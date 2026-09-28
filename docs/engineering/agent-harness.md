@@ -67,14 +67,22 @@ task check-changed
 - Harness：运行包含 `harness-check` 的根 `check`。
 - 仅测试：目标测试、Ruff format-check/lint、测试类型检查。Backend 的合同 fixtures（包括 Markdown 基线）按测试输入处理。
 - Web `design/specs`、`contracts/pages`、原型交互合同与 `prototype` 是机器消费来源；本地检查追加 `web-prototype`，普通 `docs` 阅读说明保留轻量路径。
-- 普通后端/Web 生产代码：分别运行所属包测试与静态检查/`check-web`；后端变更（含跨包）
-  共享包级静态检查（lint/format/类型）并对全部 owner 做**单次合并**的 `--fast` 调用
-  （单一 xdist 池，#322/#331），fast 车道带 10s/用例硬顶超时兜住异常（0.5s 分类阈值由
-  时长门禁与 analyze-slow-tests 治理）。收集失败由测试命令直接暴露，不再独立预探测。
-  fast 表达式按资源/旅程选择且单源维护（`tooling/quality/test_selection.py`，#330 B1），
-  owner 覆盖探针消费同一常量；某 owner 在 fast 表达式下无任何用例时升级全量门，
-  其必要测试不因其他 owner 的 fast 成功而被掩盖。
-- 高危变更（单包或跨包）同样走包级检查并另加 PIT 专项；混入契约/未知路径时才回到
+- 普通后端/Web 生产代码：分别运行影响范围测试与静态检查/`check-web`；后端变更（含跨包）
+  共享包级静态检查（lint/format/类型）并对**影响范围**做**单次合并**的 `--fast` 调用
+  （单一 xdist 池；#322/#331 奠定 owner 门，#317-C/#338 扩为闭包），fast 车道带 10s/用例
+  硬顶超时兜住异常（0.5s 分类阈值由时长门禁与 analyze-slow-tests 治理）。影响范围由
+  共享事实层 `tooling/agent_harness/impact_scope.py` 从四类关系推导：改动 owner 的
+  **声明生产反向闭包**（各包 pyproject `project.dependencies`）∪ **测试使用关系**
+  （哪些 owner 的测试 import 了受影响生产代码；测试使用只加测试责任、不回灌生产传播）
+  ∪ 直接测试责任；非代码输入（SQL/schema/fixture）按路径归属进入同一扩大。清单不可
+  解析、出现未映射 `ditto_*` 导入或直接 owner 无可跑测试树时 fail-closed 升级全量；
+  清单本身变化走根级/包级 manifest 全量门（等价于 base/head 图并集的保守实现）。
+  fast 表达式按资源/旅程选择且单源维护（`tooling/quality/test_selection.py`，#330 B1）。
+  执行完整性由**该次运行的 junit 证据**证明（#317-C 去掉冗余预收集）：合并 `--fast`
+  调用自动追加 `--junitxml`，任一 scope owner 无已执行用例或缺证据时升级 `task check`，
+  必要测试不因其他 owner 的 fast 成功而被掩盖。pre-push 计划路径不跑 AST 使用扫描
+  （约 3 秒），只列静态闭包并把使用边与完整性证明延迟到 `task verify-push`。
+- 高危变更（单包或跨包）同样走影响范围检查并另加 PIT 专项；混入契约/未知路径时才回到
   `check`。CI 的 PR job 选择（`ci.required_jobs`）对高危范围仍取全量门，本地降档只消除
   与 CI 的重复支付，不削弱合并前验证。
 - 契约或跨栈路径：运行 `check` 与 `test-system`。

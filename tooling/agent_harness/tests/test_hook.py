@@ -22,8 +22,6 @@ from tooling.agent_harness.hook import (
     verification_commands,
     verification_decision,
 )
-from tooling.quality import slow_test_gate
-from tooling.quality.test_selection import FAST_LANE_EXPR
 
 
 def _initialize_repository(root: Path) -> None:
@@ -34,6 +32,31 @@ def _initialize_repository(root: Path) -> None:
         check=True,
     )
     subprocess.run(["git", "config", "user.name", "Fixture"], cwd=root, check=True)
+
+
+_REPO_ROOT = hook_module.git_root(Path(__file__).resolve().parents[3])
+
+
+def _expected_fast_dirs(paths: list[str]) -> list[str]:
+    """本仓真实图上给定变更集应有的 fast 测试目录（#317-C 闭包+使用边）。
+
+    与 _backend_source_commands 相同的原料过滤（普通散文不算 owner 材料），
+    期望集由共享事实层推导；事实层本身由 test_impact_scope.py 单独钉住。
+    """
+    material = [p for p in paths if hook_module._backend_owner(p) is not None]
+    graph, usage = hook_module._workspace_facts(_REPO_ROOT)
+    return list(
+        hook_module.impact_scope.plan_backend_scope(
+            material, graph=graph, usage=usage
+        ).test_dirs
+    )
+
+
+def _fast_command(commands: list[list[str]]) -> list[str] | None:
+    for command in commands:
+        if command[:3] == ["task", "test", "--"]:
+            return command
+    return None
 
 
 def _commit_file(root: Path, relative: str, content: str) -> Path:
@@ -357,18 +380,15 @@ class DiffClassificationTests(unittest.TestCase):
         path = "packages/strategy/src/ditto_strategy/alpha/pipeline.py"
 
         level = classify_diff([path])
-        commands = [
-            " ".join(command) for command in verification_commands(level, [path])
-        ]
+        commands = verification_commands(level, [path])
 
         assert level == "high-risk"
-        assert commands == [
-            "task lint",
-            "task fmt-check",
-            "task type-all",
-            "task test -- --fast packages/strategy/tests",
-            "task pit",
-        ]
+        fast = _fast_command(commands)
+        assert fast is not None
+        assert fast[4:] == _expected_fast_dirs([path])
+        assert ["task", "lint"] in commands
+        assert ["task", "type-all"] in commands
+        assert ["task", "pit"] in commands
 
     def test_application_and_backend_risk_entrypoints_keep_specialized_gates(
         self,
@@ -376,15 +396,15 @@ class DiffClassificationTests(unittest.TestCase):
         fixtures = {
             "packages/application/src/ditto_application/commands/trade.py": (
                 "high-risk",
-                ("--fast packages/application/tests", "task pit"),
+                ("packages/application/tests", "task pit"),
             ),
             "packages/application/src/ditto_application/queries/factor_ic_report.py": (
                 "high-risk",
-                ("--fast packages/application/tests", "task pit"),
+                ("packages/application/tests", "task pit"),
             ),
             "apps/backend/src/ditto_apps/jobs/flows/backtest.py": (
                 "high-risk",
-                ("--fast apps/backend/tests", "task pit"),
+                ("apps/backend/tests", "task pit"),
             ),
             "apps/backend/src/ditto_apps/api/routes/trade_command_routes.py": (
                 "contract-high-risk",
@@ -394,14 +414,15 @@ class DiffClassificationTests(unittest.TestCase):
         for path, (expected_level, fragments) in fixtures.items():
             with self.subTest(path=path):
                 level = classify_diff([path])
-                commands = "\n".join(
-                    " ".join(command)
-                    for command in verification_commands(level, [path])
-                )
+                commands = verification_commands(level, [path])
 
                 assert level == expected_level
+                fast = _fast_command(commands)
+                if fast is not None:
+                    assert fast[4:] == _expected_fast_dirs([path])
+                joined = "\n".join(" ".join(command) for command in commands)
                 for fragment in fragments:
-                    assert fragment in commands
+                    assert fragment in joined
 
     def test_test_only_commands_are_scoped_and_read_only(self) -> None:
         path = "packages/data/tests/unit/test_data_import_boundary_unit.py"
@@ -777,62 +798,100 @@ if __name__ == "__main__":
 def test_single_and_cross_package_local_checks_share_the_package_gate() -> None:
     path = "packages/platform/src/ditto_platform/foundation/logging.py"
     commands = verification_commands("backend", [path])
-    assert ["task", "test", "--", "--fast", "packages/platform/tests"] in commands
+    fast = _fast_command(commands)
+    assert fast is not None
+    assert fast[4:] == _expected_fast_dirs([path])
     assert ["task", "type-all"] in commands
-    assert [
-        " ".join(command)
-        for command in verification_commands(
-            "backend", [path, "packages/kernel/src/ditto_kernel/errors.py"]
+    both = [path, "packages/kernel/src/ditto_kernel/errors.py"]
+    fast_both = _fast_command(verification_commands("backend", both))
+    assert fast_both is not None
+    # 跨包修改取闭包并集：kernel 的消费者全量进入（#338 决议表）。
+    assert fast_both[4:] == _expected_fast_dirs(both)
+    assert set(fast_both[4:]) >= {
+        "packages/kernel/tests",
+        "packages/platform/tests",
+        "packages/application/tests",
+        "apps/backend/tests",
+    }
+
+
+def test_fast_lane_command_shape_is_self_describing() -> None:
+    """执行器从命令本身读回 scope 目录，作为完整性证明的输入。"""
+    assert hook_module.fast_lane_scope_dirs(
+        ["task", "test", "--", "--fast", "a/tests", "b/tests"]
+    ) == ["a/tests", "b/tests"]
+    assert (
+        hook_module.fast_lane_scope_dirs(["task", "test", "--", "packages/x/tests"])
+        == []
+    )
+    assert hook_module.fast_lane_scope_dirs(["task", "check"]) == []
+    assert hook_module.fast_lane_scope_dirs(["uv", "run", "pytest", "-q"]) == []
+
+
+def test_fast_lane_evidence_requires_every_scope_dir(tmp_path: Path) -> None:
+    """每个 scope 目录必须有实际执行的用例；缺证据即 fail-closed（#317-C）。"""
+    module = tmp_path / "packages/a/tests/test_x.py"
+    module.parent.mkdir(parents=True)
+    module.write_text("def test_x(): pass\n", encoding="utf-8")
+    (tmp_path / "packages/b/tests").mkdir(parents=True)
+    junit = tmp_path / "evidence.xml"
+    junit.write_text(
+        '<testsuites><testsuite name="packages.a.tests.test_x" >'
+        '<testcase classname="packages.a.tests.test_x" name="test_x" time="0.01"/>'
+        "</testsuite></testsuites>",
+        encoding="utf-8",
+    )
+
+    assert (
+        hook_module.fast_lane_evidence_complete(junit, ["packages/a/tests"], tmp_path)
+        is True
+    )
+    # b/tests 没有任何已执行用例：不完整。
+    assert (
+        hook_module.fast_lane_evidence_complete(
+            junit, ["packages/a/tests", "packages/b/tests"], tmp_path
         )
-    ] == [
-        "task lint",
-        "task fmt-check",
-        "task type-all",
-        "task test -- --fast packages/kernel/tests packages/platform/tests",
-    ]
+        is False
+    )
+    # 证据文件缺失同样 fail-closed。
+    assert (
+        hook_module.fast_lane_evidence_complete(
+            tmp_path / "missing.xml", ["packages/a/tests"], tmp_path
+        )
+        is False
+    )
 
 
-def test_owner_without_fast_cases_escalates_to_the_full_gate(
+def test_fast_lane_incomplete_evidence_escalates_to_the_full_gate(
     monkeypatch,
 ) -> None:
-    """slow-only owner 的必要测试不能被其他 owner 的 fast 成功掩盖（#330 B1）。"""
+    """slow-only owner 不能被合并 fast 调用静默跳过（#330 B1 → #317-C junit 证明）。"""
+    ran: list[list[str]] = []
 
-    def _collect_covers_no_owner(paths: list[str], expr: str) -> list[str]:
-        return []
+    def fake_run(command: list[str], **_kwargs: object) -> subprocess.CompletedProcess:
+        ran.append(list(command))
+        if "--junitxml" in command:
+            junit = Path(command[command.index("--junitxml") + 1])
+            # 只有 kernel 的真实模块执行过；同一 scope 内其余 owner 无用例。
+            junit.write_text(
+                "<testsuites><testsuite "
+                'name="packages.kernel.tests.unit.test_identity">'
+                '<testcase classname="packages.kernel.tests.unit.test_identity" '
+                'name="test_fingerprint" time="0.01"/></testsuite></testsuites>',
+                encoding="utf-8",
+            )
+        return subprocess.CompletedProcess(command, 0)
 
-    monkeypatch.setattr(slow_test_gate, "collect_ids", _collect_covers_no_owner)
-    hook_module._owner_fast_coverage.cache_clear()
-    try:
-        commands = hook_module._backend_source_commands(
-            ["packages/platform/src/ditto_platform/foundation/logging.py"]
-        )
-    finally:
-        hook_module._owner_fast_coverage.cache_clear()
+    monkeypatch.setattr(hook_module.subprocess, "run", fake_run)
+    result = hook_module.run_verification(
+        _REPO_ROOT,
+        "backend",
+        ["packages/kernel/src/ditto_kernel/errors.py"],
+    )
 
-    assert commands == [["task", "check"]]
-
-
-def test_probe_uses_the_shared_de_layered_fast_expression(
-    monkeypatch,
-) -> None:
-    """owner 覆盖探针与 scripts/test.py 消费同一 fast 表达式（#330 B1）。"""
-
-    seen: dict[str, str] = {}
-
-    def _collect(paths: list[str], expr: str) -> list[str]:
-        seen["expr"] = expr
-        return [f"{paths[0]}/unit/test_fast.py::test_fast"]
-
-    monkeypatch.setattr(slow_test_gate, "collect_ids", _collect)
-    hook_module._owner_fast_coverage.cache_clear()
-    try:
-        covered = hook_module._owner_fast_coverage(("packages/platform/tests",))
-    finally:
-        hook_module._owner_fast_coverage.cache_clear()
-
-    assert covered is True
-    assert seen["expr"] == FAST_LANE_EXPR
-    assert "integration" not in FAST_LANE_EXPR
+    assert result.ok is True
+    assert ["task", "check"] in ran  # 完整性证明失败后升级全量并通过
+    assert any("--junitxml" in command for command in ran)
 
 
 def test_non_python_file_in_a_second_package_widens_the_owner_scope() -> None:
@@ -841,14 +900,12 @@ def test_non_python_file_in_a_second_package_widens_the_owner_scope() -> None:
         "packages/data/src/ditto_data/scripts/schema.sql",
     ]
     commands = verification_commands(classify_diff(paths), paths)
+    fast = _fast_command(commands)
 
-    assert [" ".join(command) for command in commands] == [
-        "task lint",
-        "task fmt-check",
-        "task type-all",
-        "task test -- --fast packages/data/tests packages/strategy/tests",
-        "task pit",
-    ]
+    assert fast is not None
+    assert fast[4:] == _expected_fast_dirs(paths)
+    assert set(fast[4:]) >= {"packages/data/tests", "packages/strategy/tests"}
+    assert ["task", "pit"] in commands
 
 
 def test_cross_owner_high_risk_keeps_local_pit_and_drops_full_check() -> None:
@@ -856,18 +913,18 @@ def test_cross_owner_high_risk_keeps_local_pit_and_drops_full_check() -> None:
         "packages/application/src/ditto_application/processes/paper_account/service.py",
         "packages/execution/src/ditto_execution/orders/splitter.py",
     ]
-    commands = [
-        " ".join(command)
-        for command in verification_commands(classify_diff(paths), paths)
-    ]
+    commands = verification_commands(classify_diff(paths), paths)
+    fast = _fast_command(commands)
 
-    assert commands == [
-        "task lint",
-        "task fmt-check",
-        "task type-all",
-        "task test -- --fast packages/application/tests packages/execution/tests",
-        "task pit",
-    ]
+    assert fast is not None
+    assert fast[4:] == _expected_fast_dirs(paths)
+    assert set(fast[4:]) >= {
+        "packages/application/tests",
+        "packages/execution/tests",
+        "apps/backend/tests",
+    }
+    assert ["task", "pit"] in commands
+    assert ["task", "check"] not in commands
 
 
 def test_application_source_with_backend_tests_runs_both_owner_scopes() -> None:
@@ -875,18 +932,17 @@ def test_application_source_with_backend_tests_runs_both_owner_scopes() -> None:
         "packages/application/src/ditto_application/processes/paper_account/service.py",
         "apps/backend/tests/integration/api/test_paper_flow.py",
     ]
-    commands = [
-        " ".join(command)
-        for command in verification_commands(classify_diff(paths), paths)
-    ]
+    commands = verification_commands(classify_diff(paths), paths)
+    fast = _fast_command(commands)
 
-    assert commands == [
-        "task lint",
-        "task fmt-check",
-        "task type-all",
-        "task test -- --fast apps/backend/tests packages/application/tests",
-        "task pit",
-    ]
+    assert fast is not None
+    assert fast[4:] == _expected_fast_dirs(paths)
+    assert set(fast[4:]) >= {
+        "apps/backend/tests",
+        "packages/application/tests",
+        "packages/agent/tests",  # application 的声明消费者
+    }
+    assert ["task", "pit"] in commands
 
 
 def test_backend_routes_stay_on_the_contract_full_gate_across_owners() -> None:
@@ -944,18 +1000,11 @@ def test_repo_level_backend_paths_keep_the_full_check() -> None:
         "packages/strategy/src/ditto_strategy/alpha/pipeline.py",
         "scripts/README.md",
     ]
-    assert [
-        " ".join(command)
-        for command in verification_commands(
-            classify_diff(with_repo_prose), with_repo_prose
-        )
-    ] == [
-        "task lint",
-        "task fmt-check",
-        "task type-all",
-        "task test -- --fast packages/strategy/tests",
-        "task pit",
-    ]
+    commands = verification_commands(classify_diff(with_repo_prose), with_repo_prose)
+    fast = _fast_command(commands)
+    assert fast is not None
+    assert fast[4:] == _expected_fast_dirs(with_repo_prose)
+    assert ["task", "pit"] in commands
 
 
 def test_prose_in_a_second_package_does_not_widen_the_scope() -> None:
@@ -963,18 +1012,14 @@ def test_prose_in_a_second_package_does_not_widen_the_scope() -> None:
         "packages/strategy/src/ditto_strategy/alpha/pipeline.py",
         "packages/data/README.md",
     ]
-    commands = [
-        " ".join(command)
-        for command in verification_commands(classify_diff(paths), paths)
-    ]
+    commands = verification_commands(classify_diff(paths), paths)
+    fast = _fast_command(commands)
 
-    assert commands == [
-        "task lint",
-        "task fmt-check",
-        "task type-all",
-        "task test -- --fast packages/strategy/tests",
-        "task pit",
-    ]
+    assert fast is not None
+    # README 不是 owner 材料：期望集与只有 strategy 变化时完全一致。
+    assert fast[4:] == _expected_fast_dirs(paths)
+    assert fast[4:] == _expected_fast_dirs([paths[0]])
+    assert ["task", "pit"] in commands
 
 
 def test_package_manifest_changes_keep_the_full_check() -> None:

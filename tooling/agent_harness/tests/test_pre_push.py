@@ -171,7 +171,7 @@ def test_verify_mode_defaults_target_to_head(tmp_path: Path) -> None:
     )
 
 
-def test_hook_plan_defers_owner_probe_to_verify(
+def test_hook_plan_defers_usage_scan_to_verify(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     from tooling.agent_harness import hook as hook_module
@@ -179,6 +179,11 @@ def test_hook_plan_defers_owner_probe_to_verify(
     _git(tmp_path, "init", "--quiet")
     _git(tmp_path, "config", "user.name", "Test")
     _git(tmp_path, "config", "user.email", "test@example.invalid")
+    kernel_root = tmp_path / "packages/kernel"
+    kernel_root.mkdir(parents=True)
+    (kernel_root / "pyproject.toml").write_text(
+        '[project]\nname = "ditto-kernel"\nversion = "0.1.0"\n', encoding="utf-8"
+    )
     source = tmp_path / "packages/kernel/src/ditto_kernel/identity.py"
     source.parent.mkdir(parents=True)
     source.write_text("first\n")
@@ -189,23 +194,34 @@ def test_hook_plan_defers_owner_probe_to_verify(
     source.write_text("second\n")
     target = _commit(tmp_path)
 
-    def _no_probe(*args: object, **kwargs: object) -> bool:
-        raise AssertionError("hook-mode planning must not start pytest collection")
+    def _no_scan(*args: object, **kwargs: object) -> bool:
+        raise AssertionError("hook-mode planning must not run the AST usage scan")
 
-    monkeypatch.setattr(hook_module, "_owner_fast_coverage", _no_probe)
+    monkeypatch.setattr(hook_module, "_workspace_facts", _no_scan)
     level, commands, notes = push_verification_plan(
-        tmp_path, base, target, probe_owners=False
+        tmp_path, base, target, resolve_usage=False
     )
     assert level == "backend"
     assert commands[0] == ["task", "lint"]
-    assert any("probe deferred" in note for note in notes)
+    assert any("test-usage scan deferred" in note for note in notes)
 
-    monkeypatch.setattr(hook_module, "_owner_fast_coverage", lambda owners: False)
+    def _incomplete_usage(root: object, *args: object, **kwargs: object) -> object:
+        from tooling.agent_harness.impact_scope import (
+            TestUsageFacts,
+            load_workspace_graph,
+        )
+
+        return (
+            load_workspace_graph(root),
+            TestUsageFacts(used_by_tests={}, incomplete=True),
+        )
+
+    monkeypatch.setattr(hook_module, "_workspace_facts", _incomplete_usage)
     _, commands, _ = push_verification_plan(tmp_path, base, target)
     assert commands == [["task", "check"]]
 
 
-def test_hook_mode_requests_probe_free_plan(
+def test_hook_mode_requests_scan_free_plan(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     seen: dict[str, object] = {}
@@ -213,12 +229,12 @@ def test_hook_mode_requests_probe_free_plan(
     def _plan(
         *args: object, **kwargs: object
     ) -> tuple[str, list[list[str]], list[str]]:
-        seen["probe_owners"] = kwargs.get("probe_owners", True)
+        seen["resolve_usage"] = kwargs.get("resolve_usage", True)
         return ("none", [], [])
 
     monkeypatch.setattr(pre_push, "push_verification_plan", _plan)
     assert pre_push.main([]) == 0
-    assert seen["probe_owners"] is False
+    assert seen["resolve_usage"] is False
 
 
 def test_verifier_cannot_inherit_push_repository_into_foreign_git(

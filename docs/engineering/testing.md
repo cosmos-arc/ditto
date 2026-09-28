@@ -61,9 +61,10 @@ blanket 资源策略，待串行审计（#226）按真实资源逐组解除—�
 
 **fast 车道按资源/旅程选择，不按层级**：表达式（`not slow and not serial and not
 e2e and not snapshot and not sandbox_live and not capacity`）单源维护于
-`tooling/quality/test_selection.py`，`scripts/test.py --fast` 与 harness 的
-owner 覆盖探针消费同一常量——低成本、可并行的真实集成测试可进入快速反馈；
-`--unit`/`--integration` 车道仍按层级选。
+`tooling/quality/test_selection.py`，`scripts/test.py --fast` 消费同一常量——低成本、
+可并行的真实集成测试可进入快速反馈；`--unit`/`--integration` 车道仍按层级选。
+harness 合并 fast 调用的 per-owner 非空证明自 #317-C 起由该次运行的 junit 证据承担
+（替代旧收集探针，见「按风险验证」一节）。
 
 导入期替换与全局 fixture 的隔离约定：
 
@@ -137,7 +138,13 @@ uv run --no-sync pytest -m pit
 task type -- --tests
 ```
 
-仅测试 diff 仍需 Ruff format-check/lint 和测试类型检查。普通生产改动（单包或跨包）运行受影响各包测试与共享的 Ruff/类型检查；契约、依赖、架构或工具链改动运行 `task check`。远端 CI 是权威合并门，本地通过不替代 CI。
+仅测试 diff 仍需 Ruff format-check/lint 和测试类型检查；conftest/helper/fixture 变更
+作用于所属 owner 的整棵测试树，不直接收集单个文件。普通生产改动（单包或跨包）运行
+**影响范围**各包测试——改动 owner 的声明生产反向闭包 ∪ 测试使用关系，由共享事实层
+`tooling/agent_harness/impact_scope.py` 推导（#338/#317-C）——与共享的 Ruff/类型检查；
+合并 fast 调用以该次运行的 junit 证据证明每个 scope owner 有已执行用例，缺证据即升级
+`task check`。契约、依赖、架构或工具链改动运行 `task check`。远端 CI 是权威合并门
+（后端完整 coverage 不因本地闭包裁剪），本地通过不替代 CI。
 
 ## 覆盖率与证据
 

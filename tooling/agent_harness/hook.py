@@ -21,10 +21,16 @@ from types import FrameType
 from typing import Any
 
 try:
+    from . import impact_scope
     from .lease import authorize_paths, generator_write_targets, protected_resources
     from .repository_policy import forbidden_package_manager_paths
 except ImportError:  # Direct script execution.
-    from lease import authorize_paths, generator_write_targets, protected_resources
+    import impact_scope
+    from lease import (
+        authorize_paths,
+        generator_write_targets,
+        protected_resources,
+    )
     from repository_policy import forbidden_package_manager_paths
 
 MAX_FEEDBACK = 6_000
@@ -1063,12 +1069,16 @@ def _backend_test_commands(
     workspace = root if root is not None else git_root(Path.cwd())
     test_files = [path for path in paths if _is_test(path) and path.endswith(".py")]
     existing_test_files = [path for path in test_files if (workspace / path).is_file()]
-    test_targets = set(test_files)
-    test_targets.intersection_update(existing_test_files)
+    # 直接目标只认存在的 test_*.py；conftest/helper/fixture 及已删除路径
+    # 归属整个 owner 测试树——收集一个 conftest 不构成任何验证（#338：
+    # helper/fixture 覆盖所有真实使用者，不能只看文件本身）。
+    test_targets = {
+        path for path in existing_test_files if Path(path).name.startswith("test_")
+    }
     for path in paths:
         if (
             _is_test(path)
-            and (not path.endswith(".py") or path not in existing_test_files)
+            and (path not in test_targets)
             and (owner := _test_owner(path))
         ):
             test_targets.add(owner)
@@ -1129,65 +1139,22 @@ def _is_package_manifest(path: str) -> bool:
     )
 
 
-def _sanitized_probe_environment() -> dict[str, str] | None:
-    """Strip Git's exported repository selectors, as pre-push does for commands.
+@lru_cache(maxsize=8)
+def _workspace_facts(
+    root: Path,
+) -> tuple[impact_scope.WorkspaceGraph, impact_scope.TestUsageFacts]:
+    """Graph + usage facts for one selection process.
 
-    During push-range selection those variables are still set; a collection
-    subprocess must not inherit a foreign GIT_DIR/GIT_INDEX_FILE. Also keeps
-    the Taskfile policy of never auto-downloading interpreters. Returns None
-    when sanitization cannot be proven so the probe can fail closed.
+    Cached per process: hook invocations are short-lived and each pytest run
+    sees immutable package trees. Graph reads are cheap either way; the AST
+    usage scan (~3s over the workspace tests) must not be paid per command.
     """
-    environment = {**os.environ, "UV_PYTHON_DOWNLOADS": "never"}
-    try:
-        exported = subprocess.run(
-            ["git", "rev-parse", "--local-env-vars"],
-            capture_output=True,
-            text=True,
-            timeout=GIT_TIMEOUT_SECONDS,
-            check=False,
-        )
-    except (OSError, subprocess.SubprocessError):
-        return None
-    if exported.returncode != 0:
-        return None
-    for name in exported.stdout.splitlines():
-        environment.pop(name, None)
-    return environment
-
-
-@lru_cache(maxsize=64)
-def _owner_fast_coverage(owners: tuple[str, ...]) -> bool:
-    """Whether every owner contributes at least one fast-lane case.
-
-    One combined collection over all owner test dirs; any owner with zero
-    selected cases keeps the cross-package gate (its fast verification would
-    otherwise be silently skipped by the combined invocation).
-    """
-    try:
-        from tooling.quality.slow_test_gate import (  # noqa: PLC0415 - 脚本直跑无 repo root
-            collect_ids,
-        )
-        from tooling.quality.test_selection import (  # noqa: PLC0415 - 同上
-            FAST_LANE_EXPR,
-        )
-    except (SystemExit, ImportError):
-        return False
-    try:
-        raw = collect_ids([f"{owner}/tests" for owner in owners], FAST_LANE_EXPR)
-    except SystemExit:
-        return False
-    files = {line.split("::", 1)[0] for line in raw}
-    return all(
-        any(
-            file == owner + "/tests" or file.startswith(owner + "/tests/")
-            for file in files
-        )
-        for owner in owners
-    )
+    graph = impact_scope.load_workspace_graph(root)
+    return graph, impact_scope.test_usage_edges(root, graph)
 
 
 def _backend_source_commands(
-    paths: Sequence[str], *, root: Path | None = None, probe_owners: bool = True
+    paths: Sequence[str], *, root: Path | None = None, resolve_usage: bool = True
 ) -> list[list[str]]:
     # Ownership spans every material backend-area path, not only Python: a
     # schema.sql or fixture in another package must keep the cross-package
@@ -1204,38 +1171,39 @@ def _backend_source_commands(
     ):
         return [["task", "check"]]
     # Backend scopes run the shared package gate plus ONE combined fast-test
-    # invocation over every owner (#322/#331): a single xdist pool beats
-    # per-owner runs, and the fast lane carries a 10s per-case hard timeout
-    # against runaway cases (the 0.5s budget itself is enforced by the
-    # duration gate and the analyzer).
-    # Collection failures surface directly from the test command; contract,
-    # root, unknown and cross-stack escalation is decided in
-    # verification_commands before this branch, and CI keeps high-risk
-    # scopes on the full gate (ci.required_jobs).
+    # invocation over the production closure plus test-usage owners (#322
+    # laid the owner gate; #338/#317-C widens it to reverse consumers):
+    # a single xdist pool beats per-owner runs, and the fast lane carries a
+    # 10s per-case hard timeout against runaway cases. Collection failures
+    # surface directly from the test command; contract, root, unknown and
+    # cross-stack escalation is decided in verification_commands before this
+    # branch, and CI keeps high-risk scopes on the full gate.
     if not owners:
         return [["task", "check"]]
     workspace = root if root is not None else git_root(Path.cwd())
-    for owner in sorted(owners):
+    material = [path for path in paths if _backend_owner(path) is not None]
+    usage = None
+    if resolve_usage:
+        graph, usage = _workspace_facts(workspace)
+    else:
+        graph = impact_scope.load_workspace_graph(workspace)
+    plan = impact_scope.plan_backend_scope(material, graph=graph, usage=usage)
+    if plan.escalation is not None:
+        # 图不完整（清单不可解析/未映射 ditto 导入）：失败关闭到全量。
+        return [["task", "check"]]
+    if not plan.test_dirs:
+        return [["task", "check"]]
+    for owner in (*plan.production_owners, *plan.test_owners):
         tests_dir = workspace / owner / "tests"
         if not tests_dir.is_dir() or not any(tests_dir.rglob("test_*.py")):
-            # 无可跑测试范围（如整包删除）时保持 fail-closed 全量。
+            # 直接 owner 无可跑测试范围（如整包删除）时保持 fail-closed 全量；
+            # 闭包/使用边成员本就无测试时不阻断（其缺席不是本差异造成的）。
             return [["task", "check"]]
-    if probe_owners and not _owner_fast_coverage(tuple(sorted(owners))):
-        # 某 owner 的测试全部被 fast 表达式排除：合并调用会静默跳过它，升级全量。
-        # probe_owners=False 供免副作用的计划路径（pre-push 报告）延迟该探针：
-        # 探针会拉起 pytest --collect-only，不属于 push 路径的廉价检查（#340）。
-        return [["task", "check"]]
     return [
         ["task", "lint"],
         ["task", "fmt-check"],
         ["task", "type-all"],
-        [
-            "task",
-            "test",
-            "--",
-            "--fast",
-            *[f"{owner}/tests" for owner in sorted(owners)],
-        ],
+        ["task", "test", "--", "--fast", *plan.test_dirs],
     ]
 
 
@@ -1244,9 +1212,14 @@ def verification_commands(
     paths: Sequence[str],
     *,
     root: Path | None = None,
-    probe_owners: bool = True,
+    resolve_usage: bool = True,
 ) -> list[list[str]]:
-    """Build a monotonic, non-destructive validation plan for all path classes."""
+    """Build a monotonic, non-destructive validation plan for all path classes.
+
+    ``resolve_usage=False`` keeps planning side-effect free and fast (no AST
+    usage scan): the plan then carries the statically derivable closure and
+    pre-push defers the dynamic facts to ``task verify-push`` (#340/#317-C).
+    """
     if paths:
         classes = _path_classes(paths, root=root)
     elif level == "contract-high-risk":
@@ -1276,7 +1249,7 @@ def verification_commands(
         commands.append(["task", "check-web"])
     elif active_classes & {"backend", "high-risk"}:
         commands.extend(
-            _backend_source_commands(paths, root=root, probe_owners=probe_owners)
+            _backend_source_commands(paths, root=root, resolve_usage=resolve_usage)
         )
 
     if needs_system:
@@ -1289,6 +1262,86 @@ def verification_commands(
     return _backend_test_commands(paths, root=root)
 
 
+def fast_lane_scope_dirs(command: Sequence[str]) -> list[str]:
+    """Scope dirs of a merged fast-lane test command ([] for other commands)."""
+    if list(command[:3]) != ["task", "test", "--"] or "--fast" not in command:
+        return []
+    return [
+        argument
+        for argument in command[3:]
+        if argument != "--fast" and not argument.startswith("--")
+    ]
+
+
+def fast_lane_evidence_complete(
+    junit_path: Path, scope_dirs: Sequence[str], root: Path
+) -> bool:
+    """Whether the run's own junit proves every scope dir executed a case.
+
+    Replaces the pre-run collection probe (#317 C 去掉冗余预收集): the
+    non-emptiness proof comes from the actual execution. Missing or
+    unreadable evidence, or a scope owner with zero executed cases, fails
+    closed so the caller escalates to the full check — an owner whose
+    necessary tests are all excluded from the fast lane can never be
+    silently skipped by the merged invocation.
+    """
+    try:
+        from tooling.quality.slow_test_gate import (  # noqa: PLC0415 - 脚本直跑无 repo root
+            parse_junit,
+        )
+
+        durations = parse_junit([junit_path], root)
+    except (SystemExit, ImportError, OSError, SyntaxError):
+        return False
+    modules = set(durations)
+    return all(
+        any(module == scope or module.startswith(scope + "/") for module in modules)
+        for scope in scope_dirs
+    )
+
+
+def _verification_environment() -> dict[str, str]:
+    return {
+        **os.environ,
+        "PYTHON_KEYRING_BACKEND": "keyring.backends.null.Keyring",
+        "_TYPER_FORCE_DISABLE_TERMINAL": "1",
+    }
+
+
+def prepare_fast_lane(
+    command: Sequence[str],
+) -> tuple[list[str], Path | None, list[str]]:
+    """Attach a junit evidence file when the command is a fast-lane run."""
+    scope_dirs = fast_lane_scope_dirs(command)
+    if not scope_dirs:
+        return list(command), None, scope_dirs
+    descriptor, name = tempfile.mkstemp(suffix=".xml", prefix="fast-lane-")
+    os.close(descriptor)
+    return [*command, "--junitxml", name], Path(name), scope_dirs
+
+
+def needs_full_check_fallback(
+    command: Sequence[str],
+    returncode: int,
+    junit_path: Path | None,
+    scope_dirs: Sequence[str],
+    root: Path,
+) -> bool:
+    """Whether a completed command must escalate to the full check.
+
+    Two fail-closed paths: pytest exit 5 (the fast lane selected no case at
+    all) and an execution-evidence gap (a scope owner executed no case).
+    """
+    if returncode == _PYTEST_NO_TESTS_COLLECTED and list(command[:2]) == [
+        "task",
+        "test",
+    ]:
+        return True
+    if junit_path is None or returncode != 0:
+        return False
+    return not fast_lane_evidence_complete(junit_path, scope_dirs, root)
+
+
 def run_verification(
     root: Path, level: str, paths: Sequence[str]
 ) -> VerificationResult:
@@ -1298,35 +1351,35 @@ def run_verification(
 
     transcripts: list[str] = []
     for command in commands:
-        print(f"$ {shlex.join(command)}", flush=True)
+        run_command, junit_path, scope_dirs = prepare_fast_lane(command)
+        print(f"$ {shlex.join(run_command)}", flush=True)
         result = subprocess.run(
-            command,
+            run_command,
             cwd=root,
             check=False,
-            env={
-                **os.environ,
-                "PYTHON_KEYRING_BACKEND": "keyring.backends.null.Keyring",
-                "_TYPER_FORCE_DISABLE_TERMINAL": "1",
-            },
+            env=_verification_environment(),
         )
-        transcript = f"$ {shlex.join(command)}\nexit code: {result.returncode}"
-        transcripts.append(transcript)
-        if result.returncode == _PYTEST_NO_TESTS_COLLECTED and command[:2] == [
-            "task",
-            "test",
-        ]:
-            # fast 车道无可选用例（pytest exit 5）：fail-closed 升级全量检查
+        transcripts.append(
+            f"$ {shlex.join(run_command)}\nexit code: {result.returncode}"
+        )
+        escalate = needs_full_check_fallback(
+            command, result.returncode, junit_path, scope_dirs, root
+        )
+        if escalate and result.returncode == 0:
+            transcripts.append(
+                "fast-lane evidence incomplete: a scope owner contributed no "
+                + "executed case; escalating to the full check"
+            )
+        if junit_path is not None:
+            junit_path.unlink(missing_ok=True)
+        if escalate:
             fallback = ["task", "check"]
             print(f"$ {shlex.join(fallback)}", flush=True)
             fallback_result = subprocess.run(
                 fallback,
                 cwd=root,
                 check=False,
-                env={
-                    **os.environ,
-                    "PYTHON_KEYRING_BACKEND": "keyring.backends.null.Keyring",
-                    "_TYPER_FORCE_DISABLE_TERMINAL": "1",
-                },
+                env=_verification_environment(),
             )
             transcripts.append(
                 f"$ {shlex.join(fallback)}\nexit code: {fallback_result.returncode}"

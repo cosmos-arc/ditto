@@ -15,8 +15,9 @@ import sys
 from pathlib import Path
 
 from tooling.agent_harness.hook import (
-    _PYTEST_NO_TESTS_COLLECTED,
     classify_diff,
+    needs_full_check_fallback,
+    prepare_fast_lane,
     verification_commands,
 )
 
@@ -43,7 +44,7 @@ def push_verification_plan(
     local_branch: str = "",
     *,
     default_target: str = "",
-    probe_owners: bool = True,
+    resolve_usage: bool = True,
 ) -> tuple[str, list[list[str]], list[str]]:
     """Identity-check a push and return (level, explicit commands, notes).
 
@@ -52,9 +53,9 @@ def push_verification_plan(
     (dirty worktree, target not checked out). Missing history and mode
     anomalies fail closed to the full gate inside the plan — they expand the
     explicit scope instead of silently re-entering the synchronous push path.
-    ``probe_owners=False`` keeps planning side-effect free (no pytest
-    collection): the owner fast-coverage escalation is then resolved by the
-    explicit ``--verify`` entry instead.
+    ``resolve_usage=False`` keeps planning side-effect free (no AST usage
+    scan): test-usage additions and the fast-lane completeness proof are
+    then resolved by the explicit ``--verify`` entry instead.
     """
 
     def git(*args: str) -> str:
@@ -89,17 +90,20 @@ def push_verification_plan(
         notes.append(f"non-plain file mode on {anomaly}; full gate required")
         return "mode-anomaly", [*_FULL_CHECK], notes
     level = classify_diff(paths, root=root)
-    commands = verification_commands(level, paths, root=root, probe_owners=probe_owners)
-    return level, commands, [*notes, *_deferred_probe_note(level, probe_owners)]
+    commands = verification_commands(
+        level, paths, root=root, resolve_usage=resolve_usage
+    )
+    return level, commands, [*notes, *_deferred_scope_note(level, resolve_usage)]
 
 
-def _deferred_probe_note(level: str, probe_owners: bool) -> list[str]:
-    """Escalation note for probe-free backend plans (hook mode, #340)."""
-    if probe_owners or level not in {"backend", "high-risk"}:
+def _deferred_scope_note(level: str, resolve_usage: bool) -> list[str]:
+    """Escalation note for scan-free backend plans (hook mode, #340/#317-C)."""
+    if resolve_usage or level not in {"backend", "high-risk"}:
         return []
     return [
-        "owner fast-coverage probe deferred to task verify-push",
-        "an owner without fast cases escalates to task check there",
+        "test-usage scan deferred to task verify-push: the plan lists the",
+        "static closure only; verify may widen it and an owner without fast",
+        "cases escalates to task check there",
     ]
 
 
@@ -115,6 +119,35 @@ def _sanitized_environment() -> dict[str, str]:
     ).splitlines():
         environment.pop(name, None)
     return environment
+
+
+def _run_explicit_verification(
+    commands: list[list[str]], root: Path, environment: dict[str, str]
+) -> int:
+    """Execute the owed commands; fail-closed escalation keeps completeness."""
+    for command in commands:
+        run_command, junit_path, scope_dirs = prepare_fast_lane(command)
+        print("verify:", " ".join(run_command), flush=True)
+        result = subprocess.run(run_command, cwd=root, env=environment, check=False)
+        escalate = needs_full_check_fallback(
+            command, result.returncode, junit_path, scope_dirs, root
+        )
+        if escalate and result.returncode == 0:
+            print(
+                "verify: fast-lane evidence incomplete "
+                + "(a scope owner executed no case); running task check",
+                flush=True,
+            )
+        if junit_path is not None:
+            junit_path.unlink(missing_ok=True)
+        if escalate:
+            fallback = ["task", "check"]
+            print("verify:", " ".join(fallback), flush=True)
+            subprocess.run(fallback, cwd=root, env=environment, check=True)
+            continue
+        if result.returncode != 0:
+            raise SystemExit(result.returncode)
+    return 0
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -141,7 +174,7 @@ def main(argv: list[str] | None = None) -> int:
             os.environ.get("PRE_COMMIT_TO_REF", ""),
             os.environ.get("PRE_COMMIT_LOCAL_BRANCH", ""),
             default_target="HEAD" if args.verify else "",
-            probe_owners=args.verify,
+            resolve_usage=args.verify,
         )
     except (ValueError, subprocess.SubprocessError) as error:
         report(f"pre-push: {error}")
@@ -162,22 +195,7 @@ def main(argv: list[str] | None = None) -> int:
         report("pre-push: PR CI remains the authoritative merge gate")
         return 0
 
-    environment = _sanitized_environment()
-    for command in commands:
-        print("verify:", " ".join(command), flush=True)
-        result = subprocess.run(command, cwd=root, env=environment, check=False)
-        if result.returncode == _PYTEST_NO_TESTS_COLLECTED and command[:2] == [
-            "task",
-            "test",
-        ]:
-            # fast 车道无可选用例（pytest exit 5）：fail-closed 升级全量检查
-            fallback = ["task", "check"]
-            print("verify:", " ".join(fallback), flush=True)
-            subprocess.run(fallback, cwd=root, env=environment, check=True)
-            continue
-        if result.returncode != 0:
-            raise SystemExit(result.returncode)
-    return 0
+    return _run_explicit_verification(commands, root, _sanitized_environment())
 
 
 if __name__ == "__main__":
