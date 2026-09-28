@@ -29,6 +29,7 @@ class TestObservabilityConfig:
         assert effective.metrics_enabled is True
         assert effective.assertions_enabled is True
         assert effective.verbose_logging is True
+        assert effective.pytest_running is False
 
     def test_get_effective_config_testing_preset(self) -> None:
         """测试测试环境预设配置."""
@@ -41,6 +42,7 @@ class TestObservabilityConfig:
         assert effective.metrics_enabled is False
         assert effective.assertions_enabled is True
         assert effective.verbose_logging is False
+        assert effective.pytest_running is False
 
     def test_get_effective_config_production_preset(self) -> None:
         """测试生产环境预设配置."""
@@ -98,6 +100,19 @@ class TestObservabilityConfig:
         assert effective.metrics_enabled is True
         assert effective.assertions_enabled is True
         assert effective.verbose_logging is False
+        assert effective.pytest_running is False
+
+    def test_get_effective_config_pytest_running_flag(self) -> None:
+        """测试 pytest_running 覆盖标志（自 integration 迁移，#348）."""
+        config = ObservabilityConfig(
+            environment=Environment.DEVELOPMENT,
+            pytest_running=True,
+        )
+        effective = config.get_effective_config()
+
+        assert effective.pytest_running is True
+        assert effective.log_level == "DEBUG"
+        assert effective.assertions_enabled is True
 
     def test_get_effective_config_none_values_use_preset(self) -> None:
         """测试 None 值使用预设."""

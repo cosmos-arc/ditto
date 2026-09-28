@@ -27,7 +27,6 @@ _mod = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(_mod)  # type: ignore[union-attr]
 
 MetricReaderWrapper = _mod.MetricReaderWrapper
-wait_for_export = _mod.wait_for_export
 
 
 @pytest.mark.integration
@@ -46,7 +45,6 @@ class TestMetricsIntegration:
 
         # 触发导出
         counter.add(1, {"endpoint": "/health"})
-        wait_for_export()
 
         # 获取导出的指标
         metrics = metrics_exporter.get_metrics_by_name("ditto.api.requests_total")
@@ -68,7 +66,6 @@ class TestMetricsIntegration:
 
         counter.add(1, {"endpoint": "/health"})
         counter.add(3, {"endpoint": "/health"})
-        wait_for_export()
 
         metrics = metrics_exporter.get_metrics_by_name("ditto.api.requests_total")
         data_points = list(metrics[0].data.data_points)
@@ -84,7 +81,6 @@ class TestMetricsIntegration:
 
         counter.add(1, {"endpoint": "/health", "method": "GET"})
         counter.add(2, {"endpoint": "/metrics", "method": "GET"})
-        wait_for_export()
 
         metrics = metrics_exporter.get_metrics_by_name("ditto.api.requests_total")
         data_points = list(metrics[0].data.data_points)
@@ -104,7 +100,6 @@ class TestMetricsIntegration:
 
         counter.add(5, {"endpoint": "/health"})
         counter.add(3, {"endpoint": "/health"})
-        wait_for_export()
 
         metrics = metrics_exporter.get_metrics_by_name("ditto.api.requests_total")
         data_point = next(iter(metrics[0].data.data_points))
@@ -124,7 +119,6 @@ class TestMetricsIntegration:
         )
 
         histogram.record(0.5, {"endpoint": "/jobs"})
-        wait_for_export()
 
         metrics = metrics_exporter.get_metrics_by_name("ditto.api.duration")
         assert len(metrics) > 0
@@ -145,7 +139,6 @@ class TestMetricsIntegration:
 
         histogram.record(0.3, {"endpoint": "/jobs"})
         histogram.record(1.5, {"endpoint": "/jobs"})
-        wait_for_export()
 
         metrics = metrics_exporter.get_metrics_by_name("ditto.api.duration")
         data_point = next(iter(metrics[0].data.data_points))
@@ -162,7 +155,6 @@ class TestMetricsIntegration:
 
         histogram.record(0.5, {"endpoint": "/jobs"})
         histogram.record(0.8, {"endpoint": "/reports"})
-        wait_for_export()
 
         metrics = metrics_exporter.get_metrics_by_name("ditto.api.duration")
         data_points = list(metrics[0].data.data_points)
@@ -185,7 +177,6 @@ class TestMetricsIntegration:
         histogram.record(0.3, {"endpoint": "/test"})  # 0.1 - 0.5
         histogram.record(2.0, {"endpoint": "/test"})  # 1.0 - 5.0
         histogram.record(10.0, {"endpoint": "/test"})  # 5.0 - 10.0
-        wait_for_export()
 
         metrics = metrics_exporter.get_metrics_by_name("ditto.api.duration")
         data_point = next(iter(metrics[0].data.data_points))
@@ -211,7 +202,6 @@ class TestMetricsIntegration:
         )
 
         counter.add(1, {"job": "daily_update"})
-        wait_for_export()
 
         metrics = metrics_exporter.get_metrics_by_name("ditto.scheduler.jobs_total")
         assert len(metrics) > 0
@@ -232,7 +222,6 @@ class TestMetricsIntegration:
 
         counter.add(5, {"job": "daily_update", "status": "success"})
         counter.add(3, {"job": "daily_update", "status": "failed"})
-        wait_for_export()
 
         metrics = metrics_exporter.get_metrics_by_name("ditto.scheduler.jobs_total")
         data_points = list(metrics[0].data.data_points)
@@ -261,7 +250,6 @@ class TestMetricsIntegration:
 
         counter.add(1, {"job": "daily_update", "queue": "default"})
         counter.add(1, {"job": "metric_export", "queue": "default"})
-        wait_for_export()
 
         metrics = metrics_exporter.get_metrics_by_name("ditto.scheduler.jobs_total")
         data_points = list(metrics[0].data.data_points)
@@ -280,7 +268,6 @@ class TestMetricsIntegration:
 
         counter.add(10, {"job": "test"})
         counter.add(5, {"job": "test"})
-        wait_for_export()
 
         metrics = metrics_exporter.get_metrics_by_name("ditto.scheduler.jobs_total")
         data_point = next(iter(metrics[0].data.data_points))
@@ -298,7 +285,6 @@ class TestMetricsIntegration:
         )
 
         gauge.set(100000.0, {"cache": "test_cache"})
-        wait_for_export()
 
         metrics = metrics_exporter.get_metrics_by_name("ditto.cache.size")
         assert len(metrics) > 0
@@ -320,7 +306,6 @@ class TestMetricsIntegration:
 
         gauge.set(100000.0, {"cache": "test_cache"})
         gauge.set(105000.0, {"cache": "test_cache"})
-        wait_for_export()
 
         metrics = metrics_exporter.get_metrics_by_name("ditto.cache.size")
         data_point = next(iter(metrics[0].data.data_points))
@@ -336,7 +321,6 @@ class TestMetricsIntegration:
 
         gauge.set(100000.0, {"cache": "cache_001"})
         gauge.set(200000.0, {"cache": "cache_002"})
-        wait_for_export()
 
         metrics = metrics_exporter.get_metrics_by_name("ditto.cache.size")
         data_points = list(metrics[0].data.data_points)
@@ -359,7 +343,6 @@ class TestMetricsIntegration:
         gauge.set(100000.0, {"cache": "test"})
         gauge.set(95000.0, {"cache": "test"})
         gauge.set(105000.0, {"cache": "test"})
-        wait_for_export()
 
         metrics = metrics_exporter.get_metrics_by_name("ditto.cache.size")
         data_point = next(iter(metrics[0].data.data_points))
@@ -379,7 +362,6 @@ class TestMetricsIntegration:
         )
 
         counter.add(1, {"cache": "primary", "reason": "refresh"})
-        wait_for_export()
 
         metrics = metrics_exporter.get_metrics_by_name(
             "ditto.cache.invalidations_total"
@@ -403,7 +385,6 @@ class TestMetricsIntegration:
         counter.add(1, {"cache": "primary"})
         counter.add(1, {"cache": "secondary"})
         counter.add(1, {"cache": "secondary"})
-        wait_for_export()
 
         metrics = metrics_exporter.get_metrics_by_name(
             "ditto.cache.invalidations_total"
@@ -428,7 +409,6 @@ class TestMetricsIntegration:
 
         counter.add(1, {"cache": "primary", "reason": "refresh"})
         counter.add(1, {"cache": "secondary", "reason": "ttl"})
-        wait_for_export()
 
         metrics = metrics_exporter.get_metrics_by_name(
             "ditto.cache.invalidations_total"
@@ -450,7 +430,6 @@ class TestMetricsIntegration:
         counter.add(1, {"cache": "primary"})
         counter.add(1, {"cache": "primary"})
         counter.add(1, {"cache": "primary"})
-        wait_for_export()
 
         metrics = metrics_exporter.get_metrics_by_name(
             "ditto.cache.invalidations_total"
@@ -470,7 +449,6 @@ class TestMetricsIntegration:
         )
 
         histogram.record(0.1, {"endpoint": "/api/v1/data"})
-        wait_for_export()
 
         metrics = metrics_exporter.get_metrics_by_name("ditto.api.duration")
         assert len(metrics) > 0
@@ -492,7 +470,6 @@ class TestMetricsIntegration:
         histogram.record(0.05, {"endpoint": "/api/v1/data"})
         histogram.record(0.15, {"endpoint": "/api/v1/data"})
         histogram.record(0.25, {"endpoint": "/api/v1/data"})
-        wait_for_export()
 
         metrics = metrics_exporter.get_metrics_by_name("ditto.api.duration")
         data_point = next(iter(metrics[0].data.data_points))
@@ -510,7 +487,6 @@ class TestMetricsIntegration:
         histogram.record(0.1, {"endpoint": "/api/v1/data", "method": "GET"})
         histogram.record(0.2, {"endpoint": "/api/v1/data", "method": "POST"})
         histogram.record(0.15, {"endpoint": "/api/v1/reports", "method": "GET"})
-        wait_for_export()
 
         metrics = metrics_exporter.get_metrics_by_name("ditto.api.duration")
         data_points = list(metrics[0].data.data_points)
@@ -533,7 +509,6 @@ class TestMetricsIntegration:
         histogram.record(0.05, {"endpoint": "/fast"})  # < 0.1
         histogram.record(0.3, {"endpoint": "/medium"})  # 0.1 - 0.5
         histogram.record(2.0, {"endpoint": "/slow"})  # 1.0 - 5.0
-        wait_for_export()
 
         metrics = metrics_exporter.get_metrics_by_name("ditto.api.duration")
         data_points = list(metrics[0].data.data_points)
@@ -566,7 +541,6 @@ class TestMetricsIntegration:
         )
 
         gauge.set(0.85, {"cache": "primary_cache"})
-        wait_for_export()
 
         metrics = metrics_exporter.get_metrics_by_name("ditto.cache.hit_rate")
         assert len(metrics) > 0
@@ -588,7 +562,6 @@ class TestMetricsIntegration:
         gauge.set(0.80, {"cache": "primary_cache"})
         gauge.set(0.85, {"cache": "primary_cache"})
         gauge.set(0.90, {"cache": "primary_cache"})
-        wait_for_export()
 
         metrics = metrics_exporter.get_metrics_by_name("ditto.cache.hit_rate")
         data_point = next(iter(metrics[0].data.data_points))
@@ -604,7 +577,6 @@ class TestMetricsIntegration:
 
         gauge.set(0.85, {"cache": "primary_cache"})
         gauge.set(0.92, {"cache": "secondary_cache"})
-        wait_for_export()
 
         metrics = metrics_exporter.get_metrics_by_name("ditto.cache.hit_rate")
         data_points = list(metrics[0].data.data_points)
@@ -628,7 +600,6 @@ class TestMetricsIntegration:
         gauge.set(0.0, {"cache": "test"})  # 0%
         gauge.set(0.5, {"cache": "test"})  # 50%
         gauge.set(1.0, {"cache": "test"})  # 100%
-        wait_for_export()
 
         metrics = metrics_exporter.get_metrics_by_name("ditto.cache.hit_rate")
         data_point = next(iter(metrics[0].data.data_points))
@@ -648,7 +619,6 @@ class TestMetricsIntegration:
         )
 
         histogram.record(0.5, {"query_type": "SELECT"})
-        wait_for_export()
 
         metrics = metrics_exporter.get_metrics_by_name("ditto.sql.query.duration")
         assert len(metrics) > 0
@@ -670,7 +640,6 @@ class TestMetricsIntegration:
         histogram.record(0.1, {"query_type": "SELECT"})
         histogram.record(0.5, {"query_type": "SELECT"})
         histogram.record(2.0, {"query_type": "SELECT"})
-        wait_for_export()
 
         metrics = metrics_exporter.get_metrics_by_name("ditto.sql.query.duration")
         data_point = next(iter(metrics[0].data.data_points))
@@ -688,7 +657,6 @@ class TestMetricsIntegration:
         histogram.record(0.1, {"query_type": "SELECT"})
         histogram.record(0.5, {"query_type": "INSERT"})
         histogram.record(0.3, {"query_type": "UPDATE"})
-        wait_for_export()
 
         metrics = metrics_exporter.get_metrics_by_name("ditto.sql.query.duration")
         data_points = list(metrics[0].data.data_points)
@@ -712,7 +680,6 @@ class TestMetricsIntegration:
         histogram.record(3.0, {"query_type": "SELECT"})  # 较慢
         histogram.record(8.0, {"query_type": "SELECT"})  # 慢查询 (>5s)
         histogram.record(60.0, {"query_type": "SELECT"})  # 非常慢 (>30s)
-        wait_for_export()
 
         metrics = metrics_exporter.get_metrics_by_name("ditto.sql.query.duration")
         data_point = next(iter(metrics[0].data.data_points))
@@ -744,7 +711,6 @@ class TestMetricsIntegration:
         )
 
         histogram.record(0.01, {"data_type": "payload"})
-        wait_for_export()
 
         metrics = metrics_exporter.get_metrics_by_name("ditto.json.serialize.duration")
         assert len(metrics) > 0
@@ -767,7 +733,6 @@ class TestMetricsIntegration:
         histogram.record(0.01, {"data_type": "test"})
         histogram.record(0.05, {"data_type": "test"})
         histogram.record(0.1, {"data_type": "test"})
-        wait_for_export()
 
         metrics = metrics_exporter.get_metrics_by_name("ditto.json.serialize.duration")
         data_point = next(iter(metrics[0].data.data_points))
@@ -784,7 +749,6 @@ class TestMetricsIntegration:
 
         histogram.record(0.01, {"data_type": "payload", "operation": "serialize"})
         histogram.record(0.02, {"data_type": "payload", "operation": "deserialize"})
-        wait_for_export()
 
         metrics = metrics_exporter.get_metrics_by_name("ditto.json.serialize.duration")
         data_points = list(metrics[0].data.data_points)
@@ -807,7 +771,6 @@ class TestMetricsIntegration:
         histogram.record(0.01, {"data_type": "test"})
         histogram.record(0.05, {"data_type": "test"})
         histogram.record(0.2, {"data_type": "test"})  # 较慢
-        wait_for_export()
 
         metrics = metrics_exporter.get_metrics_by_name("ditto.json.serialize.duration")
         data_point = next(iter(metrics[0].data.data_points))

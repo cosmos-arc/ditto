@@ -73,7 +73,7 @@ runner 内的 xdist worker。各 integration 树处置：
 | `packages/application/tests/integration` | 零 session fixture/env 写/子进程/端口/网络（conftest 仅 docstring）；`_support` 模块纯不可变常量；非 tmp 文件为纯内存 mock 或只读模板渲染；capacity 子集已自带标记 | **已解除**（第二批 #359，2026-09） |
 | `packages/backtest/tests/integration` | 806 行 conftest 全 function 级 fixture，parquet 每例 `tmp_path` 再生，模块级仅不可变常量；全树 0.7s | **已解除**（第二批 #359，2026-09） |
 | `apps/backend/tests/integration` | session 级 Prefect test harness（真实子进程/端口）、全局 observability init、env 覆盖 | 保留串行；解除需先按 worker 隔离 Prefect harness，另立票 |
-| `packages/platform` | 无 conftest；observability 集成测试触全局 init | 保留串行；与 #348（observability 隔离与等待治理）协同后解除 |
+| `packages/platform`（即 observability 树） | 等待治理与状态恢复已收口（#348，2026-09）：死等待删除有 SDK 同步契约证据；每例前后重置并快照/恢复 OTel API 全局；生产 OTLP 传输走本地真实 sink；纯配置合同并入 unit | 保留串行；解除走独立审计票（#226 同形态证据） |
 | `packages/analysis` / `packages/strategy` | 全 `tmp_path`、无 conftest/session fixture | 候选下一批（体量小，随 platform 批一起） |
 
 CPU/内存容量型慢测试与串行策略分开：它们打 `slow`/`capacity` 进慢道，不是保留
@@ -81,6 +81,28 @@ CPU/内存容量型慢测试与串行策略分开：它们打 `slow`/`capacity` 
 并发故障，先给受影响文件加显式 `@pytest.mark.serial` 立即恢复隔离并保留复现，
 再决定是否撤登记表条目；若故障证明的是跨 runner 作用域问题，不得以恢复旧 blanket
 标记宣称解决——互斥必须在正确作用域实现。
+
+**等待治理（#348）**：删除固定等待须有同步合同证据——SDK 源码级核实等待是死等待
+（如 `InMemoryMetricReader.get_metrics_data()` 在读取点同步 `collect()`，无后台
+线程，读后即得）；仍需等待的行为用实际条件加有限超时表达，不扩大超时掩盖失败。
+等待治理收益只报实测墙钟（≥5 组配对对照的中位数），不得以声明 sleep 时长之和
+充当墙钟收益。生产 OTLP 路径不得指向真实端点：连接被拒会触发 OTLP HTTP
+exporter 内建指数退避重试（约 15s/次 shutdown），基线里该成本被"provider 泄漏到
+进程退出、从不 shutdown"掩盖——observability 树用本地 `_OtlpHttpSink`（真实
+POST 往返 + 200 应答）同时获得确定性与真实传输断言。
+
+**observability 树状态恢复步骤（#348）**：conftest autouse fixture 在每例前后各
+执行一次 `reset_for_testing()`（只在测试前重置会把树内末例的脏状态泄漏给同进程
+后续 owner 的用例）；OTel API 的 provider 全局是 once-only 写且无公开撤销入口，
+teardown 按快照恢复 `_TRACER_PROVIDER`/`_METER_PROVIDER`、各自 `Once._done`
+及 metrics proxy 绑定态——走 SDK 私有符号，版本由 uv.lock 钉住，符号漂移会在
+teardown 响亮失败。纯配置字段合同与真实 SDK 接缝按用例区分，不按整文件归类：
+
+| 用例组 | 判定 |
+| --- | --- |
+| 纯配置字段合同（原 integration 的 `TestPresetConfig`/`TestRuntimeFlags`，12 例） | 无 SDK 装配，并入 `tests/unit/observability/test_config_unit.py`：9 例与 unit 等价删除、3 例 preset 的 `pytest_running` 断言并入 unit 版本、1 例独有迁移 |
+| configure/setup、tracing span、logging 文件输出、init/shutdown | 真实 SDK 接缝，保留 integration |
+| `_resolve_log_dir`（4 例） | 文件系统契约（XDG/cwd/tmp），无 SDK 装配，保留 integration |
 
 **fast 车道按资源/旅程选择，不按层级**：表达式（`not slow and not serial and not
 e2e and not snapshot and not sandbox_live and not capacity`）单源维护于
