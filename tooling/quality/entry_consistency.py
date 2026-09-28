@@ -26,6 +26,10 @@ SHARD_EXCLUDED_MARKERS = ("snapshot", "sandbox_live", "capacity")
 # tuple is the source of truth — splitting the expression string is unsafe
 # because marker names themselves contain "and" (sandbox_live).
 SHARD_EXPR = " and ".join(f"not {marker}" for marker in SHARD_EXCLUDED_MARKERS)
+# Mirrors the exact `task tooling-test` combined invocation (Taskfile); the
+# agent_harness tree runs separately via harness-test and stays a per-tree
+# entry below.
+_TOOLING_TEST_TREES = ("dev", "contracts", "quality", "release")
 _ENTRY_TIMEOUT_SECONDS = 900
 _SAMPLE_LIMIT = 10
 _LAYER_MARKERS = frozenset({"unit", "integration", "e2e"})
@@ -47,7 +51,13 @@ def _collect(
     root: Path, name: str, args: list[str], dump: Path
 ) -> dict[str, list[str]]:
     """Collect one entry and return its ``{nodeid: markers}`` dump."""
-    environment = {**os.environ, "MARKER_DUMP": str(dump)}
+    environment = {
+        **os.environ,
+        # Repo convention (scripts/test.py): collection must never read the
+        # host keyring.
+        "PYTHON_KEYRING_BACKEND": "keyring.backends.null.Keyring",
+        "MARKER_DUMP": str(dump),
+    }
     try:
         proc = subprocess.run(  # noqa: S603 - fixed interpreter and pytest args
             [
@@ -113,11 +123,17 @@ def _run_entries(root: Path) -> dict[str, dict[str, list[str]]]:
         tooling = _trees(root, "tooling/*/tests")
         for tree in tooling:
             collect(f"tooling:{tree}", [tree])
-        # Mirror how task tooling-test really invokes the tooling trees: one
-        # pytest process over all of them, where a near-tree conftest could
-        # mutate the others' collection.
-        if tooling:
-            collect("tooling:combined", tooling)
+        # Mirror the exact `task tooling-test` combined invocation: one pytest
+        # process over its four trees, where a near-tree conftest could mutate
+        # the others' collection. agent_harness stays out — it runs via the
+        # separate harness-test invocation.
+        combined = [
+            f"tooling/{name}/tests"
+            for name in _TOOLING_TEST_TREES
+            if (root / f"tooling/{name}/tests").is_dir()
+        ]
+        if combined:
+            collect("tooling:combined", combined)
         collect(
             "shard",
             [
@@ -180,15 +196,19 @@ def _membership_failures(dumps: dict[str, dict[str, list[str]]]) -> list[str]:
         )
     if "tooling:combined" in dumps:
         combined_ids = set(dumps["tooling:combined"])
-        for name, dump in sorted(dumps.items()):
-            if name.startswith("tooling:") and name != "tooling:combined":
-                dropped = _dropped(name, dump, combined_ids)
-                if dropped:
-                    examples = ", ".join(dropped[:_EXAMPLES_LIMIT])
-                    failures.append(
-                        f"{name} collected {len(dropped)} nodeids the combined"
-                        + f" tooling entry dropped, e.g. {examples}"
-                    )
+        in_combined = {
+            f"tooling:{name}/tests"
+            for name in _TOOLING_TEST_TREES
+            if f"tooling:{name}/tests" in dumps
+        }
+        for name in sorted(in_combined):
+            dropped = _dropped(name, dumps[name], combined_ids)
+            if dropped:
+                examples = ", ".join(dropped[:_EXAMPLES_LIMIT])
+                failures.append(
+                    f"{name} collected {len(dropped)} nodeids the combined"
+                    + f" tooling entry dropped, e.g. {examples}"
+                )
     return failures
 
 
