@@ -15,11 +15,12 @@ from __future__ import annotations
 import argparse
 import json
 import os
-import subprocess
 import sys
 import tempfile
 from collections import defaultdict
 from pathlib import Path
+
+from tooling.quality.slow_test_gate import run_bounded_collect
 
 SHARD_EXCLUDED_MARKERS = ("snapshot", "sandbox_live", "capacity")
 # Mirrors the CI shard collect expression in tooling/quality/test_shards.py; the
@@ -58,27 +59,24 @@ def _collect(
         "PYTHON_KEYRING_BACKEND": "keyring.backends.null.Keyring",
         "MARKER_DUMP": str(dump),
     }
+    command = [
+        sys.executable,
+        "-m",
+        "pytest",
+        *args,
+        "-p",
+        "tooling.quality.pytest_marker_dump",
+        "--collect-only",
+        "-q",
+        "--no-header",
+    ]
     try:
-        proc = subprocess.run(  # noqa: S603 - fixed interpreter and pytest args
-            [
-                sys.executable,
-                "-m",
-                "pytest",
-                *args,
-                "-p",
-                "tooling.quality.pytest_marker_dump",
-                "--collect-only",
-                "-q",
-                "--no-header",
-            ],
-            cwd=root,
-            env=environment,
-            capture_output=True,
-            text=True,
-            timeout=_ENTRY_TIMEOUT_SECONDS,
-            check=False,
+        # Bounded collection shared with slow_test_gate: a timeout kills the
+        # whole process group, so inherited xdist workers cannot survive.
+        proc = run_bounded_collect(
+            command, environment, root, float(_ENTRY_TIMEOUT_SECONDS)
         )
-    except (OSError, subprocess.SubprocessError) as error:
+    except (OSError, RuntimeError) as error:
         raise SystemExit(f"[fail] {name}: {error!r}") from error
     if proc.returncode != 0 or not dump.is_file():
         tail = (proc.stderr + proc.stdout)[-2000:]
@@ -224,12 +222,12 @@ def _membership_failures(
         failures.append(
             f"shard dropped {len(missing)} expected nodeids, e.g. {examples}"
         )
-    unexpected = sorted(shard_ids - full_ids)
+    unexpected = sorted(shard_ids - expected_shard)
     if unexpected:
         examples = ", ".join(unexpected[:_EXAMPLES_LIMIT])
         failures.append(
-            f"shard collected {len(unexpected)} nodeids outside the full entry,"
-            + f" e.g. {examples}"
+            f"shard collected {len(unexpected)} nodeids its exclusion expression"
+            + f" should have dropped, e.g. {examples}"
         )
     if "tooling:combined" in dumps:
         combined_ids = set(dumps["tooling:combined"])

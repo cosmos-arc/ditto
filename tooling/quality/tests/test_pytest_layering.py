@@ -25,40 +25,68 @@ _TREE_FILES = {
 
 
 def test_layer_markers_follow_directory_components() -> None:
-    assert layer_markers_for(Path("packages/data/tests/unit/storage/test_x.py")) == (
-        "unit",
-    )
-    assert layer_markers_for(Path("packages/data/tests/integration/test_x.py")) == (
+    repo = Path("/repo")
+    assert layer_markers_for(
+        Path("/repo/packages/data/tests/unit/storage/test_x.py"), repo
+    ) == ("unit",)
+    assert layer_markers_for(
+        Path("/repo/packages/data/tests/integration/test_x.py"), repo
+    ) == (
         "integration",
         "serial",
     )
-    assert layer_markers_for(Path("apps/backend/tests/contract/test_x.py")) == (
-        "integration",
+    assert layer_markers_for(
+        Path("/repo/apps/backend/tests/contract/test_x.py"), repo
+    ) == ("integration",)
+    assert layer_markers_for(Path("/repo/apps/backend/tests/e2e/test_x.py"), repo) == (
+        "e2e",
     )
-    assert layer_markers_for(Path("apps/backend/tests/e2e/test_x.py")) == ("e2e",)
-    assert layer_markers_for(Path("apps/backend/tests/registry/test_x.py")) == ("unit",)
-    assert layer_markers_for(Path("tooling/quality/tests/test_x.py")) == ("unit",)
+    assert layer_markers_for(
+        Path("/repo/apps/backend/tests/registry/test_x.py"), repo
+    ) == ("unit",)
+    assert layer_markers_for(Path("/repo/tooling/quality/tests/test_x.py"), repo) == (
+        "unit",
+    )
 
 
 def test_integration_component_wins_over_unit_on_mixed_paths() -> None:
-    assert layer_markers_for(Path("x/tests/unit/integration/test_x.py")) == (
+    repo = Path("/repo")
+    assert layer_markers_for(
+        Path("/repo/x/tests/unit/integration/test_x.py"), repo
+    ) == (
         "integration",
         "serial",
     )
 
 
 def test_file_name_substrings_never_decide_the_layer() -> None:
-    assert layer_markers_for(Path("x/tests/unit/test_x_integration.py")) == ("unit",)
-    assert layer_markers_for(Path("x/tests/test_x_unit.py")) == ("unit",)
+    repo = Path("/repo")
+    assert layer_markers_for(
+        Path("/repo/x/tests/unit/test_x_integration.py"), repo
+    ) == ("unit",)
+    assert layer_markers_for(Path("/repo/x/tests/test_x_unit.py"), repo) == ("unit",)
 
 
 def test_checkout_ancestors_never_decide_the_layer() -> None:
+    repo = Path("/checkouts/ditto")
     assert layer_markers_for(
-        Path("/tmp/integration/ditto/packages/kernel/tests/unit/test_x.py")
+        Path("/tmp/integration/ditto/packages/kernel/tests/unit/test_x.py"), repo
     ) == ("unit",)
     assert layer_markers_for(
-        Path("/home/unit/work/ditto/packages/kernel/tests/integration/test_x.py")
-    ) == ("integration", "serial")
+        Path("/checkouts/ditto/packages/kernel/tests/integration/test_x.py"), repo
+    ) == (
+        "integration",
+        "serial",
+    )
+    # 检出祖先本身叫 tests 也不能充当 tests 根。
+    assert layer_markers_for(
+        Path("/tmp/tests/integration/ditto/scripts/acceptance/test_x.py"),
+        Path("/tmp/tests/integration/ditto"),
+    ) == ("unit",)
+    assert layer_markers_for(
+        Path("/home/unit/work/ditto/scripts/acceptance/test_x.py"),
+        Path("/home/unit/work/ditto"),
+    ) == ("unit",)
 
 
 def _make_tree(root: Path) -> None:

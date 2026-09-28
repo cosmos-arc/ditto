@@ -64,28 +64,37 @@ def register_import_bracket(
     _import_brackets.append((scope.resolve(), apply, restore))
 
 
-def layer_markers_for(path: Path) -> tuple[str, ...]:
+def layer_markers_for(path: Path, root: Path) -> tuple[str, ...]:
     """
     Markers implied by the layer directories under the item's tests root.
 
-    Only path components below the last ``tests`` directory participate. A
-    module with no ``tests`` root keeps the default layer untouched — its
-    checkout ancestors never decide anything either.
+    Only components of the repository-relative path below its last ``tests``
+    directory participate, so neither checkout ancestors (``/tmp/tests/...``
+    or ``/tmp/integration/...``) nor their subdirectories can decide a layer.
+    A module with no ``tests`` root inside the repository keeps the default
+    layer.
     """
-    for index in range(len(path.parts) - 1, -1, -1):
-        if path.parts[index] == "tests":
-            parts = path.parts[index + 1 :]
+    try:
+        parts = path.relative_to(root).parts
+    except ValueError:
+        return _DEFAULT_LAYER
+    for index in range(len(parts) - 1, -1, -1):
+        if parts[index] == "tests":
+            inner = parts[index + 1 :]
             for component, markers in _LAYER_BY_COMPONENT.items():
-                if component in parts:
+                if component in inner:
                     return markers
             break
     return _DEFAULT_LAYER
 
 
-def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
+def pytest_collection_modifyitems(
+    config: pytest.Config, items: list[pytest.Item]
+) -> None:
     """Add the directory layer markers to every collected item."""
+    root = Path(config.rootpath)
     for item in items:
-        for name in layer_markers_for(item.path):
+        for name in layer_markers_for(item.path, root):
             item.add_marker(getattr(pytest.mark, name))
 
 

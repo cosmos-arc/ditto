@@ -158,8 +158,11 @@ class _CollectTimeout(RuntimeError):
     """The collection subprocess (and its process group) was killed."""
 
 
-def _run_collect(
-    command: list[str], env: dict[str, str], cwd: Path | None
+def run_bounded_collect(
+    command: list[str],
+    env: dict[str, str],
+    cwd: Path | None,
+    timeout: float = _COLLECT_TIMEOUT_SECONDS,
 ) -> subprocess.CompletedProcess[str]:
     """Run collection in its own session and kill the whole tree on timeout."""
     proc = subprocess.Popen(  # noqa: S603 - venv 内固定 pytest 参数
@@ -172,7 +175,7 @@ def _run_collect(
         start_new_session=True,
     )
     try:
-        stdout, stderr = proc.communicate(timeout=_COLLECT_TIMEOUT_SECONDS)
+        stdout, stderr = proc.communicate(timeout=timeout)
     except subprocess.TimeoutExpired:
         if hasattr(os, "killpg"):
             try:
@@ -227,7 +230,7 @@ def collect_ids(
         **(extra_env or {}),
     )
     try:
-        result = _run_collect(command, env, cwd)
+        result = run_bounded_collect(command, env, cwd)
     except _CollectTimeout as error:
         message = f"collect-only timed out after {_COLLECT_TIMEOUT_SECONDS}s"
         raise SystemExit(message) from error
