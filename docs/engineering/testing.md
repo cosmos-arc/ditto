@@ -42,9 +42,10 @@ CI 失败先读取失败 job 日志，记录 SHA、命令和失败原因；确�
 
 目录到层级的映射由**单一规则**解释：`tooling/quality/pytest_layering.py` 经仓库根
 `conftest.py` 注册，对单文件、owner、全仓与 CI 分片（含 `-o addopts=` 重建参数的
-子系统）入口一致生效。规则按路径组件精确匹配：
+子系统）入口一致生效。规则按 **tests 树内**路径组件精确匹配（检出路径祖先不参与，
+如 `/tmp/integration/ditto` 不改变任何标记）：
 
-| 路径含目录 | 追加标记 |
+| tests 树内含目录 | 追加标记 |
 | --- | --- |
 | `integration` | `integration` + `serial` |
 | `unit` | `unit` |

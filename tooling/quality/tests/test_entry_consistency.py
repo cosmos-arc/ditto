@@ -52,16 +52,33 @@ def pytest_collection_modifyitems(items):
             item.add_marker(pytest.mark.serial)
 """
 
+# 静默缩集形态：alpha 的钩子在合并入口直接 deselect 外国 item——checker 必须
+# 以成员关系失败报警，而不是只看幸存 nodeid 的标记一致性。
+_DESELECT_ALPHA_CONFTEST = """\
+import pytest
+from pathlib import Path
 
-def _make_tree(root: Path, *, legacy_alpha_hook: bool) -> None:
+_ROOT = Path(__file__).parent
+
+
+def pytest_collection_modifyitems(items):
+    items[:] = [
+        item
+        for item in items
+        if _ROOT in item.path.parents or "beta" not in item.path.parts
+    ]
+"""
+
+
+def _make_tree(root: Path, *, alpha_conftest: str | None) -> None:
     (root / "conftest.py").write_text(_ROOT_CONFTEST, encoding="utf-8")
     for relative, body in _TREE_FILES.items():
         path = root / relative
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(body, encoding="utf-8")
-    if legacy_alpha_hook:
+    if alpha_conftest is not None:
         (root / "packages/alpha/tests/conftest.py").write_text(
-            _LEGACY_ALPHA_CONFTEST, encoding="utf-8"
+            alpha_conftest, encoding="utf-8"
         )
 
 
@@ -70,7 +87,7 @@ def test_checker_passes_when_entries_agree(
 ) -> None:
     root = tmp_path / "repo"
     root.mkdir()
-    _make_tree(root, legacy_alpha_hook=False)
+    _make_tree(root, alpha_conftest=None)
     _with_repo_on_pythonpath(monkeypatch)
 
     code = entry_consistency.main(["--root", str(root)])
@@ -84,7 +101,7 @@ def test_checker_flags_foreign_marker_drift_from_a_near_conftest(
 ) -> None:
     root = tmp_path / "repo"
     root.mkdir()
-    _make_tree(root, legacy_alpha_hook=True)
+    _make_tree(root, alpha_conftest=_LEGACY_ALPHA_CONFTEST)
     _with_repo_on_pythonpath(monkeypatch)
 
     code = entry_consistency.main(["--root", str(root)])
@@ -93,3 +110,40 @@ def test_checker_flags_foreign_marker_drift_from_a_near_conftest(
     out = capsys.readouterr().out
     assert "test_g_integration.py" in out
     assert "entry drift" in out
+
+
+def test_checker_flags_a_near_conftest_silently_dropping_foreign_items(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture
+) -> None:
+    root = tmp_path / "repo"
+    root.mkdir()
+    _make_tree(root, alpha_conftest=_DESELECT_ALPHA_CONFTEST)
+    _with_repo_on_pythonpath(monkeypatch)
+
+    code = entry_consistency.main(["--root", str(root)])
+
+    assert code == 1
+    out = capsys.readouterr().out
+    assert "membership failure" in out
+    assert "owner:packages/beta/tests" in out
+
+
+def test_marker_names_containing_and_survive_exclusion() -> None:
+    """sandbox_live 含 "and" 子串——排除判定不得按 "and" 切表达式字符串。"""
+    assert (
+        entry_consistency._expr_allows(
+            ["integration", "sandbox_live", "serial"],
+            entry_consistency.SHARD_EXCLUDED_MARKERS,
+        )
+        is False
+    )
+    assert (
+        entry_consistency._expr_allows(
+            ["unit"], entry_consistency.SHARD_EXCLUDED_MARKERS
+        )
+        is True
+    )
+    assert (
+        entry_consistency.SHARD_EXPR
+        == "not snapshot and not sandbox_live and not capacity"
+    )

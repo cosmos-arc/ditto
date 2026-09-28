@@ -52,6 +52,15 @@ def test_file_name_substrings_never_decide_the_layer() -> None:
     assert layer_markers_for(Path("x/tests/test_x_unit.py")) == ("unit",)
 
 
+def test_checkout_ancestors_never_decide_the_layer() -> None:
+    assert layer_markers_for(
+        Path("/tmp/integration/ditto/packages/kernel/tests/unit/test_x.py")
+    ) == ("unit",)
+    assert layer_markers_for(
+        Path("/home/unit/work/ditto/packages/kernel/tests/integration/test_x.py")
+    ) == ("integration", "serial")
+
+
 def _make_tree(root: Path) -> None:
     (root / "conftest.py").write_text(
         'pytest_plugins = ["tooling.quality.pytest_layering"]\n', encoding="utf-8"

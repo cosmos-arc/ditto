@@ -8,10 +8,12 @@ markers (#330 B1); the legacy per-package path hooks were removed in favor
 of this module.
 
 The rule is component-exact: a directory literally named ``integration`` /
-``unit`` / ``contract`` / ``e2e`` decides the layer. File-name substrings
-never do. Explicit markers on a test always remain on top of the directory
-layer. Unclassified test trees (registry, benchmarks, ``tooling/*/tests``)
-default to ``unit``.
+``unit`` / ``contract`` / ``e2e`` **under the item's tests root** decides the
+layer. Components above the last ``tests`` directory never match, so a
+checkout path like ``/tmp/integration/ditto`` cannot flip every marker; file
+names never match either. Explicit markers on a test always remain on top of
+the directory layer. Unclassified test trees (registry, benchmarks,
+``tooling/*/tests``) default to ``unit``.
 
 ``integration`` directories also carry ``serial`` — the blanket resource
 policy inherited from the legacy hooks. It stays until the per-resource
@@ -63,9 +65,19 @@ def register_import_bracket(
 
 
 def layer_markers_for(path: Path) -> tuple[str, ...]:
-    """Markers implied by the directory location of a collected item."""
+    """
+    Markers implied by the layer directories under the item's tests root.
+
+    Only path components below the last ``tests`` directory participate, so
+    checkout ancestors never decide a layer.
+    """
+    parts = path.parts
+    for index in range(len(parts) - 1, -1, -1):
+        if parts[index] == "tests":
+            parts = parts[index + 1 :]
+            break
     for component, markers in _LAYER_BY_COMPONENT.items():
-        if component in path.parts:
+        if component in parts:
             return markers
     return _DEFAULT_LAYER
 
