@@ -208,7 +208,7 @@ def test_hook_plan_defers_owner_probe_to_verify(
 def test_hook_mode_requests_probe_free_plan(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    seen: dict[str, bool] = {}
+    seen: dict[str, object] = {}
 
     def _plan(
         *args: object, **kwargs: object
