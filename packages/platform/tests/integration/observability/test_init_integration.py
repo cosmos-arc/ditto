@@ -14,6 +14,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 import pytest
 from ditto_platform.foundation import (
+    Metrics,
     init,
     reset_for_testing,
     shutdown,
@@ -122,6 +123,10 @@ class TestInit:
         init(config, force=True)
 
         assert _is_initialized() is True
+
+        # 记录真实数据点：空采集时 SDK 可不触发导出，记录后 shutdown 的
+        # 末次导出确定性携带数据（reader.shutdown join 完成前 POST 已落地）
+        Metrics.api_requests.add(1, {"endpoint": "/health"})
 
         shutdown()
         assert otlp_http_sink.metrics_posts > 0, "生产 reader 关闭时应完成真实导出"
