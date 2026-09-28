@@ -1,4 +1,4 @@
-"""Exercise committed push ranges against real Git state."""
+"""Exercise push identity checks and verification plans on real Git state."""
 
 import subprocess
 import sys
@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 
 from tooling.agent_harness import pre_push
-from tooling.agent_harness.pre_push import push_commands
+from tooling.agent_harness.pre_push import push_verification_plan
 
 
 def _git(root: Path, *args: str) -> str:
@@ -20,7 +20,7 @@ def _commit(root: Path) -> str:
     return _git(root, "rev-parse", "HEAD")
 
 
-def test_push_uses_committed_range_and_rejects_unchecked_state(tmp_path: Path) -> None:
+def test_plan_uses_committed_range_and_rejects_unchecked_state(tmp_path: Path) -> None:
     _git(tmp_path, "init", "--quiet")
     _git(tmp_path, "config", "user.name", "Test")
     _git(tmp_path, "config", "user.email", "test@example.invalid")
@@ -30,30 +30,46 @@ def test_push_uses_committed_range_and_rejects_unchecked_state(tmp_path: Path) -
     base = _commit(tmp_path)
     source.write_text("second\n")
     target = _commit(tmp_path)
-    assert push_commands(tmp_path, base, target) == [["task", "check-web"]]
-    assert push_commands(tmp_path, target, target) == []
-    assert push_commands(tmp_path, "", target) == [["task", "check"]]
-    assert push_commands(tmp_path, "0" * 40, target) == [["task", "check"]]
-    assert push_commands(tmp_path, "missing-history", target) == [["task", "check"]]
+    assert push_verification_plan(tmp_path, base, target) == (
+        "web",
+        [["task", "check-web"]],
+        [],
+    )
+    assert push_verification_plan(tmp_path, target, target) == ("none", [], [])
+    for missing, note in (
+        ("", "no remote default branch to fork from; full gate required"),
+        ("0" * 40, "no remote default branch to fork from; full gate required"),
+        (
+            "missing-history",
+            "push range not derivable from history; full gate required",
+        ),
+    ):
+        _, commands, notes = push_verification_plan(tmp_path, missing, target)
+        assert commands == [["task", "check"]]
+        assert notes == [note]
     with pytest.raises(ValueError, match="checked out"):
-        push_commands(tmp_path, target, base)
+        push_verification_plan(tmp_path, target, base)
     branch = _git(tmp_path, "symbolic-ref", "HEAD")
-    assert push_commands(tmp_path, "", "", branch) == [["task", "check"]]
+    assert push_verification_plan(tmp_path, "", "", branch)[1] == [["task", "check"]]
     with pytest.raises(ValueError, match="checked out"):
-        push_commands(tmp_path, "", "")
+        push_verification_plan(tmp_path, "", "")
     source.write_text("uncommitted\n")
     with pytest.raises(ValueError, match="clean worktree"):
-        push_commands(tmp_path, base, target)
+        push_verification_plan(tmp_path, base, target)
     _commit(tmp_path)
     source.chmod(0o755)
     target = _commit(tmp_path)
-    assert push_commands(tmp_path, base, target) == [["task", "check"]]
+    assert push_verification_plan(tmp_path, base, target) == (
+        "mode-anomaly",
+        [["task", "check"]],
+        ["non-plain file mode on apps/web/src/app.tsx; full gate required"],
+    )
     source.unlink()
     deleted = _commit(tmp_path)
-    assert push_commands(tmp_path, target, deleted) == [["task", "check"]]
+    assert push_verification_plan(tmp_path, target, deleted)[1] == [["task", "check"]]
 
 
-def test_new_branch_push_scopes_via_merge_base_with_remote_default(
+def test_new_branch_plan_scopes_via_merge_base_with_remote_default(
     tmp_path: Path,
 ) -> None:
     _git(tmp_path, "init", "--quiet")
@@ -66,8 +82,143 @@ def test_new_branch_push_scopes_via_merge_base_with_remote_default(
     _git(tmp_path, "update-ref", "refs/remotes/origin/main", base)
     source.write_text("second\n")
     target = _commit(tmp_path)
-    assert push_commands(tmp_path, "", target) == [["task", "check-web"]]
-    assert push_commands(tmp_path, "0" * 40, target) == [["task", "check-web"]]
+    for base_ref in ("", "0" * 40):
+        assert push_verification_plan(tmp_path, base_ref, target) == (
+            "web",
+            [["task", "check-web"]],
+            [],
+        )
+
+
+def test_hook_mode_reports_without_running_checks(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    monkeypatch.setattr(
+        pre_push,
+        "push_verification_plan",
+        lambda *args, **kwargs: ("web", [["task", "check-web"]], ["note"]),
+    )
+
+    def _fail(*_args: object, **_kwargs: object) -> None:
+        raise AssertionError("hook mode must not run verification commands")
+
+    monkeypatch.setattr(pre_push.subprocess, "run", _fail)
+    assert pre_push.main([]) == 0
+    output = capsys.readouterr().err
+    assert "task check-web" in output
+    assert "task verify-push" in output
+    assert "PR CI remains the authoritative merge gate" in output
+    assert "note" in output
+
+
+def test_verify_mode_runs_the_plan_and_propagates_failure(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        pre_push,
+        "push_verification_plan",
+        lambda *args, **kwargs: (
+            "backend",
+            [[sys.executable, "-c", "import sys; sys.exit(3)"]],
+            [],
+        ),
+    )
+    monkeypatch.setattr(
+        pre_push, "_sanitized_environment", lambda: {"PATH": "/usr/bin:/bin"}
+    )
+    with pytest.raises(SystemExit) as raised:
+        pre_push.main(["--verify"])
+    assert raised.value.code == 3
+
+
+def test_identity_failure_reports_cleanly(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    def _fail(
+        *args: object, **kwargs: object
+    ) -> tuple[str, list[list[str]], list[str]]:
+        raise ValueError("pre-push requires a clean worktree; commit or stash")
+
+    monkeypatch.setattr(pre_push, "push_verification_plan", _fail)
+    assert pre_push.main([]) == 1
+    assert "clean worktree" in capsys.readouterr().err
+
+
+def test_verify_mode_defaults_target_to_head(tmp_path: Path) -> None:
+    _git(tmp_path, "init", "--quiet")
+    _git(tmp_path, "config", "user.name", "Test")
+    _git(tmp_path, "config", "user.email", "test@example.invalid")
+    source = tmp_path / "apps/web/src/app.tsx"
+    source.parent.mkdir(parents=True)
+    source.write_text("first\n")
+    _commit(tmp_path)
+    # No PRE_COMMIT_* context: --verify must still resolve HEAD and fall back
+    # to the remote default branch fork point instead of rejecting the run.
+    assert push_verification_plan(tmp_path, "", "", "", default_target="HEAD") == (
+        "missing-history",
+        [["task", "check"]],
+        ["no remote default branch to fork from; full gate required"],
+    )
+    _git(tmp_path, "update-ref", "refs/remotes/origin/main", "HEAD")
+    source.write_text("second\n")
+    _commit(tmp_path)
+    assert push_verification_plan(tmp_path, "", "", "", default_target="HEAD") == (
+        "web",
+        [["task", "check-web"]],
+        [],
+    )
+
+
+def test_hook_plan_defers_owner_probe_to_verify(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from tooling.agent_harness import hook as hook_module
+
+    _git(tmp_path, "init", "--quiet")
+    _git(tmp_path, "config", "user.name", "Test")
+    _git(tmp_path, "config", "user.email", "test@example.invalid")
+    source = tmp_path / "packages/kernel/src/ditto_kernel/identity.py"
+    source.parent.mkdir(parents=True)
+    source.write_text("first\n")
+    tests_dir = tmp_path / "packages/kernel/tests"
+    tests_dir.mkdir(parents=True)
+    (tests_dir / "test_identity.py").write_text("def test_ok():\n    assert True\n")
+    base = _commit(tmp_path)
+    source.write_text("second\n")
+    target = _commit(tmp_path)
+
+    def _no_probe(*args: object, **kwargs: object) -> bool:
+        raise AssertionError("hook-mode planning must not start pytest collection")
+
+    monkeypatch.setattr(hook_module, "_owner_fast_coverage", _no_probe)
+    level, commands, notes = push_verification_plan(
+        tmp_path, base, target, probe_owners=False
+    )
+    assert level == "backend"
+    assert commands[0] == ["task", "lint"]
+    assert any("probe deferred" in note for note in notes)
+
+    monkeypatch.setattr(hook_module, "_owner_fast_coverage", lambda owners: False)
+    _, commands, _ = push_verification_plan(tmp_path, base, target)
+    assert commands == [["task", "check"]]
+
+
+def test_hook_mode_requests_probe_free_plan(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    seen: dict[str, object] = {}
+
+    def _plan(
+        *args: object, **kwargs: object
+    ) -> tuple[str, list[list[str]], list[str]]:
+        seen["probe_owners"] = kwargs.get("probe_owners", True)
+        return ("none", [], [])
+
+    monkeypatch.setattr(pre_push, "push_verification_plan", _plan)
+    assert pre_push.main([]) == 0
+    assert seen["probe_owners"] is False
 
 
 def test_verifier_cannot_inherit_push_repository_into_foreign_git(
@@ -89,8 +240,10 @@ def test_verifier_cannot_inherit_push_repository_into_foreign_git(
         f"{str(foreign)!r}], check=True)"
     )
     monkeypatch.setattr(
-        pre_push, "push_commands", lambda *args: [[sys.executable, "-c", script]]
+        pre_push,
+        "push_verification_plan",
+        lambda *args, **kwargs: ("backend", [[sys.executable, "-c", script]], []),
     )
-    assert pre_push.main() == 0
+    assert pre_push.main(["--verify"]) == 0
     assert (git_dir / "config").read_bytes() == before
     assert (foreign / "HEAD").is_file()

@@ -83,7 +83,8 @@ release-cohort 注册链、copied-library source provenance SPDX、release input
 
 测量条件：分支 `perf/318-verify-baseline` @ `b7d2e8ee`（origin/main，#316 后）、macOS
 ARM64、uv 热缓存、无并行负载；长链条顺序执行避免争用，每命令单次实测。阶梯各级耗时
-为组件之和（命令构成与 pre-push 分级一致）。
+为组件之和（命令构成当时与 pre-push 分级一致；#340 后同一阶梯归 `task verify-push`
+与 `check-changed`，pre-push 只核对身份/范围，见 agent-harness 文档）。
 
 组件实测：
 

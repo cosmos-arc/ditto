@@ -11,6 +11,11 @@ function level and only when every collected case carries the marker; a
 new, non-exempt case with no junit evidence under the managed test paths
 fails closed. A legitimately slow new test escapes via
 ``@pytest.mark.slow``/``@pytest.mark.capacity``.
+
+The generic 0.5s/5s budgets are governance input, not a merge gate (#340):
+CI consumes this module with ``--report``, which always exits 0 and never
+re-runs tests — functional failures still block through the shard, capacity
+and PIT jobs that produced the evidence.
 """
 
 from __future__ import annotations
@@ -598,22 +603,9 @@ def _report_outcome(
     return 1
 
 
-def main(argv: list[str] | None = None) -> int:
-    """Run the gate; exit 0 when compliant, 1 when blocking or unevaluable."""
-    parser = argparse.ArgumentParser(
-        description=__doc__,
-    )
-    parser.add_argument(
-        "--junit-glob", required=True, help="glob of junit XML artifacts"
-    )
-    parser.add_argument(
-        "--base", default="origin/main", help="base ref for the new-test diff"
-    )
-    parser.add_argument("--root", default=".", help="repository root")
-    args = parser.parse_args(argv)
-
-    root = Path(args.root)
-    base_sha = resolve_base(args.base, root)
+def _evaluate(root: Path, junit_glob: str, base: str) -> int:
+    """Run the analysis; exit 1 when findings block (default mode)."""
+    base_sha = resolve_base(base, root)
     scope, renames = changed_test_files(base_sha, root)
     files = scope
     if files is not None and not files:
@@ -644,9 +636,9 @@ def main(argv: list[str] | None = None) -> int:
         print(f"[slow-test-gate] {count} file(s) changed, no new tests; pass")
         return 0
 
-    junit_paths = sorted(root.glob(args.junit_glob))
+    junit_paths = sorted(root.glob(junit_glob))
     if not junit_paths:
-        print(f"[slow-test-gate] FAIL: no junit XML matches {args.junit_glob}")
+        print(f"[slow-test-gate] FAIL: no junit XML matches {junit_glob}")
         print("[slow-test-gate] cannot evaluate new tests without shard evidence")
         return 1
 
@@ -675,6 +667,46 @@ def main(argv: list[str] | None = None) -> int:
     )
 
     return _report_outcome(new_cases, durations, exempt_functions, violations)
+
+
+def main(argv: list[str] | None = None) -> int:
+    """Run the analysis; ``--report`` prints findings without blocking."""
+    parser = argparse.ArgumentParser(
+        description=__doc__,
+    )
+    parser.add_argument(
+        "--junit-glob", required=True, help="glob of junit XML artifacts"
+    )
+    parser.add_argument(
+        "--base", default="origin/main", help="base ref for the new-test diff"
+    )
+    parser.add_argument("--root", default=".", help="repository root")
+    parser.add_argument(
+        "--report",
+        action="store_true",
+        help="report findings without blocking; exit 0 even on violations",
+    )
+    args = parser.parse_args(argv)
+    try:
+        code = _evaluate(Path(args.root), args.junit_glob, args.base)
+    except (
+        SystemExit,
+        ET.ParseError,
+        OSError,
+        subprocess.SubprocessError,
+    ) as error:
+        # Analysis infrastructure failures (collection, malformed junit,
+        # git worktree/base operations) carry no verdict in report mode;
+        # in default mode they still fail closed.
+        if not args.report:
+            raise
+        print(f"[slow-test-report] analysis unavailable: {error!r}")
+        return 0
+    if code != 0 and args.report:
+        print("[slow-test-report] findings above feed duration governance;")
+        print("[slow-test-report] they do not block this merge (#340).")
+        return 0
+    return code
 
 
 if __name__ == "__main__":
