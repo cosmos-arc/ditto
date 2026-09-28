@@ -205,7 +205,9 @@ def test_hook_plan_defers_usage_scan_to_verify(
     assert commands[0] == ["task", "lint"]
     assert any("test-usage scan deferred" in note for note in notes)
 
-    def _incomplete_usage(root: object, *args: object, **kwargs: object) -> object:
+    def _incomplete_usage(
+        root: Path, *args: object, **kwargs: object
+    ) -> tuple[object, object]:
         from tooling.agent_harness.impact_scope import (
             TestUsageFacts,
             load_workspace_graph,
