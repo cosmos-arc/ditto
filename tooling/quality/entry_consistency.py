@@ -88,9 +88,10 @@ def _collect(
 
 def _sample_files(
     dumps: dict[str, dict[str, list[str]]], limit: int
-) -> list[tuple[str, str]]:
+) -> list[tuple[str, str, str]]:
     """One representative file per (tree, layer) from already-collected dumps."""
     chosen: dict[tuple[str, str], str] = {}
+    source: dict[tuple[str, str], str] = {}
     for entry, dump in dumps.items():
         tree = entry.split(":", 1)[1] if ":" in entry else ""
         for nodeid, marks in dump.items():
@@ -101,13 +102,18 @@ def _sample_files(
             key = (tree, layers)
             if key not in chosen:
                 chosen[key] = path
-    return [(f"{tree}:{layers}", path) for (tree, layers), path in chosen.items()][
-        :limit
-    ]
+                source[key] = entry
+    return [
+        (f"{tree}:{layers}", path, source[(tree, layers)])
+        for (tree, layers), path in chosen.items()
+    ][:limit]
 
 
-def _run_entries(root: Path) -> dict[str, dict[str, list[str]]]:
+def _run_entries(
+    root: Path,
+) -> tuple[dict[str, dict[str, list[str]]], dict[str, tuple[str, str]]]:
     dumps: dict[str, dict[str, list[str]]] = {}
+    singles: dict[str, tuple[str, str]] = {}
     with tempfile.TemporaryDirectory(prefix="entry-consistency-") as tmp:
         dump_dir = Path(tmp)
 
@@ -120,20 +126,22 @@ def _run_entries(root: Path) -> dict[str, dict[str, list[str]]]:
             owners.append("apps/backend/tests")
         for tree in owners:
             collect(f"owner:{tree}", [tree])
-        tooling = _trees(root, "tooling/*/tests")
-        for tree in tooling:
-            collect(f"tooling:{tree}", [tree])
-        # Mirror the exact `task tooling-test` combined invocation: one pytest
-        # process over its four trees, where a near-tree conftest could mutate
-        # the others' collection. agent_harness stays out — it runs via the
-        # separate harness-test invocation.
+        # Tooling trees run serially without coverage in their authoritative
+        # tasks (harness-test / tooling-test) — mirror that process model, not
+        # the default parallel addopts.
+        for tree in _trees(root, "tooling/*/tests"):
+            collect(f"tooling:{tree}", [tree, "-n0", "--no-cov"])
+        # Mirror the exact `task tooling-test` combined invocation: one serial
+        # pytest process over its four trees, where a near-tree conftest could
+        # mutate the others' collection. agent_harness stays out — it runs via
+        # the separate harness-test invocation.
         combined = [
             f"tooling/{name}/tests"
             for name in _TOOLING_TEST_TREES
             if (root / f"tooling/{name}/tests").is_dir()
         ]
         if combined:
-            collect("tooling:combined", combined)
+            collect("tooling:combined", [*combined, "-n0", "--no-cov"])
         collect(
             "shard",
             [
@@ -146,9 +154,11 @@ def _run_entries(root: Path) -> dict[str, dict[str, list[str]]]:
                 SHARD_EXPR,
             ],
         )
-        for label, path in _sample_files(dumps, _SAMPLE_LIMIT):
-            collect(f"single:{label}", [path])
-    return dumps
+        for label, path, origin in _sample_files(dumps, _SAMPLE_LIMIT):
+            name = f"single:{label}"
+            collect(name, [path])
+            singles[name] = (origin, path)
+    return dumps, singles
 
 
 def _expr_allows(marks: list[str], excluded: tuple[str, ...]) -> bool:
@@ -191,7 +201,9 @@ def _pair_failures(
     return failures
 
 
-def _membership_failures(dumps: dict[str, dict[str, list[str]]]) -> list[str]:
+def _membership_failures(
+    dumps: dict[str, dict[str, list[str]]], singles: dict[str, tuple[str, str]]
+) -> list[str]:
     """No entry may drop a nodeid its reference entry collected, either way."""
     failures: list[str] = []
     full = dumps["full"]
@@ -231,6 +243,17 @@ def _membership_failures(dumps: dict[str, dict[str, list[str]]]) -> list[str]:
             failures.extend(
                 _pair_failures(name, dumps[name], combined_ids, tree, "combined entry")
             )
+    for name, (origin, path) in sorted(singles.items()):
+        expected = {
+            nodeid for nodeid in dumps[origin] if nodeid.startswith(path + "::")
+        }
+        difference = set(dumps[name]) ^ expected
+        if difference:
+            examples = ", ".join(sorted(difference)[:_EXAMPLES_LIMIT])
+            failures.append(
+                f"{name} collected {len(dumps[name])} of the {len(expected)}"
+                + f" nodeids {origin} collected for that file, e.g. {examples}"
+            )
     return failures
 
 
@@ -248,9 +271,11 @@ def _marker_drift(
     }
 
 
-def _compare(dumps: dict[str, dict[str, list[str]]]) -> int:
+def _compare(
+    dumps: dict[str, dict[str, list[str]]], singles: dict[str, tuple[str, str]]
+) -> int:
     drift = _marker_drift(dumps)
-    membership = _membership_failures(dumps)
+    membership = _membership_failures(dumps, singles)
     for entry in sorted(dumps):
         print(f"{entry}: {len(dumps[entry])} items")
     if not drift and not membership:
@@ -274,8 +299,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--root", default=".", help="repository root")
     args = parser.parse_args(argv)
     root = Path(args.root).resolve()
-    dumps = _run_entries(root)
-    return _compare(dumps)
+    dumps, singles = _run_entries(root)
+    return _compare(dumps, singles)
 
 
 if __name__ == "__main__":

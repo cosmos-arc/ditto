@@ -68,17 +68,17 @@ def layer_markers_for(path: Path) -> tuple[str, ...]:
     """
     Markers implied by the layer directories under the item's tests root.
 
-    Only path components below the last ``tests`` directory participate, so
-    checkout ancestors never decide a layer.
+    Only path components below the last ``tests`` directory participate. A
+    module with no ``tests`` root keeps the default layer untouched — its
+    checkout ancestors never decide anything either.
     """
-    parts = path.parts
-    for index in range(len(parts) - 1, -1, -1):
-        if parts[index] == "tests":
-            parts = parts[index + 1 :]
+    for index in range(len(path.parts) - 1, -1, -1):
+        if path.parts[index] == "tests":
+            parts = path.parts[index + 1 :]
+            for component, markers in _LAYER_BY_COMPONENT.items():
+                if component in parts:
+                    return markers
             break
-    for component, markers in _LAYER_BY_COMPONENT.items():
-        if component in parts:
-            return markers
     return _DEFAULT_LAYER
 
 
@@ -89,17 +89,27 @@ def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
             item.add_marker(getattr(pytest.mark, name))
 
 
-def pytest_pycollect_makemodule(module_path: Path, parent: pytest.Collector) -> None:
-    """Apply tree-scoped import brackets around each module import."""
+def pytest_collectstart(collector: pytest.Collector) -> None:
+    """
+    Apply tree-scoped import brackets around each collector's run.
+
+    A module is imported inside its collector's ``collect()``; this hook
+    fires immediately before that collector runs, so the bracket stays
+    correct even when pytest creates many collectors up front (CI shard
+    ``@files`` invocations), where a collector-creation-time bracket would
+    leave the replacement state matching only the last collector created.
+    """
     if not _import_brackets:
-        return None
-    resolved = Path(module_path).resolve()
+        return
+    path = getattr(collector, "path", None)
+    if path is None:
+        return
+    resolved = Path(path).resolve()
     for scope, apply, restore in _import_brackets:
         if scope in resolved.parents:
             apply()
         else:
             restore()
-    return None
 
 
 def pytest_collection_finish(session: pytest.Session) -> None:
