@@ -11,6 +11,7 @@ from __future__ import annotations
 import argparse
 import os
 import subprocess
+import sys
 from pathlib import Path
 
 from tooling.agent_harness.hook import (
@@ -111,6 +112,13 @@ def main(argv: list[str] | None = None) -> int:
     )
     args = parser.parse_args(argv)
     root = Path.cwd()
+
+    def report(message: str) -> None:
+        # pre-commit hides a passing hook's stdout, but Git streams pre-push
+        # stderr straight to the developer: the owed-verification plan must
+        # stay visible on every successful push.
+        print(message, file=sys.stderr, flush=True)
+
     try:
         level, commands, notes = push_verification_plan(
             root,
@@ -120,22 +128,22 @@ def main(argv: list[str] | None = None) -> int:
             default_target="HEAD" if args.verify else "",
         )
     except (ValueError, subprocess.SubprocessError) as error:
-        print(f"pre-push: {error}")
+        report(f"pre-push: {error}")
         return 1
     for note in notes:
-        print(f"pre-push: {note}")
+        report(f"pre-push: {note}")
     if not commands:
-        print(
+        report(
             f"pre-push: identity verified; scope '{level}' owes no local verification"
         )
         return 0
-    print(f"pre-push: identity verified; scope '{level}'")
-    print("pre-push: explicit verification owed before review:")
+    report(f"pre-push: identity verified; scope '{level}'")
+    report("pre-push: explicit verification owed before review:")
     for command in commands:
-        print("pre-push:   ", " ".join(command))
+        report(f"pre-push:    {' '.join(command)}")
     if not args.verify:
-        print("pre-push: run `task verify-push` to execute them")
-        print("pre-push: PR CI remains the authoritative merge gate")
+        report("pre-push: run `task verify-push` to execute them")
+        report("pre-push: PR CI remains the authoritative merge gate")
         return 0
 
     environment = _sanitized_environment()

@@ -105,7 +105,7 @@ def test_hook_mode_reports_without_running_checks(
 
     monkeypatch.setattr(pre_push.subprocess, "run", _fail)
     assert pre_push.main([]) == 0
-    output = capsys.readouterr().out
+    output = capsys.readouterr().err
     assert "task check-web" in output
     assert "task verify-push" in output
     assert "PR CI remains the authoritative merge gate" in output
@@ -143,7 +143,7 @@ def test_identity_failure_reports_cleanly(
 
     monkeypatch.setattr(pre_push, "push_verification_plan", _fail)
     assert pre_push.main([]) == 1
-    assert "clean worktree" in capsys.readouterr().out
+    assert "clean worktree" in capsys.readouterr().err
 
 
 def test_verify_mode_defaults_target_to_head(tmp_path: Path) -> None:
