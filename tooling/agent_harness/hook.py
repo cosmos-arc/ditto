@@ -1155,12 +1155,6 @@ def _sanitized_probe_environment() -> dict[str, str] | None:
     return environment
 
 
-_FAST_COLLECT_EXPR = (
-    "not slow and not integration and not snapshot and not sandbox_live"
-    " and not capacity"
-)
-
-
 @lru_cache(maxsize=64)
 def _owner_fast_coverage(owners: tuple[str, ...]) -> bool:
     """Whether every owner contributes at least one fast-lane case.
@@ -1173,10 +1167,13 @@ def _owner_fast_coverage(owners: tuple[str, ...]) -> bool:
         from tooling.quality.slow_test_gate import (  # noqa: PLC0415 - 脚本直跑无 repo root
             collect_ids,
         )
+        from tooling.quality.test_selection import (  # noqa: PLC0415 - 同上
+            FAST_LANE_EXPR,
+        )
     except (SystemExit, ImportError):
         return False
     try:
-        raw = collect_ids([f"{owner}/tests" for owner in owners], _FAST_COLLECT_EXPR)
+        raw = collect_ids([f"{owner}/tests" for owner in owners], FAST_LANE_EXPR)
     except SystemExit:
         return False
     files = {line.split("::", 1)[0] for line in raw}

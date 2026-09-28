@@ -16,6 +16,12 @@ task test 命令包装脚本
 import os
 import subprocess
 import sys
+from pathlib import Path
+
+# scripts/ 不在 sys.path 上；引导仓库根后共享同一 fast 选择表达式。
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+from tooling.quality.test_selection import FAST_LANE_EXPR
 
 
 def build_pytest_command() -> list[str]:
@@ -70,14 +76,14 @@ def build_pytest_command() -> list[str]:
         # 集成测试：串行（排除 snapshot）
         cmd.extend(["-m", "integration and not snapshot", "-n", "0"])
     elif has_fast:
-        # 快速测试：跳过 slow/integration/snapshot 和物理容器验收；
+        # 快速测试：按资源/旅程成本选择（slow/serial/e2e/snapshot/sandbox_live/
+        # capacity），不含 unit/integration 层级——低成本真实集成可进入快速车道；
         # 10s/用例硬顶超时兜住异常用例(挂死/失控)——0.5s 分类阈值由时长门禁
-        # 与 analyze-slow-tests 治理,硬顶只杀真异常,不误杀边界人群
+        # 与 analyze-slow-tests 治理,硬顶只杀真异常,不误杀边界人群（#330 B1）
         cmd.extend(
             [
                 "-m",
-                "not slow and not integration and not snapshot and not sandbox_live"
-                " and not capacity",
+                FAST_LANE_EXPR,
                 "--timeout=10",
                 "--no-cov",
                 "-q",

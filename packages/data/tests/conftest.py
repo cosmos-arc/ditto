@@ -18,34 +18,14 @@ from ditto_platform.foundation import (
 )
 
 
-def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
-    """
-    Auto-mark tests based on their directory location.
-
-    - tests/unit/ -> unit
-    - tests/integration/ -> integration
-    Only special cases need manual markers.
-    """
-    for item in items:
-        try:
-            # Get the relative path from the tests directory
-            rel_path = item.path.relative_to(Path(__file__).parent)
-
-            # Mark based on directory
-            if "integration" in str(rel_path):
-                item.add_marker(pytest.mark.integration)
-                item.add_marker(pytest.mark.serial)
-            elif "unit" in str(rel_path):
-                item.add_marker(pytest.mark.unit)
-        except ValueError:
-            # Item is not under this conftest's directory, skip
-            # It will be handled by its own package's conftest
-            pass
-
-
 @pytest.fixture(autouse=True)
-def init_observability() -> None:
-    """Initialize observability in testing mode for all tests."""
+def init_observability() -> Generator[None]:
+    """Initialize observability in testing mode, restored after each test.
+
+    The teardown reset keeps shared-process entries (full tree, CI shards)
+    from leaking an initialized global registry into other owners' tests,
+    matching what each owner sees in its own entry (#330 B1).
+    """
     reset_for_testing()
     register_metrics()
     config = ObservabilityConfig(
@@ -57,7 +37,8 @@ def init_observability() -> None:
         metrics_enabled=False,
     )
     init(config, force=True)
-    # Cleanup is handled by reset_for_testing if needed
+    yield
+    reset_for_testing()
 
 
 @pytest.fixture(scope="session")

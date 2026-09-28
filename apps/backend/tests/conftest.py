@@ -14,43 +14,6 @@ from ditto_apps.testing import DatabaseManager
 from ditto_platform.foundation import Environment, ObservabilityConfig, Settings
 
 
-def pytest_configure(config) -> None:
-    """在测试开始前预加载模块并注册自定义 markers.
-
-    预加载 ingestion flows 模块,避免每个测试都重新导入相同模块,
-    从而减少测试执行时间（目标: 减少 1-2秒/测试）.
-    """
-    # 注册自定义 markers
-    config.addinivalue_line(
-        "markers", "cli_test: CLI tests that disable observability auto-reset"
-    )
-    # 预加载 flows 模块,避免每个测试都重新导入
-    # fmt: off
-    # fmt: on
-
-
-def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
-    """Auto-mark tests based on directory location.
-
-    - tests/unit/ -> unit
-    - tests/integration/ -> integration + serial
-    """
-    for item in items:
-        rel_path_str = str(item.fspath)
-        try:
-            tests_root = Path(__file__).parent
-            rel_path = item.path.relative_to(tests_root)
-        except ValueError:
-            rel_path = None
-
-        path_to_check = str(rel_path) if rel_path else rel_path_str
-        if "integration" in path_to_check:
-            item.add_marker(pytest.mark.integration)
-            item.add_marker(pytest.mark.serial)
-        elif "unit" in path_to_check:
-            item.add_marker(pytest.mark.unit)
-
-
 @pytest.fixture
 def fake_time(monkeypatch: pytest.MonkeyPatch) -> None:
     """可控的时间 fixture，通过 monkeypatch 替换时间函数.

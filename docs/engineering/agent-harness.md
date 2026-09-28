@@ -71,6 +71,9 @@ task check-changed
   共享包级静态检查（lint/format/类型）并对全部 owner 做**单次合并**的 `--fast` 调用
   （单一 xdist 池，#322/#331），fast 车道带 10s/用例硬顶超时兜住异常（0.5s 分类阈值由
   时长门禁与 analyze-slow-tests 治理）。收集失败由测试命令直接暴露，不再独立预探测。
+  fast 表达式按资源/旅程选择且单源维护（`tooling/quality/test_selection.py`，#330 B1），
+  owner 覆盖探针消费同一常量；某 owner 在 fast 表达式下无任何用例时升级全量门，
+  其必要测试不因其他 owner 的 fast 成功而被掩盖。
 - 高危变更（单包或跨包）同样走包级检查并另加 PIT 专项；混入契约/未知路径时才回到
   `check`。CI 的 PR job 选择（`ci.required_jobs`）对高危范围仍取全量门，本地降档只消除
   与 CI 的重复支付，不削弱合并前验证。

@@ -33,3 +33,18 @@ def test_pytest_options_and_paths_are_forwarded(
         "--maxfail=1",
     ]
     assert "--fast" not in command
+
+
+def test_fast_lane_expression_is_shared_and_layer_free(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """--fast 与 harness 探针同一表达式，且不含 unit/integration 层级（#330 B1）。"""
+    from tooling.quality.test_selection import FAST_LANE_EXPR
+
+    monkeypatch.setattr(sys, "argv", ["test.py", "--fast"])
+    command = build_pytest_command()
+    marker_index = command.index("-m")
+    assert command[marker_index + 1] == FAST_LANE_EXPR
+    assert "integration" not in FAST_LANE_EXPR
+    assert "unit" not in FAST_LANE_EXPR
+    assert "not serial" in FAST_LANE_EXPR

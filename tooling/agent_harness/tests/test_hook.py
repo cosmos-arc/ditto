@@ -22,6 +22,8 @@ from tooling.agent_harness.hook import (
     verification_commands,
     verification_decision,
 )
+from tooling.quality import slow_test_gate
+from tooling.quality.test_selection import FAST_LANE_EXPR
 
 
 def _initialize_repository(root: Path) -> None:
@@ -788,6 +790,49 @@ def test_single_and_cross_package_local_checks_share_the_package_gate() -> None:
         "task type-all",
         "task test -- --fast packages/kernel/tests packages/platform/tests",
     ]
+
+
+def test_owner_without_fast_cases_escalates_to_the_full_gate(
+    monkeypatch,
+) -> None:
+    """slow-only owner 的必要测试不能被其他 owner 的 fast 成功掩盖（#330 B1）。"""
+
+    def _collect_covers_no_owner(paths: list[str], expr: str) -> list[str]:
+        return []
+
+    monkeypatch.setattr(slow_test_gate, "collect_ids", _collect_covers_no_owner)
+    hook_module._owner_fast_coverage.cache_clear()
+    try:
+        commands = hook_module._backend_source_commands(
+            ["packages/platform/src/ditto_platform/foundation/logging.py"]
+        )
+    finally:
+        hook_module._owner_fast_coverage.cache_clear()
+
+    assert commands == [["task", "check"]]
+
+
+def test_probe_uses_the_shared_de_layered_fast_expression(
+    monkeypatch,
+) -> None:
+    """owner 覆盖探针与 scripts/test.py 消费同一 fast 表达式（#330 B1）。"""
+
+    seen: dict[str, str] = {}
+
+    def _collect(paths: list[str], expr: str) -> list[str]:
+        seen["expr"] = expr
+        return [f"{paths[0]}/unit/test_fast.py::test_fast"]
+
+    monkeypatch.setattr(slow_test_gate, "collect_ids", _collect)
+    hook_module._owner_fast_coverage.cache_clear()
+    try:
+        covered = hook_module._owner_fast_coverage(("packages/platform/tests",))
+    finally:
+        hook_module._owner_fast_coverage.cache_clear()
+
+    assert covered is True
+    assert seen["expr"] == FAST_LANE_EXPR
+    assert "integration" not in FAST_LANE_EXPR
 
 
 def test_non_python_file_in_a_second_package_widens_the_owner_scope() -> None:

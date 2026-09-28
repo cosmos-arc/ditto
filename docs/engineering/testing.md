@@ -38,6 +38,47 @@ CI 失败先读取失败 job 日志，记录 SHA、命令和失败原因；确�
 - Golden/E2E：验证合成数据的完整用户路径；真实数据 E2E 需要 token、显式授权和独立证据。
 - PIT：使用 `@pytest.mark.pit`，包含未来哨兵、截止边界和允许数据的对照断言。
 
+## 入口一致性与标记语义（#330 B1）
+
+目录到层级的映射由**单一规则**解释：`tooling/quality/pytest_layering.py` 经仓库根
+`conftest.py` 注册，对单文件、owner、全仓与 CI 分片（含 `-o addopts=` 重建参数的
+子系统）入口一致生效。规则取**仓库根相对路径**里最后一个 `tests` 目录之后的组件
+精确匹配（检出路径祖先不参与——无论祖先叫 `integration`、`unit` 还是 `tests`）：
+
+| tests 树内含目录 | 追加标记 |
+| --- | --- |
+| `integration` | `integration` + `serial` |
+| `unit` | `unit` |
+| `contract`（apps/backend） | `integration` |
+| `e2e`（apps/backend） | `e2e` |
+| 其余（registry、benchmarks、`tooling/*/tests`） | `unit` |
+
+文件名子串不参与判定；测试上的显式标记保留并叠加。近端 conftest 不得修改外国
+owner 的标记或收集（历史上的四个按路径加标钩子已移除）；conftest 里的 `pytestmark`
+从不生效，层级声明放测试模块。`integration` 目录附带 `serial` 是继承自旧钩子的
+blanket 资源策略，待串行审计（#226）按真实资源逐组解除——解除入口在 layering
+规则，不在各包 conftest。
+
+**fast 车道按资源/旅程选择，不按层级**：表达式（`not slow and not serial and not
+e2e and not snapshot and not sandbox_live and not capacity`）单源维护于
+`tooling/quality/test_selection.py`，`scripts/test.py --fast` 与 harness 的
+owner 覆盖探针消费同一常量——低成本、可并行的真实集成测试可进入快速反馈；
+`--unit`/`--integration` 车道仍按层级选。
+
+导入期替换与全局 fixture 的隔离约定：
+
+- conftest **不得在模块级替换全局符号**（如 `prefect.flows.flow`）——合并入口下
+  会泄漏进其他 owner 的导入。作用域化的导入期替换经 layering 插件的
+  `register_import_bracket(scope, apply, restore)` 注册，仅在本树模块导入期间生效
+  （backend unit 的 Prefect mock 即此形态，见 `ditto_apps.prefect_mock`）。
+- 跨 owner 全局状态的 autouse fixture（如 observability 初始化）必须在 teardown
+  恢复，使全仓/分片等共享进程入口不把状态泄漏给后续 owner。
+- 近端 conftest 的 `sys.path.insert` 仅允许暴露**本目录**测试 helper，不得共享命名。
+
+tooling 测试在默认 testpaths 之外：本地统一经 `task tooling-test`（含
+`tooling/release/tests`），CI 的 release-policy job 亦执行 release 测试。一致性
+证据入口：`task entry-consistency` 逐 nodeid 比较各入口标记集，漂移即 exit 1。
+
 测试应确定、隔离且可并行。时间、随机数、外部 I/O 与 source snapshot 必须显式控制；失败后清理临时状态。
 
 `scripts/test.py` 在启动 pytest 前为子进程固定 `PYTHON_KEYRING_BACKEND=keyring.backends.null.Keyring`，

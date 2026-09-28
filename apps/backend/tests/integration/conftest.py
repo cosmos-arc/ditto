@@ -134,5 +134,5 @@ def configure_observability_for_testing() -> None:
     init(config, force=True)
 
 
-# 集成测试串行执行，避免并发副作用
-pytestmark = pytest.mark.serial
+# 集成目录的 serial 由根 layering 规则赋予（tests/integration ⇒ integration+serial）；
+# conftest 里的 pytestmark 从不生效，曾经的声明是 no-op（#330 B1）。

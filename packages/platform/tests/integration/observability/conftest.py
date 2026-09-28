@@ -15,8 +15,8 @@ from opentelemetry.sdk.metrics.export import InMemoryMetricReader
 from opentelemetry.sdk.metrics.view import ExplicitBucketHistogramAggregation, View
 from opentelemetry.sdk.resources import Resource
 
-# 集成测试串行执行，避免全局状态污染
-pytestmark = pytest.mark.serial
+# serial 由根 layering 规则按 tests/integration 目录赋予；conftest 的
+# pytestmark 声明从不生效，已删除该 no-op（#330 B1）。
 
 
 @pytest.fixture(autouse=True)

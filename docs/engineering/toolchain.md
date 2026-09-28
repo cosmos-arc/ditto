@@ -122,6 +122,13 @@ ARM64、uv 热缓存、无并行负载；长链条顺序执行避免争用，每
 观察：#322 只降档纯后端多 owner 档（契约/跨栈/根路径折叠条件保持全量）。配对对比——
 纯后端跨包高危（application + backend）现行 ≈589s（探针 + `task check` + pit），#322 后
 估算 ≈444s（约 -25%）；契约/跨栈叠加 `test-system` 的 944s 组合不在 #322 降档范围。
+
+2026-09-28（#330 B1）同机复测 fast 车道：表达式去层级化后（`not slow and not serial
+and not e2e and not snapshot and not sandbox_live and not capacity`，integration 目录项
+因 blanket serial 退出、低成本显式集成/contract 项进入），kernel 285 例 3.3s、
+application 4295 例 124.6s/134.5s（两复测；改动前同机 4469 例 110.5s——组成不同：
+-174 个 integration 目录项、+61 个低成本集成项，墙钟在本机方差内持平，收益是选择
+语义稳定而非时长）、backend 2108 例 62.3s。上表其余组件构成未变。
 `task type-all` 40.6s 为全仓检查，单包档也整付（记录观察，本票不改）。
 
 CI 侧（9 次成功全量 PR + 3 次后端 squash push，2026-09-27 取样）：

@@ -100,7 +100,7 @@ tasks:
     - sh: 'test -f "{{.VENV_PYTHON}}"'
       msg: Python environment is missing; run task python-install explicitly.
     cmds:
-    - uv run --no-sync pytest tooling/dev/tests tooling/contracts/tests tooling/quality/tests -q -n0 --no-cov
+    - uv run --no-sync pytest tooling/dev/tests tooling/contracts/tests tooling/quality/tests tooling/release/tests -q -n0 --no-cov
       {{.CLI_ARGS}}
     - bun test tooling/quality/tests/bun_workspace.test.mjs
   harness-type:
@@ -342,6 +342,13 @@ tasks:
       msg: Python environment is missing; run task python-install explicitly.
     cmds:
     - uv run --no-sync python scripts/analyze_slow_tests.py {{.CLI_ARGS}}
+  entry-consistency:
+    desc: Compare per-nodeid markers across collection entries (#330 B1)
+    preconditions:
+    - sh: 'test -f "{{.VENV_PYTHON}}"'
+      msg: Python environment is missing; run task python-install explicitly.
+    cmds:
+    - uv run --no-sync python -m tooling.quality.entry_consistency {{.CLI_ARGS}}
   default:
     cmds:
     - task: check
