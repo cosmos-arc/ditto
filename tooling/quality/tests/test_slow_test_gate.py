@@ -1,5 +1,7 @@
 """Prove the new-test duration gate classifies, exempts, and exits as specified."""
 
+import subprocess
+import xml.etree.ElementTree as ET
 from pathlib import Path
 
 import pytest
@@ -448,6 +450,30 @@ def test_report_mode_exits_zero_without_junit_evidence(
 ) -> None:
     script = _script({"x/tests/unit/a.py": {"test_any"}})
     assert _run_main(monkeypatch, script, tmp_path, None, report=True) == 0
+
+
+def test_report_mode_absorbs_malformed_junit(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    script = _script({"x/tests/unit/a.py": {"test_any"}})
+    assert _run_main(monkeypatch, script, tmp_path, "<testcase uncl", report=True) == 0
+    with pytest.raises(ET.ParseError):
+        _run_main(monkeypatch, script, tmp_path, "<testcase uncl")
+
+
+def test_report_mode_absorbs_git_infra_failure(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    def _fail(base: str, root: Path) -> str:
+        raise subprocess.CalledProcessError(128, ["git", "merge-base"])
+
+    monkeypatch.setattr(gate, "resolve_base", _fail)
+    assert (
+        gate.main(["--junit-glob", "junit-*.xml", "--root", str(tmp_path), "--report"])
+        == 0
+    )
+    with pytest.raises(subprocess.CalledProcessError):
+        gate.main(["--junit-glob", "junit-*.xml", "--root", str(tmp_path)])
 
 
 def test_report_mode_survives_collection_infra_failure(

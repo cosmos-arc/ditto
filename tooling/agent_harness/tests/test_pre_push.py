@@ -171,6 +171,56 @@ def test_verify_mode_defaults_target_to_head(tmp_path: Path) -> None:
     )
 
 
+def test_hook_plan_defers_owner_probe_to_verify(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from tooling.agent_harness import hook as hook_module
+
+    _git(tmp_path, "init", "--quiet")
+    _git(tmp_path, "config", "user.name", "Test")
+    _git(tmp_path, "config", "user.email", "test@example.invalid")
+    source = tmp_path / "packages/kernel/src/ditto_kernel/identity.py"
+    source.parent.mkdir(parents=True)
+    source.write_text("first\n")
+    tests_dir = tmp_path / "packages/kernel/tests"
+    tests_dir.mkdir(parents=True)
+    (tests_dir / "test_identity.py").write_text("def test_ok():\n    assert True\n")
+    base = _commit(tmp_path)
+    source.write_text("second\n")
+    target = _commit(tmp_path)
+
+    def _no_probe(*args: object, **kwargs: object) -> bool:
+        raise AssertionError("hook-mode planning must not start pytest collection")
+
+    monkeypatch.setattr(hook_module, "_owner_fast_coverage", _no_probe)
+    level, commands, notes = push_verification_plan(
+        tmp_path, base, target, probe_owners=False
+    )
+    assert level == "backend"
+    assert commands[0] == ["task", "lint"]
+    assert any("probe deferred" in note for note in notes)
+
+    monkeypatch.setattr(hook_module, "_owner_fast_coverage", lambda owners: False)
+    _, commands, _ = push_verification_plan(tmp_path, base, target)
+    assert commands == [["task", "check"]]
+
+
+def test_hook_mode_requests_probe_free_plan(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    seen: dict[str, bool] = {}
+
+    def _plan(
+        *args: object, **kwargs: object
+    ) -> tuple[str, list[list[str]], list[str]]:
+        seen["probe_owners"] = kwargs.get("probe_owners", True)
+        return ("none", [], [])
+
+    monkeypatch.setattr(pre_push, "push_verification_plan", _plan)
+    assert pre_push.main([]) == 0
+    assert seen["probe_owners"] is False
+
+
 def test_verifier_cannot_inherit_push_repository_into_foreign_git(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

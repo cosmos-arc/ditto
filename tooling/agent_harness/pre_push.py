@@ -43,6 +43,7 @@ def push_verification_plan(
     local_branch: str = "",
     *,
     default_target: str = "",
+    probe_owners: bool = True,
 ) -> tuple[str, list[list[str]], list[str]]:
     """Identity-check a push and return (level, explicit commands, notes).
 
@@ -51,6 +52,9 @@ def push_verification_plan(
     (dirty worktree, target not checked out). Missing history and mode
     anomalies fail closed to the full gate inside the plan — they expand the
     explicit scope instead of silently re-entering the synchronous push path.
+    ``probe_owners=False`` keeps planning side-effect free (no pytest
+    collection): the owner fast-coverage escalation is then resolved by the
+    explicit ``--verify`` entry instead.
     """
 
     def git(*args: str) -> str:
@@ -85,7 +89,18 @@ def push_verification_plan(
         notes.append(f"non-plain file mode on {anomaly}; full gate required")
         return "mode-anomaly", [*_FULL_CHECK], notes
     level = classify_diff(paths, root=root)
-    return level, verification_commands(level, paths, root=root), notes
+    commands = verification_commands(level, paths, root=root, probe_owners=probe_owners)
+    return level, commands, [*notes, *_deferred_probe_note(level, probe_owners)]
+
+
+def _deferred_probe_note(level: str, probe_owners: bool) -> list[str]:
+    """Escalation note for probe-free backend plans (hook mode, #340)."""
+    if probe_owners or level not in {"backend", "high-risk"}:
+        return []
+    return [
+        "owner fast-coverage probe deferred to task verify-push",
+        "an owner without fast cases escalates to task check there",
+    ]
 
 
 def _sanitized_environment() -> dict[str, str]:
@@ -126,6 +141,7 @@ def main(argv: list[str] | None = None) -> int:
             os.environ.get("PRE_COMMIT_TO_REF", ""),
             os.environ.get("PRE_COMMIT_LOCAL_BRANCH", ""),
             default_target="HEAD" if args.verify else "",
+            probe_owners=args.verify,
         )
     except (ValueError, subprocess.SubprocessError) as error:
         report(f"pre-push: {error}")

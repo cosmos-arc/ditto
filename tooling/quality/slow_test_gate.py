@@ -689,11 +689,18 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     try:
         code = _evaluate(Path(args.root), args.junit_glob, args.base)
-    except SystemExit as error:
-        # collection/git infrastructure failures carry no verdict in report mode
+    except (
+        SystemExit,
+        ET.ParseError,
+        OSError,
+        subprocess.SubprocessError,
+    ) as error:
+        # Analysis infrastructure failures (collection, malformed junit,
+        # git worktree/base operations) carry no verdict in report mode;
+        # in default mode they still fail closed.
         if not args.report:
             raise
-        print(f"[slow-test-report] analysis unavailable: {error}")
+        print(f"[slow-test-report] analysis unavailable: {error!r}")
         return 0
     if code != 0 and args.report:
         print("[slow-test-report] findings above feed duration governance;")

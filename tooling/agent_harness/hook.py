@@ -1190,7 +1190,7 @@ def _owner_fast_coverage(owners: tuple[str, ...]) -> bool:
 
 
 def _backend_source_commands(
-    paths: Sequence[str], *, root: Path | None = None
+    paths: Sequence[str], *, root: Path | None = None, probe_owners: bool = True
 ) -> list[list[str]]:
     # Ownership spans every material backend-area path, not only Python: a
     # schema.sql or fixture in another package must keep the cross-package
@@ -1223,8 +1223,10 @@ def _backend_source_commands(
         if not tests_dir.is_dir() or not any(tests_dir.rglob("test_*.py")):
             # 无可跑测试范围（如整包删除）时保持 fail-closed 全量。
             return [["task", "check"]]
-    if not _owner_fast_coverage(tuple(sorted(owners))):
+    if probe_owners and not _owner_fast_coverage(tuple(sorted(owners))):
         # 某 owner 的测试全部被 fast 表达式排除：合并调用会静默跳过它，升级全量。
+        # probe_owners=False 供免副作用的计划路径（pre-push 报告）延迟该探针：
+        # 探针会拉起 pytest --collect-only，不属于 push 路径的廉价检查（#340）。
         return [["task", "check"]]
     return [
         ["task", "lint"],
@@ -1241,7 +1243,11 @@ def _backend_source_commands(
 
 
 def verification_commands(
-    level: str, paths: Sequence[str], *, root: Path | None = None
+    level: str,
+    paths: Sequence[str],
+    *,
+    root: Path | None = None,
+    probe_owners: bool = True,
 ) -> list[list[str]]:
     """Build a monotonic, non-destructive validation plan for all path classes."""
     if paths:
@@ -1272,7 +1278,9 @@ def verification_commands(
     elif "web" in active_classes:
         commands.append(["task", "check-web"])
     elif active_classes & {"backend", "high-risk"}:
-        commands.extend(_backend_source_commands(paths, root=root))
+        commands.extend(
+            _backend_source_commands(paths, root=root, probe_owners=probe_owners)
+        )
 
     if needs_system:
         commands.append(["task", "test-system"])
