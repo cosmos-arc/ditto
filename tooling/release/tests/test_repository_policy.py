@@ -107,23 +107,26 @@ def test_backend_coverage_merges_shards_and_enforces_the_floor() -> None:
     artifact_downloads = json.dumps(backend["steps"])
     assert "backend-shard-" in artifact_downloads
     assert "backend-capacity-" in artifact_downloads
-    # 必要产物缺失在下载点即失败并点名产物（#342），不等下游合并才暴露
-    downloads = [
+    # 必要产物缺失在下载后点名失败（#342）：download-artifact 无
+    # if-no-files-found 输入（属 upload-artifact），用显式存在性校验步。
+    verify = next(
         step
         for step in backend["steps"]
-        if "download-artifact" in str(step.get("uses", ""))
-    ]
-    assert len(downloads) == 2
-    for step in downloads:
-        assert step["with"]["if-no-files-found"] == "error"
+        if step.get("name") == "Verify required artifacts present"
+    )
+    assert "shard-*.json" in verify["run"]
+    assert "-ne 6" in verify["run"]
+    assert "capacity.json" in verify["run"]
+    for step in backend["steps"]:
+        if "download-artifact" in str(step.get("uses", "")):
+            assert "if-no-files-found" not in step.get("with", {})
     system_e2e = _workflow("ci.yml")["jobs"]["system-e2e"]
-    e2e_downloads = [
+    e2e_verify = next(
         step
         for step in system_e2e["steps"]
-        if "download-artifact" in str(step.get("uses", ""))
-    ]
-    assert len(e2e_downloads) == 1
-    assert e2e_downloads[0]["with"]["if-no-files-found"] == "error"
+        if step.get("name") == "Verify web-dist artifact present"
+    )
+    assert "apps/web/dist/index.html" in e2e_verify["run"]
 
 
 def test_ci_has_explicit_pit_and_supported_platform_gates() -> None:

@@ -117,14 +117,24 @@ jobs:
           pattern: backend-shard-*-${{ github.run_id }}
           path: build/test-shards
           merge-multiple: true
-          # 必要产物缺失在下载点即失败（#342）：点名缺失产物，可行动；
-          # 不等下游 coverage combine 才以 ShardError 暴露。
-          if-no-files-found: error
       - uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # v8.0.0
         with:
           name: backend-capacity-${{ github.run_id }}
           path: build/test-shards
-          if-no-files-found: error
+      # download-artifact 无 if-no-files-found 输入（那是 upload-artifact 的）：
+      # 必要产物缺失在此点名失败（#342），不等下游合并才以 ShardError 暴露。
+      - name: Verify required artifacts present
+        run: |-
+          shopt -s nullglob
+          shards=(build/test-shards/shard-*.json)
+          if [ "${#shards[@]}" -ne 6 ]; then
+            echo "CI fail-closed: expected 6 shard manifests, found ${#shards[@]}" >&2
+            exit 1
+          fi
+          test -f build/test-shards/capacity.json || {
+            echo "CI fail-closed: backend-capacity artifact missing" >&2
+            exit 1
+          }
       - name: Verify shard completeness and coverage floor
         run: |-
           task backend-coverage-combine -- --count 6 --commit "$GITHUB_SHA"
@@ -239,8 +249,12 @@ jobs:
         with:
           name: web-dist-${{ github.run_id }}
           path: apps/web/dist
-          # system-e2e 的必要输入（web-build 产物）缺失即失败（#342）
-          if-no-files-found: error
+      - name: Verify web-dist artifact present
+        run: |-
+          test -f apps/web/dist/index.html || {
+            echo "CI fail-closed: web-dist artifact missing for system-e2e" >&2
+            exit 1
+          }
       - name: Cache Playwright browsers
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
