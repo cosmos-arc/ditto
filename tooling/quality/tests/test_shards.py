@@ -10,9 +10,7 @@ from tooling.quality.test_shards import ShardError, partition, verify_manifests
 
 
 def test_partition_is_complete_and_spreads_adjacent_capacity_cases() -> None:
-    inventory = [
-        (f"capacity.py::test_restart[{n}]", n % 2 == 0, False) for n in range(12)
-    ]
+    inventory = [(f"capacity.py::test_restart[{n}]", n % 2 == 0) for n in range(12)]
     parts = [partition(inventory, i, 4) for i in range(4)]
     assert sorted(item for part in parts for item in part) == sorted(inventory)
     assert all(len(part) == 3 for part in parts)
@@ -34,7 +32,7 @@ def test_partition_is_complete_and_spreads_adjacent_capacity_cases() -> None:
 def test_combine_rejects_incomplete_or_stale_proof(
     tmp_path: Path, corruption: str | None
 ) -> None:
-    inventory = [("a.py::test_a", False, False), ("b.py::test_b", True, False)]
+    inventory = [("a.py::test_a", False), ("b.py::test_b", True)]
     for index in range(2):
         data = tmp_path / f".coverage.shard-{index}"
         data.write_bytes(b"coverage data")
@@ -57,7 +55,7 @@ def test_combine_rejects_incomplete_or_stale_proof(
             if corruption == "selection":
                 report["selected"] = []
             if corruption == "inventory":
-                report["inventory"] = [["different", False, False]]
+                report["inventory"] = [["different", False]]
             if corruption == "coverage":
                 data.write_bytes(b"changed")
             if corruption == "status":

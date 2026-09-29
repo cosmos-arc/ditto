@@ -2,73 +2,78 @@
 Fail-closed proof that required suites executed exactly once in shards.
 
 Replaces blind re-execution of deduplicated suites (#350): the pit-marked
-suite and the OpenAPI conformance file keep their CI guarantee by proving,
-from shard artifacts alone, that every required nodeid was selected exactly
-once and every selected lane produced a matching junit report. Removing the
-dedicated ``task pit`` / conformance re-run must never be able to hide a
-missing or silently skipped required test.
+suite and the OpenAPI conformance file keep their CI guarantee by proving
+that every required nodeid was selected exactly once by the shards and every
+selected lane produced a matching junit report. The required set comes from
+an UNFILTERED live marker collection, so a pit-marked test that also carries
+snapshot/sandbox_live/capacity cannot silently fall out of the proof.
 """
 
 from __future__ import annotations
 
 import argparse
 import json
+import os
+import subprocess
 import sys
+import tempfile
 import xml.etree.ElementTree as ET
 from collections import Counter
 from pathlib import Path
 
-_INVENTORY_FIELD_COUNT = 3
+_REPO_ROOT = Path(__file__).resolve().parents[2]
 
 
 class EvidenceError(ValueError):
     """Required-suite evidence is missing, duplicated or inconsistent."""
 
 
-def _glob(pattern: str) -> list[Path]:
-    candidate = Path(pattern)
-    return sorted(candidate.parent.glob(candidate.name))
+def collect_marker_dump(dump_path: Path) -> dict[str, list[str]]:
+    """Collect the unfiltered marker dump for this working tree (#350 P2)."""
+    environment = {
+        **os.environ,
+        "PYTHONPATH": str(_REPO_ROOT),
+        "MARKER_DUMP": str(dump_path),
+    }
+    proc = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "pytest",
+            "-o",
+            "addopts=",
+            "--import-mode=importlib",
+            "-p",
+            "tooling.quality.pytest_marker_dump",
+            "--collect-only",
+            "-q",
+            "--no-header",
+        ],
+        cwd=_REPO_ROOT,
+        env=environment,
+        capture_output=True,
+        text=True,
+        timeout=600,
+        check=False,
+    )
+    if proc.returncode != 0 or not dump_path.is_file():
+        detail = f"{proc.stdout[-2000:]}\n{proc.stderr[-2000:]}"
+        raise EvidenceError(f"unfiltered marker collection failed:\n{detail}")
+    return json.loads(dump_path.read_text(encoding="utf-8"))
 
 
-def _load_inventories(pattern: str) -> list[tuple[str, bool, bool]]:
-    paths = _glob(pattern)
-    if not paths:
-        raise EvidenceError(f"no inventory artifacts match {pattern}")
-    records: list[tuple[str, bool, bool]] | None = None
-    for path in paths:
-        value = json.loads(path.read_text(encoding="utf-8"))
-        if not isinstance(value, list):
-            raise EvidenceError(f"inventory {path} is not a list")
-        current = []
-        for item in value:
-            if (
-                not isinstance(item, list)
-                or len(item) != _INVENTORY_FIELD_COUNT
-                or not isinstance(item[0], str)
-                or not isinstance(item[1], bool)
-                or not isinstance(item[2], bool)
-            ):
-                raise EvidenceError(f"inventory {path} has a malformed entry")
-            current.append((item[0], item[1], item[2]))
-        if records is None:
-            records = current
-        elif records != current:
-            raise EvidenceError(f"inventory {path} differs from the first shard")
-    if records is None:  # pragma: no cover - paths 非空时 records 必已被赋值
-        raise EvidenceError("no inventory artifacts were loaded")
-    return records
-
-
-def _required(
-    inventory: list[tuple[str, bool, bool]],
+def required_from_dump(
+    dump: dict[str, list[str]],
     *,
     pit_marker: bool,
     path: str | None,
 ) -> list[str]:
+    """Derive the required nodeids from the unfiltered marker dump."""
     selected = [
         nodeid
-        for nodeid, _serial, pit in inventory
-        if (pit_marker and pit) or (path and nodeid.startswith(path + "::"))
+        for nodeid, markers in dump.items()
+        if (pit_marker and "pit" in markers)
+        or (path and nodeid.startswith(path + "::"))
     ]
     if not selected:
         raise EvidenceError(
@@ -76,6 +81,22 @@ def _required(
             "any collected nodeid"
         )
     return selected
+
+
+def _glob(pattern: str) -> list[Path]:
+    """Glob with the base anchored at the first wildcard-free prefix."""
+    parts = Path(pattern).parts
+    base: list[str] = []
+    rest: list[str] = []
+    for part in parts:
+        if rest or any(ch in part for ch in "*?["):
+            rest.append(part)
+        else:
+            base.append(part)
+    if not rest:
+        raise EvidenceError(f"pattern has no wildcard component: {pattern}")
+    root = Path(*base) if base else Path.cwd()
+    return sorted(root.glob(str(Path(*rest))))
 
 
 def _selected_counts(pattern: str) -> Counter[str]:
@@ -120,16 +141,12 @@ def _verify_junit_matches_selection(junit_pattern: str, nodes_pattern: str) -> N
 
 
 def run_checks(
-    inventory_glob: str,
+    required: list[str],
+    *,
     nodes_glob: str,
     junit_glob: str,
-    *,
-    pit_marker: bool,
-    path: str | None,
 ) -> dict[str, object]:
     """Prove the required suite executed exactly once; raise on any gap."""
-    inventory = _load_inventories(inventory_glob)
-    required = _required(inventory, pit_marker=pit_marker, path=path)
     selected = _selected_counts(nodes_glob)
     _verify_junit_matches_selection(junit_glob, nodes_glob)
 
@@ -149,27 +166,31 @@ def run_checks(
         "required": len(required),
         "selection": "exactly-once",
         "junit": "lanes-consistent",
-        "suite": "pit" if pit_marker else path,
     }
 
 
 def main(argv: list[str] | None = None) -> int:
-    """Parse artifact globs and run the fail-closed checks."""
+    """Collect markers live, then verify shard artifacts fail-closed."""
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--inventory-glob", required=True)
     parser.add_argument("--nodes-glob", required=True)
     parser.add_argument("--junit-glob", required=True)
-    group = parser.add_mutually_exclusive_group(required=True)
-    group.add_argument("--pit-marker", action="store_true")
-    group.add_argument("--path")
+    selectors = parser.add_argument_group("required suite selectors (union)")
+    selectors.add_argument("--pit-marker", action="store_true")
+    selectors.add_argument("--path")
     args = parser.parse_args(argv)
+    if not (args.pit_marker or args.path):
+        parser.error("at least one selector (--pit-marker or --path) is required")
+
+    with tempfile.TemporaryDirectory() as tmp:
+        dump = collect_marker_dump(Path(tmp) / "markers.json")
+    required = required_from_dump(dump, pit_marker=args.pit_marker, path=args.path)
     result = run_checks(
-        args.inventory_glob,
-        args.nodes_glob,
-        args.junit_glob,
-        pit_marker=args.pit_marker,
-        path=args.path,
+        required, nodes_glob=args.nodes_glob, junit_glob=args.junit_glob
     )
+    result["suites"] = [
+        *(["pit"] if args.pit_marker else []),
+        *([args.path] if args.path else []),
+    ]
     sys.stdout.write(json.dumps(result, sort_keys=True) + "\n")
     return 0
 

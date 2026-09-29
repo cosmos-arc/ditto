@@ -120,6 +120,7 @@ def test_ci_has_explicit_pit_and_supported_platform_gates() -> None:
     assert "test_openapi_conformance.py" in backend_steps
 
     platform = jobs["platform-smoke"]
+    platform = jobs["platform-smoke"]
     matrix = platform["strategy"]["matrix"]["include"]
     by_name = {entry["name"]: entry for entry in matrix}
     assert by_name["macos-arm64"]["os"] == "macos-14"
@@ -181,6 +182,15 @@ def test_contract_job_uses_the_complete_root_contract_gate() -> None:
     assert any(step.get("run") == "task contract-toolchain-bootstrap" for step in steps)
     backend_steps = json.dumps(workflow["jobs"]["backend-tests"]["steps"])
     assert "required_suite_evidence" in backend_steps
+    # Web-only PR（无 backend-shards）必须仍直跑 conformance（#350 P1）。
+    fallback = next(
+        step
+        for step in steps
+        if step.get("name") == "Contract conformance (no shard evidence this run)"
+    )
+    assert fallback["run"] == "task contract-conformance"
+    assert "backend-shards" in fallback["if"]
+    assert "!" in fallback["if"]
 
 
 def test_required_ci_executes_all_release_policy_tests() -> None:

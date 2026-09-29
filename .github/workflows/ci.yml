@@ -131,14 +131,9 @@ jobs:
       - name: Required suite evidence from shards (PIT, OpenAPI conformance)
         run: |-
           uv run --no-sync python -m tooling.quality.required_suite_evidence \
-            --inventory-glob 'build/test-shards/inventory-*.json' \
             --nodes-glob 'build/test-shards/nodes-*.txt' \
             --junit-glob 'build/test-shards/junit-*.xml' \
-            --pit-marker
-          uv run --no-sync python -m tooling.quality.required_suite_evidence \
-            --inventory-glob 'build/test-shards/inventory-*.json' \
-            --nodes-glob 'build/test-shards/nodes-*.txt' \
-            --junit-glob 'build/test-shards/junit-*.xml' \
+            --pit-marker \
             --path apps/backend/tests/contract/test_openapi_conformance.py
       - name: Upload coverage evidence
         if: ${{ always() }}
@@ -218,6 +213,11 @@ jobs:
         run: |-
           task contract-static
           task cohort-compatibility-check
+      # Web-only PR 不选 backend-shards，conformance 无分片可证——此时必须直跑
+      # （#350 P1：api-contract-only 选择不得失去 conformance 门）。
+      - name: Contract conformance (no shard evidence this run)
+        if: ${{ !contains(fromJSON(needs.repository-policy.outputs.required || '[]'), 'backend-shards') }}
+        run: task contract-conformance
   system-e2e:
     needs:
       - repository-policy

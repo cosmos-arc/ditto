@@ -15,24 +15,14 @@ def pytest_addoption(parser: pytest.Parser) -> None:
 
 
 def pytest_collection_finish(session: pytest.Session) -> None:
-    """
-    Capture selected IDs and marks after all collection hooks.
-
-    Records ``(nodeid, serial, pit)`` per test: the serial flag drives lane
-    split in shards, the pit flag backs the required-suite evidence check
-    (#350) so a markered suite can be proven executed from artifacts alone.
-    """
+    """Capture selected IDs and marks after all collection hooks."""
     destination = session.config.getoption("inventory_output")
     if not destination:
         return
     Path(destination).write_text(
         json.dumps(
             sorted(
-                (
-                    item.nodeid,
-                    item.get_closest_marker("serial") is not None,
-                    item.get_closest_marker("pit") is not None,
-                )
+                (item.nodeid, item.get_closest_marker("serial") is not None)
                 for item in session.items
             )
         )
