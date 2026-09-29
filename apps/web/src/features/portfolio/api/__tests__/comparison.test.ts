@@ -1,3 +1,4 @@
+// @vitest-environment node
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { capturedRequest, requestPath } from "@/test/request";
 import { fetchComparisonAttribution } from "../comparison";

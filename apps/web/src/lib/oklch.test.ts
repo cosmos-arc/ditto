@@ -1,3 +1,4 @@
+// @vitest-environment node
 import { describe, expect, it } from "vitest";
 import { CHART_FALLBACK_COLORS, cssColorToEngineColor, oklchToRgbUnit, parseOklchColor, withAlpha } from "./oklch";
 

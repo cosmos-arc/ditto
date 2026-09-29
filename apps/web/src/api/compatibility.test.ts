@@ -1,3 +1,4 @@
+// @vitest-environment node
 import { describe, expect, it } from "vitest";
 import type { WebBuildMetadata } from "./build-metadata";
 import { evaluateCompatibility, parseSystemStatus } from "./compatibility";
