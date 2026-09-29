@@ -195,6 +195,30 @@ def verify(commit_sha: str) -> tuple[str, list[str]]:
     return VERIFIED, reasons
 
 
+def _policy_job(run: dict[str, Any]) -> dict[str, Any] | None:
+    """Find the Repository policy job, scanning earlier attempts when needed.
+
+    `gh run rerun --failed` 不重跑原本成功的 job——默认端点只返回最新
+    attempt 的 jobs，policy job 可能只在早期 attempt 里（#352 评审）。
+    """
+    run_id = run.get("id")
+    attempts = run.get("run_attempt") or 1
+    if not isinstance(run_id, int):
+        return None
+    for attempt in range(int(attempts), 0, -1):
+        jobs = _gh(
+            f"repos/{_repo()}/actions/runs/{run_id}/jobs"
+            + f"?per_page=100&attempt={attempt}"
+        )
+        found = next(
+            (j for j in jobs.get("jobs", []) if j.get("name") == "Repository policy"),
+            None,
+        )
+        if found is not None:
+            return found
+    return None
+
+
 def observe(limit: int = 20) -> list[dict[str, Any]]:
     """Summarize recent main push runs' evidence outcomes (#352 影子观察).
 
@@ -206,11 +230,21 @@ def observe(limit: int = 20) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     for run in runs.get("workflow_runs", []):
         sha = run.get("head_sha", "")
-        jobs = _gh(f"repos/{_repo()}/actions/runs/{run['id']}/jobs?per_page=100")
-        policy = next(
-            (j for j in jobs.get("jobs", []) if j.get("name") == "Repository policy"),
-            None,
-        )
+        try:
+            policy = _policy_job(run)
+        except EvidenceApiError as error:
+            # 单个历史 run 的 jobs 查询失败不炸整个观察：降级并记原因
+            rows.append(
+                {
+                    "run_id": run.get("id"),
+                    "sha": sha[:12],
+                    "created_at": run.get("created_at"),
+                    "conclusion": run.get("conclusion"),
+                    "evidence": "unknown",
+                    "reasons": [f"jobs lookup failed: {error}"],
+                }
+            )
+            continue
         outcome = "unknown"
         reasons: list[str] = []
         if policy is not None and isinstance(policy.get("id"), int):
