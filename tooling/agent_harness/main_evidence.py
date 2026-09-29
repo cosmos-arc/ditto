@@ -11,6 +11,7 @@ toolchain 等全部规则文件——tested tree 即最终 tree 时规则不可�
 from __future__ import annotations
 
 import argparse
+import datetime
 import io
 import json
 import os
@@ -195,13 +196,186 @@ def verify(commit_sha: str) -> tuple[str, list[str]]:
     return VERIFIED, reasons
 
 
+def _policy_job(run: dict[str, Any]) -> dict[str, Any] | None:
+    """Find the Repository policy job, scanning earlier attempts when needed.
+
+    `gh run rerun --failed` 不重跑原本成功的 job——默认端点只返回最新
+    attempt 的 jobs，policy job 可能只在早期 attempt 里（#352 评审）。
+    """
+    run_id = run.get("id")
+    attempts = run.get("run_attempt") or 1
+    if not isinstance(run_id, int):
+        return None
+    for attempt in range(int(attempts), 0, -1):
+        # attempt= 不是 list-jobs 的合法参数；per-attempt 用文档化路由
+        jobs = _gh(
+            f"repos/{_repo()}/actions/runs/{run_id}"
+            + f"/attempts/{attempt}/jobs?per_page=100"
+        )
+        found = next(
+            (j for j in jobs.get("jobs", []) if j.get("name") == "Repository policy"),
+            None,
+        )
+        if found is not None:
+            return found
+    return None
+
+
+_MAX_RUN_PAGES = 10
+_API_MAX_PER_PAGE = 100
+_GATE_MIN_SHAS = 10
+_GATE_MIN_DAYS = 7
+
+
+def _push_run_window(
+    endpoint: str, limit: int, since: str | None
+) -> list[dict[str, Any]]:
+    """Fetch the complete server-filtered push window (#352 评审).
+
+    --since 经服务端 created 过滤表达（API 返回序实测不完全可信，不能
+    用客户端 oldest<since 提前停页——早页混入旧 run 会漏掉窗口内后页）；
+    翻到空页/尾页即窗口完整，翻满页上限 fail closed。
+    """
+    query = "branch=main&event=push&sort=created&direction=desc"
+    if since:
+        query += f"&created=>={since}"
+    # API 单页上限 100：limit 再大也按 100 取页，尾页判定按有效页大小
+    per_page = min(limit, _API_MAX_PER_PAGE)
+    collected: list[dict[str, Any]] = []
+    page = 1
+    while page <= _MAX_RUN_PAGES:
+        batch = _gh(f"{endpoint}?{query}&per_page={per_page}&page={page}").get(
+            "workflow_runs", []
+        )
+        if not batch:
+            return collected
+        collected.extend(batch)
+        if len(batch) < per_page:
+            return collected
+        if not since and len(collected) >= limit:
+            # 无 --since 时尊重 --limit：只取最近 N 条，不翻尽全史
+            return collected[:limit]
+        page += 1
+    raise EvidenceApiError(
+        "observation window exceeded page cap; raise --limit or narrow --since"
+    )
+
+
+def observe(limit: int = 20, since: str | None = None) -> list[dict[str, Any]]:
+    """Summarize recent main push runs' evidence outcomes (#352 影子观察).
+
+    逐个取 main 上 event=push 的 ci.yml run，从其 Repository policy job
+    日志提取 main-evidence outcome——影子观察（≥7 天/10 SHA）可机检复盘。
+    """
+    endpoint = f"repos/{_repo()}/actions/workflows/ci.yml/runs"
+    collected = _push_run_window(endpoint, limit, since)
+    runs = {"workflow_runs": collected}
+    rows: list[dict[str, Any]] = []
+    for run in runs.get("workflow_runs", []):
+        sha = run.get("head_sha", "")
+        try:
+            policy = _policy_job(run)
+        except EvidenceApiError as error:
+            # 单个历史 run 的 jobs 查询失败不炸整个观察：降级并记原因
+            rows.append(
+                {
+                    "run_id": run.get("id"),
+                    "sha": sha[:12],
+                    "created_at": run.get("created_at"),
+                    "conclusion": run.get("conclusion"),
+                    "evidence": "unknown",
+                    "reasons": [f"jobs lookup failed: {error}"],
+                }
+            )
+            continue
+        outcome = "unknown"
+        reasons: list[str] = []
+        if policy is not None and isinstance(policy.get("id"), int):
+            try:
+                proc = subprocess.run(
+                    ["gh", "api", f"repos/{_repo()}/actions/jobs/{policy['id']}/logs"],
+                    capture_output=True,
+                    text=True,
+                    timeout=60,
+                    check=False,
+                )
+                if proc.returncode != 0:
+                    # 失败下载的部分 stdout 不可信，不做解析
+                    reasons.append(f"log fetch failed: gh exit {proc.returncode}")
+                else:
+                    # Actions 日志行带时间戳前缀——用包含而非 startswith
+                    for line in proc.stdout.splitlines():
+                        outcome_marker = "main-evidence outcome: "
+                        if outcome_marker in line:
+                            outcome = line.split(outcome_marker, 1)[1].strip()
+                        elif "main-evidence: " in line:
+                            marker = "main-evidence: "
+                            reasons.append(line.split(marker, 1)[1].strip())
+            except (subprocess.TimeoutExpired, OSError) as error:
+                # 单个历史日志拉取失败不炸整个观察：降级 unknown 并记原因
+                reasons.append(f"log fetch failed: {error}")
+        rows.append(
+            {
+                "run_id": run.get("id"),
+                "sha": sha[:12],
+                "created_at": run.get("created_at"),
+                "conclusion": run.get("conclusion"),
+                "evidence": outcome,
+                "reasons": reasons,
+            }
+        )
+    return rows
+
+
 def main(argv: list[str] | None = None) -> int:
     """Emit outcome for the workflow; never fail the job on evidence doubt."""
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("mode", choices=("verify",))
-    parser.add_argument("--commit", required=True)
+    parser.add_argument("mode", choices=("verify", "observe"))
+    parser.add_argument("--commit")
     parser.add_argument("--output", help="GITHUB_OUTPUT path for outcome=")
+    parser.add_argument("--limit", type=int, default=20)
+    parser.add_argument(
+        "--since",
+        help="ISO date (YYYY-MM-DD); drop earlier runs (observation start)",
+    )
     args = parser.parse_args(argv)
+    if args.mode == "observe":
+        rows = observe(args.limit, args.since)
+        if args.since:
+            rows = [row for row in rows if str(row["created_at"] or "") >= args.since]
+        for row in rows:
+            print(json.dumps(row, ensure_ascii=False, sort_keys=True))
+        verified = sum(1 for row in rows if row["evidence"] == VERIFIED)
+        distinct = len({row["sha"] for row in rows})
+        explainable = {VERIFIED, FULL_REQUIRED}
+        unexplained = sum(
+            1
+            for row in rows
+            if row["evidence"] not in explainable or not row.get("reasons")
+        )
+        stamps = sorted(str(row["created_at"]) for row in rows if row["created_at"])
+        summary = (
+            f"observation: {verified}/{len(rows)} verified, {distinct} distinct SHAs"
+        )
+        span_days: float | None = None
+        if stamps:
+            start = datetime.datetime.fromisoformat(stamps[0].replace("Z", "+00:00"))
+            end = datetime.datetime.fromisoformat(stamps[-1].replace("Z", "+00:00"))
+            span_days = (end - start).total_seconds() / 86400
+            summary += f", span {span_days:.1f}d ({stamps[0]}..{stamps[-1]})"
+        if unexplained:
+            summary += f", {unexplained} unexplained rows"
+        gate = (
+            distinct >= _GATE_MIN_SHAS
+            and span_days is not None
+            and span_days >= _GATE_MIN_DAYS
+            and unexplained == 0
+        )
+        print(summary)
+        print(f"switch gate satisfied: {str(gate).lower()}")
+        return 0
+    if not args.commit:
+        parser.error("verify requires --commit")
     outcome, reasons = verify(args.commit)
     for reason in reasons:
         print(f"main-evidence: {reason}")

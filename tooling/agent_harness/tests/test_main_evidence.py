@@ -235,3 +235,50 @@ def test_repo_helper_reads_env(monkeypatch: pytest.MonkeyPatch) -> None:
     assert _repo() == os.environ["GITHUB_REPOSITORY"]
     monkeypatch.delenv("GITHUB_REPOSITORY")
     assert _repo() == "cosmos-arc/ditto"
+
+
+def test_observe_parses_evidence_outcome_from_logs(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """#352：观察命令从 push run 的 policy job 日志提取证据结论."""
+    import tooling.agent_harness.main_evidence as me
+
+    def fake_gh(endpoint: str) -> Any:
+        if "/actions/workflows/ci.yml/runs" in endpoint:
+            return {
+                "workflow_runs": [
+                    {
+                        "id": 5,
+                        "head_sha": _COMMIT,
+                        "created_at": "t",
+                        "conclusion": "success",
+                    }
+                ]
+            }
+        if "/jobs" in endpoint:
+            return {"jobs": [{"name": "Repository policy", "id": 77}]}
+        raise AssertionError(f"unexpected {endpoint}")
+
+    def fake_logs(*args: str, **kwargs: object) -> Any:
+        class P:
+            stdout = (
+                "2026-09-29T00:00:00Z main-evidence: pr ok\n"
+                "2026-09-29T00:00:00Z main-evidence outcome: verified\n"
+            )
+            returncode = 0
+
+        return P()
+
+    monkeypatch.setattr(me, "_gh", fake_gh)
+    monkeypatch.setattr(me.subprocess, "run", fake_logs)
+    rows = me.observe(limit=5)
+    assert rows == [
+        {
+            "run_id": 5,
+            "sha": _COMMIT[:12],
+            "created_at": "t",
+            "conclusion": "success",
+            "evidence": "verified",
+            "reasons": ["pr ok"],
+        }
+    ]
