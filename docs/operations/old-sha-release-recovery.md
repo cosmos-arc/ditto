@@ -15,19 +15,23 @@
 2. **仅当该 push 运行结论不是 success 时**才需要恢复——发布门只看
    结论，不看产物保留期：成功的旧 run 即使产物过期也直接放行，不要
    为过期产物重跑成功运行。
-3. 原地重跑保持 event=push 身份（不新开 dispatch）。按原结论分派：
-   - 结论为 failure：默认 `gh run rerun <run-id> --failed` 只重跑失败
-     job；`--failed` 不重跑原本成功的 job，tested-commit 产物不受
-     影响。例外：失败的 job 包含 Repository policy 本身（在其后段
-     Diff hygiene 失败）时，重跑会再次上传 `tested-commit-<run_id>`
-     并与 v4 不可变产物冲突——先删旧产物再重跑：
-     `gh api -X DELETE repos/cosmos-arc/ditto/actions/artifacts/<id>`
-     （产物 id 经 `/actions/runs/<run-id>/artifacts` 查询）。
-   - 结论为 cancelled：取消态没有 failed job 可重跑，需整跑重试
-     `gh run rerun <run-id>`——注意它会重新执行 repository-policy
-     并再次上传 `tested-commit-<run_id>`，与 v4 产物不可变语义冲突
-     （必要时先删旧产物或接受该次证据退化，退化为 push 全量验证仍
-     安全）。
+3. 原地重跑保持 event=push 身份（不新开 dispatch）。先处理冲突产物：
+   任何以 `if: always()` 上传的产物（tested-commit、backend-shard-*、
+   backend-coverage-* 等）在同 run_id 重跑对应 job 时会与 v4 不可变
+   语义冲突——重跑前删除将被重跑 job 再度上传的产物：
+   `gh api repos/cosmos-arc/ditto/actions/runs/<run-id>/artifacts` 列出，
+   `gh api -X DELETE repos/cosmos-arc/ditto/actions/artifacts/<id>` 删除。
+   按原结论分派：
+   - failure / timed_out / stale / startup_failure：默认
+     `gh run rerun <run-id> --failed` 只重跑未成功 job；其中已上传过
+     产物的失败 job（如失败 shard 的 backend-shard-*）须先按上段删
+     除其产物，否则重跑在同一上传步反复失败。
+   - cancelled：取消态没有 failed job 可重跑，整跑重试
+     `gh run rerun <run-id>`——若取消的 attempt 已上传过
+     tested-commit，删除是**必须**步骤而非可选（不删则上传步必失败，
+     无法"接受退化"绕过）。
+   - action_required：不是重跑问题——先处理待审批（环境保护/审批），
+     再按上述分派。
    重跑产生同 run_id 的新 attempt，结论取最新 attempt。
 4. 重跑成功后按常规发布流程触发 release；发布门按上面的规则放行。
 
