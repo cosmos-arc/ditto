@@ -74,23 +74,40 @@ def _tree_oid(commit_sha: str) -> str:
     return tree_oid
 
 
-def _ci_gate_succeeded(head_sha: str) -> bool:
-    """绑定 .github/workflows/ci.yml 的真实 run：名字相同的其他 App/工作流
-    check-run 不能冒充（#351 评审 P1）。"""
+def _latest_pr_run(head_sha: str) -> dict[str, Any] | None:
+    """该 PR head 最新的 pull_request run（#351 评审：陈旧成功不能冒充——
+    close/reopen 不改 head 但产生新 run，最新 run 失败即不通过）。"""
     runs = _gh(
-        f"repos/{_repo()}/actions/workflows/ci.yml/runs?head_sha={head_sha}&per_page=20"
+        f"repos/{_repo()}/actions/workflows/ci.yml/runs"
+        + f"?head_sha={head_sha}&event=pull_request&per_page=10"
     )
-    for run in runs.get("workflow_runs", []):
-        if run.get("event") != "pull_request" or run.get("conclusion") != "success":
-            continue
-        run_id = run.get("id")
-        if not isinstance(run_id, int):
-            continue
-        jobs = _gh(f"repos/{_repo()}/actions/runs/{run_id}/jobs?per_page=100")
-        for job in jobs.get("jobs", []):
-            if job.get("name") == "CI gate" and job.get("conclusion") == "success":
-                return True
-    return False
+    candidates = [
+        run
+        for run in runs.get("workflow_runs", [])
+        if run.get("event") == "pull_request" and isinstance(run.get("id"), int)
+    ]
+    if not candidates:
+        return None
+    return max(candidates, key=lambda run: run["id"])
+
+
+def _tested_gate_result(run: dict[str, Any]) -> tuple[bool, str | None]:
+    """绑定 ci.yml 真实 run 的 CI gate job 结论；返回 (成功, 被测 merge SHA).
+
+    名字相同的其他 App/工作流 check 不能冒充（#351 评审 P1）。PR run
+    实测的是 refs/pull/<n>/merge 提交——run.head_sha 即被测 SHA，树比较
+    必须用它而非 PR head（被测树才是验证对象）。
+    """
+    if run.get("conclusion") != "success":
+        return False, None
+    tested_sha = run.get("head_sha")
+    if not isinstance(tested_sha, str):
+        return False, None
+    jobs = _gh(f"repos/{_repo()}/actions/runs/{run['id']}/jobs?per_page=100")
+    for job in jobs.get("jobs", []):
+        if job.get("name") == "CI gate" and job.get("conclusion") == "success":
+            return True, tested_sha
+    return False, tested_sha
 
 
 def verify(commit_sha: str) -> tuple[str, list[str]]:
@@ -110,12 +127,18 @@ def verify(commit_sha: str) -> tuple[str, list[str]]:
         reasons.append(
             f"pr #{pull.get('number')} head {head_sha[:12]} merged at this commit"
         )
-        if not _ci_gate_succeeded(head_sha):
-            return full("CI gate did not succeed on the tested (head) sha")
-        reasons.append("CI gate succeeded on the tested (head) sha")
-        head_tree, main_tree = _tree_oid(head_sha), _tree_oid(commit_sha)
-        if head_tree != main_tree:
-            mismatch = f"{head_tree[:12]} != {main_tree[:12]}"
+        latest = _latest_pr_run(head_sha)
+        gate_ok, tested_sha = (
+            _tested_gate_result(latest) if latest is not None else (False, None)
+        )
+        if latest is None or not gate_ok or tested_sha is None:
+            return full("CI gate did not succeed in the latest ci.yml run")
+        reasons.append(
+            f"CI gate succeeded in ci.yml run {latest['id']} (tested {tested_sha[:12]})"
+        )
+        tested_tree, main_tree = _tree_oid(tested_sha), _tree_oid(commit_sha)
+        if tested_tree != main_tree:
+            mismatch = f"{tested_tree[:12]} != {main_tree[:12]}"
             return full(f"tested tree != final main tree ({mismatch})")
         reasons.append(f"tested tree == final main tree ({main_tree[:12]})")
     except Exception as error:

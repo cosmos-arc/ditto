@@ -15,6 +15,7 @@ from tooling.agent_harness.main_evidence import (
 
 _COMMIT = "c" * 40
 _HEAD = "a" * 40
+_MERGE = "m" * 40
 
 
 def _pull(merged: bool = True, merge_sha: str = _COMMIT) -> dict[str, Any]:
@@ -48,7 +49,14 @@ def _responder(
     runs = (
         workflow_runs
         if workflow_runs is not None
-        else [{"id": 7, "event": "pull_request", "conclusion": "success"}]
+        else [
+            {
+                "id": 7,
+                "event": "pull_request",
+                "conclusion": "success",
+                "head_sha": _MERGE,
+            }
+        ]
     )
     jobs = (
         gate_jobs
@@ -57,22 +65,22 @@ def _responder(
     )
     detail = pull_detail if pull_detail is not None else _pull()
 
-    def respond(endpoint: str) -> Any:
+    def route(endpoint: str) -> Any:
         if endpoint.endswith(f"/commits/{_COMMIT}/pulls"):
             return pulls if pulls is not None else [detail]
         if endpoint.endswith("/pulls/42"):
             return detail
         if "/actions/workflows/ci.yml/runs" in endpoint:
             return {"workflow_runs": runs}
-        if "/actions/runs/7/jobs" in endpoint:
+        if "/actions/runs/" in endpoint and "/jobs" in endpoint:
             return {"jobs": jobs}
-        if endpoint.endswith(f"/git/commits/{_HEAD}"):
+        if endpoint.endswith((f"/git/commits/{_HEAD}", f"/git/commits/{_MERGE}")):
             return {"tree": {"sha": head_tree}}
         if endpoint.endswith(f"/git/commits/{_COMMIT}"):
             return {"tree": {"sha": main_tree}}
         raise AssertionError(f"unexpected endpoint {endpoint}")
 
-    return respond
+    return route
 
 
 def test_happy_chain_verifies(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -175,3 +183,45 @@ def test_timeout_normalizes_to_full_required(monkeypatch: pytest.MonkeyPatch) ->
     outcome, reasons = verify(_COMMIT)
     assert outcome == FULL_REQUIRED
     assert any("lookup failed" in r for r in reasons)
+
+
+def test_stale_success_cannot_override_newer_failed_run(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """#351 评审 P1：同 head 最新 run 失败时，历史成功不能冒充通过."""
+    _install(
+        monkeypatch,
+        _responder(
+            workflow_runs=[
+                {
+                    "id": 7,
+                    "event": "pull_request",
+                    "conclusion": "success",
+                    "head_sha": _MERGE,
+                },
+                {
+                    "id": 8,
+                    "event": "pull_request",
+                    "conclusion": "failure",
+                    "head_sha": _MERGE,
+                },
+            ],
+        ),
+    )
+    outcome, reasons = verify(_COMMIT)
+    assert outcome == FULL_REQUIRED
+    assert any("latest ci.yml run" in r for r in reasons)
+
+
+def test_tree_compared_against_tested_merge_commit(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """#351 评审 P1：树比较用被测 merge 提交（run.head_sha），非 PR head."""
+    # head 树与 main 相同、但被测 merge 树不同 → 全量
+    _install(
+        monkeypatch,
+        _responder(head_tree="x" * 40, main_tree="t" * 40),
+    )
+    outcome, reasons = verify(_COMMIT)
+    assert outcome == FULL_REQUIRED
+    assert any("tested tree != final main tree" in r for r in reasons)

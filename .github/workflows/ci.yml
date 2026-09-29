@@ -27,6 +27,7 @@ jobs:
       contents: read
       pull-requests: read
       checks: read
+      actions: read
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
