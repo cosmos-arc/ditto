@@ -22,6 +22,11 @@ jobs:
       required: ${{ steps.scope.outputs.required }}
       analysis: ${{ steps.scope.outputs.analysis }}
       full: ${{ steps.scope.outputs.full }}
+      main-evidence: ${{ steps.evidence.outputs.outcome }}
+    permissions:
+      contents: read
+      pull-requests: read
+      checks: read
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -29,10 +34,20 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
+      # #351：push 到 main 先机器核验 PR 身份链；未验证通过则选择全量。
+      - name: Verify main merge evidence
+        id: evidence
+        if: ${{ github.event_name == 'push' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |-
+          python3 -m tooling.agent_harness.main_evidence verify             --commit "$GITHUB_SHA" --output "$GITHUB_OUTPUT"
       - name: Select checks from changed scope
         id: scope
         env:
           CHECK_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          MAIN_EVIDENCE: ${{ steps.evidence.outputs.outcome }}
         run: python3 -m tooling.agent_harness.ci select
       - name: Diff hygiene
         env:

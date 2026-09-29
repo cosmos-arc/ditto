@@ -91,8 +91,13 @@ def main() -> int:
     parser.parse_args()
     event = os.environ.get("GITHUB_EVENT_NAME", "")
     if event == "push":
-        # push 到 main 信任 PR 已验证的等价内容；仅补跑跨平台 full 门与常驻安全检查。
-        required = _ALWAYS | {"platform-smoke"}
+        # push 到 main 沿用 PR 已验证的等价内容（#351：由 main_evidence
+        # 机器核验身份链——合并 PR 关联/head CI gate 成功/tested tree ==
+        # final tree）；核验未通过或缺失时退回全量。
+        if os.environ.get("MAIN_EVIDENCE") == "verified":
+            required = _ALWAYS | {"platform-smoke"}
+        else:
+            required = set(REQUIRED_JOBS)
         _emit(required)
         return 0
     full = event != "pull_request"

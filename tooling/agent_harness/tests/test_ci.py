@@ -127,7 +127,7 @@ class CiTests(unittest.TestCase):
                 )
 
     def test_push_event_narrows_to_platform_smoke_only(self) -> None:
-        """push 到 main 信任 PR 等价验证，仅保留跨平台门与常驻安全检查."""
+        """push+证据 verified 时收窄；未验证/缺失退回全量（#351）."""
         repo = Path(__file__).resolve().parents[3]
         with tempfile.TemporaryDirectory() as temporary:
             output = Path(temporary) / "ci-output.txt"
@@ -143,6 +143,7 @@ class CiTests(unittest.TestCase):
                     **os.environ,
                     "GITHUB_EVENT_NAME": "push",
                     "GITHUB_SHA": "0" * 40,
+                    "MAIN_EVIDENCE": "verified",
                     "GITHUB_OUTPUT": str(output),
                 },
                 check=True,
@@ -157,6 +158,41 @@ class CiTests(unittest.TestCase):
                 "security-supply-chain",
             ]
             assert "full=false" in output.read_text()
+
+    def test_push_without_verified_evidence_requires_full_gate(self) -> None:
+        """#351：证据未 verified（缺失/不匹配/API 失败）时 push 退回全量."""
+        import subprocess as sp
+        import tempfile as tmp
+
+        repo = Path(__file__).resolve().parents[3]
+        for outcome, expected in (
+            ("full-required", REQUIRED_JOBS),
+            ("", REQUIRED_JOBS),
+            (
+                "verified",
+                {"platform-smoke", "repository-policy", "security-supply-chain"},
+            ),
+        ):
+            with self.subTest(outcome=outcome or "missing"):
+                with tmp.TemporaryDirectory() as temporary:
+                    output = Path(temporary) / "ci-output.txt"
+                    sp.run(
+                        [sys.executable, "-m", "tooling.agent_harness.ci", "select"],
+                        cwd=repo,
+                        env={
+                            **os.environ,
+                            "GITHUB_EVENT_NAME": "push",
+                            "GITHUB_SHA": "0" * 40,
+                            "MAIN_EVIDENCE": outcome,
+                            "GITHUB_OUTPUT": str(output),
+                        },
+                        check=True,
+                        capture_output=True,
+                    )
+                    selected = json.loads(
+                        output.read_text().splitlines()[0].removeprefix("required=")
+                    )
+                    assert set(selected) == set(expected)
 
     def test_backend_scope_selects_capacity_lane(self) -> None:
         required = required_jobs(["packages/application/src/ditto_application/x.py"])
