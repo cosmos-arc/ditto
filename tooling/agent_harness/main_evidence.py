@@ -15,6 +15,7 @@ import json
 import os
 import subprocess
 from pathlib import Path
+from typing import Any
 
 VERIFIED = "verified"
 FULL_REQUIRED = "full-required"
@@ -24,7 +25,7 @@ class EvidenceApiError(RuntimeError):
     """GitHub API evidence lookup failed."""
 
 
-def _gh(*arguments: str) -> object:
+def _gh(*arguments: str) -> Any:
     proc = subprocess.run(
         ["gh", "api", *arguments],
         capture_output=True,
