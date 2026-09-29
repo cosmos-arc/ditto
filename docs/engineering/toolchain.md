@@ -99,7 +99,7 @@ ARM64、uv 热缓存、无并行负载；长链条顺序执行避免争用，每
 | fast 测试 kernel | `task test -- --fast packages/kernel/tests` | 4.3s |
 | fast 测试 application | `task test -- --fast packages/application/tests` | 191.3s |
 | fast 测试 backend | `task test -- --fast apps/backend/tests` | 129.6s |
-| PIT 专项（串行） | `task pit` | 59.6s |
+| PIT 专项（串行，本地链条；CI 由分片承载+证据核验 #350） | `task pit` | 59.6s |
 | 系统测试 | `task test-system` | 377.4s |
 | 全量门 | `task check` | 507.1s |
 | 单个测试文件 | `pytest <file> -q` | 2.6s |

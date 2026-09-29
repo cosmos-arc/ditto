@@ -110,11 +110,16 @@ def test_backend_coverage_merges_shards_and_enforces_the_floor() -> None:
 
 
 def test_ci_has_explicit_pit_and_supported_platform_gates() -> None:
+    """PIT correctness stays an explicit CI gate (#350): shards execute the
+    pit-marked suite and the backend-tests job proves it from artifacts."""
     workflow = _workflow("ci.yml")
     jobs = workflow["jobs"]
     backend_steps = json.dumps(jobs["backend-tests"])
-    assert "task pit" in backend_steps
+    assert "required_suite_evidence" in backend_steps
+    assert "--pit-marker" in backend_steps
+    assert "test_openapi_conformance.py" in backend_steps
 
+    platform = jobs["platform-smoke"]
     platform = jobs["platform-smoke"]
     matrix = platform["strategy"]["matrix"]["include"]
     by_name = {entry["name"]: entry for entry in matrix}
@@ -165,12 +170,27 @@ def test_windows_gate_runs_representative_units_and_a_real_loopback_api() -> Non
 
 
 def test_contract_job_uses_the_complete_root_contract_gate() -> None:
-    """Hosted CI must include conformance, not only the static snapshot checks."""
+    """Hosted CI keeps static + cohort gates here; conformance EXECUTES in
+    shards and is proven fail-closed in backend-tests (#350), never dropped."""
     workflow = _workflow("ci.yml")
     steps = workflow["jobs"]["api-contract"]["steps"]
     contract_step = next(step for step in steps if step.get("name") == "Contract gate")
-    assert contract_step["run"] == "task check-contract"
+    run = contract_step["run"]
+    assert "task contract-static" in run
+    assert "task cohort-compatibility-check" in run
+    assert "task contract-conformance" not in run  # 由分片执行+证据核验承载
     assert any(step.get("run") == "task contract-toolchain-bootstrap" for step in steps)
+    backend_steps = json.dumps(workflow["jobs"]["backend-tests"]["steps"])
+    assert "required_suite_evidence" in backend_steps
+    # Web-only PR（无 backend-shards）必须仍直跑 conformance（#350 P1）。
+    fallback = next(
+        step
+        for step in steps
+        if step.get("name") == "Contract conformance (no shard evidence this run)"
+    )
+    assert fallback["run"] == "task contract-conformance"
+    assert "backend-shards" in fallback["if"]
+    assert "!" in fallback["if"]
 
 
 def test_required_ci_executes_all_release_policy_tests() -> None:
