@@ -11,6 +11,7 @@ toolchain 等全部规则文件——tested tree 即最终 tree 时规则不可�
 from __future__ import annotations
 
 import argparse
+import datetime
 import io
 import json
 import os
@@ -221,6 +222,8 @@ def _policy_job(run: dict[str, Any]) -> dict[str, Any] | None:
 
 
 _MAX_RUN_PAGES = 10
+_GATE_MIN_SHAS = 10
+_GATE_MIN_DAYS = 7
 
 
 def _push_run_window(
@@ -342,17 +345,26 @@ def main(argv: list[str] | None = None) -> int:
             for row in rows
             if row["evidence"] not in explainable or not row.get("reasons")
         )
-        dates = sorted(str(row["created_at"]) for row in rows if row["created_at"])
+        stamps = sorted(str(row["created_at"]) for row in rows if row["created_at"])
         summary = (
             f"observation: {verified}/{len(rows)} verified, {distinct} distinct SHAs"
         )
-        if dates:
-            summary += f", span {dates[0][:10]}..{dates[-1][:10]}"
+        span_days: float | None = None
+        if stamps:
+            start = datetime.datetime.fromisoformat(stamps[0].replace("Z", "+00:00"))
+            end = datetime.datetime.fromisoformat(stamps[-1].replace("Z", "+00:00"))
+            span_days = (end - start).total_seconds() / 86400
+            summary += f", span {span_days:.1f}d ({stamps[0]}..{stamps[-1]})"
         if unexplained:
             summary += f", {unexplained} unexplained rows"
-        print(
-            f"{summary} (switch gate: >=10 distinct SHAs over >=7 days, 0 unexplained)"
+        gate = (
+            distinct >= _GATE_MIN_SHAS
+            and span_days is not None
+            and span_days >= _GATE_MIN_DAYS
+            and unexplained == 0
         )
+        print(summary)
+        print(f"switch gate satisfied: {str(gate).lower()}")
         return 0
     if not args.commit:
         parser.error("verify requires --commit")
