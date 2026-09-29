@@ -220,14 +220,45 @@ def _policy_job(run: dict[str, Any]) -> dict[str, Any] | None:
     return None
 
 
-def observe(limit: int = 20) -> list[dict[str, Any]]:
+_MAX_RUN_PAGES = 10
+
+
+def _push_run_window(
+    endpoint: str, limit: int, since: str | None
+) -> list[dict[str, Any]]:
+    """Fetch push runs until the --since window is covered (#352 评审).
+
+    先取满窗口再过滤：--since 期内的早页不被 --limit 截掉。
+    """
+    collected: list[dict[str, Any]] = list(
+        _gh(f"{endpoint}?branch=main&event=push&per_page={limit}").get(
+            "workflow_runs", []
+        )
+    )
+    page = 2
+    while since and collected and page <= _MAX_RUN_PAGES:
+        oldest = min(str(r.get("created_at") or "") for r in collected)
+        if oldest and oldest < since:
+            break
+        batch = _gh(
+            f"{endpoint}?branch=main&event=push&per_page={limit}&page={page}"
+        ).get("workflow_runs", [])
+        if not batch:
+            break
+        collected.extend(batch)
+        page += 1
+    return collected
+
+
+def observe(limit: int = 20, since: str | None = None) -> list[dict[str, Any]]:
     """Summarize recent main push runs' evidence outcomes (#352 影子观察).
 
     逐个取 main 上 event=push 的 ci.yml run，从其 Repository policy job
     日志提取 main-evidence outcome——影子观察（≥7 天/10 SHA）可机检复盘。
     """
     endpoint = f"repos/{_repo()}/actions/workflows/ci.yml/runs"
-    runs = _gh(f"{endpoint}?branch=main&event=push&per_page={limit}")
+    collected = _push_run_window(endpoint, limit, since)
+    runs = {"workflow_runs": collected}
     rows: list[dict[str, Any]] = []
     for run in runs.get("workflow_runs", []):
         sha = run.get("head_sha", "")
@@ -296,7 +327,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     args = parser.parse_args(argv)
     if args.mode == "observe":
-        rows = observe(args.limit)
+        rows = observe(args.limit, args.since)
         if args.since:
             rows = [row for row in rows if str(row["created_at"] or "") >= args.since]
         for row in rows:
