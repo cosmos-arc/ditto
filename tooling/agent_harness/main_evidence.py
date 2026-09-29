@@ -212,18 +212,26 @@ def observe(limit: int = 20) -> list[dict[str, Any]]:
             None,
         )
         outcome = "unknown"
+        reasons: list[str] = []
         if policy is not None and isinstance(policy.get("id"), int):
-            proc = subprocess.run(
-                ["gh", "api", f"repos/{_repo()}/actions/jobs/{policy['id']}/logs"],
-                capture_output=True,
-                text=True,
-                timeout=60,
-                check=False,
-            )
-            for line in proc.stdout.splitlines():
-                marker = "main-evidence outcome: "
-                if marker in line:
-                    outcome = line.split(marker, 1)[1].strip()
+            try:
+                proc = subprocess.run(
+                    ["gh", "api", f"repos/{_repo()}/actions/jobs/{policy['id']}/logs"],
+                    capture_output=True,
+                    text=True,
+                    timeout=60,
+                    check=False,
+                )
+                for line in proc.stdout.splitlines():
+                    reason_marker = "main-evidence: "
+                    if line.startswith(reason_marker):
+                        reasons.append(line.split(reason_marker, 1)[1].strip())
+                    outcome_marker = "main-evidence outcome: "
+                    if outcome_marker in line:
+                        outcome = line.split(outcome_marker, 1)[1].strip()
+            except (subprocess.TimeoutExpired, OSError) as error:
+                # 单个历史日志拉取失败不炸整个观察：降级 unknown 并记原因
+                reasons.append(f"log fetch failed: {error}")
         rows.append(
             {
                 "run_id": run.get("id"),
@@ -231,6 +239,7 @@ def observe(limit: int = 20) -> list[dict[str, Any]]:
                 "created_at": run.get("created_at"),
                 "conclusion": run.get("conclusion"),
                 "evidence": outcome,
+                "reasons": reasons,
             }
         )
     return rows

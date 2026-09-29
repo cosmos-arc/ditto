@@ -261,7 +261,7 @@ def test_observe_parses_evidence_outcome_from_logs(
 
     def fake_logs(*args: str, **kwargs: object) -> Any:
         class P:
-            stdout = "line\nmain-evidence outcome: verified\n"
+            stdout = "main-evidence: pr ok\nmain-evidence outcome: verified\n"
 
         return P()
 
@@ -275,5 +275,6 @@ def test_observe_parses_evidence_outcome_from_logs(
             "created_at": "t",
             "conclusion": "success",
             "evidence": "verified",
+            "reasons": ["pr ok"],
         }
     ]
