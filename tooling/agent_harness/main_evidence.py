@@ -195,13 +195,65 @@ def verify(commit_sha: str) -> tuple[str, list[str]]:
     return VERIFIED, reasons
 
 
+def observe(limit: int = 20) -> list[dict[str, Any]]:
+    """Summarize recent main push runs' evidence outcomes (#352 影子观察).
+
+    逐个取 main 上 event=push 的 ci.yml run，从其 Repository policy job
+    日志提取 main-evidence outcome——影子观察（≥7 天/10 SHA）可机检复盘。
+    """
+    endpoint = f"repos/{_repo()}/actions/workflows/ci.yml/runs"
+    runs = _gh(f"{endpoint}?branch=main&event=push&per_page={limit}")
+    rows: list[dict[str, Any]] = []
+    for run in runs.get("workflow_runs", []):
+        sha = run.get("head_sha", "")
+        jobs = _gh(f"repos/{_repo()}/actions/runs/{run['id']}/jobs?per_page=100")
+        policy = next(
+            (j for j in jobs.get("jobs", []) if j.get("name") == "Repository policy"),
+            None,
+        )
+        outcome = "unknown"
+        if policy is not None and isinstance(policy.get("id"), int):
+            proc = subprocess.run(
+                ["gh", "api", f"repos/{_repo()}/actions/jobs/{policy['id']}/logs"],
+                capture_output=True,
+                text=True,
+                timeout=60,
+                check=False,
+            )
+            for line in proc.stdout.splitlines():
+                marker = "main-evidence outcome: "
+                if marker in line:
+                    outcome = line.split(marker, 1)[1].strip()
+        rows.append(
+            {
+                "run_id": run.get("id"),
+                "sha": sha[:12],
+                "created_at": run.get("created_at"),
+                "conclusion": run.get("conclusion"),
+                "evidence": outcome,
+            }
+        )
+    return rows
+
+
 def main(argv: list[str] | None = None) -> int:
     """Emit outcome for the workflow; never fail the job on evidence doubt."""
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("mode", choices=("verify",))
-    parser.add_argument("--commit", required=True)
+    parser.add_argument("mode", choices=("verify", "observe"))
+    parser.add_argument("--commit")
     parser.add_argument("--output", help="GITHUB_OUTPUT path for outcome=")
+    parser.add_argument("--limit", type=int, default=20)
     args = parser.parse_args(argv)
+    if args.mode == "observe":
+        rows = observe(args.limit)
+        for row in rows:
+            print(json.dumps(row, ensure_ascii=False, sort_keys=True))
+        verified = sum(1 for row in rows if row["evidence"] == VERIFIED)
+        summary = f"observation: {verified}/{len(rows)} verified"
+        print(f"{summary} (switch gate needs >=10 distinct SHAs over >=7 days)")
+        return 0
+    if not args.commit:
+        parser.error("verify requires --commit")
     outcome, reasons = verify(args.commit)
     for reason in reasons:
         print(f"main-evidence: {reason}")
