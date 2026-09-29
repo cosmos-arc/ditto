@@ -233,19 +233,18 @@ def _push_run_window(
 
     先取满窗口再过滤：--since 期内的早页不被 --limit 截掉。
     """
+    query = "branch=main&event=push&sort=created&direction=desc"
     collected: list[dict[str, Any]] = list(
-        _gh(f"{endpoint}?branch=main&event=push&per_page={limit}").get(
-            "workflow_runs", []
-        )
+        _gh(f"{endpoint}?{query}&per_page={limit}").get("workflow_runs", [])
     )
     page = 2
     while since and collected and page <= _MAX_RUN_PAGES:
         oldest = min(str(r.get("created_at") or "") for r in collected)
         if oldest and oldest < since:
             break
-        batch = _gh(
-            f"{endpoint}?branch=main&event=push&per_page={limit}&page={page}"
-        ).get("workflow_runs", [])
+        batch = _gh(f"{endpoint}?{query}&per_page={limit}&page={page}").get(
+            "workflow_runs", []
+        )
         if not batch:
             break
         collected.extend(batch)
