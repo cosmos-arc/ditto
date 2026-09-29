@@ -37,9 +37,10 @@ def test_partition_is_complete_deterministic_and_file_affine() -> None:
 
 
 def test_partition_balances_by_duration_weight() -> None:
-    """时长权重驱动均衡：重文件先落最轻片，目标最慢/最快收敛。"""
-    inventory = _inventory_of({f"pkg/tests/test_w{i}.py": 2 for i in range(6)})
-    # 低于单片预算的不等权重：LPT 应给出均衡分组
+    """时长权重驱动均衡（全串行=成本与权重一致的简化形态）。"""
+    inventory = [
+        (f"pkg/tests/test_w{i}.py::test_{j}", True) for i in range(6) for j in range(2)
+    ]
     durations = {
         f"pkg/tests/test_w{i}.py": float(w) for i, w in enumerate((4, 4, 4, 3, 3, 3))
     }
@@ -48,6 +49,45 @@ def test_partition_balances_by_duration_weight() -> None:
         sum(durations[item[0].split("::")[0]] for item in part) for part in parts
     )
     assert loads[-1] / loads[0] <= 1.2
+
+
+def test_serial_records_cost_more_than_parallel_for_balance() -> None:
+    """#326 评审：串行道 -n 0 全价、并行道折价——成本模型区分车道。"""
+    from tooling.quality.test_shards import _unit_cost
+
+    assert _unit_cost([("a.py::test_s", True)], 4.0) == 4.0
+    assert _unit_cost([("a.py::test_p", False)], 4.0) == 1.0
+
+
+def test_filename_containing_split_marker_stays_whole() -> None:
+    """#326 评审：合法文件名含 #split 不被误判为拆分单元。"""
+    inventory = [
+        ("pkg/tests/test_foo#split0.py::test_ok", False),
+        ("pkg/tests/test_a.py::test_a", False),
+        ("pkg/tests/test_b.py::test_b", False),
+    ]
+    durations = {
+        "pkg/tests/test_foo#split0.py": 1.0,
+        "pkg/tests/test_a.py": 1.0,
+        "pkg/tests/test_b.py": 1.0,
+    }
+    parts = [partition(inventory, i, 2, durations) for i in range(2)]
+    assert sorted(item for part in parts for item in part) == sorted(inventory)
+
+
+def test_refresh_rejects_unresolvable_junit(tmp_path: Path) -> None:
+    """#326 评审：junit 匹配但无任何用例解析到 root 下时必须失败关闭。"""
+    from tooling.quality.test_shards import ShardError, refresh_durations
+
+    junit = tmp_path / "junit.xml"
+    junit.write_text(
+        '<testsuites><testsuite tests="1" errors="0" failures="0">'
+        '<testcase classname="nowhere.tests.test_x" name="test_one" time="1.0"/>'
+        "</testsuite></testsuites>",
+        encoding="utf-8",
+    )
+    with pytest.raises(ShardError, match="no testcase resolved"):
+        refresh_durations([str(junit)], tmp_path / "durations.json", root=tmp_path)
 
 
 def test_oversized_file_splits_but_assignment_stays_complete() -> None:
@@ -106,7 +146,7 @@ def test_refresh_durations_merges_junit_totals(tmp_path: Path) -> None:
     manifest = tmp_path / "durations.json"
     merged = refresh_durations([str(junit)], manifest, root=tmp_path)
     assert merged == {"pkg/tests/unit/test_x.py": 2.5}
-    rerun = refresh_durations([str(junit)], manifest)
+    rerun = refresh_durations([str(junit)], manifest, root=tmp_path)
     assert rerun == merged
 
 

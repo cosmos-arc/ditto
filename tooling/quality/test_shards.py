@@ -18,6 +18,8 @@ _INVENTORY_FIELD_COUNT = 2
 # 未入清单文件的单例保守计权，锚定实测 p95≈0.43s（#326）：新文件按
 # 0.4s×用例数估重，宁可高估也不让未知重组件打破均衡。
 _DEFAULT_TEST_SECONDS = 0.4
+# run_shard 并行道的 xdist worker 数（串行道 -n 0 全价计）
+_PARALLEL_EFFECTIVE_LANES = 4
 _DURATION_MANIFEST = Path(__file__).with_name("shard_durations.json")
 
 
@@ -92,30 +94,18 @@ def _file_weights(
     return weights
 
 
-def _split_units(
-    groups: Mapping[str, list[tuple[str, bool]]],
-    weights: Mapping[str, float],
-    count: int,
-) -> dict[str, list[tuple[str, bool]]]:
+def _unit_cost(records: Sequence[tuple[str, bool]], per_test: float) -> float:
     """
-    把超过单片预算 60% 的巨文件按有序 nodeid 轮询拆成 count 个单元（#326）.
+    车道成本模型：串行记录全价，并行记录按有效并行度折价（#326 评审）.
 
-    文件亲和是均衡优化不是硬约束：单文件重量超过理想均值六成时，
-    不拆会把均衡下限钉死（实测 852s 巨文件钉出 2.16x）。拆分单元
-    按有序 nodeid 轮询，确定性完整；普通文件仍整文件分配。
+    run_shard 在同 runner 内先 -n 4 并行道后 -n 0 串行道——同一总权重
+    下串行占比高的片墙钟更长；成本近似 per≈文件均值×（串行 1.0/并行
+    0.25），只为均衡启发，不改变确定性与完回性。
     """
-    total = sum(weights.values())
-    budget = (total / count) * 0.6 if total > 0 else 0.0
-    units: dict[str, list[tuple[str, bool]]] = {}
-    for name, records in groups.items():
-        if weights[name] > budget and len(records) > 1:
-            targets = min(count, len(records))
-            ordered = sorted(records)
-            for shard in range(targets):
-                units[f"{name}#split{shard}"] = ordered[shard::targets]
-        else:
-            units[name] = records
-    return units
+    return sum(
+        per_test * (1.0 if serial else 1.0 / _PARALLEL_EFFECTIVE_LANES)
+        for _nodeid, serial in records
+    )
 
 
 def _assign_files(
@@ -124,27 +114,34 @@ def _assign_files(
     count: int,
 ) -> list[list[tuple[str, bool]]]:
     """
-    LPT 装箱：单元按时长降序（同权按路径字典序）放入当前最轻的片.
+    LPT 装箱：单元按车道成本降序（同权按首 nodeid 字典序）放入当前最轻的片.
 
-    负载并列取最小片序号——纯函数，同输入同输出（#326 确定性要求）。
+    单元为（成本, 首 nodeid, 记录）三元组——结构化表示拆分状态，不从
+    文件名子串推断（合法文件名可含 #split）。负载并列取最小片序号——
+    纯函数，同输入同输出（#326 确定性要求）。
     """
-    units = _split_units(groups, weights, count)
-    unit_weights = {
-        unit: (
-            weights[origin] * len(records) / len(groups[origin])
-            if "#split" in unit
-            else weights[unit]
-        )
-        for unit, records in units.items()
-        for origin in [unit.rsplit("#split", 1)[0]]
-    }
-    order = sorted(units, key=lambda name: (-unit_weights[name], name))
+    total = sum(weights.values())
+    budget = (total / count) * 0.6 if total > 0 else 0.0
+    units: list[tuple[float, str, list[tuple[str, bool]]]] = []
+    for name, records in groups.items():
+        per_test = weights[name] / len(records)
+        if weights[name] > budget and len(records) > 1:
+            targets = min(count, len(records))
+            ordered = sorted(records)
+            for shard in range(targets):
+                unit = ordered[shard::targets]
+                units.append(
+                    (_unit_cost(unit, per_test), ordered[0][0] + f"#{shard}", unit)
+                )
+        else:
+            units.append((_unit_cost(records, per_test), records[0][0], records))
+    order = sorted(units, key=lambda unit: (-unit[0], unit[1]))
     loads = [0.0] * count
     buckets: list[list[tuple[str, bool]]] = [[] for _ in range(count)]
-    for name in order:
+    for cost, _tie, records in order:
         target = min(range(count), key=lambda shard: (loads[shard], shard))
-        loads[target] += unit_weights[name]
-        buckets[target].extend(units[name])
+        loads[target] += cost
+        buckets[target].extend(records)
     return buckets
 
 
@@ -396,7 +393,13 @@ def refresh_durations(
         paths.extend(matched)
     # 全部 pattern 的路径聚合后一次解析：跨片/跨车道同模块观测按
     # parse_junit 既有 per-case max 聚合，结果不依赖参数顺序（#326 评审）。
-    for module, cases in parse_junit(paths, root or Path.cwd()).items():
+    parsed = parse_junit(paths, root or Path.cwd())
+    if not parsed:
+        raise ShardError(
+            "junit evidence matched but no testcase resolved under the root — "
+            "wrong working directory or renamed paths?"
+        )
+    for module, cases in parsed.items():
         merged[module] = sum(cases.values())
     payload = {name: round(seconds, 3) for name, seconds in sorted(merged.items())}
     manifest.write_text(json.dumps(payload, indent=0, separators=(",", ":")) + "\n")
