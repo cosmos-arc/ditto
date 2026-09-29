@@ -297,9 +297,8 @@ def main(argv: list[str] | None = None) -> int:
             print(json.dumps(row, ensure_ascii=False, sort_keys=True))
         verified = sum(1 for row in rows if row["evidence"] == VERIFIED)
         distinct = len({row["sha"] for row in rows})
-        unexplained = sum(
-            1 for row in rows if row["evidence"] == "unknown" and not row.get("reasons")
-        )
+        explainable = {VERIFIED, FULL_REQUIRED}
+        unexplained = sum(1 for row in rows if row["evidence"] not in explainable)
         dates = sorted(str(row["created_at"]) for row in rows if row["created_at"])
         summary = (
             f"observation: {verified}/{len(rows)} verified, {distinct} distinct SHAs"

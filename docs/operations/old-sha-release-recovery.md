@@ -22,14 +22,17 @@
    `gh api repos/cosmos-arc/ditto/actions/runs/<run-id>/artifacts` 列出，
    `gh api -X DELETE repos/cosmos-arc/ditto/actions/artifacts/<id>` 删除。
    按原结论分派：
-   - failure / timed_out / stale / startup_failure：默认
-     `gh run rerun <run-id> --failed` 只重跑未成功 job；其中已上传过
-     产物的失败 job（如失败 shard 的 backend-shard-*）须先按上段删
-     除其产物，否则重跑在同一上传步反复失败。
+   - failure / timed_out / stale：默认 `gh run rerun <run-id> --failed`
+     只重跑未成功 job；其中已上传过产物的失败 job（如失败 shard 的
+     backend-shard-*）须先按上段删除其产物，否则重跑在同一上传步
+     反复失败。
+   - startup_failure：该 run 可能没有任何 job，`--failed` 无从重跑——
+     整跑重试 `gh run rerun <run-id>`，并按取消态同样先删全部产物。
    - cancelled：取消态没有 failed job 可重跑，整跑重试
-     `gh run rerun <run-id>`——若取消的 attempt 已上传过
-     tested-commit，删除是**必须**步骤而非可选（不删则上传步必失败，
-     无法"接受退化"绕过）。
+     `gh run rerun <run-id>`——整跑重执行**所有** job，取消前任何
+     job 已上传的产物（tested-commit、web-dist、backend-shard-* 等）
+     都会撞名，**必须先删除该 run 的全部产物**再整跑（不删则上传步
+     必失败，无法"接受退化"绕过）。
    - action_required：不是重跑问题——先处理待审批（环境保护/审批），
      再按上述分派。
    重跑产生同 run_id 的新 attempt，结论取最新 attempt。
