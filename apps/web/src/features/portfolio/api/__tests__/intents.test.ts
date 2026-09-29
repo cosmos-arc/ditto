@@ -1,3 +1,4 @@
+// @vitest-environment node
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { capturedRequest, requestJson, requestPath } from "@/test/request";
 import { updateIntentStatus } from "../intents";
