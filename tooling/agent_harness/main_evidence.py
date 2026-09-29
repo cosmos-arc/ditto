@@ -206,9 +206,10 @@ def _policy_job(run: dict[str, Any]) -> dict[str, Any] | None:
     if not isinstance(run_id, int):
         return None
     for attempt in range(int(attempts), 0, -1):
+        # attempt= 不是 list-jobs 的合法参数；per-attempt 用文档化路由
         jobs = _gh(
-            f"repos/{_repo()}/actions/runs/{run_id}/jobs"
-            + f"?per_page=100&attempt={attempt}"
+            f"repos/{_repo()}/actions/runs/{run_id}"
+            + f"/attempts/{attempt}/jobs?per_page=100"
         )
         found = next(
             (j for j in jobs.get("jobs", []) if j.get("name") == "Repository policy"),
@@ -295,8 +296,21 @@ def main(argv: list[str] | None = None) -> int:
         for row in rows:
             print(json.dumps(row, ensure_ascii=False, sort_keys=True))
         verified = sum(1 for row in rows if row["evidence"] == VERIFIED)
-        summary = f"observation: {verified}/{len(rows)} verified"
-        print(f"{summary} (switch gate needs >=10 distinct SHAs over >=7 days)")
+        distinct = len({row["sha"] for row in rows})
+        unexplained = sum(
+            1 for row in rows if row["evidence"] == "unknown" and not row.get("reasons")
+        )
+        dates = sorted(str(row["created_at"]) for row in rows if row["created_at"])
+        summary = (
+            f"observation: {verified}/{len(rows)} verified, {distinct} distinct SHAs"
+        )
+        if dates:
+            summary += f", span {dates[0][:10]}..{dates[-1][:10]}"
+        if unexplained:
+            summary += f", {unexplained} unexplained rows"
+        print(
+            f"{summary} (switch gate: >=10 distinct SHAs over >=7 days, 0 unexplained)"
+        )
         return 0
     if not args.commit:
         parser.error("verify requires --commit")
