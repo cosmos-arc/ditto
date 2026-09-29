@@ -94,18 +94,29 @@ def _file_weights(
     return weights
 
 
-def _unit_cost(records: Sequence[tuple[str, bool]], per_test: float) -> float:
+def _lane_wall(
+    serial_sum: float, parallel_sum: float, largest_parallel: float
+) -> float:
     """
-    车道成本模型：串行记录全价，并行记录按有效并行度折价（#326 评审）.
+    车道墙钟模型（#326 评审）：串行道 -n 0 全价 + 并行道 loadfile 墙钟.
 
-    run_shard 在同 runner 内先 -n 4 并行道后 -n 0 串行道——同一总权重
-    下串行占比高的片墙钟更长；成本近似 per≈文件均值×（串行 1.0/并行
-    0.25），只为均衡启发，不改变确定性与完回性。
+    并行道 --dist=loadfile 文件不可分：墙钟 ≈ max(最大并行单元,
+    并行总和/worker 数)——整文件单元不被 /4 低估，小文件仍享并行度。
     """
-    return sum(
-        per_test * (1.0 if serial else 1.0 / _PARALLEL_EFFECTIVE_LANES)
-        for _nodeid, serial in records
-    )
+    return serial_sum + max(largest_parallel, parallel_sum / _PARALLEL_EFFECTIVE_LANES)
+
+
+def _bucket_wall(serial_sum: float, parallel_by_file: Mapping[str, float]) -> float:
+    """
+    车道墙钟模型（#326 评审）：串行道 -n 0 全价 + 并行道 loadfile 墙钟.
+
+    loadfile 文件不可分且同文件锁定单 worker：墙钟 ≈ max(最大单文件
+    并行足迹, 并行总和/worker 数)——整文件单元不被 /4 低估，小文件仍
+    享并行度；同文件拆分单元同片堆叠按合并足迹计价。
+    """
+    parallel_sum = sum(parallel_by_file.values())
+    largest = max(parallel_by_file.values(), default=0.0)
+    return serial_sum + max(largest, parallel_sum / _PARALLEL_EFFECTIVE_LANES)
 
 
 def _assign_files(
@@ -114,33 +125,53 @@ def _assign_files(
     count: int,
 ) -> list[list[tuple[str, bool]]]:
     """
-    LPT 装箱：单元按车道成本降序（同权按首 nodeid 字典序）放入当前最轻的片.
+    车道墙钟贪心分配.
 
-    单元为（成本, 首 nodeid, 记录）三元组——结构化表示拆分状态，不从
-    文件名子串推断（合法文件名可含 #split）。负载并列取最小片序号——
-    纯函数，同输入同输出（#326 确定性要求）。
+    单元（整文件或巨文件拆分块）按秒数降序（同权按首 nodeid 字典序）
+    放入使墙钟最小的片；并列取最小片序号——纯函数，同输入同输出。
     """
     total = sum(weights.values())
     budget = (total / count) * 0.6 if total > 0 else 0.0
+    # (每记录秒, 首 nodeid, 记录)：文件粒度时长摊到记录（均匀近似）
     units: list[tuple[float, str, list[tuple[str, bool]]]] = []
     for name, records in groups.items():
-        per_test = weights[name] / len(records)
+        per_record = weights[name] / len(records)
         if weights[name] > budget and len(records) > 1:
             targets = min(count, len(records))
             ordered = sorted(records)
             for shard in range(targets):
                 unit = ordered[shard::targets]
-                units.append(
-                    (_unit_cost(unit, per_test), ordered[0][0] + f"#{shard}", unit)
-                )
+                units.append((per_record, ordered[0][0] + f"#{shard}", unit, name))
         else:
-            units.append((_unit_cost(records, per_test), records[0][0], records))
-    order = sorted(units, key=lambda unit: (-unit[0], unit[1]))
-    loads = [0.0] * count
+            units.append((per_record, records[0][0], records, name))
+
+    order = sorted(units, key=lambda unit: (-unit[0] * len(unit[2]), unit[1]))
+    serial_sums = [0.0] * count
+    parallel_by_file: list[dict[str, float]] = [{} for _ in range(count)]
     buckets: list[list[tuple[str, bool]]] = [[] for _ in range(count)]
-    for cost, _tie, records in order:
-        target = min(range(count), key=lambda shard: (loads[shard], shard))
-        loads[target] += cost
+    for per_record, _tie, records, origin in order:
+        unit_serial = per_record * sum(1 for _n, is_serial in records if is_serial)
+        unit_parallel = per_record * sum(
+            1 for _n, is_serial in records if not is_serial
+        )
+        best: tuple[float, int] | None = None
+        for shard in range(count):
+            merged_parallel = dict(parallel_by_file[shard])
+            if unit_parallel:
+                merged_parallel[origin] = (
+                    merged_parallel.get(origin, 0.0) + unit_parallel
+                )
+            wall = _bucket_wall(serial_sums[shard] + unit_serial, merged_parallel)
+            if best is None or wall < best[0]:
+                best = (wall, shard)
+        if best is None:  # pragma: no cover - count>=1 时循环至少一次
+            raise ShardError("no shard candidate")
+        target = best[1]
+        serial_sums[target] += unit_serial
+        if unit_parallel:
+            parallel_by_file[target][origin] = (
+                parallel_by_file[target].get(origin, 0.0) + unit_parallel
+            )
         buckets[target].extend(records)
     return buckets
 
@@ -249,8 +280,16 @@ def run_shard(output: Path, commit: str, index: int, count: int) -> None:
     report_path.write_text(json.dumps(report) + "\n")
     executed = False
     for serial in (False, True):
-        nodeids = [name for name, marked in selected if marked is serial]
+        nodeids = [name for name, is_serial in selected if is_serial is serial]
         if not nodeids:
+            # 该道无选择：清掉复用输出目录里上一轮的陈旧产物，防止
+            # nodes/junit 残留误导产物侧证据核验（#326 评审）
+            for stale in output.glob(f"nodes-{index}-{serial}.txt"):
+                stale.unlink()
+            for stale in output.glob(f"files-{index}-{serial}.txt"):
+                stale.unlink()
+            for stale in output.glob(f"junit-{index}-{serial}.xml"):
+                stale.unlink()
             continue
         selection = output / f"nodes-{index}-{serial}.txt"
         selection.write_text("\n".join(nodeids) + "\n")
@@ -285,14 +324,8 @@ def run_shard(output: Path, commit: str, index: int, count: int) -> None:
         _run(*command)
         executed = True
     if not selected:
-        # 合法空片：清掉复用输出目录里上一轮的陈旧车道产物（nodes/files/
-        # junit 残留会误导产物侧证据核验），验证侧按空选择跳过数据要求
-        for stale in output.glob(f"nodes-{index}-*.txt"):
-            stale.unlink()
-        for stale in output.glob(f"files-{index}-*.txt"):
-            stale.unlink()
-        for stale in output.glob(f"junit-{index}-*.xml"):
-            stale.unlink()
+        # 合法空片：两道产物已由上方逐道清理移除；验证侧按空选择跳过
+        # coverage 数据要求
         report.update(status="passed")
         report_path.write_text(json.dumps(report) + "\n")
         return

@@ -52,11 +52,17 @@ def test_partition_balances_by_duration_weight() -> None:
 
 
 def test_serial_records_cost_more_than_parallel_for_balance() -> None:
-    """#326 评审：串行道 -n 0 全价、并行道折价——成本模型区分车道。"""
-    from tooling.quality.test_shards import _unit_cost
+    """#326 评审：串行道 -n 0 全价；并行道 loadfile 下整文件单元不被 /4 低估。"""
+    from tooling.quality.test_shards import _bucket_wall
 
-    assert _unit_cost([("a.py::test_s", True)], 4.0) == 4.0
-    assert _unit_cost([("a.py::test_p", False)], 4.0) == 1.0
+    # 单个 400s 并行文件占满一个 worker：max(400, 400/4)=400 而非 100
+    assert _bucket_wall(0.0, {"a.py": 400.0}) == 400.0
+    # 4 个 100s 小文件摊在 4 个 worker：max(100, 400/4)=100
+    assert _bucket_wall(0.0, {f"f{i}.py": 100.0 for i in range(4)}) == 100.0
+    # 串行道全价叠加
+    assert _bucket_wall(50.0, {f"f{i}.py": 100.0 for i in range(4)}) == 150.0
+    # 同文件堆叠按合并足迹计价（loadfile 同文件单 worker）
+    assert _bucket_wall(0.0, {"a.py": 300.0}) == 300.0
 
 
 def test_filename_containing_split_marker_stays_whole() -> None:
