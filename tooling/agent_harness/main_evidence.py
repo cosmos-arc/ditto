@@ -11,9 +11,11 @@ toolchain 等全部规则文件——tested tree 即最终 tree 时规则不可�
 from __future__ import annotations
 
 import argparse
+import io
 import json
 import os
 import subprocess
+import zipfile
 from pathlib import Path
 from typing import Any
 
@@ -45,6 +47,45 @@ def _gh(*arguments: str) -> Any:
         return json.loads(proc.stdout)
     except json.JSONDecodeError as error:
         raise EvidenceApiError(f"gh api returned malformed JSON: {error}") from error
+
+
+def _gh_raw(endpoint: str) -> bytes:
+    """Download a binary endpoint (artifact zip); failures normalize."""
+    try:
+        proc = subprocess.run(
+            ["gh", "api", endpoint],
+            capture_output=True,
+            timeout=120,
+            check=False,
+        )
+    except (subprocess.TimeoutExpired, OSError) as error:
+        raise EvidenceApiError(f"gh api invocation failed: {error}") from error
+    if proc.returncode != 0:
+        raise EvidenceApiError(
+            f"gh api {endpoint[:80]} failed: {proc.stderr.decode()[:200]}"
+        )
+    return proc.stdout
+
+
+def _tested_commit_from_artifacts(run_id: int) -> str | None:
+    """从 run 产物取被测提交（#351 评审 P1）：REST 无 merge 提交字段，
+    shard manifest 记录的 commit=$GITHUB_SHA 才是实测对象。无产物
+    （如 web-only PR）→ None → 全量。"""
+    artifacts = _gh(f"repos/{_repo()}/actions/runs/{run_id}/artifacts?per_page=100")
+    for artifact in artifacts.get("artifacts", []):
+        if not str(artifact.get("name", "")).startswith("tested-commit-"):
+            continue
+        artifact_id = artifact.get("id")
+        if not isinstance(artifact_id, int):
+            continue
+        blob = _gh_raw(f"repos/{_repo()}/actions/artifacts/{artifact_id}/zip")
+        with zipfile.ZipFile(io.BytesIO(blob)) as archive:
+            for name in archive.namelist():
+                if name.endswith("tested-commit"):
+                    commit = archive.read(name).decode("utf-8").strip()
+                    if commit:
+                        return commit
+    return None
 
 
 def _repo() -> str:
@@ -100,14 +141,17 @@ def _tested_gate_result(run: dict[str, Any]) -> tuple[bool, str | None]:
     """
     if run.get("conclusion") != "success":
         return False, None
-    tested_sha = run.get("head_sha")
-    if not isinstance(tested_sha, str):
+    run_id = run.get("id")
+    if not isinstance(run_id, int):
         return False, None
-    jobs = _gh(f"repos/{_repo()}/actions/runs/{run['id']}/jobs?per_page=100")
-    for job in jobs.get("jobs", []):
-        if job.get("name") == "CI gate" and job.get("conclusion") == "success":
-            return True, tested_sha
-    return False, tested_sha
+    jobs = _gh(f"repos/{_repo()}/actions/runs/{run_id}/jobs?per_page=100")
+    gate_ok = any(
+        job.get("name") == "CI gate" and job.get("conclusion") == "success"
+        for job in jobs.get("jobs", [])
+    )
+    if not gate_ok:
+        return False, None
+    return True, _tested_commit_from_artifacts(run_id)
 
 
 def verify(commit_sha: str) -> tuple[str, list[str]]:

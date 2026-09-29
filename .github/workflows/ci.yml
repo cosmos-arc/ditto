@@ -50,6 +50,16 @@ jobs:
           CHECK_BASE_SHA: ${{ github.event.pull_request.base.sha }}
           MAIN_EVIDENCE: ${{ steps.evidence.outputs.outcome }}
         run: python3 -m tooling.agent_harness.ci select
+      - name: Record tested commit
+        run: |
+          mkdir -p build/evidence
+          echo -n "$GITHUB_SHA" > build/evidence/tested-commit
+      - name: Upload tested commit evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: tested-commit-${{ github.run_id }}
+          path: build/evidence/tested-commit
+          if-no-files-found: error
       - name: Diff hygiene
         env:
           CHECK_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha || github.event.before }}
