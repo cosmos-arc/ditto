@@ -238,10 +238,17 @@ def _push_run_window(
         _gh(f"{endpoint}?{query}&per_page={limit}").get("workflow_runs", [])
     )
     page = 2
-    while since and collected and page <= _MAX_RUN_PAGES:
+    while since and collected:
         oldest = min(str(r.get("created_at") or "") for r in collected)
         if oldest and oldest < since:
-            break
+            return collected
+        if page > _MAX_RUN_PAGES:
+            # 窗口不完整（翻满页仍未到 since）：静默截断会让被省略页的
+            # unexplained 消失——fail closed（#352 评审）
+            raise EvidenceApiError(
+                "observation window exceeded page cap before --since; "
+                "raise --limit or narrow --since"
+            )
         batch = _gh(f"{endpoint}?{query}&per_page={limit}&page={page}").get(
             "workflow_runs", []
         )
