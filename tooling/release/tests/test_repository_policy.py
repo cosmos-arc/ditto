@@ -107,6 +107,23 @@ def test_backend_coverage_merges_shards_and_enforces_the_floor() -> None:
     artifact_downloads = json.dumps(backend["steps"])
     assert "backend-shard-" in artifact_downloads
     assert "backend-capacity-" in artifact_downloads
+    # 必要产物缺失在下载点即失败并点名产物（#342），不等下游合并才暴露
+    downloads = [
+        step
+        for step in backend["steps"]
+        if "download-artifact" in str(step.get("uses", ""))
+    ]
+    assert len(downloads) == 2
+    for step in downloads:
+        assert step["with"]["if-no-files-found"] == "error"
+    system_e2e = _workflow("ci.yml")["jobs"]["system-e2e"]
+    e2e_downloads = [
+        step
+        for step in system_e2e["steps"]
+        if "download-artifact" in str(step.get("uses", ""))
+    ]
+    assert len(e2e_downloads) == 1
+    assert e2e_downloads[0]["with"]["if-no-files-found"] == "error"
 
 
 def test_ci_has_explicit_pit_and_supported_platform_gates() -> None:
