@@ -11,32 +11,33 @@ import sys
 from collections.abc import Sequence
 from pathlib import Path
 
-_INVENTORY_FIELD_COUNT = 2
+_INVENTORY_FIELD_COUNT = 3
 
 
 class ShardError(ValueError):
     """Shard evidence does not prove the complete current test inventory."""
 
 
-def _inventory(value: object) -> list[tuple[str, bool]]:
+def _inventory(value: object) -> list[tuple[str, bool, bool]]:
     if not isinstance(value, list):
         raise ShardError("inventory must be a list")
-    result: list[tuple[str, bool]] = []
+    result: list[tuple[str, bool, bool]] = []
     for item in value:
         if (
             not isinstance(item, list)
             or len(item) != _INVENTORY_FIELD_COUNT
             or not isinstance(item[0], str)
             or not isinstance(item[1], bool)
+            or not isinstance(item[2], bool)
         ):
             raise ShardError("malformed test inventory entry")
-        result.append((item[0], item[1]))
+        result.append((item[0], item[1], item[2]))
     return result
 
 
 def partition(
-    inventory: Sequence[tuple[str, bool]], index: int, count: int
-) -> list[tuple[str, bool]]:
+    inventory: Sequence[tuple[str, bool, bool]], index: int, count: int
+) -> list[tuple[str, bool, bool]]:
     """Distribute sorted node IDs once, including slow parametrized cases."""
     if not 0 <= index < count or not inventory:
         raise ShardError("invalid shard coordinates or empty inventory")
@@ -51,7 +52,7 @@ def verify_manifests(directory: Path, commit: str, count: int) -> list[Path]:
     manifests = sorted(directory.glob("shard-*.json"))
     if len(manifests) != count:
         raise ShardError("missing or extra shard manifests")
-    inventory: list[tuple[str, bool]] | None = None
+    inventory: list[tuple[str, bool, bool]] | None = None
     seen: set[int] = set()
     coverage: list[Path] = []
     for path in manifests:
@@ -124,7 +125,7 @@ def run_shard(output: Path, commit: str, index: int, count: int) -> None:
     report_path.write_text(json.dumps(report) + "\n")
     executed = False
     for serial in (False, True):
-        nodeids = [name for name, marked in selected if marked is serial]
+        nodeids = [name for name, is_serial, _pit in selected if is_serial is serial]
         if not nodeids:
             continue
         selection = output / f"nodes-{index}-{serial}.txt"

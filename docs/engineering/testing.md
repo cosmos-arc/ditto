@@ -84,6 +84,17 @@ CPU/内存容量型慢测试与串行策略分开：它们打 `slow`/`capacity` 
 再决定是否撤登记表条目；若故障证明的是跨 runner 作用域问题，不得以恢复旧 blanket
 标记宣称解决——互斥必须在正确作用域实现。
 
+**同语境重复执行消除与证据核验（#350）**：PIT 标记套件与 OpenAPI conformance
+在 CI 里曾各执行两次（分片并行道全量一次 + 专用重跑一次：backend-tests 内
+`task pit` 59.6s 串行尾部、api-contract 内整文件 conformance 重跑）。现统一由
+分片承载唯一执行，backend-tests 以 `tooling/quality/required_suite_evidence`
+从产物 fail-closed 核验：inventory（含 pit 标志）⊆ nodes 选择恰一次 + 每道
+junit 计数与选择数一致且 errors=0——清单漂移、缺清单（标记不再匹配任何收集项）、
+漏用例、重复选择、junit 短计均立即失败。负向验收覆盖于
+`tooling/quality/tests/test_required_suite_evidence.py`。本地链条不变
+（`task pit`/`check-contract` 保留具名门），CI 钉死更新保真原意图：PIT 与
+conformance 仍是显式 CI 门，只是从盲重跑升级为执行+产物证明。
+
 **真实持久化与装配接缝的落位（#347 试点，承接 #339 迁移决议四组之二）**：真实
 存储（真 SQLite/文件 reopen、防篡改恢复）归**集成职责**，所有权仍在能力包——
 迁移是目录归属变化，不是把 mock 换成真库或反之；同文件混合 mock 接缝与真库
