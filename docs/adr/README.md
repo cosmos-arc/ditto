@@ -35,6 +35,7 @@ ADR 记录项目中的重要架构决策，每个 ADR 包含：
 | [0012](0012-development-skills-ownership.md) | 通用开发 skills 与 Ditto 治理的职责边界 | Accepted | 2026-09-08 | 上游独立维护，项目适配与交付闭环 |
 | [0013](0013-repository-knowledge-lifecycle.md) | 仓库知识归属与生命周期 | Accepted | 2026-09-08 | GitHub 管任务，仓库保存长期知识 |
 | [0014](0014-agent-sdk-agui-goalx-alignment.md) | 研究 Agent SDK 与 AG-UI 对齐 GoalX | Accepted | 2026-09-20 | 沿用 Python SDK，统一交互栈，保留 Ditto 状态、审批和恢复边界 |
+| [0015](0015-main-push-evidence-verification.md) | main push 收窄选择的机器证据核验 | Accepted | 2026-09-29 | 三腿身份链（合并关联/head CI gate 成功/树同一）；存疑退全量 |
 
 ## ADR 编号规则
 
