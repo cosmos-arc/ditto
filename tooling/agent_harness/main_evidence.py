@@ -290,15 +290,25 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--commit")
     parser.add_argument("--output", help="GITHUB_OUTPUT path for outcome=")
     parser.add_argument("--limit", type=int, default=20)
+    parser.add_argument(
+        "--since",
+        help="ISO date (YYYY-MM-DD); drop earlier runs (observation start)",
+    )
     args = parser.parse_args(argv)
     if args.mode == "observe":
         rows = observe(args.limit)
+        if args.since:
+            rows = [row for row in rows if str(row["created_at"] or "") >= args.since]
         for row in rows:
             print(json.dumps(row, ensure_ascii=False, sort_keys=True))
         verified = sum(1 for row in rows if row["evidence"] == VERIFIED)
         distinct = len({row["sha"] for row in rows})
         explainable = {VERIFIED, FULL_REQUIRED}
-        unexplained = sum(1 for row in rows if row["evidence"] not in explainable)
+        unexplained = sum(
+            1
+            for row in rows
+            if row["evidence"] not in explainable or not row.get("reasons")
+        )
         dates = sorted(str(row["created_at"]) for row in rows if row["created_at"])
         summary = (
             f"observation: {verified}/{len(rows)} verified, {distinct} distinct SHAs"

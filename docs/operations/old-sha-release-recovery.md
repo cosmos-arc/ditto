@@ -15,17 +15,23 @@
 2. **仅当该 push 运行结论不是 success 时**才需要恢复——发布门只看
    结论，不看产物保留期：成功的旧 run 即使产物过期也直接放行，不要
    为过期产物重跑成功运行。
-3. 原地重跑保持 event=push 身份（不新开 dispatch）。先处理冲突产物：
+3. 前置检查：确认当前没有进行中的 main CI run（
+   `gh run list --branch main --limit 1`）——ci.yml 的 concurrency 组
+   `ci-CI-refs/heads/main` 带 cancel-in-progress，恢复性重跑若与普通
+   main push 重叠会互相取消；错峰执行。
+4. 原地重跑保持 event=push 身份（不新开 dispatch）。先处理冲突产物：
    任何以 `if: always()` 上传的产物（tested-commit、backend-shard-*、
    backend-coverage-* 等）在同 run_id 重跑对应 job 时会与 v4 不可变
    语义冲突——重跑前删除将被重跑 job 再度上传的产物：
    `gh api repos/cosmos-arc/ditto/actions/runs/<run-id>/artifacts` 列出，
    `gh api -X DELETE repos/cosmos-arc/ditto/actions/artifacts/<id>` 删除。
    按原结论分派：
-   - failure / timed_out / stale：默认 `gh run rerun <run-id> --failed`
+   - failure / timed_out：默认 `gh run rerun <run-id> --failed`
      只重跑未成功 job；其中已上传过产物的失败 job（如失败 shard 的
      backend-shard-*）须先按上段删除其产物，否则重跑在同一上传步
      反复失败。
+   - stale：job 也以 stale 结束而非 failure，`--failed` 无可选 job——
+     与 startup_failure 同样走整跑重试+先删全部产物。
    - startup_failure：该 run 可能没有任何 job，`--failed` 无从重跑——
      整跑重试 `gh run rerun <run-id>`，并按取消态同样先删全部产物。
    - cancelled：取消态没有 failed job 可重跑，整跑重试
@@ -36,7 +42,7 @@
    - action_required：不是重跑问题——先处理待审批（环境保护/审批），
      再按上述分派。
    重跑产生同 run_id 的新 attempt，结论取最新 attempt。
-4. 重跑成功后按常规发布流程触发 release；发布门按上面的规则放行。
+5. 重跑成功后按常规发布流程触发 release；发布门按上面的规则放行。
 
 ## 边界
 
@@ -54,10 +60,11 @@ platform-smoke 从每次 push 移到"PR 原生 + 周度 cron"的最终开关，
 须先完成影子观察：≥7 天、≥10 个不同候选 SHA 的 push run 证据全部
 可解释（verified 有理由链、full-required 有明确原因）。
 
-机检命令：
+机检命令（--since 取观察机制上线日，剔除不可能含结论的历史 run）：
 
 ```
-GH_TOKEN=... python -m tooling.agent_harness.main_evidence observe --limit 30
+GH_TOKEN=... python -m tooling.agent_harness.main_evidence observe \
+  --limit 30 --since 2026-09-29
 ```
 
 样本不足不切换；观察期证据变化后重取。切换落地时同步更新
