@@ -229,34 +229,30 @@ _GATE_MIN_DAYS = 7
 def _push_run_window(
     endpoint: str, limit: int, since: str | None
 ) -> list[dict[str, Any]]:
-    """Fetch push runs until the --since window is covered (#352 评审).
+    """Fetch the complete server-filtered push window (#352 评审).
 
-    先取满窗口再过滤：--since 期内的早页不被 --limit 截掉。
+    --since 经服务端 created 过滤表达（API 返回序实测不完全可信，不能
+    用客户端 oldest<since 提前停页——早页混入旧 run 会漏掉窗口内后页）；
+    翻到空页/尾页即窗口完整，翻满页上限 fail closed。
     """
     query = "branch=main&event=push&sort=created&direction=desc"
-    collected: list[dict[str, Any]] = list(
-        _gh(f"{endpoint}?{query}&per_page={limit}").get("workflow_runs", [])
-    )
-    page = 2
-    while since and collected:
-        oldest = min(str(r.get("created_at") or "") for r in collected)
-        if oldest and oldest < since:
-            return collected
-        if page > _MAX_RUN_PAGES:
-            # 窗口不完整（翻满页仍未到 since）：静默截断会让被省略页的
-            # unexplained 消失——fail closed（#352 评审）
-            raise EvidenceApiError(
-                "observation window exceeded page cap before --since; "
-                "raise --limit or narrow --since"
-            )
+    if since:
+        query += f"&created=>={since}"
+    collected: list[dict[str, Any]] = []
+    page = 1
+    while page <= _MAX_RUN_PAGES:
         batch = _gh(f"{endpoint}?{query}&per_page={limit}&page={page}").get(
             "workflow_runs", []
         )
         if not batch:
-            break
+            return collected
         collected.extend(batch)
+        if len(batch) < limit:
+            return collected
         page += 1
-    return collected
+    raise EvidenceApiError(
+        "observation window exceeded page cap; raise --limit or narrow --since"
+    )
 
 
 def observe(limit: int = 20, since: str | None = None) -> list[dict[str, Any]]:
