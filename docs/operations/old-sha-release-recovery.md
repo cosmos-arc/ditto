@@ -15,12 +15,13 @@
 2. **仅当该 push 运行结论不是 success 时**才需要恢复——发布门只看
    结论，不看产物保留期：成功的旧 run 即使产物过期也直接放行，不要
    为过期产物重跑成功运行。
-3. 前置检查：确认当前没有**进行中/排队中**的 CI 工作流 run（
-   `gh run list --workflow CI --branch main --status in_progress` 与
-   `--status queued` 都为空）——注意不能只看 `--limit 1` 的最新 run
-   （可能是其他工作流的已完成 run）；ci.yml 的 concurrency 组
-   `ci-CI-refs/heads/main` 带 cancel-in-progress，恢复性重跑若与普通
-   main push 重叠会互相取消；错峰执行。
+3. 前置检查：确认当前没有**任何活跃态**的 CI 工作流 run——
+   `in_progress`、`queued`、`pending`、`requested`、`waiting` 逐个
+   查询 `gh run list --workflow CI --branch main --status <状态>` 均
+   为空（注意不能只看 `--limit 1` 的最新 run，可能是其他工作流的
+   已完成 run）；ci.yml 的 concurrency 组 `ci-CI-refs/heads/main` 带
+   cancel-in-progress，恢复性重跑若与普通 main push 重叠会互相取消；
+   错峰执行。
 4. 原地重跑保持 event=push 身份（不新开 dispatch）。先处理冲突产物：
    任何以 `if: always()` 上传的产物（tested-commit、backend-shard-*、
    backend-coverage-* 等）在同 run_id 重跑对应 job 时会与 v4 不可变
