@@ -20,9 +20,8 @@ def _inventory_of(files: dict[str, int]) -> list[tuple[str, bool]]:
 def test_partition_is_complete_deterministic_and_file_affine() -> None:
     """#326：每 nodeid 恰好一次、纯函数确定、同文件不跨片（fixture 亲和）。"""
     inventory = _inventory_of({f"pkg/tests/test_{name}.py": 3 for name in "abcdefgh"})
-    durations = {
-        f"pkg/tests/test_{name}.py": 10.0 * i for i, name in enumerate("abcdefgh")
-    }
+    # 权重全部低于单片预算（60% 阈值），不触发巨文件拆分——本测试只考察亲和
+    durations = {f"pkg/tests/test_{name}.py": 10.0 for name in "abcdefgh"}
     parts = [partition(inventory, i, 4, durations) for i in range(4)]
     assert sorted(item for part in parts for item in part) == sorted(inventory)
     # 确定性：同输入重算逐字节一致
@@ -40,7 +39,10 @@ def test_partition_is_complete_deterministic_and_file_affine() -> None:
 def test_partition_balances_by_duration_weight() -> None:
     """时长权重驱动均衡：重文件先落最轻片，目标最慢/最快收敛。"""
     inventory = _inventory_of({f"pkg/tests/test_w{i}.py": 2 for i in range(6)})
-    durations = {f"pkg/tests/test_w{i}.py": float(10 - i) for i in range(6)}
+    # 低于单片预算的不等权重：LPT 应给出均衡分组
+    durations = {
+        f"pkg/tests/test_w{i}.py": float(w) for i, w in enumerate((4, 4, 4, 3, 3, 3))
+    }
     parts = [partition(inventory, i, 3, durations) for i in range(3)]
     loads = sorted(
         sum(durations[item[0].split("::")[0]] for item in part) for part in parts

@@ -108,12 +108,11 @@ def _split_units(
     budget = (total / count) * 0.6 if total > 0 else 0.0
     units: dict[str, list[tuple[str, bool]]] = {}
     for name, records in groups.items():
-        if weights[name] > budget and len(records) >= count:
+        if weights[name] > budget and len(records) > 1:
+            targets = min(count, len(records))
             ordered = sorted(records)
-            for shard in range(count):
-                unit = ordered[shard::count]
-                if unit:
-                    units[f"{name}#split{shard}"] = unit
+            for shard in range(targets):
+                units[f"{name}#split{shard}"] = ordered[shard::targets]
         else:
             units[name] = records
     return units
@@ -289,7 +288,14 @@ def run_shard(output: Path, commit: str, index: int, count: int) -> None:
         _run(*command)
         executed = True
     if not selected:
-        # 合法空片：无执行无 coverage，验证侧按空选择跳过数据要求
+        # 合法空片：清掉复用输出目录里上一轮的陈旧车道产物（nodes/files/
+        # junit 残留会误导产物侧证据核验），验证侧按空选择跳过数据要求
+        for stale in output.glob(f"nodes-{index}-*.txt"):
+            stale.unlink()
+        for stale in output.glob(f"files-{index}-*.txt"):
+            stale.unlink()
+        for stale in output.glob(f"junit-{index}-*.xml"):
+            stale.unlink()
         report.update(status="passed")
         report_path.write_text(json.dumps(report) + "\n")
         return
@@ -375,9 +381,11 @@ def refresh_durations(
     """
     Merge per-file totals from junit evidence into the duration manifest (#326).
 
-    复用 slow_test_gate 的 junit 解析（module 定位权威实现）；同文件多次
-    观测取该批最大值，最新一批覆盖旧值。清单只是均衡权重：缺失/过期
-    仅降精度，不影响分配确定性与完回性。
+    复用 slow_test_gate 的 junit 解析（module 定位权威实现）；批内同
+    用例多次观测取最大（parse_junit 既有语义），**本批出现的文件替换
+    旧值**——优化变快或瞬时离群后清单能回落；未在本批出现的文件保留
+    旧值。清单只是均衡权重：缺失/过期仅降精度，不影响分配确定性与完
+    固性。
     """
     merged = _read_duration_manifest(manifest)
     for pattern in junit_globs:
@@ -385,7 +393,7 @@ def refresh_durations(
         if not paths:
             raise ShardError(f"no junit evidence matches {pattern}")
         for module, cases in parse_junit(paths, root or Path.cwd()).items():
-            merged[module] = max(merged.get(module, 0.0), sum(cases.values()))
+            merged[module] = sum(cases.values())
     payload = {name: round(seconds, 3) for name, seconds in sorted(merged.items())}
     manifest.write_text(json.dumps(payload, indent=0, separators=(",", ":")) + "\n")
     return payload
@@ -398,7 +406,7 @@ def main() -> int:
         "mode", choices=("run", "combine", "capacity", "refresh-durations")
     )
     parser.add_argument("--output", type=Path, default=Path("build/test-shards"))
-    parser.add_argument("--commit", required=True)
+    parser.add_argument("--commit")
     parser.add_argument("--count", type=int, default=4)
     parser.add_argument("--index", type=int, default=0)
     parser.add_argument("--junit-glob", action="append", default=[])
@@ -406,20 +414,23 @@ def main() -> int:
     args = parser.parse_args()
     os.environ["PYTHON_KEYRING_BACKEND"] = "keyring.backends.null.Keyring"
     os.environ["_TYPER_FORCE_DISABLE_TERMINAL"] = "1"
-    if args.mode == "run":
-        run_shard(args.output, args.commit, args.index, args.count)
-    elif args.mode == "capacity":
-        run_capacity(args.output, args.commit)
-    elif args.mode == "refresh-durations":
+    if args.mode == "refresh-durations":
         if not args.junit_glob:
             parser.error("refresh-durations requires at least one --junit-glob")
         refresh_durations(args.junit_glob, args.manifest)
     else:
-        data = verify_manifests(args.output, args.commit, args.count)
-        data += _verify_capacity(args.output, args.commit)
-        _run("-m", "coverage", "combine", "--keep", *map(str, data))
-        _run("-m", "coverage", "json", "-o", "coverage.json")
-        _run("-m", "coverage", "xml", "-o", "coverage.xml")
+        if not args.commit:
+            parser.error(f"{args.mode} requires --commit")
+        if args.mode == "run":
+            run_shard(args.output, args.commit, args.index, args.count)
+        elif args.mode == "capacity":
+            run_capacity(args.output, args.commit)
+        else:
+            data = verify_manifests(args.output, args.commit, args.count)
+            data += _verify_capacity(args.output, args.commit)
+            _run("-m", "coverage", "combine", "--keep", *map(str, data))
+            _run("-m", "coverage", "json", "-o", "coverage.json")
+            _run("-m", "coverage", "xml", "-o", "coverage.xml")
     return 0
 
 
