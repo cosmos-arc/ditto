@@ -11,10 +11,15 @@
 
 1. 找到该 SHA 的精确 push 运行：
    `gh api "repos/cosmos-arc/ditto/actions/workflows/ci.yml/runs?head_sha=<SHA>&event=push" --jq '.workflow_runs[0].id'`
-2. 原地重跑该运行（保持 event=push 身份，不新开 dispatch）：
-   `gh run rerun <run-id>`（必要时 `--failed` 只重跑失败 job）。
-   重跑产生同 run_id 的新 attempt，结论更新为最新 attempt 的。
-3. 重跑成功后按常规发布流程触发 release；发布门按上面的规则放行。
+2. **仅当该 push 运行结论不是 success 时**才需要恢复——发布门只看
+   结论，不看产物保留期：成功的旧 run 即使产物过期也直接放行，不要
+   为过期产物重跑成功运行。
+3. 原地重跑保持 event=push 身份（不新开 dispatch）。默认
+   `gh run rerun <run-id> --failed` 只重跑失败 job——整跑重试会重新
+   执行 repository-policy 并再次上传 `tested-commit-<run_id>`，与
+   v4 产物不可变语义冲突；只有运行整体不可用且能接受产物冲突处理时
+   才整跑重试。重跑产生同 run_id 的新 attempt，结论取最新 attempt。
+4. 重跑成功后按常规发布流程触发 release；发布门按上面的规则放行。
 
 ## 边界
 

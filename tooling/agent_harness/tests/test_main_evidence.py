@@ -261,7 +261,10 @@ def test_observe_parses_evidence_outcome_from_logs(
 
     def fake_logs(*args: str, **kwargs: object) -> Any:
         class P:
-            stdout = "main-evidence: pr ok\nmain-evidence outcome: verified\n"
+            stdout = (
+                "2026-09-29T00:00:00Z main-evidence: pr ok\n"
+                "2026-09-29T00:00:00Z main-evidence outcome: verified\n"
+            )
 
         return P()
 

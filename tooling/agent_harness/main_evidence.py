@@ -222,13 +222,16 @@ def observe(limit: int = 20) -> list[dict[str, Any]]:
                     timeout=60,
                     check=False,
                 )
+                if proc.returncode != 0:
+                    reasons.append(f"log fetch failed: gh exit {proc.returncode}")
+                # Actions 日志行带时间戳前缀——用包含而非 startswith
                 for line in proc.stdout.splitlines():
-                    reason_marker = "main-evidence: "
-                    if line.startswith(reason_marker):
-                        reasons.append(line.split(reason_marker, 1)[1].strip())
                     outcome_marker = "main-evidence outcome: "
                     if outcome_marker in line:
                         outcome = line.split(outcome_marker, 1)[1].strip()
+                    elif "main-evidence: " in line:
+                        marker = "main-evidence: "
+                        reasons.append(line.split(marker, 1)[1].strip())
             except (subprocess.TimeoutExpired, OSError) as error:
                 # 单个历史日志拉取失败不炸整个观察：降级 unknown 并记原因
                 reasons.append(f"log fetch failed: {error}")
