@@ -44,7 +44,7 @@ def _repo() -> str:
     return os.environ.get("GITHUB_REPOSITORY", "cosmos-arc/ditto")
 
 
-def _merged_pr_for(commit_sha: str) -> dict[str, object]:
+def _merged_pr_for(commit_sha: str) -> dict[str, Any]:
     pulls = _gh(f"repos/{_repo()}/commits/{commit_sha}/pulls")
     candidates = [p for p in pulls if isinstance(p, dict)]
     for candidate in candidates:
