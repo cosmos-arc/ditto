@@ -9,6 +9,11 @@
 
 ## 恢复流程
 
+0. **先诊断再重跑**：查失败 job 日志区分瞬态与确定性失败——测试/
+   类型/coverage/policy 的确定性失败无法靠重跑修复（不可变 SHA 上
+   只会复现同样失败，还可能白删产物）；先修问题从修复提交重新走
+   push 验证。只有基础设施瞬态（网络/工具链下载/runner 故障）才
+   适用本恢复流程。
 1. 找到该 SHA 在 **main 分支**上的精确 push 运行（同 SHA 可能在其他
    分支也有 push 运行，重跑它无法满足发布门）：
    `gh api "repos/cosmos-arc/ditto/actions/workflows/ci.yml/runs?head_sha=<SHA>&event=push&branch=main" --jq '.workflow_runs[0].id'`

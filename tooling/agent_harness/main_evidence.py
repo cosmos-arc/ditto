@@ -222,6 +222,7 @@ def _policy_job(run: dict[str, Any]) -> dict[str, Any] | None:
 
 
 _MAX_RUN_PAGES = 10
+_API_MAX_PER_PAGE = 100
 _GATE_MIN_SHAS = 10
 _GATE_MIN_DAYS = 7
 
@@ -238,16 +239,18 @@ def _push_run_window(
     query = "branch=main&event=push&sort=created&direction=desc"
     if since:
         query += f"&created=>={since}"
+    # API 单页上限 100：limit 再大也按 100 取页，尾页判定按有效页大小
+    per_page = min(limit, _API_MAX_PER_PAGE)
     collected: list[dict[str, Any]] = []
     page = 1
     while page <= _MAX_RUN_PAGES:
-        batch = _gh(f"{endpoint}?{query}&per_page={limit}&page={page}").get(
+        batch = _gh(f"{endpoint}?{query}&per_page={per_page}&page={page}").get(
             "workflow_runs", []
         )
         if not batch:
             return collected
         collected.extend(batch)
-        if len(batch) < limit:
+        if len(batch) < per_page:
             return collected
         page += 1
     raise EvidenceApiError(
