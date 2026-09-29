@@ -73,8 +73,9 @@ runner 内的 xdist worker。各 integration 树处置：
 | `packages/application/tests/integration` | 零 session fixture/env 写/子进程/端口/网络（conftest 仅 docstring）；`_support` 模块纯不可变常量；非 tmp 文件为纯内存 mock 或只读模板渲染；capacity 子集已自带标记 | **已解除**（第二批 #359，2026-09） |
 | `packages/backtest/tests/integration` | 806 行 conftest 全 function 级 fixture，parquet 每例 `tmp_path` 再生，模块级仅不可变常量；全树 0.7s | **已解除**（第二批 #359，2026-09） |
 | `apps/backend/tests/integration` | session 级 Prefect test harness（真实子进程/端口）、全局 observability init、env 覆盖 | 保留串行；解除需先按 worker 隔离 Prefect harness，另立票 |
-| `packages/platform`（即 observability 树） | 等待治理与状态恢复已收口（#348，2026-09）：死等待删除有 SDK 同步契约证据；每例前后重置并快照/恢复 OTel API 全局；生产 OTLP 传输走本地真实 sink；纯配置合同并入 unit | 保留串行；解除走独立审计票（#226 同形态证据） |
-| `packages/analysis` / `packages/strategy` | 全 `tmp_path`、无 conftest/session fixture | 候选下一批（体量小，随 platform 批一起） |
+| `packages/platform/tests/integration`（observability 树） | 等待治理与状态恢复已收口（#348，2026-09）：每例快照/摘挂/恢复 OTel API 全局，外来 provider 不被 teardown 关闭；生产 OTLP 传输走本地真实 sink（`127.0.0.1:0` 临时端口，daemon 线程 fixture 拆除收敛）；`os.chdir` 两处均 `finally` 恢复；fixtures 全 function 级 | **已解除**（第三批 #363，2026-09） |
+| `packages/analysis/tests/integration` | 无 conftest；全 `tmp_path`，`monkeypatch.setenv` 自动恢复，`importlib.resources` 与 fixtures 目录只读 | **已解除**（第三批 #363，2026-09） |
+| `packages/strategy/tests/integration`（alpha） | conftest 纯 helper/不可变常量（零 fixture 声明）；唯一 fixture 纯内存 polars 构造；parquet 每例 `tmp_path` 再生 | **已解除**（第三批 #363，2026-09） |
 
 CPU/内存容量型慢测试与串行策略分开：它们打 `slow`/`capacity` 进慢道，不是保留
 `serial` 的理由。旧"4 片/-n2/<5min"目标仅作历史参考。**恢复策略**：任何可复现的
