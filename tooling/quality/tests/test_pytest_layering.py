@@ -181,7 +181,7 @@ def test_same_nodeid_marks_stable_across_entries(tmp_path: Path) -> None:
 
 
 def test_serial_audit_opt_out_is_component_exact() -> None:
-    """#226/#359：审计登记树解除层级 serial，边界外一律保留。"""
+    """#226/#359/#363：审计登记树解除层级 serial，边界外一律保留。"""
     repo = Path("/repo")
     assert layer_markers_for(
         Path("/repo/packages/data/tests/integration/test_x.py"), repo
@@ -203,12 +203,16 @@ def test_serial_audit_opt_out_is_component_exact() -> None:
     assert layer_markers_for(
         Path("/repo/packages/data-x/tests/integration/test_x.py"), repo
     ) == ("integration", "serial")
+    # 第三批登记（#363）：analysis、platform 与 strategy 解除。
     assert layer_markers_for(
         Path("/repo/packages/analysis/tests/integration/test_x.py"), repo
-    ) == ("integration", "serial")
+    ) == ("integration",)
     assert layer_markers_for(
         Path("/repo/packages/platform/tests/integration/test_x.py"), repo
-    ) == ("integration", "serial")
+    ) == ("integration",)
+    assert layer_markers_for(
+        Path("/repo/packages/strategy/tests/integration/alpha/test_x.py"), repo
+    ) == ("integration",)
     # 混合 unit/integration 路径不在被审计树内，保守保留 serial。
     assert layer_markers_for(
         Path("/repo/packages/data/tests/unit/integration/test_x.py"), repo
@@ -216,7 +220,7 @@ def test_serial_audit_opt_out_is_component_exact() -> None:
 
 
 def test_real_repo_serial_audit_lifts_only_the_audited_trees() -> None:
-    """钉死真实仓库：只有登记树解除（data/application/backtest），其余保留。"""
+    """钉死真实仓库：只有登记树解除，其余（backend）保留。"""
     files = sorted(
         {
             *REPO_ROOT.glob("packages/*/tests/integration/**/test_*.py"),
@@ -233,9 +237,12 @@ def test_real_repo_serial_audit_lifts_only_the_audited_trees() -> None:
         assert markers in {("integration",), ("integration", "serial")}, relative
         if relative.startswith(
             (
+                "packages/analysis/tests/integration/",
                 "packages/application/tests/integration/",
                 "packages/backtest/tests/integration/",
                 "packages/data/tests/integration/",
+                "packages/platform/tests/integration/",
+                "packages/strategy/tests/integration/",
             )
         ):
             assert markers == ("integration",), relative
@@ -243,8 +250,16 @@ def test_real_repo_serial_audit_lifts_only_the_audited_trees() -> None:
         else:
             assert markers == ("integration", "serial"), relative
             serial_owners.add(owner)
-    assert lifted == {"application", "backtest", "data"}
-    assert {"analysis", "platform", "strategy"} <= serial_owners
+    # 第三批（#363）后：六树解除，唯 backend 保留（Prefect harness 待隔离）。
+    assert lifted == {
+        "analysis",
+        "application",
+        "backtest",
+        "data",
+        "platform",
+        "strategy",
+    }
+    assert serial_owners == {"backend"}
 
 
 def test_explicit_serial_marker_survives_the_opt_out(tmp_path: Path) -> None:
