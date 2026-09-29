@@ -40,15 +40,21 @@ def _responder(
     *,
     pulls: list[dict[str, Any]] | None = None,
     pull_detail: dict[str, Any] | None = None,
-    check_runs: dict[str, Any] | None = None,
+    workflow_runs: list[dict[str, Any]] | None = None,
+    gate_jobs: list[dict[str, Any]] | None = None,
     head_tree: str = "t" * 40,
     main_tree: str = "t" * 40,
 ) -> Callable[[str], Any]:
-    gate = check_runs or {
-        "check_runs": [
-            {"name": "CI gate", "status": "completed", "conclusion": "success"}
-        ]
-    }
+    runs = (
+        workflow_runs
+        if workflow_runs is not None
+        else [{"id": 7, "event": "pull_request", "conclusion": "success"}]
+    )
+    jobs = (
+        gate_jobs
+        if gate_jobs is not None
+        else [{"name": "CI gate", "conclusion": "success"}]
+    )
     detail = pull_detail if pull_detail is not None else _pull()
 
     def respond(endpoint: str) -> Any:
@@ -56,8 +62,10 @@ def _responder(
             return pulls if pulls is not None else [detail]
         if endpoint.endswith("/pulls/42"):
             return detail
-        if endpoint.endswith(f"/commits/{_HEAD}/check-runs"):
-            return gate
+        if "/actions/workflows/ci.yml/runs" in endpoint:
+            return {"workflow_runs": runs}
+        if "/actions/runs/7/jobs" in endpoint:
+            return {"jobs": jobs}
         if endpoint.endswith(f"/git/commits/{_HEAD}"):
             return {"tree": {"sha": head_tree}}
         if endpoint.endswith(f"/git/commits/{_COMMIT}"):
@@ -92,12 +100,8 @@ def test_unmerged_or_wrong_merge_pr_requires_full(
 
 
 def test_failed_ci_gate_requires_full(monkeypatch: pytest.MonkeyPatch) -> None:
-    failed = {
-        "check_runs": [
-            {"name": "CI gate", "status": "completed", "conclusion": "failure"}
-        ]
-    }
-    _install(monkeypatch, _responder(check_runs=failed))
+    failed_jobs = [{"name": "CI gate", "conclusion": "failure"}]
+    _install(monkeypatch, _responder(gate_jobs=failed_jobs))
     outcome, reasons = verify(_COMMIT)
     assert outcome == FULL_REQUIRED
     assert any("CI gate did not succeed" in r for r in reasons)
@@ -131,3 +135,43 @@ def test_live_repo_helper_reads_env(monkeypatch: pytest.MonkeyPatch) -> None:
     assert _repo() == os.environ["GITHUB_REPOSITORY"]
     monkeypatch.delenv("GITHUB_REPOSITORY")
     assert _repo() == "cosmos-arc/ditto"
+
+
+def test_foreign_ci_gate_name_cannot_spoof_verification(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """#351 评审 P1：绑定 ci.yml 真实 run 的 job 结论——同名他源不能冒充."""
+    _install(
+        monkeypatch,
+        _responder(gate_jobs=[{"name": "CI gate", "conclusion": "failure"}]),
+    )
+    outcome, reasons = verify(_COMMIT)
+    assert outcome == FULL_REQUIRED
+    assert any("CI gate did not succeed" in r for r in reasons)
+
+
+def test_no_successful_ci_yml_run_requires_full(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """ci.yml 无 event=pull_request 且成功的 run（只有其他来源同名检查）→ 全量."""
+    _install(
+        monkeypatch,
+        _responder(
+            workflow_runs=[{"id": 7, "event": "pull_request", "conclusion": "failure"}]
+        ),
+    )
+    outcome, _ = verify(_COMMIT)
+    assert outcome == FULL_REQUIRED
+
+
+def test_timeout_normalizes_to_full_required(monkeypatch: pytest.MonkeyPatch) -> None:
+    """#351 评审 P2：进程超时归一为 full-required，不炸 job。"""
+    import subprocess as sp
+
+    def boom(*_args: str, **_kwargs: object) -> Any:
+        raise sp.TimeoutExpired(cmd="gh", timeout=60)
+
+    monkeypatch.setattr("tooling.agent_harness.main_evidence.subprocess.run", boom)
+    outcome, reasons = verify(_COMMIT)
+    assert outcome == FULL_REQUIRED
+    assert any("lookup failed" in r for r in reasons)

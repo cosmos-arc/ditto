@@ -26,18 +26,25 @@ class EvidenceApiError(RuntimeError):
 
 
 def _gh(*arguments: str) -> Any:
-    proc = subprocess.run(
-        ["gh", "api", *arguments],
-        capture_output=True,
-        text=True,
-        timeout=60,
-        check=False,
-    )
+    """Call gh api; normalize process/decoding failures into EvidenceApiError."""
+    try:
+        proc = subprocess.run(
+            ["gh", "api", *arguments],
+            capture_output=True,
+            text=True,
+            timeout=60,
+            check=False,
+        )
+    except (subprocess.TimeoutExpired, OSError) as error:
+        raise EvidenceApiError(f"gh api invocation failed: {error}") from error
     if proc.returncode != 0:
         raise EvidenceApiError(
             f"gh api {' '.join(arguments[:2])} failed: {proc.stderr.strip()[:400]}"
         )
-    return json.loads(proc.stdout)
+    try:
+        return json.loads(proc.stdout)
+    except json.JSONDecodeError as error:
+        raise EvidenceApiError(f"gh api returned malformed JSON: {error}") from error
 
 
 def _repo() -> str:
@@ -68,42 +75,56 @@ def _tree_oid(commit_sha: str) -> str:
 
 
 def _ci_gate_succeeded(head_sha: str) -> bool:
-    payload = _gh(f"repos/{_repo()}/commits/{head_sha}/check-runs")
-    for run in payload.get("check_runs", []):
-        completed = run.get("status") == "completed"
-        succeeded = run.get("conclusion") == "success"
-        if run.get("name") == "CI gate" and completed and succeeded:
-            return True
+    """绑定 .github/workflows/ci.yml 的真实 run：名字相同的其他 App/工作流
+    check-run 不能冒充（#351 评审 P1）。"""
+    runs = _gh(
+        f"repos/{_repo()}/actions/workflows/ci.yml/runs?head_sha={head_sha}&per_page=20"
+    )
+    for run in runs.get("workflow_runs", []):
+        if run.get("event") != "pull_request" or run.get("conclusion") != "success":
+            continue
+        run_id = run.get("id")
+        if not isinstance(run_id, int):
+            continue
+        jobs = _gh(f"repos/{_repo()}/actions/runs/{run_id}/jobs?per_page=100")
+        for job in jobs.get("jobs", []):
+            if job.get("name") == "CI gate" and job.get("conclusion") == "success":
+                return True
     return False
 
 
 def verify(commit_sha: str) -> tuple[str, list[str]]:
     """Return (outcome, reasons); any doubt resolves to full-required."""
     reasons: list[str] = []
+
+    def full(extra: str) -> tuple[str, list[str]]:
+        return FULL_REQUIRED, [*reasons, extra]
+
     try:
         pull = _merged_pr_for(commit_sha)
         if not pull:
-            return FULL_REQUIRED, [
-                "no merged pull request is associated with the commit"
-            ]
+            return full("no merged pull request is associated with the commit")
         head_sha = pull.get("head", {}).get("sha")
         if not isinstance(head_sha, str):
-            return FULL_REQUIRED, ["merged pull request exposes no head sha"]
+            return full("merged pull request exposes no head sha")
         reasons.append(
             f"pr #{pull.get('number')} head {head_sha[:12]} merged at this commit"
         )
         if not _ci_gate_succeeded(head_sha):
-            reasons.append("CI gate did not succeed on the tested (head) sha")
-            return FULL_REQUIRED, reasons
+            return full("CI gate did not succeed on the tested (head) sha")
         reasons.append("CI gate succeeded on the tested (head) sha")
         head_tree, main_tree = _tree_oid(head_sha), _tree_oid(commit_sha)
         if head_tree != main_tree:
             mismatch = f"{head_tree[:12]} != {main_tree[:12]}"
-            reasons.append(f"tested tree != final main tree ({mismatch})")
-            return FULL_REQUIRED, reasons
+            return full(f"tested tree != final main tree ({mismatch})")
         reasons.append(f"tested tree == final main tree ({main_tree[:12]})")
-    except EvidenceApiError as error:
-        return FULL_REQUIRED, [*reasons, f"evidence lookup failed: {error}"]
+    except Exception as error:
+        label = (
+            "evidence lookup failed"
+            if isinstance(error, EvidenceApiError)
+            else "unexpected evidence error"
+        )
+        return full(f"{label}: {error}")
     return VERIFIED, reasons
 
 
