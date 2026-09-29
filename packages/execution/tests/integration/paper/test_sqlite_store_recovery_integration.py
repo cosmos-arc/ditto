@@ -1,4 +1,9 @@
-"""Durability, CAS, and tamper-detection tests for paper session storage."""
+"""Durability, CAS, and tamper-detection tests for paper session storage.
+
+自 unit 迁移（#347 试点，迁移决议四组之二）：真实 SQLite 持久化与
+写入间中断/防篡改恢复归集成职责，仍由 execution 能力包拥有；
+CAS/revision/幂等重放与 fail-closed 恢复保障逐例保留。
+"""
 
 from __future__ import annotations
 
@@ -30,6 +35,8 @@ from ditto_kernel.identity import InstrumentId
 from ditto_kernel.order import OrderSide, OrderType
 from ditto_kernel.trading import MarketSnapshot
 from ditto_platform.foundation import SQLiteClient
+
+pytestmark = pytest.mark.integration
 
 _NOW = datetime(2026, 9, 4, 7, 0, tzinfo=UTC)
 _INSTRUMENT = InstrumentId(600519)

@@ -1,4 +1,9 @@
-"""Data specimen evidence persistence tests."""
+"""Data specimen evidence persistence tests (real SQLite seam).
+
+自 unit 迁移（#347 试点，迁移决议四组之二）：真实持久化归集成职责，
+仍由 data 能力包拥有；PIT 语义（coverage 区间、knowable_from、
+allowed_uses、as-of 反例）与内容寻址不可变保障逐例保留。
+"""
 
 from __future__ import annotations
 
@@ -46,6 +51,7 @@ def _verified(anchor: str, adjudicated_at: datetime) -> DataSpecimen:
     )
 
 
+@pytest.mark.integration
 class TestSQLiteSpecimenStore:
     def test_append_only_record_survives_reopen(self, tmp_path: Path) -> None:
         db_path = tmp_path / "catalog.sqlite"

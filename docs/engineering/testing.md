@@ -76,12 +76,26 @@ runner 内的 xdist worker。各 integration 树处置：
 | `packages/platform/tests/integration`（observability 树） | 等待治理与状态恢复已收口（#348，2026-09）：每例快照/摘挂/恢复 OTel API 全局，外来 provider 不被 teardown 关闭；生产 OTLP 传输走本地真实 sink（`127.0.0.1:0` 临时端口，daemon 线程 fixture 拆除收敛）；`os.chdir` 两处均 `finally` 恢复；fixtures 全 function 级 | **已解除**（第三批 #363，2026-09） |
 | `packages/analysis/tests/integration` | 无 conftest；全 `tmp_path`，`monkeypatch.setenv` 自动恢复，`importlib.resources` 与 fixtures 目录只读 | **已解除**（第三批 #363，2026-09） |
 | `packages/strategy/tests/integration`（alpha） | conftest 纯 helper/不可变常量（零 fixture 声明）；唯一 fixture 纯内存 polars 构造；parquet 每例 `tmp_path` 再生 | **已解除**（第三批 #363，2026-09） |
+| `packages/execution/tests/integration` | #347 试点新树：真实 SQLite 持久化（paper 会话库恢复/防篡改组）自 unit 迁入；每例独立 `:memory:` pool fixture，conftest 仅 sqlite fixtures（store 实现已核实零 observability 依赖），无文件/端口/线程/子进程/env 写 | **已解除**（随 #347 迁移登记，2026-09；证据同 #226 形态：配对×5/注入/车道） |
 
 CPU/内存容量型慢测试与串行策略分开：它们打 `slow`/`capacity` 进慢道，不是保留
 `serial` 的理由。旧"4 片/-n2/<5min"目标仅作历史参考。**恢复策略**：任何可复现的
 并发故障，先给受影响文件加显式 `@pytest.mark.serial` 立即恢复隔离并保留复现，
 再决定是否撤登记表条目；若故障证明的是跨 runner 作用域问题，不得以恢复旧 blanket
 标记宣称解决——互斥必须在正确作用域实现。
+
+**真实持久化与装配接缝的落位（#347 试点，承接 #339 迁移决议四组之二）**：真实
+存储（真 SQLite/文件 reopen、防篡改恢复）归**集成职责**，所有权仍在能力包——
+迁移是目录归属变化，不是把 mock 换成真库或反之；同文件混合 mock 接缝与真库
+接缝时按用例拆分，不批量搬同目录所有测试。纯符号/规则断言（如 `__all__` 导出、
+标记形状）与真实装配证明（构建 composition root 容器并断言 fail-closed）分文件
+维护，符号断言不得替代装配证明；装配证明留在低成本入口（unit）执行，不推入
+串行树抬高其执行成本。迁移必须附原保障→迁移后保障逐例映射，且执行频率不降低
+（fast 车道收集数前后一致；新 integration 树须按串行审计形态登记解除，否则
+迁移件会掉出 fast 车道）。已迁组：data specimen store（PIT coverage 区间/
+knowable_from/allowed_uses/内容寻址不可变）、execution paper 会话库恢复组
+（CAS/revision/幂等重放/防篡改 fail-closed）；backend 组合证明按接缝拆为
+symbol-rules 与 assembly 两文件。
 
 **等待治理（#348）**：删除固定等待须有同步合同证据——SDK 源码级核实等待是死等待
 （如 `InMemoryMetricReader.get_metrics_data()` 在读取点同步 `collect()`，无后台
