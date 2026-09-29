@@ -252,6 +252,9 @@ def _push_run_window(
         collected.extend(batch)
         if len(batch) < per_page:
             return collected
+        if not since and len(collected) >= limit:
+            # 无 --since 时尊重 --limit：只取最近 N 条，不翻尽全史
+            return collected[:limit]
         page += 1
     raise EvidenceApiError(
         "observation window exceeded page cap; raise --limit or narrow --since"
