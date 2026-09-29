@@ -84,6 +84,22 @@ CPU/内存容量型慢测试与串行策略分开：它们打 `slow`/`capacity` 
 再决定是否撤登记表条目；若故障证明的是跨 runner 作用域问题，不得以恢复旧 blanket
 标记宣称解决——互斥必须在正确作用域实现。
 
+**CI 汇总 fail-closed 链条（#342 验收口径）**：CI gate 以 `if: always()`
+依赖全部生产者 job（钉死 `needs == 全 jobs`），按 repository-policy 的
+required 选择逐名比对结果——必要 job 缺席/跳过/取消/失败、非必要 job
+失败、非法选择集均失败（`tooling/agent_harness/tests/test_ci.py` 直跑
+内联脚本覆盖失败分类学）。产物级完回性分层把关：必要产物（分片×6、
+capacity、system-e2e 的 web-dist）下载后以显式存在性校验步点名失败
+（download-artifact 无 `if-no-files-found` 输入——那是 upload-artifact
+的，写了也是 no-op）；`backend-coverage-combine` 校验 manifest 的
+commit/SHA/片数/inventory 分区唯一性（`test_shards` 损坏矩阵）；
+`required_suite_evidence` 核验 pit/conformance 恰一次执行（#350）。
+"生产者延迟完成"竞态由 needs 全量依赖结构性消除——gate 不先于任何
+生产者结束。恢复路径：重跑失败 job——产物陈旧/混杂由 manifest 的 commit
+匹配与 coverage SHA 校验兜底拒绝（本会话 run 36523025487 实证：shard
+基础设施失败 → gate 红 → rerun 后全绿），不回退 capacity 依赖或降低
+coverage 阈值。
+
 **时长感知分片（#326）**：分片分配从排序轮询改为**文件级时长加权 LPT**——
 `tooling/quality/shard_durations.json`（文件→实测秒，`test_shards
 refresh-durations --junit-glob ...` 从 CI junit 刷新，同文件多次观测取最大）
