@@ -81,10 +81,17 @@ def test_required_from_dump_unions_pit_and_path_and_keeps_capacity_overlap() -> 
     ]
 
 
-def test_empty_required_suite_fails_closed() -> None:
-    """缺清单：标记或路径不再匹配任何收集项时必须失败。"""
-    with pytest.raises(EvidenceError, match="selected no tests"):
-        required_from_dump({"a.py::test_x": ["unit"]}, pit_marker=True, path=None)
+def test_each_selector_validated_independently() -> None:
+    """缺清单（#350 评审 P1）：任一请求选择器匹配为空即失败，另一侧非空不能掩盖。"""
+    conf = "apps/backend/tests/contract/test_conformance.py"
+    dump = {f"{conf}::test_ok": ["unit"]}
+    with pytest.raises(EvidenceError, match="pit selector matched no collected test"):
+        required_from_dump(dump, pit_marker=True, path=conf)
+    dump_pit = {"a.py::test_pit": ["pit"]}
+    with pytest.raises(EvidenceError, match="path selector matched no collected test"):
+        required_from_dump(dump_pit, pit_marker=True, path=conf)
+    with pytest.raises(EvidenceError, match="no selector was requested"):
+        required_from_dump(dump_pit, pit_marker=False, path=None)
 
 
 def test_happy_path_proves_exactly_once(tmp_path: Path) -> None:

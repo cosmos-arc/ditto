@@ -34,6 +34,9 @@ def collect_marker_dump(dump_path: Path) -> dict[str, list[str]]:
         **os.environ,
         "PYTHONPATH": str(_REPO_ROOT),
         "MARKER_DUMP": str(dump_path),
+        # 与 task pit / 分片 runner 同语义：收集期 fred/tushare 的 skipif
+        # 会立刻读 keyring，宿主后端在 CI 不可用（#350 评审 P2）。
+        "PYTHON_KEYRING_BACKEND": "keyring.backends.null.Keyring",
     }
     proc = subprocess.run(
         [
@@ -68,19 +71,26 @@ def required_from_dump(
     pit_marker: bool,
     path: str | None,
 ) -> list[str]:
-    """Derive the required nodeids from the unfiltered marker dump."""
-    selected = [
-        nodeid
-        for nodeid, markers in dump.items()
-        if (pit_marker and "pit" in markers)
-        or (path and nodeid.startswith(path + "::"))
-    ]
-    if not selected:
-        raise EvidenceError(
-            "required suite selected no tests: marker or path no longer matches "
-            "any collected nodeid"
-        )
-    return selected
+    """
+    Derive the required nodeids, validating every selector independently.
+
+    A requested selector that matches nothing is a disappeared required suite
+    (#350 评审 P1)——union 的另一侧非空不能掩盖它。
+    """
+    parts: list[list[str]] = []
+    if pit_marker:
+        pit = [nodeid for nodeid, markers in dump.items() if "pit" in markers]
+        if not pit:
+            raise EvidenceError("pit selector matched no collected test")
+        parts.append(pit)
+    if path:
+        by_path = [nodeid for nodeid in dump if nodeid.startswith(path + "::")]
+        if not by_path:
+            raise EvidenceError(f"path selector matched no collected test: {path}")
+        parts.append(by_path)
+    if not parts:
+        raise EvidenceError("no selector was requested")
+    return [nodeid for part in parts for nodeid in part]
 
 
 def _glob(pattern: str) -> list[Path]:
