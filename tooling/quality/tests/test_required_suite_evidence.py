@@ -61,24 +61,19 @@ def _core_globs(tmp_path: Path) -> tuple[str, str, str]:
     )
 
 
-def _options(*, pit: bool) -> dict[str, object]:
-    if pit:
-        return {"pit_marker": True, "path": None}
-    return {
-        "pit_marker": False,
-        "path": "apps/backend/tests/contract/test_conformance.py",
-    }
-
-
 def test_happy_path_proves_exactly_once_for_pit_and_path(tmp_path: Path) -> None:
     _write_tree(tmp_path, pit=True)
-    assert run_checks(*_core_globs(tmp_path), **_options(pit=True)) == {
+    assert run_checks(*_core_globs(tmp_path), pit_marker=True, path=None) == {
         "required": 1,
         "selection": "exactly-once",
         "junit": "lanes-consistent",
         "suite": "pit",
     }
-    result = run_checks(*_core_globs(tmp_path), **_options(pit=False))
+    result = run_checks(
+        *_core_globs(tmp_path),
+        pit_marker=False,
+        path="apps/backend/tests/contract/test_conformance.py",
+    )
     assert result["required"] == 1
 
 
@@ -104,7 +99,7 @@ def test_missing_required_nodeid_fails_closed(tmp_path: Path) -> None:
         )
     )
     with pytest.raises(EvidenceError):
-        run_checks(*_core_globs(tmp_path), **_options(pit=True))
+        run_checks(*_core_globs(tmp_path), pit_marker=True, path=None)
 
 
 def test_duplicated_selection_fails_closed(tmp_path: Path) -> None:
@@ -114,7 +109,7 @@ def test_duplicated_selection_fails_closed(tmp_path: Path) -> None:
         (tmp_path / "nodes-0-False.txt").read_text(), encoding="utf-8"
     )
     with pytest.raises(EvidenceError):
-        run_checks(*_core_globs(tmp_path), **_options(pit=True))
+        run_checks(*_core_globs(tmp_path), pit_marker=True, path=None)
 
 
 def test_short_junit_fails_closed(tmp_path: Path) -> None:
@@ -125,7 +120,7 @@ def test_short_junit_fails_closed(tmp_path: Path) -> None:
         '<testcase classname="x" name="t0"/></testsuite></testsuites>'
     )
     with pytest.raises(EvidenceError):
-        run_checks(*_core_globs(tmp_path), **_options(pit=True))
+        run_checks(*_core_globs(tmp_path), pit_marker=True, path=None)
 
 
 def test_inventory_drift_across_shards_fails_closed(tmp_path: Path) -> None:
