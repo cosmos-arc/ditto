@@ -48,7 +48,7 @@ _LAYER_BY_COMPONENT: dict[str, tuple[str, ...]] = {
 }
 _DEFAULT_LAYER: tuple[str, ...] = ("unit",)
 
-# Serial-audit opt-out (#226/#359/#363): repo-relative integration trees whose
+# Serial-audit opt-out (#226/#359/#363/#347): repo-relative integration trees whose
 # blanket ``serial`` was lifted after a resource audit — per-test tmp/:memory:
 # state, read-only immutable templates reused per worker, no ports,
 # subprocesses or cross-test global init. Entries are matched as whole path
@@ -60,6 +60,7 @@ _SERIAL_OPT_OUT_TREES: frozenset[str] = frozenset(
         "packages/application/tests/integration",
         "packages/backtest/tests/integration",
         "packages/data/tests/integration",
+        "packages/execution/tests/integration",
         "packages/platform/tests/integration",
         "packages/strategy/tests/integration",
     }

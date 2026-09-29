@@ -181,7 +181,7 @@ def test_same_nodeid_marks_stable_across_entries(tmp_path: Path) -> None:
 
 
 def test_serial_audit_opt_out_is_component_exact() -> None:
-    """#226/#359/#363：审计登记树解除层级 serial，边界外一律保留。"""
+    """#226/#359/#363/#347：审计登记树解除层级 serial，边界外一律保留。"""
     repo = Path("/repo")
     assert layer_markers_for(
         Path("/repo/packages/data/tests/integration/test_x.py"), repo
@@ -206,6 +206,10 @@ def test_serial_audit_opt_out_is_component_exact() -> None:
     # 第三批登记（#363）：analysis、platform 与 strategy 解除。
     assert layer_markers_for(
         Path("/repo/packages/analysis/tests/integration/test_x.py"), repo
+    ) == ("integration",)
+    # #347 试点新树：execution 集成（真实持久化迁入，随批登记解除）。
+    assert layer_markers_for(
+        Path("/repo/packages/execution/tests/integration/paper/test_x.py"), repo
     ) == ("integration",)
     assert layer_markers_for(
         Path("/repo/packages/platform/tests/integration/test_x.py"), repo
@@ -241,6 +245,7 @@ def test_real_repo_serial_audit_lifts_only_the_audited_trees() -> None:
                 "packages/application/tests/integration/",
                 "packages/backtest/tests/integration/",
                 "packages/data/tests/integration/",
+                "packages/execution/tests/integration/",
                 "packages/platform/tests/integration/",
                 "packages/strategy/tests/integration/",
             )
@@ -250,12 +255,14 @@ def test_real_repo_serial_audit_lifts_only_the_audited_trees() -> None:
         else:
             assert markers == ("integration", "serial"), relative
             serial_owners.add(owner)
-    # 第三批（#363）后：六树解除，唯 backend 保留（Prefect harness 待隔离）。
+    # 第三批（#363）+#347 试点后：七树解除，唯 backend 保留（Prefect
+    # harness 待隔离）。
     assert lifted == {
         "analysis",
         "application",
         "backtest",
         "data",
+        "execution",
         "platform",
         "strategy",
     }
