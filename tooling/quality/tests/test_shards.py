@@ -9,11 +9,103 @@ import pytest
 from tooling.quality.test_shards import ShardError, partition, verify_manifests
 
 
-def test_partition_is_complete_and_spreads_adjacent_capacity_cases() -> None:
-    inventory = [(f"capacity.py::test_restart[{n}]", n % 2 == 0) for n in range(12)]
-    parts = [partition(inventory, i, 4) for i in range(4)]
+def _inventory_of(files: dict[str, int]) -> list[tuple[str, bool]]:
+    return [
+        (f"{name}::test_{i}", i % 2 == 0)
+        for name, count in files.items()
+        for i in range(count)
+    ]
+
+
+def test_partition_is_complete_deterministic_and_file_affine() -> None:
+    """#326：每 nodeid 恰好一次、纯函数确定、同文件不跨片（fixture 亲和）。"""
+    inventory = _inventory_of({f"pkg/tests/test_{name}.py": 3 for name in "abcdefgh"})
+    durations = {
+        f"pkg/tests/test_{name}.py": 10.0 * i for i, name in enumerate("abcdefgh")
+    }
+    parts = [partition(inventory, i, 4, durations) for i in range(4)]
     assert sorted(item for part in parts for item in part) == sorted(inventory)
-    assert all(len(part) == 3 for part in parts)
+    # 确定性：同输入重算逐字节一致
+    assert parts == [partition(inventory, i, 4, durations) for i in range(4)]
+    # 文件亲和：任一文件的全部用例都在同一片
+    for name in durations:
+        homes = {
+            shard
+            for shard, part in enumerate(parts)
+            if any(item[0].startswith(name + "::") for item in part)
+        }
+        assert len(homes) == 1, name
+
+
+def test_partition_balances_by_duration_weight() -> None:
+    """时长权重驱动均衡：重文件先落最轻片，目标最慢/最快收敛。"""
+    inventory = _inventory_of({f"pkg/tests/test_w{i}.py": 2 for i in range(6)})
+    durations = {f"pkg/tests/test_w{i}.py": float(10 - i) for i in range(6)}
+    parts = [partition(inventory, i, 3, durations) for i in range(3)]
+    loads = sorted(
+        sum(durations[item[0].split("::")[0]] for item in part) for part in parts
+    )
+    assert loads[-1] / loads[0] <= 1.2
+
+
+def test_oversized_file_splits_but_assignment_stays_complete() -> None:
+    """#326：巨文件（>单片预算 60%）按 nodeid 轮询拆分，分配仍确定完整。"""
+    inventory = _inventory_of(
+        {
+            "pkg/tests/test_huge.py": 60,
+            "pkg/tests/test_a.py": 2,
+            "pkg/tests/test_b.py": 2,
+        }
+    )
+    durations = {
+        "pkg/tests/test_huge.py": 100.0,
+        "pkg/tests/test_a.py": 1.0,
+        "pkg/tests/test_b.py": 1.0,
+    }
+    parts = [partition(inventory, i, 4, durations) for i in range(4)]
+    assert sorted(item for part in parts for item in part) == sorted(inventory)
+    assert parts == [partition(inventory, i, 4, durations) for i in range(4)]
+    huge_homes = {
+        shard
+        for shard, part in enumerate(parts)
+        if any(item[0].startswith("pkg/tests/test_huge.py::") for item in part)
+    }
+    assert len(huge_homes) == 4  # 巨文件跨片拆分
+    small_a = {
+        shard
+        for shard, part in enumerate(parts)
+        if any(item[0].startswith("pkg/tests/test_a.py::") for item in part)
+    }
+    assert len(small_a) == 1  # 普通文件仍整文件
+
+
+def test_partition_falls_back_to_default_weight_without_manifest() -> None:
+    """缺清单/缺文件：默认 0.4s×用例数估重，分配仍确定且完整。"""
+    inventory = _inventory_of({"pkg/tests/test_new.py": 4, "pkg/tests/test_old.py": 2})
+    parts = [partition(inventory, i, 2, durations={}) for i in range(2)]
+    assert sorted(item for part in parts for item in part) == sorted(inventory)
+    assert parts == [partition(inventory, i, 2, durations={}) for i in range(2)]
+
+
+def test_refresh_durations_merges_junit_totals(tmp_path: Path) -> None:
+    """#326：刷新聚合文件级时长并落盘可重读。"""
+    from tooling.quality.test_shards import refresh_durations
+
+    module = tmp_path / "pkg/tests/unit/test_x.py"
+    module.parent.mkdir(parents=True)
+    module.write_text("def test_one():\n    pass\n", encoding="utf-8")
+    junit = tmp_path / "junit-0-False.xml"
+    junit.write_text(
+        '<testsuites><testsuite tests="1" errors="0" failures="0">'
+        '<testcase classname="pkg.tests.unit.test_x" name="test_one" time="2.5"/>'
+        "</testsuite></testsuites>",
+        encoding="utf-8",
+    )
+    manifest = tmp_path / "durations.json"
+    merged = refresh_durations([str(junit)], manifest, root=tmp_path)
+    assert merged == {"pkg/tests/unit/test_x.py": 2.5}
+    rerun = refresh_durations([str(junit)], manifest)
+    assert rerun == merged
 
 
 @pytest.mark.parametrize(
