@@ -388,12 +388,16 @@ def refresh_durations(
     固性。
     """
     merged = _read_duration_manifest(manifest)
+    paths: list[Path] = []
     for pattern in junit_globs:
-        paths = _glob_junit(pattern)
-        if not paths:
+        matched = _glob_junit(pattern)
+        if not matched:
             raise ShardError(f"no junit evidence matches {pattern}")
-        for module, cases in parse_junit(paths, root or Path.cwd()).items():
-            merged[module] = sum(cases.values())
+        paths.extend(matched)
+    # 全部 pattern 的路径聚合后一次解析：跨片/跨车道同模块观测按
+    # parse_junit 既有 per-case max 聚合，结果不依赖参数顺序（#326 评审）。
+    for module, cases in parse_junit(paths, root or Path.cwd()).items():
+        merged[module] = sum(cases.values())
     payload = {name: round(seconds, 3) for name, seconds in sorted(merged.items())}
     manifest.write_text(json.dumps(payload, indent=0, separators=(",", ":")) + "\n")
     return payload
