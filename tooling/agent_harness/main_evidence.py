@@ -289,15 +289,17 @@ def observe(limit: int = 20, since: str | None = None) -> list[dict[str, Any]]:
                     check=False,
                 )
                 if proc.returncode != 0:
+                    # 失败下载的部分 stdout 不可信，不做解析
                     reasons.append(f"log fetch failed: gh exit {proc.returncode}")
-                # Actions 日志行带时间戳前缀——用包含而非 startswith
-                for line in proc.stdout.splitlines():
-                    outcome_marker = "main-evidence outcome: "
-                    if outcome_marker in line:
-                        outcome = line.split(outcome_marker, 1)[1].strip()
-                    elif "main-evidence: " in line:
-                        marker = "main-evidence: "
-                        reasons.append(line.split(marker, 1)[1].strip())
+                else:
+                    # Actions 日志行带时间戳前缀——用包含而非 startswith
+                    for line in proc.stdout.splitlines():
+                        outcome_marker = "main-evidence outcome: "
+                        if outcome_marker in line:
+                            outcome = line.split(outcome_marker, 1)[1].strip()
+                        elif "main-evidence: " in line:
+                            marker = "main-evidence: "
+                            reasons.append(line.split(marker, 1)[1].strip())
             except (subprocess.TimeoutExpired, OSError) as error:
                 # 单个历史日志拉取失败不炸整个观察：降级 unknown 并记原因
                 reasons.append(f"log fetch failed: {error}")

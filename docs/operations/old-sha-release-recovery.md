@@ -62,11 +62,11 @@ platform-smoke 从每次 push 移到"PR 原生 + 周度 cron"的最终开关，
 须先完成影子观察：≥7 天、≥10 个不同候选 SHA 的 push run 证据全部
 可解释（verified 有理由链、full-required 有明确原因）。
 
-机检命令（--since 取观察机制上线日，剔除不可能含结论的历史 run）：
+机检命令（--since 取证据机制**上线时间戳**——整日会把上线前的同日 run 计为 unexplained）：
 
 ```
 GH_TOKEN=... python -m tooling.agent_harness.main_evidence observe \
-  --limit 30 --since 2026-09-29
+  --limit 30 --since 2026-09-29T13:44
 ```
 
 样本不足不切换；观察期证据变化后重取。切换落地时同步更新
