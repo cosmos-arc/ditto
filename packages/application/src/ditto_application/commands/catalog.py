@@ -9,6 +9,7 @@ from datetime import UTC, datetime
 from ditto_data.catalog.metadata import default_dataset_metadata
 from ditto_data.catalog.promotion import (
     DatasetMaturityPromotion,
+    DatasetMaturityPromotionHistoryReader,
     DatasetMaturityPromotionReader,
     DatasetMaturityPromotionRevocationReason,
     DatasetMaturityPromotionRevoker,
@@ -19,6 +20,7 @@ from ditto_data.catalog.promotion import (
     DatasetPromotionStatus,
     apply_dataset_maturity_promotion,
     assess_dataset_promotion,
+    evidence_since_latest_revocation,
 )
 
 from ditto_application.exceptions import AppCommandError
@@ -97,6 +99,7 @@ class ReviewDatasetPromotionEvidenceHandler:
         evidence_reader: DatasetPromotionEvidenceReader,
         maturity_promotion_writer: DatasetMaturityPromotionWriter,
         maturity_promotion_reader: DatasetMaturityPromotionReader,
+        maturity_promotion_history_reader: DatasetMaturityPromotionHistoryReader,
         *,
         now: Callable[[], datetime] | None = None,
     ) -> None:
@@ -104,6 +107,7 @@ class ReviewDatasetPromotionEvidenceHandler:
         self._evidence_reader = evidence_reader
         self._maturity_promotion_writer = maturity_promotion_writer
         self._maturity_promotion_reader = maturity_promotion_reader
+        self._maturity_promotion_history_reader = maturity_promotion_history_reader
         self._now = now or _utcnow
 
     def handle(
@@ -144,7 +148,12 @@ class ReviewDatasetPromotionEvidenceHandler:
         self._evidence_writer.upsert_dataset_evidence(command.dataset_id, evidence)
         assessment = assess_dataset_promotion(
             metadata,
-            self._evidence_reader.list_dataset_evidence(command.dataset_id),
+            evidence_since_latest_revocation(
+                self._evidence_reader.list_dataset_evidence(command.dataset_id),
+                self._maturity_promotion_history_reader.list_dataset_maturity_promotion_events(
+                    command.dataset_id
+                ),
+            ),
         )
         metadata_promoted = False
         dataset_maturity_after = metadata.maturity

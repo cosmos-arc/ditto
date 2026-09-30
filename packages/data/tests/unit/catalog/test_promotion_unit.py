@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from datetime import UTC, datetime, timedelta
+
 import pytest
 from ditto_data.catalog.metadata import default_dataset_metadata
 from ditto_data.catalog.promotion import (
@@ -10,6 +12,7 @@ from ditto_data.catalog.promotion import (
     DatasetPromotionEvidence,
     apply_dataset_maturity_promotion,
     assess_dataset_promotion,
+    evidence_since_latest_revocation,
 )
 
 
@@ -157,3 +160,69 @@ class TestDatasetMaturityPromotionEvent:
                 next_maturity="experimental",
                 actor="architecture-review",
             )
+
+
+class TestEvidenceSinceLatestRevocation:
+    """#380:撤销截止线只保留撤销之后记录的证据。"""
+
+    @staticmethod
+    def _evidence(
+        criterion: str, reviewed_at: datetime | None
+    ) -> DatasetPromotionEvidence:
+        return DatasetPromotionEvidence(
+            criterion=criterion,
+            evidence_uri=f"ditto://evidence/stock_daily/{criterion}",
+            approved_by="architecture-review",
+            reviewed_at=reviewed_at,
+        )
+
+    @staticmethod
+    def _revoked_event(action_at: datetime) -> DatasetMaturityPromotionEvent:
+        return DatasetMaturityPromotionEvent(
+            dataset_id="stock_daily",
+            action="revoked",
+            previous_maturity="initial-focus",
+            next_maturity="experimental",
+            actor="architecture-review",
+            action_at=action_at,
+            revocation_reason="evidence_invalidated",
+        )
+
+    def test_no_revocation_keeps_all_evidence(self) -> None:
+        evidence = (
+            self._evidence("c1", None),
+            self._evidence("c2", datetime(2026, 1, 1, tzinfo=UTC)),
+        )
+
+        assert evidence_since_latest_revocation(evidence, ()) == evidence
+
+    def test_evidence_before_cutoff_is_dropped(self) -> None:
+        cutoff = datetime(2026, 6, 1, tzinfo=UTC)
+        stale = self._evidence("c1", cutoff - timedelta(days=1))
+        fresh = self._evidence("c2", cutoff + timedelta(days=1))
+
+        assert evidence_since_latest_revocation(
+            (stale, fresh), (self._revoked_event(cutoff),)
+        ) == (fresh,)
+
+    def test_untimestamped_evidence_is_dropped_after_revocation(self) -> None:
+        cutoff = datetime(2026, 6, 1, tzinfo=UTC)
+        unknown = self._evidence("c1", None)
+
+        assert (
+            evidence_since_latest_revocation((unknown,), (self._revoked_event(cutoff),))
+            == ()
+        )
+
+    def test_latest_revocation_wins(self) -> None:
+        first = datetime(2026, 6, 1, tzinfo=UTC)
+        second = datetime(2026, 7, 1, tzinfo=UTC)
+        between = self._evidence("c1", first + timedelta(days=1))
+
+        assert (
+            evidence_since_latest_revocation(
+                (between,),
+                (self._revoked_event(first), self._revoked_event(second)),
+            )
+            == ()
+        )

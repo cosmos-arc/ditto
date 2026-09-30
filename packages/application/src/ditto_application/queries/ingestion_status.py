@@ -22,6 +22,7 @@ from ditto_data.catalog.promotion import (
     DatasetPromotionStatus,
     apply_dataset_maturity_promotion,
     assess_dataset_promotion,
+    evidence_since_latest_revocation,
 )
 from ditto_data.ingestion.ingestion_log_store import IngestionLogStore
 from ditto_data.models.ingestion import IngestionStatus
@@ -221,6 +222,7 @@ class IngestionStatusQueryFacade:
             promotion = _dataset_promotion_assessment(
                 metadata,
                 self._promotion_evidence_reader,
+                self._maturity_promotion_history_reader,
             )
             stats = self._log_service.get_stats(dataset)
             last_success = self._log_service.get_last_success_date(dataset)
@@ -489,16 +491,19 @@ class IngestionStatusQueryFacade:
                 rejected_criteria=(),
             )
 
-        evidence = self._promotion_evidence_reader.list_dataset_evidence(dataset_id)
+        promotion_history = self._maturity_promotion_history_reader
+        promotion_events = promotion_history.list_dataset_maturity_promotion_events(
+            dataset_id
+        )
+        evidence = evidence_since_latest_revocation(
+            self._promotion_evidence_reader.list_dataset_evidence(dataset_id),
+            promotion_events,
+        )
         assessment = assess_dataset_promotion(metadata, evidence)
         maturity_promotion = (
             self._maturity_promotion_reader.get_dataset_maturity_promotion(dataset_id)
         )
-        latest_revocation = _latest_revoked_promotion_event(
-            self._maturity_promotion_history_reader.list_dataset_maturity_promotion_events(
-                dataset_id
-            )
-        )
+        latest_revocation = _latest_revoked_promotion_event(promotion_events)
         current_metadata = _apply_maturity_promotion(metadata, maturity_promotion)
         return DatasetPromotionReadinessItem(
             dataset_id=dataset_id,
@@ -563,12 +568,16 @@ def _apply_maturity_promotion(
 def _dataset_promotion_assessment(
     metadata: DatasetMetadata | None,
     evidence_reader: DatasetPromotionEvidenceReader,
+    history_reader: DatasetMaturityPromotionHistoryReader,
 ) -> DatasetPromotionAssessment | None:
     if metadata is None:
         return None
     return assess_dataset_promotion(
         metadata,
-        evidence_reader.list_dataset_evidence(metadata.dataset_id),
+        evidence_since_latest_revocation(
+            evidence_reader.list_dataset_evidence(metadata.dataset_id),
+            history_reader.list_dataset_maturity_promotion_events(metadata.dataset_id),
+        ),
     )
 
 

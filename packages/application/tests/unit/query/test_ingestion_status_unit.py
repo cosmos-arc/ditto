@@ -529,12 +529,15 @@ class TestPromotionReadinessReport:
                         criterion=stock_criteria[0],
                         evidence_uri="ditto://evidence/stock_daily/pit",
                         approved_by="architecture-review",
+                        # 撤销(09:30)之后的复审证据才计入评估(#380)
+                        reviewed_at=datetime(2026, 6, 2, 9, 31, tzinfo=UTC),
                     ),
                     DatasetPromotionEvidence(
                         criterion=stock_criteria[1],
                         evidence_uri="ditto://evidence/stock_daily/failover",
                         approved_by="architecture-review",
                         passed=False,
+                        reviewed_at=datetime(2026, 6, 2, 9, 31, tzinfo=UTC),
                     ),
                 ),
                 "macro_indicators": tuple(
@@ -683,12 +686,15 @@ class TestMaturityGovernanceReport:
                         criterion=stock_criteria[0],
                         evidence_uri="ditto://evidence/stock_daily/pit",
                         approved_by="architecture-review",
+                        # 撤销之后的复审证据才计入评估(#380)
+                        reviewed_at=datetime(2026, 6, 2, 9, 31, tzinfo=UTC),
                     ),
                     DatasetPromotionEvidence(
                         criterion=stock_criteria[1],
                         evidence_uri="ditto://evidence/stock_daily/failover",
                         approved_by="architecture-review",
                         passed=False,
+                        reviewed_at=datetime(2026, 6, 2, 9, 31, tzinfo=UTC),
                     ),
                 ),
                 "macro_indicators": tuple(

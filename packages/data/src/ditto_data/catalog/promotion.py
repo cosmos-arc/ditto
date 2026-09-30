@@ -23,6 +23,7 @@ __all__ = [
     "DatasetPromotionStatus",
     "apply_dataset_maturity_promotion",
     "assess_dataset_promotion",
+    "evidence_since_latest_revocation",
 ]
 
 type DatasetPromotionStatus = Literal["not_applicable", "blocked", "ready"]
@@ -243,6 +244,33 @@ def apply_dataset_maturity_promotion(
         metadata,
         maturity=promotion.promoted_maturity,
         promotion_criteria=(),
+    )
+
+
+def evidence_since_latest_revocation(
+    evidence: tuple[DatasetPromotionEvidence, ...],
+    events: tuple[DatasetMaturityPromotionEvent, ...],
+) -> tuple[DatasetPromotionEvidence, ...]:
+    """
+    Drop evidence recorded before the latest promotion revocation.
+
+    Revocation appends an audit event and keeps older evidence auditable, but
+    revoked-era evidence must not grant new eligibility on re-review (#251,
+    #380). Evidence without a review timestamp cannot prove it postdates a
+    revocation and is dropped whenever one exists.
+    """
+    revoked_at = [
+        event.action_at
+        for event in events
+        if event.action == "revoked" and event.action_at is not None
+    ]
+    if not revoked_at:
+        return evidence
+    cutoff = max(revoked_at)
+    return tuple(
+        item
+        for item in evidence
+        if item.reviewed_at is not None and item.reviewed_at > cutoff
     )
 
 
