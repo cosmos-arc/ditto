@@ -269,7 +269,12 @@ def evidence_since_latest_revocation(
         # cannot be ordered against any evidence row, so no evidence can
         # prove it postdates the revocation.
         return ()
-    cutoff = max(event.action_at for event in revoked)
+    revoked_at: list[datetime] = [
+        event.action_at
+        for event in revoked
+        if event.action_at is not None and event.action_at.tzinfo is not None
+    ]
+    cutoff = max(revoked_at)
     return tuple(item for item in evidence if _proven_after(item.reviewed_at, cutoff))
 
 
