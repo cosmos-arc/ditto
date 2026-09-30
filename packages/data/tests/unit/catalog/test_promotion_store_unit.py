@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime, timedelta, timezone
 from pathlib import Path
 
 import pytest
@@ -269,3 +269,61 @@ class TestSQLiteDatasetMaturityPromotionStore:
             assert current.promoted_at == re_promotion.promoted_at
         finally:
             pool.close()
+
+    def test_upsert_rejects_naive_promoted_at(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """#380:无时区 promoted_at 无法与撤销排序,写入即拒。"""
+        client, pool = _client(tmp_path / "catalog.sqlite")
+        store = SQLiteDatasetMaturityPromotionStore(client)
+        naive_promotion = DatasetMaturityPromotion(
+            dataset_id="stock_daily",
+            previous_maturity="experimental",
+            promoted_maturity="initial-focus",
+            promoted_by="architecture-review",
+            promoted_at=datetime(2026, 6, 1, 13, 0),
+        )
+
+        try:
+            with pytest.raises(ValueError, match="timezone-aware"):
+                store.upsert_dataset_maturity_promotion(naive_promotion)
+        finally:
+            pool.close()
+
+    def test_upsert_orders_revocation_as_instant_across_offsets(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """#380:不同时区偏移按时刻比较,不受 ISO 字典序影响。"""
+        client, pool = _client(tmp_path / "catalog.sqlite")
+        store = SQLiteDatasetMaturityPromotionStore(client)
+        # 08:00+08:00 == 00:00Z;晋级时刻 01:00Z 晚于撤销,应当成功
+        store.upsert_dataset_maturity_promotion(
+            DatasetMaturityPromotion(
+                dataset_id="stock_daily",
+                previous_maturity="experimental",
+                promoted_maturity="initial-focus",
+                promoted_by="architecture-review",
+                promoted_at=datetime(2026, 6, 1, 0, 0, tzinfo=UTC),
+            )
+        )
+        store.revoke_dataset_maturity_promotion(
+            "stock_daily",
+            revoked_by="data-governance",
+            revoked_at=datetime(2026, 6, 1, 8, 0, tzinfo=timezone(timedelta(hours=8))),
+            revocation_reason="evidence_invalidated",
+        )
+        store.upsert_dataset_maturity_promotion(
+            DatasetMaturityPromotion(
+                dataset_id="stock_daily",
+                previous_maturity="experimental",
+                promoted_maturity="initial-focus",
+                promoted_by="architecture-review",
+                promoted_at=datetime(2026, 6, 1, 1, 0, tzinfo=UTC),
+            )
+        )
+        current = store.get_dataset_maturity_promotion("stock_daily")
+        assert current is not None
+        assert current.promoted_at == datetime(2026, 6, 1, 1, 0, tzinfo=UTC)
+        pool.close()

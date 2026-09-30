@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any, Literal, cast
 
 from ditto_platform.foundation import SQLiteClient
@@ -137,6 +137,13 @@ def _optional_datetime(value: object) -> datetime | None:
     return datetime.fromisoformat(str(value))
 
 
+def _normalized_instant_text(instant: datetime | None) -> str | None:
+    """Serialize a timezone-aware instant as UTC ISO text for ordered compares."""
+    if instant is None or instant.tzinfo is None:
+        return None
+    return instant.astimezone(UTC).isoformat()
+
+
 def _validate_dataset_id(dataset_id: str) -> None:
     if not dataset_id or dataset_id.strip() != dataset_id:
         msg = f"Invalid dataset_id: {dataset_id!r}"
@@ -216,26 +223,17 @@ class SQLiteDatasetMaturityPromotionStore:
         not resurrect a revoked override (#380).
         """
         _validate_dataset_id(promotion.dataset_id)
-        try:
-            row = self._client.fetchone(
-                """
-                SELECT MAX(action_at) AS latest_revocation
-                FROM dataset_maturity_promotion_events
-                WHERE dataset_id = ? AND action = 'revoked'
-                """,
-                [promotion.dataset_id],
+        promoted_at_text = _normalized_instant_text(promotion.promoted_at)
+        if promoted_at_text is None:
+            msg = (
+                "cannot upsert a promotion without a timezone-aware "
+                f"promoted_at: {promotion.dataset_id}"
             )
-            latest_revocation = row["latest_revocation"] if row is not None else None
-            if latest_revocation is not None and (
-                promotion.promoted_at is None
-                or latest_revocation > promotion.promoted_at.isoformat()
-            ):
-                msg = (
-                    "cannot upsert a promotion superseded by a newer "
-                    f"revocation: {promotion.dataset_id}"
-                )
-                raise ValueError(msg)
-            self._client.execute(
+            raise ValueError(msg)
+        try:
+            # The revocation guard lives in the same statement as the write,
+            # so a concurrent revoke cannot interleave between check and upsert.
+            cursor = self._client.execute(
                 """
                 INSERT INTO dataset_maturity_promotions (
                     dataset_id,
@@ -246,7 +244,17 @@ class SQLiteDatasetMaturityPromotionStore:
                     evidence_uri,
                     notes
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+                SELECT ?, ?, ?, ?, ?, ?, ?
+                WHERE NOT EXISTS (
+                    SELECT 1
+                    FROM dataset_maturity_promotion_events
+                    WHERE dataset_id = ?
+                      AND action = 'revoked'
+                      AND (
+                        action_at IS NULL
+                        OR action_at > ?
+                      )
+                )
                 ON CONFLICT (dataset_id)
                 DO UPDATE SET
                     previous_maturity = excluded.previous_maturity,
@@ -261,13 +269,19 @@ class SQLiteDatasetMaturityPromotionStore:
                     promotion.previous_maturity,
                     promotion.promoted_maturity,
                     promotion.promoted_by,
-                    promotion.promoted_at.isoformat()
-                    if promotion.promoted_at is not None
-                    else None,
+                    promoted_at_text,
                     promotion.evidence_uri,
                     promotion.notes,
+                    promotion.dataset_id,
+                    promoted_at_text,
                 ],
             )
+            if cursor.rowcount != 1:
+                msg = (
+                    "cannot upsert a promotion superseded by a newer "
+                    f"revocation: {promotion.dataset_id}"
+                )
+                raise ValueError(msg)
             self._insert_promotion_event(
                 DatasetMaturityPromotionEvent(
                     dataset_id=promotion.dataset_id,
@@ -402,7 +416,7 @@ class SQLiteDatasetMaturityPromotionStore:
                 event.previous_maturity,
                 event.next_maturity,
                 event.actor,
-                event.action_at.isoformat() if event.action_at is not None else None,
+                _normalized_instant_text(event.action_at),
                 event.evidence_uri,
                 event.revocation_reason,
                 event.notes,

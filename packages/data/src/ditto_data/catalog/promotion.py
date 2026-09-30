@@ -262,19 +262,22 @@ def evidence_since_latest_revocation(
     revoked = [event for event in events if event.action == "revoked"]
     if not revoked:
         return evidence
-    if any(event.action_at is None for event in revoked):
-        # An untimestamped revocation cannot be ordered against any evidence
-        # row, so no evidence can prove it postdates the revocation.
+    if any(
+        event.action_at is None or event.action_at.tzinfo is None for event in revoked
+    ):
+        # An unorderable revocation (missing or timezone-naive timestamp)
+        # cannot be ordered against any evidence row, so no evidence can
+        # prove it postdates the revocation.
         return ()
-    revoked_at: list[datetime] = [
-        event.action_at for event in revoked if event.action_at is not None
-    ]
-    cutoff = max(revoked_at)
-    return tuple(
-        item
-        for item in evidence
-        if item.reviewed_at is not None and item.reviewed_at > cutoff
-    )
+    cutoff = max(event.action_at for event in revoked)
+    return tuple(item for item in evidence if _proven_after(item.reviewed_at, cutoff))
+
+
+def _proven_after(instant: datetime | None, cutoff: datetime) -> bool:
+    """Compare instants only when both sides are timezone-aware."""
+    if instant is None or instant.tzinfo is None or cutoff.tzinfo is None:
+        return False
+    return instant > cutoff
 
 
 def assess_dataset_promotion(

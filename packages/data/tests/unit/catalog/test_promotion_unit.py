@@ -240,3 +240,30 @@ class TestEvidenceSinceLatestRevocation:
         recent = self._evidence("c1", cutoff + timedelta(days=1))
 
         assert evidence_since_latest_revocation((recent,), (unknown_revoke,)) == ()
+
+    def test_naive_revocation_timestamp_drops_all_evidence(self) -> None:
+        naive_revoke = DatasetMaturityPromotionEvent(
+            dataset_id="stock_daily",
+            action="revoked",
+            previous_maturity="initial-focus",
+            next_maturity="experimental",
+            actor="data-governance",
+            action_at=datetime(2026, 6, 1),
+            revocation_reason="manual_override",
+        )
+        aware_evidence = self._evidence("c1", datetime(2026, 6, 2, tzinfo=UTC))
+
+        assert (
+            evidence_since_latest_revocation((aware_evidence,), (naive_revoke,)) == ()
+        )
+
+    def test_naive_evidence_timestamp_is_dropped_after_revocation(self) -> None:
+        cutoff = datetime(2026, 6, 1, tzinfo=UTC)
+        naive_evidence = self._evidence("c1", datetime(2026, 6, 2))
+
+        assert (
+            evidence_since_latest_revocation(
+                (naive_evidence,), (self._revoked_event(cutoff),)
+            )
+            == ()
+        )
