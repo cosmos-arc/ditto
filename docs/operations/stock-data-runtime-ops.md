@@ -11,21 +11,24 @@
 
 ## 新鲜度 SLA
 
-| 数据集 | 频率 | SLA | 说明 |
-|---|---|---|---|
-| `stock_basic` | 按需快照 | 交易日 T 日终 | 全市场列表快照,身份/上市状态变更随快照重放 |
-| `stock_daily` | 交易日 | T+0 晚间(约 17:30–20:00 窗口) | 日线 OHLCV+量额,单日全市场一次调用 |
-| `stock_status` | 交易日 | T+0 晚间(随 daily 同窗) | 停复牌/交易状态,可投资集合判定输入 |
+以 catalog `DatasetMetadata` 声明为准(读侧 readiness 门按此判定;数值不一致时以 metadata 为权威并修订本文件):
 
-- 触发:工作日终人工执行 bootstrap/repair(个人工作站无常驻调度);次日开盘前补齐为达标线。
+| 数据集 | 频率 | SLA(metadata 权威值) | 说明 |
+|---|---|---|---|
+| `stock_basic` | 按需快照 | 168h(7 天) | 全市场列表快照;周内旧快照仍判 fresh |
+| `stock_daily` | 交易日 | 36h | 日线 OHLCV+量额,单日全市场一次调用 |
+| `stock_status` | 交易日 | 36h | 停复牌/交易状态,可投资集合判定输入 |
+
+- 触发:工作日终人工执行 bootstrap/repair(个人工作站无常驻调度);`stock_daily`/`stock_status` 以 T+1 晚间补齐为操作目标(36h SLA 内)。
 - 超期处置:新鲜度不足时下游 fail closed(maturity/readiness 门),不做静默旧值顶替。
 
 ## 主备与故障切换（source failover policy）
 
-1. 主源 Tushare(代理端点),备源 fuyao(同花顺开源数据,已接 adapter 与本地 dump)。
-2. 主源失败(配额/网络/接口变更)时:保持 blocked/stale 展示与最后认证快照身份;经人工确认备源口径(schema、复权、时间语义、许可)一致后,以 `--source fuyao` 显式补数,快照记录真实 provider 身份,不静默沿用主源身份。
-3. 主备共用上游时不得视为独立校验;切换与回切都以新快照/新证据落账,旧结果不回写。
-4. 连续失败或覆盖回归 → revoke 晋级,按 runbook 修复后重新认证。
+1. 主源 Tushare(代理端点);备源 fuyao(同花顺开源数据)。**fuyao 当前仅对 `stock_daily` 注册了 adapter 能力**;`stock_basic`/`stock_status` 无已注册备源。
+2. `stock_daily` 主源失败(配额/网络/接口变更)时:保持 blocked/stale 展示与最后认证快照身份;经人工确认备源口径(schema、复权、时间语义、许可)一致后,以 `--source fuyao` 显式补数,快照记录真实 provider 身份,不静默沿用主源身份。
+3. `stock_basic`/`stock_status` 主源失败时:无备源,保持 blocked 并重试主源;不以前日数据顶替当日快照。
+4. 主备共用上游时不得视为独立校验;切换与回切都以新快照/新证据落账,旧结果不回写。
+5. 连续失败或覆盖回归 → revoke 晋级,按 runbook 修复后重新认证。
 
 ## 版本
 

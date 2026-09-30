@@ -1,13 +1,10 @@
 {
-  "checked_at": "2026-09-30T19:32:00+08:00",
+  "checked_at": "2026-09-30T11:33:52.987969+00:00",
   "consumer": "instrument registry read path (SQLite metadata)",
   "source_snapshot": "snapshot:tushare:stock_basic:sha256:f8ee172c2cbfc68be23f24c4055dfdcc2fcaf92686a83cd2b8b8202b48311a39",
   "list_status_counts": {
     "D": 341,
     "L": 5581
   },
-  "board_counts": {
-    "null": 5922
-  },
-  "consumer_report_sha256": "3418b9984afb6f38bf650ceb5c78b6a5979ed743b24d5e07b820d8a16b20ffc0"
+  "consumer_report_sha256": "3303dd1f6e4035b4575c343cf67d33ebe2a2f7ff4529fa9823b93e527c7eeba8"
 }

@@ -12,10 +12,16 @@
 
 财务数据集(balance_sheet/income_statement 等)按票面保持 experimental:无历史版本证据不晋级。
 
-## 证据文件(均由命令/脚本直接生成)
+## 有界晋级范围声明(评审已确认的边界)
+
+`DatasetMaturityPromotion` 不携带覆盖区间,晋级作用于数据集级 maturity;本批认证覆盖仅为上表声明区间。产品规格对全历史(stock_basic 2015 起、stock_status 2016 起)的覆盖要求**未在本批完成**:声明区间外的读取依赖读侧 fail-closed(catalog 预 IO 门拒绝缺失交易日覆盖/缺失 catalog 资产)而非 maturity 门。全历史认证完成前,不声称 2015/2016 起的 PIT/replay 覆盖;该缺口列入 #196 后续批。
+
+## 证据文件(均由命令/脚本直接生成,时间戳为机器 UTC 时间且早于本目录提交)
 
 - `recovery-idempotency-stock_{daily,basic,status}.json` — 已完备区间重跑引导,planner 零处理、零 durable 写入。
-- `consumer-read-stock_{daily,basic,status}.json` — 真实读路径消费检查(canonical parquet / instrument registry)。
+- `consumer-read-stock-daily.json` — **catalog 读模型消费检查**:真实 DI 容器经 ServiceBackedDataProvider 读取(BarQuery,无 research opt-in),返回带 `knowledge_date`/`source_snapshot_id` 的 PIT 行情。
+- `consumer-read-stock-basic.json` — instrument registry 读路径(SQLite 元数据)。
+- `consumer-read-stock-status.json` — canonical parquet 直接读(标注;status 的 catalog 读模型覆盖待后续批补)。
 - `formal-gate-verification.json` — 真实 promotion store 上的无 bypass 运行门核验:股票道放行、财务受限、研究 opt-in 语义保留。
 
 ## 运维责任

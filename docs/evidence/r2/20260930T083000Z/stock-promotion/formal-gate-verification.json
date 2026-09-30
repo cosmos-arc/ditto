@@ -1,5 +1,5 @@
 {
-  "checked_at": "2026-09-30T19:50:00+08:00",
+  "checked_at": "2026-09-30T11:33:55.155257+00:00",
   "check": "blocked_catalog_datasets against the real runtime promotion store",
   "allow_experimental_data": false,
   "stock_lane_blocked": [],

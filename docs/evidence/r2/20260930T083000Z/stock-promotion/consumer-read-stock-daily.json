@@ -1,41 +1,32 @@
 {
-  "checked_at": "2026-09-30T19:20:00+08:00",
-  "consumer": "canonical stock_daily parquet read path (Polars)",
-  "window": {
-    "from": "2025-01-01",
-    "to": "2026-09-29"
-  },
-  "total_rows_in_window": 2304827,
-  "distinct_trade_dates": 423,
-  "distinct_instruments": 5622,
-  "sample_query": {
-    "instrument_ids": [
+  "checked_at": "2026-09-30T11:33:52.509201+00:00",
+  "consumer": "catalog-backed DataProvider read-model via real DI container",
+  "allow_experimental_data": false,
+  "note": "reads succeed without research opt-in because stock datasets are promoted",
+  "bars": {
+    "rows": 60,
+    "columns": [
+      "source_ticker",
+      "trade_date",
+      "knowledge_date",
+      "open",
+      "high",
+      "low",
+      "close",
+      "pre_close",
+      "volume",
+      "amount",
+      "pct_change",
+      "instrument_id",
+      "source",
+      "source_snapshot_id"
+    ],
+    "instruments": [
       1000001,
       1000782,
       1003525
     ],
-    "rows": 60,
-    "dates": 20,
-    "latest_close": {
-      "1000001": 11.35,
-      "1000782": 1235.58,
-      "1003525": 286.8
-    }
+    "trade_dates": 20
   },
-  "columns": [
-    "source_ticker",
-    "trade_date",
-    "knowledge_date",
-    "open",
-    "high",
-    "low",
-    "close",
-    "pre_close",
-    "volume",
-    "amount",
-    "pct_change",
-    "instrument_id",
-    "source"
-  ],
-  "consumer_report_sha256": "ef9c30ea2e15c35ceec8ec332aee756dbc0a086be0f870b64c4fdd2bb456ef1d"
+  "schedule_rows": 20
 }

@@ -1,6 +1,6 @@
 {
-  "checked_at": "2026-09-30T19:15:00+08:00",
-  "drill": "re-run bounded bootstrap over complete month 2025-04-01..2025-04-30",
+  "checked_at": "2026-09-30T11:33:41.032785+00:00",
+  "drill": "re-run bounded bootstrap over complete range 2025-04-01..2025-04-30",
   "result": {
     "status": "completed",
     "dataset": "stock_daily",
@@ -10,5 +10,5 @@
     "failed_count": 0,
     "results": []
   },
-  "expectation": "planner finds zero chunks to process; zero durable writes; zero provider calls"
+  "expectation": "planner finds nothing to process; zero durable writes"
 }
