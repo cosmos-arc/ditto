@@ -23,6 +23,7 @@ def test_owned_temporary_directory_resolves_system_symlink_before_staging(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
+    _stage_current_trivyignore(tmp_path)
     scratch = tmp_path / "scratch"
     scratch.mkdir()
     alias = tmp_path / "system-temp-alias"
@@ -106,8 +107,9 @@ def test_syft_has_writable_ephemeral_storage_without_root_or_network(
 
 def test_trivy_gate_blocks_only_vulnerabilities_with_fixes() -> None:
     """--ignore-unfixed 丢失会让门禁在发行版修复窗口内对所有构建不可通过。"""
-    arguments = artifact_gate._trivy_backend_arguments(Path("/out"))
+    arguments = artifact_gate._trivy_backend_arguments(Path("/out"), Path("/workspace"))
     assert "--ignore-unfixed" in arguments
+    assert arguments[arguments.index("--ignorefile") + 1] == "/work/.trivyignore"
     assert arguments[arguments.index("--exit-code") + 1] == "1"
     assert arguments[arguments.index("--severity") + 1] == "HIGH,CRITICAL"
     assert arguments[arguments.index("--input") + 1] == "/work/ditto-image.tar"
@@ -428,10 +430,21 @@ def test_release_identity_rejects_tracked_and_untracked_dirty_source(
         artifact_gate._release_identity(tmp_path)
 
 
+def _stage_current_trivyignore(root: Path) -> None:
+    """Gate runs demand a live temporary suppression file (#378)."""
+    from datetime import date, timedelta
+
+    expiry = (date.today() + timedelta(days=7)).isoformat()
+    (root / ".trivyignore").write_text(
+        f"# exp: {expiry}\nCVE-0000-0000\n", encoding="utf-8"
+    )
+
+
 def test_build_export_and_smoke_use_the_build_output_id(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     """A mutable tag must not be resolved again by export or readiness checks."""
+    _stage_current_trivyignore(tmp_path)
     commands: list[list[str]] = []
     image_id = "sha256:" + "d" * 64
 
