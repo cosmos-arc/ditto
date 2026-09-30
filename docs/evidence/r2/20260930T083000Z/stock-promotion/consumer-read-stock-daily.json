@@ -1,0 +1,35 @@
+{
+  "checked_at": "2026-09-30T11:33:52.509201+00:00",
+  "consumer": "catalog-backed DataProvider read-model via real DI container",
+  "allow_experimental_data": "n/a (not an input to get_bars)",
+  "note": "reads succeed without research opt-in because stock datasets are promoted",
+  "bars": {
+    "rows": 60,
+    "columns": [
+      "source_ticker",
+      "trade_date",
+      "knowledge_date",
+      "open",
+      "high",
+      "low",
+      "close",
+      "pre_close",
+      "volume",
+      "amount",
+      "pct_change",
+      "instrument_id",
+      "source",
+      "source_snapshot_id"
+    ],
+    "instruments": [
+      1000001,
+      1000782,
+      1003525
+    ],
+    "trade_dates": 20
+  },
+  "schedule_rows": 20,
+  "repo_head": "e50a4593",
+  "generated_by": "real DI container -> ServiceBackedDataProvider.get_bars(BarQuery)",
+  "claim": "functional catalog read-model check (PIT columns knowledge_date/source_snapshot_id present); maturity enforcement is NOT exercised by this call (get_bars takes no opt-in flag) — gate enforcement is covered by formal-gate-verification.json"
+}

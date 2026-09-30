@@ -20,9 +20,9 @@ RUN rm -rf /usr/local/lib/python3.13/ensurepip \
     && find /usr/local/lib/python3.13/site-packages -maxdepth 1 \
          \( -name 'pip*' -o -name 'setuptools*' -o -name 'wheel*' \) -exec rm -rf {} +
 
-FROM gcr.io/distroless/python3-debian13@sha256:e866e2f9fbaa19f63e579cf2f61b7f76cd8a74c43a62a0af95d48678d9878436 AS debian-libraries
+FROM gcr.io/distroless/python3-debian13@sha256:238e04c4399d2479534ac384ddc35cd449a07b36842be1864373ee823c6dff5a AS debian-libraries
 
-FROM gcr.io/distroless/base-debian13@sha256:9ef50bca108839d5986e4d84b7f7b2d79024c9293b7c35b162c6c55485bd5868 AS runtime
+FROM gcr.io/distroless/base-debian13@sha256:af4816d67c1801dab69ceb98535de387e6fb5332fe71171466257b9d89657c7d AS runtime
 
 ARG DITTO_PRODUCT_VERSION=0+unknown
 ARG DITTO_GIT_SHA=unknown

@@ -1,0 +1,17 @@
+{
+  "checked_at": "2026-09-30T11:33:50.337377+00:00",
+  "drill": "re-run bounded bootstrap over complete range 2026-09-30..2026-09-30",
+  "result": {
+    "status": "completed",
+    "dataset": "stock_basic",
+    "total_dates": 0,
+    "success_count": 0,
+    "skipped_count": 0,
+    "failed_count": 0,
+    "results": []
+  },
+  "expectation": "total_dates=0, empty results",
+  "repo_head": "e50a4593",
+  "generated_by": "ditto data-products bootstrap stock_basic --start-date 2026-09-30 --end-date 2026-09-30 (re-run)",
+  "claim": "skip-idempotency: planner finds zero chunks to process on a complete range; NOT an interruption-resume drill (resume evidence pending next batch)"
+}

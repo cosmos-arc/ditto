@@ -1,0 +1,24 @@
+{
+  "checked_at": "2026-09-30T12:00:29.470042+00:00",
+  "check": "blocked_catalog_datasets against the real runtime promotion store",
+  "allow_experimental_data": false,
+  "stock_lane_blocked": [
+    "stock_daily=experimental",
+    "stock_basic=experimental",
+    "stock_status=experimental"
+  ],
+  "stock_lane_formal_allowed": false,
+  "fundamentals_blocked_without_opt_in": [
+    "balance_sheet=experimental",
+    "income_statement=experimental"
+  ],
+  "fundamentals_formal_restricted": true,
+  "fundamentals_blocked_with_research_opt_in": [],
+  "expectation": [
+    "stock lane (stock_daily/stock_basic/stock_status/adj_factor) unblocked after promotion",
+    "fundamentals remain blocked on the formal path (no versioned evidence)",
+    "research opt-in still admits experimental fundamentals"
+  ],
+  "repo_head": "e50a4593",
+  "generated_by": "blocked_catalog_datasets via real container promotion reader"
+}

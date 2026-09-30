@@ -1,0 +1,24 @@
+{
+  "checked_at": "2026-09-30T11:33:52.987969+00:00",
+  "consumer": "canonical stock_status parquet read path (Polars; direct read, catalog read-model coverage pending)",
+  "window": {
+    "from": "2025-01-01",
+    "to": "2026-09-29"
+  },
+  "total_rows_in_window": 2311326,
+  "distinct_trade_dates": 423,
+  "columns": [
+    "source_ticker",
+    "trade_date",
+    "is_suspended",
+    "suspend_timing",
+    "is_st",
+    "st_type",
+    "list_status",
+    "instrument_id",
+    "source"
+  ],
+  "consumer_report_sha256": "3d8dcd4da0f1fdd0cec0a43e4d3265a1574e3f44889026eede722a3033f5b012",
+  "repo_head": "e50a4593",
+  "generated_by": "direct Polars parquet read (catalog read-model coverage pending)"
+}

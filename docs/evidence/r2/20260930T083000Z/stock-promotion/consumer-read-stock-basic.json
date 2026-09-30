@@ -1,0 +1,12 @@
+{
+  "checked_at": "2026-09-30T11:33:52.987969+00:00",
+  "consumer": "instrument registry read path (SQLite metadata)",
+  "source_snapshot": "snapshot:tushare:stock_basic:sha256:f8ee172c2cbfc68be23f24c4055dfdcc2fcaf92686a83cd2b8b8202b48311a39",
+  "list_status_counts": {
+    "D": 341,
+    "L": 5581
+  },
+  "consumer_report_sha256": "3303dd1f6e4035b4575c343cf67d33ebe2a2f7ff4529fa9823b93e527c7eeba8",
+  "repo_head": "e50a4593",
+  "generated_by": "SQLite instrument registry read"
+}
