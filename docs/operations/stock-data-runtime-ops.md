@@ -26,7 +26,7 @@
 
 1. 主源 Tushare(代理端点);备源 fuyao(同花顺开源数据)。**fuyao 当前仅对 `stock_daily` 注册了 adapter 能力**;`stock_basic`/`stock_status` 无已注册备源。
 2. `stock_daily` 主源失败(配额/网络/接口变更)时:保持 blocked/stale 展示与最后认证快照身份;经人工确认备源口径(schema、复权、时间语义、许可)一致后,以 `--source fuyao --license-record-id <fuyao 的 license 记录>` 显式补数(缺 license-record-id 时 R2 证据提交 fail closed,且 Tushare 的 license 记录不覆盖 fuyao 源)。
-3. **failover 顺序(关闭旧晋级下的新源暴露窗口)**:主源失败决定切换时,若数据集在册晋级,先 `ops promotion-revoke` 撤销晋级,再执行补数——普通读路径不校验认证身份,若先写分后撤晋级,正式消费者会在旧晋级下读到未认证的新源行。补数完成后重新认证(certify 新快照集)再重新晋级。
+3. **failover 顺序(关闭旧晋级/旧认证下的新源暴露窗口)**:主源失败决定切换时,若数据集在册晋级,先 `ops promotion-revoke` 撤销晋级并 `data-products revoke` 撤销当前认证,再执行补数——普通读路径不校验认证身份,且治理存储在存在活动认证时拒绝追加不同报告;若先写分后撤,正式消费者会在旧晋级下读到未认证的新源行。补数完成后重新认证(certify 新快照集),再复核旧 promotion 证据状态(见 #380:撤销不清理已过准则行,重晋级前须逐条以最新评审覆盖),最后重新晋级。
 4. `stock_basic`/`stock_status` 主源失败时:无备源,保持 blocked 并重试主源;不以前日数据顶替当日快照。
 5. 主备共用上游时不得视为独立校验;切换与回切都以新快照/新证据落账,旧结果不回写。
 6. 连续失败或覆盖回归 → revoke 晋级,按 runbook 修复后重新认证。
