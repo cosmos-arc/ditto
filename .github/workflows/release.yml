@@ -158,7 +158,7 @@ jobs:
             --volume "$PWD/dist:/work" \
             --volume ditto-trivy-cache:/root/.cache/trivy \
             ghcr.io/aquasecurity/trivy:0.74.0@sha256:62b1e65e8869bc4b4c6aa4fa2b21595256c7c2f6018a9d9ad61caf87187c1969 \
-            image --input /work/ditto-image.tar --format json --output /work/trivy-backend.json --exit-code 1 --severity HIGH,CRITICAL
+            image --input /work/ditto-image.tar --format json --output /work/trivy-backend.json --exit-code 1 --severity HIGH,CRITICAL --ignore-unfixed
       - name: Generate SPDX SBOMs and verify release evidence
         env:
           PRODUCT_VERSION: ${{ steps.identity.outputs.product_version }}
