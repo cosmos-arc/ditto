@@ -106,8 +106,9 @@ def test_syft_has_writable_ephemeral_storage_without_root_or_network(
 
 def test_trivy_gate_blocks_only_vulnerabilities_with_fixes() -> None:
     """--ignore-unfixed 丢失会让门禁在发行版修复窗口内对所有构建不可通过。"""
-    arguments = artifact_gate._trivy_backend_arguments(Path("/out"))
+    arguments = artifact_gate._trivy_backend_arguments(Path("/out"), Path("/workspace"))
     assert "--ignore-unfixed" in arguments
+    assert arguments[arguments.index("--ignorefile") + 1] == "/work/.trivyignore"
     assert arguments[arguments.index("--exit-code") + 1] == "1"
     assert arguments[arguments.index("--severity") + 1] == "HIGH,CRITICAL"
     assert arguments[arguments.index("--input") + 1] == "/work/ditto-image.tar"

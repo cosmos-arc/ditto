@@ -176,19 +176,23 @@ def _syft_sandbox_arguments() -> list[str]:
     ]
 
 
-def _trivy_backend_arguments(output: Path) -> list[str]:
+def _trivy_backend_arguments(output: Path, workspace: Path) -> list[str]:
     """
     Gate only on fixable HIGH/CRITICAL findings.
 
     `--ignore-unfixed` 是业界标准做法：发行版暂无修复版本的系统包 CVE
     会在修复发布后随基础镜像 digest 重 pin 重新进入门禁；对无修复项
     硬性 exit 1 会让门禁在 Debian 修复窗口内对所有构建不可通过（PR #373）。
+    仓库根 `.trivyignore` 只放带 `# exp:` 过期注释的用户批准临时抑制（#378）；
+    上游就绪或过期后条目必须移除，门禁即自动恢复。
     """
     return [
         "--volume",
         "ditto-trivy-cache:/root/.cache/trivy",
         "--volume",
         f"{output}:/work",
+        "--volume",
+        f"{workspace / '.trivyignore'}:/work/.trivyignore:ro",
         _TRIVY,
         "image",
         "--input",
@@ -202,6 +206,8 @@ def _trivy_backend_arguments(output: Path) -> list[str]:
         "--severity",
         "HIGH,CRITICAL",
         "--ignore-unfixed",
+        "--ignorefile",
+        "/work/.trivyignore",
     ]
 
 
@@ -874,11 +880,15 @@ def run_artifact_gate(root: Path) -> None:
         package_manifest=workspace / "apps" / "web" / "package.json",
     )
     _smoke_container(docker, workspace, image, release=release)
+    if not (workspace / ".trivyignore").is_file():
+        raise ArtifactGateError(
+            ".trivyignore is missing; the trivy gate mounts it explicitly (#378)"
+        )
     _run_ephemeral_container(
         docker,
         workspace,
         purpose="trivy-backend",
-        arguments=_trivy_backend_arguments(output),
+        arguments=_trivy_backend_arguments(output, workspace),
         timeout_seconds=_SCANNER_TIMEOUT_SECONDS,
     )
     _verify_scanner_subject(
