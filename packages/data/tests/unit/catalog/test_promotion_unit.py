@@ -226,3 +226,17 @@ class TestEvidenceSinceLatestRevocation:
             )
             == ()
         )
+
+    def test_untimestamped_revocation_drops_all_evidence(self) -> None:
+        cutoff = datetime(2026, 6, 1, tzinfo=UTC)
+        unknown_revoke = DatasetMaturityPromotionEvent(
+            dataset_id="stock_daily",
+            action="revoked",
+            previous_maturity="initial-focus",
+            next_maturity="experimental",
+            actor="data-governance",
+            revocation_reason="manual_override",
+        )
+        recent = self._evidence("c1", cutoff + timedelta(days=1))
+
+        assert evidence_since_latest_revocation((recent,), (unknown_revoke,)) == ()

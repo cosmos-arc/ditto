@@ -208,9 +208,33 @@ class SQLiteDatasetMaturityPromotionStore:
         self,
         promotion: DatasetMaturityPromotion,
     ) -> None:
-        """Insert or replace a dataset maturity promotion override."""
+        """
+        Insert or replace a dataset maturity promotion override.
+
+        Fails closed when a revocation event newer than ``promotion.promoted_at``
+        already exists: a promotion computed from pre-revocation evidence must
+        not resurrect a revoked override (#380).
+        """
         _validate_dataset_id(promotion.dataset_id)
         try:
+            row = self._client.fetchone(
+                """
+                SELECT MAX(action_at) AS latest_revocation
+                FROM dataset_maturity_promotion_events
+                WHERE dataset_id = ? AND action = 'revoked'
+                """,
+                [promotion.dataset_id],
+            )
+            latest_revocation = row["latest_revocation"] if row is not None else None
+            if latest_revocation is not None and (
+                promotion.promoted_at is None
+                or latest_revocation > promotion.promoted_at.isoformat()
+            ):
+                msg = (
+                    "cannot upsert a promotion superseded by a newer "
+                    f"revocation: {promotion.dataset_id}"
+                )
+                raise ValueError(msg)
             self._client.execute(
                 """
                 INSERT INTO dataset_maturity_promotions (

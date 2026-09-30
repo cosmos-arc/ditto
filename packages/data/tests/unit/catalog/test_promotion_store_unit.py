@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
+import pytest
 from ditto_data.catalog.promotion import (
     DatasetMaturityPromotion,
     DatasetMaturityPromotionEvent,
@@ -222,5 +223,49 @@ class TestSQLiteDatasetMaturityPromotionStore:
 
             assert isinstance(store, DatasetMaturityPromotionHistoryReader)
             assert isinstance(store, DatasetMaturityPromotionRevoker)
+        finally:
+            pool.close()
+
+    def test_upsert_rejects_promotion_predating_latest_revocation(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """#380:并发窗口内不得复活已被更新撤销压过的晋级 override。"""
+        client, pool = _client(tmp_path / "catalog.sqlite")
+        store = SQLiteDatasetMaturityPromotionStore(client)
+        promoted_at = datetime(2026, 6, 1, 13, 0, tzinfo=UTC)
+        revoked_at = datetime(2026, 6, 2, 9, 0, tzinfo=UTC)
+        stale_promotion = DatasetMaturityPromotion(
+            dataset_id="stock_daily",
+            previous_maturity="experimental",
+            promoted_maturity="initial-focus",
+            promoted_by="architecture-review",
+            promoted_at=promoted_at,
+        )
+        re_promotion = DatasetMaturityPromotion(
+            dataset_id="stock_daily",
+            previous_maturity="experimental",
+            promoted_maturity="initial-focus",
+            promoted_by="architecture-review",
+            promoted_at=revoked_at + timedelta(minutes=1),
+        )
+
+        try:
+            store.upsert_dataset_maturity_promotion(stale_promotion)
+            store.revoke_dataset_maturity_promotion(
+                "stock_daily",
+                revoked_by="data-governance",
+                revoked_at=revoked_at,
+                revocation_reason="evidence_invalidated",
+            )
+
+            with pytest.raises(ValueError, match="newer revocation"):
+                store.upsert_dataset_maturity_promotion(stale_promotion)
+            assert store.get_dataset_maturity_promotion("stock_daily") is None
+
+            store.upsert_dataset_maturity_promotion(re_promotion)
+            current = store.get_dataset_maturity_promotion("stock_daily")
+            assert current is not None
+            assert current.promoted_at == re_promotion.promoted_at
         finally:
             pool.close()

@@ -259,14 +259,14 @@ def evidence_since_latest_revocation(
     #380). Evidence without a review timestamp cannot prove it postdates a
     revocation and is dropped whenever one exists.
     """
-    revoked_at = [
-        event.action_at
-        for event in events
-        if event.action == "revoked" and event.action_at is not None
-    ]
-    if not revoked_at:
+    revoked = [event for event in events if event.action == "revoked"]
+    if not revoked:
         return evidence
-    cutoff = max(revoked_at)
+    if any(event.action_at is None for event in revoked):
+        # An untimestamped revocation cannot be ordered against any evidence
+        # row, so no evidence can prove it postdates the revocation.
+        return ()
+    cutoff = max(event.action_at for event in revoked)
     return tuple(
         item
         for item in evidence
