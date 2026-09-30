@@ -18,5 +18,7 @@
     "instrument_id",
     "source"
   ],
-  "consumer_report_sha256": "3d8dcd4da0f1fdd0cec0a43e4d3265a1574e3f44889026eede722a3033f5b012"
+  "consumer_report_sha256": "3d8dcd4da0f1fdd0cec0a43e4d3265a1574e3f44889026eede722a3033f5b012",
+  "repo_head": "e50a4593",
+  "generated_by": "direct Polars parquet read (catalog read-model coverage pending)"
 }

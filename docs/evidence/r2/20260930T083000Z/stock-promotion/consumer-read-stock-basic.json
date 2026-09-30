@@ -6,5 +6,7 @@
     "D": 341,
     "L": 5581
   },
-  "consumer_report_sha256": "3303dd1f6e4035b4575c343cf67d33ebe2a2f7ff4529fa9823b93e527c7eeba8"
+  "consumer_report_sha256": "3303dd1f6e4035b4575c343cf67d33ebe2a2f7ff4529fa9823b93e527c7eeba8",
+  "repo_head": "e50a4593",
+  "generated_by": "SQLite instrument registry read"
 }

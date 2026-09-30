@@ -10,5 +10,8 @@
     "failed_count": 0,
     "results": []
   },
-  "expectation": "planner finds nothing to process; zero durable writes"
+  "expectation": "total_dates=0, empty results",
+  "repo_head": "e50a4593",
+  "generated_by": "ditto data-products bootstrap stock_status --start-date 2025-04-01 --end-date 2025-04-30 (re-run)",
+  "claim": "skip-idempotency: planner finds zero chunks to process on a complete range; NOT an interruption-resume drill (resume evidence pending next batch)"
 }

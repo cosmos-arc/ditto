@@ -20,15 +20,16 @@
 | `stock_status` | 交易日 | 36h | 停复牌/交易状态,可投资集合判定输入 |
 
 - 触发:工作日终人工执行 bootstrap/repair(个人工作站无常驻调度);`stock_daily`/`stock_status` 以 T+1 晚间补齐为操作目标(36h SLA 内)。
-- 超期处置:新鲜度不足时下游 fail closed(maturity/readiness 门),不做静默旧值顶替。
+- 超期处置:新鲜度判定作用于 readiness/catalog status overlay 与治理面;**普通行情读路径不做 per-read 新鲜度检查**(`MarketQueryFacade`/`ServiceBackedDataProvider` 直接读存储),超期数据的拦截依赖上层 readiness 展示与操作者执行本 SLA,不声称读路径自动 fail closed。
 
 ## 主备与故障切换（source failover policy）
 
 1. 主源 Tushare(代理端点);备源 fuyao(同花顺开源数据)。**fuyao 当前仅对 `stock_daily` 注册了 adapter 能力**;`stock_basic`/`stock_status` 无已注册备源。
-2. `stock_daily` 主源失败(配额/网络/接口变更)时:保持 blocked/stale 展示与最后认证快照身份;经人工确认备源口径(schema、复权、时间语义、许可)一致后,以 `--source fuyao` 显式补数,快照记录真实 provider 身份,不静默沿用主源身份。
-3. `stock_basic`/`stock_status` 主源失败时:无备源,保持 blocked 并重试主源;不以前日数据顶替当日快照。
-4. 主备共用上游时不得视为独立校验;切换与回切都以新快照/新证据落账,旧结果不回写。
-5. 连续失败或覆盖回归 → revoke 晋级,按 runbook 修复后重新认证。
+2. `stock_daily` 主源失败(配额/网络/接口变更)时:保持 blocked/stale 展示与最后认证快照身份;经人工确认备源口径(schema、复权、时间语义、许可)一致后,以 `--source fuyao --license-record-id <fuyao 的 license 记录>` 显式补数(缺 license-record-id 时 R2 证据提交 fail closed,且 Tushare 的 license 记录不覆盖 fuyao 源)。
+3. **failover 快照与现有认证/晋级绑定的快照身份不一致**:切换补数后须先重新认证(certify 新快照集)再进入正式消费;不做"新分区间接顶替旧认证"的静默放行。
+4. `stock_basic`/`stock_status` 主源失败时:无备源,保持 blocked 并重试主源;不以前日数据顶替当日快照。
+5. 主备共用上游时不得视为独立校验;切换与回切都以新快照/新证据落账,旧结果不回写。
+6. 连续失败或覆盖回归 → revoke 晋级,按 runbook 修复后重新认证。
 
 ## 版本
 
