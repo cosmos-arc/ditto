@@ -43,7 +43,7 @@ def strategy_runtime_dataset_ids(spec: StrategySpec) -> tuple[str, ...]:
         msg = f"Unsupported strategy asset_class for maturity gate: {spec.asset_class}"
         raise AppBuilderError(msg)
 
-    dataset_ids: list[str] = [*dataset_pair]
+    dataset_ids: list[str] = [*dataset_pair, *spec.required_datasets]
     if spec.benchmark is not None and asset_class != "index":
         dataset_ids.extend(("index_daily", "index_basic"))
     return tuple(dict.fromkeys(dataset_ids))
