@@ -1,0 +1,10 @@
+# Temporary suppression (user-approved 2026-09-30): CVE-2026-75804 / CVE-2026-84782
+# libssl3t64 3.5.7-1~deb13u2 (HIGH) — upstream fix 3.5.7-1~deb13u3 exists in Debian 13
+# but the pinned distroless base images have not been rebuilt with it (verified
+# 2026-09-30 against latest digests). Remove these entries and re-pin the distroless
+# digests in deploy/docker/Dockerfile once upstream ships the fix.
+# Tracking: https://github.com/cosmos-arc/ditto/issues/378
+# exp: 2026-10-14
+CVE-2026-75804
+# exp: 2026-10-14
+CVE-2026-84782
