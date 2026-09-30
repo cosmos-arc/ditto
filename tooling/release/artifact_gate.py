@@ -756,6 +756,11 @@ def _verify_scanner_subject(path: Path, *, image: str, scanner: str) -> None:
 def run_artifact_gate(root: Path) -> None:
     """Build both artifacts, generate SBOMs, scan the image, and prove readiness."""
     workspace = root.expanduser().resolve(strict=True)
+    if not (workspace / ".trivyignore").is_file():
+        raise ArtifactGateError(
+            ".trivyignore is missing; the trivy gate mounts it explicitly (#378)"
+        )
+    assert_suppressions_current(workspace / ".trivyignore")
     docker = _executable("docker")
     _run(
         [docker, "version", "--format", "{{.Server.Version}}"],
@@ -881,11 +886,6 @@ def run_artifact_gate(root: Path) -> None:
         package_manifest=workspace / "apps" / "web" / "package.json",
     )
     _smoke_container(docker, workspace, image, release=release)
-    if not (workspace / ".trivyignore").is_file():
-        raise ArtifactGateError(
-            ".trivyignore is missing; the trivy gate mounts it explicitly (#378)"
-        )
-    assert_suppressions_current(workspace / ".trivyignore")
     _run_ephemeral_container(
         docker,
         workspace,
