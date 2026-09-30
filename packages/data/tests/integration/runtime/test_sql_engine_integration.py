@@ -57,9 +57,11 @@ class TestSqlEngine:
         assert self.engine.con is not None
 
     def test_init_disables_progress_bar(self) -> None:
-        """Test __init__ disables DuckDB progress bar."""
-        # DuckDB should be configured
-        assert self.engine.con is not None
+        """Test __init__ disables the DuckDB progress bar in the session."""
+        row = self.engine.con.execute(
+            "SELECT current_setting('enable_progress_bar')"
+        ).fetchone()
+        assert row == (False,)
 
     def test_execute_returns_dataframe(self) -> None:
         """Test execute returns polars DataFrame."""

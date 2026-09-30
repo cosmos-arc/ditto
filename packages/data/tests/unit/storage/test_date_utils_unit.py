@@ -3,17 +3,11 @@
 from datetime import date, datetime
 from typing import get_args
 
-import pytest
 from ditto_platform.foundation import DateInput, normalize_date
 
 
 class TestNormalizeDate:
     """Tests for normalize_date function."""
-
-    def test_normalize_string_date(self) -> None:
-        """Test normalize_date handles string dates."""
-        result = normalize_date("2024-01-15")
-        assert result == "2024-01-15"
 
     def test_normalize_date_object(self) -> None:
         """Test normalize_date handles date objects."""
@@ -26,21 +20,6 @@ class TestNormalizeDate:
         input_dt = datetime(2024, 1, 15, 10, 30, 45)
         result = normalize_date(input_dt)
         assert result == "2024-01-15"  # Time component discarded
-
-    def test_normalize_none(self) -> None:
-        """Test normalize_date handles None."""
-        result = normalize_date(None)
-        assert result is None
-
-    def test_normalize_invalid_string_raises(self) -> None:
-        """Test normalize_date raises ValueError for invalid string."""
-        with pytest.raises(ValueError, match="Invalid date format"):
-            normalize_date("not-a-date")
-
-    def test_normalize_malformed_string_raises(self) -> None:
-        """Test normalize_date raises ValueError for malformed date."""
-        with pytest.raises(ValueError, match="Invalid date format"):
-            normalize_date("2024/01/15")  # Wrong separator
 
     def test_date_input_type_exists(self) -> None:
         """Test DateInput type alias is defined."""

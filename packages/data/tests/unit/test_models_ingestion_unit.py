@@ -29,10 +29,6 @@ class TestInstrumentIngestParams:
         params = InstrumentIngestParams(instrument_id=12345)
         assert params.instrument_id == 12345
 
-    def test_standard_ticker(self) -> None:
-        params = InstrumentIngestParams(standard_ticker="000001.XSHE")
-        assert params.standard_ticker == "000001.XSHE"
-
     def test_frozen(self) -> None:
         params = InstrumentIngestParams(start_date="2024-01-01")
         with pytest.raises(AttributeError):

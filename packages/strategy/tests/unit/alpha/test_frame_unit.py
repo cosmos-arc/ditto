@@ -5,6 +5,9 @@ AAA 测试模式：Arrange → Act → Assert。
 
 from __future__ import annotations
 
+import subprocess
+import sys
+
 import polars as pl
 import pytest
 from ditto_strategy.alpha.context import StrategyContext
@@ -209,14 +212,35 @@ class TestValidateFrameReleaseMode:
             "validate_frame 应使用 StrategySpecError 报告缺失列"
         )
 
-    def test_debug_mode_raises_on_missing(self) -> None:
-        """缺少列时应抛出 StrategySpecError。"""
-        frame = pl.DataFrame({"x": [1]})
-        with pytest.raises(
-            StrategySpecError,
-            match="DecisionFrame missing required columns",
-        ):
-            validate_frame(frame, (FrameCol.INSTRUMENT_ID,))
+    @pytest.mark.slow
+    def test_missing_columns_raise_under_optimized_interpreter(self) -> None:
+        """优化模式（python -O，assert 语句被剥除）下缺列守卫仍须 fail-closed。
+
+        子进程内的自检同样不能依赖 assert（会被 -O 剥掉），用显式
+        SystemExit 报告；子进程解释器启动 + polars 导入实测 ~1s，按 #328
+        时长治理打 slow 标记。
+        """
+        program = (
+            "import sys\n"
+            "if sys.flags.optimize <= 0:\n"
+            "    raise SystemExit('subprocess not running with -O')\n"
+            "import polars as pl\n"
+            "from ditto_strategy.alpha.frame import FrameCol, validate_frame\n"
+            "from ditto_strategy.errors import StrategySpecError\n"
+            "try:\n"
+            "    validate_frame(pl.DataFrame({'x': [1]}), (FrameCol.INSTRUMENT_ID,))\n"
+            "except StrategySpecError:\n"
+            "    raise SystemExit(0)\n"
+            "raise SystemExit('optimized interpreter accepted missing columns')\n"
+        )
+        result = subprocess.run(  # noqa: S603
+            [sys.executable, "-O", "-c", program],
+            capture_output=True,
+            text=True,
+            timeout=30,
+            check=False,
+        )
+        assert result.returncode == 0, result.stderr
 
     def test_validate_frame_is_callable(self) -> None:
         """validate_frame 应可正常调用。"""

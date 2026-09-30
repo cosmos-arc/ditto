@@ -176,6 +176,35 @@ def _syft_sandbox_arguments() -> list[str]:
     ]
 
 
+def _trivy_backend_arguments(output: Path) -> list[str]:
+    """
+    Gate only on fixable HIGH/CRITICAL findings.
+
+    `--ignore-unfixed` 是业界标准做法：发行版暂无修复版本的系统包 CVE
+    会在修复发布后随基础镜像 digest 重 pin 重新进入门禁；对无修复项
+    硬性 exit 1 会让门禁在 Debian 修复窗口内对所有构建不可通过（PR #373）。
+    """
+    return [
+        "--volume",
+        "ditto-trivy-cache:/root/.cache/trivy",
+        "--volume",
+        f"{output}:/work",
+        _TRIVY,
+        "image",
+        "--input",
+        "/work/ditto-image.tar",
+        "--format",
+        "json",
+        "--output",
+        "/work/trivy-backend.json",
+        "--exit-code",
+        "1",
+        "--severity",
+        "HIGH,CRITICAL",
+        "--ignore-unfixed",
+    ]
+
+
 def _sha256(path: Path) -> str:
     digest = hashlib.sha256()
     with path.open("rb") as stream:
@@ -849,24 +878,7 @@ def run_artifact_gate(root: Path) -> None:
         docker,
         workspace,
         purpose="trivy-backend",
-        arguments=[
-            "--volume",
-            "ditto-trivy-cache:/root/.cache/trivy",
-            "--volume",
-            f"{output}:/work",
-            _TRIVY,
-            "image",
-            "--input",
-            "/work/ditto-image.tar",
-            "--format",
-            "json",
-            "--output",
-            "/work/trivy-backend.json",
-            "--exit-code",
-            "1",
-            "--severity",
-            "HIGH,CRITICAL",
-        ],
+        arguments=_trivy_backend_arguments(output),
         timeout_seconds=_SCANNER_TIMEOUT_SECONDS,
     )
     _verify_scanner_subject(

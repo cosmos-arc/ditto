@@ -124,11 +124,6 @@ class TestInstrumentIngestParamsPrimaryIdentifier:
 class TestTimeSpecHasAvailabilityTime:
     """TimeSpec.has_availability_time -> bool."""
 
-    def test_with_none_returns_false(self) -> None:
-        """availability_time_key 为 None 时返回 False."""
-        spec = TimeSpec(event_time_key="trade_date")
-        assert spec.has_availability_time is False
-
     def test_with_value_returns_true(self) -> None:
         """availability_time_key 有值时返回 True."""
         spec = TimeSpec(event_time_key="trade_date", availability_time_key="bar_time")

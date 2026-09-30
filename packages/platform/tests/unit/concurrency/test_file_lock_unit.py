@@ -27,11 +27,6 @@ class TestFileLockManager:
         manager = FileLockManager(lock_dir=lock_dir)
         assert manager.lock_dir == lock_dir
 
-    def test_initialization_with_custom_lock_dir(self, lock_dir: Path) -> None:
-        """Test initialization with custom lock directory."""
-        manager = FileLockManager(lock_dir=lock_dir)
-        assert manager.lock_dir == lock_dir
-
     def test_acquire_creates_lock_file(
         self, lock_dir: Path, mocker: MockerFixture
     ) -> None:
