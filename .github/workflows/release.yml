@@ -154,6 +154,7 @@ jobs:
           docker stop "$container_id"
           trap - EXIT
           docker save --output dist/ditto-image.tar "$IMAGE"
+          uv run --no-sync python -c "from pathlib import Path; from tooling.release.trivy_ignore import assert_suppressions_current; assert_suppressions_current(Path('.trivyignore'))"
           docker run --rm \
             --volume "$PWD/dist:/work" \
             --volume "$PWD/.trivyignore:/work/.trivyignore:ro" \

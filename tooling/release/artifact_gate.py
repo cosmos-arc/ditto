@@ -20,6 +20,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from tooling.release.environment_identity import environment_identity
+from tooling.release.trivy_ignore import assert_suppressions_current
 
 _SYFT = (
     "ghcr.io/anchore/syft:v1.51.1@sha256:"
@@ -884,6 +885,7 @@ def run_artifact_gate(root: Path) -> None:
         raise ArtifactGateError(
             ".trivyignore is missing; the trivy gate mounts it explicitly (#378)"
         )
+    assert_suppressions_current(workspace / ".trivyignore")
     _run_ephemeral_container(
         docker,
         workspace,
