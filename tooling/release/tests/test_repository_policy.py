@@ -470,6 +470,7 @@ def test_release_requires_main_ci_and_verifies_the_exact_runtime_subject() -> No
         "docker save --output dist/ditto-image.tar",
         "trivy:0.74.0@sha256:",
         "--severity HIGH,CRITICAL",
+        "--ignore-unfixed",
     ):
         assert required in verification
 
