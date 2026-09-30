@@ -239,6 +239,7 @@ class TestStrategySliceBuilder:
             template="stock_selection",
             universe="cn_stock",
             asset_class="stock",
+            required_datasets=("stock_daily", "adj_factor"),
         )
         runtime_builder = MagicMock()
         runtime_builder.build_published_runtime.return_value = _make_published_runtime(
