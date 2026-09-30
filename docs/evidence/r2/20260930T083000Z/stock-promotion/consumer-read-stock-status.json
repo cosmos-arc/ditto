@@ -1,0 +1,23 @@
+{
+  "checked_at": "2026-09-30T19:42:00+08:00",
+  "consumer": "canonical stock_status parquet read path (Polars)",
+  "window": {
+    "from": "2025-01-01",
+    "to": "2026-09-29"
+  },
+  "total_rows_in_window": 2311326,
+  "distinct_trade_dates": 423,
+  "columns": [
+    "source_ticker",
+    "trade_date",
+    "is_suspended",
+    "suspend_timing",
+    "is_st",
+    "st_type",
+    "list_status",
+    "instrument_id",
+    "source"
+  ],
+  "suspend_rows_sample": null,
+  "consumer_report_sha256": "c94c877b18d7bcb4948cf4d672b4e364fbac6dcbc15e71b864e8f99f3a975ba9"
+}
