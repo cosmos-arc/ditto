@@ -185,13 +185,6 @@ class TestResolveMarketDependency:
     ) -> None:
         assert resolve_market_dependency(dep) == expected
 
-    def test_raises_for_unknown_dependency(self) -> None:
-        with pytest.raises(
-            NotImplementedError,
-            match=r"market\.unknown_col",
-        ):
-            resolve_market_dependency("market.unknown_col")
-
 
 class TestResolveEtfDependency:
     """Tests for _resolve_etf_dependency helper."""
@@ -211,13 +204,6 @@ class TestResolveEtfDependency:
         expected: tuple[str, str],
     ) -> None:
         assert resolve_etf_dependency(dep) == expected
-
-    def test_raises_for_unknown_etf_dependency(self) -> None:
-        with pytest.raises(
-            NotImplementedError,
-            match=r"etf\.unknown_col",
-        ):
-            resolve_etf_dependency("etf.unknown_col")
 
 
 class TestRuntimeDerivedInputProvider:

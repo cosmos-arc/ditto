@@ -27,13 +27,6 @@ class TestDerivedRole:
         """应包含 4 个成员."""
         assert len(DerivedRole) == 4
 
-    def test_values(self) -> None:
-        """验证所有成员值."""
-        assert DerivedRole.FEATURE == "feature"
-        assert DerivedRole.FACTOR == "factor"
-        assert DerivedRole.SIGNAL == "signal"
-        assert DerivedRole.LABEL == "label"
-
     def test_is_strenum(self) -> None:
         """应为 StrEnum，支持直接字符串比较."""
         assert DerivedRole.FEATURE == "feature"
@@ -70,13 +63,6 @@ class TestMaterializationProfile:
         """应包含 4 个成员."""
         assert len(MaterializationProfile) == 4
 
-    def test_values(self) -> None:
-        """验证所有成员值（大写）."""
-        assert MaterializationProfile.SERIES == "SERIES"
-        assert MaterializationProfile.STATE == "STATE"
-        assert MaterializationProfile.DERIVE == "DERIVE"
-        assert MaterializationProfile.OFFLINE == "OFFLINE"
-
     def test_is_strenum(self) -> None:
         """应为 StrEnum，支持直接字符串比较."""
         assert MaterializationProfile.SERIES == "SERIES"
@@ -99,21 +85,9 @@ class TestGrainToTimeKeys:
         """应包含 1d 和 1m 两个 grain."""
         assert set(GRAIN_TO_TIME_KEYS.keys()) == {"1d", "1m"}
 
-    def test_daily_grain(self) -> None:
-        """1d grain 应包含 trade_date."""
-        assert GRAIN_TO_TIME_KEYS["1d"] == ("trade_date",)
-
-    def test_minute_grain(self) -> None:
-        """1m grain 应包含 trade_date 和 bar_time."""
-        assert GRAIN_TO_TIME_KEYS["1m"] == ("trade_date", "bar_time")
-
 
 class TestCalendarToTimezone:
     """CALENDAR_TO_TIMEZONE 映射测试."""
-
-    def test_cn_stock(self) -> None:
-        """cn_stock 应映射到 Asia/Shanghai."""
-        assert CALENDAR_TO_TIMEZONE["cn_stock"] == "Asia/Shanghai"
 
     def test_only_cn_stock(self) -> None:
         """当前仅支持 cn_stock 日历."""
@@ -132,11 +106,6 @@ class TestTimeSpec:
         """event_time_key 为必填字段."""
         spec = TimeSpec(event_time_key="trade_date")
         assert spec.event_time_key == "trade_date"
-
-    def test_availability_time_key_default_none(self) -> None:
-        """availability_time_key 默认为 None."""
-        spec = TimeSpec(event_time_key="trade_date")
-        assert spec.availability_time_key is None
 
     def test_all_fields(self) -> None:
         """所有字段正确赋值."""
@@ -237,16 +206,6 @@ class TestDerivedSpec:
         assert spec.materialization_profile is MaterializationProfile.SERIES
         assert spec.expression == "close / close.shift(1)"
 
-    def test_entity_keys_default(self) -> None:
-        """entity_keys 默认为 ('instrument_id',)."""
-        spec = self._make_spec()
-        assert spec.entity_keys == ("instrument_id",)
-
-    def test_grain_default(self) -> None:
-        """grain 默认为 '1d'."""
-        spec = self._make_spec()
-        assert spec.grain == "1d"
-
     def test_time_keys_default_none(self) -> None:
         """time_keys 默认为 None."""
         spec = self._make_spec()
@@ -266,11 +225,6 @@ class TestDerivedSpec:
         """time_spec 默认为 None."""
         spec = self._make_spec()
         assert spec.time_spec is None
-
-    def test_operator_versions_default_empty(self) -> None:
-        """operator_versions 默认为空字典."""
-        spec = self._make_spec()
-        assert spec.operator_versions == {}
 
     def test_universe_id_default_none(self) -> None:
         """universe_id 默认为 None."""

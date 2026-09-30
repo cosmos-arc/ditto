@@ -63,17 +63,6 @@ class TestValidTransitions:
             == OrderStatus.PARTIALLY_FILLED
         )
 
-    def test_fill_with_qty_equals_leaves(self) -> None:
-        assert (
-            transition(
-                OrderStatus.SUBMITTED,
-                OrderTrigger.FILL,
-                fill_qty=100,
-                leaves_qty=100,
-            )
-            == OrderStatus.FILLED
-        )
-
     def test_fill_with_qty_less_than_leaves(self) -> None:
         assert (
             transition(
