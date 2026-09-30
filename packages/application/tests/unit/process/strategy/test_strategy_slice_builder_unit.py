@@ -30,6 +30,7 @@ def _make_strategy_spec(
     template: str = "etf_rotation",
     universe: str = "cn_etf",
     asset_class: str = "etf",
+    required_datasets: tuple[str, ...] = (),
 ) -> StrategySpec:
     return StrategySpec(
         strategy_id=strategy_id,
@@ -40,6 +41,7 @@ def _make_strategy_spec(
         benchmark="000300.SH",
         params={"top_k": 3},
         tags=("momentum", asset_class),
+        required_datasets=required_datasets,
     )
 
 
@@ -259,3 +261,37 @@ class TestStrategySliceBuilder:
         )
 
         assert slice_.trade_date == "2026-01-13"
+
+    def test_blocks_fundamentals_required_spec_despite_stock_promotion(self) -> None:
+        """股票数据晋级后,声明财务数据集的规格仍不得进入默认运行时。"""
+        spec = _make_strategy_spec(
+            strategy_id="stock-alpha",
+            name="Stock Alpha",
+            template="stock_selection",
+            universe="cn_stock",
+            asset_class="stock",
+            required_datasets=("stock_daily", "adj_factor", "balance_sheet"),
+        )
+        runtime_builder = MagicMock()
+        runtime_builder.build_published_runtime.return_value = _make_published_runtime(
+            spec,
+            version=1,
+        )
+        data_provider = _make_data_provider()
+        builder = StrategySliceBuilder(
+            strategy_runtime_builder=runtime_builder,
+            metadata_service=_make_metadata_service(),
+            data_provider=data_provider,
+            maturity_promotion_reader=_MaturityPromotionReader(
+                {"stock_daily", "stock_basic"}
+            ),
+        )
+
+        with pytest.raises(AppBuilderError, match="balance_sheet=experimental"):
+            builder.build_published_slice(
+                "stock-alpha",
+                trade_date="2026-01-13",
+                version=1,
+            )
+
+        data_provider.get_bars.assert_not_called()
