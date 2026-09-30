@@ -14,6 +14,14 @@
 
 辅助数据:`adj_factor` 2026-06-01→2026-09-29(4 月度块);`index_daily` 经代理取回 0 行/日期(待诊断)。
 
+撤销的 append-only runtime 身份(权威记录在 runtime SQLite,此处仅引用):
+
+| 数据集 | 认证撤销事件 | maturity 晋级撤销事件(event_id, reason) |
+|---|---|---|
+| `stock_basic` | certification_events revoked @ 2026-09-30T11:59:09Z, actor chevy | promotion_events #4, evidence_invalidated @ 2026-09-30T11:59:53Z |
+| `stock_daily` | certification_events revoked @ 2026-09-30T11:59:13Z, actor chevy | promotion_events #5, evidence_invalidated @ 2026-09-30T11:59:58Z |
+| `stock_status` | certification_events revoked @ 2026-09-30T11:59:17Z, actor chevy | promotion_events #6, evidence_invalidated @ 2026-09-30T12:00:03Z |
+
 ## 重新晋级清单(下一批,全部满足后才重走 promotion)
 
 1. `index_daily` 修复(适配器/代理诊断)→ 正式策略运行双例:种子财务策略被运行门拦(负例)+ 无财务 sector_rotation 策略无 bypass 通过(正例)。
