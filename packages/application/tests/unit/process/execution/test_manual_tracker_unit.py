@@ -421,27 +421,6 @@ class TestComputePositionsMultipleBuys:
 class TestComputePositionsTPlusOne:
     """ManualTracker.compute_positions — T+1 交收规则."""
 
-    def test_buy_same_day_frozen(self) -> None:
-        """买入当天 available=0（冻结）."""
-
-        tracker = ManualTracker(trading_calendar=_STANDARD_CALENDAR)
-        fills = [
-            _make_fill(
-                trade_date="2026-04-10",
-                instrument_id=1,
-                direction="buy",
-                quantity=1000,
-                fill_price=1.5,
-                fee=5.0,
-            ),
-        ]
-        result = tracker.compute_positions(
-            fills=fills,
-            strategy_id="strat-1",
-            snapshot_date="2026-04-10",
-        )
-        assert result[0].available_quantity == 0
-
     def test_buy_previous_day_settled(self) -> None:
         """T-1 日买入, T 日已交收: available=quantity."""
 

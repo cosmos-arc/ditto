@@ -171,45 +171,13 @@ class TestRepresentativeFactorIC:
         """100 天 x 50 证券，IC 强度 0.3."""
         return _make_factor_and_return(n_dates=100, n_entities=50, ic_strength=0.3)
 
-    # -- Value factor: ep_ttm
+    # -- Value factor: ep_ttm（代表因子；momentum/quality 变体经 #321 S03
+    #    确认为同 fixture 同断言的逐句重复，已删除）
 
     def test_value_factor_ic(self, factor_and_return: FactorReturnPair) -> None:
         """价值因子 ep_ttm: IC 应为正.
 
         ep_ttm = net_income_ttm / (close * total_shares)
-        """
-        factor_df, return_df = factor_and_return
-        report = _evaluate_report(factor_df, return_df)
-
-        _assert_positive_ic(report)
-        _assert_quantile_monotonicity(report)
-        _assert_long_short_positive(report)
-        _assert_observations_valid(report)
-
-    # -- Momentum factor: reversal_1m
-
-    def test_momentum_factor_ic(self, factor_and_return: FactorReturnPair) -> None:
-        """动量因子 reversal_1m: IC 应为正（表达式含负号）.
-
-        reversal_1m = -ts_pct_change(market.close, 20)
-
-        由于合成数据的 IC 为正，模拟的是因子值与收益率正相关，
-        等价于 -ts_pct_change 与收益率正相关（即短期反转效应）。
-        """
-        factor_df, return_df = factor_and_return
-        report = _evaluate_report(factor_df, return_df)
-
-        _assert_positive_ic(report)
-        _assert_quantile_monotonicity(report)
-        _assert_long_short_positive(report)
-        _assert_observations_valid(report)
-
-    # -- Quality factor: gross_margin
-
-    def test_quality_factor_ic(self, factor_and_return: FactorReturnPair) -> None:
-        """质量因子 gross_margin: IC 应为正.
-
-        gross_margin = (fundamentals.revenue - fundamentals.cogs) / fundamentals.revenue
         """
         factor_df, return_df = factor_and_return
         report = _evaluate_report(factor_df, return_df)

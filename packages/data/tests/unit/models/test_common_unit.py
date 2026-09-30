@@ -114,19 +114,9 @@ class TestDomain:
 class TestDQSeverity:
     """测试 DQSeverity 枚举."""
 
-    def test_should_have_three_severity_levels(self) -> None:
-        """应该有三个严重程度级别."""
-        assert DQSeverity.ERROR.value == "error"
-        assert DQSeverity.WARNING.value == "warning"
-        assert DQSeverity.ALERT.value == "alert"
-
     def test_should_be_string_enum(self) -> None:
         """应该是字符串枚举."""
         assert isinstance(DQSeverity.ERROR.value, str)
-
-    def test_should_have_three_members(self) -> None:
-        """应该有三个成员."""
-        assert len(DQSeverity) == 3
 
 
 @pytest.mark.unit

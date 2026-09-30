@@ -209,15 +209,6 @@ class TestValidateFrameReleaseMode:
             "validate_frame 应使用 StrategySpecError 报告缺失列"
         )
 
-    def test_debug_mode_raises_on_missing(self) -> None:
-        """缺少列时应抛出 StrategySpecError。"""
-        frame = pl.DataFrame({"x": [1]})
-        with pytest.raises(
-            StrategySpecError,
-            match="DecisionFrame missing required columns",
-        ):
-            validate_frame(frame, (FrameCol.INSTRUMENT_ID,))
-
     def test_validate_frame_is_callable(self) -> None:
         """validate_frame 应可正常调用。"""
         frame = pl.DataFrame({"instrument_id": [1]})

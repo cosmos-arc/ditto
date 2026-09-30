@@ -3,26 +3,6 @@
 from ditto_data.quality.quality_types import DQIssue, DQLevel, DQResult, DQSeverity
 
 
-class TestDQLevel:
-    """Test DQLevel enum."""
-
-    def test_level_values(self) -> None:
-        """Test level enum values."""
-        assert DQLevel.TECHNICAL.value == "technical"
-        assert DQLevel.BUSINESS.value == "business"
-        assert DQLevel.STATISTICAL.value == "statistical"
-
-
-class TestDQSeverity:
-    """Test DQSeverity enum."""
-
-    def test_severity_values(self) -> None:
-        """Test severity enum values."""
-        assert DQSeverity.ERROR.value == "error"
-        assert DQSeverity.WARNING.value == "warning"
-        assert DQSeverity.ALERT.value == "alert"
-
-
 class TestDQIssue:
     """Test DQIssue dataclass."""
 

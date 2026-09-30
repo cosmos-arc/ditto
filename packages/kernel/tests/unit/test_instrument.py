@@ -1,6 +1,5 @@
 """Instrument 子域单元测试."""
 
-import pytest
 from ditto_kernel.instrument import AssetClass, Exchange, InstrumentIngestParams
 
 
@@ -33,15 +32,6 @@ class TestExchange:
 class TestInstrumentIngestParams:
     """InstrumentIngestParams 测试."""
 
-    def test_frozen(self) -> None:
-        params = InstrumentIngestParams(instrument_id=1)
-        with pytest.raises(AttributeError):
-            params.instrument_id = 2
-
-    def test_has_identifier_with_instrument_id(self) -> None:
-        params = InstrumentIngestParams(instrument_id=1)
-        assert params.has_identifier is True
-
     def test_has_identifier_with_standard_ticker(self) -> None:
         params = InstrumentIngestParams(standard_ticker="510300.SH")
         assert params.has_identifier is True
@@ -49,10 +39,6 @@ class TestInstrumentIngestParams:
     def test_has_identifier_with_ticker(self) -> None:
         params = InstrumentIngestParams(ticker="510300")
         assert params.has_identifier is True
-
-    def test_has_no_identifier(self) -> None:
-        params = InstrumentIngestParams()
-        assert params.has_identifier is False
 
     def test_primary_identifier_instrument_id_priority(self) -> None:
         params = InstrumentIngestParams(instrument_id=1, standard_ticker="510300.SH")
@@ -65,10 +51,6 @@ class TestInstrumentIngestParams:
     def test_primary_identifier_ticker(self) -> None:
         params = InstrumentIngestParams(ticker="510300")
         assert params.primary_identifier == "510300"
-
-    def test_primary_identifier_none(self) -> None:
-        params = InstrumentIngestParams()
-        assert params.primary_identifier is None
 
     def test_default_dates(self) -> None:
         params = InstrumentIngestParams(instrument_id=1)

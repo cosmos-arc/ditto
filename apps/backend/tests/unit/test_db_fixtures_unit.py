@@ -31,13 +31,6 @@ class TestDatabaseManagerFixture:
         assert hasattr(db_manager, "get_duckdb_conn")
         assert hasattr(db_manager, "clean_duckdb")
 
-    def test_db_manager_is_function_scoped(self, db_manager):
-        """测试 db_manager 是 function 作用域的（每个测试独立）."""
-        # 验证 db_manager 有正确的类型
-        assert hasattr(db_manager, "_duckdb_conn")
-        assert hasattr(db_manager, "get_duckdb_conn")
-        assert hasattr(db_manager, "clean_duckdb")
-
 
 @pytest.mark.unit
 class TestCleanDuckdbFixture:
@@ -124,13 +117,6 @@ class TestCleanDuckdbFixture:
 @pytest.mark.unit
 class TestFixtureIntegration:
     """测试 fixture 集成行为."""
-
-    def test_db_manager_has_required_methods(self, db_manager):
-        """测试 db_manager 有必要的方法和属性."""
-        # 验证 db_manager 有正确的属性和方法
-        assert hasattr(db_manager, "_duckdb_conn")
-        assert hasattr(db_manager, "get_duckdb_conn")
-        assert hasattr(db_manager, "clean_duckdb")
 
     def test_clean_duckdb_initializes_connection(
         self, db_manager, clean_duckdb: duckdb.DuckDBPyConnection

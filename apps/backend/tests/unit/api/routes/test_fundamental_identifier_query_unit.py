@@ -1,19 +1,12 @@
-"""Tests for Fundamental API route identifier migration.
+"""Tests for Fundamental API route response models.
 
-Verify that the fundamental API routes:
-1. Accept three optional identifier params (instrument_id, ticker, standard_ticker)
-2. Resolve them via resolve_instrument_identifier
-3. Pass the resulting int to the service layer
-4. Return int instrument_id in response models
+Verify that the fundamental API routes return int instrument_id in
+response models (identifier resolution itself is covered on the shared
+resolve_identifier_for_api util by the capital route tests, #321 G46–G51).
 """
-
-from unittest.mock import MagicMock
 
 import polars as pl
 import pytest
-from ditto_apps.api.utils.identifier import (
-    resolve_identifier_for_api as _resolve_identifier,
-)
 from ditto_apps.models.common import APIResponse
 from ditto_apps.models.fundamental import (
     FinancialType,
@@ -21,7 +14,6 @@ from ditto_apps.models.fundamental import (
     to_dividend_list,
     to_financial_list,
 )
-from ditto_kernel import AmbiguousTickerError
 
 
 @pytest.fixture
@@ -60,97 +52,6 @@ def corporate_action_df() -> pl.DataFrame:
             "description": ["1:2 stock split"],
         }
     )
-
-
-@pytest.mark.unit
-class TestResolveIdentifier:
-    """Test the _resolve_identifier helper function."""
-
-    def test_instrument_id_passthrough(self) -> None:
-        """Pass instrument_id to MetadataService for resolution."""
-        mock_meta = MagicMock()
-        mock_meta.resolve_instrument_identifier.return_value = 1_000_001
-        result = _resolve_identifier(
-            mock_meta,
-            instrument_id=1_000_001,
-            standard_ticker=None,
-            ticker=None,
-        )
-        assert result == 1_000_001
-        mock_meta.resolve_instrument_identifier.assert_called_once_with(
-            instrument_id=1_000_001,
-            standard_ticker=None,
-            ticker=None,
-            asof=None,
-        )
-
-    def test_standard_ticker_resolution(self) -> None:
-        """Resolve standard_ticker via MetadataService."""
-        mock_meta = MagicMock()
-        mock_meta.resolve_instrument_identifier.return_value = 1_000_001
-        result = _resolve_identifier(
-            mock_meta,
-            instrument_id=None,
-            standard_ticker="000001.XSHE",
-            ticker=None,
-        )
-        assert result == 1_000_001
-        mock_meta.resolve_instrument_identifier.assert_called_once()
-
-    def test_ticker_resolution(self) -> None:
-        """Resolve ticker via MetadataService."""
-        mock_meta = MagicMock()
-        mock_meta.resolve_instrument_identifier.return_value = 2_000_001
-        result = _resolve_identifier(
-            mock_meta,
-            instrument_id=None,
-            standard_ticker=None,
-            ticker="510300",
-        )
-        assert result == 2_000_001
-
-    def test_no_identifier_raises_400(self) -> None:
-        """No identifier provided should raise BadRequestError 400."""
-        from ditto_apps.api.errors import BadRequestError
-
-        mock_meta = MagicMock()
-        with pytest.raises(BadRequestError) as exc_info:
-            _resolve_identifier(
-                mock_meta,
-                instrument_id=None,
-                standard_ticker=None,
-                ticker=None,
-            )
-        assert exc_info.value.status_code == 400
-
-    def test_identifier_not_found_returns_none(self) -> None:
-        """IdentifierNotFoundError resolved to None should return None."""
-        mock_meta = MagicMock()
-        mock_meta.resolve_instrument_identifier.return_value = None
-        result = _resolve_identifier(
-            mock_meta,
-            instrument_id=None,
-            standard_ticker=None,
-            ticker="999999",
-        )
-        assert result is None
-
-    def test_ambiguous_ticker_raises_400(self) -> None:
-        """AmbiguousTickerError should raise BadRequestError 400."""
-        from ditto_apps.api.errors import BadRequestError
-
-        mock_meta = MagicMock()
-        mock_meta.resolve_instrument_identifier.side_effect = AmbiguousTickerError(
-            ticker="000001", matches=[]
-        )
-        with pytest.raises(BadRequestError) as exc_info:
-            _resolve_identifier(
-                mock_meta,
-                instrument_id=None,
-                standard_ticker=None,
-                ticker="000001",
-            )
-        assert exc_info.value.status_code == 400
 
 
 @pytest.mark.unit
