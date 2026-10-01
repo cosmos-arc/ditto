@@ -11,6 +11,9 @@ function sameIdSequence(left: readonly number[], right: readonly number[]): bool
 }
 
 export function toResearchCaseView(value: ResearchCase, run: SelectionRun, submitted: CreateResearchCaseBody) {
+	const asOfInstant = Date.parse(value.as_of);
+	const knowledgeInstant = Date.parse(value.knowledge_cutoff);
+	const publicationInstant = Date.parse(value.publication_cutoff);
 	if (
 		value.schema_version !== SUPPORTED_RESEARCH_CASE_SCHEMA_VERSION ||
 		!/^[a-f0-9]{64}$/.test(value.content_hash) ||
@@ -28,9 +31,11 @@ export function toResearchCaseView(value: ResearchCase, run: SelectionRun, submi
 		!sameSnapshotSet(value.source_snapshot_ids, run.source_snapshot_ids) ||
 		!sameSnapshotSet(value.missing_inputs, run.missing_inputs) ||
 		value.selection_status !== run.status ||
-		Number.isNaN(Date.parse(value.as_of)) ||
-		value.publication_cutoff > value.knowledge_cutoff ||
-		value.knowledge_cutoff > value.as_of ||
+		Number.isNaN(asOfInstant) ||
+		Number.isNaN(knowledgeInstant) ||
+		Number.isNaN(publicationInstant) ||
+		publicationInstant > knowledgeInstant ||
+		knowledgeInstant > asOfInstant ||
 		value.objective !== submitted.objective ||
 		!sameIdSequence(value.candidate_instrument_ids, submitted.candidate_instrument_ids ?? []) ||
 		(value.selection_status === "ready" && value.missing_inputs.length > 0) ||
