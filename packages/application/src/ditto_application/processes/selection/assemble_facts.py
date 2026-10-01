@@ -831,6 +831,12 @@ class AssembleSelectionFacts:
                     .rolling_mean(window_size=_TURNOVER_WINDOW)
                     .last()
                     .is_finite()
+                    & (
+                        pl.col("amount")
+                        .rolling_mean(window_size=_TURNOVER_WINDOW)
+                        .last()
+                        >= 0
+                    )
                 )
                 .then(
                     pl.col("amount").rolling_mean(window_size=_TURNOVER_WINDOW).last()

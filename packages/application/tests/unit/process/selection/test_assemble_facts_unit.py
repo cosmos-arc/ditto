@@ -896,3 +896,16 @@ def test_raw_rows_without_lineage_leave_limit_state_missing() -> None:
     request = process.assemble(_request())
 
     assert request.instruments[0].limit_state is None
+
+
+@pytest.mark.pit
+def test_negative_amounts_leave_turnover_missing() -> None:
+    frame = _bars_frame(rows_per_instrument={1: 30}).with_columns(
+        (pl.col("amount") * -1).alias("amount")
+    )
+    provider = _FakeProvider(frame)
+    history = _FakeHistory(_roster_frame((1,)))
+    process = _process(provider=provider, history=history)
+    request = process.assemble(_request())
+
+    assert request.instruments[0].average_turnover is None
