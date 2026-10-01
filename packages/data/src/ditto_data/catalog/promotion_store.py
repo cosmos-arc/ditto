@@ -385,6 +385,12 @@ class SQLiteDatasetMaturityPromotionStore:
     ) -> DatasetMaturityPromotionEvent:
         """Remove a current promotion override and append a revoke event."""
         _validate_dataset_id(dataset_id)
+        if revoked_at.tzinfo is None:
+            msg = (
+                "revoked_at must be timezone-aware to order against "
+                f"promotions: {dataset_id}"
+            )
+            raise ValueError(msg)
         current = self.get_dataset_maturity_promotion(dataset_id)
         if current is None:
             msg = f"No active maturity promotion for dataset: {dataset_id}"

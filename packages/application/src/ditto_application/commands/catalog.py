@@ -178,10 +178,18 @@ class ReviewDatasetPromotionEvidenceHandler:
                 evidence_uri=command.evidence_uri,
                 notes=command.notes,
             )
-            self._maturity_promotion_writer.upsert_dataset_maturity_promotion(
-                promotion,
-                assessed_event_sequence=assessed_sequence,
-            )
+            try:
+                self._maturity_promotion_writer.upsert_dataset_maturity_promotion(
+                    promotion,
+                    assessed_event_sequence=assessed_sequence,
+                )
+            except ValueError as exc:
+                raise AppCommandError(
+                    f"Promotion superseded by a concurrent revocation: {exc}",
+                    command="review_dataset_promotion",
+                    dataset_id=command.dataset_id,
+                    criterion=command.criterion,
+                ) from exc
             promoted_metadata = apply_dataset_maturity_promotion(metadata, promotion)
             dataset_maturity_after = promoted_metadata.maturity
             metadata_promoted = True

@@ -468,3 +468,33 @@ class TestSQLiteDatasetMaturityPromotionStore:
         assert current is not None
         assert current.promoted_at == datetime(2026, 6, 2, 9, 0, 0, 900000, tzinfo=UTC)
         pool.close()
+
+    def test_revoke_rejects_naive_timestamp_before_deleting_override(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """#380:naive revoked_at 在删除 override 之前即拒,不留半撤销状态。"""
+        client, pool = _client(tmp_path / "catalog.sqlite")
+        store = SQLiteDatasetMaturityPromotionStore(client)
+        store.upsert_dataset_maturity_promotion(
+            DatasetMaturityPromotion(
+                dataset_id="stock_daily",
+                previous_maturity="experimental",
+                promoted_maturity="initial-focus",
+                promoted_by="architecture-review",
+                promoted_at=datetime(2026, 6, 1, tzinfo=UTC),
+            ),
+            assessed_event_sequence=0,
+        )
+
+        try:
+            with pytest.raises(ValueError, match="timezone-aware"):
+                store.revoke_dataset_maturity_promotion(
+                    "stock_daily",
+                    revoked_by="data-governance",
+                    revoked_at=datetime(2026, 6, 2, 9, 0),
+                    revocation_reason="evidence_invalidated",
+                )
+            assert store.get_dataset_maturity_promotion("stock_daily") is not None
+        finally:
+            pool.close()
