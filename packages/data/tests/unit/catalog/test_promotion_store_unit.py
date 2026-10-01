@@ -429,3 +429,42 @@ class TestSQLiteDatasetMaturityPromotionStore:
             assert store.get_dataset_maturity_promotion("stock_daily") is None
         finally:
             pool.close()
+
+    def test_upsert_orders_subsecond_revocation_and_promotion(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """#380:同秒内的亚秒级撤销/晋级按全精度时刻比较。"""
+        client, pool = _client(tmp_path / "catalog.sqlite")
+        store = SQLiteDatasetMaturityPromotionStore(client)
+        store.upsert_dataset_maturity_promotion(
+            DatasetMaturityPromotion(
+                dataset_id="stock_daily",
+                previous_maturity="experimental",
+                promoted_maturity="initial-focus",
+                promoted_by="architecture-review",
+                promoted_at=datetime(2026, 6, 1, tzinfo=UTC),
+            ),
+            assessed_event_sequence=0,
+        )
+        store.revoke_dataset_maturity_promotion(
+            "stock_daily",
+            revoked_by="data-governance",
+            revoked_at=datetime(2026, 6, 2, 9, 0, 0, 100000, tzinfo=UTC),
+            revocation_reason="evidence_invalidated",
+        )
+        # 晚 800ms 的重晋级应成功(datetime() 截断会误判为同秒拒绝)
+        store.upsert_dataset_maturity_promotion(
+            DatasetMaturityPromotion(
+                dataset_id="stock_daily",
+                previous_maturity="experimental",
+                promoted_maturity="initial-focus",
+                promoted_by="architecture-review",
+                promoted_at=datetime(2026, 6, 2, 9, 0, 0, 900000, tzinfo=UTC),
+            ),
+            assessed_event_sequence=2,
+        )
+        current = store.get_dataset_maturity_promotion("stock_daily")
+        assert current is not None
+        assert current.promoted_at == datetime(2026, 6, 2, 9, 0, 0, 900000, tzinfo=UTC)
+        pool.close()
