@@ -39,12 +39,17 @@ _BASIC_WINDOW = CertifiedSnapshotWindow(
 
 
 class _FakeProvider:
-    def __init__(self, frame: pl.DataFrame) -> None:
+    def __init__(
+        self, frame: pl.DataFrame, raw_frame: pl.DataFrame | None = None
+    ) -> None:
         self.frame = frame
+        self.raw_frame = raw_frame
         self.queries: list[object] = []
 
     def get_bars(self, query):
         self.queries.append(query)
+        if query.adj == "none":
+            return self.raw_frame if self.raw_frame is not None else self.frame
         return self.frame
 
     def get_instruments(self, query):
@@ -88,7 +93,8 @@ class _FakeIdentities:
     def names(self, instrument_ids, *, asof):
         return {key: self._names[key] for key in instrument_ids}
 
-    def source_tickers(self, instrument_ids, *, asof):
+    def source_tickers(self, instrument_ids, *, asof, cutoff):
+        self.ticker_cutoffs = [*getattr(self, "ticker_cutoffs", []), (asof, cutoff)]
         return {
             key: self._tickers[key] for key in instrument_ids if key in self._tickers
         }
@@ -325,6 +331,8 @@ def test_assembles_policy_only_request_with_certified_lineage() -> None:
     assert provider.queries[0].instruments == ("000001.SZ", "000002.SZ")
     assert provider.queries[0].asof == _CROSS.isoformat()
     assert provider.queries[0].adj == "hfq"
+    assert provider.queries[-1].adj == "none"
+    assert provider.queries[-1].end == _CROSS.isoformat()
 
 
 def test_factor_values_and_hard_filters_are_projected_per_instrument() -> None:
@@ -590,10 +598,10 @@ def test_explicit_past_knowledge_is_rejected_but_server_issuance_is_not() -> Non
         )
     assert error.value.details["reason"] == "ASSEMBLY_CUTOFF_BACKDATED"
 
-    # Omitted cutoffs are issued from the server instant, so a slightly
+    # Omitted cutoffs never exceed the decision instant, so a slightly
     # stale client as-of still assembles with honestly labeled knowledge.
     request = process.assemble(_request(as_of=_AS_OF - timedelta(minutes=1)))
-    assert request.knowledge_cutoff == _AS_OF
+    assert request.knowledge_cutoff == _AS_OF - timedelta(minutes=1)
 
 
 def test_missing_knowledge_date_column_is_rejected() -> None:
@@ -784,3 +792,43 @@ def test_cross_sectional_nesting_of_time_series_is_rejected() -> None:
         process.assemble(_request(factors=("liquidity",)))
 
     assert error.value.details["reason"] == "ASSEMBLY_FACTOR_EXPRESSION_UNSUPPORTED"
+
+
+def test_limit_band_uses_raw_prices_not_adjusted() -> None:
+    raw = _bars_frame(
+        rows_per_instrument={1: 30},
+        close_overrides={1: (11.06, 10.0)},  # +10.6% raw move
+    )
+    hfq = _bars_frame(
+        rows_per_instrument={1: 30},
+        # Adjusted ratio must not influence the band judgement.
+        close_overrides={1: (5.0, 10.0)},
+    )
+    provider = _FakeProvider(hfq, raw_frame=raw)
+    history = _FakeHistory(_roster_frame((1,)))
+    process = _process(provider=provider, history=history)
+    request = process.assemble(_request())
+
+    assert request.instruments[0].limit_state == "limit_up"
+
+
+def test_non_finite_amounts_leave_turnover_missing() -> None:
+    frame = _bars_frame(rows_per_instrument={1: 30}).with_columns(
+        pl.when(pl.col("trade_date") == _CROSS)
+        .then(float("nan"))
+        .otherwise(pl.col("amount"))
+        .alias("amount")
+    )
+    provider = _FakeProvider(frame)
+    history = _FakeHistory(_roster_frame((1,)))
+    process = _process(provider=provider, history=history)
+    request = process.assemble(_request())
+
+    assert request.instruments[0].average_turnover is None
+
+
+def test_backdated_publication_cutoff_is_rejected() -> None:
+    process, _, _ = _happy_process()
+    with pytest.raises(AppProcessError) as error:
+        process.assemble(_request(publication_cutoff=_AS_OF - timedelta(days=2)))
+    assert error.value.details["reason"] == "ASSEMBLY_CUTOFF_BACKDATED"

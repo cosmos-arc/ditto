@@ -28,6 +28,11 @@ Boundaries kept honest on purpose:
 - Bars are read with ``hfq`` adjustment because the governed stock-lane
   price factors require adjusted prices; the adjustment lineage binds to
   the ``adj_factor`` dataset, which stays fail-closed until certified.
+  The live adjustment table is read at execution time — adjustment
+  knowledge provenance, like exact per-payload bar provenance, belongs to
+  the certified replay lane. The exchange price-limit band is judged on a
+  separate raw (unadjusted) read because hfq keeps ``pre_close`` as the
+  ex-rights reference.
   Expressions nesting a time-series operator under a cross-sectional one
   are rejected — the governed production recipes with materialized
   intermediates remain the future execution path.
@@ -163,7 +168,11 @@ class InstrumentIdentityReader(Protocol):
     ) -> Mapping[int, str]: ...
 
     def source_tickers(
-        self, instrument_ids: Sequence[int], *, asof: date
+        self,
+        instrument_ids: Sequence[int],
+        *,
+        asof: date,
+        cutoff: datetime,
     ) -> Mapping[int, str]: ...
 
 
@@ -279,22 +288,29 @@ class AssembleSelectionFacts:
         sources = self._roster_sources(request, knowledge)
         roster = self._resolve_roster(request, sources, knowledge, publication)
         nodes = self._plan_factors(request)
-        evaluation = self._load_bars(
+        evaluation, tickers = self._load_bars(
             roster=roster,
             request=request,
             nodes=nodes,
             as_of_date=as_of_date,
+            knowledge=knowledge,
             # Bars become publishable at the earlier declared boundary.
             visible_through=_knowledge_visible_through(publication),
         )
         self._require_certified_coverage(evaluation)
         cross_date = _cross_section_date(evaluation)
+        raw_cross = self._load_raw_cross(
+            tickers=tickers,
+            cross_date=cross_date,
+            visible_through=_knowledge_visible_through(publication),
+        )
         instruments = self._project_instruments(
             roster=roster,
             evaluation=evaluation,
             nodes=nodes,
             as_of_date=as_of_date,
             cross_date=cross_date,
+            raw_cross=raw_cross,
         )
         windows = self._binding_windows(cross_date)
         return CreateSelectionRunRequest(
@@ -352,26 +368,32 @@ class AssembleSelectionFacts:
         to the certified replay lane.
         """
         now = self._clock()
-        if request.knowledge_cutoff is None:
-            knowledge = now
-        else:
-            knowledge = request.knowledge_cutoff
-            if knowledge.tzinfo is None or knowledge > request.as_of:
-                raise AppProcessError(
-                    "assembled selection cutoffs violate causal order",
-                    details={"reason": "ASSEMBLY_CUTOFF_INVALID"},
-                )
-            if knowledge < now - _LIVE_SKEW:
-                raise AppProcessError(
-                    "past instants cannot use the live read model; "
-                    + "use the certified replay lane",
-                    details={"reason": "ASSEMBLY_CUTOFF_BACKDATED"},
-                )
+        # Never later than the decision instant, even by milliseconds of
+        # client-to-server latency.
+        knowledge = min(request.knowledge_cutoff or now, request.as_of)
+        if request.knowledge_cutoff is not None and (
+            knowledge.tzinfo is None or knowledge != request.knowledge_cutoff
+        ):
+            raise AppProcessError(
+                "assembled selection cutoffs violate causal order",
+                details={"reason": "ASSEMBLY_CUTOFF_INVALID"},
+            )
+        if knowledge < now - _LIVE_SKEW:
+            raise AppProcessError(
+                "past instants cannot use the live read model; "
+                + "use the certified replay lane",
+                details={"reason": "ASSEMBLY_CUTOFF_BACKDATED"},
+            )
         publication = request.publication_cutoff or knowledge
         if publication.tzinfo is None or publication > knowledge:
             raise AppProcessError(
                 "assembled selection cutoffs violate causal order",
                 details={"reason": "ASSEMBLY_CUTOFF_INVALID"},
+            )
+        if request.publication_cutoff is not None and publication < now - _LIVE_SKEW:
+            raise AppProcessError(
+                "backdated publication cutoffs cannot use the live read model",
+                details={"reason": "ASSEMBLY_CUTOFF_BACKDATED"},
             )
         return knowledge, publication
 
@@ -593,10 +615,13 @@ class AssembleSelectionFacts:
         request: AssembleSelectionFactsRequest,
         nodes: tuple[_FactorNode, ...],
         as_of_date: date,
+        knowledge: datetime,
         visible_through: date,
-    ) -> pl.DataFrame:
+    ) -> tuple[pl.DataFrame, Mapping[int, str]]:
         roster_ids = [int(row["instrument_id"]) for row in roster.frame.to_dicts()]
-        tickers = self._identities.source_tickers(roster_ids, asof=as_of_date)
+        tickers = self._identities.source_tickers(
+            roster_ids, asof=as_of_date, cutoff=knowledge
+        )
         if not tickers:
             raise AppProcessError(
                 "assembled selection found no resolvable instruments",
@@ -658,7 +683,7 @@ class AssembleSelectionFacts:
             evaluation = evaluation.with_columns(
                 node.compiled.expr.alias(node.factor_id)
             )
-        return evaluation
+        return evaluation, tickers
 
     def _validate_bar_schema(
         self, frame: pl.DataFrame, needed_leaves: frozenset[str] | set[str]
@@ -689,6 +714,45 @@ class AssembleSelectionFacts:
                 },
             )
 
+    def _load_raw_cross(
+        self,
+        *,
+        tickers: Mapping[int, str],
+        cross_date: date,
+        visible_through: date,
+    ) -> Mapping[int, Mapping[str, object]]:
+        """
+        Read raw (unadjusted) closes for the exchange price-limit band.
+
+        HFQ bars adjust open/high/low/close but keep ``pre_close`` as the
+        ex-rights reference, so the limit-state ratio must come from a raw
+        read; adjusted ratios would misclassify ex-dividend days.
+        """
+        window_start = cross_date - timedelta(days=10)
+        frame = self._provider.get_bars(
+            BarQuery(
+                instruments=tuple(tickers[key] for key in sorted(tickers)),
+                start=window_start.isoformat(),
+                end=cross_date.isoformat(),
+                asof=cross_date.isoformat(),
+                adj="none",
+            )
+        )
+        if frame.is_empty() or not {
+            "instrument_id",
+            "trade_date",
+            "close",
+            "pre_close",
+        }.issubset(frame.columns):
+            return {}
+        if "knowledge_date" in frame.columns:
+            knowledge = pl.col("knowledge_date")
+            if frame.schema["knowledge_date"] == pl.String:
+                knowledge = knowledge.str.to_date()
+            frame = frame.filter(knowledge <= pl.lit(visible_through))
+        rows = frame.filter(pl.col("trade_date") == pl.lit(cross_date))
+        return {int(row["instrument_id"]): row for row in rows.to_dicts()}
+
     def _project_instruments(
         self,
         *,
@@ -697,6 +761,7 @@ class AssembleSelectionFacts:
         nodes: tuple[_FactorNode, ...],
         as_of_date: date,
         cross_date: date,
+        raw_cross: Mapping[int, Mapping[str, object]],
     ) -> tuple[SelectionInstrumentDraft, ...]:
         roster_rows = roster.frame.to_dicts()
         names = self._identities.names(
@@ -708,13 +773,22 @@ class AssembleSelectionFacts:
             nodes,
         )
         cross_rows = {int(row["instrument_id"]): row for row in cross.to_dicts()}
+        # Non-finite amounts (NaN/inf in the window) make the rolling mean
+        # unusable; treat them as a missing turnover observation.
         turnover = {
             int(row["instrument_id"]): row["_average_turnover"]
             for row in evaluation.group_by("instrument_id")
             .agg(
-                pl.col("amount")
-                .rolling_mean(window_size=_TURNOVER_WINDOW)
-                .last()
+                pl.when(
+                    pl.col("amount")
+                    .rolling_mean(window_size=_TURNOVER_WINDOW)
+                    .last()
+                    .is_finite()
+                )
+                .then(
+                    pl.col("amount").rolling_mean(window_size=_TURNOVER_WINDOW).last()
+                )
+                .otherwise(None)
                 .alias("_average_turnover")
             )
             .to_dicts()
@@ -773,8 +847,8 @@ class AssembleSelectionFacts:
                     is_suspended=row["is_suspended"],
                     listing_days=_listing_days(row.get("list_date"), as_of_date),
                     limit_state=_limit_state(
-                        close=bar_row.get("close"),
-                        pre_close=bar_row.get("pre_close"),
+                        close=(raw_cross.get(instrument_id) or {}).get("close"),
+                        pre_close=(raw_cross.get(instrument_id) or {}).get("pre_close"),
                         is_st=_is_st_from_name(instrument_name),
                     ),
                     tracking_error=None,
@@ -817,9 +891,11 @@ def _knowledge_visible_through(knowledge: datetime) -> date:
     """
     Resolve the last bar trade date provably known at the cutoff.
 
-    The certified stock_daily publication claim is 18:00 Asia/Shanghai on
-    the trade date, so a cutoff before 18:00 cannot see that day's bars
-    even though both share the same calendar date.
+    Per-row ``knowledge_date`` is the authoritative visibility record —
+    production Tushare daily bars map it to ``trade_date + 1`` (T+1
+    knowledge), which this filter already honors strictly. The 18:00
+    Asia/Shanghai refinement only matters for providers that record
+    same-day knowledge: a cutoff before 18:00 cannot see that day's bars.
     """
     local = knowledge.astimezone(_SHANGHAI)
     visible = local.date()

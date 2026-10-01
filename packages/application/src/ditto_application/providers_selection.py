@@ -120,12 +120,19 @@ def _metadata_identities(metadata: MetadataService) -> InstrumentIdentityReader:
             return resolved
 
         def source_tickers(
-            self, instrument_ids: Sequence[int], *, asof: date
+            self,
+            instrument_ids: Sequence[int],
+            *,
+            asof: date,
+            cutoff: datetime,
         ) -> Mapping[int, str]:
             resolved: dict[int, str] = {}
             for instrument_id in instrument_ids:
                 ticker = metadata.instrument.get_source_ticker(
-                    instrument_id, "tushare", asof.isoformat()
+                    instrument_id,
+                    "tushare",
+                    asof.isoformat(),
+                    cutoff=cutoff.isoformat(),
                 )
                 if ticker is not None:
                     resolved[instrument_id] = ticker

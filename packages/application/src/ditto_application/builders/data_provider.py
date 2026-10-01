@@ -81,6 +81,11 @@ def _freshness_key(window: _CatalogSnapshotWindow) -> tuple[str, bytes]:
     return (window.freshness_at.isoformat(), window.snapshot_id.encode())
 
 
+def _freshness(window: _CatalogSnapshotWindow) -> str:
+    """Single sortable key preserving the freshness/identity tie-break."""
+    return f"{window.freshness_at.isoformat()}|{window.snapshot_id}"
+
+
 def _lineage_frame(frame: pl.DataFrame) -> pl.DataFrame:
     return frame.select(
         pl.col("source").cast(pl.String).alias("_lineage_source"),
@@ -109,7 +114,7 @@ def _apply_exact(
                 for index, name in enumerate(on)
             },
             "_lookup_snapshot": [window.snapshot_id for _, window in windows],
-            "_lookup_freshness": [_freshness_key(window)[0] for _, window in windows],
+            "_lookup_freshness": [_freshness(window) for _, window in windows],
         },
         schema={
             **{name: pl.String for name in on if name != "_lineage_date"},
@@ -159,14 +164,14 @@ def _apply_ranged(
         if fallback_only
         else (
             pl.col("_lineage_freshness").is_null()
-            | (pl.lit(_freshness_key(window)[0]) > pl.col("_lineage_freshness"))
+            | (pl.lit(_freshness(window)) > pl.col("_lineage_freshness"))
         )
     )
     return _rewrite_lineage(
         lineage,
         takes,
         pl.lit(window.snapshot_id),
-        pl.lit(_freshness_key(window)[0]),
+        pl.lit(_freshness(window)),
     )
 
 
