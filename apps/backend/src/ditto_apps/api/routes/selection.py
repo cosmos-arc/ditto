@@ -3,11 +3,16 @@
 from __future__ import annotations
 
 import asyncio
+from dataclasses import asdict
 from typing import Annotated, Never
 
 from dishka import FromComponent
 from dishka.integrations.fastapi import inject
 from ditto_application.exceptions import AppProcessError, AppQueryError
+from ditto_application.processes.selection.assemble_facts import (
+    AssembleSelectionFacts,
+    AssembleSelectionFactsRequest,
+)
 from ditto_application.processes.selection.create_research_case import (
     CreateResearchCaseFromSelection,
     CreateResearchCaseRequest,
@@ -30,6 +35,8 @@ from fastapi import APIRouter, Path, Query, status
 from ditto_apps.api.errors import NotFoundError, UnprocessableEntityError
 from ditto_apps.models.common import APIResponse
 from ditto_apps.models.selection import (
+    AssembledSelectionRunResponse,
+    AssembleSelectionRunBody,
     CreateResearchCaseBody,
     CreateSelectionRunBody,
     IndustryRotationResponse,
@@ -163,6 +170,78 @@ async def create_selection_run(
             error_code=str(exc.details.get("reason", "SELECTION_RUN_INVALID")),
         ) from exc
     return APIResponse(data=SelectionWorkspaceReceiptResponse.model_validate(receipt))
+
+
+def _assembly_request(body: AssembleSelectionRunBody) -> AssembleSelectionFactsRequest:
+    """Lift the policy-only transport body into the assembly process."""
+    return AssembleSelectionFactsRequest(
+        universe_id=body.universe_id,
+        asset_kind=body.asset_kind,
+        as_of=body.as_of,
+        spec_id=body.spec_id,
+        spec_version=body.spec_version,
+        top_k=body.top_k,
+        min_average_turnover=body.min_average_turnover,
+        min_listing_days=body.min_listing_days,
+        factor_weights=tuple(
+            SelectionFactorWeightDraft(item.name, item.weight)
+            for item in body.factor_weights
+        ),
+        excluded_limit_states=body.excluded_limit_states,
+        knowledge_cutoff=body.knowledge_cutoff,
+        publication_cutoff=body.publication_cutoff,
+        seed=body.seed,
+        lookback_days=body.lookback_days,
+    )
+
+
+@router.post(
+    "/runs:assembled",
+    response_model=APIResponse[AssembledSelectionRunResponse],
+    operation_id="selections_assemble_run",
+)
+@inject
+async def assemble_selection_run(
+    body: AssembleSelectionRunBody,
+    process: Annotated[AssembleSelectionFacts, FromComponent()],
+    facade: Annotated[SelectionWorkspaceFacade, FromComponent()],
+) -> APIResponse[AssembledSelectionRunResponse]:
+    """
+    Assemble every PIT fact server-side and preview the create-run gate.
+
+    The response carries the exact ``POST /selections/runs`` body plus the
+    admission report; creating the run still posts that body to ``/runs``,
+    so certification and replay semantics stay on the reviewed contract.
+    """
+    try:
+        assembled = await asyncio.to_thread(process.assemble, _assembly_request(body))
+        admission = await asyncio.to_thread(facade.assess_admission, assembled)
+    except AppProcessError as exc:
+        raise UnprocessableEntityError(
+            str(exc),
+            error_code=str(exc.details.get("reason", "SELECTION_ASSEMBLY_INVALID")),
+        ) from exc
+    return APIResponse(
+        data=AssembledSelectionRunResponse(
+            request=_assembled_body(assembled),
+            admission=SelectionAdmissionResponse.model_validate(admission),
+        )
+    )
+
+
+def _assembled_body(assembled: CreateSelectionRunRequest) -> CreateSelectionRunBody:
+    """Render the assembled request as its exact POST /runs transport body."""
+    payload = asdict(assembled)
+    for requirement in payload["data_fields"]:
+        # The transport never carries the server-computed input digest.
+        requirement.pop("consumer_input_hash", None)
+    # The application draft drops the transport-only discriminator tag.
+    payload["selection_spec"]["asset_kind"] = (
+        "stock"
+        if isinstance(assembled.selection_spec, StockSelectionSpecDraft)
+        else "etf"
+    )
+    return CreateSelectionRunBody.model_validate(payload)
 
 
 @router.post(

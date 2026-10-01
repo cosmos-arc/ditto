@@ -10,18 +10,29 @@ from typing import Any, cast
 from unittest.mock import patch
 
 import pytest
+from ditto_application.exceptions import AppProcessError
+from ditto_application.processes.selection.assemble_facts import (
+    AssembleSelectionFacts,
+    AssembleSelectionFactsRequest,
+)
 from ditto_application.processes.selection.create_research_case import (
     CreateResearchCaseFromSelection,
 )
-from ditto_application.processes.selection.facade import SelectionWorkspaceFacade
+from ditto_application.processes.selection.facade import (
+    CreateSelectionRunRequest,
+    SelectionWorkspaceFacade,
+)
 from ditto_application.processes.selection.run_industry_and_security_selection import (
     RunIndustryAndSecuritySelection,
 )
 from ditto_application.queries.field_admission import FieldAdmissionQuery
 from ditto_application.queries.industry_rotations import IndustryRotationQueryService
 from ditto_application.queries.selection_runs import SelectionRunQueryService
+from ditto_apps.api.errors import UnprocessableEntityError
 from ditto_apps.api.routes.selection import (
     _application_request,
+    _assembly_request,
+    assemble_selection_run,
     compare_selection_runs,
     create_research_case,
     create_selection_run,
@@ -29,6 +40,7 @@ from ditto_apps.api.routes.selection import (
     get_selection_run,
 )
 from ditto_apps.models.selection import (
+    AssembleSelectionRunBody,
     CreateResearchCaseBody,
     CreateSelectionRunBody,
     IndustryRotationObservationRequest,
@@ -273,6 +285,105 @@ def test_research_case_request_accepts_json_candidate_array() -> None:
     )
 
     assert body.candidate_instrument_ids == (InstrumentId(1_002_506),)
+
+
+def _assembly_body() -> AssembleSelectionRunBody:
+    return AssembleSelectionRunBody(
+        universe_id="a-share-main",
+        as_of=_AS_OF,
+        spec_id="stock-core",
+        spec_version="1",
+        top_k=1,
+        min_average_turnover=20_000_000.0,
+        min_listing_days=120,
+        factor_weights=(SelectionFactorWeightRequest(name="momentum", weight=1.0),),
+    )
+
+
+class _FakeAssembleProcess(AssembleSelectionFacts):
+    """Record lifted requests and serve a fixed assembly result."""
+
+    def __init__(
+        self,
+        assembler: Callable[[AssembleSelectionFactsRequest], CreateSelectionRunRequest],
+    ) -> None:
+        self._assembler = assembler
+        self.requests: list[AssembleSelectionFactsRequest] = []
+
+    def assemble(self, request: AssembleSelectionFactsRequest):
+        self.requests.append(request)
+        return self._assembler(request)
+
+
+def test_assembly_request_lifts_policy_fields(admission) -> None:
+    lifted = _assembly_request(_assembly_body())
+
+    assert lifted.universe_id == "a-share-main"
+    assert lifted.asset_kind == "stock"
+    assert lifted.as_of == _AS_OF
+    assert lifted.knowledge_cutoff is None
+    assert lifted.publication_cutoff is None
+    assert lifted.seed == 0
+    assert lifted.lookback_days == 400
+    assert lifted.factor_weights[0].name == "momentum"
+    assert lifted.excluded_limit_states == ("limit_up", "limit_down")
+
+
+def test_assemble_handler_round_trips_request_and_gate(admission) -> None:
+    query, updates, history = admission
+    assembled = _application_request(_body().model_copy(update=updates))
+
+    def assembler(request: AssembleSelectionFactsRequest):
+        return assembled
+
+    process = _FakeAssembleProcess(assembler)
+    facade = _facade(_Store(), query, history)
+    handler = _original(assemble_selection_run)
+
+    with patch(
+        "ditto_apps.api.routes.selection.asyncio.to_thread",
+        side_effect=_inline_to_thread,
+    ):
+        response = asyncio.run(
+            handler(body=_assembly_body(), process=process, facade=facade)
+        )
+        receipt = asyncio.run(
+            _original(create_selection_run)(body=response.data.request, facade=facade)
+        )
+
+    assert process.requests[0].universe_id == "a-share-main"
+    assert response.data.admission.allowed is True
+    assert response.data.request.universe_snapshot_id == assembled.universe_snapshot_id
+    assert response.data.request.instruments[0].instrument_id == InstrumentId(600000)
+    # The assembled body is exactly postable to the reviewed create contract.
+    assert receipt.data.selection_run.candidates[0].instrument_id == InstrumentId(
+        600000
+    )
+
+
+def test_assemble_handler_maps_process_errors(admission) -> None:
+    query, _updates, history = admission
+    facade = _facade(_Store(), query, history)
+
+    def refuse(request: AssembleSelectionFactsRequest):
+        raise AppProcessError(
+            "backdated cutoffs cannot use the live read model",
+            details={"reason": "ASSEMBLY_CUTOFF_BACKDATED"},
+        )
+
+    process = _FakeAssembleProcess(refuse)
+    handler = _original(assemble_selection_run)
+
+    with (
+        patch(
+            "ditto_apps.api.routes.selection.asyncio.to_thread",
+            side_effect=_inline_to_thread,
+        ),
+        pytest.raises(UnprocessableEntityError) as error,
+    ):
+        asyncio.run(handler(body=_assembly_body(), process=process, facade=facade))
+
+    assert error.value.error_code == "ASSEMBLY_CUTOFF_BACKDATED"
 
 
 @pytest.fixture

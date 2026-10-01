@@ -12,6 +12,8 @@ from ditto_apps.models.technical_analysis import HttpDateTime
 from ditto_apps.models.universe import HistoricalUniverseSourcesBody
 
 __all__ = [
+    "AssembleSelectionRunBody",
+    "AssembledSelectionRunResponse",
     "CreateResearchCaseBody",
     "CreateSelectionRunBody",
     "EtfSelectionSpecRequest",
@@ -265,6 +267,41 @@ class CreateSelectionRunBody(BaseModel):
     data_from: HttpDate = None
     data_to: HttpDate = None
     universe_sources: HistoricalUniverseSourcesBody | None = None
+
+
+class AssembleSelectionRunBody(BaseModel):
+    """Policy-only selection input; the server assembles every PIT fact."""
+
+    model_config = _REQUEST_CONFIG
+
+    universe_id: str = Field(min_length=1)
+    asset_kind: Literal["stock"] = "stock"
+    as_of: HttpDateTime
+    spec_id: str = Field(min_length=1)
+    spec_version: str = Field(min_length=1)
+    top_k: int = Field(gt=0)
+    min_average_turnover: float = Field(ge=0.0)
+    min_listing_days: int = Field(gt=0)
+    factor_weights: Annotated[
+        tuple[SelectionFactorWeightRequest, ...], BeforeValidator(_parse_http_array)
+    ] = Field(min_length=1)
+    excluded_limit_states: HttpTuple[LimitStateRequest] = (
+        "limit_up",
+        "limit_down",
+    )
+    knowledge_cutoff: HttpDateTime | None = None
+    publication_cutoff: HttpDateTime | None = None
+    seed: int = Field(default=0, ge=0)
+    lookback_days: int = Field(default=400, ge=60, le=1500)
+
+
+class AssembledSelectionRunResponse(BaseModel):
+    """Server-assembled exact facts plus the create-run admission preview."""
+
+    model_config = _RESPONSE_CONFIG
+
+    request: CreateSelectionRunBody
+    admission: SelectionAdmissionResponse
 
 
 class IndustryRotationContributionResponse(BaseModel):

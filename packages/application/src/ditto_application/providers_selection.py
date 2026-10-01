@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
 from datetime import date, datetime
+from typing import Literal
 
 from dishka import Provider, Scope, provide
 from ditto_data.catalog.certification import CertificationReader
@@ -12,7 +13,10 @@ from ditto_data.catalog.provider_payload import ProviderPayloadReader
 from ditto_data.catalog.snapshot_reader import SnapshotReadService, SourceTickerResolver
 from ditto_data.catalog.source_snapshot import ProviderSnapshotReader
 from ditto_data.ingestion.partition_state import PartitionLifecycleReader
+from ditto_data.services.metadata.instrument import SecurityQuery
 from ditto_data.services.metadata_service import MetadataService
+from ditto_features.factors.factor_specs import ALL_FACTOR_SPECS
+from ditto_features.factors.spec import FactorSpec
 from ditto_strategy.industry_rotation.service import IndustryRotationService
 from ditto_strategy.industry_rotation.store import (
     IndustryRotationReader,
@@ -21,6 +25,14 @@ from ditto_strategy.industry_rotation.store import (
 from ditto_strategy.selection.pipeline import SelectionPipeline
 from ditto_strategy.selection.store import SelectionRunReader, SelectionRunWriter
 
+from ditto_application.builders.data_provider import ServiceBackedDataProvider
+from ditto_application.processes.selection.assemble_facts import (
+    AssembleSelectionFacts,
+    CertifiedSnapshotIndex,
+    CertifiedSnapshotWindow,
+    InstrumentIdentityReader,
+    UniverseSourcesDiscovery,
+)
 from ditto_application.processes.selection.create_research_case import (
     CreateResearchCaseFromSelection,
 )
@@ -29,7 +41,10 @@ from ditto_application.processes.selection.run_industry_and_security_selection i
     RunIndustryAndSecuritySelection,
 )
 from ditto_application.queries.field_admission import FieldAdmissionQuery
-from ditto_application.queries.historical_universe import HistoricalUniverseQuery
+from ditto_application.queries.historical_universe import (
+    HistoricalUniverseQuery,
+    HistoricalUniverseSources,
+)
 from ditto_application.queries.industry_rotations import IndustryRotationQueryService
 from ditto_application.queries.provider_snapshot import ProviderSnapshotQuery
 from ditto_application.queries.selection_evidence import (
@@ -40,6 +55,10 @@ from ditto_application.queries.selection_runs import SelectionRunQueryService
 from ditto_application.research_case_contracts import ResearchCaseFactory
 
 __all__ = ["AppSelectionProvider"]
+
+# Mirrors the FieldAdmissionRequest profile default; admission and discovery
+# must qualify the same certification lane.
+_SELECTION_FIELDS_PROFILE = "selection-fields-v1"
 
 
 def _metadata_ticker_resolver(metadata: MetadataService) -> SourceTickerResolver:
@@ -70,6 +89,103 @@ def _metadata_ticker_resolver(metadata: MetadataService) -> SourceTickerResolver
         return resolved_by_date
 
     return resolve
+
+
+def _metadata_identities(metadata: MetadataService) -> InstrumentIdentityReader:
+    """Serve registry names and PIT source tickers from durable metadata."""
+
+    class _MetadataIdentities:
+        def names(self, instrument_ids: Sequence[int]) -> Mapping[int, str]:
+            frame = metadata.instrument.find_securities(
+                SecurityQuery(asset_class="stock", is_active=None)
+            )
+            known = {
+                int(row["instrument_id"]): str(row["name"])
+                for row in frame.unique(subset=["instrument_id"]).to_dicts()
+            }
+            return {
+                instrument_id: known[instrument_id]
+                for instrument_id in instrument_ids
+                if instrument_id in known
+            }
+
+        def source_tickers(
+            self, instrument_ids: Sequence[int], *, asof: date
+        ) -> Mapping[int, str]:
+            resolved: dict[int, str] = {}
+            for instrument_id in instrument_ids:
+                ticker = metadata.instrument.get_source_ticker(
+                    instrument_id, "tushare", asof.isoformat()
+                )
+                if ticker is not None:
+                    resolved[instrument_id] = ticker
+            return resolved
+
+    return _MetadataIdentities()
+
+
+def _certified_snapshot_index(
+    certifications: CertificationReader, snapshots: ProviderSnapshotReader
+) -> CertifiedSnapshotIndex:
+    """Qualify snapshots through the active selection-fields certification."""
+
+    class _CertifiedIndex:
+        def snapshot_ids(self, dataset_id: str) -> tuple[str, ...]:
+            report = certifications.get_active_report(
+                dataset_id, _SELECTION_FIELDS_PROFILE
+            )
+            return report.evidence.snapshot_ids if report else ()
+
+        def covering(
+            self, *, dataset_id: str, day: date
+        ) -> tuple[CertifiedSnapshotWindow, ...]:
+            windows: list[CertifiedSnapshotWindow] = []
+            for snapshot_id in self.snapshot_ids(dataset_id):
+                snapshot = snapshots.get_snapshot(snapshot_id)
+                if snapshot is None:
+                    continue
+                request_start = date.fromisoformat(snapshot.request_start)
+                request_end = date.fromisoformat(snapshot.request_end)
+                if request_start <= day <= request_end:
+                    windows.append(
+                        CertifiedSnapshotWindow(snapshot_id, request_start, request_end)
+                    )
+            return tuple(windows)
+
+    return _CertifiedIndex()
+
+
+class _GovernedFactorRegistry:
+    """Serve the governed factor table through the assembly port."""
+
+    def __init__(self, specs: Mapping[str, FactorSpec]) -> None:
+        self._specs = specs
+
+    def get(self, factor_id: str) -> FactorSpec | None:
+        return self._specs.get(factor_id)
+
+
+def _index_universe_discovery(
+    index: CertifiedSnapshotIndex,
+) -> UniverseSourcesDiscovery:
+    """Retain the certified registry chains for one universe at a cutoff."""
+
+    def discover(
+        *,
+        universe_id: str,
+        asset_kind: Literal["stock", "etf"],
+        knowledge_cutoff: datetime,
+    ) -> HistoricalUniverseSources:
+        return HistoricalUniverseSources(
+            universe_id=universe_id,
+            asset_kind=asset_kind,
+            master_snapshot_ids=index.snapshot_ids(f"{asset_kind}_basic"),
+            status_snapshot_ids=index.snapshot_ids(
+                "stock_status" if asset_kind == "stock" else "etf_daily",
+            ),
+        )
+
+    return discover
 
 
 class AppSelectionProvider(Provider):
@@ -103,6 +219,26 @@ class AppSelectionProvider(Provider):
         """Expose typed create-selection requests to transport adapters."""
         return SelectionWorkspaceFacade(
             process, admission=admission, historical_universe=historical_universe
+        )
+
+    @provide
+    def assemble_selection_facts(
+        self,
+        data_provider: ServiceBackedDataProvider,
+        historical_universe: HistoricalUniverseQuery,
+        metadata: MetadataService,
+        certifications: CertificationReader,
+        snapshots: ProviderSnapshotReader,
+    ) -> AssembleSelectionFacts:
+        """Assemble policy-only selection requests from certified evidence."""
+        index = _certified_snapshot_index(certifications, snapshots)
+        return AssembleSelectionFacts(
+            provider=data_provider,
+            history=historical_universe,
+            discover_sources=_index_universe_discovery(index),
+            identities=_metadata_identities(metadata),
+            factors=_GovernedFactorRegistry(ALL_FACTOR_SPECS),
+            snapshots=index,
         )
 
     @provide
