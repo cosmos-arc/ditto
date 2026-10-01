@@ -165,3 +165,49 @@ class TestNameHistoryReader:
 
         changes = self.reader.list_name_changes(1000002)
         assert changes == []
+
+
+class TestNameHistoryReaderBatch:
+    """Batched PIT name resolution."""
+
+    @pytest.fixture(autouse=True)
+    def setup(self, sqlite_client: SQLiteClient) -> None:
+        """Seed two instruments with staggered name changes."""
+        self.client = sqlite_client
+        self.cache = _mock_cache()
+        self.reader = NameHistoryReader(self.client, self.cache)
+        for instrument_id, ticker in ((1000001, "000001"), (1000002, "000002")):
+            self.client.execute(
+                """INSERT INTO instrument
+                (instrument_id, ticker, name, exchange, asset_class, list_date)
+                VALUES (?, ?, ?, ?, ?, ?)""",
+                [instrument_id, ticker, "初始", "SZSE", "stock", "2020-01-01"],
+            )
+        rows = [
+            (1000001, "旧", "新", "2024-06-01"),
+            (1000001, "更旧", "旧", "2023-01-01"),
+            (1000002, "旧乙", "新乙", "2025-03-01"),
+        ]
+        for row in rows:
+            self.client.execute(
+                """INSERT INTO instrument_name_history
+                (instrument_id, old_name, new_name, changed_date)
+                VALUES (?, ?, ?, ?)""",
+                list(row),
+            )
+        self.client.commit()
+
+    def test_batch_resolves_latest_name_per_instrument(self) -> None:
+        names = self.reader.get_names_batch([1000001, 1000002], asof="2026-01-01")
+
+        assert names == {1000001: "新", 1000002: "新乙"}
+
+    def test_batch_honors_asof_boundary_and_unknown_ids(self) -> None:
+        names = self.reader.get_names_batch(
+            [1000001, 1000002, 9999999], asof="2024-01-01"
+        )
+
+        assert names == {1000001: "旧"}
+
+    def test_batch_empty_input(self) -> None:
+        assert self.reader.get_names_batch([], asof="2026-01-01") == {}

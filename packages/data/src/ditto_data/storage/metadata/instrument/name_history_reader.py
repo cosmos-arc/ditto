@@ -87,7 +87,7 @@ class NameHistoryReader:
                                ORDER BY changed_date DESC
                            ) AS rn
                     FROM instrument_name_history
-                    WHERE changed_date <= ? AND instrument_id IN ({in_clause})
+                    WHERE changed_date <= ? AND {in_clause}
                 )
             WHERE rn = 1""",  # noqa: S608 - in_clause 通过 _build_in_clause 安全构建
             [asof, *params],

@@ -302,6 +302,7 @@ class AssembleSelectionFacts:
         raw_cross = self._load_raw_cross(
             tickers=tickers,
             cross_date=cross_date,
+            knowledge=knowledge,
             visible_through=_knowledge_visible_through(publication),
         )
         instruments = self._project_instruments(
@@ -742,6 +743,7 @@ class AssembleSelectionFacts:
         *,
         tickers: Mapping[int, str],
         cross_date: date,
+        knowledge: datetime,
         visible_through: date,
     ) -> Mapping[int, Mapping[str, object]]:
         """
@@ -770,10 +772,19 @@ class AssembleSelectionFacts:
         }
         if frame.is_empty() or not required.issubset(frame.columns):
             return {}
-        knowledge = pl.col("knowledge_date")
+        if "source_ticker" in frame.columns:
+            expected = pl.lit(None)
+            for resolved_id in sorted(tickers):
+                expected = (
+                    pl.when(pl.col("instrument_id") == resolved_id)
+                    .then(pl.lit(tickers[resolved_id]))
+                    .otherwise(expected)
+                )
+            frame = frame.filter(pl.col("source_ticker") == expected.cast(pl.String))
+        knowledge_column = pl.col("knowledge_date")
         if frame.schema["knowledge_date"] == pl.String:
-            knowledge = knowledge.str.to_date()
-        frame = frame.filter(knowledge <= pl.lit(visible_through))
+            knowledge_column = knowledge_column.str.to_date()
+        frame = frame.filter(knowledge_column <= pl.lit(visible_through))
         rows = frame.filter(pl.col("trade_date") == pl.lit(cross_date))
         return {int(row["instrument_id"]): row for row in rows.to_dicts()}
 
@@ -1050,9 +1061,10 @@ def data_fields(
     bind("stock_daily", "close", "membership_version")
     bind("stock_daily", "amount", "instruments.average_turnover")
     # limit_state consumes both legs of the close/pre_close ratio.
+    # limit_state is judged on the raw (unadjusted) read, so it never
+    # depends on adjustment lineage.
     bind("stock_daily", "close", "instruments.limit_state")
     bind("stock_daily", "pre_close", "instruments.limit_state")
-    bind(_ADJUSTMENT_DATASET, _ADJUSTMENT_FIELD, "instruments.limit_state")
     price_consumers = sorted(
         f"instruments.factor_values.{node.factor_id}"
         for node in nodes
