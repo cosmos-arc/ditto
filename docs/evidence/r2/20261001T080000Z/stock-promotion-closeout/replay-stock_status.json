@@ -1,0 +1,1061 @@
+{
+  "request": {
+    "fields": [
+      {
+        "dataset_id": "stock_status",
+        "field": "is_suspended",
+        "snapshot_id": "snapshot:tushare:stock_status:sha256:cd1f425da03d8091756e37dd1609b3019d25b4ceee42fb289e2d3a4b498a95be",
+        "consumer_field": "status.is_suspended",
+        "consumer_input_hash": "07e850644ad1834c22b0a9db6e7b635ebfe1b182dc0d3f2dc9ba8468fab78676"
+      }
+    ],
+    "instrument_ids": [
+      1000001,
+      1000002,
+      1000003,
+      1000004,
+      1000005,
+      1000006,
+      1000007,
+      1000008,
+      1000009,
+      1000010
+    ],
+    "required_from": "2026-09-01",
+    "required_to": "2026-09-29",
+    "knowledge_cutoff": "2026-10-01T07:48:52.499454+00:00",
+    "publication_cutoff": "2026-10-01T07:48:52.499454+00:00",
+    "purpose": "display",
+    "profile": "selection-fields-v1"
+  },
+  "admission": {
+    "allowed": true,
+    "purpose": "display",
+    "fields": [
+      {
+        "dataset_id": "stock_status",
+        "field": "is_suspended",
+        "snapshot_id": "snapshot:tushare:stock_status:sha256:cd1f425da03d8091756e37dd1609b3019d25b4ceee42fb289e2d3a4b498a95be",
+        "consumer_field": "status.is_suspended",
+        "allowed_uses": [
+          "display",
+          "exploration",
+          "formal_research",
+          "promotion_paper"
+        ],
+        "reason_codes": [],
+        "license_record_id": "license:tushare:stock_status:sha256:3e3c34485f0f805b25a0221538e8123ed6c7fdd15a667ccd03b5e045d2ca1397",
+        "certification_report_id": "certification:a9a4a9c25a1f6f3a6dd276a0da2eebf6faad4583c6c6fb1f35116e893d10ed67",
+        "covered_from": "2026-09-01",
+        "covered_to": "2026-09-29",
+        "time_precision": "date",
+        "evidence_uri": "artifact://r2/20261001T080000Z/stock-promotion-closeout/consumer-read-stock_status.json"
+      }
+    ],
+    "rule_version": "field-admission-v2"
+  },
+  "snapshots": {
+    "snapshot:tushare:stock_status:sha256:cd1f425da03d8091756e37dd1609b3019d25b4ceee42fb289e2d3a4b498a95be": [
+      {
+        "source_ticker": "000008.SZ",
+        "trade_date": "2026-09-01",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000014.SZ",
+        "trade_date": "2026-09-01",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000010.SZ",
+        "trade_date": "2026-09-01",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000001.SZ",
+        "trade_date": "2026-09-01",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000006.SZ",
+        "trade_date": "2026-09-01",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000002.SZ",
+        "trade_date": "2026-09-01",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000009.SZ",
+        "trade_date": "2026-09-01",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000007.SZ",
+        "trade_date": "2026-09-01",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000011.SZ",
+        "trade_date": "2026-09-01",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000012.SZ",
+        "trade_date": "2026-09-01",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000010.SZ",
+        "trade_date": "2026-09-02",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000009.SZ",
+        "trade_date": "2026-09-02",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000002.SZ",
+        "trade_date": "2026-09-02",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000011.SZ",
+        "trade_date": "2026-09-02",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000008.SZ",
+        "trade_date": "2026-09-02",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000014.SZ",
+        "trade_date": "2026-09-02",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000007.SZ",
+        "trade_date": "2026-09-02",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000001.SZ",
+        "trade_date": "2026-09-02",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000012.SZ",
+        "trade_date": "2026-09-02",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000006.SZ",
+        "trade_date": "2026-09-02",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000008.SZ",
+        "trade_date": "2026-09-03",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000014.SZ",
+        "trade_date": "2026-09-03",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000011.SZ",
+        "trade_date": "2026-09-03",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000012.SZ",
+        "trade_date": "2026-09-03",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000009.SZ",
+        "trade_date": "2026-09-03",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000010.SZ",
+        "trade_date": "2026-09-03",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000002.SZ",
+        "trade_date": "2026-09-03",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000006.SZ",
+        "trade_date": "2026-09-03",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000001.SZ",
+        "trade_date": "2026-09-03",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000007.SZ",
+        "trade_date": "2026-09-03",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000007.SZ",
+        "trade_date": "2026-09-04",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000001.SZ",
+        "trade_date": "2026-09-04",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000009.SZ",
+        "trade_date": "2026-09-04",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000014.SZ",
+        "trade_date": "2026-09-04",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000008.SZ",
+        "trade_date": "2026-09-04",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000011.SZ",
+        "trade_date": "2026-09-04",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000010.SZ",
+        "trade_date": "2026-09-04",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000006.SZ",
+        "trade_date": "2026-09-04",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000012.SZ",
+        "trade_date": "2026-09-04",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000002.SZ",
+        "trade_date": "2026-09-04",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000012.SZ",
+        "trade_date": "2026-09-07",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000007.SZ",
+        "trade_date": "2026-09-07",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000011.SZ",
+        "trade_date": "2026-09-07",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000008.SZ",
+        "trade_date": "2026-09-07",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000014.SZ",
+        "trade_date": "2026-09-07",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000010.SZ",
+        "trade_date": "2026-09-07",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000009.SZ",
+        "trade_date": "2026-09-07",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000006.SZ",
+        "trade_date": "2026-09-07",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000002.SZ",
+        "trade_date": "2026-09-07",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000001.SZ",
+        "trade_date": "2026-09-07",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000009.SZ",
+        "trade_date": "2026-09-08",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000010.SZ",
+        "trade_date": "2026-09-08",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000001.SZ",
+        "trade_date": "2026-09-08",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000008.SZ",
+        "trade_date": "2026-09-08",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000012.SZ",
+        "trade_date": "2026-09-08",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000002.SZ",
+        "trade_date": "2026-09-08",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000006.SZ",
+        "trade_date": "2026-09-08",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000007.SZ",
+        "trade_date": "2026-09-08",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000014.SZ",
+        "trade_date": "2026-09-08",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000011.SZ",
+        "trade_date": "2026-09-08",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000014.SZ",
+        "trade_date": "2026-09-09",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000001.SZ",
+        "trade_date": "2026-09-09",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000009.SZ",
+        "trade_date": "2026-09-09",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000006.SZ",
+        "trade_date": "2026-09-09",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000011.SZ",
+        "trade_date": "2026-09-09",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000007.SZ",
+        "trade_date": "2026-09-09",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000002.SZ",
+        "trade_date": "2026-09-09",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000012.SZ",
+        "trade_date": "2026-09-09",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000008.SZ",
+        "trade_date": "2026-09-09",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000010.SZ",
+        "trade_date": "2026-09-09",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000001.SZ",
+        "trade_date": "2026-09-10",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000007.SZ",
+        "trade_date": "2026-09-10",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000008.SZ",
+        "trade_date": "2026-09-10",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000011.SZ",
+        "trade_date": "2026-09-10",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000010.SZ",
+        "trade_date": "2026-09-10",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000009.SZ",
+        "trade_date": "2026-09-10",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000002.SZ",
+        "trade_date": "2026-09-10",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000014.SZ",
+        "trade_date": "2026-09-10",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000012.SZ",
+        "trade_date": "2026-09-10",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000006.SZ",
+        "trade_date": "2026-09-10",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000006.SZ",
+        "trade_date": "2026-09-11",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000011.SZ",
+        "trade_date": "2026-09-11",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000008.SZ",
+        "trade_date": "2026-09-11",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000007.SZ",
+        "trade_date": "2026-09-11",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000002.SZ",
+        "trade_date": "2026-09-11",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000009.SZ",
+        "trade_date": "2026-09-11",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000014.SZ",
+        "trade_date": "2026-09-11",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000001.SZ",
+        "trade_date": "2026-09-11",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000012.SZ",
+        "trade_date": "2026-09-11",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000010.SZ",
+        "trade_date": "2026-09-11",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000009.SZ",
+        "trade_date": "2026-09-14",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000010.SZ",
+        "trade_date": "2026-09-14",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000007.SZ",
+        "trade_date": "2026-09-14",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000006.SZ",
+        "trade_date": "2026-09-14",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000001.SZ",
+        "trade_date": "2026-09-14",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000014.SZ",
+        "trade_date": "2026-09-14",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000011.SZ",
+        "trade_date": "2026-09-14",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000008.SZ",
+        "trade_date": "2026-09-14",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000002.SZ",
+        "trade_date": "2026-09-14",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000012.SZ",
+        "trade_date": "2026-09-14",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000001.SZ",
+        "trade_date": "2026-09-15",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000014.SZ",
+        "trade_date": "2026-09-15",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000011.SZ",
+        "trade_date": "2026-09-15",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000002.SZ",
+        "trade_date": "2026-09-15",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000006.SZ",
+        "trade_date": "2026-09-15",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000009.SZ",
+        "trade_date": "2026-09-15",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000008.SZ",
+        "trade_date": "2026-09-15",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000012.SZ",
+        "trade_date": "2026-09-15",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000010.SZ",
+        "trade_date": "2026-09-15",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000007.SZ",
+        "trade_date": "2026-09-15",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000002.SZ",
+        "trade_date": "2026-09-16",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000008.SZ",
+        "trade_date": "2026-09-16",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000011.SZ",
+        "trade_date": "2026-09-16",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000010.SZ",
+        "trade_date": "2026-09-16",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000012.SZ",
+        "trade_date": "2026-09-16",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000014.SZ",
+        "trade_date": "2026-09-16",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000009.SZ",
+        "trade_date": "2026-09-16",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000006.SZ",
+        "trade_date": "2026-09-16",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000001.SZ",
+        "trade_date": "2026-09-16",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000007.SZ",
+        "trade_date": "2026-09-16",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000011.SZ",
+        "trade_date": "2026-09-17",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000010.SZ",
+        "trade_date": "2026-09-17",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000014.SZ",
+        "trade_date": "2026-09-17",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000006.SZ",
+        "trade_date": "2026-09-17",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000002.SZ",
+        "trade_date": "2026-09-17",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000001.SZ",
+        "trade_date": "2026-09-17",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000012.SZ",
+        "trade_date": "2026-09-17",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000008.SZ",
+        "trade_date": "2026-09-17",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000007.SZ",
+        "trade_date": "2026-09-17",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000009.SZ",
+        "trade_date": "2026-09-17",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000002.SZ",
+        "trade_date": "2026-09-18",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000001.SZ",
+        "trade_date": "2026-09-18",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000009.SZ",
+        "trade_date": "2026-09-18",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000007.SZ",
+        "trade_date": "2026-09-18",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000010.SZ",
+        "trade_date": "2026-09-18",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000006.SZ",
+        "trade_date": "2026-09-18",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000011.SZ",
+        "trade_date": "2026-09-18",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000012.SZ",
+        "trade_date": "2026-09-18",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000014.SZ",
+        "trade_date": "2026-09-18",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000008.SZ",
+        "trade_date": "2026-09-18",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000006.SZ",
+        "trade_date": "2026-09-21",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000001.SZ",
+        "trade_date": "2026-09-21",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000002.SZ",
+        "trade_date": "2026-09-21",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000012.SZ",
+        "trade_date": "2026-09-21",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000007.SZ",
+        "trade_date": "2026-09-21",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000009.SZ",
+        "trade_date": "2026-09-21",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000011.SZ",
+        "trade_date": "2026-09-21",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000010.SZ",
+        "trade_date": "2026-09-21",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000014.SZ",
+        "trade_date": "2026-09-21",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000008.SZ",
+        "trade_date": "2026-09-21",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000001.SZ",
+        "trade_date": "2026-09-22",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000006.SZ",
+        "trade_date": "2026-09-22",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000002.SZ",
+        "trade_date": "2026-09-22",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000008.SZ",
+        "trade_date": "2026-09-22",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000012.SZ",
+        "trade_date": "2026-09-22",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000010.SZ",
+        "trade_date": "2026-09-22",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000007.SZ",
+        "trade_date": "2026-09-22",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000009.SZ",
+        "trade_date": "2026-09-22",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000011.SZ",
+        "trade_date": "2026-09-22",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000014.SZ",
+        "trade_date": "2026-09-22",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000007.SZ",
+        "trade_date": "2026-09-23",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000002.SZ",
+        "trade_date": "2026-09-23",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000014.SZ",
+        "trade_date": "2026-09-23",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000008.SZ",
+        "trade_date": "2026-09-23",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000009.SZ",
+        "trade_date": "2026-09-23",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000011.SZ",
+        "trade_date": "2026-09-23",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000001.SZ",
+        "trade_date": "2026-09-23",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000012.SZ",
+        "trade_date": "2026-09-23",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000010.SZ",
+        "trade_date": "2026-09-23",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000006.SZ",
+        "trade_date": "2026-09-23",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000014.SZ",
+        "trade_date": "2026-09-24",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000006.SZ",
+        "trade_date": "2026-09-24",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000008.SZ",
+        "trade_date": "2026-09-24",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000009.SZ",
+        "trade_date": "2026-09-24",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000010.SZ",
+        "trade_date": "2026-09-24",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000012.SZ",
+        "trade_date": "2026-09-24",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000002.SZ",
+        "trade_date": "2026-09-24",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000011.SZ",
+        "trade_date": "2026-09-24",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000001.SZ",
+        "trade_date": "2026-09-24",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000007.SZ",
+        "trade_date": "2026-09-24",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000012.SZ",
+        "trade_date": "2026-09-28",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000010.SZ",
+        "trade_date": "2026-09-28",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000001.SZ",
+        "trade_date": "2026-09-28",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000006.SZ",
+        "trade_date": "2026-09-28",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000011.SZ",
+        "trade_date": "2026-09-28",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000008.SZ",
+        "trade_date": "2026-09-28",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000014.SZ",
+        "trade_date": "2026-09-28",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000009.SZ",
+        "trade_date": "2026-09-28",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000002.SZ",
+        "trade_date": "2026-09-28",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000007.SZ",
+        "trade_date": "2026-09-28",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000014.SZ",
+        "trade_date": "2026-09-29",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000008.SZ",
+        "trade_date": "2026-09-29",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000010.SZ",
+        "trade_date": "2026-09-29",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000001.SZ",
+        "trade_date": "2026-09-29",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000002.SZ",
+        "trade_date": "2026-09-29",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000012.SZ",
+        "trade_date": "2026-09-29",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000009.SZ",
+        "trade_date": "2026-09-29",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000011.SZ",
+        "trade_date": "2026-09-29",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000007.SZ",
+        "trade_date": "2026-09-29",
+        "is_suspended": true
+      },
+      {
+        "source_ticker": "000006.SZ",
+        "trade_date": "2026-09-29",
+        "is_suspended": true
+      }
+    ]
+  }
+}

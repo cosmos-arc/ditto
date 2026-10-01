@@ -1,7 +1,9 @@
 """Exact immutable snapshot reads; never fall back to the mutable canonical asset."""
 
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from datetime import date, datetime
+from typing import Protocol
 
 import polars as pl
 
@@ -12,6 +14,29 @@ from ditto_data.catalog.provider_payload import (
 from ditto_data.catalog.snapshot_completion import snapshot_completed
 from ditto_data.catalog.source_snapshot import ProviderSnapshot, ProviderSnapshotReader
 from ditto_data.ingestion.partition_state import PartitionLifecycleReader
+
+__all__ = [
+    "SnapshotContents",
+    "SnapshotReadService",
+    "SourceTickerResolver",
+]
+
+
+class SourceTickerResolver(Protocol):
+    """
+    Resolve durable instrument identities to one provider's source tickers.
+
+    Retained provider payloads keep the provider's native identity grain
+    (``source_ticker``); qualified replay scopes are expressed in resolved
+    instrument identities. The caller supplies this port so the catalog reader
+    stays free of metadata-store dependencies.
+    """
+
+    def __call__(
+        self, instrument_ids: Sequence[int], *, source: str, asof: date
+    ) -> Mapping[int, str]:
+        """Return the source ticker visible for each resolvable instrument."""
+        ...
 
 
 @dataclass(frozen=True, slots=True)
@@ -73,15 +98,38 @@ class SnapshotReadService:
         *,
         instrument_ids: tuple[int, ...],
         date_range: tuple[date, date],
+        ticker_resolver: SourceTickerResolver | None = None,
     ) -> pl.DataFrame:
-        """Project only the caller-qualified instrument, interval and field scope."""
+        """
+        Project only the caller-qualified instrument, interval and field scope.
+
+        Payloads keyed by resolved ``instrument_id`` filter directly. Payloads
+        kept at the provider's native ``source_ticker`` grain filter through
+        the supplied resolver; without one the read fails closed because the
+        qualified scope cannot be expressed.
+        """
         contents = self.read(snapshot_id)
-        selected = tuple(dict.fromkeys(("instrument_id", "trade_date", *columns)))
-        if not set(selected).issubset(contents.frame.columns):
+        frame = contents.frame
+        if "instrument_id" in frame.columns:
+            identity = pl.col("instrument_id").is_in(instrument_ids)
+            selected = tuple(dict.fromkeys(("instrument_id", "trade_date", *columns)))
+        elif ticker_resolver is not None and "source_ticker" in frame.columns:
+            resolved = ticker_resolver(
+                instrument_ids,
+                source=contents.snapshot.source,
+                asof=date_range[1],
+            )
+            tickers = tuple(dict.fromkeys(resolved.values()))
+            identity = pl.col("source_ticker").is_in(tickers)
+            selected = tuple(dict.fromkeys(("source_ticker", "trade_date", *columns)))
+        else:
             raise ValueError(
                 "snapshot replay requires retained instrument/date/field columns"
             )
-        return contents.frame.filter(
-            pl.col("instrument_id").is_in(instrument_ids)
-            & pl.col("trade_date").is_between(*date_range)
+        if not set(selected).issubset(frame.columns):
+            raise ValueError(
+                "snapshot replay requires retained instrument/date/field columns"
+            )
+        return frame.filter(
+            identity & pl.col("trade_date").is_between(*date_range)
         ).select(selected)

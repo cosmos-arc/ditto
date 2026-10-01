@@ -31,6 +31,28 @@
 5. 主备共用上游时不得视为独立校验;切换与回切都以新快照/新证据落账,旧结果不回写。
 6. 连续失败或覆盖回归 → revoke 晋级,按 runbook 修复后重新认证。
 
+## 前向观察窗(2026-10-01 重晋级起)
+
+**窗口**:自 2026-10-01 重晋级起 20 个交易日(约至 2026-10-30);期间按 SLA 正常运维并观察以下停止条件。
+
+**日常动作**(与上文 SLA 一致,不新增流程):
+
+1. 每交易日终 `bootstrap stock_daily`/`stock_status`,每周一次 `stock_basic` 快照;
+2. 每次更新后核对 readiness/catalog status overlay 与 DQ(L1/L2)结果;
+3. 观察窗结束日重跑 `row-level-coverage-stock_status.json` 量化并与基线比对。
+
+**停止条件(任一触发 → `ops promotion-revoke` 撤晋级 + `data-products revoke` 撤认证,按上文 failover 顺序修复后重走认证/晋级;#380/#383 机制下旧证据自动失效)**:
+
+1. **覆盖回归**:调度交易日在 36h SLA 到期后仍缺分区(非 provider 全站故障);
+2. **行级空洞增长**:新增 provider 空洞日超出基线(已取时代 20 日 + `row-level-coverage-stock_status.json` 终版记录的 2022-2024 空洞集);
+3. **DQ 失败**:新块 L1/L2 失败且 2 个交易日内未修复;
+4. **provider/代理退化**:配额耗尽、代理不可用超 SLA,或接口口径变化未评审;
+5. **消费者事故**:bars/status 读路径报错或发现错数据(如错误复权、状态错标);
+6. **许可/权限变化**:Tushare 或代理条款变化影响 local_cache/derivative_compute 权利。
+
+窗口无停止条件触发 → 观察窗收口记录于 #196,数据集维持 initial-focus;有触发 → 按停止条件处置并在 #196 记录事件。
+
 ## 版本
 
 - 2026-09-30:随 #196 Batch 2 首次评审建立(chevy)。
+- 2026-10-01:重晋级收尾——新增前向观察窗(20 交易日)与停止条件;stock_status 认证边界按 provider 实际覆盖定为 2017-01-03 起(chevy)。

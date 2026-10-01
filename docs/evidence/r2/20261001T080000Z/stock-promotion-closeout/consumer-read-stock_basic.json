@@ -1,0 +1,54 @@
+{
+  "checked_at": "2026-10-01T07:41:38.155411+00:00",
+  "consumer": "instrument registry read model (MetadataService.find_securities)",
+  "read": {
+    "reader": "MetadataService.find_securities",
+    "asset_class": "stock",
+    "rows": 5922,
+    "columns": [
+      "instrument_id",
+      "ticker",
+      "name",
+      "display_name",
+      "exchange",
+      "board",
+      "asset_class",
+      "list_date",
+      "delist_date",
+      "is_st",
+      "is_active",
+      "created_at",
+      "updated_at",
+      "source",
+      "source_ticker"
+    ],
+    "list_status_counts": []
+  },
+  "field_inputs": [
+    {
+      "consumer_field": "registry.list_status",
+      "reader": "MetadataService.find_securities",
+      "dataset_id": "stock_basic",
+      "instrument_count": 5922,
+      "rows": 5922,
+      "frame_columns": [
+        "instrument_id",
+        "ticker",
+        "name",
+        "display_name",
+        "exchange",
+        "board",
+        "asset_class",
+        "list_date",
+        "delist_date",
+        "is_st",
+        "is_active",
+        "created_at",
+        "updated_at",
+        "source",
+        "source_ticker"
+      ],
+      "frame_sample_sha256": "f8d3fbab765dc62ad26f39a4ac2551ef8ef58ab91bbe3edfdc8ce264012d96a5"
+    }
+  ]
+}

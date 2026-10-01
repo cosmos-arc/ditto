@@ -1,0 +1,79 @@
+{
+  "checked_at": "2026-10-01T07:47:33.391016+00:00",
+  "drill": "real interruption-recovery drill on the stock_status 2016-01-01→2024-12-31 backfill (3 SIGKILLs incl. the python worker mid-chunk; interrupted chunk retried and closed)",
+  "timeline_utc": [
+    {
+      "at": "2026-10-01T06:04:37Z",
+      "event": "first chunk complete; backfill proceeding"
+    },
+    {
+      "at": "2026-10-01T07:26:53Z",
+      "event": "kill #1: SIGKILL uv supervisor",
+      "durable_state": {
+        "chunks_complete": 56,
+        "snapshots": 56,
+        "log_rows": 57,
+        "integrity": "ok"
+      },
+      "note": "python worker orphaned (PPID 1) and continued; chunk 2020-10 completed at 07:26:54 → 57"
+    },
+    {
+      "at": "2026-10-01T07:28:06Z",
+      "event": "kill #2: SIGKILL re-run supervisor+worker mid-fetch",
+      "durable_state": {
+        "chunks_complete": 57,
+        "snapshots": 57,
+        "log_rows": 58,
+        "integrity": "ok"
+      },
+      "note": "in-flight chunk left no durable trace"
+    },
+    {
+      "at": "2026-10-01T07:29:58Z",
+      "event": "kill #3: SIGKILL the orphan python worker ~18s into chunk 2021-01",
+      "durable_state": {
+        "chunks_complete": 59,
+        "snapshots": 59,
+        "log_rows": 60,
+        "chunks_noncomplete": 0,
+        "integrity": "ok"
+      },
+      "note": "in-flight chunk 2021-01: no checkpoint, no log row"
+    },
+    {
+      "at": "2026-10-01T07:32:30Z",
+      "event": "final re-run re-completes 2018-03 (planner flagged it evidence-incomplete)"
+    },
+    {
+      "at": "2026-10-01T07:33:54Z",
+      "event": "interrupted chunk 2021-01 retried and COMPLETE"
+    }
+  ],
+  "post_state": {
+    "chunks_complete": 69,
+    "chunks_noncomplete": 0,
+    "snapshots_pre2025": 69,
+    "snapshot_ids_unique": 69,
+    "log_rows_pre2025": 70,
+    "log_failed_rows": 1
+  },
+  "interrupted_chunk_2021_01": {
+    "status": "COMPLETE",
+    "attempt": 1
+  },
+  "provider_failed_dates": [
+    {
+      "trade_date": "2018-03-23",
+      "status": "FAIL",
+      "error_code": "FETCH_ERROR"
+    }
+  ],
+  "invariants": [
+    "snapshot count == completed chunk count (no duplicates)",
+    "snapshot_ids_unique == snapshots_pre2025",
+    "interrupted chunks closed with attempts=1",
+    "no duplicate durable identities despite one overlapping re-run",
+    "sqlite integrity_check = ok"
+  ],
+  "expectation": "interruption at any point leaves zero partial durable writes; re-run skips completed chunks, retries interrupted ones, and does not duplicate identities"
+}

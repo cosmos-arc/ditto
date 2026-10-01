@@ -1,0 +1,50 @@
+{
+  "checked_at": "2026-10-01T07:41:38.155411+00:00",
+  "consumer": "stock status read model (MarketService.get_stock_status)",
+  "read": {
+    "reader": "MarketService.get_stock_status",
+    "window": {
+      "from": "2026-09-01",
+      "to": "2026-09-29"
+    },
+    "rows": 111408,
+    "columns": [
+      "source_ticker",
+      "trade_date",
+      "is_suspended",
+      "suspend_timing",
+      "is_st",
+      "st_type",
+      "list_status",
+      "instrument_id",
+      "source"
+    ],
+    "distinct_trade_dates": 20,
+    "suspended_rows": 16360
+  },
+  "field_inputs": [
+    {
+      "consumer_field": "status.is_suspended",
+      "reader": "MarketService.get_stock_status",
+      "dataset_id": "stock_status",
+      "window": {
+        "from": "2026-09-01",
+        "to": "2026-09-29"
+      },
+      "instrument_count": 5574,
+      "rows": 111408,
+      "frame_columns": [
+        "source_ticker",
+        "trade_date",
+        "is_suspended",
+        "suspend_timing",
+        "is_st",
+        "st_type",
+        "list_status",
+        "instrument_id",
+        "source"
+      ],
+      "frame_sample_sha256": "44a4d4df43670e3bf46a404c224826936801e86057f52f2651602034da3fa11e"
+    }
+  ]
+}
