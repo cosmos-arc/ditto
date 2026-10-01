@@ -38,7 +38,7 @@ from __future__ import annotations
 import math
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
-from datetime import UTC, date, datetime, timedelta
+from datetime import UTC, date, datetime, time, timedelta
 from typing import Literal, Protocol
 from zoneinfo import ZoneInfo
 
@@ -96,7 +96,6 @@ _BASIC_FACT_FIELDS: Mapping[str, str] = {
 }
 _STRUCTURAL_CONSUMERS = (
     "universe_snapshot_id",
-    "membership_version",
     "instruments.instrument_id",
     "instruments.industry_id",
 )
@@ -114,6 +113,9 @@ _RESERVED_FACTOR_COLUMNS = frozenset(
     }
 )
 _ROTATION_ALGORITHM_VERSION = "industry-rotation-v1"
+# Certified stock_daily publication claim (Batch 2 evidence): bars for a
+# trade date become visible 18:00 Asia/Shanghai on that date.
+_BAR_PUBLICATION_TIME = time(18, 0)
 _TURNOVER_WINDOW = 20
 _MAIN_LIMIT_THRESHOLD = 0.095
 _ST_LIMIT_THRESHOLD = 0.045
@@ -269,9 +271,9 @@ class AssembleSelectionFacts:
                 + "use the certified replay lane",
                 details={"reason": "ASSEMBLY_CUTOFF_BACKDATED"},
             )
-        self._validate_weights(request)
+        self._validate_policy(request)
         as_of_date = request.as_of.astimezone(_SHANGHAI).date()
-        sources = self._roster_sources(request)
+        sources = self._roster_sources(request, knowledge)
         roster = self._resolve_roster(request, sources, knowledge, publication)
         nodes = self._plan_factors(request)
         evaluation = self._load_bars(
@@ -279,6 +281,7 @@ class AssembleSelectionFacts:
             request=request,
             nodes=nodes,
             as_of_date=as_of_date,
+            knowledge=knowledge,
         )
         cross_date = _cross_section_date(evaluation)
         instruments = self._project_instruments(
@@ -341,15 +344,14 @@ class AssembleSelectionFacts:
         )
 
     def _roster_sources(
-        self, request: AssembleSelectionFactsRequest
+        self, request: AssembleSelectionFactsRequest, knowledge: datetime
     ) -> HistoricalUniverseSources:
-        """Retain the certified registry chains the roster resolves against."""
+        """Delegate universe semantics to the discovery port, fail-closed."""
         try:
-            return HistoricalUniverseSources(
+            return self._discover_sources(
                 universe_id=request.universe_id,
                 asset_kind=request.asset_kind,
-                master_snapshot_ids=self._snapshots.snapshot_ids("stock_basic"),
-                status_snapshot_ids=self._snapshots.snapshot_ids("stock_status"),
+                knowledge_cutoff=knowledge,
             )
         except AppQueryError as error:
             raise AppProcessError(
@@ -374,7 +376,7 @@ class AssembleSelectionFacts:
         except AppQueryError as error:
             raise AppProcessError(str(error), details=error.details) from error
 
-    def _validate_weights(self, request: AssembleSelectionFactsRequest) -> None:
+    def _validate_policy(self, request: AssembleSelectionFactsRequest) -> None:
         """Mirror the strategy spec invariants before assembling facts."""
         names = [weight.name for weight in request.factor_weights]
         duplicates = sorted({name for name in names if names.count(name) > 1})
@@ -393,6 +395,15 @@ class AssembleSelectionFacts:
                 details={
                     "reason": "ASSEMBLY_FACTOR_WEIGHT_TOTAL",
                     "total": total,
+                },
+            )
+        states = request.excluded_limit_states
+        if "normal" in states or len(set(states)) != len(states):
+            raise AppProcessError(
+                "excluded limit states must be unique non-normal states",
+                details={
+                    "reason": "ASSEMBLY_LIMIT_POLICY_INVALID",
+                    "excluded_limit_states": tuple(states),
                 },
             )
 
@@ -513,6 +524,7 @@ class AssembleSelectionFacts:
         request: AssembleSelectionFactsRequest,
         nodes: tuple[_FactorNode, ...],
         as_of_date: date,
+        knowledge: datetime,
     ) -> pl.DataFrame:
         roster_ids = [int(row["instrument_id"]) for row in roster.frame.to_dicts()]
         tickers = self._identities.source_tickers(roster_ids, asof=as_of_date)
@@ -549,7 +561,7 @@ class AssembleSelectionFacts:
             leaf for node in nodes if node.requested for leaf in node.leaves
         }
         self._validate_bar_schema(frame, needed_leaves)
-        frame = _without_future_knowledge(frame, as_of_date)
+        frame = _without_future_knowledge(frame, _knowledge_visible_through(knowledge))
         if frame.is_empty():
             raise AppProcessError(
                 "assembled selection bars only carry future knowledge",
@@ -634,13 +646,20 @@ class AssembleSelectionFacts:
             )
             .to_dicts()
         }
+        # Every consumed lookback row must carry lineage: a single
+        # unattributable row already shaped the factor and turnover values.
+        unattributable = set(
+            evaluation.filter(pl.col(_BAR_LINEAGE_COLUMN).is_null())[
+                "instrument_id"
+            ].to_list()
+        )
         drafts: list[SelectionInstrumentDraft] = []
         for row in roster_rows:
             instrument_id = int(row["instrument_id"])
             instrument_name = names.get(instrument_id, str(instrument_id))
             bar_row = cross_rows.get(instrument_id)
             lineage = bar_row.get(_BAR_LINEAGE_COLUMN) if bar_row is not None else None
-            if bar_row is None or lineage is None:
+            if bar_row is None or lineage is None or instrument_id in unattributable:
                 causes = ["bars"] if bar_row is None else ["source_snapshot"]
                 drafts.append(
                     SelectionInstrumentDraft(
@@ -700,9 +719,11 @@ class AssembleSelectionFacts:
         }
 
 
-def _without_future_knowledge(frame: pl.DataFrame, as_of_date: date) -> pl.DataFrame:
+def _without_future_knowledge(
+    frame: pl.DataFrame, visible_through: date
+) -> pl.DataFrame:
     """
-    Drop bar rows claiming knowledge strictly after the decision date.
+    Drop bar rows whose knowledge is not provably within the cutoff.
 
     ``knowledge_date`` is a required schema column, so this filter always
     applies: a provider that cannot prove per-row knowledge is rejected
@@ -711,7 +732,22 @@ def _without_future_knowledge(frame: pl.DataFrame, as_of_date: date) -> pl.DataF
     knowledge = pl.col("knowledge_date")
     if frame.schema["knowledge_date"] == pl.String:
         knowledge = knowledge.str.to_date()
-    return frame.filter(knowledge <= pl.lit(as_of_date))
+    return frame.filter(knowledge <= pl.lit(visible_through))
+
+
+def _knowledge_visible_through(knowledge: datetime) -> date:
+    """
+    Resolve the last bar trade date provably known at the cutoff.
+
+    The certified stock_daily publication claim is 18:00 Asia/Shanghai on
+    the trade date, so a cutoff before 18:00 cannot see that day's bars
+    even though both share the same calendar date.
+    """
+    local = knowledge.astimezone(_SHANGHAI)
+    visible = local.date()
+    if local.timetz().replace(tzinfo=None) < _BAR_PUBLICATION_TIME:
+        visible -= timedelta(days=1)
+    return visible
 
 
 def _unit_normalized(
@@ -771,6 +807,10 @@ def _limit_state(
     """
     if not isinstance(close, (int, float)) or not isinstance(pre_close, (int, float)):
         return None
+    # NaN passes the type check but every comparison against it is false,
+    # which would silently classify an unusable price fact as "normal".
+    if not math.isfinite(close) or not math.isfinite(pre_close):
+        return None
     if pre_close <= 0:
         return None
     change = float(close) / float(pre_close) - 1.0
@@ -813,6 +853,8 @@ def data_fields(
     for consumer_field, field in _BASIC_FACT_FIELDS.items():
         bind("stock_basic", field, consumer_field)
     bind("stock_status", "is_suspended", "instruments.is_suspended")
+    # The facade classifies membership_version as a rotation-stage input, so
+    # its binding must reference the rotation (stock_daily) source set.
     bind("stock_daily", "close", "membership_version")
     bind("stock_daily", "amount", "instruments.average_turnover")
     # limit_state consumes both legs of the close/pre_close ratio.

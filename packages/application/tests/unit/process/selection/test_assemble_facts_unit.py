@@ -22,7 +22,7 @@ from ditto_application.queries.historical_universe import (
 )
 from ditto_features.factors.spec import FactorSpec
 
-_AS_OF = datetime(2026, 9, 29, 8, 0, tzinfo=UTC)  # 16:00 Asia/Shanghai
+_AS_OF = datetime(2026, 9, 29, 10, 0, tzinfo=UTC)  # 18:00 Asia/Shanghai
 _CROSS = date(2026, 9, 29)
 _BAR_DATES = tuple(date(2026, 8, 31) + timedelta(days=i) for i in range(30))
 
@@ -219,6 +219,7 @@ def _process(
     registry: dict[str, FactorSpec] | None = None,
     tickers: dict[int, str] | None = None,
     snapshots: _FakeSnapshots | None = None,
+    clock: object | None = None,
 ) -> AssembleSelectionFacts:
     return AssembleSelectionFacts(
         provider=provider,
@@ -235,7 +236,7 @@ def _process(
         ),  # type: ignore[arg-type]
         factors=_Registry(registry or _registry()),  # type: ignore[arg-type]
         snapshots=snapshots or _FakeSnapshots(),  # type: ignore[arg-type]
-        clock=lambda: _AS_OF,
+        clock=clock or (lambda: _AS_OF),  # type: ignore[arg-type]
     )
 
 
@@ -646,3 +647,89 @@ def test_composed_factor_lookback_accumulates_windows() -> None:
     # 21 composed rows over a dependency that itself needs 21 rows; the
     # additive guard errs one row on the safe side over the exact 41.
     assert composed.lookback == 42
+
+
+@pytest.mark.pit
+def test_knowledge_cutoff_before_publication_hides_same_day_bars() -> None:
+    provider = _FakeProvider(_bars_frame(rows_per_instrument={1: 30}))
+    history = _FakeHistory(_roster_frame((1,)))
+    process = _process(provider=provider, history=history)
+    frozen = datetime(2026, 9, 29, 8, 0, tzinfo=UTC)
+    process = _process(provider=provider, history=history, clock=lambda: frozen)
+    request = process.assemble(_request(knowledge_cutoff=frozen))
+
+    # 16:00 Asia/Shanghai is before the 18:00 bar publication claim, so the
+    # cross-section falls back to the previous trade date.
+    assert request.data_to == date(2026, 9, 28)
+
+
+def test_invalid_excluded_limit_policy_is_rejected() -> None:
+    process, _, _ = _happy_process()
+    with pytest.raises(AppProcessError) as error:
+        process.assemble(_request(excluded_limit_states=("normal", "limit_up")))
+    assert error.value.details["reason"] == "ASSEMBLY_LIMIT_POLICY_INVALID"
+
+    with pytest.raises(AppProcessError) as error:
+        process.assemble(_request(excluded_limit_states=("limit_up", "limit_up")))
+    assert error.value.details["reason"] == "ASSEMBLY_LIMIT_POLICY_INVALID"
+
+
+@pytest.mark.pit
+def test_unattributable_lookback_row_declares_missing_source() -> None:
+    frame = _bars_frame(rows_per_instrument={1: 30, 2: 30})
+    # Null lineage on one historical row (not the cross-section row).
+    frame = frame.with_columns(
+        pl.when(
+            (pl.col("instrument_id") == 2) & (pl.col("trade_date") == date(2026, 9, 20))
+        )
+        .then(None)
+        .otherwise(pl.col("source_snapshot_id"))
+        .alias("source_snapshot_id")
+    )
+    provider = _FakeProvider(frame)
+    history = _FakeHistory(_roster_frame((1, 2)))
+    process = _process(provider=provider, history=history)
+    request = process.assemble(_request())
+
+    assert request.instruments[1].declared_missing_inputs == ("source_snapshot",)
+    assert request.instruments[0].declared_missing_inputs == ()
+
+
+@pytest.mark.pit
+def test_non_finite_prices_leave_limit_state_missing() -> None:
+    provider = _FakeProvider(
+        _bars_frame(
+            rows_per_instrument={1: 30},
+            close_overrides={1: (float("nan"), 10.0)},
+        )
+    )
+    history = _FakeHistory(_roster_frame((1,)))
+    process = _process(provider=provider, history=history)
+    request = process.assemble(_request())
+
+    assert request.instruments[0].limit_state is None
+
+
+def test_discovery_port_failures_propagate() -> None:
+    provider = _FakeProvider(_bars_frame(rows_per_instrument={1: 30}))
+    history = _FakeHistory(_roster_frame((1,)))
+
+    def refuse(**_kwargs: object) -> HistoricalUniverseSources:
+        raise AppProcessError(
+            "universe membership is narrower than the certified roster lane",
+            details={"reason": "ASSEMBLY_UNIVERSE_SCOPE_UNSUPPORTED"},
+        )
+
+    process = AssembleSelectionFacts(
+        provider=provider,
+        history=history,  # type: ignore[arg-type]
+        discover_sources=refuse,  # type: ignore[arg-type]
+        identities=_FakeIdentities(names={1: "平安银行"}, tickers={1: "000001.SZ"}),  # type: ignore[arg-type]
+        factors=_Registry(_registry()),  # type: ignore[arg-type]
+        snapshots=_FakeSnapshots(),  # type: ignore[arg-type]
+        clock=lambda: _AS_OF,
+    )
+    with pytest.raises(AppProcessError) as error:
+        process.assemble(_request())
+
+    assert error.value.details["reason"] == "ASSEMBLY_UNIVERSE_SCOPE_UNSUPPORTED"

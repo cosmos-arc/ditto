@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from datetime import date, datetime
 from typing import Literal
+from zoneinfo import ZoneInfo
 
 from dishka import Provider, Scope, provide
 from ditto_data.catalog.certification import CertificationReader
@@ -26,6 +27,7 @@ from ditto_strategy.selection.pipeline import SelectionPipeline
 from ditto_strategy.selection.store import SelectionRunReader, SelectionRunWriter
 
 from ditto_application.builders.data_provider import ServiceBackedDataProvider
+from ditto_application.exceptions import AppProcessError
 from ditto_application.processes.selection.assemble_facts import (
     AssembleSelectionFacts,
     CertifiedSnapshotIndex,
@@ -167,8 +169,18 @@ class _GovernedFactorRegistry:
 
 def _index_universe_discovery(
     index: CertifiedSnapshotIndex,
+    metadata: MetadataService,
 ) -> UniverseSourcesDiscovery:
-    """Retain the certified registry chains for one universe at a cutoff."""
+    """
+    Retain the certified registry chains for one universe at a cutoff.
+
+    The v1 roster lane projects the whole certified market through the
+    master/status chains; it cannot express a narrower pool (that needs
+    membership snapshots inside ``HistoricalUniverseSources``). Discovery
+    therefore fails closed unless the requested universe covers exactly
+    the registered stock lane, so a custom pool can never silently select
+    outside its declared membership.
+    """
 
     def discover(
         *,
@@ -176,6 +188,35 @@ def _index_universe_discovery(
         asset_kind: Literal["stock", "etf"],
         knowledge_cutoff: datetime,
     ) -> HistoricalUniverseSources:
+        if asset_kind == "stock":
+            asof = knowledge_cutoff.astimezone(ZoneInfo("Asia/Shanghai"))
+            members = set(
+                metadata.universe.get_universe(universe_id, asof.date().isoformat())
+            )
+            if not members:
+                raise AppProcessError(
+                    f"unknown universe: {universe_id}",
+                    details={
+                        "reason": "ASSEMBLY_UNIVERSE_UNKNOWN",
+                        "universe_id": universe_id,
+                    },
+                )
+            registered = set(
+                metadata.instrument.list_instrument_ids(
+                    asset_class="stock", is_active=None
+                )
+            )
+            if members != registered:
+                raise AppProcessError(
+                    "universe membership is narrower than the certified roster "
+                    + "lane; pool rosters need membership snapshots",
+                    details={
+                        "reason": "ASSEMBLY_UNIVERSE_SCOPE_UNSUPPORTED",
+                        "universe_id": universe_id,
+                        "member_count": len(members),
+                        "roster_count": len(registered),
+                    },
+                )
         return HistoricalUniverseSources(
             universe_id=universe_id,
             asset_kind=asset_kind,
@@ -235,7 +276,7 @@ class AppSelectionProvider(Provider):
         return AssembleSelectionFacts(
             provider=data_provider,
             history=historical_universe,
-            discover_sources=_index_universe_discovery(index),
+            discover_sources=_index_universe_discovery(index, metadata),
             identities=_metadata_identities(metadata),
             factors=_GovernedFactorRegistry(ALL_FACTOR_SPECS),
             snapshots=index,
