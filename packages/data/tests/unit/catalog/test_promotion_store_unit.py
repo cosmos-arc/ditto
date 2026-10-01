@@ -592,3 +592,44 @@ class TestSQLiteDatasetMaturityPromotionStore:
             assert len(history) == 1
         finally:
             pool.close()
+
+    def test_stale_append_does_not_mask_fresher_assessment(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """#383:较晚追加但快照较旧的行不得遮蔽已见撤销的有效证据。"""
+        client, pool = _client(tmp_path / "catalog.sqlite")
+        store = SQLiteDatasetPromotionEvidenceStore(client)
+        criterion = "complete PIT/replay coverage for the dataset"
+
+        try:
+            # 评审 B:已见撤销(seq 6),先写入
+            store.upsert_dataset_evidence(
+                "stock_daily",
+                DatasetPromotionEvidence(
+                    criterion=criterion,
+                    evidence_uri="ditto://evidence/seen-revoke",
+                    approved_by="data-governance",
+                    passed=True,
+                    assessed_event_sequence=6,
+                ),
+            )
+            # 评审 A:快照停在撤销前(seq 5),后追加——不得成为当前投影
+            store.upsert_dataset_evidence(
+                "stock_daily",
+                DatasetPromotionEvidence(
+                    criterion=criterion,
+                    evidence_uri="ditto://evidence/stale",
+                    approved_by="architecture-review",
+                    passed=True,
+                    assessed_event_sequence=5,
+                ),
+            )
+
+            current = store.list_dataset_evidence("stock_daily")
+            assert len(current) == 1
+            assert current[0].evidence_uri == "ditto://evidence/seen-revoke"
+            history = store.list_dataset_evidence_history("stock_daily")
+            assert len(history) == 2  # 审计轨迹两行都在
+        finally:
+            pool.close()

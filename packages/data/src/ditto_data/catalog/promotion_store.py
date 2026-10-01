@@ -76,10 +76,10 @@ class SQLiteDatasetPromotionEvidenceStore:
                 )
                 self._client.execute("DROP TABLE dataset_promotion_evidence")
                 self._client.commit()
-            except sqlite3.OperationalError:
-                # Another worker completed the same migration first; the log
-                # already holds the legacy rows and the table is gone.
+            except sqlite3.OperationalError as error:
                 self._client.rollback()
+                if "no such table" not in str(error):
+                    raise
         self._client.commit()
 
     def upsert_dataset_evidence(
@@ -141,10 +141,14 @@ class SQLiteDatasetPromotionEvidenceStore:
             FROM dataset_promotion_evidence_log AS current
             WHERE dataset_id = ?
               AND evidence_sequence = (
-                SELECT MAX(evidence_sequence)
-                FROM dataset_promotion_evidence_log AS newer
-                WHERE newer.dataset_id = current.dataset_id
-                  AND newer.criterion = current.criterion
+                SELECT pick.evidence_sequence
+                FROM dataset_promotion_evidence_log AS pick
+                WHERE pick.dataset_id = current.dataset_id
+                  AND pick.criterion = current.criterion
+                ORDER BY
+                  pick.assessed_event_sequence DESC,
+                  pick.evidence_sequence DESC
+                LIMIT 1
               )
             ORDER BY criterion
             """,
