@@ -313,7 +313,9 @@ class AssembleSelectionFacts:
             cross_date=cross_date,
             raw_cross=raw_cross,
         )
-        windows = self._binding_windows(cross_date=cross_date, as_of_date=as_of_date)
+        windows = self._binding_windows(
+            evaluation=evaluation, cross_date=cross_date, as_of_date=as_of_date
+        )
         return CreateSelectionRunRequest(
             as_of=request.as_of,
             knowledge_cutoff=knowledge,
@@ -893,22 +895,30 @@ class AssembleSelectionFacts:
         return tuple(drafts)
 
     def _binding_windows(
-        self, *, cross_date: date, as_of_date: date
+        self,
+        *,
+        evaluation: pl.DataFrame,
+        cross_date: date,
+        as_of_date: date,
     ) -> dict[str, tuple[CertifiedSnapshotWindow, ...]]:
         """
-        Bar facts anchor at the cross-section date, roster facts at as-of.
+        Bar facts bind their whole consumed chain, roster facts at as-of.
 
         Names, ST flags and listing state are read as of the decision date,
-        so their certified coverage must contain that date — anchoring them
-        at the (possibly earlier) cross-section day would qualify a window
-        that never covered the fact's own instant.
+        so their certified coverage must contain that date. Daily bars and
+        adjustments are certified in partitioned snapshots, so the binding
+        carries every window covering any consumed date; today's admission
+        mechanics check each snapshot against the full claimed interval and
+        therefore still report coverage reasons under partitioned
+        certification until union-aware coverage lands.
         """
+        consumed_dates = sorted(set(evaluation["trade_date"].unique().to_list()))
         return {
-            "stock_daily": self._snapshots.covering(
-                dataset_id="stock_daily", day=cross_date
+            "stock_daily": _covering_chain(
+                self._snapshots, "stock_daily", consumed_dates
             ),
-            _ADJUSTMENT_DATASET: self._snapshots.covering(
-                dataset_id=_ADJUSTMENT_DATASET, day=cross_date
+            _ADJUSTMENT_DATASET: _covering_chain(
+                self._snapshots, _ADJUSTMENT_DATASET, consumed_dates
             ),
             "stock_status": self._snapshots.covering(
                 dataset_id="stock_status", day=as_of_date
@@ -917,6 +927,21 @@ class AssembleSelectionFacts:
                 dataset_id="stock_basic", day=as_of_date
             ),
         }
+
+
+def _covering_chain(
+    snapshots: CertifiedSnapshotIndex,
+    dataset_id: str,
+    days: Sequence[date],
+) -> tuple[CertifiedSnapshotWindow, ...]:
+    """Union of certified windows covering any consumed date, deduplicated."""
+    chain: dict[str, CertifiedSnapshotWindow] = {}
+    for day in days:
+        for window in snapshots.covering(dataset_id=dataset_id, day=day):
+            chain[window.snapshot_id] = window
+    return tuple(
+        sorted(chain.values(), key=lambda item: (item.request_start, item.snapshot_id))
+    )
 
 
 def _without_future_knowledge(
