@@ -9,6 +9,8 @@ from datetime import UTC, datetime
 from ditto_data.catalog.metadata import default_dataset_metadata
 from ditto_data.catalog.promotion import (
     DatasetMaturityPromotion,
+    DatasetMaturityPromotionEvent,
+    DatasetMaturityPromotionHistoryReader,
     DatasetMaturityPromotionReader,
     DatasetMaturityPromotionRevocationReason,
     DatasetMaturityPromotionRevoker,
@@ -19,6 +21,7 @@ from ditto_data.catalog.promotion import (
     DatasetPromotionStatus,
     apply_dataset_maturity_promotion,
     assess_dataset_promotion,
+    evidence_since_latest_revocation,
 )
 
 from ditto_application.exceptions import AppCommandError
@@ -88,6 +91,13 @@ class DatasetMaturityPromotionRevokeResult:
     notes: str | None = None
 
 
+def _assessed_event_sequence(
+    events: tuple[DatasetMaturityPromotionEvent, ...],
+) -> int:
+    """Newest append-only event sequence an assessment already observed."""
+    return max((event.sequence or 0 for event in events), default=0)
+
+
 class ReviewDatasetPromotionEvidenceHandler:
     """Persist reviewer evidence and return the resulting promotion assessment."""
 
@@ -97,6 +107,7 @@ class ReviewDatasetPromotionEvidenceHandler:
         evidence_reader: DatasetPromotionEvidenceReader,
         maturity_promotion_writer: DatasetMaturityPromotionWriter,
         maturity_promotion_reader: DatasetMaturityPromotionReader,
+        maturity_promotion_history_reader: DatasetMaturityPromotionHistoryReader,
         *,
         now: Callable[[], datetime] | None = None,
     ) -> None:
@@ -104,6 +115,7 @@ class ReviewDatasetPromotionEvidenceHandler:
         self._evidence_reader = evidence_reader
         self._maturity_promotion_writer = maturity_promotion_writer
         self._maturity_promotion_reader = maturity_promotion_reader
+        self._maturity_promotion_history_reader = maturity_promotion_history_reader
         self._now = now or _utcnow
 
     def handle(
@@ -142,9 +154,17 @@ class ReviewDatasetPromotionEvidenceHandler:
             reviewed_at=reviewed_at,
         )
         self._evidence_writer.upsert_dataset_evidence(command.dataset_id, evidence)
+        history = self._maturity_promotion_history_reader
+        promotion_events = history.list_dataset_maturity_promotion_events(
+            command.dataset_id
+        )
+        assessed_sequence = _assessed_event_sequence(promotion_events)
         assessment = assess_dataset_promotion(
             metadata,
-            self._evidence_reader.list_dataset_evidence(command.dataset_id),
+            evidence_since_latest_revocation(
+                self._evidence_reader.list_dataset_evidence(command.dataset_id),
+                promotion_events,
+            ),
         )
         metadata_promoted = False
         dataset_maturity_after = metadata.maturity
@@ -158,7 +178,18 @@ class ReviewDatasetPromotionEvidenceHandler:
                 evidence_uri=command.evidence_uri,
                 notes=command.notes,
             )
-            self._maturity_promotion_writer.upsert_dataset_maturity_promotion(promotion)
+            try:
+                self._maturity_promotion_writer.upsert_dataset_maturity_promotion(
+                    promotion,
+                    assessed_event_sequence=assessed_sequence,
+                )
+            except ValueError as exc:
+                raise AppCommandError(
+                    f"Promotion superseded by a concurrent revocation: {exc}",
+                    command="review_dataset_promotion",
+                    dataset_id=command.dataset_id,
+                    criterion=command.criterion,
+                ) from exc
             promoted_metadata = apply_dataset_maturity_promotion(metadata, promotion)
             dataset_maturity_after = promoted_metadata.maturity
             metadata_promoted = True

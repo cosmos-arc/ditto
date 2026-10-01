@@ -841,11 +841,13 @@ class TestAppProviderStructure:
         maturity_promotion_reader = MagicMock()
         maturity_promotion_writer = MagicMock()
 
+        maturity_promotion_history_reader = MagicMock()
         handler = provider.review_dataset_promotion_evidence_handler(
             promotion_evidence_writer=evidence_writer,
             promotion_evidence_reader=evidence_reader,
             maturity_promotion_writer=maturity_promotion_writer,
             maturity_promotion_reader=maturity_promotion_reader,
+            maturity_promotion_history_reader=maturity_promotion_history_reader,
         )
 
         assert isinstance(handler, ReviewDatasetPromotionEvidenceHandler)
@@ -853,6 +855,10 @@ class TestAppProviderStructure:
         assert handler._evidence_reader is evidence_reader
         assert handler._maturity_promotion_writer is maturity_promotion_writer
         assert handler._maturity_promotion_reader is maturity_promotion_reader
+        assert (
+            handler._maturity_promotion_history_reader
+            is maturity_promotion_history_reader
+        )
 
     def test_revoke_dataset_promotion_handler_receives_reversal_ports(self) -> None:
         """Promotion revoke handler 应接收 current reader 和 revoker 端口。"""

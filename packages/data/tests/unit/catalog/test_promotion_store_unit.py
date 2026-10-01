@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta, timezone
 from pathlib import Path
 
+import pytest
 from ditto_data.catalog.promotion import (
     DatasetMaturityPromotion,
     DatasetMaturityPromotionEvent,
@@ -130,7 +131,10 @@ class TestSQLiteDatasetMaturityPromotionStore:
         try:
             SQLiteDatasetMaturityPromotionStore(
                 writer_client
-            ).upsert_dataset_maturity_promotion(promotion)
+            ).upsert_dataset_maturity_promotion(
+                promotion,
+                assessed_event_sequence=0,
+            )
         finally:
             writer_pool.close()
 
@@ -175,7 +179,10 @@ class TestSQLiteDatasetMaturityPromotionStore:
         )
 
         try:
-            store.upsert_dataset_maturity_promotion(promotion)
+            store.upsert_dataset_maturity_promotion(
+                promotion,
+                assessed_event_sequence=0,
+            )
             revoked = store.revoke_dataset_maturity_promotion(
                 "stock_daily",
                 revoked_by="architecture-review",
@@ -187,6 +194,7 @@ class TestSQLiteDatasetMaturityPromotionStore:
             assert store.get_dataset_maturity_promotion("stock_daily") is None
             assert revoked == DatasetMaturityPromotionEvent(
                 dataset_id="stock_daily",
+                sequence=2,
                 action="revoked",
                 previous_maturity="initial-focus",
                 next_maturity="experimental",
@@ -199,6 +207,7 @@ class TestSQLiteDatasetMaturityPromotionStore:
             assert store.list_dataset_maturity_promotion_events("stock_daily") == (
                 DatasetMaturityPromotionEvent(
                     dataset_id="stock_daily",
+                    sequence=1,
                     action="promoted",
                     previous_maturity="experimental",
                     next_maturity="initial-focus",
@@ -222,5 +231,270 @@ class TestSQLiteDatasetMaturityPromotionStore:
 
             assert isinstance(store, DatasetMaturityPromotionHistoryReader)
             assert isinstance(store, DatasetMaturityPromotionRevoker)
+        finally:
+            pool.close()
+
+    def test_upsert_rejects_promotion_predating_latest_revocation(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """#380:并发窗口内不得复活已被更新撤销压过的晋级 override。"""
+        client, pool = _client(tmp_path / "catalog.sqlite")
+        store = SQLiteDatasetMaturityPromotionStore(client)
+        promoted_at = datetime(2026, 6, 1, 13, 0, tzinfo=UTC)
+        revoked_at = datetime(2026, 6, 2, 9, 0, tzinfo=UTC)
+        stale_promotion = DatasetMaturityPromotion(
+            dataset_id="stock_daily",
+            previous_maturity="experimental",
+            promoted_maturity="initial-focus",
+            promoted_by="architecture-review",
+            promoted_at=promoted_at,
+        )
+        re_promotion = DatasetMaturityPromotion(
+            dataset_id="stock_daily",
+            previous_maturity="experimental",
+            promoted_maturity="initial-focus",
+            promoted_by="architecture-review",
+            promoted_at=revoked_at + timedelta(minutes=1),
+        )
+
+        try:
+            store.upsert_dataset_maturity_promotion(
+                stale_promotion,
+                assessed_event_sequence=0,
+            )
+            store.revoke_dataset_maturity_promotion(
+                "stock_daily",
+                revoked_by="data-governance",
+                revoked_at=revoked_at,
+                revocation_reason="evidence_invalidated",
+            )
+
+            with pytest.raises(ValueError, match="newer revocation"):
+                store.upsert_dataset_maturity_promotion(
+                    stale_promotion,
+                    assessed_event_sequence=0,
+                )
+            assert store.get_dataset_maturity_promotion("stock_daily") is None
+
+            store.upsert_dataset_maturity_promotion(
+                re_promotion, assessed_event_sequence=2
+            )
+            current = store.get_dataset_maturity_promotion("stock_daily")
+            assert current is not None
+            assert current.promoted_at == re_promotion.promoted_at
+        finally:
+            pool.close()
+
+    def test_upsert_rejects_naive_promoted_at(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """#380:无时区 promoted_at 无法与撤销排序,写入即拒。"""
+        client, pool = _client(tmp_path / "catalog.sqlite")
+        store = SQLiteDatasetMaturityPromotionStore(client)
+        naive_promotion = DatasetMaturityPromotion(
+            dataset_id="stock_daily",
+            previous_maturity="experimental",
+            promoted_maturity="initial-focus",
+            promoted_by="architecture-review",
+            promoted_at=datetime(2026, 6, 1, 13, 0),
+        )
+
+        try:
+            with pytest.raises(ValueError, match="timezone-aware"):
+                store.upsert_dataset_maturity_promotion(
+                    naive_promotion,
+                    assessed_event_sequence=0,
+                )
+        finally:
+            pool.close()
+
+    def test_upsert_orders_revocation_as_instant_across_offsets(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """#380:不同时区偏移按时刻比较,不受 ISO 字典序影响。"""
+        client, pool = _client(tmp_path / "catalog.sqlite")
+        store = SQLiteDatasetMaturityPromotionStore(client)
+        # 08:00+08:00 == 00:00Z;晋级时刻 01:00Z 晚于撤销,应当成功
+        store.upsert_dataset_maturity_promotion(
+            DatasetMaturityPromotion(
+                dataset_id="stock_daily",
+                previous_maturity="experimental",
+                promoted_maturity="initial-focus",
+                promoted_by="architecture-review",
+                promoted_at=datetime(2026, 6, 1, 0, 0, tzinfo=UTC),
+            ),
+            assessed_event_sequence=0,
+        )
+        store.revoke_dataset_maturity_promotion(
+            "stock_daily",
+            revoked_by="data-governance",
+            revoked_at=datetime(2026, 6, 1, 8, 0, tzinfo=timezone(timedelta(hours=8))),
+            revocation_reason="evidence_invalidated",
+        )
+        store.upsert_dataset_maturity_promotion(
+            DatasetMaturityPromotion(
+                dataset_id="stock_daily",
+                previous_maturity="experimental",
+                promoted_maturity="initial-focus",
+                promoted_by="architecture-review",
+                promoted_at=datetime(2026, 6, 1, 1, 0, tzinfo=UTC),
+            ),
+            # 评估已见到该撤销(00:00Z),快照不得早于它
+            assessed_event_sequence=2,
+        )
+        current = store.get_dataset_maturity_promotion("stock_daily")
+        assert current is not None
+        assert current.promoted_at == datetime(2026, 6, 1, 1, 0, tzinfo=UTC)
+        pool.close()
+
+    def test_upsert_rejects_promotion_tied_with_revocation(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """#380:与撤销同刻的晋级不可排序,一律拒绝(与纯函数严格序一致)。"""
+        client, pool = _client(tmp_path / "catalog.sqlite")
+        store = SQLiteDatasetMaturityPromotionStore(client)
+        moment = datetime(2026, 6, 2, 9, 0, tzinfo=UTC)
+        store.upsert_dataset_maturity_promotion(
+            DatasetMaturityPromotion(
+                dataset_id="stock_daily",
+                previous_maturity="experimental",
+                promoted_maturity="initial-focus",
+                promoted_by="architecture-review",
+                promoted_at=datetime(2026, 6, 1, tzinfo=UTC),
+            ),
+            assessed_event_sequence=0,
+        )
+        store.revoke_dataset_maturity_promotion(
+            "stock_daily",
+            revoked_by="data-governance",
+            revoked_at=moment,
+            revocation_reason="evidence_invalidated",
+        )
+        tied = DatasetMaturityPromotion(
+            dataset_id="stock_daily",
+            previous_maturity="experimental",
+            promoted_maturity="initial-focus",
+            promoted_by="architecture-review",
+            promoted_at=moment,
+        )
+
+        try:
+            with pytest.raises(ValueError, match="newer revocation"):
+                store.upsert_dataset_maturity_promotion(tied, assessed_event_sequence=0)
+        finally:
+            pool.close()
+
+    def test_upsert_rejects_revocation_unseen_by_assessment_snapshot(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """#380:评估快照之后落地的撤销(如暂停的 revoker)不得被穿透。"""
+        client, pool = _client(tmp_path / "catalog.sqlite")
+        store = SQLiteDatasetMaturityPromotionStore(client)
+        snapshot = 1  # 评估者只见到事件 1(首次晋级),未见到事件 2(撤销)
+        # revoker 在 t=11:00 已捕获时刻但尚未写事件;评估者读到空历史
+        store.upsert_dataset_maturity_promotion(
+            DatasetMaturityPromotion(
+                dataset_id="stock_daily",
+                previous_maturity="experimental",
+                promoted_maturity="initial-focus",
+                promoted_by="architecture-review",
+                promoted_at=datetime(2026, 6, 1, 10, 0, tzinfo=UTC),
+            ),
+            assessed_event_sequence=0,
+        )
+        store.revoke_dataset_maturity_promotion(
+            "stock_daily",
+            revoked_by="data-governance",
+            revoked_at=datetime(2026, 6, 1, 11, 0, tzinfo=UTC),
+            revocation_reason="evidence_invalidated",
+        )
+        stale_write = DatasetMaturityPromotion(
+            dataset_id="stock_daily",
+            previous_maturity="experimental",
+            promoted_maturity="initial-focus",
+            promoted_by="architecture-review",
+            promoted_at=datetime(2026, 6, 1, 13, 0, tzinfo=UTC),
+        )
+
+        try:
+            with pytest.raises(ValueError, match="newer revocation"):
+                store.upsert_dataset_maturity_promotion(
+                    stale_write, assessed_event_sequence=snapshot
+                )
+            assert store.get_dataset_maturity_promotion("stock_daily") is None
+        finally:
+            pool.close()
+
+    def test_upsert_orders_subsecond_revocation_and_promotion(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """#380:同秒内的亚秒级撤销/晋级按全精度时刻比较。"""
+        client, pool = _client(tmp_path / "catalog.sqlite")
+        store = SQLiteDatasetMaturityPromotionStore(client)
+        store.upsert_dataset_maturity_promotion(
+            DatasetMaturityPromotion(
+                dataset_id="stock_daily",
+                previous_maturity="experimental",
+                promoted_maturity="initial-focus",
+                promoted_by="architecture-review",
+                promoted_at=datetime(2026, 6, 1, tzinfo=UTC),
+            ),
+            assessed_event_sequence=0,
+        )
+        store.revoke_dataset_maturity_promotion(
+            "stock_daily",
+            revoked_by="data-governance",
+            revoked_at=datetime(2026, 6, 2, 9, 0, 0, 100000, tzinfo=UTC),
+            revocation_reason="evidence_invalidated",
+        )
+        # 晚 800ms 的重晋级应成功(datetime() 截断会误判为同秒拒绝)
+        store.upsert_dataset_maturity_promotion(
+            DatasetMaturityPromotion(
+                dataset_id="stock_daily",
+                previous_maturity="experimental",
+                promoted_maturity="initial-focus",
+                promoted_by="architecture-review",
+                promoted_at=datetime(2026, 6, 2, 9, 0, 0, 900000, tzinfo=UTC),
+            ),
+            assessed_event_sequence=2,
+        )
+        current = store.get_dataset_maturity_promotion("stock_daily")
+        assert current is not None
+        assert current.promoted_at == datetime(2026, 6, 2, 9, 0, 0, 900000, tzinfo=UTC)
+        pool.close()
+
+    def test_revoke_rejects_naive_timestamp_before_deleting_override(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """#380:naive revoked_at 在删除 override 之前即拒,不留半撤销状态。"""
+        client, pool = _client(tmp_path / "catalog.sqlite")
+        store = SQLiteDatasetMaturityPromotionStore(client)
+        store.upsert_dataset_maturity_promotion(
+            DatasetMaturityPromotion(
+                dataset_id="stock_daily",
+                previous_maturity="experimental",
+                promoted_maturity="initial-focus",
+                promoted_by="architecture-review",
+                promoted_at=datetime(2026, 6, 1, tzinfo=UTC),
+            ),
+            assessed_event_sequence=0,
+        )
+
+        try:
+            with pytest.raises(ValueError, match="timezone-aware"):
+                store.revoke_dataset_maturity_promotion(
+                    "stock_daily",
+                    revoked_by="data-governance",
+                    revoked_at=datetime(2026, 6, 2, 9, 0),
+                    revocation_reason="evidence_invalidated",
+                )
+            assert store.get_dataset_maturity_promotion("stock_daily") is not None
         finally:
             pool.close()

@@ -23,6 +23,7 @@ __all__ = [
     "DatasetPromotionStatus",
     "apply_dataset_maturity_promotion",
     "assess_dataset_promotion",
+    "evidence_since_latest_revocation",
 ]
 
 type DatasetPromotionStatus = Literal["not_applicable", "blocked", "ready"]
@@ -120,6 +121,7 @@ class DatasetMaturityPromotionEvent:
     evidence_uri: str | None = None
     revocation_reason: DatasetMaturityPromotionRevocationReason | None = None
     notes: str | None = None
+    sequence: int | None = None
 
     def __post_init__(self) -> None:
         """Validate event identity and supported maturity transitions."""
@@ -194,8 +196,17 @@ class DatasetMaturityPromotionWriter(Protocol):
     def upsert_dataset_maturity_promotion(
         self,
         promotion: DatasetMaturityPromotion,
+        *,
+        assessed_event_sequence: int,
     ) -> None:
-        """Insert or replace a dataset maturity promotion override."""
+        """
+        Insert or replace a dataset maturity promotion override.
+
+        ``assessed_event_sequence`` is the newest append-only event sequence
+        the caller's assessment already observed; implementations must reject
+        the write when a newer revocation event exists (fail closed on
+        revocations the assessment never saw, #380).
+        """
         ...
 
 
@@ -244,6 +255,44 @@ def apply_dataset_maturity_promotion(
         maturity=promotion.promoted_maturity,
         promotion_criteria=(),
     )
+
+
+def evidence_since_latest_revocation(
+    evidence: tuple[DatasetPromotionEvidence, ...],
+    events: tuple[DatasetMaturityPromotionEvent, ...],
+) -> tuple[DatasetPromotionEvidence, ...]:
+    """
+    Drop evidence recorded before the latest promotion revocation.
+
+    Revocation appends an audit event and keeps older evidence auditable, but
+    revoked-era evidence must not grant new eligibility on re-review (#251,
+    #380). Evidence without a review timestamp cannot prove it postdates a
+    revocation and is dropped whenever one exists.
+    """
+    revoked = [event for event in events if event.action == "revoked"]
+    if not revoked:
+        return evidence
+    if any(
+        event.action_at is None or event.action_at.tzinfo is None for event in revoked
+    ):
+        # An unorderable revocation (missing or timezone-naive timestamp)
+        # cannot be ordered against any evidence row, so no evidence can
+        # prove it postdates the revocation.
+        return ()
+    revoked_at: list[datetime] = [
+        event.action_at
+        for event in revoked
+        if event.action_at is not None and event.action_at.tzinfo is not None
+    ]
+    cutoff = max(revoked_at)
+    return tuple(item for item in evidence if _proven_after(item.reviewed_at, cutoff))
+
+
+def _proven_after(instant: datetime | None, cutoff: datetime) -> bool:
+    """Compare instants only when both sides are timezone-aware."""
+    if instant is None or instant.tzinfo is None or cutoff.tzinfo is None:
+        return False
+    return instant > cutoff
 
 
 def assess_dataset_promotion(

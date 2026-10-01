@@ -62,7 +62,10 @@ class _MaturityPromotionStore:
     def upsert_dataset_maturity_promotion(
         self,
         promotion: DatasetMaturityPromotion,
+        *,
+        assessed_event_sequence: int,
     ) -> None:
+        del assessed_event_sequence  # 桩不重放存储级守卫;语义由存储测试覆盖
         self.writes.append(promotion)
         self._promotions_by_dataset[promotion.dataset_id] = promotion
 
@@ -98,6 +101,27 @@ class _MaturityPromotionStore:
         )
 
 
+class _MaturityPromotionEventHistory:
+    """In-memory append-only promotion event history."""
+
+    def __init__(
+        self,
+        events_by_dataset: dict[str, tuple[DatasetMaturityPromotionEvent, ...]]
+        | None = None,
+    ) -> None:
+        self._events_by_dataset = events_by_dataset or {}
+
+    def append(self, event: DatasetMaturityPromotionEvent) -> None:
+        existing = self._events_by_dataset.get(event.dataset_id, ())
+        self._events_by_dataset[event.dataset_id] = (*existing, event)
+
+    def list_dataset_maturity_promotion_events(
+        self,
+        dataset_id: str,
+    ) -> tuple[DatasetMaturityPromotionEvent, ...]:
+        return self._events_by_dataset.get(dataset_id, ())
+
+
 def _now() -> datetime:
     return datetime(2026, 6, 1, 12, 30, tzinfo=UTC)
 
@@ -122,6 +146,7 @@ class TestReviewDatasetPromotionEvidenceHandler:
             evidence_reader=store,
             maturity_promotion_writer=maturity_store,
             maturity_promotion_reader=maturity_store,
+            maturity_promotion_history_reader=_MaturityPromotionEventHistory(),
             now=_now,
         )
         criterion = metadata.promotion_criteria[-1]
@@ -178,6 +203,7 @@ class TestReviewDatasetPromotionEvidenceHandler:
             evidence_reader=store,
             maturity_promotion_writer=maturity_store,
             maturity_promotion_reader=maturity_store,
+            maturity_promotion_history_reader=_MaturityPromotionEventHistory(),
             now=_now,
         )
 
@@ -291,6 +317,7 @@ class TestRevokeDatasetMaturityPromotionHandler:
             evidence_reader=store,
             maturity_promotion_writer=maturity_store,
             maturity_promotion_reader=maturity_store,
+            maturity_promotion_history_reader=_MaturityPromotionEventHistory(),
             now=_now,
         )
 
@@ -341,6 +368,7 @@ class TestPromotionGovernanceGolden:
             evidence_reader=evidence_store,
             maturity_promotion_writer=maturity_store,
             maturity_promotion_reader=maturity_store,
+            maturity_promotion_history_reader=_MaturityPromotionEventHistory(),
             now=_now,
         )
 
@@ -387,6 +415,63 @@ class TestPromotionGovernanceGolden:
         assert revoke_result.dataset_maturity_after == "experimental"
         assert maturity_store.get_dataset_maturity_promotion("stock_daily") is None
 
+    def test_revoked_era_evidence_does_not_repromote_until_re_reviewed(self) -> None:
+        """#380:撤销后旧准则通过行不再计数,须全部重记才可能再晋级。"""
+        from datetime import timedelta
+
+        metadata = default_dataset_metadata()["stock_daily"]
+        criteria = metadata.promotion_criteria
+        evidence_store = _PromotionEvidenceStore()
+        maturity_store = _MaturityPromotionStore()
+        history = _MaturityPromotionEventHistory()
+
+        class _AdvancingClock:
+            def __init__(self) -> None:
+                self._moment = _now()
+
+            def __call__(self) -> datetime:
+                self._moment += timedelta(minutes=1)
+                return self._moment
+
+        clock = _AdvancingClock()
+        handler = ReviewDatasetPromotionEvidenceHandler(
+            evidence_writer=evidence_store,
+            evidence_reader=evidence_store,
+            maturity_promotion_writer=maturity_store,
+            maturity_promotion_reader=maturity_store,
+            maturity_promotion_history_reader=history,
+            now=clock,
+        )
+
+        # 首轮:三条全过 → 晋级
+        for index, criterion in enumerate(criteria):
+            handler.handle(_review_command(criterion, index))
+        assert maturity_store.get_dataset_maturity_promotion("stock_daily") is not None
+
+        # 撤销(真实存储会把 revoke 事件写入共享事件历史)
+        revoke_event = maturity_store.revoke_dataset_maturity_promotion(
+            "stock_daily",
+            revoked_by="architecture-review",
+            revoked_at=clock(),
+            revocation_reason="evidence_invalidated",
+        )
+        history.append(revoke_event)
+
+        # 只重记一条:旧通过行不计数,不得自动再晋级
+        partial = handler.handle(_review_command(criteria[0], 100))
+        assert partial.promotion_status == "blocked"
+        assert partial.metadata_promoted is False
+        assert set(partial.missing_criteria) == set(criteria[1:])
+
+        # 其余两条重记后恢复可晋级
+        final = None
+        for offset, criterion in enumerate(criteria[1:], start=101):
+            final = handler.handle(_review_command(criterion, offset))
+        assert final is not None
+        assert final.promotion_status == "ready"
+        assert final.metadata_promoted is True
+        assert final.dataset_maturity_after == "initial-focus"
+
     def test_rejected_criterion_blocks_promotion(self) -> None:
         metadata = default_dataset_metadata()["stock_daily"]
         evidence_store = _PromotionEvidenceStore()
@@ -413,6 +498,7 @@ class TestPromotionGovernanceGolden:
             evidence_reader=store,
             maturity_promotion_writer=maturity_store,
             maturity_promotion_reader=maturity_store,
+            maturity_promotion_history_reader=_MaturityPromotionEventHistory(),
             now=_now,
         )
 

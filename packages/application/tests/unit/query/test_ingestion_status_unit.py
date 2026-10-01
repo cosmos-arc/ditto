@@ -132,6 +132,7 @@ class TestIngestionStatusCatalogOverlay:
         )
         facade = IngestionStatusQueryFacade(
             ingestion_log_store=_log_store(),
+            maturity_promotion_history_reader=_MaturityPromotionHistoryReader(),
             data_catalog_reader=catalog,
             promotion_evidence_reader=_PromotionEvidenceReader(),
             now=lambda: datetime(2026, 6, 2, 9, 0, tzinfo=UTC),
@@ -167,6 +168,7 @@ class TestIngestionStatusCatalogOverlay:
         )
         facade = IngestionStatusQueryFacade(
             ingestion_log_store=_log_store(),
+            maturity_promotion_history_reader=_MaturityPromotionHistoryReader(),
             data_catalog_reader=InMemoryDataCatalog(),
             promotion_evidence_reader=_PromotionEvidenceReader(
                 {"stock_daily": evidence}
@@ -186,6 +188,7 @@ class TestIngestionStatusCatalogOverlay:
     def test_status_uses_persisted_maturity_promotion_override(self) -> None:
         facade = IngestionStatusQueryFacade(
             ingestion_log_store=_log_store(),
+            maturity_promotion_history_reader=_MaturityPromotionHistoryReader(),
             data_catalog_reader=InMemoryDataCatalog(),
             promotion_evidence_reader=_PromotionEvidenceReader(),
             maturity_promotion_reader=_MaturityPromotionReader(
@@ -217,6 +220,7 @@ class TestIngestionStatusCatalogOverlay:
         rejected = metadata.promotion_criteria[0]
         facade = IngestionStatusQueryFacade(
             ingestion_log_store=_log_store(),
+            maturity_promotion_history_reader=_MaturityPromotionHistoryReader(),
             data_catalog_reader=InMemoryDataCatalog(),
             promotion_evidence_reader=_PromotionEvidenceReader(
                 {
@@ -274,6 +278,7 @@ class TestIngestionStatusCatalogOverlay:
     ) -> None:
         facade = IngestionStatusQueryFacade(
             ingestion_log_store=_log_store(),
+            maturity_promotion_history_reader=_MaturityPromotionHistoryReader(),
             data_catalog_reader=InMemoryDataCatalog(),
             promotion_evidence_reader=_PromotionEvidenceReader(),
             now=lambda: datetime(2026, 6, 2, 9, 0, tzinfo=UTC),
@@ -302,6 +307,7 @@ class TestIngestionStatusCatalogOverlay:
         )
         facade = IngestionStatusQueryFacade(
             ingestion_log_store=_log_store(),
+            maturity_promotion_history_reader=_MaturityPromotionHistoryReader(),
             data_catalog_reader=catalog,
             promotion_evidence_reader=_PromotionEvidenceReader(),
             now=lambda: datetime(2026, 6, 2, 9, 0, tzinfo=UTC),
@@ -317,6 +323,7 @@ class TestIngestionStatusCatalogOverlay:
     ) -> None:
         store = _log_store()
         facade = IngestionStatusQueryFacade(
+            maturity_promotion_history_reader=_MaturityPromotionHistoryReader(),
             ingestion_log_store=store,
             data_catalog_reader=InMemoryDataCatalog(),
             promotion_evidence_reader=_PromotionEvidenceReader(),
@@ -338,6 +345,7 @@ class TestIngestionStatusCatalogOverlay:
     def test_status_marks_newly_supported_dataset_missing_until_ingested(self) -> None:
         facade = IngestionStatusQueryFacade(
             ingestion_log_store=_log_store(),
+            maturity_promotion_history_reader=_MaturityPromotionHistoryReader(),
             data_catalog_reader=InMemoryDataCatalog(),
             promotion_evidence_reader=_PromotionEvidenceReader(),
             now=lambda: datetime(2026, 6, 2, 9, 0, tzinfo=UTC),
@@ -446,6 +454,7 @@ class TestPromotionReadinessReport:
         )
         facade = IngestionStatusQueryFacade(
             ingestion_log_store=_log_store(),
+            maturity_promotion_history_reader=_MaturityPromotionHistoryReader(),
             data_catalog_reader=InMemoryDataCatalog(),
             promotion_evidence_reader=_PromotionEvidenceReader(),
             source_health_summary_query=source_health,
@@ -529,12 +538,15 @@ class TestPromotionReadinessReport:
                         criterion=stock_criteria[0],
                         evidence_uri="ditto://evidence/stock_daily/pit",
                         approved_by="architecture-review",
+                        # 撤销(09:30)之后的复审证据才计入评估(#380)
+                        reviewed_at=datetime(2026, 6, 2, 9, 31, tzinfo=UTC),
                     ),
                     DatasetPromotionEvidence(
                         criterion=stock_criteria[1],
                         evidence_uri="ditto://evidence/stock_daily/failover",
                         approved_by="architecture-review",
                         passed=False,
+                        reviewed_at=datetime(2026, 6, 2, 9, 31, tzinfo=UTC),
                     ),
                 ),
                 "macro_indicators": tuple(
@@ -561,6 +573,7 @@ class TestPromotionReadinessReport:
         )
         facade = IngestionStatusQueryFacade(
             ingestion_log_store=_log_store(),
+            maturity_promotion_history_reader=_MaturityPromotionHistoryReader(),
             data_catalog_reader=InMemoryDataCatalog(),
             promotion_evidence_reader=evidence_reader,
             maturity_promotion_reader=maturity_reader,
@@ -634,6 +647,7 @@ class TestMaturityGovernanceReport:
         )
         facade = IngestionStatusQueryFacade(
             ingestion_log_store=_log_store(),
+            maturity_promotion_history_reader=_MaturityPromotionHistoryReader(),
             data_catalog_reader=InMemoryDataCatalog(),
             promotion_evidence_reader=_PromotionEvidenceReader(),
             source_health_summary_query=source_health,
@@ -683,12 +697,15 @@ class TestMaturityGovernanceReport:
                         criterion=stock_criteria[0],
                         evidence_uri="ditto://evidence/stock_daily/pit",
                         approved_by="architecture-review",
+                        # 撤销之后的复审证据才计入评估(#380)
+                        reviewed_at=datetime(2026, 6, 2, 9, 31, tzinfo=UTC),
                     ),
                     DatasetPromotionEvidence(
                         criterion=stock_criteria[1],
                         evidence_uri="ditto://evidence/stock_daily/failover",
                         approved_by="architecture-review",
                         passed=False,
+                        reviewed_at=datetime(2026, 6, 2, 9, 31, tzinfo=UTC),
                     ),
                 ),
                 "macro_indicators": tuple(

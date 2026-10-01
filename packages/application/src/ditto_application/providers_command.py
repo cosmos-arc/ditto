@@ -13,6 +13,7 @@ from ditto_data.catalog.fallback_policy import (
 )
 from ditto_data.catalog.license import DatasetLicenseReader, DatasetLicenseWriter
 from ditto_data.catalog.promotion import (
+    DatasetMaturityPromotionHistoryReader,
     DatasetMaturityPromotionReader,
     DatasetMaturityPromotionRevoker,
     DatasetMaturityPromotionWriter,
@@ -339,6 +340,7 @@ class AppCommandProvider(Provider):
         promotion_evidence_reader: DatasetPromotionEvidenceReader,
         maturity_promotion_writer: DatasetMaturityPromotionWriter,
         maturity_promotion_reader: DatasetMaturityPromotionReader,
+        maturity_promotion_history_reader: DatasetMaturityPromotionHistoryReader,
     ) -> ReviewDatasetPromotionEvidenceHandler:
         """Dataset promotion reviewer evidence handler."""
         return ReviewDatasetPromotionEvidenceHandler(
@@ -346,6 +348,7 @@ class AppCommandProvider(Provider):
             evidence_reader=promotion_evidence_reader,
             maturity_promotion_writer=maturity_promotion_writer,
             maturity_promotion_reader=maturity_promotion_reader,
+            maturity_promotion_history_reader=maturity_promotion_history_reader,
         )
 
     @provide
