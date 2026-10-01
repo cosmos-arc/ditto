@@ -16,19 +16,22 @@ export function toResearchCaseView(value: ResearchCase, run: SelectionRun, submi
 		!/^[a-f0-9]{64}$/.test(value.content_hash) ||
 		value.case_id !== `research-case:sha256:${value.content_hash}` ||
 		value.selection_run_id !== run.run_id ||
+		value.selection_run_id !== `selection-run:sha256:${value.selection_run_hash}` ||
 		value.selection_input_hash !== run.input_hash ||
 		value.selection_spec_hash !== run.spec_hash ||
+		value.asset_kind !== run.asset_kind ||
 		value.universe_snapshot_id !== run.universe_snapshot_id ||
 		value.industry_rotation_snapshot_id !== run.industry_rotation_snapshot_id ||
 		value.as_of !== run.as_of ||
 		value.knowledge_cutoff !== run.knowledge_cutoff ||
 		value.publication_cutoff !== run.publication_cutoff ||
 		!sameSnapshotSet(value.source_snapshot_ids, run.source_snapshot_ids) ||
+		!sameSnapshotSet(value.missing_inputs, run.missing_inputs) ||
 		value.selection_status !== run.status ||
 		Number.isNaN(Date.parse(value.as_of)) ||
 		value.objective !== submitted.objective ||
 		!sameIdSequence(value.candidate_instrument_ids, submitted.candidate_instrument_ids ?? []) ||
-		!Array.isArray(value.missing_inputs) ||
+		(value.selection_status === "ready" && value.missing_inputs.length > 0) ||
 		(value.selection_status !== "ready" && value.selection_status !== "degraded")
 	)
 		throw new Error("研究用例响应的 lineage、schema 版本或提交范围与请求不一致");

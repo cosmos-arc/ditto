@@ -47,18 +47,18 @@ describe("SelectionWorkspacePage", () => {
 		expect(screen.getByText("0.5400")).toBeInTheDocument();
 		expect(screen.getByRole("link", { name: "贵州茅台" })).toHaveAttribute(
 			"href",
-			"/instruments/600519?tab=technical&selectionRunId=selection-run%3Asha256%3Arun-one",
+			"/instruments/600519?tab=technical&selectionRunId=selection-run%3Asha256%3A1111111111111111111111111111111111111111111111111111111111111111",
 		);
 		await user.click(screen.getByRole("tab", { name: "排除 1" }));
 		expect(screen.getByText("insufficient_liquidity")).toBeInTheDocument();
 		expect(screen.getByRole("link", { name: "邯郸钢铁" })).toHaveAttribute(
 			"href",
-			"/instruments/600001?tab=technical&selectionRunId=selection-run%3Asha256%3Arun-one",
+			"/instruments/600001?tab=technical&selectionRunId=selection-run%3Asha256%3A1111111111111111111111111111111111111111111111111111111111111111",
 		);
 
 		const memo = screen.getByRole("link", { name: "生成 SelectionMemo" });
 		expect(memo).toHaveAttribute("data-context-type", "selection");
-		expect(memo).toHaveAttribute("data-context-id", "selection-run:sha256:run-one");
+		expect(memo).toHaveAttribute("data-context-id", `selection-run:sha256:${"1".repeat(64)}`);
 	});
 
 	it("compares two exact saved runs and labels the source of drift", async () => {
@@ -87,7 +87,7 @@ describe("SelectionWorkspacePage", () => {
 		expect(localStorage.getItem("ditto.selection-run-input.v1")).toContain('"spec_id": "a-share-stock-discovery"');
 		await user.click(screen.getByRole("button", { name: "执行 SelectionRun" }));
 
-		await expect(screen.findByText("已保存 SelectionRun run-one")).resolves.toBeInTheDocument();
+		await expect(screen.findByText("已保存 SelectionRun 111111111111")).resolves.toBeInTheDocument();
 	});
 
 	it("creates a ResearchCase from the exact run with selected candidates and a required objective", async () => {
