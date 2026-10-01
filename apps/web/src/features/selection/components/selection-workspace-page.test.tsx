@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { HttpResponse, http } from "msw";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { selectionRunInputFixture } from "@/mocks/fixtures/selection";
+import { researchCaseFixture, selectionRunInputFixture } from "@/mocks/fixtures/selection";
 import { selectionHandlers } from "@/mocks/handlers/selection";
 import { server } from "@/mocks/server";
 import { ContextActionsProvider, type ContextActionsRequest } from "@/providers";
@@ -47,18 +47,18 @@ describe("SelectionWorkspacePage", () => {
 		expect(screen.getByText("0.5400")).toBeInTheDocument();
 		expect(screen.getByRole("link", { name: "贵州茅台" })).toHaveAttribute(
 			"href",
-			"/instruments/600519?tab=technical&selectionRunId=selection-run%3Asha256%3Arun-one",
+			"/instruments/600519?tab=technical&selectionRunId=selection-run%3Asha256%3A1111111111111111111111111111111111111111111111111111111111111111",
 		);
 		await user.click(screen.getByRole("tab", { name: "排除 1" }));
 		expect(screen.getByText("insufficient_liquidity")).toBeInTheDocument();
 		expect(screen.getByRole("link", { name: "邯郸钢铁" })).toHaveAttribute(
 			"href",
-			"/instruments/600001?tab=technical&selectionRunId=selection-run%3Asha256%3Arun-one",
+			"/instruments/600001?tab=technical&selectionRunId=selection-run%3Asha256%3A1111111111111111111111111111111111111111111111111111111111111111",
 		);
 
 		const memo = screen.getByRole("link", { name: "生成 SelectionMemo" });
 		expect(memo).toHaveAttribute("data-context-type", "selection");
-		expect(memo).toHaveAttribute("data-context-id", "selection-run:sha256:run-one");
+		expect(memo).toHaveAttribute("data-context-id", `selection-run:sha256:${"1".repeat(64)}`);
 	});
 
 	it("compares two exact saved runs and labels the source of drift", async () => {
@@ -87,7 +87,37 @@ describe("SelectionWorkspacePage", () => {
 		expect(localStorage.getItem("ditto.selection-run-input.v1")).toContain('"spec_id": "a-share-stock-discovery"');
 		await user.click(screen.getByRole("button", { name: "执行 SelectionRun" }));
 
-		await expect(screen.findByText("已保存 SelectionRun run-one")).resolves.toBeInTheDocument();
+		await expect(screen.findByText("已保存 SelectionRun 111111111111")).resolves.toBeInTheDocument();
+	});
+
+	it("creates a ResearchCase from the exact run with selected candidates and a required objective", async () => {
+		const writeText = vi.fn<(text: string) => Promise<void>>().mockResolvedValue(undefined);
+		const user = userEvent.setup();
+		Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true });
+		let received: { objective: string; candidate_instrument_ids: number[] } | undefined;
+		server.use(
+			http.post("/api/v1/selections/runs/:runId/research-cases", async ({ request }) => {
+				received = (await request.json()) as { objective: string; candidate_instrument_ids: number[] };
+				return HttpResponse.json({ data: { ...researchCaseFixture, ...received } }, { status: 201 });
+			}),
+		);
+		render(<SelectionWorkspacePage />, { wrapper: wrapper() });
+
+		expect(await screen.findByRole("button", { name: "创建研究用例" })).toBeDisabled();
+		await user.type(screen.getByRole("textbox", { name: "研究假设 objective" }), "验证动量因子在食品饮料的持续性");
+		await user.click(screen.getByRole("checkbox", { name: "纳入 600519 贵州茅台" }));
+		await user.click(screen.getByRole("checkbox", { name: "纳入 300750 宁德时代" }));
+		await expect(screen.findByRole("button", { name: "创建研究用例" })).resolves.toBeDisabled();
+		await user.click(screen.getByRole("checkbox", { name: "纳入 600519 贵州茅台" }));
+		await user.click(screen.getByRole("button", { name: "创建研究用例" }));
+
+		await expect(screen.findByText(researchCaseFixture.case_id)).resolves.toBeInTheDocument();
+		expect(received?.candidate_instrument_ids).toEqual([600519]);
+		expect(received?.objective).toBe("验证动量因子在食品饮料的持续性");
+
+		await user.click(screen.getByRole("button", { name: "复制用例 ID" }));
+		expect(writeText).toHaveBeenCalledWith(researchCaseFixture.case_id);
+		expect(screen.getByText("已复制")).toBeInTheDocument();
 	});
 });
 

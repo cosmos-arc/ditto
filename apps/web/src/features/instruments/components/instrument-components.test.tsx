@@ -299,9 +299,12 @@ describe("InstrumentHubPage overlays", () => {
 	});
 
 	it("constrains the technical tab to the object-hub viewport so its evidence remains scrollable", () => {
-		render(<InstrumentHubPage search={{ selectionRunId: "selection-run:sha256:run-one", tab: "technical" }} />, {
-			wrapper: createWrapper(),
-		});
+		render(
+			<InstrumentHubPage search={{ selectionRunId: `selection-run:sha256:${"1".repeat(64)}`, tab: "technical" }} />,
+			{
+				wrapper: createWrapper(),
+			},
+		);
 		expect(screen.getByRole("tabpanel", { name: "技术证据" })).toHaveClass("h-full", "min-h-0", "overflow-hidden");
 	});
 

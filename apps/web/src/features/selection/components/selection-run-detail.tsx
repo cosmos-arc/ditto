@@ -1,6 +1,16 @@
+import { useMutation } from "@tanstack/react-query";
+import { useRef, useState } from "react";
+import { Button } from "@/components/ui/button";
 import { Panel, PanelBody, PanelHeader } from "@/features/shell";
 import { ContextActions } from "@/providers";
-import type { SelectionRun, SelectionRunDiff } from "../api";
+import {
+	type CreateResearchCaseBody,
+	createResearchCase,
+	type SelectionRun,
+	type SelectionRunDiff,
+	selectionKeys,
+} from "../api";
+import { toResearchCaseView } from "../research-case";
 
 function compactIdentity(value: string): string {
 	const [, digest] = value.split(":sha256:");
@@ -9,6 +19,143 @@ function compactIdentity(value: string): string {
 
 function truthLabel(value: boolean, yes: string, no: string): string {
 	return value ? yes : no;
+}
+
+function ResearchCaseCreation({ run }: { readonly run: SelectionRun }) {
+	const [objective, setObjective] = useState("");
+	const [excluded, setExcluded] = useState<readonly number[]>([]);
+	const [copied, setCopied] = useState(false);
+	const [copyError, setCopyError] = useState<string | null>(null);
+	const copiedCaseRef = useRef<string | null>(null);
+	const createCase = useMutation({
+		mutationKey: selectionKeys.researchCases(run.run_id),
+		mutationFn: async (body: CreateResearchCaseBody) =>
+			toResearchCaseView(await createResearchCase(run.run_id, body), run, body),
+		onMutate: () => {
+			setCopied(false);
+			setCopyError(null);
+		},
+	});
+	const view = createCase.data;
+	const selectedIds = run.candidates
+		.filter((candidate) => !excluded.includes(candidate.instrument_id))
+		.map((candidate) => candidate.instrument_id);
+	const canSubmit = objective.trim().length > 0 && selectedIds.length > 0;
+
+	function invalidateCreatedCase(): void {
+		createCase.reset();
+		setCopied(false);
+		setCopyError(null);
+		copiedCaseRef.current = null;
+	}
+
+	async function copyCaseId(): Promise<void> {
+		if (!view) return;
+		const caseId = view.caseId;
+		copiedCaseRef.current = caseId;
+		try {
+			await navigator.clipboard.writeText(caseId);
+			if (copiedCaseRef.current === caseId) {
+				setCopied(true);
+				setCopyError(null);
+			}
+		} catch {
+			if (copiedCaseRef.current === caseId) setCopyError("剪贴板不可用，请手动选择下方用例 ID 复制");
+		}
+	}
+
+	if (run.candidates.length === 0) {
+		return (
+			<p className="text-(--color-foreground-tertiary)">
+				该运行无入选候选，无法创建研究用例（研究用例绑定运行的实际候选范围）。
+			</p>
+		);
+	}
+
+	return (
+		<div className="mt-2 space-y-3 text-xs">
+			{run.candidates.length > 0 && (
+				<fieldset disabled={createCase.isPending} className="space-y-1">
+					<legend className="text-(--color-foreground-tertiary)">
+						候选范围（默认全部 {run.candidates.length} 只入选）
+					</legend>
+					<ul className="grid gap-1 sm:grid-cols-2">
+						{run.candidates.map((candidate) => (
+							<li key={candidate.instrument_id}>
+								<label className="flex items-center gap-2">
+									<input
+										type="checkbox"
+										aria-label={`纳入 ${candidate.instrument_id} ${candidate.instrument_name}`}
+										checked={!excluded.includes(candidate.instrument_id)}
+										onChange={() => {
+											invalidateCreatedCase();
+											setExcluded((current) =>
+												current.includes(candidate.instrument_id)
+													? current.filter((value) => value !== candidate.instrument_id)
+													: [...current, candidate.instrument_id],
+											);
+										}}
+									/>
+									<span>
+										<span className="font-mono">{candidate.instrument_id}</span> · {candidate.instrument_name}
+									</span>
+								</label>
+							</li>
+						))}
+					</ul>
+				</fieldset>
+			)}
+			<label className="grid gap-1">
+				研究假设 objective
+				<input
+					aria-label="研究假设 objective"
+					className="rounded-(--radius-sm) border border-(--color-border-primary) bg-(--color-surface-1) px-2 py-1.5 text-xs text-(--color-foreground)"
+					disabled={createCase.isPending}
+					placeholder="该运行要验证什么假设？"
+					value={objective}
+					onChange={(event) => {
+						invalidateCreatedCase();
+						setObjective(event.currentTarget.value);
+					}}
+				/>
+			</label>
+			<div className="flex items-center gap-2">
+				<Button
+					type="button"
+					disabled={createCase.isPending || !canSubmit}
+					onClick={() => createCase.mutate({ candidate_instrument_ids: selectedIds, objective: objective.trim() })}
+				>
+					{createCase.isPending ? "创建中…" : "创建研究用例"}
+				</Button>
+				{view && (
+					<Button type="button" variant="outline" onClick={() => void copyCaseId()}>
+						{copied ? "已复制" : "复制用例 ID"}
+					</Button>
+				)}
+			</div>
+			{createCase.isError && (
+				<p role="alert" className="text-(--color-risk-critical-fg)">
+					{createCase.error.message}
+				</p>
+			)}
+			{copyError && (
+				<p role="alert" className="text-(--color-risk-critical-fg)">
+					{copyError}
+				</p>
+			)}
+			{view && (
+				<p
+					role="status"
+					className="break-all rounded-(--radius-sm) border border-(--color-border-subtle) bg-(--color-surface-1) p-2"
+				>
+					<span className="font-mono">{view.caseId}</span>
+					<span className="ml-2 text-(--color-foreground-tertiary)">
+						{view.degraded ? `降级 · 缺输入：${view.missingInputs || "未声明"}` : "就绪"}
+					</span>
+				</p>
+			)}
+		</div>
+	);
 }
 
 export function SelectionRunDetail({
@@ -92,6 +239,16 @@ export function SelectionRunDetail({
 									Paper
 								</a>
 							</div>
+						</section>
+
+						<section aria-labelledby="selection-research-case" className="border-t border-(--color-border-subtle) pt-4">
+							<h3
+								id="selection-research-case"
+								className="text-xs font-semibold tracking-wide text-(--color-foreground-secondary)"
+							>
+								创建研究用例
+							</h3>
+							<ResearchCaseCreation key={run.run_id} run={run} />
 						</section>
 
 						<section aria-labelledby="selection-agent" className="border-t border-(--color-border-subtle) pt-4">
