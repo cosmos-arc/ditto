@@ -4,7 +4,11 @@ from dataclasses import dataclass
 
 import polars as pl
 from ditto_data.catalog.metadata import default_dataset_metadata
-from ditto_data.catalog.snapshot_reader import SnapshotContents, SnapshotReadService
+from ditto_data.catalog.snapshot_reader import (
+    SnapshotContents,
+    SnapshotReadService,
+    SourceTickerResolver,
+)
 
 from ditto_application.exceptions import AppQueryError
 from ditto_application.queries.field_admission import (
@@ -12,6 +16,8 @@ from ditto_application.queries.field_admission import (
     FieldAdmissionReport,
     FieldAdmissionRequest,
 )
+
+__all__ = ["ProviderSnapshotQuery", "SnapshotReplay"]
 
 
 @dataclass(frozen=True, slots=True)
@@ -26,10 +32,15 @@ class ProviderSnapshotQuery:
     """Keep audit access distinct from permission to start new research."""
 
     def __init__(
-        self, reader: SnapshotReadService, admission: FieldAdmissionQuery
+        self,
+        reader: SnapshotReadService,
+        admission: FieldAdmissionQuery,
+        *,
+        ticker_resolver: SourceTickerResolver | None = None,
     ) -> None:
         self._reader = reader
         self._admission = admission
+        self._ticker_resolver = ticker_resolver
 
     def read_for_audit(self, snapshot_id: str) -> SnapshotContents:
         """Read exact completed bytes without claiming current research eligibility."""
@@ -60,6 +71,8 @@ class ProviderSnapshotQuery:
                     columns,
                     instrument_ids=request.instrument_ids,
                     date_range=(request.required_from, request.required_to),
+                    knowledge_cutoff=request.knowledge_cutoff,
+                    ticker_resolver=self._ticker_resolver,
                 )
             except ValueError as error:
                 raise AppQueryError(str(error)) from error

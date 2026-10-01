@@ -1,0 +1,173 @@
+{
+  "checked_at": "2026-10-01T07:41:38.155411+00:00",
+  "consumer": "catalog-backed DataProvider bars read model (real DI container)",
+  "read": {
+    "reader": "ServiceBackedDataProvider.get_bars",
+    "window": {
+      "from": "2026-09-01",
+      "to": "2026-09-29"
+    },
+    "requested_instruments": 5581,
+    "returned_instruments": 5571,
+    "rows": 111148,
+    "trade_dates": 20,
+    "columns": [
+      "source_ticker",
+      "trade_date",
+      "knowledge_date",
+      "open",
+      "high",
+      "low",
+      "close",
+      "pre_close",
+      "volume",
+      "amount",
+      "pct_change",
+      "instrument_id",
+      "source",
+      "source_snapshot_id"
+    ]
+  },
+  "field_inputs": [
+    {
+      "consumer_field": "bars.open",
+      "reader": "ServiceBackedDataProvider.get_bars",
+      "dataset_id": "stock_daily",
+      "window": {
+        "from": "2026-09-01",
+        "to": "2026-09-29"
+      },
+      "instrument_count": 5571,
+      "rows": 111148,
+      "frame_columns": [
+        "source_ticker",
+        "trade_date",
+        "knowledge_date",
+        "open",
+        "high",
+        "low",
+        "close",
+        "pre_close",
+        "volume",
+        "amount",
+        "pct_change",
+        "instrument_id",
+        "source",
+        "source_snapshot_id"
+      ],
+      "frame_sample_sha256": "d196a99cb864bca102a164d734666acbc8f0b371affb98cff88f182256b11dbe"
+    },
+    {
+      "consumer_field": "bars.high",
+      "reader": "ServiceBackedDataProvider.get_bars",
+      "dataset_id": "stock_daily",
+      "window": {
+        "from": "2026-09-01",
+        "to": "2026-09-29"
+      },
+      "instrument_count": 5571,
+      "rows": 111148,
+      "frame_columns": [
+        "source_ticker",
+        "trade_date",
+        "knowledge_date",
+        "open",
+        "high",
+        "low",
+        "close",
+        "pre_close",
+        "volume",
+        "amount",
+        "pct_change",
+        "instrument_id",
+        "source",
+        "source_snapshot_id"
+      ],
+      "frame_sample_sha256": "d196a99cb864bca102a164d734666acbc8f0b371affb98cff88f182256b11dbe"
+    },
+    {
+      "consumer_field": "bars.low",
+      "reader": "ServiceBackedDataProvider.get_bars",
+      "dataset_id": "stock_daily",
+      "window": {
+        "from": "2026-09-01",
+        "to": "2026-09-29"
+      },
+      "instrument_count": 5571,
+      "rows": 111148,
+      "frame_columns": [
+        "source_ticker",
+        "trade_date",
+        "knowledge_date",
+        "open",
+        "high",
+        "low",
+        "close",
+        "pre_close",
+        "volume",
+        "amount",
+        "pct_change",
+        "instrument_id",
+        "source",
+        "source_snapshot_id"
+      ],
+      "frame_sample_sha256": "d196a99cb864bca102a164d734666acbc8f0b371affb98cff88f182256b11dbe"
+    },
+    {
+      "consumer_field": "bars.close",
+      "reader": "ServiceBackedDataProvider.get_bars",
+      "dataset_id": "stock_daily",
+      "window": {
+        "from": "2026-09-01",
+        "to": "2026-09-29"
+      },
+      "instrument_count": 5571,
+      "rows": 111148,
+      "frame_columns": [
+        "source_ticker",
+        "trade_date",
+        "knowledge_date",
+        "open",
+        "high",
+        "low",
+        "close",
+        "pre_close",
+        "volume",
+        "amount",
+        "pct_change",
+        "instrument_id",
+        "source",
+        "source_snapshot_id"
+      ],
+      "frame_sample_sha256": "d196a99cb864bca102a164d734666acbc8f0b371affb98cff88f182256b11dbe"
+    },
+    {
+      "consumer_field": "bars.volume",
+      "reader": "ServiceBackedDataProvider.get_bars",
+      "dataset_id": "stock_daily",
+      "window": {
+        "from": "2026-09-01",
+        "to": "2026-09-29"
+      },
+      "instrument_count": 5571,
+      "rows": 111148,
+      "frame_columns": [
+        "source_ticker",
+        "trade_date",
+        "knowledge_date",
+        "open",
+        "high",
+        "low",
+        "close",
+        "pre_close",
+        "volume",
+        "amount",
+        "pct_change",
+        "instrument_id",
+        "source",
+        "source_snapshot_id"
+      ],
+      "frame_sample_sha256": "d196a99cb864bca102a164d734666acbc8f0b371affb98cff88f182256b11dbe"
+    }
+  ]
+}

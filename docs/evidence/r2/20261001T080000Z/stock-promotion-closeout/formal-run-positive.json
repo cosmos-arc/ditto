@@ -1,0 +1,9 @@
+{
+  "checked_at": "2026-10-01T08:46:30.770118+00:00",
+  "case": "positive: fundamentals-free momentum strategy runs without bypass",
+  "strategy_id": "stock_momentum_selection_196b2",
+  "trade_date": "2026-09-29",
+  "allow_experimental_data": false,
+  "exit_code": 0,
+  "output_tail": "run_id=9b8295e4 strategy_id=stock_momentum_selection_196b2 trade_date=2026-09-29 mode=recommendation\n"
+}

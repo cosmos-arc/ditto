@@ -1,0 +1,1287 @@
+{
+  "request": {
+    "fields": [
+      {
+        "dataset_id": "stock_daily",
+        "field": "close",
+        "snapshot_id": "snapshot:tushare:stock_daily:sha256:51b5275da43ecc6826b15d2763362cbfa62993a4155d82c7b5f3acdd8fd26dc5",
+        "consumer_field": "bars.close",
+        "consumer_input_hash": "bf0769f31da81bfbb2ecf975172c21e0392a3d15175a22c30f9d740a00bbae8b"
+      },
+      {
+        "dataset_id": "stock_daily",
+        "field": "volume",
+        "snapshot_id": "snapshot:tushare:stock_daily:sha256:51b5275da43ecc6826b15d2763362cbfa62993a4155d82c7b5f3acdd8fd26dc5",
+        "consumer_field": "bars.volume",
+        "consumer_input_hash": "932e2baef1895541313cb0c42d2881ce4b69c6e9bb97d78172d9305b81c7f54b"
+      }
+    ],
+    "instrument_ids": [
+      1000001,
+      1000002,
+      1000003,
+      1000004,
+      1000005,
+      1000006,
+      1000007,
+      1000008,
+      1000009,
+      1000010
+    ],
+    "required_from": "2026-09-01",
+    "required_to": "2026-09-29",
+    "knowledge_cutoff": "2026-10-01T07:48:52.499454+00:00",
+    "publication_cutoff": "2026-10-01T07:48:52.499454+00:00",
+    "purpose": "display",
+    "profile": "selection-fields-v1"
+  },
+  "admission": {
+    "allowed": true,
+    "purpose": "display",
+    "fields": [
+      {
+        "dataset_id": "stock_daily",
+        "field": "close",
+        "snapshot_id": "snapshot:tushare:stock_daily:sha256:51b5275da43ecc6826b15d2763362cbfa62993a4155d82c7b5f3acdd8fd26dc5",
+        "consumer_field": "bars.close",
+        "allowed_uses": [
+          "display",
+          "exploration",
+          "formal_research",
+          "promotion_paper"
+        ],
+        "reason_codes": [],
+        "license_record_id": "license:tushare:stock_daily:sha256:e8889ac3a277e8c78ce656b2c81c0b91a7e8e826b842885d2e8632dd54cf62c7",
+        "certification_report_id": "certification:dc79cfd58598a6ccda3fb76c5b72a9b1541638ca7f5bc0be61c8345f39e7038f",
+        "covered_from": "2026-09-01",
+        "covered_to": "2026-09-29",
+        "time_precision": "date",
+        "evidence_uri": "artifact://r2/20261001T080000Z/stock-promotion-closeout/consumer-read-stock_daily.json"
+      },
+      {
+        "dataset_id": "stock_daily",
+        "field": "volume",
+        "snapshot_id": "snapshot:tushare:stock_daily:sha256:51b5275da43ecc6826b15d2763362cbfa62993a4155d82c7b5f3acdd8fd26dc5",
+        "consumer_field": "bars.volume",
+        "allowed_uses": [
+          "display",
+          "exploration",
+          "formal_research",
+          "promotion_paper"
+        ],
+        "reason_codes": [],
+        "license_record_id": "license:tushare:stock_daily:sha256:e8889ac3a277e8c78ce656b2c81c0b91a7e8e826b842885d2e8632dd54cf62c7",
+        "certification_report_id": "certification:dc79cfd58598a6ccda3fb76c5b72a9b1541638ca7f5bc0be61c8345f39e7038f",
+        "covered_from": "2026-09-01",
+        "covered_to": "2026-09-29",
+        "time_precision": "date",
+        "evidence_uri": "artifact://r2/20261001T080000Z/stock-promotion-closeout/consumer-read-stock_daily.json"
+      }
+    ],
+    "rule_version": "field-admission-v2"
+  },
+  "snapshots": {
+    "snapshot:tushare:stock_daily:sha256:51b5275da43ecc6826b15d2763362cbfa62993a4155d82c7b5f3acdd8fd26dc5": [
+      {
+        "source_ticker": "000009.SZ",
+        "trade_date": "2026-09-01",
+        "close": 7.19,
+        "volume": 184707.66
+      },
+      {
+        "source_ticker": "000007.SZ",
+        "trade_date": "2026-09-01",
+        "close": 12.86,
+        "volume": 58392.0
+      },
+      {
+        "source_ticker": "000002.SZ",
+        "trade_date": "2026-09-01",
+        "close": 3.16,
+        "volume": 1716249.18
+      },
+      {
+        "source_ticker": "000006.SZ",
+        "trade_date": "2026-09-01",
+        "close": 7.2,
+        "volume": 221708.76
+      },
+      {
+        "source_ticker": "000014.SZ",
+        "trade_date": "2026-09-01",
+        "close": 10.95,
+        "volume": 114612.67
+      },
+      {
+        "source_ticker": "000012.SZ",
+        "trade_date": "2026-09-01",
+        "close": 3.76,
+        "volume": 177200.53
+      },
+      {
+        "source_ticker": "000010.SZ",
+        "trade_date": "2026-09-01",
+        "close": 1.67,
+        "volume": 228716.0
+      },
+      {
+        "source_ticker": "000008.SZ",
+        "trade_date": "2026-09-01",
+        "close": 2.56,
+        "volume": 355925.08
+      },
+      {
+        "source_ticker": "000011.SZ",
+        "trade_date": "2026-09-01",
+        "close": 9.16,
+        "volume": 550532.83
+      },
+      {
+        "source_ticker": "000001.SZ",
+        "trade_date": "2026-09-01",
+        "close": 11.92,
+        "volume": 1523164.53
+      },
+      {
+        "source_ticker": "000012.SZ",
+        "trade_date": "2026-09-02",
+        "close": 3.74,
+        "volume": 156354.0
+      },
+      {
+        "source_ticker": "000002.SZ",
+        "trade_date": "2026-09-02",
+        "close": 3.08,
+        "volume": 1535339.4
+      },
+      {
+        "source_ticker": "000001.SZ",
+        "trade_date": "2026-09-02",
+        "close": 11.91,
+        "volume": 892247.52
+      },
+      {
+        "source_ticker": "000007.SZ",
+        "trade_date": "2026-09-02",
+        "close": 12.93,
+        "volume": 94095.0
+      },
+      {
+        "source_ticker": "000014.SZ",
+        "trade_date": "2026-09-02",
+        "close": 10.76,
+        "volume": 76632.69
+      },
+      {
+        "source_ticker": "000009.SZ",
+        "trade_date": "2026-09-02",
+        "close": 7.2,
+        "volume": 202795.8
+      },
+      {
+        "source_ticker": "000011.SZ",
+        "trade_date": "2026-09-02",
+        "close": 8.69,
+        "volume": 416581.87
+      },
+      {
+        "source_ticker": "000006.SZ",
+        "trade_date": "2026-09-02",
+        "close": 7.04,
+        "volume": 156452.83
+      },
+      {
+        "source_ticker": "000008.SZ",
+        "trade_date": "2026-09-02",
+        "close": 2.53,
+        "volume": 258936.0
+      },
+      {
+        "source_ticker": "000010.SZ",
+        "trade_date": "2026-09-02",
+        "close": 1.65,
+        "volume": 150831.0
+      },
+      {
+        "source_ticker": "000010.SZ",
+        "trade_date": "2026-09-03",
+        "close": 1.65,
+        "volume": 183295.03
+      },
+      {
+        "source_ticker": "000006.SZ",
+        "trade_date": "2026-09-03",
+        "close": 6.98,
+        "volume": 127671.67
+      },
+      {
+        "source_ticker": "000002.SZ",
+        "trade_date": "2026-09-03",
+        "close": 3.14,
+        "volume": 1966036.46
+      },
+      {
+        "source_ticker": "000008.SZ",
+        "trade_date": "2026-09-03",
+        "close": 2.49,
+        "volume": 286987.5
+      },
+      {
+        "source_ticker": "000014.SZ",
+        "trade_date": "2026-09-03",
+        "close": 10.57,
+        "volume": 57558.81
+      },
+      {
+        "source_ticker": "000007.SZ",
+        "trade_date": "2026-09-03",
+        "close": 12.5,
+        "volume": 104389.0
+      },
+      {
+        "source_ticker": "000011.SZ",
+        "trade_date": "2026-09-03",
+        "close": 8.35,
+        "volume": 305654.13
+      },
+      {
+        "source_ticker": "000009.SZ",
+        "trade_date": "2026-09-03",
+        "close": 7.11,
+        "volume": 133442.76
+      },
+      {
+        "source_ticker": "000001.SZ",
+        "trade_date": "2026-09-03",
+        "close": 11.88,
+        "volume": 1105134.39
+      },
+      {
+        "source_ticker": "000012.SZ",
+        "trade_date": "2026-09-03",
+        "close": 3.71,
+        "volume": 105690.2
+      },
+      {
+        "source_ticker": "000008.SZ",
+        "trade_date": "2026-09-04",
+        "close": 2.49,
+        "volume": 266272.56
+      },
+      {
+        "source_ticker": "000009.SZ",
+        "trade_date": "2026-09-04",
+        "close": 7.07,
+        "volume": 165200.56
+      },
+      {
+        "source_ticker": "000012.SZ",
+        "trade_date": "2026-09-04",
+        "close": 3.72,
+        "volume": 189628.0
+      },
+      {
+        "source_ticker": "000002.SZ",
+        "trade_date": "2026-09-04",
+        "close": 3.24,
+        "volume": 2723794.74
+      },
+      {
+        "source_ticker": "000006.SZ",
+        "trade_date": "2026-09-04",
+        "close": 7.01,
+        "volume": 185097.73
+      },
+      {
+        "source_ticker": "000007.SZ",
+        "trade_date": "2026-09-04",
+        "close": 12.42,
+        "volume": 63890.0
+      },
+      {
+        "source_ticker": "000011.SZ",
+        "trade_date": "2026-09-04",
+        "close": 8.5,
+        "volume": 336047.33
+      },
+      {
+        "source_ticker": "000001.SZ",
+        "trade_date": "2026-09-04",
+        "close": 11.89,
+        "volume": 814372.95
+      },
+      {
+        "source_ticker": "000014.SZ",
+        "trade_date": "2026-09-04",
+        "close": 10.53,
+        "volume": 50441.0
+      },
+      {
+        "source_ticker": "000010.SZ",
+        "trade_date": "2026-09-04",
+        "close": 1.72,
+        "volume": 317501.0
+      },
+      {
+        "source_ticker": "000009.SZ",
+        "trade_date": "2026-09-07",
+        "close": 7.06,
+        "volume": 121593.16
+      },
+      {
+        "source_ticker": "000010.SZ",
+        "trade_date": "2026-09-07",
+        "close": 1.71,
+        "volume": 190487.0
+      },
+      {
+        "source_ticker": "000006.SZ",
+        "trade_date": "2026-09-07",
+        "close": 7.11,
+        "volume": 110904.67
+      },
+      {
+        "source_ticker": "000001.SZ",
+        "trade_date": "2026-09-07",
+        "close": 11.7,
+        "volume": 1087275.52
+      },
+      {
+        "source_ticker": "000014.SZ",
+        "trade_date": "2026-09-07",
+        "close": 10.58,
+        "volume": 45920.0
+      },
+      {
+        "source_ticker": "000002.SZ",
+        "trade_date": "2026-09-07",
+        "close": 3.19,
+        "volume": 1401215.95
+      },
+      {
+        "source_ticker": "000007.SZ",
+        "trade_date": "2026-09-07",
+        "close": 11.5,
+        "volume": 206591.5
+      },
+      {
+        "source_ticker": "000011.SZ",
+        "trade_date": "2026-09-07",
+        "close": 8.63,
+        "volume": 204917.8
+      },
+      {
+        "source_ticker": "000012.SZ",
+        "trade_date": "2026-09-07",
+        "close": 3.74,
+        "volume": 146644.9
+      },
+      {
+        "source_ticker": "000008.SZ",
+        "trade_date": "2026-09-07",
+        "close": 2.49,
+        "volume": 146486.56
+      },
+      {
+        "source_ticker": "000002.SZ",
+        "trade_date": "2026-09-08",
+        "close": 3.27,
+        "volume": 1686731.62
+      },
+      {
+        "source_ticker": "000010.SZ",
+        "trade_date": "2026-09-08",
+        "close": 1.78,
+        "volume": 266272.0
+      },
+      {
+        "source_ticker": "000009.SZ",
+        "trade_date": "2026-09-08",
+        "close": 7.13,
+        "volume": 126868.79
+      },
+      {
+        "source_ticker": "000008.SZ",
+        "trade_date": "2026-09-08",
+        "close": 2.54,
+        "volume": 274581.0
+      },
+      {
+        "source_ticker": "000012.SZ",
+        "trade_date": "2026-09-08",
+        "close": 3.8,
+        "volume": 245665.19
+      },
+      {
+        "source_ticker": "000007.SZ",
+        "trade_date": "2026-09-08",
+        "close": 11.68,
+        "volume": 109514.5
+      },
+      {
+        "source_ticker": "000011.SZ",
+        "trade_date": "2026-09-08",
+        "close": 9.49,
+        "volume": 347923.57
+      },
+      {
+        "source_ticker": "000006.SZ",
+        "trade_date": "2026-09-08",
+        "close": 7.36,
+        "volume": 291656.23
+      },
+      {
+        "source_ticker": "000014.SZ",
+        "trade_date": "2026-09-08",
+        "close": 11.05,
+        "volume": 105225.61
+      },
+      {
+        "source_ticker": "000001.SZ",
+        "trade_date": "2026-09-08",
+        "close": 11.78,
+        "volume": 740515.97
+      },
+      {
+        "source_ticker": "000007.SZ",
+        "trade_date": "2026-09-09",
+        "close": 11.77,
+        "volume": 77546.0
+      },
+      {
+        "source_ticker": "000001.SZ",
+        "trade_date": "2026-09-09",
+        "close": 11.7,
+        "volume": 582305.98
+      },
+      {
+        "source_ticker": "000009.SZ",
+        "trade_date": "2026-09-09",
+        "close": 7.11,
+        "volume": 98606.98
+      },
+      {
+        "source_ticker": "000011.SZ",
+        "trade_date": "2026-09-09",
+        "close": 9.18,
+        "volume": 314538.98
+      },
+      {
+        "source_ticker": "000014.SZ",
+        "trade_date": "2026-09-09",
+        "close": 10.86,
+        "volume": 78599.85
+      },
+      {
+        "source_ticker": "000002.SZ",
+        "trade_date": "2026-09-09",
+        "close": 3.19,
+        "volume": 1128497.58
+      },
+      {
+        "source_ticker": "000008.SZ",
+        "trade_date": "2026-09-09",
+        "close": 2.5,
+        "volume": 257879.97
+      },
+      {
+        "source_ticker": "000006.SZ",
+        "trade_date": "2026-09-09",
+        "close": 7.19,
+        "volume": 161200.31
+      },
+      {
+        "source_ticker": "000012.SZ",
+        "trade_date": "2026-09-09",
+        "close": 3.77,
+        "volume": 130041.19
+      },
+      {
+        "source_ticker": "000010.SZ",
+        "trade_date": "2026-09-09",
+        "close": 1.69,
+        "volume": 307043.0
+      },
+      {
+        "source_ticker": "000007.SZ",
+        "trade_date": "2026-09-10",
+        "close": 10.97,
+        "volume": 101382.0
+      },
+      {
+        "source_ticker": "000002.SZ",
+        "trade_date": "2026-09-10",
+        "close": 3.16,
+        "volume": 1010441.22
+      },
+      {
+        "source_ticker": "000012.SZ",
+        "trade_date": "2026-09-10",
+        "close": 3.78,
+        "volume": 204983.04
+      },
+      {
+        "source_ticker": "000006.SZ",
+        "trade_date": "2026-09-10",
+        "close": 7.07,
+        "volume": 118703.28
+      },
+      {
+        "source_ticker": "000001.SZ",
+        "trade_date": "2026-09-10",
+        "close": 11.85,
+        "volume": 867632.22
+      },
+      {
+        "source_ticker": "000011.SZ",
+        "trade_date": "2026-09-10",
+        "close": 9.11,
+        "volume": 176226.1
+      },
+      {
+        "source_ticker": "000010.SZ",
+        "trade_date": "2026-09-10",
+        "close": 1.71,
+        "volume": 296087.0
+      },
+      {
+        "source_ticker": "000008.SZ",
+        "trade_date": "2026-09-10",
+        "close": 2.49,
+        "volume": 225577.0
+      },
+      {
+        "source_ticker": "000014.SZ",
+        "trade_date": "2026-09-10",
+        "close": 10.58,
+        "volume": 46934.2
+      },
+      {
+        "source_ticker": "000009.SZ",
+        "trade_date": "2026-09-10",
+        "close": 7.01,
+        "volume": 109261.37
+      },
+      {
+        "source_ticker": "000006.SZ",
+        "trade_date": "2026-09-11",
+        "close": 6.85,
+        "volume": 163370.0
+      },
+      {
+        "source_ticker": "000009.SZ",
+        "trade_date": "2026-09-11",
+        "close": 6.89,
+        "volume": 166186.72
+      },
+      {
+        "source_ticker": "000001.SZ",
+        "trade_date": "2026-09-11",
+        "close": 11.74,
+        "volume": 832460.84
+      },
+      {
+        "source_ticker": "000014.SZ",
+        "trade_date": "2026-09-11",
+        "close": 10.3,
+        "volume": 55867.01
+      },
+      {
+        "source_ticker": "000012.SZ",
+        "trade_date": "2026-09-11",
+        "close": 3.83,
+        "volume": 367740.73
+      },
+      {
+        "source_ticker": "000007.SZ",
+        "trade_date": "2026-09-11",
+        "close": 10.99,
+        "volume": 103690.0
+      },
+      {
+        "source_ticker": "000002.SZ",
+        "trade_date": "2026-09-11",
+        "close": 3.06,
+        "volume": 1661997.9
+      },
+      {
+        "source_ticker": "000008.SZ",
+        "trade_date": "2026-09-11",
+        "close": 2.46,
+        "volume": 310855.91
+      },
+      {
+        "source_ticker": "000010.SZ",
+        "trade_date": "2026-09-11",
+        "close": 1.72,
+        "volume": 253757.0
+      },
+      {
+        "source_ticker": "000011.SZ",
+        "trade_date": "2026-09-11",
+        "close": 8.82,
+        "volume": 147659.52
+      },
+      {
+        "source_ticker": "000011.SZ",
+        "trade_date": "2026-09-14",
+        "close": 8.58,
+        "volume": 139298.0
+      },
+      {
+        "source_ticker": "000006.SZ",
+        "trade_date": "2026-09-14",
+        "close": 6.79,
+        "volume": 78903.32
+      },
+      {
+        "source_ticker": "000012.SZ",
+        "trade_date": "2026-09-14",
+        "close": 3.77,
+        "volume": 220878.28
+      },
+      {
+        "source_ticker": "000002.SZ",
+        "trade_date": "2026-09-14",
+        "close": 3.05,
+        "volume": 720262.65
+      },
+      {
+        "source_ticker": "000001.SZ",
+        "trade_date": "2026-09-14",
+        "close": 11.85,
+        "volume": 741248.02
+      },
+      {
+        "source_ticker": "000010.SZ",
+        "trade_date": "2026-09-14",
+        "close": 1.72,
+        "volume": 207360.0
+      },
+      {
+        "source_ticker": "000014.SZ",
+        "trade_date": "2026-09-14",
+        "close": 10.27,
+        "volume": 39385.0
+      },
+      {
+        "source_ticker": "000008.SZ",
+        "trade_date": "2026-09-14",
+        "close": 2.46,
+        "volume": 207241.0
+      },
+      {
+        "source_ticker": "000009.SZ",
+        "trade_date": "2026-09-14",
+        "close": 6.94,
+        "volume": 87451.52
+      },
+      {
+        "source_ticker": "000007.SZ",
+        "trade_date": "2026-09-14",
+        "close": 10.99,
+        "volume": 61900.0
+      },
+      {
+        "source_ticker": "000014.SZ",
+        "trade_date": "2026-09-15",
+        "close": 9.97,
+        "volume": 46376.28
+      },
+      {
+        "source_ticker": "000002.SZ",
+        "trade_date": "2026-09-15",
+        "close": 3.02,
+        "volume": 702047.93
+      },
+      {
+        "source_ticker": "000010.SZ",
+        "trade_date": "2026-09-15",
+        "close": 1.58,
+        "volume": 292727.0
+      },
+      {
+        "source_ticker": "000009.SZ",
+        "trade_date": "2026-09-15",
+        "close": 6.91,
+        "volume": 109402.13
+      },
+      {
+        "source_ticker": "000007.SZ",
+        "trade_date": "2026-09-15",
+        "close": 10.91,
+        "volume": 54711.0
+      },
+      {
+        "source_ticker": "000006.SZ",
+        "trade_date": "2026-09-15",
+        "close": 6.63,
+        "volume": 93696.07
+      },
+      {
+        "source_ticker": "000008.SZ",
+        "trade_date": "2026-09-15",
+        "close": 2.39,
+        "volume": 328888.0
+      },
+      {
+        "source_ticker": "000012.SZ",
+        "trade_date": "2026-09-15",
+        "close": 3.71,
+        "volume": 214938.89
+      },
+      {
+        "source_ticker": "000011.SZ",
+        "trade_date": "2026-09-15",
+        "close": 8.27,
+        "volume": 148054.0
+      },
+      {
+        "source_ticker": "000001.SZ",
+        "trade_date": "2026-09-15",
+        "close": 11.82,
+        "volume": 755251.46
+      },
+      {
+        "source_ticker": "000001.SZ",
+        "trade_date": "2026-09-16",
+        "close": 11.7,
+        "volume": 949626.32
+      },
+      {
+        "source_ticker": "000010.SZ",
+        "trade_date": "2026-09-16",
+        "close": 1.57,
+        "volume": 172848.04
+      },
+      {
+        "source_ticker": "000011.SZ",
+        "trade_date": "2026-09-16",
+        "close": 8.39,
+        "volume": 105247.0
+      },
+      {
+        "source_ticker": "000009.SZ",
+        "trade_date": "2026-09-16",
+        "close": 6.97,
+        "volume": 118196.89
+      },
+      {
+        "source_ticker": "000012.SZ",
+        "trade_date": "2026-09-16",
+        "close": 3.73,
+        "volume": 225124.27
+      },
+      {
+        "source_ticker": "000006.SZ",
+        "trade_date": "2026-09-16",
+        "close": 6.74,
+        "volume": 101277.11
+      },
+      {
+        "source_ticker": "000002.SZ",
+        "trade_date": "2026-09-16",
+        "close": 3.03,
+        "volume": 649775.76
+      },
+      {
+        "source_ticker": "000014.SZ",
+        "trade_date": "2026-09-16",
+        "close": 10.05,
+        "volume": 37119.0
+      },
+      {
+        "source_ticker": "000007.SZ",
+        "trade_date": "2026-09-16",
+        "close": 11.19,
+        "volume": 56055.99
+      },
+      {
+        "source_ticker": "000008.SZ",
+        "trade_date": "2026-09-16",
+        "close": 2.4,
+        "volume": 188684.0
+      },
+      {
+        "source_ticker": "000014.SZ",
+        "trade_date": "2026-09-17",
+        "close": 10.19,
+        "volume": 50113.04
+      },
+      {
+        "source_ticker": "000009.SZ",
+        "trade_date": "2026-09-17",
+        "close": 6.9,
+        "volume": 87799.54
+      },
+      {
+        "source_ticker": "000008.SZ",
+        "trade_date": "2026-09-17",
+        "close": 2.4,
+        "volume": 211264.0
+      },
+      {
+        "source_ticker": "000011.SZ",
+        "trade_date": "2026-09-17",
+        "close": 8.93,
+        "volume": 177337.05
+      },
+      {
+        "source_ticker": "000007.SZ",
+        "trade_date": "2026-09-17",
+        "close": 11.31,
+        "volume": 67308.99
+      },
+      {
+        "source_ticker": "000006.SZ",
+        "trade_date": "2026-09-17",
+        "close": 6.87,
+        "volume": 130855.24
+      },
+      {
+        "source_ticker": "000001.SZ",
+        "trade_date": "2026-09-17",
+        "close": 11.61,
+        "volume": 691925.35
+      },
+      {
+        "source_ticker": "000012.SZ",
+        "trade_date": "2026-09-17",
+        "close": 3.75,
+        "volume": 311217.22
+      },
+      {
+        "source_ticker": "000002.SZ",
+        "trade_date": "2026-09-17",
+        "close": 3.02,
+        "volume": 553289.76
+      },
+      {
+        "source_ticker": "000010.SZ",
+        "trade_date": "2026-09-17",
+        "close": 1.56,
+        "volume": 128715.07
+      },
+      {
+        "source_ticker": "000011.SZ",
+        "trade_date": "2026-09-18",
+        "close": 9.14,
+        "volume": 164205.21
+      },
+      {
+        "source_ticker": "000007.SZ",
+        "trade_date": "2026-09-18",
+        "close": 11.33,
+        "volume": 53990.0
+      },
+      {
+        "source_ticker": "000001.SZ",
+        "trade_date": "2026-09-18",
+        "close": 11.7,
+        "volume": 853037.79
+      },
+      {
+        "source_ticker": "000010.SZ",
+        "trade_date": "2026-09-18",
+        "close": 1.58,
+        "volume": 139141.52
+      },
+      {
+        "source_ticker": "000009.SZ",
+        "trade_date": "2026-09-18",
+        "close": 7.0,
+        "volume": 120184.28
+      },
+      {
+        "source_ticker": "000008.SZ",
+        "trade_date": "2026-09-18",
+        "close": 2.4,
+        "volume": 184366.0
+      },
+      {
+        "source_ticker": "000002.SZ",
+        "trade_date": "2026-09-18",
+        "close": 3.32,
+        "volume": 4408252.7
+      },
+      {
+        "source_ticker": "000014.SZ",
+        "trade_date": "2026-09-18",
+        "close": 10.45,
+        "volume": 52385.0
+      },
+      {
+        "source_ticker": "000006.SZ",
+        "trade_date": "2026-09-18",
+        "close": 7.06,
+        "volume": 149390.81
+      },
+      {
+        "source_ticker": "000012.SZ",
+        "trade_date": "2026-09-18",
+        "close": 3.72,
+        "volume": 213124.88
+      },
+      {
+        "source_ticker": "000008.SZ",
+        "trade_date": "2026-09-21",
+        "close": 2.44,
+        "volume": 297916.0
+      },
+      {
+        "source_ticker": "000007.SZ",
+        "trade_date": "2026-09-21",
+        "close": 11.63,
+        "volume": 55500.0
+      },
+      {
+        "source_ticker": "000001.SZ",
+        "trade_date": "2026-09-21",
+        "close": 11.73,
+        "volume": 817555.31
+      },
+      {
+        "source_ticker": "000011.SZ",
+        "trade_date": "2026-09-21",
+        "close": 9.66,
+        "volume": 220932.9
+      },
+      {
+        "source_ticker": "000009.SZ",
+        "trade_date": "2026-09-21",
+        "close": 7.03,
+        "volume": 126182.48
+      },
+      {
+        "source_ticker": "000012.SZ",
+        "trade_date": "2026-09-21",
+        "close": 3.78,
+        "volume": 237669.49
+      },
+      {
+        "source_ticker": "000014.SZ",
+        "trade_date": "2026-09-21",
+        "close": 10.97,
+        "volume": 97465.0
+      },
+      {
+        "source_ticker": "000006.SZ",
+        "trade_date": "2026-09-21",
+        "close": 7.19,
+        "volume": 228848.44
+      },
+      {
+        "source_ticker": "000010.SZ",
+        "trade_date": "2026-09-21",
+        "close": 1.6,
+        "volume": 114754.2
+      },
+      {
+        "source_ticker": "000002.SZ",
+        "trade_date": "2026-09-21",
+        "close": 3.65,
+        "volume": 8344266.08
+      },
+      {
+        "source_ticker": "000011.SZ",
+        "trade_date": "2026-09-22",
+        "close": 9.62,
+        "volume": 155696.57
+      },
+      {
+        "source_ticker": "000014.SZ",
+        "trade_date": "2026-09-22",
+        "close": 10.87,
+        "volume": 65036.2
+      },
+      {
+        "source_ticker": "000001.SZ",
+        "trade_date": "2026-09-22",
+        "close": 11.71,
+        "volume": 759457.32
+      },
+      {
+        "source_ticker": "000006.SZ",
+        "trade_date": "2026-09-22",
+        "close": 7.29,
+        "volume": 298562.16
+      },
+      {
+        "source_ticker": "000008.SZ",
+        "trade_date": "2026-09-22",
+        "close": 2.42,
+        "volume": 263214.0
+      },
+      {
+        "source_ticker": "000002.SZ",
+        "trade_date": "2026-09-22",
+        "close": 3.81,
+        "volume": 8198321.33
+      },
+      {
+        "source_ticker": "000012.SZ",
+        "trade_date": "2026-09-22",
+        "close": 3.76,
+        "volume": 217104.2
+      },
+      {
+        "source_ticker": "000009.SZ",
+        "trade_date": "2026-09-22",
+        "close": 7.04,
+        "volume": 133765.96
+      },
+      {
+        "source_ticker": "000007.SZ",
+        "trade_date": "2026-09-22",
+        "close": 11.75,
+        "volume": 56662.0
+      },
+      {
+        "source_ticker": "000010.SZ",
+        "trade_date": "2026-09-22",
+        "close": 1.57,
+        "volume": 142241.79
+      },
+      {
+        "source_ticker": "000007.SZ",
+        "trade_date": "2026-09-23",
+        "close": 11.61,
+        "volume": 58340.0
+      },
+      {
+        "source_ticker": "000009.SZ",
+        "trade_date": "2026-09-23",
+        "close": 7.0,
+        "volume": 105620.95
+      },
+      {
+        "source_ticker": "000008.SZ",
+        "trade_date": "2026-09-23",
+        "close": 2.38,
+        "volume": 284402.0
+      },
+      {
+        "source_ticker": "000010.SZ",
+        "trade_date": "2026-09-23",
+        "close": 1.52,
+        "volume": 175122.07
+      },
+      {
+        "source_ticker": "000006.SZ",
+        "trade_date": "2026-09-23",
+        "close": 7.24,
+        "volume": 312832.74
+      },
+      {
+        "source_ticker": "000012.SZ",
+        "trade_date": "2026-09-23",
+        "close": 3.77,
+        "volume": 256025.8
+      },
+      {
+        "source_ticker": "000002.SZ",
+        "trade_date": "2026-09-23",
+        "close": 3.92,
+        "volume": 10662846.65
+      },
+      {
+        "source_ticker": "000011.SZ",
+        "trade_date": "2026-09-23",
+        "close": 9.59,
+        "volume": 194568.43
+      },
+      {
+        "source_ticker": "000001.SZ",
+        "trade_date": "2026-09-23",
+        "close": 11.6,
+        "volume": 906725.65
+      },
+      {
+        "source_ticker": "000014.SZ",
+        "trade_date": "2026-09-23",
+        "close": 10.82,
+        "volume": 72695.0
+      },
+      {
+        "source_ticker": "000012.SZ",
+        "trade_date": "2026-09-24",
+        "close": 3.7,
+        "volume": 231801.94
+      },
+      {
+        "source_ticker": "000010.SZ",
+        "trade_date": "2026-09-24",
+        "close": 1.5,
+        "volume": 101365.0
+      },
+      {
+        "source_ticker": "000001.SZ",
+        "trade_date": "2026-09-24",
+        "close": 11.3,
+        "volume": 1043818.72
+      },
+      {
+        "source_ticker": "000002.SZ",
+        "trade_date": "2026-09-24",
+        "close": 3.76,
+        "volume": 6672650.5
+      },
+      {
+        "source_ticker": "000008.SZ",
+        "trade_date": "2026-09-24",
+        "close": 2.38,
+        "volume": 189408.83
+      },
+      {
+        "source_ticker": "000007.SZ",
+        "trade_date": "2026-09-24",
+        "close": 11.64,
+        "volume": 48123.0
+      },
+      {
+        "source_ticker": "000014.SZ",
+        "trade_date": "2026-09-24",
+        "close": 10.64,
+        "volume": 55386.01
+      },
+      {
+        "source_ticker": "000006.SZ",
+        "trade_date": "2026-09-24",
+        "close": 7.21,
+        "volume": 278599.46
+      },
+      {
+        "source_ticker": "000009.SZ",
+        "trade_date": "2026-09-24",
+        "close": 6.8,
+        "volume": 164542.71
+      },
+      {
+        "source_ticker": "000011.SZ",
+        "trade_date": "2026-09-24",
+        "close": 9.2,
+        "volume": 170770.22
+      },
+      {
+        "source_ticker": "000008.SZ",
+        "trade_date": "2026-09-28",
+        "close": 2.35,
+        "volume": 179249.9
+      },
+      {
+        "source_ticker": "000014.SZ",
+        "trade_date": "2026-09-28",
+        "close": 11.2,
+        "volume": 220358.44
+      },
+      {
+        "source_ticker": "000010.SZ",
+        "trade_date": "2026-09-28",
+        "close": 1.47,
+        "volume": 92698.0
+      },
+      {
+        "source_ticker": "000007.SZ",
+        "trade_date": "2026-09-28",
+        "close": 10.91,
+        "volume": 74521.0
+      },
+      {
+        "source_ticker": "000012.SZ",
+        "trade_date": "2026-09-28",
+        "close": 3.67,
+        "volume": 174623.29
+      },
+      {
+        "source_ticker": "000001.SZ",
+        "trade_date": "2026-09-28",
+        "close": 11.3,
+        "volume": 715341.43
+      },
+      {
+        "source_ticker": "000006.SZ",
+        "trade_date": "2026-09-28",
+        "close": 7.32,
+        "volume": 310979.72
+      },
+      {
+        "source_ticker": "000011.SZ",
+        "trade_date": "2026-09-28",
+        "close": 10.12,
+        "volume": 188412.24
+      },
+      {
+        "source_ticker": "000009.SZ",
+        "trade_date": "2026-09-28",
+        "close": 6.76,
+        "volume": 145039.12
+      },
+      {
+        "source_ticker": "000002.SZ",
+        "trade_date": "2026-09-28",
+        "close": 3.71,
+        "volume": 4476338.81
+      },
+      {
+        "source_ticker": "000010.SZ",
+        "trade_date": "2026-09-29",
+        "close": 1.47,
+        "volume": 78831.0
+      },
+      {
+        "source_ticker": "000008.SZ",
+        "trade_date": "2026-09-29",
+        "close": 2.39,
+        "volume": 254540.83
+      },
+      {
+        "source_ticker": "000011.SZ",
+        "trade_date": "2026-09-29",
+        "close": 11.13,
+        "volume": 421423.91
+      },
+      {
+        "source_ticker": "000007.SZ",
+        "trade_date": "2026-09-29",
+        "close": 11.08,
+        "volume": 69977.0
+      },
+      {
+        "source_ticker": "000006.SZ",
+        "trade_date": "2026-09-29",
+        "close": 7.62,
+        "volume": 523759.52
+      },
+      {
+        "source_ticker": "000012.SZ",
+        "trade_date": "2026-09-29",
+        "close": 3.67,
+        "volume": 117406.51
+      },
+      {
+        "source_ticker": "000001.SZ",
+        "trade_date": "2026-09-29",
+        "close": 11.35,
+        "volume": 690979.09
+      },
+      {
+        "source_ticker": "000002.SZ",
+        "trade_date": "2026-09-29",
+        "close": 4.08,
+        "volume": 8021104.94
+      },
+      {
+        "source_ticker": "000014.SZ",
+        "trade_date": "2026-09-29",
+        "close": 11.55,
+        "volume": 263608.47
+      },
+      {
+        "source_ticker": "000009.SZ",
+        "trade_date": "2026-09-29",
+        "close": 6.86,
+        "volume": 131092.61
+      }
+    ]
+  }
+}

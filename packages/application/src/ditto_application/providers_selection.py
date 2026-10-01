@@ -2,13 +2,17 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping, Sequence
+from datetime import date, datetime
+
 from dishka import Provider, Scope, provide
 from ditto_data.catalog.certification import CertificationReader
 from ditto_data.catalog.license import DatasetLicenseReader
 from ditto_data.catalog.provider_payload import ProviderPayloadReader
-from ditto_data.catalog.snapshot_reader import SnapshotReadService
+from ditto_data.catalog.snapshot_reader import SnapshotReadService, SourceTickerResolver
 from ditto_data.catalog.source_snapshot import ProviderSnapshotReader
 from ditto_data.ingestion.partition_state import PartitionLifecycleReader
+from ditto_data.services.metadata_service import MetadataService
 from ditto_strategy.industry_rotation.service import IndustryRotationService
 from ditto_strategy.industry_rotation.store import (
     IndustryRotationReader,
@@ -36,6 +40,36 @@ from ditto_application.queries.selection_runs import SelectionRunQueryService
 from ditto_application.research_case_contracts import ResearchCaseFactory
 
 __all__ = ["AppSelectionProvider"]
+
+
+def _metadata_ticker_resolver(metadata: MetadataService) -> SourceTickerResolver:
+    """Resolve replay scopes through the durable PIT source-ticker mapping."""
+
+    def resolve(
+        instrument_ids: Sequence[int],
+        *,
+        source: str,
+        asofs: Sequence[date],
+        cutoff: datetime,
+    ) -> Mapping[str, Mapping[int, str]]:
+        cutoff_text = cutoff.isoformat()
+        resolved_by_date: dict[str, dict[int, str]] = {
+            asof.isoformat(): {} for asof in asofs
+        }
+        for instrument_id in instrument_ids:
+            tickers = metadata.instrument.get_source_tickers(
+                instrument_id,
+                source=source,
+                asofs=[asof.isoformat() for asof in asofs],
+                cutoff=cutoff_text,
+            )
+            for asof in asofs:
+                ticker = tickers.get(asof.isoformat())
+                if ticker is not None:
+                    resolved_by_date[asof.isoformat()][instrument_id] = ticker
+        return resolved_by_date
+
+    return resolve
 
 
 class AppSelectionProvider(Provider):
@@ -130,10 +164,13 @@ class AppSelectionProvider(Provider):
         payloads: ProviderPayloadReader,
         lifecycle: PartitionLifecycleReader,
         admission: FieldAdmissionQuery,
+        metadata: MetadataService,
     ) -> ProviderSnapshotQuery:
         """Bind exact replay to data-owned immutable reads and current qualification."""
         return ProviderSnapshotQuery(
-            SnapshotReadService(snapshots, payloads, lifecycle), admission
+            SnapshotReadService(snapshots, payloads, lifecycle),
+            admission,
+            ticker_resolver=_metadata_ticker_resolver(metadata),
         )
 
     @provide
