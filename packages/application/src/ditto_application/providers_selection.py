@@ -97,7 +97,12 @@ def _metadata_identities(metadata: MetadataService) -> InstrumentIdentityReader:
     """Serve registry names and PIT source tickers from durable metadata."""
 
     class _MetadataIdentities:
-        def names(self, instrument_ids: Sequence[int]) -> Mapping[int, str]:
+        def names(
+            self, instrument_ids: Sequence[int], *, asof: date
+        ) -> Mapping[int, str]:
+            # PIT name history first; the live registry is the documented
+            # fallback while the history table is not ingested.
+            resolved: dict[int, str] = {}
             frame = metadata.instrument.find_securities(
                 SecurityQuery(asset_class="stock", is_active=None)
             )
@@ -105,11 +110,14 @@ def _metadata_identities(metadata: MetadataService) -> InstrumentIdentityReader:
                 int(row["instrument_id"]): str(row["name"])
                 for row in frame.unique(subset=["instrument_id"]).to_dicts()
             }
-            return {
-                instrument_id: known[instrument_id]
-                for instrument_id in instrument_ids
-                if instrument_id in known
-            }
+            for instrument_id in instrument_ids:
+                name = metadata.instrument.get_stock_name(
+                    instrument_id, asof.isoformat()
+                )
+                resolved[instrument_id] = name or known.get(
+                    instrument_id, str(instrument_id)
+                )
+            return resolved
 
         def source_tickers(
             self, instrument_ids: Sequence[int], *, asof: date

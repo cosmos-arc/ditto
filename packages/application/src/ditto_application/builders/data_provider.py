@@ -7,6 +7,7 @@ satisfying the DataProvider Protocol for unified data access.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import date, datetime
 
@@ -75,30 +76,154 @@ def _snapshot_window(entry: DataCatalogEntry) -> _CatalogSnapshotWindow | None:
     )
 
 
-def _resolve_snapshot_id(
-    windows: tuple[_CatalogSnapshotWindow, ...],
+def _freshness_key(window: _CatalogSnapshotWindow) -> tuple[str, bytes]:
+    """Order windows by observed freshness, then immutable identity."""
+    return (window.freshness_at.isoformat(), window.snapshot_id.encode())
+
+
+def _lineage_frame(frame: pl.DataFrame) -> pl.DataFrame:
+    return frame.select(
+        pl.col("source").cast(pl.String).alias("_lineage_source"),
+        pl.col("source_ticker").cast(pl.String).alias("_lineage_ticker"),
+        pl.col("trade_date").cast(pl.Date).alias("_lineage_date"),
+    ).with_columns(
+        pl.lit(None, dtype=pl.String).alias("_lineage_snapshot"),
+        pl.lit(None, dtype=pl.String).alias("_lineage_freshness"),
+    )
+
+
+def _apply_exact(
+    lineage: pl.DataFrame,
+    windows: Sequence[tuple[tuple[object, ...], _CatalogSnapshotWindow]],
+    on: Sequence[str],
     *,
-    source: str,
-    source_ticker: str,
-    trade_date: date,
-) -> str | None:
-    matching = tuple(
-        item
-        for item in windows
-        if item.contains(
-            source=source,
-            source_ticker=source_ticker,
-            trade_date=trade_date,
+    fallback_only: bool = False,
+) -> pl.DataFrame:
+    """Join the freshest exact-date window per key, fresher wins per row."""
+    if not windows:
+        return lineage
+    lookup = pl.DataFrame(
+        {
+            **{
+                name: [key[index] for key, _ in windows]
+                for index, name in enumerate(on)
+            },
+            "_lookup_snapshot": [window.snapshot_id for _, window in windows],
+            "_lookup_freshness": [_freshness_key(window)[0] for _, window in windows],
+        },
+        schema={
+            **{name: pl.String for name in on if name != "_lineage_date"},
+            **({"_lineage_date": pl.Date} if "_lineage_date" in on else {}),
+            "_lookup_snapshot": pl.String,
+            "_lookup_freshness": pl.String,
+        },
+    )
+    joined = lineage.join(lookup, on=list(on), how="left")
+    takes = (
+        pl.col("_lineage_snapshot").is_null()
+        if fallback_only
+        else (
+            pl.col("_lineage_freshness").is_null()
+            | (
+                pl.col("_lookup_freshness").is_not_null()
+                & (pl.col("_lookup_freshness") > pl.col("_lineage_freshness"))
+            )
         )
     )
-    exact = tuple(item for item in matching if item.source_ticker == source_ticker)
-    eligible = exact or matching
-    if not eligible:
-        return None
-    return max(
-        eligible,
-        key=lambda item: (item.freshness_at.isoformat(), item.snapshot_id.encode()),
-    ).snapshot_id
+    return _rewrite_lineage(
+        joined,
+        takes,
+        pl.col("_lookup_snapshot"),
+        pl.col("_lookup_freshness"),
+    ).drop("_lookup_snapshot", "_lookup_freshness")
+
+
+def _apply_ranged(
+    lineage: pl.DataFrame,
+    window: _CatalogSnapshotWindow,
+    *,
+    fallback_only: bool = False,
+) -> pl.DataFrame:
+    """Overlay one multi-date window where it outranks the current pick."""
+    matches = (
+        (pl.col("_lineage_source") == window.source)
+        & (
+            pl.lit(window.source_ticker is None)
+            | (pl.col("_lineage_ticker") == window.source_ticker)
+        )
+        & (pl.col("_lineage_date") >= window.start_date)
+        & (pl.col("_lineage_date") <= window.end_date)
+    )
+    takes = matches & (
+        pl.col("_lineage_snapshot").is_null()
+        if fallback_only
+        else (
+            pl.col("_lineage_freshness").is_null()
+            | (pl.lit(_freshness_key(window)[0]) > pl.col("_lineage_freshness"))
+        )
+    )
+    return _rewrite_lineage(
+        lineage,
+        takes,
+        pl.lit(window.snapshot_id),
+        pl.lit(_freshness_key(window)[0]),
+    )
+
+
+def _rewrite_lineage(
+    lineage: pl.DataFrame,
+    takes: pl.Expr,
+    snapshot: pl.Expr,
+    freshness: pl.Expr,
+) -> pl.DataFrame:
+    return lineage.with_columns(
+        pl.when(takes)
+        .then(
+            pl.struct(
+                snapshot.alias("_lineage_snapshot"),
+                freshness.alias("_lineage_freshness"),
+            )
+        )
+        .otherwise(pl.struct(pl.col("_lineage_snapshot"), pl.col("_lineage_freshness")))
+        .struct.field("*")
+    )
+
+
+def _catalog_windows(
+    catalog_reader: DataCatalogReader,
+) -> tuple[_CatalogSnapshotWindow, ...]:
+    return tuple(
+        window
+        for entry in catalog_reader.list_assets("market")
+        if (window := _snapshot_window(entry)) is not None
+    )
+
+
+def _partition_windows(
+    windows: tuple[_CatalogSnapshotWindow, ...],
+) -> tuple[
+    dict[tuple[str, str, date], _CatalogSnapshotWindow],
+    dict[tuple[str, date], _CatalogSnapshotWindow],
+    list[_CatalogSnapshotWindow],
+]:
+    """Split catalog windows into keyed exact-date and multi-date shapes."""
+    keyed: dict[tuple[str, str, date], _CatalogSnapshotWindow] = {}
+    wildcard_date: dict[tuple[str, date], _CatalogSnapshotWindow] = {}
+    ranged: list[_CatalogSnapshotWindow] = []
+    for window in windows:
+        if window.start_date != window.end_date:
+            ranged.append(window)
+        elif window.source_ticker is None:
+            key = (window.source, window.start_date)
+            if key not in wildcard_date or _freshness_key(window) > _freshness_key(
+                wildcard_date[key]
+            ):
+                wildcard_date[key] = window
+        else:
+            key = (window.source, window.source_ticker, window.start_date)
+            if key not in keyed or _freshness_key(window) > _freshness_key(keyed[key]):
+                keyed[key] = window
+    return keyed, wildcard_date, ranged
 
 
 def _attach_catalog_source_snapshots(
@@ -108,33 +233,39 @@ def _attach_catalog_source_snapshots(
     if frame.is_empty() or _SOURCE_SNAPSHOT_COLUMN in frame.columns:
         return frame
     required = {"trade_date", "source", "source_ticker"}
-    if not required.issubset(frame.columns):
+    if not required.issubset(frame.columns) or not (
+        windows := _catalog_windows(catalog_reader)
+    ):
         return frame.with_columns(
             pl.lit(None, dtype=pl.String).alias(_SOURCE_SNAPSHOT_COLUMN)
         )
-    windows = tuple(
-        window
-        for entry in catalog_reader.list_assets("market")
-        if (window := _snapshot_window(entry)) is not None
+    # Vectorized lineage. The former per-row Python scan scaled as rows x
+    # catalog entries; exact-date windows (the common catalog shape) resolve
+    # through joins and only the few multi-date windows iterate. Ticker-
+    # specific windows (exact or ranged) form the preferred class, wildcard
+    # windows the fallback, and within a class the freshest snapshot wins
+    # per row, matching the original scan's precedence exactly.
+    keyed, wildcard_date, ranged = _partition_windows(windows)
+    lineage = _lineage_frame(frame)
+    lineage = _apply_exact(
+        lineage,
+        tuple(keyed.items()),
+        ["_lineage_source", "_lineage_ticker", "_lineage_date"],
     )
-    snapshot_ids: list[str | None] = []
-    for row in frame.select(sorted(required)).to_dicts():
-        raw_date = row["trade_date"]
-        trade_date = (
-            raw_date
-            if isinstance(raw_date, date)
-            else date.fromisoformat(str(raw_date))
-        )
-        snapshot_ids.append(
-            _resolve_snapshot_id(
-                windows,
-                source=str(row["source"]),
-                source_ticker=str(row["source_ticker"]),
-                trade_date=trade_date,
-            )
-        )
+    for window in sorted(ranged, key=_freshness_key):
+        if window.source_ticker is not None:
+            lineage = _apply_ranged(lineage, window)
+    lineage = _apply_exact(
+        lineage,
+        tuple(wildcard_date.items()),
+        ["_lineage_source", "_lineage_date"],
+        fallback_only=True,
+    )
+    for window in sorted(ranged, key=_freshness_key):
+        if window.source_ticker is None:
+            lineage = _apply_ranged(lineage, window, fallback_only=True)
     return frame.with_columns(
-        pl.Series(_SOURCE_SNAPSHOT_COLUMN, snapshot_ids, dtype=pl.String)
+        lineage["_lineage_snapshot"].alias(_SOURCE_SNAPSHOT_COLUMN)
     )
 
 

@@ -25,6 +25,17 @@ Boundaries kept honest on purpose:
   observed bar through cross-section day): the computed values already
   consumed that history, so insufficient snapshot coverage must surface as
   admission reasons instead of being narrowed away.
+- Bars are read with ``hfq`` adjustment because the governed stock-lane
+  price factors require adjusted prices; the adjustment lineage binds to
+  the ``adj_factor`` dataset, which stays fail-closed until certified.
+  Expressions nesting a time-series operator under a cross-sectional one
+  are rejected — the governed production recipes with materialized
+  intermediates remain the future execution path.
+- Every consumed bar date must sit inside a certified stock_daily window
+  and every consumed row must carry catalog lineage; per-row catalog
+  identities are ticker/date-granular and differ from the registry
+  snapshot identities, so exact per-payload provenance remains the
+  certified replay lane's job.
 - Industry rotation is assembled as an empty observation set; the rotation
   snapshot then lands BLOCKED with ``industries`` declared missing, which is
   the honest state while industry data is not ingested.
@@ -94,6 +105,11 @@ _BASIC_FACT_FIELDS: Mapping[str, str] = {
     "instruments.is_st": "name",
     "instruments.listing_days": "list_date",
 }
+# Price-series leaves derive their adjusted values from the adjustment
+# dataset; their bindings must qualify that lineage alongside the raw field.
+_PRICE_LEAVES = frozenset({"market.open", "market.high", "market.low", "market.close"})
+_ADJUSTMENT_DATASET = "adj_factor"
+_ADJUSTMENT_FIELD = "adj_factor"
 _STRUCTURAL_CONSUMERS = (
     "universe_snapshot_id",
     "instruments.instrument_id",
@@ -116,6 +132,9 @@ _ROTATION_ALGORITHM_VERSION = "industry-rotation-v1"
 # Certified stock_daily publication claim (Batch 2 evidence): bars for a
 # trade date become visible 18:00 Asia/Shanghai on that date.
 _BAR_PUBLICATION_TIME = time(18, 0)
+# Client and server clocks drift by seconds; only instants older than this
+# window count as genuinely past for the live read model.
+_LIVE_SKEW = timedelta(minutes=5)
 _TURNOVER_WINDOW = 20
 _MAIN_LIMIT_THRESHOLD = 0.095
 _ST_LIMIT_THRESHOLD = 0.045
@@ -139,7 +158,9 @@ class UniverseSourcesDiscovery(Protocol):
 class InstrumentIdentityReader(Protocol):
     """Resolve durable instrument identities to names and source tickers."""
 
-    def names(self, instrument_ids: Sequence[int]) -> Mapping[int, str]: ...
+    def names(
+        self, instrument_ids: Sequence[int], *, asof: date
+    ) -> Mapping[int, str]: ...
 
     def source_tickers(
         self, instrument_ids: Sequence[int], *, asof: date
@@ -252,25 +273,7 @@ class AssembleSelectionFacts:
                 "assembled selection as-of must carry a timezone",
                 details={"reason": "ASSEMBLY_TIME_INVALID"},
             )
-        knowledge, publication = request.resolved_cutoffs()
-        if (
-            publication.tzinfo is None
-            or knowledge.tzinfo is None
-            or publication > knowledge
-            or knowledge > request.as_of
-        ):
-            raise AppProcessError(
-                "assembled selection cutoffs violate causal order",
-                details={"reason": "ASSEMBLY_CUTOFF_INVALID"},
-            )
-        # The live read model cannot prove sub-day visibility for any past
-        # instant, whether cutoffs are explicit or defaulted to a past as-of.
-        if knowledge < self._clock():
-            raise AppProcessError(
-                "past instants cannot use the live read model; "
-                + "use the certified replay lane",
-                details={"reason": "ASSEMBLY_CUTOFF_BACKDATED"},
-            )
+        knowledge, publication = self._resolve_cutoffs(request)
         self._validate_policy(request)
         as_of_date = request.as_of.astimezone(_SHANGHAI).date()
         sources = self._roster_sources(request, knowledge)
@@ -281,8 +284,10 @@ class AssembleSelectionFacts:
             request=request,
             nodes=nodes,
             as_of_date=as_of_date,
-            knowledge=knowledge,
+            # Bars become publishable at the earlier declared boundary.
+            visible_through=_knowledge_visible_through(publication),
         )
+        self._require_certified_coverage(evaluation)
         cross_date = _cross_section_date(evaluation)
         instruments = self._project_instruments(
             roster=roster,
@@ -292,15 +297,6 @@ class AssembleSelectionFacts:
             cross_date=cross_date,
         )
         windows = self._binding_windows(cross_date)
-        if not windows["stock_daily"]:
-            raise AppProcessError(
-                "no certified stock_daily snapshot covers the cross-section date",
-                details={
-                    "reason": "ASSEMBLY_SNAPSHOT_WINDOW_MISSING",
-                    "dataset_id": "stock_daily",
-                    "cross_date": cross_date.isoformat(),
-                },
-            )
         return CreateSelectionRunRequest(
             as_of=request.as_of,
             knowledge_cutoff=knowledge,
@@ -342,6 +338,66 @@ class AssembleSelectionFacts:
             data_to=cross_date,
             universe_sources=sources,
         )
+
+    def _resolve_cutoffs(
+        self, request: AssembleSelectionFactsRequest
+    ) -> tuple[datetime, datetime]:
+        """
+        Issue live cutoffs from one server instant, skew-tolerant.
+
+        Omitted cutoffs default to a single ``clock()`` read rather than the
+        client as-of, which may already be seconds old by comparison time.
+        Explicit cutoffs must still obey causal order and may only antedate
+        the server clock by the tolerated live skew; anything older belongs
+        to the certified replay lane.
+        """
+        now = self._clock()
+        if request.knowledge_cutoff is None:
+            knowledge = now
+        else:
+            knowledge = request.knowledge_cutoff
+            if knowledge.tzinfo is None or knowledge > request.as_of:
+                raise AppProcessError(
+                    "assembled selection cutoffs violate causal order",
+                    details={"reason": "ASSEMBLY_CUTOFF_INVALID"},
+                )
+            if knowledge < now - _LIVE_SKEW:
+                raise AppProcessError(
+                    "past instants cannot use the live read model; "
+                    + "use the certified replay lane",
+                    details={"reason": "ASSEMBLY_CUTOFF_BACKDATED"},
+                )
+        publication = request.publication_cutoff or knowledge
+        if publication.tzinfo is None or publication > knowledge:
+            raise AppProcessError(
+                "assembled selection cutoffs violate causal order",
+                details={"reason": "ASSEMBLY_CUTOFF_INVALID"},
+            )
+        return knowledge, publication
+
+    def _require_certified_coverage(self, evaluation: pl.DataFrame) -> None:
+        """Every consumed bar date must sit inside a certified window."""
+        uncovered = sorted(
+            {
+                trade_date
+                for trade_date in evaluation["trade_date"].unique().to_list()
+                if not self._snapshots.covering(
+                    dataset_id="stock_daily", day=trade_date
+                )
+            }
+        )
+        if uncovered:
+            raise AppProcessError(
+                "bar dates outside every certified stock_daily window",
+                details={
+                    "reason": "ASSEMBLY_SNAPSHOT_COVERAGE_MISSING",
+                    "dataset_id": "stock_daily",
+                    "uncovered_dates": tuple(
+                        value.isoformat() for value in uncovered[:10]
+                    ),
+                    "uncovered_count": len(uncovered),
+                },
+            )
 
     def _roster_sources(
         self, request: AssembleSelectionFactsRequest, knowledge: datetime
@@ -437,6 +493,19 @@ class AssembleSelectionFacts:
                 )
             leaves[factor_id] = frozenset(node_leaves)
             compiled[factor_id] = self._compile_factor(factor_id, spec)
+            operators = compiled[factor_id].analysis.operator_names
+            if any(op.startswith("cs_") for op in operators) and any(
+                op.startswith("ts_") for op in operators
+            ):
+                raise AppProcessError(
+                    "factor nests a time-series operator under a "
+                    + "cross-sectional operator; the production recipe with "
+                    + "materialized intermediates is required",
+                    details={
+                        "reason": "ASSEMBLY_FACTOR_EXPRESSION_UNSUPPORTED",
+                        "factor_id": factor_id,
+                    },
+                )
             # Time-series windows compose across registered dependencies, so
             # the required history is this node's window plus the deepest
             # dependency chain below it.
@@ -524,7 +593,7 @@ class AssembleSelectionFacts:
         request: AssembleSelectionFactsRequest,
         nodes: tuple[_FactorNode, ...],
         as_of_date: date,
-        knowledge: datetime,
+        visible_through: date,
     ) -> pl.DataFrame:
         roster_ids = [int(row["instrument_id"]) for row in roster.frame.to_dicts()]
         tickers = self._identities.source_tickers(roster_ids, asof=as_of_date)
@@ -550,6 +619,9 @@ class AssembleSelectionFacts:
                 start=start.isoformat(),
                 end=as_of_date.isoformat(),
                 asof=as_of_date.isoformat(),
+                # Governed stock-lane price factors require adjusted prices;
+                # the adjustment lineage binds separately below.
+                adj="hfq",
             )
         )
         if frame.is_empty():
@@ -561,7 +633,7 @@ class AssembleSelectionFacts:
             leaf for node in nodes if node.requested for leaf in node.leaves
         }
         self._validate_bar_schema(frame, needed_leaves)
-        frame = _without_future_knowledge(frame, _knowledge_visible_through(knowledge))
+        frame = _without_future_knowledge(frame, visible_through)
         if frame.is_empty():
             raise AppProcessError(
                 "assembled selection bars only carry future knowledge",
@@ -628,7 +700,8 @@ class AssembleSelectionFacts:
     ) -> tuple[SelectionInstrumentDraft, ...]:
         roster_rows = roster.frame.to_dicts()
         names = self._identities.names(
-            [int(row["instrument_id"]) for row in roster_rows]
+            [int(row["instrument_id"]) for row in roster_rows],
+            asof=as_of_date,
         )
         cross = _unit_normalized(
             evaluation.filter(pl.col("trade_date") == cross_date),
@@ -715,7 +788,12 @@ class AssembleSelectionFacts:
     ) -> dict[str, tuple[CertifiedSnapshotWindow, ...]]:
         return {
             dataset_id: self._snapshots.covering(dataset_id=dataset_id, day=cross_date)
-            for dataset_id in ("stock_daily", "stock_status", "stock_basic")
+            for dataset_id in (
+                "stock_daily",
+                "stock_status",
+                "stock_basic",
+                _ADJUSTMENT_DATASET,
+            )
         }
 
 
@@ -767,8 +845,9 @@ def _unit_normalized(
         if not node.requested:
             continue
         values = pl.col(node.factor_id).fill_nan(None)
+        finite = pl.when(values.is_finite()).then(values).otherwise(None)
         cross = cross.with_columns(
-            (values.rank(method="average") / values.count()).alias(node.factor_id)
+            (finite.rank(method="average") / finite.count()).alias(node.factor_id)
         )
     return cross
 
@@ -860,6 +939,7 @@ def data_fields(
     # limit_state consumes both legs of the close/pre_close ratio.
     bind("stock_daily", "close", "instruments.limit_state")
     bind("stock_daily", "pre_close", "instruments.limit_state")
+    bind(_ADJUSTMENT_DATASET, _ADJUSTMENT_FIELD, "instruments.limit_state")
     for node in nodes:
         if not node.requested:
             continue
@@ -867,6 +947,12 @@ def data_fields(
             bind(
                 "stock_daily",
                 _MARKET_BAR_COLUMNS[leaf],
+                f"instruments.factor_values.{node.factor_id}",
+            )
+        if node.leaves & _PRICE_LEAVES:
+            bind(
+                _ADJUSTMENT_DATASET,
+                _ADJUSTMENT_FIELD,
                 f"instruments.factor_values.{node.factor_id}",
             )
     return tuple(fields)

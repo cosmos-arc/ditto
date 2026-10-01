@@ -20,6 +20,7 @@ from ditto_application.queries.historical_universe import (
     HistoricalUniverseResult,
     HistoricalUniverseSources,
 )
+from ditto_features.factors.factor_specs import ALL_FACTOR_SPECS
 from ditto_features.factors.spec import FactorSpec
 
 _AS_OF = datetime(2026, 9, 29, 10, 0, tzinfo=UTC)  # 18:00 Asia/Shanghai
@@ -27,7 +28,7 @@ _CROSS = date(2026, 9, 29)
 _BAR_DATES = tuple(date(2026, 8, 31) + timedelta(days=i) for i in range(30))
 
 _DAILY_WINDOW = CertifiedSnapshotWindow(
-    "snapshot:tushare:stock_daily:sha256:d1", date(2026, 9, 1), _CROSS
+    "snapshot:tushare:stock_daily:sha256:d1", date(2026, 8, 1), _CROSS
 )
 _STATUS_WINDOW = CertifiedSnapshotWindow(
     "snapshot:tushare:stock_status:sha256:s1", date(2026, 9, 1), _CROSS
@@ -84,7 +85,7 @@ class _FakeIdentities:
         self._names = names
         self._tickers = tickers
 
-    def names(self, instrument_ids):
+    def names(self, instrument_ids, *, asof):
         return {key: self._names[key] for key in instrument_ids}
 
     def source_tickers(self, instrument_ids, *, asof):
@@ -93,14 +94,24 @@ class _FakeIdentities:
         }
 
 
+_ADJ_WINDOW = CertifiedSnapshotWindow(
+    "snapshot:tushare:adj_factor:sha256:a1", date(2026, 8, 1), _CROSS
+)
+
+
 class _FakeSnapshots:
     def __init__(
-        self, daily=(_DAILY_WINDOW,), status=(_STATUS_WINDOW,), basic=(_BASIC_WINDOW,)
+        self,
+        daily=(_DAILY_WINDOW,),
+        status=(_STATUS_WINDOW,),
+        basic=(_BASIC_WINDOW,),
+        adj=(_ADJ_WINDOW,),
     ):
         self._windows = {
             "stock_daily": daily,
             "stock_status": status,
             "stock_basic": basic,
+            "adj_factor": adj,
         }
 
     def snapshot_ids(self, dataset_id):
@@ -305,9 +316,15 @@ def test_assembles_policy_only_request_with_certified_lineage() -> None:
     assert ("stock_daily", "pre_close", "instruments.limit_state") in bindings
     assert ("stock_basic", "name", "instruments.instrument_name") in bindings
     assert ("stock_basic", "list_date", "instruments.listing_days") in bindings
+    assert (
+        "adj_factor",
+        "adj_factor",
+        "instruments.factor_values.reversal_1w",
+    ) in bindings
     assert [draft.instrument_id for draft in request.instruments] == [1, 2]
     assert provider.queries[0].instruments == ("000001.SZ", "000002.SZ")
     assert provider.queries[0].asof == _CROSS.isoformat()
+    assert provider.queries[0].adj == "hfq"
 
 
 def test_factor_values_and_hard_filters_are_projected_per_instrument() -> None:
@@ -366,14 +383,13 @@ def test_resolves_transitive_factor_dependencies() -> None:
     # Constant closes yield zero volatility; the transitive chain still
     # produced a finite (not null/NaN) cross-section value.
     assert math.isfinite(values["volatility_factor"])
-    leaves = {
-        item.consumer_field: (item.dataset_id, item.field)
+    factor_bindings = {
+        (item.dataset_id, item.field)
         for item in request.data_fields
+        if item.consumer_field == "instruments.factor_values.volatility_factor"
     }
-    assert leaves["instruments.factor_values.volatility_factor"] == (
-        "stock_daily",
-        "close",
-    )
+    assert ("stock_daily", "close") in factor_bindings
+    assert ("adj_factor", "adj_factor") in factor_bindings
 
 
 def test_rejects_non_market_leaf_dependency() -> None:
@@ -561,14 +577,23 @@ def test_short_history_declares_missing_factor_value() -> None:
 
 
 @pytest.mark.pit
-def test_past_as_of_with_omitted_cutoffs_is_rejected() -> None:
+def test_explicit_past_knowledge_is_rejected_but_server_issuance_is_not() -> None:
     provider = _FakeProvider(_bars_frame(rows_per_instrument={1: 30}))
     history = _FakeHistory(_roster_frame((1,)))
     process = _process(provider=provider, history=history)
     with pytest.raises(AppProcessError) as error:
-        process.assemble(_request(as_of=_AS_OF - timedelta(days=1)))
-
+        process.assemble(
+            _request(
+                as_of=_AS_OF - timedelta(days=1),
+                knowledge_cutoff=_AS_OF - timedelta(days=1),
+            )
+        )
     assert error.value.details["reason"] == "ASSEMBLY_CUTOFF_BACKDATED"
+
+    # Omitted cutoffs are issued from the server instant, so a slightly
+    # stale client as-of still assembles with honestly labeled knowledge.
+    request = process.assemble(_request(as_of=_AS_OF - timedelta(minutes=1)))
+    assert request.knowledge_cutoff == _AS_OF
 
 
 def test_missing_knowledge_date_column_is_rejected() -> None:
@@ -589,13 +614,23 @@ def test_uncovered_daily_window_is_rejected_before_response() -> None:
     process = _process(
         provider=provider,
         history=history,
-        snapshots=_FakeSnapshots(daily=()),
+        snapshots=_FakeSnapshots(
+            daily=(
+                CertifiedSnapshotWindow(
+                    "snapshot:tushare:stock_daily:sha256:d0",
+                    date(2026, 8, 1),
+                    date(2026, 8, 31),
+                ),
+            )
+        ),
     )
     with pytest.raises(AppProcessError) as error:
         process.assemble(_request())
 
-    assert error.value.details["reason"] == "ASSEMBLY_SNAPSHOT_WINDOW_MISSING"
-    assert error.value.details["cross_date"] == _CROSS.isoformat()
+    # Coverage of every consumed bar date (including the cross-section) is
+    # the single fail-closed guard; the run never reaches response rendering.
+    assert error.value.details["reason"] == "ASSEMBLY_SNAPSHOT_COVERAGE_MISSING"
+    assert error.value.details["uncovered_count"] >= 19
 
 
 def test_weight_invariants_mirror_the_strategy_spec() -> None:
@@ -733,3 +768,19 @@ def test_discovery_port_failures_propagate() -> None:
         process.assemble(_request())
 
     assert error.value.details["reason"] == "ASSEMBLY_UNIVERSE_SCOPE_UNSUPPORTED"
+
+
+def test_cross_sectional_nesting_of_time_series_is_rejected() -> None:
+    provider = _FakeProvider(_bars_frame(rows_per_instrument={1: 30}))
+    history = _FakeHistory(_roster_frame((1,)))
+    process = _process(
+        provider=provider,
+        history=history,
+        registry=_registry(
+            liquidity=ALL_FACTOR_SPECS["liquidity"],
+        ),
+    )
+    with pytest.raises(AppProcessError) as error:
+        process.assemble(_request(factors=("liquidity",)))
+
+    assert error.value.details["reason"] == "ASSEMBLY_FACTOR_EXPRESSION_UNSUPPORTED"
