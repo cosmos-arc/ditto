@@ -100,9 +100,9 @@ def _metadata_identities(metadata: MetadataService) -> InstrumentIdentityReader:
         def names(
             self, instrument_ids: Sequence[int], *, asof: date
         ) -> Mapping[int, str]:
-            # PIT name history first; the live registry is the documented
-            # fallback while the history table is not ingested.
-            resolved: dict[int, str] = {}
+            # One registry read plus one batched PIT history query; the
+            # registry map doubles as the documented fallback while the
+            # history table is not ingested.
             frame = metadata.instrument.find_securities(
                 SecurityQuery(asset_class="stock", is_active=None)
             )
@@ -110,14 +110,14 @@ def _metadata_identities(metadata: MetadataService) -> InstrumentIdentityReader:
                 int(row["instrument_id"]): str(row["name"])
                 for row in frame.unique(subset=["instrument_id"]).to_dicts()
             }
-            for instrument_id in instrument_ids:
-                name = metadata.instrument.get_stock_name(
-                    instrument_id, asof.isoformat()
-                )
-                resolved[instrument_id] = name or known.get(
-                    instrument_id, str(instrument_id)
-                )
-            return resolved
+            historical = metadata.instrument.get_stock_names(
+                list(instrument_ids), asof.isoformat()
+            )
+            return {
+                instrument_id: historical.get(instrument_id)
+                or known.get(instrument_id, str(instrument_id))
+                for instrument_id in instrument_ids
+            }
 
         def source_tickers(
             self,

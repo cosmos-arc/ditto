@@ -312,7 +312,7 @@ class AssembleSelectionFacts:
             cross_date=cross_date,
             raw_cross=raw_cross,
         )
-        windows = self._binding_windows(cross_date)
+        windows = self._binding_windows(cross_date=cross_date, as_of_date=as_of_date)
         return CreateSelectionRunRequest(
             as_of=request.as_of,
             knowledge_cutoff=knowledge,
@@ -368,6 +368,11 @@ class AssembleSelectionFacts:
         to the certified replay lane.
         """
         now = self._clock()
+        if request.as_of > now + _LIVE_SKEW:
+            raise AppProcessError(
+                "future decision instants cannot use the live read model",
+                details={"reason": "ASSEMBLY_TIME_INVALID"},
+            )
         # Never later than the decision instant, even by milliseconds of
         # client-to-server latency.
         knowledge = min(request.knowledge_cutoff or now, request.as_of)
@@ -654,6 +659,24 @@ class AssembleSelectionFacts:
                 "assembled selection found no bars in the lookback window",
                 details={"reason": "ASSEMBLY_BARS_MISSING"},
             )
+        # The provider re-resolves tickers internally without a knowledge
+        # cutoff; any row whose (instrument_id, source_ticker) pair disagrees
+        # with the cutoff-resolved mapping is dropped so a post-cutoff
+        # mapping correction can never swap an instrument's price series.
+        if "source_ticker" in frame.columns:
+            expected = pl.lit(None)
+            for resolved_id in sorted(tickers):
+                expected = (
+                    pl.when(pl.col("instrument_id") == resolved_id)
+                    .then(pl.lit(tickers[resolved_id]))
+                    .otherwise(expected)
+                )
+            frame = frame.filter(pl.col("source_ticker") == expected.cast(pl.String))
+            if frame.is_empty():
+                raise AppProcessError(
+                    "assembled selection bars resolved to unexpected identities",
+                    details={"reason": "ASSEMBLY_BARS_MISSING"},
+                )
         needed_leaves = {
             leaf for node in nodes if node.requested for leaf in node.leaves
         }
@@ -738,18 +761,19 @@ class AssembleSelectionFacts:
                 adj="none",
             )
         )
-        if frame.is_empty() or not {
+        required = {
             "instrument_id",
             "trade_date",
             "close",
             "pre_close",
-        }.issubset(frame.columns):
+            "knowledge_date",
+        }
+        if frame.is_empty() or not required.issubset(frame.columns):
             return {}
-        if "knowledge_date" in frame.columns:
-            knowledge = pl.col("knowledge_date")
-            if frame.schema["knowledge_date"] == pl.String:
-                knowledge = knowledge.str.to_date()
-            frame = frame.filter(knowledge <= pl.lit(visible_through))
+        knowledge = pl.col("knowledge_date")
+        if frame.schema["knowledge_date"] == pl.String:
+            knowledge = knowledge.str.to_date()
+        frame = frame.filter(knowledge <= pl.lit(visible_through))
         rows = frame.filter(pl.col("trade_date") == pl.lit(cross_date))
         return {int(row["instrument_id"]): row for row in rows.to_dicts()}
 
@@ -858,16 +882,29 @@ class AssembleSelectionFacts:
         return tuple(drafts)
 
     def _binding_windows(
-        self, cross_date: date
+        self, *, cross_date: date, as_of_date: date
     ) -> dict[str, tuple[CertifiedSnapshotWindow, ...]]:
+        """
+        Bar facts anchor at the cross-section date, roster facts at as-of.
+
+        Names, ST flags and listing state are read as of the decision date,
+        so their certified coverage must contain that date — anchoring them
+        at the (possibly earlier) cross-section day would qualify a window
+        that never covered the fact's own instant.
+        """
         return {
-            dataset_id: self._snapshots.covering(dataset_id=dataset_id, day=cross_date)
-            for dataset_id in (
-                "stock_daily",
-                "stock_status",
-                "stock_basic",
-                _ADJUSTMENT_DATASET,
-            )
+            "stock_daily": self._snapshots.covering(
+                dataset_id="stock_daily", day=cross_date
+            ),
+            _ADJUSTMENT_DATASET: self._snapshots.covering(
+                dataset_id=_ADJUSTMENT_DATASET, day=cross_date
+            ),
+            "stock_status": self._snapshots.covering(
+                dataset_id="stock_status", day=as_of_date
+            ),
+            "stock_basic": self._snapshots.covering(
+                dataset_id="stock_basic", day=as_of_date
+            ),
         }
 
 
@@ -1016,6 +1053,22 @@ def data_fields(
     bind("stock_daily", "close", "instruments.limit_state")
     bind("stock_daily", "pre_close", "instruments.limit_state")
     bind(_ADJUSTMENT_DATASET, _ADJUSTMENT_FIELD, "instruments.limit_state")
+    price_consumers = sorted(
+        f"instruments.factor_values.{node.factor_id}"
+        for node in nodes
+        if node.requested and node.leaves & _PRICE_LEAVES
+    )
+    if price_consumers and not windows.get(_ADJUSTMENT_DATASET):
+        # Without a certified adjustment window the binding would silently
+        # vanish while the raw-field binding still satisfies admission.
+        raise AppProcessError(
+            "price factors require a certified adj_factor window",
+            details={
+                "reason": "ASSEMBLY_ADJUSTMENT_WINDOW_MISSING",
+                "dataset_id": _ADJUSTMENT_DATASET,
+                "consumers": tuple(price_consumers),
+            },
+        )
     for node in nodes:
         if not node.requested:
             continue

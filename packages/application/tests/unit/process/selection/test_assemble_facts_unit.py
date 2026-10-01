@@ -699,7 +699,9 @@ def test_knowledge_cutoff_before_publication_hides_same_day_bars() -> None:
     process = _process(provider=provider, history=history)
     frozen = datetime(2026, 9, 29, 8, 0, tzinfo=UTC)
     process = _process(provider=provider, history=history, clock=lambda: frozen)
-    request = process.assemble(_request(knowledge_cutoff=frozen))
+    request = process.assemble(
+        _request(as_of=frozen, knowledge_cutoff=frozen, publication_cutoff=frozen)
+    )
 
     # 16:00 Asia/Shanghai is before the 18:00 bar publication claim, so the
     # cross-section falls back to the previous trade date.
@@ -832,3 +834,42 @@ def test_backdated_publication_cutoff_is_rejected() -> None:
     with pytest.raises(AppProcessError) as error:
         process.assemble(_request(publication_cutoff=_AS_OF - timedelta(days=2)))
     assert error.value.details["reason"] == "ASSEMBLY_CUTOFF_BACKDATED"
+
+
+def test_future_as_of_is_rejected() -> None:
+    process, _, _ = _happy_process()
+    with pytest.raises(AppProcessError) as error:
+        process.assemble(_request(as_of=_AS_OF + timedelta(hours=1)))
+    assert error.value.details["reason"] == "ASSEMBLY_TIME_INVALID"
+
+
+def test_price_factors_require_certified_adjustment_window() -> None:
+    provider = _FakeProvider(_bars_frame(rows_per_instrument={1: 30}))
+    history = _FakeHistory(_roster_frame((1,)))
+    process = _process(
+        provider=provider, history=history, snapshots=_FakeSnapshots(adj=())
+    )
+    with pytest.raises(AppProcessError) as error:
+        process.assemble(_request())
+    assert error.value.details["reason"] == "ASSEMBLY_ADJUSTMENT_WINDOW_MISSING"
+
+
+@pytest.mark.pit
+def test_provider_identity_mismatch_rows_are_dropped() -> None:
+    frame = _bars_frame(rows_per_instrument={1: 30}).with_columns(
+        # The provider re-resolved this row to a foreign identity.
+        pl.when(pl.col("trade_date") == _CROSS)
+        .then(99)
+        .otherwise(pl.col("instrument_id"))
+        .alias("instrument_id")
+    )
+    provider = _FakeProvider(frame)
+    history = _FakeHistory(_roster_frame((1,)))
+    process = _process(provider=provider, history=history)
+    request = process.assemble(_request())
+
+    # The poisoned cross row is dropped, so the cross-section falls back to
+    # the previous date; the foreign identity never produces facts.
+    assert request.data_to == date(2026, 9, 28)
+    assert [draft.instrument_id for draft in request.instruments] == [1]
+    assert request.instruments[0].declared_missing_inputs == ()

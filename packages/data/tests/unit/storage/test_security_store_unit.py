@@ -11,7 +11,7 @@ from ditto_data.storage.metadata.instrument import (
     SecurityQuery,
     StockExtension,
 )
-from ditto_data.storage.metadata.instrument.instrument_reader import _build_in_clause
+from ditto_data.storage.metadata.instrument.instrument_reader import build_in_clause
 from ditto_platform.foundation import DataCache, SQLiteClient
 from pytest_mock import MockerFixture
 
@@ -1069,8 +1069,8 @@ class TestSqlInjectionProtection:
 
     def test_build_in_clause_empty_and_chunked(self) -> None:
         """IN clause helper should be safe for empty and chunked inputs."""
-        empty_clause, empty_params = _build_in_clause("instrument_id", [])
-        chunked_clause, chunked_params = _build_in_clause(
+        empty_clause, empty_params = build_in_clause("instrument_id", [])
+        chunked_clause, chunked_params = build_in_clause(
             "instrument_id",
             [1, 2, 3, 4, 5],
             chunk_size=2,

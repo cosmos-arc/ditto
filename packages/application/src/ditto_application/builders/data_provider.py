@@ -94,6 +94,7 @@ def _lineage_frame(frame: pl.DataFrame) -> pl.DataFrame:
     ).with_columns(
         pl.lit(None, dtype=pl.String).alias("_lineage_snapshot"),
         pl.lit(None, dtype=pl.String).alias("_lineage_freshness"),
+        pl.lit(None, dtype=pl.String).alias("_lineage_class"),
     )
 
 
@@ -102,9 +103,9 @@ def _apply_exact(
     windows: Sequence[tuple[tuple[object, ...], _CatalogSnapshotWindow]],
     on: Sequence[str],
     *,
-    fallback_only: bool = False,
+    lineage_class: str,
 ) -> pl.DataFrame:
-    """Join the freshest exact-date window per key, fresher wins per row."""
+    """Join the freshest exact-date window per key within one class."""
     if not windows:
         return lineage
     lookup = pl.DataFrame(
@@ -124,32 +125,24 @@ def _apply_exact(
         },
     )
     joined = lineage.join(lookup, on=list(on), how="left")
-    takes = (
-        pl.col("_lineage_snapshot").is_null()
-        if fallback_only
-        else (
-            pl.col("_lineage_freshness").is_null()
-            | (
-                pl.col("_lookup_freshness").is_not_null()
-                & (pl.col("_lookup_freshness") > pl.col("_lineage_freshness"))
-            )
-        )
-    )
-    return _rewrite_lineage(
+    takes = _takes(joined, lineage_class, pl.col("_lookup_freshness"))
+    rewritten = _rewrite_lineage(
         joined,
         takes,
         pl.col("_lookup_snapshot"),
         pl.col("_lookup_freshness"),
-    ).drop("_lookup_snapshot", "_lookup_freshness")
+        lineage_class,
+    )
+    return rewritten.drop("_lookup_snapshot", "_lookup_freshness")
 
 
 def _apply_ranged(
     lineage: pl.DataFrame,
     window: _CatalogSnapshotWindow,
     *,
-    fallback_only: bool = False,
+    lineage_class: str,
 ) -> pl.DataFrame:
-    """Overlay one multi-date window where it outranks the current pick."""
+    """Overlay one multi-date window within its lineage class."""
     matches = (
         (pl.col("_lineage_source") == window.source)
         & (
@@ -159,19 +152,27 @@ def _apply_ranged(
         & (pl.col("_lineage_date") >= window.start_date)
         & (pl.col("_lineage_date") <= window.end_date)
     )
-    takes = matches & (
-        pl.col("_lineage_snapshot").is_null()
-        if fallback_only
-        else (
-            pl.col("_lineage_freshness").is_null()
-            | (pl.lit(_freshness(window)) > pl.col("_lineage_freshness"))
-        )
-    )
+    takes = matches & _takes(lineage, lineage_class, pl.lit(_freshness(window)))
     return _rewrite_lineage(
         lineage,
         takes,
         pl.lit(window.snapshot_id),
         pl.lit(_freshness(window)),
+        lineage_class,
+    )
+
+
+def _takes(lineage: pl.DataFrame, lineage_class: str, freshness: pl.Expr) -> pl.Expr:
+    """
+    A window takes the row only within its own lineage class.
+
+    Ticker-specific windows never lose to wildcard ones regardless of
+    freshness, while fresher candidates replace older picks of the same
+    class — the original scan's precedence.
+    """
+    return pl.col("_lineage_snapshot").is_null() | (
+        (pl.col("_lineage_class") == pl.lit(lineage_class))
+        & (freshness.is_not_null() & (freshness > pl.col("_lineage_freshness")))
     )
 
 
@@ -180,6 +181,7 @@ def _rewrite_lineage(
     takes: pl.Expr,
     snapshot: pl.Expr,
     freshness: pl.Expr,
+    lineage_class: str,
 ) -> pl.DataFrame:
     return lineage.with_columns(
         pl.when(takes)
@@ -187,9 +189,16 @@ def _rewrite_lineage(
             pl.struct(
                 snapshot.alias("_lineage_snapshot"),
                 freshness.alias("_lineage_freshness"),
+                pl.lit(lineage_class).alias("_lineage_class"),
             )
         )
-        .otherwise(pl.struct(pl.col("_lineage_snapshot"), pl.col("_lineage_freshness")))
+        .otherwise(
+            pl.struct(
+                pl.col("_lineage_snapshot"),
+                pl.col("_lineage_freshness"),
+                pl.col("_lineage_class"),
+            )
+        )
         .struct.field("*")
     )
 
@@ -256,19 +265,20 @@ def _attach_catalog_source_snapshots(
         lineage,
         tuple(keyed.items()),
         ["_lineage_source", "_lineage_ticker", "_lineage_date"],
+        lineage_class="ticker",
     )
     for window in sorted(ranged, key=_freshness_key):
         if window.source_ticker is not None:
-            lineage = _apply_ranged(lineage, window)
+            lineage = _apply_ranged(lineage, window, lineage_class="ticker")
     lineage = _apply_exact(
         lineage,
         tuple(wildcard_date.items()),
         ["_lineage_source", "_lineage_date"],
-        fallback_only=True,
+        lineage_class="wildcard",
     )
     for window in sorted(ranged, key=_freshness_key):
         if window.source_ticker is None:
-            lineage = _apply_ranged(lineage, window, fallback_only=True)
+            lineage = _apply_ranged(lineage, window, lineage_class="wildcard")
     return frame.with_columns(
         lineage["_lineage_snapshot"].alias(_SOURCE_SNAPSHOT_COLUMN)
     )
