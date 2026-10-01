@@ -62,7 +62,10 @@ class _MaturityPromotionStore:
     def upsert_dataset_maturity_promotion(
         self,
         promotion: DatasetMaturityPromotion,
+        *,
+        assessed_event_sequence: int,
     ) -> None:
+        del assessed_event_sequence  # 桩不重放存储级守卫;语义由存储测试覆盖
         self.writes.append(promotion)
         self._promotions_by_dataset[promotion.dataset_id] = promotion
 

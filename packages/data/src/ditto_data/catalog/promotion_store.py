@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from datetime import UTC, datetime
 from typing import Any, Literal, cast
 
@@ -214,13 +215,18 @@ class SQLiteDatasetMaturityPromotionStore:
     def upsert_dataset_maturity_promotion(
         self,
         promotion: DatasetMaturityPromotion,
+        *,
+        assessed_event_sequence: int,
     ) -> None:
         """
         Insert or replace a dataset maturity promotion override.
 
         Fails closed when a revocation event newer than ``promotion.promoted_at``
-        already exists: a promotion computed from pre-revocation evidence must
-        not resurrect a revoked override (#380).
+        or appended after ``assessed_event_sequence`` (the caller's assessment
+        snapshot) already exists: a promotion computed from pre-revocation
+        evidence must not resurrect a revoked override (#380). Timestamps are
+        compared through SQLite ``datetime()`` so legacy non-UTC ISO rows
+        order as instants.
         """
         _validate_dataset_id(promotion.dataset_id)
         promoted_at_text = _normalized_instant_text(promotion.promoted_at)
@@ -228,6 +234,12 @@ class SQLiteDatasetMaturityPromotionStore:
             msg = (
                 "cannot upsert a promotion without a timezone-aware "
                 f"promoted_at: {promotion.dataset_id}"
+            )
+            raise ValueError(msg)
+        if assessed_event_sequence < 0:
+            msg = (
+                "assessed_event_sequence must be a non-negative append-only "
+                f"sequence: {promotion.dataset_id}"
             )
             raise ValueError(msg)
         try:
@@ -252,7 +264,8 @@ class SQLiteDatasetMaturityPromotionStore:
                       AND action = 'revoked'
                       AND (
                         action_at IS NULL
-                        OR action_at >= ?
+                        OR datetime(action_at) >= datetime(?)
+                        OR event_id > ?
                       )
                 )
                 ON CONFLICT (dataset_id)
@@ -274,6 +287,7 @@ class SQLiteDatasetMaturityPromotionStore:
                     promotion.notes,
                     promotion.dataset_id,
                     promoted_at_text,
+                    assessed_event_sequence,
                 ],
             )
             if cursor.rowcount != 1:
@@ -333,6 +347,7 @@ class SQLiteDatasetMaturityPromotionStore:
         rows = self._client.fetchall(
             """
             SELECT
+                event_id,
                 dataset_id,
                 action,
                 previous_maturity,
@@ -384,18 +399,18 @@ class SQLiteDatasetMaturityPromotionStore:
                 """,
                 [dataset_id],
             )
-            self._insert_promotion_event(event)
+            sequence = self._insert_promotion_event(event)
             self._client.commit()
         except Exception:
             self._client.rollback()
             raise
-        return event
+        return replace(event, sequence=sequence)
 
     def _insert_promotion_event(
         self,
         event: DatasetMaturityPromotionEvent,
-    ) -> None:
-        self._client.execute(
+    ) -> int:
+        cursor = self._client.execute(
             """
             INSERT INTO dataset_maturity_promotion_events (
                 dataset_id,
@@ -422,6 +437,7 @@ class SQLiteDatasetMaturityPromotionStore:
                 event.notes,
             ],
         )
+        return int(cursor.lastrowid or 0)
 
 
 def _promotion_from_row(row: dict[str, Any]) -> DatasetMaturityPromotion:
@@ -456,4 +472,5 @@ def _promotion_event_from_row(row: dict[str, Any]) -> DatasetMaturityPromotionEv
         if row["revocation_reason"] is not None
         else None,
         notes=str(row["notes"]) if row["notes"] is not None else None,
+        sequence=int(row["event_id"]),
     )

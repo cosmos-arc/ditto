@@ -180,9 +180,8 @@ class IngestionStatusQueryFacade:
         ingestion_log_store: IngestionLogStore,
         data_catalog_reader: DataCatalogReader,
         promotion_evidence_reader: DatasetPromotionEvidenceReader,
+        maturity_promotion_history_reader: DatasetMaturityPromotionHistoryReader,
         maturity_promotion_reader: DatasetMaturityPromotionReader | None = None,
-        maturity_promotion_history_reader: DatasetMaturityPromotionHistoryReader
-        | None = None,
         *,
         source_health_summary_query: _SourceHealthSummaryQuery | None = None,
         now: Callable[[], datetime] | None = None,
@@ -193,10 +192,7 @@ class IngestionStatusQueryFacade:
         self._maturity_promotion_reader = (
             maturity_promotion_reader or _NoDatasetMaturityPromotionReader()
         )
-        self._maturity_promotion_history_reader = (
-            maturity_promotion_history_reader
-            or _NoDatasetMaturityPromotionHistoryReader()
-        )
+        self._maturity_promotion_history_reader = maturity_promotion_history_reader
         self._source_health_summary_query = source_health_summary_query
         self._now = now or _utcnow
 
@@ -584,14 +580,6 @@ def _dataset_promotion_assessment(
 class _NoDatasetMaturityPromotionReader:
     def get_dataset_maturity_promotion(self, dataset_id: str) -> None:
         return None
-
-
-class _NoDatasetMaturityPromotionHistoryReader:
-    def list_dataset_maturity_promotion_events(
-        self,
-        dataset_id: str,
-    ) -> tuple[DatasetMaturityPromotionEvent, ...]:
-        return ()
 
 
 def _latest_revoked_promotion_event(

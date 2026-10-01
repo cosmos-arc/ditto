@@ -121,6 +121,7 @@ class DatasetMaturityPromotionEvent:
     evidence_uri: str | None = None
     revocation_reason: DatasetMaturityPromotionRevocationReason | None = None
     notes: str | None = None
+    sequence: int | None = None
 
     def __post_init__(self) -> None:
         """Validate event identity and supported maturity transitions."""
@@ -195,8 +196,17 @@ class DatasetMaturityPromotionWriter(Protocol):
     def upsert_dataset_maturity_promotion(
         self,
         promotion: DatasetMaturityPromotion,
+        *,
+        assessed_event_sequence: int,
     ) -> None:
-        """Insert or replace a dataset maturity promotion override."""
+        """
+        Insert or replace a dataset maturity promotion override.
+
+        ``assessed_event_sequence`` is the newest append-only event sequence
+        the caller's assessment already observed; implementations must reject
+        the write when a newer revocation event exists (fail closed on
+        revocations the assessment never saw, #380).
+        """
         ...
 
 

@@ -9,6 +9,7 @@ from datetime import UTC, datetime
 from ditto_data.catalog.metadata import default_dataset_metadata
 from ditto_data.catalog.promotion import (
     DatasetMaturityPromotion,
+    DatasetMaturityPromotionEvent,
     DatasetMaturityPromotionHistoryReader,
     DatasetMaturityPromotionReader,
     DatasetMaturityPromotionRevocationReason,
@@ -90,6 +91,13 @@ class DatasetMaturityPromotionRevokeResult:
     notes: str | None = None
 
 
+def _assessed_event_sequence(
+    events: tuple[DatasetMaturityPromotionEvent, ...],
+) -> int:
+    """Newest append-only event sequence an assessment already observed."""
+    return max((event.sequence or 0 for event in events), default=0)
+
+
 class ReviewDatasetPromotionEvidenceHandler:
     """Persist reviewer evidence and return the resulting promotion assessment."""
 
@@ -146,13 +154,16 @@ class ReviewDatasetPromotionEvidenceHandler:
             reviewed_at=reviewed_at,
         )
         self._evidence_writer.upsert_dataset_evidence(command.dataset_id, evidence)
+        history = self._maturity_promotion_history_reader
+        promotion_events = history.list_dataset_maturity_promotion_events(
+            command.dataset_id
+        )
+        assessed_sequence = _assessed_event_sequence(promotion_events)
         assessment = assess_dataset_promotion(
             metadata,
             evidence_since_latest_revocation(
                 self._evidence_reader.list_dataset_evidence(command.dataset_id),
-                self._maturity_promotion_history_reader.list_dataset_maturity_promotion_events(
-                    command.dataset_id
-                ),
+                promotion_events,
             ),
         )
         metadata_promoted = False
@@ -167,7 +178,10 @@ class ReviewDatasetPromotionEvidenceHandler:
                 evidence_uri=command.evidence_uri,
                 notes=command.notes,
             )
-            self._maturity_promotion_writer.upsert_dataset_maturity_promotion(promotion)
+            self._maturity_promotion_writer.upsert_dataset_maturity_promotion(
+                promotion,
+                assessed_event_sequence=assessed_sequence,
+            )
             promoted_metadata = apply_dataset_maturity_promotion(metadata, promotion)
             dataset_maturity_after = promoted_metadata.maturity
             metadata_promoted = True

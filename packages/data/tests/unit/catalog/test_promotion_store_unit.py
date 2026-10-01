@@ -131,7 +131,10 @@ class TestSQLiteDatasetMaturityPromotionStore:
         try:
             SQLiteDatasetMaturityPromotionStore(
                 writer_client
-            ).upsert_dataset_maturity_promotion(promotion)
+            ).upsert_dataset_maturity_promotion(
+                promotion,
+                assessed_event_sequence=0,
+            )
         finally:
             writer_pool.close()
 
@@ -176,7 +179,10 @@ class TestSQLiteDatasetMaturityPromotionStore:
         )
 
         try:
-            store.upsert_dataset_maturity_promotion(promotion)
+            store.upsert_dataset_maturity_promotion(
+                promotion,
+                assessed_event_sequence=0,
+            )
             revoked = store.revoke_dataset_maturity_promotion(
                 "stock_daily",
                 revoked_by="architecture-review",
@@ -188,6 +194,7 @@ class TestSQLiteDatasetMaturityPromotionStore:
             assert store.get_dataset_maturity_promotion("stock_daily") is None
             assert revoked == DatasetMaturityPromotionEvent(
                 dataset_id="stock_daily",
+                sequence=2,
                 action="revoked",
                 previous_maturity="initial-focus",
                 next_maturity="experimental",
@@ -200,6 +207,7 @@ class TestSQLiteDatasetMaturityPromotionStore:
             assert store.list_dataset_maturity_promotion_events("stock_daily") == (
                 DatasetMaturityPromotionEvent(
                     dataset_id="stock_daily",
+                    sequence=1,
                     action="promoted",
                     previous_maturity="experimental",
                     next_maturity="initial-focus",
@@ -251,7 +259,10 @@ class TestSQLiteDatasetMaturityPromotionStore:
         )
 
         try:
-            store.upsert_dataset_maturity_promotion(stale_promotion)
+            store.upsert_dataset_maturity_promotion(
+                stale_promotion,
+                assessed_event_sequence=0,
+            )
             store.revoke_dataset_maturity_promotion(
                 "stock_daily",
                 revoked_by="data-governance",
@@ -260,10 +271,15 @@ class TestSQLiteDatasetMaturityPromotionStore:
             )
 
             with pytest.raises(ValueError, match="newer revocation"):
-                store.upsert_dataset_maturity_promotion(stale_promotion)
+                store.upsert_dataset_maturity_promotion(
+                    stale_promotion,
+                    assessed_event_sequence=0,
+                )
             assert store.get_dataset_maturity_promotion("stock_daily") is None
 
-            store.upsert_dataset_maturity_promotion(re_promotion)
+            store.upsert_dataset_maturity_promotion(
+                re_promotion, assessed_event_sequence=2
+            )
             current = store.get_dataset_maturity_promotion("stock_daily")
             assert current is not None
             assert current.promoted_at == re_promotion.promoted_at
@@ -287,7 +303,10 @@ class TestSQLiteDatasetMaturityPromotionStore:
 
         try:
             with pytest.raises(ValueError, match="timezone-aware"):
-                store.upsert_dataset_maturity_promotion(naive_promotion)
+                store.upsert_dataset_maturity_promotion(
+                    naive_promotion,
+                    assessed_event_sequence=0,
+                )
         finally:
             pool.close()
 
@@ -306,7 +325,8 @@ class TestSQLiteDatasetMaturityPromotionStore:
                 promoted_maturity="initial-focus",
                 promoted_by="architecture-review",
                 promoted_at=datetime(2026, 6, 1, 0, 0, tzinfo=UTC),
-            )
+            ),
+            assessed_event_sequence=0,
         )
         store.revoke_dataset_maturity_promotion(
             "stock_daily",
@@ -321,7 +341,9 @@ class TestSQLiteDatasetMaturityPromotionStore:
                 promoted_maturity="initial-focus",
                 promoted_by="architecture-review",
                 promoted_at=datetime(2026, 6, 1, 1, 0, tzinfo=UTC),
-            )
+            ),
+            # 评估已见到该撤销(00:00Z),快照不得早于它
+            assessed_event_sequence=2,
         )
         current = store.get_dataset_maturity_promotion("stock_daily")
         assert current is not None
@@ -343,7 +365,8 @@ class TestSQLiteDatasetMaturityPromotionStore:
                 promoted_maturity="initial-focus",
                 promoted_by="architecture-review",
                 promoted_at=datetime(2026, 6, 1, tzinfo=UTC),
-            )
+            ),
+            assessed_event_sequence=0,
         )
         store.revoke_dataset_maturity_promotion(
             "stock_daily",
@@ -361,6 +384,48 @@ class TestSQLiteDatasetMaturityPromotionStore:
 
         try:
             with pytest.raises(ValueError, match="newer revocation"):
-                store.upsert_dataset_maturity_promotion(tied)
+                store.upsert_dataset_maturity_promotion(tied, assessed_event_sequence=0)
+        finally:
+            pool.close()
+
+    def test_upsert_rejects_revocation_unseen_by_assessment_snapshot(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """#380:评估快照之后落地的撤销(如暂停的 revoker)不得被穿透。"""
+        client, pool = _client(tmp_path / "catalog.sqlite")
+        store = SQLiteDatasetMaturityPromotionStore(client)
+        snapshot = 1  # 评估者只见到事件 1(首次晋级),未见到事件 2(撤销)
+        # revoker 在 t=11:00 已捕获时刻但尚未写事件;评估者读到空历史
+        store.upsert_dataset_maturity_promotion(
+            DatasetMaturityPromotion(
+                dataset_id="stock_daily",
+                previous_maturity="experimental",
+                promoted_maturity="initial-focus",
+                promoted_by="architecture-review",
+                promoted_at=datetime(2026, 6, 1, 10, 0, tzinfo=UTC),
+            ),
+            assessed_event_sequence=0,
+        )
+        store.revoke_dataset_maturity_promotion(
+            "stock_daily",
+            revoked_by="data-governance",
+            revoked_at=datetime(2026, 6, 1, 11, 0, tzinfo=UTC),
+            revocation_reason="evidence_invalidated",
+        )
+        stale_write = DatasetMaturityPromotion(
+            dataset_id="stock_daily",
+            previous_maturity="experimental",
+            promoted_maturity="initial-focus",
+            promoted_by="architecture-review",
+            promoted_at=datetime(2026, 6, 1, 13, 0, tzinfo=UTC),
+        )
+
+        try:
+            with pytest.raises(ValueError, match="newer revocation"):
+                store.upsert_dataset_maturity_promotion(
+                    stale_write, assessed_event_sequence=snapshot
+                )
+            assert store.get_dataset_maturity_promotion("stock_daily") is None
         finally:
             pool.close()
