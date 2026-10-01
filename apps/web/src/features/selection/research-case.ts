@@ -1,11 +1,18 @@
-import type { ResearchCase, SelectionRun } from "./api";
+import type { CreateResearchCaseBody, ResearchCase, SelectionRun } from "./api";
+
+const SUPPORTED_RESEARCH_CASE_SCHEMA_VERSION = 1;
 
 function sameSnapshotSet(left: readonly string[], right: readonly string[]): boolean {
 	return [...left].sort().join("\n") === [...right].sort().join("\n");
 }
 
-export function toResearchCaseView(value: ResearchCase, run: SelectionRun) {
+function sameIdSequence(left: readonly number[], right: readonly number[]): boolean {
+	return left.length === right.length && [...left].sort().join(",") === [...right].sort().join(",");
+}
+
+export function toResearchCaseView(value: ResearchCase, run: SelectionRun, submitted: CreateResearchCaseBody) {
 	if (
+		value.schema_version !== SUPPORTED_RESEARCH_CASE_SCHEMA_VERSION ||
 		!/^[a-f0-9]{64}$/.test(value.content_hash) ||
 		value.case_id !== `research-case:sha256:${value.content_hash}` ||
 		value.selection_run_id !== run.run_id ||
@@ -18,14 +25,13 @@ export function toResearchCaseView(value: ResearchCase, run: SelectionRun) {
 		value.publication_cutoff !== run.publication_cutoff ||
 		!sameSnapshotSet(value.source_snapshot_ids, run.source_snapshot_ids) ||
 		value.selection_status !== run.status ||
-		!Number.isSafeInteger(value.schema_version) ||
 		Number.isNaN(Date.parse(value.as_of)) ||
-		!Array.isArray(value.candidate_instrument_ids) ||
-		value.candidate_instrument_ids.some((instrumentId) => !Number.isSafeInteger(instrumentId) || instrumentId <= 0) ||
+		value.objective !== submitted.objective ||
+		!sameIdSequence(value.candidate_instrument_ids, submitted.candidate_instrument_ids ?? []) ||
 		!Array.isArray(value.missing_inputs) ||
 		(value.selection_status !== "ready" && value.selection_status !== "degraded")
 	)
-		throw new Error("研究用例响应的 lineage 与所选运行不一致");
+		throw new Error("研究用例响应的 lineage、schema 版本或提交范围与请求不一致");
 	return {
 		caseId: value.case_id,
 		contentHash: value.content_hash,

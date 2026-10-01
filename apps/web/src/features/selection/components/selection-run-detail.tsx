@@ -25,22 +25,38 @@ function ResearchCaseCreation({ run }: { readonly run: SelectionRun }) {
 	const [objective, setObjective] = useState("");
 	const [excluded, setExcluded] = useState<readonly number[]>([]);
 	const [copied, setCopied] = useState(false);
+	const [copyError, setCopyError] = useState<string | null>(null);
 	const createCase = useMutation({
 		mutationKey: selectionKeys.researchCases(run.run_id),
 		mutationFn: async (body: CreateResearchCaseBody) =>
-			toResearchCaseView(await createResearchCase(run.run_id, body), run),
-		onMutate: () => setCopied(false),
+			toResearchCaseView(await createResearchCase(run.run_id, body), run, body),
+		onMutate: () => {
+			setCopied(false);
+			setCopyError(null);
+		},
 	});
 	const view = createCase.data;
 	const selectedIds = run.candidates
 		.filter((candidate) => !excluded.includes(candidate.instrument_id))
 		.map((candidate) => candidate.instrument_id);
-	const canSubmit = objective.trim().length > 0 && (run.candidates.length === 0 || selectedIds.length > 0);
+	const canSubmit = objective.trim().length > 0 && selectedIds.length > 0;
 
 	async function copyCaseId(): Promise<void> {
 		if (!view) return;
-		await navigator.clipboard.writeText(view.caseId);
-		setCopied(true);
+		try {
+			await navigator.clipboard.writeText(view.caseId);
+			setCopied(true);
+		} catch {
+			setCopyError("剪贴板不可用，请手动选择下方用例 ID 复制");
+		}
+	}
+
+	if (run.candidates.length === 0) {
+		return (
+			<p className="text-(--color-foreground-tertiary)">
+				该运行无入选候选，无法创建研究用例（研究用例绑定运行的实际候选范围）。
+			</p>
+		);
 	}
 
 	return (
@@ -103,6 +119,11 @@ function ResearchCaseCreation({ run }: { readonly run: SelectionRun }) {
 			{createCase.isError && (
 				<p role="alert" className="text-(--color-risk-critical-fg)">
 					{createCase.error.message}
+				</p>
+			)}
+			{copyError && (
+				<p role="alert" className="text-(--color-risk-critical-fg)">
+					{copyError}
 				</p>
 			)}
 			{view && (
