@@ -873,3 +873,26 @@ def test_provider_identity_mismatch_rows_are_dropped() -> None:
     assert request.data_to == date(2026, 9, 28)
     assert [draft.instrument_id for draft in request.instruments] == [1]
     assert request.instruments[0].declared_missing_inputs == ()
+
+
+def test_naive_declared_cutoff_is_rejected_structurally() -> None:
+    process, _, _ = _happy_process()
+    with pytest.raises(AppProcessError) as error:
+        process.assemble(_request(knowledge_cutoff=datetime(2026, 9, 29, 9, 0)))
+    assert error.value.details["reason"] == "ASSEMBLY_CUTOFF_INVALID"
+
+
+@pytest.mark.pit
+def test_raw_rows_without_lineage_leave_limit_state_missing() -> None:
+    raw = _bars_frame(rows_per_instrument={1: 30}).with_columns(
+        pl.when(pl.col("trade_date") == _CROSS)
+        .then(None)
+        .otherwise(pl.col("source_snapshot_id"))
+        .alias("source_snapshot_id")
+    )
+    provider = _FakeProvider(_bars_frame(rows_per_instrument={1: 30}), raw_frame=raw)
+    history = _FakeHistory(_roster_frame((1,)))
+    process = _process(provider=provider, history=history)
+    request = process.assemble(_request())
+
+    assert request.instruments[0].limit_state is None

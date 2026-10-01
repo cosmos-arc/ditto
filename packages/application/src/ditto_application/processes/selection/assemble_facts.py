@@ -371,6 +371,12 @@ class AssembleSelectionFacts:
         to the certified replay lane.
         """
         now = self._clock()
+        for declared in (request.knowledge_cutoff, request.publication_cutoff):
+            if declared is not None and declared.tzinfo is None:
+                raise AppProcessError(
+                    "assembled selection cutoffs must carry a timezone",
+                    details={"reason": "ASSEMBLY_CUTOFF_INVALID"},
+                )
         if request.as_of > now + _LIVE_SKEW:
             raise AppProcessError(
                 "future decision instants cannot use the live read model",
@@ -771,6 +777,7 @@ class AssembleSelectionFacts:
             "close",
             "pre_close",
             "knowledge_date",
+            _BAR_LINEAGE_COLUMN,
         }
         if frame.is_empty() or not required.issubset(frame.columns):
             return {}
@@ -782,7 +789,10 @@ class AssembleSelectionFacts:
                     .then(pl.lit(tickers[resolved_id]))
                     .otherwise(expected)
                 )
-            frame = frame.filter(pl.col("source_ticker") == expected.cast(pl.String))
+            frame = frame.filter(
+                (pl.col("source_ticker") == expected.cast(pl.String))
+                & pl.col(_BAR_LINEAGE_COLUMN).is_not_null()
+            )
         knowledge_column = pl.col("knowledge_date")
         if frame.schema["knowledge_date"] == pl.String:
             knowledge_column = knowledge_column.str.to_date()
