@@ -252,7 +252,7 @@ class SQLiteDatasetMaturityPromotionStore:
                       AND action = 'revoked'
                       AND (
                         action_at IS NULL
-                        OR action_at > ?
+                        OR action_at >= ?
                       )
                 )
                 ON CONFLICT (dataset_id)

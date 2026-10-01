@@ -327,3 +327,40 @@ class TestSQLiteDatasetMaturityPromotionStore:
         assert current is not None
         assert current.promoted_at == datetime(2026, 6, 1, 1, 0, tzinfo=UTC)
         pool.close()
+
+    def test_upsert_rejects_promotion_tied_with_revocation(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """#380:与撤销同刻的晋级不可排序,一律拒绝(与纯函数严格序一致)。"""
+        client, pool = _client(tmp_path / "catalog.sqlite")
+        store = SQLiteDatasetMaturityPromotionStore(client)
+        moment = datetime(2026, 6, 2, 9, 0, tzinfo=UTC)
+        store.upsert_dataset_maturity_promotion(
+            DatasetMaturityPromotion(
+                dataset_id="stock_daily",
+                previous_maturity="experimental",
+                promoted_maturity="initial-focus",
+                promoted_by="architecture-review",
+                promoted_at=datetime(2026, 6, 1, tzinfo=UTC),
+            )
+        )
+        store.revoke_dataset_maturity_promotion(
+            "stock_daily",
+            revoked_by="data-governance",
+            revoked_at=moment,
+            revocation_reason="evidence_invalidated",
+        )
+        tied = DatasetMaturityPromotion(
+            dataset_id="stock_daily",
+            previous_maturity="experimental",
+            promoted_maturity="initial-focus",
+            promoted_by="architecture-review",
+            promoted_at=moment,
+        )
+
+        try:
+            with pytest.raises(ValueError, match="newer revocation"):
+                store.upsert_dataset_maturity_promotion(tied)
+        finally:
+            pool.close()
