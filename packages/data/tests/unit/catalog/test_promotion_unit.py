@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime, timedelta
-
 import pytest
 from ditto_data.catalog.metadata import default_dataset_metadata
 from ditto_data.catalog.promotion import (
@@ -163,73 +161,71 @@ class TestDatasetMaturityPromotionEvent:
 
 
 class TestEvidenceSinceLatestRevocation:
-    """#380:撤销截止线只保留撤销之后记录的证据。"""
+    """#383:撤销截止线按治理事件序列过滤证据。"""
 
     @staticmethod
     def _evidence(
-        criterion: str, reviewed_at: datetime | None
+        criterion: str, assessed_event_sequence: int = 0
     ) -> DatasetPromotionEvidence:
         return DatasetPromotionEvidence(
             criterion=criterion,
             evidence_uri=f"ditto://evidence/stock_daily/{criterion}",
             approved_by="architecture-review",
-            reviewed_at=reviewed_at,
+            assessed_event_sequence=assessed_event_sequence,
         )
 
     @staticmethod
-    def _revoked_event(action_at: datetime) -> DatasetMaturityPromotionEvent:
+    def _revoked_event(sequence: int) -> DatasetMaturityPromotionEvent:
         return DatasetMaturityPromotionEvent(
             dataset_id="stock_daily",
             action="revoked",
             previous_maturity="initial-focus",
             next_maturity="experimental",
             actor="architecture-review",
-            action_at=action_at,
             revocation_reason="evidence_invalidated",
+            sequence=sequence,
         )
 
     def test_no_revocation_keeps_all_evidence(self) -> None:
-        evidence = (
-            self._evidence("c1", None),
-            self._evidence("c2", datetime(2026, 1, 1, tzinfo=UTC)),
-        )
+        evidence = (self._evidence("c1"), self._evidence("c2", 5))
 
         assert evidence_since_latest_revocation(evidence, ()) == evidence
 
-    def test_evidence_before_cutoff_is_dropped(self) -> None:
-        cutoff = datetime(2026, 6, 1, tzinfo=UTC)
-        stale = self._evidence("c1", cutoff - timedelta(days=1))
-        fresh = self._evidence("c2", cutoff + timedelta(days=1))
+    def test_evidence_assessed_before_revocation_is_dropped(self) -> None:
+        stale = self._evidence("c1", 1)
+        fresh = self._evidence("c2", 3)
 
         assert evidence_since_latest_revocation(
-            (stale, fresh), (self._revoked_event(cutoff),)
+            (stale, fresh), (self._revoked_event(2),)
         ) == (fresh,)
 
-    def test_untimestamped_evidence_is_dropped_after_revocation(self) -> None:
-        cutoff = datetime(2026, 6, 1, tzinfo=UTC)
-        unknown = self._evidence("c1", None)
+    def test_legacy_unattributed_rows_never_survive_revocation(self) -> None:
+        legacy = self._evidence("c1", 0)
 
         assert (
-            evidence_since_latest_revocation((unknown,), (self._revoked_event(cutoff),))
-            == ()
+            evidence_since_latest_revocation((legacy,), (self._revoked_event(1),)) == ()
+        )
+
+    def test_evidence_assessed_with_revocation_in_view_survives(self) -> None:
+        seen = self._evidence("c1", 2)
+
+        assert evidence_since_latest_revocation((seen,), (self._revoked_event(2),)) == (
+            seen,
         )
 
     def test_latest_revocation_wins(self) -> None:
-        first = datetime(2026, 6, 1, tzinfo=UTC)
-        second = datetime(2026, 7, 1, tzinfo=UTC)
-        between = self._evidence("c1", first + timedelta(days=1))
+        between = self._evidence("c1", 3)
 
         assert (
             evidence_since_latest_revocation(
                 (between,),
-                (self._revoked_event(first), self._revoked_event(second)),
+                (self._revoked_event(2), self._revoked_event(5)),
             )
             == ()
         )
 
-    def test_untimestamped_revocation_drops_all_evidence(self) -> None:
-        cutoff = datetime(2026, 6, 1, tzinfo=UTC)
-        unknown_revoke = DatasetMaturityPromotionEvent(
+    def test_sequence_less_revocation_drops_all_evidence(self) -> None:
+        unsequenced = DatasetMaturityPromotionEvent(
             dataset_id="stock_daily",
             action="revoked",
             previous_maturity="initial-focus",
@@ -237,33 +233,6 @@ class TestEvidenceSinceLatestRevocation:
             actor="data-governance",
             revocation_reason="manual_override",
         )
-        recent = self._evidence("c1", cutoff + timedelta(days=1))
+        fresh = self._evidence("c1", 99)
 
-        assert evidence_since_latest_revocation((recent,), (unknown_revoke,)) == ()
-
-    def test_naive_revocation_timestamp_drops_all_evidence(self) -> None:
-        naive_revoke = DatasetMaturityPromotionEvent(
-            dataset_id="stock_daily",
-            action="revoked",
-            previous_maturity="initial-focus",
-            next_maturity="experimental",
-            actor="data-governance",
-            action_at=datetime(2026, 6, 1),
-            revocation_reason="manual_override",
-        )
-        aware_evidence = self._evidence("c1", datetime(2026, 6, 2, tzinfo=UTC))
-
-        assert (
-            evidence_since_latest_revocation((aware_evidence,), (naive_revoke,)) == ()
-        )
-
-    def test_naive_evidence_timestamp_is_dropped_after_revocation(self) -> None:
-        cutoff = datetime(2026, 6, 1, tzinfo=UTC)
-        naive_evidence = self._evidence("c1", datetime(2026, 6, 2))
-
-        assert (
-            evidence_since_latest_revocation(
-                (naive_evidence,), (self._revoked_event(cutoff),)
-            )
-            == ()
-        )
+        assert evidence_since_latest_revocation((fresh,), (unsequenced,)) == ()

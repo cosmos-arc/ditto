@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import sqlite3
 from dataclasses import replace
 from datetime import UTC, datetime
 from typing import Any, Literal, cast
@@ -32,7 +33,8 @@ class SQLiteDatasetPromotionEvidenceStore:
     def _create_tables(self) -> None:
         self._client.execute(
             """
-            CREATE TABLE IF NOT EXISTS dataset_promotion_evidence (
+            CREATE TABLE IF NOT EXISTS dataset_promotion_evidence_log (
+                evidence_sequence INTEGER PRIMARY KEY AUTOINCREMENT,
                 dataset_id TEXT NOT NULL,
                 criterion TEXT NOT NULL,
                 evidence_uri TEXT NOT NULL,
@@ -40,16 +42,44 @@ class SQLiteDatasetPromotionEvidenceStore:
                 passed INTEGER NOT NULL,
                 notes TEXT,
                 reviewed_at TEXT,
-                PRIMARY KEY (dataset_id, criterion)
+                assessed_event_sequence INTEGER NOT NULL DEFAULT 0
             )
             """,
         )
         self._client.execute(
             """
-            CREATE INDEX IF NOT EXISTS idx_dataset_promotion_evidence_dataset
-            ON dataset_promotion_evidence(dataset_id)
+            CREATE INDEX IF NOT EXISTS idx_dataset_promotion_evidence_log_dataset
+            ON dataset_promotion_evidence_log(dataset_id)
             """,
         )
+        # One-time migration (#383): legacy last-write-wins rows move into the
+        # append-only log as unattributed (sequence 0 = never survives a
+        # revocation), then the legacy table is retired.
+        legacy = self._client.fetchone(
+            """
+            SELECT name FROM sqlite_master
+            WHERE type = 'table' AND name = 'dataset_promotion_evidence'
+            """,
+        )
+        if legacy is not None:
+            try:
+                self._client.execute(
+                    """
+                    INSERT INTO dataset_promotion_evidence_log (
+                        dataset_id, criterion, evidence_uri, approved_by,
+                        passed, notes, reviewed_at, assessed_event_sequence
+                    )
+                    SELECT dataset_id, criterion, evidence_uri, approved_by,
+                           passed, notes, reviewed_at, 0
+                    FROM dataset_promotion_evidence
+                    """,
+                )
+                self._client.execute("DROP TABLE dataset_promotion_evidence")
+                self._client.commit()
+            except sqlite3.OperationalError as error:
+                self._client.rollback()
+                if "no such table" not in str(error):
+                    raise
         self._client.commit()
 
     def upsert_dataset_evidence(
@@ -57,28 +87,22 @@ class SQLiteDatasetPromotionEvidenceStore:
         dataset_id: str,
         evidence: DatasetPromotionEvidence,
     ) -> None:
-        """Insert or replace evidence for a dataset criterion."""
+        """Append one immutable evidence review to the log (#383)."""
         _validate_dataset_id(dataset_id)
         try:
             self._client.execute(
                 """
-                INSERT INTO dataset_promotion_evidence (
+                INSERT INTO dataset_promotion_evidence_log (
                     dataset_id,
                     criterion,
                     evidence_uri,
                     approved_by,
                     passed,
                     notes,
-                    reviewed_at
+                    reviewed_at,
+                    assessed_event_sequence
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?)
-                ON CONFLICT (dataset_id, criterion)
-                DO UPDATE SET
-                    evidence_uri = excluded.evidence_uri,
-                    approved_by = excluded.approved_by,
-                    passed = excluded.passed,
-                    notes = excluded.notes,
-                    reviewed_at = excluded.reviewed_at
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 [
                     dataset_id,
@@ -90,6 +114,7 @@ class SQLiteDatasetPromotionEvidenceStore:
                     evidence.reviewed_at.isoformat()
                     if evidence.reviewed_at is not None
                     else None,
+                    evidence.assessed_event_sequence,
                 ],
             )
             self._client.commit()
@@ -111,10 +136,45 @@ class SQLiteDatasetPromotionEvidenceStore:
                 approved_by,
                 passed,
                 notes,
-                reviewed_at
-            FROM dataset_promotion_evidence
+                reviewed_at,
+                assessed_event_sequence
+            FROM dataset_promotion_evidence_log AS current
             WHERE dataset_id = ?
+              AND evidence_sequence = (
+                SELECT pick.evidence_sequence
+                FROM dataset_promotion_evidence_log AS pick
+                WHERE pick.dataset_id = current.dataset_id
+                  AND pick.criterion = current.criterion
+                ORDER BY
+                  pick.assessed_event_sequence DESC,
+                  pick.evidence_sequence DESC
+                LIMIT 1
+              )
             ORDER BY criterion
+            """,
+            [dataset_id],
+        )
+        return tuple(_evidence_from_row(row) for row in rows)
+
+    def list_dataset_evidence_history(
+        self,
+        dataset_id: str,
+    ) -> tuple[DatasetPromotionEvidence, ...]:
+        """Return the full append-only evidence audit trail for one dataset."""
+        _validate_dataset_id(dataset_id)
+        rows = self._client.fetchall(
+            """
+            SELECT
+                criterion,
+                evidence_uri,
+                approved_by,
+                passed,
+                notes,
+                reviewed_at,
+                assessed_event_sequence
+            FROM dataset_promotion_evidence_log
+            WHERE dataset_id = ?
+            ORDER BY evidence_sequence
             """,
             [dataset_id],
         )
@@ -129,6 +189,7 @@ def _evidence_from_row(row: dict[str, Any]) -> DatasetPromotionEvidence:
         passed=bool(row["passed"]),
         notes=str(row["notes"]) if row["notes"] is not None else None,
         reviewed_at=_optional_datetime(row["reviewed_at"]),
+        assessed_event_sequence=int(row.get("assessed_event_sequence") or 0),
     )
 
 
@@ -221,15 +282,11 @@ class SQLiteDatasetMaturityPromotionStore:
         """
         Insert or replace a dataset maturity promotion override.
 
-        Fails closed when a revocation event newer than ``promotion.promoted_at``
-        or appended after ``assessed_event_sequence`` (the caller's assessment
-        snapshot) already exists: a promotion computed from pre-revocation
-        evidence must not resurrect a revoked override (#380). Timestamps are
-        compared as UTC-normalized text with a ``julianday()`` coarse pass
-        plus lexical tie-break; legacy non-UTC rows order as instants, and
-        same-millisecond cross-offset ties over-reject (fail closed) so
-        legacy non-UTC ISO rows
-        order as instants.
+        Fails closed when a revocation event appended after
+        ``assessed_event_sequence`` (the caller's assessment snapshot) already
+        exists: a promotion computed from pre-revocation evidence must not
+        resurrect a revoked override (#380). The append-only event sequence is
+        the single write order — no timestamp comparison is needed or used.
         """
         _validate_dataset_id(promotion.dataset_id)
         promoted_at_text = _normalized_instant_text(promotion.promoted_at)
@@ -265,15 +322,7 @@ class SQLiteDatasetMaturityPromotionStore:
                     FROM dataset_maturity_promotion_events
                     WHERE dataset_id = ?
                       AND action = 'revoked'
-                      AND (
-                        action_at IS NULL
-                        OR julianday(action_at) > julianday(?)
-                        OR (
-                          julianday(action_at) = julianday(?)
-                          AND action_at >= ?
-                        )
-                        OR event_id > ?
-                      )
+                      AND event_id > ?
                 )
                 ON CONFLICT (dataset_id)
                 DO UPDATE SET
@@ -293,9 +342,6 @@ class SQLiteDatasetMaturityPromotionStore:
                     promotion.evidence_uri,
                     promotion.notes,
                     promotion.dataset_id,
-                    promoted_at_text,
-                    promoted_at_text,
-                    promoted_at_text,
                     assessed_event_sequence,
                 ],
             )

@@ -111,9 +111,17 @@ class _MaturityPromotionEventHistory:
     ) -> None:
         self._events_by_dataset = events_by_dataset or {}
 
-    def append(self, event: DatasetMaturityPromotionEvent) -> None:
+    def append(
+        self, event: DatasetMaturityPromotionEvent, sequence: int | None = None
+    ) -> None:
         existing = self._events_by_dataset.get(event.dataset_id, ())
-        self._events_by_dataset[event.dataset_id] = (*existing, event)
+        next_sequence = sequence or len(existing) + 1
+        from dataclasses import replace
+
+        self._events_by_dataset[event.dataset_id] = (
+            *existing,
+            replace(event, sequence=next_sequence),
+        )
 
     def list_dataset_maturity_promotion_events(
         self,

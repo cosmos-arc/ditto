@@ -54,6 +54,9 @@ class DatasetPromotionEvidence:
     passed: bool = True
     notes: str | None = None
     reviewed_at: datetime | None = None
+    # Governance event sequence the reviewer had observed when recording this
+    # row (#383): 0 means unattributed/legacy and never survives a revocation.
+    assessed_event_sequence: int = 0
 
     def __post_init__(self) -> None:
         """Validate required evidence identity fields."""
@@ -266,33 +269,23 @@ def evidence_since_latest_revocation(
 
     Revocation appends an audit event and keeps older evidence auditable, but
     revoked-era evidence must not grant new eligibility on re-review (#251,
-    #380). Evidence without a review timestamp cannot prove it postdates a
-    revocation and is dropped whenever one exists.
+    #380). Rows carry the governance event sequence their reviewer observed
+    (#383); only rows recorded with the newest revocation already in view
+    survive.
     """
-    revoked = [event for event in events if event.action == "revoked"]
-    if not revoked:
-        return evidence
-    if any(
-        event.action_at is None or event.action_at.tzinfo is None for event in revoked
-    ):
-        # An unorderable revocation (missing or timezone-naive timestamp)
-        # cannot be ordered against any evidence row, so no evidence can
-        # prove it postdates the revocation.
+    if any(event.action == "revoked" and event.sequence is None for event in events):
+        # A revocation without its append-only sequence cannot be ordered
+        # against evidence rows, so no evidence can prove it postdates it.
         return ()
-    revoked_at: list[datetime] = [
-        event.action_at
-        for event in revoked
-        if event.action_at is not None and event.action_at.tzinfo is not None
-    ]
-    cutoff = max(revoked_at)
-    return tuple(item for item in evidence if _proven_after(item.reviewed_at, cutoff))
-
-
-def _proven_after(instant: datetime | None, cutoff: datetime) -> bool:
-    """Compare instants only when both sides are timezone-aware."""
-    if instant is None or instant.tzinfo is None or cutoff.tzinfo is None:
-        return False
-    return instant > cutoff
+    latest_revoke = max(
+        (event.sequence or 0 for event in events if event.action == "revoked"),
+        default=0,
+    )
+    if latest_revoke == 0:
+        return evidence
+    return tuple(
+        item for item in evidence if item.assessed_event_sequence >= latest_revoke
+    )
 
 
 def assess_dataset_promotion(

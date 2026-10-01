@@ -145,6 +145,11 @@ class ReviewDatasetPromotionEvidenceHandler:
             )
 
         reviewed_at = self._now()
+        assessed_sequence = _assessed_event_sequence(
+            self._maturity_promotion_history_reader.list_dataset_maturity_promotion_events(
+                command.dataset_id
+            )
+        )
         evidence = DatasetPromotionEvidence(
             criterion=command.criterion,
             evidence_uri=command.evidence_uri,
@@ -152,13 +157,14 @@ class ReviewDatasetPromotionEvidenceHandler:
             passed=command.passed,
             notes=command.notes,
             reviewed_at=reviewed_at,
+            assessed_event_sequence=assessed_sequence,
         )
         self._evidence_writer.upsert_dataset_evidence(command.dataset_id, evidence)
         history = self._maturity_promotion_history_reader
         promotion_events = history.list_dataset_maturity_promotion_events(
             command.dataset_id
         )
-        assessed_sequence = _assessed_event_sequence(promotion_events)
+        snapshot_sequence = _assessed_event_sequence(promotion_events)
         assessment = assess_dataset_promotion(
             metadata,
             evidence_since_latest_revocation(
@@ -181,7 +187,7 @@ class ReviewDatasetPromotionEvidenceHandler:
             try:
                 self._maturity_promotion_writer.upsert_dataset_maturity_promotion(
                     promotion,
-                    assessed_event_sequence=assessed_sequence,
+                    assessed_event_sequence=snapshot_sequence,
                 )
             except ValueError as exc:
                 raise AppCommandError(
