@@ -18,6 +18,8 @@ from ditto_data.ingestion.partition_state import (
     PartitionLifecycleEvent,
 )
 
+pytestmark = pytest.mark.pit
+
 _DAY = date(2026, 9, 18)
 _OTHER_DAY = date(2026, 9, 17)
 _VISIBLE = datetime(2026, 9, 30, 9, tzinfo=UTC)
