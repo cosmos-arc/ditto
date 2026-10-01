@@ -487,6 +487,12 @@ class IngestionStatusQueryFacade:
                 rejected_criteria=(),
             )
 
+        # Read the override before the event history: a revocation landing in
+        # between then appears in events, so the evidence filter drops
+        # revoked-era rows instead of reporting a stale ready assessment.
+        maturity_promotion = (
+            self._maturity_promotion_reader.get_dataset_maturity_promotion(dataset_id)
+        )
         promotion_history = self._maturity_promotion_history_reader
         promotion_events = promotion_history.list_dataset_maturity_promotion_events(
             dataset_id
@@ -496,9 +502,6 @@ class IngestionStatusQueryFacade:
             promotion_events,
         )
         assessment = assess_dataset_promotion(metadata, evidence)
-        maturity_promotion = (
-            self._maturity_promotion_reader.get_dataset_maturity_promotion(dataset_id)
-        )
         latest_revocation = _latest_revoked_promotion_event(promotion_events)
         current_metadata = _apply_maturity_promotion(metadata, maturity_promotion)
         return DatasetPromotionReadinessItem(

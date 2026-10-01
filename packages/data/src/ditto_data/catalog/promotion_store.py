@@ -225,7 +225,9 @@ class SQLiteDatasetMaturityPromotionStore:
         or appended after ``assessed_event_sequence`` (the caller's assessment
         snapshot) already exists: a promotion computed from pre-revocation
         evidence must not resurrect a revoked override (#380). Timestamps are
-        compared through SQLite ``julianday()`` (fractional precision) so
+        compared as UTC-normalized text with a ``julianday()`` coarse pass
+        plus lexical tie-break; legacy non-UTC rows order as instants, and
+        same-millisecond cross-offset ties over-reject (fail closed) so
         legacy non-UTC ISO rows
         order as instants.
         """
@@ -265,7 +267,11 @@ class SQLiteDatasetMaturityPromotionStore:
                       AND action = 'revoked'
                       AND (
                         action_at IS NULL
-                        OR julianday(action_at) >= julianday(?)
+                        OR julianday(action_at) > julianday(?)
+                        OR (
+                          julianday(action_at) = julianday(?)
+                          AND action_at >= ?
+                        )
                         OR event_id > ?
                       )
                 )
@@ -287,6 +293,8 @@ class SQLiteDatasetMaturityPromotionStore:
                     promotion.evidence_uri,
                     promotion.notes,
                     promotion.dataset_id,
+                    promoted_at_text,
+                    promoted_at_text,
                     promoted_at_text,
                     assessed_event_sequence,
                 ],
