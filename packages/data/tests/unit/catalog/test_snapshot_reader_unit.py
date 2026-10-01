@@ -19,6 +19,7 @@ from ditto_data.ingestion.partition_state import (
 )
 
 _DAY = date(2026, 9, 18)
+_OTHER_DAY = date(2026, 9, 17)
 _VISIBLE = datetime(2026, 9, 30, 9, tzinfo=UTC)
 
 
@@ -27,18 +28,18 @@ def _snapshot() -> ProviderSnapshot:
         ProviderSnapshotDraft(
             dataset_id="stock_daily",
             source="tushare",
-            request_start="2026-09-18",
+            request_start="2026-09-17",
             request_end="2026-09-18",
             schema_version="market.stock_daily.v1",
             checksum="a" * 32,
             canonical_asset=DataAssetRef("stock_daily", "market"),
-            request_parameters_hash="a" * 64,
+            request_parameters_hash="a" * 32,
             response_metadata=(),
             license_record_id="license:1",
             row_count=4,
-            payload_uri="provider_payloads/tushare/stock_daily/"
-            + "a" * 32
-            + ".parquet",
+            payload_uri=(
+                "provider_payloads/tushare/stock_daily/" + "a" * 32 + ".parquet"
+            ),
             payload_retained=True,
             created_at=_VISIBLE,
         )
@@ -109,35 +110,66 @@ def _service(frame: pl.DataFrame, snapshot: ProviderSnapshot) -> SnapshotReadSer
 
 _TICKER_FRAME = pl.DataFrame(
     {
-        "source_ticker": ["000001.SZ", "600519.SH", "300750.SZ"],
-        "trade_date": [_DAY, _DAY, _DAY],
-        "close": [10.0, 1500.0, 200.0],
-        "volume": [100, 200, 300],
+        "source_ticker": [
+            "600000.Old",
+            "000001.SZ",
+            "600000.SH",
+            "600000.SH",
+        ],
+        "trade_date": [_OTHER_DAY, _DAY, _OTHER_DAY, _DAY],
+        "close": [9.0, 10.0, 11.0, 12.0],
+        "volume": [1, 2, 3, 4],
     }
 )
 
-_INSTRUMENT_FRAME = _TICKER_FRAME.rename(
-    {"source_ticker": "instrument_id"}
-).with_columns(
-    pl.col("instrument_id").str.replace_all(r"\D", "").cast(pl.Int64) + 1_000_000
+_INSTRUMENT_FRAME = pl.DataFrame(
+    {
+        "instrument_id": [1_000_001, 1_000_002],
+        "trade_date": [_DAY, _DAY],
+        "close": [10.0, 20.0],
+    }
 )
 
 
-def test_ticker_keyed_payload_filters_through_resolver() -> None:
-    """Provider-grain payloads project the qualified scope via resolved tickers."""
+def _resolver(mapping_by_date, *, spy=None):
+    def resolve(instrument_ids, *, source, asofs, cutoff):
+        if spy is not None:
+            spy["asofs"] = tuple(asofs)
+            spy["cutoff"] = cutoff
+        return {
+            asof.isoformat(): {
+                iid: ticker
+                for iid, ticker in mapping_by_date.get(asof.isoformat(), {}).items()
+                if iid in instrument_ids
+            }
+            for asof in asofs
+        }
+
+    return resolve
+
+
+def test_ticker_keyed_payload_filters_per_qualified_date() -> None:
+    """Ticker changes resolve per date; rows match the identity valid that day."""
     service = _service(_TICKER_FRAME, _snapshot())
+    spy: dict[str, object] = {}
     frame = service.read_fields(
         _snapshot().snapshot_id,
         ("close", "volume"),
-        instrument_ids=(1_000_001, 1_000_002),
-        date_range=(_DAY, _DAY),
-        ticker_resolver=lambda ids, *, source, asof: {
-            1_000_001: "000001.SZ",
-            1_000_002: "600519.SH",
-        },
+        instrument_ids=(1_000_001,),
+        date_range=(_OTHER_DAY, _DAY),
+        knowledge_cutoff=_VISIBLE,
+        ticker_resolver=_resolver(
+            {
+                "2026-09-17": {1_000_001: "600000.Old"},
+                "2026-09-18": {1_000_001: "600000.SH"},
+            },
+            spy=spy,
+        ),
     )
     assert frame.columns == ["source_ticker", "trade_date", "close", "volume"]
-    assert frame["source_ticker"].to_list() == ["000001.SZ", "600519.SH"]
+    assert frame["source_ticker"].to_list() == ["600000.Old", "600000.SH"]
+    assert spy["cutoff"] == _VISIBLE
+    assert set(spy["asofs"]) == {_OTHER_DAY, _DAY}  # type: ignore[arg-type]
 
 
 def test_ticker_keyed_payload_without_resolver_fails_closed() -> None:
@@ -148,21 +180,56 @@ def test_ticker_keyed_payload_without_resolver_fails_closed() -> None:
             _snapshot().snapshot_id,
             ("close",),
             instrument_ids=(1_000_001,),
-            date_range=(_DAY, _DAY),
+            date_range=(_OTHER_DAY, _DAY),
+            knowledge_cutoff=_VISIBLE,
         )
 
 
-def test_unresolved_instruments_project_no_rows() -> None:
-    """Identities the mapping cannot resolve read as an empty qualified scope."""
+def test_ticker_keyed_payload_without_cutoff_fails_closed() -> None:
+    """Identity resolution is not PIT-defined without a knowledge cutoff."""
+    service = _service(_TICKER_FRAME, _snapshot())
+    with pytest.raises(ValueError, match="knowledge cutoff"):
+        service.read_fields(
+            _snapshot().snapshot_id,
+            ("close",),
+            instrument_ids=(1_000_001,),
+            date_range=(_OTHER_DAY, _DAY),
+            knowledge_cutoff=None,
+            ticker_resolver=_resolver({"2026-09-18": {1_000_001: "000001.SZ"}}),
+        )
+
+
+def test_never_resolved_instrument_is_rejected() -> None:
+    """An identity resolving on no qualified date must not silently shrink scope."""
+    service = _service(_TICKER_FRAME, _snapshot())
+    with pytest.raises(ValueError, match="cannot resolve instrument identities"):
+        service.read_fields(
+            _snapshot().snapshot_id,
+            ("close",),
+            instrument_ids=(1_000_001, 1_000_009),
+            date_range=(_OTHER_DAY, _DAY),
+            knowledge_cutoff=_VISIBLE,
+            ticker_resolver=_resolver(
+                {
+                    "2026-09-17": {1_000_001: "600000.Old"},
+                    "2026-09-18": {1_000_001: "600000.SH"},
+                }
+            ),
+        )
+
+
+def test_identity_valid_on_one_date_projects_only_that_date() -> None:
+    """A listing that starts mid-interval reads rows only from its own dates."""
     service = _service(_TICKER_FRAME, _snapshot())
     frame = service.read_fields(
         _snapshot().snapshot_id,
         ("close",),
-        instrument_ids=(1_000_009,),
-        date_range=(_DAY, _DAY),
-        ticker_resolver=lambda ids, *, source, asof: {},
+        instrument_ids=(1_000_002,),
+        date_range=(_OTHER_DAY, _DAY),
+        knowledge_cutoff=_VISIBLE,
+        ticker_resolver=_resolver({"2026-09-18": {1_000_002: "000001.SZ"}}),
     )
-    assert frame.height == 0
+    assert frame["trade_date"].to_list() == [_DAY]
 
 
 def test_instrument_keyed_payload_keeps_direct_filter() -> None:
@@ -173,7 +240,8 @@ def test_instrument_keyed_payload_keeps_direct_filter() -> None:
         ("close",),
         instrument_ids=(1_000_001,),
         date_range=(_DAY, _DAY),
-        ticker_resolver=lambda ids, *, source, asof: {1_000_001: "000001.SZ"},
+        knowledge_cutoff=_VISIBLE,
+        ticker_resolver=_resolver({}),
     )
     assert frame.columns == ["instrument_id", "trade_date", "close"]
     assert frame.height == 1

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
-from datetime import date
+from datetime import date, datetime
 
 from dishka import Provider, Scope, provide
 from ditto_data.catalog.certification import CertificationReader
@@ -46,21 +46,28 @@ def _metadata_ticker_resolver(metadata: MetadataService) -> SourceTickerResolver
     """Resolve replay scopes through the durable PIT source-ticker mapping."""
 
     def resolve(
-        instrument_ids: Sequence[int], *, source: str, asof: date
-    ) -> Mapping[int, str]:
-        asof_text = asof.isoformat()
-        resolved: dict[int, str] = {}
+        instrument_ids: Sequence[int],
+        *,
+        source: str,
+        asofs: Sequence[date],
+        cutoff: datetime,
+    ) -> Mapping[str, Mapping[int, str]]:
+        cutoff_text = cutoff.isoformat()
+        resolved_by_date: dict[str, dict[int, str]] = {
+            asof.isoformat(): {} for asof in asofs
+        }
         for instrument_id in instrument_ids:
             tickers = metadata.instrument.get_source_tickers(
                 instrument_id,
                 source=source,
-                asofs=[asof_text],
-                cutoff=asof_text,
+                asofs=[asof.isoformat() for asof in asofs],
+                cutoff=cutoff_text,
             )
-            ticker = tickers.get(asof_text)
-            if ticker is not None:
-                resolved[instrument_id] = ticker
-        return resolved
+            for asof in asofs:
+                ticker = tickers.get(asof.isoformat())
+                if ticker is not None:
+                    resolved_by_date[asof.isoformat()][instrument_id] = ticker
+        return resolved_by_date
 
     return resolve
 

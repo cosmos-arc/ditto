@@ -71,6 +71,7 @@ class ProviderSnapshotQuery:
                     columns,
                     instrument_ids=request.instrument_ids,
                     date_range=(request.required_from, request.required_to),
+                    knowledge_cutoff=request.knowledge_cutoff,
                     ticker_resolver=self._ticker_resolver,
                 )
             except ValueError as error:
