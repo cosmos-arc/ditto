@@ -16,13 +16,15 @@ Boundaries kept honest on purpose:
   cross-sectional fractional ranks (unit scores) because the selection
   contract scores weighted sums of unit-normalized values.
 - Bars are read through the live market read model at the request's as-of
-  instant. Backdated knowledge/publication cutoffs are therefore rejected:
-  the live store cannot prove sub-day visibility for past instants. The
-  certified replay lane remains the exact-payload path for evidence.
-- Admission range claims follow the established per-observation-day
-  semantics (``required_from == required_to == cross-section day``, as the
-  historical universe query and the reviewed selection contract do);
-  lookback provenance rides the frozen consumer payload digests.
+  instant. Any past instant — backdated cutoffs or a past as-of with omitted
+  cutoffs — is rejected because the live store cannot prove sub-day
+  visibility for it; the certified replay lane remains the exact-payload
+  path for historical evidence. Rows carry a required ``knowledge_date``
+  column, and rows claiming future knowledge are dropped fail-closed.
+- The admission claim covers the full consumed read range (earliest
+  observed bar through cross-section day): the computed values already
+  consumed that history, so insufficient snapshot coverage must surface as
+  admission reasons instead of being narrowed away.
 - Industry rotation is assembled as an empty observation set; the rotation
   snapshot then lands BLOCKED with ``industries`` declared missing, which is
   the honest state while industry data is not ingested.
@@ -36,7 +38,7 @@ from __future__ import annotations
 import math
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
-from datetime import date, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from typing import Literal, Protocol
 from zoneinfo import ZoneInfo
 
@@ -82,7 +84,21 @@ _MARKET_BAR_COLUMNS: Mapping[str, str] = {
     "market.amount": "amount",
 }
 _REQUIRED_BAR_COLUMNS = frozenset(
-    {"instrument_id", "trade_date", "close", "pre_close", "amount"}
+    {"instrument_id", "trade_date", "close", "pre_close", "amount", "knowledge_date"}
+)
+# Facts with a concrete dataset derivation bind to their real source field;
+# the structural consumers (universe identity, membership tag, instrument id,
+# industry slot) anchor on the registry build that produced the roster.
+_BASIC_FACT_FIELDS: Mapping[str, str] = {
+    "instruments.instrument_name": "name",
+    "instruments.is_st": "name",
+    "instruments.listing_days": "list_date",
+}
+_STRUCTURAL_CONSUMERS = (
+    "universe_snapshot_id",
+    "membership_version",
+    "instruments.instrument_id",
+    "instruments.industry_id",
 )
 _BAR_LINEAGE_COLUMN = "source_snapshot_id"
 _RESERVED_FACTOR_COLUMNS = frozenset(
@@ -194,6 +210,7 @@ class _FactorNode:
     compiled: CompiledDerivedExpression
     requested: bool
     leaves: frozenset[str]
+    lookback: int
 
 
 class AssembleSelectionFacts:
@@ -208,7 +225,7 @@ class AssembleSelectionFacts:
         identities: InstrumentIdentityReader,
         factors: FactorRegistry,
         snapshots: CertifiedSnapshotIndex,
-        compiler: ExpressionCompiler | None = None,
+        clock: Callable[[], datetime] | None = None,
     ) -> None:
         self._provider = provider
         self._history = history
@@ -216,7 +233,8 @@ class AssembleSelectionFacts:
         self._identities = identities
         self._factors = factors
         self._snapshots = snapshots
-        self._compiler = compiler or ExpressionCompiler()
+        self._compiler = ExpressionCompiler()
+        self._clock = clock or (lambda: datetime.now(UTC))
 
     def assemble(
         self, request: AssembleSelectionFactsRequest
@@ -243,18 +261,15 @@ class AssembleSelectionFacts:
                 "assembled selection cutoffs violate causal order",
                 details={"reason": "ASSEMBLY_CUTOFF_INVALID"},
             )
-        if (
-            request.knowledge_cutoff is not None
-            and request.knowledge_cutoff < request.as_of
-        ) or (
-            request.publication_cutoff is not None
-            and request.publication_cutoff < request.as_of
-        ):
+        # The live read model cannot prove sub-day visibility for any past
+        # instant, whether cutoffs are explicit or defaulted to a past as-of.
+        if knowledge < self._clock():
             raise AppProcessError(
-                "backdated cutoffs cannot use the live read model; "
-                + "use the certified replay lane for past instants",
+                "past instants cannot use the live read model; "
+                + "use the certified replay lane",
                 details={"reason": "ASSEMBLY_CUTOFF_BACKDATED"},
             )
+        self._validate_weights(request)
         as_of_date = request.as_of.astimezone(_SHANGHAI).date()
         sources = self._roster_sources(request)
         roster = self._resolve_roster(request, sources, knowledge, publication)
@@ -274,6 +289,15 @@ class AssembleSelectionFacts:
             cross_date=cross_date,
         )
         windows = self._binding_windows(cross_date)
+        if not windows["stock_daily"]:
+            raise AppProcessError(
+                "no certified stock_daily snapshot covers the cross-section date",
+                details={
+                    "reason": "ASSEMBLY_SNAPSHOT_WINDOW_MISSING",
+                    "dataset_id": "stock_daily",
+                    "cross_date": cross_date.isoformat(),
+                },
+            )
         return CreateSelectionRunRequest(
             as_of=request.as_of,
             knowledge_cutoff=knowledge,
@@ -311,7 +335,7 @@ class AssembleSelectionFacts:
             seed=request.seed,
             instruments=instruments,
             data_fields=data_fields(windows, nodes),
-            data_from=claimed_from(evaluation, windows, cross_date),
+            data_from=claimed_from(evaluation),
             data_to=cross_date,
             universe_sources=sources,
         )
@@ -350,6 +374,28 @@ class AssembleSelectionFacts:
         except AppQueryError as error:
             raise AppProcessError(str(error), details=error.details) from error
 
+    def _validate_weights(self, request: AssembleSelectionFactsRequest) -> None:
+        """Mirror the strategy spec invariants before assembling facts."""
+        names = [weight.name for weight in request.factor_weights]
+        duplicates = sorted({name for name in names if names.count(name) > 1})
+        if duplicates:
+            raise AppProcessError(
+                "assembly factor weights contain duplicate names",
+                details={
+                    "reason": "ASSEMBLY_FACTOR_DUPLICATE",
+                    "factor_ids": tuple(duplicates),
+                },
+            )
+        total = sum(weight.weight for weight in request.factor_weights)
+        if not math.isclose(total, 1.0, abs_tol=1e-12):
+            raise AppProcessError(
+                "assembly factor weights must sum to one",
+                details={
+                    "reason": "ASSEMBLY_FACTOR_WEIGHT_TOTAL",
+                    "total": total,
+                },
+            )
+
     def _plan_factors(
         self, request: AssembleSelectionFactsRequest
     ) -> tuple[_FactorNode, ...]:
@@ -357,6 +403,7 @@ class AssembleSelectionFacts:
         order: list[str] = []
         leaves: dict[str, frozenset[str]] = {}
         compiled: dict[str, CompiledDerivedExpression] = {}
+        lookbacks: dict[str, int] = {}
 
         def visit(factor_id: str, path: tuple[str, ...]) -> frozenset[str]:
             if factor_id in leaves:
@@ -372,13 +419,24 @@ class AssembleSelectionFacts:
                     },
                 )
             spec = self._factor_spec(factor_id)
-            node_leaves = {
-                leaf
-                for dependency in spec.dependencies
-                for leaf in self._dependency_leaves(dependency, factor_id, path, visit)
-            }
+            node_leaves: set[str] = set()
+            for dependency in spec.dependencies:
+                node_leaves |= self._dependency_leaves(
+                    dependency, factor_id, path, visit
+                )
             leaves[factor_id] = frozenset(node_leaves)
             compiled[factor_id] = self._compile_factor(factor_id, spec)
+            # Time-series windows compose across registered dependencies, so
+            # the required history is this node's window plus the deepest
+            # dependency chain below it.
+            lookbacks[factor_id] = compiled[factor_id].analysis.lookback + max(
+                (
+                    lookbacks[dependency]
+                    for dependency in spec.dependencies
+                    if dependency in lookbacks
+                ),
+                default=0,
+            )
             order.append(factor_id)
             return leaves[factor_id]
 
@@ -391,6 +449,7 @@ class AssembleSelectionFacts:
                 compiled=compiled[factor_id],
                 requested=factor_id in requested,
                 leaves=leaves[factor_id],
+                lookback=lookbacks[factor_id],
             )
             for factor_id in order
         )
@@ -464,7 +523,7 @@ class AssembleSelectionFacts:
             )
         max_lookback = max(
             _TURNOVER_WINDOW,
-            *(node.compiled.analysis.lookback for node in nodes),
+            *(node.lookback for node in nodes),
         )
         lookback_calendar_days = max(
             request.lookback_days,
@@ -642,9 +701,13 @@ class AssembleSelectionFacts:
 
 
 def _without_future_knowledge(frame: pl.DataFrame, as_of_date: date) -> pl.DataFrame:
-    """Drop bar rows that claim knowledge strictly after the decision date."""
-    if "knowledge_date" not in frame.columns:
-        return frame
+    """
+    Drop bar rows claiming knowledge strictly after the decision date.
+
+    ``knowledge_date`` is a required schema column, so this filter always
+    applies: a provider that cannot prove per-row knowledge is rejected
+    during schema validation instead of silently passing future rows.
+    """
     knowledge = pl.col("knowledge_date")
     if frame.schema["knowledge_date"] == pl.String:
         knowledge = knowledge.str.to_date()
@@ -660,15 +723,16 @@ def _unit_normalized(
     The selection contract scores weighted sums of unit-normalized values;
     raw factor magnitudes (for example a 252-day return above 1.0) would
     both break the domain bound and mix incomparable scales. Fractional
-    average ranks keep ties deterministic and preserve ordering.
+    average ranks keep ties deterministic and preserve ordering; the
+    denominator counts only valid observations so a factor's missing
+    cross-sections do not silently down-weight its peers.
     """
     for node in nodes:
         if not node.requested:
             continue
+        values = pl.col(node.factor_id).fill_nan(None)
         cross = cross.with_columns(
-            (
-                pl.col(node.factor_id).fill_nan(None).rank(method="average") / pl.len()
-            ).alias(node.factor_id)
+            (values.rank(method="average") / values.count()).alias(node.factor_id)
         )
     return cross
 
@@ -718,20 +782,17 @@ def _limit_state(
     return "normal"
 
 
-def claimed_from(
-    evaluation: pl.DataFrame,
-    windows: Mapping[str, tuple[CertifiedSnapshotWindow, ...]],
-    cross_date: date,
-) -> date | None:
-    """Claim the widest observation range every binding can prove together."""
-    starts = [window.request_start for group in windows.values() for window in group]
-    if not starts:
-        return None
+def claimed_from(evaluation: pl.DataFrame) -> date | None:
+    """
+    Claim the full consumed read range; coverage gaps fail at admission.
+
+    The factor and turnover values already consumed every row of the
+    evaluation window, so the claim must start at the earliest observed
+    trade date — narrowing it to a snapshot's request range would let
+    admission pass without qualifying rows that shaped the output.
+    """
     first_observed = evaluation["trade_date"].min()
-    if not isinstance(first_observed, date):
-        return None
-    claim = max(first_observed, *starts)
-    return claim if claim <= cross_date else None
+    return first_observed if isinstance(first_observed, date) else None
 
 
 def data_fields(
@@ -747,19 +808,16 @@ def data_fields(
                 FieldRequirement(dataset_id, field, window.snapshot_id, consumer_field)
             )
 
-    for consumer_field in (
-        "universe_snapshot_id",
-        "instruments.instrument_id",
-        "instruments.instrument_name",
-        "instruments.industry_id",
-        "instruments.is_st",
-        "instruments.listing_days",
-    ):
+    for consumer_field in _STRUCTURAL_CONSUMERS:
         bind("stock_basic", "list_status", consumer_field)
+    for consumer_field, field in _BASIC_FACT_FIELDS.items():
+        bind("stock_basic", field, consumer_field)
     bind("stock_status", "is_suspended", "instruments.is_suspended")
-    bind("stock_daily", "close", "instruments.limit_state")
     bind("stock_daily", "close", "membership_version")
     bind("stock_daily", "amount", "instruments.average_turnover")
+    # limit_state consumes both legs of the close/pre_close ratio.
+    bind("stock_daily", "close", "instruments.limit_state")
+    bind("stock_daily", "pre_close", "instruments.limit_state")
     for node in nodes:
         if not node.requested:
             continue

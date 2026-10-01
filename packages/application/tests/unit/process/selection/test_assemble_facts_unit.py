@@ -235,6 +235,7 @@ def _process(
         ),  # type: ignore[arg-type]
         factors=_Registry(registry or _registry()),  # type: ignore[arg-type]
         snapshots=snapshots or _FakeSnapshots(),  # type: ignore[arg-type]
+        clock=lambda: _AS_OF,
     )
 
 
@@ -274,7 +275,8 @@ def test_assembles_policy_only_request_with_certified_lineage() -> None:
     assert request.industries == ()
     assert request.rotation_missing_inputs == ("industries",)
     assert request.membership_version == "catalog"
-    assert request.data_from == date(2026, 9, 1)
+    # The claim covers every consumed row, starting at the window's first bar.
+    assert request.data_from == _BAR_DATES[0]
     assert request.data_to == _CROSS
     assert request.rotation_source_snapshot_ids == (_DAILY_WINDOW.snapshot_id,)
     assert _STATUS_WINDOW.snapshot_id in request.selection_source_snapshot_ids
@@ -295,6 +297,13 @@ def test_assembles_policy_only_request_with_certified_lineage() -> None:
         "stock_daily",
         "close",
     )
+    bindings = {
+        (item.dataset_id, item.field, item.consumer_field)
+        for item in request.data_fields
+    }
+    assert ("stock_daily", "pre_close", "instruments.limit_state") in bindings
+    assert ("stock_basic", "name", "instruments.instrument_name") in bindings
+    assert ("stock_basic", "list_date", "instruments.listing_days") in bindings
     assert [draft.instrument_id for draft in request.instruments] == [1, 2]
     assert provider.queries[0].instruments == ("000001.SZ", "000002.SZ")
     assert provider.queries[0].asof == _CROSS.isoformat()
@@ -545,3 +554,95 @@ def test_short_history_declares_missing_factor_value() -> None:
 
     assert request.instruments[1].declared_missing_inputs == ("factor:reversal_1w",)
     assert request.instruments[1].factor_values == ()
+    # Ranks normalize by valid observations, so the surviving instrument
+    # still reaches the top of the (0, 1] unit range.
+    assert request.instruments[0].factor_values[0].value == pytest.approx(1.0)
+
+
+@pytest.mark.pit
+def test_past_as_of_with_omitted_cutoffs_is_rejected() -> None:
+    provider = _FakeProvider(_bars_frame(rows_per_instrument={1: 30}))
+    history = _FakeHistory(_roster_frame((1,)))
+    process = _process(provider=provider, history=history)
+    with pytest.raises(AppProcessError) as error:
+        process.assemble(_request(as_of=_AS_OF - timedelta(days=1)))
+
+    assert error.value.details["reason"] == "ASSEMBLY_CUTOFF_BACKDATED"
+
+
+def test_missing_knowledge_date_column_is_rejected() -> None:
+    frame = _bars_frame(rows_per_instrument={1: 30}).drop("knowledge_date")
+    provider = _FakeProvider(frame)
+    history = _FakeHistory(_roster_frame((1,)))
+    process = _process(provider=provider, history=history)
+    with pytest.raises(AppProcessError) as error:
+        process.assemble(_request())
+
+    assert error.value.details["reason"] == "ASSEMBLY_BARS_SCHEMA"
+    assert "knowledge_date" in error.value.details["columns"]
+
+
+def test_uncovered_daily_window_is_rejected_before_response() -> None:
+    provider = _FakeProvider(_bars_frame(rows_per_instrument={1: 30}))
+    history = _FakeHistory(_roster_frame((1,)))
+    process = _process(
+        provider=provider,
+        history=history,
+        snapshots=_FakeSnapshots(daily=()),
+    )
+    with pytest.raises(AppProcessError) as error:
+        process.assemble(_request())
+
+    assert error.value.details["reason"] == "ASSEMBLY_SNAPSHOT_WINDOW_MISSING"
+    assert error.value.details["cross_date"] == _CROSS.isoformat()
+
+
+def test_weight_invariants_mirror_the_strategy_spec() -> None:
+    process, _, _ = _happy_process()
+    with pytest.raises(AppProcessError) as error:
+        process.assemble(
+            _request(
+                factors=("reversal_1w", "reversal_1w"),
+                factor_weights=(
+                    SelectionFactorWeightDraft("reversal_1w", 0.6),
+                    SelectionFactorWeightDraft("reversal_1w", 0.4),
+                ),
+            )
+        )
+    assert error.value.details["reason"] == "ASSEMBLY_FACTOR_DUPLICATE"
+
+    with pytest.raises(AppProcessError) as error:
+        process.assemble(
+            _request(factor_weights=(SelectionFactorWeightDraft("reversal_1w", 0.5),))
+        )
+    assert error.value.details["reason"] == "ASSEMBLY_FACTOR_WEIGHT_TOTAL"
+    assert error.value.details["total"] == 0.5
+
+
+def test_composed_factor_lookback_accumulates_windows() -> None:
+    provider = _FakeProvider(_bars_frame(rows_per_instrument={1: 30}))
+    history = _FakeHistory(_roster_frame((1,)))
+    process = _process(
+        provider=provider,
+        history=history,
+        registry=_registry(
+            composed=FactorSpec(
+                id="composed",
+                expression="ts_mean(slow, 20)",
+                dependencies=("slow",),
+            ),
+            slow=FactorSpec(
+                id="slow",
+                expression="ts_mean(market.close, 20)",
+                dependencies=("market.close",),
+            ),
+        ),
+    )
+    nodes = process._plan_factors(_request(factors=("composed",)))
+    composed = next(node for node in nodes if node.factor_id == "composed")
+    slow = next(node for node in nodes if node.factor_id == "slow")
+
+    assert slow.lookback == 21  # ts_mean(20) consumes 21 rows
+    # 21 composed rows over a dependency that itself needs 21 rows; the
+    # additive guard errs one row on the safe side over the exact 41.
+    assert composed.lookback == 42
