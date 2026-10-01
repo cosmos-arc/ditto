@@ -1,6 +1,7 @@
 import type {
 	CreateSelectionRunBody,
 	IndustryRotation,
+	ResearchCase,
 	SelectionRun,
 	SelectionRunDiff,
 	SelectionWorkspaceReceipt,
@@ -169,3 +170,24 @@ export const selectionReceiptFixture = {
 	industry_rotation: selectionRotationFixture,
 	selection_run: selectionRunFixtures[0],
 } satisfies SelectionWorkspaceReceipt;
+
+export const researchCaseFixture = {
+	as_of: "2026-08-31T07:00:00Z",
+	asset_kind: "stock",
+	candidate_instrument_ids: [600519, 300750],
+	case_id: `research-case:sha256:${"e".repeat(64)}`,
+	content_hash: "e".repeat(64),
+	industry_rotation_snapshot_id: selectionRotationFixture.snapshot_id,
+	knowledge_cutoff: "2026-08-31T07:00:00Z",
+	missing_inputs: [],
+	objective: "验证动量因子持续性",
+	publication_cutoff: "2026-08-31T06:30:00Z",
+	schema_version: 1,
+	selection_input_hash: "f".repeat(64),
+	selection_run_hash: "b".repeat(64),
+	selection_run_id: selectionRunFixtures[0].run_id,
+	selection_spec_hash: "c".repeat(64),
+	selection_status: "ready",
+	source_snapshot_ids: ["stock-daily:sha256:a"],
+	universe_snapshot_id: "universe:sha256:stock-core",
+} satisfies ResearchCase;

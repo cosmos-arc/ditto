@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { HttpResponse, http } from "msw";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { selectionRunInputFixture } from "@/mocks/fixtures/selection";
+import { researchCaseFixture, selectionRunInputFixture } from "@/mocks/fixtures/selection";
 import { selectionHandlers } from "@/mocks/handlers/selection";
 import { server } from "@/mocks/server";
 import { ContextActionsProvider, type ContextActionsRequest } from "@/providers";
@@ -88,6 +88,33 @@ describe("SelectionWorkspacePage", () => {
 		await user.click(screen.getByRole("button", { name: "执行 SelectionRun" }));
 
 		await expect(screen.findByText("已保存 SelectionRun run-one")).resolves.toBeInTheDocument();
+	});
+
+	it("creates a ResearchCase from the exact run with selected candidates and a required objective", async () => {
+		const writeText = vi.fn<(text: string) => Promise<void>>().mockResolvedValue(undefined);
+		const user = userEvent.setup();
+		Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true });
+		let received: { objective: string; candidate_instrument_ids: number[] } | undefined;
+		server.use(
+			http.post("/api/v1/selections/runs/:runId/research-cases", async ({ request }) => {
+				received = (await request.json()) as { objective: string; candidate_instrument_ids: number[] };
+				return HttpResponse.json({ data: { ...researchCaseFixture, ...received } }, { status: 201 });
+			}),
+		);
+		render(<SelectionWorkspacePage />, { wrapper: wrapper() });
+
+		expect(await screen.findByRole("button", { name: "创建研究用例" })).toBeDisabled();
+		await user.click(screen.getByRole("checkbox", { name: "纳入 300750 宁德时代" }));
+		await user.type(screen.getByRole("textbox", { name: "研究假设 objective" }), "验证动量因子在食品饮料的持续性");
+		await user.click(screen.getByRole("button", { name: "创建研究用例" }));
+
+		await expect(screen.findByText(researchCaseFixture.case_id)).resolves.toBeInTheDocument();
+		expect(received?.candidate_instrument_ids).toEqual([600519]);
+		expect(received?.objective).toBe("验证动量因子在食品饮料的持续性");
+
+		await user.click(screen.getByRole("button", { name: "复制用例 ID" }));
+		expect(writeText).toHaveBeenCalledWith(researchCaseFixture.case_id);
+		expect(screen.getByText("已复制")).toBeInTheDocument();
 	});
 });
 

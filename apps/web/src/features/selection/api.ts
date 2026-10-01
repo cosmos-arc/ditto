@@ -2,8 +2,10 @@ import type { components } from "@/api/generated/schema";
 import { apiClient } from "@/api/transport";
 
 export type AdmissionResponse = components["schemas"]["SelectionAdmissionResponse"];
+export type CreateResearchCaseBody = components["schemas"]["CreateResearchCaseBody"];
 export type CreateSelectionRunBody = components["schemas"]["CreateSelectionRunBody"];
 export type IndustryRotation = components["schemas"]["IndustryRotationResponse"];
+export type ResearchCase = components["schemas"]["ResearchCaseResponse"];
 export type SelectionRun = components["schemas"]["SelectionRunResponse"];
 export type SelectionRunDiff = components["schemas"]["SelectionRunDiffResponse"];
 export type SelectionWorkspaceReceipt = components["schemas"]["SelectionWorkspaceReceiptResponse"];
@@ -15,6 +17,7 @@ export const selectionKeys = {
 	rotation: (snapshotId: string) => [...selectionKeys.all, "rotation", snapshotId] as const,
 	compare: (beforeRunId: string, afterRunId: string) =>
 		[...selectionKeys.all, "compare", beforeRunId, afterRunId] as const,
+	researchCases: (runId: string) => [...selectionKeys.all, "research-cases", runId] as const,
 };
 
 export function listSelectionRuns(specId: string, limit = 20): Promise<readonly SelectionRun[]> {
@@ -42,6 +45,13 @@ export function compareSelectionRuns(beforeRunId: string, afterRunId: string): P
 
 export function createSelectionRun(body: CreateSelectionRunBody): Promise<SelectionWorkspaceReceipt> {
 	return apiClient.post("/api/v1/selections/runs", { body });
+}
+
+export function createResearchCase(runId: string, body: CreateResearchCaseBody): Promise<ResearchCase> {
+	return apiClient.post("/api/v1/selections/runs/{run_id}/research-cases", {
+		params: { path: { run_id: runId } },
+		body,
+	});
 }
 
 export function assessSelectionAdmission(body: CreateSelectionRunBody, instrumentId?: number) {

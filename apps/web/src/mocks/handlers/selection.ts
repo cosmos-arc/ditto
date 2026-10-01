@@ -1,5 +1,6 @@
 import { HttpResponse, http } from "msw";
 import {
+	researchCaseFixture,
 	selectionDiffFixture,
 	selectionReceiptFixture,
 	selectionRotationFixture,
@@ -47,4 +48,20 @@ export const selectionHandlers = [
 			: HttpResponse.json({ detail: "not found" }, { status: 404 }),
 	),
 	http.post("/api/v1/selections/runs", () => HttpResponse.json({ data: selectionReceiptFixture }, { status: 201 })),
+	http.post("/api/v1/selections/runs/:runId/research-cases", async ({ params, request }) => {
+		const run = selectionRunFixtures.find((item) => item.run_id === params["runId"]);
+		if (!run) return HttpResponse.json({ detail: "not found" }, { status: 404 });
+		const body = (await request.json()) as { objective: string; candidate_instrument_ids: number[] };
+		return HttpResponse.json(
+			{
+				data: {
+					...researchCaseFixture,
+					objective: body.objective,
+					candidate_instrument_ids: body.candidate_instrument_ids,
+					selection_run_id: run.run_id,
+				},
+			},
+			{ status: 201 },
+		);
+	}),
 ];
