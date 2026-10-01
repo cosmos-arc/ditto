@@ -87,14 +87,18 @@ def _freshness(window: _CatalogSnapshotWindow) -> str:
 
 
 def _lineage_frame(frame: pl.DataFrame) -> pl.DataFrame:
-    return frame.select(
-        pl.col("source").cast(pl.String).alias("_lineage_source"),
-        pl.col("source_ticker").cast(pl.String).alias("_lineage_ticker"),
-        pl.col("trade_date").cast(pl.Date).alias("_lineage_date"),
-    ).with_columns(
-        pl.lit(None, dtype=pl.String).alias("_lineage_snapshot"),
-        pl.lit(None, dtype=pl.String).alias("_lineage_freshness"),
-        pl.lit(None, dtype=pl.String).alias("_lineage_class"),
+    return (
+        frame.select(
+            pl.col("source").cast(pl.String).alias("_lineage_source"),
+            pl.col("source_ticker").cast(pl.String).alias("_lineage_ticker"),
+            pl.col("trade_date").cast(pl.Date).alias("_lineage_date"),
+        )
+        .with_row_index("_lineage_row")
+        .with_columns(
+            pl.lit(None, dtype=pl.String).alias("_lineage_snapshot"),
+            pl.lit(None, dtype=pl.String).alias("_lineage_freshness"),
+            pl.lit(None, dtype=pl.String).alias("_lineage_class"),
+        )
     )
 
 
@@ -133,7 +137,7 @@ def _apply_exact(
         pl.col("_lookup_freshness"),
         lineage_class,
     )
-    return rewritten.drop("_lookup_snapshot", "_lookup_freshness")
+    return rewritten.drop("_lookup_snapshot", "_lookup_freshness").sort("_lineage_row")
 
 
 def _apply_ranged(
@@ -279,8 +283,14 @@ def _attach_catalog_source_snapshots(
     for window in sorted(ranged, key=_freshness_key):
         if window.source_ticker is None:
             lineage = _apply_ranged(lineage, window, lineage_class="wildcard")
-    return frame.with_columns(
-        lineage["_lineage_snapshot"].alias(_SOURCE_SNAPSHOT_COLUMN)
+    resolved = lineage.select(
+        "_lineage_row",
+        pl.col("_lineage_snapshot").alias(_SOURCE_SNAPSHOT_COLUMN),
+    ).sort("_lineage_row")
+    return (
+        frame.with_row_index("_lineage_row")
+        .join(resolved, on="_lineage_row", how="left")
+        .drop("_lineage_row")
     )
 
 

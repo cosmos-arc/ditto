@@ -673,14 +673,7 @@ class AssembleSelectionFacts:
         # with the cutoff-resolved mapping is dropped so a post-cutoff
         # mapping correction can never swap an instrument's price series.
         if "source_ticker" in frame.columns:
-            expected = pl.lit(None)
-            for resolved_id in sorted(tickers):
-                expected = (
-                    pl.when(pl.col("instrument_id") == resolved_id)
-                    .then(pl.lit(tickers[resolved_id]))
-                    .otherwise(expected)
-                )
-            frame = frame.filter(pl.col("source_ticker") == expected.cast(pl.String))
+            frame = _filter_identity_consistent(frame, tickers)
             if frame.is_empty():
                 raise AppProcessError(
                     "assembled selection bars resolved to unexpected identities",
@@ -782,16 +775,8 @@ class AssembleSelectionFacts:
         if frame.is_empty() or not required.issubset(frame.columns):
             return {}
         if "source_ticker" in frame.columns:
-            expected = pl.lit(None)
-            for resolved_id in sorted(tickers):
-                expected = (
-                    pl.when(pl.col("instrument_id") == resolved_id)
-                    .then(pl.lit(tickers[resolved_id]))
-                    .otherwise(expected)
-                )
-            frame = frame.filter(
-                (pl.col("source_ticker") == expected.cast(pl.String))
-                & pl.col(_BAR_LINEAGE_COLUMN).is_not_null()
+            frame = _filter_identity_consistent(frame, tickers).filter(
+                pl.col(_BAR_LINEAGE_COLUMN).is_not_null()
             )
         knowledge_column = pl.col("knowledge_date")
         if frame.schema["knowledge_date"] == pl.String:
@@ -943,6 +928,29 @@ class AssembleSelectionFacts:
                 dataset_id="stock_basic", day=as_of_date
             ),
         }
+
+
+def _filter_identity_consistent(
+    frame: pl.DataFrame, tickers: Mapping[int, str]
+) -> pl.DataFrame:
+    """
+    Keep only rows whose (instrument_id, source_ticker) matches the map.
+
+    A joined mapping frame keeps this O(rows) even for the full registered
+    market, where a nested conditional per instrument would explode.
+    """
+    expected = pl.DataFrame(
+        {
+            "instrument_id": sorted(tickers),
+            "_expected_ticker": [tickers[key] for key in sorted(tickers)],
+        },
+        schema={"instrument_id": pl.Int64, "_expected_ticker": pl.String},
+    )
+    return (
+        frame.join(expected, on="instrument_id", how="left")
+        .filter(pl.col("source_ticker") == pl.col("_expected_ticker"))
+        .drop("_expected_ticker")
+    )
 
 
 def _covering_chain(
