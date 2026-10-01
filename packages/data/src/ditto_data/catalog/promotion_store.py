@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import sqlite3
 from dataclasses import replace
 from datetime import UTC, datetime
 from typing import Any, Literal, cast
@@ -75,9 +76,10 @@ class SQLiteDatasetPromotionEvidenceStore:
                 )
                 self._client.execute("DROP TABLE dataset_promotion_evidence")
                 self._client.commit()
-            except Exception:
+            except sqlite3.OperationalError:
+                # Another worker completed the same migration first; the log
+                # already holds the legacy rows and the table is gone.
                 self._client.rollback()
-                raise
         self._client.commit()
 
     def upsert_dataset_evidence(

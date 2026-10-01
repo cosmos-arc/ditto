@@ -223,3 +223,16 @@ class TestEvidenceSinceLatestRevocation:
             )
             == ()
         )
+
+    def test_sequence_less_revocation_drops_all_evidence(self) -> None:
+        unsequenced = DatasetMaturityPromotionEvent(
+            dataset_id="stock_daily",
+            action="revoked",
+            previous_maturity="initial-focus",
+            next_maturity="experimental",
+            actor="data-governance",
+            revocation_reason="manual_override",
+        )
+        fresh = self._evidence("c1", 99)
+
+        assert evidence_since_latest_revocation((fresh,), (unsequenced,)) == ()

@@ -273,6 +273,10 @@ def evidence_since_latest_revocation(
     (#383); only rows recorded with the newest revocation already in view
     survive.
     """
+    if any(event.action == "revoked" and event.sequence is None for event in events):
+        # A revocation without its append-only sequence cannot be ordered
+        # against evidence rows, so no evidence can prove it postdates it.
+        return ()
     latest_revoke = max(
         (event.sequence or 0 for event in events if event.action == "revoked"),
         default=0,
