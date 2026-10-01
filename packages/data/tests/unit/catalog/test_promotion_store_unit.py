@@ -498,3 +498,97 @@ class TestSQLiteDatasetMaturityPromotionStore:
             assert store.get_dataset_maturity_promotion("stock_daily") is not None
         finally:
             pool.close()
+
+    def test_evidence_log_is_append_only_with_latest_projection(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """#383:重审同准则追加新行,读侧取最新,审计轨迹全量保留。"""
+        client, pool = _client(tmp_path / "catalog.sqlite")
+        store = SQLiteDatasetPromotionEvidenceStore(client)
+
+        try:
+            store.upsert_dataset_evidence(
+                "stock_daily",
+                DatasetPromotionEvidence(
+                    criterion="complete PIT/replay coverage for the dataset",
+                    evidence_uri="ditto://evidence/old",
+                    approved_by="architecture-review",
+                    passed=True,
+                    reviewed_at=datetime(2026, 6, 1, tzinfo=UTC),
+                    assessed_event_sequence=0,
+                ),
+            )
+            store.upsert_dataset_evidence(
+                "stock_daily",
+                DatasetPromotionEvidence(
+                    criterion="complete PIT/replay coverage for the dataset",
+                    evidence_uri="ditto://evidence/new",
+                    approved_by="data-governance",
+                    passed=False,
+                    reviewed_at=datetime(2026, 6, 3, tzinfo=UTC),
+                    assessed_event_sequence=4,
+                ),
+            )
+
+            current = store.list_dataset_evidence("stock_daily")
+            assert len(current) == 1
+            assert current[0].evidence_uri == "ditto://evidence/new"
+            assert current[0].passed is False
+            assert current[0].assessed_event_sequence == 4
+
+            history = store.list_dataset_evidence_history("stock_daily")
+            assert [row.evidence_uri for row in history] == [
+                "ditto://evidence/old",
+                "ditto://evidence/new",
+            ]
+        finally:
+            pool.close()
+
+    def test_legacy_evidence_table_migrates_into_log_once(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """#383:存量 last-write-wins 行一次性入日志(sequence 0),旧表退役。"""
+        client, pool = _client(tmp_path / "catalog.sqlite")
+        client.executescript(
+            """
+            CREATE TABLE dataset_promotion_evidence (
+                dataset_id TEXT NOT NULL,
+                criterion TEXT NOT NULL,
+                evidence_uri TEXT NOT NULL,
+                approved_by TEXT NOT NULL,
+                passed INTEGER NOT NULL,
+                notes TEXT,
+                reviewed_at TEXT,
+                PRIMARY KEY (dataset_id, criterion)
+            );
+            INSERT INTO dataset_promotion_evidence VALUES (
+                'stock_daily', 'c1', 'ditto://evidence/legacy',
+                'architecture-review', 1, NULL, '2026-05-01T00:00:00+00:00'
+            );
+            """
+        )
+        client.commit()
+
+        store = SQLiteDatasetPromotionEvidenceStore(client)
+        try:
+            migrated = store.list_dataset_evidence("stock_daily")
+            assert len(migrated) == 1
+            assert migrated[0].evidence_uri == "ditto://evidence/legacy"
+            assert migrated[0].assessed_event_sequence == 0
+
+            legacy = client.fetchone(
+                """
+                SELECT name FROM sqlite_master
+                WHERE type = 'table' AND name = 'dataset_promotion_evidence'
+                """
+            )
+            assert legacy is None
+
+            # 再实例化不重复迁移
+            SQLiteDatasetPromotionEvidenceStore(client)
+            history = store.list_dataset_evidence_history("stock_daily")
+            assert len(history) == 1
+        finally:
+            pool.close()
