@@ -55,7 +55,10 @@ function ResearchCaseCreation({ run }: { readonly run: SelectionRun }) {
 		copiedCaseRef.current = caseId;
 		try {
 			await navigator.clipboard.writeText(caseId);
-			if (copiedCaseRef.current === caseId) setCopied(true);
+			if (copiedCaseRef.current === caseId) {
+				setCopied(true);
+				setCopyError(null);
+			}
 		} catch {
 			if (copiedCaseRef.current === caseId) setCopyError("剪贴板不可用，请手动选择下方用例 ID 复制");
 		}
