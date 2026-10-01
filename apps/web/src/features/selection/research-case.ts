@@ -29,6 +29,8 @@ export function toResearchCaseView(value: ResearchCase, run: SelectionRun, submi
 		!sameSnapshotSet(value.missing_inputs, run.missing_inputs) ||
 		value.selection_status !== run.status ||
 		Number.isNaN(Date.parse(value.as_of)) ||
+		value.publication_cutoff > value.knowledge_cutoff ||
+		value.knowledge_cutoff > value.as_of ||
 		value.objective !== submitted.objective ||
 		!sameIdSequence(value.candidate_instrument_ids, submitted.candidate_instrument_ids ?? []) ||
 		(value.selection_status === "ready" && value.missing_inputs.length > 0) ||

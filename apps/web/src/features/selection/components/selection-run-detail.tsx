@@ -1,5 +1,5 @@
 import { useMutation } from "@tanstack/react-query";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Panel, PanelBody, PanelHeader } from "@/features/shell";
 import { ContextActions } from "@/providers";
@@ -26,6 +26,7 @@ function ResearchCaseCreation({ run }: { readonly run: SelectionRun }) {
 	const [excluded, setExcluded] = useState<readonly number[]>([]);
 	const [copied, setCopied] = useState(false);
 	const [copyError, setCopyError] = useState<string | null>(null);
+	const copiedCaseRef = useRef<string | null>(null);
 	const createCase = useMutation({
 		mutationKey: selectionKeys.researchCases(run.run_id),
 		mutationFn: async (body: CreateResearchCaseBody) =>
@@ -41,13 +42,22 @@ function ResearchCaseCreation({ run }: { readonly run: SelectionRun }) {
 		.map((candidate) => candidate.instrument_id);
 	const canSubmit = objective.trim().length > 0 && selectedIds.length > 0;
 
+	function invalidateCreatedCase(): void {
+		createCase.reset();
+		setCopied(false);
+		setCopyError(null);
+		copiedCaseRef.current = null;
+	}
+
 	async function copyCaseId(): Promise<void> {
 		if (!view) return;
+		const caseId = view.caseId;
+		copiedCaseRef.current = caseId;
 		try {
-			await navigator.clipboard.writeText(view.caseId);
-			setCopied(true);
+			await navigator.clipboard.writeText(caseId);
+			if (copiedCaseRef.current === caseId) setCopied(true);
 		} catch {
-			setCopyError("剪贴板不可用，请手动选择下方用例 ID 复制");
+			if (copiedCaseRef.current === caseId) setCopyError("剪贴板不可用，请手动选择下方用例 ID 复制");
 		}
 	}
 
@@ -74,13 +84,14 @@ function ResearchCaseCreation({ run }: { readonly run: SelectionRun }) {
 										type="checkbox"
 										aria-label={`纳入 ${candidate.instrument_id} ${candidate.instrument_name}`}
 										checked={!excluded.includes(candidate.instrument_id)}
-										onChange={() =>
+										onChange={() => {
+											invalidateCreatedCase();
 											setExcluded((current) =>
 												current.includes(candidate.instrument_id)
 													? current.filter((value) => value !== candidate.instrument_id)
 													: [...current, candidate.instrument_id],
-											)
-										}
+											);
+										}}
 									/>
 									<span>
 										<span className="font-mono">{candidate.instrument_id}</span> · {candidate.instrument_name}
@@ -99,7 +110,10 @@ function ResearchCaseCreation({ run }: { readonly run: SelectionRun }) {
 					disabled={createCase.isPending}
 					placeholder="该运行要验证什么假设？"
 					value={objective}
-					onChange={(event) => setObjective(event.currentTarget.value)}
+					onChange={(event) => {
+						invalidateCreatedCase();
+						setObjective(event.currentTarget.value);
+					}}
 				/>
 			</label>
 			<div className="flex items-center gap-2">
