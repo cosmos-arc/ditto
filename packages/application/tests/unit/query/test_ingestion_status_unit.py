@@ -255,6 +255,7 @@ class TestIngestionStatusCatalogOverlay:
                         DatasetMaturityPromotionEvent(
                             dataset_id="stock_daily",
                             action="revoked",
+                            sequence=1,
                             previous_maturity="initial-focus",
                             next_maturity="experimental",
                             actor="data-governance",
@@ -506,6 +507,7 @@ class TestPromotionReadinessReport:
                         DatasetMaturityPromotionEvent(
                             dataset_id="stock_daily",
                             action="revoked",
+                            sequence=1,
                             previous_maturity="initial-focus",
                             next_maturity="experimental",
                             actor="data-governance",
@@ -538,8 +540,9 @@ class TestPromotionReadinessReport:
                         criterion=stock_criteria[0],
                         evidence_uri="ditto://evidence/stock_daily/pit",
                         approved_by="architecture-review",
-                        # 撤销(09:30)之后的复审证据才计入评估(#380)
+                        # 撤销(09:30)之后、已见撤销事件的复审证据才计入(#380/#383)
                         reviewed_at=datetime(2026, 6, 2, 9, 31, tzinfo=UTC),
+                        assessed_event_sequence=1,
                     ),
                     DatasetPromotionEvidence(
                         criterion=stock_criteria[1],
@@ -547,6 +550,7 @@ class TestPromotionReadinessReport:
                         approved_by="architecture-review",
                         passed=False,
                         reviewed_at=datetime(2026, 6, 2, 9, 31, tzinfo=UTC),
+                        assessed_event_sequence=1,
                     ),
                 ),
                 "macro_indicators": tuple(
@@ -699,6 +703,7 @@ class TestMaturityGovernanceReport:
                         approved_by="architecture-review",
                         # 撤销之后的复审证据才计入评估(#380)
                         reviewed_at=datetime(2026, 6, 2, 9, 31, tzinfo=UTC),
+                        assessed_event_sequence=1,
                     ),
                     DatasetPromotionEvidence(
                         criterion=stock_criteria[1],
@@ -706,6 +711,7 @@ class TestMaturityGovernanceReport:
                         approved_by="architecture-review",
                         passed=False,
                         reviewed_at=datetime(2026, 6, 2, 9, 31, tzinfo=UTC),
+                        assessed_event_sequence=1,
                     ),
                 ),
                 "macro_indicators": tuple(
@@ -742,6 +748,7 @@ class TestMaturityGovernanceReport:
                         DatasetMaturityPromotionEvent(
                             dataset_id="stock_daily",
                             action="revoked",
+                            sequence=1,
                             previous_maturity="initial-focus",
                             next_maturity="experimental",
                             actor="data-governance",
