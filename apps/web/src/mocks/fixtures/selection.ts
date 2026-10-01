@@ -183,7 +183,7 @@ export const researchCaseFixture = {
 	objective: "验证动量因子持续性",
 	publication_cutoff: "2026-08-31T06:30:00Z",
 	schema_version: 1,
-	selection_input_hash: "f".repeat(64),
+	selection_input_hash: "b".repeat(64),
 	selection_run_hash: "b".repeat(64),
 	selection_run_id: selectionRunFixtures[0].run_id,
 	selection_spec_hash: "c".repeat(64),

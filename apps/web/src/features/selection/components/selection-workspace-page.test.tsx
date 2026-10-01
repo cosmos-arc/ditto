@@ -104,8 +104,11 @@ describe("SelectionWorkspacePage", () => {
 		render(<SelectionWorkspacePage />, { wrapper: wrapper() });
 
 		expect(await screen.findByRole("button", { name: "创建研究用例" })).toBeDisabled();
-		await user.click(screen.getByRole("checkbox", { name: "纳入 300750 宁德时代" }));
 		await user.type(screen.getByRole("textbox", { name: "研究假设 objective" }), "验证动量因子在食品饮料的持续性");
+		await user.click(screen.getByRole("checkbox", { name: "纳入 600519 贵州茅台" }));
+		await user.click(screen.getByRole("checkbox", { name: "纳入 300750 宁德时代" }));
+		await expect(screen.findByRole("button", { name: "创建研究用例" })).resolves.toBeDisabled();
+		await user.click(screen.getByRole("checkbox", { name: "纳入 600519 贵州茅台" }));
 		await user.click(screen.getByRole("button", { name: "创建研究用例" }));
 
 		await expect(screen.findByText(researchCaseFixture.case_id)).resolves.toBeInTheDocument();

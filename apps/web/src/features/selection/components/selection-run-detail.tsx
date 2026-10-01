@@ -28,12 +28,14 @@ function ResearchCaseCreation({ run }: { readonly run: SelectionRun }) {
 	const createCase = useMutation({
 		mutationKey: selectionKeys.researchCases(run.run_id),
 		mutationFn: async (body: CreateResearchCaseBody) =>
-			toResearchCaseView(await createResearchCase(run.run_id, body), run.run_id),
+			toResearchCaseView(await createResearchCase(run.run_id, body), run),
+		onMutate: () => setCopied(false),
 	});
 	const view = createCase.data;
 	const selectedIds = run.candidates
 		.filter((candidate) => !excluded.includes(candidate.instrument_id))
 		.map((candidate) => candidate.instrument_id);
+	const canSubmit = objective.trim().length > 0 && (run.candidates.length === 0 || selectedIds.length > 0);
 
 	async function copyCaseId(): Promise<void> {
 		if (!view) return;
@@ -78,6 +80,7 @@ function ResearchCaseCreation({ run }: { readonly run: SelectionRun }) {
 				<input
 					aria-label="研究假设 objective"
 					className="rounded-(--radius-sm) border border-(--color-border-primary) bg-(--color-surface-1) px-2 py-1.5 text-xs text-(--color-foreground)"
+					disabled={createCase.isPending}
 					placeholder="该运行要验证什么假设？"
 					value={objective}
 					onChange={(event) => setObjective(event.currentTarget.value)}
@@ -86,7 +89,7 @@ function ResearchCaseCreation({ run }: { readonly run: SelectionRun }) {
 			<div className="flex items-center gap-2">
 				<Button
 					type="button"
-					disabled={createCase.isPending || objective.trim().length === 0}
+					disabled={createCase.isPending || !canSubmit}
 					onClick={() => createCase.mutate({ candidate_instrument_ids: selectedIds, objective: objective.trim() })}
 				>
 					{createCase.isPending ? "创建中…" : "创建研究用例"}
