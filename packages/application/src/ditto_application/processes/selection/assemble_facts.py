@@ -788,7 +788,9 @@ class AssembleSelectionFacts:
         requested_start = as_of - timedelta(days=request_lookback)
         if len(sessions) >= needed:
             return min(requested_start, sessions[-needed])
-        return min(requested_start, sessions[0])
+        # A partial calendar must not narrow below the conservative
+        # fallback window either.
+        return min(fallback, requested_start, sessions[0])
 
     def _load_raw_cross(
         self,
@@ -905,7 +907,12 @@ class AssembleSelectionFacts:
         drafts: list[SelectionInstrumentDraft] = []
         for row in roster_rows:
             instrument_id = int(row["instrument_id"])
-            instrument_name = names.get(instrument_id, str(instrument_id))
+            resolved_name = names.get(instrument_id)
+            instrument_name = resolved_name or str(instrument_id)
+            # A missing registry name cannot back the ST marker: keep the
+            # fact absent so the pipeline excludes the instrument instead
+            # of passing an underived status.
+            is_st = None if resolved_name is None else _is_st_from_name(resolved_name)
             bar_row = cross_rows.get(instrument_id)
             lineage = bar_row.get(_BAR_LINEAGE_COLUMN) if bar_row is not None else None
             if bar_row is None or lineage is None or instrument_id in unattributable:
@@ -917,7 +924,7 @@ class AssembleSelectionFacts:
                         industry_id=None,
                         factor_values=(),
                         average_turnover=None,
-                        is_st=_is_st_from_name(instrument_name),
+                        is_st=is_st,
                         is_suspended=row["is_suspended"],
                         listing_days=_listing_days(row.get("list_date"), as_of_date),
                         limit_state=None,
@@ -945,18 +952,24 @@ class AssembleSelectionFacts:
                     industry_id=None,
                     factor_values=tuple(values),
                     average_turnover=turnover.get(instrument_id),
-                    is_st=_is_st_from_name(instrument_name),
+                    is_st=is_st,
                     is_suspended=row["is_suspended"],
                     listing_days=_listing_days(row.get("list_date"), as_of_date),
-                    limit_state=_limit_state(
-                        source_ticker=(raw_cross.get(instrument_id) or {}).get(
-                            "source_ticker"
-                        ),
-                        close=(raw_cross.get(instrument_id) or {}).get("close"),
-                        pre_close=(raw_cross.get(instrument_id) or {}).get("pre_close"),
-                        high=(raw_cross.get(instrument_id) or {}).get("high"),
-                        low=(raw_cross.get(instrument_id) or {}).get("low"),
-                        is_st=_is_st_from_name(instrument_name),
+                    limit_state=(
+                        _limit_state(
+                            source_ticker=(raw_cross.get(instrument_id) or {}).get(
+                                "source_ticker"
+                            ),
+                            close=(raw_cross.get(instrument_id) or {}).get("close"),
+                            pre_close=(raw_cross.get(instrument_id) or {}).get(
+                                "pre_close"
+                            ),
+                            high=(raw_cross.get(instrument_id) or {}).get("high"),
+                            low=(raw_cross.get(instrument_id) or {}).get("low"),
+                            is_st=is_st or False,
+                        )
+                        if is_st is not None
+                        else None
                     ),
                     tracking_error=None,
                     declared_missing_inputs=tuple(missing_factors),
@@ -1194,10 +1207,12 @@ def data_fields(
     bind("stock_daily", "close", "membership_version")
     bind("stock_daily", "amount", "instruments.average_turnover")
     # limit_state consumes both legs of the close/pre_close ratio.
-    # limit_state is judged on the raw (unadjusted) read, so it never
-    # depends on adjustment lineage.
+    # limit_state is judged on the raw (unadjusted) read — the close must
+    # sit at the session extreme, so high and low are consumed too.
     bind("stock_daily", "close", "instruments.limit_state")
     bind("stock_daily", "pre_close", "instruments.limit_state")
+    bind("stock_daily", "high", "instruments.limit_state")
+    bind("stock_daily", "low", "instruments.limit_state")
     price_consumers = sorted(
         f"instruments.factor_values.{node.factor_id}"
         for node in nodes

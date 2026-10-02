@@ -109,6 +109,7 @@ def _metadata_identities(metadata: MetadataService) -> InstrumentIdentityReader:
             known = {
                 int(row["instrument_id"]): str(row["name"])
                 for row in frame.unique(subset=["instrument_id"]).to_dicts()
+                if row["name"] is not None
             }
             historical = metadata.instrument.get_stock_names(
                 list(instrument_ids), asof.isoformat()

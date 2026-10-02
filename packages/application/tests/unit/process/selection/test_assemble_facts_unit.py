@@ -100,7 +100,7 @@ class _FakeIdentities:
         self._tickers = tickers
 
     def names(self, instrument_ids, *, asof):
-        return {key: self._names[key] for key in instrument_ids}
+        return {key: self._names[key] for key in instrument_ids if key in self._names}
 
     def source_tickers(self, instrument_ids, *, asof, cutoff):
         self.ticker_cutoffs = [*getattr(self, "ticker_cutoffs", []), (asof, cutoff)]
@@ -1003,3 +1003,41 @@ def test_lookback_start_follows_the_trading_calendar() -> None:
         provider.queries[0].start
         == min(visible[-25], _CROSS - timedelta(days=60)).isoformat()
     )
+
+
+def test_missing_registry_name_leaves_st_fact_absent() -> None:
+    provider = _FakeProvider(_bars_frame(rows_per_instrument={1: 30}))
+    history = _FakeHistory(_roster_frame((1,)))
+    identities = _FakeIdentities(names={}, tickers={1: "000001.SZ"})
+    process = AssembleSelectionFacts(
+        provider=provider,
+        history=history,  # type: ignore[arg-type]
+        discover_sources=lambda **_kwargs: HistoricalUniverseSources(
+            universe_id="unused",
+            asset_kind="stock",
+            master_snapshot_ids=(_BASIC_WINDOW.snapshot_id,),
+            status_snapshot_ids=(_STATUS_WINDOW.snapshot_id,),
+        ),
+        identities=identities,  # type: ignore[arg-type]
+        factors=_Registry(_registry()),  # type: ignore[arg-type]
+        snapshots=_FakeSnapshots(),  # type: ignore[arg-type]
+        clock=lambda: _AS_OF,
+    )
+    request = process.assemble(_request())
+
+    # The display name falls back to the id, but the ST marker stays an
+    # underived missing fact instead of defaulting to non-ST.
+    assert request.instruments[0].instrument_name == "1"
+    assert request.instruments[0].is_st is None
+
+
+def test_limit_state_binding_covers_session_extremes() -> None:
+    process, _, _ = _happy_process()
+    request = process.assemble(_request())
+
+    bound_fields = {
+        item.field
+        for item in request.data_fields
+        if item.consumer_field == "instruments.limit_state"
+    }
+    assert {"close", "pre_close", "high", "low"} <= bound_fields
