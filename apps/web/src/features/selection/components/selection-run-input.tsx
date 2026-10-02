@@ -14,7 +14,8 @@ import { SelectionAdmission } from "./selection-admission";
 
 const STORAGE_KEY = "ditto.selection-run-input.v1";
 
-const WEIGHT_SUM_TOLERANCE = 1e-12;
+// 镜像服务端 math.isclose(total, 1.0, abs_tol=1e-12)：默认 rel_tol=1e-9 主导有效容差。
+const WEIGHT_SUM_TOLERANCE = 1e-9;
 
 function parseRunInput(value: string): CreateSelectionRunBody {
 	const parsed: unknown = JSON.parse(value);
@@ -60,7 +61,10 @@ function parseDecimal(value: string): number | null {
 
 function parseInteger(value: string): number | null {
 	const trimmed = value.trim();
-	return /^-?\d+$/u.test(trimmed) ? Number(trimmed) : null;
+	if (!/^-?\d+$/u.test(trimmed)) return null;
+	const parsed = Number(trimmed);
+	// 超出安全整数范围的值会被 JSON 往返舍入，破坏提交身份的精确性。
+	return Number.isSafeInteger(parsed) ? parsed : null;
 }
 
 type FactorRow = {
@@ -85,7 +89,7 @@ type StrategyForm = {
 	readonly publicationCutoff: string;
 };
 
-const INITIAL_FACTORS: readonly FactorRow[] = [{ name: "momentum", weight: "1" }];
+const INITIAL_FACTORS: readonly FactorRow[] = [{ name: "momentum_1m", weight: "1" }];
 
 function initialForm(): StrategyForm {
 	return {
@@ -176,6 +180,7 @@ export function SelectionRunInput({
 	readonly onSaved: (input: CreateSelectionRunBody) => void;
 }) {
 	const [form, setForm] = useState<StrategyForm>(initialForm);
+	const [asOfEdited, setAsOfEdited] = useState(false);
 	const [advancedValue, setAdvancedValue] = useState(readSavedSelectionInput);
 	const [message, setMessage] = useState<string | null>(null);
 	const [instrument, setInstrument] = useState("");
@@ -270,7 +275,10 @@ export function SelectionRunInput({
 							className={INPUT_CLASS}
 							type="datetime-local"
 							value={form.asOf}
-							onChange={(event) => updateForm({ asOf: event.currentTarget.value })}
+							onChange={(event) => {
+								setAsOfEdited(true);
+								updateForm({ asOf: event.currentTarget.value });
+							}}
 						/>
 					</label>
 					<label className="grid gap-1 text-xs">
@@ -380,7 +388,7 @@ export function SelectionRunInput({
 							<input
 								aria-label={`因子 ${index + 1} 名称`}
 								className={`${INPUT_CLASS} w-40`}
-								placeholder="因子名称，如 momentum"
+								placeholder="因子名称，如 momentum_1m"
 								value={factor.name}
 								onChange={(event) => updateFactor(index, { name: event.currentTarget.value })}
 							/>
@@ -454,7 +462,13 @@ export function SelectionRunInput({
 						type="button"
 						disabled={assemble.isPending || errors.length > 0}
 						onClick={() => {
-							if (body) assemble.mutate(body);
+							if (!body) return;
+							// 未手动改过的实时默认值在提交时刻刷新：留置页面数分钟后
+							// 的旧时点会被服务端偏差窗判为回溯。
+							const asOf = asOfEdited ? form.asOf : shanghaiLocalInput(new Date());
+							const nextForm = { ...form, asOf };
+							if (!asOfEdited) setForm(nextForm);
+							assemble.mutate(strategyBody(nextForm));
 						}}
 					>
 						{assemble.isPending ? "组装中…" : "组装并预览"}

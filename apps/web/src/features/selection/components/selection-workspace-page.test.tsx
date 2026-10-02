@@ -174,12 +174,12 @@ describe("SelectionWorkspacePage", () => {
 		render(<SelectionWorkspacePage />, { wrapper: wrapper() });
 
 		await user.click(screen.getByRole("button", { name: "添加因子" }));
-		await user.type(screen.getByLabelText("因子 2 名称"), "momentum");
+		await user.type(screen.getByLabelText("因子 2 名称"), "momentum_1m");
 		expect(screen.getByRole("button", { name: "组装并预览" })).toBeDisabled();
-		expect(screen.getByText("因子名称重复：momentum")).toBeInTheDocument();
+		expect(screen.getByText("因子名称重复：momentum_1m")).toBeInTheDocument();
 
 		await user.clear(screen.getByLabelText("因子 2 名称"));
-		await user.type(screen.getByLabelText("因子 2 名称"), "quality");
+		await user.type(screen.getByLabelText("因子 2 名称"), "reversal_1w");
 		await user.clear(screen.getByLabelText("因子 1 权重"));
 		await user.type(screen.getByLabelText("因子 1 权重"), "0.4");
 		await user.clear(screen.getByLabelText("因子 2 权重"));

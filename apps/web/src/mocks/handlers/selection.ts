@@ -8,6 +8,9 @@ import {
 	selectionRunFixtures,
 } from "../fixtures/selection";
 
+/** 组装端点接受的已注册行情因子（镜像 ALL_FACTOR_SPECS 中叶子依赖可达的子集）。 */
+const ASSEMBLY_KNOWN_FACTORS = new Set(["momentum_1m", "momentum_12m", "reversal_1w", "volatility_factor"]);
+
 export const ASSEMBLED_UNIVERSE_SNAPSHOT_ID = `universe:sha256:${"6".repeat(64)}`;
 
 /** Deterministic assembled facts echoing the submitted policy; mirrors the server's assemble endpoint. */
@@ -114,8 +117,13 @@ export const selectionHandlers = [
 		const body = (await request.json()) as AssembleSelectionRunBody;
 		const names = body.factor_weights.map((factor) => factor.name);
 		const weightSum = body.factor_weights.reduce((sum, factor) => sum + factor.weight, 0);
-		if (new Set(names).size !== names.length || Math.abs(weightSum - 1) > 1e-12)
+		if (new Set(names).size !== names.length || Math.abs(weightSum - 1) > 1e-9)
 			return HttpResponse.json({ detail: "因子权重不得重复且权重之和必须为 1" }, { status: 422 });
+		if (body.factor_weights.some((factor) => !ASSEMBLY_KNOWN_FACTORS.has(factor.name)))
+			return HttpResponse.json(
+				{ detail: `未注册因子：仅支持 ${[...ASSEMBLY_KNOWN_FACTORS].join("、")}` },
+				{ status: 422 },
+			);
 		return HttpResponse.json({ data: assembledSelectionRunResponse(body) });
 	}),
 	http.post("/api/v1/selections/runs/:runId/research-cases", async ({ params, request }) => {
