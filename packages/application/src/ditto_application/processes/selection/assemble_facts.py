@@ -289,11 +289,8 @@ class AssembleSelectionFacts:
         self._identities = identities
         self._factors = factors
         self._snapshots = snapshots
-        self._catalog = _CertifiedCatalog.load(
-            snapshots,
-            ("stock_daily", "stock_status", "stock_basic", _ADJUSTMENT_DATASET),
-        )
         self._compiler = ExpressionCompiler()
+        self._catalog: _CertifiedCatalog | None = None
         self._clock = clock or (lambda: datetime.now(UTC))
 
     def assemble(
@@ -312,6 +309,12 @@ class AssembleSelectionFacts:
             )
         knowledge, publication = self._resolve_cutoffs(request)
         self._validate_policy(request)
+        # Windows resolve per request: certification promotion or
+        # revocation between requests must be honored without a restart.
+        self._catalog = _CertifiedCatalog.load(
+            self._snapshots,
+            ("stock_daily", "stock_status", "stock_basic", _ADJUSTMENT_DATASET),
+        )
         as_of_date = request.as_of.astimezone(_SHANGHAI).date()
         sources = self._roster_sources(request, knowledge)
         roster = self._resolve_roster(request, sources, knowledge, publication)
@@ -446,13 +449,23 @@ class AssembleSelectionFacts:
             )
         return knowledge, publication
 
+    @property
+    def catalog(self) -> _CertifiedCatalog:
+        """The per-request window catalog (loaded by assemble)."""
+        if self._catalog is None:
+            raise AppProcessError(
+                "certified windows are loaded per assembly request",
+                details={"reason": "ASSEMBLY_SNAPSHOT_WINDOW_MISSING"},
+            )
+        return self._catalog
+
     def _require_certified_coverage(self, evaluation: pl.DataFrame) -> None:
         """Every consumed bar date must sit inside a certified window."""
         uncovered = sorted(
             {
                 trade_date
                 for trade_date in evaluation["trade_date"].unique().to_list()
-                if not self._catalog.covering(dataset_id="stock_daily", day=trade_date)
+                if not self.catalog.covering(dataset_id="stock_daily", day=trade_date)
             }
         )
         if uncovered:
@@ -1063,21 +1076,19 @@ class AssembleSelectionFacts:
         """
         consumed_dates = sorted(set(evaluation["trade_date"].unique().to_list()))
         return {
-            "stock_daily": _covering_chain(
-                self._catalog, "stock_daily", consumed_dates
-            ),
+            "stock_daily": _covering_chain(self.catalog, "stock_daily", consumed_dates),
             _ADJUSTMENT_DATASET: _covering_chain(
-                self._catalog, _ADJUSTMENT_DATASET, consumed_dates
+                self.catalog, _ADJUSTMENT_DATASET, consumed_dates
             ),
-            "stock_status": self._catalog.covering(
+            "stock_status": self.catalog.covering(
                 dataset_id="stock_status", day=as_of_date
             ),
-            "stock_basic": self._catalog.covering(
+            "stock_basic": self.catalog.covering(
                 dataset_id="stock_basic", day=as_of_date
             ),
             # limit_state consumes cross-date name/ST/listing metadata;
             # qualify that instant separately when it differs from as-of.
-            "stock_basic_cross": self._catalog.covering(
+            "stock_basic_cross": self.catalog.covering(
                 dataset_id="stock_basic", day=cross_date
             ),
         }
