@@ -7,8 +7,6 @@ from typing import Literal
 
 __all__ = ["derive_limit_state"]
 
-_IPO_UNRESTRICTED_CALENDAR_DAYS = 6
-
 type LimitState = Literal["normal", "limit_up", "limit_down"]
 
 
@@ -20,7 +18,7 @@ def derive_limit_state(
     high: float,
     low: float,
     is_st: bool,
-    listing_age_days: int | None = None,
+    unrestricted: bool = False,
 ) -> LimitState:
     """
     Derive a conservative A-share close limit using board/ST thresholds.
@@ -29,13 +27,11 @@ def derive_limit_state(
     codes use ±29.5%; the main boards use ±9.5%. A limit additionally
     requires the close to sit at the session extreme, so an intraday touch
     that faded is not a close limit. Newly listed instruments trade
-    unrestricted initial sessions; with a known listing age those sessions
-    are classified as unlimited rather than mislabelled by the board band.
+    unrestricted initial sessions; the caller derives that window from the
+    trading calendar and board-specific session counts and passes
+    ``unrestricted=True`` so those sessions are not mislabelled.
     """
-    if (
-        listing_age_days is not None
-        and listing_age_days <= _IPO_UNRESTRICTED_CALENDAR_DAYS
-    ):
+    if unrestricted:
         return "normal"
     ticker = source_ticker.partition(".")[0]
     if is_st:

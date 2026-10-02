@@ -98,7 +98,11 @@ def _metadata_identities(metadata: MetadataService) -> InstrumentIdentityReader:
 
     class _MetadataIdentities:
         def names(
-            self, instrument_ids: Sequence[int], *, asof: date
+            self,
+            instrument_ids: Sequence[int],
+            *,
+            asof: date,
+            allow_current_fallback: bool = True,
         ) -> Mapping[int, str]:
             # One registry read plus one batched PIT history query; the
             # registry map doubles as the documented fallback while the
@@ -116,11 +120,22 @@ def _metadata_identities(metadata: MetadataService) -> InstrumentIdentityReader:
             )
             # Unresolved ids stay absent: the assembler distinguishes a
             # missing name (ST fact unavailable) from a real one.
+            if allow_current_fallback:
+                return {
+                    instrument_id: name
+                    for instrument_id in instrument_ids
+                    if (
+                        name := historical.get(instrument_id)
+                        or known.get(instrument_id)
+                    )
+                    is not None
+                }
+            # Historical-only resolution: the cross-date band must not be
+            # decided by a current registry name when no PIT record exists.
             return {
                 instrument_id: name
                 for instrument_id in instrument_ids
-                if (name := historical.get(instrument_id) or known.get(instrument_id))
-                is not None
+                if (name := historical.get(instrument_id)) is not None
             }
 
         def source_tickers(

@@ -99,7 +99,7 @@ class _FakeIdentities:
         self._names = names
         self._tickers = tickers
 
-    def names(self, instrument_ids, *, asof):
+    def names(self, instrument_ids, *, asof, allow_current_fallback=True):
         return {key: self._names[key] for key in instrument_ids if key in self._names}
 
     def source_tickers(self, instrument_ids, *, asof, cutoff):
@@ -1075,10 +1075,15 @@ def test_ipo_unrestricted_sessions_are_not_limited() -> None:
             pl.lit("000001.SZ").alias("source_ticker")
         ),
         raw_frame=raw,
+        schedule=pl.DataFrame(
+            {"trade_date": [_CROSS]},
+            schema={"trade_date": pl.Date},
+        ),
     )
     history = _FakeHistory(roster)
     process = _process(provider=provider, history=history)
     request = process.assemble(_request())
 
     assert request.instruments[0].listing_days == 0
+    # One session since listing is inside the main-board no-limit window.
     assert request.instruments[0].limit_state == "normal"

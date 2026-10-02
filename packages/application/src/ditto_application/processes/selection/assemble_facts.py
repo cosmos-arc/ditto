@@ -164,7 +164,11 @@ class InstrumentIdentityReader(Protocol):
     """Resolve durable instrument identities to names and source tickers."""
 
     def names(
-        self, instrument_ids: Sequence[int], *, asof: date
+        self,
+        instrument_ids: Sequence[int],
+        *,
+        asof: date,
+        allow_current_fallback: bool = True,
     ) -> Mapping[int, str]: ...
 
     def source_tickers(
@@ -838,6 +842,38 @@ class AssembleSelectionFacts:
         rows = frame.filter(pl.col("trade_date") == pl.lit(cross_date))
         return {int(row["instrument_id"]): row for row in rows.to_dicts()}
 
+    def _in_unrestricted_window(
+        self,
+        *,
+        raw_ticker: object,
+        list_date: object,
+        cross_date: date,
+    ) -> bool:
+        """
+        Derive the IPO no-limit window from the trading calendar.
+
+        Calendar-day age under-covers IPOs followed by long exchange
+        holidays; count actual sessions since listing instead.
+        """
+        sessions = _unrestricted_sessions(raw_ticker)
+        if sessions is None or not isinstance(list_date, date):
+            return False
+        try:
+            schedule = self._provider.get_schedule(
+                start=list_date.isoformat(), end=cross_date.isoformat()
+            )
+        except Exception:
+            return False
+        if schedule.is_empty() or "trade_date" not in schedule.columns:
+            return False
+        column = schedule["trade_date"]
+        if column.dtype == pl.String:
+            column = column.str.to_date()
+        count = len(
+            [value for value in column.to_list() if list_date <= value <= cross_date]
+        )
+        return 1 <= count <= sessions
+
     def _project_instruments(
         self,
         *,
@@ -856,7 +892,9 @@ class AssembleSelectionFacts:
         cross_names = (
             names
             if cross_date == as_of_date
-            else self._identities.names(roster_ids, asof=cross_date)
+            else self._identities.names(
+                roster_ids, asof=cross_date, allow_current_fallback=False
+            )
         )
         cross_section = evaluation.filter(pl.col("trade_date") == cross_date)
         # Unattributable instruments never contribute to the ranking
@@ -917,7 +955,11 @@ class AssembleSelectionFacts:
             is_st = None if resolved_name is None else _is_st_from_name(resolved_name)
             cross_name = cross_names.get(instrument_id)
             band_is_st = None if cross_name is None else _is_st_from_name(cross_name)
-            listing_age_days = _listing_days(row.get("list_date"), cross_date)
+            unrestricted = self._in_unrestricted_window(
+                raw_ticker=(raw_cross.get(instrument_id) or {}).get("source_ticker"),
+                list_date=row.get("list_date"),
+                cross_date=cross_date,
+            )
             bar_row = cross_rows.get(instrument_id)
             lineage = bar_row.get(_BAR_LINEAGE_COLUMN) if bar_row is not None else None
             if bar_row is None or lineage is None or instrument_id in unattributable:
@@ -972,7 +1014,7 @@ class AssembleSelectionFacts:
                             high=(raw_cross.get(instrument_id) or {}).get("high"),
                             low=(raw_cross.get(instrument_id) or {}).get("low"),
                             is_st=band_is_st,
-                            listing_age_days=listing_age_days,
+                            unrestricted=unrestricted,
                         )
                         if band_is_st is not None
                         else None
@@ -1014,6 +1056,11 @@ class AssembleSelectionFacts:
             ),
             "stock_basic": self._snapshots.covering(
                 dataset_id="stock_basic", day=as_of_date
+            ),
+            # limit_state consumes cross-date name/ST/listing metadata;
+            # qualify that instant separately when it differs from as-of.
+            "stock_basic_cross": self._snapshots.covering(
+                dataset_id="stock_basic", day=cross_date
             ),
         }
 
@@ -1134,6 +1181,22 @@ def _listing_days(list_date: object, as_of_date: date) -> int | None:
     return max(0, (as_of_date - list_date).days)
 
 
+_BOARD_UNRESTRICTED_SESSIONS: Mapping[str, int] = {
+    "chinext_star": 5,
+    "other": 1,
+}
+
+
+def _unrestricted_sessions(source_ticker: object) -> int | None:
+    """Board-specific count of post-listing sessions without price limits."""
+    if not isinstance(source_ticker, str):
+        return None
+    ticker = source_ticker.partition(".")[0]
+    if ticker.startswith(("300", "301", "688", "689")):
+        return _BOARD_UNRESTRICTED_SESSIONS["chinext_star"]
+    return _BOARD_UNRESTRICTED_SESSIONS["other"]
+
+
 def _limit_state(
     *,
     source_ticker: object,
@@ -1142,7 +1205,7 @@ def _limit_state(
     high: object,
     low: object,
     is_st: bool | None,
-    listing_age_days: int | None,
+    unrestricted: bool,
 ) -> Literal["normal", "limit_up", "limit_down"] | None:
     """
     Classify the close against the board/ST price-limit band.
@@ -1174,8 +1237,28 @@ def _limit_state(
         high=prices[2],
         low=prices[3],
         is_st=is_st,
-        listing_age_days=listing_age_days,
+        unrestricted=unrestricted,
     )
+
+
+def _bind_cross_date_metadata(
+    windows: Mapping[str, tuple[CertifiedSnapshotWindow, ...]],
+    fields: list[FieldRequirement],
+) -> None:
+    """Qualify the cross-date name/listing metadata behind limit_state."""
+    cross_basic = windows.get("stock_basic_cross") or ()
+    if not cross_basic or cross_basic == windows.get("stock_basic"):
+        return
+    for field in ("name", "list_date"):
+        for window in cross_basic:
+            fields.append(
+                FieldRequirement(
+                    "stock_basic",
+                    field,
+                    window.snapshot_id,
+                    "instruments.limit_state",
+                )
+            )
 
 
 def claimed_from(evaluation: pl.DataFrame) -> date | None:
@@ -1220,6 +1303,7 @@ def data_fields(
     bind("stock_daily", "pre_close", "instruments.limit_state")
     bind("stock_daily", "high", "instruments.limit_state")
     bind("stock_daily", "low", "instruments.limit_state")
+    _bind_cross_date_metadata(windows, fields)
     price_consumers = sorted(
         f"instruments.factor_values.{node.factor_id}"
         for node in nodes
