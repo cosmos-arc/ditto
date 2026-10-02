@@ -172,6 +172,21 @@ def _certified_snapshot_index(
             )
             return report.evidence.snapshot_ids if report else ()
 
+        def windows(self, dataset_id: str) -> tuple[CertifiedSnapshotWindow, ...]:
+            resolved: list[CertifiedSnapshotWindow] = []
+            for snapshot_id in self.snapshot_ids(dataset_id):
+                snapshot = snapshots.get_snapshot(snapshot_id)
+                if snapshot is None:
+                    continue
+                resolved.append(
+                    CertifiedSnapshotWindow(
+                        snapshot_id,
+                        date.fromisoformat(snapshot.request_start),
+                        date.fromisoformat(snapshot.request_end),
+                    )
+                )
+            return tuple(resolved)
+
         def covering(
             self, *, dataset_id: str, day: date
         ) -> tuple[CertifiedSnapshotWindow, ...]:

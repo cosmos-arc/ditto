@@ -132,6 +132,9 @@ class _FakeSnapshots:
     def snapshot_ids(self, dataset_id):
         return tuple(window.snapshot_id for window in self._windows[dataset_id])
 
+    def windows(self, dataset_id):
+        return self._windows[dataset_id]
+
     def covering(self, *, dataset_id, day):
         return tuple(
             window

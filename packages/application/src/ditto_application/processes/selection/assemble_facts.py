@@ -202,11 +202,31 @@ class CertifiedSnapshotIndex(Protocol):
         """All certified snapshot ids of one dataset."""
         ...
 
+    def windows(self, dataset_id: str) -> tuple[CertifiedSnapshotWindow, ...]:
+        """All certified windows of one dataset, resolved once per call."""
+        ...
+
+
+@dataclass(frozen=True, slots=True)
+class _CertifiedCatalog:
+    """Per-assembly snapshot window cache; each dataset resolves once."""
+
+    _by_dataset: Mapping[str, tuple[CertifiedSnapshotWindow, ...]]
+
+    @classmethod
+    def load(
+        cls, index: CertifiedSnapshotIndex, datasets: Sequence[str]
+    ) -> _CertifiedCatalog:
+        return cls({dataset: index.windows(dataset) for dataset in datasets})
+
     def covering(
         self, *, dataset_id: str, day: date
     ) -> tuple[CertifiedSnapshotWindow, ...]:
-        """Certified snapshots whose request range contains one day."""
-        ...
+        return tuple(
+            window
+            for window in self._by_dataset.get(dataset_id, ())
+            if window.request_start <= day <= window.request_end
+        )
 
 
 @dataclass(frozen=True, slots=True)
@@ -269,6 +289,10 @@ class AssembleSelectionFacts:
         self._identities = identities
         self._factors = factors
         self._snapshots = snapshots
+        self._catalog = _CertifiedCatalog.load(
+            snapshots,
+            ("stock_daily", "stock_status", "stock_basic", _ADJUSTMENT_DATASET),
+        )
         self._compiler = ExpressionCompiler()
         self._clock = clock or (lambda: datetime.now(UTC))
 
@@ -428,9 +452,7 @@ class AssembleSelectionFacts:
             {
                 trade_date
                 for trade_date in evaluation["trade_date"].unique().to_list()
-                if not self._snapshots.covering(
-                    dataset_id="stock_daily", day=trade_date
-                )
+                if not self._catalog.covering(dataset_id="stock_daily", day=trade_date)
             }
         )
         if uncovered:
@@ -842,37 +864,31 @@ class AssembleSelectionFacts:
         rows = frame.filter(pl.col("trade_date") == pl.lit(cross_date))
         return {int(row["instrument_id"]): row for row in rows.to_dicts()}
 
-    def _in_unrestricted_window(
-        self,
-        *,
-        raw_ticker: object,
-        list_date: object,
-        cross_date: date,
-    ) -> bool:
-        """
-        Derive the IPO no-limit window from the trading calendar.
-
-        Calendar-day age under-covers IPOs followed by long exchange
-        holidays; count actual sessions since listing instead.
-        """
-        sessions = _unrestricted_sessions(raw_ticker)
-        if sessions is None or not isinstance(list_date, date):
-            return False
+    def _young_listing_sessions(
+        self, roster_rows: Sequence[Mapping[str, object]], cross_date: date
+    ) -> list[date]:
+        """One targeted schedule read for the roster's young listings."""
+        dates = {
+            value
+            for row in roster_rows
+            if isinstance(value := row.get("list_date"), date)
+            and (cross_date - value).days <= _YOUNG_LISTING_CALENDAR_DAYS
+        }
+        listing_dates: list[date] = sorted(dates)
+        if not listing_dates:
+            return []
         try:
             schedule = self._provider.get_schedule(
-                start=list_date.isoformat(), end=cross_date.isoformat()
+                start=listing_dates[0].isoformat(), end=cross_date.isoformat()
             )
         except Exception:
-            return False
+            return []
         if schedule.is_empty() or "trade_date" not in schedule.columns:
-            return False
+            return []
         column = schedule["trade_date"]
         if column.dtype == pl.String:
             column = column.str.to_date()
-        count = len(
-            [value for value in column.to_list() if list_date <= value <= cross_date]
-        )
-        return 1 <= count <= sessions
+        return sorted(column.to_list())
 
     def _project_instruments(
         self,
@@ -896,6 +912,7 @@ class AssembleSelectionFacts:
                 roster_ids, asof=cross_date, allow_current_fallback=False
             )
         )
+        ipo_sessions = self._young_listing_sessions(roster_rows, cross_date)
         cross_section = evaluation.filter(pl.col("trade_date") == cross_date)
         # Unattributable instruments never contribute to the ranking
         # population: an extreme uncertified value must not shift every
@@ -955,10 +972,11 @@ class AssembleSelectionFacts:
             is_st = None if resolved_name is None else _is_st_from_name(resolved_name)
             cross_name = cross_names.get(instrument_id)
             band_is_st = None if cross_name is None else _is_st_from_name(cross_name)
-            unrestricted = self._in_unrestricted_window(
+            unrestricted = _in_unrestricted_window(
                 raw_ticker=(raw_cross.get(instrument_id) or {}).get("source_ticker"),
                 list_date=row.get("list_date"),
                 cross_date=cross_date,
+                ipo_sessions=ipo_sessions,
             )
             bar_row = cross_rows.get(instrument_id)
             lineage = bar_row.get(_BAR_LINEAGE_COLUMN) if bar_row is not None else None
@@ -1046,20 +1064,20 @@ class AssembleSelectionFacts:
         consumed_dates = sorted(set(evaluation["trade_date"].unique().to_list()))
         return {
             "stock_daily": _covering_chain(
-                self._snapshots, "stock_daily", consumed_dates
+                self._catalog, "stock_daily", consumed_dates
             ),
             _ADJUSTMENT_DATASET: _covering_chain(
-                self._snapshots, _ADJUSTMENT_DATASET, consumed_dates
+                self._catalog, _ADJUSTMENT_DATASET, consumed_dates
             ),
-            "stock_status": self._snapshots.covering(
+            "stock_status": self._catalog.covering(
                 dataset_id="stock_status", day=as_of_date
             ),
-            "stock_basic": self._snapshots.covering(
+            "stock_basic": self._catalog.covering(
                 dataset_id="stock_basic", day=as_of_date
             ),
             # limit_state consumes cross-date name/ST/listing metadata;
             # qualify that instant separately when it differs from as-of.
-            "stock_basic_cross": self._snapshots.covering(
+            "stock_basic_cross": self._catalog.covering(
                 dataset_id="stock_basic", day=cross_date
             ),
         }
@@ -1089,14 +1107,14 @@ def _filter_identity_consistent(
 
 
 def _covering_chain(
-    snapshots: CertifiedSnapshotIndex,
+    catalog: _CertifiedCatalog,
     dataset_id: str,
     days: Sequence[date],
 ) -> tuple[CertifiedSnapshotWindow, ...]:
     """Union of certified windows covering any consumed date, deduplicated."""
     chain: dict[str, CertifiedSnapshotWindow] = {}
     for day in days:
-        for window in snapshots.covering(dataset_id=dataset_id, day=day):
+        for window in catalog.covering(dataset_id=dataset_id, day=day):
             chain[window.snapshot_id] = window
     return tuple(
         sorted(chain.values(), key=lambda item: (item.request_start, item.snapshot_id))
@@ -1181,20 +1199,34 @@ def _listing_days(list_date: object, as_of_date: date) -> int | None:
     return max(0, (as_of_date - list_date).days)
 
 
-_BOARD_UNRESTRICTED_SESSIONS: Mapping[str, int] = {
-    "chinext_star": 5,
-    "other": 1,
-}
+# Registration-reform rules: every board trades its first five sessions
+# after listing without a price limit.
+_UNRESTRICTED_SESSIONS = 5
+_YOUNG_LISTING_CALENDAR_DAYS = 30
+
+
+def _in_unrestricted_window(
+    *,
+    raw_ticker: object,
+    list_date: object,
+    cross_date: date,
+    ipo_sessions: Sequence[date],
+) -> bool:
+    """Derive the IPO no-limit window from pre-fetched trading sessions."""
+    sessions = _unrestricted_sessions(raw_ticker)
+    if sessions is None or not isinstance(list_date, date):
+        return False
+    if not ipo_sessions:
+        return False
+    count = len([value for value in ipo_sessions if list_date <= value <= cross_date])
+    return 1 <= count <= sessions
 
 
 def _unrestricted_sessions(source_ticker: object) -> int | None:
     """Board-specific count of post-listing sessions without price limits."""
     if not isinstance(source_ticker, str):
         return None
-    ticker = source_ticker.partition(".")[0]
-    if ticker.startswith(("300", "301", "688", "689")):
-        return _BOARD_UNRESTRICTED_SESSIONS["chinext_star"]
-    return _BOARD_UNRESTRICTED_SESSIONS["other"]
+    return _UNRESTRICTED_SESSIONS
 
 
 def _limit_state(
@@ -1245,12 +1277,14 @@ def _bind_cross_date_metadata(
     windows: Mapping[str, tuple[CertifiedSnapshotWindow, ...]],
     fields: list[FieldRequirement],
 ) -> None:
-    """Qualify the cross-date name/listing metadata behind limit_state."""
-    cross_basic = windows.get("stock_basic_cross") or ()
-    if not cross_basic or cross_basic == windows.get("stock_basic"):
-        return
+    """
+    Qualify the cross-date name/listing metadata behind limit_state.
+
+    The binding stands even when one broad snapshot covers both dates:
+    the consumer fact is still the cross-date read of that metadata.
+    """
     for field in ("name", "list_date"):
-        for window in cross_basic:
+        for window in windows.get("stock_basic_cross") or ():
             fields.append(
                 FieldRequirement(
                     "stock_basic",
