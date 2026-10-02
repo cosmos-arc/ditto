@@ -1060,3 +1060,25 @@ def test_t_plus_one_knowledge_is_visible_the_next_morning() -> None:
     )
 
     assert request.data_to == date(2026, 9, 28)
+
+
+def test_ipo_unrestricted_sessions_are_not_limited() -> None:
+    raw = _bars_frame(
+        rows_per_instrument={1: 30},
+        close_overrides={1: (11.06, 10.0)},  # +10.6% first-session move
+    ).with_columns(pl.lit("000001.SZ").alias("source_ticker"))
+    roster = _roster_frame((1,)).with_columns(
+        pl.lit(_CROSS).alias("list_date")  # listed on the cross date itself
+    )
+    provider = _FakeProvider(
+        _bars_frame(rows_per_instrument={1: 30}).with_columns(
+            pl.lit("000001.SZ").alias("source_ticker")
+        ),
+        raw_frame=raw,
+    )
+    history = _FakeHistory(roster)
+    process = _process(provider=provider, history=history)
+    request = process.assemble(_request())
+
+    assert request.instruments[0].listing_days == 0
+    assert request.instruments[0].limit_state == "normal"

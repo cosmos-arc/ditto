@@ -849,9 +849,14 @@ class AssembleSelectionFacts:
         raw_cross: Mapping[int, Mapping[str, object]],
     ) -> tuple[SelectionInstrumentDraft, ...]:
         roster_rows = roster.frame.to_dicts()
-        names = self._identities.names(
-            [int(row["instrument_id"]) for row in roster_rows],
-            asof=as_of_date,
+        roster_ids = [int(row["instrument_id"]) for row in roster_rows]
+        names = self._identities.names(roster_ids, asof=as_of_date)
+        # The price-limit band describes the cross-date bar; an ST marker
+        # dropped after that session must not relax the historical band.
+        cross_names = (
+            names
+            if cross_date == as_of_date
+            else self._identities.names(roster_ids, asof=cross_date)
         )
         cross_section = evaluation.filter(pl.col("trade_date") == cross_date)
         # Unattributable instruments never contribute to the ranking
@@ -910,6 +915,9 @@ class AssembleSelectionFacts:
             # fact absent so the pipeline excludes the instrument instead
             # of passing an underived status.
             is_st = None if resolved_name is None else _is_st_from_name(resolved_name)
+            cross_name = cross_names.get(instrument_id)
+            band_is_st = None if cross_name is None else _is_st_from_name(cross_name)
+            listing_age_days = _listing_days(row.get("list_date"), cross_date)
             bar_row = cross_rows.get(instrument_id)
             lineage = bar_row.get(_BAR_LINEAGE_COLUMN) if bar_row is not None else None
             if bar_row is None or lineage is None or instrument_id in unattributable:
@@ -963,9 +971,10 @@ class AssembleSelectionFacts:
                             ),
                             high=(raw_cross.get(instrument_id) or {}).get("high"),
                             low=(raw_cross.get(instrument_id) or {}).get("low"),
-                            is_st=is_st or False,
+                            is_st=band_is_st,
+                            listing_age_days=listing_age_days,
                         )
-                        if is_st is not None
+                        if band_is_st is not None
                         else None
                     ),
                     tracking_error=None,
@@ -1132,7 +1141,8 @@ def _limit_state(
     pre_close: object,
     high: object,
     low: object,
-    is_st: bool,
+    is_st: bool | None,
+    listing_age_days: int | None,
 ) -> Literal["normal", "limit_up", "limit_down"] | None:
     """
     Classify the close against the board/ST price-limit band.
@@ -1154,7 +1164,7 @@ def _limit_state(
     # which would silently classify an unusable price fact as "normal".
     if not all(math.isfinite(value) for value in prices):
         return None
-    if prices[1] <= 0 or not isinstance(source_ticker, str):
+    if prices[1] <= 0 or not isinstance(source_ticker, str) or is_st is None:
         return None
     pct_change = (prices[0] / prices[1] - 1.0) * 100.0
     return derive_limit_state(
@@ -1164,6 +1174,7 @@ def _limit_state(
         high=prices[2],
         low=prices[3],
         is_st=is_st,
+        listing_age_days=listing_age_days,
     )
 
 

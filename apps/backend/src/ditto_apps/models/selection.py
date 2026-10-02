@@ -280,7 +280,7 @@ class AssembleSelectionRunBody(BaseModel):
     spec_id: str = Field(min_length=1)
     spec_version: str = Field(min_length=1)
     top_k: int = Field(gt=0)
-    min_average_turnover: float = Field(ge=0.0)
+    min_average_turnover: float = Field(ge=0.0, allow_inf_nan=False)
     min_listing_days: int = Field(gt=0)
     factor_weights: Annotated[
         tuple[SelectionFactorWeightRequest, ...], BeforeValidator(_parse_http_array)
