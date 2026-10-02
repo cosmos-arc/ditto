@@ -45,6 +45,9 @@ export function toAssembledRunView(value: AssembledSelectionRunResponse, submitt
 		sameFactorWeights(spec.factor_weights, submitted.factor_weights) &&
 		sameLimitStates(spec.excluded_limit_states, submitted.excluded_limit_states) &&
 		UNIVERSE_SNAPSHOT_PATTERN.test(request.universe_snapshot_id) &&
+		request.universe_sources != null &&
+		request.universe_sources.universe_id === submitted.universe_id &&
+		request.universe_sources.asset_kind === "stock" &&
 		Array.isArray(request.instruments) &&
 		request.instruments.length > 0 &&
 		request.instruments.every(

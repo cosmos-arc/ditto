@@ -79,6 +79,9 @@ const ASSEMBLY_KNOWN_FACTORS = new Set([
 	"williams_r",
 ]);
 
+/** 组装 v1 唯一接受的股票全市场池（镜像服务端 ASSEMBLY_UNIVERSE_SCOPE_UNSUPPORTED 语义）。 */
+export const ASSEMBLY_STOCK_UNIVERSE_ID = "a-share-custom-202609";
+
 export const ASSEMBLED_UNIVERSE_SNAPSHOT_ID = `universe:sha256:${"6".repeat(64)}`;
 
 /** Deterministic assembled facts echoing the submitted policy; mirrors the server's assemble endpoint. */
@@ -107,7 +110,46 @@ export function assembledSelectionRunResponse(body: AssembleSelectionRunBody): A
 		},
 		request: {
 			as_of: body.as_of,
-			data_fields: [],
+			data_fields: [
+				...["universe_snapshot_id", "membership_version"].map((consumer_field) => ({
+					consumer_field,
+					dataset_id: "stock_basic",
+					field: "list_status",
+					snapshot_id: "stock-basic:sha256:mock",
+				})),
+				...["instruments.instrument_name", "instruments.is_st", "instruments.listing_days"].map((consumer_field) => ({
+					consumer_field,
+					dataset_id: "stock_basic",
+					field: "name",
+					snapshot_id: "stock-basic:sha256:mock",
+				})),
+				{
+					consumer_field: "instruments.is_suspended",
+					dataset_id: "stock_status",
+					field: "is_suspended",
+					snapshot_id: "stock-status:sha256:mock",
+				},
+				...body.factor_weights.flatMap((factor) =>
+					["close", "instrument_id", "knowledge_date", "trade_date", "source_ticker"].map((field) => ({
+						consumer_field: `instruments.factor_values.${factor.name}`,
+						dataset_id: "stock_daily",
+						field,
+						snapshot_id: "stock-daily:sha256:mock",
+					})),
+				),
+				{
+					consumer_field: "instruments.average_turnover",
+					dataset_id: "stock_daily",
+					field: "amount",
+					snapshot_id: "stock-daily:sha256:mock",
+				},
+				{
+					consumer_field: "instruments.limit_state",
+					dataset_id: "stock_daily",
+					field: "close",
+					snapshot_id: "stock-daily:sha256:mock",
+				},
+			],
 			data_from: "2015-01-05",
 			data_to: body.as_of.slice(0, 10),
 			industries: [],
@@ -135,7 +177,14 @@ export function assembledSelectionRunResponse(body: AssembleSelectionRunBody): A
 				top_k: body.top_k,
 			},
 			universe_snapshot_id: ASSEMBLED_UNIVERSE_SNAPSHOT_ID,
-			universe_sources: null,
+			universe_sources: {
+				universe_id: body.universe_id,
+				asset_kind: "stock",
+				master_snapshot_ids: ["stock-basic:sha256:mock"],
+				status_snapshot_ids: ["stock-status:sha256:mock"],
+				membership_snapshot_ids: null,
+				index_id: null,
+			},
 		},
 	};
 }
@@ -189,6 +238,11 @@ export const selectionHandlers = [
 			return HttpResponse.json({ detail: "因子权重不得重复且权重之和必须为 1" }, { status: 422 });
 		if (body.factor_weights.some((factor) => !ASSEMBLY_KNOWN_FACTORS.has(factor.name)))
 			return HttpResponse.json({ detail: "未注册因子或该因子表达式暂不被组装支持" }, { status: 422 });
+		if (body.universe_id !== ASSEMBLY_STOCK_UNIVERSE_ID)
+			return HttpResponse.json(
+				{ detail: "组装 v1 仅支持全市场股票池；窄池/非股票池需 membership 快照链" },
+				{ status: 422 },
+			);
 		return HttpResponse.json({ data: assembledSelectionRunResponse(body) });
 	}),
 	http.post("/api/v1/selections/runs/:runId/research-cases", async ({ params, request }) => {

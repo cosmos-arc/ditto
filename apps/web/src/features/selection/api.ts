@@ -60,7 +60,16 @@ export interface UniverseOption {
 }
 
 export async function listUniverseOptions(): Promise<UniverseOption[]> {
-	const rows = await apiClient.get("/api/v1/universes");
+	// 服务端默认每页 20 条：逐页拉全，避免可用池被静默截断。
+	const pageSize = 100;
+	const rows: components["schemas"]["UniverseResponse"][] = [];
+	for (let offset = 0; offset < 10_000; offset += pageSize) {
+		const page: components["schemas"]["UniverseResponse"][] = await apiClient.get("/api/v1/universes", {
+			params: { query: { limit: pageSize, offset } },
+		});
+		rows.push(...page);
+		if (page.length < pageSize) break;
+	}
 	return rows.map((row) => ({
 		universeId: row.universe_id,
 		name: row.name,

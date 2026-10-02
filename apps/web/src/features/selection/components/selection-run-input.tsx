@@ -265,22 +265,33 @@ export function SelectionRunInput({
 					按策略字段新建运行：服务端负责组装历史证券池与数据区间等全部 PIT 事实，先组装预览准入，再创建运行。
 				</p>
 				<div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-					<label className="grid gap-1 text-xs">
-						universe 证券池
-						<select
-							aria-label="universe 证券池"
-							className={INPUT_CLASS}
-							value={form.universeId}
-							onChange={(event) => updateForm({ universeId: event.currentTarget.value })}
-						>
-							<option value="">{universes.isLoading ? "加载证券池…" : "请选择"}</option>
-							{(universes.data ?? []).map((option) => (
-								<option key={option.universeId} value={option.universeId}>
-									{option.name}（{option.universeId}）
-								</option>
-							))}
-						</select>
-					</label>
+					<div className="grid gap-1 text-xs">
+						{universes.isError ? (
+							<span className="flex items-center gap-2">
+								<span role="alert">证券池列表加载失败</span>
+								<Button type="button" variant="outline" size="sm" onClick={() => void universes.refetch()}>
+									重试
+								</Button>
+							</span>
+						) : (
+							<label className="grid gap-1">
+								universe 证券池（组装 v1 仅支持全市场股票池）
+								<select
+									aria-label="universe 证券池"
+									className={INPUT_CLASS}
+									value={form.universeId}
+									onChange={(event) => updateForm({ universeId: event.currentTarget.value })}
+								>
+									<option value="">{universes.isLoading ? "加载证券池…" : "请选择"}</option>
+									{(universes.data ?? []).map((option) => (
+										<option key={option.universeId} value={option.universeId}>
+											{option.name}（{option.universeId}）
+										</option>
+									))}
+								</select>
+							</label>
+						)}
+					</div>
 					<label className="grid gap-1 text-xs">
 						决策时点 as_of（上海时区）
 						<input
