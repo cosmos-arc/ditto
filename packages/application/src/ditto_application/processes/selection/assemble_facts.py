@@ -715,6 +715,9 @@ class AssembleSelectionFacts:
                 # Governed stock-lane price factors require adjusted prices;
                 # the adjustment lineage binds separately below.
                 adj="hfq",
+                # Lineage must come from this dataset's catalog entries, not
+                # any daily-bar dataset sharing the source/ticker/date keys.
+                dataset_id="stock_daily",
             )
         )
         if frame.is_empty():
@@ -862,6 +865,7 @@ class AssembleSelectionFacts:
                 end=cross_date.isoformat(),
                 asof=cross_date.isoformat(),
                 adj="none",
+                dataset_id="stock_daily",
             )
         )
         required = {
@@ -1323,7 +1327,12 @@ def _bind_visibility_gates(
     )
     for window in windows.get("stock_daily") or ():
         for consumer_field in bar_consumers:
-            for column in ("knowledge_date", "trade_date", "source_ticker"):
+            for column in (
+                "instrument_id",
+                "knowledge_date",
+                "trade_date",
+                "source_ticker",
+            ):
                 fields.append(
                     FieldRequirement(
                         "stock_daily",

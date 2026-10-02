@@ -212,18 +212,22 @@ _BAR_DATASETS = frozenset({"stock_daily", "etf_daily"})
 
 def _catalog_windows(
     catalog_reader: DataCatalogReader,
+    dataset_id: str | None,
 ) -> tuple[_CatalogSnapshotWindow, ...]:
     """
-    Daily-bar windows only.
+    Daily-bar windows for the expected dataset.
 
-    The market namespace also carries adjustments and status datasets;
-    an unfiltered scan lets a fresher unrelated snapshot win the same
-    source/ticker/date window and stamp the wrong dataset's lineage.
+    The market namespace also carries other datasets; an unfiltered scan
+    lets a fresher unrelated snapshot win the same source/ticker/date
+    window and stamp the wrong dataset's lineage. With an expected dataset
+    only that dataset participates; otherwise any daily-bar dataset may
+    (legacy callers).
     """
+    allowed = {dataset_id} if dataset_id is not None else _BAR_DATASETS
     return tuple(
         window
         for entry in catalog_reader.list_assets("market")
-        if entry.asset.dataset_id in _BAR_DATASETS
+        if entry.asset.dataset_id in allowed
         and (window := _snapshot_window(entry)) is not None
     )
 
@@ -258,12 +262,13 @@ def _partition_windows(
 def _attach_catalog_source_snapshots(
     frame: pl.DataFrame,
     catalog_reader: DataCatalogReader,
+    dataset_id: str | None = None,
 ) -> pl.DataFrame:
     if frame.is_empty() or _SOURCE_SNAPSHOT_COLUMN in frame.columns:
         return frame
     required = {"trade_date", "source", "source_ticker"}
     if not required.issubset(frame.columns) or not (
-        windows := _catalog_windows(catalog_reader)
+        windows := _catalog_windows(catalog_reader, dataset_id)
     ):
         return frame.with_columns(
             pl.lit(None, dtype=pl.String).alias(_SOURCE_SNAPSHOT_COLUMN)
@@ -355,7 +360,7 @@ class ServiceBackedDataProvider:
         bars = self._market.find_bars(bars_query)
         if self._catalog is None:
             return bars
-        return _attach_catalog_source_snapshots(bars, self._catalog)
+        return _attach_catalog_source_snapshots(bars, self._catalog, query.dataset_id)
 
     def get_instruments(self, query: InstrumentQuery) -> pl.DataFrame:
         """获取标的列表."""
