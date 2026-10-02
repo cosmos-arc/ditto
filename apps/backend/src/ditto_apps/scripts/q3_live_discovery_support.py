@@ -41,6 +41,9 @@ from ditto_data.catalog.provider_payload import (
     ProviderPayloadReader,
 )
 from ditto_data.catalog.source_snapshot import ProviderSnapshot, ProviderSnapshotReader
+from ditto_data.helpers.limit_state import (
+    derive_limit_state as shared_derive_limit_state,
+)
 from ditto_kernel.identity import InstrumentId
 
 from ditto_apps.scripts.r2_live_certification import probe_consumer_payload
@@ -123,22 +126,15 @@ def derive_limit_state(
     low: float,
     is_st: bool,
 ) -> LimitStateDraft:
-    """Derive a conservative A-share close limit using board/ST thresholds."""
-    ticker = source_ticker.partition(".")[0]
-    if is_st:
-        threshold = 4.8
-    elif ticker.startswith(("300", "301", "688", "689")):
-        threshold = 19.5
-    elif ticker.startswith(("4", "8", "92")):
-        threshold = 29.5
-    else:
-        threshold = 9.5
-    tolerance = max(abs(close), 1.0) * 1e-8
-    if pct_change >= threshold and math.isclose(close, high, abs_tol=tolerance):
-        return "limit_up"
-    if pct_change <= -threshold and math.isclose(close, low, abs_tol=tolerance):
-        return "limit_down"
-    return "normal"
+    """Board/ST-aware close limit (shared authority in ditto_data.helpers)."""
+    return shared_derive_limit_state(
+        source_ticker=source_ticker,
+        pct_change=pct_change,
+        close=close,
+        high=high,
+        low=low,
+        is_st=is_st,
+    )
 
 
 def _sha256_file(path: Path) -> str:

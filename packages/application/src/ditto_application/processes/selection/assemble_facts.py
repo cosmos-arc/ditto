@@ -59,6 +59,7 @@ from typing import Literal, Protocol
 from zoneinfo import ZoneInfo
 
 import polars as pl
+from ditto_data.helpers.limit_state import derive_limit_state
 from ditto_data.provider import BarQuery, DataProvider
 from ditto_features.expression.compiler import ExpressionCompiler
 from ditto_features.expression.contracts import CompiledDerivedExpression
@@ -141,9 +142,8 @@ _BAR_PUBLICATION_TIME = time(18, 0)
 # window count as genuinely past for the live read model.
 _LIVE_SKEW = timedelta(minutes=5)
 _TURNOVER_WINDOW = 20
-_MAIN_LIMIT_THRESHOLD = 0.095
-_ST_LIMIT_THRESHOLD = 0.045
 _CALENDAR_BUFFER_DAYS = 14
+_SESSION_BUFFER = 5
 _DEFAULT_LOOKBACK_DAYS = 400
 _SHANGHAI = ZoneInfo("Asia/Shanghai")
 
@@ -316,6 +316,9 @@ class AssembleSelectionFacts:
         windows = self._binding_windows(
             evaluation=evaluation, cross_date=cross_date, as_of_date=as_of_date
         )
+        consumes_adjustment = any(
+            node.requested and node.leaves & _PRICE_LEAVES for node in nodes
+        )
         return CreateSelectionRunRequest(
             as_of=request.as_of,
             knowledge_cutoff=knowledge,
@@ -334,7 +337,11 @@ class AssembleSelectionFacts:
                     {
                         *(
                             window.snapshot_id
-                            for group in windows.values()
+                            for dataset_id, group in windows.items()
+                            # Adjustment snapshots are declared sources only
+                            # when adjusted prices were actually consumed;
+                            # otherwise admission reports them unbound.
+                            if dataset_id != _ADJUSTMENT_DATASET or consumes_adjustment
                             for window in group
                         ),
                         *sources.snapshot_ids,
@@ -645,11 +652,11 @@ class AssembleSelectionFacts:
             _TURNOVER_WINDOW,
             *(node.lookback for node in nodes),
         )
-        lookback_calendar_days = max(
-            request.lookback_days,
-            math.ceil(max_lookback * 7 / 5) + _CALENDAR_BUFFER_DAYS,
+        start = self._lookback_start(
+            max_lookback=max_lookback,
+            request_lookback=request.lookback_days,
+            as_of=as_of_date,
         )
-        start = as_of_date - timedelta(days=lookback_calendar_days)
         frame = self._provider.get_bars(
             BarQuery(
                 instruments=tuple(
@@ -739,6 +746,45 @@ class AssembleSelectionFacts:
                 },
             )
 
+    def _lookback_start(
+        self, *, max_lookback: int, request_lookback: int, as_of: date
+    ) -> date:
+        """
+        Resolve the read start on the trading calendar when available.
+
+        A weekday approximation (7/5) under-covers A-share years once Spring
+        Festival and National Day closures are taken into account, leaving a
+        252-session factor null despite available history; the calendar
+        count guarantees the sessions plus a small suspension margin. A
+        provider without calendar evidence falls back to the approximation.
+        """
+        needed = max_lookback + _SESSION_BUFFER
+        approx_calendar = max(
+            request_lookback,
+            math.ceil(needed * 7 / 5) + _CALENDAR_BUFFER_DAYS,
+        )
+        fallback = as_of - timedelta(days=approx_calendar)
+        try:
+            schedule = self._provider.get_schedule(
+                start=(as_of - timedelta(days=approx_calendar * 2)).isoformat(),
+                end=as_of.isoformat(),
+            )
+        except Exception:
+            return fallback
+        if schedule.is_empty() or "trade_date" not in schedule.columns:
+            return fallback
+        sessions_column = schedule["trade_date"]
+        if sessions_column.dtype == pl.String:
+            sessions_column = sessions_column.str.to_date()
+        sessions = sorted(
+            session for session in sessions_column.to_list() if session <= as_of
+        )
+        if not sessions:
+            return fallback
+        if len(sessions) >= needed:
+            return sessions[-needed]
+        return sessions[0]
+
     def _load_raw_cross(
         self,
         *,
@@ -769,6 +815,9 @@ class AssembleSelectionFacts:
             "trade_date",
             "close",
             "pre_close",
+            "high",
+            "low",
+            "source_ticker",
             "knowledge_date",
             _BAR_LINEAGE_COLUMN,
         }
@@ -800,10 +849,27 @@ class AssembleSelectionFacts:
             [int(row["instrument_id"]) for row in roster_rows],
             asof=as_of_date,
         )
-        cross = _unit_normalized(
-            evaluation.filter(pl.col("trade_date") == cross_date),
-            nodes,
+        cross_section = evaluation.filter(pl.col("trade_date") == cross_date)
+        # Unattributable instruments never contribute to the ranking
+        # population: an extreme uncertified value must not shift every
+        # other instrument's normalized score.
+        unattributable = set(
+            evaluation.filter(pl.col(_BAR_LINEAGE_COLUMN).is_null())[
+                "instrument_id"
+            ].to_list()
         )
+        if unattributable:
+            cross_section = cross_section.with_columns(
+                [
+                    pl.when(pl.col("instrument_id").is_in(sorted(unattributable)))
+                    .then(None)
+                    .otherwise(pl.col(node.factor_id))
+                    .alias(node.factor_id)
+                    for node in nodes
+                    if node.requested
+                ]
+            )
+        cross = _unit_normalized(cross_section, nodes)
         cross_rows = {int(row["instrument_id"]): row for row in cross.to_dicts()}
         # Non-finite amounts (NaN/inf in the window) make the rolling mean
         # unusable; treat them as a missing turnover observation.
@@ -831,13 +897,6 @@ class AssembleSelectionFacts:
             )
             .to_dicts()
         }
-        # Every consumed lookback row must carry lineage: a single
-        # unattributable row already shaped the factor and turnover values.
-        unattributable = set(
-            evaluation.filter(pl.col(_BAR_LINEAGE_COLUMN).is_null())[
-                "instrument_id"
-            ].to_list()
-        )
         drafts: list[SelectionInstrumentDraft] = []
         for row in roster_rows:
             instrument_id = int(row["instrument_id"])
@@ -885,8 +944,13 @@ class AssembleSelectionFacts:
                     is_suspended=row["is_suspended"],
                     listing_days=_listing_days(row.get("list_date"), as_of_date),
                     limit_state=_limit_state(
+                        source_ticker=(raw_cross.get(instrument_id) or {}).get(
+                            "source_ticker"
+                        ),
                         close=(raw_cross.get(instrument_id) or {}).get("close"),
                         pre_close=(raw_cross.get(instrument_id) or {}).get("pre_close"),
+                        high=(raw_cross.get(instrument_id) or {}).get("high"),
+                        low=(raw_cross.get(instrument_id) or {}).get("low"),
                         is_st=_is_st_from_name(instrument_name),
                     ),
                     tracking_error=None,
@@ -1048,30 +1112,45 @@ def _listing_days(list_date: object, as_of_date: date) -> int | None:
 
 
 def _limit_state(
-    *, close: object, pre_close: object, is_st: bool
+    *,
+    source_ticker: object,
+    close: object,
+    pre_close: object,
+    high: object,
+    low: object,
+    is_st: bool,
 ) -> Literal["normal", "limit_up", "limit_down"] | None:
     """
-    Classify the close against the exchange price-limit band.
+    Classify the close against the board/ST price-limit band.
 
-    ST names use the ±4.5% band (5% cap with margin); regular names use
-    ±9.5%. Wider boards (20%) are not modeled yet, so the conservative band
-    classifies more moves as limited, never fewer.
+    Delegates to the shared board-aware authority (ST ±4.8%, ChiNext/STAR
+    ±19.5%, Beijing ±29.5%, main boards ±9.5%); a limit additionally
+    requires the close at the session extreme. Non-finite or missing price
+    facts return None so the pipeline fails closed on them.
     """
-    if not isinstance(close, (int, float)) or not isinstance(pre_close, (int, float)):
+    if (
+        not isinstance(close, (int, float))
+        or not isinstance(pre_close, (int, float))
+        or not isinstance(high, (int, float))
+        or not isinstance(low, (int, float))
+    ):
         return None
+    prices = (float(close), float(pre_close), float(high), float(low))
     # NaN passes the type check but every comparison against it is false,
     # which would silently classify an unusable price fact as "normal".
-    if not math.isfinite(close) or not math.isfinite(pre_close):
+    if not all(math.isfinite(value) for value in prices):
         return None
-    if pre_close <= 0:
+    if prices[1] <= 0 or not isinstance(source_ticker, str):
         return None
-    change = float(close) / float(pre_close) - 1.0
-    threshold = _ST_LIMIT_THRESHOLD if is_st else _MAIN_LIMIT_THRESHOLD
-    if change >= threshold:
-        return "limit_up"
-    if change <= -threshold:
-        return "limit_down"
-    return "normal"
+    pct_change = (prices[0] / prices[1] - 1.0) * 100.0
+    return derive_limit_state(
+        source_ticker=source_ticker,
+        pct_change=pct_change,
+        close=prices[0],
+        high=prices[2],
+        low=prices[3],
+        is_st=is_st,
+    )
 
 
 def claimed_from(evaluation: pl.DataFrame) -> date | None:

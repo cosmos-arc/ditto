@@ -40,10 +40,14 @@ _BASIC_WINDOW = CertifiedSnapshotWindow(
 
 class _FakeProvider:
     def __init__(
-        self, frame: pl.DataFrame, raw_frame: pl.DataFrame | None = None
+        self,
+        frame: pl.DataFrame,
+        raw_frame: pl.DataFrame | None = None,
+        schedule: pl.DataFrame | None = None,
     ) -> None:
         self.frame = frame
         self.raw_frame = raw_frame
+        self.schedule = schedule
         self.queries: list[object] = []
 
     def get_bars(self, query):
@@ -56,6 +60,11 @@ class _FakeProvider:
         return pl.DataFrame()
 
     def get_schedule(self, start, end):
+        if self.schedule is not None:
+            return self.schedule.filter(
+                (pl.col("trade_date") >= pl.lit(date.fromisoformat(start)))
+                & (pl.col("trade_date") <= pl.lit(date.fromisoformat(end)))
+            )
         return pl.DataFrame()
 
     def get_factor(self, name, instruments, start, end, asof=None):
@@ -909,3 +918,80 @@ def test_negative_amounts_leave_turnover_missing() -> None:
     request = process.assemble(_request())
 
     assert request.instruments[0].average_turnover is None
+
+
+def test_chinext_limit_band_is_board_aware() -> None:
+    raw = _bars_frame(
+        rows_per_instrument={1: 30},
+        close_overrides={1: (11.06, 10.0)},  # +10.6% raw move at the high
+    ).with_columns(pl.lit("300001.SZ").alias("source_ticker"))
+    adjusted = _bars_frame(rows_per_instrument={1: 30}).with_columns(
+        pl.lit("300001.SZ").alias("source_ticker")
+    )
+    provider = _FakeProvider(adjusted, raw_frame=raw)
+    history = _FakeHistory(_roster_frame((1,)))
+    process = _process(provider=provider, history=history, tickers={1: "300001.SZ"})
+    request = process.assemble(_request())
+
+    # ChiNext uses the ±19.5% band: a main-board-style +10.6% close is normal.
+    assert request.instruments[0].limit_state == "normal"
+
+
+def test_amount_only_factors_do_not_declare_adjustment_sources() -> None:
+    provider = _FakeProvider(_bars_frame(rows_per_instrument={1: 30, 2: 30}))
+    history = _FakeHistory(_roster_frame((1, 2)))
+    process = _process(
+        provider=provider,
+        history=history,
+        registry=_registry(
+            amount_rank=FactorSpec(
+                id="amount_rank",
+                expression="cs_rank(market.amount)",
+                dependencies=("market.amount",),
+            )
+        ),
+    )
+    request = process.assemble(_request(factors=("amount_rank",)))
+
+    assert _ADJ_WINDOW.snapshot_id not in request.selection_source_snapshot_ids
+    assert all(
+        item.snapshot_id != _ADJ_WINDOW.snapshot_id for item in request.data_fields
+    )
+
+    price_process, _, _ = _happy_process()
+    price_request = price_process.assemble(_request())
+    assert _ADJ_WINDOW.snapshot_id in price_request.selection_source_snapshot_ids
+
+
+def test_unattributable_instruments_leave_the_ranking_population() -> None:
+    frame = _bars_frame(rows_per_instrument={1: 30, 2: 30}).with_columns(
+        pl.when(pl.col("instrument_id") == 2)
+        .then(None)
+        .otherwise(pl.col("source_snapshot_id"))
+        .alias("source_snapshot_id")
+    )
+    provider = _FakeProvider(frame)
+    history = _FakeHistory(_roster_frame((1, 2)))
+    process = _process(provider=provider, history=history)
+    request = process.assemble(_request())
+
+    assert request.instruments[1].declared_missing_inputs == ("source_snapshot",)
+    # The clean instrument is ranked alone: extreme uncertified values from
+    # instrument 2 cannot shift its normalized score.
+    assert request.instruments[0].factor_values[0].value == pytest.approx(1.0)
+
+
+def test_lookback_start_follows_the_trading_calendar() -> None:
+    sessions = pl.DataFrame(
+        {"trade_date": _BAR_DATES},
+        schema={"trade_date": pl.Date},
+    )
+    provider = _FakeProvider(
+        _bars_frame(rows_per_instrument={1: 30}), schedule=sessions
+    )
+    history = _FakeHistory(_roster_frame((1,)))
+    process = _process(provider=provider, history=history)
+    process.assemble(_request())
+
+    # reversal_1w needs 6 rows, turnover 20: 25 sessions requested.
+    assert provider.queries[0].start == _BAR_DATES[-25].isoformat()
