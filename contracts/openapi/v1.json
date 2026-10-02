@@ -265,6 +265,30 @@
         "title": "APIResponse[AgentSessionResponse]",
         "type": "object"
       },
+      "APIResponse_AssembledSelectionRunResponse_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/AssembledSelectionRunResponse",
+            "description": "响应数据"
+          },
+          "pagination": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PaginationResponse"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "分页信息(可选)"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "title": "APIResponse[AssembledSelectionRunResponse]",
+        "type": "object"
+      },
       "APIResponse_BacktestReportResponse_": {
         "properties": {
           "data": {
@@ -7030,6 +7054,134 @@
           }
         },
         "title": "AlphaStatsResponse",
+        "type": "object"
+      },
+      "AssembleSelectionRunBody": {
+        "additionalProperties": false,
+        "description": "Policy-only selection input; the server assembles every PIT fact.",
+        "properties": {
+          "as_of": {
+            "format": "date-time",
+            "title": "As Of",
+            "type": "string"
+          },
+          "asset_kind": {
+            "const": "stock",
+            "default": "stock",
+            "title": "Asset Kind",
+            "type": "string"
+          },
+          "excluded_limit_states": {
+            "$ref": "#/components/schemas/HttpTuple_LimitStateRequest_",
+            "default": [
+              "limit_up",
+              "limit_down"
+            ]
+          },
+          "factor_weights": {
+            "items": {
+              "$ref": "#/components/schemas/SelectionFactorWeightRequest"
+            },
+            "minItems": 1,
+            "title": "Factor Weights",
+            "type": "array"
+          },
+          "knowledge_cutoff": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Knowledge Cutoff"
+          },
+          "lookback_days": {
+            "default": 400,
+            "maximum": 1500.0,
+            "minimum": 60.0,
+            "title": "Lookback Days",
+            "type": "integer"
+          },
+          "min_average_turnover": {
+            "minimum": 0.0,
+            "title": "Min Average Turnover",
+            "type": "number"
+          },
+          "min_listing_days": {
+            "exclusiveMinimum": 0.0,
+            "title": "Min Listing Days",
+            "type": "integer"
+          },
+          "publication_cutoff": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Publication Cutoff"
+          },
+          "seed": {
+            "default": 0,
+            "minimum": 0.0,
+            "title": "Seed",
+            "type": "integer"
+          },
+          "spec_id": {
+            "minLength": 1,
+            "title": "Spec Id",
+            "type": "string"
+          },
+          "spec_version": {
+            "minLength": 1,
+            "title": "Spec Version",
+            "type": "string"
+          },
+          "top_k": {
+            "exclusiveMinimum": 0.0,
+            "title": "Top K",
+            "type": "integer"
+          },
+          "universe_id": {
+            "minLength": 1,
+            "title": "Universe Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "universe_id",
+          "as_of",
+          "spec_id",
+          "spec_version",
+          "top_k",
+          "min_average_turnover",
+          "min_listing_days",
+          "factor_weights"
+        ],
+        "title": "AssembleSelectionRunBody",
+        "type": "object"
+      },
+      "AssembledSelectionRunResponse": {
+        "description": "Server-assembled exact facts plus the create-run admission preview.",
+        "properties": {
+          "admission": {
+            "$ref": "#/components/schemas/SelectionAdmissionResponse"
+          },
+          "request": {
+            "$ref": "#/components/schemas/CreateSelectionRunBody"
+          }
+        },
+        "required": [
+          "request",
+          "admission"
+        ],
+        "title": "AssembledSelectionRunResponse",
         "type": "object"
       },
       "AssetClass": {
@@ -52196,6 +52348,123 @@
           }
         },
         "summary": "Create Research Case",
+        "tags": [
+          "selections"
+        ],
+        "x-ditto-maturity": "initial-focus"
+      }
+    },
+    "/api/v1/selections/runs:assembled": {
+      "post": {
+        "description": "Assemble every PIT fact server-side and preview the create-run gate.\n\nThe response carries the exact ``POST /selections/runs`` body plus the\nadmission report; creating the run still posts that body to ``/runs``,\nso certification and replay semantics stay on the reviewed contract.\n\nCapability maturity: `initial-focus`. Primary near-term product scope under architecture review.",
+        "operationId": "selections_assemble_run",
+        "parameters": [
+          {
+            "description": "Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required.",
+            "in": "header",
+            "name": "X-Ditto-API-Contract-Version",
+            "required": false,
+            "schema": {
+              "const": "v1",
+              "description": "Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required.",
+              "title": "X-Ditto-Api-Contract-Version",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssembleSelectionRunBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIResponse_AssembledSelectionRunResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad request"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Resource not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Request conflicts with current state"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Request or domain validation failed"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal server error"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Structured Ditto API error"
+          }
+        },
+        "summary": "Assemble Selection Run",
         "tags": [
           "selections"
         ],

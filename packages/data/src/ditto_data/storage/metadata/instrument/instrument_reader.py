@@ -37,7 +37,7 @@ class SecurityQuery:
     min_list_days: int | None = None
 
 
-def _build_in_clause(
+def build_in_clause(
     column: str,
     items: list[Any],
     chunk_size: int = 200,
@@ -59,12 +59,12 @@ def _build_in_clause(
         - params: 参数列表
 
     Examples:
-        >>> _build_in_clause("s.instrument_id", [1, 2, 3])
+        >>> build_in_clause("s.instrument_id", [1, 2, 3])
         ("s.instrument_id IN (?,?,?)", [1, 2, 3])
-        >>> _build_in_clause("s.instrument_id", [], 200)
+        >>> build_in_clause("s.instrument_id", [], 200)
         ("1=0", [])
         >>> # 分块处理（超过 chunk_size）
-        >>> _build_in_clause("s.instrument_id", list(range(500)), 200)
+        >>> build_in_clause("s.instrument_id", list(range(500)), 200)
         ("(...)", [...])
 
     """
@@ -233,7 +233,7 @@ class InstrumentReader:
             return {}
 
         # 构建参数化 IN 子句
-        in_clause, params = _build_in_clause("source_ticker", source_tickers)
+        in_clause, params = build_in_clause("source_ticker", source_tickers)
         sql = f"""
             SELECT source_ticker, instrument_id
             FROM instrument_mapping
@@ -438,14 +438,14 @@ class InstrumentReader:
         params: list[Any] = []
 
         if query.instrument_ids:
-            in_clause, sids_list = _build_in_clause(
+            in_clause, sids_list = build_in_clause(
                 "s.instrument_id", query.instrument_ids
             )
             sql += f" AND {in_clause}"
             params.extend(sids_list)
 
         if query.source_tickers:
-            in_clause, source_tickers_list = _build_in_clause(
+            in_clause, source_tickers_list = build_in_clause(
                 "m.source_ticker", query.source_tickers
             )
             sql += f" AND {in_clause} AND m.source = ?"
@@ -606,7 +606,7 @@ class InstrumentReader:
 
         # 从数据库查询
         if instrument_ids:
-            in_clause, sids_list = _build_in_clause("instrument_id", instrument_ids)
+            in_clause, sids_list = build_in_clause("instrument_id", instrument_ids)
             rows = self._client.fetchall(
                 f"SELECT instrument_id, ticker FROM instrument WHERE {in_clause}",  # noqa: S608 - in_clause 通过 _build_in_clause 安全构建
                 sids_list,

@@ -1,6 +1,6 @@
 /**
  * DO NOT EDIT: generated from contracts/openapi/v1.json.
- * Schema SHA-256: 1fe22f4ed58d204e327384e55293c7d30e7843b822d45694c42948bb32cf5f2d
+ * Schema SHA-256: b905eb8108498b333ce6f838330c265645e3e18f3cec7f7b506b32905c9483ec
  * Generator: openapi-typescript 7.13.0
  */
 
@@ -3747,6 +3747,32 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/selections/runs:assembled": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Assemble Selection Run
+         * @description Assemble every PIT fact server-side and preview the create-run gate.
+         *
+         *     The response carries the exact ``POST /selections/runs`` body plus the
+         *     admission report; creating the run still posts that body to ``/runs``,
+         *     so certification and replay semantics stay on the reviewed contract.
+         *
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
+         */
+        post: operations["selections_assemble_run"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/source/{source}/{dataset}": {
         parameters: {
             query?: never;
@@ -4406,6 +4432,13 @@ export interface components {
         APIResponse_AgentSessionResponse_: {
             /** @description 响应数据 */
             data: components["schemas"]["AgentSessionResponse"];
+            /** @description 分页信息(可选) */
+            pagination?: components["schemas"]["PaginationResponse"] | null;
+        };
+        /** APIResponse[AssembledSelectionRunResponse] */
+        APIResponse_AssembledSelectionRunResponse_: {
+            /** @description 响应数据 */
+            data: components["schemas"]["AssembledSelectionRunResponse"];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
         };
@@ -6847,6 +6880,66 @@ export interface components {
             total_turnover: number;
             /** Tracking Error */
             tracking_error?: number | null;
+        };
+        /**
+         * AssembleSelectionRunBody
+         * @description Policy-only selection input; the server assembles every PIT fact.
+         */
+        AssembleSelectionRunBody: {
+            /**
+             * As Of
+             * Format: date-time
+             */
+            as_of: string;
+            /**
+             * Asset Kind
+             * @default stock
+             * @constant
+             */
+            asset_kind: "stock";
+            /**
+             * @default [
+             *       "limit_up",
+             *       "limit_down"
+             *     ]
+             */
+            excluded_limit_states: components["schemas"]["HttpTuple_LimitStateRequest_"];
+            /** Factor Weights */
+            factor_weights: components["schemas"]["SelectionFactorWeightRequest"][];
+            /** Knowledge Cutoff */
+            knowledge_cutoff?: string | null;
+            /**
+             * Lookback Days
+             * @default 400
+             */
+            lookback_days: number;
+            /** Min Average Turnover */
+            min_average_turnover: number;
+            /** Min Listing Days */
+            min_listing_days: number;
+            /** Publication Cutoff */
+            publication_cutoff?: string | null;
+            /**
+             * Seed
+             * @default 0
+             */
+            seed: number;
+            /** Spec Id */
+            spec_id: string;
+            /** Spec Version */
+            spec_version: string;
+            /** Top K */
+            top_k: number;
+            /** Universe Id */
+            universe_id: string;
+        };
+        /**
+         * AssembledSelectionRunResponse
+         * @description Server-assembled exact facts plus the create-run admission preview.
+         */
+        AssembledSelectionRunResponse: {
+            admission: components["schemas"]["SelectionAdmissionResponse"];
+            request: components["schemas"]["CreateSelectionRunBody"];
         };
         /**
          * AssetClass
@@ -33177,6 +33270,96 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["APIResponse_ResearchCaseResponse_"];
+                };
+            };
+            /** @description Bad request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Resource not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Request conflicts with current state */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Request or domain validation failed */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Internal server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Structured Ditto API error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    selections_assemble_run: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required. */
+                "X-Ditto-API-Contract-Version"?: "v1";
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AssembleSelectionRunBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_AssembledSelectionRunResponse_"];
                 };
             };
             /** @description Bad request */

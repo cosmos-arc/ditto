@@ -26,6 +26,7 @@ class BarQuery:
         frequency: 频率（"daily" / "weekly" / "monthly"），由实现侧验证
         adj: 复权类型（"none" / "hfq" / "qfq"），由实现侧验证
         asof: PIT 时间点（ISO 格式 "YYYY-MM-DD"），None 表示使用当前映射
+        dataset_id: 期望的日线数据集（如 "stock_daily"），用于目录 lineage 精确匹配
 
     """
 
@@ -35,6 +36,7 @@ class BarQuery:
     frequency: str = "daily"
     adj: str = "none"
     asof: str | None = None
+    dataset_id: str | None = None
 
     def __init__(
         self,
@@ -45,6 +47,7 @@ class BarQuery:
         frequency: str = "daily",
         adj: str = "none",
         asof: str | None = None,
+        dataset_id: str | None = None,
     ) -> None:
         object.__setattr__(self, "instruments", tuple(instruments))
         object.__setattr__(self, "start", start)
@@ -52,6 +55,7 @@ class BarQuery:
         object.__setattr__(self, "frequency", frequency)
         object.__setattr__(self, "adj", adj)
         object.__setattr__(self, "asof", asof)
+        object.__setattr__(self, "dataset_id", dataset_id)
 
 
 @dataclass(frozen=True)

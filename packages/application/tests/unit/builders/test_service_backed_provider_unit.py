@@ -366,3 +366,49 @@ class TestServiceBackedDataProvider:
         assert hasattr(provider, "get_instruments")
         assert hasattr(provider, "get_schedule")
         assert hasattr(provider, "get_factor")
+
+
+class TestVectorizedLineagePrecedence:
+    """Cross-shape wildcard freshness must follow the original scan."""
+
+    def test_fresher_ranged_wildcard_replaces_exact_wildcard(self) -> None:
+        market = _make_mock_service("market")
+        metadata = _make_mock_service("metadata")
+        derived = _make_mock_service("derived")
+        catalog = _make_mock_service("catalog")
+        metadata.instrument.resolve_instrument_ids_batch.return_value = {
+            "518880.SH": 2_001_724,
+        }
+        market.find_bars.return_value = pl.DataFrame(
+            {
+                "instrument_id": [2_001_724],
+                "trade_date": [date(2024, 3, 29)],
+                "source": ["tushare"],
+                "source_ticker": ["518880.SH"],
+                "close": [98.0],
+            }
+        )
+        catalog.list_assets.return_value = (
+            _catalog_entry(
+                partition_keys=("trade_date=2024-03-29",),
+                snapshot_id="wildcard-exact-stale",
+                freshness_at=datetime(2026, 9, 1, 10, tzinfo=UTC),
+            ),
+            _catalog_entry(
+                partition_keys=("start_date=2024-01-01", "end_date=2024-03-29"),
+                snapshot_id="wildcard-ranged-fresh",
+                freshness_at=datetime(2026, 9, 1, 12, tzinfo=UTC),
+            ),
+        )
+        provider = ServiceBackedDataProvider(
+            market_service=market,
+            metadata_service=metadata,
+            derived_service=derived,
+            catalog_reader=catalog,
+        )
+
+        result = provider.get_bars(
+            BarQuery(instruments=["518880.SH"], start="2024-03-01", end="2024-03-29")
+        )
+
+        assert result["source_snapshot_id"].to_list() == ["wildcard-ranged-fresh"]

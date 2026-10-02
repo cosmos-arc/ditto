@@ -772,6 +772,29 @@ class InstrumentService:
 
     # ============ 证券名称查询 ============
 
+    @traced("metadata.instrument.get_stock_names")
+    def get_stock_names(
+        self,
+        instrument_ids: list[int],
+        asof: str | None = None,
+    ) -> dict[int, str]:
+        """
+        批量获取证券名称（PIT，单次查询）.
+
+        只返回名称变更历史命中的证券；调用方以当前注册表作回退.
+
+        Args:
+            instrument_ids: 证券 ID 列表.
+            asof: Point-in-Time 日期 (YYYY-MM-DD).
+
+        Returns:
+            {instrument_id: name} 映射.
+
+        """
+        if asof is None:
+            return {}
+        return self._name_history_reader.get_names_batch(instrument_ids, asof)
+
     @traced("metadata.instrument.get_stock_name")
     def get_stock_name(
         self,
