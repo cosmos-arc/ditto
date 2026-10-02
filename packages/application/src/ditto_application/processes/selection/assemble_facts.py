@@ -59,7 +59,6 @@ from typing import Literal, Protocol
 from zoneinfo import ZoneInfo
 
 import polars as pl
-from ditto_data.helpers.limit_state import derive_limit_state
 from ditto_data.provider import BarQuery, DataProvider
 from ditto_features.expression.compiler import ExpressionCompiler
 from ditto_features.expression.contracts import CompiledDerivedExpression
@@ -77,6 +76,7 @@ from ditto_application.processes.selection.facade import (
     SelectionFactorWeightDraft,
     SelectionInstrumentDraft,
     StockSelectionSpecDraft,
+    derive_limit_state,
 )
 from ditto_application.queries.field_admission import FieldRequirement
 from ditto_application.queries.historical_universe import (

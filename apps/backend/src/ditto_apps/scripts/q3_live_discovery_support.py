@@ -32,6 +32,9 @@ from ditto_application.processes.selection.facade import (
     SelectionFactorValueDraft,
     SelectionInstrumentDraft,
 )
+from ditto_application.processes.selection.facade import (
+    derive_limit_state as shared_derive_limit_state,
+)
 from ditto_data.catalog.certification import (
     CertificationGovernanceStore,
     DatasetCertificationReport,
@@ -41,9 +44,6 @@ from ditto_data.catalog.provider_payload import (
     ProviderPayloadReader,
 )
 from ditto_data.catalog.source_snapshot import ProviderSnapshot, ProviderSnapshotReader
-from ditto_data.helpers.limit_state import (
-    derive_limit_state as shared_derive_limit_state,
-)
 from ditto_kernel.identity import InstrumentId
 
 from ditto_apps.scripts.r2_live_certification import probe_consumer_payload
