@@ -32,6 +32,7 @@ export const mockUniverseDefinitions: UniverseResponse[] = [
 ];
 
 export const mockUniverseMembers: Readonly<Record<string, readonly number[]>> = {
+	"a-share-custom-202609": [600519, 300750],
 	csi300: [600519, 601318, 600036],
 	csi_etf_broad: [510300, 510500, 159915],
 	etf_core_watch: [510300, 510500],

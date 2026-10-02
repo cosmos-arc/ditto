@@ -123,7 +123,13 @@ export function assembledSelectionRunResponse(body: AssembleSelectionRunBody): A
 					field: "close",
 					snapshot_id: "stock-daily:sha256:mock",
 				},
-				...["instruments.instrument_name", "instruments.is_st", "instruments.listing_days"].map((consumer_field) => ({
+				...[
+					"instruments.instrument_name",
+					"instruments.is_st",
+					"instruments.listing_days",
+					"instruments.instrument_id",
+					"instruments.industry_id",
+				].map((consumer_field) => ({
 					consumer_field,
 					dataset_id: "stock_basic",
 					field: "name",

@@ -139,6 +139,18 @@ function strategyErrors(form: StrategyForm): readonly string[] {
 	if (seed === null || seed < 0) errors.push("seed 需为 ≥0 的整数");
 	const lookbackDays = parseInteger(form.lookbackDays);
 	if (lookbackDays === null || lookbackDays < 60 || lookbackDays > 1500) errors.push("回看天数需为 60–1500 的整数");
+	if (form.asOf.trim() && form.knowledgeCutoff.trim()) {
+		const asOf = Date.parse(shanghaiIso(form.asOf.trim()));
+		const knowledge = Date.parse(shanghaiIso(form.knowledgeCutoff.trim()));
+		if (Number.isFinite(asOf) && Number.isFinite(knowledge) && knowledge > asOf)
+			errors.push("知识截止不能晚于决策时点");
+	}
+	if (form.knowledgeCutoff.trim() && form.publicationCutoff.trim()) {
+		const knowledge = Date.parse(shanghaiIso(form.knowledgeCutoff.trim()));
+		const publication = Date.parse(shanghaiIso(form.publicationCutoff.trim()));
+		if (Number.isFinite(knowledge) && Number.isFinite(publication) && publication > knowledge)
+			errors.push("披露截止不能晚于知识截止");
+	}
 	return [...new Set(errors)];
 }
 
