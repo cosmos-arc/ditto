@@ -290,7 +290,6 @@ class AssembleSelectionFacts:
         self._factors = factors
         self._snapshots = snapshots
         self._compiler = ExpressionCompiler()
-        self._catalog: _CertifiedCatalog | None = None
         self._clock = clock or (lambda: datetime.now(UTC))
 
     def assemble(
@@ -309,9 +308,10 @@ class AssembleSelectionFacts:
             )
         knowledge, publication = self._resolve_cutoffs(request)
         self._validate_policy(request)
-        # Windows resolve per request: certification promotion or
-        # revocation between requests must be honored without a restart.
-        self._catalog = _CertifiedCatalog.load(
+        # Windows resolve per request into a local catalog: shared
+        # instance state would race concurrent assemblies and go stale
+        # across certification changes.
+        catalog = _CertifiedCatalog.load(
             self._snapshots,
             ("stock_daily", "stock_status", "stock_basic", _ADJUSTMENT_DATASET),
         )
@@ -328,7 +328,7 @@ class AssembleSelectionFacts:
             # Bars become publishable at the earlier declared boundary.
             cutoff=publication,
         )
-        self._require_certified_coverage(evaluation)
+        self._require_certified_coverage(evaluation, catalog)
         cross_date = _cross_section_date(evaluation)
         raw_cross = self._load_raw_cross(
             tickers=tickers,
@@ -345,7 +345,10 @@ class AssembleSelectionFacts:
             raw_cross=raw_cross,
         )
         windows = self._binding_windows(
-            evaluation=evaluation, cross_date=cross_date, as_of_date=as_of_date
+            evaluation=evaluation,
+            cross_date=cross_date,
+            as_of_date=as_of_date,
+            catalog=catalog,
         )
         consumes_adjustment = any(
             node.requested and node.leaves & _PRICE_LEAVES for node in nodes
@@ -449,23 +452,15 @@ class AssembleSelectionFacts:
             )
         return knowledge, publication
 
-    @property
-    def catalog(self) -> _CertifiedCatalog:
-        """The per-request window catalog (loaded by assemble)."""
-        if self._catalog is None:
-            raise AppProcessError(
-                "certified windows are loaded per assembly request",
-                details={"reason": "ASSEMBLY_SNAPSHOT_WINDOW_MISSING"},
-            )
-        return self._catalog
-
-    def _require_certified_coverage(self, evaluation: pl.DataFrame) -> None:
+    def _require_certified_coverage(
+        self, evaluation: pl.DataFrame, catalog: _CertifiedCatalog
+    ) -> None:
         """Every consumed bar date must sit inside a certified window."""
         uncovered = sorted(
             {
                 trade_date
                 for trade_date in evaluation["trade_date"].unique().to_list()
-                if not self.catalog.covering(dataset_id="stock_daily", day=trade_date)
+                if not catalog.covering(dataset_id="stock_daily", day=trade_date)
             }
         )
         if uncovered:
@@ -1062,6 +1057,7 @@ class AssembleSelectionFacts:
         evaluation: pl.DataFrame,
         cross_date: date,
         as_of_date: date,
+        catalog: _CertifiedCatalog,
     ) -> dict[str, tuple[CertifiedSnapshotWindow, ...]]:
         """
         Bar facts bind their whole consumed chain, roster facts at as-of.
@@ -1076,19 +1072,15 @@ class AssembleSelectionFacts:
         """
         consumed_dates = sorted(set(evaluation["trade_date"].unique().to_list()))
         return {
-            "stock_daily": _covering_chain(self.catalog, "stock_daily", consumed_dates),
+            "stock_daily": _covering_chain(catalog, "stock_daily", consumed_dates),
             _ADJUSTMENT_DATASET: _covering_chain(
-                self.catalog, _ADJUSTMENT_DATASET, consumed_dates
+                catalog, _ADJUSTMENT_DATASET, consumed_dates
             ),
-            "stock_status": self.catalog.covering(
-                dataset_id="stock_status", day=as_of_date
-            ),
-            "stock_basic": self.catalog.covering(
-                dataset_id="stock_basic", day=as_of_date
-            ),
+            "stock_status": catalog.covering(dataset_id="stock_status", day=as_of_date),
+            "stock_basic": catalog.covering(dataset_id="stock_basic", day=as_of_date),
             # limit_state consumes cross-date name/ST/listing metadata;
             # qualify that instant separately when it differs from as-of.
-            "stock_basic_cross": self.catalog.covering(
+            "stock_basic_cross": catalog.covering(
                 dataset_id="stock_basic", day=cross_date
             ),
         }
@@ -1213,6 +1205,7 @@ def _listing_days(list_date: object, as_of_date: date) -> int | None:
 # Registration-reform rules: every board trades its first five sessions
 # after listing without a price limit.
 _UNRESTRICTED_SESSIONS = 5
+_BJ_UNRESTRICTED_SESSIONS = 1
 _YOUNG_LISTING_CALENDAR_DAYS = 30
 
 
@@ -1234,9 +1227,18 @@ def _in_unrestricted_window(
 
 
 def _unrestricted_sessions(source_ticker: object) -> int | None:
-    """Board-specific count of post-listing sessions without price limits."""
+    """
+    Board-specific count of post-listing sessions without price limits.
+
+    Main boards, ChiNext and STAR trade five unrestricted sessions after
+    listing; Beijing-exchange listings are unrestricted only on the
+    listing session itself.
+    """
     if not isinstance(source_ticker, str):
         return None
+    ticker = source_ticker.partition(".")[0]
+    if ticker.startswith(("4", "8", "92")):
+        return _BJ_UNRESTRICTED_SESSIONS
     return _UNRESTRICTED_SESSIONS
 
 
