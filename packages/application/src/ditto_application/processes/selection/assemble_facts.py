@@ -1286,6 +1286,47 @@ def _limit_state(
     )
 
 
+def _bind_visibility_gates(
+    windows: Mapping[str, tuple[CertifiedSnapshotWindow, ...]],
+    nodes: tuple[_FactorNode, ...],
+    fields: list[FieldRequirement],
+) -> None:
+    """
+    Bind the per-row visibility gate and board-selecting ticker.
+
+    Every bar-derived consumer depends on ``knowledge_date`` deciding which
+    rows are visible; limit_state additionally selects its band from the
+    row's ``source_ticker``.
+    """
+    for window in windows.get("stock_daily") or ():
+        for consumer_field in (
+            "instruments.limit_state",
+            "instruments.average_turnover",
+            "membership_version",
+            *(
+                f"instruments.factor_values.{node.factor_id}"
+                for node in nodes
+                if node.requested
+            ),
+        ):
+            fields.append(
+                FieldRequirement(
+                    "stock_daily",
+                    "knowledge_date",
+                    window.snapshot_id,
+                    consumer_field,
+                )
+            )
+        fields.append(
+            FieldRequirement(
+                "stock_daily",
+                "source_ticker",
+                window.snapshot_id,
+                "instruments.limit_state",
+            )
+        )
+
+
 def _bind_cross_date_metadata(
     windows: Mapping[str, tuple[CertifiedSnapshotWindow, ...]],
     fields: list[FieldRequirement],
@@ -1339,6 +1380,9 @@ def data_fields(
     for consumer_field, field in _BASIC_FACT_FIELDS.items():
         bind("stock_basic", field, consumer_field)
     bind("stock_status", "is_suspended", "instruments.is_suspended")
+    # Every bar-derived consumer depends on the per-row visibility gate
+    # and, for limit_state, on the board-selecting ticker.
+    _bind_visibility_gates(windows, nodes, fields)
     # The facade classifies membership_version as a rotation-stage input, so
     # its binding must reference the rotation (stock_daily) source set.
     bind("stock_daily", "close", "membership_version")

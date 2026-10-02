@@ -318,15 +318,13 @@ def test_assembles_policy_only_request_with_certified_lineage() -> None:
     assert "instruments.is_suspended" in consumed
     assert "membership_version" in consumed
     assert "universe_snapshot_id" in consumed
-    daily_binding = next(
-        item
+    factor_fields = {
+        (item.dataset_id, item.field)
         for item in request.data_fields
         if item.consumer_field == "instruments.factor_values.reversal_1w"
-    )
-    assert (daily_binding.dataset_id, daily_binding.field) == (
-        "stock_daily",
-        "close",
-    )
+    }
+    assert ("stock_daily", "close") in factor_fields
+    assert ("stock_daily", "knowledge_date") in factor_fields
     bindings = {
         (item.dataset_id, item.field, item.consumer_field)
         for item in request.data_fields
