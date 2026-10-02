@@ -111,12 +111,18 @@ export function assembledSelectionRunResponse(body: AssembleSelectionRunBody): A
 		request: {
 			as_of: body.as_of,
 			data_fields: [
-				...["universe_snapshot_id", "membership_version"].map((consumer_field) => ({
-					consumer_field,
+				{
+					consumer_field: "universe_snapshot_id",
 					dataset_id: "stock_basic",
 					field: "list_status",
 					snapshot_id: "stock-basic:sha256:mock",
-				})),
+				},
+				{
+					consumer_field: "membership_version",
+					dataset_id: "stock_daily",
+					field: "close",
+					snapshot_id: "stock-daily:sha256:mock",
+				},
 				...["instruments.instrument_name", "instruments.is_st", "instruments.listing_days"].map((consumer_field) => ({
 					consumer_field,
 					dataset_id: "stock_basic",
@@ -178,7 +184,7 @@ export function assembledSelectionRunResponse(body: AssembleSelectionRunBody): A
 			rotation_missing_inputs: [],
 			rotation_source_snapshot_ids: ["stock-daily:sha256:mock"],
 			seed: body.seed,
-			selection_source_snapshot_ids: ["stock-daily:sha256:mock"],
+			selection_source_snapshot_ids: ["stock-daily:sha256:mock", "stock-basic:sha256:mock", "stock-status:sha256:mock"],
 			selection_spec: {
 				asset_kind: "stock",
 				excluded_limit_states: body.excluded_limit_states,

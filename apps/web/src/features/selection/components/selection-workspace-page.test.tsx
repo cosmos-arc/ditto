@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { HttpResponse, http } from "msw";
 import type { ReactNode } from "react";
@@ -294,4 +294,26 @@ it("loads universe options from the authoritative list and requires an explicit 
 	await user.selectOptions(select, option);
 	expect((select as HTMLSelectElement).value).toBe("a-share-custom-202609");
 	expect(screen.getByRole("button", { name: "组装并预览" })).toBeEnabled();
+});
+
+it("rejects an assembled response whose policy echo drifts from the submitted window", async () => {
+	const user = userEvent.setup();
+	server.use(
+		http.post("/api/v1/selections/runs:assembled", async ({ request }) => {
+			const body = (await request.json()) as AssembleSelectionRunBody;
+			const response = assembledSelectionRunResponse(body);
+			// 模拟错配/过期响应：改窄数据区间。
+			response.request.data_from = "2026-09-01";
+			return HttpResponse.json({ data: response });
+		}),
+	);
+	render(<SelectionWorkspacePage />, { wrapper: wrapper() });
+	await waitFor(() => expect((screen.getByLabelText("universe 证券池") as HTMLSelectElement).value).not.toBe(""));
+
+	await user.click(screen.getByRole("button", { name: "组装并预览" }));
+
+	await waitFor(() =>
+		expect(screen.getByRole("alert")).toHaveTextContent(/组装响应的策略回显或服务端事实与提交不一致/),
+	);
+	expect(screen.getByRole("button", { name: "创建运行" })).toBeDisabled();
 });
