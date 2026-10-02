@@ -8,8 +8,76 @@ import {
 	selectionRunFixtures,
 } from "../fixtures/selection";
 
-/** 组装端点接受的已注册行情因子（镜像 ALL_FACTOR_SPECS 中叶子依赖可达的子集）。 */
-const ASSEMBLY_KNOWN_FACTORS = new Set(["momentum_1m", "momentum_12m", "reversal_1w", "volatility_factor"]);
+/**
+ * 组装端点接受的已注册行情因子——快照自权威注册表（ALL_FACTOR_SPECS 按
+ * 行情叶依赖闭包 + 纯时序表达式过滤，2026-10-02 经真实编译器枚举）。
+ * 注册表演进时需同步刷新此快照。
+ */
+const ASSEMBLY_KNOWN_FACTORS = new Set([
+	"amihud_illiquidity",
+	"atr_14",
+	"atr_20",
+	"bollinger_lower",
+	"bollinger_middle",
+	"bollinger_upper",
+	"cci_20",
+	"choppiness_index",
+	"cmra",
+	"elder_ray_bull",
+	"ema_10",
+	"ema_13",
+	"ema_14",
+	"ema_20",
+	"ema_5",
+	"ema_60",
+	"intraday_vol",
+	"ma_10",
+	"ma_14",
+	"ma_20",
+	"ma_5",
+	"ma_60",
+	"macd",
+	"macd_hist",
+	"macd_signal",
+	"mfi_14",
+	"momentum_12m",
+	"momentum_1m",
+	"momentum_3m",
+	"momentum_accel",
+	"overnight_vol",
+	"prev_close",
+	"raw_mf",
+	"returns_1",
+	"returns_10",
+	"returns_20",
+	"returns_5",
+	"returns_60",
+	"reversal_1m",
+	"reversal_1w",
+	"reversal_3d",
+	"rsi_14",
+	"rsi_6",
+	"sequential_momentum",
+	"tp",
+	"tr",
+	"umd_6m",
+	"vol_ratio",
+	"volatility_10",
+	"volatility_120",
+	"volatility_14",
+	"volatility_20",
+	"volatility_5",
+	"volatility_60",
+	"volatility_factor",
+	"volume_ma_10",
+	"volume_ma_14",
+	"volume_ma_20",
+	"volume_ma_5",
+	"volume_ma_60",
+	"volume_price_corr",
+	"vwap_20d",
+	"williams_r",
+]);
 
 export const ASSEMBLED_UNIVERSE_SNAPSHOT_ID = `universe:sha256:${"6".repeat(64)}`;
 
@@ -120,10 +188,7 @@ export const selectionHandlers = [
 		if (new Set(names).size !== names.length || Math.abs(weightSum - 1) > 1e-9)
 			return HttpResponse.json({ detail: "因子权重不得重复且权重之和必须为 1" }, { status: 422 });
 		if (body.factor_weights.some((factor) => !ASSEMBLY_KNOWN_FACTORS.has(factor.name)))
-			return HttpResponse.json(
-				{ detail: `未注册因子：仅支持 ${[...ASSEMBLY_KNOWN_FACTORS].join("、")}` },
-				{ status: 422 },
-			);
+			return HttpResponse.json({ detail: "未注册因子或该因子表达式暂不被组装支持" }, { status: 422 });
 		return HttpResponse.json({ data: assembledSelectionRunResponse(body) });
 	}),
 	http.post("/api/v1/selections/runs/:runId/research-cases", async ({ params, request }) => {

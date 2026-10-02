@@ -1,5 +1,5 @@
-import { useMutation } from "@tanstack/react-query";
-import { useState } from "react";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { type AdmissionView, toAdmissionView } from "../admission";
 import {
@@ -7,6 +7,7 @@ import {
 	assembleSelectionRun,
 	assessSelectionAdmission,
 	type CreateSelectionRunBody,
+	listUniverseOptions,
 	resolveSelectionUniverse,
 } from "../api";
 import { toAssembledRunView } from "../assembled-run";
@@ -93,7 +94,7 @@ const INITIAL_FACTORS: readonly FactorRow[] = [{ name: "momentum_1m", weight: "1
 
 function initialForm(): StrategyForm {
 	return {
-		universeId: "a-share-custom-202609",
+		universeId: "",
 		asOf: shanghaiLocalInput(new Date()),
 		specId: "stock-momentum-manual",
 		specVersion: "1",
@@ -113,7 +114,7 @@ function initialForm(): StrategyForm {
 function strategyErrors(form: StrategyForm): readonly string[] {
 	const errors: string[] = [];
 	if (!form.asOf.trim()) errors.push("请填写决策时点 as_of");
-	if (!form.universeId.trim()) errors.push("请填写 universe_id");
+	if (!form.universeId.trim()) errors.push("请选择 universe 证券池");
 	if (!form.specId.trim()) errors.push("请填写 spec_id");
 	if (!form.specVersion.trim()) errors.push("请填写 spec_version");
 	const topK = parseInteger(form.topK);
@@ -181,6 +182,11 @@ export function SelectionRunInput({
 }) {
 	const [form, setForm] = useState<StrategyForm>(initialForm);
 	const [asOfEdited, setAsOfEdited] = useState(false);
+	const universes = useQuery({ queryKey: ["selection", "universe-options"], queryFn: listUniverseOptions });
+	useEffect(() => {
+		const first = universes.data?.[0]?.universeId;
+		if (first && !form.universeId) setForm((current) => ({ ...current, universeId: first }));
+	}, [universes.data, form.universeId]);
 	const [advancedValue, setAdvancedValue] = useState(readSavedSelectionInput);
 	const [message, setMessage] = useState<string | null>(null);
 	const [instrument, setInstrument] = useState("");
@@ -260,13 +266,20 @@ export function SelectionRunInput({
 				</p>
 				<div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
 					<label className="grid gap-1 text-xs">
-						universe_id
-						<input
-							aria-label="universe_id"
+						universe 证券池
+						<select
+							aria-label="universe 证券池"
 							className={INPUT_CLASS}
 							value={form.universeId}
 							onChange={(event) => updateForm({ universeId: event.currentTarget.value })}
-						/>
+						>
+							<option value="">{universes.isLoading ? "加载证券池…" : "请选择"}</option>
+							{(universes.data ?? []).map((option) => (
+								<option key={option.universeId} value={option.universeId}>
+									{option.name}（{option.universeId}）
+								</option>
+							))}
+						</select>
 					</label>
 					<label className="grid gap-1 text-xs">
 						决策时点 as_of（上海时区）

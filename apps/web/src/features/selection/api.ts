@@ -53,6 +53,21 @@ export function assembleSelectionRun(body: AssembleSelectionRunBody): Promise<As
 	return apiClient.post("/api/v1/selections/runs:assembled", { body });
 }
 
+export interface UniverseOption {
+	readonly universeId: string;
+	readonly name: string;
+	readonly universeType: string;
+}
+
+export async function listUniverseOptions(): Promise<UniverseOption[]> {
+	const rows = await apiClient.get("/api/v1/universes");
+	return rows.map((row) => ({
+		universeId: row.universe_id,
+		name: row.name,
+		universeType: row.universe_type,
+	}));
+}
+
 export function createResearchCase(runId: string, body: CreateResearchCaseBody): Promise<ResearchCase> {
 	return apiClient.post("/api/v1/selections/runs/{run_id}/research-cases", {
 		params: { path: { run_id: runId } },

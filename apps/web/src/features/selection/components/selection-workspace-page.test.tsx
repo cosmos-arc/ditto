@@ -269,3 +269,29 @@ it("shows the historical roster and hides it after editing its bound input", asy
 	});
 	expect(screen.queryByRole("region", { name: "历史证券池" })).not.toBeInTheDocument();
 });
+
+it("loads universe options from the authoritative list and requires an explicit pick", async () => {
+	const user = userEvent.setup();
+	server.use(
+		http.get("/api/v1/universes", () =>
+			HttpResponse.json({
+				data: [
+					{
+						universe_id: "a-share-custom-202609",
+						name: "A 股全市场池",
+						universe_type: "custom",
+						description: null,
+						source_ref: null,
+					},
+				],
+			}),
+		),
+	);
+	render(<SelectionWorkspacePage />, { wrapper: wrapper() });
+
+	const select = await screen.findByLabelText("universe 证券池");
+	const option = await screen.findByRole("option", { name: /A 股全市场池/ });
+	await user.selectOptions(select, option);
+	expect((select as HTMLSelectElement).value).toBe("a-share-custom-202609");
+	expect(screen.getByRole("button", { name: "组装并预览" })).toBeEnabled();
+});

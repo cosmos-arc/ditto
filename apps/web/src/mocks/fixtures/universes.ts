@@ -2,6 +2,13 @@ import type { UniverseResponse } from "@/features/research/api/universes";
 
 export const mockUniverseDefinitions: UniverseResponse[] = [
 	{
+		universe_id: "a-share-custom-202609",
+		name: "A 股全市场池（2026-09-30 stock_basic 快照）",
+		universe_type: "custom",
+		description: "股票选股组装支持的注册全市场证券池。",
+		source_ref: null,
+	},
+	{
 		universe_id: "csi300",
 		name: "沪深 300",
 		universe_type: "preset",
