@@ -53,6 +53,7 @@ export function toAssembledRunView(value: AssembledSelectionRunResponse, submitt
 			request.publication_cutoff,
 			submitted.publication_cutoff ?? submitted.knowledge_cutoff ?? submitted.as_of,
 		) &&
+		Date.parse(request.publication_cutoff) <= Date.parse(request.knowledge_cutoff) &&
 		typeof spec === "object" &&
 		spec !== null &&
 		spec.asset_kind === "stock" &&

@@ -95,7 +95,12 @@ export function assembledSelectionRunResponse(body: AssembleSelectionRunBody): A
 					certification_report_id: "certification-mock",
 					consumer_field: "instruments.average_turnover",
 					covered_from: "2015-01-05",
-					covered_to: body.as_of.slice(0, 10),
+					covered_to: new Intl.DateTimeFormat("en-CA", {
+						timeZone: "Asia/Shanghai",
+						year: "numeric",
+						month: "2-digit",
+						day: "2-digit",
+					}).format(new Date(Date.parse(body.as_of) - 86_400_000)),
 					dataset_id: "stock_daily",
 					evidence_uri: "mock://evidence/amount",
 					field: "amount",
@@ -163,7 +168,12 @@ export function assembledSelectionRunResponse(body: AssembleSelectionRunBody): A
 				},
 			],
 			data_from: "2015-01-05",
-			data_to: body.as_of.slice(0, 10),
+			data_to: new Intl.DateTimeFormat("en-CA", {
+				timeZone: "Asia/Shanghai",
+				year: "numeric",
+				month: "2-digit",
+				day: "2-digit",
+			}).format(new Date(Date.parse(body.as_of) - 86_400_000)),
 			industries: [],
 			instruments: [600519, 300750].map((instrument_id, index) => ({
 				declared_missing_inputs: [],

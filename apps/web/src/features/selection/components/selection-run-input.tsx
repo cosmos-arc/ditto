@@ -196,8 +196,11 @@ export function SelectionRunInput({
 	const [asOfEdited, setAsOfEdited] = useState(false);
 	const universes = useQuery({ queryKey: ["selection", "universe-options"], queryFn: listUniverseOptions });
 	useEffect(() => {
-		const first = universes.data?.[0]?.universeId;
-		if (first && !form.universeId) setForm((current) => ({ ...current, universeId: first }));
+		const options = universes.data;
+		if (!options || options.length === 0) return;
+		if (!form.universeId || !options.some((option) => option.universeId === form.universeId)) {
+			setForm((current) => ({ ...current, universeId: options[0]?.universeId ?? "" }));
+		}
 	}, [universes.data, form.universeId]);
 	const [advancedValue, setAdvancedValue] = useState(readSavedSelectionInput);
 	const [message, setMessage] = useState<string | null>(null);
