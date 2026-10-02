@@ -1088,3 +1088,22 @@ def test_ipo_unrestricted_sessions_are_not_limited() -> None:
     assert request.instruments[0].listing_days == 0
     # One session since listing is inside the main-board no-limit window.
     assert request.instruments[0].limit_state == "normal"
+
+
+@pytest.mark.pit
+def test_future_client_clock_cannot_unlock_publication_boundary() -> None:
+    provider = _FakeProvider(_bars_frame(rows_per_instrument={1: 30}))
+    history = _FakeHistory(_roster_frame((1,)))
+    # Server at 17:55 Shanghai; client clock 2 minutes ahead (inside the
+    # skew window) submits matching 17:57 cutoffs.
+    server = datetime(2026, 9, 29, 9, 55, tzinfo=UTC)
+    ahead = datetime(2026, 9, 29, 9, 57, tzinfo=UTC)
+    process = _process(provider=provider, history=history, clock=lambda: server)
+    request = process.assemble(
+        _request(as_of=ahead, knowledge_cutoff=ahead, publication_cutoff=ahead)
+    )
+
+    # Effective knowledge is capped at the server instant: before 18:00
+    # publication, same-day-knowledge rows stay hidden.
+    assert request.knowledge_cutoff == server
+    assert request.data_to == date(2026, 9, 28)

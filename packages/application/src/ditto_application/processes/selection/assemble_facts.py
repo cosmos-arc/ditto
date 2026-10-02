@@ -423,28 +423,41 @@ class AssembleSelectionFacts:
                 "future decision instants cannot use the live read model",
                 details={"reason": "ASSEMBLY_TIME_INVALID"},
             )
-        # Never later than the decision instant, even by milliseconds of
-        # client-to-server latency.
-        knowledge = min(request.knowledge_cutoff or now, request.as_of)
-        if request.knowledge_cutoff is not None and (
-            knowledge.tzinfo is None or knowledge != request.knowledge_cutoff
+        # Never later than the decision instant nor the server clock:
+        # skew tolerance forgives validation, it never grants future
+        # evidence (an 18:01 cutoff at server 17:59 must not unlock
+        # same-day bars at the 18:00 publication boundary).
+        declared_knowledge = request.knowledge_cutoff
+        if declared_knowledge is not None and (
+            declared_knowledge.tzinfo is None or declared_knowledge > request.as_of
         ):
             raise AppProcessError(
                 "assembled selection cutoffs violate causal order",
                 details={"reason": "ASSEMBLY_CUTOFF_INVALID"},
             )
+        declared_publication = request.publication_cutoff
+        if declared_publication is not None and (
+            declared_publication.tzinfo is None
+            or (
+                declared_knowledge is not None
+                and declared_publication > declared_knowledge
+            )
+        ):
+            raise AppProcessError(
+                "assembled selection cutoffs violate causal order",
+                details={"reason": "ASSEMBLY_CUTOFF_INVALID"},
+            )
+        # Effective cutoffs are additionally capped at the server clock:
+        # skew tolerance forgives validation, it never grants future
+        # evidence around the publication boundary.
+        knowledge = min(declared_knowledge or now, request.as_of, now)
         if knowledge < now - _LIVE_SKEW:
             raise AppProcessError(
                 "past instants cannot use the live read model; "
                 + "use the certified replay lane",
                 details={"reason": "ASSEMBLY_CUTOFF_BACKDATED"},
             )
-        publication = request.publication_cutoff or knowledge
-        if publication.tzinfo is None or publication > knowledge:
-            raise AppProcessError(
-                "assembled selection cutoffs violate causal order",
-                details={"reason": "ASSEMBLY_CUTOFF_INVALID"},
-            )
+        publication = min(declared_publication or knowledge, now)
         if request.publication_cutoff is not None and publication < now - _LIVE_SKEW:
             raise AppProcessError(
                 "backdated publication cutoffs cannot use the live read model",
@@ -1313,6 +1326,14 @@ def _bind_visibility_gates(
                 FieldRequirement(
                     "stock_daily",
                     "knowledge_date",
+                    window.snapshot_id,
+                    consumer_field,
+                )
+            )
+            fields.append(
+                FieldRequirement(
+                    "stock_daily",
+                    "trade_date",
                     window.snapshot_id,
                     consumer_field,
                 )
