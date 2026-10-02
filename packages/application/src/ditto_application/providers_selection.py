@@ -114,10 +114,13 @@ def _metadata_identities(metadata: MetadataService) -> InstrumentIdentityReader:
             historical = metadata.instrument.get_stock_names(
                 list(instrument_ids), asof.isoformat()
             )
+            # Unresolved ids stay absent: the assembler distinguishes a
+            # missing name (ST fact unavailable) from a real one.
             return {
-                instrument_id: historical.get(instrument_id)
-                or known.get(instrument_id, str(instrument_id))
+                instrument_id: name
                 for instrument_id in instrument_ids
+                if (name := historical.get(instrument_id) or known.get(instrument_id))
+                is not None
             }
 
         def source_tickers(

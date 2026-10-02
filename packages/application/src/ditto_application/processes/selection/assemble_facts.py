@@ -295,7 +295,7 @@ class AssembleSelectionFacts:
             as_of_date=as_of_date,
             knowledge=knowledge,
             # Bars become publishable at the earlier declared boundary.
-            visible_through=_knowledge_visible_through(publication),
+            cutoff=publication,
         )
         self._require_certified_coverage(evaluation)
         cross_date = _cross_section_date(evaluation)
@@ -303,7 +303,7 @@ class AssembleSelectionFacts:
             tickers=tickers,
             cross_date=cross_date,
             knowledge=knowledge,
-            visible_through=_knowledge_visible_through(publication),
+            cutoff=publication,
         )
         instruments = self._project_instruments(
             roster=roster,
@@ -637,7 +637,7 @@ class AssembleSelectionFacts:
         nodes: tuple[_FactorNode, ...],
         as_of_date: date,
         knowledge: datetime,
-        visible_through: date,
+        cutoff: datetime,
     ) -> tuple[pl.DataFrame, Mapping[int, str]]:
         roster_ids = [int(row["instrument_id"]) for row in roster.frame.to_dicts()]
         tickers = self._identities.source_tickers(
@@ -690,7 +690,7 @@ class AssembleSelectionFacts:
             leaf for node in nodes if node.requested for leaf in node.leaves
         }
         self._validate_bar_schema(frame, needed_leaves)
-        frame = _without_future_knowledge(frame, visible_through)
+        frame = _without_future_knowledge(frame, cutoff)
         if frame.is_empty():
             raise AppProcessError(
                 "assembled selection bars only carry future knowledge",
@@ -798,7 +798,7 @@ class AssembleSelectionFacts:
         tickers: Mapping[int, str],
         cross_date: date,
         knowledge: datetime,
-        visible_through: date,
+        cutoff: datetime,
     ) -> Mapping[int, Mapping[str, object]]:
         """
         Read raw (unadjusted) closes for the exchange price-limit band.
@@ -834,10 +834,7 @@ class AssembleSelectionFacts:
             frame = _filter_identity_consistent(frame, tickers).filter(
                 pl.col(_BAR_LINEAGE_COLUMN).is_not_null()
             )
-        knowledge_column = pl.col("knowledge_date")
-        if frame.schema["knowledge_date"] == pl.String:
-            knowledge_column = knowledge_column.str.to_date()
-        frame = frame.filter(knowledge_column <= pl.lit(visible_through))
+        frame = _without_future_knowledge(frame, cutoff)
         rows = frame.filter(pl.col("trade_date") == pl.lit(cross_date))
         return {int(row["instrument_id"]): row for row in rows.to_dicts()}
 
@@ -1050,37 +1047,36 @@ def _covering_chain(
     )
 
 
-def _without_future_knowledge(
-    frame: pl.DataFrame, visible_through: date
-) -> pl.DataFrame:
+def _without_future_knowledge(frame: pl.DataFrame, cutoff: datetime) -> pl.DataFrame:
     """
     Drop bar rows whose knowledge is not provably within the cutoff.
 
     ``knowledge_date`` is a required schema column, so this filter always
     applies: a provider that cannot prove per-row knowledge is rejected
     during schema validation instead of silently passing future rows.
+    Rows are known from their knowledge date (production maps daily bars
+    to T+1); the 18:00 Asia/Shanghai publication refinement only demotes
+    rows whose provider records same-day knowledge while the cutoff is
+    still before that day's publication time.
     """
     knowledge = pl.col("knowledge_date")
     if frame.schema["knowledge_date"] == pl.String:
         knowledge = knowledge.str.to_date()
-    return frame.filter(knowledge <= pl.lit(visible_through))
-
-
-def _knowledge_visible_through(knowledge: datetime) -> date:
-    """
-    Resolve the last bar trade date provably known at the cutoff.
-
-    Per-row ``knowledge_date`` is the authoritative visibility record —
-    production Tushare daily bars map it to ``trade_date + 1`` (T+1
-    knowledge), which this filter already honors strictly. The 18:00
-    Asia/Shanghai refinement only matters for providers that record
-    same-day knowledge: a cutoff before 18:00 cannot see that day's bars.
-    """
-    local = knowledge.astimezone(_SHANGHAI)
-    visible = local.date()
-    if local.timetz().replace(tzinfo=None) < _BAR_PUBLICATION_TIME:
-        visible -= timedelta(days=1)
-    return visible
+    visible_date = cutoff.astimezone(_SHANGHAI).date()
+    same_day_published = pl.lit(
+        cutoff.astimezone(_SHANGHAI).timetz().replace(tzinfo=None)
+        >= _BAR_PUBLICATION_TIME
+    )
+    known_by_date = knowledge <= pl.lit(visible_date)
+    # Same-day-knowledge rows stay unpublished until 18:00 that day; rows
+    # whose knowledge lands on a later date (production T+1) are known
+    # from their own knowledge date onward.
+    unpublished_same_day = (
+        (knowledge == pl.col("trade_date"))
+        & (knowledge == pl.lit(visible_date))
+        & ~same_day_published
+    )
+    return frame.filter(known_by_date & ~unpublished_same_day)
 
 
 def _unit_normalized(

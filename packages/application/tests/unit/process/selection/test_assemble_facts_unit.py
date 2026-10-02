@@ -1041,3 +1041,22 @@ def test_limit_state_binding_covers_session_extremes() -> None:
         if item.consumer_field == "instruments.limit_state"
     }
     assert {"close", "pre_close", "high", "low"} <= bound_fields
+
+
+@pytest.mark.pit
+def test_t_plus_one_knowledge_is_visible_the_next_morning() -> None:
+    # Production maps daily bars to knowledge_date = trade_date + 1; a
+    # T+1-style row is known from its own knowledge date, so the morning
+    # cross-section uses the previous session's bar.
+    frame = _bars_frame(rows_per_instrument={1: 30}).with_columns(
+        (pl.col("knowledge_date") + pl.duration(days=1)).alias("knowledge_date")
+    )
+    provider = _FakeProvider(frame)
+    history = _FakeHistory(_roster_frame((1,)))
+    frozen = datetime(2026, 9, 29, 1, 0, tzinfo=UTC)  # 09:00 Asia/Shanghai
+    process = _process(provider=provider, history=history, clock=lambda: frozen)
+    request = process.assemble(
+        _request(as_of=frozen, knowledge_cutoff=frozen, publication_cutoff=frozen)
+    )
+
+    assert request.data_to == date(2026, 9, 28)
