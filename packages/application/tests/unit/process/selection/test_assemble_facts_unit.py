@@ -982,8 +982,14 @@ def test_unattributable_instruments_leave_the_ranking_population() -> None:
 
 
 def test_lookback_start_follows_the_trading_calendar() -> None:
+    # A sparse calendar (a session every 4th day) makes the 25-session
+    # boundary earlier than the requested 60-day window; the wider of the
+    # two wins, and the request's own boundary is never narrowed.
+    sparse = sorted(date(2026, 9, 25) - timedelta(days=4 * i) for i in range(30))
+    fetch_start = _CROSS - timedelta(days=120)
+    visible = sorted(s for s in [*sparse, _CROSS] if s >= fetch_start)
     sessions = pl.DataFrame(
-        {"trade_date": _BAR_DATES},
+        {"trade_date": visible},
         schema={"trade_date": pl.Date},
     )
     provider = _FakeProvider(
@@ -991,7 +997,9 @@ def test_lookback_start_follows_the_trading_calendar() -> None:
     )
     history = _FakeHistory(_roster_frame((1,)))
     process = _process(provider=provider, history=history)
-    process.assemble(_request())
+    process.assemble(_request(lookback_days=60))
 
-    # reversal_1w needs 6 rows, turnover 20: 25 sessions requested.
-    assert provider.queries[0].start == _BAR_DATES[-25].isoformat()
+    assert (
+        provider.queries[0].start
+        == min(visible[-25], _CROSS - timedelta(days=60)).isoformat()
+    )

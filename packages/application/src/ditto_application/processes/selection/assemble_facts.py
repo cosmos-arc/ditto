@@ -781,9 +781,14 @@ class AssembleSelectionFacts:
         )
         if not sessions:
             return fallback
+        # The wider of the two boundaries: the caller's requested calendar
+        # window (default 400 days) must not be narrowed by the factor
+        # requirement, and a long suspension inside the requested window
+        # must not starve a per-instrument rolling window either.
+        requested_start = as_of - timedelta(days=request_lookback)
         if len(sessions) >= needed:
-            return sessions[-needed]
-        return sessions[0]
+            return min(requested_start, sessions[-needed])
+        return min(requested_start, sessions[0])
 
     def _load_raw_cross(
         self,
