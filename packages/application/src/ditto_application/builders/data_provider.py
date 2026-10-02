@@ -207,13 +207,24 @@ def _rewrite_lineage(
     )
 
 
+_BAR_DATASETS = frozenset({"stock_daily", "etf_daily"})
+
+
 def _catalog_windows(
     catalog_reader: DataCatalogReader,
 ) -> tuple[_CatalogSnapshotWindow, ...]:
+    """
+    Daily-bar windows only.
+
+    The market namespace also carries adjustments and status datasets;
+    an unfiltered scan lets a fresher unrelated snapshot win the same
+    source/ticker/date window and stamp the wrong dataset's lineage.
+    """
     return tuple(
         window
         for entry in catalog_reader.list_assets("market")
-        if (window := _snapshot_window(entry)) is not None
+        if entry.asset.dataset_id in _BAR_DATASETS
+        and (window := _snapshot_window(entry)) is not None
     )
 
 

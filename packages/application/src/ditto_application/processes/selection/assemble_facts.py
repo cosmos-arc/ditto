@@ -1305,47 +1305,33 @@ def _bind_visibility_gates(
     fields: list[FieldRequirement],
 ) -> None:
     """
-    Bind the per-row visibility gate and board-selecting ticker.
+    Bind the per-row visibility and identity gates.
 
     Every bar-derived consumer depends on ``knowledge_date`` deciding which
-    rows are visible; limit_state additionally selects its band from the
-    row's ``source_ticker``.
+    rows are visible, on ``trade_date`` ordering the rolling windows, and on
+    ``source_ticker`` passing the identity-consistency filter.
     """
+    bar_consumers = (
+        "instruments.limit_state",
+        "instruments.average_turnover",
+        "membership_version",
+        *(
+            f"instruments.factor_values.{node.factor_id}"
+            for node in nodes
+            if node.requested
+        ),
+    )
     for window in windows.get("stock_daily") or ():
-        for consumer_field in (
-            "instruments.limit_state",
-            "instruments.average_turnover",
-            "membership_version",
-            *(
-                f"instruments.factor_values.{node.factor_id}"
-                for node in nodes
-                if node.requested
-            ),
-        ):
-            fields.append(
-                FieldRequirement(
-                    "stock_daily",
-                    "knowledge_date",
-                    window.snapshot_id,
-                    consumer_field,
+        for consumer_field in bar_consumers:
+            for column in ("knowledge_date", "trade_date", "source_ticker"):
+                fields.append(
+                    FieldRequirement(
+                        "stock_daily",
+                        column,
+                        window.snapshot_id,
+                        consumer_field,
+                    )
                 )
-            )
-            fields.append(
-                FieldRequirement(
-                    "stock_daily",
-                    "trade_date",
-                    window.snapshot_id,
-                    consumer_field,
-                )
-            )
-        fields.append(
-            FieldRequirement(
-                "stock_daily",
-                "source_ticker",
-                window.snapshot_id,
-                "instruments.limit_state",
-            )
-        )
 
 
 def _bind_cross_date_metadata(
