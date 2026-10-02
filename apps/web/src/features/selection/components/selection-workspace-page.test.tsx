@@ -302,8 +302,8 @@ it("rejects an assembled response whose policy echo drifts from the submitted wi
 		http.post("/api/v1/selections/runs:assembled", async ({ request }) => {
 			const body = (await request.json()) as AssembleSelectionRunBody;
 			const response = assembledSelectionRunResponse(body);
-			// 模拟错配/过期响应：改窄数据区间。
-			response.request.data_from = "2026-09-01";
+			// 模拟错配/过期响应：把区间终点挪到决策时点之后。
+			response.request.data_to = "2026-12-31";
 			return HttpResponse.json({ data: response });
 		}),
 	);

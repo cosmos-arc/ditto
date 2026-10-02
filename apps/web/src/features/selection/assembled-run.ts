@@ -17,8 +17,8 @@ function sameLimitStates(left: readonly string[], right: readonly string[]): boo
 	return [...left].sort().join("\n") === [...right].sort().join("\n");
 }
 
-/** 返回的数据区间不得晚于提交回看窗口的请求边界。 */
-function windowCoversReturned(
+/** 返回区间必须可解析、有序、不晚于决策时点。 */
+function windowWellFormed(
 	dataFrom: string | null | undefined,
 	dataTo: string | null | undefined,
 	submitted: AssembleSelectionRunBody,
@@ -26,10 +26,8 @@ function windowCoversReturned(
 	if (dataFrom == null || dataTo == null) return false;
 	const from = Date.parse(dataFrom);
 	const to = Date.parse(dataTo);
-	if (!Number.isFinite(from) || !Number.isFinite(to) || from > to) return false;
-	// 服务端起点取 min(请求日历边界, 会话边界)——永远不会晚于请求边界。
-	const requestedBoundary = Date.parse(submitted.as_of) - (submitted.lookback_days ?? 400) * 86_400_000;
-	return from <= requestedBoundary + 86_400_000;
+	const asOf = Date.parse(submitted.as_of);
+	return Number.isFinite(from) && Number.isFinite(to) && Number.isFinite(asOf) && from <= to && to <= asOf;
 }
 
 /** 返回的截止时刻必须可解析、不晚于表单声明的边界（未填按 as_of 收口）。 */
@@ -49,7 +47,7 @@ export function toAssembledRunView(value: AssembledSelectionRunResponse, submitt
 		request !== null &&
 		request.as_of === submitted.as_of &&
 		request.seed === submitted.seed &&
-		windowCoversReturned(request.data_from, request.data_to, submitted) &&
+		windowWellFormed(request.data_from, request.data_to, submitted) &&
 		sameInstantBound(request.knowledge_cutoff, submitted.knowledge_cutoff ?? submitted.as_of) &&
 		sameInstantBound(
 			request.publication_cutoff,
