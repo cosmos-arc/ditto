@@ -197,8 +197,12 @@ export function SelectionRunInput({
 	const universes = useQuery({ queryKey: ["selection", "universe-options"], queryFn: listUniverseOptions });
 	useEffect(() => {
 		const options = universes.data;
-		if (!options || options.length === 0) return;
-		if (!form.universeId || !options.some((option) => option.universeId === form.universeId)) {
+		if (!options) return;
+		if (
+			options.length === 0
+				? form.universeId !== ""
+				: !form.universeId || !options.some((option) => option.universeId === form.universeId)
+		) {
 			setForm((current) => ({ ...current, universeId: options[0]?.universeId ?? "" }));
 		}
 	}, [universes.data, form.universeId]);

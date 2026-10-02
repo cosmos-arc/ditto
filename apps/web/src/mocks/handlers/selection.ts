@@ -195,7 +195,7 @@ export function assembledSelectionRunResponse(body: AssembleSelectionRunBody): A
 			knowledge_cutoff: body.knowledge_cutoff ?? body.as_of,
 			market_context_feature_set_id: null,
 			membership_version: "sw-l1:mock",
-			publication_cutoff: body.publication_cutoff ?? body.as_of,
+			publication_cutoff: body.publication_cutoff ?? body.knowledge_cutoff ?? body.as_of,
 			rotation_algorithm_version: "industry-rotation-v1",
 			rotation_missing_inputs: [],
 			rotation_source_snapshot_ids: ["stock-daily:sha256:mock"],
