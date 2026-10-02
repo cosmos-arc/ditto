@@ -457,7 +457,7 @@ class AssembleSelectionFacts:
                 + "use the certified replay lane",
                 details={"reason": "ASSEMBLY_CUTOFF_BACKDATED"},
             )
-        publication = min(declared_publication or knowledge, now)
+        publication = min(declared_publication or knowledge, knowledge, now)
         if request.publication_cutoff is not None and publication < now - _LIVE_SKEW:
             raise AppProcessError(
                 "backdated publication cutoffs cannot use the live read model",
