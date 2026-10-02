@@ -6,21 +6,21 @@ function sameFactorWeights(
 	left: readonly { name: string; weight: number }[],
 	right: readonly { name: string; weight: number }[],
 ): boolean {
+	// 权重数组是有序的规范载荷：重排会得到不同的 spec/input 哈希，必须按位比较。
 	return (
 		left.length === right.length &&
-		[...left]
-			.map((item) => `${item.name}:${item.weight}`)
-			.sort()
-			.join("\n") ===
-			[...right]
-				.map((item) => `${item.name}:${item.weight}`)
-				.sort()
-				.join("\n")
+		left.every((item, index) => item.name === right[index]?.name && item.weight === right[index]?.weight)
 	);
 }
 
 function sameLimitStates(left: readonly string[], right: readonly string[]): boolean {
 	return [...left].sort().join("\n") === [...right].sort().join("\n");
+}
+
+/** 返回的截止时刻必须可解析、不晚于表单声明的边界（未填按 as_of 收口）。 */
+function sameInstantBound(returned: string, submitted: string): boolean {
+	const parsed = Date.parse(returned);
+	return Number.isFinite(parsed) && parsed <= Date.parse(submitted);
 }
 
 export function toAssembledRunView(value: AssembledSelectionRunResponse, submitted: AssembleSelectionRunBody) {
@@ -34,6 +34,11 @@ export function toAssembledRunView(value: AssembledSelectionRunResponse, submitt
 		request !== null &&
 		request.as_of === submitted.as_of &&
 		request.seed === submitted.seed &&
+		sameInstantBound(request.knowledge_cutoff, submitted.knowledge_cutoff ?? submitted.as_of) &&
+		sameInstantBound(
+			request.publication_cutoff,
+			submitted.publication_cutoff ?? submitted.knowledge_cutoff ?? submitted.as_of,
+		) &&
 		typeof spec === "object" &&
 		spec !== null &&
 		spec.asset_kind === "stock" &&
@@ -56,7 +61,8 @@ export function toAssembledRunView(value: AssembledSelectionRunResponse, submitt
 				item.instrument_id > 0 &&
 				typeof item.instrument_name === "string" &&
 				item.instrument_name.length > 0,
-		);
+		) &&
+		new Set(request.instruments.map((item) => item.instrument_id)).size === request.instruments.length;
 	if (!valid) throw new Error("组装响应的策略回显或服务端事实与提交不一致");
 	return { request, admission: value.admission };
 }

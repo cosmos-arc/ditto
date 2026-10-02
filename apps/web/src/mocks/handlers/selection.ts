@@ -153,10 +153,23 @@ export function assembledSelectionRunResponse(body: AssembleSelectionRunBody): A
 			data_from: "2015-01-05",
 			data_to: body.as_of.slice(0, 10),
 			industries: [],
-			instruments: [
-				{ declared_missing_inputs: [], factor_values: [], instrument_id: 600519, instrument_name: "贵州茅台" },
-				{ declared_missing_inputs: [], factor_values: [], instrument_id: 300750, instrument_name: "宁德时代" },
-			],
+			instruments: [600519, 300750].map((instrument_id, index) => ({
+				declared_missing_inputs: [],
+				factor_values: body.factor_weights.map((factor) => ({
+					name: factor.name,
+					// 确定性单位分：两只标的在因子方向上对称（0.75/0.25 交替）。
+					value: index === 0 ? 0.75 : 0.25,
+				})),
+				instrument_id,
+				instrument_name: instrument_id === 600519 ? "贵州茅台" : "宁德时代",
+				industry_id: null,
+				average_turnover: index === 0 ? 3.1e7 : 2.4e7,
+				is_st: false,
+				is_suspended: false,
+				listing_days: 9000,
+				limit_state: "normal",
+				tracking_error: null,
+			})),
 			knowledge_cutoff: body.knowledge_cutoff ?? body.as_of,
 			market_context_feature_set_id: null,
 			membership_version: "sw-l1:mock",
