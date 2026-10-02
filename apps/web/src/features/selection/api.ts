@@ -2,6 +2,8 @@ import type { components } from "@/api/generated/schema";
 import { apiClient } from "@/api/transport";
 
 export type AdmissionResponse = components["schemas"]["SelectionAdmissionResponse"];
+export type AssembledSelectionRunResponse = components["schemas"]["AssembledSelectionRunResponse"];
+export type AssembleSelectionRunBody = components["schemas"]["AssembleSelectionRunBody"];
 export type CreateResearchCaseBody = components["schemas"]["CreateResearchCaseBody"];
 export type CreateSelectionRunBody = components["schemas"]["CreateSelectionRunBody"];
 export type IndustryRotation = components["schemas"]["IndustryRotationResponse"];
@@ -45,6 +47,34 @@ export function compareSelectionRuns(beforeRunId: string, afterRunId: string): P
 
 export function createSelectionRun(body: CreateSelectionRunBody): Promise<SelectionWorkspaceReceipt> {
 	return apiClient.post("/api/v1/selections/runs", { body });
+}
+
+export function assembleSelectionRun(body: AssembleSelectionRunBody): Promise<AssembledSelectionRunResponse> {
+	return apiClient.post("/api/v1/selections/runs:assembled", { body });
+}
+
+export interface UniverseOption {
+	readonly universeId: string;
+	readonly name: string;
+	readonly universeType: string;
+}
+
+export async function listUniverseOptions(): Promise<UniverseOption[]> {
+	// 服务端默认每页 20 条：逐页拉全，避免可用池被静默截断。
+	const pageSize = 100;
+	const rows: components["schemas"]["UniverseResponse"][] = [];
+	for (let offset = 0; offset < 10_000; offset += pageSize) {
+		const page: components["schemas"]["UniverseResponse"][] = await apiClient.get("/api/v1/universes", {
+			params: { query: { limit: pageSize, offset } },
+		});
+		rows.push(...page);
+		if (page.length < pageSize) break;
+	}
+	return rows.map((row) => ({
+		universeId: row.universe_id,
+		name: row.name,
+		universeType: row.universe_type,
+	}));
 }
 
 export function createResearchCase(runId: string, body: CreateResearchCaseBody): Promise<ResearchCase> {
