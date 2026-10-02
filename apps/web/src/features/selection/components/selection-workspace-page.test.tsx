@@ -4,10 +4,15 @@ import userEvent from "@testing-library/user-event";
 import { HttpResponse, http } from "msw";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { researchCaseFixture, selectionRunInputFixture } from "@/mocks/fixtures/selection";
-import { selectionHandlers } from "@/mocks/handlers/selection";
+import { researchCaseFixture, selectionReceiptFixture, selectionRunInputFixture } from "@/mocks/fixtures/selection";
+import {
+	ASSEMBLED_UNIVERSE_SNAPSHOT_ID,
+	assembledSelectionRunResponse,
+	selectionHandlers,
+} from "@/mocks/handlers/selection";
 import { server } from "@/mocks/server";
 import { ContextActionsProvider, type ContextActionsRequest } from "@/providers";
+import type { AssembleSelectionRunBody } from "../api";
 import { SelectionWorkspacePage } from "./selection-workspace-page";
 
 const renderContextActions = vi.fn((request: ContextActionsRequest) => (
@@ -79,7 +84,7 @@ describe("SelectionWorkspacePage", () => {
 		const user = userEvent.setup();
 		render(<SelectionWorkspacePage />, { wrapper: wrapper() });
 
-		await user.click(screen.getByText("新建运行 · 导入规范化输入包"));
+		await user.click(screen.getByText("高级模式 · 导入完整输入包"));
 		fireEvent.change(screen.getByLabelText("Selection 输入 JSON"), {
 			target: { value: JSON.stringify(selectionRunInputFixture) },
 		});
@@ -119,12 +124,99 @@ describe("SelectionWorkspacePage", () => {
 		expect(writeText).toHaveBeenCalledWith(researchCaseFixture.case_id);
 		expect(screen.getByText("已复制")).toBeInTheDocument();
 	});
+
+	it("assembles server facts from the structured form and creates the run with the exact request body", async () => {
+		const user = userEvent.setup();
+		let assembledBody: AssembleSelectionRunBody | undefined;
+		let createdBody: unknown;
+		server.use(
+			http.post("/api/v1/selections/runs:assembled", async ({ request }) => {
+				assembledBody = (await request.json()) as AssembleSelectionRunBody;
+				return HttpResponse.json({ data: assembledSelectionRunResponse(assembledBody) });
+			}),
+			http.post("/api/v1/selections/runs", async ({ request }) => {
+				createdBody = await request.json();
+				return HttpResponse.json({ data: selectionReceiptFixture }, { status: 201 });
+			}),
+		);
+		render(<SelectionWorkspacePage />, { wrapper: wrapper() });
+
+		expect(screen.getByRole("button", { name: "创建运行" })).toBeDisabled();
+		await user.click(screen.getByRole("button", { name: "组装并预览" }));
+
+		const summary = await screen.findByRole("region", { name: "组装摘要" });
+		expect(summary).toHaveTextContent(ASSEMBLED_UNIVERSE_SNAPSHOT_ID);
+		expect(summary).toHaveTextContent("输入证券：2 只");
+		expect(await screen.findByRole("region", { name: "字段用途准入" })).toHaveTextContent("数据准入通过");
+
+		const createButton = screen.getByRole("button", { name: "创建运行" });
+		expect(createButton).toBeEnabled();
+		await user.click(createButton);
+
+		await expect(screen.findByText("已保存 SelectionRun 111111111111")).resolves.toBeInTheDocument();
+		expect(createdBody).toEqual(assembledSelectionRunResponse(assembledBody as AssembleSelectionRunBody).request);
+		const created = createdBody as {
+			seed: number;
+			universe_snapshot_id: string;
+			selection_spec: { spec_id: string; excluded_limit_states: string[] };
+		};
+		expect(created.seed).toBe(0);
+		expect(created.universe_snapshot_id).toMatch(/^universe:sha256:[a-f0-9]{64}$/);
+		expect(created.selection_spec.spec_id).toBe("stock-momentum-manual");
+		expect(created.selection_spec.excluded_limit_states).toEqual(["limit_up", "limit_down"]);
+		expect((assembledBody as AssembleSelectionRunBody | undefined)?.lookback_days).toBe(400);
+	});
+
+	it("blocks assembly on client-side strategy validation with in-place messages", async () => {
+		const user = userEvent.setup();
+		const assembleError = vi.fn(() => HttpResponse.json({ detail: "unreachable" }, { status: 200 }));
+		server.use(http.post("/api/v1/selections/runs:assembled", () => assembleError()));
+		render(<SelectionWorkspacePage />, { wrapper: wrapper() });
+
+		await user.click(screen.getByRole("button", { name: "添加因子" }));
+		await user.type(screen.getByLabelText("因子 2 名称"), "momentum");
+		expect(screen.getByRole("button", { name: "组装并预览" })).toBeDisabled();
+		expect(screen.getByText("因子名称重复：momentum")).toBeInTheDocument();
+
+		await user.clear(screen.getByLabelText("因子 2 名称"));
+		await user.type(screen.getByLabelText("因子 2 名称"), "quality");
+		await user.clear(screen.getByLabelText("因子 1 权重"));
+		await user.type(screen.getByLabelText("因子 1 权重"), "0.4");
+		await user.clear(screen.getByLabelText("因子 2 权重"));
+		await user.type(screen.getByLabelText("因子 2 权重"), "0.4");
+		expect(screen.getByRole("button", { name: "组装并预览" })).toBeDisabled();
+		expect(screen.getByText("因子权重之和需为 1")).toBeInTheDocument();
+
+		await user.clear(screen.getByLabelText("因子 2 权重"));
+		await user.type(screen.getByLabelText("因子 2 权重"), "0.6");
+		expect(screen.getByRole("button", { name: "组装并预览" })).toBeEnabled();
+		expect(assembleError).not.toHaveBeenCalled();
+
+		fireEvent.change(screen.getByLabelText("决策时点 as_of"), { target: { value: "" } });
+		expect(screen.getByRole("button", { name: "组装并预览" })).toBeDisabled();
+		expect(screen.getByText("请填写决策时点 as_of")).toBeInTheDocument();
+	});
+
+	it("shows the server 422 validation error without crashing", async () => {
+		const user = userEvent.setup();
+		server.use(
+			http.post("/api/v1/selections/runs:assembled", () =>
+				HttpResponse.json({ detail: "因子权重不得重复且权重之和必须为 1" }, { status: 422 }),
+			),
+		);
+		render(<SelectionWorkspacePage />, { wrapper: wrapper() });
+
+		await user.click(screen.getByRole("button", { name: "组装并预览" }));
+
+		await expect(screen.findByText("因子权重不得重复且权重之和必须为 1")).resolves.toBeInTheDocument();
+		expect(screen.getByRole("button", { name: "创建运行" })).toBeDisabled();
+	});
 });
 
 it("previews field admission and clears stale qualification when the input changes", async () => {
 	const user = userEvent.setup();
 	render(<SelectionWorkspacePage />, { wrapper: wrapper() });
-	await user.click(screen.getByText("新建运行 · 导入规范化输入包"));
+	await user.click(screen.getByText("高级模式 · 导入完整输入包"));
 	fireEvent.change(screen.getByLabelText("Selection 输入 JSON"), {
 		target: {
 			value: JSON.stringify({
@@ -166,7 +258,7 @@ it("shows the historical roster and hides it after editing its bound input", asy
 		}),
 	);
 	render(<SelectionWorkspacePage />, { wrapper: wrapper() });
-	await user.click(screen.getByText("新建运行 · 导入规范化输入包"));
+	await user.click(screen.getByText("高级模式 · 导入完整输入包"));
 	const input = { ...selectionRunInputFixture, universe_sources: sources };
 	fireEvent.change(screen.getByLabelText("Selection 输入 JSON"), { target: { value: JSON.stringify(input) } });
 	await user.click(screen.getByRole("button", { name: "查看历史证券池" }));

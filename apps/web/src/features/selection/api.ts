@@ -2,6 +2,8 @@ import type { components } from "@/api/generated/schema";
 import { apiClient } from "@/api/transport";
 
 export type AdmissionResponse = components["schemas"]["SelectionAdmissionResponse"];
+export type AssembledSelectionRunResponse = components["schemas"]["AssembledSelectionRunResponse"];
+export type AssembleSelectionRunBody = components["schemas"]["AssembleSelectionRunBody"];
 export type CreateResearchCaseBody = components["schemas"]["CreateResearchCaseBody"];
 export type CreateSelectionRunBody = components["schemas"]["CreateSelectionRunBody"];
 export type IndustryRotation = components["schemas"]["IndustryRotationResponse"];
@@ -45,6 +47,10 @@ export function compareSelectionRuns(beforeRunId: string, afterRunId: string): P
 
 export function createSelectionRun(body: CreateSelectionRunBody): Promise<SelectionWorkspaceReceipt> {
 	return apiClient.post("/api/v1/selections/runs", { body });
+}
+
+export function assembleSelectionRun(body: AssembleSelectionRunBody): Promise<AssembledSelectionRunResponse> {
+	return apiClient.post("/api/v1/selections/runs:assembled", { body });
 }
 
 export function createResearchCase(runId: string, body: CreateResearchCaseBody): Promise<ResearchCase> {
