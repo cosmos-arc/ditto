@@ -18,7 +18,6 @@ from ditto_data.catalog import (
     InMemoryDataCatalog,
 )
 from ditto_data.catalog.provider_payload import ProviderPayloadWriter
-from ditto_data.lineage import DataLineageRecorder, InMemoryDataLineage
 from ditto_data.sources.registry import SourceRegistry
 
 
@@ -34,9 +33,8 @@ class _FakeContainer:
         self.closed = True
 
 
-def test_create_ingestion_bundle_passes_lineage_recorder(mocker) -> None:
-    """Composition root should wire persistent lineage into ingestion coordinator."""
-    lineage = InMemoryDataLineage()
+def test_create_ingestion_bundle_wires_runtime_ports(mocker) -> None:
+    """Composition root should wire catalog/payload ports into the coordinator."""
     catalog = InMemoryDataCatalog()
     source_registry = SourceRegistry()
     services = {
@@ -52,7 +50,6 @@ def test_create_ingestion_bundle_passes_lineage_recorder(mocker) -> None:
         ingestion_context.ExchangeTransformers: MagicMock(),
         ingestion_context.CheckDataQualityHandler: MagicMock(),
         SourceRegistry: source_registry,
-        DataLineageRecorder: lineage,
         DataCatalogReader: catalog,
         DataCatalogWriter: catalog,
         ProviderPayloadWriter: MagicMock(),
@@ -105,7 +102,6 @@ def test_create_ingestion_bundle_passes_lineage_recorder(mocker) -> None:
     coordinator_services = cast(CoordinatorServices, captured_services["services"])
     assert coordinator_services.source_registry is source_registry
     runtime = cast(CoordinatorRuntimeContext, captured_kwargs["runtime"])
-    assert runtime.lineage_recorder is lineage
     assert runtime.catalog_reader is catalog
     assert runtime.catalog_writer is catalog
     assert retry_manager_cls.call_args.kwargs["data_catalog_reader"] is catalog

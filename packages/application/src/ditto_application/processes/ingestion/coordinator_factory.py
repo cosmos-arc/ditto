@@ -13,7 +13,6 @@ from ditto_data.ingestion.ingestion_cursor_store import (
 from ditto_data.ingestion.ingestion_log_store import (
     IngestionLogStore,
 )
-from ditto_data.lineage import DataLineageRecorder
 from ditto_data.models import Source
 from ditto_data.services.capital_store import CapitalStore
 from ditto_data.services.fundamental_store import FundamentalStore
@@ -80,12 +79,10 @@ class CoordinatorRuntimeContext:
 
     ingestion_cursor_store: IngestionCursorStore | None = None
     quality_checker: QualityCheckerProtocol | None = None
-    lineage_recorder: DataLineageRecorder | None = None
     catalog_reader: DataCatalogReader | None = None
     catalog_writer: DataCatalogWriter | None = None
     evidence_committer: IngestionEvidenceCommitter | None = None
     provider_payload_writer: ProviderPayloadWriter | None = None
-    license_record_id: str | None = None
 
 
 def _registered_source_or_default[FetcherT](
@@ -223,9 +220,10 @@ def _build_coordinator(
     runtime: CoordinatorRuntimeContext,
 ) -> IngestionCoordinator:
     """Build one source-consistent ingestion coordinator."""
+    # R2 证据模式下 FRED 直连不可用，除非协调器本身就是为 FRED 构建的。
     fred_source = (
         services.source_accessor.fred
-        if runtime.license_record_id is None or source_key is Source.FRED
+        if runtime.evidence_committer is None or source_key is Source.FRED
         else None
     )
     if fred_source is not None:
@@ -249,12 +247,10 @@ def _build_coordinator(
             ingestion_log_store=services.ingestion_log_store,
             ingestion_cursor_store=runtime.ingestion_cursor_store,
             quality_checker=runtime.quality_checker,
-            lineage_recorder=runtime.lineage_recorder,
             catalog_reader=runtime.catalog_reader,
             catalog_writer=runtime.catalog_writer,
             evidence_committer=runtime.evidence_committer,
             provider_payload_writer=runtime.provider_payload_writer,
-            license_record_id=runtime.license_record_id,
         ),
     )
 

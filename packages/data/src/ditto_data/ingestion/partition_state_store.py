@@ -25,9 +25,7 @@ _NEXT_STAGE: dict[PartitionLifecycleStatus, PartitionLifecycleStatus] = dict(
 
 _EVIDENCE_FIELD: dict[PartitionLifecycleStatus, str] = {
     PartitionLifecycleStatus.PAYLOAD_COMMITTED: "payload_id",
-    PartitionLifecycleStatus.CATALOG_ATTESTED: "catalog_asset_id",
-    PartitionLifecycleStatus.LINEAGE_RECORDED: "lineage_run_id",
-    PartitionLifecycleStatus.SUCCESS_RECORDED: "ingestion_log_id",
+    PartitionLifecycleStatus.COMPLETE: "complete_evidence_id",
 }
 
 
@@ -52,14 +50,20 @@ class SQLitePartitionLifecycleStore:
                 attempt INTEGER NOT NULL,
                 retry_budget INTEGER NOT NULL,
                 payload_id TEXT,
-                catalog_asset_id TEXT,
-                lineage_run_id TEXT,
-                ingestion_log_id TEXT,
+                complete_evidence_id TEXT,
                 error_code TEXT,
                 updated_at TEXT NOT NULL
             )
             """
         )
+        if self._column_missing(
+            "ingestion_partition_checkpoints", "complete_evidence_id"
+        ):
+            # Upgraded stores predate the COMPLETE snapshot evidence binding.
+            self._client.execute(
+                "ALTER TABLE ingestion_partition_checkpoints "
+                "ADD COLUMN complete_evidence_id TEXT"
+            )
         self._client.execute(
             """
             CREATE TABLE IF NOT EXISTS ingestion_partition_events (
@@ -83,6 +87,10 @@ class SQLitePartitionLifecycleStore:
             """
         )
         self._client.commit()
+
+    def _column_missing(self, table: str, column: str) -> bool:
+        rows = self._client.fetchall(f"PRAGMA table_info({table})")
+        return all(row["name"] != column for row in rows)
 
     def plan_partition(self, checkpoint: PartitionCheckpoint) -> None:
         """Create a PLANNED checkpoint and initial audit event."""
@@ -322,10 +330,9 @@ class SQLitePartitionLifecycleStore:
             INSERT INTO ingestion_partition_checkpoints (
                 chunk_id, dataset_id, source, request_start, request_end, status,
                 last_successful_stage, attempt, retry_budget, payload_id,
-                catalog_asset_id, lineage_run_id, ingestion_log_id, error_code,
-                updated_at
+                complete_evidence_id, error_code, updated_at
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             _checkpoint_params(checkpoint),
         )
@@ -337,8 +344,8 @@ class SQLitePartitionLifecycleStore:
             UPDATE ingestion_partition_checkpoints
             SET dataset_id = ?, source = ?, request_start = ?, request_end = ?,
                 status = ?, last_successful_stage = ?, attempt = ?, retry_budget = ?,
-                payload_id = ?, catalog_asset_id = ?, lineage_run_id = ?,
-                ingestion_log_id = ?, error_code = ?, updated_at = ?
+                payload_id = ?, complete_evidence_id = ?, error_code = ?,
+                updated_at = ?
             WHERE chunk_id = ?
             """,
             [*params[1:], params[0]],
@@ -416,9 +423,7 @@ def _checkpoint_params(checkpoint: PartitionCheckpoint) -> list[object]:
         checkpoint.attempt,
         checkpoint.retry_budget,
         checkpoint.payload_id,
-        checkpoint.catalog_asset_id,
-        checkpoint.lineage_run_id,
-        checkpoint.ingestion_log_id,
+        checkpoint.complete_evidence_id,
         checkpoint.error_code,
         checkpoint.updated_at.isoformat(),
     ]
@@ -440,17 +445,9 @@ def _checkpoint_from_row(row: dict[str, Any]) -> PartitionCheckpoint:
         attempt=int(row["attempt"]),
         retry_budget=int(row["retry_budget"]),
         payload_id=str(row["payload_id"]) if row["payload_id"] is not None else None,
-        catalog_asset_id=(
-            str(row["catalog_asset_id"])
-            if row["catalog_asset_id"] is not None
-            else None
-        ),
-        lineage_run_id=(
-            str(row["lineage_run_id"]) if row["lineage_run_id"] is not None else None
-        ),
-        ingestion_log_id=(
-            str(row["ingestion_log_id"])
-            if row["ingestion_log_id"] is not None
+        complete_evidence_id=(
+            str(row["complete_evidence_id"])
+            if row.get("complete_evidence_id") is not None
             else None
         ),
         error_code=str(row["error_code"]) if row["error_code"] is not None else None,

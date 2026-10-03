@@ -23,7 +23,6 @@ from ditto_data.errors import (
     SourceFetchError,
     SourceRateLimitError,
 )
-from ditto_data.lineage import InMemoryDataLineage
 from ditto_data.models.ingestion import IngestionLog, IngestionResult, IngestionStatus
 from ditto_platform.foundation import (
     Environment,
@@ -592,84 +591,6 @@ class TestIngestDate:
         # Assert
         assert result.status == "success"
         mock_source.fetch_stock_daily.assert_called_once_with("2024-12-27")
-
-    def test_ingest_date_success_records_data_lineage(
-        self,
-        mock_metadata_service,
-        mock_market_write_service,
-        mock_fundamental_store,
-        mock_capital_store,
-        mock_macro_service,
-        mock_ingestion_log_store,
-        mock_source,
-    ) -> None:
-        """成功摄取后记录源数据到落库资产的 lineage。"""
-        # Arrange
-        lineage = InMemoryDataLineage()
-        coordinator = IngestionCoordinator(
-            services=IngestionServices(
-                metadata=mock_metadata_service,
-                market=MarketServices(
-                    query=mock_market_write_service,
-                    write=mock_market_write_service,
-                ),
-                fundamental=mock_fundamental_store,
-                capital=mock_capital_store,
-                macro=mock_macro_service,
-            ),
-            fetchers=SourceFetchers(
-                metadata=mock_source,
-                market=mock_source,
-                fundamental=mock_source,
-                capital=mock_source,
-                macro=mock_source,
-            ),
-            config=IngestionCoordinatorConfig(
-                ingestion_log_store=mock_ingestion_log_store,
-                lineage_recorder=lineage,
-            ),
-        )
-        mock_ingestion_log_store.get_log.return_value = None
-        mock_source.fetch_stock_daily.return_value = pl.DataFrame(
-            {
-                "source_ticker": ["000001.SZ"],
-                "trade_date": [date(2024, 12, 27)],
-                "open": [10.0],
-                "high": [10.5],
-                "low": [9.8],
-                "close": [10.2],
-                "pre_close": [10.0],
-                "volume": [1000000],
-                "amount": [10200000],
-                "pct_change": [2.0],
-            }
-        )
-        mock_market_write_service.save_bars.return_value = 1
-
-        # Act
-        result = coordinator.ingest_date("stock_daily", "2024-12-27")
-
-        # Assert
-        assert result.status == "success"
-        source_asset = DataAssetRef(
-            dataset_id="stock_daily",
-            namespace="source",
-            partition_keys=("source=tushare", "trade_date=2024-12-27"),
-        )
-        output_asset = DataAssetRef(
-            dataset_id="stock_daily",
-            namespace="market",
-            partition_keys=("trade_date=2024-12-27",),
-        )
-        events = lineage.list_events_for_asset(output_asset)
-        assert len(events) == 1
-        event = events[0]
-        assert event.operation == "ingest"
-        assert event.run_id.startswith("ingest:tushare:stock_daily:2024-12-27:")
-        assert tuple(ref.asset for ref in event.inputs) == (source_asset,)
-        assert tuple(ref.role for ref in event.inputs) == ("source",)
-        assert tuple(ref.asset for ref in event.outputs) == (output_asset,)
-        assert tuple(ref.role for ref in event.outputs) == ("dataset",)
 
     def test_ingest_date_success_upserts_data_catalog_entry(
         self,

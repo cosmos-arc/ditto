@@ -13,10 +13,7 @@ from ditto_data.catalog.source_snapshot import (
     ProviderSnapshot,
     ProviderSnapshotDraft,
 )
-from ditto_data.ingestion.partition_state import (
-    PartitionCheckpoint,
-    PartitionLifecycleEvent,
-)
+from ditto_data.ingestion.partition_state import PartitionCheckpoint
 
 pytestmark = pytest.mark.pit
 
@@ -64,27 +61,11 @@ def _lifecycle(snapshot: ProviderSnapshot):
                 payload_id=(
                     f"payload:{snapshot.checksum}:synthetic:{snapshot.snapshot_id}"
                 ),
-                catalog_asset_id=None,
-                lineage_run_id=None,
-                ingestion_log_id=None,
+                complete_evidence_id=snapshot.snapshot_id,
                 error_code=None,
                 updated_at=_VISIBLE,
             )
             return (checkpoint,)
-
-        def list_events(self, chunk_id):
-            return (
-                PartitionLifecycleEvent(
-                    event_id=1,
-                    chunk_id=chunk_id,
-                    from_status=None,
-                    to_status=PartitionLifecycleStatus.COMPLETE,
-                    attempt=1,
-                    evidence_id=snapshot.snapshot_id,
-                    error_code=None,
-                    occurred_at=_VISIBLE,
-                ),
-            )
 
     return _Lifecycle()
 

@@ -28,7 +28,6 @@ from ditto_data.errors import (
 from ditto_data.ingestion.ingestion_cursor_store import (
     IngestionCursorStore,
 )
-from ditto_data.lineage import DataLineageRecorder
 from ditto_data.models.ingestion import (
     IngestionQualityEvidence,
     IngestionResult,
@@ -48,7 +47,6 @@ from ditto_application.processes.ingestion.ingestion_evidence import (
     build_evidence_commit_request,
     dataset_schema_version,
     ingestion_partition_id,
-    record_ingestion_lineage,
 )
 from ditto_application.processes.ingestion.list_date_inference import (
     ListDateInferenceService,
@@ -71,7 +69,6 @@ __all__ = [
     "is_sparse_pit_dataset",
     "process_fetched_data",
     "record_data_catalog_entry",
-    "record_ingestion_lineage",
     "resolve_sparse_asof_snapshot",
     "retain_provider_payload",
     "run_list_date_inference",
@@ -105,11 +102,9 @@ class PostIngestContext:
     catalog_reader: DataCatalogReader | None = None
     quality_checker: QualityCheckerProtocol | None = None
     cursor_store: IngestionCursorStore | None = None
-    lineage_recorder: DataLineageRecorder | None = None
     catalog_writer: DataCatalogWriter | None = None
     evidence_committer: IngestionEvidenceCommitter | None = None
     provider_payload_writer: ProviderPayloadWriter | None = None
-    license_record_id: str | None = None
 
 
 def run_list_date_inference(
@@ -258,14 +253,6 @@ def process_fetched_data(  # noqa: C901, PLR0911, PLR0912 - fail-closed stages
         sparse_pit or ctx.evidence_committer is not None
     ) and ctx.quality_checker is None:
         return ctx.result_handler.handle_quality_check_required(dataset, trade_date)
-    if ctx.evidence_committer is not None and not ctx.license_record_id:
-        return IngestionResult(
-            dataset=dataset,
-            trade_date=trade_date,
-            status="failed",
-            error="R2_LICENSE_RECORD_REQUIRED",
-            message="R2 证据模式缺少已审核 license record",
-        )
 
     df, quality_failure = run_write_quality_gate(
         df,
@@ -335,10 +322,7 @@ def process_fetched_data(  # noqa: C901, PLR0911, PLR0912 - fail-closed stages
     snapshot_evidence: IngestionSnapshotEvidence | None = None
     if ctx.evidence_committer is not None:
         outcome = ctx.evidence_committer.commit(
-            build_evidence_commit_request(
-                catalog_ctx,
-                license_record_id=ctx.license_record_id,
-            )
+            build_evidence_commit_request(catalog_ctx)
         )
         if not outcome.completed:
             return IngestionResult(
@@ -409,20 +393,11 @@ def process_fetched_data(  # noqa: C901, PLR0911, PLR0912 - fail-closed stages
         ),
         persist_log=ctx.evidence_committer is None,
     )
-    if ctx.evidence_committer is None:
-        record_ingestion_lineage(
-            dataset,
-            request_start or trade_date,
-            source_name=ctx.source_name,
-            lineage_recorder=ctx.lineage_recorder,
-            write_result=write_result,
-            end_date=request_end,
+    if ctx.evidence_committer is None and not sparse_pit:
+        record_data_catalog_entry(
+            catalog_ctx,
+            catalog_writer=ctx.catalog_writer,
         )
-        if not sparse_pit:
-            record_data_catalog_entry(
-                catalog_ctx,
-                catalog_writer=ctx.catalog_writer,
-            )
     run_list_date_inference(ctx.list_date_inference, dataset)
     return result
 
@@ -440,14 +415,6 @@ def _commit_empty_provider_observation(
     """Persist an auditable zero-row provider response without inventing payload."""
     if ctx.quality_checker is None:
         return ctx.result_handler.handle_quality_check_required(dataset, trade_date)
-    if not ctx.license_record_id:
-        return IngestionResult(
-            dataset=dataset,
-            trade_date=trade_date,
-            status="failed",
-            error="R2_LICENSE_RECORD_REQUIRED",
-            message="R2 证据模式缺少已审核 license record",
-        )
     range_end = request_end or trade_date
     digest = sha256(
         orjson.dumps(
@@ -483,12 +450,7 @@ def _commit_empty_provider_observation(
     committer = ctx.evidence_committer
     if committer is None:
         raise AppProcessError("empty provider observation requires evidence committer")
-    outcome = committer.commit(
-        build_evidence_commit_request(
-            observation,
-            license_record_id=ctx.license_record_id,
-        )
-    )
+    outcome = committer.commit(build_evidence_commit_request(observation))
     if not outcome.completed:
         return IngestionResult(
             dataset=dataset,

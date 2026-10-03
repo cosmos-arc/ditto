@@ -137,12 +137,10 @@ class IngestionCoordinator:
         self._ingestion_log_store = cfg.ingestion_log_store
         self._ingestion_cursor_store = cfg.ingestion_cursor_store
         self._quality_checker = cfg.quality_checker
-        self._lineage_recorder = cfg.lineage_recorder
         self._catalog_reader = cfg.catalog_reader
         self._catalog_writer = cfg.catalog_writer
         self._evidence_committer = cfg.evidence_committer
         self._provider_payload_writer = cfg.provider_payload_writer
-        self._license_record_id = cfg.license_record_id
 
         self._metadata_manager = MetadataManager(
             cfg.ingestion_log_store,
@@ -393,12 +391,10 @@ class IngestionCoordinator:
                 list_date_inference=self._list_date_inference,
                 catalog_reader=self._catalog_reader,
                 cursor_store=self._ingestion_cursor_store,
-                lineage_recorder=self._lineage_recorder,
                 catalog_writer=self._catalog_writer,
                 source_name=self._source_name,
                 evidence_committer=self._evidence_committer,
                 provider_payload_writer=self._provider_payload_writer,
-                license_record_id=self._license_record_id,
             ),
             request_window=(
                 RequestWindow(*request_bounds, advance_cursor=False)
@@ -542,12 +538,10 @@ class IngestionCoordinator:
                 list_date_inference=self._list_date_inference,
                 catalog_reader=self._catalog_reader,
                 cursor_store=self._ingestion_cursor_store,
-                lineage_recorder=self._lineage_recorder,
                 catalog_writer=self._catalog_writer,
                 source_name=self._source_name,
                 evidence_committer=self._evidence_committer,
                 provider_payload_writer=self._provider_payload_writer,
-                license_record_id=self._license_record_id,
             ),
             request_window=RequestWindow(None, request_end),
             chunk_id=chunk_id,
@@ -643,12 +637,10 @@ class IngestionCoordinator:
                 source_name=self._source_name,
                 result_handler=self._result_handler,
                 data_writer=self._data_writer,
-                lineage_recorder=self._lineage_recorder,
                 catalog_writer=self._catalog_writer,
                 quality_checker=self._quality_checker,
                 evidence_committer=self._evidence_committer,
                 provider_payload_writer=self._provider_payload_writer,
-                license_record_id=self._license_record_id,
             ),
         )
 
@@ -671,12 +663,10 @@ class IngestionCoordinator:
                 source_name=self._source_name,
                 result_handler=self._result_handler,
                 data_writer=self._data_writer,
-                lineage_recorder=self._lineage_recorder,
                 catalog_writer=self._catalog_writer,
                 quality_checker=self._quality_checker,
                 evidence_committer=self._evidence_committer,
                 provider_payload_writer=self._provider_payload_writer,
-                license_record_id=self._license_record_id,
             ),
             chunk_id=chunk_id,
         )
@@ -719,6 +709,5 @@ class IngestionCoordinator:
                 fetchers=self._fetchers,
                 source_name=self._source_name,
                 data_writer=self._data_writer,
-                lineage_recorder=self._lineage_recorder,
             ),
         )

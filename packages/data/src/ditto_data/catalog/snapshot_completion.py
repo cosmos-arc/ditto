@@ -39,13 +39,9 @@ def checkpoint_matches_snapshot(
 def snapshot_completed(
     snapshot: ProviderSnapshot, lifecycle: PartitionLifecycleReader
 ) -> bool:
-    """The terminal event pins schema and request identity as well as payload bytes."""
+    """The COMPLETE row itself pins the exact snapshot identity it attests."""
     return any(
         checkpoint_matches_snapshot(checkpoint, snapshot)
-        and any(
-            event.to_status is PartitionLifecycleStatus.COMPLETE
-            and event.evidence_id == snapshot.snapshot_id
-            for event in lifecycle.list_events(checkpoint.chunk_id)
-        )
+        and checkpoint.complete_evidence_id == snapshot.snapshot_id
         for checkpoint in lifecycle.list_complete(dataset_id=snapshot.dataset_id)
     )

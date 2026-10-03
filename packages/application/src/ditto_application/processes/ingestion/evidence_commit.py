@@ -19,12 +19,12 @@ from ditto_data.catalog.source_snapshot import (
     ProviderSnapshotWriter,
 )
 from ditto_data.ingestion.partition_state import (
+    EXCEPTION_PARTITION_STATES,
     PartitionCheckpoint,
     PartitionLifecycleReader,
     PartitionLifecycleStatus,
     PartitionLifecycleWriter,
 )
-from ditto_data.lineage import DataLineageReader, DataLineageRecorder, LineageEvent
 from ditto_data.models.ingestion import IngestionLog, IngestionStatus
 
 from ditto_application.exceptions import AppProcessError
@@ -72,7 +72,6 @@ class EvidenceCommitRequest:
     request_end: str
     provider_snapshot: ProviderSnapshot
     catalog_entry: DataCatalogEntry
-    lineage_event: LineageEvent
     success_log: IngestionLog
     quality_attested: bool = True
     retry_budget: int = 3
@@ -99,8 +98,6 @@ class EvidenceCommitPorts:
     snapshot_writer: ProviderSnapshotWriter
     snapshot_reader: ProviderSnapshotReader
     catalog_writer: DataCatalogWriter
-    lineage_recorder: DataLineageRecorder
-    lineage_reader: DataLineageReader
     ingestion_log_store: _IngestionLogWriter
 
 
@@ -141,9 +138,7 @@ class IngestionEvidenceCommitter:
                     if intent.snapshot_id is not None
                     else f"intent:{intent.payload.checksum}"
                 ),
-                catalog_asset_id=None,
-                lineage_run_id=None,
-                ingestion_log_id=None,
+                complete_evidence_id=None,
                 error_code=None,
                 updated_at=self._now(),
             )
@@ -160,9 +155,6 @@ class IngestionEvidenceCommitter:
         catalog_failure = self._commit_catalog_evidence(request)
         if catalog_failure is not None:
             return catalog_failure
-        lineage_failure = self._commit_lineage_evidence(request)
-        if lineage_failure is not None:
-            return lineage_failure
         log_failure = self._commit_success_log(request)
         if log_failure is not None:
             return log_failure
@@ -219,17 +211,7 @@ class IngestionEvidenceCommitter:
     ) -> bool:
         """Reuse must prove the recorded evidence belongs to this snapshot."""
         if checkpoint.status is PartitionLifecycleStatus.COMPLETE:
-            attested = next(
-                (
-                    event.evidence_id
-                    for event in self._ports.lifecycle_reader.list_events(
-                        checkpoint.chunk_id
-                    )
-                    if event.to_status is PartitionLifecycleStatus.COMPLETE
-                    and event.evidence_id is not None
-                ),
-                None,
-            )
+            attested = checkpoint.complete_evidence_id
             if attested is None:
                 return True
             return snapshot_id is not None and attested != snapshot_id
@@ -253,7 +235,7 @@ class IngestionEvidenceCommitter:
                 self._ports.snapshot_writer.append_snapshot(request.provider_snapshot)
                 self._persist_success_log(request.success_log)
                 return EvidenceCommitOutcome(request.chunk_id, completed=True)
-            self._advance_payload_stages(checkpoint, request)
+            self._advance_payload_stage(checkpoint, request)
         except Exception:
             return EvidenceCommitOutcome(
                 request.chunk_id,
@@ -272,10 +254,6 @@ class IngestionEvidenceCommitter:
                 status=PartitionLifecycleStatus.ORPHAN_PAYLOAD,
                 error_code=evidence_error,
             )
-
-        checkpoint = self._require_checkpoint(request.chunk_id)
-        if checkpoint.status is not PartitionLifecycleStatus.PAYLOAD_COMMITTED:
-            return None
         try:
             # The idempotent append also backfills the observation ledger for
             # upgraded stores whose legacy snapshot rows predate observations.
@@ -288,11 +266,6 @@ class IngestionEvidenceCommitter:
             )
         try:
             self._ports.catalog_writer.upsert_asset(request.catalog_entry)
-            self._advance(
-                request.chunk_id,
-                PartitionLifecycleStatus.CATALOG_ATTESTED,
-                evidence_id=_catalog_evidence_id(request.catalog_entry),
-            )
         except Exception:
             return self._fail(
                 request,
@@ -301,48 +274,11 @@ class IngestionEvidenceCommitter:
             )
         return None
 
-    def _commit_lineage_evidence(
-        self, request: EvidenceCommitRequest
-    ) -> EvidenceCommitOutcome | None:
-        checkpoint = self._require_checkpoint(request.chunk_id)
-        if checkpoint.status is not PartitionLifecycleStatus.CATALOG_ATTESTED:
-            return None
-        try:
-            event = request.lineage_event
-            existing = self._ports.lineage_reader.list_events_for_run(event.run_id)
-            if not existing:
-                self._ports.lineage_recorder.record_event(event)
-            elif (
-                len(existing) != 1
-                or replace(event, timestamp=existing[0].timestamp) != existing[0]
-            ):
-                raise AppProcessError("immutable ingestion lineage conflict")
-            self._advance(
-                request.chunk_id,
-                PartitionLifecycleStatus.LINEAGE_RECORDED,
-                evidence_id=request.lineage_event.run_id,
-            )
-        except Exception:
-            return self._fail(
-                request,
-                status=PartitionLifecycleStatus.CATALOG_ONLY,
-                error_code="LINEAGE_WRITE_FAILED",
-            )
-        return None
-
     def _commit_success_log(
         self, request: EvidenceCommitRequest
     ) -> EvidenceCommitOutcome | None:
-        checkpoint = self._require_checkpoint(request.chunk_id)
-        if checkpoint.status is not PartitionLifecycleStatus.LINEAGE_RECORDED:
-            return None
         try:
             self._persist_success_log(request.success_log)
-            self._advance(
-                request.chunk_id,
-                PartitionLifecycleStatus.SUCCESS_RECORDED,
-                evidence_id=_ingestion_log_id(request.success_log),
-            )
         except Exception:
             return self._fail(
                 request,
@@ -397,7 +333,6 @@ class IngestionEvidenceCommitter:
             or not isinstance(request.catalog_entry.source_snapshot_id, str)
             or f":{request.success_log.checksum}"
             not in request.catalog_entry.source_snapshot_id
-            or f":{request.success_log.checksum}" not in request.lineage_event.run_id
         ):
             raise AppProcessError(
                 "success log does not match committed canonical evidence"
@@ -427,7 +362,6 @@ class IngestionEvidenceCommitter:
                 _intent_evidence_id(request),
                 _payload_evidence_id(request),
             }
-            or checkpoint.lineage_run_id not in {None, request.lineage_event.run_id}
         ):
             raise AppProcessError("partition checkpoint identity conflict")
         if checkpoint is None:
@@ -442,58 +376,32 @@ class IngestionEvidenceCommitter:
                 attempt=1,
                 retry_budget=request.retry_budget,
                 payload_id=None,
-                catalog_asset_id=None,
-                lineage_run_id=None,
-                ingestion_log_id=None,
+                complete_evidence_id=None,
                 error_code=None,
                 updated_at=self._now(),
             )
             self._ports.lifecycle_writer.plan_partition(checkpoint)
             return checkpoint
-        if checkpoint.status in {
-            PartitionLifecycleStatus.FAILED,
-            PartitionLifecycleStatus.QUARANTINED,
-            PartitionLifecycleStatus.ORPHAN_PAYLOAD,
-            PartitionLifecycleStatus.LOG_ONLY,
-            PartitionLifecycleStatus.CATALOG_ONLY,
-        }:
+        if checkpoint.status in EXCEPTION_PARTITION_STATES:
             return self._ports.lifecycle_writer.resume_partition(
                 request.chunk_id,
                 occurred_at=self._now(),
             )
         return checkpoint
 
-    def _advance_payload_stages(
+    def _advance_payload_stage(
         self,
         checkpoint: PartitionCheckpoint,
         request: EvidenceCommitRequest,
     ) -> PartitionCheckpoint:
-        stages = (
-            PartitionLifecycleStatus.FETCHED,
-            PartitionLifecycleStatus.NORMALIZED,
-            PartitionLifecycleStatus.PIT_PASSED,
-            PartitionLifecycleStatus.DQ_PASSED,
+        if checkpoint.status is not PartitionLifecycleStatus.PLANNED:
+            return checkpoint
+        return self._ports.lifecycle_writer.advance_partition(
+            request.chunk_id,
             PartitionLifecycleStatus.PAYLOAD_COMMITTED,
+            occurred_at=self._now(),
+            evidence_id=_payload_evidence_id(request),
         )
-        current = checkpoint
-        stage_index = {
-            status: index
-            for index, status in enumerate((PartitionLifecycleStatus.PLANNED, *stages))
-        }
-        if current.status not in stage_index:
-            return current
-        for stage in stages[stage_index[current.status] :]:
-            current = self._ports.lifecycle_writer.advance_partition(
-                request.chunk_id,
-                stage,
-                occurred_at=self._now(),
-                evidence_id=(
-                    _payload_evidence_id(request)
-                    if stage is PartitionLifecycleStatus.PAYLOAD_COMMITTED
-                    else None
-                ),
-            )
-        return current
 
     def _evidence_error(self, request: EvidenceCommitRequest) -> str | None:
         return None if request.quality_attested else "DQ_EVIDENCE_MISSING"
@@ -538,12 +446,6 @@ class IngestionEvidenceCommitter:
             error_code=error_code,
         )
 
-    def _require_checkpoint(self, chunk_id: str) -> PartitionCheckpoint:
-        checkpoint = self._ports.lifecycle_reader.get_checkpoint(chunk_id)
-        if checkpoint is None:
-            raise AppProcessError(f"missing partition checkpoint: {chunk_id}")
-        return checkpoint
-
 
 def _intent_evidence_id(request: EvidenceCommitRequest) -> str:
     return (
@@ -558,12 +460,3 @@ def _payload_evidence_id(request: EvidenceCommitRequest) -> str:
         f"payload:{request.provider_snapshot.checksum}:"
         f"{request.catalog_entry.storage_uri}:{request.provider_snapshot.snapshot_id}"
     )
-
-
-def _catalog_evidence_id(entry: DataCatalogEntry) -> str:
-    partitions = ",".join(entry.asset.partition_keys)
-    return f"catalog:{entry.asset.namespace}:{entry.asset.dataset_id}:{partitions}"
-
-
-def _ingestion_log_id(log: IngestionLog) -> str:
-    return f"log:{log.source}:{log.dataset}:{log.trade_date}:{log.checksum}"

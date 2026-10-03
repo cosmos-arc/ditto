@@ -297,6 +297,22 @@ class _ProtocolAdapterProvider(Provider):
 # ---------------------------------------------------------------------------
 
 
+class _SnapshotReaderStub:
+    """Minimal ProviderSnapshotReader stand-in for structure assertions."""
+
+    def get_snapshot(self, snapshot_id: str):  # pragma: no cover - stub
+        return None
+
+    def get_observed_at(self, snapshot_id: str):  # pragma: no cover - stub
+        return None
+
+    def get_predecessor(self, snapshot_id: str):  # pragma: no cover - stub
+        return None
+
+    def list_snapshots(self, **_filters):  # pragma: no cover - stub
+        return ()
+
+
 class TestAppProviderStructure:
     """验证 App 层 Provider 结构."""
 
@@ -661,19 +677,22 @@ class TestAppProviderStructure:
         assert expected.issubset(method_names)
 
     def test_lineage_query_facade_receives_data_readers(self) -> None:
-        """LineageQueryFacade 应接收 data runtime 和 source-health read ports。"""
+        """LineageQueryFacade 应接收 lineage/catalog/快照读取端口。"""
         provider = AppStrategyQueryProvider()
         lineage_reader = InMemoryDataLineage()
         catalog_reader = InMemoryDataCatalog()
+        snapshots = _SnapshotReaderStub()
         facade = provider.lineage_query_facade(
             run_service=MagicMock(),
             data_lineage_reader=lineage_reader,
             data_catalog_reader=catalog_reader,
+            provider_snapshots=snapshots,
         )
 
         assert isinstance(facade, LineageQueryFacade)
         assert facade._data_lineage_reader is lineage_reader
         assert facade._data_catalog_reader is catalog_reader
+        assert facade._provider_snapshots is snapshots
 
     def test_catalog_query_facade_receives_data_catalog_reader(self) -> None:
         """CatalogQueryFacade 应接收 data runtime 提供的 catalog reader。"""
