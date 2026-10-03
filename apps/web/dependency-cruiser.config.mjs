@@ -11,7 +11,6 @@ const foundationalFeatures = ["navigation", "shell"];
 const approvedPeerFeatureDependencies = {
 	agent: [],
 	backtest: [],
-	"data-products": [],
 	home: ["agent", "markets", "portfolio"],
 	instruments: [],
 	markets: [],
