@@ -321,9 +321,13 @@ class IngestionEvidenceCommitter:
             raise AppProcessError("provider snapshot source does not match request")
         if request.catalog_entry.asset != request.provider_snapshot.canonical_asset:
             raise AppProcessError("catalog and provider snapshot assets do not match")
-        # #394:数据集级 catalog 行不再携带逐分区内容,「同 run 不同内容拒绝」
-        # 的锚点改为 provider_snapshot(checksum/row_count)与 success log 的
-        # 逐字节交叉校验,强度不降。
+        # #394/#396:数据集级 catalog 行不再携带逐分区内容。内容身份由
+        # checkpoint 绑定链承载:PAYLOAD_COMMITTED 的 payload_id 含 payload
+        # checksum、COMPLETE 的 complete_evidence_id=snapshot_id(含同一
+        # checksum),同 run 不同内容必然落为不同 revision 或被拒绝。
+        # success log 记录的是 canonical 写入(enrich 派生后)的 checksum,
+        # 与 retained payload checksum 是两个语义,不做逐字节等式;此处
+        # 只校验 log 结构与本次 run 的身份一致。
         if (
             request.success_log.dataset != request.dataset_id
             or request.success_log.source != request.source
@@ -332,8 +336,6 @@ class IngestionEvidenceCommitter:
             or request.success_log.status is not IngestionStatus.SUCCESS
             or not isinstance(request.success_log.checksum, str)
             or not request.success_log.checksum
-            or request.success_log.checksum != request.provider_snapshot.checksum
-            or request.success_log.rows != request.provider_snapshot.row_count
         ):
             raise AppProcessError(
                 "success log does not match committed canonical evidence"
