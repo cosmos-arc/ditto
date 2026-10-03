@@ -385,9 +385,9 @@ class PersistedIngestionEvidenceVerifier:
     """
     Bind serialized ingestion evidence to durable snapshot and log facts.
 
-    三方交叉验证:success log × provider_snapshot(checksum/row_count) ×
-    snapshot_completed。这是"同 run 不同内容拒绝"的锚点——log 与完成
-    snapshot 的内容身份必须逐字节一致,任何一方漂移都判定证据无效。
+    三方交叉验证:success log × snapshot 的 canonical write binding ×
+    snapshot_completed。原始 payload 与 canonical 输出分别保留自己的
+    checksum/row_count；日志必须匹配同一次完成写入绑定的 canonical 身份。
     """
 
     snapshots: ProviderSnapshotReader
