@@ -2,6 +2,10 @@ import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import AxeBuilder from "@axe-core/playwright";
 import { type APIResponse, expect, type Page, test } from "@playwright/test";
+import {
+	expectEmptyMarketResponse,
+	isEmptyMarketDiagnostic,
+} from "./empty-market";
 
 function requiredEnvironment(name: string): string {
 	const value = process.env[name]?.trim();
@@ -60,13 +64,7 @@ function captureBrowserErrors(page: Page): string[] {
 	page.on("pageerror", (error) => errors.push(error.message));
 	page.on("console", (message) => {
 		if (message.type() !== "error") return;
-		// The isolated cohort has no market snapshots. Its expected fail-closed
-		// HTTP response is asserted below; all other console errors remain failures.
-		const expectedEmptyMarket =
-			message.location().url.includes("/api/v1/market/context?") &&
-			message.text() ===
-				"Failed to load resource: the server responded with a status of 422 (Unprocessable Entity)";
-		if (!expectedEmptyMarket) errors.push(message.text());
+		if (!isEmptyMarketDiagnostic(message)) errors.push(message.text());
 	});
 	return errors;
 }
@@ -126,12 +124,7 @@ test.describe
 				response.url().includes("/api/v1/market/context?"),
 			);
 			await page.goto("/markets/");
-			const response = await contextResponse;
-			expect(response.status()).toBe(422);
-			expect(await response.json()).toMatchObject({
-				error_code: "MARKET_CONTEXT_INVALID",
-				detail: "market context requires unique explicit source snapshot IDs",
-			});
+			await expectEmptyMarketResponse(await contextResponse);
 			await expect(page.getByText("市场覆盖")).toBeVisible();
 			await expect(page.getByRole("alert")).toContainText(
 				"没有回退到 latest 数据",

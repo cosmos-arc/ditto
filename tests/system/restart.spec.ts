@@ -1,4 +1,8 @@
 import { expect, test } from "@playwright/test";
+import {
+	expectEmptyMarketResponse,
+	isEmptyMarketDiagnostic,
+} from "./empty-market";
 
 const apiOrigin = process.env["DITTO_SYSTEM_API_ORIGIN"];
 const contractHeaders = { "X-Ditto-API-Contract-Version": "v1" } as const;
@@ -58,9 +62,14 @@ test("a clean API restart recovers the isolated manual and paper state", async (
 	const browserErrors: string[] = [];
 	page.on("pageerror", (error) => browserErrors.push(error.message));
 	page.on("console", (message) => {
-		if (message.type() === "error") browserErrors.push(message.text());
+		if (message.type() === "error" && !isEmptyMarketDiagnostic(message))
+			browserErrors.push(message.text());
 	});
+	const contextResponse = page.waitForResponse((response) =>
+		response.url().includes("/api/v1/market/context?"),
+	);
 	await page.goto("/");
+	await expectEmptyMarketResponse(await contextResponse);
 	await expect(page.getByText("今日优先事项")).toBeVisible();
 	expect(browserErrors).toEqual([]);
 });
