@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dishka import Provider, Scope, provide
-from ditto_data.catalog import DataCatalogReader
+from ditto_data.catalog.source_snapshot import ProviderSnapshotReader
 from ditto_data.lineage import DataLineageRecorder
 from ditto_data.services.market_service import MarketService
 from ditto_data.services.metadata_service import MetadataService
@@ -124,14 +124,14 @@ class AppBuilderFactory(Provider):
         market_service: MarketService,
         metadata_service: MetadataService,
         derived_query_service: DerivedQueryService,
-        data_catalog_reader: DataCatalogReader,
+        snapshots: ProviderSnapshotReader,
     ) -> ServiceBackedDataProvider:
-        """服务层数据提供器."""
+        """服务层数据提供器(行级 lineage 来自 provider snapshots)."""
         return ServiceBackedDataProvider(
             market_service=market_service,
             metadata_service=metadata_service,
             derived_service=derived_query_service,
-            catalog_reader=data_catalog_reader,
+            snapshot_reader=snapshots,
         )
 
     @provide

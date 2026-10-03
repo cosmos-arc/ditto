@@ -1,16 +1,10 @@
 """Tests for MetadataManager."""
 
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 
 import polars as pl
 import pytest
 from ditto_application.processes.ingestion.metadata_manager import MetadataManager
-from ditto_data.catalog import (
-    DataAssetRef,
-    DataCatalogEntry,
-    DataSchemaFingerprint,
-    InMemoryDataCatalog,
-)
 from ditto_data.models.ingestion import IngestionLog, IngestionStatus
 from ditto_platform.foundation import (
     ChecksumCompute,
@@ -18,6 +12,9 @@ from ditto_platform.foundation import (
     ObservabilityConfig,
     init,
     reset_for_testing,
+)
+from packages.application.tests.unit.process.ingestion import (
+    snapshot_evidence_support as _evidence_support,
 )
 
 
@@ -47,42 +44,12 @@ def setup_observability():
     reset_for_testing()
 
 
+_SKIP_CHECKSUM = "f" * 32
+
+
 @pytest.mark.unit
 class TestShouldSkip:
     """测试 should_skip 方法。"""
-
-    def _catalog_with_asset(
-        self,
-        *,
-        dataset: str = "stock_daily",
-        trade_date: str = "2024-12-27",
-        source: str = "tushare",
-        checksum: str = "abc123",
-        row_count: int = 1000,
-        freshness_at: datetime | None = None,
-    ) -> InMemoryDataCatalog:
-        catalog = InMemoryDataCatalog()
-        catalog.upsert_asset(
-            DataCatalogEntry(
-                asset=DataAssetRef(
-                    dataset_id=dataset,
-                    namespace="market",
-                    partition_keys=(f"trade_date={trade_date}",),
-                ),
-                storage_uri=f"{dataset}/2024",
-                schema=DataSchemaFingerprint(
-                    schema_hash=f"schema:{dataset}:v1",
-                    row_count=row_count,
-                    created_at=datetime(2024, 12, 27, 18, 0, tzinfo=UTC),
-                ),
-                source=source,
-                freshness_at=freshness_at or datetime(2024, 12, 27, 18, 5, tzinfo=UTC),
-                source_snapshot_id=(
-                    f"snapshot:{source}:{dataset}:{trade_date}:{checksum}:quality=l1-l2"
-                ),
-            )
-        )
-        return catalog
 
     def test_should_not_skip_when_force_is_true(self, mock_ingestion_log_store) -> None:
         """force=True 时不跳过。"""
@@ -113,57 +80,74 @@ class TestShouldSkip:
         assert reason is None
         mock_ingestion_log_store.get_log.assert_called_once()
 
-    def test_catalog_without_success_log_is_reingested(
+    def test_completed_snapshot_without_success_log_is_reingested(
         self,
         mock_ingestion_log_store,
     ) -> None:
-        """Catalog-only 残留不能形成永久 skip/DQ 死循环。"""
+        """完成快照但没有 success log 的残留不能形成永久 skip。"""
         mock_ingestion_log_store.get_log.return_value = None
-        manager = MetadataManager(
-            mock_ingestion_log_store,
-            data_catalog_reader=self._catalog_with_asset(
-                freshness_at=datetime.now(UTC),
-            ),
-        )
+        with _evidence_support.evidence_stores() as stores:
+            _evidence_support.commit_snapshot(
+                stores,
+                dataset="stock_daily",
+                request_start="2024-12-27",
+                request_end="2024-12-27",
+                checksum="a" * 32,
+                row_count=1000,
+                schema_version="market.stock_daily.v1",
+            )
+            manager = MetadataManager(
+                mock_ingestion_log_store,
+                snapshot_reader=stores.snapshots,
+                lifecycle_reader=stores.lifecycle,
+            )
 
-        should_skip, reason = manager.should_skip(
-            dataset="stock_daily",
-            trade_date="2024-12-27",
-            force=False,
-        )
+            should_skip, reason = manager.should_skip(
+                dataset="stock_daily",
+                trade_date="2024-12-27",
+                force=False,
+            )
 
         assert should_skip is False
         assert reason is None
 
-    def test_should_not_skip_when_catalog_asset_is_stale(
+    def test_should_not_skip_when_snapshot_is_not_completed(
         self,
         mock_ingestion_log_store,
     ) -> None:
-        """无 log 历史但 catalog 资产超过 freshness SLA 时不跳过。"""
-        now = datetime(2026, 6, 1, 12, tzinfo=UTC)
+        """快照存在但从未完成(无 log)时不跳过,等待重试。"""
         mock_ingestion_log_store.get_log.return_value = None
-        manager = MetadataManager(
-            mock_ingestion_log_store,
-            data_catalog_reader=self._catalog_with_asset(
-                freshness_at=now - timedelta(hours=60),
-            ),
-            now=lambda: now,
-        )
+        with _evidence_support.evidence_stores() as stores:
+            _evidence_support.commit_snapshot(
+                stores,
+                dataset="stock_daily",
+                request_start="2024-12-27",
+                request_end="2024-12-27",
+                checksum="b" * 32,
+                row_count=1000,
+                schema_version="market.stock_daily.v1",
+                complete=False,
+            )
+            manager = MetadataManager(
+                mock_ingestion_log_store,
+                snapshot_reader=stores.snapshots,
+                lifecycle_reader=stores.lifecycle,
+            )
 
-        should_skip, reason = manager.should_skip(
-            dataset="stock_daily",
-            trade_date="2024-12-27",
-            force=False,
-        )
+            should_skip, reason = manager.should_skip(
+                dataset="stock_daily",
+                trade_date="2024-12-27",
+                force=False,
+            )
 
         assert should_skip is False
         assert reason is None
 
-    def test_previous_failure_overrides_catalog_skip(
+    def test_previous_failure_overrides_snapshot_skip(
         self,
         mock_ingestion_log_store,
     ) -> None:
-        """历史失败记录优先重试，不被 catalog entry 直接跳过。"""
+        """历史失败记录优先重试，不被完成快照直接跳过。"""
         mock_ingestion_log_store.get_log.return_value = IngestionLog(
             dataset="stock_daily",
             source="tushare",
@@ -172,43 +156,62 @@ class TestShouldSkip:
             error_code="FETCH_ERROR",
             error_message="Network error",
         )
-        manager = MetadataManager(
-            mock_ingestion_log_store,
-            data_catalog_reader=self._catalog_with_asset(
-                freshness_at=datetime.now(UTC),
-            ),
-        )
+        with _evidence_support.evidence_stores() as stores:
+            _evidence_support.commit_snapshot(
+                stores,
+                dataset="stock_daily",
+                request_start="2024-12-27",
+                request_end="2024-12-27",
+                checksum="c" * 32,
+                row_count=1000,
+                schema_version="market.stock_daily.v1",
+            )
+            manager = MetadataManager(
+                mock_ingestion_log_store,
+                snapshot_reader=stores.snapshots,
+                lifecycle_reader=stores.lifecycle,
+            )
 
-        should_skip, reason = manager.should_skip(
-            dataset="stock_daily",
-            trade_date="2024-12-27",
-            force=False,
-        )
+            should_skip, reason = manager.should_skip(
+                dataset="stock_daily",
+                trade_date="2024-12-27",
+                force=False,
+            )
 
         assert should_skip is False
         assert reason is None
 
     def test_should_skip_when_previous_success(self, mock_ingestion_log_store) -> None:
-        """历史成功时跳过。"""
-        # Mock get_log 返回成功的历史记录
+        """历史成功且有完成快照交叉验证时跳过。"""
         mock_ingestion_log_store.get_log.return_value = IngestionLog(
             dataset="stock_daily",
             source="tushare",
             trade_date="2024-12-27",
             status=IngestionStatus.SUCCESS,
-            checksum="abc123",
+            checksum=_SKIP_CHECKSUM,
             rows=1000,
         )
-        manager = MetadataManager(
-            mock_ingestion_log_store,
-            data_catalog_reader=self._catalog_with_asset(),
-        )
+        with _evidence_support.evidence_stores() as stores:
+            _evidence_support.commit_snapshot(
+                stores,
+                dataset="stock_daily",
+                request_start="2024-12-27",
+                request_end="2024-12-27",
+                checksum=_SKIP_CHECKSUM,
+                row_count=1000,
+                schema_version="market.stock_daily.v1",
+            )
+            manager = MetadataManager(
+                mock_ingestion_log_store,
+                snapshot_reader=stores.snapshots,
+                lifecycle_reader=stores.lifecycle,
+            )
 
-        should_skip, reason = manager.should_skip(
-            dataset="stock_daily",
-            trade_date="2024-12-27",
-            force=False,
-        )
+            should_skip, reason = manager.should_skip(
+                dataset="stock_daily",
+                trade_date="2024-12-27",
+                force=False,
+            )
 
         assert should_skip is True
         assert reason is not None
@@ -224,46 +227,43 @@ class TestShouldSkip:
             source="tushare",
             trade_date="2024-03-28",
             status=IngestionStatus.SUCCESS,
-            checksum="abc123",
+            checksum="0" * 32,
             rows=126,
         )
-        catalog = InMemoryDataCatalog()
-        catalog.upsert_asset(
-            DataCatalogEntry(
-                asset=DataAssetRef(
-                    dataset_id="corporate_actions",
-                    namespace="capital",
-                    partition_keys=(
-                        "start_date=2024-03-28",
-                        "end_date=2024-03-28",
-                    ),
-                ),
-                storage_uri="corporate_actions/2024",
-                schema=DataSchemaFingerprint(
-                    schema_hash="schema:corporate_actions:v2",
-                    row_count=126,
-                ),
-                source="tushare",
-                freshness_at=datetime(2024, 3, 28, 18, 5, tzinfo=UTC),
-                source_snapshot_id=(
-                    "snapshot:tushare:corporate_actions:all:2024-03-28:"
-                    "2024-03-28:abc123:quality=l1-l2"
-                ),
+        with _evidence_support.evidence_stores() as stores:
+            # 当日组件由 success log 佐证。
+            _evidence_support.commit_snapshot(
+                stores,
+                dataset="corporate_actions",
+                request_start="2024-03-28",
+                request_end="2024-03-28",
+                checksum="0" * 32,
+                row_count=126,
+                schema_version="capital.corporate_actions.v1",
+                namespace="capital",
+                observed_at=datetime(2024, 3, 28, 18, 5, tzinfo=UTC),
             )
-        )
-        manager = MetadataManager(
-            mock_ingestion_log_store,
-            data_catalog_reader=catalog,
-        )
+            _evidence_support.record_success(
+                stores,
+                dataset="corporate_actions",
+                trade_date="2024-03-28",
+                checksum="0" * 32,
+                rows=126,
+            )
+            manager = MetadataManager(
+                mock_ingestion_log_store,
+                snapshot_reader=stores.snapshots,
+                lifecycle_reader=stores.lifecycle,
+            )
 
-        decision = manager.get_skip_decision(
-            dataset="corporate_actions",
-            trade_date="2024-03-28",
-            source="tushare",
-        )
+            decision = manager.get_skip_decision(
+                dataset="corporate_actions",
+                trade_date="2024-03-28",
+                source="tushare",
+            )
 
         assert decision.should_skip is True
-        assert decision.checksum == "abc123"
+        assert decision.checksum == "0" * 32
         assert decision.row_count == 126
 
     @pytest.mark.parametrize(
@@ -337,27 +337,38 @@ class TestShouldSkip:
 
     def test_should_skip_uses_source_parameter(self, mock_ingestion_log_store) -> None:
         """should_skip 应使用传入的 source 参数，而非硬编码。"""
-        # Mock get_log 返回成功的历史记录
         mock_ingestion_log_store.get_log.return_value = IngestionLog(
             dataset="stock_daily",
             source="akshare",  # 不同的数据源
             trade_date="2024-12-27",
             status=IngestionStatus.SUCCESS,
-            checksum="abc123",
+            checksum=_SKIP_CHECKSUM,
             rows=1000,
         )
-        manager = MetadataManager(
-            mock_ingestion_log_store,
-            data_catalog_reader=self._catalog_with_asset(source="akshare"),
-        )
+        with _evidence_support.evidence_stores() as stores:
+            _evidence_support.commit_snapshot(
+                stores,
+                dataset="stock_daily",
+                source="akshare",
+                request_start="2024-12-27",
+                request_end="2024-12-27",
+                checksum=_SKIP_CHECKSUM,
+                row_count=1000,
+                schema_version="market.stock_daily.v1",
+            )
+            manager = MetadataManager(
+                mock_ingestion_log_store,
+                snapshot_reader=stores.snapshots,
+                lifecycle_reader=stores.lifecycle,
+            )
 
-        # 使用 akshare 数据源
-        should_skip, reason = manager.should_skip(
-            dataset="stock_daily",
-            trade_date="2024-12-27",
-            source="akshare",
-            force=False,
-        )
+            # 使用 akshare 数据源
+            should_skip, reason = manager.should_skip(
+                dataset="stock_daily",
+                trade_date="2024-12-27",
+                source="akshare",
+                force=False,
+            )
 
         # 验证 get_log 被调用时使用了正确的 source
         assert mock_ingestion_log_store.get_log.call_count == 2
@@ -527,51 +538,40 @@ class TestShouldSkipEdgeCases:
         self, mock_ingestion_log_store
     ) -> None:
         """跳过原因应包含 checksum 和 rows 信息。"""
-        # Mock get_log 返回成功的历史记录
         mock_ingestion_log_store.get_log.return_value = IngestionLog(
             dataset="stock_daily",
             source="tushare",
             trade_date="2024-12-27",
             status=IngestionStatus.SUCCESS,
-            checksum="abcdef1234567890",
+            checksum="12345678" + "0" * 24,
             rows=1000,
         )
-        catalog = InMemoryDataCatalog()
-        catalog.upsert_asset(
-            DataCatalogEntry(
-                asset=DataAssetRef(
-                    dataset_id="stock_daily",
-                    namespace="market",
-                    partition_keys=("trade_date=2024-12-27",),
-                ),
-                storage_uri="stock_daily/2024",
-                schema=DataSchemaFingerprint(
-                    schema_hash="schema:stock_daily:v1",
-                    row_count=1000,
-                ),
-                source="tushare",
-                freshness_at=datetime(2024, 12, 27, 18, 5, tzinfo=UTC),
-                source_snapshot_id=(
-                    "snapshot:tushare:stock_daily:2024-12-27:"
-                    "abcdef1234567890:quality=l1-l2"
-                ),
+        with _evidence_support.evidence_stores() as stores:
+            _evidence_support.commit_snapshot(
+                stores,
+                dataset="stock_daily",
+                request_start="2024-12-27",
+                request_end="2024-12-27",
+                checksum="12345678" + "0" * 24,
+                row_count=1000,
+                schema_version="market.stock_daily.v1",
             )
-        )
-        manager = MetadataManager(
-            mock_ingestion_log_store,
-            data_catalog_reader=catalog,
-        )
+            manager = MetadataManager(
+                mock_ingestion_log_store,
+                snapshot_reader=stores.snapshots,
+                lifecycle_reader=stores.lifecycle,
+            )
 
-        should_skip, reason = manager.should_skip(
-            dataset="stock_daily",
-            trade_date="2024-12-27",
-            force=False,
-        )
+            should_skip, reason = manager.should_skip(
+                dataset="stock_daily",
+                trade_date="2024-12-27",
+                force=False,
+            )
 
         assert should_skip is True
         assert reason is not None
         assert "2024-12-27" in reason
-        assert "abcdef12" in reason  # checksum 前 8 个字符
+        assert "12345678" in reason  # checksum 前 8 个字符
         assert "1000" in reason  # 行数
 
     def test_success_without_checksum_is_retried_for_authoritative_evidence(

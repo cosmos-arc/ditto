@@ -25,8 +25,10 @@ from ditto_data.catalog import (
     DataCatalogWriter,
 )
 from ditto_data.catalog.provider_payload import ProviderPayloadWriter
+from ditto_data.catalog.source_snapshot import ProviderSnapshotReader
 from ditto_data.ingestion.ingestion_cursor_store import IngestionCursorStore
 from ditto_data.ingestion.ingestion_log_store import IngestionLogStore
+from ditto_data.ingestion.partition_state import PartitionLifecycleReader
 from ditto_data.services.capital_store import CapitalStore
 from ditto_data.services.fundamental_store import FundamentalStore
 from ditto_data.services.macro_service import MacroService
@@ -53,20 +55,24 @@ def create_ingestion_bundle(
     解决 ARCH-004：替代嵌套的 create_ingestion_context + create_ingestion_log_context，
     确保单个 flow 只创建一个容器实例。
 
+    #394 之后跳过/覆盖/PIT 证据全部消费 completed provider snapshots,
+    摄取必须产出快照事实,因此证据 saga 恒开启;license_record_id
+    仅作兼容占位,不再切换模式。
+
     Args:
-        source: 数据源名称
-        license_record_id: 非 None 时启用 R2 fail-closed 证据模式（license
-            治理已删除,该参数仅作为模式开关保留）。
+        source: 数据源名称。
+        license_record_id: 兼容占位参数,无行为差异。
 
     Yields:
         IngestionBundle: 包含协调器、管理器和查询 facade
 
     Example:
-        with create_ingestion_bundle() as bundle:
-            result = bundle.coordinator.ingest(...)
-            bundle.metadata_facade.is_trading_day(...)
+        >>> with create_ingestion_bundle() as bundle:
+        ...     result = bundle.coordinator.ingest(...)
+        ...     bundle.metadata_facade.is_trading_day(...)
 
     """
+    _ = license_record_id
     container = make_app_container()
     try:
         # 获取所有服务
@@ -85,9 +91,14 @@ def create_ingestion_bundle(
         catalog_reader = container.get(DataCatalogReader)
         catalog_writer = container.get(DataCatalogWriter)
         provider_payload_writer = container.get(ProviderPayloadWriter)
-        evidence_committer: IngestionEvidenceCommitter | None = None
-        if license_record_id is not None:
-            evidence_committer = container.get(IngestionEvidenceCommitter)
+        snapshot_reader = container.get(ProviderSnapshotReader)
+        lifecycle_reader = container.get(PartitionLifecycleReader)
+        evidence_committer = container.get(IngestionEvidenceCommitter)
+        evidence_verifier = PersistedIngestionEvidenceVerifier(
+            snapshots=snapshot_reader,
+            lifecycle=lifecycle_reader,
+            ingestion_logs=ingestion_log_store,
+        )
 
         # 创建协调器
         with create_coordinator(
@@ -110,32 +121,28 @@ def create_ingestion_bundle(
                 catalog_writer=catalog_writer,
                 evidence_committer=evidence_committer,
                 provider_payload_writer=provider_payload_writer,
+                snapshot_reader=snapshot_reader,
+                lifecycle_reader=lifecycle_reader,
             ),
         ) as coordinator:
             # 创建管理器
             backfill_manager = BackfillManager(
                 coordinator=coordinator,
                 metadata_service=metadata_service,
-                ingestion_log_store=ingestion_log_store,
                 bootstrap_planner=container.get(BootstrapPlanner),
-                evidence_verifier=PersistedIngestionEvidenceVerifier(
-                    reader=catalog_reader,
-                    ingestion_logs=ingestion_log_store,
-                ),
+                snapshot_reader=snapshot_reader,
+                lifecycle_reader=lifecycle_reader,
             )
             retry_manager = RetryManager(
                 coordinator=coordinator,
                 ingestion_log_store=ingestion_log_store,
                 source=source,
-                data_catalog_reader=catalog_reader,
             )
             sparse_pit_reattestation = SparsePITReattestationProcess(
                 ingestion=coordinator,
-                catalog=catalog_reader,
-                verifier=PersistedIngestionEvidenceVerifier(
-                    reader=catalog_reader,
-                    ingestion_logs=ingestion_log_store,
-                ),
+                snapshots=snapshot_reader,
+                lifecycle=lifecycle_reader,
+                verifier=evidence_verifier,
             )
             # 创建查询 facade
             metadata_facade = MetadataQueryFacade(metadata_service=metadata_service)

@@ -18,11 +18,14 @@ from ditto_data.catalog.provider_payload import (
     ProviderPayloadArtifact,
     schema_fingerprint,
 )
-from ditto_data.catalog.source_snapshot import ProviderSnapshot, ProviderSnapshotDraft
+from ditto_data.catalog.source_snapshot import (
+    ProviderSnapshot,
+    ProviderSnapshotDraft,
+    snapshot_identity,
+)
 from ditto_data.models.ingestion import IngestionLog, IngestionStatus
 from ditto_platform.foundation import WriteResult
 
-from ditto_application.catalog_freshness import catalog_source_snapshot_id
 from ditto_application.exceptions import AppProcessError
 from ditto_application.processes.ingestion.evidence_commit import EvidenceCommitRequest
 
@@ -59,58 +62,17 @@ def _dataset_namespace(dataset: str) -> str:
     return "data" if metadata is None else metadata.domain
 
 
-def _output_asset(
-    dataset: str,
-    trade_date: str,
-    *,
-    source_ticker: str | None = None,
-    end_date: str | None = None,
-) -> DataAssetRef:
-    if source_ticker is not None or end_date is not None:
-        range_end = end_date or trade_date
-        range_keys = (
-            f"start_date={trade_date}",
-            f"end_date={range_end}",
-        )
-        if source_ticker is None:
-            return DataAssetRef(
-                dataset_id=dataset,
-                namespace=_dataset_namespace(dataset),
-                partition_keys=range_keys,
-            )
-        return DataAssetRef(
-            dataset_id=dataset,
-            namespace=_dataset_namespace(dataset),
-            partition_keys=(
-                f"source_ticker={source_ticker}",
-                f"start_date={trade_date}",
-                f"end_date={range_end}",
-            ),
-        )
+def _output_asset(dataset: str) -> DataAssetRef:
+    """
+    #394: catalog 收敛为数据集级描述行,partition_keys 恒为空。
+
+    每 (namespace, dataset_id) 一行整行 replace;精确来源覆盖由
+    provider_snapshots 承载,不再物化到 catalog 分区。
+    """
     return DataAssetRef(
         dataset_id=dataset,
         namespace=_dataset_namespace(dataset),
-        partition_keys=(f"trade_date={trade_date}",),
-    )
-
-
-def _source_snapshot_id(
-    ctx: CatalogWriteContext,
-) -> str:
-    start = ctx.start_date or ctx.trade_date
-    if ctx.source_ticker is not None or ctx.end_date is not None:
-        snapshot_id = (
-            f"snapshot:{ctx.source_name}:{ctx.dataset}:{ctx.source_ticker or 'all'}:"
-            f"{start}:{ctx.end_date or ctx.trade_date}:"
-            f"{ctx.write_result.checksum}"
-        )
-        return f"{snapshot_id}:quality=l1-l2" if ctx.l1_l2_attested else snapshot_id
-    return catalog_source_snapshot_id(
-        dataset=ctx.dataset,
-        trade_date=ctx.trade_date,
-        source=ctx.source_name,
-        checksum=ctx.write_result.checksum,
-        l1_l2_attested=ctx.l1_l2_attested,
+        partition_keys=(),
     )
 
 
@@ -131,19 +93,32 @@ def dataset_schema_version(dataset: str) -> str:
     return metadata.schema_version
 
 
+def display_snapshot_id(ctx: CatalogWriteContext) -> str:
+    """Canonical provider snapshot identity for this write, without storing it."""
+    return snapshot_identity(
+        ctx.dataset,
+        ctx.source_name,
+        ctx.start_date or ctx.trade_date,
+        ctx.end_date or ctx.trade_date,
+        dataset_schema_version(ctx.dataset),
+        ctx.write_result.checksum,
+    )
+
+
 def build_data_catalog_entry(
     ctx: CatalogWriteContext,
     *,
     now: datetime,
+    source_snapshot_id: str,
 ) -> DataCatalogEntry:
-    """Build the canonical catalog entry for one persisted payload."""
+    """
+    Build the dataset-level catalog entry for one persisted payload.
+
+    整行 replace:freshness_at 取本次写入时刻,schema_* 取本次载荷,
+    source_snapshot_id 保留最后写入的 canonical snapshot id 仅作展示。
+    """
     return DataCatalogEntry(
-        asset=_output_asset(
-            ctx.dataset,
-            ctx.start_date or ctx.trade_date,
-            source_ticker=ctx.source_ticker,
-            end_date=ctx.end_date,
-        ),
+        asset=_output_asset(ctx.dataset),
         storage_uri=ctx.write_result.file_path,
         schema=DataSchemaFingerprint(
             schema_hash=_schema_hash_from_dataframe(ctx.df),
@@ -154,7 +129,7 @@ def build_data_catalog_entry(
         ),
         source=ctx.source_name,
         freshness_at=now,
-        source_snapshot_id=_source_snapshot_id(ctx),
+        source_snapshot_id=source_snapshot_id,
     )
 
 
@@ -167,7 +142,6 @@ def build_evidence_commit_request(
     now = datetime.now(UTC)
     request_start = ctx.start_date or ctx.trade_date
     request_end = ctx.end_date or ctx.trade_date
-    catalog_entry = build_data_catalog_entry(ctx, now=now)
     request_hash = hashlib.sha256(
         orjson.dumps(
             [
@@ -197,17 +171,29 @@ def build_evidence_commit_request(
             request_end=request_end,
             schema_version=dataset_schema_version(ctx.dataset),
             checksum=payload_checksum,
-            canonical_asset=catalog_entry.asset,
+            canonical_asset=_output_asset(ctx.dataset),
             request_parameters_hash=f"sha256:{request_hash}",
-            response_metadata=(
-                (
-                    "snapshot_layer",
+            response_metadata=tuple(
+                sorted(
                     (
-                        "normalized_provider_payload"
-                        if ctx.payload_retained
-                        else "verified_empty_provider_observation"
-                    ),
-                ),
+                        (
+                            "snapshot_layer",
+                            (
+                                "normalized_provider_payload"
+                                if ctx.payload_retained
+                                else "verified_empty_provider_observation"
+                            ),
+                        ),
+                        # 数据集级 canonical asset 不再携带标的维度;按标的写入
+                        # 仍把标的事实留在响应元数据里,行级 lineage 据此区分
+                        # 标的专属窗口与全市场窗口。
+                        *(
+                            (("source_ticker", ctx.source_ticker),)
+                            if ctx.source_ticker is not None
+                            else ()
+                        ),
+                    )
+                )
             ),
             license_record_id=UNUSED_LICENSE_RECORD_ID,
             row_count=payload_row_count,
@@ -238,7 +224,11 @@ def build_evidence_commit_request(
         request_end=request_end,
         ingestion_date=ctx.trade_date,
         provider_snapshot=snapshot,
-        catalog_entry=catalog_entry,
+        catalog_entry=build_data_catalog_entry(
+            ctx,
+            now=now,
+            source_snapshot_id=snapshot.snapshot_id,
+        ),
         success_log=IngestionLog(
             dataset=ctx.dataset,
             source=ctx.source_name,

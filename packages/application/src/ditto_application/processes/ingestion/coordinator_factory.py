@@ -7,12 +7,14 @@ from typing import Protocol, cast
 
 from ditto_data.catalog import DataCatalogReader, DataCatalogWriter
 from ditto_data.catalog.provider_payload import ProviderPayloadWriter
+from ditto_data.catalog.source_snapshot import ProviderSnapshotReader
 from ditto_data.ingestion.ingestion_cursor_store import (
     IngestionCursorStore,
 )
 from ditto_data.ingestion.ingestion_log_store import (
     IngestionLogStore,
 )
+from ditto_data.ingestion.partition_state import PartitionLifecycleReader
 from ditto_data.models import Source
 from ditto_data.services.capital_store import CapitalStore
 from ditto_data.services.fundamental_store import FundamentalStore
@@ -83,6 +85,8 @@ class CoordinatorRuntimeContext:
     catalog_writer: DataCatalogWriter | None = None
     evidence_committer: IngestionEvidenceCommitter | None = None
     provider_payload_writer: ProviderPayloadWriter | None = None
+    snapshot_reader: ProviderSnapshotReader | None = None
+    lifecycle_reader: PartitionLifecycleReader | None = None
 
 
 def _registered_source_or_default[FetcherT](
@@ -251,6 +255,8 @@ def _build_coordinator(
             catalog_writer=runtime.catalog_writer,
             evidence_committer=runtime.evidence_committer,
             provider_payload_writer=runtime.provider_payload_writer,
+            snapshot_reader=runtime.snapshot_reader,
+            lifecycle_reader=runtime.lifecycle_reader,
         ),
     )
 
@@ -303,7 +309,8 @@ def create_coordinator(
 
             yield AutoSourceIngestionCoordinator(
                 coordinators,
-                catalog_reader=runtime_ctx.catalog_reader,
+                snapshot_reader=runtime_ctx.snapshot_reader,
+                lifecycle_reader=runtime_ctx.lifecycle_reader,
                 date_range_lister=date_range_lister,
                 default_source=Source.TUSHARE.value,
             )

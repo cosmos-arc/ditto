@@ -5,7 +5,10 @@ from unittest.mock import MagicMock
 
 import polars as pl
 from ditto_application.builders.data_provider import ServiceBackedDataProvider
-from ditto_data.catalog import DataAssetRef, DataCatalogEntry, DataSchemaFingerprint
+from ditto_data.catalog.contracts import DataAssetRef
+from ditto_data.catalog.source_snapshot import (
+    ProviderSnapshot,
+)
 from ditto_data.provider import BarQuery, InstrumentQuery
 
 
@@ -14,24 +17,55 @@ def _make_mock_service(name: str) -> MagicMock:
     return MagicMock(name=name)
 
 
-def _catalog_entry(
+def _snapshot(
     *,
-    partition_keys: tuple[str, ...],
     snapshot_id: str,
-    freshness_at: datetime,
-) -> DataCatalogEntry:
-    return DataCatalogEntry(
-        asset=DataAssetRef(
-            dataset_id="etf_daily",
-            namespace="market",
-            partition_keys=partition_keys,
-        ),
-        storage_uri="etf_daily/2024",
-        schema=DataSchemaFingerprint(schema_hash="schema:sha256:test"),
+    request_start: str,
+    request_end: str,
+    observed_at: datetime,
+    dataset: str = "etf_daily",
+    namespace: str = "market",
+    source_ticker: str | None = None,
+) -> ProviderSnapshot:
+    """数据集级 canonical 资产的 provider snapshot(可选标的元数据)。"""
+    metadata = (("snapshot_layer", "normalized_provider_payload"),)
+    if source_ticker is not None:
+        metadata = (*metadata, ("source_ticker", source_ticker))
+    return ProviderSnapshot(
+        snapshot_id=snapshot_id,
+        dataset_id=dataset,
         source="tushare",
-        freshness_at=freshness_at,
-        source_snapshot_id=snapshot_id,
+        request_start=request_start,
+        request_end=request_end,
+        schema_version="etf.daily.v1",
+        checksum="0" * 32,
+        canonical_asset=DataAssetRef(dataset_id=dataset, namespace=namespace),
+        request_parameters_hash="sha256:test",
+        response_metadata=tuple(sorted(metadata)),
+        license_record_id="unit-license",
+        row_count=1,
+        payload_uri="provider_payloads/tushare/etf_daily/x.parquet",
+        payload_retained=True,
+        created_at=observed_at,
+        observations=(observed_at,),
     )
+
+
+class _SnapshotReader:
+    """按数据集级 canonical 资产过滤的快照读端口 double。"""
+
+    def __init__(self, *snapshots: ProviderSnapshot) -> None:
+        self._snapshots = snapshots
+        self.calls: list[DataAssetRef] = []
+
+    def list_snapshots(self, *, canonical_asset: DataAssetRef | None = None):
+        if canonical_asset is not None:
+            self.calls.append(canonical_asset)
+        return tuple(
+            snapshot
+            for snapshot in self._snapshots
+            if canonical_asset is None or snapshot.canonical_asset == canonical_asset
+        )
 
 
 class TestServiceBackedDataProvider:
@@ -142,12 +176,32 @@ class TestServiceBackedDataProvider:
         bars_query = call_args[0][0]
         assert bars_query.instrument_ids == [1]
 
-    def test_get_bars_attaches_latest_exact_catalog_source_snapshot(self) -> None:
-        """Provider rows inherit the newest exact ticker/range catalog lineage."""
+    def test_get_bars_attaches_latest_observed_covering_snapshot(self) -> None:
+        """覆盖该行日期的最新观察快照赢得行级 lineage。"""
         market = _make_mock_service("market")
         metadata = _make_mock_service("metadata")
         derived = _make_mock_service("derived")
-        catalog = _make_mock_service("catalog")
+        reader = _SnapshotReader(
+            _snapshot(
+                snapshot_id="snapshot-old",
+                request_start="2022-10-01",
+                request_end="2024-03-29",
+                observed_at=datetime(2026, 9, 1, 10, tzinfo=UTC),
+            ),
+            _snapshot(
+                snapshot_id="snapshot-current",
+                request_start="2023-01-01",
+                request_end="2024-03-29",
+                observed_at=datetime(2026, 9, 1, 11, tzinfo=UTC),
+            ),
+            # 更晚观察但覆盖更窄区间的快照不覆盖 2024-01-02。
+            _snapshot(
+                snapshot_id="snapshot-recent-narrow",
+                request_start="2024-03-01",
+                request_end="2024-03-29",
+                observed_at=datetime(2026, 9, 1, 12, tzinfo=UTC),
+            ),
+        )
         metadata.instrument.resolve_instrument_ids_batch.return_value = {
             "518880.SH": 2_001_724,
         }
@@ -160,36 +214,11 @@ class TestServiceBackedDataProvider:
                 "close": [92.0, 98.0],
             }
         )
-        catalog.list_assets.return_value = (
-            _catalog_entry(
-                partition_keys=(
-                    "source_ticker=518880.SH",
-                    "start_date=2022-10-01",
-                    "end_date=2024-03-29",
-                ),
-                snapshot_id="snapshot-old",
-                freshness_at=datetime(2026, 9, 1, 10, tzinfo=UTC),
-            ),
-            _catalog_entry(
-                partition_keys=(
-                    "source_ticker=518880.SH",
-                    "start_date=2023-01-01",
-                    "end_date=2024-03-29",
-                ),
-                snapshot_id="snapshot-current",
-                freshness_at=datetime(2026, 9, 1, 11, tzinfo=UTC),
-            ),
-            _catalog_entry(
-                partition_keys=("trade_date=2024-03-29",),
-                snapshot_id="snapshot-daily-fallback",
-                freshness_at=datetime(2026, 9, 1, 12, tzinfo=UTC),
-            ),
-        )
         provider = ServiceBackedDataProvider(
             market_service=market,
             metadata_service=metadata,
             derived_service=derived,
-            catalog_reader=catalog,
+            snapshot_reader=reader,
         )
 
         result = provider.get_bars(
@@ -197,21 +226,24 @@ class TestServiceBackedDataProvider:
                 instruments=["518880.SH"],
                 start="2024-01-01",
                 end="2024-03-29",
+                dataset_id="etf_daily",
             )
         )
 
         assert result["source_snapshot_id"].to_list() == [
             "snapshot-current",
-            "snapshot-current",
+            "snapshot-recent-narrow",
         ]
-        catalog.list_assets.assert_called_once_with("market")
+        assert reader.calls == [
+            DataAssetRef(dataset_id="etf_daily", namespace="market")
+        ]
 
     def test_get_bars_leaves_unresolved_source_snapshot_null(self) -> None:
         """The adapter preserves rows so the consuming PIT boundary can fail closed."""
         market = _make_mock_service("market")
         metadata = _make_mock_service("metadata")
         derived = _make_mock_service("derived")
-        catalog = _make_mock_service("catalog")
+        reader = _SnapshotReader()
         metadata.instrument.resolve_instrument_ids_batch.return_value = {
             "518880.SH": 2_001_724,
         }
@@ -224,12 +256,11 @@ class TestServiceBackedDataProvider:
                 "close": [92.0],
             }
         )
-        catalog.list_assets.return_value = ()
         provider = ServiceBackedDataProvider(
             market_service=market,
             metadata_service=metadata,
             derived_service=derived,
-            catalog_reader=catalog,
+            snapshot_reader=reader,
         )
 
         result = provider.get_bars(
@@ -369,13 +400,26 @@ class TestServiceBackedDataProvider:
 
 
 class TestVectorizedLineagePrecedence:
-    """Cross-shape wildcard freshness must follow the original scan."""
+    """同日多窗口时按观察事件时序取最新。"""
 
-    def test_fresher_ranged_wildcard_replaces_exact_wildcard(self) -> None:
+    def test_fresher_observation_wins_for_same_date(self) -> None:
         market = _make_mock_service("market")
         metadata = _make_mock_service("metadata")
         derived = _make_mock_service("derived")
-        catalog = _make_mock_service("catalog")
+        reader = _SnapshotReader(
+            _snapshot(
+                snapshot_id="older-observation",
+                request_start="2024-03-29",
+                request_end="2024-03-29",
+                observed_at=datetime(2026, 9, 1, 10, tzinfo=UTC),
+            ),
+            _snapshot(
+                snapshot_id="newer-observation",
+                request_start="2024-01-01",
+                request_end="2024-03-29",
+                observed_at=datetime(2026, 9, 1, 12, tzinfo=UTC),
+            ),
+        )
         metadata.instrument.resolve_instrument_ids_batch.return_value = {
             "518880.SH": 2_001_724,
         }
@@ -388,27 +432,15 @@ class TestVectorizedLineagePrecedence:
                 "close": [98.0],
             }
         )
-        catalog.list_assets.return_value = (
-            _catalog_entry(
-                partition_keys=("trade_date=2024-03-29",),
-                snapshot_id="wildcard-exact-stale",
-                freshness_at=datetime(2026, 9, 1, 10, tzinfo=UTC),
-            ),
-            _catalog_entry(
-                partition_keys=("start_date=2024-01-01", "end_date=2024-03-29"),
-                snapshot_id="wildcard-ranged-fresh",
-                freshness_at=datetime(2026, 9, 1, 12, tzinfo=UTC),
-            ),
-        )
         provider = ServiceBackedDataProvider(
             market_service=market,
             metadata_service=metadata,
             derived_service=derived,
-            catalog_reader=catalog,
+            snapshot_reader=reader,
         )
 
         result = provider.get_bars(
             BarQuery(instruments=["518880.SH"], start="2024-03-01", end="2024-03-29")
         )
 
-        assert result["source_snapshot_id"].to_list() == ["wildcard-ranged-fresh"]
+        assert result["source_snapshot_id"].to_list() == ["newer-observation"]

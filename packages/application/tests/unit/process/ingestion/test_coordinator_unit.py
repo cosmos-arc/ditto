@@ -18,6 +18,7 @@ from ditto_data.catalog import (
     DataSchemaFingerprint,
     InMemoryDataCatalog,
 )
+from ditto_data.catalog.source_snapshot import snapshot_identity
 from ditto_data.errors import (
     SourceAuthenticationError,
     SourceFetchError,
@@ -30,6 +31,9 @@ from ditto_platform.foundation import (
     OnDuplicate,
     init,
     reset_for_testing,
+)
+from packages.application.tests.unit.process.ingestion import (
+    snapshot_evidence_support as _evidence_support,
 )
 
 
@@ -191,6 +195,13 @@ def mock_source(mocker):
 
 
 @pytest.fixture
+def evidence():
+    """SQLite 完成事实存储,与 coordinator 共享。"""
+    with _evidence_support.evidence_stores() as stores:
+        yield stores
+
+
+@pytest.fixture
 def coordinator(
     mock_metadata_service,
     mock_market_write_service,
@@ -201,6 +212,7 @@ def coordinator(
     mock_quality_checker,
     mock_source,
     in_memory_catalog,
+    evidence,
 ):
     """创建 IngestionCoordinator 实例。"""
     return IngestionCoordinator(
@@ -226,6 +238,8 @@ def coordinator(
             quality_checker=mock_quality_checker,
             catalog_reader=in_memory_catalog,
             catalog_writer=in_memory_catalog,
+            snapshot_reader=evidence.snapshots,
+            lifecycle_reader=evidence.lifecycle,
         ),
     )
 
@@ -290,9 +304,9 @@ class TestIngestDate:
         coordinator,
         mock_ingestion_log_store,
         mock_source,
-        in_memory_catalog,
+        evidence,
     ) -> None:
-        """历史成功时跳过摄取。"""
+        """历史成功且有完成快照交叉验证时跳过摄取。"""
         # Arrange
         mock_ingestion_log_store.get_log.return_value = IngestionLog(
             dataset="stock_daily",
@@ -302,24 +316,14 @@ class TestIngestDate:
             checksum="abc123",
             rows=1000,
         )
-        in_memory_catalog.upsert_asset(
-            DataCatalogEntry(
-                asset=DataAssetRef(
-                    dataset_id="stock_daily",
-                    namespace="market",
-                    partition_keys=("trade_date=2024-12-27",),
-                ),
-                storage_uri="stock_daily/2024-12-27",
-                schema=DataSchemaFingerprint(
-                    schema_hash="market.stock_daily.v1",
-                    row_count=1000,
-                ),
-                source="tushare",
-                freshness_at=datetime(2024, 12, 27, tzinfo=UTC),
-                source_snapshot_id=(
-                    "snapshot:tushare:stock_daily:2024-12-27:abc123:quality=l1-l2"
-                ),
-            )
+        _evidence_support.commit_snapshot(
+            evidence,
+            dataset="stock_daily",
+            request_start="2024-12-27",
+            request_end="2024-12-27",
+            checksum="abc123",
+            row_count=1000,
+            schema_version="market.stock_daily.v1",
         )
 
         # Act
@@ -350,76 +354,73 @@ class TestIngestDate:
         mock_ingestion_log_store,
         mock_source,
     ) -> None:
-        catalog = InMemoryDataCatalog()
-        for partition_date, checksum, rows in (
-            ("2024-12-20", "old", 3),
-            ("2024-12-27", "current", 2),
-        ):
-            catalog.upsert_asset(
-                DataCatalogEntry(
-                    asset=DataAssetRef(
-                        dataset_id="balance_sheet",
-                        namespace="fundamental",
-                        partition_keys=(f"trade_date={partition_date}",),
-                    ),
-                    storage_uri=f"balance_sheet/{partition_date}",
-                    schema=DataSchemaFingerprint(
-                        schema_hash="fundamental.balance_sheet.v1",
+        with _evidence_support.evidence_stores() as stores:
+            seeded_ids = []
+            for partition_date, checksum, rows in (
+                ("2024-12-20", "old", 3),
+                ("2024-12-27", "current", 2),
+            ):
+                seeded_ids.append(
+                    _evidence_support.commit_snapshot(
+                        stores,
+                        dataset="balance_sheet",
+                        request_start=partition_date,
+                        request_end=partition_date,
+                        checksum=checksum,
                         row_count=rows,
-                    ),
-                    source="tushare",
-                    freshness_at=datetime(2024, 12, 27, tzinfo=UTC),
-                    source_snapshot_id=(
-                        f"snapshot:tushare:balance_sheet:{partition_date}:"
-                        f"{checksum}:quality=l1-l2"
-                    ),
+                        schema_version="fundamental.balance_sheet.v1",
+                        namespace="fundamental",
+                        # 观察事件必须不晚于信号日,否则按 #393 事件语义不可见。
+                        observed_at=datetime(
+                            2024, 12, int(partition_date[-2:]), 9, tzinfo=UTC
+                        ),
+                    ).snapshot_id
                 )
+            mock_ingestion_log_store.get_log.return_value = IngestionLog(
+                dataset="balance_sheet",
+                source="tushare",
+                trade_date="2024-12-27",
+                status=IngestionStatus.SUCCESS,
+                checksum="current",
+                rows=2,
             )
-        mock_ingestion_log_store.get_log.return_value = IngestionLog(
-            dataset="balance_sheet",
-            source="tushare",
-            trade_date="2024-12-27",
-            status=IngestionStatus.SUCCESS,
-            checksum="current",
-            rows=2,
-        )
-        coordinator = IngestionCoordinator(
-            services=IngestionServices(
-                metadata=mock_metadata_service,
-                market=MarketServices(
-                    query=mock_market_write_service,
-                    write=mock_market_write_service,
+            coordinator = IngestionCoordinator(
+                services=IngestionServices(
+                    metadata=mock_metadata_service,
+                    market=MarketServices(
+                        query=mock_market_write_service,
+                        write=mock_market_write_service,
+                    ),
+                    fundamental=mock_fundamental_store,
+                    capital=mock_capital_store,
+                    macro=mock_macro_service,
                 ),
-                fundamental=mock_fundamental_store,
-                capital=mock_capital_store,
-                macro=mock_macro_service,
-            ),
-            fetchers=SourceFetchers(
-                metadata=mock_source,
-                market=mock_source,
-                fundamental=mock_source,
-                capital=mock_source,
-                macro=mock_source,
-            ),
-            config=IngestionCoordinatorConfig(
-                ingestion_log_store=mock_ingestion_log_store,
-                catalog_reader=catalog,
-            ),
-        )
+                fetchers=SourceFetchers(
+                    metadata=mock_source,
+                    market=mock_source,
+                    fundamental=mock_source,
+                    capital=mock_source,
+                    macro=mock_source,
+                ),
+                config=IngestionCoordinatorConfig(
+                    ingestion_log_store=mock_ingestion_log_store,
+                    snapshot_reader=stores.snapshots,
+                    lifecycle_reader=stores.lifecycle,
+                ),
+            )
 
-        result = coordinator.ingest_date("balance_sheet", "2024-12-27")
+            result = coordinator.ingest_date("balance_sheet", "2024-12-27")
 
-        assert result.status == "skipped"
-        assert result.checksum is None
-        assert result.snapshot_evidence is not None
-        assert result.snapshot_evidence.row_count == 5
-        assert result.snapshot_evidence.source_snapshot_ids == (
-            "snapshot:tushare:balance_sheet:2024-12-20:old:quality=l1-l2",
-            "snapshot:tushare:balance_sheet:2024-12-27:current:quality=l1-l2",
-        )
-        assert result.quality_evidence is not None
-        assert result.quality_evidence.checksum == "current"
-        mock_source.fetch_balance_sheet.assert_not_called()
+            assert result.status == "skipped"
+            assert result.checksum is None
+            assert result.snapshot_evidence is not None
+            assert result.snapshot_evidence.row_count == 5
+            assert result.snapshot_evidence.source_snapshot_ids == tuple(
+                sorted(seeded_ids)
+            )
+            assert result.quality_evidence is not None
+            assert result.quality_evidence.checksum == "current"
+            mock_source.fetch_balance_sheet.assert_not_called()
 
     def test_ingest_date_skipped_when_catalog_has_exact_trade_date_asset(
         self,
@@ -647,11 +648,8 @@ class TestIngestDate:
         result = coordinator.ingest_date("stock_daily", "2024-12-27")
 
         assert result.status == "success"
-        asset = DataAssetRef(
-            dataset_id="stock_daily",
-            namespace="market",
-            partition_keys=("trade_date=2024-12-27",),
-        )
+        # #394:数据集级行,partition_keys 恒空;snapshot id 为展示用 canonical id。
+        asset = DataAssetRef(dataset_id="stock_daily", namespace="market")
         entry = catalog.get_asset(asset)
         assert entry is not None
         assert entry.asset == asset
@@ -660,9 +658,13 @@ class TestIngestDate:
         assert entry.schema.row_count == 1
         assert entry.schema.schema_version == "market.stock_daily.v1"
         assert entry.schema.schema_hash.startswith("schema:sha256:")
-        assert (
-            entry.source_snapshot_id
-            == f"snapshot:tushare:stock_daily:2024-12-27:{result.checksum}"
+        assert entry.source_snapshot_id == snapshot_identity(
+            "stock_daily",
+            "tushare",
+            "2024-12-27",
+            "2024-12-27",
+            "market.stock_daily.v1",
+            result.checksum,
         )
 
     def test_ingest_date_success_adj_factor(
@@ -744,16 +746,27 @@ class TestIngestDate:
 
     def test_ingest_date_success_balance_sheet(
         self,
-        coordinator,
-        mock_ingestion_log_store,
-        mock_source,
+        mock_metadata_service,
+        mock_market_write_service,
         mock_fundamental_store,
-        mocker,
+        mock_capital_store,
+        mock_macro_service,
+        mock_ingestion_log_store,
+        mock_quality_checker,
+        mock_source,
+        tmp_path,
     ) -> None:
-        """成功摄取 balance_sheet 数据。"""
-        # Arrange
+        """稀疏 PIT 摄取经证据 saga 落快照并自证当日 asof 事实。"""
+        from ditto_application.processes.ingestion.evidence_commit import (
+            EvidenceCommitPorts,
+            IngestionEvidenceCommitter,
+        )
+        from ditto_data.catalog.provider_payload import (
+            FilesystemProviderPayloadStore,
+        )
+
         mock_ingestion_log_store.get_log.return_value = None
-        mock_source.fetch_balance_sheet.return_value = pl.DataFrame(
+        frame = pl.DataFrame(
             {
                 "instrument_id": ["000001.SZ"],
                 "report_date": [date(2024, 9, 30)],
@@ -767,23 +780,55 @@ class TestIngestDate:
                 "current_liabilities": [20.0],
             }
         )
+        mock_source.fetch_balance_sheet.return_value = frame
         mock_fundamental_store.save_balance_sheet.return_value = 1
-        mock_ingestion_log_store.save_log.return_value = IngestionLog(
-            dataset="balance_sheet",
-            source="tushare",
-            trade_date="2024-12-27",
-            status=IngestionStatus.SUCCESS,
-            checksum="checksum_balance_sheet",
-            rows=1,
-        )
+        with _evidence_support.evidence_stores() as stores:
+            coordinator = IngestionCoordinator(
+                services=IngestionServices(
+                    metadata=mock_metadata_service,
+                    market=MarketServices(
+                        query=mock_market_write_service,
+                        write=mock_market_write_service,
+                    ),
+                    fundamental=mock_fundamental_store,
+                    capital=mock_capital_store,
+                    macro=mock_macro_service,
+                ),
+                fetchers=SourceFetchers(
+                    metadata=mock_source,
+                    market=mock_source,
+                    fundamental=mock_source,
+                    capital=mock_source,
+                    macro=mock_source,
+                ),
+                config=IngestionCoordinatorConfig(
+                    ingestion_log_store=mock_ingestion_log_store,
+                    quality_checker=mock_quality_checker,
+                    snapshot_reader=stores.snapshots,
+                    lifecycle_reader=stores.lifecycle,
+                    evidence_committer=IngestionEvidenceCommitter(
+                        ports=EvidenceCommitPorts(
+                            lifecycle_reader=stores.lifecycle,
+                            lifecycle_writer=stores.lifecycle,
+                            snapshot_writer=stores.snapshots,
+                            snapshot_reader=stores.snapshots,
+                            catalog_writer=InMemoryDataCatalog(),
+                            ingestion_log_store=mock_ingestion_log_store,
+                        )
+                    ),
+                    provider_payload_writer=FilesystemProviderPayloadStore(tmp_path),
+                ),
+            )
 
-        # Act
-        result = coordinator.ingest_date("balance_sheet", "2024-12-27")
+            # 稀疏 PIT 自证要求当日观察可见,使用当前日期。
+            from datetime import date as _date
 
-        # Assert
-        assert result.status == "success"
-        mock_source.fetch_balance_sheet.assert_called_once_with("2024-12-27")
-        mock_fundamental_store.save_balance_sheet.assert_called_once()
+            today = _date.today().isoformat()
+            result = coordinator.ingest_date("balance_sheet", today)
+
+            assert result.status == "success", result.error
+            mock_source.fetch_balance_sheet.assert_called_once_with(today)
+            mock_fundamental_store.save_balance_sheet.assert_called_once()
 
     def test_ingest_date_success_valuation_metrics(
         self,
@@ -1384,17 +1429,18 @@ class TestIngestRange:
         assert mock_source.fetch_stock_daily.call_count == 3
         mock_market_write_service.save_bars.assert_called_once()
         entry = in_memory_catalog.get_asset(
-            DataAssetRef(
-                dataset_id="stock_daily",
-                namespace="market",
-                partition_keys=(
-                    "start_date=2024-12-25",
-                    "end_date=2024-12-27",
-                ),
-            )
+            DataAssetRef(dataset_id="stock_daily", namespace="market")
         )
         assert entry is not None
         assert entry.schema.row_count == 3
+        assert entry.source_snapshot_id == snapshot_identity(
+            "stock_daily",
+            "tushare",
+            "2024-12-25",
+            "2024-12-27",
+            "market.stock_daily.v1",
+            result.checksum,
+        )
 
     def test_source_defined_chunk_uses_one_range_fetch(
         self,
@@ -1444,11 +1490,11 @@ class TestIngestRange:
     def test_ingest_range_with_skipped_dates(
         self,
         coordinator,
+        evidence,
         mock_metadata_service,
         mock_ingestion_log_store,
         mock_source,
         mock_market_write_service,
-        in_memory_catalog,
     ) -> None:
         """日期范围内有跳过的日期。"""
         # Arrange
@@ -1473,24 +1519,14 @@ class TestIngestRange:
             return None
 
         mock_ingestion_log_store.get_log.side_effect = get_log_side_effect
-        in_memory_catalog.upsert_asset(
-            DataCatalogEntry(
-                asset=DataAssetRef(
-                    dataset_id="stock_daily",
-                    namespace="market",
-                    partition_keys=("trade_date=2024-12-26",),
-                ),
-                storage_uri="stock_daily/2024-12-26",
-                schema=DataSchemaFingerprint(
-                    schema_hash="market.stock_daily.v1",
-                    row_count=1000,
-                ),
-                source="tushare",
-                freshness_at=datetime(2024, 12, 26, tzinfo=UTC),
-                source_snapshot_id=(
-                    "snapshot:tushare:stock_daily:2024-12-26:old_checksum:quality=l1-l2"
-                ),
-            )
+        _evidence_support.commit_snapshot(
+            evidence,
+            dataset="stock_daily",
+            request_start="2024-12-26",
+            request_end="2024-12-26",
+            checksum="old_checksum",
+            row_count=1000,
+            schema_version="market.stock_daily.v1",
         )
 
         source_df = pl.DataFrame(

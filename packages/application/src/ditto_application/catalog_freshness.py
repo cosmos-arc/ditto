@@ -1,4 +1,10 @@
-"""Catalog freshness policy helpers shared by application read/process paths."""
+"""
+Dataset-level catalog freshness and provider-snapshot completion policies.
+
+#394 之后精确来源覆盖不再住在 catalog 分区行里:一个 (dataset, source, date)
+是否已被摄取完成,由「存在覆盖该日期的 completed provider snapshot」判定;
+catalog 只保留数据集级描述行。本模块是这两类事实的应用层策略家。
+"""
 
 from __future__ import annotations
 
@@ -10,13 +16,15 @@ from typing import Literal, Protocol
 
 import orjson
 from ditto_data.catalog import (
-    DataAssetRef,
     DataCatalogEntry,
     DataCatalogReader,
     default_dataset_metadata,
 )
 from ditto_data.catalog.snapshot_completion import snapshot_completed
-from ditto_data.catalog.source_snapshot import ProviderSnapshotReader
+from ditto_data.catalog.source_snapshot import (
+    ProviderSnapshot,
+    ProviderSnapshotReader,
+)
 from ditto_data.ingestion.partition_state import PartitionLifecycleReader
 from ditto_data.models.ingestion import IngestionLog, IngestionStatus
 
@@ -32,18 +40,20 @@ __all__ = [
     "CatalogFreshnessAssessment",
     "CatalogFreshnessStatus",
     "PersistedIngestionEvidenceVerifier",
+    "SourceCoverageEvidence",
     "aggregate_source_snapshot_ids",
     "assess_catalog_freshness",
-    "catalog_asof_snapshot",
-    "catalog_entry_for_date",
-    "catalog_repair_priority",
-    "catalog_snapshot_has_quality_logs",
-    "catalog_source_snapshot_id",
+    "completed_covering_snapshot",
+    "covering_snapshots",
     "dataset_namespace",
     "latest_catalog_entry_for_dataset",
-    "latest_catalog_entry_on_or_before",
+    "observed_at",
     "observed_snapshot_ids",
     "select_ingestion_source",
+    "snapshot_asof_evidence",
+    "snapshot_repair_priority",
+    "source_coverage_evidence",
+    "visible_completed_snapshots",
 ]
 
 
@@ -55,10 +65,17 @@ class _IngestionLogReader(Protocol):
         trade_date: str,
     ) -> IngestionLog | None: ...
 
+    def list_ingested_dates(
+        self,
+        dataset: str,
+        source: str,
+        status: IngestionStatus | None = None,
+    ) -> list[str]: ...
+
 
 @dataclass(frozen=True, slots=True)
 class CatalogFreshnessAssessment:
-    """Freshness assessment for one dataset catalog entry."""
+    """Freshness assessment for one dataset-level catalog entry."""
 
     status: CatalogFreshnessStatus
     sla_hours: int | None
@@ -67,7 +84,7 @@ class CatalogFreshnessAssessment:
 
 @dataclass(frozen=True, slots=True)
 class CatalogAsOfSnapshot:
-    """Cumulative catalog provenance selected under a signal-date PIT cutoff."""
+    """Cumulative provider-snapshot provenance selected under a signal-date cutoff."""
 
     effective_partition_date: str
     source_snapshot_id: str
@@ -76,13 +93,23 @@ class CatalogAsOfSnapshot:
     freshness_sla_hours: int
 
 
+@dataclass(frozen=True, slots=True)
+class SourceCoverageEvidence:
+    """Completion-fact evidence for one (dataset, source, trade_date)."""
+
+    source: str
+    status: CatalogFreshnessStatus
+    sla_hours: int | None
+    snapshot: ProviderSnapshot | None = None
+
+
 def assess_catalog_freshness(
     *,
     dataset: str,
     catalog_entry: DataCatalogEntry | None,
     now: Callable[[], datetime] | None = None,
 ) -> CatalogFreshnessAssessment:
-    """Assess a catalog entry against the data-owned dataset freshness SLA."""
+    """Assess a dataset-level catalog entry against the dataset freshness SLA."""
     metadata = default_dataset_metadata().get(dataset)
     freshness_sla_hours = metadata.freshness_sla_hours if metadata is not None else None
     if freshness_sla_hours is None:
@@ -114,86 +141,186 @@ def latest_catalog_entry_for_dataset(
     reader: DataCatalogReader,
     dataset: str,
 ) -> DataCatalogEntry | None:
-    """Return the freshest known catalog entry for a dataset."""
+    """Return the freshest dataset-level catalog row for a dataset."""
     entries = (
-        entry for entry in reader.list_assets() if entry.asset.dataset_id == dataset
+        entry
+        for entry in reader.list_assets()
+        if entry.asset.dataset_id == dataset and not entry.asset.partition_keys
     )
     return max(entries, key=_catalog_entry_freshness_sort_key, default=None)
 
 
-def latest_catalog_entry_on_or_before(
+def observed_at(snapshot: ProviderSnapshot) -> datetime:
+    """Latest observation event time, falling back to content visibility."""
+    if snapshot.observations:
+        return snapshot.observations[-1]
+    return snapshot.created_at
+
+
+def covering_snapshots(
+    snapshots: ProviderSnapshotReader,
     *,
-    reader: DataCatalogReader,
     dataset: str,
     source: str,
     trade_date: str,
-) -> DataCatalogEntry | None:
-    """Return the latest exact-date source snapshot visible as of ``trade_date``."""
-    candidates = _catalog_entries_on_or_before(
-        reader=reader,
+) -> tuple[ProviderSnapshot, ...]:
+    """Snapshots whose provider request interval covers ``trade_date``."""
+    target = _parse_iso_date(trade_date)
+    if target is None:
+        return ()
+    covering: list[ProviderSnapshot] = []
+    for snapshot in snapshots.list_snapshots(dataset_id=dataset, source=source):
+        start = _parse_iso_date(snapshot.request_start)
+        end = _parse_iso_date(snapshot.request_end)
+        if start is None or end is None or not start <= target <= end:
+            continue
+        covering.append(snapshot)
+    return tuple(covering)
+
+
+def completed_covering_snapshot(
+    snapshots: ProviderSnapshotReader,
+    lifecycle: PartitionLifecycleReader,
+    *,
+    dataset: str,
+    source: str,
+    trade_date: str,
+) -> ProviderSnapshot | None:
+    """Latest observed completed snapshot covering one date, if any."""
+    completed = tuple(
+        snapshot
+        for snapshot in covering_snapshots(
+            snapshots,
+            dataset=dataset,
+            source=source,
+            trade_date=trade_date,
+        )
+        if snapshot_completed(snapshot, lifecycle)
+    )
+    return max(
+        completed,
+        key=lambda item: (observed_at(item), item.snapshot_id),
+        default=None,
+    )
+
+
+def source_coverage_evidence(
+    snapshots: ProviderSnapshotReader,
+    lifecycle: PartitionLifecycleReader,
+    *,
+    dataset: str,
+    source: str,
+    trade_date: str,
+) -> SourceCoverageEvidence:
+    """
+    Completion-fact status for one source at one date.
+
+    fresh — a completed snapshot covers the date (已覆盖,可跳过重复摄取);
+    stale — snapshots were requested for the date but none completed (需重试);
+    missing — no snapshot ever covered the date (可摄取);
+    not_applicable — the dataset has no registered freshness/coverage contract.
+    """
+    metadata = default_dataset_metadata().get(dataset)
+    sla_hours = metadata.freshness_sla_hours if metadata is not None else None
+    if sla_hours is None:
+        return SourceCoverageEvidence(
+            source=source,
+            status="not_applicable",
+            sla_hours=None,
+        )
+    covering = covering_snapshots(
+        snapshots,
         dataset=dataset,
         source=source,
         trade_date=trade_date,
     )
-    if not candidates:
-        return None
-    return max(
-        candidates,
-        key=lambda item: (item[0], *_catalog_entry_freshness_sort_key(item[1])),
-    )[1]
+    if not covering:
+        return SourceCoverageEvidence(
+            source=source,
+            status="missing",
+            sla_hours=sla_hours,
+        )
+    snapshot = max(
+        (item for item in covering if snapshot_completed(item, lifecycle)),
+        key=lambda item: (observed_at(item), item.snapshot_id),
+        default=None,
+    )
+    if snapshot is None:
+        return SourceCoverageEvidence(
+            source=source,
+            status="stale",
+            sla_hours=sla_hours,
+        )
+    return SourceCoverageEvidence(
+        source=source,
+        status="fresh",
+        sla_hours=sla_hours,
+        snapshot=snapshot,
+    )
 
 
-def catalog_asof_snapshot(  # noqa: PLR0911 - fail-closed evidence validation
+def visible_completed_snapshots(
+    snapshots: ProviderSnapshotReader,
+    lifecycle: PartitionLifecycleReader,
     *,
-    reader: DataCatalogReader,
+    dataset: str,
+    source: str,
+    cutoff: date,
+) -> tuple[ProviderSnapshot, ...]:
+    """
+    Completed snapshots with request_end ≤ cutoff that carry observations.
+
+    可见性锚定 #393 观察账本:快照必须已被本地观察(事件存在)才可参与
+    聚合;行级内容可知性由 sparse PIT cutoff 校验保证,历史回补的快照
+    不会因观察时间晚于信号日而被排除(与旧分区日期语义一致)。
+    """
+    visible: list[ProviderSnapshot] = []
+    for snapshot in snapshots.list_snapshots(dataset_id=dataset, source=source):
+        request_end = _parse_iso_date(snapshot.request_end)
+        if request_end is None or request_end > cutoff:
+            continue
+        if not snapshot.observations:
+            continue
+        if not snapshot_completed(snapshot, lifecycle):
+            continue
+        visible.append(snapshot)
+    return tuple(visible)
+
+
+def snapshot_asof_evidence(
+    *,
+    snapshots: ProviderSnapshotReader,
+    lifecycle: PartitionLifecycleReader,
     dataset: str,
     source: str,
     signal_date: str,
 ) -> CatalogAsOfSnapshot | None:
-    """Aggregate all persisted deltas visible at D under the dataset PIT SLA."""
-    try:
-        cutoff = date.fromisoformat(signal_date)
-    except ValueError:
+    """Aggregate all visible completed deltas at D under the dataset PIT SLA."""
+    cutoff = _parse_iso_date(signal_date)
+    if cutoff is None:
         return None
-    dated_entries = _catalog_entries_on_or_before(
-        reader=reader,
-        dataset=dataset,
-        source=source,
-        trade_date=signal_date,
-    )
     metadata = default_dataset_metadata().get(dataset)
     sla_hours = metadata.freshness_sla_hours if metadata is not None else None
-    if not dated_entries or sla_hours is None:
+    if sla_hours is None:
         return None
-
-    effective_date = max(item[0] for item in dated_entries)
+    components = visible_completed_snapshots(
+        snapshots,
+        lifecycle,
+        dataset=dataset,
+        source=source,
+        cutoff=cutoff,
+    )
+    if not components:
+        return None
+    effective_date = max(
+        _parse_iso_date(snapshot.request_end)
+        for snapshot in components
+        # visible_completed_snapshots already rejected unparsable request_end
+        if _parse_iso_date(snapshot.request_end) is not None
+    )
     if (cutoff - effective_date).days * 24 > sla_hours:
         return None
-
-    entries = tuple(item[1] for item in dated_entries)
-    if any(
-        not _is_l1_l2_attested_snapshot_id(entry.source_snapshot_id)
-        for entry in entries
-    ):
-        return None
-    snapshot_ids = tuple(
-        sorted(
-            {
-                entry.source_snapshot_id
-                for entry in entries
-                if isinstance(entry.source_snapshot_id, str)
-                and entry.source_snapshot_id
-            }
-        )
-    )
-    if len(snapshot_ids) != len(entries):
-        return None
-    row_counts = tuple(entry.schema.row_count for entry in entries)
-    if any(
-        not isinstance(count, int) or isinstance(count, bool) or count < 0
-        for count in row_counts
-    ):
-        return None
+    snapshot_ids = tuple(sorted({item.snapshot_id for item in components}))
     aggregate_id = aggregate_source_snapshot_ids(snapshot_ids)
     if aggregate_id is None:
         return None
@@ -201,7 +328,7 @@ def catalog_asof_snapshot(  # noqa: PLR0911 - fail-closed evidence validation
         effective_partition_date=effective_date.isoformat(),
         source_snapshot_id=aggregate_id,
         source_snapshot_ids=snapshot_ids,
-        row_count=sum(count for count in row_counts if isinstance(count, int)),
+        row_count=sum(item.row_count for item in components),
         freshness_sla_hours=sla_hours,
     )
 
@@ -237,30 +364,18 @@ def aggregate_source_snapshot_ids(snapshot_ids: tuple[str, ...]) -> str | None:
     return f"snapshot-set:sha256:{digest}"
 
 
-def catalog_source_snapshot_id(
-    *,
-    dataset: str,
-    trade_date: str,
-    source: str,
-    checksum: str,
-    l1_l2_attested: bool = False,
-) -> str:
-    """Build the canonical source snapshot ID for one date-level write."""
-    snapshot_id = f"snapshot:{source}:{dataset}:{trade_date}:{checksum}"
-    if l1_l2_attested:
-        return f"{snapshot_id}:quality=l1-l2"
-    return snapshot_id
-
-
-def _is_l1_l2_attested_snapshot_id(snapshot_id: str | None) -> bool:
-    return isinstance(snapshot_id, str) and snapshot_id.endswith("quality=l1-l2")
-
-
 @dataclass(frozen=True, slots=True)
 class PersistedIngestionEvidenceVerifier:
-    """Bind serialized ingestion evidence to durable catalog and log facts."""
+    """
+    Bind serialized ingestion evidence to durable snapshot and log facts.
 
-    reader: DataCatalogReader
+    三方交叉验证:success log × provider_snapshot(checksum/row_count) ×
+    snapshot_completed。这是"同 run 不同内容拒绝"的锚点——log 与完成
+    snapshot 的内容身份必须逐字节一致,任何一方漂移都判定证据无效。
+    """
+
+    snapshots: ProviderSnapshotReader
+    lifecycle: PartitionLifecycleReader
     ingestion_logs: _IngestionLogReader
 
     def verify_exact_date(
@@ -272,31 +387,32 @@ class PersistedIngestionEvidenceVerifier:
         checksum: str,
         row_count: int,
     ) -> bool:
-        """Verify one non-sparse result against its DQ-attested persisted write."""
-        entry = catalog_entry_for_date(
-            reader=self.reader,
-            dataset=dataset,
-            source=source,
-            trade_date=trade_date,
-        )
+        """Verify one non-sparse result against its completed snapshot facts."""
+        if not isinstance(checksum, str) or not checksum:
+            return False
+        if isinstance(row_count, bool) or not isinstance(row_count, int):
+            return False
         log = self.ingestion_logs.get_log(
             dataset=dataset,
             source=source,
             trade_date=trade_date,
         )
-        return bool(
-            entry is not None
-            and log is not None
-            and log.status == IngestionStatus.SUCCESS
-            and log.checksum == checksum
-            and log.rows == row_count
-            and entry.schema.row_count == row_count
-            and entry.source_snapshot_id
-            == _expected_catalog_source_snapshot_id(
-                entry=entry,
+        if (
+            log is None
+            or log.status is not IngestionStatus.SUCCESS
+            or log.checksum != checksum
+            or log.rows != row_count
+        ):
+            return False
+        return any(
+            snapshot.checksum == checksum
+            and snapshot.row_count == row_count
+            and snapshot_completed(snapshot, self.lifecycle)
+            for snapshot in covering_snapshots(
+                self.snapshots,
                 dataset=dataset,
                 source=source,
-                checksum=checksum,
+                trade_date=trade_date,
             )
         )
 
@@ -310,177 +426,72 @@ class PersistedIngestionEvidenceVerifier:
         expected_row_count: int,
     ) -> bool:
         """Verify every component of one cumulative sparse PIT snapshot."""
-        return catalog_snapshot_has_quality_logs(
-            reader=self.reader,
-            ingestion_logs=self.ingestion_logs,
-            dataset=dataset,
-            source=source,
-            signal_date=signal_date,
-            expected_snapshot_ids=expected_snapshot_ids,
-            expected_row_count=expected_row_count,
-        )
-
-
-def catalog_snapshot_has_quality_logs(
-    *,
-    reader: DataCatalogReader,
-    ingestion_logs: _IngestionLogReader,
-    dataset: str,
-    source: str,
-    signal_date: str,
-    expected_snapshot_ids: tuple[str, ...],
-    expected_row_count: int,
-) -> bool:
-    """Verify every cumulative PIT catalog delta against a successful DQ-gated log."""
-    dated_entries = _catalog_entries_on_or_before(
-        reader=reader,
-        dataset=dataset,
-        source=source,
-        trade_date=signal_date,
-    )
-    entries = tuple(item[1] for item in dated_entries)
-    actual_ids = tuple(
-        sorted(
-            entry.source_snapshot_id
-            for entry in entries
-            if isinstance(entry.source_snapshot_id, str) and entry.source_snapshot_id
-        )
-    )
-    if actual_ids != expected_snapshot_ids or len(entries) != len(actual_ids):
-        return False
-    row_count = 0
-    for _partition_date, entry in dated_entries:
-        log_trade_date = _catalog_log_trade_date(entry)
-        if log_trade_date is None:
-            return False
-        log = ingestion_logs.get_log(
-            dataset=dataset,
-            source=source,
-            trade_date=log_trade_date,
-        )
-        if (
-            log is None
-            or log.status != IngestionStatus.SUCCESS
-            or not isinstance(log.checksum, str)
-            or not log.checksum
-            or not isinstance(log.rows, int)
-            or isinstance(log.rows, bool)
-            or log.rows < 0
-            or log.rows != entry.schema.row_count
-            or entry.source_snapshot_id
-            != _expected_catalog_source_snapshot_id(
-                entry=entry,
-                dataset=dataset,
-                source=source,
-                checksum=log.checksum,
-            )
+        if isinstance(expected_row_count, bool) or not isinstance(
+            expected_row_count, int
         ):
             return False
-        row_count += log.rows
-    return row_count == expected_row_count
-
-
-def _catalog_partition_values(entry: DataCatalogEntry) -> dict[str, str] | None:
-    values: dict[str, str] = {}
-    for partition in entry.asset.partition_keys:
-        key, separator, value = partition.partition("=")
-        if not separator or not key or not value or key in values:
-            return None
-        values[key] = value
-    return values
-
-
-def _catalog_log_trade_date(entry: DataCatalogEntry) -> str | None:
-    values = _catalog_partition_values(entry)
-    if values is None:
-        return None
-    if set(values) == {"trade_date"}:
-        return values["trade_date"]
-    if set(values) in (
-        {"start_date", "end_date"},
-        {"source_ticker", "start_date", "end_date"},
-    ):
-        return values["start_date"]
-    return None
-
-
-def _expected_catalog_source_snapshot_id(
-    *,
-    entry: DataCatalogEntry,
-    dataset: str,
-    source: str,
-    checksum: str,
-) -> str | None:
-    values = _catalog_partition_values(entry)
-    if values is None:
-        return None
-    if set(values) == {"trade_date"}:
-        return catalog_source_snapshot_id(
+        cutoff = _parse_iso_date(signal_date)
+        if cutoff is None:
+            return False
+        components = visible_completed_snapshots(
+            self.snapshots,
+            self.lifecycle,
             dataset=dataset,
-            trade_date=values["trade_date"],
             source=source,
-            checksum=checksum,
-            l1_l2_attested=True,
+            cutoff=cutoff,
         )
-    if set(values) in (
-        {"start_date", "end_date"},
-        {"source_ticker", "start_date", "end_date"},
-    ):
-        source_ticker = values.get("source_ticker", "all")
-        return (
-            f"snapshot:{source}:{dataset}:{source_ticker}:"
-            f"{values['start_date']}:{values['end_date']}:"
-            f"{checksum}:quality=l1-l2"
+        if tuple(sorted({item.snapshot_id for item in components})) != tuple(
+            sorted(set(expected_snapshot_ids))
+        ):
+            return False
+        attested_payloads = self._success_payloads(dataset=dataset, source=source)
+        return sum(item.row_count for item in components) == expected_row_count and all(
+            (item.checksum, item.row_count) in attested_payloads for item in components
         )
-    return None
+
+    def _success_payloads(
+        self,
+        *,
+        dataset: str,
+        source: str,
+    ) -> set[tuple[str, int]]:
+        """Content identities proven by durable success logs."""
+        payloads: set[tuple[str, int]] = set()
+        for trade_date in self.ingestion_logs.list_ingested_dates(
+            dataset,
+            source,
+            IngestionStatus.SUCCESS,
+        ):
+            log = self.ingestion_logs.get_log(dataset, source, trade_date)
+            if (
+                log is not None
+                and log.status is IngestionStatus.SUCCESS
+                and isinstance(log.checksum, str)
+                and log.checksum
+                and isinstance(log.rows, int)
+                and not isinstance(log.rows, bool)
+                and log.rows >= 0
+            ):
+                payloads.add((log.checksum, log.rows))
+        return payloads
 
 
-def catalog_entry_for_date(
+def snapshot_repair_priority(
     *,
-    reader: DataCatalogReader,
+    logs: _IngestionLogReader,
     dataset: str,
     source: str,
     trade_date: str,
-) -> DataCatalogEntry | None:
-    """Return an exact-date catalog entry for dataset/source if present."""
-    entry = reader.get_asset(
-        DataAssetRef(
-            dataset_id=dataset,
-            namespace=dataset_namespace(dataset),
-            partition_keys=(f"trade_date={trade_date}",),
-        )
-    )
-    if entry is None or entry.source != source:
-        return None
-    return entry
+) -> tuple[int, str, str]:
+    """
+    Sort failed dates for repair: never-attempted first, then fewest attempts.
 
-
-def catalog_repair_priority(
-    *,
-    reader: DataCatalogReader,
-    dataset: str,
-    source: str,
-    trade_date: str,
-    now: Callable[[], datetime] | None = None,
-) -> int:
-    """Return lower values for failed dates that should be repaired first."""
-    entry = catalog_entry_for_date(
-        reader=reader,
-        dataset=dataset,
-        source=source,
-        trade_date=trade_date,
-    )
-    assessment = assess_catalog_freshness(
-        dataset=dataset,
-        catalog_entry=entry,
-        now=now,
-    )
-    return {
-        "missing": 0,
-        "stale": 1,
-        "not_applicable": 2,
-        "fresh": 3,
-    }[assessment.status]
+    #394 之后精确日期条目不再存在,排序锚定 success log 的尝试簿记。
+    """
+    log = logs.get_log(dataset, source, trade_date)
+    if log is None:
+        return (0, "", trade_date)
+    return (log.attempts, log.last_attempt_at or "", trade_date)
 
 
 def select_ingestion_source(
@@ -488,8 +499,8 @@ def select_ingestion_source(
     dataset: str,
     trade_date: str,
     available_sources: tuple[str, ...],
-    catalog_reader: DataCatalogReader | None = None,
-    now: Callable[[], datetime] | None = None,
+    snapshots: ProviderSnapshotReader | None = None,
+    lifecycle: PartitionLifecycleReader | None = None,
 ) -> str:
     """Select the runtime source that should drive this ingestion request."""
     normalized_sources = tuple(
@@ -514,21 +525,18 @@ def select_ingestion_source(
         if metadata is not None and metadata.default_source in candidates
         else candidates[0]
     )
-    if catalog_reader is None:
+    if snapshots is None or lifecycle is None:
         return default_source
 
     assessments = tuple(
         (
             source,
-            assess_catalog_freshness(
+            source_coverage_evidence(
+                snapshots,
+                lifecycle,
                 dataset=dataset,
-                catalog_entry=catalog_entry_for_date(
-                    reader=catalog_reader,
-                    dataset=dataset,
-                    source=source,
-                    trade_date=trade_date,
-                ),
-                now=now,
+                source=source,
+                trade_date=trade_date,
             ),
         )
         for source in candidates
@@ -559,46 +567,11 @@ def _catalog_entry_freshness_sort_key(
     )
 
 
-def _exact_partition_date(entry: DataCatalogEntry) -> date | None:
-    trade_dates = [
-        partition.removeprefix("trade_date=")
-        for partition in entry.asset.partition_keys
-        if partition.startswith("trade_date=")
-    ]
-    range_end_dates = [
-        partition.removeprefix("end_date=")
-        for partition in entry.asset.partition_keys
-        if partition.startswith("end_date=")
-    ]
-    raw_dates = trade_dates or range_end_dates
-    if len(raw_dates) != 1 or (trade_dates and range_end_dates):
-        return None
+def _parse_iso_date(value: str) -> date | None:
     try:
-        return date.fromisoformat(raw_dates[0])
+        return date.fromisoformat(value)
     except ValueError:
         return None
-
-
-def _catalog_entries_on_or_before(
-    *,
-    reader: DataCatalogReader,
-    dataset: str,
-    source: str,
-    trade_date: str,
-) -> tuple[tuple[date, DataCatalogEntry], ...]:
-    try:
-        cutoff = date.fromisoformat(trade_date)
-    except ValueError:
-        return ()
-    namespace = dataset_namespace(dataset)
-    candidates: list[tuple[date, DataCatalogEntry]] = []
-    for entry in reader.list_assets(namespace):
-        if entry.asset.dataset_id != dataset or entry.source != source:
-            continue
-        partition_date = _exact_partition_date(entry)
-        if partition_date is not None and partition_date <= cutoff:
-            candidates.append((partition_date, entry))
-    return tuple(candidates)
 
 
 def _utcnow() -> datetime:

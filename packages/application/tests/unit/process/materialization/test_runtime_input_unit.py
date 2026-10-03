@@ -38,6 +38,9 @@ from ditto_features.materialization.dependency_registry import (
     resolve_market_dependency,
 )
 from ditto_kernel.strategy import ExecutionPolicy
+from packages.application.tests.unit.process.ingestion import (
+    snapshot_evidence_support as _evidence_support,
+)
 
 
 def _make_spec(**overrides: object) -> DerivedSpec:
@@ -143,12 +146,14 @@ def _catalog_entry(
         "amount",
     ),
 ) -> DataCatalogEntry:
+    _ = trade_date
     timestamp = datetime(2024, 1, 10, 16, 0, tzinfo=UTC)
     return DataCatalogEntry(
+        # #394:catalog 只有数据集级描述行;覆盖事实来自快照。
         asset=DataAssetRef(
             dataset_id=dataset_id,
             namespace=namespace,
-            partition_keys=(f"trade_date={trade_date}",),
+            partition_keys=(),
         ),
         storage_uri=f"lake://{namespace}/{dataset_id}/{trade_date}.parquet",
         schema=DataSchemaFingerprint(
@@ -215,6 +220,8 @@ class TestRuntimeDerivedInputProvider:
         mock_market_service: MagicMock | None = None,
         data_catalog: InMemoryDataCatalog | None = None,
         catalog_coverage_dates: tuple[str, ...] | None = None,
+        snapshots: object | None = None,
+        lifecycle: object | None = None,
     ) -> RuntimeDerivedInputProvider:
         catalog_service = MagicMock()
         catalog_service.resolve_offline_version.return_value = 1
@@ -231,6 +238,8 @@ class TestRuntimeDerivedInputProvider:
             market_service=market,
             artifact_root=Path("/tmp/artifacts"),
             data_catalog_reader=data_catalog,
+            snapshots=snapshots,
+            lifecycle=lifecycle,
             catalog_coverage_dates_provider=(
                 (lambda _start, _end: catalog_coverage_dates)
                 if catalog_coverage_dates is not None
@@ -386,14 +395,17 @@ class TestRuntimeDerivedInputProvider:
             )
         )
         mock_market = MagicMock()
-        provider = self._make_provider(
-            mock_market_service=mock_market,
-            data_catalog=catalog,
-        )
-        ctx = _make_input_context(dependencies=("market.close", "market.volume"))
+        with _evidence_support.evidence_stores() as stores:
+            provider = self._make_provider(
+                mock_market_service=mock_market,
+                data_catalog=catalog,
+                snapshots=stores.snapshots,
+                lifecycle=stores.lifecycle,
+            )
+            ctx = _make_input_context(dependencies=("market.close", "market.volume"))
 
-        with pytest.raises(DependencyCatalogCompatibilityError) as exc_info:
-            provider.load_input(ctx)
+            with pytest.raises(DependencyCatalogCompatibilityError) as exc_info:
+                provider.load_input(ctx)
 
         assert exc_info.value.dataset_ref == "market.stock_daily"
         assert exc_info.value.missing_columns == ("volume",)
@@ -404,17 +416,29 @@ class TestRuntimeDerivedInputProvider:
     ) -> None:
         """Provider should reject catalog assets that do not cover request dates."""
         catalog = InMemoryDataCatalog()
-        catalog.upsert_asset(_catalog_entry(trade_date="2024-01-01"))
+        catalog.upsert_asset(_catalog_entry())
         mock_market = MagicMock()
-        provider = self._make_provider(
-            mock_market_service=mock_market,
-            data_catalog=catalog,
-            catalog_coverage_dates=("2024-01-01", "2024-01-02"),
-        )
-        ctx = _make_input_context(dependencies=("market.close",))
+        with _evidence_support.evidence_stores() as stores:
+            _evidence_support.commit_snapshot(
+                stores,
+                dataset="stock_daily",
+                request_start="2024-01-01",
+                request_end="2024-01-01",
+                checksum="1" * 32,
+                row_count=2,
+                schema_version="market.stock_daily.v1",
+            )
+            provider = self._make_provider(
+                mock_market_service=mock_market,
+                data_catalog=catalog,
+                catalog_coverage_dates=("2024-01-01", "2024-01-02"),
+                snapshots=stores.snapshots,
+                lifecycle=stores.lifecycle,
+            )
+            ctx = _make_input_context(dependencies=("market.close",))
 
-        with pytest.raises(DependencyCatalogCompatibilityError) as exc_info:
-            provider.load_input(ctx)
+            with pytest.raises(DependencyCatalogCompatibilityError) as exc_info:
+                provider.load_input(ctx)
 
         assert exc_info.value.dataset_ref == "market.stock_daily"
         assert exc_info.value.reason == "missing_catalog_coverage"
@@ -426,21 +450,32 @@ class TestRuntimeDerivedInputProvider:
     ) -> None:
         """Provider should pin source reads to the requested catalog snapshot."""
         catalog = InMemoryDataCatalog()
-        catalog.upsert_asset(
-            _catalog_entry(source_snapshot_id="snapshot:tushare:stock_daily:v1")
-        )
+        catalog.upsert_asset(_catalog_entry())
         mock_market = MagicMock()
-        provider = self._make_provider(
-            mock_market_service=mock_market,
-            data_catalog=catalog,
-        )
-        ctx = _make_input_context(
-            dependencies=("market.close",),
-            source_snapshot_id="snapshot:tushare:stock_daily:v2",
-        )
+        with _evidence_support.evidence_stores() as stores:
+            snapshot = _evidence_support.commit_snapshot(
+                stores,
+                dataset="stock_daily",
+                request_start="2024-01-01",
+                request_end="2024-01-01",
+                checksum="2" * 32,
+                row_count=2,
+                schema_version="market.stock_daily.v1",
+            )
+            provider = self._make_provider(
+                mock_market_service=mock_market,
+                data_catalog=catalog,
+                catalog_coverage_dates=("2024-01-01",),
+                snapshots=stores.snapshots,
+                lifecycle=stores.lifecycle,
+            )
+            ctx = _make_input_context(
+                dependencies=("market.close",),
+                source_snapshot_id="snapshot:tushare:stock_daily:v2",
+            )
 
-        with pytest.raises(DependencyCatalogCompatibilityError) as exc_info:
-            provider.load_input(ctx)
+            with pytest.raises(DependencyCatalogCompatibilityError) as exc_info:
+                provider.load_input(ctx)
 
         assert exc_info.value.dataset_ref == "market.stock_daily"
         assert exc_info.value.reason == "source_snapshot_mismatch"
@@ -448,10 +483,7 @@ class TestRuntimeDerivedInputProvider:
             exc_info.value.expected_source_snapshot_id
             == "snapshot:tushare:stock_daily:v2"
         )
-        assert (
-            exc_info.value.actual_source_snapshot_id
-            == "snapshot:tushare:stock_daily:v1"
-        )
+        assert exc_info.value.actual_source_snapshot_id == snapshot.snapshot_id
         mock_market.get_stock_bars.assert_not_called()
 
     def test_load_input_delegates_to_get_etf_bars_for_etf_deps(self) -> None:

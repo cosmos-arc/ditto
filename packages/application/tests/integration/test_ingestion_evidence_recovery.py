@@ -82,11 +82,7 @@ from ditto_platform.foundation.storage import parquet_store
 
 def _request() -> EvidenceCommitRequest:
     now = datetime(2026, 7, 18, 8, 30, tzinfo=UTC)
-    asset = DataAssetRef(
-        dataset_id="stock_daily",
-        namespace="market",
-        partition_keys=("trade_date=2026-07-17",),
-    )
+    asset = DataAssetRef(dataset_id="stock_daily", namespace="market")
     snapshot = ProviderSnapshot.create(
         ProviderSnapshotDraft(
             dataset_id="stock_daily",
@@ -124,16 +120,15 @@ def _request() -> EvidenceCommitRequest:
             ),
             source="tushare",
             freshness_at=now,
-            source_snapshot_id=(
-                "snapshot:tushare:stock_daily:2026-07-17:sha256:canonical:quality=l1-l2"
-            ),
+            source_snapshot_id=snapshot.snapshot_id,
         ),
+        # #394:log 内容与 provider snapshot 的 checksum/row_count 逐字节一致。
         success_log=IngestionLog(
             dataset="stock_daily",
             source="tushare",
             trade_date="2026-07-17",
             status=IngestionStatus.SUCCESS,
-            checksum="sha256:canonical",
+            checksum="sha256:payload",
             rows=1,
         ),
     )
@@ -486,6 +481,8 @@ def _coordinator(runtime: _Pipeline, source: _MarketSource):
             quality_checker=runtime.context.quality_checker,
             evidence_committer=runtime.context.evidence_committer,
             provider_payload_writer=runtime.context.provider_payload_writer,
+            snapshot_reader=runtime.ports.snapshot_reader,
+            lifecycle_reader=runtime.ports.lifecycle_reader,
         ),
     )
     return coordinator, metadata
@@ -507,11 +504,12 @@ def test_normal_backfill_resumes_failed_revision_after_original_completed(
         manager = BackfillManager(
             coordinator,
             metadata,
-            cast(IngestionLogStore, runtime.ports.ingestion_log_store),
             bootstrap_planner=BootstrapPlanner(
                 metadata_service=metadata,
                 partition_lifecycle_reader=runtime.ports.lifecycle_reader,
             ),
+            snapshot_reader=runtime.ports.snapshot_reader,
+            lifecycle_reader=runtime.ports.lifecycle_reader,
         )
         initial = manager.backfill_range("stock_daily", "2026-07-16", "2026-07-17")
         assert initial.success_count == 1

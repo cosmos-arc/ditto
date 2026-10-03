@@ -7,12 +7,14 @@ from pathlib import Path
 
 from ditto_data.catalog import DataCatalogReader, DataCatalogWriter
 from ditto_data.catalog.provider_payload import ProviderPayloadWriter
+from ditto_data.catalog.source_snapshot import ProviderSnapshotReader
 from ditto_data.ingestion.ingestion_cursor_store import (
     IngestionCursorStore,
 )
 from ditto_data.ingestion.ingestion_log_store import (
     IngestionLogStore,
 )
+from ditto_data.ingestion.partition_state import PartitionLifecycleReader
 from pydantic import BaseModel, ConfigDict, Field
 
 from ditto_application.processes.ingestion.evidence_commit import (
@@ -46,3 +48,5 @@ class IngestionCoordinatorConfig:
     catalog_writer: DataCatalogWriter | None = None
     evidence_committer: IngestionEvidenceCommitter | None = None
     provider_payload_writer: ProviderPayloadWriter | None = None
+    snapshot_reader: ProviderSnapshotReader | None = None
+    lifecycle_reader: PartitionLifecycleReader | None = None

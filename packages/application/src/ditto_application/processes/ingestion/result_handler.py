@@ -23,10 +23,7 @@ from ditto_data.models.ingestion import (
 )
 from ditto_platform.foundation import WriteResult
 
-from ditto_application.catalog_freshness import (
-    aggregate_source_snapshot_ids,
-    catalog_source_snapshot_id,
-)
+from ditto_application.catalog_freshness import aggregate_source_snapshot_ids
 from ditto_application.processes.ingestion.sparse_pit import SparsePITCutoffError
 
 
@@ -195,17 +192,10 @@ def _validated_quality_evidence(
                 and checksum is None
             )
         else:
-            expected_snapshot_id = (
-                catalog_source_snapshot_id(
-                    dataset=dataset,
-                    trade_date=trade_date,
-                    source=source,
-                    checksum=checksum,
-                    l1_l2_attested=True,
-                )
-                if isinstance(checksum, str) and checksum
-                else None
-            )
+            # #394:组件快照 id 是 provider 侧哈希,序列化载荷无法反推;
+            # checksum↔快照的内容绑定由 durable 三方校验
+            # (success log × provider_snapshot × snapshot_completed)承担,
+            # 此处只要求聚合组件非空且内容身份存在。
             raw_snapshot_ids = cast(dict[object, object], raw_snapshot).get(
                 "source_snapshot_ids"
             )
@@ -214,9 +204,10 @@ def _validated_quality_evidence(
                 and status == "passed"
                 and levels == ("l1", "l2")
                 and evidence_rows == payload_rows
-                and expected_snapshot_id is not None
+                and isinstance(checksum, str)
+                and bool(checksum)
                 and isinstance(raw_snapshot_ids, (list, tuple))
-                and expected_snapshot_id in raw_snapshot_ids
+                and len(raw_snapshot_ids) > 0
             )
     else:
         valid = (

@@ -139,12 +139,15 @@ class IngestionCoordinator:
         self._quality_checker = cfg.quality_checker
         self._catalog_reader = cfg.catalog_reader
         self._catalog_writer = cfg.catalog_writer
+        self._snapshot_reader = cfg.snapshot_reader
+        self._lifecycle_reader = cfg.lifecycle_reader
         self._evidence_committer = cfg.evidence_committer
         self._provider_payload_writer = cfg.provider_payload_writer
 
         self._metadata_manager = MetadataManager(
             cfg.ingestion_log_store,
-            data_catalog_reader=cfg.catalog_reader,
+            snapshot_reader=cfg.snapshot_reader,
+            lifecycle_reader=cfg.lifecycle_reader,
         )
         self._result_handler = IngestionResultHandler(
             cfg.ingestion_log_store, cfg.source_name
@@ -307,7 +310,8 @@ class IngestionCoordinator:
                     dataset=dataset,
                     trade_date=trade_date,
                     source_name=self._source_name,
-                    catalog_reader=self._catalog_reader,
+                    snapshots=self._snapshot_reader,
+                    lifecycle=self._lifecycle_reader,
                 )
                 if snapshot_evidence is None or quality_evidence is None:
                     return None
@@ -395,6 +399,8 @@ class IngestionCoordinator:
                 source_name=self._source_name,
                 evidence_committer=self._evidence_committer,
                 provider_payload_writer=self._provider_payload_writer,
+                snapshot_reader=self._snapshot_reader,
+                lifecycle_reader=self._lifecycle_reader,
             ),
             request_window=(
                 RequestWindow(*request_bounds, advance_cursor=False)
@@ -542,6 +548,8 @@ class IngestionCoordinator:
                 source_name=self._source_name,
                 evidence_committer=self._evidence_committer,
                 provider_payload_writer=self._provider_payload_writer,
+                snapshot_reader=self._snapshot_reader,
+                lifecycle_reader=self._lifecycle_reader,
             ),
             request_window=RequestWindow(None, request_end),
             chunk_id=chunk_id,

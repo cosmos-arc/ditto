@@ -6,10 +6,11 @@ from datetime import UTC, date, datetime
 from typing import Literal
 
 import polars as pl
-from ditto_data.catalog import DataCatalogReader
+from ditto_data.catalog.source_snapshot import ProviderSnapshotReader
+from ditto_data.ingestion.partition_state import PartitionLifecycleReader
 from ditto_data.models.ingestion import IngestionSnapshotEvidence
 
-from ditto_application.catalog_freshness import catalog_asof_snapshot
+from ditto_application.catalog_freshness import snapshot_asof_evidence
 
 type SparsePITCutoffError = Literal[
     "PIT_CUTOFF_DATE_INVALID",
@@ -91,13 +92,20 @@ def resolve_sparse_asof_snapshot(
     dataset: str,
     trade_date: str,
     source_name: str,
-    catalog_reader: DataCatalogReader | None,
+    snapshots: ProviderSnapshotReader | None,
+    lifecycle: PartitionLifecycleReader | None,
 ) -> IngestionSnapshotEvidence | None:
-    """Resolve durable cumulative PIT provenance at the signal-date cutoff."""
-    if catalog_reader is None:
+    """
+    Resolve durable cumulative PIT provenance at the signal-date cutoff.
+
+    #394:聚合事实来自 completed provider snapshots(request_end ≤ 信号日、
+    观察事件可见),catalog 不再参与。
+    """
+    if snapshots is None or lifecycle is None:
         return None
-    snapshot = catalog_asof_snapshot(
-        reader=catalog_reader,
+    snapshot = snapshot_asof_evidence(
+        snapshots=snapshots,
+        lifecycle=lifecycle,
         dataset=dataset,
         source=source_name,
         signal_date=trade_date,

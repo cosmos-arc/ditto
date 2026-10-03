@@ -152,7 +152,6 @@ from ditto_application.processes.materialization.publication_facade import (
 )
 from ditto_application.processes.materialization.source_snapshot_resolver import (
     CatalogSourceSnapshotResolver,
-    UniverseSourceTickersRequest,
 )
 from ditto_application.processes.quality import (
     QualityBatchCoordinator,
@@ -172,23 +171,6 @@ from ditto_application.queries.research_certification import (
 from ditto_application.queries.run import RunReadModel
 from ditto_application.queries.snapshot_readiness import SnapshotReadinessQuery
 from ditto_application.settings import TradingSettings
-
-
-def _source_tickers_for_universe(
-    metadata_service: MetadataService,
-    request: UniverseSourceTickersRequest,
-) -> tuple[str, ...]:
-    return tuple(
-        metadata_service.resolve_source_ticker(
-            instrument_id=instrument_id,
-            source=request.source,
-            asof=request.asof,
-        )
-        for instrument_id in metadata_service.get_universe(
-            request.universe_id,
-            request.asof,
-        )
-    )
 
 
 @dataclass(frozen=True)
@@ -470,12 +452,14 @@ class AppProcessProvider(Provider):
     @provide
     def persisted_ingestion_evidence_verifier(
         self,
-        data_catalog_reader: DataCatalogReader,
+        snapshots: ProviderSnapshotReader,
+        partitions: PartitionLifecycleReader,
         ingestion_log_store: IngestionLogStore,
     ) -> PersistedIngestionEvidenceVerifier:
-        """Bind DQ outcomes to durable catalog and ingestion-log facts."""
+        """Bind DQ outcomes to durable snapshot and ingestion-log facts."""
         return PersistedIngestionEvidenceVerifier(
-            reader=data_catalog_reader,
+            snapshots=snapshots,
+            lifecycle=partitions,
             ingestion_logs=ingestion_log_store,
         )
 
@@ -494,6 +478,8 @@ class AppProcessProvider(Provider):
         market_service: MarketService,
         settings: DataStoreSettings,
         data_catalog_reader: DataCatalogReader,
+        snapshots: ProviderSnapshotReader,
+        partitions: PartitionLifecycleReader,
         metadata_service: MetadataService,
     ) -> RuntimeDerivedInputProvider:
         """衍生因子运行时输入提供器."""
@@ -502,6 +488,8 @@ class AppProcessProvider(Provider):
             market_service=market_service,
             artifact_root=Path(settings.data_root),
             data_catalog_reader=data_catalog_reader,
+            snapshots=snapshots,
+            lifecycle=partitions,
             catalog_coverage_dates_provider=metadata_service.list_trading_days,
         )
 
@@ -536,15 +524,16 @@ class AppProcessProvider(Provider):
     def catalog_source_snapshot_resolver(
         self,
         data_catalog_reader: DataCatalogReader,
+        snapshots: ProviderSnapshotReader,
+        partitions: PartitionLifecycleReader,
         metadata_service: MetadataService,
     ) -> CatalogSourceSnapshotResolver:
-        """从 DataCatalog 解析物化输入快照."""
+        """从完成快照事实解析物化输入来源."""
         return CatalogSourceSnapshotResolver(
             data_catalog_reader=data_catalog_reader,
+            snapshots=snapshots,
+            lifecycle=partitions,
             catalog_coverage_dates_provider=metadata_service.list_trading_days,
-            universe_source_tickers_provider=lambda request: (
-                _source_tickers_for_universe(metadata_service, request)
-            ),
         )
 
     @provide

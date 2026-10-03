@@ -2,17 +2,13 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
-from datetime import datetime
-
-from ditto_data.catalog import DataCatalogReader
 from ditto_data.ingestion.ingestion_log_store import (
     IngestionLogStore,
 )
 from ditto_data.models.ingestion import IngestionResult, RetryResult
 from ditto_platform.foundation import logger
 
-from ditto_application.catalog_freshness import catalog_repair_priority
+from ditto_application.catalog_freshness import snapshot_repair_priority
 from ditto_application.processes.ingestion.result_handler import count_results
 from ditto_application.processes.ingestion.source_selection import (
     IngestionCoordinatorLike,
@@ -27,9 +23,6 @@ class RetryManager:
         coordinator: IngestionCoordinatorLike,
         ingestion_log_store: IngestionLogStore,
         source: str = "tushare",
-        *,
-        data_catalog_reader: DataCatalogReader | None = None,
-        now: Callable[[], datetime] | None = None,
     ) -> None:
         """
 
@@ -42,21 +35,12 @@ class RetryManager:
 
             source: 数据源标识符
 
-            data_catalog_reader: 可选 catalog 读端口，用于按 freshness/SLA
-                优先级排序失败修复任务。
-
-            now: 可选当前时间函数，便于测试 SLA 判定。
-
-
-
         """
         self._coordinator = coordinator
 
         self._ingestion_log_store = ingestion_log_store
 
         self._source = source
-        self._data_catalog_reader = data_catalog_reader
-        self._now = now
 
     def get_failed_dates(
         self,
@@ -107,17 +91,13 @@ class RetryManager:
         dataset: str,
         failed_dates: list[str],
     ) -> list[str]:
-        reader = self._data_catalog_reader
-        if reader is None:
-            return failed_dates
         return sorted(
             failed_dates,
-            key=lambda trade_date: catalog_repair_priority(
-                reader=reader,
+            key=lambda trade_date: snapshot_repair_priority(
+                logs=self._ingestion_log_store,
                 dataset=dataset,
                 source=self._source,
                 trade_date=trade_date,
-                now=self._now,
             ),
         )
 

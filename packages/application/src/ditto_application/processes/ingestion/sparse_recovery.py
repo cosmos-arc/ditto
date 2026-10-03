@@ -2,16 +2,17 @@
 
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, timedelta
 from typing import Protocol
 
-from ditto_data.catalog import DataCatalogReader
+from ditto_data.catalog.source_snapshot import ProviderSnapshotReader
+from ditto_data.ingestion.partition_state import PartitionLifecycleReader
 from ditto_data.models.ingestion import IngestionQualityEvidence, IngestionResult
 from ditto_platform.foundation import logger
 
 from ditto_application.catalog_freshness import (
     PersistedIngestionEvidenceVerifier,
-    catalog_asof_snapshot,
+    snapshot_asof_evidence,
 )
 from ditto_application.exceptions import AppProcessError
 from ditto_application.processes.ingestion.sparse_pit import is_sparse_pit_dataset
@@ -22,6 +23,8 @@ from ditto_application.processes.ingestion.sparse_recovery_models import (
 )
 
 __all__ = ["SparsePITIngestionPort", "SparsePITReattestationProcess"]
+
+_MAX_RANGE_EXPANSION_DAYS = 400
 
 
 class SparsePITIngestionPort(Protocol):
@@ -44,11 +47,13 @@ class SparsePITReattestationProcess:
         self,
         *,
         ingestion: SparsePITIngestionPort,
-        catalog: DataCatalogReader,
+        snapshots: ProviderSnapshotReader,
+        lifecycle: PartitionLifecycleReader,
         verifier: PersistedIngestionEvidenceVerifier,
     ) -> None:
         self._ingestion = ingestion
-        self._catalog = catalog
+        self._snapshots = snapshots
+        self._lifecycle = lifecycle
         self._verifier = verifier
 
     def run(
@@ -89,8 +94,9 @@ class SparsePITReattestationProcess:
             )
 
         try:
-            snapshot = catalog_asof_snapshot(
-                reader=self._catalog,
+            snapshot = snapshot_asof_evidence(
+                snapshots=self._snapshots,
+                lifecycle=self._lifecycle,
                 dataset=request.dataset,
                 source=request.source,
                 signal_date=request.signal_date,
@@ -232,28 +238,36 @@ class SparsePITReattestationProcess:
         self,
         request: SparsePITReattestationRequest,
     ) -> tuple[str, ...]:
+        """
+        Every component date persisted by snapshots at or before the cutoff.
+
+        #394:组件日期来自 provider snapshots 的请求区间;同一快照覆盖的每个
+        日历日都是一个待重放组件(非交易日由 ingest_date 自行跳过)。
+        """
         cutoff = date.fromisoformat(request.signal_date)
         dates: set[date] = set()
-        for entry in self._catalog.list_assets():
-            if (
-                entry.asset.dataset_id != request.dataset
-                or entry.source != request.source
-            ):
-                continue
-            if len(entry.asset.partition_keys) != 1:
-                msg = "Sparse PIT component must have exactly one partition key"
-                raise AppProcessError(msg)
-            key = entry.asset.partition_keys[0]
-            if not key.startswith("trade_date="):
-                msg = "Sparse PIT component partition must be trade_date"
-                raise AppProcessError(msg)
+        for snapshot in self._snapshots.list_snapshots(
+            dataset_id=request.dataset,
+            source=request.source,
+        ):
             try:
-                component_date = date.fromisoformat(key.removeprefix("trade_date="))
+                start = date.fromisoformat(snapshot.request_start)
+                end = date.fromisoformat(snapshot.request_end)
             except ValueError as error:
-                msg = "Sparse PIT component trade_date partition is invalid"
+                msg = "Sparse PIT snapshot request interval is invalid"
                 raise AppProcessError(msg) from error
-            if component_date <= cutoff:
-                dates.add(component_date)
+            if end < start:
+                msg = "Sparse PIT snapshot request interval is inverted"
+                raise AppProcessError(msg)
+            if (end - start).days > _MAX_RANGE_EXPANSION_DAYS:
+                msg = "Sparse PIT snapshot request interval is implausibly wide"
+                raise AppProcessError(msg)
+            if start > cutoff:
+                continue
+            dates.update(
+                start + timedelta(days=offset)
+                for offset in range((min(end, cutoff) - start).days + 1)
+            )
         return tuple(item.isoformat() for item in sorted(dates))
 
     @staticmethod

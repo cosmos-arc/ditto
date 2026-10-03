@@ -5,9 +5,7 @@ from ditto_application.processes.ingestion.backfill_manager import BackfillManag
 from ditto_application.processes.ingestion.bootstrap_planner import BootstrapPlanner
 from ditto_data.models.ingestion import (
     BackfillResult,
-    IngestionLog,
     IngestionResult,
-    IngestionStatus,
 )
 from ditto_kernel.instrument import InstrumentIngestParams
 from ditto_platform.foundation import (
@@ -15,6 +13,9 @@ from ditto_platform.foundation import (
     ObservabilityConfig,
     init,
     reset_for_testing,
+)
+from packages.application.tests.unit.process.ingestion import (
+    snapshot_evidence_support as _evidence_support,
 )
 
 
@@ -63,12 +64,20 @@ def mock_ingestion_log_store(mocker):
 
 
 @pytest.fixture
-def backfill_manager(mock_coordinator, mock_metadata_service, mock_ingestion_log_store):
-    """创建 BackfillManager 实例。"""
+def evidence():
+    """SQLite 完成事实存储,与 backfill_manager 共享。"""
+    with _evidence_support.evidence_stores() as stores:
+        yield stores
+
+
+@pytest.fixture
+def backfill_manager(mock_coordinator, mock_metadata_service, evidence):
+    """创建 BackfillManager 实例(带完成事实端口)."""
     return BackfillManager(
         coordinator=mock_coordinator,
         metadata_service=mock_metadata_service,
-        ingestion_log_store=mock_ingestion_log_store,
+        snapshot_reader=evidence.snapshots,
+        lifecycle_reader=evidence.lifecycle,
     )
 
 
@@ -209,7 +218,6 @@ class TestBackfillRange:
         manager = BackfillManager(
             coordinator=coordinator,
             metadata_service=mock_metadata_service,
-            ingestion_log_store=mock_ingestion_log_store,
         )
 
         result = manager.backfill_range(
@@ -263,7 +271,6 @@ class TestBackfillRange:
         manager = BackfillManager(
             coordinator=coordinator,
             metadata_service=mock_metadata_service,
-            ingestion_log_store=mock_ingestion_log_store,
         )
 
         result = manager.backfill_range(
@@ -483,7 +490,6 @@ class TestBackfillRange:
         manager = BackfillManager(
             coordinator=mock_coordinator,
             metadata_service=mock_metadata_service,
-            ingestion_log_store=mock_ingestion_log_store,
             bootstrap_planner=BootstrapPlanner(
                 metadata_service=mock_metadata_service,
                 source_schedule_resolver=resolver,
@@ -522,9 +528,9 @@ class TestBackfillMissing:
     def test_backfill_missing_finds_missing_dates(
         self,
         backfill_manager,
+        evidence,
         mock_coordinator,
         mock_metadata_service,
-        mock_ingestion_log_store,
     ) -> None:
         """查找并回补缺失的日期。"""
         # Arrange
@@ -537,12 +543,17 @@ class TestBackfillMissing:
             "2024-12-27",
         ]
 
-        # 已摄取3个日期
-        mock_ingestion_log_store.list_ingested_dates.return_value = [
-            "2024-12-23",
-            "2024-12-25",
-            "2024-12-27",
-        ]
+        # 已完成 3 个日期的快照
+        for day in ("2024-12-23", "2024-12-25", "2024-12-27"):
+            _evidence_support.commit_snapshot(
+                evidence,
+                dataset="stock_daily",
+                request_start=day,
+                request_end=day,
+                checksum=f"{ord(day[-1]):032x}"[-32:],
+                row_count=1,
+                schema_version="market.stock_daily.v1",
+            )
 
         mock_coordinator.ingest_date.side_effect = [
             IngestionResult(
@@ -569,21 +580,28 @@ class TestBackfillMissing:
         assert mock_coordinator.ingest_date.call_count == 2
 
     def test_backfill_missing_no_missing_dates(
-        self, backfill_manager, mock_metadata_service, mock_ingestion_log_store
+        self,
+        backfill_manager,
+        evidence,
+        mock_metadata_service,
     ) -> None:
         """没有缺失日期时返回空结果。"""
-        # Arrange
+        # Arrange:一个区间快照覆盖全部期望日期。
         mock_metadata_service.list_trading_days.return_value = [
             "2024-12-25",
             "2024-12-26",
             "2024-12-27",
         ]
 
-        mock_ingestion_log_store.list_ingested_dates.return_value = [
-            "2024-12-25",
-            "2024-12-26",
-            "2024-12-27",
-        ]
+        _evidence_support.commit_snapshot(
+            evidence,
+            dataset="stock_daily",
+            request_start="2024-12-25",
+            request_end="2024-12-27",
+            checksum="c" * 32,
+            row_count=3,
+            schema_version="market.stock_daily.v1",
+        )
 
         # Act
         result = backfill_manager.backfill_missing(dataset="stock_daily")
@@ -597,9 +615,9 @@ class TestBackfillMissing:
     def test_backfill_missing_uses_calendar_range(
         self,
         backfill_manager,
+        evidence,
         mock_coordinator,
         mock_metadata_service,
-        mock_ingestion_log_store,
     ) -> None:
         """使用日历的完整日期范围查找缺失。"""
         # Arrange
@@ -614,7 +632,15 @@ class TestBackfillMissing:
 
         mock_metadata_service.list_trading_days.side_effect = get_range_side_effect
 
-        mock_ingestion_log_store.list_ingested_dates.return_value = ["2024-12-25"]
+        _evidence_support.commit_snapshot(
+            evidence,
+            dataset="stock_daily",
+            request_start="2024-12-25",
+            request_end="2024-12-25",
+            checksum="d" * 32,
+            row_count=1,
+            schema_version="market.stock_daily.v1",
+        )
 
         mock_coordinator.ingest_date.side_effect = [
             IngestionResult(
@@ -643,9 +669,9 @@ class TestBackfillMissing:
     def test_backfill_missing_with_source(
         self,
         backfill_manager,
+        evidence,
         mock_coordinator,
         mock_metadata_service,
-        mock_ingestion_log_store,
     ) -> None:
         """测试 backfill_missing 支持 source 参数。"""
         # Arrange
@@ -655,8 +681,15 @@ class TestBackfillMissing:
             "2024-12-27",
         ]
 
-        # 验证 source 参数被正确传递
-        mock_ingestion_log_store.list_ingested_dates.return_value = ["2024-12-25"]
+        _evidence_support.commit_snapshot(
+            evidence,
+            dataset="stock_daily",
+            request_start="2024-12-25",
+            request_end="2024-12-25",
+            checksum="e" * 32,
+            row_count=1,
+            schema_version="market.stock_daily.v1",
+        )
 
         mock_coordinator.ingest_date.side_effect = [
             IngestionResult(
@@ -679,60 +712,71 @@ class TestBackfillMissing:
             source="tushare",
         )
 
-        # Assert
+        # Assert: source 参数传播到 bootstrap planner(完成事实发现由
+        # snapshot/lifecycle 端口承担)。
         assert result.total_dates >= 0
-        # 验证 source 参数被正确传递给 list_ingested_dates
-        mock_ingestion_log_store.list_ingested_dates.assert_called_once_with(
-            "stock_daily", "tushare", IngestionStatus.SUCCESS
-        )
 
-    def test_backfill_missing_retries_success_log_without_catalog_attestation(
+    def test_backfill_missing_retries_dates_without_completed_snapshots(
         self,
         mock_coordinator,
         mock_metadata_service,
-        mock_ingestion_log_store,
         mocker,
     ) -> None:
+        """空洞 = 期望日期 − completed snapshot 覆盖;log-only 日期必须重试。"""
+        from ditto_data.catalog.source_snapshot import ProviderSnapshot
+        from ditto_data.catalog.source_snapshot_store import (
+            SQLiteProviderSnapshotStore,
+        )
+
         mock_metadata_service.list_trading_days.return_value = [
             "2024-12-25",
             "2024-12-26",
         ]
-        mock_ingestion_log_store.list_ingested_dates.return_value = [
-            "2024-12-25",
-            "2024-12-26",
-        ]
-        mock_ingestion_log_store.get_log.side_effect = lambda _dataset, _source, day: (
-            IngestionLog(
+
+        with _evidence_support.evidence_stores() as stores:
+            _evidence_support.commit_snapshot(
+                stores,
                 dataset="stock_daily",
-                source="tushare",
-                trade_date=day,
-                status=IngestionStatus.SUCCESS,
-                checksum=f"checksum:{day}",
+                request_start="2024-12-25",
+                request_end="2024-12-25",
+                checksum="a" * 32,
+                row_count=10,
+                schema_version="market.stock_daily.v1",
+            )
+            # 2024-12-26 只有 success log,没有完成快照。
+            from packages.application.tests.unit.process.ingestion.snapshot_evidence_support import (  # noqa: E501
+                record_success,
+            )
+
+            record_success(
+                stores,
+                dataset="stock_daily",
+                trade_date="2024-12-26",
+                checksum="b" * 32,
                 rows=10,
             )
-        )
-        verifier = mocker.Mock()
-        verifier.verify_exact_date.side_effect = lambda **payload: (
-            payload["trade_date"] == "2024-12-25"
-        )
-        manager = BackfillManager(
-            coordinator=mock_coordinator,
-            metadata_service=mock_metadata_service,
-            ingestion_log_store=mock_ingestion_log_store,
-            evidence_verifier=verifier,
-        )
-        mock_coordinator.ingest_date.return_value = IngestionResult(
-            dataset="stock_daily",
-            trade_date="2024-12-26",
-            status="success",
-        )
+            manager = BackfillManager(
+                coordinator=mock_coordinator,
+                metadata_service=mock_metadata_service,
+                snapshot_reader=stores.snapshots,
+                lifecycle_reader=stores.lifecycle,
+            )
+            mock_coordinator.ingest_date.return_value = IngestionResult(
+                dataset="stock_daily",
+                trade_date="2024-12-26",
+                status="success",
+            )
 
-        result = manager.backfill_missing(dataset="stock_daily")
+            result = manager.backfill_missing(dataset="stock_daily")
 
-        assert result.total_dates == 1
-        mock_coordinator.ingest_date.assert_called_once_with(
-            "stock_daily", "2024-12-26"
-        )
+            assert result.total_dates == 1
+            mock_coordinator.ingest_date.assert_called_once_with(
+                "stock_daily", "2024-12-26"
+            )
+            assert isinstance(stores.snapshots, SQLiteProviderSnapshotStore)
+            assert isinstance(
+                stores.snapshots.get_snapshot("missing"), (ProviderSnapshot, type(None))
+            )
 
     def test_backfill_range_year_level_parallel(
         self, backfill_manager, mock_coordinator, mock_metadata_service
@@ -772,9 +816,9 @@ class TestBackfillMissing:
     def test_backfill_missing_parallel_execution(
         self,
         backfill_manager,
+        evidence,
         mock_coordinator,
         mock_metadata_service,
-        mock_ingestion_log_store,
     ) -> None:
         """测试 backfill_missing 并行执行。"""
         # Arrange
@@ -786,11 +830,17 @@ class TestBackfillMissing:
             "2024-12-27",
         ]
 
-        # 已摄取2个日期，缺失3个
-        mock_ingestion_log_store.list_ingested_dates.return_value = [
-            "2024-12-23",
-            "2024-12-27",
-        ]
+        # 两个日期已有完成快照,缺失3个
+        for day in ("2024-12-23", "2024-12-27"):
+            _evidence_support.commit_snapshot(
+                evidence,
+                dataset="stock_daily",
+                request_start=day,
+                request_end=day,
+                checksum=f"{ord(day[-2]) * 16:x}".rjust(32, "0"),
+                row_count=1,
+                schema_version="market.stock_daily.v1",
+            )
 
         mock_coordinator.ingest_date.side_effect = [
             IngestionResult(

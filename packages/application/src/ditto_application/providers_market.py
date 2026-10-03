@@ -249,9 +249,15 @@ class AppMarketQueryProvider(Provider):
     def catalog_query_facade(
         self,
         data_catalog_reader: DataCatalogReader,
+        snapshots: ProviderSnapshotReader,
+        lifecycle: PartitionLifecycleReader,
     ) -> CatalogQueryFacade:
-        """DataCatalog 查询 facade — 暴露 storage/schema/freshness 读模型."""
-        return CatalogQueryFacade(data_catalog_reader=data_catalog_reader)
+        """DataCatalog 查询 facade — 数据集级列表 + snapshot 完成性 health."""
+        return CatalogQueryFacade(
+            data_catalog_reader=data_catalog_reader,
+            snapshot_reader=snapshots,
+            lifecycle_reader=lifecycle,
+        )
 
     @provide
     def metadata_query_facade(
