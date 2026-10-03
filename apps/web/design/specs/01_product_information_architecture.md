@@ -276,9 +276,8 @@ Ditto
 │   ├── /portfolio/risk
 │   └── /portfolio/review
 │
-├── System (7)
+├── System (6)
 │   ├── /system                   ← 系统运维总览
-│   ├── /system/data-products
 │   ├── /system/jobs
 │   ├── /system/agent            ← Agent Ops
 │   ├── /system/approvals
@@ -557,7 +556,7 @@ Portfolio 域的 Paper 模拟与账户解释必须体现以下 A 股市场规则
 
 **目标**：管理和感知只读数据源、任务、系统健康状况，以及 Agent 运行状态与审批。
 
-**主要页面**：`/system`、`/system/data-products`、`/system/jobs`、`/system/agent`、`/system/approvals`、`/system/settings`、`/system/audit`。
+**主要页面**：`/system`、`/system/jobs`、`/system/agent`、`/system/approvals`、`/system/settings`、`/system/audit`。
 
 > **v3.0 边界**：Broker 不是等待拆分的设置项，而是产品明确排除的能力。实时行情 Provider 只能使用只读合同，不能携带账户查询、下单、撤单或成交回报权限。
 
