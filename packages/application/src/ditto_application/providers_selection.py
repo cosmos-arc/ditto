@@ -403,8 +403,19 @@ class AppSelectionProvider(Provider):
         payloads: ProviderPayloadReader,
         lifecycle: PartitionLifecycleReader,
         readiness: SnapshotReadinessQuery,
+        metadata: MetadataService,
     ) -> HistoricalUniverseQuery:
         """Resolve qualified historical scopes from completed retained evidence."""
+
+        def resolve_tickers(
+            source_tickers: list[str], *, source: str, asof: str
+        ) -> dict[str, int]:
+            return metadata.instrument.resolve_instrument_ids_batch(
+                source_tickers, source=source, asof=asof
+            )
+
         return HistoricalUniverseQuery(
-            SnapshotReadService(snapshots, payloads, lifecycle), readiness
+            SnapshotReadService(snapshots, payloads, lifecycle),
+            readiness,
+            ticker_resolver=resolve_tickers,
         )

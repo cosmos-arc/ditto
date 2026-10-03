@@ -58,3 +58,15 @@ trading
 - 选股组装推进至历史证券池解析,被 **HISTORY_FIELDS_MISSING 阻断**:historical universe 的 status 链要求 PIT 区间形状(instrument_id/effective_from/effective_to/publication_at),而 stock_status 真实载荷为原始日频形状(source_ticker/trade_date/is_st/is_suspended);旧世界该链由手工构造的 golden 快照满足,从未与真实摄取联通过
 - 该缺口为 #391 历史池设计与 #196 真实数据形状的既有裂缝,#396 如实报告不假装通过;修复需单独决策(status 链读取投影层 / stock_status 数据集形状变更),已开票跟踪
 - 另发现 universe replace_constituents 存量 bug(同 effective_from 重放撞 UNIQUE),已开票跟踪
+
+## 用户旅程验收(#414/#415 修复后补全,2026-10-04)
+
+- #414 修复(读取投影层):stock_basic/stock_status 原始载荷在历史池 pin→resolve 时投影为 PIT 区间(名单=上市起开放区间+观察时间;日频=当日区间);readiness 覆盖语义按数据集分区形状分流(trade_date→包含;knowledge_date→自证);as-of 绑定取完成窗口全集;rotation BLOCKED 的 missing 去重
+- #415 修复:replace_constituents 同 effective_date 重放=替换(DELETE 当日起+关闭更早+插入)
+- 旅程结果(真实 API):
+  - 选股组装 POST /selections/runs:assembled → 200(5919 instruments,缺失声明诚实:5572 缺 252 日动量、347 缺 bars——单日数据历史不足,符合"从有证据范围开始")
+  - 选股创建 POST /selections/runs → **201**(run_id=selection-run:sha256:c4a12e7b…;rotation BLOCKED 诚实;candidates 空因因子历史不足)
+  - market context GET /market/context → 200(服务端 observed 快照解析)
+  - 图表 POST /market/chart → 200(1 bar+缺日诚实;停牌矛盾数据 fail-closed 正确拒绝)
+  - ETF 候选 GET /metadata/etf-candidates → 200(1841 只,读 #395 生产写侧真实事实)
+- 回归:fast 15864 passed / pit 625 passed

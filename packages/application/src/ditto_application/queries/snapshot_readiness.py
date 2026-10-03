@@ -12,6 +12,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import date
 
+from ditto_data.catalog.metadata import default_dataset_metadata
 from ditto_data.catalog.snapshot_completion import snapshot_completed
 from ditto_data.catalog.source_snapshot import ProviderSnapshotReader
 from ditto_data.ingestion.partition_state import PartitionLifecycleReader
@@ -140,8 +141,21 @@ class SnapshotReadinessQuery:
             reasons.append("SNAPSHOT_INCOMPLETE")
         if not snapshot.payload_retained:
             reasons.append("SNAPSHOT_PAYLOAD_MISSING")
-        if request.required_from < date.fromisoformat(
-            snapshot.request_start
-        ) or request.required_to > date.fromisoformat(snapshot.request_end):
-            reasons.append("SNAPSHOT_COVERAGE_MISSING")
+        spec = default_dataset_metadata().get(item.dataset_id)
+        partition_keys = (
+            spec.dataset_spec.partition_keys if spec and spec.dataset_spec else ()
+        )
+        if partition_keys == ("trade_date",):
+            # Date-partitioned datasets serve interval snapshots: the request
+            # window must sit inside the snapshot's own interval.
+            covered = not (
+                request.required_from < date.fromisoformat(snapshot.request_start)
+                or request.required_to > date.fromisoformat(snapshot.request_end)
+            )
+            if not covered:
+                reasons.append("SNAPSHOT_COVERAGE_MISSING")
+        # Roster/observation-keyed snapshots (e.g. knowledge_date) state a
+        # point-in-time fact with no interval semantics: completion and
+        # retention already attested above, and time visibility belongs to
+        # the caller's cutoff — no coverage reason applies.
         return tuple(reasons)
