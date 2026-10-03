@@ -33,9 +33,7 @@ def _planned(*, retry_budget: int = 3) -> PartitionCheckpoint:
         attempt=1,
         retry_budget=retry_budget,
         payload_id=None,
-        catalog_asset_id=None,
-        lineage_run_id=None,
-        ingestion_log_id=None,
+        complete_evidence_id=None,
         error_code=None,
         updated_at=datetime(2026, 7, 1, 8, 0, tzinfo=UTC),
     )
@@ -46,37 +44,35 @@ class TestSQLitePartitionLifecycleStore:
         client, pool = _client(tmp_path / "runtime.sqlite")
         store = SQLitePartitionLifecycleStore(client)
         planned = _planned()
+        snapshot_id = "snapshot:tushare:stock_daily:sha256:abc"
         stages = (
-            PartitionLifecycleStatus.FETCHED,
-            PartitionLifecycleStatus.NORMALIZED,
-            PartitionLifecycleStatus.PIT_PASSED,
-            PartitionLifecycleStatus.DQ_PASSED,
-            PartitionLifecycleStatus.PAYLOAD_COMMITTED,
-            PartitionLifecycleStatus.CATALOG_ATTESTED,
-            PartitionLifecycleStatus.LINEAGE_RECORDED,
-            PartitionLifecycleStatus.SUCCESS_RECORDED,
-            PartitionLifecycleStatus.COMPLETE,
+            (
+                PartitionLifecycleStatus.PAYLOAD_COMMITTED,
+                f"payload:sha256:abc:stock_daily/2026/06:{snapshot_id}",
+            ),
+            (PartitionLifecycleStatus.COMPLETE, snapshot_id),
         )
 
         try:
             store.plan_partition(planned)
-            for offset, stage in enumerate(stages, start=1):
+            for offset, (stage, evidence_id) in enumerate(stages, start=1):
                 store.advance_partition(
                     planned.chunk_id,
                     stage,
                     occurred_at=planned.updated_at + timedelta(minutes=offset),
-                    evidence_id=f"evidence:{stage.value}",
+                    evidence_id=evidence_id,
                 )
 
             current = store.get_checkpoint(planned.chunk_id)
             assert current is not None
             assert current.status is PartitionLifecycleStatus.COMPLETE
             assert current.last_successful_stage is PartitionLifecycleStatus.COMPLETE
-            assert current.payload_id == "evidence:PAYLOAD_COMMITTED"
-            assert current.catalog_asset_id == "evidence:CATALOG_ATTESTED"
-            assert current.lineage_run_id == "evidence:LINEAGE_RECORDED"
-            assert current.ingestion_log_id == "evidence:SUCCESS_RECORDED"
-            assert len(store.list_events(planned.chunk_id)) == 10
+            assert (
+                current.payload_id
+                == f"payload:sha256:abc:stock_daily/2026/06:{snapshot_id}"
+            )
+            assert current.complete_evidence_id == snapshot_id
+            assert len(store.list_events(planned.chunk_id)) == 3
             assert store.list_incomplete(dataset_id="stock_daily") == ()
         finally:
             pool.close()
@@ -92,15 +88,39 @@ class TestSQLitePartitionLifecycleStore:
             with pytest.raises(ValueError, match="invalid partition transition"):
                 store.advance_partition(
                     planned.chunk_id,
-                    PartitionLifecycleStatus.PAYLOAD_COMMITTED,
+                    PartitionLifecycleStatus.COMPLETE,
                     occurred_at=planned.updated_at + timedelta(minutes=1),
-                    evidence_id="payload:unexpected",
+                    evidence_id="snapshot:tushare:stock_daily:sha256:unexpected",
+                )
+        finally:
+            pool.close()
+
+    def test_complete_requires_evidence(self, tmp_path: Path) -> None:
+        client, pool = _client(tmp_path / "runtime.sqlite")
+        store = SQLitePartitionLifecycleStore(client)
+        planned = _planned()
+
+        try:
+            store.plan_partition(planned)
+            store.advance_partition(
+                planned.chunk_id,
+                PartitionLifecycleStatus.PAYLOAD_COMMITTED,
+                occurred_at=planned.updated_at,
+                evidence_id="payload:sha256:abc:stock_daily/2026/06:snapshot-1",
+            )
+
+            with pytest.raises(ValueError, match="requires evidence_id"):
+                store.advance_partition(
+                    planned.chunk_id,
+                    PartitionLifecycleStatus.COMPLETE,
+                    occurred_at=planned.updated_at + timedelta(minutes=1),
                 )
         finally:
             pool.close()
 
     def test_orphan_payload_resumes_after_payload_without_refetch(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         client, pool = _client(tmp_path / "runtime.sqlite")
         store = SQLitePartitionLifecycleStore(client)
@@ -108,26 +128,12 @@ class TestSQLitePartitionLifecycleStore:
 
         try:
             store.plan_partition(planned)
-            for offset, stage in enumerate(
-                (
-                    PartitionLifecycleStatus.FETCHED,
-                    PartitionLifecycleStatus.NORMALIZED,
-                    PartitionLifecycleStatus.PIT_PASSED,
-                    PartitionLifecycleStatus.DQ_PASSED,
-                    PartitionLifecycleStatus.PAYLOAD_COMMITTED,
-                ),
-                start=1,
-            ):
-                store.advance_partition(
-                    planned.chunk_id,
-                    stage,
-                    occurred_at=planned.updated_at + timedelta(minutes=offset),
-                    evidence_id=(
-                        "payload:sha256:abc"
-                        if stage is PartitionLifecycleStatus.PAYLOAD_COMMITTED
-                        else None
-                    ),
-                )
+            store.advance_partition(
+                planned.chunk_id,
+                PartitionLifecycleStatus.PAYLOAD_COMMITTED,
+                occurred_at=planned.updated_at + timedelta(minutes=1),
+                evidence_id="payload:sha256:abc",
+            )
             store.fail_partition(
                 planned.chunk_id,
                 PartitionLifecycleStatus.ORPHAN_PAYLOAD,
@@ -186,15 +192,15 @@ class TestSQLitePartitionLifecycleStore:
             store.plan_partition(planned)
             store.advance_partition(
                 planned.chunk_id,
-                PartitionLifecycleStatus.FETCHED,
+                PartitionLifecycleStatus.PAYLOAD_COMMITTED,
                 occurred_at=occurred_at,
-                evidence_id="request:tushare:1",
+                evidence_id="payload:sha256:abc:uri:snapshot-1",
             )
             store.advance_partition(
                 planned.chunk_id,
-                PartitionLifecycleStatus.FETCHED,
+                PartitionLifecycleStatus.PAYLOAD_COMMITTED,
                 occurred_at=occurred_at,
-                evidence_id="request:tushare:1",
+                evidence_id="payload:sha256:abc:uri:snapshot-1",
             )
 
             assert len(store.list_events(planned.chunk_id)) == 2

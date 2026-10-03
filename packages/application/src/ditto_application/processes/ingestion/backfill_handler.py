@@ -6,14 +6,12 @@ from dataclasses import dataclass
 from datetime import date
 
 import polars as pl
-from ditto_data.lineage import DataLineageRecorder
 from ditto_data.services.market_service import MarketService
 from ditto_data.services.metadata_service import MetadataService
 from ditto_data.sources.protocols import MarketFetcher
-from ditto_platform.foundation import OnDuplicate, WriteResult, logger
+from ditto_platform.foundation import OnDuplicate, logger
 
 from ditto_application.processes.ingestion.data_writer import IngestionDataWriter
-from ditto_application.processes.ingestion.post_ingest import record_ingestion_lineage
 
 
 @dataclass(frozen=True)
@@ -25,7 +23,6 @@ class BackfillContext:
     source: MarketFetcher
     source_name: str
     data_writer: IngestionDataWriter
-    lineage_recorder: DataLineageRecorder | None = None
 
 
 @dataclass(frozen=True)
@@ -33,7 +30,6 @@ class BackfillWriteOutcome:
     """单段回补写入结果."""
 
     filled_dates: int
-    write_result: WriteResult
 
 
 def backfill_adj_factor(
@@ -108,15 +104,6 @@ def backfill_adj_factor(
         if write_outcome is None:
             continue
         total_filled += write_outcome.filled_dates
-        record_ingestion_lineage(
-            "adj_factor",
-            range_start,
-            source_name=ctx.source_name,
-            lineage_recorder=ctx.lineage_recorder,
-            write_result=write_outcome.write_result,
-            source_ticker=source_ticker,
-            end_date=range_end,
-        )
 
     logger.info(
         "智能回补复权因子完成",
@@ -191,13 +178,8 @@ def write_adj_factor_range(
 ) -> BackfillWriteOutcome | None:
     """写入单段复权因子数据，失败时返回 None."""
     try:
-        write_result = data_writer.write_data(
-            "adj_factor", gap_df, range_start, OnDuplicate.KEEP_LAST
-        )
-        return BackfillWriteOutcome(
-            filled_dates=len(gap_df),
-            write_result=write_result,
-        )
+        data_writer.write_data("adj_factor", gap_df, range_start, OnDuplicate.KEEP_LAST)
+        return BackfillWriteOutcome(filled_dates=len(gap_df))
     except Exception as e:
         logger.warning(
             "回补写入失败",

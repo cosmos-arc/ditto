@@ -13,7 +13,6 @@ from ditto_data.ingestion.ingestion_cursor_store import (
 from ditto_data.ingestion.ingestion_log_store import (
     IngestionLogStore,
 )
-from ditto_data.lineage import DataLineageRecorder
 from pydantic import BaseModel, ConfigDict, Field
 
 from ditto_application.processes.ingestion.evidence_commit import (
@@ -43,9 +42,7 @@ class IngestionCoordinatorConfig:
     ingestion_log_store: IngestionLogStore | None = None
     ingestion_cursor_store: IngestionCursorStore | None = None
     quality_checker: QualityCheckerProtocol | None = None
-    lineage_recorder: DataLineageRecorder | None = None
     catalog_reader: DataCatalogReader | None = None
     catalog_writer: DataCatalogWriter | None = None
     evidence_committer: IngestionEvidenceCommitter | None = None
     provider_payload_writer: ProviderPayloadWriter | None = None
-    license_record_id: str | None = None

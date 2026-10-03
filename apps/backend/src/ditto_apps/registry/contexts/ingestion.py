@@ -27,7 +27,6 @@ from ditto_data.catalog import (
 from ditto_data.catalog.provider_payload import ProviderPayloadWriter
 from ditto_data.ingestion.ingestion_cursor_store import IngestionCursorStore
 from ditto_data.ingestion.ingestion_log_store import IngestionLogStore
-from ditto_data.lineage import DataLineageRecorder
 from ditto_data.services.capital_store import CapitalStore
 from ditto_data.services.fundamental_store import FundamentalStore
 from ditto_data.services.macro_service import MacroService
@@ -56,7 +55,8 @@ def create_ingestion_bundle(
 
     Args:
         source: 数据源名称
-        license_record_id: 启用 R2 fail-closed 证据模式的已审核许可记录 ID。
+        license_record_id: 非 None 时启用 R2 fail-closed 证据模式（license
+            治理已删除,该参数仅作为模式开关保留）。
 
     Yields:
         IngestionBundle: 包含协调器、管理器和查询 facade
@@ -82,7 +82,6 @@ def create_ingestion_bundle(
         ingestion_cursor_store = container.get(IngestionCursorStore)
         exchange_transformers = container.get(ExchangeTransformers)
         quality_checker = container.get(CheckDataQualityHandler)
-        lineage_recorder = container.get(DataLineageRecorder)
         catalog_reader = container.get(DataCatalogReader)
         catalog_writer = container.get(DataCatalogWriter)
         provider_payload_writer = container.get(ProviderPayloadWriter)
@@ -107,12 +106,10 @@ def create_ingestion_bundle(
             runtime=CoordinatorRuntimeContext(
                 ingestion_cursor_store=ingestion_cursor_store,
                 quality_checker=quality_checker,
-                lineage_recorder=lineage_recorder,
                 catalog_reader=catalog_reader,
                 catalog_writer=catalog_writer,
                 evidence_committer=evidence_committer,
                 provider_payload_writer=provider_payload_writer,
-                license_record_id=license_record_id,
             ),
         ) as coordinator:
             # 创建管理器

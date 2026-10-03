@@ -11,7 +11,6 @@ from ditto_data.catalog.provider_payload import (
     ProviderPayloadArtifact,
     ProviderPayloadWriter,
 )
-from ditto_data.lineage import DataLineageRecorder
 from ditto_data.models import Dataset
 from ditto_data.models.ingestion import IngestionQualityEvidence, IngestionResult
 from ditto_data.services.market_service import MarketService
@@ -47,7 +46,6 @@ from ditto_application.processes.ingestion.post_ingest import (
     handle_fetch_error,
     prepare_payload_write,
     record_data_catalog_entry,
-    record_ingestion_lineage,
     retain_provider_payload,
     write_data_safe,
 )
@@ -76,7 +74,6 @@ class InstrumentBackfillContext:
     fetchers: SourceFetchers
     source_name: str
     data_writer: IngestionDataWriter
-    lineage_recorder: DataLineageRecorder | None = None
 
 
 @dataclass(frozen=True)
@@ -88,12 +85,10 @@ class InstrumentIngestContext:
     source_name: str
     result_handler: IngestionResultHandler
     data_writer: IngestionDataWriter
-    lineage_recorder: DataLineageRecorder | None = None
     catalog_writer: DataCatalogWriter | None = None
     quality_checker: QualityCheckerProtocol | None = None
     evidence_committer: IngestionEvidenceCommitter | None = None
     provider_payload_writer: ProviderPayloadWriter | None = None
-    license_record_id: str | None = None
 
 
 @dataclass(frozen=True)
@@ -103,12 +98,10 @@ class InstrumentPostIngestContext:
     result_handler: IngestionResultHandler
     data_writer: IngestionDataWriter
     source_name: str
-    lineage_recorder: DataLineageRecorder | None = None
     catalog_writer: DataCatalogWriter | None = None
     quality_checker: QualityCheckerProtocol | None = None
     evidence_committer: IngestionEvidenceCommitter | None = None
     provider_payload_writer: ProviderPayloadWriter | None = None
-    license_record_id: str | None = None
 
 
 def ingest_by_instrument(
@@ -209,12 +202,10 @@ def _fetch_and_ingest_by_instrument(
             result_handler=ctx.result_handler,
             data_writer=ctx.data_writer,
             source_name=ctx.source_name,
-            lineage_recorder=ctx.lineage_recorder,
             catalog_writer=ctx.catalog_writer,
             quality_checker=ctx.quality_checker,
             evidence_committer=ctx.evidence_committer,
             provider_payload_writer=ctx.provider_payload_writer,
-            license_record_id=ctx.license_record_id,
         ),
         chunk_id=chunk_id,
         force=force,
@@ -325,10 +316,7 @@ def _process_fetched_data_by_instrument(  # noqa: PLR0911 - fail-closed stages
     )
     if ctx.evidence_committer is not None:
         outcome = ctx.evidence_committer.commit(
-            build_evidence_commit_request(
-                catalog_ctx,
-                license_record_id=ctx.license_record_id,
-            )
+            build_evidence_commit_request(catalog_ctx)
         )
         if not outcome.completed:
             return IngestionResult(
@@ -360,15 +348,6 @@ def _process_fetched_data_by_instrument(  # noqa: PLR0911 - fail-closed stages
         persist_log=ctx.evidence_committer is None,
     )
     if ctx.evidence_committer is None:
-        record_ingestion_lineage(
-            dataset,
-            params.start_date,
-            source_name=ctx.source_name,
-            lineage_recorder=ctx.lineage_recorder,
-            write_result=write_result,
-            source_ticker=source_ticker,
-            end_date=params.end_date,
-        )
         record_data_catalog_entry(
             catalog_ctx,
             catalog_writer=ctx.catalog_writer,
@@ -387,15 +366,7 @@ def _instrument_evidence_prerequisite_failure(
         return None
     if ctx.quality_checker is None:
         return ctx.result_handler.handle_quality_check_required(dataset, trade_date)
-    if ctx.license_record_id:
-        return None
-    return IngestionResult(
-        dataset=dataset,
-        trade_date=trade_date,
-        status="failed",
-        error="R2_LICENSE_RECORD_REQUIRED",
-        message="R2 证据模式缺少已审核 license record",
-    )
+    return None
 
 
 def _retain_instrument_provider_payload(
@@ -475,6 +446,5 @@ def backfill_adj_factor(
             source=ctx.fetchers.market,
             source_name=ctx.source_name,
             data_writer=ctx.data_writer,
-            lineage_recorder=ctx.lineage_recorder,
         ),
     )

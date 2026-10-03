@@ -49,8 +49,6 @@ from ditto_data.catalog.sqlite_store import SQLiteDataCatalog
 from ditto_data.ingestion.ingestion_log_store import IngestionLogStore
 from ditto_data.ingestion.partition_state import PartitionLifecycleStatus
 from ditto_data.ingestion.partition_state_store import SQLitePartitionLifecycleStore
-from ditto_data.lineage import LineageEvent, LineageInputRef, LineageOutputRef
-from ditto_data.lineage.sqlite_store import SQLiteDataLineage
 from ditto_data.models.ingestion import IngestionLog, IngestionStatus
 from ditto_data.observability.metrics import register_metrics
 from ditto_data.services.capital_store import CapitalStore
@@ -130,25 +128,6 @@ def _request() -> EvidenceCommitRequest:
                 "snapshot:tushare:stock_daily:2026-07-17:sha256:canonical:quality=l1-l2"
             ),
         ),
-        lineage_event=LineageEvent(
-            run_id="ingest:tushare:stock_daily:2026-07-17:sha256:canonical",
-            operation="ingest",
-            inputs=(
-                LineageInputRef(
-                    DataAssetRef(
-                        dataset_id="stock_daily",
-                        namespace="source",
-                        partition_keys=(
-                            "source=tushare",
-                            "trade_date=2026-07-17",
-                        ),
-                    ),
-                    role="source",
-                ),
-            ),
-            outputs=(LineageOutputRef(asset, role="dataset"),),
-            timestamp=now,
-        ),
         success_log=IngestionLog(
             dataset="stock_daily",
             source="tushare",
@@ -169,9 +148,9 @@ def test_evidence_chain_persists_and_completed_replay_is_idempotent(
     pool = SQLitePool(str(tmp_path / "runtime.sqlite"))
     client = SQLiteClient(pool)
     lifecycle = SQLitePartitionLifecycleStore(client)
-    snapshots = SQLiteProviderSnapshotStore(client)
+    store_now = datetime(2026, 7, 18, 9, 0, tzinfo=UTC)
+    snapshots = SQLiteProviderSnapshotStore(client, now=lambda: store_now)
     catalog = SQLiteDataCatalog(client)
-    lineage = SQLiteDataLineage(client)
     logs = IngestionLogStore(IngestionLogReader(client), IngestionLogWriter(client))
     request = _request()
     committer = IngestionEvidenceCommitter(
@@ -181,11 +160,9 @@ def test_evidence_chain_persists_and_completed_replay_is_idempotent(
             snapshot_writer=snapshots,
             snapshot_reader=snapshots,
             catalog_writer=catalog,
-            lineage_recorder=lineage,
-            lineage_reader=lineage,
             ingestion_log_store=logs,
         ),
-        now=lambda: datetime(2026, 7, 18, 9, 0, tzinfo=UTC),
+        now=lambda: store_now,
     )
 
     try:
@@ -199,9 +176,9 @@ def test_evidence_chain_persists_and_completed_replay_is_idempotent(
         assert checkpoint is not None
         assert checkpoint.status is PartitionLifecycleStatus.COMPLETE
         assert len(lifecycle.list_events(request.chunk_id)) == event_count_after_first
-        assert (
-            snapshots.get_snapshot(request.provider_snapshot.snapshot_id)
-            == request.provider_snapshot
+        # 首次本地观察即首条观察事件(追加时钟,不早于首次可见)。
+        assert snapshots.get_snapshot(request.provider_snapshot.snapshot_id) == (
+            replace(request.provider_snapshot, observations=(store_now,))
         )
         observed_again = request.provider_snapshot.created_at.replace(hour=10)
         replay = replace(
@@ -213,7 +190,8 @@ def test_evidence_chain_persists_and_completed_replay_is_idempotent(
         assert committer.commit(replay).completed
         stored = snapshots.get_snapshot(request.provider_snapshot.snapshot_id)
         assert stored is not None
-        assert stored.observations == (observed_again,)
+        # 首次观察与重观察都作为有序事件保留。
+        assert stored.observations == (store_now, observed_again)
         unattested = replace(
             replay,
             quality_attested=False,
@@ -226,9 +204,6 @@ def test_evidence_chain_persists_and_completed_replay_is_idempotent(
         assert rejected.error_code == "DQ_EVIDENCE_MISSING"
         assert snapshots.get_snapshot(request.provider_snapshot.snapshot_id) == stored
         assert catalog.get_asset(request.catalog_entry.asset) == request.catalog_entry
-        assert lineage.list_events_for_run(request.lineage_event.run_id) == (
-            request.lineage_event,
-        )
         saved_log = logs.get_log("stock_daily", "tushare", "2026-07-17")
         assert saved_log is not None
         assert saved_log.attempts == 1
@@ -247,9 +222,7 @@ def test_evidence_chain_persists_and_completed_replay_is_idempotent(
 @pytest.mark.parametrize(
     "failed_stage",
     [
-        PartitionLifecycleStatus.CATALOG_ATTESTED,
-        PartitionLifecycleStatus.LINEAGE_RECORDED,
-        PartitionLifecycleStatus.SUCCESS_RECORDED,
+        PartitionLifecycleStatus.PAYLOAD_COMMITTED,
         PartitionLifecycleStatus.COMPLETE,
     ],
 )
@@ -265,7 +238,6 @@ def test_retry_after_evidence_write_before_checkpoint_does_not_duplicate(
     lifecycle = SQLitePartitionLifecycleStore(client)
     snapshots = SQLiteProviderSnapshotStore(client)
     catalog = SQLiteDataCatalog(client)
-    lineage = SQLiteDataLineage(client)
     logs = IngestionLogStore(IngestionLogReader(client), IngestionLogWriter(client))
     request = _request()
     committer = IngestionEvidenceCommitter(
@@ -275,8 +247,6 @@ def test_retry_after_evidence_write_before_checkpoint_does_not_duplicate(
             snapshot_writer=snapshots,
             snapshot_reader=snapshots,
             catalog_writer=catalog,
-            lineage_recorder=lineage,
-            lineage_reader=lineage,
             ingestion_log_store=logs,
         )
     )
@@ -309,7 +279,6 @@ def test_retry_after_evidence_write_before_checkpoint_does_not_duplicate(
         )
         assert committer.commit(retry).completed
         assert len(snapshots.list_snapshots()) == 1
-        assert len(lineage.list_events_for_run(request.lineage_event.run_id)) == 1
         log = logs.get_log("stock_daily", "tushare", "2026-07-17")
         assert log is not None
         assert log.attempts == 1
@@ -348,7 +317,6 @@ def _pipeline(
     lifecycle = SQLitePartitionLifecycleStore(client)
     snapshots = SQLiteProviderSnapshotStore(client, now=snapshot_now)
     catalog = SQLiteDataCatalog(client)
-    lineage = SQLiteDataLineage(client)
     logs = IngestionLogStore(IngestionLogReader(client), IngestionLogWriter(client))
     ports = EvidenceCommitPorts(
         lifecycle_reader=lifecycle,
@@ -356,8 +324,6 @@ def _pipeline(
         snapshot_writer=snapshots,
         snapshot_reader=snapshots,
         catalog_writer=catalog,
-        lineage_recorder=lineage,
-        lineage_reader=lineage,
         ingestion_log_store=logs,
     )
     committer = IngestionEvidenceCommitter(ports=ports)
@@ -392,7 +358,6 @@ def _pipeline(
         quality_checker=QualityChecker(),
         evidence_committer=committer,
         provider_payload_writer=payloads,
-        license_record_id="license-test-0001",
     )
     try:
         yield _Pipeline(ctx, writer, store, market, ports)
@@ -521,14 +486,16 @@ def _coordinator(runtime: _Pipeline, source: _MarketSource):
             quality_checker=runtime.context.quality_checker,
             evidence_committer=runtime.context.evidence_committer,
             provider_payload_writer=runtime.context.provider_payload_writer,
-            license_record_id="license-test-0001",
         ),
     )
     return coordinator, metadata
 
 
 @pytest.mark.integration
-@pytest.mark.parametrize("failure_boundary", ["catalog_checkpoint", "payload_checksum"])
+@pytest.mark.parametrize(
+    "failure_boundary",
+    ["complete_checkpoint", "payload_checksum"],
+)
 def test_normal_backfill_resumes_failed_revision_after_original_completed(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -562,8 +529,8 @@ def test_normal_backfill_resumes_failed_revision_after_original_completed(
             nonlocal should_fail
             if (
                 should_fail
-                and failure_boundary == "catalog_checkpoint"
-                and stage is PartitionLifecycleStatus.CATALOG_ATTESTED
+                and failure_boundary == "complete_checkpoint"
+                and stage is PartitionLifecycleStatus.COMPLETE
             ):
                 should_fail = False
                 raise OSError("injected revision checkpoint failure")

@@ -10,7 +10,16 @@ from typing import Literal
 
 from ditto_data.catalog import DataAssetRef
 from ditto_data.catalog.contracts import DataCatalogEntry, DataCatalogReader
-from ditto_data.lineage import DataLineageReader, LineageEvent
+from ditto_data.catalog.source_snapshot import (
+    ProviderSnapshot,
+    ProviderSnapshotReader,
+)
+from ditto_data.lineage import (
+    DataLineageReader,
+    LineageEvent,
+    LineageInputRef,
+    LineageOutputRef,
+)
 from ditto_strategy.storage.sqlite.services.strategy_run_service import (
     StrategyRunLifecycleStore,
 )
@@ -203,19 +212,26 @@ class DataLineageGraph:
 
 
 class LineageQueryFacade:
-    """运行血统查询 facade — 提供血统链查询."""
+    """
+    运行血统查询 facade — 提供血统链查询.
+
+    摄取 ingest 事件不再写入 lineage store:读取侧从 provider snapshots
+    (按 asset 关联)合成,事件时间取观察事件;物化血缘仍读 lineage store。
+    """
 
     def __init__(
         self,
         run_service: StrategyRunLifecycleStore,
         data_lineage_reader: DataLineageReader | None = None,
         data_catalog_reader: DataCatalogReader | None = None,
+        provider_snapshots: ProviderSnapshotReader | None = None,
         *,
         now: Callable[[], datetime] | None = None,
     ) -> None:
         self._service = run_service
         self._data_lineage_reader = data_lineage_reader
         self._data_catalog_reader = data_catalog_reader
+        self._provider_snapshots = provider_snapshots
         self._now = now
 
     def get_lineage(self, run_id: str) -> LineageChain | None:
@@ -240,30 +256,16 @@ class LineageQueryFacade:
         partition_keys: tuple[str, ...] = (),
     ) -> tuple[DataLineageEvent, ...]:
         """Return recorded data lineage events mentioning one asset."""
-        reader = self._data_lineage_reader
-        if reader is None:
-            return ()
         asset = DataAssetRef(
             dataset_id=dataset_id,
             namespace=namespace,
             partition_keys=partition_keys,
         )
-        events = reader.list_events_for_asset(asset)
-        return tuple(_to_data_lineage_event(e) for e in events)
+        return tuple(_to_data_lineage_event(e) for e in self._events_for_asset(asset))
 
     def get_data_lineage_for_run(self, run_id: str) -> DataLineageRunSummary:
         """Return recorded data lineage summary for one run."""
-        reader = self._data_lineage_reader
-        if reader is None:
-            return DataLineageRunSummary(
-                run_id=run_id,
-                events=(),
-                input_assets=(),
-                output_assets=(),
-            )
-        events = tuple(
-            _to_data_lineage_event(e) for e in reader.list_events_for_run(run_id)
-        )
+        events = tuple(_to_data_lineage_event(e) for e in self._events_for_run(run_id))
         return DataLineageRunSummary(
             run_id=run_id,
             events=events,
@@ -328,13 +330,12 @@ class LineageQueryFacade:
             namespace=namespace,
             partition_keys=partition_keys,
         )
-        reader = self._data_lineage_reader
         assets: tuple[DataAssetRef, ...] = (root,)
         events: tuple[LineageEvent, ...] = ()
         edges: tuple[tuple[DataAssetRef, DataAssetRef, LineageEvent], ...] = ()
-        if reader is not None and max_depth > 0:
+        if max_depth > 0:
             assets, events, edges = _traverse_data_lineage_graph(
-                reader=reader,
+                events_for_asset=self._events_for_asset,
                 root=root,
                 direction=normalized_direction,
                 max_depth=max_depth,
@@ -348,6 +349,38 @@ class LineageQueryFacade:
             events=tuple(events),
             edges=tuple(edges),
         )
+
+    def _events_for_asset(self, asset: DataAssetRef) -> tuple[LineageEvent, ...]:
+        """Combine synthesized ingest events with stored non-ingest lineage."""
+        recorded: tuple[LineageEvent, ...] = ()
+        reader = self._data_lineage_reader
+        if reader is not None:
+            # 摄取写侧已删除;遗留 ingest 行让位给合成事件,避免双源重复。
+            recorded = tuple(
+                event
+                for event in reader.list_events_for_asset(asset)
+                if event.operation != _INGEST_OPERATION
+            )
+        return _sorted_lineage_events(
+            (*recorded, *_synthetic_ingest_events(asset, self._provider_snapshots))
+        )
+
+    def _events_for_run(self, run_id: str) -> tuple[LineageEvent, ...]:
+        """Combine synthesized ingest events with stored non-ingest lineage."""
+        recorded: tuple[LineageEvent, ...] = ()
+        reader = self._data_lineage_reader
+        if reader is not None:
+            recorded = tuple(
+                event
+                for event in reader.list_events_for_run(run_id)
+                if event.operation != _INGEST_OPERATION
+            )
+        synthesized = (
+            event
+            for event in _all_synthetic_ingest_events(self._provider_snapshots)
+            if event.run_id == run_id
+        )
+        return _sorted_lineage_events((*recorded, *synthesized))
 
     def _to_catalog_asset_report(
         self,
@@ -386,6 +419,95 @@ def _to_data_lineage_asset(asset: DataAssetRef) -> DataLineageAsset:
         namespace=asset.namespace,
         partition_keys=asset.partition_keys,
     )
+
+
+_INGEST_OPERATION = "ingest"
+
+
+def _canonical_partition_values(snapshot: ProviderSnapshot) -> dict[str, str]:
+    values: dict[str, str] = {}
+    for partition in snapshot.canonical_asset.partition_keys:
+        key, separator, value = partition.partition("=")
+        if separator and key and value:
+            values[key] = value
+    return values
+
+
+def _ingest_source_asset(snapshot: ProviderSnapshot) -> DataAssetRef:
+    """Rebuild the provider-side input asset recorded by the old ingest writes."""
+    values = _canonical_partition_values(snapshot)
+    ticker = values.get("source_ticker")
+    keys: list[str] = [f"source={snapshot.source}"]
+    if ticker is not None:
+        keys.append(f"source_ticker={ticker}")
+    keys.append(f"start_date={snapshot.request_start}")
+    keys.append(f"end_date={snapshot.request_end}")
+    return DataAssetRef(
+        dataset_id=snapshot.dataset_id,
+        namespace="source",
+        partition_keys=tuple(keys),
+    )
+
+
+def _ingest_run_id(snapshot: ProviderSnapshot) -> str:
+    values = _canonical_partition_values(snapshot)
+    ticker = values.get("source_ticker")
+    if ticker is None and snapshot.request_start == snapshot.request_end:
+        return (
+            f"ingest:{snapshot.source}:{snapshot.dataset_id}:"
+            f"{snapshot.request_start}:{snapshot.checksum}"
+        )
+    return (
+        f"ingest:{snapshot.source}:{snapshot.dataset_id}:{ticker or 'all'}:"
+        f"{snapshot.request_start}:{snapshot.request_end}:{snapshot.checksum}"
+    )
+
+
+def _synthetic_ingest_event(snapshot: ProviderSnapshot) -> LineageEvent:
+    """One ingest lineage event rebuilt from immutable snapshot evidence."""
+    observed = min(snapshot.observations, default=snapshot.created_at)
+    return LineageEvent(
+        run_id=_ingest_run_id(snapshot),
+        operation=_INGEST_OPERATION,
+        inputs=(LineageInputRef(asset=_ingest_source_asset(snapshot), role="source"),),
+        outputs=(LineageOutputRef(asset=snapshot.canonical_asset, role="dataset"),),
+        timestamp=observed,
+    )
+
+
+def _synthetic_ingest_events(
+    asset: DataAssetRef,
+    snapshots: ProviderSnapshotReader | None,
+) -> tuple[LineageEvent, ...]:
+    """Synthesize ingest events for snapshots bound to one asset either side."""
+    if snapshots is None:
+        return ()
+    if asset.namespace == "source":
+        return tuple(
+            _synthetic_ingest_event(snapshot)
+            for snapshot in snapshots.list_snapshots(dataset_id=asset.dataset_id)
+            if _ingest_source_asset(snapshot) == asset
+        )
+    return tuple(
+        _synthetic_ingest_event(snapshot)
+        for snapshot in snapshots.list_snapshots(canonical_asset=asset)
+    )
+
+
+def _all_synthetic_ingest_events(
+    snapshots: ProviderSnapshotReader | None,
+) -> tuple[LineageEvent, ...]:
+    if snapshots is None:
+        return ()
+    return tuple(
+        _synthetic_ingest_event(snapshot) for snapshot in snapshots.list_snapshots()
+    )
+
+
+def _sorted_lineage_events(
+    events: tuple[LineageEvent, ...],
+) -> tuple[LineageEvent, ...]:
+    return tuple(sorted(events, key=lambda event: (event.timestamp, event.run_id)))
 
 
 def _to_data_asset_ref(asset: DataLineageAsset) -> DataAssetRef:
@@ -599,7 +721,7 @@ def _lineage_adjacent_assets(
 
 def _traverse_data_lineage_graph(
     *,
-    reader: DataLineageReader,
+    events_for_asset: Callable[[DataAssetRef], tuple[LineageEvent, ...]],
     root: DataAssetRef,
     direction: str,
     max_depth: int,
@@ -622,7 +744,7 @@ def _traverse_data_lineage_graph(
         if depth >= max_depth:
             continue
 
-        for event in reader.list_events_for_asset(asset):
+        for event in events_for_asset(asset):
             next_assets = _lineage_adjacent_assets(
                 asset=asset,
                 event=event,

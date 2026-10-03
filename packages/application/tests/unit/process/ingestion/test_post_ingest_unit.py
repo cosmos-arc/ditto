@@ -277,7 +277,6 @@ def test_r2_evidence_profile_requires_quality_checker_before_payload_write() -> 
         list_date_inference=cast(ListDateInferenceService, None),
         source_name="tushare",
         evidence_committer=cast(IngestionEvidenceCommitter, committer),
-        license_record_id="license:tushare:stock_daily:reviewed",
     )
 
     result = process_fetched_data(
@@ -320,7 +319,6 @@ def test_r2_evidence_failure_never_returns_success(tmp_path: Path) -> None:
         quality_checker=_PassingQualityChecker(),
         evidence_committer=cast(IngestionEvidenceCommitter, committer),
         provider_payload_writer=FilesystemProviderPayloadStore(tmp_path),
-        license_record_id="license:tushare:stock_daily:reviewed",
     )
 
     result = process_fetched_data(
@@ -362,7 +360,6 @@ def test_r2_evidence_success_does_not_duplicate_success_log(tmp_path: Path) -> N
         quality_checker=_PassingQualityChecker(),
         evidence_committer=cast(IngestionEvidenceCommitter, committer),
         provider_payload_writer=FilesystemProviderPayloadStore(tmp_path),
-        license_record_id="license:tushare:stock_daily:reviewed",
     )
 
     result = process_fetched_data(
@@ -403,7 +400,6 @@ def test_r2_provider_payload_uri_remains_bound_to_pre_future_response(
         quality_checker=_PassingQualityChecker(),
         evidence_committer=cast(IngestionEvidenceCommitter, committer),
         provider_payload_writer=payload_store,
-        license_record_id="license:tushare:stock_daily:reviewed",
     )
     original = pl.DataFrame({"trade_date": ["2026-08-28"], "close": [10.2]})
     revised = pl.DataFrame(
@@ -965,7 +961,6 @@ def test_r2_empty_range_commits_no_payload_provider_observation() -> None:
         source_name="tushare",
         quality_checker=_PassingQualityChecker(),
         evidence_committer=cast(IngestionEvidenceCommitter, committer),
-        license_record_id="license:tushare:commodity_daily:reviewed",
     )
 
     result = process_fetched_data(

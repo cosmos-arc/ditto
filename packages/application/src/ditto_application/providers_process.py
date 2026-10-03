@@ -28,7 +28,7 @@ from ditto_data.ingestion.partition_state import (
     PartitionLifecycleReader,
     PartitionLifecycleWriter,
 )
-from ditto_data.lineage import DataLineageReader, DataLineageRecorder
+from ditto_data.lineage import DataLineageRecorder
 from ditto_data.quality import QualityEngine
 from ditto_data.services.market_service import MarketService
 from ditto_data.services.metadata_service import MetadataService
@@ -207,7 +207,6 @@ class _IngestionEvidenceReaders:
 
     partitions: PartitionLifecycleReader
     snapshots: ProviderSnapshotReader
-    lineage: DataLineageReader
 
 
 class AppProcessProvider(Provider):
@@ -259,10 +258,9 @@ class AppProcessProvider(Provider):
         self,
         partitions: PartitionLifecycleReader,
         snapshots: ProviderSnapshotReader,
-        lineage: DataLineageReader,
     ) -> _IngestionEvidenceReaders:
         """Group the recovery reads used by the evidence saga."""
-        return _IngestionEvidenceReaders(partitions, snapshots, lineage)
+        return _IngestionEvidenceReaders(partitions, snapshots)
 
     @provide
     def ingestion_evidence_committer(
@@ -271,7 +269,6 @@ class AppProcessProvider(Provider):
         provider_snapshot_writer: ProviderSnapshotWriter,
         readers: _IngestionEvidenceReaders,
         data_catalog_writer: DataCatalogWriter,
-        lineage_recorder: DataLineageRecorder,
         ingestion_log_store: IngestionLogStore,
     ) -> IngestionEvidenceCommitter:
         """Assemble the fail-closed R2 evidence saga from application ports."""
@@ -281,9 +278,7 @@ class AppProcessProvider(Provider):
                 lifecycle_writer=partition_lifecycle_writer,
                 snapshot_writer=provider_snapshot_writer,
                 snapshot_reader=readers.snapshots,
-                lineage_reader=readers.lineage,
                 catalog_writer=data_catalog_writer,
-                lineage_recorder=lineage_recorder,
                 ingestion_log_store=ingestion_log_store,
             )
         )

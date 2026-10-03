@@ -22,7 +22,6 @@ from ditto_data.catalog.source_snapshot import (
 )
 from ditto_data.ingestion.partition_state import (
     PartitionCheckpoint,
-    PartitionLifecycleEvent,
     PartitionLifecycleStatus,
 )
 from ditto_features.technical_analysis.contracts import (
@@ -67,9 +66,7 @@ def _checkpoint(snapshot: ProviderSnapshot) -> PartitionCheckpoint:
         attempt=1,
         retry_budget=3,
         payload_id=f"payload:{snapshot.checksum}:synthetic:{snapshot.snapshot_id}",
-        catalog_asset_id=None,
-        lineage_run_id=None,
-        ingestion_log_id=None,
+        complete_evidence_id=snapshot.snapshot_id,
         error_code=None,
         updated_at=snapshot.created_at,
     )
@@ -116,29 +113,6 @@ class _Lifecycle:
             _checkpoint(snapshot)
             for snapshot in self._snapshots
             if snapshot.dataset_id == dataset_id
-        )
-
-    def list_events(self, chunk_id: str) -> tuple[PartitionLifecycleEvent, ...]:
-        checkpoint = self._checkpoint_for(chunk_id)
-        if checkpoint is None:
-            return ()
-        snapshot = next(
-            item
-            for item in self._snapshots
-            if item.request_start == checkpoint.request_start
-            and item.request_end == checkpoint.request_end
-        )
-        return (
-            PartitionLifecycleEvent(
-                event_id=1,
-                chunk_id=chunk_id,
-                from_status=PartitionLifecycleStatus.SUCCESS_RECORDED,
-                to_status=PartitionLifecycleStatus.COMPLETE,
-                attempt=1,
-                evidence_id=snapshot.snapshot_id,
-                error_code=None,
-                occurred_at=checkpoint.updated_at,
-            ),
         )
 
     def _checkpoint_for(self, chunk_id: str) -> PartitionCheckpoint | None:

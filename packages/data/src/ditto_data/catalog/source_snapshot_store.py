@@ -35,6 +35,11 @@ def _metadata_json(metadata: tuple[tuple[str, str], ...]) -> str:
     return orjson.dumps(dict(metadata)).decode()
 
 
+def _first_observed_at(now: datetime, snapshot: ProviderSnapshot) -> datetime:
+    """The first local observation never precedes the content's own visibility."""
+    return max(now, snapshot.created_at)
+
+
 def _metadata_from_json(value: object) -> tuple[tuple[str, str], ...]:
     parsed: object = orjson.loads(str(value))
     if not isinstance(parsed, dict):
@@ -215,6 +220,13 @@ class SQLiteProviderSnapshotStore:
                     snapshot.schema_fingerprint,
                 ],
             )
+            # 首次本地观察即第一条观察事件,时间取追加时钟且不早于内容首次
+            # 可见时间;事件表是观察账本的单一事实,provider_snapshot_observations
+            # 仅作为兼容缓存继续写入。
+            self._client.execute(
+                _INSERT_OBSERVATION_EVENT,
+                [snapshot.snapshot_id, _first_observed_at(self._now(), snapshot)],
+            )
             self._client.execute(
                 "INSERT INTO provider_snapshot_observations VALUES (?, ?, ?)",
                 [
@@ -229,6 +241,7 @@ class SQLiteProviderSnapshotStore:
             raise
 
     def _predecessor_at(self, snapshot: ProviderSnapshot) -> str | None:
+        """Fold observation events into the latest prior content identity."""
         events = (
             (observed_at, previous.snapshot_id)
             for previous in self.list_snapshots(
@@ -240,7 +253,7 @@ class SQLiteProviderSnapshotStore:
             and previous.request_start == snapshot.request_start
             and previous.request_end == snapshot.request_end
             and previous.created_at <= snapshot.created_at
-            for observed_at in (previous.created_at, *previous.observations)
+            for observed_at in previous.observations
             if observed_at <= snapshot.created_at
         )
         latest = max(events, default=None)
@@ -263,10 +276,21 @@ class SQLiteProviderSnapshotStore:
         """
         if self.get_observed_at(snapshot_id) is not None:
             return
+        snapshot = self.get_snapshot(snapshot_id)
+        observed_at = (
+            self._now()
+            if snapshot is None
+            else _first_observed_at(self._now(), snapshot)
+        )
         try:
             self._client.execute(
-                "INSERT INTO provider_snapshot_observations VALUES (?, NULL, ?)",
-                [snapshot_id, self._now().isoformat()],
+                _INSERT_OBSERVATION_EVENT,
+                [snapshot_id, observed_at.isoformat()],
+            )
+            self._client.execute(
+                "INSERT OR REPLACE INTO provider_snapshot_observations "
+                "VALUES (?, NULL, ?)",
+                [snapshot_id, observed_at.isoformat()],
             )
             self._client.commit()
         except Exception:
@@ -274,26 +298,25 @@ class SQLiteProviderSnapshotStore:
             raise
 
     def get_predecessor(self, snapshot_id: str) -> str | None:
-        """Return prior observed content without claiming historical availability."""
+        """Fold observation events into the prior observed content identity."""
+        snapshot = self.get_snapshot(snapshot_id)
+        if snapshot is None:
+            return None
+        return self._predecessor_at(snapshot)
+
+    def get_observed_at(self, snapshot_id: str) -> datetime | None:
+        """First observation event; absent for legacy evidence."""
         row = self._client.fetchone(
-            """SELECT previous_snapshot_id FROM provider_snapshot_observations
+            """SELECT MIN(observed_at) AS observed_at
+               FROM provider_snapshot_observation_events
                WHERE snapshot_id = ?""",
             [snapshot_id],
         )
         return (
-            str(row["previous_snapshot_id"])
-            if row and row["previous_snapshot_id"]
+            datetime.fromisoformat(str(row["observed_at"]))
+            if row and row["observed_at"]
             else None
         )
-
-    def get_observed_at(self, snapshot_id: str) -> datetime | None:
-        """First local catalog observation; absent for legacy evidence."""
-        row = self._client.fetchone(
-            """SELECT observed_at FROM provider_snapshot_observations
-               WHERE snapshot_id = ?""",
-            [snapshot_id],
-        )
-        return datetime.fromisoformat(str(row["observed_at"])) if row else None
 
     def list_snapshots(
         self,

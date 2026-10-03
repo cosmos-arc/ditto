@@ -22,7 +22,6 @@ from ditto_data.catalog import (
     DataSchemaFingerprint,
     InMemoryDataCatalog,
 )
-from ditto_data.lineage import InMemoryDataLineage
 from ditto_data.models import Source
 from ditto_data.models.ingestion import IngestionResult
 from ditto_data.sources.protocols import (
@@ -675,51 +674,6 @@ class TestCreateCoordinatorSourceRegistryRouting:
             "selection_date": "2024-12-27",
         }
         fred_coordinator.ingest_by_instrument.assert_not_called()
-
-
-class TestCreateCoordinatorLineage:
-    """lineage recorder 运行时注入."""
-
-    def test_accepts_runtime_context_for_optional_ports(self) -> None:
-        services = _make_services()
-        services.source_accessor.tushare = MagicMock()
-        lineage = InMemoryDataLineage()
-        catalog = InMemoryDataCatalog()
-
-        runtime = CoordinatorRuntimeContext(
-            lineage_recorder=lineage,
-            catalog_reader=catalog,
-            catalog_writer=catalog,
-        )
-
-        with _patch_coordinator_init() as (mock_cls, _):
-            with create_coordinator(
-                services,
-                source_name="tushare",
-                runtime=runtime,
-            ):
-                pass
-
-            config = mock_cls.call_args.kwargs["config"]
-            assert config.lineage_recorder is lineage
-            assert config.catalog_reader is catalog
-            assert config.catalog_writer is catalog
-
-    def test_passes_lineage_recorder_to_config(self) -> None:
-        services = _make_services()
-        services.source_accessor.tushare = MagicMock()
-        lineage = InMemoryDataLineage()
-
-        with _patch_coordinator_init() as (mock_cls, _):
-            with create_coordinator(
-                services,
-                source_name="tushare",
-                runtime=CoordinatorRuntimeContext(lineage_recorder=lineage),
-            ):
-                pass
-
-            config = mock_cls.call_args.kwargs["config"]
-            assert config.lineage_recorder is lineage
 
 
 class TestCreateCoordinatorCatalog:

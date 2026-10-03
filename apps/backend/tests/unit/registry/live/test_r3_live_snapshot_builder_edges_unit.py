@@ -18,7 +18,6 @@ from ditto_apps.registry.live import r3_live_snapshot_builder as subject
 from ditto_data.catalog.source_snapshot import ProviderSnapshotReader
 from ditto_data.ingestion.partition_state import (
     PartitionCheckpoint,
-    PartitionLifecycleEvent,
     PartitionLifecycleReader,
     PartitionLifecycleStatus,
 )
@@ -92,38 +91,12 @@ class _Lifecycle:
                 payload_id=(
                     f"payload:{snapshot.checksum}:synthetic:{snapshot.snapshot_id}"
                 ),
-                catalog_asset_id=None,
-                lineage_run_id=None,
-                ingestion_log_id=None,
+                complete_evidence_id=snapshot.snapshot_id,
                 error_code=None,
                 updated_at=_CUTOFF,
             )
             for snapshot in self._snapshots
             if snapshot.dataset_id == dataset_id
-        )
-
-    def list_events(self, chunk_id: str) -> tuple[PartitionLifecycleEvent, ...]:
-        snapshot = next(
-            (
-                item
-                for item in self._snapshots
-                if f"chunk-{item.snapshot_id}" == chunk_id
-            ),
-            None,
-        )
-        if snapshot is None:
-            return ()
-        return (
-            PartitionLifecycleEvent(
-                event_id=1,
-                chunk_id=chunk_id,
-                from_status=PartitionLifecycleStatus.SUCCESS_RECORDED,
-                to_status=PartitionLifecycleStatus.COMPLETE,
-                attempt=1,
-                evidence_id=snapshot.snapshot_id,
-                error_code=None,
-                occurred_at=_CUTOFF,
-            ),
         )
 
 

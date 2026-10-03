@@ -73,22 +73,13 @@ def completed_evidence(
             attempt=1,
             retry_budget=3,
             payload_id=None,
-            catalog_asset_id=None,
-            lineage_run_id=None,
-            ingestion_log_id=None,
+            complete_evidence_id=None,
             error_code=None,
             updated_at=visible,
         )
     )
     stages = (
-        PartitionLifecycleStatus.FETCHED,
-        PartitionLifecycleStatus.NORMALIZED,
-        PartitionLifecycleStatus.PIT_PASSED,
-        PartitionLifecycleStatus.DQ_PASSED,
         PartitionLifecycleStatus.PAYLOAD_COMMITTED,
-        PartitionLifecycleStatus.CATALOG_ATTESTED,
-        PartitionLifecycleStatus.LINEAGE_RECORDED,
-        PartitionLifecycleStatus.SUCCESS_RECORDED,
         *((PartitionLifecycleStatus.COMPLETE,) if complete else ()),
     )
     for stage in stages:

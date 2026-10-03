@@ -1,4 +1,4 @@
-"""Canonical catalog, provider snapshot, and lineage evidence builders."""
+"""Canonical catalog and provider snapshot evidence builders."""
 
 from __future__ import annotations
 
@@ -19,14 +19,8 @@ from ditto_data.catalog.provider_payload import (
     schema_fingerprint,
 )
 from ditto_data.catalog.source_snapshot import ProviderSnapshot, ProviderSnapshotDraft
-from ditto_data.lineage import (
-    DataLineageRecorder,
-    LineageEvent,
-    LineageInputRef,
-    LineageOutputRef,
-)
 from ditto_data.models.ingestion import IngestionLog, IngestionStatus
-from ditto_platform.foundation import WriteResult, logger
+from ditto_platform.foundation import WriteResult
 
 from ditto_application.catalog_freshness import catalog_source_snapshot_id
 from ditto_application.exceptions import AppProcessError
@@ -36,8 +30,10 @@ __all__ = [
     "CatalogWriteContext",
     "build_data_catalog_entry",
     "build_evidence_commit_request",
-    "record_ingestion_lineage",
 ]
+
+# license 治理已删除;列保留给 #396 重置时移除,写入统一占位值。
+UNUSED_LICENSE_RECORD_ID = "unused"
 
 
 @dataclass(frozen=True)
@@ -61,44 +57,6 @@ class CatalogWriteContext:
 def _dataset_namespace(dataset: str) -> str:
     metadata = default_dataset_metadata().get(dataset)
     return "data" if metadata is None else metadata.domain
-
-
-def _source_asset(
-    dataset: str,
-    trade_date: str,
-    source_name: str,
-    *,
-    source_ticker: str | None = None,
-    end_date: str | None = None,
-) -> DataAssetRef:
-    if source_ticker is not None or end_date is not None:
-        range_end = end_date or trade_date
-        range_keys = (
-            f"source={source_name}",
-            f"start_date={trade_date}",
-            f"end_date={range_end}",
-        )
-        if source_ticker is None:
-            return DataAssetRef(
-                dataset_id=dataset,
-                namespace="source",
-                partition_keys=range_keys,
-            )
-        return DataAssetRef(
-            dataset_id=dataset,
-            namespace="source",
-            partition_keys=(
-                f"source={source_name}",
-                f"source_ticker={source_ticker}",
-                f"start_date={trade_date}",
-                f"end_date={range_end}",
-            ),
-        )
-    return DataAssetRef(
-        dataset_id=dataset,
-        namespace="source",
-        partition_keys=(f"source={source_name}", f"trade_date={trade_date}"),
-    )
 
 
 def _output_asset(
@@ -136,23 +94,6 @@ def _output_asset(
     )
 
 
-def _ingestion_run_id(
-    dataset: str,
-    trade_date: str,
-    source_name: str,
-    checksum: str,
-    *,
-    source_ticker: str | None = None,
-    end_date: str | None = None,
-) -> str:
-    if source_ticker is not None or end_date is not None:
-        return (
-            f"ingest:{source_name}:{dataset}:{source_ticker or 'all'}:"
-            f"{trade_date}:{end_date or trade_date}:{checksum}"
-        )
-    return f"ingest:{source_name}:{dataset}:{trade_date}:{checksum}"
-
-
 def _source_snapshot_id(
     ctx: CatalogWriteContext,
 ) -> str:
@@ -171,96 +112,6 @@ def _source_snapshot_id(
         checksum=ctx.write_result.checksum,
         l1_l2_attested=ctx.l1_l2_attested,
     )
-
-
-def _lineage_event(
-    dataset: str,
-    trade_date: str,
-    *,
-    source_name: str,
-    write_result: WriteResult,
-    now: datetime,
-    source_ticker: str | None = None,
-    end_date: str | None = None,
-) -> LineageEvent:
-    return LineageEvent(
-        run_id=_ingestion_run_id(
-            dataset,
-            trade_date,
-            source_name,
-            write_result.checksum,
-            source_ticker=source_ticker,
-            end_date=end_date,
-        ),
-        operation="ingest",
-        inputs=(
-            LineageInputRef(
-                asset=_source_asset(
-                    dataset,
-                    trade_date,
-                    source_name,
-                    source_ticker=source_ticker,
-                    end_date=end_date,
-                ),
-                role="source",
-            ),
-        ),
-        outputs=(
-            LineageOutputRef(
-                asset=_output_asset(
-                    dataset,
-                    trade_date,
-                    source_ticker=source_ticker,
-                    end_date=end_date,
-                ),
-                role="dataset",
-            ),
-        ),
-        timestamp=now,
-    )
-
-
-def record_ingestion_lineage(
-    dataset: str,
-    trade_date: str,
-    *,
-    source_name: str,
-    lineage_recorder: DataLineageRecorder | None,
-    write_result: WriteResult,
-    source_ticker: str | None = None,
-    end_date: str | None = None,
-) -> None:
-    """Record source-to-payload lineage without failing an otherwise valid write."""
-    if lineage_recorder is None:
-        return
-    try:
-        lineage_recorder.record_event(
-            _lineage_event(
-                dataset,
-                trade_date,
-                source_name=source_name,
-                write_result=write_result,
-                source_ticker=source_ticker,
-                end_date=end_date,
-                now=datetime.now(UTC),
-            )
-        )
-    except (AppProcessError, ValueError, KeyError, TypeError, OSError) as error:
-        logger.warning(
-            "lineage_record_failed",
-            event="lineage_record_error",
-            dataset=dataset,
-            trade_date=trade_date,
-            error_type=type(error).__name__,
-            error=str(error),
-        )
-    except Exception:
-        logger.exception(
-            "lineage_record_failed_unexpected",
-            event="lineage_record_error",
-            dataset=dataset,
-            trade_date=trade_date,
-        )
 
 
 def _schema_hash_from_dataframe(df: pl.DataFrame) -> str:
@@ -309,12 +160,8 @@ def build_data_catalog_entry(
 
 def build_evidence_commit_request(
     ctx: CatalogWriteContext,
-    *,
-    license_record_id: str | None,
 ) -> EvidenceCommitRequest:
-    """Build immutable provider/catalog/lineage/log evidence for one payload."""
-    if license_record_id is None:
-        raise AppProcessError("R2 evidence commit requires license_record_id")
+    """Build immutable provider/catalog/log evidence for one payload."""
     if ctx.payload_retained and ctx.provider_payload is None:
         raise AppProcessError("R2 evidence commit requires immutable provider payload")
     now = datetime.now(UTC)
@@ -362,7 +209,7 @@ def build_evidence_commit_request(
                     ),
                 ),
             ),
-            license_record_id=license_record_id,
+            license_record_id=UNUSED_LICENSE_RECORD_ID,
             row_count=payload_row_count,
             payload_uri=(
                 ctx.provider_payload.uri
@@ -392,15 +239,6 @@ def build_evidence_commit_request(
         ingestion_date=ctx.trade_date,
         provider_snapshot=snapshot,
         catalog_entry=catalog_entry,
-        lineage_event=_lineage_event(
-            ctx.dataset,
-            request_start,
-            source_name=ctx.source_name,
-            write_result=ctx.write_result,
-            source_ticker=ctx.source_ticker,
-            end_date=ctx.end_date,
-            now=now,
-        ),
         success_log=IngestionLog(
             dataset=ctx.dataset,
             source=ctx.source_name,

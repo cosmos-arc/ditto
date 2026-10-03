@@ -5,7 +5,10 @@ from __future__ import annotations
 from datetime import UTC, datetime
 
 from ditto_data.catalog.contracts import DataAssetRef
-from ditto_data.catalog.snapshot_completion import checkpoint_matches_snapshot
+from ditto_data.catalog.snapshot_completion import (
+    checkpoint_matches_snapshot,
+    snapshot_completed,
+)
 from ditto_data.catalog.source_snapshot import ProviderSnapshot, ProviderSnapshotDraft
 from ditto_data.ingestion.partition_state import (
     PartitionCheckpoint,
@@ -50,9 +53,7 @@ def _checkpoint(payload_id: str | None) -> PartitionCheckpoint:
         attempt=1,
         retry_budget=3,
         payload_id=payload_id,
-        catalog_asset_id=None,
-        lineage_run_id=None,
-        ingestion_log_id=None,
+        complete_evidence_id=None,
         error_code=None,
         updated_at=datetime(2026, 6, 1, 10, 5, tzinfo=UTC),
     )
@@ -84,3 +85,61 @@ class TestCheckpointMatchesSnapshot:
         checkpoint = _checkpoint(f"intent:{snapshot.checksum}")
 
         assert checkpoint_matches_snapshot(checkpoint, snapshot)
+
+
+class _Lifecycle:
+    """Minimal completion reader over synthetic checkpoints."""
+
+    def __init__(self, *checkpoints: PartitionCheckpoint) -> None:
+        self._checkpoints = checkpoints
+
+    def list_complete(self, *, dataset_id: str) -> tuple[PartitionCheckpoint, ...]:
+        return tuple(
+            checkpoint
+            for checkpoint in self._checkpoints
+            if checkpoint.dataset_id == dataset_id
+            and checkpoint.status is PartitionLifecycleStatus.COMPLETE
+        )
+
+
+class TestSnapshotCompleted:
+    """COMPLETE 行必须以 complete_evidence_id 绑定精确快照身份。"""
+
+    def _complete(self, snapshot: ProviderSnapshot, evidence_id: str | None):
+        return PartitionCheckpoint(
+            chunk_id="chunk:tushare:stock_daily:2026-06-01",
+            dataset_id="stock_daily",
+            source="tushare",
+            request_start="2026-06-01",
+            request_end="2026-06-01",
+            status=PartitionLifecycleStatus.COMPLETE,
+            last_successful_stage=PartitionLifecycleStatus.COMPLETE,
+            attempt=1,
+            retry_budget=3,
+            payload_id=f"payload:{snapshot.checksum}:stock_daily/2026:{snapshot.snapshot_id}",
+            complete_evidence_id=evidence_id,
+            error_code=None,
+            updated_at=datetime(2026, 6, 1, 10, 6, tzinfo=UTC),
+        )
+
+    def test_complete_evidence_binding_attests_snapshot(self) -> None:
+        snapshot = _snapshot("market.stock_daily.v1")
+        lifecycle = _Lifecycle(
+            self._complete(snapshot, evidence_id=snapshot.snapshot_id)
+        )
+
+        assert snapshot_completed(snapshot, lifecycle)
+
+    def test_legacy_complete_without_evidence_stays_incomplete(self) -> None:
+        snapshot = _snapshot("market.stock_daily.v1")
+        lifecycle = _Lifecycle(self._complete(snapshot, evidence_id=None))
+
+        assert not snapshot_completed(snapshot, lifecycle)
+
+    def test_complete_bound_to_other_snapshot_stays_incomplete(self) -> None:
+        v1 = _snapshot("market.stock_daily.v1")
+        v2 = _snapshot("market.stock_daily.v2")
+        lifecycle = _Lifecycle(self._complete(v1, evidence_id=v1.snapshot_id))
+
+        assert snapshot_completed(v1, lifecycle)
+        assert not snapshot_completed(v2, lifecycle)

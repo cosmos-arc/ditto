@@ -735,23 +735,10 @@ def test_observed_source_snapshots_use_only_completed_history() -> None:
                     status=PartitionLifecycleStatus.COMPLETE,
                     chunk_id=f"chunk-{item.snapshot_id}",
                     payload_id=f"payload:{item.checksum}:synthetic:{item.snapshot_id}",
+                    complete_evidence_id=item.snapshot_id,
                 )
                 for item in current.values()
                 if item.dataset_id == dataset_id
-            )
-
-        def list_events(self, chunk_id: str) -> tuple[SimpleNamespace, ...]:
-            snapshot_id = chunk_id.removeprefix("chunk-")
-            item = current.get(snapshot_id)
-            if item is None:
-                return ()
-            from ditto_data.ingestion.partition_state import PartitionLifecycleStatus
-
-            return (
-                SimpleNamespace(
-                    to_status=PartitionLifecycleStatus.COMPLETE,
-                    evidence_id=item.snapshot_id,
-                ),
             )
 
     sources, authority, by_dataset, bindings = _observed_source_snapshots(

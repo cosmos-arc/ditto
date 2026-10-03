@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from datetime import UTC, datetime
 from unittest.mock import MagicMock
 
@@ -11,6 +12,10 @@ from ditto_data.catalog import (
     DataCatalogEntry,
     DataSchemaFingerprint,
     InMemoryDataCatalog,
+)
+from ditto_data.catalog.source_snapshot import (
+    ProviderSnapshot,
+    ProviderSnapshotDraft,
 )
 from ditto_data.lineage import (
     InMemoryDataLineage,
@@ -217,7 +222,7 @@ class TestGetDataLineageForRun:
         lineage.record_event(
             LineageEvent(
                 run_id="run-001",
-                operation="ingest",
+                operation="transform",
                 inputs=(LineageInputRef(asset=raw_asset, role="source"),),
                 outputs=(LineageOutputRef(asset=clean_asset, role="dataset"),),
                 timestamp=datetime(2026, 1, 5, 9, 0, tzinfo=UTC),
@@ -250,7 +255,7 @@ class TestGetDataLineageForRun:
 
         assert result.run_id == "run-001"
         assert [event.operation for event in result.events] == [
-            "ingest",
+            "transform",
             "materialize",
         ]
         assert result.input_assets == (
@@ -429,7 +434,7 @@ class TestGetDataLineageGraphForAsset:
         lineage.record_event(
             LineageEvent(
                 run_id="run-001",
-                operation="ingest",
+                operation="transform",
                 inputs=(LineageInputRef(asset=raw_asset, role="source"),),
                 outputs=(LineageOutputRef(asset=clean_asset, role="dataset"),),
                 timestamp=datetime(2026, 1, 5, 9, 0, tzinfo=UTC),
@@ -474,14 +479,14 @@ class TestGetDataLineageGraphForAsset:
             "alpha_inputs",
         ]
         assert [event.operation for event in result.events] == [
-            "ingest",
+            "transform",
             "materialize",
         ]
         assert [
             (edge.source.dataset_id, edge.target.dataset_id, edge.event.operation)
             for edge in result.edges
         ] == [
-            ("raw_bars", "clean_bars", "ingest"),
+            ("raw_bars", "clean_bars", "transform"),
             ("clean_bars", "alpha_inputs", "materialize"),
         ]
 
@@ -495,7 +500,7 @@ class TestGetDataLineageGraphForAsset:
         lineage.record_event(
             LineageEvent(
                 run_id="run-001",
-                operation="ingest",
+                operation="transform",
                 inputs=(LineageInputRef(asset=raw_asset, role="source"),),
                 outputs=(LineageOutputRef(asset=clean_asset, role="dataset"),),
                 timestamp=datetime(2026, 1, 5, 9, 0, tzinfo=UTC),
@@ -532,5 +537,199 @@ class TestGetDataLineageGraphForAsset:
             for edge in result.edges
         ] == [
             ("clean_bars", "alpha_inputs", "materialize"),
-            ("raw_bars", "clean_bars", "ingest"),
+            ("raw_bars", "clean_bars", "transform"),
         ]
+
+
+# ========== ingest 事件合成（provider snapshots 单一事实） ==========
+
+
+class _SnapshotReader:
+    """Minimal ProviderSnapshotReader over in-memory snapshots."""
+
+    def __init__(self, *snapshots) -> None:
+        self._snapshots = tuple(snapshots)
+
+    def get_snapshot(self, snapshot_id: str):
+        return next(
+            (item for item in self._snapshots if item.snapshot_id == snapshot_id),
+            None,
+        )
+
+    def get_observed_at(self, snapshot_id: str):
+        snapshot = self.get_snapshot(snapshot_id)
+        return None if snapshot is None else snapshot.created_at
+
+    def get_predecessor(self, snapshot_id: str):
+        return None
+
+    def list_snapshots(
+        self,
+        *,
+        dataset_id: str | None = None,
+        source: str | None = None,
+        canonical_asset: DataAssetRef | None = None,
+    ):
+        return tuple(
+            item
+            for item in self._snapshots
+            if (dataset_id is None or item.dataset_id == dataset_id)
+            and (source is None or item.source == source)
+            and (canonical_asset is None or item.canonical_asset == canonical_asset)
+        )
+
+
+def _ingested_snapshot(
+    *,
+    created_at: datetime,
+    observations: tuple[datetime, ...] = (),
+    partition_keys: tuple[str, ...] = ("trade_date=2026-01-05",),
+) -> ProviderSnapshot:
+    snapshot = ProviderSnapshot.create(
+        ProviderSnapshotDraft(
+            dataset_id="stock_daily",
+            source="tushare",
+            request_start="2026-01-05",
+            request_end="2026-01-05",
+            schema_version="market.stock_daily.v1",
+            checksum="sha256:payload",
+            canonical_asset=DataAssetRef(
+                dataset_id="stock_daily",
+                namespace="market",
+                partition_keys=partition_keys,
+            ),
+            request_parameters_hash="sha256:request",
+            response_metadata=(),
+            license_record_id="unused",
+            row_count=1,
+            payload_uri="stock_daily/2026/01/05.parquet",
+            payload_retained=True,
+            created_at=created_at,
+        )
+    )
+    return replace(snapshot, observations=observations)
+
+
+class TestSyntheticIngestEvents:
+    """摄取 ingest 事件从 provider snapshots 合成,store 只供非 ingest 血缘。"""
+
+    def _facade(self, snapshots) -> LineageQueryFacade:
+        lineage = InMemoryDataLineage()
+        return LineageQueryFacade(
+            run_service=_make_service(),
+            data_lineage_reader=lineage,
+            provider_snapshots=_SnapshotReader(*snapshots),
+        )
+
+    def test_synthesizes_ingest_event_for_canonical_asset(self) -> None:
+        observed = datetime(2026, 1, 5, 9, 0, tzinfo=UTC)
+        reobserved = datetime(2026, 1, 6, 9, 0, tzinfo=UTC)
+        # 真实 store 中观察事件包含首次可见时间与其后重观察。
+        snapshot = _ingested_snapshot(
+            created_at=observed,
+            observations=(observed, reobserved),
+        )
+        facade = self._facade((snapshot,))
+
+        events = facade.list_data_events_for_asset(
+            namespace="market",
+            dataset_id="stock_daily",
+            partition_keys=("trade_date=2026-01-05",),
+        )
+
+        assert len(events) == 1
+        event = events[0]
+        assert event.operation == "ingest"
+        # 事件时间取观察事件(首次可见)。
+        assert event.timestamp == observed
+        assert event.inputs[0].asset.namespace == "source"
+        assert event.inputs[0].asset.partition_keys == (
+            "source=tushare",
+            "start_date=2026-01-05",
+            "end_date=2026-01-05",
+        )
+        assert event.outputs[0].asset.partition_keys == ("trade_date=2026-01-05",)
+
+    def test_synthesizes_ingest_event_for_source_asset(self) -> None:
+        snapshot = _ingested_snapshot(created_at=datetime(2026, 1, 5, 9, 0, tzinfo=UTC))
+        facade = self._facade((snapshot,))
+
+        events = facade.list_data_events_for_asset(
+            namespace="source",
+            dataset_id="stock_daily",
+            partition_keys=(
+                "source=tushare",
+                "start_date=2026-01-05",
+                "end_date=2026-01-05",
+            ),
+        )
+
+        assert [event.operation for event in events] == ["ingest"]
+
+    def test_run_summary_resolves_synthetic_ingest_run_id(self) -> None:
+        snapshot = _ingested_snapshot(created_at=datetime(2026, 1, 5, 9, 0, tzinfo=UTC))
+        facade = self._facade((snapshot,))
+
+        events = facade.list_data_events_for_asset(
+            namespace="market",
+            dataset_id="stock_daily",
+            partition_keys=("trade_date=2026-01-05",),
+        )
+        summary = facade.get_data_lineage_for_run(events[0].run_id)
+
+        assert [event.run_id for event in summary.events] == [events[0].run_id]
+        assert summary.input_assets[0].namespace == "source"
+        assert summary.output_assets[0].namespace == "market"
+
+    def test_store_ingest_rows_are_superseded_by_synthesis(self) -> None:
+        """遗留 store ingest 行让位给合成事件,避免双源重复。"""
+        service = _make_service()
+        lineage = InMemoryDataLineage()
+        asset = DataAssetRef(
+            dataset_id="stock_daily",
+            namespace="market",
+            partition_keys=("trade_date=2026-01-05",),
+        )
+        lineage.record_event(
+            LineageEvent(
+                run_id="ingest:legacy:tushare:stock_daily:2026-01-05:sha256:old",
+                operation="ingest",
+                inputs=(LineageInputRef(asset=asset, role="source"),),
+                outputs=(LineageOutputRef(asset=asset, role="dataset"),),
+                timestamp=datetime(2026, 1, 5, 9, 0, tzinfo=UTC),
+            )
+        )
+        snapshot = _ingested_snapshot(created_at=datetime(2026, 1, 5, 9, 0, tzinfo=UTC))
+        facade = LineageQueryFacade(
+            run_service=service,
+            data_lineage_reader=lineage,
+            provider_snapshots=_SnapshotReader(snapshot),
+        )
+
+        events = facade.list_data_events_for_asset(
+            namespace="market",
+            dataset_id="stock_daily",
+            partition_keys=("trade_date=2026-01-05",),
+        )
+
+        assert len(events) == 1
+        assert events[0].run_id == (
+            f"ingest:tushare:stock_daily:2026-01-05:{snapshot.checksum}"
+        )
+
+    def test_graph_traverses_synthetic_ingest_edges(self) -> None:
+        snapshot = _ingested_snapshot(created_at=datetime(2026, 1, 5, 9, 0, tzinfo=UTC))
+        facade = self._facade((snapshot,))
+
+        graph = facade.get_data_lineage_graph_for_asset(
+            namespace="market",
+            dataset_id="stock_daily",
+            partition_keys=("trade_date=2026-01-05",),
+            direction="upstream",
+            max_depth=1,
+        )
+
+        assert [event.operation for event in graph.events] == ["ingest"]
+        assert [
+            (edge.source.namespace, edge.target.namespace) for edge in graph.edges
+        ] == [("source", "market")]

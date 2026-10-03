@@ -20,14 +20,7 @@ class PartitionLifecycleStatus(StrEnum):
     """Normal and repairable states for one ingestion chunk."""
 
     PLANNED = "PLANNED"
-    FETCHED = "FETCHED"
-    NORMALIZED = "NORMALIZED"
-    PIT_PASSED = "PIT_PASSED"
-    DQ_PASSED = "DQ_PASSED"
     PAYLOAD_COMMITTED = "PAYLOAD_COMMITTED"
-    CATALOG_ATTESTED = "CATALOG_ATTESTED"
-    LINEAGE_RECORDED = "LINEAGE_RECORDED"
-    SUCCESS_RECORDED = "SUCCESS_RECORDED"
     COMPLETE = "COMPLETE"
 
     FAILED = "FAILED"
@@ -39,14 +32,7 @@ class PartitionLifecycleStatus(StrEnum):
 
 NORMAL_PARTITION_STAGES: tuple[PartitionLifecycleStatus, ...] = (
     PartitionLifecycleStatus.PLANNED,
-    PartitionLifecycleStatus.FETCHED,
-    PartitionLifecycleStatus.NORMALIZED,
-    PartitionLifecycleStatus.PIT_PASSED,
-    PartitionLifecycleStatus.DQ_PASSED,
     PartitionLifecycleStatus.PAYLOAD_COMMITTED,
-    PartitionLifecycleStatus.CATALOG_ATTESTED,
-    PartitionLifecycleStatus.LINEAGE_RECORDED,
-    PartitionLifecycleStatus.SUCCESS_RECORDED,
     PartitionLifecycleStatus.COMPLETE,
 )
 
@@ -75,9 +61,7 @@ class PartitionCheckpoint:
     attempt: int
     retry_budget: int
     payload_id: str | None
-    catalog_asset_id: str | None
-    lineage_run_id: str | None
-    ingestion_log_id: str | None
+    complete_evidence_id: str | None
     error_code: str | None
     updated_at: datetime
 

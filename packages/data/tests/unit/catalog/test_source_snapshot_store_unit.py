@@ -53,7 +53,10 @@ class TestSQLiteProviderSnapshotStore:
         self, tmp_path: Path
     ) -> None:
         client, pool = _client(tmp_path / "catalog.sqlite")
-        store = SQLiteProviderSnapshotStore(client)
+        # 追加时钟与首次可见时间一致,首条观察事件即 created_at。
+        store = SQLiteProviderSnapshotStore(
+            client, now=lambda: datetime(2026, 6, 1, 10, 0, tzinfo=UTC)
+        )
         tushare = _snapshot("tushare", "sha256:tushare")
         tdx = _snapshot("local_tdx", "sha256:tdx")
 
@@ -61,25 +64,34 @@ class TestSQLiteProviderSnapshotStore:
             store.append_snapshot(tushare)
             store.append_snapshot(tdx)
 
-            assert store.get_snapshot(tushare.snapshot_id) == tushare
-            assert store.get_snapshot(tdx.snapshot_id) == tdx
+            # 首次观察即事件:store 记录 (created_at,) 观察事件。
+            assert store.get_snapshot(tushare.snapshot_id) == replace(
+                tushare, observations=(tushare.created_at,)
+            )
+            assert store.get_snapshot(tdx.snapshot_id) == replace(
+                tdx, observations=(tdx.created_at,)
+            )
             assert store.list_snapshots(canonical_asset=tushare.canonical_asset) == (
-                tdx,
-                tushare,
+                replace(tdx, observations=(tdx.created_at,)),
+                replace(tushare, observations=(tushare.created_at,)),
             )
         finally:
             pool.close()
 
     def test_identical_append_is_idempotent(self, tmp_path: Path) -> None:
         client, pool = _client(tmp_path / "catalog.sqlite")
-        store = SQLiteProviderSnapshotStore(client)
+        store = SQLiteProviderSnapshotStore(
+            client, now=lambda: datetime(2026, 6, 1, 10, 0, tzinfo=UTC)
+        )
         snapshot = _snapshot("tushare", "sha256:tushare")
 
         try:
             store.append_snapshot(snapshot)
             store.append_snapshot(snapshot)
 
-            assert store.list_snapshots(dataset_id="stock_daily") == (snapshot,)
+            assert store.list_snapshots(dataset_id="stock_daily") == (
+                replace(snapshot, observations=(snapshot.created_at,)),
+            )
         finally:
             pool.close()
 
@@ -105,14 +117,18 @@ class TestSQLiteProviderSnapshotStore:
         snapshot = _snapshot("tushare", "sha256:tushare")
         writer_client, writer_pool = _client(db_path)
         try:
-            SQLiteProviderSnapshotStore(writer_client).append_snapshot(snapshot)
+            SQLiteProviderSnapshotStore(
+                writer_client, now=lambda: snapshot.created_at
+            ).append_snapshot(snapshot)
         finally:
             writer_pool.close()
 
         reader_client, reader_pool = _client(db_path)
         try:
             store = SQLiteProviderSnapshotStore(reader_client)
-            assert store.get_snapshot(snapshot.snapshot_id) == snapshot
+            assert store.get_snapshot(snapshot.snapshot_id) == replace(
+                snapshot, observations=(snapshot.created_at,)
+            )
             assert isinstance(store, ProviderSnapshotReader)
             assert isinstance(store, ProviderSnapshotWriter)
         finally:
@@ -168,9 +184,14 @@ class TestObservationBackfill:
         try:
             store.append_snapshot(snapshot)
             # A store upgraded before the observation ledger existed has rows
-            # without observations.
+            # without observations (neither cache nor event rows).
             client.execute(
                 "DELETE FROM provider_snapshot_observations WHERE snapshot_id = ?",
+                [snapshot.snapshot_id],
+            )
+            client.execute(
+                "DELETE FROM provider_snapshot_observation_events "
+                "WHERE snapshot_id = ?",
                 [snapshot.snapshot_id],
             )
             client.commit()
@@ -186,12 +207,38 @@ class TestObservationBackfill:
 
 
 class TestReobservationOrdering:
+    def test_aba_replay_observed_at_is_min_a_event(self, tmp_path: Path) -> None:
+        """A→B→A 时 get_observed_at 取 A 的最早事件,前驱按事件折叠。"""
+        client, pool = _client(tmp_path / "catalog.sqlite")
+        original = _snapshot("tushare", "sha256:open")
+        store = SQLiteProviderSnapshotStore(client, now=lambda: original.created_at)
+        closed = replace(
+            _snapshot("tushare", "sha256:closed"),
+            created_at=datetime(2026, 6, 2, 10, tzinfo=UTC),
+        )
+        reopened = replace(original, created_at=datetime(2026, 6, 3, 10, tzinfo=UTC))
+
+        try:
+            store.append_snapshot(original)
+            store.append_snapshot(closed)
+            store.append_snapshot(reopened)
+
+            # A 的事件 = (首次可见 t1, 重观察 t3);min 即首次可见。
+            assert store.get_observed_at(original.snapshot_id) == original.created_at
+            assert store.get_observed_at(closed.snapshot_id) == closed.created_at
+            # B 的前驱是 A(t1 观察事件是 B 出现前最近的内容)。
+            assert store.get_predecessor(closed.snapshot_id) == original.snapshot_id
+            # A 重观察不改变自身前驱:参考时间仍是首次可见 t1,早于 B。
+            assert store.get_predecessor(original.snapshot_id) is None
+        finally:
+            pool.close()
+
     def test_new_snapshot_follows_latest_reobserved_content(
         self, tmp_path: Path
     ) -> None:
         client, pool = _client(tmp_path / "catalog.sqlite")
-        store = SQLiteProviderSnapshotStore(client)
         original = _snapshot("tushare", "sha256:open")
+        store = SQLiteProviderSnapshotStore(client, now=lambda: original.created_at)
         closed = replace(
             _snapshot("tushare", "sha256:closed"),
             created_at=datetime(2026, 6, 2, 10, tzinfo=UTC),
@@ -211,8 +258,8 @@ class TestReobservationOrdering:
     def test_reobservations_preserve_intermediate_events(self, tmp_path: Path) -> None:
         """A→B→A→A keeps both re-observations for cutoff replay."""
         client, pool = _client(tmp_path / "catalog.sqlite")
-        store = SQLiteProviderSnapshotStore(client)
         original = _snapshot("tushare", "sha256:open")
+        store = SQLiteProviderSnapshotStore(client, now=lambda: original.created_at)
         closed = replace(
             _snapshot("tushare", "sha256:closed"),
             created_at=datetime(2026, 6, 2, 10, 0, tzinfo=UTC),
@@ -233,9 +280,11 @@ class TestReobservationOrdering:
 
             stored = store.get_snapshot(original.snapshot_id)
             assert stored is not None
-            # 首次可见时间不可变；重观察作为事件追加，历史完整保留。
+            # 首次可见时间不可变；首次观察与重观察都作为有序事件追加，
+            # 历史完整保留。
             assert stored.created_at == original.created_at
             assert stored.observations == (
+                original.created_at,
                 reopened.created_at,
                 observed_again.created_at,
             )
@@ -247,7 +296,9 @@ class TestReobservationOrdering:
         snapshot = _snapshot("tushare", "sha256:open")
         observed_at = datetime(2026, 6, 3, 10, tzinfo=UTC)
         try:
-            SQLiteProviderSnapshotStore(client).append_snapshot(snapshot)
+            SQLiteProviderSnapshotStore(
+                client, now=lambda: snapshot.created_at
+            ).append_snapshot(snapshot)
             client.execute(
                 "ALTER TABLE provider_snapshots ADD COLUMN last_observed_at TEXT"
             )
@@ -260,7 +311,8 @@ class TestReobservationOrdering:
 
             upgraded = SQLiteProviderSnapshotStore(client)
             assert upgraded.get_snapshot(snapshot.snapshot_id) == replace(
-                snapshot, observations=(observed_at,)
+                snapshot,
+                observations=(snapshot.created_at, observed_at),
             )
         finally:
             pool.close()
@@ -274,8 +326,8 @@ class TestSchemaFingerprintBackfill:
         from ditto_data.catalog.provider_payload import schema_fingerprint
 
         client, pool = _client(tmp_path / "catalog.sqlite")
-        store = SQLiteProviderSnapshotStore(client)
         legacy = _snapshot("tushare", "sha256:tushare")
+        store = SQLiteProviderSnapshotStore(client, now=lambda: legacy.created_at)
         assert legacy.schema_fingerprint is None
 
         try:
@@ -285,6 +337,8 @@ class TestSchemaFingerprintBackfill:
 
             store.append_snapshot(upgraded)
 
-            assert store.get_snapshot(legacy.snapshot_id) == upgraded
+            assert store.get_snapshot(legacy.snapshot_id) == replace(
+                upgraded, observations=(legacy.created_at,)
+            )
         finally:
             pool.close()
