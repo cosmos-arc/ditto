@@ -159,7 +159,6 @@ OpenAPI prefix registry.
 | `/readyz` | infrastructure | `main.py` |
 | `/api/v1/status` | infrastructure | `main.py` |
 | `/backtests` | initial-focus | `api/routes/backtest.py` |
-| `/data-products` | initial-focus | `api/routes/data_products.py` |
 | `/market` | initial-focus | `api/routes/market.py` |
 | `/metadata` | initial-focus | `api/routes/metadata.py` |
 | `/strategies` | initial-focus | `api/routes/strategy.py` |

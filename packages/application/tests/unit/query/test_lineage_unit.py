@@ -3,10 +3,8 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from types import SimpleNamespace
 from unittest.mock import MagicMock
 
-from ditto_application.queries.catalog import CatalogSourceFallbackPolicyEffect
 from ditto_application.queries.lineage import LineageQueryFacade
 from ditto_data.catalog import (
     DataAssetRef,
@@ -412,80 +410,6 @@ class TestGetDataLineageCatalogReportForRun:
         ] == [
             ("catalog_not_configured", 1),
         ]
-
-    def test_summarizes_source_fallback_policy_effect_counts(self) -> None:
-        """Source context should expose policy-effect counts."""
-        service = _make_service()
-        lineage = InMemoryDataLineage()
-        source_health = MagicMock()
-        source_health.get_source_health_summary.return_value = SimpleNamespace(
-            reports=(
-                SimpleNamespace(
-                    source_fallback_policy_effect=CatalogSourceFallbackPolicyEffect(
-                        policy_id="fallback-policy-001",
-                        policy_status="active",
-                        catalog_selected_source="tushare",
-                        effective_selected_source="fred",
-                        reason_codes=("selected_source_missing",),
-                        recommended_actions=("repair_catalog_source_coverage",),
-                    )
-                ),
-                SimpleNamespace(
-                    source_fallback_policy_effect=CatalogSourceFallbackPolicyEffect(
-                        policy_id="fallback-policy-001",
-                        policy_status="active",
-                        catalog_selected_source="tushare",
-                        effective_selected_source="fred",
-                        reason_codes=("selected_source_missing",),
-                        recommended_actions=("repair_catalog_source_coverage",),
-                    )
-                ),
-                SimpleNamespace(source_fallback_policy_effect=None),
-            )
-        )
-        input_asset = DataAssetRef(
-            dataset_id="stock_daily",
-            namespace="market",
-            partition_keys=("trade_date=2026-06-01",),
-        )
-        lineage.record_event(
-            LineageEvent(
-                run_id="run-001",
-                operation="backtest",
-                inputs=(LineageInputRef(asset=input_asset, role="market_data"),),
-                outputs=(),
-                timestamp=datetime(2026, 6, 1, 9, 30, tzinfo=UTC),
-            )
-        )
-        facade = LineageQueryFacade(
-            run_service=service,
-            data_lineage_reader=lineage,
-            source_health_summary_query=source_health,
-        )
-
-        result = facade.get_data_lineage_catalog_report_for_run(
-            "run-001",
-            trade_dates=("2026-06-01",),
-            available_sources=("tushare", "fred"),
-        )
-
-        assert [
-            (
-                item.policy_id,
-                item.policy_status,
-                item.catalog_selected_source,
-                item.effective_selected_source,
-                item.count,
-            )
-            for item in result.source_fallback_policy_effect_counts
-        ] == [
-            ("fallback-policy-001", "active", "tushare", "fred", 2),
-        ]
-        source_health.get_source_health_summary.assert_called_once_with(
-            dataset_ids=("stock_daily",),
-            trade_dates=("2026-06-01",),
-            available_sources=("tushare", "fred"),
-        )
 
 
 # ========== get_data_lineage_graph_for_asset ==========

@@ -36,10 +36,6 @@ export interface InstrumentTechnicalSelectionRun {
 }
 
 export interface InstrumentTechnicalDependencies {
-	readonly fetchSourceEvidence: (
-		datasetId: string,
-		profile: string,
-	) => Promise<{ readonly snapshot_ids: readonly string[] }>;
 	readonly getSelectionRun: (runId: string) => Promise<InstrumentTechnicalSelectionRun>;
 	readonly selectionRunKey: (runId: string) => readonly unknown[];
 }
@@ -89,22 +85,8 @@ export function useInstrumentTechnicalAnalysis(
 	}
 	const candidate = selection.data?.candidates.find((item) => item.instrument_id === instrumentId) ?? null;
 	const exclusion = selection.data?.exclusions.find((item) => item.instrument_id === instrumentId) ?? null;
-	const sourceEvidence = useQuery({
-		queryKey: [...instrumentKeys.all, id, "technical-source-evidence", identity.data?.asset_class ?? "unknown"],
-		queryFn: () =>
-			dependencies.fetchSourceEvidence(
-				identity.data?.asset_class === "etf" ? "etf_daily" : "stock_daily",
-				"technical_daily",
-			),
-		enabled: Boolean(identity.data && selection.data && (candidate || exclusion)),
-		staleTime: Number.POSITIVE_INFINITY,
-	});
 	const body: TechnicalAnalysisQueryBody | null =
-		identity.data &&
-		selection.data &&
-		instrumentId !== null &&
-		(candidate || exclusion) &&
-		sourceEvidence.data?.snapshot_ids.length
+		identity.data && selection.data && instrumentId !== null && (candidate || exclusion)
 			? {
 					as_of: selection.data.as_of,
 					instrument_code: instrumentCode(identity.data),
@@ -115,7 +97,8 @@ export function useInstrumentTechnicalAnalysis(
 					publication_cutoff: selection.data.publication_cutoff,
 					research_case_id: null,
 					selection_run_id: selection.data.run_id,
-					source_snapshot_ids: [...sourceEvidence.data.snapshot_ids],
+					// 空快照集由服务端解析 observed 快照集。
+					source_snapshot_ids: [],
 					spec: V1_SPEC,
 				}
 			: null;
@@ -130,5 +113,5 @@ export function useInstrumentTechnicalAnalysis(
 		staleTime: Number.POSITIVE_INFINITY,
 	});
 
-	return { analysis, candidate, exclusion, identity, selection, sourceEvidence };
+	return { analysis, candidate, exclusion, identity, selection };
 }

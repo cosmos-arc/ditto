@@ -17,12 +17,6 @@ from ditto_analysis.experiments.campaign_persistence import (
 from ditto_analysis.research.artifact_service import ResearchArtifactService
 from ditto_analysis.research.catalog_service import ResearchCatalogService
 from ditto_data.catalog import DataCatalogReader, DataCatalogWriter
-from ditto_data.catalog.certification import (
-    CertificationReader as DataProductCertificationReader,
-)
-from ditto_data.catalog.license import DatasetLicenseReader
-from ditto_data.catalog.metadata import default_dataset_metadata
-from ditto_data.catalog.promotion import DatasetMaturityPromotionReader
 from ditto_data.catalog.source_snapshot import (
     ProviderSnapshotReader,
     ProviderSnapshotWriter,
@@ -143,8 +137,6 @@ from ditto_application.processes.ingestion.evidence_commit import (
     IngestionEvidenceCommitter,
 )
 from ditto_application.processes.ingestion.r2_preflight import (
-    R2_ACCEPTANCE_CERTIFICATION_PROFILE,
-    ProductCertificationEvidence,
     R2AcceptanceRuntimeEvidence,
 )
 from ditto_application.processes.materialization.cascade_orchestrator import (
@@ -171,9 +163,6 @@ from ditto_application.processes.research_dataset import ResearchDatasetBuildPro
 from ditto_application.processes.strategy.promotion import StrategyPromotionProcess
 from ditto_application.providers_builder import get_trading_calendar_range
 from ditto_application.queries.account import AccountBaselineQuery
-from ditto_application.queries.data_readiness import (
-    DataReadinessQueryFacade,
-)
 from ditto_application.queries.historical_universe import HistoricalUniverseQuery
 from ditto_application.queries.market import MarketQueryFacade
 from ditto_application.queries.metadata import MetadataQueryFacade
@@ -181,6 +170,7 @@ from ditto_application.queries.research_certification import (
     DataReadinessCertificationProbe as _DataReadinessCertificationProbe,
 )
 from ditto_application.queries.run import RunReadModel
+from ditto_application.queries.snapshot_readiness import SnapshotReadinessQuery
 from ditto_application.settings import TradingSettings
 
 
@@ -280,7 +270,6 @@ class AppProcessProvider(Provider):
         partition_lifecycle_writer: PartitionLifecycleWriter,
         provider_snapshot_writer: ProviderSnapshotWriter,
         readers: _IngestionEvidenceReaders,
-        dataset_license_reader: DatasetLicenseReader,
         data_catalog_writer: DataCatalogWriter,
         lineage_recorder: DataLineageRecorder,
         ingestion_log_store: IngestionLogStore,
@@ -293,7 +282,6 @@ class AppProcessProvider(Provider):
                 snapshot_writer=provider_snapshot_writer,
                 snapshot_reader=readers.snapshots,
                 lineage_reader=readers.lineage,
-                license_reader=dataset_license_reader,
                 catalog_writer=data_catalog_writer,
                 lineage_recorder=lineage_recorder,
                 ingestion_log_store=ingestion_log_store,
@@ -304,8 +292,6 @@ class AppProcessProvider(Provider):
     def r2_acceptance_runtime_evidence(
         self,
         settings: DataSourceSettings,
-        license_reader: DatasetLicenseReader,
-        certification_reader: DataProductCertificationReader,
     ) -> R2AcceptanceRuntimeEvidence:
         """Resolve non-secret live acceptance inputs at the composition boundary."""
         credential_sources: set[str] = set()
@@ -315,53 +301,18 @@ class AppProcessProvider(Provider):
             credential_sources.update({"fred", "alfred"})
         if Path(settings.tdx_path).expanduser().is_dir():
             credential_sources.add("local_tdx")
-        certifications: list[ProductCertificationEvidence] = []
-        for metadata in default_dataset_metadata().values():
-            contract = metadata.dataset_spec
-            if contract is None or contract.r2_scope != "hard":
-                continue
-            report = certification_reader.get_active_report(
-                metadata.dataset_id,
-                R2_ACCEPTANCE_CERTIFICATION_PROFILE,
-            )
-            if report is None or report.coverage.complete_from is None:
-                continue
-            certifications.append(
-                ProductCertificationEvidence(
-                    dataset_id=metadata.dataset_id,
-                    profile=report.profile,
-                    report_id=report.report_id,
-                    content_hash=report.content_hash,
-                    certified_from=report.coverage.complete_from,
-                    certified_through=report.coverage.target_to,
-                )
-            )
         return R2AcceptanceRuntimeEvidence(
             credential_sources=frozenset(credential_sources),
-            license_records=license_reader.list_licenses(),
-            certifications=tuple(certifications),
-        )
-
-    @provide
-    def data_readiness_query_facade(
-        self,
-        certification_reader: DataProductCertificationReader,
-        maturity_promotion_reader: DatasetMaturityPromotionReader,
-    ) -> DataReadinessQueryFacade:
-        """R2 consumer readiness query with certification and maturity gates."""
-        return DataReadinessQueryFacade(
-            certification_reader=certification_reader,
-            maturity_promotion_reader=maturity_promotion_reader,
         )
 
     @provide
     def research_certification_probe(
         self,
-        facade: DataReadinessQueryFacade,
+        readiness: SnapshotReadinessQuery,
         research_catalog: ResearchCatalogService,
     ) -> _DataReadinessCertificationProbe:
-        """Bind R3 preflight to the fixed R2 certification read model."""
-        return _DataReadinessCertificationProbe(facade, research_catalog)
+        """Bind R3 preflight to completed observed snapshot evidence."""
+        return _DataReadinessCertificationProbe(readiness, research_catalog)
 
     @provide
     def research_executor_probe(

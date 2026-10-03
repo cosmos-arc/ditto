@@ -58,7 +58,7 @@ from ditto_apps.scripts.r2_data_acceptance import run_fixture_acceptance
 _API_KEY_ENV = "DITTO_AGENT_GLM_VALIDATION_API_KEY"
 _CREDENTIAL_KIND = AgentModelCredentialKind.GLM_CODING_PLAN_VALIDATION
 _DATASET_ID = "etf_daily"
-_EXPERIMENT_ID = "product-beta-certified-etf"
+_EXPERIMENT_ID = "product-beta-observed-etf"
 _TOOL_NAME = "research_experiment_evidence"
 _MAX_MODEL_TOKENS = 4_096
 _MAX_OUTPUT_TOKENS = 1_024
@@ -69,8 +69,8 @@ class ProductBetaValidationError(RuntimeError):
     """The persisted model run did not satisfy the product-beta contract."""
 
 
-class _CertifiedExperimentFacade:
-    """Expose one exact R2-certified experiment-shaped evidence record."""
+class _ObservedExperimentFacade:
+    """Expose one exact observed experiment-shaped evidence record."""
 
     def __init__(self, result: ResearchEvidenceReadModel) -> None:
         self._result = result
@@ -85,25 +85,25 @@ class _CertifiedExperimentFacade:
     ) -> ResearchEvidenceReadModel:
         if experiment_id != _EXPERIMENT_ID:
             raise ProductBetaValidationError(
-                "certified experiment identity differs from its exact scope"
+                "observed experiment identity differs from its exact scope"
             )
         if candidate_id is not None or fold_id is not None:
             raise ProductBetaValidationError(
-                "certified experiment sub-scope must remain absent"
+                "observed experiment sub-scope must remain absent"
             )
         if context != self._result.temporal_context:
             raise ProductBetaValidationError(
-                "certified experiment query differs from its exact PIT context"
+                "observed experiment query differs from its exact PIT context"
             )
         return self._result
 
 
-class _CertifiedExperimentEvidenceTool(ExperimentEvidenceTool):
+class _ObservedExperimentEvidenceTool(ExperimentEvidenceTool):
     """Narrow the product-beta tool schema to its sole exact identity."""
 
     spec = function_spec(
         name=_TOOL_NAME,
-        description="Read the exact R2-certified ETF product-beta experiment.",
+        description="Read the exact observed ETF product-beta experiment.",
         properties={
             "experiment_id": {"type": "string", "minLength": 1},
         },
@@ -156,26 +156,16 @@ def _tool_schema_hash(registry: EvidenceToolRegistry) -> str:
     )
 
 
-def _certified_evidence(
+def _observed_evidence(
     *,
     context: TemporalToolContext,
 ) -> tuple[ResearchEvidenceReadModel, str, str, str]:
-    acceptance = run_fixture_acceptance(checked_at=_CHECKED_AT)
-    product = next(
-        item for item in acceptance.preflight.products if item.dataset_id == _DATASET_ID
-    )
-    report_id = product.certification_report_id
-    content_hash = product.certification_content_hash
-    if acceptance.status != "ready" or not product.ready:
-        raise ProductBetaValidationError("R2 certified ETF acceptance is not ready")
-    if report_id is None or content_hash is None:
-        raise ProductBetaValidationError("R2 certification identity is incomplete")
-    source_snapshot_id = f"{report_id}:2026-08-28:{content_hash}"
+    product_id, content_hash, source_snapshot_id = _product_identity()
     if context.source_snapshot_id != source_snapshot_id:
         raise ProductBetaValidationError("source snapshot identity drifted")
     artifact_schema_hash = canonical_sha256(
         {
-            "schema": "ditto.product-beta.certified-experiment",
+            "schema": "ditto.product-beta.observed-experiment",
             "version": 1,
         }
     )
@@ -193,34 +183,24 @@ def _certified_evidence(
                 value={
                     "status": "ready",
                     "dataset_id": _DATASET_ID,
-                    "certification_report_id": report_id,
-                    "certification_content_hash": content_hash,
-                    "certified_from": (
-                        product.certified_from.isoformat()
-                        if product.certified_from is not None
-                        else None
-                    ),
-                    "certified_through": (
-                        product.certified_through.isoformat()
-                        if product.certified_through is not None
-                        else None
-                    ),
+                    "product_id": product_id,
+                    "product_content_hash": content_hash,
                 },
             ),
             artifact_refs=(
                 EvidenceArtifactReference(
-                    artifact_id=report_id,
-                    artifact_kind="data_product_certification",
+                    artifact_id=product_id,
+                    artifact_kind="data_product_acceptance",
                     content_hash=content_hash,
                     schema_hash=artifact_schema_hash,
                 ),
             ),
             lineage=(
-                f"certification:{report_id}",
+                f"product:{product_id}",
                 f"snapshot:{source_snapshot_id}",
             ),
         ),
-        report_id,
+        product_id,
         content_hash,
         source_snapshot_id,
     )
@@ -241,27 +221,23 @@ def _context(source_snapshot_id: str) -> TemporalToolContext:
     )
 
 
-def _certification_identity() -> tuple[str, str, str]:
+def _product_identity() -> tuple[str, str, str]:
     acceptance = run_fixture_acceptance(checked_at=_CHECKED_AT)
     product = next(
         item for item in acceptance.preflight.products if item.dataset_id == _DATASET_ID
     )
-    if (
-        acceptance.status != "ready"
-        or not product.ready
-        or product.certification_report_id is None
-        or product.certification_content_hash is None
-    ):
-        raise ProductBetaValidationError("R2 certification identity is unavailable")
-    snapshot_id = (
-        f"{product.certification_report_id}:2026-08-28:"
-        f"{product.certification_content_hash}"
+    if acceptance.status != "ready" or not product.ready:
+        raise ProductBetaValidationError("R2 accepted ETF product is not ready")
+    content_hash = canonical_sha256(
+        {
+            "dataset_id": product.dataset_id,
+            "provider_datasets": product.provider_datasets,
+            "usable_provider_datasets": product.usable_provider_datasets,
+        }
     )
-    return (
-        product.certification_report_id,
-        product.certification_content_hash,
-        snapshot_id,
-    )
+    product_id = f"product:{product.dataset_id}"
+    snapshot_id = f"{product_id}:2026-08-28:{content_hash}"
+    return product_id, content_hash, snapshot_id
 
 
 async def _execute(
@@ -270,37 +246,39 @@ async def _execute(
     model_id: str,
     api_key: str,
 ) -> dict[str, object]:
-    report_id, content_hash, source_snapshot_id = _certification_identity()
+    product_id, content_hash, source_snapshot_id = _product_identity()
     context = _context(source_snapshot_id)
-    read_model, verified_report_id, verified_content_hash, verified_snapshot_id = (
-        _certified_evidence(context=context)
+    read_model, verified_product_id, verified_content_hash, verified_snapshot_id = (
+        _observed_evidence(context=context)
     )
-    if (report_id, content_hash, source_snapshot_id) != (
-        verified_report_id,
+    if (product_id, content_hash, source_snapshot_id) != (
+        verified_product_id,
         verified_content_hash,
         verified_snapshot_id,
     ):
-        raise ProductBetaValidationError("R2 certification changed during validation")
+        raise ProductBetaValidationError(
+            "R2 product identity changed during validation"
+        )
     registry = EvidenceToolRegistry(
         tools=(
-            _CertifiedExperimentEvidenceTool(
+            _ObservedExperimentEvidenceTool(
                 facade=cast(
                     ResearchEvidenceQueryPort,
-                    _CertifiedExperimentFacade(read_model),
+                    _ObservedExperimentFacade(read_model),
                 )
             ),
         )
     )
     prompt_identity = canonical_sha256(
         {
-            "prompt": "product-beta-certified-evidence",
+            "prompt": "product-beta-observed-evidence",
             "version": 1,
         }
     )
     manifest = AgentManifest(
         manifest_id="product-beta-glm",
         agent_version="r5.1",
-        prompt_version="certified-evidence-v1",
+        prompt_version="observed-evidence-v1",
         prompt_hash=prompt_identity,
         tool_schema_version="read-only-v1",
         tool_schema_hash=_tool_schema_hash(registry),
@@ -350,10 +328,10 @@ async def _execute(
         )
         objective = (
             "Call research_experiment_evidence exactly once with experiment_id "
-            "product-beta-certified-etf and no candidate_id or fold_id. Then return "
+            "product-beta-observed-etf and no candidate_id or fold_id. Then return "
             "one claim stating that the host result is ready, cite the exact "
             "evidence_id from the host result, and state that the conclusion is "
-            "limited to the certified snapshot."
+            "limited to the observed snapshot."
         )
         queued = runtime.create_run(
             AgentRunCreateCommand(
@@ -403,10 +381,10 @@ async def _execute(
             "credential_kind": _CREDENTIAL_KIND,
             "production_eligible": False,
             "release_gate_passed": True,
-            "dataset_mode": "certified_fixture",
+            "dataset_mode": "observed_fixture",
             "dataset_id": _DATASET_ID,
-            "certification_report_id": report_id,
-            "certification_content_hash": content_hash,
+            "product_id": product_id,
+            "product_content_hash": content_hash,
             "source_snapshot_id": source_snapshot_id,
             "authority_hash": plan.authority_hash,
             "temporal_context_hash": canonical_sha256(context.canonical_payload()),

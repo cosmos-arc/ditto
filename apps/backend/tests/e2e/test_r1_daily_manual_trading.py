@@ -594,7 +594,7 @@ def test_builtin_seed_baseline_eod_package_decision_and_identical_rerun(
 
 @pytest.mark.e2e
 @pytest.mark.integration
-def test_certified_etf_paper_flow_completes_five_consecutive_trading_days(
+def test_observed_etf_paper_flow_completes_five_consecutive_trading_days(
     tmp_path: Path,
 ) -> None:
     """Bind five paper days to one current R2-certified ETF data identity."""
@@ -608,8 +608,6 @@ def test_certified_etf_paper_flow_completes_five_consecutive_trading_days(
     )
     assert certification.status == "ready"
     assert etf_daily.ready is True
-    assert etf_daily.certification_report_id is not None
-    assert etf_daily.certification_content_hash is not None
 
     paper_days = (
         ("2026-08-24", "2026-08-25", "2026-08-26"),
@@ -631,10 +629,7 @@ def test_certified_etf_paper_flow_completes_five_consecutive_trading_days(
             instrument_id=510300,
             reference_price=4.0,
         )
-        snapshot_id = (
-            f"{etf_daily.certification_report_id}:{signal_date}:"
-            f"{etf_daily.certification_content_hash}"
-        )
+        snapshot_id = f"product:etf_daily:{signal_date}:accepted"
         harness = _harness(tmp_path / f"paper-day-{index}.sqlite", scenario)
         try:
             harness.bootstrap()
@@ -701,7 +696,7 @@ def test_certified_etf_paper_flow_completes_five_consecutive_trading_days(
     )
     assert all(
         status == "completed"
-        and snapshot.startswith("certification:etf_daily:")
+        and snapshot.startswith("product:etf_daily:")
         and fill_count == 1
         for _, status, snapshot, fill_count in receipts
     )

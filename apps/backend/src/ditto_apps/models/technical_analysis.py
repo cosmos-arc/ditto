@@ -77,7 +77,7 @@ class TechnicalAnalysisQueryBody(BaseModel):
     as_of: HttpDateTime
     knowledge_cutoff: HttpDateTime
     publication_cutoff: HttpDateTime
-    source_snapshot_ids: SnapshotIds = Field(min_length=1)
+    source_snapshot_ids: SnapshotIds | None = None
     spec: TechnicalAnalysisSpecRequest
     selection_run_id: str | None = None
     research_case_id: str | None = None

@@ -87,7 +87,7 @@ class TestSQLitePool:
         assert "instrument" in table_names
         assert "instrument_mapping" in table_names
         assert "trading_calendar" in table_names
-        assert "freeze_point" in table_names
+        assert "freeze_point" not in table_names
         assert "price_limit_config" in table_names
         assert "universe" in table_names
         assert "universe_constituent" in table_names

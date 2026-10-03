@@ -11,31 +11,8 @@ from ditto_data.catalog.source_snapshot import ProviderSnapshot, ProviderSnapsho
 
 __all__ = [
     "CoverageCollector",
-    "CoverageException",
     "DatasetCoverage",
 ]
-
-
-@dataclass(frozen=True, slots=True)
-class CoverageException:
-    """A reviewed gap exception with accountable evidence."""
-
-    code: str
-    owner: str
-    evidence_uri: str
-    start_date: date
-    end_date: date
-
-    def __post_init__(self) -> None:
-        """Validate exception accountability and interval ordering."""
-        for field in ("code", "owner", "evidence_uri"):
-            _validate_text(field, str(getattr(self, field)))
-        if self.end_date < self.start_date:
-            raise ValueError("coverage exception end_date precedes start_date")
-
-    def covers(self, partition_date: date) -> bool:
-        """Return whether this approval covers one missing partition."""
-        return self.start_date <= partition_date <= self.end_date
 
 
 @dataclass(frozen=True, slots=True)
@@ -55,12 +32,12 @@ class DatasetCoverage:
     expected_partitions: int
     actual_partitions: int
     gaps: tuple[date, ...]
-    exceptions: tuple[CoverageException, ...]
     collected_at: datetime
 
     def __post_init__(self) -> None:
         """Validate the frozen coverage fact set."""
-        _validate_text("dataset_id", self.dataset_id)
+        if not self.dataset_id or self.dataset_id.strip() != self.dataset_id:
+            raise ValueError(f"invalid coverage dataset_id: {self.dataset_id!r}")
         if self.target_to < self.target_from:
             raise ValueError("coverage target_to precedes target_from")
         if self.expected_partitions < 0 or self.actual_partitions < 0:
@@ -73,18 +50,9 @@ class DatasetCoverage:
             raise ValueError("coverage collected_at must be timezone-aware")
 
     @property
-    def unapproved_gaps(self) -> tuple[date, ...]:
-        """Return gaps not covered by an accountable reviewed exception."""
-        return tuple(
-            gap
-            for gap in self.gaps
-            if not any(exception.covers(gap) for exception in self.exceptions)
-        )
-
-    @property
     def is_complete(self) -> bool:
-        """Return whether every expected partition exists or is excepted."""
-        return self.expected_partitions > 0 and not self.unapproved_gaps
+        """Return whether every expected partition exists."""
+        return self.expected_partitions > 0 and not self.gaps
 
 
 class CoverageCollector:
@@ -105,7 +73,6 @@ class CoverageCollector:
         target_from: date | None = None,
         target_to: date,
         expected_dates: tuple[date, ...],
-        exceptions: tuple[CoverageException, ...] = (),
         snapshot_ids: frozenset[str] | None = None,
     ) -> DatasetCoverage:
         """Assess expected versus canonical partitions for one target interval."""
@@ -158,15 +125,10 @@ class CoverageCollector:
             for partition_date in expected
             if partition_date not in actual_dates
         )
-        unapproved = tuple(
-            gap
-            for gap in gaps
-            if not any(exception.covers(gap) for exception in exceptions)
-        )
         complete_from = _complete_from(
             target_from=target_from,
             expected=expected,
-            unapproved_gaps=unapproved,
+            gaps=gaps,
         )
         native_from, native_to = self._native_interval(
             dataset_id,
@@ -186,7 +148,6 @@ class CoverageCollector:
             expected_partitions=len(expected),
             actual_partitions=len(actual),
             gaps=gaps,
-            exceptions=exceptions,
             collected_at=datetime.now(UTC),
         )
 
@@ -278,13 +239,13 @@ def _complete_from(
     *,
     target_from: date,
     expected: tuple[date, ...],
-    unapproved_gaps: tuple[date, ...],
+    gaps: tuple[date, ...],
 ) -> date | None:
     if not expected:
         return None
-    if not unapproved_gaps:
+    if not gaps:
         return target_from
-    final_gap = max(unapproved_gaps)
+    final_gap = max(gaps)
     return next(
         (partition_date for partition_date in expected if partition_date > final_gap),
         None,
@@ -343,8 +304,3 @@ def _optional_iso_date(value: str) -> date | None:
         return date.fromisoformat(value)
     except ValueError:
         return None
-
-
-def _validate_text(field: str, value: str) -> None:
-    if not value or value.strip() != value:
-        raise ValueError(f"invalid coverage {field}: {value!r}")

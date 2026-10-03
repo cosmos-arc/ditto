@@ -2,8 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import replace
-from datetime import UTC, date, datetime
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
@@ -20,7 +19,6 @@ from ditto_data.catalog import (
     DataCatalogEntry,
     DataSchemaFingerprint,
 )
-from ditto_data.catalog.license import DatasetLicenseDraft, DatasetLicenseRecord
 from ditto_data.catalog.snapshot_completion import snapshot_completed
 from ditto_data.catalog.source_snapshot import ProviderSnapshot, ProviderSnapshotDraft
 from ditto_data.ingestion.partition_state import (
@@ -31,25 +29,6 @@ from ditto_data.ingestion.partition_state_store import SQLitePartitionLifecycleS
 from ditto_data.lineage import LineageEvent, LineageInputRef, LineageOutputRef
 from ditto_data.models.ingestion import IngestionLog, IngestionStatus
 from ditto_platform.foundation import SQLiteClient, SQLitePool
-
-
-class _LicenseReader:
-    def __init__(self, record: DatasetLicenseRecord) -> None:
-        self.record = record
-
-    def get_license(self, record_id: str) -> DatasetLicenseRecord | None:
-        return self.record if record_id == self.record.record_id else None
-
-    def list_licenses(
-        self, *, dataset_id: str | None = None, source: str | None = None
-    ) -> tuple[DatasetLicenseRecord, ...]:
-        records = (self.record,)
-        return tuple(
-            record
-            for record in records
-            if (dataset_id is None or record.dataset_id == dataset_id)
-            and (source is None or record.source == source)
-        )
 
 
 class _Recorder:
@@ -116,27 +95,7 @@ class _Recorder:
         self.values.append(value)
 
 
-def _license() -> DatasetLicenseRecord:
-    return DatasetLicenseRecord.create(
-        DatasetLicenseDraft(
-            dataset_id="stock_daily",
-            source="tushare",
-            terms_version="fixture-v1",
-            effective_from=date(2020, 1, 1),
-            effective_to=None,
-            local_cache="allowed",
-            derivative_compute="allowed",
-            display="restricted",
-            redistribution="prohibited",
-            notes="Test fixture review only.",
-            reviewed_by="test-reviewer",
-            reviewed_at=datetime(2026, 7, 18, 8, 0, tzinfo=UTC),
-        )
-    )
-
-
 def _request(
-    license_record: DatasetLicenseRecord,
     schema_version: str = "market.stock_daily.v1",
 ) -> EvidenceCommitRequest:
     now = datetime(2026, 7, 18, 8, 30, tzinfo=UTC)
@@ -156,7 +115,7 @@ def _request(
             canonical_asset=canonical_asset,
             request_parameters_hash="sha256:request",
             response_metadata=(("snapshot_layer", "normalized_provider_payload"),),
-            license_record_id=license_record.record_id,
+            license_record_id="license-test-0001",
             row_count=1,
             payload_uri="stock_daily/2026/07/17.parquet",
             payload_retained=True,
@@ -228,7 +187,6 @@ def test_evidence_commit_reaches_complete_only_after_all_durable_writes(
     tmp_path: Path,
 ) -> None:
     lifecycle, pool = _store(tmp_path)
-    license_record = _license()
     snapshot, catalog, lineage, logs = (_Recorder() for _ in range(4))
     committer = IngestionEvidenceCommitter(
         ports=EvidenceCommitPorts(
@@ -236,7 +194,6 @@ def test_evidence_commit_reaches_complete_only_after_all_durable_writes(
             lifecycle_writer=lifecycle,
             snapshot_writer=snapshot,
             snapshot_reader=snapshot,
-            license_reader=_LicenseReader(license_record),
             catalog_writer=catalog,
             lineage_recorder=lineage,
             lineage_reader=lineage,
@@ -246,7 +203,7 @@ def test_evidence_commit_reaches_complete_only_after_all_durable_writes(
     )
 
     try:
-        outcome = committer.commit(_request(license_record))
+        outcome = committer.commit(_request())
 
         assert outcome.completed is True
         assert outcome.error_code is None
@@ -262,63 +219,6 @@ def test_evidence_commit_reaches_complete_only_after_all_durable_writes(
 
 
 @pytest.mark.unit
-def test_license_effective_on_fetch_date_allows_older_observation_date(
-    tmp_path: Path,
-) -> None:
-    lifecycle, pool = _store(tmp_path)
-    license_record = replace(_license(), effective_from=date(2026, 7, 18))
-    recorder = _Recorder()
-    committer = IngestionEvidenceCommitter(
-        ports=EvidenceCommitPorts(
-            lifecycle_reader=lifecycle,
-            lifecycle_writer=lifecycle,
-            snapshot_writer=recorder,
-            snapshot_reader=recorder,
-            license_reader=_LicenseReader(license_record),
-            catalog_writer=recorder,
-            lineage_recorder=recorder,
-            lineage_reader=recorder,
-            ingestion_log_store=recorder,
-        )
-    )
-
-    try:
-        outcome = committer.commit(_request(license_record))
-
-        assert outcome.completed is True
-        assert outcome.error_code is None
-    finally:
-        pool.close()
-
-
-@pytest.mark.unit
-def test_license_expired_before_fetch_date_fails_closed(tmp_path: Path) -> None:
-    lifecycle, pool = _store(tmp_path)
-    license_record = replace(_license(), effective_to=date(2026, 7, 17))
-    recorder = _Recorder()
-    committer = IngestionEvidenceCommitter(
-        ports=EvidenceCommitPorts(
-            lifecycle_reader=lifecycle,
-            lifecycle_writer=lifecycle,
-            snapshot_writer=recorder,
-            snapshot_reader=recorder,
-            license_reader=_LicenseReader(license_record),
-            catalog_writer=recorder,
-            lineage_recorder=recorder,
-            lineage_reader=recorder,
-            ingestion_log_store=recorder,
-        )
-    )
-
-    try:
-        outcome = committer.commit(_request(license_record))
-
-        assert outcome.completed is False
-        assert outcome.error_code == "LICENSE_NOT_EFFECTIVE"
-    finally:
-        pool.close()
-
-
 @pytest.mark.unit
 @pytest.mark.parametrize(
     ("failing_port", "expected_status", "expected_error"),
@@ -336,7 +236,6 @@ def test_evidence_commit_fails_closed_at_each_durable_boundary(
     expected_error: str,
 ) -> None:
     lifecycle, pool = _store(tmp_path)
-    license_record = _license()
     ports = {
         name: _Recorder(fail=name == failing_port)
         for name in ("snapshot", "catalog", "lineage", "logs")
@@ -347,7 +246,6 @@ def test_evidence_commit_fails_closed_at_each_durable_boundary(
             lifecycle_writer=lifecycle,
             snapshot_writer=ports["snapshot"],
             snapshot_reader=ports["snapshot"],
-            license_reader=_LicenseReader(license_record),
             catalog_writer=ports["catalog"],
             lineage_recorder=ports["lineage"],
             lineage_reader=ports["lineage"],
@@ -357,7 +255,7 @@ def test_evidence_commit_fails_closed_at_each_durable_boundary(
     )
 
     try:
-        outcome = committer.commit(_request(license_record))
+        outcome = committer.commit(_request())
 
         assert outcome.completed is False
         assert outcome.error_code == expected_error
@@ -374,7 +272,6 @@ def test_reingest_legacy_completion_reattests_on_new_revision(
     tmp_path: Path,
 ) -> None:
     lifecycle, pool = _store(tmp_path)
-    license_record = _license()
     snapshot = _Recorder()
     catalog = _Recorder()
     lineage = _Recorder()
@@ -385,7 +282,6 @@ def test_reingest_legacy_completion_reattests_on_new_revision(
             lifecycle_writer=lifecycle,
             snapshot_writer=snapshot,
             snapshot_reader=snapshot,
-            license_reader=_LicenseReader(license_record),
             catalog_writer=catalog,
             lineage_recorder=lineage,
             lineage_reader=lineage,
@@ -393,7 +289,7 @@ def test_reingest_legacy_completion_reattests_on_new_revision(
         ),
         now=lambda: datetime(2026, 7, 18, 9, 0, tzinfo=UTC),
     )
-    request = _request(license_record)
+    request = _request()
 
     try:
         lifecycle.plan_partition(
@@ -476,7 +372,6 @@ def test_schema_version_change_with_same_checksum_reattests_new_snapshot(
     tmp_path: Path,
 ) -> None:
     lifecycle, pool = _store(tmp_path)
-    license_record = _license()
     recorder = _Recorder()
     committer = IngestionEvidenceCommitter(
         ports=EvidenceCommitPorts(
@@ -484,7 +379,6 @@ def test_schema_version_change_with_same_checksum_reattests_new_snapshot(
             lifecycle_writer=lifecycle,
             snapshot_writer=recorder,
             snapshot_reader=recorder,
-            license_reader=_LicenseReader(license_record),
             catalog_writer=recorder,
             lineage_recorder=recorder,
             lineage_reader=recorder,
@@ -492,8 +386,8 @@ def test_schema_version_change_with_same_checksum_reattests_new_snapshot(
         ),
         now=lambda: datetime(2026, 7, 18, 9, 0, tzinfo=UTC),
     )
-    request_v1 = _request(license_record)
-    request_v2 = _request(license_record, schema_version="market.stock_daily.v2")
+    request_v1 = _request()
+    request_v2 = _request(schema_version="market.stock_daily.v2")
 
     try:
         first = committer.commit(request_v1)
@@ -521,7 +415,6 @@ def test_schema_version_change_with_same_checksum_reattests_new_snapshot(
 @pytest.mark.unit
 def test_repair_resumes_after_payload_without_rewriting_payload(tmp_path: Path) -> None:
     lifecycle, pool = _store(tmp_path)
-    license_record = _license()
     snapshot = _Recorder()
     catalog = _Recorder(fail=True)
     lineage = _Recorder()
@@ -532,7 +425,6 @@ def test_repair_resumes_after_payload_without_rewriting_payload(tmp_path: Path) 
             lifecycle_writer=lifecycle,
             snapshot_writer=snapshot,
             snapshot_reader=snapshot,
-            license_reader=_LicenseReader(license_record),
             catalog_writer=catalog,
             lineage_recorder=lineage,
             lineage_reader=lineage,
@@ -540,7 +432,7 @@ def test_repair_resumes_after_payload_without_rewriting_payload(tmp_path: Path) 
         ),
         now=lambda: datetime(2026, 7, 18, 9, 0, tzinfo=UTC),
     )
-    request = _request(license_record)
+    request = _request()
 
     try:
         failed = committer.commit(request)
@@ -570,7 +462,6 @@ def test_schema_change_after_partial_attestation_forks_new_revision(
     tmp_path: Path,
 ) -> None:
     lifecycle, pool = _store(tmp_path)
-    license_record = _license()
     snapshot = _Recorder()
     catalog = _Recorder()
     lineage = _Recorder()
@@ -581,7 +472,6 @@ def test_schema_change_after_partial_attestation_forks_new_revision(
             lifecycle_writer=lifecycle,
             snapshot_writer=snapshot,
             snapshot_reader=snapshot,
-            license_reader=_LicenseReader(license_record),
             catalog_writer=catalog,
             lineage_recorder=lineage,
             lineage_reader=lineage,
@@ -589,8 +479,8 @@ def test_schema_change_after_partial_attestation_forks_new_revision(
         ),
         now=lambda: datetime(2026, 7, 18, 9, 0, tzinfo=UTC),
     )
-    request_v1 = _request(license_record)
-    request_v2 = _request(license_record, schema_version="market.stock_daily.v2")
+    request_v1 = _request()
+    request_v2 = _request(schema_version="market.stock_daily.v2")
 
     try:
         lifecycle.plan_partition(
@@ -657,7 +547,6 @@ def test_same_request_resumes_partially_attested_checkpoint_without_fork(
     tmp_path: Path,
 ) -> None:
     lifecycle, pool = _store(tmp_path)
-    license_record = _license()
     snapshot = _Recorder()
     catalog = _Recorder()
     lineage = _Recorder()
@@ -668,7 +557,6 @@ def test_same_request_resumes_partially_attested_checkpoint_without_fork(
             lifecycle_writer=lifecycle,
             snapshot_writer=snapshot,
             snapshot_reader=snapshot,
-            license_reader=_LicenseReader(license_record),
             catalog_writer=catalog,
             lineage_recorder=lineage,
             lineage_reader=lineage,
@@ -676,7 +564,7 @@ def test_same_request_resumes_partially_attested_checkpoint_without_fork(
         ),
         now=lambda: datetime(2026, 7, 18, 9, 0, tzinfo=UTC),
     )
-    request = _request(license_record)
+    request = _request()
 
     try:
         lifecycle.plan_partition(
@@ -735,7 +623,6 @@ def test_reingestion_backfills_observation_for_legacy_snapshot_row(
 
     lifecycle, pool = _store(tmp_path)
     snapshots = SQLiteProviderSnapshotStore(SQLiteClient(pool))
-    license_record = _license()
     lineage = _Recorder()
     logs = _Recorder()
     committer = IngestionEvidenceCommitter(
@@ -744,7 +631,6 @@ def test_reingestion_backfills_observation_for_legacy_snapshot_row(
             lifecycle_writer=lifecycle,
             snapshot_writer=snapshots,
             snapshot_reader=snapshots,
-            license_reader=_LicenseReader(license_record),
             catalog_writer=_Recorder(),
             lineage_recorder=lineage,
             lineage_reader=lineage,
@@ -752,7 +638,7 @@ def test_reingestion_backfills_observation_for_legacy_snapshot_row(
         ),
         now=lambda: datetime(2026, 7, 18, 9, 0, tzinfo=UTC),
     )
-    request = _request(license_record)
+    request = _request()
 
     try:
         snapshots.append_snapshot(request.provider_snapshot)
@@ -795,7 +681,6 @@ def test_reingestion_backfills_observation_for_legacy_snapshot_row(
 @pytest.mark.unit
 def test_schema_change_after_unbound_intent_forks_new_revision(tmp_path: Path) -> None:
     lifecycle, pool = _store(tmp_path)
-    license_record = _license()
     recorder = _Recorder()
     committer = IngestionEvidenceCommitter(
         ports=EvidenceCommitPorts(
@@ -803,7 +688,6 @@ def test_schema_change_after_unbound_intent_forks_new_revision(tmp_path: Path) -
             lifecycle_writer=lifecycle,
             snapshot_writer=recorder,
             snapshot_reader=recorder,
-            license_reader=_LicenseReader(license_record),
             catalog_writer=recorder,
             lineage_recorder=recorder,
             lineage_reader=recorder,
@@ -811,8 +695,8 @@ def test_schema_change_after_unbound_intent_forks_new_revision(tmp_path: Path) -
         ),
         now=lambda: datetime(2026, 7, 18, 9, 0, tzinfo=UTC),
     )
-    request_v1 = _request(license_record)
-    request_v2 = _request(license_record, schema_version="market.stock_daily.v2")
+    request_v1 = _request()
+    request_v2 = _request(schema_version="market.stock_daily.v2")
 
     try:
         lifecycle.plan_partition(

@@ -38,6 +38,8 @@ from ditto_apps.models.market import (
     MarketContextResponse,
     RegimeDiagnosticsResponse,
 )
+from ditto_data.catalog.source_snapshot import ProviderSnapshotReader
+from ditto_data.ingestion.partition_state import PartitionLifecycleReader
 from ditto_strategy.alpha.builtins.regime.regime_types import RegimeLabel
 
 
@@ -142,6 +144,16 @@ class TestGetRegimeDiagnosticsHandler:
         assert response.data.bars_content_hash == "b" * 64
 
 
+def _observed_snapshots_reader() -> MagicMock:
+    reader = MagicMock(spec=ProviderSnapshotReader)
+    reader.list_snapshots.return_value = ()
+    return reader
+
+
+def _empty_lifecycle() -> MagicMock:
+    return MagicMock(spec=PartitionLifecycleReader)
+
+
 class TestGetMarketContextHandler:
     """GET /market/context exposes exact PIT identity and evidence."""
 
@@ -208,6 +220,8 @@ class TestGetMarketContextHandler:
             response = asyncio.run(
                 handler(
                     facade=facade,
+                    snapshots=_observed_snapshots_reader(),
+                    lifecycle=_empty_lifecycle(),
                     as_of=as_of,
                     knowledge_cutoff=knowledge_cutoff,
                     publication_cutoff=publication_cutoff,
@@ -242,6 +256,8 @@ class TestGetMarketContextHandler:
             asyncio.run(
                 handler(
                     facade=facade,
+                    snapshots=_observed_snapshots_reader(),
+                    lifecycle=_empty_lifecycle(),
                     as_of=datetime(2026, 8, 31, 9),
                     knowledge_cutoff=datetime(2026, 8, 31, 8),
                     publication_cutoff=datetime(2026, 8, 31, 7, 30),

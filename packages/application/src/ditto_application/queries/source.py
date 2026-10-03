@@ -6,7 +6,6 @@ from typing import Protocol
 
 import polars as pl
 from ditto_data.catalog.metadata import dataset_asset_class
-from ditto_data.catalog.promotion import DatasetMaturityPromotionReader
 from ditto_data.models import Dataset
 from ditto_data.services.metadata_service import MetadataService
 
@@ -49,11 +48,9 @@ class SourceQueryFacade:
         self,
         source_data: SourceDataPort,
         metadata_service: MetadataService,
-        maturity_promotion_reader: DatasetMaturityPromotionReader | None = None,
     ) -> None:
         self._source = source_data
         self._metadata = metadata_service
-        self._maturity_promotion_reader = maturity_promotion_reader
 
     def get_dataset_asset_class(self, dataset: str) -> str | None:
         """
@@ -154,7 +151,6 @@ class SourceQueryFacade:
         blocked = blocked_catalog_datasets(
             (dataset,),
             allow_experimental_data=allow_experimental_data,
-            maturity_promotion_reader=self._maturity_promotion_reader,
         )
         if not blocked:
             return

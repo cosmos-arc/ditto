@@ -1,13 +1,6 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
-import {
-	fetchSystemCatalogAssets,
-	fetchSystemFallback,
-	fetchSystemPromotion,
-	fetchSystemRemediation,
-	fetchSystemSourceHealth,
-	systemOverviewKeys,
-} from "../api/system-overview";
+import { fetchSystemCatalogAssets, fetchSystemSourceHealth, systemOverviewKeys } from "../api/system-overview";
 
 const PLATFORM_OVERVIEW_STALE_TIME_MS = 30_000;
 
@@ -27,27 +20,6 @@ export function useSystemOverview(tradeDate: string) {
 	return {
 		assets,
 		datasetIds,
-		fallback: useQuery({
-			queryKey: systemOverviewKeys.fallback(scope),
-			queryFn: () => fetchSystemFallback(scope),
-			enabled,
-			placeholderData: keepPreviousData,
-			staleTime: PLATFORM_OVERVIEW_STALE_TIME_MS,
-		}),
-		promotion: useQuery({
-			queryKey: systemOverviewKeys.promotion(scope),
-			queryFn: () => fetchSystemPromotion(scope),
-			enabled,
-			placeholderData: keepPreviousData,
-			staleTime: PLATFORM_OVERVIEW_STALE_TIME_MS,
-		}),
-		remediation: useQuery({
-			queryKey: systemOverviewKeys.remediation(scope),
-			queryFn: () => fetchSystemRemediation(scope),
-			enabled,
-			placeholderData: keepPreviousData,
-			staleTime: PLATFORM_OVERVIEW_STALE_TIME_MS,
-		}),
 		sourceHealth: useQuery({
 			queryKey: systemOverviewKeys.sourceHealth(scope),
 			queryFn: () => fetchSystemSourceHealth(scope),

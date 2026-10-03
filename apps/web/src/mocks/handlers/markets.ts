@@ -4,6 +4,16 @@ export const marketsHandlers: RequestHandler[] = [
 	http.get("/api/v1/market/context", ({ request }) => {
 		const query = new URL(request.url).searchParams;
 		const asOf = query.get("as_of") ?? "2026-08-31T09:00:00Z";
+		// 未显式携带 source_snapshot_id 时，服务端解析 observed 快照集并在响应中回传。
+		const requestedSnapshotIds = query.getAll("source_snapshot_id");
+		const sourceSnapshotIds =
+			requestedSnapshotIds.length > 0
+				? requestedSnapshotIds
+				: [
+						"snapshot:stock_daily:2026-09-30",
+						"snapshot:index_daily:2026-09-30",
+						"snapshot:macro_indicators:2026-09-30",
+					];
 		return HttpResponse.json({
 			data: {
 				as_of: asOf,
@@ -53,7 +63,7 @@ export const marketsHandlers: RequestHandler[] = [
 				publication_cutoff: asOf,
 				regime_label: "risk_on",
 				regime_score: 0.28,
-				source_snapshot_ids: query.getAll("source_snapshot_id"),
+				source_snapshot_ids: sourceSnapshotIds,
 				source_snapshot_set_id: "snapshot-set:sha256:mock-context",
 				status: "ready",
 				uncertainties: [],

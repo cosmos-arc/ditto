@@ -20,11 +20,6 @@ class TestDatasetStatusResponse:
             latest_status="success",
             dataset_maturity="experimental",
             dataset_maturity_warning="experimental data requires research opt-in",
-            dataset_promotion_criteria=["complete PIT replay coverage"],
-            dataset_promotion_status="blocked",
-            dataset_promotion_missing_criteria=["complete PIT replay coverage"],
-            dataset_promotion_satisfied_criteria=[],
-            dataset_promotion_rejected_criteria=["source failover policy missing"],
             record_count=5000,
             last_attempt="2024-01-15T18:05:00",
             catalog_freshness_at="2026-06-01T10:01:00+00:00",
@@ -41,13 +36,6 @@ class TestDatasetStatusResponse:
         assert m.dataset_maturity_warning == (
             "experimental data requires research opt-in"
         )
-        assert m.dataset_promotion_criteria == ["complete PIT replay coverage"]
-        assert m.dataset_promotion_status == "blocked"
-        assert m.dataset_promotion_missing_criteria == ["complete PIT replay coverage"]
-        assert m.dataset_promotion_satisfied_criteria == []
-        assert m.dataset_promotion_rejected_criteria == [
-            "source failover policy missing"
-        ]
         assert m.record_count == 5000
         assert m.last_attempt == "2024-01-15T18:05:00"
         assert m.catalog_freshness_at == "2026-06-01T10:01:00+00:00"
@@ -73,11 +61,6 @@ class TestDatasetStatusResponse:
         assert m.catalog_freshness_status is None
         assert m.catalog_freshness_sla_hours is None
         assert m.dataset_maturity_warning is None
-        assert m.dataset_promotion_criteria == []
-        assert m.dataset_promotion_status is None
-        assert m.dataset_promotion_missing_criteria == []
-        assert m.dataset_promotion_satisfied_criteria == []
-        assert m.dataset_promotion_rejected_criteria == []
 
     def test_model_dump(self) -> None:
         """序列化输出."""
@@ -90,10 +73,6 @@ class TestDatasetStatusResponse:
             record_count=100,
             dataset_maturity="experimental",
             dataset_maturity_warning="experimental data requires research opt-in",
-            dataset_promotion_criteria=["complete PIT replay coverage"],
-            dataset_promotion_status="blocked",
-            dataset_promotion_missing_criteria=["complete PIT replay coverage"],
-            dataset_promotion_rejected_criteria=["source failover policy missing"],
             catalog_freshness_at="2026-06-01T10:01:00+00:00",
             catalog_freshness_status="fresh",
         )
@@ -104,14 +83,6 @@ class TestDatasetStatusResponse:
         assert d["dataset_maturity_warning"] == (
             "experimental data requires research opt-in"
         )
-        assert d["dataset_promotion_criteria"] == ["complete PIT replay coverage"]
-        assert d["dataset_promotion_status"] == "blocked"
-        assert d["dataset_promotion_missing_criteria"] == [
-            "complete PIT replay coverage"
-        ]
-        assert d["dataset_promotion_rejected_criteria"] == [
-            "source failover policy missing"
-        ]
         assert d["catalog_freshness_at"] == "2026-06-01T10:01:00+00:00"
         assert d["catalog_freshness_status"] == "fresh"
 
@@ -146,8 +117,6 @@ class TestIngestionStatusResponse:
                     not_applicable_count=0,
                     failed_count=1,
                     warning_count=1,
-                    promotion_ready_count=0,
-                    promotion_blocked_count=1,
                 )
             ],
         )
@@ -156,7 +125,6 @@ class TestIngestionStatusResponse:
         assert resp.maturity_summary[0].dataset_count == 2
         assert resp.maturity_summary[0].missing_count == 1
         assert resp.maturity_summary[0].warning_count == 1
-        assert resp.maturity_summary[0].promotion_blocked_count == 1
 
     def test_with_datasets(self) -> None:
         """包含数据集列表."""
@@ -184,90 +152,6 @@ class TestIngestionStatusResponse:
 
         resp = IngestionStatusResponse(datasets=[])
         assert resp.datasets == []
-
-
-@pytest.mark.unit
-class TestPromotionEvidenceReviewModels:
-    """测试 promotion reviewer API models."""
-
-    def test_review_request_and_response_models(self) -> None:
-        """Promotion review request/response preserve operator fields."""
-        from ditto_apps.models.ingestion import (
-            PromotionEvidenceReviewRequest,
-            PromotionEvidenceReviewResponse,
-        )
-
-        request = PromotionEvidenceReviewRequest(
-            dataset_id="stock_daily",
-            criterion="complete PIT replay coverage",
-            evidence_uri="ditto://evidence/stock_daily/pit",
-            reviewed_by="architecture-review",
-            passed=False,
-            notes="PIT replay still missing",
-        )
-        response = PromotionEvidenceReviewResponse(
-            dataset_id="stock_daily",
-            reviewed_criterion=request.criterion,
-            evidence_uri=request.evidence_uri,
-            reviewed_by=request.reviewed_by,
-            passed=request.passed,
-            reviewed_at="2026-06-01T12:30:00+00:00",
-            promotion_status="blocked",
-            missing_criteria=[],
-            satisfied_criteria=[],
-            rejected_criteria=[request.criterion],
-            metadata_promoted=False,
-            dataset_maturity_before="experimental",
-            dataset_maturity_after="experimental",
-        )
-
-        assert request.dataset_id == "stock_daily"
-        assert request.passed is False
-        assert response.metadata_promoted is False
-        assert response.dataset_maturity_after == "experimental"
-        assert response.rejected_criteria == ["complete PIT replay coverage"]
-
-    def test_promotion_history_and_revoke_models(self) -> None:
-        """Promotion history/revoke models preserve governance audit fields."""
-        from ditto_apps.models.ingestion import (
-            MaturityPromotionHistoryItem,
-            MaturityPromotionRevokeRequest,
-            MaturityPromotionRevokeResponse,
-        )
-
-        request = MaturityPromotionRevokeRequest(
-            dataset_id="stock_daily",
-            revoked_by="architecture-review",
-            revocation_reason="failed_revalidation",
-            notes="PIT regression reopened promotion",
-        )
-        history = MaturityPromotionHistoryItem(
-            dataset_id="stock_daily",
-            action="revoked",
-            previous_maturity="initial-focus",
-            next_maturity="experimental",
-            actor=request.revoked_by,
-            action_at="2026-06-02T09:00:00+00:00",
-            evidence_uri="ditto://evidence/stock_daily/runtime-tests",
-            revocation_reason=request.revocation_reason,
-            notes=request.notes,
-        )
-        response = MaturityPromotionRevokeResponse(
-            dataset_id=request.dataset_id,
-            revoked_by=request.revoked_by,
-            revoked_at="2026-06-02T09:00:00+00:00",
-            dataset_maturity_before="initial-focus",
-            dataset_maturity_after="experimental",
-            evidence_uri=history.evidence_uri,
-            revocation_reason=request.revocation_reason,
-            notes=request.notes,
-        )
-
-        assert history.action == "revoked"
-        assert history.next_maturity == "experimental"
-        assert history.revocation_reason == "failed_revalidation"
-        assert response.revocation_reason == "failed_revalidation"
-        assert response.dataset_maturity_after == "experimental"
 
 
 @pytest.mark.unit

@@ -8,21 +8,13 @@ from dishka import Provider, Scope, provide
 from ditto_analysis.research.artifact_service import ResearchArtifactService
 from ditto_analysis.research.catalog_service import ResearchCatalogService
 from ditto_data.catalog import DataCatalogReader
-from ditto_data.catalog.certification import CertificationReader
-from ditto_data.catalog.fallback_policy import CatalogSourceFallbackPolicyReader
-from ditto_data.catalog.license import DatasetLicenseReader
-from ditto_data.catalog.promotion import (
-    DatasetMaturityPromotionHistoryReader,
-    DatasetMaturityPromotionReader,
-    DatasetPromotionEvidenceReader,
-)
 from ditto_data.catalog.provider_payload import ProviderPayloadReader
 from ditto_data.catalog.source_snapshot import ProviderSnapshotReader
-from ditto_data.catalog.specimen import SpecimenReader
 from ditto_data.config.data_store import DataStoreSettings
 from ditto_data.ingestion.ingestion_log_store import (
     IngestionLogStore,
 )
+from ditto_data.ingestion.partition_state import PartitionLifecycleReader
 from ditto_data.services.capital_store import CapitalStore
 from ditto_data.services.fundamental_store import FundamentalStore
 from ditto_data.services.macro_service import MacroService
@@ -39,8 +31,6 @@ from ditto_features.technical_analysis.service import TechnicalAnalysisService
 from ditto_application.queries.capital import CapitalQueryFacade
 from ditto_application.queries.catalog import CatalogQueryFacade
 from ditto_application.queries.commodity import CommodityQueryFacade
-from ditto_application.queries.data_products import DataProductsQueryFacade
-from ditto_application.queries.data_specimen import DataSpecimenQuery
 from ditto_application.queries.derived import DerivedQueryFacade
 from ditto_application.queries.evaluation import FactorEvaluationFacade
 from ditto_application.queries.forward_return_service import ForwardReturnService
@@ -63,7 +53,6 @@ from ditto_application.queries.market_context_source import (
     ProviderPayloadMarketContextSource,
 )
 from ditto_application.queries.metadata import MetadataQueryFacade
-from ditto_application.queries.promotion_evidence import PromotionEvidenceCollector
 from ditto_application.queries.research import ResearchDatasetQuery
 from ditto_application.queries.snapshot_readiness import SnapshotReadinessQuery
 from ditto_application.queries.source import SourceDataPort, SourceQueryFacade
@@ -132,14 +121,15 @@ class AppMarketQueryProvider(Provider):
     @provide
     def instrument_technical_evidence_query_facade(
         self,
-        certification_reader: CertificationReader,
+        snapshots: ProviderSnapshotReader,
+        lifecycle: PartitionLifecycleReader,
         technical_analysis: TechnicalAnalysisFacade,
     ) -> InstrumentTechnicalEvidenceQueryFacade:
-        """Bind technical briefs to approved historical stock snapshots."""
+        """Bind technical briefs to completed observed stock snapshots."""
         return InstrumentTechnicalEvidenceQueryFacade(
-            certification_reader=certification_reader,
+            snapshots=snapshots,
+            lifecycle=lifecycle,
             technical_analysis=technical_analysis,
-            certification_profile="technical_daily",
         )
 
     @provide
@@ -174,36 +164,15 @@ class AppMarketQueryProvider(Provider):
     @provide
     def market_context_evidence_query_facade(
         self,
-        certification_reader: CertificationReader,
+        snapshots: ProviderSnapshotReader,
+        lifecycle: PartitionLifecycleReader,
         market_context: MarketContextFacade,
     ) -> MarketContextEvidenceQueryFacade:
-        """Bind Agent briefs to approved historical research-daily snapshots."""
+        """Bind Agent briefs to completed observed research-daily snapshots."""
         return MarketContextEvidenceQueryFacade(
-            certification_reader=certification_reader,
-            market_context=market_context,
-            certification_profile="research_daily",
-        )
-
-    @provide
-    def data_products_query_facade(
-        self,
-        certification_reader: CertificationReader,
-    ) -> DataProductsQueryFacade:
-        """R2 data-product workbench read models."""
-        return DataProductsQueryFacade(certification_reader=certification_reader)
-
-    @provide
-    def data_specimen_query(
-        self,
-        specimens: SpecimenReader,
-        snapshots: ProviderSnapshotReader,
-        licenses: DatasetLicenseReader,
-    ) -> DataSpecimenQuery:
-        """Five-category specimen summaries with reference re-verification."""
-        return DataSpecimenQuery(
-            specimens=specimens,
             snapshots=snapshots,
-            licenses=licenses,
+            lifecycle=lifecycle,
+            market_context=market_context,
         )
 
     @provide
@@ -245,13 +214,11 @@ class AppMarketQueryProvider(Provider):
         self,
         market_service: MarketService,
         capital_store: CapitalStore,
-        maturity_promotion_reader: DatasetMaturityPromotionReader,
     ) -> MarketQueryFacade:
         """行情数据查询 facade — 隐藏内部查询类型."""
         return MarketQueryFacade(
             market_service=market_service,
             capital_store=capital_store,
-            maturity_promotion_reader=maturity_promotion_reader,
         )
 
     @provide
@@ -259,13 +226,11 @@ class AppMarketQueryProvider(Provider):
         self,
         source_data: SourceDataPort,
         metadata_service: MetadataService,
-        maturity_promotion_reader: DatasetMaturityPromotionReader,
     ) -> SourceQueryFacade:
         """数据源查询 facade — 通过 Protocol 获取 source 数据."""
         return SourceQueryFacade(
             source_data=source_data,
             metadata_service=metadata_service,
-            maturity_promotion_reader=maturity_promotion_reader,
         )
 
     @provide
@@ -284,23 +249,9 @@ class AppMarketQueryProvider(Provider):
     def catalog_query_facade(
         self,
         data_catalog_reader: DataCatalogReader,
-        maturity_promotion_history_reader: DatasetMaturityPromotionHistoryReader,
-        catalog_source_fallback_policy_reader: CatalogSourceFallbackPolicyReader,
     ) -> CatalogQueryFacade:
         """DataCatalog 查询 facade — 暴露 storage/schema/freshness 读模型."""
-        return CatalogQueryFacade(
-            data_catalog_reader=data_catalog_reader,
-            maturity_promotion_history_reader=maturity_promotion_history_reader,
-            source_fallback_policy_reader=catalog_source_fallback_policy_reader,
-        )
-
-    @provide
-    def promotion_evidence_collector(
-        self,
-        data_catalog_reader: DataCatalogReader,
-    ) -> PromotionEvidenceCollector:
-        """Promotion evidence collector — measures dataset coverage via catalog."""
-        return PromotionEvidenceCollector(catalog_reader=data_catalog_reader)
+        return CatalogQueryFacade(data_catalog_reader=data_catalog_reader)
 
     @provide
     def metadata_query_facade(
@@ -322,37 +273,25 @@ class AppMarketQueryProvider(Provider):
     def capital_query_facade(
         self,
         capital_store: CapitalStore,
-        maturity_promotion_reader: DatasetMaturityPromotionReader,
     ) -> CapitalQueryFacade:
         """资金查询 facade — 隐藏 CQRS 端口类型."""
-        return CapitalQueryFacade(
-            capital_store=capital_store,
-            maturity_promotion_reader=maturity_promotion_reader,
-        )
+        return CapitalQueryFacade(capital_store=capital_store)
 
     @provide
     def fundamental_query_facade(
         self,
         fundamental_store: FundamentalStore,
-        maturity_promotion_reader: DatasetMaturityPromotionReader,
     ) -> FundamentalQueryFacade:
         """基本面查询 facade — 隐藏 CQRS 端口类型."""
-        return FundamentalQueryFacade(
-            fundamental_store=fundamental_store,
-            maturity_promotion_reader=maturity_promotion_reader,
-        )
+        return FundamentalQueryFacade(fundamental_store=fundamental_store)
 
     @provide
     def macro_query_facade(
         self,
         macro_service: MacroService,
-        maturity_promotion_reader: DatasetMaturityPromotionReader,
     ) -> MacroQueryFacade:
         """宏观查询 facade — 隐藏 MacroQuery 和枚举类型."""
-        return MacroQueryFacade(
-            macro_service=macro_service,
-            maturity_promotion_reader=maturity_promotion_reader,
-        )
+        return MacroQueryFacade(macro_service=macro_service)
 
     @provide
     def fx_query_facade(
@@ -383,17 +322,9 @@ class AppMarketQueryProvider(Provider):
         self,
         ingestion_log_store: IngestionLogStore,
         data_catalog_reader: DataCatalogReader,
-        promotion_evidence_reader: DatasetPromotionEvidenceReader,
-        maturity_promotion_reader: DatasetMaturityPromotionReader,
-        maturity_promotion_history_reader: DatasetMaturityPromotionHistoryReader,
-        catalog_query_facade: CatalogQueryFacade,
     ) -> IngestionStatusQueryFacade:
         """摄取状态查询 facade — 封装 log 与 catalog freshness 读模型."""
         return IngestionStatusQueryFacade(
             ingestion_log_store=ingestion_log_store,
             data_catalog_reader=data_catalog_reader,
-            promotion_evidence_reader=promotion_evidence_reader,
-            maturity_promotion_reader=maturity_promotion_reader,
-            maturity_promotion_history_reader=maturity_promotion_history_reader,
-            source_health_summary_query=catalog_query_facade,
         )

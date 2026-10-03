@@ -20,7 +20,6 @@ from ditto_backtest.result import (
 from ditto_backtest.simulation import BrokerageModel
 from ditto_backtest.simulation.fill import AShareFillModel
 from ditto_backtest.simulation.slippage import FixedBpsSlippage, SlippageModel
-from ditto_data.catalog.promotion import DatasetMaturityPromotionReader
 from ditto_data.lineage import DataLineageRecorder
 from ditto_data.provider import DataProvider
 from ditto_data.services.metadata_service import MetadataService
@@ -423,14 +422,12 @@ class BacktestRuntimeBuilder:
         strategy_runtime_builder: StrategyRuntimeBuilder,
         metadata_service: MetadataService,
         data_provider: DataProvider,
-        maturity_promotion_reader: DatasetMaturityPromotionReader | None = None,
         fundamental_read_facade: FundamentalReadFacade | None = None,
         classification_read_facade: ClassificationReadFacade | None = None,
     ) -> None:
         self._strategy_runtime_builder = strategy_runtime_builder
         self._metadata_service = metadata_service
         self._data_provider = data_provider
-        self._maturity_promotion_reader = maturity_promotion_reader
         self._fundamental_read_facade = fundamental_read_facade
         self._classification_read_facade = classification_read_facade
 
@@ -453,7 +450,6 @@ class BacktestRuntimeBuilder:
         assert_strategy_runtime_data_allowed(
             runtime.spec,
             allow_experimental_data=allow_experimental_data,
-            maturity_promotion_reader=self._maturity_promotion_reader,
             context="catalog-backed backtest",
         )
         resolved_fee_model = fee_model or AShareFeeModel()

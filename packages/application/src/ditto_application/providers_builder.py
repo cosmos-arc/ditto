@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from dishka import Provider, Scope, provide
 from ditto_data.catalog import DataCatalogReader
-from ditto_data.catalog.promotion import DatasetMaturityPromotionReader
 from ditto_data.lineage import DataLineageRecorder
 from ditto_data.services.market_service import MarketService
 from ditto_data.services.metadata_service import MetadataService
@@ -141,7 +140,6 @@ class AppBuilderFactory(Provider):
         runtime_builder: StrategyRuntimeBuilder,
         metadata_service: MetadataService,
         data_provider: ServiceBackedDataProvider,
-        maturity_promotion_reader: DatasetMaturityPromotionReader,
         fundamental_query_facade: FundamentalQueryFacade,
     ) -> BacktestRuntimeBuilder:
         """回测运行时构建器."""
@@ -149,7 +147,6 @@ class AppBuilderFactory(Provider):
             strategy_runtime_builder=runtime_builder,
             metadata_service=metadata_service,
             data_provider=data_provider,
-            maturity_promotion_reader=maturity_promotion_reader,
             fundamental_read_facade=fundamental_query_facade,
             # InstrumentService 满足 ClassificationReadFacade Protocol(其
             # get_stock_industry 委托 IndustryMappingReader 做 PIT 行业查询)。
@@ -162,14 +159,12 @@ class AppBuilderFactory(Provider):
         runtime_builder: StrategyRuntimeBuilder,
         metadata_service: MetadataService,
         data_provider: ServiceBackedDataProvider,
-        maturity_promotion_reader: DatasetMaturityPromotionReader,
     ) -> StrategySliceBuilder:
         """策略切片构建器."""
         return StrategySliceBuilder(
             strategy_runtime_builder=runtime_builder,
             metadata_service=metadata_service,
             data_provider=data_provider,
-            maturity_promotion_reader=maturity_promotion_reader,
         )
 
     @provide

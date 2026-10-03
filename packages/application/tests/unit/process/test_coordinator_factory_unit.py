@@ -13,9 +13,6 @@ from ditto_application.processes.ingestion.coordinator_factory import (
     CoordinatorServices,
     create_coordinator,
 )
-from ditto_application.processes.ingestion.source_capability import (
-    UnsupportedIngestionSourceError,
-)
 from ditto_application.processes.ingestion.source_selection import (
     AutoSourceIngestionCoordinator,
 )
@@ -25,7 +22,6 @@ from ditto_data.catalog import (
     DataSchemaFingerprint,
     InMemoryDataCatalog,
 )
-from ditto_data.catalog.fallback_policy import CatalogSourceFallbackPolicy
 from ditto_data.lineage import InMemoryDataLineage
 from ditto_data.models import Source
 from ditto_data.models.ingestion import IngestionResult
@@ -68,74 +64,6 @@ def _make_services_with_source_registry(
         source_accessor=MagicMock(),
         ingestion_log_store=MagicMock(),
         source_registry=registry,
-    )
-
-
-class _PolicyReader:
-    def __init__(
-        self,
-        policies: tuple[CatalogSourceFallbackPolicy, ...],
-    ) -> None:
-        self._policies = policies
-
-    def get_source_fallback_policy(
-        self,
-        policy_id: str,
-    ) -> CatalogSourceFallbackPolicy | None:
-        return next(
-            (policy for policy in self._policies if policy.policy_id == policy_id),
-            None,
-        )
-
-    def list_source_fallback_policies(
-        self,
-        *,
-        dataset_id: str | None = None,
-        status: str | None = None,
-    ) -> tuple[CatalogSourceFallbackPolicy, ...]:
-        policies = self._policies
-        if dataset_id is not None:
-            policies = tuple(
-                policy for policy in policies if policy.dataset_id == dataset_id
-            )
-        if status is not None:
-            policies = tuple(policy for policy in policies if policy.status == status)
-        return policies
-
-    def list_source_fallback_policy_events(
-        self,
-        policy_id: str,
-    ) -> tuple[object, ...]:
-        return ()
-
-
-def _active_policy(
-    *,
-    policy_id: str = "fallback-policy-001",
-    dataset_id: str = "macro_indicators",
-    trade_date: str = "2024-12-27",
-    selected_source: str = "fred",
-    status: str = "active",
-) -> CatalogSourceFallbackPolicy:
-    return CatalogSourceFallbackPolicy(
-        policy_id=policy_id,
-        dataset_id=dataset_id,
-        namespace="macro" if dataset_id == "macro_indicators" else "market",
-        trade_date=trade_date,
-        default_source="tushare",
-        selected_source=selected_source,
-        recommended_source=selected_source,
-        status=status,
-        created_by="architecture-review",
-        created_at=datetime(2026, 6, 10, 9, tzinfo=UTC),
-        recommended_actions=("use_selected_source",),
-        reason_codes=("default_source_failover",),
-        fallback_sources=(selected_source,),
-        unsupported_sources=(),
-        source_selection_status="ready",
-        source_selection_blockers=(),
-        approval_required=True,
-        execution_allowed=True,
     )
 
 
@@ -539,112 +467,6 @@ class TestCreateCoordinatorSourceRegistryRouting:
             params,
             False,
         )
-
-    def test_auto_source_active_policy_overrides_catalog_freshness_selection(
-        self,
-    ) -> None:
-        """active fallback policy 可作为后端选源 effect 覆盖 catalog freshness."""
-        tushare_coordinator = MagicMock(name="tushare_coordinator")
-        fred_coordinator = MagicMock(name="fred_coordinator")
-        catalog = InMemoryDataCatalog()
-        catalog.upsert_asset(
-            DataCatalogEntry(
-                asset=DataAssetRef(
-                    dataset_id="macro_indicators",
-                    namespace="macro",
-                    partition_keys=("trade_date=2024-12-27",),
-                ),
-                storage_uri="macro/macro_indicators/2024-12-27",
-                schema=DataSchemaFingerprint(schema_hash="fresh", row_count=1),
-                source="tushare",
-                freshness_at=datetime.now(UTC),
-            )
-        )
-        coordinator = AutoSourceIngestionCoordinator(
-            {"tushare": tushare_coordinator, "fred": fred_coordinator},
-            catalog_reader=catalog,
-            source_fallback_policy_reader=_PolicyReader((_active_policy(),)),
-        )
-
-        coordinator.ingest_date("macro_indicators", "2024-12-27")
-
-        tushare_coordinator.ingest_date.assert_not_called()
-        fred_coordinator.ingest_date.assert_called_once_with(
-            "macro_indicators",
-            "2024-12-27",
-            False,
-        )
-
-    def test_auto_source_ignores_inactive_fallback_policy(self) -> None:
-        """draft/approved/retired policy 不应影响自动选源 effect."""
-        tushare_coordinator = MagicMock(name="tushare_coordinator")
-        fred_coordinator = MagicMock(name="fred_coordinator")
-        catalog = InMemoryDataCatalog()
-        catalog.upsert_asset(
-            DataCatalogEntry(
-                asset=DataAssetRef(
-                    dataset_id="macro_indicators",
-                    namespace="macro",
-                    partition_keys=("trade_date=2024-12-27",),
-                ),
-                storage_uri="macro/macro_indicators/2024-12-27",
-                schema=DataSchemaFingerprint(schema_hash="fresh", row_count=1),
-                source="tushare",
-                freshness_at=datetime.now(UTC),
-            )
-        )
-        coordinator = AutoSourceIngestionCoordinator(
-            {"tushare": tushare_coordinator, "fred": fred_coordinator},
-            catalog_reader=catalog,
-            source_fallback_policy_reader=_PolicyReader(
-                (_active_policy(status="approved"),),
-            ),
-        )
-
-        coordinator.ingest_date("macro_indicators", "2024-12-27")
-
-        tushare_coordinator.ingest_date.assert_called_once_with(
-            "macro_indicators",
-            "2024-12-27",
-            False,
-        )
-        fred_coordinator.ingest_date.assert_not_called()
-
-    def test_auto_source_active_policy_fails_closed_when_source_is_unsupported(
-        self,
-    ) -> None:
-        """unsupported active policy source 必须 fail closed 且带 policy context."""
-        fred_coordinator = MagicMock(name="fred_coordinator")
-        coordinator = AutoSourceIngestionCoordinator(
-            {"fred": fred_coordinator},
-            catalog_reader=InMemoryDataCatalog(),
-            source_fallback_policy_reader=_PolicyReader(
-                (
-                    _active_policy(
-                        dataset_id="stock_daily",
-                        selected_source="fred",
-                    ),
-                ),
-            ),
-        )
-
-        with pytest.raises(
-            UnsupportedIngestionSourceError,
-            match="does not support dataset",
-        ) as exc:
-            coordinator.ingest_date("stock_daily", "2024-12-27")
-
-        assert exc.value.details == {
-            "field": "source_name",
-            "value": "fred",
-            "dataset": "stock_daily",
-            "supported": ["tushare", "fuyao"],
-            "operation": "ingest_date",
-            "selection_date": "2024-12-27",
-            "source_fallback_policy_id": "fallback-policy-001",
-            "source_fallback_policy_status": "active",
-        }
-        fred_coordinator.ingest_date.assert_not_called()
 
     def test_auto_source_instrument_range_routes_each_date_independently(
         self,

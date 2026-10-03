@@ -10,7 +10,6 @@ from ditto_application.builders import (
     BacktestRuntimeBuilder,
     PublishedStrategyRuntime,
 )
-from ditto_application.exceptions import AppBuilderError
 from ditto_application.processes.execution.backtest_process import (
     BacktestCatalogRequestConfig,
 )
@@ -25,7 +24,6 @@ from ditto_backtest.result import (
     BacktestSettlementStateSnapshot,
 )
 from ditto_backtest.simulation.fill import AShareFillModel
-from ditto_data.catalog.promotion import DatasetMaturityPromotion
 from ditto_data.provider import DataProvider
 from ditto_data.services.metadata_service import MetadataService
 from ditto_execution.planner import SimpleExecutionPlanner
@@ -92,24 +90,6 @@ def _make_published_strategy_runtime(
         parameter_hash=binding.parameter_hash,
         effective_parameters=binding.effective_parameters,
     )
-
-
-class _MaturityPromotionReader:
-    def __init__(self, promoted_dataset_ids: set[str]) -> None:
-        self._promoted_dataset_ids = promoted_dataset_ids
-
-    def get_dataset_maturity_promotion(
-        self,
-        dataset_id: str,
-    ) -> DatasetMaturityPromotion | None:
-        if dataset_id not in self._promoted_dataset_ids:
-            return None
-        return DatasetMaturityPromotion(
-            dataset_id=dataset_id,
-            previous_maturity="experimental",
-            promoted_maturity="initial-focus",
-            promoted_by="architecture-review",
-        )
 
 
 class TestBacktestRuntimeBuilder:
@@ -384,8 +364,8 @@ class TestBacktestRuntimeBuilder:
         assert pending[0].order.order_id == "restore-order-1"
         assert pending[0].leaves_quantity == 300
 
-    def test_rejects_experimental_stock_data_by_default(self) -> None:
-        """默认回测入口不得静默使用 experimental 股票数据集。"""
+    def test_core_lane_stock_data_available_by_default(self) -> None:
+        """核心市场 lane 静态为 initial-focus,默认回测入口可用。"""
         spec = _make_strategy_spec(
             strategy_id="stock-alpha",
             name="Stock Alpha",
@@ -405,18 +385,14 @@ class TestBacktestRuntimeBuilder:
             data_provider=data_provider,
         )
 
-        with pytest.raises(AppBuilderError, match="experimental dataset"):
-            builder.build_published_runtime(
-                config=BacktestCatalogRequestConfig(
-                    strategy_id="stock-alpha",
-                    start_date="2026-01-10",
-                    end_date="2026-01-13",
-                ),
-                version=1,
-            )
-
-        metadata_service.get_universe.assert_not_called()
-        data_provider.get_bars.assert_not_called()
+        builder.build_published_runtime(
+            config=BacktestCatalogRequestConfig(
+                strategy_id="stock-alpha",
+                start_date="2026-01-10",
+                end_date="2026-01-13",
+            ),
+            version=1,
+        )
 
     def test_allows_experimental_stock_data_when_explicit(self) -> None:
         """研究场景可显式 opt in 使用 experimental 股票数据集。"""
@@ -453,47 +429,6 @@ class TestBacktestRuntimeBuilder:
             ),
             version=1,
             allow_experimental_data=True,
-        )
-
-        assert runtime.spec.asset_class == "stock"
-
-    def test_allows_promoted_stock_data_without_research_opt_in(self) -> None:
-        """已完成 metadata promotion 的股票回测不需要 research opt-in。"""
-        spec = _make_strategy_spec(
-            strategy_id="stock-alpha",
-            name="Stock Alpha",
-            template="stock_selection",
-            universe="cn_stock",
-            asset_class="stock",
-        )
-        strategy_runtime_builder = MagicMock()
-        strategy_runtime_builder.build_published_runtime.return_value = (
-            _make_published_strategy_runtime(spec, version=1, spec_hash="b" * 64)
-        )
-        metadata_service = MagicMock(spec=MetadataService)
-        metadata_service.resolve_instrument_id.return_value = 3_000_001
-        metadata_service.get_universe.return_value = [1_000_001]
-        metadata_service.instrument.get_instrument.return_value = {
-            "ticker": "600000",
-            "exchange": "XSHG",
-        }
-        data_provider = MagicMock(spec=DataProvider)
-        builder = BacktestRuntimeBuilder(
-            strategy_runtime_builder=strategy_runtime_builder,
-            metadata_service=metadata_service,
-            data_provider=data_provider,
-            maturity_promotion_reader=_MaturityPromotionReader(
-                {"stock_daily", "stock_basic"}
-            ),
-        )
-
-        runtime = builder.build_published_runtime(
-            config=BacktestCatalogRequestConfig(
-                strategy_id="stock-alpha",
-                start_date="2026-01-10",
-                end_date="2026-01-13",
-            ),
-            version=1,
         )
 
         assert runtime.spec.asset_class == "stock"

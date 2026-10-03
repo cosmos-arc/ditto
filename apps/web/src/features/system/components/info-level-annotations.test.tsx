@@ -26,19 +26,19 @@ beforeEach(() => {
 });
 
 describe("SystemPage info-level annotations", () => {
-	it("annotates the 2 primary evidence units", async () => {
+	it("annotates the primary evidence unit", async () => {
 		render(<SystemPage />, { wrapper: createWrapper() });
 
-		await screen.findByText("Remediation backlog");
+		await screen.findByText("Catalog assets");
 
 		const l1Units = document.querySelectorAll("[data-info-level='l1']");
 		const l1UnitNames = Array.from(l1Units).map((el) => el.getAttribute("data-info-unit"));
 
-		expect(l1UnitNames).toEqual(["catalog-assets", "remediation"]);
-		expect(l1Units).toHaveLength(2);
+		expect(l1UnitNames).toEqual(["catalog-assets"]);
+		expect(l1Units).toHaveLength(1);
 	});
 
-	it("annotates 3 L2 information units", async () => {
+	it("annotates the L2 information unit", async () => {
 		render(<SystemPage />, { wrapper: createWrapper() });
 
 		await screen.findByText("Source health");
@@ -47,8 +47,6 @@ describe("SystemPage info-level annotations", () => {
 		const l2UnitNames = Array.from(l2Units).map((el) => el.getAttribute("data-info-unit"));
 
 		expect(l2UnitNames).toContain("source-health");
-		expect(l2UnitNames).toContain("fallback");
-		expect(l2UnitNames).toContain("promotion");
-		expect(l2Units).toHaveLength(3);
+		expect(l2Units).toHaveLength(1);
 	});
 });

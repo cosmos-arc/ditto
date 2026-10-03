@@ -1,4 +1,4 @@
-"""Certify and replay the bounded Q2 live MarketContext evidence chain."""
+"""Replay the bounded Q2 live MarketContext evidence chain."""
 
 from __future__ import annotations
 
@@ -21,14 +21,6 @@ from ditto_agent.contracts.temporal import (
 )
 from ditto_agent.tools.market_context import MarketContextEvidenceTool
 from ditto_application.catalog_freshness import aggregate_source_snapshot_ids
-from ditto_application.commands.data_product_certification import (
-    DataProductCertificationCommands,
-)
-from ditto_application.commands.data_product_certification_builder import (
-    AddressedCertificationEvidence,
-    CertificationBuildRequest,
-    DataProductCertificationBuilder,
-)
 from ditto_application.exceptions import AppQueryError
 from ditto_application.queries.market_context import (
     MarketContextFacade,
@@ -36,10 +28,6 @@ from ditto_application.queries.market_context import (
 )
 from ditto_application.queries.market_context_evidence import (
     MarketContextEvidenceQueryFacade,
-)
-from ditto_data.catalog.certification import (
-    CertificationGovernanceStore,
-    DatasetCertificationReport,
 )
 from ditto_data.catalog.metadata import default_dataset_metadata
 from ditto_data.catalog.provider_payload import (
@@ -54,7 +42,7 @@ from ditto_data.catalog.source_snapshot import (
 from ditto_apps.config.runtime import state_root_matches
 from ditto_apps.registry.container import make_app_container
 from ditto_apps.registry.contexts.query import create_query_context
-from ditto_apps.scripts.r2_live_certification import (
+from ditto_apps.scripts.q3_live_discovery_support import (
     build_expected_dates,
     probe_consumer_payload,
 )
@@ -78,29 +66,14 @@ _GLOBAL_DATASET = "global_index_daily"
 
 
 @dataclass(frozen=True, slots=True)
-class _CertifiedProduct:
+class _ObservedDataset:
     dataset_id: str
-    report_id: str
-    content_hash: str
     target_from: str
     target_to: str
     expected_partition_count: int
     snapshot_ids: tuple[str, ...]
     consumer_probe: Mapping[str, int | str]
     consumer_evidence_sha256: str
-
-
-@dataclass(frozen=True, slots=True)
-class _CertificationAuthority:
-    data_root: Path
-    evidence_root: Path
-    recovery_path: Path
-    recovery_hash: str
-    generated_at: datetime
-    actor: str
-    builder: DataProductCertificationBuilder
-    commands: DataProductCertificationCommands
-    store: CertificationGovernanceStore
 
 
 def select_interval_snapshot_ids(
@@ -193,38 +166,19 @@ def _validate_recovery_evidence(path: Path) -> tuple[Path, str]:
     return resolved, _sha256_file(resolved)
 
 
-def _validate_active_report(
-    report: DatasetCertificationReport,
-    *,
-    target_from: date,
-    target_to: date,
-    snapshot_ids: tuple[str, ...],
-    store: CertificationGovernanceStore,
-) -> None:
-    events = store.list_events(report.report_id)
-    if (
-        report.coverage.target_from != target_from
-        or report.coverage.target_to != target_to
-        or not report.coverage.is_complete
-        or report.evidence.snapshot_ids != snapshot_ids
-        or not events
-        or events[-1].action != "approved"
-    ):
-        raise ValueError(f"Q2 active certification drift: {report.dataset_id}")
-
-
-def _certify_product(
+def _observed_dataset(
     *,
     dataset_id: str,
     target_from: date,
     target_to: date,
     expected_dates: tuple[date, ...],
     snapshot_ids: tuple[str, ...],
-    authority: _CertificationAuthority,
-) -> _CertifiedProduct:
-    probe = probe_consumer_payload(authority.data_root, dataset_id)
-    consumer_path, consumer_hash = _write_addressed(
-        authority.evidence_root / "consumer" / dataset_id,
+    data_root: Path,
+    evidence_root: Path,
+) -> _ObservedDataset:
+    probe = probe_consumer_payload(data_root, dataset_id)
+    _consumer_path, consumer_hash = _write_addressed(
+        evidence_root / "consumer" / dataset_id,
         "consumer-read-smoke",
         {
             "schema": "ditto.q2-consumer-evidence.v1",
@@ -235,52 +189,8 @@ def _certify_product(
             "probe": probe,
         },
     )
-    active = authority.store.get_active_report(dataset_id, _PROFILE)
-    if active is None:
-        report = authority.builder.build(
-            CertificationBuildRequest(
-                dataset_id=dataset_id,
-                profile=_PROFILE,
-                target_from=target_from,
-                target_to=target_to,
-                expected_dates=expected_dates,
-                snapshot_ids=snapshot_ids,
-                generated_at=authority.generated_at,
-                recovery_evidence=AddressedCertificationEvidence(
-                    name="q1_isolated_backup_restore_hash_parity",
-                    evidence_uri=(
-                        f"artifact+sha256://q1/recovery/{authority.recovery_hash}"
-                    ),
-                    local_path=authority.recovery_path,
-                    sha256_hex=authority.recovery_hash,
-                ),
-                consumer_evidence=AddressedCertificationEvidence(
-                    name="q2_production_consumer_read_smoke",
-                    evidence_uri=(
-                        f"artifact+sha256://q2/consumer/{dataset_id}/{consumer_hash}"
-                    ),
-                    local_path=consumer_path,
-                    sha256_hex=consumer_hash,
-                ),
-            )
-        )
-        active = authority.commands.freeze(report)
-        authority.commands.review(
-            active.report_id,
-            reviewer=authority.actor,
-            reviewed_at=authority.generated_at,
-        )
-    _validate_active_report(
-        active,
-        target_from=target_from,
-        target_to=target_to,
-        snapshot_ids=snapshot_ids,
-        store=authority.store,
-    )
-    return _CertifiedProduct(
+    return _ObservedDataset(
         dataset_id=dataset_id,
-        report_id=active.report_id,
-        content_hash=active.content_hash,
         target_from=target_from.isoformat(),
         target_to=target_to.isoformat(),
         expected_partition_count=len(expected_dates),
@@ -345,19 +255,16 @@ def _assert_market_context_contract(  # noqa: C901 - bounded evidence checklist
         raise ValueError("Q2 degraded context must declare missing inputs")
 
 
-def run_q2_live_market_context_acceptance(  # noqa: PLR0915 - vertical acceptance flow
+def run_q2_live_market_context_acceptance(
     *,
     data_root: Path,
     evidence_root: Path,
     recovery_evidence: Path,
-    actor: str,
 ) -> dict[str, object]:
-    """Freeze bounded certifications and prove exact PIT/Agent replay behavior."""
+    """Prove exact PIT/Agent replay behavior over one bounded observed window."""
     root = data_root.expanduser().resolve(strict=True)
     if not state_root_matches(root):
         raise ValueError("DITTO_STATE_ROOT must equal the isolated Q2 data root")
-    if not actor or actor.strip() != actor:
-        raise ValueError("Q2 certification actor is invalid")
     evidence_dir = evidence_root.expanduser().resolve(strict=False)
     recovery_path, recovery_hash = _validate_recovery_evidence(recovery_evidence)
     registry = default_dataset_metadata()
@@ -392,28 +299,15 @@ def run_q2_live_market_context_acceptance(  # noqa: PLR0915 - vertical acceptanc
             generated_at = max(
                 snapshot.created_at for snapshot in selected_snapshots
             ) + timedelta(minutes=1)
-            builder = container.get(DataProductCertificationBuilder)
-            commands = container.get(DataProductCertificationCommands)
-            store = container.get(CertificationGovernanceStore)
-            authority = _CertificationAuthority(
-                data_root=root,
-                evidence_root=evidence_dir,
-                recovery_path=recovery_path,
-                recovery_hash=recovery_hash,
-                generated_at=generated_at,
-                actor=actor,
-                builder=builder,
-                commands=commands,
-                store=store,
-            )
             products = tuple(
-                _certify_product(
+                _observed_dataset(
                     dataset_id=dataset_id,
                     target_from=target_from,
                     target_to=target_to,
                     expected_dates=expected[dataset_id],
                     snapshot_ids=selected[dataset_id],
-                    authority=authority,
+                    data_root=root,
+                    evidence_root=evidence_dir,
                 )
                 for dataset_id, (target_from, target_to) in _WINDOWS.items()
             )
@@ -428,7 +322,7 @@ def run_q2_live_market_context_acceptance(  # noqa: PLR0915 - vertical acceptanc
             )
             snapshot_set_id = aggregate_source_snapshot_ids(snapshot_ids)
             if snapshot_set_id is None:
-                raise ValueError("Q2 certified snapshot set is empty")
+                raise ValueError("Q2 observed snapshot set is empty")
 
             early_as_of = min(
                 snapshot.created_at for snapshot in selected_snapshots
@@ -514,8 +408,7 @@ def run_q2_live_market_context_acceptance(  # noqa: PLR0915 - vertical acceptanc
         "schema": "ditto.q2-live-market-context.v1",
         "generated_at": generated_at,
         "data_root": str(root),
-        "profile": _PROFILE,
-        "certifications": products,
+        "datasets": products,
         "source_snapshot_ids": snapshot_ids,
         "source_snapshot_set_id": snapshot_set_id,
         "market_context": payload,
@@ -565,7 +458,6 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--data-root", required=True, type=Path)
     parser.add_argument("--evidence-root", required=True, type=Path)
     parser.add_argument("--recovery-evidence", required=True, type=Path)
-    parser.add_argument("--actor", required=True)
     parser.add_argument("--output", required=True, type=Path)
     return parser
 
@@ -577,7 +469,6 @@ def main(argv: list[str] | None = None) -> int:
         data_root=args.data_root,
         evidence_root=args.evidence_root,
         recovery_evidence=args.recovery_evidence,
-        actor=cast("str", args.actor),
     )
     output = args.output.expanduser().resolve(strict=False)
     output.parent.mkdir(parents=True, exist_ok=True)

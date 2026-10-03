@@ -24,13 +24,10 @@ describe("useSystemOverview", () => {
 	it("loads catalog identity before the exact-date governance projections", async () => {
 		const { result } = renderHook(() => useSystemOverview("2026-08-30"), { wrapper: createWrapper() });
 
-		await waitFor(() => expect(result.current.promotion.isSuccess).toBe(true));
+		await waitFor(() => expect(result.current.sourceHealth.isSuccess).toBe(true));
 
 		expect(result.current.datasetIds).toEqual(["etf_daily", "stock_daily"]);
-		expect(result.current.remediation.data?.totalItems).toBe(2);
 		expect(result.current.sourceHealth.data?.failoverCount).toBe(1);
-		expect(result.current.fallback.data?.approvalRequiredCount).toBe(1);
-		expect(result.current.promotion.data?.promotableCount).toBe(1);
 	});
 });
 

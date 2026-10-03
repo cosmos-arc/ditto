@@ -39,8 +39,6 @@ from ditto_application.processes.ingestion.post_ingest import (
 from ditto_application.processes.ingestion.result_handler import IngestionResultHandler
 from ditto_application.processes.ingestion.types import SourceFetchers
 from ditto_data.catalog import DataAssetRef, DataCatalogEntry, DataSchemaFingerprint
-from ditto_data.catalog.license import DatasetLicenseDraft, DatasetLicenseRecord
-from ditto_data.catalog.license_store import SQLiteDatasetLicenseStore
 from ditto_data.catalog.provider_payload import (
     FilesystemProviderPayloadStore,
     ProviderPayloadArtifact,
@@ -84,26 +82,7 @@ from ditto_platform.foundation import (
 from ditto_platform.foundation.storage import parquet_store
 
 
-def _license() -> DatasetLicenseRecord:
-    return DatasetLicenseRecord.create(
-        DatasetLicenseDraft(
-            dataset_id="stock_daily",
-            source="tushare",
-            terms_version="fixture-v1",
-            effective_from=date(2020, 1, 1),
-            effective_to=None,
-            local_cache="allowed",
-            derivative_compute="allowed",
-            display="restricted",
-            redistribution="prohibited",
-            notes="Integration fixture review only.",
-            reviewed_by="test-reviewer",
-            reviewed_at=datetime(2026, 7, 18, 8, 0, tzinfo=UTC),
-        )
-    )
-
-
-def _request(license_record: DatasetLicenseRecord) -> EvidenceCommitRequest:
+def _request() -> EvidenceCommitRequest:
     now = datetime(2026, 7, 18, 8, 30, tzinfo=UTC)
     asset = DataAssetRef(
         dataset_id="stock_daily",
@@ -121,7 +100,7 @@ def _request(license_record: DatasetLicenseRecord) -> EvidenceCommitRequest:
             canonical_asset=asset,
             request_parameters_hash="sha256:request",
             response_metadata=(("snapshot_layer", "normalized_provider_payload"),),
-            license_record_id=license_record.record_id,
+            license_record_id="license-test-0001",
             row_count=1,
             payload_uri="stock_daily/2026/07/17.parquet",
             payload_retained=True,
@@ -190,21 +169,17 @@ def test_evidence_chain_persists_and_completed_replay_is_idempotent(
     pool = SQLitePool(str(tmp_path / "runtime.sqlite"))
     client = SQLiteClient(pool)
     lifecycle = SQLitePartitionLifecycleStore(client)
-    licenses = SQLiteDatasetLicenseStore(client)
     snapshots = SQLiteProviderSnapshotStore(client)
     catalog = SQLiteDataCatalog(client)
     lineage = SQLiteDataLineage(client)
     logs = IngestionLogStore(IngestionLogReader(client), IngestionLogWriter(client))
-    license_record = _license()
-    licenses.append_license(license_record)
-    request = _request(license_record)
+    request = _request()
     committer = IngestionEvidenceCommitter(
         ports=EvidenceCommitPorts(
             lifecycle_reader=lifecycle,
             lifecycle_writer=lifecycle,
             snapshot_writer=snapshots,
             snapshot_reader=snapshots,
-            license_reader=licenses,
             catalog_writer=catalog,
             lineage_recorder=lineage,
             lineage_reader=lineage,
@@ -288,21 +263,17 @@ def test_retry_after_evidence_write_before_checkpoint_does_not_duplicate(
     pool = SQLitePool(str(tmp_path / "runtime.sqlite"))
     client = SQLiteClient(pool)
     lifecycle = SQLitePartitionLifecycleStore(client)
-    licenses = SQLiteDatasetLicenseStore(client)
     snapshots = SQLiteProviderSnapshotStore(client)
     catalog = SQLiteDataCatalog(client)
     lineage = SQLiteDataLineage(client)
     logs = IngestionLogStore(IngestionLogReader(client), IngestionLogWriter(client))
-    license_record = _license()
-    licenses.append_license(license_record)
-    request = _request(license_record)
+    request = _request()
     committer = IngestionEvidenceCommitter(
         ports=EvidenceCommitPorts(
             lifecycle_reader=lifecycle,
             lifecycle_writer=lifecycle,
             snapshot_writer=snapshots,
             snapshot_reader=snapshots,
-            license_reader=licenses,
             catalog_writer=catalog,
             lineage_recorder=lineage,
             lineage_reader=lineage,
@@ -375,19 +346,15 @@ def _pipeline(
     pool = SQLitePool(str(tmp_path / "runtime.sqlite"))
     client = SQLiteClient(pool)
     lifecycle = SQLitePartitionLifecycleStore(client)
-    licenses = SQLiteDatasetLicenseStore(client)
     snapshots = SQLiteProviderSnapshotStore(client, now=snapshot_now)
     catalog = SQLiteDataCatalog(client)
     lineage = SQLiteDataLineage(client)
     logs = IngestionLogStore(IngestionLogReader(client), IngestionLogWriter(client))
-    license_record = replace(_license(), dataset_id=dataset, display=display)
-    licenses.append_license(license_record)
     ports = EvidenceCommitPorts(
         lifecycle_reader=lifecycle,
         lifecycle_writer=lifecycle,
         snapshot_writer=snapshots,
         snapshot_reader=snapshots,
-        license_reader=licenses,
         catalog_writer=catalog,
         lineage_recorder=lineage,
         lineage_reader=lineage,
@@ -425,7 +392,7 @@ def _pipeline(
         quality_checker=QualityChecker(),
         evidence_committer=committer,
         provider_payload_writer=payloads,
-        license_record_id=license_record.record_id,
+        license_record_id="license-test-0001",
     )
     try:
         yield _Pipeline(ctx, writer, store, market, ports)
@@ -554,7 +521,7 @@ def _coordinator(runtime: _Pipeline, source: _MarketSource):
             quality_checker=runtime.context.quality_checker,
             evidence_committer=runtime.context.evidence_committer,
             provider_payload_writer=runtime.context.provider_payload_writer,
-            license_record_id=runtime.context.license_record_id,
+            license_record_id="license-test-0001",
         ),
     )
     return coordinator, metadata

@@ -260,8 +260,7 @@ def test_planning_document_thaws_frozen_strategy_json(mocker) -> None:
 def test_dataset_requirements_start_at_actual_research_snapshot_boundary() -> None:
     binding = LiveDatasetSnapshotBinding(
         dataset_id="stock_daily",
-        certification_report_id="certification-1",
-        certified_at="2026-08-01T00:00:00+00:00",
+        observed_at="2026-08-01T00:00:00+00:00",
         certified_from="2015-01-01",
         certified_through="2026-07-31",
         snapshot_ids=("provider-snapshot-1",),

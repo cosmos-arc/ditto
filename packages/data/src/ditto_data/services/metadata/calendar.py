@@ -6,14 +6,35 @@ CalendarService - 交易日历子服务.
 
 from __future__ import annotations
 
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, time, timedelta
+from hashlib import sha256
 from typing import Any
+from zoneinfo import ZoneInfo
 
 import polars as pl
 from ditto_platform.foundation import traced
 
-from ditto_data.catalog.field_evidence import publication_calendar_boundary
 from ditto_data.storage.metadata.calendar import CalendarReader, CalendarWriter
+
+
+def publication_calendar_boundary(
+    disclosed: date, evidence: tuple[str, ...]
+) -> tuple[datetime, str]:
+    """Validate and address a complete daily calendar through the next open."""
+    if not evidence:
+        raise ValueError("publication calendar evidence is missing")
+    expected = disclosed + timedelta(days=1)
+    for index, item in enumerate(evidence):
+        final = index == len(evidence) - 1
+        if item != f"{expected.isoformat()}:{int(final)}":
+            raise ValueError("publication calendar evidence is incomplete")
+        if not final:
+            expected += timedelta(days=1)
+    boundary = datetime.combine(expected, time(9, 30), ZoneInfo("Asia/Shanghai"))
+    digest = sha256(
+        ("SSE:Asia/Shanghai:09:30:v1|" + "|".join(evidence)).encode()
+    ).hexdigest()
+    return boundary, digest
 
 
 def compute_calendar_enrichment(days: list[dict[str, Any]]) -> list[dict[str, Any]]:

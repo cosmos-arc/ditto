@@ -8,6 +8,7 @@ from typing import Annotated
 
 from dishka import FromComponent
 from dishka.integrations.fastapi import inject
+from ditto_application.catalog_freshness import observed_snapshot_ids
 from ditto_application.exceptions import AppProcessError, AppQueryError
 from ditto_application.processes.experiments.regime_diagnostics_reader import (
     RegimeDiagnosticsReader,
@@ -25,7 +26,12 @@ from ditto_application.queries.market_context import (
     MarketContextRequest,
     MarketContextView,
 )
+from ditto_application.queries.market_context_evidence import (
+    MARKET_CONTEXT_DATASETS,
+)
 from ditto_application.queries.metadata import MetadataQueryFacade
+from ditto_data.catalog.source_snapshot import ProviderSnapshotReader
+from ditto_data.ingestion.partition_state import PartitionLifecycleReader
 from fastapi import APIRouter, Query
 
 from ditto_apps.api.errors import NotFoundError, UnprocessableEntityError
@@ -206,12 +212,22 @@ def _regime_response(view: RegimeDiagnosticsView) -> RegimeDiagnosticsResponse:
 @inject
 async def get_market_context(
     facade: Annotated[MarketContextFacade, FromComponent()],
+    snapshots: Annotated[ProviderSnapshotReader, FromComponent()],
+    lifecycle: Annotated[PartitionLifecycleReader, FromComponent()],
     as_of: datetime,
     knowledge_cutoff: datetime,
     publication_cutoff: datetime,
-    source_snapshot_id: Annotated[list[str], Query(min_length=1)],
+    source_snapshot_id: Annotated[list[str] | None, Query()] = None,
 ) -> APIResponse[MarketContextResponse]:
-    """Read one market context from explicit immutable provider snapshots."""
+    """Read one market context from explicit or server-resolved snapshots."""
+    resolved = tuple(source_snapshot_id or ())
+    if not resolved:
+        resolved = observed_snapshot_ids(
+            snapshots,
+            lifecycle,
+            dataset_ids=MARKET_CONTEXT_DATASETS,
+            knowledge_cutoff=knowledge_cutoff,
+        )
     try:
         view = await asyncio.to_thread(
             facade.get_context,
@@ -219,7 +235,7 @@ async def get_market_context(
                 as_of=as_of,
                 knowledge_cutoff=knowledge_cutoff,
                 publication_cutoff=publication_cutoff,
-                source_snapshot_ids=tuple(source_snapshot_id),
+                source_snapshot_ids=resolved,
             ),
         )
     except (AppQueryError, ValueError) as exc:

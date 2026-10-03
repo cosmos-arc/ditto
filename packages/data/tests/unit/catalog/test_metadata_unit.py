@@ -237,14 +237,19 @@ class TestDefaultMetadataMaturityAssignments:
             "global_index_daily",
             "industry_classification",
             "industry_mapping",
+            "stock_basic",
+            "stock_daily",
+            "stock_status",
+            "index_weight",
+            "corporate_actions",
+            "macro_indicators",
+            "fx_daily",
+            "commodity_daily",
         }
     )
 
     EXPERIMENTAL: ClassVar[frozenset[str]] = frozenset(
         {
-            "stock_basic",
-            "stock_daily",
-            "stock_status",
             "balance_sheet",
             "income_statement",
             "cash_flow",
@@ -252,11 +257,6 @@ class TestDefaultMetadataMaturityAssignments:
             "valuation_metrics",
             "margin_trading",
             "pledge_ratio",
-            "corporate_actions",
-            "macro_indicators",
-            "fx_daily",
-            "commodity_daily",
-            "index_weight",
         }
     )
 

@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import polars as pl
-from ditto_data.catalog.promotion import DatasetMaturityPromotionReader
 from ditto_data.services.macro_service import MacroQuery, MacroService
 from ditto_kernel.market import MacroCategory, MacroFrequency
 
@@ -25,10 +24,8 @@ class MacroQueryFacade:
     def __init__(
         self,
         macro_service: MacroService,
-        maturity_promotion_reader: DatasetMaturityPromotionReader | None = None,
     ) -> None:
         self._service = macro_service
-        self._maturity_promotion_reader = maturity_promotion_reader
 
     def find_indicators(
         self,
@@ -105,6 +102,5 @@ class MacroQueryFacade:
         assert_query_datasets_allowed(
             (_MACRO_INDICATORS_DATASET,),
             allow_experimental_data=allow_experimental_data,
-            maturity_promotion_reader=self._maturity_promotion_reader,
             context="macro query macro_indicators",
         )

@@ -8,21 +8,6 @@ import polars as pl
 import pytest
 from ditto_application.exceptions import AppQueryError
 from ditto_application.queries.market import MarketQueryFacade
-from ditto_data.catalog.promotion import DatasetMaturityPromotion
-
-
-class _MaturityPromotionReader:
-    def __init__(
-        self,
-        promotions_by_dataset: dict[str, DatasetMaturityPromotion] | None = None,
-    ) -> None:
-        self._promotions_by_dataset = promotions_by_dataset or {}
-
-    def get_dataset_maturity_promotion(
-        self,
-        dataset_id: str,
-    ) -> DatasetMaturityPromotion | None:
-        return self._promotions_by_dataset.get(dataset_id)
 
 
 class TestMarketQueryFacadeFindBars:
@@ -66,19 +51,20 @@ class TestMarketQueryFacadeFindBars:
         with pytest.raises(AppQueryError, match="adj"):
             facade.find_bars(instrument_ids=[1], start=None, end=None, adj="invalid")
 
-    def test_stock_bars_require_explicit_research_opt_in(self) -> None:
+    def test_stock_bars_available_without_opt_in(self) -> None:
         service = MagicMock(spec=["find_bars"])
+        service.find_bars.return_value = pl.DataFrame()
         facade = MarketQueryFacade(market_service=service)
 
-        with pytest.raises(AppQueryError, match="allow_experimental_data=True"):
-            facade.find_bars(
-                instrument_ids=[1],
-                start="2026-06-01",
-                end="2026-06-01",
-                asset_class="stock",
-            )
+        facade.find_bars(
+            instrument_ids=[1],
+            start="2026-06-01",
+            end="2026-06-01",
+            asset_class="stock",
+        )
 
-        service.find_bars.assert_not_called()
+        query_arg = service.find_bars.call_args[0][0]
+        assert query_arg.asset_class == "stock"
 
     def test_stock_bars_allow_explicit_research_opt_in(self) -> None:
         service = MagicMock(spec=["find_bars"])
@@ -96,20 +82,18 @@ class TestMarketQueryFacadeFindBars:
         query_arg = service.find_bars.call_args[0][0]
         assert query_arg.asset_class == "stock"
 
-    def test_stock_bars_inferred_from_instrument_id_require_research_opt_in(
-        self,
-    ) -> None:
+    def test_stock_bars_inferred_from_instrument_id_available(self) -> None:
         service = MagicMock(spec=["find_bars"])
+        service.find_bars.return_value = pl.DataFrame()
         facade = MarketQueryFacade(market_service=service)
 
-        with pytest.raises(AppQueryError, match="stock_daily"):
-            facade.find_bars(
-                instrument_ids=[1_000_001],
-                start="2026-06-01",
-                end="2026-06-01",
-            )
+        facade.find_bars(
+            instrument_ids=[1_000_001],
+            start="2026-06-01",
+            end="2026-06-01",
+        )
 
-        service.find_bars.assert_not_called()
+        service.find_bars.assert_called_once()
 
     def test_stock_bars_inferred_from_instrument_id_allow_research_opt_in(
         self,
@@ -144,62 +128,6 @@ class TestMarketQueryFacadeFindBars:
         assert query_arg.instrument_ids == [2_000_001]
         assert query_arg.asset_class is None
 
-    def test_promoted_stock_bars_do_not_need_research_opt_in(self) -> None:
-        service = MagicMock(spec=["find_bars"])
-        service.find_bars.return_value = pl.DataFrame()
-        facade = MarketQueryFacade(
-            market_service=service,
-            maturity_promotion_reader=_MaturityPromotionReader(
-                {
-                    "stock_daily": DatasetMaturityPromotion(
-                        dataset_id="stock_daily",
-                        previous_maturity="experimental",
-                        promoted_maturity="initial-focus",
-                        promoted_by="architecture-review",
-                    )
-                }
-            ),
-        )
-
-        facade.find_bars(
-            instrument_ids=[1],
-            start="2026-06-01",
-            end="2026-06-01",
-            asset_class="stock",
-        )
-
-        query_arg = service.find_bars.call_args[0][0]
-        assert query_arg.asset_class == "stock"
-
-    def test_promoted_stock_bars_inferred_from_instrument_id_do_not_need_opt_in(
-        self,
-    ) -> None:
-        service = MagicMock(spec=["find_bars"])
-        service.find_bars.return_value = pl.DataFrame()
-        facade = MarketQueryFacade(
-            market_service=service,
-            maturity_promotion_reader=_MaturityPromotionReader(
-                {
-                    "stock_daily": DatasetMaturityPromotion(
-                        dataset_id="stock_daily",
-                        previous_maturity="experimental",
-                        promoted_maturity="initial-focus",
-                        promoted_by="architecture-review",
-                    )
-                }
-            ),
-        )
-
-        facade.find_bars(
-            instrument_ids=[1_000_001],
-            start="2026-06-01",
-            end="2026-06-01",
-        )
-
-        query_arg = service.find_bars.call_args[0][0]
-        assert query_arg.instrument_ids == [1_000_001]
-        assert query_arg.asset_class is None
-
 
 class TestMarketQueryFacadeListBars:
     """MarketQueryFacade.list_bars — 带资产类别和 limit 的查询。"""
@@ -225,47 +153,45 @@ class TestMarketQueryFacadeListBars:
             limit=500,
         )
 
-    def test_list_stock_bars_require_explicit_research_opt_in(self) -> None:
+    def test_list_stock_bars_available_without_opt_in(self) -> None:
         service = MagicMock(spec=["list_bars"])
+        service.list_bars.return_value = pl.DataFrame()
         facade = MarketQueryFacade(market_service=service)
 
-        with pytest.raises(AppQueryError, match="allow_experimental_data=True"):
-            facade.list_bars(
-                instrument_ids=[100],
-                start="2026-06-01",
-                end="2026-06-01",
-                asset_class="stock",
-            )
+        facade.list_bars(
+            instrument_ids=[100],
+            start="2026-06-01",
+            end="2026-06-01",
+            asset_class="stock",
+        )
 
-        service.list_bars.assert_not_called()
+        service.list_bars.assert_called_once()
 
-    def test_list_stock_bars_inferred_from_instrument_id_require_opt_in(
-        self,
-    ) -> None:
+    def test_list_stock_bars_inferred_from_instrument_id_available(self) -> None:
         service = MagicMock(spec=["list_bars"])
+        service.list_bars.return_value = pl.DataFrame()
         facade = MarketQueryFacade(market_service=service)
 
-        with pytest.raises(AppQueryError, match="stock_daily"):
-            facade.list_bars(
-                instrument_ids=[1_000_001],
-                start="2026-06-01",
-                end="2026-06-01",
-            )
+        facade.list_bars(
+            instrument_ids=[1_000_001],
+            start="2026-06-01",
+            end="2026-06-01",
+        )
 
-        service.list_bars.assert_not_called()
+        service.list_bars.assert_called_once()
 
-    def test_list_mixed_bars_blocks_inferred_experimental_dataset(self) -> None:
+    def test_list_mixed_bars_available_across_lanes(self) -> None:
         service = MagicMock(spec=["list_bars"])
+        service.list_bars.return_value = pl.DataFrame()
         facade = MarketQueryFacade(market_service=service)
 
-        with pytest.raises(AppQueryError, match="stock_daily"):
-            facade.list_bars(
-                instrument_ids=[1_000_001, 2_000_001],
-                start="2026-06-01",
-                end="2026-06-01",
-            )
+        facade.list_bars(
+            instrument_ids=[1_000_001, 2_000_001],
+            start="2026-06-01",
+            end="2026-06-01",
+        )
 
-        service.list_bars.assert_not_called()
+        service.list_bars.assert_called_once()
 
 
 class TestMarketQueryFacadeGetConstituents:
@@ -287,21 +213,23 @@ class TestMarketQueryFacadeGetConstituents:
 class TestMarketQueryFacadeGetIndexWeights:
     """MarketQueryFacade.get_index_weights — explicit PIT and maturity gate."""
 
-    def test_requires_explicit_research_opt_in_for_experimental_dataset(self) -> None:
+    def test_index_weights_available_without_opt_in(self) -> None:
         service = MagicMock()
         capital_store = MagicMock()
+        capital_store.get_index_composition.return_value = pl.DataFrame(
+            {"instrument_id": [1, 2], "weight": [60.0, 40.0]}
+        )
         facade = MarketQueryFacade(
             market_service=service,
             capital_store=capital_store,
         )
 
-        with pytest.raises(AppQueryError, match="index_weight"):
-            facade.get_index_weights(
-                index_id="000300.SH",
-                as_of_date="2024-06-30",
-            )
+        facade.get_index_weights(
+            index_id="000300.SH",
+            as_of_date="2024-06-30",
+        )
 
-        capital_store.get_index_composition.assert_not_called()
+        capital_store.get_index_composition.assert_called_once()
 
     def test_delegates_as_of_query_when_research_opted_in(self) -> None:
         service = MagicMock()
@@ -326,31 +254,6 @@ class TestMarketQueryFacadeGetIndexWeights:
             str(capital_store.get_index_composition.call_args.args[1]) == "2024-06-30"
         )
         assert len(result) == 2
-
-    def test_promoted_dataset_does_not_need_research_opt_in(self) -> None:
-        capital_store = MagicMock()
-        capital_store.get_index_composition.return_value = pl.DataFrame()
-        facade = MarketQueryFacade(
-            market_service=MagicMock(),
-            capital_store=capital_store,
-            maturity_promotion_reader=_MaturityPromotionReader(
-                {
-                    "index_weight": DatasetMaturityPromotion(
-                        dataset_id="index_weight",
-                        previous_maturity="experimental",
-                        promoted_maturity="initial-focus",
-                        promoted_by="data-product-certification",
-                    )
-                }
-            ),
-        )
-
-        facade.get_index_weights(
-            index_id="000300.SH",
-            as_of_date="2024-06-30",
-        )
-
-        capital_store.get_index_composition.assert_called_once()
 
     def test_rejects_invalid_as_of_date(self) -> None:
         facade = MarketQueryFacade(

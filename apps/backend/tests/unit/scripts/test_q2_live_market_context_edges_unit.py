@@ -13,28 +13,13 @@ import polars as pl
 import pytest
 from ditto_agent.contracts.evidence import EvidenceEnvelope
 from ditto_agent.contracts.temporal import TemporalToolContext
-from ditto_application.commands.data_product_certification import (
-    DataProductCertificationCommands,
-)
-from ditto_application.commands.data_product_certification_builder import (
-    CertificationBuildRequest,
-    DataProductCertificationBuilder,
-)
 from ditto_application.exceptions import AppQueryError
 from ditto_application.queries.market_context import MarketContextFacade
 from ditto_application.queries.market_context_evidence import (
     MarketContextEvidenceQueryFacade,
 )
 from ditto_apps.scripts import q2_live_market_context as subject
-from ditto_data.catalog.certification import (
-    CertificationEvidence,
-    CertificationGovernanceStore,
-    CertificationReviewEvent,
-    DatasetCertificationReport,
-    EvidenceCheck,
-)
 from ditto_data.catalog.contracts import DataAssetRef
-from ditto_data.catalog.coverage import DatasetCoverage
 from ditto_data.catalog.provider_payload import (
     ProviderPayloadArtifact,
     ProviderPayloadReader,
@@ -84,68 +69,6 @@ def _snapshot(
     )
 
 
-def _report(
-    *,
-    dataset_id: str = "index_daily",
-    target_from: date = _TARGET_DATE,
-    target_to: date = _TARGET_DATE,
-    snapshot_ids: tuple[str, ...] = ("snapshot-1",),
-    generated_at: datetime = datetime(2024, 3, 29, 0, 1, tzinfo=UTC),
-) -> DatasetCertificationReport:
-    coverage = DatasetCoverage(
-        dataset_id=dataset_id,
-        schedule="trading_days",
-        target_from=target_from,
-        target_to=target_to,
-        native_from=target_from,
-        native_to=target_to,
-        actual_from=target_from,
-        actual_to=target_to,
-        raw_from=target_from,
-        complete_from=target_from,
-        expected_partitions=1,
-        actual_partitions=1,
-        gaps=(),
-        exceptions=(),
-        collected_at=generated_at,
-    )
-    passing = EvidenceCheck(
-        name="passing",
-        evidence_uri="artifact+sha256://passing",
-        passed=True,
-    )
-    evidence = CertificationEvidence(
-        source_ids=("tushare",),
-        schema_versions=("1",),
-        snapshot_ids=snapshot_ids,
-        dq_rule_version="dq-v1",
-        dq_results=(passing,),
-        pit_replay_results=(passing,),
-        fallback_history=("source:tushare:primary:no-fallback-event",),
-        override_history=(),
-        freshness_results=(passing,),
-        recovery_results=(passing,),
-        license_record_ids=(f"license:{dataset_id}",),
-        consumer_results=(passing,),
-    )
-    return DatasetCertificationReport.create(
-        dataset_id=dataset_id,
-        profile="research_daily",
-        coverage=coverage,
-        evidence=evidence,
-        generated_at=generated_at,
-    )
-
-
-class _EventStore:
-    def __init__(self, events: tuple[CertificationReviewEvent, ...]) -> None:
-        self.events = events
-
-    def list_events(self, report_id: str) -> tuple[CertificationReviewEvent, ...]:
-        del report_id
-        return self.events
-
-
 class _PayloadReader:
     def __init__(self, frame: pl.DataFrame) -> None:
         self.frame = frame
@@ -169,80 +92,6 @@ class _SnapshotReader:
             snapshot
             for snapshot in self.snapshots
             if dataset_id is None or snapshot.dataset_id == dataset_id
-        )
-
-
-class _GovernanceStore:
-    def __init__(self) -> None:
-        self.reports: dict[str, DatasetCertificationReport] = {}
-        self.active: dict[tuple[str, str], DatasetCertificationReport] = {}
-        self.events: dict[str, list[CertificationReviewEvent]] = {}
-
-    def append_report(
-        self,
-        report: DatasetCertificationReport,
-    ) -> DatasetCertificationReport:
-        self.reports[report.report_id] = report
-        return report
-
-    def approve_report(
-        self,
-        report_id: str,
-        *,
-        reviewer: str,
-        reviewed_at: datetime,
-    ) -> CertificationReviewEvent:
-        report = self.reports[report_id]
-        event = CertificationReviewEvent(
-            event_id=sum(len(events) for events in self.events.values()) + 1,
-            report_id=report.report_id,
-            dataset_id=report.dataset_id,
-            profile=report.profile,
-            action="approved",
-            actor=reviewer,
-            occurred_at=reviewed_at,
-        )
-        self.events.setdefault(report_id, []).append(event)
-        self.active[(report.dataset_id, report.profile)] = report
-        return event
-
-    def get_active_report(
-        self,
-        dataset_id: str,
-        profile: str,
-    ) -> DatasetCertificationReport | None:
-        return self.active.get((dataset_id, profile))
-
-    def list_events(
-        self,
-        report_id: str,
-    ) -> tuple[CertificationReviewEvent, ...]:
-        return tuple(self.events.get(report_id, ()))
-
-    def install_active(self, report: DatasetCertificationReport) -> None:
-        self.append_report(report)
-        self.approve_report(
-            report.report_id,
-            reviewer="existing-reviewer",
-            reviewed_at=report.generated_at,
-        )
-
-
-class _CertificationBuilder:
-    def __init__(self) -> None:
-        self.requests: list[CertificationBuildRequest] = []
-
-    def build(
-        self,
-        request: CertificationBuildRequest,
-    ) -> DatasetCertificationReport:
-        self.requests.append(request)
-        return _report(
-            dataset_id=request.dataset_id,
-            target_from=request.target_from or request.target_to,
-            target_to=request.target_to,
-            snapshot_ids=request.snapshot_ids,
-            generated_at=request.generated_at,
         )
 
 
@@ -326,7 +175,7 @@ def _install_acceptance_fakes(
     *,
     rejects_early_query: bool = True,
     tampered_evidence: bool = False,
-) -> tuple[Path, Path, Path, _Container, _CertificationBuilder]:
+) -> tuple[Path, Path, Path, _Container]:
     data_root = tmp_path / "state"
     data_root.mkdir()
     evidence_root = tmp_path / "evidence"
@@ -346,11 +195,6 @@ def _install_acceptance_fakes(
         )
         for dataset_id, (target_from, target_to) in _WINDOWS.items()
     )
-    store = _GovernanceStore()
-    builder = _CertificationBuilder()
-    commands = DataProductCertificationCommands(
-        cast(CertificationGovernanceStore, store),
-    )
     global_frame = pl.DataFrame(
         {
             "source_ticker": ["N225"],
@@ -363,9 +207,6 @@ def _install_acceptance_fakes(
             ProviderSnapshotReader,
             _SnapshotReader(snapshots),
         ),
-        DataProductCertificationBuilder: cast(DataProductCertificationBuilder, builder),
-        DataProductCertificationCommands: commands,
-        CertificationGovernanceStore: cast(CertificationGovernanceStore, store),
         MarketContextFacade: cast(
             MarketContextFacade,
             _MarketFacade(rejects_early_query=rejects_early_query),
@@ -407,7 +248,7 @@ def _install_acceptance_fakes(
         )
 
     monkeypatch.setattr(subject, "MarketContextEvidenceTool", evidence_tool_factory)
-    return data_root, evidence_root, recovery_path, container, builder
+    return data_root, evidence_root, recovery_path, container
 
 
 def _valid_market_context(*, status: str = "ready") -> dict[str, object]:
@@ -533,36 +374,6 @@ def test_recovery_evidence_requires_a_passing_addressed_payload(
     assert digest == subject._sha256_file(passing)
 
 
-def test_active_report_requires_a_matching_approved_event() -> None:
-    report = _report()
-    empty_store = cast(CertificationGovernanceStore, _EventStore(()))
-    with pytest.raises(ValueError, match="active certification drift"):
-        subject._validate_active_report(
-            report,
-            target_from=_TARGET_DATE,
-            target_to=_TARGET_DATE,
-            snapshot_ids=("snapshot-1",),
-            store=empty_store,
-        )
-
-    approved = CertificationReviewEvent(
-        event_id=1,
-        report_id=report.report_id,
-        dataset_id=report.dataset_id,
-        profile=report.profile,
-        action="approved",
-        actor="q2-test",
-        occurred_at=report.generated_at,
-    )
-    subject._validate_active_report(
-        report,
-        target_from=_TARGET_DATE,
-        target_to=_TARGET_DATE,
-        snapshot_ids=("snapshot-1",),
-        store=cast(CertificationGovernanceStore, _EventStore((approved,))),
-    )
-
-
 def test_global_payload_requires_retention_and_preserves_artifact_identity() -> None:
     frame = pl.DataFrame({"value": [1]})
     reader = _PayloadReader(frame)
@@ -653,57 +464,7 @@ def test_market_context_contract_accepts_honest_degradation() -> None:
     subject._assert_market_context_contract(_valid_market_context(status="degraded"))
 
 
-def test_certification_reuses_a_matching_active_report(
-    monkeypatch: pytest.MonkeyPatch,
-    tmp_path: Path,
-) -> None:
-    report = _report()
-    store = _GovernanceStore()
-    store.install_active(report)
-    builder = _CertificationBuilder()
-    commands = DataProductCertificationCommands(
-        cast(CertificationGovernanceStore, store),
-    )
-    data_root = tmp_path / "state"
-    data_root.mkdir()
-    recovery = tmp_path / "recovery.json"
-    recovery.write_bytes(orjson.dumps({"passed": True}))
-
-    def probe_consumer_payload(
-        probe_root: Path,
-        dataset_id: str,
-    ) -> dict[str, int | str]:
-        assert probe_root == data_root
-        return {"dataset_id": dataset_id, "row_count": 1}
-
-    monkeypatch.setattr(subject, "probe_consumer_payload", probe_consumer_payload)
-    authority = subject._CertificationAuthority(
-        data_root=data_root,
-        evidence_root=tmp_path / "evidence",
-        recovery_path=recovery,
-        recovery_hash=subject._sha256_file(recovery),
-        generated_at=report.generated_at,
-        actor="q2-test",
-        builder=cast(DataProductCertificationBuilder, builder),
-        commands=commands,
-        store=cast(CertificationGovernanceStore, store),
-    )
-
-    product = subject._certify_product(
-        dataset_id="index_daily",
-        target_from=_TARGET_DATE,
-        target_to=_TARGET_DATE,
-        expected_dates=(_TARGET_DATE,),
-        snapshot_ids=("snapshot-1",),
-        authority=authority,
-    )
-
-    assert product.report_id == report.report_id
-    assert product.snapshot_ids == ("snapshot-1",)
-    assert builder.requests == []
-
-
-def test_acceptance_rejects_wrong_state_root_and_noncanonical_actor(
+def test_acceptance_rejects_wrong_state_root(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
@@ -716,16 +477,6 @@ def test_acceptance_rejects_wrong_state_root_and_noncanonical_actor(
             data_root=data_root,
             evidence_root=tmp_path / "evidence",
             recovery_evidence=tmp_path / "unused-recovery.json",
-            actor="q2-test",
-        )
-
-    monkeypatch.setattr(subject, "state_root_matches", lambda root: root == data_root)
-    with pytest.raises(ValueError, match="actor is invalid"):
-        subject.run_q2_live_market_context_acceptance(
-            data_root=data_root,
-            evidence_root=tmp_path / "evidence",
-            recovery_evidence=tmp_path / "unused-recovery.json",
-            actor=" q2-test ",
         )
 
 
@@ -733,7 +484,7 @@ def test_acceptance_builds_an_isolated_deterministic_degraded_evidence_chain(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
-    data_root, evidence_root, recovery, container, builder = _install_acceptance_fakes(
+    data_root, evidence_root, recovery, container = _install_acceptance_fakes(
         monkeypatch, tmp_path
     )
 
@@ -741,19 +492,17 @@ def test_acceptance_builds_an_isolated_deterministic_degraded_evidence_chain(
         data_root=data_root,
         evidence_root=evidence_root,
         recovery_evidence=recovery,
-        actor="q2-test",
     )
 
     assert result["passed"] is True
     assert isinstance(result["market_context"], Mapping)
     assert isinstance(result["missing_data_behavior"], Mapping)
     assert isinstance(result["historical_replay"], Mapping)
-    assert isinstance(result["certifications"], Sequence)
+    assert isinstance(result["datasets"], Sequence)
     assert result["market_context"]["status"] == "degraded"
     assert result["missing_data_behavior"]["passed"] is True
     assert result["historical_replay"]["deterministic"] is True
-    assert len(result["certifications"]) == len(_WINDOWS)
-    assert len(builder.requests) == len(_WINDOWS)
+    assert len(result["datasets"]) == len(_WINDOWS)
     assert container.closed is True
 
 
@@ -761,7 +510,7 @@ def test_acceptance_requires_the_pre_acquisition_query_to_fail_closed(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
-    data_root, evidence_root, recovery, container, _ = _install_acceptance_fakes(
+    data_root, evidence_root, recovery, container = _install_acceptance_fakes(
         monkeypatch,
         tmp_path,
         rejects_early_query=False,
@@ -772,7 +521,6 @@ def test_acceptance_requires_the_pre_acquisition_query_to_fail_closed(
             data_root=data_root,
             evidence_root=evidence_root,
             recovery_evidence=recovery,
-            actor="q2-test",
         )
 
     assert container.closed is True
@@ -782,7 +530,7 @@ def test_acceptance_rejects_tampered_agent_replay_evidence(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
-    data_root, evidence_root, recovery, container, _ = _install_acceptance_fakes(
+    data_root, evidence_root, recovery, container = _install_acceptance_fakes(
         monkeypatch,
         tmp_path,
         tampered_evidence=True,
@@ -793,7 +541,6 @@ def test_acceptance_rejects_tampered_agent_replay_evidence(
             data_root=data_root,
             evidence_root=evidence_root,
             recovery_evidence=recovery,
-            actor="q2-test",
         )
 
     assert container.closed is True
@@ -819,7 +566,6 @@ def test_main_writes_canonical_evidence_and_stdout_summary(
             "data_root": data_root,
             "evidence_root": evidence_root,
             "recovery_evidence": recovery,
-            "actor": "q2-test",
         }
         return result
 
@@ -837,8 +583,6 @@ def test_main_writes_canonical_evidence_and_stdout_summary(
             str(evidence_root),
             "--recovery-evidence",
             str(recovery),
-            "--actor",
-            "q2-test",
             "--output",
             str(output),
         ],

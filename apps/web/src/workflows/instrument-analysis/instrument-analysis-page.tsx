@@ -1,5 +1,4 @@
 import type { ReactElement } from "react";
-import { fetchDataProductEvidence } from "@/features/data-products";
 import {
 	type InstrumentHubSearch,
 	InstrumentHubPage as InstrumentHubView,
@@ -10,12 +9,11 @@ import {
 import { getSelectionRun, selectionKeys } from "@/features/selection";
 
 const technicalDependencies: InstrumentTechnicalDependencies = {
-	fetchSourceEvidence: fetchDataProductEvidence,
 	getSelectionRun,
 	selectionRunKey: selectionKeys.run,
 };
 
-/** Compose Instrument analysis with Selection and certified Data Product evidence. */
+/** Compose Instrument analysis with Selection; technical snapshots resolve server-side. */
 export function InstrumentTechnicalView(props: InstrumentTechnicalSlotProps): ReactElement {
 	return <InstrumentTechnicalEvidenceView {...props} dependencies={technicalDependencies} />;
 }

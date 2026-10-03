@@ -2,16 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Literal
-
 from pydantic import BaseModel, ConfigDict, Field
-
-type MaturityPromotionRevocationReason = Literal[
-    "policy_regression",
-    "failed_revalidation",
-    "manual_override",
-    "evidence_invalidated",
-]
 
 
 class DatasetStatusResponse(BaseModel):
@@ -29,38 +20,6 @@ class DatasetStatusResponse(BaseModel):
     dataset_maturity_warning: str | None = Field(
         default=None,
         description="数据集能力成熟度警告",
-    )
-    dataset_promotion_criteria: list[str] = Field(
-        default_factory=list,
-        description="数据集晋级到运行时焦点能力前需满足的条件",
-    )
-    dataset_promotion_status: str | None = Field(
-        default=None,
-        description="数据集晋级评估状态 (not_applicable/blocked/ready)",
-    )
-    dataset_promotion_missing_criteria: list[str] = Field(
-        default_factory=list,
-        description="当前缺失的晋级证据条件",
-    )
-    dataset_promotion_satisfied_criteria: list[str] = Field(
-        default_factory=list,
-        description="已满足的晋级证据条件",
-    )
-    dataset_promotion_rejected_criteria: list[str] = Field(
-        default_factory=list,
-        description="已审核但未通过的晋级证据条件",
-    )
-    latest_revocation_reason: MaturityPromotionRevocationReason | None = Field(
-        default=None,
-        description="最近一次晋级撤销原因分类",
-    )
-    latest_revoked_by: str | None = Field(
-        default=None,
-        description="最近一次晋级撤销人或撤销主体",
-    )
-    latest_revoked_at: str | None = Field(
-        default=None,
-        description="最近一次晋级撤销时间",
     )
     record_count: int = Field(default=0, description="最新成功摄取的记录数")
     last_attempt: str | None = Field(default=None, description="最近一次尝试时间")
@@ -109,8 +68,6 @@ class DatasetMaturitySummaryResponse(BaseModel):
     )
     failed_count: int = Field(default=0, description="最新摄取状态为 failed 的数量")
     warning_count: int = Field(default=0, description="包含 maturity 警告的数据集数量")
-    promotion_ready_count: int = Field(default=0, description="晋级评估 ready 数量")
-    promotion_blocked_count: int = Field(default=0, description="晋级评估 blocked 数量")
 
     model_config = ConfigDict(strict=True, extra="ignore")
 
@@ -123,208 +80,6 @@ class IngestionStatusResponse(BaseModel):
         default_factory=list,
         description="按能力成熟度分组的摄取与 freshness 摘要",
     )
-
-    model_config = ConfigDict(strict=True, extra="ignore")
-
-
-class PromotionEvidenceReviewRequest(BaseModel):
-    """Reviewer decision request for one dataset promotion criterion."""
-
-    dataset_id: str = Field(description="数据集 ID")
-    criterion: str = Field(description="被审核的晋级条件")
-    evidence_uri: str = Field(description="审核证据 URI")
-    reviewed_by: str = Field(description="审核人或审核主体")
-    passed: bool = Field(default=True, description="该条件是否审核通过")
-    notes: str | None = Field(default=None, description="审核备注")
-
-    model_config = ConfigDict(strict=True, extra="ignore")
-
-
-class PromotionEvidenceReviewResponse(BaseModel):
-    """Promotion review result response."""
-
-    dataset_id: str = Field(description="数据集 ID")
-    reviewed_criterion: str = Field(description="本次审核的晋级条件")
-    evidence_uri: str = Field(description="审核证据 URI")
-    reviewed_by: str = Field(description="审核人或审核主体")
-    passed: bool = Field(description="该条件是否审核通过")
-    reviewed_at: str = Field(description="审核时间")
-    promotion_status: str = Field(description="审核后晋级评估状态")
-    missing_criteria: list[str] = Field(default_factory=list, description="缺失条件")
-    satisfied_criteria: list[str] = Field(default_factory=list, description="通过条件")
-    rejected_criteria: list[str] = Field(
-        default_factory=list,
-        description="已审核但未通过条件",
-    )
-    metadata_promoted: bool = Field(description="本次审核是否触发 metadata 晋级")
-    dataset_maturity_before: str = Field(description="审核前数据集成熟度")
-    dataset_maturity_after: str = Field(description="审核后数据集成熟度")
-
-    model_config = ConfigDict(strict=True, extra="ignore")
-
-
-class PromotionStatusCountResponse(BaseModel):
-    """Promotion readiness status count."""
-
-    status: str = Field(description="晋级评估状态")
-    count: int = Field(description="该状态的数据集数量")
-
-    model_config = ConfigDict(strict=True, extra="ignore")
-
-
-class PromotionCriterionCountResponse(BaseModel):
-    """Promotion criterion occurrence count."""
-
-    criterion: str = Field(description="晋级条件")
-    count: int = Field(description="该条件出现次数")
-
-    model_config = ConfigDict(strict=True, extra="ignore")
-
-
-class PromotionReadinessSourceFallbackPolicyEffectCountResponse(BaseModel):
-    """Promotion readiness count by source fallback policy effect."""
-
-    policy_id: str = Field(description="触发 source fallback effect 的 policy ID")
-    policy_status: str = Field(description="触发 effect 的 policy lifecycle 状态")
-    catalog_selected_source: str = Field(
-        description="Catalog freshness 策略原本选择的来源",
-    )
-    effective_selected_source: str = Field(
-        description="应用 active fallback policy 后的最终来源",
-    )
-    count: int = Field(description="该 policy effect 影响的 source decision 数量")
-
-    model_config = ConfigDict(strict=True, extra="ignore")
-
-
-class PromotionReadinessItemResponse(BaseModel):
-    """Dataset-level promotion readiness report item."""
-
-    dataset_id: str = Field(description="数据集 ID")
-    metadata_maturity: str | None = Field(
-        default=None,
-        description="DatasetMetadata 声明的原始 maturity",
-    )
-    current_maturity: str | None = Field(
-        default=None,
-        description="应用当前 maturity promotion override 后的 maturity",
-    )
-    promotion_status: str = Field(description="晋级评估状态")
-    active_maturity_promotion: bool = Field(
-        description="当前是否存在 active maturity promotion override",
-    )
-    required_criteria: list[str] = Field(
-        default_factory=list,
-        description="晋级所需条件",
-    )
-    satisfied_criteria: list[str] = Field(
-        default_factory=list,
-        description="已满足条件",
-    )
-    missing_criteria: list[str] = Field(
-        default_factory=list,
-        description="缺失条件",
-    )
-    rejected_criteria: list[str] = Field(
-        default_factory=list,
-        description="已审核但未通过条件",
-    )
-    latest_revocation_reason: MaturityPromotionRevocationReason | None = Field(
-        default=None,
-        description="最近一次晋级撤销原因分类",
-    )
-    latest_revoked_by: str | None = Field(
-        default=None,
-        description="最近一次晋级撤销人或撤销主体",
-    )
-    latest_revoked_at: str | None = Field(
-        default=None,
-        description="最近一次晋级撤销时间",
-    )
-
-    model_config = ConfigDict(strict=True, extra="ignore")
-
-
-class PromotionReadinessReportResponse(BaseModel):
-    """Aggregated dataset promotion readiness report."""
-
-    dataset_count: int = Field(description="报告覆盖的数据集数量")
-    promotable_count: int = Field(description="晋级评估 ready 的数据集数量")
-    active_promotion_count: int = Field(
-        description="当前存在 maturity promotion override 的数据集数量",
-    )
-    status_counts: list[PromotionStatusCountResponse] = Field(
-        description="按晋级评估状态聚合的数据集数量",
-    )
-    missing_criteria_counts: list[PromotionCriterionCountResponse] = Field(
-        default_factory=list,
-        description="按缺失晋级条件聚合的数据集数量",
-    )
-    rejected_criteria_counts: list[PromotionCriterionCountResponse] = Field(
-        default_factory=list,
-        description="按 rejected 晋级条件聚合的数据集数量",
-    )
-    source_fallback_policy_effect_counts: list[
-        PromotionReadinessSourceFallbackPolicyEffectCountResponse
-    ] = Field(
-        default_factory=list,
-        description=(
-            "按 active source fallback policy effect 聚合的 source decision 数量"
-        ),
-    )
-    datasets: list[PromotionReadinessItemResponse] = Field(
-        description="各数据集晋级评估明细",
-    )
-
-    model_config = ConfigDict(strict=True, extra="ignore")
-
-
-class MaturityPromotionHistoryItem(BaseModel):
-    """Dataset maturity promotion governance history item."""
-
-    dataset_id: str = Field(description="数据集 ID")
-    action: str = Field(description="治理动作 (promoted/revoked)")
-    previous_maturity: str = Field(description="动作前成熟度")
-    next_maturity: str = Field(description="动作后成熟度")
-    actor: str = Field(description="操作人或操作主体")
-    action_at: str | None = Field(default=None, description="操作时间")
-    evidence_uri: str | None = Field(default=None, description="关联证据 URI")
-    revocation_reason: MaturityPromotionRevocationReason | None = Field(
-        default=None,
-        description="撤销原因分类",
-    )
-    notes: str | None = Field(default=None, description="备注")
-
-    model_config = ConfigDict(strict=True, extra="ignore")
-
-
-class MaturityPromotionRevokeRequest(BaseModel):
-    """Operator request to revoke a current maturity promotion override."""
-
-    dataset_id: str = Field(description="数据集 ID")
-    revoked_by: str = Field(description="撤销人或撤销主体")
-    revocation_reason: MaturityPromotionRevocationReason = Field(
-        description="撤销原因分类",
-    )
-    notes: str | None = Field(default=None, description="撤销备注")
-
-    model_config = ConfigDict(strict=True, extra="ignore")
-
-
-class MaturityPromotionRevokeResponse(BaseModel):
-    """Result of revoking a dataset maturity promotion override."""
-
-    dataset_id: str = Field(description="数据集 ID")
-    revoked_by: str = Field(description="撤销人或撤销主体")
-    revoked_at: str = Field(description="撤销时间")
-    dataset_maturity_before: str = Field(description="撤销前数据集成熟度")
-    dataset_maturity_after: str = Field(description="撤销后数据集成熟度")
-    evidence_uri: str | None = Field(default=None, description="原晋级证据 URI")
-    revocation_reason: MaturityPromotionRevocationReason | None = Field(
-        default=None,
-        description="撤销原因分类",
-    )
-    notes: str | None = Field(default=None, description="撤销备注")
 
     model_config = ConfigDict(strict=True, extra="ignore")
 
@@ -430,29 +185,6 @@ class CatalogSourceHealthResponse(BaseModel):
     model_config = ConfigDict(strict=True, extra="ignore")
 
 
-class CatalogSourceFallbackPolicyEffectResponse(BaseModel):
-    """Active source fallback policy effect evidence."""
-
-    policy_id: str = Field(description="触发 source fallback effect 的 policy ID")
-    policy_status: str = Field(description="触发 effect 的 policy lifecycle 状态")
-    catalog_selected_source: str = Field(
-        description="Catalog freshness 策略原本选择的来源",
-    )
-    effective_selected_source: str = Field(
-        description="应用 active fallback policy 后的最终来源",
-    )
-    reason_codes: list[str] = Field(
-        default_factory=list,
-        description="policy 持久化的结构化原因代码",
-    )
-    recommended_actions: list[str] = Field(
-        default_factory=list,
-        description="policy 持久化的建议动作代码",
-    )
-
-    model_config = ConfigDict(strict=True, extra="ignore")
-
-
 class CatalogSourceHealthReportResponse(BaseModel):
     """DataCatalog source-selection health report response."""
 
@@ -466,12 +198,6 @@ class CatalogSourceHealthReportResponse(BaseModel):
     )
     selected_source_health: CatalogSourceHealthResponse = Field(
         description="source=auto 选中来源的完整 freshness 证据",
-    )
-    source_fallback_policy_effect: CatalogSourceFallbackPolicyEffectResponse | None = (
-        Field(
-            default=None,
-            description="active fallback policy 对 source=auto 选择产生的只读证据",
-        )
     )
     source_selection_status: str = Field(
         description="source=auto 选中来源是否可用于后端编排",
@@ -498,18 +224,6 @@ class CatalogSourceHealthReportResponse(BaseModel):
     fallback_sources: list[str] = Field(
         default_factory=list,
         description="该数据集支持的非默认候选来源",
-    )
-    latest_revocation_reason: MaturityPromotionRevocationReason | None = Field(
-        default=None,
-        description="最近一次数据集晋级撤销原因分类",
-    )
-    latest_revoked_by: str | None = Field(
-        default=None,
-        description="最近一次数据集晋级撤销人或撤销主体",
-    )
-    latest_revoked_at: str | None = Field(
-        default=None,
-        description="最近一次数据集晋级撤销时间",
     )
 
     model_config = ConfigDict(strict=True, extra="ignore")
@@ -572,12 +286,6 @@ class CatalogSourceHealthAttentionItemResponse(BaseModel):
     selected_source_health: CatalogSourceHealthResponse = Field(
         description="selected source 的 freshness/storage/schema 证据",
     )
-    source_fallback_policy_effect: CatalogSourceFallbackPolicyEffectResponse | None = (
-        Field(
-            default=None,
-            description="active fallback policy 对 source=auto 选择产生的只读证据",
-        )
-    )
     source_selection_status: str = Field(
         description="source=auto 选中来源是否可用于后端编排",
     )
@@ -604,18 +312,6 @@ class CatalogSourceHealthAttentionItemResponse(BaseModel):
         default_factory=list,
         description="该数据集支持的非默认候选来源",
     )
-    latest_revocation_reason: MaturityPromotionRevocationReason | None = Field(
-        default=None,
-        description="最近一次数据集晋级撤销原因分类",
-    )
-    latest_revoked_by: str | None = Field(
-        default=None,
-        description="最近一次数据集晋级撤销人或撤销主体",
-    )
-    latest_revoked_at: str | None = Field(
-        default=None,
-        description="最近一次数据集晋级撤销时间",
-    )
 
     model_config = ConfigDict(strict=True, extra="ignore")
 
@@ -634,10 +330,6 @@ class CatalogSourceHealthSummaryReportResponse(BaseModel):
     no_fallback_source_count: int = Field(
         default=0,
         description="没有非默认候选来源的 report 数量",
-    )
-    revoked_promotion_count: int = Field(
-        default=0,
-        description="存在最近晋级撤销上下文的 report 数量",
     )
     status_counts: list[CatalogSourceHealthStatusCountResponse] = Field(
         description="按 freshness 状态聚合的 source health 数量",

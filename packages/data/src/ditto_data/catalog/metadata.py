@@ -166,14 +166,21 @@ _INITIAL_FOCUS_DATASETS: frozenset[str] = frozenset(
         "global_index_daily",
         "industry_classification",
         "industry_mapping",
+        # Core market/reference lanes that previously carried a promotion
+        # override; the static assignment replaces the removed workflow.
+        "stock_basic",
+        "stock_daily",
+        "stock_status",
+        "index_weight",
+        "corporate_actions",
+        "macro_indicators",
+        "fx_daily",
+        "commodity_daily",
     }
 )
 
 _EXPERIMENTAL_DATASETS: frozenset[str] = frozenset(
     {
-        "stock_basic",
-        "stock_daily",
-        "stock_status",
         "balance_sheet",
         "income_statement",
         "cash_flow",
@@ -181,11 +188,6 @@ _EXPERIMENTAL_DATASETS: frozenset[str] = frozenset(
         "valuation_metrics",
         "margin_trading",
         "pledge_ratio",
-        "corporate_actions",
-        "macro_indicators",
-        "fx_daily",
-        "commodity_daily",
-        "index_weight",
     }
 )
 

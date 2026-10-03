@@ -28,7 +28,6 @@ ROUTE_MATURITY_BY_PREFIX: dict[str, ApiMaturity] = {
     "/api/v1/status": "infrastructure",
     "/api/v1/agent": "experimental",
     "/api/v1/backtests": "initial-focus",
-    "/api/v1/data-products": "initial-focus",
     "/api/v1/market": "initial-focus",
     "/api/v1/metadata": "initial-focus",
     "/api/v1/strategies": "initial-focus",
@@ -52,7 +51,6 @@ ROUTE_MATURITY_BY_PREFIX: dict[str, ApiMaturity] = {
 _TAG_MATURITY: tuple[tuple[str, ApiMaturity], ...] = (
     ("agent", "experimental"),
     ("backtests", "initial-focus"),
-    ("data-products", "initial-focus"),
     ("market", "initial-focus"),
     ("metadata", "initial-focus"),
     ("strategies", "initial-focus"),

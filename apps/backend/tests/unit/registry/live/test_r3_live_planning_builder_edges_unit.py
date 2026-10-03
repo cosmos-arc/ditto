@@ -209,7 +209,7 @@ def test_requirements_reject_missing_certification_binding() -> None:
         SimpleNamespace(dataset_bindings=(), snapshot_start="2015-01-01"),
     )
 
-    with pytest.raises(ValueError, match="lacks required certification"):
+    with pytest.raises(ValueError, match="lacks required observed dataset bindings"):
         subject._requirements(snapshot, ("stock_daily",))
 
 

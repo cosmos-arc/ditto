@@ -4,16 +4,11 @@ import { PageActionBar } from "@/components/domain/page-action-overlay";
 import { StatusBadge } from "@/components/status";
 import { Button } from "@/components/ui/button";
 import { OpsConsoleLayout, Panel, PanelBody, PanelHeader, StatusBar } from "@/features/shell";
-import type {
-	SystemFallbackSummary,
-	SystemPromotionReadiness,
-	SystemSourceHealthSummary,
-} from "../api/system-overview";
+import type { SystemSourceHealthSummary } from "../api/system-overview";
 import { useSystemOverview } from "../hooks/use-system-overview";
 import { type SystemOverlayId, SystemOverlays, systemActions } from "./system-overlays";
 
 const ASSET_VISIBLE_LIMIT = 8;
-const REMEDIATION_VISIBLE_LIMIT = 6;
 
 function today(): string {
 	return new Date().toISOString().slice(0, 10);
@@ -49,18 +44,16 @@ function severityVariant(value: string): "critical" | "warning" | "idle" {
 function SystemHealthStrip({
 	assetCount,
 	isLoading,
-	remediationCount,
 	sourceHealth,
 }: {
 	readonly assetCount: number;
 	readonly isLoading: boolean;
-	readonly remediationCount: number;
 	readonly sourceHealth: SystemSourceHealthSummary | undefined;
 }) {
 	if (isLoading) {
 		return (
-			<div className="grid h-9 grid-cols-4 items-center gap-3 px-4" role="status" aria-label="正在加载平台治理摘要">
-				{["assets", "attention", "remediation", "failover"].map((key) => (
+			<div className="grid h-9 grid-cols-3 items-center gap-3 px-4" role="status" aria-label="正在加载平台治理摘要">
+				{["assets", "attention", "failover"].map((key) => (
 					<LoadingSkeleton key={key} variant="metric" />
 				))}
 			</div>
@@ -78,11 +71,6 @@ function SystemHealthStrip({
 					: "text-(--color-system-healthy-fg)",
 		},
 		{
-			label: "Remediation",
-			value: remediationCount,
-			tone: remediationCount > 0 ? "text-(--color-risk-critical-fg)" : "text-(--color-system-healthy-fg)",
-		},
-		{
 			label: "自动切源",
 			value: sourceHealth?.failoverCount ?? 0,
 			tone:
@@ -94,7 +82,7 @@ function SystemHealthStrip({
 
 	return (
 		<div
-			className="grid h-9 grid-cols-2 items-center divide-x divide-(--color-border-subtle) px-2 sm:grid-cols-4"
+			className="grid h-9 grid-cols-2 items-center divide-x divide-(--color-border-subtle) px-2 sm:grid-cols-3"
 			role="status"
 		>
 			{metrics.map((metric) => (
@@ -134,11 +122,10 @@ function SourceHealthCard({
 					</p>
 				) : (
 					<>
-						<div className="grid grid-cols-3 gap-2 text-center">
+						<div className="grid grid-cols-2 gap-2 text-center">
 							{[
 								["attention", data?.attentionRequiredCount ?? 0],
 								["no fallback", data?.noFallbackSourceCount ?? 0],
-								["revoked", data?.revokedPromotionCount ?? 0],
 							].map(([label, value]) => (
 								<div key={label} className="rounded-(--radius-sm) bg-(--color-surface-strip) p-2">
 									<strong className="block font-data text-base">{value}</strong>
@@ -169,108 +156,17 @@ function SourceHealthCard({
 	);
 }
 
-function FallbackCard({
-	data,
-	error,
-}: {
-	readonly data: SystemFallbackSummary | undefined;
-	readonly error: Error | null;
-}) {
-	return (
-		<Panel data-info-level="l2" data-info-unit="fallback">
-			<PanelHeader title="Fallback control" count={data?.totalPreviews} />
-			<PanelBody className="p-3">
-				{error ? (
-					<p role="alert" className="text-xs text-(--color-risk-critical-fg)">
-						{errorMessage(error)}
-					</p>
-				) : (
-					<>
-						<p className="text-xs text-(--color-foreground-secondary)">
-							需审批 <strong className="font-data text-(--color-foreground)">{data?.approvalRequiredCount ?? 0}</strong>{" "}
-							· 可执行{" "}
-							<strong className="font-data text-(--color-foreground)">{data?.executionAllowedCount ?? 0}</strong>
-						</p>
-						<ul className="mt-3 space-y-2">
-							{data?.previews.slice(0, 3).map((item) => (
-								<li key={item.datasetId} className="rounded-(--radius-sm) bg-(--color-surface-strip) p-2">
-									<div className="flex items-center justify-between gap-2">
-										<code className="font-data text-xs">{item.datasetId}</code>
-										<StatusBadge label={item.policyStatus} variant="idle" size="sm" />
-									</div>
-									<p className="mt-1 font-data text-xs text-(--color-foreground-tertiary)">
-										{item.defaultSource} → {item.recommendedSource ?? item.selectedSource}
-									</p>
-								</li>
-							))}
-						</ul>
-					</>
-				)}
-			</PanelBody>
-		</Panel>
-	);
-}
-
-function PromotionCard({
-	data,
-	error,
-}: {
-	readonly data: SystemPromotionReadiness | undefined;
-	readonly error: Error | null;
-}) {
-	return (
-		<Panel data-info-level="l2" data-info-unit="promotion">
-			<PanelHeader title="Promotion readiness" count={data?.datasetCount} />
-			<PanelBody className="p-3">
-				{error ? (
-					<p role="alert" className="text-xs text-(--color-risk-critical-fg)">
-						{errorMessage(error)}
-					</p>
-				) : (
-					<>
-						<div className="flex items-center justify-between text-xs text-(--color-foreground-secondary)">
-							<span>Ready {data?.promotableCount ?? 0}</span>
-							<span>Active {data?.activePromotionCount ?? 0}</span>
-						</div>
-						<ul className="mt-3 space-y-2">
-							{data?.datasets.slice(0, 4).map((item) => (
-								<li
-									key={item.datasetId}
-									className="flex items-start justify-between gap-2 border-t border-(--color-border-subtle) pt-2 first:border-0 first:pt-0"
-								>
-									<div className="min-w-0">
-										<code className="font-data text-xs">{item.datasetId}</code>
-										<p className="truncate text-xs text-(--color-foreground-tertiary)">
-											{item.currentMaturity ?? "maturity unknown"} ·{" "}
-											{item.missingCriteria.join(" · ") || "criteria complete"}
-										</p>
-									</div>
-									<StatusBadge
-										label={item.status}
-										variant={item.status === "ready" ? "healthy" : "warning"}
-										size="sm"
-									/>
-								</li>
-							))}
-						</ul>
-					</>
-				)}
-			</PanelBody>
-		</Panel>
-	);
-}
-
 export function SystemPage() {
 	const [tradeDate, setTradeDate] = useState(today);
 	const [activeOverlay, setActiveOverlay] = useState<SystemOverlayId | null>(null);
 	const overview = useSystemOverview(tradeDate);
 	const assets = overview.assets.data ?? [];
-	const overviewQueries = [overview.remediation, overview.sourceHealth, overview.fallback, overview.promotion];
+	const overviewQueries = [overview.sourceHealth];
 	const isOverviewLoading = overviewQueries.some((query) => query.isLoading);
 	const isRefreshing = [overview.assets, ...overviewQueries].some(
 		(query) => query.isFetching && query.data !== undefined,
 	);
-	const focusedTask = overview.remediation.data?.items[0];
+	const focusedTask = overview.sourceHealth.data?.attentionItems[0];
 
 	function refresh(): void {
 		void overview.assets.refetch();
@@ -285,7 +181,6 @@ export function SystemPage() {
 					<SystemHealthStrip
 						assetCount={assets.length}
 						isLoading={overview.assets.isLoading || isOverviewLoading}
-						remediationCount={overview.remediation.data?.totalItems ?? 0}
 						sourceHealth={overview.sourceHealth.data}
 					/>
 				}
@@ -397,42 +292,6 @@ export function SystemPage() {
 											</table>
 										</PanelBody>
 									</Panel>
-
-									<Panel data-info-level="l1" data-info-unit="remediation">
-										<PanelHeader title="Remediation backlog" count={overview.remediation.data?.totalItems} />
-										<PanelBody className="p-3">
-											{overview.remediation.isLoading && <LoadingSkeleton variant="table" rows={3} />}
-											{overview.remediation.isError && (
-												<p role="alert" className="text-xs text-(--color-risk-critical-fg)">
-													{errorMessage(overview.remediation.error)}
-												</p>
-											)}
-											{overview.remediation.data?.items.length === 0 && (
-												<p role="status" className="text-sm text-(--color-foreground-secondary)">
-													当前交易日没有 remediation item。
-												</p>
-											)}
-											<ul className="grid gap-2 xl:grid-cols-2">
-												{overview.remediation.data?.items.slice(0, REMEDIATION_VISIBLE_LIMIT).map((item) => (
-													<li
-														key={item.itemId}
-														className="rounded-(--radius-sm) border border-(--color-border-subtle) bg-(--color-surface-strip) p-3"
-													>
-														<div className="flex items-center justify-between gap-2">
-															<code className="truncate font-data text-xs">{item.datasetId}</code>
-															<StatusBadge label={item.severity} variant={severityVariant(item.severity)} size="sm" />
-														</div>
-														<p className="mt-2 truncate text-xs text-(--color-foreground-secondary)">
-															{item.source} · {item.reasons.join(" · ") || "reason unavailable"}
-														</p>
-														<p className="mt-1 truncate font-data text-xs text-(--color-foreground-tertiary)">
-															{item.suggestedActions.join(" · ") || "manual review"}
-														</p>
-													</li>
-												))}
-											</ul>
-										</PanelBody>
-									</Panel>
 								</div>
 							)}
 						</div>
@@ -444,8 +303,6 @@ export function SystemPage() {
 						aria-label="治理证据"
 					>
 						<SourceHealthCard data={overview.sourceHealth.data} error={overview.sourceHealth.error} />
-						<FallbackCard data={overview.fallback.data} error={overview.fallback.error} />
-						<PromotionCard data={overview.promotion.data} error={overview.promotion.error} />
 					</aside>
 				}
 			/>
@@ -456,7 +313,7 @@ export function SystemPage() {
 				onClose={() => setActiveOverlay(null)}
 				onRefresh={refresh}
 				reasons={focusedTask?.reasons.join(" · ") ?? ""}
-				suggestedActions={focusedTask?.suggestedActions.join(" · ") ?? ""}
+				status={focusedTask?.status ?? ""}
 				tradeDate={tradeDate}
 			/>
 		</>

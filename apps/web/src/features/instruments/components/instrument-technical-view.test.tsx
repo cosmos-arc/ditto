@@ -11,7 +11,6 @@ import { InstrumentTechnicalView } from "@/workflows/instrument-analysis";
 import type { TechnicalAnalysisQueryBody, TechnicalAnalysisSnapshot } from "../api/technical-analysis";
 
 const run = selectionRunFixtures[0];
-const certifiedTechnicalSnapshotId = `snapshot:tushare:stock_daily:sha256:${"9".repeat(64)}`;
 let receivedBody: TechnicalAnalysisQueryBody | null = null;
 
 const snapshot = {
@@ -94,22 +93,6 @@ beforeEach(() => {
 	server.use(
 		...instrumentsHandlers,
 		...selectionHandlers,
-		http.get("/api/v1/data-products/stock_daily/evidence", ({ request }) => {
-			expect(new URL(request.url).searchParams.get("profile")).toBe("technical_daily");
-			return HttpResponse.json({
-				data: {
-					content_hash: "8".repeat(64),
-					dataset_id: "stock_daily",
-					fallback_history: [],
-					override_history: [],
-					profile: "technical_daily",
-					report_id: `certification:${"7".repeat(64)}`,
-					schema_versions: ["market.stock_daily.v1"],
-					snapshot_ids: [certifiedTechnicalSnapshotId],
-					source_ids: ["tushare"],
-				},
-			});
-		}),
 		http.post("/api/v1/technical-analysis/snapshots/query", async ({ request }) => {
 			receivedBody = (await request.json()) as TechnicalAnalysisQueryBody;
 			return HttpResponse.json({
@@ -148,7 +131,7 @@ describe("InstrumentTechnicalView", () => {
 				knowledge_cutoff: run.knowledge_cutoff,
 				publication_cutoff: run.publication_cutoff,
 				selection_run_id: run.run_id,
-				source_snapshot_ids: [certifiedTechnicalSnapshotId],
+				source_snapshot_ids: [],
 			});
 		});
 	});
@@ -186,13 +169,12 @@ describe("InstrumentTechnicalView", () => {
 			expect(receivedBody).toMatchObject({
 				instrument_id: 600001,
 				instrument_name: "邯郸钢铁",
-				source_snapshot_ids: [certifiedTechnicalSnapshotId],
+				source_snapshot_ids: [],
 			});
 		});
 	});
 
-	it("uses the exact technical profile for ETF technical evidence", async () => {
-		const etfSnapshotId = `snapshot:tushare:etf_daily:sha256:${"6".repeat(64)}`;
+	it("binds the ETF instrument identity without client-side snapshot resolution", async () => {
 		server.use(
 			http.get("/api/v1/metadata/instruments/2001724", () =>
 				HttpResponse.json({
@@ -223,22 +205,6 @@ describe("InstrumentTechnicalView", () => {
 					},
 				}),
 			),
-			http.get("/api/v1/data-products/etf_daily/evidence", ({ request }) => {
-				expect(new URL(request.url).searchParams.get("profile")).toBe("technical_daily");
-				return HttpResponse.json({
-					data: {
-						content_hash: "5".repeat(64),
-						dataset_id: "etf_daily",
-						fallback_history: [],
-						override_history: [],
-						profile: "technical_daily",
-						report_id: `certification:${"4".repeat(64)}`,
-						schema_versions: ["etf.daily.v1"],
-						snapshot_ids: [etfSnapshotId],
-						source_ids: ["tushare"],
-					},
-				});
-			}),
 			http.post("/api/v1/technical-analysis/snapshots/query", async ({ request }) => {
 				receivedBody = (await request.json()) as TechnicalAnalysisQueryBody;
 				return HttpResponse.json({
@@ -259,7 +225,7 @@ describe("InstrumentTechnicalView", () => {
 			expect(receivedBody).toMatchObject({
 				instrument_code: "518880.SH",
 				instrument_id: 2001724,
-				source_snapshot_ids: [etfSnapshotId],
+				source_snapshot_ids: [],
 			});
 		});
 	});

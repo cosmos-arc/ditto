@@ -1,6 +1,6 @@
 -- SQLite Database Schema for Ditto DataHub
 -- This schema supports Instrument ID allocation, 证券主数据, PIT queries,
--- trading calendar, freeze points, and universe management.
+-- trading calendar, and universe management.
 
 -- Instrument ID 序列 (百万级范围，与 SidRange 保持一致)
 CREATE TABLE IF NOT EXISTS instrument_id_sequence (
@@ -150,14 +150,6 @@ CREATE TABLE IF NOT EXISTS trading_calendar (
     is_quarter_end BOOLEAN,
     is_half_day BOOLEAN DEFAULT FALSE,
     is_special BOOLEAN DEFAULT FALSE
-);
-
--- Freeze 冻结点
-CREATE TABLE IF NOT EXISTS freeze_point (
-    freeze_id TEXT PRIMARY KEY,
-    description TEXT,
-    manifest_path TEXT NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 -- 涨跌幅配置

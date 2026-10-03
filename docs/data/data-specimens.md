@@ -29,6 +29,6 @@ fail-closed 不变量（构造时校验）：
 
 ## 边界
 
-- 试样结论≠字段准入：Selection/研究/ETF/Paper 的字段准入继续走 `FieldAdmissionQuery`（#256），两者互不等待。
+- 试样结论≠数据合格：Selection/研究/ETF/Paper 的数据合格检查走 `SnapshotReadinessQuery`（#391），两者互不等待。
 - 预算报价与供应商权益取证归数据策略票（#191）；本结构只承载"实际取证、报价未知项与限制"的记录。
 - 自动化测试使用合成证据；合成通过不证明供应商真实历史覆盖或权益已核实（父规格 Testing Decisions）。

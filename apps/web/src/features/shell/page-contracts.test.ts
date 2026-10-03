@@ -33,7 +33,6 @@ const IA_ROUTES = [
 	"/portfolio/risk",
 	"/portfolio/review",
 	"/system",
-	"/system/data-products",
 	"/system/jobs",
 	"/system/agent",
 	"/system/approvals",

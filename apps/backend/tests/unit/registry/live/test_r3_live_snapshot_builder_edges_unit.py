@@ -15,64 +15,121 @@ from ditto_application.processes.experiments.execution_bundle import (
     ContentAddressedResearchInput,
 )
 from ditto_apps.registry.live import r3_live_snapshot_builder as subject
-from ditto_data.catalog.certification import CertificationReader
 from ditto_data.catalog.source_snapshot import ProviderSnapshotReader
+from ditto_data.ingestion.partition_state import (
+    PartitionCheckpoint,
+    PartitionLifecycleEvent,
+    PartitionLifecycleReader,
+    PartitionLifecycleStatus,
+)
 
-
-class _Certification:
-    def __init__(self, report: object | None) -> None:
-        self.report = report
-
-    def get_active_report(self, _dataset_id: str, _profile: str) -> object | None:
-        return self.report
-
-
-class _Snapshots:
-    def __init__(self, snapshot: object | None) -> None:
-        self.snapshot = snapshot
-
-    def get_snapshot(self, _snapshot_id: str) -> object | None:
-        return self.snapshot
-
-
-def _report(
-    *,
-    complete_from: date | None = date(2015, 1, 1),
-    target_to: date = date(2026, 8, 1),
-    snapshot_ids: tuple[str, ...] = ("snapshot-1",),
-) -> SimpleNamespace:
-    return SimpleNamespace(
-        report_id="report-1",
-        generated_at=datetime(2026, 8, 1, tzinfo=UTC),
-        coverage=SimpleNamespace(
-            complete_from=complete_from,
-            target_to=target_to,
-        ),
-        evidence=SimpleNamespace(snapshot_ids=snapshot_ids),
-    )
+_CUTOFF = datetime(2026, 8, 1, tzinfo=UTC)
 
 
 def _snapshot(
     *,
+    snapshot_id: str = "snapshot-1",
     dataset_id: str = "stock_daily",
     retained: bool = True,
     payload_uri: str | None = "artifact://snapshot-1",
+    request_start: str = "2015-01-01",
     request_end: str = "2026-07-31",
+    created_at: datetime = _CUTOFF,
 ) -> SimpleNamespace:
     return SimpleNamespace(
-        snapshot_id="snapshot-1",
+        snapshot_id=snapshot_id,
         dataset_id=dataset_id,
-        request_start="2015-01-01",
+        source="tushare",
+        request_start=request_start,
         request_end=request_end,
+        checksum=f"checksum-{snapshot_id}",
         payload_retained=retained,
         payload_uri=payload_uri,
+        created_at=created_at,
     )
+
+
+class _Snapshots:
+    def __init__(
+        self,
+        snapshots: tuple[SimpleNamespace, ...],
+        *,
+        hide: frozenset[str] = frozenset(),
+    ) -> None:
+        self._snapshots = snapshots
+        self._hide = hide
+
+    def list_snapshots(self, *, dataset_id: str) -> tuple[SimpleNamespace, ...]:
+        return tuple(item for item in self._snapshots if item.dataset_id == dataset_id)
+
+    def get_snapshot(self, snapshot_id: str) -> SimpleNamespace | None:
+        if snapshot_id in self._hide:
+            return None
+        return next(
+            (item for item in self._snapshots if item.snapshot_id == snapshot_id),
+            None,
+        )
+
+
+class _Lifecycle:
+    """Mark exactly the addressed snapshots as durably completed."""
+
+    def __init__(self, snapshots: tuple[SimpleNamespace, ...]) -> None:
+        self._snapshots = snapshots
+
+    def list_complete(self, *, dataset_id: str) -> tuple[PartitionCheckpoint, ...]:
+        return tuple(
+            PartitionCheckpoint(
+                chunk_id=f"chunk-{snapshot.snapshot_id}",
+                dataset_id=snapshot.dataset_id,
+                source="tushare",
+                request_start=snapshot.request_start,
+                request_end=snapshot.request_end,
+                status=PartitionLifecycleStatus.COMPLETE,
+                last_successful_stage=PartitionLifecycleStatus.COMPLETE,
+                attempt=1,
+                retry_budget=3,
+                payload_id=(
+                    f"payload:{snapshot.checksum}:synthetic:{snapshot.snapshot_id}"
+                ),
+                catalog_asset_id=None,
+                lineage_run_id=None,
+                ingestion_log_id=None,
+                error_code=None,
+                updated_at=_CUTOFF,
+            )
+            for snapshot in self._snapshots
+            if snapshot.dataset_id == dataset_id
+        )
+
+    def list_events(self, chunk_id: str) -> tuple[PartitionLifecycleEvent, ...]:
+        snapshot = next(
+            (
+                item
+                for item in self._snapshots
+                if f"chunk-{item.snapshot_id}" == chunk_id
+            ),
+            None,
+        )
+        if snapshot is None:
+            return ()
+        return (
+            PartitionLifecycleEvent(
+                event_id=1,
+                chunk_id=chunk_id,
+                from_status=PartitionLifecycleStatus.SUCCESS_RECORDED,
+                to_status=PartitionLifecycleStatus.COMPLETE,
+                attempt=1,
+                evidence_id=snapshot.snapshot_id,
+                error_code=None,
+                occurred_at=_CUTOFF,
+            ),
+        )
 
 
 @pytest.mark.parametrize(
     "condition",
     [
-        "missing_report",
         "late_start",
         "early_end",
         "missing_snapshot",
@@ -81,64 +138,74 @@ def _snapshot(
         "empty",
     ],
 )
-def test_certified_binding_rejects_incomplete_authority(condition: str) -> None:
-    report: object | None = _report()
-    snapshot: object | None = _snapshot()
-    if condition == "missing_report":
-        report = None
-    elif condition == "late_start":
-        report = _report(complete_from=date(2026, 1, 1))
+def test_observed_binding_rejects_incomplete_history(condition: str) -> None:
+    snapshot = _snapshot()
+    hide: frozenset[str] = frozenset()
+    if condition == "late_start":
+        snapshot = _snapshot(request_start="2026-01-01")
     elif condition == "early_end":
-        report = _report(target_to=date(2020, 1, 1))
+        snapshot = _snapshot(request_end="2020-01-01")
     elif condition == "missing_snapshot":
-        snapshot = None
+        hide = frozenset({"snapshot-1"})
     elif condition == "dataset":
         snapshot = _snapshot(dataset_id="other")
     elif condition == "retention":
         snapshot = _snapshot(retained=False, payload_uri=None)
     else:
-        report = _report(snapshot_ids=())
+        snapshot = None
 
+    snapshots = () if snapshot is None else (snapshot,)
     with pytest.raises(ValueError):
-        subject._certified_dataset_binding(
-            certification_reader=cast(CertificationReader, _Certification(report)),
-            snapshot_reader=cast(ProviderSnapshotReader, _Snapshots(snapshot)),
+        subject._observed_dataset_binding(
+            snapshot_reader=cast(
+                ProviderSnapshotReader, _Snapshots(snapshots, hide=hide)
+            ),
+            lifecycle_reader=cast(PartitionLifecycleReader, _Lifecycle(snapshots)),
             dataset_id="stock_daily",
+            observed_cutoff=_CUTOFF,
         )
 
 
-def test_primary_certification_must_cover_live_snapshot_end() -> None:
-    ids = {
-        "calendar": "calendar-1",
-        "etf_basic": "etf-basic-1",
-        "etf_daily": "etf-daily-1",
-        "index_daily": "index-daily-1",
-    }
-
-    class _Certifications:
-        def get_active_report(self, dataset_id: str, _profile: str) -> object:
-            return _report(snapshot_ids=(ids[dataset_id],))
-
-    class _SnapshotSet:
-        def get_snapshot(self, snapshot_id: str) -> object:
-            dataset_id = next(key for key, value in ids.items() if value == snapshot_id)
-            values = vars(
-                _snapshot(
-                    dataset_id=dataset_id,
-                    request_end=(
-                        "2020-01-01" if dataset_id == "etf_daily" else "2026-07-31"
-                    ),
-                )
-            )
-            values["snapshot_id"] = snapshot_id
-            return SimpleNamespace(**values)
-
-    with pytest.raises(ValueError, match="primary live provider evidence is stale"):
-        subject._certified_source_snapshots(
-            certification_reader=cast(CertificationReader, _Certifications()),
-            snapshot_reader=cast(ProviderSnapshotReader, _SnapshotSet()),
-            lane="etf",
+def test_primary_observed_snapshot_is_the_latest_covering_live_end() -> None:
+    snapshots = tuple(
+        _snapshot(
+            snapshot_id=snapshot_id,
+            dataset_id=dataset_id,
         )
+        for dataset_id, snapshot_id in (
+            ("calendar", "calendar-1"),
+            ("etf_basic", "etf-basic-1"),
+            ("etf_daily", "etf-daily-1"),
+            ("etf_daily", "etf-daily-older"),
+            ("index_daily", "index-daily-1"),
+        )
+    )
+    older = snapshots[3]
+    snapshots = (
+        *snapshots[:3],
+        _snapshot(
+            snapshot_id=older.snapshot_id,
+            dataset_id=older.dataset_id,
+            request_end="2026-06-30",
+        ),
+        snapshots[4],
+    )
+
+    sources, authority, _by_dataset, bindings = subject._observed_source_snapshots(
+        snapshot_reader=cast(ProviderSnapshotReader, _Snapshots(snapshots)),
+        lifecycle_reader=cast(PartitionLifecycleReader, _Lifecycle(snapshots)),
+        lane="etf",
+        observed_cutoff=_CUTOFF,
+    )
+
+    assert authority == "etf-daily-1"
+    assert tuple(binding.dataset_id for binding in bindings) == (
+        "calendar",
+        "etf_basic",
+        "etf_daily",
+        "index_daily",
+    )
+    assert sources == tuple(sorted(item.snapshot_id for item in snapshots))
 
 
 def test_instrument_rules_require_every_member_and_benchmark() -> None:

@@ -68,7 +68,6 @@ class TestMainRoutesAssembly:
             "backtest",
             "capital",
             "commodity",
-            "data_products",
             "fundamental",
             "fx",
             "ingestion",

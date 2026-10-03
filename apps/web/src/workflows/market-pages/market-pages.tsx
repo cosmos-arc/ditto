@@ -1,9 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
-import { useDataProductCoverage } from "@/features/data-products";
 import { fetchInstrumentCatalog, type InstrumentCatalogFilter } from "@/features/instruments";
 import {
 	ASharesPage as ASharesView,
 	CalendarPage as CalendarView,
+	fetchCalendarStatus,
 	MarketsPage as MarketsView,
 	WatchlistPage as WatchlistView,
 } from "@/features/markets";
@@ -19,6 +19,14 @@ function useMarketCatalog(filter: InstrumentCatalogFilter = {}) {
 	return useQuery({
 		queryKey: marketCatalogKeys.list(filter),
 		queryFn: () => fetchInstrumentCatalog(filter),
+		staleTime: 60_000,
+	});
+}
+
+function useCalendarStatus() {
+	return useQuery({
+		queryKey: ["market-page-calendar-status"],
+		queryFn: () => fetchCalendarStatus(),
 		staleTime: 60_000,
 	});
 }
@@ -42,8 +50,8 @@ export function WatchlistPage() {
 	return <WatchlistView catalog={catalog} />;
 }
 
-/** Cross-feature composition for Data Product-backed calendar coverage. */
+/** Cross-feature composition for ingestion-status-backed calendar data status. */
 export function CalendarPage() {
-	const coverage = useDataProductCoverage("calendar");
-	return <CalendarView coverage={coverage} />;
+	const status = useCalendarStatus();
+	return <CalendarView status={status} />;
 }

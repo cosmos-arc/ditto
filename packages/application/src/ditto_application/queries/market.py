@@ -6,7 +6,6 @@ from collections.abc import Sequence
 from datetime import date
 
 import polars as pl
-from ditto_data.catalog.promotion import DatasetMaturityPromotionReader
 from ditto_data.models import InstrumentIdRange
 from ditto_data.services.capital_store import CapitalStore
 from ditto_data.services.market_service import AdjType, MarketBarsQuery, MarketService
@@ -43,11 +42,9 @@ class MarketQueryFacade:
         self,
         market_service: MarketService,
         capital_store: CapitalStore | None = None,
-        maturity_promotion_reader: DatasetMaturityPromotionReader | None = None,
     ) -> None:
         self._service = market_service
         self._capital_store = capital_store
-        self._maturity_promotion_reader = maturity_promotion_reader
 
     def find_bars(
         self,
@@ -156,7 +153,6 @@ class MarketQueryFacade:
         blocked = blocked_catalog_datasets(
             ("adj_factor",),
             allow_experimental_data=allow_experimental_data,
-            maturity_promotion_reader=self._maturity_promotion_reader,
         )
         if blocked:
             raise AppQueryError("adj_factor requires experimental dataset maturity")
@@ -166,7 +162,6 @@ class MarketQueryFacade:
         return not blocked_catalog_datasets(
             ("stock_status",),
             allow_experimental_data=allow_experimental_data,
-            maturity_promotion_reader=self._maturity_promotion_reader,
         )
 
     def get_constituents(
@@ -198,7 +193,6 @@ class MarketQueryFacade:
         blocked = blocked_catalog_datasets(
             ("index_weight",),
             allow_experimental_data=allow_experimental_data,
-            maturity_promotion_reader=self._maturity_promotion_reader,
         )
         if blocked:
             msg = (
@@ -227,7 +221,6 @@ class MarketQueryFacade:
         blocked = blocked_catalog_datasets(
             ("adj_factor",),
             allow_experimental_data=allow_experimental_data,
-            maturity_promotion_reader=self._maturity_promotion_reader,
         )
         if blocked:
             joined = ", ".join(blocked)
@@ -310,7 +303,6 @@ class MarketQueryFacade:
         blocked = blocked_catalog_datasets(
             dataset_ids,
             allow_experimental_data=allow_experimental_data,
-            maturity_promotion_reader=self._maturity_promotion_reader,
         )
         if not blocked:
             return

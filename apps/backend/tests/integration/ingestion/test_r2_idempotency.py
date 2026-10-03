@@ -90,9 +90,7 @@ def test_live_mode_without_credentials_or_evidence_is_configuration_blocked(
 ) -> None:
     container = mocker.MagicMock()
     container.get.return_value = R2AcceptanceRuntimeEvidence(
-        credential_sources=frozenset(),
-        license_records=(),
-        certifications=(),
+        credential_sources=frozenset()
     )
     mocker.patch(
         "ditto_apps.scripts.r2_data_acceptance.make_app_container",

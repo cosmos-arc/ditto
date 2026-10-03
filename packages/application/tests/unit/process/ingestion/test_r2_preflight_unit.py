@@ -1,26 +1,19 @@
-"""Unit contract for the R2 provider and performance preflight."""
+"""Unit contract for the R2 provider access and performance preflight."""
 
 from __future__ import annotations
 
-from datetime import UTC, date, datetime
+from datetime import UTC, datetime
 
 import pytest
 from ditto_application.processes.ingestion.r2_preflight import (
-    R2_ACCEPTANCE_CERTIFICATION_PROFILE,
     ChunkBenchmark,
-    ProductCertificationEvidence,
     ProviderAccessEvidence,
     R2IngestionPreflight,
     R2PreflightEvidence,
 )
-from ditto_data.catalog.license import (
-    DatasetLicenseDraft,
-    DatasetLicenseRecord,
-)
 from ditto_data.catalog.metadata import default_dataset_metadata
 
 CHECKED_AT = datetime(2026, 7, 18, 8, 0, tzinfo=UTC)
-AS_OF = date(2026, 7, 18)
 REPRESENTATIVE_DATASETS = (
     "stock_daily",
     "index_daily",
@@ -51,45 +44,6 @@ def _access() -> tuple[ProviderAccessEvidence, ...]:
     )
 
 
-def _licenses() -> tuple[DatasetLicenseRecord, ...]:
-    records = []
-    for contract in _hard_contracts():
-        source = contract.provider_datasets[0].partition(":")[0]
-        records.append(
-            DatasetLicenseRecord.create(
-                DatasetLicenseDraft(
-                    dataset_id=contract.dataset_id,
-                    source=source,
-                    terms_version="fixture-v1",
-                    effective_from=date(2026, 1, 1),
-                    effective_to=None,
-                    local_cache="allowed",
-                    derivative_compute="allowed",
-                    display="restricted",
-                    redistribution="prohibited",
-                    notes="R2 deterministic fixture review.",
-                    reviewed_by="fixture-reviewer",
-                    reviewed_at=CHECKED_AT,
-                )
-            )
-        )
-    return tuple(records)
-
-
-def _certifications() -> tuple[ProductCertificationEvidence, ...]:
-    return tuple(
-        ProductCertificationEvidence(
-            dataset_id=contract.dataset_id,
-            profile=R2_ACCEPTANCE_CERTIFICATION_PROFILE,
-            report_id=f"certification:{contract.dataset_id}:fixture",
-            content_hash="a" * 64,
-            certified_from=date(2010, 1, 1),
-            certified_through=AS_OF,
-        )
-        for contract in _hard_contracts()
-    )
-
-
 def _benchmarks(
     *,
     elapsed_seconds: float = 60.0,
@@ -109,16 +63,13 @@ def _benchmarks(
 
 
 @pytest.mark.unit
-def test_ready_requires_22_contracts_access_licenses_and_performance_evidence() -> None:
+def test_ready_requires_22_contracts_access_and_performance_evidence() -> None:
     report = R2IngestionPreflight().run(
         R2PreflightEvidence(
             provider_access=_access(),
-            license_records=_licenses(),
-            certifications=_certifications(),
             benchmarks=_benchmarks(),
             incremental_elapsed_seconds=120.0,
             workbench_query_seconds=0.4,
-            as_of=AS_OF,
             checked_at=CHECKED_AT,
         )
     )
@@ -127,10 +78,6 @@ def test_ready_requires_22_contracts_access_licenses_and_performance_evidence() 
     assert report.contract_count == 22
     assert len(report.products) == 22
     assert all(product.ready for product in report.products)
-    assert all(product.certification_report_id for product in report.products)
-    assert all(
-        product.certified_from <= date(2015, 1, 1) for product in report.products
-    )
     assert report.performance.bootstrap_passed is True
     assert report.performance.projected_bootstrap_seconds == 36_000.0
     assert report.performance.incremental_passed is True
@@ -152,12 +99,9 @@ def test_missing_credential_is_configuration_blocked_and_never_success() -> None
     report = R2IngestionPreflight().run(
         R2PreflightEvidence(
             provider_access=tuple(access),
-            license_records=_licenses(),
-            certifications=_certifications(),
             benchmarks=_benchmarks(),
             incremental_elapsed_seconds=120.0,
             workbench_query_seconds=0.4,
-            as_of=AS_OF,
             checked_at=CHECKED_AT,
         )
     )
@@ -169,7 +113,7 @@ def test_missing_credential_is_configuration_blocked_and_never_success() -> None
 
 
 @pytest.mark.unit
-def test_entitlement_and_license_are_both_fail_closed() -> None:
+def test_entitlement_denial_is_fail_closed() -> None:
     access = list(_access())
     target = next(
         item for item in access if item.provider_dataset == "tushare:fund_adj"
@@ -181,19 +125,13 @@ def test_entitlement_and_license_are_both_fail_closed() -> None:
         evidence_uri="evidence://provider-access/fund-adj-denied",
         checked_at=CHECKED_AT,
     )
-    licenses = tuple(
-        record for record in _licenses() if record.dataset_id != "index_weight"
-    )
 
     report = R2IngestionPreflight().run(
         R2PreflightEvidence(
             provider_access=tuple(access),
-            license_records=licenses,
-            certifications=_certifications(),
             benchmarks=_benchmarks(),
             incremental_elapsed_seconds=120.0,
             workbench_query_seconds=0.4,
-            as_of=AS_OF,
             checked_at=CHECKED_AT,
         )
     )
@@ -203,7 +141,6 @@ def test_entitlement_and_license_are_both_fail_closed() -> None:
         product.dataset_id: product.reason_codes for product in report.products
     }
     assert "entitlement_denied" in product_reasons["fund_adj"]
-    assert "license_missing" in product_reasons["index_weight"]
 
 
 @pytest.mark.unit
@@ -211,12 +148,9 @@ def test_performance_gate_blocks_slow_bootstrap_incremental_and_query() -> None:
     report = R2IngestionPreflight().run(
         R2PreflightEvidence(
             provider_access=_access(),
-            license_records=_licenses(),
-            certifications=_certifications(),
             benchmarks=_benchmarks(elapsed_seconds=200.0),
             incremental_elapsed_seconds=1_801.0,
             workbench_query_seconds=5.1,
-            as_of=AS_OF,
             checked_at=CHECKED_AT,
         )
     )
@@ -234,39 +168,10 @@ def test_performance_gate_blocks_slow_bootstrap_incremental_and_query() -> None:
 
 
 @pytest.mark.unit
-def test_missing_or_short_active_certification_is_configuration_blocked() -> None:
-    certifications = list(_certifications())
-    stock_daily = next(
-        item for item in certifications if item.dataset_id == "stock_daily"
-    )
-    certifications[certifications.index(stock_daily)] = ProductCertificationEvidence(
-        dataset_id="stock_daily",
-        profile=R2_ACCEPTANCE_CERTIFICATION_PROFILE,
-        report_id="certification:stock_daily:short",
-        content_hash="b" * 64,
-        certified_from=date(2020, 1, 1),
-        certified_through=AS_OF,
-    )
-    certifications = [
-        item for item in certifications if item.dataset_id != "index_weight"
-    ]
+def test_fixture_preflight_stays_ready_without_secret_material() -> None:
+    report = R2IngestionPreflight().run_fixture(checked_at=CHECKED_AT)
 
-    report = R2IngestionPreflight().run(
-        R2PreflightEvidence(
-            provider_access=_access(),
-            license_records=_licenses(),
-            certifications=tuple(certifications),
-            benchmarks=_benchmarks(),
-            incremental_elapsed_seconds=120.0,
-            workbench_query_seconds=0.4,
-            as_of=AS_OF,
-            checked_at=CHECKED_AT,
-        )
-    )
-
-    assert report.status == "configuration_blocked"
-    product_reasons = {
-        product.dataset_id: product.reason_codes for product in report.products
-    }
-    assert "certified_history_target_unmet" in product_reasons["stock_daily"]
-    assert "certification_missing" in product_reasons["index_weight"]
+    assert report.status == "ready"
+    assert report.contract_count == 22
+    assert "token" not in repr(report).casefold()
+    assert "secret" not in repr(report).casefold()

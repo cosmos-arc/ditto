@@ -15,6 +15,9 @@ from ditto_data.catalog import (
     DataCatalogReader,
     default_dataset_metadata,
 )
+from ditto_data.catalog.snapshot_completion import snapshot_completed
+from ditto_data.catalog.source_snapshot import ProviderSnapshotReader
+from ditto_data.ingestion.partition_state import PartitionLifecycleReader
 from ditto_data.models.ingestion import IngestionLog, IngestionStatus
 
 type CatalogFreshnessStatus = Literal[
@@ -39,6 +42,7 @@ __all__ = [
     "dataset_namespace",
     "latest_catalog_entry_for_dataset",
     "latest_catalog_entry_on_or_before",
+    "observed_snapshot_ids",
     "select_ingestion_source",
 ]
 
@@ -200,6 +204,26 @@ def catalog_asof_snapshot(  # noqa: PLR0911 - fail-closed evidence validation
         row_count=sum(count for count in row_counts if isinstance(count, int)),
         freshness_sla_hours=sla_hours,
     )
+
+
+def observed_snapshot_ids(
+    snapshots: ProviderSnapshotReader,
+    lifecycle: PartitionLifecycleReader,
+    *,
+    dataset_ids: tuple[str, ...],
+    knowledge_cutoff: datetime,
+) -> tuple[str, ...]:
+    """Snapshot identities completed and already observed by the cutoff."""
+    identities: set[str] = set()
+    for dataset_id in dataset_ids:
+        for snapshot in snapshots.list_snapshots(dataset_id=dataset_id):
+            if (
+                snapshot.created_at <= knowledge_cutoff
+                and snapshot.payload_retained
+                and snapshot_completed(snapshot, lifecycle)
+            ):
+                identities.add(snapshot.snapshot_id)
+    return tuple(sorted(identities))
 
 
 def aggregate_source_snapshot_ids(snapshot_ids: tuple[str, ...]) -> str | None:

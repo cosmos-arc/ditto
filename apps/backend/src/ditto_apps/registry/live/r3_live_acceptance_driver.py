@@ -51,8 +51,8 @@ from ditto_application.queries.experiments import (
     ExperimentDetailReadModel,
     ExperimentReviewPacketReadModel,
 )
-from ditto_data.catalog.certification import CertificationReader
 from ditto_data.catalog.source_snapshot import ProviderSnapshotReader
+from ditto_data.ingestion.partition_state import PartitionLifecycleReader
 from ditto_strategy.storage.sqlite.services.strategy_catalog_service import (
     StrategyCatalogService,
 )
@@ -234,8 +234,8 @@ def _build_planning(
             services=LivePlanningServices(
                 artifact_service=container.get(ResearchArtifactService),
                 research_catalog=container.get(ResearchCatalogService),
-                certification_reader=container.get(CertificationReader),
                 snapshot_reader=container.get(ProviderSnapshotReader),
+                lifecycle_reader=container.get(PartitionLifecycleReader),
                 strategy_catalog=container.get(StrategyCatalogService),
                 update_handler=container.get(UpdateStrategyHandler),
                 executor_probe=container.get(BuilderBackedResearchExecutorProbe),

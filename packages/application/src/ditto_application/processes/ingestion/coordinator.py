@@ -137,7 +137,6 @@ class IngestionCoordinator:
         self._ingestion_log_store = cfg.ingestion_log_store
         self._ingestion_cursor_store = cfg.ingestion_cursor_store
         self._quality_checker = cfg.quality_checker
-        self._freeze_store = cfg.freeze_store
         self._lineage_recorder = cfg.lineage_recorder
         self._catalog_reader = cfg.catalog_reader
         self._catalog_writer = cfg.catalog_writer
@@ -394,7 +393,6 @@ class IngestionCoordinator:
                 list_date_inference=self._list_date_inference,
                 catalog_reader=self._catalog_reader,
                 cursor_store=self._ingestion_cursor_store,
-                freeze_store=self._freeze_store,
                 lineage_recorder=self._lineage_recorder,
                 catalog_writer=self._catalog_writer,
                 source_name=self._source_name,
@@ -544,7 +542,6 @@ class IngestionCoordinator:
                 list_date_inference=self._list_date_inference,
                 catalog_reader=self._catalog_reader,
                 cursor_store=self._ingestion_cursor_store,
-                freeze_store=self._freeze_store,
                 lineage_recorder=self._lineage_recorder,
                 catalog_writer=self._catalog_writer,
                 source_name=self._source_name,

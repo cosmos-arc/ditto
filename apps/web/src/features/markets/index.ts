@@ -1,5 +1,7 @@
 export {
+	fetchCalendarStatus,
 	fetchMarketContext,
+	type MarketCalendarStatus,
 	type MarketContext,
 	type MarketContextScope,
 } from "./api/market-evidence";
@@ -7,7 +9,7 @@ export { ASharesPage } from "./components/a-shares-page";
 export { CalendarPage } from "./components/calendar-page";
 export { IntelligencePage } from "./components/intelligence-page";
 export type {
-	MarketCalendarCoverageQuery,
+	MarketCalendarStatusQuery,
 	MarketCatalogQuery,
 	MarketContextQuery,
 } from "./components/market-view-contracts";

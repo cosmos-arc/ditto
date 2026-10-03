@@ -72,7 +72,7 @@ def test_fixture_report_is_engineering_pass_but_release_blocked(
     }
     assert payload["does_not_prove"] == [
         "provider_entitlement",
-        "certified_live_data",
+        "observed_live_data",
         "live_96_month_history",
         "real_browser_acceptance",
         "production_recovery",
@@ -212,7 +212,7 @@ def test_live_cli_requires_exact_mode_and_release_guards(tmp_path: Path) -> None
             "--real-data",
             "--workspace-root",
             str(tmp_path),
-            "--require-certified",
+            "--require-observed",
             "--require-both-golden-lanes",
             "--r2-evidence",
             str(report),
@@ -226,7 +226,7 @@ def test_live_cli_requires_exact_mode_and_release_guards(tmp_path: Path) -> None
     assert args.real_data is True
     assert args.fixture is False
     assert args.workspace_root == tmp_path
-    assert args.require_certified is True
+    assert args.require_observed is True
     assert args.require_both_golden_lanes is True
     assert args.r2_evidence == report
     assert args.r2_source_manifest == source_manifest
@@ -261,7 +261,7 @@ def test_live_runner_without_explicit_environment_opt_in_is_blocked(
             manifest=tmp_path / "r3-manifest.json",
             r2_evidence=report,
             r2_source_manifest=source_manifest,
-            require_certified=True,
+            require_observed=True,
             require_both_golden_lanes=True,
         ),
         environment={},
@@ -288,7 +288,7 @@ def test_content_verified_ready_r2_source_runs_live_command_contract(
             manifest=tmp_path / "r3-manifest.json",
             r2_evidence=report,
             r2_source_manifest=source_manifest,
-            require_certified=True,
+            require_observed=True,
             require_both_golden_lanes=True,
         ),
         environment={"DITTO_RUN_REAL_DATA_ACCEPTANCE": "1"},
@@ -355,7 +355,7 @@ def test_live_runner_binds_verified_r2_source_only_while_commands_run(
             manifest=tmp_path / "r3-manifest.json",
             r2_evidence=report,
             r2_source_manifest=source_manifest,
-            require_certified=True,
+            require_observed=True,
             require_both_golden_lanes=True,
         ),
         environment={"DITTO_RUN_REAL_DATA_ACCEPTANCE": "1"},
@@ -387,7 +387,7 @@ def test_live_runner_does_not_execute_when_r2_manifest_hash_drifts(
             manifest=tmp_path / "r3-manifest.json",
             r2_evidence=report,
             r2_source_manifest=source_manifest,
-            require_certified=True,
+            require_observed=True,
             require_both_golden_lanes=True,
         ),
         environment={"DITTO_RUN_REAL_DATA_ACCEPTANCE": "1"},
@@ -428,7 +428,7 @@ def test_live_runner_fails_release_when_one_live_command_fails(
             manifest=tmp_path / "r3-manifest.json",
             r2_evidence=report,
             r2_source_manifest=source_manifest,
-            require_certified=True,
+            require_observed=True,
             require_both_golden_lanes=True,
         ),
         environment={"DITTO_RUN_REAL_DATA_ACCEPTANCE": "1"},
@@ -456,7 +456,7 @@ def test_r2_source_manifest_rejects_parent_path_escape(tmp_path: Path) -> None:
             manifest=tmp_path / "r3-manifest.json",
             r2_evidence=report,
             r2_source_manifest=source_manifest,
-            require_certified=True,
+            require_observed=True,
             require_both_golden_lanes=True,
         ),
         environment={"DITTO_RUN_REAL_DATA_ACCEPTANCE": "1"},

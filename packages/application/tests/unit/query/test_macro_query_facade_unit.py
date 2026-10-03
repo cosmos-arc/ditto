@@ -5,25 +5,8 @@ from __future__ import annotations
 from unittest.mock import MagicMock
 
 import polars as pl
-import pytest
-from ditto_application.exceptions import AppQueryError
 from ditto_application.queries.macro import MacroQueryFacade
-from ditto_data.catalog.promotion import DatasetMaturityPromotion
 from ditto_data.services.macro_service import MacroQuery
-
-
-class _MaturityPromotionReader:
-    def __init__(
-        self,
-        promotions_by_dataset: dict[str, DatasetMaturityPromotion] | None = None,
-    ) -> None:
-        self._promotions_by_dataset = promotions_by_dataset or {}
-
-    def get_dataset_maturity_promotion(
-        self,
-        dataset_id: str,
-    ) -> DatasetMaturityPromotion | None:
-        return self._promotions_by_dataset.get(dataset_id)
 
 
 class TestMacroQueryFacadeFindIndicators:
@@ -128,25 +111,23 @@ class TestMacroQueryFacadeListIndicators:
 class TestMacroQueryFacadeMaturityGate:
     """MacroQueryFacade — 显式数据集 maturity read gate."""
 
-    def test_find_indicators_requires_explicit_research_opt_in(self) -> None:
+    def test_find_indicators_available_without_opt_in(self) -> None:
         service = MagicMock(spec=["find_indicators"])
+        service.find_indicators.return_value = pl.DataFrame({"value": [3.5]})
         facade = MacroQueryFacade(macro_service=service)
 
-        with pytest.raises(AppQueryError, match="allow_experimental_data=True") as exc:
-            facade.find_indicators(start="2026-01-01", end="2026-06-01")
+        facade.find_indicators(start="2026-01-01", end="2026-06-01")
 
-        service.find_indicators.assert_not_called()
-        assert "macro_indicators" in str(exc.value)
+        service.find_indicators.assert_called_once()
 
-    def test_list_indicators_requires_explicit_research_opt_in(self) -> None:
+    def test_list_indicators_available_without_opt_in(self) -> None:
         service = MagicMock(spec=["list_indicators"])
+        service.list_indicators.return_value = pl.DataFrame({"name": ["cpi_yoy"]})
         facade = MacroQueryFacade(macro_service=service)
 
-        with pytest.raises(AppQueryError, match="allow_experimental_data=True") as exc:
-            facade.list_indicators(start="2026-01-01", end="2026-06-01")
+        facade.list_indicators(start="2026-01-01", end="2026-06-01")
 
-        service.list_indicators.assert_not_called()
-        assert "macro_indicators" in str(exc.value)
+        service.list_indicators.assert_called_once()
 
     def test_allow_experimental_data_delegates_to_service(self) -> None:
         service = MagicMock(spec=["find_indicators"])
@@ -158,28 +139,6 @@ class TestMacroQueryFacadeMaturityGate:
             end="2026-06-01",
             allow_experimental_data=True,
         )
-
-        assert len(result) == 1
-        service.find_indicators.assert_called_once()
-
-    def test_promoted_dataset_does_not_need_research_opt_in(self) -> None:
-        service = MagicMock(spec=["find_indicators"])
-        service.find_indicators.return_value = pl.DataFrame({"value": [3.5]})
-        facade = MacroQueryFacade(
-            macro_service=service,
-            maturity_promotion_reader=_MaturityPromotionReader(
-                {
-                    "macro_indicators": DatasetMaturityPromotion(
-                        dataset_id="macro_indicators",
-                        previous_maturity="experimental",
-                        promoted_maturity="initial-focus",
-                        promoted_by="architecture-review",
-                    )
-                }
-            ),
-        )
-
-        result = facade.find_indicators(start="2026-01-01", end="2026-06-01")
 
         assert len(result) == 1
         service.find_indicators.assert_called_once()
