@@ -40,8 +40,10 @@ from ditto_application.queries.data_specimen import (
     SPECIMEN_RULE_VERSION,
     DataSpecimenQuery,
 )
-from ditto_application.queries.field_admission import FieldAdmissionRequest
-from ditto_application.queries.provider_snapshot import ProviderSnapshotQuery
+from ditto_application.queries.provider_snapshot import (
+    ProviderSnapshotQuery,
+    SnapshotReplayRequest,
+)
 from pydantic import TypeAdapter, ValidationError
 
 from ditto_apps.cli.utils.output import output_json_dict
@@ -646,14 +648,14 @@ def replay_snapshots(
     """Read qualified fields at explicit snapshot identities and PIT cutoffs."""
     container = make_app_container()
     try:
-        request = TypeAdapter(FieldAdmissionRequest).validate_json(
+        request = TypeAdapter(SnapshotReplayRequest).validate_json(
             request_file.read_bytes()
         )
         result = container.get(ProviderSnapshotQuery).replay(request)
         output_json_dict(
             {
                 "request": asdict(request),
-                "admission": asdict(result.admission),
+                "readiness": asdict(result.readiness),
                 "snapshots": {
                     key: frame.to_dicts() for key, frame in result.frames.items()
                 },

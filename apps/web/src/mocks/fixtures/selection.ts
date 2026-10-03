@@ -1,38 +1,10 @@
 import type {
-	CreateSelectionRunBody,
 	IndustryRotation,
 	ResearchCase,
 	SelectionRun,
 	SelectionRunDiff,
 	SelectionWorkspaceReceipt,
 } from "@/features/selection/api";
-
-export const selectionRunInputFixture = {
-	as_of: "2026-08-31T07:00:00Z",
-	data_fields: [],
-	industries: [],
-	instruments: [],
-	knowledge_cutoff: "2026-08-31T07:00:00Z",
-	market_context_feature_set_id: null,
-	membership_version: "sw-l1:2026-08-31",
-	publication_cutoff: "2026-08-31T06:30:00Z",
-	rotation_algorithm_version: "industry-rotation-v1",
-	rotation_missing_inputs: ["industry_inputs"],
-	rotation_source_snapshot_ids: ["stock-daily:sha256:a"],
-	seed: 17,
-	selection_source_snapshot_ids: ["stock-daily:sha256:a"],
-	selection_spec: {
-		asset_kind: "stock",
-		excluded_limit_states: ["limit_up", "limit_down"],
-		factor_weights: [{ name: "momentum", weight: 1 }],
-		min_average_turnover: 20_000_000,
-		min_listing_days: 120,
-		spec_id: "a-share-stock-discovery",
-		spec_version: "1",
-		top_k: 10,
-	},
-	universe_snapshot_id: "universe:sha256:stock-core",
-} satisfies CreateSelectionRunBody;
 
 export const selectionRotationFixture = {
 	algorithm_version: "industry-rotation-v1",

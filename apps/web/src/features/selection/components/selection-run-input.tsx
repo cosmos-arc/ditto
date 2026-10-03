@@ -1,38 +1,14 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { type AdmissionView, toAdmissionView } from "../admission";
-import {
-	type AssembleSelectionRunBody,
-	assembleSelectionRun,
-	assessSelectionAdmission,
-	type CreateSelectionRunBody,
-	listUniverseOptions,
-	resolveSelectionUniverse,
-} from "../api";
+import { type AssembleSelectionRunBody, assembleSelectionRun, listUniverseOptions } from "../api";
 import { toAssembledRunView } from "../assembled-run";
-import { SelectionAdmission } from "./selection-admission";
-
-const STORAGE_KEY = "ditto.selection-run-input.v1";
 
 // 镜像服务端 math.isclose(total, 1.0, abs_tol=1e-12)：默认 rel_tol=1e-9 主导有效容差。
 const WEIGHT_SUM_TOLERANCE = 1e-9;
 
-function parseRunInput(value: string): CreateSelectionRunBody {
-	const parsed: unknown = JSON.parse(value);
-	if (typeof parsed !== "object" || parsed === null || !("selection_spec" in parsed)) {
-		throw new Error("输入必须包含 selection_spec");
-	}
-	const spec = Reflect.get(parsed, "selection_spec");
-	if (typeof spec !== "object" || spec === null || typeof Reflect.get(spec, "spec_id") !== "string") {
-		throw new Error("selection_spec.spec_id 必须是字符串");
-	}
-	return parsed as CreateSelectionRunBody;
-}
-
-export function readSavedSelectionInput(): string {
-	return localStorage.getItem(STORAGE_KEY) ?? "";
-}
+// 全市场池的缺失输入证券可达数千只：预览只展开前 N 只，其余汇总计数。
+const MISSING_INSTRUMENT_PREVIEW_LIMIT = 20;
 
 function shanghaiLocalInput(date: Date): string {
 	const parts = new Intl.DateTimeFormat("en-CA", {
@@ -186,11 +162,9 @@ const INPUT_CLASS =
 export function SelectionRunInput({
 	busy,
 	onRun,
-	onSaved,
 }: {
 	readonly busy: boolean;
-	readonly onRun: (input: CreateSelectionRunBody) => void;
-	readonly onSaved: (input: CreateSelectionRunBody) => void;
+	readonly onRun: (input: AssembleSelectionRunBody) => void;
 }) {
 	const [form, setForm] = useState<StrategyForm>(initialForm);
 	const [asOfEdited, setAsOfEdited] = useState(false);
@@ -206,45 +180,22 @@ export function SelectionRunInput({
 			setForm((current) => ({ ...current, universeId: options[0]?.universeId ?? "" }));
 		}
 	}, [universes.data, form.universeId]);
-	const [advancedValue, setAdvancedValue] = useState(readSavedSelectionInput);
-	const [message, setMessage] = useState<string | null>(null);
-	const [instrument, setInstrument] = useState("");
 
 	const errors = strategyErrors(form);
-	const body = errors.length === 0 ? strategyBody(form) : null;
 
 	const assemble = useMutation({
-		mutationFn: async (payload: AssembleSelectionRunBody) => {
-			const view = toAssembledRunView(await assembleSelectionRun(payload), payload);
-			return { ...view, admissionView: toAdmissionView(view.admission) satisfies AdmissionView };
-		},
+		mutationFn: async (payload: AssembleSelectionRunBody) =>
+			toAssembledRunView(await assembleSelectionRun(payload), payload),
 	});
 	const sameAttempt = Boolean(
-		body && assemble.variables && JSON.stringify(assemble.variables) === JSON.stringify(body),
+		errors.length === 0 &&
+			assemble.variables &&
+			JSON.stringify(assemble.variables) === JSON.stringify(strategyBody(form)),
 	);
 	const assembled = sameAttempt ? assemble.data : undefined;
-
-	const inspection = useMutation({
-		mutationFn: async ({ raw, instrument }: { raw: string; instrument: string }) =>
-			toAdmissionView(await assessSelectionAdmission(parseRunInput(raw), instrument ? Number(instrument) : undefined)),
-	});
-	const universe = useMutation({
-		mutationFn: (raw: string) => resolveSelectionUniverse(parseRunInput(raw)),
-	});
-	const historical = universe.variables === advancedValue ? universe.data : undefined;
-	const currentInspection =
-		inspection.variables?.raw === advancedValue && inspection.variables.instrument === instrument;
-	let instruments: CreateSelectionRunBody["instruments"] = [];
-	try {
-		const input = parseRunInput(advancedValue);
-		if (Array.isArray(input.instruments))
-			instruments = input.instruments.filter(
-				(item) => item && typeof item.instrument_id === "number" && typeof item.instrument_name === "string",
-			);
-	} catch {
-		/* Incomplete drafts are validated on explicit action. */
-	}
-	const admission = currentInspection ? inspection.data : undefined;
+	const missingInstruments =
+		assembled?.request.instruments.filter((item) => item.declared_missing_inputs.length > 0) ?? [];
+	const rotationMissingInputs = assembled?.request.rotation_missing_inputs ?? [];
 
 	function updateForm(patch: Partial<StrategyForm>): void {
 		setForm((current) => ({ ...current, ...patch }));
@@ -257,31 +208,21 @@ export function SelectionRunInput({
 		}));
 	}
 
-	function validated(): CreateSelectionRunBody | null {
-		try {
-			const input = parseRunInput(advancedValue);
-			setMessage(null);
-			return input;
-		} catch (error) {
-			setMessage(error instanceof Error ? error.message : "运行输入不是有效 JSON");
-			return null;
-		}
-	}
-
-	function save(): void {
-		const input = validated();
-		if (!input) return;
-		localStorage.setItem(STORAGE_KEY, JSON.stringify(input, null, 2));
-		setAdvancedValue(JSON.stringify(input, null, 2));
-		setMessage("已保存精确输入草案到本机");
-		onSaved(input);
+	function submitForm(): StrategyForm {
+		// 未手动改过的实时默认值在提交时刻刷新：留置页面数分钟后
+		// 的旧时点会被服务端偏差窗判为回溯。
+		const asOf = asOfEdited ? form.asOf : shanghaiLocalInput(new Date());
+		const nextForm = { ...form, asOf };
+		if (!asOfEdited) setForm(nextForm);
+		return nextForm;
 	}
 
 	return (
 		<section className="border-b border-(--color-border-subtle) bg-(--color-surface-strip)">
 			<div className="grid gap-3 px-4 py-3">
 				<p className="max-w-3xl text-xs leading-5 text-(--color-foreground-tertiary)">
-					按策略字段新建运行：服务端负责组装历史证券池与数据区间等全部 PIT 事实，先组装预览准入，再创建运行。
+					按策略字段新建运行：服务端负责组装历史证券池与数据区间等全部 PIT
+					事实，可先组装预览；数据不完整时服务端会拒绝创建。
 				</p>
 				<div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
 					<div className="grid gap-1 text-xs">
@@ -504,25 +445,11 @@ export function SelectionRunInput({
 					<Button
 						type="button"
 						disabled={assemble.isPending || errors.length > 0}
-						onClick={() => {
-							if (!body) return;
-							// 未手动改过的实时默认值在提交时刻刷新：留置页面数分钟后
-							// 的旧时点会被服务端偏差窗判为回溯。
-							const asOf = asOfEdited ? form.asOf : shanghaiLocalInput(new Date());
-							const nextForm = { ...form, asOf };
-							if (!asOfEdited) setForm(nextForm);
-							assemble.mutate(strategyBody(nextForm));
-						}}
+						onClick={() => assemble.mutate(strategyBody(submitForm()))}
 					>
 						{assemble.isPending ? "组装中…" : "组装并预览"}
 					</Button>
-					<Button
-						type="button"
-						disabled={busy || errors.length > 0 || !assembled || !assembled.admissionView.allowed}
-						onClick={() => {
-							if (assembled) onRun(assembled.request);
-						}}
-					>
+					<Button type="button" disabled={busy || errors.length > 0} onClick={() => onRun(strategyBody(submitForm()))}>
 						{busy ? "运行中…" : "创建运行"}
 					</Button>
 					{!assembled && sameAttempt && assemble.isPending && (
@@ -549,123 +476,22 @@ export function SelectionRunInput({
 							数据区间：{assembled.request.data_from ?? "未知"} → {assembled.request.data_to ?? "未知"}
 						</p>
 						<p>输入证券：{assembled.request.instruments.length} 只</p>
+						{rotationMissingInputs.length > 0 && (
+							<p role="alert">行业轮动缺失输入：{rotationMissingInputs.join("、")}</p>
+						)}
+						{missingInstruments.slice(0, MISSING_INSTRUMENT_PREVIEW_LIMIT).map((item) => (
+							<p role="alert" key={item.instrument_id}>
+								{item.instrument_name}（{item.instrument_id}）缺失输入：
+								{item.declared_missing_inputs.join("、")}
+							</p>
+						))}
+						{missingInstruments.length > MISSING_INSTRUMENT_PREVIEW_LIMIT && (
+							<p>另有 {missingInstruments.length - MISSING_INSTRUMENT_PREVIEW_LIMIT} 只证券存在缺失输入。</p>
+						)}
+						{rotationMissingInputs.length === 0 && missingInstruments.length === 0 && <p>无缺失输入。</p>}
 					</section>
 				)}
-				{assembled && (
-					<SelectionAdmission
-						key={JSON.stringify(assemble.variables)}
-						value={assembled.admissionView}
-						scope="组装结果"
-					/>
-				)}
 			</div>
-			<details className="border-t border-(--color-border-subtle)">
-				<summary className="cursor-pointer px-4 py-2 text-xs font-medium text-(--color-foreground-secondary)">
-					高级模式 · 导入完整输入包
-				</summary>
-				<div className="grid gap-3 px-4 pb-4">
-					<p className="max-w-3xl text-xs leading-5 text-(--color-foreground-tertiary)">
-						输入包需绑定字段来源、数据区间及历史证券池快照。观察池须保留退市与不可投资证券；服务端会核对完整名单、许可、认证和时点。
-					</p>
-					<textarea
-						aria-label="Selection 输入 JSON"
-						className="min-h-40 w-full rounded-(--radius-md) border border-(--color-border-primary) bg-(--color-surface-1) p-3 font-mono text-xs text-(--color-foreground)"
-						placeholder='{"as_of":"...","selection_spec":{"spec_id":"..."}}'
-						spellCheck={false}
-						value={advancedValue}
-						onChange={(event) => {
-							setAdvancedValue(event.currentTarget.value);
-							setInstrument("");
-						}}
-					/>
-					<label className="grid gap-1 text-xs">
-						选择证券查看字段资格
-						<select
-							aria-label="选择证券"
-							value={instrument}
-							onChange={(event) => setInstrument(event.currentTarget.value)}
-							className="rounded-(--radius-md) border border-(--color-border-primary) bg-(--color-surface-1) p-2"
-						>
-							<option value="">全部输入证券</option>
-							{instruments.map((item) => (
-								<option key={item.instrument_id} value={item.instrument_id}>
-									{item.instrument_name} · {item.instrument_id}
-								</option>
-							))}
-						</select>
-					</label>
-					{instrument && <p className="text-xs">当前仅检查所选证券的数据资格；执行时服务端仍校验输入包的全部证券。</p>}
-					<div className="flex items-center gap-2">
-						<Button
-							type="button"
-							variant="outline"
-							disabled={inspection.isPending || !advancedValue.trim()}
-							onClick={() => {
-								if (validated()) inspection.mutate({ raw: advancedValue, instrument });
-							}}
-						>
-							{inspection.isPending ? "检查中…" : "检查字段准入"}
-						</Button>
-						<Button
-							type="button"
-							variant="outline"
-							disabled={universe.isPending || !advancedValue.trim()}
-							onClick={() => universe.mutate(advancedValue)}
-						>
-							{universe.isPending ? "读取中…" : "查看历史证券池"}
-						</Button>
-						<Button type="button" variant="outline" onClick={save}>
-							校验并保存输入
-						</Button>
-						<Button
-							type="button"
-							disabled={busy || advancedValue.trim().length === 0 || (!instrument && admission?.allowed === false)}
-							onClick={() => {
-								const input = validated();
-								if (input) onRun(input);
-							}}
-						>
-							{busy ? "运行中…" : "执行 SelectionRun"}
-						</Button>
-						{message && (
-							<span role="status" className="text-xs text-(--color-foreground-tertiary)">
-								{message}
-							</span>
-						)}
-					</div>
-					{currentInspection && inspection.isError && <p role="alert">{inspection.error.message}</p>}
-					{universe.variables === advancedValue && universe.isError && <p role="alert">{universe.error.message}</p>}
-					{historical && (
-						<section aria-label="历史证券池" className="space-y-2 text-xs">
-							<p>
-								历史观察池 · {historical.asOf} · {historical.members.length} 只证券
-							</p>
-							<p className="break-all">快照：{historical.snapshotId}</p>
-							<p>
-								知识截止：{historical.knowledgeCutoff} · 披露截止：{historical.publicationCutoff}
-							</p>
-							{historical.members.length === 0 ? (
-								<p>该时点没有可见证券。</p>
-							) : (
-								<ul className="max-h-48 overflow-auto">
-									{historical.members.map((member) => (
-										<li key={member.instrumentId}>
-											{member.instrumentId} · {member.investable ? "可投资" : "不可投资"} · {member.reasons}
-										</li>
-									))}
-								</ul>
-							)}
-						</section>
-					)}
-					{admission && (
-						<SelectionAdmission
-							key={`${advancedValue}:${instrument}`}
-							value={admission}
-							scope={instrument ? "所选证券" : "全部输入证券"}
-						/>
-					)}
-				</div>
-			</details>
 		</section>
 	);
 }

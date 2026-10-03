@@ -8,11 +8,10 @@ from typing import Literal
 from zoneinfo import ZoneInfo
 
 from dishka import Provider, Scope, provide
-from ditto_data.catalog.certification import CertificationReader
-from ditto_data.catalog.license import DatasetLicenseReader
 from ditto_data.catalog.provider_payload import ProviderPayloadReader
+from ditto_data.catalog.snapshot_completion import snapshot_completed
 from ditto_data.catalog.snapshot_reader import SnapshotReadService, SourceTickerResolver
-from ditto_data.catalog.source_snapshot import ProviderSnapshotReader
+from ditto_data.catalog.source_snapshot import ProviderSnapshot, ProviderSnapshotReader
 from ditto_data.ingestion.partition_state import PartitionLifecycleReader
 from ditto_data.services.metadata.instrument import SecurityQuery
 from ditto_data.services.metadata_service import MetadataService
@@ -30,9 +29,9 @@ from ditto_application.builders.data_provider import ServiceBackedDataProvider
 from ditto_application.exceptions import AppProcessError
 from ditto_application.processes.selection.assemble_facts import (
     AssembleSelectionFacts,
-    CertifiedSnapshotIndex,
-    CertifiedSnapshotWindow,
     InstrumentIdentityReader,
+    SnapshotCoverageIndex,
+    SnapshotWindow,
     UniverseSourcesDiscovery,
 )
 from ditto_application.processes.selection.create_research_case import (
@@ -42,7 +41,6 @@ from ditto_application.processes.selection.facade import SelectionWorkspaceFacad
 from ditto_application.processes.selection.run_industry_and_security_selection import (
     RunIndustryAndSecuritySelection,
 )
-from ditto_application.queries.field_admission import FieldAdmissionQuery
 from ditto_application.queries.historical_universe import (
     HistoricalUniverseQuery,
     HistoricalUniverseSources,
@@ -54,13 +52,10 @@ from ditto_application.queries.selection_evidence import (
     SelectionRunEvidenceQueryFacade,
 )
 from ditto_application.queries.selection_runs import SelectionRunQueryService
+from ditto_application.queries.snapshot_readiness import SnapshotReadinessQuery
 from ditto_application.research_case_contracts import ResearchCaseFactory
 
 __all__ = ["AppSelectionProvider"]
-
-# Mirrors the FieldAdmissionRequest profile default; admission and discovery
-# must qualify the same certification lane.
-_SELECTION_FIELDS_PROFILE = "selection-fields-v1"
 
 
 def _metadata_ticker_resolver(metadata: MetadataService) -> SourceTickerResolver:
@@ -160,50 +155,35 @@ def _metadata_identities(metadata: MetadataService) -> InstrumentIdentityReader:
     return _MetadataIdentities()
 
 
-def _certified_snapshot_index(
-    certifications: CertificationReader, snapshots: ProviderSnapshotReader
-) -> CertifiedSnapshotIndex:
-    """Qualify snapshots through the active selection-fields certification."""
+def _completed_snapshot_index(
+    lifecycle: PartitionLifecycleReader, snapshots: ProviderSnapshotReader
+) -> SnapshotCoverageIndex:
+    """Qualify snapshots through their own ingestion completion evidence."""
 
-    class _CertifiedIndex:
-        def snapshot_ids(self, dataset_id: str) -> tuple[str, ...]:
-            report = certifications.get_active_report(
-                dataset_id, _SELECTION_FIELDS_PROFILE
+    class _CompletedIndex:
+        def _completed(self, dataset_id: str) -> tuple[ProviderSnapshot, ...]:
+            return tuple(
+                snapshot
+                for snapshot in snapshots.list_snapshots(dataset_id=dataset_id)
+                if snapshot.payload_retained and snapshot_completed(snapshot, lifecycle)
             )
-            return report.evidence.snapshot_ids if report else ()
 
-        def windows(self, dataset_id: str) -> tuple[CertifiedSnapshotWindow, ...]:
-            resolved: list[CertifiedSnapshotWindow] = []
-            for snapshot_id in self.snapshot_ids(dataset_id):
-                snapshot = snapshots.get_snapshot(snapshot_id)
-                if snapshot is None:
-                    continue
-                resolved.append(
-                    CertifiedSnapshotWindow(
-                        snapshot_id,
-                        date.fromisoformat(snapshot.request_start),
-                        date.fromisoformat(snapshot.request_end),
-                    )
+        def snapshot_ids(self, dataset_id: str) -> tuple[str, ...]:
+            return tuple(
+                snapshot.snapshot_id for snapshot in self._completed(dataset_id)
+            )
+
+        def windows(self, dataset_id: str) -> tuple[SnapshotWindow, ...]:
+            return tuple(
+                SnapshotWindow(
+                    snapshot.snapshot_id,
+                    date.fromisoformat(snapshot.request_start),
+                    date.fromisoformat(snapshot.request_end),
                 )
-            return tuple(resolved)
+                for snapshot in self._completed(dataset_id)
+            )
 
-        def covering(
-            self, *, dataset_id: str, day: date
-        ) -> tuple[CertifiedSnapshotWindow, ...]:
-            windows: list[CertifiedSnapshotWindow] = []
-            for snapshot_id in self.snapshot_ids(dataset_id):
-                snapshot = snapshots.get_snapshot(snapshot_id)
-                if snapshot is None:
-                    continue
-                request_start = date.fromisoformat(snapshot.request_start)
-                request_end = date.fromisoformat(snapshot.request_end)
-                if request_start <= day <= request_end:
-                    windows.append(
-                        CertifiedSnapshotWindow(snapshot_id, request_start, request_end)
-                    )
-            return tuple(windows)
-
-    return _CertifiedIndex()
+    return _CompletedIndex()
 
 
 class _GovernedFactorRegistry:
@@ -217,13 +197,13 @@ class _GovernedFactorRegistry:
 
 
 def _index_universe_discovery(
-    index: CertifiedSnapshotIndex,
+    index: SnapshotCoverageIndex,
     metadata: MetadataService,
 ) -> UniverseSourcesDiscovery:
     """
-    Retain the certified registry chains for one universe at a cutoff.
+    Retain the completed registry chains for one universe at a cutoff.
 
-    The v1 roster lane projects the whole certified market through the
+    The v1 roster lane projects the whole registered market through the
     master/status chains; it cannot express a narrower pool (that needs
     membership snapshots inside ``HistoricalUniverseSources``). Discovery
     therefore fails closed unless the requested universe covers exactly
@@ -257,7 +237,7 @@ def _index_universe_discovery(
             )
             if members != registered:
                 raise AppProcessError(
-                    "universe membership is narrower than the certified roster "
+                    "universe membership is narrower than the registered roster "
                     + "lane; pool rosters need membership snapshots",
                     details={
                         "reason": "ASSEMBLY_UNIVERSE_SCOPE_UNSUPPORTED",
@@ -303,12 +283,12 @@ class AppSelectionProvider(Provider):
     def selection_workspace_facade(
         self,
         process: RunIndustryAndSecuritySelection,
-        admission: FieldAdmissionQuery,
+        readiness: SnapshotReadinessQuery,
         historical_universe: HistoricalUniverseQuery,
     ) -> SelectionWorkspaceFacade:
         """Expose typed create-selection requests to transport adapters."""
         return SelectionWorkspaceFacade(
-            process, admission=admission, historical_universe=historical_universe
+            process, readiness=readiness, historical_universe=historical_universe
         )
 
     @provide
@@ -317,11 +297,11 @@ class AppSelectionProvider(Provider):
         data_provider: ServiceBackedDataProvider,
         historical_universe: HistoricalUniverseQuery,
         metadata: MetadataService,
-        certifications: CertificationReader,
+        lifecycle: PartitionLifecycleReader,
         snapshots: ProviderSnapshotReader,
     ) -> AssembleSelectionFacts:
-        """Assemble policy-only selection requests from certified evidence."""
-        index = _certified_snapshot_index(certifications, snapshots)
+        """Assemble policy-only selection requests from completed evidence."""
+        index = _completed_snapshot_index(lifecycle, snapshots)
         return AssembleSelectionFacts(
             provider=data_provider,
             history=historical_universe,
@@ -373,15 +353,13 @@ class AppSelectionProvider(Provider):
         return SelectionRunEvidenceQueryFacade(reader)
 
     @provide
-    def field_admission_query(
+    def snapshot_readiness_query(
         self,
         snapshots: ProviderSnapshotReader,
-        licenses: DatasetLicenseReader,
-        certifications: CertificationReader,
         lifecycle: PartitionLifecycleReader,
-    ) -> FieldAdmissionQuery:
+    ) -> SnapshotReadinessQuery:
         """Reuse durable data evidence for both selection checks and previews."""
-        return FieldAdmissionQuery(snapshots, licenses, certifications, lifecycle)
+        return SnapshotReadinessQuery(snapshots, lifecycle)
 
     @provide
     def provider_snapshot_query(
@@ -389,13 +367,13 @@ class AppSelectionProvider(Provider):
         snapshots: ProviderSnapshotReader,
         payloads: ProviderPayloadReader,
         lifecycle: PartitionLifecycleReader,
-        admission: FieldAdmissionQuery,
+        readiness: SnapshotReadinessQuery,
         metadata: MetadataService,
     ) -> ProviderSnapshotQuery:
         """Bind exact replay to data-owned immutable reads and current qualification."""
         return ProviderSnapshotQuery(
             SnapshotReadService(snapshots, payloads, lifecycle),
-            admission,
+            readiness,
             ticker_resolver=_metadata_ticker_resolver(metadata),
         )
 
@@ -405,9 +383,9 @@ class AppSelectionProvider(Provider):
         snapshots: ProviderSnapshotReader,
         payloads: ProviderPayloadReader,
         lifecycle: PartitionLifecycleReader,
-        admission: FieldAdmissionQuery,
+        readiness: SnapshotReadinessQuery,
     ) -> HistoricalUniverseQuery:
         """Resolve qualified historical scopes from completed retained evidence."""
         return HistoricalUniverseQuery(
-            SnapshotReadService(snapshots, payloads, lifecycle), admission
+            SnapshotReadService(snapshots, payloads, lifecycle), readiness
         )

@@ -1,4 +1,4 @@
-"""Public CLI replay uses actual ingestion, approval and immutable payload services."""
+"""Public CLI replay uses actual ingestion, readiness and immutable payload services."""
 
 from contextlib import ExitStack
 from datetime import UTC, datetime
@@ -10,26 +10,21 @@ from ditto_application.processes.ingestion.post_ingest import (
     RequestWindow,
     process_fetched_data,
 )
-from ditto_application.queries.field_admission import FieldAdmissionQuery
 from ditto_application.queries.provider_snapshot import ProviderSnapshotQuery
+from ditto_application.queries.snapshot_readiness import SnapshotReadinessQuery
 from ditto_apps.cli.main import app
-from ditto_data.catalog.certification_store import SQLiteCertificationStore
 from ditto_data.catalog.provider_payload import FilesystemProviderPayloadStore
 from ditto_data.catalog.snapshot_reader import SnapshotReadService
-from ditto_platform.foundation import SQLiteClient, SQLitePool
 from packages.application.tests.integration.test_ingestion_evidence_recovery import (
     _bars,
     _pipeline,
-)
-from packages.application.tests.integration.test_provider_snapshot_replay import (
-    _certify,
 )
 from typer.testing import CliRunner
 
 
 @pytest.mark.integration
 @pytest.mark.pit
-def test_cli_replay_checks_cutoff_and_revocation_without_losing_audit(
+def test_cli_replay_reads_ready_snapshots_and_fails_closed_without_losing_audit(
     tmp_path, monkeypatch
 ):
     with ExitStack() as stack:
@@ -41,11 +36,7 @@ def test_cli_replay_checks_cutoff_and_revocation_without_losing_audit(
                 snapshot_now=lambda: datetime(2026, 7, 17, 10, tzinfo=UTC),
             )
         )
-        pool = SQLitePool(tmp_path / "reviews.sqlite")
-        stack.callback(pool.close)
-        reports = SQLiteCertificationStore(SQLiteClient(pool))
         ports = runtime.ports
-        visible = datetime(2026, 7, 18, 9, tzinfo=UTC)
         result = process_fetched_data(
             _bars(),
             "stock_daily",
@@ -57,26 +48,20 @@ def test_cli_replay_checks_cutoff_and_revocation_without_losing_audit(
         )
         assert result.status == "success"
         snapshot = ports.snapshot_reader.list_snapshots()[0]
-        report = _certify(runtime, reports, snapshot, tmp_path, visible)
         query = ProviderSnapshotQuery(
             SnapshotReadService(
                 ports.snapshot_reader,
                 FilesystemProviderPayloadStore(tmp_path),
                 ports.lifecycle_reader,
             ),
-            FieldAdmissionQuery(
-                ports.snapshot_reader,
-                ports.license_reader,
-                reports,
-                ports.lifecycle_reader,
-                now=lambda: visible,
-            ),
+            SnapshotReadinessQuery(ports.snapshot_reader, ports.lifecycle_reader),
         )
         container = SimpleNamespace(get=lambda _type: query, close=lambda: None)
         monkeypatch.setattr(
             "ditto_apps.cli.commands.data_products.make_app_container",
             lambda: container,
         )
+        runner = CliRunner()
         request = {
             "fields": [
                 {
@@ -88,40 +73,46 @@ def test_cli_replay_checks_cutoff_and_revocation_without_losing_audit(
             "instrument_ids": [1000001],
             "required_from": "2026-07-16",
             "required_to": "2026-07-17",
-            "knowledge_cutoff": "2026-07-18T08:59:00Z",
-            "publication_cutoff": visible.isoformat(),
-            "purpose": "formal_research",
+            "knowledge_cutoff": "2026-07-18T09:00:00Z",
         }
         path = tmp_path / "request.json"
-        runner = CliRunner()
-        path.write_bytes(orjson.dumps(request))
-        early = runner.invoke(app, ["data-products", "replay-snapshots", str(path)])
-        assert early.exit_code == 2, early.output
-        request["knowledge_cutoff"] = visible.isoformat()
         path.write_bytes(orjson.dumps(request))
         allowed = runner.invoke(app, ["data-products", "replay-snapshots", str(path)])
         assert allowed.exit_code == 0, allowed.output
         payload = orjson.loads(allowed.output)
-        assert payload["admission"]["rule_version"] == "field-admission-v2"
+        assert payload["readiness"]["rule_version"] == "snapshot-readiness-v1"
         assert [row["close"] for row in payload["snapshots"][snapshot.snapshot_id]] == [
             10.0,
             20.0,
         ]
-        reports.revoke_report(
-            report.report_id,
-            revoked_by="reviewer",
-            revoked_at=visible,
-            reason="withdrawn",
+
+        # An identity the ledger never registered is never replayed.
+        unregistered = dict(request)
+        unregistered["fields"] = [
+            {**request["fields"][0], "snapshot_id": "snapshot:absent"}
+        ]
+        path.write_bytes(orjson.dumps(unregistered))
+        rejected = runner.invoke(app, ["data-products", "replay-snapshots", str(path)])
+        assert rejected.exit_code == 2, rejected.output
+        assert "snapshot replay data is incomplete" in rejected.output
+
+        # A window the snapshot never covered fails closed the same way.
+        uncovered = {**request, "required_from": "2026-07-01"}
+        path.write_bytes(orjson.dumps(uncovered))
+        wide = runner.invoke(app, ["data-products", "replay-snapshots", str(path)])
+        assert wide.exit_code == 2, wide.output
+        assert "snapshot replay data is incomplete" in wide.output
+
+        # A pinned replay never accepts an ambiguous naive knowledge cutoff.
+        naive = {**request, "knowledge_cutoff": "2026-07-18T09:00:00"}
+        path.write_bytes(orjson.dumps(naive))
+        ambiguous = runner.invoke(app, ["data-products", "replay-snapshots", str(path)])
+        assert ambiguous.exit_code == 2, ambiguous.output
+
+        # Immutable audit access is never lost when replay refuses.
+        audited = runner.invoke(
+            app, ["data-products", "read-snapshot", snapshot.snapshot_id]
         )
-        assert (
-            runner.invoke(
-                app, ["data-products", "replay-snapshots", str(path)]
-            ).exit_code
-            == 2
-        )
-        assert (
-            runner.invoke(
-                app, ["data-products", "read-snapshot", snapshot.snapshot_id]
-            ).exit_code
-            == 0
-        )
+        assert audited.exit_code == 0, audited.output
+        payload = orjson.loads(audited.output)
+        assert [row["close"] for row in payload["rows"]] == [10.0, 20.0]

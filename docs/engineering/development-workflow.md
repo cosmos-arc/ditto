@@ -4,6 +4,25 @@
 架构、契约与测试。小任务直接实现并按风险验证；复杂任务只补齐影响结果的规格、依赖
 与决定，复用 Issue 中已确认的测试边界和授权。GitHub 操作见[任务记录约定](../agents/issue-tracker.md)。
 
+## 整改期间的临时交付策略（2026-10-03）
+
+维护者明确要求：先暂停整个仓库远端 CI，完成本次整改和功能开发，之后统一重构 CI。
+仓库级 GitHub Actions 已关闭，`ditto-main` 仅移除 required status check `CI gate`。
+PR、会话解决、线性历史、禁止强推和删除等其余规则保持原值；合并仍由维护者决定。
+
+此期间本节替代本页、测试指南、Harness 说明及既有任务中的远端 CI/自动评审完成要求：
+送审与交付只依赖本地 review 和按风险选取的适用验证，不等待远端检查变绿。
+保留根 Task、`task verify-push`、本地 hooks、PIT/契约/账本等验证；不得将 CI 暂停写成
+CI 通过，也不能因此跳过有效的本地检查。实际结果仍绑定提交 SHA、命令和检查范围。
+
+workflow 文件未改；未提交 Actions 允许列表或 SHA 固定策略变更，原值已留档。
+仓库级开关也暂停 Actions 驱动的安全扫描和
+发布工作流。本次未调整独立的 Dependabot 更新或仓库 Secret Protection 设置；Dependabot
+更新可能绕过 Actions 禁用，不能据此声称所有 GitHub 后台任务均已停止。
+
+配置前后快照见[CI 暂停记录](../evidence/ci-pause/20261003T050802Z/README.md)。整改结束后，
+先完成 CI 重构，再由维护者确认重新启用 Actions 与新的合并检查要求；不自动恢复旧门禁。
+
 ## 技能来源与宿主
 
 通用方法来自 [mattpocock/skills](https://github.com/mattpocock/skills/tree/3cca18b368ae95cdbdebbff572ccafa662551015)，

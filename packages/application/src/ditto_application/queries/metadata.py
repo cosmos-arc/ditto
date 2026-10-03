@@ -10,7 +10,7 @@ from ditto_data.catalog.source_snapshot import ProviderSnapshotReader
 from ditto_data.services.metadata_service import MetadataService
 
 from ditto_application.queries.etf_candidates import ETFCandidate, ETFCandidateQuery
-from ditto_application.queries.field_admission import FieldAdmissionQuery
+from ditto_application.queries.snapshot_readiness import SnapshotReadinessQuery
 
 __all__ = ["MetadataQueryFacade"]
 
@@ -26,19 +26,19 @@ class MetadataQueryFacade:
     def __init__(
         self,
         metadata_service: MetadataService,
-        admission: FieldAdmissionQuery | None = None,
+        readiness: SnapshotReadinessQuery | None = None,
         snapshots: ProviderSnapshotReader | None = None,
         payloads: ProviderPayloadReader | None = None,
     ) -> None:
         self._service = metadata_service
-        self._admission = admission
+        self._readiness = readiness
         self._snapshots = snapshots
         self._payloads = payloads
 
     def list_etf_reference_snapshots(self, *, cutoff: str) -> list[str]:
         """List ETF reference source snapshots visible at the cutoff."""
         return ETFCandidateQuery(
-            self._service, self._admission, self._snapshots, self._payloads
+            self._service, self._readiness, self._snapshots, self._payloads
         ).snapshots(cutoff=cutoff)
 
     def list_etf_candidates(
@@ -54,7 +54,7 @@ class MetadataQueryFacade:
     ) -> list[ETFCandidate]:
         """Compare ETF candidates at one exact reference snapshot."""
         return ETFCandidateQuery(
-            self._service, self._admission, self._snapshots, self._payloads
+            self._service, self._readiness, self._snapshots, self._payloads
         ).list_candidates(
             asof=asof,
             cutoff=cutoff,

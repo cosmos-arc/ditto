@@ -1,4 +1,4 @@
-"""Admitted signal-day and execution-day facts for ETF Paper fills."""
+"""Visible signal-day and execution-day facts for ETF Paper fills."""
 
 from __future__ import annotations
 
@@ -27,12 +27,7 @@ from ditto_application.paper_contracts import (
 )
 from ditto_application.queries.account_ledger import AccountLedgerQuery
 from ditto_application.queries.etf_candidates import ETFCandidate
-from ditto_application.queries.etf_paper_handoff_facts import admitted_etf_field
-from ditto_application.queries.field_admission import (
-    FieldAdmissionQuery,
-    FieldAdmissionRequest,
-    FieldRequirement,
-)
+from ditto_application.queries.etf_paper_handoff_facts import etf_field_visible
 from ditto_application.queries.metadata import MetadataQueryFacade
 from ditto_application.queries.retained_calendar import (
     RetainedCalendarAbsent,
@@ -40,6 +35,7 @@ from ditto_application.queries.retained_calendar import (
     calendar_has_single_source,
     retained_trading_days,
 )
+from ditto_application.queries.snapshot_readiness import SnapshotReadinessQuery
 from ditto_application.queries.technical_analysis_source import (
     ProviderPayloadTechnicalAnalysisSource,
 )
@@ -66,20 +62,20 @@ _BAR_FIELDS = (
 
 
 class LiveETFPaperExecutionFacts:
-    """Require retained market bars, admitted ETF rules and real PAPER balances."""
+    """Require retained market bars, visible ETF rules and real PAPER balances."""
 
     def __init__(
         self,
         *,
         metadata: MetadataQueryFacade,
-        admission: FieldAdmissionQuery,
+        readiness: SnapshotReadinessQuery,
         snapshots: ProviderSnapshotReader,
         payloads: ProviderPayloadReader,
         bars: ProviderPayloadTechnicalAnalysisSource,
         ledger: AccountLedgerQuery,
     ) -> None:
         self._metadata = metadata
-        self._admission = admission
+        self._readiness = readiness
         self._snapshots = snapshots
         self._payloads = payloads
         self._bars = bars
@@ -178,26 +174,17 @@ class LiveETFPaperExecutionFacts:
             request.market_snapshot_id, "etf_daily", request.execution_cutoff
         )
         trade_day = date.fromisoformat(request.intended_trade_date)
-        report = self._admission.assess(
-            FieldAdmissionRequest(
-                fields=tuple(
-                    FieldRequirement(
-                        dataset_id="etf_daily",
-                        field=field,
-                        snapshot_id=request.market_snapshot_id,
-                    )
-                    for field in _BAR_FIELDS
-                ),
-                instrument_ids=(instrument_id,),
-                required_from=trade_day,
-                required_to=trade_day,
-                knowledge_cutoff=request.execution_cutoff,
-                publication_cutoff=request.execution_cutoff,
-                purpose="promotion_paper",
-            )
+        bar_reasons = self._readiness.snapshot_reasons(
+            "etf_daily",
+            request.market_snapshot_id,
+            trade_day,
+            trade_day,
         )
-        if not report.allowed:
-            raise AppProcessError("ETF execution bar fields are not admitted for Paper")
+        if bar_reasons:
+            raise AppProcessError(
+                "ETF execution bar snapshot is not consumable: "
+                + ", ".join(bar_reasons)
+            )
         source_ticker = self._source_ticker(
             request=request,
             instrument_id=instrument_id,
@@ -322,16 +309,15 @@ class LiveETFPaperExecutionFacts:
         snapshot_id: str,
     ) -> str | float:
         field = candidate.fields.get(field_name)
-        if field is None or not admitted_etf_field(
+        if field is None or not etf_field_visible(
             candidate,
             field_name,
             field,
             asof=asof,
             cutoff=cutoff,
             snapshot_id=snapshot_id,
-            admission=self._admission,
         ):
-            raise AppProcessError(f"ETF Paper {field_name} is missing or not admitted")
+            raise AppProcessError(f"ETF Paper {field_name} is missing or not visible")
         value = field.value
         if value is None:
             raise AppProcessError(f"ETF Paper {field_name} is missing")
@@ -457,7 +443,7 @@ def _derived_price_limits(
     market: PaperMarketSnapshotInput, rules: PaperInstrumentRulesInput
 ) -> PaperMarketSnapshotInput:
     """
-    Fill absent exchange limits from pre_close and the admitted rule set.
+    Fill absent exchange limits from pre_close and the visible rule set.
 
     The canonical ETF daily producer carries no limit columns, so the limits
     follow the exchange rule: pre_close shifted by price_limit_pct and rounded

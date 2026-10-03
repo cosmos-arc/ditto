@@ -2,7 +2,7 @@ import { HttpResponse, http } from "msw";
 import { describe, expect, it } from "vitest";
 import { server } from "@/mocks/server";
 import {
-	type CreateSelectionRunBody,
+	type AssembleSelectionRunBody,
 	compareSelectionRuns,
 	createSelectionRun,
 	getIndustryRotation,
@@ -10,31 +10,19 @@ import {
 	listSelectionRuns,
 } from "./api";
 
-const runBody: CreateSelectionRunBody = {
+const policyBody: AssembleSelectionRunBody = {
 	as_of: "2026-08-31T07:00:00Z",
-	data_fields: [],
-	industries: [],
-	instruments: [],
-	knowledge_cutoff: "2026-08-31T07:00:00Z",
-	market_context_feature_set_id: null,
-	membership_version: "sw-l1:2026-08-31",
-	publication_cutoff: "2026-08-31T07:00:00Z",
-	rotation_algorithm_version: "industry-rotation-v1",
-	rotation_missing_inputs: ["industry_inputs"],
-	rotation_source_snapshot_ids: ["market-a"],
+	asset_kind: "stock",
+	excluded_limit_states: ["limit_up", "limit_down"],
+	factor_weights: [{ name: "momentum_1m", weight: 1 }],
+	lookback_days: 400,
+	min_average_turnover: 20_000_000,
+	min_listing_days: 120,
 	seed: 17,
-	selection_source_snapshot_ids: ["market-a"],
-	selection_spec: {
-		asset_kind: "stock",
-		excluded_limit_states: ["limit_up", "limit_down"],
-		factor_weights: [{ name: "momentum", weight: 1 }],
-		min_average_turnover: 20_000_000,
-		min_listing_days: 120,
-		spec_id: "stock-core",
-		spec_version: "1",
-		top_k: 10,
-	},
-	universe_snapshot_id: "universe:sha256:abc",
+	spec_id: "stock-core",
+	spec_version: "1",
+	top_k: 10,
+	universe_id: "a-share-custom-202609",
 };
 
 describe("selection API", () => {
@@ -61,7 +49,7 @@ describe("selection API", () => {
 			}),
 			http.post("/api/v1/selections/runs", async ({ request }) => {
 				requests.push(request.url);
-				expect(await request.json()).toEqual(runBody);
+				expect(await request.json()).toEqual(policyBody);
 				return HttpResponse.json({ data: { selection_run: { run_id: "run-new" } } }, { status: 201 });
 			}),
 		);
@@ -70,7 +58,7 @@ describe("selection API", () => {
 		await getSelectionRun("run/one");
 		await getIndustryRotation("rotation/one");
 		await compareSelectionRuns("run/before", "run/after");
-		await createSelectionRun(runBody);
+		await createSelectionRun(policyBody);
 
 		expect(requests.map((value) => new URL(value).pathname)).toEqual([
 			"/api/v1/selections/runs",
@@ -85,74 +73,4 @@ describe("selection API", () => {
 	it("fails closed before compare when exact run identities are not distinct", () => {
 		expect(() => compareSelectionRuns("same", "same")).toThrow("distinct exact run IDs");
 	});
-});
-
-it("resolves the full historical pool with Shanghai date and pinned sources", async () => {
-	const { resolveSelectionUniverse } = await import("./api");
-	const sources = {
-		universe_id: "pool",
-		asset_kind: "stock" as const,
-		master_snapshot_ids: ["master"],
-		status_snapshot_ids: ["status"],
-	};
-	server.use(
-		http.post("/api/v1/universes/pool/history", async ({ request }) => {
-			expect(await request.json()).toEqual({
-				sources,
-				as_of: "2026-09-01",
-				knowledge_cutoff: runBody.knowledge_cutoff,
-				publication_cutoff: runBody.publication_cutoff,
-			});
-			return HttpResponse.json({
-				data: {
-					snapshot_id: `universe:sha256:${"a".repeat(64)}`,
-					sources,
-					rule_version: "historical-universe-v1",
-					as_of: "2026-09-01",
-					knowledge_cutoff: runBody.knowledge_cutoff,
-					publication_cutoff: runBody.publication_cutoff,
-					members: [{ instrument_id: 1, investable: false, exclusion_reasons: ["DELISTED"] }],
-				},
-			});
-		}),
-	);
-	const result = await resolveSelectionUniverse({
-		...runBody,
-		as_of: "2026-08-31T18:00:00Z",
-		universe_sources: sources,
-	});
-	expect(result.members).toEqual([{ instrumentId: 1, investable: false, reasons: "DELISTED" }]);
-	expect(result.snapshotId).toBe(`universe:sha256:${"a".repeat(64)}`);
-});
-
-it.each(["identity", "eligibility", "duplicates"])("refuses a malformed historical %s response", async (failure) => {
-	const { resolveSelectionUniverse } = await import("./api");
-	const sources = {
-		universe_id: "pool",
-		asset_kind: "stock" as const,
-		master_snapshot_ids: ["master"],
-		status_snapshot_ids: ["status"],
-	};
-	server.use(
-		http.post("/api/v1/universes/pool/history", () =>
-			HttpResponse.json({
-				data: {
-					sources: { ...sources, index_id: failure === "identity" ? "unexpected" : null },
-					as_of: "2026-08-31",
-					knowledge_cutoff: runBody.knowledge_cutoff,
-					publication_cutoff: runBody.publication_cutoff,
-					rule_version: "historical-universe-v1",
-					snapshot_id: `universe:sha256:${"a".repeat(64)}`,
-					members: Array.from({ length: failure === "duplicates" ? 2 : 1 }, () => ({
-						instrument_id: 1,
-						investable: true,
-						exclusion_reasons: failure === "eligibility" ? ["DELISTED"] : [],
-					})),
-				},
-			}),
-		),
-	);
-	await expect(resolveSelectionUniverse({ ...runBody, universe_sources: sources })).rejects.toThrow(
-		"历史证券池响应的身份或投资资格无效",
-	);
 });

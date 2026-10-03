@@ -1,6 +1,6 @@
 /**
  * DO NOT EDIT: generated from contracts/openapi/v1.json.
- * Schema SHA-256: b905eb8108498b333ce6f838330c265645e3e18f3cec7f7b506b32905c9483ec
+ * Schema SHA-256: 1230f8a28abfc0f159c7e47814d4b88d2aa431e3b72bd111fa906d19b042091c
  * Generator: openapi-typescript 7.13.0
  */
 
@@ -3609,28 +3609,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/selections/admission": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Assess Selection Admission
-         * @description Preview exact field admission without saving or changing certification.
-         *
-         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
-         */
-        post: operations["selections_assess_admission"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/selections/industry-rotations/{snapshot_id}": {
         parameters: {
             query?: never;
@@ -3670,7 +3648,12 @@ export interface paths {
         put?: never;
         /**
          * Create Selection Run
-         * @description Create or exactly replay a content-addressed industry and selection run.
+         * @description Assemble every PIT fact server-side, then create the exact run.
+         *
+         *     The client submits strategy parameters and allowed request identity
+         *     only; client-authored fact packages are no longer an authoritative
+         *     write surface. Re-posting one policy under unchanged data replays to
+         *     the same content-addressed run.
          *
          *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
          */
@@ -3758,11 +3741,7 @@ export interface paths {
         put?: never;
         /**
          * Assemble Selection Run
-         * @description Assemble every PIT fact server-side and preview the create-run gate.
-         *
-         *     The response carries the exact ``POST /selections/runs`` body plus the
-         *     admission report; creating the run still posts that body to ``/runs``,
-         *     so certification and replay semantics stay on the reviewed contract.
+         * @description Assemble every PIT fact server-side and preview the exact create body.
          *
          *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
          */
@@ -5034,13 +5013,6 @@ export interface components {
         APIResponse_RunResponse_: {
             /** @description 响应数据 */
             data: components["schemas"]["RunResponse"];
-            /** @description 分页信息(可选) */
-            pagination?: components["schemas"]["PaginationResponse"] | null;
-        };
-        /** APIResponse[SelectionAdmissionResponse] */
-        APIResponse_SelectionAdmissionResponse_: {
-            /** @description 响应数据 */
-            data: components["schemas"]["SelectionAdmissionResponse"];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
         };
@@ -6935,10 +6907,9 @@ export interface components {
         };
         /**
          * AssembledSelectionRunResponse
-         * @description Server-assembled exact facts plus the create-run admission preview.
+         * @description Server-assembled exact facts the create-run endpoint would consume.
          */
         AssembledSelectionRunResponse: {
-            admission: components["schemas"]["SelectionAdmissionResponse"];
             request: components["schemas"]["CreateSelectionRunBody"];
         };
         /**
@@ -9308,7 +9279,7 @@ export interface components {
         };
         /**
          * CreateSelectionRunBody
-         * @description One exact industry-rotation and stock/ETF selection mutation.
+         * @description Server-assembled facts echoed for preview; not a client write surface.
          */
         CreateSelectionRunBody: {
             /**
@@ -16163,23 +16134,6 @@ export interface components {
             valuation_snapshot_id: string;
         };
         /**
-         * SelectionAdmissionResponse
-         * @description Read-only preview of the server's mandatory create-run gate.
-         */
-        SelectionAdmissionResponse: {
-            /** Allowed */
-            allowed: boolean;
-            /** Fields */
-            fields: components["schemas"]["SelectionFieldAdmissionResponse"][];
-            /**
-             * Purpose
-             * @enum {string}
-             */
-            purpose: "display" | "exploration" | "formal_research" | "promotion_paper";
-            /** Rule Version */
-            rule_version: string;
-        };
-        /**
          * SelectionCandidateResponse
          * @description One selected candidate and exact ranking evidence.
          */
@@ -16258,36 +16212,6 @@ export interface components {
             name: string;
             /** Weight */
             weight: number;
-        };
-        /**
-         * SelectionFieldAdmissionResponse
-         * @description Field-scoped qualification and actionable durable evidence references.
-         */
-        SelectionFieldAdmissionResponse: {
-            /** Allowed Uses */
-            allowed_uses: ("display" | "exploration" | "formal_research" | "promotion_paper")[];
-            /** Certification Report Id */
-            certification_report_id: string | null;
-            /** Consumer Field */
-            consumer_field: string;
-            /** Covered From */
-            covered_from: string | null;
-            /** Covered To */
-            covered_to: string | null;
-            /** Dataset Id */
-            dataset_id: string;
-            /** Evidence Uri */
-            evidence_uri: string | null;
-            /** Field */
-            field: string;
-            /** License Record Id */
-            license_record_id: string | null;
-            /** Reason Codes */
-            reason_codes: string[];
-            /** Snapshot Id */
-            snapshot_id: string;
-            /** Time Precision */
-            time_precision: string;
         };
         /**
          * SelectionFieldRequirementBody
@@ -32709,98 +32633,6 @@ export interface operations {
             };
         };
     };
-    selections_assess_admission: {
-        parameters: {
-            query?: {
-                instrument_id?: number | null;
-            };
-            header?: {
-                /** @description Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required. */
-                "X-Ditto-API-Contract-Version"?: "v1";
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CreateSelectionRunBody"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["APIResponse_SelectionAdmissionResponse_"];
-                };
-            };
-            /** @description Bad request */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Forbidden */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Resource not found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Request conflicts with current state */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Request or domain validation failed */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Internal server error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Structured Ditto API error */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-        };
-    };
     selections_get_industry_rotation: {
         parameters: {
             query?: never;
@@ -32990,7 +32822,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["CreateSelectionRunBody"];
+                "application/json": components["schemas"]["AssembleSelectionRunBody"];
             };
         };
         responses: {

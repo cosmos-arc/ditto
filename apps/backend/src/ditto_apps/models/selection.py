@@ -210,38 +210,8 @@ class SelectionFieldRequirementBody(BaseModel):
     consumer_field: str = Field(min_length=1)
 
 
-class SelectionFieldAdmissionResponse(BaseModel):
-    """Field-scoped qualification and actionable durable evidence references."""
-
-    model_config = _RESPONSE_CONFIG
-    dataset_id: str
-    field: str
-    snapshot_id: str
-    consumer_field: str
-    allowed_uses: tuple[
-        Literal["display", "exploration", "formal_research", "promotion_paper"], ...
-    ]
-    reason_codes: tuple[str, ...]
-    license_record_id: str | None
-    certification_report_id: str | None
-    covered_from: date | None
-    covered_to: date | None
-    time_precision: str
-    evidence_uri: str | None
-
-
-class SelectionAdmissionResponse(BaseModel):
-    """Read-only preview of the server's mandatory create-run gate."""
-
-    model_config = _RESPONSE_CONFIG
-    allowed: bool
-    purpose: Literal["display", "exploration", "formal_research", "promotion_paper"]
-    fields: tuple[SelectionFieldAdmissionResponse, ...]
-    rule_version: str
-
-
 class CreateSelectionRunBody(BaseModel):
-    """One exact industry-rotation and stock/ETF selection mutation."""
+    """Server-assembled facts echoed for preview; not a client write surface."""
 
     model_config = _REQUEST_CONFIG
 
@@ -296,12 +266,11 @@ class AssembleSelectionRunBody(BaseModel):
 
 
 class AssembledSelectionRunResponse(BaseModel):
-    """Server-assembled exact facts plus the create-run admission preview."""
+    """Server-assembled exact facts the create-run endpoint would consume."""
 
     model_config = _RESPONSE_CONFIG
 
     request: CreateSelectionRunBody
-    admission: SelectionAdmissionResponse
 
 
 class IndustryRotationContributionResponse(BaseModel):

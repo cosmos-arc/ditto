@@ -87,32 +87,6 @@ export const ASSEMBLED_UNIVERSE_SNAPSHOT_ID = `universe:sha256:${"6".repeat(64)}
 /** Deterministic assembled facts echoing the submitted policy; mirrors the server's assemble endpoint. */
 export function assembledSelectionRunResponse(body: AssembleSelectionRunBody): AssembledSelectionRunResponse {
 	return {
-		admission: {
-			allowed: true,
-			fields: [
-				{
-					allowed_uses: ["formal_research"],
-					certification_report_id: "certification-mock",
-					consumer_field: "instruments.average_turnover",
-					covered_from: "2015-01-05",
-					covered_to: new Intl.DateTimeFormat("en-CA", {
-						timeZone: "Asia/Shanghai",
-						year: "numeric",
-						month: "2-digit",
-						day: "2-digit",
-					}).format(new Date(Date.parse(body.as_of) - 86_400_000)),
-					dataset_id: "stock_daily",
-					evidence_uri: "mock://evidence/amount",
-					field: "amount",
-					license_record_id: "license-mock",
-					reason_codes: [],
-					snapshot_id: "stock-daily:sha256:mock",
-					time_precision: "day",
-				},
-			],
-			purpose: "formal_research",
-			rule_version: "field-admission-v2",
-		},
 		request: {
 			as_of: body.as_of,
 			data_fields: [
@@ -224,32 +198,23 @@ export function assembledSelectionRunResponse(body: AssembleSelectionRunBody): A
 	};
 }
 
+/** 创建与组装共享的 policy 校验：因子注册、权重和与全市场池范围。 */
+function validateAssemblyPolicy(body: AssembleSelectionRunBody): ReturnType<typeof HttpResponse.json> | null {
+	const names = body.factor_weights.map((factor) => factor.name);
+	const weightSum = body.factor_weights.reduce((sum, factor) => sum + factor.weight, 0);
+	if (new Set(names).size !== names.length || Math.abs(weightSum - 1) > 1e-9)
+		return HttpResponse.json({ detail: "因子权重不得重复且权重之和必须为 1" }, { status: 422 });
+	if (body.factor_weights.some((factor) => !ASSEMBLY_KNOWN_FACTORS.has(factor.name)))
+		return HttpResponse.json({ detail: "未注册因子或该因子表达式暂不被组装支持" }, { status: 422 });
+	if (body.universe_id !== ASSEMBLY_STOCK_UNIVERSE_ID)
+		return HttpResponse.json(
+			{ detail: "组装 v1 仅支持全市场股票池；窄池/非股票池需 membership 快照链" },
+			{ status: 422 },
+		);
+	return null;
+}
+
 export const selectionHandlers = [
-	http.post("/api/v1/selections/admission", () =>
-		HttpResponse.json({
-			data: {
-				allowed: false,
-				purpose: "formal_research",
-				rule_version: "field-admission-v2",
-				fields: [
-					{
-						dataset_id: "stock_daily",
-						field: "amount",
-						snapshot_id: "synthetic-snapshot",
-						consumer_field: "instruments.average_turnover",
-						allowed_uses: [],
-						reason_codes: ["FIELD_EVIDENCE_MISSING"],
-						license_record_id: null,
-						certification_report_id: null,
-						covered_from: null,
-						covered_to: null,
-						time_precision: "unknown",
-						evidence_uri: null,
-					},
-				],
-			},
-		}),
-	),
 	http.get("/api/v1/selections/runs", ({ request }) => {
 		const specId = new URL(request.url).searchParams.get("spec_id");
 		return HttpResponse.json({ data: selectionRunFixtures.filter((run) => run.spec_id === specId) });
@@ -264,20 +229,15 @@ export const selectionHandlers = [
 			? HttpResponse.json({ data: selectionRotationFixture })
 			: HttpResponse.json({ detail: "not found" }, { status: 404 }),
 	),
-	http.post("/api/v1/selections/runs", () => HttpResponse.json({ data: selectionReceiptFixture }, { status: 201 })),
+	http.post("/api/v1/selections/runs", async ({ request }) => {
+		const invalid = validateAssemblyPolicy((await request.json()) as AssembleSelectionRunBody);
+		if (invalid) return invalid;
+		return HttpResponse.json({ data: selectionReceiptFixture }, { status: 201 });
+	}),
 	http.post("/api/v1/selections/runs:assembled", async ({ request }) => {
 		const body = (await request.json()) as AssembleSelectionRunBody;
-		const names = body.factor_weights.map((factor) => factor.name);
-		const weightSum = body.factor_weights.reduce((sum, factor) => sum + factor.weight, 0);
-		if (new Set(names).size !== names.length || Math.abs(weightSum - 1) > 1e-9)
-			return HttpResponse.json({ detail: "因子权重不得重复且权重之和必须为 1" }, { status: 422 });
-		if (body.factor_weights.some((factor) => !ASSEMBLY_KNOWN_FACTORS.has(factor.name)))
-			return HttpResponse.json({ detail: "未注册因子或该因子表达式暂不被组装支持" }, { status: 422 });
-		if (body.universe_id !== ASSEMBLY_STOCK_UNIVERSE_ID)
-			return HttpResponse.json(
-				{ detail: "组装 v1 仅支持全市场股票池；窄池/非股票池需 membership 快照链" },
-				{ status: 422 },
-			);
+		const invalid = validateAssemblyPolicy(body);
+		if (invalid) return invalid;
 		return HttpResponse.json({ data: assembledSelectionRunResponse(body) });
 	}),
 	http.post("/api/v1/selections/runs/:runId/research-cases", async ({ params, request }) => {

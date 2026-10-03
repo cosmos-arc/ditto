@@ -5,14 +5,7 @@ import { Button } from "@/components/ui/button";
 import { CatalogLayout } from "@/features/shell";
 import { ErrorState } from "@/lib/error-boundary";
 import { StaleIndicator } from "@/lib/stale-indicator";
-import {
-	type CreateSelectionRunBody,
-	compareSelectionRuns,
-	createSelectionRun,
-	getSelectionRun,
-	listSelectionRuns,
-	selectionKeys,
-} from "../api";
+import { compareSelectionRuns, createSelectionRun, getSelectionRun, listSelectionRuns, selectionKeys } from "../api";
 import { SelectionRunDetail } from "./selection-run-detail";
 import { SelectionRunInput } from "./selection-run-input";
 
@@ -73,11 +66,6 @@ export function SelectionWorkspacePage() {
 		comparison.reset();
 	}
 
-	function saveInput(input: CreateSelectionRunBody): void {
-		setSpecId(input.selection_spec.spec_id);
-		setFeedback(`已保存 ${input.selection_spec.spec_id} 输入草案`);
-	}
-
 	const run = exactRun.data ?? null;
 	const currentItems = tab === "candidates" ? run?.candidates : run?.exclusions;
 
@@ -124,11 +112,7 @@ export function SelectionWorkspacePage() {
 			main={
 				<div data-info-level="l1" data-info-unit="selection-main" className="h-full overflow-y-auto">
 					<StaleIndicator isStale={Boolean(history.data && history.isFetching)} />
-					<SelectionRunInput
-						busy={createRun.isPending}
-						onRun={(input) => createRun.mutate(input)}
-						onSaved={saveInput}
-					/>
+					<SelectionRunInput busy={createRun.isPending} onRun={(input) => createRun.mutate(input)} />
 					{feedback && (
 						<p
 							role="status"

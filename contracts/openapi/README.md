@@ -33,6 +33,16 @@ Breaking changes require `/api/v2` or an explicit deprecation window, migration
 tests, and owner approval. `oasdiff` is a minimum detector, not authority to
 declare a change compatible; domain semantic changes still require review.
 
+### Approved break window (2026-10 data-layer reset, #390)
+
+The maintainer approved destructive contract changes for the data-layer
+simplification program (#390, sub-issues #391–#397): the project has never
+shipped, no old clients exist, and no deprecation window, dual read/write or
+legacy DTO adaptation is required. During this window `oasdiff breaking`
+against the merge base is expected to fail on those PRs; the failure list must
+be quoted in the PR description. The gate returns to fully green once the
+program lands and main carries the final contract.
+
 ## Required runtime validation
 
 Compile-time OpenAPI types are insufficient when a malformed response could

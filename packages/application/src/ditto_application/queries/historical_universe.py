@@ -17,10 +17,10 @@ from ditto_data.services.historical_universe import (
 )
 
 from ditto_application.exceptions import AppQueryError
-from ditto_application.queries.field_admission import (
-    FieldAdmissionQuery,
-    FieldAdmissionRequest,
+from ditto_application.queries.snapshot_readiness import (
     FieldRequirement,
+    SnapshotReadinessQuery,
+    SnapshotReadinessRequest,
 )
 
 
@@ -96,7 +96,7 @@ class PinnedHistoricalUniverse:
     """Pinned evidence loaded once; each resolve projects one exact time point."""
 
     sources: HistoricalUniverseSources
-    admission: FieldAdmissionQuery
+    readiness: SnapshotReadinessQuery
     master: tuple[SnapshotContents, ...]
     status: tuple[SnapshotContents, ...]
     membership: tuple[SnapshotContents, ...] = ()
@@ -157,23 +157,19 @@ class PinnedHistoricalUniverse:
                     scope_ids = tuple(sorted(set(ids.to_list())))
                     if not scope_ids:
                         raise AppQueryError("HISTORY_SCOPE_EMPTY")
-                report = self.admission.assess(
-                    FieldAdmissionRequest(
+                report = self.readiness.assess(
+                    SnapshotReadinessRequest(
                         fields=tuple(
                             FieldRequirement(
                                 dataset_id, field, contents.snapshot.snapshot_id
                             )
                             for field in fields
                         ),
-                        instrument_ids=scope_ids,
                         required_from=as_of,
                         required_to=as_of,
-                        knowledge_cutoff=knowledge_cutoff,
-                        publication_cutoff=publication_cutoff,
-                        purpose="formal_research",
                     )
                 )
-                if not report.allowed:
+                if not report.ready:
                     reasons = "; ".join(
                         f"{item.dataset_id}.{item.field}: "
                         + ", ".join(item.reason_codes)
@@ -181,25 +177,11 @@ class PinnedHistoricalUniverse:
                         if item.reason_codes
                     )
                     raise AppQueryError(
-                        f"HISTORY_ADMISSION_BLOCKED: {reasons}", report=report
+                        f"HISTORY_DATA_INCOMPLETE: {reasons}", report=report
                     )
                 reports.append(
                     {
                         "snapshot_id": contents.snapshot.snapshot_id,
-                        "certification_report_ids": sorted(
-                            {
-                                item.certification_report_id
-                                for item in report.fields
-                                if item.certification_report_id is not None
-                            }
-                        ),
-                        "license_record_ids": sorted(
-                            {
-                                item.license_record_id
-                                for item in report.fields
-                                if item.license_record_id is not None
-                            }
-                        ),
                         "rule_version": report.rule_version,
                     }
                 )
@@ -226,7 +208,7 @@ class PinnedHistoricalUniverse:
                 "knowledge_cutoff": knowledge_cutoff.isoformat(),
                 "publication_cutoff": publication_cutoff.isoformat(),
                 "rule_version": "historical-universe-v1",
-                "admission": reports,
+                "readiness": reports,
                 "observation_count": frame.height,
                 "investable_count": frame.filter(pl.col("investable")).height,
             },
@@ -265,10 +247,10 @@ class HistoricalUniverseQuery:
     """Read exact completed artifacts, qualify fields, then project historical rows."""
 
     def __init__(
-        self, reader: SnapshotReadService, admission: FieldAdmissionQuery
+        self, reader: SnapshotReadService, readiness: SnapshotReadinessQuery
     ) -> None:
         self._reader = reader
-        self._admission = admission
+        self._readiness = readiness
 
     def pin(self, sources: HistoricalUniverseSources) -> PinnedHistoricalUniverse:
         """Load and structurally validate every pinned member exactly once."""
@@ -311,7 +293,7 @@ class HistoricalUniverseQuery:
             raise AppQueryError(str(error)) from error
         return PinnedHistoricalUniverse(
             sources=sources,
-            admission=self._admission,
+            readiness=self._readiness,
             master=chains["master"],
             status=chains["status"],
             membership=chains.get("membership", ()),

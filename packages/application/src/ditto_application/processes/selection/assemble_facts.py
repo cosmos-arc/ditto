@@ -1,5 +1,5 @@
 """
-Server-side selection fact assembly from certified catalog evidence.
+Server-side selection fact assembly from completed catalog evidence.
 
 The selection workspace contract requires the caller to provide every PIT
 fact (per-instrument factor values, hard-filter facts, source snapshots).
@@ -12,35 +12,35 @@ Boundaries kept honest on purpose:
 - Factors come from the governed factor registry; the dependency closure is
   resolved transitively (cycle-guarded) and only market-bar leaves are
   allowed. Fundamental dependencies stay fail-closed until those datasets
-  are certified for formal research. Requested factors are emitted as
+  are completed for formal research. Requested factors are emitted as
   cross-sectional fractional ranks (unit scores) because the selection
   contract scores weighted sums of unit-normalized values.
 - Bars are read through the live market read model at the request's as-of
   instant. Any past instant — backdated cutoffs or a past as-of with omitted
   cutoffs — is rejected because the live store cannot prove sub-day
-  visibility for it; the certified replay lane remains the exact-payload
+  visibility for it; the retained replay lane remains the exact-payload
   path for historical evidence. Rows carry a required ``knowledge_date``
   column, and rows claiming future knowledge are dropped fail-closed.
-- The admission claim covers the full consumed read range (earliest
+- The readiness claim covers the full consumed read range (earliest
   observed bar through cross-section day): the computed values already
   consumed that history, so insufficient snapshot coverage must surface as
-  admission reasons instead of being narrowed away.
+  readiness reasons instead of being narrowed away.
 - Bars are read with ``hfq`` adjustment because the governed stock-lane
   price factors require adjusted prices; the adjustment lineage binds to
-  the ``adj_factor`` dataset, which stays fail-closed until certified.
+  the ``adj_factor`` dataset, which stays fail-closed until completed.
   The live adjustment table is read at execution time — adjustment
   knowledge provenance, like exact per-payload bar provenance, belongs to
-  the certified replay lane. The exchange price-limit band is judged on a
+  the retained replay lane. The exchange price-limit band is judged on a
   separate raw (unadjusted) read because hfq keeps ``pre_close`` as the
   ex-rights reference.
   Expressions nesting a time-series operator under a cross-sectional one
   are rejected — the governed production recipes with materialized
   intermediates remain the future execution path.
-- Every consumed bar date must sit inside a certified stock_daily window
+- Every consumed bar date must sit inside a completed stock_daily window
   and every consumed row must carry catalog lineage; per-row catalog
   identities are ticker/date-granular and differ from the registry
   snapshot identities, so exact per-payload provenance remains the
-  certified replay lane's job.
+  retained replay lane's job.
 - Industry rotation is assembled as an empty observation set; the rotation
   snapshot then lands BLOCKED with ``industries`` declared missing, which is
   the honest state while industry data is not ingested.
@@ -78,18 +78,18 @@ from ditto_application.processes.selection.facade import (
     StockSelectionSpecDraft,
     derive_limit_state,
 )
-from ditto_application.queries.field_admission import FieldRequirement
 from ditto_application.queries.historical_universe import (
     HistoricalUniverseQuery,
     HistoricalUniverseResult,
     HistoricalUniverseSources,
 )
+from ditto_application.queries.snapshot_readiness import FieldRequirement
 
 __all__ = [
     "AssembleSelectionFacts",
     "AssembleSelectionFactsRequest",
-    "CertifiedSnapshotIndex",
-    "CertifiedSnapshotWindow",
+    "SnapshotCoverageIndex",
+    "SnapshotWindow",
 ]
 
 _MARKET_BAR_COLUMNS: Mapping[str, str] = {
@@ -135,7 +135,7 @@ _RESERVED_FACTOR_COLUMNS = frozenset(
     }
 )
 _ROTATION_ALGORITHM_VERSION = "industry-rotation-v1"
-# Certified stock_daily publication claim (Batch 2 evidence): bars for a
+# stock_daily publication claim (Batch 2 evidence): bars for a
 # trade date become visible 18:00 Asia/Shanghai on that date.
 _BAR_PUBLICATION_TIME = time(18, 0)
 # Client and server clocks drift by seconds; only instants older than this
@@ -187,41 +187,39 @@ class FactorRegistry(Protocol):
 
 
 @dataclass(frozen=True, slots=True)
-class CertifiedSnapshotWindow:
-    """One certified registry snapshot and the request range it answers."""
+class SnapshotWindow:
+    """One completed registry snapshot and the request range it answers."""
 
     snapshot_id: str
     request_start: date
     request_end: date
 
 
-class CertifiedSnapshotIndex(Protocol):
-    """Locate certified snapshots of one dataset under the selection profile."""
+class SnapshotCoverageIndex(Protocol):
+    """Locate completed retained snapshots of one dataset."""
 
     def snapshot_ids(self, dataset_id: str) -> tuple[str, ...]:
-        """All certified snapshot ids of one dataset."""
+        """All completed snapshot ids of one dataset."""
         ...
 
-    def windows(self, dataset_id: str) -> tuple[CertifiedSnapshotWindow, ...]:
-        """All certified windows of one dataset, resolved once per call."""
+    def windows(self, dataset_id: str) -> tuple[SnapshotWindow, ...]:
+        """All completed windows of one dataset, resolved once per call."""
         ...
 
 
 @dataclass(frozen=True, slots=True)
-class _CertifiedCatalog:
+class _CoverageCatalog:
     """Per-assembly snapshot window cache; each dataset resolves once."""
 
-    _by_dataset: Mapping[str, tuple[CertifiedSnapshotWindow, ...]]
+    _by_dataset: Mapping[str, tuple[SnapshotWindow, ...]]
 
     @classmethod
     def load(
-        cls, index: CertifiedSnapshotIndex, datasets: Sequence[str]
-    ) -> _CertifiedCatalog:
+        cls, index: SnapshotCoverageIndex, datasets: Sequence[str]
+    ) -> _CoverageCatalog:
         return cls({dataset: index.windows(dataset) for dataset in datasets})
 
-    def covering(
-        self, *, dataset_id: str, day: date
-    ) -> tuple[CertifiedSnapshotWindow, ...]:
+    def covering(self, *, dataset_id: str, day: date) -> tuple[SnapshotWindow, ...]:
         return tuple(
             window
             for window in self._by_dataset.get(dataset_id, ())
@@ -270,7 +268,7 @@ class _FactorNode:
 
 
 class AssembleSelectionFacts:
-    """Assemble one CreateSelectionRunRequest from certified catalog evidence."""
+    """Assemble one CreateSelectionRunRequest from completed catalog evidence."""
 
     def __init__(
         self,
@@ -280,7 +278,7 @@ class AssembleSelectionFacts:
         discover_sources: UniverseSourcesDiscovery,
         identities: InstrumentIdentityReader,
         factors: FactorRegistry,
-        snapshots: CertifiedSnapshotIndex,
+        snapshots: SnapshotCoverageIndex,
         clock: Callable[[], datetime] | None = None,
     ) -> None:
         self._provider = provider
@@ -310,8 +308,8 @@ class AssembleSelectionFacts:
         self._validate_policy(request)
         # Windows resolve per request into a local catalog: shared
         # instance state would race concurrent assemblies and go stale
-        # across certification changes.
-        catalog = _CertifiedCatalog.load(
+        # across ingestion changes.
+        catalog = _CoverageCatalog.load(
             self._snapshots,
             ("stock_daily", "stock_status", "stock_basic", _ADJUSTMENT_DATASET),
         )
@@ -328,7 +326,7 @@ class AssembleSelectionFacts:
             # Bars become publishable at the earlier declared boundary.
             cutoff=publication,
         )
-        self._require_certified_coverage(evaluation, catalog)
+        self._require_snapshot_coverage(evaluation, catalog)
         cross_date = _cross_section_date(evaluation)
         raw_cross = self._load_raw_cross(
             tickers=tickers,
@@ -374,7 +372,7 @@ class AssembleSelectionFacts:
                             for dataset_id, group in windows.items()
                             # Adjustment snapshots are declared sources only
                             # when adjusted prices were actually consumed;
-                            # otherwise admission reports them unbound.
+                            # otherwise readiness reports them unbound.
                             if dataset_id != _ADJUSTMENT_DATASET or consumes_adjustment
                             for window in group
                         ),
@@ -409,7 +407,7 @@ class AssembleSelectionFacts:
         client as-of, which may already be seconds old by comparison time.
         Explicit cutoffs must still obey causal order and may only antedate
         the server clock by the tolerated live skew; anything older belongs
-        to the certified replay lane.
+        to the retained replay lane.
         """
         now = self._clock()
         for declared in (request.knowledge_cutoff, request.publication_cutoff):
@@ -454,7 +452,7 @@ class AssembleSelectionFacts:
         if knowledge < now - _LIVE_SKEW:
             raise AppProcessError(
                 "past instants cannot use the live read model; "
-                + "use the certified replay lane",
+                + "use the retained replay lane",
                 details={"reason": "ASSEMBLY_CUTOFF_BACKDATED"},
             )
         publication = min(declared_publication or knowledge, knowledge, now)
@@ -465,10 +463,10 @@ class AssembleSelectionFacts:
             )
         return knowledge, publication
 
-    def _require_certified_coverage(
-        self, evaluation: pl.DataFrame, catalog: _CertifiedCatalog
+    def _require_snapshot_coverage(
+        self, evaluation: pl.DataFrame, catalog: _CoverageCatalog
     ) -> None:
-        """Every consumed bar date must sit inside a certified window."""
+        """Every consumed bar date must sit inside a completed window."""
         uncovered = sorted(
             {
                 trade_date
@@ -478,7 +476,7 @@ class AssembleSelectionFacts:
         )
         if uncovered:
             raise AppProcessError(
-                "bar dates outside every certified stock_daily window",
+                "bar dates outside every completed stock_daily window",
                 details={
                     "reason": "ASSEMBLY_SNAPSHOT_COVERAGE_MISSING",
                     "dataset_id": "stock_daily",
@@ -654,7 +652,7 @@ class AssembleSelectionFacts:
         if dependency in _MARKET_BAR_COLUMNS:
             return frozenset({dependency})
         raise AppProcessError(
-            "factor dependency is not certified for assembly: "
+            "factor dependency is not available for assembly: "
             + f"{factor_id} -> {dependency}",
             details={
                 "reason": "ASSEMBLY_FACTOR_DEPENDENCY_UNSUPPORTED",
@@ -940,7 +938,7 @@ class AssembleSelectionFacts:
         ipo_sessions = self._young_listing_sessions(roster_rows, cross_date)
         cross_section = evaluation.filter(pl.col("trade_date") == cross_date)
         # Unattributable instruments never contribute to the ranking
-        # population: an extreme uncertified value must not shift every
+        # population: an extreme unattested value must not shift every
         # other instrument's normalized score.
         unattributable = set(
             evaluation.filter(pl.col(_BAR_LINEAGE_COLUMN).is_null())[
@@ -1074,18 +1072,18 @@ class AssembleSelectionFacts:
         evaluation: pl.DataFrame,
         cross_date: date,
         as_of_date: date,
-        catalog: _CertifiedCatalog,
-    ) -> dict[str, tuple[CertifiedSnapshotWindow, ...]]:
+        catalog: _CoverageCatalog,
+    ) -> dict[str, tuple[SnapshotWindow, ...]]:
         """
         Bar facts bind their whole consumed chain, roster facts at as-of.
 
         Names, ST flags and listing state are read as of the decision date,
-        so their certified coverage must contain that date. Daily bars and
-        adjustments are certified in partitioned snapshots, so the binding
-        carries every window covering any consumed date; today's admission
+        so their completed coverage must contain that date. Daily bars and
+        adjustments are completed in partitioned snapshots, so the binding
+        carries every window covering any consumed date; today's readiness
         mechanics check each snapshot against the full claimed interval and
         therefore still report coverage reasons under partitioned
-        certification until union-aware coverage lands.
+        snapshots until union-aware coverage lands.
         """
         consumed_dates = sorted(set(evaluation["trade_date"].unique().to_list()))
         return {
@@ -1127,12 +1125,12 @@ def _filter_identity_consistent(
 
 
 def _covering_chain(
-    catalog: _CertifiedCatalog,
+    catalog: _CoverageCatalog,
     dataset_id: str,
     days: Sequence[date],
-) -> tuple[CertifiedSnapshotWindow, ...]:
-    """Union of certified windows covering any consumed date, deduplicated."""
-    chain: dict[str, CertifiedSnapshotWindow] = {}
+) -> tuple[SnapshotWindow, ...]:
+    """Union of completed windows covering any consumed date, deduplicated."""
+    chain: dict[str, SnapshotWindow] = {}
     for day in days:
         for window in catalog.covering(dataset_id=dataset_id, day=day):
             chain[window.snapshot_id] = window
@@ -1304,7 +1302,7 @@ def _limit_state(
 
 
 def _bind_visibility_gates(
-    windows: Mapping[str, tuple[CertifiedSnapshotWindow, ...]],
+    windows: Mapping[str, tuple[SnapshotWindow, ...]],
     nodes: tuple[_FactorNode, ...],
     fields: list[FieldRequirement],
 ) -> None:
@@ -1344,7 +1342,7 @@ def _bind_visibility_gates(
 
 
 def _bind_cross_date_metadata(
-    windows: Mapping[str, tuple[CertifiedSnapshotWindow, ...]],
+    windows: Mapping[str, tuple[SnapshotWindow, ...]],
     fields: list[FieldRequirement],
 ) -> None:
     """
@@ -1367,19 +1365,19 @@ def _bind_cross_date_metadata(
 
 def claimed_from(evaluation: pl.DataFrame) -> date | None:
     """
-    Claim the full consumed read range; coverage gaps fail at admission.
+    Claim the full consumed read range; coverage gaps fail at readiness.
 
     The factor and turnover values already consumed every row of the
     evaluation window, so the claim must start at the earliest observed
     trade date — narrowing it to a snapshot's request range would let
-    admission pass without qualifying rows that shaped the output.
+    readiness pass without qualifying rows that shaped the output.
     """
     first_observed = evaluation["trade_date"].min()
     return first_observed if isinstance(first_observed, date) else None
 
 
 def data_fields(
-    windows: Mapping[str, tuple[CertifiedSnapshotWindow, ...]],
+    windows: Mapping[str, tuple[SnapshotWindow, ...]],
     nodes: tuple[_FactorNode, ...],
 ) -> tuple[FieldRequirement, ...]:
     """Bind every consumed selection input to its reviewed source field."""
@@ -1417,10 +1415,10 @@ def data_fields(
         if node.requested and node.leaves & _PRICE_LEAVES
     )
     if price_consumers and not windows.get(_ADJUSTMENT_DATASET):
-        # Without a certified adjustment window the binding would silently
-        # vanish while the raw-field binding still satisfies admission.
+        # Without a completed adjustment window the binding would silently
+        # vanish while the raw-field binding still satisfies readiness.
         raise AppProcessError(
-            "price factors require a certified adj_factor window",
+            "price factors require a completed adj_factor window",
             details={
                 "reason": "ASSEMBLY_ADJUSTMENT_WINDOW_MISSING",
                 "dataset_id": _ADJUSTMENT_DATASET,

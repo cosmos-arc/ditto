@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { HttpResponse, http } from "msw";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { researchCaseFixture, selectionReceiptFixture, selectionRunInputFixture } from "@/mocks/fixtures/selection";
+import { researchCaseFixture, selectionReceiptFixture } from "@/mocks/fixtures/selection";
 import {
 	ASSEMBLED_UNIVERSE_SNAPSHOT_ID,
 	assembledSelectionRunResponse,
@@ -80,19 +80,26 @@ describe("SelectionWorkspacePage", () => {
 		expect(screen.getByText("300750 · 1 → 2")).toBeInTheDocument();
 	});
 
-	it("saves a typed input draft locally and persists the returned SelectionRun", async () => {
+	it("saves a SelectionRun directly from the policy form without requiring a preview", async () => {
 		const user = userEvent.setup();
+		let createdBody: unknown;
+		server.use(
+			http.post("/api/v1/selections/runs", async ({ request }) => {
+				createdBody = await request.json();
+				return HttpResponse.json({ data: selectionReceiptFixture }, { status: 201 });
+			}),
+		);
 		render(<SelectionWorkspacePage />, { wrapper: wrapper() });
 
-		await user.click(screen.getByText("高级模式 · 导入完整输入包"));
-		fireEvent.change(screen.getByLabelText("Selection 输入 JSON"), {
-			target: { value: JSON.stringify(selectionRunInputFixture) },
-		});
-		await user.click(screen.getByRole("button", { name: "校验并保存输入" }));
-		expect(localStorage.getItem("ditto.selection-run-input.v1")).toContain('"spec_id": "a-share-stock-discovery"');
-		await user.click(screen.getByRole("button", { name: "执行 SelectionRun" }));
+		const createButton = await screen.findByRole("button", { name: "创建运行" });
+		await waitFor(() => expect(createButton).toBeEnabled());
+		await user.click(createButton);
 
 		await expect(screen.findByText("已保存 SelectionRun 111111111111")).resolves.toBeInTheDocument();
+		const created = createdBody as AssembleSelectionRunBody;
+		expect(created.spec_id).toBe("stock-momentum-manual");
+		expect(created.factor_weights).toEqual([{ name: "momentum_1m", weight: 1 }]);
+		expect(createdBody).not.toHaveProperty("instruments");
 	});
 
 	it("creates a ResearchCase from the exact run with selected candidates and a required objective", async () => {
@@ -125,7 +132,7 @@ describe("SelectionWorkspacePage", () => {
 		expect(screen.getByText("已复制")).toBeInTheDocument();
 	});
 
-	it("assembles server facts from the structured form and creates the run with the exact request body", async () => {
+	it("assembles server facts from the structured form and creates the run with the policy-only body", async () => {
 		const user = userEvent.setup();
 		let assembledBody: AssembleSelectionRunBody | undefined;
 		let createdBody: unknown;
@@ -141,30 +148,61 @@ describe("SelectionWorkspacePage", () => {
 		);
 		render(<SelectionWorkspacePage />, { wrapper: wrapper() });
 
-		expect(screen.getByRole("button", { name: "创建运行" })).toBeDisabled();
 		await user.click(screen.getByRole("button", { name: "组装并预览" }));
 
 		const summary = await screen.findByRole("region", { name: "组装摘要" });
 		expect(summary).toHaveTextContent(ASSEMBLED_UNIVERSE_SNAPSHOT_ID);
 		expect(summary).toHaveTextContent("输入证券：2 只");
-		expect(await screen.findByRole("region", { name: "字段用途准入" })).toHaveTextContent("数据准入通过");
+		expect(summary).toHaveTextContent("无缺失输入");
 
-		const createButton = screen.getByRole("button", { name: "创建运行" });
-		expect(createButton).toBeEnabled();
-		await user.click(createButton);
+		await user.click(screen.getByRole("button", { name: "创建运行" }));
 
 		await expect(screen.findByText("已保存 SelectionRun 111111111111")).resolves.toBeInTheDocument();
-		expect(createdBody).toEqual(assembledSelectionRunResponse(assembledBody as AssembleSelectionRunBody).request);
-		const created = createdBody as {
-			seed: number;
-			universe_snapshot_id: string;
-			selection_spec: { spec_id: string; excluded_limit_states: string[] };
-		};
-		expect(created.seed).toBe(0);
-		expect(created.universe_snapshot_id).toMatch(/^universe:sha256:[a-f0-9]{64}$/);
-		expect(created.selection_spec.spec_id).toBe("stock-momentum-manual");
-		expect(created.selection_spec.excluded_limit_states).toEqual(["limit_up", "limit_down"]);
-		expect((assembledBody as AssembleSelectionRunBody | undefined)?.lookback_days).toBe(400);
+		const created = createdBody as AssembleSelectionRunBody;
+		expect(created).toEqual(assembledBody);
+		expect(created).toMatchObject({
+			seed: 0,
+			universe_id: "a-share-custom-202609",
+			lookback_days: 400,
+		});
+		// policy-only：客户端事实包字段不再上送，由服务端在创建时组装。
+		expect(createdBody).not.toHaveProperty("instruments");
+		expect(createdBody).not.toHaveProperty("universe_snapshot_id");
+	});
+
+	it("surfaces declared missing inputs from the assembled request echo", async () => {
+		const user = userEvent.setup();
+		server.use(
+			http.post("/api/v1/selections/runs:assembled", async ({ request }) => {
+				const body = (await request.json()) as AssembleSelectionRunBody;
+				const response = assembledSelectionRunResponse(body);
+				response.request.rotation_missing_inputs = ["industry_inputs"];
+				const first = response.request.instruments[0];
+				if (first) {
+					first.declared_missing_inputs = ["momentum_1m"];
+					// 全市场池下缺失输入证券可能远超预览上限：第 21 只之后只汇总计数。
+					for (const instrument_id of Array.from({ length: 25 }, (_, index) => index + 1)) {
+						response.request.instruments.push({
+							...first,
+							instrument_id,
+							instrument_name: `合成证券${instrument_id}`,
+							declared_missing_inputs: ["bars"],
+						});
+					}
+				}
+				return HttpResponse.json({ data: response });
+			}),
+		);
+		render(<SelectionWorkspacePage />, { wrapper: wrapper() });
+
+		await user.click(screen.getByRole("button", { name: "组装并预览" }));
+
+		const summary = await screen.findByRole("region", { name: "组装摘要" });
+		expect(summary).toHaveTextContent("行业轮动缺失输入：industry_inputs");
+		expect(summary).toHaveTextContent("贵州茅台（600519）缺失输入：momentum_1m");
+		expect(summary).toHaveTextContent("另有 6 只证券存在缺失输入");
+		expect(summary).not.toHaveTextContent("合成证券25");
+		expect(summary).not.toHaveTextContent("无缺失输入");
 	});
 
 	it("blocks assembly on client-side strategy validation with in-place messages", async () => {
@@ -209,65 +247,9 @@ describe("SelectionWorkspacePage", () => {
 		await user.click(screen.getByRole("button", { name: "组装并预览" }));
 
 		await expect(screen.findByText("因子权重不得重复且权重之和必须为 1")).resolves.toBeInTheDocument();
-		expect(screen.getByRole("button", { name: "创建运行" })).toBeDisabled();
+		// policy-only：预览失败不阻塞创建，数据完整性由服务端在创建时把关。
+		expect(screen.getByRole("button", { name: "创建运行" })).toBeEnabled();
 	});
-});
-
-it("previews field admission and clears stale qualification when the input changes", async () => {
-	const user = userEvent.setup();
-	render(<SelectionWorkspacePage />, { wrapper: wrapper() });
-	await user.click(screen.getByText("高级模式 · 导入完整输入包"));
-	fireEvent.change(screen.getByLabelText("Selection 输入 JSON"), {
-		target: {
-			value: JSON.stringify({
-				...selectionRunInputFixture,
-				instruments: [{ instrument_id: 600519, instrument_name: "贵州茅台", factor_values: [] }],
-			}),
-		},
-	});
-	await user.selectOptions(screen.getByRole("combobox", { name: "选择证券" }), "600519");
-	await user.click(screen.getByRole("button", { name: "检查字段准入" }));
-	await expect(screen.findByText("请补齐该字段的认证与范围证据，再重新检查。")).resolves.toBeInTheDocument();
-	expect(screen.getByRole("combobox", { name: "选择输入字段" })).toBeInTheDocument();
-	fireEvent.change(screen.getByLabelText("Selection 输入 JSON"), { target: { value: "{}" } });
-	expect(screen.queryByRole("combobox", { name: "选择输入字段" })).not.toBeInTheDocument();
-});
-
-it("shows the historical roster and hides it after editing its bound input", async () => {
-	const user = userEvent.setup();
-	const sources = {
-		universe_id: "pool",
-		asset_kind: "stock",
-		master_snapshot_ids: ["master"],
-		status_snapshot_ids: ["status"],
-	};
-	server.use(
-		http.post("/api/v1/universes/pool/history", async ({ request }) => {
-			const input = (await request.json()) as Record<string, unknown>;
-			return HttpResponse.json({
-				data: {
-					...input,
-					rule_version: "historical-universe-v1",
-					snapshot_id: `universe:sha256:${"a".repeat(64)}`,
-					members: [
-						{ instrument_id: 1, investable: true, exclusion_reasons: [] },
-						{ instrument_id: 2, investable: false, exclusion_reasons: ["DELISTED"] },
-					],
-				},
-			});
-		}),
-	);
-	render(<SelectionWorkspacePage />, { wrapper: wrapper() });
-	await user.click(screen.getByText("高级模式 · 导入完整输入包"));
-	const input = { ...selectionRunInputFixture, universe_sources: sources };
-	fireEvent.change(screen.getByLabelText("Selection 输入 JSON"), { target: { value: JSON.stringify(input) } });
-	await user.click(screen.getByRole("button", { name: "查看历史证券池" }));
-	expect(await screen.findByRole("region", { name: "历史证券池" })).toHaveTextContent("2 只证券");
-	expect(screen.getByText("2 · 不可投资 · DELISTED")).toBeInTheDocument();
-	fireEvent.change(screen.getByLabelText("Selection 输入 JSON"), {
-		target: { value: JSON.stringify({ ...input, as_of: "2026-09-01T00:00:00Z" }) },
-	});
-	expect(screen.queryByRole("region", { name: "历史证券池" })).not.toBeInTheDocument();
 });
 
 it("loads universe options from the authoritative list and requires an explicit pick", async () => {
@@ -315,5 +297,5 @@ it("rejects an assembled response whose policy echo drifts from the submitted wi
 	await waitFor(() =>
 		expect(screen.getByRole("alert")).toHaveTextContent(/组装响应的策略回显或服务端事实与提交不一致/),
 	);
-	expect(screen.getByRole("button", { name: "创建运行" })).toBeDisabled();
+	expect(screen.queryByRole("region", { name: "组装摘要" })).not.toBeInTheDocument();
 });
