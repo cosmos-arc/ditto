@@ -1,0 +1,16 @@
+{
+  "github_owned_allowed": true,
+  "patterns_allowed": [
+    "actions/*",
+    "codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f",
+    "docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a",
+    "github/codeql-action/init@cdf488f595d80d6e07e03d4674febd5ab45fa938",
+    "github/codeql-action/analyze@cdf488f595d80d6e07e03d4674febd5ab45fa938",
+    "github/codeql-action/upload-sarif@cdf488f595d80d6e07e03d4674febd5ab45fa938",
+    "docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e",
+    "astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78",
+    "arduino/setup-task@c0bc642852239c2689f73f4ea6459c29405f3c52",
+    "oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6"
+  ],
+  "verified_allowed": false
+}

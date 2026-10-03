@@ -1,0 +1,77 @@
+{
+  "total_count": 6,
+  "workflows": [
+    {
+      "id": 214366208,
+      "node_id": "W_kwDOPT8clc4MxvgA",
+      "name": "CI",
+      "path": ".github/workflows/ci.yml",
+      "state": "active",
+      "created_at": "2025-12-09T22:18:19.000+08:00",
+      "updated_at": "2026-01-14T22:37:47.000+08:00",
+      "url": "https://api.github.com/repos/cosmos-arc/ditto/actions/workflows/214366208",
+      "html_url": "https://github.com/cosmos-arc/ditto/blob/main/.github/workflows/ci.yml",
+      "badge_url": "https://github.com/cosmos-arc/ditto/workflows/CI/badge.svg"
+    },
+    {
+      "id": 267475869,
+      "node_id": "W_kwDOPT8clc4P8Vud",
+      "name": "Dependency Graph",
+      "path": "dynamic/dependabot/update-graph",
+      "state": "active",
+      "created_at": "2026-04-28T11:18:47.000+08:00",
+      "updated_at": "2026-04-28T11:18:47.000+08:00",
+      "url": "https://api.github.com/repos/cosmos-arc/ditto/actions/workflows/267475869",
+      "html_url": "https://github.com/cosmos-arc/ditto/actions/workflows/dependabot/update-graph",
+      "badge_url": "https://github.com/cosmos-arc/ditto/actions/workflows/dependabot/update-graph/badge.svg"
+    },
+    {
+      "id": 350940610,
+      "node_id": "W_kwDOPT8clc4U6u3C",
+      "name": "Release artifacts",
+      "path": ".github/workflows/release.yml",
+      "state": "active",
+      "created_at": "2026-09-05T21:54:47.000+08:00",
+      "updated_at": "2026-09-05T21:54:47.000+08:00",
+      "url": "https://api.github.com/repos/cosmos-arc/ditto/actions/workflows/350940610",
+      "html_url": "https://github.com/cosmos-arc/ditto/blob/main/.github/workflows/release.yml",
+      "badge_url": "https://github.com/cosmos-arc/ditto/workflows/Release%20artifacts/badge.svg"
+    },
+    {
+      "id": 350940612,
+      "node_id": "W_kwDOPT8clc4U6u3E",
+      "name": "Security",
+      "path": ".github/workflows/security.yml",
+      "state": "active",
+      "created_at": "2026-09-05T21:54:47.000+08:00",
+      "updated_at": "2026-09-05T21:54:47.000+08:00",
+      "url": "https://api.github.com/repos/cosmos-arc/ditto/actions/workflows/350940612",
+      "html_url": "https://github.com/cosmos-arc/ditto/blob/main/.github/workflows/security.yml",
+      "badge_url": "https://github.com/cosmos-arc/ditto/workflows/Security/badge.svg"
+    },
+    {
+      "id": 352741460,
+      "node_id": "W_kwDOPT8clc4VBmhU",
+      "name": "CodeQL",
+      "path": "dynamic/github-code-scanning/codeql",
+      "state": "active",
+      "created_at": "2026-09-08T10:29:08.000+08:00",
+      "updated_at": "2026-09-08T10:29:08.000+08:00",
+      "url": "https://api.github.com/repos/cosmos-arc/ditto/actions/workflows/352741460",
+      "html_url": "https://github.com/cosmos-arc/ditto/actions/workflows/github-code-scanning/codeql",
+      "badge_url": "https://github.com/cosmos-arc/ditto/actions/workflows/github-code-scanning/codeql/badge.svg"
+    },
+    {
+      "id": 353545432,
+      "node_id": "W_kwDOPT8clc4VEqzY",
+      "name": "Dependabot Updates",
+      "path": "dynamic/dependabot/dependabot-updates",
+      "state": "active",
+      "created_at": "2026-09-09T06:44:06.000+08:00",
+      "updated_at": "2026-09-09T06:44:06.000+08:00",
+      "url": "https://api.github.com/repos/cosmos-arc/ditto/actions/workflows/353545432",
+      "html_url": "https://github.com/cosmos-arc/ditto/actions/workflows/dependabot/dependabot-updates",
+      "badge_url": "https://github.com/cosmos-arc/ditto/actions/workflows/dependabot/dependabot-updates/badge.svg"
+    }
+  ]
+}

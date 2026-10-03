@@ -1,0 +1,38 @@
+{
+  "checked_at": "2026-10-02T16:26:51.286984+00:00",
+  "consumer": "canonical adjustment storage read + catalog probe (real data root)",
+  "field_inputs": [
+    {
+      "consumer_field": "adjustment.adj_factor",
+      "dataset_id": "adj_factor",
+      "frame_columns": [
+        "source_ticker",
+        "trade_date",
+        "knowledge_date",
+        "adj_factor",
+        "instrument_id",
+        "source"
+      ],
+      "frame_sample_sha256": "f6b630684bc5c03355353cbb60c9ebead0cdb2f6c910bc04c4747a8f4e955078",
+      "instrument_count": 5651,
+      "reader": "canonical adjustment physical contract (market/stock/adj)",
+      "rows": 2315450,
+      "window": {
+        "from": "2025-01-02",
+        "to": "2026-09-29"
+      }
+    }
+  ],
+  "probe": {
+    "file_count": 2,
+    "kind": "parquet",
+    "object": "market/stock/adj",
+    "row_count": 2315450
+  },
+  "read": {
+    "instruments": 5651,
+    "rows": 2315450,
+    "trade_date_max": "2026-09-29",
+    "trade_date_min": "2025-01-02"
+  }
+}
