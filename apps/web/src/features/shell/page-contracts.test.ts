@@ -204,14 +204,7 @@ describe("R1-R5 live page contracts", () => {
 			"completed",
 			"reconnecting",
 		],
-		system: [
-			"pipeline-running",
-			"source-degraded",
-			"fallback-active",
-			"promotion-blocked",
-			"approval-expired",
-			"remediation-empty",
-		],
+		system: ["pipeline-running", "source-degraded", "approval-expired"],
 		"model-portfolio": [
 			"ready",
 			"review-required",

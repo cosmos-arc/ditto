@@ -28,10 +28,7 @@
   "liveData": {
     "readPaths": [
 	  "/api/v1/ingestion/catalog/assets",
-      "/api/v1/ingestion/catalog/remediation/backlog",
-      "/api/v1/ingestion/catalog/source-health/summary",
-      "/api/v1/ingestion/catalog/source-fallback/summary",
-      "/api/v1/ingestion/catalog/promotion/readiness"
+      "/api/v1/ingestion/catalog/source-health/summary"
     ],
     "writePaths": [],
     "mockFallback": false
@@ -91,11 +88,8 @@
       "catalog-empty",
       "pipeline-running",
       "source-degraded",
-      "fallback-active",
-      "promotion-blocked",
       "approval-expired",
-      "partial-unavailable",
-      "remediation-empty"
+      "partial-unavailable"
     ]
   },
   "flags": {

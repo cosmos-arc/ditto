@@ -14,8 +14,8 @@ authority.
 
 The certified acceptance lane is sufficient for deterministic release evidence, but
 it is not a fresh provider lane. Tushare/FRED are considered live only after their
-local credential preflight, entitlement evidence, snapshot build, and certification
-pass. Never label fixture or restored data as fresh.
+local credential preflight, entitlement evidence, snapshot build, and snapshot
+readiness pass. Never label fixture or restored data as fresh.
 
 ## 2. Start and stop
 
