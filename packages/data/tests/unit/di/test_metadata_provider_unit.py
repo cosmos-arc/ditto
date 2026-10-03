@@ -16,6 +16,9 @@ def test_metadata_service_uses_grouped_provider_dependencies() -> None:
     instrument_writer = MagicMock()
     name_history_reader = MagicMock()
     name_history_writer = MagicMock()
+    st_change_history_reader = MagicMock()
+    st_change_history_writer = MagicMock()
+    etf_reference_writer = MagicMock()
     calendar_reader = MagicMock()
     calendar_writer = MagicMock()
     industry_reader = MagicMock()
@@ -35,6 +38,9 @@ def test_metadata_service_uses_grouped_provider_dependencies() -> None:
         instrument_writer,
         name_history_reader,
         name_history_writer,
+        st_change_history_reader,
+        st_change_history_writer,
+        etf_reference_writer,
     )
     calendar_deps = provider.metadata_calendar_dependencies(
         calendar_reader,

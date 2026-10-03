@@ -315,6 +315,38 @@ INGESTION_SPECS: dict[_Dataset, DatasetSpec] = {
         priority=12,
         timeout_seconds=900,
     ),
+    _Dataset.NAME_CHANGE: create_t1_config(
+        dataset=_Dataset.NAME_CHANGE,
+        description="证券名称变更历史(可信历史事件流)",
+        typical_available_time=time(20, 30),
+        depends_on=[_Dataset.STOCK_BASIC],
+        critical_fields=[
+            "instrument_id",
+            "new_name",
+            "changed_date",
+            "source",
+            "observed_at",
+        ],
+        task_name="ingest_namechange",
+        priority=13,
+        timeout_seconds=900,
+    ),
+    _Dataset.ST_HISTORY: create_t1_config(
+        dataset=_Dataset.ST_HISTORY,
+        description="ST 状态变更历史(可信历史事件流)",
+        typical_available_time=time(20, 30),
+        depends_on=[_Dataset.STOCK_BASIC],
+        critical_fields=[
+            "instrument_id",
+            "effective_from",
+            "is_st",
+            "source",
+            "observed_at",
+        ],
+        task_name="ingest_st_history",
+        priority=14,
+        timeout_seconds=900,
+    ),
 }
 
 

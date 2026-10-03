@@ -288,7 +288,6 @@ Feature/Factor 产物路径由 Features 层 `FeatureArtifactStoreSettings` 管�
 | `RATE_LIMIT_PROFILE` | str | `free` | Tushare 运行时限流预设：`free`、`paid`（兼容别名 `premium`）或 `conservative`；非法值会在客户端初始化时 fail closed |
 | `RATE_LIMIT_GLOBAL_RATE` | int | - | 全局速率限制 |
 | `RATE_LIMIT_DAILY_RATE` | int | - | 每日速率限制 |
-| `TDX_PATH` | str | `D:\new_tdx\vipdoc` | 通达信路径（质量对账用） |
 
 ### 4. observability.env - 可观测性配置
 

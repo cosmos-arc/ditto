@@ -3,9 +3,19 @@
 
 Engine 层：纯业务逻辑，无数据访问依赖。
 接收两个 DataFrame 进行对比，不关心数据从哪来。
+
+#395 对账语义：
+- 比较键为 instrument_id + trade_date（辅源帧经来源映射反解为 instrument_id）；
+- 零交集 = 不可比较（显式状态 ``not_comparable``，不算通过）；
+- 结果报告两侧数量/匹配数/主侧未匹配/辅侧未匹配/重复键/差异数，
+  inner join 升级为 outer/anti 分析；
+- 除权日（adj_factor 事件日）差异单列标记（``ex_dividend_day``）。
 """
 
-from typing import Any
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+from typing import Any, Literal
 
 import polars as pl
 from ditto_platform.foundation import logger
@@ -15,6 +25,30 @@ from ditto_data.quality.spec import (
     CompareMethod,
     ToleranceRule,
 )
+
+type ComparisonStatus = Literal["compared", "not_comparable"]
+
+
+@dataclass(frozen=True)
+class CrossSourceComparison:
+    """一次跨源对比的完整报告（两侧数量、匹配、未匹配、重复键、差异）。"""
+
+    status: ComparisonStatus
+    key_columns: tuple[str, ...]
+    primary_count: int
+    secondary_count: int
+    matched_count: int
+    primary_unmatched_count: int
+    secondary_unmatched_count: int
+    primary_duplicate_keys: int
+    secondary_duplicate_keys: int
+    diff_count: int
+    diff_rows: list[dict[str, Any]] = field(default_factory=list)
+
+    @property
+    def comparable(self) -> bool:
+        """零交集 = 不可比较；非零交集才算有效比较。"""
+        return self.status == "compared" and self.matched_count > 0
 
 
 class CrossSourceChecker:
@@ -48,6 +82,182 @@ class CrossSourceChecker:
             "amount": ToleranceRule(method=CompareMethod.RELATIVE, relative_tol=0.001),
         }
 
+    # ------------------------------------------------------------------
+    # 结构化对比：报告两侧数量/匹配/未匹配/重复键/差异
+    # ------------------------------------------------------------------
+
+    def compare(
+        self,
+        primary: pl.DataFrame,
+        secondary: pl.DataFrame,
+        *,
+        key_columns: list[str] | tuple[str, ...] = ("instrument_id", "trade_date"),
+        fields: list[str] | tuple[str, ...] = (),
+        tolerance_rules: dict[str, ToleranceRule] | None = None,
+        ex_dividend_instruments: frozenset[int] | None = None,
+    ) -> CrossSourceComparison:
+        """
+        执行 outer/anti 结构分析并按容差比对字段。
+
+        Args:
+            primary: 主数据源帧（含 key_columns 与比对字段）.
+            secondary: 辅助数据源帧（同上，经来源映射反解为 instrument_id）.
+            key_columns: 比较键（默认 instrument_id + trade_date）.
+            fields: 比对字段列表.
+            tolerance_rules: 字段 → 容差规则（缺省用 checker 默认）.
+            ex_dividend_instruments: 除权日（adj_factor 事件日）标的集合，
+                命中的差异行单列标记 ex_dividend_day.
+
+        Returns:
+            CrossSourceComparison 结构化报告.
+
+        """
+        keys = list(key_columns)
+        tolerance = dict(self.tolerance_rules)
+        if tolerance_rules:
+            tolerance.update(tolerance_rules)
+
+        primary_keys = self._distinct_keys(primary, keys)
+        secondary_keys = self._distinct_keys(secondary, keys)
+        matched_keys = primary_keys & secondary_keys
+        primary_unmatched = primary_keys - secondary_keys
+        secondary_unmatched = secondary_keys - primary_keys
+
+        status: ComparisonStatus = "compared" if matched_keys else "not_comparable"
+        diff_rows: list[dict[str, Any]] = []
+        if status == "compared":
+            diff_rows = self._field_diffs(
+                primary,
+                secondary,
+                keys,
+                list(fields),
+                tolerance,
+                ex_dividend_instruments or frozenset(),
+            )
+
+        return CrossSourceComparison(
+            status=status,
+            key_columns=tuple(keys),
+            primary_count=primary.height,
+            secondary_count=secondary.height,
+            matched_count=len(matched_keys),
+            primary_unmatched_count=len(primary_unmatched),
+            secondary_unmatched_count=len(secondary_unmatched),
+            primary_duplicate_keys=self._duplicate_key_count(primary, keys),
+            secondary_duplicate_keys=self._duplicate_key_count(secondary, keys),
+            diff_count=len(diff_rows),
+            diff_rows=diff_rows,
+        )
+
+    @staticmethod
+    def _distinct_keys(frame: pl.DataFrame, keys: list[str]) -> set[tuple[Any, ...]]:
+        """帧的键集合（空帧/缺键列 → 空集）。"""
+        missing = [key for key in keys if key not in frame.columns]
+        if missing or frame.is_empty():
+            return set()
+        # select 仅键列后转元组
+        return {tuple(row) for row in frame.select(keys).unique().iter_rows()}
+
+    @staticmethod
+    def _duplicate_key_count(frame: pl.DataFrame, keys: list[str]) -> int:
+        """重复键数量（同键多行的键个数）。"""
+        missing = [key for key in keys if key not in frame.columns]
+        if missing or frame.is_empty():
+            return 0
+        return frame.group_by(keys).len().filter(pl.col("len") > 1).height
+
+    def _field_diffs(
+        self,
+        primary: pl.DataFrame,
+        secondary: pl.DataFrame,
+        keys: list[str],
+        fields: list[str],
+        tolerance: dict[str, ToleranceRule],
+        ex_dividend_instruments: frozenset[int],
+    ) -> list[dict[str, Any]]:
+        """按容差逐字段比对键交集行，返回差异样本（含除权日标记）。"""
+        comparable_fields = [
+            f for f in fields if f in primary.columns and f in secondary.columns
+        ]
+        if not comparable_fields:
+            return []
+        # 键去重（重复键已单独计数），每键取首行避免 join 扇出
+        primary_unique = primary.unique(subset=keys, keep="first")
+        secondary_unique = secondary.unique(subset=keys, keep="first")
+        merged = primary_unique.join(
+            secondary_unique, on=keys, how="inner", suffix="_secondary"
+        )
+        diff_rows: list[dict[str, Any]] = []
+        for field_name in comparable_fields:
+            rule = tolerance.get(field_name)
+            if rule is None:
+                continue
+            violating = self._violating_rows(merged, field_name, rule)
+            if violating.height == 0:
+                continue
+            for row in violating.to_dicts():
+                diff_rows.append(
+                    {
+                        **{key: row.get(key) for key in keys},
+                        "field": field_name,
+                        "primary_value": row.get(field_name),
+                        "secondary_value": row.get(f"{field_name}_secondary"),
+                        "diff": abs(
+                            float(row.get(field_name) or 0.0)
+                            - float(row.get(f"{field_name}_secondary") or 0.0)
+                        ),
+                        # 除权日（adj_factor 事件日）差异单列标记：
+                        # 原始/复权口径差异不与单位错误混排
+                        "ex_dividend_day": (
+                            "instrument_id" in keys
+                            and row.get("instrument_id") in ex_dividend_instruments
+                        ),
+                    }
+                )
+        return diff_rows
+
+    @staticmethod
+    def _violating_rows(
+        merged: pl.DataFrame, field_name: str, rule: ToleranceRule
+    ) -> pl.DataFrame:
+        """返回超出容差的交集行。"""
+        primary_col = pl.col(field_name).cast(pl.Float64, strict=False)
+        secondary_col = pl.col(f"{field_name}_secondary").cast(pl.Float64, strict=False)
+        if rule.method == CompareMethod.TICK_ALIGNED:
+            diff = (primary_col - secondary_col).abs()
+            return merged.filter(
+                pl.col(field_name).is_not_null()
+                & pl.col(f"{field_name}_secondary").is_not_null()
+                & (diff > (rule.tick_size or 0.0))
+            )
+        if rule.method == CompareMethod.RELATIVE:
+            if rule.relative_tol is None:
+                return pl.DataFrame()
+            denominator = secondary_col.abs()
+            ratio = (primary_col - secondary_col).abs() / pl.when(
+                denominator == 0
+            ).then(None).otherwise(denominator)
+            return merged.filter(
+                pl.col(field_name).is_not_null()
+                & pl.col(f"{field_name}_secondary").is_not_null()
+                & ratio.is_not_null()
+                & (ratio > rule.relative_tol)
+            )
+        if rule.method == CompareMethod.ABSOLUTE:
+            if rule.absolute_tol is None:
+                return pl.DataFrame()
+            diff = (primary_col - secondary_col).abs()
+            return merged.filter(
+                pl.col(field_name).is_not_null()
+                & pl.col(f"{field_name}_secondary").is_not_null()
+                & (diff > rule.absolute_tol)
+            )
+        return pl.DataFrame()
+
+    # ------------------------------------------------------------------
+    # DQIssue 适配（写入时/巡检路径）
+    # ------------------------------------------------------------------
+
     def check(
         self,
         primary: pl.DataFrame,
@@ -60,26 +270,23 @@ class CrossSourceChecker:
 
         Args:
             primary: 主数据源 DataFrame（如 Tushare）
-            secondary: 辅助数据源 DataFrame（如 TDX）
+            secondary: 辅助数据源 DataFrame（如 fuyao）
             rules: 跨源对比规则列表
-            context: 额外上下文
+            context: 额外上下文（可含 ex_dividend_instruments）
 
         Returns:
             DQIssue 列表
 
         """
         issues: list[DQIssue] = []
-
         for rule in rules:
             if rule.get("rule") != "cross_source_compare":
                 continue
             if not rule.get("enabled", True):
                 continue
-
             issue = self._check_cross_source(primary, secondary, rule, context)
             if issue:
                 issues.append(issue)
-
         return issues
 
     def _check_cross_source(
@@ -89,67 +296,82 @@ class CrossSourceChecker:
         rule: dict[str, Any],
         context: dict[str, Any] | None = None,
     ) -> DQIssue | None:
-        """
-        检查单个跨源对比规则.
-
-        Args:
-            primary: 主数据源
-            secondary: 辅助数据源
-            rule: 规则配置
-            context: 额外上下文
-
-        Returns:
-            DQIssue if rule violated, None otherwise
-
-        """
-        key_columns = rule.get("key_columns", ["ticker", "trade_date"])
+        """把结构化对比折叠为单条 DQIssue（保留可比较性语义）。"""
+        key_columns = rule.get("key_columns", ["instrument_id", "trade_date"])
         fields = rule.get("fields", [])
         custom_tolerance = rule.get("tolerance_rules", {})
-
-        # 合并容差规则（自定义覆盖默认）
         tolerance = self.tolerance_rules.copy()
-        for field, rule_config in custom_tolerance.items():
-            tolerance[field] = ToleranceRule(
+        for field_name, rule_config in custom_tolerance.items():
+            tolerance[field_name] = ToleranceRule(
                 method=CompareMethod(rule_config.get("method", "relative")),
                 tick_size=rule_config.get("tick_size"),
                 relative_tol=rule_config.get("relative_tol"),
                 absolute_tol=rule_config.get("absolute_tol"),
             )
-
-        # 使用 key_columns 进行 join
-        merged = primary.join(
-            secondary, on=key_columns, how="inner", suffix="_secondary"
+        ex_dividend: frozenset[int] = frozenset(
+            (context or {}).get("ex_dividend_instruments") or ()
         )
 
-        if merged.height == 0:
-            logger.debug(
-                "cross_source_no_overlap",
+        comparison = self.compare(
+            primary,
+            secondary,
+            key_columns=key_columns,
+            fields=fields,
+            tolerance_rules=tolerance,
+            ex_dividend_instruments=ex_dividend,
+        )
+
+        if not comparison.comparable:
+            logger.warning(
+                "cross_source_not_comparable",
                 event="dq_check",
                 rule="cross_source_compare",
-                reason="No overlapping records found",
+                primary_count=comparison.primary_count,
+                secondary_count=comparison.secondary_count,
+                matched_count=comparison.matched_count,
             )
-            return None
-
-        # 检查每个字段
-        diff_samples: list[dict[str, Any]] = []
-        # 使用 key_columns 的第一列作为标识符（通常是 ticker 或 instrument_id）
-        identifier_column = key_columns[0]
-        for field in fields:
-            if field not in primary.columns or field not in secondary.columns:
-                continue
-
-            field_diff = self._check_field(
-                merged, field, tolerance.get(field), identifier_column
+            return DQIssue(
+                level=DQLevel.STATISTICAL,
+                severity=DQSeverity.WARNING,
+                rule_name="cross_source_not_comparable",
+                message=(
+                    "Cross-source comparison has zero key intersection "
+                    f"(primary={comparison.primary_count}, "
+                    f"secondary={comparison.secondary_count}); "
+                    "comparison is incomplete, not passing"
+                ),
+                affected_rows=0,
+                sample_data=[],
             )
-            if field_diff is not None:
-                diff_samples.extend(field_diff)
 
-        if diff_samples:
+        duplicate_keys = (
+            comparison.primary_duplicate_keys + comparison.secondary_duplicate_keys
+        )
+        if duplicate_keys:
+            logger.warning(
+                "cross_source_duplicate_keys",
+                event="dq_check",
+                rule="cross_source_compare",
+                primary_duplicates=comparison.primary_duplicate_keys,
+                secondary_duplicates=comparison.secondary_duplicate_keys,
+            )
+            return DQIssue(
+                level=DQLevel.STATISTICAL,
+                severity=DQSeverity.WARNING,
+                rule_name="cross_source_duplicate_keys",
+                message=(
+                    f"Cross-source frames contain {duplicate_keys} duplicate keys"
+                ),
+                affected_rows=duplicate_keys,
+                sample_data=[],
+            )
+
+        if comparison.diff_rows:
             logger.warning(
                 "cross_source_difference_found",
                 event="dq_check",
                 rule="cross_source_compare",
-                diff_count=len(diff_samples),
+                diff_count=comparison.diff_count,
             )
             return DQIssue(
                 level=DQLevel.STATISTICAL,
@@ -158,74 +380,8 @@ class CrossSourceChecker:
                 message=rule.get(
                     "message", "Cross-source comparison found differences"
                 ),
-                affected_rows=len(diff_samples),
-                sample_data=diff_samples[:10],  # 最多 10 个样本
-            )
-
-        return None
-
-    def _check_field(
-        self,
-        merged: pl.DataFrame,
-        field: str,
-        tolerance: ToleranceRule | None,
-        identifier_column: str,
-    ) -> list[dict[str, Any]] | None:
-        """
-        检查单个字段的差异.
-
-        Args:
-            merged: 合并后的 DataFrame
-            field: 字段名
-            tolerance: 容差规则
-            identifier_column: 标识符列名（ticker 或 instrument_id）
-
-        Returns:
-            差异样本列表，无差异返回 None
-
-        """
-        if tolerance is None:
-            return None
-
-        primary_col = pl.col(field)
-        secondary_col = pl.col(f"{field}_secondary")
-
-        if tolerance.method == CompareMethod.TICK_ALIGNED:
-            # Tick 对齐：差异应 <= tick_size
-            diff = (primary_col - secondary_col).abs()
-            diff_rows = merged.filter(diff > tolerance.tick_size)
-        elif tolerance.method == CompareMethod.RELATIVE:
-            # 相对容差：|primary - secondary| / secondary <= tolerance
-            if tolerance.relative_tol is None:
-                return None
-            ratio = (primary_col - secondary_col).abs() / secondary_col
-            diff_rows = merged.filter(ratio > tolerance.relative_tol)
-        elif tolerance.method == CompareMethod.ABSOLUTE:
-            # 绝对容差：|primary - secondary| <= tolerance
-            if tolerance.absolute_tol is None:
-                return None
-            diff = (primary_col - secondary_col).abs()
-            diff_rows = merged.filter(diff > tolerance.absolute_tol)
-        else:
-            return None
-
-        if diff_rows.height > 0:
-            # 返回完整的差异样本，包含上下文信息
-            return (
-                diff_rows.select(
-                    [
-                        identifier_column,
-                        "trade_date",
-                        pl.col(field).alias("primary_value"),
-                        pl.col(f"{field}_secondary").alias("secondary_value"),
-                        (pl.col(field) - pl.col(f"{field}_secondary"))
-                        .abs()
-                        .alias("diff"),
-                        pl.lit(field).alias("field"),
-                    ]
-                )
-                .head(10)
-                .to_dicts()
+                affected_rows=comparison.diff_count,
+                sample_data=comparison.diff_rows[:10],  # 最多 10 个样本
             )
 
         return None

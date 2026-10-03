@@ -184,7 +184,7 @@ def reconcile(
         "stock_daily", "--dataset", help="对账数据集(当前支持 stock_daily)"
     ),
 ) -> None:
-    """跨源对账: 主源存量 vs 辅源(fuyao 已配置时优先, 否则 TDX)."""
+    """跨源对账: 主源存量 vs 辅源 fuyao(instrument_id+trade_date 同口径比较)."""
     from ditto_apps.registry.infra.protocol_adapters import (  # noqa: PLC0415
         MarketReaders,
     )
@@ -212,17 +212,29 @@ def reconcile(
                 primary_df=primary_df, trade_date=date, dataset=dataset
             )
         )
+        typer.echo(
+            "对账统计: "
+            f"主侧={result.primary_count} 辅侧={result.secondary_count} "
+            f"匹配={result.matched_count} "
+            f"主侧未匹配={result.primary_unmatched_count} "
+            f"辅侧未匹配={result.secondary_unmatched_count} "
+            f"主侧重复键={result.primary_duplicate_keys} "
+            f"辅侧重复键={result.secondary_duplicate_keys} "
+            f"差异数={result.diff_count}"
+        )
         skipped = f" (skipped: {result.skip_reason})" if result.skipped else ""
+        comparable = "可比" if result.comparable else "不可比较(零交集)"
         color = typer.colors.GREEN if result.passed else typer.colors.RED
         typer.secho(
-            f"对账结果: passed={result.passed} issues={result.issue_count}{skipped}",
+            f"对账结果: passed={result.passed} 比较={comparable} "
+            f"issues={result.issue_count}{skipped}",
             fg=color,
         )
         if not result.passed:
             typer.secho(
                 f"error: {result.error}"
                 if result.error
-                else f"存在跨源差异, 详见 {data_root}/quarantine/quality_comparison/",
+                else f"对账未通过(详见 {data_root}/quarantine/quality_comparison/)",
                 fg=typer.colors.RED,
             )
             raise typer.Exit(1)

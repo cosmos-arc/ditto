@@ -4,11 +4,13 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from typing import ClassVar, Literal, cast
 
 import polars as pl
+from ditto_data.catalog.source_snapshot import snapshot_identity
 from ditto_data.config.dataset_checksum import dataset_sort_keys
-from ditto_data.models import Dataset
+from ditto_data.models import Dataset, Source
 from ditto_data.services.capital_store import CapitalStore
 from ditto_data.services.fundamental_store import FundamentalStore
 from ditto_data.services.macro_service import MacroService
@@ -21,6 +23,9 @@ from ditto_application.processes.ingestion.dataset_registry import (
     DatasetRegistration,
     WriteKind,
     default_dataset_registry,
+)
+from ditto_application.processes.ingestion.ingestion_evidence import (
+    dataset_schema_version,
 )
 
 
@@ -105,6 +110,12 @@ def _to_write_result(
         rows_total=rows_written,
         blocked=False,  # blocked 仅由显式 DQ 检查设置，不从 rows_written 推断
     )
+
+
+def _normalize_iso_date(value: str) -> str:
+    """把 YYYYMMDD / YYYY-MM-DD 统一为 YYYY-MM-DD。"""
+    compact = value.replace("-", "")
+    return f"{compact[:4]}-{compact[4:6]}-{compact[6:8]}"
 
 
 def _validate_index_weight_totals(df: pl.DataFrame) -> None:
@@ -261,6 +272,9 @@ class IngestionDataWriter:
         WriteKind.GLOBAL_INDEX_BARS: "_handler_global_index_bars",
         WriteKind.INDUSTRY_CLASSIFICATION: "_handler_industry_classification",
         WriteKind.INDUSTRY_MAPPING: "_handler_industry_mapping",
+        WriteKind.NAME_HISTORY: "_handler_name_history",
+        WriteKind.ST_CHANGE_HISTORY: "_handler_st_change_history",
+        WriteKind.ETF_REFERENCE: "_handler_etf_reference",
     }
 
     def _handler_traded_bars(self, ctx: _WriteContext) -> Callable[[], WriteResult]:
@@ -367,6 +381,147 @@ class IngestionDataWriter:
             ctx.df,
             "save_industry_mapping",
         )
+
+    def _handler_name_history(self, ctx: _WriteContext) -> Callable[[], WriteResult]:
+        """Namechange 摄取 → instrument_name_history（带证据三元组）。"""
+        return lambda: self._write_instrument_history(
+            ctx.dataset,
+            ctx.df,
+            "save_name_history",
+        )
+
+    def _handler_st_change_history(
+        self, ctx: _WriteContext
+    ) -> Callable[[], WriteResult]:
+        """st_history 摄取 → st_change_history（带证据三元组）。"""
+        return lambda: self._write_instrument_history(
+            ctx.dataset,
+            ctx.df,
+            "save_st_change_history",
+        )
+
+    def _write_instrument_history(
+        self,
+        dataset: str,
+        df: pl.DataFrame,
+        method_name: Literal["save_name_history", "save_st_change_history"],
+    ) -> WriteResult:
+        """
+        历史事件写入：行携带 生效时间 + 可知时间 + 来源。
+
+        缺真实生效日期的行在服务层被拒绝（计数日志），绝不以默认日期
+        冒充真实历史；写入按 (生效键, 来源) 幂等。
+        """
+        method = getattr(self._metadata_service.instrument, method_name)
+        rows_written = method(
+            df,
+            source=self._source_name,
+            observed_at=datetime.now(UTC).strftime("%Y-%m-%d %H:%M:%S"),
+        )
+        return _to_write_result(dataset, 0, df, rows_written)
+
+    def _handler_etf_reference(self, ctx: _WriteContext) -> Callable[[], WriteResult]:
+        """etf_basic 摄取：注册 + 扩展表接通 + 参考观察行产出。"""
+        asset_class = ctx.registration.basic_asset_class
+        if asset_class != "etf":
+            raise AppProcessError(
+                f"数据集 {ctx.dataset} 的 etf_reference 路由要求 etf basic",
+                field="dataset",
+                value=ctx.dataset,
+            )
+        return lambda: self._write_etf_basic_with_reference(
+            ctx.df, ctx.trade_date, asset_class
+        )
+
+    def _write_etf_basic_with_reference(
+        self,
+        df: pl.DataFrame,
+        trade_date: str,
+        asset_class: Literal["stock", "etf", "index"],
+    ) -> WriteResult:
+        """
+        etf_basic 摄取写侧（#395）。
+
+        1. 常规批量注册（instrument/instrument_mapping/instrument_etf 扩展）。
+        2. 从同一帧生成 etf_reference_observation 观察行，绑定与摄取证据
+           一致的 source_snapshot_id（dataset=etf_basic 的确定性快照身份）。
+        """
+        file_path, checksum = self._write_basic_impl(df, asset_class)
+        observation_rows = self._build_etf_reference_rows(df, trade_date, checksum)
+        if observation_rows:
+            written = self._metadata_service.instrument.save_etf_reference_observations(
+                observation_rows
+            )
+            logger.info(
+                "etf_reference_observation rows written",
+                event="etf_reference_write_complete",
+                observations=written,
+                snapshot_id=str(observation_rows[0]["source_snapshot_id"]),
+            )
+        return WriteResult(
+            file_path=file_path,
+            checksum=checksum,
+            rows_written=len(df),
+            rows_total=len(df),
+            blocked=False,
+        )
+
+    def _build_etf_reference_rows(
+        self,
+        df: pl.DataFrame,
+        trade_date: str,
+        checksum: str,
+    ) -> list[dict[str, object]]:
+        """etf_basic 帧 → 参考观察行（field/value/unit + 证据三元组）。"""
+        if df.is_empty() or "source_ticker" not in df.columns:
+            return []
+        snapshot_id = snapshot_identity(
+            "etf_basic",
+            self._source_name,
+            trade_date,
+            trade_date,
+            dataset_schema_version("etf_basic"),
+            checksum,
+        )
+        observed_on = _normalize_iso_date(trade_date)
+        published_at = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
+        rows: list[dict[str, object]] = []
+        for row in df.to_dicts():
+            source_ticker = str(row["source_ticker"])
+            fields: list[tuple[str, str, str]] = [
+                (
+                    "name",
+                    str(row["name"]) if row.get("name") is not None else "",
+                    "text",
+                ),
+                (
+                    "exchange",
+                    str(row["exchange"]) if row.get("exchange") is not None else "",
+                    "text",
+                ),
+            ]
+            if row.get("list_date") is not None:
+                fields.append(
+                    ("list_date", _normalize_iso_date(str(row["list_date"])), "date")
+                )
+            for field, value, unit in fields:
+                if value == "" or value is None:
+                    continue  # 观察缺失不推断
+                rows.append(
+                    {
+                        "source_ticker": source_ticker,
+                        "field": field,
+                        "value": value,
+                        "unit": unit,
+                        "observed_on": observed_on,
+                        "published_at": published_at,
+                        "effective_from": observed_on,
+                        "effective_to": None,
+                        "source": self._source_name,
+                        "source_snapshot_id": snapshot_id,
+                    }
+                )
+        return rows
 
     def _write_traded_bars(
         self,
@@ -589,14 +744,19 @@ class IngestionDataWriter:
 
         """
         if "instrument_id" not in df.columns:
-            source_tickers = df[source_ticker_col].unique().to_list()
-            instrument_id_mapping = (
-                self._metadata_service.instrument.resolve_instrument_ids_batch(
-                    identifiers=source_tickers,
-                    source=self._source_name,
-                    asof=None,
+            if self._source_name == Source.FUYAO.value and "trade_date" in df.columns:
+                instrument_id_mapping = self._resolve_fuyao_ids_with_evidence(
+                    df, source_ticker_col
                 )
-            )
+            else:
+                source_tickers = df[source_ticker_col].unique().to_list()
+                instrument_id_mapping = (
+                    self._metadata_service.instrument.resolve_instrument_ids_batch(
+                        identifiers=source_tickers,
+                        source=self._source_name,
+                        asof=None,
+                    )
+                )
             enriched_df = _enrich_with_instrument_id(
                 df,
                 instrument_id_mapping,
@@ -618,6 +778,35 @@ class IngestionDataWriter:
         if len(enriched_df) == 0:
             return None
         return enriched_df
+
+    def _resolve_fuyao_ids_with_evidence(
+        self,
+        df: pl.DataFrame,
+        source_ticker_col: str,
+    ) -> dict[str, int]:
+        """
+        Fuyao 摄取路径的身份解析（#395）。
+
+        既有 fuyao 映射优先；缺失但可经 ticker 前缀规则唯一匹配已注册
+        instrument 的 thscode，按本批最早交易日（有证据日期）登记
+        ``instrument_mapping(source='fuyao')`` 并复用；无法唯一匹配的键
+        保持未解析 → 行被上层拒绝并计数。
+        """
+        evidence = (
+            df.with_columns(pl.col("trade_date").cast(pl.Utf8).alias("_evidence_date"))
+            .group_by(source_ticker_col)
+            .agg(pl.col("_evidence_date").min().alias("earliest"))
+        )
+        evidence_dates = {
+            str(row[source_ticker_col]): _normalize_iso_date(str(row["earliest"]))
+            for row in evidence.to_dicts()
+        }
+        return self._metadata_service.instrument.resolve_fuyao_instrument_ids(
+            list(evidence_dates.keys()),
+            evidence_dates=evidence_dates,
+            observed_at=datetime.now(UTC).strftime("%Y-%m-%d %H:%M:%S"),
+            register_missing=True,
+        )
 
     def _write_fundamental(
         self,

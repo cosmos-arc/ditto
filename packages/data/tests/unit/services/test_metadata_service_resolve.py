@@ -35,10 +35,7 @@ def mock_dependencies() -> dict[str, MagicMock]:
 @pytest.fixture
 def exchange_transformers() -> ExchangeTransformers:
     """创建 ExchangeTransformers 实例."""
-    return ExchangeTransformers(
-        tushare=TushareExchangeTransformer(),
-        tdx=MagicMock(),  # TDX not needed for these tests
-    )
+    return ExchangeTransformers(tushare=TushareExchangeTransformer())
 
 
 @pytest.mark.unit

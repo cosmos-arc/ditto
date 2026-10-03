@@ -1,5 +1,5 @@
 # 跨源对账预期结果
-# 用于验证 Tushare 和 TDX 数据源之间的一致性
+# 用于验证 Tushare 和 fuyao 数据源之间的一致性（TDX 已删除）
 # 日期: 2024-06-28
 
 metadata:

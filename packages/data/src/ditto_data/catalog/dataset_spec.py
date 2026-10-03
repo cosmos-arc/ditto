@@ -181,6 +181,18 @@ _PRIMARY_KEYS: dict[str, tuple[str, ...]] = {
         "industry_date",
         "knowledge_date",
     ),
+    "namechange": (
+        "instrument_id",
+        "changed_date",
+        "source",
+        "observed_at",
+    ),
+    "st_history": (
+        "instrument_id",
+        "effective_from",
+        "source",
+        "observed_at",
+    ),
 }
 
 _PROVIDER_DATASETS: dict[str, tuple[str, ...]] = {
@@ -188,9 +200,9 @@ _PROVIDER_DATASETS: dict[str, tuple[str, ...]] = {
     "etf_basic": ("tushare:fund_basic",),
     "index_basic": ("tushare:index_basic",),
     "calendar": ("tushare:trade_cal",),
-    "stock_daily": ("tushare:daily", "local_tdx:day"),
-    "etf_daily": ("tushare:fund_daily", "local_tdx:day"),
-    "index_daily": ("tushare:index_daily", "local_tdx:day"),
+    "stock_daily": ("tushare:daily", "fuyao:historical_prices"),
+    "etf_daily": ("tushare:fund_daily",),
+    "index_daily": ("tushare:index_daily",),
     "global_index_daily": ("tushare:index_global",),
     "stock_status": (
         "tushare:stock_st",
@@ -220,6 +232,8 @@ _PROVIDER_DATASETS: dict[str, tuple[str, ...]] = {
     "index_weight": ("tushare:index_weight",),
     "industry_classification": ("tushare:index_classify",),
     "industry_mapping": ("tushare:index_member_all",),
+    "namechange": ("tushare:namechange",),
+    "st_history": ("tushare:namechange",),
 }
 
 _BOOTSTRAP_CHUNKS: dict[str, BootstrapChunk] = {
@@ -248,6 +262,8 @@ _BOOTSTRAP_CHUNKS: dict[str, BootstrapChunk] = {
     "index_weight": "month",
     "industry_classification": "year",
     "industry_mapping": "month",
+    "namechange": "year",
+    "st_history": "year",
 }
 
 _SCHEMA_VERSION_OVERRIDES: dict[str, str] = {
@@ -285,6 +301,8 @@ _DATASET_DOMAINS: dict[str, str] = {
     "index_weight": "market",
     "industry_classification": "metadata",
     "industry_mapping": "metadata",
+    "namechange": "metadata",
+    "st_history": "market",
 }
 
 _STATIC_DATASETS = frozenset({"stock_basic", "etf_basic", "index_basic"})
@@ -300,6 +318,8 @@ _SOURCE_DEFINED_DATASETS = frozenset(
         "global_index_daily",
         "industry_classification",
         "industry_mapping",
+        "namechange",
+        "st_history",
     }
 )
 _CNY_DATASETS = frozenset(
@@ -336,6 +356,9 @@ _APPEND_ONLY_DATASETS = frozenset(
         "fx_daily",
         "commodity_daily",
         "global_index_daily",
+        # 事件历史：追加观察行，不修订已记录的证据（#395）
+        "namechange",
+        "st_history",
     }
 )
 _EFFECTIVE_DATED_DATASETS = frozenset(
@@ -360,6 +383,8 @@ _KNOWLEDGE_DATE_DATASETS = _APPEND_ONLY_DATASETS | frozenset(
         "industry_mapping",
     }
 )
+# 历史事件表的知识时间列名为 observed_at（provider published_at→观察时间）
+_OBSERVED_AT_KNOWLEDGE_DATASETS = frozenset({"namechange", "st_history"})
 
 _DEFAULT_R2_COVERAGE_TARGET: CoverageTargets = (
     "2015-01-01",
@@ -449,10 +474,12 @@ def _coverage_targets(dataset_id: str) -> CoverageTargets:
 def _partition_keys(dataset_id: str) -> tuple[str, ...]:
     if dataset_id == "macro_indicators":
         return ("observation_date",)
-    if dataset_id == "index_weight":
+    if dataset_id in {"index_weight", "st_history"}:
         return ("effective_from",)
     if dataset_id in {"industry_classification", "industry_mapping"}:
         return ("knowledge_date",)
+    if dataset_id == "namechange":
+        return ("changed_date",)
     if dataset_id in {
         "calendar",
         "stock_daily",
@@ -532,7 +559,11 @@ def resolve_dataset_spec(dataset_id: str) -> DatasetSpec:
         certified_target_from=certified_from,
         fallback_mode=fallback_mode,
         knowledge_date_field=(
-            "knowledge_date" if dataset_id in _KNOWLEDGE_DATE_DATASETS else None
+            "observed_at"
+            if dataset_id in _OBSERVED_AT_KNOWLEDGE_DATASETS
+            else "knowledge_date"
+            if dataset_id in _KNOWLEDGE_DATE_DATASETS
+            else None
         ),
         revision_policy=revision_policy,
         runbook=f"docs/operations/r2-data-product-runbook.md#{dataset_id}",

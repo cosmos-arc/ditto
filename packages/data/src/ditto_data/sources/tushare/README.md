@@ -334,17 +334,15 @@ processors/  列映射、数据转换、合并
 
 ### Q4: 如何切换到其他数据源？
 
-Ditto 支持多数据源（Tushare、FRED、通达信），通过 DI 注入不同的 Source 实现：
+Ditto 支持多数据源（Tushare、FRED、fuyao），通过 DI 注入不同的 Source 实现（TDX 已于 #395 删除）：
 
 ```python
 # 通过 DI 容器获取不同的数据源
 from ditto_data.sources import TushareSource
 from ditto_data.sources.fred import FredSource
-from ditto_data.sources.tdx import TdxSource
 
 source = container.get(TushareSource)
 source = container.get(FredSource)
-source = container.get(TdxSource)
 ```
 
 ---

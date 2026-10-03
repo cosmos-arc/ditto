@@ -144,7 +144,7 @@ class QualityCompletenessResult:
 
 @dataclass(frozen=True)
 class ReconciliationResult:
-    """数据源对账结果（强类型）."""
+    """数据源对账结果（强类型，#395 含两侧数量/匹配/未匹配/重复键/差异）。"""
 
     trade_date: str
     dataset: str
@@ -153,6 +153,16 @@ class ReconciliationResult:
     skipped: bool = False
     skip_reason: str | None = None
     error: str | None = None
+    # 结构化对账报告（零交集 = not_comparable，不算通过）
+    comparable: bool = False
+    primary_count: int = 0
+    secondary_count: int = 0
+    matched_count: int = 0
+    primary_unmatched_count: int = 0
+    secondary_unmatched_count: int = 0
+    primary_duplicate_keys: int = 0
+    secondary_duplicate_keys: int = 0
+    diff_count: int = 0
 
     @property
     def has_error(self) -> bool:
@@ -166,6 +176,15 @@ class ReconciliationResult:
             "dataset": self.dataset,
             "passed": self.passed,
             "issue_count": self.issue_count,
+            "comparable": self.comparable,
+            "primary_count": self.primary_count,
+            "secondary_count": self.secondary_count,
+            "matched_count": self.matched_count,
+            "primary_unmatched_count": self.primary_unmatched_count,
+            "secondary_unmatched_count": self.secondary_unmatched_count,
+            "primary_duplicate_keys": self.primary_duplicate_keys,
+            "secondary_duplicate_keys": self.secondary_duplicate_keys,
+            "diff_count": self.diff_count,
         }
         if self.skipped and self.skip_reason:
             result["skipped"] = self.skip_reason

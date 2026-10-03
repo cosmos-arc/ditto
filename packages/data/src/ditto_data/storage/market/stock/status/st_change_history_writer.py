@@ -39,6 +39,55 @@ class StChangeHistoryWriter:
             event="st_change_history_writer_init_complete",
         )
 
+    def save_history_rows(
+        self,
+        rows: list[dict[str, object]],
+    ) -> int:
+        """
+        批量写入带证据的 ST 变更历史行（摄取路径，幂等）。
+
+        每行必须携带真实生效日期（effective_from）与可知时间（observed_at）；
+        幂等键 = (instrument_id, effective_from, source)（schema 唯一索引），
+        重复登记整行替换；缺生效日期的行 fail closed 拒绝。
+
+        Args:
+            rows: 行字典，键含 instrument_id/effective_from/is_st/st_type/
+                effective_to/source/observed_at.
+
+        Returns:
+            写入行数.
+
+        """
+        written = 0
+        for row in rows:
+            effective_from = row.get("effective_from")
+            if effective_from is None or str(effective_from).strip() == "":
+                raise ValueError(
+                    "st change history row lacks a real effective date; refusing "
+                    "to backfill placeholder history"
+                )
+            self._client.execute(
+                """INSERT OR REPLACE INTO st_change_history
+                (instrument_id, effective_from, is_st, st_type, effective_to,
+                 source, observed_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?)""",
+                [
+                    row["instrument_id"],
+                    str(effective_from),
+                    1 if row.get("is_st") else 0,
+                    row.get("st_type"),
+                    row.get("effective_to"),
+                    str(row.get("source") or "tushare"),
+                    row.get("observed_at"),
+                ],
+            )
+            written += 1
+        if written:
+            self._client.commit()
+            if self._cache is not None:
+                self._cache.invalidate_pattern("st_change_history:*")
+        return written
+
     @traced("data.market.record_st_change")
     def record_st_change(
         self,

@@ -35,7 +35,7 @@
 ## 2. 一次摄取会发生什么(通路+留下的账)
 
 ```
-Tushare(经 t.xiaodefa.top 代理)/ fuyao(冗余源,仅 stock_daily)/ FRED / TDX(仅对账)
+Tushare(经 t.xiaodefa.top 代理)/ fuyao(冗余源,stock_daily 摄取与对账)/ FRED（TDX 已删除,#395）
   │  ditto_data/sources/*:适配器+限流+token
   ▼
 摄取编排 application/processes/ingestion/coordinator(jobs/flows/{daily,eod,backfill,repair} 触发)

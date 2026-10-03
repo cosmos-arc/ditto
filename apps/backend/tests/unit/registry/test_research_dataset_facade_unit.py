@@ -47,7 +47,6 @@ def _sources_provider() -> Provider:
         def exchange_transformers(self) -> ExchangeTransformers:
             return ExchangeTransformers(
                 tushare=MagicMock(),
-                tdx=MagicMock(),
             )
 
     return SourcesProvider()

@@ -128,7 +128,7 @@ class TestSQLitePool:
         self.pool.init_schema()
 
     def test_init_schema_initializes_instrument_id_sequence(self) -> None:
-        """Test init_schema initializes Instrument ID sequence values."""
+        """种子与 models _RANGES 逐段对齐（8 段，键名 futures）。"""
         self.pool = SQLitePool(str(self.db_path), schema_path=self.schema_path)
         self.pool.init_schema()
 
@@ -142,17 +142,20 @@ class TestSQLitePool:
         assert asset_classes.get("stock") == 1_000_000
         assert asset_classes.get("etf") == 2_000_000
         assert asset_classes.get("index") == 3_000_000
-        assert asset_classes.get("bond") == 4_000_000
-        assert asset_classes.get("future") == 5_000_000
+        assert asset_classes.get("fx") == 4_000_000
+        assert asset_classes.get("commodity") == 5_000_000
+        assert asset_classes.get("bond") == 6_000_000
+        assert asset_classes.get("futures") == 7_000_000
+        assert asset_classes.get("option") == 8_000_000
 
     def test_execute_method_works(self) -> None:
-        """Test execute method works for basic queries."""
+        """Test execute method works for basic operations."""
         self.pool = SQLitePool(str(self.db_path), schema_path=self.schema_path)
         self.pool.init_schema()
 
         # Query instrument_id_sequence table
         rows = self.pool.execute("SELECT * FROM instrument_id_sequence").fetchall()
-        assert len(rows) == 5  # stock, etf, index, bond, future
+        assert len(rows) == 8  # stock/etf/index/fx/commodity/bond/futures/option
 
     def test_commit_method_works(self) -> None:
         """Test commit method works."""

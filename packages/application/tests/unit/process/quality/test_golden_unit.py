@@ -179,18 +179,20 @@ class TestGoldenDatasetFilter:
         mock_tdx_source: pytest.fixture,
         mock_comparison_writer: pytest.fixture,
         mock_instrument_store: pytest.fixture,
+        mock_secondary_identity_resolver: pytest.fixture,
         golden_spec: pytest.fixture,
         sample_primary_df: pytest.fixture,
         sample_secondary_df: pytest.fixture,
         sample_dq_result_passed: pytest.fixture,
     ) -> None:
-        """对账服务集成黄金数据集过滤."""
+        """对账服务集成黄金数据集过滤（辅源身份反解 → instrument_id 比较）."""
         # Arrange
         handler = ReconcileSourcesHandler(
             engine=mock_quality_engine,
             secondary_source=mock_tdx_source,
             comparison_store=mock_comparison_writer,
             instrument_store=mock_instrument_store,
+            secondary_identity_resolver=mock_secondary_identity_resolver,
             golden_dataset=golden_spec,
         )
 
@@ -200,7 +202,7 @@ class TestGoldenDatasetFilter:
         )
         mock_instrument_store.enrich_with_ticker.return_value = enriched_df
 
-        # Mock TDX 数据源返回数据
+        # Mock 辅源返回数据
         mock_tdx_source.fetch_stock_daily_bars.return_value = sample_secondary_df
 
         # Mock 质量引擎返回通过

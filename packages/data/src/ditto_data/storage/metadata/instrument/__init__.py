@@ -21,6 +21,9 @@ from ditto_data.models.metadata import (
     InstrumentRegistration,
     StockExtension,
 )
+from ditto_data.storage.metadata.instrument.etf_reference_writer import (
+    EtfReferenceObservationWriter,
+)
 from ditto_data.storage.metadata.instrument.instrument_reader import (
     InstrumentReader,
     SecurityQuery,
@@ -37,6 +40,7 @@ from ditto_data.storage.metadata.instrument.name_history_writer import (
 
 __all__ = [
     "ETFExtension",
+    "EtfReferenceObservationWriter",
     "IndexExtension",
     "InstrumentExtension",
     "InstrumentReader",

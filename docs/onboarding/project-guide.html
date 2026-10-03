@@ -697,7 +697,7 @@
         <div class="duty">外部数据源接入、PIT 安全存储、质量校验、目录成熟度治理、血缘追踪。</div>
         <div class="deps">依赖：kernel + platform</div>
         <details><summary>子模块与上手</summary><div class="inner">
-          <b>子包：</b>sources(Tushare/FRED/TDX) · storage(CQRS 读写分离) · services(MetadataService/MarketService) · catalog(DatasetMetadata+maturity 治理) · quality(L1-L4 引擎) · ingestion(游标/冻结/晚到) · lineage(append-only) · <b>helpers/pit(PIT 核心)</b> · runtime(SqlEngine)
+          <b>子包：</b>sources(Tushare/FRED/fuyao) · storage(CQRS 读写分离) · services(MetadataService/MarketService) · catalog(DatasetMetadata+maturity 治理) · quality(L1-L4 引擎) · ingestion(游标/冻结/晚到) · lineage(append-only) · <b>helpers/pit(PIT 核心)</b> · runtime(SqlEngine)
           <br><b>PIT 三层防线：</b>knowledge_date 列(T+1) + effective_from/to 版本 + rolling closed="left"
           <br><b>catalog 治理：</b>evidence 驱动 promotion，绝不自造通过
           <br><b>上手：</b>CLAUDE.md + .claude/rules/pit.md → sources→services→storage → helpers/pit → catalog/promotion

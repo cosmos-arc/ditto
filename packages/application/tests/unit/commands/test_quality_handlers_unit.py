@@ -211,17 +211,34 @@ def _make_handler(
     from ditto_application.commands.quality_reconciliation import (
         ReconcileSourcesHandler,
     )
+    from ditto_data.quality.checkers.cross_source import CrossSourceComparison
 
     mock_engine = engine or MagicMock()
     mock_tdx = tdx_source or MagicMock()
     mock_comparison = comparison_store or MagicMock()
     mock_instrument = instrument_store or MagicMock()
+    mock_resolver = MagicMock()
+    mock_resolver.resolve_secondary_ids.return_value = {"000001": 1000001}
+    if engine is None:
+        mock_engine.compare_cross_source.return_value = CrossSourceComparison(
+            status="compared",
+            key_columns=("instrument_id", "trade_date"),
+            primary_count=1,
+            secondary_count=1,
+            matched_count=1,
+            primary_unmatched_count=0,
+            secondary_unmatched_count=0,
+            primary_duplicate_keys=0,
+            secondary_duplicate_keys=0,
+            diff_count=0,
+        )
 
     handler = ReconcileSourcesHandler(
         engine=mock_engine,
         secondary_source=mock_tdx,
         comparison_store=mock_comparison,
         instrument_store=mock_instrument,
+        secondary_identity_resolver=mock_resolver,
     )
     return handler, mock_engine, mock_tdx, mock_comparison, mock_instrument
 
@@ -268,8 +285,8 @@ class TestReconcileSourcesHandler:
         mock_tdx.fetch_stock_daily_bars.assert_called_once()
         mock_engine.check_cross_source.assert_called_once()
 
-    def test_no_secondary_data_skips(self) -> None:
-        """无辅助数据时跳过."""
+    def test_no_secondary_data_not_comparable(self) -> None:
+        """零辅源数据 = 不可比较（#395 收紧：不算通过）。"""
         handler, mock_engine, mock_tdx, _, mock_instrument = _make_handler()
 
         primary_df = pl.DataFrame({"instrument_id": [1000001]})
@@ -289,9 +306,9 @@ class TestReconcileSourcesHandler:
 
         result = handler.handle(cmd)
 
-        assert result.passed is True
-        assert result.issue_count == 0
-        assert result.skip_reason == "no_secondary_data"
+        assert result.passed is False
+        assert result.comparable is False
+        assert result.matched_count == 0
         mock_engine.check_cross_source.assert_not_called()
 
     def test_missing_instrument_id_returns_error(self) -> None:
@@ -375,7 +392,7 @@ class TestReconcileSourcesHandler:
         mock_tdx.fetch_stock_daily_bars.return_value = pl.DataFrame(
             {"ticker": ["000001"], "close": [10.0]},
         )
-        mock_engine.check_cross_source.side_effect = RuntimeError("Unexpected error")
+        mock_engine.compare_cross_source.side_effect = RuntimeError("Unexpected error")
 
         from ditto_application.commands.quality_reconciliation import (
             ReconcileSourcesCommand,

@@ -64,6 +64,7 @@ from ditto_data.sources.tushare.stock_source import (
     fetch_adj_factor,
     fetch_adj_factor_by_ticker,
     fetch_calendar,
+    fetch_name_history,
     fetch_st_history,
     fetch_stock_basic,
     fetch_stock_daily,
@@ -383,6 +384,20 @@ class TushareSource:
     ) -> pl.DataFrame:
         """Fetch ST status change history. 委托给 stock_source.fetch_st_history."""
         return fetch_st_history(
+            self._stock,
+            ts_code=ts_code,
+            start_date=start_date,
+            end_date=end_date,
+        )
+
+    def fetch_name_history(
+        self,
+        ts_code: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> pl.DataFrame:
+        """Fetch name change history. 委托给 stock_source.fetch_name_history."""
+        return fetch_name_history(
             self._stock,
             ts_code=ts_code,
             start_date=start_date,

@@ -259,3 +259,40 @@ def fetch_st_history(
         start_date=start_date,
         end_date=end_date,
     )
+
+
+def fetch_name_history(
+    stock: StockTushareAdapter,
+    *,
+    ts_code: str | None = None,
+    start_date: str | None = None,
+    end_date: str | None = None,
+) -> pl.DataFrame:
+    """
+    Fetch name change history (namechange).
+
+    Args:
+        stock: Stock 数据适配器.
+        ts_code: Stock code (e.g., "000001.SZ"). None for all stocks.
+        start_date: Start date (YYYY-MM-DD). None for no limit.
+        end_date: End date (YYYY-MM-DD). None for no limit.
+
+    Returns:
+        DataFrame with columns:
+        - source_ticker: Stock code (e.g., "000001.SZ")
+        - old_name: Previous name (NULL for the earliest record)
+        - new_name: New name
+        - changed_date: Effective date (Date)
+        - effective_to: Interval end date (Date), NULL if still active
+        - change_reason: Change reason
+        - published_at: Announcement date (Date), NULL if provider omits it
+
+    Raises:
+        SourceFetchError: If fetch fails.
+
+    """
+    return stock.fetch_name_history(
+        ts_code=ts_code,
+        start_date=start_date,
+        end_date=end_date,
+    )

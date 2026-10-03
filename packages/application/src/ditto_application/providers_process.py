@@ -276,8 +276,8 @@ class AppProcessProvider(Provider):
             credential_sources.add("tushare")
         if settings.fred_api_key.strip():
             credential_sources.update({"fred", "alfred"})
-        if Path(settings.tdx_path).expanduser().is_dir():
-            credential_sources.add("local_tdx")
+        if settings.fuyao_api_key.strip():
+            credential_sources.add("fuyao")
         return R2AcceptanceRuntimeEvidence(
             credential_sources=frozenset(credential_sources),
         )

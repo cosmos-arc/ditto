@@ -58,19 +58,15 @@ class ExchangeTransformers:
     管理所有数据源的交易所转换器实例，提供统一的访问入口.
     所有转换器实例通过构造函数注入，支持依赖倒置和测试替换.
 
+    #395：TDX 适配器已删除，fuyao 复用 Tushare 同构代码（thscode 与
+    ts_code 同构），无需独立转换器；辅源对账由 fuyao 接管.
+
     Example:
-        >>> from ditto_data.sources.exchange_transformers import (
-        ...     ExchangeTransformers,
-        ... )
         >>> from ditto_data.sources.tushare.transformer import (
         ...     TushareExchangeTransformer,
         ... )
-        >>> from ditto_data.sources.tdx.transformer import (
-        ...     TdxExchangeTransformer,
-        ... )
         >>> transformers = ExchangeTransformers(
         ...     tushare=TushareExchangeTransformer(),
-        ...     tdx=TdxExchangeTransformer(),
         ... )
         >>> tushare_tf = transformers.get("tushare")
         >>> tushare_tf.to_standard("000001.SZ")
@@ -81,35 +77,27 @@ class ExchangeTransformers:
     def __init__(
         self,
         tushare: ExchangeTransformer,
-        tdx: ExchangeTransformer,
     ) -> None:
         """
         初始化 ExchangeTransformers.
 
         Args:
             tushare: Tushare 数据源交易所转换器实例.
-            tdx: TDX 数据源交易所转换器实例.
 
         """
         self._tushare = tushare
-        self._tdx = tdx
 
     @property
     def tushare(self) -> ExchangeTransformer:
         """Get Tushare exchange transformer."""
         return self._tushare
 
-    @property
-    def tdx(self) -> ExchangeTransformer:
-        """Get TDX exchange transformer."""
-        return self._tdx
-
     def get(self, name: str) -> ExchangeTransformer:
         """
         按名称获取转换器.
 
         Args:
-            name: 数据源名称 (e.g., "tushare", "tdx").
+            name: 数据源名称 (e.g., "tushare").
 
         Returns:
             对应的 ExchangeTransformer 实例.
@@ -121,8 +109,4 @@ class ExchangeTransformers:
         normalized_name = name.lower().strip()
         if normalized_name == "tushare":
             return self._tushare
-        if normalized_name == "tdx":
-            return self._tdx
-        raise ValueError(
-            f"Unknown source: '{name}'. Supported sources: ['tushare', 'tdx']"
-        )
+        raise ValueError(f"Unknown source: '{name}'. Supported sources: ['tushare']")

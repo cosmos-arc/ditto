@@ -8,9 +8,11 @@ import polars as pl
 from ditto_data.quality.golden import GoldenDatasetSpec
 from ditto_data.quality.protocols import (
     ComparisonStoreProtocol,
+    ExDividendInstrumentSourceProtocol,
     InstrumentStoreProtocol,
     QualityEngineProtocol,
     SecondaryBarsSourceProtocol,
+    SecondaryIdentityResolverProtocol,
 )
 from ditto_data.quality.quality_types import DQResult
 from ditto_platform.foundation import logger
@@ -33,7 +35,12 @@ class ReconcileSourcesHandler:
     数据源对账 Command Handler — 跨源一致性校验.
 
     直接依赖 Protocol 实现（QualityEngine、辅源、ComparisonStore、
-    InstrumentStore），编排 enrich → filter → compare → write 的完整对账流程。
+    InstrumentStore、辅源身份反解、除权日来源），编排
+    enrich → filter → resolve → compare → write 的完整对账流程。
+
+    #395 对账语义：比较键 instrument_id + trade_date（辅源帧经来源映射
+    反解）；零交集 = 不可比较（passed=False，不算通过）；结果报告
+    两侧数量/匹配数/主辅侧未匹配/重复键/差异数。
     """
 
     def __init__(
@@ -42,12 +49,16 @@ class ReconcileSourcesHandler:
         secondary_source: SecondaryBarsSourceProtocol,
         comparison_store: ComparisonStoreProtocol,
         instrument_store: InstrumentStoreProtocol,
+        secondary_identity_resolver: SecondaryIdentityResolverProtocol | None = None,
+        ex_dividend_source: ExDividendInstrumentSourceProtocol | None = None,
         golden_dataset: GoldenDatasetSpec | None = None,
     ) -> None:
         self._engine = engine
         self._secondary_source = secondary_source
         self._comparison_store = comparison_store
         self._instrument_store = instrument_store
+        self._secondary_identity_resolver = secondary_identity_resolver
+        self._ex_dividend_source = ex_dividend_source
         self._golden_dataset = golden_dataset
 
     def handle(self, cmd: ReconcileSourcesCommand) -> ReconciliationResult:
@@ -137,41 +148,155 @@ class ReconcileSourcesHandler:
         trade_date: str,
         dataset: str,
     ) -> ReconciliationResult:
-        """获取辅助数据源并执行对比."""
+        """获取辅助数据源、反解身份并执行 outer/anti 对比."""
         tickers = primary_df["ticker"].unique().cast(pl.String).to_list()
 
         secondary_result = self._fetch_secondary(tickers, trade_date, dataset)
         if isinstance(secondary_result, ReconciliationResult):
             return secondary_result
+        secondary_df = secondary_result
 
+        # 辅源帧（ticker 裸码）反解为 instrument_id：既有 fuyao 映射优先，
+        # 缺失时按裸码前缀规则唯一匹配（只读，不写映射）。
+        secondary_df = self._resolve_secondary_identities(secondary_df)
+        if secondary_df.is_empty() or "instrument_id" not in secondary_df.columns:
+            return self._zero_intersection_result(
+                trade_date, dataset, primary_df.height, secondary_df.height
+            )
+
+        context = self._comparison_context(trade_date)
+        comparison = self._engine.compare_cross_source(
+            primary=primary_df,
+            secondary=secondary_df,
+            dataset=dataset,
+            context=context,
+        )
         result = self._engine.check_cross_source(
             primary=primary_df,
-            secondary=secondary_result,
+            secondary=secondary_df,
             dataset=dataset,
+            context=context,
         )
 
-        comparison_df = self._convert_result_to_df(result, dataset)
+        comparison_df = self._convert_result_to_df(result, dataset, primary_df)
         if not comparison_df.is_empty():
             self._comparison_store.write_comparison(trade_date, comparison_df, dataset)
 
         if result.issues:
             self._send_alerts(result, trade_date, dataset)
 
+        passed = comparison.comparable and not result.has_errors
+
         logger.info(
             "Daily reconciliation complete",
             event="reconciliation_complete",
             trade_date=trade_date,
             dataset=dataset,
-            passed=result.passed,
+            passed=passed,
+            comparable=comparison.comparable,
             issue_count=len(result.issues),
+            primary_count=comparison.primary_count,
+            secondary_count=comparison.secondary_count,
+            matched_count=comparison.matched_count,
+            primary_unmatched_count=comparison.primary_unmatched_count,
+            secondary_unmatched_count=comparison.secondary_unmatched_count,
+            primary_duplicate_keys=comparison.primary_duplicate_keys,
+            secondary_duplicate_keys=comparison.secondary_duplicate_keys,
+            diff_count=comparison.diff_count,
         )
 
         return ReconciliationResult(
             trade_date=trade_date,
             dataset=dataset,
-            passed=result.passed,
+            passed=passed,
             issue_count=len(result.issues),
+            comparable=comparison.comparable,
+            primary_count=comparison.primary_count,
+            secondary_count=comparison.secondary_count,
+            matched_count=comparison.matched_count,
+            primary_unmatched_count=comparison.primary_unmatched_count,
+            secondary_unmatched_count=comparison.secondary_unmatched_count,
+            primary_duplicate_keys=comparison.primary_duplicate_keys,
+            secondary_duplicate_keys=comparison.secondary_duplicate_keys,
+            diff_count=comparison.diff_count,
         )
+
+    def _zero_intersection_result(
+        self,
+        trade_date: str,
+        dataset: str,
+        primary_count: int,
+        secondary_count: int,
+    ) -> ReconciliationResult:
+        """辅源帧无法反解出任何身份：显式零交集不可比较（不算通过）."""
+        logger.warning(
+            "Secondary identities unresolved; comparison not comparable",
+            event="reconciliation_zero_intersection",
+            trade_date=trade_date,
+            primary_count=primary_count,
+            secondary_count=secondary_count,
+        )
+        return ReconciliationResult(
+            trade_date=trade_date,
+            dataset=dataset,
+            passed=False,
+            issue_count=1,
+            comparable=False,
+            primary_count=primary_count,
+            secondary_count=secondary_count,
+        )
+
+    def _resolve_secondary_identities(self, secondary_df: pl.DataFrame) -> pl.DataFrame:
+        """辅源帧 ticker → instrument_id（只读反解；无法唯一匹配的行剔除并计数）."""
+        if (
+            self._secondary_identity_resolver is None
+            or "ticker" not in secondary_df.columns
+            or secondary_df.is_empty()
+        ):
+            return secondary_df
+        tickers = secondary_df["ticker"].unique().cast(pl.String).to_list()
+        resolved = self._secondary_identity_resolver.resolve_secondary_ids(
+            tickers, "fuyao"
+        )
+        if not resolved:
+            return secondary_df.clear()
+        mapping_df = pl.DataFrame(
+            {
+                "ticker": list(resolved.keys()),
+                "instrument_id": list(resolved.values()),
+            },
+            schema={"ticker": pl.String, "instrument_id": pl.Int64},
+        )
+        unresolved = (
+            secondary_df.height
+            - secondary_df.join(mapping_df, on="ticker", how="inner").height
+        )
+        if unresolved:
+            logger.warning(
+                "Secondary rows dropped with unresolved identities",
+                event="reconciliation_secondary_unresolved",
+                dropped_rows=unresolved,
+                resolved_tickers=len(resolved),
+            )
+        return secondary_df.join(mapping_df, on="ticker", how="inner")
+
+    def _comparison_context(self, trade_date: str) -> dict[str, object]:
+        """构建比较上下文（除权日标的集合，缺失时空集不标记）."""
+        if self._ex_dividend_source is None:
+            return {}
+        try:
+            return {
+                "ex_dividend_instruments": (
+                    self._ex_dividend_source.ex_dividend_instruments(trade_date)
+                )
+            }
+        except Exception as error:
+            logger.warning(
+                "Ex-dividend instrument lookup failed; diffs stay unflagged",
+                event="reconciliation_ex_dividend_unavailable",
+                error_type=type(error).__name__,
+            )
+            return {}
 
     def _fetch_secondary(
         self,
@@ -190,13 +315,15 @@ class ReconcileSourcesHandler:
                 event="reconciliation_no_secondary",
                 trade_date=trade_date,
             )
+            # 零辅源数据 = 零交集：不可比较，不算通过（旧语义的 skip 收紧）。
             return ReconciliationResult(
                 trade_date=trade_date,
                 dataset=dataset,
-                passed=True,
-                issue_count=0,
-                skipped=True,
-                skip_reason="no_secondary_data",
+                passed=False,
+                issue_count=1,
+                comparable=False,
+                primary_count=0,
+                secondary_count=0,
             )
 
         return secondary_df
@@ -215,27 +342,69 @@ class ReconcileSourcesHandler:
         )
         return df.filter(pl.col("ticker").is_in(golden_tickers))
 
-    def _convert_result_to_df(self, result: DQResult, dataset: str) -> pl.DataFrame:
-        """转换 DQResult -> DataFrame."""
+    def _convert_result_to_df(
+        self,
+        result: DQResult,
+        dataset: str,
+        primary_df: pl.DataFrame,
+    ) -> pl.DataFrame:
+        """转换 DQResult → DataFrame（落盘列与 CLI 输出同步）。"""
         if not result.issues:
             return pl.DataFrame()
 
+        ticker_by_id: dict[int, str] = {}
+        if "ticker" in primary_df.columns and "instrument_id" in primary_df.columns:
+            ticker_by_id = {
+                instrument_id: ticker
+                for row in primary_df.select("instrument_id", "ticker")
+                .unique(subset=["instrument_id"])
+                .to_dicts()
+                if isinstance(instrument_id := row["instrument_id"], int)
+                and isinstance(ticker := row["ticker"], str)
+            }
         rows: list[dict[str, object]] = []
         for issue in result.issues:
             for sample in issue.sample_data:
-                row: dict[str, object] = {
-                    "dataset": dataset,
-                    "ticker": sample.get("ticker", ""),
-                    "trade_date": sample.get("trade_date", ""),
-                    "field": sample.get("field", ""),
-                    "primary_value": sample.get("primary_value", ""),
-                    "secondary_value": sample.get("secondary_value", ""),
-                    "diff": sample.get("diff", ""),
-                    "severity": issue.severity.value,
-                    "rule": issue.rule_name,
-                    "message": issue.message,
-                }
-                rows.append(row)
+                sample_instrument_id = sample.get("instrument_id")
+                sample_ticker = (
+                    ticker_by_id.get(sample_instrument_id, "")
+                    if isinstance(sample_instrument_id, int)
+                    else ""
+                )
+                rows.append(
+                    {
+                        "dataset": dataset,
+                        "instrument_id": sample_instrument_id,
+                        "ticker": sample_ticker,
+                        "trade_date": sample.get("trade_date", ""),
+                        "field": sample.get("field", ""),
+                        "primary_value": sample.get("primary_value", ""),
+                        "secondary_value": sample.get("secondary_value", ""),
+                        "diff": sample.get("diff", ""),
+                        "ex_dividend_day": bool(sample.get("ex_dividend_day", False)),
+                        "severity": issue.severity.value,
+                        "rule": issue.rule_name,
+                        "message": issue.message,
+                    }
+                )
+            if not issue.sample_data and issue.rule_name != "cross_source_compare":
+                # 无样本的结构性发现（零交集/重复键）单独落一行
+                rows.append(
+                    {
+                        "dataset": dataset,
+                        "instrument_id": None,
+                        "ticker": "",
+                        "trade_date": "",
+                        "field": "",
+                        "primary_value": "",
+                        "secondary_value": "",
+                        "diff": "",
+                        "ex_dividend_day": False,
+                        "severity": issue.severity.value,
+                        "rule": issue.rule_name,
+                        "message": issue.message,
+                    }
+                )
 
         return pl.DataFrame(rows)
 

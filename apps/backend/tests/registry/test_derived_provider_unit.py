@@ -36,12 +36,11 @@ from ditto_data.quality.protocols import (
 )
 from ditto_data.sources.exchange_transformers import ExchangeTransformers
 from ditto_data.sources.source import DataSources
-from ditto_data.sources.tdx.source import TdxSource
 from ditto_features.compile_cache import SQLiteCompileCacheBackend
 from ditto_features.di import FeaturesStorageProvider
 from ditto_features.services import DerivedQueryService
 
-_tdx_mock = MagicMock(spec=TdxSource)
+_secondary_mock = MagicMock(spec=SecondaryBarsSourceProtocol)
 
 
 def _sources_provider() -> Provider:
@@ -54,20 +53,9 @@ def _sources_provider() -> Provider:
 
         @provide
         def exchange_transformers(self) -> ExchangeTransformers:
-            return ExchangeTransformers(
-                tushare=MagicMock(),
-                tdx=MagicMock(),
-            )
+            return ExchangeTransformers(tushare=MagicMock())
 
     return SourcesProvider()
-
-
-class _TdxMockProvider(Provider):
-    scope = Scope.APP
-
-    @provide
-    def tdx_source(self) -> TdxSource:
-        return _tdx_mock
 
 
 class _GoldenNoneProvider(Provider):
@@ -84,10 +72,8 @@ class _ProtocolAdapterProvider(Provider):
     scope = Scope.APP
 
     @provide
-    def secondary_bars_source_protocol(
-        self, tdx_source: TdxSource
-    ) -> SecondaryBarsSourceProtocol:
-        return tdx_source
+    def secondary_bars_source_protocol(self) -> SecondaryBarsSourceProtocol:
+        return _secondary_mock
 
     @provide
     def comparison_store_protocol(self) -> ComparisonStoreProtocol:
@@ -120,7 +106,6 @@ def _make_full_container():
         ConfigProvider(),
         QualityProvider(),
         _sources_provider(),
-        _TdxMockProvider(),
         _GoldenNoneProvider(),
         _ProtocolAdapterProvider(),
         RuntimeProvider(),

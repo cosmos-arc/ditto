@@ -110,7 +110,7 @@ class TestSQLiteClient:
         rows = sqlite_client.fetchall(
             "SELECT * FROM instrument_id_sequence ORDER BY asset_class"
         )
-        assert len(rows) == 5  # stock, etf, index, bond, future
+        assert len(rows) == 8  # stock/etf/index/fx/commodity/bond/futures/option
         assert rows[0]["asset_class"] == "bond"
 
     def test_fetchval_returns_single_value(self, sqlite_client: SQLiteClient) -> None:
@@ -199,7 +199,7 @@ class TestSQLiteClient:
     def test_count_returns_row_count(self, sqlite_client: SQLiteClient) -> None:
         """Test count method returns correct row count."""
         count = sqlite_client.count("instrument_id_sequence")
-        assert count == 5
+        assert count == 8  # stock/etf/index/fx/commodity/bond/futures/option
 
     def test_count_with_where_clause(self, sqlite_client: SQLiteClient) -> None:
         """Test count method with WHERE clause."""

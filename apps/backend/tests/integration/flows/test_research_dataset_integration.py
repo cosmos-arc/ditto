@@ -64,7 +64,6 @@ def _sources_provider() -> Provider:
         def exchange_transformers(self) -> ExchangeTransformers:
             return ExchangeTransformers(
                 tushare=MagicMock(),
-                tdx=MagicMock(),
             )
 
     return SourcesProvider()
@@ -751,7 +750,9 @@ def export_snapshot(research_state: Path, request: pytest.FixtureRequest, monkey
 
     monkeypatch.setattr(sys.modules[__name__], "seed_history", seed_declared_history)
     provider_source = (
-        "tdx" if getattr(request, "param", None) == "undeclared_source" else "tushare"
+        "undeclared"
+        if getattr(request, "param", None) == "undeclared_source"
+        else "tushare"
     )
     source = ProviderSnapshot.create(
         ProviderSnapshotDraft(
@@ -871,7 +872,7 @@ def test_export_undeclared_source_writes_nothing(
         command = container.get(ResearchDatasetExport)
         with pytest.raises(AppQueryError, match="来源使用约束未声明") as failure:
             command.export(export_snapshot, "csv", Path("exports/denied.csv"))
-        assert failure.value.details["source"] == "tdx"
+        assert failure.value.details["source"] == "undeclared"
     assert not (research_state / "exports").exists()
 
 

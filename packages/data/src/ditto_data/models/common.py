@@ -101,6 +101,10 @@ class Dataset(StrEnum):
     INDUSTRY_CLASSIFICATION = "industry_classification"
     INDUSTRY_MAPPING = "industry_mapping"
 
+    # 证券可信历史（#395：退市/名称/ST 历史写侧）
+    NAME_CHANGE = "namechange"
+    ST_HISTORY = "st_history"
+
     def _legacy_asset_class(self) -> AssetClass | None:
         """Return legacy Dataset-owned asset-class mapping without warnings."""
         # Stock 数据集

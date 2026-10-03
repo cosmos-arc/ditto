@@ -32,7 +32,6 @@ from ditto_data.quality.protocols import (
 from ditto_data.services.deps import MarketReaders
 from ditto_data.services.source_accessor import SourceAccessor
 from ditto_data.sources.fuyao.source import FuyaoSource
-from ditto_data.sources.tdx.source import TdxSource
 from ditto_data.storage.metadata.instrument import InstrumentReader
 from ditto_data.storage.runtime.quality import ComparisonWriter
 
@@ -110,12 +109,14 @@ class ProtocolAdapterProvider(Provider):
     def secondary_bars_source_protocol(
         self,
         fuyao_source: FuyaoSource | None,
-        tdx_source: TdxSource,
     ) -> SecondaryBarsSourceProtocol:
-        """对账辅源：fuyao（已配置时优先，跨平台可用）否则 TDX."""
+        """对账辅源：fuyao（未配置时显式失败，不再回退 TDX）。"""
         if fuyao_source is not None:
             return fuyao_source
-        return tdx_source
+        raise RuntimeError(
+            "secondary bars source is unconfigured: set FUYAO_API_KEY to enable "
+            "cross-source reconciliation"
+        )
 
     @provide
     def comparison_store_protocol(

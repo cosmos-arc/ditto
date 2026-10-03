@@ -32,7 +32,7 @@ I12 已由精确批准完成 Strategy Draft 保存、136 个合资格月份的�
 
 ## 最终验证
 
-- 后端：[validation/backend.json](validation/backend.json) — 最终 `pixi run -e dev ci` 通过：14,395 passed、69 skipped、11 xfailed、11 xpassed，覆盖率 92.08%，43/43 import-linter contracts、架构检查和 Harness 16/16 通过。最终 PIT 专项 73 passed、1 个缺少 TDX 本地样本的 skip；该 skip 不作为真实 provider 证明。
+- 后端：[validation/backend.json](validation/backend.json) — 最终 `pixi run -e dev ci` 通过：14,395 passed、69 skipped、11 xfailed、11 xpassed，覆盖率 92.08%，43/43 import-linter contracts、架构检查和 Harness 16/16 通过。最终 PIT 专项 73 passed、1 个缺少 TDX 本地样本的 skip；该 skip 不作为真实 provider 证明。（2026-10-03 #395：TDX 适配器已删除，辅源对账由 fuyao 接管，真实对账证据见 [fuyao-reconciliation-20260929](../fuyao-reconciliation-20260929/README.md)；本条历史记录保持原样。）
 - 前端：[validation/frontend.json](validation/frontend.json) — 最终 `bun run ci` 通过：1,507 unit、1,483 coverage、710 prototype tests，生产构建、架构、产品板、路由审计、prototype freeze 和 Harness 全部通过；OpenAPI generated types zero-diff。
 - PAP-09：[加速 bootstrap](pap09-accelerated/bootstrap.json) 与 [20 日进度](pap09-accelerated/accelerated-progress.json) — 20 个真实已收盘交易日全部有独立签名/对账证据，`q4_five_day_ready=true`、`pap09_twenty_day_release_ready=true`、签名链有效。它满足发布验收，但明确 `qualifies_as_wall_clock_soak=false`。
 - Q5：[组合闭环](q5/live-portfolio-acceptance-20260902.json)、[GLM 诊断](q5/live-portfolio-diagnostic-20260902.json) 与 [UI-08 最终验收](q5/ui08-final-20260902.json) — 真实 Tushare 2,110 行、2 个策略标的；GLM-5.3 使用 7,900 tokens、一次只读工具调用，引用精确数值路径；十步浏览器旅程全部通过。

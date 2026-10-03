@@ -95,9 +95,16 @@ class _FakeHistory:
 
 
 class _FakeIdentities:
-    def __init__(self, names: dict[int, str], tickers: dict[int, str]) -> None:
+    def __init__(
+        self,
+        names: dict[int, str],
+        tickers: dict[int, str],
+        st: dict[int, bool] | None = None,
+    ) -> None:
         self._names = names
         self._tickers = tickers
+        self._st = st or {}
+        self.st_calls: list[object] = []
 
     def names(self, instrument_ids, *, asof, allow_current_fallback=True):
         return {key: self._names[key] for key in instrument_ids if key in self._names}
@@ -107,6 +114,10 @@ class _FakeIdentities:
         return {
             key: self._tickers[key] for key in instrument_ids if key in self._tickers
         }
+
+    def st_status(self, instrument_ids, *, asof, cutoff=None):
+        self.st_calls.append((tuple(instrument_ids), asof, cutoff))
+        return {key: self._st[key] for key in instrument_ids if key in self._st}
 
 
 _ADJ_WINDOW = SnapshotWindow(
@@ -249,6 +260,7 @@ def _process(
     tickers: dict[int, str] | None = None,
     snapshots: _FakeSnapshots | None = None,
     clock: object | None = None,
+    st: dict[int, bool] | None = None,
 ) -> AssembleSelectionFacts:
     return AssembleSelectionFacts(
         provider=provider,
@@ -262,6 +274,7 @@ def _process(
         identities=_FakeIdentities(
             names={1: "平安银行", 2: "ST步高", 3: "宁波银行"},
             tickers=tickers or {1: "000001.SZ", 2: "000002.SZ", 3: "000003.SZ"},
+            st=st,
         ),  # type: ignore[arg-type]
         factors=_Registry(registry or _registry()),  # type: ignore[arg-type]
         snapshots=snapshots or _FakeSnapshots(),  # type: ignore[arg-type]
@@ -365,6 +378,36 @@ def test_factor_values_and_hard_filters_are_projected_per_instrument() -> None:
     assert first.listing_days == (_CROSS - date(2020, 1, 1)).days
     assert first.limit_state == "normal"
     assert first.declared_missing_inputs == ()
+
+
+def test_st_history_evidence_overrides_name_marker() -> None:
+    """#395：有 st_change_history 证据时用 PIT 证据，不受当前名称标记影响。"""
+    provider = _FakeProvider(_bars_frame(rows_per_instrument={1: 30, 2: 10}))
+    history = _FakeHistory(_roster_frame((1, 2)))
+    process = _process(
+        provider=provider,
+        history=history,
+        # 名称标记说 2 是 ST、1 非 ST；证据反过来：1 曾 ST（证据 True），
+        # 2 的名称带 ST 标记但证据表明当前已撤销（False）。
+        st={1: True, 2: False},
+    )
+    request = process.assemble(_request())
+    first, second = request.instruments
+
+    assert first.instrument_name == "平安银行"
+    assert first.is_st is True  # 证据优先于名称标记
+    assert second.instrument_name == "ST步高"
+    assert second.is_st is False
+
+
+def test_st_without_evidence_falls_back_to_name_marker() -> None:
+    """#395 受限回退：无历史证据的证券仍以名称标记推断（仅当前展示语义）。"""
+    process, _, _ = _happy_process()
+    request = process.assemble(_request())
+    second = request.instruments[1]
+
+    assert second.instrument_name == "ST步高"
+    assert second.is_st is True
 
 
 def test_factor_values_are_cross_sectional_unit_ranks() -> None:

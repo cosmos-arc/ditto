@@ -12,6 +12,10 @@ from ditto_data.runtime.instrument_id_allocator import InstrumentIdAllocator
 from ditto_data.services.metadata_service import MetadataService, MetadataServiceDeps
 from ditto_data.sources.exchange_transformers import ExchangeTransformers
 from ditto_data.storage.capital.index_composition import IndexCompositionReader
+from ditto_data.storage.market.stock.status import (
+    StChangeHistoryReader,
+    StChangeHistoryWriter,
+)
 from ditto_data.storage.metadata.calendar import CalendarReader, CalendarWriter
 from ditto_data.storage.metadata.industry import (
     IndustryMappingReader,
@@ -20,6 +24,7 @@ from ditto_data.storage.metadata.industry import (
     IndustryWriter,
 )
 from ditto_data.storage.metadata.instrument import (
+    EtfReferenceObservationWriter,
     InstrumentReader,
     InstrumentWriter,
     NameHistoryReader,
@@ -43,6 +48,9 @@ class MetadataInstrumentDependencies:
     instrument_writer: InstrumentWriter
     name_history_reader: NameHistoryReader
     name_history_writer: NameHistoryWriter
+    st_change_history_reader: StChangeHistoryReader
+    st_change_history_writer: StChangeHistoryWriter
+    etf_reference_writer: EtfReferenceObservationWriter
 
 
 @dataclass(frozen=True)
@@ -135,6 +143,33 @@ class MetadataProvider(Provider):
     ) -> NameHistoryWriter:
         """证券名称变更历史写入器."""
         return NameHistoryWriter(client=sqlite_client, cache=data_cache)
+
+    @provide
+    def st_change_history_reader(
+        self,
+        sqlite_client: SQLiteClient,
+        data_cache: DataCache[Any],
+    ) -> StChangeHistoryReader:
+        """ST 状态变更历史读取器（PIT + cutoff fail-closed）."""
+        return StChangeHistoryReader(sqlite_client, data_cache)
+
+    @provide
+    def st_change_history_writer(
+        self,
+        sqlite_client: SQLiteClient,
+        data_cache: DataCache[Any],
+    ) -> StChangeHistoryWriter:
+        """ST 状态变更历史写入器（含 namechange 摄取的批量证据路径）."""
+        return StChangeHistoryWriter(sqlite_client, data_cache)
+
+    @provide
+    def etf_reference_observation_writer(
+        self,
+        sqlite_client: SQLiteClient,
+        data_cache: DataCache[Any],
+    ) -> EtfReferenceObservationWriter:
+        """ETF 参考事实观察写入器（etf_basic 摄取生成，绑定来源快照）."""
+        return EtfReferenceObservationWriter(sqlite_client, data_cache)
 
     # ========================================================================
     # Calendar Store
@@ -250,6 +285,9 @@ class MetadataProvider(Provider):
         instrument_writer: InstrumentWriter,
         name_history_reader: NameHistoryReader,
         name_history_writer: NameHistoryWriter,
+        st_change_history_reader: StChangeHistoryReader,
+        st_change_history_writer: StChangeHistoryWriter,
+        etf_reference_writer: EtfReferenceObservationWriter,
     ) -> MetadataInstrumentDependencies:
         """Metadata service instrument store bundle."""
         return MetadataInstrumentDependencies(
@@ -257,6 +295,9 @@ class MetadataProvider(Provider):
             instrument_writer=instrument_writer,
             name_history_reader=name_history_reader,
             name_history_writer=name_history_writer,
+            st_change_history_reader=st_change_history_reader,
+            st_change_history_writer=st_change_history_writer,
+            etf_reference_writer=etf_reference_writer,
         )
 
     @provide
@@ -346,6 +387,9 @@ class MetadataProvider(Provider):
                 instrument_writer=domain.instrument.instrument_writer,
                 name_history_reader=domain.instrument.name_history_reader,
                 name_history_writer=domain.instrument.name_history_writer,
+                st_change_history_reader=domain.instrument.st_change_history_reader,
+                st_change_history_writer=domain.instrument.st_change_history_writer,
+                etf_reference_writer=domain.instrument.etf_reference_writer,
                 calendar_reader=domain.calendar.calendar_reader,
                 calendar_writer=domain.calendar.calendar_writer,
                 industry_reader=domain.industry.industry_reader,

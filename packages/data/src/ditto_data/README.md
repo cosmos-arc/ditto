@@ -26,7 +26,7 @@ ditto_data/
 ├── query/            # 查询模型（空，待填充）
 ├── runtime/          # 运行时支持（SQLite, PIT, Freeze）
 ├── services/         # 领域服务（7 个门面 + strategy + audit）
-├── sources/          # 数据源适配器（Tushare, FRED, TDX）
+├── sources/          # 数据源适配器（Tushare, FRED, fuyao）
 ├── storage/          # 存储层 — Reader/Writer CQRS，按领域组织
 └── utils/            # 通用工具
 ```

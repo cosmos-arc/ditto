@@ -498,6 +498,7 @@ class StockTushareAdapter(BaseTushareAdapter):
             - change_date: 变更日期 (Date)
             - end_date: 变更结束日期 (Date), NULL 表示当前仍有效
             - change_reason: 变更原因 (e.g., "ST", "*ST", "撤销ST")
+            - published_at: 公告日期 (Date), NULL 表示 provider 未提供
 
         Raises:
             SourceFetchError: If fetch fails.
@@ -514,7 +515,7 @@ class StockTushareAdapter(BaseTushareAdapter):
         with tushare_fetch_error_handler("namechange", "st_history"):
             params: dict[str, str] = {
                 "api_name": "namechange",
-                "fields": "ts_code,start_date,end_date,change_reason",
+                "fields": "ts_code,start_date,end_date,change_reason,ann_date",
             }
             if ts_code is not None:
                 params["ts_code"] = ts_code
@@ -532,6 +533,7 @@ class StockTushareAdapter(BaseTushareAdapter):
                         "change_date": pl.Date,
                         "end_date": pl.Date,
                         "change_reason": pl.String,
+                        "published_at": pl.Date,
                     }
                 )
 
@@ -544,6 +546,12 @@ class StockTushareAdapter(BaseTushareAdapter):
                 pl.col("start_date").alias("change_date"),
                 pl.col("end_date"),
                 pl.col("change_reason"),
+                pl.col("ann_date").alias("published_at"),
+            )
+            result = result.with_columns(
+                pl.col("change_date").str.to_date("%Y%m%d"),
+                pl.col("end_date").str.to_date("%Y%m%d", strict=False),
+                pl.col("published_at").str.to_date("%Y%m%d", strict=False),
             )
 
             row_count = len(result)
@@ -555,6 +563,103 @@ class StockTushareAdapter(BaseTushareAdapter):
             Metrics.data_records.add(
                 row_count,
                 {"source": "tushare", "dataset": "st_history", "status": "success"},
+            )
+
+            return result
+
+    @traced("source.tushare.fetch_name_history")
+    def fetch_name_history(
+        self,
+        ts_code: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> pl.DataFrame:
+        """
+        获取证券名称变更历史（namechange API 全量事件）.
+
+        old_name 由同标的相邻更早区间的名称推导（provider 只给 new name）；
+        最早一条记录的 old_name 为 NULL。
+
+        Args:
+            ts_code: 股票代码. 为 None 时查询全部股票.
+            start_date: 变更生效日下界（YYYY-MM-DD）. 为 None 时不限制.
+            end_date: 变更生效日上界（YYYY-MM-DD）. 为 None 时不限制.
+
+        Returns:
+            DataFrame with columns:
+            - source_ticker: 股票代码 (e.g., "000001.SZ")
+            - old_name: 变更前名称（最早记录为 NULL）
+            - new_name: 变更后名称
+            - changed_date: 生效日期 (Date)
+            - effective_to: 区间结束日期 (Date)，NULL 表示仍有效
+            - change_reason: 变更原因
+            - published_at: 公告日期 (Date)，NULL 表示 provider 未提供
+
+        Raises:
+            SourceFetchError: If fetch fails.
+
+        """
+        logger.info(
+            "Fetching Tushare name change history",
+            event="tushare_namechange_fetch_start",
+            ts_code=ts_code,
+        )
+
+        with tushare_fetch_error_handler("namechange", "namechange"):
+            params: dict[str, str] = {
+                "api_name": "namechange",
+                "fields": "ts_code,name,start_date,end_date,change_reason,ann_date",
+            }
+            if ts_code is not None:
+                params["ts_code"] = ts_code
+            if start_date is not None:
+                params["start_date"] = start_date.replace("-", "")
+            if end_date is not None:
+                params["end_date"] = end_date.replace("-", "")
+
+            response = self._client.query(**params)
+
+            if response.is_empty():
+                return pl.DataFrame(
+                    schema={
+                        "source_ticker": pl.String,
+                        "old_name": pl.String,
+                        "new_name": pl.String,
+                        "changed_date": pl.Date,
+                        "effective_to": pl.Date,
+                        "change_reason": pl.String,
+                        "published_at": pl.Date,
+                    }
+                )
+
+            result = (
+                response.sort("ts_code", "start_date")
+                .with_columns(
+                    pl.col("start_date").str.to_date("%Y%m%d"),
+                    pl.col("end_date").str.to_date("%Y%m%d", strict=False),
+                    pl.col("ann_date").str.to_date("%Y%m%d", strict=False),
+                    pl.col("name").shift(1).over("ts_code").alias("old_name"),
+                )
+                .select(
+                    pl.col("ts_code").alias("source_ticker"),
+                    "old_name",
+                    pl.col("name").alias("new_name"),
+                    pl.col("start_date").alias("changed_date"),
+                    pl.col("end_date").alias("effective_to"),
+                    "change_reason",
+                    pl.col("ann_date").alias("published_at"),
+                )
+            )
+
+            row_count = len(result)
+            logger.info(
+                "Tushare name change history fetched",
+                event="tushare_namechange_fetch_complete",
+                row_count=row_count,
+            )
+            Metrics.data_records.add(
+                row_count,
+                {"source": "tushare", "dataset": "namechange", "status": "success"},
             )
 
             return result

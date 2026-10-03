@@ -75,6 +75,9 @@ class WriteKind(StrEnum):
     GLOBAL_INDEX_BARS = "global_index_bars"
     INDUSTRY_CLASSIFICATION = "industry_classification"
     INDUSTRY_MAPPING = "industry_mapping"
+    NAME_HISTORY = "name_history"
+    ST_CHANGE_HISTORY = "st_change_history"
+    ETF_REFERENCE = "etf_reference"
 
 
 @dataclass(frozen=True)
@@ -113,6 +116,16 @@ class DatasetRegistration:
                 "basic_asset_class is required for basic datasets",
                 field="basic_asset_class",
                 value=None,
+            )
+        # etf_reference 复用 basic 语义（etf_basic 帧），额外产出参考观察行。
+        if (
+            self.write_kind == WriteKind.ETF_REFERENCE
+            and self.basic_asset_class != "etf"
+        ):
+            raise AppProcessError(
+                "etf_reference routes require basic_asset_class='etf'",
+                field="basic_asset_class",
+                value=self.basic_asset_class,
             )
 
     @property
@@ -293,6 +306,16 @@ def _global_index_fetch(ctx: DailyFetchContext) -> DailyFetchHandler:
     )
 
 
+def _history_fetch(group: str, method: str) -> DailyFetchFactory:
+    """``ctx.fetchers.<group>.<method>()`` — 全量事件历史，不随 trade_date 推进。"""
+
+    def factory(ctx: DailyFetchContext) -> DailyFetchHandler:
+        fetcher = getattr(ctx.fetchers, group)
+        return getattr(fetcher, method)  # 已绑定方法即无参 handler
+
+    return factory
+
+
 def _industry_classification_fetch(ctx: DailyFetchContext) -> DailyFetchHandler:
     def fetch() -> pl.DataFrame:
         frame = ctx.fetchers.metadata.fetch_sw_industry(level=1)
@@ -367,7 +390,7 @@ _METADATA_REGISTRATIONS: tuple[DatasetRegistration, ...] = (
     ),
     DatasetRegistration(
         dataset=Dataset.ETF_BASIC,
-        write_kind=WriteKind.BASIC,
+        write_kind=WriteKind.ETF_REFERENCE,
         basic_asset_class="etf",
         metadata_dataset=True,
         daily_fetch_factory=_property_fetch("metadata", "fetch_etf_basic"),
@@ -430,6 +453,25 @@ _INDUSTRY_REGISTRATIONS: tuple[DatasetRegistration, ...] = (
         date_schedule=DateScheduleType.SOURCE_DEFINED,
         metadata_dataset=True,
         daily_fetch_factory=_industry_mapping_fetch,
+    ),
+)
+
+# #395 可信历史：namechange / st_history（tushare namechange 全量事件流，
+# 写入行带 生效时间 + 可知时间(published_at→observed) + 来源三元组）。
+_HISTORY_REGISTRATIONS: tuple[DatasetRegistration, ...] = (
+    DatasetRegistration(
+        dataset=Dataset.NAME_CHANGE,
+        write_kind=WriteKind.NAME_HISTORY,
+        date_schedule=DateScheduleType.SOURCE_DEFINED,
+        metadata_dataset=True,
+        daily_fetch_factory=_history_fetch("market", "fetch_name_history"),
+    ),
+    DatasetRegistration(
+        dataset=Dataset.ST_HISTORY,
+        write_kind=WriteKind.ST_CHANGE_HISTORY,
+        date_schedule=DateScheduleType.SOURCE_DEFINED,
+        metadata_dataset=True,
+        daily_fetch_factory=_history_fetch("market", "fetch_st_history"),
     ),
 )
 
@@ -578,6 +620,7 @@ _ALL_REGISTRATIONS: tuple[DatasetRegistration, ...] = (
     _METADATA_REGISTRATIONS
     + _TRADED_BARS_REGISTRATIONS
     + _INDUSTRY_REGISTRATIONS
+    + _HISTORY_REGISTRATIONS
     + _MARKET_REGISTRATIONS
     + _ADJ_FACTOR_REGISTRATIONS
     + _FUNDAMENTAL_REGISTRATIONS

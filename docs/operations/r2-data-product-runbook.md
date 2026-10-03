@@ -22,7 +22,7 @@ bundle readiness 只用于消费门禁，不代替单产品证据。`fx_daily`�
 ## 2. 运行前检查
 
 1. 当前分支代码和数据库 migration 已同步，工作树可追溯到 commit SHA。
-2. Tushare、FRED/ALFRED 或本地 TDX 凭证只存在于本机 secret/config store。
+2. Tushare、FRED/ALFRED 或 fuyao 凭证只存在于本机 secret/config store。
 3. 19 项 contract 至少各有一个可用 provider；entitlement 证据记录接口、权限和检查时间，不记录凭证值。
 4. license ledger 对实际使用的 dataset/source 有 effective、reviewed 记录，且 `local_cache` 与 `derivative_compute` 为 allowed。
 5. `stock_daily`、`index_daily`、`adj_factor`、`fund_adj` 有同一参考机器和 quota 下的代表 chunk benchmark。

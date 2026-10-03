@@ -81,10 +81,12 @@ statistical:
     threshold_days: 3
     message: "价格连续 3 日无变化（停牌或异常）"
 
-  # 跨源对比：主源 vs 辅源（fuyao / TDX）
-  # 对账帧两侧均为 ticker 裸码（enrich_with_ticker / fetch_stock_daily_bars）
+  # 跨源对比：主源 vs 辅源（fuyao）
+  # 比较键升级 instrument_id + trade_date：辅源帧（thscode）经 #395 来源映射
+  # 反解为 instrument_id 后比较；单位/复权口径校准保持既有
+  # （股→手、元→千元已在 fuyao source 归一）。
   - rule: cross_source_compare
-    key_columns: [ticker, trade_date]
+    key_columns: [instrument_id, trade_date]
     fields: [open, high, low, close, volume, amount]
     tolerance_rules:
       # 价格类：严格 Tick 对齐（0.001 元）
@@ -108,5 +110,5 @@ statistical:
       amount:
         method: relative
         relative_tol: 0.001
-    message: "与通达信数据对比发现差异"
+    message: "与辅源(fuyao)数据对比发现差异"
     enabled: true

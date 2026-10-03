@@ -21,7 +21,7 @@ export const mockRegimeDiagnostics: RegimeDiagnosticsResponse = {
 	snapshot_id: "snapshot-regime-demo-v1",
 	snapshot_manifest_hash: "a".repeat(64),
 	dataset_id: "research-index-daily",
-	source_snapshot_ids: ["tdx-eod-20260325-v1"],
+	source_snapshot_ids: ["fuyao-eod-20260325-v1"],
 	builder_version: "research-snapshot-builder-v1",
 	known_at_policy: "sample_time",
 	benchmark_instrument_id: 300001,

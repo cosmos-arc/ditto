@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import polars as pl
 from dishka import Provider, Scope, provide
 from ditto_analysis.research.artifact_service import ResearchArtifactService
 from ditto_analysis.research.catalog_service import ResearchCatalogService
@@ -13,9 +14,12 @@ from ditto_data.quality import QualityEngine
 from ditto_data.quality.golden import GoldenDatasetSpec
 from ditto_data.quality.protocols import (
     ComparisonStoreProtocol,
+    ExDividendInstrumentSourceProtocol,
     InstrumentStoreProtocol,
     SecondaryBarsSourceProtocol,
+    SecondaryIdentityResolverProtocol,
 )
+from ditto_data.services.market_service import MarketService
 from ditto_data.services.metadata_service import MetadataService
 from ditto_execution.contracts import (
     AccountDataPort,
@@ -99,6 +103,61 @@ from ditto_application.processes.strategy.promotion import (
 )
 from ditto_application.queries.account import AccountBaselineQuery
 from ditto_application.queries.opening_baseline import OpeningBaselineResolver
+
+
+class _MetadataSecondaryIdentityResolver:
+    """辅源身份只读反解：fuyao 映射优先，裸码前缀规则唯一匹配兜底。"""
+
+    def __init__(self, metadata: MetadataService) -> None:
+        self._metadata = metadata
+
+    def resolve_secondary_ids(
+        self, source_tickers: list[str], source: str
+    ) -> dict[str, int]:
+        """裸码/thscode → instrument_id（只读，不写映射；键与输入一致）。"""
+        if source != "fuyao" or not source_tickers:
+            return {}
+        return self._metadata.instrument.resolve_fuyao_instrument_ids(
+            [str(ticker) for ticker in source_tickers],
+            register_missing=False,
+        )
+
+
+class _AdjFactorExDividendSource:
+    """除权日（adj_factor 事件日）标的：当日因子 ≠ 此前最近因子。"""
+
+    _LOOKBACK_DAYS = 40
+    _FACTOR_EPSILON = 1e-12
+
+    def __init__(self, market: MarketService) -> None:
+        self._market = market
+
+    def ex_dividend_instruments(self, trade_date: str) -> frozenset[int]:
+        """返回该交易日 adj_factor 发生变化的 instrument_id 集合。"""
+        from datetime import date, timedelta  # noqa: PLC0415 - 局部工具导入
+
+        target = date.fromisoformat(trade_date)
+        start = (target - timedelta(days=self._LOOKBACK_DAYS)).isoformat()
+        frame = self._market.get_adj_factors(start, trade_date)
+        required = {"instrument_id", "trade_date", "adj_factor"}
+        if frame.is_empty() or not required.issubset(frame.columns):
+            return frozenset()
+        if frame["trade_date"].dtype == pl.String:
+            frame = frame.with_columns(pl.col("trade_date").str.to_date())
+        current = frame.filter(pl.col("trade_date") == target)
+        previous = frame.filter(pl.col("trade_date") < target)
+        if current.is_empty() or previous.is_empty():
+            return frozenset()
+        previous_latest = (
+            previous.sort("trade_date")
+            .group_by("instrument_id")
+            .agg(pl.col("adj_factor").last().alias("prev_factor"))
+        )
+        joined = current.join(previous_latest, on="instrument_id", how="inner")
+        changed = joined.filter(
+            (pl.col("adj_factor") - pl.col("prev_factor")).abs() > self._FACTOR_EPSILON
+        )
+        return frozenset(int(v) for v in changed["instrument_id"].to_list())
 
 
 class AppCommandProvider(Provider):
@@ -218,20 +277,46 @@ class AppCommandProvider(Provider):
         )
 
     @provide
+    def secondary_identity_resolver(
+        self,
+        metadata: MetadataService,
+    ) -> SecondaryIdentityResolverProtocol:
+        """辅源身份只读反解（#395 来源映射 → instrument_id）。"""
+        return _MetadataSecondaryIdentityResolver(metadata)
+
+    @provide
+    def ex_dividend_instrument_source(
+        self,
+        market: MarketService,
+    ) -> ExDividendInstrumentSourceProtocol:
+        """除权日（adj_factor 事件日）标的来源。"""
+        return _AdjFactorExDividendSource(market)
+
+    @provide
     def reconcile_sources_handler(
         self,
         dq_engine: QualityEngine,
         secondary_source: SecondaryBarsSourceProtocol,
         comparison_store: ComparisonStoreProtocol,
         instrument_store: InstrumentStoreProtocol,
-        golden_dataset: GoldenDatasetSpec | None = None,
+        secondary_identity_resolver: SecondaryIdentityResolverProtocol,
+        ex_dividend_source: ExDividendInstrumentSourceProtocol,
+        golden_dataset: GoldenDatasetSpec | None,
     ) -> ReconcileSourcesHandler:
-        """数据源对账 Handler."""
+        """
+        数据源对账 Handler（辅源身份反解 + 除权日标记 + 黄金集过滤，#395）。
+
+        golden_dataset 以必填 Optional 注入：黄金集配置由 GoldenDatasetProvider
+        提供（无配置文件时为 None = 不过滤），修复此前默认参数导致的
+        生产路径黄金集过滤从未生效的问题。
+        """
         return ReconcileSourcesHandler(
             engine=dq_engine,
             secondary_source=secondary_source,
             comparison_store=comparison_store,
             instrument_store=instrument_store,
+            secondary_identity_resolver=secondary_identity_resolver,
+            ex_dividend_source=ex_dividend_source,
             golden_dataset=golden_dataset,
         )
 

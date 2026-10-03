@@ -58,21 +58,21 @@ class TestSQLiteProviderSnapshotStore:
             client, now=lambda: datetime(2026, 6, 1, 10, 0, tzinfo=UTC)
         )
         tushare = _snapshot("tushare", "sha256:tushare")
-        tdx = _snapshot("local_tdx", "sha256:tdx")
+        secondary = _snapshot("fuyao", "sha256:secondary")
 
         try:
             store.append_snapshot(tushare)
-            store.append_snapshot(tdx)
+            store.append_snapshot(secondary)
 
             # 首次观察即事件:store 记录 (created_at,) 观察事件。
             assert store.get_snapshot(tushare.snapshot_id) == replace(
                 tushare, observations=(tushare.created_at,)
             )
-            assert store.get_snapshot(tdx.snapshot_id) == replace(
-                tdx, observations=(tdx.created_at,)
+            assert store.get_snapshot(secondary.snapshot_id) == replace(
+                secondary, observations=(secondary.created_at,)
             )
             assert store.list_snapshots(canonical_asset=tushare.canonical_asset) == (
-                replace(tdx, observations=(tdx.created_at,)),
+                replace(secondary, observations=(secondary.created_at,)),
                 replace(tushare, observations=(tushare.created_at,)),
             )
         finally:
@@ -139,7 +139,7 @@ class TestProviderSnapshotIdentity:
     def test_identity_changes_with_required_provider_dimensions(self) -> None:
         baseline = _snapshot("tushare", "sha256:v1")
 
-        assert _snapshot("local_tdx", "sha256:v1").snapshot_id != baseline.snapshot_id
+        assert _snapshot("fuyao", "sha256:v1").snapshot_id != baseline.snapshot_id
         assert _snapshot("tushare", "sha256:v2").snapshot_id != baseline.snapshot_id
         assert (
             replace(baseline, request_end="2026-06-02").expected_snapshot_id()

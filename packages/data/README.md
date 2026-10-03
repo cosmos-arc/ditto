@@ -25,7 +25,7 @@ Data 采用分层架构，storage 层实现 CQRS 模式（Reader/Writer 分离�
 │              │ │  (CQRS)      │ │              │ │              │
 │ FreezeMgr    │ │ Reader/      │ │ MarketSvc    │ │ Tushare      │
 │ SqlEngine    │ │ Writer       │ │ MetadataSvc  │ │ FRED         │
-│ IdAllocator  │ │ Parquet/     │ │ CapitalSvc   │ │ TDX          │
+│ IdAllocator  │ │ Parquet/     │ │ CapitalSvc   │ │ fuyao        │
 │              │ │ SQLite       │ │ MacroSvc     │ │              │
 └──────────────┘ │              │ │ Fundamental  │ └──────────────┘
                   └──────────────┘ │ Services...  │
@@ -44,7 +44,7 @@ CQRS 模式详见 [AGENTS.md](AGENTS.md)
 |--------|------|------|
 | Tushare | A 股行情/基本面/资金 | `sources/tushare/` |
 | FRED | 宏观/商品数据 | `sources/fred/` |
-| TDX | 通达信本地数据 | `sources/tdx/` |
+| fuyao | 同花顺开源金融数据（冗余源，对账/降级） | `sources/fuyao/` |
 
 ## 数据域
 
@@ -97,7 +97,7 @@ uv run --no-sync pytest packages/data/tests/
 
 ### v0.19.0 (2026-04-27)
 - 文档同步更新：大幅精简 README，移除过时引用
-- 添加 FRED / TDX 数据源、ingestion/ 详细结构、storage 子域隔离
+- 添加 FRED / fuyao 数据源、ingestion/ 详细结构、storage 子域隔离
 - 移除已迁移服务的引用（trade/audit/derived/hot_layer/strategy/derived_catalog/research_catalog/research_artifact）
 - 同步 storage/base/ 结构（ParquetStore/PartitionStrategy 已迁移至 platform）
 

@@ -30,6 +30,10 @@ from ditto_data.services.metadata.instrument import (
 from ditto_data.services.metadata.universe import UniverseService
 from ditto_data.sources.exchange_transformers import ExchangeTransformers
 from ditto_data.storage.capital.index_composition import IndexCompositionReader
+from ditto_data.storage.market.stock.status import (
+    StChangeHistoryReader,
+    StChangeHistoryWriter,
+)
 from ditto_data.storage.metadata.calendar import CalendarReader, CalendarWriter
 from ditto_data.storage.metadata.industry import (
     IndustryMappingReader,
@@ -38,6 +42,7 @@ from ditto_data.storage.metadata.industry import (
     IndustryWriter,
 )
 from ditto_data.storage.metadata.instrument import (
+    EtfReferenceObservationWriter,
     InstrumentReader,
     InstrumentWriter,
     NameHistoryReader,
@@ -75,6 +80,11 @@ class MetadataServiceDeps:
     instrument_id_allocator: InstrumentIdAllocator
     index_composition_reader: IndexCompositionReader
     exchange_transformers: ExchangeTransformers
+    # #395：ST 历史 reader/writer（可选，未提供时子服务使用 fail-closed 占位）
+    st_change_history_reader: StChangeHistoryReader | None = None
+    st_change_history_writer: StChangeHistoryWriter | None = None
+    # #395：ETF 参考观察写入器（可选，未提供时写侧显式拒绝）
+    etf_reference_writer: EtfReferenceObservationWriter | None = None
 
 
 _LEGACY_DEPENDENCY_NAMES = (
@@ -95,9 +105,18 @@ _LEGACY_DEPENDENCY_NAMES = (
     "instrument_id_allocator",
     "index_composition_reader",
     "exchange_transformers",
+    # 可选依赖保持在尾部（不参与位置参数兼容顺序）
+    "st_change_history_reader",
+    "st_change_history_writer",
+    "etf_reference_writer",
 )
 
 _LEGACY_DEPENDENCY_NAME_SET = frozenset(_LEGACY_DEPENDENCY_NAMES)
+
+# 可选依赖（#395 ST 历史读写器与 ETF 参考写入器；缺省时子服务 fail closed）
+_OPTIONAL_DEPENDENCY_NAMES = frozenset(
+    {"st_change_history_reader", "st_change_history_writer", "etf_reference_writer"}
+)
 
 _SECURITY_QUERY_FILTER_NAMES = frozenset(
     {
@@ -174,6 +193,9 @@ class MetadataService:
                 industry_mapping_writer=service_deps.industry_mapping_writer,
                 instrument_id_allocator=service_deps.instrument_id_allocator,
                 exchange_transformers=service_deps.exchange_transformers,
+                st_change_history_reader=service_deps.st_change_history_reader,
+                st_change_history_writer=service_deps.st_change_history_writer,
+                etf_reference_writer=service_deps.etf_reference_writer,
             ),
         )
         self._universe = UniverseService(
@@ -332,7 +354,11 @@ def _metadata_service_deps_from_legacy(
         names = ", ".join(unexpected)
         raise TypeError(f"MetadataService got unexpected dependencies: {names}")
 
-    missing = [name for name in _LEGACY_DEPENDENCY_NAMES if name not in ports]
+    missing = [
+        name
+        for name in _LEGACY_DEPENDENCY_NAMES
+        if name not in ports and name not in _OPTIONAL_DEPENDENCY_NAMES
+    ]
     if missing:
         names = ", ".join(missing)
         raise TypeError(f"MetadataService missing dependencies: {names}")
@@ -342,6 +368,18 @@ def _metadata_service_deps_from_legacy(
         instrument_writer=cast(InstrumentWriter, ports["instrument_writer"]),
         name_history_reader=cast(NameHistoryReader, ports["name_history_reader"]),
         name_history_writer=cast(NameHistoryWriter, ports["name_history_writer"]),
+        st_change_history_reader=cast(
+            "StChangeHistoryReader | None",
+            ports.get("st_change_history_reader"),
+        ),
+        st_change_history_writer=cast(
+            "StChangeHistoryWriter | None",
+            ports.get("st_change_history_writer"),
+        ),
+        etf_reference_writer=cast(
+            "EtfReferenceObservationWriter | None",
+            ports.get("etf_reference_writer"),
+        ),
         calendar_reader=cast(CalendarReader, ports["calendar_reader"]),
         calendar_writer=cast(CalendarWriter, ports["calendar_writer"]),
         industry_reader=cast(IndustryReader, ports["industry_reader"]),
