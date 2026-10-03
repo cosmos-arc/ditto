@@ -79,7 +79,6 @@ export default defineConfig({
 				"src/features/*/api.{ts,tsx}": { branches: 90 },
 				"src/features/*/api/**/*.{ts,tsx}": { branches: 90 },
 				"src/features/agent/api/agent-api.ts": { branches: 90 },
-				"src/features/data-products/api/operations.ts": { branches: 90 },
 				"src/routes/system/approvals.tsx": { branches: 90 },
 				"src/features/portfolio/api/intents.ts": { branches: 90 },
 				"src/features/portfolio/api/paper-accounts.ts": { branches: 90 },

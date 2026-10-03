@@ -102,15 +102,15 @@ application barrel **不导出**（`__all__ = []`）；消费者从 `queries` / 
 | `BacktestQueryFacade`, `RunReadModel`, `LineageQueryFacade` | `queries` | 回测/运行/血统只读门面 |
 | `StrategyQueryFacade` | `queries` | 策略只读门面 |
 | `IngestDateCommand` / `IngestDateHandler` | `commands.ingestion` | 摄取写命令 |
-| `ReviewDatasetPromotionEvidenceHandler` | `commands` | 晋级证据写命令 |
 | `IngestionCoordinator` | `processes.ingestion` | 摄取流程编排 |
 
-### candidate（remediation/source-fallback/read-model，演进中）
+### candidate（read-model，演进中）
+
+> #392 已删除数据治理工作流（certification/promotion/license/specimen/remediation/
+> source-fallback 命令与查询），相关符号自本表移除。
 
 | 符号 | 子模块 | 说明 |
 |------|--------|------|
-| `CatalogRemediationQueryFacade` / remediation commands | `queries` / `commands` | catalog 修复，治理流程演进 |
-| `DraftCatalogSourceFallbackPolicyHandler` 等生命周期 commands | `commands` | source-fallback policy lifecycle |
 | `DerivedMaterializationOrchestrator` | `processes.materialization` | 物化编排 |
 | `ReplayProcess`, `FactorBridge` | `processes.execution` | 回放/因子桥接 |
 | `ComparisonQueryFacade`, `BacktestTradeQueryFacade` | `queries` | 回测对比/成交查询 |

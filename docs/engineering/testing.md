@@ -135,7 +135,8 @@ conformance 仍是显式 CI 门，只是从盲重跑升级为执行+产物证明
 串行树抬高其执行成本。迁移必须附原保障→迁移后保障逐例映射，且执行频率不降低
 （fast 车道收集数前后一致；新 integration 树须按串行审计形态登记解除，否则
 迁移件会掉出 fast 车道）。已迁组：data specimen store（PIT coverage 区间/
-knowable_from/allowed_uses/内容寻址不可变）、execution paper 会话库恢复组
+knowable_from/allowed_uses/内容寻址不可变；该组已随 #392 治理删除）、
+execution paper 会话库恢复组
 （CAS/revision/幂等重放/防篡改 fail-closed）；backend 组合证明按接缝拆为
 symbol-rules 与 assembly 两文件。
 

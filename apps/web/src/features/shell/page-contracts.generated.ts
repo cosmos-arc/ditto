@@ -2660,7 +2660,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
     prototypeSource: "prototype-backed",
     prototypeRef: "prototype/page-platform.html",
     requiredSlots: ["health", "main", "detail"],
-    requiredStates: ["loading", "empty", "error", "stale", "catalog-empty", "pipeline-running", "source-degraded", "fallback-active", "promotion-blocked", "approval-expired", "partial-unavailable", "remediation-empty"],
+    requiredStates: ["loading", "empty", "error", "stale", "catalog-empty", "pipeline-running", "source-degraded", "approval-expired", "partial-unavailable"],
     hasStatusBar: true,
     landing: {
       "reactRouteStatus": "implemented",
@@ -2750,7 +2750,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
     prototypeSource: "prototype-backed",
     prototypeRef: "prototype/page-platform.html",
     requiredSlots: ["health", "main", "detail"],
-    requiredStates: ["loading", "empty", "error", "stale", "catalog-empty", "pipeline-running", "source-degraded", "fallback-active", "promotion-blocked", "approval-expired", "partial-unavailable", "remediation-empty"],
+    requiredStates: ["loading", "empty", "error", "stale", "catalog-empty", "pipeline-running", "source-degraded", "approval-expired", "partial-unavailable"],
     hasStatusBar: true,
     landing: {
       "reactRouteStatus": "implemented",
@@ -2928,7 +2928,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
     prototypeSource: "prototype-backed",
     prototypeRef: "prototype/page-platform.html",
     requiredSlots: ["health", "main", "detail"],
-    requiredStates: ["loading", "empty", "error", "stale", "catalog-empty", "pipeline-running", "source-degraded", "fallback-active", "promotion-blocked", "approval-expired", "partial-unavailable", "remediation-empty"],
+    requiredStates: ["loading", "empty", "error", "stale", "catalog-empty", "pipeline-running", "source-degraded", "approval-expired", "partial-unavailable"],
     hasStatusBar: true,
     landing: {
       "reactRouteStatus": "implemented",

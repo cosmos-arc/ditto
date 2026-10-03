@@ -3,7 +3,27 @@
 > 本文记录**2026-10-03 精简前的开发环境观察**，不是生产运行或最终实现证明。
 > 行数和数据根描述沿用初评记录，本轮未重新统计。后续审阅修正见下文；最终处置已在
 > [Issue #390](https://github.com/cosmos-arc/ditto/issues/390) 和
-> [审阅结论](data-layer-review-2026-10.md)确认，尚未实施。旧开发数据包括 payload 均可清空重建。
+> [审阅结论](data-layer-review-2026-10.md)确认，并已按 #391–#396 实施完毕（见下节）。
+> 旧开发数据包括 payload 均可清空重建。
+
+## 最终形态(2026-10-04,#391-#396 已实施)
+
+- **治理层已删除**（#391/#392）：certification、promotion、license、specimen、
+  remediation、fallback_policy 与 freeze 全链不再存在；快照完成/范围/载荷留存检查
+  重接为 SnapshotReadinessQuery，时间可见性语义保留在消费者行级过滤。
+- **摄取簿记收敛为三阶段 fetch log**（#393）：intent → checkpoint → COMPLETE
+  （绑定 `complete_evidence_id` 精确完成证据），观察事实归一为观察事件表，
+  旧 lineage 写侧同批删除。
+- **catalog 收敛为数据集级描述**（#394）：行级来源绑定与覆盖读取改挂真实数据
+  和精确完成范围。
+- **TDX 已删除，fuyao 以同口径对账接管辅源职责**（#395）；证券身份段位与
+  可信历史写侧同批接通。
+- **死存储清理与空根重置**（#396）：DuckDB 轨、空转表与旧开发数据一并移除，
+  空根全量重置+真实摄取/旅程验收完成；历史池改为原始形状读取投影层（#414），
+  universe 重放替换（#415）。
+
+下文 §0–§9 保留变更前观察，按历史记录解读；其中标注"当前/在转"的表述
+均指 2026-10-03 精简前状态。
 
 ## 0. 三十秒心智模型
 
@@ -89,8 +109,9 @@ intent → checkpoint → COMPLETE(绑定精确 snapshot_id)。修订不改历�
 
 ## 4. 消费时的门(field admission)与一次选股全流程
 
-以下是组装与保存链的概念摘要。当前 `POST /selections/runs` 还可直接接收完整事实包，
-并不保证先经过服务端组装；#391 将修正该信任边界：
+以下是组装与保存链的概念摘要（变更前）。当时 `POST /selections/runs` 可直接接收
+完整事实包，并不保证先经过服务端组装；该信任边界已由 #391 修正为 policy-only
+（客户端事实包 422，服务端组装事实）：
 
 ```
 1. 组装事实 assemble_facts:knowledge_date 列过滤(_without_future_knowledge)
@@ -137,6 +158,10 @@ intent → checkpoint → COMPLETE(绑定精确 snapshot_id)。修订不改历�
 
 ## 7. 三条主线消费矩阵(运行时实测)
 
+> 变更前实测。表中 certification、field admission 门与 promotion 行描述的是
+> 已删除的治理链（#391/#392 删除；快照完成/范围/载荷检查由 SnapshotReadinessQuery
+> 承接，认证窗口由完成快照窗口替代），不再反映当前实现。
+
 | 设施 | 选股 #196 | ETF paper | 历史估值 #249 |
 |---|---|---|---|
 | knowledge/publication cutoff | ✅ | ✅ | ✅ |
@@ -154,9 +179,9 @@ intent → checkpoint → COMPLETE(绑定精确 snapshot_id)。修订不改历�
 
 ## 8. 在转 vs 空转(总表)
 
-**在转**:通路全家(摄取/快照/载荷/分区/查询)、admission 门、certification、promotion(运维面,Web data-products workbench 有 UI:readiness/history/revoke)、license、行级 lineage、catalog 注册表、ingestion 运行时、OTel 测试卫生、oasdiff/osv-trivy 契约与安全门。
+**在转（变更前口径）**：通路全家(摄取/快照/载荷/分区/查询)、admission 门、certification、promotion(运维面,Web data-products workbench 有 UI:readiness/history/revoke)、license、行级 lineage、catalog 注册表、ingestion 运行时、OTel 测试卫生、oasdiff/osv-trivy 契约与安全门。其中 admission 门、certification、promotion、license 及 data-products workbench UI 已随 #391/#392 删除；摄取通路由三阶段 fetch log(#393)与数据集级 catalog(#394)承接。
 
-**本数据根未见业务产物或直接消费者的候选项**（不是生产全局零使用证明，删除需核对独有保障）：
+**本数据根未见业务产物或直接消费者的候选项（不是生产全局零使用证明，删除需核对独有保障；下述各项已随 #391–#396 删除或由新事实承接）**：
 specimen 五类试样(表未建)、remediation 审批(表未建)、fallback_policy 双源回退(0 行)、freeze 回测冻结(0 行)、derived 派生物化(14 张表 0 行)、research 控制面(4 张表 0 行)+ 整个 research.sqlite(20 张 0 行)、quarantine 隔离(0 行)、lineage 读侧 4 端点(Web 零调用)、pit_query/DuckDB 引擎(库文件从未生成)、r5 发布 preflight(798 行,近 4 个月零提交,仅自测消费)、slow_test_gate(716 行,自述 not a merge gate)。
 
 初评提交分类：所选 124 个提交中 tooling 43 + catalog 12 ≈ 44%。该口径不等于
@@ -176,4 +201,5 @@ specimen 五类试样(表未建)、remediation 审批(表未建)、fallback_poli
 | cross_source inner join | 零交集可能无差异报告 | #395 增加有效比较/未匹配/重复键与口径验收 |
 
 本图的旧工作流与旧路径仅描述变更前实现。最终规格取消旧数据迁移、兼容和备份要求，
-但新采集数据的来源、观察、提交与回放证据仍需保留；实施后由 #397 更新为最终形态。
+但新采集数据的来源、观察、提交与回放证据仍需保留；#397 已按实施结果在上文补记
+最终形态。

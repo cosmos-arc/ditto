@@ -52,7 +52,6 @@ function observe(page: Page) {
 		if (
 			path.includes("/selections/industry-rotations/") ||
 			path.includes("/selections/runs") ||
-			path.includes("/data-products/") ||
 			path.includes("/technical-analysis/snapshots/query")
 		) {
 			const decoded = (await response.json()) as JsonObject;
