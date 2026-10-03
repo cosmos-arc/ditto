@@ -11,7 +11,7 @@ from ditto_application.exceptions import AppProcessError
 from ditto_application.processes.selection.assemble_facts import (
     AssembleSelectionFacts,
     AssembleSelectionFactsRequest,
-    CertifiedSnapshotWindow,
+    SnapshotWindow,
 )
 from ditto_application.processes.selection.facade import (
     SelectionFactorWeightDraft,
@@ -27,13 +27,13 @@ _AS_OF = datetime(2026, 9, 29, 10, 0, tzinfo=UTC)  # 18:00 Asia/Shanghai
 _CROSS = date(2026, 9, 29)
 _BAR_DATES = tuple(date(2026, 8, 31) + timedelta(days=i) for i in range(30))
 
-_DAILY_WINDOW = CertifiedSnapshotWindow(
+_DAILY_WINDOW = SnapshotWindow(
     "snapshot:tushare:stock_daily:sha256:d1", date(2026, 8, 1), _CROSS
 )
-_STATUS_WINDOW = CertifiedSnapshotWindow(
+_STATUS_WINDOW = SnapshotWindow(
     "snapshot:tushare:stock_status:sha256:s1", date(2026, 9, 1), _CROSS
 )
-_BASIC_WINDOW = CertifiedSnapshotWindow(
+_BASIC_WINDOW = SnapshotWindow(
     "snapshot:tushare:stock_basic:sha256:b1", date(2015, 1, 1), date(2026, 9, 30)
 )
 
@@ -109,7 +109,7 @@ class _FakeIdentities:
         }
 
 
-_ADJ_WINDOW = CertifiedSnapshotWindow(
+_ADJ_WINDOW = SnapshotWindow(
     "snapshot:tushare:adj_factor:sha256:a1", date(2026, 8, 1), _CROSS
 )
 
@@ -296,7 +296,7 @@ def _happy_process() -> tuple[AssembleSelectionFacts, _FakeProvider, _FakeHistor
     return _process(provider=provider, history=history), provider, history
 
 
-def test_assembles_policy_only_request_with_certified_lineage() -> None:
+def test_assembles_policy_only_request_with_completed_lineage() -> None:
     process, provider, history = _happy_process()
     request = process.assemble(_request())
 
@@ -634,7 +634,7 @@ def test_uncovered_daily_window_is_rejected_before_response() -> None:
         history=history,
         snapshots=_FakeSnapshots(
             daily=(
-                CertifiedSnapshotWindow(
+                SnapshotWindow(
                     "snapshot:tushare:stock_daily:sha256:d0",
                     date(2026, 8, 1),
                     date(2026, 8, 31),
@@ -771,7 +771,7 @@ def test_discovery_port_failures_propagate() -> None:
 
     def refuse(**_kwargs: object) -> HistoricalUniverseSources:
         raise AppProcessError(
-            "universe membership is narrower than the certified roster lane",
+            "universe membership is narrower than the registered roster lane",
             details={"reason": "ASSEMBLY_UNIVERSE_SCOPE_UNSUPPORTED"},
         )
 
@@ -853,7 +853,7 @@ def test_future_as_of_is_rejected() -> None:
     assert error.value.details["reason"] == "ASSEMBLY_TIME_INVALID"
 
 
-def test_price_factors_require_certified_adjustment_window() -> None:
+def test_price_factors_require_completed_adjustment_window() -> None:
     provider = _FakeProvider(_bars_frame(rows_per_instrument={1: 30}))
     history = _FakeHistory(_roster_frame((1,)))
     process = _process(
@@ -977,7 +977,7 @@ def test_unattributable_instruments_leave_the_ranking_population() -> None:
     request = process.assemble(_request())
 
     assert request.instruments[1].declared_missing_inputs == ("source_snapshot",)
-    # The clean instrument is ranked alone: extreme uncertified values from
+    # The clean instrument is ranked alone: extreme unattested values from
     # instrument 2 cannot shift its normalized score.
     assert request.instruments[0].factor_values[0].value == pytest.approx(1.0)
 

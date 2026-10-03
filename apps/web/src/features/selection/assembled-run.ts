@@ -40,9 +40,6 @@ export function toAssembledRunView(value: AssembledSelectionRunResponse, submitt
 	const request = value.request;
 	const spec = request?.selection_spec;
 	const valid =
-		typeof value.admission === "object" &&
-		value.admission !== null &&
-		typeof value.admission.allowed === "boolean" &&
 		typeof request === "object" &&
 		request !== null &&
 		request.as_of === submitted.as_of &&
@@ -79,6 +76,6 @@ export function toAssembledRunView(value: AssembledSelectionRunResponse, submitt
 		) &&
 		new Set(request.instruments.map((item) => item.instrument_id)).size === request.instruments.length;
 	if (!valid) throw new Error("组装响应的策略回显或服务端事实与提交不一致（含回看窗口边界）");
-	return { request, admission: value.admission };
+	return { request };
 }
 export type AssembledRunView = ReturnType<typeof toAssembledRunView>;

@@ -19,15 +19,10 @@ from ditto_application.processes.selection.create_research_case import (
 )
 from ditto_application.processes.selection.facade import (
     CreateSelectionRunRequest,
-    EtfSelectionSpecDraft,
-    IndustryRotationObservationDraft,
-    SelectionFactorValueDraft,
     SelectionFactorWeightDraft,
-    SelectionInstrumentDraft,
     SelectionWorkspaceFacade,
     StockSelectionSpecDraft,
 )
-from ditto_application.queries.field_admission import FieldRequirement
 from ditto_application.queries.industry_rotations import IndustryRotationQueryService
 from ditto_application.queries.selection_runs import SelectionRunQueryService
 from fastapi import APIRouter, Path, Query, status
@@ -41,11 +36,9 @@ from ditto_apps.models.selection import (
     CreateSelectionRunBody,
     IndustryRotationResponse,
     ResearchCaseResponse,
-    SelectionAdmissionResponse,
     SelectionRunDiffResponse,
     SelectionRunResponse,
     SelectionWorkspaceReceiptResponse,
-    StockSelectionSpecRequest,
 )
 
 router = APIRouter(prefix="/selections", tags=["selections"])
@@ -59,117 +52,6 @@ def _raise_query_error(exc: AppQueryError) -> Never:
         str(exc),
         error_code=str(reason or "SELECTION_QUERY_INVALID"),
     ) from exc
-
-
-def _application_request(body: CreateSelectionRunBody) -> CreateSelectionRunRequest:
-    spec = body.selection_spec
-    weights = tuple(
-        SelectionFactorWeightDraft(item.name, item.weight)
-        for item in spec.factor_weights
-    )
-    if isinstance(spec, StockSelectionSpecRequest):
-        selection_spec = StockSelectionSpecDraft(
-            spec_id=spec.spec_id,
-            spec_version=spec.spec_version,
-            top_k=spec.top_k,
-            min_average_turnover=spec.min_average_turnover,
-            min_listing_days=spec.min_listing_days,
-            factor_weights=weights,
-            excluded_limit_states=spec.excluded_limit_states,
-        )
-    else:
-        selection_spec = EtfSelectionSpecDraft(
-            spec_id=spec.spec_id,
-            spec_version=spec.spec_version,
-            top_k=spec.top_k,
-            min_average_turnover=spec.min_average_turnover,
-            min_listing_days=spec.min_listing_days,
-            factor_weights=weights,
-            max_tracking_error=spec.max_tracking_error,
-            excluded_limit_states=spec.excluded_limit_states,
-        )
-    return CreateSelectionRunRequest(
-        data_fields=tuple(
-            FieldRequirement(
-                item.dataset_id, item.field, item.snapshot_id, item.consumer_field
-            )
-            for item in body.data_fields
-        ),
-        data_from=body.data_from,
-        data_to=body.data_to,
-        as_of=body.as_of,
-        knowledge_cutoff=body.knowledge_cutoff,
-        publication_cutoff=body.publication_cutoff,
-        rotation_source_snapshot_ids=body.rotation_source_snapshot_ids,
-        market_context_feature_set_id=body.market_context_feature_set_id,
-        membership_version=body.membership_version,
-        rotation_algorithm_version=body.rotation_algorithm_version,
-        industries=tuple(
-            IndustryRotationObservationDraft(
-                industry_id=item.industry_id,
-                industry_name=item.industry_name,
-                relative_strength_5d=item.relative_strength_5d,
-                relative_strength_20d=item.relative_strength_20d,
-                relative_strength_60d=item.relative_strength_60d,
-                advancing_count=item.advancing_count,
-                declining_count=item.declining_count,
-                member_count=item.member_count,
-                trend_score=item.trend_score,
-                fundamental_score=item.fundamental_score,
-                regime_alignment_score=item.regime_alignment_score,
-            )
-            for item in body.industries
-        ),
-        rotation_missing_inputs=body.rotation_missing_inputs,
-        universe_snapshot_id=body.universe_snapshot_id,
-        universe_sources=(
-            body.universe_sources.to_application() if body.universe_sources else None
-        ),
-        selection_source_snapshot_ids=body.selection_source_snapshot_ids,
-        selection_spec=selection_spec,
-        seed=body.seed,
-        instruments=tuple(
-            SelectionInstrumentDraft(
-                instrument_id=item.instrument_id,
-                instrument_name=item.instrument_name,
-                industry_id=item.industry_id,
-                factor_values=tuple(
-                    SelectionFactorValueDraft(factor.name, factor.value)
-                    for factor in item.factor_values
-                ),
-                average_turnover=item.average_turnover,
-                is_st=item.is_st,
-                is_suspended=item.is_suspended,
-                listing_days=item.listing_days,
-                limit_state=item.limit_state,
-                tracking_error=item.tracking_error,
-                declared_missing_inputs=item.declared_missing_inputs,
-            )
-            for item in body.instruments
-        ),
-    )
-
-
-@router.post(
-    "/runs",
-    response_model=APIResponse[SelectionWorkspaceReceiptResponse],
-    status_code=status.HTTP_201_CREATED,
-    operation_id="selections_create_run",
-)
-@inject
-async def create_selection_run(
-    body: CreateSelectionRunBody,
-    facade: Annotated[SelectionWorkspaceFacade, FromComponent()],
-) -> APIResponse[SelectionWorkspaceReceiptResponse]:
-    """Create or exactly replay a content-addressed industry and selection run."""
-    try:
-        receipt = await asyncio.to_thread(facade.create, _application_request(body))
-    except AppProcessError as exc:
-        raise UnprocessableEntityError(
-            str(exc),
-            error_code=str(exc.details.get("reason", "SELECTION_RUN_INVALID")),
-        ) from exc
-    return APIResponse(data=SelectionWorkspaceReceiptResponse.model_validate(receipt))
 
 
 def _assembly_request(body: AssembleSelectionRunBody) -> AssembleSelectionFactsRequest:
@@ -195,6 +77,48 @@ def _assembly_request(body: AssembleSelectionRunBody) -> AssembleSelectionFactsR
     )
 
 
+def _assembled_body(assembled: CreateSelectionRunRequest) -> CreateSelectionRunBody:
+    """Render the assembled request as its preview transport body."""
+    payload = asdict(assembled)
+    payload["selection_spec"]["asset_kind"] = (
+        "stock"
+        if isinstance(assembled.selection_spec, StockSelectionSpecDraft)
+        else "etf"
+    )
+    return CreateSelectionRunBody.model_validate(payload)
+
+
+@router.post(
+    "/runs",
+    response_model=APIResponse[SelectionWorkspaceReceiptResponse],
+    status_code=status.HTTP_201_CREATED,
+    operation_id="selections_create_run",
+)
+@inject
+async def create_selection_run(
+    body: AssembleSelectionRunBody,
+    process: Annotated[AssembleSelectionFacts, FromComponent()],
+    facade: Annotated[SelectionWorkspaceFacade, FromComponent()],
+) -> APIResponse[SelectionWorkspaceReceiptResponse]:
+    """
+    Assemble every PIT fact server-side, then create the exact run.
+
+    The client submits strategy parameters and allowed request identity
+    only; client-authored fact packages are no longer an authoritative
+    write surface. Re-posting one policy under unchanged data replays to
+    the same content-addressed run.
+    """
+    try:
+        assembled = await asyncio.to_thread(process.assemble, _assembly_request(body))
+        receipt = await asyncio.to_thread(facade.create, assembled)
+    except AppProcessError as exc:
+        raise UnprocessableEntityError(
+            str(exc),
+            error_code=str(exc.details.get("reason", "SELECTION_RUN_INVALID")),
+        ) from exc
+    return APIResponse(data=SelectionWorkspaceReceiptResponse.model_validate(receipt))
+
+
 @router.post(
     "/runs:assembled",
     response_model=APIResponse[AssembledSelectionRunResponse],
@@ -204,44 +128,18 @@ def _assembly_request(body: AssembleSelectionRunBody) -> AssembleSelectionFactsR
 async def assemble_selection_run(
     body: AssembleSelectionRunBody,
     process: Annotated[AssembleSelectionFacts, FromComponent()],
-    facade: Annotated[SelectionWorkspaceFacade, FromComponent()],
 ) -> APIResponse[AssembledSelectionRunResponse]:
-    """
-    Assemble every PIT fact server-side and preview the create-run gate.
-
-    The response carries the exact ``POST /selections/runs`` body plus the
-    admission report; creating the run still posts that body to ``/runs``,
-    so certification and replay semantics stay on the reviewed contract.
-    """
+    """Assemble every PIT fact server-side and preview the exact create body."""
     try:
         assembled = await asyncio.to_thread(process.assemble, _assembly_request(body))
-        admission = await asyncio.to_thread(facade.assess_admission, assembled)
     except AppProcessError as exc:
         raise UnprocessableEntityError(
             str(exc),
             error_code=str(exc.details.get("reason", "SELECTION_ASSEMBLY_INVALID")),
         ) from exc
     return APIResponse(
-        data=AssembledSelectionRunResponse(
-            request=_assembled_body(assembled),
-            admission=SelectionAdmissionResponse.model_validate(admission),
-        )
+        data=AssembledSelectionRunResponse(request=_assembled_body(assembled))
     )
-
-
-def _assembled_body(assembled: CreateSelectionRunRequest) -> CreateSelectionRunBody:
-    """Render the assembled request as its exact POST /runs transport body."""
-    payload = asdict(assembled)
-    for requirement in payload["data_fields"]:
-        # The transport never carries the server-computed input digest.
-        requirement.pop("consumer_input_hash", None)
-    # The application draft drops the transport-only discriminator tag.
-    payload["selection_spec"]["asset_kind"] = (
-        "stock"
-        if isinstance(assembled.selection_spec, StockSelectionSpecDraft)
-        else "etf"
-    )
-    return CreateSelectionRunBody.model_validate(payload)
 
 
 @router.post(
@@ -352,28 +250,3 @@ async def compare_selection_runs(
     except AppQueryError as exc:
         _raise_query_error(exc)
     return APIResponse(data=SelectionRunDiffResponse.model_validate(value))
-
-
-@router.post(
-    "/admission",
-    response_model=APIResponse[SelectionAdmissionResponse],
-    operation_id="selections_assess_admission",
-)
-@inject
-async def assess_selection_admission(
-    body: CreateSelectionRunBody,
-    facade: Annotated[SelectionWorkspaceFacade, FromComponent()],
-    instrument_id: Annotated[int | None, Query(gt=0)] = None,
-) -> APIResponse[SelectionAdmissionResponse]:
-    """Preview exact field admission without saving or changing certification."""
-    try:
-        value = await asyncio.to_thread(
-            facade.assess_admission,
-            _application_request(body),
-            instrument_id=instrument_id,
-        )
-    except AppProcessError as exc:
-        raise UnprocessableEntityError(
-            str(exc), error_code=str(exc.details.get("reason", "SELECTION_RUN_INVALID"))
-        ) from exc
-    return APIResponse(data=SelectionAdmissionResponse.model_validate(value))

@@ -1,26 +1,31 @@
 """Explicit saved snapshot export for personal local research."""
 
 from dataclasses import asdict
-from datetime import datetime
 from pathlib import Path
-from zoneinfo import ZoneInfo
 
 from ditto_analysis.errors import ExperimentIntegrityError
 from ditto_analysis.research.artifact_service import ResearchArtifactService
 from ditto_analysis.research.catalog_service import ResearchCatalogService
 from ditto_analysis.research.specs import DatasetSnapshot
-from ditto_data.catalog.field_admission import DataUse, license_reasons
-from ditto_data.catalog.license import DatasetLicenseReader
 from ditto_data.catalog.source_snapshot import ProviderSnapshotReader
-from ditto_data.catalog.specimen import DataSpecimen, SpecimenReader
 
 from ditto_application.exceptions import AppQueryError
 
-EXPORT_USE: DataUse = "formal_research"
+__all__ = ["ResearchDatasetExport"]
+
+# Minimal usage constraints per provider source, replacing the removed
+# license-approval workflow. The constraint travels in every export receipt;
+# unknown sources fail closed — dropping the workflow must not silently
+# broaden redistribution rights the operator never declared.
+_SOURCE_USAGE_CONSTRAINTS: dict[str, str] = {
+    "tushare": "personal_local_research_only",
+    "fuyao": "personal_local_research_only",
+    "fred": "personal_local_research_only",
+}
 
 
 class ResearchDatasetExport:
-    """Validate saved identity and source licenses before publishing an export."""
+    """Validate saved identity and input completeness before exporting."""
 
     def __init__(
         self,
@@ -28,14 +33,10 @@ class ResearchDatasetExport:
         research_artifact_service: ResearchArtifactService,
         research_catalog_service: ResearchCatalogService,
         snapshots: ProviderSnapshotReader,
-        licenses: DatasetLicenseReader,
-        specimens: SpecimenReader,
     ) -> None:
         self._artifacts = research_artifact_service
         self._catalog = research_catalog_service
         self._snapshots = snapshots
-        self._licenses = licenses
-        self._specimens = specimens
 
     def export(
         self, snapshot: DatasetSnapshot, fmt: str, path: Path
@@ -51,8 +52,7 @@ class ResearchDatasetExport:
             raise ExperimentIntegrityError(
                 "research export requires the exact saved snapshot"
             )
-        license_ids = self._check_licenses(snapshot)
-        specimen_restrictions = self._check_specimens(snapshot)
+        usage_constraints = self._check_inputs(snapshot)
         root = self._artifacts.artifact_root
         target = path if path.is_absolute() else root / path
         try:
@@ -67,15 +67,15 @@ class ResearchDatasetExport:
             table_name=snapshot.dataset_id.replace("-", "_"),
             provenance={
                 **asdict(snapshot),
-                "license_record_ids": license_ids,
-                "specimens": specimen_restrictions,
                 "usage": "personal_local_research_only",
+                "source_usage": usage_constraints,
             },
         )
 
-    def _check_licenses(self, snapshot: DatasetSnapshot) -> tuple[str, ...]:
+    def _check_inputs(self, snapshot: DatasetSnapshot) -> dict[str, str]:
+        """Verify input versions, universe bindings and the source closure."""
         if not snapshot.source_snapshot_ids:
-            raise AppQueryError("导出缺少来源快照, 无法验证许可")
+            raise AppQueryError("导出缺少来源快照, 无法验证完整性")
         versions: dict[str, int] = {}
         bound_sources: set[str] = set()
         universe_inputs = 0
@@ -113,86 +113,19 @@ class ResearchDatasetExport:
             or bound_sources != set(snapshot.source_snapshot_ids)
         ):
             raise AppQueryError("研究输入与来源快照汇总身份不一致")
-        used_on = datetime.now(ZoneInfo("Asia/Shanghai")).date()
-        license_ids: set[str] = set()
+        usage_constraints: dict[str, str] = {}
         for snapshot_id in snapshot.source_snapshot_ids:
             source = self._snapshots.get_snapshot(snapshot_id)
             if source is None or source.snapshot_id != source.expected_snapshot_id():
                 raise AppQueryError("导出来源快照不存在或身份不完整")
-            record = self._licenses.get_license(source.license_record_id)
-            reasons = license_reasons(record, "formal_research", used_on)
-            if (
-                record is None
-                or reasons
-                or (
-                    record.source != source.source
-                    or record.dataset_id != source.dataset_id
-                )
-            ):
+            constraint = _SOURCE_USAGE_CONSTRAINTS.get(source.source)
+            if constraint is None:
                 raise AppQueryError(
-                    "来源许可不允许本地研究导出",
-                    details={"source_snapshot_id": snapshot_id, "reasons": reasons},
+                    "来源使用约束未声明, 拒绝导出",
+                    details={
+                        "source_snapshot_id": snapshot_id,
+                        "source": source.source,
+                    },
                 )
-            license_ids.add(record.record_id)
-        return tuple(sorted(license_ids))
-
-    def _check_specimens(
-        self, snapshot: DatasetSnapshot
-    ) -> tuple[dict[str, object], ...]:
-        """
-        Verified exploration-only conclusions must not launder into exports.
-
-        Every specimen bound to an export source dataset gates the export and
-        travels in the receipt: same-dataset re-adjudications or sibling
-        categories cannot hide an older restriction behind a newer verdict.
-        A dataset without any specimen is unaffected: specimen evidence is
-        optional per-category evidence, never a prerequisite for other paths.
-        """
-        dataset_ids = {
-            source.dataset_id
-            for snapshot_id in snapshot.source_snapshot_ids
-            if (source := self._snapshots.get_snapshot(snapshot_id)) is not None
-        }
-        restrictions: list[dict[str, object]] = []
-        for dataset_id in sorted(dataset_ids):
-            for specimen in self._specimens.list_specimens(dataset_id=dataset_id):
-                gaps = list(specimen.gaps)
-                gaps.extend(self._dangling_reference_gaps(specimen))
-                restrictions.append(
-                    {
-                        "specimen_id": specimen.specimen_id,
-                        "category": specimen.category,
-                        "dataset_id": specimen.dataset_id,
-                        "verification_status": specimen.verification_status,
-                        "allowed_uses": list(specimen.allowed_uses),
-                        "gaps": list(dict.fromkeys(gaps)),
-                    }
-                )
-                if (
-                    specimen.verification_status == "verified"
-                    and EXPORT_USE not in specimen.allowed_uses
-                ):
-                    raise AppQueryError(
-                        "试样裁决不允许该用途导出",
-                        details={
-                            "specimen_id": specimen.specimen_id,
-                            "dataset_id": dataset_id,
-                            "allowed_uses": list(specimen.allowed_uses),
-                            "gaps": list(specimen.gaps),
-                        },
-                    )
-        return tuple(restrictions)
-
-    def _dangling_reference_gaps(self, specimen: DataSpecimen) -> list[str]:
-        """Surface cited evidence that no longer resolves, without rewriting."""
-        gaps: list[str] = []
-        for item in specimen.sources:
-            if (
-                item.provider_snapshot_id is not None
-                and self._snapshots.get_snapshot(item.provider_snapshot_id) is None
-            ):
-                gaps.append("SPECIMEN_SOURCE_SNAPSHOT_MISSING")
-        for record_id in specimen.license_record_ids:
-            if self._licenses.get_license(record_id) is None:
-                gaps.append("SPECIMEN_LICENSE_MISSING")
-        return gaps
+            usage_constraints[snapshot_id] = constraint
+        return usage_constraints

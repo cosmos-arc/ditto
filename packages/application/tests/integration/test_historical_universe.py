@@ -1,4 +1,4 @@
-"""Historical reads through actual immutable stores and current admission."""
+"""Historical reads through actual immutable stores and snapshot readiness."""
 
 from dataclasses import replace
 from datetime import date
@@ -6,13 +6,11 @@ from datetime import date
 import polars as pl
 import pytest
 from ditto_application.exceptions import AppQueryError
-from ditto_application.queries.field_admission import FieldAdmissionQuery
 from ditto_application.queries.historical_universe import (
     HistoricalUniverseQuery,
     HistoricalUniverseSources,
 )
-from ditto_data.catalog.certification_store import SQLiteCertificationStore
-from ditto_data.catalog.license_store import SQLiteDatasetLicenseStore
+from ditto_application.queries.snapshot_readiness import SnapshotReadinessQuery
 from ditto_data.catalog.provider_payload import (
     FilesystemProviderPayloadStore,
     ProviderPayloadReader,
@@ -25,7 +23,6 @@ from ditto_data.ingestion.partition_state_store import SQLitePartitionLifecycleS
 from ditto_platform.foundation import SQLiteClient, SQLitePool
 from packages.application.tests.integration.historical_universe_support import (
     VISIBLE,
-    certify_snapshots,
     history_frames,
     retain_history,
     seed_history,
@@ -48,12 +45,7 @@ def test_history_uses_retained_identity_and_refuses_incomplete_revision(
             SnapshotReadService(
                 snapshots, FilesystemProviderPayloadStore(tmp_path), lifecycle
             ),
-            FieldAdmissionQuery(
-                snapshots,
-                SQLiteDatasetLicenseStore(client),
-                SQLiteCertificationStore(client),
-                lifecycle,
-            ),
+            SnapshotReadinessQuery(snapshots, lifecycle),
         )
         kwargs = {
             "as_of": date(2026, 3, 10),
@@ -149,12 +141,7 @@ def test_retained_relationship_boundaries_and_future_knowledge(tmp_path, asset_k
             SnapshotReadService(
                 snapshots, FilesystemProviderPayloadStore(tmp_path), lifecycle
             ),
-            FieldAdmissionQuery(
-                snapshots,
-                SQLiteDatasetLicenseStore(client),
-                SQLiteCertificationStore(client),
-                lifecycle,
-            ),
+            SnapshotReadinessQuery(snapshots, lifecycle),
         )
 
         def resolve(day, cutoff):
@@ -219,7 +206,6 @@ def test_snapshot_chain_resolves_day_visible_member_and_pins_reads_once(tmp_path
             "stock_status",
             status,
             observed=datetime(2026, 1, 14, 12, tzinfo=UTC),
-            certify=False,
         )
         # Same effective key, revised suspension only knowable Jan 15 noon and
         # only present in a snapshot observed Jan 16: no local knowledge leak.
@@ -234,15 +220,6 @@ def test_snapshot_chain_resolves_day_visible_member_and_pins_reads_once(tmp_path
             "stock_status",
             revised,
             observed=datetime(2026, 1, 16, 4, tzinfo=UTC),
-            certify=False,
-        )
-        certify_snapshots(
-            client,
-            "stock_status",
-            (
-                (first, status, datetime(2026, 1, 14, 12, tzinfo=UTC)),
-                (second, revised, datetime(2026, 1, 16, 4, tzinfo=UTC)),
-            ),
         )
         snapshots = SQLiteProviderSnapshotStore(client)
         lifecycle = SQLitePartitionLifecycleStore(client)
@@ -251,12 +228,7 @@ def test_snapshot_chain_resolves_day_visible_member_and_pins_reads_once(tmp_path
         )
         query = HistoricalUniverseQuery(
             reader,
-            FieldAdmissionQuery(
-                snapshots,
-                SQLiteDatasetLicenseStore(client),
-                SQLiteCertificationStore(client),
-                lifecycle,
-            ),
+            SnapshotReadinessQuery(snapshots, lifecycle),
         )
         chain = HistoricalUniverseSources(
             "universe.cn.all",
@@ -280,8 +252,8 @@ def test_snapshot_chain_resolves_day_visible_member_and_pins_reads_once(tmp_path
         )
         assert after.frame["investable"].to_list() == [False]
         assert after.frame["exclusion_reasons"].to_list() == [["SUSPENDED"]]
-        assert after.evidence["admission"][1]["snapshot_id"] == second.snapshot_id
-        assert before.evidence["admission"][1]["snapshot_id"] == first.snapshot_id
+        assert after.evidence["readiness"][1]["snapshot_id"] == second.snapshot_id
+        assert before.evidence["readiness"][1]["snapshot_id"] == first.snapshot_id
         # Pinned payloads serve every projection: no extra reads per day.
         assert reader.reads == 3
         # A cutoff before any member was observed locally still fails closed.

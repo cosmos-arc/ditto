@@ -11,11 +11,8 @@ from typing import Any, cast
 import pytest
 from dishka import Provider, Scope, make_async_container, provide
 from dishka.integrations.fastapi import setup_dishka
-from ditto_application.queries.field_admission import (
-    FieldAdmissionQuery,
-    FieldAdmissionRequest,
-)
 from ditto_application.queries.metadata import MetadataQueryFacade
+from ditto_application.queries.snapshot_readiness import SnapshotReadinessQuery
 from ditto_apps.api.routes.metadata import router
 from ditto_apps.middleware import configure_exception_handlers
 from ditto_data.catalog.provider_payload import ProviderPayloadReader
@@ -121,7 +118,7 @@ def _full_date_payload(
 def _setup(
     tmp_path: Path,
     *,
-    admission: FieldAdmissionQuery | None = None,
+    readiness: SnapshotReadinessQuery | None = None,
     snapshots: ProviderSnapshotReader | None = None,
     source: str = "recorded",
     tracking_sessions: list[str] | None = None,
@@ -264,7 +261,7 @@ def _setup(
         def metadata(self) -> MetadataQueryFacade:
             return MetadataQueryFacade(
                 metadata_service=service,
-                admission=admission,
+                readiness=readiness,
                 snapshots=cast(ProviderSnapshotReader, snapshots_reader),
                 payloads=cast(ProviderPayloadReader, payloads_reader),
             )
@@ -741,65 +738,22 @@ def test_tracking_comparison_requires_complete_visible_total_return_series(
     pool.close()
 
 
-def _assert_shard_scoped_admission(requests: list[FieldAdmissionRequest]) -> None:
-    """Calendar shards are admitted per their own authoritative interval."""
-    calendar_requests = {
-        request.fields[0].snapshot_id: request
-        for request in requests
-        if request.purpose == "formal_research"
-        and request.fields[0].dataset_id == "calendar"
-    }
-    assert set(calendar_requests) == {
-        "snapshot:recorded:calendar:2025",
-        "snapshot:recorded:calendar:2026",
-    }
-    assert calendar_requests["snapshot:recorded:calendar:2025"].required_to.year == 2025
-    assert (
-        calendar_requests["snapshot:recorded:calendar:2026"].required_from.year == 2026
-    )
-
-
-@pytest.mark.integration
-def test_tracking_formal_result_requires_field_admission_and_matching_benchmark(
-    tmp_path: Path,
-) -> None:
-    """Display permission alone cannot produce a formal comparison."""
-    days = []
-    day = date(2026, 9, 30)
-    while len(days) < 253:
+def _trailing_sessions(count: int = 253, *, end: date = date(2026, 9, 30)) -> list[str]:
+    """Weekday sessions ending at ``end``, oldest first."""
+    days: list[str] = []
+    day = end
+    while len(days) < count:
         if day.weekday() < 5:
             days.append(day.isoformat())
         day -= timedelta(days=1)
     days.reverse()
-    formal_allowed = [False]
-    requests: list[FieldAdmissionRequest] = []
+    return days
 
-    def assess(request: FieldAdmissionRequest) -> SimpleNamespace:
-        requests.append(request)
-        return SimpleNamespace(
-            allowed=request.purpose == "display" or formal_allowed[0],
-            fields=(SimpleNamespace(reason_codes=("LICENSE_RESTRICTED",)),),
-        )
 
-    admission = cast(FieldAdmissionQuery, SimpleNamespace(assess=assess))
-    snapshots = cast(
-        ProviderSnapshotReader,
-        SimpleNamespace(
-            get_snapshot=lambda _id: SimpleNamespace(
-                dataset_id="etf_reference",
-                source="provider",
-                created_at=datetime(2026, 9, 30, 18, 30, tzinfo=UTC),
-            )
-        ),
-    )
-    app, pool, snapshot = _setup(
-        tmp_path,
-        admission=admission,
-        snapshots=snapshots,
-        source="provider",
-        tracking_sessions=days,
-    )
-    client = SQLiteClient(pool)
+def _seed_total_return_observations(
+    client: SQLiteClient, days: list[str], snapshot: str, *, unit_suffix: str = ""
+) -> None:
+    """One aligned 252-return series for instrument 2000001 from one source."""
     for index, observed_on in enumerate(days):
         for field, unit in (
             ("nav_total_return", "CNY:nav_total_return"),
@@ -814,13 +768,76 @@ def test_tracking_formal_result_requires_field_admission_and_matching_benchmark(
                 [
                     field,
                     str(100 * 1.01**index),
-                    unit,
+                    unit + unit_suffix,
                     observed_on,
                     observed_on,
                     snapshot,
                 ],
             )
     client.commit()
+
+
+def _assert_shard_scoped_readiness(
+    calls: list[tuple[str, str, date, date]],
+) -> None:
+    """Calendar shards are qualified per their own authoritative interval."""
+    calendar_windows = {
+        snapshot_id: (required_from, required_to)
+        for dataset_id, snapshot_id, required_from, required_to in calls
+        if dataset_id == "calendar"
+    }
+    assert set(calendar_windows) == {
+        "snapshot:recorded:calendar:2025",
+        "snapshot:recorded:calendar:2026",
+    }
+    assert calendar_windows["snapshot:recorded:calendar:2025"][1].year == 2025
+    assert calendar_windows["snapshot:recorded:calendar:2026"][0].year == 2026
+
+
+@pytest.mark.integration
+def test_tracking_formal_result_requires_ready_windows_and_matching_benchmark(
+    tmp_path: Path,
+) -> None:
+    """An unready reference window cannot produce a formal comparison."""
+    days = _trailing_sessions()
+    window_unready = [True]
+    calls: list[tuple[str, str, date, date]] = []
+
+    def snapshot_reasons(
+        dataset_id: str, snapshot_id: str, required_from: date, required_to: date
+    ) -> tuple[str, ...]:
+        calls.append((dataset_id, snapshot_id, required_from, required_to))
+        if (
+            dataset_id == "etf_reference"
+            and window_unready[0]
+            and (required_from, required_to)
+            == (date.fromisoformat(days[0]), date.fromisoformat(days[-1]))
+        ):
+            return ("SNAPSHOT_INCOMPLETE",)
+        return ()
+
+    readiness = cast(
+        SnapshotReadinessQuery, SimpleNamespace(snapshot_reasons=snapshot_reasons)
+    )
+    snapshots = cast(
+        ProviderSnapshotReader,
+        SimpleNamespace(
+            get_snapshot=lambda _id: SimpleNamespace(
+                dataset_id="etf_reference",
+                source="provider",
+                created_at=datetime(2026, 9, 30, 18, 30, tzinfo=UTC),
+            )
+        ),
+    )
+    app, pool, snapshot = _setup(
+        tmp_path,
+        readiness=readiness,
+        snapshots=snapshots,
+        source="provider",
+        tracking_sessions=days,
+    )
+    client = SQLiteClient(pool)
+    _seed_total_return_observations(client, days, snapshot)
     params = {
         "asof": "2026-09-30",
         "cutoff": "2026-09-30T19:00:00Z",
@@ -832,14 +849,16 @@ def test_tracking_formal_result_requires_field_admission_and_matching_benchmark(
         assert denied.status_code == 200, denied.text
         tracking = denied.json()["data"][0]["tracking"]
         assert tracking["status"] == "unavailable"
+        assert tracking["reason"] == "formal_data_unready"
         assert tracking["tracking_error_pct"] is None
-        assert any(
-            request.purpose == "formal_research"
-            and request.required_from == date.fromisoformat(days[0])
-            for request in requests
-        )
-        _assert_shard_scoped_admission(requests)
-        formal_allowed[0] = True
+        assert (
+            "etf_reference",
+            snapshot,
+            date.fromisoformat(days[0]),
+            date.fromisoformat(days[-1]),
+        ) in calls
+        _assert_shard_scoped_readiness(calls)
+        window_unready[0] = False
         unaligned = web.get("/api/v1/metadata/etf-candidates", params=params)
         _assert_rejection_evidence(
             unaligned.json()["data"][0]["tracking"],
@@ -947,20 +966,10 @@ def test_tracking_relation_source_mismatch_blocks_formal_result(
     tmp_path: Path,
 ) -> None:
     """A cross-source tracking relation can never reach formal comparison."""
-    days = []
-    day = date(2026, 9, 30)
-    while len(days) < 253:
-        if day.weekday() < 5:
-            days.append(day.isoformat())
-        day -= timedelta(days=1)
-    days.reverse()
-    admission = cast(
-        FieldAdmissionQuery,
-        SimpleNamespace(
-            assess=lambda _request: SimpleNamespace(
-                allowed=True, fields=(SimpleNamespace(reason_codes=()),)
-            )
-        ),
+    days = _trailing_sessions()
+    readiness = cast(
+        SnapshotReadinessQuery,
+        SimpleNamespace(snapshot_reasons=lambda *_args: ()),
     )
     snapshots = cast(
         ProviderSnapshotReader,
@@ -974,35 +983,15 @@ def test_tracking_relation_source_mismatch_blocks_formal_result(
     )
     app, pool, snapshot = _setup(
         tmp_path,
-        admission=admission,
+        readiness=readiness,
         snapshots=snapshots,
         source="provider",
         tracking_sessions=days,
     )
     client = SQLiteClient(pool)
-    for index, observed_on in enumerate(days):
-        for field, unit in (
-            ("nav_total_return", "CNY:nav_total_return:valuation=07:00Z"),
-            (
-                "benchmark_total_return",
-                "CNY:index_total_return:000300.SH:valuation=07:00Z",
-            ),
-        ):
-            client.execute(
-                """INSERT INTO etf_reference_observation
-                (instrument_id, field, value, unit, observed_on, published_at,
-                 effective_from, source, source_snapshot_id)
-                VALUES (2000001, ?, ?, ?, ?,
-                        '2026-09-30T18:00:00Z', ?, 'provider', ?)""",
-                [
-                    field,
-                    str(100 * 1.01**index),
-                    unit,
-                    observed_on,
-                    observed_on,
-                    snapshot,
-                ],
-            )
+    _seed_total_return_observations(
+        client, days, snapshot, unit_suffix=":valuation=07:00Z"
+    )
     client.execute(
         "UPDATE etf_reference_observation SET source = 'cross-source'"
         " WHERE instrument_id = 2000001 AND field = 'tracking_index'"
@@ -1021,7 +1010,7 @@ def test_tracking_relation_source_mismatch_blocks_formal_result(
         assert response.status_code == 200, response.text
         tracking = response.json()["data"][0]["tracking"]
         assert tracking["status"] == "unavailable"
-        assert tracking["reason"] == "source_or_display_admission_denied"
+        assert tracking["reason"] == "source_or_display_visibility_denied"
     pool.close()
 
 
@@ -1091,7 +1080,7 @@ def test_tracking_lineage_excludes_shards_outside_selected_window(
     tmp_path: Path,
 ) -> None:
     """Shards loaded for the 550-day lookback but outside the final 253
-    sessions neither enter the lineage nor require formal admission."""
+    sessions neither enter the lineage nor require formal readiness."""
     stale_year: list[str] = []
     day = date(2024, 9, 2)
     while day <= date(2024, 12, 31):
@@ -1350,24 +1339,25 @@ def test_unregistered_provider_snapshot_hides_reference_values(tmp_path: Path) -
         field = response.json()["data"][0]["fields"]["tracking_index"]
         assert field["value"] is None
         assert field["eligibility"] == "display_denied"
-        assert field["eligibility_reasons"] == ["ADMISSION_UNAVAILABLE"]
+        assert field["eligibility_reasons"] == ["READINESS_UNAVAILABLE"]
     pool.close()
 
 
 @pytest.mark.integration
-def test_registered_snapshot_requires_field_display_admission(tmp_path: Path) -> None:
-    """A registered but denied field cannot be displayed or sorted by value."""
-    allowed = {"value": False}
-    requests: list[FieldAdmissionRequest] = []
+def test_registered_snapshot_requires_ready_display_fields(tmp_path: Path) -> None:
+    """A registered but unready field cannot be displayed or sorted by value."""
+    ready = {"value": False}
+    calls: list[tuple[str, str, date, date]] = []
 
-    def assess(request: FieldAdmissionRequest) -> SimpleNamespace:
-        requests.append(request)
-        return SimpleNamespace(
-            allowed=allowed["value"],
-            fields=(SimpleNamespace(reason_codes=("LICENSE_RESTRICTED",)),),
-        )
+    def snapshot_reasons(
+        dataset_id: str, snapshot_id: str, required_from: date, required_to: date
+    ) -> tuple[str, ...]:
+        calls.append((dataset_id, snapshot_id, required_from, required_to))
+        return () if ready["value"] else ("SNAPSHOT_INCOMPLETE",)
 
-    admission = cast(FieldAdmissionQuery, SimpleNamespace(assess=assess))
+    readiness = cast(
+        SnapshotReadinessQuery, SimpleNamespace(snapshot_reasons=snapshot_reasons)
+    )
     snapshots = cast(
         ProviderSnapshotReader,
         SimpleNamespace(
@@ -1377,7 +1367,7 @@ def test_registered_snapshot_requires_field_display_admission(tmp_path: Path) ->
             )
         ),
     )
-    app, pool, snapshot = _setup(tmp_path, admission=admission, snapshots=snapshots)
+    app, pool, snapshot = _setup(tmp_path, readiness=readiness, snapshots=snapshots)
     params = {
         "asof": "2026-09-30",
         "cutoff": "2026-09-30T18:00:00Z",
@@ -1389,11 +1379,15 @@ def test_registered_snapshot_requires_field_display_admission(tmp_path: Path) ->
         field = blocked.json()["data"][0]["fields"]["tracking_index"]
         assert field["value"] is None
         assert field["eligibility"] == "display_denied"
-        assert field["eligibility_reasons"] == ["LICENSE_RESTRICTED"]
-        assert field["missing_reason"] == "display_admission_denied"
-        assert requests
-        assert all(request.purpose == "display" for request in requests)
-        allowed["value"] = True
+        assert field["eligibility_reasons"] == ["SNAPSHOT_INCOMPLETE"]
+        assert field["missing_reason"] == "display_data_unready"
+        assert (
+            "etf_reference",
+            snapshot,
+            date(2020, 1, 1),
+            date(2020, 1, 1),
+        ) in calls
+        ready["value"] = True
         admitted = web.get("/api/v1/metadata/etf-candidates", params=params)
         assert admitted.status_code == 200, admitted.text
         field = admitted.json()["data"][0]["fields"]["tracking_index"]

@@ -528,7 +528,7 @@ def test_paper_handoff_requires_the_calendar_next_session() -> None:
 
 
 @pytest.mark.pit
-def test_paper_handoff_fact_admission_excludes_future_publication() -> None:
+def test_paper_handoff_fact_visibility_excludes_future_publication() -> None:
     cutoff = datetime.fromisoformat("2026-09-02T08:00:00+00:00")
     field = ETFField(
         value="none",
@@ -551,8 +551,8 @@ def test_paper_handoff_fact_admission_excludes_future_publication() -> None:
     )
     metadata = MagicMock(spec=MetadataQueryFacade)
     metadata.list_etf_candidates.return_value = [candidate]
-    admission = MagicMock()
-    admission.assess.return_value = SimpleNamespace(allowed=True)
+    readiness = MagicMock()
+    readiness.snapshot_reasons.return_value = ()
     snapshots = MagicMock()
     snapshots.get_snapshot.return_value = SimpleNamespace(
         snapshot_id="snapshot:recorded:market",
@@ -591,7 +591,7 @@ def test_paper_handoff_fact_admission_excludes_future_publication() -> None:
     )
     facts = LiveETFPaperHandoffFacts(
         metadata=metadata,
-        admission=admission,
+        readiness=readiness,
         snapshots=snapshots,
         payloads=payloads,
         ledger=ledger,

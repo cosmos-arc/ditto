@@ -19,14 +19,13 @@ from ditto_application.processes.selection.facade import (
 from ditto_application.processes.selection.run_industry_and_security_selection import (
     RunIndustryAndSecuritySelection,
 )
-from ditto_application.queries.field_admission import FieldAdmissionQuery
 from ditto_kernel.identity import InstrumentId
 from ditto_strategy.industry_rotation.contracts import IndustryRotationSnapshot
 from ditto_strategy.industry_rotation.service import IndustryRotationService
 from ditto_strategy.selection.contracts import SelectionRun
 from ditto_strategy.selection.pipeline import SelectionPipeline
-from packages.application.tests.integration.field_admission_support import (
-    certified_selection,
+from packages.application.tests.integration.snapshot_readiness_support import (
+    ready_selection,
 )
 
 _AS_OF = datetime(2026, 8, 31, 7, 0, tzinfo=UTC)
@@ -97,9 +96,7 @@ def _request() -> CreateSelectionRunRequest:
     )
 
 
-def _facade(
-    writer: _Writer, admission: FieldAdmissionQuery, history
-) -> SelectionWorkspaceFacade:
+def _facade(writer: _Writer, readiness, history) -> SelectionWorkspaceFacade:
     return SelectionWorkspaceFacade(
         RunIndustryAndSecuritySelection(
             rotation_service=IndustryRotationService(),
@@ -107,7 +104,7 @@ def _facade(
             rotation_writer=writer,
             run_writer=writer,
         ),
-        admission=admission,
+        readiness=readiness,
         historical_universe=history,
     )
 
@@ -115,8 +112,8 @@ def _facade(
 def test_facade_maps_typed_etf_request_to_exact_process_receipt() -> None:
     writer = _Writer()
 
-    with certified_selection(_request()) as (admission, request, history):
-        receipt = _facade(writer, admission, history).create(request)
+    with ready_selection(_request()) as (readiness, request, history):
+        receipt = _facade(writer, readiness, history).create(request)
 
     assert receipt.selection_run.asset_kind == "etf"
     assert [item.instrument_id for item in receipt.selection_run.candidates] == [
@@ -133,9 +130,9 @@ def test_facade_maps_domain_validation_to_application_process_error() -> None:
         factor_weights=(SelectionFactorWeightDraft("momentum", 0.5),),
     )
 
-    with certified_selection(request) as (admission, bound, history):
+    with ready_selection(request) as (readiness, bound, history):
         with pytest.raises(AppProcessError, match="weights"):
-            _facade(writer, admission, history).create(
+            _facade(writer, readiness, history).create(
                 replace(bound, selection_spec=invalid_spec)
             )
 
@@ -145,12 +142,12 @@ def test_facade_maps_domain_validation_to_application_process_error() -> None:
 @pytest.mark.pit
 def test_selection_keeps_delisted_instrument_as_explicit_exclusion():
     writer = _Writer()
-    with certified_selection(_request(), delist_on=_AS_OF.date()) as (
-        admission,
+    with ready_selection(_request(), delist_on=_AS_OF.date()) as (
+        readiness,
         request,
         history,
     ):
-        facade = _facade(writer, admission, history)
+        facade = _facade(writer, readiness, history)
         receipt = facade.create(request)
         assert receipt.selection_run.candidates == ()
         assert len(receipt.selection_run.exclusions) == 1

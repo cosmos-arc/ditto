@@ -43,7 +43,6 @@ from ditto_application.queries.etf_paper_execution_facts import (
     LiveETFPaperExecutionFacts,
 )
 from ditto_application.queries.etf_paper_handoff_facts import LiveETFPaperHandoffFacts
-from ditto_application.queries.field_admission import FieldAdmissionQuery
 from ditto_application.queries.history_comparison import GetHistoryComparisonQuery
 from ditto_application.queries.metadata import MetadataQueryFacade
 from ditto_application.queries.model_history import GetModelHistoryQuery
@@ -64,6 +63,7 @@ from ditto_application.queries.portfolio_history import (
 )
 from ditto_application.queries.portfolio_scenario import PreviewPortfolioScenarioQuery
 from ditto_application.queries.signal import SignalQueryFacade
+from ditto_application.queries.snapshot_readiness import SnapshotReadinessQuery
 from ditto_application.queries.strategy import StrategyQueryFacade
 from ditto_application.queries.technical_analysis import TechnicalAnalysisSourcePort
 from ditto_application.queries.technical_analysis_source import (
@@ -108,15 +108,15 @@ class AppPortfolioQueryProvider(Provider):
     def etf_paper_handoff_facts(
         self,
         metadata: MetadataQueryFacade,
-        admission: FieldAdmissionQuery,
+        readiness: SnapshotReadinessQuery,
         snapshots: ProviderSnapshotReader,
         payloads: ProviderPayloadReader,
         ledger: AccountLedgerQuery,
     ) -> LiveETFPaperHandoffFacts:
-        """Resolve current, promotion-admitted ETF and PAPER account facts."""
+        """Resolve current, visible ETF and PAPER account facts."""
         return LiveETFPaperHandoffFacts(
             metadata=metadata,
-            admission=admission,
+            readiness=readiness,
             snapshots=snapshots,
             payloads=payloads,
             ledger=ledger,
@@ -142,15 +142,15 @@ class AppPortfolioQueryProvider(Provider):
     def etf_paper_execution_facts(
         self,
         metadata: MetadataQueryFacade,
-        admission: FieldAdmissionQuery,
+        readiness: SnapshotReadinessQuery,
         snapshots: ProviderSnapshotReader,
         payloads: ProviderPayloadReader,
         ledger: AccountLedgerQuery,
     ) -> LiveETFPaperExecutionFacts:
-        """Provide the retained and admitted ETF Paper fact reader."""
+        """Provide the retained and visible ETF Paper fact reader."""
         return LiveETFPaperExecutionFacts(
             metadata=metadata,
-            admission=admission,
+            readiness=readiness,
             snapshots=snapshots,
             payloads=payloads,
             bars=ProviderPayloadTechnicalAnalysisSource(

@@ -1,4 +1,4 @@
-"""Admitted ETF Paper facts retain both date identities and reject future rules."""
+"""Visible ETF Paper facts retain both date identities and reject future rules."""
 
 from __future__ import annotations
 
@@ -53,7 +53,7 @@ def _candidate(day: str, cutoff: datetime, snapshot: str) -> ETFCandidate:
                 published_at=cutoff.isoformat(),
                 source="recorded",
                 source_snapshot_id=snapshot,
-                eligibility="PAPER_ADMITTED",
+                eligibility="display_allowed",
                 missing_reason=None,
             )
             for name, value in values.items()
@@ -72,8 +72,8 @@ def _facts() -> tuple[LiveETFPaperExecutionFacts, MagicMock, MagicMock]:
     ]
     metadata.list_trading_days.return_value = ["2026-09-02", "2026-09-03"]
     metadata.resolve_source_ticker.return_value = "510300.SH"
-    admission = MagicMock()
-    admission.assess.return_value = SimpleNamespace(allowed=True)
+    readiness = MagicMock()
+    readiness.snapshot_reasons.return_value = ()
     snapshots = MagicMock()
     snapshots.get_snapshot.side_effect = lambda snapshot_id: SimpleNamespace(
         snapshot_id=snapshot_id,
@@ -140,7 +140,7 @@ def _facts() -> tuple[LiveETFPaperExecutionFacts, MagicMock, MagicMock]:
     return (
         LiveETFPaperExecutionFacts(
             metadata=metadata,
-            admission=admission,
+            readiness=readiness,
             snapshots=snapshots,
             payloads=payloads,
             bars=bars,

@@ -8,7 +8,6 @@ from datetime import date, datetime
 from typing import Literal
 from zoneinfo import ZoneInfo
 
-from ditto_data.catalog.field_evidence import consumer_input_digest
 from ditto_kernel.identity import InstrumentId
 from ditto_strategy.errors import StrategySpecError
 from ditto_strategy.industry_rotation.contracts import (
@@ -27,20 +26,13 @@ from ditto_strategy.selection.contracts import (
 
 from ditto_application.exceptions import AppProcessError, AppQueryError
 from ditto_application.processes.selection.admission import (
-    assess_selection_fields,
+    assess_selection_readiness,
     missing_field,
     observed_fields,
-    selection_field_payload,
 )
 from ditto_application.processes.selection.run_industry_and_security_selection import (
     RunIndustryAndSecuritySelection,
     RunIndustryAndSecuritySelectionRequest,
-)
-from ditto_application.queries.field_admission import (
-    FieldAdmissionQuery,
-    FieldAdmissionReport,
-    FieldAdmissionRequest,
-    FieldRequirement,
 )
 from ditto_application.queries.historical_universe import (
     HistoricalUniverseQuery,
@@ -50,6 +42,12 @@ from ditto_application.queries.historical_universe import (
 from ditto_application.queries.selection_views import (
     SelectionWorkspaceReceiptView,
     to_selection_workspace_receipt_view,
+)
+from ditto_application.queries.snapshot_readiness import (
+    FieldRequirement,
+    SnapshotReadinessQuery,
+    SnapshotReadinessReport,
+    SnapshotReadinessRequest,
 )
 
 __all__ = [
@@ -315,35 +313,26 @@ class SelectionWorkspaceFacade:
         self,
         process: RunIndustryAndSecuritySelection,
         *,
-        admission: FieldAdmissionQuery,
+        readiness: SnapshotReadinessQuery,
         historical_universe: HistoricalUniverseQuery | None = None,
     ) -> None:
         self._process = process
-        self._admission = admission
+        self._readiness = readiness
         self._historical_universe = historical_universe
 
-    def assess_admission(
-        self, request: CreateSelectionRunRequest, *, instrument_id: int | None = None
-    ) -> FieldAdmissionReport:
-        """Preview the same field and historical universe gates used by create."""
+    def assess_data_readiness(
+        self, request: CreateSelectionRunRequest
+    ) -> SnapshotReadinessReport:
+        """Preview the same snapshot and historical universe gates used by create."""
         if (
             not request.data_fields
             or request.data_from is None
             or request.data_to is None
         ):
-            return FieldAdmissionReport(
+            return SnapshotReadinessReport(
                 False,
-                "formal_research",
                 (missing_field("data_fields", "CONSUMER_BINDING_MISSING"),),
             )
-        instrument_ids = tuple(int(item.instrument_id) for item in request.instruments)
-        if instrument_id is not None:
-            if instrument_id not in instrument_ids:
-                raise AppProcessError(
-                    "证券不在输入包中",
-                    details={"reason": "invalid_admission_instrument"},
-                )
-            instrument_ids = (instrument_id,)
         history_failure = ()
         qualified_sources: frozenset[str] = frozenset()
         try:
@@ -358,43 +347,33 @@ class SelectionWorkspaceFacade:
                     for item in historical_report.fields
                     if item.reason_codes
                 )
-                if isinstance(historical_report, FieldAdmissionReport)
+                if isinstance(historical_report, SnapshotReadinessReport)
                 else (missing_field("universe_sources", str(error)),)
             )
         try:
-            report = assess_selection_fields(
-                self._admission,
-                FieldAdmissionRequest(
+            report = assess_selection_readiness(
+                self._readiness,
+                SnapshotReadinessRequest(
                     fields=tuple(
-                        replace(
-                            item,
-                            consumer_input_hash=consumer_input_digest(
-                                selection_field_payload(request, item.consumer_field)
-                            ),
-                        )
+                        item
                         for item in request.data_fields
                         if item.consumer_field in _consumed_fields(request)
                     ),
-                    instrument_ids=instrument_ids,
                     required_from=request.data_from,
                     required_to=request.data_to,
-                    knowledge_cutoff=request.knowledge_cutoff,
-                    publication_cutoff=request.publication_cutoff,
-                    purpose="formal_research",
                 ),
                 consumed_fields=_consumed_fields(request),
-                instrument_ids=instrument_ids,
                 snapshot_bindings=_snapshot_bindings(request),
                 qualified_selection_sources=qualified_sources,
             )
             return replace(
                 report,
-                allowed=report.allowed and not history_failure,
+                ready=report.ready and not history_failure,
                 fields=(*report.fields, *history_failure),
             )
         except AppQueryError as exc:
             raise AppProcessError(
-                str(exc), details={"reason": "invalid_data_admission_request"}
+                str(exc), details={"reason": "invalid_data_readiness_request"}
             ) from exc
 
     def create(
@@ -413,15 +392,15 @@ class SelectionWorkspaceFacade:
                 str(exc),
                 details={"reason": "invalid_selection_request", **details},
             ) from exc
-        admission = self.assess_admission(request)
-        if not admission.allowed:
+        admission = self.assess_data_readiness(request)
+        if not admission.ready:
             reasons = sorted(
                 {reason for item in admission.fields for reason in item.reason_codes}
             )
             raise AppProcessError(
-                "数据准入未通过:" + ", ".join(reasons),
+                "数据不完整或不可消费:" + ", ".join(reasons),
                 details={
-                    "reason": "SELECTION_DATA_ADMISSION_BLOCKED",
+                    "reason": "SELECTION_DATA_INCOMPLETE",
                     "reason_codes": reasons,
                 },
             )

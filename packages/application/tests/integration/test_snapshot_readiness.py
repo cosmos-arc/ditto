@@ -1,7 +1,8 @@
-"""Field admission against real immutable SQLite evidence ledgers."""
+"""Snapshot readiness against real immutable SQLite evidence ledgers."""
 
 from dataclasses import replace
 from datetime import UTC, date, datetime
+from types import SimpleNamespace
 from typing import cast
 
 import pytest
@@ -10,10 +11,7 @@ from ditto_application.processes.selection.facade import SelectionWorkspaceFacad
 from ditto_application.processes.selection.run_industry_and_security_selection import (
     RunIndustryAndSecuritySelection,
 )
-from ditto_application.queries.field_admission import (
-    FieldAdmissionQuery,
-    FieldRequirement,
-)
+from ditto_application.queries.snapshot_readiness import FieldRequirement
 from ditto_platform.foundation import SQLitePool
 from ditto_strategy.industry_rotation.service import IndustryRotationService
 from ditto_strategy.selection.pipeline import SelectionPipeline
@@ -21,71 +19,60 @@ from ditto_strategy.storage.sqlite.industry_rotation_store import (
     SQLiteIndustryRotationStore,
 )
 from ditto_strategy.storage.sqlite.selection_run_store import SQLiteSelectionRunStore
-from packages.application.tests.integration.field_admission_support import (
-    certified_selection,
-    field_evidence,
+from packages.application.tests.integration.snapshot_readiness_support import (
+    completed_evidence,
+    ready_selection,
 )
 
 _DAY = date(2026, 9, 18)
 _VISIBLE = datetime(2026, 9, 18, 9, tzinfo=UTC)
 
 
-@pytest.fixture
-def evidence():
-    with field_evidence() as value:
-        yield value
+@pytest.mark.integration
+def test_completed_snapshot_with_retained_payload_is_ready():
+    with completed_evidence() as (query, request, _):
+        result = query.assess(request)
+        assert result.ready
+        assert result.fields[0].reason_codes == ()
+        assert query.assess(request) == result
 
 
-def test_requested_field_allows_then_revocation_blocks_without_deleting_history(
-    evidence,
-):
-    query, request, reports, report = evidence
-    before = reports.list_events(report.report_id)
-    result = query.assess(request)
-    assert result.allowed
-    assert result.fields[0].license_record_id == report.evidence.license_record_ids[0]
-    assert query.assess(request) == result
-    assert reports.list_events(report.report_id) == before
-    reports.revoke_report(
-        report.report_id,
-        revoked_by="human",
-        revoked_at=_VISIBLE,
-        reason="scope withdrawn",
-    )
-    assert not query.assess(request).allowed
-    assert reports.get_report(report.report_id) == report
+@pytest.mark.integration
+@pytest.mark.parametrize(
+    ("kwargs", "reason"),
+    [
+        ({"complete": False}, "SNAPSHOT_INCOMPLETE"),
+        ({"payload_retained": False}, "SNAPSHOT_PAYLOAD_MISSING"),
+        (
+            {"request_start": date(2026, 9, 17), "request_end": date(2026, 9, 17)},
+            "SNAPSHOT_COVERAGE_MISSING",
+        ),
+    ],
+)
+def test_incomplete_evidence_blocks_consumption(kwargs, reason):
+    with completed_evidence(**kwargs) as (query, request, _):
+        result = query.assess(request)
+        assert not result.ready
+        assert result.fields[0].reason_codes == (reason,)
 
 
-@pytest.mark.pit
-def test_future_visibility_is_blocked_but_backfilled_creation_time_is_not_availability(
-    evidence,
-):
-    query, request, _, _ = evidence
-    early = replace(request, knowledge_cutoff=datetime(2026, 9, 18, 8, tzinfo=UTC))
-    result = query.assess(early)
-    assert not result.allowed
-    assert "TIME_NOT_VISIBLE" in result.fields[0].reason_codes
-    assert query.assess(request).allowed
-
-
-def test_unused_unknown_field_does_not_block_and_scope_cannot_be_forged(evidence):
-    query, request, _, _ = evidence
-    unknown = FieldRequirement("stock_daily", "unknown", request.fields[0].snapshot_id)
-    result = query.assess(replace(request, fields=(*request.fields, unknown)))
-    assert not result.allowed
-    assert result.fields[0].allowed_uses
-    assert query.assess(request).allowed
-    assert not query.assess(replace(request, instrument_ids=(600001,))).allowed
-    assert not query.assess(
-        replace(
+@pytest.mark.integration
+def test_dataset_mismatch_and_missing_snapshot_fail_closed():
+    with completed_evidence() as (query, request, _):
+        mismatched = replace(
             request,
-            fields=(replace(request.fields[0], consumer_field="instruments.is_st"),),
+            fields=(replace(request.fields[0], dataset_id="stock_status"),),
         )
-    ).allowed
+        assert query.assess(mismatched).fields[0].reason_codes == ("SNAPSHOT_CONFLICT",)
+        absent = replace(
+            request,
+            fields=(replace(request.fields[0], snapshot_id="snapshot:none"),),
+        )
+        assert query.assess(absent).fields[0].reason_codes == ("SNAPSHOT_MISSING",)
 
 
-def _gate_facade(query: FieldAdmissionQuery, history=None):
-    """Real admission gate over isolated in-memory run stores."""
+def _gate_facade(query, history=None):
+    """Real readiness gate over isolated in-memory run stores."""
     pool = SQLitePool(":memory:")
     runs = SQLiteSelectionRunStore(pool)
     rotations = SQLiteIndustryRotationStore(pool)
@@ -98,41 +85,41 @@ def _gate_facade(query: FieldAdmissionQuery, history=None):
             rotation_writer=rotations,
             run_writer=runs,
         ),
-        admission=query,
+        readiness=query,
         historical_universe=history,
     )
     return facade, runs, pool
 
 
-def test_selection_cannot_save_a_run_without_complete_consumed_field_bindings(evidence):
-    query, _, _, _ = evidence
-    facade, runs, pool = _gate_facade(query)
-    gated = replace(selection_request(), data_from=_DAY, data_to=_DAY)
-    with pytest.raises(AppProcessError, match="准入"):
-        facade.create(gated)
-    assert runs.list_by_spec("admission-test") == []
-    pool.close()
+def test_selection_cannot_save_a_run_without_complete_consumed_field_bindings():
+    with completed_evidence() as (query, _, _):
+        facade, runs, pool = _gate_facade(query)
+        gated = replace(selection_request(), data_from=_DAY, data_to=_DAY)
+        with pytest.raises(AppProcessError, match="数据不完整"):
+            facade.create(gated)
+        assert runs.list_by_spec("admission-test") == []
+        pool.close()
 
 
-def test_request_without_data_binding_is_rejected(evidence):
-    """Unreleased legacy requests must not bypass formal admission."""
-    query, _, _, _ = evidence
-    facade, runs, pool = _gate_facade(query)
-    with pytest.raises(AppProcessError, match="准入"):
-        facade.create(selection_request())
-    assert runs.list_by_spec("admission-test") == []
-    pool.close()
+def test_request_without_data_binding_is_rejected():
+    """Requests without server-side bindings must not bypass the gate."""
+    with completed_evidence() as (query, _, _):
+        facade, runs, pool = _gate_facade(query)
+        with pytest.raises(AppProcessError, match="数据不完整"):
+            facade.create(selection_request())
+        assert runs.list_by_spec("admission-test") == []
+        pool.close()
 
 
-def test_admission_binds_each_stage_to_its_own_declared_sources():
+def test_readiness_binds_each_stage_to_its_own_declared_sources():
     """A snapshot declared only for rotation cannot serve selection inputs."""
-    with certified_selection(selection_request()) as (query, request, history):
+    with ready_selection(selection_request()) as (query, request, history):
         facade, _, pool = _gate_facade(query, history)
-        report = facade.assess_admission(
+        report = facade.assess_data_readiness(
             replace(request, selection_source_snapshot_ids=("unbound",))
         )
         pool.close()
-    assert not report.allowed
+    assert not report.ready
     selection_field = next(
         item for item in report.fields if item.consumer_field.startswith("instruments.")
     )
@@ -143,11 +130,11 @@ def test_admission_binds_each_stage_to_its_own_declared_sources():
     assert "SNAPSHOT_CONFLICT" not in rotation_field.reason_codes
 
 
-def test_admission_rejects_stage_sources_no_binding_claims():
+def test_readiness_rejects_stage_sources_no_binding_claims():
     """A declared source no consumed field claims cannot enter saved lineage."""
-    with certified_selection(selection_request()) as (query, request, history):
+    with ready_selection(selection_request()) as (query, request, history):
         facade, _, pool = _gate_facade(query, history)
-        report = facade.assess_admission(
+        report = facade.assess_data_readiness(
             replace(
                 request,
                 rotation_source_snapshot_ids=(
@@ -157,20 +144,20 @@ def test_admission_rejects_stage_sources_no_binding_claims():
             )
         )
         pool.close()
-    assert not report.allowed
+    assert not report.ready
     unclaimed = [
         item for item in report.fields if "SNAPSHOT_UNBOUND" in item.reason_codes
     ]
     assert [item.field for item in unclaimed] == ["extra-source"]
 
 
-def test_admission_tracks_stage_usage_by_identity_not_shared_contents():
+def test_readiness_tracks_stage_usage_by_identity_not_shared_contents():
     """Identical declared sets must not merge the two stages' usage."""
-    with certified_selection(selection_request()) as (query, request, history):
-        certified = request.rotation_source_snapshot_ids[0]
-        shared = (certified, "extra")
+    with ready_selection(selection_request()) as (query, request, history):
+        completed = request.rotation_source_snapshot_ids[0]
+        shared = (completed, "extra")
         facade, _, pool = _gate_facade(query, history)
-        report = facade.assess_admission(
+        report = facade.assess_data_readiness(
             replace(
                 request,
                 rotation_source_snapshot_ids=shared,
@@ -185,11 +172,11 @@ def test_admission_tracks_stage_usage_by_identity_not_shared_contents():
             )
         )
         pool.close()
-    assert not report.allowed
+    assert not report.ready
     unclaimed = {
         item.field for item in report.fields if "SNAPSHOT_UNBOUND" in item.reason_codes
     }
-    assert unclaimed == {certified, "extra"}
+    assert unclaimed == {completed, "extra"}
 
 
 def selection_request():
@@ -254,52 +241,17 @@ def selection_request():
     )
 
 
-@pytest.mark.parametrize(
-    ("display", "compute", "purpose", "allowed"),
-    [
-        ("restricted", "allowed", "display", False),
-        ("prohibited", "allowed", "exploration", False),
-        ("allowed", "restricted", "display", True),
-        ("allowed", "restricted", "formal_research", False),
-    ],
-)
-def test_purposes_enforce_the_actual_license(display, compute, purpose, allowed):
-    with field_evidence(display=display, compute=compute) as (query, request, _, _):
-        result = query.assess(replace(request, purpose=purpose))
-        assert result.allowed is allowed
-        if not allowed:
-            assert "LICENSE_RESTRICTED" in result.fields[0].reason_codes
-
-
-def test_license_validity_is_use_time_not_historical_data_interval():
-    historical = datetime(2015, 1, 5, 9, tzinfo=UTC)
-    with field_evidence(day=historical.date(), visible=historical) as (
-        query,
-        request,
-        _,
-        _,
-    ):
-        assert query.assess(request).allowed
-    with field_evidence(effective_to=_DAY) as (query, request, _, _):
-        assert not query.assess(request).allowed
-        assert (
-            "LICENSE_INTERVAL_MISSING" in query.assess(request).fields[0].reason_codes
-        )
-
-
 @pytest.mark.integration
 @pytest.mark.pit
 def test_replay_gate_rejects_datasets_without_instrument_trade_date_identity():
-    with field_evidence() as (admission, request, _, _):
-        from types import SimpleNamespace
-
+    with completed_evidence() as (readiness, request, _):
         from ditto_application.queries.provider_snapshot import (
             ProviderSnapshotQuery,
         )
         from ditto_data.catalog.snapshot_reader import SnapshotReadService
 
         query = ProviderSnapshotQuery(
-            cast(SnapshotReadService, SimpleNamespace()), admission
+            cast(SnapshotReadService, SimpleNamespace()), readiness
         )
         mismatched = replace(
             request,
@@ -309,4 +261,4 @@ def test_replay_gate_rejects_datasets_without_instrument_trade_date_identity():
         with pytest.raises(AppQueryError, match="instrument- and trade-date-keyed"):
             query.replay(mismatched)
 
-        assert admission.assess(request).allowed
+        assert readiness.assess(request).ready

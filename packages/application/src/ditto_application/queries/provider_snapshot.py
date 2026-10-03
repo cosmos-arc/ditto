@@ -1,6 +1,7 @@
 """Application entrypoint for retained provider evidence and qualified replay."""
 
 from dataclasses import dataclass
+from datetime import date, datetime
 
 import polars as pl
 from ditto_data.catalog.metadata import default_dataset_metadata
@@ -11,21 +12,46 @@ from ditto_data.catalog.snapshot_reader import (
 )
 
 from ditto_application.exceptions import AppQueryError
-from ditto_application.queries.field_admission import (
-    FieldAdmissionQuery,
-    FieldAdmissionReport,
-    FieldAdmissionRequest,
+from ditto_application.queries.snapshot_readiness import (
+    FieldRequirement,
+    SnapshotReadinessQuery,
+    SnapshotReadinessReport,
+    SnapshotReadinessRequest,
 )
 
-__all__ = ["ProviderSnapshotQuery", "SnapshotReplay"]
+__all__ = [
+    "ProviderSnapshotQuery",
+    "SnapshotReplay",
+    "SnapshotReplayRequest",
+]
 
 
 @dataclass(frozen=True, slots=True)
 class SnapshotReplay:
-    """Pinned read result with the exact certification and rule identities used."""
+    """Pinned read result with the exact readiness findings used."""
 
-    admission: FieldAdmissionReport
+    readiness: SnapshotReadinessReport
     frames: dict[str, pl.DataFrame]
+
+
+@dataclass(frozen=True, slots=True)
+class SnapshotReplayRequest:
+    """Pinned replay projection: exact fields, instruments, interval, cutoff."""
+
+    fields: tuple[FieldRequirement, ...]
+    instrument_ids: tuple[int, ...]
+    required_from: date
+    required_to: date
+    knowledge_cutoff: datetime
+
+    def __post_init__(self) -> None:
+        """Fail closed on ambiguous or empty replay scopes."""
+        if self.required_from > self.required_to:
+            raise AppQueryError("snapshot replay interval is reversed")
+        if not self.instrument_ids or not self.fields:
+            raise AppQueryError("snapshot replay requires fields and instruments")
+        if self.knowledge_cutoff.tzinfo is None:
+            raise AppQueryError("snapshot replay requires a knowledge cutoff")
 
 
 class ProviderSnapshotQuery:
@@ -34,12 +60,12 @@ class ProviderSnapshotQuery:
     def __init__(
         self,
         reader: SnapshotReadService,
-        admission: FieldAdmissionQuery,
+        readiness: SnapshotReadinessQuery,
         *,
         ticker_resolver: SourceTickerResolver | None = None,
     ) -> None:
         self._reader = reader
-        self._admission = admission
+        self._readiness = readiness
         self._ticker_resolver = ticker_resolver
 
     def read_for_audit(self, snapshot_id: str) -> SnapshotContents:
@@ -49,17 +75,23 @@ class ProviderSnapshotQuery:
         except ValueError as error:
             raise AppQueryError(str(error)) from error
 
-    def replay(self, request: FieldAdmissionRequest) -> SnapshotReplay:
-        """Read only the approved fields, instruments and interval at pinned cutoffs."""
+    def replay(self, request: SnapshotReplayRequest) -> SnapshotReplay:
+        """Read only the ready fields, instruments and interval at pinned cutoffs."""
         if any(
             _replay_identity_unsupported(item.dataset_id) for item in request.fields
         ):
             raise AppQueryError(
                 "snapshot replay requires instrument- and trade-date-keyed datasets",
             )
-        report = self._admission.assess(request)
-        if not report.allowed:
-            raise AppQueryError("snapshot replay field admission failed", report=report)
+        report = self._readiness.assess(
+            SnapshotReadinessRequest(
+                fields=request.fields,
+                required_from=request.required_from,
+                required_to=request.required_to,
+            )
+        )
+        if not report.ready:
+            raise AppQueryError("snapshot replay data is incomplete", report=report)
         frames: dict[str, pl.DataFrame] = {}
         for snapshot_id in dict.fromkeys(item.snapshot_id for item in request.fields):
             columns = tuple(
@@ -80,7 +112,7 @@ class ProviderSnapshotQuery:
 
 
 def _replay_identity_unsupported(dataset_id: str) -> bool:
-    """Only this projector is instrument/date-shaped; admission is not restricted."""
+    """Only this projector is instrument/date-shaped; readiness is not restricted."""
     metadata = default_dataset_metadata().get(dataset_id)
     return (
         metadata is None

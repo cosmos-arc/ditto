@@ -2329,30 +2329,6 @@
         "title": "APIResponse[RunResponse]",
         "type": "object"
       },
-      "APIResponse_SelectionAdmissionResponse_": {
-        "properties": {
-          "data": {
-            "$ref": "#/components/schemas/SelectionAdmissionResponse",
-            "description": "响应数据"
-          },
-          "pagination": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/PaginationResponse"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "分页信息(可选)"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "title": "APIResponse[SelectionAdmissionResponse]",
-        "type": "object"
-      },
       "APIResponse_SelectionRunDiffResponse_": {
         "properties": {
           "data": {
@@ -7168,18 +7144,14 @@
         "type": "object"
       },
       "AssembledSelectionRunResponse": {
-        "description": "Server-assembled exact facts plus the create-run admission preview.",
+        "description": "Server-assembled exact facts the create-run endpoint would consume.",
         "properties": {
-          "admission": {
-            "$ref": "#/components/schemas/SelectionAdmissionResponse"
-          },
           "request": {
             "$ref": "#/components/schemas/CreateSelectionRunBody"
           }
         },
         "required": [
-          "request",
-          "admission"
+          "request"
         ],
         "title": "AssembledSelectionRunResponse",
         "type": "object"
@@ -11028,7 +11000,7 @@
       },
       "CreateSelectionRunBody": {
         "additionalProperties": false,
-        "description": "One exact industry-rotation and stock/ETF selection mutation.",
+        "description": "Server-assembled facts echoed for preview; not a client write surface.",
         "properties": {
           "as_of": {
             "format": "date-time",
@@ -25442,44 +25414,6 @@
         "title": "ScenarioRiskPreviewResponse",
         "type": "object"
       },
-      "SelectionAdmissionResponse": {
-        "description": "Read-only preview of the server's mandatory create-run gate.",
-        "properties": {
-          "allowed": {
-            "title": "Allowed",
-            "type": "boolean"
-          },
-          "fields": {
-            "items": {
-              "$ref": "#/components/schemas/SelectionFieldAdmissionResponse"
-            },
-            "title": "Fields",
-            "type": "array"
-          },
-          "purpose": {
-            "enum": [
-              "display",
-              "exploration",
-              "formal_research",
-              "promotion_paper"
-            ],
-            "title": "Purpose",
-            "type": "string"
-          },
-          "rule_version": {
-            "title": "Rule Version",
-            "type": "string"
-          }
-        },
-        "required": [
-          "allowed",
-          "purpose",
-          "fields",
-          "rule_version"
-        ],
-        "title": "SelectionAdmissionResponse",
-        "type": "object"
-      },
       "SelectionCandidateResponse": {
         "description": "One selected candidate and exact ranking evidence.",
         "properties": {
@@ -25674,124 +25608,6 @@
           "weight"
         ],
         "title": "SelectionFactorWeightRequest",
-        "type": "object"
-      },
-      "SelectionFieldAdmissionResponse": {
-        "description": "Field-scoped qualification and actionable durable evidence references.",
-        "properties": {
-          "allowed_uses": {
-            "items": {
-              "enum": [
-                "display",
-                "exploration",
-                "formal_research",
-                "promotion_paper"
-              ],
-              "type": "string"
-            },
-            "title": "Allowed Uses",
-            "type": "array"
-          },
-          "certification_report_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Certification Report Id"
-          },
-          "consumer_field": {
-            "title": "Consumer Field",
-            "type": "string"
-          },
-          "covered_from": {
-            "anyOf": [
-              {
-                "format": "date",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Covered From"
-          },
-          "covered_to": {
-            "anyOf": [
-              {
-                "format": "date",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Covered To"
-          },
-          "dataset_id": {
-            "title": "Dataset Id",
-            "type": "string"
-          },
-          "evidence_uri": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Evidence Uri"
-          },
-          "field": {
-            "title": "Field",
-            "type": "string"
-          },
-          "license_record_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "License Record Id"
-          },
-          "reason_codes": {
-            "items": {
-              "type": "string"
-            },
-            "title": "Reason Codes",
-            "type": "array"
-          },
-          "snapshot_id": {
-            "title": "Snapshot Id",
-            "type": "string"
-          },
-          "time_precision": {
-            "title": "Time Precision",
-            "type": "string"
-          }
-        },
-        "required": [
-          "dataset_id",
-          "field",
-          "snapshot_id",
-          "consumer_field",
-          "allowed_uses",
-          "reason_codes",
-          "license_record_id",
-          "certification_report_id",
-          "covered_from",
-          "covered_to",
-          "time_precision",
-          "evidence_uri"
-        ],
-        "title": "SelectionFieldAdmissionResponse",
         "type": "object"
       },
       "SelectionFieldRequirementBody": {
@@ -51488,140 +51304,6 @@
         "x-ditto-maturity": "experimental"
       }
     },
-    "/api/v1/selections/admission": {
-      "post": {
-        "description": "Preview exact field admission without saving or changing certification.\n\nCapability maturity: `initial-focus`. Primary near-term product scope under architecture review.",
-        "operationId": "selections_assess_admission",
-        "parameters": [
-          {
-            "in": "query",
-            "name": "instrument_id",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "exclusiveMinimum": 0,
-                  "type": "integer"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Instrument Id"
-            }
-          },
-          {
-            "description": "Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required.",
-            "in": "header",
-            "name": "X-Ditto-API-Contract-Version",
-            "required": false,
-            "schema": {
-              "const": "v1",
-              "description": "Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required.",
-              "title": "X-Ditto-Api-Contract-Version",
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateSelectionRunBody"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/APIResponse_SelectionAdmissionResponse_"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "400": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "Bad request"
-          },
-          "403": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "Forbidden"
-          },
-          "404": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "Resource not found"
-          },
-          "409": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "Request conflicts with current state"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "Request or domain validation failed"
-          },
-          "500": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "Internal server error"
-          },
-          "default": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "Structured Ditto API error"
-          }
-        },
-        "summary": "Assess Selection Admission",
-        "tags": [
-          "selections"
-        ],
-        "x-ditto-maturity": "initial-focus"
-      }
-    },
     "/api/v1/selections/industry-rotations/{snapshot_id}": {
       "get": {
         "description": "Read one exact persisted IndustryRotation snapshot by content identity.\n\nCapability maturity: `initial-focus`. Primary near-term product scope under architecture review.",
@@ -51868,7 +51550,7 @@
         "x-ditto-maturity": "initial-focus"
       },
       "post": {
-        "description": "Create or exactly replay a content-addressed industry and selection run.\n\nCapability maturity: `initial-focus`. Primary near-term product scope under architecture review.",
+        "description": "Assemble every PIT fact server-side, then create the exact run.\n\nThe client submits strategy parameters and allowed request identity\nonly; client-authored fact packages are no longer an authoritative\nwrite surface. Re-posting one policy under unchanged data replays to\nthe same content-addressed run.\n\nCapability maturity: `initial-focus`. Primary near-term product scope under architecture review.",
         "operationId": "selections_create_run",
         "parameters": [
           {
@@ -51888,7 +51570,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/CreateSelectionRunBody"
+                "$ref": "#/components/schemas/AssembleSelectionRunBody"
               }
             }
           },
@@ -52356,7 +52038,7 @@
     },
     "/api/v1/selections/runs:assembled": {
       "post": {
-        "description": "Assemble every PIT fact server-side and preview the create-run gate.\n\nThe response carries the exact ``POST /selections/runs`` body plus the\nadmission report; creating the run still posts that body to ``/runs``,\nso certification and replay semantics stay on the reviewed contract.\n\nCapability maturity: `initial-focus`. Primary near-term product scope under architecture review.",
+        "description": "Assemble every PIT fact server-side and preview the exact create body.\n\nCapability maturity: `initial-focus`. Primary near-term product scope under architecture review.",
         "operationId": "selections_assemble_run",
         "parameters": [
           {

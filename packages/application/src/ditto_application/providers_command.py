@@ -25,7 +25,7 @@ from ditto_data.catalog.remediation import (
     CatalogRemediationApprovalWriter,
 )
 from ditto_data.catalog.source_snapshot import ProviderSnapshotReader
-from ditto_data.catalog.specimen import SpecimenReader, SpecimenWriter
+from ditto_data.catalog.specimen import SpecimenWriter
 from ditto_data.ingestion.partition_state import PartitionLifecycleReader
 from ditto_data.ingestion.quality_record_store import (
     QualityRecordStore,
@@ -164,16 +164,12 @@ class AppCommandProvider(Provider):
         research_artifact_service: ResearchArtifactService,
         research_catalog_service: ResearchCatalogService,
         snapshots: ProviderSnapshotReader,
-        licenses: DatasetLicenseReader,
-        specimens: SpecimenReader,
     ) -> ResearchDatasetExport:
-        """Wire saved snapshot export and reviewed source permissions."""
+        """Wire saved snapshot export with minimal usage constraints."""
         return ResearchDatasetExport(
             research_artifact_service=research_artifact_service,
             research_catalog_service=research_catalog_service,
             snapshots=snapshots,
-            licenses=licenses,
-            specimens=specimens,
         )
 
     @provide

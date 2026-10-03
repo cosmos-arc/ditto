@@ -18,11 +18,6 @@ from ditto_application.etf_paper_contracts import (
 from ditto_application.exceptions import AppProcessError
 from ditto_application.queries.account_ledger import AccountLedgerQuery
 from ditto_application.queries.etf_candidates import ETFCandidate, ETFField
-from ditto_application.queries.field_admission import (
-    FieldAdmissionQuery,
-    FieldAdmissionRequest,
-    FieldRequirement,
-)
 from ditto_application.queries.metadata import MetadataQueryFacade
 from ditto_application.queries.retained_calendar import (
     RetainedCalendarAbsent,
@@ -30,6 +25,7 @@ from ditto_application.queries.retained_calendar import (
     calendar_has_single_source,
     retained_trading_days,
 )
+from ditto_application.queries.snapshot_readiness import SnapshotReadinessQuery
 
 
 def _next_trading_day(
@@ -66,13 +62,13 @@ class LiveETFPaperHandoffFacts:
         self,
         *,
         metadata: MetadataQueryFacade,
-        admission: FieldAdmissionQuery,
+        readiness: SnapshotReadinessQuery,
         snapshots: ProviderSnapshotReader,
         payloads: ProviderPayloadReader,
         ledger: AccountLedgerQuery,
     ) -> None:
         self._metadata = metadata
-        self._admission = admission
+        self._readiness = readiness
         self._snapshots = snapshots
         self._payloads = payloads
         self._ledger = ledger
@@ -87,6 +83,11 @@ class LiveETFPaperHandoffFacts:
             or snapshot.created_at > request.knowledge_cutoff
         ):
             raise AppProcessError("Paper source snapshot is absent or future")
+        self._require_ready(
+            request.source_snapshot_id,
+            "etf_reference",
+            request.signal_date,
+        )
         candidates = self._metadata.list_etf_candidates(
             asof=request.signal_date,
             cutoff=canonical_cutoff(request.knowledge_cutoff),
@@ -173,18 +174,30 @@ class LiveETFPaperHandoffFacts:
         field: ETFField,
         request: ETFPaperHandoffRequest,
     ) -> bool:
-        return admitted_etf_field(
+        return etf_field_visible(
             candidate,
             field_name,
             field,
             asof=request.signal_date,
             cutoff=request.knowledge_cutoff,
             snapshot_id=request.source_snapshot_id,
-            admission=self._admission,
         )
 
+    def _require_ready(self, snapshot_id: str, dataset_id: str, day: str) -> None:
+        """Consumable check: exact identity, completion, retention, scope."""
+        reasons = self._readiness.snapshot_reasons(
+            dataset_id,
+            snapshot_id,
+            date.fromisoformat(day),
+            date.fromisoformat(day),
+        )
+        if reasons:
+            raise AppProcessError(
+                "ETF Paper source snapshot is not consumable: " + ", ".join(reasons)
+            )
 
-def admitted_etf_field(
+
+def etf_field_visible(
     candidate: ETFCandidate,
     field_name: str,
     field: ETFField,
@@ -192,9 +205,8 @@ def admitted_etf_field(
     asof: str,
     cutoff: datetime,
     snapshot_id: str,
-    admission: FieldAdmissionQuery,
 ) -> bool:
-    """Apply the same temporal and promotion admission rule at either Paper date."""
+    """Apply the same temporal visibility rule at either Paper date."""
     if (
         field.value is None
         or field.observed_on is None
@@ -215,29 +227,10 @@ def admitted_etf_field(
         )
     except ValueError:
         return False
-    if (
+    return not (
         published.tzinfo is None
         or published > cutoff
         or observed > asof_day
         or (effective_from is not None and effective_from > asof_day)
         or (effective_to is not None and effective_to <= asof_day)
-    ):
-        return False
-    report = admission.assess(
-        FieldAdmissionRequest(
-            fields=(
-                FieldRequirement(
-                    dataset_id="etf_reference",
-                    field=field_name,
-                    snapshot_id=snapshot_id,
-                ),
-            ),
-            instrument_ids=(candidate.instrument_id,),
-            required_from=observed,
-            required_to=observed,
-            knowledge_cutoff=cutoff,
-            publication_cutoff=cutoff,
-            purpose="promotion_paper",
-        )
     )
-    return report.allowed

@@ -16,11 +16,6 @@ from ditto_data.catalog.source_snapshot import ProviderSnapshotReader
 from ditto_data.services.metadata_service import MetadataService
 
 from ditto_application.exceptions import AppQueryError
-from ditto_application.queries.field_admission import (
-    FieldAdmissionQuery,
-    FieldAdmissionRequest,
-    FieldRequirement,
-)
 from ditto_application.queries.retained_calendar import (
     RetainedCalendarAbsent,
     RetainedCalendarWindow,
@@ -28,6 +23,7 @@ from ditto_application.queries.retained_calendar import (
     calendar_has_single_source,
     retained_calendar_window,
 )
+from ditto_application.queries.snapshot_readiness import SnapshotReadinessQuery
 
 _FIELDS = (
     "tracking_index",
@@ -149,12 +145,12 @@ class ETFCandidateQuery:
     def __init__(
         self,
         metadata: MetadataService,
-        admission: FieldAdmissionQuery | None = None,
+        readiness: SnapshotReadinessQuery | None = None,
         snapshots: ProviderSnapshotReader | None = None,
         payloads: ProviderPayloadReader | None = None,
     ) -> None:
         self._metadata = metadata
-        self._admission = admission
+        self._readiness = readiness
         self._snapshots = snapshots
         self._payloads = payloads
 
@@ -243,7 +239,7 @@ class ETFCandidateQuery:
             }
             fields["daily_amount"] = _liquidity(rows.get("daily_amount", []), sessions)
             fields = {
-                field_name: self._admit(
+                field_name: self._qualify_display(
                     field_name,
                     field,
                     instrument_id=instrument_id,
@@ -458,59 +454,36 @@ class ETFCandidateQuery:
             source == "recorded" for source in series_sources
         ):
             return "reference_only", "RECORDED_REFERENCE_ONLY"
-        if self._admission is None or self._snapshots is None:
-            return "unavailable", "ADMISSION_UNAVAILABLE"
+        if self._readiness is None or self._snapshots is None:
+            return "unavailable", "READINESS_UNAVAILABLE"
         snapshot = self._snapshots.get_snapshot(source_snapshot_id)
         if snapshot is None:
             return "unavailable", "SNAPSHOT_NOT_REGISTERED"
         if relation.eligibility != "display_allowed" or any(
             source != snapshot.source for source in series_sources
         ):
-            return "unavailable", "source_or_display_admission_denied"
-        parsed_cutoff = _validate_cutoff(cutoff)
+            return "unavailable", "source_or_display_visibility_denied"
         # The reference fields span the whole window, but each calendar shard
         # is only assessed for the dates it authoritatively decides; one
         # window-wide request would fail every annual shard's own coverage.
-        reference_report = self._admission.assess(
-            FieldAdmissionRequest(
-                fields=tuple(
-                    FieldRequirement(snapshot.dataset_id, field, source_snapshot_id)
-                    for field in (
-                        "tracking_index",
-                        "nav_total_return",
-                        "benchmark_total_return",
-                    )
-                ),
-                instrument_ids=(instrument_id,),
-                required_from=date.fromisoformat(sessions[0]),
-                required_to=date.fromisoformat(sessions[-1]),
-                knowledge_cutoff=parsed_cutoff,
-                publication_cutoff=parsed_cutoff,
-                purpose="formal_research",
-            )
+        reference_reasons = self._readiness.snapshot_reasons(
+            snapshot.dataset_id,
+            source_snapshot_id,
+            date.fromisoformat(sessions[0]),
+            date.fromisoformat(sessions[-1]),
         )
-        calendar_reports = [
-            self._admission.assess(
-                FieldAdmissionRequest(
-                    fields=(FieldRequirement("calendar", "is_open", shard_id),),
-                    instrument_ids=(instrument_id,),
-                    required_from=date.fromisoformat(first_day),
-                    required_to=date.fromisoformat(last_day),
-                    knowledge_cutoff=parsed_cutoff,
-                    publication_cutoff=parsed_cutoff,
-                    purpose="formal_research",
-                )
-            )
+        calendar_reasons = [
+            reason
             for shard_id, first_day, last_day in lineage.calendar_shards
+            for reason in self._readiness.snapshot_reasons(
+                "calendar",
+                shard_id,
+                date.fromisoformat(first_day),
+                date.fromisoformat(last_day),
+            )
         ]
-        admitted = reference_report.allowed and all(
-            report.allowed for report in calendar_reports
-        )
-        return (
-            ("comparable", None)
-            if admitted
-            else ("unavailable", "formal_admission_denied")
-        )
+        ready = not reference_reasons and not calendar_reasons
+        return ("comparable", None) if ready else ("unavailable", "formal_data_unready")
 
     def _tracking_result(
         self,
@@ -573,7 +546,7 @@ class ETFCandidateQuery:
             **evidence,
         )
 
-    def _admit(
+    def _qualify_display(
         self,
         field_name: str,
         field: ETFField,
@@ -589,8 +562,8 @@ class ETFCandidateQuery:
             or field.observed_on is None
         ):
             return field
-        if self._admission is None or self._snapshots is None:
-            return _unregistered(field, "ADMISSION_UNAVAILABLE")
+        if self._readiness is None or self._snapshots is None:
+            return _unregistered(field, "READINESS_UNAVAILABLE")
         snapshot = self._snapshots.get_snapshot(field.source_snapshot_id)
         if snapshot is None:
             return _unregistered(field, "SNAPSHOT_NOT_REGISTERED")
@@ -600,31 +573,20 @@ class ETFCandidateQuery:
             else date.fromisoformat(field.observed_on)
         )
         required_to = date.fromisoformat(field.observed_on)
-        report = self._admission.assess(
-            FieldAdmissionRequest(
-                fields=(
-                    FieldRequirement(
-                        dataset_id=snapshot.dataset_id,
-                        field=field_name,
-                        snapshot_id=field.source_snapshot_id,
-                    ),
-                ),
-                instrument_ids=(instrument_id,),
-                required_from=required_from,
-                required_to=required_to,
-                knowledge_cutoff=_validate_cutoff(cutoff),
-                publication_cutoff=_validate_cutoff(cutoff),
-                purpose="display",
-            )
+        reasons = self._readiness.snapshot_reasons(
+            snapshot.dataset_id,
+            field.source_snapshot_id,
+            required_from,
+            required_to,
         )
-        if report.allowed:
+        if not reasons:
             return replace(field, eligibility="display_allowed")
         return replace(
             field,
             value=None,
             eligibility="display_denied",
-            eligibility_reasons=report.fields[0].reason_codes,
-            missing_reason="display_admission_denied",
+            eligibility_reasons=reasons,
+            missing_reason="display_data_unready",
         )
 
 
@@ -640,7 +602,7 @@ def _unregistered(field: ETFField, reason: str) -> ETFField:
         value=None,
         eligibility="display_denied",
         eligibility_reasons=(reason,),
-        missing_reason="display_admission_denied",
+        missing_reason="display_data_unready",
     )
 
 
