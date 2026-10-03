@@ -1,6 +1,8 @@
 """数据接入验证测试.
 
-验证 Tushare/TDX 源数据拉取、解析、校验功能。
+验证 Tushare 源数据拉取、解析、校验功能（TDX 已删除，fuyao 冗余源
+由 #395 的 ops reconcile 对账链路覆盖，真实运行证据见
+docs/evidence/fuyao-reconciliation-20260929/）。
 该测试属于 E2E 验证，需要连接真实数据源。
 
 覆盖数据域:
@@ -20,20 +22,18 @@ from typing import ClassVar
 import polars as pl
 import pytest
 from ditto_data.quality import GoldenDatasetSpec
-from ditto_data.sources.tdx import TdxSource
 from ditto_data.sources.tushare.tushare_source import TushareSource
 
 
 @pytest.mark.e2e
 @pytest.mark.integration
 class TestIngestion:
-    """数据接入验证 - 验证 Tushare/TDX 源数据拉取、解析、校验.
+    """数据接入验证 - 验证 Tushare 源数据拉取、解析、校验.
 
     验证项清单:
     | 编号 | 验证项 | 验证方法 | 通过标准 |
     |------|--------|---------|---------|
     | S1-01 | Tushare 连接性 | 调用 API 获取 1 条数据 | 返回非空 DataFrame |
-    | S1-02 | TDX 文件可读性 | 读取本地 TDX 文件 | 解析成功无异常 |
     | S1-03 | 字段完整性 | 检查必需字段存在 | 100% 字段覆盖 |
     | S1-04 | 数据类型正确性 | Schema 校验 | 类型匹配率 100% |
     | S1-05 | 时间范围覆盖 | 检查日期范围 | 覆盖最近 3 年 |
@@ -55,40 +55,6 @@ class TestIngestion:
         # 验证返回非空数据
         assert df.height > 0, "应返回非空数据"
         assert len(df.columns) > 0, "应包含列信息"
-
-    def test_tdx_file_readable(
-        self,
-        tdx_source: TdxSource,
-        golden_spec: GoldenDatasetSpec,
-    ) -> None:
-        """S1-02: TDX 文件可读性验证.
-
-        验证 TDX 本地文件可正常读取和解析。
-
-        Args:
-            tdx_source: TDX 数据源实例（session 级 fixture）。
-            golden_spec: 黄金数据集配置。
-
-        """
-        # 抽样验证前 5 个标的
-        sample_tickers = golden_spec.tickers[:5]
-
-        for ticker in sample_tickers:
-            # 根据 ticker 前缀推断交易所
-            if ticker.startswith("6") or ticker.startswith("5"):
-                exchange = "SH"
-            elif ticker.startswith("0") or ticker.startswith("3"):
-                exchange = "SZ"
-            else:
-                exchange = "SZ"  # 默认深圳
-
-            ts_code = f"{ticker}.{exchange}"
-
-            # 读取日线数据
-            df = tdx_source.reader.read_daily(ts_code)
-
-            # 验证读取成功（空 DataFrame 也是合法的，表示文件不存在）
-            assert df is not None, f"{ticker} TDX 文件读取失败"
 
     def test_field_completeness(self, tushare_source: TushareSource) -> None:
         """S1-03: 字段完整性验证.

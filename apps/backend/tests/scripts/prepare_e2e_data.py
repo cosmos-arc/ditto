@@ -3,8 +3,9 @@
 E2E 测试数据准备脚本。
 
 生成以下测试数据：
-1. TDX 样本目录结构
-2. PIT 快照预期数据（从 Tushare API 获取）
+1. PIT 快照预期数据（从 Tushare API 获取）
+
+（TDX 样本目录已随 #395 TDX 删除移除；辅源对账走 fuyao。）
 
 使用方法：
     # 仅创建目录结构
@@ -34,49 +35,6 @@ def load_golden_dataset() -> dict:
     config_path = Path("config/default/golden_dataset.yml")
     with config_path.open(encoding="utf-8") as f:
         return yaml.safe_load(f)
-
-
-def create_tdx_directory_structure() -> None:
-    """创建 TDX 样本目录结构."""
-    tdx_root = Path("tests/tdx_samples/vipdoc")
-
-    # 创建交易所目录
-    exchanges = ["sh", "sz"]
-    for exchange in exchanges:
-        exchange_dir = tdx_root / exchange / "lday"
-        exchange_dir.mkdir(parents=True, exist_ok=True)
-
-        # 创建 README 说明文件
-        readme_path = exchange_dir / "README.md"
-        if not readme_path.exists():
-            readme_path.write_text(
-                f"""# TDX {exchange.upper()} 日线数据目录
-
-该目录存储通达信格式的日线数据文件（.day 格式）。
-
-## 文件命名规范
-
-```
-<exchange><code>.day
-```
-
-示例：
-- `sh600519.day` - 贵州茅台
-- `sz000333.day` - 美的集团
-
-## 数据来源
-
-从通达信客户端导出，或使用 tushare2tdx 工具生成。
-
-## 注意事项
-
-- 文件为二进制格式，每条记录 32 字节
-- 日期格式：YYYYMMDD（4 字节整数）
-- 价格单位：元（4 字节浮点数）
-"""
-            )
-
-    print(f"✅ TDX 目录结构已创建: {tdx_root}")
 
 
 def get_source_ticker(ticker: str, exchange: str) -> str:
@@ -211,19 +169,6 @@ def verify_data_completeness() -> bool:
 
     issues = []
 
-    # 检查 TDX 目录
-    tdx_sh = Path("tests/tdx_samples/vipdoc/sh/lday")
-    tdx_sz = Path("tests/tdx_samples/vipdoc/sz/lday")
-
-    sh_files = list(tdx_sh.glob("*.day")) if tdx_sh.exists() else []
-    sz_files = list(tdx_sz.glob("*.day")) if tdx_sz.exists() else []
-
-    print(f"  TDX SH 文件: {len(sh_files)}")
-    print(f"  TDX SZ 文件: {len(sz_files)}")
-
-    if len(sh_files) + len(sz_files) == 0:
-        issues.append("TDX 样本文件为空（预期需要 .day 文件）")
-
     # 检查快照文件
     snapshot_dir = Path("tests/fixtures/golden_expected/daily_snapshots")
     snapshot_files = (
@@ -300,7 +245,7 @@ def main() -> None:
     print("=" * 60)
 
     if args.dirs_only:
-        create_tdx_directory_structure()
+        print("目录结构准备已无 TDX 步骤（#395 TDX 删除）；请使用 --snapshots")
         return
 
     if args.verify:
@@ -308,13 +253,11 @@ def main() -> None:
         return
 
     if args.snapshots:
-        create_tdx_directory_structure()
         generate_pit_snapshots(args.date)
         verify_data_completeness()
         return
 
-    # 默认：创建目录 + 验证
-    create_tdx_directory_structure()
+    # 默认：验证
     verify_data_completeness()
 
 

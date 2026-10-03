@@ -39,8 +39,9 @@ class InstrumentIdAllocator:
             ).fetchone()
 
             if not row:
-                # 首次分配, 插入新记录
-                new_id = min_id
+                # 首次分配（无种子行）：与 schema.sql 种子（current_max = min_id）后的
+                # 首笔分配保持同一语义 —— min_id 本身保留不分配，首个 ID = min_id + 1。
+                new_id = min_id + 1
                 self._pool.execute(
                     "INSERT INTO instrument_id_sequence "  # noqa: S608 - 静态表名，参数使用占位符
                     + "(asset_class, current_max) VALUES (?, ?)",

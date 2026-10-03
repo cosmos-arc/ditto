@@ -4,12 +4,32 @@ from unittest.mock import MagicMock
 
 import polars as pl
 import pytest
+from ditto_data.quality.checkers.cross_source import CrossSourceComparison
 from ditto_data.quality.quality_types import DQIssue, DQLevel, DQResult, DQSeverity
 from pytest_mock import MockerFixture
 
 
 @pytest.fixture
-def mock_quality_engine(mocker: MockerFixture) -> MagicMock:
+def comparable_report() -> CrossSourceComparison:
+    """可比较（非零交集、无差异）的结构化对账报告."""
+    return CrossSourceComparison(
+        status="compared",
+        key_columns=("instrument_id", "trade_date"),
+        primary_count=3,
+        secondary_count=3,
+        matched_count=3,
+        primary_unmatched_count=0,
+        secondary_unmatched_count=0,
+        primary_duplicate_keys=0,
+        secondary_duplicate_keys=0,
+        diff_count=0,
+    )
+
+
+@pytest.fixture
+def mock_quality_engine(
+    mocker: MockerFixture, comparable_report: CrossSourceComparison
+) -> MagicMock:
     """Mock QualityEngine.
 
     默认配置为返回通过（无问题），可在测试中覆盖。
@@ -20,6 +40,12 @@ def mock_quality_engine(mocker: MockerFixture) -> MagicMock:
         passed=True,
         issues=[],
     )
+    engine.check_cross_source.return_value = DQResult(
+        dataset="stock_daily",
+        passed=True,
+        issues=[],
+    )
+    engine.compare_cross_source.return_value = comparable_report
     return engine
 
 
@@ -75,13 +101,25 @@ def mock_instrument_store(mocker: MockerFixture) -> MagicMock:
 
 @pytest.fixture
 def mock_tdx_source(mocker: MockerFixture) -> MagicMock:
-    """Mock TdxSource.
+    """Mock 辅源（历史名保留；现语义为 fuyao 辅源）.
 
     默认返回空 DataFrame，可在测试中覆盖。
     """
     source = mocker.MagicMock()
     source.fetch_stock_daily_bars.return_value = pl.DataFrame()
     return source
+
+
+@pytest.fixture
+def mock_secondary_identity_resolver() -> MagicMock:
+    """Mock 辅源身份反解：裸码 → instrument_id（只读）."""
+    resolver = MagicMock()
+    resolver.resolve_secondary_ids.return_value = {
+        "000001": 1000001,
+        "600000": 1000002,
+        "510300": 1000003,
+    }
+    return resolver
 
 
 @pytest.fixture

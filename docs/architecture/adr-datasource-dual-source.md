@@ -1,8 +1,21 @@
 # ADR: 数据源双源架构（Tushare 主源 + fuyao 冗余源）
 
 > 日期：2026-09-17
-> 状态：Accepted，2026-09-20 经维护者修订；当前决定见下文，原双源决定作为历史记录保留。
+> 状态：Accepted，2026-09-20 经维护者修订；2026-10-03（#395）TDX 适配器删除、fuyao 同口径对账接管辅源职责；当前决定见下文，原双源决定作为历史记录保留。
 > 范围：`ditto_data` 数据源子域、DQ 交叉对账、source fallback、预算纪律
+
+## TDX 移除（2026-10-03，#395）
+
+TDX（通达信本地 vipdoc 文件）适配器、DI 装配、专属测试与 import 契约已删除：
+
+- 辅源对账职责由 fuyao 同口径接管：比较键 `instrument_id + trade_date`
+  （fuyao thscode 经 #395 来源映射反解），单位/复权口径校准不变
+  （股→手、元→千元在 fuyao source 归一），除权日（adj_factor 事件日）
+  差异单列标记；零交集 = 不可比较，不算通过。
+- fuyao 真实 stock_daily 对账已跑通非空有效比较（2026-09-29，
+  黄金集 10 标的 10/10 匹配、无差异），运行证据见
+  [docs/evidence/fuyao-reconciliation-20260929/](../evidence/fuyao-reconciliation-20260929/README.md)。
+- 不推导全数据集冗余或独立上游保证；Tushare 主链与 FRED 保留表述不变。
 
 ## 当前决定（2026-09-20）
 

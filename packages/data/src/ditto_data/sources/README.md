@@ -6,7 +6,7 @@
 
 ## 概要
 
-统一的外部数据源接口，支持多数据源适配，提供从 Tushare、FRED、通达信等数据源获取市场数据的统一访问接口。所有数据源返回 `polars.DataFrame`，通过 `DataSource` 抽象基类统一行为契约。
+统一的外部数据源接口，支持多数据源适配，提供从 Tushare、FRED、fuyao 等数据源获取市场数据的统一访问接口（TDX 已于 #395 删除）。所有数据源返回 `polars.DataFrame`，通过 `DataSource` 抽象基类统一行为契约。
 
 ## 目录结构
 
@@ -32,7 +32,6 @@ sources/
 │   ├── indicators.py          # 指标定义
 │   └── adapters/              # 适配器
 │       ├── base.py, commodity.py, macro.py
-├── tdx/                       # 通达信数据源
 │   ├── __init__.py
 │   ├── reader.py              # 数据读取器
 │   ├── source.py              # DataSource 实现
@@ -70,7 +69,7 @@ sources/
             ┌───────────────┼───────────────┐
             △               △               △
 ┌───────────────┐  ┌───────────────┐  ┌───────────────┐
-│ TushareSource │  │  FredSource   │  │   TdxSource   │
+│ TushareSource │  │  FredSource   │  │  FuyaoSource  │
 │               │  │               │  │               │
 │ adapters/     │  │ adapters/     │  │ reader.py     │
 │ processors/   │  │   macro.py    │  │ transformer   │
@@ -227,8 +226,8 @@ uv run --no-sync pytest packages/data/tests/unit/sources/tushare/ -v
 # 运行 FRED 测试
 uv run --no-sync pytest packages/data/tests/unit/sources/fred/ -v
 
-# 运行 TDX 测试
-uv run --no-sync pytest packages/data/tests/unit/sources/tdx/ -v
+# 运行 fuyao 测试
+uv run --no-sync pytest packages/data/tests/unit/sources/fuyao/ -v
 ```
 
 ## 相关文档

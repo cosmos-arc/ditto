@@ -44,9 +44,9 @@ Boundaries kept honest on purpose:
 - Industry rotation is assembled as an empty observation set; the rotation
   snapshot then lands BLOCKED with ``industries`` declared missing, which is
   the honest state while industry data is not ingested.
-- ``is_st`` is derived from the current registry name marker ("ST") because
-  the local ``st_change_history`` table is not ingested yet; once it is, the
-  identity port can switch to that PIT reader.
+- ``is_st`` prefers the PIT ``st_change_history`` evidence (#395); the
+  current-registry name marker ("ST") remains only as a restricted
+  fallback for instruments without history evidence.
 """
 
 from __future__ import annotations
@@ -178,6 +178,16 @@ class InstrumentIdentityReader(Protocol):
         asof: date,
         cutoff: datetime,
     ) -> Mapping[int, str]: ...
+
+    def st_status(
+        self,
+        instrument_ids: Sequence[int],
+        *,
+        asof: date,
+        cutoff: datetime | None = None,
+    ) -> Mapping[int, bool]:
+        """PIT ST 状态；仅返回有 st_change_history 证据的证券（#395）。"""
+        ...
 
 
 class FactorRegistry(Protocol):
@@ -935,6 +945,14 @@ class AssembleSelectionFacts:
                 roster_ids, asof=cross_date, allow_current_fallback=False
             )
         )
+        # #395：优先 PIT 读 st_change_history（有历史证据的证券用证据状态）；
+        # 无证据的证券才落到名称标记的受限回退。
+        st_evidence = self._identities.st_status(roster_ids, asof=as_of_date)
+        cross_st_evidence = (
+            st_evidence
+            if cross_date == as_of_date
+            else self._identities.st_status(roster_ids, asof=cross_date)
+        )
         ipo_sessions = self._young_listing_sessions(roster_rows, cross_date)
         cross_section = evaluation.filter(pl.col("trade_date") == cross_date)
         # Unattributable instruments never contribute to the ranking
@@ -989,12 +1007,16 @@ class AssembleSelectionFacts:
             instrument_id = int(row["instrument_id"])
             resolved_name = names.get(instrument_id)
             instrument_name = resolved_name or str(instrument_id)
-            # A missing registry name cannot back the ST marker: keep the
-            # fact absent so the pipeline excludes the instrument instead
-            # of passing an underived status.
-            is_st = None if resolved_name is None else _is_st_from_name(resolved_name)
-            cross_name = cross_names.get(instrument_id)
-            band_is_st = None if cross_name is None else _is_st_from_name(cross_name)
+            is_st = _resolve_is_st(
+                evidence=st_evidence,
+                instrument_id=instrument_id,
+                resolved_name=resolved_name,
+            )
+            band_is_st = _resolve_is_st(
+                evidence=cross_st_evidence,
+                instrument_id=instrument_id,
+                resolved_name=cross_names.get(instrument_id),
+            )
             unrestricted = _in_unrestricted_window(
                 raw_ticker=(raw_cross.get(instrument_id) or {}).get("source_ticker"),
                 list_date=row.get("list_date"),
@@ -1206,8 +1228,35 @@ def _cross_section_date(evaluation: pl.DataFrame) -> date:
     return cross_date
 
 
+def _resolve_is_st(
+    *,
+    evidence: Mapping[int, bool],
+    instrument_id: int,
+    resolved_name: str | None,
+) -> bool | None:
+    """
+    #395 ST 事实解析：证据优先，名称标记仅作受限回退。
+
+    st_change_history 有 PIT 证据 → 用证据状态；无证据才以当前注册名的
+    "ST" 标记推断（仅限当前展示语义，不冒充历史证据）。A missing registry
+    name cannot back the ST marker either: keep the fact absent so the
+    pipeline excludes the instrument instead of passing an underived status.
+    """
+    if instrument_id in evidence:
+        return evidence[instrument_id]
+    if resolved_name is None:
+        return None
+    return _is_st_from_name(resolved_name)
+
+
 def _is_st_from_name(instrument_name: str) -> bool:
-    """Read the exchange ST marking from the registry name (v1 source)."""
+    """
+    受限回退：从当前注册名读交易所 ST 标记。
+
+    #395 起这只在 ``st_change_history`` 对该证券无 PIT 证据时使用
+    （当前展示语义）；有历史证据时必须用证据状态，不得以当前名称
+    污染过去的状态判断。
+    """
     return "ST" in instrument_name.upper()
 
 

@@ -122,6 +122,24 @@ class MarketFetcher(Protocol):
         """获取股票交易状态."""
         ...
 
+    def fetch_st_history(
+        self,
+        ts_code: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> pl.DataFrame:
+        """获取 ST 状态变更历史（事件流）."""
+        ...
+
+    def fetch_name_history(
+        self,
+        ts_code: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> pl.DataFrame:
+        """获取证券名称变更历史（事件流）."""
+        ...
+
 
 class FundamentalFetcher(Protocol):
     """Financial statements and corporate actions."""

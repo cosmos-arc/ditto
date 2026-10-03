@@ -8,6 +8,9 @@ CREATE TABLE IF NOT EXISTS instrument_id_sequence (
     current_max INTEGER NOT NULL,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+-- 种子与 models/common.py _RANGES 逐段对齐：当前值 = min_id（保留 ID 语义上
+-- 不可用），首笔分配恒为 min_id + 1；键名统一 futures（与 _RANGES 一致）。
+-- 旧种子的 bond=4M/future=5M 与 _RANGES（fx=4M/commodity=5M）冲突，一并修正。
 INSERT OR IGNORE INTO instrument_id_sequence (asset_class, current_max)
 VALUES ('stock', 1000000);
 INSERT OR IGNORE INTO instrument_id_sequence (asset_class, current_max)
@@ -15,9 +18,15 @@ VALUES ('etf', 2000000);
 INSERT OR IGNORE INTO instrument_id_sequence (asset_class, current_max)
 VALUES ('index', 3000000);
 INSERT OR IGNORE INTO instrument_id_sequence (asset_class, current_max)
-VALUES ('bond', 4000000);
+VALUES ('fx', 4000000);
 INSERT OR IGNORE INTO instrument_id_sequence (asset_class, current_max)
-VALUES ('future', 5000000);
+VALUES ('commodity', 5000000);
+INSERT OR IGNORE INTO instrument_id_sequence (asset_class, current_max)
+VALUES ('bond', 6000000);
+INSERT OR IGNORE INTO instrument_id_sequence (asset_class, current_max)
+VALUES ('futures', 7000000);
+INSERT OR IGNORE INTO instrument_id_sequence (asset_class, current_max)
+VALUES ('option', 8000000);
 
 -- 证券主表
 CREATE TABLE IF NOT EXISTS instrument (
@@ -200,17 +209,24 @@ CREATE TABLE IF NOT EXISTS universe_constituent (
 );
 
 -- 证券名称变更历史
+-- source/observed_at 构成可知时间三元组（生效时间=changed_date，可知时间=
+-- observed_at 即 provider published_at 或观察时刻，来源=source）；
+-- 新写入必须携带真实生效日期，缺则拒绝（不得用默认日期冒充历史）。
 CREATE TABLE IF NOT EXISTS instrument_name_history (
     instrument_id INTEGER NOT NULL,
-    old_name TEXT NOT NULL,
+    old_name TEXT,
     new_name TEXT NOT NULL,
     changed_date DATE NOT NULL,
-    PRIMARY KEY (instrument_id, changed_date),
+    source TEXT NOT NULL DEFAULT 'tushare',
+    observed_at TEXT,
+    PRIMARY KEY (instrument_id, changed_date, source),
     FOREIGN KEY (instrument_id) REFERENCES instrument(instrument_id)
 );
 CREATE INDEX IF NOT EXISTS idx_name_history_instrument ON instrument_name_history(instrument_id);
 
 -- ST 状态变更历史 (PIT support)
+-- 同名三元组：生效区间 [effective_from, effective_to)，可知时间=observed_at，
+-- 来源=source；(instrument_id, effective_from, source) 唯一保证登记幂等。
 CREATE TABLE IF NOT EXISTS st_change_history (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     instrument_id INTEGER NOT NULL,
@@ -218,10 +234,14 @@ CREATE TABLE IF NOT EXISTS st_change_history (
     is_st INTEGER NOT NULL,
     st_type TEXT,
     effective_to DATE,
+    source TEXT NOT NULL DEFAULT 'tushare',
+    observed_at TEXT,
     FOREIGN KEY (instrument_id) REFERENCES instrument(instrument_id)
 );
 CREATE INDEX IF NOT EXISTS idx_st_change_history_pit
     ON st_change_history(instrument_id, effective_from, effective_to);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_st_change_history_source_key
+    ON st_change_history(instrument_id, effective_from, source);
 
 -- 当前有效成分快速查询
 CREATE INDEX IF NOT EXISTS idx_constituent_current

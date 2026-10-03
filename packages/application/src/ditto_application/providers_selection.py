@@ -89,7 +89,7 @@ def _metadata_ticker_resolver(metadata: MetadataService) -> SourceTickerResolver
 
 
 def _metadata_identities(metadata: MetadataService) -> InstrumentIdentityReader:
-    """Serve registry names and PIT source tickers from durable metadata."""
+    """Serve registry names, PIT source tickers, and PIT ST status."""
 
     class _MetadataIdentities:
         def names(
@@ -100,8 +100,8 @@ def _metadata_identities(metadata: MetadataService) -> InstrumentIdentityReader:
             allow_current_fallback: bool = True,
         ) -> Mapping[int, str]:
             # One registry read plus one batched PIT history query; the
-            # registry map doubles as the documented fallback while the
-            # history table is not ingested.
+            # registry map doubles as the documented restricted fallback
+            # while the history table lacks evidence for an instrument.
             frame = metadata.instrument.find_securities(
                 SecurityQuery(asset_class="stock", is_active=None)
             )
@@ -151,6 +151,25 @@ def _metadata_identities(metadata: MetadataService) -> InstrumentIdentityReader:
                 if ticker is not None:
                     resolved[instrument_id] = ticker
             return resolved
+
+        def st_status(
+            self,
+            instrument_ids: Sequence[int],
+            *,
+            asof: date,
+            cutoff: datetime | None = None,
+        ) -> Mapping[int, bool]:
+            # 仅返回有 st_change_history 证据的证券；无证据的键缺席，
+            # assemble_facts 据此走名称标记的受限回退。
+            evidence = metadata.instrument.get_st_status_batch(
+                list(instrument_ids),
+                asof.isoformat(),
+                cutoff=cutoff.isoformat() if cutoff is not None else None,
+            )
+            return {
+                instrument_id: bool(row["is_st"])
+                for instrument_id, row in evidence.items()
+            }
 
     return _MetadataIdentities()
 

@@ -8,7 +8,7 @@
 | S4-01 | L1 技术检查 | 空值/类型/范围检查 | 检出已知缺陷 |
 | S4-02 | L2 业务检查 | 涨跌停/停牌/异常波动 | 业务规则正确触发 |
 | S4-03 | L3 统计检查 | 离群值/分布异常 | 统计阈值准确 |
-| S4-04 | 跨源对账 | Tushare vs TDX 对比 | 差异识别率 100% |
+| S4-04 | 跨源对账 | Tushare vs fuyao 对比 | 差异识别率 100% |
 | S4-05 | 黄金数据集过滤 | 启用/禁用对比 | 仅保留指定标的 |
 | S4-06 | 报告生成 | 质量报告输出 | 格式完整、内容准确 |
 
@@ -256,7 +256,7 @@ class TestQuality:
 
         """
         # 此测试验证黄金数据集配置可用于对账
-        # 实际对账需要 Tushare 和 TDX 数据源
+        # 实际对账需要 Tushare 和 fuyao 数据源（ops reconcile 链路）
 
         # Assert
         assert golden_spec is not None, "黄金数据集应可用"
@@ -368,10 +368,10 @@ class TestCrossSourceReconciliation:
 
         # Sample data
         tushare_close = 100.0
-        tdx_close = 100.05
+        secondary_close = 100.05
 
         # Act
-        diff = abs(tushare_close - tdx_close) / tushare_close
+        diff = abs(tushare_close - secondary_close) / tushare_close
         is_within_tolerance = diff <= tolerance_price
 
         # Assert

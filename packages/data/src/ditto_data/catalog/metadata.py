@@ -104,6 +104,7 @@ _METADATA_DOMAINS: frozenset[str] = frozenset(
         "calendar",
         "industry_classification",
         "industry_mapping",
+        "namechange",
     }
 )
 
@@ -117,6 +118,7 @@ _MARKET_DOMAINS: frozenset[str] = frozenset(
         "stock_status",
         "adj_factor",
         "fund_adj",
+        "st_history",
     }
 )
 
@@ -176,6 +178,9 @@ _INITIAL_FOCUS_DATASETS: frozenset[str] = frozenset(
         "macro_indicators",
         "fx_daily",
         "commodity_daily",
+        # 可信历史（#395）
+        "namechange",
+        "st_history",
     }
 )
 
@@ -246,6 +251,8 @@ def _resolve_asset_class(dataset_id: str) -> DatasetAssetClass | None:
         "margin_trading",
         "pledge_ratio",
         "corporate_actions",
+        "namechange",
+        "st_history",
     }:
         return "stock"
     if dataset_id in {"etf_daily", "fund_adj"}:
@@ -267,6 +274,9 @@ def _resolve_schedule(dataset_id: str) -> DatasetSchedule:
         "global_index_daily",
         "industry_classification",
         "industry_mapping",
+        # 全量事件历史抓取（不随 trade_date 推进）
+        "namechange",
+        "st_history",
     }:
         return "source_defined"
     # All others default to trading_days (basic datasets are also
@@ -558,6 +568,9 @@ _ALL_DATASET_IDS: tuple[str, ...] = (
     # Industry reference
     "industry_classification",
     "industry_mapping",
+    # Trustworthy instrument history (#395)
+    "namechange",
+    "st_history",
 )
 
 _INSTRUMENT_INGESTION_DATASETS: frozenset[str] = frozenset(

@@ -245,6 +245,9 @@ class TestDefaultMetadataMaturityAssignments:
             "macro_indicators",
             "fx_daily",
             "commodity_daily",
+            # #395 可信历史
+            "namechange",
+            "st_history",
         }
     )
 
@@ -518,7 +521,7 @@ class TestR2DataProductContracts:
         }
     )
     DEFERRED_SCOPE: ClassVar[frozenset[str]] = frozenset(
-        {"margin_trading", "pledge_ratio", "fx_daily"}
+        {"margin_trading", "pledge_ratio", "fx_daily", "namechange", "st_history"}
     )
 
     def test_freezes_exact_r2_scope(self) -> None:

@@ -23,7 +23,6 @@ def test_resolve_source_ticker_accepts_context_objects() -> None:
             instrument_reader=instrument_reader,
             exchange_transformers=ExchangeTransformers(
                 tushare=TushareExchangeTransformer(),
-                tdx=MagicMock(),
             ),
         ),
         IdentityResolutionRequest(

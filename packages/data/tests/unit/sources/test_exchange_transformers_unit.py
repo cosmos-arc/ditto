@@ -44,7 +44,7 @@ class TestExchangeTransformerProtocol:
 
 
 class TestExchangeTransformers:
-    """Tests for ExchangeTransformers factory."""
+    """Tests for ExchangeTransformers factory（#395：TDX 槽位已删除）."""
 
     def test_tushare_property_returns_transformer(self, mocker: MockerFixture) -> None:
         """Test tushare property returns the injected transformer."""
@@ -52,53 +52,26 @@ class TestExchangeTransformers:
         mock_tushare.to_standard = mocker.Mock(return_value="000001.XSHE")
         mock_tushare.from_standard = mocker.Mock(return_value="000001.SZ")
 
-        mock_tdx = mocker.Mock()
-
-        transformers = ExchangeTransformers(tushare=mock_tushare, tdx=mock_tdx)
+        transformers = ExchangeTransformers(tushare=mock_tushare)
         result = transformers.tushare
 
         assert result is mock_tushare
         assert result.to_standard("000001.SZ") == "000001.XSHE"
 
-    def test_tdx_property_returns_transformer(self, mocker: MockerFixture) -> None:
-        """Test tdx property returns the injected transformer."""
-        mock_tushare = mocker.Mock()
-        mock_tdx = mocker.Mock()
-        mock_tdx.to_standard = mocker.Mock(return_value="000001.XSHE")
-        mock_tdx.from_standard = mocker.Mock(return_value="000001.SZ")
-
-        transformers = ExchangeTransformers(tushare=mock_tushare, tdx=mock_tdx)
-        result = transformers.tdx
-
-        assert result is mock_tdx
-        assert result.to_standard("000001.SZ") == "000001.XSHE"
-
     def test_get_returns_tushare_transformer(self, mocker: MockerFixture) -> None:
         """Test get() method returns tushare transformer."""
         mock_tushare = mocker.Mock()
-        mock_tdx = mocker.Mock()
 
-        transformers = ExchangeTransformers(tushare=mock_tushare, tdx=mock_tdx)
+        transformers = ExchangeTransformers(tushare=mock_tushare)
         result = transformers.get("tushare")
 
         assert result is mock_tushare
 
-    def test_get_returns_tdx_transformer(self, mocker: MockerFixture) -> None:
-        """Test get() method returns tdx transformer."""
-        mock_tushare = mocker.Mock()
-        mock_tdx = mocker.Mock()
-
-        transformers = ExchangeTransformers(tushare=mock_tushare, tdx=mock_tdx)
-        result = transformers.get("tdx")
-
-        assert result is mock_tdx
-
     def test_get_is_case_insensitive(self, mocker: MockerFixture) -> None:
         """Test get() normalizes case."""
         mock_tushare = mocker.Mock()
-        mock_tdx = mocker.Mock()
 
-        transformers = ExchangeTransformers(tushare=mock_tushare, tdx=mock_tdx)
+        transformers = ExchangeTransformers(tushare=mock_tushare)
 
         result1 = transformers.get("TUSHARE")
         result2 = transformers.get("tushare")
@@ -108,27 +81,19 @@ class TestExchangeTransformers:
         assert result2 is mock_tushare
         assert result3 is mock_tushare
 
-    def test_get_tdx_is_case_insensitive(self, mocker: MockerFixture) -> None:
-        """Test get() normalizes case for tdx."""
+    def test_get_tdx_removed_raises_error(self, mocker: MockerFixture) -> None:
+        """TDX 已删除：get('tdx') 显式拒绝而不是静默回退。"""
         mock_tushare = mocker.Mock()
-        mock_tdx = mocker.Mock()
+        transformers = ExchangeTransformers(tushare=mock_tushare)
 
-        transformers = ExchangeTransformers(tushare=mock_tushare, tdx=mock_tdx)
-
-        result1 = transformers.get("TDX")
-        result2 = transformers.get("tdx")
-        result3 = transformers.get("  tdx  ")
-
-        assert result1 is mock_tdx
-        assert result2 is mock_tdx
-        assert result3 is mock_tdx
+        with pytest.raises(ValueError, match="Unknown source"):
+            transformers.get("tdx")
 
     def test_get_invalid_name_raises_error(self, mocker: MockerFixture) -> None:
         """Test get() raises error for invalid source name."""
         mock_tushare = mocker.Mock()
-        mock_tdx = mocker.Mock()
 
-        transformers = ExchangeTransformers(tushare=mock_tushare, tdx=mock_tdx)
+        transformers = ExchangeTransformers(tushare=mock_tushare)
 
         with pytest.raises(ValueError, match="Unknown source"):
             transformers.get("invalid_source")
@@ -140,9 +105,8 @@ class TestExchangeTransformers:
         mock_tushare = mocker.Mock()
         mock_tushare.to_standard = mocker.Mock(return_value="000001.XSHE")
         mock_tushare.from_standard = mocker.Mock(return_value="000001.SZ")
-        mock_tdx = mocker.Mock()
 
-        transformers = ExchangeTransformers(tushare=mock_tushare, tdx=mock_tdx)
+        transformers = ExchangeTransformers(tushare=mock_tushare)
         result = transformers.get("tushare")
 
         # Should be usable as ExchangeTransformer
@@ -153,10 +117,8 @@ class TestExchangeTransformers:
     def test_properties_return_same_instance(self, mocker: MockerFixture) -> None:
         """Test properties return the same instance on multiple calls."""
         mock_tushare = mocker.Mock()
-        mock_tdx = mocker.Mock()
 
-        transformers = ExchangeTransformers(tushare=mock_tushare, tdx=mock_tdx)
+        transformers = ExchangeTransformers(tushare=mock_tushare)
 
         # Properties should return same instance
         assert transformers.tushare is transformers.tushare
-        assert transformers.tdx is transformers.tdx

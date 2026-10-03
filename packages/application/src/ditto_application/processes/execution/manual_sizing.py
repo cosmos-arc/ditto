@@ -376,7 +376,9 @@ def _instrument_rules(request: ManualSizingRequest) -> InstrumentRules:
     return (
         InstrumentDefinition(
             instrument_id=iid,
-            asset_class="fund",
+            # 数据层资产类别命名统一为 stock/etf/index/fx/commodity；
+            # 该定义仅存在于内存（lot_size/费率计算），不落库。
+            asset_class="etf",
             exchange="XSHG",
             currency="CNY",
             tick_size=0.001,

@@ -39,31 +39,48 @@ class NameHistoryReader:
             event="name_history_reader_init_complete",
         )
 
-    def get_name(self, instrument_id: int, asof: str) -> str | None:
+    def get_name(
+        self,
+        instrument_id: int,
+        asof: str,
+        *,
+        cutoff: str | None = None,
+    ) -> str | None:
         """
         获取证券在指定时间点的名称.
 
         查询 changed_date <= asof 的最新记录，返回 new_name.
+        提供 cutoff（知识截止时刻）时，只使用该时刻之前已记录的行：
+        晚到的更名不能进入更早的 cutoff（秒粒度 fail closed）。
 
         Args:
             instrument_id: 证券 ID.
             asof: Point-in-Time 日期 (YYYY-MM-DD).
+            cutoff: 知识截止时刻 (YYYY-MM-DD HH:MM:SS)，可选.
 
         Returns:
             证券名称或 None（未找到时）.
 
         """
-        row = self._client.fetchone(
-            """SELECT new_name FROM instrument_name_history
-            WHERE instrument_id = ? AND changed_date <= ?
-            ORDER BY changed_date DESC LIMIT 1""",
-            [instrument_id, asof],
-        )
+        sql = """SELECT new_name FROM instrument_name_history
+            WHERE instrument_id = ? AND changed_date <= ?"""
+        params: list[object] = [instrument_id, asof]
+        if cutoff is not None:
+            sql += " AND (observed_at IS NULL OR datetime(observed_at) < datetime(?))"
+            params.append(cutoff)
+        sql += " ORDER BY changed_date DESC LIMIT 1"
+        row = self._client.fetchone(sql, params)
         return row["new_name"] if row else None
 
-    def get_names_batch(self, instrument_ids: list[int], asof: str) -> dict[int, str]:
+    def get_names_batch(
+        self,
+        instrument_ids: list[int],
+        asof: str,
+        *,
+        cutoff: str | None = None,
+    ) -> dict[int, str]:
         """
-        批量获取多个证券在指定时间点的名称（PIT）.
+        批量获取多个证券在指定时间点的名称（PIT，单次查询）.
 
         单次 SQL 查询解析每个证券 changed_date <= asof 的最新记录，
         未命中（无历史或不在请求列表）不返回键.
@@ -71,6 +88,7 @@ class NameHistoryReader:
         Args:
             instrument_ids: 证券 ID 列表.
             asof: Point-in-Time 日期 (YYYY-MM-DD).
+            cutoff: 知识截止时刻，提供时隐藏该时刻之后记录的行.
 
         Returns:
             {instrument_id: name} 映射（仅包含有历史记录的证券）.
@@ -78,7 +96,14 @@ class NameHistoryReader:
         """
         if not instrument_ids:
             return {}
-        in_clause, params = build_in_clause("instrument_id", instrument_ids)
+        in_clause, in_params = build_in_clause("instrument_id", instrument_ids)
+        knowledge_filter = ""
+        cutoff_params: list[object] = []
+        if cutoff is not None:
+            knowledge_filter = (
+                " AND (observed_at IS NULL OR datetime(observed_at) < datetime(?))"
+            )
+            cutoff_params.append(cutoff)
         rows = self._client.fetchall(
             f"""SELECT instrument_id, new_name FROM (
                     SELECT instrument_id, new_name,
@@ -87,10 +112,10 @@ class NameHistoryReader:
                                ORDER BY changed_date DESC
                            ) AS rn
                     FROM instrument_name_history
-                    WHERE changed_date <= ? AND {in_clause}
+                    WHERE changed_date <= ?{knowledge_filter} AND {in_clause}
                 )
             WHERE rn = 1""",  # noqa: S608 - in_clause 通过 _build_in_clause 安全构建
-            [asof, *params],
+            [asof, *cutoff_params, *in_params],
         )
         return {int(row["instrument_id"]): str(row["new_name"]) for row in rows}
 

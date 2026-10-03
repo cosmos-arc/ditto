@@ -35,7 +35,7 @@
 │  │                 │      │                 │      │                 │      │
 │  │  • Tushare      │ ───▶ │  • Adapter      │ ───▶ │  • Reader       │      │
 │  │  • AkShare      │      │  • Transformer  │      │  • Writer       │      │
-│  │  • 通达信        │      │  • ColumnMapping│      │                 │      │
+│  │  • fuyao(冗余)   │      │  • ColumnMapping│      │                 │      │
 │  └─────────────────┘      └─────────────────┘      └─────────────────┘      │
 │                                    │                   │                     │
 │                                    ▼                   ▼                     │
@@ -128,13 +128,10 @@ keyring.set_password('fred', 'api_key', 'YOUR_API_KEY')
 "
 ```
 
-### 2.3 通达信（质量对账）
+### 2.3 TDX（已删除）
 
-| 配置项 | 值 |
-|--------|-----|
-| 数据路径 | `/opt/tdx/vipdoc`（Linux）/ `D:\new_tdx\vipdoc`（Windows） |
-| 文件格式 | `.day` 二进制文件 |
-| 用途 | 仅用于数据质量对账，不参与主数据摄入 |
+TDX（通达信本地 vipdoc）适配器已于 #395（2026-10-03）删除；辅源对账
+由 fuyao 同口径接管（见 ADR 数据源双源架构）。无残留配置项。
 
 ### 2.4 AkShare（降级备选）
 

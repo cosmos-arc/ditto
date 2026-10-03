@@ -18,8 +18,6 @@ from ditto_data.sources.protocols import (
 )
 from ditto_data.sources.registry import SourceRegistry
 from ditto_data.sources.source import DataSources
-from ditto_data.sources.tdx.source import TdxSource
-from ditto_data.sources.tdx.transformer import TdxExchangeTransformer
 from ditto_data.sources.tushare.transformer import TushareExchangeTransformer
 from ditto_data.sources.tushare.tushare_source import TushareSource
 
@@ -155,30 +153,15 @@ class SourcesProvider(Provider):
         return TushareExchangeTransformer()
 
     @provide
-    def tdx_source(self, data_source_settings: DataSourceSettings) -> TdxSource:
-        """通达信数据源 — 仅用于质量对账."""
-        return TdxSource(data_source_settings=data_source_settings)
-
-    @provide
-    def tdx_transformer(self) -> TdxExchangeTransformer:
-        """TDX 交易所转换器."""
-        return TdxExchangeTransformer()
-
-    @provide
     def exchange_transformers(
         self,
         tushare_transformer: TushareExchangeTransformer,
-        tdx_transformer: TdxExchangeTransformer,
     ) -> ExchangeTransformers:
         """
         Exchange transformer 工厂.
 
         Args:
-            tushare_transformer: Tushare 交易所转换器
-            tdx_transformer: TDX 交易所转换器
+            tushare_transformer: Tushare 数据源交易所转换器实例
 
         """
-        return ExchangeTransformers(
-            tushare=tushare_transformer,
-            tdx=tdx_transformer,
-        )
+        return ExchangeTransformers(tushare=tushare_transformer)

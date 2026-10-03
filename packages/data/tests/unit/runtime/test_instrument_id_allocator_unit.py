@@ -17,7 +17,7 @@ class TestInstrumentIdAllocator:
         assert allocator._pool is mock_pool
 
     def test_allocate_stock_id_first_allocation(self, mocker: MockerFixture) -> None:
-        """Test allocating first stock ID starts at min range."""
+        """无种子行时首个分配 = min_id + 1（min_id 保留）。"""
         mock_pool = mocker.Mock()
         # No existing record
         mock_pool.execute.return_value.fetchone.return_value = None
@@ -25,47 +25,59 @@ class TestInstrumentIdAllocator:
         allocator = InstrumentIdAllocator(mock_pool)
         instrument_id = allocator.allocate("stock")
 
-        # Should start at stock min_id (1,000,000)
-        assert instrument_id == 1_000_000
+        # Should start at stock min_id + 1 (1,000,001)
+        assert instrument_id == 1_000_001
         # Verify insert was called
         mock_pool.execute.assert_any_call(
             "INSERT INTO instrument_id_sequence "
             + "(asset_class, current_max) VALUES (?, ?)",
-            ["stock", 1_000_000],
+            ["stock", 1_000_001],
         )
         mock_pool.commit.assert_called_once()
 
     def test_allocate_etf_id_first_allocation(self, mocker: MockerFixture) -> None:
-        """Test allocating first ETF ID starts at min range."""
+        """无种子行时首个 ETF 分配 = min_id + 1。"""
         mock_pool = mocker.Mock()
         mock_pool.execute.return_value.fetchone.return_value = None
 
         allocator = InstrumentIdAllocator(mock_pool)
         instrument_id = allocator.allocate("etf")
 
-        # Should start at etf min_id (2,000,000)
-        assert instrument_id == 2_000_000
+        # Should start at etf min_id + 1 (2,000,001)
+        assert instrument_id == 2_000_001
         mock_pool.execute.assert_any_call(
             "INSERT INTO instrument_id_sequence "
             + "(asset_class, current_max) VALUES (?, ?)",
-            ["etf", 2_000_000],
+            ["etf", 2_000_001],
         )
 
     def test_allocate_index_id_first_allocation(self, mocker: MockerFixture) -> None:
-        """Test allocating first index ID starts at min range."""
+        """无种子行时首个 index 分配 = min_id + 1。"""
         mock_pool = mocker.Mock()
         mock_pool.execute.return_value.fetchone.return_value = None
 
         allocator = InstrumentIdAllocator(mock_pool)
         instrument_id = allocator.allocate("index")
 
-        # Should start at index min_id (3,000,000)
-        assert instrument_id == 3_000_000
+        # Should start at index min_id + 1 (3,000,001)
+        assert instrument_id == 3_000_001
         mock_pool.execute.assert_any_call(
             "INSERT INTO instrument_id_sequence "
             + "(asset_class, current_max) VALUES (?, ?)",
-            ["index", 3_000_000],
+            ["index", 3_000_001],
         )
+
+    def test_first_allocation_matches_seeded_sequence(
+        self, mocker: MockerFixture
+    ) -> None:
+        """种子行（current_max = min_id）后的首笔分配与无种子行的首笔分配同 ID。"""
+        mock_pool = mocker.Mock()
+        mock_pool.execute.return_value.fetchone.return_value = {
+            "current_max": 1_000_000
+        }
+
+        allocator = InstrumentIdAllocator(mock_pool)
+        assert allocator.allocate("stock") == 1_000_001
 
     def test_allocate_increments_existing_id(self, mocker: MockerFixture) -> None:
         """Test that allocation increments existing ID."""
@@ -93,28 +105,28 @@ class TestInstrumentIdAllocator:
         # First allocation returns None (no existing record)
         mock_pool.execute.return_value.fetchone.side_effect = [
             None,  # First call
-            {"current_max": 1_000_000},  # After first insert, second call sees it
+            {"current_max": 1_000_001},  # After first insert, second call sees it
         ]
 
         allocator = InstrumentIdAllocator(mock_pool)
 
         id1 = allocator.allocate("stock")
-        assert id1 == 1_000_000
+        assert id1 == 1_000_001
 
         # Reset mock for next call
         mock_pool.reset_mock()
         mock_pool.execute.return_value.fetchone.return_value = {
-            "current_max": 1_000_000
+            "current_max": 1_000_001
         }
 
         instrument_id2 = allocator.allocate("stock")
-        assert instrument_id2 == 1_000_001
+        assert instrument_id2 == 1_000_002
 
         # Verify UPDATE was called with incremented value
         mock_pool.execute.assert_any_call(
             "UPDATE instrument_id_sequence "
             + "SET current_max = ? WHERE asset_class = ?",
-            [1_000_001, "stock"],
+            [1_000_002, "stock"],
         )
 
     def test_allocate_raises_overflow_when_exhausted(

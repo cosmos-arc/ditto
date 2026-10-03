@@ -7,12 +7,15 @@ from typing import Any, Literal
 import polars as pl
 
 from ditto_data.quality.checkers.business import BusinessChecker
-from ditto_data.quality.checkers.cross_source import CrossSourceChecker
+from ditto_data.quality.checkers.cross_source import (
+    CrossSourceChecker,
+    CrossSourceComparison,
+)
 from ditto_data.quality.checkers.statistical import StatisticalChecker
 from ditto_data.quality.checkers.technical import TechnicalChecker
 from ditto_data.quality.config import DQSettings
 from ditto_data.quality.quality_types import DQIssue, DQResult, DQSeverity
-from ditto_data.quality.spec import DQSpec
+from ditto_data.quality.spec import CompareMethod, DQSpec, ToleranceRule
 
 
 class QualityEngine:
@@ -174,38 +177,86 @@ class QualityEngine:
 
         Args:
             primary: 主数据源 DataFrame（如 Tushare）
-            secondary: 辅助数据源 DataFrame（如 TDX）
+            secondary: 辅助数据源 DataFrame（如 fuyao）
             dataset: 数据集标识
-            context: 额外上下文
+            context: 额外上下文（可含 ex_dividend_instruments）
 
         Returns:
             DQResult with cross-source comparison results
 
         """
-        # 检查统计类开关
         if self._dq_settings and not self._dq_settings.l3_enabled:
             return DQResult(dataset=dataset, passed=True, issues=[])
 
-        issues: list[DQIssue] = []
+        issues = self.cross_source_checker.check(
+            primary=primary,
+            secondary=secondary,
+            rules=self._cross_source_rules(dataset),
+            context=context,
+        )
+        # 统计类检查始终通过（仅告警）——零交集/重复键是显式 WARNING
+        return DQResult(dataset=dataset, passed=True, issues=issues)
 
-        # 获取数据集规则
+    def compare_cross_source(
+        self,
+        primary: pl.DataFrame,
+        secondary: pl.DataFrame,
+        dataset: str,
+        context: dict[str, Any] | None = None,
+    ) -> CrossSourceComparison:
+        """
+        执行跨源对比并返回结构化报告（#395）。
+
+        报告两侧数量/匹配数/主辅侧未匹配/重复键/差异数；
+        零交集返回 ``not_comparable``（不可比较，不算通过）。
+        """
+        rules = self._cross_source_rules(dataset)
+        if not rules:
+            return CrossSourceComparison(
+                status="not_comparable",
+                key_columns=("instrument_id", "trade_date"),
+                primary_count=primary.height,
+                secondary_count=secondary.height,
+                matched_count=0,
+                primary_unmatched_count=0,
+                secondary_unmatched_count=0,
+                primary_duplicate_keys=0,
+                secondary_duplicate_keys=0,
+                diff_count=0,
+            )
+        rule = rules[0]
+        ex_dividend = frozenset((context or {}).get("ex_dividend_instruments") or ())
+        return self.cross_source_checker.compare(
+            primary,
+            secondary,
+            key_columns=rule.get("key_columns", ["instrument_id", "trade_date"]),
+            fields=rule.get("fields", []),
+            tolerance_rules=self._cross_source_tolerances(rule),
+            ex_dividend_instruments=ex_dividend,
+        )
+
+    def _cross_source_rules(self, dataset: str) -> list[dict[str, Any]]:
+        """返回数据集配置中启用的 cross_source 规则。"""
         dataset_rules = self.config.get_rules(dataset)
         if dataset_rules is None:
-            return DQResult(dataset=dataset, passed=True, issues=[])
+            return []
+        return [
+            rule
+            for rule in dataset_rules.statistical
+            if rule.get("rule") == "cross_source_compare" and rule.get("enabled", True)
+        ]
 
-        # 执行跨源对比检查（在统计类检查规则中）
-        if dataset_rules.statistical:
-            cross_source_issues = self.cross_source_checker.check(
-                primary=primary,
-                secondary=secondary,
-                rules=dataset_rules.statistical,
-                context=context,
+    @staticmethod
+    def _cross_source_tolerances(
+        rule: dict[str, Any],
+    ) -> dict[str, ToleranceRule]:
+        """规则内的自定义容差（字段 → ToleranceRule）。"""
+        tolerances: dict[str, ToleranceRule] = {}
+        for field_name, config in rule.get("tolerance_rules", {}).items():
+            tolerances[field_name] = ToleranceRule(
+                method=CompareMethod(config.get("method", "relative")),
+                tick_size=config.get("tick_size"),
+                relative_tol=config.get("relative_tol"),
+                absolute_tol=config.get("absolute_tol"),
             )
-            issues.extend(cross_source_issues)
-
-        # 统计类检查始终通过（仅告警）
-        return DQResult(
-            dataset=dataset,
-            passed=True,  # 统计类不阻塞
-            issues=issues,
-        )
+        return tolerances

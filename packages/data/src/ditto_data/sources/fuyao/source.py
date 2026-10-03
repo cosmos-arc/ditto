@@ -71,10 +71,14 @@ _BARS_RAW_SCHEMA: dict[str, type[pl.DataType]] = {
 }
 
 
-def _to_thscode(ticker: str) -> str:
+def to_thscode(ticker: str) -> str:
+    """裸码 → thscode（与 ts_code 同构；对账反解按同一前缀规则）。"""
     return (
         ticker if "." in ticker else f"{ticker}{_TICKER_SUFFIX.get(ticker[0], '.SZ')}"
     )
+
+
+_to_thscode = to_thscode  # 模块内旧名兼容
 
 
 def _parse_date(value: str) -> date:

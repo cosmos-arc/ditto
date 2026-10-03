@@ -25,6 +25,7 @@ from ditto_data.sources.tushare.stock_source import (
     fetch_adj_factor,
     fetch_adj_factor_by_ticker,
     fetch_calendar,
+    fetch_name_history,
     fetch_st_history,
     fetch_stock_basic,
     fetch_stock_daily,
@@ -99,6 +100,20 @@ class StockFacade:
     ) -> pl.DataFrame:
         """获取 ST 状态变更历史."""
         return fetch_st_history(
+            self._stock,
+            ts_code=ts_code,
+            start_date=start_date,
+            end_date=end_date,
+        )
+
+    def fetch_name_history(
+        self,
+        ts_code: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> pl.DataFrame:
+        """获取证券名称变更历史."""
+        return fetch_name_history(
             self._stock,
             ts_code=ts_code,
             start_date=start_date,

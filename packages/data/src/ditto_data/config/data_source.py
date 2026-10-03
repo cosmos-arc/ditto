@@ -33,8 +33,5 @@ class DataSourceSettings(BaseModel):
     fuyao_api_key: str = Field(default="")
     fuyao_base_url: str = Field(default="https://fuyao.aicubes.cn")
 
-    # 通达信数据源配置（用于质量对账）
-    tdx_path: str = Field(default="D:\\new_tdx\\vipdoc")
-
 
 __all__ = ["DataSourceSettings"]

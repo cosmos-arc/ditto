@@ -40,10 +40,10 @@ class TestInstrumentIdAllocator:
         self.temp_dir.cleanup()
 
     def test_allocate_first_etf_instrument_id(self) -> None:
-        """Test allocating first ETF instrument_id returns 2M."""
+        """无种子行时首个 ETF 分配 = min_id + 1（min_id 保留）。"""
         instrument_id = self.allocator.allocate("etf")
 
-        assert instrument_id == 2_000_000
+        assert instrument_id == 2_000_001
 
         # Verify it was persisted
         row = self.pool.execute(
@@ -51,7 +51,20 @@ class TestInstrumentIdAllocator:
             ["etf"],
         ).fetchone()
         assert row is not None
-        assert row["current_max"] == 2_000_000
+        assert row["current_max"] == 2_000_001
+
+    def test_seeded_sequence_first_allocation_matches_unseeded(
+        self,
+    ) -> None:
+        """种子（current_max = min_id）后的首笔分配与无种子首笔分配同语义。"""
+        self.pool.execute("BEGIN IMMEDIATE")
+        self.pool.execute(
+            "INSERT OR REPLACE INTO instrument_id_sequence VALUES (?, ?)",
+            ["etf", 2_000_000],
+        )
+        self.pool.commit()
+
+        assert self.allocator.allocate("etf") == 2_000_001
 
     def test_allocate_consecutive_etf_instrument_ids(self) -> None:
         """Test allocating consecutive ETF instrument IDs."""
@@ -59,9 +72,9 @@ class TestInstrumentIdAllocator:
         second_instrument_id = self.allocator.allocate("etf")
         third_instrument_id = self.allocator.allocate("etf")
 
-        assert first_instrument_id == 2_000_000
-        assert second_instrument_id == 2_000_001
-        assert third_instrument_id == 2_000_002
+        assert first_instrument_id == 2_000_001
+        assert second_instrument_id == 2_000_002
+        assert third_instrument_id == 2_000_003
 
     def test_allocate_different_asset_classes(self) -> None:
         """Test allocating IDs for different asset classes."""
@@ -69,9 +82,9 @@ class TestInstrumentIdAllocator:
         stock_instrument_id = self.allocator.allocate("stock")
         index_instrument_id = self.allocator.allocate("index")
 
-        assert etf_instrument_id == 2_000_000  # ETF range starts at 2M
-        assert stock_instrument_id == 1_000_000  # Stock range starts at 1M
-        assert index_instrument_id == 3_000_000  # Index range starts at 3M
+        assert etf_instrument_id == 2_000_001  # ETF range starts at 2M + 1
+        assert stock_instrument_id == 1_000_001  # Stock range starts at 1M + 1
+        assert index_instrument_id == 3_000_001  # Index range starts at 3M + 1
 
     def test_instrument_id_exhaustion(self) -> None:
         """Test behavior when instrument_id range is exhausted."""

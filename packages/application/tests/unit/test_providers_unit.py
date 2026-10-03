@@ -118,13 +118,12 @@ from ditto_data.services.market_service import MarketService
 from ditto_data.services.metadata_service import MetadataService
 from ditto_data.sources.exchange_transformers import ExchangeTransformers
 from ditto_data.sources.source import DataSources
-from ditto_data.sources.tdx.source import TdxSource
 from ditto_features.compile_cache import SQLiteCompileCacheBackend
 from ditto_platform.foundation import DataCache, Environment
 from ditto_platform.services.notification import AlertManager
 from ditto_strategy.alpha.node_registry import NodeRegistry
 
-_tdx_mock = MagicMock(spec=TdxSource)
+_secondary_mock = MagicMock(spec=SecondaryBarsSourceProtocol)
 
 # ---------------------------------------------------------------------------
 # Test fixtures: 辅助 Provider（替代 Interfaces 层 ConfigProvider）
@@ -191,10 +190,7 @@ def _sources_provider() -> Provider:
 
         @provide
         def exchange_transformers(self) -> ExchangeTransformers:
-            return ExchangeTransformers(
-                tushare=MagicMock(),
-                tdx=MagicMock(),
-            )
+            return ExchangeTransformers(tushare=MagicMock())
 
     return SourcesProvider()
 
@@ -240,16 +236,6 @@ def _notification_provider() -> Provider:
     return NotificationProvider()
 
 
-class _TdxMockProvider(Provider):
-    """测试用 TdxSource mock Provider — 替代 SourcesProvider.tdx_source."""
-
-    scope = Scope.APP
-
-    @provide
-    def tdx_source(self) -> TdxSource:
-        return _tdx_mock
-
-
 class _GoldenNoneProvider(Provider):
     """测试用 GoldenDatasetSpec mock Provider — 返回 None."""
 
@@ -266,10 +252,8 @@ class _ProtocolAdapterProvider(Provider):
     scope = Scope.APP
 
     @provide
-    def secondary_bars_source_protocol(
-        self, tdx_source: TdxSource
-    ) -> SecondaryBarsSourceProtocol:
-        return tdx_source
+    def secondary_bars_source_protocol(self) -> SecondaryBarsSourceProtocol:
+        return _secondary_mock
 
     @provide
     def comparison_store_protocol(self) -> ComparisonStoreProtocol:
@@ -748,7 +732,6 @@ class TestAppProviderIntegration:
             _TestConfigProvider(tmp_path),
             QualityProvider(),
             _sources_provider(),
-            _TdxMockProvider(),
             _GoldenNoneProvider(),
             RuntimeProvider(),
             MetadataProvider(),

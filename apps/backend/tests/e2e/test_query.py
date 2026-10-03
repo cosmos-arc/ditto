@@ -736,7 +736,7 @@ class TestPITQueryValidation:
     ) -> None:
         """仓库内合成数据集 PIT 查询抽样验证.
 
-        对固定的临时数据集进行 PIT 查询验证，不依赖本机 TDX 文件。
+        对固定的临时数据集进行 PIT 查询验证，不依赖本机辅源文件。
 
         Args:
             market_service: MarketService 实例.

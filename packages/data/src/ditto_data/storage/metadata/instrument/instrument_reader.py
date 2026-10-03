@@ -265,6 +265,37 @@ class InstrumentReader:
 
         return result
 
+    def map_bare_tickers_to_instrument_ids(
+        self,
+        tickers: list[str],
+    ) -> dict[str, list[int]]:
+        """
+        按裸代码（如 "600000"）反查 instrument_id 列表。
+
+        仅做读取侧的唯一性证据收集：同一裸代码可能命中多个注册证券
+        （历史重码、跨资产类别撞码），调用方据此决定是否复用映射。
+
+        Args:
+            tickers: 裸代码列表.
+
+        Returns:
+            {ticker: [instrument_id, ...]} 映射（仅包含命中的代码）.
+
+        """
+        if not tickers:
+            return {}
+        in_clause, params = build_in_clause("ticker", tickers)
+        rows = self._client.fetchall(
+            f"SELECT ticker, instrument_id FROM instrument WHERE {in_clause}",  # noqa: S608 - in_clause 通过 _build_in_clause 安全构建
+            params,
+        )
+        result: dict[str, list[int]] = {}
+        for row in rows:
+            result.setdefault(cast("str", row["ticker"]), []).append(
+                cast("int", row["instrument_id"])
+            )
+        return result
+
     def get_source_ticker(
         self,
         instrument_id: int,

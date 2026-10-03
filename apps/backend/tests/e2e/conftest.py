@@ -2,7 +2,7 @@
 
 提供端到端验证测试所需的核心 fixtures，包括：
 - 黄金数据集配置
-- 真实数据源（Tushare、TDX）
+- 真实数据源（Tushare；fuyao 冗余源经 #395 对账接管，TDX 已删除）
 - 预期快照加载
 - 报告生成器
 
@@ -27,7 +27,6 @@ import pytest  # noqa: E402
 from ditto_data.config import DataSourceSettings  # noqa: E402
 from ditto_data.observability import register_metrics  # noqa: E402
 from ditto_data.quality import GoldenDatasetSpec  # noqa: E402
-from ditto_data.sources.tdx import TdxSource  # noqa: E402
 from ditto_data.sources.tushare.tushare_source import TushareSource  # noqa: E402
 from ditto_data.storage.market.stock.bars import (  # noqa: E402
     StockBarsReader,
@@ -59,7 +58,7 @@ def register_e2e_metrics() -> None:
 def e2e_data_validation() -> dict[str, bool]:
     """验证 E2E 测试数据完整性.
 
-    Session 级别 fixture，检查 TDX 样本和 PIT 快照数据是否存在。
+    Session 级别 fixture，检查 PIT 快照数据是否存在。
     如果关键数据缺失，测试将被跳过。
 
     Returns:
@@ -70,18 +69,8 @@ def e2e_data_validation() -> dict[str, bool]:
 
     """
     validation_result: dict[str, bool] = {
-        "tdx_samples": False,
         "pit_snapshots": False,
     }
-
-    # 检查 TDX 样本数据
-    tdx_sh = Path("tests/tdx_samples/vipdoc/sh/lday")
-    tdx_sz = Path("tests/tdx_samples/vipdoc/sz/lday")
-
-    sh_files = list(tdx_sh.glob("*.day")) if tdx_sh.exists() else []
-    sz_files = list(tdx_sz.glob("*.day")) if tdx_sz.exists() else []
-
-    validation_result["tdx_samples"] = len(sh_files) + len(sz_files) >= 10
 
     # 检查 PIT 快照数据
     snapshot_dir = Path("tests/fixtures/golden_expected/daily_snapshots")
@@ -92,12 +81,6 @@ def e2e_data_validation() -> dict[str, bool]:
     validation_result["pit_snapshots"] = len(snapshot_files) >= 10
 
     # 如果关键数据缺失，跳过需要这些数据的测试
-    if not validation_result["tdx_samples"]:
-        pytest.skip(
-            f"TDX 样本数据不完整: SH {len(sh_files)} 文件, SZ {len(sz_files)} 文件。"
-            "请运行: uv run --no-sync python tests/scripts/prepare_e2e_data.py"
-        )
-
     if not validation_result["pit_snapshots"]:
         pytest.skip(
             f"PIT 快照数据不完整: {len(snapshot_files)} 文件。"
@@ -172,21 +155,6 @@ def tushare_source() -> TushareSource:
         pytest.skip("Tushare Token 未配置 (keyring 或 TUSHARE_TOKEN 环境变量)")
 
     return TushareSource(settings=DataSourceSettings(), token=token)
-
-
-@pytest.fixture(scope="session")
-def tdx_source() -> TdxSource:
-    """加载内置 TDX 样本文件。
-
-    Session 级别 fixture，整个测试会话只初始化一次。
-    使用 tests/tdx_samples 目录下的 TDX 样本文件进行质量对账。
-
-    Returns:
-        TdxSource: TDX 数据源实例。
-
-    """
-    settings = DataSourceSettings(tdx_path="tests/tdx_samples")
-    return TdxSource(data_source_settings=settings)
 
 
 # ==============================================================================

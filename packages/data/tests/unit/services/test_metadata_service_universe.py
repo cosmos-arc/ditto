@@ -21,6 +21,8 @@ def mock_dependencies() -> dict[str, MagicMock]:
         "instrument_writer": MagicMock(),
         "name_history_reader": MagicMock(),
         "name_history_writer": MagicMock(),
+        "st_change_history_reader": MagicMock(),
+        "st_change_history_writer": MagicMock(),
         "calendar_reader": MagicMock(),
         "calendar_writer": MagicMock(),
         "industry_reader": MagicMock(),
@@ -39,10 +41,7 @@ def mock_dependencies() -> dict[str, MagicMock]:
 @pytest.fixture
 def exchange_transformers() -> ExchangeTransformers:
     """创建 ExchangeTransformers 实例."""
-    return ExchangeTransformers(
-        tushare=TushareExchangeTransformer(),
-        tdx=MagicMock(),
-    )
+    return ExchangeTransformers(tushare=TushareExchangeTransformer())
 
 
 @pytest.fixture
@@ -56,6 +55,8 @@ def service(
         instrument_writer=mock_dependencies["instrument_writer"],
         name_history_reader=mock_dependencies["name_history_reader"],
         name_history_writer=mock_dependencies["name_history_writer"],
+        st_change_history_reader=mock_dependencies["st_change_history_reader"],
+        st_change_history_writer=mock_dependencies["st_change_history_writer"],
         calendar_reader=mock_dependencies["calendar_reader"],
         calendar_writer=mock_dependencies["calendar_writer"],
         industry_reader=mock_dependencies["industry_reader"],
@@ -76,50 +77,57 @@ def service(
 
 
 class TestGetStockStatus:
-    """测试 get_stock_status PIT 查询."""
+    """测试 get_stock_status PIT 查询（#395 默认正常收紧）。"""
 
-    def test_get_stock_status_returns_defaults_when_no_data(
+    def test_get_stock_status_returns_explicit_unknown_when_no_data(
         self,
         service: MetadataService,
         mock_dependencies: dict[str, MagicMock],
     ) -> None:
-        """无数据时返回默认值."""
+        """无历史证据时返回显式未知状态（不再默认正常）。"""
         mock_dependencies["instrument_reader"].get_by_instrument_id.return_value = None
         mock_dependencies["instrument_reader"].get_stock_extension.return_value = None
+        mock_dependencies["st_change_history_reader"].get_st_status.return_value = None
 
         result = service.instrument.get_stock_status(1000001, "2024-01-15")
 
         assert result == {
-            "is_st": False,
-            "list_status": "L",
-            "is_suspended": False,
+            "is_st": None,
+            "st_type": None,
+            "list_status": None,
+            "is_suspended": None,
+            "has_evidence": False,
         }
 
-    def test_get_stock_status_with_instrument_data(
+    def test_get_stock_status_uses_st_history_evidence(
         self,
         service: MetadataService,
         mock_dependencies: dict[str, MagicMock],
     ) -> None:
-        """有 instrument 数据但无 stock 扩展数据时，从 instrument 取 is_st."""
+        """st_change_history 有 PIT 证据时用证据状态（当前 is_st 列不再兜底）。"""
         mock_dependencies["instrument_reader"].get_by_instrument_id.return_value = {
             "instrument_id": 1000001,
             "ticker": "000001",
             "is_st": True,
         }
         mock_dependencies["instrument_reader"].get_stock_extension.return_value = None
+        mock_dependencies["st_change_history_reader"].get_st_status.return_value = {
+            "is_st": False,
+            "st_type": None,
+            "effective_from": "2020-01-01",
+        }
 
         result = service.instrument.get_stock_status(1000001, "2024-01-15")
 
-        assert result["is_st"] is True
-        assert result["list_status"] == "L"
-        assert result["is_suspended"] is False
+        assert result["is_st"] is False
+        assert result["has_evidence"] is True
 
     def test_get_stock_status_with_full_data(
         self,
         service: MetadataService,
         mock_dependencies: dict[str, MagicMock],
     ) -> None:
-        """完整数据时合并 instrument 和 instrument_stock."""
+        """完整证据时合并 st_change_history 与 instrument_stock."""
         mock_dependencies["instrument_reader"].get_by_instrument_id.return_value = {
             "instrument_id": 1000001,
             "ticker": "000001",
@@ -130,12 +138,19 @@ class TestGetStockStatus:
             "list_status": "P",
             "industry_id": "ind_001",
         }
+        mock_dependencies["st_change_history_reader"].get_st_status.return_value = {
+            "is_st": True,
+            "st_type": "ST",
+            "effective_from": "2020-01-01",
+        }
 
         result = service.instrument.get_stock_status(1000001, "2024-01-15")
 
         assert result["is_st"] is True
+        assert result["st_type"] == "ST"
         assert result["list_status"] == "P"
         assert result["is_suspended"] is True  # P = 暂停上市
+        assert result["has_evidence"] is True
 
 
 # ============ T04: find_securities min_list_days ============
