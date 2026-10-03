@@ -19,7 +19,6 @@ SCRIPT = Path(__file__).resolve().parent / "wave1_env.sh"
 REQUIRED_KEYS = (
     "DITTO_DATA_ROOT",
     "SQLITE_PATH",
-    "DUCKDB_PATH",
     "ENVIRONMENT",
     "PYTHONUNBUFFERED",
 )
@@ -57,7 +56,6 @@ def test_wave1_env_exports_required_fields() -> None:
     assert env["PYTHONUNBUFFERED"] == "1"
     assert env["DITTO_DATA_ROOT"].endswith("some/relative-root")
     assert env["SQLITE_PATH"] == f"{env['DITTO_DATA_ROOT']}/metadata/metadata.sqlite"
-    assert env["DUCKDB_PATH"] == f"{env['DITTO_DATA_ROOT']}/db/ditto.duckdb"
 
 
 def test_wave1_env_resolves_relative_root_against_pwd() -> None:

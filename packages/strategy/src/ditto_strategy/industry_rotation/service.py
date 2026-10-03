@@ -108,7 +108,7 @@ class IndustryRotationService:
                 status=IndustryRotationStatus.BLOCKED,
                 rankings=(),
                 missing_inputs=tuple(
-                    sorted((*value.declared_missing_inputs, "industries"))
+                    sorted({*value.declared_missing_inputs, "industries"})
                 ),
             )
 

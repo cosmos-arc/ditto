@@ -21,7 +21,7 @@
 
 ### 操作手册
 - [配置系统](../apps/backend/docs/configuration.md) · [数据集手册](../packages/data/docs/data-manual.md) · [运维手册](ops-manual.md)
-- [数据集晋级治理](../packages/data/docs/dataset-promotion.md) · [因子 IC 诊断](../packages/features/docs/factor-ic-diagnosis.md)
+- [数据集晋级治理(历史注记)](../packages/data/docs/dataset-promotion.md) · [因子 IC 诊断](../packages/features/docs/factor-ic-diagnosis.md)
 
 ### 工程约定
 - [测试指南](engineering/testing.md) · [Codex/ZCode Agent Harness](engineering/agent-harness.md)

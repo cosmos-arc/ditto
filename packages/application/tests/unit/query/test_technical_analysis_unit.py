@@ -41,7 +41,6 @@ def _snapshot(
         canonical_asset=DataAssetRef(dataset_id="stock_daily", namespace="market"),
         request_parameters_hash=f"request-{snapshot_id}",
         response_metadata=(),
-        license_record_id="license-tushare",
         row_count=100,
         payload_uri=f"artifact://{snapshot_id}",
         payload_retained=True,

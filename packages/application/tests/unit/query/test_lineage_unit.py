@@ -600,7 +600,6 @@ def _ingested_snapshot(
             ),
             request_parameters_hash="sha256:request",
             response_metadata=(),
-            license_record_id="unused",
             row_count=1,
             payload_uri="stock_daily/2026/01/05.parquet",
             payload_retained=True,

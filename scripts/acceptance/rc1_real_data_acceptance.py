@@ -145,7 +145,6 @@ def _synthetic_acceptance_env(output: Path) -> dict[str, str]:
         "ENVIRONMENT": "testing",
         "DITTO_DATA_ROOT": data_root.as_posix(),
         "SQLITE_PATH": (data_root / "metadata" / "metadata.sqlite").as_posix(),
-        "DUCKDB_PATH": (data_root / "db" / "ditto.duckdb").as_posix(),
     }
 
 

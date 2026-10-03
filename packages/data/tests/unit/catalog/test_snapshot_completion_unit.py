@@ -32,7 +32,6 @@ def _snapshot(schema_version: str) -> ProviderSnapshot:
             ),
             request_parameters_hash="request:tushare",
             response_metadata=(),
-            license_record_id="license:tushare:v1",
             row_count=2,
             payload_uri="provider_payloads/tushare/stock_daily/same.parquet",
             payload_retained=True,

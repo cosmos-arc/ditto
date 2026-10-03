@@ -35,9 +35,6 @@ __all__ = [
     "build_evidence_commit_request",
 ]
 
-# license 治理已删除;列保留给 #396 重置时移除,写入统一占位值。
-UNUSED_LICENSE_RECORD_ID = "unused"
-
 
 @dataclass(frozen=True)
 class CatalogWriteContext:
@@ -195,7 +192,6 @@ def build_evidence_commit_request(
                     )
                 )
             ),
-            license_record_id=UNUSED_LICENSE_RECORD_ID,
             row_count=payload_row_count,
             payload_uri=(
                 ctx.provider_payload.uri

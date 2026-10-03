@@ -263,10 +263,6 @@ def _approved_provider_snapshot(
                 ("raw_provider_row_count", str(approved.raw_provider_row_count)),
                 ("strategy_universe", approved.strategy_universe),
             ),
-            license_record_id=(
-                "license:tushare:etf_daily:sha256:"
-                "c0f1403a9924d2cc71ad440c08ab743369721661a61d54ecb36637661bbcf6fc"
-            ),
             row_count=len(approved.provider_rows),
             payload_uri=(
                 "provider_payloads/tushare/etf_daily/"

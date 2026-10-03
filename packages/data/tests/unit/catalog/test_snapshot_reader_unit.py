@@ -34,7 +34,6 @@ def _snapshot() -> ProviderSnapshot:
             canonical_asset=DataAssetRef("stock_daily", "market"),
             request_parameters_hash="a" * 32,
             response_metadata=(),
-            license_record_id="license:1",
             row_count=4,
             payload_uri=(
                 "provider_payloads/tushare/stock_daily/" + "a" * 32 + ".parquet"

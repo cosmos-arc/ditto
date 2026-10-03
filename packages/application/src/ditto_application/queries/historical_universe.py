@@ -1,5 +1,6 @@
 """Qualified historical universe reads shared by research and selection."""
 
+from collections.abc import Callable
 from dataclasses import asdict, dataclass
 from datetime import date, datetime
 from hashlib import sha256
@@ -12,6 +13,8 @@ from ditto_data.services.historical_universe import (
     MASTER_FIELDS,
     MEMBERSHIP_FIELDS,
     STATUS_FIELDS,
+    project_basic_master_intervals,
+    project_daily_status_intervals,
     project_historical_universe,
     visible_history,
 )
@@ -100,6 +103,7 @@ class PinnedHistoricalUniverse:
     master: tuple[SnapshotContents, ...]
     status: tuple[SnapshotContents, ...]
     membership: tuple[SnapshotContents, ...] = ()
+    ticker_resolver: Callable[..., dict[str, int]] | None = None
 
     def resolve(
         self,
@@ -144,9 +148,10 @@ class PinnedHistoricalUniverse:
         try:
             for _slot, chain, dataset_id, fields in definitions:
                 contents = self._observed_by(chain, knowledge_cutoff)
+                frame = self._project_slot(_slot, contents, knowledge_cutoff)
                 if not scope_ids:
                     ids = visible_history(
-                        contents.frame,
+                        frame,
                         fields=fields,
                         as_of=as_of,
                         knowledge_cutoff=knowledge_cutoff,
@@ -157,6 +162,10 @@ class PinnedHistoricalUniverse:
                     scope_ids = tuple(sorted(set(ids.to_list())))
                     if not scope_ids:
                         raise AppQueryError("HISTORY_SCOPE_EMPTY")
+                # Coverage self-attests against the snapshot's own request
+                # interval: daily datasets only cover their trade date, and
+                # cross-date honesty is carried by the projected row filter
+                # (missing status rows surface as TRADING_STATUS_MISSING).
                 report = self.readiness.assess(
                     SnapshotReadinessRequest(
                         fields=tuple(
@@ -165,8 +174,10 @@ class PinnedHistoricalUniverse:
                             )
                             for field in fields
                         ),
-                        required_from=as_of,
-                        required_to=as_of,
+                        required_from=date.fromisoformat(
+                            contents.snapshot.request_start
+                        ),
+                        required_to=date.fromisoformat(contents.snapshot.request_end),
                     )
                 )
                 if not report.ready:
@@ -185,7 +196,7 @@ class PinnedHistoricalUniverse:
                         "rule_version": report.rule_version,
                     }
                 )
-                frames[_slot] = contents.frame.select(fields)
+                frames[_slot] = frame.select(fields)
             frame = project_historical_universe(
                 frames["master"],
                 frames["status"],
@@ -214,6 +225,54 @@ class PinnedHistoricalUniverse:
             },
         )
 
+    def _project_slot(
+        self,
+        slot: str,
+        contents: SnapshotContents,
+        knowledge_cutoff: datetime,
+    ) -> pl.DataFrame:
+        """
+        Project raw provider frames into the PIT interval shape per slot.
+
+        Real stock_basic/stock_status payloads carry the provider's native
+        daily shapes; the projection is an honest same-observation mapping
+        (no retroactive facts). Frames already carrying PIT intervals pass
+        through unchanged, so golden fixtures keep their exact semantics.
+        """
+        # Golden PIT frames pass through; only source_ticker-keyed raw
+        # payloads take the projection path.
+        if "source_ticker" not in contents.frame.columns:
+            return contents.frame
+        resolver = self._resolver(contents)
+        if resolver is None:
+            return contents.frame
+        observed_at = contents.observed_at or contents.snapshot.created_at
+        if slot == "master":
+            return project_basic_master_intervals(
+                contents.frame,
+                observed_at=observed_at,
+                resolve_instrument=resolver,
+            )
+        if slot == "status":
+            return project_daily_status_intervals(
+                contents.frame,
+                observed_at=observed_at,
+                resolve_instrument=resolver,
+            )
+        return contents.frame
+
+    def _resolver(
+        self, contents: SnapshotContents
+    ) -> Callable[[list[str], str], dict[str, int]] | None:
+        if self.ticker_resolver is None:
+            return None
+        source = contents.snapshot.source
+
+        def resolve(tickers: list[str], asof: str) -> dict[str, int]:
+            return self.ticker_resolver(tickers, source=source, asof=asof)
+
+        return resolve
+
     @staticmethod
     def _observed_by(
         chain: tuple[SnapshotContents, ...], knowledge_cutoff: datetime
@@ -239,6 +298,10 @@ def _validate_contents(
         raise AppQueryError("HISTORY_SNAPSHOT_CONFLICT")
     if contents.snapshot.schema_fingerprint is None:
         raise AppQueryError("HISTORY_SCHEMA_EVIDENCE_MISSING")
+    # Raw provider shapes (source_ticker-keyed payloads) are validated after
+    # their PIT projection at resolve time; golden PIT frames validate here.
+    if "source_ticker" in contents.frame.columns:
+        return
     if not set(fields).issubset(contents.frame.columns):
         raise AppQueryError("HISTORY_FIELDS_MISSING")
 
@@ -247,10 +310,15 @@ class HistoricalUniverseQuery:
     """Read exact completed artifacts, qualify fields, then project historical rows."""
 
     def __init__(
-        self, reader: SnapshotReadService, readiness: SnapshotReadinessQuery
+        self,
+        reader: SnapshotReadService,
+        readiness: SnapshotReadinessQuery,
+        *,
+        ticker_resolver: Callable[..., dict[str, int]] | None = None,
     ) -> None:
         self._reader = reader
         self._readiness = readiness
+        self._ticker_resolver = ticker_resolver
 
     def pin(self, sources: HistoricalUniverseSources) -> PinnedHistoricalUniverse:
         """Load and structurally validate every pinned member exactly once."""
@@ -297,6 +365,7 @@ class HistoricalUniverseQuery:
             master=chains["master"],
             status=chains["status"],
             membership=chains.get("membership", ()),
+            ticker_resolver=self._ticker_resolver,
         )
 
     def resolve(

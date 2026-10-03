@@ -557,10 +557,15 @@ class TestReplaceConstituents:
 
         assert count == 2
 
-        # 应先关闭当前成分
+        # 应先删除同日起的旧成分并关闭更早的开放行(#415 重放安全)
+        mock_client.execute.assert_any_call(
+            """DELETE FROM universe_constituent
+            WHERE universe_id = ? AND effective_from >= ?""",
+            ["test_uv", "2024-01-15"],
+        )
         mock_client.execute.assert_any_call(
             """UPDATE universe_constituent
-            SET effective_to = ?
+            SET effective_to = date(?, '-1 day')
             WHERE universe_id = ? AND effective_to IS NULL""",
             ["2024-01-15", "test_uv"],
         )

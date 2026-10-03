@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from hashlib import sha256
 from typing import Literal, NamedTuple, cast
+from zoneinfo import ZoneInfo
 
 import httpx
 import orjson
@@ -196,6 +197,12 @@ def process_fetched_data(  # noqa: C901, PLR0911, PLR0912 - fail-closed stages
     chunk_id: str | None = None,
 ) -> IngestionResult:
     """处理获取的数据：DQ 检查 + 写入 + 后置钩子."""
+    # Dateless snapshot datasets (basic lists) carry an empty trade_date; the
+    # durable evidence chain still needs an ISO anchor, so pin it to the
+    # observation day — same-day reruns stay idempotent, a later rerun is a
+    # new independent observation.
+    if not trade_date:
+        trade_date = datetime.now(ZoneInfo("Asia/Shanghai")).date().isoformat()
     request_start = request_window.start if request_window is not None else None
     request_end = request_window.end if request_window is not None else None
     processing_date = (

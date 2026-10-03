@@ -126,12 +126,8 @@ def _run_incremental(
     start_date: str,
     end_date: str,
     source: str,
-    license_record_id: str,
 ) -> None:
-    with create_ingestion_bundle(
-        source=source,
-        license_record_id=license_record_id,
-    ) as bundle:
+    with create_ingestion_bundle(source=source) as bundle:
         bundle.backfill_manager.backfill_range(
             dataset=dataset_id,
             start_date=start_date,
@@ -170,7 +166,6 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--start-date", required=True)
     parser.add_argument("--end-date", required=True)
     parser.add_argument("--source", default="tushare")
-    parser.add_argument("--license-record-id", required=True)
     return parser
 
 
@@ -188,7 +183,6 @@ def main(argv: list[str] | None = None) -> int:
             start_date=args.start_date,
             end_date=args.end_date,
             source=args.source,
-            license_record_id=args.license_record_id,
         ),
         observe=lambda: observe_runtime_identity(database),
         query_workbench=_query_workbench,

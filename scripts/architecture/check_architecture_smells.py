@@ -2160,7 +2160,6 @@ _EXTERNAL_IMPORT_TO_DEP: dict[str, str] = {
     "cvxpy": "cvxpy",
     "dishka": "dishka",
     "dotenv": "python-dotenv",
-    "duckdb": "duckdb",
     "filelock": "filelock",
     "fastapi": "fastapi",
     "granian": "granian",

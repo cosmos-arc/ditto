@@ -23,9 +23,9 @@ Data 采用分层架构，storage 层实现 CQRS 模式（Reader/Writer 分离�
 ┌──────────────┐ ┌──────────────┐ ┌──────────────┐ ┌──────────────┐
 │ Runtime层    │ │  Storage层   │ │  Service层   │ │  Sources层   │
 │              │ │  (CQRS)      │ │              │ │              │
-│ FreezeMgr    │ │ Reader/      │ │ MarketSvc    │ │ Tushare      │
-│ SqlEngine    │ │ Writer       │ │ MetadataSvc  │ │ FRED         │
-│ IdAllocator  │ │ Parquet/     │ │ CapitalSvc   │ │ fuyao        │
+│ IdAllocator  │ │ Reader/      │ │ MarketSvc    │ │ Tushare      │
+│              │ │ Writer       │ │ MetadataSvc  │ │ FRED         │
+│              │ │ Parquet/     │ │ CapitalSvc   │ │ fuyao        │
 │              │ │ SQLite       │ │ MacroSvc     │ │              │
 └──────────────┘ │              │ │ Fundamental  │ └──────────────┘
                   └──────────────┘ │ Services...  │

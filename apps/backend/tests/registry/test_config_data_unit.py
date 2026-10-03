@@ -31,7 +31,6 @@ class TestConfigProviderData:
         # 验证
         assert isinstance(settings, DataStoreSettings)
         assert settings.data_root is not None
-        assert settings.resolved_duckdb_path is not None
         assert settings.resolved_sqlite_path is not None
 
         # 清理

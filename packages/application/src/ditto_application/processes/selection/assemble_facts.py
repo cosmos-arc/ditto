@@ -236,6 +236,18 @@ class _CoverageCatalog:
             if window.request_start <= day <= window.request_end
         )
 
+    def asof_windows(self, *, dataset_id: str) -> tuple[SnapshotWindow, ...]:
+        """
+        Bind as-of facts to every completed window of the dataset.
+
+        Roster/status facts are consumed at the decision instant from the
+        latest knowledge the cutoff allows; the snapshot set here is already
+        completion-filtered, and time visibility is enforced per row at read
+        time — so the binding declares the whole retained set instead of
+        pretending a calendar interval picks one.
+        """
+        return tuple(self._by_dataset.get(dataset_id, ()))
+
 
 @dataclass(frozen=True, slots=True)
 class AssembleSelectionFactsRequest:
@@ -1113,13 +1125,11 @@ class AssembleSelectionFacts:
             _ADJUSTMENT_DATASET: _covering_chain(
                 catalog, _ADJUSTMENT_DATASET, consumed_dates
             ),
-            "stock_status": catalog.covering(dataset_id="stock_status", day=as_of_date),
-            "stock_basic": catalog.covering(dataset_id="stock_basic", day=as_of_date),
+            "stock_status": catalog.asof_windows(dataset_id="stock_status"),
+            "stock_basic": catalog.asof_windows(dataset_id="stock_basic"),
             # limit_state consumes cross-date name/ST/listing metadata;
             # qualify that instant separately when it differs from as-of.
-            "stock_basic_cross": catalog.covering(
-                dataset_id="stock_basic", day=cross_date
-            ),
+            "stock_basic_cross": catalog.asof_windows(dataset_id="stock_basic"),
         }
 
 

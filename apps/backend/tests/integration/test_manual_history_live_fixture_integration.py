@@ -94,7 +94,6 @@ def _seed(root: Path) -> tuple[str, str]:
                 ),
                 request_parameters_hash="sha256:manual-history-request-v1",
                 response_metadata=(("fixture", "manual-history-live"),),
-                license_record_id="license:manual-history:v1",
                 row_count=artifact.row_count,
                 payload_uri=artifact.uri,
                 payload_retained=True,

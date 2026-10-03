@@ -49,7 +49,6 @@ def retain_history(
             canonical_asset=DataAssetRef(dataset_id, "metadata"),
             request_parameters_hash="recorded",
             response_metadata=(),
-            license_record_id="synthetic-license",
             row_count=frame.height,
             payload_uri=payload.uri,
             payload_retained=True,

@@ -65,7 +65,6 @@ def _snapshot() -> ProviderSnapshot:
         canonical_asset=DataAssetRef(dataset_id="stock_daily", namespace="market"),
         request_parameters_hash="request",
         response_metadata=(),
-        license_record_id="license",
         row_count=6,
         payload_uri="artifact://snapshot-stock",
         payload_retained=True,

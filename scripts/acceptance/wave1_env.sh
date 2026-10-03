@@ -10,7 +10,6 @@
 # 导出:
 #   DITTO_DATA_ROOT  数据根目录（绝对路径）
 #   SQLITE_PATH      metadata.sqlite 路径（catalog/promotion store 共用）
-#   DUCKDB_PATH      DuckDB 路径
 #   ENVIRONMENT      固定 testing
 #   PYTHONUNBUFFERED 1（CLI 输出不缓冲，便于 acceptance 捕获）
 set -euo pipefail
@@ -27,6 +26,5 @@ fi
 
 export DITTO_DATA_ROOT="${WAVE1_DATA_ROOT}"
 export SQLITE_PATH="${WAVE1_DATA_ROOT}/metadata/metadata.sqlite"
-export DUCKDB_PATH="${WAVE1_DATA_ROOT}/db/ditto.duckdb"
 export ENVIRONMENT="testing"
 export PYTHONUNBUFFERED="1"

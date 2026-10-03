@@ -1,4 +1,4 @@
-"""数据存储配置 - 统一管理所有存储路径和引擎配置。"""
+"""数据存储配置 - 统一管理所有存储路径配置。"""
 
 from __future__ import annotations
 
@@ -143,11 +143,6 @@ class _FundamentalPaths:
         return self._root / "fundamental" / "indicator"
 
     @property
-    def forecast(self) -> Path:
-        """业绩预告路径."""
-        return self._root / "fundamental" / "forecast"
-
-    @property
     def holding(self) -> Path:
         """持股数据路径."""
         return self._root / "fundamental" / "holding"
@@ -157,7 +152,6 @@ class _FundamentalPaths:
         return [
             "fundamental/financial",
             "fundamental/indicator",
-            "fundamental/forecast",
             "fundamental/holding",
         ]
 
@@ -205,18 +199,13 @@ class _UtilityPaths:
         return self._root / "temp"
 
     @property
-    def db(self) -> Path:
-        """数据库存储路径."""
-        return self._root / "db"
-
-    @property
     def provider_payloads(self) -> Path:
         """不可变 provider 响应归档路径."""
         return self._root / "provider_payloads"
 
     def directories(self) -> list[str]:
         """该子域下的所有相对目录."""
-        return ["logs", "backups", "temp", "db", "provider_payloads"]
+        return ["logs", "backups", "temp", "provider_payloads"]
 
 
 @final
@@ -279,33 +268,6 @@ class PathGroups:
 
 
 # ---------------------------------------------------------------------------
-# SQL 引擎配置
-# ---------------------------------------------------------------------------
-
-
-class SqlEngineConfig(BaseModel):
-    """
-    SQL 引擎性能配置。
-
-    Attributes:
-        enable_plan_cache: 启用查询计划缓存。
-        plan_cache_size: 缓存大小。
-        slow_query_threshold: 慢查询阈值(秒)。
-
-    """
-
-    model_config = ConfigDict(extra="ignore")
-
-    enable_plan_cache: bool = Field(default=True, description="启用查询计划缓存")
-    plan_cache_size: int = Field(default=1000, ge=100, description="缓存大小")
-    slow_query_threshold: float = Field(
-        default=1.0,
-        ge=0.1,
-        description="慢查询阈值(秒)",
-    )
-
-
-# ---------------------------------------------------------------------------
 # 数据存储配置主类
 # ---------------------------------------------------------------------------
 
@@ -324,8 +286,6 @@ class DataStoreSettings(BaseModel):
     Attributes:
         data_root: 数据根目录。
         sqlite_path: SQLite 路径覆盖（可选）。
-        duckdb_path: DuckDB 路径覆盖（可选）。
-        sql_engine: SQL 引擎配置。
 
     """
 
@@ -336,17 +296,10 @@ class DataStoreSettings(BaseModel):
 
     # ========== 数据库路径（可选覆盖）==========
     sqlite_path: Path | None = Field(default=None, description="SQLite 路径覆盖")
-    duckdb_path: Path | None = Field(default=None, description="DuckDB 路径覆盖")
 
     # ========== 其他路径覆盖 (Docker 部署用) ==========
     logs_path_override: Path | None = Field(
         default=None, description="日志路径覆盖 (Docker 部署用)"
-    )
-
-    # ========== 引擎配置 ==========
-    sql_engine: SqlEngineConfig = Field(
-        default_factory=SqlEngineConfig,
-        description="SQL 引擎配置",
     )
 
     # ========== 嵌套路径组（推荐入口）==========
@@ -363,11 +316,6 @@ class DataStoreSettings(BaseModel):
         """解析后的 SQLite 路径（唯一真源）。"""
         return self.sqlite_path or self.data_root / "metadata" / "metadata.sqlite"
 
-    @property
-    def resolved_duckdb_path(self) -> Path:
-        """解析后的 DuckDB 路径。"""
-        return self.duckdb_path or self.data_root / "db" / "ditto.duckdb"
-
     # ========== 路径访问说明 ==========
 
     def all_directories(self) -> list[str]:
@@ -379,4 +327,4 @@ class DataStoreSettings(BaseModel):
         return self.paths.all_directories()
 
 
-__all__ = ["DataStoreSettings", "PathGroups", "SqlEngineConfig"]
+__all__ = ["DataStoreSettings", "PathGroups"]

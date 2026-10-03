@@ -168,7 +168,6 @@ def _cli_env(data_root: Path, token: str) -> dict[str, str]:
         {
             "DITTO_STATE_ROOT": data_root.as_posix(),
             "SQLITE_PATH": (data_root / "metadata" / "metadata.sqlite").as_posix(),
-            "DUCKDB_PATH": (data_root / "db" / "ditto.duckdb").as_posix(),
             "ENVIRONMENT": "testing",
             "PYTHONUNBUFFERED": "1",
             "TUSHARE_TOKEN": token,
@@ -235,7 +234,6 @@ def _app_env(data_root: Path, token: str) -> Iterator[None]:
     keys = (
         "DITTO_STATE_ROOT",
         "SQLITE_PATH",
-        "DUCKDB_PATH",
         "ENVIRONMENT",
         "TUSHARE_TOKEN",
     )

@@ -43,7 +43,6 @@ from ditto_data.ingestion.quality_record_store import (
 from ditto_data.lineage import DataLineageReader, DataLineageRecorder
 from ditto_data.lineage.sqlite_store import SQLiteDataLineage
 from ditto_data.runtime.instrument_id_allocator import InstrumentIdAllocator
-from ditto_data.runtime.sql_engine import SqlEngine
 from ditto_data.services.source_accessor import SourceAccessor
 from ditto_data.sources.source import DataSources
 from ditto_data.storage.runtime.ingestion import (
@@ -307,15 +306,3 @@ class RuntimeProvider(Provider):
     def source_accessor(self, sources: DataSources) -> SourceAccessor:
         """外部数据源访问服务."""
         return SourceAccessor(sources)
-
-    # ========================================================================
-    # SQL Engine
-    # ========================================================================
-
-    @provide
-    def sql_engine(
-        self,
-        settings: DataStoreSettings,
-    ) -> SqlEngine:
-        """DuckDB SQL 引擎."""
-        return SqlEngine(settings=settings)

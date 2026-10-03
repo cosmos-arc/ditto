@@ -46,10 +46,10 @@ class TestDataStoreSettingsAllDirectories:
         assert "metadata" in dirs
 
     def test_includes_generic_dirs(self) -> None:
-        """应包含 logs, backups, temp, db, locks."""
+        """应包含 logs, backups, temp, locks."""
         settings = DataStoreSettings()
         dirs = settings.all_directories()
-        for d in ("logs", "backups", "temp", "db", "locks"):
+        for d in ("logs", "backups", "temp", "locks"):
             assert d in dirs, f"Missing directory: {d}"
 
     def test_no_duplicates(self) -> None:
@@ -96,10 +96,10 @@ class TestDataStoreSettingsAllDirectories:
             assert directory not in dirs
 
     def test_count_includes_provider_payload_archive(self) -> None:
-        """目录清单应包含全球指数和不可变 provider payload 归档（26 个）."""
+        """目录清单应包含全球指数和不可变 provider payload 归档（24 个）."""
         settings = DataStoreSettings()
         dirs = settings.all_directories()
-        assert len(dirs) == 26, f"Expected 26 directories, got {len(dirs)}"
+        assert len(dirs) == 24, f"Expected 24 directories, got {len(dirs)}"
         assert "market/index/global_bars" in dirs
         assert "provider_payloads" in dirs
 
@@ -142,7 +142,6 @@ class TestPathGroupsStructure:
 
         assert fundamental.financial == root / "fundamental" / "financial"
         assert fundamental.indicator == root / "fundamental" / "indicator"
-        assert fundamental.forecast == root / "fundamental" / "forecast"
         assert fundamental.holding == root / "fundamental" / "holding"
 
     def test_macro_paths_group(self) -> None:
@@ -161,7 +160,6 @@ class TestPathGroupsStructure:
         assert utility.logs == root / "logs"
         assert utility.backups == root / "backups"
         assert utility.temp == root / "temp"
-        assert utility.db == root / "db"
 
     def test_utility_logs_override(self) -> None:
         """paths.utility.logs 应支持覆盖."""
@@ -173,13 +171,12 @@ class TestPathGroupsStructure:
         # 其他 utility 路径不受覆盖影响
         assert settings.paths.utility.backups == root / "backups"
         assert settings.paths.utility.temp == root / "temp"
-        assert settings.paths.utility.db == root / "db"
 
     def test_pathgroups_directories(self) -> None:
         """PathGroups.all_directories() 应返回完整的目录清单."""
         pg = PathGroups(Path("/data"))
         dirs = pg.all_directories()
-        assert len(dirs) == 26
+        assert len(dirs) == 24
         assert "market/stock/bars/daily" in dirs
         assert "capital/flow" in dirs
         assert "fundamental/financial" in dirs
@@ -221,12 +218,11 @@ class TestBackwardCompatibility:
         assert settings.paths.utility.logs == override
 
     def test_database_paths_unchanged(self) -> None:
-        """数据库路径（resolved_sqlite/duckdb）应保持不变."""
+        """数据库路径（resolved_sqlite）应保持不变."""
         root = Path("/data")
         settings = DataStoreSettings(data_root=root)
 
         assert settings.resolved_sqlite_path == root / "metadata" / "metadata.sqlite"
-        assert settings.resolved_duckdb_path == root / "db" / "ditto.duckdb"
 
     def test_sqlite_path_override(self) -> None:
         """sqlite_path 覆盖时应正确传播到 resolved_sqlite_path."""
@@ -263,10 +259,10 @@ class TestPathGroupsSubdomainDirectories:
         assert all(d.startswith("capital/") for d in dirs)
 
     def test_fundamental_directories(self) -> None:
-        """fundamental.directories() 应返回 4 个基本面目录."""
+        """fundamental.directories() 应返回 3 个基本面目录."""
         pg = PathGroups(Path("/data"))
         dirs = pg.fundamental.directories()
-        assert len(dirs) == 4
+        assert len(dirs) == 3
         assert all(d.startswith("fundamental/") for d in dirs)
 
     def test_macro_directories(self) -> None:
@@ -280,6 +276,6 @@ class TestPathGroupsSubdomainDirectories:
         """utility.directories() 应包含 provider payload 归档目录."""
         pg = PathGroups(Path("/data"))
         dirs = pg.utility.directories()
-        assert len(dirs) == 5
+        assert len(dirs) == 4
         assert "provider_payloads" in dirs
         assert all("/" not in d for d in dirs)  # 通用目录无子目录

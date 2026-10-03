@@ -143,7 +143,7 @@ ledger 研究域；生产域包禁止依赖。
 |---|---|
 | `catalog` | 数据集标识、schema、分区、资产类别、日期语义、血缘元数据 |
 | `sources` | 外部数据源 adapter、client、字段标准化 |
-| `storage` | 物理读写、分区、SQLite/Parquet/DuckDB 细节 |
+| `storage` | 物理读写、分区、SQLite/Parquet 细节 |
 | `quality` | DQ 规则、执行、结果、隔离、报告 |
 | `ingestion` | 摄取日志、游标、冻结、晚到数据、质量记录 |
 | `query` | 面向上层的统一数据读取 facade |

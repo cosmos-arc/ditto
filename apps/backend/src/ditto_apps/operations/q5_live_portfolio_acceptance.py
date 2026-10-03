@@ -45,10 +45,6 @@ _INSTRUMENT_ID = 2_001_724
 _INSTRUMENT_CODE = "518880.SH"
 _MAX_TARGET_POSITIONS = 5
 _MAX_TARGET_WEIGHT = 0.3
-_LICENSE_RECORD_ID = (
-    "license:tushare:etf_daily:sha256:"
-    "c0f1403a9924d2cc71ad440c08ab743369721661a61d54ecb36637661bbcf6fc"
-)
 _DATASET_SCHEMA = "etf.daily.v1"
 _PAYLOAD_SORT_KEYS = ("trade_date", "instrument_id")
 _SAFETY = {
@@ -211,7 +207,6 @@ class _ProviderSnapshotIdentity:
     checksum: str
     payload_uri: str
     schema_version: str
-    license_record_id: str
 
 
 def _provider_snapshot(
@@ -239,7 +234,6 @@ def _provider_snapshot(
         checksum=checksum,
         payload_uri=f"provider_payloads/tushare/etf_daily/{checksum}.parquet",
         schema_version=_DATASET_SCHEMA,
-        license_record_id=_LICENSE_RECORD_ID,
     )
 
 
@@ -456,7 +450,6 @@ def build_live_portfolio_acceptance_proposal(
             "payload_checksum": snapshot.checksum,
             "payload_uri": snapshot.payload_uri,
             "schema_version": snapshot.schema_version,
-            "license_record_id": snapshot.license_record_id,
             "paper_snapshot_alias": evidence["paper_snapshot_alias"],
         },
         "expected_strategy_output": {
@@ -557,7 +550,6 @@ def approved_live_portfolio_acceptance_request(  # noqa: C901 - exact approval a
         or provider.get("payload_checksum") != snapshot.checksum
         or provider.get("payload_uri") != snapshot.payload_uri
         or provider.get("schema_version") != snapshot.schema_version
-        or provider.get("license_record_id") != snapshot.license_record_id
     ):
         raise ValueError("provider snapshot identity drifted")
     raw_positions = _mapping(output.get("positions"), field="target positions")

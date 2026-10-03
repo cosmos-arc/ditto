@@ -94,7 +94,6 @@ def _snapshot(
             canonical_asset=DataAssetRef(dataset_id=dataset, namespace="market"),
             request_parameters_hash="sha256:market-chart-test",
             response_metadata=(),
-            license_record_id=f"license:{source}:{dataset}:test",
             row_count=artifact.row_count,
             payload_uri=artifact.uri,
             payload_retained=True,
@@ -1688,7 +1687,6 @@ def test_chart_rejects_stale_rows_omitted_by_newer_overlapping_shard(
             canonical_asset=DataAssetRef(dataset_id=dataset, namespace="market"),
             request_parameters_hash=prior.request_parameters_hash,
             response_metadata=(),
-            license_record_id=prior.license_record_id,
             row_count=artifact.row_count,
             payload_uri=artifact.uri,
             payload_retained=True,
@@ -1786,7 +1784,6 @@ def test_chart_ignores_closed_day_scoped_shards_in_source_authority(
             response_metadata=(
                 ("snapshot_layer", "verified_empty_provider_observation"),
             ),
-            license_record_id="license:fuyao:test",
             row_count=0,
             payload_uri=None,
             payload_retained=False,
@@ -1842,7 +1839,6 @@ def test_chart_ignores_unclosed_session_scoped_shards_in_source_authority(
             response_metadata=(
                 ("snapshot_layer", "verified_empty_provider_observation"),
             ),
-            license_record_id="license:fuyao:test",
             row_count=0,
             payload_uri=None,
             payload_retained=False,
@@ -1951,7 +1947,6 @@ def test_chart_matches_shard_partitions_on_consumable_sessions_only(
             response_metadata=(
                 ("snapshot_layer", "verified_empty_provider_observation"),
             ),
-            license_record_id="license:fuyao:test",
             row_count=0,
             payload_uri=None,
             payload_retained=False,
@@ -2227,7 +2222,6 @@ def test_chart_absence_lineage_respects_effective_ticker(tmp_path: Path) -> None
             response_metadata=(
                 ("snapshot_layer", "verified_empty_provider_observation"),
             ),
-            license_record_id="license:tushare:stock_daily:test",
             row_count=0,
             payload_uri=None,
             payload_retained=False,
@@ -4245,7 +4239,6 @@ def test_chart_excludes_suspended_days_from_price_authority(tmp_path: Path) -> N
             response_metadata=(
                 ("snapshot_layer", "verified_empty_provider_observation"),
             ),
-            license_record_id="license:fuyao:test",
             row_count=0,
             payload_uri=None,
             payload_retained=False,

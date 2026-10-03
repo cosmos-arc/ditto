@@ -7,10 +7,8 @@ from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock
 
-import duckdb
 import polars as pl
 import pytest
-from ditto_apps.testing import DatabaseManager
 from ditto_platform.foundation import Environment, ObservabilityConfig, Settings
 
 
@@ -55,31 +53,6 @@ def test_settings(tmp_path: Path) -> Settings:
         observability=ObservabilitySettings(),
     )
     return settings
-
-
-@pytest.fixture
-def db_manager(tmp_path: Path) -> Generator[DatabaseManager]:
-    """每个测试独立的数据库管理器.
-
-    使用 pytest 内置 tmp_path，每个测试获得独立的数据库实例。
-    支持并行测试。
-
-    Args:
-        tmp_path: pytest 内置 fixture，提供独立临时目录
-
-    Yields:
-        DatabaseManager: 数据库管理器实例
-    """
-    manager = DatabaseManager(database_path=tmp_path / "test.duckdb")
-    yield manager
-    manager.close()
-
-
-@pytest.fixture
-def clean_duckdb(db_manager: DatabaseManager) -> duckdb.DuckDBPyConnection:
-    """提供清理后的连接."""
-    db_manager.clean_duckdb()
-    return db_manager.get_duckdb_conn()
 
 
 @pytest.fixture

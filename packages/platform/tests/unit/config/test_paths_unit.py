@@ -349,10 +349,10 @@ class TestXDGPathsSubdirs:
         paths = XDGPaths(base_dir=tmp_path / "base")
 
         # [REVIEW]
-        subdir = paths.data_subdir("db/duckdb")
+        subdir = paths.data_subdir("db/sqlite")
 
         # Verify路径正确
-        assert subdir == tmp_path / "base" / "data" / "db" / "duckdb"
+        assert subdir == tmp_path / "base" / "data" / "db" / "sqlite"
         # Verify目录已创建
         assert subdir.exists()
         assert subdir.is_dir()

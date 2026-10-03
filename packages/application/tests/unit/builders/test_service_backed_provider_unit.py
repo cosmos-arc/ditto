@@ -42,7 +42,6 @@ def _snapshot(
         canonical_asset=DataAssetRef(dataset_id=dataset, namespace=namespace),
         request_parameters_hash="sha256:test",
         response_metadata=tuple(sorted(metadata)),
-        license_record_id="unit-license",
         row_count=1,
         payload_uri="provider_payloads/tushare/etf_daily/x.parquet",
         payload_retained=True,

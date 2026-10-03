@@ -216,7 +216,6 @@ def _snapshot(
             ),
             request_parameters_hash="sha256:technical-source-test",
             response_metadata=(),
-            license_record_id="license:tushare:stock_daily:test",
             row_count=artifact.row_count,
             payload_uri=artifact.uri,
             payload_retained=True,

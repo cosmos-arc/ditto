@@ -130,7 +130,6 @@ def commit_snapshot(
             canonical_asset=DataAssetRef(dataset_id=dataset, namespace=namespace),
             request_parameters_hash=f"sha256:{checksum}",
             response_metadata=tuple(sorted(metadata)),
-            license_record_id="unit-license",
             row_count=row_count,
             payload_uri=(
                 f"provider_payloads/{source}/{dataset}/{checksum}.parquet"

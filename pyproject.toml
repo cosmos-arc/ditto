@@ -22,7 +22,6 @@ dependencies = [
     "ditto-apps",
     "numpy>=2.0,<3",
     "polars>=1.9,<2",
-    "duckdb>=1.3,<2",
     "fastapi>=0.115,<0.137",
     "pydantic>=2.10,<3",
     "pydantic-settings>=2.10,<3",

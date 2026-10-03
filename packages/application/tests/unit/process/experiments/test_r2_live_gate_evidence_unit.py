@@ -63,7 +63,6 @@ def _ready_report(*, mode: str = "live", status: str = "ready") -> dict[str, obj
             "dataset_id": dataset_id,
             "provider_datasets": list(provider_datasets),
             "usable_provider_datasets": [provider_datasets[0]],
-            "license_record_ids": [f"license:{dataset_id}"],
             "certification_profile": "r2-modern-a-share-v1",
             "certification_report_id": f"certification:{dataset_id}:live",
             "certification_content_hash": "b" * 64,

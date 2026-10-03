@@ -1,5 +1,8 @@
 """Historical universe projection over qualified immutable provider frames."""
 
+from __future__ import annotations
+
+from collections.abc import Callable
 from datetime import UTC, date, datetime
 
 import polars as pl
@@ -14,6 +17,120 @@ HISTORY_FIELDS = (
 MASTER_FIELDS = (*HISTORY_FIELDS, "list_date", "delist_date")
 STATUS_FIELDS = (*HISTORY_FIELDS, "is_suspended")
 MEMBERSHIP_FIELDS = (*HISTORY_FIELDS, "index_id")
+
+
+def project_daily_status_intervals(
+    frame: pl.DataFrame,
+    *,
+    observed_at: datetime,
+    resolve_instrument: Callable[[list[str], str], dict[str, int]],
+) -> pl.DataFrame:
+    """
+    Project a raw daily status snapshot into same-day PIT intervals.
+
+    Daily provider snapshots state one fact per trade date; the honest PIT
+    projection is an interval that covers exactly that trade date, with the
+    snapshot's own observation time as its knowledge time. Rows whose source
+    ticker cannot be resolved to a durable identity stay out of the roster
+    rather than entering it under a guessed key.
+    """
+    required = {"source_ticker", "trade_date", "is_suspended"}
+    if not required.issubset(set(frame.columns)):
+        raise ValueError("HISTORY_FIELDS_MISSING")
+    trade_dates = sorted(
+        {
+            (
+                value.date().isoformat()
+                if isinstance(value, datetime)
+                else value.isoformat()
+                if isinstance(value, date)
+                else str(value)
+            )
+            for value in frame["trade_date"].unique().to_list()
+        }
+    )
+    tickers = sorted(set(frame["source_ticker"].to_list()))
+    resolved: dict[tuple[str, str], int] = {}
+    for trade_date in trade_dates:
+        resolved.update(
+            ((ticker, trade_date), instrument_id)
+            for ticker, instrument_id in resolve_instrument(tickers, trade_date).items()
+        )
+    lookup = pl.DataFrame(
+        {
+            "source_ticker": [key[0] for key in resolved],
+            "trade_date": [key[1] for key in resolved],
+            "_instrument_id": list(resolved.values()),
+        },
+        schema={
+            "source_ticker": pl.String,
+            "trade_date": pl.String,
+            "_instrument_id": pl.Int64,
+        },
+    )
+    normalized = frame.with_columns(
+        pl.col("trade_date").cast(pl.Utf8).alias("_trade_date_key")
+    ).join(
+        lookup,
+        left_on=["source_ticker", "_trade_date_key"],
+        right_on=["source_ticker", "trade_date"],
+        how="left",
+    )
+    projected = normalized.with_columns(
+        pl.col("_instrument_id").alias("instrument_id"),
+        pl.col("is_suspended").cast(pl.Boolean).alias("is_suspended"),
+        pl.col("trade_date").cast(pl.Date).alias("effective_from"),
+        (pl.col("trade_date").cast(pl.Date) + pl.duration(days=1)).alias(
+            "effective_to"
+        ),
+        pl.lit(observed_at).cast(pl.Datetime(time_zone="UTC")).alias("publication_at"),
+        pl.lit(observed_at).cast(pl.Datetime(time_zone="UTC")).alias("available_at"),
+    ).drop_nulls("instrument_id")
+    return projected.drop("_trade_date_key", "trade_date_right", strict=False)
+
+
+def project_basic_master_intervals(
+    frame: pl.DataFrame,
+    *,
+    observed_at: datetime,
+    resolve_instrument: Callable[[str, date], int | None],
+) -> pl.DataFrame:
+    """
+    Project a raw basic-list snapshot into listing-lifetime PIT intervals.
+
+    A basic snapshot is the provider's current roster: each row states one
+    instrument's listing lifetime as best known now. The projection keeps
+    that honesty — the interval spans list_date to delist_date and the whole
+    snapshot becomes visible only at its observation time, so a later
+    snapshot never leaks into an earlier cutoff's replay.
+    """
+    required = {"source_ticker", "list_date"}
+    if not required.issubset(set(frame.columns)):
+        raise ValueError("HISTORY_FIELDS_MISSING")
+    asof = observed_at.date().isoformat()
+    resolved = resolve_instrument(sorted(set(frame["source_ticker"].to_list())), asof)
+    projected = frame.with_columns(
+        pl.col("source_ticker")
+        .replace_strict(resolved, default=None, return_dtype=pl.Int64)
+        .alias("instrument_id"),
+        pl.lit(observed_at).cast(pl.Datetime(time_zone="UTC")).alias("publication_at"),
+        pl.lit(observed_at).cast(pl.Datetime(time_zone="UTC")).alias("available_at"),
+    ).drop_nulls(subset=["instrument_id", "list_date"])
+    delist = projected["delist_date"] if "delist_date" in projected.columns else None
+    if delist is None:
+        projected = projected.with_columns(
+            pl.lit(None, dtype=pl.Date).alias("delist_date")
+        )
+    projected = projected.with_columns(
+        pl.col("list_date").cast(pl.Date).alias("list_date"),
+        pl.col("delist_date").cast(pl.Date).alias("delist_date"),
+    )
+    # The roster row stays open-ended: delisting is carried by the delist_date
+    # column so the exclusion stays an honest roster fact, not row expiry.
+    return projected.with_columns(
+        pl.col("list_date").alias("effective_from"),
+        pl.lit(None, dtype=pl.Date).alias("effective_to"),
+    )
 
 
 def visible_history(

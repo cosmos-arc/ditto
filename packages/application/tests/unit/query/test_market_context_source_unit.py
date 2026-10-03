@@ -69,7 +69,6 @@ def _snapshot(
             ),
             request_parameters_hash="sha256:test-request",
             response_metadata=(("snapshot_layer", "normalized_provider_payload"),),
-            license_record_id=f"license:tushare:{dataset_id}:test",
             row_count=artifact.row_count,
             payload_uri=artifact.uri,
             payload_retained=True,

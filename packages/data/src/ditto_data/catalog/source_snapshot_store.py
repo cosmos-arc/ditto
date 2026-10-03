@@ -84,7 +84,6 @@ class SQLiteProviderSnapshotStore:
                 canonical_partition_keys TEXT NOT NULL,
                 request_parameters_hash TEXT NOT NULL,
                 response_metadata TEXT NOT NULL,
-                license_record_id TEXT NOT NULL,
                 row_count INTEGER NOT NULL,
                 payload_uri TEXT,
                 payload_retained INTEGER NOT NULL,
@@ -193,11 +192,11 @@ class SQLiteProviderSnapshotStore:
                     snapshot_id, dataset_id, source, request_start, request_end,
                     schema_version, checksum, canonical_namespace,
                     canonical_dataset_id, canonical_partition_keys,
-                    request_parameters_hash, response_metadata, license_record_id,
+                    request_parameters_hash, response_metadata,
                     row_count, payload_uri, payload_retained, created_at,
                     schema_fingerprint
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 [
                     snapshot.snapshot_id,
@@ -212,7 +211,6 @@ class SQLiteProviderSnapshotStore:
                     partition_keys_json(snapshot.canonical_asset.partition_keys),
                     snapshot.request_parameters_hash,
                     _metadata_json(snapshot.response_metadata),
-                    snapshot.license_record_id,
                     snapshot.row_count,
                     snapshot.payload_uri,
                     int(snapshot.payload_retained),
@@ -384,7 +382,6 @@ def _snapshot_from_row(row: dict[str, Any], client: SQLiteClient) -> ProviderSna
         ),
         request_parameters_hash=str(row["request_parameters_hash"]),
         response_metadata=_metadata_from_json(row["response_metadata"]),
-        license_record_id=str(row["license_record_id"]),
         row_count=int(row["row_count"]),
         payload_uri=(
             str(row["payload_uri"]) if row["payload_uri"] is not None else None

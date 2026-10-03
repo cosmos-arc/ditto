@@ -317,10 +317,17 @@ class UniverseWriter:
             effective_date=effective_date,
         )
 
-        # 关闭当前成分
+        # 重放安全:同 effective_from 起的行先删(它们会被整组重建),更早的
+        # 开放行关闭到重放日前一天;否则同 (universe, instrument, from) 撞
+        # UNIQUE 且关闭区间与新区间重叠。
+        self._client.execute(
+            """DELETE FROM universe_constituent
+            WHERE universe_id = ? AND effective_from >= ?""",
+            [universe_id, effective_date],
+        )
         self._client.execute(
             """UPDATE universe_constituent
-            SET effective_to = ?
+            SET effective_to = date(?, '-1 day')
             WHERE universe_id = ? AND effective_to IS NULL""",
             [effective_date, universe_id],
         )
