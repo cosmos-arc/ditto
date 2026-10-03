@@ -119,6 +119,11 @@ class SnapshotReadService:
         cannot be expressed.
         """
         contents = self.read(snapshot_id)
+        if knowledge_cutoff is not None and (
+            knowledge_cutoff.tzinfo is None
+            or contents.snapshot.created_at > knowledge_cutoff
+        ):
+            raise ValueError("snapshot was not observable at the knowledge cutoff")
         frame = contents.frame
         if not {"trade_date", *columns}.issubset(frame.columns):
             raise ValueError(

@@ -207,7 +207,7 @@ def _validated_quality_evidence(
                 and isinstance(checksum, str)
                 and bool(checksum)
                 and isinstance(raw_snapshot_ids, (list, tuple))
-                and len(raw_snapshot_ids) > 0
+                and bool(cast("list[object] | tuple[object, ...]", raw_snapshot_ids))
             )
     else:
         valid = (

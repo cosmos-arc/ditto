@@ -25,6 +25,7 @@ from ditto_application.queries.market_context import (
     MarketContextMetric,
     MarketContextView,
 )
+from ditto_application.queries.snapshot_readiness import SnapshotReadinessQuery
 from ditto_apps.api.errors import UnprocessableEntityError
 from ditto_apps.api.routes.market import (
     get_market_context,
@@ -220,8 +221,9 @@ class TestGetMarketContextHandler:
             response = asyncio.run(
                 handler(
                     facade=facade,
-                    snapshots=_observed_snapshots_reader(),
-                    lifecycle=_empty_lifecycle(),
+                    readiness=SnapshotReadinessQuery(
+                        _observed_snapshots_reader(), _empty_lifecycle()
+                    ),
                     as_of=as_of,
                     knowledge_cutoff=knowledge_cutoff,
                     publication_cutoff=publication_cutoff,
@@ -256,8 +258,9 @@ class TestGetMarketContextHandler:
             asyncio.run(
                 handler(
                     facade=facade,
-                    snapshots=_observed_snapshots_reader(),
-                    lifecycle=_empty_lifecycle(),
+                    readiness=SnapshotReadinessQuery(
+                        _observed_snapshots_reader(), _empty_lifecycle()
+                    ),
                     as_of=datetime(2026, 8, 31, 9),
                     knowledge_cutoff=datetime(2026, 8, 31, 8),
                     publication_cutoff=datetime(2026, 8, 31, 7, 30),

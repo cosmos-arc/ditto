@@ -158,7 +158,7 @@ class ReconcileSourcesHandler:
 
         # 辅源帧（ticker 裸码）反解为 instrument_id：既有 fuyao 映射优先，
         # 缺失时按裸码前缀规则唯一匹配（只读，不写映射）。
-        secondary_df = self._resolve_secondary_identities(secondary_df)
+        secondary_df = self._resolve_secondary_identities(secondary_df, trade_date)
         if secondary_df.is_empty() or "instrument_id" not in secondary_df.columns:
             return self._zero_intersection_result(
                 trade_date, dataset, primary_df.height, secondary_df.height
@@ -246,7 +246,9 @@ class ReconcileSourcesHandler:
             secondary_count=secondary_count,
         )
 
-    def _resolve_secondary_identities(self, secondary_df: pl.DataFrame) -> pl.DataFrame:
+    def _resolve_secondary_identities(
+        self, secondary_df: pl.DataFrame, trade_date: str
+    ) -> pl.DataFrame:
         """辅源帧 ticker → instrument_id（只读反解；无法唯一匹配的行剔除并计数）."""
         if (
             self._secondary_identity_resolver is None
@@ -256,7 +258,7 @@ class ReconcileSourcesHandler:
             return secondary_df
         tickers = secondary_df["ticker"].unique().cast(pl.String).to_list()
         resolved = self._secondary_identity_resolver.resolve_secondary_ids(
-            tickers, "fuyao"
+            tickers, "fuyao", asof=trade_date
         )
         if not resolved:
             return secondary_df.clear()

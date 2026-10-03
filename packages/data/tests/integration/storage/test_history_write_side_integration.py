@@ -74,7 +74,7 @@ class TestHistoryWriteSideIntegration:
                 changed_date DATE NOT NULL,
                 source TEXT NOT NULL DEFAULT 'tushare',
                 observed_at TEXT,
-                PRIMARY KEY (instrument_id, changed_date, source),
+                PRIMARY KEY (instrument_id, changed_date, source, observed_at),
                 FOREIGN KEY (instrument_id) REFERENCES instrument(instrument_id)
             );
             CREATE TABLE st_change_history (
@@ -94,7 +94,9 @@ class TestHistoryWriteSideIntegration:
                 industry_id INTEGER
             );
             CREATE UNIQUE INDEX idx_st_change_history_source_key
-                ON st_change_history(instrument_id, effective_from, source);
+                ON st_change_history(
+                    instrument_id, effective_from, source, observed_at
+                );
         """
         client.executescript(schema_sql)
         writer = InstrumentWriter(client)
@@ -387,3 +389,115 @@ class TestHistoryWriteSideIntegration:
         assert status["has_evidence"] is False
         assert status["is_st"] is None
         assert status["list_status"] is None
+
+    @pytest.mark.pit
+    def test_st_reobservation_and_revision_preserve_past(self, service):
+        frame = pl.DataFrame(
+            {
+                "source_ticker": ["000001.SZ"],
+                "change_date": ["2026-09-01"],
+                "change_reason": ["ST"],
+                "published_at": [None],
+            }
+        )
+        service.save_st_change_history(
+            frame, source="tushare", observed_at="2026-09-02 08:00:00"
+        )
+        before = service.get_st_status_batch(
+            [1000001], "2026-09-03", cutoff="2026-09-03 12:00:00"
+        )
+        service.save_st_change_history(
+            frame, source="tushare", observed_at="2026-10-01 08:00:00"
+        )
+        assert (
+            service.get_st_status_batch(
+                [1000001], "2026-09-03", cutoff="2026-09-03 12:00:00"
+            )
+            == before
+        )
+        corrected = frame.with_columns(pl.lit("撤销ST").alias("change_reason"))
+        service.save_st_change_history(
+            corrected, source="tushare", observed_at="2026-10-02 08:00:00"
+        )
+        assert (
+            service.get_st_status_batch(
+                [1000001], "2026-09-03", cutoff="2026-09-03 12:00:00"
+            )
+            == before
+        )
+        assert (
+            service.get_st_status_batch(
+                [1000001], "2026-09-03", cutoff="2026-10-03 12:00:00"
+            )[1000001]["is_st"]
+            is False
+        )
+
+    @pytest.mark.pit
+    def test_name_reobservation_and_revision_preserve_past(self, service):
+        frame = pl.DataFrame(
+            {
+                "source_ticker": ["000001.SZ"],
+                "changed_date": ["2026-09-01"],
+                "new_name": ["original"],
+                "published_at": [None],
+            }
+        )
+        service.save_name_history(
+            frame, source="tushare", observed_at="2026-09-02 08:00:00"
+        )
+        service.save_name_history(
+            frame, source="tushare", observed_at="2026-10-01 08:00:00"
+        )
+        assert (
+            service.get_stock_names(
+                [1000001], "2026-09-03", cutoff="2026-09-03 12:00:00"
+            )[1000001]
+            == "original"
+        )
+        service.save_name_history(
+            frame.with_columns(pl.lit("corrected").alias("new_name")),
+            source="tushare",
+            observed_at="2026-10-02 08:00:00",
+        )
+        assert (
+            service.get_stock_names(
+                [1000001], "2026-09-03", cutoff="2026-09-03 12:00:00"
+            )[1000001]
+            == "original"
+        )
+        assert (
+            service.get_stock_names(
+                [1000001], "2026-09-03", cutoff="2026-10-03 12:00:00"
+            )[1000001]
+            == "corrected"
+        )
+
+    @pytest.mark.pit
+    def test_st_correction_closing_interval_does_not_resurrect_old_version(
+        self, service
+    ):
+        frame = pl.DataFrame(
+            {
+                "source_ticker": ["000001.SZ"],
+                "change_date": ["2026-09-01"],
+                "change_reason": ["ST"],
+                "end_date": [None],
+            }
+        )
+        service.save_st_change_history(
+            frame, source="tushare", observed_at="2026-09-02 08:00:00"
+        )
+        service.save_st_change_history(
+            frame.with_columns(pl.lit("2026-09-03").alias("end_date")),
+            source="tushare",
+            observed_at="2026-09-10 08:00:00",
+        )
+        assert service.get_st_status_batch(
+            [1000001], "2026-09-04", cutoff="2026-09-05 00:00:00"
+        )
+        assert (
+            service.get_st_status_batch(
+                [1000001], "2026-09-04", cutoff="2026-09-11 00:00:00"
+            )
+            == {}
+        )

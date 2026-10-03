@@ -116,7 +116,11 @@ def commit_snapshot(
     """Append one snapshot and drive its lifecycle to COMPLETE (or stop short)."""
     observed = observed_at or datetime(2026, 7, 1, 9, tzinfo=UTC)
     stores.clock.now = observed
-    metadata = (("snapshot_layer", "normalized_provider_payload"),)
+    metadata = (
+        ("snapshot_layer", "normalized_provider_payload"),
+        ("canonical_checksum", checksum),
+        ("canonical_row_count", str(row_count)),
+    )
     if source_ticker is not None:
         metadata = (*metadata, ("source_ticker", source_ticker))
     snapshot = ProviderSnapshot.create(
@@ -128,7 +132,7 @@ def commit_snapshot(
             schema_version=schema_version,
             checksum=checksum,
             canonical_asset=DataAssetRef(dataset_id=dataset, namespace=namespace),
-            request_parameters_hash=f"sha256:{checksum}",
+            request_parameters_hash=f"request:{dataset}:{source}:{request_start}:{request_end}:{source_ticker}",
             response_metadata=tuple(sorted(metadata)),
             row_count=row_count,
             payload_uri=(
@@ -144,6 +148,9 @@ def commit_snapshot(
     # The observation ledger is attached on read; return the durable form.
     persisted = stores.snapshots.get_snapshot(snapshot.snapshot_id)
     chunk = f"unit:{dataset}:{source}:{request_start}:{request_end}:{checksum}"
+    if stores.lifecycle.get_checkpoint(chunk) is not None:
+        assert persisted is not None
+        return persisted
     stores.lifecycle.plan_partition(
         PartitionCheckpoint(
             chunk_id=chunk,

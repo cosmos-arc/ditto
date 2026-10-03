@@ -172,7 +172,15 @@ def test_evidence_chain_persists_and_completed_replay_is_idempotent(
         assert len(lifecycle.list_events(request.chunk_id)) == event_count_after_first
         # 首次本地观察即首条观察事件(追加时钟,不早于首次可见)。
         assert snapshots.get_snapshot(request.provider_snapshot.snapshot_id) == (
-            replace(request.provider_snapshot, observations=(store_now,))
+            replace(
+                request.provider_snapshot,
+                observations=(store_now,),
+                response_metadata=(
+                    ("canonical_checksum", "sha256:payload"),
+                    ("canonical_row_count", "1"),
+                    ("snapshot_layer", "normalized_provider_payload"),
+                ),
+            )
         )
         observed_again = request.provider_snapshot.created_at.replace(hour=10)
         replay = replace(
@@ -569,4 +577,35 @@ def test_normal_backfill_resumes_failed_revision_after_original_completed(
                 "stock_daily", "2026-07-16", "2026-07-17"
             ).total_dates
             == 0
+        )
+
+
+@pytest.mark.integration
+def test_enriched_success_is_attested_by_its_payload_binding(tmp_path):
+    from ditto_application.catalog_freshness import PersistedIngestionEvidenceVerifier
+
+    with _pipeline(tmp_path, "stock_daily") as runtime:
+        request = _request()
+        request = replace(
+            request,
+            success_log=replace(request.success_log, checksum="canonical:enriched"),
+        )
+        assert runtime.context.evidence_committer.commit(request).completed
+        ports = runtime.ports
+        verifier = PersistedIngestionEvidenceVerifier(
+            ports.snapshot_reader, ports.lifecycle_reader, ports.ingestion_log_store
+        )
+        assert verifier.verify_exact_date(
+            dataset="stock_daily",
+            source="tushare",
+            trade_date="2026-07-17",
+            checksum="canonical:enriched",
+            row_count=1,
+        )
+        assert not verifier.verify_exact_date(
+            dataset="stock_daily",
+            source="tushare",
+            trade_date="2026-07-17",
+            checksum="different-content",
+            row_count=1,
         )

@@ -27,6 +27,14 @@ from typer.testing import CliRunner
 def test_cli_replay_reads_ready_snapshots_and_fails_closed_without_losing_audit(
     tmp_path, monkeypatch
 ):
+    class FixedClock(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return datetime(2026, 7, 17, 10, tzinfo=UTC)
+
+    monkeypatch.setattr(
+        "ditto_application.processes.ingestion.ingestion_evidence.datetime", FixedClock
+    )
     with ExitStack() as stack:
         runtime = stack.enter_context(
             _pipeline(
@@ -85,6 +93,13 @@ def test_cli_replay_reads_ready_snapshots_and_fails_closed_without_losing_audit(
             10.0,
             20.0,
         ]
+
+        # The exact payload is not historical evidence before first observation.
+        future = {**request, "knowledge_cutoff": "2026-07-16T09:00:00Z"}
+        path.write_bytes(orjson.dumps(future))
+        hidden = runner.invoke(app, ["data-products", "replay-snapshots", str(path)])
+        assert hidden.exit_code == 2, hidden.output
+        assert "cutoff" in hidden.output
 
         # An identity the ledger never registered is never replayed.
         unregistered = dict(request)

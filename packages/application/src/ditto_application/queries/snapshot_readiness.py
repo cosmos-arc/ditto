@@ -10,13 +10,14 @@ filters; licenses and certifications no longer participate.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, datetime
 
 from ditto_data.catalog.metadata import default_dataset_metadata
 from ditto_data.catalog.snapshot_completion import snapshot_completed
 from ditto_data.catalog.source_snapshot import ProviderSnapshotReader
 from ditto_data.ingestion.partition_state import PartitionLifecycleReader
 
+from ditto_application.catalog_freshness import observed_snapshot_ids
 from ditto_application.exceptions import AppQueryError
 
 __all__ = [
@@ -89,6 +90,17 @@ class SnapshotReadinessQuery:
     ) -> None:
         self._snapshots = snapshots
         self._lifecycle = lifecycle
+
+    def observed_snapshot_ids(
+        self, *, dataset_ids: tuple[str, ...], knowledge_cutoff: datetime
+    ) -> tuple[str, ...]:
+        """Resolve completed, cutoff-visible identities for application consumers."""
+        return observed_snapshot_ids(
+            self._snapshots,
+            self._lifecycle,
+            dataset_ids=dataset_ids,
+            knowledge_cutoff=knowledge_cutoff,
+        )
 
     def assess(self, request: SnapshotReadinessRequest) -> SnapshotReadinessReport:
         """Assess exact snapshots without ingestion or certification writes."""

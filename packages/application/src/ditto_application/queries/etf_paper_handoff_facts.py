@@ -79,13 +79,13 @@ class LiveETFPaperHandoffFacts:
         if (
             snapshot is None
             or snapshot.snapshot_id != request.source_snapshot_id
-            or snapshot.dataset_id != "etf_reference"
+            or snapshot.dataset_id not in {"etf_reference", "etf_basic"}
             or snapshot.created_at > request.knowledge_cutoff
         ):
             raise AppProcessError("Paper source snapshot is absent or future")
         self._require_ready(
             request.source_snapshot_id,
-            "etf_reference",
+            snapshot.dataset_id,
             request.signal_date,
         )
         candidates = self._metadata.list_etf_candidates(

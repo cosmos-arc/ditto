@@ -47,8 +47,8 @@ class StChangeHistoryWriter:
         批量写入带证据的 ST 变更历史行（摄取路径，幂等）。
 
         每行必须携带真实生效日期（effective_from）与可知时间（observed_at）；
-        幂等键 = (instrument_id, effective_from, source)（schema 唯一索引），
-        重复登记整行替换；缺生效日期的行 fail closed 拒绝。
+        版本键包括 instrument_id、effective_from、source、observed_at。
+        同内容保留首次可知时间；变化内容追加版本。缺生效日期时拒绝写入。
 
         Args:
             rows: 行字典，键含 instrument_id/effective_from/is_st/st_type/
@@ -62,12 +62,30 @@ class StChangeHistoryWriter:
         for row in rows:
             effective_from = row.get("effective_from")
             if effective_from is None or str(effective_from).strip() == "":
-                raise ValueError(
-                    "st change history row lacks a real effective date; refusing "
-                    "to backfill placeholder history"
-                )
+                raise ValueError("st change history row lacks a real effective date")
+            previous = self._client.fetchone(
+                """SELECT * FROM st_change_history
+                   WHERE instrument_id = ? AND effective_from = ? AND source = ?
+                   ORDER BY datetime(observed_at) DESC LIMIT 1""",
+                [
+                    row["instrument_id"],
+                    str(effective_from),
+                    str(row.get("source") or "tushare"),
+                ],
+            )
+            if previous is not None and all(
+                previous[field] == row.get(field)
+                for field in ("is_st", "st_type", "effective_to")
+            ):
+                written += 1
+                continue
+            visible_at = row.get("observed_at")
+            if previous is not None:
+                visible_at = row.get("recorded_at", visible_at)
+            if not visible_at:
+                raise ValueError("history version requires knowledge time")
             self._client.execute(
-                """INSERT OR REPLACE INTO st_change_history
+                """INSERT INTO st_change_history
                 (instrument_id, effective_from, is_st, st_type, effective_to,
                  source, observed_at)
                 VALUES (?, ?, ?, ?, ?, ?, ?)""",
@@ -78,7 +96,7 @@ class StChangeHistoryWriter:
                     row.get("st_type"),
                     row.get("effective_to"),
                     str(row.get("source") or "tushare"),
-                    row.get("observed_at"),
+                    visible_at,
                 ],
             )
             written += 1

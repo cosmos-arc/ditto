@@ -294,10 +294,28 @@ class InstrumentService:
         register_missing: bool,
     ) -> dict[str, int]:
         """Thscode → instrument_id（读取映射 + 前缀规则唯一匹配 + 可选登记）。"""
-        resolved = self._instrument_reader.resolve_instrument_ids_batch(
-            thscodes, "fuyao", None
-        )
-        unresolved = [ticker for ticker in thscodes if ticker not in resolved]
+        resolved: dict[str, int] = {}
+        mapped: set[str] = set()
+        for asof in {evidence_dates.get(ticker) for ticker in thscodes}:
+            scoped = [
+                ticker for ticker in thscodes if evidence_dates.get(ticker) == asof
+            ]
+            resolved.update(
+                self._instrument_reader.resolve_instrument_ids_batch(
+                    scoped, "fuyao", asof
+                )
+            )
+            mapped.update(
+                self._instrument_reader.mapped_source_tickers(
+                    scoped, "fuyao", after=asof if register_missing else None
+                )
+            )
+        # A known but out-of-range identity must never fall back to today's registry.
+        unresolved = [
+            ticker
+            for ticker in thscodes
+            if ticker not in resolved and ticker not in mapped
+        ]
         if not unresolved:
             return resolved
 
@@ -331,8 +349,7 @@ class InstrumentService:
                 effective_from = evidence_dates.get(ticker)
                 if effective_from is None or observed_at is None:
                     raise ValueError(
-                        "fuyao mapping registration requires an evidence date "
-                        "and observation time"
+                        "fuyao mapping registration requires dated observation evidence"
                     )
                 registered = self._instrument_writer.register_source_mapping(
                     instrument_id=instrument_id,
@@ -1212,6 +1229,7 @@ class InstrumentService:
             "effective_to": _to_iso_date(raw.get("effective_to")),
             "source": str(raw.get("source") or source),
             "observed_at": published or observed_at,
+            "recorded_at": observed_at,
         }
 
     @staticmethod
@@ -1235,6 +1253,7 @@ class InstrumentService:
             "st_type": st_type,
             "source": str(raw.get("source") or source),
             "observed_at": published or observed_at,
+            "recorded_at": observed_at,
         }
 
     @traced("metadata.instrument.get_stock_names")
@@ -1242,6 +1261,8 @@ class InstrumentService:
         self,
         instrument_ids: list[int],
         asof: str | None = None,
+        *,
+        cutoff: str | None = None,
     ) -> dict[int, str]:
         """
         批量获取证券名称（PIT，单次查询）.
@@ -1252,13 +1273,17 @@ class InstrumentService:
             instrument_ids: 证券 ID 列表.
             asof: Point-in-Time 日期 (YYYY-MM-DD).
 
+            cutoff: Optional knowledge cutoff for historical names.
+
         Returns:
             {instrument_id: name} 映射.
 
         """
         if asof is None:
             return {}
-        return self._name_history_reader.get_names_batch(instrument_ids, asof)
+        return self._name_history_reader.get_names_batch(
+            instrument_ids, asof, cutoff=cutoff
+        )
 
     @traced("metadata.instrument.get_stock_name")
     def get_stock_name(

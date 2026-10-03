@@ -219,7 +219,7 @@ CREATE TABLE IF NOT EXISTS instrument_name_history (
     changed_date DATE NOT NULL,
     source TEXT NOT NULL DEFAULT 'tushare',
     observed_at TEXT,
-    PRIMARY KEY (instrument_id, changed_date, source),
+    PRIMARY KEY (instrument_id, changed_date, source, observed_at),
     FOREIGN KEY (instrument_id) REFERENCES instrument(instrument_id)
 );
 CREATE INDEX IF NOT EXISTS idx_name_history_instrument ON instrument_name_history(instrument_id);
@@ -241,7 +241,7 @@ CREATE TABLE IF NOT EXISTS st_change_history (
 CREATE INDEX IF NOT EXISTS idx_st_change_history_pit
     ON st_change_history(instrument_id, effective_from, effective_to);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_st_change_history_source_key
-    ON st_change_history(instrument_id, effective_from, source);
+    ON st_change_history(instrument_id, effective_from, source, observed_at);
 
 -- 当前有效成分快速查询
 CREATE INDEX IF NOT EXISTS idx_constituent_current

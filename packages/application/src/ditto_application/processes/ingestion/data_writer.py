@@ -8,7 +8,7 @@ from datetime import UTC, datetime
 from typing import ClassVar, Literal, cast
 
 import polars as pl
-from ditto_data.catalog.source_snapshot import snapshot_identity
+from ditto_data.catalog.source_snapshot import ProviderSnapshot
 from ditto_data.config.dataset_checksum import dataset_sort_keys
 from ditto_data.models import Dataset, Source
 from ditto_data.services.capital_store import CapitalStore
@@ -23,9 +23,6 @@ from ditto_application.processes.ingestion.dataset_registry import (
     DatasetRegistration,
     WriteKind,
     default_dataset_registry,
-)
-from ditto_application.processes.ingestion.ingestion_evidence import (
-    dataset_schema_version,
 )
 
 
@@ -439,25 +436,8 @@ class IngestionDataWriter:
         trade_date: str,
         asset_class: Literal["stock", "etf", "index"],
     ) -> WriteResult:
-        """
-        etf_basic 摄取写侧（#395）。
-
-        1. 常规批量注册（instrument/instrument_mapping/instrument_etf 扩展）。
-        2. 从同一帧生成 etf_reference_observation 观察行，绑定与摄取证据
-           一致的 source_snapshot_id（dataset=etf_basic 的确定性快照身份）。
-        """
+        """Register ETF identities before projecting retained reference facts."""
         file_path, checksum = self._write_basic_impl(df, asset_class)
-        observation_rows = self._build_etf_reference_rows(df, trade_date, checksum)
-        if observation_rows:
-            written = self._metadata_service.instrument.save_etf_reference_observations(
-                observation_rows
-            )
-            logger.info(
-                "etf_reference_observation rows written",
-                event="etf_reference_write_complete",
-                observations=written,
-                snapshot_id=str(observation_rows[0]["source_snapshot_id"]),
-            )
         return WriteResult(
             file_path=file_path,
             checksum=checksum,
@@ -466,25 +446,18 @@ class IngestionDataWriter:
             blocked=False,
         )
 
-    def _build_etf_reference_rows(
-        self,
-        df: pl.DataFrame,
-        trade_date: str,
-        checksum: str,
-    ) -> list[dict[str, object]]:
-        """etf_basic 帧 → 参考观察行（field/value/unit + 证据三元组）。"""
+    def write_etf_reference(self, df: pl.DataFrame, snapshot: ProviderSnapshot) -> None:
+        """Project only available basic facts, bound to the actual retained snapshot."""
+        if snapshot.dataset_id != "etf_basic" or not snapshot.payload_retained:
+            raise ValueError(
+                "ETF basic observations require retained etf_basic evidence"
+            )
         if df.is_empty() or "source_ticker" not in df.columns:
-            return []
-        snapshot_id = snapshot_identity(
-            "etf_basic",
-            self._source_name,
-            trade_date,
-            trade_date,
-            dataset_schema_version("etf_basic"),
-            checksum,
+            return
+        observed_on = snapshot.request_end
+        published_at = snapshot.created_at.astimezone(UTC).strftime(
+            "%Y-%m-%dT%H:%M:%SZ"
         )
-        observed_on = _normalize_iso_date(trade_date)
-        published_at = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
         rows: list[dict[str, object]] = []
         for row in df.to_dicts():
             source_ticker = str(row["source_ticker"])
@@ -505,7 +478,7 @@ class IngestionDataWriter:
                     ("list_date", _normalize_iso_date(str(row["list_date"])), "date")
                 )
             for field, value, unit in fields:
-                if value == "" or value is None:
+                if value == "":
                     continue  # 观察缺失不推断
                 rows.append(
                     {
@@ -518,10 +491,10 @@ class IngestionDataWriter:
                         "effective_from": observed_on,
                         "effective_to": None,
                         "source": self._source_name,
-                        "source_snapshot_id": snapshot_id,
+                        "source_snapshot_id": snapshot.snapshot_id,
                     }
                 )
-        return rows
+        self._metadata_service.instrument.save_etf_reference_observations(rows)
 
     def _write_traded_bars(
         self,
@@ -745,8 +718,20 @@ class IngestionDataWriter:
         """
         if "instrument_id" not in df.columns:
             if self._source_name == Source.FUYAO.value and "trade_date" in df.columns:
-                instrument_id_mapping = self._resolve_fuyao_ids_with_evidence(
-                    df, source_ticker_col
+                enriched_df = pl.concat(
+                    [
+                        _enrich_with_instrument_id(
+                            part,
+                            self._resolve_fuyao_ids_with_evidence(
+                                part, source_ticker_col
+                            ),
+                            source_ticker_col,
+                            self._source_name,
+                        )
+                        for part in df.sort("trade_date").partition_by(
+                            "trade_date", maintain_order=True
+                        )
+                    ]
                 )
             else:
                 source_tickers = df[source_ticker_col].unique().to_list()
@@ -757,12 +742,12 @@ class IngestionDataWriter:
                         asof=None,
                     )
                 )
-            enriched_df = _enrich_with_instrument_id(
-                df,
-                instrument_id_mapping,
-                source_ticker_col,
-                self._source_name,
-            )
+                enriched_df = _enrich_with_instrument_id(
+                    df,
+                    instrument_id_mapping,
+                    source_ticker_col,
+                    self._source_name,
+                )
         else:
             enriched_df = df
 

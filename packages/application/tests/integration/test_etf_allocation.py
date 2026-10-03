@@ -528,7 +528,10 @@ def test_paper_handoff_requires_the_calendar_next_session() -> None:
 
 
 @pytest.mark.pit
-def test_paper_handoff_fact_visibility_excludes_future_publication() -> None:
+@pytest.mark.parametrize("snapshot_dataset", ["etf_reference", "etf_basic"])
+def test_paper_handoff_fact_visibility_excludes_future_publication(
+    snapshot_dataset: str,
+) -> None:
     cutoff = datetime.fromisoformat("2026-09-02T08:00:00+00:00")
     field = ETFField(
         value="none",
@@ -556,7 +559,7 @@ def test_paper_handoff_fact_visibility_excludes_future_publication() -> None:
     snapshots = MagicMock()
     snapshots.get_snapshot.return_value = SimpleNamespace(
         snapshot_id="snapshot:recorded:market",
-        dataset_id="etf_reference",
+        dataset_id=snapshot_dataset,
         created_at=datetime.fromisoformat("2026-09-02T06:00:00+00:00"),
     )
     snapshots.list_snapshots.return_value = (

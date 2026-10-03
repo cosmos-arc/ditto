@@ -171,10 +171,8 @@ class SQLiteProviderSnapshotStore:
             if existing.schema_fingerprint is None and (
                 snapshot.schema_fingerprint is not None
             ):
-                update = (
-                    "UPDATE provider_snapshots "
-                    "SET schema_fingerprint = ? WHERE snapshot_id = ?"
-                )
+                update = """UPDATE provider_snapshots
+                    SET schema_fingerprint = ? WHERE snapshot_id = ?"""
                 self._client.execute(
                     update,
                     [snapshot.schema_fingerprint, snapshot.snapshot_id],
@@ -286,8 +284,8 @@ class SQLiteProviderSnapshotStore:
                 [snapshot_id, observed_at.isoformat()],
             )
             self._client.execute(
-                "INSERT OR REPLACE INTO provider_snapshot_observations "
-                "VALUES (?, NULL, ?)",
+                """INSERT OR REPLACE INTO provider_snapshot_observations
+                VALUES (?, NULL, ?)""",
                 [snapshot_id, observed_at.isoformat()],
             )
             self._client.commit()

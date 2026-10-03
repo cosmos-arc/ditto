@@ -90,7 +90,7 @@ class SecondaryIdentityResolverProtocol(Protocol):
     """辅源身份反解协议 — 辅源代码 → instrument_id（只读，#395）。"""
 
     def resolve_secondary_ids(
-        self, source_tickers: list[str], source: str
+        self, source_tickers: list[str], source: str, *, asof: str
     ) -> dict[str, int]:
         """
         把辅源代码（如 fuyao thscode/裸码）反解为 instrument_id.

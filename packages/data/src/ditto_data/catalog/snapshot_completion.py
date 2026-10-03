@@ -45,3 +45,13 @@ def snapshot_completed(
         and checkpoint.complete_evidence_id == snapshot.snapshot_id
         for checkpoint in lifecycle.list_complete(dataset_id=snapshot.dataset_id)
     )
+
+
+def canonical_write_identity(snapshot: ProviderSnapshot) -> tuple[str, int] | None:
+    """Canonical output attested by the same completed ingestion as the payload."""
+    metadata = dict(snapshot.response_metadata)
+    checksum = metadata.get("canonical_checksum")
+    rows = metadata.get("canonical_row_count", "")
+    if not checksum or not rows.isdecimal():
+        return None
+    return checksum, int(rows)

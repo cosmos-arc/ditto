@@ -170,14 +170,10 @@ class TestFuyaoSourceMappingIntegration:
         assert count is not None
         assert count["n"] == 1
 
-    def test_conflicting_mapping_is_rejected(
+    def test_dated_mapping_is_authoritative(
         self, service: InstrumentService, writer: InstrumentWriter, client: SQLiteClient
     ) -> None:
-        """同键重叠区间映射到不同 instrument_id → 拒绝且不落行。
-
-        既有映射带未来 effective_to（对 current 读不可见）但与新开放区间
-        重叠：登记路径必须识别重叠冲突并拒绝，而不是写出第二个映射。
-        """
+        """历史有效映射优先于当前裸代码匹配，不写出第二个映射。"""
         writer.register(
             1_000_099,
             InstrumentRegistration(
@@ -207,7 +203,7 @@ class TestFuyaoSourceMappingIntegration:
             register_missing=True,
         )
 
-        assert "600000.SH" not in resolved  # 重复映射 → 拒绝
+        assert resolved == {"600000.SH": 1_000_099}
         rows = client.fetchall(
             "SELECT instrument_id FROM instrument_mapping WHERE source = 'fuyao'"
         )
@@ -331,3 +327,26 @@ class TestFuyaoSourceMappingIntegration:
         )
 
         assert "600519.SH" not in resolved
+
+    @pytest.mark.pit
+    def test_existing_mapping_cannot_leak_before_effective_date(self, service):
+        service.resolve_fuyao_instrument_ids(
+            ["600000.SH"],
+            evidence_dates={"600000.SH": "2026-09-18"},
+            observed_at="2026-09-19 08:00:00",
+            register_missing=True,
+        )
+        assert (
+            service.resolve_fuyao_instrument_ids(
+                ["600000.SH"],
+                evidence_dates={"600000.SH": "2026-08-01"},
+                observed_at="2026-10-01 08:00:00",
+                register_missing=True,
+            )
+            == {}
+        )
+        assert service.resolve_fuyao_instrument_ids(
+            ["600000.SH"],
+            evidence_dates={"600000.SH": "2026-09-18"},
+            register_missing=False,
+        ) == {"600000.SH": 1000001}

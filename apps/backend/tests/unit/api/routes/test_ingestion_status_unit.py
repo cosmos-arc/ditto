@@ -80,37 +80,6 @@ async def _call_dq_summary() -> APIResponse[DQSummaryResponse]:
     return await route()
 
 
-async def _call_status(
-    facade: IngestionStatusQueryFacade,
-) -> APIResponse[IngestionStatusResponse]:
-    route = cast(
-        _StatusRoute,
-        getattr(get_ingestion_status, "__dishka_orig_func__", get_ingestion_status),
-    )
-    return await route(facade=facade)
-
-
-async def _call_history(
-    facade: IngestionStatusQueryFacade,
-    *,
-    dataset: str,
-    limit: int = 20,
-) -> APIResponse[list[IngestionHistoryItem]]:
-    route = cast(
-        _HistoryRoute,
-        getattr(get_ingestion_history, "__dishka_orig_func__", get_ingestion_history),
-    )
-    return await route(facade=facade, dataset=dataset, limit=limit)
-
-
-async def _call_dq_summary() -> APIResponse[DQSummaryResponse]:
-    route = cast(
-        _DQSummaryRoute,
-        getattr(get_dq_summary, "__dishka_orig_func__", get_dq_summary),
-    )
-    return await route()
-
-
 class TestGetIngestionStatus:
     """GET /ingestion/status — 各数据集最新摄取状态."""
 

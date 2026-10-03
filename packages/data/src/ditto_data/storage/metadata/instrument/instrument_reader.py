@@ -265,6 +265,21 @@ class InstrumentReader:
 
         return result
 
+    def mapped_source_tickers(
+        self, source_tickers: list[str], source: str, *, after: str | None = None
+    ) -> set[str]:
+        """Identify existing mapping histories, including currently closed intervals."""
+        if not source_tickers:
+            return set()
+        clause, params = build_in_clause("source_ticker", source_tickers)
+        interval = " AND (effective_to IS NULL OR effective_to > ?)" if after else ""
+        rows = self._client.fetchall(
+            f"""SELECT DISTINCT source_ticker FROM instrument_mapping
+            WHERE source = ? AND {clause}{interval}""",  # noqa: S608 - parameterized IN clause
+            [source, *params, *([after] if after else [])],
+        )
+        return {str(row["source_ticker"]) for row in rows}
+
     def map_bare_tickers_to_instrument_ids(
         self,
         tickers: list[str],

@@ -279,7 +279,12 @@ class LiveETFPaperExecutionFacts:
         if (
             snapshot is None
             or snapshot.snapshot_id != snapshot_id
-            or snapshot.dataset_id != dataset_id
+            or snapshot.dataset_id
+            not in (
+                {"etf_reference", "etf_basic"}
+                if dataset_id == "etf_reference"
+                else {dataset_id}
+            )
             or snapshot.created_at > cutoff
             or not snapshot.payload_retained
         ):

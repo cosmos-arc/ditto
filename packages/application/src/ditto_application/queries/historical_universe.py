@@ -267,9 +267,10 @@ class PinnedHistoricalUniverse:
         if self.ticker_resolver is None:
             return None
         source = contents.snapshot.source
+        ticker_resolver = self.ticker_resolver
 
         def resolve(tickers: list[str], asof: str) -> dict[str, int]:
-            return self.ticker_resolver(tickers, source=source, asof=asof)
+            return ticker_resolver(tickers, source=source, asof=asof)
 
         return resolve
 

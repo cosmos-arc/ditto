@@ -385,9 +385,10 @@ APPS_REGISTRY_COMPOSITION_ALLOWANCES = (
             {
                 "ditto_data.catalog",
                 "ditto_data.catalog.provider_payload",
+                "ditto_data.catalog.source_snapshot",
+                "ditto_data.ingestion.partition_state",
                 "ditto_data.ingestion.ingestion_cursor_store",
                 "ditto_data.ingestion.ingestion_log_store",
-                "ditto_data.lineage",
                 "ditto_data.services.capital_store",
                 "ditto_data.services.fundamental_store",
                 "ditto_data.services.macro_service",
