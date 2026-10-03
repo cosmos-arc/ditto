@@ -9,21 +9,6 @@ import polars as pl
 import pytest
 from ditto_application.exceptions import AppQueryError
 from ditto_application.queries.capital import CapitalDataPort, CapitalQueryFacade
-from ditto_data.catalog.promotion import DatasetMaturityPromotion
-
-
-class _MaturityPromotionReader:
-    def __init__(
-        self,
-        promotions_by_dataset: dict[str, DatasetMaturityPromotion] | None = None,
-    ) -> None:
-        self._promotions_by_dataset = promotions_by_dataset or {}
-
-    def get_dataset_maturity_promotion(
-        self,
-        dataset_id: str,
-    ) -> DatasetMaturityPromotion | None:
-        return self._promotions_by_dataset.get(dataset_id)
 
 
 class _StubCapitalData:
@@ -125,28 +110,6 @@ class TestCapitalQueryFacadeMaturityGate:
             date(2026, 6, 1),
             allow_experimental_data=True,
         )
-
-        assert len(result) == 1
-        store.get_margin_trading.assert_called_once_with(1, date(2026, 6, 1))
-
-    def test_promoted_dataset_does_not_need_research_opt_in(self) -> None:
-        store = MagicMock(spec=["get_margin_trading"])
-        store.get_margin_trading.return_value = pl.DataFrame({"rzye": [100.0]})
-        facade = CapitalQueryFacade(
-            capital_store=store,
-            maturity_promotion_reader=_MaturityPromotionReader(
-                {
-                    "margin_trading": DatasetMaturityPromotion(
-                        dataset_id="margin_trading",
-                        previous_maturity="experimental",
-                        promoted_maturity="initial-focus",
-                        promoted_by="architecture-review",
-                    )
-                }
-            ),
-        )
-
-        result = facade.get_margin_trading(1, date(2026, 6, 1))
 
         assert len(result) == 1
         store.get_margin_trading.assert_called_once_with(1, date(2026, 6, 1))

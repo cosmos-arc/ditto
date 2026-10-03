@@ -472,7 +472,8 @@ def test_chart_preserves_queried_lineage_when_no_visible_price(tmp_path: Path) -
 @pytest.mark.pit
 def test_chart_does_not_use_unapproved_status_to_hide_gaps(tmp_path: Path) -> None:
     chart, _, _ = _chart(tmp_path, poisoned=False, suspended=True)
-    # Use the real catalog gate: stock_status is experimental independently of prices.
+    # Use the real catalog gate: stock_status is a core-lane dataset, so the
+    # suspension evidence must never hide sessions behind an opt-in flag.
     market = MarketQueryFacade(cast(MarketService, SimpleNamespace()))
     chart._market = cast(
         MarketQueryFacade,
@@ -491,7 +492,7 @@ def test_chart_does_not_use_unapproved_status_to_hide_gaps(tmp_path: Path) -> No
         allow_experimental_data=False,
         now=datetime(2026, 3, 12, 8, tzinfo=UTC),
     )
-    assert chart.get_chart(request).missing_sessions == ("2026-03-11",)
+    assert chart.get_chart(request).missing_sessions == ()
     assert (
         chart.get_chart(
             MarketChartRequest(**{**vars(request), "allow_experimental_data": True})

@@ -119,18 +119,6 @@ class DataLineageCatalogAttentionSeverityCountResponse(BaseModel):
     model_config = ConfigDict(strict=True, extra="ignore")
 
 
-class DataLineageCatalogSourceFallbackPolicyEffectCountResponse(BaseModel):
-    """运行级 lineage source fallback policy effect 计数响应."""
-
-    policy_id: str = Field(description="Source fallback policy ID")
-    policy_status: str = Field(description="Source fallback policy status")
-    catalog_selected_source: str = Field(description="Catalog 原始选源")
-    effective_selected_source: str = Field(description="Policy 生效后的选源")
-    count: int = Field(description="该 policy effect 出现次数")
-
-    model_config = ConfigDict(strict=True, extra="ignore")
-
-
 class DataLineageCatalogAttentionAssetResponse(BaseModel):
     """运行级 lineage catalog attention 资产响应."""
 
@@ -185,12 +173,6 @@ class DataLineageCatalogRunReportResponse(BaseModel):
     ] = Field(
         default_factory=list,
         description="按 lineage catalog attention severity 聚合的资产数量",
-    )
-    source_fallback_policy_effect_counts: list[
-        DataLineageCatalogSourceFallbackPolicyEffectCountResponse
-    ] = Field(
-        default_factory=list,
-        description="按 active source fallback policy effect 聚合的 run input 数量",
     )
 
     model_config = ConfigDict(strict=True, extra="ignore")

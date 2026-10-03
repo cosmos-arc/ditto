@@ -4,9 +4,6 @@ from collections.abc import Generator
 from contextlib import contextmanager
 
 from ditto_application.catalog_freshness import PersistedIngestionEvidenceVerifier
-from ditto_application.commands.data_product_certification import (
-    DataProductCertificationCommands,
-)
 from ditto_application.commands.quality_check import CheckDataQualityHandler
 from ditto_application.processes.ingestion.backfill_manager import BackfillManager
 from ditto_application.processes.ingestion.bootstrap_planner import BootstrapPlanner
@@ -22,15 +19,12 @@ from ditto_application.processes.ingestion.retry_manager import RetryManager
 from ditto_application.processes.ingestion.sparse_recovery import (
     SparsePITReattestationProcess,
 )
-from ditto_application.queries.data_products import DataProductsQueryFacade
 from ditto_application.queries.metadata import MetadataQueryFacade
 from ditto_data.catalog import (
     DataCatalogReader,
     DataCatalogWriter,
 )
-from ditto_data.catalog.fallback_policy import CatalogSourceFallbackPolicyReader
 from ditto_data.catalog.provider_payload import ProviderPayloadWriter
-from ditto_data.ingestion.freeze_store import FreezeStore
 from ditto_data.ingestion.ingestion_cursor_store import IngestionCursorStore
 from ditto_data.ingestion.ingestion_log_store import IngestionLogStore
 from ditto_data.lineage import DataLineageRecorder
@@ -88,11 +82,9 @@ def create_ingestion_bundle(
         ingestion_cursor_store = container.get(IngestionCursorStore)
         exchange_transformers = container.get(ExchangeTransformers)
         quality_checker = container.get(CheckDataQualityHandler)
-        freeze_store = container.get(FreezeStore)
         lineage_recorder = container.get(DataLineageRecorder)
         catalog_reader = container.get(DataCatalogReader)
         catalog_writer = container.get(DataCatalogWriter)
-        source_fallback_policy_reader = container.get(CatalogSourceFallbackPolicyReader)
         provider_payload_writer = container.get(ProviderPayloadWriter)
         evidence_committer: IngestionEvidenceCommitter | None = None
         if license_record_id is not None:
@@ -115,11 +107,9 @@ def create_ingestion_bundle(
             runtime=CoordinatorRuntimeContext(
                 ingestion_cursor_store=ingestion_cursor_store,
                 quality_checker=quality_checker,
-                freeze_store=freeze_store,
                 lineage_recorder=lineage_recorder,
                 catalog_reader=catalog_reader,
                 catalog_writer=catalog_writer,
-                source_fallback_policy_reader=source_fallback_policy_reader,
                 evidence_committer=evidence_committer,
                 provider_payload_writer=provider_payload_writer,
                 license_record_id=license_record_id,
@@ -152,8 +142,6 @@ def create_ingestion_bundle(
             )
             # 创建查询 facade
             metadata_facade = MetadataQueryFacade(metadata_service=metadata_service)
-            data_products_query = container.get(DataProductsQueryFacade)
-            certification_commands = container.get(DataProductCertificationCommands)
 
             yield IngestionBundle(
                 coordinator=coordinator,
@@ -162,8 +150,6 @@ def create_ingestion_bundle(
                 sparse_pit_reattestation=sparse_pit_reattestation,
                 metadata_facade=metadata_facade,
                 exchange_transformers=exchange_transformers,
-                data_products_query=data_products_query,
-                certification_commands=certification_commands,
             )
     finally:
         container.close()

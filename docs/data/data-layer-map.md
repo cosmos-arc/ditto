@@ -95,16 +95,15 @@ intent → checkpoint → COMPLETE(绑定精确 snapshot_id)。修订不改历�
 ```
 1. 组装事实 assemble_facts:knowledge_date 列过滤(_without_future_knowledge)
    + 行级 source_snapshot_id 缺失 → declared_missing_inputs,fail-closed 保留
-2. certified 窗口检查:stock_daily/status/basic/adj_factor 全窗要有认证覆盖
-3. field admission 五连查:
-   ① license(用途 × 实际使用日)
-   ② CertifiedField 边界 + snapshot 绑定(跨阶段引用 → SNAPSHOT_CONFLICT)
-   ③ maturity override  ④ coverage 例外  ⑤ PIT 可见性上界(交易日历解析)
-4. consumer_input_hash 与认证冻结摘要匹配(不匹配 → CONSUMER_INPUT_MISMATCH)
-5. 全过 → 保存 run;任一不过 → SELECTION_DATA_ADMISSION_BLOCKED
+2. 快照就绪检查(#391 SnapshotReadinessQuery):声明的 snapshot 必须存在、
+   已完成(生命周期 COMPLETE 事件绑定精确 snapshot ID)且载荷留存,
+   请求区间须落在快照覆盖范围内;任一不满足 → SELECTION_DATA_INCOMPLETE
+3. 全过 → 保存 run;任一不过 → SELECTION_DATA_INCOMPLETE
 ```
 
-- #256 废弃窗口:旧请求一个绑定都不声明 → 保持原行为不进门;声明任何一个 → 全量进门
+- 认证/license/specimen 治理门已于 #391/#392 删除;时间可见性语义保留在
+  消费者行级过滤(assemble _without_future_knowledge、etf_field_visible、
+  historical universe _observed_by)
 - ETF paper 执行走同一门的简化路径(purpose=promotion_paper,信号/执行/估值三 cutoff 因果序校验)
 - 历史估值 #249 **不进这门**:只查快照唯一性 + cutoff
 

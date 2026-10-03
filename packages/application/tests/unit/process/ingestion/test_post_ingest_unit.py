@@ -35,7 +35,6 @@ from ditto_data.catalog.provider_payload import (
     FilesystemProviderPayloadStore,
     ProviderPayloadArtifact,
 )
-from ditto_data.ingestion.freeze_store import FreezeStore
 from ditto_data.models.ingestion import IngestionLog
 from ditto_platform.foundation import OnDuplicate, WriteResult
 
@@ -117,19 +116,6 @@ class _EvidenceCommitRecorder:
     def commit(self, request: object) -> EvidenceCommitOutcome:
         self.requests.append(request)
         return self.outcome
-
-
-class _FreezeRecorder:
-    def __init__(self) -> None:
-        self.calls: list[tuple[str, str, list[str]]] = []
-
-    def create_freeze(
-        self,
-        freeze_id: str,
-        description: str,
-        datasets: list[str],
-    ) -> None:
-        self.calls.append((freeze_id, description, datasets))
 
 
 def test_index_basic_skips_unbounded_per_instrument_list_date_inference() -> None:
@@ -368,7 +354,6 @@ def test_r2_evidence_success_does_not_duplicate_success_log(tmp_path: Path) -> N
         )
     )
     logs = _IngestionLogRecorder()
-    freeze = _FreezeRecorder()
     ctx = PostIngestContext(
         result_handler=IngestionResultHandler(cast(object, logs), "tushare"),
         data_writer=cast(IngestionDataWriter, writer),
@@ -378,7 +363,6 @@ def test_r2_evidence_success_does_not_duplicate_success_log(tmp_path: Path) -> N
         evidence_committer=cast(IngestionEvidenceCommitter, committer),
         provider_payload_writer=FilesystemProviderPayloadStore(tmp_path),
         license_record_id="license:tushare:stock_daily:reviewed",
-        freeze_store=cast(FreezeStore, freeze),
     )
 
     result = process_fetched_data(
@@ -392,7 +376,6 @@ def test_r2_evidence_success_does_not_duplicate_success_log(tmp_path: Path) -> N
     assert result.status == "success"
     assert len(committer.requests) == 1
     assert logs.logs == []
-    assert freeze.calls == []
 
 
 def test_r2_provider_payload_uri_remains_bound_to_pre_future_response(

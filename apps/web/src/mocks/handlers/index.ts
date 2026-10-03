@@ -2,7 +2,6 @@ import type { RequestHandler } from "msw";
 import { agentHandlers } from "./agent";
 import { aiHandlers } from "./ai";
 import { backtestHandlers } from "./backtest";
-import { dataProductsHandlers } from "./data-products";
 import { failClosedApiHandler } from "./fail-closed";
 import { homeHandlers } from "./home";
 import { instrumentsHandlers } from "./instruments";
@@ -28,7 +27,6 @@ export const handlers: RequestHandler[] = [
 	...portfolioHandlers,
 	...instrumentsHandlers,
 	...backtestHandlers,
-	...dataProductsHandlers,
 	...strategyHandlers,
 	...regimeHandlers,
 	...universeHandlers,

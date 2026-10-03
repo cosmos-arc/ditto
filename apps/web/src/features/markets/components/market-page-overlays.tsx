@@ -190,13 +190,17 @@ export function IntelligenceOverlay({
 export type CalendarOverlayId = "event-detail" | "reminder" | "intelligence";
 
 export const calendarActions = [
-	{ id: "event-detail", label: "覆盖详情" },
+	{ id: "event-detail", label: "状态详情" },
 	{ id: "reminder", label: "设置检查提醒" },
 	{ id: "intelligence", label: "前往 Intelligence" },
 ] as const;
 
 const calendarCopy: Record<CalendarOverlayId, OverlayCopy> = {
-	"event-detail": { title: "日历覆盖详情", description: "当前接口只提供交易日历覆盖与质量缺口。", kind: "drawer" },
+	"event-detail": {
+		title: "日历状态详情",
+		description: "当前接口只提供交易日历摄取状态与目录新鲜度。",
+		kind: "drawer",
+	},
 	reminder: { title: "日历检查提醒", description: "提醒只保存在当前浏览会话，不会创建系统通知。", kind: "sheet" },
 	intelligence: {
 		title: "前往 Intelligence",
@@ -233,11 +237,11 @@ export function CalendarOverlay({
 			<OverlayFactList
 				facts={[
 					["数据集", "calendar"],
-					["消费者配置", "research_daily"],
+					["数据源", "ingestion status"],
 					["事件明细", "未公开"],
 				]}
 			/>
-			<BoundaryNotice>不会用原型中的宏观事件名称、发布时间或预期值替代真实 API 数据。</BoundaryNotice>
+			<BoundaryNotice>不会用原型中的宏观事件名称、发布时间或预期值替代真实摄取状态数据。</BoundaryNotice>
 		</PageActionOverlay>
 	);
 }

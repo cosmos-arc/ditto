@@ -279,32 +279,6 @@ def test_ready_report_rejects_provider_contract_drift(tmp_path: Path) -> None:
     )
 
 
-@pytest.mark.parametrize(
-    "field",
-    [
-        "certification_report_id",
-        "certification_content_hash",
-        "certified_from",
-        "certified_through",
-    ],
-)
-def test_ready_report_requires_active_certified_history(
-    tmp_path: Path,
-    field: str,
-) -> None:
-    report = _ready_report()
-    preflight = cast("dict[str, object]", report["preflight"])
-    products = cast("list[dict[str, object]]", preflight["products"])
-    products[0][field] = None
-
-    assert (
-        FileR2LiveGateEvidenceReader(
-            _source(tmp_path, report)
-        ).read_verified_live_gate()
-        is None
-    )
-
-
 def test_ready_report_requires_measured_performance_fields(tmp_path: Path) -> None:
     report = _ready_report()
     preflight = cast("dict[str, object]", report["preflight"])

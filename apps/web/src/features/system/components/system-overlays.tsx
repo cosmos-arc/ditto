@@ -17,12 +17,12 @@ const systemCopy = {
 	},
 	"alert-handle": {
 		title: "异常处理",
-		description: "查看阻塞原因与建议动作；处理结果不会旁路写入。",
+		description: "查看阻塞原因与来源状态；处理结果不会旁路写入。",
 		kind: "alert-dialog",
 	},
 	"task-detail": {
 		title: "任务详情",
-		description: "来自当前交易日 remediation projection 的首个待办。",
+		description: "来自当前交易日 source health 关注项的首个待办。",
 		kind: "drawer",
 	},
 } as const;
@@ -33,7 +33,7 @@ export function SystemOverlays({
 	onClose,
 	onRefresh,
 	reasons,
-	suggestedActions,
+	status,
 	tradeDate,
 }: {
 	readonly active: SystemOverlayId | null;
@@ -41,7 +41,7 @@ export function SystemOverlays({
 	readonly onClose: () => void;
 	readonly onRefresh: () => void;
 	readonly reasons: string;
-	readonly suggestedActions: string;
+	readonly status: string;
 	readonly tradeDate: string;
 }) {
 	if (!active) return null;
@@ -70,7 +70,7 @@ export function SystemOverlays({
 					["交易日", tradeDate],
 					["Dataset", datasetId || "当前无待办"],
 					["阻塞原因", reasons || "未报告"],
-					["建议动作", suggestedActions || "人工复核"],
+					["来源状态", status || "未报告"],
 				]}
 			/>
 			<p className="rounded-(--radius-md) border border-(--color-risk-warning)/40 bg-(--color-risk-warning)/5 p-3 text-xs leading-5 text-(--color-risk-warning-fg)">

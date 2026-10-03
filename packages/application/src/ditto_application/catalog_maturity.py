@@ -6,10 +6,6 @@ from collections.abc import Iterable
 
 from ditto_data.catalog import DatasetMetadata, default_dataset_metadata
 from ditto_data.catalog.metadata import DatasetAssetClass, dataset_asset_class
-from ditto_data.catalog.promotion import (
-    DatasetMaturityPromotionReader,
-    apply_dataset_maturity_promotion,
-)
 from ditto_strategy.alpha.specs import StrategySpec
 
 from ditto_application.exceptions import AppBuilderError
@@ -53,14 +49,12 @@ def assert_strategy_runtime_data_allowed(
     spec: StrategySpec,
     *,
     allow_experimental_data: bool = False,
-    maturity_promotion_reader: DatasetMaturityPromotionReader | None = None,
     context: str = "strategy runtime",
 ) -> None:
     """Fail closed when a strategy runtime would use non-initial-focus data."""
-    blocked = _blocked_datasets(
+    blocked = blocked_catalog_datasets(
         strategy_runtime_dataset_ids(spec),
         allow_experimental_data=allow_experimental_data,
-        maturity_promotion_reader=maturity_promotion_reader,
     )
     if not blocked:
         return
@@ -77,45 +71,18 @@ def blocked_catalog_datasets(
     dataset_ids: Iterable[str],
     *,
     allow_experimental_data: bool = False,
-    maturity_promotion_reader: DatasetMaturityPromotionReader | None = None,
 ) -> tuple[str, ...]:
     """Return dataset maturity labels that are not allowed for production reads."""
-    return _blocked_datasets(
-        dataset_ids,
-        allow_experimental_data=allow_experimental_data,
-        maturity_promotion_reader=maturity_promotion_reader,
-    )
-
-
-def _blocked_datasets(
-    dataset_ids: Iterable[str],
-    *,
-    allow_experimental_data: bool,
-    maturity_promotion_reader: DatasetMaturityPromotionReader | None = None,
-) -> tuple[str, ...]:
     metadata_by_dataset = default_dataset_metadata()
     blocked: list[str] = []
     for dataset_id in dataset_ids:
-        metadata = metadata_by_dataset.get(dataset_id)
+        metadata: DatasetMetadata | None = metadata_by_dataset.get(dataset_id)
         if metadata is None:
             blocked.append(f"{dataset_id}=unknown")
             continue
-        metadata = _apply_maturity_promotion(metadata, maturity_promotion_reader)
         if metadata.maturity in _DEFAULT_ALLOWED_MATURITIES:
             continue
         if allow_experimental_data and metadata.maturity == "experimental":
             continue
         blocked.append(f"{dataset_id}={metadata.maturity}")
     return tuple(blocked)
-
-
-def _apply_maturity_promotion(
-    metadata: DatasetMetadata,
-    reader: DatasetMaturityPromotionReader | None,
-) -> DatasetMetadata:
-    if reader is None:
-        return metadata
-    promotion = reader.get_dataset_maturity_promotion(metadata.dataset_id)
-    if promotion is None:
-        return metadata
-    return apply_dataset_maturity_promotion(metadata, promotion)

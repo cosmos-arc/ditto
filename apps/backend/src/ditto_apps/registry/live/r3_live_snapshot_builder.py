@@ -24,11 +24,9 @@ from ditto_analysis.research.records import (
 from ditto_application.builders.research_factor_registry import (
     ResearchFactorRegistry,
 )
+from ditto_application.catalog_freshness import observed_snapshot_ids
 from ditto_application.processes.experiments.execution_bundle import (
     ContentAddressedResearchInput,
-)
-from ditto_application.processes.experiments.planning_probes import (
-    R3_RESEARCH_CERTIFICATION_PROFILE,
 )
 from ditto_application.processes.experiments.research_data_artifacts import (
     ResearchFrameKind,
@@ -38,8 +36,8 @@ from ditto_application.processes.experiments.research_data_artifacts import (
 from ditto_application.processes.experiments.research_policy_artifact import (
     VerifiedInstrumentRulesArtifact,
 )
-from ditto_data.catalog.certification import CertificationReader
 from ditto_data.catalog.source_snapshot import ProviderSnapshot, ProviderSnapshotReader
+from ditto_data.ingestion.partition_state import PartitionLifecycleReader
 
 from ditto_apps.registry.container import make_app_container
 from ditto_apps.registry.live.r3_live_market_projection import (
@@ -111,11 +109,10 @@ _REQUIRED_DEPENDENCIES = {
 
 @dataclass(frozen=True, slots=True)
 class LiveDatasetSnapshotBinding:
-    """Exact active R2 certification and snapshots used by one R3 dependency."""
+    """Exact observed live snapshots used by one R3 dependency."""
 
     dataset_id: str
-    certification_report_id: str
-    certified_at: str
+    observed_at: str
     certified_from: str
     certified_through: str
     snapshot_ids: tuple[str, ...]
@@ -234,38 +231,34 @@ def _factor_evidence() -> tuple[tuple[ContentAddressedResearchInput, bytes], ...
     return tuple(artifacts)
 
 
-def _certified_dataset_binding(
+def _observed_dataset_binding(
     *,
-    certification_reader: CertificationReader,
     snapshot_reader: ProviderSnapshotReader,
+    lifecycle_reader: PartitionLifecycleReader,
     dataset_id: str,
+    observed_cutoff: datetime,
 ) -> tuple[tuple[ProviderSnapshot, ...], LiveDatasetSnapshotBinding]:
-    report = certification_reader.get_active_report(
-        dataset_id,
-        R3_RESEARCH_CERTIFICATION_PROFILE,
+    snapshot_ids = observed_snapshot_ids(
+        snapshot_reader,
+        lifecycle_reader,
+        dataset_ids=(dataset_id,),
+        knowledge_cutoff=observed_cutoff,
     )
-    if report is None:
-        raise ValueError(f"active live certification is missing: {dataset_id}")
-    coverage = report.coverage
-    if coverage.complete_from is None or coverage.complete_from > _START:
-        raise ValueError(f"live certification starts too late: {dataset_id}")
-    if coverage.target_to < _END:
-        raise ValueError(f"live certification ends too early: {dataset_id}")
     snapshots: list[ProviderSnapshot] = []
-    for snapshot_id in report.evidence.snapshot_ids:
+    for snapshot_id in snapshot_ids:
         snapshot = snapshot_reader.get_snapshot(snapshot_id)
         if snapshot is None:
             raise ValueError(
-                f"certified provider snapshot is missing: {dataset_id}/{snapshot_id}"
+                f"observed provider snapshot is missing: {dataset_id}/{snapshot_id}"
             )
         if snapshot.dataset_id != dataset_id:
             raise ValueError(
-                "certified provider snapshot dataset mismatch: "
+                "observed provider snapshot dataset mismatch: "
                 + f"{dataset_id}/{snapshot_id}"
             )
         if not snapshot.payload_retained or snapshot.payload_uri is None:
             raise ValueError(
-                "certified provider payload is not retained: "
+                "observed provider payload is not retained: "
                 + f"{dataset_id}/{snapshot_id}"
             )
         snapshots.append(snapshot)
@@ -280,37 +273,45 @@ def _certified_dataset_binding(
         )
     )
     if not ordered:
-        raise ValueError(f"active certification has no snapshots: {dataset_id}")
+        raise ValueError(f"live observed snapshot set is empty: {dataset_id}")
+    covered_from = min(date.fromisoformat(item.request_start) for item in ordered)
+    covered_through = max(date.fromisoformat(item.request_end) for item in ordered)
+    if covered_from > _START:
+        raise ValueError(f"live observed snapshots start too late: {dataset_id}")
+    if covered_through < _END:
+        raise ValueError(f"live observed snapshots end too early: {dataset_id}")
+    observed_at = max(item.created_at for item in ordered).astimezone(UTC).isoformat()
     return ordered, LiveDatasetSnapshotBinding(
         dataset_id=dataset_id,
-        certification_report_id=report.report_id,
-        certified_at=report.generated_at.astimezone(UTC).isoformat(),
-        certified_from=coverage.complete_from.isoformat(),
-        certified_through=coverage.target_to.isoformat(),
+        observed_at=observed_at,
+        certified_from=covered_from.isoformat(),
+        certified_through=covered_through.isoformat(),
         snapshot_ids=tuple(item.snapshot_id for item in ordered),
     )
 
 
-def _certified_source_snapshots(
+def _observed_source_snapshots(
     *,
-    certification_reader: CertificationReader,
     snapshot_reader: ProviderSnapshotReader,
+    lifecycle_reader: PartitionLifecycleReader,
     lane: LiveLane,
+    observed_cutoff: datetime,
 ) -> tuple[
     tuple[str, ...],
     str,
     dict[str, tuple[str, ...]],
     tuple[LiveDatasetSnapshotBinding, ...],
 ]:
-    """Resolve only snapshots frozen into each dependency's active R2 report."""
+    """Resolve only completed snapshots observed for each live dependency."""
     by_dataset: dict[str, tuple[str, ...]] = {}
     snapshots_by_dataset: dict[str, tuple[ProviderSnapshot, ...]] = {}
     bindings: list[LiveDatasetSnapshotBinding] = []
     for dataset_id in _LINEAGE_DATASETS[lane]:
-        ordered, binding = _certified_dataset_binding(
-            certification_reader=certification_reader,
+        ordered, binding = _observed_dataset_binding(
             snapshot_reader=snapshot_reader,
+            lifecycle_reader=lifecycle_reader,
             dataset_id=dataset_id,
+            observed_cutoff=observed_cutoff,
         )
         snapshot_ids = tuple(item.snapshot_id for item in ordered)
         by_dataset[dataset_id] = snapshot_ids
@@ -591,18 +592,24 @@ def build_live_research_snapshot(
     data_root: Path,
     artifact_service: ResearchArtifactService,
     catalog_service: ResearchCatalogService,
-    certification_reader: CertificationReader,
     snapshot_reader: ProviderSnapshotReader,
+    lifecycle_reader: PartitionLifecycleReader,
     options: LiveResearchSnapshotOptions = LiveResearchSnapshotOptions(),
 ) -> LiveResearchSnapshotBuild:
     """Freeze one content-addressed live research snapshot and catalog record."""
     root = data_root.expanduser().resolve(strict=True)
     connection = _database(root)
     try:
-        sources, authority_source, by_dataset, bindings = _certified_source_snapshots(
-            certification_reader=certification_reader,
+        observed_cutoff = (
+            options.created_at.astimezone(UTC)
+            if options.created_at is not None
+            else datetime.now(UTC)
+        )
+        sources, authority_source, by_dataset, bindings = _observed_source_snapshots(
             snapshot_reader=snapshot_reader,
+            lifecycle_reader=lifecycle_reader,
             lane=lane,
+            observed_cutoff=observed_cutoff,
         )
         calendar, sessions = _calendar(
             connection,
@@ -659,7 +666,7 @@ def build_live_research_snapshot(
     now = (
         options.created_at.astimezone(UTC)
         if options.created_at is not None
-        else max(datetime.fromisoformat(item.certified_at) for item in bindings)
+        else max(datetime.fromisoformat(item.observed_at) for item in bindings)
     )
     created_at_text = now.isoformat().replace("+00:00", "Z")
     primary = _PRIMARY_DATASET[lane]
@@ -772,8 +779,8 @@ def build_composed_live_research_snapshot(
             data_root=data_root,
             artifact_service=container.get(ResearchArtifactService),
             catalog_service=container.get(ResearchCatalogService),
-            certification_reader=container.get(CertificationReader),
             snapshot_reader=container.get(ProviderSnapshotReader),
+            lifecycle_reader=container.get(PartitionLifecycleReader),
             options=LiveResearchSnapshotOptions(etf_tickers=etf_tickers),
         )
     finally:

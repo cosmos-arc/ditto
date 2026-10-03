@@ -5,15 +5,14 @@ from __future__ import annotations
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 
-from ditto_application.queries.data_products import DataProductsQueryFacade
+from ditto_application.queries.ingestion_status import (
+    DatasetStatus,
+    summarize_status_by_maturity,
+)
 from ditto_application.queries.portfolio_comparison import (
     GetPortfolioComparisonQuery,
     PortfolioComparisonRequest,
     PortfolioComparisonSource,
-)
-from ditto_data.catalog.certification import (
-    CertificationReviewEvent,
-    DatasetCertificationReport,
 )
 from ditto_features.technical_analysis.contracts import (
     TechnicalAnalysisInput,
@@ -42,14 +41,14 @@ from ditto_apps.operations.workstation_performance import PerformanceCase
 
 def default_workstation_performance_cases() -> tuple[PerformanceCase, ...]:
     """Build the four deterministic operations named by OPS-09."""
-    read_models = DataProductsQueryFacade(_EmptyCertificationReader())
+    statuses = _read_model_statuses()
     selection_input = _selection_input()
     technical_input = _technical_input()
     comparison_query, comparison_request = _comparison_operation()
     return (
         PerformanceCase(
             "read_models",
-            lambda: read_models.list_products(profile="r2-modern-a-share-v1"),
+            lambda: summarize_status_by_maturity(statuses),
             threshold_ms=250.0,
         ),
         PerformanceCase(
@@ -70,30 +69,20 @@ def default_workstation_performance_cases() -> tuple[PerformanceCase, ...]:
     )
 
 
-class _EmptyCertificationReader:
-    def get_report(self, report_id: str) -> DatasetCertificationReport | None:
-        del report_id
-        return None
-
-    def get_active_report(
-        self,
-        dataset_id: str,
-        profile: str,
-    ) -> DatasetCertificationReport | None:
-        del dataset_id, profile
-        return None
-
-    def list_reports(
-        self,
-        dataset_id: str,
-        profile: str,
-    ) -> tuple[DatasetCertificationReport, ...]:
-        del dataset_id, profile
-        return ()
-
-    def list_events(self, report_id: str) -> tuple[CertificationReviewEvent, ...]:
-        del report_id
-        return ()
+def _read_model_statuses() -> list[DatasetStatus]:
+    return [
+        DatasetStatus(
+            dataset=f"dataset-{index}",
+            latest_date="2026-08-31",
+            latest_status="success",
+            dataset_maturity="initial-focus" if index % 3 else "experimental",
+            record_count=1_000 + index,
+            last_attempt=None,
+            catalog_freshness_status="fresh" if index % 2 else "stale",
+            catalog_freshness_sla_hours=24,
+        )
+        for index in range(500)
+    ]
 
 
 def _selection_input() -> SelectionInputBundle:

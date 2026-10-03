@@ -31,12 +31,15 @@ describe("market information hierarchy", () => {
 		expect(document.querySelectorAll("[data-info-unit='a-share-row']")).toHaveLength(3);
 	});
 
-	it("annotates calendar milestones and partition integrity", async () => {
+	it("annotates calendar ingestion status and catalog freshness", async () => {
 		render(<CalendarPage />, { wrapper: wrapper() });
-		await screen.findByText("2026-07-15");
-		expect(document.querySelector("[data-info-unit='coverage-milestones']")).toBeInTheDocument();
-		expect(document.querySelector("[data-info-unit='partition-integrity']")).toBeInTheDocument();
-		expect(document.querySelectorAll("[data-info-unit='coverage-milestone']")).toHaveLength(3);
+		await screen.findByText("2026-09-30");
+		expect(document.querySelector("[data-info-unit='latest-ingestion']")).toBeInTheDocument();
+		expect(document.querySelector("[data-info-unit='catalog-freshness']")).toBeInTheDocument();
+		expect(document.querySelector("[data-info-unit='latest-ingested-date']")).toBeInTheDocument();
+		expect(document.querySelector("[data-info-unit='latest-ingestion-status']")).toBeInTheDocument();
+		expect(document.querySelector("[data-info-unit='record-count']")).toBeInTheDocument();
+		expect(document.querySelector("[data-info-unit='catalog-freshness-at']")).toBeInTheDocument();
 	});
 
 	it("annotates macro rows only after explicit opt-in", async () => {

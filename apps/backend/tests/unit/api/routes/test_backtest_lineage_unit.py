@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime
-from types import SimpleNamespace
 from typing import cast
 from unittest.mock import MagicMock
 
@@ -316,119 +315,6 @@ async def test_run_data_lineage_catalog_report_route_returns_catalog_metadata(
         ("critical", 1),
         ("warning", 0),
         ("info", 0),
-    ]
-
-
-async def test_run_data_lineage_catalog_report_route_returns_policy_effect_counts(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """Route should pass source context and expose backend policy-effect counts."""
-
-    async def run_inline(
-        func: Callable[..., object], /, *args: object, **kwargs: object
-    ) -> object:
-        return func(*args, **kwargs)
-
-    monkeypatch.setattr(backtest_query_routes, "run_blocking", run_inline)
-    route_func = getattr(
-        backtest_query_routes,
-        "get_run_data_lineage_catalog_report",
-        None,
-    )
-    assert route_func is not None
-    route = cast(
-        _CatalogRoute,
-        getattr(route_func, "__dishka_orig_func__", route_func),
-    )
-    input_asset = DataLineageAsset(
-        namespace="market",
-        dataset_id="stock_daily",
-        partition_keys=("trade_date=2026-06-01",),
-    )
-    event = DataLineageEvent(
-        run_id="run-001",
-        operation="backtest",
-        timestamp=datetime(2026, 6, 1, 9, 30, tzinfo=UTC),
-        inputs=(DataLineageRef(asset=input_asset, role="market_data"),),
-        outputs=(),
-    )
-    facade = MagicMock(spec=LineageQueryFacade)
-    facade.get_data_lineage_catalog_report_for_run.return_value = SimpleNamespace(
-        run_id="run-001",
-        events=(event,),
-        input_assets=(
-            DataLineageCatalogAsset(
-                asset=input_asset,
-                catalog_status="found",
-                source="tushare",
-                freshness_status="fresh",
-            ),
-        ),
-        output_assets=(),
-        catalog_status_counts=(
-            DataLineageCatalogStatusCount(status="found", count=1),
-            DataLineageCatalogStatusCount(status="missing", count=0),
-            DataLineageCatalogStatusCount(status="not_configured", count=0),
-        ),
-        freshness_status_counts=(
-            DataLineageCatalogFreshnessStatusCount(status="fresh", count=1),
-            DataLineageCatalogFreshnessStatusCount(status="stale", count=0),
-            DataLineageCatalogFreshnessStatusCount(status="missing", count=0),
-            DataLineageCatalogFreshnessStatusCount(
-                status="not_applicable",
-                count=0,
-            ),
-        ),
-        attention_required=(),
-        attention_reason_counts=(),
-        attention_severity_counts=(
-            DataLineageCatalogAttentionSeverityCount(
-                severity="critical",
-                count=0,
-            ),
-            DataLineageCatalogAttentionSeverityCount(
-                severity="warning",
-                count=0,
-            ),
-            DataLineageCatalogAttentionSeverityCount(
-                severity="info",
-                count=0,
-            ),
-        ),
-        source_fallback_policy_effect_counts=(
-            SimpleNamespace(
-                policy_id="fallback-policy-001",
-                policy_status="active",
-                catalog_selected_source="tushare",
-                effective_selected_source="fred",
-                count=2,
-            ),
-        ),
-    )
-
-    response = await route(
-        run_id="run-001",
-        trade_dates=["2026-06-01"],
-        available_sources=["tushare", "fred"],
-        lineage_facade=facade,
-    )
-
-    facade.get_data_lineage_catalog_report_for_run.assert_called_once_with(
-        "run-001",
-        trade_dates=("2026-06-01",),
-        available_sources=("tushare", "fred"),
-    )
-    assert [
-        (
-            item.policy_id,
-            item.policy_status,
-            item.catalog_selected_source,
-            item.effective_selected_source,
-            item.count,
-        )
-        for item in response.data.source_fallback_policy_effect_counts
-    ] == [
-        ("fallback-policy-001", "active", "tushare", "fred", 2),
     ]
 
 

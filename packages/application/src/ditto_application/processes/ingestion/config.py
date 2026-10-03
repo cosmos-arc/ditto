@@ -7,7 +7,6 @@ from pathlib import Path
 
 from ditto_data.catalog import DataCatalogReader, DataCatalogWriter
 from ditto_data.catalog.provider_payload import ProviderPayloadWriter
-from ditto_data.ingestion.freeze_store import FreezeStore
 from ditto_data.ingestion.ingestion_cursor_store import (
     IngestionCursorStore,
 )
@@ -44,7 +43,6 @@ class IngestionCoordinatorConfig:
     ingestion_log_store: IngestionLogStore | None = None
     ingestion_cursor_store: IngestionCursorStore | None = None
     quality_checker: QualityCheckerProtocol | None = None
-    freeze_store: FreezeStore | None = None
     lineage_recorder: DataLineageRecorder | None = None
     catalog_reader: DataCatalogReader | None = None
     catalog_writer: DataCatalogWriter | None = None

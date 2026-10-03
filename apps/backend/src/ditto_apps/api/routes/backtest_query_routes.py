@@ -43,7 +43,6 @@ from ditto_application.queries.lineage import (
     DataLineageCatalogAttentionSeverityCount,
     DataLineageCatalogFreshnessStatusCount,
     DataLineageCatalogRunReport,
-    DataLineageCatalogSourceFallbackPolicyEffectCount,
     DataLineageCatalogStatusCount,
     DataLineageEvent,
     DataLineageGraph,
@@ -77,7 +76,6 @@ from ditto_apps.models.lineage import (
     DataLineageCatalogAttentionSeverityCountResponse,
     DataLineageCatalogFreshnessStatusCountResponse,
     DataLineageCatalogRunReportResponse,
-    DataLineageCatalogSourceFallbackPolicyEffectCountResponse,
     DataLineageCatalogStatusCountResponse,
     DataLineageEventResponse,
     DataLineageGraphEdgeResponse,
@@ -264,19 +262,6 @@ def to_data_lineage_catalog_attention_severity_count_response(
     )
 
 
-def to_data_lineage_catalog_source_fallback_policy_effect_count_response(
-    item: DataLineageCatalogSourceFallbackPolicyEffectCount,
-) -> DataLineageCatalogSourceFallbackPolicyEffectCountResponse:
-    """将 lineage source fallback policy effect count 转为 API 响应."""
-    return DataLineageCatalogSourceFallbackPolicyEffectCountResponse(
-        policy_id=item.policy_id,
-        policy_status=item.policy_status,
-        catalog_selected_source=item.catalog_selected_source,
-        effective_selected_source=item.effective_selected_source,
-        count=item.count,
-    )
-
-
 def to_data_lineage_catalog_run_report_response(
     report: DataLineageCatalogRunReport,
 ) -> DataLineageCatalogRunReportResponse:
@@ -311,10 +296,6 @@ def to_data_lineage_catalog_run_report_response(
         attention_severity_counts=[
             to_data_lineage_catalog_attention_severity_count_response(item)
             for item in report.attention_severity_counts
-        ],
-        source_fallback_policy_effect_counts=[
-            to_data_lineage_catalog_source_fallback_policy_effect_count_response(item)
-            for item in report.source_fallback_policy_effect_counts
         ],
     )
 
@@ -576,34 +557,11 @@ async def get_run_data_lineage(
 async def get_run_data_lineage_catalog_report(
     run_id: str,
     lineage_facade: Annotated[LineageQueryFacade, FromComponent()],
-    trade_dates: Annotated[
-        list[str] | None,
-        Query(
-            description=(
-                "可选交易日期列表; 与 available_sources 一起用于 policy effect 聚合"
-            ),
-        ),
-    ] = None,
-    available_sources: Annotated[
-        list[str] | None,
-        Query(
-            description=(
-                "可选 source=auto 来源列表; 与 trade_dates 一起用于 policy effect 聚合"
-            ),
-        ),
-    ] = None,
 ) -> APIResponse[DataLineageCatalogRunReportResponse]:
     """查询某个运行的数据血缘和精确 DataCatalog 证据报告."""
-    report_kwargs: dict[str, tuple[str, ...]] = {}
-    if trade_dates is not None or available_sources is not None:
-        report_kwargs = {
-            "trade_dates": tuple(trade_dates or ()),
-            "available_sources": tuple(available_sources or ()),
-        }
     report = await run_blocking(
         lineage_facade.get_data_lineage_catalog_report_for_run,
         run_id,
-        **report_kwargs,
     )
     return APIResponse(data=to_data_lineage_catalog_run_report_response(report))
 

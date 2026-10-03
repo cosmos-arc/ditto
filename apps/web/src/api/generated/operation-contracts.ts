@@ -1,6 +1,6 @@
 /**
  * DO NOT EDIT: generated from contracts/openapi/v1.json.
- * Schema SHA-256: 1230f8a28abfc0f159c7e47814d4b88d2aa431e3b72bd111fa906d19b042091c
+ * Schema SHA-256: 0ff235517a7aedd25ba6ef6677c64dcd38f439c8ac3afe69f8cfb1e477106807
  * Generator: ditto-operation-response-contracts 4
  */
 
@@ -297,76 +297,6 @@ export const operationResponseContracts = {
     "500": ["application/json"],
     "default": ["application/json"],
   },
-  "get /api/v1/data-products": {
-    "200": ["application/json"],
-    "400": ["application/json"],
-    "403": ["application/json"],
-    "404": ["application/json"],
-    "409": ["application/json"],
-    "422": ["application/json"],
-    "500": ["application/json"],
-    "default": ["application/json"],
-  },
-  "get /api/v1/data-products/specimens": {
-    "200": ["application/json"],
-    "400": ["application/json"],
-    "403": ["application/json"],
-    "404": ["application/json"],
-    "409": ["application/json"],
-    "422": ["application/json"],
-    "500": ["application/json"],
-    "default": ["application/json"],
-  },
-  "get /api/v1/data-products/{dataset_id}/coverage": {
-    "200": ["application/json"],
-    "400": ["application/json"],
-    "403": ["application/json"],
-    "404": ["application/json"],
-    "409": ["application/json"],
-    "422": ["application/json"],
-    "500": ["application/json"],
-    "default": ["application/json"],
-  },
-  "get /api/v1/data-products/{dataset_id}/evidence": {
-    "200": ["application/json"],
-    "400": ["application/json"],
-    "403": ["application/json"],
-    "404": ["application/json"],
-    "409": ["application/json"],
-    "422": ["application/json"],
-    "500": ["application/json"],
-    "default": ["application/json"],
-  },
-  "get /api/v1/data-products/{dataset_id}/license": {
-    "200": ["application/json"],
-    "400": ["application/json"],
-    "403": ["application/json"],
-    "404": ["application/json"],
-    "409": ["application/json"],
-    "422": ["application/json"],
-    "500": ["application/json"],
-    "default": ["application/json"],
-  },
-  "get /api/v1/data-products/{dataset_id}/quality": {
-    "200": ["application/json"],
-    "400": ["application/json"],
-    "403": ["application/json"],
-    "404": ["application/json"],
-    "409": ["application/json"],
-    "422": ["application/json"],
-    "500": ["application/json"],
-    "default": ["application/json"],
-  },
-  "get /api/v1/data-products/{dataset_id}/runs": {
-    "200": ["application/json"],
-    "400": ["application/json"],
-    "403": ["application/json"],
-    "404": ["application/json"],
-    "409": ["application/json"],
-    "422": ["application/json"],
-    "500": ["application/json"],
-    "default": ["application/json"],
-  },
   "get /api/v1/fundamental/corporate-actions": {
     "200": ["application/json"],
     "400": ["application/json"],
@@ -408,136 +338,6 @@ export const operationResponseContracts = {
     "default": ["application/json"],
   },
   "get /api/v1/ingestion/catalog/assets": {
-    "200": ["application/json"],
-    "400": ["application/json"],
-    "403": ["application/json"],
-    "404": ["application/json"],
-    "409": ["application/json"],
-    "422": ["application/json"],
-    "500": ["application/json"],
-    "default": ["application/json"],
-  },
-  "get /api/v1/ingestion/catalog/maturity/governance": {
-    "200": ["application/json"],
-    "400": ["application/json"],
-    "403": ["application/json"],
-    "404": ["application/json"],
-    "409": ["application/json"],
-    "422": ["application/json"],
-    "500": ["application/json"],
-    "default": ["application/json"],
-  },
-  "get /api/v1/ingestion/catalog/promotion/history": {
-    "200": ["application/json"],
-    "400": ["application/json"],
-    "403": ["application/json"],
-    "404": ["application/json"],
-    "409": ["application/json"],
-    "422": ["application/json"],
-    "500": ["application/json"],
-    "default": ["application/json"],
-  },
-  "get /api/v1/ingestion/catalog/promotion/readiness": {
-    "200": ["application/json"],
-    "400": ["application/json"],
-    "403": ["application/json"],
-    "404": ["application/json"],
-    "409": ["application/json"],
-    "422": ["application/json"],
-    "500": ["application/json"],
-    "default": ["application/json"],
-  },
-  "get /api/v1/ingestion/catalog/remediation/approvals": {
-    "200": ["application/json"],
-    "400": ["application/json"],
-    "403": ["application/json"],
-    "404": ["application/json"],
-    "409": ["application/json"],
-    "422": ["application/json"],
-    "500": ["application/json"],
-    "default": ["application/json"],
-  },
-  "get /api/v1/ingestion/catalog/remediation/approvals/{approval_id}": {
-    "200": ["application/json"],
-    "400": ["application/json"],
-    "403": ["application/json"],
-    "404": ["application/json"],
-    "409": ["application/json"],
-    "422": ["application/json"],
-    "500": ["application/json"],
-    "default": ["application/json"],
-  },
-  "get /api/v1/ingestion/catalog/remediation/approvals/{approval_id}/events": {
-    "200": ["application/json"],
-    "400": ["application/json"],
-    "403": ["application/json"],
-    "404": ["application/json"],
-    "409": ["application/json"],
-    "422": ["application/json"],
-    "500": ["application/json"],
-    "default": ["application/json"],
-  },
-  "get /api/v1/ingestion/catalog/remediation/backlog": {
-    "200": ["application/json"],
-    "400": ["application/json"],
-    "403": ["application/json"],
-    "404": ["application/json"],
-    "409": ["application/json"],
-    "422": ["application/json"],
-    "500": ["application/json"],
-    "default": ["application/json"],
-  },
-  "get /api/v1/ingestion/catalog/remediation/items/{item_id}": {
-    "200": ["application/json"],
-    "400": ["application/json"],
-    "403": ["application/json"],
-    "404": ["application/json"],
-    "409": ["application/json"],
-    "422": ["application/json"],
-    "500": ["application/json"],
-    "default": ["application/json"],
-  },
-  "get /api/v1/ingestion/catalog/source-fallback/policies": {
-    "200": ["application/json"],
-    "400": ["application/json"],
-    "403": ["application/json"],
-    "404": ["application/json"],
-    "409": ["application/json"],
-    "422": ["application/json"],
-    "500": ["application/json"],
-    "default": ["application/json"],
-  },
-  "get /api/v1/ingestion/catalog/source-fallback/policies/{policy_id}": {
-    "200": ["application/json"],
-    "400": ["application/json"],
-    "403": ["application/json"],
-    "404": ["application/json"],
-    "409": ["application/json"],
-    "422": ["application/json"],
-    "500": ["application/json"],
-    "default": ["application/json"],
-  },
-  "get /api/v1/ingestion/catalog/source-fallback/policies/{policy_id}/events": {
-    "200": ["application/json"],
-    "400": ["application/json"],
-    "403": ["application/json"],
-    "404": ["application/json"],
-    "409": ["application/json"],
-    "422": ["application/json"],
-    "500": ["application/json"],
-    "default": ["application/json"],
-  },
-  "get /api/v1/ingestion/catalog/source-fallback/preview": {
-    "200": ["application/json"],
-    "400": ["application/json"],
-    "403": ["application/json"],
-    "404": ["application/json"],
-    "409": ["application/json"],
-    "422": ["application/json"],
-    "500": ["application/json"],
-    "default": ["application/json"],
-  },
-  "get /api/v1/ingestion/catalog/source-fallback/summary": {
     "200": ["application/json"],
     "400": ["application/json"],
     "403": ["application/json"],
@@ -1438,96 +1238,6 @@ export const operationResponseContracts = {
     "500": ["application/json"],
     "default": ["application/json"],
   },
-  "post /api/v1/ingestion/catalog/promotion/evidence": {
-    "200": ["application/json"],
-    "400": ["application/json"],
-    "403": ["application/json"],
-    "404": ["application/json"],
-    "409": ["application/json"],
-    "422": ["application/json"],
-    "500": ["application/json"],
-    "default": ["application/json"],
-  },
-  "post /api/v1/ingestion/catalog/promotion/revoke": {
-    "200": ["application/json"],
-    "400": ["application/json"],
-    "403": ["application/json"],
-    "404": ["application/json"],
-    "409": ["application/json"],
-    "422": ["application/json"],
-    "500": ["application/json"],
-    "default": ["application/json"],
-  },
-  "post /api/v1/ingestion/catalog/remediation/approvals": {
-    "200": ["application/json"],
-    "400": ["application/json"],
-    "403": ["application/json"],
-    "404": ["application/json"],
-    "409": ["application/json"],
-    "422": ["application/json"],
-    "500": ["application/json"],
-    "default": ["application/json"],
-  },
-  "post /api/v1/ingestion/catalog/remediation/approvals/{approval_id}/decision": {
-    "200": ["application/json"],
-    "400": ["application/json"],
-    "403": ["application/json"],
-    "404": ["application/json"],
-    "409": ["application/json"],
-    "422": ["application/json"],
-    "500": ["application/json"],
-    "default": ["application/json"],
-  },
-  "post /api/v1/ingestion/catalog/remediation/approvals/{approval_id}/execute": {
-    "200": ["application/json"],
-    "400": ["application/json"],
-    "403": ["application/json"],
-    "404": ["application/json"],
-    "409": ["application/json"],
-    "422": ["application/json"],
-    "500": ["application/json"],
-    "default": ["application/json"],
-  },
-  "post /api/v1/ingestion/catalog/source-fallback/policies": {
-    "200": ["application/json"],
-    "400": ["application/json"],
-    "403": ["application/json"],
-    "404": ["application/json"],
-    "409": ["application/json"],
-    "422": ["application/json"],
-    "500": ["application/json"],
-    "default": ["application/json"],
-  },
-  "post /api/v1/ingestion/catalog/source-fallback/policies/{policy_id}/activation": {
-    "200": ["application/json"],
-    "400": ["application/json"],
-    "403": ["application/json"],
-    "404": ["application/json"],
-    "409": ["application/json"],
-    "422": ["application/json"],
-    "500": ["application/json"],
-    "default": ["application/json"],
-  },
-  "post /api/v1/ingestion/catalog/source-fallback/policies/{policy_id}/approval": {
-    "200": ["application/json"],
-    "400": ["application/json"],
-    "403": ["application/json"],
-    "404": ["application/json"],
-    "409": ["application/json"],
-    "422": ["application/json"],
-    "500": ["application/json"],
-    "default": ["application/json"],
-  },
-  "post /api/v1/ingestion/catalog/source-fallback/policies/{policy_id}/retirement": {
-    "200": ["application/json"],
-    "400": ["application/json"],
-    "403": ["application/json"],
-    "404": ["application/json"],
-    "409": ["application/json"],
-    "422": ["application/json"],
-    "500": ["application/json"],
-    "default": ["application/json"],
-  },
   "post /api/v1/macro/indicators": {
     "200": ["application/json"],
     "400": ["application/json"],
@@ -2164,7 +1874,6 @@ export const operationRequestContracts = {
     parameters: {
       "header": ["X-Ditto-API-Contract-Version"],
       "path": ["run_id"],
-      "query": ["available_sources", "trade_dates"],
     },
   },
   "get /api/v1/backtests/runs/{run_id}/lineage/data": {
@@ -2216,52 +1925,6 @@ export const operationRequestContracts = {
       "query": ["allow_experimental_data", "as_of_date", "instrument_id", "standard_ticker", "ticker"],
     },
   },
-  "get /api/v1/data-products": {
-    parameters: {
-      "header": ["X-Ditto-API-Contract-Version"],
-      "query": ["profile"],
-    },
-  },
-  "get /api/v1/data-products/specimens": {
-    parameters: {
-      "header": ["X-Ditto-API-Contract-Version"],
-    },
-  },
-  "get /api/v1/data-products/{dataset_id}/coverage": {
-    parameters: {
-      "header": ["X-Ditto-API-Contract-Version"],
-      "path": ["dataset_id"],
-      "query": ["profile"],
-    },
-  },
-  "get /api/v1/data-products/{dataset_id}/evidence": {
-    parameters: {
-      "header": ["X-Ditto-API-Contract-Version"],
-      "path": ["dataset_id"],
-      "query": ["profile"],
-    },
-  },
-  "get /api/v1/data-products/{dataset_id}/license": {
-    parameters: {
-      "header": ["X-Ditto-API-Contract-Version"],
-      "path": ["dataset_id"],
-      "query": ["profile"],
-    },
-  },
-  "get /api/v1/data-products/{dataset_id}/quality": {
-    parameters: {
-      "header": ["X-Ditto-API-Contract-Version"],
-      "path": ["dataset_id"],
-      "query": ["profile"],
-    },
-  },
-  "get /api/v1/data-products/{dataset_id}/runs": {
-    parameters: {
-      "header": ["X-Ditto-API-Contract-Version"],
-      "path": ["dataset_id"],
-      "query": ["profile"],
-    },
-  },
   "get /api/v1/fundamental/corporate-actions": {
     parameters: {
       "header": ["X-Ditto-API-Contract-Version"],
@@ -2291,85 +1954,6 @@ export const operationRequestContracts = {
     parameters: {
       "header": ["X-Ditto-API-Contract-Version"],
       "query": ["dataset_id", "limit", "namespace", "offset"],
-    },
-  },
-  "get /api/v1/ingestion/catalog/maturity/governance": {
-    parameters: {
-      "header": ["X-Ditto-API-Contract-Version"],
-      "query": ["available_sources", "dataset_ids", "trade_dates"],
-    },
-  },
-  "get /api/v1/ingestion/catalog/promotion/history": {
-    parameters: {
-      "header": ["X-Ditto-API-Contract-Version"],
-      "query": ["dataset_id"],
-    },
-  },
-  "get /api/v1/ingestion/catalog/promotion/readiness": {
-    parameters: {
-      "header": ["X-Ditto-API-Contract-Version"],
-      "query": ["available_sources", "dataset_ids", "trade_dates"],
-    },
-  },
-  "get /api/v1/ingestion/catalog/remediation/approvals": {
-    parameters: {
-      "header": ["X-Ditto-API-Contract-Version"],
-      "query": ["item_id", "status"],
-    },
-  },
-  "get /api/v1/ingestion/catalog/remediation/approvals/{approval_id}": {
-    parameters: {
-      "header": ["X-Ditto-API-Contract-Version"],
-      "path": ["approval_id"],
-    },
-  },
-  "get /api/v1/ingestion/catalog/remediation/approvals/{approval_id}/events": {
-    parameters: {
-      "header": ["X-Ditto-API-Contract-Version"],
-      "path": ["approval_id"],
-    },
-  },
-  "get /api/v1/ingestion/catalog/remediation/backlog": {
-    parameters: {
-      "header": ["X-Ditto-API-Contract-Version"],
-      "query": ["available_sources", "dataset_ids", "run_id", "trade_dates"],
-    },
-  },
-  "get /api/v1/ingestion/catalog/remediation/items/{item_id}": {
-    parameters: {
-      "header": ["X-Ditto-API-Contract-Version"],
-      "path": ["item_id"],
-      "query": ["available_sources", "dataset_ids", "run_id", "trade_dates"],
-    },
-  },
-  "get /api/v1/ingestion/catalog/source-fallback/policies": {
-    parameters: {
-      "header": ["X-Ditto-API-Contract-Version"],
-      "query": ["dataset_id", "status"],
-    },
-  },
-  "get /api/v1/ingestion/catalog/source-fallback/policies/{policy_id}": {
-    parameters: {
-      "header": ["X-Ditto-API-Contract-Version"],
-      "path": ["policy_id"],
-    },
-  },
-  "get /api/v1/ingestion/catalog/source-fallback/policies/{policy_id}/events": {
-    parameters: {
-      "header": ["X-Ditto-API-Contract-Version"],
-      "path": ["policy_id"],
-    },
-  },
-  "get /api/v1/ingestion/catalog/source-fallback/preview": {
-    parameters: {
-      "header": ["X-Ditto-API-Contract-Version"],
-      "query": ["available_sources", "dataset_id", "trade_date"],
-    },
-  },
-  "get /api/v1/ingestion/catalog/source-fallback/summary": {
-    parameters: {
-      "header": ["X-Ditto-API-Contract-Version"],
-      "query": ["available_sources", "dataset_ids", "trade_dates"],
     },
   },
   "get /api/v1/ingestion/catalog/source-health": {
@@ -2900,56 +2484,6 @@ export const operationRequestContracts = {
   "post /api/v1/fx/bars": {
     parameters: {
       "header": ["X-Ditto-API-Contract-Version"],
-    },
-  },
-  "post /api/v1/ingestion/catalog/promotion/evidence": {
-    parameters: {
-      "header": ["X-Ditto-API-Contract-Version"],
-    },
-  },
-  "post /api/v1/ingestion/catalog/promotion/revoke": {
-    parameters: {
-      "header": ["X-Ditto-API-Contract-Version"],
-    },
-  },
-  "post /api/v1/ingestion/catalog/remediation/approvals": {
-    parameters: {
-      "header": ["X-Ditto-API-Contract-Version"],
-    },
-  },
-  "post /api/v1/ingestion/catalog/remediation/approvals/{approval_id}/decision": {
-    parameters: {
-      "header": ["X-Ditto-API-Contract-Version"],
-      "path": ["approval_id"],
-    },
-  },
-  "post /api/v1/ingestion/catalog/remediation/approvals/{approval_id}/execute": {
-    parameters: {
-      "header": ["X-Ditto-API-Contract-Version"],
-      "path": ["approval_id"],
-    },
-  },
-  "post /api/v1/ingestion/catalog/source-fallback/policies": {
-    parameters: {
-      "header": ["X-Ditto-API-Contract-Version"],
-    },
-  },
-  "post /api/v1/ingestion/catalog/source-fallback/policies/{policy_id}/activation": {
-    parameters: {
-      "header": ["X-Ditto-API-Contract-Version"],
-      "path": ["policy_id"],
-    },
-  },
-  "post /api/v1/ingestion/catalog/source-fallback/policies/{policy_id}/approval": {
-    parameters: {
-      "header": ["X-Ditto-API-Contract-Version"],
-      "path": ["policy_id"],
-    },
-  },
-  "post /api/v1/ingestion/catalog/source-fallback/policies/{policy_id}/retirement": {
-    parameters: {
-      "header": ["X-Ditto-API-Contract-Version"],
-      "path": ["policy_id"],
     },
   },
   "post /api/v1/macro/indicators": {

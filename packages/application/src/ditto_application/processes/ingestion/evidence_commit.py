@@ -12,7 +12,6 @@ from ditto_data.catalog import (
     DataCatalogEntry,
     DataCatalogWriter,
 )
-from ditto_data.catalog.license import DatasetLicenseReader
 from ditto_data.catalog.provider_payload import ProviderPayloadArtifact
 from ditto_data.catalog.source_snapshot import (
     ProviderSnapshot,
@@ -99,7 +98,6 @@ class EvidenceCommitPorts:
     lifecycle_writer: PartitionLifecycleWriter
     snapshot_writer: ProviderSnapshotWriter
     snapshot_reader: ProviderSnapshotReader
-    license_reader: DatasetLicenseReader
     catalog_writer: DataCatalogWriter
     lineage_recorder: DataLineageRecorder
     lineage_reader: DataLineageReader
@@ -498,27 +496,7 @@ class IngestionEvidenceCommitter:
         return current
 
     def _evidence_error(self, request: EvidenceCommitRequest) -> str | None:
-        return self._license_error(request) or (
-            None if request.quality_attested else "DQ_EVIDENCE_MISSING"
-        )
-
-    def _license_error(self, request: EvidenceCommitRequest) -> str | None:
-        snapshot = request.provider_snapshot
-        record = self._ports.license_reader.get_license(snapshot.license_record_id)
-        if (
-            record is None
-            or record.dataset_id != request.dataset_id
-            or record.source != request.source
-        ):
-            return "LICENSE_EVIDENCE_MISSING"
-        access_date = snapshot.created_at.date()
-        if access_date < record.effective_from or (
-            record.effective_to is not None and access_date > record.effective_to
-        ):
-            return "LICENSE_NOT_EFFECTIVE"
-        if record.local_cache != "allowed" or record.derivative_compute != "allowed":
-            return "LICENSE_PERMISSION_BLOCKED"
-        return None
+        return None if request.quality_attested else "DQ_EVIDENCE_MISSING"
 
     def _advance(
         self,

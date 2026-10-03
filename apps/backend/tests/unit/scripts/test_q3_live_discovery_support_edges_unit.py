@@ -10,14 +10,7 @@ from typing import cast
 import polars as pl
 import pytest
 from ditto_agent.contracts.evidence import EvidenceEnvelope
-from ditto_application.commands.data_product_certification import (
-    DataProductCertificationCommands,
-)
-from ditto_application.commands.data_product_certification_builder import (
-    DataProductCertificationBuilder,
-)
 from ditto_apps.scripts import q3_live_discovery_support as subject
-from ditto_data.catalog.certification import CertificationGovernanceStore
 from ditto_data.catalog.contracts import DataAssetRef
 from ditto_data.catalog.provider_payload import (
     ProviderPayloadArtifact,
@@ -452,23 +445,19 @@ def test_envelope_summary_rejects_tampering_and_replay_drift() -> None:
     assert summary["integrity_hash"] == left.integrity_hash
 
 
-def test_technical_certification_rejects_invalid_product_before_io(
+def test_technical_evidence_rejects_invalid_product_before_io(
     tmp_path: Path,
 ) -> None:
-    context = subject._TechnicalCertificationContext(
+    context = subject._TechnicalEvidenceContext(
         evidence_root=tmp_path,
         recovery_evidence=tmp_path / "missing",
         generated_at=datetime(2024, 3, 29, tzinfo=UTC),
-        actor="tester",
         data_root=tmp_path,
-        builder=cast(DataProductCertificationBuilder, object()),
-        commands=cast(DataProductCertificationCommands, object()),
-        store=cast(CertificationGovernanceStore, object()),
     )
     payload = pl.DataFrame({"trade_date": [date(2024, 3, 29)]})
 
     with pytest.raises(ValueError, match="daily market product"):
-        subject._technical_certification(
+        subject._technical_consumer_evidence(
             dataset_id="fundamental",
             instrument_code="600000.SH",
             snapshot=_snapshot(),
@@ -476,7 +465,7 @@ def test_technical_certification_rejects_invalid_product_before_io(
             context=context,
         )
     with pytest.raises(ValueError, match="snapshot dataset drift"):
-        subject._technical_certification(
+        subject._technical_consumer_evidence(
             dataset_id="etf_daily",
             instrument_code="518880.SH",
             snapshot=_snapshot(dataset_id="stock_daily"),

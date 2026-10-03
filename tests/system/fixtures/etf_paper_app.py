@@ -14,17 +14,7 @@ from ditto_application.commands.paper_account import (
     CreatePaperAccountHandler,
 )
 from ditto_apps.registry.fresh_runtime import create_fresh_runtime
-from ditto_data.catalog.certification import (
-    CertificationEvidence,
-    DatasetCertificationReport,
-    EvidenceCheck,
-)
-from ditto_data.catalog.certification_store import SQLiteCertificationStore
 from ditto_data.catalog.contracts import DataAssetRef
-from ditto_data.catalog.coverage import DatasetCoverage
-from ditto_data.catalog.field_evidence import CertifiedField
-from ditto_data.catalog.license import DatasetLicenseDraft, DatasetLicenseRecord
-from ditto_data.catalog.license_store import SQLiteDatasetLicenseStore
 from ditto_data.catalog.provider_payload import FilesystemProviderPayloadStore
 from ditto_data.catalog.source_snapshot import ProviderSnapshot, ProviderSnapshotDraft
 from ditto_data.catalog.source_snapshot_store import SQLiteProviderSnapshotStore
@@ -76,27 +66,6 @@ _RULES = {
 _BAR_FIELDS = ("open", "high", "low", "close", "pre_close", "volume", "amount")
 
 
-def _license(client: SQLiteClient, dataset: str) -> DatasetLicenseRecord:
-    record = DatasetLicenseRecord.create(
-        DatasetLicenseDraft(
-            dataset_id=dataset,
-            source=_SOURCE,
-            terms_version="isolated-test-v1",
-            effective_from=date(2026, 1, 1),
-            effective_to=None,
-            local_cache="allowed",
-            derivative_compute="allowed",
-            display="allowed",
-            redistribution="prohibited",
-            notes="isolated recorded acceptance data",
-            reviewed_by="fixture",
-            reviewed_at=SIGNAL_VISIBLE,
-        )
-    )
-    SQLiteDatasetLicenseStore(client).append_license(record)
-    return record
-
-
 def _snapshot(
     client: SQLiteClient,
     payloads: FilesystemProviderPayloadStore,
@@ -105,7 +74,6 @@ def _snapshot(
     day: date,
     visible: datetime,
     frame: pl.DataFrame,
-    license_record: DatasetLicenseRecord,
     request_end: date | None = None,
 ) -> ProviderSnapshot:
     artifact = payloads.retain_payload(
@@ -122,7 +90,7 @@ def _snapshot(
             canonical_asset=DataAssetRef(dataset_id=dataset, namespace="market"),
             request_parameters_hash=f"fixture:{dataset}:{day}",
             response_metadata=(("fixture", "etf-paper-browser"),),
-            license_record_id=license_record.record_id,
+            license_record_id="fixture-license",
             row_count=artifact.row_count,
             payload_uri=artifact.uri,
             payload_retained=True,
@@ -173,75 +141,6 @@ def _snapshot(
             ),
         )
     return snapshot
-
-
-def _certify(
-    client: SQLiteClient,
-    *,
-    dataset: str,
-    snapshots: tuple[ProviderSnapshot, ...],
-    licenses: tuple[DatasetLicenseRecord, ...],
-    fields: tuple[str, ...],
-) -> None:
-    dates = [date.fromisoformat(item.request_start) for item in snapshots]
-    check = (EvidenceCheck("fixture", "evidence://etf-paper-browser", True),)
-    report = DatasetCertificationReport.create(
-        dataset_id=dataset,
-        profile="selection-fields-v1",
-        coverage=DatasetCoverage(
-            dataset_id=dataset,
-            schedule="trading_days",
-            target_from=min(dates),
-            target_to=max(dates),
-            native_from=min(dates),
-            native_to=max(dates),
-            actual_from=min(dates),
-            actual_to=max(dates),
-            raw_from=min(dates),
-            complete_from=min(dates),
-            expected_partitions=len(snapshots),
-            actual_partitions=len(snapshots),
-            gaps=(),
-            exceptions=(),
-            collected_at=EXECUTION_VISIBLE,
-        ),
-        evidence=CertificationEvidence(
-            source_ids=(_SOURCE,),
-            schema_versions=tuple(sorted({item.schema_version for item in snapshots})),
-            snapshot_ids=tuple(item.snapshot_id for item in snapshots),
-            dq_rule_version="fixture-v1",
-            dq_results=check,
-            pit_replay_results=check,
-            fallback_history=("none",),
-            override_history=(),
-            freshness_results=check,
-            recovery_results=check,
-            license_record_ids=tuple(item.record_id for item in licenses),
-            consumer_results=check,
-            certified_fields=tuple(
-                CertifiedField(
-                    field=field,
-                    snapshot_id=snapshot.snapshot_id,
-                    instrument_ids=(ETF_ID, BLOCKED_ID),
-                    covered_from=date.fromisoformat(snapshot.request_start),
-                    covered_to=date.fromisoformat(snapshot.request_end),
-                    available_at=snapshot.created_at,
-                    publication_at=snapshot.created_at,
-                    time_precision="timestamp",
-                    observed_at=snapshot.created_at,
-                    evidence_uri=f"evidence://etf-paper-browser/{field}",
-                )
-                for snapshot in snapshots
-                for field in fields
-            ),
-        ),
-        generated_at=EXECUTION_VISIBLE,
-    )
-    store = SQLiteCertificationStore(client)
-    store.append_report(report)
-    store.approve_report(
-        report.report_id, reviewer="fixture", reviewed_at=EXECUTION_VISIBLE
-    )
 
 
 def _reference_rows(snapshot: ProviderSnapshot, day: date) -> list[list[object]]:
@@ -308,9 +207,6 @@ def _seed() -> dict[str, str]:
                 [day, previous, following],
             )
         client.commit()
-        ref_license = _license(client, "etf_reference")
-        daily_license = _license(client, "etf_daily")
-        calendar_license = _license(client, "calendar")
         signal = _snapshot(
             client,
             payloads,
@@ -323,7 +219,6 @@ def _seed() -> dict[str, str]:
                     "trade_date": [SIGNAL.isoformat()] * 2,
                 }
             ),
-            license_record=ref_license,
         )
         execution = _snapshot(
             client,
@@ -337,7 +232,6 @@ def _seed() -> dict[str, str]:
                     "trade_date": [TRADE.isoformat()] * 2,
                 }
             ),
-            license_record=ref_license,
         )
         client.executemany(
             """INSERT INTO etf_reference_observation
@@ -347,13 +241,6 @@ def _seed() -> dict[str, str]:
             _reference_rows(signal, SIGNAL) + _reference_rows(execution, TRADE),
         )
         client.commit()
-        _certify(
-            client,
-            dataset="etf_reference",
-            snapshots=(signal, execution),
-            licenses=(ref_license,),
-            fields=("tracking_index", "trading_restriction", "price_close", *_RULES),
-        )
         bar = _snapshot(
             client,
             payloads,
@@ -376,14 +263,6 @@ def _seed() -> dict[str, str]:
                     "amount": [10_000_000.0],
                 }
             ),
-            license_record=daily_license,
-        )
-        _certify(
-            client,
-            dataset="etf_daily",
-            snapshots=(bar,),
-            licenses=(daily_license,),
-            fields=_BAR_FIELDS,
         )
         _snapshot(
             client,
@@ -397,7 +276,6 @@ def _seed() -> dict[str, str]:
                     "is_open": [True, True, True],
                 }
             ),
-            license_record=calendar_license,
             # Calendar payloads never carry rows outside their declared
             # request window; the three-session span is requested as such.
             request_end=date(2026, 9, 3),

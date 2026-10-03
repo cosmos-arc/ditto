@@ -6,7 +6,6 @@ from datetime import date
 from typing import Protocol
 
 import polars as pl
-from ditto_data.catalog.promotion import DatasetMaturityPromotionReader
 
 from ditto_application.queries._maturity_gate import assert_query_datasets_allowed
 
@@ -47,10 +46,8 @@ class CapitalQueryFacade:
     def __init__(
         self,
         capital_store: CapitalDataPort,
-        maturity_promotion_reader: DatasetMaturityPromotionReader | None = None,
     ) -> None:
         self._service = capital_store
-        self._maturity_promotion_reader = maturity_promotion_reader
 
     def get_margin_trading(
         self,
@@ -111,6 +108,5 @@ class CapitalQueryFacade:
         assert_query_datasets_allowed(
             (dataset_id,),
             allow_experimental_data=allow_experimental_data,
-            maturity_promotion_reader=self._maturity_promotion_reader,
             context=f"capital query {dataset_id}",
         )

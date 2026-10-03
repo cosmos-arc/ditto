@@ -67,7 +67,7 @@ export const technicalAnalysisHandlers = [
 			research_case_id: body.research_case_id ?? null,
 			selection_run_id: body.selection_run_id ?? null,
 			snapshot_id: `technical-analysis:sha256:${"f".repeat(64)}`,
-			source_snapshot_ids: body.source_snapshot_ids,
+			source_snapshot_ids: body.source_snapshot_ids ?? ["snapshot-stock-daily"],
 			spec_hash: "a".repeat(64),
 			status: "ready",
 			timeframe_summaries: [

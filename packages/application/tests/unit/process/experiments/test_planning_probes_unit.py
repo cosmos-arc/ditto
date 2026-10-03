@@ -586,18 +586,21 @@ def test_production_probe_rejects_baseline_runtime_lane_mismatch() -> None:
 
 
 class _ReadinessFacade:
-    def assess(self, **kwargs: object) -> object:
-        requirements = cast("tuple[object, ...]", kwargs["requirements"])
+    def assess(self, request: object) -> object:
+        fields = cast("tuple[object, ...]", request.fields)
+        reasons: dict[str, tuple[str, ...]] = {}
+        for item in fields:
+            reasons.setdefault(item.dataset_id, ())
         return SimpleNamespace(
-            status="ready",
-            profile=kwargs["profile"],
-            datasets=tuple(
+            fields=tuple(
                 SimpleNamespace(
-                    dataset_id=cast("object", item).dataset_id,
-                    certification_report_id="cert-report-1",
-                    reason_codes=(),
+                    dataset_id=dataset_id,
+                    field="",
+                    snapshot_id="",
+                    consumer_field="",
+                    reason_codes=reasons[dataset_id],
                 )
-                for item in requirements
+                for dataset_id in sorted(reasons)
             ),
         )
 

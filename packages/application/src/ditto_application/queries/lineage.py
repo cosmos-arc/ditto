@@ -6,7 +6,7 @@ from collections import deque
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Literal, Protocol
+from typing import Literal
 
 from ditto_data.catalog import DataAssetRef
 from ditto_data.catalog.contracts import DataCatalogEntry, DataCatalogReader
@@ -21,9 +21,6 @@ from ditto_application.catalog_freshness import (
 )
 from ditto_application.exceptions import AppQueryError
 from ditto_application.queries.backtest import RunSummary, to_run_summary
-from ditto_application.queries.catalog_source_health import (
-    CatalogSourceHealthSummaryReport,
-)
 
 __all__ = [
     "DataLineageAsset",
@@ -35,7 +32,6 @@ __all__ = [
     "DataLineageCatalogAttentionSeverityCount",
     "DataLineageCatalogFreshnessStatusCount",
     "DataLineageCatalogRunReport",
-    "DataLineageCatalogSourceFallbackPolicyEffectCount",
     "DataLineageCatalogStatus",
     "DataLineageCatalogStatusCount",
     "DataLineageEvent",
@@ -57,18 +53,6 @@ type DataLineageCatalogAttentionReason = Literal[
     "catalog_stale",
 ]
 type DataLineageCatalogAttentionSeverity = Literal["critical", "warning", "info"]
-
-
-class _SourceHealthSummaryQuery(Protocol):
-    def get_source_health_summary(
-        self,
-        *,
-        dataset_ids: tuple[str, ...],
-        trade_dates: tuple[str, ...],
-        available_sources: tuple[str, ...],
-    ) -> CatalogSourceHealthSummaryReport:
-        """Return source-health summary evidence for active fallback policy effects."""
-        ...
 
 
 @dataclass(frozen=True)
@@ -173,17 +157,6 @@ class DataLineageCatalogAttentionSeverityCount:
 
 
 @dataclass(frozen=True)
-class DataLineageCatalogSourceFallbackPolicyEffectCount:
-    """Active source fallback policy effect count across run source inputs."""
-
-    policy_id: str
-    policy_status: str
-    catalog_selected_source: str
-    effective_selected_source: str
-    count: int
-
-
-@dataclass(frozen=True)
 class DataLineageCatalogAttentionAsset:
     """Run lineage catalog asset requiring operator attention."""
 
@@ -205,9 +178,6 @@ class DataLineageCatalogRunReport:
     freshness_status_counts: tuple[DataLineageCatalogFreshnessStatusCount, ...] = ()
     attention_reason_counts: tuple[DataLineageCatalogAttentionReasonCount, ...] = ()
     attention_severity_counts: tuple[DataLineageCatalogAttentionSeverityCount, ...] = ()
-    source_fallback_policy_effect_counts: tuple[
-        DataLineageCatalogSourceFallbackPolicyEffectCount, ...
-    ] = ()
     attention_required: tuple[DataLineageCatalogAttentionAsset, ...] = ()
 
 
@@ -241,13 +211,11 @@ class LineageQueryFacade:
         data_lineage_reader: DataLineageReader | None = None,
         data_catalog_reader: DataCatalogReader | None = None,
         *,
-        source_health_summary_query: _SourceHealthSummaryQuery | None = None,
         now: Callable[[], datetime] | None = None,
     ) -> None:
         self._service = run_service
         self._data_lineage_reader = data_lineage_reader
         self._data_catalog_reader = data_catalog_reader
-        self._source_health_summary_query = source_health_summary_query
         self._now = now
 
     def get_lineage(self, run_id: str) -> LineageChain | None:
@@ -308,9 +276,6 @@ class LineageQueryFacade:
     def get_data_lineage_catalog_report_for_run(
         self,
         run_id: str,
-        *,
-        trade_dates: tuple[str, ...] = (),
-        available_sources: tuple[str, ...] = (),
     ) -> DataLineageCatalogRunReport:
         """Return run-level data lineage enriched with exact catalog metadata."""
         summary = self.get_data_lineage_for_run(run_id)
@@ -341,37 +306,8 @@ class LineageQueryFacade:
             attention_severity_counts=_catalog_attention_severity_counts(
                 attention_required
             ),
-            source_fallback_policy_effect_counts=(
-                self._source_fallback_policy_effect_counts(
-                    dataset_ids=tuple(asset.asset.dataset_id for asset in input_assets),
-                    trade_dates=trade_dates,
-                    available_sources=available_sources,
-                )
-            ),
             attention_required=attention_required,
         )
-
-    def _source_fallback_policy_effect_counts(
-        self,
-        *,
-        dataset_ids: tuple[str, ...],
-        trade_dates: tuple[str, ...],
-        available_sources: tuple[str, ...],
-    ) -> tuple[DataLineageCatalogSourceFallbackPolicyEffectCount, ...]:
-        source_health_query = self._source_health_summary_query
-        if (
-            source_health_query is None
-            or not dataset_ids
-            or not trade_dates
-            or not available_sources
-        ):
-            return ()
-        source_health = source_health_query.get_source_health_summary(
-            dataset_ids=_unique_dataset_ids(dataset_ids),
-            trade_dates=trade_dates,
-            available_sources=available_sources,
-        )
-        return _source_fallback_policy_effect_counts(source_health)
 
     def get_data_lineage_graph_for_asset(
         self,
@@ -609,38 +545,6 @@ def _catalog_attention_severity(
     return "info"
 
 
-def _source_fallback_policy_effect_counts(
-    source_health: CatalogSourceHealthSummaryReport,
-) -> tuple[DataLineageCatalogSourceFallbackPolicyEffectCount, ...]:
-    counts: dict[tuple[str, str, str, str], int] = {}
-    for report in source_health.reports:
-        effect = report.source_fallback_policy_effect
-        if effect is None:
-            continue
-        key = (
-            effect.policy_id,
-            effect.policy_status,
-            effect.catalog_selected_source,
-            effect.effective_selected_source,
-        )
-        counts[key] = counts.get(key, 0) + 1
-    return tuple(
-        DataLineageCatalogSourceFallbackPolicyEffectCount(
-            policy_id=policy_id,
-            policy_status=policy_status,
-            catalog_selected_source=catalog_selected_source,
-            effective_selected_source=effective_selected_source,
-            count=count,
-        )
-        for (
-            policy_id,
-            policy_status,
-            catalog_selected_source,
-            effective_selected_source,
-        ), count in sorted(counts.items())
-    )
-
-
 def _to_data_lineage_event(event: LineageEvent) -> DataLineageEvent:
     return DataLineageEvent(
         run_id=event.run_id,
@@ -664,14 +568,6 @@ def _unique_assets(
     for asset in assets:
         if asset not in unique:
             unique.append(asset)
-    return tuple(unique)
-
-
-def _unique_dataset_ids(dataset_ids: Iterable[str]) -> tuple[str, ...]:
-    unique: list[str] = []
-    for dataset_id in dataset_ids:
-        if dataset_id not in unique:
-            unique.append(dataset_id)
     return tuple(unique)
 
 

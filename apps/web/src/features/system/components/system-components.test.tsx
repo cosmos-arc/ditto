@@ -38,7 +38,6 @@ describe("System route page contract handoffs", () => {
 		await expect(screen.findByText("Catalog assets")).resolves.toBeInTheDocument();
 		await expect(screen.findAllByText("stock_daily")).resolves.not.toHaveLength(0);
 		await expect(screen.findByText("Source health")).resolves.toBeInTheDocument();
-		await expect(screen.findByText("Remediation backlog")).resolves.toBeInTheDocument();
 	});
 
 	it("covers SystemPage route composition", async () => {
@@ -46,8 +45,7 @@ describe("System route page contract handoffs", () => {
 		render(<SystemPage />, { wrapper: createWrapper() });
 
 		await expect(screen.findByRole("main", { name: "平台治理总览" })).resolves.toBeInTheDocument();
-		await expect(screen.findByText("Fallback control")).resolves.toBeInTheDocument();
-		await expect(screen.findByText("Promotion readiness")).resolves.toBeInTheDocument();
+		await expect(screen.findByText("Source health")).resolves.toBeInTheDocument();
 		await user.click(screen.getByRole("button", { name: "任务详情" }));
 		expect(screen.getByRole("dialog", { name: "任务详情" })).toHaveTextContent("Dataset");
 	});

@@ -37,7 +37,7 @@ function formatMetric(value: number, unit: string): string {
 }
 
 function contextSummary(context?: MarketContext): string {
-	if (!context) return "正在解析已认证数据产品与 exact source snapshots。";
+	if (!context) return "正在解析 exact source snapshots。";
 	if (context.status === "blocked") {
 		return `缺少 ${context.missing_inputs.length} 项核心输入，系统不会输出伪完整市场结论。`;
 	}
@@ -214,7 +214,7 @@ function EvidenceRail({
 							)}
 						</div>
 					) : (
-						<p className="text-sm text-(--color-foreground-tertiary)">等待 certification evidence。</p>
+						<p className="text-sm text-(--color-foreground-tertiary)">等待 source snapshot evidence。</p>
 					)}
 				</PanelBody>
 			</Panel>
@@ -309,7 +309,7 @@ export function MarketsPage({
 								<PanelHeader title="MarketContext blocked" />
 								<PanelBody className="p-4">
 									<p role="alert" className="text-sm text-(--color-system-down)">
-										无法解析已认证 exact source snapshots；没有回退到 latest 数据。
+										无法解析 exact source snapshots；没有回退到 latest 数据。
 									</p>
 								</PanelBody>
 							</Panel>

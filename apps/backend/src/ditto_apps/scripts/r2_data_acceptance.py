@@ -275,12 +275,9 @@ def run_live_acceptance(
     preflight = R2IngestionPreflight().run(
         R2PreflightEvidence(
             provider_access=access,
-            license_records=runtime.license_records,
-            certifications=runtime.certifications,
             benchmarks=benchmarks,
             incremental_elapsed_seconds=evidence.incremental_elapsed_seconds,
             workbench_query_seconds=evidence.workbench_query_seconds,
-            as_of=now.date(),
             checked_at=now,
         )
     )
@@ -592,7 +589,7 @@ def _resolve_live_args(
     """
     Resolve live-run paths to absolute + derive env overrides + per-run roots.
 
-    Mirrors sibling runners (``r2_live_certification``/``r3_live_snapshot_builder``)
+    Mirrors sibling runners (``r3_live_snapshot_builder``)
     which resolve paths in ``main``. Fixes:
 
     - relative ``--output`` crashing ``write_live_evidence_bundle``'s

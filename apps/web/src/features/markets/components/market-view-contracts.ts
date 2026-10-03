@@ -1,4 +1,4 @@
-import type { MarketContext } from "../api/market-evidence";
+import type { MarketCalendarStatus, MarketContext } from "../api/market-evidence";
 
 /** Query state supplied by an app workflow to a Markets-owned view. */
 export interface MarketQueryResult<T> {
@@ -23,16 +23,9 @@ export interface MarketCatalog {
 	readonly total: number;
 }
 
-/** Minimal Data Product coverage projection rendered by the calendar page. */
-export interface MarketCalendarCoverage {
-	readonly actual_partitions: number;
-	readonly certified_from: string | null;
-	readonly complete_from: string | null;
-	readonly expected_partitions: number;
-	readonly raw_from: string | null;
-	readonly unapproved_gaps: readonly string[];
-}
+/** Calendar dataset ingestion status projection rendered by the calendar page. */
+export type { MarketCalendarStatus } from "../api/market-evidence";
 
 export type MarketCatalogQuery = MarketQueryResult<MarketCatalog>;
-export type MarketCalendarCoverageQuery = MarketQueryResult<MarketCalendarCoverage>;
+export type MarketCalendarStatusQuery = MarketQueryResult<MarketCalendarStatus>;
 export type MarketContextQuery = MarketQueryResult<MarketContext>;

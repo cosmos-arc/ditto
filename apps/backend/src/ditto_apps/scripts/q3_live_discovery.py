@@ -18,12 +18,6 @@ from ditto_agent.tools.selection import (
     SelectionRunEvidenceTool,
 )
 from ditto_agent.tools.technical_analysis import InstrumentTechnicalEvidenceTool
-from ditto_application.commands.data_product_certification import (
-    DataProductCertificationCommands,
-)
-from ditto_application.commands.data_product_certification_builder import (
-    DataProductCertificationBuilder,
-)
 from ditto_application.exceptions import AppQueryError
 from ditto_application.processes.selection.facade import (
     CreateSelectionRunRequest,
@@ -45,9 +39,6 @@ from ditto_application.queries.technical_analysis import (
 from ditto_application.queries.technical_analysis_evidence import (
     InstrumentTechnicalEvidenceQueryFacade,
 )
-from ditto_data.catalog.certification import (
-    CertificationGovernanceStore,
-)
 from ditto_data.catalog.provider_payload import (
     ProviderPayloadReader,
 )
@@ -62,7 +53,6 @@ from ditto_apps.scripts.q3_live_discovery_support import (
     _STOCK_INSTRUMENT_ID,
     _TARGET_DATE,
     _TECHNICAL_FROM,
-    _TECHNICAL_PROFILE,
     _context,
     _envelope_summary,
     _payload,
@@ -71,8 +61,8 @@ from ditto_apps.scripts.q3_live_discovery_support import (
     _selection_instruments,
     _sha256_file,
     _snapshot,
-    _technical_certification,
-    _TechnicalCertificationContext,
+    _technical_consumer_evidence,
+    _TechnicalEvidenceContext,
     _universe_snapshot_id,
     derive_limit_state,
     normalized_rank_values,
@@ -92,7 +82,6 @@ def run_q3_live_discovery_acceptance(  # noqa: PLR0915 - vertical acceptance flo
     evidence_root: Path,
     recovery_evidence: Path,
     market_context_evidence: Path,
-    actor: str,
 ) -> dict[str, object]:
     """Create and replay real Q3 discovery artifacts under exact PIT identities."""
     root = data_root.expanduser().resolve(strict=True)
@@ -318,29 +307,25 @@ def run_q3_live_discovery_acceptance(  # noqa: PLR0915 - vertical acceptance flo
         ):
             raise ValueError("Q3 SelectionRun replay identity drift")
 
-        technical_certification_context = _TechnicalCertificationContext(
+        technical_evidence_context = _TechnicalEvidenceContext(
             evidence_root=evidence_root,
             recovery_evidence=recovery_evidence,
             generated_at=generated_at,
-            actor=actor,
             data_root=root,
-            builder=container.get(DataProductCertificationBuilder),
-            commands=container.get(DataProductCertificationCommands),
-            store=container.get(CertificationGovernanceStore),
         )
-        stock_technical_report = _technical_certification(
+        stock_technical_evidence, stock_technical_hash = _technical_consumer_evidence(
             dataset_id="stock_daily",
             instrument_code=_STOCK_CODE,
             snapshot=exact["stock_history"],
             payload=frames["stock_history"],
-            context=technical_certification_context,
+            context=technical_evidence_context,
         )
-        etf_technical_report = _technical_certification(
+        etf_technical_evidence, etf_technical_hash = _technical_consumer_evidence(
             dataset_id="etf_daily",
             instrument_code=_ETF_CODE,
             snapshot=exact["etf_history"],
             payload=frames["etf_history"],
-            context=technical_certification_context,
+            context=technical_evidence_context,
         )
         technical = container.get(TechnicalAnalysisFacade)
         stock_technical_request = TechnicalAnalysisRequest(
@@ -499,15 +484,16 @@ def run_q3_live_discovery_acceptance(  # noqa: PLR0915 - vertical acceptance flo
             "etf": asdict(etf_technical),
             "future_sentinel": future_sentinel,
         },
-        "technical_certification": {
-            "profile": _TECHNICAL_PROFILE,
+        "technical_consumer_evidence": {
             "products": {
-                report.dataset_id: {
-                    "report_id": report.report_id,
-                    "content_hash": report.content_hash,
-                    "snapshot_ids": report.evidence.snapshot_ids,
+                str(evidence["dataset_id"]): {
+                    "consumer_evidence_sha256": evidence_hash,
+                    "snapshot_ids": (str(evidence["snapshot_id"]),),
                 }
-                for report in (stock_technical_report, etf_technical_report)
+                for evidence, evidence_hash in (
+                    (stock_technical_evidence, stock_technical_hash),
+                    (etf_technical_evidence, etf_technical_hash),
+                )
             },
         },
         "agent_evidence": {
@@ -543,7 +529,6 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--evidence-root", required=True, type=Path)
     parser.add_argument("--recovery-evidence", required=True, type=Path)
     parser.add_argument("--market-context-evidence", required=True, type=Path)
-    parser.add_argument("--actor", required=True)
     parser.add_argument("--output", required=True, type=Path)
     return parser
 
@@ -556,7 +541,6 @@ def main(argv: list[str] | None = None) -> int:
         evidence_root=args.evidence_root,
         recovery_evidence=args.recovery_evidence,
         market_context_evidence=args.market_context_evidence,
-        actor=cast("str", args.actor),
     )
     output = args.output.expanduser().resolve(strict=False)
     output.parent.mkdir(parents=True, exist_ok=True)

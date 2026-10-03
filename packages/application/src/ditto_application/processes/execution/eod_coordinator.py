@@ -3,8 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Mapping, Sequence
-from dataclasses import asdict, dataclass, replace
-from datetime import date
+from dataclasses import asdict, dataclass
 from typing import Literal, cast
 
 import orjson
@@ -18,12 +17,6 @@ from ditto_application.processes.execution.eod_failure import (
 )
 from ditto_application.processes.execution.signal_package import SignalPackage
 from ditto_application.processes.execution.strategy_types import RunLifecycleService
-from ditto_application.queries.data_readiness import (
-    DataReadinessQueryFacade,
-    DatasetReadinessAssessment,
-    DatasetReadinessRequirement,
-    PartitionHealth,
-)
 
 __all__ = [
     "DatasetReadiness",
@@ -31,7 +24,6 @@ __all__ = [
     "EodCoordinatorOptions",
     "EodStrategyOutcome",
     "EodStrategyRequest",
-    "R2PreflightPolicy",
 ]
 
 
@@ -67,22 +59,6 @@ class EodStrategyOutcome:
     artifact_id: str | None = None
     checksum: str | None = None
     reason: str = ""
-    r2_preflight_status: Literal["not_run", "ready", "blocked"] = "not_run"
-
-
-@dataclass(frozen=True, slots=True)
-class R2PreflightPolicy:
-    """R1 migration policy for the R2 data-product gate."""
-
-    mode: Literal["shadow", "required"] = "shadow"
-    certification_profile: str = "r2-modern-a-share-v1"
-
-    def __post_init__(self) -> None:
-        """Validate the explicit migration mode and certification profile."""
-        if self.mode not in {"shadow", "required"}:
-            raise AppProcessError(f"invalid R2 preflight mode: {self.mode}")
-        if not self.certification_profile.strip():
-            raise AppProcessError("R2 certification profile cannot be empty")
 
 
 type EodOutcomeStatus = Literal[
@@ -107,8 +83,6 @@ class EodCoordinatorOptions:
 
     construct_portfolio: _ConstructPortfolio | None = None
     suggestion_block_reason: _SuggestionBlockReason | None = None
-    data_readiness_query: DataReadinessQueryFacade | None = None
-    r2_preflight_policy: R2PreflightPolicy = R2PreflightPolicy()
 
 
 class EodCoordinator:
@@ -131,8 +105,6 @@ class EodCoordinator:
         self._finalize_signals = finalize_signals
         self._find_staged_signals = find_staged_signals
         self._run_service = run_service
-        self._data_readiness_query = options.data_readiness_query
-        self._r2_preflight_policy = options.r2_preflight_policy
 
     def run(
         self,
@@ -159,57 +131,27 @@ class EodCoordinator:
                 )
                 for dataset in request.required_datasets
             )
-            required, r2_preflight_status = self._apply_r2_preflight(
-                request=request,
-                signal_date=signal_date,
-                required=required,
-            )
             blocked = [state for state in required if state.status != "ready"]
             if blocked:
-                reason = (
-                    "R2_DATA_PREFLIGHT_BLOCKED"
-                    if self._r2_preflight_policy.mode == "required"
-                    and r2_preflight_status == "blocked"
-                    and any(
-                        state.reason.startswith(
-                            (
-                                "CERTIFICATION_",
-                                "DATASET_",
-                                "PARTITION_",
-                                "PIT_",
-                                "SOURCE_",
-                                "R2_",
-                            )
-                        )
-                        for state in blocked
-                    )
-                    else "REQUIRED_DATA_NOT_READY"
-                )
                 outcomes.append(
-                    replace(
-                        self._persist_blocked_outcome(
-                            request=request,
-                            batch_key=batch_key,
-                            signal_date=signal_date,
-                            required=required,
-                            reason=reason,
-                        ),
-                        r2_preflight_status=r2_preflight_status,
+                    self._persist_blocked_outcome(
+                        request=request,
+                        batch_key=batch_key,
+                        signal_date=signal_date,
+                        required=required,
+                        reason="REQUIRED_DATA_NOT_READY",
                     )
                 )
                 continue
             risk_block_reason = self._risk_block_reason(request, signal_date)
             if risk_block_reason is not None:
                 outcomes.append(
-                    replace(
-                        self._persist_blocked_outcome(
-                            request=request,
-                            batch_key=batch_key,
-                            signal_date=signal_date,
-                            required=required,
-                            reason=risk_block_reason,
-                        ),
-                        r2_preflight_status=r2_preflight_status,
+                    self._persist_blocked_outcome(
+                        request=request,
+                        batch_key=batch_key,
+                        signal_date=signal_date,
+                        required=required,
+                        reason=risk_block_reason,
                     )
                 )
                 continue
@@ -220,19 +162,14 @@ class EodCoordinator:
                 required=required,
             )
             if recovered is not None:
-                outcomes.append(
-                    replace(recovered, r2_preflight_status=r2_preflight_status)
-                )
+                outcomes.append(recovered)
                 continue
             outcomes.append(
-                replace(
-                    self._execute_ready_request(
-                        request=request,
-                        batch_key=batch_key,
-                        signal_date=signal_date,
-                        required=required,
-                    ),
-                    r2_preflight_status=r2_preflight_status,
+                self._execute_ready_request(
+                    request=request,
+                    batch_key=batch_key,
+                    signal_date=signal_date,
+                    required=required,
                 )
             )
         return tuple(outcomes)
@@ -253,91 +190,6 @@ class EodCoordinator:
         if reason is None:
             return None
         return reason if reason.strip() else "RISK_READINESS_UNAVAILABLE"
-
-    def _apply_r2_preflight(
-        self,
-        *,
-        request: EodStrategyRequest,
-        signal_date: str,
-        required: tuple[DatasetReadiness, ...],
-    ) -> tuple[
-        tuple[DatasetReadiness, ...],
-        Literal["not_run", "ready", "blocked"],
-    ]:
-        """Run the R2 query in shadow or fail-closed required mode."""
-        query = self._data_readiness_query
-        if query is None:
-            if self._r2_preflight_policy.mode == "shadow":
-                return required, "not_run"
-            return (
-                tuple(
-                    replace(
-                        state,
-                        status="unknown",
-                        reason=(
-                            f"R2_PREFLIGHT_NOT_CONFIGURED:{state.dataset}:{signal_date}"
-                        ),
-                    )
-                    for state in required
-                ),
-                "blocked",
-            )
-        required_to = date.fromisoformat(signal_date)
-        required_from = date.fromisoformat(request.lookback_start or signal_date)
-        requirements = tuple(
-            DatasetReadinessRequirement(
-                dataset_id=state.dataset,
-                required_from=required_from,
-                required_to=required_to,
-                expected_snapshot_ids=(
-                    (state.snapshot_id,) if state.snapshot_id is not None else ()
-                ),
-                requires_pit_universe=state.dataset
-                in {"stock_basic", "stock_status", "index_weight"},
-            )
-            for state in required
-        )
-        partition_health = {
-            state.dataset: PartitionHealth(
-                status=state.status,
-                snapshot_id=state.snapshot_id,
-            )
-            for state in required
-        }
-        try:
-            report = query.assess(
-                profile=self._r2_preflight_policy.certification_profile,
-                requirements=requirements,
-                partition_health=partition_health,
-            )
-        except Exception:
-            if self._r2_preflight_policy.mode == "shadow":
-                return required, "blocked"
-            return (
-                tuple(
-                    replace(
-                        state,
-                        status="unknown",
-                        reason=f"R2_PREFLIGHT_QUERY_FAILED:{state.dataset}:{signal_date}",
-                    )
-                    for state in required
-                ),
-                "blocked",
-            )
-        if report.status == "ready" or self._r2_preflight_policy.mode == "shadow":
-            return required, report.status
-        assessments = {item.dataset_id: item for item in report.datasets}
-        return (
-            tuple(
-                _blocked_by_r2_assessment(
-                    state,
-                    assessments.get(state.dataset),
-                    required_to=required_to,
-                )
-                for state in required
-            ),
-            "blocked",
-        )
 
     def _execute_ready_request(
         self,
@@ -673,27 +525,6 @@ class EodCoordinator:
 def _optional_str(value: object) -> str | None:
     """只把真实字符串暴露为 outcome 证据，避免 mock/未知对象泄漏。"""
     return value if isinstance(value, str) and value else None
-
-
-def _blocked_by_r2_assessment(
-    state: DatasetReadiness,
-    assessment: DatasetReadinessAssessment | None,
-    *,
-    required_to: date,
-) -> DatasetReadiness:
-    """Project a blocked R2 assessment into the existing EOD evidence shape."""
-    if assessment is not None and assessment.status == "ready":
-        return state
-    reason = (
-        assessment.reason_codes[0]
-        if assessment is not None and assessment.reason_codes
-        else "R2_DATASET_ASSESSMENT_MISSING"
-    )
-    return replace(
-        state,
-        status="unknown",
-        reason=f"{reason}:{state.dataset}:{required_to.isoformat()}",
-    )
 
 
 def _package_status(package: SignalPackage) -> EodOutcomeStatus:

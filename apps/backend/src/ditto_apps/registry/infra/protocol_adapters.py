@@ -17,10 +17,6 @@ from pathlib import Path
 from typing import Protocol, cast
 
 from dishka import Provider, Scope, provide
-from ditto_application.commands.catalog_remediation import (
-    CatalogRemediationIngestDatePort,
-)
-from ditto_application.contracts import IngestDateCommand
 from ditto_application.processes.experiments.r2_live_gate_evidence import (
     FileR2LiveGateEvidenceReader,
     NullR2LiveGateEvidenceReader,
@@ -105,19 +101,6 @@ def _ingestion_bundle_factory() -> _IngestionBundleFactory:
     return cast(_IngestionBundleFactory, module.create_ingestion_bundle)
 
 
-class _CatalogRemediationIngestDateAdapter:
-    """Lazy adapter from remediation execution to the existing ingestion bundle."""
-
-    def handle(self, command: IngestDateCommand) -> object:
-        create_ingestion_bundle = _ingestion_bundle_factory()
-        with create_ingestion_bundle(source="auto") as bundle:
-            return bundle.coordinator.ingest_date(
-                command.dataset,
-                command.trade_date.isoformat(),
-                command.force,
-            )
-
-
 class ProtocolAdapterProvider(Provider):
     """Bridges concrete infrastructure types to Protocol interfaces."""
 
@@ -162,16 +145,6 @@ class ProtocolAdapterProvider(Provider):
     def source_data_port(self, accessor: SourceAccessor) -> SourceDataPort:
         """SourceAccessor.tushare → SourceDataPort."""
         return accessor.tushare
-
-    @provide
-    def catalog_remediation_ingest_date_port(
-        self,
-    ) -> CatalogRemediationIngestDatePort:
-        """Remediation source-coverage executor → source=auto ingestion bundle."""
-        return cast(
-            CatalogRemediationIngestDatePort,
-            _CatalogRemediationIngestDateAdapter(),
-        )
 
 
 class R2LiveGateEvidenceProvider(Provider):

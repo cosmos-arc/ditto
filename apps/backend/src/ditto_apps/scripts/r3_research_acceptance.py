@@ -167,7 +167,7 @@ class LiveAcceptanceRequest:
     manifest: Path
     r2_evidence: Path
     r2_source_manifest: Path
-    require_certified: bool
+    require_observed: bool
     require_both_golden_lanes: bool
 
 
@@ -453,7 +453,7 @@ def run_fixture_acceptance(
         ),
         does_not_prove=(
             "provider_entitlement",
-            "certified_live_data",
+            "observed_live_data",
             "live_96_month_history",
             "real_browser_acceptance",
             "production_recovery",
@@ -513,7 +513,7 @@ def _live_report(
         proves=(
             (
                 "verified_r2_live_gate",
-                "certified_stock_and_etf_live_golden_lanes",
+                "observed_stock_and_etf_live_golden_lanes",
                 "live_96_month_research_governance_lifecycle",
                 "live_publish_r1_reactivate",
                 "isolated_live_backup_restore",
@@ -545,7 +545,7 @@ def run_live_acceptance(
         "DITTO_RUN_REAL_DATA_ACCEPTANCE=1 uv run --no-sync python -m "
         "ditto_apps.scripts.r3_research_acceptance --real-data "
         "--workspace-root . "
-        "--require-certified --require-both-golden-lanes "
+        "--require-observed --require-both-golden-lanes "
         "--r2-evidence artifacts/acceptance/r2-report.json "
         "--output artifacts/acceptance/r3-report.json"
     ),
@@ -578,8 +578,8 @@ def run_live_acceptance(
     failures: list[str] = []
     if environment.get(_LIVE_OPT_IN) != "1":
         failures.append("real_data_opt_in_missing")
-    if not request.require_certified:
-        failures.append("certified_data_requirement_missing")
+    if not request.require_observed:
+        failures.append("observed_data_requirement_missing")
     if not request.require_both_golden_lanes:
         failures.append("both_golden_lanes_requirement_missing")
 
@@ -640,7 +640,7 @@ def _parser() -> argparse.ArgumentParser:
     mode.add_argument("--fixture", action="store_true")
     mode.add_argument("--real-data", action="store_true")
     parser.add_argument("--workspace-root", type=Path, required=True)
-    parser.add_argument("--require-certified", action="store_true")
+    parser.add_argument("--require-observed", action="store_true")
     parser.add_argument("--require-both-golden-lanes", action="store_true")
     parser.add_argument("--r2-evidence", type=Path)
     parser.add_argument("--r2-source-manifest", type=Path)
@@ -719,7 +719,7 @@ def main(argv: list[str] | None = None) -> int:
                 manifest=manifest,
                 r2_evidence=r2_evidence,
                 r2_source_manifest=source_manifest,
-                require_certified=bool(args.require_certified),
+                require_observed=bool(args.require_observed),
                 require_both_golden_lanes=bool(args.require_both_golden_lanes),
             )
         )

@@ -10,7 +10,6 @@ from ditto_application.exceptions import AppBuilderError
 from ditto_application.strategy_spec_legacy_deserialization import (
     default_required_datasets_for_template,
 )
-from ditto_data.catalog.promotion import DatasetMaturityPromotion
 from ditto_strategy.alpha.specs import StrategySpec
 
 
@@ -26,26 +25,6 @@ class TestCatalogDatasetAssetClass:
     def test_unknown_dataset_raises_value_error(self) -> None:
         with pytest.raises(ValueError, match="Unknown dataset_id"):
             catalog_dataset_asset_class("unknown_dataset")
-
-
-class _MaturityPromotionReader:
-    """Stub promotion reader exposing an explicit promoted dataset set."""
-
-    def __init__(self, promoted_dataset_ids: set[str]) -> None:
-        self._promoted_dataset_ids = promoted_dataset_ids
-
-    def get_dataset_maturity_promotion(
-        self,
-        dataset_id: str,
-    ) -> DatasetMaturityPromotion | None:
-        if dataset_id not in self._promoted_dataset_ids:
-            return None
-        return DatasetMaturityPromotion(
-            dataset_id=dataset_id,
-            previous_maturity="experimental",
-            promoted_maturity="initial-focus",
-            promoted_by="architecture-review",
-        )
 
 
 def _stock_spec(
@@ -107,30 +86,30 @@ class TestAssertStrategyRuntimeDataAllowed:
         )
 
         with pytest.raises(AppBuilderError, match="balance_sheet=experimental"):
-            assert_strategy_runtime_data_allowed(
-                spec,
-                maturity_promotion_reader=_MaturityPromotionReader(
-                    {"stock_daily", "stock_basic"},
-                ),
-            )
+            assert_strategy_runtime_data_allowed(spec)
 
-    def test_allows_fundamentals_free_stock_spec_after_stock_promotion(self) -> None:
-        """仅消费已晋级/initial-focus 数据集的股票规格可进入正式运行时。
-
-        模板默认集直接取自 legacy 兼容映射,钉住"非财务模板在股票数据晋级后
-        即可正式运行"的声明:默认集漂移引入 experimental 数据集时此处失败。
-        """
+    def test_stock_lane_allowed_by_static_assignment(self) -> None:
+        """核心市场 lane 静态为 initial-focus,正式运行无需显式放行。"""
         spec = _stock_spec(
             required_datasets=default_required_datasets_for_template(
                 "stock_sector_rotation",
             ),
         )
 
+        assert_strategy_runtime_data_allowed(spec)
+
+    def test_fundamental_lane_requires_explicit_research_opt_in(self) -> None:
+        """财务数据集保持 experimental,正式运行时必须显式研究放行。"""
+        spec = _stock_spec(
+            required_datasets=("balance_sheet",),
+        )
+
+        with pytest.raises(AppBuilderError, match="balance_sheet=experimental"):
+            assert_strategy_runtime_data_allowed(spec)
+
         assert_strategy_runtime_data_allowed(
             spec,
-            maturity_promotion_reader=_MaturityPromotionReader(
-                {"stock_daily", "stock_basic"},
-            ),
+            allow_experimental_data=True,
         )
 
     def test_research_opt_in_allows_experimental_required_datasets(self) -> None:
@@ -138,34 +117,17 @@ class TestAssertStrategyRuntimeDataAllowed:
             required_datasets=("stock_daily", "balance_sheet"),
         )
 
-        assert_strategy_runtime_data_allowed(
-            spec,
-            allow_experimental_data=True,
-            maturity_promotion_reader=_MaturityPromotionReader(
-                {"stock_daily", "stock_basic"},
-            ),
-        )
+        assert_strategy_runtime_data_allowed(spec, allow_experimental_data=True)
 
     def test_unknown_required_dataset_blocks_formal_runtime(self) -> None:
         spec = _stock_spec(required_datasets=("stock_daily", "not_a_catalog_dataset"))
 
         with pytest.raises(AppBuilderError, match="not_a_catalog_dataset=unknown"):
-            assert_strategy_runtime_data_allowed(
-                spec,
-                maturity_promotion_reader=_MaturityPromotionReader(
-                    {"stock_daily", "stock_basic"},
-                ),
-            )
+            assert_strategy_runtime_data_allowed(spec)
 
     def test_unknown_required_dataset_blocks_even_with_research_opt_in(self) -> None:
         """研究 opt-in 只放行 experimental,不放行目录未声明的未知数据集。"""
         spec = _stock_spec(required_datasets=("stock_daily", "not_a_catalog_dataset"))
 
         with pytest.raises(AppBuilderError, match="not_a_catalog_dataset=unknown"):
-            assert_strategy_runtime_data_allowed(
-                spec,
-                allow_experimental_data=True,
-                maturity_promotion_reader=_MaturityPromotionReader(
-                    {"stock_daily", "stock_basic"},
-                ),
-            )
+            assert_strategy_runtime_data_allowed(spec, allow_experimental_data=True)

@@ -13,13 +13,11 @@ from time import perf_counter
 from typing import cast
 
 import orjson
-from ditto_application.processes.experiments.planning_probes import (
-    R3_RESEARCH_CERTIFICATION_PROFILE,
+from ditto_application.queries.ingestion_status import (
+    DatasetStatus,
+    IngestionStatusQueryFacade,
 )
-from ditto_application.queries.data_products import (
-    DataProductsQueryFacade,
-    DataProductView,
-)
+from ditto_data.catalog.metadata import default_dataset_metadata
 
 from ditto_apps.config.runtime import state_root_matches
 from ditto_apps.registry.container import make_app_container
@@ -142,13 +140,25 @@ def _run_incremental(
         )
 
 
-def _query_workbench() -> tuple[DataProductView, ...]:
+def _query_workbench() -> list[DatasetStatus]:
     container = make_app_container()
     try:
-        facade = container.get(DataProductsQueryFacade)
-        return facade.list_products(profile=R3_RESEARCH_CERTIFICATION_PROFILE)
+        facade = container.get(IngestionStatusQueryFacade)
+        return facade.get_status(list(_HARD_SCOPE_DATASETS))
     finally:
         container.close()
+
+
+def _hard_scope_datasets() -> tuple[str, ...]:
+    return tuple(
+        metadata.dataset_id
+        for metadata in default_dataset_metadata().values()
+        if metadata.dataset_spec is not None
+        and metadata.dataset_spec.r2_scope == "hard"
+    )
+
+
+_HARD_SCOPE_DATASETS = _hard_scope_datasets()
 
 
 def _parser() -> argparse.ArgumentParser:

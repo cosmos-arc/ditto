@@ -5,28 +5,7 @@ from __future__ import annotations
 from dishka import Provider, Scope, provide
 from ditto_analysis.research.artifact_service import ResearchArtifactService
 from ditto_analysis.research.catalog_service import ResearchCatalogService
-from ditto_data.catalog import DataCatalogReader
-from ditto_data.catalog.certification import CertificationGovernanceStore
-from ditto_data.catalog.fallback_policy import (
-    CatalogSourceFallbackPolicyReader,
-    CatalogSourceFallbackPolicyWriter,
-)
-from ditto_data.catalog.license import DatasetLicenseReader, DatasetLicenseWriter
-from ditto_data.catalog.promotion import (
-    DatasetMaturityPromotionHistoryReader,
-    DatasetMaturityPromotionReader,
-    DatasetMaturityPromotionRevoker,
-    DatasetMaturityPromotionWriter,
-    DatasetPromotionEvidenceReader,
-    DatasetPromotionEvidenceWriter,
-)
-from ditto_data.catalog.remediation import (
-    CatalogRemediationApprovalReader,
-    CatalogRemediationApprovalWriter,
-)
 from ditto_data.catalog.source_snapshot import ProviderSnapshotReader
-from ditto_data.catalog.specimen import SpecimenWriter
-from ditto_data.ingestion.partition_state import PartitionLifecycleReader
 from ditto_data.ingestion.quality_record_store import (
     QualityRecordStore,
 )
@@ -66,31 +45,6 @@ from ditto_application.commands.backtest import (
 from ditto_application.commands.candidate_selection import (
     CandidateSelectionHandler,
 )
-from ditto_application.commands.catalog import (
-    ReviewDatasetPromotionEvidenceHandler,
-    RevokeDatasetMaturityPromotionHandler,
-)
-from ditto_application.commands.catalog_remediation import (
-    CatalogFreshnessRemediationExecutor,
-    CatalogRemediationActionExecutorRegistry,
-    CatalogRemediationIngestDatePort,
-    CatalogSourceCoverageRemediationExecutor,
-    DatasetPromotionEvidenceRemediationExecutor,
-    DecideCatalogRemediationApprovalHandler,
-    ExecuteCatalogRemediationApprovalHandler,
-    LineageCatalogAssetRemediationExecutor,
-    RequestCatalogRemediationApprovalHandler,
-)
-from ditto_application.commands.data_product_certification import (
-    DataProductCertificationCommands,
-)
-from ditto_application.commands.data_product_certification_builder import (
-    DataProductCertificationBuilder,
-)
-from ditto_application.commands.data_product_license import DataProductLicenseCommands
-from ditto_application.commands.data_product_specimen import (
-    DataProductSpecimenCommands,
-)
 from ditto_application.commands.experiments import (
     CancelExperimentHandler,
     ClaimHoldoutCandidateHandler,
@@ -103,12 +57,6 @@ from ditto_application.commands.experiments import (
 from ditto_application.commands.quality_check import CheckDataQualityHandler
 from ditto_application.commands.quality_reconciliation import ReconcileSourcesHandler
 from ditto_application.commands.research_dataset_export import ResearchDatasetExport
-from ditto_application.commands.source_fallback_policy import (
-    ActivateCatalogSourceFallbackPolicyHandler,
-    ApproveCatalogSourceFallbackPolicyHandler,
-    DraftCatalogSourceFallbackPolicyHandler,
-    RetireCatalogSourceFallbackPolicyHandler,
-)
 from ditto_application.commands.strategy import (
     CreateStrategyHandler,
     PublishStrategyHandler,
@@ -234,48 +182,6 @@ class AppCommandProvider(Provider):
         return ClaimHoldoutCandidateHandler(process=process, notifier=notifier)
 
     @provide
-    def data_product_certification_commands(
-        self,
-        store: CertificationGovernanceStore,
-    ) -> DataProductCertificationCommands:
-        """R2 immutable certification review commands."""
-        return DataProductCertificationCommands(store=store)
-
-    @provide
-    def data_product_license_commands(
-        self,
-        writer: DatasetLicenseWriter,
-    ) -> DataProductLicenseCommands:
-        """Append one application-validated human license review."""
-        return DataProductLicenseCommands(writer)
-
-    @provide
-    def data_product_specimen_commands(
-        self,
-        writer: SpecimenWriter,
-    ) -> DataProductSpecimenCommands:
-        """Append one application-validated human specimen adjudication."""
-        return DataProductSpecimenCommands(writer)
-
-    @provide
-    def data_product_certification_builder(
-        self,
-        catalog_reader: DataCatalogReader,
-        snapshot_reader: ProviderSnapshotReader,
-        license_reader: DatasetLicenseReader,
-        lifecycle_reader: PartitionLifecycleReader,
-        metadata_service: MetadataService,
-    ) -> DataProductCertificationBuilder:
-        """Build reviewable R2 reports from the durable ingestion evidence chain."""
-        return DataProductCertificationBuilder(
-            catalog_reader=catalog_reader,
-            snapshot_reader=snapshot_reader,
-            license_reader=license_reader,
-            lifecycle_reader=lifecycle_reader,
-            calendar=metadata_service.calendar,
-        )
-
-    @provide
     def opening_baseline_resolver(
         self,
         account_query: AccountBaselineQuery,
@@ -327,134 +233,6 @@ class AppCommandProvider(Provider):
             comparison_store=comparison_store,
             instrument_store=instrument_store,
             golden_dataset=golden_dataset,
-        )
-
-    @provide
-    def review_dataset_promotion_evidence_handler(
-        self,
-        promotion_evidence_writer: DatasetPromotionEvidenceWriter,
-        promotion_evidence_reader: DatasetPromotionEvidenceReader,
-        maturity_promotion_writer: DatasetMaturityPromotionWriter,
-        maturity_promotion_reader: DatasetMaturityPromotionReader,
-        maturity_promotion_history_reader: DatasetMaturityPromotionHistoryReader,
-    ) -> ReviewDatasetPromotionEvidenceHandler:
-        """Dataset promotion reviewer evidence handler."""
-        return ReviewDatasetPromotionEvidenceHandler(
-            evidence_writer=promotion_evidence_writer,
-            evidence_reader=promotion_evidence_reader,
-            maturity_promotion_writer=maturity_promotion_writer,
-            maturity_promotion_reader=maturity_promotion_reader,
-            maturity_promotion_history_reader=maturity_promotion_history_reader,
-        )
-
-    @provide
-    def revoke_dataset_maturity_promotion_handler(
-        self,
-        maturity_promotion_reader: DatasetMaturityPromotionReader,
-        maturity_promotion_revoker: DatasetMaturityPromotionRevoker,
-    ) -> RevokeDatasetMaturityPromotionHandler:
-        """Dataset maturity promotion reversal handler."""
-        return RevokeDatasetMaturityPromotionHandler(
-            maturity_promotion_reader=maturity_promotion_reader,
-            maturity_promotion_revoker=maturity_promotion_revoker,
-        )
-
-    @provide
-    def request_catalog_remediation_approval_handler(
-        self,
-        catalog_remediation_approval_writer: CatalogRemediationApprovalWriter,
-    ) -> RequestCatalogRemediationApprovalHandler:
-        """Catalog remediation approval request handler."""
-        return RequestCatalogRemediationApprovalHandler(
-            approval_writer=catalog_remediation_approval_writer,
-        )
-
-    @provide
-    def draft_catalog_source_fallback_policy_handler(
-        self,
-        catalog_source_fallback_policy_writer: CatalogSourceFallbackPolicyWriter,
-    ) -> DraftCatalogSourceFallbackPolicyHandler:
-        """Catalog source fallback policy draft handler."""
-        return DraftCatalogSourceFallbackPolicyHandler(
-            policy_writer=catalog_source_fallback_policy_writer,
-        )
-
-    @provide
-    def approve_catalog_source_fallback_policy_handler(
-        self,
-        catalog_source_fallback_policy_reader: CatalogSourceFallbackPolicyReader,
-        catalog_source_fallback_policy_writer: CatalogSourceFallbackPolicyWriter,
-    ) -> ApproveCatalogSourceFallbackPolicyHandler:
-        """Catalog source fallback policy approval handler."""
-        return ApproveCatalogSourceFallbackPolicyHandler(
-            policy_reader=catalog_source_fallback_policy_reader,
-            policy_writer=catalog_source_fallback_policy_writer,
-        )
-
-    @provide
-    def activate_catalog_source_fallback_policy_handler(
-        self,
-        catalog_source_fallback_policy_reader: CatalogSourceFallbackPolicyReader,
-        catalog_source_fallback_policy_writer: CatalogSourceFallbackPolicyWriter,
-    ) -> ActivateCatalogSourceFallbackPolicyHandler:
-        """Catalog source fallback policy activation handler."""
-        return ActivateCatalogSourceFallbackPolicyHandler(
-            policy_reader=catalog_source_fallback_policy_reader,
-            policy_writer=catalog_source_fallback_policy_writer,
-        )
-
-    @provide
-    def retire_catalog_source_fallback_policy_handler(
-        self,
-        catalog_source_fallback_policy_reader: CatalogSourceFallbackPolicyReader,
-        catalog_source_fallback_policy_writer: CatalogSourceFallbackPolicyWriter,
-    ) -> RetireCatalogSourceFallbackPolicyHandler:
-        """Catalog source fallback policy retirement handler."""
-        return RetireCatalogSourceFallbackPolicyHandler(
-            policy_reader=catalog_source_fallback_policy_reader,
-            policy_writer=catalog_source_fallback_policy_writer,
-        )
-
-    @provide
-    def decide_catalog_remediation_approval_handler(
-        self,
-        catalog_remediation_approval_reader: CatalogRemediationApprovalReader,
-        catalog_remediation_approval_writer: CatalogRemediationApprovalWriter,
-    ) -> DecideCatalogRemediationApprovalHandler:
-        """Catalog remediation approval decision handler."""
-        return DecideCatalogRemediationApprovalHandler(
-            approval_reader=catalog_remediation_approval_reader,
-            approval_writer=catalog_remediation_approval_writer,
-        )
-
-    @provide
-    def execute_catalog_remediation_approval_handler(
-        self,
-        catalog_remediation_approval_reader: CatalogRemediationApprovalReader,
-        catalog_remediation_approval_writer: CatalogRemediationApprovalWriter,
-        promotion_review_handler: ReviewDatasetPromotionEvidenceHandler,
-        catalog_remediation_ingest_date_port: CatalogRemediationIngestDatePort,
-    ) -> ExecuteCatalogRemediationApprovalHandler:
-        """Catalog remediation approval-backed execution handler."""
-        return ExecuteCatalogRemediationApprovalHandler(
-            approval_reader=catalog_remediation_approval_reader,
-            approval_writer=catalog_remediation_approval_writer,
-            executor_registry=CatalogRemediationActionExecutorRegistry(
-                (
-                    DatasetPromotionEvidenceRemediationExecutor(
-                        promotion_review_handler
-                    ),
-                    CatalogSourceCoverageRemediationExecutor(
-                        catalog_remediation_ingest_date_port
-                    ),
-                    CatalogFreshnessRemediationExecutor(
-                        catalog_remediation_ingest_date_port
-                    ),
-                    LineageCatalogAssetRemediationExecutor(
-                        catalog_remediation_ingest_date_port
-                    ),
-                )
-            ),
         )
 
     @provide

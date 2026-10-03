@@ -1,4 +1,4 @@
-"""摄取后置处理 — list_date 推断、游标更新、冻结点创建、错误处理."""
+"""摄取后置处理 — list_date 推断、游标更新、错误处理."""
 
 from __future__ import annotations
 
@@ -25,7 +25,6 @@ from ditto_data.errors import (
     NetworkError,
     SourceFetchError,
 )
-from ditto_data.ingestion.freeze_store import FreezeStore
 from ditto_data.ingestion.ingestion_cursor_store import (
     IngestionCursorStore,
 )
@@ -68,7 +67,6 @@ __all__ = [
     "DataWriteContext",
     "PostIngestContext",
     "build_evidence_commit_request",
-    "create_freeze_point",
     "handle_fetch_error",
     "is_sparse_pit_dataset",
     "process_fetched_data",
@@ -107,7 +105,6 @@ class PostIngestContext:
     catalog_reader: DataCatalogReader | None = None
     quality_checker: QualityCheckerProtocol | None = None
     cursor_store: IngestionCursorStore | None = None
-    freeze_store: FreezeStore | None = None
     lineage_recorder: DataLineageRecorder | None = None
     catalog_writer: DataCatalogWriter | None = None
     evidence_committer: IngestionEvidenceCommitter | None = None
@@ -388,7 +385,6 @@ def process_fetched_data(  # noqa: C901, PLR0911, PLR0912 - fail-closed stages
         dataset,
         processing_date,
         cursor_store=ctx.cursor_store,
-        freeze_store=(None if ctx.evidence_committer is not None else ctx.freeze_store),
         source_name=ctx.source_name,
     )
 
@@ -629,20 +625,14 @@ def run_post_ingest_hooks(
     trade_date: str,
     *,
     cursor_store: IngestionCursorStore | None,
-    freeze_store: FreezeStore | None,
     source_name: str,
 ) -> None:
-    """执行摄取后的副作用：游标更新、冻结点创建。"""
+    """执行摄取后的副作用：游标更新。"""
     update_ingestion_cursor(
         dataset,
         trade_date,
         cursor_store=cursor_store,
         source_name=source_name,
-    )
-    create_freeze_point(
-        dataset,
-        trade_date,
-        freeze_store=freeze_store,
     )
 
 
@@ -695,29 +685,6 @@ def update_ingestion_cursor(
         ),
         log_tag="cursor_update_failed",
         event="cursor_update_error",
-        dataset=dataset,
-        trade_date=trade_date,
-    )
-
-
-def create_freeze_point(
-    dataset: str,
-    trade_date: str,
-    *,
-    freeze_store: FreezeStore | None,
-) -> None:
-    """创建冻结点 — 轻量级版本追踪（失败仅记录警告，不影响主流程）。"""
-    if freeze_store is None:
-        return
-    svc = freeze_store
-    safe_side_effect(
-        lambda: svc.create_freeze(
-            freeze_id=f"{dataset}_{trade_date}",
-            description=f"Auto-freeze: {dataset} @ {trade_date}",
-            datasets=[dataset],
-        ),
-        log_tag="freeze_create_failed",
-        event="freeze_create_error",
         dataset=dataset,
         trade_date=trade_date,
     )

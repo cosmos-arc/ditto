@@ -22,7 +22,6 @@ from ditto_apps.registry.live.r3_live_snapshot_builder import (
     _BENCHMARK_INSTRUMENT_ID,
     _LINEAGE_DATASETS,
     _REQUIRED_DEPENDENCIES,
-    _certified_source_snapshots,
     _dependency_evidence,
     _ensure_live_catalog_parents,
     _evidence,
@@ -31,13 +30,14 @@ from ditto_apps.registry.live.r3_live_snapshot_builder import (
     _instrument_rules,
     _membership_with_complete_fundamentals,
     _membership_with_instrument_lifecycle,
+    _observed_source_snapshots,
     _stock_membership,
 )
 from ditto_apps.registry.live.r3_live_snapshot_frames import (
     build_etf_membership_frame,
 )
-from ditto_data.catalog.certification import CertificationReader
 from ditto_data.catalog.source_snapshot import ProviderSnapshotReader
+from ditto_data.ingestion.partition_state import PartitionLifecycleReader
 
 
 def _raw_bars(rows: tuple[tuple[date, int, float], ...]) -> pl.DataFrame:
@@ -674,57 +674,91 @@ def test_instrument_rules_are_not_backdated_before_listing() -> None:
 
 
 @pytest.mark.unit
-def test_certified_source_snapshots_exclude_superseded_history() -> None:
-    certified_ids = {
+def test_observed_source_snapshots_use_only_completed_history() -> None:
+    completed_ids = {
         "calendar": ("calendar-current",),
         "etf_basic": ("etf-basic-current",),
         "etf_daily": ("etf-daily-current",),
         "index_daily": ("index-daily-current",),
     }
 
-    class _Certifications:
-        def get_active_report(self, dataset_id: str, profile: str) -> object:
-            assert profile == "r2-modern-a-share-v1"
-            return SimpleNamespace(
-                report_id=f"report-{dataset_id}",
-                dataset_id=dataset_id,
-                generated_at=datetime(2026, 8, 1, tzinfo=UTC),
-                coverage=SimpleNamespace(
-                    complete_from=date(2015, 1, 1),
-                    target_to=date(2026, 8, 1),
-                ),
-                evidence=SimpleNamespace(snapshot_ids=certified_ids[dataset_id]),
-            )
-
     current = {
         snapshot_id: SimpleNamespace(
             snapshot_id=snapshot_id,
             dataset_id=dataset_id,
+            source="tushare",
             request_start="2015-01-01",
             request_end="2026-07-31",
+            checksum=f"checksum-{snapshot_id}",
             payload_retained=True,
             payload_uri=f"artifact://{snapshot_id}",
+            created_at=datetime(2026, 8, 1, tzinfo=UTC),
         )
-        for dataset_id, values in certified_ids.items()
+        for dataset_id, values in completed_ids.items()
         for snapshot_id in values
     }
-    current["etf-daily-old"] = SimpleNamespace(
+    incomplete = SimpleNamespace(
         snapshot_id="etf-daily-old",
         dataset_id="etf_daily",
+        source="tushare",
         request_start="2015-01-01",
         request_end="2025-12-31",
+        checksum="checksum-etf-daily-old",
         payload_retained=True,
         payload_uri="artifact://etf-daily-old",
+        created_at=datetime(2026, 8, 1, tzinfo=UTC),
     )
+    snapshots = (*current.values(), incomplete)
 
     class _Snapshots:
-        def get_snapshot(self, snapshot_id: str) -> object | None:
-            return current.get(snapshot_id)
+        def list_snapshots(self, *, dataset_id: str) -> tuple[SimpleNamespace, ...]:
+            return tuple(item for item in snapshots if item.dataset_id == dataset_id)
 
-    sources, authority, by_dataset, bindings = _certified_source_snapshots(
-        certification_reader=cast("CertificationReader", _Certifications()),
+        def get_snapshot(self, snapshot_id: str) -> SimpleNamespace | None:
+            return next(
+                (item for item in snapshots if item.snapshot_id == snapshot_id),
+                None,
+            )
+
+    class _Lifecycle:
+        """Only the addressed current snapshots have completion evidence."""
+
+        def list_complete(self, *, dataset_id: str) -> tuple[object, ...]:
+            from ditto_data.ingestion.partition_state import PartitionLifecycleStatus
+
+            return tuple(
+                SimpleNamespace(
+                    dataset_id=item.dataset_id,
+                    source=item.source,
+                    request_start=item.request_start,
+                    request_end=item.request_end,
+                    status=PartitionLifecycleStatus.COMPLETE,
+                    chunk_id=f"chunk-{item.snapshot_id}",
+                    payload_id=f"payload:{item.checksum}:synthetic:{item.snapshot_id}",
+                )
+                for item in current.values()
+                if item.dataset_id == dataset_id
+            )
+
+        def list_events(self, chunk_id: str) -> tuple[SimpleNamespace, ...]:
+            snapshot_id = chunk_id.removeprefix("chunk-")
+            item = current.get(snapshot_id)
+            if item is None:
+                return ()
+            from ditto_data.ingestion.partition_state import PartitionLifecycleStatus
+
+            return (
+                SimpleNamespace(
+                    to_status=PartitionLifecycleStatus.COMPLETE,
+                    evidence_id=item.snapshot_id,
+                ),
+            )
+
+    sources, authority, by_dataset, bindings = _observed_source_snapshots(
         snapshot_reader=cast("ProviderSnapshotReader", _Snapshots()),
+        lifecycle_reader=cast("PartitionLifecycleReader", _Lifecycle()),
         lane="etf",
+        observed_cutoff=datetime(2026, 8, 2, tzinfo=UTC),
     )
 
     assert "etf-daily-old" not in sources
@@ -736,4 +770,4 @@ def test_certified_source_snapshots_exclude_superseded_history() -> None:
         "etf_daily",
         "index_daily",
     )
-    assert all(binding.certified_through == "2026-08-01" for binding in bindings)
+    assert all(binding.certified_through == "2026-07-31" for binding in bindings)

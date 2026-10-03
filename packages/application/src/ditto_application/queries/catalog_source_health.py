@@ -6,10 +6,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Literal
 
-from ditto_data.catalog.promotion import DatasetMaturityPromotionRevocationReason
-
 from ditto_application.catalog_freshness import CatalogFreshnessStatus
-from ditto_application.source_fallback_policy_effect import SourceFallbackPolicyEffect
 
 type CatalogSourceHealthAttentionReason = Literal[
     "selected_source_missing",
@@ -18,7 +15,6 @@ type CatalogSourceHealthAttentionReason = Literal[
     "default_source_failover",
     "no_fallback_source",
     "unsupported_sources_present",
-    "latest_maturity_promotion_revoked",
 ]
 
 type CatalogSourceHealthAttentionSeverity = Literal["critical", "warning", "info"]
@@ -41,18 +37,6 @@ class CatalogSourceHealth:
 
 
 @dataclass(frozen=True)
-class CatalogSourceFallbackPolicyEffect:
-    """Application-facing active source fallback policy effect evidence."""
-
-    policy_id: str
-    policy_status: str
-    catalog_selected_source: str
-    effective_selected_source: str
-    reason_codes: tuple[str, ...]
-    recommended_actions: tuple[str, ...]
-
-
-@dataclass(frozen=True)
 class CatalogSourceHealthReport:
     """Application-facing source health report for `source=auto` decisions."""
 
@@ -67,13 +51,9 @@ class CatalogSourceHealthReport:
     source_selection_blockers: tuple[CatalogSourceSelectionBlocker, ...]
     attention_reasons: tuple[CatalogSourceHealthAttentionReason, ...]
     sources: tuple[CatalogSourceHealth, ...]
-    source_fallback_policy_effect: CatalogSourceFallbackPolicyEffect | None = None
     unsupported_sources: tuple[str, ...] = ()
     failover_from_default: bool = False
     fallback_sources: tuple[str, ...] = ()
-    latest_revocation_reason: DatasetMaturityPromotionRevocationReason | None = None
-    latest_revoked_by: str | None = None
-    latest_revoked_at: datetime | None = None
 
 
 @dataclass(frozen=True)
@@ -129,15 +109,11 @@ class CatalogSourceHealthAttentionItem:
     selected_source_health: CatalogSourceHealth
     attention_reasons: tuple[CatalogSourceHealthAttentionReason, ...]
     attention_severity: CatalogSourceHealthAttentionSeverity
-    source_fallback_policy_effect: CatalogSourceFallbackPolicyEffect | None = None
     source_selection_status: CatalogSourceSelectionStatus = "ready"
     source_selection_blockers: tuple[CatalogSourceSelectionBlocker, ...] = ()
     unsupported_sources: tuple[str, ...] = ()
     failover_from_default: bool = False
     fallback_sources: tuple[str, ...] = ()
-    latest_revocation_reason: DatasetMaturityPromotionRevocationReason | None = None
-    latest_revoked_by: str | None = None
-    latest_revoked_at: datetime | None = None
 
 
 @dataclass(frozen=True)
@@ -155,29 +131,11 @@ class CatalogSourceHealthSummaryReport:
     source_selection_status_counts: tuple[CatalogSourceSelectionStatusCount, ...] = ()
     failover_count: int = 0
     no_fallback_source_count: int = 0
-    revoked_promotion_count: int = 0
     fallback_source_counts: tuple[CatalogSourceSelectionCount, ...] = ()
     attention_reason_counts: tuple[CatalogSourceHealthAttentionReasonCount, ...] = ()
     attention_severity_counts: tuple[
         CatalogSourceHealthAttentionSeverityCount, ...
     ] = ()
-
-
-def to_source_fallback_policy_effect(
-    effect: SourceFallbackPolicyEffect | None,
-) -> CatalogSourceFallbackPolicyEffect | None:
-    """Map a resolved active policy effect to the source-health read model."""
-    if effect is None:
-        return None
-    policy = effect.policy
-    return CatalogSourceFallbackPolicyEffect(
-        policy_id=policy.policy_id,
-        policy_status=policy.status,
-        catalog_selected_source=effect.catalog_selected_source,
-        effective_selected_source=effect.effective_source,
-        reason_codes=policy.reason_codes,
-        recommended_actions=policy.recommended_actions,
-    )
 
 
 def source_health_status_counts(
@@ -245,15 +203,11 @@ def attention_required(
             attention_severity=source_health_attention_severity(
                 report.attention_reasons
             ),
-            source_fallback_policy_effect=report.source_fallback_policy_effect,
             source_selection_status=report.source_selection_status,
             source_selection_blockers=report.source_selection_blockers,
             unsupported_sources=report.unsupported_sources,
             failover_from_default=report.failover_from_default,
             fallback_sources=report.fallback_sources,
-            latest_revocation_reason=report.latest_revocation_reason,
-            latest_revoked_by=report.latest_revoked_by,
-            latest_revoked_at=report.latest_revoked_at,
         )
         for report in reports
         for selected_source_health in (report.selected_source_health,)
@@ -270,11 +224,6 @@ def failover_count(reports: tuple[CatalogSourceHealthReport, ...]) -> int:
 def no_fallback_source_count(reports: tuple[CatalogSourceHealthReport, ...]) -> int:
     """Return number of reports without non-default fallback candidates."""
     return sum(1 for report in reports if not report.fallback_sources)
-
-
-def revoked_promotion_count(reports: tuple[CatalogSourceHealthReport, ...]) -> int:
-    """Return number of reports carrying latest promotion revocation context."""
-    return sum(1 for report in reports if report.latest_revocation_reason is not None)
 
 
 def fallback_source_counts(
@@ -360,7 +309,6 @@ def source_health_attention_reasons(
     failover_from_default: bool,
     fallback_sources: tuple[str, ...],
     unsupported_sources: tuple[str, ...],
-    latest_revocation_reason: DatasetMaturityPromotionRevocationReason | None,
 ) -> tuple[CatalogSourceHealthAttentionReason, ...]:
     """Return stable source-health attention reason codes."""
     reasons: list[CatalogSourceHealthAttentionReason] = []
@@ -377,8 +325,6 @@ def source_health_attention_reasons(
         reasons.append("no_fallback_source")
     if unsupported_sources:
         reasons.append("unsupported_sources_present")
-    if latest_revocation_reason is not None:
-        reasons.append("latest_maturity_promotion_revoked")
     return tuple(reasons)
 
 
@@ -391,7 +337,6 @@ def source_health_attention_severity(
             "selected_source_missing",
             "selected_source_stale",
             "selected_source_not_applicable",
-            "latest_maturity_promotion_revoked",
         }
     )
     warning_reasons: frozenset[CatalogSourceHealthAttentionReason] = frozenset(

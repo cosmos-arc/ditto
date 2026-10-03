@@ -83,8 +83,8 @@ from ditto_application.strategy_spec_deserialization import (
     canonical_spec_hash_for_record,
 )
 from ditto_backtest.context_inputs import ReplayContextInputRef
-from ditto_data.catalog.certification import CertificationReader
 from ditto_data.catalog.source_snapshot import ProviderSnapshotReader
+from ditto_data.ingestion.partition_state import PartitionLifecycleReader
 from ditto_strategy.alpha.seeds import SEED_STRATEGY_SPECS
 from ditto_strategy.models import StrategySpecRecord
 from ditto_strategy.storage.sqlite.services.strategy_catalog_service import (
@@ -130,8 +130,8 @@ class LivePlanningServices:
 
     artifact_service: ResearchArtifactService
     research_catalog: ResearchCatalogService
-    certification_reader: CertificationReader
     snapshot_reader: ProviderSnapshotReader
+    lifecycle_reader: PartitionLifecycleReader
     strategy_catalog: StrategyCatalogService
     update_handler: UpdateStrategyHandler
     executor_probe: BuilderBackedResearchExecutorProbe
@@ -310,7 +310,7 @@ def _requirements(
     missing = tuple(sorted(set(required_datasets) - set(bindings)))
     if missing:
         raise ValueError(
-            f"live snapshot lacks required certification bindings: {missing}"
+            f"live snapshot lacks required observed dataset bindings: {missing}"
         )
     snapshot_start = date.fromisoformat(snapshot.snapshot_start)
     return tuple(
@@ -670,7 +670,7 @@ def main(argv: list[str] | None = None) -> int:
             services=LivePlanningServices(
                 artifact_service=container.get(ResearchArtifactService),
                 research_catalog=container.get(ResearchCatalogService),
-                certification_reader=container.get(CertificationReader),
+                lifecycle_reader=container.get(PartitionLifecycleReader),
                 snapshot_reader=container.get(ProviderSnapshotReader),
                 strategy_catalog=container.get(StrategyCatalogService),
                 update_handler=container.get(UpdateStrategyHandler),

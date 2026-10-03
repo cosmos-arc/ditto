@@ -21,6 +21,7 @@ from ditto_apps.models.technical_analysis import (
 )
 from ditto_data.catalog.contracts import DataAssetRef
 from ditto_data.catalog.source_snapshot import ProviderSnapshot, ProviderSnapshotReader
+from ditto_data.ingestion.partition_state import PartitionLifecycleReader
 from ditto_features.technical_analysis.contracts import TechnicalBar
 from ditto_features.technical_analysis.service import TechnicalAnalysisService
 from ditto_kernel.identity import InstrumentId
@@ -130,11 +131,22 @@ def test_route_returns_exact_snapshot_with_indicator_and_level_evidence() -> Non
         query_technical_analysis.__dict__["__dishka_orig_func__"],
     )
 
+    snapshots = MagicMock(spec=ProviderSnapshotReader)
+    snapshots.list_snapshots.return_value = ()
+    lifecycle = MagicMock(spec=PartitionLifecycleReader)
+
     with patch(
         "ditto_apps.api.routes.technical_analysis.asyncio.to_thread",
         side_effect=_inline,
     ):
-        response = asyncio.run(handler(body=_body(), facade=facade))
+        response = asyncio.run(
+            handler(
+                body=_body(),
+                facade=facade,
+                snapshots=snapshots,
+                lifecycle=lifecycle,
+            )
+        )
 
     assert response.data.instrument_id == InstrumentId(600519)
     assert response.data.selection_run_id == "selection-run:sha256:a"

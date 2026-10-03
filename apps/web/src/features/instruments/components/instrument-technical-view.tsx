@@ -67,7 +67,7 @@ export function InstrumentTechnicalView({
 	readonly onSnapshotIdentity?: (snapshotId: string | null) => void;
 	readonly selectionRunId: string | undefined;
 }) {
-	const { analysis, candidate, exclusion, identity, selection, sourceEvidence } = useInstrumentTechnicalAnalysis(
+	const { analysis, candidate, exclusion, identity, selection } = useInstrumentTechnicalAnalysis(
 		id,
 		selectionRunId,
 		dependencies,
@@ -91,16 +91,12 @@ export function InstrumentTechnicalView({
 		);
 	}
 
-	if (selection.isLoading || identity.isLoading || sourceEvidence.isLoading || analysis.isLoading) {
+	if (selection.isLoading || identity.isLoading || analysis.isLoading) {
 		return <LoadingSkeleton variant="panel" rows={8} />;
 	}
-	if (selection.isError || identity.isError || sourceEvidence.isError || analysis.isError) {
+	if (selection.isError || identity.isError || analysis.isError) {
 		return (
-			<ErrorState
-				onRetry={() =>
-					void Promise.all([selection.refetch(), identity.refetch(), sourceEvidence.refetch(), analysis.refetch()])
-				}
-			/>
+			<ErrorState onRetry={() => void Promise.all([selection.refetch(), identity.refetch(), analysis.refetch()])} />
 		);
 	}
 	if (!selection.data || (!candidate && !exclusion)) {
@@ -139,7 +135,7 @@ export function InstrumentTechnicalView({
 								</p>
 							</div>
 							<p className="max-w-md text-right text-[11px] leading-5 text-(--color-foreground-tertiary)">
-								仅基于 cutoff 前可见的已认证日线；所有指标、价位与冲突均来自同一内容寻址快照。
+								仅基于 cutoff 前可见的日线；所有指标、价位与冲突均来自同一内容寻址快照。
 							</p>
 						</header>
 						<div className="grid gap-3 px-4 py-3 sm:grid-cols-2 xl:grid-cols-4">

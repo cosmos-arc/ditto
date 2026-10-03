@@ -3,11 +3,10 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Mapping
-from dataclasses import dataclass, replace
+from dataclasses import replace
 from typing import Protocol
 
 from ditto_data.catalog import DataCatalogReader
-from ditto_data.catalog.fallback_policy import CatalogSourceFallbackPolicyReader
 from ditto_data.models import Dataset
 from ditto_data.models.ingestion import IngestionResult
 from ditto_kernel.instrument import InstrumentIngestParams
@@ -18,12 +17,6 @@ from ditto_application.processes.ingestion.source_capability import (
     UnsupportedIngestionSourceError,
     ensure_source_supported,
 )
-from ditto_application.source_fallback_policy_effect import (
-    SourceFallbackPolicyEffect,
-    ensure_source_fallback_policy_effect_executable,
-    resolve_active_source_fallback_policy_effect,
-    source_fallback_policy_details,
-)
 
 __all__ = [
     "AUTO_SOURCE_NAME",
@@ -33,12 +26,6 @@ __all__ = [
 
 AUTO_SOURCE_NAME = "auto"
 type DateRangeLister = Callable[[str, str, str], list[str]]
-
-
-@dataclass(frozen=True, slots=True)
-class _SourceSelectionDecision:
-    source: str
-    source_fallback_policy_effect: SourceFallbackPolicyEffect | None = None
 
 
 class IngestionCoordinatorLike(Protocol):
@@ -114,7 +101,6 @@ class AutoSourceIngestionCoordinator:
         coordinators: Mapping[str, IngestionCoordinatorLike],
         *,
         catalog_reader: DataCatalogReader | None,
-        source_fallback_policy_reader: CatalogSourceFallbackPolicyReader | None = None,
         date_range_lister: DateRangeLister | None = None,
         default_source: str = "tushare",
     ) -> None:
@@ -129,7 +115,6 @@ class AutoSourceIngestionCoordinator:
             for source_name, coordinator in coordinators.items()
         }
         self._catalog_reader = catalog_reader
-        self._source_fallback_policy_reader = source_fallback_policy_reader
         self._date_range_lister = date_range_lister
         normalized_default_source = default_source.lower()
         self._default_source = (
@@ -145,18 +130,14 @@ class AutoSourceIngestionCoordinator:
         force: bool = False,
     ) -> IngestionResult:
         """Select source by dataset/date freshness, then delegate ingestion."""
-        decision = self._source_decision_for_selection_date(
-            dataset,
-            trade_date,
-        )
+        source = self._source_for_selection_date(dataset, trade_date)
         _ensure_selected_source_supported(
             dataset,
-            decision.source,
+            source,
             operation="ingest_date",
             selection_date=trade_date,
-            source_fallback_policy_effect=decision.source_fallback_policy_effect,
         )
-        coordinator = self._coordinator_for_source(decision.source, decision)
+        coordinator = self._coordinator_for_source(source)
         return coordinator.ingest_date(dataset, trade_date, force)
 
     def ingest_range(
@@ -168,17 +149,15 @@ class AutoSourceIngestionCoordinator:
     ) -> list[IngestionResult]:
         """Select and delegate source per date when a date lister is available."""
         if self._date_range_lister is None:
-            decision = _SourceSelectionDecision(source=self._default_source)
             _ensure_selected_source_supported(
                 dataset,
-                decision.source,
+                self._default_source,
                 operation="ingest_range",
                 selection_date=None,
                 start_date=start_date,
                 end_date=end_date,
-                source_fallback_policy_effect=decision.source_fallback_policy_effect,
             )
-            coordinator = self._coordinator_for_source(decision.source, decision)
+            coordinator = self._coordinator_for_source(self._default_source)
             return coordinator.ingest_range(
                 dataset,
                 start_date,
@@ -201,17 +180,16 @@ class AutoSourceIngestionCoordinator:
         force: bool = False,
     ) -> IngestionResult:
         """Delegate an atomic chunk only when one concrete source owns it."""
-        decision = self._source_decision_for_selection_date(dataset, request_end)
+        source = self._source_for_selection_date(dataset, request_end)
         _ensure_selected_source_supported(
             dataset,
-            decision.source,
+            source,
             operation="ingest_chunk",
             selection_date=request_end,
             start_date=request_start,
             end_date=request_end,
-            source_fallback_policy_effect=decision.source_fallback_policy_effect,
         )
-        coordinator = self._coordinator_for_source(decision.source, decision)
+        coordinator = self._coordinator_for_source(source)
         return coordinator.ingest_chunk(
             dataset,
             chunk_id=chunk_id,
@@ -259,17 +237,16 @@ class AutoSourceIngestionCoordinator:
     ) -> IngestionResult:
         """Choose one concrete source for a planner-owned instrument chunk."""
         selection_date = self._selection_date_for_instrument_request(params)
-        decision = self._source_decision_for_selection_date(dataset, selection_date)
+        source = self._source_for_selection_date(dataset, selection_date)
         _ensure_selected_source_supported(
             dataset,
-            decision.source,
+            source,
             operation="ingest_planned_instrument_chunk",
             selection_date=selection_date,
             start_date=params.start_date,
             end_date=params.end_date,
-            source_fallback_policy_effect=decision.source_fallback_policy_effect,
         )
-        coordinator = self._coordinator_for_source(decision.source, decision)
+        coordinator = self._coordinator_for_source(source)
         return coordinator.ingest_planned_instrument_chunk(
             dataset,
             chunk_id=chunk_id,
@@ -285,15 +262,14 @@ class AutoSourceIngestionCoordinator:
         *,
         selection_date: str | None,
     ) -> IngestionResult:
-        decision = self._source_decision_for_selection_date(dataset, selection_date)
+        source = self._source_for_selection_date(dataset, selection_date)
         _ensure_selected_source_supported(
             dataset,
-            decision.source,
+            source,
             operation="ingest_by_instrument",
             selection_date=selection_date,
-            source_fallback_policy_effect=decision.source_fallback_policy_effect,
         )
-        coordinator = self._coordinator_for_source(decision.source, decision)
+        coordinator = self._coordinator_for_source(source)
         return coordinator.ingest_by_instrument(
             dataset,
             params,
@@ -328,51 +304,31 @@ class AutoSourceIngestionCoordinator:
             end,
         )
 
-    def _source_decision_for_selection_date(
+    def _source_for_selection_date(
         self,
         dataset: str,
         trade_date: str | None,
-    ) -> _SourceSelectionDecision:
+    ) -> str:
         if trade_date is None:
-            return _SourceSelectionDecision(source=self._default_source)
-        catalog_source = select_ingestion_source(
+            return self._default_source
+        return select_ingestion_source(
             dataset=dataset,
             trade_date=trade_date,
             available_sources=tuple(self._coordinators),
             catalog_reader=self._catalog_reader,
         )
-        policy_effect = resolve_active_source_fallback_policy_effect(
-            self._source_fallback_policy_reader,
-            dataset=dataset,
-            trade_date=trade_date,
-            catalog_selected_source=catalog_source,
-        )
-        if policy_effect is None:
-            return _SourceSelectionDecision(source=catalog_source)
-        return _SourceSelectionDecision(
-            source=ensure_source_fallback_policy_effect_executable(policy_effect),
-            source_fallback_policy_effect=policy_effect,
-        )
 
-    def _coordinator_for_source(
-        self,
-        source: str,
-        decision: _SourceSelectionDecision,
-    ) -> IngestionCoordinatorLike:
+    def _coordinator_for_source(self, source: str) -> IngestionCoordinatorLike:
         coordinator = self._coordinators.get(source)
         if coordinator is not None:
             return coordinator
-        details: dict[str, object] = {
-            "field": "source_name",
-            "value": source,
-            "supported": sorted(self._coordinators),
-        }
-        details.update(
-            source_fallback_policy_details(decision.source_fallback_policy_effect)
-        )
         raise AppProcessError(
             f"Selected source is not configured: {source}",
-            details=details,
+            details={
+                "field": "source_name",
+                "value": source,
+                "supported": sorted(self._coordinators),
+            },
         )
 
     @staticmethod
@@ -394,7 +350,6 @@ def _ensure_selected_source_supported(
     selection_date: str | None,
     start_date: str | None = None,
     end_date: str | None = None,
-    source_fallback_policy_effect: SourceFallbackPolicyEffect | None = None,
 ) -> None:
     try:
         dataset_enum = Dataset(dataset)
@@ -411,7 +366,6 @@ def _ensure_selected_source_supported(
             details["start_date"] = start_date
         if end_date is not None:
             details["end_date"] = end_date
-        details.update(source_fallback_policy_details(source_fallback_policy_effect))
         raise UnsupportedIngestionSourceError(str(exc), details=details) from exc
 
 

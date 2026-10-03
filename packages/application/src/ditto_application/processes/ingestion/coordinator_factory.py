@@ -6,9 +6,7 @@ from dataclasses import dataclass
 from typing import Protocol, cast
 
 from ditto_data.catalog import DataCatalogReader, DataCatalogWriter
-from ditto_data.catalog.fallback_policy import CatalogSourceFallbackPolicyReader
 from ditto_data.catalog.provider_payload import ProviderPayloadWriter
-from ditto_data.ingestion.freeze_store import FreezeStore
 from ditto_data.ingestion.ingestion_cursor_store import (
     IngestionCursorStore,
 )
@@ -82,11 +80,9 @@ class CoordinatorRuntimeContext:
 
     ingestion_cursor_store: IngestionCursorStore | None = None
     quality_checker: QualityCheckerProtocol | None = None
-    freeze_store: FreezeStore | None = None
     lineage_recorder: DataLineageRecorder | None = None
     catalog_reader: DataCatalogReader | None = None
     catalog_writer: DataCatalogWriter | None = None
-    source_fallback_policy_reader: CatalogSourceFallbackPolicyReader | None = None
     evidence_committer: IngestionEvidenceCommitter | None = None
     provider_payload_writer: ProviderPayloadWriter | None = None
     license_record_id: str | None = None
@@ -253,7 +249,6 @@ def _build_coordinator(
             ingestion_log_store=services.ingestion_log_store,
             ingestion_cursor_store=runtime.ingestion_cursor_store,
             quality_checker=runtime.quality_checker,
-            freeze_store=runtime.freeze_store,
             lineage_recorder=runtime.lineage_recorder,
             catalog_reader=runtime.catalog_reader,
             catalog_writer=runtime.catalog_writer,
@@ -313,7 +308,6 @@ def create_coordinator(
             yield AutoSourceIngestionCoordinator(
                 coordinators,
                 catalog_reader=runtime_ctx.catalog_reader,
-                source_fallback_policy_reader=runtime_ctx.source_fallback_policy_reader,
                 date_range_lister=date_range_lister,
                 default_source=Source.TUSHARE.value,
             )

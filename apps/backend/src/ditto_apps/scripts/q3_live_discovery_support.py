@@ -1,11 +1,13 @@
-"""Q3 live-discovery normalization and certification composition helpers."""
+"""Q3 live-discovery normalization and consumer-evidence helpers."""
 
 from __future__ import annotations
 
 import hashlib
 import math
+import sqlite3
+from collections.abc import Callable
 from dataclasses import dataclass
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import cast
 
@@ -18,14 +20,6 @@ from ditto_agent.contracts.temporal import (
     TemporalToolContext,
 )
 from ditto_application.catalog_freshness import aggregate_source_snapshot_ids
-from ditto_application.commands.data_product_certification import (
-    DataProductCertificationCommands,
-)
-from ditto_application.commands.data_product_certification_builder import (
-    AddressedCertificationEvidence,
-    CertificationBuildRequest,
-    DataProductCertificationBuilder,
-)
 from ditto_application.processes.selection.facade import (
     IndustryRotationObservationDraft,
     LimitStateDraft,
@@ -35,18 +29,13 @@ from ditto_application.processes.selection.facade import (
 from ditto_application.processes.selection.facade import (
     derive_limit_state as shared_derive_limit_state,
 )
-from ditto_data.catalog.certification import (
-    CertificationGovernanceStore,
-    DatasetCertificationReport,
-)
+from ditto_data.catalog.metadata import DatasetSchedule
 from ditto_data.catalog.provider_payload import (
     ProviderPayloadArtifact,
     ProviderPayloadReader,
 )
 from ditto_data.catalog.source_snapshot import ProviderSnapshot, ProviderSnapshotReader
 from ditto_kernel.identity import InstrumentId
-
-from ditto_apps.scripts.r2_live_certification import probe_consumer_payload
 
 __all__ = [
     "_ETF_CODE",
@@ -56,7 +45,8 @@ __all__ = [
     "_TARGET_DATE",
     "_TECHNICAL_FROM",
     "_TECHNICAL_PROFILE",
-    "_TechnicalCertificationContext",
+    "ConsumerProbe",
+    "_TechnicalEvidenceContext",
     "_context",
     "_envelope_summary",
     "_payload",
@@ -65,10 +55,12 @@ __all__ = [
     "_selection_instruments",
     "_sha256_file",
     "_snapshot",
-    "_technical_certification",
+    "_technical_consumer_evidence",
     "_universe_snapshot_id",
+    "build_expected_dates",
     "derive_limit_state",
     "normalized_rank_values",
+    "probe_consumer_payload",
 ]
 
 _TARGET_DATE = date(2024, 3, 29)
@@ -83,15 +75,141 @@ _MIN_LISTING_DAYS = 120
 
 
 @dataclass(frozen=True, slots=True)
-class _TechnicalCertificationContext:
+class _SQLiteConsumerContract:
+    table: str
+    object_label: str
+    where_clause: str = ""
+    parameters: tuple[str, ...] = ()
+
+
+_SQLITE_CONSUMERS = {
+    "calendar": _SQLiteConsumerContract("trading_calendar", "trading_calendar"),
+    "stock_basic": _SQLiteConsumerContract(
+        "instrument",
+        "instrument[asset_class=stock]",
+        " WHERE asset_class = ?",
+        ("stock",),
+    ),
+    "etf_basic": _SQLiteConsumerContract(
+        "instrument",
+        "instrument[asset_class=etf]",
+        " WHERE asset_class = ?",
+        ("etf",),
+    ),
+    "index_basic": _SQLiteConsumerContract(
+        "instrument",
+        "instrument[asset_class=index]",
+        " WHERE asset_class = ?",
+        ("index",),
+    ),
+    "index_weight": _SQLiteConsumerContract("index_weight", "index_weight"),
+    "corporate_actions": _SQLiteConsumerContract(
+        "corporate_actions", "corporate_actions"
+    ),
+    "balance_sheet": _SQLiteConsumerContract("balance_sheet", "balance_sheet"),
+    "income_statement": _SQLiteConsumerContract("income_statement", "income_statement"),
+    "cash_flow": _SQLiteConsumerContract("cash_flow", "cash_flow"),
+    "dividend": _SQLiteConsumerContract("dividend", "dividend"),
+    "valuation_metrics": _SQLiteConsumerContract(
+        "valuation_metrics", "valuation_metrics"
+    ),
+    "macro_indicators": _SQLiteConsumerContract(
+        "macro_indicator_data", "macro_indicator_data"
+    ),
+}
+_PARQUET_CONSUMERS = {
+    "stock_daily": "market/stock/bars",
+    "etf_daily": "market/etf/bars",
+    "index_daily": "market/index/bars",
+    "global_index_daily": "market/index/global_bars",
+    "stock_status": "market/stock/status",
+    "adj_factor": "market/stock/adj",
+    "fund_adj": "market/etf/adj",
+    "commodity_daily": "market/commodity/bars",
+}
+
+type ConsumerProbe = dict[str, int | str]
+
+
+@dataclass(frozen=True, slots=True)
+class _TechnicalEvidenceContext:
     evidence_root: Path
     recovery_evidence: Path
     generated_at: datetime
-    actor: str
     data_root: Path
-    builder: DataProductCertificationBuilder
-    commands: DataProductCertificationCommands
-    store: CertificationGovernanceStore
+
+
+def build_expected_dates(
+    *,
+    schedule: DatasetSchedule,
+    target_from: date,
+    target_to: date,
+    trading_days_provider: Callable[[str, str], list[str]],
+) -> tuple[date, ...]:
+    """Build the explicit partition schedule expected over one target interval."""
+    if target_to < target_from:
+        raise ValueError("expected-date target interval is reversed")
+    if schedule == "trading_days":
+        values = tuple(
+            date.fromisoformat(value)
+            for value in trading_days_provider(
+                target_from.isoformat(), target_to.isoformat()
+            )
+        )
+    else:
+        days = (target_to - target_from).days
+        values = tuple(
+            target_from + timedelta(days=offset) for offset in range(days + 1)
+        )
+    expected = tuple(
+        sorted({value for value in values if target_from <= value <= target_to})
+    )
+    if not expected:
+        raise ValueError("expected partition schedule is empty")
+    return expected
+
+
+def probe_consumer_payload(data_root: Path, dataset_id: str) -> ConsumerProbe:
+    """Read one canonical storage object through its production physical contract."""
+    root = data_root.expanduser().resolve(strict=False)
+    sqlite_contract = _SQLITE_CONSUMERS.get(dataset_id)
+    if sqlite_contract is not None:
+        sqlite_path = root / "metadata" / "metadata.sqlite"
+        if not sqlite_path.is_file():
+            raise ValueError(f"consumer SQLite database is missing: {sqlite_path}")
+        with sqlite3.connect(sqlite_path) as connection:
+            row_count = int(
+                connection.execute(
+                    f'SELECT COUNT(*) FROM "{sqlite_contract.table}"'  # noqa: S608
+                    + sqlite_contract.where_clause,
+                    sqlite_contract.parameters,
+                ).fetchone()[0]
+            )
+        probe: ConsumerProbe = {
+            "kind": "sqlite",
+            "object": sqlite_contract.object_label,
+            "row_count": row_count,
+        }
+    else:
+        relative = _PARQUET_CONSUMERS.get(dataset_id)
+        if relative is None:
+            raise ValueError(f"no production consumer probe is declared: {dataset_id}")
+        payload_root = root / relative
+        files = tuple(sorted(payload_root.glob("*.parquet")))
+        if not files:
+            raise ValueError(f"consumer Parquet payload is missing: {dataset_id}")
+        row_count = int(
+            pl.scan_parquet(list(files)).select(pl.len().alias("rows")).collect().item()
+        )
+        probe = {
+            "file_count": len(files),
+            "kind": "parquet",
+            "object": relative,
+            "row_count": row_count,
+        }
+    if cast(int, probe["row_count"]) <= 0:
+        raise ValueError(f"consumer payload is empty: {dataset_id}")
+    return probe
 
 
 def normalized_rank_values(
@@ -393,18 +511,19 @@ def _universe_snapshot_id(
     return f"universe:sha256:{digest}"
 
 
-def _technical_certification(
+def _technical_consumer_evidence(
     *,
     dataset_id: str,
     instrument_code: str,
     snapshot: ProviderSnapshot,
     payload: pl.DataFrame,
-    context: _TechnicalCertificationContext,
-) -> DatasetCertificationReport:
+    context: _TechnicalEvidenceContext,
+) -> tuple[dict[str, object], str]:
+    """Write the exact technical-range consumer read smoke evidence."""
     if dataset_id not in {"stock_daily", "etf_daily"}:
-        raise ValueError("Q3 technical certification requires a daily market product")
+        raise ValueError("Q3 technical evidence requires a daily market product")
     if snapshot.dataset_id != dataset_id:
-        raise ValueError("Q3 technical certification snapshot dataset drift")
+        raise ValueError("Q3 technical evidence snapshot dataset drift")
     consumer_payload = {
         "schema": "ditto.q3-technical-consumer.v1",
         "dataset_id": dataset_id,
@@ -415,58 +534,12 @@ def _technical_certification(
         "last_trade_date": max(payload["trade_date"]).isoformat(),
         "processed_probe": probe_consumer_payload(context.data_root, dataset_id),
     }
-    consumer_path, consumer_hash = _write_addressed(
+    _consumer_path, consumer_hash = _write_addressed(
         context.evidence_root / "consumer" / dataset_id,
         "technical-range-read-smoke",
         consumer_payload,
     )
-    recovery_path = context.recovery_evidence.expanduser().resolve(strict=True)
-    recovery_hash = _sha256_file(recovery_path)
-    active = context.store.get_active_report(dataset_id, _TECHNICAL_PROFILE)
-    if active is not None:
-        if active.evidence.snapshot_ids != (snapshot.snapshot_id,):
-            raise ValueError(
-                f"Q3 {dataset_id} technical certification conflicts with active facts"
-            )
-        return active
-    expected_dates = tuple(
-        sorted(set(cast("list[date]", payload["trade_date"].to_list())))
-    )
-    report = context.builder.build(
-        CertificationBuildRequest(
-            dataset_id=dataset_id,
-            profile=_TECHNICAL_PROFILE,
-            target_from=_TECHNICAL_FROM,
-            target_to=_TARGET_DATE,
-            expected_dates=expected_dates,
-            snapshot_ids=(snapshot.snapshot_id,),
-            generated_at=context.generated_at,
-            recovery_evidence=AddressedCertificationEvidence(
-                name="q1_isolated_backup_restore_hash_parity",
-                evidence_uri=f"artifact+sha256://q1/recovery/{recovery_hash}",
-                local_path=recovery_path,
-                sha256_hex=recovery_hash,
-            ),
-            consumer_evidence=AddressedCertificationEvidence(
-                name="q3_exact_technical_range_read_smoke",
-                evidence_uri=f"artifact+sha256://q3/consumer/{consumer_hash}",
-                local_path=consumer_path,
-                sha256_hex=consumer_hash,
-            ),
-        )
-    )
-    frozen = context.commands.freeze(report)
-    context.commands.review(
-        frozen.report_id,
-        reviewer=context.actor,
-        reviewed_at=context.generated_at,
-    )
-    active = context.store.get_active_report(dataset_id, _TECHNICAL_PROFILE)
-    if active is None or active.report_id != frozen.report_id:
-        raise ValueError(
-            f"Q3 {dataset_id} technical certification did not become active"
-        )
-    return frozen
+    return consumer_payload, consumer_hash
 
 
 def _context(

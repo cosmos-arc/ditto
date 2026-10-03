@@ -1,7 +1,50 @@
 from __future__ import annotations
 
 import ast
+import importlib.util
 from pathlib import Path
+
+REMOVED_GOVERNANCE_MODULES = (
+    "ditto_data.catalog.certification",
+    "ditto_data.catalog.certification_store",
+    "ditto_data.catalog.promotion",
+    "ditto_data.catalog.promotion_store",
+    "ditto_data.catalog.license",
+    "ditto_data.catalog.license_store",
+    "ditto_data.catalog.specimen",
+    "ditto_data.catalog.specimen_store",
+    "ditto_data.catalog.remediation",
+    "ditto_data.catalog.remediation_store",
+    "ditto_data.catalog.fallback_policy",
+    "ditto_data.catalog.fallback_policy_store",
+    "ditto_data.catalog.field_admission",
+    "ditto_data.catalog.field_evidence",
+    "ditto_data.ingestion.freeze_store",
+    "ditto_data.runtime.freeze_manager",
+    "ditto_application.commands.data_product_certification",
+    "ditto_application.commands.data_product_certification_builder",
+    "ditto_application.commands.data_product_license",
+    "ditto_application.commands.data_product_specimen",
+    "ditto_application.commands.catalog",
+    "ditto_application.commands.catalog_remediation",
+    "ditto_application.commands.source_fallback_policy",
+    "ditto_application.queries.data_products",
+    "ditto_application.queries.data_readiness",
+    "ditto_application.queries.data_specimen",
+    "ditto_application.queries.promotion_evidence",
+    "ditto_application.queries.remediation",
+    "ditto_application.queries.remediation_approval",
+    "ditto_application.queries.remediation_models",
+    "ditto_application.queries._remediation_evidence",
+    "ditto_application.queries.source_fallback_policy",
+    "ditto_application.queries.source_fallback_policy_state",
+    "ditto_application.queries._maturity_types",
+    "ditto_application.queries._maturity_governance",
+    "ditto_application.remediation_approval",
+    "ditto_application.source_fallback_policy_state",
+    "ditto_application.source_fallback_policy_effect",
+    "ditto_application.processes.materialization.r2_seed_smoke",
+)
 
 CONTRACT_MODULES = (
     "packages/data/src/ditto_data/catalog/contracts.py",
@@ -216,6 +259,17 @@ def test_relative_import_from_package_records_imported_alias_module(
     )
 
     assert "ditto_data.storage" in _imported_modules(contract_path)
+
+
+def test_removed_governance_modules_stay_deleted() -> None:
+    """Issue #392: deleted governance workflows must not silently reappear."""
+    present = [
+        module
+        for module in REMOVED_GOVERNANCE_MODULES
+        if importlib.util.find_spec(module) is not None
+    ]
+
+    assert present == []
 
 
 def test_data_governance_contracts_do_not_import_forbidden_layers() -> None:

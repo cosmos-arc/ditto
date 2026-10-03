@@ -3,7 +3,6 @@
 import dataclasses
 
 import pytest
-from ditto_data.models.storage import FreezeManifest
 from ditto_platform.foundation import (
     WriteResult,
     WriteStoreResult,
@@ -120,77 +119,3 @@ class TestWriteStoreResult:
         )
         with pytest.raises(dataclasses.FrozenInstanceError):
             result.added = 200
-
-
-@pytest.mark.unit
-class TestFreezeManifest:
-    """Tests for FreezeManifest model."""
-
-    def test_create_freeze_manifest(self) -> None:
-        """Test creating FreezeManifest."""
-        manifest = FreezeManifest(
-            freeze_id="freeze_20240102_120000",
-            description="Daily data freeze",
-            created_at="2024-01-02T12:00:00Z",
-        )
-
-        assert manifest.freeze_id == "freeze_20240102_120000"
-        assert manifest.description == "Daily data freeze"
-        assert manifest.created_at == "2024-01-02T12:00:00Z"
-        assert manifest.version == "2.0"
-        assert manifest.checksum_type == "sha256"
-        assert manifest.files == {}
-
-    def test_freeze_manifest_with_custom_version(self) -> None:
-        """Test creating FreezeManifest with custom version."""
-        manifest = FreezeManifest(
-            freeze_id="freeze_20240102_120000",
-            description="Test freeze",
-            created_at="2024-01-02T12:00:00Z",
-            version="1.0",
-            checksum_type="md5",
-        )
-
-        assert manifest.version == "1.0"
-        assert manifest.checksum_type == "md5"
-
-    def test_freeze_manifest_with_files(self) -> None:
-        """Test creating FreezeManifest with files."""
-        manifest = FreezeManifest(
-            freeze_id="freeze_20240102_120000",
-            description="Daily data freeze",
-            created_at="2024-01-02T12:00:00Z",
-            files={
-                "stock_daily/2024-01-02.parquet": "abc123",
-                "stock_daily/2024-01-03.parquet": "def456",
-            },
-        )
-
-        assert manifest.file_count == 2
-        assert manifest.files["stock_daily/2024-01-02.parquet"] == "abc123"
-        assert manifest.files["stock_daily/2024-01-03.parquet"] == "def456"
-
-    def test_freeze_manifest_file_count_property(self) -> None:
-        """Test FreezeManifest file_count property."""
-        manifest = FreezeManifest(
-            freeze_id="freeze_20240102_120000",
-            description="Test freeze",
-            created_at="2024-01-02T12:00:00Z",
-            files={
-                "file1.parquet": "abc123",
-                "file2.parquet": "def456",
-                "file3.parquet": "ghi789",
-            },
-        )
-
-        assert manifest.file_count == 3
-
-    def test_freeze_manifest_is_frozen(self) -> None:
-        """Test that FreezeManifest is frozen (immutable)."""
-        manifest = FreezeManifest(
-            freeze_id="freeze_20240102_120000",
-            description="Test freeze",
-            created_at="2024-01-02T12:00:00:00Z",
-        )
-        with pytest.raises(dataclasses.FrozenInstanceError):
-            manifest.description = "Modified description"

@@ -6,22 +6,17 @@ from contextlib import contextmanager
 from typing import cast
 from unittest.mock import MagicMock
 
-from ditto_application.commands.data_product_certification import (
-    DataProductCertificationCommands,
-)
 from ditto_application.processes.ingestion.bootstrap_planner import BootstrapPlanner
 from ditto_application.processes.ingestion.coordinator_factory import (
     CoordinatorRuntimeContext,
     CoordinatorServices,
 )
-from ditto_application.queries.data_products import DataProductsQueryFacade
 from ditto_apps.registry.contexts import ingestion as ingestion_context
 from ditto_data.catalog import (
     DataCatalogReader,
     DataCatalogWriter,
     InMemoryDataCatalog,
 )
-from ditto_data.catalog.fallback_policy import CatalogSourceFallbackPolicyReader
 from ditto_data.catalog.provider_payload import ProviderPayloadWriter
 from ditto_data.lineage import DataLineageRecorder, InMemoryDataLineage
 from ditto_data.sources.registry import SourceRegistry
@@ -43,7 +38,6 @@ def test_create_ingestion_bundle_passes_lineage_recorder(mocker) -> None:
     """Composition root should wire persistent lineage into ingestion coordinator."""
     lineage = InMemoryDataLineage()
     catalog = InMemoryDataCatalog()
-    source_fallback_policy_reader = MagicMock()
     source_registry = SourceRegistry()
     services = {
         ingestion_context.MetadataService: MagicMock(),
@@ -57,16 +51,12 @@ def test_create_ingestion_bundle_passes_lineage_recorder(mocker) -> None:
         ingestion_context.IngestionCursorStore: MagicMock(),
         ingestion_context.ExchangeTransformers: MagicMock(),
         ingestion_context.CheckDataQualityHandler: MagicMock(),
-        ingestion_context.FreezeStore: MagicMock(),
         SourceRegistry: source_registry,
         DataLineageRecorder: lineage,
         DataCatalogReader: catalog,
         DataCatalogWriter: catalog,
-        CatalogSourceFallbackPolicyReader: source_fallback_policy_reader,
         ProviderPayloadWriter: MagicMock(),
         BootstrapPlanner: MagicMock(),
-        DataProductsQueryFacade: MagicMock(),
-        DataProductCertificationCommands: MagicMock(),
     }
     container = _FakeContainer(services)
     coordinator = MagicMock()
@@ -118,7 +108,6 @@ def test_create_ingestion_bundle_passes_lineage_recorder(mocker) -> None:
     assert runtime.lineage_recorder is lineage
     assert runtime.catalog_reader is catalog
     assert runtime.catalog_writer is catalog
-    assert runtime.source_fallback_policy_reader is source_fallback_policy_reader
     assert retry_manager_cls.call_args.kwargs["data_catalog_reader"] is catalog
     assert reattestation_cls.call_args.kwargs["ingestion"] is coordinator
     assert reattestation_cls.call_args.kwargs["catalog"] is catalog

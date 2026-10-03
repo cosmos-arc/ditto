@@ -1,14 +1,12 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from typing import cast
 
 import pytest
 from ditto_application.catalog_freshness import aggregate_source_snapshot_ids
 from ditto_application.exceptions import AppQueryError
 from ditto_application.queries.evidence_contracts import EvidenceTemporalContext
 from ditto_application.queries.market_context import (
-    MarketContextFacade,
     MarketContextMetric,
     MarketContextRequest,
     MarketContextView,
@@ -16,50 +14,130 @@ from ditto_application.queries.market_context import (
 from ditto_application.queries.market_context_evidence import (
     MarketContextEvidenceQueryFacade,
 )
-from ditto_data.catalog.certification import (
-    CertificationReader,
-    CertificationReviewEvent,
+from ditto_data.catalog.contracts import DataAssetRef
+from ditto_data.catalog.source_snapshot import (
+    ProviderSnapshot,
+    ProviderSnapshotDraft,
+)
+from ditto_data.ingestion.partition_state import (
+    PartitionCheckpoint,
+    PartitionLifecycleEvent,
+    PartitionLifecycleStatus,
 )
 
 
-class _Report:
-    def __init__(
-        self,
-        *,
-        dataset_id: str,
-        report_id: str,
-        snapshot_ids: tuple[str, ...],
-        generated_at: datetime,
-        content_hash: str,
-    ) -> None:
-        self.dataset_id = dataset_id
-        self.profile = "research_daily"
-        self.report_id = report_id
-        self.generated_at = generated_at
-        self.content_hash = content_hash
-        self.evidence = type("Evidence", (), {"snapshot_ids": snapshot_ids})()
+def _snapshot(
+    dataset_id: str,
+    suffix: str,
+    *,
+    created_at: datetime,
+    payload_retained: bool = True,
+) -> ProviderSnapshot:
+    return ProviderSnapshot.create(
+        ProviderSnapshotDraft(
+            dataset_id=dataset_id,
+            source="tushare",
+            request_start="2026-08-01",
+            request_end="2026-08-31",
+            schema_version=f"market.{dataset_id}.v1",
+            checksum=f"checksum-{suffix}",
+            canonical_asset=DataAssetRef(dataset_id, "market"),
+            request_parameters_hash=f"params-{suffix}",
+            response_metadata=(),
+            license_record_id="synthetic-license",
+            row_count=10,
+            payload_uri=f"evidence://retained/{suffix}" if payload_retained else None,
+            payload_retained=payload_retained,
+            created_at=created_at,
+        )
+    )
 
 
-class _CertificationReader:
-    def __init__(self, reports: tuple[_Report, ...]) -> None:
-        self._reports = reports
+def _complete_checkpoint(snapshot: ProviderSnapshot) -> PartitionCheckpoint:
+    return PartitionCheckpoint(
+        chunk_id=f"chunk-{snapshot.dataset_id}",
+        dataset_id=snapshot.dataset_id,
+        source=snapshot.source,
+        request_start=snapshot.request_start,
+        request_end=snapshot.request_end,
+        status=PartitionLifecycleStatus.COMPLETE,
+        last_successful_stage=PartitionLifecycleStatus.COMPLETE,
+        attempt=1,
+        retry_budget=3,
+        payload_id=(f"payload:{snapshot.checksum}:synthetic:{snapshot.snapshot_id}"),
+        catalog_asset_id=None,
+        lineage_run_id=None,
+        ingestion_log_id=None,
+        error_code=None,
+        updated_at=snapshot.created_at,
+    )
 
-    def list_reports(self, dataset_id: str, profile: str) -> tuple[_Report, ...]:
-        assert profile == "research_daily"
-        return tuple(item for item in self._reports if item.dataset_id == dataset_id)
 
-    def list_events(self, report_id: str) -> tuple[CertificationReviewEvent, ...]:
-        report = next(item for item in self._reports if item.report_id == report_id)
-        approved_at = report.generated_at.replace(minute=report.generated_at.minute + 5)
+class _Snapshots:
+    def __init__(self, snapshots: tuple[ProviderSnapshot, ...]) -> None:
+        self._snapshots = snapshots
+
+    def list_snapshots(self, *, dataset_id: str) -> tuple[ProviderSnapshot, ...]:
+        return tuple(item for item in self._snapshots if item.dataset_id == dataset_id)
+
+    def get_snapshot(self, snapshot_id: str) -> ProviderSnapshot | None:
+        return next(
+            (item for item in self._snapshots if item.snapshot_id == snapshot_id),
+            None,
+        )
+
+
+class _Lifecycle:
+    def __init__(self, snapshots: tuple[ProviderSnapshot, ...]) -> None:
+        self._snapshots = snapshots
+        self._checkpoints = tuple(
+            _complete_checkpoint(snapshot) for snapshot in snapshots
+        )
+
+    def get_latest_checkpoint(self, chunk_id: str) -> PartitionCheckpoint | None:
+        return next(
+            (item for item in self._checkpoints if item.chunk_id == chunk_id), None
+        )
+
+    def get_checkpoint(self, chunk_id: str) -> PartitionCheckpoint | None:
+        return self.get_latest_checkpoint(chunk_id)
+
+    def list_incomplete(
+        self, *, dataset_id: str, source: str | None = None
+    ) -> tuple[PartitionCheckpoint, ...]:
+        del source
+        return tuple(
+            item
+            for item in self._checkpoints
+            if item.dataset_id == dataset_id
+            and item.status is not PartitionLifecycleStatus.COMPLETE
+        )
+
+    def list_complete(self, *, dataset_id: str) -> tuple[PartitionCheckpoint, ...]:
+        return tuple(
+            item
+            for item in self._checkpoints
+            if item.dataset_id == dataset_id
+            and item.status is PartitionLifecycleStatus.COMPLETE
+        )
+
+    def list_events(self, chunk_id: str) -> tuple[PartitionLifecycleEvent, ...]:
+        checkpoint = self.get_latest_checkpoint(chunk_id)
+        if checkpoint is None:
+            return ()
+        snapshot = next(
+            item for item in self._snapshots if item.dataset_id == checkpoint.dataset_id
+        )
         return (
-            CertificationReviewEvent(
+            PartitionLifecycleEvent(
                 event_id=1,
-                report_id=report.report_id,
-                dataset_id=report.dataset_id,
-                profile=report.profile,
-                action="approved",
-                actor="data-owner",
-                occurred_at=approved_at,
+                chunk_id=chunk_id,
+                from_status=PartitionLifecycleStatus.SUCCESS_RECORDED,
+                to_status=PartitionLifecycleStatus.COMPLETE,
+                attempt=1,
+                evidence_id=snapshot.snapshot_id,
+                error_code=None,
+                occurred_at=checkpoint.updated_at,
             ),
         )
 
@@ -112,51 +190,46 @@ def _context(source_snapshot_id: str) -> EvidenceTemporalContext:
     )
 
 
-def _facade() -> tuple[MarketContextEvidenceQueryFacade, _MarketContextFacade]:
-    reports = (
-        _Report(
-            dataset_id="stock_daily",
-            report_id="report-stock",
-            snapshot_ids=("snapshot-stock",),
-            generated_at=datetime(2026, 8, 31, 6, tzinfo=UTC),
-            content_hash="1" * 64,
-        ),
-        _Report(
-            dataset_id="index_daily",
-            report_id="report-index",
-            snapshot_ids=("snapshot-index",),
-            generated_at=datetime(2026, 8, 31, 6, 10, tzinfo=UTC),
-            content_hash="2" * 64,
-        ),
-        _Report(
-            dataset_id="global_index_daily",
-            report_id="report-global",
-            snapshot_ids=("snapshot-global",),
-            generated_at=datetime(2026, 8, 31, 6, 20, tzinfo=UTC),
-            content_hash="4" * 64,
-        ),
-        _Report(
-            dataset_id="macro_indicators",
-            report_id="report-future-macro",
-            snapshot_ids=("snapshot-future-macro",),
-            generated_at=datetime(2026, 8, 31, 8, 30, tzinfo=UTC),
-            content_hash="3" * 64,
-        ),
-    )
+def _evidence(
+    snapshots: tuple[ProviderSnapshot, ...],
+) -> tuple[MarketContextEvidenceQueryFacade, _MarketContextFacade]:
     market = _MarketContextFacade()
     facade = MarketContextEvidenceQueryFacade(
-        certification_reader=cast(CertificationReader, _CertificationReader(reports)),
-        market_context=cast(MarketContextFacade, market),
-        certification_profile="research_daily",
+        snapshots=_Snapshots(snapshots),
+        lifecycle=_Lifecycle(snapshots),
+        market_context=market,
     )
     return facade, market
 
 
-def test_market_context_evidence_resolves_only_certifications_visible_at_cutoff() -> (
-    None
-):
-    facade, market = _facade()
-    source_ids = ("snapshot-global", "snapshot-index", "snapshot-stock")
+def test_market_context_evidence_resolves_only_snapshots_observed_by_cutoff() -> None:
+    snapshots = (
+        _snapshot(
+            "stock_daily", "stock", created_at=datetime(2026, 8, 31, 6, tzinfo=UTC)
+        ),
+        _snapshot(
+            "index_daily", "index", created_at=datetime(2026, 8, 31, 6, 10, tzinfo=UTC)
+        ),
+        _snapshot(
+            "global_index_daily",
+            "global",
+            created_at=datetime(2026, 8, 31, 6, 20, tzinfo=UTC),
+        ),
+        # Created after the knowledge cutoff: must stay invisible.
+        _snapshot(
+            "macro_indicators",
+            "future-macro",
+            created_at=datetime(2026, 8, 31, 8, 30, tzinfo=UTC),
+        ),
+    )
+    facade, market = _evidence(snapshots)
+    source_ids = tuple(
+        sorted(
+            item.snapshot_id
+            for item in snapshots
+            if item.created_at <= datetime(2026, 8, 31, 8, tzinfo=UTC)
+        )
+    )
     snapshot_set_id = aggregate_source_snapshot_ids(source_ids)
     assert snapshot_set_id is not None
 
@@ -176,11 +249,6 @@ def test_market_context_evidence_resolves_only_certifications_visible_at_cutoff(
             "value": 0.42,
         },
     )
-    assert tuple(item.artifact_id for item in result.artifact_refs) == (
-        "report-global",
-        "report-index",
-        "report-stock",
-    )
     assert market.requests == [
         MarketContextRequest(
             as_of=datetime(2026, 8, 31, 9, tzinfo=UTC),
@@ -192,9 +260,35 @@ def test_market_context_evidence_resolves_only_certifications_visible_at_cutoff(
 
 
 def test_market_context_evidence_rejects_host_snapshot_set_mismatch() -> None:
-    facade, market = _facade()
+    facade, market = _evidence(
+        (
+            _snapshot(
+                "stock_daily", "stock", created_at=datetime(2026, 8, 31, 6, tzinfo=UTC)
+            ),
+            _snapshot(
+                "index_daily", "index", created_at=datetime(2026, 8, 31, 6, tzinfo=UTC)
+            ),
+        )
+    )
 
     with pytest.raises(AppQueryError, match="snapshot_set"):
         facade.get_evidence(context=_context("snapshot-set:sha256:wrong"))
+
+    assert market.requests == []
+
+
+def test_market_context_evidence_fails_closed_without_core_dataset_snapshots() -> None:
+    facade, market = _evidence(
+        (
+            _snapshot(
+                "macro_indicators",
+                "macro",
+                created_at=datetime(2026, 8, 31, 6, tzinfo=UTC),
+            ),
+        )
+    )
+
+    with pytest.raises(AppQueryError, match="core_dataset_snapshot_missing"):
+        facade.get_evidence(context=_context("snapshot-set:sha256:whatever"))
 
     assert market.requests == []

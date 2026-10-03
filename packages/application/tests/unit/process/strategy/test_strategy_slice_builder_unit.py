@@ -12,7 +12,6 @@ from ditto_application.builders import (
     StrategySliceBuilder,
 )
 from ditto_application.exceptions import AppBuilderError
-from ditto_data.catalog.promotion import DatasetMaturityPromotion
 from ditto_data.provider import DataProvider
 from ditto_data.services.metadata_service import MetadataService
 from ditto_strategy.alpha.node_registry import default_node_registry
@@ -123,24 +122,6 @@ def _make_data_provider() -> MagicMock:
     return provider
 
 
-class _MaturityPromotionReader:
-    def __init__(self, promoted_dataset_ids: set[str]) -> None:
-        self._promoted_dataset_ids = promoted_dataset_ids
-
-    def get_dataset_maturity_promotion(
-        self,
-        dataset_id: str,
-    ) -> DatasetMaturityPromotion | None:
-        if dataset_id not in self._promoted_dataset_ids:
-            return None
-        return DatasetMaturityPromotion(
-            dataset_id=dataset_id,
-            previous_maturity="experimental",
-            promoted_maturity="initial-focus",
-            promoted_by="architecture-review",
-        )
-
-
 class TestStrategySliceBuilder:
     """catalog-backed 单日 Slice 组装测试。"""
 
@@ -172,8 +153,8 @@ class TestStrategySliceBuilder:
             2,
         )
 
-    def test_rejects_experimental_stock_data_by_default(self) -> None:
-        """单日 strategy slice 默认不得静默使用 experimental 股票数据集。"""
+    def test_allows_core_lane_stock_data_by_default(self) -> None:
+        """核心市场 lane 静态为 initial-focus,单日 slice 默认可用。"""
         spec = _make_strategy_spec(
             strategy_id="stock-alpha",
             name="Stock Alpha",
@@ -193,14 +174,11 @@ class TestStrategySliceBuilder:
             data_provider=data_provider,
         )
 
-        with pytest.raises(AppBuilderError, match="experimental dataset"):
-            builder.build_published_slice(
-                "stock-alpha",
-                trade_date="2026-01-13",
-                version=1,
-            )
-
-        data_provider.get_bars.assert_not_called()
+        builder.build_published_slice(
+            "stock-alpha",
+            trade_date="2026-01-13",
+            version=1,
+        )
 
     def test_allows_experimental_stock_data_when_explicit(self) -> None:
         """研究场景可显式 opt in 构造股票数据 slice。"""
@@ -231,8 +209,8 @@ class TestStrategySliceBuilder:
 
         assert slice_.trade_date == "2026-01-13"
 
-    def test_allows_promoted_stock_data_without_research_opt_in(self) -> None:
-        """已完成 metadata promotion 的股票数据可进入默认运行时。"""
+    def test_allows_stock_data_with_explicit_research_opt_in(self) -> None:
+        """显式研究放行后,股票数据可进入运行时。"""
         spec = _make_strategy_spec(
             strategy_id="stock-alpha",
             name="Stock Alpha",
@@ -250,21 +228,19 @@ class TestStrategySliceBuilder:
             strategy_runtime_builder=runtime_builder,
             metadata_service=_make_metadata_service(),
             data_provider=_make_data_provider(),
-            maturity_promotion_reader=_MaturityPromotionReader(
-                {"stock_daily", "stock_basic"}
-            ),
         )
 
         slice_ = builder.build_published_slice(
             "stock-alpha",
             trade_date="2026-01-13",
             version=1,
+            allow_experimental_data=True,
         )
 
         assert slice_.trade_date == "2026-01-13"
 
-    def test_blocks_fundamentals_required_spec_despite_stock_promotion(self) -> None:
-        """股票数据晋级后,声明财务数据集的规格仍不得进入默认运行时。"""
+    def test_blocks_fundamentals_required_spec_in_default_runtime(self) -> None:
+        """声明财务数据集的规格不得进入默认运行时。"""
         spec = _make_strategy_spec(
             strategy_id="stock-alpha",
             name="Stock Alpha",
@@ -283,9 +259,6 @@ class TestStrategySliceBuilder:
             strategy_runtime_builder=runtime_builder,
             metadata_service=_make_metadata_service(),
             data_provider=data_provider,
-            maturity_promotion_reader=_MaturityPromotionReader(
-                {"stock_daily", "stock_basic"}
-            ),
         )
 
         with pytest.raises(AppBuilderError, match="balance_sheet=experimental"):

@@ -12,21 +12,6 @@ from ditto_application.queries.fundamental import (
     FundamentalDataPort,
     FundamentalQueryFacade,
 )
-from ditto_data.catalog.promotion import DatasetMaturityPromotion
-
-
-class _MaturityPromotionReader:
-    def __init__(
-        self,
-        promotions_by_dataset: dict[str, DatasetMaturityPromotion] | None = None,
-    ) -> None:
-        self._promotions_by_dataset = promotions_by_dataset or {}
-
-    def get_dataset_maturity_promotion(
-        self,
-        dataset_id: str,
-    ) -> DatasetMaturityPromotion | None:
-        return self._promotions_by_dataset.get(dataset_id)
 
 
 class _StubFundamentalData:
@@ -131,11 +116,6 @@ class TestFundamentalQueryFacadeMaturityGate:
             ("get_income_statement", "income_statement", (1, date(2026, 6, 1))),
             ("get_cash_flow", "cash_flow", (1, date(2026, 6, 1))),
             ("get_dividend", "dividend", (1, date(2026, 6, 1))),
-            (
-                "list_corporate_actions",
-                "corporate_actions",
-                (1, date(2026, 1, 1), date(2026, 6, 1)),
-            ),
         ],
     )
     def test_experimental_datasets_require_explicit_research_opt_in(
@@ -171,28 +151,6 @@ class TestFundamentalQueryFacadeMaturityGate:
             date(2026, 6, 1),
             allow_experimental_data=True,
         )
-
-        assert result is not None
-        store.get_balance_sheet.assert_called_once_with(1, date(2026, 6, 1))
-
-    def test_promoted_dataset_does_not_need_research_opt_in(self) -> None:
-        store = MagicMock(spec=["get_balance_sheet"])
-        store.get_balance_sheet.return_value = pl.DataFrame({"total_assets": [1e9]})
-        facade = FundamentalQueryFacade(
-            fundamental_store=store,
-            maturity_promotion_reader=_MaturityPromotionReader(
-                {
-                    "balance_sheet": DatasetMaturityPromotion(
-                        dataset_id="balance_sheet",
-                        previous_maturity="experimental",
-                        promoted_maturity="initial-focus",
-                        promoted_by="architecture-review",
-                    )
-                }
-            ),
-        )
-
-        result = facade.get_balance_sheet(1, date(2026, 6, 1))
 
         assert result is not None
         store.get_balance_sheet.assert_called_once_with(1, date(2026, 6, 1))

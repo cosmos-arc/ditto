@@ -56,7 +56,6 @@ def test_apps_host_composition_allowances_are_owned_and_reasoned() -> None:
         ),
         "apps/backend/src/ditto_apps/scripts/q2_live_market_context.py": frozenset(
             {
-                "ditto_data.catalog.certification",
                 "ditto_data.catalog.metadata",
                 "ditto_data.catalog.provider_payload",
                 "ditto_data.catalog.source_snapshot",
@@ -64,20 +63,22 @@ def test_apps_host_composition_allowances_are_owned_and_reasoned() -> None:
         ),
         "apps/backend/src/ditto_apps/scripts/q3_live_discovery.py": frozenset(
             {
-                "ditto_data.catalog.certification",
                 "ditto_data.catalog.provider_payload",
                 "ditto_data.catalog.source_snapshot",
             }
         ),
         "apps/backend/src/ditto_apps/scripts/q3_live_discovery_support.py": frozenset(
             {
-                "ditto_data.catalog.certification",
+                "ditto_data.catalog.metadata",
                 "ditto_data.catalog.provider_payload",
                 "ditto_data.catalog.source_snapshot",
             }
         ),
         "apps/backend/src/ditto_apps/scripts/q5_live_agent_author_support.py": (
             frozenset({"ditto_strategy.models"})
+        ),
+        "apps/backend/src/ditto_apps/scripts/r2_live_runtime_probe.py": frozenset(
+            {"ditto_data.catalog.metadata"}
         ),
         "apps/backend/src/ditto_apps/scripts/r5_sandbox_live_acceptance.py": (
             frozenset(
@@ -153,9 +154,7 @@ def test_apps_registry_composition_allowances_are_owned_and_reasoned() -> None:
     ] == frozenset(
         {
             "ditto_data.catalog",
-            "ditto_data.catalog.fallback_policy",
             "ditto_data.catalog.provider_payload",
-            "ditto_data.ingestion.freeze_store",
             "ditto_data.ingestion.ingestion_cursor_store",
             "ditto_data.ingestion.ingestion_log_store",
             "ditto_data.lineage",

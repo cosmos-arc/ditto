@@ -153,10 +153,19 @@ APPS_HOST_COMPOSITION_ALLOWANCES = (
         ),
     ),
     CompositionImportAllowance(
+        path=("apps/backend/src/ditto_apps/scripts/r2_live_runtime_probe.py"),
+        allowed_modules=frozenset({"ditto_data.catalog.metadata"}),
+        owner="apps isolated R2 live runtime probe composition",
+        reason=(
+            "The operator-run runtime probe derives the fixed hard-scope "
+            "product list from the data-owned catalog metadata before timing "
+            "the workbench read path."
+        ),
+    ),
+    CompositionImportAllowance(
         path="apps/backend/src/ditto_apps/scripts/q2_live_market_context.py",
         allowed_modules=frozenset(
             {
-                "ditto_data.catalog.certification",
                 "ditto_data.catalog.metadata",
                 "ditto_data.catalog.provider_payload",
                 "ditto_data.catalog.source_snapshot",
@@ -165,37 +174,36 @@ APPS_HOST_COMPOSITION_ALLOWANCES = (
         owner="apps isolated Q2 live acceptance entrypoint",
         reason=(
             "The operator-run Q2 acceptance composes exact retained provider "
-            "payloads and certification authorities under an isolated data root."
+            "payloads under an isolated data root."
         ),
     ),
     CompositionImportAllowance(
         path=("apps/backend/src/ditto_apps/scripts/q3_live_discovery_support.py"),
         allowed_modules=frozenset(
             {
-                "ditto_data.catalog.certification",
+                "ditto_data.catalog.metadata",
                 "ditto_data.catalog.provider_payload",
                 "ditto_data.catalog.source_snapshot",
             }
         ),
         owner="apps isolated Q3 live discovery composition",
         reason=(
-            "The operator-run Q3 acceptance resolves exact provider snapshots, "
-            "payloads, and certifications before invoking application facades."
+            "The operator-run Q3 acceptance resolves exact provider snapshots "
+            "and payloads before invoking application facades."
         ),
     ),
     CompositionImportAllowance(
         path=("apps/backend/src/ditto_apps/scripts/q3_live_discovery.py"),
         allowed_modules=frozenset(
             {
-                "ditto_data.catalog.certification",
                 "ditto_data.catalog.provider_payload",
                 "ditto_data.catalog.source_snapshot",
             }
         ),
         owner="apps isolated Q3 live discovery entrypoint",
         reason=(
-            "The operator-run Q3 acceptance resolves exact provider snapshots, "
-            "payloads, and certifications before invoking application facades."
+            "The operator-run Q3 acceptance resolves exact provider snapshots "
+            "and payloads before invoking application facades."
         ),
     ),
     CompositionImportAllowance(
@@ -261,7 +269,6 @@ APPS_REGISTRY_COMPOSITION_ALLOWANCES = (
         path="apps/backend/src/ditto_apps/registry/performance_probes.py",
         allowed_modules=frozenset(
             {
-                "ditto_data.catalog.certification",
                 "ditto_features.technical_analysis.contracts",
                 "ditto_features.technical_analysis.service",
                 "ditto_portfolio.portfolio_comparison",
@@ -378,9 +385,7 @@ APPS_REGISTRY_COMPOSITION_ALLOWANCES = (
         allowed_modules=frozenset(
             {
                 "ditto_data.catalog",
-                "ditto_data.catalog.fallback_policy",
                 "ditto_data.catalog.provider_payload",
-                "ditto_data.ingestion.freeze_store",
                 "ditto_data.ingestion.ingestion_cursor_store",
                 "ditto_data.ingestion.ingestion_log_store",
                 "ditto_data.lineage",
@@ -523,36 +528,20 @@ APPS_REGISTRY_COMPOSITION_ALLOWANCES = (
         ),
     ),
     CompositionImportAllowance(
-        path=("apps/backend/src/ditto_apps/registry/live/r2_live_certification.py"),
-        allowed_modules=frozenset(
-            {
-                "ditto_data.catalog",
-                "ditto_data.catalog.certification",
-                "ditto_data.catalog.metadata",
-                "ditto_data.catalog.source_snapshot",
-            }
-        ),
-        owner="apps isolated R2 live certification composition",
-        reason=(
-            "Task 18 certification binds registry-resolved catalog, provider "
-            "snapshot, and application governance ports for one isolated root."
-        ),
-    ),
-    CompositionImportAllowance(
         path=("apps/backend/src/ditto_apps/registry/live/r3_live_snapshot_builder.py"),
         allowed_modules=frozenset(
             {
                 "ditto_analysis.research.artifact_service",
                 "ditto_analysis.research.catalog_service",
                 "ditto_analysis.research.records",
-                "ditto_data.catalog.certification",
                 "ditto_data.catalog.source_snapshot",
+                "ditto_data.ingestion.partition_state",
             }
         ),
         owner="apps isolated R3 live snapshot composition",
         reason=(
-            "Task 18 freezes analysis artifacts against exact active data "
-            "certifications and provider snapshots in the isolated live root."
+            "Task 18 freezes analysis artifacts against exact observed provider "
+            "snapshots in the isolated live root."
         ),
     ),
     CompositionImportAllowance(
@@ -565,8 +554,8 @@ APPS_REGISTRY_COMPOSITION_ALLOWANCES = (
                 "ditto_analysis.research.artifact_service",
                 "ditto_analysis.research.catalog_service",
                 "ditto_backtest.context_inputs",
-                "ditto_data.catalog.certification",
                 "ditto_data.catalog.source_snapshot",
+                "ditto_data.ingestion.partition_state",
                 "ditto_strategy.alpha.seeds",
                 "ditto_strategy.models",
                 "ditto_strategy.storage.sqlite.services.strategy_catalog_service",
@@ -575,7 +564,7 @@ APPS_REGISTRY_COMPOSITION_ALLOWANCES = (
         owner="apps isolated R3 live planning composition",
         reason=(
             "Task 18 composes frozen analysis planning inputs with the canonical "
-            "seed catalog and exact certified live snapshot identities."
+            "seed catalog and exact observed live snapshot identities."
         ),
     ),
     CompositionImportAllowance(
@@ -584,8 +573,8 @@ APPS_REGISTRY_COMPOSITION_ALLOWANCES = (
             {
                 "ditto_analysis.research.artifact_service",
                 "ditto_analysis.research.catalog_service",
-                "ditto_data.catalog.certification",
                 "ditto_data.catalog.source_snapshot",
+                "ditto_data.ingestion.partition_state",
                 "ditto_strategy.storage.sqlite.services.strategy_catalog_service",
             }
         ),

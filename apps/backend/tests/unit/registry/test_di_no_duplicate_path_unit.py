@@ -50,19 +50,6 @@ class TestDINoDuplicatePathProvider:
             "it's already provided by ConfigProvider"
         )
 
-    def test_freeze_manager_uses_settings(self) -> None:
-        """freeze_manager 应该使用 DataStoreSettings 而不是 Path。"""
-        source_file = self._get_source_file()
-        source = source_file.read_text()
-
-        params = self._get_method_params(source, "freeze_manager")
-
-        # 应该包含 settings 参数（self 之外）
-        non_self_params = [p for p in params if p != "self"]
-        assert "settings" in non_self_params, (
-            f"freeze_manager should have 'settings' parameter, got: {non_self_params}"
-        )
-
     def test_file_lock_uses_settings(self) -> None:
         """file_lock 应该使用 DataStoreSettings 而不是 Path。"""
         source_file = self._get_source_file()

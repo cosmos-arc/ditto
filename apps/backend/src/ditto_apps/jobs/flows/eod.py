@@ -44,7 +44,6 @@ from ditto_application.processes.execution.eod_coordinator import (
     EodCoordinatorOptions,
     EodStrategyOutcome,
     EodStrategyRequest,
-    R2PreflightPolicy,
 )
 from ditto_application.processes.execution.manual_sizing import (
     AShareTradeDateResolver,
@@ -425,8 +424,6 @@ def _run_strategies(
             options=EodCoordinatorOptions(
                 construct_portfolio=r4_options.construct_portfolio,
                 suggestion_block_reason=r4_options.suggestion_block_reason,
-                data_readiness_query=bundle.data_readiness_query,
-                r2_preflight_policy=R2PreflightPolicy(mode="shadow"),
             ),
         ).run(
             signal_date=trade_date,
@@ -480,8 +477,6 @@ def _failed_strategy_outcome(
 
 def _outcome_dict(outcome: EodStrategyOutcome) -> dict[str, Any]:
     payload = asdict(outcome)
-    if outcome.r2_preflight_status == "not_run":
-        payload.pop("r2_preflight_status")
     payload["required_dataset_states"] = [
         asdict(state) for state in outcome.required_dataset_states
     ]
