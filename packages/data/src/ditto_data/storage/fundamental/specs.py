@@ -60,23 +60,3 @@ CORPORATE_ACTIONS_SPEC = SqliteTableSpec(
     date_column="action_date",
     nullable_columns=frozenset({"effective_to"}),
 )
-
-FORECAST_SPEC = SqliteTableSpec(
-    table="forecast",
-    columns=("type", "profit_range_min", "profit_range_max"),
-    id_column="instrument_id",
-    date_column="report_date",
-    nullable_columns=frozenset(
-        {"effective_to", "profit_range_min", "profit_range_max"}
-    ),
-)
-
-EXPRESS_SPEC = SqliteTableSpec(
-    table="express",
-    columns=("type", "profit_range_min", "profit_range_max"),
-    id_column="instrument_id",
-    date_column="report_date",
-    nullable_columns=frozenset(
-        {"effective_to", "profit_range_min", "profit_range_max"}
-    ),
-)

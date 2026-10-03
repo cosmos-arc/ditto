@@ -52,7 +52,6 @@ def completed_evidence(
             canonical_asset=DataAssetRef(dataset_id, "market"),
             request_parameters_hash="abc",
             response_metadata=(),
-            license_record_id="synthetic-license",
             row_count=1,
             payload_uri="evidence://retained/synthetic" if payload_retained else None,
             payload_retained=payload_retained,

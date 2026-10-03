@@ -765,7 +765,6 @@ def export_snapshot(research_state: Path, request: pytest.FixtureRequest, monkey
             canonical_asset=DataAssetRef(namespace="market", dataset_id="market.daily"),
             request_parameters_hash="synthetic-request",
             response_metadata=(),
-            license_record_id="synthetic-license",
             row_count=2,
             payload_uri=None,
             payload_retained=False,

@@ -23,8 +23,6 @@ class TestFundamentalStoreGetMethods:
             "cash_flow": MagicMock(),
             "dividend": MagicMock(),
             "corporate_actions": MagicMock(),
-            "forecast": MagicMock(),
-            "express": MagicMock(),
         }
 
     @pytest.fixture
@@ -36,8 +34,6 @@ class TestFundamentalStoreGetMethods:
             "cash_flow": MagicMock(),
             "dividend": MagicMock(),
             "corporate_actions": MagicMock(),
-            "forecast": MagicMock(),
-            "express": MagicMock(),
         }
 
     @pytest.fixture
@@ -53,8 +49,6 @@ class TestFundamentalStoreGetMethods:
             cash_flow=mock_readers["cash_flow"],
             dividend=mock_readers["dividend"],
             corporate_actions=mock_readers["corporate_actions"],
-            forecast=mock_readers["forecast"],
-            express=mock_readers["express"],
         )
 
         write_ports = FundamentalWriters(
@@ -63,8 +57,6 @@ class TestFundamentalStoreGetMethods:
             cash_flow=mock_writers["cash_flow"],
             dividend=mock_writers["dividend"],
             corporate_actions=mock_writers["corporate_actions"],
-            forecast=mock_writers["forecast"],
-            express=mock_writers["express"],
         )
 
         return FundamentalStore(
@@ -167,56 +159,6 @@ class TestFundamentalStoreGetMethods:
 
         assert result is None
 
-    def test_get_forecast_returns_data_when_found(
-        self, service: FundamentalStore, mock_readers: dict[str, MagicMock]
-    ) -> None:
-        """Test get_forecast returns DataFrame when data exists."""
-        test_df = pl.DataFrame(
-            {
-                "instrument_id": [1_000_001],
-                "profit_range_min": [100],
-                "profit_range_max": [150],
-            }
-        )
-        mock_readers["forecast"].get.return_value = test_df
-
-        result = service.get_forecast(1_000_001, date(2024, 1, 1))
-
-        assert result is not None
-        assert result.equals(test_df)
-
-    def test_get_forecast_returns_none_when_empty(
-        self, service: FundamentalStore, mock_readers: dict[str, MagicMock]
-    ) -> None:
-        """Test get_forecast returns None when no data found."""
-        mock_readers["forecast"].get.return_value = pl.DataFrame()
-
-        result = service.get_forecast(1_000_001, date(2024, 1, 1))
-
-        assert result is None
-
-    def test_get_express_returns_data_when_found(
-        self, service: FundamentalStore, mock_readers: dict[str, MagicMock]
-    ) -> None:
-        """Test get_express returns DataFrame when data exists."""
-        test_df = pl.DataFrame({"instrument_id": [1_000_001], "report_type": ["快报"]})
-        mock_readers["express"].get.return_value = test_df
-
-        result = service.get_express(1_000_001, date(2024, 1, 1))
-
-        assert result is not None
-        assert result.equals(test_df)
-
-    def test_get_express_returns_none_when_empty(
-        self, service: FundamentalStore, mock_readers: dict[str, MagicMock]
-    ) -> None:
-        """Test get_express returns None when no data found."""
-        mock_readers["express"].get.return_value = pl.DataFrame()
-
-        result = service.get_express(1_000_001, date(2024, 1, 1))
-
-        assert result is None
-
 
 class TestFundamentalStoreListMethods:
     """Test list_* methods."""
@@ -233,8 +175,6 @@ class TestFundamentalStoreListMethods:
             cash_flow=mock_reader,
             dividend=mock_reader,
             corporate_actions=corporate_actions_reader,
-            forecast=mock_reader,
-            express=mock_reader,
         )
 
         write_ports = FundamentalWriters(
@@ -243,8 +183,6 @@ class TestFundamentalStoreListMethods:
             cash_flow=mock_writer,
             dividend=mock_writer,
             corporate_actions=mock_writer,
-            forecast=mock_writer,
-            express=mock_writer,
         )
 
         service = FundamentalStore(
@@ -287,8 +225,6 @@ class TestFundamentalStoreSaveMethods:
             cash_flow=mock_reader,
             dividend=mock_reader,
             corporate_actions=mock_reader,
-            forecast=mock_reader,
-            express=mock_reader,
         )
 
         write_ports = FundamentalWriters(
@@ -297,8 +233,6 @@ class TestFundamentalStoreSaveMethods:
             cash_flow=mock_writer,
             dividend=mock_writer,
             corporate_actions=mock_writer,
-            forecast=mock_writer,
-            express=mock_writer,
         )
 
         return FundamentalStore(
@@ -355,21 +289,3 @@ class TestFundamentalStoreSaveMethods:
 
         assert result == 5
         service._write_ports.corporate_actions.write.assert_called_once_with(sample_df)
-
-    def test_save_forecast(
-        self, service: FundamentalStore, sample_df: pl.DataFrame
-    ) -> None:
-        """Test save_forecast calls writer and returns count."""
-        result = service.save_forecast(sample_df)
-
-        assert result == 5
-        service._write_ports.forecast.write.assert_called_once_with(sample_df)
-
-    def test_save_express(
-        self, service: FundamentalStore, sample_df: pl.DataFrame
-    ) -> None:
-        """Test save_express calls writer and returns count."""
-        result = service.save_express(sample_df)
-
-        assert result == 5
-        service._write_ports.express.write.assert_called_once_with(sample_df)

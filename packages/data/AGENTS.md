@@ -17,4 +17,4 @@
 - `uv run --no-sync pytest -m pit`
 - [架构快速参考](../../docs/architecture/agent-context-pack.md) · [PIT skill](../../.agents/skills/ditto-pit-safety/SKILL.md)
 
-- 数据目录与晋级规则：[数据手册](docs/data-manual.md) · [数据集晋级](docs/dataset-promotion.md)
+- 数据目录：[数据手册](docs/data-manual.md) · [数据集晋级(历史注记,#392 已删除治理)](docs/dataset-promotion.md)

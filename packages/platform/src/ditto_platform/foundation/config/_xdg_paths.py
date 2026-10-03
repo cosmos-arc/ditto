@@ -130,7 +130,7 @@ class XDGPaths:
         获取 data_home 下的子目录.
 
         Args:
-            name: 子目录名称（支持嵌套，如 "db/duckdb"）
+            name: 子目录名称（支持嵌套，如 "db/sqlite"）
 
         Returns:
             子目录的完整路径.

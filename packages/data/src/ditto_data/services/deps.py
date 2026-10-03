@@ -51,10 +51,6 @@ from ditto_data.storage.fundamental.financial.income_statement_reader import (
 from ditto_data.storage.fundamental.financial.income_statement_writer import (
     IncomeStatementWriter,
 )
-from ditto_data.storage.fundamental.forecast.express_reader import ExpressReader
-from ditto_data.storage.fundamental.forecast.express_writer import ExpressWriter
-from ditto_data.storage.fundamental.forecast.forecast_reader import ForecastReader
-from ditto_data.storage.fundamental.forecast.forecast_writer import ForecastWriter
 from ditto_data.storage.market.commodity.bars import (
     CommodityBarsReader,
     CommodityBarsWriter,
@@ -178,8 +174,6 @@ class FundamentalReaders:
         cash_flow: 现金流量表读取器.
         dividend: 股息读取器.
         corporate_actions: 公司行动读取器.
-        forecast: 业绩预告读取器.
-        express: 业绩快报读取器.
 
     """
 
@@ -188,8 +182,6 @@ class FundamentalReaders:
     cash_flow: CashFlowReader
     dividend: DividendReader
     corporate_actions: CorporateActionsReader
-    forecast: ForecastReader
-    express: ExpressReader
 
 
 @dataclass(frozen=True)
@@ -205,8 +197,6 @@ class FundamentalWriters:
         cash_flow: 现金流量表写入器.
         dividend: 股息写入器.
         corporate_actions: 公司行动写入器.
-        forecast: 业绩预告写入器.
-        express: 业绩快报写入器.
 
     """
 
@@ -215,8 +205,6 @@ class FundamentalWriters:
     cash_flow: CashFlowWriter
     dividend: DividendWriter
     corporate_actions: CorporateActionsWriter
-    forecast: ForecastWriter
-    express: ExpressWriter
 
 
 @dataclass(frozen=True)

@@ -37,25 +37,11 @@ from ditto_data.storage.fundamental.financial.income_statement_reader import (
 from ditto_data.storage.fundamental.financial.income_statement_writer import (
     IncomeStatementWriter,
 )
-from ditto_data.storage.fundamental.forecast.express_reader import (
-    ExpressReader,
-)
-from ditto_data.storage.fundamental.forecast.express_writer import (
-    ExpressWriter,
-)
-from ditto_data.storage.fundamental.forecast.forecast_reader import (
-    ForecastReader,
-)
-from ditto_data.storage.fundamental.forecast.forecast_writer import (
-    ForecastWriter,
-)
 from ditto_data.storage.fundamental.specs import (
     BALANCE_SHEET_SPEC,
     CASH_FLOW_SPEC,
     CORPORATE_ACTIONS_SPEC,
     DIVIDEND_SPEC,
-    EXPRESS_SPEC,
-    FORECAST_SPEC,
     INCOME_STATEMENT_SPEC,
 )
 
@@ -63,7 +49,7 @@ __all__ = ["FundamentalProvider"]
 
 
 class FundamentalProvider(Provider):
-    """Fundamental Domain Provider - 财务报表、股息、公司行动、业绩预告."""
+    """Fundamental Domain Provider - 财务报表、股息、公司行动."""
 
     scope = Scope.APP
 
@@ -82,8 +68,6 @@ class FundamentalProvider(Provider):
                 CORPORATE_ACTIONS_SPEC,
                 sqlite_client,
             ),
-            forecast=ForecastReader(FORECAST_SPEC, sqlite_client),
-            express=ExpressReader(EXPRESS_SPEC, sqlite_client),
         )
 
     @provide
@@ -101,8 +85,6 @@ class FundamentalProvider(Provider):
                 CORPORATE_ACTIONS_SPEC,
                 sqlite_client,
             ),
-            forecast=ForecastWriter(FORECAST_SPEC, sqlite_client),
-            express=ExpressWriter(EXPRESS_SPEC, sqlite_client),
         )
 
     @provide

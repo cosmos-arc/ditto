@@ -45,7 +45,6 @@ def _provider_snapshot(suffix: str, *, created_at: datetime) -> ProviderSnapshot
             canonical_asset=DataAssetRef("stock_daily", "market"),
             request_parameters_hash=f"params-{suffix}",
             response_metadata=(),
-            license_record_id="synthetic-license",
             row_count=10,
             payload_uri=f"evidence://retained/{suffix}",
             payload_retained=True,

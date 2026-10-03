@@ -171,7 +171,6 @@ def test_schema_version_bump_sharing_artifact_still_replays_exact_bytes(tmp_path
                     canonical_asset=first.canonical_asset,
                     request_parameters_hash=first.request_parameters_hash,
                     response_metadata=first.response_metadata,
-                    license_record_id=first.license_record_id,
                     row_count=first.row_count,
                     payload_uri=first.payload_uri,
                     payload_retained=first.payload_retained,

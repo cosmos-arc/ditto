@@ -247,7 +247,6 @@ def _snapshot() -> ProviderSnapshot:
             canonical_asset=DataAssetRef("stock_daily", "market"),
             request_parameters_hash="sha256:params",
             response_metadata=(("rows", "6"),),
-            license_record_id="license:fixture",
             row_count=6,
             payload_uri="file:///tmp/comparison-bars.parquet",
             payload_retained=True,

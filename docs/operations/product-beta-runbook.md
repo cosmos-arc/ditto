@@ -45,10 +45,10 @@ uv run --no-sync python -m ditto_apps.scripts.r2_data_acceptance --mode fixture
 For a fresh provider update, first follow
 [the R2 data-product runbook](r2-data-product-runbook.md). Provider credentials stay
 in the local keyring/configuration store and must never appear in a report or shell
-history. Missing credential, entitlement, license, publication cutoff, knowledge
+history. Missing credential, entitlement, publication cutoff, knowledge
 date, or source snapshot is blocked—not empty success and not a mock fallback.
 
-Current integrated research acceptance with a certified snapshot:
+Current integrated research acceptance with a completed snapshot:
 
 ```bash
 uv run --no-sync python -m ditto_apps.scripts.r5_agent_release_preflight \
@@ -106,7 +106,7 @@ rather than duplicating orders or fills.
 
 | Operator-visible state | Response |
 |---|---|
-| data/provider unavailable | Keep the page blocked/stale, preserve its last certified snapshot identity, fix credentials/entitlement/provider, then recertify. |
+| data/provider unavailable | Keep the page blocked/stale, preserve its last completed snapshot identity, fix credentials/entitlement/provider, then re-ingest. |
 | Agent model unavailable | Disable model calls, retain events/Episode, and continue core workflows; never synthesize an answer. |
 | frontend disconnected | Keep the last known state visibly stale, reconnect the query/SSE stream, and resume after the last persisted event ID without replaying a side effect. |
 | paper EOD interruption | Restart against the same run/package identity; verify recovery before continuing. |

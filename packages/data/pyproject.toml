@@ -7,7 +7,6 @@ dependencies = [
     "ditto-platform",
     "PyYAML",
     "dishka",
-    "duckdb",
     "httpx",
     "limits",
     "loguru",

@@ -203,7 +203,6 @@ def _seed(root: Path, *, gap: bool = False, manual_start: str = "2026-03-02") ->
                 ),
                 request_parameters_hash="sha256:history-comparison-request-v1",
                 response_metadata=(("fixture", "history-comparison-live"),),
-                license_record_id="license:history-comparison:v1",
                 row_count=artifact.row_count,
                 payload_uri=artifact.uri,
                 payload_retained=True,

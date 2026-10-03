@@ -43,7 +43,6 @@ def _snapshot(
             canonical_asset=DataAssetRef(dataset_id, "market"),
             request_parameters_hash=f"params-{suffix}",
             response_metadata=(),
-            license_record_id="synthetic-license",
             row_count=10,
             payload_uri=f"evidence://retained/{suffix}" if payload_retained else None,
             payload_retained=payload_retained,

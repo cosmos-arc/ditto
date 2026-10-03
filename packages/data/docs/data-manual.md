@@ -59,7 +59,7 @@
 | **Market** | 市场行情数据 | stock_daily, etf_daily, index_daily, adj_factor, stock_status | `MarketService` |
 | **Metadata** | 证券元数据 | instrument, calendar, industry, index_weight, universe_constituent | `MetadataService` |
 | **Capital** | 资本数据 | margin_trading, pledge_ratio, valuation_metrics, index_composition | `CapitalService` |
-| **Fundamental** | 基本面数据 | balance_sheet, income_statement, cash_flow, dividend, forecast | `FundamentalService` |
+| **Fundamental** | 基本面数据 | balance_sheet, income_statement, cash_flow, dividend | `FundamentalStore` |
 | **Macro** | 宏观经济数据 | macro_indicators | `MacroService` |
 | **Features** | 技术特征 | technical_indicators | `FeatureService` |
 | **Factors** | 因子数据 | style_factors | `FactorService` |
@@ -787,7 +787,6 @@ data_root/
 │   │   ├── income_statement/
 │   │   └── cash_flow/
 │   ├── indicator/            # 财务指标
-│   ├── forecast/             # 业绩预告
 │   ├── holding/              # 持股数据
 │   └── corporate/            # 公司行为
 │       └── dividend/         # 分红
@@ -808,8 +807,6 @@ data_root/
 │   │   ├── quarantine/       # 隔离数据
 │   │   └── comparison/       # 对账记录
 │   └── ingestion/            # 摄入日志
-├── db/                        # 数据库
-│   └── ditto.duckdb          # DuckDB 文件
 ├── metadata/
 │   └── metadata.sqlite       # SQLite 元数据库
 ├── logs/                      # 日志

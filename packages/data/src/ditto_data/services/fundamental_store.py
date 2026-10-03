@@ -67,16 +67,6 @@ class FundamentalStore:
         df = self._read_ports.dividend.get(instrument_id, as_of_date)
         return None if df.is_empty() else df
 
-    def get_forecast(self, instrument_id: int, as_of_date: date) -> pl.DataFrame | None:
-        """Get forecast data for instrument on date (PIT query)."""
-        df = self._read_ports.forecast.get(instrument_id, as_of_date)
-        return None if df.is_empty() else df
-
-    def get_express(self, instrument_id: int, as_of_date: date) -> pl.DataFrame | None:
-        """Get express report for instrument on date (PIT query)."""
-        df = self._read_ports.express.get(instrument_id, as_of_date)
-        return None if df.is_empty() else df
-
     # list_* - Multi record queries
 
     def list_corporate_actions(
@@ -112,11 +102,3 @@ class FundamentalStore:
     def save_corporate_actions(self, df: pl.DataFrame) -> int:
         """Save corporate actions data."""
         return self._write_ports.corporate_actions.write(df)
-
-    def save_forecast(self, df: pl.DataFrame) -> int:
-        """Save forecast data."""
-        return self._write_ports.forecast.write(df)
-
-    def save_express(self, df: pl.DataFrame) -> int:
-        """Save express report data."""
-        return self._write_ports.express.write(df)

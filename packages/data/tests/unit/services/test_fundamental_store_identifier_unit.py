@@ -25,8 +25,6 @@ def _make_service(
         "cash_flow": override_readers.get("cash_flow", mock_reader),
         "dividend": override_readers.get("dividend", mock_reader),
         "corporate_actions": override_readers.get("corporate_actions", mock_reader),
-        "forecast": override_readers.get("forecast", mock_reader),
-        "express": override_readers.get("express", mock_reader),
     }
 
     read_ports = FundamentalReaders(**readers)
@@ -36,8 +34,6 @@ def _make_service(
         cash_flow=mocker.Mock(),
         dividend=mocker.Mock(),
         corporate_actions=mocker.Mock(),
-        forecast=mocker.Mock(),
-        express=mocker.Mock(),
     )
     return FundamentalStore(read_ports=read_ports, write_ports=write_ports)
 
@@ -104,36 +100,6 @@ class TestFundamentalStoreIntInstrumentId:
 
         service = _make_service(mocker, dividend=mock_reader)
         result = service.get_dividend(
-            instrument_id=1_000_001, as_of_date=date(2024, 1, 1)
-        )
-
-        assert isinstance(result, pl.DataFrame)
-        mock_reader.get.assert_called_once_with(1_000_001, date(2024, 1, 1))
-
-    def test_get_forecast_accepts_int(self, mocker: MockerFixture) -> None:
-        """get_forecast should accept int instrument_id and forward it."""
-        mock_reader = mocker.Mock()
-        expected_df = pl.DataFrame(
-            {"instrument_id": [1_000_001], "profit_range_min": [100]}
-        )
-        mock_reader.get.return_value = expected_df
-
-        service = _make_service(mocker, forecast=mock_reader)
-        result = service.get_forecast(
-            instrument_id=1_000_001, as_of_date=date(2024, 1, 1)
-        )
-
-        assert isinstance(result, pl.DataFrame)
-        mock_reader.get.assert_called_once_with(1_000_001, date(2024, 1, 1))
-
-    def test_get_express_accepts_int(self, mocker: MockerFixture) -> None:
-        """get_express should accept int instrument_id and forward it."""
-        mock_reader = mocker.Mock()
-        expected_df = pl.DataFrame({"instrument_id": [1_000_001], "type": ["express"]})
-        mock_reader.get.return_value = expected_df
-
-        service = _make_service(mocker, express=mock_reader)
-        result = service.get_express(
             instrument_id=1_000_001, as_of_date=date(2024, 1, 1)
         )
 

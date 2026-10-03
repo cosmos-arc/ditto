@@ -98,7 +98,6 @@ def _request(
             canonical_asset=canonical_asset,
             request_parameters_hash="sha256:request",
             response_metadata=(("snapshot_layer", "normalized_provider_payload"),),
-            license_record_id="license-test-0001",
             row_count=1,
             payload_uri="stock_daily/2026/07/17.parquet",
             payload_retained=True,

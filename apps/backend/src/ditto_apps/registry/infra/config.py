@@ -67,8 +67,6 @@ def load_data_store_settings(
     values["data_root"] = paths.state_root
     if override := os.getenv("SQLITE_PATH"):
         values["sqlite_path"] = override
-    if override := os.getenv("DUCKDB_PATH"):
-        values["duckdb_path"] = override
     if override := os.getenv("LOG_DIR"):
         values["logs_path_override"] = override
 

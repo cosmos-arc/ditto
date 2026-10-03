@@ -6,7 +6,6 @@ PIT (Point-in-Time) 模块.
 包含:
 - 策略常量: KNOWLEDGE_DATE_LAG_DAYS, PIT_QUERY_OPERATOR, RollingWindowClosed
 - DataFrame API: filter_by_knowledge_date, parse_asof_date
-- SQL API: PitHelper
 """
 
 from ditto_data.helpers.pit.dataframe import (
@@ -22,13 +21,11 @@ from ditto_data.helpers.pit.policy import (
     UnsafeResearchTimePolicy,
     is_pit_safe_closed,
 )
-from ditto_data.helpers.pit.sql import PitHelper
 
 __all__ = [
     "DEFAULT_ROLLING_WINDOW_CLOSED",
     "KNOWLEDGE_DATE_LAG_DAYS",
     "PIT_QUERY_OPERATOR",
-    "PitHelper",
     "RollingWindowClosed",
     "UnsafeResearchTimePolicy",
     "filter_by_knowledge_date",

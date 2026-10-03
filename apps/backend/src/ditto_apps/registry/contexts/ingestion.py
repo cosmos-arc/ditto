@@ -46,8 +46,6 @@ from ditto_apps.registry.contexts.bundle import IngestionBundle
 @contextmanager
 def create_ingestion_bundle(
     source: str = "tushare",
-    *,
-    license_record_id: str | None = None,
 ) -> Generator[IngestionBundle]:
     """
     创建摄入上下文组合包（单容器）.
@@ -56,12 +54,10 @@ def create_ingestion_bundle(
     确保单个 flow 只创建一个容器实例。
 
     #394 之后跳过/覆盖/PIT 证据全部消费 completed provider snapshots,
-    摄取必须产出快照事实,因此证据 saga 恒开启;license_record_id
-    仅作兼容占位,不再切换模式。
+    摄取必须产出快照事实,因此证据 saga 恒开启。
 
     Args:
         source: 数据源名称。
-        license_record_id: 兼容占位参数,无行为差异。
 
     Yields:
         IngestionBundle: 包含协调器、管理器和查询 facade
@@ -72,7 +68,6 @@ def create_ingestion_bundle(
         ...     bundle.metadata_facade.is_trading_day(...)
 
     """
-    _ = license_record_id
     container = make_app_container()
     try:
         # 获取所有服务

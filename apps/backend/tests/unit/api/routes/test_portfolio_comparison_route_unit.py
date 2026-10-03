@@ -300,7 +300,6 @@ def _model_fixture() -> tuple[GetModelHistoryQuery, ProviderSnapshot]:
             canonical_asset=DataAssetRef("stock_daily", "market"),
             request_parameters_hash="sha256:params",
             response_metadata=(("rows", "6"),),
-            license_record_id="license:fixture",
             row_count=6,
             payload_uri="file:///tmp/model-route-bars.parquet",
             payload_retained=True,

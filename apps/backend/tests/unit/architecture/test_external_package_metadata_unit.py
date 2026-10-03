@@ -85,7 +85,7 @@ def test_testing_source_helpers_are_not_runtime_imports(tmp_path: Path) -> None:
     pkg_dir.mkdir(parents=True)
     (pkg_dir / "__init__.py").write_text("", encoding="utf-8")
     (pkg_dir / "runtime.py").write_text("import fastapi\n", encoding="utf-8")
-    (pkg_dir / "testing.py").write_text("import duckdb\n", encoding="utf-8")
+    (pkg_dir / "testing.py").write_text("import respx\n", encoding="utf-8")
 
     result = _scan_external_pkg_imports(src_dir)
 

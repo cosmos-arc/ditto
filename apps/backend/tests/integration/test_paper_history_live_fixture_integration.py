@@ -105,7 +105,6 @@ def _seed(root: Path) -> str:
                 ),
                 request_parameters_hash="sha256:paper-history-request-v1",
                 response_metadata=(("fixture", "paper-history-live"),),
-                license_record_id="license:paper-history:v1",
                 row_count=artifact.row_count,
                 payload_uri=artifact.uri,
                 payload_retained=True,

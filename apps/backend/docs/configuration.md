@@ -202,10 +202,6 @@ DEBUG=true
 # 布尔值
 DEBUG=true
 
-# 嵌套配置（使用双下划线）
-SQL_ENGINE__ENABLE_PLAN_CACHE=true
-SQL_ENGINE__PLAN_CACHE_SIZE=1000
-
 # 路径不写入配置文件，由 composition root 显式注入
 ```
 
@@ -226,11 +222,7 @@ SQL_ENGINE__PLAN_CACHE_SIZE=1000
 | 配置项 | 类型 | 默认值 | 说明 |
 |--------|------|--------|------|
 | `SQLITE_PATH` | path | 自动计算 | 迁移期 SQLite 路径覆盖；目标从 state root 派生 |
-| `DUCKDB_PATH` | path | 自动计算 | 迁移期 DuckDB 路径覆盖；目标从 state root 派生 |
 | `LOGS_PATH_OVERRIDE` | path | - | 迁移期日志路径覆盖；目标由 state root/可观测配置派生 |
-| `SQL_ENGINE__ENABLE_PLAN_CACHE` | bool | `true` | 启用查询计划缓存 |
-| `SQL_ENGINE__PLAN_CACHE_SIZE` | int | `1000` | 缓存大小 |
-| `SQL_ENGINE__SLOW_QUERY_THRESHOLD` | float | `1.0` | 慢查询阈值（秒） |
 
 `data_root` 不再来自该文件，而由 `DITTO_STATE_ROOT` 注入。以下路径均从已验证的
 state root 派生：
@@ -238,7 +230,6 @@ state root 派生：
 | 派生路径 | 计算规则 | 说明 |
 |----------|----------|------|
 | `resolved_sqlite_path` | `{DITTO_STATE_ROOT}/metadata/metadata.sqlite` | SQLite 数据库 |
-| `resolved_duckdb_path` | `{DITTO_STATE_ROOT}/db/ditto.duckdb` | DuckDB 数据库 |
 | `market_stock_bars_path` | `{DITTO_STATE_ROOT}/market/stock/bars/daily` | 股票日线 |
 | `market_etf_bars_path` | `{DITTO_STATE_ROOT}/market/etf/bars/daily` | ETF 日线 |
 | `market_index_bars_path` | `{DITTO_STATE_ROOT}/market/index/bars/daily` | 指数日线 |
@@ -592,7 +583,6 @@ c.close()
 | `DATA_ROOT` / `DITTO_DATA_ROOT` | `DITTO_STATE_ROOT` 的过渡别名，优先级更低 | `/data/ditto` |
 | `SQLITE_PATH` | 迁移期 SQLite 路径覆盖 | `/tmp/test.db` |
 | `DITTO_TRADING_SQLITE_PATH` | 迁移期 execution-owned Paper/Manual SQLite 覆盖 | `/tmp/trading-acceptance.sqlite` |
-| `DUCKDB_PATH` | 迁移期 DuckDB 路径覆盖 | `/tmp/test.duckdb` |
 | `LOG_DIR` | 迁移期日志目录覆盖 | `/app/logs` |
 | `TUSHARE_TOKEN` | Tushare Token（优先级最高） | `your_token` |
 | `FRED_API_KEY` | FRED API Key（优先级最高） | `your_api_key` |

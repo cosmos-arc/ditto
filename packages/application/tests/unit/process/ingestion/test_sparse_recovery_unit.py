@@ -65,7 +65,6 @@ def test_recovery_fails_closed_for_invalid_snapshot_request_interval() -> None:
                     ),
                     request_parameters_hash="sha256:test",
                     response_metadata=(),
-                    license_record_id="unit-license",
                     row_count=1,
                     payload_uri="provider_payloads/tushare/balance_sheet/a.parquet",
                     payload_retained=True,

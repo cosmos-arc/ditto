@@ -35,7 +35,6 @@ def _snapshot(
         ),
         request_parameters_hash=f"request:{snapshot_id}",
         response_metadata=(),
-        license_record_id="license:tushare",
         row_count=1,
         payload_uri=payload_uri,
         payload_retained=True,

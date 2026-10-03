@@ -445,7 +445,6 @@ def _history_snapshot() -> ProviderSnapshot:
             canonical_asset=DataAssetRef("stock_daily", "market"),
             request_parameters_hash="sha256:params",
             response_metadata=(("rows", "0"),),
-            license_record_id="license:fixture",
             row_count=0,
             payload_uri="file:///tmp/route-bars.parquet",
             payload_retained=True,

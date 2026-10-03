@@ -56,7 +56,6 @@ class ProviderSnapshotDraft:
     canonical_asset: DataAssetRef
     request_parameters_hash: str
     response_metadata: tuple[tuple[str, str], ...]
-    license_record_id: str
     row_count: int
     payload_uri: str | None
     payload_retained: bool
@@ -78,7 +77,6 @@ class ProviderSnapshot:
     canonical_asset: DataAssetRef
     request_parameters_hash: str
     response_metadata: tuple[tuple[str, str], ...]
-    license_record_id: str
     row_count: int
     payload_uri: str | None
     payload_retained: bool
@@ -98,7 +96,6 @@ class ProviderSnapshot:
             "schema_version",
             "checksum",
             "request_parameters_hash",
-            "license_record_id",
         ):
             _validate_text(field, str(getattr(self, field)))
         if self.source != self.source.lower():
@@ -142,7 +139,6 @@ class ProviderSnapshot:
             canonical_asset=draft.canonical_asset,
             request_parameters_hash=draft.request_parameters_hash,
             response_metadata=tuple(sorted(draft.response_metadata)),
-            license_record_id=draft.license_record_id,
             row_count=draft.row_count,
             payload_uri=draft.payload_uri,
             payload_retained=draft.payload_retained,
@@ -159,7 +155,6 @@ class ProviderSnapshot:
             canonical_asset=placeholder.canonical_asset,
             request_parameters_hash=placeholder.request_parameters_hash,
             response_metadata=placeholder.response_metadata,
-            license_record_id=placeholder.license_record_id,
             row_count=placeholder.row_count,
             payload_uri=placeholder.payload_uri,
             payload_retained=placeholder.payload_retained,

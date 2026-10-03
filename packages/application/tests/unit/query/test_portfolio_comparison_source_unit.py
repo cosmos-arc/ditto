@@ -159,7 +159,6 @@ def _snapshot() -> ProviderSnapshot:
             ),
             request_parameters_hash="sha256:request",
             response_metadata=(("fixture", "portfolio-comparison"),),
-            license_record_id="license:fixture",
             row_count=2,
             payload_uri="fixtures/stock-daily.parquet",
             payload_retained=True,

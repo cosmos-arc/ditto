@@ -61,7 +61,6 @@ def _snapshot(
         ),
         request_parameters_hash=f"request:{snapshot_id}",
         response_metadata=(),
-        license_record_id=f"license:{dataset_id}",
         row_count=1,
         payload_uri=payload_uri,
         payload_retained=payload_retained,
