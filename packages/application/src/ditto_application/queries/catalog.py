@@ -2,9 +2,8 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import datetime
 
 from ditto_data.catalog import (
     DataAssetRef,
@@ -12,12 +11,14 @@ from ditto_data.catalog import (
     DataCatalogReader,
     default_dataset_metadata,
 )
+from ditto_data.catalog.source_snapshot import ProviderSnapshotReader
+from ditto_data.ingestion.partition_state import PartitionLifecycleReader
 
 from ditto_application.catalog_freshness import (
-    assess_catalog_freshness,
-    catalog_entry_for_date,
     dataset_namespace,
+    observed_at,
     select_ingestion_source,
+    source_coverage_evidence,
 )
 from ditto_application.exceptions import AppQueryError
 from ditto_application.queries.catalog_source_health import (
@@ -107,10 +108,12 @@ class CatalogQueryFacade:
         self,
         data_catalog_reader: DataCatalogReader,
         *,
-        now: Callable[[], datetime] | None = None,
+        snapshot_reader: ProviderSnapshotReader | None = None,
+        lifecycle_reader: PartitionLifecycleReader | None = None,
     ) -> None:
         self._data_catalog_reader = data_catalog_reader
-        self._now = now or _utcnow
+        self._snapshot_reader = snapshot_reader
+        self._lifecycle_reader = lifecycle_reader
 
     def list_assets(
         self,
@@ -176,8 +179,8 @@ class CatalogQueryFacade:
             dataset=dataset_id,
             trade_date=trade_date,
             available_sources=normalized_sources,
-            catalog_reader=self._data_catalog_reader,
-            now=self._now,
+            snapshots=self._snapshot_reader,
+            lifecycle=self._lifecycle_reader,
         )
         source_health = tuple(
             self._to_source_health(
@@ -287,26 +290,40 @@ class CatalogQueryFacade:
         source: str,
         trade_date: str,
     ) -> CatalogSourceHealth:
-        entry = catalog_entry_for_date(
-            reader=self._data_catalog_reader,
+        """
+        Per-source snapshot completion health for one dataset/date.
+
+        #394:证据字段取覆盖该日期的最新 completed snapshot;没有完成事实
+        端口时保持保守的 missing 视图。
+        """
+        if self._snapshot_reader is None or self._lifecycle_reader is None:
+            return CatalogSourceHealth(
+                source=source,
+                supported=True,
+                freshness_status="missing",
+                freshness_sla_hours=None,
+            )
+        evidence = source_coverage_evidence(
+            self._snapshot_reader,
+            self._lifecycle_reader,
             dataset=dataset_id,
             source=source,
             trade_date=trade_date,
         )
-        freshness = assess_catalog_freshness(
-            dataset=dataset_id,
-            catalog_entry=entry,
-            now=self._now,
-        )
+        snapshot = evidence.snapshot
         return CatalogSourceHealth(
             source=source,
             supported=True,
-            freshness_status=freshness.status,
-            freshness_sla_hours=freshness.sla_hours,
-            freshness_at=entry.freshness_at if entry is not None else None,
-            storage_uri=entry.storage_uri if entry is not None else None,
-            schema_hash=entry.schema.schema_hash if entry is not None else None,
-            row_count=entry.schema.row_count if entry is not None else None,
+            freshness_status=evidence.status,
+            freshness_sla_hours=evidence.sla_hours,
+            freshness_at=(observed_at(snapshot) if snapshot is not None else None),
+            storage_uri=snapshot.payload_uri if snapshot is not None else None,
+            schema_hash=(
+                snapshot.schema_fingerprint or snapshot.schema_version
+                if snapshot is not None
+                else None
+            ),
+            row_count=snapshot.row_count if snapshot is not None else None,
         )
 
 
@@ -338,7 +355,3 @@ def _catalog_asset_sort_key(asset: CatalogAsset) -> tuple[str, str, tuple[str, .
 
 def _dedupe_tuple(values: tuple[str, ...]) -> tuple[str, ...]:
     return tuple(dict.fromkeys(value for value in values if value))
-
-
-def _utcnow() -> datetime:
-    return datetime.now(UTC)

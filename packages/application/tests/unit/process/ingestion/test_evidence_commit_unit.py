@@ -86,11 +86,7 @@ def _request(
     checksum: str = "sha256:payload",
 ) -> EvidenceCommitRequest:
     now = datetime(2026, 7, 18, 8, 30, tzinfo=UTC)
-    canonical_asset = DataAssetRef(
-        dataset_id="stock_daily",
-        namespace="market",
-        partition_keys=("trade_date=2026-07-17",),
-    )
+    canonical_asset = DataAssetRef(dataset_id="stock_daily", namespace="market")
     snapshot = ProviderSnapshot.create(
         ProviderSnapshotDraft(
             dataset_id="stock_daily",
@@ -121,9 +117,7 @@ def _request(
         ),
         source="tushare",
         freshness_at=now,
-        source_snapshot_id=(
-            "snapshot:tushare:stock_daily:2026-07-17:sha256:canonical:quality=l1-l2"
-        ),
+        source_snapshot_id=snapshot.snapshot_id,
     )
     return EvidenceCommitRequest(
         chunk_id="chunk:tushare:stock_daily:2026-07-17",
@@ -133,12 +127,13 @@ def _request(
         request_end="2026-07-17",
         provider_snapshot=snapshot,
         catalog_entry=catalog_entry,
+        # #394:log 内容必须与 provider snapshot 的 checksum/row_count 逐字节一致。
         success_log=IngestionLog(
             dataset="stock_daily",
             source="tushare",
             trade_date="2026-07-17",
             status=IngestionStatus.SUCCESS,
-            checksum="sha256:canonical",
+            checksum=checksum,
             rows=1,
         ),
     )

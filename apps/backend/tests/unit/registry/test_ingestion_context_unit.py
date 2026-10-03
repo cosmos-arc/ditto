@@ -3,14 +3,9 @@
 from __future__ import annotations
 
 from contextlib import contextmanager
-from typing import cast
 from unittest.mock import MagicMock
 
 from ditto_application.processes.ingestion.bootstrap_planner import BootstrapPlanner
-from ditto_application.processes.ingestion.coordinator_factory import (
-    CoordinatorRuntimeContext,
-    CoordinatorServices,
-)
 from ditto_apps.registry.contexts import ingestion as ingestion_context
 from ditto_data.catalog import (
     DataCatalogReader,
@@ -18,6 +13,8 @@ from ditto_data.catalog import (
     InMemoryDataCatalog,
 )
 from ditto_data.catalog.provider_payload import ProviderPayloadWriter
+from ditto_data.catalog.source_snapshot import ProviderSnapshotReader
+from ditto_data.ingestion.partition_state import PartitionLifecycleReader
 from ditto_data.sources.registry import SourceRegistry
 
 
@@ -34,8 +31,10 @@ class _FakeContainer:
 
 
 def test_create_ingestion_bundle_wires_runtime_ports(mocker) -> None:
-    """Composition root should wire catalog/payload ports into the coordinator."""
+    """Composition root should wire catalog/snapshot/lifecycle ports into evidence."""
     catalog = InMemoryDataCatalog()
+    snapshots = MagicMock(spec=ProviderSnapshotReader)
+    lifecycle = MagicMock(spec=PartitionLifecycleReader)
     source_registry = SourceRegistry()
     services = {
         ingestion_context.MetadataService: MagicMock(),
@@ -53,7 +52,10 @@ def test_create_ingestion_bundle_wires_runtime_ports(mocker) -> None:
         DataCatalogReader: catalog,
         DataCatalogWriter: catalog,
         ProviderPayloadWriter: MagicMock(),
+        ProviderSnapshotReader: snapshots,
+        PartitionLifecycleReader: lifecycle,
         BootstrapPlanner: MagicMock(),
+        ingestion_context.IngestionEvidenceCommitter: MagicMock(),
     }
     container = _FakeContainer(services)
     coordinator = MagicMock()
@@ -99,15 +101,24 @@ def test_create_ingestion_bundle_wires_runtime_ports(mocker) -> None:
         assert bundle.coordinator is coordinator
         assert bundle.sparse_pit_reattestation is reattestation
 
-    coordinator_services = cast(CoordinatorServices, captured_services["services"])
+    coordinator_services = captured_services["services"]
     assert coordinator_services.source_registry is source_registry
-    runtime = cast(CoordinatorRuntimeContext, captured_kwargs["runtime"])
+    runtime = captured_kwargs["runtime"]
     assert runtime.catalog_reader is catalog
     assert runtime.catalog_writer is catalog
-    assert retry_manager_cls.call_args.kwargs["data_catalog_reader"] is catalog
+    # #394:证据 saga 恒开启,完成事实端口随协调器下发。
+    assert (
+        runtime.evidence_committer
+        is services[ingestion_context.IngestionEvidenceCommitter]
+    )
+    assert runtime.snapshot_reader is snapshots
+    assert runtime.lifecycle_reader is lifecycle
+    assert "data_catalog_reader" not in retry_manager_cls.call_args.kwargs
     assert reattestation_cls.call_args.kwargs["ingestion"] is coordinator
-    assert reattestation_cls.call_args.kwargs["catalog"] is catalog
+    assert reattestation_cls.call_args.kwargs["snapshots"] is snapshots
+    assert reattestation_cls.call_args.kwargs["lifecycle"] is lifecycle
     verifier = reattestation_cls.call_args.kwargs["verifier"]
-    assert verifier.reader is catalog
+    assert verifier.snapshots is snapshots
+    assert verifier.lifecycle is lifecycle
     assert verifier.ingestion_logs is services[ingestion_context.IngestionLogStore]
     assert container.closed

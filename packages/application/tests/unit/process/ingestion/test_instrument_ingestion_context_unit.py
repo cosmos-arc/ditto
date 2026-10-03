@@ -159,15 +159,8 @@ def test_process_fetched_data_by_instrument_accepts_context() -> None:
 
     assert result.status == "success"
     assert writer.calls == [("stock_daily", "2024-01-01", OnDuplicate.VERIFY_IDENTICAL)]
-    asset = DataAssetRef(
-        dataset_id="stock_daily",
-        namespace="market",
-        partition_keys=(
-            "source_ticker=000001.SZ",
-            "start_date=2024-01-01",
-            "end_date=2024-01-31",
-        ),
-    )
+    # #394:标的维度写入也收敛为数据集级 catalog 行。
+    asset = DataAssetRef(dataset_id="stock_daily", namespace="market")
     assert catalog.get_asset(asset) is not None
 
 

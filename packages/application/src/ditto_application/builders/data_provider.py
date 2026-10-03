@@ -12,11 +12,17 @@ from dataclasses import dataclass
 from datetime import date, datetime
 
 import polars as pl
-from ditto_data.catalog import DataCatalogEntry, DataCatalogReader
+from ditto_data.catalog.contracts import DataAssetRef
+from ditto_data.catalog.source_snapshot import (
+    ProviderSnapshot,
+    ProviderSnapshotReader,
+)
 from ditto_data.provider import BarQuery, InstrumentQuery
 from ditto_data.services.market_service import AdjType, MarketBarsQuery, MarketService
 from ditto_data.services.metadata_service import MetadataService
 from ditto_features.services import DerivedQueryService
+
+from ditto_application.catalog_freshness import dataset_namespace, observed_at
 
 __all__ = ["ServiceBackedDataProvider"]
 
@@ -30,7 +36,7 @@ class _CatalogSnapshotWindow:
     start_date: date
     end_date: date
     snapshot_id: str
-    freshness_at: datetime
+    observed_at: datetime
 
     def contains(self, *, source: str, source_ticker: str, trade_date: date) -> bool:
         return (
@@ -40,50 +46,68 @@ class _CatalogSnapshotWindow:
         )
 
 
-def _partition_values(entry: DataCatalogEntry) -> dict[str, str]:
+def _partition_values(partition_keys: tuple[str, ...]) -> dict[str, str]:
     values: dict[str, str] = {}
-    for raw in entry.asset.partition_keys:
+    for raw in partition_keys:
         key, separator, value = raw.partition("=")
         if separator and key and value:
             values[key] = value
     return values
 
 
-def _snapshot_window(entry: DataCatalogEntry) -> _CatalogSnapshotWindow | None:
-    snapshot_id = entry.source_snapshot_id
-    if snapshot_id is None or not snapshot_id.strip():
-        return None
-    values = _partition_values(entry)
-    exact_date = values.get("trade_date")
-    start_text = exact_date or values.get("start_date")
-    end_text = exact_date or values.get("end_date")
-    if start_text is None or end_text is None:
-        return None
+def _metadata_value(snapshot: ProviderSnapshot, key: str) -> str | None:
+    for name, value in snapshot.response_metadata:
+        if name == key:
+            return value
+    return None
+
+
+def _optional_iso_date(value: str) -> date | None:
     try:
-        start_date = date.fromisoformat(start_text)
-        end_date = date.fromisoformat(end_text)
+        return date.fromisoformat(value)
     except ValueError:
         return None
-    if start_date > end_date:
+
+
+def _snapshot_window(snapshot: ProviderSnapshot) -> _CatalogSnapshotWindow | None:
+    """
+    Lineage window for one provider snapshot.
+
+    窗口区间优先解析自 canonical_asset partition_keys(升级前的遗留行),
+    数据集级 canonical 资产后回退到 snapshot.request_start/end;排序时钟
+    采用 #393 观察事件,内容首次可见时间兜底。
+    """
+    if not snapshot.snapshot_id.strip():
         return None
+    values = _partition_values(snapshot.canonical_asset.partition_keys)
+    exact_date = values.get("trade_date")
+    start_text = exact_date or values.get("start_date") or snapshot.request_start
+    end_text = exact_date or values.get("end_date") or snapshot.request_end
+    start_date = _optional_iso_date(start_text)
+    end_date = _optional_iso_date(end_text)
+    if start_date is None or end_date is None or start_date > end_date:
+        return None
+    source_ticker = _metadata_value(snapshot, "source_ticker") or values.get(
+        "source_ticker"
+    )
     return _CatalogSnapshotWindow(
-        source=entry.source,
-        source_ticker=values.get("source_ticker"),
+        source=snapshot.source,
+        source_ticker=source_ticker,
         start_date=start_date,
         end_date=end_date,
-        snapshot_id=snapshot_id,
-        freshness_at=entry.freshness_at,
+        snapshot_id=snapshot.snapshot_id,
+        observed_at=observed_at(snapshot),
     )
 
 
 def _freshness_key(window: _CatalogSnapshotWindow) -> tuple[str, bytes]:
-    """Order windows by observed freshness, then immutable identity."""
-    return (window.freshness_at.isoformat(), window.snapshot_id.encode())
+    """Order windows by observed recency, then immutable identity."""
+    return (window.observed_at.isoformat(), window.snapshot_id.encode())
 
 
 def _freshness(window: _CatalogSnapshotWindow) -> str:
-    """Single sortable key preserving the freshness/identity tie-break."""
-    return f"{window.freshness_at.isoformat()}|{window.snapshot_id}"
+    """Single sortable key preserving the observation/identity tie-break."""
+    return f"{window.observed_at.isoformat()}|{window.snapshot_id}"
 
 
 def _lineage_frame(frame: pl.DataFrame) -> pl.DataFrame:
@@ -211,25 +235,31 @@ _BAR_DATASETS = frozenset({"stock_daily", "etf_daily"})
 
 
 def _catalog_windows(
-    catalog_reader: DataCatalogReader,
+    snapshot_reader: ProviderSnapshotReader,
     dataset_id: str | None,
 ) -> tuple[_CatalogSnapshotWindow, ...]:
     """
-    Daily-bar windows for the expected dataset.
+    Daily-bar lineage windows for the expected dataset.
 
-    The market namespace also carries other datasets; an unfiltered scan
-    lets a fresher unrelated snapshot win the same source/ticker/date
-    window and stamp the wrong dataset's lineage. With an expected dataset
-    only that dataset participates; otherwise any daily-bar dataset may
-    (legacy callers).
+    #394:窗口来自 provider snapshots 的数据集级 canonical 资产。带期望
+    dataset 时只有该数据集的快照参与;否则任一日线数据集都可能(遗留
+    调用方),防止相邻数据集的更新快照抢占同一 source/ticker/date 窗口
+    盖错 lineage。
     """
     allowed = {dataset_id} if dataset_id is not None else _BAR_DATASETS
-    return tuple(
-        window
-        for entry in catalog_reader.list_assets("market")
-        if entry.asset.dataset_id in allowed
-        and (window := _snapshot_window(entry)) is not None
-    )
+    windows: list[_CatalogSnapshotWindow] = []
+    for dataset in sorted(allowed):
+        canonical = DataAssetRef(
+            dataset_id=dataset,
+            namespace=dataset_namespace(dataset),
+            partition_keys=(),
+        )
+        windows.extend(
+            window
+            for snapshot in snapshot_reader.list_snapshots(canonical_asset=canonical)
+            if (window := _snapshot_window(snapshot)) is not None
+        )
+    return tuple(windows)
 
 
 def _partition_windows(
@@ -261,24 +291,23 @@ def _partition_windows(
 
 def _attach_catalog_source_snapshots(
     frame: pl.DataFrame,
-    catalog_reader: DataCatalogReader,
+    snapshot_reader: ProviderSnapshotReader,
     dataset_id: str | None = None,
 ) -> pl.DataFrame:
     if frame.is_empty() or _SOURCE_SNAPSHOT_COLUMN in frame.columns:
         return frame
     required = {"trade_date", "source", "source_ticker"}
     if not required.issubset(frame.columns) or not (
-        windows := _catalog_windows(catalog_reader, dataset_id)
+        windows := _catalog_windows(snapshot_reader, dataset_id)
     ):
         return frame.with_columns(
             pl.lit(None, dtype=pl.String).alias(_SOURCE_SNAPSHOT_COLUMN)
         )
-    # Vectorized lineage. The former per-row Python scan scaled as rows x
-    # catalog entries; exact-date windows (the common catalog shape) resolve
-    # through joins and only the few multi-date windows iterate. Ticker-
-    # specific windows (exact or ranged) form the preferred class, wildcard
-    # windows the fallback, and within a class the freshest snapshot wins
-    # per row, matching the original scan's precedence exactly.
+    # Vectorized lineage. Exact-date windows (the common snapshot shape) resolve
+    # through joins and only the few multi-date windows iterate. Ticker-specific
+    # windows (exact or ranged) form the preferred class, wildcard windows the
+    # fallback, and within a class the most recently observed snapshot wins per
+    # row;无覆盖窗口的行保持 null lineage,由下游 PIT 边界 fail-closed。
     keyed, wildcard_date, ranged = _partition_windows(windows)
     lineage = _lineage_frame(frame)
     lineage = _apply_exact(
@@ -323,12 +352,12 @@ class ServiceBackedDataProvider:
         market_service: MarketService,
         metadata_service: MetadataService,
         derived_service: DerivedQueryService,
-        catalog_reader: DataCatalogReader | None = None,
+        snapshot_reader: ProviderSnapshotReader | None = None,
     ) -> None:
         self._market = market_service
         self._metadata = metadata_service
         self._derived = derived_service
-        self._catalog = catalog_reader
+        self._snapshots = snapshot_reader
 
     def get_bars(self, query: BarQuery) -> pl.DataFrame:
         """
@@ -358,9 +387,9 @@ class ServiceBackedDataProvider:
             adj=AdjType.from_string(query.adj),
         )
         bars = self._market.find_bars(bars_query)
-        if self._catalog is None:
+        if self._snapshots is None:
             return bars
-        return _attach_catalog_source_snapshots(bars, self._catalog, query.dataset_id)
+        return _attach_catalog_source_snapshots(bars, self._snapshots, query.dataset_id)
 
     def get_instruments(self, query: InstrumentQuery) -> pl.DataFrame:
         """获取标的列表."""

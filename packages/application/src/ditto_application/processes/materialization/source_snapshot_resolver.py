@@ -9,9 +9,9 @@ from typing import Protocol
 
 import orjson
 from ditto_data.catalog import DataCatalogReader
-from ditto_data.catalog.metadata import default_dataset_metadata
+from ditto_data.catalog.source_snapshot import ProviderSnapshotReader
+from ditto_data.ingestion.partition_state import PartitionLifecycleReader
 from ditto_features.materialization.dependency_registry import (
-    DependencyContract,
     dependency_contracts,
 )
 
@@ -25,27 +25,9 @@ __all__ = [
     "CatalogSourceSnapshotResolver",
     "SourceSnapshotProvenance",
     "SourceSnapshotResolver",
-    "UniverseSourceTickersProvider",
-    "UniverseSourceTickersRequest",
 ]
 
 type CatalogCoverageDatesProvider = Callable[[str, str], Iterable[str]]
-type UniverseSourceTickersProvider = Callable[
-    ["UniverseSourceTickersRequest"],
-    Iterable[str],
-]
-
-
-@dataclass(frozen=True)
-class UniverseSourceTickersRequest:
-    """Request source-specific universe tickers for one dependency/date."""
-
-    universe_id: str
-    source: str
-    asof: str | None
-    dependency_ref: str
-    catalog_dataset_id: str
-    catalog_namespace: str
 
 
 @dataclass(frozen=True)
@@ -74,50 +56,35 @@ class SourceSnapshotResolver(Protocol):
 
 
 class CatalogSourceSnapshotResolver:
-    """Resolve selected source snapshots from DataCatalog dependency assets."""
+    """Resolve selected source snapshots from completed snapshot coverage facts."""
 
     def __init__(
         self,
         *,
         data_catalog_reader: DataCatalogReader,
+        snapshots: ProviderSnapshotReader,
+        lifecycle: PartitionLifecycleReader,
         catalog_coverage_dates_provider: CatalogCoverageDatesProvider | None = None,
-        universe_source_tickers_provider: UniverseSourceTickersProvider | None = None,
     ) -> None:
         self._data_catalog_reader = data_catalog_reader
+        self._snapshots = snapshots
+        self._lifecycle = lifecycle
         self._catalog_coverage_dates_provider = catalog_coverage_dates_provider
-        self._universe_source_tickers_provider = universe_source_tickers_provider
 
     def resolve(self, context: InputContext) -> SourceSnapshotProvenance:
-        """Return DataCatalog-proven source snapshot provenance for *context*."""
+        """Return snapshot-fact provenance for *context*."""
         plan = context.plan
-        asof = str(plan.compute_start)
         required_dates = self._catalog_required_dates(
-            start=asof,
+            start=str(plan.compute_start),
             end=str(plan.compute_end),
         )
-        contracts = dependency_contracts(context.dependencies)
         report = validate_dependency_catalog_compatibility(
-            contracts=contracts,
+            contracts=dependency_contracts(context.dependencies),
             catalog_reader=self._data_catalog_reader,
+            snapshots=self._snapshots,
+            lifecycle=self._lifecycle,
             required_dates=required_dates,
             expected_source_snapshot_id=context.request.source_snapshot_id,
-            required_source_tickers=(
-                ()
-                if required_dates
-                else self._required_source_tickers(
-                    context,
-                    contracts=contracts,
-                    asof=asof,
-                )
-            ),
-            required_source_tickers_by_date_by_ref=(
-                self._required_source_tickers_by_date_by_ref(
-                    context,
-                    contracts=contracts,
-                    dates=required_dates,
-                )
-            ),
-            required_source_tickers_by_date=None,
         )
         if report.source_snapshot_ids:
             return SourceSnapshotProvenance.from_ids(report.source_snapshot_ids)
@@ -127,80 +94,6 @@ class CatalogSourceSnapshotResolver:
         if self._catalog_coverage_dates_provider is None:
             return ()
         return tuple(self._catalog_coverage_dates_provider(start, end))
-
-    def _required_source_tickers(
-        self,
-        context: InputContext,
-        *,
-        contracts: tuple[DependencyContract, ...],
-        asof: str | None,
-    ) -> tuple[str, ...]:
-        if context.spec.universe_id is None:
-            return ()
-        provider = self._universe_source_tickers_provider
-        if provider is None:
-            return ()
-        source_tickers: list[str] = []
-        for contract in contracts:
-            source = _contract_default_source(contract)
-            if source is None:
-                continue
-            source_tickers.extend(
-                provider(
-                    UniverseSourceTickersRequest(
-                        universe_id=context.spec.universe_id,
-                        source=source,
-                        asof=asof,
-                        dependency_ref=contract.ref.ref,
-                        catalog_dataset_id=contract.catalog_dataset_id,
-                        catalog_namespace=contract.catalog_namespace,
-                    )
-                )
-            )
-        return tuple(dict.fromkeys(source_tickers))
-
-    def _required_source_tickers_by_date_by_ref(
-        self,
-        context: InputContext,
-        *,
-        contracts: tuple[DependencyContract, ...],
-        dates: tuple[str, ...],
-    ) -> dict[str, dict[str, tuple[str, ...]]]:
-        if context.spec.universe_id is None:
-            return {}
-        provider = self._universe_source_tickers_provider
-        if provider is None:
-            return {}
-        source_tickers_by_ref: dict[str, dict[str, tuple[str, ...]]] = {}
-        for contract in contracts:
-            source = _contract_default_source(contract)
-            if source is None:
-                continue
-            source_tickers_by_ref[contract.ref.ref] = {
-                date: tuple(
-                    dict.fromkeys(
-                        provider(
-                            UniverseSourceTickersRequest(
-                                universe_id=context.spec.universe_id,
-                                source=source,
-                                asof=date,
-                                dependency_ref=contract.ref.ref,
-                                catalog_dataset_id=contract.catalog_dataset_id,
-                                catalog_namespace=contract.catalog_namespace,
-                            )
-                        )
-                    )
-                )
-                for date in dates
-            }
-        return source_tickers_by_ref
-
-
-def _contract_default_source(contract: DependencyContract) -> str | None:
-    metadata = default_dataset_metadata().get(contract.catalog_dataset_id)
-    if metadata is None:
-        return None
-    return metadata.default_source
 
 
 def _normalize_snapshot_ids(snapshot_ids: Iterable[str | None]) -> tuple[str, ...]:

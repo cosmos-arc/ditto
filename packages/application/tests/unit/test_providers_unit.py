@@ -695,13 +695,21 @@ class TestAppProviderStructure:
         assert facade._provider_snapshots is snapshots
 
     def test_catalog_query_facade_receives_data_catalog_reader(self) -> None:
-        """CatalogQueryFacade 应接收 data runtime 提供的 catalog reader。"""
+        """CatalogQueryFacade 应接收 catalog reader 与 snapshot 完成事实端口。"""
         provider = AppMarketQueryProvider()
         reader = InMemoryDataCatalog()
-        facade = provider.catalog_query_facade(data_catalog_reader=reader)
+        snapshots = MagicMock()
+        lifecycle = MagicMock()
+        facade = provider.catalog_query_facade(
+            data_catalog_reader=reader,
+            snapshots=snapshots,
+            lifecycle=lifecycle,
+        )
 
         assert isinstance(facade, CatalogQueryFacade)
         assert facade._data_catalog_reader is reader
+        assert facade._snapshot_reader is snapshots
+        assert facade._lifecycle_reader is lifecycle
 
     def test_ingestion_status_query_facade_receives_data_catalog_reader(self) -> None:
         """IngestionStatusQueryFacade 应接收 catalog reader 以暴露 freshness."""

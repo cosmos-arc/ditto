@@ -17,6 +17,9 @@ from ditto_data.catalog import (
     DataSchemaFingerprint,
     InMemoryDataCatalog,
 )
+from packages.application.tests.unit.process.ingestion import (
+    snapshot_evidence_support as _evidence_support,
+)
 
 
 def _entry(
@@ -146,28 +149,32 @@ class TestCatalogQueryFacadeGetAsset:
 
 class TestCatalogQueryFacadeSourceHealth:
     def test_reports_source_freshness_and_selected_auto_source(self) -> None:
-        now = datetime(2026, 6, 1, 12, tzinfo=UTC)
-        catalog = InMemoryDataCatalog()
-        catalog.upsert_asset(
-            DataCatalogEntry(
-                asset=DataAssetRef(
-                    dataset_id="macro_indicators",
-                    namespace="macro",
-                    partition_keys=("trade_date=2024-12-27",),
-                ),
-                storage_uri="macro/macro_indicators/2024-12-27",
-                schema=DataSchemaFingerprint(schema_hash="stale", row_count=1),
-                source="tushare",
-                freshness_at=now - timedelta(hours=100),
+        with _evidence_support.evidence_stores() as stores:
+            # tushare 请求过该日期但未完成 → stale;fred 无覆盖 → missing。
+            stale_observed = datetime(2026, 6, 1, 12, tzinfo=UTC) - timedelta(hours=100)
+            _evidence_support.commit_snapshot(
+                stores,
+                dataset="macro_indicators",
+                request_start="2024-12-27",
+                request_end="2024-12-27",
+                checksum="a" * 32,
+                row_count=1,
+                schema_version="macro.macro_indicators.v1",
+                namespace="macro",
+                observed_at=stale_observed,
+                complete=False,
             )
-        )
-        facade = CatalogQueryFacade(catalog, now=lambda: now)
+            facade = CatalogQueryFacade(
+                InMemoryDataCatalog(),
+                snapshot_reader=stores.snapshots,
+                lifecycle_reader=stores.lifecycle,
+            )
 
-        report = facade.get_source_health_report(
-            dataset_id="macro_indicators",
-            trade_date="2024-12-27",
-            available_sources=("tushare", "fred"),
-        )
+            report = facade.get_source_health_report(
+                dataset_id="macro_indicators",
+                trade_date="2024-12-27",
+                available_sources=("tushare", "fred"),
+            )
 
         assert report.dataset_id == "macro_indicators"
         assert report.namespace == "macro"
@@ -183,10 +190,10 @@ class TestCatalogQueryFacadeSourceHealth:
         tushare, fred = report.sources
         assert tushare.supported is True
         assert tushare.freshness_status == "stale"
-        assert tushare.storage_uri == "macro/macro_indicators/2024-12-27"
-        assert tushare.schema_hash == "stale"
-        assert tushare.row_count == 1
-        assert tushare.freshness_at == now - timedelta(hours=100)
+        # stale 源没有完成快照,证据字段保持空,只有状态可报。
+        assert tushare.storage_uri is None
+        assert tushare.row_count is None
+        assert tushare.freshness_at is None
         assert fred.supported is True
         assert fred.freshness_status == "missing"
         assert fred.storage_uri is None
@@ -201,31 +208,28 @@ class TestCatalogQueryFacadeSourceHealth:
     def test_reports_unsupported_source_attention_when_selected_source_is_fresh(
         self,
     ) -> None:
-        now = datetime(2026, 6, 1, 12, tzinfo=UTC)
-        catalog = InMemoryDataCatalog()
-        catalog.upsert_asset(
-            DataCatalogEntry(
-                asset=DataAssetRef(
-                    dataset_id="stock_daily",
-                    namespace="market",
-                    partition_keys=("trade_date=2024-12-27",),
-                ),
-                storage_uri="market/stock_daily/2024-12-27",
-                schema=DataSchemaFingerprint(
-                    schema_hash="schema:stock_daily:v1",
-                    row_count=2300,
-                ),
-                source="tushare",
-                freshness_at=now - timedelta(hours=1),
+        with _evidence_support.evidence_stores() as stores:
+            _evidence_support.commit_snapshot(
+                stores,
+                dataset="stock_daily",
+                request_start="2024-12-27",
+                request_end="2024-12-27",
+                checksum="b" * 32,
+                row_count=2300,
+                schema_version="market.stock_daily.v1",
+                observed_at=datetime(2026, 6, 1, 11, tzinfo=UTC),
             )
-        )
-        facade = CatalogQueryFacade(catalog, now=lambda: now)
+            facade = CatalogQueryFacade(
+                InMemoryDataCatalog(),
+                snapshot_reader=stores.snapshots,
+                lifecycle_reader=stores.lifecycle,
+            )
 
-        report = facade.get_source_health_report(
-            dataset_id="stock_daily",
-            trade_date="2024-12-27",
-            available_sources=("tushare", "fred"),
-        )
+            report = facade.get_source_health_report(
+                dataset_id="stock_daily",
+                trade_date="2024-12-27",
+                available_sources=("tushare", "fred"),
+            )
 
         assert report.selected_source == "tushare"
         assert report.selected_freshness_status == "fresh"
@@ -233,14 +237,18 @@ class TestCatalogQueryFacadeSourceHealth:
         assert report.attention_reasons == ("unsupported_sources_present",)
 
     def test_reports_single_source_dataset_without_cross_source_fallback(self) -> None:
-        now = datetime(2026, 6, 1, 12, tzinfo=UTC)
-        facade = CatalogQueryFacade(InMemoryDataCatalog(), now=lambda: now)
+        with _evidence_support.evidence_stores() as stores:
+            facade = CatalogQueryFacade(
+                InMemoryDataCatalog(),
+                snapshot_reader=stores.snapshots,
+                lifecycle_reader=stores.lifecycle,
+            )
 
-        report = facade.get_source_health_report(
-            dataset_id="stock_daily",
-            trade_date="2024-12-27",
-            available_sources=("tushare", "fred"),
-        )
+            report = facade.get_source_health_report(
+                dataset_id="stock_daily",
+                trade_date="2024-12-27",
+                available_sources=("tushare", "fred"),
+            )
 
         assert report.default_source == "tushare"
         assert report.selected_source == "tushare"
@@ -338,6 +346,7 @@ def _assert_macro_missing_attention(
 
 def _assert_stock_unsupported_attention(
     attention: CatalogSourceHealthAttentionItem,
+    storage_uri: str | None = None,
 ) -> None:
     assert attention.dataset_id == "stock_daily"
     assert attention.namespace == "market"
@@ -347,10 +356,7 @@ def _assert_stock_unsupported_attention(
     assert attention.selected_freshness_status == "fresh"
     assert attention.selected_source_health.source == "tushare"
     assert attention.selected_source_health.freshness_status == "fresh"
-    assert attention.selected_source_health.storage_uri == (
-        "market/stock_daily/2024-12-27"
-    )
-    assert attention.selected_source_health.schema_hash == "schema:stock_daily:v1"
+    assert attention.selected_source_health.storage_uri == storage_uri
     assert attention.selected_source_health.row_count == 2300
     assert attention.attention_reasons == ("unsupported_sources_present",)
     assert attention.attention_severity == "info"
@@ -359,51 +365,45 @@ def _assert_stock_unsupported_attention(
 
 class TestCatalogQueryFacadeSourceHealthSummary:
     def test_summarizes_source_health_across_datasets_and_dates(self) -> None:
-        now = datetime(2026, 6, 1, 12, tzinfo=UTC)
-        catalog = InMemoryDataCatalog()
-        catalog.upsert_asset(
-            DataCatalogEntry(
-                asset=DataAssetRef(
-                    dataset_id="macro_indicators",
-                    namespace="macro",
-                    partition_keys=("trade_date=2024-12-27",),
-                ),
-                storage_uri="macro/macro_indicators/2024-12-27",
-                schema=DataSchemaFingerprint(
-                    schema_hash="schema:macro:v1", row_count=1
-                ),
-                source="tushare",
-                freshness_at=now - timedelta(hours=100),
+        with _evidence_support.evidence_stores() as stores:
+            _evidence_support.commit_snapshot(
+                stores,
+                dataset="macro_indicators",
+                request_start="2024-12-27",
+                request_end="2024-12-27",
+                checksum="c" * 32,
+                row_count=1,
+                schema_version="macro.macro_indicators.v1",
+                namespace="macro",
+                complete=False,
             )
-        )
-        catalog.upsert_asset(
-            DataCatalogEntry(
-                asset=DataAssetRef(
-                    dataset_id="stock_daily",
-                    namespace="market",
-                    partition_keys=("trade_date=2024-12-27",),
-                ),
-                storage_uri="market/stock_daily/2024-12-27",
-                schema=DataSchemaFingerprint(
-                    schema_hash="schema:stock_daily:v1",
-                    row_count=2300,
-                ),
-                source="tushare",
-                freshness_at=now - timedelta(hours=1),
+            stock_snapshot = _evidence_support.commit_snapshot(
+                stores,
+                dataset="stock_daily",
+                request_start="2024-12-27",
+                request_end="2024-12-27",
+                checksum="d" * 32,
+                row_count=2300,
+                schema_version="market.stock_daily.v1",
             )
-        )
-        facade = CatalogQueryFacade(catalog, now=lambda: now)
+            facade = CatalogQueryFacade(
+                InMemoryDataCatalog(),
+                snapshot_reader=stores.snapshots,
+                lifecycle_reader=stores.lifecycle,
+            )
 
-        summary = facade.get_source_health_summary(
-            dataset_ids=("macro_indicators", "stock_daily"),
-            trade_dates=("2024-12-27",),
-            available_sources=("tushare", "fred"),
-        )
+            summary = facade.get_source_health_summary(
+                dataset_ids=("macro_indicators", "stock_daily"),
+                trade_dates=("2024-12-27",),
+                available_sources=("tushare", "fred"),
+            )
 
         _assert_source_health_summary_rollups(summary)
         assert len(summary.attention_required) == 2
         _assert_macro_missing_attention(summary.attention_required[0])
-        _assert_stock_unsupported_attention(summary.attention_required[1])
+        _assert_stock_unsupported_attention(
+            summary.attention_required[1], stock_snapshot.payload_uri
+        )
         assert summary.reports[0].failover_from_default is True
         assert summary.reports[0].fallback_sources == ("fred",)
         assert summary.reports[1].failover_from_default is False

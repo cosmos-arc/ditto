@@ -2,26 +2,26 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
 from dataclasses import dataclass
-from datetime import UTC, datetime
 
 import polars as pl
-from ditto_data.catalog import (
-    DataCatalogEntry,
-    DataCatalogReader,
+from ditto_data.catalog.source_snapshot import (
+    ProviderSnapshot,
+    ProviderSnapshotReader,
 )
 from ditto_data.config.dataset_checksum import dataset_sort_keys
 from ditto_data.ingestion.ingestion_log_store import (
     IngestionLogStore,
 )
+from ditto_data.ingestion.partition_state import PartitionLifecycleReader
 from ditto_data.models.ingestion import IngestionLog
 from ditto_platform.foundation import ChecksumCompute, logger
 
 from ditto_application.catalog_freshness import (
+    CatalogAsOfSnapshot,
     PersistedIngestionEvidenceVerifier,
-    catalog_asof_snapshot,
-    catalog_entry_for_date,
+    completed_covering_snapshot,
+    snapshot_asof_evidence,
 )
 from ditto_application.processes.ingestion.sparse_pit import is_sparse_pit_dataset
 
@@ -45,6 +45,9 @@ class MetadataManager:
     - 比较数据是否变化
     - 判断是否需要跳过
 
+    跳过判定交叉 success log × completed provider snapshot(#394:
+    精确覆盖事实来自 snapshots,catalog 不再参与)。
+
     Attributes:
         _ingestion_log_store: IngestionLogStore 实例, 用于访问数据摄取日志等数据。
 
@@ -54,22 +57,22 @@ class MetadataManager:
         self,
         ingestion_log_store: IngestionLogStore | None,
         *,
-        data_catalog_reader: DataCatalogReader | None = None,
-        now: Callable[[], datetime] | None = None,
+        snapshot_reader: ProviderSnapshotReader | None = None,
+        lifecycle_reader: PartitionLifecycleReader | None = None,
     ) -> None:
         """
         初始化 MetadataManager。
 
         Args:
             ingestion_log_store: IngestionLogStore 实例。
-            data_catalog_reader: 可选 DataCatalog 读端口，用于无 log 历史时的
-                exact-date 落库资产跳过决策。
-            now: 可选当前时间函数，便于测试 freshness/SLA 判定。
+            snapshot_reader: 可选 provider snapshot 读端口，与 lifecycle_reader
+                一起构成无 log 历史时的完成事实跳过决策。
+            lifecycle_reader: 可选分区生命周期读端口。
 
         """
         self._ingestion_log_store = ingestion_log_store
-        self._data_catalog_reader = data_catalog_reader
-        self._now = now or _utcnow
+        self._snapshot_reader = snapshot_reader
+        self._lifecycle_reader = lifecycle_reader
 
     def should_skip(
         self,
@@ -191,15 +194,7 @@ class MetadataManager:
             )
             return IngestionSkipDecision(should_skip=False)
 
-        verifier = (
-            PersistedIngestionEvidenceVerifier(
-                reader=self._data_catalog_reader,
-                ingestion_logs=self._ingestion_log_store,
-            )
-            if self._data_catalog_reader is not None
-            and self._ingestion_log_store is not None
-            else None
-        )
+        verifier = self._verifier()
         verified = verifier is not None and verifier.verify_exact_date(
             dataset=dataset,
             source=source,
@@ -207,17 +202,11 @@ class MetadataManager:
             checksum=checksum,
             row_count=row_count,
         )
-        if (
-            not verified
-            and verifier is not None
-            and self._data_catalog_reader is not None
-            and is_sparse_pit_dataset(dataset)
-        ):
-            snapshot = catalog_asof_snapshot(
-                reader=self._data_catalog_reader,
+        if not verified and verifier is not None and is_sparse_pit_dataset(dataset):
+            snapshot = self._asof_snapshot(
                 dataset=dataset,
+                trade_date=trade_date,
                 source=source,
-                signal_date=trade_date,
             )
             verified = snapshot is not None and verifier.verify_asof_snapshot(
                 dataset=dataset,
@@ -228,7 +217,7 @@ class MetadataManager:
             )
         if not verified:
             logger.warning(
-                "Previous success lacks matching attested catalog evidence; retrying",
+                "Previous success lacks matching attested snapshot evidence; retrying",
                 event="should_skip_false",
                 dataset=dataset,
                 trade_date=trade_date,
@@ -262,12 +251,12 @@ class MetadataManager:
         trade_date: str,
         source: str,
     ) -> IngestionSkipDecision:
-        catalog_entry = self._catalog_entry_for_date(
+        completed = self._completed_snapshot(
             dataset=dataset,
             trade_date=trade_date,
             source=source,
         )
-        if catalog_entry is None:
+        if completed is None:
             logger.debug(
                 "No history found, not skipping",
                 event="should_skip_false",
@@ -278,30 +267,61 @@ class MetadataManager:
             return IngestionSkipDecision(should_skip=False)
 
         logger.warning(
-            "Catalog asset lacks matching ingestion log; retrying",
+            "Completed snapshot lacks matching ingestion log; retrying",
             event="should_skip_false",
             dataset=dataset,
             trade_date=trade_date,
-            storage_uri=catalog_entry.storage_uri,
             source=source,
-            reason="catalog_without_success_log",
+            snapshot_id=completed.snapshot_id,
+            reason="snapshot_without_success_log",
         )
         return IngestionSkipDecision(should_skip=False)
 
-    def _catalog_entry_for_date(
+    def _verifier(self) -> PersistedIngestionEvidenceVerifier | None:
+        if (
+            self._ingestion_log_store is None
+            or self._snapshot_reader is None
+            or self._lifecycle_reader is None
+        ):
+            return None
+        return PersistedIngestionEvidenceVerifier(
+            snapshots=self._snapshot_reader,
+            lifecycle=self._lifecycle_reader,
+            ingestion_logs=self._ingestion_log_store,
+        )
+
+    def _completed_snapshot(
         self,
         *,
         dataset: str,
         trade_date: str,
         source: str,
-    ) -> DataCatalogEntry | None:
-        if self._data_catalog_reader is None:
+    ) -> ProviderSnapshot | None:
+        if self._snapshot_reader is None or self._lifecycle_reader is None:
             return None
-        return catalog_entry_for_date(
-            reader=self._data_catalog_reader,
+        return completed_covering_snapshot(
+            self._snapshot_reader,
+            self._lifecycle_reader,
             dataset=dataset,
-            trade_date=trade_date,
             source=source,
+            trade_date=trade_date,
+        )
+
+    def _asof_snapshot(
+        self,
+        *,
+        dataset: str,
+        trade_date: str,
+        source: str,
+    ) -> CatalogAsOfSnapshot | None:
+        if self._snapshot_reader is None or self._lifecycle_reader is None:
+            return None
+        return snapshot_asof_evidence(
+            snapshots=self._snapshot_reader,
+            lifecycle=self._lifecycle_reader,
+            dataset=dataset,
+            source=source,
+            signal_date=trade_date,
         )
 
     def compare_data(
@@ -364,7 +384,3 @@ class MetadataManager:
             rows=len(new_df),
         )
         return True
-
-
-def _utcnow() -> datetime:
-    return datetime.now(UTC)

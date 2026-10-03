@@ -3,21 +3,19 @@
 from __future__ import annotations
 
 from concurrent.futures import Future, ThreadPoolExecutor, as_completed
+from datetime import date
 
-from ditto_data.ingestion.ingestion_log_store import (
-    IngestionLogStore,
-)
+from ditto_data.catalog.snapshot_completion import snapshot_completed
+from ditto_data.catalog.source_snapshot import ProviderSnapshotReader
+from ditto_data.ingestion.partition_state import PartitionLifecycleReader
 from ditto_data.models.ingestion import (
     BackfillResult,
-    IngestionLog,
     IngestionResult,
-    IngestionStatus,
 )
 from ditto_data.services.metadata_service import MetadataService
 from ditto_kernel.instrument import InstrumentIngestParams
 from ditto_platform.foundation import logger
 
-from ditto_application.catalog_freshness import PersistedIngestionEvidenceVerifier
 from ditto_application.exceptions import AppProcessError
 from ditto_application.processes.ingestion.bootstrap_planner import (
     BootstrapChunk,
@@ -37,9 +35,10 @@ class BackfillManager:
         self,
         coordinator: IngestionCoordinatorLike,
         metadata_service: MetadataService,
-        ingestion_log_store: IngestionLogStore,
         bootstrap_planner: BootstrapPlanner | None = None,
-        evidence_verifier: PersistedIngestionEvidenceVerifier | None = None,
+        *,
+        snapshot_reader: ProviderSnapshotReader | None = None,
+        lifecycle_reader: PartitionLifecycleReader | None = None,
     ) -> None:
         """
         初始化 BackfillManager。
@@ -47,18 +46,19 @@ class BackfillManager:
         Args:
             coordinator: 摄取协调器端口。
             metadata_service: MetadataService 实例。
-            ingestion_log_store: IngestionLogStore 实例。
             bootstrap_planner: 日程和分块感知的持久回补规划器。
-            evidence_verifier: 可选的目录与摄取日志一致性校验器。
+            snapshot_reader: provider snapshot 读端口,与 lifecycle_reader 一起
+                构成空洞发现的完成事实。
+            lifecycle_reader: 分区生命周期读端口。
 
         """
         self._coordinator = coordinator
         self._metadata_service = metadata_service
-        self._ingestion_log_store = ingestion_log_store
         self._bootstrap_planner = bootstrap_planner or BootstrapPlanner(
             metadata_service=metadata_service
         )
-        self._evidence_verifier = evidence_verifier
+        self._snapshot_reader = snapshot_reader
+        self._lifecycle_reader = lifecycle_reader
 
     def backfill_range(
         self,
@@ -171,15 +171,10 @@ class BackfillManager:
                 results=(),
             )
 
-        ingested_dates = self._ingestion_log_store.list_ingested_dates(
-            dataset,
-            source,
-            IngestionStatus.SUCCESS,
-        )
-        evidenced_dates = self._evidenced_dates(
+        evidenced_dates = self._completed_snapshot_dates(
             dataset=dataset,
             source=source,
-            ingested_dates=ingested_dates,
+            expected_dates=expected_dates,
         )
         missing_dates = set(expected_dates) - evidenced_dates
         if not missing_dates:
@@ -201,33 +196,39 @@ class BackfillManager:
             log_event="backfill_missing_complete",
         )
 
-    def _evidenced_dates(
+    def _completed_snapshot_dates(
         self,
         *,
         dataset: str,
         source: str,
-        ingested_dates: list[str],
+        expected_dates: list[str],
     ) -> set[str]:
-        """Return dates whose success log is backed by exact catalog evidence."""
-        if self._evidence_verifier is None:
-            return set(ingested_dates)
+        """
+        期望日期里已被 completed snapshot 覆盖的日期(#394 完成事实)。
 
-        evidenced: set[str] = set()
-        for trade_date in ingested_dates:
-            log = self._ingestion_log_store.get_log(dataset, source, trade_date)
-            payload = _verifiable_payload(log)
-            if payload is None:
+        没有完成事实端口时退化为空集——所有期望日期都视为空洞,
+        由下游 skip 决策兜底,避免把未证实的日期静默视为完整。
+        """
+        if self._snapshot_reader is None or self._lifecycle_reader is None:
+            return set()
+        expected = {_parse_iso_date_or_none(value) for value in expected_dates}
+        covered: set[date] = set()
+        for snapshot in self._snapshot_reader.list_snapshots(
+            dataset_id=dataset,
+            source=source,
+        ):
+            if not snapshot_completed(snapshot, self._lifecycle_reader):
                 continue
-            checksum, row_count = payload
-            if self._evidence_verifier.verify_exact_date(
-                dataset=dataset,
-                source=source,
-                trade_date=trade_date,
-                checksum=checksum,
-                row_count=row_count,
-            ):
-                evidenced.add(trade_date)
-        return evidenced
+            start = _parse_iso_date_or_none(snapshot.request_start)
+            end = _parse_iso_date_or_none(snapshot.request_end)
+            if start is None or end is None:
+                continue
+            covered.update(
+                value
+                for value in expected
+                if value is not None and start <= value <= end
+            )
+        return {value.isoformat() for value in covered}
 
     def _execute_backfill(
         self,
@@ -372,17 +373,11 @@ def _planned_dates(plan: BootstrapPlan) -> list[str]:
     )
 
 
-def _verifiable_payload(log: IngestionLog | None) -> tuple[str, int] | None:
-    if (
-        log is None
-        or log.status is not IngestionStatus.SUCCESS
-        or not isinstance(log.checksum, str)
-        or not log.checksum
-        or not isinstance(log.rows, int)
-        or log.rows < 0
-    ):
+def _parse_iso_date_or_none(value: str) -> date | None:
+    try:
+        return date.fromisoformat(value)
+    except ValueError:
         return None
-    return log.checksum, log.rows
 
 
 __all__ = ["BackfillManager"]

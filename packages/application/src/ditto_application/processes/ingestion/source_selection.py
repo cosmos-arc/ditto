@@ -6,7 +6,8 @@ from collections.abc import Callable, Mapping
 from dataclasses import replace
 from typing import Protocol
 
-from ditto_data.catalog import DataCatalogReader
+from ditto_data.catalog.source_snapshot import ProviderSnapshotReader
+from ditto_data.ingestion.partition_state import PartitionLifecycleReader
 from ditto_data.models import Dataset
 from ditto_data.models.ingestion import IngestionResult
 from ditto_kernel.instrument import InstrumentIngestParams
@@ -100,7 +101,8 @@ class AutoSourceIngestionCoordinator:
         self,
         coordinators: Mapping[str, IngestionCoordinatorLike],
         *,
-        catalog_reader: DataCatalogReader | None,
+        snapshot_reader: ProviderSnapshotReader | None = None,
+        lifecycle_reader: PartitionLifecycleReader | None = None,
         date_range_lister: DateRangeLister | None = None,
         default_source: str = "tushare",
     ) -> None:
@@ -114,7 +116,8 @@ class AutoSourceIngestionCoordinator:
             source_name.lower(): coordinator
             for source_name, coordinator in coordinators.items()
         }
-        self._catalog_reader = catalog_reader
+        self._snapshot_reader = snapshot_reader
+        self._lifecycle_reader = lifecycle_reader
         self._date_range_lister = date_range_lister
         normalized_default_source = default_source.lower()
         self._default_source = (
@@ -315,7 +318,8 @@ class AutoSourceIngestionCoordinator:
             dataset=dataset,
             trade_date=trade_date,
             available_sources=tuple(self._coordinators),
-            catalog_reader=self._catalog_reader,
+            snapshots=self._snapshot_reader,
+            lifecycle=self._lifecycle_reader,
         )
 
     def _coordinator_for_source(self, source: str) -> IngestionCoordinatorLike:

@@ -1,48 +1,39 @@
-"""DataCatalog-backed dependency compatibility checks for materialization."""
+"""
+Snapshot-backed dependency compatibility checks for materialization.
+
+#394 之后精确来源覆盖来自 completed provider snapshots;catalog 只提供
+数据集级 schema/版本描述行。覆盖校验与快照选择基于完成事实,schema
+校验基于数据集级 catalog 行。
+"""
 
 from __future__ import annotations
 
-from collections.abc import Iterable, Mapping
+from collections.abc import Iterable
 from dataclasses import dataclass
 
 from ditto_data.catalog import DataCatalogEntry, DataCatalogReader
 from ditto_data.catalog.metadata import default_dataset_metadata
+from ditto_data.catalog.snapshot_completion import snapshot_completed
+from ditto_data.catalog.source_snapshot import (
+    ProviderSnapshot,
+    ProviderSnapshotReader,
+)
+from ditto_data.ingestion.partition_state import PartitionLifecycleReader
 from ditto_features.materialization.dependency_registry import DependencyContract
 
 from ditto_application.exceptions import AppProcessError
 
 __all__ = [
-    "CertifiedCatalogDependencySelection",
     "DependencyCatalogCompatibilityError",
     "DependencyCatalogCompatibilityIssue",
     "DependencyCatalogCompatibilityReport",
-    "validate_certified_catalog_dependencies",
     "validate_dependency_catalog_compatibility",
 ]
 
 
-@dataclass(frozen=True, slots=True)
-class CertifiedCatalogDependencySelection:
-    """Exact provider snapshots selected for one certified input dataset."""
-
-    dataset_id: str
-    source_snapshot_ids: tuple[str, ...]
-
-    def __post_init__(self) -> None:
-        """Validate the dataset identity and non-empty unique snapshot set."""
-        if not self.dataset_id or self.dataset_id.strip() != self.dataset_id:
-            raise AppProcessError(f"invalid certified dataset_id: {self.dataset_id!r}")
-        if not self.source_snapshot_ids or len(set(self.source_snapshot_ids)) != len(
-            self.source_snapshot_ids
-        ):
-            raise AppProcessError(
-                "certified catalog source snapshot IDs must be non-empty and unique"
-            )
-
-
 @dataclass(frozen=True)
 class DependencyCatalogCompatibilityIssue:
-    """Structured DataCatalog compatibility failure details."""
+    """Structured dependency compatibility failure details."""
 
     dataset_ref: str
     reason: str
@@ -56,18 +47,17 @@ class DependencyCatalogCompatibilityIssue:
     source: str | None = None
     expected_source_snapshot_id: str | None = None
     actual_source_snapshot_id: str | None = None
-    missing_source_ticker_dates: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
 class DependencyCatalogCompatibilityReport:
-    """Successful catalog compatibility proof and selected source provenance."""
+    """Successful compatibility proof and selected source provenance."""
 
     source_snapshot_ids: tuple[str, ...] = ()
 
 
 class DependencyCatalogCompatibilityError(AppProcessError):
-    """Raised when DataCatalog metadata cannot prove dependency compatibility."""
+    """Raised when dependency facts cannot prove compatibility."""
 
     def __init__(self, issue: DependencyCatalogCompatibilityIssue) -> None:
         self.issue = issue
@@ -83,9 +73,8 @@ class DependencyCatalogCompatibilityError(AppProcessError):
         self.source = issue.source
         self.expected_source_snapshot_id = issue.expected_source_snapshot_id
         self.actual_source_snapshot_id = issue.actual_source_snapshot_id
-        self.missing_source_ticker_dates = issue.missing_source_ticker_dates
         message = (
-            "DataCatalog dependency compatibility check failed: "
+            "dependency compatibility check failed: "
             + f"dataset_ref={issue.dataset_ref}, reason={issue.reason}, "
             + "catalog_asset="
             + f"{issue.catalog_namespace}.{issue.catalog_dataset_id}, "
@@ -97,375 +86,96 @@ class DependencyCatalogCompatibilityError(AppProcessError):
             + f"source={issue.source}, "
             + "expected_source_snapshot_id="
             + f"{issue.expected_source_snapshot_id}, "
-            + "actual_source_snapshot_id="
-            + f"{issue.actual_source_snapshot_id}, "
-            + "missing_source_ticker_dates="
-            + f"{list(issue.missing_source_ticker_dates)}"
+            + f"actual_source_snapshot_id={issue.actual_source_snapshot_id}"
         )
         super().__init__(message)
-
-
-def validate_certified_catalog_dependencies(
-    *,
-    selections: Iterable[CertifiedCatalogDependencySelection],
-    catalog_reader: DataCatalogReader,
-) -> DependencyCatalogCompatibilityReport:
-    """Prove exact certified snapshots resolve to canonical catalog assets."""
-    selected_snapshot_ids: list[str] = []
-    for selection in selections:
-        metadata = default_dataset_metadata().get(selection.dataset_id)
-        if metadata is None:
-            raise DependencyCatalogCompatibilityError(
-                DependencyCatalogCompatibilityIssue(
-                    dataset_ref=selection.dataset_id,
-                    reason="unknown_certified_dataset",
-                    catalog_dataset_id=selection.dataset_id,
-                    catalog_namespace="unknown",
-                )
-            )
-        entries = tuple(
-            entry
-            for entry in catalog_reader.list_assets()
-            if entry.asset.dataset_id == selection.dataset_id
-        )
-        namespace = entries[0].asset.namespace if entries else metadata.domain
-        for snapshot_id in selection.source_snapshot_ids:
-            matching = tuple(
-                entry for entry in entries if entry.source_snapshot_id == snapshot_id
-            )
-            if not matching:
-                raise DependencyCatalogCompatibilityError(
-                    DependencyCatalogCompatibilityIssue(
-                        dataset_ref=selection.dataset_id,
-                        reason="certified_source_snapshot_missing",
-                        catalog_dataset_id=selection.dataset_id,
-                        catalog_namespace=namespace,
-                        expected_source_snapshot_id=snapshot_id,
-                    )
-                )
-            entry = _latest_catalog_entry(matching)
-            if not entry.schema.schema_version:
-                raise DependencyCatalogCompatibilityError(
-                    DependencyCatalogCompatibilityIssue(
-                        dataset_ref=selection.dataset_id,
-                        reason="missing_schema_version",
-                        catalog_dataset_id=selection.dataset_id,
-                        catalog_namespace=entry.asset.namespace,
-                        source=entry.source,
-                        actual_source_snapshot_id=entry.source_snapshot_id,
-                    )
-                )
-            if not metadata.supports_source(entry.source):
-                raise DependencyCatalogCompatibilityError(
-                    DependencyCatalogCompatibilityIssue(
-                        dataset_ref=selection.dataset_id,
-                        reason="unsupported_source",
-                        catalog_dataset_id=selection.dataset_id,
-                        catalog_namespace=entry.asset.namespace,
-                        actual_schema_version=entry.schema.schema_version,
-                        source=entry.source,
-                        actual_source_snapshot_id=entry.source_snapshot_id,
-                    )
-                )
-            selected_snapshot_ids.append(snapshot_id)
-    return DependencyCatalogCompatibilityReport(
-        source_snapshot_ids=tuple(selected_snapshot_ids)
-    )
 
 
 def validate_dependency_catalog_compatibility(
     *,
     contracts: Iterable[DependencyContract],
     catalog_reader: DataCatalogReader,
+    snapshots: ProviderSnapshotReader,
+    lifecycle: PartitionLifecycleReader,
     required_dates: Iterable[str] = (),
     expected_source_snapshot_id: str | None = None,
-    required_source_tickers: Iterable[str] = (),
-    required_source_tickers_by_date: Mapping[str, Iterable[str]] | None = None,
-    required_source_tickers_by_date_by_ref: (
-        Mapping[str, Mapping[str, Iterable[str]]] | None
-    ) = None,
 ) -> DependencyCatalogCompatibilityReport:
-    """Fail closed when catalog metadata cannot satisfy dependency contracts."""
+    """Fail closed when dependency contracts cannot be proven satisfied."""
     dates = tuple(dict.fromkeys(required_dates))
-    source_tickers = tuple(dict.fromkeys(required_source_tickers))
-    source_tickers_by_date = _normalize_source_tickers_by_date(
-        required_source_tickers_by_date or {},
-    )
-    source_tickers_by_date_by_ref = {
-        dependency_ref: _normalize_source_tickers_by_date(tickers_by_date)
-        for dependency_ref, tickers_by_date in (
-            required_source_tickers_by_date_by_ref or {}
-        ).items()
-    }
-    selected_entries: list[DataCatalogEntry] = []
+    selected_snapshot_ids: list[str] = []
     for contract in contracts:
-        entries = _catalog_entries(catalog_reader, contract)
-        if not entries:
+        entry = _dataset_catalog_entry(catalog_reader, contract)
+        _validate_catalog_entry(contract, entry)
+        snapshot_ids, missing_dates = _date_coverage(
+            snapshots,
+            lifecycle,
+            contract=contract,
+            dates=dates,
+        )
+        if missing_dates:
             raise DependencyCatalogCompatibilityError(
                 DependencyCatalogCompatibilityIssue(
                     dataset_ref=contract.ref.ref,
-                    reason="missing_catalog_asset",
+                    reason="missing_catalog_coverage",
+                    catalog_dataset_id=contract.catalog_dataset_id,
+                    catalog_namespace=contract.catalog_namespace,
+                    missing_dates=missing_dates,
+                    expected_schema_version=contract.schema_version,
+                    actual_schema_version=entry.schema.schema_version,
+                )
+            )
+        if (
+            dates
+            and expected_source_snapshot_id is not None
+            and expected_source_snapshot_id not in snapshot_ids
+        ):
+            raise DependencyCatalogCompatibilityError(
+                DependencyCatalogCompatibilityIssue(
+                    dataset_ref=contract.ref.ref,
+                    reason="source_snapshot_mismatch",
                     catalog_dataset_id=contract.catalog_dataset_id,
                     catalog_namespace=contract.catalog_namespace,
                     expected_schema_version=contract.schema_version,
-                )
-            )
-        contract_source_tickers_by_date = (
-            source_tickers_by_date_by_ref.get(contract.ref.ref)
-            or source_tickers_by_date
-        )
-        if contract_source_tickers_by_date:
-            selected_entries.extend(
-                _validate_source_ticker_coverage_by_date(
-                    contract=contract,
-                    entries=entries,
-                    source_tickers_by_date=contract_source_tickers_by_date,
+                    actual_schema_version=entry.schema.schema_version,
                     expected_source_snapshot_id=expected_source_snapshot_id,
+                    actual_source_snapshot_id=snapshot_ids[0] if snapshot_ids else None,
                 )
             )
-            continue
-        if dates and source_tickers:
-            selected_entries.extend(
-                _validate_source_ticker_coverage(
-                    contract=contract,
-                    entries=entries,
-                    dates=dates,
-                    source_tickers=source_tickers,
-                    expected_source_snapshot_id=expected_source_snapshot_id,
-                )
-            )
-            continue
-        if source_tickers:
-            selected_entries.extend(
-                _validate_source_ticker_latest(
-                    contract=contract,
-                    entries=entries,
-                    source_tickers=source_tickers,
-                    expected_source_snapshot_id=expected_source_snapshot_id,
-                )
-            )
-            continue
-        if dates:
-            selected_entries.extend(
-                _validate_catalog_coverage(
-                    contract=contract,
-                    entries=entries,
-                    dates=dates,
-                    expected_source_snapshot_id=expected_source_snapshot_id,
-                )
-            )
-            continue
-        selected_entry = _latest_catalog_entry(entries)
-        _validate_catalog_entry(
-            contract,
-            selected_entry,
-            expected_source_snapshot_id=expected_source_snapshot_id,
-        )
-        selected_entries.append(selected_entry)
+        selected_snapshot_ids.extend(snapshot_ids)
     return DependencyCatalogCompatibilityReport(
-        source_snapshot_ids=_source_snapshot_ids(selected_entries)
+        source_snapshot_ids=tuple(dict.fromkeys(selected_snapshot_ids)),
     )
 
 
-def _normalize_source_tickers_by_date(
-    source_tickers_by_date: Mapping[str, Iterable[str]],
-) -> dict[str, tuple[str, ...]]:
-    return {
-        date: tuple(dict.fromkeys(source_tickers))
-        for date, source_tickers in source_tickers_by_date.items()
-    }
-
-
-def _catalog_entries(
+def _dataset_catalog_entry(
     catalog_reader: DataCatalogReader,
     contract: DependencyContract,
-) -> tuple[DataCatalogEntry, ...]:
-    return tuple(
+) -> DataCatalogEntry:
+    entries = tuple(
         entry
         for entry in catalog_reader.list_assets(namespace=contract.catalog_namespace)
         if entry.asset.dataset_id == contract.catalog_dataset_id
+        and not entry.asset.partition_keys
     )
-
-
-def _latest_catalog_entry(entries: tuple[DataCatalogEntry, ...]) -> DataCatalogEntry:
+    if not entries:
+        raise DependencyCatalogCompatibilityError(
+            DependencyCatalogCompatibilityIssue(
+                dataset_ref=contract.ref.ref,
+                reason="missing_catalog_asset",
+                catalog_dataset_id=contract.catalog_dataset_id,
+                catalog_namespace=contract.catalog_namespace,
+                expected_schema_version=contract.schema_version,
+            )
+        )
     return max(
         entries,
-        key=_catalog_entry_sort_key,
+        key=lambda item: (item.freshness_at, item.storage_uri),
     )
-
-
-def _validate_catalog_coverage(
-    *,
-    contract: DependencyContract,
-    entries: tuple[DataCatalogEntry, ...],
-    dates: tuple[str, ...],
-    expected_source_snapshot_id: str | None,
-) -> tuple[DataCatalogEntry, ...]:
-    selected_entries: list[DataCatalogEntry] = []
-    missing_dates: list[str] = []
-    for date in dates:
-        covering_entries = tuple(
-            entry for entry in entries if _entry_covers_date(entry, date)
-        )
-        if not covering_entries:
-            missing_dates.append(date)
-            continue
-        selected_entries.append(_latest_catalog_entry(covering_entries))
-
-    if missing_dates:
-        raise DependencyCatalogCompatibilityError(
-            DependencyCatalogCompatibilityIssue(
-                dataset_ref=contract.ref.ref,
-                reason="missing_catalog_coverage",
-                catalog_dataset_id=contract.catalog_dataset_id,
-                catalog_namespace=contract.catalog_namespace,
-                missing_dates=tuple(missing_dates),
-                expected_schema_version=contract.schema_version,
-            )
-        )
-    for entry in _dedupe_entries(selected_entries):
-        _validate_catalog_entry(
-            contract,
-            entry,
-            expected_source_snapshot_id=expected_source_snapshot_id,
-        )
-    return _dedupe_entries(selected_entries)
-
-
-def _validate_source_ticker_coverage(
-    *,
-    contract: DependencyContract,
-    entries: tuple[DataCatalogEntry, ...],
-    dates: tuple[str, ...],
-    source_tickers: tuple[str, ...],
-    expected_source_snapshot_id: str | None,
-) -> tuple[DataCatalogEntry, ...]:
-    selected_entries: list[DataCatalogEntry] = []
-    missing_source_ticker_dates: list[str] = []
-    for source_ticker in source_tickers:
-        for date in dates:
-            covering_entries = tuple(
-                entry
-                for entry in entries
-                if _entry_covers_date(
-                    entry,
-                    date,
-                    required_source_ticker=source_ticker,
-                )
-            )
-            if not covering_entries:
-                missing_source_ticker_dates.append(f"{source_ticker}@{date}")
-                continue
-            selected_entries.append(_latest_catalog_entry(covering_entries))
-
-    if missing_source_ticker_dates:
-        raise DependencyCatalogCompatibilityError(
-            DependencyCatalogCompatibilityIssue(
-                dataset_ref=contract.ref.ref,
-                reason="missing_source_ticker_coverage",
-                catalog_dataset_id=contract.catalog_dataset_id,
-                catalog_namespace=contract.catalog_namespace,
-                expected_schema_version=contract.schema_version,
-                missing_source_ticker_dates=tuple(missing_source_ticker_dates),
-            )
-        )
-    for entry in _dedupe_entries(selected_entries):
-        _validate_catalog_entry(
-            contract,
-            entry,
-            expected_source_snapshot_id=expected_source_snapshot_id,
-        )
-    return _dedupe_entries(selected_entries)
-
-
-def _validate_source_ticker_coverage_by_date(
-    *,
-    contract: DependencyContract,
-    entries: tuple[DataCatalogEntry, ...],
-    source_tickers_by_date: Mapping[str, tuple[str, ...]],
-    expected_source_snapshot_id: str | None,
-) -> tuple[DataCatalogEntry, ...]:
-    selected_entries: list[DataCatalogEntry] = []
-    missing_source_ticker_dates: list[str] = []
-    for date, source_tickers in source_tickers_by_date.items():
-        for source_ticker in source_tickers:
-            covering_entries = tuple(
-                entry
-                for entry in entries
-                if _entry_covers_date(
-                    entry,
-                    date,
-                    required_source_ticker=source_ticker,
-                )
-            )
-            if not covering_entries:
-                missing_source_ticker_dates.append(f"{source_ticker}@{date}")
-                continue
-            selected_entries.append(_latest_catalog_entry(covering_entries))
-
-    if missing_source_ticker_dates:
-        raise DependencyCatalogCompatibilityError(
-            DependencyCatalogCompatibilityIssue(
-                dataset_ref=contract.ref.ref,
-                reason="missing_source_ticker_coverage",
-                catalog_dataset_id=contract.catalog_dataset_id,
-                catalog_namespace=contract.catalog_namespace,
-                expected_schema_version=contract.schema_version,
-                missing_source_ticker_dates=tuple(missing_source_ticker_dates),
-            )
-        )
-    for entry in _dedupe_entries(selected_entries):
-        _validate_catalog_entry(
-            contract,
-            entry,
-            expected_source_snapshot_id=expected_source_snapshot_id,
-        )
-    return _dedupe_entries(selected_entries)
-
-
-def _validate_source_ticker_latest(
-    *,
-    contract: DependencyContract,
-    entries: tuple[DataCatalogEntry, ...],
-    source_tickers: tuple[str, ...],
-    expected_source_snapshot_id: str | None,
-) -> tuple[DataCatalogEntry, ...]:
-    selected_entries: list[DataCatalogEntry] = []
-    missing_source_tickers: list[str] = []
-    for source_ticker in source_tickers:
-        matching_entries = tuple(
-            entry for entry in entries if _entry_source_ticker(entry) == source_ticker
-        )
-        if not matching_entries:
-            missing_source_tickers.append(f"{source_ticker}@latest")
-            continue
-        selected_entries.append(_latest_catalog_entry(matching_entries))
-
-    if missing_source_tickers:
-        raise DependencyCatalogCompatibilityError(
-            DependencyCatalogCompatibilityIssue(
-                dataset_ref=contract.ref.ref,
-                reason="missing_source_ticker_coverage",
-                catalog_dataset_id=contract.catalog_dataset_id,
-                catalog_namespace=contract.catalog_namespace,
-                expected_schema_version=contract.schema_version,
-                missing_source_ticker_dates=tuple(missing_source_tickers),
-            )
-        )
-    for entry in _dedupe_entries(selected_entries):
-        _validate_catalog_entry(
-            contract,
-            entry,
-            expected_source_snapshot_id=expected_source_snapshot_id,
-        )
-    return _dedupe_entries(selected_entries)
 
 
 def _validate_catalog_entry(
     contract: DependencyContract,
     entry: DataCatalogEntry,
-    *,
-    expected_source_snapshot_id: str | None,
 ) -> None:
     if not entry.schema.schema_version:
         raise DependencyCatalogCompatibilityError(
@@ -479,160 +189,90 @@ def _validate_catalog_entry(
                 source=entry.source,
             )
         )
-    _validate_schema_version(contract, entry)
-    _validate_schema_columns(contract, entry)
-    _validate_source(contract, entry)
-    _validate_source_snapshot(contract, entry, expected_source_snapshot_id)
-
-
-def _validate_source_snapshot(
-    contract: DependencyContract,
-    entry: DataCatalogEntry,
-    expected_source_snapshot_id: str | None,
-) -> None:
-    if expected_source_snapshot_id is None:
-        return
-    if entry.source_snapshot_id == expected_source_snapshot_id:
-        return
-    reason = (
-        "missing_source_snapshot_id"
-        if entry.source_snapshot_id is None
-        else "source_snapshot_mismatch"
-    )
-    raise DependencyCatalogCompatibilityError(
-        DependencyCatalogCompatibilityIssue(
-            dataset_ref=contract.ref.ref,
-            reason=reason,
-            catalog_dataset_id=contract.catalog_dataset_id,
-            catalog_namespace=contract.catalog_namespace,
-            expected_schema_version=contract.schema_version,
-            actual_schema_version=entry.schema.schema_version,
-            source=entry.source,
-            expected_source_snapshot_id=expected_source_snapshot_id,
-            actual_source_snapshot_id=entry.source_snapshot_id,
+    if entry.schema.schema_version != contract.schema_version:
+        raise DependencyCatalogCompatibilityError(
+            DependencyCatalogCompatibilityIssue(
+                dataset_ref=contract.ref.ref,
+                reason="schema_version_mismatch",
+                catalog_dataset_id=contract.catalog_dataset_id,
+                catalog_namespace=contract.catalog_namespace,
+                expected_schema_version=contract.schema_version,
+                actual_schema_version=entry.schema.schema_version,
+                source=entry.source,
+            )
         )
-    )
-
-
-def _validate_schema_version(
-    contract: DependencyContract,
-    entry: DataCatalogEntry,
-) -> None:
-    if entry.schema.schema_version == contract.schema_version:
-        return
-    raise DependencyCatalogCompatibilityError(
-        DependencyCatalogCompatibilityIssue(
-            dataset_ref=contract.ref.ref,
-            reason="schema_version_mismatch",
-            catalog_dataset_id=contract.catalog_dataset_id,
-            catalog_namespace=contract.catalog_namespace,
-            expected_schema_version=contract.schema_version,
-            actual_schema_version=entry.schema.schema_version,
-            source=entry.source,
-        )
-    )
-
-
-def _validate_schema_columns(
-    contract: DependencyContract,
-    entry: DataCatalogEntry,
-) -> None:
     available_columns = entry.schema.columns
     missing_columns = tuple(
         column
         for column in contract.required_frame_columns
         if column not in available_columns
     )
-    if not missing_columns:
-        return
-    raise DependencyCatalogCompatibilityError(
-        DependencyCatalogCompatibilityIssue(
-            dataset_ref=contract.ref.ref,
-            reason="schema_columns_mismatch",
-            catalog_dataset_id=contract.catalog_dataset_id,
-            catalog_namespace=contract.catalog_namespace,
-            missing_columns=missing_columns,
-            available_columns=available_columns,
-            expected_schema_version=contract.schema_version,
-            actual_schema_version=entry.schema.schema_version,
-            source=entry.source,
+    if missing_columns:
+        raise DependencyCatalogCompatibilityError(
+            DependencyCatalogCompatibilityIssue(
+                dataset_ref=contract.ref.ref,
+                reason="schema_columns_mismatch",
+                catalog_dataset_id=contract.catalog_dataset_id,
+                catalog_namespace=contract.catalog_namespace,
+                missing_columns=missing_columns,
+                available_columns=available_columns,
+                expected_schema_version=contract.schema_version,
+                actual_schema_version=entry.schema.schema_version,
+                source=entry.source,
+            )
         )
-    )
-
-
-def _validate_source(
-    contract: DependencyContract,
-    entry: DataCatalogEntry,
-) -> None:
     metadata = default_dataset_metadata().get(contract.catalog_dataset_id)
-    if metadata is None or metadata.supports_source(entry.source):
-        return
-    raise DependencyCatalogCompatibilityError(
-        DependencyCatalogCompatibilityIssue(
-            dataset_ref=contract.ref.ref,
-            reason="unsupported_source",
-            catalog_dataset_id=contract.catalog_dataset_id,
-            catalog_namespace=contract.catalog_namespace,
-            expected_schema_version=contract.schema_version,
-            actual_schema_version=entry.schema.schema_version,
-            source=entry.source,
+    if metadata is not None and not metadata.supports_source(entry.source):
+        raise DependencyCatalogCompatibilityError(
+            DependencyCatalogCompatibilityIssue(
+                dataset_ref=contract.ref.ref,
+                reason="unsupported_source",
+                catalog_dataset_id=contract.catalog_dataset_id,
+                catalog_namespace=contract.catalog_namespace,
+                expected_schema_version=contract.schema_version,
+                actual_schema_version=entry.schema.schema_version,
+                source=entry.source,
+            )
         )
+
+
+def _contract_snapshots(
+    snapshots: ProviderSnapshotReader,
+    contract: DependencyContract,
+) -> tuple[ProviderSnapshot, ...]:
+    return tuple(
+        snapshot
+        for snapshot in snapshots.list_snapshots(
+            dataset_id=contract.catalog_dataset_id,
+        )
+        if snapshot.canonical_asset.namespace == contract.catalog_namespace
     )
 
 
-def _entry_covers_date(
-    entry: DataCatalogEntry,
-    date: str,
+def _date_coverage(
+    snapshots: ProviderSnapshotReader,
+    lifecycle: PartitionLifecycleReader,
     *,
-    required_source_ticker: str | None = None,
-) -> bool:
-    partition = _partition_dict(entry.asset.partition_keys)
-    source_ticker = partition.get("source_ticker")
-    if required_source_ticker is not None:
-        if source_ticker != required_source_ticker:
-            return False
-    elif source_ticker is not None:
-        return False
-    trade_date = partition.get("trade_date")
-    if trade_date is not None:
-        return trade_date == date
-    start_date = partition.get("start_date")
-    end_date = partition.get("end_date")
-    if start_date is None or end_date is None:
-        return False
-    return start_date <= date <= end_date
+    contract: DependencyContract,
+    dates: tuple[str, ...],
+) -> tuple[tuple[str, ...], tuple[str, ...]]:
+    """Selected snapshot IDs covering every date, plus dates left uncovered."""
+    completed = tuple(
+        snapshot
+        for snapshot in _contract_snapshots(snapshots, contract)
+        if snapshot_completed(snapshot, lifecycle)
+    )
+    selected: set[str] = set()
+    missing: list[str] = []
+    for date in dates:
+        covering = [snapshot for snapshot in completed if _covers(snapshot, date)]
+        if covering:
+            selected.update(snapshot.snapshot_id for snapshot in covering)
+        else:
+            missing.append(date)
+    return tuple(sorted(selected)), tuple(missing)
 
 
-def _entry_source_ticker(entry: DataCatalogEntry) -> str | None:
-    return _partition_dict(entry.asset.partition_keys).get("source_ticker")
-
-
-def _partition_dict(partition_keys: tuple[str, ...]) -> dict[str, str]:
-    parsed: dict[str, str] = {}
-    for key in partition_keys:
-        if "=" not in key:
-            continue
-        name, value = key.split("=", maxsplit=1)
-        parsed[name] = value
-    return parsed
-
-
-def _catalog_entry_sort_key(
-    entry: DataCatalogEntry,
-) -> tuple[object, str, tuple[str, ...]]:
-    return (entry.freshness_at, entry.storage_uri, entry.asset.partition_keys)
-
-
-def _dedupe_entries(
-    entries: Iterable[DataCatalogEntry],
-) -> tuple[DataCatalogEntry, ...]:
-    return tuple(dict.fromkeys(entries))
-
-
-def _source_snapshot_ids(entries: Iterable[DataCatalogEntry]) -> tuple[str, ...]:
-    snapshot_ids = {
-        entry.source_snapshot_id
-        for entry in entries
-        if entry.source_snapshot_id is not None and entry.source_snapshot_id != ""
-    }
-    return tuple(sorted(snapshot_ids))
+def _covers(snapshot: ProviderSnapshot, date: str) -> bool:
+    # ISO 日期字符串按字典序即时间序。
+    return snapshot.request_start <= date <= snapshot.request_end

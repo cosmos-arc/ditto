@@ -31,6 +31,7 @@ from ditto_data.catalog import (
     DataCatalogWriter,
     DataSchemaFingerprint,
 )
+from ditto_data.catalog.source_snapshot_store import SQLiteProviderSnapshotStore
 from ditto_data.sources.exchange_transformers import ExchangeTransformers
 from ditto_data.sources.source import DataSources
 from ditto_features.derived_types import (
@@ -45,6 +46,9 @@ from ditto_features.services import (
     DerivedCatalogService,
     DerivedQueryService,
     DerivedSeriesQuery,
+)
+from packages.application.tests.unit.process.ingestion import (
+    snapshot_evidence_support as _evidence_support,
 )
 
 pytestmark = pytest.mark.serial
@@ -144,12 +148,22 @@ def _write_market_truth_layers(data_root: Path, *, close_values: list[float]) ->
     ).write_parquet(market_root / "status" / "2026.parquet")
 
 
+class _SeedClock:
+    """固定播种时钟,保证观察事件落在信号窗口内。"""
+
+    def __init__(self) -> None:
+        self.now = datetime(2026, 3, 12, tzinfo=UTC)
+
+    def __call__(self) -> datetime:
+        return self.now
+
+
 def _seed_market_catalog(
-    catalog: DataCatalogWriter,
+    container,
     *,
     source_snapshot_id: str,
 ) -> None:
-    """Register the two physical truth partitions used by this integration test."""
+    """Register dataset-level schema truth plus completed coverage snapshots."""
     columns = (
         "instrument_id",
         "trade_date",
@@ -161,25 +175,52 @@ def _seed_market_catalog(
         "volume",
         "amount",
     )
+    catalog = container.get(DataCatalogWriter)
+    catalog.upsert_asset(
+        DataCatalogEntry(
+            asset=DataAssetRef(
+                namespace="market",
+                dataset_id="stock_daily",
+                partition_keys=(),
+            ),
+            storage_uri="market/stock_daily/2026",
+            schema=DataSchemaFingerprint(
+                schema_hash="sha256:integration-stock-daily-v1",
+                row_count=2,
+                schema_version="market.stock_daily.v1",
+                columns=columns,
+            ),
+            source="tushare",
+            freshness_at=datetime(2026, 3, 12, tzinfo=UTC),
+            source_snapshot_id=source_snapshot_id,
+        )
+    )
+    # #394:覆盖事实来自 completed provider snapshots。
+    from ditto_data.ingestion.partition_state_store import (
+        SQLitePartitionLifecycleStore,
+    )
+
+    class _Stores:
+        snapshots: SQLiteProviderSnapshotStore = container.get(
+            SQLiteProviderSnapshotStore
+        )
+        lifecycle: SQLitePartitionLifecycleStore = container.get(
+            SQLitePartitionLifecycleStore
+        )
+        clock = _SeedClock()
+        logs = None
+
     for trade_date in ("2026-03-10", "2026-03-11"):
-        catalog.upsert_asset(
-            DataCatalogEntry(
-                asset=DataAssetRef(
-                    namespace="market",
-                    dataset_id="stock_daily",
-                    partition_keys=(f"trade_date={trade_date}",),
-                ),
-                storage_uri=f"market/stock_daily/{trade_date}",
-                schema=DataSchemaFingerprint(
-                    schema_hash="sha256:integration-stock-daily-v1",
-                    row_count=1,
-                    schema_version="market.stock_daily.v1",
-                    columns=columns,
-                ),
-                source="tushare",
-                freshness_at=datetime(2026, 3, 12, tzinfo=UTC),
-                source_snapshot_id=source_snapshot_id,
-            )
+        _evidence_support.commit_snapshot(
+            _Stores,
+            dataset="stock_daily",
+            request_start=trade_date,
+            request_end=trade_date,
+            checksum=f"{source_snapshot_id}:{trade_date}".ljust(32, "0")[:32],
+            row_count=1,
+            schema_version="market.stock_daily.v1",
+            namespace="market",
+            observed_at=datetime(2026, 3, 12, tzinfo=UTC),
         )
 
 
@@ -243,7 +284,7 @@ class TestDerivedMaterializationQueryRepairIntegration:
         try:
             catalog_service = seed_container.get(DerivedCatalogService)
             _seed_market_catalog(
-                seed_container.get(DataCatalogWriter),
+                seed_container,
                 source_snapshot_id="market:20260311-001",
             )
             _seed_series_spec(
@@ -281,7 +322,7 @@ class TestDerivedMaterializationQueryRepairIntegration:
             )
             _write_market_truth_layers(tmp_path, close_values=[10.0, 21.0])
             _seed_market_catalog(
-                before_container.get(DataCatalogWriter),
+                before_container,
                 source_snapshot_id="market:20260311-002",
             )
             invalidation_service.propagate(

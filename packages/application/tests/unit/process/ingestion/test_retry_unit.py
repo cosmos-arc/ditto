@@ -1,16 +1,13 @@
 """Tests for RetryManager."""
 
-from datetime import UTC, datetime, timedelta
-
 import pytest
 from ditto_application.processes.ingestion.retry_manager import RetryManager
-from ditto_data.catalog import (
-    DataAssetRef,
-    DataCatalogEntry,
-    DataSchemaFingerprint,
-    InMemoryDataCatalog,
+from ditto_data.models.ingestion import (
+    IngestionLog,
+    IngestionResult,
+    IngestionStatus,
+    RetryResult,
 )
-from ditto_data.models.ingestion import IngestionResult, RetryResult
 from ditto_platform.foundation import (
     Environment,
     ObservabilityConfig,
@@ -192,55 +189,44 @@ class TestGetFailedDates:
             dataset="stock_daily", source="tushare", limit=10, max_attempts=2
         )
 
-    def test_get_failed_dates_prioritizes_missing_and_stale_catalog_assets(
+    def test_get_failed_dates_prioritizes_fewer_attempts_then_older_failures(
         self,
         mock_coordinator,
         mock_ingestion_log_store,
     ) -> None:
-        """优先重试 catalog 缺失或超过 SLA 的失败日期。"""
-        now = datetime(2026, 6, 1, 12, tzinfo=UTC)
-        catalog = InMemoryDataCatalog()
-        catalog.upsert_asset(
-            DataCatalogEntry(
-                asset=DataAssetRef(
-                    dataset_id="stock_daily",
-                    namespace="market",
-                    partition_keys=("trade_date=2024-12-25",),
-                ),
-                storage_uri="sqlite:///market/stock_daily/2024-12-25",
-                schema=DataSchemaFingerprint(schema_hash="fresh", row_count=10),
+        """#394:按 success log 的尝试簿记排序——尝试少、更早的失败优先。"""
+
+        def _log(day: str, attempts: int, last: str) -> IngestionLog:
+            return IngestionLog(
+                dataset="stock_daily",
                 source="tushare",
-                freshness_at=now - timedelta(hours=1),
+                trade_date=day,
+                status=IngestionStatus.FAIL,
+                attempts=attempts,
+                last_attempt_at=last,
             )
-        )
-        catalog.upsert_asset(
-            DataCatalogEntry(
-                asset=DataAssetRef(
-                    dataset_id="stock_daily",
-                    namespace="market",
-                    partition_keys=("trade_date=2024-12-27",),
-                ),
-                storage_uri="sqlite:///market/stock_daily/2024-12-27",
-                schema=DataSchemaFingerprint(schema_hash="stale", row_count=10),
-                source="tushare",
-                freshness_at=now - timedelta(hours=60),
-            )
-        )
+
         mock_ingestion_log_store.list_failed_dates.return_value = [
             "2024-12-25",
             "2024-12-26",
             "2024-12-27",
         ]
+        mock_ingestion_log_store.get_log.side_effect = (
+            lambda dataset, source, trade_date: {
+                "2024-12-25": _log("2024-12-25", 3, "2024-12-25T08:00:00+00:00"),
+                "2024-12-26": None,
+                "2024-12-27": _log("2024-12-27", 1, "2024-12-27T09:00:00+00:00"),
+            }.get(trade_date)
+        )
         retry_manager = RetryManager(
             coordinator=mock_coordinator,
             ingestion_log_store=mock_ingestion_log_store,
             source="tushare",
-            data_catalog_reader=catalog,
-            now=lambda: now,
         )
 
         dates = retry_manager.get_failed_dates(dataset="stock_daily")
 
+        # 26 无簿记(从未落账)最优先;27 尝试少;25 尝试多垫底。
         assert dates == ["2024-12-26", "2024-12-27", "2024-12-25"]
 
 

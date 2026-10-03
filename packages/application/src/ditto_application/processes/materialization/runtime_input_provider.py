@@ -7,6 +7,8 @@ from pathlib import Path
 
 import polars as pl
 from ditto_data.catalog import DataCatalogReader
+from ditto_data.catalog.source_snapshot import ProviderSnapshotReader
+from ditto_data.ingestion.partition_state import PartitionLifecycleReader
 from ditto_data.services.market_service import MarketService
 from ditto_features.materialization.dependency_registry import (
     DependencyContract,
@@ -44,6 +46,8 @@ class RuntimeDerivedInputProvider:
         market_service: MarketService,
         artifact_root: Path,
         data_catalog_reader: DataCatalogReader | None = None,
+        snapshots: ProviderSnapshotReader | None = None,
+        lifecycle: PartitionLifecycleReader | None = None,
         catalog_coverage_dates_provider: CatalogCoverageDatesProvider | None = None,
     ) -> None:
         self._artifact_reader = DerivedArtifactReader(
@@ -52,6 +56,8 @@ class RuntimeDerivedInputProvider:
         )
         self._market_service = market_service
         self._data_catalog_reader = data_catalog_reader
+        self._snapshots = snapshots
+        self._lifecycle = lifecycle
         self._catalog_coverage_dates_provider = catalog_coverage_dates_provider
 
     def load_input(self, context: InputContext) -> pl.DataFrame:
@@ -69,10 +75,16 @@ class RuntimeDerivedInputProvider:
         }
         start = str(plan.compute_start)
         end = str(plan.compute_end)
-        if self._data_catalog_reader is not None:
+        if (
+            self._data_catalog_reader is not None
+            and self._snapshots is not None
+            and self._lifecycle is not None
+        ):
             validate_dependency_catalog_compatibility(
                 contracts=contracts_by_ref.values(),
                 catalog_reader=self._data_catalog_reader,
+                snapshots=self._snapshots,
+                lifecycle=self._lifecycle,
                 required_dates=self._catalog_required_dates(start=start, end=end),
                 expected_source_snapshot_id=context.request.source_snapshot_id,
             )

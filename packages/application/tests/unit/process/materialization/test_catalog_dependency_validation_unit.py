@@ -24,7 +24,7 @@ def _stock_daily_entry_without_schema_version() -> DataCatalogEntry:
         asset=DataAssetRef(
             dataset_id="stock_daily",
             namespace="market",
-            partition_keys=("trade_date=2026-03-10",),
+            partition_keys=(),
         ),
         storage_uri="lake://market/stock_daily/2026-03-10.parquet",
         schema=DataSchemaFingerprint(
@@ -54,10 +54,19 @@ def test_dependency_validation_rejects_missing_schema_version() -> None:
     catalog = InMemoryDataCatalog()
     catalog.upsert_asset(_stock_daily_entry_without_schema_version())
 
-    with pytest.raises(DependencyCatalogCompatibilityError) as exc_info:
+    from packages.application.tests.unit.process.ingestion import (
+        snapshot_evidence_support as _evidence_support,
+    )
+
+    with (
+        _evidence_support.evidence_stores() as stores,
+        pytest.raises(DependencyCatalogCompatibilityError) as exc_info,
+    ):
         validate_dependency_catalog_compatibility(
             contracts=dependency_contracts(("market.close",)),
             catalog_reader=catalog,
+            snapshots=stores.snapshots,
+            lifecycle=stores.lifecycle,
             required_dates=("2026-03-10",),
         )
 

@@ -19,7 +19,10 @@ from ditto_data.catalog.provider_payload import (
     ProviderPayloadArtifact,
     ProviderPayloadWriter,
 )
-from ditto_data.catalog.source_snapshot import snapshot_identity
+from ditto_data.catalog.source_snapshot import (
+    ProviderSnapshotReader,
+    snapshot_identity,
+)
 from ditto_data.errors import (
     DataSourceError,
     NetworkError,
@@ -28,6 +31,7 @@ from ditto_data.errors import (
 from ditto_data.ingestion.ingestion_cursor_store import (
     IngestionCursorStore,
 )
+from ditto_data.ingestion.partition_state import PartitionLifecycleReader
 from ditto_data.models.ingestion import (
     IngestionQualityEvidence,
     IngestionResult,
@@ -46,6 +50,7 @@ from ditto_application.processes.ingestion.ingestion_evidence import (
     build_data_catalog_entry,
     build_evidence_commit_request,
     dataset_schema_version,
+    display_snapshot_id,
     ingestion_partition_id,
 )
 from ditto_application.processes.ingestion.list_date_inference import (
@@ -105,6 +110,8 @@ class PostIngestContext:
     catalog_writer: DataCatalogWriter | None = None
     evidence_committer: IngestionEvidenceCommitter | None = None
     provider_payload_writer: ProviderPayloadWriter | None = None
+    snapshot_reader: ProviderSnapshotReader | None = None
+    lifecycle_reader: PartitionLifecycleReader | None = None
 
 
 def run_list_date_inference(
@@ -214,7 +221,8 @@ def process_fetched_data(  # noqa: C901, PLR0911, PLR0912 - fail-closed stages
                 dataset=dataset,
                 trade_date=trade_date,
                 source_name=ctx.source_name,
-                catalog_reader=ctx.catalog_reader,
+                snapshots=ctx.snapshot_reader,
+                lifecycle=ctx.lifecycle_reader,
             )
             if snapshot is None:
                 return ctx.result_handler.handle_pit_snapshot_missing(
@@ -337,7 +345,8 @@ def process_fetched_data(  # noqa: C901, PLR0911, PLR0912 - fail-closed stages
                 dataset=dataset,
                 trade_date=processing_date,
                 source_name=ctx.source_name,
-                catalog_reader=ctx.catalog_reader,
+                snapshots=ctx.snapshot_reader,
+                lifecycle=ctx.lifecycle_reader,
             )
             if snapshot_evidence is None:
                 return ctx.result_handler.handle_pit_snapshot_missing(
@@ -357,7 +366,8 @@ def process_fetched_data(  # noqa: C901, PLR0911, PLR0912 - fail-closed stages
             dataset=dataset,
             trade_date=processing_date,
             source_name=ctx.source_name,
-            catalog_reader=ctx.catalog_reader,
+            snapshots=ctx.snapshot_reader,
+            lifecycle=ctx.lifecycle_reader,
         )
         if snapshot_evidence is None:
             return ctx.result_handler.handle_pit_snapshot_missing(
@@ -464,7 +474,8 @@ def _commit_empty_provider_observation(
             dataset=dataset,
             trade_date=range_end,
             source_name=ctx.source_name,
-            catalog_reader=ctx.catalog_reader,
+            snapshots=ctx.snapshot_reader,
+            lifecycle=ctx.lifecycle_reader,
         )
         if is_sparse_pit_dataset(dataset)
         else None
@@ -531,7 +542,7 @@ def record_data_catalog_entry(
     *,
     catalog_writer: DataCatalogWriter | None,
 ) -> None:
-    """记录落库资产 catalog 元数据（失败仅记录警告，不影响摄取成功）。"""
+    """记录数据集级 catalog 描述行（失败仅记录警告，不影响摄取成功）。"""
     if catalog_writer is None:
         return
     writer = catalog_writer
@@ -540,6 +551,7 @@ def record_data_catalog_entry(
             build_data_catalog_entry(
                 ctx,
                 now=datetime.now(UTC),
+                source_snapshot_id=display_snapshot_id(ctx),
             )
         ),
         log_tag="catalog_upsert_failed",
@@ -554,7 +566,7 @@ def _record_required_data_catalog_entry(
     *,
     catalog_writer: DataCatalogWriter | None,
 ) -> bool:
-    """Persist evidence-critical sparse catalog metadata or fail closed."""
+    """Persist the dataset-level catalog row or fail closed."""
     if catalog_writer is None:
         logger.error(
             "required_catalog_writer_missing",
@@ -568,6 +580,7 @@ def _record_required_data_catalog_entry(
             build_data_catalog_entry(
                 ctx,
                 now=datetime.now(UTC),
+                source_snapshot_id=display_snapshot_id(ctx),
             )
         )
     except Exception as error:

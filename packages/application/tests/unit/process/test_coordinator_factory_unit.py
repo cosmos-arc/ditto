@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from contextlib import contextmanager
-from datetime import UTC, datetime, timedelta
 from unittest.mock import MagicMock, call, patch
 
 import pytest
@@ -17,9 +16,6 @@ from ditto_application.processes.ingestion.source_selection import (
     AutoSourceIngestionCoordinator,
 )
 from ditto_data.catalog import (
-    DataAssetRef,
-    DataCatalogEntry,
-    DataSchemaFingerprint,
     InMemoryDataCatalog,
 )
 from ditto_data.models import Source
@@ -33,6 +29,9 @@ from ditto_data.sources.protocols import (
 )
 from ditto_data.sources.registry import SourceRegistry
 from ditto_kernel.instrument import InstrumentIngestParams
+from packages.application.tests.unit.process.ingestion import (
+    snapshot_evidence_support as _evidence_support,
+)
 
 
 def _make_services() -> CoordinatorServices:
@@ -214,34 +213,35 @@ class TestCreateCoordinatorSourceRegistryRouting:
         services = _make_services_with_source_registry(registry)
         services.source_accessor.tushare = tushare_source
         services.source_accessor.fred = fred_source
-        now = datetime(2026, 6, 1, 12, tzinfo=UTC)
-        catalog = InMemoryDataCatalog()
-        catalog.upsert_asset(
-            DataCatalogEntry(
-                asset=DataAssetRef(
-                    dataset_id="macro_indicators",
-                    namespace="macro",
-                    partition_keys=("trade_date=2024-12-27",),
-                ),
-                storage_uri="macro/macro_indicators/2024-12-27",
-                schema=DataSchemaFingerprint(schema_hash="stale", row_count=1),
-                source="tushare",
-                freshness_at=now - timedelta(hours=100),
+        with _evidence_support.evidence_stores() as stores:
+            # tushare 请求过该日期但从未完成 → stale;fred 从未覆盖 → missing。
+            _evidence_support.commit_snapshot(
+                stores,
+                dataset="macro_indicators",
+                request_start="2024-12-27",
+                request_end="2024-12-27",
+                checksum="a" * 32,
+                row_count=1,
+                schema_version="macro.macro_indicators.v1",
+                namespace="macro",
+                complete=False,
             )
-        )
-        tushare_coordinator = MagicMock(name="tushare_coordinator")
-        fred_coordinator = MagicMock(name="fred_coordinator")
+            tushare_coordinator = MagicMock(name="tushare_coordinator")
+            fred_coordinator = MagicMock(name="fred_coordinator")
 
-        with patch(
-            "ditto_application.processes.ingestion.coordinator_factory.IngestionCoordinator",
-            side_effect=[tushare_coordinator, fred_coordinator],
-        ):
-            with create_coordinator(
-                services,
-                source_name="auto",
-                runtime=CoordinatorRuntimeContext(catalog_reader=catalog),
-            ) as coordinator:
-                coordinator.ingest_date("macro_indicators", "2024-12-27")
+            with patch(
+                "ditto_application.processes.ingestion.coordinator_factory.IngestionCoordinator",
+                side_effect=[tushare_coordinator, fred_coordinator],
+            ):
+                with create_coordinator(
+                    services,
+                    source_name="auto",
+                    runtime=CoordinatorRuntimeContext(
+                        snapshot_reader=stores.snapshots,
+                        lifecycle_reader=stores.lifecycle,
+                    ),
+                ) as coordinator:
+                    coordinator.ingest_date("macro_indicators", "2024-12-27")
 
         tushare_coordinator.ingest_date.assert_not_called()
         fred_coordinator.ingest_date.assert_called_once_with(
@@ -350,63 +350,62 @@ class TestCreateCoordinatorSourceRegistryRouting:
         services = _make_services_with_source_registry(registry)
         services.source_accessor.tushare = tushare_source
         services.source_accessor.fred = fred_source
-        catalog = InMemoryDataCatalog()
-        catalog.upsert_asset(
-            DataCatalogEntry(
-                asset=DataAssetRef(
-                    dataset_id="macro_indicators",
-                    namespace="macro",
-                    partition_keys=("trade_date=2024-12-27",),
-                ),
-                storage_uri="macro/macro_indicators/2024-12-27",
-                schema=DataSchemaFingerprint(schema_hash="stale", row_count=1),
-                source="tushare",
-                freshness_at=datetime(2024, 12, 27, 18, tzinfo=UTC),
+        with _evidence_support.evidence_stores() as stores:
+            # 12-27 未完成(stale)→ fred;12-28 已完成(fresh)→ tushare。
+            _evidence_support.commit_snapshot(
+                stores,
+                dataset="macro_indicators",
+                request_start="2024-12-27",
+                request_end="2024-12-27",
+                checksum="b" * 32,
+                row_count=1,
+                schema_version="macro.macro_indicators.v1",
+                namespace="macro",
+                complete=False,
             )
-        )
-        catalog.upsert_asset(
-            DataCatalogEntry(
-                asset=DataAssetRef(
-                    dataset_id="macro_indicators",
-                    namespace="macro",
-                    partition_keys=("trade_date=2024-12-28",),
-                ),
-                storage_uri="macro/macro_indicators/2024-12-28",
-                schema=DataSchemaFingerprint(schema_hash="fresh", row_count=1),
-                source="tushare",
-                freshness_at=datetime.now(UTC),
+            _evidence_support.commit_snapshot(
+                stores,
+                dataset="macro_indicators",
+                request_start="2024-12-28",
+                request_end="2024-12-28",
+                checksum="c" * 32,
+                row_count=1,
+                schema_version="macro.macro_indicators.v1",
+                namespace="macro",
             )
-        )
-        tushare_coordinator = MagicMock(name="tushare_coordinator")
-        fred_coordinator = MagicMock(name="fred_coordinator")
+            tushare_coordinator = MagicMock(name="tushare_coordinator")
+            fred_coordinator = MagicMock(name="fred_coordinator")
 
-        with patch(
-            "ditto_application.processes.ingestion.coordinator_factory.IngestionCoordinator",
-            side_effect=[tushare_coordinator, fred_coordinator],
-        ):
-            with create_coordinator(
-                services,
-                source_name="auto",
-                runtime=CoordinatorRuntimeContext(catalog_reader=catalog),
-            ) as coordinator:
-                coordinator.ingest_range(
-                    "macro_indicators",
-                    "2024-12-27",
-                    "2024-12-28",
-                )
+            with patch(
+                "ditto_application.processes.ingestion.coordinator_factory.IngestionCoordinator",
+                side_effect=[tushare_coordinator, fred_coordinator],
+            ):
+                with create_coordinator(
+                    services,
+                    source_name="auto",
+                    runtime=CoordinatorRuntimeContext(
+                        snapshot_reader=stores.snapshots,
+                        lifecycle_reader=stores.lifecycle,
+                    ),
+                ) as coordinator:
+                    coordinator.ingest_range(
+                        "macro_indicators",
+                        "2024-12-27",
+                        "2024-12-28",
+                    )
 
-        tushare_coordinator.ingest_range.assert_not_called()
-        fred_coordinator.ingest_range.assert_not_called()
-        tushare_coordinator.ingest_date.assert_called_once_with(
-            "macro_indicators",
-            "2024-12-28",
-            False,
-        )
-        fred_coordinator.ingest_date.assert_called_once_with(
-            "macro_indicators",
-            "2024-12-27",
-            False,
-        )
+            tushare_coordinator.ingest_range.assert_not_called()
+            fred_coordinator.ingest_range.assert_not_called()
+            tushare_coordinator.ingest_date.assert_called_once_with(
+                "macro_indicators",
+                "2024-12-28",
+                False,
+            )
+            fred_coordinator.ingest_date.assert_called_once_with(
+                "macro_indicators",
+                "2024-12-27",
+                False,
+            )
 
     def test_auto_source_instrument_ingestion_uses_catalog_source_selection(
         self,
@@ -427,45 +426,46 @@ class TestCreateCoordinatorSourceRegistryRouting:
         services = _make_services_with_source_registry(registry)
         services.source_accessor.tushare = tushare_source
         services.source_accessor.fred = fred_source
-        catalog = InMemoryDataCatalog()
-        catalog.upsert_asset(
-            DataCatalogEntry(
-                asset=DataAssetRef(
-                    dataset_id="macro_indicators",
-                    namespace="macro",
-                    partition_keys=("trade_date=2024-12-31",),
-                ),
-                storage_uri="macro/macro_indicators/2024-12-31",
-                schema=DataSchemaFingerprint(schema_hash="stale", row_count=1),
-                source="tushare",
-                freshness_at=datetime(2024, 12, 31, 18, tzinfo=UTC),
+        with _evidence_support.evidence_stores() as stores:
+            _evidence_support.commit_snapshot(
+                stores,
+                dataset="macro_indicators",
+                request_start="2024-12-31",
+                request_end="2024-12-31",
+                checksum="d" * 32,
+                row_count=1,
+                schema_version="macro.macro_indicators.v1",
+                namespace="macro",
+                complete=False,
             )
-        )
-        tushare_coordinator = MagicMock(name="tushare_coordinator")
-        fred_coordinator = MagicMock(name="fred_coordinator")
-        params = InstrumentIngestParams(
-            ticker="CPI",
-            start_date="2024-12-31",
-            end_date="2024-12-31",
-        )
+            tushare_coordinator = MagicMock(name="tushare_coordinator")
+            fred_coordinator = MagicMock(name="fred_coordinator")
+            params = InstrumentIngestParams(
+                ticker="CPI",
+                start_date="2024-12-31",
+                end_date="2024-12-31",
+            )
 
-        with patch(
-            "ditto_application.processes.ingestion.coordinator_factory.IngestionCoordinator",
-            side_effect=[tushare_coordinator, fred_coordinator],
-        ):
-            with create_coordinator(
-                services,
-                source_name="auto",
-                runtime=CoordinatorRuntimeContext(catalog_reader=catalog),
-            ) as coordinator:
-                coordinator.ingest_by_instrument("macro_indicators", params)
+            with patch(
+                "ditto_application.processes.ingestion.coordinator_factory.IngestionCoordinator",
+                side_effect=[tushare_coordinator, fred_coordinator],
+            ):
+                with create_coordinator(
+                    services,
+                    source_name="auto",
+                    runtime=CoordinatorRuntimeContext(
+                        snapshot_reader=stores.snapshots,
+                        lifecycle_reader=stores.lifecycle,
+                    ),
+                ) as coordinator:
+                    coordinator.ingest_by_instrument("macro_indicators", params)
 
-        tushare_coordinator.ingest_by_instrument.assert_not_called()
-        fred_coordinator.ingest_by_instrument.assert_called_once_with(
-            "macro_indicators",
-            params,
-            False,
-        )
+            tushare_coordinator.ingest_by_instrument.assert_not_called()
+            fred_coordinator.ingest_by_instrument.assert_called_once_with(
+                "macro_indicators",
+                params,
+                False,
+            )
 
     def test_auto_source_instrument_range_routes_each_date_independently(
         self,
@@ -486,63 +486,63 @@ class TestCreateCoordinatorSourceRegistryRouting:
         services = _make_services_with_source_registry(registry)
         services.source_accessor.tushare = tushare_source
         services.source_accessor.fred = fred_source
-        catalog = InMemoryDataCatalog()
-        catalog.upsert_asset(
-            DataCatalogEntry(
-                asset=DataAssetRef(
-                    dataset_id="macro_indicators",
-                    namespace="macro",
-                    partition_keys=("trade_date=2024-12-27",),
-                ),
-                storage_uri="macro/macro_indicators/2024-12-27",
-                schema=DataSchemaFingerprint(schema_hash="stale", row_count=1),
-                source="tushare",
-                freshness_at=datetime(2024, 12, 27, 18, tzinfo=UTC),
+        with _evidence_support.evidence_stores() as stores:
+            _evidence_support.commit_snapshot(
+                stores,
+                dataset="macro_indicators",
+                request_start="2024-12-27",
+                request_end="2024-12-27",
+                checksum="e" * 32,
+                row_count=1,
+                schema_version="macro.macro_indicators.v1",
+                namespace="macro",
+                complete=False,
             )
-        )
-        catalog.upsert_asset(
-            DataCatalogEntry(
-                asset=DataAssetRef(
-                    dataset_id="macro_indicators",
-                    namespace="macro",
-                    partition_keys=("trade_date=2024-12-28",),
-                ),
-                storage_uri="macro/macro_indicators/2024-12-28",
-                schema=DataSchemaFingerprint(schema_hash="fresh", row_count=1),
-                source="tushare",
-                freshness_at=datetime.now(UTC),
+            _evidence_support.commit_snapshot(
+                stores,
+                dataset="macro_indicators",
+                request_start="2024-12-28",
+                request_end="2024-12-28",
+                checksum="f" * 32,
+                row_count=1,
+                schema_version="macro.macro_indicators.v1",
+                namespace="macro",
             )
-        )
-        tushare_coordinator = MagicMock(name="tushare_coordinator")
-        fred_coordinator = MagicMock(name="fred_coordinator")
-        fred_coordinator.ingest_by_instrument.return_value = IngestionResult(
-            dataset="macro_indicators",
-            trade_date="2024-12-27",
-            status="success",
-            row_count=1,
-        )
-        tushare_coordinator.ingest_by_instrument.return_value = IngestionResult(
-            dataset="macro_indicators",
-            trade_date="2024-12-28",
-            status="success",
-            row_count=2,
-        )
-        params = InstrumentIngestParams(
-            ticker="CPI",
-            start_date="2024-12-27",
-            end_date="2024-12-28",
-        )
+            tushare_coordinator = MagicMock(name="tushare_coordinator")
+            fred_coordinator = MagicMock(name="fred_coordinator")
+            fred_coordinator.ingest_by_instrument.return_value = IngestionResult(
+                dataset="macro_indicators",
+                trade_date="2024-12-27",
+                status="success",
+                row_count=1,
+            )
+            tushare_coordinator.ingest_by_instrument.return_value = IngestionResult(
+                dataset="macro_indicators",
+                trade_date="2024-12-28",
+                status="success",
+                row_count=2,
+            )
+            params = InstrumentIngestParams(
+                ticker="CPI",
+                start_date="2024-12-27",
+                end_date="2024-12-28",
+            )
 
-        with patch(
-            "ditto_application.processes.ingestion.coordinator_factory.IngestionCoordinator",
-            side_effect=[tushare_coordinator, fred_coordinator],
-        ):
-            with create_coordinator(
-                services,
-                source_name="auto",
-                runtime=CoordinatorRuntimeContext(catalog_reader=catalog),
-            ) as coordinator:
-                result = coordinator.ingest_by_instrument("macro_indicators", params)
+            with patch(
+                "ditto_application.processes.ingestion.coordinator_factory.IngestionCoordinator",
+                side_effect=[tushare_coordinator, fred_coordinator],
+            ):
+                with create_coordinator(
+                    services,
+                    source_name="auto",
+                    runtime=CoordinatorRuntimeContext(
+                        snapshot_reader=stores.snapshots,
+                        lifecycle_reader=stores.lifecycle,
+                    ),
+                ) as coordinator:
+                    result = coordinator.ingest_by_instrument(
+                        "macro_indicators", params
+                    )
 
         fred_coordinator.ingest_by_instrument.assert_called_once_with(
             "macro_indicators",
@@ -579,7 +579,6 @@ class TestCreateCoordinatorSourceRegistryRouting:
         fred_coordinator = MagicMock(name="fred_coordinator")
         coordinator = AutoSourceIngestionCoordinator(
             {"fred": fred_coordinator},
-            catalog_reader=InMemoryDataCatalog(),
         )
 
         with pytest.raises(AppProcessError, match="does not support dataset") as exc:
@@ -602,7 +601,6 @@ class TestCreateCoordinatorSourceRegistryRouting:
         fred_coordinator = MagicMock(name="fred_coordinator")
         coordinator = AutoSourceIngestionCoordinator(
             {"fred": fred_coordinator},
-            catalog_reader=InMemoryDataCatalog(),
             date_range_lister=lambda _dataset, _start, _end: [
                 "2024-12-27",
                 "2024-12-30",
@@ -629,7 +627,6 @@ class TestCreateCoordinatorSourceRegistryRouting:
         fred_coordinator = MagicMock(name="fred_coordinator")
         coordinator = AutoSourceIngestionCoordinator(
             {"fred": fred_coordinator},
-            catalog_reader=InMemoryDataCatalog(),
             date_range_lister=None,
         )
 
@@ -654,7 +651,6 @@ class TestCreateCoordinatorSourceRegistryRouting:
         fred_coordinator = MagicMock(name="fred_coordinator")
         coordinator = AutoSourceIngestionCoordinator(
             {"fred": fred_coordinator},
-            catalog_reader=InMemoryDataCatalog(),
         )
         params = InstrumentIngestParams(
             ticker="000001.SZ",

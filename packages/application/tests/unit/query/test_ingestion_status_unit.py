@@ -26,20 +26,27 @@ def _catalog_entry(
     freshness_at: datetime,
     row_count: int = 17,
 ) -> DataCatalogEntry:
-    return DataCatalogEntry(
-        asset=DataAssetRef(
-            dataset_id=dataset_id,
-            namespace="market",
-            partition_keys=("trade_date=2026-06-01",),
-        ),
-        storage_uri=storage_uri,
-        schema=DataSchemaFingerprint(
-            schema_hash=f"schema:{dataset_id}:v1",
-            row_count=row_count,
-            created_at=datetime(2026, 6, 1, 9, 30, tzinfo=UTC),
-        ),
-        source="tushare",
-        freshness_at=freshness_at,
+    return (
+        DataCatalogEntry(
+            # #394:概览只消费数据集级 catalog 行。
+            asset=DataAssetRef(dataset_id=dataset_id, namespace="market"),
+        )
+        if False
+        else DataCatalogEntry(
+            asset=DataAssetRef(
+                dataset_id=dataset_id,
+                namespace="market",
+                partition_keys=(),
+            ),
+            storage_uri=storage_uri,
+            schema=DataSchemaFingerprint(
+                schema_hash=f"schema:{dataset_id}:v1",
+                row_count=row_count,
+                created_at=datetime(2026, 6, 1, 9, 30, tzinfo=UTC),
+            ),
+            source="tushare",
+            freshness_at=freshness_at,
+        )
     )
 
 
