@@ -449,7 +449,7 @@ class IngestionDataWriter:
     def write_etf_reference(self, df: pl.DataFrame, snapshot: ProviderSnapshot) -> None:
         """Project only available basic facts, bound to the actual retained snapshot."""
         if snapshot.dataset_id != "etf_basic" or not snapshot.payload_retained:
-            raise ValueError(
+            raise AppProcessError(
                 "ETF basic observations require retained etf_basic evidence"
             )
         if df.is_empty() or "source_ticker" not in df.columns:
