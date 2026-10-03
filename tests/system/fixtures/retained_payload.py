@@ -37,7 +37,6 @@ def retain_fixture_payload(
                 canonical_asset=DataAssetRef(dataset_id=dataset_id, namespace="market"),
                 request_parameters_hash=f"fixture:{dataset_id}:recorded",
                 response_metadata=(("fixture", "isolated-recorded"),),
-                license_record_id="fixture-license",
                 row_count=artifact.row_count,
                 payload_uri=artifact.uri,
                 payload_retained=True,

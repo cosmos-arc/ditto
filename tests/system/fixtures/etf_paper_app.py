@@ -90,7 +90,6 @@ def _snapshot(
             canonical_asset=DataAssetRef(dataset_id=dataset, namespace="market"),
             request_parameters_hash=f"fixture:{dataset}:{day}",
             response_metadata=(("fixture", "etf-paper-browser"),),
-            license_record_id="fixture-license",
             row_count=artifact.row_count,
             payload_uri=artifact.uri,
             payload_retained=True,
