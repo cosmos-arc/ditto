@@ -35,6 +35,15 @@ from packages.application.tests.integration.test_ingestion_evidence_recovery imp
 @pytest.mark.pit
 def test_delayed_revision_replay_and_failed_completion_recovery(tmp_path, monkeypatch):
     observed = datetime(2026, 7, 17, 10, tzinfo=UTC)
+
+    class FixedClock(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return observed
+
+    monkeypatch.setattr(
+        "ditto_application.processes.ingestion.ingestion_evidence.datetime", FixedClock
+    )
     cutoff = datetime(2026, 7, 18, 9, tzinfo=UTC)
     with _pipeline(
         tmp_path, "stock_daily", display="allowed", snapshot_now=lambda: observed

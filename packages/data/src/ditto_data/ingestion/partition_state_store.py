@@ -61,8 +61,8 @@ class SQLitePartitionLifecycleStore:
         ):
             # Upgraded stores predate the COMPLETE snapshot evidence binding.
             self._client.execute(
-                "ALTER TABLE ingestion_partition_checkpoints "
-                "ADD COLUMN complete_evidence_id TEXT"
+                """ALTER TABLE ingestion_partition_checkpoints
+                ADD COLUMN complete_evidence_id TEXT"""
             )
         self._client.execute(
             """

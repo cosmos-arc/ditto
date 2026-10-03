@@ -7,15 +7,13 @@ from typing import Annotated
 
 from dishka import FromComponent
 from dishka.integrations.fastapi import inject
-from ditto_application.catalog_freshness import observed_snapshot_ids
 from ditto_application.exceptions import AppQueryError
+from ditto_application.queries.snapshot_readiness import SnapshotReadinessQuery
 from ditto_application.queries.technical_analysis import (
     TechnicalAnalysisFacade,
     TechnicalAnalysisRequest,
     TechnicalAnalysisSpecDraft,
 )
-from ditto_data.catalog.source_snapshot import ProviderSnapshotReader
-from ditto_data.ingestion.partition_state import PartitionLifecycleReader
 from fastapi import APIRouter
 
 from ditto_apps.api.errors import UnprocessableEntityError
@@ -37,16 +35,13 @@ router = APIRouter(prefix="/technical-analysis", tags=["technical-analysis"])
 async def query_technical_analysis(
     body: TechnicalAnalysisQueryBody,
     facade: Annotated[TechnicalAnalysisFacade, FromComponent()],
-    snapshots: Annotated[ProviderSnapshotReader, FromComponent()],
-    lifecycle: Annotated[PartitionLifecycleReader, FromComponent()],
+    readiness: Annotated[SnapshotReadinessQuery, FromComponent()],
 ) -> APIResponse[TechnicalAnalysisSnapshotResponse]:
     """Compute one exact snapshot from retained, server-resolved data."""
     spec = body.spec
     source_snapshot_ids = body.source_snapshot_ids
     if not source_snapshot_ids:
-        source_snapshot_ids = observed_snapshot_ids(
-            snapshots,
-            lifecycle,
+        source_snapshot_ids = readiness.observed_snapshot_ids(
             dataset_ids=("stock_daily",),
             knowledge_cutoff=body.knowledge_cutoff,
         )

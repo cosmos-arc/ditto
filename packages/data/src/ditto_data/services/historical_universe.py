@@ -93,7 +93,7 @@ def project_basic_master_intervals(
     frame: pl.DataFrame,
     *,
     observed_at: datetime,
-    resolve_instrument: Callable[[str, date], int | None],
+    resolve_instrument: Callable[[list[str], str], dict[str, int]],
 ) -> pl.DataFrame:
     """
     Project a raw basic-list snapshot into listing-lifetime PIT intervals.

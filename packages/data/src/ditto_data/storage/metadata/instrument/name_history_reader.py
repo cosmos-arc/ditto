@@ -68,7 +68,7 @@ class NameHistoryReader:
         if cutoff is not None:
             sql += " AND (observed_at IS NULL OR datetime(observed_at) < datetime(?))"
             params.append(cutoff)
-        sql += " ORDER BY changed_date DESC LIMIT 1"
+        sql += " ORDER BY changed_date DESC, datetime(observed_at) DESC LIMIT 1"
         row = self._client.fetchone(sql, params)
         return row["new_name"] if row else None
 
@@ -109,7 +109,7 @@ class NameHistoryReader:
                     SELECT instrument_id, new_name,
                            ROW_NUMBER() OVER (
                                PARTITION BY instrument_id
-                               ORDER BY changed_date DESC
+                               ORDER BY changed_date DESC, datetime(observed_at) DESC
                            ) AS rn
                     FROM instrument_name_history
                     WHERE changed_date <= ?{knowledge_filter} AND {in_clause}
@@ -133,7 +133,7 @@ class NameHistoryReader:
         rows = self._client.fetchall(
             """SELECT * FROM instrument_name_history
             WHERE instrument_id = ?
-            ORDER BY changed_date DESC""",
+            ORDER BY changed_date DESC, datetime(observed_at) DESC""",
             [instrument_id],
         )
         return [dict(r) for r in rows]

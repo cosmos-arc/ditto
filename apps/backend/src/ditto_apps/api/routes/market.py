@@ -8,7 +8,6 @@ from typing import Annotated
 
 from dishka import FromComponent
 from dishka.integrations.fastapi import inject
-from ditto_application.catalog_freshness import observed_snapshot_ids
 from ditto_application.exceptions import AppProcessError, AppQueryError
 from ditto_application.processes.experiments.regime_diagnostics_reader import (
     RegimeDiagnosticsReader,
@@ -30,8 +29,7 @@ from ditto_application.queries.market_context_evidence import (
     MARKET_CONTEXT_DATASETS,
 )
 from ditto_application.queries.metadata import MetadataQueryFacade
-from ditto_data.catalog.source_snapshot import ProviderSnapshotReader
-from ditto_data.ingestion.partition_state import PartitionLifecycleReader
+from ditto_application.queries.snapshot_readiness import SnapshotReadinessQuery
 from fastapi import APIRouter, Query
 
 from ditto_apps.api.errors import NotFoundError, UnprocessableEntityError
@@ -212,8 +210,7 @@ def _regime_response(view: RegimeDiagnosticsView) -> RegimeDiagnosticsResponse:
 @inject
 async def get_market_context(
     facade: Annotated[MarketContextFacade, FromComponent()],
-    snapshots: Annotated[ProviderSnapshotReader, FromComponent()],
-    lifecycle: Annotated[PartitionLifecycleReader, FromComponent()],
+    readiness: Annotated[SnapshotReadinessQuery, FromComponent()],
     as_of: datetime,
     knowledge_cutoff: datetime,
     publication_cutoff: datetime,
@@ -222,9 +219,7 @@ async def get_market_context(
     """Read one market context from explicit or server-resolved snapshots."""
     resolved = tuple(source_snapshot_id or ())
     if not resolved:
-        resolved = observed_snapshot_ids(
-            snapshots,
-            lifecycle,
+        resolved = readiness.observed_snapshot_ids(
             dataset_ids=MARKET_CONTEXT_DATASETS,
             knowledge_cutoff=knowledge_cutoff,
         )

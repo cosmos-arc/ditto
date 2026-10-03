@@ -249,17 +249,12 @@ test.describe
 			await expect(review.getByLabel("复盘账户")).toHaveValue(`manual:${accountId}`);
 		});
 
-		test("stocks stay fail-closed until the explicit experimental opt-in, then use retained factors", async ({
+		test("stocks render retained prices and use retained adjustment factors", async ({
 			page,
 		}) => {
 			const browserErrors = captureBrowserErrors(page);
 			await page.goto(`${webOrigin}/instruments/${STOCK_ID}?tab=chart`);
 
-			// 默认 fail-closed：experimental 成熟度门控可见
-			await expect(page.locator('[data-state="experimental-disabled"]')).toBeVisible();
-
-			// 显式研究开关后渲染真实蜡烛
-			await page.getByTestId("chart-experimental-toggle").check();
 			const host = page.locator(`[data-chart-interaction-contract="instrument-candles-${STOCK_ID}"]`);
 			await expect(host).toBeVisible();
 			const answer = page.locator("[data-primary-answer]");
@@ -284,10 +279,6 @@ test.describe
 				.not.toBe(rawScope);
 
 			await expectNoSeriousAccessibilityViolations(page);
-			// fail-closed 成熟度门控按设计返回 422，浏览器会把该传输行记入
-			// console error（与 outage.spec 对 net::ERR 的处理同 convention）；
-			// 语义已由 experimental-disabled 面板断言，这里只要求无其他错误。
-			const unexpected = browserErrors.filter((line) => !line.includes("status of 422"));
-			expect(unexpected).toEqual([]);
+			expect(browserErrors).toEqual([]);
 		});
 	});

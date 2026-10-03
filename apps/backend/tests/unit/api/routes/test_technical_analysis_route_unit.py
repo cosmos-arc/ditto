@@ -8,6 +8,7 @@ from datetime import UTC, datetime, timedelta
 from typing import Any, cast
 from unittest.mock import MagicMock, patch
 
+from ditto_application.queries.snapshot_readiness import SnapshotReadinessQuery
 from ditto_application.queries.technical_analysis import (
     TechnicalAnalysisFacade,
     TechnicalAnalysisQueryService,
@@ -142,8 +143,7 @@ def test_route_returns_exact_snapshot_with_indicator_and_level_evidence() -> Non
             handler(
                 body=_body(),
                 facade=facade,
-                snapshots=snapshots,
-                lifecycle=lifecycle,
+                readiness=SnapshotReadinessQuery(snapshots, lifecycle),
             )
         )
 

@@ -219,7 +219,6 @@ def seed(root: Path) -> dict[str, object]:
                 ),
                 request_parameters_hash="sha256:history-comparison-request-v1",
                 response_metadata=(("fixture", "history-comparison-journey"),),
-                license_record_id="license:history-comparison:v1",
                 row_count=artifact.row_count,
                 payload_uri=artifact.uri,
                 payload_retained=True,

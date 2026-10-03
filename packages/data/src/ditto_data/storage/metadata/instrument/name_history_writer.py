@@ -91,7 +91,10 @@ class NameHistoryWriter:
 
         每行必须携带真实生效日期（changed_date）与可知时间（observed_at）；
         缺生效日期的行由调用方拒绝，这里 fail closed 再校验一次。
-        幂等键 = (instrument_id, changed_date, source)，重复登记整行替换。
+        版本键 = (instrument_id, changed_date, source, observed_at)，
+        同内容重复观察保留首次可知时间，
+        变化内容追加版本。
+
 
         Args:
             rows: 行字典，键含 instrument_id/old_name/new_name/changed_date/
@@ -105,12 +108,29 @@ class NameHistoryWriter:
         for row in rows:
             changed_date = row.get("changed_date")
             if changed_date is None or str(changed_date).strip() == "":
-                raise ValueError(
-                    "name history row lacks a real effective date; refusing to "
-                    "backfill placeholder history"
-                )
+                raise ValueError("name history row lacks a real effective date")
+            previous = self._client.fetchone(
+                """SELECT * FROM instrument_name_history
+                   WHERE instrument_id = ? AND changed_date = ? AND source = ?
+                   ORDER BY datetime(observed_at) DESC LIMIT 1""",
+                [
+                    row["instrument_id"],
+                    str(changed_date),
+                    str(row.get("source") or "tushare"),
+                ],
+            )
+            if previous is not None and all(
+                previous[field] == row.get(field) for field in ("old_name", "new_name")
+            ):
+                written += 1
+                continue
+            visible_at = row.get("observed_at")
+            if previous is not None:
+                visible_at = row.get("recorded_at", visible_at)
+            if not visible_at:
+                raise ValueError("history version requires knowledge time")
             self._client.execute(
-                """INSERT OR REPLACE INTO instrument_name_history
+                """INSERT INTO instrument_name_history
                 (instrument_id, old_name, new_name, changed_date, source, observed_at)
                 VALUES (?, ?, ?, ?, ?, ?)""",
                 [
@@ -119,7 +139,7 @@ class NameHistoryWriter:
                     row["new_name"],
                     str(changed_date),
                     str(row.get("source") or "tushare"),
-                    row.get("observed_at"),
+                    visible_at,
                 ],
             )
             written += 1

@@ -9,6 +9,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable, Iterator
+from dataclasses import replace
 from datetime import date
 from pathlib import Path
 from typing import Any
@@ -17,6 +19,8 @@ from unittest.mock import MagicMock
 import polars as pl
 import pytest
 from ditto_application.processes.ingestion.data_writer import IngestionDataWriter
+from ditto_application.processes.ingestion.post_ingest import process_fetched_data
+from ditto_data.models.ingestion import IngestionResult
 from ditto_data.runtime.instrument_id_allocator import InstrumentIdAllocator
 from ditto_data.services.metadata_service import MetadataService
 from ditto_data.storage.metadata.instrument import (
@@ -27,6 +31,9 @@ from ditto_data.storage.metadata.instrument import (
     NameHistoryWriter,
 )
 from ditto_platform.foundation import DataCache, SQLiteClient, SQLitePool
+from packages.application.tests.integration.test_ingestion_evidence_recovery import (
+    _pipeline,
+)
 
 
 @pytest.mark.integration
@@ -86,6 +93,38 @@ class TestEtfReferenceWriteSideIntegration:
             source_name="tushare",
         )
 
+    @pytest.fixture
+    def ingest(
+        self, writer: IngestionDataWriter, client: SQLiteClient, tmp_path: Path
+    ) -> Iterator[Callable[[], IngestionResult]]:
+        with _pipeline(tmp_path, "etf_basic") as pipeline:
+            frame = self._etf_basic_frame().with_columns(pl.lit(1.0).alias("close"))
+            ctx = replace(
+                pipeline.context,
+                data_writer=writer,
+                snapshot_reader=pipeline.ports.snapshot_reader,
+                list_date_inference=MagicMock(),
+            )
+
+            def run() -> IngestionResult:
+                result = process_fetched_data(
+                    frame, "etf_basic", "2026-09-18", True, ctx=ctx
+                )
+                assert result.status == "success", result
+                rows = client.fetchall(
+                    "SELECT DISTINCT source_snapshot_id FROM etf_reference_observation"
+                )
+                for row in rows:
+                    snapshot = pipeline.ports.snapshot_reader.get_snapshot(
+                        str(row["source_snapshot_id"])
+                    )
+                    assert snapshot is not None
+                    assert snapshot.payload_retained
+                    assert snapshot.checksum != result.checksum
+                return result
+
+            yield run
+
     @staticmethod
     def _etf_basic_frame() -> pl.DataFrame:
         return pl.DataFrame(
@@ -99,13 +138,12 @@ class TestEtfReferenceWriteSideIntegration:
         )
 
     def test_etf_basic_ingestion_registers_extension_and_observations(
-        self, writer: IngestionDataWriter, client: SQLiteClient
+        self, ingest: Callable[[], IngestionResult], client: SQLiteClient
     ) -> None:
         """一次 etf_basic 摄取：注册 + instrument_etf 行 + 参考观察行。"""
-        result = writer.write_data("etf_basic", self._etf_basic_frame(), "2026-09-18")
+        result = ingest()
 
-        assert result.rows_written == 2
-        assert result.blocked is False
+        assert result.row_count == 2
 
         # instrument 主表 + ETF 扩展表接通
         instruments = client.fetchall(
@@ -140,11 +178,20 @@ class TestEtfReferenceWriteSideIntegration:
             assert row["source_snapshot_id"].startswith("snapshot:tushare:etf_basic:")
 
     def test_etf_basic_reregistration_is_idempotent(
-        self, writer: IngestionDataWriter, client: SQLiteClient
+        self, ingest: Callable[[], IngestionResult], client: SQLiteClient
     ) -> None:
         """重复摄取同帧：注册幂等（跳过），观察行整行替换不膨胀。"""
-        writer.write_data("etf_basic", self._etf_basic_frame(), "2026-09-18")
-        writer.write_data("etf_basic", self._etf_basic_frame(), "2026-09-18")
+        ingest()
+        first = client.fetchall(
+            "SELECT * FROM etf_reference_observation ORDER BY instrument_id, field"
+        )
+        ingest()
+        assert (
+            client.fetchall(
+                "SELECT * FROM etf_reference_observation ORDER BY instrument_id, field"
+            )
+            == first
+        )
 
         instruments = client.fetchall(
             "SELECT instrument_id FROM instrument WHERE asset_class = 'etf'"
@@ -158,10 +205,10 @@ class TestEtfReferenceWriteSideIntegration:
         assert observations[0]["n"] == 6  # 同 snapshot 身份整行替换
 
     def test_find_etf_reference_consumes_new_observations(
-        self, writer: IngestionDataWriter, metadata: MetadataService
+        self, ingest: Callable[[], IngestionResult], metadata: MetadataService
     ) -> None:
         """Paper 读侧入口（find_etf_reference）能消费新观察事实。"""
-        writer.write_data("etf_basic", self._etf_basic_frame(), "2026-09-18")
+        ingest()
 
         snapshots = metadata.instrument.list_etf_reference_snapshots(
             cutoff="2999-01-01T00:00:00Z"
@@ -184,12 +231,12 @@ class TestEtfReferenceWriteSideIntegration:
         assert "创业板ETF" in names.values()
 
     def test_etf_candidate_query_consumes_new_observations(
-        self, writer: IngestionDataWriter, metadata: MetadataService
+        self, ingest: Callable[[], IngestionResult], metadata: MetadataService
     ) -> None:
         """Paper 候选查询（ETFCandidateQuery）消费新观察事实生成候选。"""
         from ditto_application.queries.etf_candidates import ETFCandidateQuery
 
-        writer.write_data("etf_basic", self._etf_basic_frame(), "2026-09-18")
+        ingest()
 
         query = ETFCandidateQuery(metadata=metadata)
         snapshots = query.snapshots(cutoff="2999-01-01T00:00:00Z")

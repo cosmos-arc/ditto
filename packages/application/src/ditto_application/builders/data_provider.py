@@ -8,15 +8,17 @@ satisfying the DataProvider Protocol for unified data access.
 from __future__ import annotations
 
 from collections.abc import Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import date, datetime
 
 import polars as pl
 from ditto_data.catalog.contracts import DataAssetRef
+from ditto_data.catalog.snapshot_completion import checkpoint_matches_snapshot
 from ditto_data.catalog.source_snapshot import (
     ProviderSnapshot,
     ProviderSnapshotReader,
 )
+from ditto_data.ingestion.partition_state import PartitionLifecycleReader
 from ditto_data.provider import BarQuery, InstrumentQuery
 from ditto_data.services.market_service import AdjType, MarketBarsQuery, MarketService
 from ditto_data.services.metadata_service import MetadataService
@@ -37,6 +39,7 @@ class _CatalogSnapshotWindow:
     end_date: date
     snapshot_id: str
     observed_at: datetime
+    consumable: bool = False
 
     def contains(self, *, source: str, source_ticker: str, trade_date: date) -> bool:
         return (
@@ -237,6 +240,7 @@ _BAR_DATASETS = frozenset({"stock_daily", "etf_daily"})
 def _catalog_windows(
     snapshot_reader: ProviderSnapshotReader,
     dataset_id: str | None,
+    lifecycle: PartitionLifecycleReader | None,
 ) -> tuple[_CatalogSnapshotWindow, ...]:
     """
     Daily-bar lineage windows for the expected dataset.
@@ -254,8 +258,19 @@ def _catalog_windows(
             namespace=dataset_namespace(dataset),
             partition_keys=(),
         )
+        completed = {
+            checkpoint.complete_evidence_id: checkpoint
+            for checkpoint in (
+                lifecycle.list_complete(dataset_id=dataset) if lifecycle else ()
+            )
+        }
         windows.extend(
-            window
+            replace(
+                window,
+                consumable=snapshot.payload_retained
+                and (checkpoint := completed.get(snapshot.snapshot_id)) is not None
+                and checkpoint_matches_snapshot(checkpoint, snapshot),
+            )
             for snapshot in snapshot_reader.list_snapshots(canonical_asset=canonical)
             if (window := _snapshot_window(snapshot)) is not None
         )
@@ -293,12 +308,13 @@ def _attach_catalog_source_snapshots(
     frame: pl.DataFrame,
     snapshot_reader: ProviderSnapshotReader,
     dataset_id: str | None = None,
+    lifecycle: PartitionLifecycleReader | None = None,
 ) -> pl.DataFrame:
     if frame.is_empty() or _SOURCE_SNAPSHOT_COLUMN in frame.columns:
         return frame
     required = {"trade_date", "source", "source_ticker"}
     if not required.issubset(frame.columns) or not (
-        windows := _catalog_windows(snapshot_reader, dataset_id)
+        windows := _catalog_windows(snapshot_reader, dataset_id, lifecycle)
     ):
         return frame.with_columns(
             pl.lit(None, dtype=pl.String).alias(_SOURCE_SNAPSHOT_COLUMN)
@@ -328,9 +344,31 @@ def _attach_catalog_source_snapshots(
     for window in sorted(ranged, key=_freshness_key):
         if window.source_ticker is None:
             lineage = _apply_ranged(lineage, window, lineage_class="wildcard")
+    # A canonical write can precede snapshot registration. Durable write intents
+    # therefore also block lineage until recovery completes, even without a snapshot.
+    pending = [
+        (pl.col("_lineage_source") == checkpoint.source)
+        & pl.col("_lineage_date").is_between(
+            date.fromisoformat(checkpoint.request_start),
+            date.fromisoformat(checkpoint.request_end),
+        )
+        for dataset in sorted({dataset_id} if dataset_id else _BAR_DATASETS)
+        for checkpoint in (
+            lifecycle.list_incomplete(dataset_id=dataset) if lifecycle else ()
+        )
+    ]
+    blocked = pl.any_horizontal(pending) if pending else pl.lit(False)
     resolved = lineage.select(
         "_lineage_row",
-        pl.col("_lineage_snapshot").alias(_SOURCE_SNAPSHOT_COLUMN),
+        pl.when(
+            pl.col("_lineage_snapshot").is_in(
+                [window.snapshot_id for window in windows if window.consumable]
+            )
+            & ~blocked
+        )
+        .then(pl.col("_lineage_snapshot"))
+        .otherwise(None)
+        .alias(_SOURCE_SNAPSHOT_COLUMN),
     ).sort("_lineage_row")
     return (
         frame.with_row_index("_lineage_row")
@@ -353,11 +391,13 @@ class ServiceBackedDataProvider:
         metadata_service: MetadataService,
         derived_service: DerivedQueryService,
         snapshot_reader: ProviderSnapshotReader | None = None,
+        lifecycle_reader: PartitionLifecycleReader | None = None,
     ) -> None:
         self._market = market_service
         self._metadata = metadata_service
         self._derived = derived_service
         self._snapshots = snapshot_reader
+        self._lifecycle = lifecycle_reader
 
     def get_bars(self, query: BarQuery) -> pl.DataFrame:
         """
@@ -389,7 +429,9 @@ class ServiceBackedDataProvider:
         bars = self._market.find_bars(bars_query)
         if self._snapshots is None:
             return bars
-        return _attach_catalog_source_snapshots(bars, self._snapshots, query.dataset_id)
+        return _attach_catalog_source_snapshots(
+            bars, self._snapshots, query.dataset_id, self._lifecycle
+        )
 
     def get_instruments(self, query: InstrumentQuery) -> pl.DataFrame:
         """获取标的列表."""

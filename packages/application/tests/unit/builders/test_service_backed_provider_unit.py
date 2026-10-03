@@ -4,10 +4,15 @@ from datetime import UTC, date, datetime
 from unittest.mock import MagicMock
 
 import polars as pl
+import pytest
 from ditto_application.builders.data_provider import ServiceBackedDataProvider
 from ditto_data.catalog.contracts import DataAssetRef
 from ditto_data.catalog.source_snapshot import (
     ProviderSnapshot,
+)
+from ditto_data.ingestion.partition_state import (
+    PartitionCheckpoint,
+    PartitionLifecycleStatus,
 )
 from ditto_data.provider import BarQuery, InstrumentQuery
 
@@ -64,6 +69,35 @@ class _SnapshotReader:
             snapshot
             for snapshot in self._snapshots
             if canonical_asset is None or snapshot.canonical_asset == canonical_asset
+        )
+
+
+class _LifecycleReader:
+    def __init__(self, reader: _SnapshotReader) -> None:
+        self.reader = reader
+
+    def list_incomplete(self, *, dataset_id: str):
+        return ()
+
+    def list_complete(self, *, dataset_id: str):
+        return tuple(
+            PartitionCheckpoint(
+                chunk_id=snapshot.snapshot_id,
+                dataset_id=dataset_id,
+                source=snapshot.source,
+                request_start=snapshot.request_start,
+                request_end=snapshot.request_end,
+                status=PartitionLifecycleStatus.COMPLETE,
+                last_successful_stage=PartitionLifecycleStatus.COMPLETE,
+                attempt=1,
+                retry_budget=1,
+                payload_id=f"payload:{snapshot.checksum}:test:{snapshot.snapshot_id}",
+                complete_evidence_id=snapshot.snapshot_id,
+                error_code=None,
+                updated_at=snapshot.created_at,
+            )
+            for snapshot in self.reader._snapshots
+            if snapshot.dataset_id == dataset_id
         )
 
 
@@ -218,6 +252,7 @@ class TestServiceBackedDataProvider:
             metadata_service=metadata,
             derived_service=derived,
             snapshot_reader=reader,
+            lifecycle_reader=_LifecycleReader(reader),
         )
 
         result = provider.get_bars(
@@ -260,6 +295,7 @@ class TestServiceBackedDataProvider:
             metadata_service=metadata,
             derived_service=derived,
             snapshot_reader=reader,
+            lifecycle_reader=_LifecycleReader(reader),
         )
 
         result = provider.get_bars(
@@ -436,6 +472,7 @@ class TestVectorizedLineagePrecedence:
             metadata_service=metadata,
             derived_service=derived,
             snapshot_reader=reader,
+            lifecycle_reader=_LifecycleReader(reader),
         )
 
         result = provider.get_bars(
@@ -443,3 +480,74 @@ class TestVectorizedLineagePrecedence:
         )
 
         assert result["source_snapshot_id"].to_list() == ["newer-observation"]
+
+
+@pytest.mark.parametrize("registered", [True, False])
+def test_uncompleted_revision_cannot_claim_canonical_bar_lineage(registered):
+    from packages.application.tests.unit.process.ingestion import (
+        snapshot_evidence_support,
+    )
+
+    evidence_stores = snapshot_evidence_support.evidence_stores
+    commit_snapshot = snapshot_evidence_support.commit_snapshot
+
+    with evidence_stores() as stores:
+        for hour, complete in ((9, True), (10, False)):
+            if hour == 10 and not registered:
+                stores.lifecycle.plan_partition(
+                    PartitionCheckpoint(
+                        chunk_id="pending-revision",
+                        dataset_id="stock_daily",
+                        source="tushare",
+                        request_start="2026-07-01",
+                        request_end="2026-07-01",
+                        status=PartitionLifecycleStatus.PLANNED,
+                        last_successful_stage=None,
+                        attempt=1,
+                        retry_budget=3,
+                        payload_id="intent:10:unregistered",
+                        complete_evidence_id=None,
+                        error_code=None,
+                        updated_at=datetime(2026, 7, 1, 10, tzinfo=UTC),
+                    )
+                )
+                continue
+            commit_snapshot(
+                stores,
+                dataset="stock_daily",
+                request_start="2026-07-01",
+                request_end="2026-07-01",
+                checksum=str(hour),
+                row_count=1,
+                schema_version="market.stock_daily.v1",
+                observed_at=datetime(2026, 7, 1, hour, tzinfo=UTC),
+                complete=complete,
+            )
+        market = MagicMock()
+        metadata = MagicMock()
+        metadata.instrument.resolve_instrument_ids_batch.return_value = {"000001.SZ": 1}
+        market.find_bars.return_value = pl.DataFrame(
+            {
+                "instrument_id": [1],
+                "trade_date": [date(2026, 7, 1)],
+                "source": ["tushare"],
+                "source_ticker": ["000001.SZ"],
+                "close": [99.0],
+            }
+        )
+        provider = ServiceBackedDataProvider(
+            market_service=market,
+            metadata_service=metadata,
+            derived_service=MagicMock(),
+            snapshot_reader=stores.snapshots,
+            lifecycle_reader=stores.lifecycle,
+        )
+        frame = provider.get_bars(
+            BarQuery(
+                instruments=["000001.SZ"],
+                start="2026-07-01",
+                end="2026-07-01",
+                dataset_id="stock_daily",
+            )
+        )
+        assert frame["source_snapshot_id"].to_list() == [None]

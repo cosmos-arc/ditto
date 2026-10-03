@@ -2,6 +2,10 @@ import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import AxeBuilder from "@axe-core/playwright";
 import { type APIResponse, expect, type Page, test } from "@playwright/test";
+import {
+	expectEmptyMarketResponse,
+	isEmptyMarketDiagnostic,
+} from "./empty-market";
 
 function requiredEnvironment(name: string): string {
 	const value = process.env[name]?.trim();
@@ -59,7 +63,8 @@ function captureBrowserErrors(page: Page): string[] {
 	const errors: string[] = [];
 	page.on("pageerror", (error) => errors.push(error.message));
 	page.on("console", (message) => {
-		if (message.type() === "error") errors.push(message.text());
+		if (message.type() !== "error") return;
+		if (!isEmptyMarketDiagnostic(message)) errors.push(message.text());
 	});
 	return errors;
 }
@@ -111,11 +116,15 @@ test.describe
 			expect(browserErrors).toEqual([]);
 		});
 
-		test("Today and Markets fail closed when certified market data is absent", async ({
+		test("Today and Markets fail closed when completed market snapshots are absent", async ({
 			page,
 		}) => {
 			const browserErrors = captureBrowserErrors(page);
+			const contextResponse = page.waitForResponse((response) =>
+				response.url().includes("/api/v1/market/context?"),
+			);
 			await page.goto("/markets/");
+			await expectEmptyMarketResponse(await contextResponse);
 			await expect(page.getByText("市场覆盖")).toBeVisible();
 			await expect(page.getByRole("alert")).toContainText(
 				"没有回退到 latest 数据",
@@ -277,9 +286,12 @@ test.describe
 			);
 
 			const browserErrors = captureBrowserErrors(page);
-			await page.goto("/portfolio/manual?account_id=system-manual&as_of=2026-09-04", {
-				waitUntil: "networkidle",
-			});
+			await page.goto(
+				"/portfolio/manual?account_id=system-manual&as_of=2026-09-04",
+				{
+					waitUntil: "networkidle",
+				},
+			);
 			await expect(page.getByText("MANUAL 手工实际账户")).toBeVisible();
 			await expect(
 				page.getByText("system-manual", { exact: true }),
@@ -294,26 +306,40 @@ test.describe
 			// Correction and reversal are both driven through production React.
 			// Their HTTP receipts plus refreshed ledger rows prove typed transport,
 			// real handlers, append-only SQLite persistence, and query invalidation.
-			await page.getByRole("button", { name: `更正 ${openingEventId}` }).click();
-			await expect(page.getByText(`更正 ${openingEventId}`, { exact: true })).toBeVisible();
+			await page
+				.getByRole("button", { name: `更正 ${openingEventId}` })
+				.click();
+			await expect(
+				page.getByText(`更正 ${openingEventId}`, { exact: true }),
+			).toBeVisible();
 			await page.getByLabel("总额").fill("120000");
 			await page.getByLabel("备注").fill("system browser correction");
 			const browserCorrection = page.waitForResponse(
 				(response) =>
 					response.request().method() === "POST" &&
-					response.url() === `${apiOrigin}/api/v1/manual/accounts/system-manual/corrections`,
+					response.url() ===
+						`${apiOrigin}/api/v1/manual/accounts/system-manual/corrections`,
 			);
 			await page.getByRole("button", { name: "追加更正事件" }).click();
 			const correctionResponse = await browserCorrection;
 			expect(correctionResponse.status()).toBe(201);
-			const correctionPayload = (await correctionResponse.json()) as Record<string, unknown>;
-			expect(objectField(objectField(correctionPayload, "data"), "event")).toMatchObject({
+			const correctionPayload = (await correctionResponse.json()) as Record<
+				string,
+				unknown
+			>;
+			expect(
+				objectField(objectField(correctionPayload, "data"), "event"),
+			).toMatchObject({
 				corrects_event_id: openingEventId,
 				note: "system browser correction",
 			});
-			await expect(page.getByText("更正事件已追加；原记录保持不变")).toBeVisible();
 			await expect(
-				page.locator("article").getByText("system browser correction", { exact: true }),
+				page.getByText("更正事件已追加；原记录保持不变"),
+			).toBeVisible();
+			await expect(
+				page
+					.locator("article")
+					.getByText("system browser correction", { exact: true }),
 			).toBeVisible();
 
 			await page.getByRole("button", { name: `冲正 ${buyEventId}` }).click();
@@ -321,18 +347,30 @@ test.describe
 			const browserReversal = page.waitForResponse(
 				(response) =>
 					response.request().method() === "POST" &&
-					response.url() === `${apiOrigin}/api/v1/manual/accounts/system-manual/reversals`,
+					response.url() ===
+						`${apiOrigin}/api/v1/manual/accounts/system-manual/reversals`,
 			);
 			await page.getByRole("button", { name: "确认追加冲正" }).click();
 			const reversalResponse = await browserReversal;
 			expect(reversalResponse.status()).toBe(201);
-			const reversalPayload = (await reversalResponse.json()) as Record<string, unknown>;
-			expect(objectField(objectField(reversalPayload, "data"), "event")).toMatchObject({
+			const reversalPayload = (await reversalResponse.json()) as Record<
+				string,
+				unknown
+			>;
+			expect(
+				objectField(objectField(reversalPayload, "data"), "event"),
+			).toMatchObject({
 				reverses_event_id: buyEventId,
 				note: "system browser reversal",
 			});
-			await expect(page.getByText("冲正事件已追加；原记录仍可审计")).toBeVisible();
-			await expect(page.locator("article").getByText("system browser reversal", { exact: true })).toBeVisible();
+			await expect(
+				page.getByText("冲正事件已追加；原记录仍可审计"),
+			).toBeVisible();
+			await expect(
+				page
+					.locator("article")
+					.getByText("system browser reversal", { exact: true }),
+			).toBeVisible();
 
 			const ledger = await expectJson(
 				await request.get(
@@ -347,8 +385,12 @@ test.describe
 			expect(Number(cash["available"])).toBe(120_000);
 
 			await page.reload({ waitUntil: "networkidle" });
-			await expect(page.getByText("system browser correction", { exact: true })).toBeVisible();
-			await expect(page.getByText("system browser reversal", { exact: true })).toBeVisible();
+			await expect(
+				page.getByText("system browser correction", { exact: true }),
+			).toBeVisible();
+			await expect(
+				page.getByText("system browser reversal", { exact: true }),
+			).toBeVisible();
 			expect(browserErrors).toEqual([]);
 		});
 
@@ -404,12 +446,16 @@ test.describe
 			const browserOrder = page.waitForResponse(
 				(response) =>
 					response.request().method() === "POST" &&
-					response.url() === `${apiOrigin}/api/v1/paper/sessions/system-paper-session/orders`,
+					response.url() ===
+						`${apiOrigin}/api/v1/paper/sessions/system-paper-session/orders`,
 			);
 			await page.getByRole("button", { name: "提交模拟订单" }).click();
 			const orderResponse = await browserOrder;
 			expect(orderResponse.status()).toBe(201);
-			const orderPayload = (await orderResponse.json()) as Record<string, unknown>;
+			const orderPayload = (await orderResponse.json()) as Record<
+				string,
+				unknown
+			>;
 			const orderReceipt = objectField(orderPayload, "data");
 			const orderId = stringField(orderReceipt, "order_id");
 			expect(orderReceipt).toMatchObject({
@@ -422,57 +468,78 @@ test.describe
 			const browserReconcile = page.waitForResponse(
 				(response) =>
 					response.request().method() === "POST" &&
-					response.url() === `${apiOrigin}/api/v1/paper/sessions/system-paper-session/reconcile`,
+					response.url() ===
+						`${apiOrigin}/api/v1/paper/sessions/system-paper-session/reconcile`,
 			);
 			await page.getByRole("button", { name: "日终对账" }).click();
 			const reconciliationResponse = await browserReconcile;
 			expect(reconciliationResponse.status()).toBe(200);
-			const reconciliationPayload = (await reconciliationResponse.json()) as Record<string, unknown>;
+			const reconciliationPayload =
+				(await reconciliationResponse.json()) as Record<string, unknown>;
 			expect(objectField(reconciliationPayload, "data")).toMatchObject({
 				balanced: true,
 				fill_count: 1,
 				ledger_fill_count: 1,
 			});
-			await expect(page.getByText("日终对账通过：1/1 笔成交已入账")).toBeVisible();
+			await expect(
+				page.getByText("日终对账通过：1/1 笔成交已入账"),
+			).toBeVisible();
 			await expect(page.getByText("日终已平衡", { exact: true })).toBeVisible();
 
 			const browserRecover = page.waitForResponse(
 				(response) =>
 					response.request().method() === "POST" &&
-					response.url() === `${apiOrigin}/api/v1/paper/sessions/system-paper-session/recover`,
+					response.url() ===
+						`${apiOrigin}/api/v1/paper/sessions/system-paper-session/recover`,
 			);
 			await page.getByRole("button", { name: "恢复账本缺口" }).click();
 			const recoveredResponse = await browserRecover;
 			expect(recoveredResponse.status()).toBe(200);
-			const recoveredPayload = (await recoveredResponse.json()) as Record<string, unknown>;
+			const recoveredPayload = (await recoveredResponse.json()) as Record<
+				string,
+				unknown
+			>;
 			expect(objectField(recoveredPayload, "data")).toMatchObject({
 				recovered_execution_count: expect.any(Number),
 			});
-			await expect(page.getByText(/恢复检查完成：\d+ 条执行记录已核验/u)).toBeVisible();
+			await expect(
+				page.getByText(/恢复检查完成：\d+ 条执行记录已核验/u),
+			).toBeVisible();
 
 			const browserPause = page.waitForResponse(
 				(response) =>
 					response.request().method() === "POST" &&
-					response.url() === `${apiOrigin}/api/v1/paper/sessions/system-paper-session/pause`,
+					response.url() ===
+						`${apiOrigin}/api/v1/paper/sessions/system-paper-session/pause`,
 			);
 			await page.getByRole("button", { name: "暂停会话" }).click();
 			const pausedResponse = await browserPause;
 			expect(pausedResponse.status()).toBe(200);
-			const pausedPayload = (await pausedResponse.json()) as Record<string, unknown>;
+			const pausedPayload = (await pausedResponse.json()) as Record<
+				string,
+				unknown
+			>;
 			expect(objectField(pausedPayload, "data")).toMatchObject({
 				session: { status: "paused", revision: 2 },
 			});
 			await expect(page.getByText("PAUSED", { exact: true })).toBeVisible();
 
 			const persistedSession = await expectJson(
-				await request.get(`${apiOrigin}/api/v1/paper/sessions/system-paper-session`, {
-					headers: contractHeaders,
-				}),
+				await request.get(
+					`${apiOrigin}/api/v1/paper/sessions/system-paper-session`,
+					{
+						headers: contractHeaders,
+					},
+				),
 				200,
 			);
 			expect(objectField(persistedSession, "data")).toMatchObject({
 				session: { status: "paused", revision: 2 },
-				latest_reconciliation: { balanced: true, fill_count: 1, ledger_fill_count: 1 },
+				latest_reconciliation: {
+					balanced: true,
+					fill_count: 1,
+					ledger_fill_count: 1,
+				},
 			});
 
 			await page.goto(

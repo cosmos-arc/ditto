@@ -97,7 +97,11 @@ def _request(
             checksum=checksum,
             canonical_asset=canonical_asset,
             request_parameters_hash="sha256:request",
-            response_metadata=(("snapshot_layer", "normalized_provider_payload"),),
+            response_metadata=(
+                ("canonical_checksum", checksum),
+                ("canonical_row_count", "1"),
+                ("snapshot_layer", "normalized_provider_payload"),
+            ),
             row_count=1,
             payload_uri="stock_daily/2026/07/17.parquet",
             payload_retained=True,
@@ -126,7 +130,7 @@ def _request(
         request_end="2026-07-17",
         provider_snapshot=snapshot,
         catalog_entry=catalog_entry,
-        # #394:log 内容必须与 provider snapshot 的 checksum/row_count 逐字节一致。
+        # Canonical output is explicitly bound in the retained snapshot metadata.
         success_log=IngestionLog(
             dataset="stock_daily",
             source="tushare",

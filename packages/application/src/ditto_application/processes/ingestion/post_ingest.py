@@ -21,6 +21,7 @@ from ditto_data.catalog.provider_payload import (
     ProviderPayloadWriter,
 )
 from ditto_data.catalog.source_snapshot import (
+    ProviderSnapshot,
     ProviderSnapshotReader,
     snapshot_identity,
 )
@@ -336,9 +337,12 @@ def process_fetched_data(  # noqa: C901, PLR0911, PLR0912 - fail-closed stages
     )
     snapshot_evidence: IngestionSnapshotEvidence | None = None
     if ctx.evidence_committer is not None:
-        outcome = ctx.evidence_committer.commit(
-            build_evidence_commit_request(catalog_ctx)
-        )
+        evidence = build_evidence_commit_request(catalog_ctx)
+        if dataset == "etf_basic":
+            failure = _write_etf_observations(df, evidence.provider_snapshot, ctx)
+            if failure is not None:
+                return failure
+        outcome = ctx.evidence_committer.commit(evidence)
         if not outcome.completed:
             return IngestionResult(
                 dataset=dataset,
@@ -417,6 +421,21 @@ def process_fetched_data(  # noqa: C901, PLR0911, PLR0912 - fail-closed stages
         )
     run_list_date_inference(ctx.list_date_inference, dataset)
     return result
+
+
+def _write_etf_observations(
+    df: pl.DataFrame, snapshot: ProviderSnapshot, ctx: PostIngestContext
+) -> IngestionResult | None:
+    """Publish the projection before COMPLETE, preserving first observation on retry."""
+    if ctx.snapshot_reader is not None:
+        snapshot = ctx.snapshot_reader.get_snapshot(snapshot.snapshot_id) or snapshot
+    try:
+        ctx.data_writer.write_etf_reference(df, snapshot)
+    except Exception as error:
+        return ctx.result_handler.handle_unknown_error(
+            snapshot.dataset_id, snapshot.request_end, error
+        )
+    return None
 
 
 def _commit_empty_provider_observation(

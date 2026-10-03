@@ -134,7 +134,6 @@ def _payload_and_snapshot(
             ),
             request_parameters_hash="sha256:cmp-live-request-v1",
             response_metadata=(("fixture", "cmp-07-live"),),
-            license_record_id="license:cmp-fixture:v1",
             row_count=artifact.row_count,
             payload_uri=artifact.uri,
             payload_retained=True,

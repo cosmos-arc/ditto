@@ -469,3 +469,46 @@ class TestToWriteResult:
         result = _to_write_result("test_ds", 2024, df, rows_written=3)
         assert result.blocked is False
         assert result.rows_written == 3
+
+
+def test_fuyao_unsorted_bars_preserve_early_identity(
+    mock_metadata_service,
+    mock_market_write_service,
+    mock_fundamental_store,
+    mock_capital_store,
+    mock_macro_service,
+):
+    first_seen = {}
+
+    def resolve(tickers, *, evidence_dates, **kwargs):
+        for ticker in tickers:
+            first_seen.setdefault(ticker, evidence_dates[ticker])
+        return {
+            ticker: 1000001
+            for ticker in tickers
+            if first_seen[ticker] <= evidence_dates[ticker]
+        }
+
+    mock_metadata_service.instrument.resolve_fuyao_instrument_ids.side_effect = resolve
+    writer = IngestionDataWriter(
+        metadata_service=mock_metadata_service,
+        market_write_service=mock_market_write_service,
+        fundamental_store=mock_fundamental_store,
+        capital_store=mock_capital_store,
+        macro_service=mock_macro_service,
+        source_name="fuyao",
+    )
+    writer.write_data(
+        "stock_daily",
+        pl.DataFrame(
+            {
+                "source_ticker": ["600000.SH", "600000.SH"],
+                "trade_date": [date(2026, 9, 2), date(2026, 9, 1)],
+                "close": [12.0, 11.0],
+            }
+        ),
+        "2026-09-02",
+    )
+    written = mock_market_write_service.save_bars.call_args.kwargs["df"]
+    assert written["close"].to_list() == [11.0, 12.0]
+    assert written["instrument_id"].to_list() == [1000001, 1000001]

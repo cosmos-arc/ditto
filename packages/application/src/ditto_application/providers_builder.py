@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dishka import Provider, Scope, provide
 from ditto_data.catalog.source_snapshot import ProviderSnapshotReader
+from ditto_data.ingestion.partition_state import PartitionLifecycleReader
 from ditto_data.lineage import DataLineageRecorder
 from ditto_data.services.market_service import MarketService
 from ditto_data.services.metadata_service import MetadataService
@@ -125,6 +126,7 @@ class AppBuilderFactory(Provider):
         metadata_service: MetadataService,
         derived_query_service: DerivedQueryService,
         snapshots: ProviderSnapshotReader,
+        lifecycle: PartitionLifecycleReader,
     ) -> ServiceBackedDataProvider:
         """服务层数据提供器(行级 lineage 来自 provider snapshots)."""
         return ServiceBackedDataProvider(
@@ -132,6 +134,7 @@ class AppBuilderFactory(Provider):
             metadata_service=metadata_service,
             derived_service=derived_query_service,
             snapshot_reader=snapshots,
+            lifecycle_reader=lifecycle,
         )
 
     @provide

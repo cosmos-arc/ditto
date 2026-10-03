@@ -24,13 +24,10 @@ Strategy governance 是标准示例：`features/strategy` 拥有 governance cont
 workflow public index。packet 缺失、读取失败、bundle hash 非法或 hard gate 阻断时，submit/approve
 必须 fail closed。
 
-Markets 与 Instrument 页面采用同一模式：`workflows/market-pages` 组合 Markets-owned view contracts、
-Instrument catalog 与 Data Product coverage；`workflows/instrument-analysis` 通过显式 renderer/dependency
-contract 组合 Instrument、SelectionRun 与 certified Data Product evidence。对应 route 只导入 workflow
-public index，`features/instruments` 不再依赖 `selection` 或 `data-products`，`features/markets` 不再依赖
-Instrument catalog。当前唯一保留的目标域 peer edge 是 `markets → data-products`：
-`fetchCurrentMarketContext` 仍是 Home 消费的既有 public API；在未把 Home 的市场脉搏编排迁到 workflow
-前，删除该边会破坏现有消费者，不能以复制 Data Product adapter 或 service locator 伪装消除。
+Markets 与 Instrument 的跨 feature 页面由 workflows 组合，route 只导入 workflow public index。
+#390 已移除 Data Product 治理 feature；行情查询使用服务端解析的完成快照，
+Instrument 分析保留精确来源与 PIT 约束。Home 继续消费 Markets 的市场上下文 API。
+缺失快照时显示不可用，不回退到 latest 数据。
 
 ## 状态与数据
 

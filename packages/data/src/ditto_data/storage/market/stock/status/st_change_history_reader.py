@@ -64,26 +64,9 @@ class StChangeHistoryReader:
             或 None 如果没有有效记录.
 
         """
-        sql = """SELECT is_st, st_type, effective_from
-            FROM st_change_history
-            WHERE instrument_id = ?
-              AND effective_from <= ?
-              AND (effective_to IS NULL OR effective_to > ?)"""
-        params: list[Any] = [instrument_id, as_of_date, as_of_date]
-        if cutoff is not None:
-            sql += " AND (observed_at IS NULL OR datetime(observed_at) < datetime(?))"
-            params.append(cutoff)
-        sql += " ORDER BY effective_from DESC LIMIT 1"
-        row = self._client.fetchone(sql, params)
-
-        if row is None:
-            return None
-
-        return {
-            "is_st": bool(row["is_st"]),
-            "st_type": row["st_type"],
-            "effective_from": row["effective_from"],
-        }
+        return self.get_st_status_batch([instrument_id], as_of_date, cutoff=cutoff).get(
+            instrument_id
+        )
 
     def get_st_status_batch(
         self,
@@ -122,16 +105,20 @@ class StChangeHistoryReader:
                     SELECT instrument_id, is_st, st_type, effective_from,
                            ROW_NUMBER() OVER (
                                PARTITION BY instrument_id
-                               ORDER BY effective_from DESC
+                               ORDER BY effective_from DESC, datetime(observed_at) DESC
                            ) AS rn
-                    FROM st_change_history
-                    WHERE effective_from <= ?
+                    FROM (
+                        SELECT *, ROW_NUMBER() OVER (
+                            PARTITION BY instrument_id, effective_from, source
+                            ORDER BY datetime(observed_at) DESC
+                        ) AS version_rank
+                        FROM st_change_history WHERE {in_clause} {knowledge_filter}
+                    )
+                    WHERE version_rank = 1 AND effective_from <= ?
                       AND (effective_to IS NULL OR effective_to > ?)
-                      {knowledge_filter}
-                      AND {in_clause}
                 )
             WHERE rn = 1""",  # noqa: S608 - in_clause 通过 _build_in_clause 安全构建
-            [as_of_date, as_of_date, *cutoff_params, *in_params],
+            [*in_params, *cutoff_params, as_of_date, as_of_date],
         )
         return {
             int(row["instrument_id"]): {

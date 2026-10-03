@@ -635,3 +635,44 @@ def test_snapshot_repair_priority_orders_by_log_attempts_then_time() -> None:
     )
     assert dataset_namespace("balance_sheet") == "fundamental"
     assert dataset_namespace("private_dataset") == "data"
+
+
+def test_sparse_revision_replaces_same_scope_without_losing_other_deltas():
+    with _evidence_support.evidence_stores() as stores:
+        for hour, checksum in enumerate(("original", "revision", "original"), start=9):
+            active = _evidence_support.commit_snapshot(
+                stores,
+                dataset="index_weight",
+                request_start="2026-07-01",
+                request_end="2026-07-01",
+                checksum=checksum,
+                row_count=1,
+                schema_version="market.index_weight.v1",
+                observed_at=datetime(2026, 7, 1, hour, tzinfo=UTC),
+            )
+            _evidence_support.record_success(
+                stores,
+                dataset="index_weight",
+                trade_date="2026-07-01",
+                checksum=checksum,
+                rows=1,
+            )
+            evidence = snapshot_asof_evidence(
+                snapshots=stores.snapshots,
+                lifecycle=stores.lifecycle,
+                dataset="index_weight",
+                source="tushare",
+                signal_date="2026-07-01",
+            )
+            assert evidence is not None
+            assert evidence.source_snapshot_ids == (active.snapshot_id,)
+            assert evidence.row_count == 1
+            assert PersistedIngestionEvidenceVerifier(
+                stores.snapshots, stores.lifecycle, stores.logs
+            ).verify_asof_snapshot(
+                dataset="index_weight",
+                source="tushare",
+                signal_date="2026-07-01",
+                expected_snapshot_ids=evidence.source_snapshot_ids,
+                expected_row_count=1,
+            )

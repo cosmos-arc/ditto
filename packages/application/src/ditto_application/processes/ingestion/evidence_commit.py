@@ -146,6 +146,21 @@ class IngestionEvidenceCommitter:
 
     def commit(self, request: EvidenceCommitRequest) -> EvidenceCommitOutcome:
         """Commit or repair the evidence chain without repeating durable stages."""
+        request = replace(
+            request,
+            provider_snapshot=replace(
+                request.provider_snapshot,
+                response_metadata=tuple(
+                    sorted(
+                        {
+                            **dict(request.provider_snapshot.response_metadata),
+                            "canonical_checksum": request.success_log.checksum,
+                            "canonical_row_count": str(request.success_log.rows),
+                        }.items()
+                    )
+                ),
+            ),
+        )
         self._validate_request(request)
         request = self._versioned_request(request)
         preparation = self._prepare_payload(request)

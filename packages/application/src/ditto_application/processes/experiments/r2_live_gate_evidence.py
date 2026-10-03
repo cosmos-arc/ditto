@@ -8,7 +8,7 @@ import os
 import stat
 from collections.abc import Mapping
 from dataclasses import InitVar, dataclass
-from datetime import date, datetime
+from datetime import datetime
 from pathlib import Path
 from typing import Literal, Protocol, cast
 
@@ -492,15 +492,6 @@ def _ready_preflight(value: Mapping[str, object], checked_at: datetime) -> bool:
         and performance is not None
         and _ready_performance(performance)
     )
-
-
-def _iso_date(value: object) -> date | None:
-    if type(value) is not str:
-        return None
-    try:
-        return date.fromisoformat(value)
-    except ValueError:
-        return None
 
 
 def _ready_products(products: list[object], checked_at: datetime) -> bool:

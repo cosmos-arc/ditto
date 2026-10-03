@@ -112,13 +112,14 @@ class _MetadataSecondaryIdentityResolver:
         self._metadata = metadata
 
     def resolve_secondary_ids(
-        self, source_tickers: list[str], source: str
+        self, source_tickers: list[str], source: str, *, asof: str
     ) -> dict[str, int]:
         """裸码/thscode → instrument_id（只读，不写映射；键与输入一致）。"""
         if source != "fuyao" or not source_tickers:
             return {}
         return self._metadata.instrument.resolve_fuyao_instrument_ids(
             [str(ticker) for ticker in source_tickers],
+            evidence_dates={str(ticker): asof for ticker in source_tickers},
             register_missing=False,
         )
 

@@ -1,7 +1,7 @@
 """Integration tests for derived materialize -> query -> repair flow."""
 
 from contextlib import contextmanager
-from dataclasses import asdict
+from dataclasses import asdict, replace
 from datetime import UTC, date, datetime
 from pathlib import Path
 from typing import Any
@@ -147,16 +147,6 @@ def _write_market_truth_layers(data_root: Path, *, close_values: list[float]) ->
     ).write_parquet(market_root / "status" / "2026.parquet")
 
 
-class _SeedClock:
-    """固定播种时钟,保证观察事件落在信号窗口内。"""
-
-    def __init__(self) -> None:
-        self.now = datetime(2026, 3, 12, tzinfo=UTC)
-
-    def __call__(self) -> datetime:
-        return self.now
-
-
 def _seed_market_catalog(
     container,
     *,
@@ -199,28 +189,24 @@ def _seed_market_catalog(
         SQLitePartitionLifecycleStore,
     )
 
-    class _Stores:
-        snapshots: SQLiteProviderSnapshotStore = container.get(
-            SQLiteProviderSnapshotStore
+    with _evidence_support.evidence_stores() as fixtures:
+        stores = replace(
+            fixtures,
+            snapshots=container.get(SQLiteProviderSnapshotStore),
+            lifecycle=container.get(SQLitePartitionLifecycleStore),
         )
-        lifecycle: SQLitePartitionLifecycleStore = container.get(
-            SQLitePartitionLifecycleStore
-        )
-        clock = _SeedClock()
-        logs = None
-
-    for trade_date in ("2026-03-10", "2026-03-11"):
-        _evidence_support.commit_snapshot(
-            _Stores,
-            dataset="stock_daily",
-            request_start=trade_date,
-            request_end=trade_date,
-            checksum=f"{source_snapshot_id}:{trade_date}".ljust(32, "0")[:32],
-            row_count=1,
-            schema_version="market.stock_daily.v1",
-            namespace="market",
-            observed_at=datetime(2026, 3, 12, tzinfo=UTC),
-        )
+        for trade_date in ("2026-03-10", "2026-03-11"):
+            _evidence_support.commit_snapshot(
+                stores,
+                dataset="stock_daily",
+                request_start=trade_date,
+                request_end=trade_date,
+                checksum=f"{source_snapshot_id}:{trade_date}".ljust(32, "0")[:32],
+                row_count=1,
+                schema_version="market.stock_daily.v1",
+                namespace="market",
+                observed_at=datetime(2026, 3, 12, tzinfo=UTC),
+            )
 
 
 def _seed_series_spec(

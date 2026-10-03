@@ -20,7 +20,10 @@ from ditto_data.catalog import (
     DataCatalogReader,
     default_dataset_metadata,
 )
-from ditto_data.catalog.snapshot_completion import snapshot_completed
+from ditto_data.catalog.snapshot_completion import (
+    canonical_write_identity,
+    snapshot_completed,
+)
 from ditto_data.catalog.source_snapshot import (
     ProviderSnapshot,
     ProviderSnapshotReader,
@@ -284,7 +287,23 @@ def visible_completed_snapshots(
         if not snapshot_completed(snapshot, lifecycle):
             continue
         visible.append(snapshot)
-    return tuple(visible)
+    active: dict[tuple[str, str, str], ProviderSnapshot] = {}
+    for snapshot in visible:
+        scope = (
+            snapshot.request_start,
+            snapshot.request_end,
+            snapshot.request_parameters_hash,
+        )
+        previous = active.get(scope)
+        if previous is None or observed_at(snapshot) > observed_at(previous):
+            active[scope] = snapshot
+        elif (
+            observed_at(snapshot) == observed_at(previous)
+            and snapshot.snapshot_id != previous.snapshot_id
+        ):
+            # Conflicting observations cannot establish an authoritative revision.
+            return ()
+    return tuple(active.values())
 
 
 def snapshot_asof_evidence(
@@ -313,10 +332,7 @@ def snapshot_asof_evidence(
     if not components:
         return None
     effective_date = max(
-        _parse_iso_date(snapshot.request_end)
-        for snapshot in components
-        # visible_completed_snapshots already rejected unparsable request_end
-        if _parse_iso_date(snapshot.request_end) is not None
+        date.fromisoformat(snapshot.request_end) for snapshot in components
     )
     if (cutoff - effective_date).days * 24 > sla_hours:
         return None
@@ -369,9 +385,9 @@ class PersistedIngestionEvidenceVerifier:
     """
     Bind serialized ingestion evidence to durable snapshot and log facts.
 
-    三方交叉验证:success log × provider_snapshot(checksum/row_count) ×
-    snapshot_completed。这是"同 run 不同内容拒绝"的锚点——log 与完成
-    snapshot 的内容身份必须逐字节一致,任何一方漂移都判定证据无效。
+    三方交叉验证:success log × snapshot 的 canonical write binding ×
+    snapshot_completed。原始 payload 与 canonical 输出分别保留自己的
+    checksum/row_count；日志必须匹配同一次完成写入绑定的 canonical 身份。
     """
 
     snapshots: ProviderSnapshotReader
@@ -388,9 +404,9 @@ class PersistedIngestionEvidenceVerifier:
         row_count: int,
     ) -> bool:
         """Verify one non-sparse result against its completed snapshot facts."""
-        if not isinstance(checksum, str) or not checksum:
+        if type(checksum) is not str or not checksum:
             return False
-        if isinstance(row_count, bool) or not isinstance(row_count, int):
+        if type(row_count) is not int:
             return False
         log = self.ingestion_logs.get_log(
             dataset=dataset,
@@ -405,8 +421,7 @@ class PersistedIngestionEvidenceVerifier:
         ):
             return False
         return any(
-            snapshot.checksum == checksum
-            and snapshot.row_count == row_count
+            canonical_write_identity(snapshot) == (checksum, row_count)
             and snapshot_completed(snapshot, self.lifecycle)
             for snapshot in covering_snapshots(
                 self.snapshots,
@@ -426,9 +441,7 @@ class PersistedIngestionEvidenceVerifier:
         expected_row_count: int,
     ) -> bool:
         """Verify every component of one cumulative sparse PIT snapshot."""
-        if isinstance(expected_row_count, bool) or not isinstance(
-            expected_row_count, int
-        ):
+        if type(expected_row_count) is not int:
             return False
         cutoff = _parse_iso_date(signal_date)
         if cutoff is None:
@@ -446,7 +459,7 @@ class PersistedIngestionEvidenceVerifier:
             return False
         attested_payloads = self._success_payloads(dataset=dataset, source=source)
         return sum(item.row_count for item in components) == expected_row_count and all(
-            (item.checksum, item.row_count) in attested_payloads for item in components
+            canonical_write_identity(item) in attested_payloads for item in components
         )
 
     def _success_payloads(

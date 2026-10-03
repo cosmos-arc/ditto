@@ -102,8 +102,10 @@ def test_create_ingestion_bundle_wires_runtime_ports(mocker) -> None:
         assert bundle.sparse_pit_reattestation is reattestation
 
     coordinator_services = captured_services["services"]
+    assert isinstance(coordinator_services, ingestion_context.CoordinatorServices)
     assert coordinator_services.source_registry is source_registry
     runtime = captured_kwargs["runtime"]
+    assert isinstance(runtime, ingestion_context.CoordinatorRuntimeContext)
     assert runtime.catalog_reader is catalog
     assert runtime.catalog_writer is catalog
     # #394:证据 saga 恒开启,完成事实端口随协调器下发。
