@@ -24,14 +24,12 @@ from ditto_data.sources.tushare.utils.http_utils import (
     response_to_dataframe,
     validate_tushare_response,
 )
+from ditto_data.sources.tushare.utils.pagination import resolve_page_size
 from ditto_data.sources.tushare.utils.rate_limiter import (
     TushareAPIGroup,
     TushareRateLimitConfig,
     TushareRateLimiter,
 )
-
-# Tushare 单次提取上限；命中即翻页
-_PAGE_SIZE = 9000
 
 
 def _get_tushare_token(token: str | None) -> str:
@@ -52,14 +50,24 @@ def _get_tushare_token(token: str | None) -> str:
 
 
 def _rate_limit_config(settings: DataSourceSettings) -> TushareRateLimitConfig:
-    """Resolve the declared provider tier without changing the free default."""
+    """
+    Resolve the declared transport tier without changing defaults.
+
+    档位区分 transport 权益（#431）：``free``/``paid`` 是代理 transport
+    （t.xiaodefa.top）承诺的档位，不是官方账号积分档；官方直连账号应选
+    ``official_120``（50/分）或 ``official_15000``（500/分）。
+    """
     profile = settings.rate_limit_profile.strip().lower()
-    if profile == "free":
+    if profile in {"free", "proxy_free"}:
         config = TushareRateLimitConfig.free()
-    elif profile in {"paid", "premium"}:
+    elif profile in {"paid", "premium", "proxy_paid"}:
         config = TushareRateLimitConfig.paid()
     elif profile == "conservative":
         config = TushareRateLimitConfig.conservative()
+    elif profile == "official_120":
+        config = TushareRateLimitConfig.official_120()
+    elif profile == "official_15000":
+        config = TushareRateLimitConfig.official_15000()
     else:
         raise SourceConfigurationError(
             message=f"Unsupported Tushare rate limit profile: {profile!r}"
@@ -229,7 +237,8 @@ class TushareClient:
         """
         Query Tushare API with rate limiting, retry and offset pagination.
 
-        单页达到 Tushare 上限时自动翻页，避免大结果集被静默截断。
+        按端点契约页宽（utils/pagination.py）翻页；页宽不超过服务端单次
+        上限时，短页才可作为取尽条件，避免大结果集被静默截断。
 
         Args:
             api_name: API name (e.g., "trade_cal", "daily").
@@ -242,22 +251,42 @@ class TushareClient:
         Raises:
             SourceRateLimitError: If rate limit exceeded after retries.
             SourceAuthenticationError: If authentication fails.
-            SourceFetchError: If query fails after retries.
+            SourceFetchError: If query fails after retries, or pagination
+                returns duplicate rows（服务端忽略 offset / 排序不稳定 /
+                翻页期间源端变更，拒绝静默截断或无限翻页）.
 
         """
-        page_size = _PAGE_SIZE
         if "limit" in params or "offset" in params:
             # 调用方自管分页时保持单页语义
             data = self._query(api_name, fields, **params)
             return response_to_dataframe(data)
 
+        page_size = resolve_page_size(api_name)
         pages: list[pl.DataFrame] = []
+        seen_rows: set[int] = set()
         offset = 0
         while True:
             data = self._query(
                 api_name, fields, limit=page_size, offset=offset, **params
             )
             page = response_to_dataframe(data)
+            page_rows = {hash(row) for row in page.iter_rows()}
+            # 页内主键/整行重复（同响应重复行）
+            in_page_duplicates = page.height - len(page_rows)
+            # 跨页重复（服务端忽略 offset、排序不稳定、翻页期间源端变更）
+            cross_page_duplicates = len(page_rows & seen_rows)
+            if in_page_duplicates or cross_page_duplicates:
+                raise SourceFetchError(
+                    message=(
+                        f"Tushare {api_name} pagination returned duplicate rows "
+                        f"at offset={offset} "
+                        f"(in-page={in_page_duplicates}, "
+                        f"cross-page={cross_page_duplicates}): "
+                        "服务端忽略 offset、排序不稳定或翻页期间源数据变更"
+                    ),
+                    source="tushare",
+                )
+            seen_rows |= page_rows
             pages.append(page)
             if len(page) < page_size:
                 break
