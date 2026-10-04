@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Protocol, cast, runtime_checkable
@@ -31,7 +30,6 @@ __all__ = [
 ]
 
 _ALLOWED_WORKER_LIMITS = frozenset({2, 4})
-_THREAD_NAME_PREFIX = "ditto-research-worker"
 _EXECUTABLE_STAGE_ROLES = {
     "exploration": "exploration",
     "holdout": "holdout",
@@ -161,14 +159,12 @@ def _execute_dispatches(
     if worker_limit is None:
         raise ValueError("dispatched_tick_requires_persisted_progress")
 
-    def execute(dispatch: ExperimentDispatch) -> ResearchWorkerResult:
-        return runtime.worker.execute(dispatch, occurred_at=occurred_at)
-
-    with ThreadPoolExecutor(
-        max_workers=worker_limit,
-        thread_name_prefix=_THREAD_NAME_PREFIX,
-    ) as executor:
-        worker_results = tuple(executor.map(execute, result.dispatches))
+    # #448: 顺序 runner——单用户工作站不再按 worker_count 并行执行；
+    # worker_count 仍是契约参数并作为持久化批次上界（validate 保留）。
+    worker_results = tuple(
+        runtime.worker.execute(dispatch, occurred_at=occurred_at)
+        for dispatch in result.dispatches
+    )
 
     for dispatch, worker_result in zip(
         result.dispatches,

@@ -38,7 +38,6 @@ from ditto_analysis.experiments import (
     SnapshotId,
     StrategyVersion,
 )
-from ditto_analysis.experiments.enqueue_fence import ExperimentEnqueueFence
 from ditto_analysis.experiments.trial_family import (
     LogicalTrialIdentity,
     TrialFamilyDeclaration,
@@ -224,18 +223,6 @@ def _enqueue_experiment(
         occurred_at=NOW,
         reason_code="preflight_passed",
         detail={},
-        launch_fence=_current_enqueue_fence(writer, experiment_id),
-    )
-
-
-def _current_enqueue_fence(
-    writer: Any,
-    experiment_id: ExperimentId = ExperimentId("experiment-1"),
-) -> ExperimentEnqueueFence:
-    reader = writer._reader
-    return ExperimentEnqueueFence.create(
-        gates=reader.list_gate_evaluations(experiment_id),
-        folds=tuple(view.spec for view in reader.list_folds(experiment_id)),
     )
 
 
@@ -360,7 +347,6 @@ def test_enqueue_allocates_queue_ordinals_atomically_and_reader_orders_them(
             occurred_at=NOW,
             reason_code="preflight_passed",
             detail={"certified": True},
-            launch_fence=_current_enqueue_fence(writer, ExperimentId(experiment_id)),
         )
 
     with ThreadPoolExecutor(max_workers=2) as executor:
@@ -759,7 +745,6 @@ def test_free_slot_rejects_out_of_order_queue_claim_without_occupying_slot(
             occurred_at=NOW,
             reason_code="preflight_passed",
             detail={},
-            launch_fence=_current_enqueue_fence(writer, ExperimentId(experiment_id)),
         )
     before_slot = reader.get_scheduler_slot()
 
@@ -800,7 +785,6 @@ def test_non_run_queue_head_blocks_all_free_slot_claims_without_being_skipped(
             occurred_at=NOW,
             reason_code="preflight_passed",
             detail={},
-            launch_fence=_current_enqueue_fence(writer, ExperimentId(experiment_id)),
         )
     connection = database.get_connection()
     connection.execute(
@@ -861,7 +845,6 @@ def test_free_slot_rejects_non_queued_experiment_lifecycle(
             occurred_at=NOW,
             reason_code="preflight_passed",
             detail={},
-            launch_fence=_current_enqueue_fence(writer),
         )
         connection = database.get_connection()
         connection.execute(
@@ -968,7 +951,6 @@ def test_expired_active_occupant_must_be_reclaimed_before_next_queue_item(
             occurred_at=NOW,
             reason_code="preflight_passed",
             detail={},
-            launch_fence=_current_enqueue_fence(writer, ExperimentId(experiment_id)),
         )
     first = writer.try_claim_lease(
         ExperimentId("experiment-1"),
@@ -1003,7 +985,6 @@ def test_expired_occupant_intent_drift_fails_closed_without_slot_mutation(
         occurred_at=NOW,
         reason_code="preflight_passed",
         detail={},
-        launch_fence=_current_enqueue_fence(writer),
     )
     first = writer.try_claim_lease(
         ExperimentId("experiment-1"),
@@ -1085,7 +1066,6 @@ def test_terminal_expired_occupant_allows_current_queue_head_to_take_slot(
             occurred_at=NOW,
             reason_code="preflight_passed",
             detail={},
-            launch_fence=_current_enqueue_fence(writer, ExperimentId(experiment_id)),
         )
     first = writer.try_claim_lease(
         ExperimentId("experiment-1"),
@@ -1206,7 +1186,6 @@ def test_expired_active_occupant_can_reclaim_its_own_slot(
         occurred_at=NOW,
         reason_code="preflight_passed",
         detail={},
-        launch_fence=_current_enqueue_fence(writer),
     )
     first = writer.try_claim_lease(
         ExperimentId("experiment-1"),
@@ -1249,7 +1228,6 @@ def test_terminal_experiment_cannot_renew_but_can_release_its_slot(
         occurred_at=NOW,
         reason_code="preflight_passed",
         detail={},
-        launch_fence=_current_enqueue_fence(writer),
     )
     lease = writer.try_claim_lease(
         ExperimentId("experiment-1"),
@@ -1348,7 +1326,6 @@ def test_active_experiment_cannot_release_its_slot(
         occurred_at=NOW,
         reason_code="preflight_passed",
         detail={},
-        launch_fence=_current_enqueue_fence(writer),
     )
     lease = writer.try_claim_lease(
         ExperimentId("experiment-1"),
@@ -1377,7 +1354,6 @@ def test_active_experiment_lease_can_expire_for_immediate_handoff(
         occurred_at=NOW,
         reason_code="preflight_passed",
         detail={},
-        launch_fence=_current_enqueue_fence(writer),
     )
     lease = writer.try_claim_lease(
         ExperimentId("experiment-1"),
@@ -1428,7 +1404,6 @@ def test_free_slot_fails_closed_when_an_active_experiment_has_no_slot(
             occurred_at=NOW,
             reason_code="preflight_passed",
             detail={},
-            launch_fence=_current_enqueue_fence(writer, ExperimentId(experiment_id)),
         )
     connection = database.get_connection()
     connection.execute(
@@ -1603,7 +1578,6 @@ def test_scheduler_experiment_transition_requires_the_current_lease_fence(
         occurred_at=NOW,
         reason_code="preflight_passed",
         detail={},
-        launch_fence=_current_enqueue_fence(writer),
     )
     lease = writer.try_claim_lease(
         ExperimentId("experiment-1"),
@@ -1770,7 +1744,6 @@ def test_every_operator_edge_requires_its_exact_target_intent(
             occurred_at=NOW,
             reason_code="preflight_passed",
             detail={},
-            launch_fence=_current_enqueue_fence(writer),
         )
         expected_revision = queued.revision
         if current_status is not ExperimentStatus.QUEUED:
@@ -2572,7 +2545,6 @@ def test_enqueue_rejects_draft_with_non_run_intent_without_queue_allocation(
             occurred_at=NOW,
             reason_code="preflight_passed",
             detail={},
-            launch_fence=_current_enqueue_fence(writer),
         )
 
     assert exc_info.value.details["reason_code"] == "experiment_desired_state_mismatch"
@@ -2592,7 +2564,6 @@ def test_scheduler_dispatch_rejects_queued_projection_with_non_run_intent(
         occurred_at=NOW,
         reason_code="preflight_passed",
         detail={},
-        launch_fence=_current_enqueue_fence(writer),
     )
     lease = writer.try_claim_lease(
         ExperimentId("experiment-1"),
@@ -2681,7 +2652,6 @@ def test_running_experiment_stage_advances_are_fenced_ordered_and_evented(
         occurred_at=NOW,
         reason_code="preflight_passed",
         detail={},
-        launch_fence=_current_enqueue_fence(writer),
     )
     lease = writer.try_claim_lease(
         ExperimentId("experiment-1"),

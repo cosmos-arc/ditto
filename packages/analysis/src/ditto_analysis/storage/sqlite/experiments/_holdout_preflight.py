@@ -26,12 +26,12 @@ from ditto_analysis.experiments.preflight_authority import (
     decode_preflight_authority,
 )
 from ditto_analysis.experiments.specs import ExperimentLaunchSpec
-from ditto_analysis.storage.sqlite.experiments._enqueue_fence import (
-    fold_fence_from_row,
-    gate_fence_from_row,
-)
 from ditto_analysis.storage.sqlite.experiments._events import (
     canonical_status_event_id,
+)
+from ditto_analysis.storage.sqlite.experiments._row_payload_hashes import (
+    fold_fence_from_row,
+    gate_fence_from_row,
 )
 
 

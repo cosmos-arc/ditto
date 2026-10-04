@@ -47,7 +47,6 @@ from ditto_analysis.experiments import (
     SnapshotId,
     StrategyVersion,
 )
-from ditto_analysis.experiments.enqueue_fence import ExperimentEnqueueFence
 from ditto_analysis.experiments.trial_family import (
     LogicalTrialIdentity,
     TrialFamilyDeclaration,
@@ -71,7 +70,6 @@ def _api() -> SimpleNamespace:
         ExperimentIntegrityError,
         ExperimentPersistenceError,
     )
-    from ditto_analysis.experiments.enqueue_fence import ExperimentEnqueueFence
     from ditto_analysis.experiments.persistence import (
         ArtifactRecord,
         AttemptPersistenceSpec,
@@ -333,7 +331,6 @@ def _claim_queued_experiment(
         occurred_at=NOW,
         reason_code="preflight_passed",
         detail={},
-        launch_fence=_current_enqueue_fence(writer),
     )
     assert queued.record.status is ExperimentStatus.QUEUED
     lease = writer.try_claim_lease(
@@ -428,26 +425,6 @@ def _experiment_gate(
         fold_id=None,
         attempt_id=None,
         artifact_id=None,
-    )
-
-
-def _enqueue_fence(
-    api: SimpleNamespace,
-    *,
-    gates: tuple[Any, ...] = (),
-    folds: tuple[Any, ...] = (),
-) -> Any:
-    return api.ExperimentEnqueueFence.create(gates=gates, folds=folds)
-
-
-def _current_enqueue_fence(
-    writer: Any,
-    experiment_id: ExperimentId = ExperimentId("experiment-1"),
-) -> ExperimentEnqueueFence:
-    reader = writer._reader
-    return ExperimentEnqueueFence.create(
-        gates=reader.list_gate_evaluations(experiment_id),
-        folds=tuple(view.spec for view in reader.list_folds(experiment_id)),
     )
 
 
@@ -729,89 +706,11 @@ def test_create_experiment_conflicting_replay_and_partial_insert_fail_closed(
     assert reader.get_launch_spec(ExperimentId("experiment-1")) == _launch()
 
 
-@pytest.mark.parametrize("subject", ["gate", "fold"])
-@pytest.mark.parametrize("mismatch", ["extra", "missing", "drift"])
-def test_enqueue_exact_fence_rejects_child_set_mismatch_without_writes(
-    tmp_path: Path,
-    subject: str,
-    mismatch: str,
-) -> None:
-    database, reader, writer, api = _store(tmp_path)
-    _create_experiment(writer, api)
-    expected_gate = _experiment_gate(api, "preflight-gate-1")
-    expected_fold = _fold_spec(api)
-    fence_gates: tuple[Any, ...] = ()
-    fence_folds: tuple[Any, ...] = ()
-    if subject == "gate":
-        fence_gates = (expected_gate,)
-        if mismatch != "missing":
-            writer.add_gate_evaluation(expected_gate)
-        if mismatch == "extra":
-            writer.add_gate_evaluation(_experiment_gate(api, "preflight-gate-extra"))
-        elif mismatch == "drift":
-            fence_gates = (replace(expected_gate, outcome="fail"),)
-    else:
-        fence_folds = (expected_fold,)
-        if mismatch != "missing":
-            writer.add_fold(expected_fold, _fold_projection(api, expected_fold))
-        if mismatch == "extra":
-            extra_key = api.FoldKey(
-                ExperimentId("experiment-1"),
-                CandidateId("candidate-2"),
-                FoldId("fold-extra"),
-            )
-            extra = _fold_spec(api, key=extra_key, ordinal=2)
-            writer.add_fold(extra, _fold_projection(api, extra))
-        elif mismatch == "drift":
-            fence_folds = (
-                api.FoldPersistenceSpec.create(
-                    key=expected_fold.key,
-                    ordinal=expected_fold.ordinal,
-                    fold_role=expected_fold.fold_role,
-                    train_window=expected_fold.train_window,
-                    test_window=expected_fold.test_window,
-                    purge_sessions=expected_fold.purge_sessions + 1,
-                    embargo_sessions=expected_fold.embargo_sessions,
-                ),
-            )
-    fence = _enqueue_fence(api, gates=fence_gates, folds=fence_folds)
-    before_projection = reader.get_experiment_projection(ExperimentId("experiment-1"))
-    before_events = reader.list_status_events(ExperimentId("experiment-1"))
-    before_changes = database.get_connection().total_changes
-
-    with pytest.raises(api.ExperimentConflictError) as exc_info:
-        writer.enqueue_experiment(
-            ExperimentId("experiment-1"),
-            expected_revision=0,
-            occurred_at=NOW,
-            reason_code="preflight_passed",
-            detail={},
-            launch_fence=fence,
-        )
-
-    assert exc_info.value.details["reason_code"] == (
-        "enqueue_gate_fence_mismatch"
-        if subject == "gate"
-        else "enqueue_fold_fence_mismatch"
-    )
-    assert reader.get_experiment_projection(ExperimentId("experiment-1")) == (
-        before_projection
-    )
-    assert reader.list_status_events(ExperimentId("experiment-1")) == before_events
-    assert database.get_connection().total_changes == before_changes
-    assert not database.get_connection().in_transaction
-
-
-def test_enqueue_exact_fence_checks_hashes_and_cas_in_one_write_transaction(
+def test_enqueue_allocates_order_and_cas_in_one_write_transaction(
     tmp_path: Path,
 ) -> None:
     database, reader, writer, api = _store(tmp_path)
     _create_experiment(writer, api)
-    gate = _experiment_gate(api, "preflight-gate-1")
-    fold = _fold_spec(api)
-    writer.add_gate_evaluation(gate)
-    writer.add_fold(fold, _fold_projection(api, fold))
-    fence = _enqueue_fence(api, gates=(gate,), folds=(fold,))
     statements: list[str] = []
     connection = database.get_connection()
     connection.set_trace_callback(statements.append)
@@ -822,29 +721,18 @@ def test_enqueue_exact_fence_checks_hashes_and_cas_in_one_write_transaction(
         occurred_at=NOW,
         reason_code="preflight_passed",
         detail={"fenced": True},
-        launch_fence=fence,
     )
 
     connection.set_trace_callback(None)
     normalized = tuple(statement.strip().upper() for statement in statements)
     begin = normalized.index("BEGIN IMMEDIATE")
-    gate_read = next(
-        index
-        for index, statement in enumerate(normalized)
-        if statement.startswith("SELECT * FROM GATE_EVALUATION")
-    )
-    fold_read = next(
-        index
-        for index, statement in enumerate(normalized)
-        if statement.startswith("SELECT * FROM EXPERIMENT_FOLD")
-    )
     root_update = next(
         index
         for index, statement in enumerate(normalized)
         if statement.startswith("UPDATE EXPERIMENT")
     )
     commit = normalized.index("COMMIT")
-    assert begin < gate_read < fold_read < root_update < commit
+    assert begin < root_update < commit
     assert normalized.count("BEGIN IMMEDIATE") == 1
     assert normalized.count("COMMIT") == 1
     assert queued.record.status is ExperimentStatus.QUEUED
@@ -863,7 +751,6 @@ def test_experiment_create_replay_after_enqueue_is_noop(tmp_path: Path) -> None:
         occurred_at=NOW,
         reason_code="preflight_passed",
         detail={},
-        launch_fence=_current_enqueue_fence(writer, spec.experiment_id),
     )
     before_events = reader.list_status_events(spec.experiment_id)
     before_changes = database.get_connection().total_changes
@@ -891,7 +778,6 @@ def test_get_launch_spec_ignores_mutable_projection_intent_after_cancel_request(
         occurred_at=NOW,
         reason_code="preflight_passed",
         detail={},
-        launch_fence=_current_enqueue_fence(writer, spec.experiment_id),
     )
     writer.transition_experiment(
         spec.experiment_id,
@@ -1247,7 +1133,6 @@ def test_add_fold_rejects_new_insert_after_enqueue_without_writes(
         occurred_at=NOW,
         reason_code="preflight_passed",
         detail={},
-        launch_fence=_current_enqueue_fence(writer),
     )
     fold = _fold_spec(api)
     connection = database.get_connection()
@@ -1280,7 +1165,6 @@ def test_terminal_transition_serializes_with_exact_fold_replay_but_rejects_new_f
         occurred_at=NOW,
         reason_code="preflight_passed",
         detail={},
-        launch_fence=_current_enqueue_fence(writer, fold.key.experiment_id),
     )
     cancel_requested = writer.transition_experiment(
         fold.key.experiment_id,
@@ -1385,7 +1269,6 @@ def test_new_fold_and_terminal_transition_serialize_without_terminal_live_child(
         occurred_at=NOW,
         reason_code="preflight_passed",
         detail={},
-        launch_fence=_current_enqueue_fence(writer),
     )
     cancel_requested = writer.transition_experiment(
         queued.record.experiment_id,
@@ -1677,7 +1560,6 @@ def test_projection_cas_and_event_append_commit_or_rollback_together(
         occurred_at=NOW,
         reason_code="preflight_passed",
         detail={"certified": True},
-        launch_fence=_current_enqueue_fence(writer),
     )
     assert queued.revision == 1
     assert (
@@ -1754,7 +1636,6 @@ def test_generic_transition_rejects_scheduler_edge_without_fence_and_writes_noth
         occurred_at=NOW,
         reason_code="preflight_passed",
         detail={},
-        launch_fence=_current_enqueue_fence(writer),
     )
     before_events = reader.list_status_events(ExperimentId("experiment-1"))
     before_slot = reader.get_scheduler_slot()
@@ -2201,7 +2082,6 @@ def test_artifact_create_exact_replay_after_pin_is_unfenced_noop(
         occurred_at=NOW,
         reason_code="preflight_passed",
         detail={},
-        launch_fence=_current_enqueue_fence(writer),
     )
     assert queued.record.status is ExperimentStatus.QUEUED
     lease = writer.try_claim_lease(
@@ -2294,7 +2174,6 @@ def test_artifact_create_drift_after_pin_fails_closed_before_lease_validation(
         occurred_at=NOW,
         reason_code="preflight_passed",
         detail={},
-        launch_fence=_current_enqueue_fence(writer),
     )
     lease = writer.try_claim_lease(
         ExperimentId("experiment-1"),

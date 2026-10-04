@@ -37,7 +37,6 @@ from ditto_analysis.experiments import (
     StrategyVersion,
 )
 from ditto_analysis.experiments.artifact_manifest import ArtifactPublicationSpec
-from ditto_analysis.experiments.enqueue_fence import ExperimentEnqueueFence
 from ditto_analysis.experiments.persistence import (
     ArtifactRecord,
     AttemptPersistenceSpec,
@@ -343,7 +342,6 @@ def _prepare_indexed_attempt(
         occurred_at=_INDEXED_NOW,
         reason_code="preflight_passed",
         detail={},
-        launch_fence=ExperimentEnqueueFence.create(gates=(), folds=(fold_spec,)),
     )
     lease = writer.try_claim_lease(
         experiment_id,

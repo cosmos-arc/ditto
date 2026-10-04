@@ -26,7 +26,6 @@ from ditto_analysis.experiments import (
     canonical_payload,
     encode_launch_spec,
 )
-from ditto_analysis.experiments.enqueue_fence import ExperimentEnqueueFence
 
 from ditto_application.exceptions import AppCommandError, AppProcessError
 from ditto_application.mutation_idempotency import (
@@ -630,10 +629,6 @@ def persist_prepared_launch(
             occurred_at=prepared.spec.created_at,
             reason_code="preflight_passed",
             detail=prepared.enqueue_detail,
-            launch_fence=ExperimentEnqueueFence.create(
-                gates=prepared.gates,
-                folds=prepared.folds,
-            ),
         )
     except AnalysisError:
         concurrent = _stable_root(reader, prepared)

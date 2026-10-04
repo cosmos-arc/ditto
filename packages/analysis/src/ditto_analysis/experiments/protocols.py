@@ -9,7 +9,6 @@ from collections.abc import Mapping
 from datetime import datetime
 from typing import Protocol
 
-from ditto_analysis.experiments.enqueue_fence import ExperimentEnqueueFence
 from ditto_analysis.experiments.evidence import ReviewPacket
 from ditto_analysis.experiments.holdout import (
     AtomicHoldoutClaimReceipt,
@@ -164,7 +163,6 @@ class ExperimentWriterProtocol(Protocol):
         occurred_at: datetime,
         reason_code: str | None,
         detail: Mapping[str, object],
-        launch_fence: ExperimentEnqueueFence,
     ) -> ExperimentProjection: ...
 
     def transition_scheduled_experiment(

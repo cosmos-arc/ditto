@@ -50,7 +50,6 @@ from ditto_analysis.experiments import (
     canonical_payload,
 )
 from ditto_analysis.experiments.artifact_manifest import ArtifactPublicationSpec
-from ditto_analysis.experiments.enqueue_fence import ExperimentEnqueueFence
 from ditto_analysis.experiments.trial_ledger import (
     MetricEvidenceLineage,
     ObjectiveMetric,
@@ -364,7 +363,6 @@ def _persist_enqueued(
         occurred_at=NOW,
         reason_code="preflight_passed",
         detail={},
-        launch_fence=ExperimentEnqueueFence.create(gates=(), folds=persisted_folds),
     )
 
 

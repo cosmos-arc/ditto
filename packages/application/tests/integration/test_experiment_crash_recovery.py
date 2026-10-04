@@ -48,7 +48,6 @@ from ditto_analysis.experiments import (
     TrialFamilyDeclaration,
     TrialKind,
 )
-from ditto_analysis.experiments.enqueue_fence import ExperimentEnqueueFence
 from ditto_analysis.experiments.trial_ledger import (
     ObjectiveMetric,
     PromotionObjective,
@@ -262,7 +261,6 @@ def _persist_enqueued(
         occurred_at=NOW,
         reason_code="preflight_passed",
         detail={},
-        launch_fence=ExperimentEnqueueFence.create(gates=(), folds=folds),
     )
 
 
