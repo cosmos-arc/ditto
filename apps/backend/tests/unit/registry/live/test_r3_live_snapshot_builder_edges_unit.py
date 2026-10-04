@@ -85,9 +85,6 @@ class _Lifecycle:
                 request_start=snapshot.request_start,
                 request_end=snapshot.request_end,
                 status=PartitionLifecycleStatus.COMPLETE,
-                last_successful_stage=PartitionLifecycleStatus.COMPLETE,
-                attempt=1,
-                retry_budget=3,
                 payload_id=(
                     f"payload:{snapshot.checksum}:synthetic:{snapshot.snapshot_id}"
                 ),

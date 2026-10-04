@@ -10,7 +10,6 @@ from typing import Any
 from ditto_platform.foundation import SQLiteClient
 
 from ditto_data.ingestion.partition_state import (
-    EXCEPTION_PARTITION_STATES,
     NORMAL_PARTITION_STAGES,
     PartitionCheckpoint,
     PartitionLifecycleEvent,
@@ -46,9 +45,6 @@ class SQLitePartitionLifecycleStore:
                 request_start TEXT NOT NULL,
                 request_end TEXT NOT NULL,
                 status TEXT NOT NULL,
-                last_successful_stage TEXT,
-                attempt INTEGER NOT NULL,
-                retry_budget INTEGER NOT NULL,
                 payload_id TEXT,
                 complete_evidence_id TEXT,
                 error_code TEXT,
@@ -64,6 +60,13 @@ class SQLitePartitionLifecycleStore:
                 """ALTER TABLE ingestion_partition_checkpoints
                 ADD COLUMN complete_evidence_id TEXT"""
             )
+        # #447: retry-budget/异常态列已删除；存量库原地降列（live 全部行为
+        # COMPLETE，无信息丢失），失败改为阶段内 error_code。
+        for column in ("last_successful_stage", "attempt", "retry_budget"):
+            if not self._column_missing("ingestion_partition_checkpoints", column):
+                self._client.execute(
+                    f"ALTER TABLE ingestion_partition_checkpoints DROP COLUMN {column}"
+                )
         self._client.execute(
             """
             CREATE TABLE IF NOT EXISTS ingestion_partition_events (
@@ -71,7 +74,6 @@ class SQLitePartitionLifecycleStore:
                 chunk_id TEXT NOT NULL,
                 from_status TEXT,
                 to_status TEXT NOT NULL,
-                attempt INTEGER NOT NULL,
                 evidence_id TEXT,
                 error_code TEXT,
                 occurred_at TEXT NOT NULL,
@@ -80,6 +82,10 @@ class SQLitePartitionLifecycleStore:
             )
             """
         )
+        if not self._column_missing("ingestion_partition_events", "attempt"):
+            self._client.execute(
+                "ALTER TABLE ingestion_partition_events DROP COLUMN attempt"
+            )
         self._client.execute(
             """
             CREATE INDEX IF NOT EXISTS idx_ingestion_partition_repair
@@ -96,8 +102,8 @@ class SQLitePartitionLifecycleStore:
         """Create a PLANNED checkpoint and initial audit event."""
         if checkpoint.status is not PartitionLifecycleStatus.PLANNED:
             raise ValueError("new partition checkpoint must start at PLANNED")
-        if checkpoint.last_successful_stage is not None:
-            raise ValueError("new partition checkpoint cannot have a successful stage")
+        if checkpoint.error_code is not None:
+            raise ValueError("new partition checkpoint cannot start with an error")
         existing = self.get_checkpoint(checkpoint.chunk_id)
         if existing is not None:
             if existing == checkpoint:
@@ -109,7 +115,6 @@ class SQLitePartitionLifecycleStore:
                 chunk_id=checkpoint.chunk_id,
                 from_status=None,
                 to_status=checkpoint.status,
-                attempt=checkpoint.attempt,
                 evidence_id=None,
                 error_code=None,
                 occurred_at=checkpoint.updated_at,
@@ -144,7 +149,6 @@ class SQLitePartitionLifecycleStore:
             raise ValueError(f"partition stage {to_status} requires evidence_id")
         changes: dict[str, object] = {
             "status": to_status,
-            "last_successful_stage": to_status,
             "error_code": None,
             "updated_at": occurred_at,
         }
@@ -160,70 +164,35 @@ class SQLitePartitionLifecycleStore:
         )
         return updated
 
-    def fail_partition(
+    def record_partition_error(
         self,
         chunk_id: str,
-        failure_status: PartitionLifecycleStatus,
         *,
         error_code: str,
         occurred_at: datetime,
     ) -> PartitionCheckpoint:
-        """Record one explicit repairable exception state."""
-        if failure_status not in EXCEPTION_PARTITION_STATES:
-            raise ValueError(f"invalid partition failure state: {failure_status}")
+        """
+        Annotate the current stage with a failure code (#447: 失败无独立态).
+
+        阶段不动、不产生转换事件；成功推进会清空 error_code。恢复＝
+        同请求重跑，各阶段按证据幂等。
+        """
         if not error_code or error_code.strip() != error_code:
             raise ValueError("partition failure requires error_code")
         current = self._require_checkpoint(chunk_id)
         if current.status is PartitionLifecycleStatus.COMPLETE:
             raise ValueError("complete partition is immutable")
-        last_stage = (
-            current.last_successful_stage
-            if current.status in EXCEPTION_PARTITION_STATES
-            else current.status
-        )
         updated = replace(
             current,
-            status=failure_status,
-            last_successful_stage=last_stage,
             error_code=error_code,
             updated_at=occurred_at,
         )
-        self._persist_transition(
-            current=current,
-            updated=updated,
-            evidence_id=None,
-            error_code=error_code,
-            occurred_at=occurred_at,
-        )
-        return updated
-
-    def resume_partition(
-        self,
-        chunk_id: str,
-        *,
-        occurred_at: datetime,
-    ) -> PartitionCheckpoint:
-        """Resume from the last durable normal stage without repeating prior work."""
-        current = self._require_checkpoint(chunk_id)
-        if current.status not in EXCEPTION_PARTITION_STATES:
-            raise ValueError("only failed partition checkpoints can resume")
-        if current.attempt >= current.retry_budget:
-            raise ValueError("partition retry budget exhausted")
-        resume_stage = current.last_successful_stage or PartitionLifecycleStatus.PLANNED
-        updated = replace(
-            current,
-            status=resume_stage,
-            attempt=current.attempt + 1,
-            error_code=None,
-            updated_at=occurred_at,
-        )
-        self._persist_transition(
-            current=current,
-            updated=updated,
-            evidence_id=None,
-            error_code=None,
-            occurred_at=occurred_at,
-        )
+        try:
+            self._update_checkpoint(updated)
+            self._client.commit()
+        except Exception:
+            self._client.rollback()
+            raise
         return updated
 
     def get_checkpoint(self, chunk_id: str) -> PartitionCheckpoint | None:
@@ -329,10 +298,9 @@ class SQLitePartitionLifecycleStore:
             """
             INSERT INTO ingestion_partition_checkpoints (
                 chunk_id, dataset_id, source, request_start, request_end, status,
-                last_successful_stage, attempt, retry_budget, payload_id,
-                complete_evidence_id, error_code, updated_at
+                payload_id, complete_evidence_id, error_code, updated_at
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             _checkpoint_params(checkpoint),
         )
@@ -343,9 +311,8 @@ class SQLitePartitionLifecycleStore:
             """
             UPDATE ingestion_partition_checkpoints
             SET dataset_id = ?, source = ?, request_start = ?, request_end = ?,
-                status = ?, last_successful_stage = ?, attempt = ?, retry_budget = ?,
-                payload_id = ?, complete_evidence_id = ?, error_code = ?,
-                updated_at = ?
+                status = ?, payload_id = ?, complete_evidence_id = ?,
+                error_code = ?, updated_at = ?
             WHERE chunk_id = ?
             """,
             [*params[1:], params[0]],
@@ -366,7 +333,6 @@ class SQLitePartitionLifecycleStore:
                 chunk_id=updated.chunk_id,
                 from_status=current.status,
                 to_status=updated.status,
-                attempt=updated.attempt,
                 evidence_id=evidence_id,
                 error_code=error_code,
                 occurred_at=occurred_at,
@@ -382,7 +348,6 @@ class SQLitePartitionLifecycleStore:
         chunk_id: str,
         from_status: PartitionLifecycleStatus | None,
         to_status: PartitionLifecycleStatus,
-        attempt: int,
         evidence_id: str | None,
         error_code: str | None,
         occurred_at: datetime,
@@ -390,16 +355,15 @@ class SQLitePartitionLifecycleStore:
         self._client.execute(
             """
             INSERT INTO ingestion_partition_events (
-                chunk_id, from_status, to_status, attempt, evidence_id,
+                chunk_id, from_status, to_status, evidence_id,
                 error_code, occurred_at
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?)
             """,
             [
                 chunk_id,
                 from_status.value if from_status is not None else None,
                 to_status.value,
-                attempt,
                 evidence_id,
                 error_code,
                 occurred_at.isoformat(),
@@ -415,13 +379,6 @@ def _checkpoint_params(checkpoint: PartitionCheckpoint) -> list[object]:
         checkpoint.request_start,
         checkpoint.request_end,
         checkpoint.status.value,
-        (
-            checkpoint.last_successful_stage.value
-            if checkpoint.last_successful_stage is not None
-            else None
-        ),
-        checkpoint.attempt,
-        checkpoint.retry_budget,
         checkpoint.payload_id,
         checkpoint.complete_evidence_id,
         checkpoint.error_code,
@@ -441,9 +398,6 @@ def _checkpoint_from_row(row: dict[str, Any]) -> PartitionCheckpoint:
         request_start=str(row["request_start"]),
         request_end=str(row["request_end"]),
         status=PartitionLifecycleStatus(str(row["status"])),
-        last_successful_stage=_optional_status(row["last_successful_stage"]),
-        attempt=int(row["attempt"]),
-        retry_budget=int(row["retry_budget"]),
         payload_id=str(row["payload_id"]) if row["payload_id"] is not None else None,
         complete_evidence_id=(
             str(row["complete_evidence_id"])
@@ -461,7 +415,6 @@ def _event_from_row(row: dict[str, Any]) -> PartitionLifecycleEvent:
         chunk_id=str(row["chunk_id"]),
         from_status=_optional_status(row["from_status"]),
         to_status=PartitionLifecycleStatus(str(row["to_status"])),
-        attempt=int(row["attempt"]),
         evidence_id=(
             str(row["evidence_id"]) if row["evidence_id"] is not None else None
         ),
