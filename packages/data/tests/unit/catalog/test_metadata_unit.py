@@ -577,19 +577,18 @@ class TestR2DataProductContracts:
                 "not_applicable",
             }
             assert spec.runbook.startswith("docs/operations/")
-            assert spec.license_policy == "provider_ledger_required"
 
-    def test_hard_scope_freezes_coverage_targets(self) -> None:
+    def test_hard_scope_freezes_coverage_rules(self) -> None:
         registry = default_dataset_metadata()
 
         for dataset_id in self.HARD_SCOPE:
             contract = registry[dataset_id].dataset_spec
-            assert contract.raw_target_from is not None
-            assert contract.certified_target_from is not None
+            assert contract.coverage_start_rule
+            assert contract.coverage_start_rule != "outside R2 release gate"
 
-        assert registry["stock_daily"].dataset_spec.raw_target_from == "2015-01-01"
         assert (
-            registry["stock_status"].dataset_spec.certified_target_from == "2016-01-01"
+            registry["stock_status"].dataset_spec.coverage_start_rule
+            == "provider history starts in 2016"
         )
         assert (
             registry["macro_indicators"].dataset_spec.knowledge_date_field

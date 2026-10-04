@@ -478,11 +478,7 @@ def test_reingestion_backfills_observation_for_legacy_snapshot_row(
     try:
         snapshots.append_snapshot(request.provider_snapshot)
         client = SQLiteClient(pool)
-        # 模拟事件账本出现之前的遗留行:缓存表与事件表都没有观察记录。
-        client.execute(
-            "DELETE FROM provider_snapshot_observations WHERE snapshot_id = ?",
-            [request.provider_snapshot.snapshot_id],
-        )
+        # 模拟事件账本出现之前的遗留行:事件表没有观察记录。
         client.execute(
             "DELETE FROM provider_snapshot_observation_events WHERE snapshot_id = ?",
             [request.provider_snapshot.snapshot_id],

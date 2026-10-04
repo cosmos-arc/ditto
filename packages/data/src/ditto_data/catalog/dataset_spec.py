@@ -20,7 +20,6 @@ type DatasetFrequency = Literal[
     "source_defined",
 ]
 type DatasetCurrency = Literal["CNY", "mixed"] | None
-type CoverageTargets = tuple[str | None, str | None, str]
 
 
 @dataclass(frozen=True)
@@ -39,13 +38,10 @@ class DatasetSpec:
     currency: DatasetCurrency
     bootstrap_chunk: BootstrapChunk
     coverage_start_rule: str
-    raw_target_from: str | None
-    certified_target_from: str | None
     fallback_mode: FallbackMode
     knowledge_date_field: str | None
     revision_policy: RevisionPolicy
     runbook: str
-    license_policy: Literal["provider_ledger_required"] = "provider_ledger_required"
 
     def __post_init__(self) -> None:
         """Reject incomplete contracts before they enter the registry."""
@@ -74,12 +70,6 @@ class DatasetSpec:
         if not self.schema_version.endswith((".v1", ".v2")):
             raise ValueError(
                 f"Invalid product contract schema_version: {self.schema_version!r}"
-            )
-        if self.r2_scope == "hard" and (
-            self.raw_target_from is None or self.certified_target_from is None
-        ):
-            raise ValueError(
-                f"Hard-scope product requires coverage targets: {self.dataset_id}"
             )
 
 
@@ -387,89 +377,33 @@ _KNOWLEDGE_DATE_DATASETS = _APPEND_ONLY_DATASETS | frozenset(
 # 历史事件表的知识时间列名为 observed_at（provider published_at→观察时间）
 _OBSERVED_AT_KNOWLEDGE_DATASETS = frozenset({"namechange", "st_history"})
 
-_DEFAULT_R2_COVERAGE_TARGET: CoverageTargets = (
-    "2015-01-01",
-    "evidence-determined",
-    "R2 modern A-share window",
-)
-_R2_COVERAGE_TARGETS: dict[str, CoverageTargets] = {
-    "stock_status": (
-        "2016-01-01",
-        "2016-01-01",
-        "provider history starts in 2016",
-    ),
-    "stock_basic": (
-        "2015-01-01",
-        "2016-01-01",
-        "daily historical universe reconstruction",
-    ),
-    "etf_daily": (
-        "2015-01-01",
-        "evidence-determined",
-        "not earlier than listing date",
-    ),
-    "etf_basic": (
-        "2015-01-01",
-        "evidence-determined",
-        "not earlier than listing date",
-    ),
-    "index_weight": (
-        "provider-native",
-        "core-index-specific",
-        "monthly observation snapshots",
-    ),
-    "macro_indicators": (
-        "series-native",
-        "series-specific",
-        "release and revision schedule",
-    ),
-    "commodity_daily": (
-        "product-native",
-        "product-specific",
-        "declared product schedule",
-    ),
-    "balance_sheet": (
-        "2015-01-01",
-        "evidence-determined",
-        "knowledge_date on or after R2 operational window",
-    ),
-    "income_statement": (
-        "2015-01-01",
-        "evidence-determined",
-        "knowledge_date on or after R2 operational window",
-    ),
-    "cash_flow": (
-        "2015-01-01",
-        "evidence-determined",
-        "knowledge_date on or after R2 operational window",
-    ),
-    "dividend": (
-        "2015-01-01",
-        "evidence-determined",
-        "knowledge_date on or after R2 operational window",
-    ),
+_DEFAULT_R2_COVERAGE_RULE = "R2 modern A-share window"
+_R2_COVERAGE_RULES: dict[str, str] = {
+    "stock_status": "provider history starts in 2016",
+    "stock_basic": "daily historical universe reconstruction",
+    "etf_daily": "not earlier than listing date",
+    "etf_basic": "not earlier than listing date",
+    "index_weight": "monthly observation snapshots",
+    "macro_indicators": "release and revision schedule",
+    "commodity_daily": "declared product schedule",
+    "balance_sheet": "knowledge_date on or after R2 operational window",
+    "income_statement": "knowledge_date on or after R2 operational window",
+    "cash_flow": "knowledge_date on or after R2 operational window",
+    "dividend": "knowledge_date on or after R2 operational window",
     "global_index_daily": (
-        "provider-native",
-        "evidence-determined",
-        "per-market trading calendar and actual retrieval visibility",
+        "per-market trading calendar and actual retrieval visibility"
     ),
     "industry_classification": (
-        "SW2021-native",
-        "evidence-determined",
-        "classification version and actual retrieval visibility",
+        "classification version and actual retrieval visibility"
     ),
-    "industry_mapping": (
-        "SW2021-native",
-        "evidence-determined",
-        "effective interval and actual retrieval visibility",
-    ),
+    "industry_mapping": "effective interval and actual retrieval visibility",
 }
 
 
-def _coverage_targets(dataset_id: str) -> CoverageTargets:
+def _coverage_rule(dataset_id: str) -> str:
     if dataset_id not in _R2_HARD_SCOPE:
-        return None, None, "outside R2 release gate"
-    return _R2_COVERAGE_TARGETS.get(dataset_id, _DEFAULT_R2_COVERAGE_TARGET)
+        return "outside R2 release gate"
+    return _R2_COVERAGE_RULES.get(dataset_id, _DEFAULT_R2_COVERAGE_RULE)
 
 
 def _partition_keys(dataset_id: str) -> tuple[str, ...]:
@@ -533,7 +467,7 @@ def _currency(dataset_id: str) -> DatasetCurrency:
 
 def resolve_dataset_spec(dataset_id: str) -> DatasetSpec:
     """Build the immutable specification for one known catalog dataset."""
-    raw_from, certified_from, coverage_rule = _coverage_targets(dataset_id)
+    coverage_rule = _coverage_rule(dataset_id)
     revision_policy: RevisionPolicy = "not_applicable"
     if dataset_id in _APPEND_ONLY_DATASETS:
         revision_policy = "append_only"
@@ -559,8 +493,6 @@ def resolve_dataset_spec(dataset_id: str) -> DatasetSpec:
         currency=_currency(dataset_id),
         bootstrap_chunk=_BOOTSTRAP_CHUNKS[dataset_id],
         coverage_start_rule=coverage_rule,
-        raw_target_from=raw_from,
-        certified_target_from=certified_from,
         fallback_mode=fallback_mode,
         knowledge_date_field=(
             "observed_at"

@@ -182,11 +182,7 @@ class TestObservationBackfill:
         try:
             store.append_snapshot(snapshot)
             # A store upgraded before the observation ledger existed has rows
-            # without observations (neither cache nor event rows).
-            client.execute(
-                "DELETE FROM provider_snapshot_observations WHERE snapshot_id = ?",
-                [snapshot.snapshot_id],
-            )
+            # without observation events.
             client.execute(
                 "DELETE FROM provider_snapshot_observation_events "
                 "WHERE snapshot_id = ?",
