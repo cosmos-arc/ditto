@@ -230,7 +230,7 @@ class TestCapitalStoreSaveMethods:
     def test_save_index_composition_delegates_to_writer(
         self, mocker: MockerFixture
     ) -> None:
-        """Test save_index_composition() delegates to IndexCompositionWriter."""
+        """Test save_index_composition() delegates to the index_weight writer."""
         # Arrange
         mock_writer = mocker.Mock()
         mock_writer.write = mocker.Mock(return_value=6)

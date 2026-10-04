@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from datetime import date
+
 import polars as pl
 from ditto_platform.foundation import Metrics, logger, traced
 
@@ -32,16 +34,23 @@ class CapitalIndexTushareAdapter(BaseTushareAdapter):
         end_date: str | None = None,
     ) -> pl.DataFrame:
         """
-        获取指数权重数据.
+        获取指数月度权重观察数据.
+
+        #452: trade_date 是月度权重观察日，不是成分调整生效日；官方不提供
+        公告/发布时刻，本方法只返回观察事实，不伪造 effective_from/effective_to。
 
         Args:
             index_code: 指数代码 (e.g., "000001.SH").
-            trade_date: 交易日期 (YYYYMMDD), None 表示最新.
+            trade_date: 观察日 (YYYYMMDD), None 表示最新.
             start_date: 可选区间开始日期 (YYYYMMDD).
             end_date: 可选区间结束日期 (YYYYMMDD).
 
         Returns:
-            DataFrame with raw Tushare columns (con_code, weight, trade_date, etc.).
+            DataFrame with columns:
+            - index_code: 指数代码
+            - source_ticker: 成分股代码
+            - trade_date: 月度权重观察日 (Date)
+            - weight: 权重
 
         Raises:
             SourceFetchError: If fetch fails.
@@ -84,14 +93,12 @@ class CapitalIndexTushareAdapter(BaseTushareAdapter):
                     .cast(pl.Utf8)
                     .str.replace_all("-", "")
                     .str.to_date("%Y%m%d")
-                    .alias("effective_from"),
-                    pl.lit(None, dtype=pl.Date).alias("effective_to"),
+                    .alias("trade_date"),
                 )
                 .select(
                     "index_code",
                     "source_ticker",
-                    "effective_from",
-                    "effective_to",
+                    "trade_date",
                     "weight",
                 )
             )
@@ -114,7 +121,12 @@ class CapitalIndexTushareAdapter(BaseTushareAdapter):
         with_weight: bool = False,
     ) -> pl.DataFrame:
         """
-        获取指数成分股.
+        获取市场指数成分股（index_member 成员路径）.
+
+        #452: 市场指数成分走旧 index_member 接口（in_date/out_date 是源端
+        提供的成员进出边界）；index_member_all 是申万行业分类分级成员接口，
+        只用于 industry.py 的申万路径，两者不得混用。官方同样不提供公告时刻，
+        effective_from/effective_to 仅承载源端 in/out 边界，不得据此推导公告可知性。
 
         Args:
             index_code: 指数代码 (e.g., "000001.SH")
@@ -126,8 +138,8 @@ class CapitalIndexTushareAdapter(BaseTushareAdapter):
             - index_id: 指数代码
             - source_ticker: 股票代码
             - weight: 权重
-            - effective_from: 生效开始日期
-            - effective_to: 生效结束日期
+            - effective_from: 源端成员纳入日
+            - effective_to: 源端成员剔除日（在籍为 null）
 
         Raises:
             SourceFetchError: If fetch fails.
@@ -147,10 +159,11 @@ class CapitalIndexTushareAdapter(BaseTushareAdapter):
                 "fields": "ts_code,in_date,out_date,is_new",
             }
 
-            if asof_date:
-                params["date"] = asof_date.replace("-", "")
-
             response = self._client.query(**params)
+
+            # index_member 返回现役+历史成员；asof/最新语义在本地显式按
+            # is_new 与 in/out 边界过滤，边界未知的行 fail closed 丢弃。
+            response = _apply_member_boundary(response, asof_date)
 
             # 添加 index_code 列和默认权重
             response = response.with_columns(
@@ -162,16 +175,15 @@ class CapitalIndexTushareAdapter(BaseTushareAdapter):
                 response, "index_composition", INDEX_COMPOSITION_MAPPING
             )
 
-            # 如果需要真实权重，获取并替换默认值
+            # 如果需要真实权重，获取并替换默认值（与 fetch_index_weight
+            # 使用同一 source_ticker 键）
             if with_weight and not result.is_empty():
                 weight_df = self.fetch_index_weight(
                     index_code,
                     asof_date.replace("-", "") if asof_date else None,
                 )
                 if not weight_df.is_empty():
-                    weight_df = weight_df.select("con_code", "weight").rename(
-                        {"con_code": "source_ticker"}
-                    )
+                    weight_df = weight_df.select("source_ticker", "weight")
                     result = result.drop("weight").join(
                         weight_df,
                         on="source_ticker",
@@ -194,3 +206,32 @@ class CapitalIndexTushareAdapter(BaseTushareAdapter):
             )
 
             return result
+
+
+def _apply_member_boundary(
+    members: pl.DataFrame, asof_date: str | None
+) -> pl.DataFrame:
+    """按 is_new（最新）/ in-out 边界（asof）显式过滤成员，未知边界 fail closed."""
+    asof = date.fromisoformat(asof_date) if asof_date is not None else None
+    normalized = members.with_columns(
+        pl.col("in_date")
+        .cast(pl.Utf8)
+        .str.replace_all("-", "")
+        .str.to_date("%Y%m%d", strict=False)
+        .alias("_in_date"),
+        pl.col("out_date")
+        .cast(pl.Utf8)
+        .str.replace_all("-", "")
+        .str.to_date("%Y%m%d", strict=False)
+        .alias("_out_date"),
+        pl.col("is_new").cast(pl.Int64, strict=False).alias("_is_new"),
+    )
+    if asof is None:
+        kept = normalized.filter(pl.col("_is_new") == 1)
+    else:
+        kept = normalized.filter(
+            pl.col("_in_date").is_not_null()
+            & (pl.col("_in_date") <= asof)
+            & (pl.col("_out_date").is_null() | (pl.col("_out_date") > asof))
+        )
+    return kept.drop("_in_date", "_out_date", "_is_new")

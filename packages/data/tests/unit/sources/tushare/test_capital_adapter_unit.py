@@ -174,34 +174,92 @@ class TestCapitalTushareAdapterFetchIndexComposition:
         self,
         mocker: pytest_mock.MockFixture,
     ) -> None:
-        """Test fetching index composition returns valid DataFrame."""
-        # Arrange
+        """Latest composition keeps only current members (is_new boundary)."""
         mock_response = pl.DataFrame(
             {
-                "ts_code": ["000001.SZ", "000002.SZ"],
+                "ts_code": ["000001.SZ", "600000.SH"],
                 "in_date": ["20200101", "20200101"],
-                "out_date": ["", ""],
-                "is_new": [1, 1],
+                "out_date": ["", "20240614"],
+                "is_new": [1, 0],
             }
         )
 
         mock_client = mocker.Mock()
         mock_client.query.return_value = mock_response
 
-        # Act
         adapter = CapitalTushareAdapter(_client=mock_client)
         result = adapter.fetch_index_composition(index_code="000001.SH")
 
-        # Assert
-        assert len(result) == 2
+        assert result["source_ticker"].to_list() == ["000001.SZ"]
         assert "index_id" in result.columns
-        assert "source_ticker" in result.columns
         assert "effective_from" in result.columns
 
-    def test_fetch_index_weight_returns_effective_dated_canonical_rows(
+    def test_fetch_index_composition_asof_keeps_removed_members_in_window(
         self,
         mocker: pytest_mock.MockFixture,
     ) -> None:
+        """Historical asof keeps old members inside their in/out window."""
+        mock_response = pl.DataFrame(
+            {
+                "ts_code": [
+                    "000001.SZ",
+                    "600000.SH",
+                    "000002.SZ",
+                    "600036.SH",
+                ],
+                "in_date": ["20200101", "20200101", "20240617", "20200101"],
+                "out_date": ["", "20240620", "", "20240601"],
+                "is_new": [1, 0, 1, 0],
+            }
+        )
+        mock_client = mocker.Mock()
+        mock_client.query.return_value = mock_response
+
+        adapter = CapitalTushareAdapter(_client=mock_client)
+        result = adapter.fetch_index_composition("000300.SH", asof_date="2024-06-16")
+
+        assert sorted(result["source_ticker"].to_list()) == ["000001.SZ", "600000.SH"]
+        mock_client.query.assert_called_once_with(
+            api_name="index_member",
+            index_code="000300.SH",
+            fields="ts_code,in_date,out_date,is_new",
+        )
+
+    def test_fetch_index_composition_with_weight_joins_on_source_ticker(
+        self,
+        mocker: pytest_mock.MockFixture,
+    ) -> None:
+        """with_weight uses the same ticker key as fetch_index_weight."""
+        mock_client = mocker.Mock()
+        mock_client.query.side_effect = [
+            pl.DataFrame(
+                {
+                    "ts_code": ["000001.SZ", "600000.SH"],
+                    "in_date": ["20200101", "20200101"],
+                    "out_date": ["", ""],
+                    "is_new": [1, 1],
+                }
+            ),
+            pl.DataFrame(
+                {
+                    "index_code": ["000001.SZ", "600000.SH"],
+                    "con_code": ["000001.SZ", "600000.SH"],
+                    "trade_date": ["20241227", "20241227"],
+                    "weight": [60.0, 40.0],
+                }
+            ),
+        ]
+
+        adapter = CapitalTushareAdapter(_client=mock_client)
+        result = adapter.fetch_index_composition("000300.SH", with_weight=True)
+
+        assert sorted(result["weight"].to_list()) == [40.0, 60.0]
+
+    def test_fetch_index_weight_returns_observation_fact_rows(
+        self,
+        mocker: pytest_mock.MockFixture,
+    ) -> None:
+        """Weights stay monthly observation facts; no fabricated effective dates."""
         mock_client = mocker.Mock()
         mock_client.query.return_value = pl.DataFrame(
             {
@@ -218,15 +276,16 @@ class TestCapitalTushareAdapterFetchIndexComposition:
         assert result.columns == [
             "index_code",
             "source_ticker",
-            "effective_from",
-            "effective_to",
+            "trade_date",
             "weight",
         ]
-        assert result["effective_from"].dtype == pl.Date
-        assert result["effective_from"].to_list() == [
+        assert result["trade_date"].dtype == pl.Date
+        assert result["trade_date"].to_list() == [
             date(2024, 12, 27),
             date(2024, 12, 27),
         ]
+        assert "effective_from" not in result.columns
+        assert "effective_to" not in result.columns
 
     def test_fetch_index_weight_supports_provider_date_range(
         self,

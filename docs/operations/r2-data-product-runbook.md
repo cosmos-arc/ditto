@@ -114,6 +114,21 @@ Bootstrap/repair 只处理 planner 标记为 missing、failed 或 evidence-incom
 chunk。完成态要求 payload、catalog 与 success evidence 同时闭环；补偿
 失败时不得手工把 partition 改为 complete。
 
+### index_weight 观察事实表重建（#452）
+
+2026-10 起 `index_weight` 表改为月度观察事实形状
+`(index_id, instrument_id, trade_date, weight)`，不再维护
+`effective_from/effective_to` 区间。schema 以 `CREATE TABLE IF NOT EXISTS`
+应用，存量库中的旧表不会被自动改写；升级后继续写旧表会因缺 `trade_date`
+列失败。处置（#451 裁决允许可重建缓存重拉）：
+
+```bash
+sqlite3 <market.db> "DROP TABLE IF EXISTS index_weight; DROP INDEX IF EXISTS idx_index_weight_current;"
+# 重启应用/重跑 schema 初始化后，按第 5 节 bootstrap/repair 重拉 index_weight
+```
+
+旧表中的 `effective_from` 值即原观察日，如需留存可在 DROP 前自行归档。
+
 ## 6. 联合 backup/restore 与 live acceptance
 
 四个目标路径必须明确且 restore 目标不存在。不要把 `$HOME`、`~`、仓库根目录或

@@ -79,34 +79,37 @@ def build_stock_membership_frame(
     authority_snapshot_id: str,
 ) -> pl.DataFrame:
     """Project point-in-time CSI300 membership onto every open session."""
+    # #452: index_weight 是月度观察行；每个交易日取最近一次已入库观察。
+    # 与 IndexCompositionReader 的 as-of 含观察日当天不同，实盘验证车道要求
+    # 知识严格早于交易日（prior-day knowledge），故取 bisect 严格前一观察。
     rows = connection.execute(
         """
-        SELECT instrument_id, effective_from
+        SELECT instrument_id, trade_date
         FROM index_weight
-        WHERE index_id = ? AND effective_from <= ?
-        ORDER BY effective_from, instrument_id
+        WHERE index_id = ? AND trade_date <= ?
+        ORDER BY trade_date, instrument_id
         """,
         (_STOCK_INDEX, LIVE_END.isoformat()),
     ).fetchall()
-    by_effective: dict[date, list[int]] = {}
+    by_observation: dict[date, list[int]] = {}
     for row in rows:
-        effective = date.fromisoformat(str(row["effective_from"]))
-        by_effective.setdefault(effective, []).append(int(row["instrument_id"]))
-    effective_dates = tuple(sorted(by_effective))
-    if not effective_dates:
+        observed = date.fromisoformat(str(row["trade_date"]))
+        by_observation.setdefault(observed, []).append(int(row["instrument_id"]))
+    observation_dates = tuple(sorted(by_observation))
+    if not observation_dates:
         raise ValueError("CSI300 PIT membership evidence is missing")
     output_dates: list[date] = []
     instrument_ids: list[int] = []
     known_at: list[date] = []
     for session in sessions:
-        position = bisect_left(effective_dates, session) - 1
+        position = bisect_left(observation_dates, session) - 1
         if position < 0:
             continue
-        effective = effective_dates[position]
-        members = by_effective[effective]
+        observed = observation_dates[position]
+        members = by_observation[observed]
         output_dates.extend((session,) * len(members))
         instrument_ids.extend(members)
-        known_at.extend((effective,) * len(members))
+        known_at.extend((observed,) * len(members))
     if not output_dates:
         raise ValueError("CSI300 PIT membership projection is empty")
     return pl.DataFrame(

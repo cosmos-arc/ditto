@@ -595,8 +595,9 @@ class TestR2DataProductContracts:
             registry["macro_indicators"].dataset_spec.knowledge_date_field
             == "knowledge_date"
         )
+        assert registry["index_weight"].dataset_spec.revision_policy == "append_only"
         assert (
-            registry["index_weight"].dataset_spec.revision_policy == "effective_dated"
+            registry["index_weight"].dataset_spec.knowledge_date_field == "trade_date"
         )
 
     def test_dataset_spec_identity_must_match_metadata(self) -> None:

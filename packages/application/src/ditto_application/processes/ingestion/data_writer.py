@@ -118,7 +118,7 @@ def _normalize_iso_date(value: str) -> str:
 def _validate_index_weight_totals(df: pl.DataFrame) -> None:
     """Reject incomplete index snapshots using provider percentage tolerance."""
     percentage_scale_threshold = 2.0
-    required = {"index_id", "instrument_id", "effective_from", "weight"}
+    required = {"index_id", "instrument_id", "trade_date", "weight"}
     missing = required - set(df.columns)
     if missing:
         raise AppProcessError(
@@ -126,7 +126,7 @@ def _validate_index_weight_totals(df: pl.DataFrame) -> None:
             field="columns",
             value=tuple(sorted(missing)),
         )
-    totals = df.group_by("index_id", "effective_from").agg(
+    totals = df.group_by("index_id", "trade_date").agg(
         pl.col("weight").sum().alias("weight_total")
     )
     invalid: list[tuple[str, str, float]] = []
@@ -134,7 +134,7 @@ def _validate_index_weight_totals(df: pl.DataFrame) -> None:
         total = float(row["weight_total"])
         expected = 100.0 if total > percentage_scale_threshold else 1.0
         if abs(total - expected) > expected * 0.02:
-            invalid.append((str(row["index_id"]), str(row["effective_from"]), total))
+            invalid.append((str(row["index_id"]), str(row["trade_date"]), total))
     if invalid:
         raise AppProcessError(
             "index_weight total is outside 2% tolerance",
@@ -665,7 +665,12 @@ class IngestionDataWriter:
         year: int,
         source_ticker_col: str,
     ) -> WriteResult:
-        """Write effective-dated index composition without future leakage."""
+        """
+        Write monthly weight observations as append-only facts (#452).
+
+        trade_date 是月度权重观察日；公告/生效时刻官方未知，不伪造
+        effective_from/effective_to 区间。
+        """
         enriched_df = self._enrich_and_filter_fk_dataframe(
             df,
             dataset,
@@ -682,15 +687,11 @@ class IngestionDataWriter:
                     value=None,
                 )
             enriched_df = enriched_df.rename({"index_code": "index_id"})
-        if "effective_from" not in enriched_df.columns:
+        if "trade_date" not in enriched_df.columns:
             raise AppProcessError(
-                "index_weight requires effective_from",
-                field="effective_from",
+                "index_weight requires trade_date",
+                field="trade_date",
                 value=None,
-            )
-        if "effective_to" not in enriched_df.columns:
-            enriched_df = enriched_df.with_columns(
-                pl.lit(None, dtype=pl.Date).alias("effective_to")
             )
         _validate_index_weight_totals(enriched_df)
         rows_written = self._capital_store.save_index_weight(enriched_df)

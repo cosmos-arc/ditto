@@ -229,7 +229,7 @@ class CapitalFetcher(Protocol):
         start_date: str | None = None,
         end_date: str | None = None,
     ) -> pl.DataFrame:
-        """Fetch effective index constituent weights."""
+        """Fetch monthly index weight observations (trade_date = observation day)."""
         ...
 
 

@@ -228,7 +228,7 @@ def mock_capital_store(mocker):
 
 
 @pytest.mark.unit
-def test_index_weight_writes_effective_dated_constituents(
+def test_index_weight_writes_observation_facts(
     data_writer,
     mock_metadata_service,
     mock_capital_store,
@@ -241,8 +241,7 @@ def test_index_weight_writes_effective_dated_constituents(
         {
             "index_code": ["000300.SH", "000300.SH"],
             "source_ticker": ["600000.SH", "600036.SH"],
-            "effective_from": [date(2024, 12, 27), date(2024, 12, 27)],
-            "effective_to": [None, None],
+            "trade_date": [date(2024, 12, 27), date(2024, 12, 27)],
             "weight": [60.0, 40.0],
         }
     )
@@ -259,8 +258,34 @@ def test_index_weight_writes_effective_dated_constituents(
         1_000_001,
         1_000_002,
     ]
-    assert "effective_from" in written.columns
-    assert "effective_to" in written.columns
+    assert written.select("trade_date").to_series().to_list() == [
+        date(2024, 12, 27),
+        date(2024, 12, 27),
+    ]
+
+
+@pytest.mark.unit
+def test_index_weight_requires_observation_date(
+    data_writer,
+    mock_metadata_service,
+    mock_capital_store,
+) -> None:
+    """#452: 不伪造生效区间；缺观察日的帧 fail closed."""
+    mock_metadata_service.instrument.resolve_instrument_ids_batch.return_value = {
+        "600000.SH": 1_000_001,
+    }
+    df = pl.DataFrame(
+        {
+            "index_code": ["000300.SH"],
+            "source_ticker": ["600000.SH"],
+            "weight": [100.0],
+        }
+    )
+
+    with pytest.raises(AppProcessError, match="trade_date"):
+        data_writer.write_data("index_weight", df, "2024-12-27")
+
+    mock_capital_store.save_index_weight.assert_not_called()
 
 
 @pytest.mark.unit
@@ -277,8 +302,7 @@ def test_index_weight_rejects_incomplete_weight_total(
         {
             "index_code": ["000300.SH", "000300.SH"],
             "source_ticker": ["600000.SH", "600036.SH"],
-            "effective_from": [date(2024, 12, 27), date(2024, 12, 27)],
-            "effective_to": [None, None],
+            "trade_date": [date(2024, 12, 27), date(2024, 12, 27)],
             "weight": [60.0, 30.0],
         }
     )

@@ -1279,8 +1279,7 @@ def test_fetch_index_weight_delegates_to_capital_adapter(mocker) -> None:
         {
             "index_code": ["000300.SH"],
             "source_ticker": ["600000.SH"],
-            "effective_from": [date(2024, 12, 27)],
-            "effective_to": [None],
+            "trade_date": [date(2024, 12, 27)],
             "weight": [100.0],
         }
     )

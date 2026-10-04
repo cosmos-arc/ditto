@@ -1,4 +1,4 @@
-"""Unit tests for IndexCompositionReader."""
+"""IndexCompositionReader 单元测试 — 观察事实 as-of 语义（#452）."""
 
 from __future__ import annotations
 
@@ -15,18 +15,16 @@ from ditto_platform.foundation import SQLiteClient, SQLitePool
 
 @pytest.fixture
 def in_memory_db() -> SQLiteClient:
-    """创建内存数据库."""
+    """按 #452 观察事实契约建表."""
     pool = SQLitePool(":memory:")
     client = SQLiteClient(pool)
-    # 创建表
     client.execute(
         """CREATE TABLE IF NOT EXISTS index_weight (
         index_id TEXT NOT NULL,
-        instrument_id TEXT NOT NULL,
+        instrument_id INTEGER NOT NULL,
+        trade_date DATE NOT NULL,
         weight REAL,
-        effective_from DATE NOT NULL,
-        effective_to DATE,
-        PRIMARY KEY (index_id, instrument_id, effective_from)
+        PRIMARY KEY (index_id, instrument_id, trade_date)
     )"""
     )
     client.commit()
@@ -35,141 +33,79 @@ def in_memory_db() -> SQLiteClient:
 
 @pytest.fixture
 def reader(in_memory_db: SQLiteClient) -> IndexCompositionReader:
-    """创建 IndexCompositionReader 实例."""
     return IndexCompositionReader(INDEX_COMPOSITION_SPEC, in_memory_db)
 
 
-def test_get_returns_data(
+def _observe(
+    db: SQLiteClient,
+    index_id: str,
+    trade_date: date,
+    members: list[tuple[int, float]],
+) -> None:
+    for instrument_id, weight in members:
+        db.execute(
+            "INSERT INTO index_weight (index_id, instrument_id, trade_date, weight) "
+            "VALUES (?, ?, ?, ?)",
+            [index_id, instrument_id, trade_date, weight],
+        )
+    db.commit()
+
+
+def test_get_returns_latest_snapshot_at_or_before_asof(
     reader: IndexCompositionReader, in_memory_db: SQLiteClient
 ) -> None:
-    """测试查询返回数据."""
-    # 插入测试数据
-    in_memory_db.execute(
-        """INSERT INTO index_weight
-        (index_id, instrument_id, weight, effective_from, effective_to)
-        VALUES (?, ?, ?, ?, ?)""",
-        ["000300.SH", "600000.SH", 0.05, date(2024, 1, 2), None],
-    )
-    in_memory_db.commit()
+    """as-of 返回 <= as_of 的最近一次观察快照."""
+    _observe(in_memory_db, "000300.SH", date(2024, 6, 28), [(1, 60.0), (2, 40.0)])
+    _observe(in_memory_db, "000300.SH", date(2024, 7, 31), [(2, 50.0), (3, 50.0)])
 
-    result = reader.get("000300.SH", date(2024, 1, 5))
-    assert len(result) == 1
-    assert result["instrument_id"][0] == "600000.SH"
+    july_mid = reader.get("000300.SH", date(2024, 7, 15))
+    assert july_mid["instrument_id"].to_list() == [1, 2]
+    after_july = reader.get("000300.SH", date(2024, 8, 1))
+    assert after_july["instrument_id"].to_list() == [2, 3]
 
 
 def test_get_empty_table(reader: IndexCompositionReader) -> None:
-    """测试空表返回空 DataFrame."""
     result = reader.get("000300.SH", date(2024, 1, 5))
-    assert len(result) == 0
+    assert result.height == 0
     assert isinstance(result, pl.DataFrame)
 
 
-def test_get_no_data(
+def test_get_unknown_index(
     reader: IndexCompositionReader, in_memory_db: SQLiteClient
 ) -> None:
-    """测试查询不存在的指数返回空 DataFrame."""
-    # 插入其他指数的数据
-    in_memory_db.execute(
-        """INSERT INTO index_weight
-        (index_id, instrument_id, weight, effective_from, effective_to)
-        VALUES (?, ?, ?, ?, ?)""",
-        ["000905.SH", "600000.SH", 0.03, date(2024, 1, 2), None],
-    )
-    in_memory_db.commit()
-
-    result = reader.get("000300.SH", date(2024, 1, 5))
-    assert len(result) == 0
+    _observe(in_memory_db, "000905.SH", date(2024, 1, 2), [(1, 100.0)])
+    assert reader.get("000300.SH", date(2024, 1, 5)).height == 0
 
 
-def test_get_pit_query(
+def test_get_observation_day_boundary_is_inclusive(
     reader: IndexCompositionReader, in_memory_db: SQLiteClient
 ) -> None:
-    """测试 PIT 查询返回有效数据."""
-    # 插入多个版本
-    in_memory_db.execute(
-        """INSERT INTO index_weight
-        (index_id, instrument_id, weight, effective_from, effective_to)
-        VALUES (?, ?, ?, ?, ?)""",
-        ["000300.SH", "600000.SH", 0.05, date(2024, 1, 3), date(2024, 1, 10)],
-    )
-    in_memory_db.execute(
-        """INSERT INTO index_weight
-        (index_id, instrument_id, weight, effective_from, effective_to)
-        VALUES (?, ?, ?, ?, ?)""",
-        ["000300.SH", "600000.SH", 0.06, date(2024, 1, 12), None],
-    )
-    in_memory_db.commit()
-
-    # 查询第一个版本有效期间的数据
-    result = reader.get("000300.SH", date(2024, 1, 5))
-    assert len(result) == 1
-    assert result["weight"][0] == 0.05
+    """观察日当天即视为已可查询（半开观察轴的左端闭合）."""
+    _observe(in_memory_db, "000300.SH", date(2024, 6, 28), [(1, 100.0)])
+    assert reader.get("000300.SH", date(2024, 6, 28)).height == 1
+    assert reader.get("000300.SH", date(2024, 6, 27)).height == 0
 
 
-def test_get_pit_query_excludes_expired_version(
+@pytest.mark.pit
+def test_get_excludes_future_observation_sentinel(
     reader: IndexCompositionReader, in_memory_db: SQLiteClient
 ) -> None:
-    """测试 PIT 查询排除已过期版本."""
-    # 插入已过期的版本
-    in_memory_db.execute(
-        """INSERT INTO index_weight
-        (index_id, instrument_id, weight, effective_from, effective_to)
-        VALUES (?, ?, ?, ?, ?)""",
-        ["000300.SH", "600000.SH", 0.05, date(2024, 1, 3), date(2024, 1, 10)],
-    )
-    in_memory_db.commit()
+    """未来哨兵：晚于 cutoff 的观察不得泄露；cutoff 内最近观察被采用."""
+    _observe(in_memory_db, "000300.SH", date(2024, 6, 28), [(1, 60.0), (2, 40.0)])
+    # 哨兵观察：cutoff 之后才存在，且成员池完全不同
+    _observe(in_memory_db, "000300.SH", date(2024, 12, 31), [(9, 100.0)])
 
-    # 查询过期后的日期
-    result = reader.get("000300.SH", date(2024, 1, 15))
-    assert len(result) == 0
+    visible = reader.get("000300.SH", date(2024, 7, 15))
+    assert visible["instrument_id"].to_list() == [1, 2]
+    # 允许瞬间（哨兵观察日当天）哨兵快照可见
+    at_sentinel = reader.get("000300.SH", date(2024, 12, 31))
+    assert at_sentinel["instrument_id"].to_list() == [9]
 
 
-def test_get_ordering_by_instrument_id(
+def test_get_handles_null_weight(
     reader: IndexCompositionReader, in_memory_db: SQLiteClient
 ) -> None:
-    """测试结果按 instrument_id 排序."""
-    # 插入多条记录
-    in_memory_db.execute(
-        """INSERT INTO index_weight
-        (index_id, instrument_id, weight, effective_from, effective_to)
-        VALUES (?, ?, ?, ?, ?)""",
-        ["000300.SH", "600036.SH", 0.03, date(2024, 1, 3), None],
-    )
-    in_memory_db.execute(
-        """INSERT INTO index_weight
-        (index_id, instrument_id, weight, effective_from, effective_to)
-        VALUES (?, ?, ?, ?, ?)""",
-        ["000300.SH", "600000.SH", 0.05, date(2024, 1, 3), None],
-    )
-    in_memory_db.execute(
-        """INSERT INTO index_weight
-        (index_id, instrument_id, weight, effective_from, effective_to)
-        VALUES (?, ?, ?, ?, ?)""",
-        ["000300.SH", "601318.SH", 0.02, date(2024, 1, 3), None],
-    )
-    in_memory_db.commit()
-
-    result = reader.get("000300.SH", date(2024, 1, 15))
-    assert len(result) == 3
-    # 验证按 instrument_id 降序排列
-    assert result["instrument_id"][0] == "601318.SH"
-    assert result["instrument_id"][1] == "600036.SH"
-    assert result["instrument_id"][2] == "600000.SH"
-
-
-def test_get_handles_null_values(
-    reader: IndexCompositionReader, in_memory_db: SQLiteClient
-) -> None:
-    """测试处理空值."""
-    in_memory_db.execute(
-        """INSERT INTO index_weight
-        (index_id, instrument_id, weight, effective_from, effective_to)
-        VALUES (?, ?, ?, ?, ?)""",
-        ["000300.SH", "600000.SH", None, date(2024, 1, 3), None],
-    )
-    in_memory_db.commit()
-
-    result = reader.get("000300.SH", date(2024, 1, 5))
-    assert len(result) == 1
-    # polars 会将 NULL 转换为 None
+    _observe(in_memory_db, "000300.SH", date(2024, 6, 28), [(1, None)])
+    result = reader.get("000300.SH", date(2024, 7, 1))
+    assert result.height == 1
     assert result["weight"][0] is None
