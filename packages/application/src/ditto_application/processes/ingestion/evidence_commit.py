@@ -19,7 +19,6 @@ from ditto_data.catalog.source_snapshot import (
     ProviderSnapshotWriter,
 )
 from ditto_data.ingestion.partition_state import (
-    EXCEPTION_PARTITION_STATES,
     PartitionCheckpoint,
     PartitionLifecycleReader,
     PartitionLifecycleStatus,
@@ -74,7 +73,6 @@ class EvidenceCommitRequest:
     catalog_entry: DataCatalogEntry
     success_log: IngestionLog
     quality_attested: bool = True
-    retry_budget: int = 3
     # 摄取/处理日，默认等于覆盖起点。success log 的 trade_date 必须等于它，
     # 而不是等于 provider 覆盖区间的起点（日历日更的覆盖起点是年初）。
     ingestion_date: str | None = None
@@ -130,9 +128,6 @@ class IngestionEvidenceCommitter:
                 request_start=intent.request_start,
                 request_end=intent.request_end,
                 status=PartitionLifecycleStatus.PLANNED,
-                last_successful_stage=None,
-                attempt=1,
-                retry_budget=3,
                 payload_id=(
                     f"intent:{intent.payload.checksum}:{intent.snapshot_id}"
                     if intent.snapshot_id is not None
@@ -264,29 +259,17 @@ class IngestionEvidenceCommitter:
     ) -> EvidenceCommitOutcome | None:
         evidence_error = self._evidence_error(request)
         if evidence_error is not None:
-            return self._fail(
-                request,
-                status=PartitionLifecycleStatus.ORPHAN_PAYLOAD,
-                error_code=evidence_error,
-            )
+            return self._fail(request, error_code=evidence_error)
         try:
             # The idempotent append also backfills the observation ledger for
             # upgraded stores whose legacy snapshot rows predate observations.
             self._ports.snapshot_writer.append_snapshot(request.provider_snapshot)
         except Exception:
-            return self._fail(
-                request,
-                status=PartitionLifecycleStatus.ORPHAN_PAYLOAD,
-                error_code="SNAPSHOT_WRITE_FAILED",
-            )
+            return self._fail(request, error_code="SNAPSHOT_WRITE_FAILED")
         try:
             self._ports.catalog_writer.upsert_asset(request.catalog_entry)
         except Exception:
-            return self._fail(
-                request,
-                status=PartitionLifecycleStatus.ORPHAN_PAYLOAD,
-                error_code="CATALOG_WRITE_FAILED",
-            )
+            return self._fail(request, error_code="CATALOG_WRITE_FAILED")
         return None
 
     def _commit_success_log(
@@ -295,11 +278,7 @@ class IngestionEvidenceCommitter:
         try:
             self._persist_success_log(request.success_log)
         except Exception:
-            return self._fail(
-                request,
-                status=PartitionLifecycleStatus.CATALOG_ONLY,
-                error_code="SUCCESS_LOG_WRITE_FAILED",
-            )
+            return self._fail(request, error_code="SUCCESS_LOG_WRITE_FAILED")
         return None
 
     def _persist_success_log(self, log: IngestionLog) -> None:
@@ -321,11 +300,7 @@ class IngestionEvidenceCommitter:
                 evidence_id=request.provider_snapshot.snapshot_id,
             )
         except Exception:
-            return self._fail(
-                request,
-                status=PartitionLifecycleStatus.LOG_ONLY,
-                error_code="PARTITION_COMPLETE_FAILED",
-            )
+            return self._fail(request, error_code="PARTITION_COMPLETE_FAILED")
         return EvidenceCommitOutcome(request.chunk_id, completed=True)
 
     @staticmethod
@@ -390,9 +365,6 @@ class IngestionEvidenceCommitter:
                 request_start=request.request_start,
                 request_end=request.request_end,
                 status=PartitionLifecycleStatus.PLANNED,
-                last_successful_stage=None,
-                attempt=1,
-                retry_budget=request.retry_budget,
                 payload_id=None,
                 complete_evidence_id=None,
                 error_code=None,
@@ -400,11 +372,8 @@ class IngestionEvidenceCommitter:
             )
             self._ports.lifecycle_writer.plan_partition(checkpoint)
             return checkpoint
-        if checkpoint.status in EXCEPTION_PARTITION_STATES:
-            return self._ports.lifecycle_writer.resume_partition(
-                request.chunk_id,
-                occurred_at=self._now(),
-            )
+        # 非 COMPLETE 的既有 checkpoint（含带 error_code 的失败残留）：
+        # 阶段保持，重跑按证据幂等推进，无需显式 resume。
         return checkpoint
 
     def _advance_payload_stage(
@@ -442,13 +411,12 @@ class IngestionEvidenceCommitter:
         self,
         request: EvidenceCommitRequest,
         *,
-        status: PartitionLifecycleStatus,
         error_code: str,
     ) -> EvidenceCommitOutcome:
+        # #447: 失败不落独立态——checkpoint 停在当前阶段并记 error_code。
         try:
-            self._ports.lifecycle_writer.fail_partition(
+            self._ports.lifecycle_writer.record_partition_error(
                 request.chunk_id,
-                status,
                 error_code=error_code,
                 occurred_at=self._now(),
             )

@@ -21,7 +21,7 @@ def _client(db_path: Path) -> tuple[SQLiteClient, SQLitePool]:
     return SQLiteClient(pool), pool
 
 
-def _planned(*, retry_budget: int = 3) -> PartitionCheckpoint:
+def _planned() -> PartitionCheckpoint:
     return PartitionCheckpoint(
         chunk_id="chunk:tushare:stock_daily:2026-06",
         dataset_id="stock_daily",
@@ -29,9 +29,6 @@ def _planned(*, retry_budget: int = 3) -> PartitionCheckpoint:
         request_start="2026-06-01",
         request_end="2026-06-30",
         status=PartitionLifecycleStatus.PLANNED,
-        last_successful_stage=None,
-        attempt=1,
-        retry_budget=retry_budget,
         payload_id=None,
         complete_evidence_id=None,
         error_code=None,
@@ -66,7 +63,6 @@ class TestSQLitePartitionLifecycleStore:
             current = store.get_checkpoint(planned.chunk_id)
             assert current is not None
             assert current.status is PartitionLifecycleStatus.COMPLETE
-            assert current.last_successful_stage is PartitionLifecycleStatus.COMPLETE
             assert (
                 current.payload_id
                 == f"payload:sha256:abc:stock_daily/2026/06:{snapshot_id}"
@@ -118,66 +114,50 @@ class TestSQLitePartitionLifecycleStore:
         finally:
             pool.close()
 
-    def test_orphan_payload_resumes_after_payload_without_refetch(
+    def test_error_recorded_on_stage_without_transition(
         self,
         tmp_path: Path,
     ) -> None:
+        """#447: 失败不落独立态——阶段不动、error_code 记录、成功推进清空."""
         client, pool = _client(tmp_path / "runtime.sqlite")
         store = SQLitePartitionLifecycleStore(client)
         planned = _planned()
+        snapshot_id = "snapshot:tushare:stock_daily:sha256:abc"
 
         try:
             store.plan_partition(planned)
             store.advance_partition(
                 planned.chunk_id,
                 PartitionLifecycleStatus.PAYLOAD_COMMITTED,
-                occurred_at=planned.updated_at + timedelta(minutes=1),
-                evidence_id="payload:sha256:abc",
+                occurred_at=planned.updated_at,
+                evidence_id=f"payload:sha256:abc:stock_daily/2026/06:{snapshot_id}",
             )
-            store.fail_partition(
+
+            failed = store.record_partition_error(
                 planned.chunk_id,
-                PartitionLifecycleStatus.ORPHAN_PAYLOAD,
-                error_code="CATALOG_ATTESTATION_FAILED",
-                occurred_at=planned.updated_at + timedelta(minutes=6),
-            )
-
-            failed = store.get_checkpoint(planned.chunk_id)
-            assert failed is not None
-            assert failed.status is PartitionLifecycleStatus.ORPHAN_PAYLOAD
-            assert (
-                failed.last_successful_stage
-                is PartitionLifecycleStatus.PAYLOAD_COMMITTED
-            )
-            assert failed.payload_id == "payload:sha256:abc"
-
-            resumed = store.resume_partition(
-                planned.chunk_id,
-                occurred_at=planned.updated_at + timedelta(minutes=7),
-            )
-            assert resumed.status is PartitionLifecycleStatus.PAYLOAD_COMMITTED
-            assert resumed.attempt == 2
-            assert resumed.payload_id == "payload:sha256:abc"
-        finally:
-            pool.close()
-
-    def test_retry_budget_blocks_additional_resume(self, tmp_path: Path) -> None:
-        client, pool = _client(tmp_path / "runtime.sqlite")
-        store = SQLitePartitionLifecycleStore(client)
-        planned = _planned(retry_budget=1)
-
-        try:
-            store.plan_partition(planned)
-            store.fail_partition(
-                planned.chunk_id,
-                PartitionLifecycleStatus.FAILED,
-                error_code="FETCH_TIMEOUT",
+                error_code="SNAPSHOT_WRITE_FAILED",
                 occurred_at=planned.updated_at + timedelta(minutes=1),
             )
+            assert failed.status is PartitionLifecycleStatus.PAYLOAD_COMMITTED
+            assert failed.error_code == "SNAPSHOT_WRITE_FAILED"
+            # 无状态转换事件：仍只有 plan+payload 两条
+            assert len(store.list_events(planned.chunk_id)) == 2
 
-            with pytest.raises(ValueError, match="retry budget"):
-                store.resume_partition(
+            # 重跑：同证据幂等推进到 COMPLETE，并清空 error_code
+            completed = store.advance_partition(
+                planned.chunk_id,
+                PartitionLifecycleStatus.COMPLETE,
+                occurred_at=planned.updated_at + timedelta(minutes=2),
+                evidence_id=snapshot_id,
+            )
+            assert completed.status is PartitionLifecycleStatus.COMPLETE
+            assert completed.error_code is None
+
+            with pytest.raises(ValueError, match="complete partition is immutable"):
+                store.record_partition_error(
                     planned.chunk_id,
-                    occurred_at=planned.updated_at + timedelta(minutes=2),
+                    error_code="LATE_FAILURE",
+                    occurred_at=planned.updated_at + timedelta(minutes=3),
                 )
         finally:
             pool.close()

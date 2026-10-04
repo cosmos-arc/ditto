@@ -166,9 +166,6 @@ def _planned(request: EvidenceCommitRequest, *, payload_id: str | None = None):
         request_start=request.request_start,
         request_end=request.request_end,
         status=PartitionLifecycleStatus.PLANNED,
-        last_successful_stage=None,
-        attempt=1,
-        retry_budget=3,
         payload_id=payload_id,
         complete_evidence_id=None,
         error_code=None,
@@ -215,17 +212,16 @@ def test_evidence_commit_reaches_complete_only_after_all_durable_writes(
 
 @pytest.mark.unit
 @pytest.mark.parametrize(
-    ("failing_port", "expected_status", "expected_error"),
+    ("failing_port", "expected_error"),
     [
-        ("snapshot", PartitionLifecycleStatus.ORPHAN_PAYLOAD, "SNAPSHOT_WRITE_FAILED"),
-        ("catalog", PartitionLifecycleStatus.ORPHAN_PAYLOAD, "CATALOG_WRITE_FAILED"),
-        ("logs", PartitionLifecycleStatus.CATALOG_ONLY, "SUCCESS_LOG_WRITE_FAILED"),
+        ("snapshot", "SNAPSHOT_WRITE_FAILED"),
+        ("catalog", "CATALOG_WRITE_FAILED"),
+        ("logs", "SUCCESS_LOG_WRITE_FAILED"),
     ],
 )
 def test_evidence_commit_fails_closed_at_each_durable_boundary(
     tmp_path: Path,
     failing_port: str,
-    expected_status: PartitionLifecycleStatus,
     expected_error: str,
 ) -> None:
     lifecycle, pool = _store(tmp_path)
@@ -243,9 +239,12 @@ def test_evidence_commit_fails_closed_at_each_durable_boundary(
 
         assert outcome.completed is False
         assert outcome.error_code == expected_error
+        # #447: 失败不落独立态——checkpoint 停在 PAYLOAD_COMMITTED 并记
+        # error_code，恢复＝同请求重跑（阶段幂等）。
         checkpoint = lifecycle.get_checkpoint(outcome.chunk_id)
         assert checkpoint is not None
-        assert checkpoint.status is expected_status
+        assert checkpoint.status is PartitionLifecycleStatus.PAYLOAD_COMMITTED
+        assert checkpoint.error_code == expected_error
         assert checkpoint.status is not PartitionLifecycleStatus.COMPLETE
     finally:
         pool.close()
@@ -348,7 +347,7 @@ def test_schema_version_change_with_same_checksum_reattests_new_snapshot(
 
 
 @pytest.mark.unit
-def test_repair_resumes_after_payload_without_rewriting_payload(tmp_path: Path) -> None:
+def test_rerun_recovers_failure_without_rewriting_payload(tmp_path: Path) -> None:
     lifecycle, pool = _store(tmp_path)
     snapshot = _Recorder()
     catalog = _Recorder(fail=True)
@@ -368,7 +367,7 @@ def test_repair_resumes_after_payload_without_rewriting_payload(tmp_path: Path) 
         assert repaired.completed is True
         checkpoint = lifecycle.get_checkpoint(request.chunk_id)
         assert checkpoint is not None
-        assert checkpoint.attempt == 2
+        assert checkpoint.error_code is None
         payload_events = [
             event
             for event in lifecycle.list_events(request.chunk_id)

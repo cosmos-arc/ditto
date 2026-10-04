@@ -17,33 +17,22 @@ __all__ = [
 
 
 class PartitionLifecycleStatus(StrEnum):
-    """Normal and repairable states for one ingestion chunk."""
+    """
+    Three-phase fetch log states for one ingestion chunk (#447).
+
+    失败不落独立态：checkpoint 停留在已达到的阶段并以 error_code 标注，
+    恢复动作＝同请求重跑（各阶段幂等）。
+    """
 
     PLANNED = "PLANNED"
     PAYLOAD_COMMITTED = "PAYLOAD_COMMITTED"
     COMPLETE = "COMPLETE"
-
-    FAILED = "FAILED"
-    QUARANTINED = "QUARANTINED"
-    ORPHAN_PAYLOAD = "ORPHAN_PAYLOAD"
-    LOG_ONLY = "LOG_ONLY"
-    CATALOG_ONLY = "CATALOG_ONLY"
 
 
 NORMAL_PARTITION_STAGES: tuple[PartitionLifecycleStatus, ...] = (
     PartitionLifecycleStatus.PLANNED,
     PartitionLifecycleStatus.PAYLOAD_COMMITTED,
     PartitionLifecycleStatus.COMPLETE,
-)
-
-EXCEPTION_PARTITION_STATES: frozenset[PartitionLifecycleStatus] = frozenset(
-    {
-        PartitionLifecycleStatus.FAILED,
-        PartitionLifecycleStatus.QUARANTINED,
-        PartitionLifecycleStatus.ORPHAN_PAYLOAD,
-        PartitionLifecycleStatus.LOG_ONLY,
-        PartitionLifecycleStatus.CATALOG_ONLY,
-    }
 )
 
 
@@ -57,9 +46,6 @@ class PartitionCheckpoint:
     request_start: str
     request_end: str
     status: PartitionLifecycleStatus
-    last_successful_stage: PartitionLifecycleStatus | None
-    attempt: int
-    retry_budget: int
     payload_id: str | None
     complete_evidence_id: str | None
     error_code: str | None
@@ -80,10 +66,6 @@ class PartitionCheckpoint:
             raise ValueError("partition request interval must use ISO dates") from error
         if request_end < request_start:
             raise ValueError("partition request_end precedes request_start")
-        if self.attempt < 1:
-            raise ValueError("partition attempt must be positive")
-        if self.retry_budget < 1:
-            raise ValueError("partition retry_budget must be positive")
         if self.updated_at.tzinfo is None:
             raise ValueError("partition updated_at must be timezone-aware")
 
@@ -96,7 +78,6 @@ class PartitionLifecycleEvent:
     chunk_id: str
     from_status: PartitionLifecycleStatus | None
     to_status: PartitionLifecycleStatus
-    attempt: int
     evidence_id: str | None
     error_code: str | None
     occurred_at: datetime
@@ -139,7 +120,7 @@ class PartitionLifecycleReader(Protocol):
 
 @runtime_checkable
 class PartitionLifecycleWriter(Protocol):
-    """Create, advance, fail, and resume partition recovery boundaries."""
+    """Create and advance partition recovery boundaries."""
 
     def plan_partition(self, checkpoint: PartitionCheckpoint) -> None:
         """Persist an initial PLANNED checkpoint idempotently."""
@@ -156,22 +137,12 @@ class PartitionLifecycleWriter(Protocol):
         """Advance exactly one required normal stage."""
         ...
 
-    def fail_partition(
+    def record_partition_error(
         self,
         chunk_id: str,
-        failure_status: PartitionLifecycleStatus,
         *,
         error_code: str,
         occurred_at: datetime,
     ) -> PartitionCheckpoint:
-        """Record one explicit repairable failure state."""
-        ...
-
-    def resume_partition(
-        self,
-        chunk_id: str,
-        *,
-        occurred_at: datetime,
-    ) -> PartitionCheckpoint:
-        """Resume at the last durable normal stage within retry budget."""
+        """Annotate the current stage with a failure code, no state change."""
         ...
