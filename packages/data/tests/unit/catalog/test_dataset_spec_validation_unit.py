@@ -41,13 +41,3 @@ def test_dataset_spec_rejects_an_unversioned_schema_contract() -> None:
 
     with pytest.raises(ValueError, match="product contract schema_version"):
         replace(spec, schema_version="market.stock_daily.latest")
-
-
-def test_hard_scope_dataset_spec_requires_both_coverage_targets() -> None:
-    spec = resolve_dataset_spec("stock_daily")
-
-    with pytest.raises(
-        ValueError,
-        match="Hard-scope product requires coverage targets",
-    ):
-        replace(spec, certified_target_from=None)

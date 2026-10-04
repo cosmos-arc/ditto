@@ -126,15 +126,9 @@ class SQLiteProviderSnapshotStore:
             )
             """
         )
-        self._client.execute(
-            """
-            CREATE TABLE IF NOT EXISTS provider_snapshot_observations (
-                snapshot_id TEXT PRIMARY KEY REFERENCES provider_snapshots(snapshot_id),
-                previous_snapshot_id TEXT REFERENCES provider_snapshots(snapshot_id),
-                observed_at TEXT NOT NULL
-            )
-            """
-        )
+        # 观察事实单一存储于 provider_snapshot_observation_events（#393 起）；
+        # 旧兼容表 provider_snapshot_observations 已按 #445 删除，存量库中的
+        # 遗留空壳表沿可丢弃开发数据重建边界处理，不再读写。
         self._client.commit()
 
     def _column_missing(self, table: str, column: str) -> bool:
@@ -217,19 +211,10 @@ class SQLiteProviderSnapshotStore:
                 ],
             )
             # 首次本地观察即第一条观察事件,时间取追加时钟且不早于内容首次
-            # 可见时间;事件表是观察账本的单一事实,provider_snapshot_observations
-            # 仅作为兼容缓存继续写入。
+            # 可见时间;事件表是观察账本的单一事实。
             self._client.execute(
                 _INSERT_OBSERVATION_EVENT,
                 [snapshot.snapshot_id, _first_observed_at(self._now(), snapshot)],
-            )
-            self._client.execute(
-                "INSERT INTO provider_snapshot_observations VALUES (?, ?, ?)",
-                [
-                    snapshot.snapshot_id,
-                    self._predecessor_at(snapshot),
-                    self._now().isoformat(),
-                ],
             )
             self._client.commit()
         except Exception:
@@ -281,11 +266,6 @@ class SQLiteProviderSnapshotStore:
         try:
             self._client.execute(
                 _INSERT_OBSERVATION_EVENT,
-                [snapshot_id, observed_at.isoformat()],
-            )
-            self._client.execute(
-                """INSERT OR REPLACE INTO provider_snapshot_observations
-                VALUES (?, NULL, ?)""",
                 [snapshot_id, observed_at.isoformat()],
             )
             self._client.commit()

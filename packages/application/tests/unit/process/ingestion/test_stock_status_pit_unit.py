@@ -37,9 +37,8 @@ def test_registry_passes_target_trade_date_to_stock_status_fetcher() -> None:
     market.fetch_stock_status.assert_called_once_with("2018-06-15")
 
 
-def test_stock_status_certification_cannot_start_before_provider_history() -> None:
+def test_stock_status_contract_declares_provider_history_window() -> None:
     contract = default_dataset_metadata()["stock_status"].dataset_spec
 
-    assert contract.raw_target_from == "2016-01-01"
-    assert contract.certified_target_from == "2016-01-01"
+    assert contract.coverage_start_rule == "provider history starts in 2016"
     assert "tushare:bak_basic" in contract.provider_datasets
