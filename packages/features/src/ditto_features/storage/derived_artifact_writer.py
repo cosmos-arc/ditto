@@ -26,7 +26,30 @@ __all__ = [
     "ArtifactMetadataParams",
     "DerivedArtifactWriter",
     "extract_partition_keys",
+    "run_metadata_path",
 ]
+
+
+def run_metadata_path(
+    artifact_root: Path,
+    *,
+    profile: str,
+    derived_id: str,
+    version: int,
+    run_id: str,
+) -> Path:
+    """Resolve one run's artifact_metadata.json path（运行元数据布局唯一权威）."""
+    return (
+        Path(artifact_root)
+        / "derived"
+        / "artifacts"
+        / profile.lower()
+        / derived_id
+        / f"v{version}"
+        / "_runs"
+        / run_id
+        / "artifact_metadata.json"
+    )
 
 
 @dataclass(frozen=True)
@@ -274,16 +297,14 @@ class DerivedArtifactWriter:
         params: ArtifactMetadataParams,
     ) -> None:
         """Write run metadata as artifact_metadata.json atomically."""
-        version_root = (
-            self._artifact_root
-            / "derived"
-            / "artifacts"
-            / params.spec.materialization_profile.lower()
-            / params.spec.derived_id
-            / f"v{params.spec.version}"
+        metadata_path = run_metadata_path(
+            self._artifact_root,
+            profile=params.spec.materialization_profile,
+            derived_id=params.spec.derived_id,
+            version=params.spec.version,
+            run_id=params.run_id,
         )
-        metadata_dir = version_root / "_runs" / params.run_id
-        metadata_dir.mkdir(parents=True, exist_ok=True)
+        metadata_path.parent.mkdir(parents=True, exist_ok=True)
         partition_dicts = [
             {
                 "partition_key": p.partition_key,
@@ -293,7 +314,6 @@ class DerivedArtifactWriter:
             }
             for p in params.partitions
         ]
-        metadata_path = metadata_dir / "artifact_metadata.json"
         atomic_bytes_write(
             orjson.dumps(
                 {

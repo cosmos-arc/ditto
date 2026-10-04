@@ -564,16 +564,16 @@ class DerivedMaterializationOrchestrator:
                 updated_at=finished_at,
             )
         )
-        self._catalog_service.publish_version(
-            derived_id=spec.id,
-            version=spec.version,
-            updated_at=finished_at,
-        )
         self._persist_dependencies(
             derived_id=spec.id,
             version=spec.version,
             dependencies=dependencies,
             created_at=finished_at,
+        )
+        self._catalog_service.publish_version(
+            derived_id=spec.id,
+            version=spec.version,
+            updated_at=finished_at,
         )
         result = DerivedMaterializationResult(
             run_id=run.run_id,
@@ -718,7 +718,13 @@ class DerivedMaterializationOrchestrator:
         if published.is_empty():
             return
         sort_keys = [*spec.entity_keys, *spec.effective_time_keys]
-        expected = frame.sort(sort_keys)
+        # 物化帧可能含 lookback 预热行；比对只针对请求窗口内的已发布内容。
+        time_key = spec.effective_time_keys[0]
+        window_key = pl.col(time_key).cast(pl.Utf8).str.slice(0, 10)
+        in_window = frame.filter(
+            (window_key >= request.request_start) & (window_key <= request.request_end)
+        )
+        expected = in_window.sort(sort_keys)
         actual = published.select(frame.columns).sort(sort_keys)
         if not expected.equals(actual):
             raise AppProcessError(

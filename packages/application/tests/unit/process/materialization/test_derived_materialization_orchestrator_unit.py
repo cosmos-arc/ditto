@@ -1060,6 +1060,60 @@ class TestDerivedMaterializationOrchestrator:
     # #444 直线发布：首版无基准可发布 / 新身份允许值变化 / 同身份异内容拒绝
     # ------------------------------------------------------------------
 
+    def test_identical_retry_with_lookback_warmup_succeeds(
+        self,
+        sqlite_client,
+        tmp_path: Path,
+    ) -> None:
+        """lookback 预热行在窗口外：同身份同窗口重试不得误拒（#444 评审修复）."""
+        spec = DerivedSpec(
+            id="factor.alpha_lookback",
+            version=1,
+            role=DerivedRole.FACTOR,
+            materialization_profile=MaterializationProfile.SERIES,
+            expression="ts_delta(close, 1)",
+        )
+        catalog_service = _catalog_service(sqlite_client, tmp_path)
+        _seed_spec(catalog_service, spec, status=DerivedVersionStatus.DRAFT)
+        warmup_frame = pl.DataFrame(
+            {
+                "instrument_id": [1, 1, 1],
+                "trade_date": [
+                    date(2026, 3, 9),
+                    date(2026, 3, 10),
+                    date(2026, 3, 11),
+                ],
+                "close": [9.0, 10.0, 11.0],
+            }
+        )
+        service = DerivedMaterializationOrchestrator(
+            orchestrator_module.MaterializationRuntimePorts(
+                catalog_service=catalog_service,
+                compile_cache_service=SQLiteCompileCache(sqlite_client),
+                input_provider=InMemoryDerivedInputProvider({spec.id: warmup_frame}),
+                artifact_writer=ArtifactPersistenceService(tmp_path),
+                artifact_reader=DerivedArtifactReader(
+                    catalog_service=catalog_service,
+                    artifact_root=tmp_path,
+                ),
+            )
+        )
+        request = DerivedMaterializationRequest(
+            derived_id=spec.id,
+            version=spec.version,
+            mode=DerivedRunMode.INCREMENTAL,
+            request_start="2026-03-10",
+            request_end="2026-03-11",
+            trigger=DerivedRunTrigger.MANUAL,
+            source_snapshot_id="market:20260310-A",
+        )
+
+        first = service.materialize(request)
+        second = service.materialize(request)
+
+        assert first.status == DerivedRunStatus.SUCCESS
+        assert second.status == DerivedRunStatus.SUCCESS
+
     def _materialize(
         self,
         service: DerivedMaterializationOrchestrator,

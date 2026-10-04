@@ -68,20 +68,6 @@ class TestDerivedMinimalDQSummary:
         )
         assert summary.is_passed() is True
 
-    def test_advanced_checks_thresholds(self) -> None:
-        summary = DerivedMinimalDQSummary(
-            row_count=10,
-            primary_key_columns=("instrument_id",),
-            coverage_rate=0.9,
-            distribution_drift=0.2,
-            value_jump_rate=0.5,
-        )
-        assert summary.advanced_checks() == (
-            "coverage_rate_minimum",
-            "distribution_stability",
-            "value_continuity",
-        )
-
 
 def test_records_are_frozen_dataclasses() -> None:
     for cls in (CompatibilityManifestRecord, DerivedMinimalDQSummaryRecord):

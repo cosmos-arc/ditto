@@ -18,6 +18,7 @@ from ditto_features.models.derived import (
     DerivedVersionRecord,
 )
 from ditto_features.services.derived._pruning import prune_parquet_paths
+from ditto_features.storage.derived_artifact_writer import run_metadata_path
 
 __all__ = [
     "DerivedArtifactFrameRequest",
@@ -146,16 +147,12 @@ class DerivedArtifactReader:
         does not exist (e.g. runs predating the straight-line publication).
         """
         spec_record = self._require_catalog_entry(derived_id, version)
-        metadata_path = (
-            self._artifact_root
-            / "derived"
-            / "artifacts"
-            / spec_record.materialization_profile.lower()
-            / derived_id
-            / f"v{version}"
-            / "_runs"
-            / run_id
-            / "artifact_metadata.json"
+        metadata_path = run_metadata_path(
+            self._artifact_root,
+            profile=spec_record.materialization_profile,
+            derived_id=derived_id,
+            version=version,
+            run_id=run_id,
         )
         if not metadata_path.exists():
             return None

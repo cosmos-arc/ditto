@@ -238,6 +238,19 @@ class TestAppProviderDerivedWiring:
 
         orchestrator = container.get(DerivedMaterializationOrchestrator)
         assert orchestrator._universe_provider is not None
+
+    def test_materialization_orchestrator_has_artifact_reader(
+        self,
+        monkeypatch,
+        tmp_path,
+    ) -> None:
+        """确定性重试守卫依赖的 artifact reader 必须由 DI 装配（fail-closed）."""
+        monkeypatch.setenv("ENVIRONMENT", "testing")
+        monkeypatch.setenv("DITTO_STATE_ROOT", tmp_path.as_posix())
+        container = _make_full_container()
+
+        orchestrator = container.get(DerivedMaterializationOrchestrator)
+        assert orchestrator._artifact_reader is not None
         container.close()
 
     def test_materialization_orchestrator_receives_persistent_lineage_recorder(
