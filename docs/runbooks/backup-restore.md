@@ -1,5 +1,10 @@
 # R3 Research / Governance Backup 与 Restore
 
+> 适用范围：R3 研究域验收的备份/恢复（metadata + research.sqlite + pinned
+> artifacts 组合单元）。工作站级灾后备份见
+> [工作站备份配方](../operations/workstation-backup-recipe.md)（#446）。
+
+
 本 runbook 只处理 R3 的一个联合恢复单元：
 
 - `${SQLITE_PATH}`：`DataStoreSettings.resolved_sqlite_path` 解析出的 metadata
