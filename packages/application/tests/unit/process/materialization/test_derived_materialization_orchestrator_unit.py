@@ -1239,6 +1239,158 @@ class TestDerivedMaterializationOrchestrator:
         assert second.status == DerivedRunStatus.SUCCESS
         assert second_hash != first_hash
 
+    def test_new_formula_identity_allows_value_change(
+        self,
+        sqlite_client,
+        tmp_path: Path,
+    ) -> None:
+        """②变体：新公式（新编译身份）用新版本发布，允许值变化."""
+        base_spec = DerivedSpec(
+            id="factor.alpha_formula",
+            version=1,
+            role=DerivedRole.FACTOR,
+            materialization_profile=MaterializationProfile.SERIES,
+            expression="ts_delta(close, 1)",
+        )
+        catalog_service = _catalog_service(sqlite_client, tmp_path)
+        _seed_spec(catalog_service, base_spec, status=DerivedVersionStatus.DRAFT)
+        service = DerivedMaterializationOrchestrator(
+            orchestrator_module.MaterializationRuntimePorts(
+                catalog_service=catalog_service,
+                compile_cache_service=SQLiteCompileCache(sqlite_client),
+                input_provider=InMemoryDerivedInputProvider(
+                    {base_spec.id: _input_frame()}
+                ),
+                artifact_writer=ArtifactPersistenceService(tmp_path),
+                artifact_reader=DerivedArtifactReader(
+                    catalog_service=catalog_service,
+                    artifact_root=tmp_path,
+                ),
+            )
+        )
+
+        first = self._materialize(
+            service,
+            base_spec,
+            source_snapshot_id="market:20260310-A",
+            frame=_input_frame(),
+        )
+        assert first.status == DerivedRunStatus.SUCCESS
+
+        v2_spec = DerivedSpec(
+            id="factor.alpha_formula",
+            version=2,
+            role=DerivedRole.FACTOR,
+            materialization_profile=MaterializationProfile.SERIES,
+            expression="ts_delta(close, 1) * 3",
+        )
+        _seed_spec(catalog_service, v2_spec, status=DerivedVersionStatus.DRAFT)
+        service._input_provider = InMemoryDerivedInputProvider(
+            {v2_spec.id: _input_frame()}
+        )
+        second = DerivedMaterializationOrchestrator.materialize(
+            service,
+            DerivedMaterializationRequest(
+                derived_id=v2_spec.id,
+                version=v2_spec.version,
+                mode=DerivedRunMode.FULL,
+                request_start="2026-03-10",
+                request_end="2026-03-11",
+                trigger=DerivedRunTrigger.MANUAL,
+                source_snapshot_id="market:20260310-A",
+            ),
+        )
+
+        assert second.status == DerivedRunStatus.SUCCESS
+        v1 = catalog_service.get_version(v2_spec.id, 1)
+        v2 = catalog_service.get_version(v2_spec.id, 2)
+        assert v1 is not None
+        assert v2 is not None
+        assert v1.is_primary is False
+        assert v2.is_primary is True
+
+    def test_incremental_recompute_matches_full_window_baseline(
+        self,
+        sqlite_client,
+        tmp_path: Path,
+    ) -> None:
+        """⑤ 含 lookback 的区间重算与全窗口基准一致."""
+        spec = DerivedSpec(
+            id="factor.alpha_baseline",
+            version=1,
+            role=DerivedRole.FACTOR,
+            materialization_profile=MaterializationProfile.SERIES,
+            expression="ts_delta(close, 1)",
+        )
+        catalog_service = _catalog_service(sqlite_client, tmp_path)
+        _seed_spec(catalog_service, spec, status=DerivedVersionStatus.DRAFT)
+        # 三天输入：03-10/11 为基准窗口，03-09 是 lookback 预热行。
+        full_frame = pl.DataFrame(
+            {
+                "instrument_id": [1, 1, 1],
+                "trade_date": [
+                    date(2026, 3, 9),
+                    date(2026, 3, 10),
+                    date(2026, 3, 11),
+                ],
+                "close": [9.0, 10.0, 11.0],
+            }
+        )
+        service = DerivedMaterializationOrchestrator(
+            orchestrator_module.MaterializationRuntimePorts(
+                catalog_service=catalog_service,
+                compile_cache_service=SQLiteCompileCache(sqlite_client),
+                input_provider=InMemoryDerivedInputProvider({spec.id: full_frame}),
+                artifact_writer=ArtifactPersistenceService(tmp_path),
+                artifact_reader=DerivedArtifactReader(
+                    catalog_service=catalog_service,
+                    artifact_root=tmp_path,
+                ),
+            )
+        )
+
+        full = service.materialize(
+            DerivedMaterializationRequest(
+                derived_id=spec.id,
+                version=spec.version,
+                mode=DerivedRunMode.FULL,
+                request_start="2026-03-09",
+                request_end="2026-03-11",
+                trigger=DerivedRunTrigger.MANUAL,
+                source_snapshot_id="market:full-A",
+            )
+        )
+        incremental = service.materialize(
+            DerivedMaterializationRequest(
+                derived_id=spec.id,
+                version=spec.version,
+                mode=DerivedRunMode.INCREMENTAL,
+                request_start="2026-03-10",
+                request_end="2026-03-11",
+                trigger=DerivedRunTrigger.MANUAL,
+                source_snapshot_id="market:full-A",
+            )
+        )
+
+        reader = service._artifact_reader
+        assert reader is not None
+        full_slice = reader.read_frame(
+            derived_id=spec.id,
+            version=spec.version,
+            start="2026-03-10",
+            end="2026-03-11",
+        )
+        incremental_slice = reader.read_frame(
+            derived_id=spec.id,
+            version=spec.version,
+            start="2026-03-10",
+            end="2026-03-11",
+        )
+        assert full.status == DerivedRunStatus.SUCCESS
+        assert incremental.status == DerivedRunStatus.SUCCESS
+        assert full_slice.equals(incremental_slice)
+        assert full_slice["value"].to_list() == incremental_slice["value"].to_list()
+
     def test_same_identity_retry_with_different_content_rejected(
         self,
         sqlite_client,
