@@ -86,7 +86,7 @@ class TestCommodityFredAdapter:
         assert set(result.columns) == expected_columns
 
     def test_fetch_commodities_ohlc_from_single_value(self, respx_mock) -> None:
-        """FRED only provides close price, OHLC should all be same value."""
+        """FRED 单值序列：close=value，open/high/low 为 null 不伪装日内 OHLC（#432）."""
         # Arrange
         respx_mock.get("https://api.stlouisfed.org/fred/series/observations").mock(
             return_value=httpx.Response(
@@ -115,10 +115,10 @@ class TestCommodityFredAdapter:
             end_date="2024-01-15",
         )
 
-        # Assert - OHLC should all be same
-        assert result["open"][0] == 72.50
-        assert result["high"][0] == 72.50
-        assert result["low"][0] == 72.50
+        # Assert - 单点参考值只写 close；日内高低价未知即 null
+        assert result["open"][0] is None
+        assert result["high"][0] is None
+        assert result["low"][0] is None
         assert result["close"][0] == 72.50
 
     def test_fetch_multiple_commodities(self, respx_mock) -> None:

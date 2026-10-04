@@ -28,7 +28,7 @@ class TestFredSourceMacroMethods:
     """Tests for FredSource macro methods."""
 
     def test_fetch_macro_indicators_with_codes(self) -> None:
-        """Test fetch_macro_indicators delegates to macro adapter with codes."""
+        """日更按频率分组做有界回看，捕获"今天发布、观察期在过去"的值."""
         mock_adapter = MagicMock()
         mock_adapter.fetch_indicators.return_value = pl.DataFrame(
             {"indicator_code": [], "date": []}
@@ -41,15 +41,53 @@ class TestFredSourceMacroMethods:
             source = FredSource(api_key="test_key")
             result = source.fetch_macro_indicators(
                 trade_date="2024-01-15",
-                codes=["US_CPI_YOY", "US_GDP_QOQ"],
+                codes=["US_CPI_INDEX", "US_GDP_QOQ"],  # monthly + quarterly
             )
 
-        mock_adapter.fetch_indicators.assert_called_once_with(
-            codes=["US_CPI_YOY", "US_GDP_QOQ"],
-            start_date="2024-01-15",
-            end_date="2024-01-15",
-        )
+        calls = mock_adapter.fetch_indicators.call_args_list
+        assert len(calls) == 2
+        by_frequency = {call.kwargs["codes"][0]: call for call in calls}
+        # 月度回看 400 天、季度回看 900 天（_DAILY_UPDATE_LOOKBACK_DAYS）
+        assert by_frequency["US_CPI_INDEX"].kwargs == {
+            "codes": ["US_CPI_INDEX"],
+            "start_date": "2022-12-11",
+            "end_date": "2024-01-15",
+        }
+        assert by_frequency["US_GDP_QOQ"].kwargs == {
+            "codes": ["US_GDP_QOQ"],
+            "start_date": "2021-07-29",
+            "end_date": "2024-01-15",
+        }
         assert result.height == 0
+
+    def test_fetch_macro_indicators_monthly_publication_day_captured(
+        self,
+    ) -> None:
+        """#432 回归：发布日在今天、观察期在上月的月度值必须落在请求窗口内."""
+        mock_adapter = MagicMock()
+        # 适配器原样返回（模拟 2024-01-15 发布 2023-12-01 观察）
+        mock_adapter.fetch_indicators.side_effect = lambda **kwargs: pl.DataFrame(
+            {
+                "indicator_code": ["US_CPI_INDEX"],
+                "date": [pl.date(2023, 12, 1)],
+                "value": [3.4],
+                "start": [kwargs["start_date"]],
+            }
+        )
+
+        with patch(
+            "ditto_data.sources.fred.fred_source.MacroFredAdapter",
+            return_value=mock_adapter,
+        ):
+            source = FredSource(api_key="test_key")
+            source.fetch_macro_indicators(
+                trade_date="2024-01-15",
+                codes=["US_CPI_INDEX"],
+            )
+
+        request_start = mock_adapter.fetch_indicators.call_args.kwargs["start_date"]
+        # 旧实现 start=end=当天 会漏掉 2023-12-01 的观察
+        assert request_start <= "2023-12-01"
 
     def test_fetch_macro_indicators_without_codes_uses_all(self) -> None:
         """Test fetch_macro_indicators uses ALL_FRED_CODES when codes is None."""
@@ -86,13 +124,13 @@ class TestFredSourceMacroMethods:
         ):
             source = FredSource(api_key="test_key")
             result = source.fetch_macro_indicators_range(
-                codes=["US_CPI_YOY"],
+                codes=["US_CPI_INDEX"],
                 start_date="2024-01-01",
                 end_date="2024-01-31",
             )
 
         mock_adapter.fetch_indicators.assert_called_once_with(
-            codes=["US_CPI_YOY"],
+            codes=["US_CPI_INDEX"],
             start_date="2024-01-01",
             end_date="2024-01-31",
         )
@@ -112,13 +150,13 @@ class TestFredSourceMacroMethods:
             source = FredSource(api_key="test_key")
             source.fetch_macro_indicators(
                 trade_date="2024-01-15",
-                codes=["US_CPI_YOY"],
+                codes=["US_CPI_INDEX"],
                 realtime_end="2024-01-15",
             )
 
         mock_adapter.fetch_indicators.assert_called_once_with(
-            codes=["US_CPI_YOY"],
-            start_date="2024-01-15",
+            codes=["US_CPI_INDEX"],
+            start_date="2022-12-11",  # 月度回看窗口 + realtime_end 透传
             end_date="2024-01-15",
             realtime_end="2024-01-15",
         )
@@ -136,7 +174,7 @@ class TestFredSourceMacroMethods:
         ):
             source = FredSource(api_key="test_key")
             source.fetch_macro_indicators_range(
-                codes=["US_CPI_YOY"],
+                codes=["US_CPI_INDEX"],
                 start_date="2024-01-01",
                 end_date="2024-01-31",
                 realtime_start="2024-01-01",
@@ -144,7 +182,7 @@ class TestFredSourceMacroMethods:
             )
 
         mock_adapter.fetch_indicators.assert_called_once_with(
-            codes=["US_CPI_YOY"],
+            codes=["US_CPI_INDEX"],
             start_date="2024-01-01",
             end_date="2024-01-31",
             realtime_start="2024-01-01",
@@ -169,13 +207,13 @@ class TestFredSourceCommodityMethods:
             with patch("ditto_data.sources.fred.fred_source.MacroFredAdapter"):
                 source = FredSource(api_key="test_key")
                 result = source.fetch_commodities(
-                    codes=["COMMOD_WTI", "COMMOD_GOLD"],
+                    codes=["COMMOD_WTI", "COMMOD_BRENT"],
                     start_date="2024-01-01",
                     end_date="2024-01-31",
                 )
 
         mock_adapter.fetch_commodities.assert_called_once_with(
-            codes=["COMMOD_WTI", "COMMOD_GOLD"],
+            codes=["COMMOD_WTI", "COMMOD_BRENT"],
             start_date="2024-01-01",
             end_date="2024-01-31",
         )

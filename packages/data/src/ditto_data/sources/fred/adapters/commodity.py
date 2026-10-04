@@ -21,13 +21,19 @@ class CommodityFredAdapter(BaseFredAdapter):
     Adapter for fetching commodity prices and VIX from FRED API.
 
     Normalizes FRED data to COMMODITY_SOURCE_SCHEMA format.
-    FRED only provides a single value per observation, so OHLC
-    are all set to the same value (the close price).
+    FRED 每个观察日只有一个单值：写入 ``close``；``open/high/low`` 置空，
+    不把单点参考值伪装成日内 OHLC（#432）。展示层如需蜡烛图自行以
+    close 兜底，策略/可成交 OHLC 算法不得消费该帧。
+
+    ``trade_date_utc`` 为观察日纽约午夜的占位时间戳（schema 要求），
+    不是真实成交/观察时刻。
 
     Note:
-        此适配器同时处理商品数据（WTI、Brent、Gold、Silver）和 VIX 波动率指数。
+        此适配器同时处理商品数据（WTI、Brent）和 VIX 波动率指数。
         VIX 虽然属于"另类数据"类别，但与商品数据共享相同的数据结构和处理流程，
         因此统一在此适配器中处理。两者都使用 COMMODITY_SOURCE_SCHEMA。
+        金银不在本适配器：FRED LBMA 序列已死（见 indicators.py 核查依据），
+        金银参考由 Tushare fx_daily 的 FXCM bid 提供。
 
     """
 
@@ -81,23 +87,21 @@ class CommodityFredAdapter(BaseFredAdapter):
                 continue
 
             # Transform to COMMODITY_SOURCE_SCHEMA
-            # FRED only provides a single value, so OHLC are all same
-            # Use Polars native expressions for timezone-aware UTC conversion
+            # FRED 单值序列：close=value，open/high/low 为 null（无日内高低价
+            # 可言），展示兜底由消费层决定；不伪造日内 OHLC。
+            # FRED dates are in US Eastern time, convert to UTC midnight
+            # （占位时间戳，非真实观察时刻）
             transformed = df.with_columns(
                 pl.lit(instrument_id).alias("instrument_id"),
                 pl.col("date").alias("trade_date"),
-                # FRED dates are in US Eastern time, convert to UTC midnight
-                # 1. Combine date with midnight time
-                # 2. Set timezone to America/New_York (FRED timezone)
-                # 3. Convert to UTC
                 pl.col("date")
                 .dt.combine(time=pl.time(0, 0, 0))
                 .dt.replace_time_zone("America/New_York", ambiguous="earliest")
                 .dt.convert_time_zone("UTC")
                 .alias("trade_date_utc"),
-                pl.col("value").alias("open"),
-                pl.col("value").alias("high"),
-                pl.col("value").alias("low"),
+                pl.lit(None, dtype=pl.Float64).alias("open"),
+                pl.lit(None, dtype=pl.Float64).alias("high"),
+                pl.lit(None, dtype=pl.Float64).alias("low"),
                 pl.col("value").alias("close"),
             ).select(
                 "instrument_id",

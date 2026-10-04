@@ -204,14 +204,17 @@ class TestMacroFredAdapterRealtimePit:
 
         adapter = MacroFredAdapter(api_key="test_key")
         result = adapter.fetch_indicators(
-            codes=["US_CPI_YOY"],  # need_pit=True
+            codes=["US_CPI_INDEX"],  # need_pit=True
             start_date="2024-01-01",
             end_date="2024-03-31",
             realtime_end="2024-04-01",
         )
 
-        # realtime_end 透传给 FRED API
+        # realtime_end 透传给 FRED API；未显式给 realtime_start 时不以观察
+        # 起点裁剪 realtime 窗口（公开日早于观察窗口起点的修订行必须参与
+        # as-of 折叠，不得整行排除）
         assert captured.get("realtime_end") == "2024-04-01"
+        assert "realtime_start" not in captured
         assert result["knowledge_date"][0] == datetime.date(2024, 2, 15)
 
     def test_non_revising_indicator_still_respects_publication_time(
@@ -285,7 +288,7 @@ class TestMacroFredAdapterRealtimePit:
 
         adapter = MacroFredAdapter(api_key="test_key")
         result = adapter.fetch_indicators(
-            codes=["US_CPI_YOY"],  # need_pit=True
+            codes=["US_CPI_INDEX"],  # need_pit=True
             start_date="2024-01-01",
             end_date="2024-03-31",
             realtime_end="2024-04-01",
@@ -329,7 +332,7 @@ class TestMacroFredAdapterRealtimePit:
 
         adapter = MacroFredAdapter(api_key="test_key")
         result = adapter.fetch_indicators(
-            codes=["US_CPI_YOY"],  # need_pit=True 但不传 realtime
+            codes=["US_CPI_INDEX"],  # need_pit=True 但不传 realtime
             start_date="2024-01-01",
             end_date="2024-03-31",
         )

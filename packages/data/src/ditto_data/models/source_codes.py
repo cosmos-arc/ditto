@@ -9,23 +9,28 @@ from __future__ import annotations
 
 # Commodity code to instrument_id mapping
 # Using 5M range (5,000,000 - 5,099,999) for commodities
+# 注意（#432）：金银 instrument 5_000_003/4 当前由 Tushare fx_daily 的
+# FXCM XAU/XAG **bid** 提供（见 tushare/adapters/metal.py），不是 SGE 也不是
+# LBMA 定盘；FRED 的 LBMA 序列已死并从注册清除。历史行如存在 LBMA 数值，
+# 与 FXCM bid 不是同一基准，不得无缝拼接解读。
 COMMODITY_CODE_TO_INSTRUMENT_ID: dict[str, int] = {
-    "COMMOD_WTI": 5_000_001,  # WTI原油
-    "COMMOD_BRENT": 5_000_002,  # 布伦特原油
-    "COMMOD_GOLD": 5_000_003,  # 伦敦金
-    "COMMOD_SILVER": 5_000_004,  # 伦敦银
+    "COMMOD_WTI": 5_000_001,  # WTI原油（FRED DCOILWTICO）
+    "COMMOD_BRENT": 5_000_002,  # 布伦特原油（FRED DCOILBRENTEU）
+    "COMMOD_GOLD": 5_000_003,  # 黄金参考（FXCM XAU/USD bid，经 Tushare）
+    "COMMOD_SILVER": 5_000_004,  # 白银参考（FXCM XAG/USD bid，经 Tushare）
 }
 
 # VIX (另类数据) code to instrument_id mapping
 # Using 5M range (5,100,000 - 5,199,999) for alternative data
+# VIX_9D 已随死序列清理移除（#432，序列页访问失败+前轮 404 记录）。
 VIX_CODE_TO_INSTRUMENT_ID: dict[str, int] = {
-    "VIX_30D": 5_100_001,  # VIX波动率指数(30天)
-    "VIX_9D": 5_100_002,  # VIX波动率指数(9天)
+    "VIX_30D": 5_100_001,  # VIX波动率指数(30天)（FRED VIXCLS）
 }
 
 # 汇率品种代码映射到 instrument_id
 # 使用 4M 范围 (4,000,000 - 4,999,999) 作为汇率
-# 注意：贵金属现货（伦敦金/银）通过 FRED 获取，不在此列表
+# 注意：贵金属参考（FXCM XAU/XAG bid）经 Tushare fx_daily METAL 分类获取，
+# 映射在 COMMODITY_CODE_TO_INSTRUMENT_ID / METAL_CODE_ALIASES，不在此列表
 FX_CODE_TO_INSTRUMENT_ID: dict[str, int] = {
     # 外汇货币对
     "USDCNH.FXCM": 4_000_001,

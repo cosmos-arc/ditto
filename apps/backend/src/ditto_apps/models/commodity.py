@@ -97,6 +97,9 @@ def to_commodity_bar(row: dict[str, Any]) -> CommodityBar:
     """
     将数据库行转换为 CommodityBar 模型.
 
+    FRED 单值参考序列的 open/high/low 存 null（#432）；展示兜底为 close
+    （平蜡烛），不伪造成 0 或日内高低价。
+
     Args:
         row: 数据库行字典，包含 commodity_code, trade_date_utc, open, high, low, close,
              volume 等字段
@@ -105,13 +108,14 @@ def to_commodity_bar(row: dict[str, Any]) -> CommodityBar:
         CommodityBar 模型实例
 
     """
+    close_value = format_float(row["close"]) or 0.0
     return CommodityBar(
         commodity_code=row["commodity_code"],
         trade_date_utc=format_date(row["trade_date_utc"]) or "",
-        open=format_float(row["open"]) or 0.0,
-        high=format_float(row["high"]) or 0.0,
-        low=format_float(row["low"]) or 0.0,
-        close=format_float(row["close"]) or 0.0,
+        open=format_float(row["open"]) or close_value,
+        high=format_float(row["high"]) or close_value,
+        low=format_float(row["low"]) or close_value,
+        close=close_value,
         volume=format_float(row.get("volume")),
     )
 

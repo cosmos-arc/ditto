@@ -213,10 +213,14 @@ def test_market_context_source_normalizes_provider_dates_before_utc_cutoff(
 
 @pytest.mark.unit
 @pytest.mark.pit
-def test_market_context_global_return_uses_visible_global_index_previous_close(
+def test_market_context_global_index_excluded_from_decision_inputs(
     tmp_path: Path,
 ) -> None:
-    """A-share context must not substitute FX/commodity for global indices."""
+    """#432/#451：全球指数点位为展示-only 全球参考，不进入决策输入.
+
+    无论 global_index_daily 快照内容如何可见，global_return_1d 恒为
+    None 并计入 declared_missing_inputs；快照证据链身份不受影响。
+    """
     cutoff = datetime(2026, 8, 31, 1, 0, tzinfo=UTC)
     global_index = pl.DataFrame(
         {
@@ -264,8 +268,8 @@ def test_market_context_global_return_uses_visible_global_index_previous_close(
 
     facts = source.load(context)
 
-    assert facts.regime_input.global_return_1d == pytest.approx(0.015)
-    assert "global_return_1d" not in facts.regime_input.declared_missing_inputs
+    assert facts.regime_input.global_return_1d is None
+    assert "global_return_1d" in facts.regime_input.declared_missing_inputs
 
 
 def _context(
@@ -636,103 +640,80 @@ def test_market_context_source_computes_tickerless_index_window(tmp_path: Path) 
     assert facts.regime_input.benchmark_return_20d == pytest.approx(0.20)
 
 
-def _global_edge_frame(variant: str, cutoff: datetime) -> pl.DataFrame:
-    if variant == "missing_close":
-        return pl.DataFrame(
-            {"event_time": [cutoff - timedelta(hours=1)], "value": [1.0]}
-        )
-    if variant == "no_ticker":
-        return pl.DataFrame(
-            {
-                "source_ticker": [None, None],
-                "event_time": [cutoff - timedelta(days=1), cutoff],
-                "close": [100.0, 110.0],
-            }
-        )
-    if variant == "short":
-        return pl.DataFrame({"event_time": [cutoff], "close": [100.0]})
-    if variant == "zero_start":
-        return pl.DataFrame(
-            {
-                "event_time": [cutoff - timedelta(days=1), cutoff],
-                "close": [0.0, 100.0],
-            }
-        )
-    if variant == "valid":
-        return pl.DataFrame(
-            {
-                "event_time": [cutoff - timedelta(days=1), cutoff],
-                "close": [100.0, 110.0],
-            }
-        )
-    raise AssertionError(f"unsupported test variant: {variant}")
-
-
-@pytest.mark.unit
-@pytest.mark.pit
-@pytest.mark.parametrize(
-    ("variant", "expected"),
-    [
-        pytest.param("missing_close", None),
-        pytest.param("no_ticker", None),
-        pytest.param("short", None),
-        pytest.param("zero_start", None),
-        pytest.param("valid", 0.10),
-    ],
-)
-def test_market_context_source_handles_global_close_return_edges(
+def test_market_context_global_close_return_edges_removed_with_policy(
     tmp_path: Path,
-    variant: str,
-    expected: float | None,
 ) -> None:
+    """#432：全球指数收益派生已按展示-only 裁决移除，任何帧形状都不派生."""
     cutoff = datetime(2026, 8, 31, 12, tzinfo=UTC)
+    valid_global = pl.DataFrame(
+        {
+            "source_ticker": ["SPX", "SPX"],
+            "event_time": [cutoff - timedelta(days=1), cutoff],
+            "close": [100.0, 110.0],
+        }
+    )
     facts = _load_single(
         tmp_path,
         dataset_id="global_index_daily",
-        frame=_global_edge_frame(variant, cutoff),
+        frame=valid_global,
         cutoff=cutoff,
     )
 
-    if expected is None:
-        assert facts.regime_input.global_return_1d is None
-        assert "global_return_1d" in facts.regime_input.declared_missing_inputs
-    else:
-        assert facts.regime_input.global_return_1d == pytest.approx(expected)
+    assert facts.regime_input.global_return_1d is None
+    assert "global_return_1d" in facts.regime_input.declared_missing_inputs
 
 
 def _macro_edge_frame(variant: str, cutoff: datetime) -> pl.DataFrame:
-    if variant == "missing_value":
-        return pl.DataFrame({"event_time": [cutoff]})
-    if variant == "ungrouped_trend":
-        return pl.DataFrame(
+    frames: dict[str, pl.DataFrame] = {
+        "missing_value": pl.DataFrame({"event_time": [cutoff]}),
+        # 无身份列：决策输入 fail-closed（#432），不允许未标识行参与评分
+        "ungrouped_trend": pl.DataFrame(
             {
                 "event_time": [cutoff - timedelta(days=1), cutoff],
                 "value": [10.0, 12.0],
             }
-        )
-    if variant == "short_group":
-        return pl.DataFrame(
+        ),
+        "short_group": pl.DataFrame(
             {"event_time": [cutoff], "indicator": ["pmi"], "value": [50.0]}
-        )
-    if variant == "null_surprise":
-        return pl.DataFrame(
+        ),
+        "null_surprise": pl.DataFrame(
             {
                 "event_time": [cutoff],
                 "indicator": ["pmi"],
                 "value": [None],
                 "forecast": [49.0],
             }
-        )
-    if variant == "valid":
-        return pl.DataFrame(
+        ),
+        "valid": pl.DataFrame(
             {
                 "event_time": [cutoff - timedelta(days=1), cutoff],
                 "indicator": ["pmi", "pmi"],
                 "value": [50.0, 55.0],
                 "forecast": [49.0, 54.0],
             }
-        )
-    raise AssertionError(f"unsupported test variant: {variant}")
+        ),
+        # FRED 宏观（展示-only）行被过滤后无剩余 → 不产生分数
+        "fred_only": pl.DataFrame(
+            {
+                "event_time": [cutoff - timedelta(days=1), cutoff],
+                "indicator": ["US_CPI_INDEX", "US_UNRATE"],
+                "value": [310.0, 4.1],
+                "forecast": [None, None],
+            }
+        ),
+        # FRED 与本土混合：只有非 FRED（CN_*）行参与评分
+        "mixed_sources": pl.DataFrame(
+            {
+                "event_time": [cutoff - timedelta(days=1), cutoff, cutoff],
+                "indicator": ["US_CPI_INDEX", "CN_CPI_YOY", "CN_CPI_YOY"],
+                "value": [310.0, 100.0, 110.0],
+                "forecast": [None, None, None],
+            }
+        ),
+    }
+    if variant not in frames:
+        raise AssertionError(f"unsupported test variant: {variant}")
+    return frames[variant]
 
 
 @pytest.mark.unit
@@ -741,10 +722,12 @@ def _macro_edge_frame(variant: str, cutoff: datetime) -> pl.DataFrame:
     ("variant", "expected_surprise", "expected_trend"),
     [
         pytest.param("missing_value", None, None),
-        pytest.param("ungrouped_trend", None, 0.20),
+        pytest.param("ungrouped_trend", None, None),
         pytest.param("short_group", None, None),
         pytest.param("null_surprise", None, None),
         pytest.param("valid", 1.0 / 54.0, 0.10),
+        pytest.param("fred_only", None, None),
+        pytest.param("mixed_sources", None, 0.10),
     ],
 )
 def test_market_context_source_derives_macro_edges(
