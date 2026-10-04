@@ -36,7 +36,12 @@ from ditto_features.derived_types import (
 )
 from ditto_features.errors import DerivedNotFoundError
 from ditto_features.materialization.models import DerivedVersionStatus
-from ditto_features.models.derived import DerivedSpecRecord, DerivedVersionRecord
+from ditto_features.models.derived import (
+    DerivedCheckpointRecord,
+    DerivedCheckpointStatus,
+    DerivedSpecRecord,
+    DerivedVersionRecord,
+)
 from ditto_features.services import DerivedCatalogService
 from ditto_platform.foundation import SQLiteClient
 from packages.application.tests.integration.historical_universe_support import (
@@ -221,7 +226,25 @@ def _write_artifact(
         data_root / "derived" / "artifacts" / "series" / derived_id / f"v{version}"
     )
     version_root.mkdir(parents=True, exist_ok=True)
-    pl.DataFrame(rows).write_parquet(version_root / "2026.parquet")
+    partition = version_root / "2026.parquet"
+    pl.DataFrame(rows).write_parquet(partition)
+    # #418 读侧诚实门禁：夹具产物必须携带 COMPLETE checkpoint＋内容 checksum。
+    with closing(_make_test_container()) as container:
+        container.get(DerivedCatalogService).save_checkpoints(
+            (
+                DerivedCheckpointRecord(
+                    derived_id=derived_id,
+                    version=version,
+                    partition_key="2026",
+                    status=DerivedCheckpointStatus.COMPLETE.value,
+                    rows_written=len(rows),
+                    checksum=sha256(partition.read_bytes()).hexdigest(),
+                    error_message=None,
+                    started_at="2026-03-14T12:00:00+08:00",
+                    completed_at="2026-03-14T12:00:00+08:00",
+                ),
+            )
+        )
     metadata_dir = version_root / "_runs" / f"run-{derived_id.replace('.', '-')}"
     metadata_dir.mkdir(parents=True, exist_ok=True)
     metadata_dir.joinpath("artifact_metadata.json").write_bytes(
@@ -232,6 +255,30 @@ def _write_artifact(
             option=orjson.OPT_INDENT_2,
         )
     )
+
+
+def _refresh_artifact_checkpoint(
+    data_root: Path,
+    *,
+    derived_id: str,
+    version: int,
+) -> None:
+    """文件被测试改写后按新内容重发布 checkpoint（#418 读侧门禁要求）."""
+    partition = (
+        data_root / "derived" / "artifacts" / "series" / derived_id / f"v{version}"
+    ) / "2026.parquet"
+    with closing(_make_test_container()) as container:
+        catalog = container.get(DerivedCatalogService)
+        record = catalog.list_checkpoints(derived_id, version)[0]
+        catalog.save_checkpoints(
+            (
+                replace(
+                    record,
+                    rows_written=pl.read_parquet(partition).height,
+                    checksum=sha256(partition.read_bytes()).hexdigest(),
+                ),
+            )
+        )
 
 
 @contextmanager
@@ -604,6 +651,9 @@ class TestResearchDatasetBuildFlowIntegration:
                 ),
             ]
         ).write_parquet(source_path)
+        _refresh_artifact_checkpoint(
+            research_state, derived_id="factor.alpha", version=2
+        )
         excluded = _invoke_research_build_flow(
             dataset_id="research.alpha_flow",
             start="2026-03-10",
@@ -676,6 +726,9 @@ class TestResearchDatasetBuildFlowIntegration:
                 ),
             ]
         ).write_parquet(source_path)
+        _refresh_artifact_checkpoint(
+            research_state, derived_id="factor.alpha", version=2
+        )
         with_future = _invoke_research_build_flow(
             dataset_id="research.alpha_flow", start="2026-03-10", end="2026-03-11"
         )

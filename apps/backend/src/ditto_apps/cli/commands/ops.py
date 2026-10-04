@@ -13,6 +13,9 @@ from ditto_application.commands.quality_reconciliation import (
 )
 from ditto_application.config import get_all_datasets
 from ditto_application.exceptions import AppError
+from ditto_application.processes.materialization.orchestrator import (
+    DerivedMaterializationOrchestrator,
+)
 from ditto_application.processes.quality.patrol import QualityPatrolService
 from ditto_application.queries.evaluation import (
     EvaluationOptions,
@@ -24,6 +27,13 @@ from ditto_application.queries.ingestion_status import (
     IngestionStatusQueryFacade,
     summarize_status_by_maturity,
 )
+from ditto_features.materialization import (
+    DerivedMaterializationRequest,
+    DerivedRunMode,
+    DerivedRunTrigger,
+)
+from ditto_features.services import DerivedCatalogService, register_governed_factor
+from ditto_kernel.exceptions import DittoError
 from ditto_platform.foundation.storage.sqlite_backup import (
     SQLiteBackupError,
     backup_database,
@@ -474,6 +484,55 @@ def dq(
             typer.echo(f"检查完成: {passed}/{total} 通过")
     except Exception as exc:
         typer.secho(f"DQ 检查失败: {exc}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(1) from exc
+    finally:
+        container.close()
+
+
+# ---------------------------------------------------------------------------
+# factor-materialize: 治理因子物化（注册→计算→derived artifact）
+# ---------------------------------------------------------------------------
+
+
+@app.command("factor-materialize")
+def factor_materialize(
+    factor: str = typer.Argument(..., help="治理因子 ID, 切片①仅支持 momentum_1m"),
+    start: str = typer.Option(..., "--start", help="请求窗口起始日 YYYY-MM-DD"),
+    end: str = typer.Option(..., "--end", help="请求窗口结束日 YYYY-MM-DD"),
+    version: int = typer.Option(1, "--version", help="物化版本号"),
+    mode: str = typer.Option("full", "--mode", help="full 或 incremental"),
+) -> None:
+    """治理因子物化: 幂等注册 DerivedSpec → 计算窗口 → 保存 derived artifact."""
+    container: Container = make_app_container()
+    try:
+        catalog = container.get(DerivedCatalogService)
+        registration = register_governed_factor(catalog, factor, version=version)
+        orchestrator = container.get(DerivedMaterializationOrchestrator)
+        result = orchestrator.materialize(
+            DerivedMaterializationRequest(
+                derived_id=registration.derived_id,
+                version=registration.version,
+                mode=DerivedRunMode(mode),
+                request_start=start,
+                request_end=end,
+                trigger=DerivedRunTrigger.MANUAL,
+                source_snapshot_id=None,
+            )
+        )
+        output_json_dict(
+            {
+                "registration": {
+                    "derived_id": registration.derived_id,
+                    "version": registration.version,
+                    "action": registration.action,
+                    "spec_hash": registration.spec_hash,
+                },
+                "run": asdict(result),
+            }
+        )
+    except DittoError as exc:
+        # 覆盖 AppError(编排器 fail closed)与注册侧 FeaturesError(身份漂移/治理集拒绝)。
+        typer.secho(f"物化失败: {exc}", fg=typer.colors.RED, err=True)
         raise typer.Exit(1) from exc
     finally:
         container.close()

@@ -7,6 +7,7 @@ from unittest.mock import MagicMock
 
 import polars as pl
 import pytest
+from ditto_application.exceptions import AppQueryError
 from ditto_application.queries.evaluation import (
     EvaluationOptions,
     FactorEvaluationFacade,
@@ -47,7 +48,9 @@ def _make_facade(
 ) -> FactorEvaluationFacade:
     """Build a FactorEvaluationFacade with mocked dependencies."""
     artifact_reader = MagicMock()
-    artifact_reader.read_frame.return_value = factor_df or _make_factor_df()
+    artifact_reader.read_frame.return_value = (
+        factor_df if factor_df is not None else _make_factor_df()
+    )
 
     fr_service = MagicMock()
     empty_fr = pl.DataFrame(
@@ -69,6 +72,41 @@ def _make_facade(
 
 class TestFactorEvaluationFacade:
     """Tests for FactorEvaluationFacade.evaluate()."""
+
+    def test_evaluate_empty_artifact_reports_explicit_missing_state(self) -> None:
+        """#418 诚实状态：无物化输入显式缺失，不产出全零报告冒充评估."""
+        empty = pl.DataFrame(
+            schema={
+                "instrument_id": pl.Int64,
+                "trade_date": pl.Date,
+                "value": pl.Float64,
+            },
+        )
+        facade = _make_facade(factor_df=empty)
+
+        with pytest.raises(AppQueryError) as exc_info:
+            facade.evaluate("factor.momentum_1m", 1)
+
+        assert exc_info.value.details["reason"] == "MATERIALIZED_INPUT_MISSING"
+        assert exc_info.value.details["factor_id"] == "factor.momentum_1m"
+
+    def test_evaluate_series_empty_artifact_reports_explicit_missing_state(
+        self,
+    ) -> None:
+        """#418 诚实状态：序列评估入口同样 fail closed."""
+        empty = pl.DataFrame(
+            schema={
+                "instrument_id": pl.Int64,
+                "trade_date": pl.Date,
+                "value": pl.Float64,
+            },
+        )
+        facade = _make_facade(factor_df=empty)
+
+        with pytest.raises(AppQueryError) as exc_info:
+            facade.evaluate_series("factor.momentum_1m", 1)
+
+        assert exc_info.value.details["reason"] == "MATERIALIZED_INPUT_MISSING"
 
     def test_evaluate_stamps_factor_id_and_version(self) -> None:
         """The facade overrides the evaluator's default factor_id/version."""

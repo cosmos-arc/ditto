@@ -20,6 +20,8 @@ from ditto_features.evaluation.report import (
     RegimeICResult,
     TailRiskMetrics,
 )
+from ditto_features.materialization import DerivedMaterializationResult
+from ditto_features.services import DerivedCatalogService
 from pytest_mock import MockerFixture
 from typer.testing import CliRunner
 
@@ -472,6 +474,101 @@ def _make_performance_attribution() -> PerformanceAttributionResult:
         information_ratio=2.5,
         win_rate_by_quantile={1: 0.4, 5: 0.6},
     )
+
+
+@pytest.mark.unit
+class TestFactorMaterializeCommand:
+    """Ops factor-materialize 命令测试。"""
+
+    def _container(self, catalog: Any, orchestrator: Any) -> Any:
+        container = MagicMock()
+        container.get.side_effect = lambda token: (
+            catalog if token is DerivedCatalogService else orchestrator
+        )
+        return container
+
+    def test_factor_materialize_registers_and_runs(
+        self,
+        runner: CliRunner,
+        mocker: MockerFixture,
+    ) -> None:
+        """#418: 注册→物化→JSON 回执；请求窗口绑定 CLI 参数."""
+        catalog = MagicMock()
+        catalog.get_spec.return_value = None
+        orchestrator = MagicMock()
+        orchestrator.materialize.return_value = DerivedMaterializationResult(
+            run_id="drv-test",
+            derived_id="momentum_1m",
+            version=1,
+            profile="SERIES",
+            status="SUCCESS",
+            rows_written=42,
+            partitions_written=("2026",),
+            coverage_start="2026-06-01",
+            coverage_end="2026-09-30",
+        )
+        mocker.patch(
+            CONTAINER_PATH,
+            return_value=self._container(catalog, orchestrator),
+        )
+
+        result = runner.invoke(
+            app,
+            [
+                "ops",
+                "factor-materialize",
+                "momentum_1m",
+                "--start",
+                "2026-06-01",
+                "--end",
+                "2026-09-30",
+            ],
+        )
+
+        assert result.exit_code == 0
+        payload = orjson.loads(result.output)
+        assert payload["registration"] == {
+            "derived_id": "momentum_1m",
+            "version": 1,
+            "action": "registered",
+            "spec_hash": payload["registration"]["spec_hash"],
+        }
+        assert payload["run"]["rows_written"] == 42
+        request = orchestrator.materialize.call_args.args[0]
+        assert request.derived_id == "momentum_1m"
+        assert request.request_start == "2026-06-01"
+        assert request.request_end == "2026-09-30"
+
+    def test_factor_materialize_domain_error_exits_nonzero(
+        self,
+        runner: CliRunner,
+        mocker: MockerFixture,
+    ) -> None:
+        """注册拒绝（非治理因子）退出码 1 且错误可见."""
+        catalog = MagicMock()
+        catalog.get_spec.return_value = None
+        orchestrator = MagicMock()
+        mocker.patch(
+            CONTAINER_PATH,
+            return_value=self._container(catalog, orchestrator),
+        )
+
+        result = runner.invoke(
+            app,
+            [
+                "ops",
+                "factor-materialize",
+                "momentum_3m",
+                "--start",
+                "2026-06-01",
+                "--end",
+                "2026-09-30",
+            ],
+        )
+
+        assert result.exit_code == 1
+        assert "物化失败" in (result.output + str(result.stderr or ""))
+        orchestrator.materialize.assert_not_called()
 
 
 @pytest.mark.unit

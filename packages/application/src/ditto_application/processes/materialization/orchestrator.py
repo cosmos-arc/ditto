@@ -36,6 +36,7 @@ from ditto_features.materialization import (
 from ditto_features.materialization.publication import CompatibilityManifestRecord
 from ditto_features.models.derived import (
     DerivedCheckpointRecord,
+    DerivedCheckpointStatus,
     DerivedDependencyRecord,
     DerivedPartitionRecord,
     DerivedRunRecord,
@@ -49,6 +50,7 @@ from ditto_features.services import (
     DerivedArtifactReader,
     DerivedCatalogService,
 )
+from ditto_features.storage.derived_artifact_writer import extract_partition_keys
 
 from ditto_application.config import now_iso
 from ditto_application.exceptions import AppProcessError
@@ -210,6 +212,32 @@ def _request_with_source_snapshot(
     if request.source_snapshot_id == source_snapshot_id:
         return request
     return replace(request, source_snapshot_id=source_snapshot_id)
+
+
+def _checkpoint_records(
+    *,
+    derived_id: str,
+    version: int,
+    run: _RunIdentity,
+    partitions: tuple[PartitionInfo, ...],
+    status: DerivedCheckpointStatus,
+) -> tuple[DerivedCheckpointRecord, ...]:
+    """Build one lifecycle stage's checkpoint rows for a run's partitions."""
+    completed_at = now_iso() if status is DerivedCheckpointStatus.COMPLETE else None
+    return tuple(
+        DerivedCheckpointRecord(
+            derived_id=derived_id,
+            version=version,
+            partition_key=partition.partition_key,
+            status=status.value,
+            rows_written=partition.row_count,
+            checksum=partition.checksum,
+            error_message=None,
+            started_at=run.started_at,
+            completed_at=completed_at,
+        )
+        for partition in partitions
+    )
 
 
 # ===========================================================================
@@ -405,6 +433,7 @@ class DerivedMaterializationOrchestrator:
             compile_identity=ctx.compiled.compile_identity,
             source_snapshot_id=request.source_snapshot_id,
             source_snapshot_ids=ctx.source_snapshot_ids,
+            knowledge_cutoff=request.request_end,
         )
         minimal_dq_record = build_minimal_dq_record(
             spec=spec,
@@ -425,6 +454,26 @@ class DerivedMaterializationOrchestrator:
             frame=materialized_frame,
         )
         time_key = spec.effective_time_keys[0]
+        # 三阶段 checkpoint（#418，复用 #393 语义）：写入前落 PLANNED 意图；
+        # 部分失败时目录停留可发现的恢复态，读取侧拒绝非 COMPLETE 分区。
+        planned_keys = extract_partition_keys(materialized_frame, time_key)
+        self._catalog_service.save_checkpoints(
+            _checkpoint_records(
+                derived_id=spec.id,
+                version=spec.version,
+                run=run,
+                partitions=tuple(
+                    PartitionInfo(
+                        partition_key=key,
+                        partition_path="",
+                        row_count=0,
+                        checksum=None,
+                    )
+                    for key in planned_keys
+                ),
+                status=DerivedCheckpointStatus.PLANNED,
+            )
+        )
         partitions = self._artifact_writer.write_durable_partitions(
             spec=ctx.spec_record,
             time_key=time_key,
@@ -433,6 +482,31 @@ class DerivedMaterializationOrchestrator:
             request_start=request.request_start,
             request_end=request.request_end,
             source_snapshot_id=request.source_snapshot_id,
+        )
+        # 分区文件已原子落盘：簿记分区行并推进 PAYLOAD_COMMITTED（可恢复态）。
+        self._catalog_service.save_partitions(
+            tuple(
+                DerivedPartitionRecord(
+                    run_id=run.run_id,
+                    derived_id=spec.id,
+                    version=spec.version,
+                    partition_key=partition.partition_key,
+                    partition_path=partition.partition_path,
+                    row_count=partition.row_count,
+                    checksum=partition.checksum,
+                    written_at=now_iso(),
+                )
+                for partition in partitions
+            )
+        )
+        self._catalog_service.save_checkpoints(
+            _checkpoint_records(
+                derived_id=spec.id,
+                version=spec.version,
+                run=run,
+                partitions=partitions,
+                status=DerivedCheckpointStatus.PAYLOAD_COMMITTED,
+            )
         )
         self._artifact_writer.write_artifact_metadata(
             ArtifactMetadataParams(
@@ -522,35 +596,15 @@ class DerivedMaterializationOrchestrator:
         dependencies: tuple[str, ...],
     ) -> DerivedMaterializationResult:
         finished_at = now_iso()
-        partition_records = tuple(
-            DerivedPartitionRecord(
-                run_id=run.run_id,
+        self._catalog_service.save_checkpoints(
+            _checkpoint_records(
                 derived_id=spec.id,
                 version=spec.version,
-                partition_key=partition.partition_key,
-                partition_path=partition.partition_path,
-                row_count=partition.row_count,
-                checksum=partition.checksum,
-                written_at=finished_at,
+                run=run,
+                partitions=partitions,
+                status=DerivedCheckpointStatus.COMPLETE,
             )
-            for partition in partitions
         )
-        checkpoint_records = tuple(
-            DerivedCheckpointRecord(
-                derived_id=spec.id,
-                version=spec.version,
-                partition_key=partition.partition_key,
-                status="done",
-                rows_written=partition.row_count,
-                checksum=partition.checksum,
-                error_message=None,
-                started_at=run.started_at,
-                completed_at=finished_at,
-            )
-            for partition in partitions
-        )
-        self._catalog_service.save_partitions(partition_records)
-        self._catalog_service.save_checkpoints(checkpoint_records)
         self._catalog_service.save_state(
             DerivedStateRecord(
                 derived_id=spec.id,

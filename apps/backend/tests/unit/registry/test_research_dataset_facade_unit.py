@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import asdict
 from datetime import date, datetime
+from hashlib import sha256
 from pathlib import Path
 from unittest.mock import MagicMock
 from zoneinfo import ZoneInfo
@@ -27,7 +28,12 @@ from ditto_features.derived_types import (
     MaterializationProfile,
 )
 from ditto_features.materialization.models import DerivedVersionStatus
-from ditto_features.models.derived import DerivedSpecRecord, DerivedVersionRecord
+from ditto_features.models.derived import (
+    DerivedCheckpointRecord,
+    DerivedCheckpointStatus,
+    DerivedSpecRecord,
+    DerivedVersionRecord,
+)
 from ditto_features.services import DerivedCatalogService
 from ditto_platform.foundation import SQLiteClient
 from packages.application.tests.integration.historical_universe_support import (
@@ -173,11 +179,9 @@ def _seed_derived_spec(
         DerivedVersionRecord(
             derived_id=derived_id,
             version=version,
-            status=(
-                DerivedVersionStatus.PUBLISHED
-                if is_primary
-                else DerivedVersionStatus.MATERIALIZED
-            ),
+            # #418 读侧门禁：非 primary 的旧版本仍是 published（publish_version
+            # 降级 primary 时不改状态）；materialized 中间态不可读。
+            status=DerivedVersionStatus.PUBLISHED,
             engine_version="expr-v1",
             is_online=is_online,
             is_primary=is_primary,
@@ -194,12 +198,31 @@ def _write_artifact(
     version: int,
     rows: list[dict[str, object]],
     input_snapshots: tuple[str, ...] = (),
+    catalog_service: DerivedCatalogService | None = None,
 ) -> None:
     version_root = (
         data_root / "derived" / "artifacts" / "series" / derived_id / f"v{version}"
     )
     version_root.mkdir(parents=True, exist_ok=True)
-    pl.DataFrame(rows).write_parquet(version_root / "2026.parquet")
+    partition = version_root / "2026.parquet"
+    pl.DataFrame(rows).write_parquet(partition)
+    if catalog_service is not None:
+        # #418 读侧诚实门禁：夹具产物必须携带 COMPLETE checkpoint＋checksum。
+        catalog_service.save_checkpoints(
+            (
+                DerivedCheckpointRecord(
+                    derived_id=derived_id,
+                    version=version,
+                    partition_key="2026",
+                    status=DerivedCheckpointStatus.COMPLETE.value,
+                    rows_written=len(rows),
+                    checksum=sha256(partition.read_bytes()).hexdigest(),
+                    error_message=None,
+                    started_at="2026-03-14T12:00:00+08:00",
+                    completed_at="2026-03-14T12:00:00+08:00",
+                ),
+            )
+        )
     if input_snapshots:
         metadata_dir = version_root / "_runs" / f"run-{derived_id.replace('.', '-')}"
         metadata_dir.mkdir(parents=True, exist_ok=True)
@@ -265,6 +288,7 @@ class TestResearchDatasetBuildProcess:
                         "availability_time": date(2026, 3, 11),
                     },
                 ],
+                catalog_service=derived_catalog,
             )
             _write_artifact(
                 tmp_path,
@@ -282,6 +306,7 @@ class TestResearchDatasetBuildProcess:
                         "value": 200.0,
                     },
                 ],
+                catalog_service=derived_catalog,
             )
             research_catalog.save_spine_spec(
                 ResearchSpineSpecRecord(
@@ -413,6 +438,7 @@ class TestResearchDatasetBuildProcess:
                         "value": 20.0,
                     },
                 ],
+                catalog_service=derived_catalog,
             )
             _write_artifact(
                 tmp_path,
@@ -425,6 +451,7 @@ class TestResearchDatasetBuildProcess:
                         "value": 30.0,
                     },
                 ],
+                catalog_service=derived_catalog,
             )
             research_catalog.save_spine_spec(
                 ResearchSpineSpecRecord(
@@ -520,6 +547,7 @@ class TestResearchDatasetBuildProcess:
                     },
                 ],
                 input_snapshots=("market:20260311-001",),
+                catalog_service=derived_catalog,
             )
             _write_artifact(
                 tmp_path,
@@ -533,6 +561,7 @@ class TestResearchDatasetBuildProcess:
                     },
                 ],
                 input_snapshots=("market:20260310-001", "market:20260311-001"),
+                catalog_service=derived_catalog,
             )
             research_catalog.save_spine_spec(
                 ResearchSpineSpecRecord(
@@ -624,6 +653,7 @@ class TestResearchDatasetBuildProcess:
                     },
                 ],
                 input_snapshots=("market:20260311-001",),
+                catalog_service=derived_catalog,
             )
             research_catalog.save_spine_spec(
                 ResearchSpineSpecRecord(

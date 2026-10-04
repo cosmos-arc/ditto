@@ -6,6 +6,7 @@ from ditto_platform.foundation import SQLiteClient
 from ditto_features.errors import FeatureStorageError
 from ditto_features.models.derived import (
     DerivedCheckpointRecord,
+    DerivedCheckpointStatus,
     DerivedDependencyRecord,
     DerivedPartitionRecord,
     DerivedRunRecord,
@@ -31,6 +32,9 @@ _VALID_RUN_STATUSES: frozenset[str] = frozenset(
         "SUCCESS",
         "FAILED",
     }
+)
+_VALID_CHECKPOINT_STATUSES: frozenset[str] = frozenset(
+    status.value for status in DerivedCheckpointStatus
 )
 
 
@@ -223,6 +227,18 @@ class SQLiteDerivedCatalogWriter:
         """Execute checkpoint INSERTs without committing."""
         if not records:
             return
+        for record in records:
+            if record.status not in _VALID_CHECKPOINT_STATUSES:
+                msg = (
+                    f"invalid checkpoint status: {record.status!r}, "
+                    f"expected one of {sorted(_VALID_CHECKPOINT_STATUSES)}"
+                )
+                raise _invalid_status_error(
+                    msg,
+                    table="derived_checkpoint",
+                    status=record.status,
+                    allowed_statuses=_VALID_CHECKPOINT_STATUSES,
+                )
         self._sqlite_client.executemany(
             """
             INSERT OR REPLACE INTO derived_checkpoint (

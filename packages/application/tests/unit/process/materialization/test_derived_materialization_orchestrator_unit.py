@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import asdict
+from dataclasses import asdict, replace
 from datetime import date, timedelta
 from hashlib import sha256
 from pathlib import Path
@@ -32,6 +32,7 @@ from ditto_features.derived_types import (
     DerivedSpec,
     MaterializationProfile,
 )
+from ditto_features.errors import DerivedIntegrityError, DerivedVersionError
 from ditto_features.expression import (
     Analysis,
     CompiledDerivedExpression,
@@ -50,6 +51,7 @@ from ditto_features.materialization.models import (
 from ditto_features.materialization.publication import CompatibilityManifest
 from ditto_features.models.derived import (
     DerivedCheckpointRecord,
+    DerivedCheckpointStatus,
     DerivedSpecRecord,
     DerivedStateRecord,
     DerivedVersionRecord,
@@ -218,6 +220,35 @@ def _seed_spec(
             updated_at=None,
         )
     )
+
+
+def _publish_written_artifact(
+    catalog_service: DerivedCatalogService,
+    data_root: Path,
+    *,
+    derived_id: str,
+    version: int,
+) -> None:
+    """把 _write_upstream_artifact 落盘的文件补成可读发布态（COMPLETE＋checksum）."""
+    version_root = (
+        data_root / "derived" / "artifacts" / "series" / derived_id / f"v{version}"
+    )
+    for parquet in sorted(version_root.glob("*.parquet")):
+        catalog_service.save_checkpoints(
+            (
+                DerivedCheckpointRecord(
+                    derived_id=derived_id,
+                    version=version,
+                    partition_key=parquet.stem,
+                    status=DerivedCheckpointStatus.COMPLETE.value,
+                    rows_written=1,
+                    checksum=sha256(parquet.read_bytes()).hexdigest(),
+                    error_message=None,
+                    started_at="2026-03-13T10:00:00+08:00",
+                    completed_at="2026-03-13T10:00:00+08:00",
+                ),
+            )
+        )
 
 
 def _read_publication_payload(
@@ -514,7 +545,7 @@ class TestDerivedMaterializationOrchestrator:
                 derived_id=spec.id,
                 version=3,
                 partition_key="2026",
-                status="done",
+                status=DerivedCheckpointStatus.COMPLETE.value,
                 rows_written=4,
                 checksum=checkpoints[0].checksum,
                 error_message=None,
@@ -763,6 +794,12 @@ class TestDerivedMaterializationOrchestrator:
             version=upstream.version,
             availability_offset_days=1,
         )
+        _publish_written_artifact(
+            catalog_service,
+            tmp_path,
+            derived_id=upstream.id,
+            version=upstream.version,
+        )
         mock_market = MagicMock()
         service = DerivedMaterializationOrchestrator(
             orchestrator_module.MaterializationRuntimePorts(
@@ -862,6 +899,9 @@ class TestDerivedMaterializationOrchestrator:
         assert manifest.pit_time_column == "knowledge_date"
         assert manifest.unsafe_time_policy == ""
         assert manifest.source_snapshot_id == "market:20260311-001"
+        # #418 身份维度：cutoff 与证券池声明随 manifest 冻结。
+        assert manifest.knowledge_cutoff == "2026-03-11"
+        assert manifest.universe == "full_market"
 
     def test_materialization_auto_propagates_resolved_source_snapshot_set(
         self,
@@ -1055,6 +1095,201 @@ class TestDerivedMaterializationOrchestrator:
         assert version_record is not None
         assert version_record.status == DerivedVersionStatus.DRAFT.value
         assert not (tmp_path / "derived" / "artifacts" / "series" / spec.id).exists()
+
+    # ------------------------------------------------------------------
+    # #418 三阶段完成语义与读侧诚实门禁
+    # ------------------------------------------------------------------
+
+    def test_crash_after_payload_commit_stays_recoverable_and_unreadable(
+        self,
+        sqlite_client,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """落盘后簿记前崩溃：分区停留 PAYLOAD_COMMITTED 可恢复态，读取 fail closed."""
+        spec = DerivedSpec(
+            id="series.alpha_crash",
+            version=3,
+            role=DerivedRole.FACTOR,
+            materialization_profile=MaterializationProfile.SERIES,
+            expression="ts_delta(close, 1)",
+        )
+        catalog_service = _catalog_service(sqlite_client, tmp_path)
+        _seed_spec(catalog_service, spec, status=DerivedVersionStatus.DRAFT)
+
+        def _explode(*args: object, **kwargs: object) -> None:
+            raise OSError("simulated metadata write crash")
+
+        monkeypatch.setattr(
+            ArtifactPersistenceService, "write_artifact_metadata", _explode
+        )
+        service = DerivedMaterializationOrchestrator(
+            orchestrator_module.MaterializationRuntimePorts(
+                catalog_service=catalog_service,
+                compile_cache_service=SQLiteCompileCache(sqlite_client),
+                input_provider=InMemoryDerivedInputProvider({spec.id: _input_frame()}),
+                artifact_writer=ArtifactPersistenceService(tmp_path),
+            )
+        )
+
+        with pytest.raises(OSError, match="simulated metadata write crash"):
+            service.materialize(
+                DerivedMaterializationRequest(
+                    derived_id=spec.id,
+                    version=spec.version,
+                    mode=DerivedRunMode.FULL,
+                    request_start="2026-03-10",
+                    request_end="2026-03-11",
+                    trigger=DerivedRunTrigger.MANUAL,
+                    source_snapshot_id="market:20260311-001",
+                )
+            )
+
+        checkpoints = catalog_service.list_checkpoints(spec.id, spec.version)
+        assert [record.status for record in checkpoints] == [
+            DerivedCheckpointStatus.PAYLOAD_COMMITTED.value
+        ]
+        assert checkpoints[0].checksum is not None
+        latest_run = catalog_service.get_latest_run(spec.id, spec.version)
+        assert latest_run is not None
+        assert latest_run.status == DerivedRunStatus.FAILED.value
+        version_record = catalog_service.get_version(spec.id, spec.version)
+        assert version_record is not None
+        assert version_record.status == DerivedVersionStatus.DRAFT.value
+        # 未完成发布：读取 fail closed，且分区文件保留为可恢复证据。
+        files = list(
+            (tmp_path / "derived" / "artifacts" / "series" / spec.id / "v3").glob(
+                "*.parquet"
+            )
+        )
+        assert len(files) == 1
+        reader = DerivedArtifactReader(
+            catalog_service=catalog_service,
+            artifact_root=tmp_path,
+        )
+        with pytest.raises(DerivedVersionError, match="not published"):
+            reader.read_frame(
+                derived_id=spec.id,
+                version=spec.version,
+                start="2026-03-10",
+                end="2026-03-11",
+            )
+
+    def test_replanned_partition_of_published_version_refused(
+        self,
+        sqlite_client,
+        tmp_path: Path,
+    ) -> None:
+        """在途重算把分区退回 PLANNED 后：已发布版本读取同样 fail closed."""
+        spec = DerivedSpec(
+            id="series.alpha_replan",
+            version=3,
+            role=DerivedRole.FACTOR,
+            materialization_profile=MaterializationProfile.SERIES,
+            expression="ts_delta(close, 1)",
+        )
+        catalog_service = _catalog_service(sqlite_client, tmp_path)
+        _seed_spec(catalog_service, spec, status=DerivedVersionStatus.DRAFT)
+        service = DerivedMaterializationOrchestrator(
+            orchestrator_module.MaterializationRuntimePorts(
+                catalog_service=catalog_service,
+                compile_cache_service=SQLiteCompileCache(sqlite_client),
+                input_provider=InMemoryDerivedInputProvider({spec.id: _input_frame()}),
+                artifact_writer=ArtifactPersistenceService(tmp_path),
+                artifact_reader=DerivedArtifactReader(
+                    catalog_service=catalog_service,
+                    artifact_root=tmp_path,
+                ),
+            )
+        )
+        service.materialize(
+            DerivedMaterializationRequest(
+                derived_id=spec.id,
+                version=spec.version,
+                mode=DerivedRunMode.FULL,
+                request_start="2026-03-10",
+                request_end="2026-03-11",
+                trigger=DerivedRunTrigger.MANUAL,
+                source_snapshot_id="market:20260311-001",
+            )
+        )
+
+        complete = catalog_service.list_checkpoints(spec.id, spec.version)[0]
+        catalog_service.save_checkpoints(
+            (
+                replace(
+                    complete,
+                    status=DerivedCheckpointStatus.PLANNED.value,
+                    completed_at=None,
+                ),
+            )
+        )
+        reader = DerivedArtifactReader(
+            catalog_service=catalog_service,
+            artifact_root=tmp_path,
+        )
+        with pytest.raises(DerivedIntegrityError, match="not COMPLETE"):
+            reader.read_frame(
+                derived_id=spec.id,
+                version=spec.version,
+                start="2026-03-10",
+                end="2026-03-11",
+            )
+
+    def test_published_artifact_checksum_drift_refused(
+        self,
+        sqlite_client,
+        tmp_path: Path,
+    ) -> None:
+        """身份漂移：已发布分区内容与目录 checksum 不一致时拒绝读取."""
+        spec = DerivedSpec(
+            id="series.alpha_drift",
+            version=3,
+            role=DerivedRole.FACTOR,
+            materialization_profile=MaterializationProfile.SERIES,
+            expression="ts_delta(close, 1)",
+        )
+        catalog_service = _catalog_service(sqlite_client, tmp_path)
+        _seed_spec(catalog_service, spec, status=DerivedVersionStatus.DRAFT)
+        service = DerivedMaterializationOrchestrator(
+            orchestrator_module.MaterializationRuntimePorts(
+                catalog_service=catalog_service,
+                compile_cache_service=SQLiteCompileCache(sqlite_client),
+                input_provider=InMemoryDerivedInputProvider({spec.id: _input_frame()}),
+                artifact_writer=ArtifactPersistenceService(tmp_path),
+            )
+        )
+        result = service.materialize(
+            DerivedMaterializationRequest(
+                derived_id=spec.id,
+                version=spec.version,
+                mode=DerivedRunMode.FULL,
+                request_start="2026-03-10",
+                request_end="2026-03-11",
+                trigger=DerivedRunTrigger.MANUAL,
+                source_snapshot_id="market:20260311-001",
+            )
+        )
+        partition = catalog_service.list_partitions(
+            spec.id,
+            spec.version,
+            result.run_id,
+        )[0]
+        published_path = tmp_path / partition.partition_path
+        tampered = pl.read_parquet(published_path).with_columns(pl.col("value") + 1.0)
+        tampered.write_parquet(published_path)
+
+        reader = DerivedArtifactReader(
+            catalog_service=catalog_service,
+            artifact_root=tmp_path,
+        )
+        with pytest.raises(DerivedIntegrityError, match="checksum drift"):
+            reader.read_frame(
+                derived_id=spec.id,
+                version=spec.version,
+                start="2026-03-10",
+                end="2026-03-11",
+            )
 
     # ------------------------------------------------------------------
     # #444 直线发布：首版无基准可发布 / 新身份允许值变化 / 同身份异内容拒绝
