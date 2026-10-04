@@ -1,4 +1,9 @@
-"""Atomic hash-on-read validation for experiment enqueue child sets."""
+"""
+Row → canonical payload-hash builders for experiment child sets.
+
+#448 起 enqueue fence 机器删除；这两个纯函数是 holdout preflight 权威
+绑定的承重件（行内容 ↔ 冻结权威事件的反泄漏比对），保留于此。
+"""
 
 from __future__ import annotations
 
@@ -10,12 +15,9 @@ from typing import cast
 
 from ditto_analysis.errors import (
     AnalysisError,
-    ExperimentConflictError,
     ExperimentIntegrityError,
-    ExperimentSpecError,
 )
 from ditto_analysis.experiments.enqueue_fence import (
-    ExperimentEnqueueFence,
     FoldPersistenceFence,
     GateEvaluationFence,
 )
@@ -36,7 +38,6 @@ from ditto_analysis.experiments.persistence import (
 __all__ = [
     "fold_fence_from_row",
     "gate_fence_from_row",
-    "validate_experiment_enqueue_fence",
 ]
 
 
@@ -44,15 +45,6 @@ def _integrity(
     message: str, reason_code: str, **details: object
 ) -> ExperimentIntegrityError:
     return ExperimentIntegrityError(
-        message,
-        details={"reason_code": reason_code, **details},
-    )
-
-
-def _conflict(
-    message: str, reason_code: str, **details: object
-) -> ExperimentConflictError:
-    return ExperimentConflictError(
         message,
         details={"reason_code": reason_code, **details},
     )
@@ -106,13 +98,13 @@ def gate_fence_from_row(row: sqlite3.Row) -> GateEvaluationFence:
         raise
     except (AnalysisError, OverflowError, TypeError, UnicodeError, ValueError) as exc:
         raise _integrity(
-            "gate row cannot be reconstructed at enqueue",
+            "gate row cannot be reconstructed",
             "gate_payload_invalid",
             evaluation_id=row["evaluation_id"],
         ) from exc
     if str(payload_hash) != row["payload_hash"]:
         raise _integrity(
-            "gate evaluation payload hash mismatch at enqueue",
+            "gate evaluation payload hash mismatch",
             "gate_payload_hash_mismatch",
             evaluation_id=row["evaluation_id"],
         )
@@ -138,7 +130,7 @@ def fold_fence_from_row(row: sqlite3.Row) -> FoldPersistenceFence:
     actual_hash = hashlib.sha256(payload).hexdigest()
     if actual_hash != row["fold_spec_hash"]:
         raise _integrity(
-            "fold canonical payload hash mismatch at enqueue",
+            "fold canonical payload hash mismatch",
             "fold_payload_hash_mismatch",
             fold_id=row["fold_id"],
         )
@@ -171,63 +163,14 @@ def fold_fence_from_row(row: sqlite3.Row) -> FoldPersistenceFence:
         fence = FoldPersistenceFence(key, ContentHash(actual_hash))
     except (AnalysisError, TypeError, ValueError) as exc:
         raise _integrity(
-            "fold row cannot be reconstructed at enqueue",
+            "fold row cannot be reconstructed",
             "fold_payload_invalid",
             fold_id=row["fold_id"],
         ) from exc
     if expected.canonical_payload != payload:
         raise _integrity(
-            "fold payload disagrees with its relational fields at enqueue",
+            "fold payload disagrees with its relational fields",
             "fold_relation_payload_mismatch",
             fold_id=row["fold_id"],
         )
     return fence
-
-
-def validate_experiment_enqueue_fence(
-    connection: sqlite3.Connection,
-    experiment_id: ExperimentId,
-    fence: ExperimentEnqueueFence,
-) -> None:
-    """Compare complete gate and fold sets inside the enqueue write transaction."""
-    if type(fence) is not ExperimentEnqueueFence:
-        raise ExperimentSpecError(
-            "enqueue requires an exact ExperimentEnqueueFence",
-            details={"reason_code": "invalid_enqueue_fence"},
-        )
-    if any(item.key.experiment_id != experiment_id for item in fence.folds):
-        raise ExperimentSpecError(
-            "enqueue fold fence belongs to another experiment",
-            details={"reason_code": "enqueue_fold_fence_experiment_mismatch"},
-        )
-    gate_rows = connection.execute(
-        """
-        SELECT * FROM gate_evaluation
-        WHERE experiment_id=? ORDER BY evaluation_id
-        """,
-        (str(experiment_id),),
-    ).fetchall()
-    actual_gates = tuple(gate_fence_from_row(row) for row in gate_rows)
-    if actual_gates != fence.gates:
-        raise _conflict(
-            "experiment gate set changed before enqueue",
-            "enqueue_gate_fence_mismatch",
-            expected_count=len(fence.gates),
-            actual_count=len(actual_gates),
-        )
-
-    fold_rows = connection.execute(
-        """
-        SELECT * FROM experiment_fold
-        WHERE experiment_id=? ORDER BY experiment_id, candidate_id, fold_id
-        """,
-        (str(experiment_id),),
-    ).fetchall()
-    actual_folds = tuple(fold_fence_from_row(row) for row in fold_rows)
-    if actual_folds != fence.folds:
-        raise _conflict(
-            "experiment fold set changed before enqueue",
-            "enqueue_fold_fence_mismatch",
-            expected_count=len(fence.folds),
-            actual_count=len(actual_folds),
-        )

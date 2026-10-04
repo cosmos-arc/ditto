@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from concurrent.futures import ThreadPoolExecutor as RealThreadPoolExecutor
 from dataclasses import replace
 from datetime import UTC, date, datetime
 from types import SimpleNamespace
@@ -240,24 +239,20 @@ def test_flow_executes_only_one_bounded_tick_and_returns_durable_results(
     worker_limit: int,
     mocker: MockerFixture,
 ) -> None:
-    """One flow run uses the persisted 2/4 bound and preserves dispatch order."""
+    """One flow run executes the bounded batch sequentially in dispatch order."""
     coordinator = _Coordinator(_tick_result(worker_limit, worker_limit=worker_limit))
     worker = _Worker()
-    executor = mocker.patch(
-        "ditto_apps.jobs.flows.experiments.ThreadPoolExecutor",
-        wraps=RealThreadPoolExecutor,
-    )
 
     result = EXPERIMENT_TICK_FLOW_RUNNER(
         runtime=ExperimentTickRuntime(coordinator=coordinator, worker=worker),
         occurred_at=_NOW,
     )
 
-    executor.assert_called_once_with(
-        max_workers=worker_limit,
-        thread_name_prefix="ditto-research-worker",
-    )
+    # #448: 顺序执行——不建线程池，按派发顺序逐个执行。
     assert coordinator.occurred_at_calls == [_NOW]
+    assert [str(attempt_id) for attempt_id, _ in worker.calls] == [
+        f"attempt-{index}" for index in range(worker_limit)
+    ]
     assert sorted(
         (str(attempt_id), occurred_at) for attempt_id, occurred_at in worker.calls
     ) == [(f"attempt-{index}", _NOW) for index in range(worker_limit)]
@@ -320,9 +315,7 @@ def test_flow_executes_one_claimed_holdout_dispatch() -> None:
     assert result["progress_at_dispatch"]["stage"] == "holdout"
 
 
-def test_idle_flow_returns_scheduler_truth_without_starting_executor(
-    mocker: MockerFixture,
-) -> None:
+def test_idle_flow_returns_scheduler_truth_without_starting_worker() -> None:
     coordinator = _Coordinator(
         SchedulerTickResult(
             state=SchedulerTickState.IDLE,
@@ -332,14 +325,12 @@ def test_idle_flow_returns_scheduler_truth_without_starting_executor(
         )
     )
     worker = _Worker()
-    executor = mocker.patch("ditto_apps.jobs.flows.experiments.ThreadPoolExecutor")
 
     result = EXPERIMENT_TICK_FLOW_RUNNER(
         runtime=ExperimentTickRuntime(coordinator=coordinator, worker=worker),
         occurred_at=_NOW,
     )
 
-    executor.assert_not_called()
     assert worker.calls == []
     assert result == {
         "state": "idle",
@@ -468,7 +459,6 @@ def test_flow_rejects_dispatch_integrity_drift_before_starting_executor(
     )
     coordinator = _Coordinator(result)
     worker = _Worker()
-    executor = mocker.patch("ditto_apps.jobs.flows.experiments.ThreadPoolExecutor")
 
     with pytest.raises(ValueError, match=reason):
         EXPERIMENT_TICK_FLOW_RUNNER(
@@ -476,7 +466,6 @@ def test_flow_rejects_dispatch_integrity_drift_before_starting_executor(
             occurred_at=_NOW,
         )
 
-    executor.assert_not_called()
     assert worker.calls == []
 
 

@@ -842,11 +842,8 @@ class _Store:
         occurred_at,
         reason_code,
         detail,
-        launch_fence,
     ):
         self.calls.append("enqueue")
-        assert len(launch_fence.gates) == len(self.gates)
-        assert len(launch_fence.folds) == len(self.folds)
         assert self.projection is not None
         assert self.projection.record.status is ExperimentStatus.DRAFT
         record = self.projection.record

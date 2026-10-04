@@ -50,7 +50,6 @@ from ditto_analysis.experiments import (
 from ditto_analysis.experiments import (
     StrategyVersion as ResearchStrategyVersion,
 )
-from ditto_analysis.experiments.enqueue_fence import ExperimentEnqueueFence
 from ditto_analysis.experiments.evidence import (
     REVIEW_PACKET_SCHEMA_VERSION,
     ReviewPacket,
@@ -716,7 +715,6 @@ def _persist_candidate_selection(
         occurred_at=NOW,
         reason_code="preflight_passed",
         detail=_preflight_detail(launch, folds, gates),
-        launch_fence=ExperimentEnqueueFence.create(gates=gates, folds=folds),
     )
     slot = reader.get_scheduler_slot()
     lease = writer.try_claim_lease(

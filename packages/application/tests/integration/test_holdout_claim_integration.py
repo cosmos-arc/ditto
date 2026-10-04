@@ -60,7 +60,6 @@ from ditto_analysis.experiments import (
     canonical_payload,
     encode_launch_spec,
 )
-from ditto_analysis.experiments.enqueue_fence import ExperimentEnqueueFence
 from ditto_analysis.experiments.preflight_authority import (
     canonical_research_cycle_hash,
 )
@@ -605,7 +604,6 @@ def _persist_candidate_selection(
                 eligibility=actual_eligibility,
             )
         ),
-        launch_fence=ExperimentEnqueueFence.create(gates=gates, folds=folds),
     )
     if not acquire_lease:
         return launch, None
