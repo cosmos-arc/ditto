@@ -16,5 +16,9 @@ def test_features_has_no_publication_safety_modules():
 
 def test_features_has_no_publication_safety_stores():
     runtime_root = FEATURES_ROOT / "storage" / "runtime"
-    assert not (runtime_root / "publication_safety").exists()
-    assert not (runtime_root / "publication_shadow_sqlite").exists()
+    for store in ("publication_safety", "publication_shadow_sqlite"):
+        # 只断言源文件不存在：残留的 __pycache__ 目录不算回流。
+        sources = [
+            path for path in (runtime_root / store).rglob("*") if path.suffix == ".py"
+        ]
+        assert not sources, sources
