@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -527,12 +528,11 @@ class TestFactorMaterializeCommand:
 
         assert result.exit_code == 0
         payload = orjson.loads(result.output)
-        assert payload["registration"] == {
-            "derived_id": "momentum_1m",
-            "version": 1,
-            "action": "registered",
-            "spec_hash": payload["registration"]["spec_hash"],
-        }
+        registration = payload["registration"]
+        assert registration["derived_id"] == "momentum_1m"
+        assert registration["version"] == 1
+        assert registration["action"] == "registered"
+        assert re.fullmatch(r"[0-9a-f]{64}", registration["spec_hash"])
         assert payload["run"]["rows_written"] == 42
         request = orchestrator.materialize.call_args.args[0]
         assert request.derived_id == "momentum_1m"

@@ -1175,6 +1175,76 @@ class TestDerivedMaterializationOrchestrator:
                 end="2026-03-11",
             )
 
+    def test_crashed_rewrite_same_window_retry_recovers(
+        self,
+        sqlite_client,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """#418 恢复语义：在途重算崩溃后，同窗口重试必须能恢复并重新 COMPLETE."""
+        spec = DerivedSpec(
+            id="series.alpha_recover",
+            version=3,
+            role=DerivedRole.FACTOR,
+            materialization_profile=MaterializationProfile.SERIES,
+            expression="ts_delta(close, 1)",
+        )
+        catalog_service = _catalog_service(sqlite_client, tmp_path)
+        _seed_spec(catalog_service, spec, status=DerivedVersionStatus.DRAFT)
+        service = DerivedMaterializationOrchestrator(
+            orchestrator_module.MaterializationRuntimePorts(
+                catalog_service=catalog_service,
+                compile_cache_service=SQLiteCompileCache(sqlite_client),
+                input_provider=InMemoryDerivedInputProvider({spec.id: _input_frame()}),
+                artifact_writer=ArtifactPersistenceService(tmp_path),
+                artifact_reader=DerivedArtifactReader(
+                    catalog_service=catalog_service,
+                    artifact_root=tmp_path,
+                ),
+            )
+        )
+        request = DerivedMaterializationRequest(
+            derived_id=spec.id,
+            version=spec.version,
+            mode=DerivedRunMode.FULL,
+            request_start="2026-03-10",
+            request_end="2026-03-11",
+            trigger=DerivedRunTrigger.MANUAL,
+            source_snapshot_id="market:20260311-001",
+        )
+        first = service.materialize(request)
+        assert first.status == DerivedRunStatus.SUCCESS
+
+        def _explode(*args: object, **kwargs: object) -> None:
+            raise OSError("simulated metadata write crash")
+
+        monkeypatch.setattr(
+            ArtifactPersistenceService, "write_artifact_metadata", _explode
+        )
+        with pytest.raises(OSError, match="simulated metadata write crash"):
+            service.materialize(request)
+        checkpoints = catalog_service.list_checkpoints(spec.id, spec.version)
+        assert [record.status for record in checkpoints] == [
+            DerivedCheckpointStatus.PAYLOAD_COMMITTED.value
+        ]
+
+        # 同窗口恢复重试：基线处于在途态，deterministic 校验跳过比对而非死锁。
+        monkeypatch.undo()
+        recovered = service.materialize(request)
+
+        assert recovered.status == DerivedRunStatus.SUCCESS
+        checkpoints = catalog_service.list_checkpoints(spec.id, spec.version)
+        assert [record.status for record in checkpoints] == [
+            DerivedCheckpointStatus.COMPLETE.value
+        ]
+        frame = service._artifact_reader.read_frame(
+            derived_id=spec.id,
+            version=spec.version,
+            start="2026-03-10",
+            end="2026-03-11",
+        )
+        assert frame.height == 4
+
     def test_replanned_partition_of_published_version_refused(
         self,
         sqlite_client,

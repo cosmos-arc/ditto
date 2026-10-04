@@ -89,6 +89,7 @@ def register_governed_factor(
     spec_hash = factor_spec_hash(spec)
     existing = catalog_service.get_spec(spec.id, spec.version)
     created_at = datetime.now(UTC).isoformat()
+    version_record = _draft_version_record(spec, created_at)
     if existing is not None:
         if existing.spec_hash != spec_hash:
             raise MaterializationError(
@@ -104,6 +105,9 @@ def register_governed_factor(
                     "new_spec_hash": spec_hash,
                 },
             )
+        # 自愈注册半程崩溃：spec 行在而 version 行缺时补写 draft（#418）。
+        if catalog_service.get_version(spec.id, spec.version) is None:
+            catalog_service.save_version(version_record)
         return FactorSpecRegistration(
             derived_id=spec.id,
             version=spec.version,
@@ -121,23 +125,25 @@ def register_governed_factor(
             created_at=created_at,
         )
     )
-    catalog_service.save_version(
-        DerivedVersionRecord(
-            derived_id=spec.id,
-            version=spec.version,
-            status="draft",
-            engine_version=_REGISTRATION_ENGINE_VERSION,
-            is_online=False,
-            is_primary=False,
-            created_at=created_at,
-            updated_at=None,
-        )
-    )
+    catalog_service.save_version(version_record)
     return FactorSpecRegistration(
         derived_id=spec.id,
         version=spec.version,
         action="registered",
         spec_hash=spec_hash,
+    )
+
+
+def _draft_version_record(spec: DerivedSpec, created_at: str) -> DerivedVersionRecord:
+    return DerivedVersionRecord(
+        derived_id=spec.id,
+        version=spec.version,
+        status="draft",
+        engine_version=_REGISTRATION_ENGINE_VERSION,
+        is_online=False,
+        is_primary=False,
+        created_at=created_at,
+        updated_at=None,
     )
 
 

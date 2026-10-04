@@ -230,12 +230,25 @@ class FactorEvaluationFacade:
         fail closed，绝不静默产出全零报告冒充评估。
 
         """
-        factor_df = self._artifact_reader.read_frame(
-            derived_id=factor_id,
-            version=resolved_version,
-            start=options.start,
-            end=options.end,
-        )
+        try:
+            factor_df = self._artifact_reader.read_frame(
+                derived_id=factor_id,
+                version=resolved_version,
+                start=options.start,
+                end=options.end,
+            )
+        except DerivedError as exc:
+            # 读门禁拒绝（未发布/部分写入/身份漂移）保持 application 边界
+            # 异常语义，reason 区分于缺失态。
+            raise AppQueryError(
+                "因子 artifact 读取被拒绝: "
+                + f"factor_id={factor_id} version={resolved_version}: {exc}",
+                details={
+                    "factor_id": factor_id,
+                    "version": resolved_version,
+                    "reason": "ARTIFACT_READ_REFUSED",
+                },
+            ) from exc
         if factor_df.is_empty():
             raise AppQueryError(
                 "无物化输入可评估: "

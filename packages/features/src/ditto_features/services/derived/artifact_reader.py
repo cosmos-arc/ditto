@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import date
 from enum import StrEnum
-from hashlib import sha256
+from hashlib import file_digest
 from pathlib import Path
 from typing import Literal, Protocol, cast, overload
 
@@ -416,7 +416,7 @@ class DerivedArtifactReader:
                     partition_key=partition_key,
                     reason="complete partition has no recorded checksum",
                 )
-            actual = sha256(path.read_bytes()).hexdigest()
+            actual = _file_sha256(path)
             if actual != record.checksum:
                 raise DerivedIntegrityError(
                     derived_id=derived_id,
@@ -426,6 +426,12 @@ class DerivedArtifactReader:
                     expected_checksum=record.checksum,
                     actual_checksum=actual,
                 )
+
+
+def _file_sha256(path: Path) -> str:
+    """Stream-hash one file（避免整分区载入内存）."""
+    with path.open("rb") as handle:
+        return file_digest(handle, "sha256").hexdigest()
 
 
 def _effective_time_key(spec_record: DerivedSpecRecord) -> str:

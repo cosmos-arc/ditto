@@ -98,13 +98,18 @@ class DerivedIntegrityError(DerivedError):
             f"Derived artifact integrity refused: derived_id={derived_id} "
             f"version={version} partition={partition_key}: {reason}"
         )
-        super().__init__(msg, derived_id=derived_id)
-        self.details = {
+        details: dict[str, object] = {
             "derived_id": derived_id,
             "version": version,
             "partition_key": partition_key,
             "reason": reason,
         }
+        if expected_checksum is not None:
+            details["expected_checksum"] = expected_checksum
+        if actual_checksum is not None:
+            details["actual_checksum"] = actual_checksum
+        super().__init__(msg, derived_id=derived_id)
+        self.details.update(details)
 
 
 class DerivedVersionError(DerivedError):

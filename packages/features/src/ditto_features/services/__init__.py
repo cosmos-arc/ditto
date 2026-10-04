@@ -49,6 +49,7 @@ from ditto_features.services.derived_catalog_service import (
     DerivedCatalogService,
     DerivedCatalogWriterProtocol,
 )
+from ditto_features.storage.derived_artifact_writer import extract_partition_keys
 
 __all__ = [
     "COMPARE_RESULT_COLUMNS",
@@ -79,6 +80,7 @@ __all__ = [
     "empty_compare_result",
     "empty_latest_result",
     "empty_series_result",
+    "extract_partition_keys",
     "factor_spec_hash",
     "register_governed_factor",
 ]

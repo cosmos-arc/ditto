@@ -496,13 +496,17 @@ def dq(
 
 @app.command("factor-materialize")
 def factor_materialize(
-    factor: str = typer.Argument(..., help="治理因子 ID, 切片①仅支持 momentum_1m"),
+    factor: str = typer.Argument(..., help="治理因子 ID, 当前治理集仅 momentum_1m"),
     start: str = typer.Option(..., "--start", help="请求窗口起始日 YYYY-MM-DD"),
     end: str = typer.Option(..., "--end", help="请求窗口结束日 YYYY-MM-DD"),
-    version: int = typer.Option(1, "--version", help="物化版本号"),
-    mode: str = typer.Option("full", "--mode", help="full 或 incremental"),
+    version: int = typer.Option(1, "--version", min=1, help="物化版本号"),
+    mode: str = typer.Option("full", "--mode", help="物化模式: full 或 incremental"),
 ) -> None:
     """治理因子物化: 幂等注册 DerivedSpec → 计算窗口 → 保存 derived artifact."""
+    if mode not in {member.value for member in DerivedRunMode}:
+        raise typer.BadParameter(
+            f"非法物化模式: {mode!r}, 允许 full/incremental", param_hint="--mode"
+        )
     container: Container = make_app_container()
     try:
         catalog = container.get(DerivedCatalogService)
