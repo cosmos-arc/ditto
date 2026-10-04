@@ -54,9 +54,39 @@ METAL_CODE_ALIASES: dict[str, str] = {
     "XAGUSD": "XAGUSD.FXCM",
 }
 
+# FRED 注册指标代码全集（#432）：镜像 sources/fred/indicators.py 的注册键。
+# application 层按 importlinter 契约不得导入 concrete sources，经本模块
+# 暴露；data 层单测（fred/test_indicators.py）保证镜像与注册表同步。
+# 全球参考展示-only：不得进入策略特征/回测/Paper/Agent 决策输入（#451）。
+FRED_INDICATOR_CODES: frozenset[str] = frozenset(
+    {
+        "US_GDP_QOQ",
+        "US_CPI_INDEX",
+        "US_CORE_CPI_INDEX",
+        "US_PCE_INDEX",
+        "US_CORE_PCE_INDEX",
+        "US_UNRATE",
+        "US_PAYEMS",
+        "US_M2",
+        "US_BOND_YIELD_1Y",
+        "US_BOND_YIELD_2Y",
+        "US_BOND_YIELD_5Y",
+        "US_BOND_YIELD_10Y",
+        "US_BOND_YIELD_30Y",
+        "US_BOND_SPREAD_10Y2Y",
+        "US_FEDFUNDS_M",
+        "US_FEDFUNDS_D",
+        "COMMOD_WTI",
+        "COMMOD_BRENT",
+        "VIX_30D",
+        "US_DOLLAR_INDEX_BROAD",
+    }
+)
+
 
 __all__ = [
     "COMMODITY_CODE_TO_INSTRUMENT_ID",
+    "FRED_INDICATOR_CODES",
     "FX_CODE_TO_INSTRUMENT_ID",
     "METAL_CODE_ALIASES",
     "VIX_CODE_TO_INSTRUMENT_ID",

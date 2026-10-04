@@ -82,3 +82,11 @@ def test_dollar_index_indicators_exist() -> None:
     assert indicator.category == "dollar_index"
     assert indicator.frequency == "daily"
     assert indicator.need_pit is False
+
+
+def test_models_mirror_matches_registry() -> None:
+    """models.FRED_INDICATOR_CODES 镜像与 fred 注册表同步（供 application 层使用）."""
+    from ditto_data.models import FRED_INDICATOR_CODES
+    from ditto_data.sources.fred.indicators import FRED_INDICATORS
+
+    assert frozenset(FRED_INDICATORS) == FRED_INDICATOR_CODES

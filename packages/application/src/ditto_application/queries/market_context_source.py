@@ -18,9 +18,9 @@ from ditto_data.catalog.source_snapshot import (
     ProviderSnapshot,
     ProviderSnapshotReader,
 )
+from ditto_data.models import FRED_INDICATOR_CODES
 from ditto_data.query.contracts import DatasetSnapshot, PITQueryContext
 from ditto_data.query.service import PITDatasetReader, PITQueryService
-from ditto_data.sources.fred.indicators import FRED_INDICATORS
 from ditto_features.market_context.contracts import MarketRegimeInput
 
 from ditto_application.exceptions import AppQueryError
@@ -39,9 +39,6 @@ _COMPACT_DATE_LENGTH = 8
 _PERCENT_SCALE_THRESHOLD = 2.0
 _RETURN_WINDOW_OBSERVATIONS = 21
 _PAIR_SIZE = 2
-
-# FRED 注册指标全集：全球参考（展示-only），不得进入决策输入（#432/#451）。
-_FRED_INDICATOR_CODES = frozenset(FRED_INDICATORS)
 
 
 def _parse_datetime(value: object, *, fallback: datetime) -> datetime:
@@ -327,7 +324,7 @@ def _decision_macro_frame(frame: pl.DataFrame) -> pl.DataFrame | None:
     )
     if identity is None:
         return None
-    return frame.filter(~pl.col(identity).is_in(_FRED_INDICATOR_CODES))
+    return frame.filter(~pl.col(identity).is_in(FRED_INDICATOR_CODES))
 
 
 def _macro_scores(frame: pl.DataFrame) -> tuple[float | None, float | None]:
