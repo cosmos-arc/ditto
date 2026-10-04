@@ -13,15 +13,12 @@ from ditto_features.derived_types import (
     MaterializationProfile,
 )
 from ditto_features.expression import Analysis, CompileIdentity
-from ditto_features.models.derived import DerivedSpecRecord, PartitionInfo
-from ditto_features.publication_safety_records import (
+from ditto_features.materialization.publication import (
     CompatibilityManifestRecord,
     DerivedMinimalDQSummaryRecord,
 )
-from ditto_features.storage.derived_artifact_writer import (
-    ArtifactMetadataParams,
-    ArtifactMetadataUpdateParams,
-)
+from ditto_features.models.derived import DerivedSpecRecord, PartitionInfo
+from ditto_features.storage.derived_artifact_writer import ArtifactMetadataParams
 
 
 def _make_spec_record(
@@ -223,63 +220,9 @@ class TestServiceDelegatesWriteArtifactMetadata:
                 request_start="2024-01-01",
                 request_end="2025-12-31",
                 source_snapshot_id="snap-001",
+                manifest_record=_make_manifest_record(),
+                minimal_dq_record=_make_minimal_dq_record(),
             ),
         )
 
         mock_writer.write_artifact_metadata.assert_called_once()
-
-
-class TestServiceDelegatesUpdateArtifactMetadata:
-    """Tests for update_artifact_metadata delegation."""
-
-    def test_service_update_artifact_metadata(self) -> None:
-        """Should delegate update_artifact_metadata to the underlying writer."""
-        from ditto_features.services import ArtifactPersistenceService
-
-        mock_writer = MagicMock()
-        service = ArtifactPersistenceService(
-            artifact_root=Path("/tmp/data"),
-            _writer=mock_writer,
-        )
-        spec_record = _make_spec_record()
-        compile_identity = _make_compile_identity_dict()
-        partitions = _make_partitions()
-        manifest_record = _make_manifest_record()
-        minimal_dq_record = _make_minimal_dq_record()
-
-        params = ArtifactMetadataUpdateParams(
-            spec=spec_record,
-            run_id="drv-update-001",
-            compile_identity=compile_identity,
-            partitions=partitions,
-            source_snapshot_id="snap-001",
-            manifest_record=manifest_record,
-            minimal_dq_record=minimal_dq_record,
-        )
-
-        service.update_artifact_metadata(params)
-
-        mock_writer.update_artifact_metadata.assert_called_once_with(params)
-
-    def test_service_update_artifact_metadata_accepts_params_object(self) -> None:
-        """Should delegate one update params object to the underlying writer."""
-        from ditto_features.services import ArtifactPersistenceService
-
-        mock_writer = MagicMock()
-        service = ArtifactPersistenceService(
-            artifact_root=Path("/tmp/data"),
-            _writer=mock_writer,
-        )
-        params = ArtifactMetadataUpdateParams(
-            spec=_make_spec_record(),
-            run_id="drv-update-params",
-            compile_identity=_make_compile_identity_dict(),
-            partitions=_make_partitions(),
-            source_snapshot_id="snap-params",
-            manifest_record=_make_manifest_record(),
-            minimal_dq_record=_make_minimal_dq_record(),
-        )
-
-        service.update_artifact_metadata(params)
-
-        mock_writer.update_artifact_metadata.assert_called_once_with(params)

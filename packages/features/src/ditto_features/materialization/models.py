@@ -39,7 +39,6 @@ class DerivedRunTrigger(StrEnum):
 
     MANUAL = "manual"
     SCHEDULED = "scheduled"
-    CASCADE = "cascade"
 
 
 class DerivedRunStatus(StrEnum):

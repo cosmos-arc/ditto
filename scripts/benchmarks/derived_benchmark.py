@@ -84,7 +84,6 @@ def default_workloads() -> list[BenchmarkWorkload]:
     return [
         BenchmarkWorkload(name="query", scales=scales),
         BenchmarkWorkload(name="materialize", scales=scales),
-        BenchmarkWorkload(name="shadow_compare", scales=scales),
     ]
 
 
@@ -189,37 +188,6 @@ def _run_materialize_workload(frame: pl.DataFrame) -> pl.DataFrame:
     )
 
 
-def _run_shadow_compare_workload(frame: pl.DataFrame) -> pl.DataFrame:
-    baseline = _run_materialize_workload(frame)
-    candidate = baseline.with_columns(
-        (
-            pl.col("factor_value")
-            + (pl.col("instrument_id").cast(pl.Float64) % 7) * 0.0001
-            + pl.col("slot").cast(pl.Float64) * 0.00001
-        ).alias("factor_value")
-    )
-    return (
-        candidate.lazy()
-        .rename({"factor_value": "candidate_value"})
-        .join(
-            baseline.lazy().rename({"factor_value": "baseline_value"}),
-            on=["instrument_id", "trade_date", "slot", "availability_time"],
-            how="inner",
-        )
-        .with_columns(
-            (pl.col("candidate_value") - pl.col("baseline_value"))
-            .abs()
-            .alias("abs_diff")
-        )
-        .select(
-            pl.len().alias("row_count"),
-            pl.col("abs_diff").mean().alias("mean_abs_diff"),
-            pl.col("abs_diff").max().alias("max_abs_diff"),
-        )
-        .collect()
-    )
-
-
 def _measure(
     *,
     workload_name: str,
@@ -231,8 +199,6 @@ def _measure(
         runner = _run_query_workload
     elif workload_name == "materialize":
         runner = _run_materialize_workload
-    elif workload_name == "shadow_compare":
-        runner = _run_shadow_compare_workload
     else:
         raise ValueError(f"unsupported workload: {workload_name}")
 

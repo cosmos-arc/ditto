@@ -1,4 +1,4 @@
-"""Integration tests for derived materialize -> query -> repair flow."""
+"""Integration tests for the derived materialize -> query -> rerun chain."""
 
 from contextlib import contextmanager
 from dataclasses import asdict, replace
@@ -11,18 +11,9 @@ import polars as pl
 import pytest
 from dishka import Provider, Scope, make_container, provide
 from ditto_application.commands.research_dataset_export import ResearchDatasetExport
-from ditto_application.processes.materialization.cascade_orchestrator import (
-    InvalidationCascadeOrchestrator,
-)
-from ditto_application.processes.materialization.publication_facade import (
-    DerivedPublicationFacade,
-)
 from ditto_application.processes.research_dataset import ResearchDatasetBuildProcess
 from ditto_application.queries.research import ResearchDatasetQuery
-from ditto_apps.jobs.flows.materialization import (
-    daily_materialization_flow,
-    repair_from_invalidation_flow,
-)
+from ditto_apps.jobs.flows.materialization import daily_materialization_flow
 from ditto_apps.registry import ConfigProvider
 from ditto_apps.registry.contexts.bundle import MaterializationBundle
 from ditto_data.catalog import (
@@ -32,6 +23,7 @@ from ditto_data.catalog import (
     DataSchemaFingerprint,
 )
 from ditto_data.catalog.source_snapshot_store import SQLiteProviderSnapshotStore
+from ditto_data.services.metadata_service import MetadataService
 from ditto_data.sources.exchange_transformers import ExchangeTransformers
 from ditto_data.sources.source import DataSources
 from ditto_features.derived_types import (
@@ -39,7 +31,6 @@ from ditto_features.derived_types import (
     DerivedSpec,
     MaterializationProfile,
 )
-from ditto_features.materialization import DerivedInvalidationEvent
 from ditto_features.materialization.models import DerivedVersionStatus
 from ditto_features.models.derived import DerivedSpecRecord, DerivedVersionRecord
 from ditto_features.services import (
@@ -91,8 +82,6 @@ def _materialization_bundle_context():
     try:
         yield MaterializationBundle(
             materialization_service=container.get(DerivedMaterializationOrchestrator),
-            invalidation_service=container.get(InvalidationCascadeOrchestrator),
-            publication_facade=container.get(DerivedPublicationFacade),
             research_dataset_build=container.get(ResearchDatasetBuildProcess),
             research_dataset_query=container.get(ResearchDatasetQuery),
             research_dataset_export=container.get(ResearchDatasetExport),
@@ -209,6 +198,17 @@ def _seed_market_catalog(
             )
 
 
+def _seed_trading_calendar(container) -> None:
+    """物化输入身份解析依赖交易日历（#444 后快照身份须可解析）."""
+    metadata_service = container.get(MetadataService)
+    metadata_service.calendar.save_calendar(
+        [
+            {"trade_date": "2026-03-10", "is_open": True},
+            {"trade_date": "2026-03-11", "is_open": True},
+        ]
+    )
+
+
 def _seed_series_spec(
     catalog_service: DerivedCatalogService,
     *,
@@ -250,7 +250,7 @@ def _seed_series_spec(
 
 @pytest.mark.integration
 class TestDerivedMaterializationQueryRepairIntegration:
-    """Integration tests for the derived repair chain."""
+    """Integration tests for the straight-line derived artifact chain."""
 
     def test_materialize_query_and_repair_flow_share_one_artifact_chain(
         self,
@@ -258,7 +258,7 @@ class TestDerivedMaterializationQueryRepairIntegration:
         mocker,
         tmp_path: Path,
     ) -> None:
-        """Materialize -> query -> repair should update the queried artifact slice."""
+        """Materialize -> query -> rerun with new input identity updates the slice."""
         sqlite_path = tmp_path / "metadata" / "metadata.sqlite"
         monkeypatch.setenv("ENVIRONMENT", "testing")
         monkeypatch.setenv("DITTO_STATE_ROOT", tmp_path.as_posix())
@@ -268,6 +268,7 @@ class TestDerivedMaterializationQueryRepairIntegration:
         seed_container = _make_test_container()
         try:
             catalog_service = seed_container.get(DerivedCatalogService)
+            _seed_trading_calendar(seed_container)
             _seed_market_catalog(
                 seed_container,
                 source_snapshot_id="market:20260311-001",
@@ -295,7 +296,6 @@ class TestDerivedMaterializationQueryRepairIntegration:
 
         before_container = _make_test_container()
         try:
-            invalidation_service = before_container.get(InvalidationCascadeOrchestrator)
             query_service = before_container.get(DerivedQueryService)
             before_frame = query_service.find_series(
                 DerivedSeriesQuery(
@@ -305,26 +305,22 @@ class TestDerivedMaterializationQueryRepairIntegration:
                     end="2026-03-11",
                 )
             )
+            # 上游修正：新 snapshot 身份（002）承载新的输入事实。
             _write_market_truth_layers(tmp_path, close_values=[10.0, 21.0])
             _seed_market_catalog(
                 before_container,
                 source_snapshot_id="market:20260311-002",
             )
-            invalidation_service.propagate(
-                DerivedInvalidationEvent(
-                    source_domain="market",
-                    source_dataset="stock_daily",
-                    change_date="2026-03-11",
-                    affected_start="2026-03-11",
-                    affected_end="2026-03-11",
-                    source_snapshot_id="market:20260311-002",
-                    root_dependency_ref="market.stock_daily",
-                )
-            )
         finally:
             before_container.close()
 
-        repair_result = _invoke_flow(repair_from_invalidation_flow, limit=10)
+        # #444 直线：无级联/修复队列——输入更新即以新身份重跑物化。
+        rerun_result = _invoke_flow(
+            daily_materialization_flow,
+            trade_date="2026-03-11",
+            mode="full",
+            derived_ids=["factor.alpha_repair"],
+        )
 
         verify_container = _make_test_container()
         try:
@@ -339,14 +335,13 @@ class TestDerivedMaterializationQueryRepairIntegration:
                 )
             )
             latest_run = catalog_service.get_latest_run("factor.alpha_repair", 3)
-            stale_invalidations = catalog_service.list_stale_invalidations()
         finally:
             verify_container.close()
 
         assert materialize_result["summary"]["materialized_count"] == 1
         assert before_frame["value"].to_list() == [22.0]
-        assert repair_result["summary"]["repaired_count"] == 1
+        assert rerun_result["summary"]["materialized_count"] == 1
         assert after_frame["value"].to_list() == [42.0]
         assert latest_run is not None
-        assert latest_run.trigger == "cascade"
-        assert stale_invalidations == ()
+        assert latest_run.trigger == "scheduled"
+        assert latest_run.status == "SUCCESS"

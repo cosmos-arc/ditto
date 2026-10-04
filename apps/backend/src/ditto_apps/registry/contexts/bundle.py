@@ -40,14 +40,8 @@ from ditto_application.processes.ingestion.source_selection import (
 from ditto_application.processes.ingestion.sparse_recovery import (
     SparsePITReattestationProcess,
 )
-from ditto_application.processes.materialization.cascade_orchestrator import (
-    InvalidationCascadeOrchestrator,
-)
 from ditto_application.processes.materialization.orchestrator import (
     DerivedMaterializationOrchestrator,
-)
-from ditto_application.processes.materialization.publication_facade import (
-    DerivedPublicationFacade,
 )
 from ditto_application.processes.research_dataset import ResearchDatasetBuildProcess
 from ditto_application.processes.strategy.seed_bootstrap import SeedStrategyBootstrap
@@ -83,8 +77,6 @@ class MaterializationBundle:
     """物化上下文组合包。"""
 
     materialization_service: DerivedMaterializationOrchestrator
-    invalidation_service: InvalidationCascadeOrchestrator
-    publication_facade: DerivedPublicationFacade
     research_dataset_build: ResearchDatasetBuildProcess
     research_dataset_query: ResearchDatasetQuery
     research_dataset_export: ResearchDatasetExport

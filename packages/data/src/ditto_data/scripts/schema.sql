@@ -644,31 +644,6 @@ CREATE TABLE IF NOT EXISTS derived_dependency (
 CREATE INDEX IF NOT EXISTS idx_derived_dependency_ref
     ON derived_dependency(dependency_ref);
 
-CREATE TABLE IF NOT EXISTS derived_invalidation (
-    invalidation_id TEXT PRIMARY KEY,
-    derived_id TEXT NOT NULL,
-    version INTEGER NOT NULL,
-    source_domain TEXT NOT NULL,
-    source_dataset TEXT NOT NULL,
-    change_date TEXT NOT NULL,
-    affected_start TEXT NOT NULL,
-    affected_end TEXT NOT NULL,
-    source_snapshot_id TEXT,
-    root_dependency_ref TEXT NOT NULL,
-    status TEXT NOT NULL,
-    created_at TEXT NOT NULL,
-    processed_at TEXT,
-    depth INTEGER NOT NULL DEFAULT 0,
-    retry_count INTEGER NOT NULL DEFAULT 0,
-    error_message TEXT,
-    dead_letter_at TEXT,
-    role TEXT NOT NULL DEFAULT 'factor'
-);
-CREATE INDEX IF NOT EXISTS idx_derived_invalidation_pending
-    ON derived_invalidation(status, created_at);
-CREATE INDEX IF NOT EXISTS idx_derived_invalidation_stale
-    ON derived_invalidation(status, depth, created_at);
-
 CREATE TABLE IF NOT EXISTS derived_state (
     derived_id TEXT PRIMARY KEY,
     active_version INTEGER,
@@ -679,14 +654,6 @@ CREATE TABLE IF NOT EXISTS derived_state (
     latest_run_status TEXT,
     total_rows INTEGER NOT NULL,
     updated_at TEXT NOT NULL
-);
-
-CREATE TABLE IF NOT EXISTS derived_shadow_slot (
-    derived_id TEXT PRIMARY KEY,
-    candidate_version INTEGER NOT NULL,
-    baseline_version INTEGER,
-    activated_at TEXT NOT NULL,
-    disabled_at TEXT
 );
 
 CREATE TABLE IF NOT EXISTS compiled_expression_cache (
@@ -785,3 +752,6 @@ CREATE INDEX IF NOT EXISTS idx_research_dataset_snapshot_lookup
 -- 交易闭环表（trade_intents/execution_fills/actual_positions）由 ditto_execution
 -- 在独立 trading.sqlite 账本中建表并读写（paper_sessions/executions/account_journal），
 -- 元数据库不再保留这些定义。
+-- 发布安全机器表（derived_shadow_slot/derived_invalidation）已按 #444 删除：
+-- 因子发布直线为 计算→最小DQ→原子写产物与manifest→推进 derived_version.status，
+-- 不再有 shadow 双跑、certification 两阶段与级联失效队列。

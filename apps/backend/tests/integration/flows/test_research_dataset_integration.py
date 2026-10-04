@@ -22,12 +22,6 @@ from ditto_analysis.research.domain import (
 )
 from ditto_application.commands.research_dataset_export import ResearchDatasetExport
 from ditto_application.exceptions import AppProcessError
-from ditto_application.processes.materialization.cascade_orchestrator import (
-    InvalidationCascadeOrchestrator,
-)
-from ditto_application.processes.materialization.publication_facade import (
-    DerivedPublicationFacade,
-)
 from ditto_application.processes.research_dataset import ResearchDatasetBuildProcess
 from ditto_application.queries.research import ResearchDatasetQuery
 from ditto_apps.jobs.flows.research import research_dataset_build_flow
@@ -250,8 +244,6 @@ def _materialization_bundle_context():
     try:
         yield MaterializationBundle(
             materialization_service=container.get(DerivedMaterializationOrchestrator),
-            invalidation_service=container.get(InvalidationCascadeOrchestrator),
-            publication_facade=container.get(DerivedPublicationFacade),
             research_dataset_build=container.get(ResearchDatasetBuildProcess),
             research_dataset_query=container.get(ResearchDatasetQuery),
             research_dataset_export=container.get(ResearchDatasetExport),

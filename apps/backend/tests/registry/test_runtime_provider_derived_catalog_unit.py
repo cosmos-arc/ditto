@@ -22,7 +22,7 @@ from ditto_execution.audit import ExecutionAuditService
 from ditto_execution.audit.models import RiskScanPayload
 from ditto_execution.di import ExecutionStorageProvider
 from ditto_features.di import FeaturesStorageProvider
-from ditto_features.services import DerivedCatalogService, DerivedShadowSlotService
+from ditto_features.services import DerivedCatalogService
 from ditto_kernel.strategy import RiskScope
 from ditto_strategy.di import StrategyStorageProvider
 from ditto_strategy.governance.service import GovernanceService
@@ -122,30 +122,6 @@ class TestCapabilityStorageProviderDerivedWiring:
         service_2 = container.get(DerivedCatalogService)
 
         assert service_1 is service_2
-        container.close()
-
-    def test_features_provider_provides_shadow_slot_service(
-        self,
-        monkeypatch,
-        tmp_path,
-    ) -> None:
-        """DerivedShadowSlotService is owned by features storage wiring."""
-        from ditto_features.storage.runtime.publication_shadow_sqlite import (
-            SQLiteDerivedShadowSlotReader,
-            SQLiteDerivedShadowSlotWriter,
-        )
-
-        monkeypatch.setenv("ENVIRONMENT", "testing")
-        monkeypatch.setenv("DITTO_STATE_ROOT", tmp_path.as_posix())
-        container = _make_container()
-
-        reader = container.get(SQLiteDerivedShadowSlotReader)
-        writer = container.get(SQLiteDerivedShadowSlotWriter)
-        service = container.get(DerivedShadowSlotService)
-
-        assert isinstance(reader, SQLiteDerivedShadowSlotReader)
-        assert isinstance(writer, SQLiteDerivedShadowSlotWriter)
-        assert isinstance(service, DerivedShadowSlotService)
         container.close()
 
     def test_runtime_provider_provides_strategy_run_service(

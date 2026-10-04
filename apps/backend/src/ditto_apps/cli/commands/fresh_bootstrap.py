@@ -41,7 +41,6 @@ _TARGET_SPECS = (
     _TargetSpec("features"),
     _TargetSpec("factors"),
     _TargetSpec("derived/artifacts"),
-    _TargetSpec("derived/publication_safety"),
     _TargetSpec("research/research.sqlite"),
     _TargetSpec("research/research.sqlite-wal"),
     _TargetSpec("research/research.sqlite-shm"),

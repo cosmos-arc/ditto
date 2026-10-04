@@ -196,40 +196,6 @@ class TestDerivedExecutionPlanner:
 
         assert plan.compute_start == "2024-01-01"
 
-    def test_incremental_with_earlier_invalidation(self) -> None:
-        """INCREMENTAL mode with earlier invalidation adjusts anchor_start."""
-        planner = DerivedExecutionPlanner()
-        spec = _make_spec()
-        compiled = _make_compiled(lookback=0)
-        request = _make_request(mode=DerivedRunMode.INCREMENTAL, start="2024-06-01")
-
-        plan = planner.plan(
-            spec=spec,
-            compiled=compiled,
-            request=request,
-            earliest_pending_invalidation_start="2024-03-01",
-        )
-
-        # anchor_start should be the earlier invalidation date
-        assert plan.compute_start == "2024-03-01"
-
-    def test_incremental_with_later_invalidation(self) -> None:
-        """INCREMENTAL mode with later invalidation uses request_start."""
-        planner = DerivedExecutionPlanner()
-        spec = _make_spec()
-        compiled = _make_compiled(lookback=0)
-        request = _make_request(mode=DerivedRunMode.INCREMENTAL, start="2024-06-01")
-
-        plan = planner.plan(
-            spec=spec,
-            compiled=compiled,
-            request=request,
-            earliest_pending_invalidation_start="2024-08-01",
-        )
-
-        # Invalidations after request_start don't affect anchor
-        assert plan.compute_start == "2024-06-01"
-
     def test_partitions_for_multi_year(self) -> None:
         """Multi-year request produces correct partitions."""
         planner = DerivedExecutionPlanner()

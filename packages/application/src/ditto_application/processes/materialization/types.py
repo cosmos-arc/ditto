@@ -8,7 +8,7 @@ helper that validates dependency columns against an input frame.
 
 from __future__ import annotations
 
-from collections.abc import Iterable, Mapping
+from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any, Protocol, cast
 
@@ -22,7 +22,7 @@ from ditto_features.materialization import (
     DerivedExecutionPlan,
     DerivedMaterializationRequest,
 )
-from ditto_features.models.derived import DerivedInvalidationRecord, DerivedSpecRecord
+from ditto_features.models.derived import DerivedSpecRecord
 from ditto_kernel.market import CalendarId, GrainId, TimeSpec
 from ditto_kernel.strategy import ExecutionPolicy
 
@@ -34,7 +34,6 @@ __all__ = [
     "InputContext",
     "MissingDependencyError",
     "UnavailableDerivedInputProvider",
-    "earliest_pending_start",
     "hydrate_spec",
     "prepare_input_frame",
 ]
@@ -253,27 +252,6 @@ def _require_int_payload(
             value=value,
         )
     return value
-
-
-# ---------------------------------------------------------------------------
-# Invalidation helpers
-# ---------------------------------------------------------------------------
-
-
-def earliest_pending_start(
-    invalidations: Iterable[DerivedInvalidationRecord],
-    derived_id: str,
-    version: int,
-) -> str | None:
-    """Return the earliest affected_start among pending invalidations."""
-    starts = [
-        invalidation.affected_start
-        for invalidation in invalidations
-        if invalidation.derived_id == derived_id and invalidation.version == version
-    ]
-    if not starts:
-        return None
-    return min(starts)
 
 
 # ---------------------------------------------------------------------------

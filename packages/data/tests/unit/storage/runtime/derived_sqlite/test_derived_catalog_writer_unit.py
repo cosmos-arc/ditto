@@ -112,22 +112,6 @@ class TestWriteRunStatusGuard:
             writer.write_run(record)
 
 
-class TestMarkInvalidationStatusGuard:
-    """mark_invalidation_status() must reject invalid status strings."""
-
-    def test_accepts_valid_status(self) -> None:
-        """Valid CascadeStatus values should not raise."""
-        writer = _make_writer()
-        for status in ("fresh", "stale", "recomputing", "healed"):
-            writer.mark_invalidation_status("inval-001", status)  # should not raise
-
-    def test_rejects_invalid_status(self) -> None:
-        """Invalid status string should raise FeatureStorageError."""
-        writer = _make_writer()
-        with pytest.raises(FeatureStorageError, match=r"invalid.*invalidation.*status"):
-            writer.mark_invalidation_status("inval-001", "BOGUS")
-
-
 class TestUnitOfWorkExecuteMethods:
     """P1-1: execute_*() methods run SQL without committing."""
 

@@ -1,54 +1,32 @@
-"""Publication safety models for derived release control."""
+"""
+Publication records for derived materialization.
+
+因子物化发布的两个承重概念：兼容性 manifest（产物身份：输入快照与计算
+身份的冻结记录）与最小 DQ 摘要（发布前的必要正确性验证）。shadow 双跑、
+certification 两阶段等发布安全机器已按 #444 删除；产物身份的唯一载体是
+artifact metadata 中的 publication 块。
+"""
 
 from __future__ import annotations
 
 from dataclasses import dataclass
-from enum import StrEnum
 
 from ditto_kernel.time_semantics import DEFAULT_PIT_TIME_COLUMN, PIT_POLICY_FAIL_CLOSED
-
-from ditto_features.derived_types import (
-    DerivedRole as _DerivedRole,
-)
-from ditto_features.derived_types import (
-    MaterializationProfile as _MaterializationProfile,
-)
-
-type CompileFlagValue = str | int | float | bool
-type JsonPrimitive = None | bool | int | float | str
-type JsonValue = JsonPrimitive | list["JsonValue"] | dict[str, "JsonValue"]
+from ditto_platform.foundation.json_types import JsonDict
 
 __all__ = [
-    "CertificationCheckResult",
-    "CertificationPack",
-    "CertificationReport",
-    "CertificationStage",
     "CompatibilityManifest",
+    "CompatibilityManifestRecord",
     "CompileFlagValue",
     "DerivedMinimalDQSummary",
-    "PublicationSafetySeverity",
-    "ShadowDiffReport",
-    "ShadowTraceRecord",
+    "DerivedMinimalDQSummaryRecord",
 ]
+
+type CompileFlagValue = str | int | float | bool
 
 _JUMP_RATE_THRESHOLD: float = 0.3
 _DISTRIBUTION_DRIFT_THRESHOLD: float = 0.1
 _COVERAGE_RATE_MINIMUM: float = 0.95
-
-
-class PublicationSafetySeverity(StrEnum):
-    """Severity levels for publication safety checks."""
-
-    ERROR = "ERROR"
-    WARNING = "WARNING"
-    INFO = "INFO"
-
-
-class CertificationStage(StrEnum):
-    """Certification gate stages."""
-
-    SHADOW_READY = "shadow_ready"
-    PUBLISH_READY = "publish_ready"
 
 
 @dataclass(frozen=True)
@@ -110,6 +88,17 @@ class CompatibilityManifest:
 
 
 @dataclass(frozen=True)
+class CompatibilityManifestRecord:
+    """Persisted manifest record embedded into artifact metadata."""
+
+    derived_id: str
+    version: int
+    manifest_hash: str
+    payload: JsonDict
+    created_at: str
+
+
+@dataclass(frozen=True)
 class DerivedMinimalDQSummary:
     """Minimal DQ summary collected from one derived materialization output."""
 
@@ -160,103 +149,13 @@ class DerivedMinimalDQSummary:
 
 
 @dataclass(frozen=True)
-class ShadowDiffReport:
-    """Aggregated candidate/baseline diff result."""
+class DerivedMinimalDQSummaryRecord:
+    """Persisted minimal DQ record embedded into artifact metadata."""
 
-    report_id: str
-    derived_id: str
-    candidate_version: int
-    baseline_version: int
-    request_count: int
-    sample_count: int
-    schema_match: bool
-    value_diff_rate: float
-    coverage_delta: float
-    freshness_delta: float | None
-    latency_p50_delta: float | None
-    latency_p95_delta: float | None
-    fallback_ratio_delta: float | None
-    error_count: int
-    warning_count: int
-    info_count: int
-    candidate_manifest_hash: str
-    baseline_manifest_hash: str
-    created_at: str
-
-    def has_blocking_errors(self) -> bool:
-        """Return whether the diff contains blocking errors."""
-        return self.error_count > 0
-
-
-@dataclass(frozen=True)
-class ShadowTraceRecord:
-    """Sampled trace record for shadow diff explainability."""
-
-    trace_id: str
-    report_id: str
-    request_context: dict[str, JsonValue]
-    candidate_value: JsonValue
-    baseline_value: JsonValue
-    diff_category: str
-    candidate_manifest_hash: str
-    baseline_manifest_hash: str
-    sampled_at: str
-
-
-@dataclass(frozen=True)
-class CertificationCheckResult:
-    """Single certification check result."""
-
-    name: str
-    severity: PublicationSafetySeverity
-    passed: bool
-    message: str
-    metric_value: float | int | str | None = None
-    threshold_value: float | int | str | None = None
-
-
-@dataclass(frozen=True)
-class CertificationPack:
-    """Pack definition for a certification gate."""
-
-    pack_id: str
-    role: _DerivedRole
-    materialization_profile: _MaterializationProfile
-    stage: CertificationStage
-    check_names: tuple[str, ...]
-
-
-@dataclass(frozen=True)
-class CertificationReport:
-    """Resolved certification result for a candidate version."""
-
-    report_id: str
-    pack: CertificationPack
     derived_id: str
     version: int
-    checks: tuple[CertificationCheckResult, ...]
-    manifest_hash: str
-    shadow_diff_report_id: str | None
+    run_id: str
+    passed: bool
+    error_count: int
+    payload: JsonDict
     created_at: str
-
-    def has_blocking_errors(self) -> bool:
-        """Return whether any ERROR-level check failed."""
-        return any(
-            check.severity == PublicationSafetySeverity.ERROR and not check.passed
-            for check in self.checks
-        )
-
-    def is_passed(self) -> bool:
-        """Return whether the certification passes its gate."""
-        return not self.has_blocking_errors()
-
-    def check_counts(self) -> dict[PublicationSafetySeverity, int]:
-        """Return failing check counts grouped by severity."""
-        return {
-            severity: sum(
-                1
-                for check in self.checks
-                if check.severity == severity and not check.passed
-            )
-            for severity in PublicationSafetySeverity
-        }

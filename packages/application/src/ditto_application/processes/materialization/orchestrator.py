@@ -23,7 +23,7 @@ from ditto_data.lineage.contracts import (
 )
 from ditto_features.compile_cache import SQLiteCompileCache
 from ditto_features.derived_types import DerivedSpec, MaterializationProfile
-from ditto_features.expression import CompiledDerivedExpression, CompileIdentity
+from ditto_features.expression import CompiledDerivedExpression
 from ditto_features.materialization import (
     DerivedExecutionPlan,
     DerivedExecutionPlanner,
@@ -33,6 +33,7 @@ from ditto_features.materialization import (
     DerivedRunStatus,
     DerivedRunTrigger,
 )
+from ditto_features.materialization.publication import CompatibilityManifestRecord
 from ditto_features.models.derived import (
     DerivedCheckpointRecord,
     DerivedDependencyRecord,
@@ -42,13 +43,11 @@ from ditto_features.models.derived import (
     DerivedStateRecord,
     PartitionInfo,
 )
-from ditto_features.publication_safety_records import DerivedMinimalDQSummaryRecord
 from ditto_features.services import (
     ArtifactMetadataParams,
-    ArtifactMetadataUpdateParams,
     ArtifactPersistenceService,
+    DerivedArtifactReader,
     DerivedCatalogService,
-    PublicationSafetyRecordService,
 )
 
 from ditto_application.config import now_iso
@@ -76,7 +75,6 @@ from ditto_application.processes.materialization.source_snapshot_resolver import
 from ditto_application.processes.materialization.types import (
     DerivedInputProvider,
     InputContext,
-    earliest_pending_start,
     hydrate_spec,
     prepare_input_frame,
 )
@@ -121,7 +119,7 @@ class MaterializationRuntimePorts:
     input_provider: DerivedInputProvider
     source_snapshot_resolver: SourceSnapshotResolver | None = None
     universe_provider: UniverseProvider | None = None
-    publication_record_service: PublicationSafetyRecordService | None = None
+    artifact_reader: DerivedArtifactReader | None = None
     lineage_recorder: DataLineageRecorder | None = None
 
 
@@ -153,20 +151,6 @@ class MaterializedDataPersistenceContext:
     compiled: CompiledDerivedExpression
     run: _RunIdentity
     materialized_frame: pl.DataFrame
-    source_snapshot_ids: tuple[str, ...]
-
-
-@dataclass(frozen=True)
-class PublicationSafetyPersistenceContext:
-    """Fields required to persist publication safety records."""
-
-    spec: DerivedSpec
-    spec_record: DerivedSpecRecord
-    run_id: str
-    request: DerivedMaterializationRequest
-    compile_identity: CompileIdentity
-    partitions: tuple[PartitionInfo, ...]
-    minimal_dq_record: DerivedMinimalDQSummaryRecord
     source_snapshot_ids: tuple[str, ...]
 
 
@@ -243,7 +227,7 @@ class DerivedMaterializationOrchestrator:
         self._input_provider = ports.input_provider
         self._source_snapshot_resolver = ports.source_snapshot_resolver
         self._universe_provider = ports.universe_provider
-        self._publication_record_service = ports.publication_record_service
+        self._artifact_reader = ports.artifact_reader
         self._lineage_recorder = ports.lineage_recorder
         self._planner = DerivedExecutionPlanner()
 
@@ -275,16 +259,10 @@ class DerivedMaterializationOrchestrator:
             spec,
             force_recompile=request.force_recompile,
         )
-        earliest_pending = earliest_pending_start(
-            self._catalog_service.list_stale_invalidations(),
-            spec.id,
-            spec.version,
-        )
         plan = self._planner.plan(
             spec=spec,
             compiled=compiled,
             request=request,
-            earliest_pending_invalidation_start=earliest_pending,
         )
         run_id = f"drv-{uuid4().hex[:12]}"
         started_at = now_iso()
@@ -421,6 +399,31 @@ class DerivedMaterializationOrchestrator:
                 rows_written=materialized_frame.height,
                 dependencies=ctx.compiled.analysis.dependencies,
             )
+        manifest_record = build_manifest_record(
+            spec=spec,
+            version=spec.version,
+            compile_identity=ctx.compiled.compile_identity,
+            source_snapshot_id=request.source_snapshot_id,
+            source_snapshot_ids=ctx.source_snapshot_ids,
+        )
+        minimal_dq_record = build_minimal_dq_record(
+            spec=spec,
+            run_id=run.run_id,
+            version=spec.version,
+            frame=materialized_frame,
+        )
+        if not minimal_dq_record.passed:
+            raise AppProcessError(
+                "minimal DQ failed, refusing to publish: "
+                + f"derived_id={spec.id} v={spec.version} "
+                + f"failed_checks={minimal_dq_record.payload.get('failed_checks')}"
+            )
+        self._verify_deterministic_retry(
+            spec=spec,
+            request=request,
+            manifest_record=manifest_record,
+            frame=materialized_frame,
+        )
         time_key = spec.effective_time_keys[0]
         partitions = self._artifact_writer.write_durable_partitions(
             spec=ctx.spec_record,
@@ -442,28 +445,10 @@ class DerivedMaterializationOrchestrator:
                 request_end=request.request_end,
                 source_snapshot_id=request.source_snapshot_id,
                 source_snapshot_ids=ctx.source_snapshot_ids,
+                manifest_record=manifest_record,
+                minimal_dq_record=minimal_dq_record,
             ),
         )
-        minimal_dq_record = None
-        if self._publication_record_service is not None:
-            minimal_dq_record = build_minimal_dq_record(
-                spec=spec,
-                run_id=run.run_id,
-                version=spec.version,
-                frame=materialized_frame,
-            )
-            self._persist_publication_safety_records(
-                PublicationSafetyPersistenceContext(
-                    spec=spec,
-                    spec_record=ctx.spec_record,
-                    run_id=run.run_id,
-                    request=request,
-                    compile_identity=ctx.compiled.compile_identity,
-                    partitions=partitions,
-                    minimal_dq_record=minimal_dq_record,
-                    source_snapshot_ids=ctx.source_snapshot_ids,
-                )
-            )
         return self._finalize_durable_run(
             spec=spec,
             request=request,
@@ -579,6 +564,11 @@ class DerivedMaterializationOrchestrator:
                 updated_at=finished_at,
             )
         )
+        self._catalog_service.publish_version(
+            derived_id=spec.id,
+            version=spec.version,
+            updated_at=finished_at,
+        )
         self._persist_dependencies(
             derived_id=spec.id,
             version=spec.version,
@@ -683,34 +673,60 @@ class DerivedMaterializationOrchestrator:
             return provenance
         return SourceSnapshotProvenance.from_ids((context.request.source_snapshot_id,))
 
-    def _persist_publication_safety_records(
+    def _verify_deterministic_retry(
         self,
-        ctx: PublicationSafetyPersistenceContext,
+        *,
+        spec: DerivedSpec,
+        request: DerivedMaterializationRequest,
+        manifest_record: CompatibilityManifestRecord,
+        frame: pl.DataFrame,
     ) -> None:
-        publication_record_service = self._publication_record_service
-        if publication_record_service is None:
-            raise AppProcessError("publication record service is not configured")
-        manifest_record = build_manifest_record(
-            spec=ctx.spec,
-            version=ctx.spec.version,
-            compile_identity=ctx.compile_identity,
-            source_snapshot_id=ctx.request.source_snapshot_id,
-            source_snapshot_ids=ctx.source_snapshot_ids,
+        """
+        相同输入身份的重试必须产出一致内容（#444 直线发布判定）.
+
+        仅当上次成功 run 与本次请求完全相同（窗口与 manifest 身份）时比对
+        已发布窗口内容；新公式/新输入产生新身份，允许值变化（首版无基准
+        也可发布）。比对发生在任何写入之前，拒绝时不触碰已发布产物。
+        """
+        reader = self._artifact_reader
+        if reader is None:
+            return
+        last_success = self._catalog_service.get_latest_successful_run(
+            spec.id,
+            spec.version,
         )
-        publication_record_service.save_manifest(manifest_record)
-        publication_record_service.save_minimal_dq_summary(ctx.minimal_dq_record)
-        self._artifact_writer.update_artifact_metadata(
-            ArtifactMetadataUpdateParams(
-                spec=ctx.spec_record,
-                run_id=ctx.run_id,
-                compile_identity=asdict(ctx.compile_identity),
-                partitions=ctx.partitions,
-                source_snapshot_id=ctx.request.source_snapshot_id,
-                manifest_record=manifest_record,
-                minimal_dq_record=ctx.minimal_dq_record,
-                source_snapshot_ids=ctx.source_snapshot_ids,
+        if last_success is None:
+            return
+        if (
+            last_success.request_start,
+            last_success.request_end,
+        ) != (request.request_start, request.request_end):
+            return
+        last_manifest_hash = reader.read_run_manifest_hash(
+            spec.id,
+            spec.version,
+            last_success.run_id,
+        )
+        if last_manifest_hash != manifest_record.manifest_hash:
+            return
+        published = reader.read_frame(
+            derived_id=spec.id,
+            version=spec.version,
+            start=request.request_start,
+            end=request.request_end,
+        )
+        if published.is_empty():
+            return
+        sort_keys = [*spec.entity_keys, *spec.effective_time_keys]
+        expected = frame.sort(sort_keys)
+        actual = published.select(frame.columns).sort(sort_keys)
+        if not expected.equals(actual):
+            raise AppProcessError(
+                "deterministic retry mismatch: same input identity produced "
+                + f"different content for derived_id={spec.id} v={spec.version} "
+                + f"window={request.request_start}..{request.request_end}; "
+                + "published artifacts were not modified"
             )
-        )
 
     def _maybe_apply_cs_amplification(
         self,

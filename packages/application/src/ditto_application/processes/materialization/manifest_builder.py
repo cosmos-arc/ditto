@@ -1,4 +1,4 @@
-"""Manifest building — compatibility manifest records for publication safety."""
+"""Manifest building — 产物身份（兼容性 manifest）构建."""
 
 from __future__ import annotations
 
@@ -10,14 +10,15 @@ from typing import cast
 import orjson
 from ditto_features.derived_types import DerivedSpec
 from ditto_features.expression.contracts import CompileIdentity
-from ditto_features.publication_safety import CompatibilityManifest
-from ditto_features.publication_safety_records import CompatibilityManifestRecord
-from ditto_features.services import DerivedCatalogService
+from ditto_features.materialization.publication import (
+    CompatibilityManifest,
+    CompatibilityManifestRecord,
+)
 from ditto_platform.foundation.json_types import JsonDict
 
 from ditto_application.config import now_iso
 
-__all__ = ["build_manifest_record", "resolve_shadow_baseline"]
+__all__ = ["build_manifest_record"]
 
 
 # ---------------------------------------------------------------------------
@@ -97,39 +98,3 @@ def _compile_flags_dict(flags: tuple[str, ...]) -> dict[str, str | int | float |
 def _manifest_hash(payload: JsonDict) -> str:
     serialized = orjson.dumps(payload, option=orjson.OPT_SORT_KEYS)
     return sha256(serialized).hexdigest()
-
-
-# ---------------------------------------------------------------------------
-# Shadow baseline
-# ---------------------------------------------------------------------------
-
-
-def resolve_shadow_baseline(
-    *,
-    catalog_service: DerivedCatalogService,
-    derived_id: str,
-    candidate_version: int,
-) -> int | None:
-    """Find the primary online version to use as shadow comparison baseline."""
-    primary_online = next(
-        (
-            record.version
-            for record in catalog_service.list_versions(derived_id)
-            if (
-                record.is_primary
-                and record.is_online
-                and record.version != candidate_version
-            )
-        ),
-        None,
-    )
-    if primary_online is not None:
-        return primary_online
-    return next(
-        (
-            record.version
-            for record in catalog_service.list_versions(derived_id)
-            if record.is_primary and record.version != candidate_version
-        ),
-        None,
-    )

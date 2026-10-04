@@ -38,19 +38,6 @@ from ditto_features.services import (
     ArtifactPersistenceService,
     DerivedArtifactReader,
     DerivedCatalogService,
-    DerivedShadowSlotService,
-    PublicationSafetyRecordService,
-    PublicationSafetyRuntimeStores,
-)
-from ditto_features.storage.runtime.publication_safety import (
-    CertificationReader,
-    CertificationWriter,
-    ManifestReader,
-    ManifestWriter,
-    MinimalDQReader,
-    MinimalDQWriter,
-    ShadowReportReader,
-    ShadowReportWriter,
 )
 from ditto_platform.services import AlertManager
 from ditto_strategy.governance.service import GovernanceService
@@ -139,16 +126,10 @@ from ditto_application.processes.ingestion.evidence_commit import (
 from ditto_application.processes.ingestion.r2_preflight import (
     R2AcceptanceRuntimeEvidence,
 )
-from ditto_application.processes.materialization.cascade_orchestrator import (
-    InvalidationCascadeOrchestrator,
-)
 from ditto_application.processes.materialization.orchestrator import (
     DerivedMaterializationOrchestrator,
     MaterializationRuntimePorts,
     RuntimeDerivedInputProvider,
-)
-from ditto_application.processes.materialization.publication_facade import (
-    DerivedPublicationFacade,
 )
 from ditto_application.processes.materialization.source_snapshot_resolver import (
     CatalogSourceSnapshotResolver,
@@ -179,7 +160,6 @@ class _MaterializationGovernancePorts:
 
     source_snapshot_resolver: CatalogSourceSnapshotResolver
     universe_provider: MetadataService
-    publication_record_service: PublicationSafetyRecordService
     lineage_recorder: DataLineageRecorder
 
 
@@ -494,25 +474,6 @@ class AppProcessProvider(Provider):
         )
 
     @provide
-    def publication_safety_record_service(
-        self,
-        settings: DataStoreSettings,
-    ) -> PublicationSafetyRecordService:
-        """发布安全记录服务."""
-        data_root = settings.data_root
-        stores = PublicationSafetyRuntimeStores(
-            manifest_reader=ManifestReader(base_path=data_root),
-            manifest_writer=ManifestWriter(base_path=data_root),
-            minimal_dq_reader=MinimalDQReader(base_path=data_root),
-            minimal_dq_writer=MinimalDQWriter(base_path=data_root),
-            shadow_report_reader=ShadowReportReader(base_path=data_root),
-            shadow_report_writer=ShadowReportWriter(base_path=data_root),
-            certification_reader=CertificationReader(base_path=data_root),
-            certification_writer=CertificationWriter(base_path=data_root),
-        )
-        return PublicationSafetyRecordService(stores)
-
-    @provide
     def derived_artifact_writer(
         self,
         settings: DataStoreSettings,
@@ -541,14 +502,12 @@ class AppProcessProvider(Provider):
         self,
         source_snapshot_resolver: CatalogSourceSnapshotResolver,
         metadata_service: MetadataService,
-        publication_record_service: PublicationSafetyRecordService,
         lineage_recorder: DataLineageRecorder,
     ) -> _MaterializationGovernancePorts:
         """衍生物化治理侧运行时 collaborators."""
         return _MaterializationGovernancePorts(
             source_snapshot_resolver=source_snapshot_resolver,
             universe_provider=metadata_service,
-            publication_record_service=publication_record_service,
             lineage_recorder=lineage_recorder,
         )
 
@@ -560,6 +519,7 @@ class AppProcessProvider(Provider):
         artifact_writer: ArtifactPersistenceService,
         derived_input_provider: RuntimeDerivedInputProvider,
         governance_ports: _MaterializationGovernancePorts,
+        settings: DataStoreSettings,
     ) -> MaterializationRuntimePorts:
         """组装衍生物化编排器运行时 ports."""
         return MaterializationRuntimePorts(
@@ -569,7 +529,10 @@ class AppProcessProvider(Provider):
             input_provider=derived_input_provider,
             source_snapshot_resolver=governance_ports.source_snapshot_resolver,
             universe_provider=governance_ports.universe_provider,
-            publication_record_service=governance_ports.publication_record_service,
+            artifact_reader=DerivedArtifactReader(
+                catalog_service=derived_catalog_service,
+                artifact_root=Path(settings.data_root),
+            ),
             lineage_recorder=governance_ports.lineage_recorder,
         )
 
@@ -580,37 +543,6 @@ class AppProcessProvider(Provider):
     ) -> DerivedMaterializationOrchestrator:
         """衍生因子物化编排器."""
         return DerivedMaterializationOrchestrator(ports)
-
-    @provide
-    def derived_invalidation_orchestrator(
-        self,
-        derived_catalog_service: DerivedCatalogService,
-        derived_materialization_orchestrator: DerivedMaterializationOrchestrator,
-    ) -> InvalidationCascadeOrchestrator:
-        """衍生因子失效级联编排器."""
-        return InvalidationCascadeOrchestrator(
-            catalog_service=derived_catalog_service,
-            materialization_service=derived_materialization_orchestrator,
-        )
-
-    @provide
-    def derived_publication_facade(
-        self,
-        derived_catalog_service: DerivedCatalogService,
-        publication_record_service: PublicationSafetyRecordService,
-        shadow_slot_service: DerivedShadowSlotService,
-        settings: DataStoreSettings,
-    ) -> DerivedPublicationFacade:
-        """衍生因子发布门面."""
-        return DerivedPublicationFacade(
-            catalog_service=derived_catalog_service,
-            artifact_reader=DerivedArtifactReader(
-                catalog_service=derived_catalog_service,
-                artifact_root=Path(settings.data_root),
-            ),
-            publication_record_service=publication_record_service,
-            shadow_slot_service=shadow_slot_service,
-        )
 
     @provide
     def quality_patrol_service(

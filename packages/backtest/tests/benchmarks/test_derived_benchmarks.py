@@ -34,7 +34,6 @@ def test_default_workloads_cover_phase6_targets() -> None:
     assert [workload.name for workload in workloads] == [
         "query",
         "materialize",
-        "shadow_compare",
     ]
     assert {scale.name for workload in workloads for scale in workload.scales} == {
         "S",
@@ -78,7 +77,6 @@ def test_run_benchmark_suite_returns_positive_measurements_for_s_scale() -> None
     assert [result.workload for result in results] == [
         "query",
         "materialize",
-        "shadow_compare",
     ]
     assert {result.scale for result in results} == {"S"}
     for result in results:

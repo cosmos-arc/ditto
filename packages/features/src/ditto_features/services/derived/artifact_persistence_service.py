@@ -9,13 +9,11 @@ import polars as pl
 from ditto_features.models.derived import DerivedSpecRecord, PartitionInfo
 from ditto_features.storage.derived_artifact_writer import (
     ArtifactMetadataParams,
-    ArtifactMetadataUpdateParams,
     DerivedArtifactWriter,
 )
 
 __all__ = [
     "ArtifactMetadataParams",
-    "ArtifactMetadataUpdateParams",
     "ArtifactPersistenceService",
 ]
 
@@ -83,10 +81,3 @@ class ArtifactPersistenceService:
     ) -> None:
         """Write run metadata as artifact_metadata.json."""
         self._writer.write_artifact_metadata(params)
-
-    def update_artifact_metadata(
-        self,
-        params: ArtifactMetadataUpdateParams,
-    ) -> None:
-        """Read existing metadata JSON and inject publication safety info."""
-        self._writer.update_artifact_metadata(params)

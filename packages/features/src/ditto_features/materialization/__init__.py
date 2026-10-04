@@ -8,7 +8,6 @@ from ditto_features.expression.contracts import (
 )
 from ditto_features.materialization.contracts import (
     DerivedExecutionPlan,
-    DerivedInvalidationEvent,
     DerivedMaterializationRequest,
     DerivedMaterializationResult,
 )
@@ -31,7 +30,6 @@ __all__ = [
     "CompiledDerivedExpression",
     "DerivedExecutionPlan",
     "DerivedExecutionPlanner",
-    "DerivedInvalidationEvent",
     "DerivedMaterializationRequest",
     "DerivedMaterializationResult",
     "DerivedPartition",
