@@ -146,7 +146,7 @@ class FredSource:
         Fetch macro indicators for a date range from FRED.
 
         Args:
-            codes: 指标代码列表 (如 ["US_CPI_YOY", "US_GDP_QOY"])。
+            codes: 指标代码列表 (如 ["US_CPI_INDEX", "US_GDP_QOY"])。
             start_date: 开始日期 (YYYY-MM-DD)。
             end_date: 结束日期 (YYYY-MM-DD)。
             realtime_start: 可选 ALFRED realtime 窗口起点 (YYYY-MM-DD).

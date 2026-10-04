@@ -85,8 +85,18 @@ def test_dollar_index_indicators_exist() -> None:
 
 
 def test_models_mirror_matches_registry() -> None:
-    """models.FRED_INDICATOR_CODES 镜像与 fred 注册表同步（供 application 层使用）."""
+    """镜像 ⊇ 注册表，且多余项恰为已退役 FRED 代码（供 application 层使用）."""
     from ditto_data.models import FRED_INDICATOR_CODES
     from ditto_data.sources.fred.indicators import FRED_INDICATORS
 
-    assert frozenset(FRED_INDICATORS) == FRED_INDICATOR_CODES
+    retired = {
+        "US_CPI_YOY",
+        "US_CPI_CORE_YOY",
+        "US_PCE_YOY",
+        "US_PCE_CORE_YOY",
+        "US_M2_YOY",
+    }
+    assert frozenset(FRED_INDICATORS) <= FRED_INDICATOR_CODES
+    assert FRED_INDICATOR_CODES - frozenset(FRED_INDICATORS) == retired
+    # 退役代码不在注册表（防止新旧并存）
+    assert not (retired & frozenset(FRED_INDICATORS))

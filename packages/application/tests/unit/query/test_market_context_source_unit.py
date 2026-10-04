@@ -692,6 +692,16 @@ def _macro_edge_frame(variant: str, cutoff: datetime) -> pl.DataFrame:
                 "forecast": [49.0, 54.0],
             }
         ),
+        # 退役旧代码的存量行（历史上以 US_CPI_YOY 入库）同样是 FRED 数据，
+        # 不得漏进决策输入
+        "fred_legacy_codes": pl.DataFrame(
+            {
+                "event_time": [cutoff - timedelta(days=1), cutoff],
+                "indicator": ["US_CPI_YOY", "US_M2_YOY"],
+                "value": [300.0, 21000.0],
+                "forecast": [None, None],
+            }
+        ),
         # FRED 宏观（展示-only）行被过滤后无剩余 → 不产生分数
         "fred_only": pl.DataFrame(
             {
@@ -727,6 +737,7 @@ def _macro_edge_frame(variant: str, cutoff: datetime) -> pl.DataFrame:
         pytest.param("null_surprise", None, None),
         pytest.param("valid", 1.0 / 54.0, 0.10),
         pytest.param("fred_only", None, None),
+        pytest.param("fred_legacy_codes", None, None),
         pytest.param("mixed_sources", None, 0.10),
     ],
 )

@@ -54,10 +54,12 @@ METAL_CODE_ALIASES: dict[str, str] = {
     "XAGUSD": "XAGUSD.FXCM",
 }
 
-# FRED 注册指标代码全集（#432）：镜像 sources/fred/indicators.py 的注册键。
+# FRED 指标代码全集（#432）：sources/fred/indicators.py 注册键 ∪ 已退役
+# 代码（历史上以旧名入库的行同样不得进入决策输入，见 #451 展示-only 裁决）。
 # application 层按 importlinter 契约不得导入 concrete sources，经本模块
-# 暴露；data 层单测（fred/test_indicators.py）保证镜像与注册表同步。
-# 全球参考展示-only：不得进入策略特征/回测/Paper/Agent 决策输入（#451）。
+# 暴露；data 层单测（fred/test_indicators.py）锁定"注册表 ⊆ 镜像，且
+# 镜像多余项恰为已退役清单"。
+# 全球参考展示-only：不得进入策略特征/回测/Paper/Agent 决策输入。
 FRED_INDICATOR_CODES: frozenset[str] = frozenset(
     {
         "US_GDP_QOQ",
@@ -80,6 +82,12 @@ FRED_INDICATOR_CODES: frozenset[str] = frozenset(
         "COMMOD_BRENT",
         "VIX_30D",
         "US_DOLLAR_INDEX_BROAD",
+        # 已退役（#432 改名/清理前的旧代码，存量行仍是 FRED 数据）
+        "US_CPI_YOY",
+        "US_CPI_CORE_YOY",
+        "US_PCE_YOY",
+        "US_PCE_CORE_YOY",
+        "US_M2_YOY",
     }
 )
 
