@@ -8,6 +8,13 @@
 > 不在此重复，见该文与[数据层全景图](data-layer-map.md)；本文聚焦本轮新增事实
 > （业界对标、三源能力边界、新源选型）与据此作出的裁决。实际拉数入库与代码改造
 > 在地图之外，按实施票执行。
+>
+> **二次复审修订（2026-10-04）**：本报告若干论据与结论已被
+> [二次复审线](https://github.com/cosmos-arc/ditto/issues/449)收窄，正式边界以
+> [维护者裁决 #451](https://github.com/cosmos-arc/ditto/issues/451#issuecomment-5975629762)为准，
+> 分册事实见 `docs/research/2026-10-04-*-second-review.md`。本文已按其修订：
+> 绝对化措辞（零同构/无监控）、EODHD 商品能力、NDX 示例、指数点位与汇率语义、
+> vintage 边界；实施票规格（#431–#439）已另行同步，以票面为准。
 
 ## 背景与范围
 
@@ -52,24 +59,26 @@ feed；机构级 PIT 约定（Compustat as-first-reported、IBES ANNDATS）仅�
 | 名称/ST 历史 | 历史＋显式未知，无证据日期不回填 | Zipline supplementary_mappings；ST 概念国内项目未见同层 | ditto 深于点名国内项目 |
 | 交易日历 | trading_calendar 表（8,401 行） | Lean market-hours、Zipline exchange-calendars、Qlib calendars | vnpy/backtrader/个人实践无独立日历 |
 | 增量摄取 | flows{daily,eod,backfill,repair} | Qlib collector＋crontab；astock/usstock/CNEquity cron 增量＋断点续跑 | 同类普遍 |
-| 完成证据 | 三阶段 fetch log＋complete_evidence_id 绑定内容寻址快照 | 未见同构；最近似＝CNEquity 失败范围续跑、Zipline timestr 整包、ArcticDB 版本树 | 零同构（三件套之一） |
-| 行情 PIT | 行情 parquet 行级 knowledge_date＋cutoff 传播＋T+1 lag | 全部点名对象行情侧均无 knowledge date | 零同构（三件套之一）；财报侧才有同类（Qlib/CNEquity/机构） |
+| 完成证据 | 三阶段 fetch log＋complete_evidence_id 绑定内容寻址快照 | 未见同构；最近似＝CNEquity 失败范围续跑、Zipline timestr 整包、ArcticDB 版本树 | 点名样本内未见同构（三件套之一） |
+| 行情 PIT | 行情 parquet 行级 knowledge_date＋cutoff 传播＋T+1 lag | 点名样本无同名列；行情可见性保障以其它形式存在（LEAN EndTime/time frontier 防前视、按各市场收市交付） | 样本内未见同构（三件套之一）；财报侧才有同类（Qlib/CNEquity/机构） |
 | 财报 PIT | knowledge_date＋ProviderSnapshot 修订观察链（A→B→A 保留） | Qlib 四列＋_next 链、CNEquity strict as_of、ArcticDB 版本＋as_of datetime | ditto 以快照观察链实现修订保留，与 Qlib 同派 |
 | fail-closed | cutoff＋就绪检查＋行级过滤组合拒绝 | Qlib 禁止未来报告期、CNEquity strict 可空 | 组合式未见同构 |
 | 元数据/行情分库 | metadata.sqlite＋Parquet 年分区 | Zipline（SQLite＋bcolz）、astock（SQLite＋Parquet） | 混合布局有同构先例 |
 | 原始载荷留存 | provider_payloads 内容寻址不可变 | 仅 CNEquity staging 层同派 | 少数派做法（三件套之一） |
 | 派生布局 | factors/features＋湖投影层 | Qlib calculated features/cache（hash 目录） | Qlib 为唯一显式派生缓存同类 |
 | 质检 | DQ 四类检查＋跨源对账报告（#395 口径验收） | Qlib check_data_health、astock R1-R7/D1-D8、CNEquity cne check | 形态一致：离线命令＋非零退出 |
-| 监控告警 | 无 | 点名对象均无常驻监控/告警 | 一致 |
+| 监控告警 | 无 | LEAN 内嵌 DataMonitor（请求成败/缺失报告/频率统计）；点名对象均无独立监控平台 | 个人级不做常驻监控，失败/缺口/陈旧报告足够（#426 维持，证据口径已收窄） |
 | 治理工作流 | 认证/晋级/人工准入已删（#391/#392） | 无点名对象存在数据集认证/晋级工作流 | 删除后与业界形态一致 |
 
-### 零同构三件套与维持理由（#426 裁决）
+### 样本内未见同构的三件套与维持理由（#426 裁决）
 
-三件在全部点名对象中零同构：①行情侧行级 knowledge_date＋cutoff 传播＋T+1＋
+三件在点名样本中未发现同构工作流（LEAN 以 EndTime/time frontier 防前视、Zipline
+以 bundle timestamp 做版本级复现、ArcticDB 以版本树＋snapshot 承担相近目标——
+形式不同，不构成「业界无此保障」的证据）：①行情侧行级 knowledge_date＋cutoff 传播＋T+1＋
 fail-closed 组合；②三阶段 fetch log＋`complete_evidence_id` 内容寻址完成证据；
 ③`provider_payloads` 原始载荷留存。裁决全部维持：机构级靠供应商合同
 （as-first-reported 分发、WRDS vintage）达成同等保证，个人级自实现是合理替代；
-零同构是事实记录，不构成重开理由。provider_payloads 的内容寻址去重使磁盘成本
+样本内零同构是事实记录，不构成重开理由。provider_payloads 的内容寻址去重使磁盘成本
 可控，且是对账/审计/重放的锚。
 
 ### 过度设计与缺口（#426 裁决）
@@ -77,8 +86,9 @@ fail-closed 组合；②三阶段 fetch log＋`complete_evidence_id` 内容寻�
 - 过度设计新增清单＝**空**：#390 已砍到位，本轮对照未发现新条目。
 - 缺口三项成立：跨源对账覆盖面（仅 stock_daily，定序归 #427）；Tushare 接口补缺
   （清单归 #427/#428）；正确性缺陷立修复票 #431/#432/#433（见实施路线）。
-- 数据质量监控/告警**不做**：与全部点名对象一致（离线命令＋非零退出即验收），
-  地图雾项裁空。
+- 数据质量监控/告警**不做常驻平台**：个人级普遍以离线命令＋非零退出口径验收
+  （LEAN 的 DataMonitor 为引擎内嵌组件，非独立运维平台）；失败/缺口/陈旧数据
+  报告覆盖当前需求，地图雾项裁空。
 
 ## 三源接入调整定案（#422–#424 底稿 → #427 裁决）
 
@@ -140,12 +150,15 @@ vintage 语义钉死（#424，官方原文）：
 
 - **vintage 时间戳＝发布日**（release dates excluding no-change releases），
   不是观察日；`realtime_start/end` 是该值「成为最新已知值」的首个/末个发布日。
+  边界：只有 `vintagedates` 端点返回的才是发布/修订日；用户传入的 `vintage_dates`
+  可为任意历史日期，不能一律当发布事实。
 - **行级 realtime 字段会被请求窗口裁剪**：默认请求（窗口＝今天）返回的每一行
   realtime_start=realtime_end=今天，包括几十年前的观察；推论模型为区间交集
   `max(发布日, 请求起点)` / `min(取代日, 请求终点)`。宽窗口与当前值路径下
   `knowledge_date = realtime_start` 会被污染（偏晚，不泄漏但版本链失真）；
   修正方向＝单日窗口锚点（方案 A，保守正确）或 output_type=3 增量流自建 vintage
-  表（方案 B，lineage 精确）——归 #432 落地。
+  表（方案 B，lineage 精确）——完整历史 vintage 回放经 #451 裁决延后，
+  #432 本轮限展示正确性。
 - **生产摄取未接线 realtime 参数**：dataset_registry 走「今天 vintage」，ALFRED
   PIT 路径仅测试在用，宏观表 knowledge_date 实际＝请求日 → #432。
 - 月度序列 `date` 为每月 1 日（期初），**join 必须按 knowledge_date asof**，
@@ -154,8 +167,9 @@ vintage 语义钉死（#424，官方原文）：
   基准）、季调核心 CPI/PCE（每年 2 月全历史重算）；UNRATE 需重标 need_pit=True；
   利率/VIX/EIA 现货/DEX 定盘类基本不回改。
 - 3 个死注册序列：GOLDAMGBD228NLBM/SLVPRUSD（2022-01-31 IBA/LBMA 整体下线）、
-  VIX9D（序列页 404）——金银现货迁已实现的 Tushare METAL 通道（#432/#434），
-  VIX9D 需另寻源（CBOE 直连候选）。中国/日本宏观 OECD MEI 序列已冻结，需新源
+  VIX9D（页面访问失败，从默认批次隔离，不作正式下架断言）——金银参考改走
+  Tushare METAL 通道（FXCM XAU/XAG bid，与 LBMA 定盘非同一基准，#432 身份分开）。
+  中国/日本宏观 OECD MEI 序列已冻结，需新源
   （A 股关心的中国信贷/社融/PMI 本就不在 FRED，走 Tushare cn_* 系列）。
 
 ## 新源选型与全球接入设计（#425 底稿 → #428 裁决）
@@ -164,10 +178,10 @@ vintage 语义钉死（#424，官方原文）：
 
 | 域 | 源 | 说明 |
 | --- | --- | --- |
-| 全球指数（21 只） | Tushare `index_global` | SPX/IXIC/DJI/RUT、HSI/HKTECH/HKAH、FTSE/FCHI/GDAXI/CSX5P、N225/KS11/SENSEX/TWII/CKLSE、AS51/IBOVESPA/RTS/SPTSX、XIN9；6000 分档已满足；vol/amount 大部分缺失、无自定义扩充、无 VIX |
-| 汇率＋贵金属现货 | Tushare `fx_daily`（含 METAL 通道 XAU/XAG） | bid 口径、GMT 时区；金银现货自 FRED 死序列迁入此通道 |
-| 宏观＋能源现货 | FRED | WTI/Brent/DHHNGSP/GASREGW 在更新；候选扩充见上节 |
-| 外盘期货连续日线 | 新浪 GlobalFuturesService（**唯一新增免费源**） | CL 1996 年起 30 年日线；直接 httpx 实现底层端点，不引入 akshare 依赖 |
+| 全球指数（21 只） | Tushare `index_global` | 官方固定 21 码：SPX/IXIC/DJI/RUT、HSI/HKTECH/HKAH、FTSE/FCHI/GDAXI/CSX5P、N225/KS11/SENSEX/TWII/CKLSE、AS51/IBOVESPA/RTS/SPTSX、XIN9。**无 NDX**（IXIC 是纳指综合，不能替代纳指100；跨境纳指100 ETF 须显式登记基准缺口）；6000 分档已满足；vol/amount 大部分缺失、无自定义扩充 |
+| 汇率＋贵金属参考 | Tushare `fx_daily`（METAL 通道实为 FXCM XAU/XAG **bid**，非 sge_daily） | bid 口径、GMT 时区；与历史 FRED LBMA 定盘非同一基准，身份分开、不无缝拼接 |
+| 宏观＋能源现货 | FRED | WTI/Brent/DHHNGSP 在更新；GASREGW 为**周频**零售含税汽油调查价；候选扩充见上节 |
+| 外盘期货连续日线 | 新浪 GlobalFuturesService（**唯一新增免费源**） | 逐品种覆盖（2026-10-04 抽样：CL 7689 行 1996 起、GC 2589 行 2016 起、ZSD 2016 起且缺 settlement）；末行 volume/settlement 多为占位零，不得当真实成交/结算；直接 httpx 实现底层端点，不引入 akshare 依赖 |
 
 排除项（#425 实测）：investpy（2022 起死项目）、stooq（2026-10-04 实测 CSV 端点
 JS PoW 反爬，程序化通道实质关闭）、Yahoo 官方 API（不存在；yfinance 仅作手工
@@ -176,9 +190,11 @@ JS PoW 反爬，程序化通道实质关闭）、Yahoo 官方 API（不存在；
 ### EODHD 触发式备选
 
 EODHD Historian（$199/年 ≈1430 元，预算内）设为**触发式备选**而非现在订阅：
-仅当免费组合实测出现缺口（历史深度不足/稳定性差/覆盖缺失）再启动。其覆盖
-（.INDX 指数＋.COMM 商品连续期货＋外汇一体、30+ 年、10 万次/天）是唯一同时补
-齐三域的正规 API；该备选定位只覆盖指数/商品/外汇，**不外推到美股股票行情**。
+仅当免费组合实测出现缺口（历史深度不足/稳定性差/覆盖缺失）再启动。其 Historian
+档覆盖全球股票/ETF/外汇/指数 EOD；**官方 Commodities API 当前为 FRED 序列转发，
+不提供连续期货**——「一份套餐兜底商品连续期货」的口径不成立（二次复审核实），
+触发采购前须按实际缺口重核目标符号、口径与套餐权利；该备选定位
+**不外推到美股股票行情**。
 
 ### 新浪源红线
 
@@ -193,14 +209,16 @@ publication cutoff 的决策链。
   与 A 股日历的对齐在消费端做。存储域沿用已建的 `market/index_global`——适配器
   PIT 模板已建成，差距只是白名单/catalog 注册，非架构问题。多市场日历架构预留
   归 #429（本轮零改动）。
-- **原币原单位存储**：全球指数原币、大宗美元；消费端按 `fx_daily` 换算——
-  PIT 干净、无隐含换算时点。
+- **原币原单位存储**：指数按点位＋计价币种元数据记录——点位不是可直接按汇率
+  换算的现金价格；人民币视角＝对齐时点的指数收益与汇率收益构造
+  （`(1+r_local)×FX_t/FX_0−1`）并注明公式与价格/总回报口径。大宗美元。
+  消费端换算不引入存储层隐含时点。
 
 ### 身份/存储/频率映射（#428 接入设计定案）
 
 | 数据域 | 源 | instrument 身份 | 存储域 | 频率与日历语义 |
 | --- | --- | --- | --- | --- |
-| 全球指数 | Tushare index_global | `asset_class=index`＋instrument_mapping(source='tushare', source_ticker=SPX/NDX/HSI/…) | `market/index_global` 年分区 | 日线；observation date 自然日 |
+| 全球指数 | Tushare index_global | `asset_class=index`＋instrument_mapping(source='tushare', source_ticker=SPX/IXIC/HSI/…，官方 21 码无 NDX) | `market/index_global` 年分区 | 日线；observation date 自然日 |
 | 汇率 | Tushare fx_daily＋FRED DEX* | 按源 ticker 映射（现有 4M 段位模式） | `market/fx` | 日线；消费端换算基准 |
 | 大宗现货 | FRED/EIA | 宏观序列注册项 | `macro/commodity` | 日/周/月；knowledge_date 语义随 #432 修正 |
 | 外盘期货 | 新浪（新增独立 sina DataSource） | 按源 ticker 映射 instrument（commodity futures） | `market/commodity`（同 #436） | 日线；容错＋缺行显式报告 |
@@ -214,8 +232,9 @@ publication cutoff 的决策链。
 `instrument_mapping` 有效区间＋分类扩展表、`trading_calendar` 单表多 exchange 行、
 复权因子独立数据集模式、Currency/Exchange/时区映射枚举。与 Lean/Zipline 的
 多市场抽象（market-hours 数据库＋symbol-properties 全局表）同为「接入时填数据、
-不提前建机制」；美股接入时只加数据与源，不改模型；本轮不参数化任何全局常量
-（当前无消费者，最小设计）。
+不提前建机制」；当前保留基础扩展点，接入时验证模型（不承诺「只加数据不改
+模型」——LEAN 的永久 Symbol/市场区分是引擎语义，非一列 asset_class 可等价）；
+本轮不参数化任何全局常量（当前无消费者，最小设计）。
 
 「美股时已知改造点」登记（届时执行，本轮不动）：
 
