@@ -38,7 +38,7 @@ def _make_forward_return_df() -> pl.DataFrame:
             "trade_date": _DATES * 3,
             "forward_return": [0.01, -0.02, 0.03, 0.02, -0.01, 0.04],
         },
-    )
+    ).with_columns(pl.col("trade_date").cast(pl.Utf8))
 
 
 def _make_facade(
@@ -89,6 +89,16 @@ class TestFactorEvaluationFacade:
 
         assert exc_info.value.details["reason"] == "MATERIALIZED_INPUT_MISSING"
         assert exc_info.value.details["factor_id"] == "factor.momentum_1m"
+
+    def test_evaluate_normalizes_date_dtype_factor_frame(self) -> None:
+        """#418: 真实 artifact 的 date dtype trade_date 归一后可评估."""
+        date_df = _make_factor_df().with_columns(pl.col("trade_date").cast(pl.Date))
+        facade = _make_facade(factor_df=date_df)
+
+        report = facade.evaluate("factor.momentum_1m", 1)
+
+        assert report.factor_id == "factor.momentum_1m"
+        assert report.rank_ic_summary is not None
 
     def test_evaluate_series_empty_artifact_reports_explicit_missing_state(
         self,

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import asdict
 from datetime import date
+from hashlib import sha256
 from pathlib import Path
 from unittest.mock import MagicMock
 
@@ -17,6 +18,7 @@ from ditto_features.derived_types import (
 from ditto_features.errors import DerivedNotFoundError, FactorValidationError
 from ditto_features.materialization.models import DerivedVersionStatus
 from ditto_features.models.derived import (
+    DerivedCheckpointRecord,
     DerivedSpecRecord,
     DerivedStateRecord,
     DerivedVersionRecord,
@@ -107,9 +109,8 @@ def _seed_spec(
         DerivedVersionRecord(
             derived_id=derived_id,
             version=version,
-            status=DerivedVersionStatus.PUBLISHED
-            if is_primary
-            else DerivedVersionStatus.MATERIALIZED,
+            # #418 读侧门禁：非 primary 版本同样为 published（primary 降级不改状态）。
+            status=DerivedVersionStatus.PUBLISHED,
             engine_version="expr-v1",
             is_online=is_online,
             is_primary=is_primary,
@@ -125,12 +126,31 @@ def _write_artifact(
     derived_id: str,
     version: int,
     rows: list[dict[str, object]],
+    catalog_service: DerivedCatalogService | None = None,
 ) -> None:
     version_root = (
         artifact_root / "derived" / "artifacts" / "series" / derived_id / f"v{version}"
     )
     version_root.mkdir(parents=True, exist_ok=True)
-    pl.DataFrame(rows).write_parquet(version_root / "2026.parquet")
+    partition = version_root / "2026.parquet"
+    pl.DataFrame(rows).write_parquet(partition)
+    if catalog_service is not None:
+        # #418 读侧诚实门禁：直落的测试产物须补 COMPLETE checkpoint＋checksum。
+        catalog_service.save_checkpoints(
+            (
+                DerivedCheckpointRecord(
+                    derived_id=derived_id,
+                    version=version,
+                    partition_key="2026",
+                    status="complete",
+                    rows_written=len(rows),
+                    checksum=sha256(partition.read_bytes()).hexdigest(),
+                    error_message=None,
+                    started_at="2026-03-19T12:00:00+08:00",
+                    completed_at="2026-03-19T12:00:00+08:00",
+                ),
+            )
+        )
 
 
 class TestDerivedQueryService:
@@ -202,6 +222,7 @@ class TestDerivedQueryService:
                     "availability_time": date(2026, 3, 11),
                 },
             ],
+            catalog_service=catalog_service,
         )
         _write_artifact(
             tmp_path,
@@ -215,6 +236,7 @@ class TestDerivedQueryService:
                     "availability_time": date(2026, 3, 11),
                 },
             ],
+            catalog_service=catalog_service,
         )
         service = DerivedQueryService(
             catalog_service=catalog_service,
@@ -320,6 +342,7 @@ class TestDerivedQueryService:
                     "availability_time": date(2026, 3, 11),
                 },
             ],
+            catalog_service=catalog_service,
         )
         service = DerivedQueryService(
             catalog_service=catalog_service,
@@ -401,6 +424,7 @@ class TestDerivedQueryService:
                     "availability_time": date(2026, 3, 11),
                 },
             ],
+            catalog_service=catalog_service,
         )
         _write_artifact(
             tmp_path,
@@ -420,6 +444,7 @@ class TestDerivedQueryService:
                     "availability_time": date(2026, 3, 11),
                 },
             ],
+            catalog_service=catalog_service,
         )
         service = DerivedQueryService(
             catalog_service=catalog_service,

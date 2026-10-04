@@ -247,4 +247,6 @@ class FactorEvaluationFacade:
                     "reason": "MATERIALIZED_INPUT_MISSING",
                 },
             )
+        # 真实物化 artifact 的 trade_date 是 date dtype，前向收益服务输出 ISO
+        # 字符串；评估器在 prepare_data 中统一归一到 date（#418）。
         return factor_df

@@ -256,6 +256,36 @@ def _seed_reader_catalog(
     )
 
 
+def _publish_written_partitions(
+    catalog_service,
+    version_root: Path,
+    *,
+    derived_id: str,
+    version: int,
+) -> None:
+    """#418 读侧诚实门禁：直落的测试产物须补 COMPLETE checkpoint＋checksum."""
+    from hashlib import sha256
+
+    from ditto_features.models.derived import DerivedCheckpointRecord
+
+    for parquet in sorted(version_root.glob("*.parquet")):
+        catalog_service.save_checkpoints(
+            (
+                DerivedCheckpointRecord(
+                    derived_id=derived_id,
+                    version=version,
+                    partition_key=parquet.stem,
+                    status="complete",
+                    rows_written=1,
+                    checksum=sha256(parquet.read_bytes()).hexdigest(),
+                    error_message=None,
+                    started_at="2026-03-19T12:00:00+08:00",
+                    completed_at="2026-03-19T12:00:00+08:00",
+                ),
+            )
+        )
+
+
 def _make_reader(
     catalog_service,
     artifact_root: Path,
@@ -291,6 +321,12 @@ class TestReadFrameAsLazy:
             }
         )
         df.write_parquet(version_root / "2024.parquet")
+        _publish_written_partitions(
+            catalog_service,
+            version_root,
+            derived_id=derived_id,
+            version=1,
+        )
 
         reader = _make_reader(catalog_service, tmp_path)
         result = reader.read_frame(
@@ -323,6 +359,12 @@ class TestReadFrameAsLazy:
             }
         )
         df.write_parquet(version_root / "2024.parquet")
+        _publish_written_partitions(
+            catalog_service,
+            version_root,
+            derived_id=derived_id,
+            version=1,
+        )
 
         reader = _make_reader(catalog_service, tmp_path)
         result = reader.read_frame(
@@ -355,6 +397,12 @@ class TestReadFrameStreaming:
             }
         )
         df.write_parquet(version_root / "2024.parquet")
+        _publish_written_partitions(
+            catalog_service,
+            version_root,
+            derived_id=derived_id,
+            version=1,
+        )
 
         reader = _make_reader(catalog_service, tmp_path)
 
@@ -401,6 +449,12 @@ class TestReadFrameMaxRows:
             }
         )
         df.write_parquet(version_root / "2024.parquet")
+        _publish_written_partitions(
+            catalog_service,
+            version_root,
+            derived_id=derived_id,
+            version=1,
+        )
 
         reader = _make_reader(catalog_service, tmp_path)
         result = reader.read_frame(
