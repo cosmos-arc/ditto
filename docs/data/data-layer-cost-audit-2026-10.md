@@ -1,6 +1,6 @@
 # 数据层过度设计成本侧审计（2026-10-04）
 
-**性质**：分析报告（工作区未提交，待用户确认后落票）。
+**性质**：分析报告。状态（2026-10-04 更新）：三档裁决已由 [#442](https://github.com/cosmos-arc/ditto/issues/442) 确认，实施票 #444–#448 已立；本文若干字面方案（checksum 定义完成、只留六字段、三库恢复单元等）已被[二次复审线 #449–#451](https://github.com/cosmos-arc/ditto/issues/451#issuecomment-5975629762)修订——**实施规格以各票同步后的正文为准**，本文保留作成本证据底稿。
 **与既有线的关系**：#420 wayfinder 线（#421 业界对标、#426 裁决"过度设计新增＝空"、报告 PR #441）用的是**功能必要性透镜**（业界有无同构）；本报告用的是**成本透镜**（维护与理解成本、live 用量），是 #421/#426 未测过的维度。两透镜结论并行不悖：功能侧维持清单不变，本报告对其中带量化成本的条目按"新证据"通道提出重开建议（用户 2026-10-04 确认此通道）。
 
 ## 1. 判据与基线（本次会话确认）
@@ -30,12 +30,12 @@
 ### C1. Shadow diff / certification 发布安全机器（最强）
 
 **证据**：
-- `packages/features/src/ditto_features/services/publication_safety.py:163-188`：`ShadowDiffReport` 含 `latency_p50_delta/latency_p95_delta/fallback_ratio_delta/request_count`——这是在线特征服务双跑比对的语义，单用户本地工作站没有并发流量可 shadow。#421 对标的全部个人级项目无此形态；业界质检统一是"离线命令＋非零退出"。
+- `packages/features/src/ditto_features/publication_safety.py:163-188`（二次复审更正定位：当前定义在 features 根，非 services/ 子目录）：`ShadowDiffReport` 含 `latency_p50_delta/latency_p95_delta/fallback_ratio_delta/request_count`——这是在线特征服务双跑比对的语义，单用户本地工作站没有并发流量可 shadow。#421 对标的点名个人级项目无此形态；个人级质检普遍是"离线命令＋非零退出"。
 - `derived_shadow_slot` 表＋`publication_shadow_sqlite/` 与 9 个 JSON 文件读写器（`storage/runtime/publication_safety/`）**双存储**。
 - certification pack 按 `shadow_ready/publish_ready` 两阶段推进（`application/processes/materialization/certification_rules.py` 302 行）。
 - 合计约 2,000+ LOC＋3 表＋~15 测试文件；`derived_spec/derived_version/derived_shadow_slot/compiled_expression_cache/research_dataset_snapshot` live 全 0 行；`data/factors` 0B。
 
-**最小等价**：发布前对 candidate 与当前版本做一次确定性重算比对（行数＋分区 checksum＋coverage/null 率——`DerivedMinimalDQSummary` 已有的一半），一个布尔结果落 `derived_version.status`。删 shadow slot、latency/fallback 字段、两阶段 pack、JSON/SQLite 双写。
+**最小等价**：发布前对 candidate 与当前版本做一次确定性重算比对（行数＋分区 checksum＋coverage/null 率——`DerivedMinimalDQSummary` 已有的一半），一个布尔结果落 `derived_version.status`。删 shadow slot、latency/fallback 字段、两阶段 pack、JSON/SQLite 双写。**等价边界（#451 修订）**：同一输入身份的重试要求内容一致；新公式/新输入版本产生新身份、允许值变化并保留旧产物；首版无 baseline 可发布；同一份代码重算一致只证明确定性、不证明正确——完整发布语义见 #444 同步规格。
 
 ### C2. Derived 级联失效＋死信队列
 
@@ -47,31 +47,31 @@
 
 **证据**：`catalog/dataset_spec.py`（570 行）中 `.certified_target_from`、`.license_policy`、`.raw_target_from` 生产消费者为 0，仅测试断言其存在。#392 删了治理工作流，但把"认证覆盖目标/许可策略"留在了数据集合同里。
 
-**最小等价**：DatasetSpec 砍到 `dataset_id/primary_key/partition_keys/provider_datasets/schema_version/frequency`，删三字段及其校验。
+**最小等价**：删除三个已证实无消费者的字段及其配套构造/校验；其余字段（`bootstrap_chunk`/`r2_scope` 等有真实消费者）逐消费者判断，不按「只留六字段」的字面清单执行（#445 同步规格）。
 
 ### C6. 双观察账本（旧表）
 
 **证据**：`source_snapshot_store.py:131-289` 同时维护 `provider_snapshot_observations`（INSERT OR REPLACE，旧）与 `provider_snapshot_observation_events`（INSERT OR IGNORE，#393 新，注释自称"单一事实"）。归一化时旧表没删。
 
-**最小等价**：只留事件表，读侧聚合；一次迁移删旧表。
+**最小等价**：只留事件表，读侧聚合。**边界（#451 修订）**：保留同一次尝试重试幂等、后来相同内容的再观察、A→B→A 顺序与首次可知时间；旧表删除沿已授权的开发数据重建边界执行，不做自动兼容迁移（#445 同步规格）。
 
 ### C7. 三层备份＋发布候选验收链
 
-**证据**：`payload_backup.py`（sha256 全树校验拷贝）→`workstation_backup.py`（manifest/digest）→`sqlite_backup.py`→`workstation_recovery.py`→`personal_workstation_release_candidate.py`（481 行）＋r2/r3 验收脚本。`data/backups/` 实际为空。重拉恢复基线下，真正需要本地备份保证的只有不可重拉数据（trading/agent/research 库）。
+**证据**：`payload_backup.py`（sha256 全树校验拷贝）→`workstation_backup.py`（manifest/digest）→`sqlite_backup.py`→`workstation_recovery.py`→`personal_workstation_release_candidate.py`（481 行）＋r2/r3 验收脚本。`data/backups/` 实际为空（空目录也可能反映运行缺口，不作无用证明，仅记录现状）。重拉恢复基线下，真正需要本地备份保证的只有不可重拉数据（trading/agent/research 库等当前业务状态）。
 
-**最小等价**：文档化配方脚本（~50 行）：`sqlite3 .backup` 三个库＋rsync 到备份目标；删 release-candidate 验收驱动（本地 review 流程已取代）。payload_backup 的树校验可用 `rsync -c` 覆盖。
+**最小等价**：文档化配方脚本：`sqlite3 .backup`/Backup API＋文件树复制，**按真实运行时清单**（`WORKSTATION_DATABASES` 为 6 个物理 SQLite 文件，不硬编码「三个逻辑库」；含策略版本、review decision、activation pointer 等恢复对象）；删 release-candidate 验收驱动（本地 review 流程已取代）。**边界（#451 B 裁决）**：重拉得到的是新观察与新快照，不冒充旧版本；缺旧依赖的实验显式「不可重放」，不以 latest 重算顶替；恢复点＝最近一次成功手动备份，天级目标，不承诺 24 小时 RPO（#446 同步规格）。
 
 ## 4. 建议简化（2 项）
 
 ### C4. Analysis 实验调度器（analysis 包，随本轮纳入）
 
 `packages/analysis/src/ditto_analysis/storage/sqlite/experiments/` 共 11,080 LOC，其中 `_dispatch.py`(777)、`_lease.py`(515)、`_enqueue_fence.py`(233)、`_terminal_retry.py`(344)、`_scheduler_queue.py`——单机单用户的实验跑批配了分布式任务队列的账本。
-**简化**：顺序 runner＋一张 run 表（status/started/finished/error）。**保留** holdout 隔离记账（5 文件）——那是承重的防泄漏部分。
+**简化**：顺序 runner＋一张 run 表（status/started/finished/error）。**边界（#451 修订）**：保留最小单实例拒重（OS 文件锁或 SQLite 原子 claim，单用户也会有重复启动）；run 须引用不可变实验规格（strategy/code、参数/seed、输入 snapshot、产物身份），字段留 spec/manifest、run 只存引用；holdout 消费链依赖 `_enqueue_fence` 的 payload-hash 构造（`_holdout_preflight.py` 直接导入），须沿提交→执行→产物→holdout 路径重接（#448 同步规格）。**保留** holdout 隔离记账——那是承重的防泄漏部分。
 
 ### C5. 摄取分区 8 态生命周期
 
 `partition_state.py` 的 8 态（PLANNED/PAYLOAD_COMMITTED/COMPLETE/FAILED/QUARANTINED/ORPHAN_PAYLOAD/LOG_ONLY/CATALOG_ONLY）＋事件表＋470 行 store（retry budget/resume）。
-**简化边界（不碰三件套）**：保留三阶段 fetch log＋`complete_evidence_id`（#426 维持件）；砍掉三阶段之外的 5 个异常态与 retry budget——内容寻址载荷天然幂等，"已完成"由 payload checksum 判定。live 仅 9 个 checkpoint，不足以正当化状态机。
+**简化边界（不碰三件套）**：保留三阶段 fetch log＋`complete_evidence_id`（#426 维持件）；砍掉三阶段之外的 5 个异常态与 retry budget。**边界（#451 修订）**：「已完成」不能由原始 payload checksum 单独定义——必须绑定本次精确 snapshot、标准化输出身份、成功范围及必要质量结果（载荷完好而 canonical 半写、schema 变更重解释、旧 COMPLETE 遇新修订半写三类反例）；「同载荷重跑不产生新观察」仅适用于同一次尝试的恢复，另一天同内容再观察是新事实（A→B→A）。live 仅 9 个 checkpoint，不足以正当化状态机（#447 同步规格）。
 
 ## 5. 维持（成本画像确认承重）
 
@@ -84,11 +84,11 @@
 | fuyao 跨源对账 | 单文件＋近期落地（#413），#438 在排 | 换源接管的比对金集 |
 | DI Provider 分层（C8 弱候选） | 12 文件/10 Provider | 层数问题属实，但改动扩散成本＞理解收益，记为已接受成本 |
 
-## 6. 时序与落票建议（待用户确认）
+## 6. 时序与落票建议（已落票：#442 裁决＋#444–#448 实施票）
 
 1. **先砍后建**：C1＋C2 删除票先行，#418 因子物化二期在清理后的地基上实施（物化直线＝重算＋checksum＋snapshot 绑定，与 #398 详设"不重建控制面"一致）。不碰 #426 保护的地基（stock_daily/adj_factor/balance_sheet）。
-2. **票结构提案**：一张裁决票（确认本文三档＋重开 C1/C2/C6）＋五张实施票（①C1+C2 删除、②C3+C6 合同与账本收尾、③C7 备份配方化、④C5 状态机收敛、⑤C4 调度器瘦身，analysis 侧独立）。
-3. **无冲突确认**：#431–#433 修复票、#434–#439 实施票与本清单正交，不需重排。
+2. **票结构（已立）**：[#442](https://github.com/cosmos-arc/ditto/issues/442) 裁决＋[#444](https://github.com/cosmos-arc/ditto/issues/444) C1+C2 删除、[#445](https://github.com/cosmos-arc/ditto/issues/445) C3+C6、[#446](https://github.com/cosmos-arc/ditto/issues/446) C7 备份配方化、[#447](https://github.com/cosmos-arc/ditto/issues/447) C5 状态机收敛、[#448](https://github.com/cosmos-arc/ditto/issues/448) C4 调度器瘦身；各票规格已按 #451 二次复审同步。
+3. **与数据源票的关系（二次复审更正，原「正交不需重排」不准确）**：C5 摄取状态精简影响 #434–#437 新接口的完成验收；C7 备份与因子物化共享 manifest/证据保留边界；精简目录与新数据集注册会碰同一合同文件——按 #451 批次推进（先源正确性、清理并行、shadow/cascade 删除后再接因子物化），共享 schema/注册/完成合同由 integrator 单写。
 4. **Housekeeping**：#391–#395、#397 在 GitHub 仍 OPEN，与"PR #409–#419 已合并"的收官叙述不一致，建议核实后关闭。
 
 ## 7. 证据来源
