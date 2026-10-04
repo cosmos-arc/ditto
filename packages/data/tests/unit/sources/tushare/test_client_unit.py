@@ -4,12 +4,16 @@ import httpx
 import orjson
 import pytest
 import pytest_mock
+import tenacity
 from ditto_data.config import DataSourceSettings
 from ditto_data.sources.base import (
     SourceAuthenticationError,
     SourceConfigurationError,
+    SourceRateLimitError,
 )
 from ditto_data.sources.tushare.client import TushareClient
+from ditto_data.sources.tushare.utils import pagination
+from ditto_data.sources.tushare.utils.pagination import resolve_page_size
 from ditto_data.sources.tushare.utils.rate_limiter import (
     TushareRateLimitConfig,
     TushareRateLimiter,
@@ -70,6 +74,36 @@ class TestTushareClientInit:
 
         assert client._limiter._config == TushareRateLimitConfig.free()
 
+    def test_init_supports_official_account_profiles(self) -> None:
+        """官方直连积分档独立于代理 transport 档位（#431）."""
+        official_120 = TushareClient(
+            settings=DataSourceSettings(
+                tushare_token="not_a_secret",
+                rate_limit_profile="official_120",
+            )
+        )
+        assert official_120._limiter._config == TushareRateLimitConfig.official_120()
+
+        official_15000 = TushareClient(
+            settings=DataSourceSettings(
+                tushare_token="not_a_secret",
+                rate_limit_profile="official_15000",
+            )
+        )
+        assert (
+            official_15000._limiter._config == TushareRateLimitConfig.official_15000()
+        )
+
+    def test_init_accepts_proxy_aliases(self) -> None:
+        """proxy_free/proxy_paid 显式命名代理 transport 档位，与旧名等价."""
+        proxy_paid = TushareClient(
+            settings=DataSourceSettings(
+                tushare_token="not_a_secret",
+                rate_limit_profile="proxy_paid",
+            )
+        )
+        assert proxy_paid._limiter._config == TushareRateLimitConfig.paid()
+
 
 class TestTushareClientQuery:
     """Tests for TushareClient.query method."""
@@ -109,7 +143,7 @@ class TestTushareClientQuery:
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """单页达到上限时自动携带 offset 翻页，避免静默截断。"""
-        monkeypatch.setattr("ditto_data.sources.tushare.client._PAGE_SIZE", 2)
+        monkeypatch.setitem(pagination._DOCUMENTED_PAGE_SIZES, "trade_cal", 2)
         pages = [
             httpx.Response(
                 200,
@@ -158,6 +192,166 @@ class TestTushareClientQuery:
 
         assert result.height == 2
         assert route.call_count == 1
+
+    def test_server_cap_below_old_page_size_still_paginates(
+        self,
+        respx_mock,
+    ) -> None:
+        """#431 回归：请求页宽必须等于端点契约上限，而非统一 9000.
+
+        离线复现的原始缺陷：2501 行源、服务端 cap 2000、旧实现请求
+        limit=9000 并以短页为结束条件 → 只取回 2000。修复后按保守默认
+        页宽 2000 请求，满页继续翻页，完整取回 2501。
+        """
+        rows = [{"cal_date": str(i)} for i in range(2501)]
+
+        def side_effect(request: httpx.Request) -> httpx.Response:
+            params = orjson.loads(request.content)["params"]
+            page = rows[params["offset"] : params["offset"] + 2000]  # cap=2000
+            return httpx.Response(
+                200,
+                json={
+                    "code": 0,
+                    "msg": None,
+                    "data": {
+                        "fields": ["cal_date"],
+                        "items": [[r["cal_date"]] for r in page],
+                    },
+                },
+            )
+
+        route = respx_mock.post("http://api.tushare.pro").mock(side_effect=side_effect)
+
+        client = TushareClient(token="test_token", settings=_settings())
+        result = client.query("trade_cal", "cal_date")
+
+        assert result.height == 2501
+        assert route.call_count == 2
+        requested_limits = {
+            orjson.loads(call.request.content)["params"]["limit"]
+            for call in respx_mock.calls
+        }
+        assert requested_limits == {2000}
+
+    def test_exact_full_page_with_empty_tail_completes(
+        self,
+        respx_mock,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """恰好在页宽边界结束：短尾页（含空尾页）是合法取尽条件。"""
+        monkeypatch.setitem(pagination._DOCUMENTED_PAGE_SIZES, "trade_cal", 2)
+        pages = [
+            {"fields": ["cal_date"], "items": [["1"], ["2"]]},
+            {"fields": ["cal_date"], "items": []},
+        ]
+        route = respx_mock.post("http://api.tushare.pro").mock(
+            side_effect=[
+                httpx.Response(200, json={"code": 0, "msg": None, "data": page})
+                for page in pages
+            ]
+        )
+
+        client = TushareClient(token="test_token", settings=_settings())
+        result = client.query("trade_cal", "cal_date")
+
+        assert result["cal_date"].to_list() == ["1", "2"]
+        assert route.call_count == 2
+
+    def test_duplicate_page_raises_instead_of_looping(
+        self,
+        respx_mock,
+        monkeypatch: pytest.MonkeyPatch,
+        fake_time,
+    ) -> None:
+        """服务端忽略 offset（重复页/不前进）时 fail-closed，不无限翻页。"""
+        monkeypatch.setitem(pagination._DOCUMENTED_PAGE_SIZES, "trade_cal", 2)
+        page = {
+            "code": 0,
+            "msg": None,
+            "data": {"fields": ["cal_date"], "items": [["1"], ["2"]]},
+        }
+        route = respx_mock.post("http://api.tushare.pro").mock(
+            return_value=httpx.Response(200, json=page)
+        )
+
+        client = TushareClient(token="test_token", settings=_settings())
+        # 重复页错误按 SourceFetchError 参与现有重试语义，耗尽后以 RetryError 冒泡
+        with pytest.raises(tenacity.RetryError) as exc_info:
+            client.query("trade_cal", "cal_date")
+
+        assert "duplicate rows" in str(exc_info.value.last_attempt.exception())
+        # 每次尝试在第二页（offset=2 收到重复页）即拦截，不会无限翻页
+        assert route.call_count == 2 * 3
+
+    def test_documented_endpoint_uses_exact_page_size(self, respx_mock) -> None:
+        """已核实上限的端点按精确页宽请求；未知端点用保守默认 2000。"""
+        single_page = {
+            "code": 0,
+            "msg": None,
+            "data": {"fields": ["ts_code"], "items": [["000001.SZ"]]},
+        }
+        route = respx_mock.post("http://api.tushare.pro").mock(
+            return_value=httpx.Response(200, json=single_page)
+        )
+
+        client = TushareClient(token="test_token", settings=_settings())
+        client.query("daily", "ts_code")
+        client.query("fund_adj", "ts_code")
+        client.query("not_documented", "ts_code")
+
+        requested_limits = [
+            orjson.loads(call.request.content)["params"]["limit"]
+            for call in respx_mock.calls
+        ]
+        assert requested_limits == [6000, 2000, 2000]
+        assert route.call_count == 3
+
+    def test_resolve_page_size_uses_documented_contract(self) -> None:
+        """端点分页契约表与官方专页一致。"""
+        assert resolve_page_size("daily") == 6000
+        assert resolve_page_size("fund_daily") == 5000
+        assert resolve_page_size("fund_adj") == 2000
+        assert resolve_page_size("index_global") == 4000
+        assert resolve_page_size("unknown_endpoint") == 2000
+
+    def test_in_page_duplicate_rows_raise(
+        self,
+        respx_mock,
+    ) -> None:
+        """同响应内整行重复（主键重复）fail-closed，不得静默入库."""
+        page = {
+            "code": 0,
+            "msg": None,
+            "data": {"fields": ["cal_date"], "items": [["1"], ["1"]]},
+        }
+        respx_mock.post("http://api.tushare.pro").mock(
+            return_value=httpx.Response(200, json=page)
+        )
+
+        client = TushareClient(token="test_token", settings=_settings())
+        # 重复行错误参与现有 SourceFetchError 重试语义，耗尽后以 RetryError 冒泡
+        with pytest.raises(tenacity.RetryError) as exc_info:
+            client.query("trade_cal", "cal_date")
+        assert "in-page=1" in str(exc_info.value.last_attempt.exception())
+
+    def test_rate_limit_message_classified_as_rate_limit_error(
+        self, respx_mock
+    ) -> None:
+        """频次超限消息归为 SourceRateLimitError，不得转为空成功或普通失败."""
+        respx_mock.post("http://api.tushare.pro").mock(
+            return_value=httpx.Response(
+                200,
+                json={
+                    "code": -1,
+                    # 标记特征：官方频次超限消息含"每分钟最多访问"（全角标点从略）
+                    "msg": "抱歉 您每分钟最多访问该接口2次",
+                },
+            )
+        )
+
+        client = TushareClient(token="test_token", settings=_settings())
+        with pytest.raises(SourceRateLimitError):
+            client.query("trade_cal", "cal_date")
 
     def test_rate_limit_before_request(
         self, respx_mock, mocker: pytest_mock.MockFixture

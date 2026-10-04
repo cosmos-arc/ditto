@@ -20,7 +20,31 @@ class TushareAPIGroup(Enum):
 # ============ 限流配置预设 ============
 @dataclass(frozen=True)
 class TushareRateLimitConfig:
-    """Tushare 限流配置."""
+    """
+    Tushare 限流配置.
+
+    档位按 transport 权益区分（#431，官方积分频次表 doc_id=290）：
+
+    - ``free``/``paid`` 是代理 transport（t.xiaodefa.top）承诺的档位
+      （200/1000 每分钟），不是官方账号积分档，不得冒充；代理 paid 的
+      1000/分高于官方任何积分档（15000 积分为 500/分）。
+    - 官方直连账号用 ``official_120``（120 积分 50/分）或
+      ``official_15000``（15000 积分 500/分）；官方表只给每分钟总额，
+      未核实的接口级细分不虚构，分组限流等于全局值。
+    - 实际账号权益以实测为准；已知文档冲突（index_dailybasic 专页 2000
+      积分与积分总目录 4000 积分不一致）如实记录，不择一宣称。
+
+    Attributes:
+        global_rate: 全局每窗口请求数（所有请求）.
+        global_window: 全局窗口秒数.
+        daily_rate: 日线接口组每窗口请求数.
+        daily_window: 日线接口组窗口秒数.
+        derived_rate: 衍生接口组每窗口请求数.
+        derived_window: 衍生接口组窗口秒数.
+        special_rate: 特殊接口组每窗口请求数.
+        special_window: 特殊接口组窗口秒数.
+
+    """
 
     # 全局限流（所有请求）
     global_rate: int = 200  # 请求/分钟
@@ -36,10 +60,10 @@ class TushareRateLimitConfig:
     special_rate: int = 20  # 特殊接口限制
     special_window: int = 60
 
-    # 预设配置
+    # 预设配置（代理 transport 档位）
     @classmethod
     def free(cls) -> "TushareRateLimitConfig":
-        """免费账户配置（保守）."""
+        """代理 transport 免费档（200/分，保守）."""
         return cls(
             global_rate=200,
             daily_rate=100,
@@ -49,7 +73,12 @@ class TushareRateLimitConfig:
 
     @classmethod
     def paid(cls) -> "TushareRateLimitConfig":
-        """付费账户配置（宽松）."""
+        """
+        代理 transport 付费档（1000/分，宽松）.
+
+        注意：高于官方 15000 积分档的 500/分；账号实际积分档为 15000 时
+        应选 ``official_15000`` 或显式覆盖 global_rate。
+        """
         return cls(
             global_rate=1000,
             daily_rate=500,
@@ -65,6 +94,27 @@ class TushareRateLimitConfig:
             daily_rate=80,
             derived_rate=30,
             special_rate=10,
+        )
+
+    # 预设配置（官方直连账号积分档）
+    @classmethod
+    def official_120(cls) -> "TushareRateLimitConfig":
+        """官方 120 积分档（50/分）."""
+        return cls(
+            global_rate=50,
+            daily_rate=50,
+            derived_rate=50,
+            special_rate=50,
+        )
+
+    @classmethod
+    def official_15000(cls) -> "TushareRateLimitConfig":
+        """官方 15000 积分档（500/分）."""
+        return cls(
+            global_rate=500,
+            daily_rate=500,
+            derived_rate=500,
+            special_rate=500,
         )
 
 

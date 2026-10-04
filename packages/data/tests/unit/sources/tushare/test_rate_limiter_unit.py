@@ -54,6 +54,22 @@ class TestTushareRateLimitConfig:
         assert config.derived_rate == 30
         assert config.special_rate == 10
 
+    def test_official_120_preset_matches_official_quota(self) -> None:
+        """官方 120 积分档 50/分；官方表只给总额，分组不虚构细分."""
+        config = TushareRateLimitConfig.official_120()
+        assert config.global_rate == 50
+        assert config.daily_rate == 50
+        assert config.derived_rate == 50
+        assert config.special_rate == 50
+
+    def test_official_15000_preset_matches_official_quota(self) -> None:
+        """官方 15000 积分档 500/分，低于代理 paid 的 1000/分."""
+        config = TushareRateLimitConfig.official_15000()
+        assert config.global_rate == 500
+        assert config.daily_rate == 500
+        assert config.derived_rate == 500
+        assert config.special_rate == 500
+
 
 class TestTushareRateLimiter:
     """Tests for TushareRateLimiter."""

@@ -11,6 +11,9 @@ from ditto_data.sources.base import (
     SourceRateLimitError,
 )
 
+# 官方频次超限消息特征（FAQ：抱歉，您每分钟/每天最多访问该接口…次）
+_RATE_LIMIT_MSG_MARKERS = ("每分钟最多访问", "每天最多访问")
+
 
 def validate_tushare_response(response_json: dict[str, object]) -> dict[str, object]:
     """
@@ -42,6 +45,12 @@ def validate_tushare_response(response_json: dict[str, object]) -> dict[str, obj
     # 检查其他业务错误
     if code != 0:
         msg_str = msg if isinstance(msg, str) else None
+        # 频次超限不得转为空成功或普通失败重试，显式归类为限流错误
+        if msg_str and any(marker in msg_str for marker in _RATE_LIMIT_MSG_MARKERS):
+            raise SourceRateLimitError(
+                message=msg_str,
+                source="tushare",
+            )
         error_msg = msg_str or f"Tushare API 返回错误码: {code}"
         raise SourceFetchError(
             message=error_msg,
