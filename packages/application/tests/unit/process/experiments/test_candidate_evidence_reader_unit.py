@@ -120,7 +120,6 @@ def test_bundle_freezes_two_fold_lineage_and_stable_resource_order(tmp_path) -> 
                 fold.spec.key.experiment_id,
                 "evidence-owner",
                 1,
-                NOW_US + 1_000_000,
             ),
             now_epoch_us=NOW_US,
         )

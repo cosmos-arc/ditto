@@ -251,7 +251,6 @@ def _fence(key: FoldKey) -> LeaseFence:
         experiment_id=key.experiment_id,
         owner_token="new-owner",
         revision=1,
-        lease_until_epoch_us=2_000_000,
     )
 
 

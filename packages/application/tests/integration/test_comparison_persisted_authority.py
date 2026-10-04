@@ -197,7 +197,6 @@ def _running_store(
         "comparison-authority-owner",
         expected_revision=0,
         now_epoch_us=NOW_US,
-        lease_until_epoch_us=NOW_US + 60_000_000,
     )
     assert lease is not None
     writer.transition_scheduled_experiment(

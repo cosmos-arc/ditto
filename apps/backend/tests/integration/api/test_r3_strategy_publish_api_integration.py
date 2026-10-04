@@ -258,8 +258,7 @@ def _build_harness(
     fence = LeaseFence(
         experiment_id=launch.experiment_id,
         owner_token="http-acceptance",
-        revision=0,
-        lease_until_epoch_us=_NOW_US - 1,
+        revision=999,
     )
     if legacy_packet:
         bundle_hash = packet.bundle_hash

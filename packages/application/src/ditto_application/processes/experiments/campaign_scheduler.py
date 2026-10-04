@@ -26,7 +26,6 @@ from ditto_application.processes.experiments.scheduler_store import (
 
 __all__ = ["ExistingExperimentCampaignScheduler"]
 
-_CAMPAIGN_LEASE_DURATION_US = 60_000_000
 _OWNER_IDENTITY = "r5-autonomous-campaign"
 _TERMINAL_EXPERIMENT_STATUSES = frozenset(
     {
@@ -50,7 +49,6 @@ class ExistingExperimentCampaignScheduler(CampaignTrialSchedulerPort):
         *,
         store: ExperimentSchedulerStoreProtocol,
         owner_token: str = _OWNER_IDENTITY,
-        lease_duration_us: int = _CAMPAIGN_LEASE_DURATION_US,
     ) -> None:
         if not owner_token or owner_token != owner_token.strip():
             raise _error(
@@ -58,15 +56,8 @@ class ExistingExperimentCampaignScheduler(CampaignTrialSchedulerPort):
                 code="CAMPAIGN_SCHEDULER_INVALID",
                 reason="campaign_scheduler_configuration_invalid",
             )
-        if type(lease_duration_us) is not int or lease_duration_us <= 0:
-            raise _error(
-                "lease_duration_us must be positive",
-                code="CAMPAIGN_SCHEDULER_INVALID",
-                reason="campaign_scheduler_configuration_invalid",
-            )
         self._store = store
         self._owner_token = owner_token
-        self._lease_duration_us = lease_duration_us
 
     def required_fold_run_count(self, campaign_id: ExperimentId) -> int:
         """Read the immutable fold matrix before the Campaign reserves budget."""
@@ -139,35 +130,27 @@ class ExistingExperimentCampaignScheduler(CampaignTrialSchedulerPort):
             )
         self._store.load_snapshot(campaign_id)
         slot = self._store.get_scheduler_slot()
-        if (
-            slot.experiment_id == campaign_id
-            and slot.owner_token == self._owner_token
-            and slot.lease_until_epoch_us is not None
-            and slot.lease_until_epoch_us > now_epoch_us
-        ):
+        if slot.experiment_id == campaign_id and slot.owner_token == self._owner_token:
             return LeaseFence(
                 experiment_id=campaign_id,
                 owner_token=self._owner_token,
                 revision=slot.revision,
-                lease_until_epoch_us=slot.lease_until_epoch_us,
             )
-        if (
-            slot.owner_token is not None
-            and slot.lease_until_epoch_us is not None
-            and slot.lease_until_epoch_us > now_epoch_us
-        ):
+        if slot.experiment_id is not None and slot.experiment_id != campaign_id:
             raise _error(
-                "the experiment scheduler lease is owned elsewhere",
+                "the experiment scheduler slot serves another experiment",
                 code="LEASE_LOST",
                 reason="campaign_lease_lost",
             )
         try:
+            # A same-experiment claim revision-overwrites any stale owner; the
+            # store enforces occupant rules, so a different-experiment
+            # occupant never reaches this CAS (#448 fencing token).
             lease = self._store.try_claim_lease(
                 campaign_id,
                 self._owner_token,
                 expected_revision=slot.revision,
                 now_epoch_us=now_epoch_us,
-                lease_until_epoch_us=now_epoch_us + self._lease_duration_us,
             )
         except AnalysisError as exc:
             raise _error(

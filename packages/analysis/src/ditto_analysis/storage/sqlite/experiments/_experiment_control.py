@@ -121,7 +121,6 @@ class SQLiteExperimentControlMixin:
         cls,
         connection: sqlite3.Connection,
         fence: LeaseFence,
-        now_epoch_us: int,
         expected_experiment_id: ExperimentId,
     ) -> sqlite3.Row: ...
 
@@ -272,7 +271,7 @@ class SQLiteExperimentControlMixin:
         connection = self._database.get_connection()
         try:
             connection.execute("BEGIN IMMEDIATE")
-            self._validate_lease(connection, lease_fence, now_epoch_us, experiment_id)
+            self._validate_lease(connection, lease_fence, experiment_id)
             row = connection.execute(
                 "SELECT * FROM experiment WHERE experiment_id=?",
                 (str(experiment_id),),
@@ -395,7 +394,7 @@ class SQLiteExperimentControlMixin:
         connection = self._database.get_connection()
         try:
             connection.execute("BEGIN IMMEDIATE")
-            self._validate_lease(connection, lease_fence, now_epoch_us, experiment_id)
+            self._validate_lease(connection, lease_fence, experiment_id)
             row = connection.execute(
                 "SELECT * FROM experiment WHERE experiment_id=?",
                 (str(experiment_id),),

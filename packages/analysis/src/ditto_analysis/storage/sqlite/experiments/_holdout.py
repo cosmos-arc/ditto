@@ -256,7 +256,6 @@ class SQLiteHoldoutClaimMixin(SQLiteExperimentWriterReaderState):
         cls,
         connection: sqlite3.Connection,
         fence: LeaseFence,
-        now_epoch_us: int,
         expected_experiment_id: ExperimentId,
     ) -> sqlite3.Row: ...
 
@@ -571,9 +570,7 @@ class SQLiteHoldoutClaimMixin(SQLiteExperimentWriterReaderState):
             raise _conflict("experiment revision is stale", "stale_projection_revision")
         if lease_fence is None or now_epoch_us is None:
             raise _spec("new holdout claim requires a lease", "holdout_lease_required")
-        self._validate_lease(
-            connection, lease_fence, now_epoch_us, command.experiment_id
-        )
+        self._validate_lease(connection, lease_fence, command.experiment_id)
         if (
             experiment["status"] != ExperimentStatus.RUNNING.value
             or experiment["desired_state"] != ExperimentDesiredState.RUN.value

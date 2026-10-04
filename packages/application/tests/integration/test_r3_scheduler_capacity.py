@@ -24,6 +24,7 @@ from ditto_analysis.experiments import (
     DateWindow,
     ExperimentBudget,
     ExperimentDesiredState,
+    ExperimentFailureCode,
     ExperimentFailurePolicy,
     ExperimentId,
     ExperimentLaunchSpec,
@@ -387,7 +388,6 @@ def _coordinator(
     *,
     owner: str,
     clock: datetime,
-    lease_duration: timedelta = timedelta(minutes=5),
     checkpoints: set[str] | None = None,
     selection_evidence_publisher: SelectionEvidencePublisher | None = None,
 ) -> ExperimentExecutionCoordinator:
@@ -399,7 +399,6 @@ def _coordinator(
         ),
         first_attempt_factory=_AttemptLineageFactory(),
         owner_token=owner,
-        lease_duration=lease_duration,
         clock=lambda: clock,
         checkpoint_available=available.__contains__,
         checkpoint_resumable=available.__contains__,
@@ -644,7 +643,7 @@ def test_128_candidate_real_preflight_launches_at_registered_run_ceiling(
 
 
 @pytest.mark.parametrize("worker_count", [2, 4])
-def test_sqlite_tick_dispatches_exact_capacity_and_excludes_second_owner(
+def test_sqlite_tick_fences_a_second_owner_into_fail_closed_recovery(
     tmp_path: Path,
     worker_count: int,
 ) -> None:
@@ -680,10 +679,27 @@ def test_sqlite_tick_dispatches_exact_capacity_and_excludes_second_owner(
     assert len(first.dispatches) == worker_count
     assert repeated.state is SchedulerTickState.WAITING
     assert repeated.dispatches == ()
-    assert blocked.state is SchedulerTickState.LEASE_BUSY
-    assert len(attempts) == len(running_folds) == worker_count
-    assert len({attempt.spec.attempt_id for attempt in attempts}) == worker_count
-    assert len({attempt.spec.fold_key for attempt in attempts}) == worker_count
+    # #448: no unexpired-lease busy anymore — the contender reclaims the slot
+    # by CAS and the interrupted owner's attempts fail closed with lease_lost;
+    # exactly one live attempt per fold survives (双协调者不双活).
+    assert blocked.state is SchedulerTickState.DISPATCHED
+    live = tuple(
+        attempt
+        for attempt in attempts
+        if attempt.projection.status
+        in (ExperimentStatus.QUEUED, ExperimentStatus.RUNNING)
+    )
+    interrupted = tuple(
+        attempt
+        for attempt in attempts
+        if attempt.projection.failure_code is ExperimentFailureCode.LEASE_LOST
+    )
+    assert len(live) == len(running_folds) == worker_count
+    assert len(interrupted) == worker_count
+    assert len({attempt.spec.fold_key for attempt in live}) == worker_count
+    assert {attempt.spec.fold_key for attempt in live} == {
+        attempt.spec.fold_key for attempt in interrupted
+    }
     database.close_all()
 
 
@@ -707,7 +723,6 @@ def test_two_queued_experiments_enter_singleton_slot_only_in_queue_order(
         database,
         owner="queue-head-owner",
         clock=NOW + timedelta(seconds=1),
-        lease_duration=timedelta(seconds=2),
     )
     blocked_owner = _coordinator(
         database,
@@ -719,7 +734,10 @@ def test_two_queued_experiments_enter_singleton_slot_only_in_queue_order(
     blocked = blocked_owner.tick(occurred_at=NOW + timedelta(seconds=2))
 
     assert head_dispatch.experiment_id == queue_head.experiment_id
-    assert blocked.state is SchedulerTickState.LEASE_BUSY
+    # #448: the singleton serves its active occupant, so the contender drives
+    # the queue head (fencing takeover) instead of the successor experiment.
+    assert blocked.state is SchedulerTickState.DISPATCHED
+    assert blocked.experiment_id == queue_head.experiment_id
     assert _attempts(reader, successor.experiment_id) == ()
 
     replacement = _coordinator(
@@ -756,7 +774,7 @@ def test_two_queued_experiments_enter_singleton_slot_only_in_queue_order(
     database.close_all()
 
 
-def test_reopen_reclaims_expired_lease_and_preserves_checkpoint_lineage(
+def test_reopen_reclaims_stale_owner_and_preserves_checkpoint_lineage(
     tmp_path: Path,
 ) -> None:
     database, reader, writer = _open(tmp_path)
@@ -771,7 +789,6 @@ def test_reopen_reclaims_expired_lease_and_preserves_checkpoint_lineage(
         database,
         owner="reopen-owner-a",
         clock=NOW + timedelta(seconds=1),
-        lease_duration=timedelta(seconds=2),
         checkpoints=checkpoints,
     )
     first = original.tick(occurred_at=NOW + timedelta(seconds=1))
@@ -787,7 +804,7 @@ def test_reopen_reclaims_expired_lease_and_preserves_checkpoint_lineage(
         CheckpointRef(str(checkpoint_run_id)),
         occurred_at=NOW + timedelta(seconds=2),
     )
-    original_lease = original.renew_lease()
+    original_lease = original.current_lease()
     artifact_proof = _publish_checkpoint_artifact(
         database,
         reader,
@@ -849,12 +866,10 @@ def test_reopen_reclaims_expired_lease_and_preserves_checkpoint_lineage(
         )
         == 2
     )
+    # #448: the interrupted coordinator's fence is dead once the reopen took
+    # over; any write under it fails closed.
     with pytest.raises(ExperimentLeaseLostError):
-        durable_writer.renew_lease(
-            original_lease.fence,
-            now_epoch_us=NOW_US + 11_000_000,
-            new_lease_until_epoch_us=NOW_US + 20_000_000,
-        )
+        durable_writer.release_lease(original_lease.fence)
     reopened.close_all()
 
 
@@ -1006,7 +1021,6 @@ def _prepare_interrupted_capacity_run_open(
         database,
         owner=original_owner,
         clock=NOW + timedelta(seconds=1),
-        lease_duration=timedelta(seconds=2),
         checkpoints=checkpoints,
     )
     first = coordinator.tick(occurred_at=NOW + timedelta(seconds=1))
@@ -1033,7 +1047,7 @@ def _prepare_interrupted_capacity_run_open(
         CheckpointRef(str(run_id)),
         occurred_at=NOW + timedelta(seconds=2),
     )
-    original_lease = coordinator.renew_lease()
+    original_lease = coordinator.current_lease()
     proof = _publish_checkpoint_artifact(
         database,
         reader,
@@ -1132,7 +1146,6 @@ def _resume_capacity_run_open(
         database,
         owner=replacement_owner,
         clock=NOW + timedelta(seconds=10),
-        lease_duration=timedelta(minutes=5),
         checkpoints=interrupted.checkpoints,
         selection_evidence_publisher=probe,
     )
@@ -1275,14 +1288,8 @@ def _assert_completed_capacity_run(
     assert slot.owner_token is not None
     assert not slot.owner_token.startswith(f"{interrupted.original_owner}:")
     assert slot.owner_token.startswith(f"{resumed.replacement_owner}:")
-    assert slot.lease_until_epoch_us is not None
-    assert slot.lease_until_epoch_us > NOW_US + 10_000_000
     with pytest.raises(ExperimentLeaseLostError):
-        resumed.writer.renew_lease(
-            interrupted.original_lease.fence,
-            now_epoch_us=NOW_US + 11_000_000,
-            new_lease_until_epoch_us=NOW_US + 20_000_000,
-        )
+        resumed.writer.release_lease(interrupted.original_lease.fence)
     assert _attempts(resumed.reader, interrupted.queued_successor.experiment_id) == ()
 
 

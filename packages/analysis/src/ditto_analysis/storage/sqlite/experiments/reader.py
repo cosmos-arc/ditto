@@ -81,8 +81,8 @@ from ditto_analysis.storage.sqlite.experiments._holdout import (
 from ditto_analysis.storage.sqlite.experiments._review_packet import (
     fetch_experiment_id_by_spec_hash,
 )
-from ditto_analysis.storage.sqlite.experiments._scheduler_queue import (
-    scheduler_queue_candidates,
+from ditto_analysis.storage.sqlite.experiments._work_rules import (
+    dispatchable_experiment_rows,
 )
 from ditto_analysis.storage.sqlite.experiments.database import (
     ResearchExperimentDatabase,
@@ -419,7 +419,7 @@ class SQLiteExperimentReader:
         )
 
     def list_dispatchable_experiments(self) -> tuple[ExperimentProjection, ...]:
-        rows = scheduler_queue_candidates(self._database.get_connection())
+        rows = dispatchable_experiment_rows(self._database.get_connection())
         return tuple(self._experiment_projection(row) for row in rows)
 
     def list_experiments(self) -> tuple[ExperimentProjection, ...]:
@@ -901,8 +901,5 @@ class SQLiteExperimentReader:
                 else ExperimentId(row["experiment_id"])
             ),
             owner_token=row["owner_token"],
-            lease_until_epoch_us=row["lease_until_epoch_us"],
-            acquired_at_epoch_us=row["acquired_at_epoch_us"],
-            renewed_at_epoch_us=row["renewed_at_epoch_us"],
             revision=row["revision"],
         )

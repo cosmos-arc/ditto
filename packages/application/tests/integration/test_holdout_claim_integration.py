@@ -613,7 +613,6 @@ def _persist_candidate_selection(
         f"owner-{experiment_id}",
         expected_revision=slot.revision,
         now_epoch_us=NOW_US,
-        lease_until_epoch_us=NOW_US + 60_000_000,
     )
     assert lease is not None
     writer.transition_scheduled_experiment(
@@ -916,7 +915,7 @@ def _finish_claimed_experiment(
         reason_code="terminal_test",
         detail={},
     )
-    writer.release_lease(lease.fence, now_epoch_us=NOW_US + 10)
+    writer.release_lease(lease.fence)
 
 
 def test_atomic_claim_commits_claim_stage_event_and_unselected_cancellation(
@@ -1420,11 +1419,13 @@ def test_stale_revision_lease_and_pause_cancel_state_reject_without_claim(
 
     with pytest.raises(ExperimentConflictError):
         _claim(writer, lease, _command(expected_revision=3))
-    renewed = writer.renew_lease(
-        lease.fence,
+    renewed = writer.try_claim_lease(
+        lease.experiment_id,
+        lease.owner_token,
+        expected_revision=lease.revision,
         now_epoch_us=NOW_US + 2,
-        new_lease_until_epoch_us=NOW_US + 120_000_000,
     )
+    assert renewed is not None
     with pytest.raises(ExperimentLeaseLostError):
         _claim(writer, lease)
 
@@ -2283,7 +2284,6 @@ def _owned_coordinator(
         selection_evidence_provider=provider,
         selection_evidence_publisher=provider,
         owner_token="holdout-acceptance-coordinator",
-        lease_duration=timedelta(minutes=5),
         clock=_AdvancingClock(NOW + timedelta(minutes=2)),
     )
     assert (
@@ -2307,7 +2307,6 @@ def _coordinator_with_selection_ledger(
         selection_evidence_provider=provider,
         selection_evidence_publisher=provider,
         owner_token="holdout-ledger-binding-coordinator",
-        lease_duration=timedelta(minutes=5),
         clock=_AdvancingClock(NOW + timedelta(minutes=2)),
     )
     assert (
@@ -2424,7 +2423,6 @@ def test_failed_candidate_isolation_preserves_remaining_holdout_claim_lifecycle(
         selection_evidence_provider=provider,
         selection_evidence_publisher=provider,
         owner_token="holdout-isolation-coordinator",
-        lease_duration=timedelta(minutes=5),
         clock=_AdvancingClock(NOW + timedelta(minutes=2)),
     )
 
@@ -2569,7 +2567,6 @@ def test_same_cycle_clone_conflicts_before_lease_or_moving_dependencies(
         first_attempt_factory=_Factory("9" * 64),
         selection_evidence_provider=None,
         owner_token="clone-without-lease",
-        lease_duration=timedelta(minutes=5),
         clock=_AdvancingClock(NOW + timedelta(minutes=2)),
     )
     api = _holdout_api()
@@ -2614,7 +2611,6 @@ def test_coordinator_dispatches_only_claimed_holdout_after_atomic_commit(
         selection_evidence_provider=provider,
         selection_evidence_publisher=provider,
         owner_token="holdout-coordinator",
-        lease_duration=timedelta(minutes=5),
         clock=lambda: clock_now[0],
     )
 
@@ -2625,7 +2621,6 @@ def test_coordinator_dispatches_only_claimed_holdout_after_atomic_commit(
         first_attempt_factory=_Factory(),
         selection_evidence_provider=provider,
         owner_token="holdout-api",
-        lease_duration=timedelta(minutes=5),
         clock=lambda: clock_now[0],
     )
     receipt = api_coordinator.claim_holdout_candidate(
@@ -2661,7 +2656,6 @@ def test_dispatch_fails_closed_when_resolved_fingerprint_drifts_after_claim(
         selection_evidence_provider=provider,
         selection_evidence_publisher=provider,
         owner_token="holdout-drift-coordinator",
-        lease_duration=timedelta(minutes=5),
         clock=_AdvancingClock(NOW + timedelta(minutes=2)),
     )
     coordinator.tick(occurred_at=NOW)

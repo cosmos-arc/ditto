@@ -645,36 +645,29 @@ class HoldoutClaimRecord:
 
 @dataclass(frozen=True, slots=True)
 class LeaseFence:
-    """Worker authority bound to experiment, owner, revision, and expiry."""
+    """Write authority bound to experiment, owner, and slot revision."""
 
     experiment_id: ExperimentId
     owner_token: str
     revision: int
-    lease_until_epoch_us: int
 
 
 @dataclass(frozen=True, slots=True)
 class SchedulerSlot:
-    """Current singleton scheduler-slot projection, free or leased."""
+    """Current singleton scheduler-slot projection, free or owned."""
 
     slot_id: str
     experiment_id: ExperimentId | None
     owner_token: str | None
-    lease_until_epoch_us: int | None
-    acquired_at_epoch_us: int | None
-    renewed_at_epoch_us: int | None
     revision: int
 
 
 @dataclass(frozen=True, slots=True)
 class SchedulerLease:
-    """Owned scheduler lease returned after a successful fenced CAS."""
+    """Owned scheduler slot claim returned after a successful fenced CAS."""
 
     experiment_id: ExperimentId
     owner_token: str
-    lease_until_epoch_us: int
-    acquired_at_epoch_us: int
-    renewed_at_epoch_us: int
     revision: int
 
     @property
@@ -684,7 +677,6 @@ class SchedulerLease:
             experiment_id=self.experiment_id,
             owner_token=self.owner_token,
             revision=self.revision,
-            lease_until_epoch_us=self.lease_until_epoch_us,
         )
 
 

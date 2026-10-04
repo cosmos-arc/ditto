@@ -5,7 +5,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Protocol
 
 from ditto_analysis.errors import AnalysisError
@@ -148,7 +148,6 @@ class ExperimentExecutionCoordinator(
         store: ExperimentSchedulerStoreProtocol,
         first_attempt_factory: FirstAttemptFactory,
         owner_token: str,
-        lease_duration: timedelta,
         selection_evidence_provider: HoldoutSelectionEvidenceProvider | None = None,
         clock: Callable[[], datetime] | None = None,
         checkpoint_available: Callable[[str], bool] | None = None,
@@ -161,7 +160,6 @@ class ExperimentExecutionCoordinator(
         self._authority = LeaseAuthority(
             store,
             owner_token=owner_token,
-            lease_duration=lease_duration,
             clock=clock,
         )
         self._holdout = HoldoutCoordinatorAuthority(
@@ -408,13 +406,6 @@ class ExperimentExecutionCoordinator(
     def _acquire_queue_head(self) -> SchedulerTickResult | None:
         try:
             slot = self._store.get_scheduler_slot()
-            now_epoch_us = self._authority.now_epoch_us()
-            if (
-                slot.experiment_id is not None
-                and slot.lease_until_epoch_us is not None
-                and slot.lease_until_epoch_us > now_epoch_us
-            ):
-                return _empty_result(SchedulerTickState.LEASE_BUSY)
             queue = self._store.list_dispatchable_experiments()
             selected: ExperimentSchedulerSnapshot | None = None
             if slot.experiment_id is not None:
@@ -556,9 +547,8 @@ class ExperimentExecutionCoordinator(
             occurred_at=occurred_at,
         )
         if terminal_state is not None:
-            result = _result(terminal_state, snapshot, ())
-            self._handoff_operator_gate(terminal_state)
-            return result
+            self._forget_operator_gate(terminal_state)
+            return _result(terminal_state, snapshot, ())
         dispatches = self._dispatch_capacity_respecting_control(
             snapshot,
             lease,
@@ -571,12 +561,13 @@ class ExperimentExecutionCoordinator(
         )
         return _result(state, refreshed, dispatches)
 
-    def _handoff_operator_gate(self, state: SchedulerTickState) -> None:
+    def _forget_operator_gate(self, state: SchedulerTickState) -> None:
+        """Park the idle claim at an operator gate for in-place reclaim."""
         if state in {
             SchedulerTickState.CANDIDATE_SELECTION,
             SchedulerTickState.HOLDOUT_GATED,
         }:
-            self._authority.handoff()
+            self._authority.forget_lease()
 
     def _advance_completed_stages(
         self,

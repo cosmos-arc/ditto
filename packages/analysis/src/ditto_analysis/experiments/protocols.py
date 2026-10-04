@@ -334,21 +334,6 @@ class ExperimentWriterProtocol(Protocol):
         *,
         expected_revision: int,
         now_epoch_us: int,
-        lease_until_epoch_us: int,
     ) -> SchedulerLease | None: ...
 
-    def renew_lease(
-        self,
-        fence: LeaseFence,
-        *,
-        now_epoch_us: int,
-        new_lease_until_epoch_us: int,
-    ) -> SchedulerLease: ...
-
-    def handoff_lease(
-        self, fence: LeaseFence, *, now_epoch_us: int
-    ) -> SchedulerSlot: ...
-
-    def release_lease(
-        self, fence: LeaseFence, *, now_epoch_us: int
-    ) -> SchedulerSlot: ...
+    def release_lease(self, fence: LeaseFence) -> SchedulerSlot: ...

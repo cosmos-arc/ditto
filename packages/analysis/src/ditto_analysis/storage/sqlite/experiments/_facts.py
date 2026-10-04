@@ -203,9 +203,7 @@ class SQLiteExperimentFactsMixin(
     ) -> None:
         """Enforce the scheduler lease unless the artifact kind is exempt."""
         if record.artifact_kind not in _LEASE_EXEMPT_KINDS:
-            self._validate_lease(
-                connection, lease_fence, now_epoch_us, record.experiment_id
-            )
+            self._validate_lease(connection, lease_fence, record.experiment_id)
 
     def record_candidate_selection(
         self,
@@ -225,7 +223,6 @@ class SQLiteExperimentFactsMixin(
             self._validate_lease(
                 connection,
                 lease_fence,
-                now_epoch_us,
                 experiment_id,
             )
             row = connection.execute(

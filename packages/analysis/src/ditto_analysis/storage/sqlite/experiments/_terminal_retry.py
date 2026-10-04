@@ -64,7 +64,6 @@ class SQLiteTerminalFoldRetryMixin:
         cls,
         connection: sqlite3.Connection,
         fence: LeaseFence,
-        now_epoch_us: int,
         expected_experiment_id: ExperimentId,
     ) -> sqlite3.Row: ...
 
@@ -257,7 +256,6 @@ class SQLiteTerminalFoldRetryMixin:
             self._validate_lease(
                 connection,
                 lease_fence,
-                now_epoch_us,
                 key.experiment_id,
             )
             fold, fold_failure_code = self._load_terminal_retry_fold(

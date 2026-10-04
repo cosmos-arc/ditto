@@ -58,7 +58,6 @@ FENCE = LeaseFence(
     experiment_id=ExperimentId("experiment-inputs"),
     owner_token="resolver-test",
     revision=1,
-    lease_until_epoch_us=NOW_US + 1_000,
 )
 SNAPSHOT_ID = "certified-snapshot-inputs"
 DATASET_ID = "research-etf-rotation"

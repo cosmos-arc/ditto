@@ -377,11 +377,7 @@ class AutonomousCampaignCoordinator(AutonomousCampaignAuthorization):
                 ),
                 now_epoch_us=campaign_epoch_us(occurred_at),
             )
-            self._validate_lease(
-                scheduled.lease,
-                campaign_id,
-                campaign_epoch_us(occurred_at),
-            )
+            self._validate_lease(scheduled.lease, campaign_id)
         except AppProcessError as exc:
             if exc.details.get("reason") == "campaign_lease_lost":
                 self._pause_for_lost_lease(campaign_id, candidate, occurred_at)
@@ -568,7 +564,7 @@ class AutonomousCampaignCoordinator(AutonomousCampaignAuthorization):
                 ),
                 now_epoch_us=campaign_epoch_us(now),
             )
-            self._validate_lease(lease, campaign_id, campaign_epoch_us(now))
+            self._validate_lease(lease, campaign_id)
             candidate_record = next(
                 item
                 for item in self._reader.list_candidates(campaign_id)

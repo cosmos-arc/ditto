@@ -73,7 +73,6 @@ FENCE = LeaseFence(
     experiment_id=ExperimentId("experiment-1"),
     owner_token="worker-1",
     revision=7,
-    lease_until_epoch_us=NOW_US + 1_000,
 )
 
 

@@ -53,7 +53,6 @@ from ditto_application.builders.research_execution_resolver import (
 )
 from ditto_application.commands.candidate_selection import CandidateSelectionProcess
 from ditto_application.processes.experiments._control_runtime import (
-    CONTROL_COORDINATOR_LEASE_DURATION,
     CONTROL_COORDINATOR_OWNER_TOKEN,
 )
 from ditto_application.processes.experiments._execution_resolution_evidence import (
@@ -364,7 +363,6 @@ class AppResearchExecutionProvider(Provider):
             store=store,
             first_attempt_factory=first_attempt_factory,
             owner_token=CONTROL_COORDINATOR_OWNER_TOKEN,
-            lease_duration=CONTROL_COORDINATOR_LEASE_DURATION,
             selection_evidence_provider=selection_evidence,
             evidence_collector=evidence_collector,
             selection_evidence_publisher=selection_evidence,

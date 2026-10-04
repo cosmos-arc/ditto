@@ -10,7 +10,7 @@ so the placeholder factory fails loudly if ever invoked.
 from __future__ import annotations
 
 from collections.abc import Callable
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 from threading import Lock, RLock
 from typing import cast
 from unittest.mock import MagicMock
@@ -60,13 +60,10 @@ class _ControlStore:
     def __init__(
         self,
         *,
-        handoff_error: BaseException | None = None,
         probe: Callable[[str], None] | None = None,
     ) -> None:
-        self.slot = SchedulerSlot("global", None, None, None, None, None, 0)
+        self.slot = SchedulerSlot("global", None, None, 0)
         self.release_calls = 0
-        self.handoff_calls = 0
-        self.handoff_error = handoff_error
         self.probe = probe
         self._lock = Lock()
 
@@ -81,7 +78,6 @@ class _ControlStore:
         *,
         expected_revision: int,
         now_epoch_us: int,
-        lease_until_epoch_us: int,
     ) -> SchedulerLease | None:
         with self._lock:
             if (
@@ -94,60 +90,23 @@ class _ControlStore:
             lease = SchedulerLease(
                 experiment_id=experiment_id,
                 owner_token=owner_token,
-                lease_until_epoch_us=lease_until_epoch_us,
-                acquired_at_epoch_us=now_epoch_us,
-                renewed_at_epoch_us=now_epoch_us,
                 revision=expected_revision + 1,
             )
             self.slot = SchedulerSlot(
                 "global",
                 experiment_id,
                 owner_token,
-                lease_until_epoch_us,
-                now_epoch_us,
-                now_epoch_us,
                 lease.revision,
             )
             return lease
 
-    def release_lease(
-        self,
-        lease: SchedulerLease,
-        *,
-        now_epoch_us: int,
-    ) -> SchedulerSlot:
+    def release_lease(self, lease: SchedulerLease) -> SchedulerSlot:
         with self._lock:
             self.release_calls += 1
             self.slot = SchedulerSlot(
                 "global",
                 None,
                 None,
-                None,
-                self.slot.acquired_at_epoch_us,
-                now_epoch_us,
-                lease.revision + 1,
-            )
-            return self.slot
-
-    def handoff_lease(
-        self,
-        lease: SchedulerLease,
-        *,
-        now_epoch_us: int,
-    ) -> SchedulerSlot:
-        with self._lock:
-            self.handoff_calls += 1
-            if self.probe is not None:
-                self.probe("handoff")
-            if self.handoff_error is not None:
-                raise self.handoff_error
-            self.slot = SchedulerSlot(
-                "global",
-                lease.experiment_id,
-                lease.owner_token,
-                max(now_epoch_us, lease.renewed_at_epoch_us + 1),
-                lease.acquired_at_epoch_us,
-                lease.renewed_at_epoch_us,
                 lease.revision + 1,
             )
             return self.slot
@@ -232,7 +191,6 @@ def _authority(store: ExperimentSchedulerStoreProtocol) -> LeaseAuthority:
     return LeaseAuthority(
         store,
         owner_token="control-owner",
-        lease_duration=timedelta(minutes=5),
         clock=lambda: _NOW,
     )
 
@@ -310,16 +268,17 @@ class TestRetryFoldUnderTransientLease:
         assert [event for event, _depth, _section_id in events] == [
             "acquire",
             "operator",
-            "handoff",
         ]
         assert all(depth >= 2 for _event, depth, _section_id in events)
         assert len({section_id for _event, _depth, section_id in events}) == 1
         assert events[0][2] is not None
         assert lock.depth == 0
         assert authority.has_lease is False
-        assert store.handoff_calls == 1
         assert store.release_calls == 0
+        # #448: the forgotten transient claim leaves the durable slot occupied
+        # for the next same-experiment claimant to reclaim in place.
         assert store.slot.experiment_id == _EXPERIMENT_ID
+        assert store.slot.owner_token is not None
 
     def test_preserves_preexisting_scheduler_lease(self) -> None:
         store = _ControlStore()
@@ -335,101 +294,5 @@ class TestRetryFoldUnderTransientLease:
 
         assert receipt is _RECEIPT
         assert store.release_calls == 0
-        assert store.handoff_calls == 0
+        assert store.slot.owner_token is not None
         assert authority.has_lease is True
-
-    def test_preserves_operator_error_when_transient_handoff_also_fails(self) -> None:
-        operator_error = AppProcessError(
-            "operator request rejected",
-            details={"code": "SPEC_INVALID", "reason": "stale_fold_revision"},
-        )
-        release_error = AppProcessError(
-            "release rejected",
-            details={"code": "SPEC_INVALID", "reason": "release_rejected"},
-        )
-        store = _ControlStore(handoff_error=release_error)
-        store_port = cast(ExperimentSchedulerStoreProtocol, store)
-        authority = _authority(store_port)
-
-        with pytest.raises(AppProcessError) as exc_info:
-            _retry(
-                authority,
-                _RetryRecovery(error=operator_error),
-                store=store_port,
-            )
-
-        assert exc_info.value is operator_error
-        assert store.handoff_calls == 1
-        assert store.release_calls == 0
-        notes = getattr(operator_error, "__notes__", ())
-        assert any(
-            "transient scheduler lease handoff also failed" in note for note in notes
-        )
-        assert any(
-            "code=SPEC_INVALID" in note and "reason=release_rejected" in note
-            for note in notes
-        )
-
-    def test_surfaces_transient_handoff_error_after_success(self) -> None:
-        release_error = AppProcessError(
-            "release rejected",
-            details={"code": "SPEC_INVALID", "reason": "release_rejected"},
-        )
-        store = _ControlStore(handoff_error=release_error)
-        store_port = cast(ExperimentSchedulerStoreProtocol, store)
-        authority = _authority(store_port)
-
-        with pytest.raises(AppProcessError) as exc_info:
-            _retry(
-                authority,
-                _RetryRecovery(result=_RECEIPT),
-                store=store_port,
-            )
-
-        assert exc_info.value is release_error
-        assert store.handoff_calls == 1
-        assert store.release_calls == 0
-
-    def test_invalidates_authority_when_handoff_interrupts_operator_error(
-        self,
-    ) -> None:
-        operator_error = AppProcessError(
-            "operator request rejected",
-            details={"code": "SPEC_INVALID", "reason": "stale_fold_revision"},
-        )
-        release_error = KeyboardInterrupt("release interrupted")
-        store = _ControlStore(handoff_error=release_error)
-        store_port = cast(ExperimentSchedulerStoreProtocol, store)
-        authority = _authority(store_port)
-
-        with pytest.raises(AppProcessError) as exc_info:
-            _retry(
-                authority,
-                _RetryRecovery(error=operator_error),
-                store=store_port,
-            )
-
-        assert exc_info.value is operator_error
-        assert authority.has_lease is False
-        assert authority.is_lost is True
-        assert any(
-            "KeyboardInterrupt: release interrupted" in note
-            for note in getattr(operator_error, "__notes__", ())
-        )
-
-    def test_invalidates_authority_when_handoff_interrupts_success(self) -> None:
-        release_error = SystemExit(23)
-        store = _ControlStore(handoff_error=release_error)
-        store_port = cast(ExperimentSchedulerStoreProtocol, store)
-        authority = _authority(store_port)
-
-        with pytest.raises(SystemExit) as exc_info:
-            _retry(
-                authority,
-                _RetryRecovery(result=_RECEIPT),
-                store=store_port,
-            )
-
-        assert exc_info.value is release_error
-        assert authority.has_lease is False
-        assert authority.is_lost is True

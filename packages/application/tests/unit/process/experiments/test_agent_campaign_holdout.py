@@ -69,9 +69,6 @@ def _lease() -> SchedulerLease:
     return SchedulerLease(
         experiment_id=ExperimentId("campaign-holdout-1"),
         owner_token="r5-holdout-operator",
-        lease_until_epoch_us=2_000_000,
-        acquired_at_epoch_us=1_000_000,
-        renewed_at_epoch_us=1_000_000,
         revision=3,
     )
 

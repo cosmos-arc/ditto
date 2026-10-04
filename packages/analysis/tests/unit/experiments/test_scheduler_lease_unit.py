@@ -233,7 +233,6 @@ def _claim_queued_experiment(
     owner: str = "owner-a",
     expected_slot_revision: int = 0,
     now_epoch_us: int = NOW_US,
-    lease_until_epoch_us: int = NOW_US + 100,
 ) -> tuple[Any, Any]:
     queued = _enqueue_experiment(writer, experiment_id)
     lease = writer.try_claim_lease(
@@ -241,10 +240,21 @@ def _claim_queued_experiment(
         owner,
         expected_revision=expected_slot_revision,
         now_epoch_us=now_epoch_us,
-        lease_until_epoch_us=lease_until_epoch_us,
     )
     assert lease is not None
     return lease, queued
+
+
+def _takeover_lease(writer: Any, lease: Any, owner: str = "owner-b") -> Any:
+    """Fencing-token takeover: same-experiment claim revision-overwrites owner."""
+    taken = writer.try_claim_lease(
+        lease.experiment_id,
+        owner,
+        expected_revision=lease.revision,
+        now_epoch_us=NOW_US + 50,
+    )
+    assert taken is not None
+    return taken
 
 
 def _start_running_experiment(
@@ -252,13 +262,11 @@ def _start_running_experiment(
     *,
     experiment_id: ExperimentId = ExperimentId("experiment-1"),
     owner: str = "owner-a",
-    lease_until_epoch_us: int = NOW_US + 100,
 ) -> tuple[Any, Any]:
     lease, queued = _claim_queued_experiment(
         writer,
         experiment_id=experiment_id,
         owner=owner,
-        lease_until_epoch_us=lease_until_epoch_us,
     )
     running = writer.transition_scheduled_experiment(
         experiment_id,
@@ -283,13 +291,11 @@ def _start_running_attempt(
     key: Any,
     *,
     owner: str = "owner-a",
-    lease_until_epoch_us: int = NOW_US + 10,
 ) -> tuple[Any, Any, Any]:
     lease, _running_experiment = _start_running_experiment(
         writer,
         experiment_id=key.experiment_id,
         owner=owner,
-        lease_until_epoch_us=lease_until_epoch_us,
     )
     spec, projection = _attempt(api, key)
     writer.claim_fold_and_add_attempt(
@@ -401,7 +407,6 @@ def test_unowned_queued_cancel_drains_then_allows_the_next_queue_item(
         "owner-drain",
         expected_revision=0,
         now_epoch_us=NOW_US,
-        lease_until_epoch_us=NOW_US + 100,
     )
     assert drain_lease is not None
     writer.transition_scheduled_experiment(
@@ -418,17 +423,13 @@ def test_unowned_queued_cancel_drains_then_allows_the_next_queue_item(
         reason_code="cancel_drained",
         detail={},
     )
-    released = writer.release_lease(
-        drain_lease.fence,
-        now_epoch_us=NOW_US + 2,
-    )
+    released = writer.release_lease(drain_lease.fence)
 
     next_lease = writer.try_claim_lease(
         ExperimentId("experiment-2"),
         "owner-next",
         expected_revision=released.revision,
         now_epoch_us=NOW_US + 3,
-        lease_until_epoch_us=NOW_US + 200,
     )
     assert next_lease is not None
 
@@ -457,7 +458,6 @@ def test_queued_origin_cancel_waits_for_queued_folds_before_terminal_release(
         "owner-drain",
         expected_revision=0,
         now_epoch_us=NOW_US,
-        lease_until_epoch_us=NOW_US + 100,
     )
     assert lease is not None
     before_experiment = reader.get_experiment_projection(key.experiment_id)
@@ -516,7 +516,7 @@ def test_queued_origin_cancel_waits_for_queued_folds_before_terminal_release(
         reason_code="cancel_drained",
         detail={},
     )
-    released = writer.release_lease(lease.fence, now_epoch_us=NOW_US + 4)
+    released = writer.release_lease(lease.fence)
 
     assert cancelled_fold.status is ExperimentStatus.CANCELLED
     assert cancelled.record.status is ExperimentStatus.CANCELLED
@@ -532,7 +532,6 @@ def test_terminal_transition_waits_for_running_attempt_then_releases_after_drain
         writer,
         api,
         key,
-        lease_until_epoch_us=NOW_US + 100,
     )
     running_experiment = reader.get_experiment_projection(key.experiment_id)
     cancel_requested = writer.transition_experiment(
@@ -616,7 +615,7 @@ def test_terminal_transition_waits_for_running_attempt_then_releases_after_drain
         reason_code="cancel_drained",
         detail={},
     )
-    released = writer.release_lease(lease.fence, now_epoch_us=NOW_US + 8)
+    released = writer.release_lease(lease.fence)
 
     assert cancelled_attempt.status is ExperimentStatus.CANCELLED
     assert cancelled_fold.status is ExperimentStatus.CANCELLED
@@ -631,7 +630,6 @@ def test_terminal_transition_rejects_running_fold_without_an_attempt(
     key = _add_fold(writer, api)
     lease, running = _start_running_experiment(
         writer,
-        lease_until_epoch_us=NOW_US + 100,
     )
     claimed_fold = writer.claim_fold(
         key,
@@ -719,7 +717,6 @@ def test_unowned_non_queued_origin_cancel_request_fails_closed(
             "owner-invalid",
             expected_revision=lease.fence.revision + 1,
             now_epoch_us=NOW_US + 2,
-            lease_until_epoch_us=NOW_US + 100,
         )
 
     assert (
@@ -729,10 +726,10 @@ def test_unowned_non_queued_origin_cancel_request_fails_closed(
     assert reader.get_scheduler_slot() == before_slot
 
 
-def test_free_slot_rejects_out_of_order_queue_claim_without_occupying_slot(
+def test_free_slot_allows_any_queued_experiment_after_queue_gate_retirement(
     tmp_path: Path,
 ) -> None:
-    _database, reader, writer, api = _store(tmp_path)
+    _database, _reader, writer, api = _store(tmp_path)
     writer.create_experiment(
         api.ResearchCycleIdentity("cycle-second", ContentHash("e" * 64)),
         _launch("experiment-2"),
@@ -746,30 +743,28 @@ def test_free_slot_rejects_out_of_order_queue_claim_without_occupying_slot(
             reason_code="preflight_passed",
             detail={},
         )
-    before_slot = reader.get_scheduler_slot()
 
-    with pytest.raises(ExperimentSpecError) as exc_info:
-        writer.try_claim_lease(
-            ExperimentId("experiment-2"),
-            "owner-b",
-            expected_revision=0,
-            now_epoch_us=NOW_US,
-            lease_until_epoch_us=NOW_US + 100,
-        )
-
-    assert exc_info.value.details["reason_code"] == "scheduler_queue_order_violation"
-    assert reader.get_scheduler_slot() == before_slot
-    lease = writer.try_claim_lease(
-        ExperimentId("experiment-1"),
-        "owner-a",
+    # #448: the FIFO head-only gate is retired; either queued experiment may
+    # claim the free singleton slot first, and the singleton then serves only
+    # its occupant until that experiment drains.
+    first = writer.try_claim_lease(
+        ExperimentId("experiment-2"),
+        "owner-b",
         expected_revision=0,
         now_epoch_us=NOW_US,
-        lease_until_epoch_us=NOW_US + 100,
     )
-    assert lease is not None
+    assert first is not None
+    with pytest.raises(ExperimentSpecError) as exc_info:
+        writer.try_claim_lease(
+            ExperimentId("experiment-1"),
+            "owner-a",
+            expected_revision=first.revision,
+            now_epoch_us=NOW_US + 1,
+        )
+    assert exc_info.value.details["reason_code"] == "scheduler_reclaim_required"
 
 
-def test_non_run_queue_head_blocks_all_free_slot_claims_without_being_skipped(
+def test_non_run_queued_experiment_cannot_claim_the_free_slot(
     tmp_path: Path,
 ) -> None:
     database, reader, writer, api = _store(tmp_path)
@@ -798,17 +793,22 @@ def test_non_run_queue_head_blocks_all_free_slot_claims_without_being_skipped(
 
     with pytest.raises(ExperimentSpecError) as exc_info:
         writer.try_claim_lease(
-            ExperimentId("experiment-2"),
-            "owner-b",
+            ExperimentId("experiment-1"),
+            "owner-a",
             expected_revision=0,
             now_epoch_us=NOW_US,
-            lease_until_epoch_us=NOW_US + 100,
         )
 
-    assert (
-        exc_info.value.details["reason_code"] == "scheduler_queue_head_intent_mismatch"
-    )
+    assert exc_info.value.details["reason_code"] == "scheduler_claim_intent_mismatch"
     assert reader.get_scheduler_slot() == before_slot
+    # Without the queue gate the next queued run-intent experiment may claim.
+    lease = writer.try_claim_lease(
+        ExperimentId("experiment-2"),
+        "owner-b",
+        expected_revision=0,
+        now_epoch_us=NOW_US,
+    )
+    assert lease is not None
 
 
 @pytest.mark.parametrize(
@@ -862,7 +862,6 @@ def test_free_slot_rejects_non_queued_experiment_lifecycle(
             "owner-a",
             expected_revision=0,
             now_epoch_us=NOW_US,
-            lease_until_epoch_us=NOW_US + 100,
         )
 
     assert exc_info.value.details["reason_code"] == "scheduler_experiment_not_eligible"
@@ -899,32 +898,22 @@ def test_claimable_fold_reader_orders_candidate_then_fold_ordinal(
     ]
 
 
-def test_claim_contention_and_expiry_boundary_have_precise_semantics(
+def test_claim_contention_and_fencing_takeover_have_precise_semantics(
     tmp_path: Path,
 ) -> None:
     _database, reader, writer, api = _store(tmp_path)
     first, _queued = _claim_queued_experiment(
         writer,
-        lease_until_epoch_us=NOW_US + 100,
     )
     assert first.fence.revision == 1
 
-    assert (
-        writer.try_claim_lease(
-            ExperimentId("experiment-1"),
-            "owner-b",
-            expected_revision=1,
-            now_epoch_us=NOW_US + 99,
-            lease_until_epoch_us=NOW_US + 200,
-        )
-        is None
-    )
+    # #448: a same-experiment claimant at the current revision CAS-overwrites
+    # the stale owner; the stale owner's release then fails closed.
     reclaimed = writer.try_claim_lease(
         ExperimentId("experiment-1"),
         "owner-b",
         expected_revision=1,
-        now_epoch_us=NOW_US + 100,
-        lease_until_epoch_us=NOW_US + 200,
+        now_epoch_us=NOW_US + 99,
     )
     assert reclaimed is not None
     assert reclaimed.fence.owner_token == "owner-b"
@@ -932,10 +921,10 @@ def test_claim_contention_and_expiry_boundary_have_precise_semantics(
     assert reader.get_scheduler_slot().owner_token == "owner-b"
 
     with pytest.raises(api.ExperimentLeaseLostError):
-        writer.release_lease(first.fence, now_epoch_us=NOW_US + 101)
+        writer.release_lease(first.fence)
 
 
-def test_expired_active_occupant_must_be_reclaimed_before_next_queue_item(
+def test_active_occupant_must_be_reclaimed_before_next_queue_item(
     tmp_path: Path,
 ) -> None:
     _database, reader, writer, api = _store(tmp_path)
@@ -957,7 +946,6 @@ def test_expired_active_occupant_must_be_reclaimed_before_next_queue_item(
         "owner-a",
         expected_revision=0,
         now_epoch_us=NOW_US,
-        lease_until_epoch_us=NOW_US + 10,
     )
     assert first is not None
     before_slot = reader.get_scheduler_slot()
@@ -968,14 +956,13 @@ def test_expired_active_occupant_must_be_reclaimed_before_next_queue_item(
             "owner-b",
             expected_revision=first.revision,
             now_epoch_us=NOW_US + 10,
-            lease_until_epoch_us=NOW_US + 100,
         )
 
     assert exc_info.value.details["reason_code"] == "scheduler_reclaim_required"
     assert reader.get_scheduler_slot() == before_slot
 
 
-def test_expired_occupant_intent_drift_fails_closed_without_slot_mutation(
+def test_stale_occupant_intent_drift_fails_closed_without_slot_mutation(
     tmp_path: Path,
 ) -> None:
     database, reader, writer, _api_ns = _store(tmp_path)
@@ -991,7 +978,6 @@ def test_expired_occupant_intent_drift_fails_closed_without_slot_mutation(
         "owner-a",
         expected_revision=0,
         now_epoch_us=NOW_US,
-        lease_until_epoch_us=NOW_US + 10,
     )
     assert first is not None
     connection = database.get_connection()
@@ -1010,14 +996,13 @@ def test_expired_occupant_intent_drift_fails_closed_without_slot_mutation(
             "owner-b",
             expected_revision=first.revision,
             now_epoch_us=NOW_US + 10,
-            lease_until_epoch_us=NOW_US + 100,
         )
 
     assert exc_info.value.details["reason_code"] == "scheduler_occupant_intent_mismatch"
     assert reader.get_scheduler_slot() == before_slot
 
 
-def test_expired_illegal_occupant_lifecycle_fails_closed(
+def test_stale_occupant_illegal_lifecycle_fails_closed(
     tmp_path: Path,
 ) -> None:
     database, reader, writer, api = _store(tmp_path)
@@ -1041,7 +1026,6 @@ def test_expired_illegal_occupant_lifecycle_fails_closed(
             "owner-b",
             expected_revision=1,
             now_epoch_us=NOW_US + 10,
-            lease_until_epoch_us=NOW_US + 100,
         )
 
     assert (
@@ -1050,7 +1034,7 @@ def test_expired_illegal_occupant_lifecycle_fails_closed(
     assert reader.get_scheduler_slot() == before_slot
 
 
-def test_terminal_expired_occupant_allows_current_queue_head_to_take_slot(
+def test_terminal_occupant_allows_current_queue_head_to_take_slot(
     tmp_path: Path,
 ) -> None:
     database, _reader, writer, api = _store(tmp_path)
@@ -1072,7 +1056,6 @@ def test_terminal_expired_occupant_allows_current_queue_head_to_take_slot(
         "owner-a",
         expected_revision=0,
         now_epoch_us=NOW_US,
-        lease_until_epoch_us=NOW_US + 10,
     )
     assert first is not None
     connection = database.get_connection()
@@ -1089,14 +1072,13 @@ def test_terminal_expired_occupant_allows_current_queue_head_to_take_slot(
         "owner-b",
         expected_revision=first.revision,
         now_epoch_us=NOW_US + 10,
-        lease_until_epoch_us=NOW_US + 100,
     )
 
     assert second is not None
     assert second.experiment_id == ExperimentId("experiment-2")
 
 
-def test_terminal_expired_occupant_with_live_child_blocks_slot_handoff(
+def test_terminal_occupant_with_live_child_blocks_slot_takeover(
     tmp_path: Path,
 ) -> None:
     database, reader, writer, api = _store(tmp_path)
@@ -1110,7 +1092,6 @@ def test_terminal_expired_occupant_with_live_child_blocks_slot_handoff(
         writer,
         api,
         key,
-        lease_until_epoch_us=NOW_US + 10,
     )
     _enqueue_experiment(writer, ExperimentId("experiment-2"))
     running_experiment = reader.get_experiment_projection(key.experiment_id)
@@ -1147,7 +1128,6 @@ def test_terminal_expired_occupant_with_live_child_blocks_slot_handoff(
             "owner-b",
             expected_revision=first.revision,
             now_epoch_us=NOW_US + 10,
-            lease_until_epoch_us=NOW_US + 100,
         )
 
     assert exc_info.value.details == {
@@ -1174,7 +1154,7 @@ def test_terminal_expired_occupant_with_live_child_blocks_slot_handoff(
         (ExperimentStatus.CANCEL_REQUESTED, ExperimentDesiredState.CANCEL),
     ],
 )
-def test_expired_active_occupant_can_reclaim_its_own_slot(
+def test_active_occupant_can_reclaim_its_own_slot(
     tmp_path: Path,
     status: ExperimentStatus,
     desired_state: ExperimentDesiredState,
@@ -1192,7 +1172,6 @@ def test_expired_active_occupant_can_reclaim_its_own_slot(
         "owner-a",
         expected_revision=0,
         now_epoch_us=NOW_US,
-        lease_until_epoch_us=NOW_US + 10,
     )
     assert first is not None
     connection = database.get_connection()
@@ -1210,7 +1189,6 @@ def test_expired_active_occupant_can_reclaim_its_own_slot(
         "owner-b",
         expected_revision=first.revision,
         now_epoch_us=NOW_US + 10,
-        lease_until_epoch_us=NOW_US + 100,
     )
 
     assert reclaimed is not None
@@ -1218,10 +1196,10 @@ def test_expired_active_occupant_can_reclaim_its_own_slot(
     assert reader.get_scheduler_slot().revision == reclaimed.revision
 
 
-def test_terminal_experiment_cannot_renew_but_can_release_its_slot(
+def test_terminal_experiment_can_release_its_slot(
     tmp_path: Path,
 ) -> None:
-    database, reader, writer, _api_ns = _store(tmp_path)
+    database, _reader, writer, _api_ns = _store(tmp_path)
     writer.enqueue_experiment(
         ExperimentId("experiment-1"),
         expected_revision=0,
@@ -1234,7 +1212,6 @@ def test_terminal_experiment_cannot_renew_but_can_release_its_slot(
         "owner-a",
         expected_revision=0,
         now_epoch_us=NOW_US,
-        lease_until_epoch_us=NOW_US + 100,
     )
     assert lease is not None
     connection = database.get_connection()
@@ -1245,18 +1222,7 @@ def test_terminal_experiment_cannot_renew_but_can_release_its_slot(
         """
     )
     connection.commit()
-    before_slot = reader.get_scheduler_slot()
-
-    with pytest.raises(ExperimentSpecError) as exc_info:
-        writer.renew_lease(
-            lease.fence,
-            now_epoch_us=NOW_US + 1,
-            new_lease_until_epoch_us=NOW_US + 200,
-        )
-
-    assert exc_info.value.details["reason_code"] == "scheduler_renewal_not_allowed"
-    assert reader.get_scheduler_slot() == before_slot
-    released = writer.release_lease(lease.fence, now_epoch_us=NOW_US + 1)
+    released = writer.release_lease(lease.fence)
     assert released.experiment_id is None
 
 
@@ -1269,7 +1235,6 @@ def test_release_rechecks_terminal_experiment_has_no_live_children(
         writer,
         api,
         key,
-        lease_until_epoch_us=NOW_US + 100,
     )
     running_experiment = reader.get_experiment_projection(key.experiment_id)
     writer.transition_experiment(
@@ -1300,7 +1265,7 @@ def test_release_rechecks_terminal_experiment_has_no_live_children(
     before_changes = connection.total_changes
 
     with pytest.raises(api.ExperimentIntegrityError) as exc_info:
-        writer.release_lease(lease.fence, now_epoch_us=NOW_US + 4)
+        writer.release_lease(lease.fence)
 
     assert exc_info.value.details == {
         "reason_code": "scheduler_terminal_live_child",
@@ -1332,60 +1297,15 @@ def test_active_experiment_cannot_release_its_slot(
         "owner-a",
         expected_revision=0,
         now_epoch_us=NOW_US,
-        lease_until_epoch_us=NOW_US + 100,
     )
     assert lease is not None
     before_slot = reader.get_scheduler_slot()
 
     with pytest.raises(ExperimentSpecError) as exc_info:
-        writer.release_lease(lease.fence, now_epoch_us=NOW_US + 1)
+        writer.release_lease(lease.fence)
 
     assert exc_info.value.details["reason_code"] == "scheduler_release_not_allowed"
     assert reader.get_scheduler_slot() == before_slot
-
-
-def test_active_experiment_lease_can_expire_for_immediate_handoff(
-    tmp_path: Path,
-) -> None:
-    _database, reader, writer, _api_ns = _store(tmp_path)
-    writer.enqueue_experiment(
-        ExperimentId("experiment-1"),
-        expected_revision=0,
-        occurred_at=NOW,
-        reason_code="preflight_passed",
-        detail={},
-    )
-    lease = writer.try_claim_lease(
-        ExperimentId("experiment-1"),
-        "owner-control",
-        expected_revision=0,
-        now_epoch_us=NOW_US,
-        lease_until_epoch_us=NOW_US + 100,
-    )
-    assert lease is not None
-
-    handed_off = writer.handoff_lease(
-        lease.fence,
-        now_epoch_us=NOW_US + 1,
-    )
-
-    assert handed_off.experiment_id == ExperimentId("experiment-1")
-    assert handed_off.owner_token == "owner-control"
-    assert handed_off.lease_until_epoch_us == NOW_US + 1
-    assert handed_off.acquired_at_epoch_us == NOW_US
-    assert handed_off.renewed_at_epoch_us == NOW_US
-    assert handed_off.revision == lease.revision + 1
-    assert reader.get_scheduler_slot() == handed_off
-
-    scheduler_lease = writer.try_claim_lease(
-        ExperimentId("experiment-1"),
-        "owner-scheduler",
-        expected_revision=handed_off.revision,
-        now_epoch_us=NOW_US + 2,
-        lease_until_epoch_us=NOW_US + 200,
-    )
-    assert scheduler_lease is not None
-    assert scheduler_lease.owner_token == "owner-scheduler"
 
 
 def test_free_slot_fails_closed_when_an_active_experiment_has_no_slot(
@@ -1421,7 +1341,6 @@ def test_free_slot_fails_closed_when_an_active_experiment_has_no_slot(
             "owner-b",
             expected_revision=0,
             now_epoch_us=NOW_US,
-            lease_until_epoch_us=NOW_US + 100,
         )
 
     assert (
@@ -1438,26 +1357,23 @@ def test_stale_claim_revision_is_not_reported_as_ordinary_contention(
     _database, _reader, writer, api = _store(tmp_path)
     first, _queued = _claim_queued_experiment(
         writer,
-        lease_until_epoch_us=NOW_US + 100,
     )
 
-    assert (
-        writer.try_claim_lease(
-            ExperimentId("experiment-1"),
-            "owner-b",
-            expected_revision=first.revision,
-            now_epoch_us=NOW_US + 1,
-            lease_until_epoch_us=NOW_US + 200,
-        )
-        is None
+    # #448: a current-revision claim legitimately takes over; only a stale
+    # expected_revision is reported as a fencing error rather than contention.
+    takeover = writer.try_claim_lease(
+        ExperimentId("experiment-1"),
+        "owner-b",
+        expected_revision=first.revision,
+        now_epoch_us=NOW_US + 1,
     )
+    assert takeover is not None
     with pytest.raises(api.ExperimentLeaseLostError) as exc_info:
         writer.try_claim_lease(
             ExperimentId("experiment-1"),
             "owner-c",
-            expected_revision=0,
+            expected_revision=first.revision,
             now_epoch_us=NOW_US + 1,
-            lease_until_epoch_us=NOW_US + 200,
         )
     assert exc_info.value.details["reason_code"] == "scheduler_lease_stale_revision"
 
@@ -1477,8 +1393,7 @@ def test_concurrent_claims_have_exactly_one_winner(
                 ExperimentId("experiment-1"),
                 f"owner-{index}",
                 expected_revision=0,
-                now_epoch_us=NOW_US,
-                lease_until_epoch_us=NOW_US + 1_000,
+                now_epoch_us=NOW_US + 1_000,
             )
         except _api_ns.ExperimentLeaseLostError as exc:
             return exc
@@ -1512,27 +1427,26 @@ def test_concurrent_claims_have_exactly_one_winner(
     )
 
 
-def test_renew_and_release_are_revisioned_and_fenced(tmp_path: Path) -> None:
+def test_release_is_revisioned_and_fenced(tmp_path: Path) -> None:
     _database, reader, writer, api = _store(tmp_path)
     lease, queued = _claim_queued_experiment(
         writer,
-        lease_until_epoch_us=NOW_US + 100,
     )
-
-    renewed = writer.renew_lease(
-        lease.fence,
-        now_epoch_us=NOW_US + 10,
-        new_lease_until_epoch_us=NOW_US + 200,
-    )
-    assert renewed.acquired_at_epoch_us == NOW_US
-    assert renewed.renewed_at_epoch_us == NOW_US + 10
-    assert renewed.fence.revision == 2
-
+    renewed = _takeover_lease(writer, lease)
     with pytest.raises(api.ExperimentLeaseLostError):
-        writer.renew_lease(
-            lease.fence,
+        writer.transition_scheduled_experiment(
+            ExperimentId("experiment-1"),
+            target_status=ExperimentStatus.RUNNING,
+            target_stage=ExperimentStage.EXPLORATION,
+            failure_code=None,
+            expected_revision=queued.revision,
+            lease_fence=lease.fence,
             now_epoch_us=NOW_US + 11,
-            new_lease_until_epoch_us=NOW_US + 300,
+            occurred_at=NOW,
+            attempt_started=False,
+            precondition_repairable=False,
+            reason_code="dispatch",
+            detail={},
         )
 
     cancel_requested = writer.transition_experiment(
@@ -1562,7 +1476,7 @@ def test_renew_and_release_are_revisioned_and_fenced(tmp_path: Path) -> None:
         reason_code="cancel_drained",
         detail={},
     )
-    released = writer.release_lease(renewed.fence, now_epoch_us=NOW_US + 13)
+    released = writer.release_lease(renewed.fence)
     assert released.owner_token is None
     assert released.revision == 3
     assert reader.get_scheduler_slot() == released
@@ -1584,14 +1498,9 @@ def test_scheduler_experiment_transition_requires_the_current_lease_fence(
         "owner-a",
         expected_revision=0,
         now_epoch_us=NOW_US,
-        lease_until_epoch_us=NOW_US + 100,
     )
     assert lease is not None
-    renewed = writer.renew_lease(
-        lease.fence,
-        now_epoch_us=NOW_US + 1,
-        new_lease_until_epoch_us=NOW_US + 200,
-    )
+    renewed = _takeover_lease(writer, lease)
 
     with pytest.raises(api.ExperimentLeaseLostError):
         writer.transition_scheduled_experiment(
@@ -1829,7 +1738,6 @@ def test_pause_rejects_running_fold_after_attempt_drain_without_writes(
     key = _add_fold(writer, api)
     lease, running = _start_running_experiment(
         writer,
-        lease_until_epoch_us=NOW_US + 100,
     )
     attempt_spec, attempt_projection = _attempt(api, key)
     running_fold, _queued_attempt = writer.claim_fold_and_add_attempt(
@@ -1937,7 +1845,6 @@ def test_pause_rejects_live_child_without_writes(
     key = _add_fold(writer, api)
     lease, running = _start_running_experiment(
         writer,
-        lease_until_epoch_us=NOW_US + 100,
     )
     attempt_spec, attempt_projection = _attempt(api, key)
     writer.claim_fold_and_add_attempt(
@@ -2024,7 +1931,6 @@ def test_pause_requeue_rejects_live_attempt_without_writes(
     key = _add_fold(writer, api)
     lease, running_experiment = _start_running_experiment(
         writer,
-        lease_until_epoch_us=NOW_US + 100,
     )
     attempt_spec, initial_attempt = _attempt(api, key)
     _running_fold, live_attempt = writer.claim_fold_and_add_attempt(
@@ -2099,7 +2005,6 @@ def test_pause_requeue_requires_pause_requested_parent_without_writes(
     key = _add_fold(writer, api)
     lease, _running = _start_running_experiment(
         writer,
-        lease_until_epoch_us=NOW_US + 100,
     )
     running_fold = writer.claim_fold(
         key,
@@ -2137,7 +2042,7 @@ def test_pause_requeue_requires_pause_requested_parent_without_writes(
     ("fence_case", "expected_reason", "now_epoch_us"),
     [
         ("wrong_owner", "scheduler_lease_lost", NOW_US + 3),
-        ("expired", "scheduler_lease_expired", NOW_US + 10),
+        ("stale_revision", "scheduler_lease_lost", NOW_US + 3),
     ],
 )
 def test_pause_requeue_rejects_invalid_fence_without_writes(
@@ -2150,7 +2055,6 @@ def test_pause_requeue_rejects_invalid_fence_without_writes(
     key = _add_fold(writer, api)
     lease, running = _start_running_experiment(
         writer,
-        lease_until_epoch_us=NOW_US + 10,
     )
     running_fold = writer.claim_fold(
         key,
@@ -2178,7 +2082,12 @@ def test_pause_requeue_rejects_invalid_fence_without_writes(
             experiment_id=lease.fence.experiment_id,
             owner_token="owner-b",
             revision=lease.fence.revision,
-            lease_until_epoch_us=lease.fence.lease_until_epoch_us,
+        )
+    else:
+        fence = type(lease.fence)(
+            experiment_id=lease.fence.experiment_id,
+            owner_token=lease.fence.owner_token,
+            revision=lease.fence.revision - 1,
         )
     before_events = reader.list_status_events(key.experiment_id)
     before_slot = reader.get_scheduler_slot()
@@ -2208,7 +2117,6 @@ def test_pause_requeue_event_failure_rolls_back_fold_update(tmp_path: Path) -> N
     key = _add_fold(writer, api)
     lease, running = _start_running_experiment(
         writer,
-        lease_until_epoch_us=NOW_US + 100,
     )
     running_fold = writer.claim_fold(
         key,
@@ -2271,7 +2179,6 @@ def test_pause_requeue_reclaim_resume_dispatches_checkpoint_successor(
         writer,
         api,
         key,
-        lease_until_epoch_us=NOW_US + 10,
     )
     running_experiment = reader.get_experiment_projection(key.experiment_id)
     pause_requested = writer.transition_experiment(
@@ -2320,7 +2227,6 @@ def test_pause_requeue_reclaim_resume_dispatches_checkpoint_successor(
         "owner-b",
         expected_revision=old_lease.revision,
         now_epoch_us=NOW_US + 10,
-        lease_until_epoch_us=NOW_US + 100,
     )
     assert new_lease is not None
     assert reader.get_fold(key).projection == old_claimed_fold
@@ -2570,7 +2476,6 @@ def test_scheduler_dispatch_rejects_queued_projection_with_non_run_intent(
         "owner-a",
         expected_revision=0,
         now_epoch_us=NOW_US,
-        lease_until_epoch_us=NOW_US + 100,
     )
     assert lease is not None
     connection = database.get_connection()
@@ -2658,7 +2563,6 @@ def test_running_experiment_stage_advances_are_fenced_ordered_and_evented(
         "owner-a",
         expected_revision=0,
         now_epoch_us=NOW_US,
-        lease_until_epoch_us=NOW_US + 100,
     )
     assert lease is not None
     running = writer.transition_scheduled_experiment(
@@ -2710,7 +2614,7 @@ def test_running_experiment_stage_advances_are_fenced_ordered_and_evented(
     )
 
 
-def test_downstream_fold_and_attempt_cas_require_current_unexpired_fence(
+def test_downstream_fold_and_attempt_cas_require_current_fence(
     tmp_path: Path,
 ) -> None:
     _database, reader, writer, api = _store(tmp_path)
@@ -2733,11 +2637,7 @@ def test_downstream_fold_and_attempt_cas_require_current_unexpired_fence(
         lease_fence=lease.fence,
         now_epoch_us=NOW_US + 2,
     )
-    renewed = writer.renew_lease(
-        lease.fence,
-        now_epoch_us=NOW_US + 3,
-        new_lease_until_epoch_us=NOW_US + 200,
-    )
+    renewed = _takeover_lease(writer, lease)
 
     with pytest.raises(api.ExperimentLeaseLostError):
         writer.transition_attempt(
@@ -3030,7 +2930,6 @@ def test_running_attempt_can_checkpoint_and_finish_after_control_request(
         writer,
         api,
         key,
-        lease_until_epoch_us=NOW_US + 100,
     )
     running_experiment = reader.get_experiment_projection(key.experiment_id)
     assert running_experiment is not None
@@ -3095,11 +2994,7 @@ def test_add_attempt_rejects_a_stale_fence_before_inserting_any_rows(
         now_epoch_us=NOW_US + 2,
         occurred_at=NOW,
     )
-    renewed = writer.renew_lease(
-        lease.fence,
-        now_epoch_us=NOW_US + 3,
-        new_lease_until_epoch_us=NOW_US + 200,
-    )
+    renewed = _takeover_lease(writer, lease, owner=lease.fence.owner_token)
     spec, projection = _attempt(api, key)
 
     with pytest.raises(api.ExperimentLeaseLostError):
@@ -3250,7 +3145,6 @@ def test_reclaimed_owner_recovers_interrupted_work_and_dispatches_successor(
         "owner-b",
         expected_revision=old_lease.revision,
         now_epoch_us=NOW_US + 10,
-        lease_until_epoch_us=NOW_US + 100,
     )
     assert new_lease is not None
 
@@ -3348,7 +3242,6 @@ def test_crash_recovery_attempt_and_fold_events_rollback_together(
         "owner-b",
         expected_revision=old_lease.revision,
         now_epoch_us=NOW_US + 10,
-        lease_until_epoch_us=NOW_US + 100,
     )
     assert new_lease is not None
     connection = database.get_connection()
@@ -3395,7 +3288,6 @@ def test_current_owner_cannot_misclassify_its_live_attempt_as_crash_orphan(
         writer,
         api,
         key,
-        lease_until_epoch_us=NOW_US + 100,
     )
     running_fold = reader.get_fold(key).projection
     before_events = reader.list_status_events(key.experiment_id)
@@ -3442,7 +3334,6 @@ def test_atomic_successor_dispatch_validates_parent_before_fold_claim(
         "owner-b",
         expected_revision=old_lease.revision,
         now_epoch_us=NOW_US + 10,
-        lease_until_epoch_us=NOW_US + 100,
     )
     assert new_lease is not None
     recovered_fold, _interrupted = writer.requeue_interrupted_fold(
@@ -3491,13 +3382,13 @@ def test_atomic_successor_dispatch_validates_parent_before_fold_claim(
     assert reader.get_attempt(successor_spec.attempt_id) is None
 
 
-def test_expired_fence_cannot_claim_or_write_work(tmp_path: Path) -> None:
+def test_stale_fence_cannot_claim_or_write_work(tmp_path: Path) -> None:
     _database, reader, writer, api = _store(tmp_path)
     key = _add_fold(writer, api)
     lease, _running_experiment = _start_running_experiment(
         writer,
-        lease_until_epoch_us=NOW_US + 10,
     )
+    _takeover_lease(writer, lease)
 
     with pytest.raises(api.ExperimentLeaseLostError) as exc_info:
         writer.claim_fold(
@@ -3508,7 +3399,7 @@ def test_expired_fence_cannot_claim_or_write_work(tmp_path: Path) -> None:
             occurred_at=NOW,
         )
 
-    assert exc_info.value.details["reason_code"] == "scheduler_lease_expired"
+    assert exc_info.value.details["reason_code"] == "scheduler_lease_lost"
     assert reader.get_fold(key).projection.status is ExperimentStatus.QUEUED
 
 
@@ -3523,7 +3414,6 @@ def test_generic_fold_transition_cannot_requeue_running_fold_with_live_attempt(
         writer,
         api,
         key,
-        lease_until_epoch_us=NOW_US + 100,
     )
     running_fold = reader.get_fold(key).projection
     before_events = reader.list_status_events(key.experiment_id)
@@ -3651,7 +3541,6 @@ def _failed_fold_for_terminal_retry(
         writer,
         api,
         key,
-        lease_until_epoch_us=NOW_US + 100,
     )
     failed_attempt = writer.transition_attempt(
         parent_spec.attempt_id,
@@ -3782,7 +3671,6 @@ def test_terminal_fold_retry_rejects_cancelled_fold_without_writes(
         writer,
         api,
         key,
-        lease_until_epoch_us=NOW_US + 100,
     )
     cancelled_attempt = writer.transition_attempt(
         parent_spec.attempt_id,
@@ -3919,7 +3807,6 @@ def test_terminal_fold_retry_rejects_cancelled_parent_attempt_without_writes(
         writer,
         api,
         key,
-        lease_until_epoch_us=NOW_US + 100,
     )
     cancelled_attempt = writer.transition_attempt(
         parent_spec.attempt_id,
@@ -4090,7 +3977,7 @@ def test_terminal_fold_retry_rejects_stale_revision_without_writes(
     ("fence_case", "expected_reason"),
     [
         ("wrong_owner", "scheduler_lease_lost"),
-        ("expired", "scheduler_lease_expired"),
+        ("stale_revision", "scheduler_lease_lost"),
     ],
 )
 def test_terminal_fold_retry_rejects_invalid_fence_without_writes(
@@ -4110,10 +3997,13 @@ def test_terminal_fold_retry_rejects_invalid_fence_without_writes(
             experiment_id=lease.fence.experiment_id,
             owner_token="owner-b",
             revision=lease.fence.revision,
-            lease_until_epoch_us=lease.fence.lease_until_epoch_us,
         )
     else:
-        now_epoch_us = lease.fence.lease_until_epoch_us
+        fence = type(lease.fence)(
+            experiment_id=lease.fence.experiment_id,
+            owner_token=lease.fence.owner_token,
+            revision=lease.fence.revision - 1,
+        )
     before_fold = reader.get_fold(key)
     before_events = reader.list_status_events(key.experiment_id)
 
@@ -4141,7 +4031,6 @@ def test_terminal_fold_retry_rejects_live_attempt_without_writes(
     key = _add_fold(writer, api)
     lease, _running_experiment = _start_running_experiment(
         writer,
-        lease_until_epoch_us=NOW_US + 100,
     )
     parent_spec, initial = _attempt(api, key)
     running_fold, queued_attempt = writer.claim_fold_and_add_attempt(
