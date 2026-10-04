@@ -23,23 +23,18 @@ class TestFredClientInit:
         assert client._api_key == "test_api_key_123"
 
     def test_init_missing_api_key_raises_error(self, monkeypatch) -> None:
-        """Test missing API key raises configuration error."""
+        """缺 key 显式报缺，并指向唯一配置入口（#433）."""
         monkeypatch.delenv("FRED_API_KEY", raising=False)
         with pytest.raises(SourceConfigurationError) as exc_info:
             FredClient()
         assert "FRED_API_KEY" in str(exc_info.value)
+        assert "DITTO_CONFIG_ROOT" in str(exc_info.value)
 
-    def test_init_with_env_var(self, monkeypatch) -> None:
-        """Test initialization reads API key from environment variable."""
-        monkeypatch.setenv("FRED_API_KEY", "env_api_key_456")
-        client = FredClient()
-        assert client._api_key == "env_api_key_456"
-
-    def test_init_parameter_overrides_env_var(self, monkeypatch) -> None:
-        """Test explicit API key parameter overrides environment variable."""
-        monkeypatch.setenv("FRED_API_KEY", "env_api_key")
-        client = FredClient(api_key="explicit_key")
-        assert client._api_key == "explicit_key"
+    def test_init_does_not_read_environment(self, monkeypatch) -> None:
+        """#433：数据层不读环境变量（唯一入口为 DataSourceSettings 注入）."""
+        monkeypatch.setenv("FRED_API_KEY", "env_api_key_should_be_ignored")
+        with pytest.raises(SourceConfigurationError):
+            FredClient()
 
 
 class TestFredClientGetSeriesObservations:

@@ -89,8 +89,10 @@ class DataSources:
         if source_key == Source.FRED:
             if self._fred is None:
                 raise ValueError(
-                    "FRED data source not configured. Set FRED_API_KEY environment "
-                    + "variable or provide fred_api_key in configuration."
+                    "FRED data source not configured. Set FRED_API_KEY in the "
+                    + "DITTO_CONFIG_ROOT data_source config (injected via "
+                    + "DataSourceSettings.fred_api_key); the data layer does "
+                    + "not read environment variables directly (#433)."
                 )
             return self._fred
 
