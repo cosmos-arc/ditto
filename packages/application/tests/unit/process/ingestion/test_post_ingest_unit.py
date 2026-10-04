@@ -802,15 +802,15 @@ def test_sparse_nonempty_requires_knowledge_date() -> None:
     assert writer.calls == []
 
 
-def test_index_weight_uses_effective_from_as_pit_knowledge_date(
+def test_index_weight_uses_observation_date_as_pit_axis(
     tmp_path: Path,
 ) -> None:
-    """Index weights are knowable from effective_from, not a synthetic trade date."""
+    """Index weights carry their monthly observation date as the PIT axis."""
     today = datetime.now(UTC).date().isoformat()
     frame = pl.DataFrame(
         {
             "index_code": ["000300.SH"],
-            "effective_from": [today],
+            "trade_date": [today],
             "weight": [100.0],
         }
     )
@@ -825,7 +825,7 @@ def test_index_weight_uses_effective_from_as_pit_knowledge_date(
             rows_total=1,
             blocked=False,
         ),
-        expected_columns=["index_code", "effective_from", "weight"],
+        expected_columns=["index_code", "trade_date", "weight"],
     )
     catalog = InMemoryDataCatalog()
     with _evidence_support.evidence_stores() as stores:
@@ -866,8 +866,8 @@ def test_index_weight_uses_effective_from_as_pit_knowledge_date(
         assert len(writer.calls) == 1
 
 
-def test_index_weight_rejects_future_effective_from() -> None:
-    """A future effective interval must never leak into an earlier as-of snapshot."""
+def test_index_weight_rejects_future_observation_date() -> None:
+    """A future observation must never leak into an earlier cutoff request."""
     writer = _WriteDataRecorder(
         WriteResult(
             file_path="index_weight/2025",
@@ -876,7 +876,7 @@ def test_index_weight_rejects_future_effective_from() -> None:
             rows_total=1,
             blocked=False,
         ),
-        expected_columns=["index_code", "effective_from", "weight"],
+        expected_columns=["index_code", "trade_date", "weight"],
     )
     ctx = PostIngestContext(
         result_handler=IngestionResultHandler(None, "tushare"),
@@ -892,7 +892,7 @@ def test_index_weight_rejects_future_effective_from() -> None:
         pl.DataFrame(
             {
                 "index_code": ["000300.SH"],
-                "effective_from": ["2025-01-07"],
+                "trade_date": ["2025-01-07"],
                 "weight": [100.0],
             }
         ),

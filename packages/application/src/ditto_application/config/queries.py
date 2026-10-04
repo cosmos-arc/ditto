@@ -274,7 +274,7 @@ INGESTION_SPECS: dict[_Dataset, DatasetSpec] = {
             "index_id",
             "instrument_id",
             "weight",
-            "effective_from",
+            "trade_date",
         ],
         task_name="ingest_index_weight",
         priority=50,

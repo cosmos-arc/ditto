@@ -189,7 +189,7 @@ class MarketQueryFacade:
         as_of_date: str,
         allow_experimental_data: bool = False,
     ) -> pl.DataFrame:
-        """Query effective-dated index weights at an explicit PIT cutoff."""
+        """Query the latest observed index weights at an explicit PIT cutoff."""
         blocked = blocked_catalog_datasets(
             ("index_weight",),
             allow_experimental_data=allow_experimental_data,

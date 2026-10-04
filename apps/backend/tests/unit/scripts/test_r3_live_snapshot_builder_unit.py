@@ -240,7 +240,7 @@ def test_stock_membership_uses_only_strictly_prior_index_composition() -> None:
     connection.row_factory = sqlite3.Row
     connection.execute(
         "CREATE TABLE index_weight "
-        "(index_id TEXT, instrument_id INTEGER, effective_from TEXT)"
+        "(index_id TEXT, instrument_id INTEGER, trade_date TEXT)"
     )
     connection.executemany(
         "INSERT INTO index_weight VALUES (?, ?, ?)",

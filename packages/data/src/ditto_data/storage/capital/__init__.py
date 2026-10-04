@@ -3,9 +3,6 @@
 from ditto_data.storage.capital.index_composition.index_composition_reader import (
     IndexCompositionReader,
 )
-from ditto_data.storage.capital.index_composition.index_composition_writer import (
-    IndexCompositionWriter,
-)
 from ditto_data.storage.capital.margin.margin_trading_reader import (
     MarginTradingReader,
 )
@@ -27,7 +24,6 @@ from ditto_data.storage.capital.valuation.valuation_metrics_writer import (
 
 __all__ = [
     "IndexCompositionReader",
-    "IndexCompositionWriter",
     "MarginTradingReader",
     "MarginTradingWriter",
     "PledgeRatioReader",

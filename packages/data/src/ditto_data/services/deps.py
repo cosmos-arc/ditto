@@ -9,11 +9,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from ditto_data.storage.base.sqlite_table_writer import SqliteTableWriter
 from ditto_data.storage.capital.index_composition.index_composition_reader import (
     IndexCompositionReader,
-)
-from ditto_data.storage.capital.index_composition.index_composition_writer import (
-    IndexCompositionWriter,
 )
 from ditto_data.storage.capital.margin.margin_trading_reader import (
     MarginTradingReader,
@@ -246,7 +244,7 @@ class CapitalWriters:
     margin_trading: MarginTradingWriter
     pledge_ratio: PledgeRatioWriter
     valuation_metrics: ValuationMetricsWriter
-    index_composition: IndexCompositionWriter
+    index_composition: SqliteTableWriter
 
 
 __all__ = [

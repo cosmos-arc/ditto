@@ -56,8 +56,10 @@ def validate_sparse_pit_cutoff(
         cutoff = date.fromisoformat(trade_date)
     except ValueError:
         return "PIT_CUTOFF_DATE_INVALID"
+    # index_weight 的可知性轴是月度观察日 trade_date（#452：公告时刻未知，
+    # 观察日晚于 cutoff 的行视为当次请求不可见）
     knowledge_date_column = (
-        "effective_from" if dataset == "index_weight" else "knowledge_date"
+        "trade_date" if dataset == "index_weight" else "knowledge_date"
     )
     if knowledge_date_column not in df.columns:
         return "PIT_KNOWLEDGE_DATE_MISSING"

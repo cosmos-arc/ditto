@@ -1,4 +1,4 @@
-"""Application-to-storage integration proof for effective-dated index weights."""
+"""Application-to-storage integration proof for index weight observations."""
 
 from __future__ import annotations
 
@@ -10,21 +10,17 @@ from ditto_application.processes.ingestion.data_writer import IngestionDataWrite
 from ditto_data.observability import register_metrics
 from ditto_data.services.capital_store import CapitalStore
 from ditto_data.services.deps import CapitalReaders, CapitalWriters
+from ditto_data.storage.base.sqlite_table_writer import SqliteTableWriter
 from ditto_data.storage.capital.index_composition.index_composition_reader import (
     IndexCompositionReader,
-)
-from ditto_data.storage.capital.index_composition.index_composition_writer import (
-    IndexCompositionWriter,
 )
 from ditto_data.storage.capital.specs import INDEX_COMPOSITION_SPEC
 from ditto_platform.foundation import SQLiteClient, SQLitePool
 
 
 @pytest.mark.integration
-def test_index_weight_ingestion_persists_non_overlapping_pit_snapshots(
-    mocker,
-) -> None:
-    """Write two provider snapshots and query only the effective constituents."""
+def test_index_weight_ingestion_persists_observation_facts(mocker) -> None:
+    """Write two monthly observations; as-of resolves the latest observed pool."""
     register_metrics()
     pool = SQLitePool(":memory:")
     client = SQLiteClient(pool)
@@ -32,15 +28,14 @@ def test_index_weight_ingestion_persists_non_overlapping_pit_snapshots(
         """CREATE TABLE index_weight (
             index_id TEXT NOT NULL,
             instrument_id INTEGER NOT NULL,
+            trade_date DATE NOT NULL,
             weight REAL,
-            effective_from DATE NOT NULL,
-            effective_to DATE,
-            PRIMARY KEY (index_id, instrument_id, effective_from)
+            PRIMARY KEY (index_id, instrument_id, trade_date)
         )"""
     )
     client.commit()
     reader = IndexCompositionReader(INDEX_COMPOSITION_SPEC, client)
-    writer = IndexCompositionWriter(INDEX_COMPOSITION_SPEC, client)
+    writer = SqliteTableWriter(INDEX_COMPOSITION_SPEC, client)
     capital_store = CapitalStore(
         read_ports=CapitalReaders(
             margin_trading=mocker.Mock(),
@@ -80,7 +75,7 @@ def test_index_weight_ingestion_persists_non_overlapping_pit_snapshots(
             {
                 "index_code": ["000300.SH", "000300.SH"],
                 "source_ticker": ["600000.SH", "600036.SH"],
-                "effective_from": [date(2024, 1, 3), date(2024, 1, 3)],
+                "trade_date": [date(2024, 1, 3), date(2024, 1, 3)],
                 "weight": [60.0, 40.0],
             }
         )
@@ -88,7 +83,7 @@ def test_index_weight_ingestion_persists_non_overlapping_pit_snapshots(
             {
                 "index_code": ["000300.SH", "000300.SH"],
                 "source_ticker": ["600036.SH", "600519.SH"],
-                "effective_from": [date(2024, 1, 10), date(2024, 1, 10)],
+                "trade_date": [date(2024, 1, 10), date(2024, 1, 10)],
                 "weight": [45.0, 55.0],
             }
         )
@@ -126,17 +121,16 @@ def test_index_weight_ingestion_persists_non_overlapping_pit_snapshots(
                 strict=True,
             )
         ) == {1_000_002: 45.0, 1_000_003: 55.0}
-        persisted_intervals = client.fetchall(
-            """SELECT effective_from, effective_to FROM index_weight
-            ORDER BY effective_from, instrument_id"""
+        # 两次观察都原样保留：不伪造 effective_to，观察日是唯一时间轴
+        persisted = client.fetchall(
+            """SELECT trade_date, instrument_id, weight FROM index_weight
+            ORDER BY trade_date, instrument_id"""
         )
-        assert [row["effective_to"] for row in persisted_intervals[:2]] == [
-            "2024-01-10",
-            "2024-01-10",
-        ]
-        assert [row["effective_to"] for row in persisted_intervals[2:]] == [
-            None,
-            None,
+        assert [(row["trade_date"], row["instrument_id"]) for row in persisted] == [
+            ("2024-01-03", 1_000_001),
+            ("2024-01-03", 1_000_002),
+            ("2024-01-10", 1_000_002),
+            ("2024-01-10", 1_000_003),
         ]
     finally:
         pool.close()

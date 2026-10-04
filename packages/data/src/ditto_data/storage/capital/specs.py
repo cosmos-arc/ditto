@@ -54,8 +54,8 @@ INDEX_COMPOSITION_SPEC = SqliteTableSpec(
     table="index_weight",
     columns=("instrument_id", "weight"),
     id_column="index_id",
-    date_column=None,
-    pit_columns=("effective_from", "effective_to"),
+    date_column="trade_date",
+    pit_columns=(),
     order_by_column="instrument_id",
-    nullable_columns=frozenset({"effective_to", "weight"}),
+    nullable_columns=frozenset({"weight"}),
 )

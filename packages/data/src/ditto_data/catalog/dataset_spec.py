@@ -166,7 +166,7 @@ _PRIMARY_KEYS: dict[str, tuple[str, ...]] = {
         "announcement_date",
         "effective_date",
     ),
-    "index_weight": ("index_id", "constituent_id", "effective_from"),
+    "index_weight": ("index_id", "constituent_id", "trade_date"),
     "industry_classification": (
         "source",
         "classification_version",
@@ -359,6 +359,8 @@ _APPEND_ONLY_DATASETS = frozenset(
         # 事件历史：追加观察行，不修订已记录的证据（#395）
         "namechange",
         "st_history",
+        # 月度权重观察行：追加观察，不改写历史（#452）
+        "index_weight",
     }
 )
 _EFFECTIVE_DATED_DATASETS = frozenset(
@@ -368,7 +370,6 @@ _EFFECTIVE_DATED_DATASETS = frozenset(
         "index_basic",
         "stock_status",
         "corporate_actions",
-        "index_weight",
         "industry_classification",
         "industry_mapping",
     }
@@ -415,7 +416,7 @@ _R2_COVERAGE_TARGETS: dict[str, CoverageTargets] = {
     "index_weight": (
         "provider-native",
         "core-index-specific",
-        "effective-dated intervals",
+        "monthly observation snapshots",
     ),
     "macro_indicators": (
         "series-native",
@@ -472,14 +473,17 @@ def _coverage_targets(dataset_id: str) -> CoverageTargets:
 
 
 def _partition_keys(dataset_id: str) -> tuple[str, ...]:
-    if dataset_id == "macro_indicators":
-        return ("observation_date",)
-    if dataset_id in {"index_weight", "st_history"}:
-        return ("effective_from",)
-    if dataset_id in {"industry_classification", "industry_mapping"}:
-        return ("knowledge_date",)
-    if dataset_id == "namechange":
-        return ("changed_date",)
+    overrides: dict[str, tuple[str, ...]] = {
+        "macro_indicators": ("observation_date",),
+        "st_history": ("effective_from",),
+        # #452: 月度权重观察行以观察日分区
+        "index_weight": ("trade_date",),
+        "industry_classification": ("knowledge_date",),
+        "industry_mapping": ("knowledge_date",),
+        "namechange": ("changed_date",),
+    }
+    if dataset_id in overrides:
+        return overrides[dataset_id]
     if dataset_id in {
         "calendar",
         "stock_daily",
@@ -561,6 +565,9 @@ def resolve_dataset_spec(dataset_id: str) -> DatasetSpec:
         knowledge_date_field=(
             "observed_at"
             if dataset_id in _OBSERVED_AT_KNOWLEDGE_DATASETS
+            else "trade_date"
+            if dataset_id == "index_weight"
+            # #452: 官方不提供公告时刻，知识轴即月度观察日
             else "knowledge_date"
             if dataset_id in _KNOWLEDGE_DATE_DATASETS
             else None

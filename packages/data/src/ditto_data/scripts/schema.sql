@@ -341,23 +341,18 @@ CREATE INDEX IF NOT EXISTS idx_strategy_run_checkpoint_strategy_id
 CREATE INDEX IF NOT EXISTS idx_strategy_run_checkpoint_completed_trade_date
     ON strategy_run_checkpoint(completed_trade_date);
 
--- 指数成分股权重（PIT support）
+-- 指数成分股权重（月度观察事实；官方不提供公告/生效时刻，不伪造区间，#452）
 CREATE TABLE IF NOT EXISTS index_weight (
     index_id       TEXT NOT NULL,
     instrument_id            INTEGER NOT NULL,
-    effective_from DATE NOT NULL,
-    effective_to   DATE,
+    trade_date     DATE NOT NULL,
     weight         REAL,
-    PRIMARY KEY (index_id, instrument_id, effective_from)
+    PRIMARY KEY (index_id, instrument_id, trade_date)
 );
 
--- 当前有效成分快速查询
-CREATE INDEX IF NOT EXISTS idx_index_weight_current
-    ON index_weight(index_id, instrument_id) WHERE effective_to IS NULL;
-
--- PIT 查询优化
+-- as-of 观察快照查询优化
 CREATE INDEX IF NOT EXISTS idx_index_weight_pit
-    ON index_weight(index_id, effective_from, effective_to);
+    ON index_weight(index_id, trade_date);
 
 -- DQ 隔离区存储（失败数据）
 CREATE TABLE IF NOT EXISTS quarantine_failed_data (

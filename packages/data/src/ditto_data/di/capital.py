@@ -7,11 +7,9 @@ from ditto_platform.foundation import SQLiteClient
 
 from ditto_data.services.capital_store import CapitalStore
 from ditto_data.services.deps import CapitalReaders, CapitalWriters
+from ditto_data.storage.base.sqlite_table_writer import SqliteTableWriter
 from ditto_data.storage.capital.index_composition.index_composition_reader import (
     IndexCompositionReader,
-)
-from ditto_data.storage.capital.index_composition.index_composition_writer import (
-    IndexCompositionWriter,
 )
 from ditto_data.storage.capital.margin.margin_trading_reader import (
     MarginTradingReader,
@@ -80,7 +78,7 @@ class CapitalProvider(Provider):
                 VALUATION_METRICS_SPEC,
                 sqlite_client,
             ),
-            index_composition=IndexCompositionWriter(
+            index_composition=SqliteTableWriter(
                 INDEX_COMPOSITION_SPEC,
                 sqlite_client,
             ),
