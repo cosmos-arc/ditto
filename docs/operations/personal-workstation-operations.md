@@ -115,28 +115,13 @@ uv run --no-sync python -m ditto_apps.scripts.q5_live_portfolio_diagnostic \
 
 两步都必须保持 broker connection、real order、账户/target 写入和 Agent write tool 为 0。诊断中的每个数值必须绑定 sealed evidence 的精确 dotted path 与字符串值。
 
-## 四域备份与隔离恢复
+## 工作站备份与恢复（#446 配方）
 
-恢复单位包含 data、research、trading 各一个库及 Agent 三个库，共六个 SQLite 文件。manifest 认证文件路径、大小、逐表行数、integrity check 与 SHA-256。
+恢复单位是 6 个物理 SQLite 库 + 可选 research artifacts 树，恢复边界、精确清单、命令与演练核对单见[工作站备份配方](workstation-backup-recipe.md)。三层备份包装与 `ops workstation` 命令已随 #446 删除；R3 研究域恢复（含 pinned artifacts）仍走 [R3 恢复流程](../runbooks/backup-restore.md)，两种恢复分别进入全新目标，不能覆盖同一个根。
 
-备份前停止全部 API、jobs、Agent 和其他 writer，保持停写直到备份与验证结束。各库逐次复制，不构成自动跨库原子快照。工作站备份不包含 research artifact tree 或外部市场数据文件；研究库和 pinned artifacts 使用 [R3 恢复流程](../runbooks/backup-restore.md)，两种恢复分别进入全新目标，不能覆盖同一个根。
+备份前停止全部 API、jobs、Agent 和其他 writer，保持停写直到备份与验证结束。各库逐次复制（SQLite Backup API），不构成自动跨库原子快照。恢复永不覆盖活动运行时：先在隔离根 `verify`（完整性 + 每域业务事实），切换活动根属于单独变更，必须再次明确批准。
 
-```bash
-uv run --no-sync python -m ditto_apps.cli.main ops workstation backup \
-  --source-root /absolute/runtime \
-  --destination /absolute/backups/ditto-YYYYMMDD-HHMMSS
-
-uv run --no-sync python -m ditto_apps.cli.main ops workstation verify \
-  --backup-root /absolute/backups/ditto-YYYYMMDD-HHMMSS
-
-uv run --no-sync python -m ditto_apps.cli.main ops workstation restore \
-  --backup-root /absolute/backups/ditto-YYYYMMDD-HHMMSS \
-  --destination-root /absolute/restores/ditto-YYYYMMDD-HHMMSS
-```
-
-源、备份和恢复目录不得重叠，destination 必须不存在。恢复永不覆盖活动运行时。先在隔离根启动并执行完整性、schema、read-only smoke、reconcile 和 SSE cursor 检查；切换活动根属于单独变更，必须再次明确批准。
-
-确定性工作站恢复用例通过实际账本查询与 Agent runtime 回读非空账户、run、事件和 cursor，并检查重复读取没有新增业务副作用：`apps/backend/tests/integration/operations/test_workstation_backup_restore.py`。R3 领域恢复继续由既有 `test_r3_backup_restore.py` 验证 governance、holdout、pinned packet 与 artifact bytes。
+配方回归测试：`apps/backend/tests/integration/operations/test_workstation_backup_recipe_integration.py`（非空根 备份→恢复→校验 演练、必需文件缺失失败、可选 artifact 缺失不阻断且旧实验不可重放）。R3 领域恢复继续由既有 `test_r3_backup_restore.py` 验证 governance、holdout、pinned packet 与 artifact bytes。
 
 组合/Agent 的 `tests/system/portfolio-agent.spec.ts` 验证精确身份 URL 下三类组合、实际工具 evidence 和刷新回读，仅模型边界使用确定性替身。它不证明 LIVE 模型质量。研究页面到组合的日常导航、普通 UI 审批后的写入恢复仍未接通，不属于这项工程验收。
 
@@ -162,32 +147,9 @@ uv run --no-sync python -m ditto_apps.cli.main ops workstation restore \
 - [ ] Paper pause 不产生新 fill，修复只追加事件。
 - [ ] Agent unavailable 不影响确定性产品，SSE 恢复不重新执行。
 - [ ] Manual correction 不改历史行，云 evidence 已脱敏。
-- [ ] 备份覆盖四域六库，恢复目标全新且隔离。
+- [ ] 备份配方覆盖 6 库+可选 artifact 树，恢复目标全新且隔离。
 - [ ] 恢复演练与 privacy/performance 报告均由 Gate manifest 哈希。
 
-## OPS-10 发布候选签发
+## OPS-10 发布候选签发（已随 #446 删除）
 
-最终 UI-08 十步旅程、前后端冻结门禁和 Q0—Q5 均通过后，运行只读聚合器。聚合器会从每个 Gate 决策的相邻 `manifests/` 目录现场重算 SHA-256，要求 manifest 同时覆盖 Gate 决策 JSON 本身及其完整 evidence 列表，并再次从私有目录复验 PAP-09 HMAC 链。Q5 acceptance receipt 还必须重新绑定到原提案的 approval hash、provider snapshot/checksum、策略身份和 Model/Paper/Manual 三组合请求，PortfolioDiagnostic 必须反向绑定同一 Q5 acceptance hash；前后端 validation 的 `full_ci.completed_at` 必须不早于最终 Q5、PortfolioDiagnostic 和 UI-08 证据，validation `captured_at` 不得早于该 CI 完成时间，bundle `generated_at` 还必须不早于两份 validation 的捕获时间。任何公开镜像、日期、证据绑定、时序或状态漂移都拒绝签发。
-
-```bash
-uv run --no-sync python -m ditto_apps.scripts.personal_workstation_release_candidate \
-  --accelerated-proposal docs/evidence/personal-workstation/pap09-accelerated-proposal-20260902.json \
-  --accelerated-bootstrap docs/evidence/personal-workstation/pap09-accelerated/bootstrap.json \
-  --accelerated-progress docs/evidence/personal-workstation/pap09-accelerated/accelerated-progress.json \
-  --restore-evidence docs/evidence/personal-workstation/q1/backup-restore-20260901.json \
-  --q5-proposal docs/evidence/personal-workstation/q5/live-portfolio-proposal-20260902.json \
-  --q5-acceptance docs/evidence/personal-workstation/q5/live-portfolio-acceptance-20260902.json \
-  --portfolio-diagnostic docs/evidence/personal-workstation/q5/live-portfolio-diagnostic-20260902.json \
-  --ui08-final docs/evidence/personal-workstation/q5/ui08-final-20260902.json \
-  --backend-validation docs/evidence/personal-workstation/validation/backend.json \
-  --frontend-validation docs/evidence/personal-workstation/validation/frontend.json \
-  --gate docs/evidence/personal-workstation/gates/Q0.json \
-  --gate docs/evidence/personal-workstation/gates/Q1.json \
-  --gate docs/evidence/personal-workstation/gates/Q2.json \
-  --gate docs/evidence/personal-workstation/gates/Q3.json \
-  --gate docs/evidence/personal-workstation/gates/Q4.json \
-  --gate docs/evidence/personal-workstation/gates/Q5.json \
-  --output docs/evidence/personal-workstation/ops/release-candidate-20260902.json
-```
-
-该 bundle 表示加速真实交易日回放的发布验收完成；`qualifies_as_wall_clock_soak` 必须保持 `false`。
+发布候选聚合器 `ditto_apps.scripts.personal_workstation_release_candidate` 已按成本审计 C7 删除：本地 review 流程取代机器签发。历史签发证据保留在 `docs/evidence/personal-workstation/ops/release-candidate-20260902.json` 及其 manifest，仅作历史记录，不再续签。
