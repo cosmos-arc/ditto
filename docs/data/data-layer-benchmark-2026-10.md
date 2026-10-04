@@ -101,8 +101,7 @@ fail-closed 组合；②三阶段 fetch log＋`complete_evidence_id` 内容寻�
 
 跨源对账从仅 stock_daily 扩展为全序列，按成本递增定序：
 
-1. ①adj_factor 事件流对账（fuyao dump 已在本地，纯 checker 工作，直接完成 ADR
-   三项对账的第二项）；
+1. ①adj_factor 事件流对账（fuyao dump 已在本地，纯 checker 工作）；
 2. ②财务数值交叉对账（fuyao 财务三表端点已验证；只比数值不比披露时间——fuyao
    财务不作披露锚，唯一锚＝Tushare `f_ann_date`）；
 3. ③指数近期对账（fuyao 指数仅 ~5 年深度＋无历史成分，只能做行情腿辅源）；
@@ -204,7 +203,7 @@ publication cutoff 的决策链。
 | 全球指数 | Tushare index_global | `asset_class=index`＋instrument_mapping(source='tushare', source_ticker=SPX/NDX/HSI/…) | `market/index_global` 年分区 | 日线；observation date 自然日 |
 | 汇率 | Tushare fx_daily＋FRED DEX* | 按源 ticker 映射（现有 4M 段位模式） | `market/fx` | 日线；消费端换算基准 |
 | 大宗现货 | FRED/EIA | 宏观序列注册项 | `macro/commodity` | 日/周/月；knowledge_date 语义随 #432 修正 |
-| 外盘期货 | 新浪（新增独立 sina DataSource） | 按源 ticker 映射 instrument（commodity futures） | sina 源侧 | 日线；容错＋缺行显式报告 |
+| 外盘期货 | 新浪（新增独立 sina DataSource） | 按源 ticker 映射 instrument（commodity futures） | `market/commodity`（同 #436） | 日线；容错＋缺行显式报告 |
 | 国内期货 | Tushare fut_daily | instrument 映射 | `market/commodity` | 日线；口径注意点见 #427 裁决 |
 
 新源注册沿用 `di/sources.py` 按 key 缺省跳过模式（无 key 返回 None）。
