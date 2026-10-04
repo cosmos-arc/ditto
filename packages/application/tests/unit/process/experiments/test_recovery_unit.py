@@ -195,8 +195,6 @@ def test_control_before_attempt_start_does_not_run_numerics() -> None:
     assert runner.audits == []
     assert publisher.calls == []
     assert [name for name, _payload in coordinator.calls] == [
-        "renew",
         "directive",
-        "renew",
         "stop",
     ]

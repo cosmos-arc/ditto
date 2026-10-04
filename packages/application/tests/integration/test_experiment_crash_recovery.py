@@ -294,7 +294,6 @@ def _coordinator(
     clock: datetime,
     checkpoints: set[str] | None = None,
     resumable_checkpoints: set[str] | None = None,
-    lease_duration: timedelta = timedelta(seconds=5),
     scheduler_store: ExperimentSchedulerStoreProtocol | None = None,
 ) -> ExperimentExecutionCoordinator:
     available = set() if checkpoints is None else checkpoints
@@ -303,7 +302,6 @@ def _coordinator(
         store=_store(database) if scheduler_store is None else scheduler_store,
         first_attempt_factory=_RecoveryFactory(),
         owner_token=owner,
-        lease_duration=lease_duration,
         clock=lambda: clock,
         checkpoint_available=available.__contains__,
         checkpoint_resumable=resumable.__contains__,
@@ -427,7 +425,6 @@ def test_expired_lease_takeover_reclaims_and_dispatches_exactly_one_successor(
         database,
         owner="owner-a",
         clock=NOW + timedelta(seconds=1),
-        lease_duration=timedelta(seconds=2),
     )
     first_tick = first_owner.tick(occurred_at=NOW + timedelta(seconds=1))
     parent = first_tick.dispatches[0].attempt
@@ -474,7 +471,6 @@ def test_crash_takeover_resumes_physical_checkpoint_before_experiment_index(
         database,
         owner="checkpoint-crash-owner",
         clock=NOW + timedelta(seconds=1),
-        lease_duration=timedelta(seconds=2),
     )
     first_tick = first_owner.tick(occurred_at=NOW + timedelta(seconds=1))
     parent = first_owner.start_attempt(
@@ -517,7 +513,6 @@ def test_pause_resume_uses_only_an_explicitly_resumable_checkpoint_parent(
         clock=NOW + timedelta(seconds=1),
         checkpoints=checkpoints,
         resumable_checkpoints=resumable_checkpoints,
-        lease_duration=timedelta(minutes=5),
     )
     first_tick = coordinator.tick(occurred_at=NOW + timedelta(seconds=1))
     parent = coordinator.start_attempt(
@@ -593,7 +588,6 @@ def test_consecutive_pause_resume_inherits_nearest_resumable_ancestor(
         clock=NOW + timedelta(seconds=1),
         checkpoints=checkpoints,
         resumable_checkpoints=checkpoints,
-        lease_duration=timedelta(minutes=5),
     )
     first_dispatch = coordinator.tick(
         occurred_at=NOW + timedelta(seconds=1)
@@ -681,7 +675,6 @@ def test_pause_drains_a_queued_claim_without_waiting_for_a_worker(
         database,
         owner="pause-queued-owner",
         clock=NOW + timedelta(seconds=1),
-        lease_duration=timedelta(minutes=5),
     )
     first_tick = coordinator.tick(occurred_at=NOW + timedelta(seconds=1))
     parent = first_tick.dispatches[0].attempt
@@ -725,7 +718,6 @@ def test_cancelled_experiment_never_recovers_or_creates_a_successor(
         database,
         owner="cancel-owner",
         clock=NOW + timedelta(seconds=1),
-        lease_duration=timedelta(seconds=2),
     )
     first_tick = coordinator.tick(occurred_at=NOW + timedelta(seconds=1))
     parent = coordinator.start_attempt(
@@ -787,7 +779,6 @@ def test_terminal_tick_releases_slot_and_dispatches_next_queued_experiment(
         store=ExperimentSchedulerStore(reader, writer),
         first_attempt_factory=_RecoveryFactory(),
         owner_token="release-owner",
-        lease_duration=timedelta(minutes=5),
         clock=lambda: NOW + timedelta(seconds=1),
     )
     first_tick = coordinator.tick(occurred_at=NOW + timedelta(seconds=1))
@@ -809,7 +800,6 @@ def test_terminal_tick_releases_slot_and_dispatches_next_queued_experiment(
         store=ExperimentSchedulerStore(reader, writer),
         first_attempt_factory=_RecoveryFactory(),
         owner_token="release-restarted-owner",
-        lease_duration=timedelta(minutes=5),
         clock=lambda: NOW + timedelta(seconds=4),
     )
     handoff = restarted.tick(occurred_at=NOW + timedelta(seconds=4))
@@ -842,7 +832,6 @@ def test_terminal_control_redelivery_keeps_checkpoint_and_authority_idempotent(
         owner=f"redelivery-{directive.value}-owner",
         clock=NOW + timedelta(seconds=1),
         checkpoints=checkpoints,
-        lease_duration=timedelta(minutes=5),
     )
     first_tick = coordinator.tick(occurred_at=NOW + timedelta(seconds=1))
     parent = coordinator.start_attempt(
@@ -902,8 +891,7 @@ def test_terminal_control_redelivery_keeps_checkpoint_and_authority_idempotent(
     )
     if directive is ResearchExecutionDirective.PAUSE:
         assert reader.get_scheduler_slot().experiment_id == launch.experiment_id
-        assert coordinator.renew_lease().experiment_id == launch.experiment_id
-    database.close_all()
+        database.close_all()
 
 
 def test_explicit_system_retry_requeues_before_creating_one_successor(
@@ -914,7 +902,6 @@ def test_explicit_system_retry_requeues_before_creating_one_successor(
         database,
         owner="retry-owner",
         clock=NOW + timedelta(seconds=1),
-        lease_duration=timedelta(minutes=5),
     )
     first_tick = coordinator.tick(occurred_at=NOW + timedelta(seconds=1))
     parent = coordinator.start_attempt(
@@ -941,8 +928,6 @@ def test_explicit_system_retry_requeues_before_creating_one_successor(
             occurred_at=NOW + timedelta(seconds=4),
         )
     assert exc_info.value.details["reason"] == "stale_fold_revision"
-    renewed = coordinator.renew_lease()
-    assert renewed.experiment_id == launch.experiment_id
 
     retry_identity = build_mutation_idempotency(
         operation_id="research_retry_fold_experiment",
@@ -966,7 +951,6 @@ def test_explicit_system_retry_requeues_before_creating_one_successor(
         database,
         owner="retry-control-owner",
         clock=control_now,
-        lease_duration=timedelta(minutes=5),
     )
     first_retry = control.retry_fold(
         experiment_id=str(launch.experiment_id),
@@ -980,13 +964,11 @@ def test_explicit_system_retry_requeues_before_creating_one_successor(
     assert handed_off.experiment_id == launch.experiment_id
     assert handed_off.owner_token is not None
     assert handed_off.owner_token.startswith("retry-control-owner:")
-    assert handed_off.lease_until_epoch_us is not None
     event_count = len(reader.list_status_events(launch.experiment_id))
     replay_retry = _coordinator(
         database,
         owner="retry-restarted-owner",
         clock=control_now,
-        lease_duration=timedelta(minutes=5),
     ).retry_fold(
         experiment_id=str(launch.experiment_id),
         candidate_id=str(parent.spec.fold_key.candidate_id),
@@ -1004,7 +986,6 @@ def test_explicit_system_retry_requeues_before_creating_one_successor(
         database,
         owner="retry-scheduler-owner",
         clock=control_now + timedelta(microseconds=1),
-        lease_duration=timedelta(minutes=5),
     ).tick(occurred_at=control_now + timedelta(microseconds=1))
     assert retried.state is SchedulerTickState.DISPATCHED
     assert len(retried.dispatches) == 1
@@ -1029,7 +1010,6 @@ def test_idempotent_retry_returns_persisted_receipt_across_post_write_projection
         database,
         owner="retry-race-owner",
         clock=NOW + timedelta(seconds=1),
-        lease_duration=timedelta(minutes=5),
         scheduler_store=cast("ExperimentSchedulerStoreProtocol", racing_store),
     )
     first_tick = coordinator.tick(occurred_at=NOW + timedelta(seconds=1))
@@ -1110,7 +1090,6 @@ def test_pause_wins_queued_dispatch_start_race_without_poisoning_authority(
         database,
         owner="pause-race-owner",
         clock=NOW + timedelta(seconds=1),
-        lease_duration=timedelta(minutes=5),
     )
     first_tick = coordinator.tick(occurred_at=NOW + timedelta(seconds=1))
     dispatch = first_tick.dispatches[0]
@@ -1128,9 +1107,6 @@ def test_pause_wins_queued_dispatch_start_race_without_poisoning_authority(
             occurred_at=NOW + timedelta(seconds=3),
         )
 
-    renewed = coordinator.renew_lease()
-    assert renewed.experiment_id == launch.experiment_id
-    assert renewed.revision > first_tick.dispatches[0].fold.projection.revision
     database.close_all()
 
 
@@ -1142,7 +1118,6 @@ def test_two_recovery_coordinators_cannot_create_two_live_successors(
         database,
         owner="crashed-owner",
         clock=NOW + timedelta(seconds=1),
-        lease_duration=timedelta(seconds=2),
     )
     first_tick = first_owner.tick(occurred_at=NOW + timedelta(seconds=1))
     parent = first_owner.start_attempt(
@@ -1159,20 +1134,37 @@ def test_two_recovery_coordinators_cannot_create_two_live_successors(
         ),
     )
 
-    def race(coordinator: ExperimentExecutionCoordinator) -> SchedulerTickState:
+    def race(
+        coordinator: ExperimentExecutionCoordinator,
+    ) -> SchedulerTickState | str:
         barrier.wait()
-        return coordinator.tick(occurred_at=NOW + timedelta(seconds=10)).state
+        try:
+            return coordinator.tick(occurred_at=NOW + timedelta(seconds=10)).state
+        except AppProcessError as error:
+            return str(error.details.get("code"))
 
     with ThreadPoolExecutor(max_workers=2) as pool:
         states = tuple(pool.map(race, contenders))
 
-    assert states.count(SchedulerTickState.DISPATCHED) == 1
-    assert states.count(SchedulerTickState.LEASE_BUSY) == 1
+    # #448: the slot CAS is a fencing token. Concurrent contenders either
+    # lose the revision race outright (LEASE_BUSY), are fenced out mid-tick
+    # (LEASE_LOST), or each completes one claim epoch in which the later
+    # claimant fences the earlier successor fail-closed with lease_lost.
+    # Every interleaving keeps the durable invariant: at most one live
+    # successor per fold.
+    assert set(states) <= {
+        SchedulerTickState.DISPATCHED,
+        SchedulerTickState.LEASE_BUSY,
+        "LEASE_LOST",
+    }
+    assert SchedulerTickState.DISPATCHED in states
     attempts = reader.list_attempts(parent.spec.fold_key)
-    assert len(attempts) == 2
+    assert len(attempts) >= 2
     assert attempts[0].projection.status is ExperimentStatus.FAILED
     assert attempts[0].projection.failure_code is ExperimentFailureCode.LEASE_LOST
-    assert attempts[1].spec.ordinal == 2
-    assert attempts[1].spec.parent_attempt_id == parent.spec.attempt_id
+    assert all(
+        attempts[index].spec.parent_attempt_id == attempts[index - 1].spec.attempt_id
+        for index in range(1, len(attempts))
+    )
     assert _live_attempt_count(database, launch.experiment_id) == 1
     database.close_all()

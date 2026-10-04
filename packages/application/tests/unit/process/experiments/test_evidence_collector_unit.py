@@ -93,7 +93,6 @@ LEASE_FENCE = LeaseFence(
     EXPERIMENT_ID,
     "evidence-owner",
     7,
-    NOW_US + 60_000_000,
 )
 
 

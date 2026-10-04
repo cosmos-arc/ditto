@@ -98,7 +98,6 @@ class _Scheduler(CampaignTrialSchedulerPort):
             experiment_id=campaign_id,
             owner_token="frontend-live-acceptance",
             revision=1,
-            lease_until_epoch_us=now_epoch_us + 60_000_000,
         )
 
     def required_fold_run_count(self, campaign_id: ExperimentId) -> int:

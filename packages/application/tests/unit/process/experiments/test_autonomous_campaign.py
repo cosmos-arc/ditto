@@ -200,7 +200,6 @@ class _Scheduler:
             experiment_id=campaign_id,
             owner_token="campaign-test-owner",
             revision=1,
-            lease_until_epoch_us=now_epoch_us + 60_000_000,
         )
 
     def required_fold_run_count(self, campaign_id: ExperimentId) -> int:
@@ -263,9 +262,6 @@ class _ExistingExperimentStore:
             slot_id="global",
             experiment_id=None,
             owner_token=None,
-            lease_until_epoch_us=None,
-            acquired_at_epoch_us=None,
-            renewed_at_epoch_us=None,
             revision=0,
         )
         self.folds = tuple(
@@ -295,24 +291,17 @@ class _ExistingExperimentStore:
         *,
         expected_revision: int,
         now_epoch_us: int,
-        lease_until_epoch_us: int,
     ) -> SchedulerLease:
         self.claim_calls += 1
         lease = SchedulerLease(
             experiment_id=campaign_id,
             owner_token=owner_token,
-            lease_until_epoch_us=lease_until_epoch_us,
-            acquired_at_epoch_us=now_epoch_us,
-            renewed_at_epoch_us=now_epoch_us,
             revision=expected_revision + 1,
         )
         self.slot = SchedulerSlot(
             slot_id="global",
             experiment_id=campaign_id,
             owner_token=owner_token,
-            lease_until_epoch_us=lease_until_epoch_us,
-            acquired_at_epoch_us=now_epoch_us,
-            renewed_at_epoch_us=now_epoch_us,
             revision=lease.revision,
         )
         return lease

@@ -323,7 +323,6 @@ def _claim_queued_experiment(
     writer: Any,
     *,
     owner: str,
-    lease_until_epoch_us: int = NOW_US + 100,
 ) -> Any:
     queued = writer.enqueue_experiment(
         ExperimentId("experiment-1"),
@@ -338,7 +337,6 @@ def _claim_queued_experiment(
         owner,
         expected_revision=0,
         now_epoch_us=NOW_US,
-        lease_until_epoch_us=lease_until_epoch_us,
     )
     assert lease is not None
     return lease
@@ -348,12 +346,10 @@ def _start_running_experiment(
     writer: Any,
     *,
     owner: str,
-    lease_until_epoch_us: int = NOW_US + 100,
 ) -> Any:
     lease = _claim_queued_experiment(
         writer,
         owner=owner,
-        lease_until_epoch_us=lease_until_epoch_us,
     )
     writer.transition_scheduled_experiment(
         ExperimentId("experiment-1"),
@@ -1184,7 +1180,6 @@ def test_terminal_transition_serializes_with_exact_fold_replay_but_rejects_new_f
         "owner-drain",
         expected_revision=0,
         now_epoch_us=NOW_US,
-        lease_until_epoch_us=NOW_US + 100,
     )
     assert lease is not None
     writer.transition_fold(
@@ -1288,7 +1283,6 @@ def test_new_fold_and_terminal_transition_serialize_without_terminal_live_child(
         "owner-drain",
         expected_revision=0,
         now_epoch_us=NOW_US,
-        lease_until_epoch_us=NOW_US + 100,
     )
     assert lease is not None
     fold = _fold_spec(api)
@@ -2089,7 +2083,6 @@ def test_artifact_create_exact_replay_after_pin_is_unfenced_noop(
         "owner-artifact",
         expected_revision=0,
         now_epoch_us=NOW_US,
-        lease_until_epoch_us=NOW_US + 10,
     )
     assert lease is not None
     artifact = replace(
@@ -2180,7 +2173,6 @@ def test_artifact_create_drift_after_pin_fails_closed_before_lease_validation(
         "owner-artifact",
         expected_revision=0,
         now_epoch_us=NOW_US,
-        lease_until_epoch_us=NOW_US + 10,
     )
     assert lease is not None
     artifact = replace(
@@ -2817,7 +2809,6 @@ def test_publish_review_packet_round_trips_through_bundle_hash(
         experiment_id=ExperimentId("experiment-1"),
         owner_token="promotion-owner",
         revision=0,
-        lease_until_epoch_us=NOW_US + 100,
     )
 
     record = writer.publish_review_packet(
@@ -2861,7 +2852,6 @@ def test_get_review_packet_for_experiment_round_trips_by_lineage(
         experiment_id=ExperimentId("experiment-1"),
         owner_token="promotion-owner",
         revision=0,
-        lease_until_epoch_us=NOW_US + 100,
     )
     writer.publish_review_packet(
         packet,
@@ -2894,7 +2884,6 @@ def test_get_experiment_id_by_spec_hash_resolves_only_when_packet_exists(
         experiment_id=ExperimentId("experiment-1"),
         owner_token="promotion-owner",
         revision=0,
-        lease_until_epoch_us=NOW_US + 100,
     )
     writer.publish_review_packet(
         packet,
@@ -2920,7 +2909,6 @@ def test_publish_review_packet_does_not_require_active_lease(tmp_path: Path) -> 
         experiment_id=ExperimentId("experiment-1"),
         owner_token="promotion-owner",
         revision=0,
-        lease_until_epoch_us=NOW_US - 1,
     )
 
     record = writer.publish_review_packet(
@@ -2951,7 +2939,6 @@ def test_publish_review_packet_rejects_legacy_v1_before_file_or_index_write(
         experiment_id=ExperimentId("experiment-1"),
         owner_token="promotion-owner",
         revision=0,
-        lease_until_epoch_us=NOW_US + 100,
     )
 
     with pytest.raises(ExperimentSpecError) as exc_info:
@@ -3002,7 +2989,6 @@ def test_reader_reopens_low_level_seeded_legacy_v1_packet(tmp_path: Path) -> Non
         experiment_id=ExperimentId("experiment-1"),
         owner_token="legacy-seed",
         revision=0,
-        lease_until_epoch_us=NOW_US - 1,
     )
     indexed = IndexedArtifactIO(
         artifact_root=database.artifact_root,

@@ -76,7 +76,6 @@ class SQLiteAtomicDispatchMixin:
         cls,
         connection: sqlite3.Connection,
         fence: LeaseFence,
-        now_epoch_us: int,
         expected_experiment_id: ExperimentId,
     ) -> sqlite3.Row: ...
 
@@ -130,9 +129,7 @@ class SQLiteAtomicDispatchMixin:
         connection = self._database.get_connection()
         try:
             connection.execute("BEGIN IMMEDIATE")
-            self._validate_lease(
-                connection, lease_fence, now_epoch_us, key.experiment_id
-            )
+            self._validate_lease(connection, lease_fence, key.experiment_id)
             validate_experiment_dispatchable(connection, key.experiment_id)
             fold = connection.execute(
                 """
@@ -539,7 +536,6 @@ class SQLiteAtomicDispatchMixin:
             self._validate_lease(
                 connection,
                 lease_fence,
-                now_epoch_us,
                 key.experiment_id,
             )
             fold = self._validate_pause_requeue_preconditions(
@@ -638,9 +634,7 @@ class SQLiteAtomicDispatchMixin:
         connection = self._database.get_connection()
         try:
             connection.execute("BEGIN IMMEDIATE")
-            self._validate_lease(
-                connection, lease_fence, now_epoch_us, key.experiment_id
-            )
+            self._validate_lease(connection, lease_fence, key.experiment_id)
             fold, attempt = self._load_interrupted_work(
                 connection,
                 key,

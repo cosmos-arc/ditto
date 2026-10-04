@@ -369,15 +369,8 @@ class AutonomousCampaignSupport:
         return AttemptId(f"campaign-attempt-{digest}")
 
     @staticmethod
-    def _validate_lease(
-        lease: LeaseFence,
-        campaign_id: ExperimentId,
-        now_epoch_us: int,
-    ) -> None:
-        if (
-            lease.experiment_id != campaign_id
-            or lease.lease_until_epoch_us <= now_epoch_us
-        ):
+    def _validate_lease(lease: LeaseFence, campaign_id: ExperimentId) -> None:
+        if lease.experiment_id != campaign_id or lease.revision < 1:
             raise campaign_error(
                 "campaign scheduler returned a stale lease",
                 code="LEASE_LOST",

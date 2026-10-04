@@ -674,7 +674,7 @@ class EvidenceCase:
         )
 
     def publish_report(self, fold: FoldView, attempt: AttemptView) -> None:
-        fence = LeaseFence(EXPERIMENT_ID, "evidence-owner", 1, NOW_US + 1_000_000)
+        fence = LeaseFence(EXPERIMENT_ID, "evidence-owner", 1)
         self.adapter.publish(
             artifact_identity(fold, attempt),
             BacktestReportEvidence.from_report(
@@ -689,7 +689,7 @@ class EvidenceCase:
         )
 
     def publish_trace(self, fold: FoldView, attempt: AttemptView) -> None:
-        fence = LeaseFence(EXPERIMENT_ID, "evidence-owner", 1, NOW_US + 1_000_000)
+        fence = LeaseFence(EXPERIMENT_ID, "evidence-owner", 1)
         trade_date = fold.spec.test_window.start.isoformat()
         self.trace_adapter.publish(
             trace_identity(fold, attempt),

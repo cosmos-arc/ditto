@@ -348,7 +348,6 @@ def _prepare_indexed_attempt(
         "owner-replay-golden",
         expected_revision=0,
         now_epoch_us=_INDEXED_NOW_US,
-        lease_until_epoch_us=_INDEXED_NOW_US + 100,
     )
     assert lease is not None
     writer.transition_scheduled_experiment(

@@ -424,9 +424,7 @@ class SQLiteExperimentWriter(
                 self._verify_attempt_replay(connection, existing, values, initial)
                 connection.commit()
                 return
-            self._validate_lease(
-                connection, lease_fence, now_epoch_us, spec.fold_key.experiment_id
-            )
+            self._validate_lease(connection, lease_fence, spec.fold_key.experiment_id)
             validate_experiment_dispatchable(connection, spec.fold_key.experiment_id)
             validate_holdout_work_authority(
                 connection,
@@ -544,7 +542,7 @@ class SQLiteExperimentWriter(
         now_epoch_us: int,
         occurred_at: datetime,
     ) -> FoldProjection:
-        """Claim queued fold work with the current unexpired scheduler fence."""
+        """Claim queued fold work with the current revisioned scheduler fence."""
         return self.transition_fold(
             key,
             target_status=ExperimentStatus.RUNNING,
@@ -581,9 +579,7 @@ class SQLiteExperimentWriter(
         connection = self._database.get_connection()
         try:
             connection.execute("BEGIN IMMEDIATE")
-            self._validate_lease(
-                connection, lease_fence, now_epoch_us, key.experiment_id
-            )
+            self._validate_lease(connection, lease_fence, key.experiment_id)
             if target_status is ExperimentStatus.RUNNING:
                 validate_experiment_dispatchable(connection, key.experiment_id)
             row = connection.execute(
@@ -704,7 +700,7 @@ class SQLiteExperimentWriter(
             if row is None:
                 raise _integrity("attempt does not exist", "attempt_not_found")
             experiment_id = ExperimentId(row["experiment_id"])
-            self._validate_lease(connection, lease_fence, now_epoch_us, experiment_id)
+            self._validate_lease(connection, lease_fence, experiment_id)
             validate_holdout_attempt_row(connection, row)
             if row["revision"] != expected_revision:
                 raise _conflict(

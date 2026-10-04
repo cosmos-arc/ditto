@@ -59,10 +59,6 @@ from ditto_application.processes.experiments._worker_contract import (
     ResearchWorkerResult,
     ResearchWorkerState,
 )
-from ditto_application.processes.experiments._worker_heartbeat import (
-    EXECUTION_HEARTBEAT_INTERVAL_SECONDS,
-    ExecutionLeaseHeartbeat,
-)
 from ditto_application.processes.experiments.backtest_service_wiring import (
     ClosedBacktestServiceGraph,
     require_closed_backtest_service,
@@ -525,7 +521,6 @@ class ResearchExperimentWorker:
     ) -> ResearchWorkerResult:
         """Run one dispatch; all failures after start become durable outcomes."""
         _require_dispatch(dispatch)
-        self._coordinator.renew_lease(occurred_at=occurred_at)
         initial_directive = self._coordinator.poll_execution_directive(
             dispatch.attempt.spec.attempt_id,
             occurred_at=occurred_at,
@@ -577,16 +572,12 @@ class ResearchExperimentWorker:
             clock=self._clock,
         )
         try:
-            with ExecutionLeaseHeartbeat(
+            run_result = self._run_fold(
+                persisted,
+                attempt,
+                run_id,
                 execution_control,
-                EXECUTION_HEARTBEAT_INTERVAL_SECONDS,
-            ):
-                run_result = self._run_fold(
-                    persisted,
-                    attempt,
-                    run_id,
-                    execution_control,
-                )
+            )
             report_evidence = _require_completed_report_evidence(run_result)
             _require_fold_selection_trace_contract(
                 attempt,
@@ -614,7 +605,6 @@ class ResearchExperimentWorker:
                 )
             state, failure_code = _failure(effective_error)
             finished_at = self._clock()
-            self._coordinator.renew_lease(occurred_at=finished_at)
             self._coordinator.fail_attempt(
                 attempt.attempt_id,
                 failure_code,
@@ -629,7 +619,6 @@ class ResearchExperimentWorker:
                 error_type=type(effective_error).__name__,
             )
         finished_at = self._clock()
-        self._coordinator.renew_lease(occurred_at=finished_at)
         self._coordinator.complete_attempt(
             attempt.attempt_id,
             occurred_at=finished_at,
@@ -759,7 +748,6 @@ class ResearchExperimentWorker:
     ) -> ResearchWorkerResult:
         state = _controlled_worker_state(directive)
         finished_at = self._clock()
-        self._coordinator.renew_lease(occurred_at=finished_at)
         if self._checkpoint_available(str(run_id)):
             self._coordinator.record_checkpoint(
                 attempt.attempt_id,

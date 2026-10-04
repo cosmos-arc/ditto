@@ -2,9 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
-from dataclasses import replace
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 from threading import Event, RLock, Thread, get_ident
 from typing import Never, cast
 
@@ -35,20 +33,11 @@ EXPERIMENT_ID = ExperimentId("experiment-lease-authority")
 
 
 class _LeaseStore:
-    """Implement only the two ports exercised by LeaseAuthority."""
+    """Implement only the ports exercised by LeaseAuthority."""
 
     def __init__(self) -> None:
-        self.renew_calls = 0
+        self.claim_calls = 0
         self.release_calls = 0
-        self.renew_section_ids: list[int | None] = []
-        self._active_section_probe: Callable[[], int | None] = lambda: None
-
-    def observe_active_section(
-        self,
-        probe: Callable[[], int | None],
-    ) -> None:
-        """Record which authority section owns each durable renewal."""
-        self._active_section_probe = probe
 
     def try_claim_lease(
         self,
@@ -57,45 +46,18 @@ class _LeaseStore:
         *,
         expected_revision: int,
         now_epoch_us: int,
-        lease_until_epoch_us: int,
     ) -> SchedulerLease:
+        self.claim_calls += 1
         return SchedulerLease(
             experiment_id=experiment_id,
             owner_token=owner_token,
-            lease_until_epoch_us=lease_until_epoch_us,
-            acquired_at_epoch_us=now_epoch_us,
-            renewed_at_epoch_us=now_epoch_us,
             revision=expected_revision + 1,
         )
 
-    def renew_lease(
-        self,
-        lease: SchedulerLease,
-        *,
-        now_epoch_us: int,
-        new_lease_until_epoch_us: int,
-    ) -> SchedulerLease:
-        self.renew_calls += 1
-        self.renew_section_ids.append(self._active_section_probe())
-        return replace(
-            lease,
-            lease_until_epoch_us=new_lease_until_epoch_us,
-            renewed_at_epoch_us=now_epoch_us,
-            revision=lease.revision + 1,
-        )
-
-    def release_lease(
-        self,
-        lease: SchedulerLease,
-        *,
-        now_epoch_us: int,
-    ) -> SchedulerSlot:
+    def release_lease(self, lease: SchedulerLease) -> SchedulerSlot:
         self.release_calls += 1
         return SchedulerSlot(
             "global",
-            None,
-            None,
-            None,
             None,
             None,
             lease.revision + 1,
@@ -153,12 +115,97 @@ def _acquired_authority(
     authority = LeaseAuthority(
         cast(ExperimentSchedulerStoreProtocol, store),
         owner_token="lease-authority-test",
-        lease_duration=timedelta(minutes=5),
         clock=lambda: NOW,
     )
     assert authority.acquire(EXPERIMENT_ID, expected_revision=0) is True
     assert authority.has_lease is True
     return authority, store
+
+
+def test_acquire_treats_stale_revision_as_retryable() -> None:
+    class _StaleRevisionStore(_LeaseStore):
+        def try_claim_lease(
+            self,
+            experiment_id: ExperimentId,
+            owner_token: str,
+            *,
+            expected_revision: int,
+            now_epoch_us: int,
+        ) -> SchedulerLease | None:
+            raise ExperimentLeaseLostError(
+                "scheduler revision is stale",
+                details={"reason_code": "scheduler_lease_stale_revision"},
+            )
+
+    store = _StaleRevisionStore()
+    authority = LeaseAuthority(
+        cast(ExperimentSchedulerStoreProtocol, store),
+        owner_token="lease-authority-test",
+        clock=lambda: NOW,
+    )
+
+    assert authority.acquire(EXPERIMENT_ID, expected_revision=0) is False
+    assert authority.is_lost is False
+    assert authority.has_lease is False
+
+
+def test_acquire_treats_foreign_occupant_as_busy_without_poisoning() -> None:
+    class _ReclaimRequiredStore(_LeaseStore):
+        def try_claim_lease(
+            self,
+            experiment_id: ExperimentId,
+            owner_token: str,
+            *,
+            expected_revision: int,
+            now_epoch_us: int,
+        ) -> SchedulerLease | None:
+            self.claim_calls += 1
+            raise ExperimentSpecError(
+                "active scheduler slot must be reclaimed by its own experiment",
+                details={"reason_code": "scheduler_reclaim_required"},
+            )
+
+    store = _ReclaimRequiredStore()
+    authority = LeaseAuthority(
+        cast(ExperimentSchedulerStoreProtocol, store),
+        owner_token="lease-authority-test",
+        clock=lambda: NOW,
+    )
+
+    # A control route claiming while another experiment occupies the slot is
+    # ordinary busyness; the process-lifetime authority must stay usable.
+    assert authority.acquire(EXPERIMENT_ID, expected_revision=0) is False
+    assert authority.is_lost is False
+    assert authority.has_lease is False
+    assert store.claim_calls == 1
+
+
+def test_acquire_fail_closes_on_a_lost_slot_race() -> None:
+    class _LostStore(_LeaseStore):
+        def try_claim_lease(
+            self,
+            experiment_id: ExperimentId,
+            owner_token: str,
+            *,
+            expected_revision: int,
+            now_epoch_us: int,
+        ) -> SchedulerLease | None:
+            raise ExperimentLeaseLostError(
+                "scheduler fencing token is stale",
+                details={"reason_code": "scheduler_lease_lost"},
+            )
+
+    authority = LeaseAuthority(
+        cast(ExperimentSchedulerStoreProtocol, _LostStore()),
+        owner_token="lease-authority-test",
+        clock=lambda: NOW,
+    )
+
+    with pytest.raises(AppProcessError) as exc_info:
+        authority.acquire(EXPERIMENT_ID, expected_revision=0)
+
+    assert exc_info.value.details["code"] == "LEASE_LOST"
+    assert authority.is_lost is True
 
 
 @pytest.mark.parametrize(
@@ -207,10 +254,9 @@ def test_execute_operator_rejection_does_not_poison_authority(
     assert exc_info.value.details["reason"] == expected_reason
     assert authority.is_lost is False
     assert authority.has_lease is True
-    renewed = authority.renew()
-    assert renewed.revision == 2
-    assert renewed.renewed_at_epoch_us == NOW_EPOCH_US
-    assert store.renew_calls == 1
+    observed_revision = authority.execute(lambda lease, _now: lease.fence.revision)
+    assert observed_revision == 1
+    assert store.claim_calls == 1
 
 
 @pytest.mark.parametrize(
@@ -265,11 +311,11 @@ def test_execute_operator_authority_failure_remains_fail_closed(
     assert exc_info.value.details["code"] == expected_code
     assert authority.is_lost is True
     assert authority.has_lease is False
-    with pytest.raises(AppProcessError) as renew_exc:
-        authority.renew()
-    assert renew_exc.value.details["code"] == "LEASE_LOST"
-    assert renew_exc.value.details["reason"] == "scheduler_authority_invalidated"
-    assert store.renew_calls == 0
+    with pytest.raises(AppProcessError) as acquire_exc:
+        authority.acquire(EXPERIMENT_ID, expected_revision=1)
+    assert acquire_exc.value.details["code"] == "LEASE_LOST"
+    assert acquire_exc.value.details["reason"] == "scheduler_authority_invalidated"
+    assert store.claim_calls == 1
 
 
 def test_execute_control_change_does_not_poison_authority() -> None:
@@ -285,8 +331,8 @@ def test_execute_control_change_does_not_poison_authority() -> None:
     assert exc_info.value is control_change
     assert authority.is_lost is False
     assert authority.has_lease is True
-    assert authority.renew().revision == 2
-    assert store.renew_calls == 1
+    assert authority.execute(lambda lease, _now: lease.fence.revision) == 1
+    assert store.claim_calls == 1
 
 
 def test_release_clears_local_lease_without_poisoning_authority() -> None:
@@ -302,13 +348,10 @@ def test_release_clears_local_lease_without_poisoning_authority() -> None:
     assert authority.acquire(ExperimentId("experiment-next"), expected_revision=2)
 
 
-def test_recoverable_publication_renews_and_runs_in_one_outer_authority_section() -> (
-    None
-):
-    authority, store = _acquired_authority()
+def test_recoverable_publication_runs_in_one_outer_authority_section() -> None:
+    authority, _store = _acquired_authority()
     lock = _ObservableRLock()
     authority._lock = lock
-    store.observe_active_section(lambda: lock.active_section_id)
     current_now_section_ids: list[int | None] = []
 
     def observed_clock() -> datetime:
@@ -318,7 +361,7 @@ def test_recoverable_publication_renews_and_runs_in_one_outer_authority_section(
     authority._clock = observed_clock
     observed: list[tuple[LeaseFence, int, int, int | None]] = []
 
-    result = authority.execute_recoverable_under_renewed_lease(
+    result = authority.execute_recoverable_publication(
         lambda fence, now_epoch_us: (
             observed.append(
                 (
@@ -333,18 +376,15 @@ def test_recoverable_publication_renews_and_runs_in_one_outer_authority_section(
     )
 
     assert result == "published"
-    assert store.renew_calls == 1
-    assert len(store.renew_section_ids) == 1
-    outer_section_id = store.renew_section_ids[0]
+    outer_section_id = current_now_section_ids[0]
     assert outer_section_id is not None
-    assert current_now_section_ids == [outer_section_id, outer_section_id]
+    assert current_now_section_ids == [outer_section_id]
     assert observed == [
         (
             LeaseFence(
                 experiment_id=EXPERIMENT_ID,
                 owner_token=observed[0][0].owner_token,
-                revision=2,
-                lease_until_epoch_us=NOW_EPOCH_US + 300_000_000,
+                revision=1,
             ),
             NOW_EPOCH_US,
             1,
@@ -354,37 +394,22 @@ def test_recoverable_publication_renews_and_runs_in_one_outer_authority_section(
     assert lock.depth == 0
 
 
-def test_recoverable_publication_blocks_a_second_renew_until_callback_returns() -> None:
+def test_recoverable_publication_blocks_a_second_section_until_callback_returns() -> (
+    None
+):
     lock = _ObservableRLock()
-    publication_renew_started = Event()
+    publication_started = Event()
 
-    class _CoordinatedRenewStore(_LeaseStore):
-        def renew_lease(
-            self,
-            lease: SchedulerLease,
-            *,
-            now_epoch_us: int,
-            new_lease_until_epoch_us: int,
-        ) -> SchedulerLease:
-            publication_renew_started.set()
-            assert lock.competitor_attempted.wait(timeout=5)
-            return super().renew_lease(
-                lease,
-                now_epoch_us=now_epoch_us,
-                new_lease_until_epoch_us=new_lease_until_epoch_us,
-            )
-
-    authority, store = _acquired_authority(_CoordinatedRenewStore())
+    authority, _store = _acquired_authority()
     authority._lock = lock
-    store.observe_active_section(lambda: lock.active_section_id)
     competitor_finished = Event()
     competitor_errors: list[BaseException] = []
     callback_observed: list[tuple[int | None, bool]] = []
 
     def competitor() -> None:
         try:
-            assert publication_renew_started.wait(timeout=5)
-            authority.renew()
+            assert publication_started.wait(timeout=5)
+            authority.execute(lambda _lease, _now: None)
         except BaseException as error:
             competitor_errors.append(error)
         finally:
@@ -394,17 +419,17 @@ def test_recoverable_publication_blocks_a_second_renew_until_callback_returns() 
     thread.start()
 
     def publish(_fence: LeaseFence, _now_epoch_us: int) -> None:
+        publication_started.set()
+        assert lock.competitor_attempted.wait(timeout=5)
         callback_observed.append((lock.active_section_id, competitor_finished.is_set()))
 
-    authority.execute_recoverable_under_renewed_lease(publish)
+    authority.execute_recoverable_publication(publish)
     thread.join(timeout=5)
 
     assert thread.is_alive() is False
     assert competitor_finished.is_set() is True
     assert competitor_errors == []
-    assert store.renew_calls == 2
-    assert len(store.renew_section_ids) == 2
-    publication_section_id = store.renew_section_ids[0]
+    publication_section_id = callback_observed[0][0]
     assert publication_section_id is not None
     assert callback_observed == [(publication_section_id, False)]
 
@@ -426,18 +451,17 @@ def test_recoverable_publication_blocks_a_second_renew_until_callback_returns() 
     ],
 )
 def test_recoverable_publication_error_preserves_authority(error: Exception) -> None:
-    authority, store = _acquired_authority()
+    authority, _store = _acquired_authority()
 
     with pytest.raises(type(error)) as exc_info:
-        authority.execute_recoverable_under_renewed_lease(
+        authority.execute_recoverable_publication(
             lambda _fence, _now_epoch_us: _raise(error)
         )
 
     assert exc_info.value is error
     assert authority.is_lost is False
     assert authority.has_lease is True
-    assert authority.renew().revision == 3
-    assert store.renew_calls == 2
+    assert authority.execute(lambda lease, _now: lease.fence.revision) == 1
 
 
 @pytest.mark.parametrize(
@@ -490,17 +514,17 @@ def test_recoverable_publication_terminal_error_invalidates_authority(
     authority, store = _acquired_authority()
 
     with pytest.raises(AppProcessError) as exc_info:
-        authority.execute_recoverable_under_renewed_lease(
+        authority.execute_recoverable_publication(
             lambda _fence, _now_epoch_us: _raise(error)
         )
 
     assert exc_info.value.details["code"] == expected_code
     assert authority.is_lost is True
     assert authority.has_lease is False
-    with pytest.raises(AppProcessError) as renew_info:
-        authority.renew()
-    assert renew_info.value.details["code"] == "LEASE_LOST"
-    assert store.renew_calls == 1
+    with pytest.raises(AppProcessError) as acquire_info:
+        authority.acquire(EXPERIMENT_ID, expected_revision=1)
+    assert acquire_info.value.details["code"] == "LEASE_LOST"
+    assert store.claim_calls == 1
 
 
 class _PublicationInterrupt(BaseException):
@@ -508,54 +532,14 @@ class _PublicationInterrupt(BaseException):
 
 
 def test_recoverable_publication_base_exception_invalidates_and_reraises() -> None:
-    authority, store = _acquired_authority()
+    authority, _store = _acquired_authority()
     interrupt = _PublicationInterrupt()
 
     with pytest.raises(_PublicationInterrupt) as exc_info:
-        authority.execute_recoverable_under_renewed_lease(
+        authority.execute_recoverable_publication(
             lambda _fence, _now: _raise_base(interrupt)
         )
 
     assert exc_info.value is interrupt
     assert authority.is_lost is True
     assert authority.has_lease is False
-    assert store.renew_calls == 1
-
-
-def test_recoverable_publication_renew_interrupt_invalidates_before_callback() -> None:
-    interrupt = _PublicationInterrupt()
-
-    class _InterruptingRenewStore(_LeaseStore):
-        def renew_lease(
-            self,
-            lease: SchedulerLease,
-            *,
-            now_epoch_us: int,
-            new_lease_until_epoch_us: int,
-        ) -> SchedulerLease:
-            _ = (lease, now_epoch_us, new_lease_until_epoch_us)
-            self.renew_calls += 1
-            raise interrupt
-
-    store = _InterruptingRenewStore()
-    authority = LeaseAuthority(
-        cast(ExperimentSchedulerStoreProtocol, store),
-        owner_token="lease-authority-test",
-        lease_duration=timedelta(minutes=5),
-        clock=lambda: NOW,
-    )
-    assert authority.acquire(EXPERIMENT_ID, expected_revision=0)
-    callback_called = False
-
-    def publish(_fence: LeaseFence, _now_epoch_us: int) -> None:
-        nonlocal callback_called
-        callback_called = True
-
-    with pytest.raises(_PublicationInterrupt) as exc_info:
-        authority.execute_recoverable_under_renewed_lease(publish)
-
-    assert exc_info.value is interrupt
-    assert callback_called is False
-    assert authority.is_lost is True
-    assert authority.has_lease is False
-    assert store.renew_calls == 1

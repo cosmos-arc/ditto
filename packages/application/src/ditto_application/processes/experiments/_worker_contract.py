@@ -18,7 +18,7 @@ from ditto_application.processes.experiments._report_evidence import (
     BacktestReportEvidence,
 )
 from ditto_application.processes.experiments.lease_authority import (
-    RenewedLeaseOperation,
+    LeaseOperation,
 )
 from ditto_application.processes.experiments.scheduler_store import (
     AttemptId,
@@ -27,7 +27,6 @@ from ditto_application.processes.experiments.scheduler_store import (
     ContentHash,
     ExperimentFailureCode,
     ResearchExecutionDirective,
-    SchedulerLease,
 )
 
 __all__ = [
@@ -85,11 +84,9 @@ class ResearchFoldRunResult:
 class ResearchWorkerCoordinator(Protocol):
     """Narrow lease-fenced coordinator operations owned by the worker."""
 
-    def renew_lease(self, *, occurred_at: datetime) -> SchedulerLease: ...
-
     def publish_attempt_artifact[ResultT](
         self,
-        operation: RenewedLeaseOperation[ResultT],
+        operation: LeaseOperation[ResultT],
     ) -> ResultT: ...
 
     def start_attempt(

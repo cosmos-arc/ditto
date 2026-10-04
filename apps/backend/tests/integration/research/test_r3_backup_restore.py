@@ -327,7 +327,6 @@ def _seed_holdout(
         store=ExperimentSchedulerStore(reader, writer),
         first_attempt_factory=_FirstAttemptFactory(),
         owner_token="r3-backup-coordinator",
-        lease_duration=timedelta(minutes=5),
         selection_evidence_provider=provider,
         selection_evidence_publisher=provider,
         clock=advancing_clock,
@@ -722,7 +721,6 @@ def _persist_candidate_selection(
         "r3-backup-seed-owner",
         expected_revision=slot.revision,
         now_epoch_us=NOW_US,
-        lease_until_epoch_us=NOW_US + 60_000_000,
     )
     assert lease is not None
     writer.transition_scheduled_experiment(
@@ -949,7 +947,6 @@ def _review_fence() -> LeaseFence:
         experiment_id=EXPERIMENT_ID,
         owner_token="promotion-owner",
         revision=0,
-        lease_until_epoch_us=NOW_US + 1,
     )
 
 

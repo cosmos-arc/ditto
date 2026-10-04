@@ -10,6 +10,8 @@ from ditto_analysis.experiments import (
     AttemptId,
     AttemptPersistenceSpec,
     AttemptProjection,
+    AttemptView,
+    BacktestRunId,
     CandidateExecutionBinding,
     CandidateId,
     CandidateSpec,
@@ -50,6 +52,9 @@ from ditto_analysis.storage.sqlite.experiments import (
     SQLiteExperimentWriter,
 )
 from ditto_application.exceptions import AppProcessError
+from ditto_application.processes.experiments._execution_resolution_evidence import (
+    build_successor_queued_attempt,
+)
 from ditto_application.processes.experiments.coordinator import (
     ExperimentExecutionCoordinator,
     SchedulerTickState,
@@ -57,12 +62,28 @@ from ditto_application.processes.experiments.coordinator import (
 from ditto_application.processes.experiments.scheduler_store import (
     ExperimentSchedulerStore,
     FirstAttempt,
+    QueuedAttempt,
 )
 
 NOW = datetime(2026, 7, 20, 2, 0, tzinfo=UTC)
 
 
 class _Factory:
+    def create_successor(
+        self,
+        fold: FoldView,
+        parent: AttemptView,
+        *,
+        resume_from_run_id: BacktestRunId | None,
+        occurred_at: datetime,
+    ) -> QueuedAttempt:
+        return build_successor_queued_attempt(
+            fold,
+            parent,
+            resume_from_run_id=resume_from_run_id,
+            occurred_at=occurred_at,
+        )
+
     def create(self, fold: FoldView, occurred_at: datetime) -> FirstAttempt:
         attempt_id = AttemptId(
             f"attempt-{fold.spec.key.experiment_id}-"
@@ -240,7 +261,7 @@ def _persist_enqueued(
     )
 
 
-def test_sqlite_tick_claims_capacity_once_and_second_owner_stays_out(
+def test_sqlite_tick_fences_second_owner_into_fail_closed_recovery(
     tmp_path: Path,
 ) -> None:
     database, reader, store = _store(tmp_path)
@@ -248,14 +269,12 @@ def test_sqlite_tick_claims_capacity_once_and_second_owner_stays_out(
         store=store,
         first_attempt_factory=_Factory(),
         owner_token="integration-owner-a",
-        lease_duration=timedelta(minutes=5),
         clock=lambda: NOW + timedelta(seconds=1),
     )
     other = ExperimentExecutionCoordinator(
         store=store,
         first_attempt_factory=_Factory(),
         owner_token="integration-owner-b",
-        lease_duration=timedelta(minutes=5),
         clock=lambda: NOW + timedelta(seconds=3),
     )
 
@@ -267,14 +286,27 @@ def test_sqlite_tick_claims_capacity_once_and_second_owner_stays_out(
     assert len(first.dispatches) == 2
     assert repeated.state is SchedulerTickState.WAITING
     assert repeated.dispatches == ()
-    assert blocked.state is SchedulerTickState.LEASE_BUSY
-    assert (
-        sum(
-            len(reader.list_attempts(fold.spec.key))
-            for fold in reader.list_folds(_launch().experiment_id)
-        )
-        == 2
+    # #448: the second owner reclaims by CAS and fail-closes the interrupted
+    # attempts; per-fold live work stays unique (no double activation).
+    assert blocked.state is SchedulerTickState.DISPATCHED
+    attempts = tuple(
+        attempt
+        for fold in reader.list_folds(_launch().experiment_id)
+        for attempt in reader.list_attempts(fold.spec.key)
     )
+    live = tuple(
+        attempt
+        for attempt in attempts
+        if attempt.projection.status
+        in (ExperimentStatus.QUEUED, ExperimentStatus.RUNNING)
+    )
+    interrupted = tuple(
+        attempt
+        for attempt in attempts
+        if attempt.projection.failure_code is ExperimentFailureCode.LEASE_LOST
+    )
+    assert len(live) == 2
+    assert len(interrupted) == 2
     assert (
         sum(
             fold.projection.status is ExperimentStatus.RUNNING
@@ -351,7 +383,7 @@ def test_scheduler_snapshot_rejects_attempt_whose_fold_is_missing(
     database.close_all()
 
 
-def test_expired_terminal_occupant_hands_slot_to_current_queue_head(
+def test_terminal_occupant_hands_slot_to_current_queue_head(
     tmp_path: Path,
 ) -> None:
     database = ResearchExperimentDatabase(tmp_path)
@@ -368,7 +400,6 @@ def test_expired_terminal_occupant_hands_slot_to_current_queue_head(
         "terminal-owner",
         expected_revision=0,
         now_epoch_us=claim_now,
-        lease_until_epoch_us=claim_now + 1_000_000,
     )
     assert lease is not None
     running = writer.transition_scheduled_experiment(
@@ -416,7 +447,6 @@ def test_expired_terminal_occupant_hands_slot_to_current_queue_head(
         store=ExperimentSchedulerStore(reader, writer),
         first_attempt_factory=_Factory(),
         owner_token="successor-owner",
-        lease_duration=timedelta(minutes=5),
         clock=lambda: NOW + timedelta(seconds=3),
     )
 

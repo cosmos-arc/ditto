@@ -603,7 +603,6 @@ def _advance_to_candidate_selection(
         "r3-evidence-golden-owner",
         expected_revision=slot.revision,
         now_epoch_us=NOW_US,
-        lease_until_epoch_us=NOW_US + 60_000_000,
     )
     assert lease is not None
     writer.transition_scheduled_experiment(
@@ -970,7 +969,6 @@ def _coordinator_with_collector(
         first_attempt_factory=_Factory(),
         selection_evidence_provider=selection_service,
         owner_token="r3-evidence-closure-coordinator",
-        lease_duration=timedelta(minutes=5),
         clock=_AdvancingClock(NOW + timedelta(minutes=2)),
         evidence_collector=collector,
         selection_evidence_publisher=selection_service,

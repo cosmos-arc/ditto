@@ -25,7 +25,7 @@ coordinator can be constructed for control-route DI.
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import datetime
 
 from ditto_analysis.experiments import (
     AttemptView,
@@ -51,7 +51,6 @@ from ditto_application.processes.experiments.scheduler_store import (
 )
 
 __all__ = [
-    "CONTROL_COORDINATOR_LEASE_DURATION",
     "CONTROL_COORDINATOR_OWNER_TOKEN",
     "CONTROL_ONLY_FACTORY_CODE",
     "CONTROL_ONLY_FACTORY_REASON",
@@ -65,7 +64,6 @@ CONTROL_ONLY_FACTORY_CODE = "CONTROL_ONLY_FACTORY"
 CONTROL_ONLY_FACTORY_REASON = "first_attempt_factory_not_wired"
 
 CONTROL_COORDINATOR_OWNER_TOKEN = "ditto-research-scheduler"  # noqa: S105
-CONTROL_COORDINATOR_LEASE_DURATION = timedelta(minutes=5)
 
 
 class LoggingExperimentControlNotifier:
@@ -150,16 +148,17 @@ def retry_fold_under_transient_lease(
     request: RetryFoldControlRequest,
 ) -> ExperimentControlReceipt:
     """
-    Retry one terminal fold via a handoff scheduler lease (control route).
+    Retry one terminal fold via a transient scheduler lease (control route).
 
     Control routes run outside the tick loop, so this acquires a transient
-    scheduler lease, executes the fenced retry, and expires ownership for handoff
-    while retaining the active experiment's singleton slot. The durable store
-    CAS (``stale_fold_revision`` + lease fence) is the correctness boundary;
-    in R3 single-machine wiring there is no concurrent tick. If the slot is
-    currently leased by another authority the request fails closed with
-    ``LEASE_LOST``. A lease already held by this coordinator remains owned by
-    its scheduler lifecycle and is never handed off by this control operation.
+    scheduler lease and executes the fenced retry; the transient claim is then
+    forgotten while the experiment's singleton slot stays occupied until the
+    next claimant revision-overwrites it. The durable store CAS
+    (``stale_fold_revision`` + lease fence) is the correctness boundary; in
+    single-machine wiring there is no concurrent tick. If the slot is currently
+    unclaimable the request fails closed with ``LEASE_LOST``. A lease already
+    held by this coordinator remains owned by its scheduler lifecycle and is
+    never forgotten by this control operation.
     """
     slot = store.get_scheduler_slot()
     return authority.execute_operator_under_transient_lease(

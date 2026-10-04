@@ -349,9 +349,6 @@ def _lease() -> SchedulerLease:
     return SchedulerLease(
         ExperimentId("experiment-1"),
         "scheduler-owner",
-        100,
-        1,
-        1,
         4,
     )
 

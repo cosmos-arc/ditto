@@ -284,7 +284,7 @@ class _SchedulerStore:
             )
         ]
         self.attempts: dict[AttemptId, AttemptView] = {}
-        self.slot = SchedulerSlot("global", None, None, None, None, None, 0)
+        self.slot = SchedulerSlot("global", None, None, 0)
         self.artifacts: list[ArtifactRecord] = []
         self.claimed_keys: list[FoldKey] = []
         self.write_fences: list[int] = []
@@ -333,7 +333,6 @@ class _SchedulerStore:
         *,
         expected_revision: int,
         now_epoch_us: int,
-        lease_until_epoch_us: int,
     ) -> SchedulerLease | None:
         if self.claim_barrier is not None:
             self.claim_barrier.wait(timeout=5)
@@ -344,70 +343,22 @@ class _SchedulerStore:
                     details={"reason_code": "scheduler_lease_stale_revision"},
                 )
             if (
-                self.slot.owner_token is not None
-                and self.slot.lease_until_epoch_us is not None
-                and self.slot.lease_until_epoch_us > now_epoch_us
+                self.slot.experiment_id is not None
+                and self.slot.experiment_id != experiment_id
             ):
                 return None
             lease = SchedulerLease(
                 experiment_id,
                 owner_token,
-                lease_until_epoch_us,
-                now_epoch_us,
-                now_epoch_us,
                 expected_revision + 1,
             )
             self.slot = SchedulerSlot(
                 "global",
                 experiment_id,
                 owner_token,
-                lease_until_epoch_us,
-                now_epoch_us,
-                now_epoch_us,
                 lease.revision,
             )
             return lease
-
-    def renew_lease(
-        self,
-        lease: SchedulerLease,
-        *,
-        now_epoch_us: int,
-        new_lease_until_epoch_us: int,
-    ) -> SchedulerLease:
-        renewed = SchedulerLease(
-            lease.experiment_id,
-            lease.owner_token,
-            new_lease_until_epoch_us,
-            lease.acquired_at_epoch_us,
-            now_epoch_us,
-            lease.revision + 1,
-        )
-        self.slot = replace(
-            self.slot,
-            lease_until_epoch_us=new_lease_until_epoch_us,
-            renewed_at_epoch_us=now_epoch_us,
-            revision=renewed.revision,
-        )
-        return renewed
-
-    def handoff_lease(
-        self,
-        lease: SchedulerLease,
-        *,
-        now_epoch_us: int,
-    ) -> SchedulerSlot:
-        """Expire ownership while retaining the active singleton occupant."""
-        self.slot = SchedulerSlot(
-            self.slot.slot_id,
-            lease.experiment_id,
-            lease.owner_token,
-            max(now_epoch_us, lease.renewed_at_epoch_us + 1),
-            lease.acquired_at_epoch_us,
-            lease.renewed_at_epoch_us,
-            lease.revision + 1,
-        )
-        return self.slot
 
     def load_snapshot(self, experiment_id: ExperimentId) -> ExperimentSchedulerSnapshot:
         assert experiment_id == self.launch.experiment_id
@@ -670,20 +621,12 @@ class _SchedulerStore:
         with self._active_lock:
             self._active_writes -= 1
 
-    def release_lease(
-        self,
-        lease: SchedulerLease,
-        *,
-        now_epoch_us: int,
-    ) -> SchedulerSlot:
+    def release_lease(self, lease: SchedulerLease) -> SchedulerSlot:
         """Release the singleton slot back to free state (test double)."""
         self.slot = SchedulerSlot(
             self.slot.slot_id,
             None,
             None,
-            None,
-            self.slot.acquired_at_epoch_us,
-            self.slot.renewed_at_epoch_us,
             self.slot.revision + 1,
         )
         return self.slot
@@ -703,7 +646,6 @@ def _coordinator(
             store=store,
             first_attempt_factory=factory,
             owner_token=owner_token or "coordinator-a",
-            lease_duration=timedelta(minutes=5),
             clock=lambda: clock_now,
             evidence_collector=evidence_collector,
             selection_evidence_publisher=selection_evidence_publisher,
@@ -800,10 +742,7 @@ def _set_running_stage(
     store.slot = SchedulerSlot(
         "global",
         store.launch.experiment_id,
-        "expired-owner",
-        NOW_US - 1,
-        NOW_US - 10,
-        NOW_US - 10,
+        "stale-owner",
         1,
     )
 
@@ -880,7 +819,7 @@ def test_tick_acquires_singleton_lease_and_dispatches_capacity_in_order() -> Non
     assert result.progress.live_attempt_count == 2
 
 
-def test_second_coordinator_cannot_enter_the_singleton_slot() -> None:
+def test_second_coordinator_reclaims_without_doubling_dispatch() -> None:
     store = _SchedulerStore()
     first, _factory = _coordinator(store, owner_token="owner-a")
     second, _second_factory = _coordinator(store, owner_token="owner-b")
@@ -888,11 +827,18 @@ def test_second_coordinator_cannot_enter_the_singleton_slot() -> None:
 
     result = second.tick(occurred_at=NOW + timedelta(seconds=1))
 
-    assert result.state is SchedulerTickState.LEASE_BUSY
-    assert len(store.claimed_keys) == 2
+    # #448: the slot CAS is a fencing token, so the second coordinator
+    # reclaims the active occupant in place, recovers the interrupted owner-a
+    # folds, and dispatches successors; no fold is ever claimed by two owners.
+    assert result.state is SchedulerTickState.DISPATCHED
+    assert result.dispatches
+    assert all(item.attempt.spec.ordinal == 2 for item in result.dispatches)
+    assert len({item.fold.spec.key for item in result.dispatches}) == 2
+    assert store.slot.owner_token is not None
+    assert store.slot.owner_token.startswith("owner-b")
 
 
-def test_concurrent_acquire_loser_is_busy_without_poisoning_its_authority() -> None:
+def test_concurrent_acquire_loser_recovers_on_its_next_tick() -> None:
     store = _SchedulerStore()
     store.claim_barrier = Barrier(2)
     first, _factory = _coordinator(store, owner_token="owner-a")
@@ -911,9 +857,11 @@ def test_concurrent_acquire_loser_is_busy_without_poisoning_its_authority() -> N
         SchedulerTickState.LEASE_BUSY,
     }
     loser = first if results[0].state is SchedulerTickState.LEASE_BUSY else second
-    assert loser.tick(occurred_at=NOW + timedelta(seconds=1)).state is (
-        SchedulerTickState.LEASE_BUSY
-    )
+    # #448: busy only means the CAS was lost once; the authority is not
+    # poisoned and the loser reclaims on its next tick.
+    recovered = loser.tick(occurred_at=NOW + timedelta(seconds=1))
+    assert recovered.state is SchedulerTickState.DISPATCHED
+    assert all(item.attempt.spec.ordinal == 2 for item in recovered.dispatches)
 
 
 def test_repeated_tick_uses_durable_capacity_without_duplicate_claim() -> None:
@@ -1154,8 +1102,7 @@ def test_walk_forward_completion_stops_at_candidate_selection_without_holdout() 
     assert isinstance(fence, LeaseFence)
     assert fence.experiment_id == store.launch.experiment_id
     assert fence.owner_token == store.slot.owner_token
-    assert fence.revision + 1 == store.slot.revision
-    assert store.slot.lease_until_epoch_us == NOW_US + 1
+    assert fence.revision == store.slot.revision
     assert publish_call["now_epoch_us"] == NOW_US
     assert all(
         fold.projection.status is ExperimentStatus.QUEUED
@@ -1213,7 +1160,6 @@ def test_walk_forward_completion_stops_at_candidate_selection_without_holdout() 
         store=store,
         first_attempt_factory=_FirstAttemptFactory(),
         owner_token="api-selection-owner",
-        lease_duration=timedelta(minutes=5),
         clock=lambda: NOW + timedelta(microseconds=1),
         candidate_selection_process=_ApiSelectionProcess(),
     )
@@ -1227,7 +1173,6 @@ def test_walk_forward_completion_stops_at_candidate_selection_without_holdout() 
     )
 
     assert api_coordinator.select_candidate(selection_request) is receipt
-    assert store.slot.lease_until_epoch_us == NOW_US + 2
 
 
 def test_candidate_selection_fails_closed_without_evidence_publisher() -> None:
@@ -1439,10 +1384,7 @@ def test_live_holdout_work_during_exploration_fails_integrity_closed() -> None:
     store.slot = SchedulerSlot(
         "global",
         store.launch.experiment_id,
-        "expired-owner",
-        NOW_US - 1,
-        NOW_US - 10,
-        NOW_US - 10,
+        "stale-owner",
         1,
     )
     coordinator, _factory = _coordinator(store)
@@ -1490,10 +1432,7 @@ def test_terminal_holdout_work_during_exploration_fails_integrity_closed() -> No
     store.slot = SchedulerSlot(
         "global",
         store.launch.experiment_id,
-        "expired-owner",
-        NOW_US - 1,
-        NOW_US - 10,
-        NOW_US - 10,
+        "stale-owner",
         1,
     )
     coordinator, _factory = _coordinator(store)
@@ -1631,7 +1570,6 @@ def test_terminal_attempt_replay_is_idempotent_and_keeps_shared_authority(
     assert replayed.attempt.projection.failure_code is failure_code
     assert replayed.fold.projection.status is terminal_status
     assert len(store.write_fences) == write_count
-    coordinator.renew_lease(occurred_at=NOW + timedelta(seconds=4))
     coordinator.complete_attempt(
         dispatched[1].attempt.spec.attempt_id,
         occurred_at=NOW + timedelta(seconds=5),
@@ -1787,22 +1725,21 @@ def test_scheduler_snapshot_rejects_spec_projection_lineage_drift() -> None:
     )
 
 
-def test_renewed_lease_fence_is_used_by_every_later_write() -> None:
+def test_claimed_lease_fence_is_used_by_every_later_write() -> None:
     store = _SchedulerStore(worker_count=2, candidate_count=2)
     coordinator, _factory = _coordinator(store)
     dispatched = coordinator.tick(occurred_at=NOW)
 
-    lease = coordinator.renew_lease()
     coordinator.start_attempt(
         dispatched.dispatches[0],
         occurred_at=NOW + timedelta(seconds=2),
     )
 
-    assert lease.revision == 2
-    assert store.write_fences[-1] == lease.revision
+    assert store.write_fences
+    assert store.write_fences[-1] == store.slot.revision
 
 
-def test_attempt_artifact_publication_uses_coordinator_owned_renewed_fence() -> None:
+def test_attempt_artifact_publication_uses_coordinator_owned_current_fence() -> None:
     store = _SchedulerStore(worker_count=2, candidate_count=2)
     coordinator, _factory = _coordinator(store)
     dispatched = coordinator.tick(occurred_at=NOW)
@@ -1815,13 +1752,13 @@ def test_attempt_artifact_publication_uses_coordinator_owned_renewed_fence() -> 
     )
 
     assert result == "published"
-    assert observed[0][0].revision == 2
+    assert observed[0][0].revision == store.slot.revision
     assert observed[0][1] == NOW_US
     coordinator.start_attempt(
         dispatched.dispatches[0],
         occurred_at=NOW + timedelta(seconds=1),
     )
-    assert store.write_fences[-1] == 2
+    assert store.write_fences[-1] == store.slot.revision
 
 
 def test_lease_authority_serializes_concurrent_result_writes() -> None:
@@ -1917,7 +1854,6 @@ def test_available_checkpoint_is_not_resumed_without_explicit_resolver() -> None
         store=store,
         first_attempt_factory=_FirstAttemptFactory(),
         owner_token="replacement-owner",
-        lease_duration=timedelta(minutes=5),
         clock=lambda: NOW,
         checkpoint_available=lambda run_id: run_id == str(parent_run_id),
     )
@@ -2054,40 +1990,13 @@ def test_queue_read_integrity_failure_permanently_invalidates_authority() -> Non
     assert second_exc.value.details["code"] == "LEASE_LOST"
 
 
-def test_stale_event_timestamp_cannot_extend_an_expired_physical_lease() -> None:
-    store = _SchedulerStore()
-    clock = _MutableClock(NOW)
-    coordinator = ExperimentExecutionCoordinator(
-        store=store,
-        first_attempt_factory=_FirstAttemptFactory(),
-        owner_token="clock-owner",
-        lease_duration=timedelta(minutes=5),
-        clock=clock,
-    )
-    dispatched = coordinator.tick(occurred_at=NOW)
-    clock.current = NOW + timedelta(minutes=6)
-    write_count = len(store.write_fences)
-
-    with pytest.raises(AppProcessError) as exc_info:
-        coordinator.start_attempt(
-            dispatched.dispatches[0],
-            occurred_at=NOW,
-        )
-
-    assert exc_info.value.details["code"] == "LEASE_LOST"
-    assert len(store.write_fences) == write_count
-
-
 def test_retry_fold_fails_closed_when_scheduler_slot_busy() -> None:
     """Control-route retry fails closed (LEASE_LOST) when the slot is leased."""
     store = _SchedulerStore()
     store.slot = SchedulerSlot(
         "global",
-        ExperimentId("experiment-1"),
+        ExperimentId("experiment-other"),
         "tick-owner",
-        NOW_US + 1_000_000,
-        NOW_US,
-        NOW_US,
         0,
     )
     coordinator, _ = _coordinator(store)
@@ -2196,7 +2105,6 @@ def test_retry_fold_hands_off_transient_lease_when_fold_not_failed() -> None:
     assert store.slot.experiment_id == ExperimentId("experiment-1")
     assert store.slot.owner_token is not None
     assert store.slot.owner_token.startswith("coordinator-a:")
-    assert store.slot.lease_until_epoch_us == NOW_US + 1
 
 
 @pytest.mark.parametrize(
@@ -2256,4 +2164,3 @@ def test_retry_fold_rejects_a_terminal_fold_outside_the_current_stage(
     assert store.slot.experiment_id == ExperimentId("experiment-1")
     assert store.slot.owner_token is not None
     assert store.slot.owner_token.startswith("coordinator-a:")
-    assert store.slot.lease_until_epoch_us == NOW_US + 1

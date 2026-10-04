@@ -33,7 +33,6 @@ from ditto_analysis.experiments import (
     FoldRole,
     FoldView,
     LeaseFence,
-    SchedulerLease,
     canonical_payload,
 )
 from ditto_analysis.experiments.artifact_manifest import (
@@ -1077,29 +1076,19 @@ def test_research_runner_rejects_factory_derived_hash_rewrite_before_numerics(
 class _Coordinator:
     def __init__(
         self,
-        renew_error_on_call: int | None = None,
         *,
-        renew_error_code: str = "LEASE_LOST",
         started_now: bool = True,
         start_transform: Callable[[PersistedAttemptStart], PersistedAttemptStart]
         | None = None,
+        poll_error_from_call: int | None = None,
+        poll_error_code: str = "LEASE_LOST",
     ) -> None:
         self.calls: list[tuple[str, object]] = []
-        self.renew_error_on_call = renew_error_on_call
-        self.renew_error_code = renew_error_code
-        self.renew_calls = 0
         self.started_now = started_now
         self.start_transform = start_transform
-
-    def renew_lease(self, *, occurred_at: datetime) -> SchedulerLease:
-        self.calls.append(("renew", occurred_at))
-        self.renew_calls += 1
-        if self.renew_calls == self.renew_error_on_call:
-            raise AppProcessError(
-                "lease fence rejected",
-                details={"code": self.renew_error_code, "reason": "lease_expired"},
-            )
-        return cast("SchedulerLease", object())
+        self.poll_calls = 0
+        self.poll_error_from_call = poll_error_from_call
+        self.poll_error_code = poll_error_code
 
     def start_attempt(self, dispatch, *, occurred_at):
         self.calls.append(("start", (dispatch, occurred_at)))
@@ -1131,7 +1120,6 @@ class _Coordinator:
             experiment_id=ExperimentId("experiment-1"),
             owner_token="worker-owner",
             revision=17,
-            lease_until_epoch_us=int(_NOW.timestamp() * 1_000_000) + 300_000_000,
         )
         now_epoch_us = int(_NOW.timestamp() * 1_000_000)
         self.calls.append(("publish", (fence, now_epoch_us)))
@@ -1143,6 +1131,15 @@ class _Coordinator:
 
     def poll_execution_directive(self, attempt_id, *, occurred_at):
         _ = (attempt_id, occurred_at)
+        self.poll_calls += 1
+        if self.poll_calls == self.poll_error_from_call:
+            raise AppProcessError(
+                "execution control poll rejected",
+                details={
+                    "code": self.poll_error_code,
+                    "reason": "scheduler_lease_lost",
+                },
+            )
         return ResearchExecutionDirective.RUN
 
     def record_checkpoint(self, attempt_id, checkpoint_ref, *, occurred_at):
@@ -1404,13 +1401,8 @@ def test_worker_runs_existing_fold_runner_and_completes_under_renewed_fence(
         str(_semantics(role=role).reproduction_fingerprint)
     )
     assert [name for name, _ in coordinator.calls] == [
-        "renew",
         "start",
-        "renew",
-        "renew",
-        "renew",
         "publish",
-        "renew",
         "complete",
     ]
     assert len(publisher.calls) == 1
@@ -1464,7 +1456,7 @@ def test_worker_fails_closed_when_selection_log_has_no_trace_publisher() -> None
     assert result.error_type == "AppProcessError"
     assert report_publisher.calls == []
     assert all(name != "publish" for name, _ in coordinator.calls)
-    assert [name for name, _ in coordinator.calls][-2:] == ["renew", "fail"]
+    assert [name for name, _ in coordinator.calls][-1:] == ["fail"]
     assert all(name != "complete" for name, _ in coordinator.calls)
 
 
@@ -1640,13 +1632,8 @@ def test_worker_turns_recoverable_publication_error_into_system_failure() -> Non
     assert result.error_type == "RuntimeError"
     assert len(publisher.calls) == 1
     assert [name for name, _ in coordinator.calls] == [
-        "renew",
         "start",
-        "renew",
-        "renew",
-        "renew",
         "publish",
-        "renew",
         "fail",
     ]
 
@@ -1794,7 +1781,7 @@ def test_worker_does_not_turn_complete_error_into_reverse_failure() -> None:
 
     assert exc_info.value is complete_error
     assert len(publisher.calls) == 1
-    assert [name for name, _ in coordinator.calls][-2:] == ["renew", "complete"]
+    assert [name for name, _ in coordinator.calls][-1:] == ["complete"]
     assert all(name != "fail" for name, _payload in coordinator.calls)
 
 
@@ -1824,7 +1811,7 @@ def test_worker_rejects_non_exact_runner_result_before_publication() -> None:
     assert result.state is ResearchWorkerState.SYSTEM_FAILED
     assert result.failure_code is ExperimentFailureCode.SYSTEM_ERROR
     assert publisher.calls == []
-    assert [name for name, _ in coordinator.calls][-2:] == ["renew", "fail"]
+    assert [name for name, _ in coordinator.calls][-1:] == ["fail"]
 
 
 @pytest.mark.parametrize(
@@ -1876,11 +1863,9 @@ def test_worker_treats_control_winning_start_race_as_normal_stop(
     assert runner.audits == []
     assert publisher.calls == []
     assert [name for name, _ in coordinator.calls] == [
-        "renew",
         "directive",
         "start",
         "directive",
-        "renew",
         "stop",
     ]
 
@@ -1915,7 +1900,7 @@ def test_worker_rejects_control_change_with_run_intent() -> None:
         "reason": "execution_control_change_without_stop_intent",
     }
     assert runner.audits == []
-    assert [name for name, _ in coordinator.calls] == ["renew", "start"]
+    assert [name for name, _ in coordinator.calls] == ["start"]
 
 
 @pytest.mark.parametrize(
@@ -1984,7 +1969,7 @@ def test_worker_rejects_persisted_dispatch_identity_drift_before_numerics(
     assert captured.value.details["code"] == "EXPERIMENT_INTEGRITY_FAILED"
     assert captured.value.details["reason"] == reason
     assert runner.audits == []
-    assert [name for name, _ in coordinator.calls] == ["renew", "start"]
+    assert [name for name, _ in coordinator.calls] == ["start"]
 
 
 def test_worker_rejects_already_running_duplicate_without_numerical_execution() -> None:
@@ -2006,7 +1991,7 @@ def test_worker_rejects_already_running_duplicate_without_numerical_execution() 
     assert captured.value.details["reason"] == "duplicate_attempt_delivery"
     assert runner.audits == []
     assert publisher.calls == []
-    assert [name for name, _ in coordinator.calls] == ["renew", "start"]
+    assert [name for name, _ in coordinator.calls] == ["start"]
 
 
 @pytest.mark.parametrize(
@@ -2085,7 +2070,7 @@ def test_worker_returns_terminal_replay_without_numerics_or_second_write(
     assert resolver.calls == 0
     assert runner.audits == []
     assert publisher.calls == []
-    assert [name for name, _ in coordinator.calls] == ["renew", "start"]
+    assert [name for name, _ in coordinator.calls] == ["start"]
 
 
 def test_concurrent_duplicate_delivery_runs_numerics_exactly_once() -> None:
@@ -2221,11 +2206,7 @@ def test_worker_persists_typed_failure_classification(
     assert result.failure_code is failure_code
     assert publisher.calls == []
     assert [name for name, _ in coordinator.calls] == [
-        "renew",
         "start",
-        "renew",
-        "renew",
-        "renew",
         "fail",
     ]
 
@@ -2250,20 +2231,13 @@ def test_worker_marks_post_claim_semantic_drift_as_input_failure() -> None:
     assert runner.audits == []
     assert publisher.calls == []
     assert [name for name, _ in coordinator.calls] == [
-        "renew",
         "start",
-        "renew",
-        "renew",
-        "renew",
         "fail",
     ]
 
 
-def test_worker_renews_authority_before_resolving_persisted_semantics() -> None:
-    coordinator = _Coordinator(
-        renew_error_on_call=2,
-        renew_error_code="LEASE_LOST",
-    )
+def test_worker_fails_closed_when_initial_directive_poll_loses_authority() -> None:
+    coordinator = _Coordinator(poll_error_from_call=1)
     resolver = _Resolver(_semantics())
     runner = _Runner()
     worker = _make_worker(
@@ -2280,17 +2254,14 @@ def test_worker_renews_authority_before_resolving_persisted_semantics() -> None:
     assert captured.value.details["code"] == "LEASE_LOST"
     assert resolver.calls == 0
     assert runner.audits == []
-    assert [name for name, _ in coordinator.calls] == ["renew", "start", "renew"]
+    assert [name for name, _ in coordinator.calls] == []
 
 
 @pytest.mark.parametrize("error_code", ["LEASE_LOST", "EXPERIMENT_INTEGRITY_FAILED"])
-def test_worker_renews_lease_from_engine_control_and_stops_on_fence_error(
+def test_worker_fails_closed_when_engine_control_poll_loses_authority(
     error_code: str,
 ) -> None:
-    coordinator = _Coordinator(
-        renew_error_on_call=2,
-        renew_error_code=error_code,
-    )
+    coordinator = _Coordinator(poll_error_from_call=2, poll_error_code=error_code)
     worker = _make_worker(
         coordinator=coordinator,
         semantics_resolver=_Resolver(_semantics()),
@@ -2303,95 +2274,7 @@ def test_worker_renews_lease_from_engine_control_and_stops_on_fence_error(
         worker.execute(_dispatch(), occurred_at=_NOW)
 
     assert captured.value.details["code"] == error_code
-    assert [name for name, _ in coordinator.calls] == ["renew", "start", "renew"]
-
-
-def test_worker_heartbeats_while_fold_runner_is_blocked(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    monkeypatch.setattr(worker_module, "EXECUTION_HEARTBEAT_INTERVAL_SECONDS", 0.001)
-    heartbeat_observed = Event()
-
-    class _HeartbeatCoordinator(_Coordinator):
-        def renew_lease(self, *, occurred_at: datetime) -> SchedulerLease:
-            lease = super().renew_lease(occurred_at=occurred_at)
-            if self.renew_calls >= 4:
-                heartbeat_observed.set()
-            return lease
-
-    class _BlockingRunner(_Runner):
-        def run(
-            self,
-            audit: ResearchExecutionAudit,
-            *,
-            external_should_stop: Callable[[], bool],
-        ) -> ResearchFoldRunResult:
-            assert heartbeat_observed.wait(timeout=1)
-            return super().run(
-                audit,
-                external_should_stop=external_should_stop,
-            )
-
-    coordinator = _HeartbeatCoordinator()
-    worker = _make_worker(
-        coordinator=coordinator,
-        semantics_resolver=_Resolver(_semantics()),
-        runner=_BlockingRunner(),
-        report_publisher=_Publisher(),
-        clock=lambda: _NOW,
-    )
-
-    result = worker.execute(_dispatch(), occurred_at=_NOW)
-
-    assert result.state is ResearchWorkerState.COMPLETED
-    assert heartbeat_observed.is_set()
-
-
-def test_worker_fails_closed_when_background_heartbeat_loses_lease(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    monkeypatch.setattr(worker_module, "EXECUTION_HEARTBEAT_INTERVAL_SECONDS", 0.001)
-    heartbeat_failed = Event()
-
-    class _FailingHeartbeatCoordinator(_Coordinator):
-        def renew_lease(self, *, occurred_at: datetime) -> SchedulerLease:
-            try:
-                return super().renew_lease(occurred_at=occurred_at)
-            finally:
-                if self.renew_calls >= 4:
-                    heartbeat_failed.set()
-
-    class _BlockingRunner(_Runner):
-        def run(
-            self,
-            audit: ResearchExecutionAudit,
-            *,
-            external_should_stop: Callable[[], bool],
-        ) -> ResearchFoldRunResult:
-            assert heartbeat_failed.wait(timeout=1)
-            return super().run(
-                audit,
-                external_should_stop=external_should_stop,
-            )
-
-    coordinator = _FailingHeartbeatCoordinator(renew_error_on_call=4)
-    publisher = _Publisher()
-    worker = _make_worker(
-        coordinator=coordinator,
-        semantics_resolver=_Resolver(_semantics()),
-        runner=_BlockingRunner(),
-        report_publisher=publisher,
-        clock=lambda: _NOW,
-    )
-
-    with pytest.raises(AppProcessError) as captured:
-        worker.execute(_dispatch(), occurred_at=_NOW)
-
-    assert captured.value.details["code"] == "LEASE_LOST"
-    assert heartbeat_failed.is_set()
-    assert publisher.calls == []
-    assert "complete" not in [name for name, _ in coordinator.calls]
-    assert "fail" not in [name for name, _ in coordinator.calls]
+    assert [name for name, _ in coordinator.calls] == ["start"]
 
 
 def test_worker_never_completes_a_cooperatively_stopped_engine() -> None:
@@ -2411,10 +2294,6 @@ def test_worker_never_completes_a_cooperatively_stopped_engine() -> None:
     assert result.failure_code is ExperimentFailureCode.SYSTEM_ERROR
     assert publisher.calls == []
     assert [name for name, _ in coordinator.calls] == [
-        "renew",
         "start",
-        "renew",
-        "renew",
-        "renew",
         "fail",
     ]

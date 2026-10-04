@@ -595,7 +595,6 @@ def _advance_planning_launch_to_candidate_selection(
         "planning-holdout-owner",
         expected_revision=reader.get_scheduler_slot().revision,
         now_epoch_us=_NOW_US,
-        lease_until_epoch_us=_NOW_US + 60_000_000,
     )
     assert lease is not None
     writer.transition_scheduled_experiment(

@@ -114,27 +114,9 @@ class ExperimentSchedulerStoreProtocol(Protocol):
         *,
         expected_revision: int,
         now_epoch_us: int,
-        lease_until_epoch_us: int,
     ) -> SchedulerLease | None: ...
 
-    def renew_lease(
-        self,
-        lease: SchedulerLease,
-        *,
-        now_epoch_us: int,
-        new_lease_until_epoch_us: int,
-    ) -> SchedulerLease: ...
-
-    def handoff_lease(
-        self, lease: SchedulerLease, *, now_epoch_us: int
-    ) -> SchedulerSlot: ...
-
-    def release_lease(
-        self,
-        lease: SchedulerLease,
-        *,
-        now_epoch_us: int,
-    ) -> SchedulerSlot: ...
+    def release_lease(self, lease: SchedulerLease) -> SchedulerSlot: ...
 
     def load_snapshot(
         self, experiment_id: ExperimentId
@@ -327,44 +309,16 @@ class ExperimentSchedulerStore(ExperimentMutationStoreMixin):
         *,
         expected_revision: int,
         now_epoch_us: int,
-        lease_until_epoch_us: int,
     ) -> SchedulerLease | None:
         return self._writer.try_claim_lease(
             experiment_id,
             owner_token,
             expected_revision=expected_revision,
             now_epoch_us=now_epoch_us,
-            lease_until_epoch_us=lease_until_epoch_us,
         )
 
-    def renew_lease(
-        self,
-        lease: SchedulerLease,
-        *,
-        now_epoch_us: int,
-        new_lease_until_epoch_us: int,
-    ) -> SchedulerLease:
-        return self._writer.renew_lease(
-            lease.fence,
-            now_epoch_us=now_epoch_us,
-            new_lease_until_epoch_us=new_lease_until_epoch_us,
-        )
-
-    def handoff_lease(
-        self, lease: SchedulerLease, *, now_epoch_us: int
-    ) -> SchedulerSlot:
-        return self._writer.handoff_lease(lease.fence, now_epoch_us=now_epoch_us)
-
-    def release_lease(
-        self,
-        lease: SchedulerLease,
-        *,
-        now_epoch_us: int,
-    ) -> SchedulerSlot:
-        return self._writer.release_lease(
-            lease.fence,
-            now_epoch_us=now_epoch_us,
-        )
+    def release_lease(self, lease: SchedulerLease) -> SchedulerSlot:
+        return self._writer.release_lease(lease.fence)
 
     def load_snapshot(self, experiment_id: ExperimentId) -> ExperimentSchedulerSnapshot:
         projection = self._reader.get_experiment_projection(experiment_id)

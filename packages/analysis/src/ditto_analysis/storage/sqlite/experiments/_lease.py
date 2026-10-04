@@ -1,4 +1,4 @@
-"""Singleton scheduler lease commands shared by the experiment writer."""
+"""Singleton scheduler slot commands shared by the experiment writer."""
 
 from __future__ import annotations
 
@@ -26,12 +26,10 @@ from ditto_analysis.storage.sqlite.experiments._experiment_rules import (
     ACTIVE_EXPERIMENT_INTENT,
     TERMINAL_EXPERIMENT_STATUSES,
 )
-from ditto_analysis.storage.sqlite.experiments._scheduler_queue import (
-    scheduler_queue_candidates,
-    unowned_active_experiment,
-)
 from ditto_analysis.storage.sqlite.experiments._work_rules import (
+    dispatchable_experiment_rows,
     find_experiment_live_child,
+    unowned_active_experiment,
 )
 from ditto_analysis.storage.sqlite.experiments.database import (
     ResearchExperimentDatabase,
@@ -71,7 +69,13 @@ def _validate_terminal_children_drained(
 
 
 class SQLiteSchedulerLeaseMixin:
-    """Provide revisioned singleton lease operations and downstream fencing."""
+    """
+    Provide revisioned singleton slot operations and downstream fencing.
+
+    The slot CAS is the single-writer authority: a new claimant
+    revision-overwrites a stale owner, whose later writes then fail closed in
+    ``_validate_lease`` (#448: renew/expiry/handoff 形状退役, fencing token 保留).
+    """
 
     _database: ResearchExperimentDatabase
 
@@ -82,9 +86,8 @@ class SQLiteSchedulerLeaseMixin:
         *,
         expected_revision: int,
         now_epoch_us: int,
-        lease_until_epoch_us: int,
     ) -> SchedulerLease | None:
-        self._validate_lease_inputs(owner_token, now_epoch_us, lease_until_epoch_us)
+        self._validate_lease_inputs(owner_token, now_epoch_us)
         connection = self._database.get_connection()
         try:
             connection.execute("BEGIN IMMEDIATE")
@@ -93,52 +96,41 @@ class SQLiteSchedulerLeaseMixin:
                 raise _lease_lost(
                     "scheduler revision is stale", "scheduler_lease_stale_revision"
                 )
-            if (
-                row["owner_token"] is not None
-                and row["lease_until_epoch_us"] > now_epoch_us
-            ):
-                connection.commit()
-                return None
             if row["experiment_id"] is None:
-                self._validate_queue_head(connection, experiment_id)
+                self._validate_claim_eligibility(connection, experiment_id)
             else:
-                self._validate_expired_occupant(
+                self._validate_occupant_takeover(
                     connection,
                     row["experiment_id"],
                     experiment_id,
                 )
             new_revision = expected_revision + 1
+            # renewed/lease_until are dormant schema-compat placeholders (#448):
+            # the occupancy CHECK requires acquired <= renewed < lease_until, but
+            # nothing reads them anymore; ownership is the revision CAS alone.
             cursor = connection.execute(
                 """
                 UPDATE experiment_scheduler_slot
-                SET experiment_id=?, owner_token=?, lease_until_epoch_us=?,
-                    acquired_at_epoch_us=?, renewed_at_epoch_us=?, revision=?
+                SET experiment_id=?, owner_token=?,
+                    lease_until_epoch_us=?, acquired_at_epoch_us=?,
+                    renewed_at_epoch_us=?, revision=?
                 WHERE slot_id='global' AND revision=?
-                  AND (owner_token IS NULL OR lease_until_epoch_us <= ?)
                 """,
                 (
                     str(experiment_id),
                     owner_token,
-                    lease_until_epoch_us,
+                    now_epoch_us + 1,
                     now_epoch_us,
                     now_epoch_us,
                     new_revision,
                     expected_revision,
-                    now_epoch_us,
                 ),
             )
             if cursor.rowcount != 1:
                 connection.rollback()
                 return None
             connection.commit()
-            return SchedulerLease(
-                experiment_id,
-                owner_token,
-                lease_until_epoch_us,
-                now_epoch_us,
-                now_epoch_us,
-                new_revision,
-            )
+            return SchedulerLease(experiment_id, owner_token, new_revision)
         except AnalysisError:
             connection.rollback()
             raise
@@ -148,73 +140,11 @@ class SQLiteSchedulerLeaseMixin:
                 "scheduler claim failed", "scheduler_claim_failed"
             ) from exc
 
-    def renew_lease(
-        self,
-        fence: LeaseFence,
-        *,
-        now_epoch_us: int,
-        new_lease_until_epoch_us: int,
-    ) -> SchedulerLease:
-        self._validate_lease_inputs(
-            fence.owner_token, now_epoch_us, new_lease_until_epoch_us
-        )
+    def release_lease(self, fence: LeaseFence) -> SchedulerSlot:
         connection = self._database.get_connection()
         try:
             connection.execute("BEGIN IMMEDIATE")
-            row = self._validate_lease(
-                connection, fence, now_epoch_us, fence.experiment_id
-            )
-            occupant = self._experiment_row(connection, fence.experiment_id)
-            if ExperimentStatus(occupant["status"]) in TERMINAL_EXPERIMENT_STATUSES:
-                raise ExperimentSpecError(
-                    "terminal experiment cannot renew the scheduler lease",
-                    details={"reason_code": "scheduler_renewal_not_allowed"},
-                )
-            self._validate_active_occupant_intent(occupant)
-            new_revision = fence.revision + 1
-            cursor = connection.execute(
-                """
-                UPDATE experiment_scheduler_slot
-                SET lease_until_epoch_us=?, renewed_at_epoch_us=?, revision=?
-                WHERE slot_id='global' AND experiment_id=? AND owner_token=?
-                  AND revision=? AND lease_until_epoch_us=? AND lease_until_epoch_us > ?
-                """,
-                (
-                    new_lease_until_epoch_us,
-                    now_epoch_us,
-                    new_revision,
-                    str(fence.experiment_id),
-                    fence.owner_token,
-                    fence.revision,
-                    fence.lease_until_epoch_us,
-                    now_epoch_us,
-                ),
-            )
-            if cursor.rowcount != 1:
-                raise _lease_lost("scheduler renewal CAS lost", "scheduler_lease_lost")
-            connection.commit()
-            return SchedulerLease(
-                fence.experiment_id,
-                fence.owner_token,
-                new_lease_until_epoch_us,
-                row["acquired_at_epoch_us"],
-                now_epoch_us,
-                new_revision,
-            )
-        except AnalysisError:
-            connection.rollback()
-            raise
-        except sqlite3.Error as exc:
-            connection.rollback()
-            raise _persistence_error(
-                "scheduler renewal failed", "scheduler_renew_failed"
-            ) from exc
-
-    def release_lease(self, fence: LeaseFence, *, now_epoch_us: int) -> SchedulerSlot:
-        connection = self._database.get_connection()
-        try:
-            connection.execute("BEGIN IMMEDIATE")
-            self._validate_lease(connection, fence, now_epoch_us, fence.experiment_id)
+            self._validate_lease(connection, fence, fence.experiment_id)
             occupant = self._experiment_row(connection, fence.experiment_id)
             occupant_status = ExperimentStatus(occupant["status"])
             if occupant_status not in TERMINAL_EXPERIMENT_STATUSES:
@@ -239,21 +169,19 @@ class SQLiteSchedulerLeaseMixin:
                 SET experiment_id=NULL, owner_token=NULL, lease_until_epoch_us=NULL,
                     acquired_at_epoch_us=NULL, renewed_at_epoch_us=NULL, revision=?
                 WHERE slot_id='global' AND experiment_id=? AND owner_token=?
-                  AND revision=? AND lease_until_epoch_us=? AND lease_until_epoch_us > ?
+                  AND revision=?
                 """,
                 (
                     new_revision,
                     str(fence.experiment_id),
                     fence.owner_token,
                     fence.revision,
-                    fence.lease_until_epoch_us,
-                    now_epoch_us,
                 ),
             )
             if cursor.rowcount != 1:
                 raise _lease_lost("scheduler release CAS lost", "scheduler_lease_lost")
             connection.commit()
-            return SchedulerSlot("global", None, None, None, None, None, new_revision)
+            return SchedulerSlot("global", None, None, new_revision)
         except AnalysisError:
             connection.rollback()
             raise
@@ -263,74 +191,8 @@ class SQLiteSchedulerLeaseMixin:
                 "scheduler release failed", "scheduler_release_failed"
             ) from exc
 
-    def handoff_lease(
-        self,
-        fence: LeaseFence,
-        *,
-        now_epoch_us: int,
-    ) -> SchedulerSlot:
-        """Expire active ownership while retaining the experiment's singleton slot."""
-        connection = self._database.get_connection()
-        try:
-            connection.execute("BEGIN IMMEDIATE")
-            slot = self._validate_lease(
-                connection,
-                fence,
-                now_epoch_us,
-                fence.experiment_id,
-            )
-            occupant = self._experiment_row(connection, fence.experiment_id)
-            self._validate_active_occupant_intent(occupant)
-            new_revision = fence.revision + 1
-            handoff_until_epoch_us = max(
-                now_epoch_us,
-                slot["renewed_at_epoch_us"] + 1,
-            )
-            cursor = connection.execute(
-                """
-                UPDATE experiment_scheduler_slot
-                SET lease_until_epoch_us=?, revision=?
-                WHERE slot_id='global' AND experiment_id=? AND owner_token=?
-                  AND revision=? AND lease_until_epoch_us=?
-                  AND lease_until_epoch_us > ?
-                """,
-                (
-                    handoff_until_epoch_us,
-                    new_revision,
-                    str(fence.experiment_id),
-                    fence.owner_token,
-                    fence.revision,
-                    fence.lease_until_epoch_us,
-                    now_epoch_us,
-                ),
-            )
-            if cursor.rowcount != 1:
-                raise _lease_lost(
-                    "scheduler handoff CAS lost",
-                    "scheduler_lease_lost",
-                )
-            connection.commit()
-            return SchedulerSlot(
-                "global",
-                fence.experiment_id,
-                fence.owner_token,
-                handoff_until_epoch_us,
-                slot["acquired_at_epoch_us"],
-                slot["renewed_at_epoch_us"],
-                new_revision,
-            )
-        except AnalysisError:
-            connection.rollback()
-            raise
-        except sqlite3.Error as exc:
-            connection.rollback()
-            raise _persistence_error(
-                "scheduler handoff failed",
-                "scheduler_handoff_failed",
-            ) from exc
-
     @staticmethod
-    def _validate_lease_inputs(owner_token: str, now_epoch_us: int, until: int) -> None:
+    def _validate_lease_inputs(owner_token: str, now_epoch_us: int) -> None:
         raw_owner = cast("object", owner_token)
         if (
             not isinstance(raw_owner, str)
@@ -338,8 +200,6 @@ class SQLiteSchedulerLeaseMixin:
             or owner_token != owner_token.strip()
             or type(now_epoch_us) is not int
             or now_epoch_us < 0
-            or type(until) is not int
-            or until <= now_epoch_us
         ):
             raise ExperimentSpecError(
                 "scheduler lease inputs are invalid",
@@ -398,75 +258,59 @@ class SQLiteSchedulerLeaseMixin:
             )
 
     @classmethod
-    def _validate_queue_head(
+    def _validate_claim_eligibility(
         cls,
         connection: sqlite3.Connection,
         requested_experiment_id: ExperimentId,
     ) -> None:
+        """Require dispatchable work and no active experiment outside the slot."""
         unowned_active = unowned_active_experiment(connection)
         if unowned_active is not None:
             raise _integrity(
                 "active experiment exists without the singleton scheduler slot",
                 "scheduler_active_experiment_without_slot",
             )
-        candidates = scheduler_queue_candidates(connection)
-        head = candidates[0] if candidates else None
-        if head is None:
-            requested = cls._experiment_row(connection, requested_experiment_id)
-            raise ExperimentSpecError(
-                "experiment is not eligible to claim the scheduler slot",
-                details={
-                    "reason_code": "scheduler_experiment_not_eligible",
-                    "status": requested["status"],
-                },
-            )
-        head_status = ExperimentStatus(head["status"])
-        expected_desired_state = ACTIVE_EXPERIMENT_INTENT[head_status]
-        if head["desired_state"] != expected_desired_state.value:
-            raise ExperimentSpecError(
-                "queue head intent does not permit scheduler dispatch",
-                details={
-                    "reason_code": "scheduler_queue_head_intent_mismatch",
-                    "experiment_id": head["experiment_id"],
-                    "desired_state": head["desired_state"],
-                    "expected_desired_state": expected_desired_state.value,
-                },
-            )
-        if head["experiment_id"] != str(requested_experiment_id):
-            requested = cls._experiment_row(connection, requested_experiment_id)
-            if not any(
-                candidate["experiment_id"] == str(requested_experiment_id)
-                for candidate in candidates
+        for candidate in dispatchable_experiment_rows(connection):
+            if candidate["experiment_id"] != str(requested_experiment_id):
+                continue
+            if (
+                candidate["status"] == ExperimentStatus.QUEUED.value
+                and candidate["desired_state"]
+                != ACTIVE_EXPERIMENT_INTENT[ExperimentStatus.QUEUED].value
             ):
                 raise ExperimentSpecError(
-                    "experiment is not eligible to claim the scheduler slot",
+                    "queued experiment intent does not permit scheduler dispatch",
                     details={
-                        "reason_code": "scheduler_experiment_not_eligible",
-                        "status": requested["status"],
+                        "reason_code": "scheduler_claim_intent_mismatch",
+                        "experiment_id": candidate["experiment_id"],
+                        "desired_state": candidate["desired_state"],
                     },
                 )
-            raise ExperimentSpecError(
-                "only the current queue head may claim the scheduler slot",
-                details={
-                    "reason_code": "scheduler_queue_order_violation",
-                    "queue_head_experiment_id": head["experiment_id"],
-                },
-            )
+            return
+        requested = cls._experiment_row(connection, requested_experiment_id)
+        raise ExperimentSpecError(
+            "experiment is not eligible to claim the scheduler slot",
+            details={
+                "reason_code": "scheduler_experiment_not_eligible",
+                "status": requested["status"],
+            },
+        )
 
     @classmethod
-    def _validate_expired_occupant(
+    def _validate_occupant_takeover(
         cls,
         connection: sqlite3.Connection,
         occupant_experiment_id: str,
         requested_experiment_id: ExperimentId,
     ) -> None:
+        """Allow same-experiment reclaim and drained-terminal takeover."""
         occupant = cls._experiment_row(connection, occupant_experiment_id)
         occupant_status = ExperimentStatus(occupant["status"])
         if occupant_status in ACTIVE_EXPERIMENT_INTENT:
             cls._validate_active_occupant_intent(occupant)
             if occupant_experiment_id != str(requested_experiment_id):
                 raise ExperimentSpecError(
-                    "expired active scheduler slot must be reclaimed in place",
+                    "active scheduler slot must be reclaimed by its own experiment",
                     details={
                         "reason_code": "scheduler_reclaim_required",
                         "experiment_id": occupant_experiment_id,
@@ -479,7 +323,7 @@ class SQLiteSchedulerLeaseMixin:
                 ExperimentId(occupant_experiment_id),
                 occupant_status,
             )
-            cls._validate_queue_head(connection, requested_experiment_id)
+            cls._validate_claim_eligibility(connection, requested_experiment_id)
             return
         raise _integrity(
             "scheduler slot occupant has an invalid lifecycle",
@@ -491,7 +335,6 @@ class SQLiteSchedulerLeaseMixin:
         cls,
         connection: sqlite3.Connection,
         fence: LeaseFence,
-        now_epoch_us: int,
         expected_experiment_id: ExperimentId,
     ) -> sqlite3.Row:
         row = cls._scheduler_row(connection)
@@ -502,13 +345,7 @@ class SQLiteSchedulerLeaseMixin:
                 "scheduler lease belongs to another experiment",
                 "scheduler_lease_foreign_experiment",
             )
-        if row["lease_until_epoch_us"] <= now_epoch_us:
-            raise _lease_lost("scheduler lease has expired", "scheduler_lease_expired")
-        if (
-            row["owner_token"] != fence.owner_token
-            or row["revision"] != fence.revision
-            or row["lease_until_epoch_us"] != fence.lease_until_epoch_us
-        ):
+        if row["owner_token"] != fence.owner_token or row["revision"] != fence.revision:
             raise _lease_lost(
                 "scheduler fencing token is stale", "scheduler_lease_lost"
             )
