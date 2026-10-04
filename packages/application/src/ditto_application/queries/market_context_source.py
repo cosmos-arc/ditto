@@ -18,6 +18,7 @@ from ditto_data.catalog.source_snapshot import (
     ProviderSnapshot,
     ProviderSnapshotReader,
 )
+from ditto_data.models import FRED_INDICATOR_CODES
 from ditto_data.query.contracts import DatasetSnapshot, PITQueryContext
 from ditto_data.query.service import PITDatasetReader, PITQueryService
 from ditto_features.market_context.contracts import MarketRegimeInput
@@ -304,31 +305,26 @@ def _return_and_volatility(
     )
 
 
-def _one_day_return(frame: pl.DataFrame) -> float | None:
-    expression = _normalized_return_expr(frame)
-    if expression is not None:
-        values = frame.sort("event_time").select(expression.alias("value"))["value"]
-        latest = values.drop_nulls().tail(1)
-        return None if latest.is_empty() else float(latest[0])
-    if "close" not in frame.columns:
-        return None
-    ticker = _select_ticker(frame, ())
-    if ticker is None:
-        return None
-    closes = _close_series(frame, ticker).tail(_PAIR_SIZE)
-    if len(closes) != _PAIR_SIZE or float(closes[0]) == 0:
-        return None
-    return float(closes[1]) / float(closes[0]) - 1.0
+def _decision_macro_frame(frame: pl.DataFrame) -> pl.DataFrame | None:
+    """
+    Restrict decision inputs to non-FRED macro indicators (#432/#451).
 
-
-def _global_index_return(frame: pl.DataFrame) -> float | None:
-    """Return an equal-weighted visible close return across global indices."""
-    ticker = _ticker_column(frame)
-    groups = (frame,) if ticker is None else frame.partition_by(ticker)
-    values = tuple(
-        value for group in groups if (value := _one_day_return(group)) is not None
+    FRED 宏观为全球参考数据，本轮只展示：不得进入策略特征/回测/Paper
+    自动决策/Agent 决策输入。A股本土宏观（Tushare CN_* 系列）不受限。
+    指标身份列不可判（无 indicator_code/indicator/series_id）时
+    fail-closed 返回 None，不喂未标识行。
+    """
+    identity = next(
+        (
+            name
+            for name in ("indicator_code", "indicator", "series_id")
+            if name in frame.columns
+        ),
+        None,
     )
-    return sum(values) / len(values) if values else None
+    if identity is None:
+        return None
+    return frame.filter(~pl.col(identity).is_in(FRED_INDICATOR_CODES))
 
 
 def _macro_scores(frame: pl.DataFrame) -> tuple[float | None, float | None]:
@@ -497,7 +493,6 @@ def _derive_core_facts(
 
 
 def _derive_optional_facts(
-    context: PITQueryContext,
     frames: dict[str, pl.DataFrame],
 ) -> tuple[
     float | None,
@@ -506,34 +501,22 @@ def _derive_optional_facts(
     frozenset[str],
     tuple[MarketContextMetric, ...],
 ]:
-    global_frame = frames.get("global_index_daily")
-    global_return = None if global_frame is None else _global_index_return(global_frame)
+    # 全球指数与 FRED 宏观均为展示-only 全球参考（#432/#451 裁决），不进入
+    # 决策输入：global_return_1d 恒为 None 并计入 declared_missing_inputs；
+    # 宏观分数只允许非 FRED（A股本土 CN_*）指标参与。
     macro = frames.get("macro_indicators")
+    decision_macro = None if macro is None else _decision_macro_frame(macro)
     macro_surprise, macro_trend = (
-        (None, None) if macro is None else _macro_scores(macro)
+        (None, None) if decision_macro is None else _macro_scores(decision_macro)
     )
     values = {
-        "global_return_1d": global_return,
+        "global_return_1d": None,
         "macro_surprise_score": macro_surprise,
         "macro_trend_score": macro_trend,
     }
-    metrics = (
-        ()
-        if global_return is None
-        else (
-            MarketContextMetric(
-                name="global_index_return_1d",
-                category="global",
-                value=global_return,
-                unit="decimal_return",
-                trend="rising" if global_return > 0 else "falling",
-                freshness="fresh",
-                evidence_ref=_evidence_ref(context.snapshot_for("global_index_daily")),
-            ),
-        )
-    )
+    metrics: tuple[MarketContextMetric, ...] = ()
     return (
-        global_return,
+        None,
         macro_surprise,
         macro_trend,
         frozenset(name for name, value in values.items() if value is None),
@@ -567,7 +550,7 @@ class ProviderPayloadMarketContextSource:
             macro_trend,
             optional_missing,
             optional_metrics,
-        ) = _derive_optional_facts(context, frames)
+        ) = _derive_optional_facts(frames)
         missing = core.missing | optional_missing
         uncertainties = tuple(
             f"{name}_not_derivable_from_requested_snapshots" for name in sorted(missing)

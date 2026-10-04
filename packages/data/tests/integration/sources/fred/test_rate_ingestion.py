@@ -51,22 +51,6 @@ class TestFredRateIngestion:
         finally:
             adapter.close()
 
-    def test_fetch_commodity_gold(self) -> None:
-        """测试获取黄金价格."""
-        adapter = MacroFredAdapter()
-
-        try:
-            df = adapter.fetch_indicators(
-                codes=["COMMOD_GOLD"],
-                start_date="2024-01-01",
-                end_date="2024-01-31",
-            )
-
-            assert df.height > 0
-
-        finally:
-            adapter.close()
-
     def test_fetch_vix(self) -> None:
         """测试获取 VIX 指数."""
         adapter = MacroFredAdapter()

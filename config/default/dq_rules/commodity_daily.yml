@@ -3,9 +3,11 @@ dataset: commodity_daily
 description: "商品日线数据质量检查规则"
 
 # 技术类: 技术校验（写入时强制阻断）
+# open/high/low 允许为空：FRED 单值参考序列（WTI/Brent/VIX）无日内高低价，
+# 存 null 而非伪装 OHLC（#432）；FXCM 金属行的真实 OHLC 仍非空。
 technical:
   - rule: not_null
-    columns: [instrument_id, trade_date, open, high, low, close]
+    columns: [instrument_id, trade_date, close]
     message: "必填字段不能为空"
 
   - rule: unique

@@ -138,49 +138,38 @@ class TestFetchCommodityDaily:
             end_date="2024-01-01",
         )
 
-    def test_fred_failure_degrades_to_tushare_only(
-        self,
-    ) -> None:
-        """FRED 抛异常，仅返回 Tushare 数据."""
+    def test_fred_failure_fails_whole_batch(self) -> None:
+        """#432：已配置的 FRED 腿失败必须整体抛错，不得报完整分区."""
         primary, fred = _make_sources(
             fred_df=RuntimeError("FRED API timeout"),
         )
+        assert fred is not None
 
-        result = fetch_commodity_daily(
-            "2024-01-01",
-            primary_source=primary,
-            fred_source=fred,
-        )
+        with pytest.raises(RuntimeError, match="FRED API timeout"):
+            fetch_commodity_daily(
+                "2024-01-01",
+                primary_source=primary,
+                fred_source=fred,
+            )
 
-        assert not result.is_empty()
-        assert len(result) == 2
-        assert result["instrument_id"].to_list() == [3, 4]
-
-    def test_tushare_failure_degrades_to_fred_only(
-        self,
-    ) -> None:
-        """Tushare 抛异常，仅返回 FRED 数据."""
+    def test_tushare_failure_fails_whole_batch(self) -> None:
+        """#432：金属腿失败必须整体抛错，不得报完整分区."""
         primary, fred = _make_sources(
             metal_df=RuntimeError("Tushare rate limit"),
         )
 
-        result = fetch_commodity_daily(
-            "2024-01-01",
-            primary_source=primary,
-            fred_source=fred,
-        )
+        with pytest.raises(RuntimeError, match="Tushare rate limit"):
+            fetch_commodity_daily(
+                "2024-01-01",
+                primary_source=primary,
+                fred_source=fred,
+            )
 
-        assert not result.is_empty()
-        assert len(result) == 2
-        assert result["instrument_id"].to_list() == [1, 2]
-
-    def test_both_sources_fail_returns_empty(
-        self,
-    ) -> None:
-        """FRED 和 Tushare 都抛异常，返回空 DataFrame."""
+    def test_legitimate_empty_frames_merge_to_empty(self) -> None:
+        """合法空（节假日无观察行）不是失败：两腿都返回空帧时结果为空."""
         primary, fred = _make_sources(
-            fred_df=RuntimeError("FRED down"),
-            metal_df=RuntimeError("Tushare down"),
+            fred_df=pl.DataFrame(),
+            metal_df=pl.DataFrame(),
         )
 
         result = fetch_commodity_daily(

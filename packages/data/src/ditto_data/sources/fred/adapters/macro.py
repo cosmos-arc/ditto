@@ -43,11 +43,18 @@ class MacroFredAdapter(BaseFredAdapter):
 
     PIT semantics:
         FRED/ALFRED ``realtime_start`` is the date on which a specific vintage
-        became public and is therefore the only valid ``knowledge_date``. When
-        ``realtime_end`` is supplied, every series uses the ALFRED window and
+        became public. When ``realtime_end`` is supplied, every series uses the
+        ALFRED window (uncapped at the start unless the caller narrows it) and
         revisions collapse to the latest vintage actually known by that date.
-        Current-vintage requests also retain their provider vintage start, so
-        an observation is never made visible from its period date by accident.
+
+        knowledge_date 语义（#432）：
+        - ALFRED 模式（realtime_end 给定）：所选 vintage 的 ``realtime_start``
+          是该修订的公开日，作为 knowledge_date 是事实；
+        - 默认模式（无 realtime 参数）：FRED 默认 realtime 窗口为请求当天，
+          返回行的 ``realtime_start`` 等于请求日，即**采集时间**而非该值
+          首次发布的精确时刻；未知首次发布时刻保持未知，不以观察日或
+          裁剪后的 realtime_start 伪装发布时刻（保守 PIT：值不早于采集日
+          可见，真实发布可能更早）。
 
     """
 
@@ -68,8 +75,8 @@ class MacroFredAdapter(BaseFredAdapter):
             start_date: Start date (YYYY-MM-DD).
             end_date: End date (YYYY-MM-DD).
             realtime_start: Optional ALFRED realtime window start (YYYY-MM-DD).
-                Used together with ``realtime_end`` and defaults to
-                ``start_date`` when omitted.
+                未提供时不裁剪 realtime 起点（完整 vintage 历史），避免排除
+                公开日早于观察窗口起点的修订。
             realtime_end: Optional ALFRED realtime PIT anchor (YYYY-MM-DD).
                 When set, the FRED API receives the realtime window, revisions
                 collapse to the latest vintage known by this date, and
@@ -94,13 +101,18 @@ class MacroFredAdapter(BaseFredAdapter):
             realtime_end_str = realtime_end
             if realtime_end_str is not None:
                 as_of = datetime.date.fromisoformat(realtime_end_str)
-                # Fetch ALFRED vintage observations known by realtime_end
+                # Fetch ALFRED vintage observations known by realtime_end.
+                # 未显式给 realtime_start 时不以观察起点裁剪 realtime 窗口：
+                # 公开日早于观察窗口起点的修订行同样参与 as-of 折叠，
+                # 否则这些行会被整行排除（修订丢失）。
+                realtime_params: dict[str, str] = {"realtime_end": realtime_end_str}
+                if realtime_start is not None:
+                    realtime_params["realtime_start"] = realtime_start
                 df = self._client.get_series_observations(
                     series_id=indicator.series_id,
                     observation_start=start_date,
                     observation_end=end_date,
-                    realtime_start=realtime_start or start_date,
-                    realtime_end=realtime_end_str,
+                    **realtime_params,
                 )
                 # Collapse revisions to the latest vintage known at as_of
                 df = _take_latest_vintage_as_of(df, as_of)

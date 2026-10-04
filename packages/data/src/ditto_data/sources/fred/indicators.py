@@ -49,6 +49,19 @@ class FredIndicator:
 
 
 # FRED indicator registry
+#
+# 注册纪律（#432，2026-10-04 核查）：
+# - 死序列不注册：GOLDAMGBD228NLBM/SLVPRUSD（FRED 2022-01 官方公告移除
+#   IBA/LBMA 定盘数据）与 VIX9D（序列页访问失败 + 前轮 404 记录；工具
+#   访问错误不等同官方下架，恢复可读后再评估）。金银参考已由 Tushare
+#   fx_daily 的 FXCM XAU/XAG bid 承担，与历史 LBMA 定盘是不同基准，
+#   身份见 tushare/adapters/metal.py。
+# - 代码与口径一致：注册拉取的是原始序列（level/index）时，代码/名称/
+#   单位不得承诺同比。展示 YoY 须显式派生（同一 vintage 宇宙内当前值与
+#   12 个月前值）或固定 FRED 官方变换 pc1 并锁定请求身份；不得把 pch
+#   当同比，也不得对已变换序列重复变换。当前无 YoY 消费者，不预置派生。
+# - need_pit 不等于无发布滞后：UNRATE 月度发布并回改、M2 季调且年度
+#   基准重算可达数年，均需修订管理（need_pit=True）。
 FRED_INDICATORS: dict[str, FredIndicator] = {
     # === Economic ===
     "US_GDP_QOQ": FredIndicator(
@@ -58,48 +71,62 @@ FRED_INDICATORS: dict[str, FredIndicator] = {
         category="economic",
         frequency="quarterly",
         unit="%",
-        description="Real Gross Domestic Product, Percent Change from Preceding Period",
+        description=(
+            "Real GDP, Percent Change from Preceding Period, "
+            "Seasonally Adjusted Annual Rate"
+        ),
         need_pit=True,
     ),
-    # === Prices ===
-    "US_CPI_YOY": FredIndicator(
+    # === Prices（原始序列为季调指数 level，非同比） ===
+    "US_CPI_INDEX": FredIndicator(
         series_id="CPIAUCSL",
-        code="US_CPI_YOY",
-        name="美国CPI同比",
+        code="US_CPI_INDEX",
+        name="美国CPI(季调指数)",
         category="prices",
         frequency="monthly",
-        unit="指数",
-        description="Consumer Price Index for All Urban Consumers: All Items",
+        unit="指数(1982-84=100)",
+        description=(
+            "CPI for All Urban Consumers: All Items, "
+            "Seasonally Adjusted Index (level, not YoY)"
+        ),
         need_pit=True,
     ),
-    "US_CPI_CORE_YOY": FredIndicator(
+    "US_CORE_CPI_INDEX": FredIndicator(
         series_id="CPILFESL",
-        code="US_CPI_CORE_YOY",
-        name="美国核心CPI同比",
+        code="US_CORE_CPI_INDEX",
+        name="美国核心CPI(季调指数)",
         category="prices",
         frequency="monthly",
-        unit="指数",
-        description="Core CPI (Excluding Food and Energy)",
+        unit="指数(1982-84=100)",
+        description=(
+            "Core CPI (Excluding Food and Energy), "
+            "Seasonally Adjusted Index (level, not YoY)"
+        ),
         need_pit=True,
     ),
-    "US_PCE_YOY": FredIndicator(
+    "US_PCE_INDEX": FredIndicator(
         series_id="PCEPI",
-        code="US_PCE_YOY",
-        name="美国PCE同比",
+        code="US_PCE_INDEX",
+        name="美国PCE物价指数(季调)",
         category="prices",
         frequency="monthly",
-        unit="指数",
-        description="Personal Consumption Expenditures Price Index",
+        unit="指数(2017=100)",
+        description=(
+            "Personal Consumption Expenditures Price Index, "
+            "Seasonally Adjusted (level, not YoY)"
+        ),
         need_pit=True,
     ),
-    "US_PCE_CORE_YOY": FredIndicator(
+    "US_CORE_PCE_INDEX": FredIndicator(
         series_id="PCEPILFE",
-        code="US_PCE_CORE_YOY",
-        name="美国核心PCE同比",
+        code="US_CORE_PCE_INDEX",
+        name="美国核心PCE物价指数(季调)",
         category="prices",
         frequency="monthly",
-        unit="指数",
-        description="Core PCE (Excluding Food and Energy)",
+        unit="指数(2017=100)",
+        description=(
+            "Core PCE (Excluding Food and Energy), Seasonally Adjusted (level, not YoY)"
+        ),
         need_pit=True,
     ),
     # === Employment ===
@@ -110,8 +137,8 @@ FRED_INDICATORS: dict[str, FredIndicator] = {
         category="employment",
         frequency="monthly",
         unit="%",
-        description="Civilian Unemployment Rate",
-        need_pit=False,
+        description="Civilian Unemployment Rate (monthly release, revised)",
+        need_pit=True,
     ),
     "US_PAYEMS": FredIndicator(
         series_id="PAYEMS",
@@ -123,16 +150,19 @@ FRED_INDICATORS: dict[str, FredIndicator] = {
         description="Nonfarm Employment",
         need_pit=True,
     ),
-    # === Money Supply ===
-    "US_M2_YOY": FredIndicator(
+    # === Money Supply（M2SL 为季调存量 level，非同比） ===
+    "US_M2": FredIndicator(
         series_id="M2SL",
-        code="US_M2_YOY",
-        name="美国M2同比",
+        code="US_M2",
+        name="美国M2货币供应(季调)",
         category="money_supply",
         frequency="monthly",
         unit="十亿美元",
-        description="M2 Money Stock",
-        need_pit=False,
+        description=(
+            "M2 Money Stock, Seasonally Adjusted (level, not YoY; "
+            "annual benchmark revisions can reach back years)"
+        ),
+        need_pit=True,
     ),
     # === Interest Rate (Market Domain) ===
     "US_BOND_YIELD_1Y": FredIndicator(
@@ -216,6 +246,9 @@ FRED_INDICATORS: dict[str, FredIndicator] = {
         need_pit=False,
     ),
     # === Commodity (Market Domain) ===
+    # 贵金属（金银）不在此注册：GOLDAMGBD228NLBM/SLVPRUSD 已死序列（见
+    # 文件头核查依据）；金银参考值由 Tushare fx_daily FXCM bid 提供（身份
+    # 见 tushare/adapters/metal.py），与历史 LBMA 定盘分属不同基准。
     "COMMOD_WTI": FredIndicator(
         series_id="DCOILWTICO",
         code="COMMOD_WTI",
@@ -236,27 +269,8 @@ FRED_INDICATORS: dict[str, FredIndicator] = {
         description="Crude Oil Prices: Brent - Europe",
         need_pit=False,
     ),
-    "COMMOD_GOLD": FredIndicator(
-        series_id="GOLDAMGBD228NLBM",
-        code="COMMOD_GOLD",
-        name="伦敦金",
-        category="commodity",
-        frequency="daily",
-        unit="美元/盎司",
-        description="Gold Fixing Price 10:30 A.M. (London market)",
-        need_pit=False,
-    ),
-    "COMMOD_SILVER": FredIndicator(
-        series_id="SLVPRUSD",
-        code="COMMOD_SILVER",
-        name="伦敦银",
-        category="commodity",
-        frequency="daily",
-        unit="美分/盎司",
-        description="Silver Fixing Price (London market)",
-        need_pit=False,
-    ),
     # === VIX (Market Domain) ===
+    # VIX9D 不注册：序列页访问失败 + 前轮 404（见文件头核查依据）。
     "VIX_30D": FredIndicator(
         series_id="VIXCLS",
         code="VIX_30D",
@@ -265,16 +279,6 @@ FRED_INDICATORS: dict[str, FredIndicator] = {
         frequency="daily",
         unit="指数",
         description="CBOE Volatility Index (VIX)",
-        need_pit=False,
-    ),
-    "VIX_9D": FredIndicator(
-        series_id="VIX9D",
-        code="VIX_9D",
-        name="VIX波动率指数(9天)",
-        category="vix",
-        frequency="daily",
-        unit="指数",
-        description="CBOE 9-Day Volatility Index",
         need_pit=False,
     ),
     # === Dollar Index (Market Domain) ===

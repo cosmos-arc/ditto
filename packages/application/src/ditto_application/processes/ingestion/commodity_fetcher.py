@@ -4,7 +4,12 @@
 从 ``IngestionCoordinator._fetch_commodity_daily`` 提取。
 数据源分配：
 - FRED: WTI 原油、布伦特原油、VIX
-- Tushare: 黄金、白银（FRED 数据已停止更新）
+- Tushare: 黄金、白银（FXCM XAU/XAG bid，见 metal adapter 身份说明）
+
+完整性合同（#432）：复合源的任一**已配置**腿失败时整体抛错（分区标记
+FAIL 而非 COMPLETE），不允许"只剩金银/只剩油"的批次被报完整；跨市场
+参考数据进入策略/Agent 输入的边界由消费侧（market_context）落实。
+合法空（周末/节假日无观察行）不是失败：腿成功返回空帧照常合并。
 """
 
 from __future__ import annotations
@@ -58,6 +63,9 @@ def fetch_commodity_daily(
     Returns:
         合并后的商品数据 DataFrame.
 
+    Raises:
+        Exception: 任一已配置腿失败时原样上抛（见模块完整性合同）。
+
     """
     return fetch_commodity_range(
         trade_date,
@@ -74,7 +82,11 @@ def fetch_commodity_range(
     primary_source: _MetalSource,
     fred_source: CommoditySource | None = None,
 ) -> pl.DataFrame:
-    """Fetch commodity observations for one explicit provider interval."""
+    """
+    Fetch commodity observations for one explicit provider interval.
+
+    已配置腿失败即抛错：复合源缺腿不得被标记为完整分区（#432）。
+    """
     results: list[pl.DataFrame] = []
 
     fred_codes = [
@@ -84,20 +96,19 @@ def fetch_commodity_range(
     ]
 
     if fred_source is not None:
-        try:
-            fred_df = fred_source.fetch_commodities(
-                codes=fred_codes,
-                start_date=start_date,
-                end_date=end_date,
-            )
-            if not fred_df.is_empty():
-                results.append(fred_df)
-        except Exception as e:
-            logger.warning(
-                "FRED commodity fetch failed, continuing with Tushare metals",
-                event="fred_commodity_fetch_failed",
-                error=str(e),
-            )
+        # 不吞异常：油/VIX 腿失败时整体失败，防止"只剩金银"被报 COMPLETE。
+        fred_df = fred_source.fetch_commodities(
+            codes=fred_codes,
+            start_date=start_date,
+            end_date=end_date,
+        )
+        logger.info(
+            "FRED commodity fetch complete",
+            event="fred_commodity_fetch_complete",
+            rows=fred_df.height,
+        )
+        if not fred_df.is_empty():
+            results.append(fred_df)
     else:
         logger.warning(
             "FRED source not configured, skipping oil/VIX data",
@@ -106,20 +117,14 @@ def fetch_commodity_range(
 
     metal_codes = list(dict.fromkeys(METAL_CODE_ALIASES.values()))
 
-    try:
-        metal_df = primary_source.fetch_metal_daily(
-            codes=metal_codes,
-            start_date=start_date,
-            end_date=end_date,
-        )
-        if not metal_df.is_empty():
-            results.append(metal_df)
-    except Exception as e:
-        logger.warning(
-            "Tushare metal fetch failed",
-            event="tushare_metal_fetch_failed",
-            error=str(e),
-        )
+    # 不吞异常：金属腿失败时整体失败，防止"只剩油/VIX"被报 COMPLETE。
+    metal_df = primary_source.fetch_metal_daily(
+        codes=metal_codes,
+        start_date=start_date,
+        end_date=end_date,
+    )
+    if not metal_df.is_empty():
+        results.append(metal_df)
 
     if not results:
         return pl.DataFrame()
