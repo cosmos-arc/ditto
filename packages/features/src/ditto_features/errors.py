@@ -6,6 +6,7 @@ from ditto_kernel.exceptions import DittoError
 
 __all__ = [
     "DerivedError",
+    "DerivedIntegrityError",
     "DerivedNotFoundError",
     "DerivedNotImplementedError",
     "DerivedValidationError",
@@ -68,6 +69,47 @@ class DerivedNotFoundError(DerivedError):
         if version is not None:
             msg += f" version={version}"
         super().__init__(msg, derived_id=derived_id)
+
+
+class DerivedIntegrityError(DerivedError):
+    """
+    Raised when an artifact partition fails the read-side honesty gate.
+
+    覆盖两类拒绝：分区 checkpoint 不是 COMPLETE（部分写入/在途重算）与
+    文件内容 checksum 与目录记录不一致（身份漂移）。两者都必须 fail closed。
+    """
+
+    def __init__(
+        self,
+        *,
+        derived_id: str,
+        version: int,
+        partition_key: str,
+        reason: str,
+        expected_checksum: str | None = None,
+        actual_checksum: str | None = None,
+    ) -> None:
+        self.version = version
+        self.partition_key = partition_key
+        self.reason = reason
+        self.expected_checksum = expected_checksum
+        self.actual_checksum = actual_checksum
+        msg = (
+            f"Derived artifact integrity refused: derived_id={derived_id} "
+            f"version={version} partition={partition_key}: {reason}"
+        )
+        details: dict[str, object] = {
+            "derived_id": derived_id,
+            "version": version,
+            "partition_key": partition_key,
+            "reason": reason,
+        }
+        if expected_checksum is not None:
+            details["expected_checksum"] = expected_checksum
+        if actual_checksum is not None:
+            details["actual_checksum"] = actual_checksum
+        super().__init__(msg, derived_id=derived_id)
+        self.details.update(details)
 
 
 class DerivedVersionError(DerivedError):

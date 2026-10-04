@@ -43,6 +43,8 @@ class CompatibilityManifest:
     unsafe_time_policy: str | None = ""
     source_snapshot_id: str | None = None
     source_snapshot_ids: tuple[str, ...] = ()
+    knowledge_cutoff: str | None = None
+    universe: str | None = None
     python_version: str | None = None
     platform: str | None = None
     builder_version: str | None = None

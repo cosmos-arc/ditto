@@ -161,8 +161,10 @@ class DerivedArtifactWriter:
         * **Phase 1** -- write every partition to a ``.tmp.parquet`` file.
         * **Phase 2** -- atomically rename all temp files to their final names.
 
-        If Phase 1 raises, all temp files are cleaned up before re-raising.
-        Checksums are computed on the *final* files after rename.
+        If Phase 1 raises, all temp files are cleaned up before re-raising and
+        a version directory created by this call is removed（空跑不落目录）.
+        An empty frame yields no partitions and no directory.  Checksums are
+        computed on the *final* files after rename.
         """
         version_root = (
             self._artifact_root
@@ -172,7 +174,6 @@ class DerivedArtifactWriter:
             / spec.derived_id
             / f"v{spec.version}"
         )
-        version_root.mkdir(parents=True, exist_ok=True)
 
         trade_date_expr = pl.col(time_key).cast(pl.Utf8)
         partition_keys = extract_partition_keys(frame, time_key)
@@ -187,6 +188,12 @@ class DerivedArtifactWriter:
             temp_path = version_root / f"{partition_key}.tmp.parquet"
             pending.append((partition_key, partition_frame, temp_path, partition_path))
 
+        if not pending:
+            # 空跑不产 artifact、不落目录（#418）。
+            return ()
+
+        version_root.mkdir(parents=True, exist_ok=True)
+
         # --- Phase 1: write all temp files ---
         try:
             for _partition_key, partition_frame, temp_path, _partition_path in pending:
@@ -197,6 +204,7 @@ class DerivedArtifactWriter:
                 [temp_path for _, _, temp_path, _ in pending]
             )
             self._cleanup_temp_files(written_temps)
+            self._remove_if_empty(version_root)
             raise
 
         # --- Phase 2: atomic rename all temp -> final ---
@@ -244,6 +252,8 @@ class DerivedArtifactWriter:
 
         If no existing file exists, the partition is written as-is.
 
+        An empty frame yields no partitions and no directory（#418 空跑不落目录）.
+
         Returns:
             Metadata for every partition that was written.
 
@@ -256,9 +266,11 @@ class DerivedArtifactWriter:
             / spec.derived_id
             / f"v{spec.version}"
         )
-        version_root.mkdir(parents=True, exist_ok=True)
 
         partition_keys = extract_partition_keys(frame, time_key)
+        if not partition_keys:
+            return ()
+        version_root.mkdir(parents=True, exist_ok=True)
         trade_date_expr = pl.col(time_key).cast(pl.Utf8)
 
         partitions: list[PartitionInfo] = []
@@ -362,6 +374,15 @@ class DerivedArtifactWriter:
     def _existing_temp_files(candidates: list[Path]) -> list[Path]:
         """Return only the paths that actually exist on disk."""
         return [p for p in candidates if p.exists()]
+
+    @staticmethod
+    def _remove_if_empty(directory: Path) -> None:
+        """Drop a directory left empty by a failed run（空跑不落目录）."""
+        try:
+            directory.rmdir()
+        except OSError:
+            # 目录非空（含既有产物）或已被并发移除：保留现状。
+            logger.debug("Kept non-empty version directory: %s", directory)
 
 
 def extract_partition_keys(

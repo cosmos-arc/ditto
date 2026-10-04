@@ -48,6 +48,17 @@ def prepare_data(
     """Filter date range and drop null values."""
     date_col = "trade_date"
 
+    # 物化 artifact 的 trade_date 是 date dtype，ForwardReturnService 输出
+    # 契约为 ISO 字符串；评估器内部（帧 join 与月度 dt 分组）统一在 date
+    # dtype 上工作，两侧在此归一（#418 真实链修复）。
+    def _to_date(frame: pl.DataFrame) -> pl.DataFrame:
+        if date_col in frame.columns and frame.schema[date_col] == pl.Utf8:
+            return frame.with_columns(pl.col(date_col).str.to_date())
+        return frame
+
+    factor_df = _to_date(factor_df)
+    return_df = _to_date(return_df)
+
     # Bounds must match each frame's trade_date dtype: Date columns compare
     # against Date literals, Utf8 (ISO string) columns against string literals
     # (lexicographic ISO order == chronological order).

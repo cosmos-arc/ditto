@@ -33,6 +33,7 @@ def build_manifest_record(
     compile_identity: CompileIdentity,
     source_snapshot_id: str | None = None,
     source_snapshot_ids: tuple[str, ...] = (),
+    knowledge_cutoff: str | None = None,
 ) -> CompatibilityManifestRecord:
     """Build a persisted manifest record for publication safety."""
     manifest = _build_manifest(
@@ -40,6 +41,7 @@ def build_manifest_record(
         compile_identity=compile_identity,
         source_snapshot_id=source_snapshot_id,
         source_snapshot_ids=source_snapshot_ids,
+        knowledge_cutoff=knowledge_cutoff,
     )
     manifest_hash = _manifest_hash(_manifest_payload(manifest))
     manifest = replace(manifest, manifest_hash=manifest_hash)
@@ -59,6 +61,7 @@ def _build_manifest(
     compile_identity: CompileIdentity,
     source_snapshot_id: str | None,
     source_snapshot_ids: tuple[str, ...],
+    knowledge_cutoff: str | None,
 ) -> CompatibilityManifest:
     return CompatibilityManifest(
         engine_codegen_version=compile_identity.engine_codegen_version,
@@ -72,6 +75,8 @@ def _build_manifest(
         time_semantics_version="time-v1",
         source_snapshot_id=source_snapshot_id,
         source_snapshot_ids=source_snapshot_ids,
+        knowledge_cutoff=knowledge_cutoff,
+        universe=spec.universe_id or "full_market",
         python_version=platform.python_version(),
         platform=platform.platform(),
         builder_version="unified-derived-v1",

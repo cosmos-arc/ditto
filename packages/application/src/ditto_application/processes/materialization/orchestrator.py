@@ -7,7 +7,7 @@ lifecycle.
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Iterator, Sequence
 from dataclasses import asdict, dataclass, replace
 from datetime import datetime
 from typing import NamedTuple, Protocol, runtime_checkable
@@ -23,6 +23,7 @@ from ditto_data.lineage.contracts import (
 )
 from ditto_features.compile_cache import SQLiteCompileCache
 from ditto_features.derived_types import DerivedSpec, MaterializationProfile
+from ditto_features.errors import DerivedIntegrityError
 from ditto_features.expression import CompiledDerivedExpression
 from ditto_features.materialization import (
     DerivedExecutionPlan,
@@ -36,6 +37,7 @@ from ditto_features.materialization import (
 from ditto_features.materialization.publication import CompatibilityManifestRecord
 from ditto_features.models.derived import (
     DerivedCheckpointRecord,
+    DerivedCheckpointStatus,
     DerivedDependencyRecord,
     DerivedPartitionRecord,
     DerivedRunRecord,
@@ -48,6 +50,7 @@ from ditto_features.services import (
     ArtifactPersistenceService,
     DerivedArtifactReader,
     DerivedCatalogService,
+    extract_partition_keys,
 )
 
 from ditto_application.config import now_iso
@@ -210,6 +213,69 @@ def _request_with_source_snapshot(
     if request.source_snapshot_id == source_snapshot_id:
         return request
     return replace(request, source_snapshot_id=source_snapshot_id)
+
+
+def _checkpoint_records(
+    *,
+    derived_id: str,
+    version: int,
+    run: _RunIdentity,
+    partitions: tuple[PartitionInfo, ...],
+    status: DerivedCheckpointStatus,
+) -> tuple[DerivedCheckpointRecord, ...]:
+    """Build post-write lifecycle stage rows (rows/checksum 来自写后事实)."""
+    return _checkpoint_rows(
+        derived_id=derived_id,
+        version=version,
+        run=run,
+        status=status,
+        facts=(
+            (partition.partition_key, partition.row_count, partition.checksum)
+            for partition in partitions
+        ),
+    )
+
+
+def _planned_checkpoint_records(
+    *,
+    derived_id: str,
+    version: int,
+    run: _RunIdentity,
+    partition_keys: tuple[str, ...],
+) -> tuple[DerivedCheckpointRecord, ...]:
+    """Build PLANNED intent rows（写入前，尚无行数与 checksum 事实）."""
+    return _checkpoint_rows(
+        derived_id=derived_id,
+        version=version,
+        run=run,
+        status=DerivedCheckpointStatus.PLANNED,
+        facts=((key, 0, None) for key in partition_keys),
+    )
+
+
+def _checkpoint_rows(
+    *,
+    derived_id: str,
+    version: int,
+    run: _RunIdentity,
+    status: DerivedCheckpointStatus,
+    facts: Iterator[tuple[str, int, str | None]],
+) -> tuple[DerivedCheckpointRecord, ...]:
+    completed_at = now_iso() if status is DerivedCheckpointStatus.COMPLETE else None
+    return tuple(
+        DerivedCheckpointRecord(
+            derived_id=derived_id,
+            version=version,
+            partition_key=partition_key,
+            status=status.value,
+            rows_written=row_count,
+            checksum=checksum,
+            error_message=None,
+            started_at=run.started_at,
+            completed_at=completed_at,
+        )
+        for partition_key, row_count, checksum in facts
+    )
 
 
 # ===========================================================================
@@ -405,6 +471,7 @@ class DerivedMaterializationOrchestrator:
             compile_identity=ctx.compiled.compile_identity,
             source_snapshot_id=request.source_snapshot_id,
             source_snapshot_ids=ctx.source_snapshot_ids,
+            knowledge_cutoff=request.request_end,
         )
         minimal_dq_record = build_minimal_dq_record(
             spec=spec,
@@ -425,6 +492,16 @@ class DerivedMaterializationOrchestrator:
             frame=materialized_frame,
         )
         time_key = spec.effective_time_keys[0]
+        # 三阶段 checkpoint（#418，复用 #393 语义）：写入前落 PLANNED 意图；
+        # 部分失败时目录停留可发现的恢复态，读取侧拒绝非 COMPLETE 分区。
+        self._catalog_service.save_checkpoints(
+            _planned_checkpoint_records(
+                derived_id=spec.id,
+                version=spec.version,
+                run=run,
+                partition_keys=extract_partition_keys(materialized_frame, time_key),
+            )
+        )
         partitions = self._artifact_writer.write_durable_partitions(
             spec=ctx.spec_record,
             time_key=time_key,
@@ -433,6 +510,31 @@ class DerivedMaterializationOrchestrator:
             request_start=request.request_start,
             request_end=request.request_end,
             source_snapshot_id=request.source_snapshot_id,
+        )
+        # 分区文件已原子落盘：簿记分区行并推进 PAYLOAD_COMMITTED（可恢复态）。
+        self._catalog_service.save_partitions(
+            tuple(
+                DerivedPartitionRecord(
+                    run_id=run.run_id,
+                    derived_id=spec.id,
+                    version=spec.version,
+                    partition_key=partition.partition_key,
+                    partition_path=partition.partition_path,
+                    row_count=partition.row_count,
+                    checksum=partition.checksum,
+                    written_at=now_iso(),
+                )
+                for partition in partitions
+            )
+        )
+        self._catalog_service.save_checkpoints(
+            _checkpoint_records(
+                derived_id=spec.id,
+                version=spec.version,
+                run=run,
+                partitions=partitions,
+                status=DerivedCheckpointStatus.PAYLOAD_COMMITTED,
+            )
         )
         self._artifact_writer.write_artifact_metadata(
             ArtifactMetadataParams(
@@ -522,35 +624,15 @@ class DerivedMaterializationOrchestrator:
         dependencies: tuple[str, ...],
     ) -> DerivedMaterializationResult:
         finished_at = now_iso()
-        partition_records = tuple(
-            DerivedPartitionRecord(
-                run_id=run.run_id,
+        self._catalog_service.save_checkpoints(
+            _checkpoint_records(
                 derived_id=spec.id,
                 version=spec.version,
-                partition_key=partition.partition_key,
-                partition_path=partition.partition_path,
-                row_count=partition.row_count,
-                checksum=partition.checksum,
-                written_at=finished_at,
+                run=run,
+                partitions=partitions,
+                status=DerivedCheckpointStatus.COMPLETE,
             )
-            for partition in partitions
         )
-        checkpoint_records = tuple(
-            DerivedCheckpointRecord(
-                derived_id=spec.id,
-                version=spec.version,
-                partition_key=partition.partition_key,
-                status="done",
-                rows_written=partition.row_count,
-                checksum=partition.checksum,
-                error_message=None,
-                started_at=run.started_at,
-                completed_at=finished_at,
-            )
-            for partition in partitions
-        )
-        self._catalog_service.save_partitions(partition_records)
-        self._catalog_service.save_checkpoints(checkpoint_records)
         self._catalog_service.save_state(
             DerivedStateRecord(
                 derived_id=spec.id,
@@ -709,12 +791,18 @@ class DerivedMaterializationOrchestrator:
         )
         if last_manifest_hash != manifest_record.manifest_hash:
             return
-        published = reader.read_frame(
-            derived_id=spec.id,
-            version=spec.version,
-            start=request.request_start,
-            end=request.request_end,
-        )
+        try:
+            published = reader.read_frame(
+                derived_id=spec.id,
+                version=spec.version,
+                start=request.request_start,
+                end=request.request_end,
+            )
+        except DerivedIntegrityError:
+            # 上次同窗口运行在 PLANNED/PAYLOAD_COMMITTED 阶段崩溃：分区处于
+            # 在途重算态，读门禁拒绝基线读取。分区即将被本次恢复运行重写，
+            # 比对无基线意义——跳过以保持同窗口重试可恢复（#418）。
+            return
         if published.is_empty():
             return
         sort_keys = [*spec.entity_keys, *spec.effective_time_keys]

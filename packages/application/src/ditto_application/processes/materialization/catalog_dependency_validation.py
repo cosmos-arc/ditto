@@ -147,6 +147,27 @@ def validate_dependency_catalog_compatibility(
     )
 
 
+# 存储目录以 source_ticker 记录行情身份；供数读层（MarketService）在读取时
+# 解析为 served 实体键 instrument_id。契约身份列因此可由指向它的存储身份
+# 别名满足（显式映射，避免无关实体键被误豁免）；数值/时间列仍必须由存储
+# schema 直接保证。
+_STORAGE_IDENTITY_ALIAS_TO_ENTITY: dict[str, frozenset[str]] = {
+    "source_ticker": frozenset({"instrument_id"}),
+}
+
+
+def _satisfied_by_storage_identity(
+    column: str,
+    contract: DependencyContract,
+    available_columns: tuple[str, ...],
+) -> bool:
+    """Whether a contract entity key is served via a storage identity alias."""
+    return column in contract.entity_keys and any(
+        column in _STORAGE_IDENTITY_ALIAS_TO_ENTITY.get(alias, frozenset())
+        for alias in available_columns
+    )
+
+
 def _dataset_catalog_entry(
     catalog_reader: DataCatalogReader,
     contract: DependencyContract,
@@ -206,6 +227,7 @@ def _validate_catalog_entry(
         column
         for column in contract.required_frame_columns
         if column not in available_columns
+        and not _satisfied_by_storage_identity(column, contract, available_columns)
     )
     if missing_columns:
         raise DependencyCatalogCompatibilityError(

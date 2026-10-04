@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, replace
 
+import polars as pl
 from ditto_features.errors import DerivedError
 from ditto_features.evaluation.evaluator import (
     EvaluationConfig,
@@ -102,16 +103,16 @@ class FactorEvaluationFacade:
 
         Raises:
             AppQueryError: version 解析失败时抛出，保留原始 ``DerivedError``
-                为 ``__cause__``。
+                为 ``__cause__``；无物化输入（空 artifact）时以
+                ``MATERIALIZED_INPUT_MISSING`` 明确缺失，不回退即时计算。
 
         """
         resolved_version = self._resolve_version(factor_id, version)
 
-        factor_df = self._artifact_reader.read_frame(
-            derived_id=factor_id,
-            version=resolved_version,
-            start=options.start,
-            end=options.end,
+        factor_df = self._read_factor_frame(
+            factor_id,
+            resolved_version,
+            options=options,
         )
 
         evaluator = FactorEvaluator(
@@ -161,11 +162,10 @@ class FactorEvaluationFacade:
         """
         resolved_version = self._resolve_version(factor_id, version)
 
-        factor_df = self._artifact_reader.read_frame(
-            derived_id=factor_id,
-            version=resolved_version,
-            start=options.start,
-            end=options.end,
+        factor_df = self._read_factor_frame(
+            factor_id,
+            resolved_version,
+            options=options,
         )
 
         evaluator = FactorEvaluator(
@@ -214,3 +214,52 @@ class FactorEvaluationFacade:
                 f"无法解析因子 artifact 版本: factor_id={factor_id}",
                 details={"factor_id": factor_id},
             ) from exc
+
+    def _read_factor_frame(
+        self,
+        factor_id: str,
+        resolved_version: int,
+        *,
+        options: EvaluationOptions,
+    ) -> pl.DataFrame:
+        """
+        读取物化因子帧；空产物显式缺失（#418 诚实状态）.
+
+        读不到行说明该因子没有可评估的物化输入（未物化、窗口无产物或读取
+        被完成门禁拒绝后无剩余行）。此时以 ``MATERIALIZED_INPUT_MISSING``
+        fail closed，绝不静默产出全零报告冒充评估。
+
+        """
+        try:
+            factor_df = self._artifact_reader.read_frame(
+                derived_id=factor_id,
+                version=resolved_version,
+                start=options.start,
+                end=options.end,
+            )
+        except DerivedError as exc:
+            # 读门禁拒绝（未发布/部分写入/身份漂移）保持 application 边界
+            # 异常语义，reason 区分于缺失态。
+            raise AppQueryError(
+                "因子 artifact 读取被拒绝: "
+                + f"factor_id={factor_id} version={resolved_version}: {exc}",
+                details={
+                    "factor_id": factor_id,
+                    "version": resolved_version,
+                    "reason": "ARTIFACT_READ_REFUSED",
+                },
+            ) from exc
+        if factor_df.is_empty():
+            raise AppQueryError(
+                "无物化输入可评估: "
+                + f"factor_id={factor_id} version={resolved_version} "
+                + f"window={options.start or 'earliest'}..{options.end or 'latest'}",
+                details={
+                    "factor_id": factor_id,
+                    "version": resolved_version,
+                    "reason": "MATERIALIZED_INPUT_MISSING",
+                },
+            )
+        # 真实物化 artifact 的 trade_date 是 date dtype，前向收益服务输出 ISO
+        # 字符串；评估器在 prepare_data 中统一归一到 date（#418）。
+        return factor_df

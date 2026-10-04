@@ -5,14 +5,21 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import date
 from enum import StrEnum
+from hashlib import file_digest
 from pathlib import Path
 from typing import Literal, Protocol, cast, overload
 
 import orjson
 import polars as pl
 
-from ditto_features.errors import DerivedNotFoundError, DerivedVersionError
+from ditto_features.errors import (
+    DerivedIntegrityError,
+    DerivedNotFoundError,
+    DerivedVersionError,
+)
 from ditto_features.models.derived import (
+    DerivedCheckpointRecord,
+    DerivedCheckpointStatus,
     DerivedSpecRecord,
     DerivedStateRecord,
     DerivedVersionRecord,
@@ -59,6 +66,9 @@ class _CatalogReader(Protocol):
     ) -> DerivedVersionRecord | None: ...
     def get_state(self, derived_id: str) -> DerivedStateRecord | None: ...
     def list_versions(self, derived_id: str) -> tuple[DerivedVersionRecord, ...]: ...
+    def list_checkpoints(
+        self, derived_id: str, version: int
+    ) -> tuple[DerivedCheckpointRecord, ...]: ...
 
 
 class DerivedArtifactReader:
@@ -279,9 +289,14 @@ class DerivedArtifactReader:
         """
         Build a filtered LazyFrame for the given artifact version.
 
+        Reads fail closed unless the version is published and every parquet
+        partition being read carries a COMPLETE checkpoint whose checksum
+        matches the file content（#418 完成才可读＋身份漂移拒绝）.
+
         Returns ``None`` when no parquet files exist for the requested
         date range (convenient for the ``as_lazy=False`` early-return).
         """
+        self._require_published_version(derived_id, version)
         spec_record = self._require_catalog_entry(derived_id, version)
         version_root = (
             self._artifact_root
@@ -294,6 +309,7 @@ class DerivedArtifactReader:
         parquet_paths = prune_parquet_paths(version_root, start=start, end=end)
         if not parquet_paths:
             return None
+        self._verify_partition_integrity(derived_id, version, parquet_paths)
 
         time_key = _effective_time_key(spec_record)
         frame = _scan_with_schema_evolution(parquet_paths)
@@ -352,6 +368,70 @@ class DerivedArtifactReader:
         if version_record is None:
             raise DerivedNotFoundError(derived_id=derived_id, version=version)
         return spec_record
+
+    def _require_published_version(self, derived_id: str, version: int) -> None:
+        """Refuse reads of versions not yet published（完成才可读）."""
+        self._require_catalog_entry(derived_id, version)
+        version_record = self._catalog_service.get_version(derived_id, version)
+        if version_record is None or version_record.status != "published":
+            raise DerivedVersionError(
+                derived_id=derived_id,
+                reason=(
+                    "artifact version not published "
+                    f"(status={version_record.status if version_record else 'missing'})"
+                ),
+            )
+
+    def _verify_partition_integrity(
+        self,
+        derived_id: str,
+        version: int,
+        parquet_paths: list[Path],
+    ) -> None:
+        """
+        Fail closed on partitions lacking COMPLETE or matching checksums.
+
+        每个被读分区必须有 COMPLETE checkpoint 且文件内容 sha256 与目录记录
+        一致；不一致即身份漂移或部分写入，拒绝读取。
+        """
+        checkpoints = {
+            record.partition_key: record
+            for record in self._catalog_service.list_checkpoints(derived_id, version)
+        }
+        for path in parquet_paths:
+            partition_key = path.name.removesuffix(".parquet")
+            record = checkpoints.get(partition_key)
+            if record is None or record.status != DerivedCheckpointStatus.COMPLETE:
+                status = record.status if record is not None else "missing"
+                raise DerivedIntegrityError(
+                    derived_id=derived_id,
+                    version=version,
+                    partition_key=partition_key,
+                    reason=f"partition checkpoint not COMPLETE (status={status})",
+                )
+            if record.checksum is None:
+                raise DerivedIntegrityError(
+                    derived_id=derived_id,
+                    version=version,
+                    partition_key=partition_key,
+                    reason="complete partition has no recorded checksum",
+                )
+            actual = _file_sha256(path)
+            if actual != record.checksum:
+                raise DerivedIntegrityError(
+                    derived_id=derived_id,
+                    version=version,
+                    partition_key=partition_key,
+                    reason="partition checksum drift (identity mismatch)",
+                    expected_checksum=record.checksum,
+                    actual_checksum=actual,
+                )
+
+
+def _file_sha256(path: Path) -> str:
+    """Stream-hash one file（避免整分区载入内存）."""
+    with path.open("rb") as handle:
+        return file_digest(handle, "sha256").hexdigest()
 
 
 def _effective_time_key(spec_record: DerivedSpecRecord) -> str:

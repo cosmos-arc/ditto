@@ -237,3 +237,32 @@ def cx() -> SimpleNamespace:
         ENTITY_KEYS=ENTITY_KEYS,
         TIME_KEYS=TIME_KEYS,
     )
+
+
+# ---------------------------------------------------------------------------
+# derived catalog fixtures（#418 spec registration 测试）
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def derived_sqlite_client():
+    """Provide an in-memory SQLite client with the derived schema loaded."""
+    from pathlib import Path as _Path
+
+    from ditto_platform.foundation import SQLiteClient, SQLitePool
+
+    schema_path = (
+        _Path(__file__).resolve().parents[4]
+        / "packages"
+        / "data"
+        / "src"
+        / "ditto_data"
+        / "scripts"
+        / "schema.sql"
+    )
+    pool = SQLitePool(":memory:", schema_path=schema_path)
+    pool.init_schema()
+    try:
+        yield SQLiteClient(pool)
+    finally:
+        pool.close()

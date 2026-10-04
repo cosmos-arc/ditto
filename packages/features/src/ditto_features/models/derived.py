@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
+from enum import StrEnum
 from typing import cast
 
 from ditto_platform.foundation.json_types import (
@@ -29,6 +30,7 @@ __all__ = [
     "CompiledExpressionCacheRecord",
     "CompiledExpressionOperatorRecord",
     "DerivedCheckpointRecord",
+    "DerivedCheckpointStatus",
     "DerivedDependencyRecord",
     "DerivedPartitionRecord",
     "DerivedRunRecord",
@@ -37,6 +39,19 @@ __all__ = [
     "DerivedVersionRecord",
     "PartitionInfo",
 ]
+
+
+class DerivedCheckpointStatus(StrEnum):
+    """
+    Durable partition lifecycle（复用 #393 三阶段完成语义）.
+
+    ``PLANNED`` 落意图（写入前），``PAYLOAD_COMMITTED`` 落盘后可恢复态，
+    ``COMPLETE`` 目录簿记与发布完成；读取侧只放行 COMPLETE 分区。
+    """
+
+    PLANNED = "planned"
+    PAYLOAD_COMMITTED = "payload_committed"
+    COMPLETE = "complete"
 
 
 def _optional_str(data: Mapping[str, _JsonValue], key: str) -> str | None:
