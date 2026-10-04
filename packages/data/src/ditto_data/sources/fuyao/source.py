@@ -18,13 +18,14 @@ fuyao 数据源门面 — 冗余源（ADR：Tushare 主源，fuyao 对账与故�
 from __future__ import annotations
 
 import tempfile
-from datetime import date
+from datetime import date, timedelta
 from pathlib import Path
 from typing import Any, Literal
 
 import polars as pl
 from ditto_platform.foundation import logger
 
+from ditto_data.sources.base import SourceFetchError
 from ditto_data.sources.fuyao.client import FuyaoClient, date_to_ms, ms_to_date
 
 type DumpKind = Literal["daily-k", "daily-k-10d", "adjustment-factors"]
@@ -89,6 +90,12 @@ def _parse_date(value: str) -> date:
 # 跨源对账与同库混写均以此为准（2026-09-18 首跑对账实测 ×100/×1000 差异）。
 _VOLUME_TO_LOTS = 100.0
 _AMOUNT_TO_THOUSANDS = 1000.0
+
+# REST 大窗口尾部静默截断防护（#433，#423 前轮实测）：A 股 10 年窗仅返回
+# 最旧 ~2186 根、指数 ≥5 年窗返回空 item 且 code=0（未见于官方文档）。
+# 保守分窗至 3 年（约 730 个交易日），远低于两个观测失败阈值；不把
+# 2186/970 固化为行数上限，窗口内仍校验日期边界与重复键。
+_REST_WINDOW_DAYS = 1095
 
 
 def _bars_frame(rows: list[Any], source_ticker: str) -> pl.DataFrame:
@@ -165,30 +172,86 @@ class FuyaoSource:
         start_date: str,
         end_date: str,
     ) -> pl.DataFrame:
+        """
+        单标的 REST 历史 — 按安全窗口分片并校验覆盖（#433）.
+
+        每窗校验响应日期不越窗、跨窗无重复键；合并去重排序后统一推导
+        pre_close/pct_change，分窗边界不丢失窗口首条的前收。空窗是合法
+        状态（周末/停牌/上市前/退市后），仅记录可疑模式（中间窗空而邻窗
+        有数据）供排障；无法证明完整时以日志暴露，不伪造成功。
+        """
         thscode = _to_thscode(source_ticker)
-        data = self._client.get(
-            "/api/a-share/prices/historical",
-            params={
-                "thscode": thscode,
-                "interval": "1d",
-                "start": date_to_ms(_parse_date(start_date)),
-                "end": date_to_ms(_parse_date(end_date)),
-                "adjust": "none",
-            },
-        )
-        items: list[dict[str, Any]] = data.get("item") or []
-        rows: list[tuple[Any, ...]] = [
-            (
-                item["date_ms"],
-                item["open_price"],
-                item["high_price"],
-                item["low_price"],
-                item["close_price"],
-                item["volume"],
-                item["turnover"],
+        window_start = _parse_date(start_date)
+        target_end = _parse_date(end_date)
+        rows: list[tuple[Any, ...]] = []
+        seen_dates: set[date] = set()
+        window_counts: list[int] = []
+
+        while window_start <= target_end:
+            window_end = min(
+                window_start + timedelta(days=_REST_WINDOW_DAYS - 1), target_end
             )
-            for item in items
-        ]
+            data = self._client.get(
+                "/api/a-share/prices/historical",
+                params={
+                    "thscode": thscode,
+                    "interval": "1d",
+                    "start": date_to_ms(window_start),
+                    "end": date_to_ms(window_end),
+                    "adjust": "none",
+                },
+            )
+            items: list[dict[str, Any]] = data.get("item") or []
+            window_counts.append(len(items))
+            for item in items:
+                item_date = ms_to_date(item["date_ms"])
+                if not window_start <= item_date <= window_end:
+                    raise SourceFetchError(
+                        source="fuyao",
+                        message=(
+                            f"fuyao historical {thscode} window "
+                            f"[{window_start},{window_end}] returned out-of-window "
+                            f"bar {item_date}: 响应契约违约 拒绝静默截断"
+                        ),
+                    )
+                if item_date in seen_dates:
+                    raise SourceFetchError(
+                        source="fuyao",
+                        message=(
+                            f"fuyao historical {thscode} returned duplicate "
+                            f"trade_date {item_date} across windows: 不前进或重复页"
+                        ),
+                    )
+                seen_dates.add(item_date)
+                rows.append(
+                    (
+                        item["date_ms"],
+                        item["open_price"],
+                        item["high_price"],
+                        item["low_price"],
+                        item["close_price"],
+                        item["volume"],
+                        item["turnover"],
+                    )
+                )
+            window_start = window_end + timedelta(days=1)
+
+        if len(window_counts) > 1 and 0 in window_counts and any(window_counts):
+            logger.warning(
+                "Fuyao historical windows contain empty windows with data elsewhere",
+                event="fuyao_rest_window_gap",
+                thscode=thscode,
+                window_row_counts=window_counts,
+                hint="可能为长期停牌/上市前/退市后 也可能为源端静默截断 需核对",
+            )
+        else:
+            logger.info(
+                "Fuyao historical fetch complete",
+                event="fuyao_ticker_daily_fetch_complete",
+                thscode=thscode,
+                windows=len(window_counts),
+                rows=len(rows),
+            )
         return _bars_frame(rows, thscode)
 
     @staticmethod

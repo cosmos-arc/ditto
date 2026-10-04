@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import logging
-import os
 import re
 from collections.abc import Mapping
 from typing import Any
@@ -80,18 +79,22 @@ class FredClient:
         Initialize FRED client.
 
         Args:
-            api_key: FRED API Key. If None, reads from FRED_API_KEY env var.
+            api_key: FRED API Key（由 DataSourceSettings.fred_api_key 注入）.
 
         Raises:
             SourceConfigurationError: If API key not configured.
 
         """
-        self._api_key = api_key or os.environ.get("FRED_API_KEY")
+        # 唯一配置入口（#433）：DITTO_CONFIG_ROOT 配置经 backend config loader
+        # 汇入 DataSourceSettings 注入；数据层不读环境变量，避免第二入口。
+        self._api_key = api_key
         if not self._api_key:
             raise SourceConfigurationError(
                 message=(
                     "FRED API Key not configured. "
-                    "Set FRED_API_KEY env var or pass api_key parameter."
+                    "Set FRED_API_KEY in the DITTO_CONFIG_ROOT data_source "
+                    "config (or keyring); it is injected via "
+                    "DataSourceSettings.fred_api_key."
                 ),
                 env_var="FRED_API_KEY",
             )

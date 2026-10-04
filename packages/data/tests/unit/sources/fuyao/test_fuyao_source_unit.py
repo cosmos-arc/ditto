@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from datetime import date
 from pathlib import Path
+from typing import cast
 from unittest.mock import MagicMock
 
 import httpx
@@ -105,6 +106,119 @@ def _historical_items() -> list[dict[str, object]]:
     ]
 
 
+def _bar(date_ms: int, close: float) -> dict[str, object]:
+    return {
+        "date_ms": date_ms,
+        "open_price": close,
+        "high_price": close,
+        "low_price": close,
+        "close_price": close,
+        "volume": 100.0,
+        "turnover": close * 100.0,
+    }
+
+
+@pytest.mark.unit
+class TestFuyaoRestWindowSharding:
+    """#433：大窗口 REST 分片、覆盖校验与合法空区分."""
+
+    def _source_with_windows(
+        self, windows: dict[tuple[date, date], list[dict[str, object]]]
+    ) -> FuyaoSource:
+        client = MagicMock()
+
+        def fake_get(path: str, params: dict[str, object] | None = None):
+            assert params is not None
+            start = ms_to_date(int(cast("int", params["start"])))
+            end = ms_to_date(int(cast("int", params["end"])))
+            for (win_start, win_end), items in windows.items():
+                if (win_start, win_end) == (start, end):
+                    return {"item": items}
+            raise AssertionError(f"unexpected window {(start, end)}")
+
+        client.get.side_effect = fake_get
+        return FuyaoSource(client=client)
+
+    def test_multi_year_request_is_sharded_into_safe_windows(self) -> None:
+        """10 年请求按 ≤3 年窗口分片（尾部静默截断防护）."""
+        w1 = (date(2015, 1, 1), date(2017, 12, 30))
+        w2 = (date(2017, 12, 31), date(2020, 12, 29))
+        w3 = (date(2020, 12, 30), date(2023, 12, 29))
+        w4 = (date(2023, 12, 30), date(2024, 12, 31))
+        bars = {
+            w1: [_bar(date_to_ms(date(2015, 1, 5)), 10.0)],
+            w2: [_bar(date_to_ms(date(2018, 1, 3)), 11.0)],
+            w3: [_bar(date_to_ms(date(2021, 1, 4)), 12.0)],
+            w4: [_bar(date_to_ms(date(2024, 1, 2)), 13.0)],
+        }
+        source = self._source_with_windows(bars)
+
+        frame = source.fetch_stock_daily(
+            source_ticker="600519", start_date="2015-01-01", end_date="2024-12-31"
+        )
+
+        assert source._client.get.call_count == 4
+        assert frame["close"].to_list() == [10.0, 11.0, 12.0, 13.0]
+        # 分窗边界不丢 pre_close：窗口首条的 pre_close 是上一窗口末根收盘
+        assert frame["pre_close"].to_list() == [None, 10.0, 11.0, 12.0]
+
+    def test_out_of_window_bar_raises(self) -> None:
+        """响应日期越窗 = 契约违约，fail-closed 而非静默截断."""
+        window = (date(2024, 1, 1), date(2024, 12, 31))
+        source = self._source_with_windows(
+            {window: [_bar(date_to_ms(date(2023, 12, 29)), 10.0)]}
+        )
+
+        with pytest.raises(SourceFetchError, match="out-of-window"):
+            source.fetch_stock_daily(
+                source_ticker="600519", start_date="2024-01-01", end_date="2024-12-31"
+            )
+
+    def test_duplicate_trade_date_in_response_raises(self) -> None:
+        """同窗响应内重复交易日（不前进/重复键）fail-closed.
+
+        分窗不相交，跨窗重复必然先以越窗形态被拦截；重复键守卫覆盖
+        单窗响应内重复与服务端 offset 类异常。
+        """
+        window = (date(2024, 1, 1), date(2026, 12, 30))
+        dup_ms = date_to_ms(date(2025, 6, 3))
+        source = self._source_with_windows(
+            {window: [_bar(dup_ms, 10.0), _bar(dup_ms, 11.0)]}
+        )
+
+        with pytest.raises(SourceFetchError, match="duplicate"):
+            source.fetch_stock_daily(
+                source_ticker="600519", start_date="2024-01-01", end_date="2027-12-31"
+            )
+
+    def test_empty_window_is_legitimate_not_failure(self) -> None:
+        """空窗（停牌/上市前/退市后）合法：返回有数据窗口的行，不报错."""
+        w1 = (date(2024, 1, 1), date(2026, 12, 30))
+        w2 = (date(2026, 12, 31), date(2027, 12, 31))  # 末期退市（合法空窗）
+        source = self._source_with_windows(
+            {w1: [_bar(date_to_ms(date(2025, 6, 3)), 10.0)], w2: []}
+        )
+
+        frame = source.fetch_stock_daily(
+            source_ticker="600519", start_date="2024-01-01", end_date="2027-12-31"
+        )
+
+        assert frame.height == 1
+        assert frame["close"].to_list() == [10.0]
+
+    def test_all_empty_returns_typed_empty_frame(self) -> None:
+        """全空（如请求未来区间）返回 schema 一致空帧，不伪造成功."""
+        w1 = (date(2024, 1, 1), date(2024, 12, 31))
+        source = self._source_with_windows({w1: []})
+
+        frame = source.fetch_stock_daily(
+            source_ticker="600519", start_date="2024-01-01", end_date="2024-12-31"
+        )
+
+        assert frame.is_empty()
+        assert "knowledge_date" in frame.columns
+
+
 @pytest.mark.unit
 class TestFuyaoSourceBars:
     """原始日线帧转换与两模式校验."""
@@ -154,7 +268,8 @@ class TestFuyaoSourceBars:
             source.fetch_stock_daily(source_ticker="600519.SH")
 
     def test_reconciliation_frame_uses_bare_ticker(self) -> None:
-        source = self._source_with_items(_historical_items())
+        # 对账单日窗：响应只含请求日 bar（窗外 bar 属契约违约，见分窗测试）
+        source = self._source_with_items([_historical_items()[1]])
 
         frame = source.fetch_stock_daily_bars(["600519"], "2025-08-19")
 

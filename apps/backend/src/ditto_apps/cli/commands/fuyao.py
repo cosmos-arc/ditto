@@ -20,7 +20,9 @@ def _fuyao_source(container: Container) -> FuyaoSource:
     source = container.get(FuyaoSource | None)
     if source is None:
         typer.secho(
-            "fuyao 未配置(FUYAO_API_KEY 缺失), 源未创建",
+            "fuyao 未配置: 在 DITTO_CONFIG_ROOT 的 data_source 配置中设置 "
+            "FUYAO_API_KEY (经 DataSourceSettings.fuyao_api_key 注入), "
+            "源未创建",
             fg=typer.colors.RED,
             err=True,
         )

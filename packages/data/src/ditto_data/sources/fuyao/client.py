@@ -48,7 +48,12 @@ class FuyaoClient:
     ) -> None:
         if not api_key:
             raise SourceConfigurationError(
-                message="fuyao api key not configured (fuyao_api_key)",
+                message=(
+                    "fuyao api key not configured: set FUYAO_API_KEY in the "
+                    "DITTO_CONFIG_ROOT data_source config (injected via "
+                    "DataSourceSettings.fuyao_api_key); the data layer does "
+                    "not read environment variables (#433)"
+                ),
             )
         self._client = httpx.Client(
             base_url=base_url.rstrip("/"),
