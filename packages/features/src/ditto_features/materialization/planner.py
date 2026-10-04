@@ -35,17 +35,9 @@ class DerivedExecutionPlanner:
         spec: DerivedSpec,
         compiled: CompiledDerivedExpression,
         request: DerivedMaterializationRequest,
-        earliest_pending_invalidation_start: str | None = None,
     ) -> DerivedExecutionPlan:
         """Build a profile-aware execution plan."""
         anchor_start = request.request_start
-        if (
-            request.mode == DerivedRunMode.INCREMENTAL
-            and earliest_pending_invalidation_start is not None
-            and earliest_pending_invalidation_start < anchor_start
-        ):
-            anchor_start = earliest_pending_invalidation_start
-
         compute_start = anchor_start
         if (
             request.mode == DerivedRunMode.INCREMENTAL

@@ -257,14 +257,10 @@ class TestPerPackageDomainRoots:
 
     def test_app_orphans_use_domain_root(self) -> None:
         from ditto_application.exceptions import AppError
-        from ditto_application.processes.materialization.cascade_orchestrator import (
-            CascadeDepthExceededError,
-        )
         from ditto_application.processes.materialization.types import (
             MissingDependencyError,
         )
 
-        assert issubclass(CascadeDepthExceededError, AppError)
         assert issubclass(MissingDependencyError, AppError)
 
     def test_infra_orphans_use_domain_root(self) -> None:

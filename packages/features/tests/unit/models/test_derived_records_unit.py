@@ -12,7 +12,6 @@ from ditto_features.models.derived import (
     CompiledExpressionOperatorRecord,
     DerivedCheckpointRecord,
     DerivedDependencyRecord,
-    DerivedInvalidationRecord,
     DerivedPartitionRecord,
     DerivedRunRecord,
     DerivedSpecRecord,
@@ -379,57 +378,6 @@ class TestDerivedDependencyRecord:
         )
         assert record.dependency_kind == "source"
         assert record.dependency_ref == "market.close"
-
-
-class TestDerivedInvalidationRecord:
-    """Tests for DerivedInvalidationRecord."""
-
-    def test_creation_with_defaults(self) -> None:
-        """Record uses default values for optional fields."""
-        record = DerivedInvalidationRecord(
-            invalidation_id="inv_1",
-            derived_id="f",
-            version=1,
-            source_domain="market",
-            source_dataset="close_prices",
-            change_date="2024-06-15",
-            affected_start="2024-06-15",
-            affected_end="2024-06-15",
-            source_snapshot_id=None,
-            root_dependency_ref="market.close",
-            status="PENDING",
-            created_at="2024-06-15",
-            processed_at=None,
-        )
-        assert record.depth == 0
-        assert record.retry_count == 0
-        assert record.error_message is None
-        assert record.dead_letter_at is None
-        assert record.role == "factor"
-
-    def test_custom_depth_and_retry(self) -> None:
-        """Custom depth and retry_count values."""
-        record = DerivedInvalidationRecord(
-            invalidation_id="inv_2",
-            derived_id="f",
-            version=1,
-            source_domain="market",
-            source_dataset="close",
-            change_date="2024-01-01",
-            affected_start="2024-01-01",
-            affected_end="2024-01-31",
-            source_snapshot_id="snap_1",
-            root_dependency_ref="market.close",
-            status="FAILED",
-            created_at="2024-01-01",
-            processed_at="2024-01-01",
-            depth=3,
-            retry_count=2,
-            error_message="Timeout",
-            dead_letter_at="2024-01-01",
-        )
-        assert record.depth == 3
-        assert record.retry_count == 2
 
 
 class TestCompiledExpressionCacheRecord:

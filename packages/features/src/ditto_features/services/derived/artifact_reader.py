@@ -8,6 +8,7 @@ from enum import StrEnum
 from pathlib import Path
 from typing import Literal, Protocol, cast, overload
 
+import orjson
 import polars as pl
 
 from ditto_features.errors import DerivedNotFoundError, DerivedVersionError
@@ -17,6 +18,7 @@ from ditto_features.models.derived import (
     DerivedVersionRecord,
 )
 from ditto_features.services.derived._pruning import prune_parquet_paths
+from ditto_features.storage.derived_artifact_writer import run_metadata_path
 
 __all__ = [
     "DerivedArtifactFrameRequest",
@@ -131,6 +133,38 @@ class DerivedArtifactReader:
                 )
         self._require_catalog_entry(derived_id, version)
         return version
+
+    def read_run_manifest_hash(
+        self,
+        derived_id: str,
+        version: int,
+        run_id: str,
+    ) -> str | None:
+        """
+        Read the publication manifest hash recorded by one run.
+
+        Returns ``None`` when the run metadata file or its publication block
+        does not exist (e.g. runs predating the straight-line publication).
+        """
+        spec_record = self._require_catalog_entry(derived_id, version)
+        metadata_path = run_metadata_path(
+            self._artifact_root,
+            profile=spec_record.materialization_profile,
+            derived_id=derived_id,
+            version=version,
+            run_id=run_id,
+        )
+        if not metadata_path.exists():
+            return None
+        decoded: object = orjson.loads(metadata_path.read_bytes())
+        if type(decoded) is not dict:
+            return None
+        payload = cast("dict[str, object]", decoded)
+        publication = payload.get("publication")
+        if type(publication) is not dict:
+            return None
+        manifest_hash = cast("dict[str, object]", publication).get("manifest_hash")
+        return manifest_hash if type(manifest_hash) is str else None
 
     # ------------------------------------------------------------------
     # read_frame overloads

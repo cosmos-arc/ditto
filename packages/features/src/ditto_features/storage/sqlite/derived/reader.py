@@ -8,7 +8,6 @@ from ditto_platform.foundation import SQLiteClient
 from ditto_features.models.derived import (
     DerivedCheckpointRecord,
     DerivedDependencyRecord,
-    DerivedInvalidationRecord,
     DerivedPartitionRecord,
     DerivedRunRecord,
     DerivedSpecRecord,
@@ -136,6 +135,30 @@ class SQLiteDerivedCatalogReader:
             return None
         return _to_run_record(row)
 
+    def get_latest_successful_run(
+        self,
+        derived_id: str,
+        version: int,
+    ) -> DerivedRunRecord | None:
+        """Read the latest SUCCESS run row for one derived version."""
+        row = self._sqlite_client.fetchone(
+            """
+            SELECT run_id, derived_id, version, mode, trigger,
+                   request_start, request_end, compute_start, compute_end,
+                   source_snapshot_id, status, rows_written,
+                   partitions_written, error_message,
+                   created_at, started_at, finished_at
+            FROM derived_run
+            WHERE derived_id = ? AND version = ? AND status = 'SUCCESS'
+            ORDER BY created_at DESC, rowid DESC
+            LIMIT 1
+            """,
+            (derived_id, version),
+        )
+        if row is None:
+            return None
+        return _to_run_record(row)
+
     def read_state(self, derived_id: str) -> DerivedStateRecord | None:
         """Read the latest durable state row for one derived id."""
         row = self._sqlite_client.fetchone(
@@ -236,91 +259,6 @@ class SQLiteDerivedCatalogReader:
             for row in rows
         )
 
-    def list_pending_invalidations(self) -> tuple[DerivedInvalidationRecord, ...]:
-        """List pending invalidation rows in processing order."""
-        rows = self._sqlite_client.fetchall(
-            """
-            SELECT invalidation_id, derived_id, version,
-                   source_domain, source_dataset, change_date,
-                   affected_start, affected_end,
-                   source_snapshot_id, root_dependency_ref,
-                   status, created_at, processed_at, depth,
-                   retry_count, error_message, dead_letter_at, role
-            FROM derived_invalidation
-            WHERE status = 'pending'
-            ORDER BY created_at ASC, invalidation_id ASC
-            """,
-        )
-        return tuple(_to_invalidation_record(row) for row in rows)
-
-    def list_stale_invalidations(self) -> tuple[DerivedInvalidationRecord, ...]:
-        """List stale invalidations, excluding those subsumed by a healed record."""
-        rows = self._sqlite_client.fetchall(
-            """
-            SELECT invalidation_id, derived_id, version,
-                   source_domain, source_dataset, change_date,
-                   affected_start, affected_end,
-                   source_snapshot_id, root_dependency_ref,
-                   status, created_at, processed_at, depth,
-                   retry_count, error_message, dead_letter_at, role
-            FROM derived_invalidation i
-            WHERE status = 'stale'
-              AND NOT EXISTS (
-                  SELECT 1 FROM derived_invalidation h
-                  WHERE h.derived_id = i.derived_id
-                    AND h.version = i.version
-                    AND h.status = 'healed'
-                    AND h.affected_start <= i.affected_start
-                    AND h.affected_end >= i.affected_end
-              )
-            ORDER BY
-                CASE role
-                    WHEN 'signal' THEN 0 WHEN 'factor' THEN 1
-                    WHEN 'label' THEN 2 WHEN 'feature' THEN 3 ELSE 4
-                END ASC,
-                depth ASC, created_at ASC, invalidation_id ASC
-            """,
-        )
-        return tuple(_to_invalidation_record(row) for row in rows)
-
-    def list_stale_by_derived_version(
-        self,
-        derived_id: str,
-        version: int,
-    ) -> tuple[DerivedInvalidationRecord, ...]:
-        """List stale invalidations for a specific derived_id and version."""
-        rows = self._sqlite_client.fetchall(
-            """
-            SELECT invalidation_id, derived_id, version,
-                   source_domain, source_dataset, change_date,
-                   affected_start, affected_end,
-                   source_snapshot_id, root_dependency_ref,
-                   status, created_at, processed_at, depth,
-                   retry_count, error_message, dead_letter_at, role
-            FROM derived_invalidation
-            WHERE status = 'stale' AND derived_id = ? AND version = ?
-            """,
-            (derived_id, version),
-        )
-        return tuple(_to_invalidation_record(row) for row in rows)
-
-    def list_dead_letter_invalidations(self) -> tuple[DerivedInvalidationRecord, ...]:
-        """List dead-letter invalidation rows ordered by dead_letter_at."""
-        rows = self._sqlite_client.fetchall(
-            """
-            SELECT invalidation_id, derived_id, version,
-                   source_domain, source_dataset, change_date,
-                   affected_start, affected_end,
-                   source_snapshot_id, root_dependency_ref,
-                   status, created_at, processed_at, depth,
-                   retry_count, error_message, dead_letter_at, role
-            FROM derived_invalidation
-            WHERE status = 'dead_letter'
-            ORDER BY dead_letter_at ASC
-            """,
-        )
-        return tuple(_to_invalidation_record(row) for row in rows)
-
     def list_specs(
         self,
         derived_ids: tuple[str, ...] | None = None,
@@ -415,27 +353,4 @@ def _to_partition_record(row: dict[str, Any]) -> DerivedPartitionRecord:
         row_count=row["row_count"],
         checksum=row["checksum"],
         written_at=row["written_at"],
-    )
-
-
-def _to_invalidation_record(row: dict[str, Any]) -> DerivedInvalidationRecord:
-    return DerivedInvalidationRecord(
-        invalidation_id=row["invalidation_id"],
-        derived_id=row["derived_id"],
-        version=row["version"],
-        source_domain=row["source_domain"],
-        source_dataset=row["source_dataset"],
-        change_date=row["change_date"],
-        affected_start=row["affected_start"],
-        affected_end=row["affected_end"],
-        source_snapshot_id=row["source_snapshot_id"],
-        root_dependency_ref=row["root_dependency_ref"],
-        status=row["status"],
-        created_at=row["created_at"],
-        processed_at=row["processed_at"],
-        depth=row["depth"],
-        retry_count=row["retry_count"],
-        error_message=row["error_message"],
-        dead_letter_at=row["dead_letter_at"],
-        role=row["role"],
     )

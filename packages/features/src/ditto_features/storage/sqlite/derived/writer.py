@@ -7,7 +7,6 @@ from ditto_features.errors import FeatureStorageError
 from ditto_features.models.derived import (
     DerivedCheckpointRecord,
     DerivedDependencyRecord,
-    DerivedInvalidationRecord,
     DerivedPartitionRecord,
     DerivedRunRecord,
     DerivedSpecRecord,
@@ -31,16 +30,6 @@ _VALID_RUN_STATUSES: frozenset[str] = frozenset(
         "RUNNING",
         "SUCCESS",
         "FAILED",
-    }
-)
-_VALID_INVALIDATION_STATUSES: frozenset[str] = frozenset(
-    {
-        "fresh",
-        "stale",
-        "recomputing",
-        "healed",
-        "processed",
-        "dead_letter",
     }
 )
 
@@ -281,84 +270,7 @@ class SQLiteDerivedCatalogWriter:
             ],
         )
 
-    def execute_invalidations(
-        self, records: tuple[DerivedInvalidationRecord, ...]
-    ) -> None:
-        """Execute invalidation INSERTs without committing."""
-        if not records:
-            return
-        self._sqlite_client.executemany(
-            """
-            INSERT OR REPLACE INTO derived_invalidation (
-                invalidation_id, derived_id, version,
-                source_domain, source_dataset, change_date,
-                affected_start, affected_end,
-                source_snapshot_id, root_dependency_ref,
-                status, created_at, processed_at, depth,
-                retry_count, error_message, dead_letter_at, role
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """,
-            [
-                (
-                    record.invalidation_id,
-                    record.derived_id,
-                    record.version,
-                    record.source_domain,
-                    record.source_dataset,
-                    record.change_date,
-                    record.affected_start,
-                    record.affected_end,
-                    record.source_snapshot_id,
-                    record.root_dependency_ref,
-                    record.status,
-                    record.created_at,
-                    record.processed_at,
-                    record.depth,
-                    record.retry_count,
-                    record.error_message,
-                    record.dead_letter_at,
-                    record.role,
-                )
-                for record in records
-            ],
-        )
-
-    def execute_invalidation_processed(
-        self, invalidation_id: str, processed_at: str
-    ) -> None:
-        """Execute invalidation processed UPDATE without committing."""
-        self._sqlite_client.execute(
-            """
-            UPDATE derived_invalidation
-            SET status = 'processed', processed_at = ?
-            WHERE invalidation_id = ?
-            """,
-            (processed_at, invalidation_id),
-        )
-
-    def execute_invalidation_status(self, invalidation_id: str, status: str) -> None:
-        """Execute invalidation status UPDATE without committing."""
-        if status not in _VALID_INVALIDATION_STATUSES:
-            msg = (
-                f"invalid invalidation status: {status!r}, "
-                f"expected one of {sorted(_VALID_INVALIDATION_STATUSES)}"
-            )
-            raise _invalid_status_error(
-                msg,
-                table="derived_invalidation",
-                status=status,
-                allowed_statuses=_VALID_INVALIDATION_STATUSES,
-            )
-        self._sqlite_client.execute(
-            """
-            UPDATE derived_invalidation
-            SET status = ?
-            WHERE invalidation_id = ?
-            """,
-            (status, invalidation_id),
-        )
-
-    # --- write methods (execute + commit, backward-compatible) ---
+    # --- write methods (execute + commit) ---
 
     def write_spec(self, record: DerivedSpecRecord) -> None:
         """Persist one derived spec row."""
@@ -395,80 +307,33 @@ class SQLiteDerivedCatalogWriter:
         self.execute_dependencies(records)
         self.commit()
 
-    def write_invalidations(
+    def publish_version(
         self,
-        records: tuple[DerivedInvalidationRecord, ...],
+        derived_id: str,
+        version: int,
+        updated_at: str,
     ) -> None:
-        """Persist invalidation rows."""
-        self.execute_invalidations(records)
-        self.commit()
+        """
+        Advance one version to published/primary and demote other primaries.
 
-    def mark_invalidation_processed(
-        self,
-        invalidation_id: str,
-        processed_at: str,
-    ) -> None:
-        """Mark one invalidation row as processed."""
-        self.execute_invalidation_processed(invalidation_id, processed_at)
-        self.commit()
-
-    def mark_invalidation_status(
-        self,
-        invalidation_id: str,
-        status: str,
-    ) -> None:
-        """Update the status of one invalidation row."""
-        self.execute_invalidation_status(invalidation_id, status)
-        self.commit()
-
-    def execute_increment_retry_count(
-        self,
-        invalidation_id: str,
-    ) -> None:
-        """Increment retry_count for one invalidation row."""
+        Both UPDATEs run in a single transaction so the primary pointer never
+        shows two owners (or none) to a concurrent reader.
+        """
         self._sqlite_client.execute(
             """
-            UPDATE derived_invalidation
-            SET retry_count = retry_count + 1
-            WHERE invalidation_id = ?
+            UPDATE derived_version
+            SET status = 'published', is_online = 1, is_primary = 1, updated_at = ?
+            WHERE derived_id = ? AND version = ?
             """,
-            (invalidation_id,),
+            (updated_at, derived_id, version),
         )
-
-    def increment_retry_count(self, invalidation_id: str) -> None:
-        """Increment retry_count for one invalidation row and commit."""
-        self.execute_increment_retry_count(invalidation_id)
-        self.commit()
-
-    def execute_mark_invalidation_dead_letter(
-        self,
-        invalidation_id: str,
-        error_message: str,
-        dead_letter_at: str,
-    ) -> None:
-        """Mark one invalidation as dead letter."""
         self._sqlite_client.execute(
             """
-            UPDATE derived_invalidation
-            SET status = 'dead_letter',
-                error_message = ?,
-                dead_letter_at = ?
-            WHERE invalidation_id = ?
+            UPDATE derived_version
+            SET is_primary = 0, updated_at = ?
+            WHERE derived_id = ? AND version <> ? AND is_primary = 1
             """,
-            (error_message, dead_letter_at, invalidation_id),
-        )
-
-    def mark_invalidation_dead_letter(
-        self,
-        invalidation_id: str,
-        error_message: str,
-        dead_letter_at: str,
-    ) -> None:
-        """Mark one invalidation as dead letter and commit."""
-        self.execute_mark_invalidation_dead_letter(
-            invalidation_id,
-            error_message,
-            dead_letter_at,
+            (updated_at, derived_id, version),
         )
         self.commit()
 
@@ -485,8 +350,8 @@ class SQLiteDerivedCatalogWriter:
         Removes rows from derived_run, derived_partition,
         derived_checkpoint, derived_spec, and derived_version.
 
-        Does NOT touch derived_state, derived_dependency, or
-        derived_invalidation (managed separately).
+        Does NOT touch derived_state or derived_dependency (managed
+        separately).
 
         Returns the number of records removed.
         """

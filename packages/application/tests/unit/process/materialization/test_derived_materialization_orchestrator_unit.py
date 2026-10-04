@@ -4,12 +4,15 @@ from __future__ import annotations
 
 from dataclasses import asdict
 from datetime import date, timedelta
+from hashlib import sha256
 from pathlib import Path
 from unittest.mock import MagicMock
 
 import ditto_application.processes.materialization.orchestrator as orchestrator_module
 import orjson
 import polars as pl
+import pytest
+from ditto_application.exceptions import AppProcessError
 from ditto_application.processes.materialization.orchestrator import (
     DerivedMaterializationOrchestrator,
     RuntimeDerivedInputProvider,
@@ -44,30 +47,17 @@ from ditto_features.materialization.models import (
     DerivedRunTrigger,
     DerivedVersionStatus,
 )
+from ditto_features.materialization.publication import CompatibilityManifest
 from ditto_features.models.derived import (
     DerivedCheckpointRecord,
     DerivedSpecRecord,
     DerivedStateRecord,
     DerivedVersionRecord,
-    PartitionInfo,
 )
-from ditto_features.publication_safety import CompatibilityManifest
-from ditto_features.publication_safety_records import DerivedMinimalDQSummaryRecord
 from ditto_features.services import (
     ArtifactPersistenceService,
+    DerivedArtifactReader,
     DerivedCatalogService,
-    PublicationSafetyRecordService,
-    PublicationSafetyRuntimeStores,
-)
-from ditto_features.storage.runtime.publication_safety import (
-    CertificationReader,
-    CertificationWriter,
-    ManifestReader,
-    ManifestWriter,
-    MinimalDQReader,
-    MinimalDQWriter,
-    ShadowReportReader,
-    ShadowReportWriter,
 )
 from ditto_features.storage.sqlite.derived import (
     SQLiteDerivedCatalogReader,
@@ -230,19 +220,24 @@ def _seed_spec(
     )
 
 
-def _publication_record_service(data_root: Path) -> PublicationSafetyRecordService:
-    return PublicationSafetyRecordService(
-        PublicationSafetyRuntimeStores(
-            manifest_reader=ManifestReader(base_path=data_root),
-            manifest_writer=ManifestWriter(base_path=data_root),
-            minimal_dq_reader=MinimalDQReader(base_path=data_root),
-            minimal_dq_writer=MinimalDQWriter(base_path=data_root),
-            shadow_report_reader=ShadowReportReader(base_path=data_root),
-            shadow_report_writer=ShadowReportWriter(base_path=data_root),
-            certification_reader=CertificationReader(base_path=data_root),
-            certification_writer=CertificationWriter(base_path=data_root),
-        )
+def _read_publication_payload(
+    catalog_service: DerivedCatalogService,
+    data_root: Path,
+    *,
+    derived_id: str,
+    version: int,
+    run_id: str,
+) -> dict:
+    """读取一次 run 的 artifact metadata publication 块（产物身份唯一载体）."""
+    partition = catalog_service.list_partitions(derived_id, version, run_id)[0]
+    metadata_path = (
+        (data_root / partition.partition_path).parent
+        / "_runs"
+        / run_id
+        / "artifact_metadata.json"
     )
+    payload = orjson.loads(metadata_path.read_bytes())
+    return payload["publication"]
 
 
 class _StaticSourceSnapshotResolver:
@@ -370,74 +365,6 @@ def test_persist_materialized_data_accepts_context_object() -> None:
     assert result.run_id == "drv-test"
     assert result.status == DerivedRunStatus.SUCCESS
     assert result.rows_written == 4
-
-
-def test_persist_publication_safety_records_accepts_context_object() -> None:
-    """Publication safety persistence should expose one context-shaped API."""
-    spec = _spec(MaterializationProfile.SERIES)
-    spec_record = DerivedSpecRecord(
-        derived_id=spec.id,
-        version=spec.version,
-        role=spec.role.value,
-        materialization_profile=spec.materialization_profile.value,
-        spec_hash="hash",
-        spec_json=asdict(spec),
-        created_at="2026-03-13T10:00:00+08:00",
-    )
-    request = DerivedMaterializationRequest(
-        derived_id=spec.id,
-        version=spec.version,
-        mode=DerivedRunMode.INCREMENTAL,
-        request_start="2026-03-10",
-        request_end="2026-03-11",
-        trigger=DerivedRunTrigger.MANUAL,
-        source_snapshot_id="snapshot-main",
-    )
-    compiled = _compiled_expression(spec)
-    partition = PartitionInfo(
-        partition_key="2026",
-        partition_path="derived/artifacts/series/x/v3/2026.parquet",
-        row_count=4,
-        checksum="checksum",
-    )
-    minimal_dq_record = DerivedMinimalDQSummaryRecord(
-        derived_id=spec.id,
-        version=spec.version,
-        run_id="drv-test",
-        passed=True,
-        error_count=0,
-        payload={"row_count": 4},
-        created_at="2026-03-13T10:00:00+08:00",
-    )
-    publication_record_service = MagicMock()
-    artifact_writer = MagicMock()
-    service = DerivedMaterializationOrchestrator(
-        orchestrator_module.MaterializationRuntimePorts(
-            catalog_service=MagicMock(),
-            compile_cache_service=MagicMock(),
-            artifact_writer=artifact_writer,
-            input_provider=MagicMock(),
-            publication_record_service=publication_record_service,
-        )
-    )
-    ctx = orchestrator_module.PublicationSafetyPersistenceContext(
-        spec=spec,
-        spec_record=spec_record,
-        run_id="drv-test",
-        request=request,
-        compile_identity=compiled.compile_identity,
-        partitions=(partition,),
-        minimal_dq_record=minimal_dq_record,
-        source_snapshot_ids=("snapshot-main",),
-    )
-
-    service._persist_publication_safety_records(ctx)
-
-    publication_record_service.save_manifest.assert_called_once()
-    publication_record_service.save_minimal_dq_summary.assert_called_once_with(
-        minimal_dq_record
-    )
-    artifact_writer.update_artifact_metadata.assert_called_once()
 
 
 def test_orchestrator_accepts_runtime_ports_context() -> None:
@@ -883,7 +810,7 @@ class TestDerivedMaterializationOrchestrator:
         sqlite_client,
         tmp_path: Path,
     ) -> None:
-        """Durable materialization should auto-save manifest."""
+        """Durable materialization should embed the manifest in one atomic write."""
         candidate = DerivedSpec(
             id="factor.alpha_publish",
             version=3,
@@ -899,7 +826,6 @@ class TestDerivedMaterializationOrchestrator:
             is_online=False,
             is_primary=False,
         )
-        publication_record_service = _publication_record_service(tmp_path)
         service = DerivedMaterializationOrchestrator(
             orchestrator_module.MaterializationRuntimePorts(
                 catalog_service=catalog_service,
@@ -908,7 +834,6 @@ class TestDerivedMaterializationOrchestrator:
                     {candidate.id: _input_frame()}
                 ),
                 artifact_writer=ArtifactPersistenceService(tmp_path),
-                publication_record_service=publication_record_service,
             )
         )
 
@@ -924,34 +849,19 @@ class TestDerivedMaterializationOrchestrator:
             )
         )
 
-        manifest_record = publication_record_service.get_manifest(
-            candidate.id,
-            candidate.version,
-        )
-        assert manifest_record is not None
-        manifest = CompatibilityManifest(**manifest_record.payload)
+        manifest_payload = _read_publication_payload(
+            catalog_service,
+            tmp_path,
+            derived_id=candidate.id,
+            version=candidate.version,
+            run_id=result.run_id,
+        )["compatibility_manifest"]
+        manifest = CompatibilityManifest(**manifest_payload)
         assert manifest.is_complete() is True
         assert manifest.pit_policy == "knowledge_date_fail_closed"
         assert manifest.pit_time_column == "knowledge_date"
         assert manifest.unsafe_time_policy == ""
         assert manifest.source_snapshot_id == "market:20260311-001"
-
-        partition = catalog_service.list_partitions(
-            candidate.id,
-            candidate.version,
-            result.run_id,
-        )[0]
-        metadata_path = (
-            (tmp_path / partition.partition_path).parent
-            / "_runs"
-            / result.run_id
-            / "artifact_metadata.json"
-        )
-        payload = orjson.loads(metadata_path.read_bytes())
-        assert payload["publication"]["manifest_hash"] == manifest_record.manifest_hash
-        assert (
-            payload["publication"]["compatibility_manifest"] == manifest_record.payload
-        )
 
     def test_materialization_auto_propagates_resolved_source_snapshot_set(
         self,
@@ -974,7 +884,6 @@ class TestDerivedMaterializationOrchestrator:
             is_online=False,
             is_primary=False,
         )
-        publication_record_service = _publication_record_service(tmp_path)
         source_snapshot_ids = (
             "snapshot:tushare:stock_daily:2026-03-10:a",
             "snapshot:tushare:stock_daily:2026-03-11:b",
@@ -987,7 +896,6 @@ class TestDerivedMaterializationOrchestrator:
                     {candidate.id: _input_frame()}
                 ),
                 artifact_writer=ArtifactPersistenceService(tmp_path),
-                publication_record_service=publication_record_service,
                 source_snapshot_resolver=_StaticSourceSnapshotResolver(
                     source_snapshot_ids
                 ),
@@ -1011,12 +919,14 @@ class TestDerivedMaterializationOrchestrator:
         assert run.source_snapshot_id is not None
         assert run.source_snapshot_id.startswith("snapshot-set:sha256:")
 
-        manifest_record = publication_record_service.get_manifest(
-            candidate.id,
-            candidate.version,
+        publication = _read_publication_payload(
+            catalog_service,
+            tmp_path,
+            derived_id=candidate.id,
+            version=candidate.version,
+            run_id=result.run_id,
         )
-        assert manifest_record is not None
-        manifest = CompatibilityManifest(**manifest_record.payload)
+        manifest = CompatibilityManifest(**publication["compatibility_manifest"])
         assert manifest.source_snapshot_id == run.source_snapshot_id
         assert manifest.source_snapshot_ids == source_snapshot_ids
 
@@ -1046,14 +956,12 @@ class TestDerivedMaterializationOrchestrator:
         spec = _spec(MaterializationProfile.SERIES)
         catalog_service = _catalog_service(sqlite_client, tmp_path)
         _seed_spec(catalog_service, spec)
-        publication_record_service = _publication_record_service(tmp_path)
         service = DerivedMaterializationOrchestrator(
             orchestrator_module.MaterializationRuntimePorts(
                 catalog_service=catalog_service,
                 compile_cache_service=SQLiteCompileCache(sqlite_client),
                 input_provider=InMemoryDerivedInputProvider({spec.id: _input_frame()}),
                 artifact_writer=ArtifactPersistenceService(tmp_path),
-                publication_record_service=publication_record_service,
             )
         )
 
@@ -1069,42 +977,29 @@ class TestDerivedMaterializationOrchestrator:
             )
         )
 
-        summary_record = publication_record_service.get_latest_minimal_dq_summary(
-            spec.id,
-            spec.version,
-        )
+        summary = _read_publication_payload(
+            catalog_service,
+            tmp_path,
+            derived_id=spec.id,
+            version=spec.version,
+            run_id=result.run_id,
+        )["minimal_dq_summary"]
 
-        assert summary_record is not None
-        assert summary_record.run_id == result.run_id
-        assert summary_record.passed is True
-        assert summary_record.error_count == 0
-        assert summary_record.payload["row_count"] == 4
-        assert summary_record.payload["null_value_count"] == 2
-        assert summary_record.payload["nan_value_count"] == 0
-        assert summary_record.payload["computable_value_count"] == 2
-        assert summary_record.payload["failed_checks"] == []
+        assert summary["run_id"] == result.run_id
+        assert summary["passed"] is True
+        assert summary["error_count"] == 0
+        assert summary["row_count"] == 4
+        assert summary["null_value_count"] == 2
+        assert summary["nan_value_count"] == 0
+        assert summary["computable_value_count"] == 2
+        assert summary["failed_checks"] == []
 
-        partition = catalog_service.list_partitions(
-            spec.id,
-            spec.version,
-            result.run_id,
-        )[0]
-        metadata_path = (
-            (tmp_path / partition.partition_path).parent
-            / "_runs"
-            / result.run_id
-            / "artifact_metadata.json"
-        )
-        payload = orjson.loads(metadata_path.read_bytes())
-        assert payload["publication"]["minimal_dq_summary"]["passed"] is True
-        assert payload["publication"]["minimal_dq_summary"]["error_count"] == 0
-
-    def test_empty_or_invalid_output_is_marked_as_failed_minimal_dq(
+    def test_failing_minimal_dq_rejects_publish(
         self,
         sqlite_client,
         tmp_path: Path,
     ) -> None:
-        """Materialization should persist a failing minimal DQ summary."""
+        """必要 DQ 失败时拒绝发布：run 失败且不产生产物. (#444 直线发布判定)"""
         spec = DerivedSpec(
             id="series.alpha_invalid",
             version=3,
@@ -1125,19 +1020,109 @@ class TestDerivedMaterializationOrchestrator:
             }
         )
         catalog_service = _catalog_service(sqlite_client, tmp_path)
-        _seed_spec(catalog_service, spec)
-        publication_record_service = _publication_record_service(tmp_path)
+        _seed_spec(catalog_service, spec, status=DerivedVersionStatus.DRAFT)
         service = DerivedMaterializationOrchestrator(
             orchestrator_module.MaterializationRuntimePorts(
                 catalog_service=catalog_service,
                 compile_cache_service=SQLiteCompileCache(sqlite_client),
                 input_provider=InMemoryDerivedInputProvider({spec.id: invalid_frame}),
                 artifact_writer=ArtifactPersistenceService(tmp_path),
-                publication_record_service=publication_record_service,
             )
         )
 
-        result = service.materialize(
+        with pytest.raises(AppProcessError, match="minimal DQ failed"):
+            service.materialize(
+                DerivedMaterializationRequest(
+                    derived_id=spec.id,
+                    version=spec.version,
+                    mode=DerivedRunMode.FULL,
+                    request_start="2026-03-10",
+                    request_end="2026-03-11",
+                    trigger=DerivedRunTrigger.MANUAL,
+                    source_snapshot_id="market:20260311-001",
+                )
+            )
+
+        latest_run = catalog_service.get_latest_run(spec.id, spec.version)
+        assert latest_run is not None
+        assert latest_run.status == DerivedRunStatus.FAILED.value
+        assert "value_has_no_nan" in (latest_run.error_message or "")
+        assert (
+            catalog_service.list_partitions(spec.id, spec.version, latest_run.run_id)
+            == []
+        )
+        version_record = catalog_service.get_version(spec.id, spec.version)
+        assert version_record is not None
+        assert version_record.status == DerivedVersionStatus.DRAFT.value
+        assert not (tmp_path / "derived" / "artifacts" / "series" / spec.id).exists()
+
+    # ------------------------------------------------------------------
+    # #444 直线发布：首版无基准可发布 / 新身份允许值变化 / 同身份异内容拒绝
+    # ------------------------------------------------------------------
+
+    def test_identical_retry_with_lookback_warmup_succeeds(
+        self,
+        sqlite_client,
+        tmp_path: Path,
+    ) -> None:
+        """lookback 预热行在窗口外：同身份同窗口重试不得误拒（#444 评审修复）."""
+        spec = DerivedSpec(
+            id="factor.alpha_lookback",
+            version=1,
+            role=DerivedRole.FACTOR,
+            materialization_profile=MaterializationProfile.SERIES,
+            expression="ts_delta(close, 1)",
+        )
+        catalog_service = _catalog_service(sqlite_client, tmp_path)
+        _seed_spec(catalog_service, spec, status=DerivedVersionStatus.DRAFT)
+        warmup_frame = pl.DataFrame(
+            {
+                "instrument_id": [1, 1, 1],
+                "trade_date": [
+                    date(2026, 3, 9),
+                    date(2026, 3, 10),
+                    date(2026, 3, 11),
+                ],
+                "close": [9.0, 10.0, 11.0],
+            }
+        )
+        service = DerivedMaterializationOrchestrator(
+            orchestrator_module.MaterializationRuntimePorts(
+                catalog_service=catalog_service,
+                compile_cache_service=SQLiteCompileCache(sqlite_client),
+                input_provider=InMemoryDerivedInputProvider({spec.id: warmup_frame}),
+                artifact_writer=ArtifactPersistenceService(tmp_path),
+                artifact_reader=DerivedArtifactReader(
+                    catalog_service=catalog_service,
+                    artifact_root=tmp_path,
+                ),
+            )
+        )
+        request = DerivedMaterializationRequest(
+            derived_id=spec.id,
+            version=spec.version,
+            mode=DerivedRunMode.INCREMENTAL,
+            request_start="2026-03-10",
+            request_end="2026-03-11",
+            trigger=DerivedRunTrigger.MANUAL,
+            source_snapshot_id="market:20260310-A",
+        )
+
+        first = service.materialize(request)
+        second = service.materialize(request)
+
+        assert first.status == DerivedRunStatus.SUCCESS
+        assert second.status == DerivedRunStatus.SUCCESS
+
+    def _materialize(
+        self,
+        service: DerivedMaterializationOrchestrator,
+        spec: DerivedSpec,
+        *,
+        source_snapshot_id: str,
+        frame: pl.DataFrame,
+    ) -> object:
+        return service.materialize(
             DerivedMaterializationRequest(
                 derived_id=spec.id,
                 version=spec.version,
@@ -1145,20 +1130,328 @@ class TestDerivedMaterializationOrchestrator:
                 request_start="2026-03-10",
                 request_end="2026-03-11",
                 trigger=DerivedRunTrigger.MANUAL,
-                source_snapshot_id="market:20260311-001",
+                source_snapshot_id=source_snapshot_id,
             )
         )
 
-        summary_record = publication_record_service.get_latest_minimal_dq_summary(
-            spec.id,
-            spec.version,
+    def test_first_durable_run_publishes_without_baseline(
+        self,
+        sqlite_client,
+        tmp_path: Path,
+    ) -> None:
+        """① 首版无基准可发布，完成后原子推进 derived status."""
+        spec = DerivedSpec(
+            id="factor.alpha_first",
+            version=1,
+            role=DerivedRole.FACTOR,
+            materialization_profile=MaterializationProfile.SERIES,
+            expression="ts_delta(close, 1)",
+        )
+        catalog_service = _catalog_service(sqlite_client, tmp_path)
+        _seed_spec(catalog_service, spec, status=DerivedVersionStatus.DRAFT)
+        service = DerivedMaterializationOrchestrator(
+            orchestrator_module.MaterializationRuntimePorts(
+                catalog_service=catalog_service,
+                compile_cache_service=SQLiteCompileCache(sqlite_client),
+                input_provider=InMemoryDerivedInputProvider({spec.id: _input_frame()}),
+                artifact_writer=ArtifactPersistenceService(tmp_path),
+                artifact_reader=DerivedArtifactReader(
+                    catalog_service=catalog_service,
+                    artifact_root=tmp_path,
+                ),
+            )
         )
 
-        assert result.rows_written == 4
-        assert summary_record is not None
-        assert summary_record.run_id == result.run_id
-        assert summary_record.passed is False
-        assert summary_record.error_count == 1
-        assert summary_record.payload["nan_value_count"] == 1
-        assert summary_record.payload["computable_value_count"] == 3
-        assert summary_record.payload["failed_checks"] == ["value_has_no_nan"]
+        result = self._materialize(
+            service,
+            spec,
+            source_snapshot_id="market:20260310-A",
+            frame=_input_frame(),
+        )
+
+        assert result.status == DerivedRunStatus.SUCCESS
+        version_record = catalog_service.get_version(spec.id, spec.version)
+        assert version_record is not None
+        assert version_record.status == DerivedVersionStatus.PUBLISHED.value
+        assert version_record.is_primary is True
+        assert version_record.is_online is True
+
+    def test_new_input_identity_allows_value_change(
+        self,
+        sqlite_client,
+        tmp_path: Path,
+    ) -> None:
+        """② 新输入身份（新 snapshot）允许值变化且照常发布."""
+        spec = DerivedSpec(
+            id="factor.alpha_identity",
+            version=1,
+            role=DerivedRole.FACTOR,
+            materialization_profile=MaterializationProfile.SERIES,
+            expression="ts_delta(close, 1)",
+        )
+        catalog_service = _catalog_service(sqlite_client, tmp_path)
+        _seed_spec(catalog_service, spec, status=DerivedVersionStatus.DRAFT)
+        service = DerivedMaterializationOrchestrator(
+            orchestrator_module.MaterializationRuntimePorts(
+                catalog_service=catalog_service,
+                compile_cache_service=SQLiteCompileCache(sqlite_client),
+                input_provider=InMemoryDerivedInputProvider({spec.id: _input_frame()}),
+                artifact_writer=ArtifactPersistenceService(tmp_path),
+                artifact_reader=DerivedArtifactReader(
+                    catalog_service=catalog_service,
+                    artifact_root=tmp_path,
+                ),
+            )
+        )
+
+        first = self._materialize(
+            service,
+            spec,
+            source_snapshot_id="market:20260310-A",
+            frame=_input_frame(),
+        )
+        first_hash = _read_publication_payload(
+            catalog_service,
+            tmp_path,
+            derived_id=spec.id,
+            version=spec.version,
+            run_id=first.run_id,
+        )["manifest_hash"]
+
+        updated_frame = _input_frame().with_columns(
+            pl.col("close") * 2.0,
+        )
+        service._input_provider = InMemoryDerivedInputProvider({spec.id: updated_frame})
+        second = self._materialize(
+            service,
+            spec,
+            source_snapshot_id="market:20260311-B",
+            frame=updated_frame,
+        )
+        second_hash = _read_publication_payload(
+            catalog_service,
+            tmp_path,
+            derived_id=spec.id,
+            version=spec.version,
+            run_id=second.run_id,
+        )["manifest_hash"]
+
+        assert second.status == DerivedRunStatus.SUCCESS
+        assert second_hash != first_hash
+
+    def test_new_formula_identity_allows_value_change(
+        self,
+        sqlite_client,
+        tmp_path: Path,
+    ) -> None:
+        """②变体：新公式（新编译身份）用新版本发布，允许值变化."""
+        base_spec = DerivedSpec(
+            id="factor.alpha_formula",
+            version=1,
+            role=DerivedRole.FACTOR,
+            materialization_profile=MaterializationProfile.SERIES,
+            expression="ts_delta(close, 1)",
+        )
+        catalog_service = _catalog_service(sqlite_client, tmp_path)
+        _seed_spec(catalog_service, base_spec, status=DerivedVersionStatus.DRAFT)
+        service = DerivedMaterializationOrchestrator(
+            orchestrator_module.MaterializationRuntimePorts(
+                catalog_service=catalog_service,
+                compile_cache_service=SQLiteCompileCache(sqlite_client),
+                input_provider=InMemoryDerivedInputProvider(
+                    {base_spec.id: _input_frame()}
+                ),
+                artifact_writer=ArtifactPersistenceService(tmp_path),
+                artifact_reader=DerivedArtifactReader(
+                    catalog_service=catalog_service,
+                    artifact_root=tmp_path,
+                ),
+            )
+        )
+
+        first = self._materialize(
+            service,
+            base_spec,
+            source_snapshot_id="market:20260310-A",
+            frame=_input_frame(),
+        )
+        assert first.status == DerivedRunStatus.SUCCESS
+
+        v2_spec = DerivedSpec(
+            id="factor.alpha_formula",
+            version=2,
+            role=DerivedRole.FACTOR,
+            materialization_profile=MaterializationProfile.SERIES,
+            expression="ts_delta(close, 1) * 3",
+        )
+        _seed_spec(catalog_service, v2_spec, status=DerivedVersionStatus.DRAFT)
+        service._input_provider = InMemoryDerivedInputProvider(
+            {v2_spec.id: _input_frame()}
+        )
+        second = DerivedMaterializationOrchestrator.materialize(
+            service,
+            DerivedMaterializationRequest(
+                derived_id=v2_spec.id,
+                version=v2_spec.version,
+                mode=DerivedRunMode.FULL,
+                request_start="2026-03-10",
+                request_end="2026-03-11",
+                trigger=DerivedRunTrigger.MANUAL,
+                source_snapshot_id="market:20260310-A",
+            ),
+        )
+
+        assert second.status == DerivedRunStatus.SUCCESS
+        v1 = catalog_service.get_version(v2_spec.id, 1)
+        v2 = catalog_service.get_version(v2_spec.id, 2)
+        assert v1 is not None
+        assert v2 is not None
+        assert v1.is_primary is False
+        assert v2.is_primary is True
+
+    def test_incremental_recompute_matches_full_window_baseline(
+        self,
+        sqlite_client,
+        tmp_path: Path,
+    ) -> None:
+        """⑤ 含 lookback 的区间重算与全窗口基准一致."""
+        spec = DerivedSpec(
+            id="factor.alpha_baseline",
+            version=1,
+            role=DerivedRole.FACTOR,
+            materialization_profile=MaterializationProfile.SERIES,
+            expression="ts_delta(close, 1)",
+        )
+        catalog_service = _catalog_service(sqlite_client, tmp_path)
+        _seed_spec(catalog_service, spec, status=DerivedVersionStatus.DRAFT)
+        # 三天输入：03-10/11 为基准窗口，03-09 是 lookback 预热行。
+        full_frame = pl.DataFrame(
+            {
+                "instrument_id": [1, 1, 1],
+                "trade_date": [
+                    date(2026, 3, 9),
+                    date(2026, 3, 10),
+                    date(2026, 3, 11),
+                ],
+                "close": [9.0, 10.0, 11.0],
+            }
+        )
+        service = DerivedMaterializationOrchestrator(
+            orchestrator_module.MaterializationRuntimePorts(
+                catalog_service=catalog_service,
+                compile_cache_service=SQLiteCompileCache(sqlite_client),
+                input_provider=InMemoryDerivedInputProvider({spec.id: full_frame}),
+                artifact_writer=ArtifactPersistenceService(tmp_path),
+                artifact_reader=DerivedArtifactReader(
+                    catalog_service=catalog_service,
+                    artifact_root=tmp_path,
+                ),
+            )
+        )
+
+        full = service.materialize(
+            DerivedMaterializationRequest(
+                derived_id=spec.id,
+                version=spec.version,
+                mode=DerivedRunMode.FULL,
+                request_start="2026-03-09",
+                request_end="2026-03-11",
+                trigger=DerivedRunTrigger.MANUAL,
+                source_snapshot_id="market:full-A",
+            )
+        )
+        incremental = service.materialize(
+            DerivedMaterializationRequest(
+                derived_id=spec.id,
+                version=spec.version,
+                mode=DerivedRunMode.INCREMENTAL,
+                request_start="2026-03-10",
+                request_end="2026-03-11",
+                trigger=DerivedRunTrigger.MANUAL,
+                source_snapshot_id="market:full-A",
+            )
+        )
+
+        reader = service._artifact_reader
+        assert reader is not None
+        full_slice = reader.read_frame(
+            derived_id=spec.id,
+            version=spec.version,
+            start="2026-03-10",
+            end="2026-03-11",
+        )
+        incremental_slice = reader.read_frame(
+            derived_id=spec.id,
+            version=spec.version,
+            start="2026-03-10",
+            end="2026-03-11",
+        )
+        assert full.status == DerivedRunStatus.SUCCESS
+        assert incremental.status == DerivedRunStatus.SUCCESS
+        assert full_slice.equals(incremental_slice)
+        assert full_slice["value"].to_list() == incremental_slice["value"].to_list()
+
+    def test_same_identity_retry_with_different_content_rejected(
+        self,
+        sqlite_client,
+        tmp_path: Path,
+    ) -> None:
+        """③ 相同输入身份的重试内容必须一致：拒绝且不动已发布产物."""
+        spec = DerivedSpec(
+            id="factor.alpha_retry",
+            version=1,
+            role=DerivedRole.FACTOR,
+            materialization_profile=MaterializationProfile.SERIES,
+            expression="ts_delta(close, 1)",
+        )
+        catalog_service = _catalog_service(sqlite_client, tmp_path)
+        _seed_spec(catalog_service, spec, status=DerivedVersionStatus.DRAFT)
+        service = DerivedMaterializationOrchestrator(
+            orchestrator_module.MaterializationRuntimePorts(
+                catalog_service=catalog_service,
+                compile_cache_service=SQLiteCompileCache(sqlite_client),
+                input_provider=InMemoryDerivedInputProvider({spec.id: _input_frame()}),
+                artifact_writer=ArtifactPersistenceService(tmp_path),
+                artifact_reader=DerivedArtifactReader(
+                    catalog_service=catalog_service,
+                    artifact_root=tmp_path,
+                ),
+            )
+        )
+
+        first = self._materialize(
+            service,
+            spec,
+            source_snapshot_id="market:20260310-A",
+            frame=_input_frame(),
+        )
+        partition = catalog_service.list_partitions(
+            spec.id,
+            spec.version,
+            first.run_id,
+        )[0]
+        published_path = tmp_path / partition.partition_path
+        checksum_before = sha256(published_path.read_bytes()).hexdigest()
+
+        # 同一 snapshot 身份、同一编译身份，但输入帧被污染 → 非确定性重试。
+        polluted_frame = _input_frame().with_columns(
+            pl.col("close") + 5.0,
+        )
+        service._input_provider = InMemoryDerivedInputProvider(
+            {spec.id: polluted_frame}
+        )
+        with pytest.raises(AppProcessError, match="deterministic retry mismatch"):
+            self._materialize(
+                service,
+                spec,
+                source_snapshot_id="market:20260310-A",
+                frame=polluted_frame,
+            )
+
+        assert sha256(published_path.read_bytes()).hexdigest() == checksum_before
+        latest_run = catalog_service.get_latest_run(spec.id, spec.version)
+        assert latest_run is not None
+        assert latest_run.status == DerivedRunStatus.FAILED.value
+        version_record = catalog_service.get_version(spec.id, spec.version)
+        assert version_record is not None
+        assert version_record.status == DerivedVersionStatus.PUBLISHED.value

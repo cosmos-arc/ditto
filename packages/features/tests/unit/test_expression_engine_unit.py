@@ -704,8 +704,8 @@ class TestPhase2NewOperators:
 class TestDerivedExecutionPlanner:
     """Tests for execution planning rules."""
 
-    def test_incremental_plan_uses_earliest_invalidation_and_lookback(self) -> None:
-        """Incremental plans should warm up from the earliest invalidation boundary."""
+    def test_incremental_plan_applies_lookback_warmup(self) -> None:
+        """Incremental plans should warm up by the lookback window."""
         spec = DerivedSpec(
             id="factor.alpha_simple",
             version=3,
@@ -722,7 +722,7 @@ class TestDerivedExecutionPlanner:
             mode=DerivedRunMode.INCREMENTAL,
             request_start="2026-03-10",
             request_end="2026-03-13",
-            trigger=DerivedRunTrigger.CASCADE,
+            trigger=DerivedRunTrigger.MANUAL,
             source_snapshot_id="market:20260313-001",
         )
 
@@ -730,12 +730,11 @@ class TestDerivedExecutionPlanner:
             spec=spec,
             compiled=compiled,
             request=request,
-            earliest_pending_invalidation_start="2026-03-08",
         )
 
         # ts_mean(window=5) → lookback=6 trading days → ceil(6*365/250)=9 calendar days
-        # anchor 2026-03-08 - 9 days = 2026-02-27
-        assert plan.compute_start == "2026-02-27"
+        # 2026-03-10 - 9 days = 2026-03-01
+        assert plan.compute_start == "2026-03-01"
         assert plan.compute_end == "2026-03-13"
         assert plan.partitions == ("2026",)
         assert plan.profile == MaterializationProfile.SERIES

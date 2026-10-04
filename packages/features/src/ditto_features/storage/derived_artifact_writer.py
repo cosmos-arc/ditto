@@ -16,18 +16,40 @@ from ditto_platform.foundation import (
 )
 from ditto_platform.foundation.util import ParquetCompression
 
-from ditto_features.models.derived import DerivedSpecRecord, PartitionInfo
-from ditto_features.publication_safety_records import (
+from ditto_features.materialization.publication import (
     CompatibilityManifestRecord,
     DerivedMinimalDQSummaryRecord,
 )
+from ditto_features.models.derived import DerivedSpecRecord, PartitionInfo
 
 __all__ = [
     "ArtifactMetadataParams",
-    "ArtifactMetadataUpdateParams",
     "DerivedArtifactWriter",
     "extract_partition_keys",
+    "run_metadata_path",
 ]
+
+
+def run_metadata_path(
+    artifact_root: Path,
+    *,
+    profile: str,
+    derived_id: str,
+    version: int,
+    run_id: str,
+) -> Path:
+    """Resolve one run's artifact_metadata.json path（运行元数据布局唯一权威）."""
+    return (
+        Path(artifact_root)
+        / "derived"
+        / "artifacts"
+        / profile.lower()
+        / derived_id
+        / f"v{version}"
+        / "_runs"
+        / run_id
+        / "artifact_metadata.json"
+    )
 
 
 @dataclass(frozen=True)
@@ -44,6 +66,8 @@ class ArtifactMetadataParams:
         request_start: 请求开始日期.
         request_end: 请求结束日期.
         source_snapshot_id: 源快照 ID.
+        manifest_record: 发布身份（兼容性 manifest）.
+        minimal_dq_record: 发布前最小 DQ 摘要.
         source_snapshot_ids: 精确输入源快照集合.
 
     """
@@ -56,23 +80,6 @@ class ArtifactMetadataParams:
     request_start: str
     request_end: str
     source_snapshot_id: str | None
-    source_snapshot_ids: tuple[str, ...] = ()
-
-
-@dataclass(frozen=True)
-class ArtifactMetadataUpdateParams:
-    """
-    制品元数据发布安全更新参数.
-
-    Groups the publication safety fields injected after the base artifact
-    metadata has already been written.
-    """
-
-    spec: DerivedSpecRecord
-    run_id: str
-    compile_identity: dict[str, Any]
-    partitions: tuple[PartitionInfo, ...]
-    source_snapshot_id: str | None
     manifest_record: CompatibilityManifestRecord
     minimal_dq_record: DerivedMinimalDQSummaryRecord
     source_snapshot_ids: tuple[str, ...] = ()
@@ -84,7 +91,7 @@ class DerivedArtifactWriter:
 
     Handles all file system I/O for derived artifact persistence, including
     ephemeral results (DERIVE profile), durable partitions (SERIES profile),
-    run metadata JSON files, and publication safety metadata injection.
+    and run metadata JSON files (including the publication identity block).
 
     All writes use atomic patterns (write-then-rename) to prevent partial
     file exposure.  Multi-partition writes follow a two-phase commit protocol
@@ -290,16 +297,14 @@ class DerivedArtifactWriter:
         params: ArtifactMetadataParams,
     ) -> None:
         """Write run metadata as artifact_metadata.json atomically."""
-        version_root = (
-            self._artifact_root
-            / "derived"
-            / "artifacts"
-            / params.spec.materialization_profile.lower()
-            / params.spec.derived_id
-            / f"v{params.spec.version}"
+        metadata_path = run_metadata_path(
+            self._artifact_root,
+            profile=params.spec.materialization_profile,
+            derived_id=params.spec.derived_id,
+            version=params.spec.version,
+            run_id=params.run_id,
         )
-        metadata_dir = version_root / "_runs" / params.run_id
-        metadata_dir.mkdir(parents=True, exist_ok=True)
+        metadata_path.parent.mkdir(parents=True, exist_ok=True)
         partition_dicts = [
             {
                 "partition_key": p.partition_key,
@@ -309,7 +314,6 @@ class DerivedArtifactWriter:
             }
             for p in params.partitions
         ]
-        metadata_path = metadata_dir / "artifact_metadata.json"
         atomic_bytes_write(
             orjson.dumps(
                 {
@@ -325,55 +329,19 @@ class DerivedArtifactWriter:
                         "end": params.request_end,
                     },
                     "partitions_written": partition_dicts,
+                    "publication": {
+                        "manifest_hash": params.manifest_record.manifest_hash,
+                        "compatibility_manifest": params.manifest_record.payload,
+                        "minimal_dq_summary": {
+                            "run_id": params.minimal_dq_record.run_id,
+                            "passed": params.minimal_dq_record.passed,
+                            "error_count": params.minimal_dq_record.error_count,
+                            **params.minimal_dq_record.payload,
+                        },
+                    },
                 },
-                option=orjson.OPT_INDENT_2,
+                option=orjson.OPT_INDENT_2 | orjson.OPT_SORT_KEYS,
             ),
-            metadata_path,
-        )
-
-    def update_artifact_metadata(
-        self,
-        params: ArtifactMetadataUpdateParams,
-    ) -> None:
-        """Read existing metadata JSON, inject publication safety, write atomically."""
-        metadata_path = (
-            self._artifact_root
-            / "derived"
-            / "artifacts"
-            / params.spec.materialization_profile.lower()
-            / params.spec.derived_id
-            / f"v{params.spec.version}"
-            / "_runs"
-            / params.run_id
-            / "artifact_metadata.json"
-        )
-        payload = orjson.loads(metadata_path.read_bytes())
-        payload["publication"] = {
-            "manifest_hash": params.manifest_record.manifest_hash,
-            "compatibility_manifest": params.manifest_record.payload,
-            "minimal_dq_summary": {
-                "run_id": params.minimal_dq_record.run_id,
-                "passed": params.minimal_dq_record.passed,
-                "error_count": params.minimal_dq_record.error_count,
-                **params.minimal_dq_record.payload,
-            },
-        }
-        payload["compile_identity"] = params.compile_identity
-        payload["input_snapshots"] = _input_snapshots(
-            source_snapshot_id=params.source_snapshot_id,
-            source_snapshot_ids=params.source_snapshot_ids,
-        )
-        payload["partitions_written"] = [
-            {
-                "partition_key": p.partition_key,
-                "partition_path": p.partition_path,
-                "row_count": p.row_count,
-                "checksum": p.checksum,
-            }
-            for p in params.partitions
-        ]
-        atomic_bytes_write(
-            orjson.dumps(payload, option=orjson.OPT_INDENT_2 | orjson.OPT_SORT_KEYS),
             metadata_path,
         )
 

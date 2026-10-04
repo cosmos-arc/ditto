@@ -141,10 +141,6 @@ def test_removed_runtime_reexport_attrs_are_absent() -> None:
             "require_payload",
             "require_str",
         ],
-        "ditto_features.publication_safety": [
-            "DerivedRole",
-            "MaterializationProfile",
-        ],
         "ditto_execution.audit.models": ["RiskScope"],
         "ditto_execution.reality.brokerage": ["FeeModel"],
         "ditto_execution.reality.fee": [

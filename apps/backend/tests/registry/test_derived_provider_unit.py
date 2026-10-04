@@ -9,9 +9,6 @@ from ditto_analysis.di import AnalysisStorageProvider
 from ditto_application.processes.materialization.orchestrator import (
     DerivedMaterializationOrchestrator,
 )
-from ditto_application.processes.materialization.publication_facade import (
-    DerivedPublicationFacade,
-)
 from ditto_application.queries.derived import DerivedQueryFacade
 from ditto_application.queries.source import SourceDataPort
 from ditto_application.research_case_contracts import ResearchCaseFactory
@@ -178,9 +175,6 @@ class TestStorageProviderWiring:
             "derived_catalog_reader",
             "derived_catalog_writer",
             "derived_catalog_service",
-            "derived_shadow_slot_reader",
-            "derived_shadow_slot_writer",
-            "derived_shadow_slot_service",
             "derived_query_service",
         }
         assert expected == provide_methods
@@ -232,20 +226,6 @@ class TestAppProviderDerivedWiring:
         assert isinstance(facade, DerivedQueryFacade)
         container.close()
 
-    def test_app_provider_builds_publication_facade(
-        self,
-        monkeypatch,
-        tmp_path,
-    ) -> None:
-        """AppProcessProvider 应提供 DerivedPublicationFacade。"""
-        monkeypatch.setenv("ENVIRONMENT", "testing")
-        monkeypatch.setenv("DITTO_STATE_ROOT", tmp_path.as_posix())
-        container = _make_full_container()
-
-        publication_facade = container.get(DerivedPublicationFacade)
-        assert isinstance(publication_facade, DerivedPublicationFacade)
-        container.close()
-
     def test_materialization_orchestrator_has_universe_provider(
         self,
         monkeypatch,
@@ -258,6 +238,19 @@ class TestAppProviderDerivedWiring:
 
         orchestrator = container.get(DerivedMaterializationOrchestrator)
         assert orchestrator._universe_provider is not None
+
+    def test_materialization_orchestrator_has_artifact_reader(
+        self,
+        monkeypatch,
+        tmp_path,
+    ) -> None:
+        """确定性重试守卫依赖的 artifact reader 必须由 DI 装配（fail-closed）."""
+        monkeypatch.setenv("ENVIRONMENT", "testing")
+        monkeypatch.setenv("DITTO_STATE_ROOT", tmp_path.as_posix())
+        container = _make_full_container()
+
+        orchestrator = container.get(DerivedMaterializationOrchestrator)
+        assert orchestrator._artifact_reader is not None
         container.close()
 
     def test_materialization_orchestrator_receives_persistent_lineage_recorder(

@@ -16,15 +16,12 @@ from ditto_features.derived_types import (
     MaterializationProfile,
 )
 from ditto_features.expression import Analysis, CompileIdentity
-from ditto_features.models.derived import DerivedSpecRecord, PartitionInfo
-from ditto_features.publication_safety_records import (
+from ditto_features.materialization.publication import (
     CompatibilityManifestRecord,
     DerivedMinimalDQSummaryRecord,
 )
-from ditto_features.storage.derived_artifact_writer import (
-    ArtifactMetadataParams,
-    ArtifactMetadataUpdateParams,
-)
+from ditto_features.models.derived import DerivedSpecRecord, PartitionInfo
+from ditto_features.storage.derived_artifact_writer import ArtifactMetadataParams
 
 _TIME_KEY = "trade_date"
 
@@ -296,6 +293,8 @@ class TestWriteArtifactMetadata:
                 request_start="2024-01-01",
                 request_end="2024-12-31",
                 source_snapshot_id="snap-001",
+                manifest_record=_make_manifest_record(),
+                minimal_dq_record=_make_minimal_dq_record(),
             ),
         )
 
@@ -346,6 +345,8 @@ class TestWriteArtifactMetadata:
                 request_start="2024-01-01",
                 request_end="2024-12-31",
                 source_snapshot_id=None,
+                manifest_record=_make_manifest_record(),
+                minimal_dq_record=_make_minimal_dq_record(),
             ),
         )
 
@@ -365,72 +366,36 @@ class TestWriteArtifactMetadata:
         assert payload["partitions_written"] == []
 
 
-class TestUpdateArtifactMetadata:
-    """Tests for update_artifact_metadata."""
+class TestPublicationBlockSingleWrite:
+    """#444 直线：publication 块随首写一次性落盘，无第二次读改写."""
 
-    def test_update_artifact_metadata_injects_publication(self, tmp_path: Path) -> None:
-        """update_artifact_metadata should read existing JSON and inject publication."""
-
+    def test_write_artifact_metadata_includes_publication_block(
+        self, tmp_path: Path
+    ) -> None:
+        """write_artifact_metadata should embed manifest and minimal DQ."""
         from ditto_features.storage.derived_artifact_writer import (
             DerivedArtifactWriter,
         )
 
         writer = DerivedArtifactWriter(artifact_root=tmp_path)
         spec_record = _make_spec_record()
-        run_id = "drv-test-run-007"
-        compile_identity = _make_compile_identity_dict()
-        analysis = _make_analysis_dict()
-        partitions = (
-            PartitionInfo(
-                partition_key="2024",
-                partition_path="derived/artifacts/series/factor.test_factor/v1/2024.parquet",
-                row_count=10,
-                checksum="sha-checksum",
-            ),
-        )
+        run_id = "drv-test-run-pub-001"
+        manifest_record = _make_manifest_record()
+        minimal_dq_record = _make_minimal_dq_record(run_id=run_id)
 
-        # First write initial metadata
         writer.write_artifact_metadata(
             ArtifactMetadataParams(
                 spec=spec_record,
                 run_id=run_id,
-                compile_identity=compile_identity,
-                analysis=analysis,
-                partitions=partitions,
+                compile_identity=_make_compile_identity_dict(),
+                analysis=_make_analysis_dict(),
+                partitions=_make_partitions(),
                 request_start="2024-01-01",
                 request_end="2024-12-31",
                 source_snapshot_id="snap-002",
-            ),
-        )
-
-        # Now update with publication info
-        manifest_record = CompatibilityManifestRecord(
-            derived_id="factor.test_factor",
-            version=1,
-            manifest_hash="manifest-hash-001",
-            payload={"engine_codegen_version": "v1"},
-            created_at="2026-03-17T00:00:00+00:00",
-        )
-        minimal_dq_record = DerivedMinimalDQSummaryRecord(
-            derived_id="factor.test_factor",
-            version=1,
-            run_id=run_id,
-            passed=True,
-            error_count=0,
-            payload={"row_count": 10},
-            created_at="2026-03-17T00:00:00+00:00",
-        )
-
-        writer.update_artifact_metadata(
-            ArtifactMetadataUpdateParams(
-                spec=spec_record,
-                run_id=run_id,
-                compile_identity=compile_identity,
-                partitions=partitions,
-                source_snapshot_id="snap-002",
                 manifest_record=manifest_record,
                 minimal_dq_record=minimal_dq_record,
-            )
+            ),
         )
 
         metadata_path = (
@@ -445,145 +410,12 @@ class TestUpdateArtifactMetadata:
             / "artifact_metadata.json"
         )
         payload = orjson.loads(metadata_path.read_bytes())
-
-        # Publication section should be injected
-        assert "publication" in payload
         assert payload["publication"]["manifest_hash"] == "manifest-hash-001"
         assert payload["publication"]["compatibility_manifest"] == {
-            "engine_codegen_version": "v1"
+            "engine_codegen_version": "v1",
         }
         assert payload["publication"]["minimal_dq_summary"]["passed"] is True
-        assert payload["publication"]["minimal_dq_summary"]["error_count"] == 0
-        assert payload["publication"]["minimal_dq_summary"]["run_id"] == run_id
-
-        # Compile identity and partitions should be refreshed
-        assert payload["compile_identity"]["cache_key"] == "cache-key"
-        assert payload["input_snapshots"] == ["snap-002"]
-        assert len(payload["partitions_written"]) == 1
-
-    def test_update_artifact_metadata_none_source_snapshot(
-        self, tmp_path: Path
-    ) -> None:
-        """source_snapshot_id=None should produce empty input_snapshots on update."""
-        from ditto_features.storage.derived_artifact_writer import (
-            DerivedArtifactWriter,
-        )
-
-        writer = DerivedArtifactWriter(artifact_root=tmp_path)
-        spec_record = _make_spec_record()
-        run_id = "drv-test-run-008"
-        compile_identity = _make_compile_identity_dict()
-        analysis = _make_analysis_dict()
-
-        writer.write_artifact_metadata(
-            ArtifactMetadataParams(
-                spec=spec_record,
-                run_id=run_id,
-                compile_identity=compile_identity,
-                analysis=analysis,
-                partitions=(),
-                request_start="2024-01-01",
-                request_end="2024-12-31",
-                source_snapshot_id=None,
-            ),
-        )
-
-        manifest_record = CompatibilityManifestRecord(
-            derived_id="factor.test_factor",
-            version=1,
-            manifest_hash="hash",
-            payload={},
-            created_at="2026-03-17T00:00:00+00:00",
-        )
-        minimal_dq_record = DerivedMinimalDQSummaryRecord(
-            derived_id="factor.test_factor",
-            version=1,
-            run_id=run_id,
-            passed=True,
-            error_count=0,
-            payload={},
-            created_at="2026-03-17T00:00:00+00:00",
-        )
-
-        writer.update_artifact_metadata(
-            ArtifactMetadataUpdateParams(
-                spec=spec_record,
-                run_id=run_id,
-                compile_identity=compile_identity,
-                partitions=(),
-                source_snapshot_id=None,
-                manifest_record=manifest_record,
-                minimal_dq_record=minimal_dq_record,
-            )
-        )
-
-        metadata_path = (
-            tmp_path
-            / "derived"
-            / "artifacts"
-            / "series"
-            / "factor.test_factor"
-            / "v1"
-            / "_runs"
-            / run_id
-            / "artifact_metadata.json"
-        )
-        payload = orjson.loads(metadata_path.read_bytes())
-        assert payload["input_snapshots"] == []
-
-    def test_update_artifact_metadata_accepts_params_object(
-        self, tmp_path: Path
-    ) -> None:
-        """update_artifact_metadata should accept one context-shaped object."""
-        from ditto_features.storage.derived_artifact_writer import (
-            DerivedArtifactWriter,
-        )
-
-        writer = DerivedArtifactWriter(artifact_root=tmp_path)
-        spec_record = _make_spec_record()
-        run_id = "drv-test-run-params"
-        compile_identity = _make_compile_identity_dict()
-        partitions = _make_partitions()
-
-        writer.write_artifact_metadata(
-            ArtifactMetadataParams(
-                spec=spec_record,
-                run_id=run_id,
-                compile_identity=compile_identity,
-                analysis=_make_analysis_dict(),
-                partitions=partitions,
-                request_start="2024-01-01",
-                request_end="2024-12-31",
-                source_snapshot_id="snap-old",
-            ),
-        )
-
-        writer.update_artifact_metadata(
-            ArtifactMetadataUpdateParams(
-                spec=spec_record,
-                run_id=run_id,
-                compile_identity=compile_identity,
-                partitions=partitions,
-                source_snapshot_id="snap-params",
-                manifest_record=_make_manifest_record(),
-                minimal_dq_record=_make_minimal_dq_record(run_id=run_id),
-            )
-        )
-
-        metadata_path = (
-            tmp_path
-            / "derived"
-            / "artifacts"
-            / "series"
-            / "factor.test_factor"
-            / "v1"
-            / "_runs"
-            / run_id
-            / "artifact_metadata.json"
-        )
-        payload = orjson.loads(metadata_path.read_bytes())
-        assert payload["input_snapshots"] == ["snap-params"]
-        assert payload["publication"]["manifest_hash"] == "manifest-hash-001"
+        assert payload["publication"]["minimal_dq_summary"]["row_count"] == 10
 
 
 class TestExtractPartitionKeys:
@@ -814,6 +646,8 @@ class TestMetadataAtomicWrite:
                     request_start="2024-01-01",
                     request_end="2024-12-31",
                     source_snapshot_id="snap-001",
+                    manifest_record=_make_manifest_record(),
+                    minimal_dq_record=_make_minimal_dq_record(),
                 ),
             )
             mock_atomic.assert_called_once()
@@ -821,93 +655,6 @@ class TestMetadataAtomicWrite:
             call_args = mock_atomic.call_args
             assert isinstance(call_args[0][0], bytes)
             assert call_args[0][1] == expected_path
-
-    def test_update_artifact_metadata_uses_atomic_write(self, tmp_path: Path) -> None:
-        """update_artifact_metadata should delegate to atomic_bytes_write."""
-        from ditto_features.storage.derived_artifact_writer import (
-            DerivedArtifactWriter,
-        )
-
-        writer = DerivedArtifactWriter(artifact_root=tmp_path)
-        spec_record = _make_spec_record()
-        run_id = "drv-test-run-upd-001"
-        compile_identity = _make_compile_identity_dict()
-        analysis = _make_analysis_dict()
-        partitions = (
-            PartitionInfo(
-                partition_key="2024",
-                partition_path="derived/artifacts/series/factor.test_factor/v1/2024.parquet",
-                row_count=10,
-                checksum="sha-checksum",
-            ),
-        )
-
-        # First write initial metadata
-        writer.write_artifact_metadata(
-            ArtifactMetadataParams(
-                spec=spec_record,
-                run_id=run_id,
-                compile_identity=compile_identity,
-                analysis=analysis,
-                partitions=partitions,
-                request_start="2024-01-01",
-                request_end="2024-12-31",
-                source_snapshot_id="snap-002",
-            ),
-        )
-
-        manifest_record = CompatibilityManifestRecord(
-            derived_id="factor.test_factor",
-            version=1,
-            manifest_hash="manifest-hash-001",
-            payload={"engine_codegen_version": "v1"},
-            created_at="2026-03-17T00:00:00+00:00",
-        )
-        minimal_dq_record = DerivedMinimalDQSummaryRecord(
-            derived_id="factor.test_factor",
-            version=1,
-            run_id=run_id,
-            passed=True,
-            error_count=0,
-            payload={"row_count": 10},
-            created_at="2026-03-17T00:00:00+00:00",
-        )
-
-        expected_path = (
-            tmp_path
-            / "derived"
-            / "artifacts"
-            / "series"
-            / "factor.test_factor"
-            / "v1"
-            / "_runs"
-            / run_id
-            / "artifact_metadata.json"
-        )
-
-        with patch(
-            "ditto_features.storage.derived_artifact_writer.atomic_bytes_write"
-        ) as mock_atomic:
-            writer.update_artifact_metadata(
-                ArtifactMetadataUpdateParams(
-                    spec=spec_record,
-                    run_id=run_id,
-                    compile_identity=compile_identity,
-                    partitions=partitions,
-                    source_snapshot_id="snap-002",
-                    manifest_record=manifest_record,
-                    minimal_dq_record=minimal_dq_record,
-                )
-            )
-            mock_atomic.assert_called_once()
-            call_args = mock_atomic.call_args
-            assert isinstance(call_args[0][0], bytes)
-            assert call_args[0][1] == expected_path
-
-            # Verify the payload contains publication info
-            payload = orjson.loads(call_args[0][0])
-            assert "publication" in payload
-            assert payload["publication"]["manifest_hash"] == "manifest-hash-001"
 
 
 class TestPartitionInfo:

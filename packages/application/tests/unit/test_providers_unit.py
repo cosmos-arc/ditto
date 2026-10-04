@@ -49,15 +49,9 @@ from ditto_application.processes.experiments.worker import (
     ResearchExperimentWorker,
     ResearchFoldRunner,
 )
-from ditto_application.processes.materialization.cascade_orchestrator import (
-    InvalidationCascadeOrchestrator,
-)
 from ditto_application.processes.materialization.orchestrator import (
     DerivedMaterializationOrchestrator,
     MaterializationRuntimePorts,
-)
-from ditto_application.processes.materialization.publication_facade import (
-    DerivedPublicationFacade,
 )
 from ditto_application.processes.quality import (
     QualityBatchCoordinator,
@@ -454,8 +448,6 @@ class TestAppProviderStructure:
             "compile_cache_service",
             "derived_input_provider",
             "derived_materialization_orchestrator",
-            "derived_invalidation_orchestrator",
-            "derived_publication_facade",
             "quality_batch_coordinator",
             "quality_completeness_service",
             "quality_patrol_service",
@@ -777,14 +769,6 @@ class TestAppProviderIntegration:
         assert isinstance(
             app_container.get(DerivedMaterializationOrchestrator),
             DerivedMaterializationOrchestrator,
-        )
-        assert isinstance(
-            app_container.get(InvalidationCascadeOrchestrator),
-            InvalidationCascadeOrchestrator,
-        )
-        assert isinstance(
-            app_container.get(DerivedPublicationFacade),
-            DerivedPublicationFacade,
         )
         assert isinstance(app_container.get(QualityPatrolService), QualityPatrolService)
         assert isinstance(

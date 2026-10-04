@@ -11,7 +11,6 @@ import polars as pl
 from ditto_features.models.derived import (
     DerivedCheckpointRecord,
     DerivedDependencyRecord,
-    DerivedInvalidationRecord,
     DerivedPartitionRecord,
     DerivedRunRecord,
     DerivedSpecRecord,
@@ -62,6 +61,14 @@ class DerivedCatalogReaderProtocol(Protocol):
         """Read the latest run record for one derived version."""
         ...
 
+    def get_latest_successful_run(
+        self,
+        derived_id: str,
+        version: int,
+    ) -> DerivedRunRecord | None:
+        """Read the latest SUCCESS run record for one derived version."""
+        ...
+
     def read_state(self, derived_id: str) -> DerivedStateRecord | None:
         """Read the latest durable state record."""
         ...
@@ -88,26 +95,6 @@ class DerivedCatalogReaderProtocol(Protocol):
         dependency_ref: str,
     ) -> tuple[DerivedDependencyRecord, ...]:
         """List downstream dependency records for one upstream reference."""
-        ...
-
-    def list_pending_invalidations(self) -> tuple[DerivedInvalidationRecord, ...]:
-        """List pending invalidation records."""
-        ...
-
-    def list_stale_invalidations(self) -> tuple[DerivedInvalidationRecord, ...]:
-        """List stale invalidation records ordered by role priority then depth."""
-        ...
-
-    def list_dead_letter_invalidations(self) -> tuple[DerivedInvalidationRecord, ...]:
-        """List dead-letter invalidation records ordered by dead_letter_at."""
-        ...
-
-    def list_stale_by_derived_version(
-        self,
-        derived_id: str,
-        version: int,
-    ) -> tuple[DerivedInvalidationRecord, ...]:
-        """List stale invalidations for a specific derived_id and version."""
         ...
 
     def list_specs(
@@ -170,22 +157,6 @@ class DerivedCatalogWriterProtocol(Protocol):
         """Execute dependency INSERTs without committing."""
         ...
 
-    def execute_invalidations(
-        self, records: tuple[DerivedInvalidationRecord, ...]
-    ) -> None:
-        """Execute invalidation INSERTs without committing."""
-        ...
-
-    def execute_invalidation_processed(
-        self, invalidation_id: str, processed_at: str
-    ) -> None:
-        """Execute invalidation processed UPDATE without committing."""
-        ...
-
-    def execute_invalidation_status(self, invalidation_id: str, status: str) -> None:
-        """Execute invalidation status UPDATE without committing."""
-        ...
-
     # --- write methods (execute + commit) ---
 
     def write_spec(self, record: DerivedSpecRecord) -> None:
@@ -194,6 +165,15 @@ class DerivedCatalogWriterProtocol(Protocol):
 
     def write_version(self, record: DerivedVersionRecord) -> None:
         """Persist one derived version record."""
+        ...
+
+    def publish_version(
+        self,
+        derived_id: str,
+        version: int,
+        updated_at: str,
+    ) -> None:
+        """Atomically advance one version to published/primary."""
         ...
 
     def write_run(self, record: DerivedRunRecord) -> None:
@@ -225,49 +205,6 @@ class DerivedCatalogWriterProtocol(Protocol):
         """Persist dependency records."""
         ...
 
-    def write_invalidations(
-        self,
-        records: tuple[DerivedInvalidationRecord, ...],
-    ) -> None:
-        """Persist invalidation records."""
-        ...
-
-    def mark_invalidation_processed(
-        self,
-        invalidation_id: str,
-        processed_at: str,
-    ) -> None:
-        """Mark one invalidation record as processed."""
-        ...
-
-    def mark_invalidation_status(
-        self,
-        invalidation_id: str,
-        status: str,
-    ) -> None:
-        """Update the status of one invalidation record."""
-        ...
-
-    def execute_increment_retry_count(self, invalidation_id: str) -> None:
-        """Increment retry_count for one invalidation row without committing."""
-        ...
-
-    def execute_mark_invalidation_dead_letter(
-        self, invalidation_id: str, error_message: str, dead_letter_at: str
-    ) -> None:
-        """Mark one invalidation as dead letter without committing."""
-        ...
-
-    def increment_retry_count(self, invalidation_id: str) -> None:
-        """Increment retry_count for one invalidation row."""
-        ...
-
-    def mark_invalidation_dead_letter(
-        self, invalidation_id: str, error_message: str, dead_letter_at: str
-    ) -> None:
-        """Mark one invalidation as dead letter."""
-        ...
-
     # --- delete methods ---
 
     def delete_version_records(self, derived_id: str, version: int) -> int:
@@ -277,8 +214,8 @@ class DerivedCatalogWriterProtocol(Protocol):
         Removes rows from derived_run, derived_partition,
         derived_checkpoint, derived_spec, and derived_version.
 
-        Does NOT touch derived_state, derived_dependency, or
-        derived_invalidation (managed separately).
+        Does NOT touch derived_state or derived_dependency (managed
+        separately).
 
         Returns the number of records removed.
         """
@@ -312,6 +249,15 @@ class DerivedCatalogService:
         """Persist derived version metadata."""
         self._catalog_writer.write_version(record)
 
+    def publish_version(
+        self,
+        derived_id: str,
+        version: int,
+        updated_at: str,
+    ) -> None:
+        """Atomically advance one version to published/primary."""
+        self._catalog_writer.publish_version(derived_id, version, updated_at)
+
     def get_version(
         self,
         derived_id: str,
@@ -344,6 +290,14 @@ class DerivedCatalogService:
     ) -> DerivedRunRecord | None:
         """Return the latest run metadata for a version."""
         return self._catalog_reader.get_latest_run(derived_id, version)
+
+    def get_latest_successful_run(
+        self,
+        derived_id: str,
+        version: int,
+    ) -> DerivedRunRecord | None:
+        """Return the latest SUCCESS run metadata for a version."""
+        return self._catalog_reader.get_latest_successful_run(derived_id, version)
 
     def save_state(self, record: DerivedStateRecord) -> None:
         """Persist latest state metadata."""
@@ -388,70 +342,6 @@ class DerivedCatalogService:
     ) -> tuple[DerivedDependencyRecord, ...]:
         """List downstream dependencies for one upstream reference."""
         return self._catalog_reader.list_dependencies_by_ref(dependency_ref)
-
-    def list_downstream_dependencies(
-        self,
-        derived_id: str,
-    ) -> tuple[DerivedDependencyRecord, ...]:
-        """List downstream dependencies for one derived id used as upstream."""
-        return self._catalog_reader.list_dependencies_by_ref(derived_id)
-
-    def save_invalidations(
-        self,
-        records: tuple[DerivedInvalidationRecord, ...],
-    ) -> None:
-        """Persist invalidation rows."""
-        self._catalog_writer.write_invalidations(records)
-
-    def list_pending_invalidations(self) -> tuple[DerivedInvalidationRecord, ...]:
-        """List invalidations waiting for repair."""
-        return self._catalog_reader.list_pending_invalidations()
-
-    def list_stale_invalidations(self) -> tuple[DerivedInvalidationRecord, ...]:
-        """List stale invalidations ordered by depth then created_at."""
-        return self._catalog_reader.list_stale_invalidations()
-
-    def mark_invalidation_processed(
-        self,
-        invalidation_id: str,
-        processed_at: str,
-    ) -> None:
-        """Mark one invalidation row as processed."""
-        self._catalog_writer.mark_invalidation_processed(invalidation_id, processed_at)
-
-    def mark_invalidation_status(
-        self,
-        invalidation_id: str,
-        status: str,
-    ) -> None:
-        """Update the status of one invalidation row."""
-        self._catalog_writer.mark_invalidation_status(invalidation_id, status)
-
-    def list_dead_letter_invalidations(self) -> tuple[DerivedInvalidationRecord, ...]:
-        """List dead-letter invalidations ordered by dead_letter_at."""
-        return self._catalog_reader.list_dead_letter_invalidations()
-
-    def list_stale_by_derived_version(
-        self,
-        derived_id: str,
-        version: int,
-    ) -> tuple[DerivedInvalidationRecord, ...]:
-        """List stale invalidations for a specific derived_id and version."""
-        return self._catalog_reader.list_stale_by_derived_version(derived_id, version)
-
-    def increment_retry_count(self, invalidation_id: str) -> None:
-        """Increment retry_count for one invalidation row."""
-        self._catalog_writer.increment_retry_count(invalidation_id)
-
-    def mark_invalidation_dead_letter(
-        self, invalidation_id: str, error_message: str, dead_letter_at: str
-    ) -> None:
-        """Mark one invalidation as dead letter."""
-        self._catalog_writer.mark_invalidation_dead_letter(
-            invalidation_id,
-            error_message,
-            dead_letter_at,
-        )
 
     def list_specs(
         self,

@@ -23,7 +23,6 @@ __all__ = [
     "CompileIdentity",
     "CompiledDerivedExpression",
     "DerivedExecutionPlan",
-    "DerivedInvalidationEvent",
     "DerivedMaterializationRequest",
     "DerivedMaterializationResult",
 ]
@@ -73,16 +72,3 @@ class DerivedMaterializationResult:
     partitions_written: tuple[str, ...]
     coverage_start: str | None
     coverage_end: str | None
-
-
-@dataclass(frozen=True)
-class DerivedInvalidationEvent:
-    """Source change event that fans out into downstream repair work."""
-
-    source_domain: str
-    source_dataset: str
-    change_date: str
-    affected_start: str
-    affected_end: str
-    source_snapshot_id: str | None
-    root_dependency_ref: str

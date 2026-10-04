@@ -30,7 +30,6 @@ __all__ = [
     "CompiledExpressionOperatorRecord",
     "DerivedCheckpointRecord",
     "DerivedDependencyRecord",
-    "DerivedInvalidationRecord",
     "DerivedPartitionRecord",
     "DerivedRunRecord",
     "DerivedSpecRecord",
@@ -323,30 +322,6 @@ class DerivedDependencyRecord:
     dependency_kind: str
     dependency_ref: str
     created_at: str
-
-
-@dataclass(frozen=True)
-class DerivedInvalidationRecord:
-    """Stored invalidation task created from a source change."""
-
-    invalidation_id: str
-    derived_id: str
-    version: int
-    source_domain: str
-    source_dataset: str
-    change_date: str
-    affected_start: str
-    affected_end: str
-    source_snapshot_id: str | None
-    root_dependency_ref: str
-    status: str
-    created_at: str
-    processed_at: str | None
-    depth: int = 0
-    retry_count: int = 0
-    error_message: str | None = None
-    dead_letter_at: str | None = None
-    role: str = "factor"
 
 
 @dataclass(frozen=True)

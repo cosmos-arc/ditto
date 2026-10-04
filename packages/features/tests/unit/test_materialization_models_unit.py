@@ -85,11 +85,10 @@ class TestDerivedRunTrigger:
         """All expected trigger values exist."""
         assert DerivedRunTrigger.MANUAL == "manual"
         assert DerivedRunTrigger.SCHEDULED == "scheduled"
-        assert DerivedRunTrigger.CASCADE == "cascade"
 
-    def test_three_members(self) -> None:
-        """Exactly three triggers exist."""
-        assert len(list(DerivedRunTrigger)) == 3
+    def test_two_members(self) -> None:
+        """Exactly two triggers exist (#444 删除 CASCADE)."""
+        assert len(list(DerivedRunTrigger)) == 2
 
 
 class TestDerivedRunStatus:
@@ -313,7 +312,7 @@ class TestDerivedRun:
             derived_id="f",
             version=1,
             mode=DerivedRunMode.INCREMENTAL,
-            trigger=DerivedRunTrigger.CASCADE,
+            trigger=DerivedRunTrigger.MANUAL,
             request_start="2024-01-01",
             request_end="2024-01-31",
             compute_start="2024-01-01",
