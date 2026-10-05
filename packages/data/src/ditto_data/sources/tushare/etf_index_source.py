@@ -127,6 +127,28 @@ def fetch_fund_adj(
     )
 
 
+def fetch_fund_nav(
+    etf: ETFTushareAdapter,
+    *,
+    trade_date: str | None = None,
+    source_ticker: str | None = None,
+    start_date: str | None = None,
+    end_date: str | None = None,
+) -> pl.DataFrame:
+    """
+    Fetch ETF/fund unit NAV (#483).
+
+    Two modes: trade_date batch (rolling [D-7, D] nav_date window) or
+    source_ticker + start_date/end_date (nav_date range).
+    """
+    return etf.fetch_fund_nav(
+        trade_date=trade_date,
+        source_ticker=source_ticker,
+        start_date=start_date,
+        end_date=end_date,
+    )
+
+
 def fetch_index_basic(
     index: IndexTushareAdapter,
 ) -> pl.DataFrame:

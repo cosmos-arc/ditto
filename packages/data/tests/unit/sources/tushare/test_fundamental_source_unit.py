@@ -351,3 +351,57 @@ class TestFinancialStatementWindowRowIdentity:
             date(2026, 8, 15),
             date(2026, 9, 1),
         ]
+
+
+@pytest.mark.unit
+class TestFetchFundNavDelegation:
+    """#483：fund_nav 双模式委托与窗口回看参数."""
+
+    def test_trade_date_mode_passes_rolling_window(self) -> None:
+        from ditto_data.sources.tushare.etf_index_source import fetch_fund_nav
+
+        etf = MagicMock()
+        fetch_fund_nav(etf, trade_date="2026-09-30")
+
+        etf.fetch_fund_nav.assert_called_once_with(
+            trade_date="2026-09-30",
+            source_ticker=None,
+            start_date=None,
+            end_date=None,
+        )
+
+    def test_ticker_mode_requires_range(self) -> None:
+        from ditto_data.sources.tushare.adapters.etf import ETFTushareAdapter
+
+        adapter = ETFTushareAdapter.__new__(ETFTushareAdapter)
+        adapter._client = MagicMock()
+        with pytest.raises(ValueError, match="start_date 和 end_date"):
+            adapter.fetch_fund_nav(source_ticker="510300.SH")
+
+    def test_trade_date_mode_queries_rolling_nav_window(self) -> None:
+        from ditto_data.sources.tushare.adapters.etf import ETFTushareAdapter
+
+        adapter = ETFTushareAdapter.__new__(ETFTushareAdapter)
+        adapter._client = MagicMock()
+        adapter._client.query.return_value = pl.DataFrame(
+            {
+                "ts_code": ["510300.SH"],
+                "ann_date": ["20261001"],
+                "nav_date": ["20260930"],
+                "unit_nav": [4.4312],
+                "acc_nav": [None],
+            }
+        )
+
+        frame = adapter.fetch_fund_nav(trade_date="2026-09-30")
+
+        # 全市场模式逐日 nav_date 查询（端点不接受无标的范围参数）：
+        # D-7 滚动回看接住 QDII 迟披露行
+        days = [c.kwargs["nav_date"] for c in adapter._client.query.call_args_list]
+        assert days[0] == "20260923"
+        assert days[-1] == "20260930"
+        assert len(days) == 8
+        row = frame.row(0, named=True)
+        assert row["trade_date"] == date(2026, 9, 30)
+        assert row["knowledge_date"] == date(2026, 10, 1)  # 披露锚 ann_date
+        assert row["unit_nav"] == pytest.approx(4.4312)

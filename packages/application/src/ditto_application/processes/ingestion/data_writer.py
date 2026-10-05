@@ -260,6 +260,7 @@ class IngestionDataWriter:
         WriteKind.STOCK_STATUS: "_handler_stock_status",
         WriteKind.ADJ_FACTOR: "_handler_adj_factor",
         WriteKind.FUND_ADJ: "_handler_fund_adj",
+        WriteKind.ETF_NAV: "_handler_etf_nav",
         WriteKind.INDEX_WEIGHT: "_handler_index_weight",
         WriteKind.FUNDAMENTAL: "_handler_fundamental",
         WriteKind.CAPITAL: "_handler_capital",
@@ -321,6 +322,11 @@ class IngestionDataWriter:
 
     def _handler_fund_adj(self, ctx: _WriteContext) -> Callable[[], WriteResult]:
         return lambda: self._write_fund_adj(
+            ctx.dataset, ctx.df, ctx.year, ctx.on_duplicate, ctx.source_ticker_col
+        )
+
+    def _handler_etf_nav(self, ctx: _WriteContext) -> Callable[[], WriteResult]:
+        return lambda: self._write_etf_nav(
             ctx.dataset, ctx.df, ctx.year, ctx.on_duplicate, ctx.source_ticker_col
         )
 
@@ -654,6 +660,32 @@ class IngestionDataWriter:
         if enriched_df is None:
             return _to_write_result(dataset, year, df, 0)
         rows_written = self._market_write_service.save_fund_adj(
+            df=enriched_df,
+            year=year,
+            on_duplicate=on_duplicate,
+        )
+        return _to_write_result(
+            dataset, year, enriched_df, rows_written, on_duplicate=on_duplicate
+        )
+
+    def _write_etf_nav(
+        self,
+        dataset: str,
+        df: pl.DataFrame,
+        year: int,
+        on_duplicate: OnDuplicate,
+        source_ticker_col: str,
+    ) -> WriteResult:
+        """Write ETF NAV observations through the dedicated ETF storage port."""
+        enriched_df = self._enrich_and_filter_fk_dataframe(
+            df,
+            dataset,
+            year,
+            source_ticker_col,
+        )
+        if enriched_df is None:
+            return _to_write_result(dataset, year, df, 0)
+        rows_written = self._market_write_service.save_fund_nav(
             df=enriched_df,
             year=year,
             on_duplicate=on_duplicate,

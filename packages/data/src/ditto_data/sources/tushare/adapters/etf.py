@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from datetime import date, timedelta
+
 import polars as pl
 from ditto_platform.foundation import logger, traced
 
@@ -11,9 +13,25 @@ from ditto_data.sources.tushare.processors.error_handler import (
 )
 from ditto_data.sources.tushare.processors.mappings import (
     ETF_BASIC_MAPPING,
+    ETF_NAV_MAPPING,
     FUND_ADJ_MAPPING,
 )
 from ditto_data.sources.tushare.processors.transformer import TushareDataTransformer
+
+# 日更滚动回看窗：QDII 净值公布 T+1/T+2，7 天覆盖节假日顺延（#483）
+_NAV_LOOKBACK_DAYS = 7
+
+
+def _yyyymmdd_range(ts_start: str, ts_end: str) -> list[str]:
+    """闭区间逐日序列（YYYYMMDD）."""
+    start = date(int(ts_start[:4]), int(ts_start[4:6]), int(ts_start[6:8]))
+    end = date(int(ts_end[:4]), int(ts_end[4:6]), int(ts_end[6:8]))
+    days: list[str] = []
+    current = start
+    while current <= end:
+        days.append(current.strftime("%Y%m%d"))
+        current += timedelta(days=1)
+    return days
 
 
 class ETFTushareAdapter(BaseTushareAdapter):
@@ -269,4 +287,93 @@ class ETFTushareAdapter(BaseTushareAdapter):
 
             return TushareDataTransformer.transform(
                 response, "fund_adj", FUND_ADJ_MAPPING
+            )
+
+    @traced("source.tushare.fetch_fund_nav")
+    def fetch_fund_nav(
+        self,
+        trade_date: str | None = None,
+        source_ticker: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> pl.DataFrame:
+        """
+        获取 ETF/基金单位净值（#483）.
+
+        支持两种查询模式：
+        - 按日期：指定 trade_date——逐日查询 nav_date ∈ [D-7, D]（该端点
+          全市场仅支持 nav_date 单日参数（2026-10-05 实测），滚动逐日 +
+          幂等上写接住 QDII 晚 1-2 个自然日公布的净值；ann_date 参数
+          不被接受）；
+        - 按标的+时间段：source_ticker + start_date/end_date（nav_date
+          区间，接受范围参数）.
+
+        Returns:
+            [source_ticker, trade_date(=nav_date 估值日), knowledge_date(=ann_date
+            披露日，缺失回退 nav_date), unit_nav, acc_nav].
+
+        """
+        if trade_date and source_ticker:
+            raise ValueError("trade_date 和 source_ticker 互斥, 不能同时指定")
+        if not trade_date and not source_ticker:
+            raise ValueError("必须指定 trade_date 或 source_ticker 之一")
+
+        if trade_date:
+            target = trade_date.replace("-", "")
+            lookback = (
+                date.fromisoformat(trade_date) - timedelta(days=_NAV_LOOKBACK_DAYS)
+            ).strftime("%Y%m%d")
+            return self._fetch_fund_nav_window(None, lookback, target, trade_date)
+        if not start_date or not end_date:
+            raise ValueError("按标的查询必须指定 start_date 和 end_date")
+        return self._fetch_fund_nav_window(
+            source_ticker,
+            start_date.replace("-", ""),
+            end_date.replace("-", ""),
+            trade_date=f"{start_date}~{end_date}",
+        )
+
+    def _fetch_fund_nav_window(
+        self,
+        source_ticker: str | None,
+        ts_start: str,
+        ts_end: str,
+        trade_date: str,
+    ) -> pl.DataFrame:
+        """fund_nav 按 nav_date 区间取数（source_ticker 为空 = 全市场）."""
+        scope = f":{source_ticker}" if source_ticker else ""
+        logger.info(
+            "Fetching Tushare fund NAV",
+            event="tushare_fund_nav_fetch_start",
+            trade_date=trade_date,
+            source_ticker=source_ticker,
+        )
+        fields = "ts_code,ann_date,nav_date,unit_nav,acc_nav"
+        with tushare_fetch_error_handler("etf_nav", f"fund_nav{scope}"):
+            if source_ticker:
+                response = self._client.query(
+                    api_name="fund_nav",
+                    fields=fields,
+                    ts_code=source_ticker,
+                    start_date=ts_start,
+                    end_date=ts_end,
+                )
+            else:
+                # 全市场：端点只接受 nav_date 单日，滚动窗逐日查询后拼接
+                frames = [
+                    self._client.query(api_name="fund_nav", fields=fields, nav_date=day)
+                    for day in _yyyymmdd_range(ts_start, ts_end)
+                ]
+                response = (
+                    pl.concat(frames, how="vertical_relaxed")
+                    if frames
+                    else pl.DataFrame()
+                )
+            # 服务端同 (ts_code, nav_date) 可返回多条不同 ann_date 的披露行
+            # （2026-10-05 实测单日响应内重复）——保留最新披露行
+            response = response.sort("ann_date").unique(
+                subset=["ts_code", "nav_date"], keep="last"
+            )
+            return TushareDataTransformer.transform(
+                response, f"etf_nav{scope}", ETF_NAV_MAPPING
             )

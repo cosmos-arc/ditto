@@ -15,6 +15,7 @@ from ditto_data.sources.tushare.etf_index_source import (
     fetch_etf_basic,
     fetch_etf_daily,
     fetch_fund_adj,
+    fetch_fund_nav,
     fetch_global_index_daily,
     fetch_index_basic,
     fetch_index_daily,
@@ -163,6 +164,22 @@ class EtfIndexFacade:
     ) -> pl.DataFrame:
         """获取 ETF/基金复权因子."""
         return fetch_fund_adj(
+            self._etf,
+            trade_date=trade_date,
+            source_ticker=source_ticker,
+            start_date=start_date,
+            end_date=end_date,
+        )
+
+    def fetch_fund_nav(
+        self,
+        trade_date: str | None = None,
+        source_ticker: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> pl.DataFrame:
+        """获取 ETF/基金单位净值（#483）."""
+        return fetch_fund_nav(
             self._etf,
             trade_date=trade_date,
             source_ticker=source_ticker,

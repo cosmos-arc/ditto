@@ -72,6 +72,7 @@ class WriteKind(StrEnum):
     STOCK_STATUS = "stock_status"
     ADJ_FACTOR = "adj_factor"
     FUND_ADJ = "fund_adj"
+    ETF_NAV = "etf_nav"
     INDEX_WEIGHT = "index_weight"
     FUNDAMENTAL = "fundamental"
     CAPITAL = "capital"
@@ -548,6 +549,12 @@ _ADJ_FACTOR_REGISTRATIONS: tuple[DatasetRegistration, ...] = (
         write_kind=WriteKind.FUND_ADJ,
         daily_fetch_factory=_daily_fetch("market", "fetch_fund_adj"),
         instrument_fetch_factory=_instrument_fetch("market", "fetch_fund_adj"),
+    ),
+    DatasetRegistration(
+        dataset=Dataset.ETF_NAV,
+        write_kind=WriteKind.ETF_NAV,
+        daily_fetch_factory=_daily_fetch("market", "fetch_fund_nav"),
+        instrument_fetch_factory=_instrument_fetch("market", "fetch_fund_nav"),
     ),
 )
 

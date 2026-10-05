@@ -266,6 +266,8 @@ class TestDefaultMetadataMaturityAssignments:
             "earnings_forecast",
             "earnings_express",
             "index_valuation",
+            # #483 ETF 单位净值
+            "etf_nav",
         }
     )
 
@@ -539,6 +541,8 @@ class TestR2DataProductContracts:
             "earnings_forecast",
             "earnings_express",
             "index_valuation",
+            # #483 ETF 单位净值
+            "etf_nav",
         }
     )
 
