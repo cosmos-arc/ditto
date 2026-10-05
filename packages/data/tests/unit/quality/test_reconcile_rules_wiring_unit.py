@@ -1,8 +1,9 @@
-"""#473-#474：跨源对账规则接线 —— 注册 yml 驱动真实 engine 语义.
+"""#473-#475：跨源对账规则接线 —— 注册 yml 驱动真实 engine 语义.
 
-验证 config/default/dq_rules/{income_statement,balance_sheet,cash_flow}.yml
-注册的 cross_source_compare 规则能被 QualityEngine 消费：财务相对容差 /
-eps 绝对容差、非日线比较键（report_date）、零交集 not_comparable。
+验证 config/default/dq_rules/{index_daily,income_statement,balance_sheet,
+cash_flow,etf_nav}.yml 注册的 cross_source_compare 规则能被 QualityEngine
+消费：容差语义（指数 2 位小数舍入/财务相对容差/eps 绝对容差/净值 4 位
+小数）、非日线比较键（report_date）、零交集 not_comparable。
 """
 
 from __future__ import annotations
@@ -154,6 +155,56 @@ class TestIncomeStatementRuleWiring:
         )
 
         assert any(s["field"] == "eps" for i in result.issues for s in i.sample_data)
+
+
+def _nav_frame(rows: list[tuple[int, float]]) -> pl.DataFrame:
+    return pl.DataFrame(
+        {
+            "instrument_id": [r[0] for r in rows],
+            "trade_date": [_D] * len(rows),
+            "unit_nav": [r[1] for r in rows],
+        },
+        schema={
+            "instrument_id": pl.Int64,
+            "trade_date": pl.Date,
+            "unit_nav": pl.Float64,
+        },
+    )
+
+
+@pytest.mark.unit
+class TestEtfNavRuleWiring:
+    def test_unit_nav_four_decimal_rounding_matches(self) -> None:
+        comparison = _engine("etf_nav").compare_cross_source(
+            primary=_nav_frame([(10, 4.43115)]),
+            secondary=_nav_frame([(10, 4.4312)]),
+            dataset="etf_nav",
+        )
+
+        assert comparison.comparable is True
+        assert comparison.matched_count == 1
+        assert comparison.diff_count == 0
+        assert comparison.key_columns == ("instrument_id", "trade_date")
+
+    def test_material_nav_gap_flags_difference(self) -> None:
+        result = _engine("etf_nav").check_cross_source(
+            primary=_nav_frame([(10, 4.4312)]),
+            secondary=_nav_frame([(10, 4.5312)]),
+            dataset="etf_nav",
+        )
+
+        assert any(
+            s["field"] == "unit_nav" for i in result.issues for s in i.sample_data
+        )
+
+    def test_zero_intersection_not_comparable(self) -> None:
+        comparison = _engine("etf_nav").compare_cross_source(
+            primary=_nav_frame([(10, 4.4312)]),
+            secondary=_nav_frame([(11, 4.4312)]),
+            dataset="etf_nav",
+        )
+
+        assert comparison.comparable is False
 
 
 @pytest.mark.unit

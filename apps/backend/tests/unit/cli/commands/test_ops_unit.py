@@ -951,6 +951,7 @@ class TestReconcileCommand:
             "stock_daily",
             "adj_factor",
             "index_daily",
+            "etf_nav",
             "income_statement",
             "balance_sheet",
             "cash_flow",

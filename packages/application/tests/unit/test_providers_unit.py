@@ -110,6 +110,7 @@ from ditto_data.quality.protocols import (
     SecondaryAdjustmentEventsSourceProtocol,
     SecondaryBarsSourceProtocol,
     SecondaryFinancialsSourceProtocol,
+    SecondaryFundNavSourceProtocol,
     SecondaryIndexBarsSourceProtocol,
 )
 from ditto_data.services.market_service import MarketService
@@ -280,6 +281,12 @@ class _ProtocolAdapterProvider(Provider):
         self,
     ) -> SecondaryFinancialsSourceProtocol:
         return MagicMock(spec=SecondaryFinancialsSourceProtocol)
+
+    @provide
+    def secondary_fund_nav_source_protocol(
+        self,
+    ) -> SecondaryFundNavSourceProtocol:
+        return MagicMock(spec=SecondaryFundNavSourceProtocol)
 
     @provide
     def comparison_store_protocol(self) -> ComparisonStoreProtocol:
