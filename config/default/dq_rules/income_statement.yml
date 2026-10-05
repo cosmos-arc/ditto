@@ -43,15 +43,19 @@ statistical:
   # 两侧金额均为元（无单位换算）；金额相对容差 1e-4（实测茅台精确到分、
   # 部分银行年报值舍入到百万级——相对容差下两者均可判定）；
   # eps 为元/股小量纲字段，不做单位换算，绝对容差 0.005 = 2 位小数舍入。
-  # 口径注意：主源 revenue=Tushare total_revenue（营业总收入），辅源为
-  # 营业收入——金融等板块两者可能不同源，差异按字段如实报告不折算掩盖。
-  # vintage：键匹配但披露日（f_ann_date vs report_date_ms）不一致的行由
-  # handler 单列 vintage_mismatch，不进入本规则数值比较。
+  # 口径（2026-10-05 实测）：operating_revenue=营业收入（Tushare `revenue` 字段）
+  # ↔ fuyao operating_income 同科目，茅台 2025 年报两侧逐位一致
+  # (168,838,102,514.79)；内部 revenue 列=营业总收入（含财务公司利息收入
+  # 等金融科目，茅台 2025 差 32.16 亿），与营业收入非同科目——不注册比较，
+  # 也不折算（差额无公开科目级对应，属同一财报两个行项目）。
+  # vintage：fuyao report_date 仅最新一期为该期披露日，历史期错挂最近同型
+  # 报告披露日（实测 2025-06-30 行挂 2026-08-15）；披露日不一致的行由
+  # handler 单列 vintage_mismatch 不做数值比较（数值实测同代，见票评论）。
   - rule: cross_source_compare
     key_columns: [instrument_id, report_date]
-    fields: [revenue, operating_profit, net_profit, eps]
+    fields: [operating_revenue, operating_profit, net_profit, eps]
     tolerance_rules:
-      revenue:
+      operating_revenue:
         method: relative
         relative_tol: 0.0001
       operating_profit:

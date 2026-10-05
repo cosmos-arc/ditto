@@ -94,3 +94,21 @@ ad-hoc 脚本写入真实 Tushare fund_nav 值（9 黄金 ETF 中 7 只有 2026-
 | `/api/a-share-index/prices/historical` | 窗口基本受控但最新边缘返回窗外最近一根（10-03 查询得 09-30 bar）；约 5 年外日期空 item；`.SI` 未知代码 code=1002；价格 2 位小数 |
 | `/api/a-share/financials/*` | 单标的、period=quarterly 含全部季报期；金额原币元（茅台精确到分、招行年报百万级舍入）；report_date_ms 疑似最新修订日非首次披露日 |
 | `/api/fund/performance/nav` | 仅相对窗口（week…fyear）无按日寻址；unit_nav 4 位小数；nav_type=unit 可单取 adj_nav |
+
+## 4. 口径核验与修复轮（2026-10-05 下午，用户质询触发）
+
+对首轮三处"不一致"逐一用真实数据核验，结论与处置：
+
+| 疑点 | 核验方法 | 结论 | 处置 |
+| --- | --- | --- | --- |
+| 399001 量额 ×3.33/×2.12 | 汇总开发根 stock_bars 2026-09-30 深市 2,904 只：494,566,872 手 / 758,570,928 千元 | **fuyao 把深市全市场量额挂在 399001 上**（与合计偏差仅 0.03%）；Tushare=成指 500 样本股口径（与深交所官方一致） | 两侧各自"准确"但口径不同；辅源缺陷实锤，index_daily.yml 注释留档，差异按 WARNING 保留报告（换算=需样本集合重算，等同重建指数，不做） |
+| revenue 差 32 亿（茅台） | Tushare income 同期取 `revenue`(营业收入) 字段：168,838,102,514.79 | **逐位等于 fuyao operating_income**；差异 100% 是比较字段错配（存量 revenue 列=营业总收入，fuyao=营业收入，差额=财务公司利息收入科目） | 修复：摄取链新增 `operating_revenue` 列（Tushare `revenue` 字段；income 表为空，加列零风险，schema.sql+存量库 ALTER）；fuyao 映射改 operating_income→operating_revenue；yml 比较字段换同科目。**复跑：差异数 4→0，9 同 vintage 键全字段一致** |
+| 披露日错配 3 行 | fuyao income 茅台 limit=10 全序列 | **fuyao report_date 仅最新一期正确，历史期错挂最近同型报告披露日**（2025-06-30 行挂 2026-08-15=2026 半年报日；2024-06-30 行挂 2025-08-13）；错配行数值与 Tushare 逐位一致（同为最新版） | guard 行为保留（披露日不可信即不作为可比锚）；数值同代事实与错位规律落 yml/票评论；后续如 owner 裁决放宽守卫（比较+标记）另行处理 |
+| balance_sheet net_assets（潜伏） | 茅台 2025 年末：Tushare exc_min_int=2,446.4 亿 vs fuyao holder_equity_total=2,539.6 亿 | 归母权益 vs 所有者权益合计，差 93.2 亿=少数股东权益；主源无含少数权益字段 | yml 移除 net_assets 比较字段并注释（不可换算） |
+
+修复轮复跑（同 12 行主源，重新摄取含新列）：
+
+```text
+对账统计: 主侧=12 辅侧=80 匹配=9 主侧未匹配=0 辅侧未匹配=68 差异数=0 披露日错配=3
+对账结果: passed=True 比较=可比 issues=0
+```

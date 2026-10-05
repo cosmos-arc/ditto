@@ -34,8 +34,10 @@ _BALANCE_SHEET_FIELDS = (
     "inventory,fixed_assets,cash_equivalents,accounts_receivable,"
     "short_term_debt,long_term_debt,money_cap,total_share"
 )
+# revenue=营业收入（与 fuyao operating_income 同科目，跨源对账可比字段）；
+# total_revenue=营业总收入（含利息收入等金融科目）沿旧义存 revenue 列。
 _INCOME_STATEMENT_FIELDS = (
-    "ts_code,end_date,f_ann_date,total_revenue,"
+    "ts_code,end_date,f_ann_date,total_revenue,revenue,"
     "operate_cost,sale_exp,admin_exp,fin_exp,rd_exp,"
     "operate_profit,total_profit,income_tax,n_income,"
     "basic_eps,diluted_eps"

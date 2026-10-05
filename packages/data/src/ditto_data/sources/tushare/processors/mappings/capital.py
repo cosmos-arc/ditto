@@ -214,6 +214,7 @@ INCOME_STATEMENT_MAPPING = ColumnMapping(
     date_columns={"end_date": "%Y%m%d", "f_ann_date": "%Y%m%d"},
     float_columns=[
         "total_revenue",
+        "revenue",
         "operate_cost",
         "sale_exp",
         "admin_exp",
@@ -230,6 +231,7 @@ INCOME_STATEMENT_MAPPING = ColumnMapping(
         "report_date": pl.col("end_date"),
         "knowledge_date": pl.col("f_ann_date"),
         "revenue": pl.col("total_revenue"),
+        "operating_revenue": pl.col("revenue"),
         "operating_profit": pl.col("operate_profit"),
         "net_profit": pl.col("n_income"),
         "eps": pl.col("basic_eps"),
@@ -239,6 +241,7 @@ INCOME_STATEMENT_MAPPING = ColumnMapping(
         "report_date",
         "knowledge_date",
         "revenue",
+        "operating_revenue",
         "operating_profit",
         "net_profit",
         "eps",

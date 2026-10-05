@@ -680,8 +680,9 @@ class TestFuyaoFinancialStatementsFrame:
         assert row["report_date"] == date(2026, 6, 30)
         assert row["disclosure_date"] == date(2026, 8, 14)
         assert row["fiscal_period"] == "Q2"
-        # fuyao 字段 → 内部列名（金额保持元，无单位换算）
-        assert row["revenue"] == pytest.approx(90_703_260_964.48)
+        # fuyao 字段 → 内部列名（营业收入映射 operating_revenue 同科目；
+        # 金额保持元，无单位换算）
+        assert row["operating_revenue"] == pytest.approx(90_703_260_964.48)
         assert row["net_profit"] == pytest.approx(46_033_330_566.78)
         assert row["eps"] == pytest.approx(35.57)
         assert row["total_profit"] == pytest.approx(61_438_419_177.29)

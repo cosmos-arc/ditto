@@ -85,7 +85,9 @@ _FINANCIAL_STATEMENT_PATHS: dict[str, str] = {
 }
 _FINANCIAL_FIELD_RENAMES: dict[str, dict[str, str]] = {
     "income_statement": {
-        "operating_income": "revenue",
+        # operating_income=营业收入 ↔ 内部 operating_revenue（Tushare `revenue`
+        # 字段）同科目；内部 revenue 列存营业总收入，非同科目不映射
+        "operating_income": "operating_revenue",
         "operating_costs": "operate_cost",
         "sales_fee": "sale_exp",
         "manage_fee": "admin_exp",
