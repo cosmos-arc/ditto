@@ -42,7 +42,6 @@ from ditto_application.commands.strategy_governance import (
     SubmitReviewHandler,
 )
 from ditto_application.processes.experiments._control_runtime import (
-    CONTROL_COORDINATOR_LEASE_DURATION,
     CONTROL_COORDINATOR_OWNER_TOKEN,
     ControlOnlyFirstAttemptFactory,
     LoggingExperimentControlNotifier,
@@ -146,7 +145,6 @@ _experiment_control = ExperimentExecutionCoordinator(
     store=_experiment_scheduler_store,
     first_attempt_factory=ControlOnlyFirstAttemptFactory(),
     owner_token=CONTROL_COORDINATOR_OWNER_TOKEN,
-    lease_duration=CONTROL_COORDINATOR_LEASE_DURATION,
 )
 _cancel_handler = CancelExperimentHandler(
     process=_experiment_control,

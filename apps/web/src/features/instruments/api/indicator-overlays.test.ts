@@ -5,7 +5,12 @@ import { fetchEtfNav } from "./indicator-overlays";
 
 describe("ETF NAV display adapter", () => {
 	it.each([
-		{ points: [{ nav_date: "2026-09-29", nav: 4.4 }, { nav_date: "2026-09-30", nav: 4.5 }] },
+		{
+			points: [
+				{ nav_date: "2026-09-29", nav: 4.4 },
+				{ nav_date: "2026-09-30", nav: 4.5 },
+			],
+		},
 		{ points: [] },
 	])("preserves the NAV response points", async ({ points }) => {
 		server.use(
