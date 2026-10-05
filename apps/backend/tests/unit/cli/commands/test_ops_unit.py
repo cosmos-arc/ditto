@@ -950,6 +950,7 @@ class TestReconcileCommand:
         datasets = (
             "stock_daily",
             "adj_factor",
+            "index_daily",
             "income_statement",
             "balance_sheet",
             "cash_flow",

@@ -23,6 +23,7 @@ from ditto_data.quality.protocols import (
     SecondaryBarsSourceProtocol,
     SecondaryFinancialsSourceProtocol,
     SecondaryIdentityResolverProtocol,
+    SecondaryIndexBarsSourceProtocol,
 )
 from ditto_data.services.market_service import MarketService
 from ditto_data.services.metadata_service import MetadataService
@@ -358,6 +359,7 @@ class AppCommandProvider(Provider):
         secondary_events_source: SecondaryAdjustmentEventsSourceProtocol,
         adj_factor_context: AdjFactorReconcileContextProtocol,
         secondary_financials_source: SecondaryFinancialsSourceProtocol,
+        secondary_index_source: SecondaryIndexBarsSourceProtocol,
     ) -> ReconcileSourcesHandler:
         """
         数据源对账 Handler（辅源身份反解 + 除权日标记 + 黄金集过滤，#395）。
@@ -379,6 +381,7 @@ class AppCommandProvider(Provider):
             secondary_events_source=secondary_events_source,
             adj_factor_context=adj_factor_context,
             secondary_financials_source=secondary_financials_source,
+            secondary_index_source=secondary_index_source,
         )
 
     @provide

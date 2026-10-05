@@ -21,6 +21,7 @@ from ditto_data.quality.protocols import (
     SecondaryBarsSourceProtocol,
     SecondaryFinancialsSourceProtocol,
     SecondaryIdentityResolverProtocol,
+    SecondaryIndexBarsSourceProtocol,
 )
 from ditto_data.quality.quality_types import DQResult
 from ditto_platform.foundation import logger
@@ -67,6 +68,7 @@ class ReconcileSourcesHandler:
         secondary_events_source: SecondaryAdjustmentEventsSourceProtocol | None = None,
         adj_factor_context: AdjFactorReconcileContextProtocol | None = None,
         secondary_financials_source: SecondaryFinancialsSourceProtocol | None = None,
+        secondary_index_source: SecondaryIndexBarsSourceProtocol | None = None,
     ) -> None:
         self._engine = engine
         self._secondary_source = secondary_source
@@ -78,6 +80,7 @@ class ReconcileSourcesHandler:
         self._secondary_events_source = secondary_events_source
         self._adj_factor_context = adj_factor_context
         self._secondary_financials_source = secondary_financials_source
+        self._secondary_index_source = secondary_index_source
 
     def handle(self, cmd: ReconcileSourcesCommand) -> ReconciliationResult:
         """执行跨源对账，返回对账结果."""
@@ -171,7 +174,12 @@ class ReconcileSourcesHandler:
             return self._execute_adj_factor_comparison(primary_df, trade_date, dataset)
         if dataset in FINANCIAL_DATASETS:
             return self._execute_financial_comparison(primary_df, trade_date, dataset)
-        tickers = primary_df["ticker"].unique().cast(pl.String).to_list()
+        # 指数对账身份键为完整 thscode（后缀区分 000001.SH 指数与 000001.SZ
+        # 个股），从 source_ticker 取；股票路径沿用裸码 ticker。
+        if dataset == "index_daily":
+            tickers = primary_df["source_ticker"].unique().cast(pl.String).to_list()
+        else:
+            tickers = primary_df["ticker"].unique().cast(pl.String).to_list()
 
         secondary_result = self._fetch_secondary(
             tickers, trade_date, dataset, primary_count=primary_df.height
@@ -699,9 +707,18 @@ class ReconcileSourcesHandler:
         primary_count: int = 0,
     ) -> pl.DataFrame | ReconciliationResult:
         """获取辅助数据源。返回 DataFrame 或跳过结果."""
-        secondary_df = self._secondary_source.fetch_stock_daily_bars(
-            tickers, trade_date
-        )
+        if dataset == "index_daily":
+            if self._secondary_index_source is None:
+                raise AppCommandError(
+                    "index_daily reconciliation requires fuyao index source"
+                )
+            secondary_df = self._secondary_index_source.fetch_index_daily_bars(
+                tickers, trade_date
+            )
+        else:
+            secondary_df = self._secondary_source.fetch_stock_daily_bars(
+                tickers, trade_date
+            )
 
         if secondary_df.height == 0:
             logger.warning(

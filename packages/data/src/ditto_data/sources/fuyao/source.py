@@ -6,8 +6,9 @@ fuyao 数据源门面 — 冗余源（ADR：Tushare 主源，fuyao 对账与故�
   （10 交易日 dump 一次下载 + 本地过滤，供 source=auto 摄取）；source_ticker
   + 起止日单标的 REST 历史（adjust=none）；
 - ``fetch_stock_daily_bars``：对账协议帧（ticker 裸码，单日）；
-- ``fetch_financial_statements``：财务三表对账协议帧（#473，ticker 保留
-  完整 thscode；对账按标的隔离失败，报告显式未匹配）；
+- ``fetch_index_daily_bars`` / ``fetch_financial_statements``：指数/财务
+  三表对账协议帧（#473-#474，ticker 保留完整 thscode；对账按标的隔离
+  失败，报告显式未匹配）；
 - 快照（A 股批量 / ETF 单只）：展示层用，不进管道；
 - ``download_market_dump`` / ``daily_k_frame``：10 年日 K / 复权因子事件流
   Parquet 不可变快照与帧转换。
@@ -58,6 +59,20 @@ _ADJUSTMENT_EVENT_COLUMNS = (
     "per_share_bonus",
     "allotment_ratio",
     "allotment_price",
+)
+
+# 指数对账帧（#474）：ticker 保留完整 thscode（后缀区分 000001.SH 上证指数与
+# 000001.SZ 平安银行，反解靠交易所一致性，不能退化为裸码）。单位归一同股票
+# 日线：fuyao 股/元 → 内部手/千元。
+_INDEX_BAR_COLUMNS = (
+    "ticker",
+    "trade_date",
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "amount",
 )
 
 # 财务三表对账帧（#473）：fuyao 字段 → 内部存储列名（同口径字段才入映射；
@@ -449,6 +464,85 @@ class FuyaoSource:
                 }
             )
         return pl.concat(frames)
+
+    def fetch_index_daily_bars(
+        self,
+        thscodes: list[str],
+        trade_date: str,
+    ) -> pl.DataFrame:
+        """
+        指数对账协议帧（#474）：[ticker(thscode), trade_date, OHLC, volume, amount].
+
+        官方契约：窗口 ≤10 年、无 offset、指数无复权。复用 #433 越窗/重复键
+        防护——实测长窗口尾部与最新边缘会返回窗口外最近一根，必须逐根校验
+        date_ms == 目标日。对账按标的隔离失败（未知代码/越窗/重复键/空窗）：
+        记录原因后跳过该标的，报告中以辅侧未匹配显式呈现，不静默缩窗。
+        """
+        target = _parse_date(trade_date)
+        rows: list[dict[str, Any]] = []
+        for thscode in thscodes:
+            code = thscode.upper()
+            try:
+                data = self._client.get(
+                    "/api/a-share-index/prices/historical",
+                    params={
+                        "thscode": code,
+                        "interval": "1d",
+                        "start": date_to_ms(target),
+                        "end": date_to_ms(target),
+                    },
+                )
+                items: list[dict[str, Any]] = data.get("item") or []
+                dates = [ms_to_date(item["date_ms"]) for item in items]
+                if len(set(dates)) != len(dates):
+                    raise SourceFetchError(
+                        source="fuyao",
+                        message=f"fuyao index {code} duplicate trade_date: 拒绝",
+                    )
+                out_of_window = [d for d in dates if d != target]
+                if out_of_window:
+                    raise SourceFetchError(
+                        source="fuyao",
+                        message=(
+                            f"fuyao index {code} window [{target},{target}] "
+                            f"returned out-of-window bars {out_of_window}"
+                        ),
+                    )
+            except SourceFetchError as error:
+                logger.warning(
+                    "Fuyao index bar skipped for reconciliation",
+                    event="fuyao_index_bar_skip",
+                    thscode=code,
+                    trade_date=str(target),
+                    reason=str(error)[:200],
+                )
+                continue
+            rows.extend(
+                {
+                    "ticker": code,
+                    "trade_date": target,
+                    "open": item["open_price"],
+                    "high": item["high_price"],
+                    "low": item["low_price"],
+                    "close": item["close_price"],
+                    "volume": item["volume"] / _VOLUME_TO_LOTS,
+                    "amount": item["turnover"] / _AMOUNT_TO_THOUSANDS,
+                }
+                for item in items
+            )
+        return pl.DataFrame(
+            rows,
+            schema={
+                "ticker": pl.String,
+                "trade_date": pl.Date,
+                "open": pl.Float64,
+                "high": pl.Float64,
+                "low": pl.Float64,
+                "close": pl.Float64,
+                "volume": pl.Float64,
+                "amount": pl.Float64,
+            },
+        )
 
     def fetch_financial_statements(
         self,
