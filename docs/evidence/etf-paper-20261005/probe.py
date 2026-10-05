@@ -4,11 +4,13 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import os
 import shutil
 import subprocess
 import sys
 import time
+from contextlib import closing
 from dataclasses import asdict
 from datetime import UTC, datetime
 from decimal import Decimal
@@ -38,6 +40,13 @@ from ditto_portfolio.account_ledger import (
     AccountKind,
     create_account_event,
 )
+
+
+def wait_for_cutoff_boundary() -> None:
+    """Wait for the next whole-second visibility boundary."""
+    boundary = math.ceil(time.time())
+    while (remaining := boundary - time.time()) > 0:
+        time.sleep(remaining)
 
 
 def main() -> None:
@@ -83,7 +92,7 @@ def main() -> None:
             bundle.coordinator.ingest_date("etf_daily", "2026-09-30")
         )
     with (
-        make_app_container() as container,
+        closing(make_app_container()) as container,
         SqliteAccountEventJournal(str(root / "paper.sqlite")) as journal,
     ):
         snapshots = container.get(ProviderSnapshotReader)
@@ -92,7 +101,7 @@ def main() -> None:
         metadata = container.get(MetadataQueryFacade)
         readiness = container.get(SnapshotReadinessQuery)
         payloads = container.get(ProviderPayloadReader)
-        time.sleep(1)  # Canonical query cutoffs have second resolution.
+        wait_for_cutoff_boundary()
         query = ETFPaperReferenceQuery(
             asof="2026-09-30",
             cutoff=datetime.now(UTC),
@@ -146,7 +155,7 @@ def main() -> None:
                     ),
                 )
             )
-        time.sleep(1)
+        wait_for_cutoff_boundary()
         ledger = AccountLedgerQuery(journal=journal)
         facts = LiveETFPaperHandoffFacts(
             metadata=metadata,

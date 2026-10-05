@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from contextlib import closing
 from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
@@ -115,7 +116,7 @@ def test_provider_inputs_preserve_prices_and_refuse_missing_rules(
         )
 
     with (
-        make_app_container() as container,
+        closing(make_app_container()) as container,
         SqliteAccountEventJournal(str(tmp_path / "paper.sqlite")) as journal,
     ):
         snapshots = container.get(ProviderSnapshotReader)
@@ -213,7 +214,9 @@ def test_provider_inputs_preserve_prices_and_refuse_missing_rules(
             facts.resolve(
                 replace(request, knowledge_cutoff=datetime(2026, 9, 30, tzinfo=UTC))
             )
-        payload = root / by_dataset["etf_daily"].payload_uri
+        payload_uri = by_dataset["etf_daily"].payload_uri
+        assert payload_uri is not None
+        payload = root / payload_uri
         payload.unlink()
         with pytest.raises(AppProcessError, match="payload is unavailable"):
             facts.resolve(request)

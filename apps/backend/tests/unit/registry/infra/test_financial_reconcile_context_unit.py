@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from datetime import date
-from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 import polars as pl
@@ -11,9 +10,10 @@ import pytest
 from ditto_apps.registry.infra.protocol_adapters import (
     FundamentalFinancialReconcileContext,
 )
+from ditto_data.services.deps import FundamentalReaders
 
 
-def _readers(income_frame: pl.DataFrame) -> SimpleNamespace:
+def _readers(income_frame: pl.DataFrame) -> FundamentalReaders:
     income = MagicMock()
 
     def get_range(instrument_id: int, **_: object) -> pl.DataFrame:
@@ -22,10 +22,12 @@ def _readers(income_frame: pl.DataFrame) -> SimpleNamespace:
         return pl.DataFrame()
 
     income.get_range.side_effect = get_range
-    return SimpleNamespace(
+    return FundamentalReaders(
         income_statement=income,
         balance_sheet=MagicMock(),
         cash_flow=MagicMock(),
+        dividend=MagicMock(),
+        corporate_actions=MagicMock(),
     )
 
 
@@ -85,15 +87,8 @@ class TestFundamentalFinancialReconcileContext:
         golden = MagicMock()
         golden.is_enabled = True
         golden.get_tickers.return_value = ["600519"]
-        empty_reader = MagicMock()
-        empty_reader.get_range.return_value = pl.DataFrame()
         context = FundamentalFinancialReconcileContext(
             _readers(pl.DataFrame()), _instrument_reader(), golden
-        )
-        context._readers = SimpleNamespace(
-            income_statement=empty_reader,
-            balance_sheet=MagicMock(),
-            cash_flow=MagicMock(),
         )
 
         assert context.latest_statements("income_statement", "2026-10-05").is_empty()

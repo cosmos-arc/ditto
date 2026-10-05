@@ -198,3 +198,55 @@ test("restricted ETF cannot enter Paper and returns to tool selection", async ({
 	).toHaveAttribute("href", "#etf-tool-selection");
 	expect(new URL(page.url()).searchParams.has("paperSession")).toBe(false);
 });
+
+test("independent ETF inputs survive handoff and execution", async ({ request }) => {
+	const fixture = await (await request.get(`${apiOrigin}/system-fixture/etf-paper`)).json();
+	const allocation = `${apiOrigin}/api/v1/portfolio/etf-allocations/composed`;
+	const post = async (url: string, key: string, data: object) => {
+		const response = await request.post(url, { headers: { "Idempotency-Key": key }, data });
+		expect(response.ok(), await response.text()).toBe(true);
+		return (await response.json()).data;
+	};
+	const version = await post(`${allocation}/versions`, "save", {
+		asof: "2026-09-01", knowledge_cutoff: "2026-09-01T09:00:00Z",
+		source_snapshot_id: fixture.signal_etf_basic, instrument_ids: [2000101],
+		mode: "equal", cash_weight: "0.5", max_position_weight: "0.5",
+		reason: "isolated combination contract, not LIVE configuration",
+	});
+	const base = `${allocation}/versions/${version.version_id}`;
+	for (const action of ["submit", "approve"]) {
+		await post(`${base}/review`, action, { action, actor: "recorded test", reason: "exact version" });
+	}
+	const identity = {
+		account_id: "etf-composed-inputs", session_id: "composed-session",
+		intended_trade_date: "2026-09-02",
+	};
+	const authorization = await post(`${base}/paper-authorizations`, "authorize", {
+		...identity, actor: "recorded test", reason: "isolated Paper only",
+	});
+	const common = { ...identity, authorization_id: authorization.authorization_id, signal_date: "2026-09-01" };
+	const handoff = {
+		...common, decision_date: "2026-09-01", knowledge_cutoff: "2026-09-01T09:00:00Z",
+		source_snapshot_id: fixture.signal_etf_basic,
+		input_snapshot_ids: { etf_daily: fixture.signal_etf_daily, etf_reference: fixture.signal_reference },
+	};
+	for (const [rules, reason] of [[fixture.execution_reference, "future"], [fixture.pending_rules, "not consumable"]]) {
+		const rejected = await request.post(`${base}/paper-handoffs`, {
+			headers: { "Idempotency-Key": `reject-${reason}` },
+			data: { ...handoff, input_snapshot_ids: { ...handoff.input_snapshot_ids, etf_reference: rules } },
+		});
+		expect(rejected.status()).toBe(422);
+		expect(await rejected.text()).toContain(reason);
+	}
+	await post(`${base}/paper-handoffs`, "handoff", handoff);
+	const execution = {
+		...common, execution_cutoff: "2026-09-03T08:00:00Z",
+		reference_snapshot_id: fixture.execution_etf_basic, market_snapshot_id: fixture.market,
+		input_snapshot_ids: { etf_daily: fixture.execution_etf_daily, etf_reference: fixture.execution_reference },
+	};
+	const first = await post(`${base}/paper-executions`, "execute", execution);
+	expect(first.outcomes[0].status).toBe("filled");
+	expect(await post(`${base}/paper-executions`, "execute", execution)).toEqual(first);
+	const persisted = await request.get(`${apiOrigin}/system-fixture/etf-paper/composed-rule-identity`);
+	expect(await persisted.json()).toEqual({ rule_snapshot_id: fixture.execution_reference, rule_cutoff: "2026-09-03T08:00:00+00:00" });
+});
