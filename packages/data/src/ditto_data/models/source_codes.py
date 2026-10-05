@@ -92,10 +92,24 @@ FRED_INDICATOR_CODES: frozenset[str] = frozenset(
 )
 
 
+# 新浪外盘连续期货小白名单（#436）——逐品种身份/单位/币种登记。
+# 值为 (instrument_id, 单位, 币种, 说明)。连续参考序列：换月规则未知，
+# 不与具体可交易合约混身份；身份经数值/符号惯例核实后才入表
+# （ZSD 2026-10-05 实测数值与已知金属品种不符且源无名称字段，
+# 身份未核实不入表）。展示-only（#451）：不得进入策略/回测/Paper/Agent
+# 决策输入。
+SINA_FOREIGN_FUTURES: dict[str, tuple[int, str, str, str]] = {
+    "CL": (5_000_005, "美元/桶", "USD", "NYMEX WTI 原油连续参考"),
+    "GC": (5_000_006, "美元/盎司", "USD", "COMEX 黄金连续参考"),
+    "SI": (5_000_007, "美元/盎司", "USD", "COMEX 白银连续参考"),
+}
+
+
 __all__ = [
     "COMMODITY_CODE_TO_INSTRUMENT_ID",
     "FRED_INDICATOR_CODES",
     "FX_CODE_TO_INSTRUMENT_ID",
     "METAL_CODE_ALIASES",
+    "SINA_FOREIGN_FUTURES",
     "VIX_CODE_TO_INSTRUMENT_ID",
 ]

@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from ditto_data.models.common import Source
 from ditto_data.sources.fred.fred_source import FredSource
+from ditto_data.sources.sina.source import SinaSource
 from ditto_data.sources.source import DataSources
 from ditto_data.sources.tushare.tushare_source import TushareSource
 
@@ -24,15 +25,22 @@ class SourceAccessor:
     - 管理不同数据源的获取
     """
 
-    def __init__(self, sources: DataSources) -> None:
+    def __init__(
+        self,
+        sources: DataSources,
+        sina_source: SinaSource | None = None,
+    ) -> None:
         """
         初始化 SourceAccessor.
 
         Args:
             sources: DataSources accessor 实例
+            sina_source: 新浪外盘连续期货源（#436，免费公开无 key，
+                默认启用；sina_enabled=False 时为 None）
 
         """
         self._sources = sources
+        self._sina_source = sina_source
 
     def get_source(self, name: str | Source) -> TushareSource | FredSource:
         """
@@ -71,3 +79,14 @@ class SourceAccessor:
 
         """
         return self._sources.fred
+
+    @property
+    def sina(self) -> SinaSource | None:
+        """
+        获取新浪外盘连续期货源（#436）.
+
+        Returns:
+            SinaSource 实例或 None（sina_enabled=False 时）
+
+        """
+        return self._sina_source

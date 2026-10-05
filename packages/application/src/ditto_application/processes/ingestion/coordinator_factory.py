@@ -246,6 +246,7 @@ def _build_coordinator(
         ),
         fetchers=_source_fetchers_for(services, source_key),
         fred_source=fred_source,
+        sina_source=services.source_accessor.sina,
         config=IngestionCoordinatorConfig(
             source_name=source_key.value,
             ingestion_log_store=services.ingestion_log_store,

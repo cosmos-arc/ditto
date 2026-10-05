@@ -120,6 +120,7 @@ class IngestionCoordinator:
         *,
         fetchers: SourceFetchers,
         fred_source: CommoditySource | None = None,
+        sina_source: CommoditySource | None = None,
         config: IngestionCoordinatorConfig | None = None,
     ) -> None:
         """初始化 IngestionCoordinator。"""
@@ -134,6 +135,7 @@ class IngestionCoordinator:
         self._fetchers = fetchers
         self._source_name = cfg.source_name
         self._fred_source = fred_source
+        self._sina_source = sina_source
         self._ingestion_log_store = cfg.ingestion_log_store
         self._ingestion_cursor_store = cfg.ingestion_cursor_store
         self._quality_checker = cfg.quality_checker
@@ -176,6 +178,7 @@ class IngestionCoordinator:
             trade_date,
             primary_source=self._fetchers.macro,
             fred_source=self._fred_source,
+            sina_source=self._sina_source,
         )
 
     def _fetch_source_defined_range(
@@ -191,6 +194,7 @@ class IngestionCoordinator:
                 end_date,
                 primary_source=self._fetchers.macro,
                 fred_source=self._fred_source,
+                sina_source=self._sina_source,
             )
         if dataset == "macro_indicators":
             range_fetch = getattr(

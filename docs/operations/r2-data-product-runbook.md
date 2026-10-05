@@ -173,3 +173,46 @@ task ci
 完整 DoD 和本次证据映射见
 [R2 设计 §16](../plans/2026-07-17-r2-data-product-design.md#16-definition-of-done) 与
 [R2 evidence index](../evidence/r2/README.md)。
+
+## 10. 全球指数 21 指数全量摄取（#435）
+
+`index_global` 官方 21 指数白名单落在
+`ditto_data.models.GLOBAL_INDEX_CODES`（权威清单，摄取篮子与探针共用），
+适配器 `_GLOBAL_INDEX_SPECS` 逐码声明时区/计价币种/收市时刻。官方表无
+NDX；IXIC 是纳斯达克综合指数，不能替代纳斯达克 100（跨境纳指 100 ETF
+基准缺口如实保留）。
+
+- 用途为展示-only（#451 裁决）：`market_context` 以展示 metrics 暴露每码
+  最新观察 close（`global_index_<code>_close`，unit=index_point），
+  `global_return_1d` 恒为 None 并计入 declared_missing_inputs。
+- 发布时刻官方不可知：published_at/available_at 恒为实际采集时刻；
+  close_time 仅是 event_time 会话元数据（标 approx 的为最佳已知近似）。
+- 2026-10-05 实测可得区间：主流指数 1990 起；XIN9 2004-07、HKAH/AS51
+  2007、SPTSX 2001、CSX5P 1998、CKLSE 1995、HKTECH 2020-07、
+  RTS 2020-01 起；RUT/RTS/XIN9/HKAH/HKTECH vol 缺失率 100%，
+  缺失保留 null 不补零。
+- 摄取走既有 `global_index_daily` 日更路由（SOURCE_DEFINED），
+  单码长历史由 client 按页宽 4000 自动翻页。
+
+## 11. 新浪外盘连续期货参考（#436）
+
+免费公开无 key 源（`GlobalFuturesService.getGlobalFuturesDailyKLine`，
+JSONP），默认启用（`SINA_ENABLED=false` 可关）。作为商品复合源第三条腿
+进入 `commodity_daily`（FRED 油/VIX + Tushare 金银 + Sina 外盘连续），
+失败按 #432 完整性合同整体报错，不静默降级。
+
+- 品种小白名单 `ditto_data.models.SINA_FOREIGN_FUTURES`：CL
+  (5,000,005, 美元/桶)、GC (5,000,006, 美元/盎司)、SI (5,000,007,
+  美元/盎司)。**ZSD 身份未核实**（2026-10-05 实测数值 3706 与已知金属
+  品种不符且源无名称字段），不入表；核实后逐品种登记再扩。
+- 连续参考身份：换月规则未知，不与具体可交易合约混身份（Tushare
+  fut_daily 是合约日线，两者身份不同）；展示-only，不进入策略/回测/
+  Paper/Agent 决策输入。
+- 占位零语义：CL/GC 的 volume/position/settlement 恒为 0、ZSD 缺
+  settlement——不证明真实成交/持仓/结算，一律不入库，仅存真实 OHLC。
+- 端点无窗口参数：源侧返回全量当前视图后本地过滤；实测历史起点恰为
+  探测日 30/10 年前（CL 1996-10-07、GC/SI 2016-10-05），疑似滚动窗口，
+  回填深度以逐日摄取为准。trade_date_utc 为纽约午夜占位，真实收盘
+  时刻未验证。
+- 2026-10-05 LIVE：窄窗口 6 交易日×3 品种=18 行写入读回一致；
+  重复写 KEEP_LAST updated=18。
