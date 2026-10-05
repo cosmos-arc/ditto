@@ -406,6 +406,7 @@ CREATE TABLE IF NOT EXISTS income_statement (
     effective_from DATE NOT NULL,
     effective_to DATE,
     revenue REAL,
+    operating_revenue REAL,
     operating_profit REAL,
     net_profit REAL,
     eps REAL,

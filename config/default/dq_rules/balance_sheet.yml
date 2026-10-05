@@ -47,17 +47,18 @@ statistical:
   # 主源 Tushare 资产负债表 vs 辅源 fuyao 资产负债表数值交叉。
   # 两侧金额均为元；fuyao 无流动负债合计对应字段（current_liabilities
   # 不注册比较）、cash=货币资金映射 money_cap，语义差异以字段映射显式单列。
+  # 口径（2026-10-05 实测茅台 2025 年末）：net_assets=Tushare
+  # total_hldr_eqy_exc_min_int（归母权益 2446.4 亿）≠ fuyao
+  # holder_equity_total（所有者权益合计 2539.6 亿，差 93.2 亿=少数股东
+  # 权益）——非同科目且主源无含少数权益字段，不可换算，不注册比较。
   - rule: cross_source_compare
     key_columns: [instrument_id, report_date]
-    fields: [total_assets, total_liabilities, net_assets, current_assets]
+    fields: [total_assets, total_liabilities, current_assets]
     tolerance_rules:
       total_assets:
         method: relative
         relative_tol: 0.0001
       total_liabilities:
-        method: relative
-        relative_tol: 0.0001
-      net_assets:
         method: relative
         relative_tol: 0.0001
       current_assets:

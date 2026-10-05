@@ -18,7 +18,9 @@ BALANCE_SHEET_SPEC = SqliteTableSpec(
 
 INCOME_STATEMENT_SPEC = SqliteTableSpec(
     table="income_statement",
-    columns=("revenue", "operating_profit", "net_profit", "eps"),
+    # revenue=营业总收入（旧义，因子消费方在用）；operating_revenue=营业收入
+    # （同 fuyao operating_income 科目，跨源对账可比）
+    columns=("revenue", "operating_revenue", "operating_profit", "net_profit", "eps"),
     id_column="instrument_id",
     date_column="report_date",
     nullable_columns=frozenset({"effective_to"}),

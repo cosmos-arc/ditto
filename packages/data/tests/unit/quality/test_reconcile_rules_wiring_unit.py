@@ -101,13 +101,13 @@ def _income_frame(rows: list[tuple[int, float, float]]) -> pl.DataFrame:
         {
             "instrument_id": [r[0] for r in rows],
             "report_date": [_D] * len(rows),
-            "revenue": [r[1] for r in rows],
+            "operating_revenue": [r[1] for r in rows],
             "eps": [r[2] for r in rows],
         },
         schema={
             "instrument_id": pl.Int64,
             "report_date": pl.Date,
-            "revenue": pl.Float64,
+            "operating_revenue": pl.Float64,
             "eps": pl.Float64,
         },
     )

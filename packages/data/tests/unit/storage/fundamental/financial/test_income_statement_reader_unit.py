@@ -30,6 +30,7 @@ def in_memory_db(tmp_path: Path) -> SQLitePool:
         effective_from DATE NOT NULL,
         effective_to DATE,
         revenue REAL,
+        operating_revenue REAL,
         operating_profit REAL,
         net_profit REAL,
         eps REAL,
