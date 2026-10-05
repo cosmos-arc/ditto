@@ -80,7 +80,8 @@ class TestLsNavSeries:
 
 
 class TestMonthlyIc:
-    def test_groups_by_year_month_with_count(self) -> None:
+    @pytest.mark.parametrize("as_date", [False, True])
+    def test_groups_by_year_month_with_count(self, as_date: bool) -> None:
         frame = pl.DataFrame(
             {
                 "trade_date": [
@@ -92,6 +93,8 @@ class TestMonthlyIc:
                 "ic": [0.1, 0.3, -0.2, 0.0],
             },
         )
+        if as_date:
+            frame = frame.with_columns(pl.col("trade_date").str.to_date())
         result = monthly_ic(frame)
         assert result.to_dicts() == [
             {"year": 2025, "month": 12, "mean_ic": 0.0, "days": 1},

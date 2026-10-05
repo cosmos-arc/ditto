@@ -135,8 +135,8 @@ def monthly_ic(ic_df: pl.DataFrame) -> pl.DataFrame:
     """Mean IC and observation count per (year, month)."""
     return (
         ic_df.with_columns(
-            year=pl.col("trade_date").str.slice(0, 4).cast(pl.Int32),
-            month=pl.col("trade_date").str.slice(5, 2).cast(pl.Int32),
+            year=pl.col("trade_date").cast(pl.String).str.slice(0, 4).cast(pl.Int32),
+            month=pl.col("trade_date").cast(pl.String).str.slice(5, 2).cast(pl.Int32),
         )
         .group_by("year", "month")
         .agg(mean_ic=pl.col("ic").mean(), days=pl.len())
