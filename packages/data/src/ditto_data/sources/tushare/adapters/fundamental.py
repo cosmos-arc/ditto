@@ -28,8 +28,10 @@ from ditto_data.sources.tushare.processors.transformer import (
 # ── 财务报表字段定义 ──────────────────────────────────────────────
 # 披露锚 = f_ann_date（实际公告日，ADR 红线 4）；ann_date 可被 Tushare
 # 事后加工改写，不作为 PIT knowledge date。
+# report_type/update_flag 为 #482 行身份列（过滤/去重在 _fetch_financial，
+# 不进输出帧）
 _BALANCE_SHEET_FIELDS = (
-    "ts_code,end_date,f_ann_date,total_assets,total_liab,"
+    "ts_code,end_date,f_ann_date,report_type,update_flag,total_assets,total_liab,"
     "total_hldr_eqy_exc_min_int,total_cur_assets,total_cur_liab,"
     "inventory,fixed_assets,cash_equivalents,accounts_receivable,"
     "short_term_debt,long_term_debt,money_cap,total_share"
@@ -37,7 +39,7 @@ _BALANCE_SHEET_FIELDS = (
 # revenue=营业收入（与 fuyao operating_income 同科目，跨源对账可比字段）；
 # total_revenue=营业总收入（含利息收入等金融科目）沿旧义存 revenue 列。
 _INCOME_STATEMENT_FIELDS = (
-    "ts_code,end_date,f_ann_date,total_revenue,revenue,"
+    "ts_code,end_date,f_ann_date,report_type,update_flag,total_revenue,revenue,"
     "operate_cost,sale_exp,admin_exp,fin_exp,rd_exp,"
     "operate_profit,total_profit,income_tax,n_income,"
     "basic_eps,diluted_eps"
@@ -46,7 +48,8 @@ _INCOME_STATEMENT_FIELDS = (
 # 旧的 n_cash_flows_* 拼写取不回值。depreciation/interest_paid/tax_paid
 # 在官方端点已无同名字段且无消费者，不再请求。
 _CASH_FLOW_FIELDS = (
-    "ts_code,end_date,f_ann_date,n_cashflow_act,n_cashflow_inv_act,n_cashflow_fnc_act"
+    "ts_code,end_date,f_ann_date,report_type,update_flag,"
+    "n_cashflow_act,n_cashflow_inv_act,n_cashflow_fnc_act"
 )
 
 # 业绩预告（doc_id=45）：上下界型预告，净利润上下限单位万元。
@@ -164,6 +167,21 @@ class FundamentalTushareAdapter(BaseTushareAdapter):
                 params.update({k: v for k, v in extra_params.items() if v})
 
             response = self._client.query(**params)
+
+            # #482（2026-10-05 实测）：财务窗口响应含同披露 update_flag=0/1
+            # 两行——字段清单不含该列时值相同的两行字节级一致，触发翻页
+            # 重复键守卫拒绝（守卫语义保持不变）。请求列显式携带身份后：
+            # 只保留合并报表（report_type=1；调整/更正类 vintage 排除，
+            # 有消费需求再扩），同一披露键（ts_code, end_date, f_ann_date）
+            # 取 update_flag=1（最新）行。
+            if "report_type" in response.columns:
+                response = response.filter(
+                    pl.col("report_type").is_null() | (pl.col("report_type") == "1")
+                )
+            if "update_flag" in response.columns:
+                response = response.sort("update_flag").unique(
+                    subset=["ts_code", "end_date", "f_ann_date"], keep="last"
+                )
 
             result = TushareDataTransformer.transform(response, dataset, mapping)
 
