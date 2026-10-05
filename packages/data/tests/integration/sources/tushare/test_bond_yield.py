@@ -21,11 +21,6 @@ def _get_tushare_token() -> str | None:
     return keyring.get_password("tushare", "token")
 
 
-def _has_tushare_token() -> bool:
-    """检查 Tushare token 是否可用（环境变量或 keyring）."""
-    return bool(_get_tushare_token())
-
-
 def _is_entitlement_denied(error: BaseException) -> bool:
     """Inspect wrapped/retried provider failures for an endpoint permission denial."""
     pending: list[BaseException] = [error]
@@ -70,10 +65,9 @@ def tushare_adapter() -> BondYieldTushareAdapter:
     return adapter
 
 
+# token 探测只在 fixture 体内执行（运行时 skip）：collection 期调用 keyring
+# 会在 macOS 非交互会话阻塞等待钥匙串授权（#222）
 @pytest.mark.integration
-@pytest.mark.skipif(
-    not _has_tushare_token(), reason="TUSHARE_TOKEN not set (env or keyring)"
-)
 class TestTushareBondYieldIngestion:
     """Tushare 中国国债收益率数据摄取集成测试."""
 
