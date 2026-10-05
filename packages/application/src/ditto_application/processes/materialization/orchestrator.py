@@ -498,6 +498,7 @@ class DerivedMaterializationOrchestrator:
             frame=materialized_frame,
         )
         time_key = spec.effective_time_keys[0]
+        history = self._published_history(spec, materialized_frame, time_key)
         # 三阶段 checkpoint（#418，复用 #393 语义）：写入前落 PLANNED 意图；
         # 部分失败时目录停留可发现的恢复态，读取侧拒绝非 COMPLETE 分区。
         self._catalog_service.save_checkpoints(
@@ -515,7 +516,7 @@ class DerivedMaterializationOrchestrator:
             frame=materialized_frame,
             request_start=request.request_start,
             request_end=request.request_end,
-            source_snapshot_id=request.source_snapshot_id,
+            published_history=history,
         )
         # 分区文件已原子落盘：簿记分区行并推进 PAYLOAD_COMMITTED（可恢复态）。
         self._catalog_service.save_partitions(
@@ -774,6 +775,36 @@ class DerivedMaterializationOrchestrator:
             return provenance
         return SourceSnapshotProvenance.from_ids((context.request.source_snapshot_id,))
 
+    def _published_history(
+        self, spec: DerivedSpec, frame: pl.DataFrame, time_key: str
+    ) -> pl.DataFrame:
+        """Retain only checksum-verified immutable history, including after a crash."""
+        remaining = set(extract_partition_keys(frame, time_key))
+        history: list[pl.DataFrame] = []
+        for previous in reversed(
+            self._catalog_service.list_successful_runs(spec.id, spec.version)
+        ):
+            keys = {
+                item.partition_key
+                for item in self._catalog_service.list_partitions(
+                    spec.id, spec.version, previous.run_id
+                )
+            } & remaining
+            if not keys:
+                continue
+            if self._artifact_reader is None:
+                raise AppProcessError("published history requires an artifact reader")
+            old = self._artifact_reader.read_run_frame(
+                spec.id, spec.version, previous.run_id
+            )
+            history.append(
+                old.filter(pl.col(time_key).cast(pl.String).str.slice(0, 4).is_in(keys))
+            )
+            remaining -= keys
+            if not remaining:
+                break
+        return pl.concat(history, how="diagonal_relaxed") if history else pl.DataFrame()
+
     def _verify_deterministic_retry(
         self,
         *,
@@ -801,10 +832,12 @@ class DerivedMaterializationOrchestrator:
                 request.request_end,
             ):
                 continue
-            if (
-                reader.read_run_manifest_hash(spec.id, spec.version, previous.run_id)
-                != manifest_record.manifest_hash
-            ):
+            previous_hash = reader.read_run_manifest_hash(
+                spec.id, spec.version, previous.run_id
+            )
+            if previous_hash is None:
+                raise AppProcessError("successful run identity metadata is missing")
+            if previous_hash != manifest_record.manifest_hash:
                 continue
             published = reader.read_run_frame(spec.id, spec.version, previous.run_id)
             if expected.is_empty() and published.is_empty():

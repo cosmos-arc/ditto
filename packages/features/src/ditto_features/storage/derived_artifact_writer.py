@@ -152,7 +152,7 @@ class DerivedArtifactWriter:
         frame: pl.DataFrame,
         request_start: str,
         request_end: str,
-        source_snapshot_id: str | None,
+        published_history: pl.DataFrame | None = None,
     ) -> tuple[PartitionInfo, ...]:
         """
         Write durable (series) partitions as per-year parquet files.
@@ -186,8 +186,14 @@ class DerivedArtifactWriter:
                 trade_date_expr.str.slice(0, 4) == partition_key
             )
             partition_path = version_root / f"{partition_key}.parquet"
-            if partition_path.exists():
-                existing = pl.read_parquet(partition_path)
+            if partition_path.exists() and published_history is None:
+                raise ValueError(
+                    "existing partitions require verified published history"
+                )
+            if published_history is not None and not published_history.is_empty():
+                existing = published_history.filter(
+                    pl.col(time_key).cast(pl.String).str.slice(0, 4) == partition_key
+                )
                 outside = ~pl.col(time_key).cast(pl.String).str.slice(0, 10).is_between(
                     pl.lit(request_start), pl.lit(request_end)
                 )

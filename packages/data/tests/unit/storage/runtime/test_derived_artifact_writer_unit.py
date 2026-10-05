@@ -192,7 +192,6 @@ class TestWriteDurablePartitions:
             frame=frame,
             request_start="2024-01-01",
             request_end="2025-12-31",
-            source_snapshot_id=None,
         )
 
         assert len(partitions) == 2
@@ -221,7 +220,6 @@ class TestWriteDurablePartitions:
             frame=frame,
             request_start="2024-01-01",
             request_end="2024-12-31",
-            source_snapshot_id="snap-001",
         )
 
         assert len(partitions) == 1
@@ -250,7 +248,6 @@ class TestWriteDurablePartitions:
             frame=frame,
             request_start="2024-01-01",
             request_end="2024-12-31",
-            source_snapshot_id=None,
         )
 
         version_root = (
@@ -484,7 +481,6 @@ class TestTwoPhaseCommit:
                     frame=frame,
                     request_start="2024-01-01",
                     request_end="2026-12-31",
-                    source_snapshot_id=None,
                 )
 
         # No final parquet files should exist (all-or-nothing)
@@ -510,7 +506,6 @@ class TestTwoPhaseCommit:
             frame=frame,
             request_start="2024-01-01",
             request_end="2025-12-31",
-            source_snapshot_id=None,
         )
 
         version_root = (
@@ -958,7 +953,6 @@ class TestConfigurableCompression:
             frame=frame,
             request_start="2024-01-01",
             request_end="2025-12-31",
-            source_snapshot_id=None,
         )
 
         assert len(partitions) == 2

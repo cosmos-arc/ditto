@@ -48,7 +48,6 @@ def test_empty_frame_durable_write_creates_no_directory(tmp_path: Path) -> None:
         frame=_frame(rows=0),
         request_start="2026-09-30",
         request_end="2026-09-30",
-        source_snapshot_id=None,
     )
     assert partitions == ()
     assert not _version_root(tmp_path).exists()
@@ -85,7 +84,6 @@ def test_phase1_failure_cleans_temps_and_created_directory(
             frame=_frame(rows=2),
             request_start="2026-09-30",
             request_end="2026-09-30",
-            source_snapshot_id=None,
         )
     version_root = _version_root(tmp_path)
     assert not version_root.exists()
@@ -104,7 +102,6 @@ def test_phase1_failure_keeps_existing_artifacts(
         frame=_frame(rows=2),
         request_start="2026-09-30",
         request_end="2026-09-30",
-        source_snapshot_id=None,
     )
     assert published != ()
 
@@ -118,9 +115,9 @@ def test_phase1_failure_keeps_existing_artifacts(
             time_key="trade_date",
             run_id="drv-crash",
             frame=_frame(rows=1),
+            published_history=_frame(rows=2),
             request_start="2026-09-30",
             request_end="2026-09-30",
-            source_snapshot_id=None,
         )
     version_root = _version_root(tmp_path)
     assert (version_root / "2026.parquet").exists()

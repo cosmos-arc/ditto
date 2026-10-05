@@ -1819,6 +1819,19 @@ def test_incremental_preserves_history_and_checks_every_input_identity(
     run("A", days[1], days[2], [9.0, 10.0, 11.0, 12.0], DerivedRunMode.FULL)
     before = reader.read_frame(derived_id=spec.id, version=1, end=days[2])
     assert before.height == 2
+    canonical = (
+        tmp_path
+        / "derived"
+        / "artifacts"
+        / "series"
+        / spec.id
+        / "v1"
+        / f"{days[2][:4]}.parquet"
+    )
+    if days[2][:4] == days[3][:4]:
+        pl.read_parquet(canonical).with_columns(
+            pl.lit(999.0).alias("value")
+        ).write_parquet(canonical)
     first_b = run("B", days[3], days[3], [9.0, 10.0, 11.0, 12.0])
     frozen_b = reader.read_run_frame(spec.id, 1, first_b.run_id)
     assert reader.read_frame(derived_id=spec.id, version=1, end=days[2]).equals(before)
@@ -1833,3 +1846,19 @@ def test_incremental_preserves_history_and_checks_every_input_identity(
         run("B", days[3], days[3], [9.0, 10.0, 11.0, 12.0]).status
         == DerivedRunStatus.SUCCESS
     )
+    metadata_path = (
+        tmp_path
+        / "derived"
+        / "artifacts"
+        / "series"
+        / spec.id
+        / "v1"
+        / "_runs"
+        / first_b.run_id
+        / "artifact_metadata.json"
+    )
+    metadata_path.unlink()
+    frozen = reader.read_frame(derived_id=spec.id, version=1)
+    with pytest.raises(AppProcessError, match="identity metadata is missing"):
+        run("B", days[3], days[3], [9.0, 10.0, 11.0, 777.0])
+    assert reader.read_frame(derived_id=spec.id, version=1).equals(frozen)

@@ -176,7 +176,6 @@ class TestServiceDelegatesWriteDurablePartitions:
             frame=frame,
             request_start="2024-01-01",
             request_end="2025-12-31",
-            source_snapshot_id="snap-001",
         )
 
         mock_writer.write_durable_partitions.assert_called_once_with(
@@ -186,7 +185,7 @@ class TestServiceDelegatesWriteDurablePartitions:
             frame=frame,
             request_start="2024-01-01",
             request_end="2025-12-31",
-            source_snapshot_id="snap-001",
+            published_history=None,
         )
         assert result is partitions
         assert isinstance(result[0], PartitionInfo)
