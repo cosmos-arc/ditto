@@ -108,6 +108,35 @@ _AMOUNT_TO_THOUSANDS = 1000.0
 # 2186/970 固化为行数上限，窗口内仍校验日期边界与重复键。
 _REST_WINDOW_DAYS = 1095
 
+# daily-k 常量列口径（#439：先验证再删列，不凭函数注释保证口径）
+_DAILY_K_CONSTANTS = {"currency": "CNY", "interval": "1d", "adjusted": "none"}
+
+
+def _validate_constant_column(
+    raw: pl.DataFrame, column: str, expected: str, *, kind: str
+) -> None:
+    """校验 dump 常量列口径，缺列或非常量期望值时拒绝转换（fail-closed）."""
+    if column not in raw.columns:
+        raise SourceFetchError(
+            source="fuyao",
+            message=f"{kind} dump 缺常量列 {column}: 契约违约 拒绝转换",
+        )
+    unique = raw[column].unique().to_list()
+    if unique != [expected]:
+        raise SourceFetchError(
+            source="fuyao",
+            message=(
+                f"{kind} dump {column} 期望常量 {expected}, 实际 {unique}: "
+                "契约违约 拒绝转换"
+            ),
+        )
+
+
+def _validate_daily_k_constants(raw: pl.DataFrame) -> None:
+    """校验 daily-k dump 常量列口径（currency/interval/adjusted）."""
+    for column, expected in _DAILY_K_CONSTANTS.items():
+        _validate_constant_column(raw, column, expected, kind="daily-k")
+
 
 def _bars_frame(rows: list[Any], source_ticker: str) -> pl.DataFrame:
     """原始 bar 行 → STOCK_DAILY SourceSchema 帧（knowledge_date = T+1）."""
@@ -269,6 +298,7 @@ class FuyaoSource:
     def daily_k_frame(dump_path: Path) -> pl.DataFrame:
         """日 K dump Parquet → STOCK_DAILY 帧（pre_close 在 dump 窗口内推导）."""
         raw = pl.read_parquet(dump_path)
+        _validate_daily_k_constants(raw)
         return (
             raw.rename(
                 {
@@ -321,15 +351,7 @@ class FuyaoSource:
                 source="fuyao",
                 message=(f"adjustment-factors dump 缺列 {missing}: 契约违约 拒绝转换"),
             )
-        currencies = raw["currency"].unique().to_list()
-        if currencies != ["CNY"]:
-            raise SourceFetchError(
-                source="fuyao",
-                message=(
-                    f"adjustment-factors dump currency 期望常量 CNY, 实际 "
-                    f"{currencies}: 契约违约 拒绝转换"
-                ),
-            )
+        _validate_constant_column(raw, "currency", "CNY", kind="adjustment-factors")
         return raw.with_columns(
             ticker=pl.col("thscode").str.split(".").list.get(0),
             trade_date=pl.col("ex_date_ms").map_elements(
@@ -413,3 +435,68 @@ class FuyaoSource:
             size_bytes=dest.stat().st_size,
         )
         return dest
+
+
+class FuyaoDailyKDumpFetcher:
+    """
+    daily-k 本地 dump 回填 fetcher（#439 手动回填专用）.
+
+    仅实现 stock_daily 日期级取数（MarketFetcher 协议子集，与 FuyaoSource
+    注册同口径：数据集级白名单负责精确门禁）。主键重复或常量列违约拒绝
+    回填；身份登记、DQ、VERIFY_IDENTICAL 重叠保护与 ProviderSnapshot 证据
+    均由正常摄取链路（source=fuyao 协调器）承担。不自动降级：只有被显式
+    注入组合根（market_fetcher_override）时才生效。
+    """
+
+    def __init__(self, dump_path: Path) -> None:
+        raw = pl.read_parquet(dump_path)
+        missing = [c for c in ("thscode", "date_ms") if c not in raw.columns]
+        if missing:
+            raise SourceFetchError(
+                source="fuyao",
+                message=f"daily-k dump 缺主键列 {missing}: 契约违约 拒绝回填",
+            )
+        duplicates = raw.height - raw.unique(subset=["thscode", "date_ms"]).height
+        if duplicates:
+            raise SourceFetchError(
+                source="fuyao",
+                message=(
+                    f"daily-k dump 主键(thscode,date_ms)重复 {duplicates} 行: "
+                    "拒绝回填(重新下载 dump)"
+                ),
+            )
+        self._frame = FuyaoSource.daily_k_frame(dump_path)
+        self._empty = self._frame.clear()
+        # 按日分区一次，逐日取数 O(1)（10 年全量约 2400 个交易日）
+        self._by_date: dict[date, pl.DataFrame] = {
+            part["trade_date"][0]: part
+            for part in self._frame.partition_by("trade_date", maintain_order=True)
+        }
+
+    @property
+    def coverage(self) -> tuple[date, date] | None:
+        """Dump 实际日期覆盖（请求区间与之取交，不要求末根等于请求 end）."""
+        if not self._by_date:
+            return None
+        dates = sorted(self._by_date)
+        return (dates[0], dates[-1])
+
+    @property
+    def frame(self) -> pl.DataFrame:
+        """已验证的完整 STOCK_DAILY 帧（dry-run 冲突分析用）."""
+        return self._frame
+
+    def fetch_stock_daily(
+        self,
+        trade_date: str | None = None,
+        source_ticker: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> pl.DataFrame:
+        """Dump 单日切片（正常摄取链路的 fetch 钩子）."""
+        if not trade_date or source_ticker or start_date or end_date:
+            raise SourceFetchError(
+                source="fuyao",
+                message="daily-k dump 回填仅支持 trade_date 单日取数",
+            )
+        return self._by_date.get(_parse_date(trade_date), self._empty)

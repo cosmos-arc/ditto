@@ -104,8 +104,10 @@ from ditto_data.lineage import InMemoryDataLineage
 from ditto_data.quality.config import DQSettings
 from ditto_data.quality.golden import GoldenDatasetSpec
 from ditto_data.quality.protocols import (
+    AdjFactorReconcileContextProtocol,
     ComparisonStoreProtocol,
     InstrumentStoreProtocol,
+    SecondaryAdjustmentEventsSourceProtocol,
     SecondaryBarsSourceProtocol,
 )
 from ditto_data.services.market_service import MarketService
@@ -254,6 +256,16 @@ class _ProtocolAdapterProvider(Provider):
     @provide
     def secondary_bars_source_protocol(self) -> SecondaryBarsSourceProtocol:
         return _secondary_mock
+
+    @provide
+    def secondary_adjustment_events_source_protocol(
+        self,
+    ) -> SecondaryAdjustmentEventsSourceProtocol:
+        return MagicMock(spec=SecondaryAdjustmentEventsSourceProtocol)
+
+    @provide
+    def adj_factor_reconcile_context(self) -> AdjFactorReconcileContextProtocol:
+        return MagicMock(spec=AdjFactorReconcileContextProtocol)
 
     @provide
     def comparison_store_protocol(self) -> ComparisonStoreProtocol:
