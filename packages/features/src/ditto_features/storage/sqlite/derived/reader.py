@@ -159,6 +159,17 @@ class SQLiteDerivedCatalogReader:
             return None
         return _to_run_record(row)
 
+    def list_successful_runs(
+        self, derived_id: str, version: int
+    ) -> tuple[DerivedRunRecord, ...]:
+        """Retain every published input identity, including superseded runs."""
+        rows = self._sqlite_client.fetchall(
+            """SELECT * FROM derived_run WHERE derived_id = ? AND version = ?
+            AND status = 'SUCCESS' ORDER BY created_at, rowid""",
+            (derived_id, version),
+        )
+        return tuple(_to_run_record(row) for row in rows)
+
     def read_state(self, derived_id: str) -> DerivedStateRecord | None:
         """Read the latest durable state row for one derived id."""
         row = self._sqlite_client.fetchone(

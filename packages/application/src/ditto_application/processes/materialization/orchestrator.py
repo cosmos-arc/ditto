@@ -23,7 +23,6 @@ from ditto_data.lineage.contracts import (
 )
 from ditto_features.compile_cache import SQLiteCompileCache
 from ditto_features.derived_types import DerivedSpec, MaterializationProfile
-from ditto_features.errors import DerivedIntegrityError
 from ditto_features.expression import CompiledDerivedExpression
 from ditto_features.materialization import (
     DerivedExecutionPlan,
@@ -451,6 +450,13 @@ class DerivedMaterializationOrchestrator:
         plan = ctx.plan
         run = ctx.run
         materialized_frame = ctx.materialized_frame
+        time_key = spec.effective_time_keys[0]
+        window = pl.col(time_key).cast(pl.String).str.slice(0, 10)
+        materialized_frame = materialized_frame.filter(
+            window.is_between(
+                pl.lit(request.request_start), pl.lit(request.request_end)
+            )
+        )
         if spec.materialization_profile == MaterializationProfile.DERIVE:
             self._artifact_writer.write_ephemeral_result(
                 spec=ctx.spec_record,
@@ -633,16 +639,29 @@ class DerivedMaterializationOrchestrator:
                 status=DerivedCheckpointStatus.COMPLETE,
             )
         )
+        previous_state = self._catalog_service.get_state(spec.id)
+        starts = [request.request_start]
+        ends = [request.request_end]
+        if previous_state is not None and previous_state.active_version == spec.version:
+            if previous_state.coverage_start:
+                starts.append(previous_state.coverage_start)
+            if previous_state.coverage_end:
+                ends.append(previous_state.coverage_end)
         self._catalog_service.save_state(
             DerivedStateRecord(
                 derived_id=spec.id,
                 active_version=spec.version,
-                coverage_start=plan.compute_start,
-                coverage_end=plan.compute_end,
-                watermark=plan.compute_end,
+                coverage_start=min(starts),
+                coverage_end=max(ends),
+                watermark=max(ends),
                 latest_run_id=run.run_id,
                 latest_run_status=DerivedRunStatus.SUCCESS.value,
-                total_rows=frame.height,
+                total_rows=sum(
+                    item.rows_written or 0
+                    for item in self._catalog_service.list_checkpoints(
+                        spec.id, spec.version
+                    )
+                ),
                 updated_at=finished_at,
             )
         )
@@ -766,61 +785,44 @@ class DerivedMaterializationOrchestrator:
         """
         相同输入身份的重试必须产出一致内容（#444 直线发布判定）.
 
-        仅当上次成功 run 与本次请求完全相同（窗口与 manifest 身份）时比对
-        已发布窗口内容；新公式/新输入产生新身份，允许值变化（首版无基准
-        也可发布）。比对发生在任何写入之前，拒绝时不触碰已发布产物。
+        遍历成功 run 的完整窗口与 manifest 身份，读取其不可变分区副本。
+        比对发生在任何写入之前，不能拿当前分区冒充旧身份。
         """
         reader = self._artifact_reader
         if reader is None:
             return
-        last_success = self._catalog_service.get_latest_successful_run(
-            spec.id,
-            spec.version,
-        )
-        if last_success is None:
-            return
-        if (
-            last_success.request_start,
-            last_success.request_end,
-        ) != (request.request_start, request.request_end):
-            return
-        last_manifest_hash = reader.read_run_manifest_hash(
-            spec.id,
-            spec.version,
-            last_success.run_id,
-        )
-        if last_manifest_hash != manifest_record.manifest_hash:
-            return
-        try:
-            published = reader.read_frame(
-                derived_id=spec.id,
-                version=spec.version,
-                start=request.request_start,
-                end=request.request_end,
-            )
-        except DerivedIntegrityError:
-            # 上次同窗口运行在 PLANNED/PAYLOAD_COMMITTED 阶段崩溃：分区处于
-            # 在途重算态，读门禁拒绝基线读取。分区即将被本次恢复运行重写，
-            # 比对无基线意义——跳过以保持同窗口重试可恢复（#418）。
-            return
-        if published.is_empty():
-            return
         sort_keys = [*spec.entity_keys, *spec.effective_time_keys]
-        # 物化帧可能含 lookback 预热行；比对只针对请求窗口内的已发布内容。
-        time_key = spec.effective_time_keys[0]
-        window_key = pl.col(time_key).cast(pl.Utf8).str.slice(0, 10)
-        in_window = frame.filter(
-            (window_key >= request.request_start) & (window_key <= request.request_end)
-        )
-        expected = in_window.sort(sort_keys)
-        actual = published.select(frame.columns).sort(sort_keys)
-        if not expected.equals(actual):
-            raise AppProcessError(
-                "deterministic retry mismatch: same input identity produced "
-                + f"different content for derived_id={spec.id} v={spec.version} "
-                + f"window={request.request_start}..{request.request_end}; "
-                + "published artifacts were not modified"
+        expected = frame.sort(sort_keys)
+        for previous in self._catalog_service.list_successful_runs(
+            spec.id, spec.version
+        ):
+            if (previous.request_start, previous.request_end) != (
+                request.request_start,
+                request.request_end,
+            ):
+                continue
+            if (
+                reader.read_run_manifest_hash(spec.id, spec.version, previous.run_id)
+                != manifest_record.manifest_hash
+            ):
+                continue
+            published = reader.read_run_frame(spec.id, spec.version, previous.run_id)
+            if expected.is_empty() and published.is_empty():
+                continue
+            time_key = (
+                pl.col(spec.effective_time_keys[0]).cast(pl.String).str.slice(0, 10)
             )
+            actual = published.filter(
+                time_key.is_between(
+                    pl.lit(request.request_start), pl.lit(request.request_end)
+                )
+            )
+            if not expected.equals(actual.select(frame.columns).sort(sort_keys)):
+                raise AppProcessError(
+                    "deterministic retry mismatch: same input identity produced "
+                    + f"different content for derived_id={spec.id} v={spec.version}; "
+                    + "published artifacts were not modified"
+                )
 
     def _maybe_apply_cs_amplification(
         self,
