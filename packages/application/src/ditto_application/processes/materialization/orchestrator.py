@@ -51,6 +51,10 @@ from ditto_features.services import (
     DerivedCatalogService,
     extract_partition_keys,
 )
+from ditto_features.services.spec_registration import (
+    FactorSpecRegistration,
+    register_governed_factor,
+)
 
 from ditto_application.config import now_iso
 from ditto_application.exceptions import AppProcessError
@@ -295,6 +299,26 @@ class DerivedMaterializationOrchestrator:
         self._artifact_reader = ports.artifact_reader
         self._lineage_recorder = ports.lineage_recorder
         self._planner = DerivedExecutionPlanner()
+
+    def materialize_governed_factor(
+        self, *, factor: str, version: int, mode: str, start: str, end: str
+    ) -> tuple[FactorSpecRegistration, DerivedMaterializationResult]:
+        """Register a governed factor and materialize its exact requested window."""
+        registration = register_governed_factor(
+            self._catalog_service, factor, version=version
+        )
+        result = self.materialize(
+            DerivedMaterializationRequest(
+                derived_id=registration.derived_id,
+                version=registration.version,
+                mode=DerivedRunMode(mode),
+                request_start=start,
+                request_end=end,
+                trigger=DerivedRunTrigger.MANUAL,
+                source_snapshot_id=None,
+            )
+        )
+        return registration, result
 
     def materialize(
         self,

@@ -15,6 +15,9 @@ from ditto_application.commands.quality_reconciliation import (
 )
 from ditto_application.config import get_all_datasets
 from ditto_application.exceptions import AppError
+from ditto_application.processes.materialization.orchestrator import (
+    DerivedMaterializationOrchestrator,
+)
 from ditto_application.processes.quality.patrol import QualityPatrolService
 from ditto_application.queries.evaluation import (
     EvaluationOptions,
@@ -38,7 +41,6 @@ from ditto_apps.cli.utils.output import output_json_dict, output_json_dicts
 from ditto_apps.jobs.flows.eod import run_eod_pipeline
 from ditto_apps.jobs.flows.repair import run_sparse_pit_reattestation
 from ditto_apps.registry.container import Container, make_app_container
-from ditto_apps.registry.contexts.materialization import materialize_governed_factor
 
 app = typer.Typer(help="运维命令")
 
@@ -550,15 +552,19 @@ def factor_materialize(
         raise typer.BadParameter(
             f"非法物化模式: {mode!r}, 允许 full/incremental", param_hint="--mode"
         )
+    container = make_app_container()
     try:
-        output_json_dict(
-            materialize_governed_factor(
-                factor=factor, version=version, mode=mode, start=start, end=end
-            )
+        registration, result = container.get(
+            DerivedMaterializationOrchestrator
+        ).materialize_governed_factor(
+            factor=factor, version=version, mode=mode, start=start, end=end
         )
+        output_json_dict({"registration": asdict(registration), "run": asdict(result)})
     except DittoError as exc:
         typer.secho(f"物化失败: {exc}", fg=typer.colors.RED, err=True)
         raise typer.Exit(1) from exc
+    finally:
+        container.close()
 
 
 # ---------------------------------------------------------------------------

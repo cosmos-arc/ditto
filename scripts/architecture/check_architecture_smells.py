@@ -416,19 +416,6 @@ APPS_REGISTRY_COMPOSITION_ALLOWANCES = (
         ),
     ),
     CompositionImportAllowance(
-        path="apps/backend/src/ditto_apps/registry/contexts/materialization.py",
-        allowed_modules=frozenset(
-            {
-                "ditto_features.materialization.models",
-                "ditto_features.materialization.contracts",
-                "ditto_features.services.derived_catalog_service",
-                "ditto_features.services.spec_registration",
-            }
-        ),
-        owner="apps materialization registry context",
-        reason="Compose governed factor registration and materialization for the CLI.",
-    ),
-    CompositionImportAllowance(
         path="apps/backend/src/ditto_apps/registry/contexts/query.py",
         allowed_modules=frozenset(
             {

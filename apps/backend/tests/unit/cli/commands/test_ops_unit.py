@@ -11,6 +11,9 @@ from unittest.mock import MagicMock
 import orjson
 import pytest
 from ditto_application.exceptions import AppQueryError
+from ditto_application.processes.materialization.orchestrator import (
+    DerivedMaterializationOrchestrator,
+)
 from ditto_application.queries.evaluation import EvaluationOptions
 from ditto_apps.cli.main import app
 from ditto_features.derived_types import MaterializationProfile
@@ -484,6 +487,12 @@ class TestFactorMaterializeCommand:
     """Ops factor-materialize 命令测试。"""
 
     def _container(self, catalog: Any, orchestrator: Any) -> Any:
+        orchestrator._catalog_service = catalog
+        orchestrator.materialize_governed_factor.side_effect = lambda **kwargs: (
+            DerivedMaterializationOrchestrator.materialize_governed_factor(
+                orchestrator, **kwargs
+            )
+        )
         container = MagicMock()
         container.get.side_effect = lambda token: (
             catalog if token is DerivedCatalogService else orchestrator
@@ -511,7 +520,7 @@ class TestFactorMaterializeCommand:
             coverage_end="2026-09-30",
         )
         mocker.patch(
-            "ditto_apps.registry.contexts.materialization.make_app_container",
+            CONTAINER_PATH,
             return_value=self._container(catalog, orchestrator),
         )
 
@@ -551,7 +560,7 @@ class TestFactorMaterializeCommand:
         catalog.get_spec.return_value = None
         orchestrator = MagicMock()
         mocker.patch(
-            "ditto_apps.registry.contexts.materialization.make_app_container",
+            CONTAINER_PATH,
             return_value=self._container(catalog, orchestrator),
         )
 
