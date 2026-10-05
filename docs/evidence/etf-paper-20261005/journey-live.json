@@ -1,0 +1,318 @@
+{
+  "sha": "41ed18ab3ef8db9ed19b992f9ae918769ffe60ab",
+  "root": "/private/tmp/ditto-etf-paper-journey-20261005-final",
+  "started_at": "2026-10-05T15:04:21.895633+00:00",
+  "scope": "isolated PAPER only; real provider ingestion, maintainer-confirmed config rules, authorized handoff and simulated execution",
+  "signal_date": "2026-09-30",
+  "intended_trade_date": "2026-10-08",
+  "ingestion": {
+    "calendar@2026-09-30": {
+      "dataset": "calendar",
+      "trade_date": "2026-09-30",
+      "status": "success",
+      "row_count": 396,
+      "checksum": "59b73681afb6f8559342798477bdd58b",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-09-30",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 396,
+        "checksum": "59b73681afb6f8559342798477bdd58b"
+      }
+    },
+    "etf_basic@2026-09-30": {
+      "dataset": "etf_basic",
+      "trade_date": "2026-09-30",
+      "status": "success",
+      "row_count": 1779,
+      "checksum": "b2f07c5b2054e648399a8b2b33b3d928",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-09-30",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 1779,
+        "checksum": "b2f07c5b2054e648399a8b2b33b3d928"
+      }
+    },
+    "etf_daily@2026-09-30": {
+      "dataset": "etf_daily",
+      "trade_date": "2026-09-30",
+      "status": "success",
+      "row_count": 1650,
+      "checksum": "f065a5864a95d161e6d0c564010f5bd8",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-09-30",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 1650,
+        "checksum": "f065a5864a95d161e6d0c564010f5bd8"
+      }
+    }
+  },
+  "etf_reference_ingestion": {
+    "dataset": "etf_reference",
+    "trade_date": "2026-09-30",
+    "status": "success",
+    "row_count": 10,
+    "checksum": "745b85d536f365cc6ddec1cf94597056",
+    "message": "数据摄取成功",
+    "error": null,
+    "snapshot_evidence": null,
+    "quality_evidence": {
+      "kind": "write_time_l1_l2",
+      "status": "passed",
+      "source": "config",
+      "trade_date": "2026-09-30",
+      "levels": [
+        "l1",
+        "l2"
+      ],
+      "row_count": 10,
+      "checksum": "745b85d536f365cc6ddec1cf94597056"
+    }
+  },
+  "etf_reference_repeat": {
+    "dataset": "etf_reference",
+    "trade_date": "2026-09-30",
+    "status": "skipped",
+    "row_count": 10,
+    "checksum": "745b85d536f365cc6ddec1cf94597056",
+    "message": "数据已存在且摄取成功(2026-09-30, checksum=745b85d5..., rows=10)",
+    "error": null,
+    "snapshot_evidence": null,
+    "quality_evidence": {
+      "kind": "persisted_ingestion_l1_l2",
+      "status": "passed",
+      "source": "config",
+      "trade_date": "2026-09-30",
+      "levels": [
+        "l1",
+        "l2"
+      ],
+      "row_count": 10,
+      "checksum": "745b85d536f365cc6ddec1cf94597056"
+    }
+  },
+  "snapshots": {
+    "etf_basic": "snapshot:tushare:etf_basic:sha256:b9c0ee938111c22811bbf9f87b712f401600dd78d1665d27537ff204803f916b",
+    "etf_daily_signal": "snapshot:tushare:etf_daily:sha256:05d2b54abe3c6100e08e483583e067e53640bc09f59e7712fb485d88e7257192",
+    "etf_reference": "snapshot:config:etf_reference:sha256:bfd04db646fe6dc7d79c28759189d844c218c85a1bee393169f27daaf418d696"
+  },
+  "declaration_source": "config",
+  "account_receipt": {
+    "account_id": "issue-408-journey-paper",
+    "account_kind": "paper",
+    "name": "issue #408 acceptance journey",
+    "status": "created",
+    "opening_event_id": "account-event:f7960acc8bd6b145add3e3b9e5c6bcfe"
+  },
+  "handoff_preview": {
+    "investable_instrument_ids": [
+      2000801
+    ],
+    "next_trading_day": "2026-10-08",
+    "unavailable_summary": {
+      "count": 1779,
+      "reasons": [
+        "list_status:inactive",
+        "price_close:missing",
+        "trading_currency:missing",
+        "trading_restriction:missing"
+      ],
+      "selected_510300_reasons": []
+    }
+  },
+  "allocation_version": {
+    "version_id": "etf-allocation-f294ded5c5f7fc7dda4afb9547764556",
+    "allocation_id": "issue-408-journey",
+    "parent_version_id": null,
+    "asof": "2026-09-30",
+    "knowledge_cutoff": "2026-10-05T15:04:37Z",
+    "source_snapshot_id": "snapshot:tushare:etf_basic:sha256:b9c0ee938111c22811bbf9f87b712f401600dd78d1665d27537ff204803f916b",
+    "mode": "equal",
+    "weights": {
+      "2000801": "0.50000000"
+    },
+    "cash_weight": "0.5",
+    "max_position_weight": "0.5",
+    "tracking_exposure": {
+      "000300.SH": "0.50000000"
+    },
+    "reason": "issue #408 real journey acceptance target",
+    "rule_version": "etf-allocation-v1",
+    "paper_status": "research_only",
+    "review_status": "review_approved",
+    "created_at": "2026-10-05T15:04:38.499640+00:00"
+  },
+  "authorization_id": "etf-allocation-f294ded5c5f7fc7dda4afb9547764556:paper:d545259731759df4f514cf7fc22fa2d2",
+  "handoff_receipt": {
+    "status": "created",
+    "action": "start",
+    "session": {
+      "session_id": "issue-408-journey-session",
+      "account_id": "issue-408-journey-paper",
+      "strategy_id": "etf-allocation:issue-408-journey",
+      "trade_date": "2026-10-08",
+      "status": "running",
+      "revision": 1,
+      "created_at": "2026-10-05 15:04:41.105561+00:00",
+      "updated_at": "2026-10-05 15:04:41.107386+00:00",
+      "pause_reason": null
+    }
+  },
+  "valuation": {
+    "allocation_id": "issue-408-journey",
+    "version_id": "etf-allocation-f294ded5c5f7fc7dda4afb9547764556",
+    "account_kind": "paper",
+    "account_id": "issue-408-journey-paper",
+    "as_of": "2026-10-05",
+    "knowledge_cutoff": "2026-10-05T15:04:42.000765+00:00",
+    "valuation_snapshot_id": "portfolio-valuation:sha256:d04c14a09ab4d8c1f2ec6039006b78f26d3fe8e760947b453130ee911a85f77e",
+    "source_snapshot_ids": [
+      "snapshot:tushare:etf_daily:sha256:05d2b54abe3c6100e08e483583e067e53640bc09f59e7712fb485d88e7257192"
+    ],
+    "ledger_hash": "account-ledger:sha256:56e7f682496815bf88c645541238f1b81852ff0c2cbbb31a866744e94408a0a4",
+    "target": {
+      "portfolio_id": "etf-allocation-f294ded5c5f7fc7dda4afb9547764556",
+      "portfolio_kind": "model",
+      "as_of": "2026-10-05",
+      "valuation_snapshot_id": "portfolio-valuation:sha256:d04c14a09ab4d8c1f2ec6039006b78f26d3fe8e760947b453130ee911a85f77e",
+      "source_snapshot_ids": [
+        "snapshot:tushare:etf_daily:sha256:05d2b54abe3c6100e08e483583e067e53640bc09f59e7712fb485d88e7257192"
+      ],
+      "currency": "CNY",
+      "cash": "5000.00",
+      "cash_weight": "0.50000000",
+      "total_value": "10000.00",
+      "invested_weight": "0.50000000",
+      "positions": [
+        {
+          "instrument_id": 2000801,
+          "quantity": "1128.1588",
+          "last_price": "4.432",
+          "market_value": "5000.00",
+          "weight": "0.50000000",
+          "average_cost_value": "0.00",
+          "realized_pnl": "0.00",
+          "unrealized_pnl": "0.00",
+          "fees": "0.00",
+          "industry": null
+        }
+      ],
+      "realized_pnl": "0.00",
+      "unrealized_pnl": "0.00",
+      "fees": "0.00",
+      "pending_event_count": 0,
+      "alert_codes": []
+    },
+    "actual": {
+      "portfolio_id": "issue-408-journey-paper",
+      "portfolio_kind": "paper",
+      "as_of": "2026-10-05",
+      "valuation_snapshot_id": "portfolio-valuation:sha256:d04c14a09ab4d8c1f2ec6039006b78f26d3fe8e760947b453130ee911a85f77e",
+      "source_snapshot_ids": [
+        "snapshot:tushare:etf_daily:sha256:05d2b54abe3c6100e08e483583e067e53640bc09f59e7712fb485d88e7257192"
+      ],
+      "currency": "CNY",
+      "cash": "10000.00",
+      "cash_weight": "1.00000000",
+      "total_value": "10000.00",
+      "invested_weight": "0E-8",
+      "positions": [],
+      "realized_pnl": "0",
+      "unrealized_pnl": "0",
+      "fees": "0",
+      "pending_event_count": 0,
+      "alert_codes": []
+    },
+    "drift": {
+      "comparison_kind": "model_vs_paper",
+      "baseline_portfolio_id": "etf-allocation-f294ded5c5f7fc7dda4afb9547764556",
+      "observed_portfolio_id": "issue-408-journey-paper",
+      "total_abs_drift_bps": "2500.00",
+      "cash_drift_bps": "5000.00",
+      "items": [
+        {
+          "instrument_id": 2000801,
+          "baseline_weight": "0.50000000",
+          "observed_weight": "0",
+          "drift_weight": "-0.50000000",
+          "drift_bps": "-5000.00"
+        }
+      ],
+      "attribution": {
+        "unfilled_bps": "0",
+        "slippage_amount": "0.00",
+        "fee_amount": "0.00",
+        "risk_blocked_bps": "0",
+        "user_choice_bps": "0"
+      }
+    },
+    "target_exposure": {
+      "000300.SH": "0.50000000"
+    },
+    "actual_exposure": {},
+    "unknown_exposure_instrument_ids": []
+  },
+  "ledger_after_handoff": {
+    "events": [
+      {
+        "event_id": "account-event:f7960acc8bd6b145add3e3b9e5c6bcfe",
+        "account_id": "issue-408-journey-paper",
+        "account_kind": "paper",
+        "event_type": "opening_cash",
+        "trade_date": "2026-09-30",
+        "settlement_date": "2026-09-30",
+        "recorded_at": "2026-10-05 15:04:34.470882+00:00",
+        "idempotency_key": "paper-opening:journey-opening",
+        "actor": "paper-engine:account-bootstrap",
+        "source": "paper_engine",
+        "instrument_id": null,
+        "currency": "CNY",
+        "quantity": "0",
+        "price": "0.0000",
+        "gross_amount": "10000.00",
+        "fees": "0.00",
+        "tax": "0.00",
+        "net_cash": "10000.00",
+        "flow_position": null,
+        "note": "",
+        "attachment_refs": [],
+        "external_reference": null,
+        "reverses_event_id": null,
+        "corrects_event_id": null,
+        "replacement_event_type": null,
+        "event_hash": "account-event:sha256:396b48ac3cf739810f148b519be068dcd566cd9733522bf8deb3cc3680a0333f"
+      }
+    ],
+    "valuation_complete": true
+  },
+  "journey_status": "COMPLETED",
+  "execution_leg": "Execution requires the version cutoff to fall on the signal day after its close (etf_paper_execution._after_close); this replayed version was saved after the signal session, so its lifecycle ends at handoff + valuation by design. A same-evening live run (ingest → save → authorize → handoff on signal day, execute after the trade-day close) is the follow-up cadence.",
+  "finished_at": "2026-10-05T15:04:43.015525+00:00",
+  "note": "Full report.json (incl. per-instrument unavailable reasons for all 1779 ETFs) lives in the isolated root /private/tmp/ditto-etf-paper-journey-20261005-final."
+}
