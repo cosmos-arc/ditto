@@ -310,7 +310,7 @@ class ETFTushareAdapter(BaseTushareAdapter):
 
         Returns:
             [source_ticker, trade_date(=nav_date 估值日), knowledge_date(=ann_date
-            披露日，缺失回退 nav_date), unit_nav, acc_nav].
+            披露日，未知保持 null), unit_nav, acc_nav].
 
         """
         if trade_date and source_ticker:
@@ -371,9 +371,22 @@ class ETFTushareAdapter(BaseTushareAdapter):
                 )
             # 服务端同 (ts_code, nav_date) 可返回多条不同 ann_date 的披露行
             # （2026-10-05 实测单日响应内重复）——保留最新披露行
-            response = response.sort("ann_date").unique(
-                subset=["ts_code", "nav_date"], keep="last"
+            result = (
+                TushareDataTransformer.transform(
+                    response, f"etf_nav{scope}", ETF_NAV_MAPPING
+                )
+                .sort("knowledge_date", nulls_last=False)
+                .unique(
+                    subset=["source_ticker", "trade_date"],
+                    keep="last",
+                    maintain_order=True,
+                )
             )
-            return TushareDataTransformer.transform(
-                response, f"etf_nav{scope}", ETF_NAV_MAPPING
-            )
+            if missing := result["knowledge_date"].null_count():
+                logger.warning(
+                    "ETF NAV disclosure unknown; display and reconciliation only",
+                    event="tushare_fund_nav_unknown_disclosure",
+                    row_count=result.height,
+                    missing_disclosure_count=missing,
+                )
+            return result
