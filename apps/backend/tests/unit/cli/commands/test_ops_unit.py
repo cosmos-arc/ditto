@@ -511,7 +511,7 @@ class TestFactorMaterializeCommand:
             coverage_end="2026-09-30",
         )
         mocker.patch(
-            CONTAINER_PATH,
+            "ditto_apps.registry.contexts.materialization.make_app_container",
             return_value=self._container(catalog, orchestrator),
         )
 
@@ -551,7 +551,7 @@ class TestFactorMaterializeCommand:
         catalog.get_spec.return_value = None
         orchestrator = MagicMock()
         mocker.patch(
-            CONTAINER_PATH,
+            "ditto_apps.registry.contexts.materialization.make_app_container",
             return_value=self._container(catalog, orchestrator),
         )
 

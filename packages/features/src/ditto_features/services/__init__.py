@@ -34,20 +34,20 @@ from ditto_features.services.derived.concurrent_materializer import (
     MaterializationTaskResult,
 )
 
-# --- derived: governed spec registration ---
-from ditto_features.services.derived.spec_registration import (
-    DEFAULT_MATERIALIZABLE_FACTOR_IDS,
-    FactorSpecRegistration,
-    build_factor_derived_spec,
-    factor_spec_hash,
-    register_governed_factor,
-)
-
 # --- catalog ---
 from ditto_features.services.derived_catalog_service import (
     DerivedCatalogReaderProtocol,
     DerivedCatalogService,
     DerivedCatalogWriterProtocol,
+)
+
+# --- derived: governed spec registration ---
+from ditto_features.services.spec_registration import (
+    DEFAULT_MATERIALIZABLE_FACTOR_IDS,
+    FactorSpecRegistration,
+    build_factor_derived_spec,
+    factor_spec_hash,
+    register_governed_factor,
 )
 from ditto_features.storage.derived_artifact_writer import extract_partition_keys
 

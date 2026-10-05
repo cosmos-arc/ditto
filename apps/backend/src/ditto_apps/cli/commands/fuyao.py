@@ -11,10 +11,10 @@ from dishka import Container
 from ditto_application.processes.ingestion.date_range import list_ingestion_dates
 
 from ditto_apps.registry.container import make_app_container
+from ditto_apps.registry.contexts.ingestion import create_ingestion_bundle
 from ditto_apps.registry.infra.protocol_adapters import (
     FuyaoDailyKDumpFetcher,
     FuyaoSource,
-    IngestionResult,
     InstrumentService,
     MarketService,
     MetadataService,
@@ -224,32 +224,6 @@ def _print_backfill_plan(
             typer.echo(f"  {sample}")
 
 
-def _print_backfill_results(results: list[IngestionResult]) -> None:
-    """逐失败日打印（半写不报完整）并汇总; 存在失败时退出码非零。"""
-    counts = {"success": 0, "failed": 0, "skipped": 0}
-    rows_written = 0
-    for result in results:
-        counts[result.status] = counts.get(result.status, 0) + 1
-        rows_written += result.row_count or 0
-        if result.status == "failed":
-            typer.secho(
-                f"  失败 {result.trade_date}: {result.error or result.message}",
-                fg=typer.colors.RED,
-            )
-    typer.echo(
-        f"回填完成: 成功 {counts['success']} / 跳过 {counts['skipped']} / "
-        f"失败 {counts['failed']}, 写入行数 {rows_written}"
-    )
-    typer.echo(
-        "证据: 每成功日独立 ProviderSnapshot(source=fuyao), 观察时间为真实回填时刻"
-    )
-    if counts["failed"]:
-        typer.secho(
-            "存在失败交易日, 回填不完整; 修复后可重跑(幂等)", fg=typer.colors.RED
-        )
-        raise typer.Exit(1)
-
-
 @app.command("backfill-daily-k")
 def backfill_daily_k(
     start: str = typer.Option(..., "--start", "-s", help="回填起始日 YYYY-MM-DD"),
@@ -269,10 +243,6 @@ def backfill_daily_k(
     ),
 ) -> None:
     """daily-k dump 手动回填(#439): dry-run 展示主源重叠冲突, 执行走正常摄取链路."""
-    from ditto_apps.registry.contexts.ingestion import (  # noqa: PLC0415
-        create_ingestion_bundle,
-    )
-
     try:
         start_date = date.fromisoformat(start)
         end_date = date.fromisoformat(end)
@@ -336,6 +306,17 @@ def backfill_daily_k(
         )
         return
 
+    _execute_backfill(fetcher, effective_start, effective_end, force=force)
+
+
+def _execute_backfill(
+    fetcher: FuyaoDailyKDumpFetcher,
+    effective_start: date,
+    effective_end: date,
+    *,
+    force: bool,
+) -> None:
+    """Execute the date range and report each outcome without exporting data DTOs."""
     with create_ingestion_bundle("fuyao", market_fetcher_override=fetcher) as bundle:
         results = bundle.coordinator.ingest_range(
             "stock_daily",
@@ -343,4 +324,25 @@ def backfill_daily_k(
             effective_end.isoformat(),
             force=force,
         )
-    _print_backfill_results(results)
+    counts = {"success": 0, "failed": 0, "skipped": 0}
+    rows_written = 0
+    for result in results:
+        counts[result.status] = counts.get(result.status, 0) + 1
+        rows_written += result.row_count or 0
+        if result.status == "failed":
+            typer.secho(
+                f"  失败 {result.trade_date}: {result.error or result.message}",
+                fg=typer.colors.RED,
+            )
+    typer.echo(
+        f"回填完成: 成功 {counts['success']} / 跳过 {counts['skipped']} / "
+        f"失败 {counts['failed']}, 写入行数 {rows_written}"
+    )
+    typer.echo(
+        "证据: 每成功日独立 ProviderSnapshot(source=fuyao), 观察时间为真实回填时刻"
+    )
+    if counts["failed"]:
+        typer.secho(
+            "存在失败交易日, 回填不完整; 修复后可重跑(幂等)", fg=typer.colors.RED
+        )
+        raise typer.Exit(1)

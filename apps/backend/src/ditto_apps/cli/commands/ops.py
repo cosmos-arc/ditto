@@ -15,9 +15,6 @@ from ditto_application.commands.quality_reconciliation import (
 )
 from ditto_application.config import get_all_datasets
 from ditto_application.exceptions import AppError
-from ditto_application.processes.materialization.orchestrator import (
-    DerivedMaterializationOrchestrator,
-)
 from ditto_application.processes.quality.patrol import QualityPatrolService
 from ditto_application.queries.evaluation import (
     EvaluationOptions,
@@ -29,12 +26,6 @@ from ditto_application.queries.ingestion_status import (
     IngestionStatusQueryFacade,
     summarize_status_by_maturity,
 )
-from ditto_features.materialization import (
-    DerivedMaterializationRequest,
-    DerivedRunMode,
-    DerivedRunTrigger,
-)
-from ditto_features.services import DerivedCatalogService, register_governed_factor
 from ditto_kernel.exceptions import DittoError
 from ditto_platform.foundation.storage.sqlite_backup import (
     SQLiteBackupError,
@@ -47,6 +38,7 @@ from ditto_apps.cli.utils.output import output_json_dict, output_json_dicts
 from ditto_apps.jobs.flows.eod import run_eod_pipeline
 from ditto_apps.jobs.flows.repair import run_sparse_pit_reattestation
 from ditto_apps.registry.container import Container, make_app_container
+from ditto_apps.registry.contexts.materialization import materialize_governed_factor
 
 app = typer.Typer(help="运维命令")
 
@@ -554,43 +546,19 @@ def factor_materialize(
     mode: str = typer.Option("full", "--mode", help="物化模式: full 或 incremental"),
 ) -> None:
     """治理因子物化: 幂等注册 DerivedSpec → 计算窗口 → 保存 derived artifact."""
-    if mode not in {member.value for member in DerivedRunMode}:
+    if mode not in {"full", "incremental"}:
         raise typer.BadParameter(
             f"非法物化模式: {mode!r}, 允许 full/incremental", param_hint="--mode"
         )
-    container: Container = make_app_container()
     try:
-        catalog = container.get(DerivedCatalogService)
-        registration = register_governed_factor(catalog, factor, version=version)
-        orchestrator = container.get(DerivedMaterializationOrchestrator)
-        result = orchestrator.materialize(
-            DerivedMaterializationRequest(
-                derived_id=registration.derived_id,
-                version=registration.version,
-                mode=DerivedRunMode(mode),
-                request_start=start,
-                request_end=end,
-                trigger=DerivedRunTrigger.MANUAL,
-                source_snapshot_id=None,
+        output_json_dict(
+            materialize_governed_factor(
+                factor=factor, version=version, mode=mode, start=start, end=end
             )
         )
-        output_json_dict(
-            {
-                "registration": {
-                    "derived_id": registration.derived_id,
-                    "version": registration.version,
-                    "action": registration.action,
-                    "spec_hash": registration.spec_hash,
-                },
-                "run": asdict(result),
-            }
-        )
     except DittoError as exc:
-        # 覆盖 AppError(编排器 fail closed)与注册侧 FeaturesError(身份漂移/治理集拒绝)。
         typer.secho(f"物化失败: {exc}", fg=typer.colors.RED, err=True)
         raise typer.Exit(1) from exc
-    finally:
-        container.close()
 
 
 # ---------------------------------------------------------------------------

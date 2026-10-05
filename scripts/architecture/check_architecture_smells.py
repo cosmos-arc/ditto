@@ -404,6 +404,7 @@ APPS_REGISTRY_COMPOSITION_ALLOWANCES = (
                 "ditto_data.services.metadata_service",
                 "ditto_data.services.source_accessor",
                 "ditto_data.sources.exchange_transformers",
+                "ditto_data.sources.fuyao.source",
                 "ditto_data.sources.protocols",
                 "ditto_data.sources.registry",
             }
@@ -413,6 +414,19 @@ APPS_REGISTRY_COMPOSITION_ALLOWANCES = (
             "Ingestion registry context owns data service and runtime policy "
             "Protocol wiring for application ingestion handlers."
         ),
+    ),
+    CompositionImportAllowance(
+        path="apps/backend/src/ditto_apps/registry/contexts/materialization.py",
+        allowed_modules=frozenset(
+            {
+                "ditto_features.materialization.models",
+                "ditto_features.materialization.contracts",
+                "ditto_features.services.derived_catalog_service",
+                "ditto_features.services.spec_registration",
+            }
+        ),
+        owner="apps materialization registry context",
+        reason="Compose governed factor registration and materialization for the CLI.",
     ),
     CompositionImportAllowance(
         path="apps/backend/src/ditto_apps/registry/contexts/query.py",
