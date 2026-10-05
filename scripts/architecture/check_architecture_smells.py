@@ -121,6 +121,7 @@ APPS_HOST_COMPOSITION_ALLOWANCES = (
         allowed_modules=frozenset(
             {
                 "ditto_data.models.ingestion",
+                "ditto_data.quality.golden",
                 "ditto_data.quality.protocols",
                 "ditto_data.services.deps",
                 "ditto_data.services.market_service",
@@ -129,6 +130,7 @@ APPS_HOST_COMPOSITION_ALLOWANCES = (
                 "ditto_data.services.source_accessor",
                 "ditto_data.sources.base",
                 "ditto_data.sources.fuyao.source",
+                "ditto_data.storage.base.sqlite_table_reader",
                 "ditto_data.storage.metadata.instrument",
                 "ditto_data.storage.runtime.quality",
                 "ditto_features.compile_cache",
@@ -470,6 +472,7 @@ APPS_REGISTRY_COMPOSITION_ALLOWANCES = (
         allowed_modules=frozenset(
             {
                 "ditto_data.models.ingestion",
+                "ditto_data.quality.golden",
                 "ditto_data.quality.protocols",
                 "ditto_data.services.deps",
                 "ditto_data.services.market_service",
@@ -478,6 +481,7 @@ APPS_REGISTRY_COMPOSITION_ALLOWANCES = (
                 "ditto_data.services.source_accessor",
                 "ditto_data.sources.base",
                 "ditto_data.sources.fuyao.source",
+                "ditto_data.storage.base.sqlite_table_reader",
                 "ditto_data.storage.metadata.instrument",
                 "ditto_data.storage.runtime.quality",
                 "ditto_features.compile_cache",

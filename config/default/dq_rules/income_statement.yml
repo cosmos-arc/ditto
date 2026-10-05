@@ -36,3 +36,32 @@ business:
     column: revenue
     min: 0
     message: "营业收入不应为负数"
+
+# 统计类: 跨源对账（#473）
+statistical:
+  # 主源 Tushare 利润表 vs 辅源 fuyao 利润表数值交叉。
+  # 两侧金额均为元（无单位换算）；金额相对容差 1e-4（实测茅台精确到分、
+  # 部分银行年报值舍入到百万级——相对容差下两者均可判定）；
+  # eps 为元/股小量纲字段，不做单位换算，绝对容差 0.005 = 2 位小数舍入。
+  # 口径注意：主源 revenue=Tushare total_revenue（营业总收入），辅源为
+  # 营业收入——金融等板块两者可能不同源，差异按字段如实报告不折算掩盖。
+  # vintage：键匹配但披露日（f_ann_date vs report_date_ms）不一致的行由
+  # handler 单列 vintage_mismatch，不进入本规则数值比较。
+  - rule: cross_source_compare
+    key_columns: [instrument_id, report_date]
+    fields: [revenue, operating_profit, net_profit, eps]
+    tolerance_rules:
+      revenue:
+        method: relative
+        relative_tol: 0.0001
+      operating_profit:
+        method: relative
+        relative_tol: 0.0001
+      net_profit:
+        method: relative
+        relative_tol: 0.0001
+      eps:
+        method: absolute
+        absolute_tol: 0.005
+    message: "与辅源(fuyao)利润表数值交叉发现差异"
+    enabled: true

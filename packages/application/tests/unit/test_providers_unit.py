@@ -109,6 +109,7 @@ from ditto_data.quality.protocols import (
     InstrumentStoreProtocol,
     SecondaryAdjustmentEventsSourceProtocol,
     SecondaryBarsSourceProtocol,
+    SecondaryFinancialsSourceProtocol,
 )
 from ditto_data.services.market_service import MarketService
 from ditto_data.services.metadata_service import MetadataService
@@ -266,6 +267,12 @@ class _ProtocolAdapterProvider(Provider):
     @provide
     def adj_factor_reconcile_context(self) -> AdjFactorReconcileContextProtocol:
         return MagicMock(spec=AdjFactorReconcileContextProtocol)
+
+    @provide
+    def secondary_financials_source_protocol(
+        self,
+    ) -> SecondaryFinancialsSourceProtocol:
+        return MagicMock(spec=SecondaryFinancialsSourceProtocol)
 
     @provide
     def comparison_store_protocol(self) -> ComparisonStoreProtocol:

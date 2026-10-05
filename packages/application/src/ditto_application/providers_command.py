@@ -21,6 +21,7 @@ from ditto_data.quality.protocols import (
     InstrumentStoreProtocol,
     SecondaryAdjustmentEventsSourceProtocol,
     SecondaryBarsSourceProtocol,
+    SecondaryFinancialsSourceProtocol,
     SecondaryIdentityResolverProtocol,
 )
 from ditto_data.services.market_service import MarketService
@@ -356,6 +357,7 @@ class AppCommandProvider(Provider):
         golden_dataset: GoldenDatasetSpec | None,
         secondary_events_source: SecondaryAdjustmentEventsSourceProtocol,
         adj_factor_context: AdjFactorReconcileContextProtocol,
+        secondary_financials_source: SecondaryFinancialsSourceProtocol,
     ) -> ReconcileSourcesHandler:
         """
         数据源对账 Handler（辅源身份反解 + 除权日标记 + 黄金集过滤，#395）。
@@ -363,7 +365,8 @@ class AppCommandProvider(Provider):
         golden_dataset 以必填 Optional 注入：黄金集配置由 GoldenDatasetProvider
         提供（无配置文件时为 None = 不过滤），修复此前默认参数导致的
         生产路径黄金集过滤从未生效的问题。
-        adj_factor 数据集（#438）额外接事件辅源与主源因子上下文。
+        adj_factor 数据集（#438）额外接事件辅源与主源因子上下文；
+        财务三表（#473）接 fuyao 财务辅源端口。
         """
         return ReconcileSourcesHandler(
             engine=dq_engine,
@@ -375,6 +378,7 @@ class AppCommandProvider(Provider):
             golden_dataset=golden_dataset,
             secondary_events_source=secondary_events_source,
             adj_factor_context=adj_factor_context,
+            secondary_financials_source=secondary_financials_source,
         )
 
     @provide

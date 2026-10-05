@@ -36,3 +36,25 @@ business:
     name: cash_flow_consistency
     expr: "net_cash_flow == operating_cash_flow + investing_cash_flow + financing_cash_flow"
     message: "净现金流与三大现金流之和不一致"
+
+# 统计类: 跨源对账（#473）
+statistical:
+  # 主源 Tushare 现金流量表 vs 辅源 fuyao 现金流量表数值交叉。
+  # 只比较三大活动净额；主源 net_cash_flow 是三项之和（computed），
+  # fuyao cash_equivalents_net_addition 为现金及等价物净增加额（含汇率
+  # 变动影响等），口径不可等价——不注册比较（单列口径差异，不折算）。
+  - rule: cross_source_compare
+    key_columns: [instrument_id, report_date]
+    fields: [operating_cash_flow, investing_cash_flow, financing_cash_flow]
+    tolerance_rules:
+      operating_cash_flow:
+        method: relative
+        relative_tol: 0.0001
+      investing_cash_flow:
+        method: relative
+        relative_tol: 0.0001
+      financing_cash_flow:
+        method: relative
+        relative_tol: 0.0001
+    message: "与辅源(fuyao)现金流量表数值交叉发现差异"
+    enabled: true

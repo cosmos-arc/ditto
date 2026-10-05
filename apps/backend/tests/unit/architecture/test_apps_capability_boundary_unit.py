@@ -44,10 +44,17 @@ def test_apps_host_composition_allowances_are_owned_and_reasoned() -> None:
         ),
         "apps/backend/src/ditto_apps/registry/infra/protocol_adapters.py": frozenset(
             {
+                "ditto_data.models.ingestion",
+                "ditto_data.quality.golden",
                 "ditto_data.quality.protocols",
                 "ditto_data.services.deps",
+                "ditto_data.services.market_service",
+                "ditto_data.services.metadata.instrument",
+                "ditto_data.services.metadata_service",
                 "ditto_data.services.source_accessor",
+                "ditto_data.sources.base",
                 "ditto_data.sources.fuyao.source",
+                "ditto_data.storage.base.sqlite_table_reader",
                 "ditto_data.storage.metadata.instrument",
                 "ditto_data.storage.runtime.quality",
                 "ditto_features.compile_cache",
@@ -166,6 +173,7 @@ def test_apps_registry_composition_allowances_are_owned_and_reasoned() -> None:
             "ditto_data.services.metadata_service",
             "ditto_data.services.source_accessor",
             "ditto_data.sources.exchange_transformers",
+            "ditto_data.sources.protocols",
             "ditto_data.sources.registry",
         }
     )

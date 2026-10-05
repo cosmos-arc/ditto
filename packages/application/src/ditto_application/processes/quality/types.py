@@ -165,6 +165,9 @@ class ReconciliationResult:
     diff_count: int = 0
     # adj_factor（#438）：事件侧缺前价/缺配股价等不可推导样本数（单列报告）
     secondary_underivable_count: int = 0
+    # 财务三表（#473）：键匹配但两侧披露日不一致的跨 vintage 样本数
+    # （单列报告，不做数值比较，不计 matched）
+    secondary_vintage_mismatch_count: int = 0
 
     @property
     def has_error(self) -> bool:
@@ -188,6 +191,7 @@ class ReconciliationResult:
             "secondary_duplicate_keys": self.secondary_duplicate_keys,
             "diff_count": self.diff_count,
             "secondary_underivable_count": self.secondary_underivable_count,
+            "secondary_vintage_mismatch_count": self.secondary_vintage_mismatch_count,
         }
         if self.skipped and self.skip_reason:
             result["skipped"] = self.skip_reason

@@ -854,3 +854,198 @@ class TestAdjFactorReconciliation:
         assert result.secondary_underivable_count == 0
         call = mock_quality_engine.compare_cross_source.call_args
         assert call.kwargs["secondary"]["instrument_id"].to_list() == [1000001]
+
+
+# ══ #473-#475 新数据集分支 ═══════════════════════════════════
+
+
+def _financial_primary_df() -> pl.DataFrame:
+    return pl.DataFrame(
+        {
+            "instrument_id": [1000001, 1000002],
+            "ticker": ["000001", "600000"],
+            "report_date": [date(2026, 6, 30), date(2026, 6, 30)],
+            "knowledge_date": [date(2026, 8, 14), date(2026, 8, 20)],
+            "revenue": [1.0e10, 2.0e10],
+            "net_profit": [1.0e9, 2.0e9],
+            "eps": [1.0, 2.0],
+        }
+    )
+
+
+def _financial_secondary_df() -> pl.DataFrame:
+    return pl.DataFrame(
+        {
+            "ticker": ["000001.SZ", "600000.SH"],
+            "report_date": [date(2026, 6, 30), date(2026, 6, 30)],
+            "disclosure_date": [date(2026, 8, 14), date(2026, 8, 21)],
+            "revenue": [1.0e10, 2.0e10],
+            "net_profit": [1.0e9, 2.0e9],
+            "eps": [1.0, 2.0],
+        }
+    )
+
+
+@pytest.mark.unit
+class TestFinancialReconciliation:
+    """#473 财务三表对账：vintage guard + matched 口径."""
+
+    def _handler(
+        self,
+        engine,
+        financials_source,
+        comparison_writer,
+        instrument_store,
+        resolver,
+    ) -> ReconcileSourcesHandler:
+        return ReconcileSourcesHandler(
+            engine=engine,
+            secondary_source=MagicMock(),
+            comparison_store=comparison_writer,
+            instrument_store=instrument_store,
+            secondary_identity_resolver=resolver,
+            secondary_financials_source=financials_source,
+        )
+
+    def test_same_vintage_rows_compared_and_matched(
+        self,
+        mock_quality_engine,
+        mock_comparison_writer,
+        mock_instrument_store,
+        mock_secondary_identity_resolver,
+    ) -> None:
+        """披露日一致 → 同 vintage 数值比较，matched 计入."""
+        financials_source = MagicMock()
+        # 600000 披露日错配（8-20 vs 8-21）：只剩 000001 同 vintage 参与
+        financials_source.fetch_financial_statements.return_value = (
+            _financial_secondary_df()
+        )
+        resolver = MagicMock()
+        resolver.resolve_secondary_ids.return_value = {
+            "000001.SZ": 1000001,
+            "600000.SH": 1000002,
+        }
+        handler = self._handler(
+            mock_quality_engine,
+            financials_source,
+            mock_comparison_writer,
+            mock_instrument_store,
+            resolver,
+        )
+
+        result = handler.handle(
+            ReconcileSourcesCommand(
+                primary_df=_financial_primary_df(),
+                trade_date="2026-10-05",
+                dataset="income_statement",
+            )
+        )
+
+        assert result.comparable is True
+        assert result.passed is True
+        # matched 只计完成数值比较的同 vintage 键
+        assert result.matched_count == 1
+        assert result.secondary_vintage_mismatch_count == 1
+        # 数值比较只发生在同 vintage 分区上
+        call = mock_quality_engine.compare_cross_source.call_args
+        assert call.kwargs["primary"]["instrument_id"].to_list() == [1000001]
+        assert call.kwargs["secondary"]["instrument_id"].to_list() == [1000001]
+        # 跨 vintage 样本单列落盘（不进入数值比较）
+        written = mock_comparison_writer.write_comparison.call_args.args[1]
+        assert written.filter(pl.col("field") == "vintage_mismatch").height == 1
+
+    def test_all_vintage_mismatch_not_comparable(
+        self,
+        mock_quality_engine,
+        mock_comparison_writer,
+        mock_instrument_store,
+        mock_secondary_identity_resolver,
+    ) -> None:
+        """全部披露日错配 → 零数值比较 → 不算通过（不给错误匹配）."""
+        financials_source = MagicMock()
+        secondary = _financial_secondary_df().with_columns(
+            pl.col("disclosure_date") + pl.duration(days=30)
+        )
+        financials_source.fetch_financial_statements.return_value = secondary
+        resolver = MagicMock()
+        resolver.resolve_secondary_ids.return_value = {
+            "000001.SZ": 1000001,
+            "600000.SH": 1000002,
+        }
+        handler = self._handler(
+            mock_quality_engine,
+            financials_source,
+            mock_comparison_writer,
+            mock_instrument_store,
+            resolver,
+        )
+
+        result = handler.handle(
+            ReconcileSourcesCommand(
+                primary_df=_financial_primary_df(),
+                trade_date="2026-10-05",
+                dataset="income_statement",
+            )
+        )
+
+        assert result.comparable is False
+        assert result.passed is False
+        assert result.matched_count == 0
+        assert result.secondary_vintage_mismatch_count == 2
+        mock_quality_engine.check_cross_source.assert_not_called()
+
+    def test_zero_secondary_not_comparable(
+        self,
+        mock_quality_engine,
+        mock_comparison_writer,
+        mock_instrument_store,
+        mock_secondary_identity_resolver,
+    ) -> None:
+        """辅源覆盖不足（空返回）→ 显式 not_comparable 不算通过."""
+        financials_source = MagicMock()
+        financials_source.fetch_financial_statements.return_value = pl.DataFrame()
+        handler = self._handler(
+            mock_quality_engine,
+            financials_source,
+            mock_comparison_writer,
+            mock_instrument_store,
+            mock_secondary_identity_resolver,
+        )
+
+        result = handler.handle(
+            ReconcileSourcesCommand(
+                primary_df=_financial_primary_df(),
+                trade_date="2026-10-05",
+                dataset="income_statement",
+            )
+        )
+
+        assert result.comparable is False
+        assert result.passed is False
+
+    def test_missing_financials_source_is_error(
+        self,
+        mock_quality_engine,
+        mock_comparison_writer,
+        mock_instrument_store,
+        mock_secondary_identity_resolver,
+    ) -> None:
+        """未接辅源端口 → 显式异常（fail closed）。"""
+        handler = ReconcileSourcesHandler(
+            engine=mock_quality_engine,
+            secondary_source=MagicMock(),
+            comparison_store=mock_comparison_writer,
+            instrument_store=mock_instrument_store,
+            secondary_identity_resolver=mock_secondary_identity_resolver,
+        )
+
+        result = handler.handle(
+            ReconcileSourcesCommand(
+                primary_df=_financial_primary_df(),
+                trade_date="2026-10-05",
+                dataset="income_statement",
+            )
+        )
+
+        assert result.passed is False
+        assert result.error is not None

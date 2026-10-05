@@ -19,6 +19,7 @@ from ditto_data.quality.protocols import (
     QualityEngineProtocol,
     SecondaryAdjustmentEventsSourceProtocol,
     SecondaryBarsSourceProtocol,
+    SecondaryFinancialsSourceProtocol,
     SecondaryIdentityResolverProtocol,
 )
 from ditto_data.quality.quality_types import DQResult
@@ -26,6 +27,10 @@ from ditto_platform.foundation import logger
 
 from ditto_application.exceptions import AppCommandError
 from ditto_application.processes.quality.types import ReconciliationResult
+
+# 财务三表对账数据集（#473）：比较键为 instrument_id + report_date，
+# 交叉前按披露日 vintage 判定，跨 vintage 不做数值比较。
+FINANCIAL_DATASETS = frozenset({"income_statement", "balance_sheet", "cash_flow"})
 
 
 @dataclass(frozen=True)
@@ -61,6 +66,7 @@ class ReconcileSourcesHandler:
         golden_dataset: GoldenDatasetSpec | None = None,
         secondary_events_source: SecondaryAdjustmentEventsSourceProtocol | None = None,
         adj_factor_context: AdjFactorReconcileContextProtocol | None = None,
+        secondary_financials_source: SecondaryFinancialsSourceProtocol | None = None,
     ) -> None:
         self._engine = engine
         self._secondary_source = secondary_source
@@ -71,6 +77,7 @@ class ReconcileSourcesHandler:
         self._golden_dataset = golden_dataset
         self._secondary_events_source = secondary_events_source
         self._adj_factor_context = adj_factor_context
+        self._secondary_financials_source = secondary_financials_source
 
     def handle(self, cmd: ReconcileSourcesCommand) -> ReconciliationResult:
         """执行跨源对账，返回对账结果."""
@@ -162,9 +169,13 @@ class ReconcileSourcesHandler:
         """获取辅助数据源、反解身份并执行 outer/anti 对比."""
         if dataset == "adj_factor":
             return self._execute_adj_factor_comparison(primary_df, trade_date, dataset)
+        if dataset in FINANCIAL_DATASETS:
+            return self._execute_financial_comparison(primary_df, trade_date, dataset)
         tickers = primary_df["ticker"].unique().cast(pl.String).to_list()
 
-        secondary_result = self._fetch_secondary(tickers, trade_date, dataset)
+        secondary_result = self._fetch_secondary(
+            tickers, trade_date, dataset, primary_count=primary_df.height
+        )
         if isinstance(secondary_result, ReconciliationResult):
             return secondary_result
         secondary_df = secondary_result
@@ -303,8 +314,8 @@ class ReconcileSourcesHandler:
         )
         # 比较行全部落在事件日：差异行统一标记除权日，不与单位错误混排
         context = {
-            "ex_dividend_instruments": frozenset(
-                int(value) for value in secondary_cmp["instrument_id"].to_list()
+            "ex_dividend_instruments": self._instrument_id_set(
+                secondary_cmp["instrument_id"]
             ),
         }
         comparison = self._engine.compare_cross_source(
@@ -379,6 +390,200 @@ class ReconcileSourcesHandler:
             diff_count=comparison.diff_count,
             secondary_underivable_count=underivable.height,
         )
+
+    def _execute_financial_comparison(
+        self,
+        primary_df: pl.DataFrame,
+        trade_date: str,
+        dataset: str,
+    ) -> ReconciliationResult:
+        """
+        财务三表对账（#473）：Tushare PIT 报表 vs fuyao 财务数值交叉.
+
+        #473 红线：披露锚唯一 = Tushare f_ann_date（knowledge_date），辅源
+        disclosure_date 只做交叉对账；交叉不得跨 vintage 混比——键匹配但
+        两侧披露日不一致的行单列 ``vintage_mismatch``（不做数值比较，不计
+        matched）；单位换算不适用（两侧金额均为元），语义差异经字段映射
+        单列（fuyao 无对应口径的内部列不注册比较）。
+        """
+        if self._secondary_financials_source is None:
+            raise AppCommandError(
+                "financial reconciliation requires fuyao financials source"
+            )
+
+        # 主源帧 ticker 为裸码；辅源取数按股票前缀规则补 thscode 后缀
+        tickers = primary_df["ticker"].unique().cast(pl.String).to_list()
+        secondary_df = self._secondary_financials_source.fetch_financial_statements(
+            dataset, tickers
+        )
+        if secondary_df.height == 0:
+            return self._zero_intersection_result(
+                trade_date, dataset, primary_df.height, 0
+            )
+        secondary_df = self._resolve_secondary_identities(secondary_df, trade_date)
+        if secondary_df.is_empty() or "instrument_id" not in secondary_df.columns:
+            return self._zero_intersection_result(
+                trade_date, dataset, primary_df.height, secondary_df.height
+            )
+
+        keys = ["instrument_id", "report_date"]
+        # SQLite 读取路径的日期列为字符串：统一转 date 后再按键连接
+        primary_cmp = self._normalize_financial_dates(
+            primary_df.unique(subset=keys, keep="last")
+        )
+        secondary_cmp = secondary_df.unique(subset=keys, keep="last")
+        joined = primary_cmp.join(secondary_cmp, on=keys, how="inner")
+        same_vintage = joined.filter(
+            pl.col("knowledge_date").is_not_null()
+            & pl.col("disclosure_date").is_not_null()
+            & (pl.col("knowledge_date") == pl.col("disclosure_date"))
+        ).select(keys)
+        vintage_mismatch = joined.join(same_vintage, on=keys, how="anti")
+        if same_vintage.height == 0:
+            # 键交集全部跨 vintage：没有任何数值比较发生 → not_comparable
+            mismatch_rows = self._vintage_mismatch_rows(vintage_mismatch, dataset)
+            if mismatch_rows.height:
+                self._comparison_store.write_comparison(
+                    trade_date, mismatch_rows, dataset
+                )
+            return ReconciliationResult(
+                trade_date=trade_date,
+                dataset=dataset,
+                passed=False,
+                issue_count=1,
+                comparable=False,
+                primary_count=primary_df.height,
+                secondary_count=secondary_df.height,
+                secondary_vintage_mismatch_count=vintage_mismatch.height,
+            )
+        primary_same = primary_cmp.join(same_vintage, on=keys, how="inner")
+        secondary_same = secondary_cmp.join(same_vintage, on=keys, how="inner")
+
+        # matched 只计完成数值比较的同 vintage 键（#438 首审裁决同款语义）
+        comparison = self._engine.compare_cross_source(
+            primary=primary_same,
+            secondary=secondary_same,
+            dataset=dataset,
+            context={},
+        )
+        result = self._engine.check_cross_source(
+            primary=primary_same,
+            secondary=secondary_same,
+            dataset=dataset,
+            context={},
+        )
+        primary_unmatched = self._key_set(primary_cmp, keys) - self._key_set(
+            secondary_cmp, keys
+        )
+        secondary_unmatched = self._key_set(secondary_cmp, keys) - self._key_set(
+            primary_cmp, keys
+        )
+
+        frames = [
+            frame
+            for frame in (
+                self._convert_result_to_df(result, dataset, primary_df),
+                self._vintage_mismatch_rows(vintage_mismatch, dataset),
+            )
+            if frame.height
+        ]
+        comparison_df = (
+            pl.concat(frames, how="diagonal_relaxed") if frames else pl.DataFrame()
+        )
+        if not comparison_df.is_empty():
+            self._comparison_store.write_comparison(trade_date, comparison_df, dataset)
+
+        if result.issues:
+            self._send_alerts(result, trade_date, dataset)
+
+        comparable = comparison.comparable and same_vintage.height > 0
+        passed = comparable and not result.has_errors
+
+        logger.info(
+            "financial reconciliation complete",
+            event="reconciliation_complete",
+            trade_date=trade_date,
+            dataset=dataset,
+            passed=passed,
+            comparable=comparable,
+            issue_count=len(result.issues),
+            primary_count=primary_df.height,
+            secondary_count=secondary_df.height,
+            matched_count=same_vintage.height,
+            primary_unmatched_count=len(primary_unmatched),
+            secondary_unmatched_count=len(secondary_unmatched),
+            diff_count=comparison.diff_count,
+            vintage_mismatch_count=vintage_mismatch.height,
+        )
+
+        return ReconciliationResult(
+            trade_date=trade_date,
+            dataset=dataset,
+            passed=passed,
+            issue_count=len(result.issues),
+            comparable=comparable,
+            primary_count=primary_df.height,
+            secondary_count=secondary_df.height,
+            matched_count=same_vintage.height,
+            primary_unmatched_count=len(primary_unmatched),
+            secondary_unmatched_count=len(secondary_unmatched),
+            diff_count=comparison.diff_count,
+            secondary_vintage_mismatch_count=vintage_mismatch.height,
+        )
+
+    def _vintage_mismatch_rows(
+        self,
+        mismatched: pl.DataFrame,
+        dataset: str,
+    ) -> pl.DataFrame:
+        """跨 vintage 键匹配样本 → 对账落盘行（披露日差异单列，不做数值比较）."""
+        if mismatched.is_empty():
+            return pl.DataFrame()
+        return mismatched.select(
+            "instrument_id",
+            ticker=pl.col("ticker").fill_null(""),
+            trade_date=pl.col("report_date"),
+            dataset=pl.lit(dataset),
+            field=pl.lit("vintage_mismatch"),
+            primary_value=pl.lit(None, dtype=pl.Float64),
+            secondary_value=pl.lit(None, dtype=pl.Float64),
+            diff=pl.lit(None, dtype=pl.Float64),
+            ex_dividend_day=pl.lit(False),
+            severity=pl.lit("warning"),
+            rule=pl.lit("cross_source_vintage_mismatch"),
+            message=pl.format(
+                "披露日不一致: 主源 f_ann_date={} vs 辅源 report_date={}",
+                pl.col("knowledge_date"),
+                pl.col("disclosure_date"),
+            ),
+        )
+
+    @staticmethod
+    def _key_set(frame: pl.DataFrame, keys: list[str]) -> set[tuple[object, ...]]:
+        """帧的复合键集合（缺键列/空帧 → 空集）。"""
+        if frame.is_empty() or any(key not in frame.columns for key in keys):
+            return set()
+        return {tuple(row) for row in frame.select(keys).unique().iter_rows()}
+
+    @staticmethod
+    def _normalize_financial_dates(frame: pl.DataFrame) -> pl.DataFrame:
+        """财务主源帧日期列（report_date/knowledge_date）str → date."""
+        casts = [
+            pl.col(name).str.to_date().alias(name)
+            for name in ("report_date", "knowledge_date")
+            if name in frame.columns and frame[name].dtype == pl.String
+        ]
+        return frame.with_columns(casts) if casts else frame
+
+    @staticmethod
+    def _instrument_id_set(values: pl.Series) -> frozenset[int]:
+        """instrument_id 系列 → frozenset[int]（类型异常按命令边界规则拒绝）."""
+        try:
+            return frozenset(int(value) for value in values.to_list())
+        except (TypeError, ValueError) as error:
+            raise AppCommandError(
+                f"secondary instrument ids are not int-coercible: {error}"
+            ) from error
 
     def _underivable_rows(
         self,
@@ -491,6 +696,7 @@ class ReconcileSourcesHandler:
         tickers: list[str],
         trade_date: str,
         dataset: str,
+        primary_count: int = 0,
     ) -> pl.DataFrame | ReconciliationResult:
         """获取辅助数据源。返回 DataFrame 或跳过结果."""
         secondary_df = self._secondary_source.fetch_stock_daily_bars(
@@ -510,7 +716,7 @@ class ReconcileSourcesHandler:
                 passed=False,
                 issue_count=1,
                 comparable=False,
-                primary_count=0,
+                primary_count=primary_count,
                 secondary_count=0,
             )
 
@@ -559,12 +765,19 @@ class ReconcileSourcesHandler:
                     if isinstance(sample_instrument_id, int)
                     else ""
                 )
+                # 落盘 trade_date 列兼容非日线键（report_date/nav_date）
+                sample_date = (
+                    sample.get("trade_date")
+                    or sample.get("report_date")
+                    or sample.get("nav_date")
+                    or ""
+                )
                 rows.append(
                     {
                         "dataset": dataset,
                         "instrument_id": sample_instrument_id,
                         "ticker": sample_ticker,
-                        "trade_date": sample.get("trade_date", ""),
+                        "trade_date": sample_date,
                         "field": sample.get("field", ""),
                         "primary_value": sample.get("primary_value", ""),
                         "secondary_value": sample.get("secondary_value", ""),

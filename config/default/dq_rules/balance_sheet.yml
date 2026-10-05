@@ -41,3 +41,27 @@ business:
     name: asset_liability_relation
     expr: "total_assets >= total_liabilities"
     message: "总资产不应小于总负债（资不抵债需关注）"
+
+# 统计类: 跨源对账（#473）
+statistical:
+  # 主源 Tushare 资产负债表 vs 辅源 fuyao 资产负债表数值交叉。
+  # 两侧金额均为元；fuyao 无流动负债合计对应字段（current_liabilities
+  # 不注册比较）、cash=货币资金映射 money_cap，语义差异以字段映射显式单列。
+  - rule: cross_source_compare
+    key_columns: [instrument_id, report_date]
+    fields: [total_assets, total_liabilities, net_assets, current_assets]
+    tolerance_rules:
+      total_assets:
+        method: relative
+        relative_tol: 0.0001
+      total_liabilities:
+        method: relative
+        relative_tol: 0.0001
+      net_assets:
+        method: relative
+        relative_tol: 0.0001
+      current_assets:
+        method: relative
+        relative_tol: 0.0001
+    message: "与辅源(fuyao)资产负债表数值交叉发现差异"
+    enabled: true

@@ -13,11 +13,13 @@ __all__ = [
     "AdjFactorReconcileContextProtocol",
     "ComparisonStoreProtocol",
     "ExDividendInstrumentSourceProtocol",
+    "FinancialReconcileContextProtocol",
     "InstrumentStoreProtocol",
     "QualityEngineProtocol",
     "QuarantineWriterProtocol",
     "SecondaryAdjustmentEventsSourceProtocol",
     "SecondaryBarsSourceProtocol",
+    "SecondaryFinancialsSourceProtocol",
     "SecondaryIdentityResolverProtocol",
 ]
 
@@ -96,6 +98,44 @@ class SecondaryAdjustmentEventsSourceProtocol(Protocol):
         获取辅源除权事件 [ticker, trade_date, 分红/送转/配股字段].
 
         事件字段保持公司行动原始口径（无单位换算），ticker 为裸码。
+        """
+        ...
+
+
+class SecondaryFinancialsSourceProtocol(Protocol):
+    """财务三表对账辅源协议 — 财务数值取数（fuyao REST，#473）。"""
+
+    def fetch_financial_statements(
+        self,
+        dataset: str,
+        thscodes: list[str],
+        *,
+        period: str = "quarterly",
+        limit: int = 20,
+    ) -> pl.DataFrame:
+        """
+        获取辅源财务报表行.
+
+        列为 [ticker(完整 thscode), report_date, disclosure_date, fiscal_year,
+        fiscal_period, <内部列名数值字段>]；金额两侧均为元（无单位换算）；
+        disclosure_date 为辅源披露日，仅用于 vintage 判定（#473 红线：
+        交叉不得跨 vintage 混比）。
+        """
+        ...
+
+
+class FinancialReconcileContextProtocol(Protocol):
+    """财务对账主源上下文 — 最新有效 vintage 报表行（#473）。"""
+
+    def latest_statements(self, dataset: str, as_of: str) -> pl.DataFrame:
+        """
+        获取主源最新有效 vintage 报表行.
+
+        列为 [instrument_id, ticker, report_date, knowledge_date, <数值字段>]
+        （PIT 有效区间过滤后的每报告期最新 vintage）。比较范围按黄金集标的
+        收敛（黄金集未配置时拒绝——财务对账不做全市场展开）；knowledge_date
+        = 披露锚 f_ann_date（#199/#191 红线：辅源披露日只做交叉对账，不进
+        披露链）。
         """
         ...
 
