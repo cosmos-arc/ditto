@@ -67,11 +67,10 @@ class ETFTushareAdapter(BaseTushareAdapter):
             event="tushare_etf_basic_fetch_start",
         )
 
-        with tushare_fetch_error_handler("etf_basic", "fund_basic"):
+        with tushare_fetch_error_handler("etf_basic", "etf_basic"):
             response = self._client.query(
-                api_name="fund_basic",  # ETF basic 使用 fund_basic API
-                market="E",  # 场内基金（ETF）
-                fields="ts_code,name,list_date",
+                api_name="etf_basic",
+                fields="ts_code,csname,list_date,list_status,index_code,etf_type",
             )
 
             transformed = TushareDataTransformer.transform(
@@ -81,7 +80,7 @@ class ETFTushareAdapter(BaseTushareAdapter):
                 return transformed
             return transformed.filter(
                 pl.col("list_date").is_not_null()
-                & pl.col("name").str.contains(r"(?i)ETF")
+                & pl.col("exchange").is_in(["SSE", "SZSE"])
             )
 
     @traced("source.tushare.fetch_etf_daily")

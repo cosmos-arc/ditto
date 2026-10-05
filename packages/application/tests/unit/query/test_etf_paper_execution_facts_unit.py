@@ -81,6 +81,13 @@ def _facts() -> tuple[LiveETFPaperExecutionFacts, MagicMock, MagicMock]:
         created_at=SIGNAL if snapshot_id == "signal" else EXECUTION,
         payload_retained=True,
         schema_version="market.etf_daily.v1",
+        payload_uri=(
+            "provider_payloads/recorded/"
+            + ("etf_daily" if snapshot_id == "bar" else "etf_reference")
+            + f"/{'b' * 32}.parquet"
+        ),
+        checksum="b" * 32,
+        row_count=1,
         source="recorded",
     )
     calendar_snapshot = SimpleNamespace(

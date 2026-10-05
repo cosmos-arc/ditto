@@ -18,7 +18,6 @@ from ditto_portfolio.account_projection import PortfolioPositionSnapshot
 from ditto_application.etf_paper_contracts import (
     ETFPaperExecutionRequest,
     ETFPaperOrderFacts,
-    canonical_cutoff,
 )
 from ditto_application.exceptions import AppProcessError
 from ditto_application.paper_contracts import (
@@ -28,6 +27,10 @@ from ditto_application.paper_contracts import (
 from ditto_application.queries.account_ledger import AccountLedgerQuery
 from ditto_application.queries.etf_candidates import ETFCandidate
 from ditto_application.queries.etf_paper_handoff_facts import etf_field_visible
+from ditto_application.queries.etf_paper_reference import (
+    ETFPaperReferenceQuery,
+    paper_reference_candidates,
+)
 from ditto_application.queries.metadata import MetadataQueryFacade
 from ditto_application.queries.retained_calendar import (
     RetainedCalendarAbsent,
@@ -89,6 +92,7 @@ class LiveETFPaperExecutionFacts:
         signal_snapshot_id: str,
         signal_cutoff: datetime,
         valuation_cutoff: datetime,
+        signal_input_snapshot_ids: dict[str, str] | None = None,
     ) -> ETFPaperOrderFacts:
         """
         Read exact D and D+1 inputs; no caller-supplied market or rule values.
@@ -98,10 +102,17 @@ class LiveETFPaperExecutionFacts:
         ``valuation_cutoff`` (the handoff's declared cutoff) bounds the
         reference-data reads that reproduce the package's valuation basis.
         """
+        signal_inputs = signal_input_snapshot_ids or {}
+        signal_ids = (signal_snapshot_id, *signal_inputs.values())
+        execution_ids = (
+            request.reference_snapshot_id,
+            *request.input_snapshot_ids.values(),
+        )
         signal = self._candidates(
             asof=request.signal_date,
             cutoff=valuation_cutoff,
             snapshot_id=signal_snapshot_id,
+            input_snapshot_ids=signal_inputs,
         )
         candidate = signal.get(instrument_id)
         if candidate is None:
@@ -110,7 +121,7 @@ class LiveETFPaperExecutionFacts:
             candidate,
             asof=request.signal_date,
             cutoff=valuation_cutoff,
-            snapshot_id=signal_snapshot_id,
+            snapshot_id=signal_ids,
         )
         initial_account = self._ledger.get_paper(
             account_id=request.account_id,
@@ -126,7 +137,7 @@ class LiveETFPaperExecutionFacts:
                 signal[item_id],
                 asof=request.signal_date,
                 cutoff=valuation_cutoff,
-                snapshot_id=signal_snapshot_id,
+                snapshot_id=signal_ids,
             )
             for item_id in needed
             if item_id in signal
@@ -148,6 +159,7 @@ class LiveETFPaperExecutionFacts:
             asof=request.intended_trade_date,
             cutoff=request.execution_cutoff,
             snapshot_id=request.reference_snapshot_id,
+            input_snapshot_ids=request.input_snapshot_ids,
         )
         execution_candidate = execution.get(instrument_id)
         if execution_candidate is None:
@@ -156,7 +168,7 @@ class LiveETFPaperExecutionFacts:
             execution_candidate,
             asof=request.intended_trade_date,
             cutoff=request.execution_cutoff,
-            snapshot_id=request.reference_snapshot_id,
+            snapshot_id=execution_ids,
         )
         if not execution_candidate.is_active:
             raise AppProcessError("ETF execution instrument is inactive")
@@ -165,7 +177,7 @@ class LiveETFPaperExecutionFacts:
             "trading_restriction",
             asof=request.intended_trade_date,
             cutoff=request.execution_cutoff,
-            snapshot_id=request.reference_snapshot_id,
+            snapshot_id=execution_ids,
         )
         if restriction != "none":
             raise AppProcessError("ETF execution instrument is restricted")
@@ -292,17 +304,25 @@ class LiveETFPaperExecutionFacts:
         return snapshot
 
     def _candidates(
-        self, *, asof: str, cutoff: datetime, snapshot_id: str
+        self,
+        *,
+        asof: str,
+        cutoff: datetime,
+        snapshot_id: str,
+        input_snapshot_ids: dict[str, str],
     ) -> dict[int, ETFCandidate]:
-        self._snapshot(snapshot_id, "etf_reference", cutoff)
-        return {
-            item.instrument_id: item
-            for item in self._metadata.list_etf_candidates(
+        return paper_reference_candidates(
+            metadata=self._metadata,
+            readiness=self._readiness,
+            snapshots=self._snapshots,
+            payloads=self._payloads,
+            query=ETFPaperReferenceQuery(
                 asof=asof,
-                cutoff=canonical_cutoff(cutoff),
-                source_snapshot_id=snapshot_id,
-            )
-        }
+                cutoff=cutoff,
+                snapshot_id=snapshot_id,
+                input_snapshot_ids=input_snapshot_ids,
+            ),
+        )
 
     def _value(
         self,
@@ -311,7 +331,7 @@ class LiveETFPaperExecutionFacts:
         *,
         asof: str,
         cutoff: datetime,
-        snapshot_id: str,
+        snapshot_id: str | tuple[str, ...],
     ) -> str | float:
         field = candidate.fields.get(field_name)
         if field is None or not etf_field_visible(
@@ -334,7 +354,7 @@ class LiveETFPaperExecutionFacts:
         *,
         asof: str,
         cutoff: datetime,
-        snapshot_id: str,
+        snapshot_id: str | tuple[str, ...],
     ) -> Decimal:
         field = candidate.fields.get("price_close")
         if field is None:
@@ -362,7 +382,7 @@ class LiveETFPaperExecutionFacts:
         *,
         asof: str,
         cutoff: datetime,
-        snapshot_id: str,
+        snapshot_id: str | tuple[str, ...],
     ) -> PaperInstrumentRulesInput:
         asset_class = self._value(
             candidate, "asset_class", asof=asof, cutoff=cutoff, snapshot_id=snapshot_id

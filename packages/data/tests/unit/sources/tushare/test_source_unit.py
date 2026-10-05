@@ -92,14 +92,10 @@ class TestTushareSourceCalendar:
 
 
 class TestTushareSourceEtfBasic:
-    """Tests for TushareSource.fetch_etf_basic."""
+    """The ETF-specific endpoint is the authority, never a name substring."""
 
-    def test_fetch_etf_basic_returns_dataframe(self, respx_mock) -> None:
-        """Test fetch_etf_basic returns DataFrame with correct schema."""
-
-        # Mock HTTP 响应 - fund_basic API
-        # [REVIEW]: fund_basic 返回 ts_code, name, list_date
-        respx_mock.post("http://api.tushare.pro").mock(
+    def test_fetch_etf_basic_returns_structured_identity(self, respx_mock) -> None:
+        route = respx_mock.post("http://api.tushare.pro").mock(
             return_value=httpx.Response(
                 200,
                 json={
@@ -108,101 +104,59 @@ class TestTushareSourceEtfBasic:
                     "data": {
                         "fields": [
                             "ts_code",
-                            "name",
+                            "csname",
                             "list_date",
+                            "list_status",
+                            "index_code",
+                            "etf_type",
                         ],
                         "items": [
-                            ["510300.SH", "沪深300ETF", "20120706"],
-                            ["159919.SZ", "沪深300ETF", "20190624"],
+                            [
+                                "510300.SH",
+                                "沪深300",
+                                "20120706",
+                                "L",
+                                "000300.SH",
+                                "境内",
+                            ],
+                            ["159001.SZ", "已退市工具", "20190624", "D", None, "QDII"],
+                            ["589430.SH", "待上市", None, "P", None, "境内"],
+                            [
+                                "510300.OF",
+                                "场外份额",
+                                "20120706",
+                                "L",
+                                "000300.SH",
+                                "境内",
+                            ],
                         ],
                     },
                 },
-            )
+            ),
         )
+        result = TushareSource(settings=_settings()).fetch_etf_basic()
+        import json
 
-        source = TushareSource(settings=_settings())
-        result = source.fetch_etf_basic()
-
-        # Verify schema
-        assert dict(result.schema) == {
-            "source_ticker": pl.String,
-            "ticker": pl.String,
-            "name": pl.String,
-            "exchange": pl.String,
-            "list_date": pl.Date,
-        }
-
-        # Verify data transformation
-        assert result.to_dicts() == [
-            {
-                "source_ticker": "510300.SH",
-                "ticker": "510300",
-                "name": "沪深300ETF",
-                "exchange": "SSE",
-                "list_date": date(2012, 7, 6),
-            },
-            {
-                "source_ticker": "159919.SZ",
-                "ticker": "159919",
-                "name": "沪深300ETF",
-                "exchange": "SZSE",
-                "list_date": date(2019, 6, 24),
-            },
-        ]
+        assert json.loads(route.calls[0].request.content)["api_name"] == "etf_basic"
+        assert result["source_ticker"].to_list() == ["510300.SH", "159001.SZ"]
+        assert result["name"].to_list() == ["沪深300", "已退市工具"]
+        assert result["asset_class"].to_list() == ["etf", "etf"]
+        assert result["tracking_index"].to_list() == ["000300.SH", None]
+        assert result["list_status"].to_list() == ["L", "D"]
+        assert result["etf_type"].to_list() == ["境内", "QDII"]
 
     def test_fetch_etf_basic_empty_response(self, respx_mock) -> None:
-        """Test fetch_etf_basic handles empty response."""
-
-        # Mock HTTP 响应 - 空数据
         respx_mock.post("http://api.tushare.pro").mock(
             return_value=httpx.Response(
                 200,
                 json={
                     "code": 0,
                     "msg": None,
-                    "data": {
-                        "fields": [
-                            "ts_code",
-                            "name",
-                            "list_date",
-                        ],
-                        "items": [],
-                    },
+                    "data": {"fields": ["ts_code", "csname", "list_date"], "items": []},
                 },
-            )
+            ),
         )
-
-        source = TushareSource(settings=_settings())
-        result = source.fetch_etf_basic()
-
-        assert result.is_empty()
-
-    def test_fetch_etf_basic_excludes_non_etf_and_unlisted_rows(
-        self, respx_mock
-    ) -> None:
-        """Only listed ETFs may enter the ETF security master."""
-        respx_mock.post("http://api.tushare.pro").mock(
-            return_value=httpx.Response(
-                200,
-                json={
-                    "code": 0,
-                    "msg": None,
-                    "data": {
-                        "fields": ["ts_code", "name", "list_date"],
-                        "items": [
-                            ["510300.SH", "沪深300ETF", "20120706"],
-                            ["164212.SZ", "新能源汽车(QDII-LOF)-A", "20200101"],
-                            ["508609.SH", "华安锦江REIT", "20240101"],
-                            ["589430.SH", "科创板芯片设计ETF", None],
-                        ],
-                    },
-                },
-            )
-        )
-
-        result = TushareSource(settings=_settings()).fetch_etf_basic()
-
-        assert result["source_ticker"].to_list() == ["510300.SH"]
+        assert TushareSource(settings=_settings()).fetch_etf_basic().is_empty()
 
 
 class TestTushareSourceEtfDaily:

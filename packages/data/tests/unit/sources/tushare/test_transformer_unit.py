@@ -287,8 +287,11 @@ class TestTushareDataTransformer:
         input_df = pl.DataFrame(
             {
                 "ts_code": ["510300.SH", "159919.SZ", "512100.SH"],
-                "name": ["沪深300ETF", "沪深300ETF", "科创板50ETF"],
+                "csname": ["沪深300ETF", "沪深300ETF", "科创板50ETF"],
                 "list_date": ["20120706", "20190624", "20201116"],
+                "index_code": [None, None, None],
+                "list_status": ["L", "L", "L"],
+                "etf_type": ["境内", "境内", "境内"],
             }
         )
 
@@ -298,6 +301,9 @@ class TestTushareDataTransformer:
             input_df, "etf_basic", ETF_BASIC_MAPPING
         )
 
+        result = result.select(
+            "source_ticker", "ticker", "name", "exchange", "list_date"
+        )
         # Verify schema
         assert dict(result.schema) == {
             "source_ticker": pl.String,
@@ -448,4 +454,8 @@ class TestTushareDataTransformer:
             "name": pl.String,
             "exchange": pl.String,
             "list_date": pl.Date,
+            "list_status": pl.String,
+            "tracking_index": pl.String,
+            "etf_type": pl.String,
+            "asset_class": pl.String,
         }

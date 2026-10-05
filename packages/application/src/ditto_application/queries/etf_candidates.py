@@ -26,6 +26,8 @@ from ditto_application.queries.retained_calendar import (
 from ditto_application.queries.snapshot_readiness import SnapshotReadinessQuery
 
 _FIELDS = (
+    "list_status",
+    "etf_type",
     "tracking_index",
     "asset_class",
     "fund_currency",
@@ -261,7 +263,11 @@ class ETFCandidateQuery:
                     ticker=ticker,
                     name=name,
                     exchange=str(identity["exchange"]),
-                    is_active=bool(identity["is_active"]),
+                    is_active=(
+                        fields["list_status"].value == "L"
+                        if fields["list_status"].value is not None
+                        else bool(identity["is_active"])
+                    ),
                     fields=fields,
                     tracking=self._tracking(
                         rows,

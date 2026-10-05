@@ -338,7 +338,7 @@ def process_fetched_data(  # noqa: C901, PLR0911, PLR0912 - fail-closed stages
     snapshot_evidence: IngestionSnapshotEvidence | None = None
     if ctx.evidence_committer is not None:
         evidence = build_evidence_commit_request(catalog_ctx)
-        if dataset == "etf_basic":
+        if dataset in {"etf_basic", "etf_daily"}:
             failure = _write_etf_observations(df, evidence.provider_snapshot, ctx)
             if failure is not None:
                 return failure

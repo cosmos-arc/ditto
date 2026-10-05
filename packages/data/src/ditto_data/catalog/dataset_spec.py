@@ -206,7 +206,7 @@ _PRIMARY_KEYS: dict[str, tuple[str, ...]] = {
 
 _PROVIDER_DATASETS: dict[str, tuple[str, ...]] = {
     "stock_basic": ("tushare:stock_basic", "tushare:bak_basic"),
-    "etf_basic": ("tushare:fund_basic",),
+    "etf_basic": ("tushare:etf_basic",),
     "index_basic": ("tushare:index_basic",),
     "calendar": ("tushare:trade_cal",),
     "stock_daily": ("tushare:daily", "fuyao:historical_prices"),

@@ -130,6 +130,7 @@ class ETFPaperHandoffBody(BaseModel):
     intended_trade_date: date
     knowledge_cutoff: datetime
     source_snapshot_id: str = Field(min_length=1)
+    input_snapshot_ids: dict[str, str] = Field(default_factory=dict)
 
 
 class ETFPaperExecutionBody(BaseModel):
@@ -145,6 +146,7 @@ class ETFPaperExecutionBody(BaseModel):
     execution_cutoff: datetime
     reference_snapshot_id: str = Field(min_length=1)
     market_snapshot_id: str = Field(min_length=1)
+    input_snapshot_ids: dict[str, str] = Field(default_factory=dict)
 
 
 class ETFPaperExecutionOutcomeResponse(BaseModel):

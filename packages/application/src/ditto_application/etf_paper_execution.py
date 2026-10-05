@@ -214,6 +214,11 @@ class ETFPaperExecution:
             signal_snapshot_id=package.dataset_snapshot_ids["etf_reference"],
             signal_cutoff=signal_cutoff,
             valuation_cutoff=reference_cutoff,
+            signal_input_snapshot_ids={
+                key.removeprefix("etf_input:"): value
+                for key, value in package.dataset_snapshot_ids.items()
+                if key.startswith("etf_input:")
+            },
         )
         if facts.signal_ledger_hash != package.dataset_snapshot_ids.get(
             "paper_signal_ledger"
@@ -298,7 +303,9 @@ class ETFPaperExecution:
                 cash_available=facts.execution_cash_available,
                 request_identity_hash=request_hash,
                 expected_ledger_hash=facts.execution_ledger_hash,
-                rule_snapshot_id=request.reference_snapshot_id,
+                rule_snapshot_id=request.input_snapshot_ids.get(
+                    "etf_reference", request.reference_snapshot_id
+                ),
                 rule_cutoff=request.execution_cutoff.isoformat(),
             )
         )
