@@ -461,6 +461,9 @@ def _coordinator(runtime: _Pipeline, source: _MarketSource):
         MetadataService,
         SimpleNamespace(
             list_trading_days=lambda start, end: ["2026-07-16", "2026-07-17"],
+            is_trading_day=lambda day: True,
+            calendar=SimpleNamespace(get_first_trading_day=lambda: "2026-07-16"),
+            get_last_trading_day=lambda: "2026-07-17",
         ),
     )
     coordinator = IngestionCoordinator(
@@ -591,6 +594,8 @@ def test_enriched_success_is_attested_by_its_payload_binding(tmp_path):
             success_log=replace(request.success_log, checksum="canonical:enriched"),
         )
         assert runtime.context.evidence_committer.commit(request).completed
+        assert runtime.context.evidence_committer.commit(request).completed
+        assert len(runtime.ports.snapshot_reader.list_snapshots()) == 1
         ports = runtime.ports
         verifier = PersistedIngestionEvidenceVerifier(
             ports.snapshot_reader, ports.lifecycle_reader, ports.ingestion_log_store
@@ -609,3 +614,122 @@ def test_enriched_success_is_attested_by_its_payload_binding(tmp_path):
             checksum="different-content",
             row_count=1,
         )
+
+
+@pytest.mark.integration
+def test_instrument_snapshot_does_not_complete_market_dates(tmp_path: Path) -> None:
+    from ditto_application.catalog_freshness import source_coverage_evidence
+    from ditto_application.processes.ingestion.metadata_manager import MetadataManager
+
+    with _pipeline(tmp_path, "stock_daily") as runtime:
+        from ditto_application.processes.ingestion.ingestion_evidence import (
+            CatalogWriteContext,
+            build_evidence_commit_request,
+        )
+
+        frame = _bars()
+        written = runtime.writer.write_data("stock_daily", frame, "2026-07-16")
+        payload = runtime.context.provider_payload_writer.retain_payload(
+            dataset_id="stock_daily",
+            source="tushare",
+            payload=frame,
+        )
+        request = build_evidence_commit_request(
+            CatalogWriteContext(
+                dataset="stock_daily",
+                trade_date="2026-07-16",
+                source_name="tushare",
+                write_result=written,
+                df=frame,
+                source_ticker="600000.SH",
+                end_date="2026-07-17",
+                l1_l2_attested=True,
+                provider_payload=payload,
+            )
+        )
+        assert runtime.context.evidence_committer.commit(request).completed
+        assert runtime.context.evidence_committer.commit(request).completed
+        assert len(runtime.ports.snapshot_reader.list_snapshots()) == 1
+        ports = runtime.ports
+        manager = MetadataManager(
+            cast(IngestionLogStore, ports.ingestion_log_store),
+            snapshot_reader=ports.snapshot_reader,
+            lifecycle_reader=ports.lifecycle_reader,
+        )
+        assert not manager.should_skip("stock_daily", "2026-07-16")[0]
+        for day in ("2026-07-16", "2026-07-17"):
+            assert (
+                source_coverage_evidence(
+                    ports.snapshot_reader,
+                    ports.lifecycle_reader,
+                    dataset="stock_daily",
+                    source="tushare",
+                    trade_date=day,
+                ).status
+                != "fresh"
+            )
+        coordinator, metadata = _coordinator(runtime, _MarketSource())
+        backfill = BackfillManager(
+            coordinator,
+            metadata,
+            snapshot_reader=ports.snapshot_reader,
+            lifecycle_reader=ports.lifecycle_reader,
+        )
+        repaired = backfill.backfill_missing("stock_daily")
+        assert repaired.success_count == 2
+
+
+@pytest.mark.integration
+@pytest.mark.parametrize("recovery", ["daily", "missing"])
+def test_daily_retry_recovers_pending_revision_over_old_success(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    recovery: str,
+) -> None:
+    from ditto_application.catalog_freshness import source_coverage_evidence
+
+    with _pipeline(tmp_path, "stock_daily") as runtime:
+        source = _MarketSource()
+        coordinator, metadata = _coordinator(runtime, source)
+        assert coordinator.ingest_date("stock_daily", "2026-07-17").status == "success"
+        digest = parquet_store.file_md5
+
+        def fail_checksum(path: Path) -> str:
+            raise OSError("crash after canonical replacement")
+
+        monkeypatch.setattr(parquet_store, "file_md5", fail_checksum)
+        source.payload = source.payload.with_columns(pl.lit(999.0).alias("close"))
+        assert (
+            coordinator.ingest_date("stock_daily", "2026-07-17", force=True).status
+            == "failed"
+        )
+        monkeypatch.setattr(parquet_store, "file_md5", digest)
+        ports = runtime.ports
+        assert (
+            source_coverage_evidence(
+                ports.snapshot_reader,
+                ports.lifecycle_reader,
+                dataset="stock_daily",
+                source="tushare",
+                trade_date="2026-07-17",
+            ).status
+            == "stale"
+        )
+        if recovery == "daily":
+            assert (
+                coordinator.ingest_date("stock_daily", "2026-07-17").status == "success"
+            )
+        else:
+            result = BackfillManager(
+                coordinator,
+                metadata,
+                snapshot_reader=ports.snapshot_reader,
+                lifecycle_reader=ports.lifecycle_reader,
+            ).backfill_missing("stock_daily")
+            assert result.failed_count == 0
+            assert any(
+                item.trade_date == "2026-07-17" and item.status == "success"
+                for item in result.results
+            )
+        assert ports.lifecycle_reader.list_incomplete() == ()
+        assert coordinator.ingest_date("stock_daily", "2026-07-17").status == "skipped"

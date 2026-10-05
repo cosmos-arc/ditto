@@ -49,6 +49,7 @@ __all__ = [
     "completed_covering_snapshot",
     "covering_snapshots",
     "dataset_namespace",
+    "has_pending_date",
     "latest_catalog_entry_for_dataset",
     "observed_at",
     "observed_snapshot_ids",
@@ -160,6 +161,20 @@ def observed_at(snapshot: ProviderSnapshot) -> datetime:
     return snapshot.created_at
 
 
+def has_pending_date(
+    lifecycle: PartitionLifecycleReader,
+    *,
+    dataset: str,
+    source: str,
+    trade_date: str,
+) -> bool:
+    """A market-wide request must repair any overlapping write from its source."""
+    return any(
+        item.request_start <= trade_date <= item.request_end
+        for item in lifecycle.list_incomplete(dataset_id=dataset, source=source)
+    )
+
+
 def covering_snapshots(
     snapshots: ProviderSnapshotReader,
     *,
@@ -167,12 +182,15 @@ def covering_snapshots(
     source: str,
     trade_date: str,
 ) -> tuple[ProviderSnapshot, ...]:
-    """Snapshots whose provider request interval covers ``trade_date``."""
+    """Snapshots proving market-wide coverage, never a restricted request."""
     target = _parse_iso_date(trade_date)
     if target is None:
         return ()
     covering: list[ProviderSnapshot] = []
     for snapshot in snapshots.list_snapshots(dataset_id=dataset, source=source):
+        scope = dict(snapshot.response_metadata)
+        if scope.get("source_ticker") or scope.get("exchange"):
+            continue
         start = _parse_iso_date(snapshot.request_start)
         end = _parse_iso_date(snapshot.request_end)
         if start is None or end is None or not start <= target <= end:
@@ -190,6 +208,10 @@ def completed_covering_snapshot(
     trade_date: str,
 ) -> ProviderSnapshot | None:
     """Latest observed completed snapshot covering one date, if any."""
+    if has_pending_date(
+        lifecycle, dataset=dataset, source=source, trade_date=trade_date
+    ):
+        return None
     completed = tuple(
         snapshot
         for snapshot in covering_snapshots(
@@ -237,6 +259,12 @@ def source_coverage_evidence(
         source=source,
         trade_date=trade_date,
     )
+    if has_pending_date(
+        lifecycle, dataset=dataset, source=source, trade_date=trade_date
+    ):
+        return SourceCoverageEvidence(
+            source=source, status="stale", sla_hours=sla_hours
+        )
     if not covering:
         return SourceCoverageEvidence(
             source=source,
@@ -404,6 +432,10 @@ class PersistedIngestionEvidenceVerifier:
         row_count: int,
     ) -> bool:
         """Verify one non-sparse result against its completed snapshot facts."""
+        if has_pending_date(
+            self.lifecycle, dataset=dataset, source=source, trade_date=trade_date
+        ):
+            return False
         if type(checksum) is not str or not checksum:
             return False
         if type(row_count) is not int:

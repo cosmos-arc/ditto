@@ -21,6 +21,7 @@ from ditto_application.catalog_freshness import (
     CatalogAsOfSnapshot,
     PersistedIngestionEvidenceVerifier,
     completed_covering_snapshot,
+    has_pending_date,
     snapshot_asof_evidence,
 )
 from ditto_application.processes.ingestion.sparse_pit import is_sparse_pit_dataset
@@ -121,6 +122,14 @@ class MetadataManager:
                 trade_date=trade_date,
                 reason="force=True",
             )
+            return IngestionSkipDecision(should_skip=False)
+
+        if self._lifecycle_reader is not None and has_pending_date(
+            self._lifecycle_reader,
+            dataset=dataset,
+            source=source,
+            trade_date=trade_date,
+        ):
             return IngestionSkipDecision(should_skip=False)
 
         # 检查是否有历史记录
