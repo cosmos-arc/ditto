@@ -173,3 +173,23 @@ task ci
 完整 DoD 和本次证据映射见
 [R2 设计 §16](../plans/2026-07-17-r2-data-product-design.md#16-definition-of-done) 与
 [R2 evidence index](../evidence/r2/README.md)。
+
+## 12. FRED 序列扩充（#437，全部展示-only）
+
+`sources/fred/indicators.py` 注册 31 个新序列（#424 候选全集），
+`FRED_INDICATOR_CODES` 镜像同步扩充（消费边界自动覆盖：不进入策略
+特征/回测/Paper/Agent 决策输入）。频率类型新增 `weekly`（GASREGW
+周频如实注册，日更回看 90 天）。类别新增 `exchange_rate`。
+
+- **汇率身份分离**：DEXJPUS/DEXUSEU/DEXCHUS/DEXUSUK 与 DTWEXAFEGS
+  是 H.10 口径（周一发布上周值），存于宏观长表；Tushare fx_daily
+  （FXCM 口径）是另一身份，不静默合并同一序列。
+- **ID 修正**（2026-10-05 CSV 端点核实）：PALLFNFINDEXM（旧
+  PALLFNF/PALLFIN 错误 404）、DBAA（日度 Baa）、BAA10Y、PNGASEUUSDM
+  （候选清单 PNGASUSDM 为错误 ID 404，正确为 PNGASEUUSDM——欧盟
+  天然气，与 Henry Hub 分属不同基准）。
+- **已知边界**：ICE BofA OAS 两序列自 2026-04 仅滚动 3 年窗口；
+  DGS20 存在 1987-1993 停发段缺失；BAA 仅月度、DBAA 为日度（不同
+  序列）；EFFR 与 DFF 为不同序列并存。
+- 31/31 序列经 fredgraph.csv 公开端点核验身份与最新观察日
+  （2026-10-05）；正式摄取仍走 api.stlouisfed.org（key 注入不变）。

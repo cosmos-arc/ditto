@@ -29,6 +29,7 @@ ALL_VIX_CODES: list[str] = [ind.code for ind in list_fred_indicators(category="v
 # 更老修订需显式 range 重拉（fetch_macro_indicators_range）。
 _DAILY_UPDATE_LOOKBACK_DAYS: dict[str, int] = {
     "daily": 10,
+    "weekly": 90,  # 周一发布上周值（#437 GASREGW），13 周回看捕获缺周补发
     "monthly": 400,
     "quarterly": 900,
 }

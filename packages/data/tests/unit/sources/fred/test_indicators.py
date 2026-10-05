@@ -2,6 +2,9 @@
 
 """Tests for FRED indicator definitions."""
 
+import pytest
+from ditto_data.sources.fred.indicators import FRED_INDICATORS
+
 
 def test_rate_indicators_exist() -> None:
     """测试美国利率指标定义存在."""
@@ -100,3 +103,70 @@ def test_models_mirror_matches_registry() -> None:
     assert FRED_INDICATOR_CODES - frozenset(FRED_INDICATORS) == retired
     # 退役代码不在注册表（防止新旧并存）
     assert not (retired & frozenset(FRED_INDICATORS))
+
+
+@pytest.mark.unit
+class TestFredSeriesExpansion437:
+    """#437 扩充序列的注册合同（全部展示-only）。"""
+
+    def test_gasregw_registers_weekly_not_daily(self) -> None:
+        ind = FRED_INDICATORS["COMMOD_GASREGW"]
+        assert ind.series_id == "GASREGW"
+        assert ind.frequency == "weekly"  # 周频如实注册，不伪称日频
+
+    def test_exchange_rate_series_are_h10_not_fx_daily(self) -> None:
+        codes = {
+            "FX_JPYUSD_H10": "DEXJPUS",
+            "FX_EURUSD_H10": "DEXUSEU",
+            "FX_USDCNY_H10": "DEXCHUS",
+            "FX_GBPUSD_H10": "DEXUSUK",
+        }
+        for code, series_id in codes.items():
+            ind = FRED_INDICATORS[code]
+            assert ind.series_id == series_id
+            assert ind.category == "exchange_rate"
+        # 与 Tushare fx_daily（FXCM 口径）分属不同身份：H10 码不在
+        # FX_CODE_TO_INSTRUMENT_ID 中，存于宏观长表不并入 fx_daily。
+        from ditto_data.models import FX_CODE_TO_INSTRUMENT_ID
+
+        assert not (set(codes) & set(FX_CODE_TO_INSTRUMENT_ID))
+
+    def test_corrected_series_ids_verified(self) -> None:
+        assert FRED_INDICATORS["COMMOD_ALLFNF_IMF"].series_id == "PALLFNFINDEXM"
+        assert FRED_INDICATORS["US_CORP_YIELD_BAA_D"].series_id == "DBAA"
+        assert FRED_INDICATORS["US_BOND_SPREAD_BAA10Y"].series_id == "BAA10Y"
+        # 候选清单的 PNGASUSDM 为错误 ID（404），正确为 PNGASEUUSDM
+        assert FRED_INDICATORS["COMMOD_NATGAS_EU_IMF"].series_id == "PNGASEUUSDM"
+
+    def test_ice_series_declare_rolling_window_boundary(self) -> None:
+        for code in ("US_CREDIT_IG_OAS", "US_CREDIT_HY_OAS"):
+            assert "3 年窗口" in FRED_INDICATORS[code].description
+
+    def test_baa_monthly_and_daily_are_distinct_series(self) -> None:
+        assert FRED_INDICATORS["US_CORP_YIELD_BAA_M"].series_id == "BAA"
+        assert FRED_INDICATORS["US_CORP_YIELD_BAA_D"].series_id == "DBAA"
+        assert FRED_INDICATORS["US_CORP_YIELD_BAA_M"].frequency == "monthly"
+        assert FRED_INDICATORS["US_CORP_YIELD_BAA_D"].frequency == "daily"
+
+    def test_expansion_codes_covered_by_display_boundary(self) -> None:
+        from ditto_data.models import FRED_INDICATOR_CODES
+
+        new_codes = {
+            "US_DOLLAR_INDEX_AFE_GOODS",
+            "FX_JPYUSD_H10",
+            "US_BOND_YIELD_20Y",
+            "US_SOFR",
+            "US_EFFR",
+            "US_CREDIT_IG_OAS",
+            "VIX_NASDAQ",
+            "VIX_RUSSELL",
+            "COMMOD_HH_NATGAS",
+            "COMMOD_GASREGW",
+            "COMMOD_NATGAS_EU_IMF",
+        }
+        assert new_codes <= FRED_INDICATOR_CODES
+
+    def test_lookback_covers_weekly_frequency(self) -> None:
+        from ditto_data.sources.fred.fred_source import _lookback_start
+
+        assert _lookback_start("2026-10-05", "weekly") == "2026-07-07"
