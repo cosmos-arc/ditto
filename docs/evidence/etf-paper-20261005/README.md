@@ -24,29 +24,36 @@ etf_basic 的 index_code 不证明指数收益版本；etf_type 只表示投资�
 
 **授权链与估值已 LIVE 完成；执行腿受 PIT 合同限制需活体节奏，排程于 2026-10-08/10-09 晚间。**
 
-CODE/TEST（41ed18ab）：
+CODE/TEST（097c3287，含三轴审查修复）：
 
 - `etf_reference` 成为 source=config 的真实数据集：声明文件 → 真实摄取链
   （快照+payload 留存+完成证据+幂等）→ `etf_reference_observation` 观察行；
-  config 身份映射登记（fuyao 同语义），未解析身份 fail closed。
+  config 身份映射两阶段登记（未解析标的整批不登记）、最早证据日锚定、
+  区间外身份不回退当前注册表（fuyao 同守卫）。
 - 读侧合同不变：handoff/execution 以 `etf_reference` 补充输入取得
   trading_restriction/trading_currency/lot/tick/结算/涨跌幅/佣金/最低佣金/
   印花税/过户费；未声明标的保持缺失并精确拒绝（`trading_restriction:missing` 等）。
-- 集成测试 3 项（真实摄取链→investable、快照身份错配拒绝、未注册身份拒绝）
-  + 声明读取器单元 14 项通过；lint/format/type 全绿。
+- 测试：provider→Paper 集成 4 项（真实摄取链→investable、最小证据日锚定、
+  未注册身份 fail closed 无映射残留、白名单合同锁定）+ config 映射 SQLite
+  集成 4 项 + 声明读取器单元 13 项；lint/format/type 全绿。
+- API/Web 合同：本批无契约改动——`input_snapshot_ids` 组合输入合同（#493 已
+  生成）即本链路的 API/Web 面，系统级 etf-paper-journey 第 3 用例经真实 HTTP
+  复放组合输入 handoff+execution（44/44 系统用例通过）。页面交互仍缺补充
+  快照选择器，记录为产品缺口不阻塞本票后端验收。
 
 LIVE 用户旅程（[journey-live.json](journey-live.json)，全量 report.json 在隔离根）：
 
-绑定 `41ed18ab3ef8db9ed19b992f9ae918769ffe60ab`，2026-10-05 15:04:21–15:04:43 UTC，
-隔离根 `/private/tmp/ditto-etf-paper-journey-20261005-final`。命令：
+绑定 `097c32870fac0b082a2584375404a1ffcf497dda`（含三轴审查修复），2026-10-05
+15:47:21–15:47:42 UTC，隔离根 `/private/tmp/ditto-etf-paper-journey-20261005-fixcommit`。命令：
 
 ```bash
 uv run --no-sync python docs/evidence/etf-paper-20261005/paper_journey.py \
-  --root /tmp/ditto-etf-paper-journey-20261005-final \
+  --root /tmp/ditto-etf-paper-journey-20261005-fixcommit \
   --config-root /Users/chevy/Desktop/code/ditto
 ```
 
-（重放须换新根；脚本拒绝覆盖已有根。）
+（重放须换新根；脚本拒绝覆盖已有根。修复前 41ed18ab 的同旅程亦完成，
+差异仅在 config 映射锚定日由 2022-04-29 修正为最早证据日 2012-05-28。）
 
 1. 真实 Tushare 摄取：calendar 396、etf_basic 1779、etf_daily 1650 行 success；
 2. config 声明摄取：10 条事实 success，重复摄取 skipped（幂等）；

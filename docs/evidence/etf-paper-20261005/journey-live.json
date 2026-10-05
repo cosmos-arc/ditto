@@ -1,7 +1,7 @@
 {
-  "sha": "41ed18ab3ef8db9ed19b992f9ae918769ffe60ab",
-  "root": "/private/tmp/ditto-etf-paper-journey-20261005-final",
-  "started_at": "2026-10-05T15:04:21.895633+00:00",
+  "sha": "097c32870fac0b082a2584375404a1ffcf497dda",
+  "root": "/private/tmp/ditto-etf-paper-journey-20261005-fixcommit",
+  "started_at": "2026-10-05T15:47:21.178448+00:00",
   "scope": "isolated PAPER only; real provider ingestion, maintainer-confirmed config rules, authorized handoff and simulated execution",
   "signal_date": "2026-09-30",
   "intended_trade_date": "2026-10-08",
@@ -151,7 +151,7 @@
     "allocation_id": "issue-408-journey",
     "parent_version_id": null,
     "asof": "2026-09-30",
-    "knowledge_cutoff": "2026-10-05T15:04:37Z",
+    "knowledge_cutoff": "2026-10-05T15:47:32Z",
     "source_snapshot_id": "snapshot:tushare:etf_basic:sha256:b9c0ee938111c22811bbf9f87b712f401600dd78d1665d27537ff204803f916b",
     "mode": "equal",
     "weights": {
@@ -166,7 +166,7 @@
     "rule_version": "etf-allocation-v1",
     "paper_status": "research_only",
     "review_status": "review_approved",
-    "created_at": "2026-10-05T15:04:38.499640+00:00"
+    "created_at": "2026-10-05T15:47:33.419933+00:00"
   },
   "authorization_id": "etf-allocation-f294ded5c5f7fc7dda4afb9547764556:paper:d545259731759df4f514cf7fc22fa2d2",
   "handoff_receipt": {
@@ -179,8 +179,8 @@
       "trade_date": "2026-10-08",
       "status": "running",
       "revision": 1,
-      "created_at": "2026-10-05 15:04:41.105561+00:00",
-      "updated_at": "2026-10-05 15:04:41.107386+00:00",
+      "created_at": "2026-10-05 15:47:36.000667+00:00",
+      "updated_at": "2026-10-05 15:47:36.001902+00:00",
       "pause_reason": null
     }
   },
@@ -190,12 +190,12 @@
     "account_kind": "paper",
     "account_id": "issue-408-journey-paper",
     "as_of": "2026-10-05",
-    "knowledge_cutoff": "2026-10-05T15:04:42.000765+00:00",
+    "knowledge_cutoff": "2026-10-05T15:47:37.011935+00:00",
     "valuation_snapshot_id": "portfolio-valuation:sha256:d04c14a09ab4d8c1f2ec6039006b78f26d3fe8e760947b453130ee911a85f77e",
     "source_snapshot_ids": [
       "snapshot:tushare:etf_daily:sha256:05d2b54abe3c6100e08e483583e067e53640bc09f59e7712fb485d88e7257192"
     ],
-    "ledger_hash": "account-ledger:sha256:56e7f682496815bf88c645541238f1b81852ff0c2cbbb31a866744e94408a0a4",
+    "ledger_hash": "account-ledger:sha256:16b66292f1184a7a56b5251117b87be7c5827f2c09b6e152c31e035f60026cee",
     "target": {
       "portfolio_id": "etf-allocation-f294ded5c5f7fc7dda4afb9547764556",
       "portfolio_kind": "model",
@@ -287,7 +287,7 @@
         "event_type": "opening_cash",
         "trade_date": "2026-09-30",
         "settlement_date": "2026-09-30",
-        "recorded_at": "2026-10-05 15:04:34.470882+00:00",
+        "recorded_at": "2026-10-05 15:47:29.047924+00:00",
         "idempotency_key": "paper-opening:journey-opening",
         "actor": "paper-engine:account-bootstrap",
         "source": "paper_engine",
@@ -306,13 +306,13 @@
         "reverses_event_id": null,
         "corrects_event_id": null,
         "replacement_event_type": null,
-        "event_hash": "account-event:sha256:396b48ac3cf739810f148b519be068dcd566cd9733522bf8deb3cc3680a0333f"
+        "event_hash": "account-event:sha256:d70fcb541725392602d8a7d2032377263e068b54c5c176366bd14400283d5f7b"
       }
     ],
     "valuation_complete": true
   },
   "journey_status": "COMPLETED",
   "execution_leg": "Execution requires the version cutoff to fall on the signal day after its close (etf_paper_execution._after_close); this replayed version was saved after the signal session, so its lifecycle ends at handoff + valuation by design. A same-evening live run (ingest → save → authorize → handoff on signal day, execute after the trade-day close) is the follow-up cadence.",
-  "finished_at": "2026-10-05T15:04:43.015525+00:00",
-  "note": "Full report.json (incl. per-instrument unavailable reasons for all 1779 ETFs) lives in the isolated root /private/tmp/ditto-etf-paper-journey-20261005-final."
+  "finished_at": "2026-10-05T15:47:38.015942+00:00",
+  "note": "Full report.json (incl. per-instrument unavailable reasons for all 1779 ETFs) lives in the isolated root /private/tmp/ditto-etf-paper-journey-20261005-fixcommit."
 }
