@@ -277,7 +277,6 @@ async def prepare_review() -> dict[str, object]:
                 experiment_id=launch.experiment_id,
                 owner_token="system-http-acceptance",
                 revision=0,
-                lease_until_epoch_us=publish_support._NOW_US - 1,
             ),
             now_epoch_us=publish_support._NOW_US,
             created_at=publish_support._NOW,
