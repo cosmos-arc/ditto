@@ -273,6 +273,7 @@ class IngestionDataWriter:
         WriteKind.NAME_HISTORY: "_handler_name_history",
         WriteKind.ST_CHANGE_HISTORY: "_handler_st_change_history",
         WriteKind.ETF_REFERENCE: "_handler_etf_reference",
+        WriteKind.ETF_REFERENCE_CONFIG: "_handler_etf_reference_config",
         WriteKind.FUTURES_BARS: "_handler_futures_bars",
         WriteKind.FUTURES_BASIC: "_handler_futures_basic",
         WriteKind.EARNINGS_EVENT: "_handler_earnings_event",
@@ -440,6 +441,43 @@ class IngestionDataWriter:
             ctx.df, ctx.trade_date, asset_class
         )
 
+    def _handler_etf_reference_config(
+        self, ctx: _WriteContext
+    ) -> Callable[[], WriteResult]:
+        """etf_reference 声明摄取：登记 config 身份映射，观察行在 post-ingest 落库。"""
+        return lambda: self._write_etf_reference_config(ctx.df, ctx.trade_date)
+
+    def _write_etf_reference_config(
+        self, df: pl.DataFrame, trade_date: str
+    ) -> WriteResult:
+        """按声明登记 source='config' 映射；未解析身份的标的 fail closed。"""
+        if df.is_empty() or "source_ticker" not in df.columns:
+            raise AppProcessError(
+                "etf_reference declaration is empty; refusing identity-free write"
+            )
+        rows = df.to_dicts()
+        evidence_dates = {
+            str(row["source_ticker"]): _normalize_iso_date(str(row["effective_from"]))
+            for row in rows
+        }
+        resolved = (
+            self._metadata_service.instrument.resolve_config_reference_instruments(
+                sorted(evidence_dates),
+                evidence_dates=evidence_dates,
+                observed_at=datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
+            )
+        )
+        unresolved = sorted(set(evidence_dates) - set(resolved))
+        if unresolved:
+            raise AppProcessError(
+                "etf_reference declaration identity is unresolved: "
+                + ", ".join(unresolved)
+                + "; ingest etf_basic first",
+                field="source_ticker",
+                value=tuple(unresolved),
+            )
+        return _to_write_result("etf_reference", 0, df, len(df))
+
     def _write_etf_basic_with_reference(
         self,
         df: pl.DataFrame,
@@ -459,7 +497,7 @@ class IngestionDataWriter:
     def write_etf_reference(self, df: pl.DataFrame, snapshot: ProviderSnapshot) -> None:
         """Project only available basic facts, bound to the actual retained snapshot."""
         if (
-            snapshot.dataset_id not in {"etf_basic", "etf_daily"}
+            snapshot.dataset_id not in {"etf_basic", "etf_daily", "etf_reference"}
             or not snapshot.payload_retained
         ):
             raise AppProcessError(
@@ -474,6 +512,28 @@ class IngestionDataWriter:
         rows: list[dict[str, object]] = []
         for row in df.to_dicts():
             source_ticker = str(row["source_ticker"])
+            if snapshot.dataset_id == "etf_reference":
+                # 声明式事实：观察日=本次摄取请求日，生效日=声明确认的生效日。
+                value = str(row["value"]) if row.get("value") is not None else ""
+                if value == "":
+                    continue  # 观察缺失不推断
+                rows.append(
+                    {
+                        "source_ticker": source_ticker,
+                        "field": str(row["field"]),
+                        "value": value,
+                        "unit": str(row["unit"]),
+                        "observed_on": observed_on,
+                        "published_at": published_at,
+                        "effective_from": _normalize_iso_date(
+                            str(row["effective_from"])
+                        ),
+                        "effective_to": None,
+                        "source": self._source_name,
+                        "source_snapshot_id": snapshot.snapshot_id,
+                    }
+                )
+                continue
             fields: list[tuple[str, str, str]] = [
                 (
                     "name",

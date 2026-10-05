@@ -380,6 +380,83 @@ class InstrumentService:
         exchange = instrument.get("exchange")
         return str(exchange) if exchange is not None else None
 
+    @traced("metadata.identity.resolve_config_reference_instruments")
+    def resolve_config_reference_instruments(
+        self,
+        source_tickers: list[str],
+        *,
+        evidence_dates: Mapping[str, str],
+        observed_at: str,
+    ) -> dict[str, int]:
+        """
+        解析声明式 ETF 参考事实的 source_ticker 并登记 source='config' 映射（#408）。
+
+        规则（与 fuyao 映射同一语义）：
+        1. 先读既有 ``instrument_mapping(source='config')``。
+        2. 未命中的 suffixed ticker 按裸码唯一匹配已注册 instrument；
+           后缀推导交易所（SH→SSE、SZ→SZSE）与注册交易所一致才接受。
+        3. 命中后登记 ``instrument_mapping(source='config', effective_from=
+           有证据日期)``；同键重叠区间映射到不同 instrument_id 时拒绝。
+        4. 无法唯一匹配 → 不解析（调用方对该标的 fail closed）。
+
+        Args:
+            source_tickers: suffixed 源代码列表（如 "510300.SH"）.
+            evidence_dates: {source_ticker: 有证据的最早日期}.
+            observed_at: 观察时间（写入 created_at）.
+
+        Returns:
+            {source_ticker: instrument_id}（仅含可解析项）.
+
+        """
+        resolved: dict[str, int] = {}
+        by_evidence_date: dict[str, list[str]] = {}
+        for ticker in source_tickers:
+            evidence_date = evidence_dates.get(ticker)
+            if evidence_date is not None:
+                by_evidence_date.setdefault(str(evidence_date), []).append(ticker)
+        for asof, scoped in by_evidence_date.items():
+            resolved.update(
+                self._instrument_reader.resolve_instrument_ids_batch(
+                    scoped, "config", asof
+                )
+            )
+        unresolved = [ticker for ticker in source_tickers if ticker not in resolved]
+        if unresolved:
+            bare = sorted({ticker.split(".", 1)[0] for ticker in unresolved})
+            matches = self._instrument_reader.map_bare_tickers_to_instrument_ids(bare)
+            for ticker in unresolved:
+                bare_code, _, suffix = ticker.partition(".")
+                suffix_exchange = self._FUYAO_SUFFIX_EXCHANGE.get(suffix.upper())
+                candidates = matches.get(bare_code, [])
+                compatible = [
+                    instrument_id
+                    for instrument_id in candidates
+                    if suffix_exchange is not None
+                    and self._exchange_of(instrument_id) == suffix_exchange
+                ]
+                if len(compatible) != 1:
+                    continue
+                effective_from = evidence_dates.get(ticker)
+                if effective_from is None:
+                    continue
+                registered = self._instrument_writer.register_source_mapping(
+                    instrument_id=compatible[0],
+                    source="config",
+                    source_ticker=ticker,
+                    effective_from=str(effective_from),
+                    observed_at=observed_at,
+                )
+                if registered:
+                    resolved[ticker] = compatible[0]
+        if unknown := [ticker for ticker in source_tickers if ticker not in resolved]:
+            logger.warning(
+                "config reference identity left unresolved mappings",
+                event="config_reference_unknown_mappings",
+                unknown_count=len(unknown),
+                sample=sorted(unknown)[:10],
+            )
+        return resolved
+
     # ============ 证券查询 ============
 
     @traced("metadata.instrument.get_instrument")

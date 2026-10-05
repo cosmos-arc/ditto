@@ -1,0 +1,72 @@
+{
+  "confirmed_at": "2026-10-05",
+  "confirmed_by": "maintainer (chevy), issue #408 acceptance",
+  "notes": "维护者确认的 ETF Paper 参考事实声明（source=config）。每条事实独立声明来源依据与生效日；未声明的标的/字段在 Paper 读侧保持缺失并精确拒绝。事实变更走新声明行（追加观察），不改写已记录证据。",
+  "instruments": [
+    {
+      "source_ticker": "510300.SH",
+      "facts": {
+        "trading_currency": {
+          "value": "CNY",
+          "unit": "text",
+          "effective_from": "2012-05-28",
+          "basis": "上交所上市基金以人民币申报与成交（上交所交易规则；华泰柏瑞沪深300ETF基金合同/招募说明书）"
+        },
+        "trading_restriction": {
+          "value": "none",
+          "unit": "text",
+          "effective_from": "2026-09-29",
+          "basis": "维护者确认 2026-10-05：该基金 2026-09-29/09-30 二级市场正常交易（Tushare fund_daily 当日成交记录佐证）"
+        },
+        "lot_size": {
+          "value": "100",
+          "unit": "count",
+          "effective_from": "2012-05-28",
+          "basis": "基金招募说明书：买入申报数量为 100 份或其整数倍"
+        },
+        "tick_size": {
+          "value": "0.001",
+          "unit": "price",
+          "effective_from": "2012-05-28",
+          "basis": "基金招募说明书：申报价格最小变动单位 0.001 元"
+        },
+        "settlement_cycle": {
+          "value": "1",
+          "unit": "days",
+          "effective_from": "2012-05-28",
+          "basis": "A股交易型指数基金 T+1 交收（上交所交易规则）"
+        },
+        "price_limit_pct": {
+          "value": "0.10",
+          "unit": "ratio",
+          "effective_from": "2012-05-28",
+          "basis": "基金招募说明书：上市首日起实行 10% 价格涨跌幅限制（主板股票型 ETF）"
+        },
+        "commission_rate": {
+          "value": "0.0001",
+          "unit": "ratio",
+          "effective_from": "2026-09-29",
+          "basis": "维护者确认的券商账户佣金 万1（2026-10-05 确认，自本场景生效日起适用）"
+        },
+        "min_commission": {
+          "value": "5",
+          "unit": "cny",
+          "effective_from": "2026-09-29",
+          "basis": "维护者确认的券商账户最低佣金 5 元/笔（2026-10-05 确认）"
+        },
+        "stamp_duty_rate": {
+          "value": "0",
+          "unit": "ratio",
+          "effective_from": "2012-05-28",
+          "basis": "《中华人民共和国印花税法》（2022-07-01 施行）：证券交易印花税对股份转让书据征收，基金（含 ETF）转让不征收"
+        },
+        "transfer_fee_rate": {
+          "value": "0.00001",
+          "unit": "ratio",
+          "effective_from": "2022-04-29",
+          "basis": "中国结算 2022-04-29 起过户费按成交金额 0.001% 双边收取（沪深市场证券）；维护者确认按此标准口径（2026-10-05）"
+        }
+      }
+    }
+  ]
+}

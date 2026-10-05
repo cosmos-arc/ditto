@@ -146,6 +146,7 @@ def create_ingestion_bundle(
                 source_accessor=source_accessor,
                 ingestion_log_store=ingestion_log_store,
                 source_registry=source_registry,
+                etf_reference_config=source_accessor.etf_reference_config,
             ),
             source_name=source,
             runtime=CoordinatorRuntimeContext(

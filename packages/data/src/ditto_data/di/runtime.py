@@ -44,6 +44,7 @@ from ditto_data.lineage import DataLineageReader, DataLineageRecorder
 from ditto_data.lineage.sqlite_store import SQLiteDataLineage
 from ditto_data.runtime.instrument_id_allocator import InstrumentIdAllocator
 from ditto_data.services.source_accessor import SourceAccessor
+from ditto_data.sources.reference_config import EtfReferenceConfigSource
 from ditto_data.sources.sina.source import SinaSource
 from ditto_data.sources.source import DataSources
 from ditto_data.storage.runtime.ingestion import (
@@ -308,6 +309,11 @@ class RuntimeProvider(Provider):
         self,
         sources: DataSources,
         sina_source: SinaSource | None,
+        etf_reference_config: EtfReferenceConfigSource,
     ) -> SourceAccessor:
         """外部数据源访问服务."""
-        return SourceAccessor(sources, sina_source=sina_source)
+        return SourceAccessor(
+            sources,
+            sina_source=sina_source,
+            etf_reference_config=etf_reference_config,
+        )

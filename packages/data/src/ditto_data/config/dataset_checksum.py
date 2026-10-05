@@ -34,6 +34,7 @@ _SORT_KEYS: dict[str, Sequence[str]] = {
     "calendar": ("trade_date",),
     "stock_basic": ("ts_code",),
     "etf_basic": ("ts_code",),
+    "etf_reference": ("source_ticker", "field"),
     "industry_classification": (
         "source",
         "classification_version",

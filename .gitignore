@@ -103,6 +103,8 @@ docs/archive/web/reviews/visual-audit/
 !/package.json
 config/**/*.json
 !config/**/*.example.json
+# 维护者确认的 ETF 参考事实声明（#408）：版本化事实，非本地产物
+!config/default/etf_reference.json
 
 # ===================================================================
 #                    Jupyter & IPython

@@ -46,6 +46,8 @@ class DailyFetchContext:
     fetch_commodity_daily: Callable[[str], pl.DataFrame]
     get_cached_index_codes: Callable[[], list[str]]
     source_name: str = "tushare"
+    # 维护者确认的 ETF 参考事实声明读取（#408）；缺配置时 fail closed。
+    fetch_etf_reference_config: Callable[[], pl.DataFrame] | None = None
 
 
 @dataclass(frozen=True)
@@ -85,6 +87,7 @@ class WriteKind(StrEnum):
     NAME_HISTORY = "name_history"
     ST_CHANGE_HISTORY = "st_change_history"
     ETF_REFERENCE = "etf_reference"
+    ETF_REFERENCE_CONFIG = "etf_reference_config"
     FUTURES_BARS = "futures_bars"
     FUTURES_BASIC = "futures_basic"
     EARNINGS_EVENT = "earnings_event"
@@ -274,6 +277,20 @@ def _property_fetch(group: str, method: str) -> DailyFetchFactory:
     return factory
 
 
+def _etf_reference_config_fetch(ctx: DailyFetchContext) -> DailyFetchHandler:
+    """Read the maintainer-confirmed reference declaration, fail closed when absent."""
+
+    def fetch() -> pl.DataFrame:
+        if ctx.fetch_etf_reference_config is None:
+            raise AppProcessError(
+                "etf_reference config declaration is not configured: "
+                + "config/default/etf_reference.json under DITTO_CONFIG_ROOT"
+            )
+        return ctx.fetch_etf_reference_config()
+
+    return fetch
+
+
 def _index_weight_fetch(ctx: DailyFetchContext) -> DailyFetchHandler:
     """Fetch every configured index for one effective date."""
 
@@ -442,6 +459,14 @@ _METADATA_REGISTRATIONS: tuple[DatasetRegistration, ...] = (
         basic_asset_class="etf",
         metadata_dataset=True,
         daily_fetch_factory=_property_fetch("metadata", "fetch_etf_basic"),
+    ),
+    # 维护者确认的 ETF 参考事实（#408）：声明文件经真实摄取链落快照/观察行。
+    DatasetRegistration(
+        dataset=Dataset.ETF_REFERENCE,
+        write_kind=WriteKind.ETF_REFERENCE_CONFIG,
+        date_schedule=DateScheduleType.SOURCE_DEFINED,
+        metadata_dataset=True,
+        daily_fetch_factory=_etf_reference_config_fetch,
     ),
     DatasetRegistration(
         dataset=Dataset.INDEX_BASIC,

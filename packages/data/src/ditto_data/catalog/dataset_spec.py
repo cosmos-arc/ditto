@@ -117,6 +117,7 @@ _PRIMARY_KEYS: dict[str, tuple[str, ...]] = {
     "adj_factor": ("instrument_id", "trade_date", "knowledge_date"),
     "fund_adj": ("instrument_id", "trade_date", "knowledge_date"),
     "etf_nav": ("instrument_id", "trade_date", "knowledge_date"),
+    "etf_reference": ("instrument_id", "field", "observed_on"),
     "balance_sheet": (
         "instrument_id",
         "report_date",
@@ -221,6 +222,7 @@ _PROVIDER_DATASETS: dict[str, tuple[str, ...]] = {
     "adj_factor": ("tushare:adj_factor",),
     "fund_adj": ("tushare:fund_adj",),
     "etf_nav": ("tushare:fund_nav",),
+    "etf_reference": ("config:etf_reference",),
     "balance_sheet": ("tushare:balancesheet",),
     "income_statement": ("tushare:income",),
     "cash_flow": ("tushare:cashflow",),
@@ -264,6 +266,7 @@ _BOOTSTRAP_CHUNKS: dict[str, BootstrapChunk] = {
     "adj_factor": "month",
     "fund_adj": "month",
     "etf_nav": "month",
+    "etf_reference": "source_defined",
     "balance_sheet": "quarter",
     "income_statement": "quarter",
     "cash_flow": "quarter",
@@ -309,6 +312,7 @@ _DATASET_DOMAINS: dict[str, str] = {
     "adj_factor": "market",
     "fund_adj": "market",
     "etf_nav": "market",
+    "etf_reference": "metadata",
     "balance_sheet": "fundamental",
     "income_statement": "fundamental",
     "cash_flow": "fundamental",
@@ -351,6 +355,8 @@ _SOURCE_DEFINED_DATASETS = frozenset(
         "industry_mapping",
         "namechange",
         "st_history",
+        # 维护者确认的声明式快照，不随交易日历推进（#408）
+        "etf_reference",
     }
 )
 _CNY_DATASETS = frozenset(
@@ -401,6 +407,8 @@ _APPEND_ONLY_DATASETS = frozenset(
         "earnings_forecast",
         "earnings_express",
         "index_valuation",
+        # 配置声明观察行：追加观察，不改写已记录证据（#408）
+        "etf_reference",
     }
 )
 _EFFECTIVE_DATED_DATASETS = frozenset(

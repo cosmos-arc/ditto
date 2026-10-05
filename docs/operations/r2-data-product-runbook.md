@@ -269,3 +269,23 @@ JSONP），默认启用（`SINA_ENABLED=false` 可关）。作为商品复合源
   序列）；EFFR 与 DFF 为不同序列并存。
 - 31/31 序列经 fredgraph.csv 公开端点核验身份与最新观察日
   （2026-10-05）；正式摄取仍走 api.stlouisfed.org（key 注入不变）。
+
+## 13. 维护者确认的 ETF 参考事实（etf_reference，#408）
+
+`config/default/etf_reference.json`（跨环境默认层）承载维护者确认的
+ETF Paper 参考事实：交易限制、交易币种、lot/tick/结算周期/涨跌幅与
+账户费用（佣金/最低佣金/印花税/过户费）。外部数据源无结构化提供方，
+声明文件即唯一合法来源；每条事实独立声明 `basis`（来源依据）与
+`effective_from`（生效日），`confirmed_at` 记录确认日。
+
+- **摄取**：`source=config`、`dataset=etf_reference`，走真实摄取链
+  （快照 + payload 留存 + 幂等 + 完成证据）；观察日=摄取请求日，
+  生效日=声明确认的生效日，发布时刻=快照创建时刻。
+- **身份**：声明 `source_ticker` 经裸码+后缀交易所唯一匹配已注册
+  instrument 后登记 `instrument_mapping(source='config')`；未注册或
+  多义 → 摄取 fail closed（先摄取 etf_basic）。
+- **读侧**：Paper handoff/execution 以 `etf_reference` 补充输入快照
+  消费；未声明标的/字段保持缺失并精确拒绝，不推断、不默认。
+- **变更**：修改事实 = 编辑声明文件后按新摄取日期重新摄取（追加
+  观察行）；已记录证据不改写。账户费用变化须同步更新 `basis` 与
+  生效日。

@@ -74,6 +74,9 @@ class Dataset(StrEnum):
     FUND_ADJ = "fund_adj"
     ETF_NAV = "etf_nav"
 
+    # 维护者确认的 ETF 参考事实（配置源，#408）
+    ETF_REFERENCE = "etf_reference"
+
     # Fundamental 域（财务/公司行为）
     BALANCE_SHEET = "balance_sheet"
     INCOME_STATEMENT = "income_statement"
@@ -244,6 +247,7 @@ class Source(StrEnum):
     AKSHARE = "akshare"  # 预留，未来支持
     FRED = "fred"  # Federal Reserve Economic Data (美国宏观数据)
     FUYAO = "fuyao"  # 同花顺开源金融数据（冗余源）
+    CONFIG = "config"  # 维护者确认的本地声明配置（ETF 参考事实，#408）
 
 
 _RANGES: dict[AssetClassType, tuple[int, int]] = {

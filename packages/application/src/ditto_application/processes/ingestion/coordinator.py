@@ -13,6 +13,7 @@ from ditto_data.services.macro_service import MacroService
 from ditto_data.services.market_service import MarketService
 from ditto_data.services.market_write_service import MarketWriteService
 from ditto_data.services.metadata_service import MetadataService
+from ditto_data.sources.reference_config import EtfReferenceConfigSource
 from ditto_kernel.instrument import InstrumentIngestParams
 from ditto_platform.foundation import OnDuplicate, WriteResult, logger
 
@@ -121,6 +122,7 @@ class IngestionCoordinator:
         fetchers: SourceFetchers,
         fred_source: CommoditySource | None = None,
         sina_source: CommoditySource | None = None,
+        etf_reference_config: EtfReferenceConfigSource | None = None,
         config: IngestionCoordinatorConfig | None = None,
     ) -> None:
         """初始化 IngestionCoordinator。"""
@@ -136,6 +138,7 @@ class IngestionCoordinator:
         self._source_name = cfg.source_name
         self._fred_source = fred_source
         self._sina_source = sina_source
+        self._etf_reference_config = etf_reference_config
         self._ingestion_log_store = cfg.ingestion_log_store
         self._ingestion_cursor_store = cfg.ingestion_cursor_store
         self._quality_checker = cfg.quality_checker
@@ -180,6 +183,14 @@ class IngestionCoordinator:
             fred_source=self._fred_source,
             sina_source=self._sina_source,
         )
+
+    def _fetch_etf_reference_config(self) -> pl.DataFrame:
+        """读取维护者确认的 ETF 参考事实声明（#408），缺配置 fail closed。"""
+        if self._etf_reference_config is None:
+            raise AppProcessError(
+                "etf_reference config declaration source is not configured"
+            )
+        return self._etf_reference_config.fetch_etf_reference()
 
     def _fetch_source_defined_range(
         self,
@@ -693,6 +704,7 @@ class IngestionCoordinator:
             fetch_commodity_daily=self._fetch_commodity_daily,
             get_cached_index_codes=self._get_cached_index_codes,
             source_name=self._source_name,
+            fetch_etf_reference_config=self._fetch_etf_reference_config,
         )
 
         if dataset_enum not in handlers:
