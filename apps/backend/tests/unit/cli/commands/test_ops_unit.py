@@ -919,3 +919,37 @@ class TestFactorIcCommand:
         assert "stock_daily" in result.output
         assert "catalog-snap-001" in result.output
         assert "csi_300" in result.output
+
+
+@pytest.mark.unit
+class TestReconcileCommand:
+    """#438：reconcile 数据集门禁（adj_factor 放开, 其它拒绝）."""
+
+    def test_unsupported_dataset_rejected_before_container(
+        self, runner: CliRunner, mocker: MockerFixture
+    ) -> None:
+        container_factory = mocker.patch(CONTAINER_PATH)
+
+        result = runner.invoke(
+            app, ["ops", "reconcile", "2025-06-25", "--dataset", "etf_daily"]
+        )
+
+        assert result.exit_code == 1
+        assert "暂不支持 etf_daily" in result.output
+        container_factory.assert_not_called()
+
+    def test_adj_factor_and_stock_daily_pass_gate(
+        self, runner: CliRunner, mocker: MockerFixture
+    ) -> None:
+        """门禁仅放行两个数据集; adj_factor 不再被硬拒(#438 解除)."""
+        container_factory = mocker.patch(CONTAINER_PATH)
+
+        runner.invoke(app, ["ops", "reconcile", "2025-06-25", "--dataset", "foo"])
+
+        assert container_factory.assert_not_called() is None
+        for dataset in ("stock_daily", "adj_factor"):
+            result = runner.invoke(
+                app, ["ops", "reconcile", "2025-06-25", "--dataset", dataset]
+            )
+            # 门禁通过(进入容器装配阶段, 组装失败即说明未被门禁拒绝)
+            assert "暂不支持" not in result.output

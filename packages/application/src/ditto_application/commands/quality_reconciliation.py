@@ -3,14 +3,21 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import date
 
 import polars as pl
+from ditto_data.quality.checkers.adjustment_events import (
+    derive_event_adjustment_ratios,
+    derive_factor_ratios,
+)
 from ditto_data.quality.golden import GoldenDatasetSpec
 from ditto_data.quality.protocols import (
+    AdjFactorReconcileContextProtocol,
     ComparisonStoreProtocol,
     ExDividendInstrumentSourceProtocol,
     InstrumentStoreProtocol,
     QualityEngineProtocol,
+    SecondaryAdjustmentEventsSourceProtocol,
     SecondaryBarsSourceProtocol,
     SecondaryIdentityResolverProtocol,
 )
@@ -43,7 +50,7 @@ class ReconcileSourcesHandler:
     两侧数量/匹配数/主辅侧未匹配/重复键/差异数。
     """
 
-    def __init__(
+    def __init__(  # noqa: PLR0913 — 协作端口按数据集一次注入，收拢对账编排
         self,
         engine: QualityEngineProtocol,
         secondary_source: SecondaryBarsSourceProtocol,
@@ -52,6 +59,8 @@ class ReconcileSourcesHandler:
         secondary_identity_resolver: SecondaryIdentityResolverProtocol | None = None,
         ex_dividend_source: ExDividendInstrumentSourceProtocol | None = None,
         golden_dataset: GoldenDatasetSpec | None = None,
+        secondary_events_source: SecondaryAdjustmentEventsSourceProtocol | None = None,
+        adj_factor_context: AdjFactorReconcileContextProtocol | None = None,
     ) -> None:
         self._engine = engine
         self._secondary_source = secondary_source
@@ -60,6 +69,8 @@ class ReconcileSourcesHandler:
         self._secondary_identity_resolver = secondary_identity_resolver
         self._ex_dividend_source = ex_dividend_source
         self._golden_dataset = golden_dataset
+        self._secondary_events_source = secondary_events_source
+        self._adj_factor_context = adj_factor_context
 
     def handle(self, cmd: ReconcileSourcesCommand) -> ReconciliationResult:
         """执行跨源对账，返回对账结果."""
@@ -149,6 +160,8 @@ class ReconcileSourcesHandler:
         dataset: str,
     ) -> ReconciliationResult:
         """获取辅助数据源、反解身份并执行 outer/anti 对比."""
+        if dataset == "adj_factor":
+            return self._execute_adj_factor_comparison(primary_df, trade_date, dataset)
         tickers = primary_df["ticker"].unique().cast(pl.String).to_list()
 
         secondary_result = self._fetch_secondary(tickers, trade_date, dataset)
@@ -219,6 +232,179 @@ class ReconcileSourcesHandler:
             primary_duplicate_keys=comparison.primary_duplicate_keys,
             secondary_duplicate_keys=comparison.secondary_duplicate_keys,
             diff_count=comparison.diff_count,
+        )
+
+    def _execute_adj_factor_comparison(
+        self,
+        primary_df: pl.DataFrame,
+        trade_date: str,
+        dataset: str,
+    ) -> ReconciliationResult:
+        """
+        adj_factor 对账（#438）：事件流 vs 累积因子的同基准比例比较.
+
+        不比较绝对因子（基期可能不同）：主源推 F(D)/F(prev)，事件按
+        除权参考价公式推 prev_close/ref；缺前价/缺配股价等不可推导事件
+        单列（field=event_underivable），零交集不可比较不算通过。
+        """
+        if self._secondary_events_source is None or self._adj_factor_context is None:
+            raise AppCommandError(
+                "adj_factor reconciliation requires events source and factor context"
+            )
+
+        events = self._secondary_events_source.fetch_adjustment_events(trade_date)
+        if events.height == 0:
+            logger.warning(
+                "No secondary adjustment events found for comparison",
+                event="reconciliation_no_secondary",
+                trade_date=trade_date,
+            )
+            return ReconciliationResult(
+                trade_date=trade_date,
+                dataset=dataset,
+                passed=False,
+                issue_count=1,
+                comparable=False,
+                primary_count=primary_df.height,
+                secondary_count=0,
+            )
+        events = self._resolve_secondary_identities(events, trade_date)
+        if events.is_empty() or "instrument_id" not in events.columns:
+            return self._zero_intersection_result(
+                trade_date, dataset, primary_df.height, events.height
+            )
+
+        # 黄金集（或当日主源帧）限定比较范围：与 stock_daily 路径的
+        # 过滤语义一致，未经允许的事件/因子变化行不参与本次对账。
+        allowed_ids = primary_df["instrument_id"].unique().to_list()
+        events = events.filter(pl.col("instrument_id").is_in(allowed_ids))
+        if events.is_empty():
+            return self._zero_intersection_result(
+                trade_date, dataset, primary_df.height, 0
+            )
+
+        target = date.fromisoformat(trade_date)
+        primary_cmp = derive_factor_ratios(
+            self._adj_factor_context.factor_window(trade_date), target
+        ).filter(pl.col("instrument_id").is_in(allowed_ids))
+        secondary_cmp = derive_event_adjustment_ratios(
+            events, self._adj_factor_context.previous_closes(trade_date)
+        )
+        # 可推导匹配数：两侧 adjustment_ratio 均非空的键交集。键匹配但
+        # 全部不可推导时没有发生任何数值比较，不得报告 matched/通过。
+        derivable_matches = (
+            primary_cmp.filter(pl.col("adjustment_ratio").is_not_null())
+            .join(
+                secondary_cmp.filter(pl.col("adjustment_ratio").is_not_null()),
+                on=["instrument_id", "trade_date"],
+                how="inner",
+            )
+            .height
+        )
+        # 比较行全部落在事件日：差异行统一标记除权日，不与单位错误混排
+        context = {
+            "ex_dividend_instruments": frozenset(
+                int(value) for value in secondary_cmp["instrument_id"].to_list()
+            ),
+        }
+        comparison = self._engine.compare_cross_source(
+            primary=primary_cmp,
+            secondary=secondary_cmp,
+            dataset=dataset,
+            context=context,
+        )
+        result = self._engine.check_cross_source(
+            primary=primary_cmp,
+            secondary=secondary_cmp,
+            dataset=dataset,
+            context=context,
+        )
+        underivable = secondary_cmp.filter(pl.col("underivable_reason").is_not_null())
+
+        frames = [
+            frame
+            for frame in (
+                self._convert_result_to_df(result, dataset, primary_df),
+                self._underivable_rows(underivable, dataset),
+            )
+            if frame.height
+        ]
+        comparison_df = (
+            pl.concat(frames, how="diagonal_relaxed") if frames else pl.DataFrame()
+        )
+        if not comparison_df.is_empty():
+            self._comparison_store.write_comparison(trade_date, comparison_df, dataset)
+
+        if result.issues:
+            self._send_alerts(result, trade_date, dataset)
+
+        comparable = comparison.comparable and derivable_matches > 0
+        passed = comparable and not result.has_errors
+
+        logger.info(
+            "adj_factor reconciliation complete",
+            event="reconciliation_complete",
+            trade_date=trade_date,
+            dataset=dataset,
+            passed=passed,
+            comparable=comparable,
+            issue_count=len(result.issues),
+            primary_count=comparison.primary_count,
+            secondary_count=comparison.secondary_count,
+            matched_count=derivable_matches,
+            primary_unmatched_count=comparison.primary_unmatched_count,
+            secondary_unmatched_count=comparison.secondary_unmatched_count,
+            primary_duplicate_keys=comparison.primary_duplicate_keys,
+            secondary_duplicate_keys=comparison.secondary_duplicate_keys,
+            diff_count=comparison.diff_count,
+            underivable_count=underivable.height,
+        )
+
+        # matched_count 报告实际完成数值比较的可推导匹配数：键级匹配中
+        # 不可推导的部分单列为 secondary_underivable_count，不计入匹配，
+        # 避免"零数值比较却报告通过"的错误匹配口径。
+        return ReconciliationResult(
+            trade_date=trade_date,
+            dataset=dataset,
+            passed=passed,
+            issue_count=len(result.issues),
+            comparable=comparable,
+            primary_count=comparison.primary_count,
+            secondary_count=comparison.secondary_count,
+            matched_count=derivable_matches,
+            primary_unmatched_count=comparison.primary_unmatched_count,
+            secondary_unmatched_count=comparison.secondary_unmatched_count,
+            primary_duplicate_keys=comparison.primary_duplicate_keys,
+            secondary_duplicate_keys=comparison.secondary_duplicate_keys,
+            diff_count=comparison.diff_count,
+            secondary_underivable_count=underivable.height,
+        )
+
+    def _underivable_rows(
+        self,
+        underivable: pl.DataFrame,
+        dataset: str,
+    ) -> pl.DataFrame:
+        """不可推导事件样本 → 对账落盘行（原因进 message，不伪造数值比较）."""
+        if underivable.is_empty():
+            return pl.DataFrame()
+        return underivable.select(
+            "instrument_id",
+            "ticker",
+            "trade_date",
+            dataset=pl.lit(dataset),
+            field=pl.lit("event_underivable"),
+            primary_value=pl.lit(None, dtype=pl.Float64),
+            secondary_value=pl.lit(None, dtype=pl.Float64),
+            diff=pl.lit(None, dtype=pl.Float64),
+            ex_dividend_day=pl.lit(True),
+            severity=pl.lit("warning"),
+            rule=pl.lit("cross_source_event_underivable"),
+            message=pl.format(
+                "辅源事件不可推导: kind={}, reason={}",
+                pl.col("event_kind"),
+                pl.col("underivable_reason"),
+            ),
         )
 
     def _zero_intersection_result(

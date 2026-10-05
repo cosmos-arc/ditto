@@ -10,11 +10,13 @@ from ditto_data.quality.checkers.cross_source import CrossSourceComparison
 from ditto_data.quality.quality_types import DQResult
 
 __all__ = [
+    "AdjFactorReconcileContextProtocol",
     "ComparisonStoreProtocol",
     "ExDividendInstrumentSourceProtocol",
     "InstrumentStoreProtocol",
     "QualityEngineProtocol",
     "QuarantineWriterProtocol",
+    "SecondaryAdjustmentEventsSourceProtocol",
     "SecondaryBarsSourceProtocol",
     "SecondaryIdentityResolverProtocol",
 ]
@@ -77,12 +79,36 @@ class InstrumentStoreProtocol(Protocol):
 
 
 class SecondaryBarsSourceProtocol(Protocol):
-    """对账辅源协议 — 日线值跨源对比的次源取数（fuyao）."""
+    """对账辅源协议 — 日线值跨源对比的次源取数（fuyao）。"""
 
     def fetch_stock_daily_bars(
         self, tickers: list[str], trade_date: str
     ) -> pl.DataFrame:
         """获取辅源股票日线数据 [ticker, trade_date, OHLCV, amount]."""
+        ...
+
+
+class SecondaryAdjustmentEventsSourceProtocol(Protocol):
+    """adj_factor 对账辅源协议 — 公司行动事件流取数（fuyao 本地 dump，#438）。"""
+
+    def fetch_adjustment_events(self, trade_date: str) -> pl.DataFrame:
+        """
+        获取辅源除权事件 [ticker, trade_date, 分红/送转/配股字段].
+
+        事件字段保持公司行动原始口径（无单位换算），ticker 为裸码。
+        """
+        ...
+
+
+class AdjFactorReconcileContextProtocol(Protocol):
+    """adj_factor 对账主源上下文 — 因子窗口与同基准前收（#438）。"""
+
+    def factor_window(self, trade_date: str) -> pl.DataFrame:
+        """主源累积因子回看窗 [instrument_id, trade_date, adj_factor]。"""
+        ...
+
+    def previous_closes(self, trade_date: str) -> pl.DataFrame:
+        """主源同基准前收 [instrument_id, prev_close]（目标日前最后一根收盘）。"""
         ...
 
 
