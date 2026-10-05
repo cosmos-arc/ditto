@@ -691,7 +691,22 @@ def test_daily_retry_recovers_pending_revision_over_old_success(
     with _pipeline(tmp_path, "stock_daily") as runtime:
         source = _MarketSource()
         coordinator, metadata = _coordinator(runtime, source)
-        assert coordinator.ingest_date("stock_daily", "2026-07-17").status == "success"
+        manager = BackfillManager(
+            coordinator,
+            metadata,
+            bootstrap_planner=BootstrapPlanner(
+                metadata_service=metadata,
+                partition_lifecycle_reader=runtime.ports.lifecycle_reader,
+            ),
+            snapshot_reader=runtime.ports.snapshot_reader,
+            lifecycle_reader=runtime.ports.lifecycle_reader,
+        )
+        assert (
+            manager.backfill_range(
+                "stock_daily", "2026-07-16", "2026-07-17"
+            ).success_count
+            == 1
+        )
         digest = parquet_store.file_md5
 
         def fail_checksum(path: Path) -> str:
@@ -720,12 +735,7 @@ def test_daily_retry_recovers_pending_revision_over_old_success(
                 coordinator.ingest_date("stock_daily", "2026-07-17").status == "success"
             )
         else:
-            result = BackfillManager(
-                coordinator,
-                metadata,
-                snapshot_reader=ports.snapshot_reader,
-                lifecycle_reader=ports.lifecycle_reader,
-            ).backfill_missing("stock_daily")
+            result = manager.backfill_missing("stock_daily")
             assert result.failed_count == 0
             assert any(
                 item.trade_date == "2026-07-17" and item.status == "success"

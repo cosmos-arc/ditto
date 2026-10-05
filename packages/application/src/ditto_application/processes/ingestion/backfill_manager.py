@@ -158,6 +158,7 @@ class BackfillManager:
             source=source,
             start_date=first_date,
             end_date=last_date,
+            include_complete=True,
         )
         expected_dates = _planned_dates(plan)
         if not expected_dates:
