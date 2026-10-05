@@ -101,6 +101,13 @@ class Dataset(StrEnum):
     INDUSTRY_CLASSIFICATION = "industry_classification"
     INDUSTRY_MAPPING = "industry_mapping"
 
+    # #434 四组增补：期货/业绩预告快报/指数估值
+    FUTURES_DAILY = "futures_daily"
+    FUTURES_BASIC = "futures_basic"
+    EARNINGS_FORECAST = "earnings_forecast"
+    EARNINGS_EXPRESS = "earnings_express"
+    INDEX_VALUATION = "index_valuation"
+
     # 证券可信历史（#395：退市/名称/ST 历史写侧）
     NAME_CHANGE = "namechange"
     ST_HISTORY = "st_history"

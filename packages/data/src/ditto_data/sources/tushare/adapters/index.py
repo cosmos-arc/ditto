@@ -24,12 +24,40 @@ class _GlobalIndexSpec:
     close_time: time
 
 
+# 官方 index_global 21 指数全量白名单（doc_id=211，#435）。官方表无 NDX；
+# IXIC 是纳斯达克综合指数，不能替代纳斯达克 100——跨境纳指 100 ETF 的
+# 基准缺口如实保留，不以 IXIC 冒充。
+#
+# close_time 是常规时段收市时刻，仅用于 event_time 会话元数据；发布时刻
+# 官方不可知，published_at/available_at 恒为实际采集时刻（保守可见性）。
+# 收市时刻置信度：欧美亚主要交易所为公开常规时段（已核）；标 #approx 的
+# 为最佳已知近似（半日市/临时停市不覆盖，不伪称精确）。
 _GLOBAL_INDEX_SPECS: dict[str, _GlobalIndexSpec] = {
+    # ── 北美 ──
     "SPX": _GlobalIndexSpec("America/New_York", "USD", time(16, 0)),
-    "IXIC": _GlobalIndexSpec("America/New_York", "USD", time(16, 0)),
     "DJI": _GlobalIndexSpec("America/New_York", "USD", time(16, 0)),
+    "IXIC": _GlobalIndexSpec("America/New_York", "USD", time(16, 0)),
+    "RUT": _GlobalIndexSpec("America/New_York", "USD", time(16, 0)),
+    "SPTSX": _GlobalIndexSpec("America/Toronto", "CAD", time(16, 0)),
+    # ── 欧洲 ──
+    "FTSE": _GlobalIndexSpec("Europe/London", "GBP", time(16, 30)),
+    "FCHI": _GlobalIndexSpec("Europe/Paris", "EUR", time(17, 30)),
     "GDAXI": _GlobalIndexSpec("Europe/Berlin", "EUR", time(17, 30)),
+    "RTS": _GlobalIndexSpec("Europe/Moscow", "USD", time(18, 50)),  # approx
+    # ── 亚太 ──
     "N225": _GlobalIndexSpec("Asia/Tokyo", "JPY", time(15, 30)),
+    "HSI": _GlobalIndexSpec("Asia/Hong_Kong", "HKD", time(16, 0)),
+    "HKTECH": _GlobalIndexSpec("Asia/Hong_Kong", "HKD", time(16, 0)),
+    "HKAH": _GlobalIndexSpec("Asia/Hong_Kong", "HKD", time(16, 0)),
+    "KS11": _GlobalIndexSpec("Asia/Seoul", "KRW", time(15, 30)),
+    "TWII": _GlobalIndexSpec("Asia/Taipei", "TWD", time(13, 30)),
+    "XIN9": _GlobalIndexSpec("Asia/Singapore", "USD", time(16, 35)),  # approx
+    "CSX5P": _GlobalIndexSpec("Asia/Singapore", "SGD", time(17, 0)),  # approx
+    "CKLSE": _GlobalIndexSpec("Asia/Kuala_Lumpur", "MYR", time(17, 0)),  # approx
+    "SENSEX": _GlobalIndexSpec("Asia/Kolkata", "INR", time(15, 30)),
+    "AS51": _GlobalIndexSpec("Australia/Sydney", "AUD", time(16, 0)),
+    # ── 拉美 ──
+    "IBOVESPA": _GlobalIndexSpec("America/Sao_Paulo", "BRL", time(17, 0)),  # approx
 }
 _TSE_CLOSE_EXTENSION_DATE = date(2024, 11, 5)
 _SHANGHAI = ZoneInfo("Asia/Shanghai")

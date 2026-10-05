@@ -104,11 +104,41 @@ SINA_FOREIGN_FUTURES: dict[str, tuple[int, str, str, str]] = {
     "SI": (5_000_007, "美元/盎司", "USD", "COMEX 白银连续参考"),
 }
 
+# 全球指数 21 指数权威代码清单（#435，官方 index_global doc_id=211）。
+# 官方表无 NDX；IXIC 是纳斯达克综合指数，不能替代纳斯达克 100。
+# 摄取篮子（application dataset_registry）与探针脚本共用本清单；
+# data 层单测锁定适配器 spec 与本清单一一对应。
+# 全球参考展示-only（#451 裁决）：不得进入策略特征/回测/Paper/Agent 决策输入。
+GLOBAL_INDEX_CODES: tuple[str, ...] = (
+    "XIN9",
+    "HSI",
+    "HKTECH",
+    "HKAH",
+    "DJI",
+    "SPX",
+    "IXIC",
+    "FTSE",
+    "FCHI",
+    "GDAXI",
+    "N225",
+    "KS11",
+    "AS51",
+    "SENSEX",
+    "IBOVESPA",
+    "RTS",
+    "TWII",
+    "CKLSE",
+    "SPTSX",
+    "CSX5P",
+    "RUT",
+)
+
 
 __all__ = [
     "COMMODITY_CODE_TO_INSTRUMENT_ID",
     "FRED_INDICATOR_CODES",
     "FX_CODE_TO_INSTRUMENT_ID",
+    "GLOBAL_INDEX_CODES",
     "METAL_CODE_ALIASES",
     "SINA_FOREIGN_FUTURES",
     "VIX_CODE_TO_INSTRUMENT_ID",

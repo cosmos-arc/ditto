@@ -11,13 +11,19 @@ from typing import Literal
 
 import polars as pl
 from ditto_data.catalog import default_dataset_metadata
-from ditto_data.models import FX_CODE_TO_INSTRUMENT_ID, Dataset, DateScheduleType
+from ditto_data.models import (
+    FX_CODE_TO_INSTRUMENT_ID,
+    GLOBAL_INDEX_CODES,
+    Dataset,
+    DateScheduleType,
+)
 from ditto_kernel.instrument import InstrumentIngestParams
 
 from ditto_application.exceptions import AppProcessError  # noqa: RUF100
 from ditto_application.processes.ingestion.types import SourceFetchers
 
 __all__ = [
+    "GLOBAL_CONTEXT_INDEX_CODES",
     "DailyFetchContext",
     "DailyFetchFactory",
     "DailyFetchHandler",
@@ -78,6 +84,10 @@ class WriteKind(StrEnum):
     NAME_HISTORY = "name_history"
     ST_CHANGE_HISTORY = "st_change_history"
     ETF_REFERENCE = "etf_reference"
+    FUTURES_BARS = "futures_bars"
+    FUTURES_BASIC = "futures_basic"
+    EARNINGS_EVENT = "earnings_event"
+    INDEX_VALUATION = "index_valuation"
 
 
 @dataclass(frozen=True)
@@ -295,15 +305,48 @@ def _index_weight_instrument_fetch(
     )
 
 
-_GLOBAL_CONTEXT_INDEX_CODES = ["SPX", "IXIC", "DJI", "GDAXI", "N225"]
+# 官方 21 指数全量篮子（#435）；权威清单在 ditto_data.models.GLOBAL_INDEX_CODES
+GLOBAL_CONTEXT_INDEX_CODES: list[str] = list(GLOBAL_INDEX_CODES)
 
 
 def _global_index_fetch(ctx: DailyFetchContext) -> DailyFetchHandler:
     return lambda: ctx.fetchers.market.fetch_global_index_daily(
-        _GLOBAL_CONTEXT_INDEX_CODES,
+        GLOBAL_CONTEXT_INDEX_CODES,
         ctx.trade_date,
         ctx.trade_date,
     )
+
+
+def _earnings_announcement_fetch(
+    group: str,
+    method: str,
+) -> DailyFetchFactory:
+    """``ctx.fetchers.<group>.<method>(ann_date=ctx.trade_date)`` — 公告日驱动."""
+
+    def factory(ctx: DailyFetchContext) -> DailyFetchHandler:
+        fetcher = getattr(ctx.fetchers, group)
+        fn = getattr(fetcher, method)
+        return lambda: fn(ann_date=ctx.trade_date)
+
+    return factory
+
+
+def _earnings_instrument_fetch(
+    group: str,
+    method: str,
+) -> InstrumentFetchFactory:
+    """公告回填：按标的+公告区间（参数即公告日区间）."""
+
+    def factory(ctx: InstrumentFetchContext) -> InstrumentFetchHandler:
+        fetcher = getattr(ctx.fetchers, group)
+        fn = getattr(fetcher, method)
+        return lambda: fn(
+            source_ticker=ctx.source_ticker,
+            start_date=ctx.params.start_date,
+            end_date=ctx.params.end_date,
+        )
+
+    return factory
 
 
 def _history_fetch(group: str, method: str) -> DailyFetchFactory:
@@ -342,6 +385,10 @@ _CHINA_MACRO_CODES = [
     "CN_PPI_YOY",
     "CN_M2_YOY",
     "CN_PMI_MFG",
+    # #434 社融三系列（增量亿元×2/存量万亿元），共享 sf_month 月度窗口
+    "CN_SF_FLOW_MONTH",
+    "CN_SF_FLOW_CUM",
+    "CN_SF_STOCK",
 ]
 
 
@@ -605,6 +652,56 @@ _FX_COMMODITY_REGISTRATIONS: tuple[DatasetRegistration, ...] = (
     ),
 )
 
+# #434 四组增补：期货/业绩预告快报/指数估值
+_FUTURES_REGISTRATIONS: tuple[DatasetRegistration, ...] = (
+    DatasetRegistration(
+        dataset=Dataset.FUTURES_DAILY,
+        write_kind=WriteKind.FUTURES_BARS,
+        daily_fetch_factory=_daily_fetch("market", "fetch_futures_daily"),
+        instrument_fetch_factory=_instrument_fetch("market", "fetch_futures_daily"),
+    ),
+    DatasetRegistration(
+        dataset=Dataset.FUTURES_BASIC,
+        write_kind=WriteKind.FUTURES_BASIC,
+        date_schedule=DateScheduleType.SOURCE_DEFINED,
+        daily_fetch_factory=_property_fetch("market", "fetch_futures_basic"),
+    ),
+)
+
+_EARNINGS_REGISTRATIONS: tuple[DatasetRegistration, ...] = (
+    DatasetRegistration(
+        dataset=Dataset.EARNINGS_FORECAST,
+        write_kind=WriteKind.EARNINGS_EVENT,
+        date_schedule=DateScheduleType.NATURAL_DAYS,
+        daily_fetch_factory=_earnings_announcement_fetch(
+            "fundamental", "fetch_earnings_forecast"
+        ),
+        instrument_fetch_factory=_earnings_instrument_fetch(
+            "fundamental", "fetch_earnings_forecast"
+        ),
+    ),
+    DatasetRegistration(
+        dataset=Dataset.EARNINGS_EXPRESS,
+        write_kind=WriteKind.EARNINGS_EVENT,
+        date_schedule=DateScheduleType.NATURAL_DAYS,
+        daily_fetch_factory=_earnings_announcement_fetch(
+            "fundamental", "fetch_earnings_express"
+        ),
+        instrument_fetch_factory=_earnings_instrument_fetch(
+            "fundamental", "fetch_earnings_express"
+        ),
+    ),
+)
+
+_INDEX_VALUATION_REGISTRATIONS: tuple[DatasetRegistration, ...] = (
+    DatasetRegistration(
+        dataset=Dataset.INDEX_VALUATION,
+        write_kind=WriteKind.INDEX_VALUATION,
+        daily_fetch_factory=_daily_fetch("capital", "fetch_index_valuation"),
+        instrument_fetch_factory=_instrument_fetch("capital", "fetch_index_valuation"),
+    ),
+)
+
 _PLACEHOLDER_REGISTRATIONS: tuple[DatasetRegistration, ...] = (
     DatasetRegistration(
         dataset=Dataset.INDEX_WEIGHT,
@@ -627,6 +724,9 @@ _ALL_REGISTRATIONS: tuple[DatasetRegistration, ...] = (
     + _CAPITAL_REGISTRATIONS
     + _MACRO_REGISTRATIONS
     + _FX_COMMODITY_REGISTRATIONS
+    + _FUTURES_REGISTRATIONS
+    + _EARNINGS_REGISTRATIONS
+    + _INDEX_VALUATION_REGISTRATIONS
     + _PLACEHOLDER_REGISTRATIONS
 )
 

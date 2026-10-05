@@ -30,6 +30,11 @@ _DOCUMENTED_PAGE_SIZES: dict[str, int] = {
     "fund_daily": 5000,  # doc_id=127，5000 积分起
     "fund_adj": 2000,  # doc_id=199，专页明确 offset/limit
     "index_global": 4000,  # doc_id=211，6000 积分
+    "fut_daily": 2000,  # doc_id=138，2026-10-05 实测全日约 1075 行
+    "fut_basic": 10000,  # doc_id=135，实测全表 11287 行、offset 翻页可用
+    "forecast": 3500,  # doc_id=45，全市场按 ann_date 走 forecast_vip
+    "sf_month": 2000,  # doc_id=310，月度窗口参数 start_m/end_m
+    "index_dailybasic": 3000,  # doc_id=128，实测日覆盖 15 个大盘指数
 }
 
 _DEFAULT_PAGE_SIZE = 2000

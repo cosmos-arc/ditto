@@ -140,6 +140,20 @@ class MarketFetcher(Protocol):
         """获取证券名称变更历史（事件流）."""
         ...
 
+    def fetch_futures_daily(
+        self,
+        trade_date: str | None = None,
+        source_ticker: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> pl.DataFrame:
+        """获取国内期货合约日线（amount 万元，原始口径）."""
+        ...
+
+    def fetch_futures_basic(self) -> pl.DataFrame:
+        """获取期货合约信息快照（按交易所分片）."""
+        ...
+
 
 class FundamentalFetcher(Protocol):
     """Financial statements and corporate actions."""
@@ -188,6 +202,26 @@ class FundamentalFetcher(Protocol):
         """获取公司行动数据."""
         ...
 
+    def fetch_earnings_forecast(
+        self,
+        ann_date: str | None = None,
+        source_ticker: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> pl.DataFrame:
+        """获取业绩预告（净利润上下限万元，修订版本保留）."""
+        ...
+
+    def fetch_earnings_express(
+        self,
+        ann_date: str | None = None,
+        source_ticker: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> pl.DataFrame:
+        """获取业绩快报（金额元，含审计状态）."""
+        ...
+
 
 class CapitalFetcher(Protocol):
     """Capital market data (valuation, margin trading, pledge ratio)."""
@@ -230,6 +264,16 @@ class CapitalFetcher(Protocol):
         end_date: str | None = None,
     ) -> pl.DataFrame:
         """Fetch monthly index weight observations (trade_date = observation day)."""
+        ...
+
+    def fetch_index_valuation(
+        self,
+        trade_date: str | None = None,
+        source_ticker: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> pl.DataFrame:
+        """获取指数每日估值（市值元、股本股）."""
         ...
 
 

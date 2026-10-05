@@ -94,6 +94,49 @@ class _MarketSource:
             }
         )
 
+    # #434 新增 instrument 路由方法：handler 构建期被 getattr，本测试
+    # 只执行 stock_daily 路由，存根返回空帧即可。
+
+    def fetch_earnings_forecast(
+        self,
+        *,
+        source_ticker: str,
+        start_date: str,
+        end_date: str,
+    ) -> pl.DataFrame:
+        _ = source_ticker, start_date, end_date
+        return pl.DataFrame()
+
+    def fetch_earnings_express(
+        self,
+        *,
+        source_ticker: str,
+        start_date: str,
+        end_date: str,
+    ) -> pl.DataFrame:
+        _ = source_ticker, start_date, end_date
+        return pl.DataFrame()
+
+    def fetch_futures_daily(
+        self,
+        *,
+        source_ticker: str,
+        start_date: str,
+        end_date: str,
+    ) -> pl.DataFrame:
+        _ = source_ticker, start_date, end_date
+        return pl.DataFrame()
+
+    def fetch_index_valuation(
+        self,
+        *,
+        source_ticker: str,
+        start_date: str,
+        end_date: str,
+    ) -> pl.DataFrame:
+        _ = source_ticker, start_date, end_date
+        return pl.DataFrame()
+
 
 class _MarketQueryService:
     def get_adj_factors(self, start: str, end: str) -> pl.DataFrame:

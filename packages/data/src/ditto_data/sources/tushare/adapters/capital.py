@@ -58,6 +58,21 @@ class CapitalTushareAdapter(BaseTushareAdapter):
 
     # --- market: valuation / dividend / margin / pledge ---
 
+    def fetch_index_valuation(
+        self,
+        trade_date: str | None = None,
+        ts_code: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> pl.DataFrame:
+        """获取指数每日估值（市值元、股本股）."""
+        return self._market.fetch_index_valuation(
+            trade_date=trade_date,
+            ts_code=ts_code,
+            start_date=start_date,
+            end_date=end_date,
+        )
+
     def fetch_valuation_metrics(
         self,
         ts_code: str | None = None,

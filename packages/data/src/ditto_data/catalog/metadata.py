@@ -119,6 +119,8 @@ _MARKET_DOMAINS: frozenset[str] = frozenset(
         "adj_factor",
         "fund_adj",
         "st_history",
+        "futures_daily",
+        "futures_basic",
     }
 )
 
@@ -129,6 +131,7 @@ _CAPITAL_DOMAINS: frozenset[str] = frozenset(
         "margin_trading",
         "pledge_ratio",
         "corporate_actions",
+        "index_valuation",
     }
 )
 
@@ -139,6 +142,8 @@ _FUNDAMENTAL_DOMAINS: frozenset[str] = frozenset(
         "income_statement",
         "cash_flow",
         "dividend",
+        "earnings_forecast",
+        "earnings_express",
     }
 )
 
@@ -193,6 +198,12 @@ _EXPERIMENTAL_DATASETS: frozenset[str] = frozenset(
         "valuation_metrics",
         "margin_trading",
         "pledge_ratio",
+        # #434 四组增补：PIT/回放覆盖未验收前为 experimental
+        "futures_daily",
+        "futures_basic",
+        "earnings_forecast",
+        "earnings_express",
+        "index_valuation",
     }
 )
 
@@ -259,13 +270,23 @@ def _resolve_asset_class(dataset_id: str) -> DatasetAssetClass | None:
         return "etf"
     if dataset_id in {"index_daily", "global_index_daily", "index_weight"}:
         return "index"
+    if dataset_id == "index_valuation":
+        return "index"
+    if dataset_id in {"earnings_forecast", "earnings_express"}:
+        return "stock"
     return None
 
 
 def _resolve_schedule(dataset_id: str) -> DatasetSchedule:
     """Resolve the date schedule type for a given dataset ID."""
     # Natural-days datasets
-    if dataset_id in {"fx_daily", "dividend", "corporate_actions"}:
+    if dataset_id in {
+        "fx_daily",
+        "dividend",
+        "corporate_actions",
+        "earnings_forecast",
+        "earnings_express",
+    }:
         return "natural_days"
     # Source-defined datasets
     if dataset_id in {
@@ -277,6 +298,8 @@ def _resolve_schedule(dataset_id: str) -> DatasetSchedule:
         # 全量事件历史抓取（不随 trade_date 推进）
         "namechange",
         "st_history",
+        # 合约信息快照：按交易所分片全量抓取
+        "futures_basic",
     }:
         return "source_defined"
     # All others default to trading_days (basic datasets are also
@@ -571,6 +594,12 @@ _ALL_DATASET_IDS: tuple[str, ...] = (
     # Trustworthy instrument history (#395)
     "namechange",
     "st_history",
+    # #434 四组增补
+    "futures_daily",
+    "futures_basic",
+    "earnings_forecast",
+    "earnings_express",
+    "index_valuation",
 )
 
 _INSTRUMENT_INGESTION_DATASETS: frozenset[str] = frozenset(
@@ -588,6 +617,10 @@ _INSTRUMENT_INGESTION_DATASETS: frozenset[str] = frozenset(
         "margin_trading",
         "pledge_ratio",
         "index_weight",
+        "futures_daily",
+        "earnings_forecast",
+        "earnings_express",
+        "index_valuation",
     }
 )
 
