@@ -17,6 +17,8 @@ from ditto_data.sources.protocols import (
     MetadataFetcher,
 )
 from ditto_data.sources.registry import SourceRegistry
+from ditto_data.sources.sina.client import SinaClient
+from ditto_data.sources.sina.source import SinaSource
 from ditto_data.sources.source import DataSources
 from ditto_data.sources.tushare.transformer import TushareExchangeTransformer
 from ditto_data.sources.tushare.tushare_source import TushareSource
@@ -122,6 +124,24 @@ class SourcesProvider(Provider):
 
         """
         return DataSources(tushare=tushare_source, fred=fred_source)
+
+    @provide
+    def sina_source(
+        self,
+        data_source_settings: DataSourceSettings,
+    ) -> Iterator[SinaSource | None]:
+        """新浪外盘连续期货源（#436）——免费公开无 key，显式启用而非按缺 key 跳过."""
+        if not data_source_settings.sina_enabled:
+            yield None
+            return
+        source = SinaSource(
+            client=SinaClient(
+                base_url=data_source_settings.sina_base_url,
+                timeout=data_source_settings.http_timeout,
+            )
+        )
+        yield source
+        source.close()
 
     @provide
     def source_registry(

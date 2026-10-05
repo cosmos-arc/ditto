@@ -33,5 +33,10 @@ class DataSourceSettings(BaseModel):
     fuyao_api_key: str = Field(default="")
     fuyao_base_url: str = Field(default="https://fuyao.aicubes.cn")
 
+    # 新浪外盘期货（免费公开无 key，#436）：显式启用而非按缺 key 跳过；
+    # 无 SLA，源故障由复合源合同显式报错。
+    sina_enabled: bool = Field(default=True)
+    sina_base_url: str = Field(default="https://stock2.finance.sina.com.cn")
+
 
 __all__ = ["DataSourceSettings"]

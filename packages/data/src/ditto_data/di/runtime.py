@@ -44,6 +44,7 @@ from ditto_data.lineage import DataLineageReader, DataLineageRecorder
 from ditto_data.lineage.sqlite_store import SQLiteDataLineage
 from ditto_data.runtime.instrument_id_allocator import InstrumentIdAllocator
 from ditto_data.services.source_accessor import SourceAccessor
+from ditto_data.sources.sina.source import SinaSource
 from ditto_data.sources.source import DataSources
 from ditto_data.storage.runtime.ingestion import (
     IngestionCursorReader,
@@ -303,6 +304,10 @@ class RuntimeProvider(Provider):
         )
 
     @provide
-    def source_accessor(self, sources: DataSources) -> SourceAccessor:
+    def source_accessor(
+        self,
+        sources: DataSources,
+        sina_source: SinaSource | None,
+    ) -> SourceAccessor:
         """外部数据源访问服务."""
-        return SourceAccessor(sources)
+        return SourceAccessor(sources, sina_source=sina_source)
