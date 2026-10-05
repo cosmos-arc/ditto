@@ -291,7 +291,7 @@ def _seed(root: Path) -> None:
         {
             "instrument_id": ETF_ID,
             "trade_date": day.isoformat(),
-            "nav": round(3.8 + ((index * 11) % 19) * 0.02, 4),
+            "unit_nav": round(3.8 + ((index * 11) % 19) * 0.02, 4),
         }
         for index, day in enumerate(_TRADING_DAYS)
     ]
