@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import date
 
 import polars as pl
-from ditto_platform.foundation import logger
+from ditto_platform.foundation import OnDuplicate, logger
 
 from ditto_data.services.deps import FundamentalReaders, FundamentalWriters
 
@@ -102,3 +102,32 @@ class FundamentalStore:
     def save_corporate_actions(self, df: pl.DataFrame) -> int:
         """Save corporate actions data."""
         return self._write_ports.corporate_actions.write(df)
+
+    # #434 业绩预告/快报：parquet 公告事件写入（无公告时刻，采集日即知识日；
+    # 与 sqlite 写路径共享单活摄取不变量，不加独立文件锁）。
+
+    def save_earnings_forecast(
+        self,
+        df: pl.DataFrame,
+        year: int,
+        on_duplicate: OnDuplicate = OnDuplicate.ERROR,
+    ) -> int:
+        """Save earnings-forecast announcement rows (net-profit bounds in 万元)."""
+        writer = self._write_ports.earnings_forecast
+        if writer is None:
+            raise ValueError("earnings_forecast writer not configured")
+        result = writer.write(df, year, on_duplicate=on_duplicate)
+        return result.added + result.updated
+
+    def save_earnings_express(
+        self,
+        df: pl.DataFrame,
+        year: int,
+        on_duplicate: OnDuplicate = OnDuplicate.ERROR,
+    ) -> int:
+        """Save earnings-express announcement rows (amounts in 元)."""
+        writer = self._write_ports.earnings_express
+        if writer is None:
+            raise ValueError("earnings_express writer not configured")
+        result = writer.write(df, year, on_duplicate=on_duplicate)
+        return result.added + result.updated

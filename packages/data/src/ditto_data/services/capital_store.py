@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import date
 
 import polars as pl
-from ditto_platform.foundation import logger
+from ditto_platform.foundation import OnDuplicate, logger
 
 from ditto_data.services.deps import CapitalReaders, CapitalWriters
 
@@ -152,6 +152,19 @@ class CapitalStore:
 
         """
         return self._write_ports.index_composition.write(df)
+
+    def save_index_valuation(
+        self,
+        df: pl.DataFrame,
+        year: int,
+        on_duplicate: OnDuplicate = OnDuplicate.ERROR,
+    ) -> int:
+        """Save index daily valuation rows (market cap in 元, shares in 股)."""
+        writer = self._write_ports.index_valuation
+        if writer is None:
+            raise ValueError("index_valuation writer not configured")
+        result = writer.write(df, year, on_duplicate=on_duplicate)
+        return result.added + result.updated
 
     def save_index_weight(self, df: pl.DataFrame) -> int:
         """Save canonical effective-dated index weights."""

@@ -25,6 +25,7 @@ from ditto_data.sources.tushare.adapters.calendar import CalendarTushareAdapter
 from ditto_data.sources.tushare.adapters.capital import CapitalTushareAdapter
 from ditto_data.sources.tushare.adapters.etf import ETFTushareAdapter
 from ditto_data.sources.tushare.adapters.fundamental import FundamentalTushareAdapter
+from ditto_data.sources.tushare.adapters.futures import FuturesTushareAdapter
 from ditto_data.sources.tushare.adapters.fx import FxTushareAdapter
 from ditto_data.sources.tushare.adapters.index import IndexTushareAdapter
 from ditto_data.sources.tushare.adapters.industry import IndustryTushareAdapter
@@ -47,10 +48,16 @@ from ditto_data.sources.tushare.fundamental_source import (
     fetch_cash_flow,
     fetch_corporate_actions,
     fetch_dividend,
+    fetch_earnings_express,
+    fetch_earnings_forecast,
     fetch_income_statement,
     fetch_margin_trading,
     fetch_pledge_ratio,
     fetch_valuation_metrics,
+)
+from ditto_data.sources.tushare.futures_source import (
+    fetch_futures_basic,
+    fetch_futures_daily,
 )
 from ditto_data.sources.tushare.macro_source import (
     fetch_commodities,
@@ -300,6 +307,7 @@ class TushareSource:
         self._macro = MacroTushareAdapter(_client=self._client)
         self._fx = FxTushareAdapter(_client=self._client)
         self._metal = MetalTushareAdapter(_client=self._client)
+        self._futures = FuturesTushareAdapter(_client=self._client)
 
         # 初始化 facade
         self._stock_facade = _StockFacade(self._calendar, self._stock)
@@ -739,6 +747,75 @@ class TushareSource:
     ) -> pl.DataFrame:
         """Tushare 不支持商品数据."""
         return fetch_commodities(codes, start_date, end_date)
+
+    # ── Futures + Earnings + Index Valuation（#434 四组增补）────────
+
+    def fetch_futures_daily(
+        self,
+        trade_date: str | None = None,
+        source_ticker: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> pl.DataFrame:
+        """Fetch domestic futures contract daily bars (amount in 万元, raw)."""
+        return fetch_futures_daily(
+            self._futures,
+            trade_date=trade_date,
+            source_ticker=source_ticker,
+            start_date=start_date,
+            end_date=end_date,
+        )
+
+    def fetch_futures_basic(self) -> pl.DataFrame:
+        """Fetch the futures contract reference snapshot (per-exchange)."""
+        return fetch_futures_basic(self._futures)
+
+    def fetch_earnings_forecast(
+        self,
+        ann_date: str | None = None,
+        source_ticker: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> pl.DataFrame:
+        """Fetch earnings forecasts (net-profit bounds in 万元, versions kept)."""
+        return fetch_earnings_forecast(
+            self._fundamental,
+            ann_date=ann_date,
+            source_ticker=source_ticker,
+            start_date=start_date,
+            end_date=end_date,
+        )
+
+    def fetch_earnings_express(
+        self,
+        ann_date: str | None = None,
+        source_ticker: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> pl.DataFrame:
+        """Fetch earnings express reports (amounts in 元)."""
+        return fetch_earnings_express(
+            self._fundamental,
+            ann_date=ann_date,
+            source_ticker=source_ticker,
+            start_date=start_date,
+            end_date=end_date,
+        )
+
+    def fetch_index_valuation(
+        self,
+        trade_date: str | None = None,
+        source_ticker: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> pl.DataFrame:
+        """Fetch index daily valuation (market cap in 元, shares in 股)."""
+        return self._capital.fetch_index_valuation(
+            trade_date=trade_date,
+            ts_code=source_ticker,
+            start_date=start_date,
+            end_date=end_date,
+        )
 
     def close(self) -> None:
         """

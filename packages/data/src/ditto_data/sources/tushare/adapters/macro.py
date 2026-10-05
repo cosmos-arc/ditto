@@ -59,6 +59,12 @@ def _parse_date_by_frequency(date_str: str, frequency: str) -> pl.Date | None:
     return None
 
 
+def _to_quarter(compact_date: str) -> str:
+    """Convert a compact YYYYMMDD date to the provider's YYYYQq form."""
+    month = int(compact_date[4:6])
+    return f"{compact_date[:4]}Q{(month - 1) // 3 + 1}"
+
+
 class MacroTushareAdapter(BaseTushareAdapter):
     """Tushare adapter for macro indicator datasets."""
 
@@ -293,13 +299,15 @@ class MacroTushareAdapter(BaseTushareAdapter):
         fields = list({ind.field for ind in indicators})
         date_field = self._resolve_date_field(indicators[0])
         all_fields = [date_field, *fields]
+        range_params = self._resolve_range_params(indicators)
 
         with tushare_fetch_error_handler("macro_indicators", api_name):
             response = self._client.query(
                 api_name=api_name,
                 fields=",".join(all_fields),
-                start_date=compact_start,
-                end_date=compact_end,
+                **self._build_window_params(
+                    range_params, indicators[0].frequency, compact_start, compact_end
+                ),
             )
 
             if response.is_empty():
@@ -318,6 +326,44 @@ class MacroTushareAdapter(BaseTushareAdapter):
                 if df.height > 0:
                     results.append(df)
             return results
+
+    @staticmethod
+    def _resolve_range_params(
+        indicators: list[TushareMacroIndicator],
+    ) -> tuple[str, str]:
+        """Return the endpoint window contract, rejecting mixed declarations."""
+        param_sets = {indicator.range_params for indicator in indicators}
+        if len(param_sets) > 1:
+            msg = (
+                "Indicators sharing one API must share one window contract: "
+                f"{sorted(param_sets)}"
+            )
+            raise ValueError(msg)
+        return param_sets.pop()
+
+    @staticmethod
+    def _build_window_params(
+        range_params: tuple[str, str],
+        frequency: str,
+        compact_start: str,
+        compact_end: str,
+    ) -> dict[str, str]:
+        """
+        Build window request params per endpoint contract.
+
+        月度端点要求 YYYYMM（start_m/end_m）、季度端点要求 YYYYQq
+        （start_q/end_q）；官方合同见各专页（cn_cpi doc_id=228、
+        cn_gdp 等）。发送错误参数名会被代理忽略并返回全历史。
+        """
+        start_param, end_param = range_params
+        if start_param == "start_m":
+            return {start_param: compact_start[:6], end_param: compact_end[:6]}
+        if start_param == "start_q":
+            return {
+                start_param: _to_quarter(compact_start),
+                end_param: _to_quarter(compact_end),
+            }
+        return {start_param: compact_start, end_param: compact_end}
 
     @staticmethod
     def _resolve_date_field(indicator: TushareMacroIndicator) -> str:

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from datetime import date
+
 import polars as pl
 from ditto_platform.foundation import Metrics, logger, traced
 
@@ -38,11 +40,64 @@ _INCOME_STATEMENT_FIELDS = (
     "operate_profit,total_profit,income_tax,n_income,"
     "basic_eps,diluted_eps"
 )
+# 官方字段名为 n_cashflow_inv_act/n_cashflow_fnc_act（doc_id=44）；
+# 旧的 n_cash_flows_* 拼写取不回值。depreciation/interest_paid/tax_paid
+# 在官方端点已无同名字段且无消费者，不再请求。
 _CASH_FLOW_FIELDS = (
-    "ts_code,end_date,f_ann_date,n_cashflow_act,"
-    "n_cash_flows_inv_act,n_cash_flows_fnc_act,"
-    "depreciation,interest_paid,tax_paid"
+    "ts_code,end_date,f_ann_date,n_cashflow_act,n_cashflow_inv_act,n_cashflow_fnc_act"
 )
+
+# 业绩预告（doc_id=45）：上下界型预告，净利润上下限单位万元。
+# 同日同标的同类型可同时存在 update_flag 0/1 两行（2026-10-05 实测
+# 000017.SZ 2026-01-30 预增两行），修订身份必须进主键，不能去重。
+_FORECAST_FIELDS = (
+    "ts_code,ann_date,end_date,type,p_change_min,p_change_max,"
+    "net_profit_min,net_profit_max,first_ann_date,update_flag"
+)
+
+# 业绩快报（doc_id=46）：金额字段单位为元。与 forecast（万元）不可共
+# 用一条换算规则，两侧均按原始值存储。
+_EXPRESS_FIELDS = (
+    "ts_code,ann_date,end_date,revenue,operate_profit,total_profit,"
+    "n_income,total_assets,audit_status"
+)
+
+EARNINGS_FORECAST_SCHEMA: dict[str, pl.DataType | type[pl.DataType]] = {
+    "source_ticker": pl.String,
+    "ann_date": pl.Date,
+    "report_date": pl.Date,
+    "forecast_type": pl.String,
+    "p_change_min": pl.Float64,
+    "p_change_max": pl.Float64,
+    "net_profit_min": pl.Float64,
+    "net_profit_max": pl.Float64,
+    "first_ann_date": pl.Date,
+    "update_flag": pl.String,
+    "knowledge_date": pl.Date,
+}
+
+EARNINGS_EXPRESS_SCHEMA: dict[str, pl.DataType | type[pl.DataType]] = {
+    "source_ticker": pl.String,
+    "ann_date": pl.Date,
+    "report_date": pl.Date,
+    "revenue": pl.Float64,
+    "operate_profit": pl.Float64,
+    "total_profit": pl.Float64,
+    "n_income": pl.Float64,
+    "total_assets": pl.Float64,
+    "audit_status": pl.String,
+    "knowledge_date": pl.Date,
+}
+
+
+def _today() -> date:
+    return date.today()
+
+
+def _empty_with_schema(
+    schema: dict[str, pl.DataType | type[pl.DataType]],
+) -> pl.DataFrame:
+    return pl.DataFrame(schema=schema)
 
 
 class FundamentalTushareAdapter(BaseTushareAdapter):
@@ -131,6 +186,167 @@ class FundamentalTushareAdapter(BaseTushareAdapter):
             return result
 
     # ── 非财报方法（结构差异大，不复用 _fetch_financial）─────────
+
+    @traced("source.tushare.fetch_earnings_forecast")
+    def fetch_earnings_forecast(
+        self,
+        ann_date: str | None = None,
+        source_ticker: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> pl.DataFrame:
+        """
+        获取业绩预告（上下界型，净利润上下限万元）.
+
+        按公告日全市场使用 forecast_vip；按标的回填使用 forecast
+        （非 VIP 端点要求必填 ts_code，2026-10-05 实测）。预告区间允许
+        单边为空；同日修订行按 update_flag 保留为独立版本。
+
+        Args:
+            ann_date: 公告日期 (YYYY-MM-DD)，全市场按公告日抓取.
+            source_ticker: 股票代码 (e.g., "000017.SZ").
+            start_date: 公告开始日期 (YYYY-MM-DD).
+            end_date: 公告结束日期 (YYYY-MM-DD).
+
+        Returns:
+            DataFrame with EARNINGS_FORECAST_SCHEMA columns.
+
+        """
+        api_name = "forecast_vip" if ann_date else "forecast"
+        params: dict[str, str] = {
+            "api_name": api_name,
+            "fields": _FORECAST_FIELDS,
+        }
+        if ann_date:
+            params["ann_date"] = ann_date.replace("-", "")
+        else:
+            if not source_ticker:
+                msg = "按标的查询 forecast 必须指定 source_ticker"
+                raise ValueError(msg)
+            params["ts_code"] = source_ticker
+            params["start_date"] = (start_date or "").replace("-", "")
+            params["end_date"] = (end_date or "").replace("-", "")
+
+        with tushare_fetch_error_handler("earnings_forecast", api_name):
+            response = self._client.query(**params)
+
+        if response.is_empty():
+            return _empty_with_schema(EARNINGS_FORECAST_SCHEMA)
+
+        result = (
+            response.rename(
+                {
+                    "ts_code": "source_ticker",
+                    "end_date": "report_date",
+                    "type": "forecast_type",
+                }
+            )
+            .with_columns(
+                pl.col("ann_date").cast(pl.String).str.to_date("%Y%m%d", strict=False),
+                pl.col("report_date")
+                .cast(pl.String)
+                .str.to_date("%Y%m%d", strict=False),
+                pl.col("first_ann_date")
+                .cast(pl.String)
+                .str.to_date("%Y%m%d", strict=False),
+                pl.col("update_flag").cast(pl.String),
+                *(
+                    pl.col(column).cast(pl.Float64, strict=False)
+                    for column in (
+                        "p_change_min",
+                        "p_change_max",
+                        "net_profit_min",
+                        "net_profit_max",
+                    )
+                ),
+                pl.lit(_today()).alias("knowledge_date"),
+            )
+            .filter(
+                pl.col("ann_date").is_not_null() & pl.col("report_date").is_not_null()
+            )
+        )
+
+        Metrics.data_records.add(
+            result.height,
+            {"source": "tushare", "dataset": "earnings_forecast", "status": "success"},
+        )
+        return result.select(*EARNINGS_FORECAST_SCHEMA)
+
+    @traced("source.tushare.fetch_earnings_express")
+    def fetch_earnings_express(
+        self,
+        ann_date: str | None = None,
+        source_ticker: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> pl.DataFrame:
+        """
+        获取业绩快报（金额单位元，含审计状态）.
+
+        按公告日全市场使用 express_vip；按标的回填使用 express。
+        快报不是正式审计财报，audit_status 保留原值。
+
+        Args:
+            ann_date: 公告日期 (YYYY-MM-DD).
+            source_ticker: 股票代码.
+            start_date: 公告开始日期 (YYYY-MM-DD).
+            end_date: 公告结束日期 (YYYY-MM-DD).
+
+        Returns:
+            DataFrame with EARNINGS_EXPRESS_SCHEMA columns.
+
+        """
+        api_name = "express_vip" if ann_date else "express"
+        params: dict[str, str] = {
+            "api_name": api_name,
+            "fields": _EXPRESS_FIELDS,
+        }
+        if ann_date:
+            params["ann_date"] = ann_date.replace("-", "")
+        else:
+            if not source_ticker:
+                msg = "按标的查询 express 必须指定 source_ticker"
+                raise ValueError(msg)
+            params["ts_code"] = source_ticker
+            params["start_date"] = (start_date or "").replace("-", "")
+            params["end_date"] = (end_date or "").replace("-", "")
+
+        with tushare_fetch_error_handler("earnings_express", api_name):
+            response = self._client.query(**params)
+
+        if response.is_empty():
+            return _empty_with_schema(EARNINGS_EXPRESS_SCHEMA)
+
+        result = (
+            response.rename({"ts_code": "source_ticker", "end_date": "report_date"})
+            .with_columns(
+                pl.col("ann_date").cast(pl.String).str.to_date("%Y%m%d", strict=False),
+                pl.col("report_date")
+                .cast(pl.String)
+                .str.to_date("%Y%m%d", strict=False),
+                pl.col("audit_status").cast(pl.String),
+                *(
+                    pl.col(column).cast(pl.Float64, strict=False)
+                    for column in (
+                        "revenue",
+                        "operate_profit",
+                        "total_profit",
+                        "n_income",
+                        "total_assets",
+                    )
+                ),
+                pl.lit(_today()).alias("knowledge_date"),
+            )
+            .filter(
+                pl.col("ann_date").is_not_null() & pl.col("report_date").is_not_null()
+            )
+        )
+
+        Metrics.data_records.add(
+            result.height,
+            {"source": "tushare", "dataset": "earnings_express", "status": "success"},
+        )
+        return result.select(*EARNINGS_EXPRESS_SCHEMA)
 
     @traced("source.tushare.fetch_dividend")
     def fetch_dividend(

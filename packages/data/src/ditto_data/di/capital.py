@@ -3,13 +3,18 @@
 from __future__ import annotations
 
 from dishka import Provider, Scope, provide
-from ditto_platform.foundation import SQLiteClient
+from ditto_platform.foundation import ParquetStore, SQLiteClient
 
+from ditto_data.config.data_store import DataStoreSettings
 from ditto_data.services.capital_store import CapitalStore
 from ditto_data.services.deps import CapitalReaders, CapitalWriters
 from ditto_data.storage.base.sqlite_table_writer import SqliteTableWriter
 from ditto_data.storage.capital.index_composition.index_composition_reader import (
     IndexCompositionReader,
+)
+from ditto_data.storage.capital.index_valuation import (
+    IndexValuationReader,
+    IndexValuationWriter,
 )
 from ditto_data.storage.capital.margin.margin_trading_reader import (
     MarginTradingReader,
@@ -53,7 +58,11 @@ class CapitalProvider(Provider):
         return IndexCompositionReader(INDEX_COMPOSITION_SPEC, sqlite_client)
 
     @provide
-    def capital_readers(self, sqlite_client: SQLiteClient) -> CapitalReaders:
+    def capital_readers(
+        self,
+        sqlite_client: SQLiteClient,
+        settings: DataStoreSettings,
+    ) -> CapitalReaders:
         """Capital 域读取依赖聚合。"""
         return CapitalReaders(
             margin_trading=MarginTradingReader(MARGIN_TRADING_SPEC, sqlite_client),
@@ -66,10 +75,17 @@ class CapitalProvider(Provider):
                 INDEX_COMPOSITION_SPEC,
                 sqlite_client,
             ),
+            index_valuation=IndexValuationReader(
+                _index_valuation_parquet_store(settings)
+            ),
         )
 
     @provide
-    def capital_writers(self, sqlite_client: SQLiteClient) -> CapitalWriters:
+    def capital_writers(
+        self,
+        sqlite_client: SQLiteClient,
+        settings: DataStoreSettings,
+    ) -> CapitalWriters:
         """Capital 域写入依赖聚合。"""
         return CapitalWriters(
             margin_trading=MarginTradingWriter(MARGIN_TRADING_SPEC, sqlite_client),
@@ -81,6 +97,9 @@ class CapitalProvider(Provider):
             index_composition=SqliteTableWriter(
                 INDEX_COMPOSITION_SPEC,
                 sqlite_client,
+            ),
+            index_valuation=IndexValuationWriter(
+                _index_valuation_parquet_store(settings)
             ),
         )
 
@@ -95,3 +114,13 @@ class CapitalProvider(Provider):
             read_ports=capital_read_ports,
             write_ports=capital_write_ports,
         )
+
+
+def _index_valuation_parquet_store(settings: DataStoreSettings) -> ParquetStore:
+    """指数估值行按 (instrument_id, trade_date, knowledge_date) 幂等."""
+    return ParquetStore(
+        settings.data_root,
+        key_columns=("instrument_id", "trade_date", "knowledge_date"),
+        date_column="trade_date",
+        instrument_column="instrument_id",
+    )
