@@ -117,12 +117,11 @@ class ETFPaperHandoff:
         blocked = selected - facts.investable_instrument_ids
         if blocked:
             raise AppConflictError(
-                "ETF tools are not investable: "
+                "ETF tools are not investable; choose alternatives: "
                 + str(
                     {
-                        item: facts.unavailable_reasons.get(
-                            item, ("restricted_or_invalid",)
-                        )
+                        item: facts.unavailable_reasons.get(item)
+                        or ("restricted_or_invalid",)
                         for item in sorted(blocked)
                     }
                 )

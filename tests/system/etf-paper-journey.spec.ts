@@ -193,6 +193,7 @@ test("restricted ETF cannot enter Paper and returns to tool selection", async ({
 	await expect(workspace.getByRole("alert")).toContainText(
 		"not investable; choose alternatives",
 	);
+	await expect(workspace.getByRole("alert")).toContainText("restricted_or_invalid");
 	await expect(
 		workspace.getByRole("link", { name: "返回工具选择" }),
 	).toHaveAttribute("href", "#etf-tool-selection");
@@ -232,7 +233,7 @@ test("independent ETF inputs survive handoff and execution", async ({ request })
 	};
 	for (const [rules, reason] of [[fixture.execution_reference, "future"], [fixture.pending_rules, "not consumable"]]) {
 		const rejected = await request.post(`${base}/paper-handoffs`, {
-			headers: { "Idempotency-Key": `reject-${reason}` },
+			headers: { "Idempotency-Key": `reject-${reason.replaceAll(" ", "-")}` },
 			data: { ...handoff, input_snapshot_ids: { ...handoff.input_snapshot_ids, etf_reference: rules } },
 		});
 		expect(rejected.status()).toBe(422);
