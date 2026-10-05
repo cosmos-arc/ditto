@@ -6,9 +6,9 @@ fuyao 数据源门面 — 冗余源（ADR：Tushare 主源，fuyao 对账与故�
   （10 交易日 dump 一次下载 + 本地过滤，供 source=auto 摄取）；source_ticker
   + 起止日单标的 REST 历史（adjust=none）；
 - ``fetch_stock_daily_bars``：对账协议帧（ticker 裸码，单日）；
-- ``fetch_index_daily_bars`` / ``fetch_financial_statements``：指数/财务
-  三表对账协议帧（#473-#474，ticker 保留完整 thscode；对账按标的隔离
-  失败，报告显式未匹配）；
+- ``fetch_index_daily_bars`` / ``fetch_financial_statements`` /
+  ``fetch_fund_nav``：指数/财务三表/ETF 单位净值对账协议帧（#473-#475，
+  ticker 保留完整 thscode；对账按标的隔离失败，报告显式未匹配）；
 - 快照（A 股批量 / ETF 单只）：展示层用，不进管道；
 - ``download_market_dump`` / ``daily_k_frame``：10 年日 K / 复权因子事件流
   Parquet 不可变快照与帧转换。
@@ -637,6 +637,73 @@ class FuyaoSource:
                         "非 CNY 拒绝"
                     ),
                 )
+
+    def fetch_fund_nav(
+        self,
+        thscodes: list[str],
+        trade_date: str,
+        *,
+        range_window: str = "year",
+    ) -> pl.DataFrame:
+        """
+        ETF 单位净值对账协议帧（#475）：[ticker(thscode), trade_date, unit_nav].
+
+        fuyao 净值端点只有相对窗口（week…fyear），无按日寻址：取一年窗后按
+        nav_date（估值日，即交易日）== 目标日过滤；目标日落窗 = 该标的覆盖
+        不足（跳过并记录，报告以辅侧未匹配呈现；全部缺席判 not_comparable）。
+        只请求单位净值（unit）——adj_nav 复权净值≠累计净值，不参与比较（红线）。
+        thscodes 接受裸码（ETF 5/1 前缀规则补后缀）或完整 thscode。
+        """
+        target = _parse_date(trade_date)
+        rows: list[dict[str, Any]] = []
+        for raw_code in thscodes:
+            code = to_thscode(raw_code)
+            try:
+                data = self._client.get(
+                    "/api/fund/performance/nav",
+                    params={
+                        "thscode": code,
+                        "range": range_window,
+                        "nav_type": "unit",
+                    },
+                )
+                items: list[dict[str, Any]] = data.get("item") or []
+                matched = [
+                    item for item in items if ms_to_date(item["nav_date"]) == target
+                ]
+                if not matched:
+                    logger.warning(
+                        "Fuyao fund NAV target date not in range window",
+                        event="fuyao_fund_nav_out_of_range",
+                        thscode=code,
+                        trade_date=str(target),
+                        range_window=range_window,
+                    )
+                    continue
+                rows.extend(
+                    {
+                        "ticker": code,
+                        "trade_date": target,
+                        "unit_nav": item["unit_nav"],
+                    }
+                    for item in matched
+                )
+            except SourceFetchError as error:
+                logger.warning(
+                    "Fuyao fund NAV skipped for reconciliation",
+                    event="fuyao_fund_nav_skip",
+                    thscode=code,
+                    reason=str(error)[:200],
+                )
+                continue
+        return pl.DataFrame(
+            rows,
+            schema={
+                "ticker": pl.String,
+                "trade_date": pl.Date,
+                "unit_nav": pl.Float64,
+            },
+        )
 
     # ── 快照（展示层，不进管道）──────────────────────────────────
 

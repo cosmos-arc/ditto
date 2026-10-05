@@ -529,26 +529,6 @@ class TestFuyaoDailyKDumpFetcher:
             )
 
 
-def _source_by_thscode(
-    responses: dict[str, object],
-) -> FuyaoSource:
-    """按 thscode 路由 mock 响应（dict=正常 data；Exception=抛错）。"""
-    client = MagicMock()
-
-    def fake_get(path: str, params: dict[str, object] | None = None):
-        assert params is not None
-        key = str(params.get("thscode", ""))
-        if key not in responses:
-            raise AssertionError(f"unexpected thscode {key} on {path}")
-        value = responses[key]
-        if isinstance(value, Exception):
-            raise value
-        return value
-
-    client.get.side_effect = fake_get
-    return FuyaoSource(client=client)
-
-
 def _index_item(d: date, close: float = 3842.19) -> dict[str, object]:
     return {
         "date_ms": date_to_ms(d),
@@ -750,3 +730,55 @@ class TestFuyaoFinancialStatementsFrame:
 
         assert frame.height == 0
         assert frame["report_date"].dtype == pl.Date
+
+
+@pytest.mark.unit
+class TestFuyaoFundNavFrame:
+    """#475 ETF 单位净值对账帧：只取 unit、目标日落窗跳过."""
+
+    def test_filters_target_date_and_requests_unit_only(self) -> None:
+        client = MagicMock()
+        client.get.return_value = {
+            "item": [
+                {"nav_date": date_to_ms(date(2026, 9, 29)), "unit_nav": 4.4181},
+                {"nav_date": date_to_ms(date(2026, 9, 30)), "unit_nav": 4.4312},
+            ]
+        }
+        source = FuyaoSource(client=client)
+
+        frame = source.fetch_fund_nav(["510300"], "2026-09-30")
+
+        assert frame.height == 1
+        assert frame.row(0, named=True) == {
+            "ticker": "510300.SH",
+            "trade_date": date(2026, 9, 30),
+            "unit_nav": 4.4312,
+        }
+        # 红线：只请求单位净值（adj_nav 复权净值不参与比较）
+        params = client.get.call_args.kwargs["params"]
+        assert params["nav_type"] == "unit"
+
+    def test_target_out_of_range_window_skips_ticker(self) -> None:
+        client = MagicMock()
+        client.get.return_value = {
+            "item": [{"nav_date": date_to_ms(date(2026, 9, 30)), "unit_nav": 4.4312}]
+        }
+        source = FuyaoSource(client=client)
+
+        frame = source.fetch_fund_nav(["510300"], "2025-06-30")
+
+        assert frame.height == 0
+
+    def test_business_error_returns_typed_empty(self) -> None:
+        source = _source_by_thscode(
+            {
+                "513100.SH": SourceFetchError(
+                    source="fuyao", message="code=3002 no snapshot"
+                )
+            }
+        )
+
+        frame = source.fetch_fund_nav(["513100"], "2026-09-30")
+
+        assert frame.height == 0
+        assert frame["unit_nav"].dtype == pl.Float64

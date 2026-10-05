@@ -35,6 +35,7 @@ from ditto_data.quality.protocols import (
     SecondaryAdjustmentEventsSourceProtocol,
     SecondaryBarsSourceProtocol,
     SecondaryFinancialsSourceProtocol,
+    SecondaryFundNavSourceProtocol,
     SecondaryIndexBarsSourceProtocol,
 )
 from ditto_data.services.deps import FundamentalReaders, MarketReaders
@@ -249,6 +250,19 @@ class ProtocolAdapterProvider(Provider):
         return FuyaoAdjustmentEventsSource(Path(data_root))
 
     @provide
+    def secondary_index_bars_source_protocol(
+        self,
+        fuyao_source: FuyaoSource | None,
+    ) -> SecondaryIndexBarsSourceProtocol:
+        """index_daily 对账辅源：fuyao 指数历史 REST（#474）。"""
+        if fuyao_source is not None:
+            return fuyao_source
+        raise RuntimeError(
+            "secondary index source is unconfigured: set FUYAO_API_KEY to enable "
+            "index_daily reconciliation"
+        )
+
+    @provide
     def secondary_financials_source_protocol(
         self,
         fuyao_source: FuyaoSource | None,
@@ -262,16 +276,16 @@ class ProtocolAdapterProvider(Provider):
         )
 
     @provide
-    def secondary_index_bars_source_protocol(
+    def secondary_fund_nav_source_protocol(
         self,
         fuyao_source: FuyaoSource | None,
-    ) -> SecondaryIndexBarsSourceProtocol:
-        """index_daily 对账辅源：fuyao 指数历史 REST（#474）。"""
+    ) -> SecondaryFundNavSourceProtocol:
+        """etf_nav 对账辅源：fuyao 基金单位净值 REST（#475）。"""
         if fuyao_source is not None:
             return fuyao_source
         raise RuntimeError(
-            "secondary index source is unconfigured: set FUYAO_API_KEY to enable "
-            "index_daily reconciliation"
+            "secondary fund NAV source is unconfigured: set FUYAO_API_KEY to "
+            "enable etf_nav reconciliation"
         )
 
     @provide

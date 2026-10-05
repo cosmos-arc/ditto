@@ -20,6 +20,7 @@ __all__ = [
     "SecondaryAdjustmentEventsSourceProtocol",
     "SecondaryBarsSourceProtocol",
     "SecondaryFinancialsSourceProtocol",
+    "SecondaryFundNavSourceProtocol",
     "SecondaryIdentityResolverProtocol",
     "SecondaryIndexBarsSourceProtocol",
 ]
@@ -136,6 +137,20 @@ class SecondaryFinancialsSourceProtocol(Protocol):
         fiscal_period, <内部列名数值字段>]；金额两侧均为元（无单位换算）；
         disclosure_date 为辅源披露日，仅用于 vintage 判定（#473 红线：
         交叉不得跨 vintage 混比）。
+        """
+        ...
+
+
+class SecondaryFundNavSourceProtocol(Protocol):
+    """etf_nav 对账辅源协议 — ETF 单位净值取数（fuyao REST，#475）。"""
+
+    def fetch_fund_nav(self, thscodes: list[str], trade_date: str) -> pl.DataFrame:
+        """
+        获取辅源 ETF 单位净值 [ticker(完整 thscode), trade_date, unit_nav].
+
+        trade_date = 净值估值日（即交易日）；只取单位净值：fuyao 复权净值
+        （adj_nav）不等同于累计净值，与主源 acc_nav 口径不可等价比较
+        （#475 红线：单位/累计口径显式区分，不混列折算）。
         """
         ...
 
