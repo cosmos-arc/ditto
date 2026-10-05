@@ -8,7 +8,7 @@
           "hooks": [
             {
               "type": "command",
-              "command": "python3 \"${ZCODE_PROJECT_DIR}/tooling/agent_harness/hook.py\" --host zcode --event pre-tool",
+              "command": "\"${ZCODE_PROJECT_DIR}/.venv/bin/python\" \"${ZCODE_PROJECT_DIR}/tooling/agent_harness/hook.py\" --host zcode --event pre-tool",
               "timeout": 10,
               "statusMessage": "Checking Ditto command policy"
             }
@@ -21,7 +21,7 @@
           "hooks": [
             {
               "type": "command",
-              "command": "python3 \"${ZCODE_PROJECT_DIR}/tooling/agent_harness/hook.py\" --host zcode --event post-tool",
+              "command": "\"${ZCODE_PROJECT_DIR}/.venv/bin/python\" \"${ZCODE_PROJECT_DIR}/tooling/agent_harness/hook.py\" --host zcode --event post-tool",
               "timeout": 10,
               "statusMessage": "Formatting edited Python files"
             }
@@ -33,7 +33,7 @@
           "hooks": [
             {
               "type": "command",
-              "command": "python3 \"${ZCODE_PROJECT_DIR}/tooling/agent_harness/hook.py\" --host zcode --event stop",
+              "command": "\"${ZCODE_PROJECT_DIR}/.venv/bin/python\" \"${ZCODE_PROJECT_DIR}/tooling/agent_harness/hook.py\" --host zcode --event stop",
               "timeout": 3,
               "statusMessage": "Checking pending changes"
             }
