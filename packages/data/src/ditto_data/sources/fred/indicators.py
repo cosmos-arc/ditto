@@ -17,8 +17,9 @@ CategoryType = Literal[
     "commodity",
     "vix",
     "dollar_index",
+    "exchange_rate",
 ]
-FrequencyType = Literal["daily", "monthly", "quarterly"]
+FrequencyType = Literal["daily", "weekly", "monthly", "quarterly"]
 
 
 @dataclass(frozen=True)
@@ -289,7 +290,360 @@ FRED_INDICATORS: dict[str, FredIndicator] = {
         category="dollar_index",
         frequency="daily",
         unit="指数",
-        description="Trade Weighted U.S. Dollar Index: Broad, Goods and Services",
+        description=(
+            "Trade Weighted U.S. Dollar Index: Broad, Goods and Services "
+            "(Federal Reserve Board H.10 release)"
+        ),
+        need_pit=False,
+    ),
+    "US_DOLLAR_INDEX_AFE_GOODS": FredIndicator(
+        series_id="DTWEXAFEGS",
+        code="US_DOLLAR_INDEX_AFE_GOODS",
+        name="美元指数(发达经济体·商品)",
+        category="dollar_index",
+        frequency="daily",
+        unit="指数",
+        description=(
+            "Trade Weighted U.S. Dollar Index: Advanced Foreign Economies, "
+            "Goods (Federal Reserve Board H.10)"
+        ),
+        need_pit=False,
+    ),
+    # === Exchange Rate（H.10；与 Tushare fx_daily 的 FXCM 口径分属不同
+    # 身份，存于宏观长表，不静默合并同一序列；H.10 周一发布上周值）===
+    "FX_JPYUSD_H10": FredIndicator(
+        series_id="DEXJPUS",
+        code="FX_JPYUSD_H10",
+        name="日元兑美元(H.10)",
+        category="exchange_rate",
+        frequency="daily",
+        unit="日元/美元",
+        description=(
+            "Japanese Yen to U.S. Dollar Spot Exchange Rate "
+            "(H.10 noon buying rate; not the Tushare fx_daily series)"
+        ),
+        need_pit=False,
+    ),
+    "FX_EURUSD_H10": FredIndicator(
+        series_id="DEXUSEU",
+        code="FX_EURUSD_H10",
+        name="欧元兑美元(H.10)",
+        category="exchange_rate",
+        frequency="daily",
+        unit="美元/欧元",
+        description=("U.S. Dollars to Euro Spot Exchange Rate (H.10 noon buying rate)"),
+        need_pit=False,
+    ),
+    "FX_USDCNY_H10": FredIndicator(
+        series_id="DEXCHUS",
+        code="FX_USDCNY_H10",
+        name="人民币兑美元(H.10)",
+        category="exchange_rate",
+        frequency="daily",
+        unit="人民币/美元",
+        description=(
+            "China Yuan to U.S. Dollar Spot Exchange Rate (H.10 noon buying rate)"
+        ),
+        need_pit=False,
+    ),
+    "FX_GBPUSD_H10": FredIndicator(
+        series_id="DEXUSUK",
+        code="FX_GBPUSD_H10",
+        name="英镑兑美元(H.10)",
+        category="exchange_rate",
+        frequency="daily",
+        unit="美元/英镑",
+        description=(
+            "U.S. Dollars to British Pound Spot Exchange Rate (H.10 noon buying rate)"
+        ),
+        need_pit=False,
+    ),
+    # === Interest Rate 扩充（#437 候选全集） ===
+    "US_BOND_YIELD_1MO": FredIndicator(
+        series_id="DGS1MO",
+        code="US_BOND_YIELD_1MO",
+        name="美国1个月期国债收益率",
+        category="interest_rate",
+        frequency="daily",
+        unit="%",
+        description="1-Month Treasury Constant Maturity Rate",
+        need_pit=False,
+    ),
+    "US_BOND_YIELD_3MO": FredIndicator(
+        series_id="DGS3MO",
+        code="US_BOND_YIELD_3MO",
+        name="美国3个月期国债收益率",
+        category="interest_rate",
+        frequency="daily",
+        unit="%",
+        description="3-Month Treasury Constant Maturity Rate",
+        need_pit=False,
+    ),
+    "US_BOND_YIELD_3Y": FredIndicator(
+        series_id="DGS3",
+        code="US_BOND_YIELD_3Y",
+        name="美国3年期国债收益率",
+        category="interest_rate",
+        frequency="daily",
+        unit="%",
+        description="3-Year Treasury Constant Maturity Rate",
+        need_pit=False,
+    ),
+    "US_BOND_YIELD_7Y": FredIndicator(
+        series_id="DGS7",
+        code="US_BOND_YIELD_7Y",
+        name="美国7年期国债收益率",
+        category="interest_rate",
+        frequency="daily",
+        unit="%",
+        description="7-Year Treasury Constant Maturity Rate",
+        need_pit=False,
+    ),
+    "US_BOND_YIELD_20Y": FredIndicator(
+        series_id="DGS20",
+        code="US_BOND_YIELD_20Y",
+        name="美国20年期国债收益率",
+        category="interest_rate",
+        frequency="daily",
+        unit="%",
+        description=(
+            "20-Year Treasury Constant Maturity Rate (1987-1993 停发段缺失为源覆盖边界)"
+        ),
+        need_pit=False,
+    ),
+    "US_BOND_SPREAD_10Y3M": FredIndicator(
+        series_id="T10Y3M",
+        code="US_BOND_SPREAD_10Y3M",
+        name="美国10Y-3M国债利差",
+        category="interest_rate",
+        frequency="daily",
+        unit="%",
+        description="10-Year Treasury Minus 3-Month Treasury",
+        need_pit=False,
+    ),
+    "US_BREAKEVEN_10Y": FredIndicator(
+        series_id="T10YIE",
+        code="US_BREAKEVEN_10Y",
+        name="美国10年期盈亏平衡通胀",
+        category="interest_rate",
+        frequency="daily",
+        unit="%",
+        description="10-Year Breakeven Inflation Rate",
+        need_pit=False,
+    ),
+    "US_BREAKEVEN_5Y": FredIndicator(
+        series_id="T5YIE",
+        code="US_BREAKEVEN_5Y",
+        name="美国5年期盈亏平衡通胀",
+        category="interest_rate",
+        frequency="daily",
+        unit="%",
+        description="5-Year Breakeven Inflation Rate",
+        need_pit=False,
+    ),
+    "US_SOFR": FredIndicator(
+        series_id="SOFR",
+        code="US_SOFR",
+        name="SOFR担保隔夜融资利率",
+        category="interest_rate",
+        frequency="daily",
+        unit="%",
+        description="Secured Overnight Financing Rate (NY Fed)",
+        need_pit=False,
+    ),
+    "US_EFFR": FredIndicator(
+        series_id="EFFR",
+        code="US_EFFR",
+        name="有效联邦基金利率(EFFR)",
+        category="interest_rate",
+        frequency="daily",
+        unit="%",
+        description=("Effective Federal Funds Rate (NY Fed daily; 与 DFF 是不同序列)"),
+        need_pit=False,
+    ),
+    # === Credit（ICE 序列 2026-04 起仅滚动 3 年窗口，历史深度受限） ===
+    "US_CREDIT_IG_OAS": FredIndicator(
+        series_id="BAMLC0A0CM",
+        code="US_CREDIT_IG_OAS",
+        name="美国投资级公司债利差OAS",
+        category="credit",
+        frequency="daily",
+        unit="%",
+        description=(
+            "ICE BofA US Corporate Index Option-Adjusted Spread "
+            "(ICE 自 2026-04 仅提供滚动 3 年窗口)"
+        ),
+        need_pit=False,
+    ),
+    "US_CREDIT_HY_OAS": FredIndicator(
+        series_id="BAMLH0A0HYM2",
+        code="US_CREDIT_HY_OAS",
+        name="美国高收益公司债利差OAS",
+        category="credit",
+        frequency="daily",
+        unit="%",
+        description=(
+            "ICE BofA US High Yield Index Option-Adjusted Spread "
+            "(ICE 自 2026-04 仅提供滚动 3 年窗口)"
+        ),
+        need_pit=False,
+    ),
+    "US_CORP_YIELD_AAA": FredIndicator(
+        series_id="DAAA",
+        code="US_CORP_YIELD_AAA",
+        name="Moody's AAA公司债收益率",
+        category="credit",
+        frequency="daily",
+        unit="%",
+        description="Moody's Seasoned Aaa Corporate Bond Yield",
+        need_pit=False,
+    ),
+    "US_CORP_YIELD_BAA_D": FredIndicator(
+        series_id="DBAA",
+        code="US_CORP_YIELD_BAA_D",
+        name="Moody's Baa公司债收益率(日)",
+        category="credit",
+        frequency="daily",
+        unit="%",
+        description="Moody's Seasoned Baa Corporate Bond Yield (daily)",
+        need_pit=False,
+    ),
+    "US_CORP_YIELD_BAA_M": FredIndicator(
+        series_id="BAA",
+        code="US_CORP_YIELD_BAA_M",
+        name="Moody's Baa公司债收益率(月)",
+        category="credit",
+        frequency="monthly",
+        unit="%",
+        description="Moody's Seasoned Baa Corporate Bond Yield (monthly only)",
+        need_pit=False,
+    ),
+    "US_BOND_SPREAD_BAA10Y": FredIndicator(
+        series_id="BAA10Y",
+        code="US_BOND_SPREAD_BAA10Y",
+        name="Baa公司债-10年期国债利差",
+        category="credit",
+        frequency="daily",
+        unit="%",
+        description=(
+            "Moody's Seasoned Baa Corporate Bond Yield Relative to "
+            "Yield on 10-Year Treasury"
+        ),
+        need_pit=False,
+    ),
+    # === VIX 扩充 ===
+    "VIX_NASDAQ": FredIndicator(
+        series_id="VXNCLS",
+        code="VIX_NASDAQ",
+        name="纳斯达克100波动率指数",
+        category="vix",
+        frequency="daily",
+        unit="指数",
+        description="CBOE NASDAQ 100 Volatility Index (VXN, 2001-02 起)",
+        need_pit=False,
+    ),
+    "VIX_RUSSELL": FredIndicator(
+        series_id="RVXCLS",
+        code="VIX_RUSSELL",
+        name="罗素2000波动率指数",
+        category="vix",
+        frequency="daily",
+        unit="指数",
+        description="CBOE Russell 2000 Volatility Index (RVX, 2004-01 起)",
+        need_pit=False,
+    ),
+    # === Commodity 扩充（EIA 现货 + IMF PCPS 月度；LBMA 已死不注册） ===
+    "COMMOD_HH_NATGAS": FredIndicator(
+        series_id="DHHNGSP",
+        code="COMMOD_HH_NATGAS",
+        name="Henry Hub天然气现货",
+        category="commodity",
+        frequency="daily",
+        unit="美元/百万英热",
+        description="Henry Hub Natural Gas Spot Price (EIA, 1997-01 起)",
+        need_pit=False,
+    ),
+    "COMMOD_GASREGW": FredIndicator(
+        series_id="GASREGW",
+        code="COMMOD_GASREGW",
+        name="美国常规汽油零售价(周)",
+        category="commodity",
+        frequency="weekly",
+        unit="美元/加仑",
+        description=(
+            "US Regular Conventional Gas Price, Weekly (EIA 周一发布上周值; "
+            "周频如实注册, 不伪称日频)"
+        ),
+        need_pit=False,
+    ),
+    "COMMOD_COPPER_IMF": FredIndicator(
+        series_id="PCOPPUSDM",
+        code="COMMOD_COPPER_IMF",
+        name="IMF铜价(月)",
+        category="commodity",
+        frequency="monthly",
+        unit="美元/吨",
+        description="Global price of Copper (IMF PCPS, monthly)",
+        need_pit=False,
+    ),
+    "COMMOD_ALUMINUM_IMF": FredIndicator(
+        series_id="PALUMUSDM",
+        code="COMMOD_ALUMINUM_IMF",
+        name="IMF铝价(月)",
+        category="commodity",
+        frequency="monthly",
+        unit="美元/吨",
+        description="Global price of Aluminum (IMF PCPS, monthly)",
+        need_pit=False,
+    ),
+    "COMMOD_IRONORE_IMF": FredIndicator(
+        series_id="PIORECRUSDM",
+        code="COMMOD_IRONORE_IMF",
+        name="IMF铁矿石价(月)",
+        category="commodity",
+        frequency="monthly",
+        unit="美元/干公吨",
+        description="Global price of Iron Ore (IMF PCPS, monthly)",
+        need_pit=False,
+    ),
+    "COMMOD_WTI_IMF": FredIndicator(
+        series_id="POILWTIUSDM",
+        code="COMMOD_WTI_IMF",
+        name="IMF WTI原油价(月)",
+        category="commodity",
+        frequency="monthly",
+        unit="美元/桶",
+        description=(
+            "Global price of WTI Crude (IMF PCPS, monthly; 与 DCOILWTICO "
+            "日度现货是不同频率/口径序列)"
+        ),
+        need_pit=False,
+    ),
+    "COMMOD_NATGAS_EU_IMF": FredIndicator(
+        series_id="PNGASEUUSDM",
+        code="COMMOD_NATGAS_EU_IMF",
+        name="IMF欧盟天然气价(月)",
+        category="commodity",
+        frequency="monthly",
+        unit="美元/百万英热",
+        description=(
+            "Global price of Natural Gas, EU (IMF PCPS, monthly; 与 Henry Hub "
+            "是不同基准。正确ID为 PNGASEUUSDM——候选清单的 PNGASUSDM "
+            "为错误ID 404, 2026-10-05 CSV 端点核实)"
+        ),
+        need_pit=False,
+    ),
+    "COMMOD_ALLFNF_IMF": FredIndicator(
+        series_id="PALLFNFINDEXM",
+        code="COMMOD_ALLFNF_IMF",
+        name="IMF全球金融与非能源商品指数(月)",
+        category="commodity",
+        frequency="monthly",
+        unit="指数",
+        description=(
+            "IMF Global price index of Financial Non-Fuel Commodities "
+            "(正确ID; 旧 PALLFNF/PALLFIN 为错误ID 404)"
+        ),
         need_pit=False,
     ),
 }
