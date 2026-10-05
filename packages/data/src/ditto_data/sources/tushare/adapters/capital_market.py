@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from datetime import date
+
 import polars as pl
 from ditto_platform.foundation import Metrics, logger, traced
 
@@ -16,6 +18,19 @@ from ditto_data.sources.tushare.processors.mappings import (
     VALUATION_METRICS_MAPPING,
 )
 from ditto_data.sources.tushare.processors.transformer import TushareDataTransformer
+
+# 指数每日估值（index_dailybasic）：市值元、股本股（doc_id=128）。
+INDEX_VALUATION_SCHEMA: dict[str, pl.DataType | type[pl.DataType]] = {
+    "source_ticker": pl.String,
+    "trade_date": pl.Date,
+    "total_mv": pl.Float64,
+    "float_mv": pl.Float64,
+    "pe": pl.Float64,
+    "pe_ttm": pl.Float64,
+    "pb": pl.Float64,
+    "turnover_rate": pl.Float64,
+    "knowledge_date": pl.Date,
+}
 
 
 class CapitalMarketTushareAdapter(BaseTushareAdapter):
@@ -360,3 +375,90 @@ class CapitalMarketTushareAdapter(BaseTushareAdapter):
             )
 
             return result
+
+    @traced("source.tushare.fetch_index_valuation")
+    def fetch_index_valuation(
+        self,
+        trade_date: str | None = None,
+        ts_code: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> pl.DataFrame:
+        """
+        获取指数每日估值（index_dailybasic，社区计算指标）.
+
+        单位合同与个股 daily_basic 不同：市值单位元、股本单位股，
+        不能套用万元/万股换算（doc_id=128）。端点仅覆盖部分大盘指数
+        （2026-10-05 实测日覆盖 15 个代码）；空结果如实报告，不填零、
+        不承诺所有 ETF 跟踪指数估值。价格指数水平与估值指标分别存储。
+
+        Args:
+            trade_date: 交易日期 (YYYY-MM-DD).
+            ts_code: 指数代码 (e.g., "000300.SH").
+            start_date: 开始日期 (YYYY-MM-DD).
+            end_date: 结束日期 (YYYY-MM-DD).
+
+        Returns:
+            DataFrame with INDEX_VALUATION_SCHEMA columns.
+
+        """
+        logger.info(
+            "Fetching Tushare index valuation",
+            event="tushare_index_valuation_fetch_start",
+            trade_date=trade_date,
+            ts_code=ts_code,
+        )
+        params: dict[str, str] = {
+            "api_name": "index_dailybasic",
+            "fields": (
+                "ts_code,trade_date,total_mv,float_mv,pe,pe_ttm,pb,turnover_rate"
+            ),
+        }
+        if trade_date:
+            params["trade_date"] = trade_date.replace("-", "")
+        if ts_code:
+            params["ts_code"] = ts_code
+        if start_date:
+            params["start_date"] = start_date.replace("-", "")
+        if end_date:
+            params["end_date"] = end_date.replace("-", "")
+
+        with tushare_fetch_error_handler("index_valuation", "index_dailybasic"):
+            response = self._client.query(**params)
+
+        if response.is_empty():
+            return pl.DataFrame(schema=INDEX_VALUATION_SCHEMA)
+
+        result = (
+            response.rename({"ts_code": "source_ticker"})
+            .with_columns(
+                pl.col("trade_date")
+                .cast(pl.String)
+                .str.to_date("%Y%m%d", strict=False),
+                *(
+                    pl.col(column).cast(pl.Float64, strict=False)
+                    for column in (
+                        "total_mv",
+                        "float_mv",
+                        "pe",
+                        "pe_ttm",
+                        "pb",
+                        "turnover_rate",
+                    )
+                ),
+                pl.lit(date.today()).alias("knowledge_date"),
+            )
+            .filter(pl.col("trade_date").is_not_null())
+        )
+
+        row_count = len(result)
+        logger.info(
+            "Tushare index valuation fetched",
+            event="tushare_index_valuation_fetch_complete",
+            row_count=row_count,
+        )
+        Metrics.data_records.add(
+            row_count,
+            {"source": "tushare", "dataset": "index_valuation", "status": "success"},
+        )
+        return result.select(*INDEX_VALUATION_SCHEMA)

@@ -13,6 +13,10 @@ from ditto_data.storage.base.sqlite_table_writer import SqliteTableWriter
 from ditto_data.storage.capital.index_composition.index_composition_reader import (
     IndexCompositionReader,
 )
+from ditto_data.storage.capital.index_valuation import (
+    IndexValuationReader,
+    IndexValuationWriter,
+)
 from ditto_data.storage.capital.margin.margin_trading_reader import (
     MarginTradingReader,
 )
@@ -35,6 +39,14 @@ from ditto_data.storage.fundamental.corporate.corporate_actions_writer import (
 )
 from ditto_data.storage.fundamental.corporate.dividend_reader import DividendReader
 from ditto_data.storage.fundamental.corporate.dividend_writer import DividendWriter
+from ditto_data.storage.fundamental.earnings.express import (
+    EarningsExpressReader,
+    EarningsExpressWriter,
+)
+from ditto_data.storage.fundamental.earnings.forecast import (
+    EarningsForecastReader,
+    EarningsForecastWriter,
+)
 from ditto_data.storage.fundamental.financial.balance_sheet_reader import (
     BalanceSheetReader,
 )
@@ -57,6 +69,14 @@ from ditto_data.storage.market.etf.adj import EtfAdjFactorReader, EtfAdjFactorWr
 from ditto_data.storage.market.etf.bars import EtfBarsReader, EtfBarsWriter
 from ditto_data.storage.market.etf.nav import EtfNavReader, EtfNavWriter
 from ditto_data.storage.market.etf.status import EtfStatusReader, EtfStatusWriter
+from ditto_data.storage.market.futures.basic import (
+    FuturesBasicReader,
+    FuturesBasicWriter,
+)
+from ditto_data.storage.market.futures.daily import (
+    FuturesDailyReader,
+    FuturesDailyWriter,
+)
 from ditto_data.storage.market.fx.bars import FxBarsReader, FxBarsWriter
 from ditto_data.storage.market.index.bars import IndexBarsReader, IndexBarsWriter
 from ditto_data.storage.market.index.constituent import (
@@ -118,6 +138,8 @@ class MarketReaders:
     index_constituent: IndexConstituentReader | None = None
     fx_bars: FxBarsReader | None = None
     commodity_bars: CommodityBarsReader | None = None
+    futures_daily: FuturesDailyReader | None = None
+    futures_basic: FuturesBasicReader | None = None
 
 
 @dataclass(frozen=True)
@@ -157,6 +179,8 @@ class MarketWriters:
     index_constituent: IndexConstituentWriter | None = None
     fx_bars: FxBarsWriter | None = None
     commodity_bars: CommodityBarsWriter | None = None
+    futures_daily: FuturesDailyWriter | None = None
+    futures_basic: FuturesBasicWriter | None = None
 
 
 @dataclass(frozen=True)
@@ -180,6 +204,8 @@ class FundamentalReaders:
     cash_flow: CashFlowReader
     dividend: DividendReader
     corporate_actions: CorporateActionsReader
+    earnings_forecast: EarningsForecastReader | None = None
+    earnings_express: EarningsExpressReader | None = None
 
 
 @dataclass(frozen=True)
@@ -203,6 +229,8 @@ class FundamentalWriters:
     cash_flow: CashFlowWriter
     dividend: DividendWriter
     corporate_actions: CorporateActionsWriter
+    earnings_forecast: EarningsForecastWriter | None = None
+    earnings_express: EarningsExpressWriter | None = None
 
 
 @dataclass(frozen=True)
@@ -224,6 +252,7 @@ class CapitalReaders:
     pledge_ratio: PledgeRatioReader
     valuation_metrics: ValuationMetricsReader
     index_composition: IndexCompositionReader
+    index_valuation: IndexValuationReader | None = None
 
 
 @dataclass(frozen=True)
@@ -245,6 +274,7 @@ class CapitalWriters:
     pledge_ratio: PledgeRatioWriter
     valuation_metrics: ValuationMetricsWriter
     index_composition: SqliteTableWriter
+    index_valuation: IndexValuationWriter | None = None
 
 
 __all__ = [

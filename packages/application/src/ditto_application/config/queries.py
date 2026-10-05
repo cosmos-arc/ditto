@@ -347,6 +347,52 @@ INGESTION_SPECS: dict[_Dataset, DatasetSpec] = {
         priority=14,
         timeout_seconds=900,
     ),
+    # #434 四组增补
+    _Dataset.FUTURES_DAILY: create_t1_config(
+        dataset=_Dataset.FUTURES_DAILY,
+        description="国内期货合约日线",
+        typical_available_time=time(21, 30),
+        depends_on=[_Dataset.CALENDAR],
+        critical_fields=["source_ticker", "trade_date", "settle", "knowledge_date"],
+        task_name="ingest_futures_daily",
+        priority=58,
+    ),
+    _Dataset.FUTURES_BASIC: create_t1_config(
+        dataset=_Dataset.FUTURES_BASIC,
+        description="期货合约信息快照",
+        typical_available_time=time(21, 30),
+        depends_on=[_Dataset.CALENDAR],
+        critical_fields=["source", "source_ticker", "knowledge_date"],
+        task_name="ingest_futures_basic",
+        priority=58,
+    ),
+    _Dataset.EARNINGS_FORECAST: create_t1_config(
+        dataset=_Dataset.EARNINGS_FORECAST,
+        description="业绩预告(净利润上下限万元)",
+        typical_available_time=time(20, 30),
+        depends_on=[_Dataset.STOCK_BASIC],
+        critical_fields=["source_ticker", "ann_date", "report_date", "forecast_type"],
+        task_name="ingest_earnings_forecast",
+        priority=60,
+    ),
+    _Dataset.EARNINGS_EXPRESS: create_t1_config(
+        dataset=_Dataset.EARNINGS_EXPRESS,
+        description="业绩快报(金额元)",
+        typical_available_time=time(20, 30),
+        depends_on=[_Dataset.STOCK_BASIC],
+        critical_fields=["source_ticker", "ann_date", "report_date"],
+        task_name="ingest_earnings_express",
+        priority=60,
+    ),
+    _Dataset.INDEX_VALUATION: create_t1_config(
+        dataset=_Dataset.INDEX_VALUATION,
+        description="指数每日估值(市值元/股本股)",
+        typical_available_time=time(19, 30),
+        depends_on=[_Dataset.INDEX_BASIC],
+        critical_fields=["instrument_id", "trade_date", "total_mv"],
+        task_name="ingest_index_valuation",
+        priority=46,
+    ),
 }
 
 

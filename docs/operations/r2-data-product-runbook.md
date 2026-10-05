@@ -174,6 +174,39 @@ task ci
 [R2 设计 §16](../plans/2026-07-17-r2-data-product-design.md#16-definition-of-done) 与
 [R2 evidence index](../evidence/r2/README.md)。
 
+## 9. #434 四组增补数据集（futures_daily / futures_basic / earnings_forecast / earnings_express / index_valuation）
+
+单位与身份合同（2026-10-05 真实账号核验，代理 t.xiaodefa.top）：
+
+- `futures_daily`：国内期货合约日线，身份=具体合约 ts_code（如 CU2506.SHF）。
+  `amount` 万元；2020-01-01 前后成交量单/双边口径变化，原始口径保留不换算；
+  `close` 可 null（结算价 settle 有效时不互填）。PK
+  `(source_ticker, trade_date, knowledge_date)`，append-only。
+- `futures_basic`：合约信息快照（品种/乘数/上市/最后交易日），按交易所
+  SHFE/CZCE/DCE/INE/CFFEX/GFEX 分片全量抓取（全表 11287 行 > 单页 10000）。
+  注意官方交易所代码是 SHFE/CZCE，不是 SHF/ZCE（后者静默返回空）。
+- `earnings_forecast`：业绩预告上下界，净利润上下限**万元**。同日同标的同
+  类型存在 update_flag 0/1 两行（修订身份进主键，不去重）；PK
+  `(source_ticker, ann_date, report_date, forecast_type, update_flag, knowledge_date)`。
+  日更走 `forecast_vip`（按 ann_date 全市场）；非 VIP `forecast` 必填 ts_code。
+- `earnings_express`：业绩快报，金额字段**元**（与 forecast 万元不可共用换算）。
+  PK `(source_ticker, ann_date, report_date, knowledge_date)`；日更走 `express_vip`。
+- `index_valuation`：指数每日估值（社区计算指标），市值**元**、股本**股**，
+  不能套用个股 daily_basic 的万元/万股换算。端点日覆盖 15 个大盘指数；
+  空结果如实报告，不填零。PK `(instrument_id, trade_date, knowledge_date)`。
+
+已知边界：代理对 `cn_pmi` 任何参数形态均返回空（端点可达、无数据）；
+`sf_month` 社融三系列（增量当月/累计亿元、存量万亿元）已入宏观长表，
+月度窗口参数 `start_m/end_m`（发 `start_date` 会被代理忽略并返回全历史）。
+
+```bash
+uv run --no-sync ditto ingest market futures 2026-09-30
+uv run --no-sync ditto ingest market futures-basic 2026-10-05
+uv run --no-sync ditto ingest fundamental forecast 2026-01-30
+uv run --no-sync ditto ingest fundamental express 2026-01-30
+uv run --no-sync ditto ingest market index-valuation 2026-09-30
+```
+
 ## 10. 全球指数 21 指数全量摄取（#435）
 
 `index_global` 官方 21 指数白名单落在

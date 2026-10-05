@@ -17,6 +17,14 @@ from ditto_data.storage.market.etf.bars import EtfBarsReader, EtfBarsWriter
 from ditto_data.storage.market.etf.nav.nav_reader import EtfNavReader
 from ditto_data.storage.market.etf.nav.nav_writer import EtfNavWriter
 from ditto_data.storage.market.etf.status import EtfStatusReader, EtfStatusWriter
+from ditto_data.storage.market.futures.basic import (
+    FuturesBasicReader,
+    FuturesBasicWriter,
+)
+from ditto_data.storage.market.futures.daily import (
+    FuturesDailyReader,
+    FuturesDailyWriter,
+)
 from ditto_data.storage.market.fx.bars import FxBarsReader, FxBarsWriter
 from ditto_data.storage.market.index.bars.bars_reader import IndexBarsReader
 from ditto_data.storage.market.index.bars.bars_writer import IndexBarsWriter
@@ -62,6 +70,8 @@ class MarketProvider(Provider):
         """Market 域读取依赖聚合。"""
         store = _market_parquet_store(settings)
         global_store = _global_index_parquet_store(settings)
+        futures_store = _futures_daily_parquet_store(settings)
+        futures_basic_store = _futures_basic_parquet_store(settings)
         return MarketReaders(
             stock_bars=StockBarsReader(store),
             stock_status=StockStatusReader(store),
@@ -76,6 +86,8 @@ class MarketProvider(Provider):
             index_constituent=IndexConstituentReader(data_root=settings.data_root),
             fx_bars=FxBarsReader(store),
             commodity_bars=CommodityBarsReader(store),
+            futures_daily=FuturesDailyReader(futures_store),
+            futures_basic=FuturesBasicReader(futures_basic_store),
         )
 
     @provide
@@ -86,6 +98,8 @@ class MarketProvider(Provider):
         """Market 域写入依赖聚合。"""
         store = _market_parquet_store(settings)
         global_store = _global_index_parquet_store(settings)
+        futures_store = _futures_daily_parquet_store(settings)
+        futures_basic_store = _futures_basic_parquet_store(settings)
         return MarketWriters(
             stock_bars=StockBarsWriter(store),
             stock_status=StockStatusWriter(store),
@@ -99,6 +113,8 @@ class MarketProvider(Provider):
             index_constituent=IndexConstituentWriter(data_root=settings.data_root),
             fx_bars=FxBarsWriter(store),
             commodity_bars=CommodityBarsWriter(store),
+            futures_daily=FuturesDailyWriter(futures_store),
+            futures_basic=FuturesBasicWriter(futures_basic_store),
         )
 
     @provide
@@ -132,5 +148,25 @@ def _global_index_parquet_store(settings: DataStoreSettings) -> ParquetStore:
         settings.data_root,
         key_columns=("source_ticker", "trade_date", "knowledge_date"),
         date_column="trade_date",
+        instrument_column="source_ticker",
+    )
+
+
+def _futures_daily_parquet_store(settings: DataStoreSettings) -> ParquetStore:
+    """期货合约日线与全球指数共用 (source_ticker, trade_date, knowledge_date) 键形."""
+    return ParquetStore(
+        settings.data_root,
+        key_columns=("source_ticker", "trade_date", "knowledge_date"),
+        date_column="trade_date",
+        instrument_column="source_ticker",
+    )
+
+
+def _futures_basic_parquet_store(settings: DataStoreSettings) -> ParquetStore:
+    """合约信息快照按 (source, source_ticker, knowledge_date) 幂等."""
+    return ParquetStore(
+        settings.data_root,
+        key_columns=("source", "source_ticker", "knowledge_date"),
+        date_column="knowledge_date",
         instrument_column="source_ticker",
     )

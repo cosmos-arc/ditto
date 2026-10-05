@@ -131,6 +131,56 @@ class MarketWriteService:
 
         return rows_written
 
+    @traced("market.save_futures_daily")
+    def save_futures_daily(
+        self,
+        df: pl.DataFrame,
+        year: int,
+        on_duplicate: OnDuplicate = OnDuplicate.ERROR,
+    ) -> int:
+        """Persist futures contract daily bars keyed by provider contract code."""
+        writer = self._write_ports.futures_daily
+        if writer is None:
+            raise ValueError("futures_daily writer not configured")
+        lock_name = f"bars_write_futures_daily_{year}"
+        with self._file_lock.acquire(lock_name, timeout=60.0):
+            write_result = writer.write(
+                self._to_storage_columns(df),
+                year,
+                on_duplicate=self._map_on_duplicate(on_duplicate),
+            )
+        rows_written = write_result.added + write_result.updated
+        Metrics.data_records.add(
+            len(df),
+            {"dataset": "futures_daily", "operation": "write"},
+        )
+        return rows_written
+
+    @traced("market.save_futures_basic")
+    def save_futures_basic(
+        self,
+        df: pl.DataFrame,
+        year: int,
+        on_duplicate: OnDuplicate = OnDuplicate.ERROR,
+    ) -> int:
+        """Persist the futures contract reference snapshot (knowledge-dated)."""
+        writer = self._write_ports.futures_basic
+        if writer is None:
+            raise ValueError("futures_basic writer not configured")
+        lock_name = "bars_write_futures_basic"
+        with self._file_lock.acquire(lock_name, timeout=60.0):
+            write_result = writer.write(
+                self._to_storage_columns(df),
+                year,
+                on_duplicate=self._map_on_duplicate(on_duplicate),
+            )
+        rows_written = write_result.added + write_result.updated
+        Metrics.data_records.add(
+            len(df),
+            {"dataset": "futures_basic", "operation": "write"},
+        )
+        return rows_written
+
     @traced("market.save_global_index_bars")
     def save_global_index_bars(
         self,
