@@ -40,6 +40,7 @@ from ditto_data.services.source_accessor import SourceAccessor
 from ditto_data.sources.exchange_transformers import ExchangeTransformers
 from ditto_data.sources.fuyao.source import FuyaoDailyKDumpFetcher
 from ditto_data.sources.protocols import MarketFetcher
+from ditto_data.sources.reference_config import EtfReferenceConfigSource
 from ditto_data.sources.registry import SourceRegistry
 
 from ditto_apps.registry.container import make_app_container
@@ -128,6 +129,9 @@ def create_ingestion_bundle(
         snapshot_reader = container.get(ProviderSnapshotReader)
         lifecycle_reader = container.get(PartitionLifecycleReader)
         evidence_committer = container.get(IngestionEvidenceCommitter)
+        # 维护者确认的 ETF 参考事实声明源（#408）：composition root 按配置根
+        # 解析注入摄取协调器；不经过 SourceAccessor（外部源访问器）。
+        etf_reference_config = container.get(EtfReferenceConfigSource)
         evidence_verifier = PersistedIngestionEvidenceVerifier(
             snapshots=snapshot_reader,
             lifecycle=lifecycle_reader,
@@ -146,7 +150,7 @@ def create_ingestion_bundle(
                 source_accessor=source_accessor,
                 ingestion_log_store=ingestion_log_store,
                 source_registry=source_registry,
-                etf_reference_config=source_accessor.etf_reference_config,
+                etf_reference_config=etf_reference_config,
             ),
             source_name=source,
             runtime=CoordinatorRuntimeContext(

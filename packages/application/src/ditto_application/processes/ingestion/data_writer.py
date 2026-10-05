@@ -455,11 +455,14 @@ class IngestionDataWriter:
             raise AppProcessError(
                 "etf_reference declaration is empty; refusing identity-free write"
             )
-        rows = df.to_dicts()
-        evidence_dates = {
-            str(row["source_ticker"]): _normalize_iso_date(str(row["effective_from"]))
-            for row in rows
-        }
+        evidence_dates: dict[str, str] = {}
+        for row in df.to_dicts():
+            ticker = str(row["source_ticker"])
+            day = _normalize_iso_date(str(row["effective_from"]))
+            # 身份锚定取该标的最早有证据日期（与映射登记合同一致），
+            # 不随声明字段排序/增删漂移。
+            if ticker not in evidence_dates or day < evidence_dates[ticker]:
+                evidence_dates[ticker] = day
         resolved = (
             self._metadata_service.instrument.resolve_config_reference_instruments(
                 sorted(evidence_dates),
@@ -505,6 +508,9 @@ class IngestionDataWriter:
             )
         if df.is_empty() or "source_ticker" not in df.columns:
             return
+        if snapshot.dataset_id == "etf_reference":
+            self._save_config_observations(df, snapshot)
+            return
         observed_on = snapshot.request_end
         published_at = snapshot.created_at.astimezone(UTC).strftime(
             "%Y-%m-%dT%H:%M:%SZ"
@@ -512,28 +518,6 @@ class IngestionDataWriter:
         rows: list[dict[str, object]] = []
         for row in df.to_dicts():
             source_ticker = str(row["source_ticker"])
-            if snapshot.dataset_id == "etf_reference":
-                # 声明式事实：观察日=本次摄取请求日，生效日=声明确认的生效日。
-                value = str(row["value"]) if row.get("value") is not None else ""
-                if value == "":
-                    continue  # 观察缺失不推断
-                rows.append(
-                    {
-                        "source_ticker": source_ticker,
-                        "field": str(row["field"]),
-                        "value": value,
-                        "unit": str(row["unit"]),
-                        "observed_on": observed_on,
-                        "published_at": published_at,
-                        "effective_from": _normalize_iso_date(
-                            str(row["effective_from"])
-                        ),
-                        "effective_to": None,
-                        "source": self._source_name,
-                        "source_snapshot_id": snapshot.snapshot_id,
-                    }
-                )
-                continue
             fields: list[tuple[str, str, str]] = [
                 (
                     "name",
@@ -586,6 +570,35 @@ class IngestionDataWriter:
                     }
                 )
         self._metadata_service.instrument.save_etf_reference_observations(rows)
+
+    def _save_config_observations(
+        self, df: pl.DataFrame, snapshot: ProviderSnapshot
+    ) -> None:
+        """声明式事实：观察日=本次摄取请求日，生效日=声明确认的生效日。"""
+        observed_on = _normalize_iso_date(snapshot.request_end)
+        published_at = snapshot.created_at.astimezone(UTC).strftime(
+            "%Y-%m-%dT%H:%M:%SZ"
+        )
+        observations: list[dict[str, object]] = []
+        for row in df.to_dicts():
+            value = row.get("value")
+            if value is None or str(value) == "":
+                continue  # 观察缺失不推断
+            observations.append(
+                {
+                    "source_ticker": str(row["source_ticker"]),
+                    "field": str(row["field"]),
+                    "value": str(value),
+                    "unit": str(row["unit"]),
+                    "observed_on": observed_on,
+                    "published_at": published_at,
+                    "effective_from": _normalize_iso_date(str(row["effective_from"])),
+                    "effective_to": None,
+                    "source": self._source_name,
+                    "source_snapshot_id": snapshot.snapshot_id,
+                }
+            )
+        self._metadata_service.instrument.save_etf_reference_observations(observations)
 
     def _write_traded_bars(
         self,

@@ -17,6 +17,7 @@ from ditto_application.exceptions import AppProcessError
 from ditto_application.queries.account_ledger import AccountLedgerQuery
 from ditto_application.queries.etf_paper_handoff_facts import LiveETFPaperHandoffFacts
 from ditto_application.queries.etf_paper_reference import (
+    _INPUT_FIELDS,
     ETFPaperReferenceQuery,
     paper_reference_candidates,
 )
@@ -27,6 +28,8 @@ from ditto_apps.registry.contexts.ingestion import create_ingestion_bundle
 from ditto_apps.registry.infra.init_providers import MetadataDbInitProvider
 from ditto_data.catalog.provider_payload import ProviderPayloadReader
 from ditto_data.catalog.source_snapshot import ProviderSnapshotReader
+from ditto_data.services.metadata_service import MetadataService
+from ditto_data.sources.reference_config import ETF_REFERENCE_CONFIG_FIELDS
 from ditto_execution.storage.sqlite.account_journal import SqliteAccountEventJournal
 from ditto_kernel.identity import InstrumentId
 from ditto_portfolio.account_ledger import (
@@ -237,7 +240,7 @@ _DECLARATION: dict[str, object] = {
                 "trading_currency": {
                     "value": "CNY",
                     "unit": "text",
-                    "effective_from": "2026-09-01",
+                    "effective_from": "2026-09-15",
                     "basis": "recorded test basis: currency",
                 },
                 "trading_restriction": {
@@ -352,6 +355,17 @@ def test_config_declaration_supplements_paper_reference_facts(
             ),
             source_snapshot_id=by_dataset["etf_basic"].snapshot_id,
         )[0]
+        # 身份映射按最早证据日锚定（2026-09-01），不随声明字段排序漂移。
+        instrument_service = container.get(MetadataService).instrument
+        assert instrument_service.resolve_instrument_ids_batch(
+            ["510300.SH"], "config", "2026-09-01"
+        ) == {"510300.SH": instrument.instrument_id}
+        assert (
+            instrument_service.resolve_instrument_ids_batch(
+                ["510300.SH"], "config", "2026-08-31"
+            )
+            == {}
+        )
         composed = paper_reference_candidates(
             metadata=metadata,
             readiness=container.get(SnapshotReadinessQuery),
@@ -474,14 +488,26 @@ def test_config_declaration_refuses_unresolved_identity(
     monkeypatch: pytest.MonkeyPatch,
     respx_mock,
 ) -> None:
-    """声明引用未注册标的时摄取 fail closed，不产生观察行。"""
+    """声明引用未注册标的时摄取 fail closed：无观察行，也无 config 映射残留。"""
     repo = Path(__file__).parents[5]
     config_root = tmp_path / "config-root"
     shutil.copytree(repo / "config", config_root / "config")
+    # 混合声明：510300.SH 可解析、999999.SH 未注册——整批不登记任何映射。
     declaration = {
         "confirmed_at": "2026-09-30",
         "confirmed_by": "recorded integration test",
         "instruments": [
+            {
+                "source_ticker": "510300.SH",
+                "facts": {
+                    "trading_currency": {
+                        "value": "CNY",
+                        "unit": "text",
+                        "effective_from": "2026-09-01",
+                        "basis": "recorded test basis",
+                    }
+                },
+            },
             {
                 "source_ticker": "999999.SH",
                 "facts": {
@@ -492,7 +518,7 @@ def test_config_declaration_refuses_unresolved_identity(
                         "basis": "recorded test basis",
                     }
                 },
-            }
+            },
         ],
     }
     (config_root / "config" / "default" / "etf_reference.json").write_text(
@@ -517,3 +543,21 @@ def test_config_declaration_refuses_unresolved_identity(
         assert "unresolved" in (result.message or "") or "unresolved" in (
             result.error or ""
         )
+    with closing(make_app_container()) as container:
+        # 失败载荷不留 canonical 副作用：无 config 身份映射、无观察行。
+        instrument_service = container.get(MetadataService).instrument
+        assert (
+            instrument_service.resolve_instrument_ids_batch(
+                ["510300.SH"], "config", "2026-09-30"
+            )
+            == {}
+        )
+        snapshots = container.get(ProviderSnapshotReader)
+        assert all(
+            item.dataset_id != "etf_reference" for item in snapshots.list_snapshots()
+        )
+
+
+def test_config_declaration_whitelist_matches_application_read_contract() -> None:
+    """写侧声明白名单与应用层 etf_reference 补充字段合同一致。"""
+    assert set(_INPUT_FIELDS["etf_reference"]) == ETF_REFERENCE_CONFIG_FIELDS

@@ -391,13 +391,14 @@ class InstrumentService:
         """
         解析声明式 ETF 参考事实的 source_ticker 并登记 source='config' 映射（#408）。
 
-        规则（与 fuyao 映射同一语义）：
-        1. 先读既有 ``instrument_mapping(source='config')``。
-        2. 未命中的 suffixed ticker 按裸码唯一匹配已注册 instrument；
-           后缀推导交易所（SH→SSE、SZ→SZSE）与注册交易所一致才接受。
-        3. 命中后登记 ``instrument_mapping(source='config', effective_from=
-           有证据日期)``；同键重叠区间映射到不同 instrument_id 时拒绝。
-        4. 无法唯一匹配 → 不解析（调用方对该标的 fail closed）。
+        两阶段（失败载荷不留 canonical 副作用）：
+        1. 只读解析全部 ticker：先读既有 ``instrument_mapping(source='config')``；
+           已知但区间外的身份不回退当前注册表（fuyao 同守卫），其余按裸码唯一
+           匹配已注册 instrument——后缀推导交易所（SH→SSE、SZ→SZSE）与注册
+           交易所一致才接受。
+        2. 存在未解析项 → 不登记任何映射直接返回部分结果（调用方 fail closed）；
+           全部可解析才登记 ``instrument_mapping(source='config', effective_from=
+           有证据的最早日期)``（幂等；同键重叠区间映射到不同 instrument_id 拒绝）。
 
         Args:
             source_tickers: suffixed 源代码列表（如 "510300.SH"）.
@@ -414,47 +415,69 @@ class InstrumentService:
             evidence_date = evidence_dates.get(ticker)
             if evidence_date is not None:
                 by_evidence_date.setdefault(str(evidence_date), []).append(ticker)
+        mapped: set[str] = set()
         for asof, scoped in by_evidence_date.items():
             resolved.update(
                 self._instrument_reader.resolve_instrument_ids_batch(
                     scoped, "config", asof
                 )
             )
-        unresolved = [ticker for ticker in source_tickers if ticker not in resolved]
-        if unresolved:
-            bare = sorted({ticker.split(".", 1)[0] for ticker in unresolved})
+            mapped.update(
+                self._instrument_reader.mapped_source_tickers(
+                    scoped, "config", after=asof
+                )
+            )
+        # 已知但区间外的身份不得回退到当前注册表（fuyao 同守卫）。
+        candidates = [
+            ticker
+            for ticker in source_tickers
+            if ticker not in resolved and ticker not in mapped
+        ]
+        planned: dict[str, int] = {}
+        if candidates:
+            bare = sorted({ticker.split(".", 1)[0] for ticker in candidates})
             matches = self._instrument_reader.map_bare_tickers_to_instrument_ids(bare)
-            for ticker in unresolved:
+            for ticker in candidates:
                 bare_code, _, suffix = ticker.partition(".")
                 suffix_exchange = self._FUYAO_SUFFIX_EXCHANGE.get(suffix.upper())
-                candidates = matches.get(bare_code, [])
                 compatible = [
                     instrument_id
-                    for instrument_id in candidates
+                    for instrument_id in matches.get(bare_code, [])
                     if suffix_exchange is not None
                     and self._exchange_of(instrument_id) == suffix_exchange
                 ]
-                if len(compatible) != 1:
-                    continue
-                effective_from = evidence_dates.get(ticker)
-                if effective_from is None:
-                    continue
-                registered = self._instrument_writer.register_source_mapping(
-                    instrument_id=compatible[0],
-                    source="config",
-                    source_ticker=ticker,
-                    effective_from=str(effective_from),
-                    observed_at=observed_at,
-                )
-                if registered:
-                    resolved[ticker] = compatible[0]
-        if unknown := [ticker for ticker in source_tickers if ticker not in resolved]:
+                if len(compatible) == 1:
+                    planned[ticker] = compatible[0]
+        unresolved = [
+            ticker
+            for ticker in source_tickers
+            if ticker not in resolved and ticker not in planned
+        ]
+        if unresolved:
             logger.warning(
                 "config reference identity left unresolved mappings",
                 event="config_reference_unknown_mappings",
-                unknown_count=len(unknown),
-                sample=sorted(unknown)[:10],
+                unknown_count=len(unresolved),
+                sample=sorted(unresolved)[:10],
             )
+            return resolved
+        for ticker, instrument_id in planned.items():
+            registered = self._instrument_writer.register_source_mapping(
+                instrument_id=instrument_id,
+                source="config",
+                source_ticker=ticker,
+                effective_from=str(evidence_dates[ticker]),
+                observed_at=observed_at,
+            )
+            if registered:
+                resolved[ticker] = instrument_id
+            else:
+                logger.warning(
+                    "config reference mapping conflict rejected",
+                    event="config_reference_mapping_conflict",
+                    source_ticker=ticker,
+                    instrument_id=instrument_id,
+                )
         return resolved
 
     # ============ 证券查询 ============

@@ -7,7 +7,6 @@ from pathlib import Path
 import orjson
 import pytest
 from ditto_data.sources.reference_config import (
-    ETF_REFERENCE_CONFIG_FIELDS,
     EtfReferenceConfigError,
     EtfReferenceConfigSource,
     get_default_etf_reference_config_path,
@@ -134,13 +133,6 @@ def test_duplicate_fact_rejected(tmp_path: Path) -> None:
     instruments.append(instruments[0])
     with pytest.raises(EtfReferenceConfigError, match="twice"):
         _source(tmp_path, document).fetch_etf_reference()
-
-
-def test_fields_match_application_read_contract() -> None:
-    """写侧白名单与应用层 etf_reference 补充字段合同一致。"""
-    from ditto_application.queries.etf_paper_reference import _INPUT_FIELDS
-
-    assert set(_INPUT_FIELDS["etf_reference"]) == ETF_REFERENCE_CONFIG_FIELDS
 
 
 def test_default_path_under_config_default(tmp_path: Path) -> None:
