@@ -11,13 +11,19 @@ from typing import Literal
 
 import polars as pl
 from ditto_data.catalog import default_dataset_metadata
-from ditto_data.models import FX_CODE_TO_INSTRUMENT_ID, Dataset, DateScheduleType
+from ditto_data.models import (
+    FX_CODE_TO_INSTRUMENT_ID,
+    GLOBAL_INDEX_CODES,
+    Dataset,
+    DateScheduleType,
+)
 from ditto_kernel.instrument import InstrumentIngestParams
 
 from ditto_application.exceptions import AppProcessError  # noqa: RUF100
 from ditto_application.processes.ingestion.types import SourceFetchers
 
 __all__ = [
+    "GLOBAL_CONTEXT_INDEX_CODES",
     "DailyFetchContext",
     "DailyFetchFactory",
     "DailyFetchHandler",
@@ -299,12 +305,13 @@ def _index_weight_instrument_fetch(
     )
 
 
-_GLOBAL_CONTEXT_INDEX_CODES = ["SPX", "IXIC", "DJI", "GDAXI", "N225"]
+# 官方 21 指数全量篮子（#435）；权威清单在 ditto_data.models.GLOBAL_INDEX_CODES
+GLOBAL_CONTEXT_INDEX_CODES: list[str] = list(GLOBAL_INDEX_CODES)
 
 
 def _global_index_fetch(ctx: DailyFetchContext) -> DailyFetchHandler:
     return lambda: ctx.fetchers.market.fetch_global_index_daily(
-        _GLOBAL_CONTEXT_INDEX_CODES,
+        GLOBAL_CONTEXT_INDEX_CODES,
         ctx.trade_date,
         ctx.trade_date,
     )

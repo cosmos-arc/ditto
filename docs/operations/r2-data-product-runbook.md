@@ -206,3 +206,23 @@ uv run --no-sync ditto ingest fundamental forecast 2026-01-30
 uv run --no-sync ditto ingest fundamental express 2026-01-30
 uv run --no-sync ditto ingest market index-valuation 2026-09-30
 ```
+
+## 10. 全球指数 21 指数全量摄取（#435）
+
+`index_global` 官方 21 指数白名单落在
+`ditto_data.models.GLOBAL_INDEX_CODES`（权威清单，摄取篮子与探针共用），
+适配器 `_GLOBAL_INDEX_SPECS` 逐码声明时区/计价币种/收市时刻。官方表无
+NDX；IXIC 是纳斯达克综合指数，不能替代纳斯达克 100（跨境纳指 100 ETF
+基准缺口如实保留）。
+
+- 用途为展示-only（#451 裁决）：`market_context` 以展示 metrics 暴露每码
+  最新观察 close（`global_index_<code>_close`，unit=index_point），
+  `global_return_1d` 恒为 None 并计入 declared_missing_inputs。
+- 发布时刻官方不可知：published_at/available_at 恒为实际采集时刻；
+  close_time 仅是 event_time 会话元数据（标 approx 的为最佳已知近似）。
+- 2026-10-05 实测可得区间：主流指数 1990 起；XIN9 2004-07、HKAH/AS51
+  2007、SPTSX 2001、CSX5P 1998、CKLSE 1995、HKTECH 2020-07、
+  RTS 2020-01 起；RUT/RTS/XIN9/HKAH/HKTECH vol 缺失率 100%，
+  缺失保留 null 不补零。
+- 摄取走既有 `global_index_daily` 日更路由（SOURCE_DEFINED），
+  单码长历史由 client 按页宽 4000 自动翻页。

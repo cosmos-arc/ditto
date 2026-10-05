@@ -13,6 +13,9 @@ from typing import Protocol, cast
 
 import orjson
 import polars as pl
+from ditto_application.processes.ingestion.dataset_registry import (
+    GLOBAL_CONTEXT_INDEX_CODES,
+)
 from ditto_application.queries.source import SourceDataPort
 
 from ditto_apps.registry.container import make_app_container
@@ -197,7 +200,7 @@ def _specs() -> tuple[_ProbeSpec, ...]:
             "global_index_daily",
             "tushare:index_global",
             lambda s: s.fetch_global_index_daily(
-                ["SPX", "IXIC", "DJI", "GDAXI", "N225"],
+                list(GLOBAL_CONTEXT_INDEX_CODES),
                 date_value,
                 date_value,
             ),
