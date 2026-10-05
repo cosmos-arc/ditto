@@ -120,10 +120,14 @@ APPS_HOST_COMPOSITION_ALLOWANCES = (
         path="apps/backend/src/ditto_apps/registry/infra/protocol_adapters.py",
         allowed_modules=frozenset(
             {
+                "ditto_data.models.ingestion",
                 "ditto_data.quality.protocols",
                 "ditto_data.services.deps",
                 "ditto_data.services.market_service",
+                "ditto_data.services.metadata.instrument",
+                "ditto_data.services.metadata_service",
                 "ditto_data.services.source_accessor",
+                "ditto_data.sources.base",
                 "ditto_data.sources.fuyao.source",
                 "ditto_data.storage.metadata.instrument",
                 "ditto_data.storage.runtime.quality",
@@ -398,6 +402,7 @@ APPS_REGISTRY_COMPOSITION_ALLOWANCES = (
                 "ditto_data.services.metadata_service",
                 "ditto_data.services.source_accessor",
                 "ditto_data.sources.exchange_transformers",
+                "ditto_data.sources.protocols",
                 "ditto_data.sources.registry",
             }
         ),
@@ -464,10 +469,14 @@ APPS_REGISTRY_COMPOSITION_ALLOWANCES = (
         path="apps/backend/src/ditto_apps/registry/infra/protocol_adapters.py",
         allowed_modules=frozenset(
             {
+                "ditto_data.models.ingestion",
                 "ditto_data.quality.protocols",
                 "ditto_data.services.deps",
                 "ditto_data.services.market_service",
+                "ditto_data.services.metadata.instrument",
+                "ditto_data.services.metadata_service",
                 "ditto_data.services.source_accessor",
+                "ditto_data.sources.base",
                 "ditto_data.sources.fuyao.source",
                 "ditto_data.storage.metadata.instrument",
                 "ditto_data.storage.runtime.quality",

@@ -94,7 +94,8 @@ def _existing_bars() -> pl.DataFrame:
             "high": [11.0, 13.0],
             "low": [9.5, 11.5],
             "close": [10.5, 99.0],  # 000001 8-19 收盘冲突(12.5 vs 99.0)
-            "pre_close": [None, None],
+            # 除权日口径反例：主源 pre_close 是除权参考价, dump 是原始前收
+            "pre_close": [None, 15.0],
             "volume": [1.0, 3.0],
             "amount": [1.05, 3.75],
             "pct_change": [None, None],
@@ -136,6 +137,9 @@ class TestBackfillDailyKDryRun:
         assert result.exit_code == 0, result.output
         assert "dump 覆盖: 2025-08-18..2025-08-19" in result.output
         assert "主源重叠行: 2(完全一致 1 / 冲突 1)" in result.output
+        # 除权日 pre_close 口径差异(原始前收 vs 除权参考价)如实计入冲突字段
+        assert "pre_close" in result.output
+        assert "close" in result.output
         assert "dry-run 完成, 未写入任何数据" in result.output
         bundle.coordinator.ingest_range.assert_not_called()
 

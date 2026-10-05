@@ -112,23 +112,30 @@ _REST_WINDOW_DAYS = 1095
 _DAILY_K_CONSTANTS = {"currency": "CNY", "interval": "1d", "adjusted": "none"}
 
 
+def _validate_constant_column(
+    raw: pl.DataFrame, column: str, expected: str, *, kind: str
+) -> None:
+    """校验 dump 常量列口径，缺列或非常量期望值时拒绝转换（fail-closed）."""
+    if column not in raw.columns:
+        raise SourceFetchError(
+            source="fuyao",
+            message=f"{kind} dump 缺常量列 {column}: 契约违约 拒绝转换",
+        )
+    unique = raw[column].unique().to_list()
+    if unique != [expected]:
+        raise SourceFetchError(
+            source="fuyao",
+            message=(
+                f"{kind} dump {column} 期望常量 {expected}, 实际 {unique}: "
+                "契约违约 拒绝转换"
+            ),
+        )
+
+
 def _validate_daily_k_constants(raw: pl.DataFrame) -> None:
-    """校验 daily-k dump 常量列口径，违约拒绝转换（fail-closed）."""
+    """校验 daily-k dump 常量列口径（currency/interval/adjusted）."""
     for column, expected in _DAILY_K_CONSTANTS.items():
-        if column not in raw.columns:
-            raise SourceFetchError(
-                source="fuyao",
-                message=f"daily-k dump 缺常量列 {column}: 契约违约 拒绝转换",
-            )
-        unique = raw[column].unique().to_list()
-        if unique != [expected]:
-            raise SourceFetchError(
-                source="fuyao",
-                message=(
-                    f"daily-k dump {column} 期望常量 {expected}, 实际 {unique}: "
-                    "契约违约 拒绝转换"
-                ),
-            )
+        _validate_constant_column(raw, column, expected, kind="daily-k")
 
 
 def _bars_frame(rows: list[Any], source_ticker: str) -> pl.DataFrame:
@@ -344,15 +351,7 @@ class FuyaoSource:
                 source="fuyao",
                 message=(f"adjustment-factors dump 缺列 {missing}: 契约违约 拒绝转换"),
             )
-        currencies = raw["currency"].unique().to_list()
-        if currencies != ["CNY"]:
-            raise SourceFetchError(
-                source="fuyao",
-                message=(
-                    f"adjustment-factors dump currency 期望常量 CNY, 实际 "
-                    f"{currencies}: 契约违约 拒绝转换"
-                ),
-            )
+        _validate_constant_column(raw, "currency", "CNY", kind="adjustment-factors")
         return raw.with_columns(
             ticker=pl.col("thscode").str.split(".").list.get(0),
             trade_date=pl.col("ex_date_ms").map_elements(
@@ -481,11 +480,6 @@ class FuyaoDailyKDumpFetcher:
             return None
         dates = sorted(self._by_date)
         return (dates[0], dates[-1])
-
-    @property
-    def date_row_counts(self) -> dict[date, int]:
-        """逐交易日行数（dry-run 覆盖报告用）."""
-        return {day: part.height for day, part in self._by_date.items()}
 
     @property
     def frame(self) -> pl.DataFrame:

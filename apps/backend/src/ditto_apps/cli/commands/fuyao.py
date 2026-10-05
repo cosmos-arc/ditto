@@ -9,15 +9,18 @@ import polars as pl
 import typer
 from dishka import Container
 from ditto_application.processes.ingestion.date_range import list_ingestion_dates
-from ditto_data.models.ingestion import IngestionResult
-from ditto_data.services.market_service import MarketService
-from ditto_data.services.metadata.instrument import InstrumentService
-from ditto_data.services.metadata_service import MetadataService
-from ditto_data.sources.base import SourceFetchError
-from ditto_data.sources.fuyao.source import FuyaoDailyKDumpFetcher
 
 from ditto_apps.registry.container import make_app_container
-from ditto_apps.registry.infra.protocol_adapters import FuyaoSource
+from ditto_apps.registry.infra.protocol_adapters import (
+    FuyaoDailyKDumpFetcher,
+    FuyaoSource,
+    IngestionResult,
+    InstrumentService,
+    MarketService,
+    MetadataService,
+    SourceFetchError,
+    latest_fuyao_dump,
+)
 
 app = typer.Typer(help="fuyao 冗余源: 对账与降级")
 
@@ -113,15 +116,6 @@ def dump_daily_k() -> None:
 def dump_adjustment_factors() -> None:
     """下载全市场复权因子事件流(分红/送转/配股)Parquet 不可变快照."""
     _run_dump("adjustment-factors", "复权因子事件流")
-
-
-def _latest_daily_k_dump(data_root: Path) -> Path | None:
-    """data_root/fuyao/dumps/daily-k/ 下最新快照（YYYYMMDD 文件名字典序）."""
-    dump_dir = Path(data_root) / "fuyao" / "dumps" / "daily-k"
-    if not dump_dir.is_dir():
-        return None
-    dumps = sorted(dump_dir.glob("*.parquet"))
-    return dumps[-1] if dumps else None
 
 
 def _overlap_report(
@@ -291,7 +285,7 @@ def backfill_daily_k(
 
     container: Container = make_app_container()
     try:
-        dump_path = dump or _latest_daily_k_dump(container.get(Path))
+        dump_path = dump or latest_fuyao_dump(container.get(Path), "daily-k")
         if dump_path is None:
             typer.secho(
                 "未找到 daily-k dump: 先运行 ditto fuyao dump-daily-k",

@@ -464,15 +464,36 @@ class TestFuyaoDailyKDumpFetcher:
         fetcher = FuyaoDailyKDumpFetcher(_write_dump(tmp_path, _daily_k_rows()))
 
         assert fetcher.coverage == (date(2025, 8, 18), date(2025, 8, 19))
-        assert fetcher.date_row_counts == {
-            date(2025, 8, 18): 1,
-            date(2025, 8, 19): 2,
-        }
         day = fetcher.fetch_stock_daily(trade_date="2025-08-19")
         assert sorted(day["source_ticker"].to_list()) == [
             "000001.SZ",
             "600519.SH",
         ]
+
+    def test_beijing_exchange_ticker_roundtrip(self, tmp_path: Path) -> None:
+        """北交所代码（8/4 前缀）在 dump 取数与身份后缀推导同构."""
+        from ditto_data.sources.fuyao.source import FuyaoDailyKDumpFetcher
+
+        rows = _daily_k_rows()
+        rows["thscode"] = rows["thscode"] + ["830799.BJ"]
+        for key in ("currency", "interval", "adjusted"):
+            rows[key] = rows[key] + [rows[key][0]]
+        rows["date_ms"] = rows["date_ms"] + [date_to_ms(date(2025, 8, 19))]
+        for key in (
+            "open_price",
+            "high_price",
+            "low_price",
+            "close_price",
+            "volume",
+            "turnover",
+        ):
+            rows[key] = rows[key] + [rows[key][0]]
+        fetcher = FuyaoDailyKDumpFetcher(_write_dump(tmp_path, rows))
+
+        day = fetcher.fetch_stock_daily(trade_date="2025-08-19")
+
+        assert "830799.BJ" in day["source_ticker"].to_list()
+        assert _to_thscode("830799") == "830799.BJ"
 
     def test_fetch_out_of_coverage_returns_typed_empty(self, tmp_path: Path) -> None:
         from ditto_data.sources.fuyao.source import FuyaoDailyKDumpFetcher
