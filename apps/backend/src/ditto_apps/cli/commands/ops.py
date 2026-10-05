@@ -277,10 +277,11 @@ def reconcile(
             f"辅侧重复键={result.secondary_duplicate_keys} "
             f"差异数={result.diff_count} "
             f"事件不可推导={result.secondary_underivable_count} "
-            f"披露日错配={result.secondary_vintage_mismatch_count}"
+            f"披露日错配={result.secondary_vintage_mismatch_count} "
+            f"字段比较数={result.field_matched_counts}"
         )
         skipped = f" (skipped: {result.skip_reason})" if result.skipped else ""
-        comparable = "可比" if result.comparable else "不可比较(零交集)"
+        comparable = "可比" if result.comparable else "不可比较(无有效数值对)"
         color = typer.colors.GREEN if result.passed else typer.colors.RED
         typer.secho(
             f"对账结果: passed={result.passed} 比较={comparable} "

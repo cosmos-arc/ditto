@@ -240,6 +240,7 @@ class ReconcileSourcesHandler:
             primary_duplicate_keys=comparison.primary_duplicate_keys,
             secondary_duplicate_keys=comparison.secondary_duplicate_keys,
             diff_count=comparison.diff_count,
+            field_matched_counts=comparison.field_matched_counts,
         )
 
         return ReconciliationResult(
@@ -256,6 +257,7 @@ class ReconcileSourcesHandler:
             primary_duplicate_keys=comparison.primary_duplicate_keys,
             secondary_duplicate_keys=comparison.secondary_duplicate_keys,
             diff_count=comparison.diff_count,
+            field_matched_counts=comparison.field_matched_counts,
         )
 
     def _execute_adj_factor_comparison(
@@ -402,6 +404,7 @@ class ReconcileSourcesHandler:
             secondary_duplicate_keys=comparison.secondary_duplicate_keys,
             diff_count=comparison.diff_count,
             secondary_underivable_count=underivable.height,
+            field_matched_counts=comparison.field_matched_counts,
         )
 
     def _execute_financial_comparison(
@@ -441,16 +444,41 @@ class ReconcileSourcesHandler:
 
         keys = ["instrument_id", "report_date"]
         # SQLite 读取路径的日期列为字符串：统一转 date 后再按键连接
-        primary_cmp = self._normalize_financial_dates(
-            primary_df.unique(subset=keys, keep="last")
+        primary_cmp = self._normalize_financial_dates(primary_df)
+        secondary_cmp = self._normalize_financial_dates(secondary_df)
+        primary_duplicates = (
+            primary_cmp.group_by(keys).len().filter(pl.col("len") > 1).height
         )
-        secondary_cmp = secondary_df.unique(subset=keys, keep="last")
+        secondary_duplicates = (
+            secondary_cmp.group_by(keys).len().filter(pl.col("len") > 1).height
+        )
+        # Choose the latest disclosure explicitly, retaining conflicting rows within it.
+        primary_cmp = primary_cmp.filter(
+            pl.col("knowledge_date").eq_missing(
+                pl.col("knowledge_date").max().over(keys)
+            )
+        )
+        secondary_cmp = secondary_cmp.filter(
+            pl.col("disclosure_date").eq_missing(
+                pl.col("disclosure_date").max().over(keys)
+            )
+        )
+        primary_unmatched = self._key_set(primary_cmp, keys) - self._key_set(
+            secondary_cmp, keys
+        )
+        secondary_unmatched = self._key_set(secondary_cmp, keys) - self._key_set(
+            primary_cmp, keys
+        )
         joined = primary_cmp.join(secondary_cmp, on=keys, how="inner")
-        same_vintage = joined.filter(
-            pl.col("knowledge_date").is_not_null()
-            & pl.col("disclosure_date").is_not_null()
-            & (pl.col("knowledge_date") == pl.col("disclosure_date"))
-        ).select(keys)
+        same_vintage = (
+            joined.filter(
+                pl.col("knowledge_date").is_not_null()
+                & pl.col("disclosure_date").is_not_null()
+                & (pl.col("knowledge_date") == pl.col("disclosure_date"))
+            )
+            .select(keys)
+            .unique()
+        )
         vintage_mismatch = joined.join(same_vintage, on=keys, how="anti")
         if same_vintage.height == 0:
             # 键交集全部跨 vintage：没有任何数值比较发生 → not_comparable
@@ -468,6 +496,10 @@ class ReconcileSourcesHandler:
                 primary_count=primary_df.height,
                 secondary_count=secondary_df.height,
                 secondary_vintage_mismatch_count=vintage_mismatch.height,
+                primary_unmatched_count=len(primary_unmatched),
+                secondary_unmatched_count=len(secondary_unmatched),
+                primary_duplicate_keys=primary_duplicates,
+                secondary_duplicate_keys=secondary_duplicates,
             )
         primary_same = primary_cmp.join(same_vintage, on=keys, how="inner")
         secondary_same = secondary_cmp.join(same_vintage, on=keys, how="inner")
@@ -484,12 +516,6 @@ class ReconcileSourcesHandler:
             secondary=secondary_same,
             dataset=dataset,
             context={},
-        )
-        primary_unmatched = self._key_set(primary_cmp, keys) - self._key_set(
-            secondary_cmp, keys
-        )
-        secondary_unmatched = self._key_set(secondary_cmp, keys) - self._key_set(
-            primary_cmp, keys
         )
 
         frames = [
@@ -510,7 +536,7 @@ class ReconcileSourcesHandler:
             self._send_alerts(result, trade_date, dataset)
 
         comparable = comparison.comparable and same_vintage.height > 0
-        passed = comparable and not result.has_errors
+        passed = comparable and not result.has_errors and comparison.diff_count == 0
 
         logger.info(
             "financial reconciliation complete",
@@ -522,10 +548,13 @@ class ReconcileSourcesHandler:
             issue_count=len(result.issues),
             primary_count=primary_df.height,
             secondary_count=secondary_df.height,
-            matched_count=same_vintage.height,
+            matched_count=comparison.matched_count,
             primary_unmatched_count=len(primary_unmatched),
             secondary_unmatched_count=len(secondary_unmatched),
             diff_count=comparison.diff_count,
+            primary_duplicate_keys=primary_duplicates,
+            secondary_duplicate_keys=secondary_duplicates,
+            field_matched_counts=comparison.field_matched_counts,
             vintage_mismatch_count=vintage_mismatch.height,
         )
 
@@ -537,10 +566,13 @@ class ReconcileSourcesHandler:
             comparable=comparable,
             primary_count=primary_df.height,
             secondary_count=secondary_df.height,
-            matched_count=same_vintage.height,
+            matched_count=comparison.matched_count,
             primary_unmatched_count=len(primary_unmatched),
             secondary_unmatched_count=len(secondary_unmatched),
             diff_count=comparison.diff_count,
+            primary_duplicate_keys=primary_duplicates,
+            secondary_duplicate_keys=secondary_duplicates,
+            field_matched_counts=comparison.field_matched_counts,
             secondary_vintage_mismatch_count=vintage_mismatch.height,
         )
 
@@ -614,6 +646,7 @@ class ReconcileSourcesHandler:
             primary_unmatched_count=comparison.primary_unmatched_count,
             secondary_unmatched_count=comparison.secondary_unmatched_count,
             diff_count=comparison.diff_count,
+            field_matched_counts=comparison.field_matched_counts,
         )
 
         return ReconciliationResult(
@@ -628,6 +661,7 @@ class ReconcileSourcesHandler:
             primary_unmatched_count=comparison.primary_unmatched_count,
             secondary_unmatched_count=comparison.secondary_unmatched_count,
             diff_count=comparison.diff_count,
+            field_matched_counts=comparison.field_matched_counts,
         )
 
     def _vintage_mismatch_rows(
@@ -669,7 +703,7 @@ class ReconcileSourcesHandler:
         """财务主源帧日期列（report_date/knowledge_date）str → date."""
         casts = [
             pl.col(name).str.to_date().alias(name)
-            for name in ("report_date", "knowledge_date")
+            for name in ("report_date", "knowledge_date", "disclosure_date")
             if name in frame.columns and frame[name].dtype == pl.String
         ]
         return frame.with_columns(casts) if casts else frame

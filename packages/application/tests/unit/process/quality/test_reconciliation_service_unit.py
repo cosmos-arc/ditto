@@ -925,6 +925,12 @@ class TestFinancialReconciliation:
             "000001.SZ": 1000001,
             "600000.SH": 1000002,
         }
+        from dataclasses import replace
+
+        mock_quality_engine.compare_cross_source.return_value = replace(
+            mock_quality_engine.compare_cross_source.return_value,
+            matched_count=1,
+        )
         handler = self._handler(
             mock_quality_engine,
             financials_source,
@@ -1243,3 +1249,106 @@ class TestEtfNavReconciliation:
 
         assert result.comparable is False
         assert result.passed is False
+
+
+@pytest.mark.parametrize(
+    "case",
+    ["zero", "null", "missing", "conflict", "conflict_reversed", "newer_vintage"],
+)
+def test_financial_reconciliation_reports_missing_and_conflicting_values(
+    case,
+    mock_instrument_store,
+    mock_comparison_writer,
+) -> None:
+    from pathlib import Path
+
+    import yaml
+    from ditto_data.quality.engine import QualityEngine
+    from ditto_data.quality.spec import DatasetRules, DQSpec
+
+    root = next(
+        parent
+        for parent in Path(__file__).resolve().parents
+        if (parent / "config/default/dq_rules").is_dir()
+    )
+    config = yaml.safe_load(
+        (root / "config/default/dq_rules/income_statement.yml").read_text()
+    )
+    engine = QualityEngine(
+        config=DQSpec(datasets={"income_statement": DatasetRules(**config)})
+    )
+    primary = (
+        _financial_primary_df()
+        .head(1)
+        .rename({"revenue": "operating_revenue"})
+        .with_columns(
+            operating_revenue=pl.lit(1_000_000.0),
+            operating_profit=pl.lit(1_000_000.0),
+            net_profit=pl.lit(1_000_000.0),
+            eps=pl.lit(None, dtype=pl.Float64),
+        )
+    )
+    secondary = primary.drop("instrument_id").rename(
+        {"knowledge_date": "disclosure_date"}
+    )
+    fields = ["operating_revenue", "operating_profit", "net_profit", "eps"]
+    if case == "zero":
+        secondary = secondary.with_columns(
+            pl.lit(0.0).alias(name) for name in fields[:3]
+        )
+    elif case == "null":
+        primary = primary.with_columns(
+            pl.lit(None, dtype=pl.Float64).alias(name) for name in fields
+        )
+        secondary = secondary.with_columns(
+            pl.lit(None, dtype=pl.Float64).alias(name) for name in fields
+        )
+    elif case == "missing":
+        primary = primary.drop(fields)
+        secondary = secondary.drop(fields)
+    elif case.startswith("conflict"):
+        primary = pl.concat(
+            [primary.with_columns(operating_revenue=pl.lit(2_000_000.0)), primary]
+        )
+        if case.endswith("reversed"):
+            primary = primary.reverse()
+    else:
+        older = primary.with_columns(
+            knowledge_date=pl.lit(date(2026, 8, 1)),
+            operating_revenue=pl.lit(2_000_000.0),
+        )
+        primary = pl.concat([primary, older])
+    financials = MagicMock()
+    financials.fetch_financial_statements.return_value = secondary
+    resolver = MagicMock()
+    resolver.resolve_secondary_ids.return_value = {"000001": 1000001}
+    handler = ReconcileSourcesHandler(
+        engine=engine,
+        secondary_source=MagicMock(),
+        comparison_store=mock_comparison_writer,
+        instrument_store=mock_instrument_store,
+        secondary_identity_resolver=resolver,
+        secondary_financials_source=financials,
+    )
+    result = handler.handle(
+        ReconcileSourcesCommand(
+            primary_df=primary, trade_date="2026-10-05", dataset="income_statement"
+        )
+    )
+    assert result.error is None
+    assert result.field_matched_counts["eps"] == 0
+    if case in {"null", "missing"}:
+        assert result.matched_count == 0
+        assert not result.comparable
+        assert not result.passed
+    elif case.startswith("conflict"):
+        assert result.primary_duplicate_keys == 1
+        assert result.diff_count == 1
+        assert not result.passed
+    elif case == "zero":
+        assert result.diff_count == 3
+        assert not result.passed
+    else:
+        assert result.matched_count == 1
+        assert result.diff_count == 0
+        assert result.passed

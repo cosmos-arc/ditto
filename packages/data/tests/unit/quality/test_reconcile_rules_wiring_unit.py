@@ -264,3 +264,25 @@ class TestBalanceAndCashFlowRuleWiring:
 
         assert comparison.matched_count == 1
         assert comparison.diff_count == 0
+
+
+@pytest.mark.parametrize(
+    ("primary", "secondary", "diffs"),
+    [
+        (1e6, 0.0, 1),
+        (0.0, 0.0, 0),
+        (-1e6, 0.0, 1),
+        (-100.0, -100.01, 0),
+        (100.0, -100.0, 1),
+        (10001.0, 10000.0, 0),
+        (10002.0, 10000.0, 1),
+    ],
+)
+def test_relative_tolerance_zero_and_signed_values(primary, secondary, diffs) -> None:
+    comparison = _engine("income_statement").compare_cross_source(
+        primary=_income_frame([(1, primary, 1.0)]),
+        secondary=_income_frame([(1, secondary, 1.0)]),
+        dataset="income_statement",
+    )
+    assert comparison.matched_count == 1
+    assert comparison.diff_count == diffs

@@ -44,6 +44,7 @@ class CrossSourceComparison:
     secondary_duplicate_keys: int
     diff_count: int
     diff_rows: list[dict[str, Any]] = field(default_factory=list)
+    field_matched_counts: dict[str, int] = field(default_factory=dict)
 
     @property
     def comparable(self) -> bool:
@@ -123,30 +124,66 @@ class CrossSourceChecker:
         primary_unmatched = primary_keys - secondary_keys
         secondary_unmatched = secondary_keys - primary_keys
 
-        status: ComparisonStatus = "compared" if matched_keys else "not_comparable"
-        diff_rows: list[dict[str, Any]] = []
-        if status == "compared":
-            diff_rows = self._field_diffs(
-                primary,
-                secondary,
+        common_fields = [
+            name
+            for name in fields
+            if name in primary.columns
+            and name in secondary.columns
+            and name in tolerance
+        ]
+        merged = pl.DataFrame()
+        if matched_keys and common_fields:
+            # Keep conflicting values visible; collapse only identical comparison rows.
+            columns = [*keys, *common_fields]
+            merged = (
+                primary.select(columns)
+                .unique()
+                .sort(columns)
+                .join(
+                    secondary.select(columns).unique().sort(columns),
+                    on=keys,
+                    how="inner",
+                    suffix="_secondary",
+                )
+            )
+        compared_keys: set[tuple[Any, ...]] = set()
+        field_matched_counts = dict.fromkeys(fields, 0)
+        for name in common_fields:
+            if merged.is_empty():
+                continue
+            valid = merged.filter(
+                pl.col(name).cast(pl.Float64, strict=False).is_finite()
+                & pl.col(f"{name}_secondary").cast(pl.Float64, strict=False).is_finite()
+            )
+            valid_keys = self._distinct_keys(valid, keys)
+            compared_keys.update(valid_keys)
+            field_matched_counts[name] = len(valid_keys)
+        status: ComparisonStatus = "compared" if compared_keys else "not_comparable"
+        diff_rows = (
+            self._field_diffs(
+                merged,
                 keys,
-                list(fields),
+                common_fields,
                 tolerance,
                 ex_dividend_instruments or frozenset(),
             )
+            if compared_keys
+            else []
+        )
 
         return CrossSourceComparison(
             status=status,
             key_columns=tuple(keys),
             primary_count=primary.height,
             secondary_count=secondary.height,
-            matched_count=len(matched_keys),
+            matched_count=len(compared_keys),
             primary_unmatched_count=len(primary_unmatched),
             secondary_unmatched_count=len(secondary_unmatched),
             primary_duplicate_keys=self._duplicate_key_count(primary, keys),
             secondary_duplicate_keys=self._duplicate_key_count(secondary, keys),
             diff_count=len(diff_rows),
             diff_rows=diff_rows,
+            field_matched_counts=field_matched_counts,
         )
 
     @staticmethod
@@ -156,7 +193,9 @@ class CrossSourceChecker:
         if missing or frame.is_empty():
             return set()
         # select 仅键列后转元组
-        return {tuple(row) for row in frame.select(keys).unique().iter_rows()}
+        return {
+            tuple(row) for row in frame.select(keys).drop_nulls().unique().iter_rows()
+        }
 
     @staticmethod
     def _duplicate_key_count(frame: pl.DataFrame, keys: list[str]) -> int:
@@ -168,25 +207,13 @@ class CrossSourceChecker:
 
     def _field_diffs(
         self,
-        primary: pl.DataFrame,
-        secondary: pl.DataFrame,
+        merged: pl.DataFrame,
         keys: list[str],
-        fields: list[str],
+        comparable_fields: list[str],
         tolerance: dict[str, ToleranceRule],
         ex_dividend_instruments: frozenset[int],
     ) -> list[dict[str, Any]]:
-        """按容差逐字段比对键交集行，返回差异样本（含除权日标记）。"""
-        comparable_fields = [
-            f for f in fields if f in primary.columns and f in secondary.columns
-        ]
-        if not comparable_fields:
-            return []
-        # 键去重（重复键已单独计数），每键取首行避免 join 扇出
-        primary_unique = primary.unique(subset=keys, keep="first")
-        secondary_unique = secondary.unique(subset=keys, keep="first")
-        merged = primary_unique.join(
-            secondary_unique, on=keys, how="inner", suffix="_secondary"
-        )
+        """Compare all distinct values; input row order cannot settle conflicts."""
         diff_rows: list[dict[str, Any]] = []
         for field_name in comparable_fields:
             rule = tolerance.get(field_name)
@@ -223,6 +250,7 @@ class CrossSourceChecker:
         """返回超出容差的交集行。"""
         primary_col = pl.col(field_name).cast(pl.Float64, strict=False)
         secondary_col = pl.col(f"{field_name}_secondary").cast(pl.Float64, strict=False)
+        merged = merged.filter(primary_col.is_finite() & secondary_col.is_finite())
         if rule.method == CompareMethod.TICK_ALIGNED:
             diff = (primary_col - secondary_col).abs()
             return merged.filter(
@@ -233,15 +261,11 @@ class CrossSourceChecker:
         if rule.method == CompareMethod.RELATIVE:
             if rule.relative_tol is None:
                 return pl.DataFrame()
-            denominator = secondary_col.abs()
-            ratio = (primary_col - secondary_col).abs() / pl.when(
-                denominator == 0
-            ).then(None).otherwise(denominator)
+            difference = (primary_col - secondary_col).abs()
             return merged.filter(
-                pl.col(field_name).is_not_null()
-                & pl.col(f"{field_name}_secondary").is_not_null()
-                & ratio.is_not_null()
-                & (ratio > rule.relative_tol)
+                primary_col.is_finite()
+                & secondary_col.is_finite()
+                & (difference > rule.relative_tol * secondary_col.abs())
             )
         if rule.method == CompareMethod.ABSOLUTE:
             if rule.absolute_tol is None:
@@ -335,7 +359,7 @@ class CrossSourceChecker:
                 severity=DQSeverity.WARNING,
                 rule_name="cross_source_not_comparable",
                 message=(
-                    "Cross-source comparison has zero key intersection "
+                    "Cross-source comparison has no valid numeric pairs "
                     f"(primary={comparison.primary_count}, "
                     f"secondary={comparison.secondary_count}); "
                     "comparison is incomplete, not passing"
@@ -363,7 +387,7 @@ class CrossSourceChecker:
                     f"Cross-source frames contain {duplicate_keys} duplicate keys"
                 ),
                 affected_rows=duplicate_keys,
-                sample_data=[],
+                sample_data=comparison.diff_rows[:10],
             )
 
         if comparison.diff_rows:
