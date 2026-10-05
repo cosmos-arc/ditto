@@ -6,6 +6,7 @@ import math
 from dataclasses import dataclass
 from datetime import UTC, date, datetime, time
 from hashlib import sha256
+from typing import Literal
 from zoneinfo import ZoneInfo
 
 import orjson
@@ -492,7 +493,59 @@ def _derive_core_facts(
     )
 
 
+def _global_display_facts(
+    context: PITQueryContext,
+    frame: pl.DataFrame | None,
+) -> tuple[MarketContextMetric, ...]:
+    """
+    Derive display-only latest global index observations (#435).
+
+    全球参考展示-only（#451 裁决）：仅产出展示 metrics，不进入
+    MarketRegimeInput（global_return_1d 恒为 None）。每个源代码取
+    请求快照内最新观察日的 close；close 缺失不造零；发布时刻不可知，
+    可见性由快照 PIT 身份保证。
+    """
+    if frame is None or frame.is_empty():
+        return ()
+    if "source_ticker" not in frame.columns or "close" not in frame.columns:
+        return ()
+    # PIT 载荷帧以 event_time 为观察时间轴；无 event_time 时回退 trade_date。
+    time_column = "event_time" if "event_time" in frame.columns else "trade_date"
+    try:
+        reference = _evidence_ref(context.snapshot_for("global_index_daily"))
+    except ValueError:
+        return ()
+    latest = frame.sort(time_column).group_by("source_ticker").last()
+    metrics: list[MarketContextMetric] = []
+    for row in latest.iter_rows(named=True):
+        close = row.get("close")
+        if close is None:
+            continue
+        pct_change = row.get("pct_change")
+        if pct_change is None:
+            trend: Literal["rising", "falling", "unknown"] = "unknown"
+        elif float(pct_change) > 0:
+            trend = "rising"
+        elif float(pct_change) < 0:
+            trend = "falling"
+        else:
+            trend = "unknown"
+        metrics.append(
+            MarketContextMetric(
+                name=f"global_index_{str(row['source_ticker']).lower()}_close",
+                category="global",
+                value=float(close),
+                unit="index_point",
+                trend=trend,
+                freshness="fresh",
+                evidence_ref=reference,
+            )
+        )
+    return tuple(sorted(metrics, key=lambda metric: metric.name))
+
+
 def _derive_optional_facts(
+    context: PITQueryContext,
     frames: dict[str, pl.DataFrame],
 ) -> tuple[
     float | None,
@@ -503,7 +556,8 @@ def _derive_optional_facts(
 ]:
     # 全球指数与 FRED 宏观均为展示-only 全球参考（#432/#451 裁决），不进入
     # 决策输入：global_return_1d 恒为 None 并计入 declared_missing_inputs；
-    # 宏观分数只允许非 FRED（A股本土 CN_*）指标参与。
+    # 宏观分数只允许非 FRED（A股本土 CN_*）指标参与。全球指数最新值仅以
+    # 展示 metrics 暴露（#435）。
     macro = frames.get("macro_indicators")
     decision_macro = None if macro is None else _decision_macro_frame(macro)
     macro_surprise, macro_trend = (
@@ -514,7 +568,7 @@ def _derive_optional_facts(
         "macro_surprise_score": macro_surprise,
         "macro_trend_score": macro_trend,
     }
-    metrics: tuple[MarketContextMetric, ...] = ()
+    metrics = _global_display_facts(context, frames.get("global_index_daily"))
     return (
         None,
         macro_surprise,
@@ -550,7 +604,7 @@ class ProviderPayloadMarketContextSource:
             macro_trend,
             optional_missing,
             optional_metrics,
-        ) = _derive_optional_facts(frames)
+        ) = _derive_optional_facts(context, frames)
         missing = core.missing | optional_missing
         uncertainties = tuple(
             f"{name}_not_derivable_from_requested_snapshots" for name in sorted(missing)

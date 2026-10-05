@@ -791,3 +791,53 @@ def test_market_context_source_wraps_payload_io_failure(tmp_path: Path) -> None:
 
     with pytest.raises(AppQueryError, match="payload failed closed for 'stock_daily'"):
         source.load(context)
+
+
+@pytest.mark.unit
+@pytest.mark.pit
+def test_market_context_global_index_display_metrics_latest_per_ticker(
+    tmp_path: Path,
+) -> None:
+    """#435：全球指数以展示 metrics 暴露最新观察值，决策输入仍拒绝.
+
+    每个源代码取 PIT 过滤后最新观察的 close；close 缺失不造零、
+    不产生 metric；pct_change 缺失时 trend 为 unknown。
+    """
+    cutoff = datetime(2026, 10, 5, 12, tzinfo=UTC)
+    global_index = pl.DataFrame(
+        {
+            "source_ticker": ["SPX", "SPX", "N225", "RTS"],
+            "event_time": [
+                cutoff - timedelta(days=2),
+                cutoff - timedelta(days=1),
+                cutoff - timedelta(days=1),
+                cutoff - timedelta(days=1),
+            ],
+            "close": [100.0, 101.5, 39000.0, None],
+            "pct_change": [0.5, 1.5, None, 0.0],
+        }
+    )
+    facts = _load_single(
+        tmp_path,
+        dataset_id="global_index_daily",
+        frame=global_index,
+        cutoff=cutoff,
+    )
+
+    metrics = {metric.name: metric for metric in facts.metrics}
+    # RTS close 缺失：不造零、不出现
+    assert set(metrics) == {
+        "global_index_n225_close",
+        "global_index_spx_close",
+    }
+    spx = metrics["global_index_spx_close"]
+    assert spx.category == "global"
+    assert spx.value == 101.5  # 最新观察日，不是首日
+    assert spx.unit == "index_point"
+    assert spx.trend == "rising"
+    assert spx.evidence_ref
+    n225 = metrics["global_index_n225_close"]
+    assert n225.trend == "unknown"  # pct_change 缺失不猜方向
+    # 决策边界不受展示影响
+    assert facts.regime_input.global_return_1d is None
+    assert "global_return_1d" in facts.regime_input.declared_missing_inputs
