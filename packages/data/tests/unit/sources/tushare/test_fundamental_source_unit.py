@@ -231,3 +231,123 @@ class TestCapitalSourceDelegates:
         """Blank source tickers are treated as missing query modes."""
         with pytest.raises(ValueError, match="必须指定"):
             fetch_fn(MagicMock(), **missing_kwargs)
+
+
+def _income_raw_rows() -> list[dict[str, object]]:
+    return [
+        # 同披露 update_flag 0/1 两行（值不同时也不允许双写，取 1）
+        {
+            "ts_code": "600519.SH",
+            "end_date": "20260630",
+            "f_ann_date": "20260815",
+            "report_type": "1",
+            "update_flag": "0",
+            "total_revenue": 92.0e10,
+            "revenue": 90.0e10,
+            "operate_cost": 55.0e9,
+            "sale_exp": 16.0e9,
+            "admin_exp": 18.0e9,
+            "fin_exp": 0.1e9,
+            "rd_exp": 0.6e9,
+            "operate_profit": 61.0e10,
+            "total_profit": 61.4e10,
+            "income_tax": 15.0e10,
+            "n_income": 46.0e10,
+            "basic_eps": 35.56,
+            "diluted_eps": 35.56,
+        },
+        {
+            "ts_code": "600519.SH",
+            "end_date": "20260630",
+            "f_ann_date": "20260815",
+            "report_type": "1",
+            "update_flag": "1",
+            "total_revenue": 92.2783e10,
+            "revenue": 90.7033e10,
+            "operate_cost": 55.2073e9,
+            "sale_exp": 16.0576e9,
+            "admin_exp": 18.5376e9,
+            "fin_exp": 0.1e9,
+            "rd_exp": 0.6e9,
+            "operate_profit": 61.4113e10,
+            "total_profit": 61.4384e10,
+            "income_tax": 15.4051e10,
+            "n_income": 46.0333e10,
+            "basic_eps": 35.57,
+            "diluted_eps": 35.57,
+        },
+        # 非合并报表类型行（type 2 单季）：排除
+        {
+            "ts_code": "600519.SH",
+            "end_date": "20260630",
+            "f_ann_date": "20260815",
+            "report_type": "2",
+            "update_flag": "1",
+            "total_revenue": 41.0e10,
+            "revenue": 40.0e10,
+            "operate_cost": 20.0e9,
+            "sale_exp": 8.0e9,
+            "admin_exp": 9.0e9,
+            "fin_exp": 0.0,
+            "rd_exp": 0.3e9,
+            "operate_profit": 28.0e10,
+            "total_profit": 28.1e10,
+            "income_tax": 7.0e10,
+            "n_income": 21.0e10,
+            "basic_eps": 16.7,
+            "diluted_eps": 16.7,
+        },
+    ]
+
+
+@pytest.mark.unit
+class TestFinancialStatementWindowRowIdentity:
+    """#482：窗口模式行身份过滤（update_flag 去重 + 合并报表口径）。"""
+
+    def _adapter(self, rows: list[dict[str, object]]) -> Any:
+        from ditto_data.sources.tushare.adapters.fundamental import (
+            FundamentalTushareAdapter,
+        )
+
+        adapter = FundamentalTushareAdapter.__new__(FundamentalTushareAdapter)
+        adapter._client = MagicMock()
+        adapter._client.query.return_value = pl.DataFrame(rows)
+        return adapter
+
+    def test_window_rows_collapse_to_latest_consolidated(self) -> None:
+        """update_flag 0/1 同披露 → 取 1（最新值）；type 2 行排除。"""
+        adapter = self._adapter(_income_raw_rows())
+
+        frame = adapter.fetch_income_statement(
+            ts_code="600519.SH", start_date="20240101", end_date="20261005"
+        )
+
+        assert frame.height == 1
+        row = frame.row(0, named=True)
+        assert row["net_profit"] == pytest.approx(46.0333e10)
+        assert row["eps"] == pytest.approx(35.57)
+        # 身份列不进输出帧
+        assert "update_flag" not in frame.columns
+        assert "report_type" not in frame.columns
+        # 请求字段携带身份列
+        fields = adapter._client.query.call_args.kwargs["fields"]
+        assert "report_type" in fields
+        assert "update_flag" in fields
+
+    def test_distinct_disclosures_both_kept(self) -> None:
+        """不同披露日（修订 vintage）各自成行，不跨 vintage 合并。"""
+        rows = _income_raw_rows()
+        revised = dict(rows[1])
+        revised["f_ann_date"] = "20260901"
+        revised["n_income"] = 46.10e10
+        adapter = self._adapter([*rows, revised])
+
+        frame = adapter.fetch_income_statement(
+            ts_code="600519.SH", start_date="20240101", end_date="20261005"
+        )
+
+        assert frame.height == 2
+        assert sorted(frame["knowledge_date"].to_list()) == [
+            date(2026, 8, 15),
+            date(2026, 9, 1),
+        ]
