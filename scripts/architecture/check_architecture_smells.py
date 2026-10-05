@@ -122,6 +122,7 @@ APPS_HOST_COMPOSITION_ALLOWANCES = (
             {
                 "ditto_data.quality.protocols",
                 "ditto_data.services.deps",
+                "ditto_data.services.market_service",
                 "ditto_data.services.source_accessor",
                 "ditto_data.sources.fuyao.source",
                 "ditto_data.storage.metadata.instrument",
@@ -465,6 +466,7 @@ APPS_REGISTRY_COMPOSITION_ALLOWANCES = (
             {
                 "ditto_data.quality.protocols",
                 "ditto_data.services.deps",
+                "ditto_data.services.market_service",
                 "ditto_data.services.source_accessor",
                 "ditto_data.sources.fuyao.source",
                 "ditto_data.storage.metadata.instrument",

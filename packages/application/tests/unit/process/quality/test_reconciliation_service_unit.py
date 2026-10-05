@@ -777,3 +777,80 @@ class TestAdjFactorReconciliation:
 
         assert result.passed is False
         assert result.error is not None
+
+    def test_all_events_underivable_is_not_comparable(
+        self,
+        mock_quality_engine,
+        mock_comparison_writer,
+        mock_instrument_store,
+        mock_secondary_identity_resolver,
+        comparable_report,
+    ) -> None:
+        """键匹配但零数值比较（全部事件不可推导）＝错误匹配, 不得报告通过."""
+        events_source = MagicMock()
+        events_source.fetch_adjustment_events.return_value = _adj_factor_events_df()
+        context = MagicMock()
+        # 主源有因子变化(1000001) 但事件侧三行均不可推导:
+        # 600000 缺配股价、510300 缺前价、000001 无对应前收帧
+        context.factor_window.return_value = _adj_factor_factor_window()
+        context.previous_closes.return_value = pl.DataFrame(
+            schema={"instrument_id": pl.Int64, "prev_close": pl.Float64}
+        )
+        handler = ReconcileSourcesHandler(
+            engine=mock_quality_engine,
+            secondary_source=MagicMock(),
+            comparison_store=mock_comparison_writer,
+            instrument_store=mock_instrument_store,
+            secondary_identity_resolver=mock_secondary_identity_resolver,
+            secondary_events_source=events_source,
+            adj_factor_context=context,
+        )
+
+        result = handler.handle(
+            ReconcileSourcesCommand(
+                primary_df=_adj_factor_primary_df(),
+                trade_date="2025-06-25",
+                dataset="adj_factor",
+            )
+        )
+
+        assert result.comparable is False
+        assert result.passed is False
+        assert result.matched_count == 0
+        assert result.secondary_underivable_count == 3
+
+    def test_events_outside_primary_scope_dropped(
+        self,
+        mock_quality_engine,
+        mock_comparison_writer,
+        mock_instrument_store,
+        mock_secondary_identity_resolver,
+    ) -> None:
+        """黄金集语义：主源帧（已过滤）范围外的事件不参与对账."""
+        events_source = MagicMock()
+        events_source.fetch_adjustment_events.return_value = _adj_factor_events_df()
+        narrow_primary = _adj_factor_primary_df().filter(
+            pl.col("instrument_id") == 1000001
+        )
+        handler = ReconcileSourcesHandler(
+            engine=mock_quality_engine,
+            secondary_source=MagicMock(),
+            comparison_store=mock_comparison_writer,
+            instrument_store=mock_instrument_store,
+            secondary_identity_resolver=mock_secondary_identity_resolver,
+            secondary_events_source=events_source,
+            adj_factor_context=self._context_mock(),
+        )
+
+        result = handler.handle(
+            ReconcileSourcesCommand(
+                primary_df=narrow_primary,
+                trade_date="2025-06-25",
+                dataset="adj_factor",
+            )
+        )
+
+        # 仅 000001→1000001 在范围内: 不可推导计数不含范围外事件
+        assert result.secondary_underivable_count == 0
+        call = mock_quality_engine.compare_cross_source.call_args
+        assert call.kwargs["secondary"]["instrument_id"].to_list() == [1000001]

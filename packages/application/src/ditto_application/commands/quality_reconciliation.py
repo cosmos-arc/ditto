@@ -274,12 +274,32 @@ class ReconcileSourcesHandler:
                 trade_date, dataset, primary_df.height, events.height
             )
 
+        # 黄金集（或当日主源帧）限定比较范围：与 stock_daily 路径的
+        # 过滤语义一致，未经允许的事件/因子变化行不参与本次对账。
+        allowed_ids = primary_df["instrument_id"].unique().to_list()
+        events = events.filter(pl.col("instrument_id").is_in(allowed_ids))
+        if events.is_empty():
+            return self._zero_intersection_result(
+                trade_date, dataset, primary_df.height, 0
+            )
+
         target = date.fromisoformat(trade_date)
         primary_cmp = derive_factor_ratios(
             self._adj_factor_context.factor_window(trade_date), target
-        )
+        ).filter(pl.col("instrument_id").is_in(allowed_ids))
         secondary_cmp = derive_event_adjustment_ratios(
             events, self._adj_factor_context.previous_closes(trade_date)
+        )
+        # 可推导匹配数：两侧 adjustment_ratio 均非空的键交集。键匹配但
+        # 全部不可推导时没有发生任何数值比较，不得报告 matched/通过。
+        derivable_matches = (
+            primary_cmp.filter(pl.col("adjustment_ratio").is_not_null())
+            .join(
+                secondary_cmp.filter(pl.col("adjustment_ratio").is_not_null()),
+                on=["instrument_id", "trade_date"],
+                how="inner",
+            )
+            .height
         )
         # 比较行全部落在事件日：差异行统一标记除权日，不与单位错误混排
         context = {
@@ -318,7 +338,8 @@ class ReconcileSourcesHandler:
         if result.issues:
             self._send_alerts(result, trade_date, dataset)
 
-        passed = comparison.comparable and not result.has_errors
+        comparable = comparison.comparable and derivable_matches > 0
+        passed = comparable and not result.has_errors
 
         logger.info(
             "adj_factor reconciliation complete",
@@ -326,11 +347,11 @@ class ReconcileSourcesHandler:
             trade_date=trade_date,
             dataset=dataset,
             passed=passed,
-            comparable=comparison.comparable,
+            comparable=comparable,
             issue_count=len(result.issues),
             primary_count=comparison.primary_count,
             secondary_count=comparison.secondary_count,
-            matched_count=comparison.matched_count,
+            matched_count=derivable_matches,
             primary_unmatched_count=comparison.primary_unmatched_count,
             secondary_unmatched_count=comparison.secondary_unmatched_count,
             primary_duplicate_keys=comparison.primary_duplicate_keys,
@@ -339,15 +360,18 @@ class ReconcileSourcesHandler:
             underivable_count=underivable.height,
         )
 
+        # matched_count 报告实际完成数值比较的可推导匹配数：键级匹配中
+        # 不可推导的部分单列为 secondary_underivable_count，不计入匹配，
+        # 避免"零数值比较却报告通过"的错误匹配口径。
         return ReconciliationResult(
             trade_date=trade_date,
             dataset=dataset,
             passed=passed,
             issue_count=len(result.issues),
-            comparable=comparison.comparable,
+            comparable=comparable,
             primary_count=comparison.primary_count,
             secondary_count=comparison.secondary_count,
-            matched_count=comparison.matched_count,
+            matched_count=derivable_matches,
             primary_unmatched_count=comparison.primary_unmatched_count,
             secondary_unmatched_count=comparison.secondary_unmatched_count,
             primary_duplicate_keys=comparison.primary_duplicate_keys,

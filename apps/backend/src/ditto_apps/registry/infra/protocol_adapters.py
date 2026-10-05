@@ -33,12 +33,13 @@ from ditto_data.quality.protocols import (
     SecondaryBarsSourceProtocol,
 )
 from ditto_data.services.deps import MarketReaders
+from ditto_data.services.market_service import MarketService
 from ditto_data.services.source_accessor import SourceAccessor
 from ditto_data.sources.fuyao.source import FuyaoSource
 from ditto_data.storage.metadata.instrument import InstrumentReader
 from ditto_data.storage.runtime.quality import ComparisonWriter
 
-__all__ = ["FuyaoSource", "MarketReaders"]
+__all__ = ["FuyaoSource", "MarketReaders", "MarketService"]
 from ditto_features.compile_cache import SQLiteCompileCacheBackend
 from ditto_platform.foundation import SQLiteClient
 

@@ -194,6 +194,7 @@ def reconcile(
     """跨源对账: 主源存量 vs 辅源 fuyao(instrument_id+trade_date 同口径比较)."""
     from ditto_apps.registry.infra.protocol_adapters import (  # noqa: PLC0415
         MarketReaders,
+        MarketService,
     )
 
     if dataset not in {"stock_daily", "adj_factor"}:
@@ -205,10 +206,6 @@ def reconcile(
         handler = container.get(ReconcileSourcesHandler)
         if dataset == "adj_factor":
             # adj_factor 主源：当日因子帧（比例所需回看窗由 handler 上下文提供）
-            from ditto_data.services.market_service import (  # noqa: PLC0415
-                MarketService,
-            )
-
             market = container.get(MarketService)
             primary_df = market.get_adj_factors(date, date)
             data_root = container.get(Path)
