@@ -527,3 +527,129 @@ class TestFuyaoDailyKDumpFetcher:
             fetcher.fetch_stock_daily(
                 source_ticker="600519", start_date="2025-08-18", end_date="2025-08-19"
             )
+
+
+def _source_by_thscode(
+    responses: dict[str, object],
+) -> FuyaoSource:
+    """按 thscode 路由 mock 响应（dict=正常 data；Exception=抛错）。"""
+    client = MagicMock()
+
+    def fake_get(path: str, params: dict[str, object] | None = None):
+        assert params is not None
+        key = str(params.get("thscode", ""))
+        if key not in responses:
+            raise AssertionError(f"unexpected thscode {key} on {path}")
+        value = responses[key]
+        if isinstance(value, Exception):
+            raise value
+        return value
+
+    client.get.side_effect = fake_get
+    return FuyaoSource(client=client)
+
+
+def _income_item(
+    period_end: date, report_date: date, **overrides: object
+) -> dict[str, object]:
+    item: dict[str, object] = {
+        "thscode": "600519.SH",
+        "ticker": "600519",
+        "period": "quarterly",
+        "fiscal_year": period_end.year,
+        "fiscal_period": "Q2",
+        "report_date_ms": date_to_ms(report_date),
+        "period_end_ms": date_to_ms(period_end),
+        "currency": "CNY",
+        "operating_income": 90_703_260_964.48,
+        "operating_costs": 9_473_762_565.88,
+        "operating_expenses": 30_946_044_878.08,
+        "sales_fee": 3_206_308_341.53,
+        "manage_fee": 3_635_355_263.82,
+        "research_and_development_expenses": 114_926_219.6,
+        "operating_profit": 61_411_291_686.27,
+        "interest_expenses": 76_587_662.57,
+        "profit_total": 61_438_419_177.29,
+        "income_tax_expense": 15_405_088_610.51,
+        "net_profit": 46_033_330_566.78,
+        "parent_holder_net_profit": 44_516_880_421.86,
+        "basic_eps": 35.57,
+    }
+    item.update(overrides)
+    return item
+
+
+@pytest.mark.unit
+class TestFuyaoFinancialStatementsFrame:
+    """#473 财务三表对账帧：字段映射、披露日、契约违约按标的隔离."""
+
+    def test_renames_fields_and_derives_dates_from_bare_ticker(self) -> None:
+        source = _source_by_thscode(
+            {
+                "600519.SH": {
+                    "item": [_income_item(date(2026, 6, 30), date(2026, 8, 14))]
+                }
+            }
+        )
+
+        frame = source.fetch_financial_statements(
+            "income_statement",
+            ["600519"],  # 裸码 → 前缀规则补后缀
+        )
+
+        assert frame.height == 1
+        row = frame.row(0, named=True)
+        assert row["ticker"] == "600519.SH"
+        assert row["report_date"] == date(2026, 6, 30)
+        assert row["disclosure_date"] == date(2026, 8, 14)
+        assert row["fiscal_period"] == "Q2"
+        # fuyao 字段 → 内部列名（金额保持元，无单位换算）
+        assert row["revenue"] == pytest.approx(90_703_260_964.48)
+        assert row["net_profit"] == pytest.approx(46_033_330_566.78)
+        assert row["eps"] == pytest.approx(35.57)
+        assert row["total_profit"] == pytest.approx(61_438_419_177.29)
+
+    def test_non_cny_currency_skips_ticker(self) -> None:
+        source = _source_by_thscode(
+            {
+                "600519.SH": {
+                    "item": [_income_item(date(2026, 6, 30), date(2026, 8, 14))]
+                },
+                "600036.SH": {
+                    "item": [
+                        _income_item(
+                            date(2026, 6, 30), date(2026, 8, 14), currency="USD"
+                        )
+                    ]
+                },
+            }
+        )
+
+        frame = source.fetch_financial_statements(
+            "income_statement", ["600519", "600036"]
+        )
+
+        assert frame["ticker"].to_list() == ["600519.SH"]
+
+    def test_missing_mapped_column_skips_ticker(self) -> None:
+        item = _income_item(date(2026, 6, 30), date(2026, 8, 14))
+        del item["basic_eps"]
+        source = _source_by_thscode({"600519.SH": {"item": [item]}})
+
+        frame = source.fetch_financial_statements("income_statement", ["600519"])
+
+        assert frame.height == 0
+
+    def test_business_error_skips_ticker(self) -> None:
+        source = _source_by_thscode(
+            {
+                "600519.SH": SourceFetchError(
+                    source="fuyao", message="code=1002 Unknown thscode"
+                )
+            }
+        )
+
+        frame = source.fetch_financial_statements("income_statement", ["600519"])
+
+        assert frame.height == 0
+        assert frame["report_date"].dtype == pl.Date

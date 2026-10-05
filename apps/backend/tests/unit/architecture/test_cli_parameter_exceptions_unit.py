@@ -19,6 +19,14 @@ _APPROVED_PLR0913_NOQA_LINES: tuple[tuple[str, str], ...] = (
         "apps/backend/src/ditto_apps/cli/commands/strategy.py",
         f"def publish_signals(  # noqa: PLR0913 — {_TYPER_INJECTION_REASON}",
     ),
+    (
+        "packages/application/src/ditto_application/commands/quality_reconciliation.py",
+        "def __init__(  # noqa: PLR0913 — 协作端口按数据集一次注入，收拢对账编排",  # noqa: RUF001 — 与被核对源码行逐字一致
+    ),
+    (
+        "packages/application/src/ditto_application/providers_command.py",
+        "def reconcile_sources_handler(  # noqa: PLR0913 — dishka 依赖注入聚合端口",
+    ),
 )
 
 

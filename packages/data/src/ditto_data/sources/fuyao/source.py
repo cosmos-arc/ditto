@@ -6,6 +6,8 @@ fuyao 数据源门面 — 冗余源（ADR：Tushare 主源，fuyao 对账与故�
   （10 交易日 dump 一次下载 + 本地过滤，供 source=auto 摄取）；source_ticker
   + 起止日单标的 REST 历史（adjust=none）；
 - ``fetch_stock_daily_bars``：对账协议帧（ticker 裸码，单日）；
+- ``fetch_financial_statements``：财务三表对账协议帧（#473，ticker 保留
+  完整 thscode；对账按标的隔离失败，报告显式未匹配）；
 - 快照（A 股批量 / ETF 单只）：展示层用，不进管道；
 - ``download_market_dump`` / ``daily_k_frame``：10 年日 K / 复权因子事件流
   Parquet 不可变快照与帧转换。
@@ -57,6 +59,54 @@ _ADJUSTMENT_EVENT_COLUMNS = (
     "allotment_ratio",
     "allotment_price",
 )
+
+# 财务三表对账帧（#473）：fuyao 字段 → 内部存储列名（同口径字段才入映射；
+# fuyao 无对应列的内部列不比较）。金额两侧均为元，无单位换算；
+# disclosure_date 保留辅源披露日（vintage 判定用，非比较字段）。
+_FINANCIAL_STATEMENT_PATHS: dict[str, str] = {
+    "income_statement": "/api/a-share/financials/income-statements",
+    "balance_sheet": "/api/a-share/financials/balance-sheets",
+    "cash_flow": "/api/a-share/financials/cash-flow-statements",
+}
+_FINANCIAL_FIELD_RENAMES: dict[str, dict[str, str]] = {
+    "income_statement": {
+        "operating_income": "revenue",
+        "operating_costs": "operate_cost",
+        "sales_fee": "sale_exp",
+        "manage_fee": "admin_exp",
+        "research_and_development_expenses": "rd_exp",
+        "operating_profit": "operating_profit",
+        "profit_total": "total_profit",
+        "income_tax_expense": "income_tax",
+        "net_profit": "net_profit",
+        "basic_eps": "eps",
+    },
+    "balance_sheet": {
+        "assets_total": "total_assets",
+        "total_current_assets": "current_assets",
+        "cash": "money_cap",
+        "accounts_receivable": "accounts_receivable",
+        "total_debt": "total_liabilities",
+        "holder_equity_total": "net_assets",
+    },
+    "cash_flow": {
+        "act_cash_flow_net": "operating_cash_flow",
+        "invest_cash_flow_net": "investing_cash_flow",
+        "financing_cash_flow_net": "financing_cash_flow",
+    },
+}
+_FINANCIAL_STATEMENT_COLUMNS = (
+    "ticker",
+    "report_date",
+    "disclosure_date",
+    "fiscal_year",
+    "fiscal_period",
+)
+
+# ETF 净值对账帧（#475）：只取单位净值——fuyao adj_nav 是复权净值（官方明示
+# 不等同于累计净值），与 Tushare acc_nav 口径不可等价比较（红线：不混列折算），
+# 因此请求即不带 nav_type=adj。
+_FUND_NAV_COLUMNS = ("ticker", "trade_date", "unit_nav")
 
 _BAR_COLUMNS = (
     "source_ticker",
@@ -399,6 +449,100 @@ class FuyaoSource:
                 }
             )
         return pl.concat(frames)
+
+    def fetch_financial_statements(
+        self,
+        dataset: str,
+        thscodes: list[str],
+        *,
+        period: str = "quarterly",
+        limit: int = 20,
+    ) -> pl.DataFrame:
+        """
+        财务三表对账协议帧（#473）.
+
+        fuyao 财务接口单标的、period=quarterly 覆盖全部季度末报告期（含年报
+        Q4），金额原币元。thscodes 接受裸码（按股票前缀规则补后缀，与身份
+        反解同规则）或完整 thscode。返回 [ticker(thscode), report_date,
+        disclosure_date, fiscal_year, fiscal_period, <内部列名数值字段>]；
+        disclosure_date 为辅源披露日（vintage 判定，非比较字段）。契约违约
+        （非 CNY/缺列）按标的跳过并记录，不中断其他标的。
+        """
+        path = _FINANCIAL_STATEMENT_PATHS[dataset]
+        renames = _FINANCIAL_FIELD_RENAMES[dataset]
+        rows: list[dict[str, Any]] = []
+        for raw_code in thscodes:
+            code = to_thscode(raw_code)
+            try:
+                data = self._client.get(
+                    path,
+                    params={
+                        "thscode": code,
+                        "period": period,
+                        "limit": limit,
+                    },
+                )
+                items: list[dict[str, Any]] = data.get("item") or []
+                self._validate_financial_items(dataset, code, items, renames)
+            except SourceFetchError as error:
+                logger.warning(
+                    "Fuyao financial statement skipped for reconciliation",
+                    event="fuyao_financial_skip",
+                    dataset=dataset,
+                    thscode=code,
+                    reason=str(error)[:200],
+                )
+                continue
+            for item in items:
+                rows.append(
+                    {
+                        "ticker": code,
+                        "report_date": ms_to_date(item["period_end_ms"]),
+                        "disclosure_date": ms_to_date(item["report_date_ms"]),
+                        "fiscal_year": item["fiscal_year"],
+                        "fiscal_period": item["fiscal_period"],
+                        **{
+                            internal: item[fuyao_name]
+                            for fuyao_name, internal in renames.items()
+                        },
+                    }
+                )
+        schema: dict[str, type[pl.DataType]] = {
+            "ticker": pl.String,
+            "report_date": pl.Date,
+            "disclosure_date": pl.Date,
+            "fiscal_year": pl.Int64,
+            "fiscal_period": pl.String,
+            **dict.fromkeys(renames.values(), pl.Float64),
+        }
+        return pl.DataFrame(rows, schema=schema)
+
+    @staticmethod
+    def _validate_financial_items(
+        dataset: str,
+        thscode: str,
+        items: list[dict[str, Any]],
+        renames: dict[str, str],
+    ) -> None:
+        """校验辅源财务行契约（CNY 常量 + 关键列存在），违约拒绝该标的."""
+        required = {"period_end_ms", "report_date_ms", "currency", *renames}
+        for item in items:
+            missing = sorted(required - set(item))
+            if missing:
+                raise SourceFetchError(
+                    source="fuyao",
+                    message=(
+                        f"fuyao {dataset} {thscode} 缺列 {missing}: 契约违约 拒绝"
+                    ),
+                )
+            if item["currency"] != "CNY":
+                raise SourceFetchError(
+                    source="fuyao",
+                    message=(
+                        f"fuyao {dataset} {thscode} currency={item['currency']}: "
+                        "非 CNY 拒绝"
+                    ),
+                )
 
     # ── 快照（展示层，不进管道）──────────────────────────────────
 

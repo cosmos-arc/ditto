@@ -941,13 +941,20 @@ class TestReconcileCommand:
     def test_adj_factor_and_stock_daily_pass_gate(
         self, runner: CliRunner, mocker: MockerFixture
     ) -> None:
-        """门禁仅放行两个数据集; adj_factor 不再被硬拒(#438 解除)."""
+        """门禁仅放行注册数据集; adj_factor 不再被硬拒(#438 解除)."""
         container_factory = mocker.patch(CONTAINER_PATH)
 
         runner.invoke(app, ["ops", "reconcile", "2025-06-25", "--dataset", "foo"])
 
         assert container_factory.assert_not_called() is None
-        for dataset in ("stock_daily", "adj_factor"):
+        datasets = (
+            "stock_daily",
+            "adj_factor",
+            "income_statement",
+            "balance_sheet",
+            "cash_flow",
+        )
+        for dataset in datasets:
             result = runner.invoke(
                 app, ["ops", "reconcile", "2025-06-25", "--dataset", dataset]
             )

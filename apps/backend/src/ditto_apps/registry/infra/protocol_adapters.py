@@ -27,23 +27,29 @@ from ditto_application.processes.experiments.r2_live_gate_evidence import (
 )
 from ditto_application.queries.source import SourceDataPort
 from ditto_data.models.ingestion import IngestionResult
+from ditto_data.quality.golden import GoldenDatasetSpec
 from ditto_data.quality.protocols import (
     ComparisonStoreProtocol,
+    FinancialReconcileContextProtocol,
     InstrumentStoreProtocol,
     SecondaryAdjustmentEventsSourceProtocol,
     SecondaryBarsSourceProtocol,
+    SecondaryFinancialsSourceProtocol,
 )
-from ditto_data.services.deps import MarketReaders
+from ditto_data.services.deps import FundamentalReaders, MarketReaders
 from ditto_data.services.market_service import MarketService
 from ditto_data.services.metadata.instrument import InstrumentService
 from ditto_data.services.metadata_service import MetadataService
 from ditto_data.services.source_accessor import SourceAccessor
 from ditto_data.sources.base import SourceFetchError
 from ditto_data.sources.fuyao.source import FuyaoDailyKDumpFetcher, FuyaoSource
+from ditto_data.storage.base.sqlite_table_reader import SqliteTableReader
 from ditto_data.storage.metadata.instrument import InstrumentReader
 from ditto_data.storage.runtime.quality import ComparisonWriter
 
 __all__ = [
+    "FinancialReconcileContextProtocol",
+    "FundamentalFinancialReconcileContext",
     "FuyaoDailyKDumpFetcher",
     "FuyaoSource",
     "IngestionResult",
@@ -152,6 +158,69 @@ class FuyaoAdjustmentEventsSource:
         return frame.filter(pl.col("trade_date") == target)
 
 
+class FundamentalFinancialReconcileContext:
+    """财务对账主源上下文（#473）：黄金集标的的最新有效 vintage 报表行."""
+
+    def __init__(
+        self,
+        readers: FundamentalReaders,
+        instrument_reader: InstrumentReader,
+        golden: GoldenDatasetSpec | None,
+    ) -> None:
+        self._readers = readers
+        self._instrument_reader = instrument_reader
+        self._golden = golden
+
+    def latest_statements(
+        self, dataset: str, as_of: str, tickers: list[str] | None = None
+    ) -> pl.DataFrame:
+        """黄金集标的 → PIT 最新有效行（黄金集未配置时拒绝，不做全市场展开）."""
+        scope = tickers if tickers is not None else self._golden_tickers()
+        reader = self._reader_for(dataset)
+        rows = [
+            frame
+            for ticker in scope
+            if not (frame := self._statement_frame(reader, ticker, as_of)).is_empty()
+        ]
+        if not rows:
+            return pl.DataFrame()
+        return pl.concat(rows)
+
+    def _golden_tickers(self) -> list[str]:
+        if not self._golden or not self._golden.is_enabled:
+            raise RuntimeError(
+                "financial reconciliation requires the golden dataset "
+                "(config/default/golden_dataset.yml) to scope instruments"
+            )
+        return list(self._golden.get_tickers())
+
+    def _reader_for(self, dataset: str) -> SqliteTableReader:
+        readers = self._readers
+        reader = {
+            "income_statement": readers.income_statement,
+            "balance_sheet": readers.balance_sheet,
+            "cash_flow": readers.cash_flow,
+        }.get(dataset)
+        if reader is None:
+            raise RuntimeError(f"unsupported financial dataset: {dataset}")
+        return reader
+
+    def _statement_frame(
+        self, reader: SqliteTableReader, ticker: str, as_of: str
+    ) -> pl.DataFrame:
+        instrument_ids = self._instrument_reader.map_bare_tickers_to_instrument_ids(
+            [ticker]
+        ).get(ticker, [])
+        frames = [
+            reader.get_range(instrument_id, as_of_date=date.fromisoformat(as_of))
+            for instrument_id in instrument_ids
+        ]
+        frames = [frame for frame in frames if not frame.is_empty()]
+        if not frames:
+            return pl.DataFrame()
+        return pl.concat(frames).with_columns(ticker=pl.lit(ticker, dtype=pl.String))
+
+
 class ProtocolAdapterProvider(Provider):
     """Bridges concrete infrastructure types to Protocol interfaces."""
 
@@ -177,6 +246,33 @@ class ProtocolAdapterProvider(Provider):
     ) -> SecondaryAdjustmentEventsSourceProtocol:
         """adj_factor 对账辅源：fuyao 本地事件 dump（无 dump 显式失败）。"""
         return FuyaoAdjustmentEventsSource(Path(data_root))
+
+    @provide
+    def secondary_financials_source_protocol(
+        self,
+        fuyao_source: FuyaoSource | None,
+    ) -> SecondaryFinancialsSourceProtocol:
+        """财务三表对账辅源：fuyao 财务 REST（#473）。"""
+        if fuyao_source is not None:
+            return fuyao_source
+        raise RuntimeError(
+            "secondary financials source is unconfigured: set FUYAO_API_KEY to "
+            "enable financial reconciliation"
+        )
+
+    @provide
+    def financial_reconcile_context(
+        self,
+        fundamental_readers: FundamentalReaders,
+        instrument_reader: InstrumentReader,
+        golden_dataset: GoldenDatasetSpec | None,
+    ) -> FinancialReconcileContextProtocol:
+        """财务对账主源上下文：黄金集标的的最新有效 vintage 报表行（#473）。"""
+        return FundamentalFinancialReconcileContext(
+            fundamental_readers,
+            instrument_reader,
+            golden_dataset,
+        )
 
     @provide
     def comparison_store_protocol(
