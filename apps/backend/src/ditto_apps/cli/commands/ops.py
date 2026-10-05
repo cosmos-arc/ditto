@@ -188,7 +188,7 @@ def reattest_sparse_pit(
 def reconcile(
     date: str = typer.Argument(..., help="对账交易日 (YYYY-MM-DD)"),
     dataset: str = typer.Option(
-        "stock_daily", "--dataset", help="对账数据集(当前支持 stock_daily)"
+        "stock_daily", "--dataset", help="对账数据集(stock_daily/adj_factor)"
     ),
 ) -> None:
     """跨源对账: 主源存量 vs 辅源 fuyao(instrument_id+trade_date 同口径比较)."""
@@ -196,16 +196,26 @@ def reconcile(
         MarketReaders,
     )
 
-    if dataset != "stock_daily":
+    if dataset not in {"stock_daily", "adj_factor"}:
         typer.secho(f"暂不支持 {dataset} 对账", fg=typer.colors.RED, err=True)
         raise typer.Exit(1)
 
     container: Container = make_app_container()
     try:
         handler = container.get(ReconcileSourcesHandler)
-        stock_bars_reader = container.get(MarketReaders).stock_bars
-        data_root = stock_bars_reader.data_root
-        primary_df = stock_bars_reader.read(start_date=date, end_date=date)
+        if dataset == "adj_factor":
+            # adj_factor 主源：当日因子帧（比例所需回看窗由 handler 上下文提供）
+            from ditto_data.services.market_service import (  # noqa: PLC0415
+                MarketService,
+            )
+
+            market = container.get(MarketService)
+            primary_df = market.get_adj_factors(date, date)
+            data_root = container.get(Path)
+        else:
+            stock_bars_reader = container.get(MarketReaders).stock_bars
+            data_root = stock_bars_reader.data_root
+            primary_df = stock_bars_reader.read(start_date=date, end_date=date)
         if primary_df.is_empty():
             typer.secho(
                 f"主源 {dataset} 在 {date} 无存量数据(先摄取再对账)",
@@ -227,7 +237,8 @@ def reconcile(
             f"辅侧未匹配={result.secondary_unmatched_count} "
             f"主侧重复键={result.primary_duplicate_keys} "
             f"辅侧重复键={result.secondary_duplicate_keys} "
-            f"差异数={result.diff_count}"
+            f"差异数={result.diff_count} "
+            f"事件不可推导={result.secondary_underivable_count}"
         )
         skipped = f" (skipped: {result.skip_reason})" if result.skipped else ""
         comparable = "可比" if result.comparable else "不可比较(零交集)"

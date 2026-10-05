@@ -163,6 +163,8 @@ class ReconciliationResult:
     primary_duplicate_keys: int = 0
     secondary_duplicate_keys: int = 0
     diff_count: int = 0
+    # adj_factor（#438）：事件侧缺前价/缺配股价等不可推导样本数（单列报告）
+    secondary_underivable_count: int = 0
 
     @property
     def has_error(self) -> bool:
@@ -185,6 +187,7 @@ class ReconciliationResult:
             "primary_duplicate_keys": self.primary_duplicate_keys,
             "secondary_duplicate_keys": self.secondary_duplicate_keys,
             "diff_count": self.diff_count,
+            "secondary_underivable_count": self.secondary_underivable_count,
         }
         if self.skipped and self.skip_reason:
             result["skipped"] = self.skip_reason

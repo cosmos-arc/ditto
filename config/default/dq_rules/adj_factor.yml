@@ -62,3 +62,18 @@ statistical:
     name: cross_check_with_price
     reference_dataset: stock_daily
     message: "复权因子与价格数据存在不一致"
+
+  # 跨源对比：主源 Tushare 累积因子 vs 辅源 fuyao 事件流（#438）
+  # 不比较绝对因子（基期可能不同）：两侧各自推导同基准除权比例后按
+  # adjustment_ratio 相对容差比较；缺前价/缺配股价事件单列不可推导，
+  # 零交集 = not_comparable 不算通过。容差覆盖交易所除权参考价 0.01 元
+  # 取整在低价股上的相对误差。
+  - rule: cross_source_compare
+    key_columns: [instrument_id, trade_date]
+    fields: [adjustment_ratio]
+    tolerance_rules:
+      adjustment_ratio:
+        method: relative
+        relative_tol: 0.005
+    message: "与辅源(fuyao)除权比例对比发现差异"
+    enabled: true

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from datetime import date, timedelta
+
 import polars as pl
 from dishka import Provider, Scope, provide
 from ditto_analysis.research.artifact_service import ResearchArtifactService
@@ -13,9 +15,11 @@ from ditto_data.ingestion.quality_record_store import (
 from ditto_data.quality import QualityEngine
 from ditto_data.quality.golden import GoldenDatasetSpec
 from ditto_data.quality.protocols import (
+    AdjFactorReconcileContextProtocol,
     ComparisonStoreProtocol,
     ExDividendInstrumentSourceProtocol,
     InstrumentStoreProtocol,
+    SecondaryAdjustmentEventsSourceProtocol,
     SecondaryBarsSourceProtocol,
     SecondaryIdentityResolverProtocol,
 )
@@ -161,6 +165,45 @@ class _AdjFactorExDividendSource:
         return frozenset(int(v) for v in changed["instrument_id"].to_list())
 
 
+class _MarketServiceAdjFactorReconcileContext:
+    """
+    adj_factor 对账主源上下文（#438）：因子窗口与同基准前收.
+
+    回看窗沿用除权日来源的 40 日约定；窗内无前收/前因子 = 不可推导，
+    由推导函数单列报告，不在此伪造。
+    """
+
+    _LOOKBACK_DAYS = 40
+
+    def __init__(self, market: MarketService) -> None:
+        self._market = market
+
+    def factor_window(self, trade_date: str) -> pl.DataFrame:
+        """主源累积因子回看窗 [instrument_id, trade_date, adj_factor]."""
+        return self._market.get_adj_factors(self._window_start(trade_date), trade_date)
+
+    def previous_closes(self, trade_date: str) -> pl.DataFrame:
+        """主源同基准前收 [instrument_id, prev_close]（目标日前最后一根收盘）."""
+        frame = self._market.get_stock_bars(self._window_start(trade_date), trade_date)
+        schema = {"instrument_id": pl.Int64, "prev_close": pl.Float64}
+        required = {"instrument_id", "trade_date", "close"}
+        if frame.is_empty() or not required.issubset(frame.columns):
+            return pl.DataFrame(schema=schema)
+        if frame["trade_date"].dtype == pl.String:
+            frame = frame.with_columns(pl.col("trade_date").str.to_date())
+        target = date.fromisoformat(trade_date)
+        return (
+            frame.filter(pl.col("trade_date") < target)
+            .sort("trade_date")
+            .group_by("instrument_id")
+            .agg(pl.col("close").last().alias("prev_close"))
+        )
+
+    def _window_start(self, trade_date: str) -> str:
+        target = date.fromisoformat(trade_date)
+        return (target - timedelta(days=self._LOOKBACK_DAYS)).isoformat()
+
+
 class AppCommandProvider(Provider):
     """App Command 层 DI Provider — Command Handler 注册。"""
 
@@ -294,7 +337,15 @@ class AppCommandProvider(Provider):
         return _AdjFactorExDividendSource(market)
 
     @provide
-    def reconcile_sources_handler(
+    def adj_factor_reconcile_context(
+        self,
+        market: MarketService,
+    ) -> AdjFactorReconcileContextProtocol:
+        """adj_factor 对账主源上下文（因子窗口 + 同基准前收，#438）。"""
+        return _MarketServiceAdjFactorReconcileContext(market)
+
+    @provide
+    def reconcile_sources_handler(  # noqa: PLR0913 — dishka 依赖注入聚合端口
         self,
         dq_engine: QualityEngine,
         secondary_source: SecondaryBarsSourceProtocol,
@@ -303,6 +354,8 @@ class AppCommandProvider(Provider):
         secondary_identity_resolver: SecondaryIdentityResolverProtocol,
         ex_dividend_source: ExDividendInstrumentSourceProtocol,
         golden_dataset: GoldenDatasetSpec | None,
+        secondary_events_source: SecondaryAdjustmentEventsSourceProtocol,
+        adj_factor_context: AdjFactorReconcileContextProtocol,
     ) -> ReconcileSourcesHandler:
         """
         数据源对账 Handler（辅源身份反解 + 除权日标记 + 黄金集过滤，#395）。
@@ -310,6 +363,7 @@ class AppCommandProvider(Provider):
         golden_dataset 以必填 Optional 注入：黄金集配置由 GoldenDatasetProvider
         提供（无配置文件时为 None = 不过滤），修复此前默认参数导致的
         生产路径黄金集过滤从未生效的问题。
+        adj_factor 数据集（#438）额外接事件辅源与主源因子上下文。
         """
         return ReconcileSourcesHandler(
             engine=dq_engine,
@@ -319,6 +373,8 @@ class AppCommandProvider(Provider):
             secondary_identity_resolver=secondary_identity_resolver,
             ex_dividend_source=ex_dividend_source,
             golden_dataset=golden_dataset,
+            secondary_events_source=secondary_events_source,
+            adj_factor_context=adj_factor_context,
         )
 
     @provide

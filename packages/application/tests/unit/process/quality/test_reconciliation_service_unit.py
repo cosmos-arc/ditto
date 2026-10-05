@@ -2,7 +2,11 @@
 
 #395 语义：比较键 instrument_id + trade_date；零交集 = 不可比较（不算通过）；
 结果报告两侧数量/匹配/未匹配/重复键/差异数。
+#438 adj_factor：事件流 vs 累积因子的同基准比例，不可推导事件单列。
 """
+
+from datetime import date
+from unittest.mock import MagicMock
 
 import polars as pl
 import pytest
@@ -550,3 +554,226 @@ class TestSendAlerts:
         )
 
         handler._send_alerts(sample_dq_result_with_issues, "20240101", "stock_daily")
+
+
+def _adj_factor_events_df() -> pl.DataFrame:
+    """辅源事件帧（裸码；000001 可推导，600000 缺配股价，510300 缺前价）."""
+    return pl.DataFrame(
+        {
+            "ticker": ["000001", "600000", "510300"],
+            "trade_date": [date(2025, 6, 25)] * 3,
+            "dividend_per_share": [1.0, None, 0.5],
+            "per_share_bonus": [None, None, None],
+            "allotment_ratio": [None, 0.1, None],
+            "allotment_price": [None, None, None],
+        },
+        schema={
+            "ticker": pl.String,
+            "trade_date": pl.Date,
+            "dividend_per_share": pl.Float64,
+            "per_share_bonus": pl.Float64,
+            "allotment_ratio": pl.Float64,
+            "allotment_price": pl.Float64,
+        },
+    )
+
+
+def _adj_factor_factor_window() -> pl.DataFrame:
+    """主源因子窗口：1000001 除权日比例 = 20/19（与事件口径一致）."""
+    return pl.DataFrame(
+        {
+            "instrument_id": [1000001, 1000001],
+            "trade_date": [date(2025, 6, 24), date(2025, 6, 25)],
+            "adj_factor": [10.0, 200.0 / 19.0],
+        },
+        schema={
+            "instrument_id": pl.Int64,
+            "trade_date": pl.Date,
+            "adj_factor": pl.Float64,
+        },
+    )
+
+
+def _adj_factor_prev_closes() -> pl.DataFrame:
+    return pl.DataFrame(
+        {
+            "instrument_id": [1000001, 1000002],
+            "prev_close": [20.0, 10.0],
+        },
+        schema={"instrument_id": pl.Int64, "prev_close": pl.Float64},
+    )
+
+
+def _adj_factor_primary_df() -> pl.DataFrame:
+    return pl.DataFrame(
+        {
+            "instrument_id": [1000001, 1000002, 1000003],
+            "trade_date": [date(2025, 6, 25)] * 3,
+            "adj_factor": [200.0 / 19.0, 1.0, 1.0],
+        },
+        schema={
+            "instrument_id": pl.Int64,
+            "trade_date": pl.Date,
+            "adj_factor": pl.Float64,
+        },
+    )
+
+
+@pytest.mark.unit
+class TestAdjFactorReconciliation:
+    """#438：adj_factor 对账（事件流 vs 累积因子同基准比例）."""
+
+    def _handler(
+        self,
+        mock_quality_engine,
+        mock_comparison_writer,
+        mock_instrument_store,
+        mock_secondary_identity_resolver,
+        events_source,
+        adj_context,
+    ) -> ReconcileSourcesHandler:
+        return ReconcileSourcesHandler(
+            engine=mock_quality_engine,
+            secondary_source=MagicMock(),
+            comparison_store=mock_comparison_writer,
+            instrument_store=mock_instrument_store,
+            secondary_identity_resolver=mock_secondary_identity_resolver,
+            secondary_events_source=events_source,
+            adj_factor_context=adj_context,
+        )
+
+    def _context_mock(self) -> MagicMock:
+        context = MagicMock()
+        context.factor_window.return_value = _adj_factor_factor_window()
+        context.previous_closes.return_value = _adj_factor_prev_closes()
+        return context
+
+    def test_pass_flow_compares_derived_ratios(
+        self,
+        mock_quality_engine,
+        mock_comparison_writer,
+        mock_instrument_store,
+        mock_secondary_identity_resolver,
+        comparable_report,
+    ) -> None:
+        """完整流程：事件反解→两侧推导→engine 按数据集规则比较."""
+        events_source = MagicMock()
+        events_source.fetch_adjustment_events.return_value = _adj_factor_events_df()
+        handler = self._handler(
+            mock_quality_engine,
+            mock_comparison_writer,
+            mock_instrument_store,
+            mock_secondary_identity_resolver,
+            events_source,
+            self._context_mock(),
+        )
+
+        result = handler.handle(
+            ReconcileSourcesCommand(
+                primary_df=_adj_factor_primary_df(),
+                trade_date="2025-06-25",
+                dataset="adj_factor",
+            )
+        )
+
+        assert result.passed is True
+        assert result.comparable is True
+        # 事件侧 3 行全部参与键核算；缺配股价/缺前价 2 行单列不可推导
+        assert result.secondary_underivable_count == 2
+        call = mock_quality_engine.compare_cross_source.call_args
+        assert call.kwargs["dataset"] == "adj_factor"
+        assert "adjustment_ratio" in call.kwargs["primary"].columns
+        assert "adjustment_ratio" in call.kwargs["secondary"].columns
+
+    def test_underivable_events_written_to_comparison_store(
+        self,
+        mock_quality_engine,
+        mock_comparison_writer,
+        mock_instrument_store,
+        mock_secondary_identity_resolver,
+    ) -> None:
+        """不可推导事件落盘单列（field=event_underivable，原因进 message）."""
+        events_source = MagicMock()
+        events_source.fetch_adjustment_events.return_value = _adj_factor_events_df()
+        handler = self._handler(
+            mock_quality_engine,
+            mock_comparison_writer,
+            mock_instrument_store,
+            mock_secondary_identity_resolver,
+            events_source,
+            self._context_mock(),
+        )
+
+        handler.handle(
+            ReconcileSourcesCommand(
+                primary_df=_adj_factor_primary_df(),
+                trade_date="2025-06-25",
+                dataset="adj_factor",
+            )
+        )
+
+        written = mock_comparison_writer.write_comparison.call_args.args[1]
+        underivable = written.filter(pl.col("field") == "event_underivable")
+        assert underivable.height == 2
+        assert set(underivable["rule"].to_list()) == {"cross_source_event_underivable"}
+        messages = " ".join(underivable["message"].to_list())
+        assert "missing_allotment_price" in messages
+        assert "missing_prev_close" in messages
+
+    def test_no_events_not_comparable(
+        self,
+        mock_quality_engine,
+        mock_comparison_writer,
+        mock_instrument_store,
+        mock_secondary_identity_resolver,
+    ) -> None:
+        """零事件 = 零交集：不可比较，不算通过."""
+        events_source = MagicMock()
+        events_source.fetch_adjustment_events.return_value = pl.DataFrame()
+        handler = self._handler(
+            mock_quality_engine,
+            mock_comparison_writer,
+            mock_instrument_store,
+            mock_secondary_identity_resolver,
+            events_source,
+            self._context_mock(),
+        )
+
+        result = handler.handle(
+            ReconcileSourcesCommand(
+                primary_df=_adj_factor_primary_df(),
+                trade_date="2025-06-25",
+                dataset="adj_factor",
+            )
+        )
+
+        assert result.passed is False
+        assert result.comparable is False
+        mock_quality_engine.check_cross_source.assert_not_called()
+
+    def test_missing_dependencies_return_error_result(
+        self,
+        mock_quality_engine,
+        mock_comparison_writer,
+        mock_instrument_store,
+        mock_secondary_identity_resolver,
+    ) -> None:
+        """缺事件辅源/主源上下文：错误结果而非崩溃."""
+        handler = ReconcileSourcesHandler(
+            engine=mock_quality_engine,
+            secondary_source=MagicMock(),
+            comparison_store=mock_comparison_writer,
+            instrument_store=mock_instrument_store,
+            secondary_identity_resolver=mock_secondary_identity_resolver,
+        )
+
+        result = handler.handle(
+            ReconcileSourcesCommand(
+                primary_df=_adj_factor_primary_df(),
+                trade_date="2025-06-25",
+                dataset="adj_factor",
+            )
+        )
+
+        assert result.passed is False
+        assert result.error is not None

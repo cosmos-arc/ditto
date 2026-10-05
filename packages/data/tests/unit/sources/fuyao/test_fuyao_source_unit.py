@@ -118,6 +118,65 @@ def _bar(date_ms: int, close: float) -> dict[str, object]:
     }
 
 
+def _adjustment_dump_rows() -> dict[str, list[object]]:
+    return {
+        "thscode": ["600519.SH", "000001.SZ"],
+        "ticker": ["600519", "000001"],
+        "currency": ["CNY", "CNY"],
+        "ex_date_ms": [
+            date_to_ms(date(2025, 6, 25)),
+            date_to_ms(date(2025, 7, 10)),
+        ],
+        "dividend_per_share": [30.0, 0.1],
+        "per_share_bonus": [0.0, None],
+        "allotment_ratio": [None, None],
+        "allotment_price": [None, None],
+    }
+
+
+@pytest.mark.unit
+class TestFuyaoAdjustmentFactorsFrame:
+    """#438：复权因子事件流 dump → 事件帧（公司行动原始口径）."""
+
+    def test_event_semantics_kept_without_unit_scaling(self, tmp_path: Path) -> None:
+        dump = tmp_path / "adjustment-factors.parquet"
+        pl.DataFrame(_adjustment_dump_rows()).write_parquet(dump)
+
+        frame = FuyaoSource.adjustment_factors_frame(dump)
+
+        assert frame.columns == [
+            "ticker",
+            "trade_date",
+            "dividend_per_share",
+            "per_share_bonus",
+            "allotment_ratio",
+            "allotment_price",
+        ]
+        # 裸码从 thscode 推导，不信任展示列
+        assert frame["ticker"].to_list() == ["600519", "000001"]
+        assert frame["trade_date"].to_list() == [date(2025, 6, 25), date(2025, 7, 10)]
+        # 事件字段原样保留：股/元 → 手/千元换算不适用于公司行动事件
+        assert frame["dividend_per_share"].to_list() == [30.0, 0.1]
+
+    def test_currency_contract_violation_rejected(self, tmp_path: Path) -> None:
+        rows = _adjustment_dump_rows()
+        rows["currency"] = ["CNY", "USD"]
+        dump = tmp_path / "adjustment-factors.parquet"
+        pl.DataFrame(rows).write_parquet(dump)
+
+        with pytest.raises(SourceFetchError, match="currency"):
+            FuyaoSource.adjustment_factors_frame(dump)
+
+    def test_missing_event_column_rejected(self, tmp_path: Path) -> None:
+        rows = _adjustment_dump_rows()
+        del rows["allotment_price"]
+        dump = tmp_path / "adjustment-factors.parquet"
+        pl.DataFrame(rows).write_parquet(dump)
+
+        with pytest.raises(SourceFetchError, match="allotment_price"):
+            FuyaoSource.adjustment_factors_frame(dump)
+
+
 @pytest.mark.unit
 class TestFuyaoRestWindowSharding:
     """#433：大窗口 REST 分片、覆盖校验与合法空区分."""

@@ -12,10 +12,12 @@ import os
 from collections.abc import Callable
 from collections.abc import Mapping as MappingABC
 from contextlib import AbstractContextManager
+from datetime import date
 from importlib import import_module
 from pathlib import Path
 from typing import Protocol, cast
 
+import polars as pl
 from dishka import Provider, Scope, provide
 from ditto_application.processes.experiments.r2_live_gate_evidence import (
     FileR2LiveGateEvidenceReader,
@@ -27,6 +29,7 @@ from ditto_application.queries.source import SourceDataPort
 from ditto_data.quality.protocols import (
     ComparisonStoreProtocol,
     InstrumentStoreProtocol,
+    SecondaryAdjustmentEventsSourceProtocol,
     SecondaryBarsSourceProtocol,
 )
 from ditto_data.services.deps import MarketReaders
@@ -100,6 +103,32 @@ def _ingestion_bundle_factory() -> _IngestionBundleFactory:
     return cast(_IngestionBundleFactory, module.create_ingestion_bundle)
 
 
+class FuyaoAdjustmentEventsSource:
+    """fuyao 复权因子事件辅源（#438）：本地 adjustment-factors dump 最新快照."""
+
+    def __init__(self, dump_dir: Path) -> None:
+        self._dump_dir = dump_dir
+
+    def fetch_adjustment_events(self, trade_date: str) -> pl.DataFrame:
+        """最新 dump → 目标日事件帧 [ticker, trade_date, 分红/送转/配股字段]."""
+        dump = self._latest_dump()
+        if dump is None:
+            raise RuntimeError(
+                "fuyao adjustment-factors dump not found: run 'ditto fuyao "
+                "dump-adjustment-factors' before adj_factor reconciliation"
+            )
+        target = date.fromisoformat(trade_date)
+        frame = FuyaoSource.adjustment_factors_frame(dump)
+        return frame.filter(pl.col("trade_date") == target)
+
+    def _latest_dump(self) -> Path | None:
+        """YYYYMMDD.parquet 文件名字典序 = 时间序，取最新."""
+        if not self._dump_dir.is_dir():
+            return None
+        dumps = sorted(self._dump_dir.glob("*.parquet"))
+        return dumps[-1] if dumps else None
+
+
 class ProtocolAdapterProvider(Provider):
     """Bridges concrete infrastructure types to Protocol interfaces."""
 
@@ -116,6 +145,16 @@ class ProtocolAdapterProvider(Provider):
         raise RuntimeError(
             "secondary bars source is unconfigured: set FUYAO_API_KEY to enable "
             "cross-source reconciliation"
+        )
+
+    @provide
+    def secondary_adjustment_events_source_protocol(
+        self,
+        data_root: Path,
+    ) -> SecondaryAdjustmentEventsSourceProtocol:
+        """adj_factor 对账辅源：fuyao 本地事件 dump（无 dump 显式失败）。"""
+        return FuyaoAdjustmentEventsSource(
+            Path(data_root) / "fuyao" / "dumps" / "adjustment-factors"
         )
 
     @provide

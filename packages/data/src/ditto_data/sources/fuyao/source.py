@@ -47,6 +47,17 @@ _TICKER_SUFFIX = {
     "4": ".BJ",
 }
 
+# 复权因子事件帧（#438 对账辅源）：事件字段保持公司行动原始口径，
+# 不做股/元 → 手/千元的单位换算（量纲规则只适用于行情，不适用于事件）。
+_ADJUSTMENT_EVENT_COLUMNS = (
+    "ticker",
+    "trade_date",
+    "dividend_per_share",
+    "per_share_bonus",
+    "allotment_ratio",
+    "allotment_price",
+)
+
 _BAR_COLUMNS = (
     "source_ticker",
     "trade_date",
@@ -288,6 +299,43 @@ class FuyaoSource:
         )
 
     # ── 对账协议（辅源）──────────────────────────────────────────
+
+    @staticmethod
+    def adjustment_factors_frame(dump_path: Path) -> pl.DataFrame:
+        """
+        复权因子事件流 dump Parquet → 事件帧（#438 adj_factor 对账辅源）.
+
+        fuyao dump 是分红/送转/配股事件流（thscode + ex_date_ms 主键），
+        不是每日累积因子；缺列或 currency 契约违约时拒绝转换。
+        """
+        raw = pl.read_parquet(dump_path)
+        required = {
+            "thscode",
+            "ex_date_ms",
+            "currency",
+            *_ADJUSTMENT_EVENT_COLUMNS[2:],
+        }
+        missing = sorted(required - set(raw.columns))
+        if missing:
+            raise SourceFetchError(
+                source="fuyao",
+                message=(f"adjustment-factors dump 缺列 {missing}: 契约违约 拒绝转换"),
+            )
+        currencies = raw["currency"].unique().to_list()
+        if currencies != ["CNY"]:
+            raise SourceFetchError(
+                source="fuyao",
+                message=(
+                    f"adjustment-factors dump currency 期望常量 CNY, 实际 "
+                    f"{currencies}: 契约违约 拒绝转换"
+                ),
+            )
+        return raw.with_columns(
+            ticker=pl.col("thscode").str.split(".").list.get(0),
+            trade_date=pl.col("ex_date_ms").map_elements(
+                ms_to_date, return_dtype=pl.Date
+            ),
+        ).select(_ADJUSTMENT_EVENT_COLUMNS)
 
     def fetch_stock_daily_bars(
         self,
