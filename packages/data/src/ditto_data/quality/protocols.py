@@ -21,6 +21,7 @@ __all__ = [
     "SecondaryBarsSourceProtocol",
     "SecondaryFinancialsSourceProtocol",
     "SecondaryIdentityResolverProtocol",
+    "SecondaryIndexBarsSourceProtocol",
 ]
 
 
@@ -98,6 +99,21 @@ class SecondaryAdjustmentEventsSourceProtocol(Protocol):
         获取辅源除权事件 [ticker, trade_date, 分红/送转/配股字段].
 
         事件字段保持公司行动原始口径（无单位换算），ticker 为裸码。
+        """
+        ...
+
+
+class SecondaryIndexBarsSourceProtocol(Protocol):
+    """index_daily 对账辅源协议 — 指数日 K 取数（fuyao REST，#474）。"""
+
+    def fetch_index_daily_bars(
+        self, thscodes: list[str], trade_date: str
+    ) -> pl.DataFrame:
+        """
+        获取辅源指数日线 [ticker(完整 thscode), trade_date, OHLC, volume, amount].
+
+        单位已在源侧归一（股/元 → 手/千元）；按标的隔离失败（未知代码/越窗/
+        重复键），失败标的缺席由报告辅侧未匹配呈现。
         """
         ...
 

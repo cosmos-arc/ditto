@@ -207,6 +207,16 @@ def _reconcile_primary(
             typer.secho(f"主源 {dataset} 读取器未配置", fg=typer.colors.RED, err=True)
             raise typer.Exit(1)
         return reader.read(start_date=date, end_date=date), reader.data_root
+    if dataset == "index_daily":
+        readers = container.get(MarketReaders)
+        index_bars_reader = readers.index_bars
+        if index_bars_reader is None:
+            typer.secho(f"主源 {dataset} 读取器未配置", fg=typer.colors.RED, err=True)
+            raise typer.Exit(1)
+        return (
+            index_bars_reader.read(start_date=date, end_date=date),
+            index_bars_reader.data_root,
+        )
     if dataset in {"income_statement", "balance_sheet", "cash_flow"}:
         # 财务主源：黄金集标的最新有效 vintage（辅源无历史 vintage 查询，
         # as-of 取当日与辅源同基线；DATE 参数仅作报告标签）
@@ -231,7 +241,8 @@ def reconcile(
         "stock_daily",
         "--dataset",
         help=(
-            "对账数据集(stock_daily/adj_factor/income_statement/balance_sheet/cash_flow)"
+            "对账数据集(stock_daily/adj_factor/index_daily/"
+            "income_statement/balance_sheet/cash_flow)"
         ),
     ),
 ) -> None:
@@ -239,6 +250,7 @@ def reconcile(
     supported = {
         "stock_daily",
         "adj_factor",
+        "index_daily",
         "income_statement",
         "balance_sheet",
         "cash_flow",
