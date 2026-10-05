@@ -1049,3 +1049,110 @@ class TestFinancialReconciliation:
 
         assert result.passed is False
         assert result.error is not None
+
+
+@pytest.mark.unit
+class TestIndexDailyReconciliation:
+    """#474 指数对账：thscode 身份键 + 通用对账路径."""
+
+    def test_fetches_by_full_thscode(
+        self,
+        mock_quality_engine,
+        mock_comparison_writer,
+        mock_instrument_store,
+        mock_secondary_identity_resolver,
+        sample_dq_result_passed,
+        comparable_report,
+    ) -> None:
+        """辅源取数用 source_ticker 完整 thscode（后缀区分指数/个股）."""
+        index_source = MagicMock()
+        index_source.fetch_index_daily_bars.return_value = pl.DataFrame(
+            {
+                "ticker": ["000001.SH"],
+                "trade_date": [date(2026, 9, 30)],
+                "open": [3839.25],
+                "high": [3851.22],
+                "low": [3833.09],
+                "close": [3842.19],
+                "volume": [414_560_250.0],
+                "amount": [679_398_990.0],
+            }
+        )
+        primary = pl.DataFrame(
+            {
+                "instrument_id": [3000002],
+                "source_ticker": ["000001.SH"],
+                "trade_date": [date(2026, 9, 30)],
+                "open": [3839.2527],
+                "high": [3851.2169],
+                "low": [3833.0863],
+                "close": [3842.1946],
+                "volume": [414_560_247.0],
+                "amount": [679_398_990.0],
+            }
+        )
+        enriched = primary.with_columns(pl.Series("ticker", ["000001"]))
+        mock_instrument_store.enrich_with_ticker.return_value = enriched
+        resolver = MagicMock()
+        resolver.resolve_secondary_ids.return_value = {"000001.SH": 3000002}
+        handler = ReconcileSourcesHandler(
+            engine=mock_quality_engine,
+            secondary_source=MagicMock(),
+            comparison_store=mock_comparison_writer,
+            instrument_store=mock_instrument_store,
+            secondary_identity_resolver=resolver,
+            secondary_index_source=index_source,
+        )
+
+        result = handler.handle(
+            ReconcileSourcesCommand(
+                primary_df=primary,
+                trade_date="2026-09-30",
+                dataset="index_daily",
+            )
+        )
+
+        assert result.passed is True
+        index_source.fetch_index_daily_bars.assert_called_once_with(
+            ["000001.SH"], "2026-09-30"
+        )
+
+    def test_secondary_uncovered_not_comparable(
+        self,
+        mock_quality_engine,
+        mock_comparison_writer,
+        mock_instrument_store,
+        mock_secondary_identity_resolver,
+    ) -> None:
+        """辅源覆盖不足（全部空返回）→ not_comparable 不算通过."""
+        index_source = MagicMock()
+        index_source.fetch_index_daily_bars.return_value = pl.DataFrame()
+        primary = pl.DataFrame(
+            {
+                "instrument_id": [3000002],
+                "source_ticker": ["000001.SH"],
+                "trade_date": [date(2026, 9, 30)],
+            }
+        )
+        mock_instrument_store.enrich_with_ticker.return_value = primary.with_columns(
+            pl.Series("ticker", ["000001"])
+        )
+        handler = ReconcileSourcesHandler(
+            engine=mock_quality_engine,
+            secondary_source=MagicMock(),
+            comparison_store=mock_comparison_writer,
+            instrument_store=mock_instrument_store,
+            secondary_identity_resolver=mock_secondary_identity_resolver,
+            secondary_index_source=index_source,
+        )
+
+        result = handler.handle(
+            ReconcileSourcesCommand(
+                primary_df=primary,
+                trade_date="2018-06-01",
+                dataset="index_daily",
+            )
+        )
+
+        assert result.comparable is False
+        assert result.passed is False

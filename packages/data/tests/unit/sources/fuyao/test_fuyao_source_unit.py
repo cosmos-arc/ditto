@@ -549,6 +549,103 @@ def _source_by_thscode(
     return FuyaoSource(client=client)
 
 
+def _index_item(d: date, close: float = 3842.19) -> dict[str, object]:
+    return {
+        "date_ms": date_to_ms(d),
+        "open_price": close - 3.0,
+        "high_price": close + 9.0,
+        "low_price": close - 9.0,
+        "close_price": close,
+        "volume": 41_456_025_000.0,
+        "turnover": 679_398_990_000.0,
+    }
+
+
+def _source_by_thscode(
+    responses: dict[str, object],
+) -> FuyaoSource:
+    """按 thscode 路由 mock 响应（dict=正常 data；Exception=抛错）。"""
+    client = MagicMock()
+
+    def fake_get(path: str, params: dict[str, object] | None = None):
+        assert params is not None
+        key = str(params.get("thscode", ""))
+        if key not in responses:
+            raise AssertionError(f"unexpected thscode {key} on {path}")
+        value = responses[key]
+        if isinstance(value, Exception):
+            raise value
+        return value
+
+    client.get.side_effect = fake_get
+    return FuyaoSource(client=client)
+
+
+@pytest.mark.unit
+class TestFuyaoIndexBarsReconciliationFrame:
+    """#474 指数对账帧：单位归一 + 越窗/重复键/未知代码按标的隔离失败."""
+
+    def test_normalizes_units_and_keeps_full_thscode(self) -> None:
+        d = date(2026, 9, 30)
+        source = _source_by_thscode({"000001.SH": {"item": [_index_item(d)]}})
+
+        frame = source.fetch_index_daily_bars(["000001.SH"], "2026-09-30")
+
+        assert frame.height == 1
+        assert frame["ticker"].to_list() == ["000001.SH"]
+        assert frame["trade_date"].to_list() == [d]
+        # 股→手(÷100)、元→千元(÷1000)，与 Tushare index_daily 口径对齐
+        assert frame["close"].to_list() == [3842.19]
+        assert frame["volume"].to_list() == [414_560_250.0]
+        assert frame["amount"].to_list() == [679_398_990.0]
+
+    def test_unknown_thscode_skipped_not_fatal(self) -> None:
+        """申万 .SI 等未收录代码（code=1002）按标的跳过，其余标的继续."""
+        d = date(2026, 9, 30)
+        source = _source_by_thscode(
+            {
+                "801951.SI": SourceFetchError(
+                    source="fuyao", message="code=1002 Unknown thscode"
+                ),
+                "000300.SH": {"item": [_index_item(d, close=4357.62)]},
+            }
+        )
+
+        frame = source.fetch_index_daily_bars(["801951.SI", "000300.SH"], "2026-09-30")
+
+        assert frame["ticker"].to_list() == ["000300.SH"]
+
+    def test_out_of_window_bar_skipped(self) -> None:
+        """最新边缘返回窗口外最近一根（实测行为）→ 拒收该标的，不缩窗伪造."""
+        source = _source_by_thscode(
+            {"000001.SH": {"item": [_index_item(date(2026, 9, 30))]}}
+        )
+
+        frame = source.fetch_index_daily_bars(["000001.SH"], "2026-10-03")
+
+        assert frame.height == 0
+
+    def test_duplicate_trade_date_skipped(self) -> None:
+        d = date(2026, 9, 30)
+        source = _source_by_thscode(
+            {"000001.SH": {"item": [_index_item(d), _index_item(d)]}}
+        )
+
+        frame = source.fetch_index_daily_bars(["000001.SH"], "2026-09-30")
+
+        assert frame.height == 0
+
+    def test_empty_items_returns_typed_empty_frame(self) -> None:
+        """空返回（覆盖不足）= 有类型空帧，零交集由上层判 not_comparable."""
+        source = _source_by_thscode({"000001.SH": {"item": []}})
+
+        frame = source.fetch_index_daily_bars(["000001.SH"], "2018-06-01")
+
+        assert frame.height == 0
+        assert frame["ticker"].dtype == pl.String
+        assert frame["trade_date"].dtype == pl.Date
+
+
 def _income_item(
     period_end: date, report_date: date, **overrides: object
 ) -> dict[str, object]:

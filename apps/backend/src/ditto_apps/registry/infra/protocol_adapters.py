@@ -35,6 +35,7 @@ from ditto_data.quality.protocols import (
     SecondaryAdjustmentEventsSourceProtocol,
     SecondaryBarsSourceProtocol,
     SecondaryFinancialsSourceProtocol,
+    SecondaryIndexBarsSourceProtocol,
 )
 from ditto_data.services.deps import FundamentalReaders, MarketReaders
 from ditto_data.services.market_service import MarketService
@@ -258,6 +259,19 @@ class ProtocolAdapterProvider(Provider):
         raise RuntimeError(
             "secondary financials source is unconfigured: set FUYAO_API_KEY to "
             "enable financial reconciliation"
+        )
+
+    @provide
+    def secondary_index_bars_source_protocol(
+        self,
+        fuyao_source: FuyaoSource | None,
+    ) -> SecondaryIndexBarsSourceProtocol:
+        """index_daily 对账辅源：fuyao 指数历史 REST（#474）。"""
+        if fuyao_source is not None:
+            return fuyao_source
+        raise RuntimeError(
+            "secondary index source is unconfigured: set FUYAO_API_KEY to enable "
+            "index_daily reconciliation"
         )
 
     @provide

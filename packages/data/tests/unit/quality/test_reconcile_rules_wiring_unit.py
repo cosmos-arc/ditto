@@ -1,4 +1,4 @@
-"""#473：财务三表跨源对账规则接线 —— 注册 yml 驱动真实 engine 语义.
+"""#473-#474：跨源对账规则接线 —— 注册 yml 驱动真实 engine 语义.
 
 验证 config/default/dq_rules/{income_statement,balance_sheet,cash_flow}.yml
 注册的 cross_source_compare 规则能被 QualityEngine 消费：财务相对容差 /
@@ -35,6 +35,64 @@ def _engine(dataset: str) -> QualityEngine:
     )
     spec = DQSpec(datasets={data["dataset"]: DatasetRules(**data)})
     return QualityEngine(config=spec)
+
+
+def _index_frame(rows: list[tuple[int, float, float]]) -> pl.DataFrame:
+    return pl.DataFrame(
+        {
+            "instrument_id": [r[0] for r in rows],
+            "trade_date": [_D] * len(rows),
+            "close": [r[1] for r in rows],
+            "volume": [r[2] for r in rows],
+        },
+        schema={
+            "instrument_id": pl.Int64,
+            "trade_date": pl.Date,
+            "close": pl.Float64,
+            "volume": pl.Float64,
+        },
+    )
+
+
+@pytest.mark.unit
+class TestIndexDailyRuleWiring:
+    def test_two_decimal_rounding_within_tolerance(self) -> None:
+        """fuyao 2 位小数舍入（3839.2527→3839.25）容差内 → 匹配无差异."""
+        primary = _index_frame([(3000002, 3839.2527, 414_560_247.0)])
+        secondary = _index_frame([(3000002, 3839.25, 414_560_250.0)])
+
+        comparison = _engine("index_daily").compare_cross_source(
+            primary=primary, secondary=secondary, dataset="index_daily"
+        )
+
+        assert comparison.comparable is True
+        assert comparison.matched_count == 1
+        assert comparison.diff_count == 0
+
+    def test_material_price_gap_flags_difference(self) -> None:
+        primary = _index_frame([(3000002, 3839.2527, 414_560_247.0)])
+        secondary = _index_frame([(3000002, 3939.25, 414_560_247.0)])
+
+        result = _engine("index_daily").check_cross_source(
+            primary=primary, secondary=secondary, dataset="index_daily"
+        )
+
+        assert len(result.issues) == 1
+        sample = result.issues[0].sample_data[0]
+        assert sample["field"] == "close"
+        assert sample["primary_value"] == pytest.approx(3839.2527)
+        assert sample["secondary_value"] == pytest.approx(3939.25)
+
+    def test_volume_relative_tolerance(self) -> None:
+        """量额走相对容差 0.1%：0.5% 偏差 → 差异."""
+        primary = _index_frame([(3000002, 3839.25, 100.0)])
+        secondary = _index_frame([(3000002, 3839.25, 100.5)])
+
+        result = _engine("index_daily").check_cross_source(
+            primary=primary, secondary=secondary, dataset="index_daily"
+        )
+
+        assert any(s["field"] == "volume" for i in result.issues for s in i.sample_data)
 
 
 def _income_frame(rows: list[tuple[int, float, float]]) -> pl.DataFrame:

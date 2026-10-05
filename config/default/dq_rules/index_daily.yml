@@ -61,3 +61,33 @@ statistical:
     expected_dates: "trade_calendar"
     lookback_days: 5
     message: "最近 5 个交易日存在缺失数据"
+
+  # 跨源对比：主源 Tushare 指数日 K vs 辅源 fuyao 指数历史（#474）。
+  # OHLC 容差 0.006 = fuyao 指数价格 2 位小数舍入（实测 2026-09-30
+  # 000001.SH：fuyao 3839.25 vs Tushare 3839.2527）+ 主源 4 位小数自身
+  # 舍入余量；量/额相对 0.1% 沿 stock_daily 注册值。fuyao 股/元已在
+  # 源侧归一为手/千元（实测 ÷100/÷1000 对齐 Tushare）。
+  - rule: cross_source_compare
+    key_columns: [instrument_id, trade_date]
+    fields: [open, high, low, close, volume, amount]
+    tolerance_rules:
+      open:
+        method: tick_aligned
+        tick_size: 0.006
+      high:
+        method: tick_aligned
+        tick_size: 0.006
+      low:
+        method: tick_aligned
+        tick_size: 0.006
+      close:
+        method: tick_aligned
+        tick_size: 0.006
+      volume:
+        method: relative
+        relative_tol: 0.001
+      amount:
+        method: relative
+        relative_tol: 0.001
+    message: "与辅源(fuyao)指数日K对比发现差异"
+    enabled: true
