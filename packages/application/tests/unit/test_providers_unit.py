@@ -175,6 +175,8 @@ class _TestConfigProvider(Provider):
 
 
 def _sources_provider() -> Provider:
+    from ditto_data.sources.sina.source import SinaSource
+
     class SourcesProvider(Provider):
         scope = Scope.APP
 
@@ -185,6 +187,10 @@ def _sources_provider() -> Provider:
         @provide
         def exchange_transformers(self) -> ExchangeTransformers:
             return ExchangeTransformers(tushare=MagicMock())
+
+        @provide
+        def sina_source(self) -> SinaSource | None:
+            return None  # #436：新浪源在集成容器里以关闭形态注入
 
     return SourcesProvider()
 

@@ -5,6 +5,8 @@
 数据源分配：
 - FRED: WTI 原油、布伦特原油、VIX
 - Tushare: 黄金、白银（FXCM XAU/XAG bid，见 metal adapter 身份说明）
+- Sina: 外盘连续期货参考（CL/GC/SI 小白名单，#436；免费无 SLA，
+  失败按同一完整性合同显式报错，不静默）
 
 完整性合同（#432）：复合源的任一**已配置**腿失败时整体抛错（分区标记
 FAIL 而非 COMPLETE），不允许"只剩金银/只剩油"的批次被报完整；跨市场
@@ -17,7 +19,11 @@ from __future__ import annotations
 from typing import Protocol
 
 import polars as pl
-from ditto_data.models import METAL_CODE_ALIASES, VIX_CODE_TO_INSTRUMENT_ID
+from ditto_data.models import (
+    METAL_CODE_ALIASES,
+    SINA_FOREIGN_FUTURES,
+    VIX_CODE_TO_INSTRUMENT_ID,
+)
 from ditto_platform.foundation import logger
 
 
@@ -51,14 +57,16 @@ def fetch_commodity_daily(
     *,
     primary_source: _MetalSource,
     fred_source: CommoditySource | None = None,
+    sina_source: CommoditySource | None = None,
 ) -> pl.DataFrame:
     """
-    获取商品数据（原油、贵金属、VIX）并合并.
+    获取商品数据（原油、贵金属、VIX、外盘连续参考）并合并.
 
     Args:
         trade_date: 交易日期 (YYYY-MM-DD).
         primary_source: 主数据源（贵金属）.
         fred_source: FRED 数据源（原油/VIX），可选.
+        sina_source: 新浪外盘连续期货源，可选（#436）.
 
     Returns:
         合并后的商品数据 DataFrame.
@@ -72,6 +80,7 @@ def fetch_commodity_daily(
         trade_date,
         primary_source=primary_source,
         fred_source=fred_source,
+        sina_source=sina_source,
     )
 
 
@@ -81,6 +90,7 @@ def fetch_commodity_range(
     *,
     primary_source: _MetalSource,
     fred_source: CommoditySource | None = None,
+    sina_source: CommoditySource | None = None,
 ) -> pl.DataFrame:
     """
     Fetch commodity observations for one explicit provider interval.
@@ -114,6 +124,22 @@ def fetch_commodity_range(
             "FRED source not configured, skipping oil/VIX data",
             event="fred_not_configured",
         )
+
+    if sina_source is not None:
+        # 不吞异常：新浪腿失败时整体失败（免费无 SLA，故障必须显式报告，
+        # 不得静默降级；#436）。端点无窗口参数，源侧全量返回后本地过滤。
+        sina_df = sina_source.fetch_commodities(
+            codes=list(SINA_FOREIGN_FUTURES),
+            start_date=start_date,
+            end_date=end_date,
+        )
+        logger.info(
+            "Sina commodity fetch complete",
+            event="sina_commodity_fetch_complete",
+            rows=sina_df.height,
+        )
+        if not sina_df.is_empty():
+            results.append(sina_df)
 
     metal_codes = list(dict.fromkeys(METAL_CODE_ALIASES.values()))
 

@@ -17,6 +17,7 @@ from ditto_data.models.source_codes import (
     FX_CODE_TO_INSTRUMENT_ID,
     GLOBAL_INDEX_CODES,
     METAL_CODE_ALIASES,
+    SINA_FOREIGN_FUTURES,
     VIX_CODE_TO_INSTRUMENT_ID,
 )
 
@@ -25,6 +26,7 @@ __all__ = [
     "FX_CODE_TO_INSTRUMENT_ID",
     "GLOBAL_INDEX_CODES",
     "METAL_CODE_ALIASES",
+    "SINA_FOREIGN_FUTURES",
     "VIX_CODE_TO_INSTRUMENT_ID",
     "Dataset",
     "DateScheduleType",

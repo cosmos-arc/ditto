@@ -226,3 +226,26 @@ NDX；IXIC 是纳斯达克综合指数，不能替代纳斯达克 100（跨境�
   缺失保留 null 不补零。
 - 摄取走既有 `global_index_daily` 日更路由（SOURCE_DEFINED），
   单码长历史由 client 按页宽 4000 自动翻页。
+
+## 11. 新浪外盘连续期货参考（#436）
+
+免费公开无 key 源（`GlobalFuturesService.getGlobalFuturesDailyKLine`，
+JSONP），默认启用（`SINA_ENABLED=false` 可关）。作为商品复合源第三条腿
+进入 `commodity_daily`（FRED 油/VIX + Tushare 金银 + Sina 外盘连续），
+失败按 #432 完整性合同整体报错，不静默降级。
+
+- 品种小白名单 `ditto_data.models.SINA_FOREIGN_FUTURES`：CL
+  (5,000,005, 美元/桶)、GC (5,000,006, 美元/盎司)、SI (5,000,007,
+  美元/盎司)。**ZSD 身份未核实**（2026-10-05 实测数值 3706 与已知金属
+  品种不符且源无名称字段），不入表；核实后逐品种登记再扩。
+- 连续参考身份：换月规则未知，不与具体可交易合约混身份（Tushare
+  fut_daily 是合约日线，两者身份不同）；展示-only，不进入策略/回测/
+  Paper/Agent 决策输入。
+- 占位零语义：CL/GC 的 volume/position/settlement 恒为 0、ZSD 缺
+  settlement——不证明真实成交/持仓/结算，一律不入库，仅存真实 OHLC。
+- 端点无窗口参数：源侧返回全量当前视图后本地过滤；实测历史起点恰为
+  探测日 30/10 年前（CL 1996-10-07、GC/SI 2016-10-05），疑似滚动窗口，
+  回填深度以逐日摄取为准。trade_date_utc 为纽约午夜占位，真实收盘
+  时刻未验证。
+- 2026-10-05 LIVE：窄窗口 6 交易日×3 品种=18 行写入读回一致；
+  重复写 KEEP_LAST updated=18。
