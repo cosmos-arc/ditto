@@ -396,3 +396,134 @@ class TestFuyaoSourceBars:
         assert frame.filter(pl.col("source_ticker") == "000001.SZ")[
             "pre_close"
         ].to_list() == [None]
+
+
+def _daily_k_rows() -> dict[str, list[object]]:
+    return {
+        "thscode": ["600519.SH", "600519.SH", "000001.SZ"],
+        "currency": ["CNY"] * 3,
+        "interval": ["1d"] * 3,
+        "adjusted": ["none"] * 3,
+        "date_ms": [
+            date_to_ms(date(2025, 8, 18)),
+            date_to_ms(date(2025, 8, 19)),
+            date_to_ms(date(2025, 8, 19)),
+        ],
+        "open_price": [10.0, 10.5, 12.0],
+        "high_price": [11.0, 11.5, 13.0],
+        "low_price": [9.5, 10.0, 11.5],
+        "close_price": [10.5, 11.0, 12.5],
+        "volume": [100.0, 200.0, 300.0],
+        "turnover": [1050.0, 2200.0, 3750.0],
+    }
+
+
+def _write_dump(tmp_path: Path, rows: dict[str, list[object]]) -> Path:
+    dump = tmp_path / "daily-k.parquet"
+    pl.DataFrame(rows).write_parquet(dump)
+    return dump
+
+
+@pytest.mark.unit
+class TestDailyKFrameConstantValidation:
+    """#439：常量列先验证再删列，不凭注释保证口径."""
+
+    def test_bad_currency_rejected(self, tmp_path: Path) -> None:
+        rows = _daily_k_rows()
+        rows["currency"] = ["CNY", "USD", "CNY"]
+        dump = _write_dump(tmp_path, rows)
+
+        with pytest.raises(SourceFetchError, match="currency"):
+            FuyaoSource.daily_k_frame(dump)
+
+    def test_forward_adjusted_rejected(self, tmp_path: Path) -> None:
+        # ETF 红线同源：复权口径 dump 不进原始价管道
+        rows = _daily_k_rows()
+        rows["adjusted"] = ["forward"] * 3
+        dump = _write_dump(tmp_path, rows)
+
+        with pytest.raises(SourceFetchError, match="adjusted"):
+            FuyaoSource.daily_k_frame(dump)
+
+    def test_missing_constant_column_rejected(self, tmp_path: Path) -> None:
+        rows = _daily_k_rows()
+        del rows["interval"]
+        dump = _write_dump(tmp_path, rows)
+
+        with pytest.raises(SourceFetchError, match="interval"):
+            FuyaoSource.daily_k_frame(dump)
+
+
+@pytest.mark.unit
+class TestFuyaoDailyKDumpFetcher:
+    """#439：daily-k 本地 dump 回填 fetcher."""
+
+    def test_fetch_filters_date_and_reports_coverage(self, tmp_path: Path) -> None:
+        from ditto_data.sources.fuyao.source import FuyaoDailyKDumpFetcher
+
+        fetcher = FuyaoDailyKDumpFetcher(_write_dump(tmp_path, _daily_k_rows()))
+
+        assert fetcher.coverage == (date(2025, 8, 18), date(2025, 8, 19))
+        day = fetcher.fetch_stock_daily(trade_date="2025-08-19")
+        assert sorted(day["source_ticker"].to_list()) == [
+            "000001.SZ",
+            "600519.SH",
+        ]
+
+    def test_beijing_exchange_ticker_roundtrip(self, tmp_path: Path) -> None:
+        """北交所代码（8/4 前缀）在 dump 取数与身份后缀推导同构."""
+        from ditto_data.sources.fuyao.source import FuyaoDailyKDumpFetcher
+
+        rows = _daily_k_rows()
+        rows["thscode"] = rows["thscode"] + ["830799.BJ"]
+        for key in ("currency", "interval", "adjusted"):
+            rows[key] = rows[key] + [rows[key][0]]
+        rows["date_ms"] = rows["date_ms"] + [date_to_ms(date(2025, 8, 19))]
+        for key in (
+            "open_price",
+            "high_price",
+            "low_price",
+            "close_price",
+            "volume",
+            "turnover",
+        ):
+            rows[key] = rows[key] + [rows[key][0]]
+        fetcher = FuyaoDailyKDumpFetcher(_write_dump(tmp_path, rows))
+
+        day = fetcher.fetch_stock_daily(trade_date="2025-08-19")
+
+        assert "830799.BJ" in day["source_ticker"].to_list()
+        assert _to_thscode("830799") == "830799.BJ"
+
+    def test_fetch_out_of_coverage_returns_typed_empty(self, tmp_path: Path) -> None:
+        from ditto_data.sources.fuyao.source import FuyaoDailyKDumpFetcher
+
+        fetcher = FuyaoDailyKDumpFetcher(_write_dump(tmp_path, _daily_k_rows()))
+
+        empty = fetcher.fetch_stock_daily(trade_date="2030-01-01")
+
+        assert empty.is_empty()
+        assert "knowledge_date" in empty.columns
+
+    def test_duplicate_primary_keys_reject_backfill(self, tmp_path: Path) -> None:
+        from ditto_data.sources.fuyao.source import FuyaoDailyKDumpFetcher
+
+        rows = _daily_k_rows()
+        dup_ms = date_to_ms(date(2025, 8, 19))
+        for key in rows:
+            rows[key] = rows[key] + [rows[key][1]]  # 复制 600519 8-19 行
+        rows["date_ms"][-1] = dup_ms
+        dump = _write_dump(tmp_path, rows)
+
+        with pytest.raises(SourceFetchError, match="重复"):
+            FuyaoDailyKDumpFetcher(dump)
+
+    def test_non_date_mode_rejected(self, tmp_path: Path) -> None:
+        from ditto_data.sources.fuyao.source import FuyaoDailyKDumpFetcher
+
+        fetcher = FuyaoDailyKDumpFetcher(_write_dump(tmp_path, _daily_k_rows()))
+
+        with pytest.raises(SourceFetchError, match="单日"):
+            fetcher.fetch_stock_daily(
+                source_ticker="600519", start_date="2025-08-18", end_date="2025-08-19"
+            )

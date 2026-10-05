@@ -2,6 +2,7 @@
 
 from collections.abc import Generator
 from contextlib import contextmanager
+from typing import cast
 
 from ditto_application.catalog_freshness import PersistedIngestionEvidenceVerifier
 from ditto_application.commands.quality_check import CheckDataQualityHandler
@@ -37,15 +38,44 @@ from ditto_data.services.market_write_service import MarketWriteService
 from ditto_data.services.metadata_service import MetadataService
 from ditto_data.services.source_accessor import SourceAccessor
 from ditto_data.sources.exchange_transformers import ExchangeTransformers
+from ditto_data.sources.protocols import MarketFetcher
 from ditto_data.sources.registry import SourceRegistry
 
 from ditto_apps.registry.container import make_app_container
 from ditto_apps.registry.contexts.bundle import IngestionBundle
 
 
+class _MarketFetcherOverrideRegistry:
+    """
+    组合根单源 MarketFetcher 覆盖（#439 手动回填专用）.
+
+    只覆盖 ``(source, MarketFetcher)`` 一个绑定，其余查询透传底座；
+    不参与 source=auto 选源，仅由显式 ``market_fetcher_override`` 注入。
+    """
+
+    def __init__(
+        self,
+        base: SourceRegistry,
+        source_name: str,
+        fetcher: MarketFetcher,
+    ) -> None:
+        self._base = base
+        self._source_name = source_name
+        self._fetcher = fetcher
+
+    def get[FetcherT](self, name: str, protocol: type[FetcherT]) -> FetcherT:
+        if name == self._source_name and protocol is MarketFetcher:
+            # 协议子集实现（与 FuyaoSource 注册同口径），不支持的方法
+            # 由数据集白名单前置挡住或以取数错误暴露
+            return cast("FetcherT", self._fetcher)
+        return self._base.get(name, protocol)
+
+
 @contextmanager
 def create_ingestion_bundle(
     source: str = "tushare",
+    *,
+    market_fetcher_override: MarketFetcher | None = None,
 ) -> Generator[IngestionBundle]:
     """
     创建摄入上下文组合包（单容器）.
@@ -58,6 +88,8 @@ def create_ingestion_bundle(
 
     Args:
         source: 数据源名称。
+        market_fetcher_override: 显式覆盖 (source, MarketFetcher) 绑定
+            （#439 fuyao dump 手动回填；None = 使用容器注册的真实源）.
 
     Yields:
         IngestionBundle: 包含协调器、管理器和查询 facade
@@ -78,7 +110,13 @@ def create_ingestion_bundle(
         capital_store = container.get(CapitalStore)
         macro_service = container.get(MacroService)
         source_accessor = container.get(SourceAccessor)
-        source_registry = container.get(SourceRegistry)
+        source_registry: SourceRegistry | _MarketFetcherOverrideRegistry = (
+            container.get(SourceRegistry)
+        )
+        if market_fetcher_override is not None:
+            source_registry = _MarketFetcherOverrideRegistry(
+                source_registry, source, market_fetcher_override
+            )
         ingestion_log_store = container.get(IngestionLogStore)
         ingestion_cursor_store = container.get(IngestionCursorStore)
         exchange_transformers = container.get(ExchangeTransformers)
