@@ -203,3 +203,86 @@ def test_cli_verify_exit_code(tmp_path: Path, capsys: pytest.CaptureFixture) -> 
     assert main(["verify", "--data-root", str(root)]) == 1
     captured = capsys.readouterr()
     assert "FAIL" in captured.out
+
+
+@pytest.mark.parametrize(
+    "damage",
+    [
+        "amount",
+        "missing_entry",
+        "duplicate",
+        "traversal",
+        "schema",
+        "missing_file",
+        "symlink",
+    ],
+)
+def test_restore_preflight_rejects_damaged_backup_without_writing_target(
+    tmp_path: Path, damage: str
+) -> None:
+    import orjson
+
+    source, backup, target = (
+        tmp_path / name for name in ("source", "backup", "target")
+    )
+    _seed_non_empty_root(source)
+    manifest = backup_workstation_state(data_root=source, backup_dir=backup)
+    database = backup / "trading/trading.sqlite"
+    if damage == "amount":
+        with sqlite3.connect(database) as conn:
+            conn.execute("UPDATE account_journal_events SET amount = 1")
+            assert conn.execute("PRAGMA integrity_check").fetchone()[0] == "ok"
+    elif damage == "missing_entry":
+        manifest["entries"] = manifest["entries"][1:]
+    elif damage == "duplicate":
+        manifest["entries"].append(manifest["entries"][0])
+    elif damage == "traversal":
+        manifest["entries"][0]["path"] = "../source/metadata/metadata.sqlite"
+    elif damage == "schema":
+        manifest["schema"] = "wrong"
+    elif damage == "missing_file":
+        database.unlink()
+    else:
+        database.unlink()
+        database.symlink_to(source / "trading/trading.sqlite")
+    (backup / "manifest.json").write_bytes(orjson.dumps(manifest))
+    with pytest.raises(RecipeError):
+        restore_workstation_state(backup_dir=backup, data_root=target)
+    assert not target.exists()
+    with sqlite3.connect(source / "trading/trading.sqlite") as conn:
+        assert (
+            conn.execute("SELECT amount FROM account_journal_events").fetchone()[0]
+            == 10000
+        )
+
+
+def test_verify_detects_restored_business_fact_drift(tmp_path: Path) -> None:
+    source, backup, target = (
+        tmp_path / name for name in ("source", "backup", "target")
+    )
+    _seed_non_empty_root(source)
+    backup_workstation_state(data_root=source, backup_dir=backup)
+    restore_workstation_state(backup_dir=backup, data_root=target)
+    for relative, query, expected in (
+        (
+            "trading/trading.sqlite",
+            "SELECT event_id, amount FROM account_journal_events",
+            ("evt-001", 10000.0),
+        ),
+        (
+            "metadata/metadata.sqlite",
+            "SELECT event_id, strategy_id FROM strategy_activation_event",
+            ("evt-1", "strat-active"),
+        ),
+        (
+            "research/research.sqlite",
+            "SELECT * FROM holdout_claim",
+            ("claim-1", "2026-10-01"),
+        ),
+        ("agent/agent.sqlite", "SELECT * FROM agent_sessions", ("sess-1", 1)),
+    ):
+        with sqlite3.connect(target / relative) as conn:
+            assert conn.execute(query).fetchone() == expected
+    with sqlite3.connect(target / "trading/trading.sqlite") as conn:
+        conn.execute("UPDATE account_journal_events SET amount = 1")
+    assert not verify_workstation_state(data_root=target)["passed"]

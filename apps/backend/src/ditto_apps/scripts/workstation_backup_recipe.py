@@ -19,6 +19,7 @@
 from __future__ import annotations
 
 import argparse
+import re
 import sqlite3
 import sys
 from pathlib import Path
@@ -28,6 +29,7 @@ import orjson
 from ditto_platform.foundation.storage.payload_backup import (
     PayloadBackupError,
     backup_payload_tree,
+    inspect_payload_tree,
     restore_payload_tree,
 )
 from ditto_platform.foundation.storage.sqlite_backup import (
@@ -127,6 +129,7 @@ def backup_workstation_state(
                     "path": relative,
                     "sha256": report.sha256,
                     "size_bytes": report.size_bytes,
+                    "logical_sha256": report.logical_sha256,
                     "integrity_check": report.integrity_check,
                 }
             )
@@ -172,10 +175,9 @@ def restore_workstation_state(
     manifest_path = backup_dir / "manifest.json"
     if not manifest_path.is_file():
         raise RecipeError(f"manifest missing: {manifest_path}")
-    manifest = orjson.loads(manifest_path.read_bytes())
-    entries = manifest.get("entries")
-    if not isinstance(entries, list):
-        raise RecipeError("manifest has no entries")
+    manifest = _read_manifest(manifest_path)
+    entries = manifest["entries"]
+    _preflight(backup_dir, entries)
     if data_root.exists() and any(data_root.iterdir()):
         raise RecipeError(
             f"restore target must be empty: {data_root} "
@@ -191,6 +193,8 @@ def restore_workstation_state(
             if not source.exists():
                 raise RecipeError(f"required backup missing: {source}")
             report = restore_database(source, data_root / relative)
+            if report.logical_sha256 != entry["logical_sha256"]:
+                raise RecipeError(f"restored business facts mismatch: {relative}")
             restored.append(
                 {
                     "path": relative,
@@ -212,7 +216,83 @@ def restore_workstation_state(
             restored.append({"path": relative, "restored": True})
         else:
             raise RecipeError(f"unknown manifest entry kind: {entry.get('kind')!r}")
+    (data_root / "restore-manifest.json").write_bytes(orjson.dumps(manifest))
     return {"restored": restored}
+
+
+def _read_manifest(path: Path) -> dict[str, Any]:
+    try:
+        manifest = orjson.loads(path.read_bytes())
+    except (OSError, orjson.JSONDecodeError) as exc:
+        raise RecipeError(f"invalid manifest: {path}") from exc
+    if (
+        not isinstance(manifest, dict)
+        or manifest.get("schema") != "ditto.workstation-backup-recipe.v1"
+    ):
+        raise RecipeError("unsupported backup manifest schema")
+    entries = manifest.get("entries")
+    if not isinstance(entries, list):
+        raise RecipeError("manifest has no entries")
+    expected = {
+        **dict.fromkeys(RECIPE_DATABASES, "database"),
+        **dict.fromkeys(OPTIONAL_TREES, "optional_tree"),
+    }
+    seen: set[str] = set()
+    for entry in entries:
+        if not isinstance(entry, dict):
+            raise RecipeError("malformed manifest entry")
+        relative = entry.get("path")
+        if (
+            not isinstance(relative, str)
+            or relative not in expected
+            or relative in seen
+        ):
+            raise RecipeError(f"invalid or duplicate manifest path: {relative!r}")
+        if entry.get("kind") != expected[relative]:
+            raise RecipeError(f"incorrect manifest kind: {relative}")
+        seen.add(relative)
+        _validate_entry_identity(entry, relative)
+    if not set(RECIPE_DATABASES).issubset(seen):
+        raise RecipeError("required database manifest entry missing")
+    return manifest
+
+
+def _validate_entry_identity(entry: dict[str, Any], relative: str) -> None:
+    """Require complete typed identities for each retained object."""
+    keys = ("sha256", "logical_sha256")
+    if entry["kind"] == "optional_tree":
+        if type(entry.get("present")) is not bool:
+            raise RecipeError(f"invalid optional presence: {relative}")
+        keys = ("sha256",) if entry["present"] else ()
+    if any(
+        not re.fullmatch(r"sha256:[0-9a-f]{64}", str(entry.get(key))) for key in keys
+    ):
+        raise RecipeError(f"missing or invalid content identity: {relative}")
+
+
+def _preflight(backup_dir: Path, entries: list[dict[str, Any]]) -> None:
+    """Validate every required object before creating any restore target."""
+    for entry in entries:
+        relative = entry["path"]
+        source = backup_dir / relative
+        if source.resolve() != backup_dir.resolve() / relative:
+            raise RecipeError(f"backup path escapes or follows a symlink: {relative}")
+        try:
+            if entry["kind"] == "database":
+                if not source.is_file():
+                    raise RecipeError(f"required backup missing: {relative}")
+                report = inspect_database(source)
+                if (report.sha256, report.logical_sha256, report.size_bytes) != (
+                    entry["sha256"],
+                    entry["logical_sha256"],
+                    entry.get("size_bytes"),
+                ):
+                    raise RecipeError(f"backup identity mismatch: {relative}")
+            elif entry.get("present") and source.exists():
+                if inspect_payload_tree(source).root_sha256 != entry.get("sha256"):
+                    raise RecipeError(f"backup identity mismatch: {relative}")
+        except (SQLiteBackupError, PayloadBackupError) as exc:
+            raise RecipeError(f"invalid backup object: {relative}: {exc}") from exc
 
 
 def verify_workstation_state(
@@ -222,6 +302,14 @@ def verify_workstation_state(
     """校验恢复结果：完整性＋每域必须可读的业务事实."""
     data_root = _require_dir(data_root)
     results: list[dict[str, Any]] = []
+    expected = {}
+    manifest_path = data_root / "restore-manifest.json"
+    if manifest_path.exists():
+        expected = {
+            entry["path"]: entry
+            for entry in _read_manifest(manifest_path)["entries"]
+            if entry["kind"] == "database"
+        }
     failed = False
     for relative in RECIPE_DATABASES:
         database = data_root / relative
@@ -237,6 +325,16 @@ def verify_workstation_state(
             results.append({"path": relative, "check": "integrity", "status": "FAIL"})
             failed = True
             continue
+        if relative in expected:
+            matches = report.logical_sha256 == expected[relative]["logical_sha256"]
+            results.append(
+                {
+                    "path": relative,
+                    "check": "restored_content",
+                    "status": "PASS" if matches else "FAIL",
+                }
+            )
+            failed = failed or not matches
         results.append(
             {
                 "path": relative,
