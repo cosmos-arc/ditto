@@ -272,6 +272,10 @@ class IngestionDataWriter:
         WriteKind.NAME_HISTORY: "_handler_name_history",
         WriteKind.ST_CHANGE_HISTORY: "_handler_st_change_history",
         WriteKind.ETF_REFERENCE: "_handler_etf_reference",
+        WriteKind.FUTURES_BARS: "_handler_futures_bars",
+        WriteKind.FUTURES_BASIC: "_handler_futures_basic",
+        WriteKind.EARNINGS_EVENT: "_handler_earnings_event",
+        WriteKind.INDEX_VALUATION: "_handler_index_valuation",
     }
 
     def _handler_traded_bars(self, ctx: _WriteContext) -> Callable[[], WriteResult]:

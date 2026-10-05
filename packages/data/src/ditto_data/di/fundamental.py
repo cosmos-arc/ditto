@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 from dishka import Provider, Scope, provide
-from ditto_platform.foundation import SQLiteClient
+from ditto_platform.foundation import ParquetStore, SQLiteClient
 
+from ditto_data.config.data_store import DataStoreSettings
 from ditto_data.services.deps import FundamentalReaders, FundamentalWriters
 from ditto_data.services.fundamental_store import FundamentalStore
 from ditto_data.storage.fundamental.corporate.corporate_actions_reader import (
@@ -18,6 +19,14 @@ from ditto_data.storage.fundamental.corporate.dividend_reader import (
 )
 from ditto_data.storage.fundamental.corporate.dividend_writer import (
     DividendWriter,
+)
+from ditto_data.storage.fundamental.earnings.express import (
+    EarningsExpressReader,
+    EarningsExpressWriter,
+)
+from ditto_data.storage.fundamental.earnings.forecast import (
+    EarningsForecastReader,
+    EarningsForecastWriter,
 )
 from ditto_data.storage.fundamental.financial.balance_sheet_reader import (
     BalanceSheetReader,
@@ -54,7 +63,11 @@ class FundamentalProvider(Provider):
     scope = Scope.APP
 
     @provide
-    def fundamental_readers(self, sqlite_client: SQLiteClient) -> FundamentalReaders:
+    def fundamental_readers(
+        self,
+        sqlite_client: SQLiteClient,
+        settings: DataStoreSettings,
+    ) -> FundamentalReaders:
         """Fundamental 域读取依赖聚合。"""
         return FundamentalReaders(
             balance_sheet=BalanceSheetReader(BALANCE_SHEET_SPEC, sqlite_client),
@@ -68,10 +81,20 @@ class FundamentalProvider(Provider):
                 CORPORATE_ACTIONS_SPEC,
                 sqlite_client,
             ),
+            earnings_forecast=EarningsForecastReader(
+                _earnings_forecast_parquet_store(settings)
+            ),
+            earnings_express=EarningsExpressReader(
+                _earnings_express_parquet_store(settings)
+            ),
         )
 
     @provide
-    def fundamental_writers(self, sqlite_client: SQLiteClient) -> FundamentalWriters:
+    def fundamental_writers(
+        self,
+        sqlite_client: SQLiteClient,
+        settings: DataStoreSettings,
+    ) -> FundamentalWriters:
         """Fundamental 域写入依赖聚合。"""
         return FundamentalWriters(
             balance_sheet=BalanceSheetWriter(BALANCE_SHEET_SPEC, sqlite_client),
@@ -84,6 +107,12 @@ class FundamentalProvider(Provider):
             corporate_actions=CorporateActionsWriter(
                 CORPORATE_ACTIONS_SPEC,
                 sqlite_client,
+            ),
+            earnings_forecast=EarningsForecastWriter(
+                _earnings_forecast_parquet_store(settings)
+            ),
+            earnings_express=EarningsExpressWriter(
+                _earnings_express_parquet_store(settings)
             ),
         )
 
@@ -98,3 +127,30 @@ class FundamentalProvider(Provider):
             read_ports=read_ports,
             write_ports=write_ports,
         )
+
+
+def _earnings_forecast_parquet_store(settings: DataStoreSettings) -> ParquetStore:
+    """预告行以 (标的, 公告日, 报告期, 类型, 修订标志, 采集日) 为自然键."""
+    return ParquetStore(
+        settings.data_root,
+        key_columns=(
+            "source_ticker",
+            "ann_date",
+            "report_date",
+            "forecast_type",
+            "update_flag",
+            "knowledge_date",
+        ),
+        date_column="ann_date",
+        instrument_column="source_ticker",
+    )
+
+
+def _earnings_express_parquet_store(settings: DataStoreSettings) -> ParquetStore:
+    """快报行以 (标的, 公告日, 报告期, 采集日) 为自然键."""
+    return ParquetStore(
+        settings.data_root,
+        key_columns=("source_ticker", "ann_date", "report_date", "knowledge_date"),
+        date_column="ann_date",
+        instrument_column="source_ticker",
+    )

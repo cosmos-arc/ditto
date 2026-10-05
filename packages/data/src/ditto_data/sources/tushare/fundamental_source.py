@@ -262,3 +262,37 @@ def fetch_pledge_ratio(
 
     # 按标的查询（pledge_ratio API 不支持日期范围）
     return capital.fetch_pledge_ratio(ts_code=source_ticker)
+
+
+def fetch_earnings_forecast(
+    fundamental: FundamentalTushareAdapter,
+    *,
+    ann_date: str | None = None,
+    source_ticker: str | None = None,
+    start_date: str | None = None,
+    end_date: str | None = None,
+) -> pl.DataFrame:
+    """Fetch earnings forecasts (net-profit bounds in 万元; #434)."""
+    return fundamental.fetch_earnings_forecast(
+        ann_date=ann_date,
+        source_ticker=source_ticker,
+        start_date=start_date,
+        end_date=end_date,
+    )
+
+
+def fetch_earnings_express(
+    fundamental: FundamentalTushareAdapter,
+    *,
+    ann_date: str | None = None,
+    source_ticker: str | None = None,
+    start_date: str | None = None,
+    end_date: str | None = None,
+) -> pl.DataFrame:
+    """Fetch earnings express reports (amounts in 元; #434)."""
+    return fundamental.fetch_earnings_express(
+        ann_date=ann_date,
+        source_ticker=source_ticker,
+        start_date=start_date,
+        end_date=end_date,
+    )

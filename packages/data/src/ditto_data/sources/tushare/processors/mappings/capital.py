@@ -259,21 +259,18 @@ CASH_FLOW_MAPPING = ColumnMapping(
     date_columns={"end_date": "%Y%m%d", "f_ann_date": "%Y%m%d"},
     float_columns=[
         "n_cashflow_act",
-        "n_cash_flows_inv_act",
-        "n_cash_flows_fnc_act",
-        "depreciation",
-        "interest_paid",
-        "tax_paid",
+        "n_cashflow_inv_act",
+        "n_cashflow_fnc_act",
     ],
     computed_columns={
         "report_date": pl.col("end_date"),
         "knowledge_date": pl.col("f_ann_date"),
         "operating_cash_flow": pl.col("n_cashflow_act"),
-        "investing_cash_flow": pl.col("n_cash_flows_inv_act"),
-        "financing_cash_flow": pl.col("n_cash_flows_fnc_act"),
+        "investing_cash_flow": pl.col("n_cashflow_inv_act"),
+        "financing_cash_flow": pl.col("n_cashflow_fnc_act"),
         "net_cash_flow": pl.col("n_cashflow_act")
-        + pl.col("n_cash_flows_inv_act")
-        + pl.col("n_cash_flows_fnc_act"),
+        + pl.col("n_cashflow_inv_act")
+        + pl.col("n_cashflow_fnc_act"),
     },
     output_columns=(
         "source_ticker",
@@ -283,9 +280,6 @@ CASH_FLOW_MAPPING = ColumnMapping(
         "investing_cash_flow",
         "financing_cash_flow",
         "net_cash_flow",
-        "depreciation",
-        "interest_paid",
-        "tax_paid",
     ),
 )
 

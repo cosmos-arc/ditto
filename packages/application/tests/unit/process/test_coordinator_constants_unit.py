@@ -49,6 +49,10 @@ class TestSupportedInstrumentDatasets:
             Dataset.MARGIN_TRADING,
             Dataset.PLEDGE_RATIO,
             Dataset.INDEX_WEIGHT,
+            Dataset.FUTURES_DAILY,
+            Dataset.EARNINGS_FORECAST,
+            Dataset.EARNINGS_EXPRESS,
+            Dataset.INDEX_VALUATION,
         }
         assert expected == SUPPORTED_INSTRUMENT_DATASETS
 

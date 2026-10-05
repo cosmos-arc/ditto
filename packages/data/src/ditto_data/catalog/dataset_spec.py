@@ -183,6 +183,24 @@ _PRIMARY_KEYS: dict[str, tuple[str, ...]] = {
         "source",
         "observed_at",
     ),
+    # #434 四组增补：期货合约身份/修订身份进主键
+    "futures_daily": ("source_ticker", "trade_date", "knowledge_date"),
+    "futures_basic": ("source", "source_ticker", "knowledge_date"),
+    "earnings_forecast": (
+        "source_ticker",
+        "ann_date",
+        "report_date",
+        "forecast_type",
+        "update_flag",
+        "knowledge_date",
+    ),
+    "earnings_express": (
+        "source_ticker",
+        "ann_date",
+        "report_date",
+        "knowledge_date",
+    ),
+    "index_valuation": ("instrument_id", "trade_date", "knowledge_date"),
 }
 
 _PROVIDER_DATASETS: dict[str, tuple[str, ...]] = {
@@ -224,6 +242,11 @@ _PROVIDER_DATASETS: dict[str, tuple[str, ...]] = {
     "industry_mapping": ("tushare:index_member_all",),
     "namechange": ("tushare:namechange",),
     "st_history": ("tushare:namechange",),
+    "futures_daily": ("tushare:fut_daily",),
+    "futures_basic": ("tushare:fut_basic",),
+    "earnings_forecast": ("tushare:forecast", "tushare:forecast_vip"),
+    "earnings_express": ("tushare:express", "tushare:express_vip"),
+    "index_valuation": ("tushare:index_dailybasic",),
 }
 
 _BOOTSTRAP_CHUNKS: dict[str, BootstrapChunk] = {
@@ -254,6 +277,11 @@ _BOOTSTRAP_CHUNKS: dict[str, BootstrapChunk] = {
     "industry_mapping": "month",
     "namechange": "year",
     "st_history": "year",
+    "futures_daily": "month",
+    "futures_basic": "year",
+    "earnings_forecast": "quarter",
+    "earnings_express": "quarter",
+    "index_valuation": "month",
 }
 
 _SCHEMA_VERSION_OVERRIDES: dict[str, str] = {
@@ -293,13 +321,22 @@ _DATASET_DOMAINS: dict[str, str] = {
     "industry_mapping": "metadata",
     "namechange": "metadata",
     "st_history": "market",
+    "futures_daily": "market",
+    "futures_basic": "market",
+    "earnings_forecast": "fundamental",
+    "earnings_express": "fundamental",
+    "index_valuation": "capital",
 }
 
-_STATIC_DATASETS = frozenset({"stock_basic", "etf_basic", "index_basic"})
+_STATIC_DATASETS = frozenset(
+    {"stock_basic", "etf_basic", "index_basic", "futures_basic"}
+)
 _QUARTERLY_DATASETS = frozenset(
     {"balance_sheet", "income_statement", "cash_flow", "pledge_ratio"}
 )
-_EVENT_DATASETS = frozenset({"dividend", "corporate_actions"})
+_EVENT_DATASETS = frozenset(
+    {"dividend", "corporate_actions", "earnings_forecast", "earnings_express"}
+)
 _MONTHLY_DATASETS = frozenset({"index_weight"})
 _SOURCE_DEFINED_DATASETS = frozenset(
     {
@@ -325,6 +362,10 @@ _CNY_DATASETS = frozenset(
         "margin_trading",
         "pledge_ratio",
         "corporate_actions",
+        "futures_daily",
+        "earnings_forecast",
+        "earnings_express",
+        "index_valuation",
     }
 )
 _MIXED_CURRENCY_DATASETS = frozenset(
@@ -351,6 +392,11 @@ _APPEND_ONLY_DATASETS = frozenset(
         "st_history",
         # 月度权重观察行：追加观察，不改写历史（#452）
         "index_weight",
+        # #434 四组增补：追加观察行，修订以新 knowledge_date 版本呈现
+        "futures_daily",
+        "earnings_forecast",
+        "earnings_express",
+        "index_valuation",
     }
 )
 _EFFECTIVE_DATED_DATASETS = frozenset(
@@ -362,6 +408,7 @@ _EFFECTIVE_DATED_DATASETS = frozenset(
         "corporate_actions",
         "industry_classification",
         "industry_mapping",
+        "futures_basic",
     }
 )
 _KNOWLEDGE_DATE_DATASETS = _APPEND_ONLY_DATASETS | frozenset(
@@ -415,6 +462,9 @@ def _partition_keys(dataset_id: str) -> tuple[str, ...]:
         "industry_classification": ("knowledge_date",),
         "industry_mapping": ("knowledge_date",),
         "namechange": ("changed_date",),
+        # #434: 公告事件按公告日分区
+        "earnings_forecast": ("ann_date",),
+        "earnings_express": ("ann_date",),
     }
     if dataset_id in overrides:
         return overrides[dataset_id]
@@ -431,6 +481,8 @@ def _partition_keys(dataset_id: str) -> tuple[str, ...]:
         "margin_trading",
         "fx_daily",
         "commodity_daily",
+        "futures_daily",
+        "index_valuation",
     }:
         return ("trade_date",)
     return ("knowledge_date",)

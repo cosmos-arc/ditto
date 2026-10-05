@@ -38,6 +38,21 @@ app.command("dividend")(
         cli_path="ingest fundamental dividend",
     )
 )
+# #434 业绩预告/快报（公告日全市场或按标的回填）
+app.command("forecast")(
+    create_instrument_command(
+        "earnings_forecast",
+        "摄取业绩预告",
+        cli_path="ingest fundamental forecast",
+    )
+)
+app.command("express")(
+    create_instrument_command(
+        "earnings_express",
+        "摄取业绩快报",
+        cli_path="ingest fundamental express",
+    )
+)
 
 # 公司行为（仅按日期）
 _corporate_actions_impl = create_daily_command("corporate_actions", "摄取公司行为")

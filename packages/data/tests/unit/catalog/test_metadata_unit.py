@@ -260,6 +260,12 @@ class TestDefaultMetadataMaturityAssignments:
             "valuation_metrics",
             "margin_trading",
             "pledge_ratio",
+            # #434 四组增补
+            "futures_daily",
+            "futures_basic",
+            "earnings_forecast",
+            "earnings_express",
+            "index_valuation",
         }
     )
 
@@ -521,7 +527,19 @@ class TestR2DataProductContracts:
         }
     )
     DEFERRED_SCOPE: ClassVar[frozenset[str]] = frozenset(
-        {"margin_trading", "pledge_ratio", "fx_daily", "namechange", "st_history"}
+        {
+            "margin_trading",
+            "pledge_ratio",
+            "fx_daily",
+            "namechange",
+            "st_history",
+            # #434 四组增补
+            "futures_daily",
+            "futures_basic",
+            "earnings_forecast",
+            "earnings_express",
+            "index_valuation",
+        }
     )
 
     def test_freezes_exact_r2_scope(self) -> None:

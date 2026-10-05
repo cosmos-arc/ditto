@@ -55,6 +55,15 @@ _fx_daily_impl = create_daily_command("fx_daily", "摄取汇率日线数据")
 # commodity (商品)
 _commodity_daily_impl = create_daily_command("commodity_daily", "摄取商品价格数据")
 
+# #434 期货（按日期全市场/按合约）与指数估值
+_futures_daily_impl = create_instrument_command(
+    "futures_daily",
+    "摄取国内期货合约日线",
+    cli_path="ingest market futures",
+)
+_futures_basic_impl = create_daily_command("futures_basic", "摄取期货合约信息")
+_index_valuation_impl = create_daily_command("index_valuation", "摄取指数每日估值")
+
 
 @app.command("adj")
 def adj(
@@ -106,3 +115,33 @@ def commodity(
 ) -> None:
     """摄取商品价格数据."""
     return _commodity_daily_impl(ctx, date, force)
+
+
+@app.command("futures")
+def futures(
+    ctx: typer.Context,
+    date: str = typer.Argument(..., help="交易日期 (YYYY-MM-DD)"),
+    force: bool = typer.Option(False, "--force", "-f", help="强制重新摄取"),
+) -> None:
+    """摄取国内期货合约日线（按日期全市场）."""
+    return _futures_daily_impl(ctx, date, force)
+
+
+@app.command("futures-basic")
+def futures_basic(
+    ctx: typer.Context,
+    date: str = typer.Argument(..., help="采集日期 (YYYY-MM-DD)"),
+    force: bool = typer.Option(False, "--force", "-f", help="强制重新摄取"),
+) -> None:
+    """摄取期货合约信息快照（按交易所分片）."""
+    return _futures_basic_impl(ctx, date, force)
+
+
+@app.command("index-valuation")
+def index_valuation(
+    ctx: typer.Context,
+    date: str = typer.Argument(..., help="交易日期 (YYYY-MM-DD)"),
+    force: bool = typer.Option(False, "--force", "-f", help="强制重新摄取"),
+) -> None:
+    """摄取指数每日估值（市值元/股本股）."""
+    return _index_valuation_impl(ctx, date, force)
