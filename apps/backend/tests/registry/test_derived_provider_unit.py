@@ -27,11 +27,17 @@ from ditto_data.lineage import DataLineageRecorder
 from ditto_data.lineage.sqlite_store import SQLiteDataLineage
 from ditto_data.quality.golden import GoldenDatasetSpec
 from ditto_data.quality.protocols import (
+    AdjFactorReconcileContextProtocol,
     ComparisonStoreProtocol,
     InstrumentStoreProtocol,
+    SecondaryAdjustmentEventsSourceProtocol,
     SecondaryBarsSourceProtocol,
+    SecondaryFinancialsSourceProtocol,
+    SecondaryFundNavSourceProtocol,
+    SecondaryIndexBarsSourceProtocol,
 )
 from ditto_data.sources.exchange_transformers import ExchangeTransformers
+from ditto_data.sources.sina.source import SinaSource
 from ditto_data.sources.source import DataSources
 from ditto_features.compile_cache import SQLiteCompileCacheBackend
 from ditto_features.di import FeaturesStorageProvider
@@ -47,6 +53,10 @@ def _sources_provider() -> Provider:
         @provide
         def data_sources(self) -> DataSources:
             return DataSources(tushare=MagicMock(), fred=None)
+
+        @provide
+        def sina_source(self) -> SinaSource | None:
+            return None
 
         @provide
         def exchange_transformers(self) -> ExchangeTransformers:
@@ -71,6 +81,30 @@ class _ProtocolAdapterProvider(Provider):
     @provide
     def secondary_bars_source_protocol(self) -> SecondaryBarsSourceProtocol:
         return _secondary_mock
+
+    @provide
+    def secondary_adjustment_events_source_protocol(
+        self,
+    ) -> SecondaryAdjustmentEventsSourceProtocol:
+        return MagicMock(spec=SecondaryAdjustmentEventsSourceProtocol)
+
+    @provide
+    def adj_factor_reconcile_context_protocol(
+        self,
+    ) -> AdjFactorReconcileContextProtocol:
+        return MagicMock(spec=AdjFactorReconcileContextProtocol)
+
+    @provide
+    def secondary_index_bars_source_protocol(self) -> SecondaryIndexBarsSourceProtocol:
+        return MagicMock(spec=SecondaryIndexBarsSourceProtocol)
+
+    @provide
+    def secondary_financials_source_protocol(self) -> SecondaryFinancialsSourceProtocol:
+        return MagicMock(spec=SecondaryFinancialsSourceProtocol)
+
+    @provide
+    def secondary_fund_nav_source_protocol(self) -> SecondaryFundNavSourceProtocol:
+        return MagicMock(spec=SecondaryFundNavSourceProtocol)
 
     @provide
     def comparison_store_protocol(self) -> ComparisonStoreProtocol:

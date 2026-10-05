@@ -32,7 +32,9 @@ class TestMarketFetcherOverrideRegistry:
 
 
 @pytest.mark.unit
-def test_override_bundle_assembles_with_real_container(tmp_path: Path) -> None:
+def test_override_bundle_assembles_with_real_container(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """真实容器装配冒烟：override 经 registry 进协调器工厂（不执行摄取）."""
     from datetime import date
 
@@ -40,6 +42,10 @@ def test_override_bundle_assembles_with_real_container(tmp_path: Path) -> None:
     from ditto_apps.registry.contexts.ingestion import create_ingestion_bundle
     from ditto_data.sources.fuyao.client import date_to_ms
 
+    monkeypatch.setenv("ENVIRONMENT", "testing")
+    monkeypatch.setenv("DITTO_STATE_ROOT", str(tmp_path / "state"))
+    monkeypatch.setenv("DITTO_CACHE_ROOT", str(tmp_path / "cache"))
+    monkeypatch.setenv("TUSHARE_TOKEN", "offline-container-test")
     dump = tmp_path / "daily-k.parquet"
     pl.DataFrame(
         {

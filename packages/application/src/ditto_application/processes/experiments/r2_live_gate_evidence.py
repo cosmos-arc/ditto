@@ -49,7 +49,7 @@ _MAX_EVIDENCE_BYTES = 16 * 1024 * 1024
 _EVIDENCE_READ_CHUNK_BYTES = 64 * 1024
 _R2_HARD_DATASET_PROVIDER_CONTRACTS = {
     "stock_basic": ("tushare:stock_basic", "tushare:bak_basic"),
-    "etf_basic": ("tushare:fund_basic",),
+    "etf_basic": ("tushare:etf_basic",),
     "index_basic": ("tushare:index_basic",),
     "calendar": ("tushare:trade_cal",),
     "stock_daily": ("tushare:daily", "fuyao:historical_prices"),
