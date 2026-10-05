@@ -41,6 +41,7 @@ class TestSupportedInstrumentDatasets:
             Dataset.INDEX_DAILY,
             Dataset.ADJ_FACTOR,
             Dataset.FUND_ADJ,
+            Dataset.ETF_NAV,
             Dataset.VALUATION_METRICS,
             Dataset.BALANCE_SHEET,
             Dataset.INCOME_STATEMENT,

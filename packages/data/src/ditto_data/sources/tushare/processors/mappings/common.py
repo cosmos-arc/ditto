@@ -67,9 +67,29 @@ FUND_ADJ_MAPPING = ColumnMapping(
     output_columns=("source_ticker", "trade_date", "knowledge_date", "adj_factor"),
 )
 
+# #483 ETF 单位净值：nav_date（估值日）即交易日列；knowledge_date 用 ann_date
+# （披露锚，QDII T+1/T+2 晚于估值日；缺失回退 nav_date）
+ETF_NAV_MAPPING = ColumnMapping(
+    rename={"ts_code": "source_ticker"},
+    date_columns={"ann_date": "%Y%m%d", "nav_date": "%Y%m%d"},
+    float_columns=["unit_nav", "acc_nav"],
+    computed_columns={
+        "trade_date": pl.col("nav_date"),
+        "knowledge_date": pl.col("ann_date").fill_null(pl.col("nav_date")),
+    },
+    output_columns=(
+        "source_ticker",
+        "trade_date",
+        "knowledge_date",
+        "unit_nav",
+        "acc_nav",
+    ),
+)
+
 __all__ = [
     "ADJ_FACTOR_MAPPING",
     "CALENDAR_MAPPING",
     "DAILY_OHLCV_MAPPING",
+    "ETF_NAV_MAPPING",
     "FUND_ADJ_MAPPING",
 ]

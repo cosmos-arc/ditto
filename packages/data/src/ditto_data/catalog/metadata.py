@@ -118,6 +118,7 @@ _MARKET_DOMAINS: frozenset[str] = frozenset(
         "stock_status",
         "adj_factor",
         "fund_adj",
+        "etf_nav",
         "st_history",
         "futures_daily",
         "futures_basic",
@@ -204,6 +205,8 @@ _EXPERIMENTAL_DATASETS: frozenset[str] = frozenset(
         "earnings_forecast",
         "earnings_express",
         "index_valuation",
+        # #483 ETF 单位净值：PIT/回放覆盖未验收前 experimental
+        "etf_nav",
     }
 )
 
@@ -266,7 +269,7 @@ def _resolve_asset_class(dataset_id: str) -> DatasetAssetClass | None:
         "st_history",
     }:
         return "stock"
-    if dataset_id in {"etf_daily", "fund_adj"}:
+    if dataset_id in {"etf_daily", "fund_adj", "etf_nav"}:
         return "etf"
     if dataset_id in {"index_daily", "global_index_daily", "index_weight"}:
         return "index"
@@ -570,6 +573,7 @@ _ALL_DATASET_IDS: tuple[str, ...] = (
     # Reference
     "adj_factor",
     "fund_adj",
+    "etf_nav",
     # Fundamental
     "balance_sheet",
     "income_statement",
@@ -609,6 +613,7 @@ _INSTRUMENT_INGESTION_DATASETS: frozenset[str] = frozenset(
         "index_daily",
         "adj_factor",
         "fund_adj",
+        "etf_nav",
         "balance_sheet",
         "income_statement",
         "cash_flow",

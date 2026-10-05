@@ -37,6 +37,7 @@ from ditto_data.sources.tushare.etf_index_source import (
     fetch_etf_basic,
     fetch_etf_daily,
     fetch_fund_adj,
+    fetch_fund_nav,
     fetch_global_index_daily,
     fetch_index_basic,
     fetch_index_daily,
@@ -443,6 +444,22 @@ class TushareSource:
     ) -> pl.DataFrame:
         """Fetch ETF/fund adjustment factors. 委托给 etf_index_source.fetch_fund_adj."""
         return fetch_fund_adj(
+            self._etf,
+            trade_date=trade_date,
+            source_ticker=source_ticker,
+            start_date=start_date,
+            end_date=end_date,
+        )
+
+    def fetch_fund_nav(
+        self,
+        trade_date: str | None = None,
+        source_ticker: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> pl.DataFrame:
+        """Fetch ETF/fund unit NAV. 委托给 etf_index_source.fetch_fund_nav."""
+        return fetch_fund_nav(
             self._etf,
             trade_date=trade_date,
             source_ticker=source_ticker,

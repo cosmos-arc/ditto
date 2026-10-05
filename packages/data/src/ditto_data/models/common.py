@@ -72,6 +72,7 @@ class Dataset(StrEnum):
     # 参考类数据集（需要 trade_date）
     ADJ_FACTOR = "adj_factor"
     FUND_ADJ = "fund_adj"
+    ETF_NAV = "etf_nav"
 
     # Fundamental 域（财务/公司行为）
     BALANCE_SHEET = "balance_sheet"
@@ -129,7 +130,7 @@ class Dataset(StrEnum):
         ):
             return AssetClass.STOCK
         # ETF 数据集
-        if self in (Dataset.ETF_DAILY, Dataset.FUND_ADJ):
+        if self in (Dataset.ETF_DAILY, Dataset.FUND_ADJ, Dataset.ETF_NAV):
             return AssetClass.ETF
         # Index 数据集
         if self in (

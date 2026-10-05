@@ -46,6 +46,15 @@ app.command("adj-fund")(
     )
 )
 
+# nav (ETF 单位净值) — 双模式（按日期滚动窗/按标的）
+app.command("nav")(
+    create_instrument_command(
+        "etf_nav",
+        "摄取ETF单位净值",
+        cli_path="ingest market nav",
+    )
+)
+
 # status (股票状态)
 _stock_status_impl = create_daily_command("stock_status", "摄取股票状态")
 

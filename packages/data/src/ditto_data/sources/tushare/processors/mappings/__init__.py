@@ -25,6 +25,7 @@ from .common import (
     ADJ_FACTOR_MAPPING,
     CALENDAR_MAPPING,
     DAILY_OHLCV_MAPPING,
+    ETF_NAV_MAPPING,
     FUND_ADJ_MAPPING,
 )
 from .macro import (
@@ -43,6 +44,7 @@ __all__ = [
     "DAILY_OHLCV_MAPPING",
     "DIVIDEND_MAPPING",
     "ETF_BASIC_MAPPING",
+    "ETF_NAV_MAPPING",
     "FUND_ADJ_MAPPING",
     "INCOME_STATEMENT_MAPPING",
     "INDEX_BASIC_MAPPING",

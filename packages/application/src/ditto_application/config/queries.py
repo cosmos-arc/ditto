@@ -163,6 +163,15 @@ INGESTION_SPECS: dict[_Dataset, DatasetSpec] = {
         task_name="ingest_fund_adj",
         priority=30,
     ),
+    _Dataset.ETF_NAV: create_t1_config(
+        dataset=_Dataset.ETF_NAV,
+        description="ETF 单位净值",
+        typical_available_time=time(21, 30),
+        depends_on=[_Dataset.ETF_BASIC],
+        critical_fields=["instrument_id", "trade_date", "unit_nav"],
+        task_name="ingest_etf_nav",
+        priority=31,
+    ),
     _Dataset.BALANCE_SHEET: create_t1_config(
         dataset=_Dataset.BALANCE_SHEET,
         description="资产负债表",
