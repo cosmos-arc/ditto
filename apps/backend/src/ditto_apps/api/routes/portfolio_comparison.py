@@ -294,6 +294,7 @@ async def handoff_etf_paper(
                 intended_trade_date=body.intended_trade_date.isoformat(),
                 knowledge_cutoff=body.knowledge_cutoff,
                 source_snapshot_id=body.source_snapshot_id,
+                input_snapshot_ids=body.input_snapshot_ids,
             ),
         )
     except AppConflictError as exc:
@@ -334,6 +335,7 @@ async def execute_etf_paper(
                 execution_cutoff=body.execution_cutoff,
                 reference_snapshot_id=body.reference_snapshot_id,
                 market_snapshot_id=body.market_snapshot_id,
+                input_snapshot_ids=body.input_snapshot_ids,
                 idempotency_key=idempotency_key,
             ),
         )

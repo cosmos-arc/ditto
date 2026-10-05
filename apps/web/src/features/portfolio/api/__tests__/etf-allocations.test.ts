@@ -127,6 +127,7 @@ describe("executeETFPaper", () => {
 		execution_cutoff: "2026-09-02T08:00:00Z",
 		reference_snapshot_id: "reference",
 		market_snapshot_id: "bar",
+		input_snapshot_ids: { etf_reference: "rules-and-fees" },
 	};
 
 	const outcome = (overrides: Record<string, unknown> = {}) => ({
@@ -140,7 +141,8 @@ describe("executeETFPaper", () => {
 	});
 
 	it("maps a filled outcome with its ledger identity", async () => {
-		vi.stubGlobal("fetch", fetchMock({ outcomes: [outcome()] }, 201));
+		const request = fetchMock({ outcomes: [outcome()] }, 201);
+		vi.stubGlobal("fetch", request);
 
 		await expect(executeETFPaper("demo", "version-one", "key", body)).resolves.toEqual([
 			{
@@ -152,6 +154,7 @@ describe("executeETFPaper", () => {
 				ledgerEventId: "event-a",
 			},
 		]);
+		expect(await capturedRequest(request.mock.calls).json()).toEqual(body);
 	});
 
 	it("rejects an unknown execution status", async () => {

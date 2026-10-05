@@ -56,18 +56,22 @@ python -m ditto_apps.scripts.workstation_backup_recipe verify \
 ```
 
 `verify` 退出码非零＝恢复失败；每条检查输出 PASS/WARN/FAIL：
-- FAIL：必需库缺失、完整性校验失败、业务事实查询出错（非缺表）。
+- FAIL：必需库缺失、完整性校验失败、恢复内容与备份业务身份不符、业务事实查询出错（非缺表）。
 - WARN：业务表存在但 0 行（该域当前无记录）或表不存在（该域未初始化）。
+
+恢复在创建目标文件前校验 manifest schema、必需条目、路径及备份 SHA-256。
+SQLite 恢复后按 schema 和完整有序字段值核对逻辑摘要；字节布局变化不影响业务等价。
+目标根的 `restore-manifest.json` 保留备份基线，`verify` 据此检查恢复后的内容漂移。
+此校验用于停写的恢复演练；恢复正常写入后，内容与旧恢复点不同是预期行为。
 
 ## 恢复演练核对单
 
 演练必须在实际备份目录的临时恢复根上完成并通过 `verify`：
 
-1. 账本余额：`paper_sessions`/`account_journal_events` 有行（FAIL 级）。
-2. 当前策略/配置：`strategy_active_pointer` 与 `strategy_activation_event`
-   有行（FAIL 级）。
-3. agent 状态：`agent_sessions` 可查（FAIL 级）。
-4. holdout 约束：`holdout_claim` 有行（FAIL 级）。
+1. 账本：会话、事件和金额与备份逻辑身份一致（FAIL 级）。
+2. 当前策略/配置与 review/activation 全部字段与备份一致（FAIL 级）。
+3. agent 各库状态与备份一致（FAIL 级）。
+4. holdout 消费身份和状态与备份一致（FAIL 级）。
 5. 当前运行必需文件缺失 → `verify` 明确失败。
 6. 可选旧 artifact 缺失 → 恢复继续，输出"旧实验不可重放"，不得清零
    holdout 消费事实。

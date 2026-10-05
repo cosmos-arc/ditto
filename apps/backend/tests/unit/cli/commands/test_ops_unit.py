@@ -11,8 +11,12 @@ from unittest.mock import MagicMock
 import orjson
 import pytest
 from ditto_application.exceptions import AppQueryError
+from ditto_application.processes.materialization.orchestrator import (
+    DerivedMaterializationOrchestrator,
+)
 from ditto_application.queries.evaluation import EvaluationOptions
 from ditto_apps.cli.main import app
+from ditto_features.derived_types import MaterializationProfile
 from ditto_features.evaluation.report import (
     FactorEvaluationReport,
     ICSummary,
@@ -21,7 +25,8 @@ from ditto_features.evaluation.report import (
     RegimeICResult,
     TailRiskMetrics,
 )
-from ditto_features.materialization import DerivedMaterializationResult
+from ditto_features.materialization.contracts import DerivedMaterializationResult
+from ditto_features.materialization.models import DerivedRunStatus
 from ditto_features.services import DerivedCatalogService
 from pytest_mock import MockerFixture
 from typer.testing import CliRunner
@@ -482,6 +487,12 @@ class TestFactorMaterializeCommand:
     """Ops factor-materialize 命令测试。"""
 
     def _container(self, catalog: Any, orchestrator: Any) -> Any:
+        orchestrator._catalog_service = catalog
+        orchestrator.materialize_governed_factor.side_effect = lambda **kwargs: (
+            DerivedMaterializationOrchestrator.materialize_governed_factor(
+                orchestrator, **kwargs
+            )
+        )
         container = MagicMock()
         container.get.side_effect = lambda token: (
             catalog if token is DerivedCatalogService else orchestrator
@@ -501,8 +512,8 @@ class TestFactorMaterializeCommand:
             run_id="drv-test",
             derived_id="momentum_1m",
             version=1,
-            profile="SERIES",
-            status="SUCCESS",
+            profile=MaterializationProfile.SERIES,
+            status=DerivedRunStatus.SUCCESS,
             rows_written=42,
             partitions_written=("2026",),
             coverage_start="2026-06-01",

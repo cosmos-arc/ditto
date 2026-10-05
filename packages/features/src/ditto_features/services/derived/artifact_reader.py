@@ -20,6 +20,8 @@ from ditto_features.errors import (
 from ditto_features.models.derived import (
     DerivedCheckpointRecord,
     DerivedCheckpointStatus,
+    DerivedPartitionRecord,
+    DerivedRunRecord,
     DerivedSpecRecord,
     DerivedStateRecord,
     DerivedVersionRecord,
@@ -60,6 +62,12 @@ class DerivedArtifactFrameRequest:
 class _CatalogReader(Protocol):
     """Minimal catalog read interface consumed by the artifact reader."""
 
+    def get_run(
+        self, derived_id: str, version: int, run_id: str
+    ) -> DerivedRunRecord | None: ...
+    def list_partitions(
+        self, derived_id: str, version: int, run_id: str
+    ) -> list[DerivedPartitionRecord]: ...
     def get_spec(self, derived_id: str, version: int) -> DerivedSpecRecord | None: ...
     def get_version(
         self, derived_id: str, version: int
@@ -175,6 +183,29 @@ class DerivedArtifactReader:
             return None
         manifest_hash = cast("dict[str, object]", publication).get("manifest_hash")
         return manifest_hash if type(manifest_hash) is str else None
+
+    def read_run_frame(
+        self, derived_id: str, version: int, run_id: str
+    ) -> pl.DataFrame:
+        """Read the exact published run; never substitute current partitions."""
+        run = self._catalog_service.get_run(derived_id, version, run_id)
+        if run is None or run.status != "SUCCESS":
+            raise DerivedVersionError(
+                derived_id=derived_id, reason="run is not successful"
+            )
+        partitions = self._catalog_service.list_partitions(derived_id, version, run_id)
+        frames: list[pl.DataFrame] = []
+        for partition in partitions:
+            path = self._artifact_root / partition.partition_path
+            if not path.is_file() or _file_sha256(path) != partition.checksum:
+                raise DerivedIntegrityError(
+                    derived_id=derived_id,
+                    version=version,
+                    partition_key=partition.partition_key,
+                    reason="retained run partition missing or checksum drift",
+                )
+            frames.append(pl.read_parquet(path))
+        return pl.concat(frames, how="diagonal_relaxed") if frames else pl.DataFrame()
 
     # ------------------------------------------------------------------
     # read_frame overloads

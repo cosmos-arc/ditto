@@ -20,6 +20,8 @@ from ditto_apps.registry.fresh_runtime import create_fresh_runtime
 from ditto_data.models.metadata import InstrumentRegistration
 from ditto_data.storage.metadata.instrument.instrument_writer import InstrumentWriter
 from ditto_features.models.derived import (
+    DerivedCheckpointRecord,
+    DerivedCheckpointStatus,
     DerivedSpecRecord,
     DerivedStateRecord,
     DerivedVersionRecord,
@@ -201,14 +203,29 @@ def _seed() -> None:
         ),
     )
     persistence = ArtifactPersistenceService(artifact_root=_state)
-    persistence.write_durable_partitions(
+    partitions = persistence.write_durable_partitions(
         spec=spec,
         time_key="trade_date",
         run_id="fx-seed-run-1",
         frame=factor_frame,
         request_start=START_DATE,
         request_end=END_DATE,
-        source_snapshot_id=None,
+    )
+    catalog.save_checkpoints(
+        tuple(
+            DerivedCheckpointRecord(
+                derived_id=FACTOR_ID,
+                version=1,
+                partition_key=partition.partition_key,
+                status=DerivedCheckpointStatus.COMPLETE,
+                rows_written=partition.row_count,
+                checksum=partition.checksum,
+                error_message=None,
+                started_at="2026-04-25T00:00:00Z",
+                completed_at="2026-04-25T00:00:00Z",
+            )
+            for partition in partitions
+        )
     )
 
 

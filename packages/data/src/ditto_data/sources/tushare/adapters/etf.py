@@ -67,11 +67,10 @@ class ETFTushareAdapter(BaseTushareAdapter):
             event="tushare_etf_basic_fetch_start",
         )
 
-        with tushare_fetch_error_handler("etf_basic", "fund_basic"):
+        with tushare_fetch_error_handler("etf_basic", "etf_basic"):
             response = self._client.query(
-                api_name="fund_basic",  # ETF basic 使用 fund_basic API
-                market="E",  # 场内基金（ETF）
-                fields="ts_code,name,list_date",
+                api_name="etf_basic",
+                fields="ts_code,csname,list_date,list_status,index_code,etf_type",
             )
 
             transformed = TushareDataTransformer.transform(
@@ -81,7 +80,7 @@ class ETFTushareAdapter(BaseTushareAdapter):
                 return transformed
             return transformed.filter(
                 pl.col("list_date").is_not_null()
-                & pl.col("name").str.contains(r"(?i)ETF")
+                & pl.col("exchange").is_in(["SSE", "SZSE"])
             )
 
     @traced("source.tushare.fetch_etf_daily")
@@ -310,7 +309,7 @@ class ETFTushareAdapter(BaseTushareAdapter):
 
         Returns:
             [source_ticker, trade_date(=nav_date 估值日), knowledge_date(=ann_date
-            披露日，缺失回退 nav_date), unit_nav, acc_nav].
+            披露日，未知保持 null), unit_nav, acc_nav].
 
         """
         if trade_date and source_ticker:
@@ -371,9 +370,22 @@ class ETFTushareAdapter(BaseTushareAdapter):
                 )
             # 服务端同 (ts_code, nav_date) 可返回多条不同 ann_date 的披露行
             # （2026-10-05 实测单日响应内重复）——保留最新披露行
-            response = response.sort("ann_date").unique(
-                subset=["ts_code", "nav_date"], keep="last"
+            result = (
+                TushareDataTransformer.transform(
+                    response, f"etf_nav{scope}", ETF_NAV_MAPPING
+                )
+                .sort("knowledge_date", nulls_last=False)
+                .unique(
+                    subset=["source_ticker", "trade_date"],
+                    keep="last",
+                    maintain_order=True,
+                )
             )
-            return TushareDataTransformer.transform(
-                response, f"etf_nav{scope}", ETF_NAV_MAPPING
-            )
+            if missing := result["knowledge_date"].null_count():
+                logger.warning(
+                    "ETF NAV disclosure unknown; display and reconciliation only",
+                    event="tushare_fund_nav_unknown_disclosure",
+                    row_count=result.height,
+                    missing_disclosure_count=missing,
+                )
+            return result

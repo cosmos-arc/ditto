@@ -38,6 +38,7 @@ from ditto_data.services.market_write_service import MarketWriteService
 from ditto_data.services.metadata_service import MetadataService
 from ditto_data.services.source_accessor import SourceAccessor
 from ditto_data.sources.exchange_transformers import ExchangeTransformers
+from ditto_data.sources.fuyao.source import FuyaoDailyKDumpFetcher
 from ditto_data.sources.protocols import MarketFetcher
 from ditto_data.sources.registry import SourceRegistry
 
@@ -57,7 +58,7 @@ class _MarketFetcherOverrideRegistry:
         self,
         base: SourceRegistry,
         source_name: str,
-        fetcher: MarketFetcher,
+        fetcher: MarketFetcher | FuyaoDailyKDumpFetcher,
     ) -> None:
         self._base = base
         self._source_name = source_name
@@ -75,7 +76,7 @@ class _MarketFetcherOverrideRegistry:
 def create_ingestion_bundle(
     source: str = "tushare",
     *,
-    market_fetcher_override: MarketFetcher | None = None,
+    market_fetcher_override: MarketFetcher | FuyaoDailyKDumpFetcher | None = None,
 ) -> Generator[IngestionBundle]:
     """
     创建摄入上下文组合包（单容器）.

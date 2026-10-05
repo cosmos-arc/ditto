@@ -91,7 +91,10 @@ _HOST_COMMAND_BASE = {
         '/usr/bin/env python3 "$(git rev-parse --show-toplevel)/'
         + 'tooling/agent_harness/hook.py"'
     ),
-    "zcode": 'python3 "${ZCODE_PROJECT_DIR}/tooling/agent_harness/hook.py"',
+    "zcode": (
+        '"${ZCODE_PROJECT_DIR}/.venv/bin/python" '
+        '"${ZCODE_PROJECT_DIR}/tooling/agent_harness/hook.py"'
+    ),
 }
 
 

@@ -369,6 +369,20 @@ class FormatFixtureTests(unittest.TestCase):
         validate_module._validate_host_hook_contract(config, "zcode", enabled)
         assert enabled == []
 
+    def test_zcode_hooks_require_the_project_interpreter(self) -> None:
+        config_text = (ROOT / ".zcode" / "config.json").read_text(encoding="utf-8")
+        errors: list[str] = []
+        validate_module._validate_host_hook_contract(
+            json.loads(config_text), "zcode", errors
+        )
+        assert errors == []
+
+        legacy_config = json.loads(
+            config_text.replace(r"\"${ZCODE_PROJECT_DIR}/.venv/bin/python\"", "python3")
+        )
+        validate_module._validate_host_hook_contract(legacy_config, "zcode", errors)
+        assert len(errors) == 3
+
     def test_inert_host_hook_entries_are_rejected(self) -> None:
         config: dict[str, object] = {
             "hooks": {

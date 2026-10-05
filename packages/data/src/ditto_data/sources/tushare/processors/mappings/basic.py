@@ -9,7 +9,11 @@ from ditto_data.sources.tushare.processors.column_mapping import ColumnMapping
 # ETF 基本信息配置
 # list_date 可能为空，后续通过行情数据推断
 ETF_BASIC_MAPPING = ColumnMapping(
-    rename={"ts_code": "source_ticker"},
+    rename={
+        "ts_code": "source_ticker",
+        "csname": "name",
+        "index_code": "tracking_index",
+    },
     date_columns={"list_date": "%Y%m%d"},
     float_columns=[],
     computed_columns={
@@ -18,8 +22,20 @@ ETF_BASIC_MAPPING = ColumnMapping(
         .str.split(".")
         .list.get(1)
         .replace({"SH": "SSE", "SZ": "SZSE"}),
+        # The dedicated etf_basic endpoint supplies ETF membership.
+        "asset_class": pl.lit("etf"),
     },
-    output_columns=("source_ticker", "ticker", "name", "exchange", "list_date"),
+    output_columns=(
+        "source_ticker",
+        "ticker",
+        "name",
+        "exchange",
+        "list_date",
+        "list_status",
+        "tracking_index",
+        "etf_type",
+        "asset_class",
+    ),
 )
 
 # 指数基本信息配置

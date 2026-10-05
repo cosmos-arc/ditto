@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from hashlib import sha256
 from pathlib import Path
+from shutil import copyfile
 from typing import Any
 
 import orjson
@@ -151,7 +152,7 @@ class DerivedArtifactWriter:
         frame: pl.DataFrame,
         request_start: str,
         request_end: str,
-        source_snapshot_id: str | None,
+        published_history: pl.DataFrame | None = None,
     ) -> tuple[PartitionInfo, ...]:
         """
         Write durable (series) partitions as per-year parquet files.
@@ -185,6 +186,20 @@ class DerivedArtifactWriter:
                 trade_date_expr.str.slice(0, 4) == partition_key
             )
             partition_path = version_root / f"{partition_key}.parquet"
+            if partition_path.exists() and published_history is None:
+                raise ValueError(
+                    "existing partitions require verified published history"
+                )
+            if published_history is not None and not published_history.is_empty():
+                existing = published_history.filter(
+                    pl.col(time_key).cast(pl.String).str.slice(0, 4) == partition_key
+                )
+                outside = ~pl.col(time_key).cast(pl.String).str.slice(0, 10).is_between(
+                    pl.lit(request_start), pl.lit(request_end)
+                )
+                partition_frame = _merge_partitions(
+                    existing.filter(outside), partition_frame, time_key
+                )
             temp_path = version_root / f"{partition_key}.tmp.parquet"
             pending.append((partition_key, partition_frame, temp_path, partition_path))
 
@@ -207,18 +222,24 @@ class DerivedArtifactWriter:
             self._remove_if_empty(version_root)
             raise
 
+        # Retain each run before replacing the mutable current partitions.
+        # Incomplete runs cannot be read as published identities.
+        for _pk, _pf, temp_path, partition_path in pending:
+            retained_path = version_root / "_runs" / run_id / partition_path.name
+            _retain_partition(temp_path, retained_path)
+
         # --- Phase 2: atomic rename all temp -> final ---
         partitions: list[PartitionInfo] = []
         for _pk, _pf, temp_path, partition_path in pending:
             temp_path.replace(partition_path)
 
-        # Compute checksums on final files (after rename)
         for partition_key, partition_frame, _temp_path, partition_path in pending:
             checksum = sha256(partition_path.read_bytes()).hexdigest()
+            retained_path = version_root / "_runs" / run_id / partition_path.name
             partitions.append(
                 PartitionInfo(
                     partition_key=partition_key,
-                    partition_path=str(partition_path.relative_to(self._artifact_root)),
+                    partition_path=str(retained_path.relative_to(self._artifact_root)),
                     row_count=partition_frame.height,
                     checksum=checksum,
                 )
@@ -433,3 +454,13 @@ def _merge_partitions(
         )
         .last()
     )
+
+
+def _retain_partition(source: Path, target: Path) -> None:
+    """Preserve published run bytes without replacing a prior identity."""
+    target.parent.mkdir(parents=True, exist_ok=True)
+    if target.exists():
+        if target.read_bytes() != source.read_bytes():
+            raise ValueError(f"immutable materialization conflict: {target}")
+    else:
+        copyfile(source, target)

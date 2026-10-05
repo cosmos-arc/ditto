@@ -404,6 +404,7 @@ APPS_REGISTRY_COMPOSITION_ALLOWANCES = (
                 "ditto_data.services.metadata_service",
                 "ditto_data.services.source_accessor",
                 "ditto_data.sources.exchange_transformers",
+                "ditto_data.sources.fuyao.source",
                 "ditto_data.sources.protocols",
                 "ditto_data.sources.registry",
             }

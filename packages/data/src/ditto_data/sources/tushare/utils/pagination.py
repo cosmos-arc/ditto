@@ -26,6 +26,8 @@ __all__ = ["resolve_page_size"]
 
 # 已核实官方单次提取上限的端点 → 上限（tushare.pro/document/2 各专页）。
 _DOCUMENTED_PAGE_SIZES: dict[str, int] = {
+    "etf_basic": 5000,  # doc_id=385
+    "etf_limit": 3000,  # doc_id=491
     "daily": 6000,  # doc_id=27，停牌不出行
     "fund_daily": 5000,  # doc_id=127，5000 积分起
     "fund_adj": 2000,  # doc_id=199，专页明确 offset/limit

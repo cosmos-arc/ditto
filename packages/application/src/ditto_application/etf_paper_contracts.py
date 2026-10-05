@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import Protocol
 
@@ -28,6 +28,7 @@ class ETFPaperHandoffRequest:
     knowledge_cutoff: datetime
     source_snapshot_id: str
     ledger_cutoff: datetime | None = None
+    input_snapshot_ids: dict[str, str] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -41,6 +42,7 @@ class ETFPaperHandoffFacts:
     investable_instrument_ids: frozenset[int]
     signal_ledger_hash: str
     next_trading_day: str
+    unavailable_reasons: dict[int, tuple[str, ...]] = field(default_factory=dict)
 
 
 class ETFPaperHandoffFactsPort(Protocol):
@@ -66,6 +68,7 @@ class ETFPaperExecutionRequest:
     reference_snapshot_id: str
     market_snapshot_id: str
     idempotency_key: str
+    input_snapshot_ids: dict[str, str] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -99,6 +102,7 @@ class ETFPaperExecutionFactsPort(Protocol):
         signal_snapshot_id: str,
         signal_cutoff: datetime,
         valuation_cutoff: datetime,
+        signal_input_snapshot_ids: dict[str, str] | None = None,
     ) -> ETFPaperOrderFacts:
         """Return exact signal and execution facts or fail closed."""
         ...

@@ -1,6 +1,6 @@
 /**
  * DO NOT EDIT: generated from contracts/openapi/v1.json.
- * Schema SHA-256: 0ff235517a7aedd25ba6ef6677c64dcd38f439c8ac3afe69f8cfb1e477106807
+ * Schema SHA-256: 5b7c7ab6088130433e6bcb8534331fe5604f76feb2f4e4c9e7bd54e5aef942a1
  * Generator: openapi-typescript 7.13.0
  */
 
@@ -8666,6 +8666,10 @@ export interface components {
              * Format: date-time
              */
             execution_cutoff: string;
+            /** Input Snapshot Ids */
+            input_snapshot_ids?: {
+                [key: string]: string;
+            };
             /**
              * Intended Trade Date
              * Format: date
@@ -8723,6 +8727,10 @@ export interface components {
              * Format: date
              */
             decision_date: string;
+            /** Input Snapshot Ids */
+            input_snapshot_ids?: {
+                [key: string]: string;
+            };
             /**
              * Intended Trade Date
              * Format: date

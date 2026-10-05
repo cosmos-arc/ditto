@@ -396,9 +396,9 @@ async def post_etf_nav(
     )
     date_column = "nav_date" if "nav_date" in df.columns else "trade_date"
     points = [
-        EtfNavPoint(nav_date=str(row[date_column]), nav=float(row["nav"]))
+        EtfNavPoint(nav_date=str(row[date_column]), nav=float(row["unit_nav"]))
         for row in df.to_dicts()
-        if row.get("nav") is not None
+        if row.get("unit_nav") is not None
     ]
     return APIResponse(
         data=EtfNavResponse(instrument_id=query.instrument_id, points=points)

@@ -78,6 +78,7 @@ class ETFPaperHandoff:
                 "intended_trade_date": request.intended_trade_date,
                 "knowledge_cutoff": request.knowledge_cutoff.isoformat(),
                 "source_snapshot_id": request.source_snapshot_id,
+                "input_snapshot_ids": request.input_snapshot_ids,
             },
         )
         session_key = sha256(
@@ -116,7 +117,14 @@ class ETFPaperHandoff:
         blocked = selected - facts.investable_instrument_ids
         if blocked:
             raise AppConflictError(
-                f"ETF tools are not investable; choose alternatives: {sorted(blocked)}"
+                "ETF tools are not investable; choose alternatives: "
+                + str(
+                    {
+                        item: facts.unavailable_reasons.get(item)
+                        or ("restricted_or_invalid",)
+                        for item in sorted(blocked)
+                    }
+                )
             )
         if any(
             instrument_id <= 0 or not isfinite(weight) or weight < 0 or weight > 1
@@ -159,6 +167,10 @@ class ETFPaperHandoff:
                 required_dataset_states=(),
                 dataset_snapshot_ids={
                     "etf_reference": facts.source_snapshot_id,
+                    **{
+                        f"etf_input:{dataset}": identity
+                        for dataset, identity in request.input_snapshot_ids.items()
+                    },
                     "etf_research_reference": version.source_snapshot_id,
                     "paper_signal_ledger": facts.signal_ledger_hash,
                     "paper_signal_reference_cutoff": (

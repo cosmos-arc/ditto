@@ -11577,6 +11577,13 @@
             "title": "Execution Cutoff",
             "type": "string"
           },
+          "input_snapshot_ids": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Input Snapshot Ids",
+            "type": "object"
+          },
           "intended_trade_date": {
             "format": "date",
             "title": "Intended Trade Date",
@@ -11711,6 +11718,13 @@
             "format": "date",
             "title": "Decision Date",
             "type": "string"
+          },
+          "input_snapshot_ids": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Input Snapshot Ids",
+            "type": "object"
           },
           "intended_trade_date": {
             "format": "date",

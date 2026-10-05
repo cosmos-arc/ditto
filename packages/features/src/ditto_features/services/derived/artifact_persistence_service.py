@@ -62,7 +62,7 @@ class ArtifactPersistenceService:
         frame: pl.DataFrame,
         request_start: str,
         request_end: str,
-        source_snapshot_id: str | None,
+        published_history: pl.DataFrame | None = None,
     ) -> tuple[PartitionInfo, ...]:
         """Write durable (series) partitions as per-year parquet files."""
         return self._writer.write_durable_partitions(
@@ -72,7 +72,7 @@ class ArtifactPersistenceService:
             frame=frame,
             request_start=request_start,
             request_end=request_end,
-            source_snapshot_id=source_snapshot_id,
+            published_history=published_history,
         )
 
     def write_artifact_metadata(

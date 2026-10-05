@@ -26,7 +26,6 @@ from ditto_application.processes.experiments.r2_live_gate_evidence import (
     R2LiveGateEvidenceSource,
 )
 from ditto_application.queries.source import SourceDataPort
-from ditto_data.models.ingestion import IngestionResult
 from ditto_data.quality.golden import GoldenDatasetSpec
 from ditto_data.quality.protocols import (
     ComparisonStoreProtocol,
@@ -54,7 +53,6 @@ __all__ = [
     "FundamentalFinancialReconcileContext",
     "FuyaoDailyKDumpFetcher",
     "FuyaoSource",
-    "IngestionResult",
     "InstrumentService",
     "MarketReaders",
     "MarketService",

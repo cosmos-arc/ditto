@@ -30,6 +30,7 @@ from ditto_data.di import RuntimeProvider
 from ditto_data.lineage import DataLineageRecorder
 from ditto_data.services.market_service import MarketService
 from ditto_data.services.metadata_service import MetadataService
+from ditto_data.sources.sina.source import SinaSource
 from ditto_data.sources.source import DataSources
 from ditto_execution.audit import ExecutionAuditService
 from ditto_execution.brokerage import Brokerage
@@ -55,6 +56,10 @@ def _sources_provider() -> Provider:
         @provide
         def data_sources(self) -> DataSources:
             return DataSources(tushare=MagicMock(), fred=None)
+
+        @provide
+        def sina_source(self) -> SinaSource | None:
+            return None
 
     return SourcesProvider()
 

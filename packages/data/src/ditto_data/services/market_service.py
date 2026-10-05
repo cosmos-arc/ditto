@@ -247,7 +247,7 @@ class MarketService:
             instrument_ids: 标的 ID 过滤（可选，None 为全部）.
 
         Returns:
-            净值 DataFrame（instrument_id、nav_date、nav 等）；读取器未配置时
+            净值 DataFrame（instrument_id、trade_date、unit_nav 等）；读取器未配置时
             返回空帧（调用方按不可得降级）。
 
         """

@@ -25,6 +25,7 @@ from ditto_data.ingestion.partition_state import (
 from ditto_data.ingestion.partition_state_store import SQLitePartitionLifecycleStore
 from ditto_data.models.metadata import InstrumentRegistration
 from ditto_data.storage.metadata.instrument.instrument_writer import InstrumentWriter
+from ditto_execution.paper.sqlite_store import SqlitePaperSessionStore
 from ditto_execution.storage.sqlite.account_journal import SqliteAccountEventJournal
 from ditto_platform.foundation import SQLiteClient, SQLitePool
 
@@ -75,6 +76,7 @@ def _snapshot(
     visible: datetime,
     frame: pl.DataFrame,
     request_end: date | None = None,
+    complete: bool = True,
 ) -> ProviderSnapshot:
     artifact = payloads.retain_payload(
         dataset_id=dataset, source=_SOURCE, payload=frame
@@ -98,7 +100,7 @@ def _snapshot(
     )
     SQLiteProviderSnapshotStore(client).append_snapshot(snapshot)
     lifecycle = SQLitePartitionLifecycleStore(client)
-    chunk = f"etf-paper-{dataset}-{day}"
+    chunk = f"etf-paper-{snapshot.snapshot_id}"
     lifecycle.plan_partition(
         PartitionCheckpoint(
             chunk_id=chunk,
@@ -117,6 +119,8 @@ def _snapshot(
         PartitionLifecycleStatus.PAYLOAD_COMMITTED,
         PartitionLifecycleStatus.COMPLETE,
     ):
+        if stage is PartitionLifecycleStatus.COMPLETE and not complete:
+            break
         lifecycle.advance_partition(
             chunk,
             stage,
@@ -251,6 +255,52 @@ def _seed() -> dict[str, str]:
                 }
             ),
         )
+        # Separate producer identities for the composition contract check.
+        # These recorded test rules are not evidence of production configuration.
+        split_inputs = {}
+        for label, reference, day in (
+            ("signal", signal, SIGNAL),
+            ("execution", execution, TRADE),
+        ):
+            rows = _reference_rows(reference, day)
+            for dataset, fields in (
+                ("etf_basic", {"asset_class", "tracking_index"}),
+                ("etf_daily", {"price_close"}),
+            ):
+                selected = [row for row in rows if row[1] in fields]
+                snapshot = _snapshot(
+                    client,
+                    payloads,
+                    dataset=dataset,
+                    day=day,
+                    visible=reference.created_at,
+                    frame=pl.DataFrame(
+                        {
+                            "instrument_id": [row[0] for row in selected],
+                            "field": [row[1] for row in selected],
+                            "value": [row[2] for row in selected],
+                        }
+                    ),
+                )
+                client.executemany(
+                    """INSERT INTO etf_reference_observation
+                       (instrument_id, field, value, unit, observed_on, published_at,
+                        effective_from, source, source_snapshot_id)
+                       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                    [[*row[:-1], snapshot.snapshot_id] for row in selected],
+                )
+                split_inputs[f"{label}_{dataset}"] = snapshot.snapshot_id
+        pending = _snapshot(
+            client,
+            payloads,
+            dataset="etf_reference",
+            day=SIGNAL,
+            visible=SIGNAL_VISIBLE,
+            complete=False,
+            frame=pl.DataFrame({"status": ["uncompleted configured rules"]}),
+        )
+        split_inputs["pending_rules"] = pending.snapshot_id
+        client.commit()
         _snapshot(
             client,
             payloads,
@@ -280,7 +330,19 @@ def _seed() -> dict[str, str]:
                 idempotency_key="etf-browser-opening",
             )
         )
+    with SqliteAccountEventJournal(str(_state / "trading/trading.sqlite")) as journal:
+        CreatePaperAccountHandler(journal=journal, clock=lambda: SIGNAL_VISIBLE).handle(
+            CreatePaperAccountCommand(
+                account_id="etf-composed-inputs",
+                name="composed recorded test",
+                opened_at=SIGNAL_VISIBLE,
+                trade_date=SIGNAL.isoformat(),
+                initial_cash=Decimal("100000"),
+                idempotency_key="composed-opening",
+            )
+        )
     return {
+        **split_inputs,
         "signal_reference": signal.snapshot_id,
         "execution_reference": execution.snapshot_id,
         "market": bar.snapshot_id,
@@ -296,3 +358,14 @@ app = importlib.import_module("ditto_apps.main").app
 async def fixture_identity() -> dict[str, str]:
     """Expose only fixed test identities; requests use production routes."""
     return _identity
+
+
+@app.get("/system-fixture/etf-paper/composed-rule-identity")
+async def composed_rule_identity() -> dict[str, str | None]:
+    """Inspect the persisted execution identity in this isolated test only."""
+    with SqlitePaperSessionStore(str(_state / "trading/trading.sqlite")) as sessions:
+        (record,) = sessions.list_executions("composed-session")
+        return {
+            "rule_snapshot_id": record.rule_snapshot_id,
+            "rule_cutoff": record.rule_cutoff,
+        }

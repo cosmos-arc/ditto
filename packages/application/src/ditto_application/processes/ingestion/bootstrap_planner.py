@@ -95,6 +95,7 @@ class BootstrapPlanner:
         start_date: str,
         end_date: str,
         instrument_ids: tuple[int, ...] = (),
+        include_complete: bool = False,
     ) -> BootstrapPlan:
         """Build deterministic pending chunks for one data product interval."""
         start, end = _validated_interval(start_date, end_date)
@@ -149,7 +150,8 @@ class BootstrapPlanner:
                 else None
             )
             if (
-                checkpoint is not None
+                not include_complete
+                and checkpoint is not None
                 and checkpoint.status is PartitionLifecycleStatus.COMPLETE
             ):
                 skipped.append(chunk.chunk_id)

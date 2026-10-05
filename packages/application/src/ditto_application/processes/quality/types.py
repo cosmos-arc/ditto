@@ -168,6 +168,7 @@ class ReconciliationResult:
     # 财务三表（#473）：键匹配但两侧披露日不一致的跨 vintage 样本数
     # （单列报告，不做数值比较，不计 matched）
     secondary_vintage_mismatch_count: int = 0
+    field_matched_counts: dict[str, int] = field(default_factory=dict)
 
     @property
     def has_error(self) -> bool:
@@ -192,6 +193,7 @@ class ReconciliationResult:
             "diff_count": self.diff_count,
             "secondary_underivable_count": self.secondary_underivable_count,
             "secondary_vintage_mismatch_count": self.secondary_vintage_mismatch_count,
+            "field_matched_counts": self.field_matched_counts,
         }
         if self.skipped and self.skip_reason:
             result["skipped"] = self.skip_reason

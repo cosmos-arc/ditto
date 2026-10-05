@@ -16,7 +16,7 @@ from pytest_mock import MockerFixture
 from typer.testing import CliRunner
 
 CONTAINER_PATH = "ditto_apps.cli.commands.fuyao.make_app_container"
-BUNDLE_PATH = "ditto_apps.registry.contexts.ingestion.create_ingestion_bundle"
+BUNDLE_PATH = "ditto_apps.cli.commands.fuyao.create_ingestion_bundle"
 DATES_PATH = "ditto_application.processes.ingestion.date_range.list_ingestion_dates"
 
 

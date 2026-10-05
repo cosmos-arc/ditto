@@ -69,6 +69,12 @@ class DerivedCatalogReaderProtocol(Protocol):
         """Read the latest SUCCESS run record for one derived version."""
         ...
 
+    def list_successful_runs(
+        self, derived_id: str, version: int
+    ) -> tuple[DerivedRunRecord, ...]:
+        """List all successful identities for deterministic replay."""
+        ...
+
     def read_state(self, derived_id: str) -> DerivedStateRecord | None:
         """Read the latest durable state record."""
         ...
@@ -290,6 +296,12 @@ class DerivedCatalogService:
     ) -> DerivedRunRecord | None:
         """Return the latest run metadata for a version."""
         return self._catalog_reader.get_latest_run(derived_id, version)
+
+    def list_successful_runs(
+        self, derived_id: str, version: int
+    ) -> tuple[DerivedRunRecord, ...]:
+        """List all successful identities for deterministic replay."""
+        return self._catalog_reader.list_successful_runs(derived_id, version)
 
     def get_latest_successful_run(
         self,

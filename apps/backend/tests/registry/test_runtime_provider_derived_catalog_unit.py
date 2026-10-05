@@ -17,6 +17,7 @@ from ditto_analysis.storage.sqlite.experiments import (
 )
 from ditto_apps.registry.infra import ConfigProvider
 from ditto_data.di import RuntimeProvider
+from ditto_data.sources.sina.source import SinaSource
 from ditto_data.sources.source import DataSources
 from ditto_execution.audit import ExecutionAuditService
 from ditto_execution.audit.models import RiskScanPayload
@@ -49,6 +50,10 @@ def _sources_provider() -> Provider:
         @provide
         def data_sources(self) -> DataSources:
             return DataSources(tushare=MagicMock(), fred=None)
+
+        @provide
+        def sina_source(self) -> SinaSource | None:
+            return None
 
     return SourcesProvider()
 

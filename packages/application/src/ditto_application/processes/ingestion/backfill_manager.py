@@ -3,9 +3,7 @@
 from __future__ import annotations
 
 from concurrent.futures import Future, ThreadPoolExecutor, as_completed
-from datetime import date
 
-from ditto_data.catalog.snapshot_completion import snapshot_completed
 from ditto_data.catalog.source_snapshot import ProviderSnapshotReader
 from ditto_data.ingestion.partition_state import PartitionLifecycleReader
 from ditto_data.models.ingestion import (
@@ -16,6 +14,7 @@ from ditto_data.services.metadata_service import MetadataService
 from ditto_kernel.instrument import InstrumentIngestParams
 from ditto_platform.foundation import logger
 
+from ditto_application.catalog_freshness import completed_covering_snapshot
 from ditto_application.exceptions import AppProcessError
 from ditto_application.processes.ingestion.bootstrap_planner import (
     BootstrapChunk,
@@ -159,6 +158,7 @@ class BackfillManager:
             source=source,
             start_date=first_date,
             end_date=last_date,
+            include_complete=True,
         )
         expected_dates = _planned_dates(plan)
         if not expected_dates:
@@ -211,24 +211,18 @@ class BackfillManager:
         """
         if self._snapshot_reader is None or self._lifecycle_reader is None:
             return set()
-        expected = {_parse_iso_date_or_none(value) for value in expected_dates}
-        covered: set[date] = set()
-        for snapshot in self._snapshot_reader.list_snapshots(
-            dataset_id=dataset,
-            source=source,
-        ):
-            if not snapshot_completed(snapshot, self._lifecycle_reader):
-                continue
-            start = _parse_iso_date_or_none(snapshot.request_start)
-            end = _parse_iso_date_or_none(snapshot.request_end)
-            if start is None or end is None:
-                continue
-            covered.update(
-                value
-                for value in expected
-                if value is not None and start <= value <= end
+        return {
+            day
+            for day in expected_dates
+            if completed_covering_snapshot(
+                self._snapshot_reader,
+                self._lifecycle_reader,
+                dataset=dataset,
+                source=source,
+                trade_date=day,
             )
-        return {value.isoformat() for value in covered}
+            is not None
+        }
 
     def _execute_backfill(
         self,
@@ -371,13 +365,6 @@ def _planned_dates(plan: BootstrapPlan) -> list[str]:
             for partition_date in chunk.partition_dates
         }
     )
-
-
-def _parse_iso_date_or_none(value: str) -> date | None:
-    try:
-        return date.fromisoformat(value)
-    except ValueError:
-        return None
 
 
 __all__ = ["BackfillManager"]

@@ -458,9 +458,12 @@ class IngestionDataWriter:
 
     def write_etf_reference(self, df: pl.DataFrame, snapshot: ProviderSnapshot) -> None:
         """Project only available basic facts, bound to the actual retained snapshot."""
-        if snapshot.dataset_id != "etf_basic" or not snapshot.payload_retained:
+        if (
+            snapshot.dataset_id not in {"etf_basic", "etf_daily"}
+            or not snapshot.payload_retained
+        ):
             raise AppProcessError(
-                "ETF basic observations require retained etf_basic evidence"
+                "ETF observations require retained basic or raw daily evidence"
             )
         if df.is_empty() or "source_ticker" not in df.columns:
             return
@@ -486,6 +489,24 @@ class IngestionDataWriter:
             if row.get("list_date") is not None:
                 fields.append(
                     ("list_date", _normalize_iso_date(str(row["list_date"])), "date")
+                )
+            if snapshot.dataset_id == "etf_basic":
+                fields.extend(
+                    (field, str(row[field]), "text")
+                    for field in (
+                        "asset_class",
+                        "tracking_index",
+                        "list_status",
+                        "etf_type",
+                    )
+                    if row.get(field) is not None
+                )
+            else:
+                observed_on = _normalize_iso_date(str(row["trade_date"]))
+                fields = (
+                    [("price_close", str(row["close"]), "price")]
+                    if row.get("close") is not None
+                    else []
                 )
             for field, value, unit in fields:
                 if value == "":

@@ -1,0 +1,604 @@
+{
+  "sha": "bdff6c97d13bf0fbfe432efc61da817c01ffa1fb",
+  "root": "/private/tmp/ditto-etf-paper-20261005-final",
+  "started_at": "2026-10-05T11:55:57.611152+00:00",
+  "scope": "isolated PAPER only; simulated opening cash 10000 and 100 ETF units",
+  "ingestion": {
+    "calendar": {
+      "dataset": "calendar",
+      "trade_date": "2026-09-30",
+      "status": "success",
+      "row_count": 396,
+      "checksum": "59b73681afb6f8559342798477bdd58b",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-09-30",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 396,
+        "checksum": "59b73681afb6f8559342798477bdd58b"
+      }
+    },
+    "etf_basic": {
+      "dataset": "etf_basic",
+      "trade_date": "2026-09-30",
+      "status": "success",
+      "row_count": 1779,
+      "checksum": "b2f07c5b2054e648399a8b2b33b3d928",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-09-30",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 1779,
+        "checksum": "b2f07c5b2054e648399a8b2b33b3d928"
+      }
+    },
+    "etf_daily": {
+      "dataset": "etf_daily",
+      "trade_date": "2026-09-30",
+      "status": "success",
+      "row_count": 1650,
+      "checksum": "f065a5864a95d161e6d0c564010f5bd8",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-09-30",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 1650,
+        "checksum": "f065a5864a95d161e6d0c564010f5bd8"
+      }
+    }
+  },
+  "repeat_etf_daily": {
+    "dataset": "etf_daily",
+    "trade_date": "2026-09-30",
+    "status": "skipped",
+    "row_count": 1650,
+    "checksum": "f065a5864a95d161e6d0c564010f5bd8",
+    "message": "数据已存在且摄取成功(2026-09-30, checksum=f065a586..., rows=1650)",
+    "error": null,
+    "snapshot_evidence": null,
+    "quality_evidence": {
+      "kind": "persisted_ingestion_l1_l2",
+      "status": "passed",
+      "source": "tushare",
+      "trade_date": "2026-09-30",
+      "levels": [
+        "l1",
+        "l2"
+      ],
+      "row_count": 1650,
+      "checksum": "f065a5864a95d161e6d0c564010f5bd8"
+    }
+  },
+  "snapshots": {
+    "calendar": {
+      "snapshot_id": "snapshot:tushare:calendar:sha256:f340f7d4c4a2f48593bbb9d63536fd0691507cdcb305eded464583a33e31d526",
+      "dataset_id": "calendar",
+      "source": "tushare",
+      "request_start": "2026-01-01",
+      "request_end": "2027-01-31",
+      "schema_version": "metadata.calendar.v1",
+      "checksum": "59b73681afb6f8559342798477bdd58b",
+      "canonical_asset": {
+        "dataset_id": "calendar",
+        "namespace": "metadata",
+        "partition_keys": []
+      },
+      "request_parameters_hash": "sha256:cf76df793bca90f336441a1fc17f8a86d024e24a6beb6bb78d24def37c1eeb2d",
+      "response_metadata": [
+        [
+          "canonical_checksum",
+          "59b73681afb6f8559342798477bdd58b"
+        ],
+        [
+          "canonical_row_count",
+          "396"
+        ],
+        [
+          "snapshot_layer",
+          "normalized_provider_payload"
+        ]
+      ],
+      "row_count": 396,
+      "payload_uri": "provider_payloads/tushare/calendar/59b73681afb6f8559342798477bdd58b.parquet",
+      "payload_retained": true,
+      "created_at": "2026-10-05 11:55:59.927229+00:00",
+      "schema_fingerprint": "[[\"trade_date\",\"Date\"],[\"is_open\",\"Boolean\"]]",
+      "observations": [
+        "2026-10-05 11:55:59.928451+00:00"
+      ]
+    },
+    "etf_basic": {
+      "snapshot_id": "snapshot:tushare:etf_basic:sha256:b9c0ee938111c22811bbf9f87b712f401600dd78d1665d27537ff204803f916b",
+      "dataset_id": "etf_basic",
+      "source": "tushare",
+      "request_start": "2026-09-30",
+      "request_end": "2026-09-30",
+      "schema_version": "metadata.etf_basic.v1",
+      "checksum": "9c87c415e09f024a0b2c7969c39d1205",
+      "canonical_asset": {
+        "dataset_id": "etf_basic",
+        "namespace": "metadata",
+        "partition_keys": []
+      },
+      "request_parameters_hash": "sha256:a2843a5ddfc16d15dc86a4c4249ae8fb9b2a65977c91ca55e6efa8cf7f56adc8",
+      "response_metadata": [
+        [
+          "canonical_checksum",
+          "b2f07c5b2054e648399a8b2b33b3d928"
+        ],
+        [
+          "canonical_row_count",
+          "1779"
+        ],
+        [
+          "snapshot_layer",
+          "normalized_provider_payload"
+        ]
+      ],
+      "row_count": 1779,
+      "payload_uri": "provider_payloads/tushare/etf_basic/9c87c415e09f024a0b2c7969c39d1205.parquet",
+      "payload_retained": true,
+      "created_at": "2026-10-05 11:56:02.456002+00:00",
+      "schema_fingerprint": "[[\"source_ticker\",\"String\"],[\"ticker\",\"String\"],[\"name\",\"String\"],[\"exchange\",\"String\"],[\"list_date\",\"Date\"],[\"list_status\",\"String\"],[\"tracking_index\",\"String\"],[\"etf_type\",\"String\"],[\"asset_class\",\"String\"]]",
+      "observations": [
+        "2026-10-05 11:56:02.941133+00:00"
+      ]
+    },
+    "etf_daily": {
+      "snapshot_id": "snapshot:tushare:etf_daily:sha256:05d2b54abe3c6100e08e483583e067e53640bc09f59e7712fb485d88e7257192",
+      "dataset_id": "etf_daily",
+      "source": "tushare",
+      "request_start": "2026-09-30",
+      "request_end": "2026-09-30",
+      "schema_version": "etf.daily.v1",
+      "checksum": "5bd32ed3177a603eca296d037f8d94cb",
+      "canonical_asset": {
+        "dataset_id": "etf_daily",
+        "namespace": "market",
+        "partition_keys": []
+      },
+      "request_parameters_hash": "sha256:1646845f654e774ff3a11e2a87fbb93f7004881554a78b7ab1b211bc73655af8",
+      "response_metadata": [
+        [
+          "canonical_checksum",
+          "f065a5864a95d161e6d0c564010f5bd8"
+        ],
+        [
+          "canonical_row_count",
+          "1650"
+        ],
+        [
+          "snapshot_layer",
+          "normalized_provider_payload"
+        ]
+      ],
+      "row_count": 2142,
+      "payload_uri": "provider_payloads/tushare/etf_daily/5bd32ed3177a603eca296d037f8d94cb.parquet",
+      "payload_retained": true,
+      "created_at": "2026-10-05 11:56:04.280788+00:00",
+      "schema_fingerprint": "[[\"source_ticker\",\"String\"],[\"trade_date\",\"Date\"],[\"knowledge_date\",\"Date\"],[\"open\",\"Float64\"],[\"high\",\"Float64\"],[\"low\",\"Float64\"],[\"close\",\"Float64\"],[\"pre_close\",\"Float64\"],[\"volume\",\"Float64\"],[\"amount\",\"Float64\"],[\"pct_change\",\"Float64\"]]",
+      "observations": [
+        "2026-10-05 11:56:04.327498+00:00"
+      ]
+    }
+  },
+  "candidate": {
+    "instrument_id": 2000801,
+    "ticker": "510300",
+    "name": "华泰柏瑞沪深300ETF",
+    "exchange": "SSE",
+    "is_active": true,
+    "fields": {
+      "list_status": {
+        "value": "L",
+        "unit": "text",
+        "observed_on": "2026-09-30",
+        "published_at": "2026-10-05T11:56:02Z",
+        "source": "tushare",
+        "source_snapshot_id": "snapshot:tushare:etf_basic:sha256:b9c0ee938111c22811bbf9f87b712f401600dd78d1665d27537ff204803f916b",
+        "eligibility": "display_allowed",
+        "missing_reason": null,
+        "eligibility_reasons": [],
+        "sample_count": null,
+        "effective_from": "2026-09-30",
+        "effective_to": null
+      },
+      "etf_type": {
+        "value": "纯境内",
+        "unit": "text",
+        "observed_on": "2026-09-30",
+        "published_at": "2026-10-05T11:56:02Z",
+        "source": "tushare",
+        "source_snapshot_id": "snapshot:tushare:etf_basic:sha256:b9c0ee938111c22811bbf9f87b712f401600dd78d1665d27537ff204803f916b",
+        "eligibility": "display_allowed",
+        "missing_reason": null,
+        "eligibility_reasons": [],
+        "sample_count": null,
+        "effective_from": "2026-09-30",
+        "effective_to": null
+      },
+      "tracking_index": {
+        "value": "000300.SH",
+        "unit": "text",
+        "observed_on": "2026-09-30",
+        "published_at": "2026-10-05T11:56:02Z",
+        "source": "tushare",
+        "source_snapshot_id": "snapshot:tushare:etf_basic:sha256:b9c0ee938111c22811bbf9f87b712f401600dd78d1665d27537ff204803f916b",
+        "eligibility": "display_allowed",
+        "missing_reason": null,
+        "eligibility_reasons": [],
+        "sample_count": null,
+        "effective_from": "2026-09-30",
+        "effective_to": null
+      },
+      "asset_class": {
+        "value": "etf",
+        "unit": "text",
+        "observed_on": "2026-09-30",
+        "published_at": "2026-10-05T11:56:02Z",
+        "source": "tushare",
+        "source_snapshot_id": "snapshot:tushare:etf_basic:sha256:b9c0ee938111c22811bbf9f87b712f401600dd78d1665d27537ff204803f916b",
+        "eligibility": "display_allowed",
+        "missing_reason": null,
+        "eligibility_reasons": [],
+        "sample_count": null,
+        "effective_from": "2026-09-30",
+        "effective_to": null
+      },
+      "fund_currency": {
+        "value": null,
+        "unit": null,
+        "observed_on": null,
+        "published_at": null,
+        "source": null,
+        "source_snapshot_id": null,
+        "eligibility": null,
+        "missing_reason": "no_observation",
+        "eligibility_reasons": [],
+        "sample_count": null,
+        "effective_from": null,
+        "effective_to": null
+      },
+      "trading_currency": {
+        "value": null,
+        "unit": null,
+        "observed_on": null,
+        "published_at": null,
+        "source": null,
+        "source_snapshot_id": null,
+        "eligibility": null,
+        "missing_reason": "no_observation",
+        "eligibility_reasons": [],
+        "sample_count": null,
+        "effective_from": null,
+        "effective_to": null
+      },
+      "aum": {
+        "value": null,
+        "unit": null,
+        "observed_on": null,
+        "published_at": null,
+        "source": null,
+        "source_snapshot_id": null,
+        "eligibility": null,
+        "missing_reason": "no_observation",
+        "eligibility_reasons": [],
+        "sample_count": null,
+        "effective_from": null,
+        "effective_to": null
+      },
+      "management_fee": {
+        "value": null,
+        "unit": null,
+        "observed_on": null,
+        "published_at": null,
+        "source": null,
+        "source_snapshot_id": null,
+        "eligibility": null,
+        "missing_reason": "no_observation",
+        "eligibility_reasons": [],
+        "sample_count": null,
+        "effective_from": null,
+        "effective_to": null
+      },
+      "custody_fee": {
+        "value": null,
+        "unit": null,
+        "observed_on": null,
+        "published_at": null,
+        "source": null,
+        "source_snapshot_id": null,
+        "eligibility": null,
+        "missing_reason": "no_observation",
+        "eligibility_reasons": [],
+        "sample_count": null,
+        "effective_from": null,
+        "effective_to": null
+      },
+      "trading_restriction": {
+        "value": null,
+        "unit": null,
+        "observed_on": null,
+        "published_at": null,
+        "source": null,
+        "source_snapshot_id": null,
+        "eligibility": null,
+        "missing_reason": "no_observation",
+        "eligibility_reasons": [],
+        "sample_count": null,
+        "effective_from": null,
+        "effective_to": null
+      },
+      "distribution": {
+        "value": null,
+        "unit": null,
+        "observed_on": null,
+        "published_at": null,
+        "source": null,
+        "source_snapshot_id": null,
+        "eligibility": null,
+        "missing_reason": "no_observation",
+        "eligibility_reasons": [],
+        "sample_count": null,
+        "effective_from": null,
+        "effective_to": null
+      },
+      "price_close": {
+        "value": 4.432,
+        "unit": "price",
+        "observed_on": "2026-09-30",
+        "published_at": "2026-10-05T11:56:04Z",
+        "source": "tushare",
+        "source_snapshot_id": "snapshot:tushare:etf_daily:sha256:05d2b54abe3c6100e08e483583e067e53640bc09f59e7712fb485d88e7257192",
+        "eligibility": "display_allowed",
+        "missing_reason": null,
+        "eligibility_reasons": [],
+        "sample_count": null,
+        "effective_from": "2026-09-30",
+        "effective_to": null
+      },
+      "lot_size": {
+        "value": null,
+        "unit": null,
+        "observed_on": null,
+        "published_at": null,
+        "source": null,
+        "source_snapshot_id": null,
+        "eligibility": null,
+        "missing_reason": "no_observation",
+        "eligibility_reasons": [],
+        "sample_count": null,
+        "effective_from": null,
+        "effective_to": null
+      },
+      "tick_size": {
+        "value": null,
+        "unit": null,
+        "observed_on": null,
+        "published_at": null,
+        "source": null,
+        "source_snapshot_id": null,
+        "eligibility": null,
+        "missing_reason": "no_observation",
+        "eligibility_reasons": [],
+        "sample_count": null,
+        "effective_from": null,
+        "effective_to": null
+      },
+      "settlement_cycle": {
+        "value": null,
+        "unit": null,
+        "observed_on": null,
+        "published_at": null,
+        "source": null,
+        "source_snapshot_id": null,
+        "eligibility": null,
+        "missing_reason": "no_observation",
+        "eligibility_reasons": [],
+        "sample_count": null,
+        "effective_from": null,
+        "effective_to": null
+      },
+      "price_limit_pct": {
+        "value": null,
+        "unit": null,
+        "observed_on": null,
+        "published_at": null,
+        "source": null,
+        "source_snapshot_id": null,
+        "eligibility": null,
+        "missing_reason": "no_observation",
+        "eligibility_reasons": [],
+        "sample_count": null,
+        "effective_from": null,
+        "effective_to": null
+      },
+      "commission_rate": {
+        "value": null,
+        "unit": null,
+        "observed_on": null,
+        "published_at": null,
+        "source": null,
+        "source_snapshot_id": null,
+        "eligibility": null,
+        "missing_reason": "no_observation",
+        "eligibility_reasons": [],
+        "sample_count": null,
+        "effective_from": null,
+        "effective_to": null
+      },
+      "min_commission": {
+        "value": null,
+        "unit": null,
+        "observed_on": null,
+        "published_at": null,
+        "source": null,
+        "source_snapshot_id": null,
+        "eligibility": null,
+        "missing_reason": "no_observation",
+        "eligibility_reasons": [],
+        "sample_count": null,
+        "effective_from": null,
+        "effective_to": null
+      },
+      "stamp_duty_rate": {
+        "value": null,
+        "unit": null,
+        "observed_on": null,
+        "published_at": null,
+        "source": null,
+        "source_snapshot_id": null,
+        "eligibility": null,
+        "missing_reason": "no_observation",
+        "eligibility_reasons": [],
+        "sample_count": null,
+        "effective_from": null,
+        "effective_to": null
+      },
+      "transfer_fee_rate": {
+        "value": null,
+        "unit": null,
+        "observed_on": null,
+        "published_at": null,
+        "source": null,
+        "source_snapshot_id": null,
+        "eligibility": null,
+        "missing_reason": "no_observation",
+        "eligibility_reasons": [],
+        "sample_count": null,
+        "effective_from": null,
+        "effective_to": null
+      },
+      "nav": {
+        "value": null,
+        "unit": null,
+        "observed_on": null,
+        "published_at": null,
+        "source": null,
+        "source_snapshot_id": null,
+        "eligibility": null,
+        "missing_reason": "no_observation",
+        "eligibility_reasons": [],
+        "sample_count": null,
+        "effective_from": null,
+        "effective_to": null
+      },
+      "iopv": {
+        "value": null,
+        "unit": null,
+        "observed_on": null,
+        "published_at": null,
+        "source": null,
+        "source_snapshot_id": null,
+        "eligibility": null,
+        "missing_reason": "no_observation",
+        "eligibility_reasons": [],
+        "sample_count": null,
+        "effective_from": null,
+        "effective_to": null
+      },
+      "daily_amount": {
+        "value": null,
+        "unit": null,
+        "observed_on": null,
+        "published_at": null,
+        "source": null,
+        "source_snapshot_id": null,
+        "eligibility": null,
+        "missing_reason": "incomplete_20_session_window",
+        "eligibility_reasons": [],
+        "sample_count": 0,
+        "effective_from": null,
+        "effective_to": null
+      }
+    },
+    "tracking": {
+      "status": "unavailable",
+      "reason": "insufficient_trading_sessions",
+      "tracking_deviation_pct": null,
+      "tracking_error_pct": null,
+      "sample_count": 0,
+      "start": null,
+      "end": null,
+      "currency": null,
+      "benchmark_id": null,
+      "source_snapshot_id": "snapshot:tushare:etf_basic:sha256:b9c0ee938111c22811bbf9f87b712f401600dd78d1665d27537ff204803f916b",
+      "calendar_snapshot_ids": [
+        "snapshot:tushare:calendar:sha256:f340f7d4c4a2f48593bbb9d63536fd0691507cdcb305eded464583a33e31d526"
+      ],
+      "method": "dividend-reinvested NAV total return vs same-currency index total return; formal results require the same UTC valuation time; 252 aligned daily returns; sample std (ddof=1) * sqrt(252)"
+    }
+  },
+  "handoff_facts": {
+    "signal_date": "2026-09-30",
+    "knowledge_cutoff": "2026-10-05 11:56:08.567811+00:00",
+    "source_snapshot_id": "snapshot:tushare:etf_basic:sha256:b9c0ee938111c22811bbf9f87b712f401600dd78d1665d27537ff204803f916b",
+    "current_positions": {
+      "2000801": 0.04243909912670446
+    },
+    "investable_instrument_ids": "frozenset()",
+    "signal_ledger_hash": "account-ledger:sha256:bdd13599159ee60f96905baa0b0ce27c63260c8bfb8384c0fe84eb108a7afe0e",
+    "next_trading_day": "2026-10-08",
+    "selected_unavailable_reasons": [
+      "trading_restriction:missing",
+      "trading_currency:missing"
+    ]
+  },
+  "valuation": {
+    "account_id": "issue-408-isolated-paper",
+    "account_kind": "paper",
+    "as_of": "2026-09-30",
+    "currency": "CNY",
+    "cash": {
+      "available": "10000.00",
+      "settled": "10000.00",
+      "frozen": "0"
+    },
+    "positions": [
+      {
+        "instrument_id": 2000801,
+        "quantity": "1E+2",
+        "available_quantity": "1E+2",
+        "average_cost": "4.4320",
+        "last_price": "4.4320",
+        "market_value": "443.20",
+        "realized_pnl": "0.00",
+        "unrealized_pnl": "0.00",
+        "total_fees": "0.00"
+      }
+    ],
+    "total_value": "10443.20",
+    "realized_pnl": "0.00",
+    "unrealized_pnl": "0.00",
+    "total_fees": "0.00",
+    "event_count": 2,
+    "ledger_hash": "account-ledger:sha256:bdd13599159ee60f96905baa0b0ce27c63260c8bfb8384c0fe84eb108a7afe0e",
+    "valuation_complete": true
+  },
+  "journey_status": "BLOCKED: no authorized handoff or execution; required rules/currency/restriction absent",
+  "finished_at": "2026-10-05T11:56:10.994945+00:00"
+}

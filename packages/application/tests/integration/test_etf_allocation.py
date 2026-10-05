@@ -412,7 +412,7 @@ def test_paper_handoff_requires_separate_exact_authorization_and_current_facts(
             signal_ledger_hash="ledger-before",
             next_trading_day=request.intended_trade_date,
         )
-        with pytest.raises(AppConflictError, match="choose alternatives"):
+        with pytest.raises(AppConflictError, match="not investable"):
             handoff.handoff(request)
         packages.publish.assert_not_called()
         facts.resolve.return_value = replace(
@@ -560,6 +560,11 @@ def test_paper_handoff_fact_visibility_excludes_future_publication(
     snapshots.get_snapshot.return_value = SimpleNamespace(
         snapshot_id="snapshot:recorded:market",
         dataset_id=snapshot_dataset,
+        payload_retained=True,
+        source="recorded",
+        payload_uri=f"provider_payloads/recorded/{snapshot_dataset}/{'b' * 32}.parquet",
+        checksum="b" * 32,
+        row_count=1,
         created_at=datetime.fromisoformat("2026-09-02T06:00:00+00:00"),
     )
     snapshots.list_snapshots.return_value = (

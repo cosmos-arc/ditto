@@ -262,11 +262,8 @@ def _read_publication_payload(
     """读取一次 run 的 artifact metadata publication 块（产物身份唯一载体）."""
     partition = catalog_service.list_partitions(derived_id, version, run_id)[0]
     metadata_path = (
-        (data_root / partition.partition_path).parent
-        / "_runs"
-        / run_id
-        / "artifact_metadata.json"
-    )
+        data_root / partition.partition_path
+    ).parent / "artifact_metadata.json"
     payload = orjson.loads(metadata_path.read_bytes())
     return payload["publication"]
 
@@ -461,9 +458,7 @@ class TestDerivedMaterializationOrchestrator:
         assert len(partitions) == 1
         artifact_path = tmp_path / partitions[0].partition_path
         assert artifact_path.exists()
-        metadata_path = (
-            artifact_path.parent / "_runs" / result.run_id / "artifact_metadata.json"
-        )
+        metadata_path = artifact_path.parent / "artifact_metadata.json"
         assert metadata_path.exists()
         payload = orjson.loads(metadata_path.read_bytes())
         assert payload["compile_identity"]["cache_key"]
@@ -976,11 +971,8 @@ class TestDerivedMaterializationOrchestrator:
             result.run_id,
         )[0]
         metadata_path = (
-            (tmp_path / partition.partition_path).parent
-            / "_runs"
-            / result.run_id
-            / "artifact_metadata.json"
-        )
+            tmp_path / partition.partition_path
+        ).parent / "artifact_metadata.json"
         payload = orjson.loads(metadata_path.read_bytes())
         assert payload["input_snapshots"] == list(source_snapshot_ids)
         assert payload["publication"]["compatibility_manifest"][
@@ -1345,7 +1337,9 @@ class TestDerivedMaterializationOrchestrator:
             spec.version,
             result.run_id,
         )[0]
-        published_path = tmp_path / partition.partition_path
+        published_path = (tmp_path / partition.partition_path).parents[
+            2
+        ] / "2026.parquet"
         tampered = pl.read_parquet(published_path).with_columns(pl.col("value") + 1.0)
         tampered.write_parquet(published_path)
 
@@ -1665,6 +1659,14 @@ class TestDerivedMaterializationOrchestrator:
                 source_snapshot_id="market:full-A",
             )
         )
+        reader = service._artifact_reader
+        assert reader is not None
+        full_slice = reader.read_frame(
+            derived_id=spec.id,
+            version=spec.version,
+            start="2026-03-10",
+            end="2026-03-11",
+        )
         incremental = service.materialize(
             DerivedMaterializationRequest(
                 derived_id=spec.id,
@@ -1677,14 +1679,6 @@ class TestDerivedMaterializationOrchestrator:
             )
         )
 
-        reader = service._artifact_reader
-        assert reader is not None
-        full_slice = reader.read_frame(
-            derived_id=spec.id,
-            version=spec.version,
-            start="2026-03-10",
-            end="2026-03-11",
-        )
         incremental_slice = reader.read_frame(
             derived_id=spec.id,
             version=spec.version,
@@ -1760,3 +1754,111 @@ class TestDerivedMaterializationOrchestrator:
         version_record = catalog_service.get_version(spec.id, spec.version)
         assert version_record is not None
         assert version_record.status == DerivedVersionStatus.PUBLISHED.value
+
+
+@pytest.mark.parametrize("expression", ["close", "ts_delta(close, 1)"])
+@pytest.mark.parametrize(
+    "days",
+    [
+        ("2026-03-09", "2026-03-10", "2026-03-11", "2026-03-12"),
+        ("2025-12-29", "2025-12-30", "2025-12-31", "2026-01-01"),
+    ],
+)
+def test_incremental_preserves_history_and_checks_every_input_identity(
+    sqlite_client,
+    tmp_path: Path,
+    expression: str,
+    days: tuple[str, str, str, str],
+) -> None:
+    spec = DerivedSpec(
+        id="factor.retained_history",
+        version=1,
+        role=DerivedRole.FACTOR,
+        materialization_profile=MaterializationProfile.SERIES,
+        expression=expression,
+    )
+    catalog = _catalog_service(sqlite_client, tmp_path)
+    _seed_spec(catalog, spec, status=DerivedVersionStatus.DRAFT)
+    reader = DerivedArtifactReader(catalog_service=catalog, artifact_root=tmp_path)
+
+    def run(
+        snapshot: str,
+        start: str,
+        end: str,
+        values: list[float],
+        mode=DerivedRunMode.INCREMENTAL,
+    ):
+        frame = pl.DataFrame(
+            {
+                "instrument_id": [1] * 4,
+                "trade_date": [date.fromisoformat(day) for day in days],
+                "close": values,
+            }
+        )
+        service = DerivedMaterializationOrchestrator(
+            orchestrator_module.MaterializationRuntimePorts(
+                catalog_service=catalog,
+                compile_cache_service=SQLiteCompileCache(sqlite_client),
+                input_provider=InMemoryDerivedInputProvider({spec.id: frame}),
+                artifact_writer=ArtifactPersistenceService(tmp_path),
+                artifact_reader=reader,
+            )
+        )
+        return service.materialize(
+            DerivedMaterializationRequest(
+                derived_id=spec.id,
+                version=1,
+                mode=mode,
+                request_start=start,
+                request_end=end,
+                trigger=DerivedRunTrigger.MANUAL,
+                source_snapshot_id=snapshot,
+            )
+        )
+
+    run("A", days[1], days[2], [9.0, 10.0, 11.0, 12.0], DerivedRunMode.FULL)
+    before = reader.read_frame(derived_id=spec.id, version=1, end=days[2])
+    assert before.height == 2
+    canonical = (
+        tmp_path
+        / "derived"
+        / "artifacts"
+        / "series"
+        / spec.id
+        / "v1"
+        / f"{days[2][:4]}.parquet"
+    )
+    if days[2][:4] == days[3][:4]:
+        pl.read_parquet(canonical).with_columns(
+            pl.lit(999.0).alias("value")
+        ).write_parquet(canonical)
+    first_b = run("B", days[3], days[3], [9.0, 10.0, 11.0, 12.0])
+    frozen_b = reader.read_run_frame(spec.id, 1, first_b.run_id)
+    assert reader.read_frame(derived_id=spec.id, version=1, end=days[2]).equals(before)
+    assert reader.read_frame(derived_id=spec.id, version=1).height == 3
+    run("C", days[3], days[3], [9.0, 10.0, 11.0, 120.0])
+    current = reader.read_frame(derived_id=spec.id, version=1)
+    assert reader.read_run_frame(spec.id, 1, first_b.run_id).equals(frozen_b)
+    with pytest.raises(AppProcessError, match="deterministic retry mismatch"):
+        run("B", days[3], days[3], [9.0, 10.0, 11.0, 999.0])
+    assert reader.read_frame(derived_id=spec.id, version=1).equals(current)
+    assert (
+        run("B", days[3], days[3], [9.0, 10.0, 11.0, 12.0]).status
+        == DerivedRunStatus.SUCCESS
+    )
+    metadata_path = (
+        tmp_path
+        / "derived"
+        / "artifacts"
+        / "series"
+        / spec.id
+        / "v1"
+        / "_runs"
+        / first_b.run_id
+        / "artifact_metadata.json"
+    )
+    metadata_path.unlink()
+    frozen = reader.read_frame(derived_id=spec.id, version=1)
+    with pytest.raises(AppProcessError, match="identity metadata is missing"):
+        run("B", days[3], days[3], [9.0, 10.0, 11.0, 777.0])
+    assert reader.read_frame(derived_id=spec.id, version=1).equals(frozen)

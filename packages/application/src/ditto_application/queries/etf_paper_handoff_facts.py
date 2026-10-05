@@ -13,11 +13,14 @@ from ditto_portfolio.account_ledger import ledger_hash
 from ditto_application.etf_paper_contracts import (
     ETFPaperHandoffFacts,
     ETFPaperHandoffRequest,
-    canonical_cutoff,
 )
 from ditto_application.exceptions import AppProcessError
 from ditto_application.queries.account_ledger import AccountLedgerQuery
 from ditto_application.queries.etf_candidates import ETFCandidate, ETFField
+from ditto_application.queries.etf_paper_reference import (
+    ETFPaperReferenceQuery,
+    paper_reference_candidates,
+)
 from ditto_application.queries.metadata import MetadataQueryFacade
 from ditto_application.queries.retained_calendar import (
     RetainedCalendarAbsent,
@@ -75,26 +78,25 @@ class LiveETFPaperHandoffFacts:
 
     def resolve(self, request: ETFPaperHandoffRequest) -> ETFPaperHandoffFacts:
         """Read only evidence visible under the selected execution-day cutoff."""
-        snapshot = self._snapshots.get_snapshot(request.source_snapshot_id)
-        if (
-            snapshot is None
-            or snapshot.snapshot_id != request.source_snapshot_id
-            or snapshot.dataset_id not in {"etf_reference", "etf_basic"}
-            or snapshot.created_at > request.knowledge_cutoff
-        ):
-            raise AppProcessError("Paper source snapshot is absent or future")
-        self._require_ready(
-            request.source_snapshot_id,
-            snapshot.dataset_id,
-            request.signal_date,
-        )
-        candidates = self._metadata.list_etf_candidates(
-            asof=request.signal_date,
-            cutoff=canonical_cutoff(request.knowledge_cutoff),
-            source_snapshot_id=request.source_snapshot_id,
-        )
+        candidates = paper_reference_candidates(
+            metadata=self._metadata,
+            readiness=self._readiness,
+            snapshots=self._snapshots,
+            payloads=self._payloads,
+            query=ETFPaperReferenceQuery(
+                asof=request.signal_date,
+                cutoff=request.knowledge_cutoff,
+                snapshot_id=request.source_snapshot_id,
+                input_snapshot_ids=request.input_snapshot_ids,
+            ),
+        ).values()
         prices: dict[InstrumentId, Decimal] = {}
         investable: set[int] = set()
+        candidates = list(candidates)
+        unavailable = {
+            candidate.instrument_id: self._unavailable(candidate, request)
+            for candidate in candidates
+        }
         for candidate in candidates:
             price = candidate.fields.get("price_close")
             if price is None:
@@ -159,6 +161,7 @@ class LiveETFPaperHandoffFacts:
             current_positions=weights,
             investable_instrument_ids=frozenset(investable),
             signal_ledger_hash=ledger_hash(account.events),
+            unavailable_reasons=unavailable,
             next_trading_day=_next_trading_day(
                 snapshots=self._snapshots,
                 payloads=self._payloads,
@@ -166,6 +169,32 @@ class LiveETFPaperHandoffFacts:
                 signal_date=request.signal_date,
             ),
         )
+
+    def _unavailable(
+        self, candidate: ETFCandidate, request: ETFPaperHandoffRequest
+    ) -> tuple[str, ...]:
+        reasons: list[str] = []
+        for name in (
+            "price_close",
+            "trading_restriction",
+            "asset_class",
+            "trading_currency",
+        ):
+            field = candidate.fields.get(name)
+            if field is None or field.value is None:
+                reasons.append(f"{name}:missing")
+            elif not self._field_allowed(candidate, name, field, request):
+                reasons.append(f"{name}:not_visible")
+        price = candidate.fields.get("price_close")
+        if (
+            price is not None
+            and price.value is not None
+            and price.observed_on != request.signal_date
+        ):
+            reasons.append("price_close:not_signal_day")
+        if not candidate.is_active:
+            reasons.append("list_status:inactive")
+        return tuple(reasons)
 
     def _field_allowed(
         self,
@@ -180,21 +209,11 @@ class LiveETFPaperHandoffFacts:
             field,
             asof=request.signal_date,
             cutoff=request.knowledge_cutoff,
-            snapshot_id=request.source_snapshot_id,
+            snapshot_id=(
+                request.source_snapshot_id,
+                *request.input_snapshot_ids.values(),
+            ),
         )
-
-    def _require_ready(self, snapshot_id: str, dataset_id: str, day: str) -> None:
-        """Consumable check: exact identity, completion, retention, scope."""
-        reasons = self._readiness.snapshot_reasons(
-            dataset_id,
-            snapshot_id,
-            date.fromisoformat(day),
-            date.fromisoformat(day),
-        )
-        if reasons:
-            raise AppProcessError(
-                "ETF Paper source snapshot is not consumable: " + ", ".join(reasons)
-            )
 
 
 def etf_field_visible(
@@ -204,13 +223,14 @@ def etf_field_visible(
     *,
     asof: str,
     cutoff: datetime,
-    snapshot_id: str,
+    snapshot_id: str | tuple[str, ...],
 ) -> bool:
     """Apply the same temporal visibility rule at either Paper date."""
     if (
         field.value is None
         or field.observed_on is None
-        or field.source_snapshot_id != snapshot_id
+        or field.source_snapshot_id
+        not in ((snapshot_id,) if isinstance(snapshot_id, str) else snapshot_id)
     ):
         return False
     try:

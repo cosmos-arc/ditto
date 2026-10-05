@@ -23,6 +23,7 @@ class SQLiteDatabaseReport:
     sha256: str
     size_bytes: int
     table_row_counts: dict[str, int]
+    logical_sha256: str
 
 
 def inspect_database(database: Path) -> SQLiteDatabaseReport:
@@ -31,6 +32,7 @@ def inspect_database(database: Path) -> SQLiteDatabaseReport:
     try:
         with _read_only_connection(path) as connection:
             integrity, row_counts = _integrity_and_row_counts(connection)
+            logical_sha256 = _logical_sha256(connection)
     except (OSError, sqlite3.Error) as exc:
         raise SQLiteBackupError("SQLite integrity verification failed") from exc
     if integrity != "ok":
@@ -41,6 +43,7 @@ def inspect_database(database: Path) -> SQLiteDatabaseReport:
         sha256=_sha256(path),
         size_bytes=path.stat().st_size,
         table_row_counts=row_counts,
+        logical_sha256=logical_sha256,
     )
 
 
@@ -78,11 +81,15 @@ def _copy_database(source: Path, destination: Path) -> SQLiteDatabaseReport:
             source_integrity, _ = _integrity_and_row_counts(source_connection)
             if source_integrity != "ok":
                 raise SQLiteBackupError("SQLite integrity verification failed")
+            source_identity = _logical_sha256(source_connection)
             source_connection.backup(destination_connection)
             destination_connection.commit()
             backup_integrity, backup_row_counts = _integrity_and_row_counts(
                 destination_connection
             )
+            logical_sha256 = _logical_sha256(destination_connection)
+            if logical_sha256 != source_identity:
+                raise SQLiteBackupError("SQLite restored logical content mismatch")
             if backup_integrity != "ok":
                 raise SQLiteBackupError("SQLite integrity verification failed")
         try:
@@ -105,6 +112,7 @@ def _copy_database(source: Path, destination: Path) -> SQLiteDatabaseReport:
         sha256=_sha256(destination_path),
         size_bytes=destination_path.stat().st_size,
         table_row_counts=backup_row_counts,
+        logical_sha256=logical_sha256,
     )
 
 
@@ -149,6 +157,25 @@ def _integrity_and_row_counts(
         ).fetchone()
         row_counts[table_name] = int(row[0]) if row is not None else 0
     return integrity, row_counts
+
+
+def _logical_sha256(connection: sqlite3.Connection) -> str:
+    """Hash schema and ordered typed values, independent of SQLite file layout."""
+    digest = hashlib.sha256()
+    schema = connection.execute(
+        "SELECT type, name, tbl_name, sql FROM sqlite_schema ORDER BY type, name"
+    ).fetchall()
+    digest.update(repr(schema).encode())
+    for kind, name, _table, _sql in schema:
+        if kind != "table":
+            continue
+        quoted = name.replace('"', '""')
+        cursor = connection.execute(f'SELECT * FROM "{quoted}" LIMIT 0')  # noqa: S608
+        ordering = ", ".join(str(index + 1) for index in range(len(cursor.description)))
+        digest.update(repr((name, cursor.description)).encode())
+        for row in connection.execute(f'SELECT * FROM "{quoted}" ORDER BY {ordering}'):  # noqa: S608
+            digest.update(repr(row).encode() + b"\n")
+    return f"sha256:{digest.hexdigest()}"
 
 
 def _sha256(path: Path) -> str:
