@@ -26,6 +26,7 @@ from ditto_application.processes.experiments.r2_live_gate_evidence import (
     R2LiveGateEvidenceSource,
 )
 from ditto_application.queries.source import SourceDataPort
+from ditto_data.models.ingestion import IngestionResult
 from ditto_data.quality.protocols import (
     ComparisonStoreProtocol,
     InstrumentStoreProtocol,
@@ -34,16 +35,38 @@ from ditto_data.quality.protocols import (
 )
 from ditto_data.services.deps import MarketReaders
 from ditto_data.services.market_service import MarketService
+from ditto_data.services.metadata.instrument import InstrumentService
+from ditto_data.services.metadata_service import MetadataService
 from ditto_data.services.source_accessor import SourceAccessor
-from ditto_data.sources.fuyao.source import FuyaoSource
+from ditto_data.sources.base import SourceFetchError
+from ditto_data.sources.fuyao.source import FuyaoDailyKDumpFetcher, FuyaoSource
 from ditto_data.storage.metadata.instrument import InstrumentReader
 from ditto_data.storage.runtime.quality import ComparisonWriter
 
-__all__ = ["FuyaoSource", "MarketReaders", "MarketService"]
+__all__ = [
+    "FuyaoDailyKDumpFetcher",
+    "FuyaoSource",
+    "IngestionResult",
+    "InstrumentService",
+    "MarketReaders",
+    "MarketService",
+    "MetadataService",
+    "SourceFetchError",
+    "latest_fuyao_dump",
+]
 from ditto_features.compile_cache import SQLiteCompileCacheBackend
-from ditto_platform.foundation import SQLiteClient
+from ditto_platform.foundation import SQLiteClient, logger
 
 from ditto_apps.r2_live_evidence_source import load_r2_live_gate_source
+
+
+def latest_fuyao_dump(data_root: Path, kind: str) -> Path | None:
+    """Fuyao dumps 目录下指定 kind 的最新快照（YYYYMMDD 文件名字典序 = 时间序）."""
+    dump_dir = Path(data_root) / "fuyao" / "dumps" / kind
+    if not dump_dir.is_dir():
+        return None
+    dumps = sorted(dump_dir.glob("*.parquet"))
+    return dumps[-1] if dumps else None
 
 
 class _IngestionCoordinatorLike(Protocol):
@@ -107,27 +130,26 @@ def _ingestion_bundle_factory() -> _IngestionBundleFactory:
 class FuyaoAdjustmentEventsSource:
     """fuyao 复权因子事件辅源（#438）：本地 adjustment-factors dump 最新快照."""
 
-    def __init__(self, dump_dir: Path) -> None:
-        self._dump_dir = dump_dir
+    def __init__(self, data_root: Path) -> None:
+        self._data_root = data_root
 
     def fetch_adjustment_events(self, trade_date: str) -> pl.DataFrame:
         """最新 dump → 目标日事件帧 [ticker, trade_date, 分红/送转/配股字段]."""
-        dump = self._latest_dump()
+        dump = latest_fuyao_dump(self._data_root, "adjustment-factors")
         if dump is None:
             raise RuntimeError(
                 "fuyao adjustment-factors dump not found: run 'ditto fuyao "
                 "dump-adjustment-factors' before adj_factor reconciliation"
             )
+        logger.info(
+            "adj_factor reconciliation using fuyao adjustment-factors dump",
+            event="reconciliation_events_dump",
+            dump=str(dump),
+            trade_date=trade_date,
+        )
         target = date.fromisoformat(trade_date)
         frame = FuyaoSource.adjustment_factors_frame(dump)
         return frame.filter(pl.col("trade_date") == target)
-
-    def _latest_dump(self) -> Path | None:
-        """YYYYMMDD.parquet 文件名字典序 = 时间序，取最新."""
-        if not self._dump_dir.is_dir():
-            return None
-        dumps = sorted(self._dump_dir.glob("*.parquet"))
-        return dumps[-1] if dumps else None
 
 
 class ProtocolAdapterProvider(Provider):
@@ -154,9 +176,7 @@ class ProtocolAdapterProvider(Provider):
         data_root: Path,
     ) -> SecondaryAdjustmentEventsSourceProtocol:
         """adj_factor 对账辅源：fuyao 本地事件 dump（无 dump 显式失败）。"""
-        return FuyaoAdjustmentEventsSource(
-            Path(data_root) / "fuyao" / "dumps" / "adjustment-factors"
-        )
+        return FuyaoAdjustmentEventsSource(Path(data_root))
 
     @provide
     def comparison_store_protocol(
