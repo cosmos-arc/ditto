@@ -1,0 +1,48 @@
+# ETF 净值 DQ 规则
+dataset: etf_nav
+description: "ETF 单位净值数据质量检查规则"
+
+# 技术类: 技术校验（写入时强制阻断）
+technical:
+  - rule: not_null
+    columns: [instrument_id, trade_date, unit_nav]
+    message: "必填字段不能为空"
+
+  - rule: unique
+    columns: [instrument_id, trade_date]
+    message: "主键 (instrument_id, trade_date) 重复"
+
+  - rule: foreign_key
+    column: instrument_id
+    reference: instrument.instrument_id
+    message: "Instrument ID 不存在于证券主表"
+
+  - rule: type_check
+    columns:
+      instrument_id: int
+      trade_date: date
+      unit_nav: float
+    message: "字段类型不匹配"
+
+# 业务类: 业务规则（写入时警告但不阻断）
+business:
+  - rule: positive
+    columns: [unit_nav]
+    message: "单位净值必须为正数"
+
+# 统计类: 跨源对账（#475）
+statistical:
+  # 主源 Tushare etf_nav vs 辅源 fuyao 基金净值端点（unit_nav 单位净值）。
+  # 只比较单位净值：fuyao adj_nav 是复权净值（官方明示不等同于累计净值），
+  # 与主源 acc_nav 口径不可等价——不注册比较、不折算，口径差异单列。
+  # 容差 0.0001 = 两侧 4 位小数舍入（实测 510300.SH unit_nav 4dp）。
+  # 键 = instrument_id + trade_date（净值估值日，即交易日；沿市场存储约定）。
+  - rule: cross_source_compare
+    key_columns: [instrument_id, trade_date]
+    fields: [unit_nav]
+    tolerance_rules:
+      unit_nav:
+        method: absolute
+        absolute_tol: 0.0001
+    message: "与辅源(fuyao)ETF单位净值对比发现差异"
+    enabled: true

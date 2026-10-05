@@ -20,6 +20,7 @@ from ditto_data.quality.protocols import (
     SecondaryAdjustmentEventsSourceProtocol,
     SecondaryBarsSourceProtocol,
     SecondaryFinancialsSourceProtocol,
+    SecondaryFundNavSourceProtocol,
     SecondaryIdentityResolverProtocol,
     SecondaryIndexBarsSourceProtocol,
 )
@@ -67,8 +68,9 @@ class ReconcileSourcesHandler:
         golden_dataset: GoldenDatasetSpec | None = None,
         secondary_events_source: SecondaryAdjustmentEventsSourceProtocol | None = None,
         adj_factor_context: AdjFactorReconcileContextProtocol | None = None,
-        secondary_financials_source: SecondaryFinancialsSourceProtocol | None = None,
         secondary_index_source: SecondaryIndexBarsSourceProtocol | None = None,
+        secondary_financials_source: SecondaryFinancialsSourceProtocol | None = None,
+        secondary_fund_nav_source: SecondaryFundNavSourceProtocol | None = None,
     ) -> None:
         self._engine = engine
         self._secondary_source = secondary_source
@@ -79,8 +81,9 @@ class ReconcileSourcesHandler:
         self._golden_dataset = golden_dataset
         self._secondary_events_source = secondary_events_source
         self._adj_factor_context = adj_factor_context
-        self._secondary_financials_source = secondary_financials_source
         self._secondary_index_source = secondary_index_source
+        self._secondary_financials_source = secondary_financials_source
+        self._secondary_fund_nav_source = secondary_fund_nav_source
 
     def handle(self, cmd: ReconcileSourcesCommand) -> ReconciliationResult:
         """执行跨源对账，返回对账结果."""
@@ -174,6 +177,8 @@ class ReconcileSourcesHandler:
             return self._execute_adj_factor_comparison(primary_df, trade_date, dataset)
         if dataset in FINANCIAL_DATASETS:
             return self._execute_financial_comparison(primary_df, trade_date, dataset)
+        if dataset == "etf_nav":
+            return self._execute_etf_nav_comparison(primary_df, trade_date, dataset)
         # 指数对账身份键为完整 thscode（后缀区分 000001.SH 指数与 000001.SZ
         # 个股），从 source_ticker 取；股票路径沿用裸码 ticker。
         if dataset == "index_daily":
@@ -537,6 +542,92 @@ class ReconcileSourcesHandler:
             secondary_unmatched_count=len(secondary_unmatched),
             diff_count=comparison.diff_count,
             secondary_vintage_mismatch_count=vintage_mismatch.height,
+        )
+
+    def _execute_etf_nav_comparison(
+        self,
+        primary_df: pl.DataFrame,
+        trade_date: str,
+        dataset: str,
+    ) -> ReconciliationResult:
+        """
+        ETF 单位净值对账（#475）：只比较 unit_nav（单位净值）.
+
+        #475 红线：fuyao 恒前复权行情价不得作为净值/原始价比较对象（不取
+        行情端点）；adj_nav 复权净值≠累计净值，不与主源 acc_nav 比较也不
+        折算——口径差异以「不注册比较字段」显式单列。目标日落辅源窗口 =
+        该标的覆盖不足（辅侧未匹配呈现；全部缺席判 not_comparable）。
+        """
+        if self._secondary_fund_nav_source is None:
+            raise AppCommandError(
+                "etf_nav reconciliation requires fuyao fund NAV source"
+            )
+
+        # 主源帧 ticker 为裸码；辅源取数按 ETF 前缀规则补 thscode 后缀
+        tickers = primary_df["ticker"].unique().cast(pl.String).to_list()
+        secondary_df = self._secondary_fund_nav_source.fetch_fund_nav(
+            tickers, trade_date
+        )
+        if secondary_df.height == 0:
+            return self._zero_intersection_result(
+                trade_date, dataset, primary_df.height, 0
+            )
+        secondary_df = self._resolve_secondary_identities(secondary_df, trade_date)
+        if secondary_df.is_empty() or "instrument_id" not in secondary_df.columns:
+            return self._zero_intersection_result(
+                trade_date, dataset, primary_df.height, secondary_df.height
+            )
+
+        comparison = self._engine.compare_cross_source(
+            primary=primary_df,
+            secondary=secondary_df,
+            dataset=dataset,
+            context={},
+        )
+        result = self._engine.check_cross_source(
+            primary=primary_df,
+            secondary=secondary_df,
+            dataset=dataset,
+            context={},
+        )
+
+        comparison_df = self._convert_result_to_df(result, dataset, primary_df)
+        if not comparison_df.is_empty():
+            self._comparison_store.write_comparison(trade_date, comparison_df, dataset)
+
+        if result.issues:
+            self._send_alerts(result, trade_date, dataset)
+
+        passed = comparison.comparable and not result.has_errors
+
+        logger.info(
+            "etf_nav reconciliation complete",
+            event="reconciliation_complete",
+            trade_date=trade_date,
+            dataset=dataset,
+            passed=passed,
+            comparable=comparison.comparable,
+            issue_count=len(result.issues),
+            primary_count=comparison.primary_count,
+            secondary_count=comparison.secondary_count,
+            matched_count=comparison.matched_count,
+            primary_unmatched_count=comparison.primary_unmatched_count,
+            secondary_unmatched_count=comparison.secondary_unmatched_count,
+            diff_count=comparison.diff_count,
+        )
+
+        return ReconciliationResult(
+            trade_date=trade_date,
+            dataset=dataset,
+            passed=passed,
+            issue_count=len(result.issues),
+            comparable=comparison.comparable,
+            primary_count=comparison.primary_count,
+            secondary_count=comparison.secondary_count,
+            matched_count=comparison.matched_count,
+            primary_unmatched_count=comparison.primary_unmatched_count,
+            secondary_unmatched_count=comparison.secondary_unmatched_count,
+            diff_count=comparison.diff_count,
         )
 
     def _vintage_mismatch_rows(

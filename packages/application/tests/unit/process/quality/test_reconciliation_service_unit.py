@@ -1156,3 +1156,90 @@ class TestIndexDailyReconciliation:
 
         assert result.comparable is False
         assert result.passed is False
+
+
+@pytest.mark.unit
+class TestEtfNavReconciliation:
+    """#475 ETF 单位净值对账：unit_nav 唯一比较字段 + 覆盖不足 not_comparable."""
+
+    def _primary(self) -> pl.DataFrame:
+        return pl.DataFrame(
+            {
+                "instrument_id": [1000003],
+                "source_ticker": ["510300.SH"],
+                "ticker": ["510300"],
+                "trade_date": [date(2026, 9, 30)],
+                "unit_nav": [4.4312],
+            }
+        )
+
+    def test_unit_nav_compared(
+        self,
+        mock_quality_engine,
+        mock_comparison_writer,
+        mock_instrument_store,
+        mock_secondary_identity_resolver,
+    ) -> None:
+        nav_source = MagicMock()
+        nav_source.fetch_fund_nav.return_value = pl.DataFrame(
+            {
+                "ticker": ["510300.SH"],
+                "trade_date": [date(2026, 9, 30)],
+                "unit_nav": [4.4312],
+            }
+        )
+        mock_instrument_store.enrich_with_ticker.return_value = self._primary()
+        resolver = MagicMock()
+        resolver.resolve_secondary_ids.return_value = {"510300.SH": 1000003}
+        handler = ReconcileSourcesHandler(
+            engine=mock_quality_engine,
+            secondary_source=MagicMock(),
+            comparison_store=mock_comparison_writer,
+            instrument_store=mock_instrument_store,
+            secondary_identity_resolver=resolver,
+            secondary_fund_nav_source=nav_source,
+        )
+
+        result = handler.handle(
+            ReconcileSourcesCommand(
+                primary_df=self._primary(),
+                trade_date="2026-09-30",
+                dataset="etf_nav",
+            )
+        )
+
+        assert result.passed is True
+        call = mock_quality_engine.compare_cross_source.call_args
+        assert call.kwargs["dataset"] == "etf_nav"
+        # 只比较 unit_nav：主源帧含 acc_nav 也不进入数值比较（口径红线）
+        assert "unit_nav" in call.kwargs["primary"].columns
+
+    def test_out_of_range_window_not_comparable(
+        self,
+        mock_quality_engine,
+        mock_comparison_writer,
+        mock_instrument_store,
+        mock_secondary_identity_resolver,
+    ) -> None:
+        """目标日落辅源窗口 → 覆盖不足 → not_comparable 不算通过."""
+        nav_source = MagicMock()
+        nav_source.fetch_fund_nav.return_value = pl.DataFrame()
+        handler = ReconcileSourcesHandler(
+            engine=mock_quality_engine,
+            secondary_source=MagicMock(),
+            comparison_store=mock_comparison_writer,
+            instrument_store=mock_instrument_store,
+            secondary_identity_resolver=mock_secondary_identity_resolver,
+            secondary_fund_nav_source=nav_source,
+        )
+
+        result = handler.handle(
+            ReconcileSourcesCommand(
+                primary_df=self._primary(),
+                trade_date="2025-06-30",
+                dataset="etf_nav",
+            )
+        )
+
+        assert result.comparable is False
+        assert result.passed is False
