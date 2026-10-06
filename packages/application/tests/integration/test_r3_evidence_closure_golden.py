@@ -152,6 +152,7 @@ from ditto_backtest.statistics import (
 from ditto_backtest.steps import StepContext
 from ditto_kernel.identity import InstrumentId
 from ditto_kernel.time_context import TimeContext
+from ditto_kernel.trading import MarketSnapshot
 from ditto_platform.foundation import SQLitePool
 from ditto_strategy.alpha.context import StrategyContext
 from ditto_strategy.alpha.parameters import CandidateParameter, legacy_parameter_path
@@ -234,7 +235,7 @@ def _run_stock_golden_selection_trace(
     trade_day = date.fromisoformat(trade_date)
     knowledge_date = trade_day - timedelta(days=1)
     instrument_ids = list(range(1, 22))
-    bars: dict[InstrumentId, MagicMock] = {}
+    bars: dict[InstrumentId, MarketSnapshot] = {}
     history_rows: list[dict[str, object]] = []
     for instrument_id in instrument_ids:
         base = 10.0 + instrument_id
@@ -253,13 +254,19 @@ def _run_stock_golden_selection_trace(
                 }
             )
         close = base * (1 + growth * 25)
-        bar = MagicMock()
-        bar.open = close * 0.99
-        bar.high = close * 1.01
-        bar.low = close * 0.98
-        bar.close = close
-        bar.volume = 1_000_000.0
-        bars[InstrumentId(instrument_id)] = bar
+        # 生产侧只读取 open/high/low/close/volume；prev_close/amount 按当日值
+        # 填充以构造真实 MarketSnapshot（行为与旧 MagicMock 替身一致）。
+        bars[InstrumentId(instrument_id)] = MarketSnapshot(
+            trade_date=trade_date,
+            instrument_id=InstrumentId(instrument_id),
+            open=close * 0.99,
+            high=close * 1.01,
+            low=close * 0.98,
+            close=close,
+            prev_close=close,
+            volume=1_000_000.0,
+            amount=0.0,
+        )
 
     slice_ = MagicMock(spec=Slice)
     slice_.bars = bars
@@ -352,7 +359,7 @@ def _run_etf_golden_selection_trace(
     trade_day = date.fromisoformat(trade_date)
     knowledge_date = trade_day - timedelta(days=1)
     instrument_ids = list(range(1, 7))
-    bars: dict[InstrumentId, MagicMock] = {}
+    bars: dict[InstrumentId, MarketSnapshot] = {}
     history_rows: list[dict[str, object]] = []
     for instrument_id in instrument_ids:
         base = 20.0 + instrument_id
@@ -371,13 +378,19 @@ def _run_etf_golden_selection_trace(
                 }
             )
         close = base * (1 + growth * 25)
-        bar = MagicMock()
-        bar.open = close * 0.99
-        bar.high = close * 1.01
-        bar.low = close * 0.98
-        bar.close = close
-        bar.volume = 1_000_000.0
-        bars[InstrumentId(instrument_id)] = bar
+        # 生产侧只读取 open/high/low/close/volume；prev_close/amount 按当日值
+        # 填充以构造真实 MarketSnapshot（行为与旧 MagicMock 替身一致）。
+        bars[InstrumentId(instrument_id)] = MarketSnapshot(
+            trade_date=trade_date,
+            instrument_id=InstrumentId(instrument_id),
+            open=close * 0.99,
+            high=close * 1.01,
+            low=close * 0.98,
+            close=close,
+            prev_close=close,
+            volume=1_000_000.0,
+            amount=0.0,
+        )
 
     slice_ = MagicMock(spec=Slice)
     slice_.bars = bars
@@ -447,12 +460,13 @@ def _drift_one_cost_semantics(
 
 def _complete_fold(
     writer: SQLiteExperimentWriter,
+    reader: SQLiteExperimentReader,
     fold: FoldPersistenceSpec | FoldView,
     lease: Any,
     *,
     fingerprint: str = "8" * 64,
 ) -> None:
-    view = fold if isinstance(fold, FoldView) else writer._reader.get_fold(fold.key)
+    view = fold if isinstance(fold, FoldView) else reader.get_fold(fold.key)
     assert view is not None
     attempt_id = AttemptId(
         "attempt-complete-"
@@ -622,7 +636,7 @@ def _advance_to_candidate_selection(
     folds = reader.list_folds(launch.experiment_id)
     for fold in folds:
         if fold.spec.fold_role is FoldRole.EXPLORATION:
-            _complete_fold(writer, fold, lease)
+            _complete_fold(writer, reader, fold, lease)
     projection = writer.advance_experiment_stage(
         launch.experiment_id,
         target_stage=ExperimentStage.WALK_FORWARD,
@@ -638,7 +652,7 @@ def _advance_to_candidate_selection(
         if fold.spec.fold_role is not FoldRole.WALK_FORWARD:
             continue
         fingerprint = str(resolver.resolve(fold).reproduction_fingerprint)
-        _complete_fold(writer, fold, lease, fingerprint=fingerprint)
+        _complete_fold(writer, reader, fold, lease, fingerprint=fingerprint)
     return lease
 
 

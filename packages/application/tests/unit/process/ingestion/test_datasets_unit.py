@@ -1,6 +1,8 @@
 """Tests for Dataset Configuration Registry."""
 
+from collections.abc import Callable
 from datetime import time
+from typing import cast
 
 import pytest
 from ditto_application.config import (
@@ -653,8 +655,10 @@ class TestT1ConfigSpec:
 
     def test_t1_config_params_validation(self) -> None:
         """Test T1ConfigSpec validates required fields."""
+        # 负向测试:故意缺必填 dataset 触发 pydantic 校验错误,先放宽构造器签名
+        loose_ctor = cast("Callable[..., object]", T1ConfigSpec)
         with pytest.raises(ValueError):
-            T1ConfigSpec(
+            loose_ctor(
                 # Missing required field: dataset
                 description="ETF日行情数据",
                 typical_available_time=time(18, 0),

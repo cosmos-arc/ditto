@@ -125,7 +125,7 @@ def test_publish_strategy_version_handler_promotes() -> None:
     process.promote.return_value = PromotionResult(
         strategy_id="s1",
         version=1,
-        bundle_hash=ContentHash(_BUNDLE),
+        bundle_hash=_BUNDLE,
         active_pointer=StrategyActivePointer("s1", 1, 0, "event-1"),
     )
     handler = PublishStrategyVersionHandler(process=process, reader=reader)

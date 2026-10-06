@@ -2,6 +2,7 @@
 
 from contextlib import contextmanager
 from datetime import UTC, date, datetime
+from typing import Literal
 
 import polars as pl
 from ditto_application.queries.historical_universe import HistoricalUniverseSources
@@ -120,7 +121,7 @@ def seed_history(
     client,
     root,
     *,
-    asset_kind="stock",
+    asset_kind: Literal["stock", "etf"] = "stock",
     ids=(1,),
     universe_id="universe.cn.all",
     delist_on=None,
@@ -159,7 +160,7 @@ def selection_history(request, *, delist_on=None):
 
     with TemporaryDirectory() as directory:
         root = Path(directory)
-        pool = SQLitePool(root / "history.sqlite")
+        pool = SQLitePool(str(root / "history.sqlite"))
         try:
             client = SQLiteClient(pool)
             kind = (

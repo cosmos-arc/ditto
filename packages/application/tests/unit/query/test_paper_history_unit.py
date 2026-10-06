@@ -114,6 +114,17 @@ class _Journal:
         self.events.append(event)
         return event
 
+    def append_if_revision(
+        self,
+        event: AccountEvent,
+        *,
+        expected_ledger_hash: str,
+    ) -> AccountEvent:
+        # 协议成员补齐：按账户流哈希做乐观校验后复用 append 路径。
+        if ledger_hash(self.list_events(event.account_id)) != expected_ledger_hash:
+            raise AssertionError("test journal revision conflict")
+        return self.append(event)
+
     def get_event(self, account_id: str, event_id: str) -> AccountEvent | None:
         return next(
             (

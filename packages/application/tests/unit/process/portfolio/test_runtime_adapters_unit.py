@@ -24,6 +24,7 @@ from ditto_application.processes.portfolio.runtime_adapters import (
     VersionedPortfolioPolicyRegistry,
 )
 from ditto_backtest.portfolio_construction import PortfolioConstructionContext
+from ditto_kernel.identity import InstrumentId
 from ditto_portfolio.rebalancing.optimization_models import (
     OptimizationMethod,
     PortfolioConstructionPolicy,
@@ -90,7 +91,7 @@ def test_backtest_adapter_maps_explicit_temporal_context_and_failure() -> None:
         trade_date="2026-04-01",
         strategy_id="strategy-a",
         run_id="run-1",
-        positions={1: 1.0},
+        positions={InstrumentId(1): 1.0},
         cash_target=0.0,
     )
     adapter = BacktestPortfolioConstructionAdapter(
@@ -144,7 +145,7 @@ def test_eod_adapter_raises_stable_blocking_error_on_construction_failure() -> N
         trade_date="2026-04-01",
         strategy_id="strategy-a",
         run_id="run-1",
-        positions={1: 1.0},
+        positions={InstrumentId(1): 1.0},
     )
     result = StrategyRunResult(
         run_id="run-1",

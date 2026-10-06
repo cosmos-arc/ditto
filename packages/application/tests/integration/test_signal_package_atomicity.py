@@ -249,10 +249,11 @@ def test_completed_active_retry_noops_and_safe_change_replaces(
         assert original.status == "archived"
         intents = trade.list_intents(STRATEGY_ID, signal_date=SIGNAL_DATE)
         assert len(intents) == 4
+        raw_intents = original.metadata["intents"]
+        # 窄化 metadata JSON 节点为数组（运行时校验；递归联合无法静态窄化）.
+        assert isinstance(raw_intents, list)
         original_ids = {
-            item["intent_id"]
-            for item in original.metadata["intents"]
-            if isinstance(item, dict)
+            item["intent_id"] for item in raw_intents if isinstance(item, dict)
         }
         assert all(
             intent.status == "superseded"

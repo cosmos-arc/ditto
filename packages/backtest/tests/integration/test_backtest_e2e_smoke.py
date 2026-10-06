@@ -55,6 +55,7 @@ from ditto_strategy.alpha.templates.etf_rotation import (
 
 _conftest_path = Path(__file__).parent / "conftest.py"
 _spec = importlib.util.spec_from_file_location("_conftest", _conftest_path)
+assert _spec is not None, f"failed to load conftest spec: {_conftest_path}"
 _mod = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(_mod)  # type: ignore[union-attr]
 

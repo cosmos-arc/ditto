@@ -83,6 +83,7 @@ def test_reader_projects_exact_scope_metrics_and_hashes() -> None:
         )
     )
 
+    assert view is not None
     assert view.factor_id == "momentum_1m"
     assert view.snapshot_hash == "a" * 64
     assert view.metrics == {"coverage": 0.97, "rank_ic": 0.08}

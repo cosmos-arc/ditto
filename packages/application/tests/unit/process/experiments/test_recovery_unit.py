@@ -167,6 +167,8 @@ def test_running_worker_treats_durable_stop_as_control_not_system_failure(
     checkpoint_call = next(
         payload for name, payload in coordinator.calls if name == "checkpoint"
     )
+    # calls 记录为 tuple[str, object]；按运行时形状窄化 checkpoint 载荷元组。
+    assert isinstance(checkpoint_call, tuple)
     assert checkpoint_call[1] == CheckpointRef("research-run-persisted")
 
 

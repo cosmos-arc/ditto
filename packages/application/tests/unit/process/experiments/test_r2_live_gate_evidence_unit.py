@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import os
+from collections.abc import Mapping
 from dataclasses import replace
 from pathlib import Path
 from typing import cast
@@ -31,6 +32,12 @@ _R2_CONTRACTS = _R2_HARD_DATASET_PROVIDER_CONTRACTS
 
 def _hash(payload: bytes) -> str:
     return hashlib.sha256(payload).hexdigest()
+
+
+def _obj(value: object) -> Mapping[str, object]:
+    """窄化 GateFact.detail（声明为 object；运行时为冻结 Mapping）."""
+    assert isinstance(value, Mapping)
+    return value
 
 
 def _ready_report(*, mode: str = "live", status: str = "ready") -> dict[str, object]:
@@ -190,8 +197,9 @@ def test_verified_configuration_blocked_report_is_an_explicit_fail(
     assert evidence.status == "configuration_blocked"
     fact = project_r2_live_gate_fact(reader)
     assert fact.satisfied is False
-    assert fact.detail["status"] == "configuration_blocked"
-    assert fact.detail["reason_codes"] == ("entitlement_unverified",)
+    detail = _obj(fact.detail)
+    assert detail["status"] == "configuration_blocked"
+    assert detail["reason_codes"] == ("entitlement_unverified",)
 
 
 @pytest.mark.parametrize(
@@ -432,10 +440,11 @@ def test_ready_projection_binds_report_and_all_evidence_refs(tmp_path: Path) -> 
     fact = project_r2_live_gate_fact(FileR2LiveGateEvidenceReader(source))
 
     assert fact.satisfied is True
-    assert fact.detail["report_hash"] == str(source.expected_report_hash)
-    assert fact.detail["checked_at"] == "2026-07-31T12:00:00+00:00"
-    assert fact.detail["status"] == "ready"
-    assert tuple(fact.detail) == (
+    detail = _obj(fact.detail)
+    assert detail["report_hash"] == str(source.expected_report_hash)
+    assert detail["checked_at"] == "2026-07-31T12:00:00+00:00"
+    assert detail["status"] == "ready"
+    assert tuple(detail) == (
         "report_uri",
         "report_hash",
         "checked_at",

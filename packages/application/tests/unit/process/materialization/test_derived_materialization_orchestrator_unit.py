@@ -41,6 +41,7 @@ from ditto_features.expression import (
 from ditto_features.materialization import (
     DerivedExecutionPlan,
     DerivedMaterializationRequest,
+    DerivedMaterializationResult,
 )
 from ditto_features.materialization.models import (
     DerivedRunMode,
@@ -1229,7 +1230,9 @@ class TestDerivedMaterializationOrchestrator:
         assert [record.status for record in checkpoints] == [
             DerivedCheckpointStatus.COMPLETE.value
         ]
-        frame = service._artifact_reader.read_frame(
+        artifact_reader = service._artifact_reader
+        assert artifact_reader is not None
+        frame = artifact_reader.read_frame(
             derived_id=spec.id,
             version=spec.version,
             start="2026-03-10",
@@ -1420,7 +1423,7 @@ class TestDerivedMaterializationOrchestrator:
         *,
         source_snapshot_id: str,
         frame: pl.DataFrame,
-    ) -> object:
+    ) -> DerivedMaterializationResult:
         return service.materialize(
             DerivedMaterializationRequest(
                 derived_id=spec.id,

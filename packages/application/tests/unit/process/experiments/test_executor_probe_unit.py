@@ -28,8 +28,9 @@ class _Probe:
 
     def probe(
         self,
-        _request: ResearchExecutorProbeRequest,
+        request: ResearchExecutorProbeRequest,
     ) -> ResearchExecutorProbeResult:
+        _ = request
         return ResearchExecutorProbeResult(
             available=True,
             code=None,

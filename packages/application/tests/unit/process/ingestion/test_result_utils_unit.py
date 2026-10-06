@@ -130,7 +130,7 @@ class TestCountResultsWithDict:
 
     def test_count_dict_mixed_results(self) -> None:
         """测试字典类型的混合结果。"""
-        results = {
+        results: dict[str, dict[str, object]] = {
             "task1": {"status": "success", "dataset": "stock_daily"},
             "task2": {
                 "status": "failed",
@@ -190,7 +190,7 @@ class TestCountResultsEdgeCases:
 
     def test_count_dict_with_missing_status(self) -> None:
         """测试字典中缺少 status 字段的情况。"""
-        results = {
+        results: dict[str, dict[str, object]] = {
             "task1": {"status": "success"},
             "task2": {"dataset": "stock_daily"},  # 缺少 status
             "task3": {"status": "failed"},
@@ -205,7 +205,7 @@ class TestCountResultsEdgeCases:
 
     def test_count_dict_with_invalid_status(self) -> None:
         """测试字典中包含无效 status 值的情况。"""
-        results = {
+        results: dict[str, dict[str, object]] = {
             "task1": {"status": "success"},
             "task2": {"status": "invalid"},  # 无效状态
             "task3": {"status": "failed"},

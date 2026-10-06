@@ -13,6 +13,7 @@ from ditto_analysis.errors import ExperimentConflictError, ResearchDatasetError
 from ditto_analysis.experiments import (
     ContentHash,
     ExperimentDesiredState,
+    ExperimentLaunchSpec,
     ExperimentProjection,
     ExperimentReaderProtocol,
     ExperimentStage,
@@ -713,7 +714,7 @@ class _Store:
     def __init__(self) -> None:
         self.calls: list[str] = []
         self.cycle = None
-        self.spec = None
+        self.spec: ExperimentLaunchSpec | None = None
         self.projection: ExperimentProjection | None = None
         self.creation_event: StatusEventRecord | None = None
         self.gates = {}
@@ -2118,6 +2119,7 @@ def test_launch_writes_draft_gates_all_folds_then_enqueues_without_attempts() ->
     }
     assert len(store.folds) == 8
     assert not any("attempt" in call for call in store.calls)
+    assert store.spec is not None
     assert store.spec.budget.fold_run_limit == request.budget.fold_run_limit
 
 
@@ -2710,7 +2712,9 @@ def test_oversized_canonical_preflight_is_blocked_without_writes(
         check for check in report.checks if check.rule_id == "preflight_detail"
     )
     assert detail_check.code == "PREFLIGHT_DETAIL_TOO_LARGE"
-    assert detail_check.observed["canonical_detail_bytes"] > 1
+    canonical_detail_bytes = detail_check.observed["canonical_detail_bytes"]
+    assert isinstance(canonical_detail_bytes, int)
+    assert canonical_detail_bytes > 1
     assert detail_check.policy["maximum_canonical_detail_bytes"] == 1
     with pytest.raises(AppProcessError) as exc_info:
         process.launch(_request(), confirmed_plan_hash="0" * 64)
@@ -3291,19 +3295,20 @@ def test_draft_child_read_race_reconciles_concurrent_enqueue_and_fold_claim() ->
     request = _request()
     report = outer.preflight(request)
     assert report.plan_hash is not None
+    confirmed_plan_hash = report.plan_hash
     concurrent_receipts = []
     completed_write_counts = []
 
     def _enqueue_and_claim() -> None:
         concurrent_receipts.append(
-            concurrent.launch(request, confirmed_plan_hash=report.plan_hash)
+            concurrent.launch(request, confirmed_plan_hash=confirmed_plan_hash)
         )
         _progress_store_to_running(store)
         completed_write_counts.append(len(store.calls))
 
     store.fold_read_hook = _enqueue_and_claim
 
-    receipt = outer.launch(request, confirmed_plan_hash=report.plan_hash)
+    receipt = outer.launch(request, confirmed_plan_hash=confirmed_plan_hash)
 
     assert concurrent_receipts == [receipt]
     assert receipt.status == ExperimentStatus.QUEUED.value
@@ -3362,12 +3367,13 @@ def test_concurrent_exact_root_create_after_absent_projection_reconciles() -> No
     request = _request()
     report = first.preflight(request)
     assert report.plan_hash is not None
+    confirmed_plan_hash = report.plan_hash
     concurrent_receipts = []
 
     store.projection_read_hook = lambda: concurrent_receipts.append(
-        concurrent.launch(request, confirmed_plan_hash=report.plan_hash)
+        concurrent.launch(request, confirmed_plan_hash=confirmed_plan_hash)
     )
-    receipt = first.launch(request, confirmed_plan_hash=report.plan_hash)
+    receipt = first.launch(request, confirmed_plan_hash=confirmed_plan_hash)
 
     assert concurrent_receipts == [receipt]
     assert receipt.status == "queued"

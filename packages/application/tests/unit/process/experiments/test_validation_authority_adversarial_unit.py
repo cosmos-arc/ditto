@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from dataclasses import replace
 from datetime import date, timedelta
 from typing import cast
@@ -341,7 +341,7 @@ def test_probe_cannot_mutate_request_to_another_matching_legal_identity() -> Non
 
         def probe(
             self,
-            mutable_request: ResearchValidationAuthorityRequest,
+            request: ResearchValidationAuthorityRequest,
         ) -> ResearchValidationAuthorityResult:
             self.calls += 1
             protocol = replace(
@@ -368,14 +368,14 @@ def test_probe_cannot_mutate_request_to_another_matching_legal_identity() -> Non
                 ),
             )
             snapshot = ExperimentSnapshotIdentity("snapshot-mutated", "f" * 64)
-            object.__setattr__(mutable_request, "snapshot_identity", snapshot)
-            object.__setattr__(mutable_request, "runtime_validation", runtime)
+            object.__setattr__(request, "snapshot_identity", snapshot)
+            object.__setattr__(request, "runtime_validation", runtime)
             object.__setattr__(
-                mutable_request,
+                request,
                 "declared_requirements",
                 requirements,
             )
-            object.__setattr__(mutable_request, "declared_protocol", protocol)
+            object.__setattr__(request, "declared_protocol", protocol)
             evidence = ResearchValidationAuthorityEvidence.create(
                 protocol=protocol,
                 snapshot_identity=snapshot,
@@ -741,9 +741,13 @@ def test_persisted_authority_summary_uses_compiled_continuous_eligible_suffix() 
     assessment = assess_validation_authority(_ReadyProbe(evidence), request)
 
     assert assessment.check.outcome.value == "pass"
-    summaries = assessment.check.observed["summaries"]
-    assert summaries["eligibility"]["eligible_month_count"] == 49
-    assert summaries["eligibility"]["instrument_eligibility"] == [
+    # observed 声明为 Mapping[str, object]；递归窄化 summaries → eligibility 节点。
+    observed_summaries = assessment.check.observed["summaries"]
+    assert isinstance(observed_summaries, Mapping)
+    eligibility = observed_summaries["eligibility"]
+    assert isinstance(eligibility, Mapping)
+    assert eligibility["eligible_month_count"] == 49
+    assert eligibility["instrument_eligibility"] == [
         {
             "instrument_id": instrument.instrument_id,
             "listing_date": instrument.listing_date.isoformat(),

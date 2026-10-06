@@ -8,6 +8,7 @@ error handling, and cancel/retry status guards.
 from __future__ import annotations
 
 from dataclasses import asdict, replace
+from typing import Any, TypedDict, Unpack, cast
 from unittest.mock import Mock
 
 import pytest
@@ -139,18 +140,33 @@ def _make_command(**overrides) -> BacktestRunCommand:
     return BacktestRunCommand(**defaults)
 
 
-def _make_run_record(**overrides) -> StrategyRunRecord:
+class _RunRecordKwargs(TypedDict, total=False):
+    """_make_run_record 覆写参数的精确键型（调用侧受检）。"""
+
+    run_id: str
+    strategy_id: str
+    strategy_version: str
+    mode: str
+    status: str
+    config_json: str
+
+
+_RUN_RECORD_DEFAULTS: dict[str, object] = {
+    "run_id": "abc123",
+    "strategy_id": "momentum-etf",
+    "strategy_version": "1",
+    "mode": "backtest",
+    "status": "pending",
+    "config_json": "",
+}
+
+
+def _make_run_record(**overrides: Unpack[_RunRecordKwargs]) -> StrategyRunRecord:
     """Build a default StrategyRunRecord with optional overrides."""
-    defaults = {
-        "run_id": "abc123",
-        "strategy_id": "momentum-etf",
-        "strategy_version": "1",
-        "mode": "backtest",
-        "status": "pending",
-        "config_json": "",
-    }
-    defaults.update(overrides)
-    return StrategyRunRecord(**defaults)
+    # 覆写参数经 Unpack[TypedDict] 调用侧受检；合并字典构造点单点放宽。
+    return StrategyRunRecord(
+        **cast("dict[str, Any]", {**_RUN_RECORD_DEFAULTS, **overrides})
+    )
 
 
 def _make_checkpoint_record(**overrides) -> StrategyRunCheckpointRecord:

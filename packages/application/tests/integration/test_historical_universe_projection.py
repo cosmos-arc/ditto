@@ -34,7 +34,7 @@ def _resolver(
 @pytest.mark.pit
 def test_raw_daily_shapes_project_into_same_day_intervals(tmp_path: Path) -> None:
     """Real stock_basic/stock_status payload shapes resolve without golden frames."""
-    pool = SQLitePool(tmp_path / "history.sqlite")
+    pool = SQLitePool(str(tmp_path / "history.sqlite"))
     try:
         client = SQLiteClient(pool)
         master = pl.DataFrame(
@@ -90,7 +90,7 @@ def test_raw_daily_shapes_project_into_same_day_intervals(tmp_path: Path) -> Non
 @pytest.mark.pit
 def test_later_observation_does_not_leak_into_earlier_cutoff(tmp_path: Path) -> None:
     """A snapshot observed after the cutoff is invisible to that replay."""
-    pool = SQLitePool(tmp_path / "history.sqlite")
+    pool = SQLitePool(str(tmp_path / "history.sqlite"))
     try:
         client = SQLiteClient(pool)
         master = pl.DataFrame(

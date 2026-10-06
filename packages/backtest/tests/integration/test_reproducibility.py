@@ -46,6 +46,7 @@ from ditto_execution.orders.journal import InMemoryOrderEventJournal
 from ditto_execution.planner import SimpleExecutionPlanner
 from ditto_execution.reality import AShareFeeModel, SimpleFeeModel
 from ditto_kernel.clock import SimulatedClock
+from ditto_kernel.identity import InstrumentId
 from ditto_kernel.synchronizer import TimeSlice
 from ditto_kernel.trading import (
     FeeSchedule,
@@ -68,6 +69,7 @@ from ditto_strategy.alpha.templates.etf_rotation import (
 
 _conftest_path = Path(__file__).parent / "conftest.py"
 _spec = importlib.util.spec_from_file_location("_conftest", _conftest_path)
+assert _spec is not None, f"failed to load conftest spec: {_conftest_path}"
 _mod = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(_mod)  # type: ignore[union-attr]
 
@@ -83,7 +85,7 @@ write_parquet_data = _mod.write_parquet_data
 
 
 def _default_rules_getter(
-    instrument_id: int,
+    instrument_id: InstrumentId,
     trade_date: str,
 ) -> InstrumentRules:
     """默认规则 — 与 BacktestBrokerage._default_rules_getter 一致。"""
@@ -120,7 +122,7 @@ def _default_rules_getter(
 
 
 def _ashare_rules_getter(
-    instrument_id: int,
+    instrument_id: InstrumentId,
     trade_date: str,
 ) -> InstrumentRules:
     """A 股规则 — 包含印花税 (仅卖出) + 过户费。"""
@@ -951,16 +953,16 @@ class TestProofTests:
             effective_parameters=(),
             research_snapshot_id=None,
             research_snapshot_manifest_hash=None,
-            input_refs=(1, 2),
+            input_refs=(InstrumentId(1), InstrumentId(2)),
             rule_refs=(
                 RuleRef(
-                    instrument_id=1,
+                    instrument_id=InstrumentId(1),
                     definition_version="a1b2c3d4",
                     trading_rule_as_of="2026-01-01",
                     fee_schedule_as_of="2026-01-01",
                 ),
                 RuleRef(
-                    instrument_id=2,
+                    instrument_id=InstrumentId(2),
                     definition_version="e5f6g7h8",
                     trading_rule_as_of="2026-01-01",
                     fee_schedule_as_of="2026-01-01",
@@ -977,19 +979,19 @@ class TestProofTests:
     def test_rule_refs_sorted_and_diffable(self) -> None:
         """rule_refs 稳定排序 → diff 可定位变更。"""
         rule_a = RuleRef(
-            instrument_id=2,
+            instrument_id=InstrumentId(2),
             definition_version="e5f6g7h8",
             trading_rule_as_of="2026-01-01",
             fee_schedule_as_of="2026-01-01",
         )
         rule_b = RuleRef(
-            instrument_id=1,
+            instrument_id=InstrumentId(1),
             definition_version="a1b2c3d4",
             trading_rule_as_of="2026-01-01",
             fee_schedule_as_of="2026-01-01",
         )
         rule_c = RuleRef(
-            instrument_id=3,
+            instrument_id=InstrumentId(3),
             definition_version="11223344",
             trading_rule_as_of="2026-01-01",
             fee_schedule_as_of="2026-01-01",
@@ -1045,7 +1047,7 @@ class TestProofTests:
         decision = PreTradeDecisionRecord(
             trade_date="2026-01-05",
             order_id="order-001",
-            instrument_id=1,
+            instrument_id=InstrumentId(1),
             direction="buy",
             original_quantity=1500,
             final_quantity=1400,

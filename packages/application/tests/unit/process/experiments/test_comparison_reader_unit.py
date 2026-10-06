@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 from types import SimpleNamespace
+from typing import cast
 from unittest.mock import MagicMock
 
 import pytest
@@ -57,4 +58,6 @@ def test_load_comparison_returns_none_when_experiment_absent() -> None:
     reader.reader.get_experiment_projection.return_value = None  # type: ignore[method-assign]
 
     assert reader.load_comparison("exp-1") is None
-    reader.scheduler_store.load_snapshot.assert_not_called()
+    # scheduler_store 形参声明为协议；本用例注入的是 MagicMock，窄点 cast 取回
+    # mock 断言 API（load_snapshot 未被调用的守卫）。
+    cast("MagicMock", reader.scheduler_store.load_snapshot).assert_not_called()

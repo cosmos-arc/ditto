@@ -616,6 +616,20 @@ def test_snapshot_repair_priority_orders_by_log_attempts_then_time() -> None:
         ) -> IngestionLog | None:
             return logs.get((dataset, source, trade_date))
 
+        def list_ingested_dates(
+            self,
+            dataset: str,
+            source: str,
+            status: IngestionStatus | None = None,
+        ) -> list[str]:
+            return sorted(
+                trade_date
+                for (log_dataset, log_source, trade_date), log in logs.items()
+                if log_dataset == dataset
+                and log_source == source
+                and (status is None or log.status is status)
+            )
+
     assert snapshot_repair_priority(
         logs=_Logs(),
         dataset="stock_daily",

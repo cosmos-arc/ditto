@@ -14,6 +14,7 @@ from ditto_application.builders.template_builders import (
     build_legacy_node_stage_groups,
 )
 from ditto_application.exceptions import AppBuilderError
+from ditto_kernel.identity import InstrumentId
 from ditto_portfolio.rebalancing import AllocationStage, ConstraintStage
 from ditto_strategy.alpha.builtins.filtering import RiskLockFilter, TrendFilterStage
 from ditto_strategy.alpha.builtins.scoring import ScoringMethod, ScoringStage
@@ -134,9 +135,9 @@ def test_etf_seed_rank_then_combine_legacy_adapter_preserves_composite_scores() 
     )
 
     assert set(target.positions) == {2, 3, 4}
-    assert target.positions[4] == pytest.approx(0.275 / 0.3)
-    assert target.positions[3] == pytest.approx(0.025 / 0.3)
-    assert target.positions[2] == pytest.approx(0.0)
+    assert target.positions[InstrumentId(4)] == pytest.approx(0.275 / 0.3)
+    assert target.positions[InstrumentId(3)] == pytest.approx(0.025 / 0.3)
+    assert target.positions[InstrumentId(2)] == pytest.approx(0.0)
 
 
 def test_stock_seed_pipeline_keeps_stable_builtin_stage_order() -> None:
@@ -241,9 +242,9 @@ def test_stock_seed_rank_then_combine_preserves_factor_bridge_scores() -> None:
     )
     assert scoring.method is ScoringMethod.RAW
     assert set(target.positions) == {2, 3, 4}
-    assert target.positions[4] == pytest.approx(0.275 / 0.3)
-    assert target.positions[3] == pytest.approx(0.025 / 0.3)
-    assert target.positions[2] == pytest.approx(0.0)
+    assert target.positions[InstrumentId(4)] == pytest.approx(0.275 / 0.3)
+    assert target.positions[InstrumentId(3)] == pytest.approx(0.025 / 0.3)
+    assert target.positions[InstrumentId(2)] == pytest.approx(0.0)
 
 
 def test_stock_seed_unknown_scorer_fails_closed() -> None:

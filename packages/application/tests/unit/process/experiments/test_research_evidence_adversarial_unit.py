@@ -27,6 +27,7 @@ from ditto_application.processes.experiments.planning_probes import (
     CandidateExecutorEvidence,
     ResearchCertificationRequest,
     ResearchCertificationResult,
+    ResearchExecutorProbe,
     ResearchExecutorProbeResult,
     ResearchSnapshotEvidence,
 )
@@ -165,7 +166,8 @@ def test_snapshot_payload_does_not_serialize_evil_string_or_date_subclasses() ->
         manifest_hash=cast("str", _EvilStr("d" * 64)),
         source_snapshot_ids=(cast("str", _EvilStr("source-1")),),
         snapshot_start=_EvilDate(2016, 1, 1),
-        snapshot_end=cast("object", SimpleNamespace(isoformat=lambda: "2025-12-31")),
+        # 对抗输入：故意违反 snapshot_end: date 声明，验证序列化端 sanitization。
+        snapshot_end=cast("date", SimpleNamespace(isoformat=lambda: "2025-12-31")),
         known_at_policy=cast("str", _EvilStr("sample_time")),
         builder_version=cast("str", _EvilStr("builder-v1")),
     )
@@ -352,9 +354,11 @@ def test_executor_probe_result_subclass_is_normalized_to_typed_blocker() -> None
     )
 
     result = probe_executor(
-        cast("object", _Probe()),
-        cast("object", request),
-        cast("object", matrix),
+        # 结构化替身只携带 probe_executor 消费的成员；返回子类结果验证归一化，
+        # 三个参数均以窄点 cast 对齐形参类型。
+        cast("ResearchExecutorProbe", _Probe()),
+        cast("ExperimentPlanningRequest", request),
+        cast("CandidateMatrixPlan", matrix),
     )
 
     assert type(result) is ResearchExecutorProbeResult

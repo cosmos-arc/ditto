@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from typing import cast
 
 import pytest
 from ditto_application.catalog_freshness import aggregate_source_snapshot_ids
 from ditto_application.exceptions import AppQueryError
 from ditto_application.queries.evidence_contracts import EvidenceTemporalContext
 from ditto_application.queries.market_context import (
+    MarketContextFacade,
     MarketContextMetric,
     MarketContextRequest,
     MarketContextView,
@@ -21,6 +23,7 @@ from ditto_data.catalog.source_snapshot import (
 )
 from ditto_data.ingestion.partition_state import (
     PartitionCheckpoint,
+    PartitionLifecycleEvent,
     PartitionLifecycleStatus,
 )
 
@@ -70,14 +73,36 @@ class _Snapshots:
     def __init__(self, snapshots: tuple[ProviderSnapshot, ...]) -> None:
         self._snapshots = snapshots
 
-    def list_snapshots(self, *, dataset_id: str) -> tuple[ProviderSnapshot, ...]:
-        return tuple(item for item in self._snapshots if item.dataset_id == dataset_id)
+    def list_snapshots(
+        self,
+        *,
+        dataset_id: str | None = None,
+        source: str | None = None,
+        canonical_asset: DataAssetRef | None = None,
+    ) -> tuple[ProviderSnapshot, ...]:
+        return tuple(
+            item
+            for item in self._snapshots
+            if (dataset_id is None or item.dataset_id == dataset_id)
+            and (source is None or item.source == source)
+            and (canonical_asset is None or item.canonical_asset == canonical_asset)
+        )
 
     def get_snapshot(self, snapshot_id: str) -> ProviderSnapshot | None:
         return next(
             (item for item in self._snapshots if item.snapshot_id == snapshot_id),
             None,
         )
+
+    def get_observed_at(self, snapshot_id: str) -> datetime | None:
+        # 协议最小实现：本测试不依赖 catalog 观察时间。
+        del snapshot_id
+        return None
+
+    def get_predecessor(self, snapshot_id: str) -> str | None:
+        # 协议最小实现：本测试不依赖前驱快照链。
+        del snapshot_id
+        return None
 
 
 class _Lifecycle:
@@ -96,23 +121,37 @@ class _Lifecycle:
         return self.get_latest_checkpoint(chunk_id)
 
     def list_incomplete(
-        self, *, dataset_id: str, source: str | None = None
+        self,
+        *,
+        dataset_id: str | None = None,
+        source: str | None = None,
     ) -> tuple[PartitionCheckpoint, ...]:
         del source
         return tuple(
             item
             for item in self._checkpoints
-            if item.dataset_id == dataset_id
+            if (dataset_id is None or item.dataset_id == dataset_id)
             and item.status is not PartitionLifecycleStatus.COMPLETE
         )
 
-    def list_complete(self, *, dataset_id: str) -> tuple[PartitionCheckpoint, ...]:
+    def list_complete(
+        self,
+        *,
+        dataset_id: str | None = None,
+        source: str | None = None,
+    ) -> tuple[PartitionCheckpoint, ...]:
+        del source
         return tuple(
             item
             for item in self._checkpoints
-            if item.dataset_id == dataset_id
+            if (dataset_id is None or item.dataset_id == dataset_id)
             and item.status is PartitionLifecycleStatus.COMPLETE
         )
+
+    def list_events(self, chunk_id: str) -> tuple[PartitionLifecycleEvent, ...]:
+        # 协议最小实现：审计事件不参与快照完成度判定。
+        del chunk_id
+        return ()
 
 
 class _MarketContextFacade:
@@ -170,7 +209,10 @@ def _evidence(
     facade = MarketContextEvidenceQueryFacade(
         snapshots=_Snapshots(snapshots),
         lifecycle=_Lifecycle(snapshots),
-        market_context=market,
+        # MarketContextFacade 是具体类（组合多端口），无法结构化伪装；
+        # evidence facade 只消费 get_context(request)，fake 即该边界的记录器，
+        # 此单点窄化注入安全。
+        market_context=cast(MarketContextFacade, market),
     )
     return facade, market
 

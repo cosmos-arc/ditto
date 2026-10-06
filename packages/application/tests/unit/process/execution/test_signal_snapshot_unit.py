@@ -5,6 +5,8 @@ from __future__ import annotations
 from unittest.mock import MagicMock
 
 import pytest
+from ditto_execution.targets import TargetPortfolioLike
+from ditto_kernel.identity import InstrumentId
 
 # ---------------------------------------------------------------------------
 # Test Helpers
@@ -13,13 +15,17 @@ import pytest
 
 def _make_target_portfolio(
     positions: dict[int, float],
-) -> MagicMock:
-    """构建 TargetPortfolioLike mock."""
+) -> TargetPortfolioLike:
+    """构建 TargetPortfolioLike 最小 fake（仅提供 positions 投影）."""
 
     class _Target:
         @property
-        def positions(self) -> dict[int, float]:
-            return positions
+        def positions(self) -> dict[InstrumentId, float]:
+            # InstrumentId 是 int NewType，运行时等值，静态侧满足协议键类型。
+            return {
+                InstrumentId(instrument_id): weight
+                for instrument_id, weight in positions.items()
+            }
 
     return _Target()
 

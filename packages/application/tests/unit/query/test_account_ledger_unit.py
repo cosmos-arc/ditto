@@ -37,6 +37,15 @@ class _Journal:
     def append(self, event: AccountEvent) -> AccountEvent:
         raise AssertionError("query must not write")
 
+    def append_if_revision(
+        self,
+        event: AccountEvent,
+        *,
+        expected_ledger_hash: str,
+    ) -> AccountEvent:
+        del expected_ledger_hash
+        raise AssertionError("query must not write")
+
     def get_event(self, account_id: str, event_id: str) -> AccountEvent | None:
         return next(
             (event for event in self.events if event.event_id == event_id),

@@ -13,6 +13,7 @@ from ditto_application.builders.research_backtest_factory import (
 )
 from ditto_application.builders.research_runtime_builder import (
     ResearchSnapshotIdentity,
+    ResearchStrategyRuntime,
 )
 from ditto_application.exceptions import AppBuilderError, AppProcessError
 from ditto_application.processes.experiments.baseline_registry import (
@@ -24,11 +25,16 @@ from ditto_application.processes.experiments.baseline_registry import (
 )
 from ditto_application.processes.experiments.execution_bundle import (
     ResearchExecutionAudit,
+    StrategyExecutionBinding,
 )
 from ditto_application.processes.experiments.execution_contracts import (
     ExactUniverseIdentity,
 )
-from ditto_strategy.alpha.selection_evidence import SelectionEvidenceCollector
+from ditto_strategy.alpha.parameters import CandidateParameter
+from ditto_strategy.alpha.selection_evidence import (
+    SelectionEvidenceCollector,
+    SelectionEvidenceSink,
+)
 from ditto_strategy.alpha.specs import (
     ExecutionSpec,
     ScorerSpec,
@@ -45,7 +51,15 @@ class _NeverBuilder:
     def __init__(self) -> None:
         self.calls = 0
 
-    def build(self, **_kwargs: object) -> object:
+    def build(
+        self,
+        *,
+        record: StrategySpecRecord,
+        candidate_parameters: tuple[CandidateParameter, ...],
+        snapshot_identity: ResearchSnapshotIdentity,
+        version_status: str,
+        evidence_sink: SelectionEvidenceSink | None = None,
+    ) -> ResearchStrategyRuntime:
         self.calls += 1
         raise AssertionError("the candidate builder crossed into the baseline lane")
 
@@ -199,6 +213,9 @@ def test_factory_rejects_invalid_published_baseline_lane_or_status(
     _, candidate_audit, reader, _candidate_builder, loader = factory_fixtures._fixture()
     reader.version_state = status
     binding = candidate_audit.semantics.strategy
+    # 语义字段声明为 StrategyExecutionBinding | BaselineExecutorBinding；
+    # 本用例的 candidate 语义在运行时持有前者，运行时窄化后取 exact 身份。
+    assert isinstance(binding, StrategyExecutionBinding)
     plan = BaselineExecutionPlan(
         baseline_ref=BaselineRef("test_exact_stock_extension", 1),
         kind=BaselinePlanKind.CODE_REGISTERED_EXTENSION,

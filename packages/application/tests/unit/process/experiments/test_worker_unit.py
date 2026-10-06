@@ -966,39 +966,39 @@ def test_research_runner_rejects_factory_coherent_audit_rewrite_before_numerics(
     class _CoherentAuditRewriteFactory:
         def build(
             self,
-            requested_audit: ResearchExecutionAudit,
+            audit: ResearchExecutionAudit,
             *,
             external_should_stop: Callable[[], bool],
         ) -> VerifiedResearchBacktestBuild:
             build = concrete.build(
-                requested_audit,
+                audit,
                 external_should_stop=external_should_stop,
             )
             rewritten_semantics = replace(
-                requested_audit.semantics,
+                audit.semantics,
                 seed=9_999,
             )
             rewritten_audit = ResearchExecutionAudit.create(
                 semantics=rewritten_semantics,
-                attempt_id=requested_audit.attempt_id,
-                attempt_ordinal=requested_audit.attempt_ordinal,
-                backtest_run_id=requested_audit.backtest_run_id,
-                parent_attempt_id=requested_audit.parent_attempt_id,
-                resume_from_run_id=requested_audit.resume_from_run_id,
-                created_at=requested_audit.created_at,
+                attempt_id=audit.attempt_id,
+                attempt_ordinal=audit.attempt_ordinal,
+                backtest_run_id=audit.backtest_run_id,
+                parent_attempt_id=audit.parent_attempt_id,
+                resume_from_run_id=audit.resume_from_run_id,
+                created_at=audit.created_at,
             )
             object.__setattr__(
-                requested_audit,
+                audit,
                 "semantics",
                 rewritten_audit.semantics,
             )
             object.__setattr__(
-                requested_audit,
+                audit,
                 "canonical_payload",
                 rewritten_audit.canonical_payload,
             )
             object.__setattr__(
-                requested_audit,
+                audit,
                 "bundle_hash",
                 rewritten_audit.bundle_hash,
             )
@@ -1006,7 +1006,7 @@ def test_research_runner_rejects_factory_coherent_audit_rewrite_before_numerics(
             object.__setattr__(
                 build,
                 "attestation",
-                ResearchBacktestBuildAttestation.from_audit(requested_audit),
+                ResearchBacktestBuildAttestation.from_audit(audit),
             )
             return build
 
@@ -1042,24 +1042,24 @@ def test_research_runner_rejects_factory_derived_hash_rewrite_before_numerics(
     class _DerivedHashRewriteFactory:
         def build(
             self,
-            requested_audit: ResearchExecutionAudit,
+            audit: ResearchExecutionAudit,
             *,
             external_should_stop: Callable[[], bool],
         ) -> VerifiedResearchBacktestBuild:
             build = concrete.build(
-                requested_audit,
+                audit,
                 external_should_stop=external_should_stop,
             )
             if derived_hash == "execution_config":
-                target = requested_audit.semantics.backtest
+                target = audit.semantics.backtest
             else:
-                target = requested_audit.semantics.backtest.benchmark
+                target = audit.semantics.backtest.benchmark
                 assert target is not None
             object.__setattr__(target, "canonical_hash", ContentHash(_sha("0")))
             object.__setattr__(
                 build,
                 "attestation",
-                ResearchBacktestBuildAttestation.from_audit(requested_audit),
+                ResearchBacktestBuildAttestation.from_audit(audit),
             )
             return build
 

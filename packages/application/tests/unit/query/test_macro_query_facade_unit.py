@@ -32,7 +32,9 @@ class TestMacroQueryFacadeFindIndicators:
         assert query_arg.indicators == ["GDP"]
         assert query_arg.start == "2024-01-01"
         assert query_arg.end == "2024-12-31"
+        assert query_arg.category is not None
         assert query_arg.category.value == "economic"
+        assert query_arg.frequency is not None
         assert query_arg.frequency.value == "quarterly"
 
     def test_passes_none_when_no_enum_strings(self) -> None:

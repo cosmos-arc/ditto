@@ -532,6 +532,7 @@ def _persist_candidate_selection(
     preflight_status: str | None = "ready",
     preflight_eligibility: str | None = None,
 ) -> tuple[ExperimentLaunchSpec, Any | None]:
+    reader = SQLiteExperimentReader(database)
     actual_holdout = holdout_window or DateWindow(date(2026, 3, 1), date(2026, 3, 28))
     actual_cutoff = certified_cutoff or actual_holdout.end
     actual_eligibility = preflight_eligibility or (
@@ -607,7 +608,7 @@ def _persist_candidate_selection(
     )
     if not acquire_lease:
         return launch, None
-    slot = writer._reader.get_scheduler_slot()
+    slot = reader.get_scheduler_slot()
     lease = writer.try_claim_lease(
         launch.experiment_id,
         f"owner-{experiment_id}",
@@ -631,7 +632,7 @@ def _persist_candidate_selection(
     )
     for fold in folds:
         if fold.fold_role is FoldRole.EXPLORATION:
-            _complete_fold(writer, fold, lease)
+            _complete_fold(writer, reader, fold, lease)
     projection = writer.advance_experiment_stage(
         launch.experiment_id,
         target_stage=ExperimentStage.WALK_FORWARD,
@@ -646,9 +647,9 @@ def _persist_candidate_selection(
     for fold in folds:
         if fold.fold_role is FoldRole.WALK_FORWARD:
             if str(fold.key.candidate_id) == fail_walk_forward_candidate_id:
-                _fail_fold(writer, fold, lease)
+                _fail_fold(writer, reader, fold, lease)
             else:
-                _complete_fold(writer, fold, lease)
+                _complete_fold(writer, reader, fold, lease)
     if fail_walk_forward_candidate_id is not None:
         return launch, lease
     projection = writer.advance_experiment_stage(
@@ -667,12 +668,13 @@ def _persist_candidate_selection(
 
 def _complete_fold(
     writer: SQLiteExperimentWriter,
+    reader: SQLiteExperimentReader,
     fold: FoldPersistenceSpec | FoldView,
     lease: Any,
     *,
     fingerprint: str = "8" * 64,
 ) -> None:
-    view = fold if isinstance(fold, FoldView) else writer._reader.get_fold(fold.key)
+    view = fold if isinstance(fold, FoldView) else reader.get_fold(fold.key)
     assert view is not None
     attempt_id = AttemptId(
         f"attempt-complete-{view.spec.key.experiment_id}-{view.spec.key.fold_id}"
@@ -747,10 +749,11 @@ def _complete_fold(
 
 def _fail_fold(
     writer: SQLiteExperimentWriter,
+    reader: SQLiteExperimentReader,
     fold: FoldPersistenceSpec | FoldView,
     lease: Any,
 ) -> None:
-    view = fold if isinstance(fold, FoldView) else writer._reader.get_fold(fold.key)
+    view = fold if isinstance(fold, FoldView) else reader.get_fold(fold.key)
     assert view is not None
     attempt_id = AttemptId(
         f"attempt-failed-{view.spec.key.experiment_id}-{view.spec.key.fold_id}"
@@ -890,7 +893,7 @@ def _finish_claimed_experiment(
         if fold.spec.fold_role is FoldRole.HOLDOUT
         and fold.projection.status is ExperimentStatus.QUEUED
     )
-    _complete_fold(writer, selected, lease, fingerprint="4" * 64)
+    _complete_fold(writer, reader, selected, lease, fingerprint="4" * 64)
     writer.advance_experiment_stage(
         launch.experiment_id,
         target_stage=ExperimentStage.EVIDENCE,
@@ -934,6 +937,7 @@ def test_atomic_claim_commits_claim_stage_event_and_unselected_cancellation(
         if fold.spec.fold_role is FoldRole.HOLDOUT
     )
     assert projection is not None
+    assert claim is not None
     assert projection.record.stage is ExperimentStage.HOLDOUT
     assert projection.revision == 5
     assert claim == receipt.claim
@@ -964,7 +968,7 @@ def test_exact_and_terminal_replay_return_original_receipt_without_writes(
         if fold.spec.fold_role is FoldRole.HOLDOUT
         and fold.spec.key.candidate_id == CandidateId("candidate-2")
     )
-    _complete_fold(writer, selected, lease, fingerprint="4" * 64)
+    _complete_fold(writer, reader, selected, lease, fingerprint="4" * 64)
     writer.advance_experiment_stage(
         launch.experiment_id,
         target_stage=ExperimentStage.EVIDENCE,
@@ -2212,7 +2216,7 @@ class _SelectionProvider:
     def read_selection_evidence(
         self,
         experiment_id: ExperimentId,
-        _expected_content_hash: ContentHash,
+        expected_content_hash: ContentHash,
     ) -> PublishedSelectionEvidence:
         return PublishedSelectionEvidence(
             ArtifactRecord(
@@ -2239,13 +2243,13 @@ class _SelectionProvider:
 
     def publish_selection_evidence(
         self,
-        _snapshot: Any,
+        snapshot: Any,
         *,
         lease_fence: Any,
         now_epoch_us: int,
     ) -> Any:
         """Stand in for the durable publisher in holdout-only integration cases."""
-        del lease_fence, now_epoch_us
+        del snapshot, lease_fence, now_epoch_us
         return None
 
 
@@ -2472,6 +2476,17 @@ class _FailOnceNotifier:
     def __init__(self) -> None:
         self.calls: list[tuple[str, str, datetime]] = []
 
+    def notify_run_stop(
+        self,
+        *,
+        experiment_id: str,
+        run_id: str,
+        desired_state: str,
+        occurred_at: datetime,
+    ) -> None:
+        del run_id, desired_state
+        self.calls.append((experiment_id, "run_stop", occurred_at))
+
     def notify_scheduler(
         self,
         *,
@@ -2497,13 +2512,15 @@ def test_real_handler_replays_committed_claim_and_renotifies_after_failure(
         handler.handle(command)
 
     connection = database.get_connection()
-    assert exc_info.value.details["claim_id"].startswith("holdout:")
+    failed_claim_id = exc_info.value.details["claim_id"]
+    assert isinstance(failed_claim_id, str)
+    assert failed_claim_id.startswith("holdout:")
     assert connection.execute("SELECT count(*) FROM holdout_claim").fetchone()[0] == 1
     before_replay = connection.total_changes
 
     receipt = handler.handle(command)
 
-    assert receipt.claim_id == exc_info.value.details["claim_id"]
+    assert receipt.claim_id == failed_claim_id
     assert connection.total_changes == before_replay
     assert notifier.calls == [
         ("experiment-1", "holdout_claimed", NOW),
@@ -2699,6 +2716,7 @@ def test_system_retry_preserves_claim_logical_run_and_fingerprint(
     )
     failed = store.load_snapshot(launch.experiment_id)
     original_claim = failed.holdout_claim
+    assert original_claim is not None
     selected = next(
         fold
         for fold in failed.folds
@@ -2726,7 +2744,9 @@ def test_system_retry_preserves_claim_logical_run_and_fingerprint(
     assert {
         str(attempt.spec.reproduction_fingerprint) for attempt in retry_attempts
     } == {original_claim.reproduction_fingerprint}
-    assert refreshed.holdout_claim.logical_run_id == original_claim.logical_run_id
+    refreshed_claim = refreshed.holdout_claim
+    assert refreshed_claim is not None
+    assert refreshed_claim.logical_run_id == original_claim.logical_run_id
     assert (
         database.get_connection()
         .execute("SELECT count(*) FROM holdout_claim")
@@ -2792,7 +2812,9 @@ def test_terminal_holdout_failure_cannot_reselect_or_bypass_retry_rules(
         == "terminal_fold_retry_requires_failed_fold"
     )
     refreshed = store.load_snapshot(launch.experiment_id)
-    assert refreshed.holdout_claim.claim_id == original.claim_id
+    refreshed_claim = refreshed.holdout_claim
+    assert refreshed_claim is not None
+    assert refreshed_claim.claim_id == original.claim_id
     assert (
         database.get_connection()
         .execute("SELECT count(*) FROM holdout_claim")

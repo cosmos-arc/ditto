@@ -132,19 +132,20 @@ def _launch() -> ExperimentLaunchSpec:
     )
 
 
-def _fold_specs() -> tuple[FoldPersistenceSpec, FoldPersistenceSpec]:
-    return tuple(
-        FoldPersistenceSpec.create(
-            FoldKey(EXPERIMENT_ID, CANDIDATE_ID, FoldId(f"wf-{ordinal}")),
-            ordinal,
-            FoldRole.WALK_FORWARD,
-            DateWindow(date(2023, 1, 1), date(2023, 12, 31)),
-            DateWindow(date(2024, ordinal, 1), date(2024, ordinal, 2)),
-            2,
-            1,
-        )
-        for ordinal in (1, 2)
+def _fold_spec(ordinal: int) -> FoldPersistenceSpec:
+    return FoldPersistenceSpec.create(
+        FoldKey(EXPERIMENT_ID, CANDIDATE_ID, FoldId(f"wf-{ordinal}")),
+        ordinal,
+        FoldRole.WALK_FORWARD,
+        DateWindow(date(2023, 1, 1), date(2023, 12, 31)),
+        DateWindow(date(2024, ordinal, 1), date(2024, ordinal, 2)),
+        2,
+        1,
     )
+
+
+def _fold_specs() -> tuple[FoldPersistenceSpec, FoldPersistenceSpec]:
+    return (_fold_spec(1), _fold_spec(2))
 
 
 def _running_store(

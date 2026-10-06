@@ -2,16 +2,24 @@
 
 from __future__ import annotations
 
+from typing import Any, Literal, cast
+
 import polars as pl
 import pytest
 from ditto_application.processes.quality.patrol import QualityPatrolService
+from ditto_application.queries.market import MarketQueryFacade
+from ditto_application.queries.metadata import MetadataQueryFacade
+from ditto_data.quality.checkers.cross_source import CrossSourceComparison
+from ditto_data.quality.quality_types import DQResult
 
 
 def _service(capital_facade):
+    # MarketQueryFacade/MetadataQueryFacade 为具体类（非协议），无法以轻量
+    # stub 结构化满足；capital 分支不读取它们，按测试 mock 边界单点收窄。
     return QualityPatrolService(
         engine=_EngineStub(),
-        market_facade=_MarketStub(),
-        metadata_facade=_MetadataStub(),
+        market_facade=cast("MarketQueryFacade", _MarketStub()),
+        metadata_facade=cast("MetadataQueryFacade", _MetadataStub()),
         capital_facade=capital_facade,
     )
 
@@ -20,10 +28,42 @@ class _EngineStub:
     def has_statistical_rules(self, dataset: str) -> bool:
         return dataset in {"moneyflow", "cyq_perf"}
 
-    def check_statistical(self, dataset: str, **_kwargs: object):
-        from ditto_data.quality.quality_types import DQResult
-
+    def check_statistical(
+        self,
+        dataset: str,
+        current: pl.DataFrame,
+        historical: pl.DataFrame | None = None,
+        calendar: pl.DataFrame | None = None,
+        reference: pl.DataFrame | None = None,
+    ) -> DQResult:
         return DQResult(dataset=dataset, passed=True, issues=[])
+
+    def check(
+        self,
+        df: pl.DataFrame,
+        dataset: str,
+        levels: list[Literal["l1", "l2"]] | None = None,
+        context: dict[str, Any] | None = None,
+    ) -> DQResult:
+        raise AssertionError(f"capital 分支不得触发写入时 DQ 检查: {dataset}")
+
+    def check_cross_source(
+        self,
+        primary: pl.DataFrame,
+        secondary: pl.DataFrame,
+        dataset: str,
+        context: dict[str, Any] | None = None,
+    ) -> DQResult:
+        raise AssertionError(f"capital 分支不得触发跨源对比: {dataset}")
+
+    def compare_cross_source(
+        self,
+        primary: pl.DataFrame,
+        secondary: pl.DataFrame,
+        dataset: str,
+        context: dict[str, Any] | None = None,
+    ) -> CrossSourceComparison:
+        raise AssertionError(f"capital 分支不得触发跨源对比报告: {dataset}")
 
 
 class _MarketStub:

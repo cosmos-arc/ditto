@@ -15,6 +15,7 @@ from ditto_application.processes.execution.strategy_run_process import (
     StrategyRunServiceConfig,
 )
 from ditto_backtest.data_feed import Slice
+from ditto_kernel.identity import InstrumentId
 from ditto_kernel.trading import MarketSnapshot
 from ditto_strategy.alpha.context import StrategyContext
 from ditto_strategy.alpha.models import TargetPortfolio
@@ -44,7 +45,7 @@ def _make_target_portfolio(
         trade_date=trade_date,
         strategy_id=strategy_id,
         run_id=run_id,
-        positions={1: 0.6, 2: 0.3},
+        positions={InstrumentId(1): 0.6, InstrumentId(2): 0.3},
         cash_target=0.1,
     )
 
@@ -55,9 +56,9 @@ def _make_fake_slice(trade_date: str = TRADE_DATE) -> Slice:
         step_time=datetime(2026, 1, 15, 9, 30),
         trade_date=trade_date,
         bars={
-            1: MarketSnapshot(
+            InstrumentId(1): MarketSnapshot(
                 trade_date=trade_date,
-                instrument_id=1,
+                instrument_id=InstrumentId(1),
                 open=10.0,
                 high=10.5,
                 low=9.8,
@@ -199,7 +200,7 @@ class TestResearchMode:
         pipeline = _make_mock_pipeline(target)
 
         def run_with_risk(context: StrategyContext, bundle: object) -> TargetPortfolio:
-            context.lock_instrument(1, "MAX_POSITION_LIMIT")
+            context.lock_instrument(InstrumentId(1), "MAX_POSITION_LIMIT")
             return target
 
         pipeline.run.side_effect = run_with_risk

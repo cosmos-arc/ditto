@@ -19,9 +19,12 @@ from ditto_application.agent_authoring_contracts import (
 )
 from ditto_application.commands.agent_authoring import AgentAuthoringCommandFacade
 from ditto_application.commands.strategy import (
+    CreateStrategyCommand,
     CreateStrategyHandler,
+    UpdateStrategyCommand,
     UpdateStrategyHandler,
 )
+from ditto_application.commands.strategy_governance import SubmitReviewCommand
 from ditto_application.contracts import StrategySpecInfo, StrategyVersionStateInfo
 from ditto_application.exceptions import AppCommandError
 from ditto_application.mutation_idempotency import (
@@ -72,9 +75,9 @@ class _Verifier:
 
 class _CreateHandler:
     def __init__(self) -> None:
-        self.calls: list[object] = []
+        self.calls: list[CreateStrategyCommand] = []
 
-    def handle(self, command: object) -> StrategySpecInfo:
+    def handle(self, command: CreateStrategyCommand) -> StrategySpecInfo:
         self.calls.append(command)
         return StrategySpecInfo(
             strategy_id="strategy-001",
@@ -87,15 +90,28 @@ class _CreateHandler:
         )
 
 
-class _UpdateHandler(_CreateHandler):
-    pass
+class _UpdateHandler:
+    def __init__(self) -> None:
+        self.calls: list[UpdateStrategyCommand] = []
+
+    def handle(self, command: UpdateStrategyCommand) -> StrategySpecInfo:
+        self.calls.append(command)
+        return StrategySpecInfo(
+            strategy_id="strategy-001",
+            name="Momentum",
+            spec_json={"strategy_family_id": "strategy-001"},
+            version=1,
+            status="draft",
+            created_at="2026-08-12T07:06:00Z",
+            tags=("agent",),
+        )
 
 
 class _SubmitHandler:
     def __init__(self) -> None:
-        self.calls: list[object] = []
+        self.calls: list[SubmitReviewCommand] = []
 
-    def handle(self, command: object) -> StrategyVersionStateInfo:
+    def handle(self, command: SubmitReviewCommand) -> StrategyVersionStateInfo:
         self.calls.append(command)
         return StrategyVersionStateInfo(
             strategy_id="strategy-001",
@@ -285,7 +301,7 @@ class _IdempotentCreateHandler(_CreateHandler):
         self._events: set[str] = set()
         self.side_effects = 0
 
-    def handle(self, command: object) -> StrategySpecInfo:
+    def handle(self, command: CreateStrategyCommand) -> StrategySpecInfo:
         assert command.idempotency is not None
         event_id = mutation_event_id(command.idempotency)
         with self._lock:

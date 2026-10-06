@@ -22,6 +22,7 @@ from ditto_application.queries.historical_universe import (
     HistoricalUniverseResult,
     HistoricalUniverseSources,
 )
+from ditto_data.provider import BarQuery
 from ditto_features.factors.factor_specs import ALL_FACTOR_SPECS
 from ditto_features.factors.spec import FactorSpec
 
@@ -50,9 +51,9 @@ class _FakeProvider:
         self.frame = frame
         self.raw_frame = raw_frame
         self.schedule = schedule
-        self.queries: list[object] = []
+        self.queries: list[BarQuery] = []
 
-    def get_bars(self, query):
+    def get_bars(self, query: BarQuery) -> pl.DataFrame:
         self.queries.append(query)
         if query.adj == "none":
             return self.raw_frame if self.raw_frame is not None else self.frame
@@ -668,7 +669,10 @@ def test_missing_knowledge_date_column_is_rejected() -> None:
         process.assemble(_request())
 
     assert error.value.details["reason"] == "ASSEMBLY_BARS_SCHEMA"
-    assert "knowledge_date" in error.value.details["columns"]
+    # 生产侧 details["columns"] 为 tuple[str, ...]，窄化后做成员断言。
+    missing_columns = error.value.details["columns"]
+    assert isinstance(missing_columns, tuple)
+    assert "knowledge_date" in missing_columns
 
 
 def test_uncovered_daily_window_is_rejected_before_response() -> None:
@@ -693,7 +697,10 @@ def test_uncovered_daily_window_is_rejected_before_response() -> None:
     # Coverage of every consumed bar date (including the cross-section) is
     # the single fail-closed guard; the run never reaches response rendering.
     assert error.value.details["reason"] == "ASSEMBLY_SNAPSHOT_COVERAGE_MISSING"
-    assert error.value.details["uncovered_count"] >= 19
+    # 生产侧 details["uncovered_count"] 为 int 计数，窄化后比较。
+    uncovered_count = error.value.details["uncovered_count"]
+    assert isinstance(uncovered_count, int)
+    assert uncovered_count >= 19
 
 
 def test_weight_invariants_mirror_the_strategy_spec() -> None:

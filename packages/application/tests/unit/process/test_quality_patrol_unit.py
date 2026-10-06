@@ -97,7 +97,9 @@ class TestQualityPatrolServiceContract:
         assert isinstance(result, L3CheckResult)
         assert result.has_error is True
         assert result.passed is False
-        assert "RuntimeError" in result.error
+        error = result.error
+        assert error is not None
+        assert "RuntimeError" in error
 
     def test_dataset_without_statistical_rules_is_explicitly_not_applicable(
         self,

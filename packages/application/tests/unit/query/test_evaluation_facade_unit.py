@@ -189,11 +189,12 @@ class TestFactorEvaluationFacadeEvaluateSeries:
                 return_value=3,
             ) as mock_resolve,
         ):
+            artifact_reader = MagicMock(spec=["read_frame"])
+            artifact_reader.read_frame.return_value = factor_df
             facade = FactorEvaluationFacade(
-                artifact_reader=MagicMock(),
+                artifact_reader=artifact_reader,
                 forward_return_service=MagicMock(),
             )
-            facade._artifact_reader.read_frame.return_value = factor_df
             series = FactorEvaluationSeries(
                 factor_id="unknown",
                 factor_version=0,

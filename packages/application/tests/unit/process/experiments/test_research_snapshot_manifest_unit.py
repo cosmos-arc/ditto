@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 from dataclasses import FrozenInstanceError
+from typing import Any, cast
 
 import orjson
 import pytest
@@ -120,7 +121,9 @@ def test_verified_manifest_derives_immutable_binding_from_exact_bytes() -> None:
         ),
     )
     with pytest.raises(FrozenInstanceError):
-        verified.snapshot_binding = verified.snapshot_binding
+        # 旨在触发 FrozenInstanceError 的非法赋值：经 Any 视图发起，
+        # 让类型核验让位于被测的运行时冻结语义。
+        cast("Any", verified).snapshot_binding = verified.snapshot_binding
 
 
 @pytest.mark.parametrize("drift", ["input", "source"])

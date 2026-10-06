@@ -111,9 +111,10 @@ class TestBacktestRuntimeBuilder:
             None,
         )
 
-        assert isinstance(request_type, type)
+        # getattr 探针只做存在性检查；调用走静态可解析的真实符号。
+        assert request_type is BacktestCatalogRequestConfig
         assert callable(resolver)
-        request = request_type(
+        request = BacktestCatalogRequestConfig(
             strategy_id="momentum-etf",
             strategy_version="requested",
             run_id="run-request",
@@ -136,7 +137,7 @@ class TestBacktestRuntimeBuilder:
             resume_from_run_id="resume-source",
         )
 
-        resolved = resolver(
+        resolved = service_factory._resolve_backtest_catalog_request(
             request,
             strategy_version="7",
             benchmark_id=InstrumentId(3_000_001),

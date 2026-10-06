@@ -5,6 +5,8 @@ Phase 3.1 — Run Lineage / Replayability.
 
 from __future__ import annotations
 
+from typing import TypedDict
+
 import pytest
 from ditto_backtest.errors import ReplayError
 from ditto_backtest.manifest import (
@@ -37,6 +39,20 @@ from ditto_strategy.alpha.parameters import (
 
 _IID_510300 = InstrumentId(510300)
 _IID_510500 = InstrumentId(510500)
+
+
+class _ReplayIdentityOverrides(TypedDict, total=False):
+    """确定性身份字段的参数化覆盖（#540：dict[str, object] 会让 _make_manifest
+    每个形参 × object 各报一个 reportArgumentType）。"""
+
+    mode: RunMode
+    artifacts: tuple[str, ...]
+    rule_resolution_policy: str
+    universe_hash: str
+    pit_time_column: str
+    pit_policy: str
+    unsafe_time_policy: str
+    knowledge_lag_days: int
 
 
 def _make_manifest(
@@ -652,25 +668,25 @@ class TestCompareManifests:
         assert any(field_name in item for item in diff.data_diffs)
 
     @pytest.mark.parametrize(
-        ("field_name", "replay_value"),
+        ("field_name", "replay_overrides"),
         [
-            ("mode", RunMode.RESEARCH),
-            ("artifacts", ("manifest.json",)),
-            ("rule_resolution_policy", "latest"),
-            ("universe_hash", "changed"),
-            ("pit_time_column", "trade_date"),
-            ("pit_policy", "unsafe"),
-            ("unsafe_time_policy", "allow_future"),
-            ("knowledge_lag_days", 2),
+            ("mode", {"mode": RunMode.RESEARCH}),
+            ("artifacts", {"artifacts": ("manifest.json",)}),
+            ("rule_resolution_policy", {"rule_resolution_policy": "latest"}),
+            ("universe_hash", {"universe_hash": "changed"}),
+            ("pit_time_column", {"pit_time_column": "trade_date"}),
+            ("pit_policy", {"pit_policy": "unsafe"}),
+            ("unsafe_time_policy", {"unsafe_time_policy": "allow_future"}),
+            ("knowledge_lag_days", {"knowledge_lag_days": 2}),
         ],
     )
     def test_complete_deterministic_manifest_identity_is_compared(
         self,
         field_name: str,
-        replay_value: object,
+        replay_overrides: _ReplayIdentityOverrides,
     ) -> None:
         a = _make_manifest()
-        b = _make_manifest(**{field_name: replay_value})
+        b = _make_manifest(**replay_overrides)
 
         diff = ReplayValidator.compare_manifests(a, b)
 

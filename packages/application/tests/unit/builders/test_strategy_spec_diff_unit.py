@@ -51,8 +51,8 @@ class TestDiffCanonicalPayloads:
         assert result == (SpecChange(path="a", op="changed", old_value=1, new_value=2),)
 
     def test_nested_dict_path_accumulates(self) -> None:
-        base = {"pipeline": {"sequence": ["a", "b"]}}
-        target = {"pipeline": {"sequence": ["a", "c"]}}
+        base: dict[str, object] = {"pipeline": {"sequence": ["a", "b"]}}
+        target: dict[str, object] = {"pipeline": {"sequence": ["a", "c"]}}
         result = diff_canonical_payloads(base, target)
         assert result == (
             SpecChange(
@@ -94,8 +94,8 @@ class TestDiffCanonicalPayloads:
 
     def test_keyed_list_added_by_key_field(self) -> None:
         """parameter_schema 按 name 键定位：新增一条只报该键 added（path 用键值）."""
-        base = {"parameter_schema": [{"name": "a", "dtype": "int"}]}
-        target = {
+        base: dict[str, object] = {"parameter_schema": [{"name": "a", "dtype": "int"}]}
+        target: dict[str, object] = {
             "parameter_schema": [
                 {"name": "a", "dtype": "int"},
                 {"name": "b", "dtype": "float"},
@@ -112,13 +112,15 @@ class TestDiffCanonicalPayloads:
         )
 
     def test_keyed_list_removed_by_key_field(self) -> None:
-        base = {
+        base: dict[str, object] = {
             "parameter_schema": [
                 {"name": "a", "dtype": "int"},
                 {"name": "b", "dtype": "float"},
             ]
         }
-        target = {"parameter_schema": [{"name": "a", "dtype": "int"}]}
+        target: dict[str, object] = {
+            "parameter_schema": [{"name": "a", "dtype": "int"}],
+        }
         result = diff_canonical_payloads(base, target)
         assert result == (
             SpecChange(
@@ -131,8 +133,12 @@ class TestDiffCanonicalPayloads:
 
     def test_keyed_list_change_inside_matched_element(self) -> None:
         """同键元素的字段变化按键匹配后递归（path 含键值 + 字段）."""
-        base = {"parameter_schema": [{"name": "a", "dtype": "int"}]}
-        target = {"parameter_schema": [{"name": "a", "dtype": "float"}]}
+        base: dict[str, object] = {
+            "parameter_schema": [{"name": "a", "dtype": "int"}],
+        }
+        target: dict[str, object] = {
+            "parameter_schema": [{"name": "a", "dtype": "float"}],
+        }
         result = diff_canonical_payloads(base, target)
         assert result == (
             SpecChange(
@@ -145,13 +151,13 @@ class TestDiffCanonicalPayloads:
 
     def test_keyed_list_middle_insert_does_not_cascade(self) -> None:
         """中间插入一条只报该键 added，既有键不级联（altitude 核心 case）."""
-        base = {
+        base: dict[str, object] = {
             "parameter_schema": [
                 {"name": "a", "v": 1},
                 {"name": "c", "v": 3},
             ]
         }
-        target = {
+        target: dict[str, object] = {
             "parameter_schema": [
                 {"name": "a", "v": 1},
                 {"name": "b", "v": 2},
@@ -170,8 +176,12 @@ class TestDiffCanonicalPayloads:
 
     def test_pipeline_nodes_keyed_by_node_id(self) -> None:
         """pipeline.nodes 按 node_id 键定位（验证嵌套 keyed list path）."""
-        base = {"pipeline": {"nodes": [{"enabled": True, "node_id": "universe"}]}}
-        target = {"pipeline": {"nodes": [{"enabled": False, "node_id": "universe"}]}}
+        base: dict[str, object] = {
+            "pipeline": {"nodes": [{"enabled": True, "node_id": "universe"}]}
+        }
+        target: dict[str, object] = {
+            "pipeline": {"nodes": [{"enabled": False, "node_id": "universe"}]}
+        }
         result = diff_canonical_payloads(base, target)
         assert result == (
             SpecChange(

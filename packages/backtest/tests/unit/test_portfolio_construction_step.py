@@ -41,7 +41,7 @@ class _SuccessfulConstructor:
         context: PortfolioConstructionContext,
     ) -> PortfolioConstructionOutcome:
         return PortfolioConstructionOutcome.completed(
-            target_portfolio=_Target({1: 0.25, 2: 0.75}),
+            target_portfolio=_Target({InstrumentId(1): 0.25, InstrumentId(2): 0.75}),
             evidence={"policy_digest": "digest-1"},
         )
 
@@ -49,8 +49,8 @@ class _SuccessfulConstructor:
 def _ready_context() -> StepContext:
     ctx = _make_ctx(trade_date="2026-01-15", is_rebalance_day=True)
     ctx.account_view = _make_account_view()
-    ctx.target_portfolio = _Target({1: 0.5, 2: 0.5})
-    ctx.source_snapshot_ids = {1: "snap-b", 2: "snap-a"}
+    ctx.target_portfolio = _Target({InstrumentId(1): 0.5, InstrumentId(2): 0.5})
+    ctx.source_snapshot_ids = {InstrumentId(1): "snap-b", InstrumentId(2): "snap-a"}
     return ctx
 
 

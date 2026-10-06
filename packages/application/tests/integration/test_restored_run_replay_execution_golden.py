@@ -19,6 +19,7 @@ import pytest
 from ditto_application.builders import (
     BacktestRuntimeBuilder,
     PublishedStrategyRuntime,
+    StrategyRuntimeBuilder,
     StrategyServiceFactory,
 )
 from ditto_application.commands.backtest import ResumeRunCommand, ResumeRunHandler
@@ -30,6 +31,7 @@ from ditto_application.processes.execution.backtest_process import (
 from ditto_application.processes.execution.replay_process import ReplayProcess
 from ditto_application.processes.execution.strategy_run_process import StrategyFacade
 from ditto_application.queries.backtest import BacktestQueryFacade
+from ditto_application.queries.backtest_trade import BacktestTradeQueryFacade
 from ditto_application.queries.run import RunReadModel
 from ditto_data.provider import BarQuery, DataProvider, InstrumentQuery
 from ditto_data.services.metadata_service import MetadataService
@@ -37,8 +39,13 @@ from ditto_execution.audit import ExecutionAuditService
 from ditto_kernel.identity import InstrumentId
 from ditto_kernel.strategy import RunStatus
 from ditto_strategy.alpha.context import StrategyContext
-from ditto_strategy.alpha.parameters import canonical_parameter_hash
+from ditto_strategy.alpha.parameters import (
+    CandidateParameter,
+    canonical_parameter_hash,
+)
 from ditto_strategy.alpha.pipeline import StrategyPipeline
+from ditto_strategy.alpha.selection_evidence import SelectionEvidenceSink
+from ditto_strategy.alpha.spec_codec import adapt_legacy_strategy_spec
 from ditto_strategy.alpha.specs import StrategySpec
 from ditto_strategy.models import (
     StrategyArtifactRecord,
@@ -143,6 +150,17 @@ class _InMemoryRunControl:
     def mark_running(self, run_id: str) -> bool:
         return self._update(run_id, status=RunStatus.RUNNING)
 
+    def retry_failed(self, run_id: str, *, config_json: str = "") -> bool:
+        record = self._runs.get(run_id)
+        if record is None or record.status != RunStatus.FAILED:
+            return False
+        self._runs[run_id] = replace(
+            record,
+            status=RunStatus.PENDING,
+            config_json=config_json or record.config_json,
+        )
+        return True
+
     def mark_completed(self, run_id: str) -> bool:
         return self._update(run_id, status=RunStatus.COMPLETED)
 
@@ -152,6 +170,22 @@ class _InMemoryRunControl:
             status=RunStatus.FAILED,
             error_message=error_message,
         )
+
+    def mark_pending_failed(self, run_id: str, error_message: str = "") -> bool:
+        record = self._runs.get(run_id)
+        if record is None or record.status != RunStatus.PENDING:
+            return False
+        return self._update(
+            run_id,
+            status=RunStatus.FAILED,
+            error_message=error_message,
+        )
+
+    def refresh_blocked_evidence(self, run_id: str, *, config_json: str) -> bool:
+        record = self._runs.get(run_id)
+        if record is None:
+            return False
+        return self._update(run_id, config_json=config_json)
 
     def mark_cancelled(self, run_id: str) -> bool:
         return self._update(run_id, status=RunStatus.CANCELLED)
@@ -340,11 +374,15 @@ def _build_factory(
         benchmark=None,
         tags=("golden",),
     )
-    strategy_runtime_builder = cast(object, _RuntimeBuilderStub(spec))
+    # StrategyRuntimeBuilder 是名义类；替身按真实方法表实现，单点 cast 满足类型。
+    strategy_runtime_builder = cast(
+        "StrategyRuntimeBuilder",
+        _RuntimeBuilderStub(spec),
+    )
     metadata_service = cast(MetadataService, _MetadataServiceStub())
     data_provider = cast(DataProvider, _SyntheticDataProvider(_make_data()))
     runtime_builder = BacktestRuntimeBuilder(
-        strategy_runtime_builder=cast(object, strategy_runtime_builder),
+        strategy_runtime_builder=strategy_runtime_builder,
         metadata_service=metadata_service,
         data_provider=data_provider,
     )
@@ -366,9 +404,12 @@ class _RuntimeBuilderStub:
         strategy_id: str,
         version: int | None = None,
         *,
-        candidate_parameters: tuple[object, ...] = (),
+        candidate_parameters: tuple[CandidateParameter, ...] = (),
+        evidence_sink: SelectionEvidenceSink | None = None,
     ) -> PublishedStrategyRuntime:
-        _ = (strategy_id, version, candidate_parameters)
+        _ = (strategy_id, version, candidate_parameters, evidence_sink)
+        # 与生产 build_typed_legacy_runtime 同源：legacy spec 显式迁移为 V2 值对象。
+        v2_spec = adapt_legacy_strategy_spec(self._spec)
         return PublishedStrategyRuntime(
             record=StrategySpecRecord(
                 strategy_id=self._spec.strategy_id,
@@ -378,8 +419,8 @@ class _RuntimeBuilderStub:
                 tags=self._spec.tags,
             ),
             spec=self._spec,
-            base_spec=self._spec,
-            resolved_spec=self._spec,
+            base_spec=v2_spec,
+            resolved_spec=v2_spec,
             pipeline=StrategyPipeline((_AllCashStage(),)),
             base_spec_hash="a" * 64,
             spec_hash="b" * 64,
@@ -455,6 +496,18 @@ class _ReplayFacade:
         return service.run()
 
 
+def _json_int(value: object) -> int:
+    """窄化 JSON 数值节点为 int（运行时校验，替代盲 cast）。"""
+    assert isinstance(value, int)
+    return int(value)
+
+
+def _json_float(value: object) -> float:
+    """窄化 JSON 数值节点为 float（运行时校验，int/float 均可）。"""
+    assert isinstance(value, (int, float))
+    return float(value)
+
+
 def _config_from_record(record: StrategyRunRecord) -> BacktestCatalogRequestConfig:
     raw = orjson.loads(record.config_json)
     assert isinstance(raw, dict)
@@ -466,20 +519,26 @@ def _config_from_record(record: StrategyRunRecord) -> BacktestCatalogRequestConf
         parent_run_id=record.parent_run_id,
         start_date=cast(str, data["start_date"]),
         end_date=cast(str, data["end_date"]),
-        initial_cash=float(data["initial_cash"]),
+        initial_cash=_json_float(data["initial_cash"]),
         parameter_overrides=tuple(cast(list[str], data.get("parameter_overrides", []))),
         resume_from_run_id=cast(str, data.get("resume_from_run_id", "")),
         resume_checkpoint_trade_date=cast(
             str,
             data.get("resume_checkpoint_trade_date", ""),
         ),
-        resume_checkpoint_completed_days=int(
+        resume_checkpoint_completed_days=_json_int(
             data.get("resume_checkpoint_completed_days", 0),
         ),
-        resume_checkpoint_total_days=int(data.get("resume_checkpoint_total_days", 0)),
-        resume_checkpoint_nav=float(data.get("resume_checkpoint_nav", 0.0)),
-        resume_checkpoint_order_count=int(data.get("resume_checkpoint_order_count", 0)),
-        resume_checkpoint_fill_count=int(data.get("resume_checkpoint_fill_count", 0)),
+        resume_checkpoint_total_days=_json_int(
+            data.get("resume_checkpoint_total_days", 0),
+        ),
+        resume_checkpoint_nav=_json_float(data.get("resume_checkpoint_nav", 0.0)),
+        resume_checkpoint_order_count=_json_int(
+            data.get("resume_checkpoint_order_count", 0),
+        ),
+        resume_checkpoint_fill_count=_json_int(
+            data.get("resume_checkpoint_fill_count", 0),
+        ),
         resume_account_state_json=cast(str, data.get("resume_account_state_json", "")),
         resume_account_state_hash=cast(str, data.get("resume_account_state_hash", "")),
         resume_settlement_state_json=cast(
@@ -552,7 +611,8 @@ def test_restored_run_replay_execution_golden(tmp_path: Path) -> None:
     replay_result = replay_process.replay(child_report.run_id)
 
     facade = BacktestQueryFacade(
-        trade_facade=cast(object, object()),
+        # get_replay_evidence_summary 只读 artifact/audit，不会触达 trade 查询面。
+        trade_facade=cast("BacktestTradeQueryFacade", object()),
         run_model=cast(RunReadModel, run_control),
         audit_service=cast(ExecutionAuditService, _NoopAuditService()),
         artifact_service=cast(StrategyArtifactService, artifact_service),

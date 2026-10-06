@@ -27,6 +27,7 @@ from ditto_features.materialization import (
     DerivedRunTrigger,
 )
 from ditto_features.models.derived import DerivedSpecRecord
+from ditto_platform.foundation.json_types import JsonDict
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -88,7 +89,7 @@ def _make_context(**overrides: object) -> InputContext:
     return InputContext(**defaults)  # type: ignore[arg-type]
 
 
-def _make_spec_record(spec_json: dict[str, object]) -> DerivedSpecRecord:
+def _make_spec_record(spec_json: JsonDict) -> DerivedSpecRecord:
     return DerivedSpecRecord(
         derived_id="test.derived",
         version=1,

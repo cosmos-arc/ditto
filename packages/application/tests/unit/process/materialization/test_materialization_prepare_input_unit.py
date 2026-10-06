@@ -29,7 +29,7 @@ def _make_spec(**overrides: object) -> DerivedSpec:
 
 def _make_frame(*columns: str) -> pl.DataFrame:
     """Create a minimal frame with given columns plus the required key columns."""
-    data = {col: [1.0] for col in columns}
+    data: dict[str, list[object]] = {col: [1.0] for col in columns}
     data.setdefault("instrument_id", ["000001.SZ"])
     data.setdefault("trade_date", ["2024-01-01"])
     return pl.DataFrame(data)

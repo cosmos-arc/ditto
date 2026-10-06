@@ -29,6 +29,7 @@ from ditto_backtest.statistics import (
     sortino_ratio,
     total_return,
 )
+from ditto_kernel.identity import InstrumentId
 from ditto_kernel.order import OrderSide
 from ditto_portfolio.accounting import (
     AccountView,
@@ -541,7 +542,7 @@ class TestCostMetrics:
         return FillEvent(
             fill_id="f-1",
             order_id="o-1",
-            instrument_id=1,
+            instrument_id=InstrumentId(1),
             direction=OrderSide.BUY,
             filled_quantity=qty,
             fill_price=price,
@@ -645,7 +646,7 @@ def _make_account_view(
     nav: float = 100_000.0,
     exposure: float = 60_000.0,
     cash: float = 40_000.0,
-    positions: dict[int, Position] | None = None,
+    positions: dict[InstrumentId, Position] | None = None,
 ) -> AccountView:
     """构造 AccountView 快照，用于 PortfolioStatistics 测试."""
     cash_book = CashBook(available=cash, settled=cash, frozen=0.0)

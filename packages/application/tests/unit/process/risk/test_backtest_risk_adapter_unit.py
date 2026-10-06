@@ -12,6 +12,7 @@ from ditto_application.processes.risk.fingerprint import position_fingerprint
 from ditto_backtest.risk_runtime import BacktestRiskContext
 from ditto_execution.orders.ids import ClientOrderId
 from ditto_execution.orders.model import Order
+from ditto_kernel.identity import InstrumentId
 from ditto_kernel.order import OrderSide, OrderType
 from ditto_portfolio.accounting import Account, CashBook, FillEvent, Position
 from ditto_risk.continuous_gate import ContinuousRiskGate
@@ -40,7 +41,7 @@ def test_adapter_runs_gate_and_round_trips_canonical_state() -> None:
     daily = adapter.daily_scan(_context())
     order = Order(
         client_id=ClientOrderId("order-1"),
-        instrument_id=1,
+        instrument_id=InstrumentId(1),
         order_type=OrderType.MARKET,
         direction=OrderSide.BUY,
         quantity=100,
@@ -74,7 +75,7 @@ def test_adapter_replays_an_earlier_fill_idempotently_after_later_fills() -> Non
     first = FillEvent(
         fill_id="fill-1",
         order_id="order-1",
-        instrument_id=1,
+        instrument_id=InstrumentId(1),
         direction=OrderSide.BUY,
         filled_quantity=100,
         fill_price=10.0,
@@ -99,7 +100,7 @@ def test_adapter_replays_an_earlier_fill_idempotently_after_later_fills() -> Non
 
 def test_position_fingerprint_ignores_t1_availability_but_not_holdings() -> None:
     position = Position(
-        instrument_id=1,
+        instrument_id=InstrumentId(1),
         quantity=100,
         available_quantity=0,
         average_cost=10.0,
@@ -109,12 +110,14 @@ def test_position_fingerprint_ignores_t1_availability_but_not_holdings() -> None
         total_fees=0.0,
     )
 
-    frozen = Account(positions={1: position}).get_view()
+    frozen = Account(positions={InstrumentId(1): position}).get_view()
     settled = Account(
-        positions={1: replace(position, available_quantity=100)}
+        positions={InstrumentId(1): replace(position, available_quantity=100)}
     ).get_view()
     changed = Account(
-        positions={1: replace(position, quantity=200, available_quantity=100)}
+        positions={
+            InstrumentId(1): replace(position, quantity=200, available_quantity=100)
+        }
     ).get_view()
 
     assert position_fingerprint(frozen) == position_fingerprint(settled)

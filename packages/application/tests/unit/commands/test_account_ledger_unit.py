@@ -18,7 +18,12 @@ from ditto_application.commands.account_ledger import (
 )
 from ditto_application.exceptions import AppConflictError, AppNotFoundError
 from ditto_kernel.identity import InstrumentId
-from ditto_portfolio.account_ledger import AccountDefinition, AccountEvent, AccountKind
+from ditto_portfolio.account_ledger import (
+    AccountDefinition,
+    AccountEvent,
+    AccountKind,
+    ledger_hash,
+)
 
 NOW = datetime(2026, 8, 31, 9, 30, tzinfo=UTC)
 
@@ -42,6 +47,17 @@ class _MemoryJournal:
     def append(self, event: AccountEvent) -> AccountEvent:
         self.events[event.account_id].append(event)
         return event
+
+    def append_if_revision(
+        self,
+        event: AccountEvent,
+        *,
+        expected_ledger_hash: str,
+    ) -> AccountEvent:
+        current = tuple(self.events.get(event.account_id, ()))
+        if ledger_hash(current) != expected_ledger_hash:
+            raise RuntimeError("stale ledger revision")
+        return self.append(event)
 
     def get_event(self, account_id: str, event_id: str) -> AccountEvent | None:
         return next(
@@ -201,10 +217,13 @@ def test_correction_and_reversal_return_immutable_receipts() -> None:
         )
     )
 
+    # 成功写入的 receipt 一定携带事件；窄化后取不可变事件 id。
+    buy_event = buy.event
+    assert buy_event is not None
     correction = handler.correct(
         CorrectManualEventCommand(
             account_id="manual-main",
-            corrects_event_id=buy.event.event_id,
+            corrects_event_id=buy_event.event_id,
             replacement=ManualEventInput.buy_or_sell(
                 side="buy",
                 trade_date="2026-08-31",
@@ -219,20 +238,24 @@ def test_correction_and_reversal_return_immutable_receipts() -> None:
             ),
         )
     )
+    correction_event = correction.event
+    assert correction_event is not None
     reversal = handler.reverse(
         ReverseManualEventCommand(
             account_id="manual-main",
-            reverses_event_id=correction.event.event_id,
+            reverses_event_id=correction_event.event_id,
             trade_date="2026-08-31",
             settlement_date="2026-08-31",
             idempotency_key="reverse-correction",
             actor="user:chevy",
         )
     )
+    reversal_event = reversal.event
+    assert reversal_event is not None
 
     assert opening.status == "created"
-    assert correction.event.corrects_event_id == buy.event.event_id
-    assert reversal.event.reverses_event_id == correction.event.event_id
+    assert correction_event.corrects_event_id == buy_event.event_id
+    assert reversal_event.reverses_event_id == correction_event.event_id
     assert tuple(
         event.event_type.value for event in journal.list_events("manual-main")
     ) == (

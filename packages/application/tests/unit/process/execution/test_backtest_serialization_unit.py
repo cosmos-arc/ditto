@@ -600,7 +600,9 @@ class TestSelectionEvidenceTables:
             return SelectionEvidenceLog(exclusions=(event,))
         if type(event) is SelectionEvidence:
             return SelectionEvidenceLog(selections=(event,))
-        return SelectionEvidenceLog(factor_contributions=(event,))
+        if type(event) is FactorContributionEvidence:
+            return SelectionEvidenceLog(factor_contributions=(event,))
+        raise AssertionError(f"unexpected evidence type: {type(event).__name__}")
 
     @pytest.mark.parametrize(
         ("event", "field_name", "poisoned_value"),

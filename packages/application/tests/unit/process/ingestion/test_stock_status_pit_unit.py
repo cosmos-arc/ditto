@@ -39,6 +39,7 @@ def test_registry_passes_target_trade_date_to_stock_status_fetcher() -> None:
 
 def test_stock_status_contract_declares_provider_history_window() -> None:
     contract = default_dataset_metadata()["stock_status"].dataset_spec
+    assert contract is not None
 
     assert contract.coverage_start_rule == "provider history starts in 2016"
     assert "tushare:bak_basic" in contract.provider_datasets

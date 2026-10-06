@@ -67,8 +67,8 @@ SOURCE_SNAPSHOT_ID = "provider-snapshot-inputs"
 class _MemoryArtifactIndex:
     """Thread-safe test port mirroring the SQLite artifact index contract."""
 
-    def __init__(self, artifact_root: Path | None = None) -> None:
-        self.artifact_root = None if artifact_root is None else artifact_root.resolve()
+    def __init__(self, artifact_root: Path) -> None:
+        self.artifact_root = artifact_root.resolve()
         self.records: dict[str, ArtifactRecord] = {}
         self._lock = threading.Lock()
 

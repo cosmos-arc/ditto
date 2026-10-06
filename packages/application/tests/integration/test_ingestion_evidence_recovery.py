@@ -298,6 +298,7 @@ class _Pipeline:
     store: ParquetStore
     market: MarketWriteService
     ports: EvidenceCommitPorts
+    logs: IngestionLogStore
 
 
 @contextmanager
@@ -309,9 +310,13 @@ def _pipeline(
     snapshot_now: Callable[[], datetime] | None = None,
 ) -> Iterator[_Pipeline]:
     class QualityChecker:
-        def handle(self, command: CheckDataQualityCommand) -> tuple[pl.DataFrame, bool]:
-            assert command.df["close"].min() > 0
-            return command.df, False
+        def handle(self, cmd: CheckDataQualityCommand) -> tuple[pl.DataFrame, bool]:
+            minimum = cmd.df["close"].min()
+            assert minimum is not None
+            # close 列最小值是数值字面量（运行时校验窄化 PythonLiteral 联合）.
+            assert isinstance(minimum, (int, float))
+            assert minimum > 0
+            return cmd.df, False
 
     register_metrics()
     pool = SQLitePool(str(tmp_path / "runtime.sqlite"))
@@ -362,7 +367,7 @@ def _pipeline(
         provider_payload_writer=payloads,
     )
     try:
-        yield _Pipeline(ctx, writer, store, market, ports)
+        yield _Pipeline(ctx, writer, store, market, ports, logs)
     finally:
         pool.close()
 
@@ -593,12 +598,14 @@ def test_enriched_success_is_attested_by_its_payload_binding(tmp_path):
             request,
             success_log=replace(request.success_log, checksum="canonical:enriched"),
         )
-        assert runtime.context.evidence_committer.commit(request).completed
-        assert runtime.context.evidence_committer.commit(request).completed
+        committer = runtime.context.evidence_committer
+        assert committer is not None
+        assert committer.commit(request).completed
+        assert committer.commit(request).completed
         assert len(runtime.ports.snapshot_reader.list_snapshots()) == 1
         ports = runtime.ports
         verifier = PersistedIngestionEvidenceVerifier(
-            ports.snapshot_reader, ports.lifecycle_reader, ports.ingestion_log_store
+            ports.snapshot_reader, ports.lifecycle_reader, runtime.logs
         )
         assert verifier.verify_exact_date(
             dataset="stock_daily",
@@ -629,7 +636,9 @@ def test_instrument_snapshot_does_not_complete_market_dates(tmp_path: Path) -> N
 
         frame = _bars()
         written = runtime.writer.write_data("stock_daily", frame, "2026-07-16")
-        payload = runtime.context.provider_payload_writer.retain_payload(
+        payload_writer = runtime.context.provider_payload_writer
+        assert payload_writer is not None
+        payload = payload_writer.retain_payload(
             dataset_id="stock_daily",
             source="tushare",
             payload=frame,
@@ -647,8 +656,10 @@ def test_instrument_snapshot_does_not_complete_market_dates(tmp_path: Path) -> N
                 provider_payload=payload,
             )
         )
-        assert runtime.context.evidence_committer.commit(request).completed
-        assert runtime.context.evidence_committer.commit(request).completed
+        committer = runtime.context.evidence_committer
+        assert committer is not None
+        assert committer.commit(request).completed
+        assert committer.commit(request).completed
         assert len(runtime.ports.snapshot_reader.list_snapshots()) == 1
         ports = runtime.ports
         manager = MetadataManager(

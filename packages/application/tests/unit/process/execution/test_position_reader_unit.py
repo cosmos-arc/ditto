@@ -12,6 +12,18 @@ from ditto_execution.models import PositionRecord
 class _PositionPort:
     rows: list[PositionRecord]
 
+    def save_position(self, record: PositionRecord) -> None:
+        raise AssertionError("reader test port is read-only")
+
+    def replace_position_snapshot(
+        self,
+        *,
+        strategy_id: str,
+        snapshot_date: str,
+        positions: tuple[PositionRecord, ...],
+    ) -> None:
+        raise AssertionError("reader test port is read-only")
+
     def list_positions(
         self,
         strategy_id: str,

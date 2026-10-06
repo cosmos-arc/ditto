@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import replace
 from datetime import UTC, date, datetime, timedelta
 from threading import Barrier, Event, Lock
 from types import SimpleNamespace
-from typing import cast
+from typing import TypedDict, cast
 
 import pytest
 from ditto_analysis.errors import ExperimentIntegrityError, ExperimentLeaseLostError
@@ -48,6 +49,7 @@ from ditto_analysis.experiments import (
     SchedulerLease,
     SchedulerSlot,
     SnapshotId,
+    StatusEventRecord,
     StrategyVersion,
     TrialFamilyDeclaration,
     TrialKind,
@@ -61,10 +63,20 @@ from ditto_application.candidate_selection import (
     CandidateSelectionRequest,
 )
 from ditto_application.exceptions import AppProcessError
+from ditto_application.processes.experiments._holdout_contract import (
+    HoldoutClaimPersistenceRequest,
+    PersistedHoldoutClaim,
+)
+from ditto_application.processes.experiments._selection_evidence_artifact import (
+    PublishedSelectionEvidence,
+)
 from ditto_application.processes.experiments.coordinator import (
     ExperimentExecutionCoordinator,
     PersistedAttemptStart,
     SchedulerTickState,
+)
+from ditto_application.processes.experiments.evidence_collector import (
+    ExperimentEvidenceCollector,
 )
 from ditto_application.processes.experiments.scheduler_store import (
     ExperimentExecutionControlChanged,
@@ -304,6 +316,114 @@ class _SchedulerStore:
         self._active_lock = Lock()
         self._lease_lock = Lock()
 
+    def list_experiments(self) -> tuple[ExperimentProjection, ...]:
+        raise AssertionError("coordinator unit suite never lists all experiments")
+
+    def get_launch_spec(
+        self,
+        experiment_id: ExperimentId,
+    ) -> ExperimentLaunchSpec | None:
+        raise AssertionError(
+            f"coordinator unit suite never reads launch spec: {experiment_id}",
+        )
+
+    def list_status_events(
+        self,
+        experiment_id: ExperimentId,
+    ) -> tuple[StatusEventRecord, ...]:
+        raise AssertionError(
+            f"coordinator unit suite never reads status events: {experiment_id}",
+        )
+
+    def claim_holdout_candidate(
+        self,
+        request: HoldoutClaimPersistenceRequest,
+        *,
+        lease: SchedulerLease | None,
+        now_epoch_us: int | None,
+    ) -> PersistedHoldoutClaim:
+        raise AssertionError("coordinator unit suite never claims holdout candidates")
+
+    def record_candidate_selection(
+        self,
+        experiment_id: ExperimentId,
+        candidate_id: CandidateId,
+        *,
+        expected_revision: int,
+        lease: SchedulerLease,
+        now_epoch_us: int,
+        occurred_at: datetime,
+        detail: Mapping[str, object],
+    ) -> ExperimentProjection:
+        raise AssertionError(
+            "coordinator unit suite never records candidate selection "
+            f"({experiment_id}/{candidate_id})",
+        )
+
+    def transition_operator_experiment(
+        self,
+        projection: ExperimentProjection,
+        *,
+        target_status: ExperimentStatus,
+        target_desired_state: ExperimentDesiredState,
+        expected_revision: int,
+        occurred_at: datetime,
+        reason_code: str,
+        detail: Mapping[str, object] | None = None,
+    ) -> ExperimentProjection:
+        raise AssertionError(
+            f"coordinator unit suite never runs operator transitions ({reason_code})",
+        )
+
+    def checkpoint_attempt(
+        self,
+        attempt: AttemptView,
+        checkpoint_ref: CheckpointRef,
+        lease: SchedulerLease,
+        *,
+        now_epoch_us: int,
+        occurred_at: datetime,
+    ) -> AttemptView:
+        raise AssertionError(
+            "coordinator unit suite never checkpoints attempts",
+        )
+
+    def cancel_attempt(
+        self,
+        attempt: AttemptView,
+        *,
+        backtest_run_id: BacktestRunId,
+        lease: SchedulerLease,
+        now_epoch_us: int,
+        occurred_at: datetime,
+        reason_code: str,
+    ) -> AttemptView:
+        raise AssertionError(
+            f"coordinator unit suite never cancels attempts ({reason_code})",
+        )
+
+    def requeue_fold_for_pause(
+        self,
+        fold: FoldView,
+        lease: SchedulerLease,
+        *,
+        now_epoch_us: int,
+        occurred_at: datetime,
+    ) -> FoldView:
+        raise AssertionError("coordinator unit suite never requeues paused folds")
+
+    def retry_terminal_fold(
+        self,
+        fold: FoldView,
+        parent_attempt: AttemptView,
+        lease: SchedulerLease,
+        *,
+        now_epoch_us: int,
+        occurred_at: datetime,
+        detail: Mapping[str, object] | None = None,
+    ) -> FoldView:
+        raise AssertionError("coordinator unit suite never retries terminal folds")
+
     def list_dispatchable_experiments(self) -> tuple[ExperimentProjection, ...]:
         if self.slot.experiment_id is not None:
             return ()
@@ -428,7 +548,7 @@ class _SchedulerStore:
     def claim_attempt(
         self,
         fold: FoldView,
-        queued_attempt: QueuedAttempt,
+        attempt: QueuedAttempt,
         lease: SchedulerLease,
         *,
         now_epoch_us: int,
@@ -476,10 +596,10 @@ class _SchedulerStore:
             ),
         )
         self.folds[index] = claimed
-        attempt = AttemptView(queued_attempt.spec, queued_attempt.projection)
-        self.attempts[queued_attempt.spec.attempt_id] = attempt
+        claimed_attempt = AttemptView(attempt.spec, attempt.projection)
+        self.attempts[attempt.spec.attempt_id] = claimed_attempt
         self.claimed_keys.append(fold.spec.key)
-        return claimed, attempt
+        return claimed, claimed_attempt
 
     def recover_interrupted_fold(
         self,
@@ -556,10 +676,12 @@ class _SchedulerStore:
         *,
         target_status: ExperimentStatus,
         failure_code: ExperimentFailureCode | None,
+        reason_code: str | None = None,
         lease: SchedulerLease,
         now_epoch_us: int,
         occurred_at: datetime,
     ) -> FoldView:
+        _ = reason_code
         if self.raise_lease_lost_on_fold_transition:
             raise ExperimentLeaseLostError(
                 "lost",
@@ -641,24 +763,38 @@ def _coordinator(
     selection_evidence_publisher: _FakeSelectionEvidencePublisher | None = None,
 ) -> tuple[ExperimentExecutionCoordinator, _FirstAttemptFactory]:
     factory = _FirstAttemptFactory()
+    # evidence_collector 形参是具体类 ExperimentEvidenceCollector 而非协议：
+    # 结构化替身只实现 collect 检查点（运行时唯一被调用成员），
+    # 在此单一构造点窄化跨过该 mock 边界。
+    collector = (
+        cast("ExperimentEvidenceCollector", evidence_collector)
+        if evidence_collector is not None
+        else None
+    )
     return (
         ExperimentExecutionCoordinator(
             store=store,
             first_attempt_factory=factory,
             owner_token=owner_token or "coordinator-a",
             clock=lambda: clock_now,
-            evidence_collector=evidence_collector,
+            evidence_collector=collector,
             selection_evidence_publisher=selection_evidence_publisher,
         ),
         factory,
     )
 
 
+class _PublishCall(TypedDict):
+    snapshot: ExperimentSchedulerSnapshot
+    lease_fence: LeaseFence
+    now_epoch_us: int
+
+
 class _FakeSelectionEvidencePublisher:
     """Record candidate-selection publication attempts at the coordinator edge."""
 
     def __init__(self, *, raise_error: Exception | None = None) -> None:
-        self.publish_calls: list[dict[str, object]] = []
+        self.publish_calls: list[_PublishCall] = []
         self.raise_error = raise_error
 
     def publish_selection_evidence(
@@ -667,7 +803,7 @@ class _FakeSelectionEvidencePublisher:
         *,
         lease_fence: LeaseFence,
         now_epoch_us: int,
-    ) -> object:
+    ) -> PublishedSelectionEvidence:
         self.publish_calls.append(
             {
                 "snapshot": snapshot,
@@ -677,7 +813,9 @@ class _FakeSelectionEvidencePublisher:
         )
         if self.raise_error is not None:
             raise self.raise_error
-        return object()
+        # 协议要求返回 PublishedSelectionEvidence，但 coordinator 丢弃该返回值；
+        # 替身不构造真实 trial ledger，以窄点 cast 维持协议形状。
+        return cast("PublishedSelectionEvidence", object())
 
 
 class _FakeEvidenceCollector:
@@ -1142,6 +1280,16 @@ def test_walk_forward_completion_stops_at_candidate_selection_without_holdout() 
         ) -> CandidateSelectionReceipt | None:
             _ = request
             return None
+
+        def read_selection(
+            self,
+            experiment_id: str,
+            selection_id: str,
+        ) -> CandidateSelectionReceipt | None:
+            raise AssertionError(
+                "api selection fake must not read selections: "
+                f"{experiment_id}/{selection_id}",
+            )
 
         def select(
             self,

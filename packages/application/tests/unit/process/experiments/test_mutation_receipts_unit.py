@@ -9,10 +9,12 @@ from typing import cast
 
 import pytest
 from ditto_analysis.experiments import (
+    CandidateId,
     ExperimentDesiredState,
     ExperimentId,
     ExperimentStage,
     ExperimentStatus,
+    FoldId,
     StatusEventRecord,
     StatusSubjectType,
     canonical_payload,
@@ -392,8 +394,8 @@ def test_retry_receipt_requires_exact_fold_transition(
     fold_event = StatusEventRecord(
         event_id="fold:experiment-1:candidate-1:fold-1:4",
         experiment_id=ExperimentId("experiment-1"),
-        candidate_id="candidate-1",
-        fold_id="fold-1",
+        candidate_id=CandidateId("candidate-1"),
+        fold_id=FoldId("fold-1"),
         attempt_id=None,
         subject_type=StatusSubjectType.FOLD,
         subject_revision=4,

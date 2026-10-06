@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass, replace
 from inspect import Parameter, signature
-from typing import cast
+from typing import TypedDict, Unpack, cast
 
 import pytest
 from ditto_application.exceptions import AppProcessError
@@ -21,7 +23,7 @@ from ditto_application.processes.execution.signal_package import (
     SignalPackagePublishRequest,
 )
 from ditto_application.processes.execution.signal_snapshot import SignalSnapshotProcess
-from ditto_execution.models import FillRecord, SignalRecord
+from ditto_execution.models import FillAdjustmentRecord, FillRecord, SignalRecord
 from ditto_kernel.identity import InstrumentId
 from ditto_strategy.alpha.models import TargetPortfolio
 from ditto_strategy.models import ArtifactKind, StrategyArtifactRecord
@@ -86,8 +88,18 @@ class _IntentPort:
 class _FillPort:
     rows: list[FillRecord]
 
-    def save_fill(self, record: FillRecord) -> None:
+    @contextmanager
+    def ledger_transaction(self) -> Iterator[None]:
+        yield
+
+    def save_fill(self, record: FillRecord) -> bool:
+        if self.get_fill(record.fill_id) is not None:
+            return False
         self.rows.append(record)
+        return True
+
+    def get_fill(self, fill_id: str) -> FillRecord | None:
+        return next((row for row in self.rows if row.fill_id == fill_id), None)
 
     def list_fills(
         self,
@@ -104,6 +116,44 @@ class _FillPort:
             and (intent_id is None or row.intent_id == intent_id)
             and (end_date is None or row.trade_date <= end_date)
         ]
+
+    def list_effective_fills(
+        self,
+        strategy_id: str,
+        trade_date: str | None = None,
+        intent_id: str | None = None,
+        end_date: str | None = None,
+    ) -> list[FillRecord]:
+        # 内存 fake 不产生 void/replace 调整事件，有效成交即原始成交。
+        return self.list_fills(
+            strategy_id,
+            trade_date=trade_date,
+            intent_id=intent_id,
+            end_date=end_date,
+        )
+
+    def get_fill_adjustment(self, adjustment_id: str) -> FillAdjustmentRecord | None:
+        del adjustment_id
+        return None
+
+    def list_fill_adjustments(
+        self,
+        strategy_id: str,
+        *,
+        fill_id: str | None = None,
+        intent_id: str | None = None,
+    ) -> list[FillAdjustmentRecord]:
+        del strategy_id, fill_id, intent_id
+        return []
+
+    def apply_fill_adjustment(
+        self,
+        record: FillAdjustmentRecord,
+        *,
+        replacement_fill: FillRecord | None = None,
+    ) -> bool:
+        del record, replacement_fill
+        raise AssertionError("signal package publication never adjusts fills")
 
 
 @dataclass
@@ -139,6 +189,23 @@ class _ArtifactStore:
                 self.rows[index] = replace(row, status=status)
                 return True
         return False
+
+    def transition_with_receipt(
+        self,
+        artifact_id: str,
+        status: str,
+        expected_current: str,
+        receipt: StrategyArtifactRecord,
+    ) -> bool:
+        if self.get(receipt.artifact_id) is not None:
+            return False
+        if not self.update_status(
+            artifact_id,
+            status,
+            expected_current=(expected_current,),
+        ):
+            return False
+        return self.save(receipt)
 
     def claim_replacement(
         self,
@@ -283,9 +350,20 @@ def _publish_package(
     )
 
 
+class _PublishKwargs(TypedDict, total=False):
+    """_publish_package 关键字透传（#540：**kwargs: object 会把 object 扩散进形参）."""
+
+    target: TargetPortfolio
+    strategy_version: str
+    account_id: str
+    sleeve_id: str
+    risk_flags: tuple[str, ...]
+    factor_values: dict[int, dict[str, float]]
+
+
 def _publish_and_finalize(
     publisher: SignalPackagePublisher,
-    **kwargs: object,
+    **kwargs: Unpack[_PublishKwargs],
 ) -> SignalPackage:
     package = _publish_package(publisher, **kwargs)
     return publisher.finalize(package)

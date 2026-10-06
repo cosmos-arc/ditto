@@ -463,7 +463,7 @@ class _SelectionEvidencePublisherProbe:
 
     def publish_selection_evidence(
         self,
-        _snapshot: ExperimentSchedulerSnapshot,
+        snapshot: ExperimentSchedulerSnapshot,
         *,
         lease_fence: LeaseFence,
         now_epoch_us: int,

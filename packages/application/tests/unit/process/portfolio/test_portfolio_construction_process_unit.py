@@ -14,6 +14,7 @@ from ditto_application.processes.portfolio.construction import (
     PortfolioConstructionQuery,
     PortfolioConstructionTemporalContext,
 )
+from ditto_kernel.identity import InstrumentId
 from ditto_portfolio.rebalancing.optimization_models import (
     OptimizationMethod,
     PortfolioConstructionPolicy,
@@ -98,7 +99,7 @@ def _candidate() -> TargetPortfolio:
         trade_date="2026-04-01",
         strategy_id="stock-selection",
         run_id="run-1",
-        positions={1: 0.5, 2: 0.5},
+        positions={InstrumentId(1): 0.5, InstrumentId(2): 0.5},
     )
 
 
@@ -106,9 +107,9 @@ def test_bound_policy_builds_optimized_target_and_evidence() -> None:
     input_reader = _InputReader(
         PortfolioConstructionData(
             return_frame=_frame(),
-            current_weights={1: 0.0, 2: 0.0},
-            industries={1: "bank", 2: "tech"},
-            eligibility={1: True, 2: True},
+            current_weights={InstrumentId(1): 0.0, InstrumentId(2): 0.0},
+            industries={InstrumentId(1): "bank", InstrumentId(2): "tech"},
+            eligibility={InstrumentId(1): True, InstrumentId(2): True},
         )
     )
     process = PortfolioConstructionProcess(
@@ -126,7 +127,10 @@ def test_bound_policy_builds_optimized_target_and_evidence() -> None:
     assert decision.success is True
     assert decision.target is not None
     assert sum(decision.target.positions.values()) == pytest.approx(1.0)
-    assert decision.target.positions[2] > decision.target.positions[1]
+    assert (
+        decision.target.positions[InstrumentId(2)]
+        > decision.target.positions[InstrumentId(1)]
+    )
     assert decision.evidence["solver"] == "OSQP"
     assert decision.evidence["source_snapshot_ids"] == ("snap-1",)
     assert "shrinkage" in decision.evidence
@@ -166,7 +170,7 @@ def test_insufficient_history_returns_structured_failure_without_fallback() -> N
         input_reader=_InputReader(
             PortfolioConstructionData(
                 return_frame=_frame(observations=59),
-                current_weights={1: 0.0, 2: 0.0},
+                current_weights={InstrumentId(1): 0.0, InstrumentId(2): 0.0},
             )
         ),
         optimizer=CVXPYPortfolioOptimizer(),
@@ -188,7 +192,7 @@ def test_insufficient_history_returns_structured_failure_without_fallback() -> N
 def test_process_output_is_independent_of_candidate_mapping_order() -> None:
     data = PortfolioConstructionData(
         return_frame=_frame(),
-        current_weights={1: 0.0, 2: 0.0},
+        current_weights={InstrumentId(1): 0.0, InstrumentId(2): 0.0},
     )
     process = PortfolioConstructionProcess(
         policy_reader=_PolicyReader(_policy()),
@@ -199,7 +203,7 @@ def test_process_output_is_independent_of_candidate_mapping_order() -> None:
         trade_date="2026-04-01",
         strategy_id="stock-selection",
         run_id="run-1",
-        positions={2: 0.5, 1: 0.5},
+        positions={InstrumentId(2): 0.5, InstrumentId(1): 0.5},
     )
 
     first = process.construct(
@@ -234,7 +238,7 @@ def test_shadow_policy_records_optimizer_result_without_changing_candidate() -> 
         input_reader=_InputReader(
             PortfolioConstructionData(
                 return_frame=_frame(),
-                current_weights={1: 0.0, 2: 0.0},
+                current_weights={InstrumentId(1): 0.0, InstrumentId(2): 0.0},
             )
         ),
         optimizer=CVXPYPortfolioOptimizer(),
@@ -282,7 +286,7 @@ def test_shadow_policy_still_fails_closed_when_optimizer_fails() -> None:
         input_reader=_InputReader(
             PortfolioConstructionData(
                 return_frame=_frame(),
-                current_weights={1: 0.5, 2: 0.5},
+                current_weights={InstrumentId(1): 0.5, InstrumentId(2): 0.5},
             )
         ),
         optimizer=_FailingOptimizer(),
@@ -327,7 +331,7 @@ def test_current_holding_outside_candidate_is_included_in_turnover_universe() ->
     input_reader = _InputReader(
         PortfolioConstructionData(
             return_frame=pl.concat((_frame(), third)),
-            current_weights={1: 0.5, 3: 0.5},
+            current_weights={InstrumentId(1): 0.5, InstrumentId(3): 0.5},
         )
     )
     optimizer = _CapturingOptimizer()
@@ -355,8 +359,8 @@ def test_explicit_expected_returns_are_forwarded_without_using_candidate_scores(
 ):
     data = PortfolioConstructionData(
         return_frame=_frame(),
-        current_weights={1: 0.5, 2: 0.5},
-        expected_returns={1: 0.0, 2: 1.0},
+        current_weights={InstrumentId(1): 0.5, InstrumentId(2): 0.5},
+        expected_returns={InstrumentId(1): 0.0, InstrumentId(2): 1.0},
     )
     process = PortfolioConstructionProcess(
         policy_reader=_PolicyReader(_policy()),
@@ -372,7 +376,7 @@ def test_explicit_expected_returns_are_forwarded_without_using_candidate_scores(
 
     assert decision.success is True
     assert decision.target is not None
-    assert decision.target.positions[2] > 0.99
+    assert decision.target.positions[InstrumentId(2)] > 0.99
 
 
 def test_input_reader_failure_returns_structured_failure_without_fallback() -> None:

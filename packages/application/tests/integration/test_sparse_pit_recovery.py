@@ -369,6 +369,7 @@ def test_sqlite_exact_verifier_accepts_match_and_rejects_log_mismatch(
         log = runtime.logs.get_log("balance_sheet", "tushare", trade_date)
         assert log is not None
         checksum = log.checksum
+        assert checksum is not None
         assert runtime.verifier.verify_exact_date(
             dataset="balance_sheet",
             source="tushare",

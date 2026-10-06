@@ -165,7 +165,7 @@ class GoldenLaneSpec:
     execution_policy: ResearchExecutionPolicy
 
     @property
-    def baseline_payload(self) -> dict[str, object]:
+    def baseline_payload(self) -> dict[str, str | int]:
         """Project the exact planning payload for this lane's baseline."""
         exact = self.baseline_exact_strategy
         if exact is None:
@@ -660,6 +660,12 @@ def _backtest_binding(
     )
 
 
+def _candidate_scalar(value: object) -> bool | int | float | str:
+    """窄化 launch 冻结参数为标量（运行时校验；CandidateParameter 边界只收标量）."""
+    assert isinstance(value, (bool, int, float, str))
+    return value
+
+
 def _execution_semantics(
     launch: ExperimentLaunchSpec,
     fold: FoldView,
@@ -759,7 +765,7 @@ def _execution_semantics(
             compiled_factor_set_hash=compiled_expressions_execution_hash(None),
             factor_bindings=(),
             candidate_parameters=tuple(
-                CandidateParameter(path=path, value=value)
+                CandidateParameter(path=path, value=_candidate_scalar(value))
                 for path, value in sorted(
                     candidate.parameters.items(),
                     key=lambda item: item[0].encode(),
