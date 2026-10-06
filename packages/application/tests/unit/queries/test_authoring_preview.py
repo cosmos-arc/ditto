@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable, Mapping, Sequence
 from copy import deepcopy
 from dataclasses import asdict
 from typing import cast
@@ -49,6 +50,33 @@ def _v2_candidate() -> dict[str, object]:
         "metadata": dict(spec.metadata),
         "tags": list(spec.tags),
     }
+
+
+def _obj(value: object) -> Mapping[str, object]:
+    """窄化 JSON 节点为对象（运行时校验；证据 payload 的递归联合无法静态窄化）."""
+    assert isinstance(value, Mapping)
+    return value
+
+
+def _mut(value: object) -> dict[str, object]:
+    """窄化 JSON 节点为可变 dict（需写入的断言场景专用）."""
+    assert isinstance(value, dict)
+    return value
+
+
+def _seq(value: object) -> Sequence[object]:
+    """窄化 JSON 节点为数组（运行时校验；str/bytes 虽是 Sequence 但非数组）."""
+    assert isinstance(value, Sequence)
+    assert not isinstance(value, (str, bytes))
+    return value
+
+
+def _dig(value: object, *path: str | int) -> object:
+    """按 JSON 路径逐级取值（测试断言侧窄化器）."""
+    node: object = value
+    for key in path:
+        node = _seq(node)[key] if isinstance(key, int) else _obj(node)[key]
+    return node
 
 
 class _Catalog:
@@ -116,15 +144,16 @@ def test_draft_rejects_unknown_nodes_and_config_type_mismatches(
     reason: str,
 ) -> None:
     candidate = _v2_candidate()
-    cast("object", mutate)(candidate)
+    # 参数化 lambda 无法携带注解（推断会扩散进 lambda 体），调用侧窄化 cast。
+    cast("Callable[[dict[str, object]], None]", mutate)(candidate)
 
     result = _facade().create_draft(spec_json=candidate)
 
     assert result.kind is AuthoringPreviewKind.DRAFT
     assert result.valid is False
     assert result.changed is False
-    diagnostic = result.payload.value["diagnostics"][0]
-    assert diagnostic["details"]["reason"] == reason
+    diagnostic = _dig(result.payload.value, "diagnostics", 0)
+    assert _dig(diagnostic, "details", "reason") == reason
     assert "canonical_spec" not in result.payload.value
 
 
@@ -148,7 +177,7 @@ def test_compile_returns_ditto_diagnostics_for_invalid_dsl(
 
     assert result.kind is AuthoringPreviewKind.COMPILE
     assert result.valid is False
-    assert result.payload.value["diagnostics"][0]["code"] == error_code
+    assert _dig(result.payload.value, "diagnostics", 0, "code") == error_code
     assert "compile_identity" not in result.payload.value
 
 
@@ -169,8 +198,10 @@ def test_compile_golden_is_deterministic_and_contains_compiler_identity() -> Non
     assert first == second
     assert first.valid is True
     assert first.payload.payload_hash == second.payload.payload_hash
-    assert first.payload.value["analysis"]["lookback"] == 21
-    assert len(first.payload.value["compile_identity"]["cache_key"]) == 64
+    assert _dig(first.payload.value, "analysis", "lookback") == 21
+    cache_key = _dig(first.payload.value, "compile_identity", "cache_key")
+    assert isinstance(cache_key, str)
+    assert len(cache_key) == 64
 
 
 def test_structured_draft_preview_is_content_addressed_and_replayable() -> None:
@@ -198,10 +229,10 @@ def test_draft_rejects_model_smuggled_code_or_explanation(forbidden: str) -> Non
     result = _facade().create_draft(spec_json=candidate)
 
     assert result.valid is False
-    assert result.payload.value["diagnostics"][0]["code"] == (
+    assert _dig(result.payload.value, "diagnostics", 0, "code") == (
         "AUTHORING_FORBIDDEN_FIELD"
     )
-    assert result.payload.value["diagnostics"][0]["details"]["field"] == (
+    assert _dig(result.payload.value, "diagnostics", 0, "details", "field") == (
         f"metadata.{forbidden}"
     )
 
@@ -235,7 +266,7 @@ def test_validate_fails_closed_when_candidate_identity_changes() -> None:
 
     assert result.valid is False
     assert result.changed is False
-    assert result.payload.value["diagnostics"][0]["code"] == (
+    assert _dig(result.payload.value, "diagnostics", 0, "code") == (
         "AUTHORING_IDENTITY_MISMATCH"
     )
     assert "canonical_spec" not in result.payload.value
@@ -244,9 +275,11 @@ def test_validate_fails_closed_when_candidate_identity_changes() -> None:
 def test_diff_is_canonical_replayable_and_reads_only_exact_base() -> None:
     catalog = _Catalog()
     candidate = _v2_candidate()
-    nodes = candidate["pipeline"]["nodes"]
-    selector = next(node for node in nodes if node["node_id"] == "legacy_selector")
-    selector["config"]["params"]["k"] = 21
+    nodes = _seq(_dig(candidate, "pipeline", "nodes"))
+    selector = next(
+        node for node in nodes if _dig(node, "node_id") == "legacy_selector"
+    )
+    _mut(_dig(selector, "config", "params"))["k"] = 21
     facade = _facade(catalog)
 
     first = facade.diff_strategy(

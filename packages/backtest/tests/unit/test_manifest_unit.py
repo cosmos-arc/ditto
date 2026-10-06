@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from inspect import Parameter, signature
+from typing import TypedDict, cast
 
 import orjson
 import pytest
@@ -35,6 +36,7 @@ from ditto_kernel.trading import (
     InstrumentRules,
     TradingRuleSet,
 )
+from ditto_strategy.alpha.parameters import EffectiveParameter
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -47,7 +49,21 @@ _EMPTY_PARAMETER_HASH = (
 )
 
 
-def _baseline_manifest_identity() -> dict[str, object]:
+class _BaselineIdentity(TypedDict):
+    """RunManifest/EngineConfig 身份字段的测试基线.
+
+    以 ** 解包进构造器，键与值类型须与两个构造器逐字段一致（#540：弱类型的
+    dict[str, object] 会让每个形参 × object 各报一个 reportArgumentType）.
+    """
+
+    base_spec_hash: str
+    parameter_hash: str
+    effective_parameters: tuple[EffectiveParameter, ...]
+    research_snapshot_id: str | None
+    research_snapshot_manifest_hash: str | None
+
+
+def _baseline_manifest_identity() -> _BaselineIdentity:
     return {
         "base_spec_hash": _BASE_SPEC_HASH,
         "parameter_hash": _EMPTY_PARAMETER_HASH,
@@ -57,12 +73,12 @@ def _baseline_manifest_identity() -> dict[str, object]:
     }
 
 
-def _baseline_engine_identity() -> dict[str, object]:
+def _baseline_engine_identity() -> _BaselineIdentity:
     return _baseline_manifest_identity()
 
 
 def _make_definition(
-    instrument_id: int = 1,
+    instrument_id: InstrumentId = InstrumentId(1),
     tick_size: float = 0.001,
     lot_size: int = 100,
 ) -> InstrumentDefinition:
@@ -80,7 +96,7 @@ def _make_definition(
 
 
 def _make_trading_rule(
-    instrument_id: int = 1,
+    instrument_id: InstrumentId = InstrumentId(1),
     as_of_date: str = "2025-01-01",
     settlement_cycle: int = 1,
 ) -> TradingRuleSet:
@@ -96,7 +112,7 @@ def _make_trading_rule(
 
 
 def _make_fee_schedule(
-    instrument_id: int = 1,
+    instrument_id: InstrumentId = InstrumentId(1),
     as_of_date: str = "2025-01-01",
     commission_rate: float = 0.0003,
 ) -> FeeSchedule:
@@ -111,7 +127,7 @@ def _make_fee_schedule(
 
 
 def _make_rules(
-    instrument_id: int = 1,
+    instrument_id: InstrumentId = InstrumentId(1),
     trading_rule_as_of: str = "2025-01-01",
     fee_as_of: str = "2025-01-01",
     tick_size: float = 0.001,
@@ -131,7 +147,7 @@ def _make_manifest(
         strategy_id="momentum-etf",
         strategy_version="1.0.0",
         mode=RunMode.BACKTEST,
-        input_refs=(1, 2),
+        input_refs=(InstrumentId(1), InstrumentId(2)),
         parameter_overrides=(),
         rule_refs=rule_refs or (),
         artifacts=(),
@@ -187,7 +203,7 @@ class TestRuleRefFrozen:
 
     def test_frozen(self) -> None:
         ref = RuleRef(
-            instrument_id=1,
+            instrument_id=InstrumentId(1),
             definition_version="a1b2c3d4",
             trading_rule_as_of="2025-01-01",
             fee_schedule_as_of="2025-01-01",
@@ -195,11 +211,11 @@ class TestRuleRefFrozen:
             fee_schedule_effective_to="",
         )
         with pytest.raises(AttributeError):
-            ref.instrument_id = 2  # type: ignore[misc]
+            ref.instrument_id = InstrumentId(2)  # type: ignore[misc]
 
     def test_equality(self) -> None:
         r1 = RuleRef(
-            instrument_id=1,
+            instrument_id=InstrumentId(1),
             definition_version="a1b2c3d4",
             trading_rule_as_of="2025-01-01",
             fee_schedule_as_of="2025-01-01",
@@ -207,7 +223,7 @@ class TestRuleRefFrozen:
             fee_schedule_effective_to="",
         )
         r2 = RuleRef(
-            instrument_id=1,
+            instrument_id=InstrumentId(1),
             definition_version="a1b2c3d4",
             trading_rule_as_of="2025-01-01",
             fee_schedule_as_of="2025-01-01",
@@ -328,7 +344,9 @@ class TestRunManifestFrozen:
 
     def test_spec_hash_is_required(self) -> None:
         manifest_signature = signature(RunManifest)
-        constructor: Callable[..., RunManifest] = RunManifest
+        # 故意的缺参调用：验证 spec_hash 必填语义——经未检查 callable 发起，
+        # 让类型核验让位于被测的运行时 TypeError。
+        constructor = cast("Callable[..., object]", RunManifest)
 
         assert manifest_signature.parameters["spec_hash"].default is Parameter.empty
         with pytest.raises(TypeError, match="spec_hash"):
@@ -389,8 +407,8 @@ class TestRuleRefCollectorBasic:
 
     def test_single_observe(self) -> None:
         collector = RuleRefCollector()
-        rules: dict[int, InstrumentRules] = {
-            1: _make_rules(1),
+        rules: dict[InstrumentId, InstrumentRules] = {
+            InstrumentId(1): _make_rules(InstrumentId(1)),
         }
         collector.observe("2026-03-01", rules)
         assert len(collector.rule_refs) == 1
@@ -398,9 +416,9 @@ class TestRuleRefCollectorBasic:
     def test_two_instruments_same_version(self) -> None:
         """Two instruments with same definition/timing produce 2 refs."""
         collector = RuleRefCollector()
-        rules: dict[int, InstrumentRules] = {
-            1: _make_rules(1),
-            2: _make_rules(2),
+        rules: dict[InstrumentId, InstrumentRules] = {
+            InstrumentId(1): _make_rules(InstrumentId(1)),
+            InstrumentId(2): _make_rules(InstrumentId(2)),
         }
         collector.observe("2026-03-01", rules)
         assert len(collector.rule_refs) == 2
@@ -409,12 +427,14 @@ class TestRuleRefCollectorBasic:
         """F3: same key observed again → first version kept."""
         collector = RuleRefCollector()
 
-        rules_day1: dict[int, InstrumentRules] = {
-            1: _make_rules(1, trading_rule_as_of="2025-01-01"),
+        rules_day1: dict[InstrumentId, InstrumentRules] = {
+            InstrumentId(1): _make_rules(
+                InstrumentId(1), trading_rule_as_of="2025-01-01"
+            ),
         }
-        rules_day2: dict[int, InstrumentRules] = {
-            1: _make_rules(
-                1,
+        rules_day2: dict[InstrumentId, InstrumentRules] = {
+            InstrumentId(1): _make_rules(
+                InstrumentId(1),
                 trading_rule_as_of="2025-01-01",  # same key
             ),
         }
@@ -438,19 +458,23 @@ class TestRuleRefCollectorCrossRuleChangeDay:
         collector = RuleRefCollector()
 
         # Day 1: settlement_cycle=1, fee_as_of=2025-01-01
-        rules_v1: dict[int, InstrumentRules] = {
-            1: (
-                _make_definition(1, tick_size=0.001),
-                _make_trading_rule(1, as_of_date="2025-01-01", settlement_cycle=1),
-                _make_fee_schedule(1, as_of_date="2025-01-01"),
+        rules_v1: dict[InstrumentId, InstrumentRules] = {
+            InstrumentId(1): (
+                _make_definition(InstrumentId(1), tick_size=0.001),
+                _make_trading_rule(
+                    InstrumentId(1), as_of_date="2025-01-01", settlement_cycle=1
+                ),
+                _make_fee_schedule(InstrumentId(1), as_of_date="2025-01-01"),
             ),
         }
         # Day 2: settlement_cycle=1, fee_as_of=2025-06-15 (fee changed)
-        rules_v2: dict[int, InstrumentRules] = {
-            1: (
-                _make_definition(1, tick_size=0.001),
-                _make_trading_rule(1, as_of_date="2025-01-01", settlement_cycle=1),
-                _make_fee_schedule(1, as_of_date="2025-06-15"),
+        rules_v2: dict[InstrumentId, InstrumentRules] = {
+            InstrumentId(1): (
+                _make_definition(InstrumentId(1), tick_size=0.001),
+                _make_trading_rule(
+                    InstrumentId(1), as_of_date="2025-01-01", settlement_cycle=1
+                ),
+                _make_fee_schedule(InstrumentId(1), as_of_date="2025-06-15"),
             ),
         }
 
@@ -469,11 +493,11 @@ class TestRuleRefCollectorCrossRuleChangeDay:
         """If definition changes (different tick_size), new ref is added."""
         collector = RuleRefCollector()
 
-        rules_v1: dict[int, InstrumentRules] = {
-            1: _make_rules(1, tick_size=0.001),
+        rules_v1: dict[InstrumentId, InstrumentRules] = {
+            InstrumentId(1): _make_rules(InstrumentId(1), tick_size=0.001),
         }
-        rules_v2: dict[int, InstrumentRules] = {
-            1: _make_rules(1, tick_size=0.01),
+        rules_v2: dict[InstrumentId, InstrumentRules] = {
+            InstrumentId(1): _make_rules(InstrumentId(1), tick_size=0.01),
         }
 
         collector.observe("2026-03-01", rules_v1)
@@ -518,7 +542,7 @@ class TestSerializeManifest:
         manifest = _make_manifest(
             rule_refs=(
                 RuleRef(
-                    instrument_id=1,
+                    instrument_id=InstrumentId(1),
                     definition_version="a1b2c3d4",
                     trading_rule_as_of="2025-01-01",
                     fee_schedule_as_of="2025-01-01",
@@ -547,7 +571,7 @@ class TestSerializeManifest:
         manifest = _make_manifest(
             rule_refs=(
                 RuleRef(
-                    instrument_id=2,
+                    instrument_id=InstrumentId(2),
                     definition_version="z9",
                     trading_rule_as_of="2025-06-01",
                     fee_schedule_as_of="2025-06-01",
@@ -555,7 +579,7 @@ class TestSerializeManifest:
                     fee_schedule_effective_to="",
                 ),
                 RuleRef(
-                    instrument_id=1,
+                    instrument_id=InstrumentId(1),
                     definition_version="a1",
                     trading_rule_as_of="2025-01-01",
                     fee_schedule_as_of="2025-01-01",
@@ -580,7 +604,7 @@ class TestSerializeManifest:
     def test_manifest_with_multiple_refs_roundtrip(self) -> None:
         """Serialize and deserialize preserves all fields."""
         ref1 = RuleRef(
-            instrument_id=1,
+            instrument_id=InstrumentId(1),
             definition_version="a1b2c3d4",
             trading_rule_as_of="2025-01-01",
             fee_schedule_as_of="2025-01-01",
@@ -588,7 +612,7 @@ class TestSerializeManifest:
             fee_schedule_effective_to="",
         )
         ref2 = RuleRef(
-            instrument_id=2,
+            instrument_id=InstrumentId(2),
             definition_version="e5f6g7h8",
             trading_rule_as_of="2025-06-15",
             fee_schedule_as_of="2025-06-15",
@@ -600,7 +624,7 @@ class TestSerializeManifest:
             strategy_id="strat",
             strategy_version="2.0",
             mode=RunMode.BACKTEST,
-            input_refs=(1,),
+            input_refs=(InstrumentId(1),),
             parameter_overrides=(),
             rule_refs=(ref1, ref2),
             artifacts=("trade_log.csv",),
@@ -635,8 +659,8 @@ class TestCollectorToManifestIntegration:
     def test_collector_refs_into_manifest(self) -> None:
         """RuleRefCollector.rule_refs can be passed directly to RunManifest."""
         collector = RuleRefCollector()
-        rules: dict[int, InstrumentRules] = {
-            1: _make_rules(1),
+        rules: dict[InstrumentId, InstrumentRules] = {
+            InstrumentId(1): _make_rules(InstrumentId(1)),
         }
         collector.observe("2026-03-01", rules)
 
@@ -653,9 +677,9 @@ class TestCollectorToManifestIntegration:
         collector = RuleRefCollector()
 
         # Day 1: instrument 1 with rule v1
-        rules_day1: dict[int, InstrumentRules] = {
-            1: _make_rules(
-                1,
+        rules_day1: dict[InstrumentId, InstrumentRules] = {
+            InstrumentId(1): _make_rules(
+                InstrumentId(1),
                 trading_rule_as_of="2025-01-01",
                 fee_as_of="2025-01-01",
             ),
@@ -663,14 +687,14 @@ class TestCollectorToManifestIntegration:
         collector.observe("2026-03-01", rules_day1)
 
         # Day 2: instrument 1 fee changes, instrument 2 appears
-        rules_day2: dict[int, InstrumentRules] = {
-            1: _make_rules(
-                1,
+        rules_day2: dict[InstrumentId, InstrumentRules] = {
+            InstrumentId(1): _make_rules(
+                InstrumentId(1),
                 trading_rule_as_of="2025-01-01",
                 fee_as_of="2025-06-15",
             ),
-            2: _make_rules(
-                2,
+            InstrumentId(2): _make_rules(
+                InstrumentId(2),
                 trading_rule_as_of="2025-03-01",
                 fee_as_of="2025-03-01",
             ),
@@ -697,7 +721,7 @@ class TestInputRef:
     def test_frozen(self) -> None:
         """InputRef 不可变."""
         ref = InputRef(
-            instrument_id=1,
+            instrument_id=InstrumentId(1),
             data_hash="sha256:abcd1234",
             date_range=("2025-01-01", "2025-12-31"),
             source="parquet://data/bars/1",
@@ -708,7 +732,7 @@ class TestInputRef:
     def test_all_fields(self) -> None:
         """所有字段正确赋值."""
         ref = InputRef(
-            instrument_id=510050,
+            instrument_id=InstrumentId(510050),
             data_hash="sha256:deadbeef",
             date_range=("2025-01-01", "2025-06-30"),
             source="parquet://data/bars/510050",
@@ -722,7 +746,7 @@ class TestInputRef:
     def test_source_snapshot_id(self) -> None:
         """InputRef can capture the source snapshot version used by a run."""
         ref = InputRef(
-            instrument_id=510050,
+            instrument_id=InstrumentId(510050),
             data_hash="sha256:deadbeef",
             date_range=("2025-01-01", "2025-06-30"),
             source="tushare",
@@ -734,13 +758,13 @@ class TestInputRef:
     def test_equality(self) -> None:
         """相同字段 → 相等."""
         r1 = InputRef(
-            instrument_id=1,
+            instrument_id=InstrumentId(1),
             data_hash="sha256:abc",
             date_range=("2025-01-01", "2025-12-31"),
             source="src",
         )
         r2 = InputRef(
-            instrument_id=1,
+            instrument_id=InstrumentId(1),
             data_hash="sha256:abc",
             date_range=("2025-01-01", "2025-12-31"),
             source="src",
@@ -750,13 +774,13 @@ class TestInputRef:
     def test_hash_inequality(self) -> None:
         """不同 data_hash → 不相等."""
         r1 = InputRef(
-            instrument_id=1,
+            instrument_id=InstrumentId(1),
             data_hash="sha256:aaa",
             date_range=("2025-01-01", "2025-12-31"),
             source="src",
         )
         r2 = InputRef(
-            instrument_id=1,
+            instrument_id=InstrumentId(1),
             data_hash="sha256:bbb",
             date_range=("2025-01-01", "2025-12-31"),
             source="src",
@@ -792,13 +816,13 @@ class TestRunManifestEnrichment:
         """input_ref_details 接受 InputRef 元组."""
         refs = (
             InputRef(
-                instrument_id=1,
+                instrument_id=InstrumentId(1),
                 data_hash="sha256:abc",
                 date_range=("2025-01-01", "2025-06-30"),
                 source="parquet://data/bars/1",
             ),
             InputRef(
-                instrument_id=2,
+                instrument_id=InstrumentId(2),
                 data_hash="sha256:def",
                 date_range=("2025-01-01", "2025-06-30"),
                 source="parquet://data/bars/2",
@@ -856,7 +880,7 @@ class TestSerializeManifestEnrichment:
     def test_input_ref_details_in_serialized_output(self) -> None:
         """input_ref_details 出现在序列化输出中."""
         ref = InputRef(
-            instrument_id=1,
+            instrument_id=InstrumentId(1),
             data_hash="sha256:abc123",
             date_range=("2025-01-01", "2025-12-31"),
             source="parquet://data/bars/1",
@@ -972,13 +996,13 @@ class TestSerializeManifestEnrichment:
         """input_ref_details 按 instrument_id 排序."""
         refs = (
             InputRef(
-                instrument_id=3,
+                instrument_id=InstrumentId(3),
                 data_hash="sha256:ccc",
                 date_range=("2025-01-01", "2025-12-31"),
                 source="src3",
             ),
             InputRef(
-                instrument_id=1,
+                instrument_id=InstrumentId(1),
                 data_hash="sha256:aaa",
                 date_range=("2025-01-01", "2025-06-30"),
                 source="src1",
@@ -1003,7 +1027,7 @@ class TestSerializeManifestEnrichment:
     def test_byte_level_stability_with_enrichment(self) -> None:
         """含新字段时仍保持字节级稳定 (P2)."""
         ref = InputRef(
-            instrument_id=1,
+            instrument_id=InstrumentId(1),
             data_hash="sha256:stable",
             date_range=("2025-01-01", "2025-12-31"),
             source="src",
