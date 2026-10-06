@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping, Sequence
 from datetime import UTC, datetime
 from decimal import Decimal
 
@@ -33,6 +34,27 @@ from ditto_strategy.models import ArtifactKind, StrategyArtifactRecord
 _SNAPSHOTS = tuple(sorted(("provider-snapshot:stock", "provider-snapshot:etf")))
 _SNAPSHOT_SET = aggregate_source_snapshot_ids(_SNAPSHOTS)
 assert _SNAPSHOT_SET is not None
+
+
+def _obj(value: object) -> Mapping[str, object]:
+    """窄化 JSON 节点为对象（EvidenceValue 递归联合的断言侧收窄）."""
+    assert isinstance(value, Mapping)
+    return value
+
+
+def _seq(value: object) -> Sequence[object]:
+    """窄化 JSON 节点为数组（运行时校验；str/bytes 虽是 Sequence 但非数组）."""
+    assert isinstance(value, Sequence)
+    assert not isinstance(value, (str, bytes))
+    return value
+
+
+def _dig(value: object, *path: str | int) -> object:
+    """按 JSON 路径逐级取值（测试断言侧窄化器）."""
+    node: object = value
+    for key in path:
+        node = _seq(node)[key] if isinstance(key, int) else _obj(node)[key]
+    return node
 
 
 def _valuation(kind: str) -> PortfolioValuationInput:
@@ -174,9 +196,10 @@ def test_comparison_evidence_resolves_exact_snapshots_from_checksum_bound_packag
     assert source.requests[0].valuation_snapshot_id is None
     assert evidence.source_snapshot_set_id == _SNAPSHOT_SET
     assert evidence.source_snapshot_ids == _SNAPSHOTS
-    assert evidence.payload.value["model"]["total_value"] == "100000.00"
+    assert _dig(evidence.payload.value, "model", "total_value") == "100000.00"
     assert (
-        evidence.payload.value["model_vs_paper"]["attribution"]["unfilled_bps"] == "250"
+        _dig(evidence.payload.value, "model_vs_paper", "attribution", "unfilled_bps")
+        == "250"
     )
     assert evidence.artifact_refs[0].artifact_id == "model-main"
 
@@ -199,7 +222,7 @@ def test_scenario_evidence_returns_host_computed_weights_without_writes() -> Non
 
     proposed = evidence.payload.value["proposed_weights"]
     assert proposed == {"1": "0.55000000"}
-    assert evidence.payload.value["risk"]["after"]["stressed_return"] == -0.0825
+    assert _dig(evidence.payload.value, "risk", "after", "stressed_return") == -0.0825
     assert len(source.requests) == 1
 
 

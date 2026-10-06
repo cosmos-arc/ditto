@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping, Sequence
 from datetime import UTC, datetime
 from decimal import Decimal
 
@@ -25,6 +26,27 @@ from ditto_portfolio.account_ledger import (
 )
 
 _NOW = datetime(2026, 8, 31, 7, tzinfo=UTC)
+
+
+def _obj(value: object) -> Mapping[str, object]:
+    """窄化 JSON 节点为对象（EvidenceValue 递归联合的断言侧收窄）."""
+    assert isinstance(value, Mapping)
+    return value
+
+
+def _seq(value: object) -> Sequence[object]:
+    """窄化 JSON 节点为数组（运行时校验；str/bytes 虽是 Sequence 但非数组）."""
+    assert isinstance(value, Sequence)
+    assert not isinstance(value, (str, bytes))
+    return value
+
+
+def _dig(value: object, *path: str | int) -> object:
+    """按 JSON 路径逐级取值（测试断言侧窄化器）."""
+    node: object = value
+    for key in path:
+        node = _seq(node)[key] if isinstance(key, int) else _obj(node)[key]
+    return node
 
 
 class _Journal:
@@ -51,11 +73,19 @@ class _Journal:
     ) -> AccountEvent | None:
         return None
 
+    def list_accounts(self) -> tuple[AccountDefinition, ...]:
+        return (self._account,)
+
     def list_events(self, account_id: str) -> tuple[AccountEvent, ...]:
         return (self._event,) if account_id == self._account.account_id else ()
 
-    def list_accounts(self) -> tuple[AccountDefinition, ...]:
-        return (self._account,)
+    def append_if_revision(
+        self,
+        event: AccountEvent,
+        *,
+        expected_ledger_hash: str,
+    ) -> AccountEvent:
+        raise AssertionError("evidence query must not write")
 
 
 def _facade() -> tuple[AccountEventEvidenceQueryFacade, AccountEvent]:
@@ -119,10 +149,11 @@ def test_cloud_evidence_omits_free_text_identifiers_and_exact_amounts() -> None:
         "123.45",
         "100",
     ):
+        assert secret is not None
         assert secret not in serialized
     assert evidence.payload.value["redaction"] == "cloud_redacted"
-    assert evidence.payload.value["events"][0]["event_hash"] == event.event_hash
-    assert evidence.payload.value["events"][0]["instrument_id"] == 600519
+    assert _dig(evidence.payload.value, "events", 0, "event_hash") == event.event_hash
+    assert _dig(evidence.payload.value, "events", 0, "instrument_id") == 600519
     assert evidence.artifact_refs[0].content_hash in evidence.ledger_hash
 
 
@@ -136,12 +167,13 @@ def test_local_detail_keeps_financial_terms_but_never_private_free_text() -> Non
         context=_context(),
     )
 
-    item = evidence.payload.value["events"][0]
-    assert item["quantity"] == "100"
-    assert item["price"] == "123.4500"
-    assert item["fees"] == "5.00"
+    item = _dig(evidence.payload.value, "events", 0)
+    assert _dig(item, "quantity") == "100"
+    assert _dig(item, "price") == "123.4500"
+    assert _dig(item, "fees") == "5.00"
     serialized = repr(evidence.payload.value)
     assert event.note not in serialized
     assert event.actor not in serialized
     assert event.idempotency_key not in serialized
+    assert event.external_reference is not None
     assert event.external_reference not in serialized

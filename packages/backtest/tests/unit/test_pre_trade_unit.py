@@ -8,6 +8,7 @@ from ditto_execution.orders.model import Order
 from ditto_execution.orders.status import OrderStatus
 from ditto_execution.orders.ticket import OrderTicket
 from ditto_execution.reality import SimpleFeeModel
+from ditto_kernel.identity import InstrumentId
 from ditto_kernel.order import OrderSide, OrderType
 from ditto_kernel.trading import (
     FeeSchedule,
@@ -42,7 +43,7 @@ from ditto_risk.pre_trade import (
 
 
 def _make_instrument_rules(
-    instrument_id: int = 1,
+    instrument_id: InstrumentId = InstrumentId(1),
     lot_size: int = 100,
 ) -> InstrumentRules:
     """构造 InstrumentRules 元组。"""
@@ -78,7 +79,7 @@ def _make_instrument_rules(
 
 
 def _make_snapshot(
-    instrument_id: int = 1,
+    instrument_id: InstrumentId = InstrumentId(1),
     close: float = 10.0,
     prev_close: float = 10.0,
     limit_up: float | None = 11.0,
@@ -101,24 +102,24 @@ def _make_snapshot(
 
 
 @pytest.fixture
-def rules() -> dict[int, InstrumentRules]:
+def rules() -> dict[InstrumentId, InstrumentRules]:
     return {
-        1: _make_instrument_rules(1),
-        2: _make_instrument_rules(2, lot_size=200),
+        InstrumentId(1): _make_instrument_rules(InstrumentId(1)),
+        InstrumentId(2): _make_instrument_rules(InstrumentId(2), lot_size=200),
     }
 
 
 @pytest.fixture
-def snapshots() -> dict[int, MarketSnapshot]:
+def snapshots() -> dict[InstrumentId, MarketSnapshot]:
     return {
-        1: _make_snapshot(
-            1,
+        InstrumentId(1): _make_snapshot(
+            InstrumentId(1),
             close=10.0,
             limit_up=11.0,
             limit_down=9.0,
         ),
-        2: _make_snapshot(
-            2,
+        InstrumentId(2): _make_snapshot(
+            InstrumentId(2),
             close=20.0,
             limit_up=22.0,
             limit_down=18.0,
@@ -155,8 +156,8 @@ def buying_power_model() -> CashAccountBuyingPower:
 @pytest.fixture
 def empty_context(
     account_view: AccountView,
-    rules: dict[int, InstrumentRules],
-    snapshots: dict[int, MarketSnapshot],
+    rules: dict[InstrumentId, InstrumentRules],
+    snapshots: dict[InstrumentId, MarketSnapshot],
     fee_model: SimpleFeeModel,
     buying_power_model: CashAccountBuyingPower,
 ) -> PreTradeContext:
@@ -171,7 +172,7 @@ def empty_context(
 
 def _buy_order(
     order_id: str = "o-1",
-    instrument_id: int = 1,
+    instrument_id: InstrumentId = InstrumentId(1),
     quantity: int = 100,
     price: float | None = None,
     order_type: OrderType = OrderType.MARKET,
@@ -188,7 +189,7 @@ def _buy_order(
 
 def _sell_order(
     order_id: str = "o-sell",
-    instrument_id: int = 1,
+    instrument_id: InstrumentId = InstrumentId(1),
     quantity: int = 100,
 ) -> Order:
     return Order(
@@ -233,26 +234,26 @@ class TestOrderCheckResult:
 
 class TestPreTradeContextHelpers:
     def test_price_for_existing(self, empty_context: PreTradeContext) -> None:
-        assert empty_context.price_for(1) == 10.0
-        assert empty_context.price_for(2) == 20.0
+        assert empty_context.price_for(InstrumentId(1)) == 10.0
+        assert empty_context.price_for(InstrumentId(2)) == 20.0
 
     def test_price_for_missing(self, empty_context: PreTradeContext) -> None:
-        assert empty_context.price_for(999) is None
+        assert empty_context.price_for(InstrumentId(999)) is None
 
     def test_lot_size_for_existing(self, empty_context: PreTradeContext) -> None:
-        assert empty_context.lot_size_for(1) == 100
-        assert empty_context.lot_size_for(2) == 200
+        assert empty_context.lot_size_for(InstrumentId(1)) == 100
+        assert empty_context.lot_size_for(InstrumentId(2)) == 200
 
     def test_lot_size_for_missing(self, empty_context: PreTradeContext) -> None:
-        assert empty_context.lot_size_for(999) == 100
+        assert empty_context.lot_size_for(InstrumentId(999)) == 100
 
     def test_fee_schedule_for_existing(self, empty_context: PreTradeContext) -> None:
-        fs = empty_context.fee_schedule_for(1)
+        fs = empty_context.fee_schedule_for(InstrumentId(1))
         assert fs.commission_rate == 0.0003
         assert fs.min_commission == 5.0
 
     def test_fee_schedule_for_missing(self, empty_context: PreTradeContext) -> None:
-        fs = empty_context.fee_schedule_for(999)
+        fs = empty_context.fee_schedule_for(InstrumentId(999))
         assert fs.commission_rate == 0.0003  # 默认值
 
     def test_estimate_order_cost(self, empty_context: PreTradeContext) -> None:
@@ -265,7 +266,7 @@ class TestPreTradeContextHelpers:
         self,
         empty_context: PreTradeContext,
     ) -> None:
-        order = _buy_order(instrument_id=999, quantity=100)
+        order = _buy_order(instrument_id=InstrumentId(999), quantity=100)
         assert empty_context.estimate_order_cost(order) == 0.0
 
     def test_frozen(self, empty_context: PreTradeContext) -> None:
@@ -301,7 +302,7 @@ class TestPreTradeContext:
         from ditto_portfolio.accounting import Position
 
         pos = Position(
-            instrument_id=1,
+            instrument_id=InstrumentId(1),
             quantity=500,
             available_quantity=500,
             average_cost=10.0,
@@ -311,7 +312,7 @@ class TestPreTradeContext:
             total_fees=0.0,
         )
         view = AccountView(
-            positions=MappingProxyType({1: pos}),
+            positions=MappingProxyType({InstrumentId(1): pos}),
             cash=CashBook(available=500_000.0, settled=500_000.0, frozen=0.0),
             total_value=505_000.0,
             nav=505_000.0,
@@ -328,7 +329,7 @@ class TestPreTradeContext:
         sell = _sell_order(quantity=200)
         new_ctx = ctx.with_order_accepted(sell)
 
-        assert new_ctx.account_view.positions[1].available_quantity == 300
+        assert new_ctx.account_view.positions[InstrumentId(1)].available_quantity == 300
 
     def test_sell_does_not_exceed_available(
         self,
@@ -338,7 +339,7 @@ class TestPreTradeContext:
         from ditto_portfolio.accounting import Position
 
         pos = Position(
-            instrument_id=1,
+            instrument_id=InstrumentId(1),
             quantity=100,
             available_quantity=100,
             average_cost=10.0,
@@ -348,7 +349,7 @@ class TestPreTradeContext:
             total_fees=0.0,
         )
         view = AccountView(
-            positions=MappingProxyType({1: pos}),
+            positions=MappingProxyType({InstrumentId(1): pos}),
             cash=CashBook(available=500_000.0, settled=500_000.0, frozen=0.0),
             total_value=501_000.0,
             nav=501_000.0,
@@ -365,7 +366,7 @@ class TestPreTradeContext:
         sell = _sell_order(quantity=200)
         new_ctx = ctx.with_order_accepted(sell)
 
-        assert new_ctx.account_view.positions[1].available_quantity == 0
+        assert new_ctx.account_view.positions[InstrumentId(1)].available_quantity == 0
 
     def test_rolling_context_second_order_sees_first(
         self,
@@ -386,7 +387,7 @@ class TestPreTradeContext:
         empty_context: PreTradeContext,
     ) -> None:
         """Order with no price data -> context unchanged。"""
-        order = _buy_order(instrument_id=999, quantity=100)
+        order = _buy_order(instrument_id=InstrumentId(999), quantity=100)
         new_ctx = empty_context.with_order_accepted(order)
 
         assert (
@@ -427,7 +428,7 @@ class TestNoShortSellCheck:
         from ditto_portfolio.accounting import Position
 
         pos = Position(
-            instrument_id=1,
+            instrument_id=InstrumentId(1),
             quantity=500,
             available_quantity=500,
             average_cost=10.0,
@@ -437,7 +438,7 @@ class TestNoShortSellCheck:
             total_fees=0.0,
         )
         view = AccountView(
-            positions=MappingProxyType({1: pos}),
+            positions=MappingProxyType({InstrumentId(1): pos}),
             cash=CashBook(available=500_000.0, settled=500_000.0, frozen=0.0),
             total_value=505_000.0,
             nav=505_000.0,
@@ -473,7 +474,7 @@ class TestNoShortSellCheck:
         from ditto_portfolio.accounting import Position
 
         pos = Position(
-            instrument_id=1,
+            instrument_id=InstrumentId(1),
             quantity=50,
             available_quantity=50,
             average_cost=10.0,
@@ -483,7 +484,7 @@ class TestNoShortSellCheck:
             total_fees=0.0,
         )
         view = AccountView(
-            positions=MappingProxyType({1: pos}),
+            positions=MappingProxyType({InstrumentId(1): pos}),
             cash=CashBook(available=500_000.0, settled=500_000.0, frozen=0.0),
             total_value=500_500.0,
             nav=500_500.0,
@@ -562,7 +563,7 @@ class TestPriceValidityCheck:
         """无市场快照时直接放行。"""
         check = PriceValidityCheck()
         order = _buy_order(
-            instrument_id=999,
+            instrument_id=InstrumentId(999),
             order_type=OrderType.LIMIT,
             price=100.0,
         )
@@ -573,8 +574,8 @@ class TestPriceValidityCheck:
     def test_no_price_limit_accepts(self) -> None:
         """无涨跌停信息（如 IPO 前五日）时直接放行。"""
         snapshots = {
-            1: _make_snapshot(
-                1,
+            InstrumentId(1): _make_snapshot(
+                InstrumentId(1),
                 close=10.0,
                 limit_up=None,
                 limit_down=None,
@@ -588,7 +589,7 @@ class TestPriceValidityCheck:
                 nav=1_000_000.0,
                 exposure=0.0,
             ),
-            rules={1: _make_instrument_rules(1)},
+            rules={InstrumentId(1): _make_instrument_rules(InstrumentId(1))},
             market_snapshots=snapshots,
             fee_model=SimpleFeeModel(),
             buying_power_model=CashAccountBuyingPower(),
@@ -647,7 +648,7 @@ class TestLotSizeCheck:
     def test_per_instrument_lot_size(self, empty_context: PreTradeContext) -> None:
         """ETF-002 lot_size=200，50 -> resize to 200。"""
         check = LotSizeCheck()
-        order = _buy_order(instrument_id=2, quantity=50)
+        order = _buy_order(instrument_id=InstrumentId(2), quantity=50)
         result = check.check_order(order, empty_context)
 
         assert result.decision == Decision.RESIZE
@@ -659,7 +660,7 @@ class TestLotSizeCheck:
     ) -> None:
         """无规则标的默认 lot_size=100。"""
         check = LotSizeCheck()
-        order = _buy_order(instrument_id=999, quantity=50)
+        order = _buy_order(instrument_id=InstrumentId(999), quantity=50)
         result = check.check_order(order, empty_context)
 
         assert result.decision == Decision.RESIZE
@@ -713,9 +714,9 @@ class TestBuyingPowerCheck:
                 nav=1.0,
                 exposure=0.0,
             ),
-            rules={1: _make_instrument_rules(1)},
+            rules={InstrumentId(1): _make_instrument_rules(InstrumentId(1))},
             market_snapshots={
-                1: _make_snapshot(1, close=10.0),
+                InstrumentId(1): _make_snapshot(InstrumentId(1), close=10.0),
             },
             fee_model=SimpleFeeModel(),
             buying_power_model=CashAccountBuyingPower(),
@@ -771,7 +772,7 @@ class TestConcentrationPreCheck:
         from ditto_portfolio.accounting import Position
 
         pos = Position(
-            instrument_id=1,
+            instrument_id=InstrumentId(1),
             quantity=15000,
             available_quantity=15000,
             average_cost=10.0,
@@ -781,7 +782,7 @@ class TestConcentrationPreCheck:
             total_fees=0.0,
         )
         view = AccountView(
-            positions=MappingProxyType({1: pos}),
+            positions=MappingProxyType({InstrumentId(1): pos}),
             cash=CashBook(available=850_000.0, settled=850_000.0, frozen=0.0),
             total_value=1_000_000.0,
             nav=1_000_000.0,
@@ -804,7 +805,7 @@ class TestConcentrationPreCheck:
     def test_no_position_no_price_accepts(self, empty_context: PreTradeContext) -> None:
         """无价格信息时直接放行。"""
         check = ConcentrationPreCheck(max_weight=0.20)
-        order = _buy_order(instrument_id=999, quantity=100)
+        order = _buy_order(instrument_id=InstrumentId(999), quantity=100)
         result = check.check_order(order, empty_context)
 
         assert result.decision == Decision.ACCEPT
@@ -819,8 +820,10 @@ class TestConcentrationPreCheck:
                 nav=0.0,
                 exposure=0.0,
             ),
-            rules={1: _make_instrument_rules(1)},
-            market_snapshots={1: _make_snapshot(1, close=10.0)},
+            rules={InstrumentId(1): _make_instrument_rules(InstrumentId(1))},
+            market_snapshots={
+                InstrumentId(1): _make_snapshot(InstrumentId(1), close=10.0)
+            },
             fee_model=SimpleFeeModel(),
             buying_power_model=CashAccountBuyingPower(),
         )
@@ -932,7 +935,7 @@ class TestDailyTurnoverPreCheck:
     def test_no_price_accepts(self, empty_context: PreTradeContext) -> None:
         """无价格信息时直接放行。"""
         check = DailyTurnoverPreCheck(max_turnover=0.30)
-        order = _buy_order(instrument_id=999, quantity=100)
+        order = _buy_order(instrument_id=InstrumentId(999), quantity=100)
         result = check.check_order(order, empty_context)
 
         assert result.decision == Decision.ACCEPT
@@ -947,8 +950,10 @@ class TestDailyTurnoverPreCheck:
                 nav=0.0,
                 exposure=0.0,
             ),
-            rules={1: _make_instrument_rules(1)},
-            market_snapshots={1: _make_snapshot(1, close=10.0)},
+            rules={InstrumentId(1): _make_instrument_rules(InstrumentId(1))},
+            market_snapshots={
+                InstrumentId(1): _make_snapshot(InstrumentId(1), close=10.0)
+            },
             fee_model=SimpleFeeModel(),
             buying_power_model=CashAccountBuyingPower(),
         )
