@@ -239,7 +239,9 @@ def test_release_builder_rejects_incomplete_suite_sets_and_count_drift() -> None
         )
 
     cases = dict.fromkeys(RELEASE_SUITE_COUNTS, ())
-    observations = dict.fromkeys(RELEASE_SUITE_COUNTS, ())
+    observations: dict[str, tuple[EvalObservation, ...]] = dict.fromkeys(
+        RELEASE_SUITE_COUNTS, ()
+    )
     observations["grounded"] = (_observation(),)
     reports = cast(
         "dict[str, EvalReport]",

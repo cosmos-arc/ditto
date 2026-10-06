@@ -13,6 +13,7 @@ from ditto_features.risk_estimation.covariance import (
     RiskEstimationEvidence,
     ShrinkageCovarianceEstimator,
 )
+from ditto_kernel.identity import InstrumentId
 
 
 def _returns_frame(*, include_visible_boundary: bool = True) -> pl.DataFrame:
@@ -67,12 +68,12 @@ def test_future_sentinel_is_excluded_and_visible_boundary_is_consumed() -> None:
     )
     request = ReturnMatrixRequest(
         frame=visible,
-        instrument_ids=(1, 2),
+        instrument_ids=(InstrumentId(1), InstrumentId(2)),
         evidence=_evidence(),
     )
     with_future = ReturnMatrixRequest(
         frame=pl.concat((visible, future)),
-        instrument_ids=(1, 2),
+        instrument_ids=(InstrumentId(1), InstrumentId(2)),
         evidence=_evidence(),
     )
 
@@ -88,7 +89,7 @@ def test_future_sentinel_is_excluded_and_visible_boundary_is_consumed() -> None:
         estimator.estimate(
             ReturnMatrixRequest(
                 frame=_returns_frame(include_visible_boundary=False),
-                instrument_ids=(1, 2),
+                instrument_ids=(InstrumentId(1), InstrumentId(2)),
                 evidence=_evidence(),
             )
         )
@@ -110,7 +111,7 @@ def test_singular_covariance_repair_is_explicit_in_evidence() -> None:
     result = ShrinkageCovarianceEstimator().estimate(
         ReturnMatrixRequest(
             frame=frame,
-            instrument_ids=(1, 2),
+            instrument_ids=(InstrumentId(1), InstrumentId(2)),
             evidence=_evidence(),
         )
     )

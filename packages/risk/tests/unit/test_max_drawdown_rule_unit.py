@@ -2,14 +2,16 @@
 
 from __future__ import annotations
 
-from types import MappingProxyType, SimpleNamespace
+from collections.abc import Mapping
+from types import MappingProxyType
 
 import pytest
+from ditto_kernel.identity import InstrumentId
 from ditto_kernel.strategy import RiskScope
 from ditto_portfolio.accounting import AccountView, CashBook
 from ditto_risk.drawdown.rules import MaxDrawdownRule
 from ditto_risk.errors import RiskConfigurationError
-from ditto_risk.post_trade import RiskActionType, RiskSeverity
+from ditto_risk.post_trade import BarSlice, RiskActionType, RiskSeverity, SliceView
 
 
 def _account_view(nav: float = 100_000.0) -> AccountView:
@@ -22,8 +24,15 @@ def _account_view(nav: float = 100_000.0) -> AccountView:
     )
 
 
-def _slice() -> SimpleNamespace:
-    return SimpleNamespace(bars={})
+class _EmptySlice:
+    """SliceView 协议最小 fake — MaxDrawdownRule 不读 bars，恒为空即可。"""
+
+    def __init__(self) -> None:
+        self.bars: Mapping[InstrumentId, BarSlice] = MappingProxyType({})
+
+
+def _slice() -> SliceView:
+    return _EmptySlice()
 
 
 class TestMaxDrawdownRule:

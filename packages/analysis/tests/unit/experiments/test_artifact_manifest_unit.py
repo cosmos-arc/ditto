@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import replace
 from datetime import UTC, datetime
+from typing import cast
 
 import pytest
 from ditto_analysis.errors import ExperimentIntegrityError, ExperimentSpecError
@@ -218,7 +220,8 @@ def test_record_manifest_drift_fails_closed(field: str, value: object) -> None:
     record = _manifest().to_record()
     payload = dict(record.manifest)
     if field in {"content_hash", "schema_hash", "row_count", "byte_size"}:
-        content = dict(payload["content"])  # type: ignore[arg-type]
+        # record.manifest 由生产 payload 构造，content/audit 节必为对象映射。
+        content = dict(cast("Mapping[str, object]", payload["content"]))
         content[field] = value
         payload["content"] = content
     else:
@@ -343,7 +346,8 @@ def test_attempt_audit_requires_run_attempt_and_timestamp_identity() -> None:
 def test_manifest_content_hash_detects_audit_only_tampering() -> None:
     record = _manifest().to_record()
     payload = dict(record.manifest)
-    audit = dict(payload["audit"])  # type: ignore[arg-type]
+    # record.manifest 由生产 payload 构造，audit 节必为对象映射。
+    audit = dict(cast("Mapping[str, object]", payload["audit"]))
     audit["run_id"] = "run-tampered"
     payload["audit"] = audit
 

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import replace
-from typing import cast
+from typing import TypedDict, cast
 
 import pytest
 from ditto_analysis.errors import ExperimentSpecError
@@ -132,6 +132,16 @@ def test_campaign_hash_binds_per_sandbox_resource_limits() -> None:
     assert manifest.manifest_hash != reduced.manifest_hash
 
 
+class _BudgetChanges(TypedDict, total=False):
+    """CampaignBudget 整型字段覆写键型（kwargs 调用侧受检）。"""
+
+    generation_limit: int
+    concurrent_sandbox_limit: int
+    wall_time_limit_seconds: int
+    temporary_storage_limit_bytes: int
+    model_spend_limit_usd_micros: int
+
+
 @pytest.mark.parametrize(
     ("changes", "reason_code"),
     [
@@ -146,7 +156,7 @@ def test_campaign_hash_binds_per_sandbox_resource_limits() -> None:
     ],
 )
 def test_campaign_budget_fails_closed(
-    changes: dict[str, int], reason_code: str
+    changes: _BudgetChanges, reason_code: str
 ) -> None:
     with pytest.raises(ExperimentSpecError) as exc_info:
         CampaignBudget(

@@ -2,8 +2,16 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
+
 import pytest
 from ditto_risk.models import RiskPosition, StressScenario, build_launch_risk_report
+
+
+def _obj(value: object) -> Mapping[str, object]:
+    """窄化 report payload 节点为 Mapping（to_dict 顶层值类型为 object）."""
+    assert isinstance(value, Mapping)
+    return value
 
 
 def test_launch_risk_report_includes_minimum_required_metrics() -> None:
@@ -65,11 +73,13 @@ def test_launch_risk_report_serializes_to_stable_dict_contract() -> None:
 
     payload = report.to_dict()
 
-    assert payload["concentration"]["max_weight"] == pytest.approx(1.0)
+    assert _obj(payload["concentration"])["max_weight"] == pytest.approx(1.0)
     assert payload["industry_exposure"] == {"unclassified": pytest.approx(1.0)}
-    assert payload["benchmark_active_weight"]["active_weights"] == {
+    assert _obj(payload["benchmark_active_weight"])["active_weights"] == {
         "1": pytest.approx(0.25),
     }
-    assert payload["drawdown"]["max_drawdown"] == pytest.approx(-0.10)
-    assert payload["tail_risk"]["var_95"] == pytest.approx(-0.10)
-    assert payload["stress_scenario_returns"]["market_down"] == pytest.approx(-0.10)
+    assert _obj(payload["drawdown"])["max_drawdown"] == pytest.approx(-0.10)
+    assert _obj(payload["tail_risk"])["var_95"] == pytest.approx(-0.10)
+    assert _obj(payload["stress_scenario_returns"])["market_down"] == pytest.approx(
+        -0.10
+    )

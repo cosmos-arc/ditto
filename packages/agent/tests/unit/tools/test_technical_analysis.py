@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping, Sequence
 from datetime import UTC, datetime
 from typing import cast
 
@@ -23,8 +24,22 @@ from ditto_application.queries.evidence_contracts import (
     InstrumentTechnicalEvidenceQueryPort,
     InstrumentTechnicalEvidenceReadModel,
 )
+from ditto_kernel.identity import InstrumentId
 
 _SNAPSHOT_ID = "technical-analysis:sha256:" + "a" * 64
+
+
+def _obj(value: object) -> Mapping[str, object]:
+    """窄化 JSON 节点为对象（运行时校验；冻结证据的递归结构无法静态窄化）."""
+    assert isinstance(value, Mapping)
+    return value
+
+
+def _seq(value: object) -> Sequence[object]:
+    """窄化 JSON 节点为数组（运行时校验；str/bytes 虽是 Sequence 但非数组）."""
+    assert isinstance(value, Sequence)
+    assert not isinstance(value, (str, bytes))
+    return value
 
 
 def _context() -> TemporalToolContext:
@@ -73,7 +88,7 @@ class _Facade:
         )
         return InstrumentTechnicalEvidenceReadModel(
             snapshot_id=_SNAPSHOT_ID,
-            instrument_id=600519,
+            instrument_id=InstrumentId(600519),
             instrument_name="贵州茅台",
             status="ready",
             source_snapshot_ids=("snapshot-stock",),
@@ -106,7 +121,8 @@ def test_tool_returns_exact_levels_and_rejects_context_smuggling() -> None:
         context=_context(),
     )
 
-    assert envelope.result["payload"]["levels"][0]["price"] == 97.5
+    levels = _seq(_obj(envelope.result["payload"])["levels"])
+    assert _obj(levels[0])["price"] == 97.5
     assert envelope.verify_integrity()
     with pytest.raises(ValueError, match="unexpected arguments"):
         _tool().invoke(

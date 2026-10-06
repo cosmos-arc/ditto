@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import replace
 from datetime import UTC, datetime
 
@@ -36,6 +37,7 @@ from ditto_application.queries.evidence_contracts import (
     DecisionEvidenceReadModel,
     EvidencePayloadReadModel,
     EvidenceTemporalContext,
+    EvidenceValue,
     IndustryRotationEvidenceReadModel,
     InstrumentTechnicalEvidenceReadModel,
     MarketContextEvidenceReadModel,
@@ -48,6 +50,7 @@ from ditto_application.queries.portfolio_comparison_evidence_contracts import (
     PortfolioComparisonEvidenceReadModel,
     PortfolioScenarioEvidenceReadModel,
 )
+from ditto_kernel.identity import InstrumentId
 
 pytestmark = pytest.mark.pit
 
@@ -73,8 +76,14 @@ def _other_context() -> EvidenceTemporalContext:
     )
 
 
-def _payload(value: dict[str, object]) -> EvidencePayloadReadModel:
+def _payload(value: Mapping[str, EvidenceValue]) -> EvidencePayloadReadModel:
     return EvidencePayloadReadModel.seal(schema_version=1, value=value)
+
+
+def _payload_mapping(value: EvidenceValue) -> dict[str, EvidenceValue]:
+    """窄化嵌套证据节点为可变 dict（递归联合无法静态窄化；运行时校验）."""
+    assert isinstance(value, Mapping)
+    return dict(value)
 
 
 def test_research_and_decision_evidence_reject_context_or_kind_drift() -> None:
@@ -262,7 +271,7 @@ def test_selection_run_seal_rejects_projection_drift(
 def _technical_model() -> InstrumentTechnicalEvidenceReadModel:
     return InstrumentTechnicalEvidenceReadModel(
         snapshot_id="technical-1",
-        instrument_id=600000,
+        instrument_id=InstrumentId(600000),
         instrument_name="浦发银行",
         status="ready",
         source_snapshot_ids=("snapshot-one",),
@@ -433,7 +442,7 @@ def test_portfolio_scenario_seal_rejects_projection_drift(
         elif mutation == "risk":
             value["risk"] = "drifted"
         else:
-            risk = dict(value["risk"])
+            risk = _payload_mapping(value["risk"])
             key = {
                 "as_of": "as_of",
                 "valuation": "valuation_snapshot_id",

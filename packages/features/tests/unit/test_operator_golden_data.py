@@ -600,7 +600,7 @@ class TestCsRank:
         """The larger close ranks 1.0 and the smaller ranks 0.5 per date."""
         df = _sample_frame()
         result = _eval_expr(df, "cs_rank(close)")
-        expected = [
+        expected: list[float | None] = [
             1.0,
             1.0,
             1.0,
@@ -631,7 +631,7 @@ class TestCsScale:
         """
         df = _sample_frame()
         result = _eval_expr(df, "cs_scale(close)")
-        expected = [
+        expected: list[float | None] = [
             10.0 / 18.0,
             11.0 / 18.5,
             10.0 / 18.0,
@@ -679,7 +679,7 @@ class TestCsZscore:
 
         expected_val = 1.0 / math.sqrt(2.0)
         # Instrument 1 has higher close on dates 3/8-3/12, lower on 3/13
-        expected = [
+        expected: list[float | None] = [
             expected_val,  # 3/8: inst1=10 > inst2=8
             expected_val,  # 3/9: inst1=11 > inst2=7.5
             expected_val,  # 3/10: inst1=10 > inst2=8
@@ -722,7 +722,7 @@ class TestCsDemean:
         """
         df = _sample_frame()
         result = _eval_expr(df, "cs_demean(close)")
-        expected = [
+        expected: list[float | None] = [
             1.0,  # 3/8 inst1
             1.75,  # 3/9 inst1
             1.0,  # 3/10 inst1

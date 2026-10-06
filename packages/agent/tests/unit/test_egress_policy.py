@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Mapping, Sequence
 from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 
@@ -13,6 +14,19 @@ from ditto_agent.runtime.egress_policy import (
 from ditto_agent.runtime.temporal_context import TemporalContextFactory
 
 DECISION_TIME = datetime(2026, 8, 16, 7, 0, tzinfo=UTC)
+
+
+def _obj(value: object) -> Mapping[str, object]:
+    """窄化 JSON 节点为对象（运行时校验；投影 payload 的递归联合无法静态窄化）."""
+    assert isinstance(value, Mapping)
+    return value
+
+
+def _seq(value: object) -> Sequence[object]:
+    """窄化 JSON 节点为数组（运行时校验；str/bytes 虽是 Sequence 但非数组）."""
+    assert isinstance(value, Sequence)
+    assert not isinstance(value, (str, bytes))
+    return value
 
 
 def _context(
@@ -176,11 +190,12 @@ def test_approved_research_selection_evidence_excludes_full_universe() -> None:
     ).prepare_for_model((evidence,), context=context)[0]
 
     assert payload.result["redaction_profile"] == "approved-research-minimal-v1"
-    projected = payload.result["payload"]
+    projected = _obj(payload.result["payload"])
     assert projected["candidate_count"] == 5
     assert projected["exclusion_count"] == 3
-    assert len(projected["top_candidates"]) == 3
-    assert projected["top_candidates"][0]["factor_contributions"] == (
+    top_candidates = _seq(projected["top_candidates"])
+    assert len(top_candidates) == 3
+    assert _obj(top_candidates[0])["factor_contributions"] == (
         {"factor_name": "momentum", "value": 1},
     )
     assert projected["exclusion_summary"] == (

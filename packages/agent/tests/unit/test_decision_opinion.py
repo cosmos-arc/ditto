@@ -20,6 +20,7 @@ from ditto_agent.models.fake import (
 )
 from ditto_agent.models.port import (
     ModelFailureKind,
+    ModelRequest,
     ModelResult,
     ModelUsage,
 )
@@ -137,6 +138,7 @@ async def test_ready_v3_generates_content_addressed_read_only_opinion() -> None:
     assert opinion.opinion_id == f"decision-opinion-{opinion.opinion_hash}"
     assert opinion.shadow_outcome_id == f"decision-shadow-{opinion.opinion_hash}"
     request = model.requests[0]
+    assert isinstance(request, ModelRequest)
     assert request.tools == ()
     assert request.max_turns == 1
     assert not {

@@ -7,6 +7,7 @@ and assemble_report correct assembly of FactorEvaluationReport.
 from __future__ import annotations
 
 import math
+from collections.abc import Mapping
 from dataclasses import replace
 from datetime import date, timedelta
 from types import MappingProxyType
@@ -41,6 +42,12 @@ from ditto_features.evaluation.report import (
     r3_factor_diagnostics_content_hash,
     r3_factor_diagnostics_projection_hash,
 )
+
+
+def _obj(value: object) -> Mapping[str, object]:
+    """窄化 diagnostics 投影节点为 mapping（运行时校验；递归联合无法静态窄化）."""
+    assert isinstance(value, Mapping)
+    return value
 
 
 def _diagnostic_provenance(
@@ -158,7 +165,7 @@ def test_diagnostic_hash_and_nested_mapping_order_are_canonical() -> None:
     assert r3_factor_diagnostics_projection_hash(first, provenance=provenance) == (
         r3_factor_diagnostics_projection_hash(second, provenance=provenance)
     )
-    assert tuple(first_projection.values["exposure"]) == ("industry", "style")
+    assert tuple(_obj(first_projection.values["exposure"])) == ("industry", "style")
     assert first_projection.values == second_projection.values
 
 
@@ -238,8 +245,8 @@ def test_diagnostics_projection_is_deeply_immutable_and_defensively_copied() -> 
     exposure["industry"]["bank"] = 9.9
 
     assert isinstance(projection.values, MappingProxyType)
-    assert projection.values["factor_contribution"]["momentum"] == 0.3
-    assert projection.values["exposure"]["industry"]["bank"] == 0.2
+    assert _obj(projection.values["factor_contribution"])["momentum"] == 0.3
+    assert _obj(_obj(projection.values["exposure"])["industry"])["bank"] == 0.2
     with pytest.raises(TypeError):
         projection.values["new"] = 1.0  # type: ignore[index]
     with pytest.raises(TypeError):

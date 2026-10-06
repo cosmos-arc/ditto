@@ -9,6 +9,7 @@ import subprocess
 import sys
 import types
 from pathlib import Path
+from typing import cast
 
 import pytest
 from ditto_analysis.research import _artifact_file_primitives as primitives
@@ -205,8 +206,9 @@ def test_windows_fd_flags_preserve_open_mode() -> None:
 
 def _install_fake_msvcrt(monkeypatch: pytest.MonkeyPatch) -> None:
     module = types.ModuleType("msvcrt")
-    module.get_osfhandle = lambda descriptor: descriptor
-    module.open_osfhandle = lambda handle, _flags: int(handle)
+    # ModuleType 的动态成员经 __dict__ 注入（类型层无 get_osfhandle 声明）。
+    module.__dict__["get_osfhandle"] = lambda descriptor: descriptor
+    module.__dict__["open_osfhandle"] = lambda handle, _flags: int(handle)
     monkeypatch.setitem(sys.modules, "msvcrt", module)
 
 
@@ -220,6 +222,10 @@ class _FakeWinApi:
     def __init__(self, handle: object = 123) -> None:
         self.CreateFileW = _FakeWinFunction(handle)
         self.CloseHandle = _FakeWinFunction(None)
+        # ntdll 专属成员按用例赋值；默认 None 仅占位（不触达即不读）。
+        self.NtCreateFile: _FakeWinFunction | None = None
+        self.RtlNtStatusToDosError: _FakeWinFunction | None = None
+        self.NtSetInformationFile: _FakeWinFunction | None = None
 
     def __call__(self, *_args: object, **_kwargs: object) -> _FakeWinApi:
         return self
@@ -290,8 +296,10 @@ def test_windows_relative_open_converts_nt_handle(
     descriptor = os.open(target, primitives.READ_FLAGS, dir_fd=parent_fd)
 
     def create_file(handle_reference: object, *_args: object) -> int:
+        # 生产调用点首参为 ctypes.byref(handle) 的 _CArgObject；窄化后写回句柄。
+        byref_object = cast("ctypes._CArgObject", handle_reference)
         ctypes.cast(
-            handle_reference, ctypes.POINTER(ctypes.c_void_p)
+            byref_object, ctypes.POINTER(ctypes.c_void_p)
         ).contents.value = descriptor
         return 0
 

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping, Sequence
 from dataclasses import replace
 from datetime import UTC, datetime
 from types import MappingProxyType
@@ -167,15 +168,30 @@ def _draft(
     )
 
 
+def _obj(value: object) -> Mapping[str, object]:
+    """窄化 JSON schema 节点为对象（运行时校验；schema 值的递归联合无法静态窄化）."""
+    assert isinstance(value, Mapping)
+    return value
+
+
+def _seq(value: object) -> Sequence[object]:
+    """窄化 JSON schema 节点为数组（运行时校验；str/bytes 虽是 Sequence 但非数组）."""
+    assert isinstance(value, Sequence)
+    assert not isinstance(value, (str, bytes))
+    return value
+
+
 def test_all_six_output_schemas_are_closed_and_kind_specific() -> None:
     assert len(BusinessOutputKind) == 6
 
     for kind in BusinessOutputKind:
         schema = business_output_schema(kind)
+        properties = _obj(schema["properties"])
+        details = _obj(properties["details"])
         assert schema["additionalProperties"] is False
-        assert schema["properties"]["output_kind"]["const"] == kind.value
-        assert schema["properties"]["details"]["additionalProperties"] is False
-        assert set(schema["properties"]["details"]["required"]) == set(_DETAILS[kind])
+        assert _obj(properties["output_kind"])["const"] == kind.value
+        assert details["additionalProperties"] is False
+        assert set(_seq(details["required"])) == set(_DETAILS[kind])
 
 
 @pytest.mark.parametrize("kind", list(BusinessOutputKind))

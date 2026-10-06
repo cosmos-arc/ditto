@@ -12,13 +12,14 @@ from __future__ import annotations
 
 import hashlib
 import sqlite3
+from collections.abc import Mapping
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import replace
 from datetime import UTC, date, datetime
 from pathlib import Path
 from threading import Barrier
 from types import SimpleNamespace
-from typing import Any
+from typing import Any, cast
 
 import orjson
 import pytest
@@ -47,6 +48,7 @@ from ditto_analysis.experiments import (
     SnapshotId,
     StrategyVersion,
 )
+from ditto_analysis.experiments.specs import FrozenValue
 from ditto_analysis.experiments.trial_family import (
     LogicalTrialIdentity,
     TrialFamilyDeclaration,
@@ -99,7 +101,7 @@ def _candidate(
     ordinal: int,
     *,
     baseline: bool = False,
-    parameters: dict[str, object] | None = None,
+    parameters: Mapping[str, FrozenValue] | None = None,
 ) -> CandidateSpec:
     return CandidateSpec(
         candidate_id=CandidateId(f"candidate-{ordinal}"),
@@ -1294,7 +1296,8 @@ def test_new_fold_and_terminal_transition_serialize_without_terminal_live_child(
         try:
             writer.add_fold(fold, initial)
         except ExperimentSpecError as exc:
-            return "rejected", exc.details["reason_code"]
+            # 该错误族的 reason_code 恒为 str（生产构造点字面量保证）。
+            return "rejected", cast("str", exc.details["reason_code"])
         return "added", None
 
     def terminalize() -> tuple[str, str | None]:
@@ -1315,7 +1318,8 @@ def test_new_fold_and_terminal_transition_serialize_without_terminal_live_child(
                 detail={},
             )
         except ExperimentSpecError as exc:
-            return "rejected", exc.details["reason_code"]
+            # 该错误族的 reason_code 恒为 str（生产构造点字面量保证）。
+            return "rejected", cast("str", exc.details["reason_code"])
         return "terminal", None
 
     with ThreadPoolExecutor(max_workers=2) as executor:

@@ -4,8 +4,9 @@ from __future__ import annotations
 
 import math
 from collections.abc import Callable, Mapping
-from dataclasses import replace
+from dataclasses import Field, replace
 from types import MappingProxyType
+from typing import Any, ClassVar, Protocol
 
 import pytest
 from ditto_features.evaluation.report import (
@@ -32,6 +33,12 @@ from ditto_features.factors.production_guard import validate_r3_core_factor_cata
 from ditto_features.factors.spec import FactorContext
 
 
+class _DataclassInstance(Protocol):
+    """与 typeshed DataclassInstance 同构的最小结构，收窄 replace 的实例边界."""
+
+    __dataclass_fields__: ClassVar[dict[str, Field[Any]]]
+
+
 def _runtime_construct[T](
     factory: Callable[..., T],
     /,
@@ -41,7 +48,7 @@ def _runtime_construct[T](
     return factory(**kwargs)
 
 
-def _runtime_replace[T](value: T, /, **changes: object) -> T:
+def _runtime_replace[T: _DataclassInstance](value: T, /, **changes: object) -> T:
     """Inject runtime values through dataclasses.replace for boundary tests."""
     return replace(value, **changes)
 

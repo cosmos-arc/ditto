@@ -14,6 +14,7 @@ from ditto_analysis.experiments.metric_schema import (
 )
 from ditto_analysis.experiments.pbo_plan import (
     PboEstimator,
+    PboPartitionIdentity,
     ReturnFrequency,
     SamplingReturnUnit,
 )
@@ -97,7 +98,7 @@ def _trial(
 
 
 def _plan(
-    partitions: tuple[str, ...],
+    partitions: tuple[PboPartitionIdentity, ...],
     **overrides: object,
 ) -> object:
     values: dict[str, object] = {

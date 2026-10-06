@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from datetime import UTC, datetime
 from typing import cast
 
@@ -78,6 +79,7 @@ def test_portfolio_scenario_schema_cannot_accept_model_authored_target_weights()
     properties = (
         _registry().tools["portfolio_scenario_preview"].spec.input_schema["properties"]
     )
+    assert isinstance(properties, Mapping)
 
     assert "target_weights" not in properties
     assert "source_snapshot_ids" not in properties

@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections.abc import AsyncIterator
 from dataclasses import replace
 from types import MappingProxyType, SimpleNamespace
-from typing import cast
+from typing import Any, cast
 
 import pytest
 from agents.items import ToolApprovalItem
@@ -354,7 +354,8 @@ def test_compatible_model_rejects_untyped_capabilities(
         field_name: value,
     }
     with pytest.raises(ValueError, match=message):
-        OpenAICompatibleAgentsModel(**kwargs)
+        # kwargs 按字段名塞非法值做负向注入，构造点单点放宽。
+        OpenAICompatibleAgentsModel(**cast("dict[str, Any]", kwargs))
 
 
 @pytest.mark.asyncio
@@ -422,7 +423,8 @@ def test_openai_adapter_requires_project_identity() -> None:
         OpenAIAgentsModel(
             model_id="gpt-5.6-terra-2026-08-01",
             api_key="test-key",
-            project_id=None,
+            # 签名声明 str，None 注入专测运行时防绕过（生产 __init__ 显式判 None）。
+            project_id=cast("str", None),
         )
 
 

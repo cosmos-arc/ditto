@@ -4,6 +4,7 @@ import pytest
 from ditto_execution.orders.ids import ClientOrderId
 from ditto_execution.orders.model import Order
 from ditto_execution.reality.fee import AShareFeeModel, SimpleFeeModel
+from ditto_kernel.identity import InstrumentId
 from ditto_kernel.order import OrderSide, OrderType
 from ditto_kernel.trading import FeeSchedule
 
@@ -15,7 +16,7 @@ from ditto_kernel.trading import FeeSchedule
 def _order(
     direction: OrderSide = OrderSide.BUY,
     quantity: int = 100,
-    instrument_id: int = 1,
+    instrument_id: InstrumentId = InstrumentId(1),
 ) -> Order:
     return Order(
         client_id=ClientOrderId(value="ORD-001"),
@@ -28,7 +29,7 @@ def _order(
 
 
 _FEE_SCHEDULE = FeeSchedule(
-    instrument_id=0,
+    instrument_id=InstrumentId(0),
     as_of_date="",
     commission_rate=0.0003,
     min_commission=5.0,
@@ -37,7 +38,7 @@ _FEE_SCHEDULE = FeeSchedule(
 )
 
 _FEE_ETF = FeeSchedule(
-    instrument_id=1,
+    instrument_id=InstrumentId(1),
     as_of_date="2026-03-01",
     commission_rate=0.0003,
     min_commission=5.0,
@@ -46,7 +47,7 @@ _FEE_ETF = FeeSchedule(
 )
 
 _FEE_STOCK = FeeSchedule(
-    instrument_id=3,
+    instrument_id=InstrumentId(3),
     as_of_date="2026-03-01",
     commission_rate=0.0003,
     min_commission=5.0,

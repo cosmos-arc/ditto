@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from datetime import UTC, datetime
 from typing import cast
 
@@ -113,7 +114,14 @@ class _Facade:
         )
 
 
-def _tools(facade: _Facade) -> tuple[object, ...]:
+def _tools(
+    facade: _Facade,
+) -> tuple[
+    AuthorDraftStrategyTool,
+    AuthorCompileExpressionTool,
+    AuthorValidateStrategyTool,
+    AuthorDiffStrategyTool,
+]:
     port = cast(AuthoringPreviewPort, facade)
     return (
         AuthorDraftStrategyTool(facade=port),
@@ -121,6 +129,12 @@ def _tools(facade: _Facade) -> tuple[object, ...]:
         AuthorValidateStrategyTool(facade=port),
         AuthorDiffStrategyTool(facade=port),
     )
+
+
+def _obj(value: object) -> Mapping[str, object]:
+    """窄化 JSON 节点为对象（运行时校验；冻结证据的递归结构无法静态窄化）."""
+    assert isinstance(value, Mapping)
+    return value
 
 
 def test_author_tool_specs_are_closed_no_approval_and_expose_no_trusted_context() -> (
@@ -146,7 +160,7 @@ def test_author_tool_specs_are_closed_no_approval_and_expose_no_trusted_context(
         tool.spec.input_schema["additionalProperties"] is False for tool in tools
     )
     assert all(
-        trusted.isdisjoint(tool.spec.input_schema["properties"]) for tool in tools
+        trusted.isdisjoint(_obj(tool.spec.input_schema["properties"])) for tool in tools
     )
 
 

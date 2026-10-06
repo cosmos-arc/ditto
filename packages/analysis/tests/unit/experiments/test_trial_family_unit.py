@@ -1,7 +1,7 @@
 """Unit tests for immutable logical trial-family declarations."""
 
 from dataclasses import FrozenInstanceError
-from typing import cast
+from typing import Any, cast
 
 import pytest
 from ditto_analysis.errors import ExperimentSpecError
@@ -117,7 +117,8 @@ def test_trial_family_identity_has_no_execution_attempt_dimension() -> None:
         "kind",
     )
     with pytest.raises(FrozenInstanceError):
-        member.ordinal = 2
+        # 负向用例：frozen 字段写入需经 Any 视图注入以验证运行时报错。
+        cast("Any", member).ordinal = 2
 
 
 @pytest.mark.parametrize("ordinal", [0, -1, True])

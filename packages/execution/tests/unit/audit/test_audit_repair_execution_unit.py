@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Generator
 from dataclasses import FrozenInstanceError, replace
+from pathlib import Path
 
 import orjson
 import pytest
@@ -21,7 +22,7 @@ from ditto_platform.foundation import SQLitePool
 
 
 @pytest.fixture
-def audit_service(tmp_path: object) -> Generator[ExecutionAuditService]:
+def audit_service(tmp_path: Path) -> Generator[ExecutionAuditService]:
     """Create an ExecutionAuditService with a temporary SQLite database."""
     pool = SQLitePool(str(tmp_path / "test_audit_repair_execution.db"))
     service = ExecutionAuditService(pool)

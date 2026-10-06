@@ -1,5 +1,8 @@
 """Unit tests for experiment observed-state transition validation."""
 
+from collections.abc import Callable
+from typing import cast
+
 import pytest
 from ditto_analysis.errors import ExperimentStateTransitionError
 from ditto_analysis.experiments import ExperimentStatus, validate_status_transition
@@ -80,7 +83,9 @@ def test_failed_only_applies_after_attempt_started() -> None:
 
 
 def test_unknown_status_fails_closed_with_typed_error() -> None:
+    # 负向用例：坏值必须绕过枚举参数签名注入，验证运行时 fail-closed。
+    transition = cast("Callable[..., ExperimentStatus]", validate_status_transition)
     with pytest.raises(ExperimentStateTransitionError) as exc_info:
-        validate_status_transition("draft", "queued", attempt_started=False)
+        transition("draft", "queued", attempt_started=False)
 
     assert exc_info.value.details["reason_code"] == "unknown_experiment_status"

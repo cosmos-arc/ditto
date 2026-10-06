@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from decimal import Decimal
+from typing import Any, cast
 
 import pytest
 from ditto_agent.models.port import ModelUsage
@@ -32,7 +33,8 @@ def _limits(**overrides: object) -> BudgetLimits:
         "max_retries": 1,
     }
     values.update(overrides)
-    return BudgetLimits(**values)
+    # **overrides 是负向注入的宽松参数（按字段名塞非法值），构造点单点放宽。
+    return BudgetLimits(**cast("dict[str, Any]", values))
 
 
 def _pricing() -> ModelPricing:

@@ -7,6 +7,7 @@ from datetime import datetime
 
 import pytest
 from ditto_execution.fills import Filled, FillOutcome, NoFill
+from ditto_kernel.identity import InstrumentId
 from ditto_kernel.order import OrderSide
 from ditto_portfolio.accounting import FillEvent
 
@@ -17,7 +18,7 @@ from ditto_portfolio.accounting import FillEvent
 _FILL_EVENT = FillEvent(
     fill_id="FILL-001",
     order_id="ORD-001",
-    instrument_id=1,
+    instrument_id=InstrumentId(1),
     direction=OrderSide.BUY,
     filled_quantity=100,
     fill_price=0.452,

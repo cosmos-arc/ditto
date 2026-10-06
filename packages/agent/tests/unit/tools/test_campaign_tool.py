@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import inspect
+from collections.abc import Mapping
 from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
@@ -119,12 +120,18 @@ def _execution() -> CampaignToolExecutionContext:
     )
 
 
+def _obj(value: object) -> Mapping[str, object]:
+    """窄化 JSON 节点为对象（运行时校验；冻结证据的递归结构无法静态窄化）."""
+    assert isinstance(value, Mapping)
+    return value
+
+
 def test_campaign_tool_schema_exposes_only_candidate_proposal_fields() -> None:
     spec = _tool(_Commands()).spec
 
     assert spec.name == "campaign_propose_candidate"
     assert not spec.requires_approval
-    assert set(spec.input_schema["properties"]) == {
+    assert set(_obj(spec.input_schema["properties"])) == {
         "parent_candidate_id",
         "parameters",
         "factor_code_hash",
@@ -143,7 +150,7 @@ def test_campaign_tool_schema_exposes_only_candidate_proposal_fields() -> None:
         "order",
         "broker",
     }
-    assert forbidden.isdisjoint(spec.input_schema["properties"])
+    assert forbidden.isdisjoint(_obj(spec.input_schema["properties"]))
 
 
 def test_tool_injects_campaign_authority_and_seals_application_receipt() -> None:
@@ -169,7 +176,7 @@ def test_tool_injects_campaign_authority_and_seals_application_receipt() -> None
     assert command.authority_hash == authorization.authority_hash
     assert command.run_id == "run-campaign-001"
     assert command.call_id == "call-campaign-001"
-    assert envelope.result["receipt"]["candidate_id"] == "candidate-proposed"
+    assert _obj(envelope.result["receipt"])["candidate_id"] == "candidate-proposed"
     assert envelope.verify_integrity()
 
 
