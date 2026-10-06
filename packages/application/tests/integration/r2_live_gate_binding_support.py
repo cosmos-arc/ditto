@@ -7,38 +7,14 @@ from pathlib import Path
 
 import orjson
 from ditto_application.processes.experiments.r2_live_gate_evidence import (
+    _R2_HARD_DATASET_PROVIDER_CONTRACTS,
     R2LiveGateArtifactSource,
     R2LiveGateEvidenceSource,
 )
 
-_R2_CONTRACTS = {
-    "stock_basic": ("tushare:stock_basic", "tushare:bak_basic"),
-    "etf_basic": ("tushare:etf_basic",),
-    "index_basic": ("tushare:index_basic",),
-    "calendar": ("tushare:trade_cal",),
-    "stock_daily": ("tushare:daily", "fuyao:historical_prices"),
-    "etf_daily": ("tushare:fund_daily",),
-    "index_daily": ("tushare:index_daily",),
-    "global_index_daily": ("tushare:index_global",),
-    "stock_status": ("tushare:stock_st", "tushare:suspend_d", "tushare:bak_basic"),
-    "adj_factor": ("tushare:adj_factor",),
-    "fund_adj": ("tushare:fund_adj",),
-    "balance_sheet": ("tushare:balancesheet",),
-    "income_statement": ("tushare:income",),
-    "cash_flow": ("tushare:cashflow",),
-    "dividend": ("tushare:dividend",),
-    "valuation_metrics": ("tushare:daily_basic",),
-    "macro_indicators": (
-        "tushare:cn_macro",
-        "fred:series_observations",
-        "alfred:vintages",
-    ),
-    "commodity_daily": ("fred:commodity_series", "tushare:commodity_reference"),
-    "corporate_actions": ("tushare:corporate_actions",),
-    "index_weight": ("tushare:index_weight",),
-    "industry_classification": ("tushare:index_classify",),
-    "industry_mapping": ("tushare:index_member_all",),
-}
+# 跟随生产契约表（#529 收口：fixture 副本漂移曾使 #534 的 provider 面扩展
+# 未同步到这里，ready 报告静默 fail closed）。
+_R2_CONTRACTS = _R2_HARD_DATASET_PROVIDER_CONTRACTS
 
 
 def _hash(payload: bytes) -> str:
