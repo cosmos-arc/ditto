@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 from collections.abc import Generator
+from pathlib import Path
+from typing import Any, TypedDict, Unpack, cast
 
 import pytest
 from ditto_data.storage.metadata.fee_schedule_reader import (
@@ -12,6 +14,7 @@ from ditto_data.storage.metadata.fee_schedule_reader import (
 from ditto_data.storage.metadata.fee_schedule_writer import (
     SQLiteFeeScheduleWriter,
 )
+from ditto_kernel.identity import InstrumentId
 from ditto_platform.foundation import SQLitePool
 
 # ---------------------------------------------------------------------------
@@ -20,7 +23,7 @@ from ditto_platform.foundation import SQLitePool
 
 
 @pytest.fixture
-def pool(tmp_path: object) -> Generator[SQLitePool]:
+def pool(tmp_path: Path) -> Generator[SQLitePool]:
     """Create a SQLitePool with fee_schedule schema initialized."""
     p = SQLitePool(str(tmp_path / "test_fee_schedule.db"))
     writer = SQLiteFeeScheduleWriter(p)
@@ -45,8 +48,22 @@ def writer(pool: SQLitePool) -> SQLiteFeeScheduleWriter:
 # Test data factories
 # ---------------------------------------------------------------------------
 
+
+class _Defaults(TypedDict, total=False):
+    """_make 覆写参数的精确键型（调用侧受检）。"""
+
+    instrument_id: InstrumentId
+    as_of_date: str
+    commission_rate: float
+    min_commission: float
+    stamp_duty_rate: float
+    transfer_fee_rate: float
+    effective_from: str
+    effective_to: str | None
+
+
 _DEFAULTS: dict[str, object] = {
-    "instrument_id": 1,
+    "instrument_id": InstrumentId(1),
     "as_of_date": "2026-01-01",
     "commission_rate": 0.0003,
     "min_commission": 5.0,
@@ -57,8 +74,9 @@ _DEFAULTS: dict[str, object] = {
 }
 
 
-def _make(**overrides: object) -> FeeScheduleRecord:
-    return FeeScheduleRecord(**{**_DEFAULTS, **overrides})
+def _make(**overrides: Unpack[_Defaults]) -> FeeScheduleRecord:
+    # 覆写参数经 Unpack[TypedDict] 调用侧受检；合并字典构造点单点放宽。
+    return FeeScheduleRecord(**cast("dict[str, Any]", {**_DEFAULTS, **overrides}))
 
 
 # ---------------------------------------------------------------------------
@@ -102,8 +120,8 @@ class TestSQLiteFeeScheduleWriter:
         self, writer: SQLiteFeeScheduleWriter, reader: SQLiteFeeScheduleReader
     ) -> None:
         """write() should accumulate records."""
-        writer.write(_make(instrument_id=1))
-        writer.write(_make(instrument_id=2))
+        writer.write(_make(instrument_id=InstrumentId(1)))
+        writer.write(_make(instrument_id=InstrumentId(2)))
         assert len(reader.list_all()) == 2
 
     def test_write_upserts_on_conflict(
@@ -130,7 +148,7 @@ class TestSQLiteFeeScheduleReader:
     ) -> None:
         """get() should return the record matching instrument_id and PIT condition."""
         writer.write(_make())
-        result = reader.get(1, "2026-03-01")
+        result = reader.get(InstrumentId(1), "2026-03-01")
         assert result is not None
         assert result.commission_rate == pytest.approx(0.0003)
 
@@ -138,13 +156,13 @@ class TestSQLiteFeeScheduleReader:
         self, reader: SQLiteFeeScheduleReader
     ) -> None:
         """get() should return None when no record matches."""
-        assert reader.get(999, "2026-01-01") is None
+        assert reader.get(InstrumentId(999), "2026-01-01") is None
 
     def test_get_returns_none_for_empty_db(
         self, reader: SQLiteFeeScheduleReader
     ) -> None:
         """get() on an empty database should return None."""
-        assert reader.get(1, "2026-01-01") is None
+        assert reader.get(InstrumentId(1), "2026-01-01") is None
 
     def test_pit_effective_from_boundary(
         self, writer: SQLiteFeeScheduleWriter, reader: SQLiteFeeScheduleReader
@@ -156,8 +174,8 @@ class TestSQLiteFeeScheduleReader:
                 effective_to=None,
             )
         )
-        assert reader.get(1, "2026-02-01") is not None
-        assert reader.get(1, "2026-01-31") is None
+        assert reader.get(InstrumentId(1), "2026-02-01") is not None
+        assert reader.get(InstrumentId(1), "2026-01-31") is None
 
     def test_pit_effective_to_boundary(
         self, writer: SQLiteFeeScheduleWriter, reader: SQLiteFeeScheduleReader
@@ -169,8 +187,8 @@ class TestSQLiteFeeScheduleReader:
                 effective_to="2026-02-15",
             )
         )
-        assert reader.get(1, "2026-02-14") is not None
-        assert reader.get(1, "2026-02-15") is None
+        assert reader.get(InstrumentId(1), "2026-02-14") is not None
+        assert reader.get(InstrumentId(1), "2026-02-15") is None
 
     def test_pit_selects_latest_version(
         self, writer: SQLiteFeeScheduleWriter, reader: SQLiteFeeScheduleReader
@@ -193,12 +211,12 @@ class TestSQLiteFeeScheduleReader:
             )
         )
         # Historical version
-        result_old = reader.get(1, "2023-01-15")
+        result_old = reader.get(InstrumentId(1), "2023-01-15")
         assert result_old is not None
         assert result_old.stamp_duty_rate == pytest.approx(0.0005)
 
         # Current version
-        result_new = reader.get(1, "2026-01-01")
+        result_new = reader.get(InstrumentId(1), "2026-01-01")
         assert result_new is not None
         assert result_new.stamp_duty_rate == pytest.approx(0.00025)
 
@@ -207,16 +225,20 @@ class TestSQLiteFeeScheduleReader:
     ) -> None:
         """effective_to IS NULL means the version is still valid."""
         writer.write(_make())
-        assert reader.get(1, "2099-12-31") is not None
+        assert reader.get(InstrumentId(1), "2099-12-31") is not None
 
     def test_pit_multiple_instruments(
         self, writer: SQLiteFeeScheduleWriter, reader: SQLiteFeeScheduleReader
     ) -> None:
         """get() should isolate queries by instrument_id."""
-        writer.write(_make(instrument_id=1, commission_rate=0.0003))
-        writer.write(_make(instrument_id=2, commission_rate=0.0005))
-        assert reader.get(1, "2026-03-01").commission_rate == pytest.approx(0.0003)
-        assert reader.get(2, "2026-03-01").commission_rate == pytest.approx(0.0005)
+        writer.write(_make(instrument_id=InstrumentId(1), commission_rate=0.0003))
+        writer.write(_make(instrument_id=InstrumentId(2), commission_rate=0.0005))
+        result = reader.get(InstrumentId(1), "2026-03-01")
+        assert result is not None
+        assert result.commission_rate == pytest.approx(0.0003)
+        result = reader.get(InstrumentId(2), "2026-03-01")
+        assert result is not None
+        assert result.commission_rate == pytest.approx(0.0005)
 
     def test_pit_gap_between_versions(
         self, writer: SQLiteFeeScheduleWriter, reader: SQLiteFeeScheduleReader
@@ -234,7 +256,7 @@ class TestSQLiteFeeScheduleReader:
                 effective_to=None,
             )
         )
-        assert reader.get(1, "2026-02-15") is None
+        assert reader.get(InstrumentId(1), "2026-02-15") is None
 
     def test_float_precision_round_trip(
         self, writer: SQLiteFeeScheduleWriter, reader: SQLiteFeeScheduleReader
@@ -247,7 +269,7 @@ class TestSQLiteFeeScheduleReader:
             transfer_fee_rate=0.00001,
         )
         writer.write(record)
-        result = reader.get(1, "2026-03-01")
+        result = reader.get(InstrumentId(1), "2026-03-01")
         assert result is not None
         assert result.commission_rate == pytest.approx(0.00025)
         assert result.min_commission == pytest.approx(5.0)
@@ -266,18 +288,22 @@ class TestLoadAndRead:
     ) -> None:
         """load() should persist records via INSERT OR REPLACE."""
         records = [
-            _make(instrument_id=1),
-            _make(instrument_id=2),
+            _make(instrument_id=InstrumentId(1)),
+            _make(instrument_id=InstrumentId(2)),
         ]
         writer.load(records)
-        assert reader.get(1, "2026-03-01") is not None
-        assert reader.get(2, "2026-03-01") is not None
+        assert reader.get(InstrumentId(1), "2026-03-01") is not None
+        assert reader.get(InstrumentId(2), "2026-03-01") is not None
 
     def test_load_replaces_existing(
         self, writer: SQLiteFeeScheduleWriter, reader: SQLiteFeeScheduleReader
     ) -> None:
         """load() with same PK should replace existing records."""
         writer.load([_make(commission_rate=0.0003)])
-        assert reader.get(1, "2026-03-01").commission_rate == pytest.approx(0.0003)
+        result = reader.get(InstrumentId(1), "2026-03-01")
+        assert result is not None
+        assert result.commission_rate == pytest.approx(0.0003)
         writer.load([_make(commission_rate=0.0008)])
-        assert reader.get(1, "2026-03-01").commission_rate == pytest.approx(0.0008)
+        result = reader.get(InstrumentId(1), "2026-03-01")
+        assert result is not None
+        assert result.commission_rate == pytest.approx(0.0008)

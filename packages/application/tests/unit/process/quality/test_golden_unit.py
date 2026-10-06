@@ -86,11 +86,11 @@ class TestGoldenDatasetFilter:
     @pytest.fixture
     def handler_with_golden(
         self,
-        mock_quality_engine: pytest.fixture,
-        mock_tdx_source: pytest.fixture,
-        mock_comparison_writer: pytest.fixture,
-        mock_instrument_store: pytest.fixture,
-        golden_spec: pytest.fixture,
+        mock_quality_engine,
+        mock_tdx_source,
+        mock_comparison_writer,
+        mock_instrument_store,
+        golden_spec,
     ) -> ReconcileSourcesHandler:
         """带黄金数据集的对账 handler."""
         return ReconcileSourcesHandler(
@@ -104,10 +104,10 @@ class TestGoldenDatasetFilter:
     @pytest.fixture
     def handler_without_golden(
         self,
-        mock_quality_engine: pytest.fixture,
-        mock_tdx_source: pytest.fixture,
-        mock_comparison_writer: pytest.fixture,
-        mock_instrument_store: pytest.fixture,
+        mock_quality_engine,
+        mock_tdx_source,
+        mock_comparison_writer,
+        mock_instrument_store,
     ) -> ReconcileSourcesHandler:
         """不带黄金数据集的对账 handler."""
         return ReconcileSourcesHandler(
@@ -175,15 +175,15 @@ class TestGoldenDatasetFilter:
     @pytest.mark.asyncio
     async def test_reconciliation_with_golden_filter(
         self,
-        mock_quality_engine: pytest.fixture,
-        mock_tdx_source: pytest.fixture,
-        mock_comparison_writer: pytest.fixture,
-        mock_instrument_store: pytest.fixture,
-        mock_secondary_identity_resolver: pytest.fixture,
-        golden_spec: pytest.fixture,
-        sample_primary_df: pytest.fixture,
-        sample_secondary_df: pytest.fixture,
-        sample_dq_result_passed: pytest.fixture,
+        mock_quality_engine,
+        mock_tdx_source,
+        mock_comparison_writer,
+        mock_instrument_store,
+        mock_secondary_identity_resolver,
+        golden_spec,
+        sample_primary_df,
+        sample_secondary_df,
+        sample_dq_result_passed,
     ) -> None:
         """对账服务集成黄金数据集过滤（辅源身份反解 → instrument_id 比较）."""
         # Arrange
@@ -232,11 +232,11 @@ class TestGoldenDatasetFilter:
     @pytest.mark.asyncio
     async def test_reconciliation_empty_after_golden_filter(
         self,
-        mock_quality_engine: pytest.fixture,
-        mock_tdx_source: pytest.fixture,
-        mock_comparison_writer: pytest.fixture,
-        mock_instrument_store: pytest.fixture,
-        sample_dq_result_passed: pytest.fixture,
+        mock_quality_engine,
+        mock_tdx_source,
+        mock_comparison_writer,
+        mock_instrument_store,
+        sample_dq_result_passed,
     ) -> None:
         """黄金数据集过滤后为空，跳过对账."""
         # Arrange - 黄金数据集只有 000001
