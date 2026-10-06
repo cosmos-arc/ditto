@@ -269,6 +269,24 @@ class TestFuyaoSourceMappingIntegration:
         assert count is not None
         assert count["n"] == 0
 
+    def test_unrecognized_prefix_left_unresolved_with_trace(
+        self, service: InstrumentService, client: SQLiteClient
+    ) -> None:
+        """#516：未识别前缀（900xxx B 股）按规则 5 不解析，不中断其余键."""
+        resolved = service.resolve_fuyao_instrument_ids(
+            ["600000.SH", "900901"],
+            evidence_dates={"600000.SH": "2026-09-18"},
+            observed_at="2026-09-19 08:00:00",
+            register_missing=True,
+        )
+
+        assert resolved == {"600000.SH": 1_000_001}
+        # 未识别前缀的裸码不登记任何映射（不猜测交易所）
+        rows = client.fetchall(
+            "SELECT source_ticker FROM instrument_mapping WHERE source = 'fuyao'"
+        )
+        assert [row["source_ticker"] for row in rows] == ["600000.SH"]
+
     def test_read_only_mode_never_writes(
         self, service: InstrumentService, writer: InstrumentWriter, client: SQLiteClient
     ) -> None:

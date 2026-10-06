@@ -31,7 +31,13 @@ class SinaClient:
         self._client = httpx.Client(
             base_url=base_url.rstrip("/"),
             timeout=timeout,
-            headers={"Content-Type": "application/json"},
+            headers={
+                "Content-Type": "application/json",
+                # 社区反爬案例：新浪系接口常要求站内 Referer，缺失时表现为
+                # IP 级限流/Empty reply（#508 调研）——2026-10-05 实测尚可用，
+                # 补头属低成本预防，不改变匿名无 key 形态。
+                "Referer": "https://finance.sina.com.cn/",
+            },
         )
 
     @retry(

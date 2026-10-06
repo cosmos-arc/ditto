@@ -5,21 +5,37 @@ Base URL https://fuyao.aicubes.cn，鉴权头 X-api-key，统一响应信封
 ApiResponse：``{code, message, request_id, data}``，业务失败 code != 0
 （2001 无效 key、2003 无权限、4001 限流）。时间字段为毫秒 Unix 时间戳，
 交易日按 Asia/Shanghai 解释。
+
+限流（官方 llms.txt「调用频率与限流」）：不限累计次数，策略按服务端负载
+动态调整，HTTP 429 与 code=4001 均表示触发限流，官方建议降低频率、避免
+立即连续重试。宽基对账逐标的串行连发数千请求（#508）——默认 0.1s 节流，
+触发限流时间隔 ×2 自适应上升（封顶 2s），并按 2s/4s/8s 退避重试至多 3 次；
+重试耗尽仍以 SourceFetchError fail-closed（对账按标的隔离语义不变）.
 """
 
 from __future__ import annotations
 
+import time
 from datetime import UTC, date, datetime, timedelta, timezone
-from typing import Any, BinaryIO
+from typing import Any, BinaryIO, cast
 
 import httpx
 import orjson
 from ditto_platform.foundation import logger
 
 from ditto_data.sources.base import SourceConfigurationError, SourceFetchError
+from ditto_data.sources.throttle import MinIntervalThrottle
 
 # fuyao 文档约定：交易日毫秒戳按 Asia/Shanghai 零点解释
 _BEIJING = timezone(timedelta(hours=8))
+
+# 限流治理常量（#516）：间隔/退避均可在测试中注入或 monkeypatch
+_FUYAO_DEFAULT_MIN_REQUEST_INTERVAL = 0.1
+_FUYAO_MAX_REQUEST_INTERVAL = 2.0
+_FUYAO_RATE_LIMIT_CODE = 4001
+_FUYAO_HTTP_TOO_MANY_REQUESTS = 429
+_FUYAO_RATE_LIMIT_RETRIES = 3
+_FUYAO_RATE_LIMIT_BACKOFF_BASE_SECONDS = 2.0
 
 
 def ms_to_date(ms: int) -> date:
@@ -45,6 +61,7 @@ class FuyaoClient:
         base_url: str = "https://fuyao.aicubes.cn",
         api_key: str = "",
         timeout: float = 30.0,
+        min_request_interval: float | None = None,
     ) -> None:
         if not api_key:
             raise SourceConfigurationError(
@@ -60,12 +77,90 @@ class FuyaoClient:
             timeout=timeout,
             headers={"X-api-key": api_key},
         )
+        self._throttle = MinIntervalThrottle(
+            _FUYAO_DEFAULT_MIN_REQUEST_INTERVAL
+            if min_request_interval is None
+            else min_request_interval
+        )
+
+    def _backoff_for_rate_limit(self, path: str, attempt: int, *, origin: str) -> None:
+        """
+        限流后退避（官方：避免立即连续重试），并把节流间隔翻倍封顶 2s.
+
+        间隔只升不降（进程内单向）；单次命令进程结束后自然重置.
+        """
+        wait_seconds = _FUYAO_RATE_LIMIT_BACKOFF_BASE_SECONDS * 2**attempt
+        if self._throttle.min_interval > 0:
+            self._throttle.min_interval = min(
+                self._throttle.min_interval * 2, _FUYAO_MAX_REQUEST_INTERVAL
+            )
+        logger.warning(
+            "Fuyao rate limit hit, backing off before retry",
+            event="fuyao_rate_limit_backoff",
+            path=path,
+            origin=origin,
+            attempt=attempt + 1,
+            wait_seconds=wait_seconds,
+            next_min_request_interval=self._throttle.min_interval,
+        )
+        time.sleep(wait_seconds)
+
+    def _get_envelope(self, path: str, params: dict[str, Any] | None) -> dict[str, Any]:
+        """单次到多次限流退避的 GET，返回原始信封 dict（不校验业务码）."""
+        attempt = 0
+        while True:
+            self._throttle.wait()
+            try:
+                response = self._client.get(path, params=params)
+                response.raise_for_status()
+            except httpx.HTTPStatusError as e:
+                status = e.response.status_code
+                if (
+                    status == _FUYAO_HTTP_TOO_MANY_REQUESTS
+                    and attempt < _FUYAO_RATE_LIMIT_RETRIES
+                ):
+                    self._backoff_for_rate_limit(path, attempt, origin=f"http_{status}")
+                    attempt += 1
+                    continue
+                raise SourceFetchError(
+                    source="fuyao",
+                    message=(
+                        f"fuyao {path} http error: {status} "
+                        f"{e.response.text[:200]}"  # 截断防日志爆炸
+                    ),
+                ) from e
+            except httpx.RequestError as e:
+                # 连接/超时等网络错误同样包装：对账按标的隔离只捕
+                # SourceFetchError（#516 评审，与 fred client 对齐）
+                raise SourceFetchError(
+                    source="fuyao",
+                    message=f"fuyao {path} network error: {e}",
+                ) from e
+            try:
+                envelope: object = orjson.loads(response.content)
+            except ValueError as e:
+                raise SourceFetchError(
+                    source="fuyao",
+                    message=f"fuyao {path} returned a non-JSON body",
+                ) from e
+            if not isinstance(envelope, dict):
+                raise SourceFetchError(
+                    source="fuyao",
+                    message=f"fuyao {path} returned a non-object JSON envelope",
+                )
+            typed_envelope = cast("dict[str, Any]", envelope)
+            if (
+                typed_envelope.get("code") == _FUYAO_RATE_LIMIT_CODE
+                and attempt < _FUYAO_RATE_LIMIT_RETRIES
+            ):
+                self._backoff_for_rate_limit(path, attempt, origin="code_4001")
+                attempt += 1
+                continue
+            return typed_envelope
 
     def get(self, path: str, params: dict[str, Any] | None = None) -> dict[str, Any]:
         """GET 并校验信封，返回 data 字段；code != 0 一律 fail-closed 抛错."""
-        response = self._client.get(path, params=params)
-        response.raise_for_status()
-        envelope = orjson.loads(response.content)
+        envelope = self._get_envelope(path, params)
         code = envelope.get("code")
         if code != 0:
             raise SourceFetchError(

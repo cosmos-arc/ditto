@@ -45,6 +45,139 @@ class TestFuyaoTimeConversions:
         assert _to_thscode("830799") == "830799.BJ"
         assert _to_thscode("600519.SH") == "600519.SH"
 
+    def test_ticker_suffix_unknown_prefix_rejected(self) -> None:
+        """#516：未识别前缀（900/200xxx B 股、空串）显式拒绝，不静默落 .SZ."""
+        for bad_ticker in ("900901", "200001", "739001", ""):
+            with pytest.raises(SourceFetchError, match="前缀未识别"):
+                _to_thscode(bad_ticker)
+
+
+@pytest.mark.unit
+class TestFuyaoClientRateLimit:
+    """#516 限流治理 — 节流 + 429/4001 退避重试 + fail-closed 保持."""
+
+    @respx.mock
+    def test_code_4001_retried_then_succeeds_and_interval_adapts(self) -> None:
+        """code=4001 退避后重试成功；节流间隔自适应翻倍（官方：降频重试）."""
+        endpoint = respx.get(f"{_BASE}/api/x").mock(
+            side_effect=[
+                httpx.Response(
+                    200,
+                    json={"code": 4001, "message": "rate limit", "data": None},
+                ),
+                httpx.Response(
+                    200, json={"code": 0, "message": "success", "data": {"item": [1]}}
+                ),
+            ]
+        )
+        client = FuyaoClient(base_url=_BASE, api_key="k", min_request_interval=0.1)
+
+        assert client.get("/api/x") == {"item": [1]}
+        assert endpoint.call_count == 2
+        assert client._throttle.min_interval == pytest.approx(0.2)
+
+    @respx.mock
+    def test_code_4001_exhaustion_fails_closed(self) -> None:
+        """重试耗尽仍 4001 → 按信封错误 fail-closed（隔离语义不变）."""
+        endpoint = respx.get(f"{_BASE}/api/x").mock(
+            return_value=httpx.Response(
+                200, json={"code": 4001, "message": "rate limit", "data": None}
+            )
+        )
+
+        with pytest.raises(SourceFetchError, match="code=4001"):
+            FuyaoClient(base_url=_BASE, api_key="k").get("/api/x")
+
+        assert endpoint.call_count == 4  # 首发 + 3 次退避重试
+
+    @respx.mock
+    def test_http_429_retried_like_4001(self) -> None:
+        """HTTP 429 与 code=4001 同为限流信号（官方 llms.txt），退避重试."""
+        endpoint = respx.get(f"{_BASE}/api/x").mock(
+            side_effect=[
+                httpx.Response(429, json={"code": 4001, "message": "limit"}),
+                httpx.Response(
+                    200, json={"code": 0, "message": "success", "data": {"item": []}}
+                ),
+            ]
+        )
+
+        assert _client().get("/api/x") == {"item": []}
+        assert endpoint.call_count == 2
+
+    @respx.mock
+    def test_http_error_wrapped_without_retry(self) -> None:
+        """非限流 HTTP 错误包装为 SourceFetchError（原为裸 httpx 错误）."""
+        endpoint = respx.get(f"{_BASE}/api/x").mock(
+            return_value=httpx.Response(500, text="internal error")
+        )
+
+        with pytest.raises(SourceFetchError, match="http error: 500"):
+            _client().get("/api/x")
+
+        assert endpoint.call_count == 1
+
+    @respx.mock
+    def test_network_error_wrapped(self) -> None:
+        """连接/超时错误包装为 SourceFetchError（对账按标的隔离只捕该类）."""
+        respx.get(f"{_BASE}/api/x").mock(side_effect=httpx.ConnectError("refused"))
+
+        with pytest.raises(SourceFetchError, match="network error"):
+            _client().get("/api/x")
+
+    @respx.mock
+    def test_non_json_body_wrapped(self) -> None:
+        """200 非 JSON 响应体 → 包装为 SourceFetchError，不裸抛（#516）."""
+        endpoint = respx.get(f"{_BASE}/api/x").mock(
+            return_value=httpx.Response(200, text="<html>bad gateway</html>")
+        )
+
+        with pytest.raises(SourceFetchError, match="non-JSON"):
+            _client().get("/api/x")
+
+        assert endpoint.call_count == 1
+
+    @respx.mock
+    def test_non_object_envelope_rejected(self) -> None:
+        """200 JSON 但信封不是对象 → 拒绝，不裸抛 AttributeError."""
+        respx.get(f"{_BASE}/api/x").mock(
+            return_value=httpx.Response(200, json=[1, 2, 3])
+        )
+
+        with pytest.raises(SourceFetchError, match="non-object JSON"):
+            _client().get("/api/x")
+
+    def test_request_path_is_throttled(
+        self, respx_mock, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """公开 get 路径两次调用间真实走节流（mock 时钟，删调用即失败）."""
+        from ditto_data.sources import throttle as throttle_module
+
+        respx_mock.get(f"{_BASE}/api/x").mock(
+            return_value=httpx.Response(
+                200, json={"code": 0, "message": "success", "data": {"item": []}}
+            )
+        )
+        client = FuyaoClient(base_url=_BASE, api_key="k", min_request_interval=0.1)
+        sleeps: list[float] = []
+        clock = {"now": 100.0}
+
+        def _fake_monotonic() -> float:
+            return clock["now"]
+
+        def _fake_sleep(seconds: float) -> None:
+            sleeps.append(seconds)
+            clock["now"] += seconds
+
+        monkeypatch.setattr(throttle_module.time, "monotonic", _fake_monotonic)
+        monkeypatch.setattr(throttle_module.time, "sleep", _fake_sleep)
+
+        assert client.get("/api/x") == {"item": []}
+        assert client.get("/api/x") == {"item": []}
+
+        # 第二次调用距上次起点 0s（mock 时钟不前进）→ 需补满 0.1s
+        assert sleeps == [pytest.approx(0.1)]
+
 
 @pytest.mark.unit
 class TestFuyaoClientEnvelope:
@@ -783,3 +916,63 @@ class TestFuyaoFundNavFrame:
 
         assert frame.height == 0
         assert frame["unit_nav"].dtype == pl.Float64
+
+
+@pytest.mark.unit
+class TestFuyaoPerTickerIsolation:
+    """#516 评审 F1/F2 — 未识别前缀按标的隔离，单标的身份错误不中断整批."""
+
+    def test_financial_statements_unknown_prefix_skips_ticker(self) -> None:
+        """混入 900xxx B 股裸码：该标的跳过留痕，有效标的结果不受影响."""
+        source = _source_by_thscode(
+            {
+                "600519.SH": {
+                    "item": [_income_item(date(2026, 6, 30), date(2026, 8, 14))]
+                }
+            }
+        )
+
+        frame = source.fetch_financial_statements(
+            "income_statement", ["600519", "900901"]
+        )
+
+        assert frame.height == 1
+        assert frame["ticker"].to_list() == ["600519.SH"]
+
+    def test_fund_nav_unknown_prefix_skips_ticker(self) -> None:
+        target_ms = date_to_ms(date(2026, 9, 30))
+        source = _source_by_thscode(
+            {"510300.SH": {"item": [{"nav_date": target_ms, "unit_nav": 4.4312}]}}
+        )
+
+        frame = source.fetch_fund_nav(["510300", "900901"], "2026-09-30")
+
+        assert frame.height == 1
+        assert frame["ticker"].to_list() == ["510300.SH"]
+
+    def test_stock_daily_bars_unknown_prefix_skips_ticker(self) -> None:
+        """bars 篮子（宽基对账最大篮）同样按标的隔离，不再整批中断."""
+        source = _source_by_thscode(
+            {"600519.SH": {"item": [_bar(date_to_ms(date(2026, 9, 30)), 10.5)]}}
+        )
+
+        frame = source.fetch_stock_daily_bars(["600519", "900901"], "2026-09-30")
+
+        assert frame.height == 1
+        assert frame["ticker"].to_list() == ["600519"]
+
+    def test_stock_daily_bars_contract_violation_skips_ticker(self) -> None:
+        """越窗 bar（契约违约）按标的跳过留痕，其余标的照常返回."""
+        good_ms = date_to_ms(date(2026, 9, 30))
+        bad_ms = date_to_ms(date(2026, 10, 15))
+        source = _source_by_thscode(
+            {
+                "600519.SH": {"item": [_bar(good_ms, 10.5)]},
+                "000001.SZ": {"item": [_bar(bad_ms, 12.0)]},
+            }
+        )
+
+        frame = source.fetch_stock_daily_bars(["600519", "000001"], "2026-09-30")
+
+        assert frame.height == 1
+        assert frame["ticker"].to_list() == ["600519"]

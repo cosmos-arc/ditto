@@ -11,6 +11,8 @@
 - 占位零语义：CL/GC 的 volume/position/settlement 实测恒为 0（ZSD 缺
   settlement 字段），不证明真实成交/持仓/结算，一律不入库；仅存真实
   日线 OHLC。单位/币种逐品种见白名单登记。
+- OHLC 非空校验：源字段改名会经宽松 String+非严格 cast 静默得 null，
+  入库前对窗口内行 fail-closed（#516），拒绝整段静默空数据。
 - trade_date_utc 为交易日纽约午夜占位时间戳（schema 要求），外盘真实
   收盘时刻未验证，不用于可见性判断。
 """
@@ -24,6 +26,7 @@ import polars as pl
 from ditto_platform.foundation import logger
 
 from ditto_data.models import SINA_FOREIGN_FUTURES
+from ditto_data.sources.base import SourceFetchError
 from ditto_data.sources.schemas.commodity_schemas import COMMODITY_SOURCE_SCHEMA
 
 if TYPE_CHECKING:
@@ -87,21 +90,60 @@ class SinaSource:
             )
             # 占位字段（volume/position/s/settlement）不选出：实测恒零或
             # 缺失，不证明真实成交/持仓/结算（#436 口径合同）。
-            transformed = (
-                frame.select(
-                    pl.col("date")
-                    .str.to_date("%Y-%m-%d", strict=False)
-                    .alias("trade_date"),
-                    pl.col("open").cast(pl.Float64, strict=False).alias("open"),
-                    pl.col("high").cast(pl.Float64, strict=False).alias("high"),
-                    pl.col("low").cast(pl.Float64, strict=False).alias("low"),
-                    pl.col("close").cast(pl.Float64, strict=False).alias("close"),
+            parsed = frame.select(
+                pl.col("date"),
+                pl.col("date")
+                .str.to_date("%Y-%m-%d", strict=False)
+                .alias("trade_date"),
+                pl.col("open").cast(pl.Float64, strict=False).alias("open"),
+                pl.col("high").cast(pl.Float64, strict=False).alias("high"),
+                pl.col("low").cast(pl.Float64, strict=False).alias("low"),
+                pl.col("close").cast(pl.Float64, strict=False).alias("close"),
+            )
+            # 字段解析为宽松 String + 非严格 cast：源端 date 字段改名或格式
+            # 变更会静默得 null trade_date，若先 drop_nulls 则整段被静默
+            # 丢弃、OHLC 校验永远不触发（#516 评审 F3）。行存在而日期解析
+            # 失败即 fail-closed，不允许静默缩段。
+            unparsed_dates = parsed.filter(pl.col("trade_date").is_null())
+            if not unparsed_dates.is_empty():
+                sample_raw = unparsed_dates["date"].head(3).to_list()
+                raise SourceFetchError(
+                    source="sina",
+                    message=(
+                        f"sina {symbol} 响应 {unparsed_dates.height} 行日期解析失败"
+                        f" (样本 {sample_raw}):"
+                        " 源字段契约疑似变更 拒绝静默入库 (#516)"
+                    ),
                 )
+            # OHLC 同理：字段改名经非严格 cast 得 null，入库前窗口内非空校验，
+            # fail-closed 防整段静默空数据（#516）。
+            transformed = (
+                parsed.drop("date")
                 .drop_nulls("trade_date")
                 .filter(pl.col("trade_date").is_between(start, end))
             )
             if transformed.is_empty():
                 continue
+            null_ohlc = transformed.filter(
+                pl.any_horizontal(
+                    pl.col("open").is_null(),
+                    pl.col("high").is_null(),
+                    pl.col("low").is_null(),
+                    pl.col("close").is_null(),
+                )
+            )
+            if not null_ohlc.is_empty():
+                sample_dates = (
+                    null_ohlc["trade_date"].head(3).dt.strftime("%Y-%m-%d").to_list()
+                )
+                raise SourceFetchError(
+                    source="sina",
+                    message=(
+                        f"sina {symbol} 窗口内 {null_ohlc.height} 行 OHLC 为 null"
+                        f" (样本 {sample_dates}):"
+                        " 源字段契约疑似变更 拒绝静默入库 (#516)"
+                    ),
+                )
             transformed = transformed.with_columns(
                 pl.lit(instrument_id).alias("instrument_id"),
                 pl.col("trade_date")
