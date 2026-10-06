@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import polars as pl
 import pytest
+from ditto_kernel.identity import InstrumentId
 from ditto_strategy.alpha.builtins.filtering import (
     RiskLockFilter,
     TrendFilterStage,
@@ -44,7 +45,7 @@ def empty_context() -> StrategyContext:
 def context_with_positions() -> StrategyContext:
     """带持仓成本的上下文。"""
     return StrategyContext(
-        positions={1: 0.80, 2: 4.10},
+        positions={InstrumentId(1): 0.80, InstrumentId(2): 4.10},
     )
 
 
@@ -335,8 +336,8 @@ class TestBuildETFTrendSwingPipeline:
         assert 20 in target.positions
         assert 21 in target.positions
         # Equal weight fallback (no AllocationStage): 1.0 / 2 = 0.5
-        assert target.positions[20] == pytest.approx(0.5)
-        assert target.positions[21] == pytest.approx(0.5)
+        assert target.positions[InstrumentId(20)] == pytest.approx(0.5)
+        assert target.positions[InstrumentId(21)] == pytest.approx(0.5)
 
     def test_regime_config_inserts_scoring_step(
         self,

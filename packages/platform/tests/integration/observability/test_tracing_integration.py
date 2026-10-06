@@ -7,6 +7,7 @@
 """
 
 import re
+from typing import cast
 
 import pytest
 from ditto_platform.foundation import (
@@ -17,11 +18,18 @@ from ditto_platform.foundation import (
     traced,
 )
 from ditto_platform.foundation.observability.tracing import (
+    _OTelSpanKinds,
     configure_tracing,
     get_span_id,
     get_trace_id,
 )
-from opentelemetry.trace import SpanKind, StatusCode
+from opentelemetry import trace as otel_trace
+from opentelemetry.trace.status import StatusCode
+
+# 仓库 opentelemetry 窄 stub（typings/opentelemetry/trace.pyi）未声明 API 层
+# SpanKind；运行时枚举经 vars() 桥接取真实成员（与生产 tracing.
+# _otel_span_kind 同款），保持 ``is`` 身份断言语义不变.
+SpanKind = cast("_OTelSpanKinds", vars(otel_trace)["SpanKind"])
 
 
 @pytest.mark.integration

@@ -8,6 +8,8 @@ and E2E pipeline execution.
 
 from __future__ import annotations
 
+from typing import cast
+
 import polars as pl
 import pytest
 from ditto_kernel.identity import InstrumentId
@@ -48,7 +50,8 @@ STOCKS = [
     ("STOCK-HEA-003", "SECTOR-HEA"),
 ]
 
-_INSTRUMENT_ID_MAP: dict[str, InstrumentId] = {
+# 键型取 object：frame 的 instrument_id 为字符串列（兼容映射前 ID）
+_INSTRUMENT_ID_MAP: dict[object, InstrumentId] = {
     "SECTOR-FIN": InstrumentId(100),
     "SECTOR-TECH": InstrumentId(101),
     "SECTOR-HEA": InstrumentId(102),
@@ -1159,7 +1162,8 @@ class TestPipelineE2E:
     ) -> None:
         """RiskLockFilter 排除被锁定标的。"""
         context = StrategyContext()
-        context.lock_instrument("STOCK-TECH-002", "test lock")
+        # frame 阶段 instrument_id 仍为字符串（映射前），字符串兼容路径 cast 运行时恒等
+        context.lock_instrument(cast("InstrumentId", "STOCK-TECH-002"), "test lock")
 
         config = StockSectorRotationConfig(
             top_sectors=2,

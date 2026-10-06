@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import polars as pl
 import pytest
+from ditto_kernel.identity import InstrumentId
 from ditto_strategy.alpha.builtins.filtering import (
     FilterCondition,
     FilteringStage,
@@ -25,6 +26,17 @@ from ditto_strategy.alpha.builtins.universe import UniverseStage
 from ditto_strategy.alpha.context import StrategyContext
 from ditto_strategy.alpha.selection_evidence import SelectionEvidenceCollector
 from ditto_strategy.errors import StrategySpecError
+from polars.exceptions import ColumnNotFoundError
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+
+def _instrument_ids(*values: int) -> frozenset[InstrumentId]:
+    """把裸 int 白名单包成 InstrumentId（NewType 运行时恒等）."""
+    return frozenset(InstrumentId(value) for value in values)
+
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -90,7 +102,7 @@ class TestUniverseStage:
         empty_context: StrategyContext,
     ) -> None:
         """白名单包含所有标的时应原样返回。"""
-        ids = frozenset({1, 2, 3})
+        ids = _instrument_ids(1, 2, 3)
         stage = UniverseStage(instrument_ids=ids)
         result = stage.process(sample_instruments, empty_context)
         assert result.shape == (3, 1)
@@ -102,7 +114,7 @@ class TestUniverseStage:
         empty_context: StrategyContext,
     ) -> None:
         """白名单只包含部分标的时，应保留匹配的行。"""
-        ids = frozenset({1, 2})
+        ids = _instrument_ids(1, 2)
         stage = UniverseStage(instrument_ids=ids)
         result = stage.process(sample_instruments, empty_context)
         assert result.shape == (2, 1)
@@ -113,7 +125,7 @@ class TestUniverseStage:
         empty_context: StrategyContext,
     ) -> None:
         """缺少 instrument_id 时应由 validate_frame 抛出 StrategySpecError。"""
-        stage = UniverseStage(instrument_ids=frozenset({1}))
+        stage = UniverseStage(instrument_ids=_instrument_ids(1))
         bad_frame = pl.DataFrame({"name": ["a", "b"]})
         with pytest.raises(StrategySpecError, match="missing required columns"):
             stage.process(bad_frame, empty_context)
@@ -700,7 +712,7 @@ class TestFilteringStage:
                 ),
             )
         )
-        with pytest.raises(pl.ColumnNotFoundError):
+        with pytest.raises(ColumnNotFoundError):
             stage.process(sample_instruments, empty_context)
 
 
@@ -916,7 +928,7 @@ class TestTrendFilterStage:
         """signal_column 不存在时由 Polars 抛出错误。"""
         frame = pl.DataFrame({"instrument_id": [10, 11]})
         stage = TrendFilterStage(threshold=0.0, direction="long")
-        with pytest.raises(pl.ColumnNotFoundError):
+        with pytest.raises(ColumnNotFoundError):
             stage.process(frame, empty_context)
 
     def test_frozen(self) -> None:
@@ -1115,7 +1127,7 @@ class TestRiskLockFilter:
         """部分标的被锁定时应过滤掉锁定行。"""
         ctx = StrategyContext(
             risk_locked_instruments={
-                1: ("stop_loss", None),
+                InstrumentId(1): ("stop_loss", None),
             },
         )
         stage = RiskLockFilter()
@@ -1130,9 +1142,9 @@ class TestRiskLockFilter:
         """所有标的被锁定时应返回空 frame。"""
         ctx = StrategyContext(
             risk_locked_instruments={
-                1: ("stop_loss", None),
-                2: ("stop_loss", None),
-                3: ("stop_loss", None),
+                InstrumentId(1): ("stop_loss", None),
+                InstrumentId(2): ("stop_loss", None),
+                InstrumentId(3): ("stop_loss", None),
             },
         )
         stage = RiskLockFilter()
@@ -1143,7 +1155,7 @@ class TestRiskLockFilter:
         """空 frame 加锁定列表仍返回空 frame。"""
         ctx = StrategyContext(
             risk_locked_instruments={
-                1: ("stop_loss", None),
+                InstrumentId(1): ("stop_loss", None),
             },
         )
         empty_frame = pl.DataFrame(
@@ -1189,7 +1201,7 @@ class TestFullPipelineIntegration:
         )
 
         # Stage 1: Universe - 保留 10, 11, 12, 13
-        universe = UniverseStage(instrument_ids=frozenset({10, 11, 12, 13}))
+        universe = UniverseStage(instrument_ids=_instrument_ids(10, 11, 12, 13))
 
         # Stage 2: Signal - 将 momentum 重命名为 signal_value
         signal = SignalStage(

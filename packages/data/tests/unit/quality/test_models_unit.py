@@ -6,6 +6,7 @@ from ditto_data.quality.spec import (
     DQSpec,
     NotNullRule,
     RangeCheckRule,
+    RuleType,
     UniqueRule,
     ZScoreRule,
 )
@@ -65,7 +66,7 @@ class TestRuleModels:
     def test_not_null_rule(self) -> None:
         """Test NotNullRule validation."""
         rule = NotNullRule(
-            rule="not_null",
+            rule=RuleType.NOT_NULL,
             columns=["instrument_id", "trade_date"],
             message="Fields required",
         )
@@ -76,7 +77,7 @@ class TestRuleModels:
     def test_unique_rule(self) -> None:
         """Test UniqueRule validation."""
         rule = UniqueRule(
-            rule="unique",
+            rule=RuleType.UNIQUE,
             columns=["instrument_id", "trade_date"],
             message="Primary key unique",
         )
@@ -88,7 +89,7 @@ class TestRuleModels:
         """Test ZScoreRule validation."""
         # Valid rule
         rule = ZScoreRule(
-            rule="zscore",
+            rule=RuleType.ZSCORE,
             name="volume_spike",
             column="volume",
             window=60,
@@ -104,7 +105,7 @@ class TestRuleModels:
         # Invalid threshold
         with pytest.raises(ValidationError):
             ZScoreRule(
-                rule="zscore",
+                rule=RuleType.ZSCORE,
                 name="test",
                 column="volume",
                 threshold=-1.0,  # Must be > 0
@@ -114,7 +115,7 @@ class TestRuleModels:
         # Invalid window
         with pytest.raises(ValidationError):
             ZScoreRule(
-                rule="zscore",
+                rule=RuleType.ZSCORE,
                 name="test",
                 column="volume",
                 window=0,  # Must be >= 1
@@ -124,7 +125,7 @@ class TestRuleModels:
     def test_range_check_rule(self) -> None:
         """Test RangeCheckRule validation."""
         rule = RangeCheckRule(
-            rule="range_check",
+            rule=RuleType.RANGE_CHECK,
             column="close",
             min_ratio=0.01,
             max_ratio=1.11,

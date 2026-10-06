@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import sqlite3
+from collections.abc import Iterator
 from dataclasses import asdict
 from typing import Any
 
@@ -77,7 +78,7 @@ class _SQLiteBackend:
 
 
 @pytest.fixture
-def sqlite_backend() -> _SQLiteBackend:
+def sqlite_backend() -> Iterator[_SQLiteBackend]:
     """In-memory SQLite backend with compile cache schema."""
     conn = sqlite3.connect(":memory:")
     conn.executescript(_SCHEMA_SQL)

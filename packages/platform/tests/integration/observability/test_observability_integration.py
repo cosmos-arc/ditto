@@ -7,6 +7,7 @@
 """
 
 import re
+from typing import Any, TypedDict, Unpack, cast
 
 import pytest
 from ditto_platform.foundation import (
@@ -25,7 +26,19 @@ from ditto_platform.foundation import (
 from ditto_platform.foundation.config.environment import Environment
 
 
-def _test_config(**overrides: object) -> ObservabilityConfig:
+class _TestConfigKwargs(TypedDict, total=False):
+    """_test_config 覆写参数的精确键型（调用侧受检，#540）."""
+
+    environment: Environment
+    pytest_running: bool
+    assertions_enabled: bool | None
+    verbose_logging: bool | None
+    tracing_enabled: bool | None
+    tracing_sample_rate: float | None
+    metrics_enabled: bool | None
+
+
+def _test_config(**overrides: Unpack[_TestConfigKwargs]) -> ObservabilityConfig:
     values: dict[str, object] = {
         "environment": Environment.TESTING,
         "pytest_running": True,
@@ -35,8 +48,8 @@ def _test_config(**overrides: object) -> ObservabilityConfig:
         "tracing_sample_rate": 1.0,
         "metrics_enabled": True,
     }
-    values.update(overrides)
-    return ObservabilityConfig(**values)
+    # 覆写参数经 Unpack[TypedDict] 调用侧受检；合并字典构造点单点放宽。
+    return ObservabilityConfig(**cast("dict[str, Any]", {**values, **overrides}))
 
 
 class TestInit:

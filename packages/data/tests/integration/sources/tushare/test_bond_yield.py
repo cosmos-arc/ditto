@@ -94,8 +94,14 @@ class TestTushareBondYieldIngestion:
         # 验证数值范围合理（10年期国债收益率通常在 1.5%-5% 之间）
         values = yield_10y_df["value"].drop_nulls()
         if values.len() > 0:
-            assert values.min() > 1.0, "国债收益率应该大于 1%"
-            assert values.max() < 6.0, "国债收益率应该小于 6%"
+            min_value = values.min()
+            max_value = values.max()
+            assert min_value is not None
+            assert max_value is not None
+            assert isinstance(min_value, int | float), "收益率取值应为数值"
+            assert isinstance(max_value, int | float), "收益率取值应为数值"
+            assert min_value > 1.0, "国债收益率应该大于 1%"
+            assert max_value < 6.0, "国债收益率应该小于 6%"
 
     def test_fetch_multiple_maturities(
         self, tushare_adapter: BondYieldTushareAdapter

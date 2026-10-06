@@ -46,7 +46,8 @@ def empty_context() -> StrategyContext:
     return StrategyContext()
 
 
-def _build_stock_id_map(ids: list[str]) -> dict[str, InstrumentId]:
+def _build_stock_id_map(ids: list[str]) -> dict[object, InstrumentId]:
+    """字符串 ticker → canonical InstrumentId（匹配 bundle 的 object 键型）."""
     return {ticker: InstrumentId(index) for index, ticker in enumerate(ids, start=1)}
 
 

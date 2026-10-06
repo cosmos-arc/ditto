@@ -12,6 +12,7 @@ import importlib.util
 from pathlib import Path
 
 from ditto_backtest.engine import EngineLoop
+from ditto_strategy.alpha.builtins.scoring import ScoringMethod
 from ditto_strategy.alpha.pipeline import StrategyPipeline
 from ditto_strategy.alpha.templates.etf_trend_swing import (
     ETFTrendSwingConfig,
@@ -20,6 +21,7 @@ from ditto_strategy.alpha.templates.etf_trend_swing import (
 
 _conftest_path = Path(__file__).parent / "conftest.py"
 _spec = importlib.util.spec_from_file_location("_conftest", _conftest_path)
+assert _spec is not None
 _mod = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(_mod)  # type: ignore[union-attr]
 
@@ -46,7 +48,7 @@ def _build_trend_swing_engine(
         trend_threshold=0.0,
         trailing_stop_pct=trailing_stop_pct,
         max_positions=5,
-        scoring_method="rank",
+        scoring_method=ScoringMethod.RANK,
         scoring_ascending=False,
         allocation_method="equal_weight",
         cash_target=0.0,

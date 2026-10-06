@@ -3,10 +3,15 @@
 from __future__ import annotations
 
 import operator
-from collections.abc import Mapping
+from collections.abc import Mapping, MutableMapping
 from dataclasses import FrozenInstanceError, replace
+from typing import cast
 
 import pytest
+from ditto_strategy.alpha.node_registry import (
+    NodeConfigType,
+    NodeDescriptor,
+)
 from ditto_strategy.alpha.nodes import (
     NodeCategory,
     NodeInstance,
@@ -26,12 +31,7 @@ def _descriptor(
     display_name: str | None = None,
     implementation_key: str | None = None,
     origin: str = "builtin",
-) -> object:
-    from ditto_strategy.alpha.node_registry import (
-        NodeConfigType,
-        NodeDescriptor,
-    )
-
+) -> NodeDescriptor:
     return NodeDescriptor(
         node_type=node_type,
         version="1",
@@ -54,7 +54,7 @@ def _descriptor(
 def _golden_descriptors(
     *,
     scorer_input: str = "factor_frame.v1",
-) -> tuple[object, ...]:
+) -> tuple[NodeDescriptor, ...]:
     categories = (
         (
             "test.universe",
@@ -214,9 +214,25 @@ class TestNodeDescriptor:
         with pytest.raises(FrozenInstanceError):
             descriptor.display_name = "changed"  # type: ignore[misc]
         with pytest.raises(TypeError):
-            operator.setitem(descriptor.config_schema, "added", NodeConfigType.JSON)
+            # 负向测试：冻结 MappingProxyType，借可变视图触发 setitem 失败
+            operator.setitem(
+                cast(
+                    "MutableMapping[str, NodeConfigType]",
+                    descriptor.config_schema,
+                ),
+                "added",
+                NodeConfigType.JSON,
+            )
         with pytest.raises(TypeError):
-            operator.setitem(descriptor.default_config, "label", "changed")
+            # 负向测试：冻结 MappingProxyType，借可变视图触发 setitem 失败
+            operator.setitem(
+                cast(
+                    "MutableMapping[str, object]",
+                    descriptor.default_config,
+                ),
+                "label",
+                "changed",
+            )
 
     def test_schema_may_require_config_without_defining_a_default(self) -> None:
         from ditto_strategy.alpha.node_registry import (

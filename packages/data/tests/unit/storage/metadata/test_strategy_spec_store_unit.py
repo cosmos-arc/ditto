@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import sqlite3
+from collections.abc import Generator
 from pathlib import Path
 
 import pytest
@@ -15,7 +16,7 @@ from ditto_strategy.storage.sqlite.strategy_spec_store import (
 
 
 @pytest.fixture
-def pool(tmp_path: Path) -> SQLitePool:
+def pool(tmp_path: Path) -> Generator[SQLitePool]:
     """Create a SQLitePool backed by a temporary file."""
     p = SQLitePool(str(tmp_path / "test.db"))
     yield p

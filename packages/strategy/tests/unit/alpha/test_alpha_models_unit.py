@@ -3,6 +3,7 @@
 from dataclasses import FrozenInstanceError
 
 import pytest
+from ditto_kernel.identity import InstrumentId
 
 
 class TestStrategyVersion:
@@ -116,14 +117,14 @@ class TestSignalSnapshot:
             strategy_id="etf_momentum_rotation",
             run_id="RUN-001",
             signals={
-                1: 0.85,
-                2: 0.62,
-                3: 0.41,
+                InstrumentId(1): 0.85,
+                InstrumentId(2): 0.62,
+                InstrumentId(3): 0.41,
             },
         )
         assert snapshot.trade_date == "2026-01-15"
         assert len(snapshot.signals) == 3
-        assert snapshot.signals[1] == pytest.approx(0.85)
+        assert snapshot.signals[InstrumentId(1)] == pytest.approx(0.85)
 
     def test_is_frozen(self) -> None:
         from ditto_strategy.alpha.models import SignalSnapshot
@@ -132,7 +133,7 @@ class TestSignalSnapshot:
             trade_date="2026-01-15",
             strategy_id="test",
             run_id="RUN-001",
-            signals={10: 0.5},
+            signals={InstrumentId(10): 0.5},
         )
         with pytest.raises(FrozenInstanceError):
             snapshot.trade_date = "2026-01-16"  # type: ignore[misc]
@@ -170,9 +171,9 @@ class TestTargetPortfolio:
             strategy_id="etf_momentum_rotation",
             run_id="RUN-001",
             positions={
-                1: 0.35,
-                2: 0.35,
-                3: 0.30,
+                InstrumentId(1): 0.35,
+                InstrumentId(2): 0.35,
+                InstrumentId(3): 0.30,
             },
             cash_target=0.0,
         )
@@ -186,7 +187,7 @@ class TestTargetPortfolio:
             trade_date="2026-01-15",
             strategy_id="test",
             run_id="RUN-001",
-            positions={10: 0.40, 20: 0.40},
+            positions={InstrumentId(10): 0.40, InstrumentId(20): 0.40},
             cash_target=0.20,
         )
         assert target.cash_target == 0.20
@@ -201,9 +202,9 @@ class TestRebalancePlan:
             strategy_id="etf_momentum_rotation",
             run_id="RUN-001",
             target_weights={
-                1: 0.40,
-                2: 0.35,
-                3: 0.25,
+                InstrumentId(1): 0.40,
+                InstrumentId(2): 0.35,
+                InstrumentId(3): 0.25,
             },
         )
         assert plan.executed is False

@@ -4,19 +4,23 @@ from __future__ import annotations
 
 import math
 import operator
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Mapping, MutableMapping
 from dataclasses import FrozenInstanceError
+from typing import TYPE_CHECKING, cast
 
 import pytest
 from ditto_strategy.errors import StrategySpecError
 
+if TYPE_CHECKING:
+    from ditto_strategy.alpha.nodes import NodeCategory, NodeInstance
+
 
 def _node(
     node_id: str,
-    category: object,
+    category: NodeCategory,
     *,
     node_type: str | None = None,
-) -> object:
+) -> NodeInstance:
     from ditto_strategy.alpha.nodes import NodeInstance, NodeRef
 
     resolved_type = node_type or node_id.replace("_", ".")
@@ -26,6 +30,11 @@ def _node(
         category=category,
         config={},
     )
+
+
+def _try_setitem(target: object, key: object, value: object) -> None:
+    """负向断言辅助：operator.setitem 形参要求 MutableMapping，而被测对象刻意不可变."""
+    operator.setitem(cast("MutableMapping[object, object]", target), key, value)
 
 
 class TestNodeCategory:
@@ -189,7 +198,8 @@ class TestPipelineSpec:
             "sequence": ("universe",),
         }
         values[field_name] = invalid_value
-        constructor: Callable[..., PipelineSpec] = PipelineSpec
+        # 负向测试：动态键名 × 非法值无法静态收窄，按 ... 签名调用以触发校验错误
+        constructor = cast("Callable[..., PipelineSpec]", PipelineSpec)
 
         with pytest.raises(StrategySpecError, match=field_name):
             constructor(**values)
@@ -231,11 +241,11 @@ class TestNodeInstanceCanonicalConfig:
         assert isinstance(weights, tuple)
 
         with pytest.raises(TypeError):
-            operator.setitem(node.config, "added", True)
+            _try_setitem(node.config, "added", True)
         with pytest.raises(TypeError):
-            operator.setitem(nested, "added", True)
+            _try_setitem(nested, "added", True)
         with pytest.raises(TypeError):
-            operator.setitem(weights, 0, 1.0)
+            _try_setitem(weights, 0, 1.0)
 
         source_nested = source["nested"]
         assert isinstance(source_nested, dict)

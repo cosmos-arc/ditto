@@ -2,11 +2,17 @@
 
 import math
 import operator
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Mapping, MutableMapping
 from dataclasses import FrozenInstanceError
+from typing import cast
 
 import pytest
 from ditto_strategy.errors import StrategySpecError
+
+
+def _try_setitem(target: object, key: object, value: object) -> None:
+    """负向断言辅助：operator.setitem 形参要求 MutableMapping，而被测快照刻意不可变."""
+    operator.setitem(cast("MutableMapping[object, object]", target), key, value)
 
 
 class TestParamConstraint:
@@ -60,7 +66,8 @@ class TestParamConstraint:
     ) -> None:
         from ditto_strategy.alpha.specs import ParamConstraint
 
-        constructor: Callable[..., ParamConstraint] = ParamConstraint
+        # 动态键名 kwargs：按 ... 签名调用，运行时仍走完整校验
+        constructor = cast("Callable[..., ParamConstraint]", ParamConstraint)
         positive = constructor(
             name="lookback",
             dtype="float",
@@ -83,7 +90,8 @@ class TestParamConstraint:
     ) -> None:
         from ditto_strategy.alpha.specs import ParamConstraint
 
-        constructor: Callable[..., ParamConstraint] = ParamConstraint
+        # 动态键名 kwargs：按 ... 签名调用，运行时仍走完整校验
+        constructor = cast("Callable[..., ParamConstraint]", ParamConstraint)
         parameter = constructor(
             name="lookback",
             dtype="float",
@@ -101,7 +109,8 @@ class TestParamConstraint:
     ) -> None:
         from ditto_strategy.alpha.specs import ParamConstraint
 
-        constructor: Callable[..., ParamConstraint] = ParamConstraint
+        # 动态键名 kwargs：按 ... 签名调用，运行时仍走完整校验
+        constructor = cast("Callable[..., ParamConstraint]", ParamConstraint)
         exact_integer = 2**53
         lossy_integer = exact_integer + 1
         assert float(exact_integer) == float(lossy_integer)
@@ -129,7 +138,8 @@ class TestParamConstraint:
     def test_rejects_bool_numeric_identity_fields(self, field_name: str) -> None:
         from ditto_strategy.alpha.specs import ParamConstraint
 
-        constructor: Callable[..., ParamConstraint] = ParamConstraint
+        # 动态键名 kwargs：按 ... 签名调用，运行时仍走完整校验
+        constructor = cast("Callable[..., ParamConstraint]", ParamConstraint)
 
         with pytest.raises(StrategySpecError) as exc_info:
             constructor(
@@ -174,8 +184,11 @@ class TestParamConstraint:
     ) -> None:
         from ditto_strategy.alpha.specs import ParamConstraint
 
+        # 负向测试：动态键名 × 非法值按 ... 签名注入以触发校验错误
+        constructor = cast("Callable[..., ParamConstraint]", ParamConstraint)
+
         with pytest.raises(StrategySpecError, match=field_name):
-            ParamConstraint(
+            constructor(
                 name="lookback",
                 dtype="float",
                 **{field_name: invalid_value},
@@ -222,7 +235,8 @@ class TestParamConstraint:
     ) -> None:
         from ditto_strategy.alpha.specs import ParamConstraint
 
-        constructor: Callable[..., ParamConstraint] = ParamConstraint
+        # 动态键名 kwargs：按 ... 签名调用，运行时仍走完整校验
+        constructor = cast("Callable[..., ParamConstraint]", ParamConstraint)
         values: dict[str, object] = {
             "name": "allocation_method",
             "dtype": "str",
@@ -243,7 +257,8 @@ class TestParamConstraint:
     ) -> None:
         from ditto_strategy.alpha.specs import ParamConstraint
 
-        constructor: Callable[..., ParamConstraint] = ParamConstraint
+        # 动态键名 kwargs：按 ... 签名调用，运行时仍走完整校验
+        constructor = cast("Callable[..., ParamConstraint]", ParamConstraint)
 
         with pytest.raises(StrategySpecError) as exc_info:
             constructor(
@@ -334,7 +349,9 @@ class TestScorerSpec:
             method="rank_then_combine",
             params={"signal_weights": {"momentum": 0.5, "cheapness": 0.3}},
         )
-        assert spec.params["signal_weights"]["momentum"] == 0.5
+        signal_weights = spec.params["signal_weights"]
+        assert isinstance(signal_weights, Mapping)
+        assert signal_weights["momentum"] == 0.5
 
 
 class TestSelectorSpec:
@@ -382,15 +399,15 @@ class TestStrategySpec:
                 method="calendar",
                 cost_model=CostModelSpec(commission_rate=0.0003, slippage_bps=5.0),
             ),
-            constraints=[
+            constraints=(
                 ConstraintSpec(
                     type="max_weight_per_instrument", params={"value": 0.40}, priority=1
                 ),
                 ConstraintSpec(type="max_turnover", params={"value": 0.50}, priority=2),
-            ],
+            ),
             benchmark="000300.SH",
             params={"lookback": 252, "vol_window": 60},
-            param_constraints=[],
+            param_constraints=(),
             tags=("momentum", "rotation", "etf"),
         )
         assert len(spec.constraints) == 2
@@ -809,11 +826,11 @@ class TestStrategySpecV2:
         assert isinstance(columns, tuple)
 
         with pytest.raises(TypeError):
-            operator.setitem(spec.metadata, "added", True)
+            _try_setitem(spec.metadata, "added", True)
         with pytest.raises(TypeError):
-            operator.setitem(layout, "added", True)
+            _try_setitem(layout, "added", True)
         with pytest.raises(TypeError):
-            operator.setitem(columns, 0, "changed")
+            _try_setitem(columns, 0, "changed")
 
         source_layout = source["layout"]
         assert isinstance(source_layout, dict)
@@ -856,7 +873,8 @@ class TestStrategySpecV2:
             "tags": (),
         }
         values[field_name] = invalid_value
-        constructor: Callable[..., StrategySpecV2] = StrategySpecV2
+        # 负向测试：动态键名 × 非法值无法静态收窄，按 ... 签名调用以触发校验错误
+        constructor = cast("Callable[..., StrategySpecV2]", StrategySpecV2)
 
         with pytest.raises(StrategySpecError, match=field_name):
             constructor(**values)

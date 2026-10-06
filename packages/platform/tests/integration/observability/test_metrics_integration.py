@@ -23,8 +23,12 @@ from ditto_platform.foundation.observability.metrics import (
 
 _conftest_path = Path(__file__).parent / "conftest.py"
 _spec = importlib.util.spec_from_file_location("_conftest", _conftest_path)
+# conftest.py 必然存在，spec_from_file_location 对真实 .py 文件返回非空
+# spec（含 loader）；断言收窄 None 分支而非忽略.
+assert _spec is not None
+assert _spec.loader is not None
 _mod = importlib.util.module_from_spec(_spec)
-_spec.loader.exec_module(_mod)  # type: ignore[union-attr]
+_spec.loader.exec_module(_mod)
 
 MetricReaderWrapper = _mod.MetricReaderWrapper
 

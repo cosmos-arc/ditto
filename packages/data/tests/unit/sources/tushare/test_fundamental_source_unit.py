@@ -402,10 +402,13 @@ class TestFetchFundNavDelegation:
     def test_trade_date_mode_queries_rolling_nav_window(self) -> None:
         from ditto_data.sources.tushare.adapters.etf import ETFTushareAdapter
 
-        adapter = ETFTushareAdapter(_client=MagicMock())
+        # adapter._client 静态收窄为 TushareClient；mock 记录/回值经
+        # 边界变量单点访问（同一对象），不经被测适配器的强类型视图。
+        client = MagicMock()
+        adapter = ETFTushareAdapter(_client=client)
         # 聚焦 nav 滚动窗行为：预热 universe 缓存避免 etf_basic 请求
         adapter._etf_universe = frozenset({"510300.SH"})
-        adapter._client.query.return_value = pl.DataFrame(
+        client.query.return_value = pl.DataFrame(
             {
                 "ts_code": ["510300.SH"],
                 "ann_date": ["20261001"],
@@ -419,7 +422,7 @@ class TestFetchFundNavDelegation:
 
         # 全市场模式逐日 nav_date 查询（端点不接受无标的范围参数）：
         # D-7 滚动回看接住 QDII 迟披露行
-        days = [c.kwargs["nav_date"] for c in adapter._client.query.call_args_list]
+        days = [c.kwargs["nav_date"] for c in client.query.call_args_list]
         assert days[0] == "20260923"
         assert days[-1] == "20260930"
         assert len(days) == 8

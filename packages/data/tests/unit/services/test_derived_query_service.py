@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import asdict
 from datetime import date
 from hashlib import sha256
 from pathlib import Path
+from typing import cast
 from unittest.mock import MagicMock
 
 import polars as pl
@@ -174,8 +176,10 @@ class TestDerivedQueryService:
 
     def test_latest_query_rejects_unsupported_source_scope(self) -> None:
         """Derived latest queries should reject unsupported source scopes."""
+        # 负向用例：字段声明为 DerivedSourceScope，非法字符串由运行时校验拒绝。
+        ctor = cast("Callable[..., object]", DerivedLatestQuery)
         with pytest.raises(FactorValidationError, match="unsupported source_scope"):
-            DerivedLatestQuery(
+            ctor(
                 derived_ids=("factor.momentum_20d",),
                 instrument_ids=(1,),
                 source_scope="archive",

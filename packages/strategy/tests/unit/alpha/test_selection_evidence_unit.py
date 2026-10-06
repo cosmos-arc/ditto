@@ -6,10 +6,12 @@ from collections.abc import Sequence
 from dataclasses import FrozenInstanceError, fields
 from importlib.util import find_spec
 from math import inf, nan
+from typing import cast
 
 import ditto_strategy.alpha.selection_evidence as evidence
 import polars as pl
 import pytest
+from ditto_kernel.identity import InstrumentId
 from ditto_strategy.alpha.builtins.filtering import (
     FilterCondition,
     FilteringStage,
@@ -635,7 +637,8 @@ def test_trend_and_risk_filters_emit_missing_threshold_and_lock_reasons() -> Non
     collector = SelectionEvidenceCollector()
     collector.begin_rebalance(_TRADE_DATE)
     context = StrategyContext()
-    context.lock_instrument("LOCKED", "operator_lock")
+    # frame 的 instrument_id 为字符串列（映射前兼容路径），cast 运行时恒等
+    context.lock_instrument(cast("InstrumentId", "LOCKED"), "operator_lock")
     frame = pl.DataFrame(
         {
             "instrument_id": ["PASS", "MISSING", "LOW", "LOCKED"],

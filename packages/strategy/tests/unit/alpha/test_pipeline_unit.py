@@ -687,7 +687,7 @@ class TestStrategyPipeline:
         pipeline = StrategyPipeline(stages=[stage1, stage2, stage3])
 
         ctx = StrategyContext()
-        ctx.lock_instrument(1, "max_drawdown")
+        ctx.lock_instrument(InstrumentId(1), "max_drawdown")
         bundle = _make_input_bundle(
             instruments=sample_instruments,
             market_data=sample_market_data,
@@ -704,7 +704,7 @@ class TestStrategyPipeline:
         assert stage3.received_contexts[0] is ctx
 
         # Context mutation is visible to later stages
-        assert stage1.received_contexts[0].is_locked(1)
+        assert stage1.received_contexts[0].is_locked(InstrumentId(1))
 
     def test_target_portfolio_from_final_frame_with_weights(
         self,
@@ -722,9 +722,9 @@ class TestStrategyPipeline:
         target = pipeline.run(empty_context, bundle)
 
         assert isinstance(target, TargetPortfolio)
-        assert target.positions[1] == pytest.approx(0.4)
-        assert target.positions[2] == pytest.approx(0.35)
-        assert target.positions[3] == pytest.approx(0.25)
+        assert target.positions[InstrumentId(1)] == pytest.approx(0.4)
+        assert target.positions[InstrumentId(2)] == pytest.approx(0.35)
+        assert target.positions[InstrumentId(3)] == pytest.approx(0.25)
 
     def test_target_portfolio_resolves_string_ids_with_input_bundle_identity_map(
         self,

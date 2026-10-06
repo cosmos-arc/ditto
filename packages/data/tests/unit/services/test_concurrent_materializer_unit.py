@@ -92,7 +92,9 @@ class TestConcurrentMaterializer:
 
         assert by_id["factor.good"].success is True
         assert by_id["factor.bad"].success is False
-        assert "compilation failed" in by_id["factor.bad"].error
+        error = by_id["factor.bad"].error
+        assert error is not None
+        assert "compilation failed" in error
         assert by_id["factor.also_good"].success is True
 
     def test_batch_runs_concurrently(self) -> None:

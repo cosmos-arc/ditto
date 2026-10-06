@@ -1,9 +1,24 @@
 """Unit tests for Models - instrument."""
 
+from collections.abc import Callable
 from dataclasses import asdict
+from typing import TypedDict, cast
 
 import pytest
 from ditto_data.storage.metadata.instrument import InstrumentRegistration
+
+
+class _RegistrationData(TypedDict):
+    """反序列化输入的精确键型（kwargs 解包受检）."""
+
+    source_ticker: str
+    ticker: str
+    name: str
+    exchange: str
+    asset_class: str
+    list_date: str
+    source: str
+    board: str
 
 
 @pytest.mark.unit
@@ -66,7 +81,7 @@ class TestInstrumentRegistration:
 
     def test_model_deserialization_from_dict(self) -> None:
         """Test InstrumentRegistration can be deserialized from dict."""
-        data = {
+        data: _RegistrationData = {
             "source_ticker": "600000.SH",
             "ticker": "600000",
             "name": "浦发银行",
@@ -85,11 +100,10 @@ class TestInstrumentRegistration:
 
     def test_validation_fails_with_missing_required_field(self) -> None:
         """Test that validation fails when required field is missing."""
+        # 负向测试：故意缺参触发 TypeError；cast 绕过构造器参数完整性检查。
+        ctor = cast("Callable[..., object]", InstrumentRegistration)
         with pytest.raises(TypeError) as exc_info:
-            InstrumentRegistration(
-                # Missing required fields
-                source_ticker="600000.SH",
-            )
+            ctor(source_ticker="600000.SH")
 
         # dataclass 会抛出 TypeError，提示缺少必需参数
         error_msg = str(exc_info.value).lower()

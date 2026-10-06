@@ -6,6 +6,8 @@
 
 from __future__ import annotations
 
+from typing import cast
+
 import polars as pl
 import pytest
 from ditto_kernel.identity import InstrumentId
@@ -21,8 +23,21 @@ from ditto_strategy.alpha.templates.etf_rotation import (
 # ---------------------------------------------------------------------------
 
 
-def _build_instrument_id_map(ids: list[str]) -> dict[str, InstrumentId]:
+def _build_instrument_id_map(ids: list[str]) -> dict[object, InstrumentId]:
+    """构造 ticker → canonical InstrumentId 映射.
+
+    生产字段 instrument_id_map 声明为 Mapping[object, InstrumentId]，
+    key 按 frame 内原始值（本测试为字符串 ticker）索引。
+    """
     return {ticker: InstrumentId(index + 1) for index, ticker in enumerate(ids)}
+
+
+def _lock_raw_id(context: StrategyContext, raw_id: str, reason: str) -> None:
+    """按 frame 内原始字符串 ID 锁定标的."""
+    # RiskLockFilter 用 lock key 匹配 DecisionFrame 的 instrument_id 原值
+    # （本测试为字符串 ticker）；生产签名声明 InstrumentId，此处窄点 cast，
+    # 运行时仍以字符串 key 写入 risk_locked_instruments。
+    context.lock_instrument(cast("InstrumentId", raw_id), reason)
 
 
 @pytest.fixture
@@ -109,8 +124,8 @@ class TestETFRotationE2E:
     ) -> None:
         """部分标的被 RiskLock 过滤。"""
         context = StrategyContext()
-        context.lock_instrument("ETF001", "hit stop-loss")
-        context.lock_instrument("ETF002", "hit stop-loss")
+        _lock_raw_id(context, "ETF001", "hit stop-loss")
+        _lock_raw_id(context, "ETF002", "hit stop-loss")
 
         config = ETFRotationConfig(top_k=5)
         stages = build_etf_rotation_pipeline(config)
@@ -129,7 +144,7 @@ class TestETFRotationE2E:
         """全部被 RiskLock 锁定。"""
         context = StrategyContext()
         for i in range(1, 13):
-            context.lock_instrument(f"ETF{i:03d}", "market halt")
+            _lock_raw_id(context, f"ETF{i:03d}", "market halt")
 
         config = ETFRotationConfig(top_k=5)
         stages = build_etf_rotation_pipeline(config)

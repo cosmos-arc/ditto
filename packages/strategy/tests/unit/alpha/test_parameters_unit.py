@@ -3,14 +3,30 @@
 from __future__ import annotations
 
 import math
+from collections.abc import Callable, Mapping
 from dataclasses import replace
+from typing import cast
 
 import pytest
 from ditto_strategy.alpha.node_registry import default_node_registry
-from ditto_strategy.alpha.nodes import NodeRef, PipelineSpec
+from ditto_strategy.alpha.nodes import NodeInstance, NodeRef, PipelineSpec
+from ditto_strategy.alpha.parameters import ParameterValue
 from ditto_strategy.alpha.spec_codec import adapt_legacy_strategy_spec
 from ditto_strategy.alpha.specs import ParamConstraint, StrategySpec, StrategySpecV2
 from ditto_strategy.errors import StrategySpecError
+
+
+def _node_params(node: NodeInstance) -> Mapping[str, object]:
+    """窄化节点 config["params"] 为映射（运行时校验；冻结快照的值联合无法静态窄化）."""
+    params = node.config["params"]
+    assert isinstance(params, Mapping)
+    return params
+
+
+def _sign_bit(value: ParameterValue) -> float:
+    """math.copysign 的窄化包装：被探测值均为数值字面量，运行时排除 str 分支."""
+    assert not isinstance(value, str)
+    return math.copysign(1.0, value)
 
 
 def _legacy_parameter_spec() -> StrategySpec:
@@ -157,9 +173,9 @@ def test_parameter_binding_returns_new_frozen_resolved_spec_and_hashes() -> None
         for node in result.resolved_spec.pipeline.nodes
         if node.node_id == "legacy_factor_set"
     )
-    assert factor_before.config["params"]["top_k"] == 5
-    assert factor_after.config["params"]["top_k"] == 3
-    assert factor_after.config["params"]["threshold"] == 0.20
+    assert _node_params(factor_before)["top_k"] == 5
+    assert _node_params(factor_after)["top_k"] == 3
+    assert _node_params(factor_after)["threshold"] == 0.20
     assert result.base_spec is base
     assert result.resolved_spec is not base
     assert result.base_spec_hash == canonical_spec_hash(base)
@@ -475,19 +491,19 @@ def test_parameter_identity_collapses_signed_zero_without_mutating_hash_input() 
     negative = EffectiveParameter(path=_path("threshold"), value=-0.0)
     positive = EffectiveParameter(path=_path("threshold"), value=0.0)
 
-    assert math.copysign(1.0, negative.value) == 1.0
+    assert _sign_bit(negative.value) == 1.0
     assert canonical_parameter_hash((negative,)) == canonical_parameter_hash(
         (positive,),
     )
 
     bypassed = EffectiveParameter(path=_path("threshold"), value=0.0)
     object.__setattr__(bypassed, "value", -0.0)
-    assert math.copysign(1.0, bypassed.value) == -1.0
+    assert _sign_bit(bypassed.value) == -1.0
 
     assert canonical_parameter_hash((bypassed,)) == canonical_parameter_hash(
         (positive,),
     )
-    assert math.copysign(1.0, bypassed.value) == -1.0
+    assert _sign_bit(bypassed.value) == -1.0
 
 
 @pytest.mark.parametrize(
@@ -507,8 +523,10 @@ def test_direct_parameter_values_fail_closed_without_raw_codec_errors(
     from ditto_strategy.alpha.parameters import CandidateParameter, EffectiveParameter
 
     for parameter_type in (CandidateParameter, EffectiveParameter):
+        # 负向测试：注入非法 value 触发 fail-closed 校验，构造器不会正常返回
+        constructor = cast("Callable[..., object]", parameter_type)
         with pytest.raises(StrategySpecError) as exc_info:
-            parameter_type(path=_path("threshold"), value=invalid_value)
+            constructor(path=_path("threshold"), value=invalid_value)
 
         _assert_spec_invalid(exc_info, reason="invalid_parameter_value")
         assert exc_info.value.details["path"] == _path("threshold")
@@ -585,10 +603,10 @@ def test_binder_canonicalizes_signed_zero_without_mutating_candidate() -> None:
         for item in negative.effective_parameters
         if item.path == _path("threshold")
     )
-    assert math.copysign(1.0, effective_value) == 1.0
+    assert _sign_bit(effective_value) == 1.0
     assert negative.parameter_hash == positive.parameter_hash
     assert negative.resolved_spec_hash == positive.resolved_spec_hash
-    assert math.copysign(1.0, candidate.value) == -1.0
+    assert _sign_bit(candidate.value) == -1.0
 
 
 @pytest.mark.parametrize(

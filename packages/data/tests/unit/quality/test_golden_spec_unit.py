@@ -1,5 +1,7 @@
 """Tests for Golden Dataset model validation."""
 
+from typing import cast
+
 import pytest
 from ditto_data.quality.golden import (
     AssetType,
@@ -80,14 +82,19 @@ class TestGoldenDatasetSpecValidation:
 
     def test_tickers_parse_mapping_items_and_ignore_invalid_specs(self) -> None:
         """tickers 列表可混合字符串和对象，坏对象只进入裸 ticker 集合."""
+        # before 校验器 parse_tickers_data 运行时接受 str|Mapping 混合项；
+        # 字段静态声明为 list[str]，故在构造点单点窄 cast。
         spec = GoldenDatasetSpec(
-            tickers=[
-                " 600519 ",
-                " ",
-                {"ticker": "510300", "name": "沪深300ETF", "asset_type": "etf"},
-                {"ticker": ""},
-                {"ticker": "BAD", "asset_type": "unknown"},
-            ]
+            tickers=cast(
+                "list[str]",
+                [
+                    " 600519 ",
+                    " ",
+                    {"ticker": "510300", "name": "沪深300ETF", "asset_type": "etf"},
+                    {"ticker": ""},
+                    {"ticker": "BAD", "asset_type": "unknown"},
+                ],
+            )
         )
 
         assert spec.tickers == ["510300", "600519", "BAD"]
@@ -99,7 +106,8 @@ class TestGoldenDatasetSpecValidation:
         explicit = TickerSpec(ticker="000001", asset_type=AssetType.STOCK)
 
         spec = GoldenDatasetSpec(
-            tickers=[{"ticker": "510300", "asset_type": "etf"}],
+            # 同上：运行时契约接受 Mapping 项，构造点单点窄 cast。
+            tickers=cast("list[str]", [{"ticker": "510300", "asset_type": "etf"}]),
             ticker_specs=[explicit],
         )
 
@@ -119,18 +127,22 @@ class TestGoldenDatasetSpecValidation:
     def test_ticker_spec_lookup_and_asset_type_filters(self) -> None:
         """按 ticker 和资产类型读取完整 spec/source ticker."""
         spec = GoldenDatasetSpec(
-            tickers=[
-                {
-                    "ticker": "600519",
-                    "asset_type": "stock",
-                    "exchange": "XSHG",
-                },
-                {
-                    "ticker": "510300",
-                    "asset_type": "etf",
-                    "exchange": "XSHG",
-                },
-            ]
+            # 同上：运行时契约接受 Mapping 项，构造点单点窄 cast。
+            tickers=cast(
+                "list[str]",
+                [
+                    {
+                        "ticker": "600519",
+                        "asset_type": "stock",
+                        "exchange": "XSHG",
+                    },
+                    {
+                        "ticker": "510300",
+                        "asset_type": "etf",
+                        "exchange": "XSHG",
+                    },
+                ],
+            )
         )
 
         assert spec.get_ticker_spec("600519") is not None

@@ -38,10 +38,12 @@ class TestIndexValuation:
     def test_request_uses_documented_field_set(self) -> None:
         from ditto_data.sources.tushare.adapters.capital import CapitalTushareAdapter
 
-        adapter = CapitalTushareAdapter(_client=_client())
+        # adapter._client 静态收窄为 TushareClient；断言走 mock 边界变量。
+        client = _client()
+        adapter = CapitalTushareAdapter(_client=client)
         adapter.fetch_index_valuation(trade_date="2026-09-30")
 
-        kwargs = adapter._client.query.call_args.kwargs
+        kwargs = client.query.call_args.kwargs
         assert kwargs["api_name"] == "index_dailybasic"
         assert set(kwargs["fields"].split(",")) == set(
             _INDEX_DAILYBASIC_FIELDS.split(",")

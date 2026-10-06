@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import FrozenInstanceError
+from typing import Any, TypedDict, Unpack, cast
 
 import pytest
 from ditto_strategy.models import StrategySpecRecord
@@ -12,17 +13,33 @@ from ditto_strategy.storage.sqlite.services.strategy_catalog_service import (
 from pytest_mock import MockerFixture
 
 
-def _make_spec(**overrides: object) -> StrategySpecRecord:
+class _Defaults(TypedDict, total=False):
+    """_make_spec 覆写参数的精确键型（调用侧受检）。"""
+
+    strategy_id: str
+    name: str
+    spec_json: dict[str, object]
+    spec_hash: str
+    version: int
+    parent_version: int | None
+    created_at: str
+    tags: tuple[str, ...]
+
+
+_DEFAULTS: dict[str, object] = {
+    "strategy_id": "strat.momentum_20d",
+    "name": "20 日动量策略",
+    "spec_json": {"lookback": 20, "instrument_type": "etf"},
+    "version": 1,
+    "created_at": "2026-03-23T10:00:00+08:00",
+    "tags": ("momentum", "etf"),
+}
+
+
+def _make_spec(**overrides: Unpack[_Defaults]) -> StrategySpecRecord:
     """构建测试用 StrategySpecRecord."""
-    defaults: dict[str, object] = {
-        "strategy_id": "strat.momentum_20d",
-        "name": "20 日动量策略",
-        "spec_json": {"lookback": 20, "instrument_type": "etf"},
-        "version": 1,
-        "created_at": "2026-03-23T10:00:00+08:00",
-        "tags": ("momentum", "etf"),
-    }
-    return StrategySpecRecord(**{**defaults, **overrides})
+    # 覆写参数经 Unpack[TypedDict] 调用侧受检；合并字典构造点单点放宽。
+    return StrategySpecRecord(**cast("dict[str, Any]", {**_DEFAULTS, **overrides}))
 
 
 # ── Model Tests ──────────────────────────────────────────────────────────────

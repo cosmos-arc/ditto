@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+from typing import cast
+
 import polars as pl
 import pytest
+from ditto_kernel.identity import InstrumentId
 from ditto_strategy.alpha.builtins.filtering import RiskLockFilter
 from ditto_strategy.alpha.builtins.regime import RegimeConfig, TrendIndicator
 from ditto_strategy.alpha.builtins.regime_allocation import RegimeAwareAllocationStage
@@ -214,7 +217,8 @@ class TestRiskLockFilter:
         frame = pl.DataFrame(
             {"instrument_id": ["A", "B", "C"], "value": [1.0, 2.0, 3.0]},
         )
-        empty_context.lock_instrument("B", "hit stop-loss")
+        # frame 的 instrument_id 为字符串列（实验模板兼容路径），cast 运行时恒等
+        empty_context.lock_instrument(cast("InstrumentId", "B"), "hit stop-loss")
         filt = RiskLockFilter()
         result = filt.process(frame, empty_context)
         assert result.shape == (2, 2)
@@ -228,8 +232,9 @@ class TestRiskLockFilter:
         frame = pl.DataFrame(
             {"instrument_id": ["A", "B"], "value": [1.0, 2.0]},
         )
-        empty_context.lock_instrument("A", "halt")
-        empty_context.lock_instrument("B", "halt")
+        # 字符串 instrument_id 兼容路径，cast 运行时恒等（pipeline 同款处理）
+        empty_context.lock_instrument(cast("InstrumentId", "A"), "halt")
+        empty_context.lock_instrument(cast("InstrumentId", "B"), "halt")
         filt = RiskLockFilter()
         result = filt.process(frame, empty_context)
         assert result.is_empty()
@@ -242,7 +247,8 @@ class TestRiskLockFilter:
         frame = pl.DataFrame(
             {"instrument_id": ["A", "B"], "value": [1.0, 2.0]},
         )
-        empty_context.lock_instrument("X", "some reason")
+        # 字符串 instrument_id 兼容路径，cast 运行时恒等
+        empty_context.lock_instrument(cast("InstrumentId", "X"), "some reason")
         filt = RiskLockFilter()
         result = filt.process(frame, empty_context)
         assert result.shape == (2, 2)
@@ -256,7 +262,8 @@ class TestRiskLockFilter:
             {"instrument_id": []},
             schema={"instrument_id": pl.Utf8},
         )
-        empty_context.lock_instrument("A", "halt")
+        # 字符串 instrument_id 兼容路径，cast 运行时恒等
+        empty_context.lock_instrument(cast("InstrumentId", "A"), "halt")
         filt = RiskLockFilter()
         result = filt.process(frame, empty_context)
         assert result.is_empty()

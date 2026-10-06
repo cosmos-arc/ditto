@@ -94,8 +94,16 @@ def test_catalog_protocols_accept_structural_in_memory_fake() -> None:
 
     assert isinstance(catalog, DataCatalogReader)
     assert isinstance(catalog, DataCatalogWriter)
-    writer: DataCatalogWriter = catalog
-    reader: DataCatalogReader = catalog
+
+    def _bind_writer(fake: InMemoryCatalog) -> DataCatalogWriter:
+        return fake
+
+    def _bind_reader(fake: InMemoryCatalog) -> DataCatalogReader:
+        return fake
+
+    # 函数边界处做结构兼容静态校验，且避免赋值窄化回具体 fake 类型。
+    writer = _bind_writer(catalog)
+    reader = _bind_reader(catalog)
     assert_type(writer, DataCatalogWriter)
     assert_type(reader, DataCatalogReader)
 

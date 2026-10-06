@@ -11,6 +11,7 @@ from __future__ import annotations
 import threading
 from collections.abc import Iterator
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from typing import Any, TypedDict, Unpack, cast
 
 import pytest
 from ditto_platform.foundation import (
@@ -69,15 +70,25 @@ def otlp_http_sink() -> Iterator[_OtlpHttpSink]:
     sink._thread.join(timeout=5)
 
 
-def _test_config(**overrides: object) -> ObservabilityConfig:
+class _TestConfigKwargs(TypedDict, total=False):
+    """_test_config 覆写参数的精确键型（调用侧受检，#540）."""
+
+    service_name: str
+    environment: Environment
+    pytest_running: bool
+    assertions_enabled: bool | None
+    verbose_logging: bool | None
+
+
+def _test_config(**overrides: Unpack[_TestConfigKwargs]) -> ObservabilityConfig:
     values: dict[str, object] = {
         "environment": Environment.TESTING,
         "pytest_running": True,
         "assertions_enabled": True,
         "verbose_logging": False,
     }
-    values.update(overrides)
-    return ObservabilityConfig(**values)
+    # 覆写参数经 Unpack[TypedDict] 调用侧受检；合并字典构造点单点放宽。
+    return ObservabilityConfig(**cast("dict[str, Any]", {**values, **overrides}))
 
 
 @pytest.mark.integration

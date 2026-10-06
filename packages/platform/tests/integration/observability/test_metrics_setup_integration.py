@@ -14,6 +14,11 @@ from ditto_platform.foundation.observability.metrics import (
     SafeHistogram,
     configure_metrics,
 )
+from ditto_platform.foundation.observability.metrics._registry import _MetricsRegistry
+from ditto_platform.foundation.observability.metrics._types import METRIC_DEFINITIONS
+
+# METRIC_DEFINITIONS/_MetricsRegistry 的包级 __getattr__ 惰性导出在类型侧
+# 是 object；从定义符号的叶模块导入获得真实类型（消费者走源叶模块）.
 
 
 @pytest.mark.integration
@@ -105,8 +110,6 @@ class TestMSetup:
         meter = configure_metrics(config)
 
         # [REVIEW] METRIC_DEFINITIONS 添加未知类型
-        from ditto_platform.foundation.observability.metrics import METRIC_DEFINITIONS
-
         original_definitions = METRIC_DEFINITIONS.copy()
         try:
             # [REVIEW]
@@ -153,16 +156,12 @@ class TestMetricsRegistry:
 
     def test_registry_initial_state(self) -> None:
         """测试注册表初始状态."""
-        from ditto_platform.foundation.observability.metrics import _MetricsRegistry
-
         _MetricsRegistry.reset()
         assert _MetricsRegistry.get_meter() is None
         assert _MetricsRegistry.get_in_memory_reader() is None
 
     def test_registry_set_and_get_meter(self) -> None:
         """测试设置和获取 meter."""
-        from ditto_platform.foundation.observability.metrics import _MetricsRegistry
-
         _MetricsRegistry.reset()
         config = ObservabilityConfig(
             pytest_running=True, assertions_enabled=True, verbose_logging=False
@@ -175,8 +174,6 @@ class TestMetricsRegistry:
 
     def test_registry_set_and_get_reader(self) -> None:
         """测试设置和获取 in_memory_reader."""
-        from ditto_platform.foundation.observability.metrics import _MetricsRegistry
-
         _MetricsRegistry.reset()
         config = ObservabilityConfig(
             pytest_running=True, assertions_enabled=True, verbose_logging=False
@@ -188,8 +185,6 @@ class TestMetricsRegistry:
 
     def test_registry_reset_clears_state(self) -> None:
         """测试 reset 清除状态."""
-        from ditto_platform.foundation.observability.metrics import _MetricsRegistry
-
         config = ObservabilityConfig(
             pytest_running=True, assertions_enabled=True, verbose_logging=False
         )

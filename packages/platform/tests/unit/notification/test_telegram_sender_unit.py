@@ -1,5 +1,6 @@
 """TelegramSender unit tests."""
 
+from typing import TYPE_CHECKING
 from unittest.mock import Mock, patch
 
 import httpx
@@ -7,6 +8,9 @@ import pytest
 from ditto_platform.services.notification.channels.telegram import TelegramSender
 from ditto_platform.services.notification.config import NotificationSettings
 from loguru import logger
+
+if TYPE_CHECKING:
+    from loguru import Record
 
 
 class TestTelegramSenderInit:
@@ -176,7 +180,7 @@ class TestTelegramSenderSend:
             request=request,
             response=response,
         )
-        records: list[dict[str, object]] = []
+        records: list[Record] = []
         sink_id = logger.add(
             lambda message: records.append(message.record),
             level="ERROR",
@@ -272,7 +276,7 @@ class TestTelegramSenderSend:
         factory = exception_factory
         assert callable(factory)
         error = factory(request, sensitive_url)
-        records: list[dict[str, object]] = []
+        records: list[Record] = []
         sink_id = logger.add(
             lambda message: records.append(message.record),
             level="WARNING",
@@ -332,7 +336,7 @@ class TestTelegramSenderSend:
         )
         sender = TelegramSender(settings)
         sensitive_url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
-        records: list[dict[str, object]] = []
+        records: list[Record] = []
         sink_id = logger.add(
             lambda message: records.append(message.record),
             level="ERROR",
