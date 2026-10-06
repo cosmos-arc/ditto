@@ -382,14 +382,13 @@ class TestFredClientRobustness:
         endpoint = respx_mock.get("https://api.stlouisfed.org/fred/series/observations")
         endpoint.mock(return_value=httpx.Response(404, text="Not Found"))
 
-        with pytest.raises(SourceFetchError, match="404") as exc_info:
+        with pytest.raises(SourceFetchError, match="404"):
             FredClient(api_key="test_key").get_series_observations(
                 series_id="BAD_SERIES",
                 observation_start="2024-01-01",
                 observation_end="2024-12-31",
             )
 
-        assert not isinstance(exc_info.value, tenacity.RetryError)
         assert endpoint.call_count == 1
 
     def test_non_json_200_raises_permanent_fetch_error(self, respx_mock) -> None:
@@ -434,10 +433,60 @@ class TestFredClientRobustness:
         assert isinstance(exc_info.value.__cause__, SourceFetchError)
         assert endpoint.call_count == 3
 
-    def test_throttle_spaces_request_starts(
-        self, monkeypatch: pytest.MonkeyPatch
+    def test_rate_limit_429_exhaustion_wrapped(self, respx_mock) -> None:
+        """持续 429 → 3 次尝试耗尽后 RetryError 包 SourceRateLimitError."""
+        endpoint = respx_mock.get("https://api.stlouisfed.org/fred/series/observations")
+        endpoint.mock(
+            return_value=httpx.Response(429, json={"error_code": 429, "message": "l"})
+        )
+
+        with pytest.raises(tenacity.RetryError) as exc_info:
+            FredClient(api_key="test_key").get_series_observations(
+                series_id="UNRATE",
+                observation_start="2024-01-01",
+                observation_end="2024-12-31",
+            )
+
+        assert isinstance(exc_info.value.__cause__, SourceRateLimitError)
+        assert endpoint.call_count == 3
+
+    def test_scalar_observations_elements_rejected(self, respx_mock) -> None:
+        """observations 元素非对象（如 [1,2,3]）→ 确定性失败，不裸抛 polars 错."""
+        respx_mock.get("https://api.stlouisfed.org/fred/series/observations").mock(
+            return_value=httpx.Response(200, json={"observations": [1, 2, 3]})
+        )
+
+        with pytest.raises(SourceFetchError, match="non-object elements"):
+            FredClient(api_key="test_key").get_series_observations(
+                series_id="UNRATE",
+                observation_start="2024-01-01",
+                observation_end="2024-12-31",
+            )
+
+    def test_malformed_observation_rows_wrapped(self, respx_mock) -> None:
+        """缺键行在帧构造处包装为确定性失败，不留 polars 裸抛（#516 评审 F4）."""
+        respx_mock.get("https://api.stlouisfed.org/fred/series/observations").mock(
+            return_value=httpx.Response(
+                200, json={"observations": [{"date": "2024-01-01"}]}
+            )
+        )
+
+        with pytest.raises(SourceFetchError, match="malformed element shape"):
+            FredClient(api_key="test_key").get_series_observations(
+                series_id="UNRATE",
+                observation_start="2024-01-01",
+                observation_end="2024-12-31",
+            )
+
+    def test_request_path_is_throttled(
+        self, respx_mock, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """默认节流把相邻请求起点间隔压到官方 2 req/s 以内（mock 时钟）."""
+        """公开取数路径两次调用间真实走节流（mock 时钟，删调用即失败）."""
+        from ditto_data.sources import throttle as throttle_module
+
+        respx_mock.get("https://api.stlouisfed.org/fred/series/observations").mock(
+            return_value=httpx.Response(200, json={"observations": []})
+        )
         client = FredClient(api_key="test_key", min_request_interval=0.5)
         sleeps: list[float] = []
         clock = {"now": 100.0}
@@ -449,14 +498,22 @@ class TestFredClientRobustness:
             sleeps.append(seconds)
             clock["now"] += seconds
 
-        monkeypatch.setattr(fred_client_module.time, "monotonic", _fake_monotonic)
-        monkeypatch.setattr(fred_client_module.time, "sleep", _fake_sleep)
+        monkeypatch.setattr(throttle_module.time, "monotonic", _fake_monotonic)
+        monkeypatch.setattr(throttle_module.time, "sleep", _fake_sleep)
 
-        client._throttle()  # 首个请求：无间隔要求
-        assert sleeps == []
-        clock["now"] += 0.1  # 只过了 0.1s
-        client._throttle()  # 需补 0.4s
-        assert sleeps == [pytest.approx(0.4)]
+        client.get_series_observations(
+            series_id="UNRATE",
+            observation_start="2024-01-01",
+            observation_end="2024-12-31",
+        )
+        client.get_series_observations(
+            series_id="UNRATE",
+            observation_start="2024-01-01",
+            observation_end="2024-12-31",
+        )
+
+        # 第二次调用距上次起点 0s（mock 时钟不前进）→ 需补满 0.5s
+        assert sleeps == [pytest.approx(0.5)]
 
     def test_rate_limit_wait_uses_dedicated_backoff(
         self, monkeypatch: pytest.MonkeyPatch
@@ -474,7 +531,7 @@ class TestFredClientRobustness:
         rate_limited = SourceRateLimitError(message="x", source="fred")
         assert wait_fn(_state_with(rate_limited, 1)) == 5.0
         assert wait_fn(_state_with(rate_limited, 2)) == 10.0
-        assert wait_fn(_state_with(rate_limited, 9)) == 60.0  # 封顶
+        assert wait_fn(_state_with(rate_limited, 9)) == 5.0 * 2**8  # 纯函数无封顶
 
         with_retry_after = SourceRateLimitError(message="x", source="fred")
         with_retry_after.details["retry_after_seconds"] = 7

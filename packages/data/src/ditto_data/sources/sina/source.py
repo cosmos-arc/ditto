@@ -90,24 +90,40 @@ class SinaSource:
             )
             # 占位字段（volume/position/s/settlement）不选出：实测恒零或
             # 缺失，不证明真实成交/持仓/结算（#436 口径合同）。
-            transformed = (
-                frame.select(
-                    pl.col("date")
-                    .str.to_date("%Y-%m-%d", strict=False)
-                    .alias("trade_date"),
-                    pl.col("open").cast(pl.Float64, strict=False).alias("open"),
-                    pl.col("high").cast(pl.Float64, strict=False).alias("high"),
-                    pl.col("low").cast(pl.Float64, strict=False).alias("low"),
-                    pl.col("close").cast(pl.Float64, strict=False).alias("close"),
+            parsed = frame.select(
+                pl.col("date"),
+                pl.col("date")
+                .str.to_date("%Y-%m-%d", strict=False)
+                .alias("trade_date"),
+                pl.col("open").cast(pl.Float64, strict=False).alias("open"),
+                pl.col("high").cast(pl.Float64, strict=False).alias("high"),
+                pl.col("low").cast(pl.Float64, strict=False).alias("low"),
+                pl.col("close").cast(pl.Float64, strict=False).alias("close"),
+            )
+            # 字段解析为宽松 String + 非严格 cast：源端 date 字段改名或格式
+            # 变更会静默得 null trade_date，若先 drop_nulls 则整段被静默
+            # 丢弃、OHLC 校验永远不触发（#516 评审 F3）。行存在而日期解析
+            # 失败即 fail-closed，不允许静默缩段。
+            unparsed_dates = parsed.filter(pl.col("trade_date").is_null())
+            if not unparsed_dates.is_empty():
+                sample_raw = unparsed_dates["date"].head(3).to_list()
+                raise SourceFetchError(
+                    source="sina",
+                    message=(
+                        f"sina {symbol} 响应 {unparsed_dates.height} 行日期解析失败"
+                        f" (样本 {sample_raw}):"
+                        " 源字段契约疑似变更 拒绝静默入库 (#516)"
+                    ),
                 )
+            # OHLC 同理：字段改名经非严格 cast 得 null，入库前窗口内非空校验，
+            # fail-closed 防整段静默空数据（#516）。
+            transformed = (
+                parsed.drop("date")
                 .drop_nulls("trade_date")
                 .filter(pl.col("trade_date").is_between(start, end))
             )
             if transformed.is_empty():
                 continue
-            # 字段解析为宽松 String + 非严格 cast：源端字段改名会静默得
-            # null OHLC 而非报错（drop_nulls 只保护 trade_date）。入库前
-            # 对窗口内行做非空校验，fail-closed 防整段静默空数据（#516）。
             null_ohlc = transformed.filter(
                 pl.any_horizontal(
                     pl.col("open").is_null(),

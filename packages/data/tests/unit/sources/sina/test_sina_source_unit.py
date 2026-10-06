@@ -146,6 +146,54 @@ class TestSinaRobustness:
         with pytest.raises(SourceFetchError, match="OHLC 为 null"):
             source.fetch_commodities(["CL"], "2026-09-30", "2026-10-02")
 
+    def test_unparseable_dates_rejected_before_silent_drop(self) -> None:
+        """date 字段改名/格式变更 → 解析全 null：先于 drop_nulls 拒绝（F3）.
+
+        若守卫放在 drop_nulls 之后，整段会被静默丢弃、返回 0 行——
+        复合源把空腿当成功，构成整段静默空数据.
+        """
+        rows = [
+            {
+                "date": "2026/10/01",  # 斜杠格式：解析失败
+                "open": "90.700",
+                "high": "91.000",
+                "low": "90.200",
+                "close": "90.900",
+                "volume": "0",
+                "position": "0",
+                "s": "0.000",
+                "settlement": "0",
+            },
+        ]
+        mock_client = MagicMock()
+        mock_client.get_global_futures_daily_kline.return_value = rows
+        source = SinaSource(client=mock_client)
+
+        with pytest.raises(SourceFetchError, match="日期解析失败"):
+            source.fetch_commodities(["CL"], "2026-09-30", "2026-10-02")
+
+    def test_date_field_rename_rejected(self) -> None:
+        """date 键改名（行内无该键）→ 全 null 列同样显式拒绝，不静默 0 行."""
+        rows = [
+            {
+                "d": "2026-10-01",
+                "open": "90.700",
+                "high": "91.000",
+                "low": "90.200",
+                "close": "90.900",
+                "volume": "0",
+                "position": "0",
+                "s": "0.000",
+                "settlement": "0",
+            },
+        ]
+        mock_client = MagicMock()
+        mock_client.get_global_futures_daily_kline.return_value = rows
+        source = SinaSource(client=mock_client)
+
+        with pytest.raises(SourceFetchError, match="日期解析失败"):
+            source.fetch_commodities(["CL"], "2026-09-30", "2026-10-02")
+
     def test_null_ohlc_outside_window_tolerated(self) -> None:
         """窗口外行的 null OHLC 不参与校验（本地过滤语义不变）."""
         rows = [

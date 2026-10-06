@@ -447,11 +447,27 @@ class FuyaoSource:
         tickers: list[str],
         trade_date: str,
     ) -> pl.DataFrame:
-        """对账协议帧：[ticker, trade_date, open, high, low, close, volume, amount]."""
+        """
+        对账协议帧：[ticker, trade_date, open, high, low, close, volume, amount].
+
+        按标的隔离失败（未识别前缀/越窗/重复键/单标的业务错误）：记录原因
+        后跳过该标的，报告以辅侧未匹配显式呈现，不中断整篮（#516 评审 F2
+        ——宽基对账数千标的，单标的身份错误不得替换整数据集结果）.
+        """
         target = _parse_date(trade_date)
         frames: list[pl.DataFrame] = []
         for ticker in tickers:
-            frame = self._fetch_ticker_daily(ticker, str(target), str(target))
+            try:
+                frame = self._fetch_ticker_daily(ticker, str(target), str(target))
+            except SourceFetchError as error:
+                logger.warning(
+                    "Fuyao stock bar skipped for reconciliation",
+                    event="fuyao_stock_bar_skip",
+                    ticker=ticker,
+                    trade_date=str(target),
+                    reason=str(error)[:200],
+                )
+                continue
             frame = frame.filter(pl.col("trade_date") == target)
             if not frame.is_empty():
                 frames.append(
@@ -584,8 +600,10 @@ class FuyaoSource:
         renames = _FINANCIAL_FIELD_RENAMES[dataset]
         rows: list[dict[str, Any]] = []
         for raw_code in thscodes:
-            code = to_thscode(raw_code)
             try:
+                # 前缀转换也在隔离块内：未识别前缀（如 B 股裸码）按标的
+                # 跳过留痕，不中断整批（#516 评审 F1）
+                code = to_thscode(raw_code)
                 data = self._client.get(
                     path,
                     params={
@@ -601,7 +619,7 @@ class FuyaoSource:
                     "Fuyao financial statement skipped for reconciliation",
                     event="fuyao_financial_skip",
                     dataset=dataset,
-                    thscode=code,
+                    thscode=raw_code,
                     reason=str(error)[:200],
                 )
                 continue
@@ -675,8 +693,9 @@ class FuyaoSource:
         target = _parse_date(trade_date)
         rows: list[dict[str, Any]] = []
         for raw_code in thscodes:
-            code = to_thscode(raw_code)
             try:
+                # 前缀转换也在隔离块内（#516 评审 F1，同财务三表）
+                code = to_thscode(raw_code)
                 data = self._client.get(
                     "/api/fund/performance/nav",
                     params={
@@ -710,7 +729,7 @@ class FuyaoSource:
                 logger.warning(
                     "Fuyao fund NAV skipped for reconciliation",
                     event="fuyao_fund_nav_skip",
-                    thscode=code,
+                    thscode=raw_code,
                     reason=str(error)[:200],
                 )
                 continue

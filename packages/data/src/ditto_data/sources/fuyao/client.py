@@ -24,12 +24,13 @@ import orjson
 from ditto_platform.foundation import logger
 
 from ditto_data.sources.base import SourceConfigurationError, SourceFetchError
+from ditto_data.sources.throttle import MinIntervalThrottle
 
 # fuyao 文档约定：交易日毫秒戳按 Asia/Shanghai 零点解释
 _BEIJING = timezone(timedelta(hours=8))
 
 # 限流治理常量（#516）：间隔/退避均可在测试中注入或 monkeypatch
-FUYAO_DEFAULT_MIN_REQUEST_INTERVAL = 0.1
+_FUYAO_DEFAULT_MIN_REQUEST_INTERVAL = 0.1
 _FUYAO_MAX_REQUEST_INTERVAL = 2.0
 _FUYAO_RATE_LIMIT_CODE = 4001
 _FUYAO_HTTP_TOO_MANY_REQUESTS = 429
@@ -76,32 +77,22 @@ class FuyaoClient:
             timeout=timeout,
             headers={"X-api-key": api_key},
         )
-        self._min_request_interval = (
-            FUYAO_DEFAULT_MIN_REQUEST_INTERVAL
+        self._throttle = MinIntervalThrottle(
+            _FUYAO_DEFAULT_MIN_REQUEST_INTERVAL
             if min_request_interval is None
-            else max(0.0, min_request_interval)
+            else min_request_interval
         )
-        self._last_request_monotonic: float | None = None
-
-    def _throttle(self) -> None:
-        """把相邻请求起点间隔压到当前最小间隔以内（限流后自适应上升）."""
-        if self._min_request_interval <= 0:
-            return
-        now = time.monotonic()
-        if self._last_request_monotonic is not None:
-            remaining = self._min_request_interval - (
-                now - self._last_request_monotonic
-            )
-            if remaining > 0:
-                time.sleep(remaining)
-        self._last_request_monotonic = time.monotonic()
 
     def _backoff_for_rate_limit(self, path: str, attempt: int, *, origin: str) -> None:
-        """限流后退避（官方：避免立即连续重试），并把节流间隔翻倍封顶 2s."""
+        """
+        限流后退避（官方：避免立即连续重试），并把节流间隔翻倍封顶 2s.
+
+        间隔只升不降（进程内单向）；单次命令进程结束后自然重置.
+        """
         wait_seconds = _FUYAO_RATE_LIMIT_BACKOFF_BASE_SECONDS * 2**attempt
-        if self._min_request_interval > 0:
-            self._min_request_interval = min(
-                self._min_request_interval * 2, _FUYAO_MAX_REQUEST_INTERVAL
+        if self._throttle.min_interval > 0:
+            self._throttle.min_interval = min(
+                self._throttle.min_interval * 2, _FUYAO_MAX_REQUEST_INTERVAL
             )
         logger.warning(
             "Fuyao rate limit hit, backing off before retry",
@@ -110,7 +101,7 @@ class FuyaoClient:
             origin=origin,
             attempt=attempt + 1,
             wait_seconds=wait_seconds,
-            next_min_request_interval=self._min_request_interval,
+            next_min_request_interval=self._throttle.min_interval,
         )
         time.sleep(wait_seconds)
 
@@ -118,7 +109,7 @@ class FuyaoClient:
         """单次到多次限流退避的 GET，返回原始信封 dict（不校验业务码）."""
         attempt = 0
         while True:
-            self._throttle()
+            self._throttle.wait()
             try:
                 response = self._client.get(path, params=params)
                 response.raise_for_status()
@@ -134,8 +125,16 @@ class FuyaoClient:
                 raise SourceFetchError(
                     source="fuyao",
                     message=(
-                        f"fuyao {path} http error: {status} {e.response.text[:200]}"
+                        f"fuyao {path} http error: {status} "
+                        f"{e.response.text[:200]}"  # 截断防日志爆炸
                     ),
+                ) from e
+            except httpx.RequestError as e:
+                # 连接/超时等网络错误同样包装：对账按标的隔离只捕
+                # SourceFetchError（#516 评审，与 fred client 对齐）
+                raise SourceFetchError(
+                    source="fuyao",
+                    message=f"fuyao {path} network error: {e}",
                 ) from e
             try:
                 envelope: object = orjson.loads(response.content)

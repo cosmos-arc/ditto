@@ -12,5 +12,5 @@ def _no_fred_throttle(monkeypatch: pytest.MonkeyPatch) -> None:
 
     节流与退避时序有专测（mock 时钟），其余测试不应真实 sleep.
     """
-    monkeypatch.setattr(fred_client_module, "FRED_DEFAULT_MIN_REQUEST_INTERVAL", 0.0)
+    monkeypatch.setattr(fred_client_module, "_FRED_DEFAULT_MIN_REQUEST_INTERVAL", 0.0)
     monkeypatch.setattr(fred_client_module, "_RATE_LIMIT_BACKOFF_BASE_SECONDS", 0.001)

@@ -4,12 +4,12 @@ from __future__ import annotations
 
 import logging
 import re
-import time
 from collections.abc import Mapping
 from typing import Any, cast
 
 import httpx
 import polars as pl
+from polars import exceptions as pl_exceptions
 from tenacity import (
     RetryCallState,
     retry,
@@ -24,19 +24,20 @@ from ditto_data.sources.base import (
     SourceFetchError,
     SourceRateLimitError,
 )
+from ditto_data.sources.throttle import MinIntervalThrottle
 
 FRED_API_BASE_URL = "https://api.stlouisfed.org/fred"
 HTTP_UNAUTHORIZED = 401
-HTTP_TOO_MANY_REQUESTS = 429
+_HTTP_TOO_MANY_REQUESTS = 429
 
-# 官方限速 2 req/s，超限先收到 429、持续违反可致临时 IP 封禁
-# （fred.stlouisfed.org/docs/api/errors.html）。全量日更 ≈51 序列突发，
-# 默认 0.5s 节流把请求压在限速内；429 仍触发时走专用退避（10s 起指数，
-# 存在 Retry-After 则优先遵从），与瞬态错误的 2-10s 通用退避分离（#516）。
-FRED_DEFAULT_MIN_REQUEST_INTERVAL = 0.5
+# 官方限速 120 req/min（≈2 req/s），超限先收到 429、持续违反可致 key 封禁
+# （https://fred.stlouisfed.org/docs/api/fred/errors.html）。全量日更 ≈51
+# 序列突发，默认 0.5s 节流把请求压在限速内；429 仍触发时走专用退避
+# （10s 起指数，存在 Retry-After 则优先遵从，上限 120s），与瞬态错误的
+# 2-10s 通用退避分离（#516）。
+_FRED_DEFAULT_MIN_REQUEST_INTERVAL = 0.5
 _TRANSIENT_SERVER_ERRORS = frozenset({500, 502, 503, 504})
 _RATE_LIMIT_BACKOFF_BASE_SECONDS = 10.0
-_RATE_LIMIT_BACKOFF_MAX_SECONDS = 60.0
 _RATE_LIMIT_RETRY_AFTER_CAP_SECONDS = 120.0
 
 _REDACTED_QUERY_VALUE = "%3Credacted%3E"
@@ -111,6 +112,20 @@ def _decode_observations(
             source="fred",
             details={"dataset": series_id},
         )
+    malformed = [
+        type(element).__name__
+        for element in cast("list[object]", observations)
+        if not isinstance(element, dict)
+    ]
+    if malformed:
+        # 标量/混合元素（如 [1,2,3]）会让下游 polars 构造裸抛（#516 评审）
+        raise _PermanentFetchError(
+            message=(
+                f"FRED API observations contain non-object elements: {malformed[:5]}"
+            ),
+            source="fred",
+            details={"dataset": series_id},
+        )
     return cast("list[dict[str, Any]]", observations)
 
 
@@ -125,10 +140,8 @@ def _rate_limit_aware_wait(retry_state: RetryCallState) -> float:
             and 0 < retry_after <= _RATE_LIMIT_RETRY_AFTER_CAP_SECONDS
         ):
             return float(retry_after)
-        return min(
-            _RATE_LIMIT_BACKOFF_MAX_SECONDS,
-            _RATE_LIMIT_BACKOFF_BASE_SECONDS
-            * 2 ** max(0, retry_state.attempt_number - 1),
+        return _RATE_LIMIT_BACKOFF_BASE_SECONDS * 2 ** max(
+            0, retry_state.attempt_number - 1
         )
     return _TRANSIENT_WAIT(retry_state)
 
@@ -148,7 +161,7 @@ class FredClient:
     Attributes:
         _api_key: FRED API key.
         _client: HTTPX client instance.
-        _min_request_interval: Minimum seconds between request starts (0 disables).
+        _throttle: 请求起点间隔节流器（官方 2 req/s，0 禁用）.
 
     """
 
@@ -183,31 +196,17 @@ class FredClient:
                 ),
                 env_var="FRED_API_KEY",
             )
-        self._min_request_interval = (
-            FRED_DEFAULT_MIN_REQUEST_INTERVAL
+        self._throttle = MinIntervalThrottle(
+            _FRED_DEFAULT_MIN_REQUEST_INTERVAL
             if min_request_interval is None
-            else max(0.0, min_request_interval)
+            else min_request_interval
         )
-        self._last_request_monotonic: float | None = None
 
         _install_http_log_filter()
         self._client = httpx.Client(
             base_url=FRED_API_BASE_URL,
             timeout=30.0,
         )
-
-    def _throttle(self) -> None:
-        """把相邻请求起点间隔压到官方限速（2 req/s）以内."""
-        if self._min_request_interval <= 0:
-            return
-        now = time.monotonic()
-        if self._last_request_monotonic is not None:
-            remaining = self._min_request_interval - (
-                now - self._last_request_monotonic
-            )
-            if remaining > 0:
-                time.sleep(remaining)
-        self._last_request_monotonic = time.monotonic()
 
     @staticmethod
     def _rate_limit_error(http_error: httpx.HTTPStatusError) -> SourceRateLimitError:
@@ -283,7 +282,7 @@ class FredClient:
             params["realtime_end"] = realtime_end
 
         try:
-            self._throttle()
+            self._throttle.wait()
             response = self._client.get("/series/observations", params=params)
             response.raise_for_status()
         except httpx.HTTPStatusError as e:
@@ -293,7 +292,7 @@ class FredClient:
                     message="FRED API authentication failed. Check your API key.",
                     source="fred",
                 ) from e
-            if status == HTTP_TOO_MANY_REQUESTS:
+            if status == _HTTP_TOO_MANY_REQUESTS:
                 raise self._rate_limit_error(e) from e
             if status not in _TRANSIENT_SERVER_ERRORS:
                 # 400/404 等确定性 4xx：重试不会改变结果（#508 调研缺陷）
@@ -326,10 +325,18 @@ class FredClient:
                 }
             )
 
-        df = pl.DataFrame(observations)
-        return df.with_columns(
-            pl.col("date").str.to_date(strict=False),
-            pl.col("value").cast(pl.Float64, strict=False),
-            pl.col("realtime_start").str.to_date(strict=False),
-            pl.col("realtime_end").str.to_date(strict=False),
-        ).select("date", "value", "realtime_start", "realtime_end")
+        try:
+            df = pl.DataFrame(observations)
+            return df.with_columns(
+                pl.col("date").str.to_date(strict=False),
+                pl.col("value").cast(pl.Float64, strict=False),
+                pl.col("realtime_start").str.to_date(strict=False),
+                pl.col("realtime_end").str.to_date(strict=False),
+            ).select("date", "value", "realtime_start", "realtime_end")
+        except (pl_exceptions.PolarsError, TypeError, KeyError) as e:
+            # 缺键/异构行等形态违约：包装为确定性失败，不留 polars 裸抛（#516）
+            raise _PermanentFetchError(
+                message="FRED API observations have a malformed element shape",
+                source="fred",
+                details={"dataset": series_id, "original_error": str(e)},
+            ) from e

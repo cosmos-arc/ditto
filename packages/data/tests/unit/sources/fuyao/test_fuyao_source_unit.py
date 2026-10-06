@@ -74,7 +74,7 @@ class TestFuyaoClientRateLimit:
 
         assert client.get("/api/x") == {"item": [1]}
         assert endpoint.call_count == 2
-        assert client._min_request_interval == pytest.approx(0.2)
+        assert client._throttle.min_interval == pytest.approx(0.2)
 
     @respx.mock
     def test_code_4001_exhaustion_fails_closed(self) -> None:
@@ -118,6 +118,14 @@ class TestFuyaoClientRateLimit:
         assert endpoint.call_count == 1
 
     @respx.mock
+    def test_network_error_wrapped(self) -> None:
+        """连接/超时错误包装为 SourceFetchError（对账按标的隔离只捕该类）."""
+        respx.get(f"{_BASE}/api/x").mock(side_effect=httpx.ConnectError("refused"))
+
+        with pytest.raises(SourceFetchError, match="network error"):
+            _client().get("/api/x")
+
+    @respx.mock
     def test_non_json_body_wrapped(self) -> None:
         """200 非 JSON 响应体 → 包装为 SourceFetchError，不裸抛（#516）."""
         endpoint = respx.get(f"{_BASE}/api/x").mock(
@@ -139,12 +147,17 @@ class TestFuyaoClientRateLimit:
         with pytest.raises(SourceFetchError, match="non-object JSON"):
             _client().get("/api/x")
 
-    def test_throttle_spaces_request_starts(
-        self, monkeypatch: pytest.MonkeyPatch
+    def test_request_path_is_throttled(
+        self, respx_mock, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """默认节流维持相邻请求起点间隔（mock 时钟，不真实 sleep）."""
-        from ditto_data.sources.fuyao import client as fuyao_client_module
+        """公开 get 路径两次调用间真实走节流（mock 时钟，删调用即失败）."""
+        from ditto_data.sources import throttle as throttle_module
 
+        respx_mock.get(f"{_BASE}/api/x").mock(
+            return_value=httpx.Response(
+                200, json={"code": 0, "message": "success", "data": {"item": []}}
+            )
+        )
         client = FuyaoClient(base_url=_BASE, api_key="k", min_request_interval=0.1)
         sleeps: list[float] = []
         clock = {"now": 100.0}
@@ -156,14 +169,14 @@ class TestFuyaoClientRateLimit:
             sleeps.append(seconds)
             clock["now"] += seconds
 
-        monkeypatch.setattr(fuyao_client_module.time, "monotonic", _fake_monotonic)
-        monkeypatch.setattr(fuyao_client_module.time, "sleep", _fake_sleep)
+        monkeypatch.setattr(throttle_module.time, "monotonic", _fake_monotonic)
+        monkeypatch.setattr(throttle_module.time, "sleep", _fake_sleep)
 
-        client._throttle()  # 首个请求：无间隔要求
-        assert sleeps == []
-        clock["now"] += 0.02  # 只过了 0.02s
-        client._throttle()  # 需补 0.08s
-        assert sleeps == [pytest.approx(0.08)]
+        assert client.get("/api/x") == {"item": []}
+        assert client.get("/api/x") == {"item": []}
+
+        # 第二次调用距上次起点 0s（mock 时钟不前进）→ 需补满 0.1s
+        assert sleeps == [pytest.approx(0.1)]
 
 
 @pytest.mark.unit
@@ -903,3 +916,63 @@ class TestFuyaoFundNavFrame:
 
         assert frame.height == 0
         assert frame["unit_nav"].dtype == pl.Float64
+
+
+@pytest.mark.unit
+class TestFuyaoPerTickerIsolation:
+    """#516 评审 F1/F2 — 未识别前缀按标的隔离，单标的身份错误不中断整批."""
+
+    def test_financial_statements_unknown_prefix_skips_ticker(self) -> None:
+        """混入 900xxx B 股裸码：该标的跳过留痕，有效标的结果不受影响."""
+        source = _source_by_thscode(
+            {
+                "600519.SH": {
+                    "item": [_income_item(date(2026, 6, 30), date(2026, 8, 14))]
+                }
+            }
+        )
+
+        frame = source.fetch_financial_statements(
+            "income_statement", ["600519", "900901"]
+        )
+
+        assert frame.height == 1
+        assert frame["ticker"].to_list() == ["600519.SH"]
+
+    def test_fund_nav_unknown_prefix_skips_ticker(self) -> None:
+        target_ms = date_to_ms(date(2026, 9, 30))
+        source = _source_by_thscode(
+            {"510300.SH": {"item": [{"nav_date": target_ms, "unit_nav": 4.4312}]}}
+        )
+
+        frame = source.fetch_fund_nav(["510300", "900901"], "2026-09-30")
+
+        assert frame.height == 1
+        assert frame["ticker"].to_list() == ["510300.SH"]
+
+    def test_stock_daily_bars_unknown_prefix_skips_ticker(self) -> None:
+        """bars 篮子（宽基对账最大篮）同样按标的隔离，不再整批中断."""
+        source = _source_by_thscode(
+            {"600519.SH": {"item": [_bar(date_to_ms(date(2026, 9, 30)), 10.5)]}}
+        )
+
+        frame = source.fetch_stock_daily_bars(["600519", "900901"], "2026-09-30")
+
+        assert frame.height == 1
+        assert frame["ticker"].to_list() == ["600519"]
+
+    def test_stock_daily_bars_contract_violation_skips_ticker(self) -> None:
+        """越窗 bar（契约违约）按标的跳过留痕，其余标的照常返回."""
+        good_ms = date_to_ms(date(2026, 9, 30))
+        bad_ms = date_to_ms(date(2026, 10, 15))
+        source = _source_by_thscode(
+            {
+                "600519.SH": {"item": [_bar(good_ms, 10.5)]},
+                "000001.SZ": {"item": [_bar(bad_ms, 12.0)]},
+            }
+        )
+
+        frame = source.fetch_stock_daily_bars(["600519", "000001"], "2026-09-30")
+
+        assert frame.height == 1
+        assert frame["ticker"].to_list() == ["600519"]

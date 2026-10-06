@@ -12,7 +12,7 @@ def _no_fuyao_throttle(monkeypatch: pytest.MonkeyPatch) -> None:
 
     节流与退避时序有专测（mock 时钟），其余测试不应真实 sleep.
     """
-    monkeypatch.setattr(fuyao_client_module, "FUYAO_DEFAULT_MIN_REQUEST_INTERVAL", 0.0)
+    monkeypatch.setattr(fuyao_client_module, "_FUYAO_DEFAULT_MIN_REQUEST_INTERVAL", 0.0)
     monkeypatch.setattr(
         fuyao_client_module, "_FUYAO_RATE_LIMIT_BACKOFF_BASE_SECONDS", 0.001
     )
