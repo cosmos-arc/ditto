@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping, Sequence
 from dataclasses import replace
 from datetime import UTC, datetime
 from typing import Literal, cast
@@ -23,6 +24,27 @@ from ditto_application.queries.daily_decision_v3 import (
 )
 from ditto_application.queries.decision_evidence import DecisionEvidenceQueryFacade
 from ditto_application.queries.evidence_contracts import EvidenceTemporalContext
+
+
+def _obj(value: object) -> Mapping[str, object]:
+    """窄化 JSON 节点为对象（EvidenceValue 递归联合的断言侧收窄）."""
+    assert isinstance(value, Mapping)
+    return value
+
+
+def _seq(value: object) -> Sequence[object]:
+    """窄化 JSON 节点为数组（运行时校验；str/bytes 虽是 Sequence 但非数组）."""
+    assert isinstance(value, Sequence)
+    assert not isinstance(value, (str, bytes))
+    return value
+
+
+def _dig(value: object, *path: str | int) -> object:
+    """按 JSON 路径逐级取值（测试断言侧窄化器）."""
+    node: object = value
+    for key in path:
+        node = _seq(node)[key] if isinstance(key, int) else _obj(node)[key]
+    return node
 
 
 def _context() -> EvidenceTemporalContext:
@@ -112,10 +134,10 @@ def test_decision_facade_binds_portfolio_risk_and_v3_to_exact_identity() -> None
 
     assert result.strategy_id == "strategy-1"
     assert result.readiness == "ready"
-    assert result.payload.value["portfolio_construction"]["status"] == "optimal"
-    assert result.payload.value["tail_risk"]["historical_es99"] == 0.03
-    assert result.payload.value["factor_risk"]["availability"] == "available"
-    assert result.payload.value["v2"]["account_positions"]["positions"]
+    assert _dig(result.payload.value, "portfolio_construction", "status") == "optimal"
+    assert _dig(result.payload.value, "tail_risk", "historical_es99") == 0.03
+    assert _dig(result.payload.value, "factor_risk", "availability") == "available"
+    assert _dig(result.payload.value, "v2", "account_positions", "positions")
     assert result.artifact_refs[0].content_hash == result.payload.payload_hash
     v3.get_report_v3.assert_called_once_with(
         strategy_id="strategy-1",

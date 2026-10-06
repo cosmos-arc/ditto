@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping, Sequence
 from dataclasses import replace
 from datetime import UTC, datetime
 
@@ -33,6 +34,27 @@ from ditto_strategy.selection.pipeline import SelectionPipeline
 
 _AS_OF = datetime(2026, 8, 31, 7, tzinfo=UTC)
 _SOURCE_IDS = ("fundamental-a", "market-a")
+
+
+def _obj(value: object) -> Mapping[str, object]:
+    """窄化 JSON 节点为对象（EvidenceValue 递归联合的断言侧收窄）."""
+    assert isinstance(value, Mapping)
+    return value
+
+
+def _seq(value: object) -> Sequence[object]:
+    """窄化 JSON 节点为数组（运行时校验；str/bytes 虽是 Sequence 但非数组）."""
+    assert isinstance(value, Sequence)
+    assert not isinstance(value, (str, bytes))
+    return value
+
+
+def _dig(value: object, *path: str | int) -> object:
+    """按 JSON 路径逐级取值（测试断言侧窄化器）."""
+    node: object = value
+    for key in path:
+        node = _seq(node)[key] if isinstance(key, int) else _obj(node)[key]
+    return node
 
 
 def _artifacts() -> tuple[IndustryRotationSnapshot, SelectionRun]:
@@ -149,12 +171,13 @@ def test_exact_evidence_preserves_rank_factors_and_exclusion_reason() -> None:
         context=_context(),
     )
 
-    assert rotation_evidence.payload.value["rankings"][0]["rank"] == 1
-    assert selection_evidence.payload.value["candidates"][0]["instrument_id"] == (
-        InstrumentId(600000)
-    )
-    assert selection_evidence.payload.value["exclusions"][0]["reason_code"] == (
-        "insufficient_liquidity"
+    assert _dig(rotation_evidence.payload.value, "rankings", 0, "rank") == 1
+    assert _dig(
+        selection_evidence.payload.value, "candidates", 0, "instrument_id"
+    ) == InstrumentId(600000)
+    assert (
+        _dig(selection_evidence.payload.value, "exclusions", 0, "reason_code")
+        == "insufficient_liquidity"
     )
 
 

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any, cast
+
 from ditto_backtest.report_renderer import BacktestReportRenderer
 from ditto_backtest.statistics import (
     AggregatedTradeStatistics,
@@ -30,7 +32,8 @@ _ALPHA_DEFAULTS: dict[str, float | None | int] = {
 
 
 def _make_alpha_stats(**overrides: float | None | int) -> AlphaStatistics:
-    return AlphaStatistics(**{**_ALPHA_DEFAULTS, **overrides})
+    """字段级覆写（含 None 可选指标），构造点单点放宽."""
+    return AlphaStatistics(**cast("dict[str, Any]", {**_ALPHA_DEFAULTS, **overrides}))
 
 
 _TRADE_DEFAULTS: dict[str, float | int] = {
@@ -55,7 +58,9 @@ _TRADE_DEFAULTS: dict[str, float | int] = {
 
 
 def _make_trade_stats(**overrides: float | int) -> AggregatedTradeStatistics:
-    return AggregatedTradeStatistics(**{**_TRADE_DEFAULTS, **overrides})
+    return AggregatedTradeStatistics(
+        **cast("dict[str, Any]", {**_TRADE_DEFAULTS, **overrides})
+    )
 
 
 def _make_report(**overrides: object) -> BacktestReport:
@@ -73,7 +78,8 @@ def _make_report(**overrides: object) -> BacktestReport:
         "fill_log": (),
     }
     defaults.update(overrides)
-    return BacktestReport(**defaults)
+    # 报告字段覆写工厂：defaults 字面量与 overrides 合并后的单点放宽。
+    return BacktestReport(**cast("dict[str, Any]", defaults))
 
 
 class TestFmt:

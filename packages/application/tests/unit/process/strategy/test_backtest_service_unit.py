@@ -7,6 +7,7 @@ from dataclasses import FrozenInstanceError, replace
 from datetime import UTC, date, datetime, timedelta
 from inspect import Parameter, signature
 from pathlib import Path
+from typing import Any, cast
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -36,6 +37,7 @@ from ditto_backtest.result import (
     BacktestTargetWeightSnapshot,
 )
 from ditto_backtest.statistics import BacktestReport
+from ditto_backtest.steps.types import StepContext
 from ditto_data.catalog import DataAssetRef
 from ditto_data.lineage import InMemoryDataLineage
 from ditto_kernel.identity import InstrumentId
@@ -88,7 +90,8 @@ def _make_service_config(
         effective_parameters=(),
         research_snapshot_id=None,
         research_snapshot_manifest_hash=None,
-        **overrides,
+        # **overrides 是负向注入的宽松参数（按字段名塞非法值），构造点单点放宽。
+        **cast("dict[str, Any]", overrides),
     )
 
 
@@ -211,7 +214,8 @@ class TestBacktestServiceConfig:
             BacktestCatalogRequestConfig,
         )
 
-        constructor: Callable[..., BacktestService] = BacktestService
+        # 故意的错误配置类型：验证运行时拒绝未解析请求，类型核验让位。
+        constructor = cast("Callable[..., object]", BacktestService)
         request = BacktestCatalogRequestConfig(
             strategy_id="momentum-etf",
             start_date="2026-01-01",
@@ -346,7 +350,8 @@ class TestBacktestServiceConfig:
     ) -> None:
         """Invalid timing or seed controls must fail before engine assembly."""
         with pytest.raises(AppProcessError) as exc_info:
-            _make_service_config(**{field_name: invalid_value})
+            # 按字段名注入任意非法值的负向测试，调用侧单点放宽。
+            _make_service_config(**cast("dict[str, Any]", {field_name: invalid_value}))
 
         assert exc_info.value.details["field_name"] == field_name
         assert exc_info.value.details["reason"] == "invalid_deterministic_control"
@@ -1213,7 +1218,7 @@ class TestArtifactPersistence:
             effective_parameters=(),
             research_snapshot_id=None,
             research_snapshot_manifest_hash=None,
-            input_refs=("ETF-001",),
+            input_refs=(InstrumentId(1),),
             config_hash="cfg-123",
             engine_version="0.2.0",
         )
@@ -1456,8 +1461,8 @@ class TestBuildFactorAwareBundleBuilder:
     def _make_step_context(
         self,
         td: str = "2026-04-10",
-    ) -> MagicMock:
-        """构建 StepContext mock (含 bars slice)."""
+    ) -> StepContext:
+        """构建 StepContext（含 bars slice）."""
         from ditto_backtest.data_feed import Slice
 
         iid1 = InstrumentId(510050)
@@ -1565,9 +1570,11 @@ class TestBuildFactorAwareBundleBuilder:
         assert bundle.instruments.height == 2
         assert bundle.market_data.height == 2
         # signal_values 包含 instrument_id + signal_value 列
-        assert "instrument_id" in bundle.signal_values.columns
-        assert "signal_value" in bundle.signal_values.columns
-        assert bundle.signal_values.height == 2
+        signal_values = bundle.signal_values
+        assert signal_values is not None
+        assert "instrument_id" in signal_values.columns
+        assert "signal_value" in signal_values.columns
+        assert signal_values.height == 2
 
     def test_run_id_param_propagated_to_bundle(self) -> None:
         """传入的 run_id 参数应传递到生成的 StrategyInputBundle.run_id (F10)."""
@@ -1647,7 +1654,9 @@ class TestBuildFactorAwareBundleBuilder:
         from ditto_strategy.alpha.pipeline import StrategyInputBundle
 
         assert isinstance(bundle, StrategyInputBundle)
-        assert bundle.signal_values.height == 2  # FactorBridge 处理 empty exprs
+        sv = bundle.signal_values  # FactorBridge 处理 empty exprs
+        assert sv is not None
+        assert sv.height == 2
 
     def test_compilation_failure_propagates_error(self) -> None:
         """当 FactorBridge.compute_signals 因无效表达式抛异常时，builder 传播异常."""
@@ -2195,7 +2204,7 @@ class TestBacktestCheckpointPersistence:
             settlement_state=BacktestSettlementStateSnapshot(
                 frozen_quantities=(
                     BacktestFrozenQuantitySnapshot(
-                        instrument_id=1,
+                        instrument_id=InstrumentId(1),
                         settle_date="2026-03-03",
                         quantity=1000,
                     ),
@@ -2205,7 +2214,7 @@ class TestBacktestCheckpointPersistence:
                 pending_orders=(
                     BacktestPendingOrderSnapshot(
                         client_order_id="order-001",
-                        instrument_id=1,
+                        instrument_id=InstrumentId(1),
                         order_type="market",
                         direction="buy",
                         quantity=300,
@@ -2228,7 +2237,7 @@ class TestBacktestCheckpointPersistence:
                         cash_target=0.5,
                         positions=(
                             BacktestTargetWeightSnapshot(
-                                instrument_id=1,
+                                instrument_id=InstrumentId(1),
                                 target_weight=0.5,
                             ),
                         ),
