@@ -30,6 +30,12 @@ business:
     columns: [adj_factor]
     message: "复权因子必须为正数"
 
+  - rule: monotonic_decrease
+    column: adj_factor
+    group_by: instrument_id
+    severity: warning
+    message: "复权因子应单调递减（分红除息时会跳跃）"
+
   - rule: expression
     name: reasonable_range
     expr: "adj_factor BETWEEN 0.1 AND 100.0"

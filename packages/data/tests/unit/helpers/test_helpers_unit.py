@@ -4,12 +4,8 @@ from datetime import date
 
 import polars as pl
 import pytest
-from ditto_data.helpers.adjustment import (
-    AdjustmentFactorMissingError,
-    _reject_missing_adjustment,
-    apply_hfq_adj,
-    apply_qfq_adj,
-)
+from ditto_data.errors.integrity import AdjustmentFactorMissingError
+from ditto_data.helpers.adjustment import apply_hfq_adj, apply_qfq_adj
 from ditto_data.helpers.pit import filter_by_knowledge_date, parse_asof_date
 
 
@@ -284,8 +280,8 @@ class TestApplyQfqAdj:
     def test_qfq_baseline_missing_fails_closed(self) -> None:
         """标的在 qfq baseline 窗口内完全没有因子时显式失败（#514）.
 
-        adj_factor 行级齐全但 latest_factor 为 null 的形态：join 后
-        factor 列有值、baseline 无该标的——由 baseline 检查接住。
+        公开路径形态：行情行已由调用方 join 到当日因子（adj_factor 齐全），
+        但标的从不出现在 baseline 因子表中——latest_factor 为 null。
         """
         df = pl.DataFrame(
             {
@@ -296,13 +292,20 @@ class TestApplyQfqAdj:
                 "low": [9.5, 19.5],
                 "close": [10.0, 20.0],
                 "adj_factor": [1.0, 1.0],
-                "latest_factor": [1.1, None],
+            }
+        )
+        adj_df = pl.DataFrame(
+            {
+                # 标的 2 不存在于因子表：行级因子经调用方 join 补齐，
+                # 但 baseline 分组永远缺它
+                "instrument_id": [1],
+                "trade_date": [date(2024, 1, 1)],
+                "adj_factor": [1.1],
             }
         )
 
-        # 直接构造 post-join 形态：latest_factor 已由调用方 join 完成
         with pytest.raises(AdjustmentFactorMissingError, match="latest_factor"):
-            _reject_missing_adjustment(df, check_baseline=True)
+            apply_qfq_adj(df, adj_df)
 
     def test_qfq_with_asof_string(self) -> None:
         """Test QFQ adjustment with asof as string."""

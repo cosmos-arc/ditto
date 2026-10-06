@@ -393,9 +393,8 @@ class TestFetchFundNavDelegation:
     def test_ticker_mode_requires_range(self) -> None:
         from ditto_data.sources.tushare.adapters.etf import ETFTushareAdapter
 
-        adapter = ETFTushareAdapter.__new__(ETFTushareAdapter)
-        adapter._client = MagicMock()
-        # __new__ 绕过 __init__：手工注入 universe 缓存（#513 边界）
+        adapter = ETFTushareAdapter(_client=MagicMock())
+        # 聚焦 nav 参数校验：预热 universe 缓存避免 etf_basic 请求
         adapter._etf_universe = frozenset({"510300.SH"})
         with pytest.raises(ValueError, match="start_date 和 end_date"):
             adapter.fetch_fund_nav(source_ticker="510300.SH")
@@ -403,9 +402,8 @@ class TestFetchFundNavDelegation:
     def test_trade_date_mode_queries_rolling_nav_window(self) -> None:
         from ditto_data.sources.tushare.adapters.etf import ETFTushareAdapter
 
-        adapter = ETFTushareAdapter.__new__(ETFTushareAdapter)
-        adapter._client = MagicMock()
-        # __new__ 绕过 __init__：手工注入 universe 缓存（#513 边界）
+        adapter = ETFTushareAdapter(_client=MagicMock())
+        # 聚焦 nav 滚动窗行为：预热 universe 缓存避免 etf_basic 请求
         adapter._etf_universe = frozenset({"510300.SH"})
         adapter._client.query.return_value = pl.DataFrame(
             {

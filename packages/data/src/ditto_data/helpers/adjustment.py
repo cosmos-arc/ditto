@@ -16,16 +16,13 @@ from datetime import date
 
 import polars as pl
 
+from ditto_data.errors.integrity import AdjustmentFactorMissingError
 from ditto_data.helpers.pit import (
     filter_by_knowledge_date,
     parse_asof_date,
 )
 
 _SAMPLE_LIMIT = 5
-
-
-class AdjustmentFactorMissingError(ValueError):
-    """复权因子缺失——复权计算拒绝产出失真值（fail closed）."""
 
 
 def _reject_missing_adjustment(

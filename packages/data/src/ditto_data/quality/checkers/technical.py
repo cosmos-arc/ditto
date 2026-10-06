@@ -156,7 +156,12 @@ class TechnicalChecker:
         if not column or not reference:
             return None
 
-        # Need reference_values from context (provided by Application Layer)
+        # Need reference_values from context (provided by Application Layer).
+        #
+        # #513 裁决说明：不为「ETF 域混入 LOF」接线此处——品种边界由
+        # ETFTushareAdapter 在源层按 etf_basic universe 交集/拒绝把关
+        # （写入前过滤），写入时 instrument 解析本身即天然 FK；此处
+        # reference_values 机制留给未来需要跨数据集值域校验的规则。
         if not context or "reference_values" not in context:
             logger.debug(
                 "dq_fk_skip_no_context",

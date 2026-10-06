@@ -247,6 +247,9 @@ class StatisticalChecker:
           缺行（#1861 单指数缺口形态）。帧内完全缺席的标的不在检测面
           内（需要 universe 期望清单接线，见 #511 票评论边界）。
 
+        规则键 ``lookback_days`` 本检查器不消费（遗留键）：期望集窗口
+        由调用方传入的 calendar 帧决定（patrol 取 ~10 个开市日）。
+
         Args:
             current: Current data (must contain 'trade_date' column)
             historical: Stored window frame (patrol ~120 trade days)
@@ -277,12 +280,9 @@ class StatisticalChecker:
 
         try:
             # Get expected trading days (open days only)
-            expected_dates = sorted(
-                set(
-                    calendar.filter(pl.col("is_open"))["trade_date"].cast(str).to_list()
-                )
+            expected_set = set(
+                calendar.filter(pl.col("is_open"))["trade_date"].cast(str).to_list()
             )
-            expected_set = set(expected_dates)
 
             # Get actual data dates
             actual_dates = set(frame["trade_date"].cast(str).unique().to_list())

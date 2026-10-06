@@ -12,11 +12,8 @@ from datetime import date
 import polars as pl
 from ditto_platform.foundation import logger
 
-from ditto_data.helpers.adjustment import (
-    AdjustmentFactorMissingError,
-    apply_hfq_adj,
-    apply_qfq_adj,
-)
+from ditto_data.errors.integrity import AdjustmentFactorMissingError
+from ditto_data.helpers.adjustment import apply_hfq_adj, apply_qfq_adj
 from ditto_data.services.deps import MarketReaders
 from ditto_data.services.market_types import AdjType
 

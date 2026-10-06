@@ -84,6 +84,14 @@ class ETFTushareAdapter(BaseTushareAdapter):
             self._etf_universe = frozenset(basic["source_ticker"].to_list())
         return self._etf_universe
 
+    def _require_etf_ticker(self, source_ticker: str, dataset: str) -> None:
+        """按标的模式拒绝非 ETF 品种（如 LOF），防止污染 ETF 域表（#513）."""
+        if source_ticker not in self._load_etf_universe():
+            raise ValueError(
+                f"source_ticker {source_ticker} is not in the etf_basic "
+                + f"universe; {dataset} only accepts ETF instruments (#513)"
+            )
+
     @traced("source.tushare.fetch_etf_basic")
     def fetch_etf_basic(self) -> pl.DataFrame:
         """
@@ -239,12 +247,7 @@ class ETFTushareAdapter(BaseTushareAdapter):
             end_date=end_date,
         )
 
-        if source_ticker not in self._load_etf_universe():
-            # 按标的模式显式拒绝非 ETF 品种（如 LOF），防止污染 etf_daily
-            raise ValueError(
-                f"source_ticker {source_ticker} is not in the etf_basic "
-                + "universe; etf_daily only accepts ETF instruments (#513)"
-            )
+        self._require_etf_ticker(source_ticker, "etf_daily")
 
         with tushare_fetch_error_handler("etf_daily", "fund_daily"):
             ts_start = start_date.replace("-", "")
@@ -350,11 +353,7 @@ class ETFTushareAdapter(BaseTushareAdapter):
             end_date=end_date,
         )
 
-        if source_ticker not in self._load_etf_universe():
-            raise ValueError(
-                f"source_ticker {source_ticker} is not in the etf_basic "
-                + "universe; fund_adj only accepts ETF instruments (#513)"
-            )
+        self._require_etf_ticker(source_ticker, "fund_adj")
 
         with tushare_fetch_error_handler("fund_adj", f"fund_adj:{source_ticker}"):
             ts_start = start_date.replace("-", "")
@@ -431,12 +430,9 @@ class ETFTushareAdapter(BaseTushareAdapter):
             source_ticker=source_ticker,
         )
         fields = "ts_code,ann_date,nav_date,unit_nav,acc_nav"
-        if source_ticker and source_ticker not in self._load_etf_universe():
-            raise ValueError(
-                f"source_ticker {source_ticker} is not in the etf_basic "
-                + "universe; etf_nav only accepts ETF instruments (#513)"
-            )
-        if not source_ticker:
+        if source_ticker:
+            self._require_etf_ticker(source_ticker, "etf_nav")
+        else:
             self._load_etf_universe()
         with tushare_fetch_error_handler("etf_nav", f"fund_nav{scope}"):
             if source_ticker:

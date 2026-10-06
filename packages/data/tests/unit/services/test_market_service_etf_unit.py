@@ -9,7 +9,7 @@ from unittest.mock import MagicMock
 
 import polars as pl
 import pytest
-from ditto_data.helpers.adjustment import AdjustmentFactorMissingError
+from ditto_data.errors.integrity import AdjustmentFactorMissingError
 from ditto_data.services.deps import MarketReaders
 from ditto_data.services.market_service import MarketService
 
