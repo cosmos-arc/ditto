@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from contextlib import contextmanager
+from typing import Any, cast
 from unittest.mock import MagicMock, call, patch
 
 import pytest
@@ -32,6 +33,14 @@ from ditto_kernel.instrument import InstrumentIngestParams
 from packages.application.tests.unit.process.ingestion import (
     snapshot_evidence_support as _evidence_support,
 )
+
+
+def _set_source(
+    services: CoordinatorServices, name: str, source: object | None
+) -> None:
+    """测试替身注入：source_accessor 运行时是 MagicMock，静态声明是
+    SourceAccessor——替身替换经本单点放宽，不逐处 cast。"""
+    cast("Any", services.source_accessor).__setattr__(name, source)
 
 
 def _make_services() -> CoordinatorServices:
@@ -82,7 +91,7 @@ class TestCreateCoordinatorStringSource:
     def test_valid_string_creates_coordinator(self) -> None:
         services = _make_services()
         mock_source = MagicMock()
-        services.source_accessor.tushare = mock_source
+        _set_source(services, "tushare", mock_source)
 
         with _patch_coordinator_init() as (mock_cls, mock_instance):
             with create_coordinator(
@@ -138,8 +147,8 @@ class TestCreateCoordinatorFredDegradation:
 
     def test_fred_unavailable_degrades_gracefully(self) -> None:
         services = _make_services()
-        services.source_accessor.tushare = MagicMock()
-        services.source_accessor.fred = None
+        _set_source(services, "tushare", MagicMock())
+        _set_source(services, "fred", None)
 
         with _patch_coordinator_init() as (mock_cls, mock_instance):
             with create_coordinator(services, source_name="tushare") as coordinator:
@@ -151,8 +160,8 @@ class TestCreateCoordinatorFredDegradation:
     def test_fred_available(self) -> None:
         services = _make_services()
         mock_fred = MagicMock()
-        services.source_accessor.tushare = MagicMock()
-        services.source_accessor.fred = mock_fred
+        _set_source(services, "tushare", MagicMock())
+        _set_source(services, "fred", mock_fred)
 
         with _patch_coordinator_init() as (mock_cls, _):
             with create_coordinator(services, source_name="tushare"):
@@ -180,8 +189,8 @@ class TestCreateCoordinatorSourceRegistryRouting:
         registry.register("fred", MacroFetcher, fred_source)
 
         services = _make_services_with_source_registry(registry)
-        services.source_accessor.tushare = tushare_source
-        services.source_accessor.fred = fred_source
+        _set_source(services, "tushare", tushare_source)
+        _set_source(services, "fred", fred_source)
 
         with _patch_coordinator_init() as (mock_cls, _):
             with create_coordinator(services, source_name="fred"):
@@ -211,8 +220,8 @@ class TestCreateCoordinatorSourceRegistryRouting:
             registry.register("tushare", protocol, tushare_source)
         registry.register("fred", MacroFetcher, fred_source)
         services = _make_services_with_source_registry(registry)
-        services.source_accessor.tushare = tushare_source
-        services.source_accessor.fred = fred_source
+        _set_source(services, "tushare", tushare_source)
+        _set_source(services, "fred", fred_source)
         with _evidence_support.evidence_stores() as stores:
             # tushare 请求过该日期但从未完成 → stale;fred 从未覆盖 → missing。
             _evidence_support.commit_snapshot(
@@ -265,8 +274,8 @@ class TestCreateCoordinatorSourceRegistryRouting:
             registry.register("tushare", protocol, tushare_source)
         registry.register("fred", MacroFetcher, fred_source)
         services = _make_services_with_source_registry(registry)
-        services.source_accessor.tushare = tushare_source
-        services.source_accessor.fred = fred_source
+        _set_source(services, "tushare", tushare_source)
+        _set_source(services, "fred", fred_source)
         tushare_coordinator = MagicMock(name="tushare_coordinator")
         fred_coordinator = MagicMock(name="fred_coordinator")
 
@@ -305,9 +314,10 @@ class TestCreateCoordinatorSourceRegistryRouting:
             registry.register("tushare", protocol, tushare_source)
         registry.register("fred", MacroFetcher, fred_source)
         services = _make_services_with_source_registry(registry)
-        services.source_accessor.tushare = tushare_source
-        services.source_accessor.fred = fred_source
-        services.metadata_service.list_trading_days.return_value = [
+        _set_source(services, "tushare", tushare_source)
+        _set_source(services, "fred", fred_source)
+        # metadata_service 运行时是 MagicMock；返回值注入单点放宽。
+        cast("Any", services.metadata_service).list_trading_days.return_value = [
             "2024-12-27",
             "2024-12-30",
         ]
@@ -348,8 +358,8 @@ class TestCreateCoordinatorSourceRegistryRouting:
             registry.register("tushare", protocol, tushare_source)
         registry.register("fred", MacroFetcher, fred_source)
         services = _make_services_with_source_registry(registry)
-        services.source_accessor.tushare = tushare_source
-        services.source_accessor.fred = fred_source
+        _set_source(services, "tushare", tushare_source)
+        _set_source(services, "fred", fred_source)
         with _evidence_support.evidence_stores() as stores:
             # 12-27 未完成(stale)→ fred;12-28 已完成(fresh)→ tushare。
             _evidence_support.commit_snapshot(
@@ -424,8 +434,8 @@ class TestCreateCoordinatorSourceRegistryRouting:
             registry.register("tushare", protocol, tushare_source)
         registry.register("fred", MacroFetcher, fred_source)
         services = _make_services_with_source_registry(registry)
-        services.source_accessor.tushare = tushare_source
-        services.source_accessor.fred = fred_source
+        _set_source(services, "tushare", tushare_source)
+        _set_source(services, "fred", fred_source)
         with _evidence_support.evidence_stores() as stores:
             _evidence_support.commit_snapshot(
                 stores,
@@ -484,8 +494,8 @@ class TestCreateCoordinatorSourceRegistryRouting:
             registry.register("tushare", protocol, tushare_source)
         registry.register("fred", MacroFetcher, fred_source)
         services = _make_services_with_source_registry(registry)
-        services.source_accessor.tushare = tushare_source
-        services.source_accessor.fred = fred_source
+        _set_source(services, "tushare", tushare_source)
+        _set_source(services, "fred", fred_source)
         with _evidence_support.evidence_stores() as stores:
             _evidence_support.commit_snapshot(
                 stores,
@@ -677,7 +687,7 @@ class TestCreateCoordinatorCatalog:
 
     def test_passes_catalog_writer_to_config(self) -> None:
         services = _make_services()
-        services.source_accessor.tushare = MagicMock()
+        _set_source(services, "tushare", MagicMock())
         catalog = InMemoryDataCatalog()
 
         with _patch_coordinator_init() as (mock_cls, _):
@@ -693,7 +703,7 @@ class TestCreateCoordinatorCatalog:
 
     def test_passes_catalog_reader_to_config(self) -> None:
         services = _make_services()
-        services.source_accessor.tushare = MagicMock()
+        _set_source(services, "tushare", MagicMock())
         catalog = InMemoryDataCatalog()
 
         with _patch_coordinator_init() as (mock_cls, _):

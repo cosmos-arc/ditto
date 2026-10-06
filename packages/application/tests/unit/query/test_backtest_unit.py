@@ -7,7 +7,7 @@ from unittest.mock import MagicMock
 
 import polars as pl
 import pytest
-from ditto_application.queries.backtest import RunSummary
+from ditto_application.queries.backtest import BacktestQueryFacade, RunSummary
 from ditto_strategy.models import ArtifactKind, StrategyArtifactRecord
 from ditto_strategy.runs.models import StrategyRunRecord
 
@@ -78,11 +78,8 @@ def _make_facade(
     audit_service: MagicMock | None = None,
     artifact_service: MagicMock | None = None,
     artifact_reader: MagicMock | None = None,
-) -> object:
+) -> BacktestQueryFacade:
     """构造 BacktestQueryFacade 实例，注入 mock 依赖."""
-    # 延迟导入确保测试在实现前可编写
-    from ditto_application.queries.backtest import BacktestQueryFacade
-
     return BacktestQueryFacade(
         trade_facade=trade_facade
         or MagicMock(
@@ -198,7 +195,8 @@ class TestBacktestQueryFacadeGetTrades:
         facade = _make_facade(trade_facade=trade_facade)
         result = facade.get_trades(run_id="run-001")
 
-        assert result.equals(trade_df)
+        # mock 原样转发，恒等断言强于值相等
+        assert result is trade_df
         trade_facade.query_trades.assert_called_once_with(
             run_id="run-001",
             start_date=None,
@@ -222,7 +220,8 @@ class TestBacktestQueryFacadeGetTrades:
             offset=5,
         )
 
-        assert result.equals(trade_df)
+        # mock 原样转发，恒等断言强于值相等
+        assert result is trade_df
         trade_facade.query_trades.assert_called_once_with(
             run_id="run-001",
             start_date="2024-01-10",
@@ -867,7 +866,9 @@ def _run_with_config(
     )
 
 
-def _inject_market(facade: object, market: MagicMock) -> object:
+def _inject_market(
+    facade: BacktestQueryFacade, market: MagicMock
+) -> BacktestQueryFacade:
     """把 mock market facade 注入已构造的 BacktestQueryFacade."""
     facade.__dict__["_market"] = market
     return facade

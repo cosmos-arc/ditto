@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 from collections.abc import Generator
+from pathlib import Path
+from typing import Any, TypedDict, Unpack, cast
 
 import pytest
 from ditto_data.storage.metadata.trading_rule_reader import (
@@ -12,6 +14,7 @@ from ditto_data.storage.metadata.trading_rule_reader import (
 from ditto_data.storage.metadata.trading_rule_writer import (
     SQLiteTradingRuleWriter,
 )
+from ditto_kernel.identity import InstrumentId
 from ditto_platform.foundation import SQLitePool
 
 # ---------------------------------------------------------------------------
@@ -20,7 +23,7 @@ from ditto_platform.foundation import SQLitePool
 
 
 @pytest.fixture
-def pool(tmp_path: object) -> Generator[SQLitePool]:
+def pool(tmp_path: Path) -> Generator[SQLitePool]:
     """Create a SQLitePool with trading_rule schema initialized."""
     p = SQLitePool(str(tmp_path / "test_trading_rule.db"))
     writer = SQLiteTradingRuleWriter(p)
@@ -45,8 +48,23 @@ def writer(pool: SQLitePool) -> SQLiteTradingRuleWriter:
 # Test data factories
 # ---------------------------------------------------------------------------
 
+
+class _Defaults(TypedDict, total=False):
+    """_make 覆写参数的精确键型（调用侧受检）。"""
+
+    instrument_id: InstrumentId
+    as_of_date: str
+    settlement_cycle: int
+    fund_settlement_cycle: int
+    price_limit_pct: float | None
+    order_types_supported: tuple[str, ...]
+    call_auction_sessions: tuple[str, ...]
+    effective_from: str
+    effective_to: str | None
+
+
 _DEFAULTS: dict[str, object] = {
-    "instrument_id": 1,
+    "instrument_id": InstrumentId(1),
     "as_of_date": "2026-01-01",
     "settlement_cycle": 1,
     "fund_settlement_cycle": 1,
@@ -58,8 +76,9 @@ _DEFAULTS: dict[str, object] = {
 }
 
 
-def _make(**overrides: object) -> TradingRuleRecord:
-    return TradingRuleRecord(**{**_DEFAULTS, **overrides})
+def _make(**overrides: Unpack[_Defaults]) -> TradingRuleRecord:
+    # 覆写参数经 Unpack[TypedDict] 调用侧受检；合并字典构造点单点放宽。
+    return TradingRuleRecord(**cast("dict[str, Any]", {**_DEFAULTS, **overrides}))
 
 
 # ---------------------------------------------------------------------------
@@ -103,8 +122,8 @@ class TestSQLiteTradingRuleWriter:
         self, writer: SQLiteTradingRuleWriter, reader: SQLiteTradingRuleReader
     ) -> None:
         """write() should accumulate records."""
-        writer.write(_make(instrument_id=1))
-        writer.write(_make(instrument_id=2))
+        writer.write(_make(instrument_id=InstrumentId(1)))
+        writer.write(_make(instrument_id=InstrumentId(2)))
         assert len(reader.list_all()) == 2
 
     def test_write_upserts_on_conflict(
@@ -132,7 +151,7 @@ class TestSQLiteTradingRuleReader:
     ) -> None:
         """get() should return the record matching instrument_id and PIT condition."""
         writer.write(_make())
-        result = reader.get(1, "2026-03-01")
+        result = reader.get(InstrumentId(1), "2026-03-01")
         assert result is not None
         assert result.settlement_cycle == 1
 
@@ -140,13 +159,13 @@ class TestSQLiteTradingRuleReader:
         self, reader: SQLiteTradingRuleReader
     ) -> None:
         """get() should return None when no record matches."""
-        assert reader.get(999, "2026-01-01") is None
+        assert reader.get(InstrumentId(999), "2026-01-01") is None
 
     def test_get_returns_none_for_empty_db(
         self, reader: SQLiteTradingRuleReader
     ) -> None:
         """get() on an empty database should return None."""
-        assert reader.get(1, "2026-01-01") is None
+        assert reader.get(InstrumentId(1), "2026-01-01") is None
 
     def test_pit_effective_from_boundary(
         self, writer: SQLiteTradingRuleWriter, reader: SQLiteTradingRuleReader
@@ -159,9 +178,9 @@ class TestSQLiteTradingRuleReader:
             )
         )
         # as_of_date == effective_from -> should match
-        assert reader.get(1, "2026-02-01") is not None
+        assert reader.get(InstrumentId(1), "2026-02-01") is not None
         # as_of_date < effective_from -> should not match
-        assert reader.get(1, "2026-01-31") is None
+        assert reader.get(InstrumentId(1), "2026-01-31") is None
 
     def test_pit_effective_to_boundary(
         self, writer: SQLiteTradingRuleWriter, reader: SQLiteTradingRuleReader
@@ -174,9 +193,9 @@ class TestSQLiteTradingRuleReader:
             )
         )
         # as_of_date < effective_to -> should match
-        assert reader.get(1, "2026-02-14") is not None
+        assert reader.get(InstrumentId(1), "2026-02-14") is not None
         # as_of_date == effective_to -> should NOT match (exclusive)
-        assert reader.get(1, "2026-02-15") is None
+        assert reader.get(InstrumentId(1), "2026-02-15") is None
 
     def test_pit_selects_latest_version(
         self, writer: SQLiteTradingRuleWriter, reader: SQLiteTradingRuleReader
@@ -199,12 +218,12 @@ class TestSQLiteTradingRuleReader:
             )
         )
         # Before new version takes effect -> old version
-        result_old = reader.get(1, "2026-05-15")
+        result_old = reader.get(InstrumentId(1), "2026-05-15")
         assert result_old is not None
         assert result_old.price_limit_pct == pytest.approx(0.10)
 
         # After new version takes effect -> new version
-        result_new = reader.get(1, "2026-06-01")
+        result_new = reader.get(InstrumentId(1), "2026-06-01")
         assert result_new is not None
         assert result_new.price_limit_pct == pytest.approx(0.20)
 
@@ -213,18 +232,20 @@ class TestSQLiteTradingRuleReader:
     ) -> None:
         """effective_to IS NULL means the version is still valid."""
         writer.write(_make())
-        assert reader.get(1, "2099-12-31") is not None
+        assert reader.get(InstrumentId(1), "2099-12-31") is not None
 
     def test_pit_multiple_instruments(
         self, writer: SQLiteTradingRuleWriter, reader: SQLiteTradingRuleReader
     ) -> None:
         """get() should isolate queries by instrument_id."""
-        writer.write(_make(instrument_id=1, settlement_cycle=1))
-        writer.write(_make(instrument_id=2, settlement_cycle=2))
-        assert reader.get(1, "2026-03-01") is not None
-        assert reader.get(1, "2026-03-01").settlement_cycle == 1
-        assert reader.get(2, "2026-03-01") is not None
-        assert reader.get(2, "2026-03-01").settlement_cycle == 2
+        writer.write(_make(instrument_id=InstrumentId(1), settlement_cycle=1))
+        writer.write(_make(instrument_id=InstrumentId(2), settlement_cycle=2))
+        first = reader.get(InstrumentId(1), "2026-03-01")
+        assert first is not None
+        assert first.settlement_cycle == 1
+        second = reader.get(InstrumentId(2), "2026-03-01")
+        assert second is not None
+        assert second.settlement_cycle == 2
 
     def test_pit_gap_between_versions(
         self, writer: SQLiteTradingRuleWriter, reader: SQLiteTradingRuleReader
@@ -243,7 +264,7 @@ class TestSQLiteTradingRuleReader:
             )
         )
         # Date in the gap -> no version covers it
-        assert reader.get(1, "2026-02-15") is None
+        assert reader.get(InstrumentId(1), "2026-02-15") is None
 
     def test_tuple_fields_round_trip(
         self, writer: SQLiteTradingRuleWriter, reader: SQLiteTradingRuleReader
@@ -254,7 +275,7 @@ class TestSQLiteTradingRuleReader:
             call_auction_sessions=("open", "close", "midday"),
         )
         writer.write(record)
-        result = reader.get(1, "2026-03-01")
+        result = reader.get(InstrumentId(1), "2026-03-01")
         assert result is not None
         assert result.order_types_supported == ("market", "limit", "stop")
         assert result.call_auction_sessions == ("open", "close", "midday")
@@ -265,7 +286,7 @@ class TestSQLiteTradingRuleReader:
         """price_limit_pct=None should round-trip correctly."""
         record = _make(price_limit_pct=None)
         writer.write(record)
-        result = reader.get(1, "2026-03-01")
+        result = reader.get(InstrumentId(1), "2026-03-01")
         assert result is not None
         assert result.price_limit_pct is None
 
@@ -280,7 +301,7 @@ class TestWriteAndRead:
         self, writer: SQLiteTradingRuleWriter, reader: SQLiteTradingRuleReader
     ) -> None:
         """write() should persist records."""
-        writer.write(_make(instrument_id=1))
-        writer.write(_make(instrument_id=2))
-        assert reader.get(1, "2026-03-01") is not None
-        assert reader.get(2, "2026-03-01") is not None
+        writer.write(_make(instrument_id=InstrumentId(1)))
+        writer.write(_make(instrument_id=InstrumentId(2)))
+        assert reader.get(InstrumentId(1), "2026-03-01") is not None
+        assert reader.get(InstrumentId(2), "2026-03-01") is not None
