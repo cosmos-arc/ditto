@@ -37,9 +37,10 @@ class TestDefaultConfigPaths:
 
         dq_dir = get_default_dq_rules_dir(_WORKSPACE_ROOT)
         expected_not_null = {
-            "balance_sheet": {"instrument_id", "report_date"},
-            "income_statement": {"instrument_id", "report_date"},
-            "cash_flow": {"instrument_id", "report_date"},
+            # #529：门禁帧为富集前源帧，键为 source_ticker
+            "balance_sheet": {"source_ticker", "report_date"},
+            "income_statement": {"source_ticker", "report_date"},
+            "cash_flow": {"source_ticker", "report_date"},
         }
 
         for dataset, expected_columns in expected_not_null.items():

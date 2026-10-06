@@ -7,6 +7,26 @@ from ditto_platform.foundation import logger
 
 from ditto_data.quality.quality_types import DQIssue, DQLevel, DQSeverity
 
+# yml 期望记号 → Polars dtype 基名（str 为 macro_indicators/corporate_actions
+# 既有记号）
+_EXPECTED_DTYPE_ALIASES = {"str": "string"}
+
+
+def _dtype_base(actual_dtype: str) -> str:
+    """
+    Polars dtype repr 的比较基名：去参数、去位宽、小写。
+
+    "Int64"→"int"、"Float64"→"float"、"Date"→"date"、
+    "Datetime(time_unit='us')"→"datetime"、"String"→"string"——基名精确
+    相等使 date 不匹配 datetime、int 不匹配 uint。
+    """
+    return actual_dtype.lower().split("(", 1)[0].rstrip("0123456789")
+
+
+def _expected_dtype_base(expected_type: str) -> str:
+    normalized = expected_type.strip().lower()
+    return _EXPECTED_DTYPE_ALIASES.get(normalized, normalized)
+
 
 class TechnicalChecker:
     """L1 technical validation checker."""
@@ -162,6 +182,10 @@ class TechnicalChecker:
         # ETFTushareAdapter 在源层按 etf_basic universe 交集/拒绝把关
         # （写入前过滤），写入时 instrument 解析本身即天然 FK；此处
         # reference_values 机制留给未来需要跨数据集值域校验的规则。
+        # #529 收口：各 dq_rules yml 的 foreign_key instrument_id 死规则
+        # （reference_values 从未接线，自始静默跳过）已全部删除；身份
+        # FK 实际由写入器富集解析（data_writer 过滤不可解析标的并留痕）
+        # + 存储 PK 约束承担。
         if not context or "reference_values" not in context:
             logger.debug(
                 "dq_fk_skip_no_context",
@@ -216,21 +240,23 @@ class TechnicalChecker:
 
         Args:
             df: Data to check
-            rule: Rule config with "types" dict mapping column -> expected dtype
+            rule: Rule config with "columns" dict mapping column -> expected
+                dtype token (int/float/date/datetime/str/string/bool)
 
         Returns:
             DQIssue if type mismatch, None otherwise
 
         """
-        expected_types = rule.get("types", {})
+        # #529：键名对齐 TypeCheckRule（spec 定义为 columns: dict[str, str]；
+        # 旧实现读 "types" 键使全部 yml 规则自始未生效）。
+        expected_types = rule.get("columns", {})
 
         for col, expected_type in expected_types.items():
             if col not in df.columns:
                 continue
 
             actual_dtype = str(df[col].dtype)
-            # Polars dtypes like "Int64", "Float64", "String"
-            if not actual_dtype.startswith(expected_type):
+            if _dtype_base(actual_dtype) != _expected_dtype_base(expected_type):
                 logger.warning(
                     "dq_rule_type_mismatch",
                     event="dq_check",

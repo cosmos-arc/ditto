@@ -5,27 +5,22 @@ description: "指数日 K 线数据质量检查规则"
 # 技术类: 技术校验（写入时强制阻断）
 technical:
   - rule: not_null
-    columns: [instrument_id, trade_date, open, high, low, close, volume, amount]
+    columns: [source_ticker, trade_date, open, high, low, close, volume, amount]
     message: "必填字段不能为空"
 
   - rule: unique
-    columns: [instrument_id, trade_date]
-    message: "主键 (instrument_id, trade_date) 重复"
-
-  - rule: foreign_key
-    column: instrument_id
-    reference: instrument.instrument_id
-    message: "Instrument ID 不存在于证券主表"
+    columns: [source_ticker, trade_date]
+    message: "主键 (source_ticker, trade_date) 重复"
 
   - rule: type_check
     columns:
-      instrument_id: int
       trade_date: date
       open: float
       high: float
       low: float
       close: float
-      volume: int
+      # #529：与 stock_daily 同用 DAILY_OHLCV_MAPPING，volume 实际 Float64
+      volume: float
       amount: float
     message: "字段类型不匹配"
 

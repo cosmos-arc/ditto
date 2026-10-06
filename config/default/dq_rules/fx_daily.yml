@@ -12,11 +12,6 @@ technical:
     columns: [instrument_id, trade_date]
     message: "主键 (instrument_id, trade_date) 重复"
 
-  - rule: foreign_key
-    column: instrument_id
-    reference: instrument.instrument_id
-    message: "Instrument ID 不存在于证券主表"
-
   - rule: type_check
     columns:
       instrument_id: int

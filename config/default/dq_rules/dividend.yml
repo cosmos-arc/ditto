@@ -12,14 +12,8 @@ technical:
     columns: [source_ticker, knowledge_date, ex_dividend_date, dividend_per_share, div_proc]
     message: "分红公告业务行 (source_ticker, knowledge_date, ex_dividend_date, dividend_per_share, div_proc) 重复"
 
-  - rule: foreign_key
-    column: instrument_id
-    reference: instrument.instrument_id
-    message: "Instrument ID 不存在于证券主表"
-
   - rule: type_check
     columns:
-      instrument_id: int
       ex_dividend_date: date
       dividend_per_share: float
       dividend_yield: float
