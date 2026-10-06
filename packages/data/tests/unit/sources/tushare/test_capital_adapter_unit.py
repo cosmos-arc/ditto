@@ -166,6 +166,56 @@ class TestCapitalTushareAdapterFetchPledgeRatio:
         assert "pledge_ratio" in result.columns
         assert "total_shares" in result.columns
 
+    def test_fetch_pledge_ratio_forwards_report_date_as_end_date(
+        self,
+        mocker: pytest_mock.MockFixture,
+    ) -> None:
+        """report_date must reach the API as end_date (#512).
+
+        此前 report_date 被静默丢弃，「按期拉取」退化为全表翻页且被
+        单次 1000 行上限静默截断。
+        """
+        mock_response = pl.DataFrame(
+            {
+                "ts_code": ["000001.SZ", "000002.SZ"],
+                "end_date": ["20240329", "20240329"],
+                "pledge_ratio": [5.5, 1.2],
+                "total_share": [10000000.0, 20000000.0],
+            }
+        )
+        mock_client = mocker.Mock()
+        mock_client.query.return_value = mock_response
+
+        adapter = CapitalTushareAdapter(_client=mock_client)
+        adapter.fetch_pledge_ratio(report_date="20240329")
+
+        call_kwargs = mock_client.query.call_args.kwargs
+        assert call_kwargs["api_name"] == "pledge_stat"
+        assert call_kwargs["end_date"] == "20240329"
+
+    def test_fetch_pledge_ratio_without_report_date_keeps_full_pull(
+        self,
+        mocker: pytest_mock.MockFixture,
+    ) -> None:
+        """按标的回填模式（无日期过滤）保持全历史语义，不受本修复影响."""
+        mock_response = pl.DataFrame(
+            {
+                "ts_code": ["000001.SZ"],
+                "end_date": ["20240329"],
+                "pledge_ratio": [5.5],
+                "total_share": [10000000.0],
+            }
+        )
+        mock_client = mocker.Mock()
+        mock_client.query.return_value = mock_response
+
+        adapter = CapitalTushareAdapter(_client=mock_client)
+        adapter.fetch_pledge_ratio(ts_code="000001.SZ")
+
+        call_kwargs = mock_client.query.call_args.kwargs
+        assert "end_date" not in call_kwargs
+        assert call_kwargs["ts_code"] == "000001.SZ"
+
 
 class TestCapitalTushareAdapterFetchIndexComposition:
     """Tests for fetch_index_composition method."""

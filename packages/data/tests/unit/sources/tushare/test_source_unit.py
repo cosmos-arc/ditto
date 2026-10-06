@@ -1,5 +1,6 @@
 """Tests for TushareSource."""
 
+import json
 from datetime import UTC, date, datetime
 
 import httpx
@@ -21,6 +22,37 @@ def _settings(token: str | None = None) -> DataSourceSettings:
     if token is None:
         token = "not_a_secret"
     return DataSourceSettings(tushare_token=token)
+
+
+def _etf_basic_data(*tickers: str) -> dict:
+    """etf_basic 载荷（#513 universe 交集的依赖端点）."""
+    known = {
+        "510300.SH": ["510300.SH", "沪深300ETF", "20120706", "L", "000300.SH", "境内"],
+        "159919.SZ": ["159919.SZ", "创业板ETF", "20110909", "L", "399006.SZ", "境内"],
+    }
+    return {
+        "fields": [
+            "ts_code",
+            "csname",
+            "list_date",
+            "list_status",
+            "index_code",
+            "etf_type",
+        ],
+        "items": [known[t] for t in tickers],
+    }
+
+
+def _mock_api_routes(respx_mock, payloads: dict[str, dict]) -> None:
+    """按请求体的 api_name 分发响应（universe 交集会发多次请求）."""
+
+    def _side_effect(request: httpx.Request) -> httpx.Response:
+        api_name = json.loads(request.content)["api_name"]
+        return httpx.Response(
+            200, json={"code": 0, "msg": None, "data": payloads[api_name]}
+        )
+
+    respx_mock.post("http://api.tushare.pro").mock(side_effect=_side_effect)
 
 
 class TestTushareSourceCalendar:
@@ -165,46 +197,43 @@ class TestTushareSourceEtfDaily:
     def test_fetch_etf_daily_returns_dataframe(self, respx_mock) -> None:
         """Test fetch_etf_daily returns DataFrame with correct schema."""
 
-        # Mock HTTP 响应 - fund_daily API
+        # Mock HTTP 响应 - fund_daily API（etf_basic 提供 universe，#513）
         # [REVIEW]: fund_daily 返回 vol, amount, pct_chg
-        respx_mock.post("http://api.tushare.pro").mock(
-            return_value=httpx.Response(
-                200,
-                json={
-                    "code": 0,
-                    "msg": None,
-                    "data": {
-                        "fields": [
-                            "ts_code",
-                            "trade_date",
-                            "pre_close",
-                            "open",
-                            "high",
-                            "low",
-                            "close",
-                            "change",
-                            "pct_chg",
-                            "vol",
-                            "amount",
+        _mock_api_routes(
+            respx_mock,
+            {
+                "etf_basic": _etf_basic_data("510300.SH"),
+                "fund_daily": {
+                    "fields": [
+                        "ts_code",
+                        "trade_date",
+                        "pre_close",
+                        "open",
+                        "high",
+                        "low",
+                        "close",
+                        "change",
+                        "pct_chg",
+                        "vol",
+                        "amount",
+                    ],
+                    "items": [
+                        [
+                            "510300.SH",
+                            "20240102",
+                            "3.5",
+                            "3.5",
+                            "3.6",
+                            "3.4",
+                            "3.55",
+                            "0.05",
+                            "1.5",
+                            "100000.0",
+                            "355000.0",
                         ],
-                        "items": [
-                            [
-                                "510300.SH",
-                                "20240102",
-                                "3.5",
-                                "3.5",
-                                "3.6",
-                                "3.4",
-                                "3.55",
-                                "0.05",
-                                "1.5",
-                                "100000.0",
-                                "355000.0",
-                            ],
-                        ],
-                    },
+                    ],
                 },
-            )
+            },
         )
 
         source = TushareSource(settings=_settings())
@@ -248,31 +277,28 @@ class TestTushareSourceEtfDaily:
     def test_fetch_etf_daily_empty_response(self, respx_mock) -> None:
         """Test fetch_etf_daily handles empty response."""
 
-        # Mock HTTP 响应 - 空数据
-        respx_mock.post("http://api.tushare.pro").mock(
-            return_value=httpx.Response(
-                200,
-                json={
-                    "code": 0,
-                    "msg": None,
-                    "data": {
-                        "fields": [
-                            "ts_code",
-                            "trade_date",
-                            "pre_close",
-                            "open",
-                            "high",
-                            "low",
-                            "close",
-                            "change",
-                            "pct_chg",
-                            "vol",
-                            "amount",
-                        ],
-                        "items": [],
-                    },
+        # Mock HTTP 响应 - 空数据（universe 非空才允许判空，#513）
+        _mock_api_routes(
+            respx_mock,
+            {
+                "etf_basic": _etf_basic_data("510300.SH"),
+                "fund_daily": {
+                    "fields": [
+                        "ts_code",
+                        "trade_date",
+                        "pre_close",
+                        "open",
+                        "high",
+                        "low",
+                        "close",
+                        "change",
+                        "pct_chg",
+                        "vol",
+                        "amount",
+                    ],
+                    "items": [],
                 },
-            )
+            },
         )
 
         source = TushareSource(settings=_settings())
@@ -770,22 +796,19 @@ class TestTushareSourceFundAdj:
     def test_fetch_fund_adj_returns_dataframe(self, respx_mock) -> None:
         """Test fetch_fund_adj returns DataFrame with correct schema."""
 
-        # Mock HTTP 响应 - fund_adj API
-        respx_mock.post("http://api.tushare.pro").mock(
-            return_value=httpx.Response(
-                200,
-                json={
-                    "code": 0,
-                    "msg": None,
-                    "data": {
-                        "fields": ["ts_code", "trade_date", "adj_factor"],
-                        "items": [
-                            ["510300.SH", "20240102", "1.0123"],
-                            ["159919.SZ", "20240102", "1.0456"],
-                        ],
-                    },
+        # Mock HTTP 响应 - fund_adj API（etf_basic 提供 universe，#513）
+        _mock_api_routes(
+            respx_mock,
+            {
+                "etf_basic": _etf_basic_data("510300.SH", "159919.SZ"),
+                "fund_adj": {
+                    "fields": ["ts_code", "trade_date", "adj_factor"],
+                    "items": [
+                        ["510300.SH", "20240102", "1.0123"],
+                        ["159919.SZ", "20240102", "1.0456"],
+                    ],
                 },
-            )
+            },
         )
 
         source = TushareSource(settings=_settings())
@@ -819,19 +842,16 @@ class TestTushareSourceFundAdj:
     def test_fetch_fund_adj_empty_response(self, respx_mock) -> None:
         """Test fetch_fund_adj handles empty response."""
 
-        # Mock HTTP 响应 - 空数据
-        respx_mock.post("http://api.tushare.pro").mock(
-            return_value=httpx.Response(
-                200,
-                json={
-                    "code": 0,
-                    "msg": None,
-                    "data": {
-                        "fields": ["ts_code", "trade_date", "adj_factor"],
-                        "items": [],
-                    },
+        # Mock HTTP 响应 - 空数据（universe 非空才允许判空，#513）
+        _mock_api_routes(
+            respx_mock,
+            {
+                "etf_basic": _etf_basic_data("510300.SH"),
+                "fund_adj": {
+                    "fields": ["ts_code", "trade_date", "adj_factor"],
+                    "items": [],
                 },
-            )
+            },
         )
 
         source = TushareSource(settings=_settings())

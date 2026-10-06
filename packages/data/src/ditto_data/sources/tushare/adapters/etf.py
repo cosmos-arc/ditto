@@ -7,7 +7,10 @@ from datetime import date, timedelta
 import polars as pl
 from ditto_platform.foundation import logger, traced
 
+from ditto_data.config import DataSourceSettings
+from ditto_data.errors.network import SourceFetchError
 from ditto_data.sources.tushare.adapters.base import BaseTushareAdapter
+from ditto_data.sources.tushare.client import TushareClient
 from ditto_data.sources.tushare.processors.error_handler import (
     tushare_fetch_error_handler,
 )
@@ -42,8 +45,44 @@ class ETFTushareAdapter(BaseTushareAdapter):
     - ETF 基本信息
     - ETF 日线数据
     - 基金复权因子
+    - 基金净值
 
+    品种边界（#513）：fund_daily/fund_adj/fund_nav 的全市场响应会混入
+    LOF 等非 ETF 品种（#1891），本 adapter 统一按 etf_basic universe
+    交集过滤（按日模式）并拒绝非 universe 标的（按标的模式）。
     """
+
+    def __init__(
+        self,
+        token: str | None = None,
+        settings: DataSourceSettings | None = None,
+        *,
+        _client: TushareClient | None = None,
+    ) -> None:
+        super().__init__(token, settings, _client=_client)
+        # fund_daily 全市场拉取会混入 LOF 等非 ETF 品种（#1891），
+        # 按 etf_basic 口径做 universe 交集（#513）。进程内缓存一份。
+        self._etf_universe: frozenset[str] | None = None
+
+    def _load_etf_universe(self) -> frozenset[str]:
+        """
+        Load (and cache) the ETF ticker universe from etf_basic.
+
+        空清单视为源侧异常并显式失败：静默空 universe 会把 etf_daily
+        的全市场拉取整体过滤为空（fail-closed）。
+        """
+        if self._etf_universe is None:
+            basic = self.fetch_etf_basic()
+            if basic.is_empty():
+                raise SourceFetchError(
+                    message=(
+                        "etf_basic returned no rows; cannot establish the ETF "
+                        "universe for fund_daily intersection (#513)"
+                    ),
+                    source="tushare",
+                )
+            self._etf_universe = frozenset(basic["source_ticker"].to_list())
+        return self._etf_universe
 
     @traced("source.tushare.fetch_etf_basic")
     def fetch_etf_basic(self) -> pl.DataFrame:
@@ -136,12 +175,16 @@ class ETFTushareAdapter(BaseTushareAdapter):
         return self._fetch_etf_daily_by_ticker(source_ticker, start_date, end_date)
 
     def _fetch_etf_daily_by_date(self, trade_date: str) -> pl.DataFrame:
-        """按日期获取 ETF 日线数据."""
+        """按日期获取 ETF 日线数据（与 etf_basic universe 交集过滤）."""
         logger.info(
             "Fetching Tushare ETF daily",
             event="tushare_etf_daily_fetch_start",
             trade_date=trade_date,
         )
+
+        # universe 加载在 fetch 错误处理之外：清单为空属源侧配置/契约
+        # 问题，应携带原始信息失败，而非被包装成泛化 fetch 错误。
+        self._load_etf_universe()
 
         with tushare_fetch_error_handler("etf_daily", "fund_daily"):
             ts_date = trade_date.replace("-", "")
@@ -152,10 +195,34 @@ class ETFTushareAdapter(BaseTushareAdapter):
                 fields="ts_code,trade_date,open,high,low,close,pre_close,vol,amount,pct_chg",
             )
 
+            response = self._filter_non_etf_rows(response)
             return TushareDataTransformer.transform_daily_ohlcv(
                 response,
                 "etf_daily",
             )
+
+    def _filter_non_etf_rows(self, response: pl.DataFrame) -> pl.DataFrame:
+        """
+        Intersect fund_daily rows with the etf_basic universe (#513).
+
+        fund_daily 全市场拉取混入 LOF 等非 ETF 品种（#1891），不过滤会
+        以 source_ticker 落入 etf_daily。被过滤行数记录 WARNING，不静默。
+        """
+        if response.is_empty():
+            return response
+        universe = self._load_etf_universe()
+        kept = response.filter(pl.col("ts_code").is_in(universe))
+        dropped = response.height - kept.height
+        if dropped:
+            dropped_codes = sorted(set(response["ts_code"].to_list()) - universe)
+            logger.warning(
+                "fund_daily returned non-ETF rows, dropped",
+                event="tushare_etf_daily_non_etf_dropped",
+                dropped_rows=dropped,
+                dropped_codes=dropped_codes[:20],
+                dropped_code_count=len(dropped_codes),
+            )
+        return kept
 
     def _fetch_etf_daily_by_ticker(
         self,
@@ -171,6 +238,13 @@ class ETFTushareAdapter(BaseTushareAdapter):
             start_date=start_date,
             end_date=end_date,
         )
+
+        if source_ticker not in self._load_etf_universe():
+            # 按标的模式显式拒绝非 ETF 品种（如 LOF），防止污染 etf_daily
+            raise ValueError(
+                f"source_ticker {source_ticker} is not in the etf_basic "
+                + "universe; etf_daily only accepts ETF instruments (#513)"
+            )
 
         with tushare_fetch_error_handler("etf_daily", "fund_daily"):
             ts_start = start_date.replace("-", "")
@@ -239,12 +313,14 @@ class ETFTushareAdapter(BaseTushareAdapter):
         return self._fetch_fund_adj_by_ticker(source_ticker, start_date, end_date)
 
     def _fetch_fund_adj_by_date(self, trade_date: str) -> pl.DataFrame:
-        """按日期获取 ETF/基金复权因子."""
+        """按日期获取 ETF/基金复权因子（与 etf_basic universe 交集过滤）."""
         logger.info(
             "Fetching Tushare fund adj factors",
             event="tushare_fund_adj_fetch_start",
             trade_date=trade_date,
         )
+
+        self._load_etf_universe()
 
         with tushare_fetch_error_handler("fund_adj", "fund_adj"):
             ts_date = trade_date.replace("-", "")
@@ -254,6 +330,7 @@ class ETFTushareAdapter(BaseTushareAdapter):
                 trade_date=ts_date,
             )
 
+            response = self._filter_non_etf_rows(response)
             return TushareDataTransformer.transform(
                 response, "fund_adj", FUND_ADJ_MAPPING
             )
@@ -272,6 +349,12 @@ class ETFTushareAdapter(BaseTushareAdapter):
             start_date=start_date,
             end_date=end_date,
         )
+
+        if source_ticker not in self._load_etf_universe():
+            raise ValueError(
+                f"source_ticker {source_ticker} is not in the etf_basic "
+                + "universe; fund_adj only accepts ETF instruments (#513)"
+            )
 
         with tushare_fetch_error_handler("fund_adj", f"fund_adj:{source_ticker}"):
             ts_start = start_date.replace("-", "")
@@ -348,6 +431,13 @@ class ETFTushareAdapter(BaseTushareAdapter):
             source_ticker=source_ticker,
         )
         fields = "ts_code,ann_date,nav_date,unit_nav,acc_nav"
+        if source_ticker and source_ticker not in self._load_etf_universe():
+            raise ValueError(
+                f"source_ticker {source_ticker} is not in the etf_basic "
+                + "universe; etf_nav only accepts ETF instruments (#513)"
+            )
+        if not source_ticker:
+            self._load_etf_universe()
         with tushare_fetch_error_handler("etf_nav", f"fund_nav{scope}"):
             if source_ticker:
                 response = self._client.query(
@@ -368,6 +458,7 @@ class ETFTushareAdapter(BaseTushareAdapter):
                     if frames
                     else pl.DataFrame()
                 )
+                response = self._filter_non_etf_rows(response)
             # 服务端同 (ts_code, nav_date) 可返回多条不同 ann_date 的披露行
             # （2026-10-05 实测单日响应内重复）——保留最新披露行
             result = (

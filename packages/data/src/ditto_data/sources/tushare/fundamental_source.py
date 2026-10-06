@@ -9,6 +9,8 @@ fetch_margin_trading / fetch_pledge_ratio 模块级函数，
 
 from __future__ import annotations
 
+from datetime import date, timedelta
+
 import polars as pl
 
 from ditto_data.sources.tushare._fundamental import (
@@ -220,6 +222,18 @@ def fetch_margin_trading(
     )
 
 
+def _pledge_snapshot_date(trade_date: str) -> str:
+    """
+    Resolve the pledge_stat weekly snapshot date on or before ``trade_date``.
+
+    pledge_stat 按周发布（快照日为周五），``end_date`` 为精确匹配语义；
+    交易日 D 的请求统一解析为 ≤D 的最近周五，非快照日不发起空请求。
+    """
+    day = date.fromisoformat(trade_date)
+    snapshot = day - timedelta(days=(day.weekday() - 4) % 7)
+    return snapshot.strftime("%Y%m%d")
+
+
 def fetch_pledge_ratio(
     capital: CapitalTushareAdapter,
     *,
@@ -256,9 +270,10 @@ def fetch_pledge_ratio(
         raise ValueError("必须指定 trade_date 或 source_ticker 之一")
 
     if trade_date:
-        # 按日期批量查询
-        compact_date = to_compact_date(trade_date)
-        return capital.fetch_pledge_ratio(report_date=compact_date)
+        # 按日期批量查询：解析为 ≤trade_date 的最近周快照日（#512），
+        # 同一快照日被重复拉取时由 (instrument_id, report_date, knowledge_date)
+        # 主键幂等去重。
+        return capital.fetch_pledge_ratio(report_date=_pledge_snapshot_date(trade_date))
 
     # 按标的查询（pledge_ratio API 不支持日期范围）
     return capital.fetch_pledge_ratio(ts_code=source_ticker)

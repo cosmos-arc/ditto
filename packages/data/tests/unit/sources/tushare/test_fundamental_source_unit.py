@@ -154,15 +154,35 @@ class TestCapitalSourceDelegates:
             end_date=None,
         )
 
-    def test_pledge_ratio_trade_date_uses_compact_report_date(self) -> None:
-        """Pledge ratio date-batch mode forwards a compact report_date."""
+    def test_pledge_ratio_trade_date_resolves_weekly_snapshot(self) -> None:
+        """Pledge ratio date-batch mode resolves the latest Friday ≤ trade_date.
+
+        pledge_stat 的 end_date 是周快照日精确匹配（非快照日返回空），
+        非周五的交易日必须映射到最近的周快照日。
+        """
         capital = MagicMock()
         capital.fetch_pledge_ratio.return_value = _frame("pledge")
 
         result = fundamental_source.fetch_pledge_ratio(capital, trade_date="2024-03-31")
 
         assert result["dataset"].item() == "pledge"
-        capital.fetch_pledge_ratio.assert_called_once_with(report_date="20240331")
+        # 2024-03-31 是周日，≤该日的最近周五是 2024-03-29
+        capital.fetch_pledge_ratio.assert_called_once_with(report_date="20240329")
+
+    @pytest.mark.parametrize(
+        ("trade_date", "expected_snapshot"),
+        [
+            ("2024-03-29", "20240329"),  # 周五本身
+            ("2024-03-30", "20240329"),  # 周六
+            ("2024-04-01", "20240329"),  # 下周一仍属上一快照周
+            ("2024-04-04", "20240329"),  # 周四 -> 上一周五（≤D 的最近快照）
+        ],
+    )
+    def test_pledge_snapshot_date_mapping(
+        self, trade_date: str, expected_snapshot: str
+    ) -> None:
+        """Snapshot mapping covers Friday/self, weekend, and Monday cases."""
+        assert fundamental_source._pledge_snapshot_date(trade_date) == expected_snapshot
 
     def test_pledge_ratio_ticker_mode_ignores_range(self) -> None:
         """Pledge ratio API only forwards source ticker in ticker mode."""
@@ -375,6 +395,8 @@ class TestFetchFundNavDelegation:
 
         adapter = ETFTushareAdapter.__new__(ETFTushareAdapter)
         adapter._client = MagicMock()
+        # __new__ 绕过 __init__：手工注入 universe 缓存（#513 边界）
+        adapter._etf_universe = frozenset({"510300.SH"})
         with pytest.raises(ValueError, match="start_date 和 end_date"):
             adapter.fetch_fund_nav(source_ticker="510300.SH")
 
@@ -383,6 +405,8 @@ class TestFetchFundNavDelegation:
 
         adapter = ETFTushareAdapter.__new__(ETFTushareAdapter)
         adapter._client = MagicMock()
+        # __new__ 绕过 __init__：手工注入 universe 缓存（#513 边界）
+        adapter._etf_universe = frozenset({"510300.SH"})
         adapter._client.query.return_value = pl.DataFrame(
             {
                 "ts_code": ["510300.SH"],
