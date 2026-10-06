@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import date
 
 import polars as pl
-from ditto_platform.foundation import OnDuplicate, logger
+from ditto_platform.foundation import FileLockManager, OnDuplicate, logger
 
 from ditto_data.services.deps import CapitalReaders, CapitalWriters
 
@@ -22,6 +22,7 @@ class CapitalStore:
         self,
         read_ports: CapitalReaders,
         write_ports: CapitalWriters,
+        file_lock: FileLockManager | None = None,
     ) -> None:
         """
         Initialize CapitalStore.
@@ -29,10 +30,12 @@ class CapitalStore:
         Args:
             read_ports: Capital domain read ports (all readers).
             write_ports: Capital domain write ports (all writers).
+            file_lock: 文件锁（可选；parquet 车道并发写防护）.
 
         """
         self._read_ports = read_ports
         self._write_ports = write_ports
+        self._file_lock = file_lock
 
         logger.debug(
             "CapitalStore initialized",
@@ -182,7 +185,12 @@ class CapitalStore:
         writer = self._write_ports.moneyflow
         if writer is None:
             raise ValueError("moneyflow writer not configured")
-        result = writer.write(df, year, on_duplicate=on_duplicate)
+        # backfill --parallel 并发写同年分区的丢失更新防护（#517-523 评审）
+        if self._file_lock is not None:
+            with self._file_lock.acquire(f"moneyflow_write_{year}", timeout=60.0):
+                result = writer.write(df, year, on_duplicate=on_duplicate)
+        else:
+            result = writer.write(df, year, on_duplicate=on_duplicate)
         return result.added + result.updated
 
     def save_cyq_perf(
@@ -195,7 +203,12 @@ class CapitalStore:
         writer = self._write_ports.cyq_perf
         if writer is None:
             raise ValueError("cyq_perf writer not configured")
-        result = writer.write(df, year, on_duplicate=on_duplicate)
+        # backfill --parallel 并发写同年分区的丢失更新防护（#517-523 评审）
+        if self._file_lock is not None:
+            with self._file_lock.acquire(f"cyq_perf_write_{year}", timeout=60.0):
+                result = writer.write(df, year, on_duplicate=on_duplicate)
+        else:
+            result = writer.write(df, year, on_duplicate=on_duplicate)
         return result.added + result.updated
 
     def save_hk_hold(
@@ -208,7 +221,12 @@ class CapitalStore:
         writer = self._write_ports.hk_hold
         if writer is None:
             raise ValueError("hk_hold writer not configured")
-        result = writer.write(df, year, on_duplicate=on_duplicate)
+        # backfill --parallel 并发写同年分区的丢失更新防护（#517-523 评审）
+        if self._file_lock is not None:
+            with self._file_lock.acquire(f"hk_hold_write_{year}", timeout=60.0):
+                result = writer.write(df, year, on_duplicate=on_duplicate)
+        else:
+            result = writer.write(df, year, on_duplicate=on_duplicate)
         return result.added + result.updated
 
     def save_hsgt_top10(
@@ -221,7 +239,12 @@ class CapitalStore:
         writer = self._write_ports.hsgt_top10
         if writer is None:
             raise ValueError("hsgt_top10 writer not configured")
-        result = writer.write(df, year, on_duplicate=on_duplicate)
+        # backfill --parallel 并发写同年分区的丢失更新防护（#517-523 评审）
+        if self._file_lock is not None:
+            with self._file_lock.acquire(f"hsgt_top10_write_{year}", timeout=60.0):
+                result = writer.write(df, year, on_duplicate=on_duplicate)
+        else:
+            result = writer.write(df, year, on_duplicate=on_duplicate)
         return result.added + result.updated
 
     def save_top_list(
@@ -234,7 +257,12 @@ class CapitalStore:
         writer = self._write_ports.top_list
         if writer is None:
             raise ValueError("top_list writer not configured")
-        result = writer.write(df, year, on_duplicate=on_duplicate)
+        # backfill --parallel 并发写同年分区的丢失更新防护（#517-523 评审）
+        if self._file_lock is not None:
+            with self._file_lock.acquire(f"top_list_write_{year}", timeout=60.0):
+                result = writer.write(df, year, on_duplicate=on_duplicate)
+        else:
+            result = writer.write(df, year, on_duplicate=on_duplicate)
         return result.added + result.updated
 
     def save_top_inst(
@@ -247,7 +275,12 @@ class CapitalStore:
         writer = self._write_ports.top_inst
         if writer is None:
             raise ValueError("top_inst writer not configured")
-        result = writer.write(df, year, on_duplicate=on_duplicate)
+        # backfill --parallel 并发写同年分区的丢失更新防护（#517-523 评审）
+        if self._file_lock is not None:
+            with self._file_lock.acquire(f"top_inst_write_{year}", timeout=60.0):
+                result = writer.write(df, year, on_duplicate=on_duplicate)
+        else:
+            result = writer.write(df, year, on_duplicate=on_duplicate)
         return result.added + result.updated
 
     def get_moneyflows(self, start: str, end: str) -> pl.DataFrame:

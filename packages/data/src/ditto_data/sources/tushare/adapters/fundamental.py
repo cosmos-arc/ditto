@@ -110,20 +110,50 @@ def _empty_with_schema(
 _FINA_PAGE_SIZE = 2000
 
 
-def _dedupe_fina_disclosure_key(frame: pl.DataFrame) -> pl.DataFrame:
+def _normalize_fina_numeric_columns(frame: pl.DataFrame) -> pl.DataFrame:
     """
-    同披露键（标的, 报告期, 公告日）多版本行去重 keep-last（#484 先例）.
+    118 指标列统一 Float64（correctness review #4）.
 
-    fina_indicator 无 update_flag 身份列，同键多行是源端多版本发布；
-    全字段请求下行彼此可区分，取源序末行（最新发布）。
+    透传列的 dtype 由响应推断（Int64/Float64/Null 随当日值漂移）；
+    不归一则日更全窗口重拉在 VERIFY_IDENTICAL 下因 dtype 漂移硬失败。
+    身份/日期列之外全部 cast Float64（strict 容忍偶发字符串）。
     """
     if frame.is_empty():
         return frame
-    return frame.unique(
-        subset=["source_ticker", "report_date", "knowledge_date"],
-        keep="last",
-        maintain_order=True,
+    identity = {"source_ticker", "report_date", "knowledge_date"}
+    casts = [
+        pl.col(name).cast(pl.Float64, strict=False)
+        for name, dtype in frame.schema.items()
+        if name not in identity and dtype != pl.Float64
+    ]
+    return frame.with_columns(casts) if casts else frame
+
+
+def _dedupe_fina_disclosure_key(frame: pl.DataFrame) -> pl.DataFrame:
+    """
+    同披露键（标的, 报告期, 公告日）多版本行去重（#484 先例）.
+
+    fina_indicator 无 update_flag 身份列，同键多行是源端多版本发布；
+    全字段请求下行彼此可区分。挑选行时按整行哈希排序 keep-last——
+    同一行集合无论源端返回顺序如何都选出同一行（重试幂等，
+    correctness review #6）。
+    """
+    if frame.is_empty():
+        return frame
+    return (
+        frame.with_columns(_row_hash_expr(frame).alias("_dedupe_hash"))
+        .sort("_dedupe_hash")
+        .unique(
+            subset=["source_ticker", "report_date", "knowledge_date"],
+            keep="last",
+        )
+        .drop("_dedupe_hash")
     )
+
+
+def _row_hash_expr(frame: pl.DataFrame) -> pl.Expr:
+    """整行确定性哈希（列序固定于调用时的 schema）."""
+    return pl.struct(pl.all()).hash()
 
 
 class FundamentalTushareAdapter(BaseTushareAdapter):
@@ -546,8 +576,10 @@ class FundamentalTushareAdapter(BaseTushareAdapter):
 
         三表衍生指标的官方对照源：118 指标列透传（mapping 无 output_columns），
         kd=ann_date（公告锚）。无 report_type/update_flag 列（2026-10-06 实测），
-        行身份 = (ts_code, end_date, ann_date)；修订以新 ann_date 版本呈现，
-        不做同披露键去重。单位：每股指标元/股、比率 %、绝对额元。
+        行身份 = (ts_code, end_date, ann_date)；跨公告日的修订以新 ann_date
+        版本呈现；**同披露键**（同 ts_code/end_date/ann_date）的字节级
+        重复行按确定性去重（见 _dedupe_fina_disclosure_key）。
+        单位：每股指标元/股、比率 %、绝对额元。
 
         Args:
             ts_code: 股票代码 (e.g., "600519.SH")
@@ -573,7 +605,7 @@ class FundamentalTushareAdapter(BaseTushareAdapter):
             },
             add_pit=False,
         )
-        return _dedupe_fina_disclosure_key(result)
+        return _dedupe_fina_disclosure_key(_normalize_fina_numeric_columns(result))
 
     @traced("source.tushare.fetch_fina_indicator_vip")
     def fetch_fina_indicator_vip(
@@ -611,7 +643,10 @@ class FundamentalTushareAdapter(BaseTushareAdapter):
                     offset=offset,
                     **active,
                 )
-                pages.append(page)
+                if page.height > 0:
+                    # 终页（总行数恰为页宽整数倍时）是 all-String 空 schema，
+                    # 进 concat 会把数值列拉成 String——空页丢弃。
+                    pages.append(page)
                 if page.height < _FINA_PAGE_SIZE:
                     break
                 offset += _FINA_PAGE_SIZE
@@ -628,7 +663,7 @@ class FundamentalTushareAdapter(BaseTushareAdapter):
         result = TushareDataTransformer.transform(
             raw, "fina_indicator", FINA_INDICATOR_MAPPING
         )
-        return _dedupe_fina_disclosure_key(result)
+        return _dedupe_fina_disclosure_key(_normalize_fina_numeric_columns(result))
 
     @traced("source.tushare.fetch_fund_portfolio")
     def fetch_fund_portfolio(

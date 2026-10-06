@@ -381,8 +381,14 @@ def fetch_fund_portfolio(
 
 
 def max_quarters_in_range(start_date: str, end_date: str) -> int:
-    """报告期窗口大小：区间覆盖的季度数 + 1（边界季度）."""
+    """
+    报告期窗口大小：区间覆盖的季度数 + 2（两端边界季度）.
+
+    区间起点前的季末报告期可能仍在区间内晚披露（correctness review
+    #9：-s 2025-12-01 -e 2026-01-31 需覆盖 20250930 期的区间内更正），
+    两端各留一个边界季度。
+    """
     start = date.fromisoformat(start_date)
     end = date.fromisoformat(end_date)
     quarters = (end.year - start.year) * 4 + (end.month - start.month) // 3
-    return max(quarters + 1, 1)
+    return max(quarters + 2, 2)

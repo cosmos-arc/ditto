@@ -151,8 +151,8 @@ class TestFundPortfolioModes:
             fundamental,
             _compact,
             source_ticker="510300.SH",
-            start_date="2026-07-01",
-            end_date="2026-07-31",
+            start_date="2026-04-01",
+            end_date="2026-05-31",
         )
 
         periods = [
@@ -160,7 +160,7 @@ class TestFundPortfolioModes:
             for call in fundamental.fetch_fund_portfolio.call_args_list
         ]
         # 区间窗口按季度数+1 覆盖边界季度；每期都带 ts_code
-        assert len(periods) == max_quarters_in_range("2026-07-01", "2026-07-31")
+        assert len(periods) == max_quarters_in_range("2026-04-01", "2026-05-31")
         assert all(
             call.kwargs["ts_code"] == "510300.SH"
             for call in fundamental.fetch_fund_portfolio.call_args_list
@@ -175,3 +175,73 @@ class TestFundPortfolioModes:
             fetch_fund_portfolio(fundamental, _compact)
         with pytest.raises(ValueError, match="start_date and end_date"):
             fetch_fund_portfolio(fundamental, _compact, source_ticker="510300.SH")
+
+
+@pytest.mark.unit
+class TestFinaIndicatorDedupDeterminism:
+    """#521 验收「多版本去重有测试锁定」：确定性 keep-one + 数值归一."""
+
+    def _duplicate_rows(self) -> pl.DataFrame:
+        base = {
+            "source_ticker": ["600519.SH", "600519.SH"],
+            "report_date": [date(2026, 6, 30), date(2026, 6, 30)],
+            "knowledge_date": [date(2026, 7, 21), date(2026, 7, 21)],
+            "eps": [33.19, 33.20],
+            "roe": [19.2, 19.3],
+        }
+        return pl.DataFrame(base)
+
+    def test_same_rows_both_orders_yield_identical_output(self) -> None:
+        from ditto_data.sources.tushare.adapters.fundamental import (
+            _dedupe_fina_disclosure_key,
+        )
+
+        forward = _dedupe_fina_disclosure_key(self._duplicate_rows())
+        reversed_ = _dedupe_fina_disclosure_key(self._duplicate_rows().reverse())
+        assert forward.height == 1
+        assert reversed_.height == 1
+        assert forward.equals(reversed_)
+
+    def test_numeric_passthrough_columns_normalized_to_float(self) -> None:
+        from ditto_data.sources.tushare.adapters.fundamental import (
+            _normalize_fina_numeric_columns,
+        )
+
+        frame = pl.DataFrame(
+            {
+                "source_ticker": ["600519.SH"],
+                "report_date": [date(2026, 6, 30)],
+                "knowledge_date": [date(2026, 7, 21)],
+                "eps": [33],
+                "roe": [19.2],
+            }
+        )
+        normalized = _normalize_fina_numeric_columns(frame)
+        assert normalized["eps"].dtype == pl.Float64
+        assert normalized["roe"].dtype == pl.Float64
+        assert normalized["source_ticker"].dtype == pl.String
+
+    def test_vip_fetch_dedupes_same_disclosure_key(self) -> None:
+        from unittest.mock import MagicMock
+
+        from ditto_data.sources.tushare.adapters.fundamental import (
+            FundamentalTushareAdapter,
+        )
+
+        client = MagicMock()
+        # client 返回原始列形状（transform 前端）：ts_code/ann_date/end_date
+        client.query.return_value = pl.DataFrame(
+            {
+                "ts_code": ["600519.SH", "600519.SH"],
+                "ann_date": ["20260721", "20260721"],
+                "end_date": ["20260630", "20260630"],
+                "eps": [33.19, 33.20],
+                "roe": [19.2, 19.3],
+            }
+        )
+        adapter = FundamentalTushareAdapter(_client=client)
+
+        frame = adapter.fetch_fina_indicator_vip(period="20260630")
+
+        assert frame.height == 1
+        assert frame["eps"].dtype == pl.Float64

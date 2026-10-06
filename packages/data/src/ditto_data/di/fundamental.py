@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dishka import Provider, Scope, provide
-from ditto_platform.foundation import ParquetStore, SQLiteClient
+from ditto_platform.foundation import FileLockManager, ParquetStore, SQLiteClient
 
 from ditto_data.config.data_store import DataStoreSettings
 from ditto_data.services.deps import FundamentalReaders, FundamentalWriters
@@ -133,11 +133,13 @@ class FundamentalProvider(Provider):
         self,
         read_ports: FundamentalReaders,
         write_ports: FundamentalWriters,
+        file_lock_manager: FileLockManager,
     ) -> FundamentalStore:
         """Fundamental domain unified service."""
         return FundamentalStore(
             read_ports=read_ports,
             write_ports=write_ports,
+            file_lock=file_lock_manager,
         )
 
 

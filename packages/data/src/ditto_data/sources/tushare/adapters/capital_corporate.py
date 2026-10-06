@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import polars as pl
+from ditto_kernel.exceptions import DittoError
 from ditto_platform.foundation import Metrics, logger, traced
 
 from ditto_data.sources.tushare.adapters.base import BaseTushareAdapter
@@ -38,6 +39,19 @@ def _empty_corporate_actions() -> pl.DataFrame:
             "description": pl.String,
         }
     )
+
+
+_RIGHTS_ENDPOINT_UNKNOWN_CODE = 50101  # 代理未开通端点：请指定正确的接口名
+
+
+def _exception_chain(error: BaseException) -> list[BaseException]:
+    """异常及其全部 __cause__ 链（tenacity RetryError 包装下取原始层）."""
+    chain = [error]
+    inner = getattr(error, "__cause__", None)
+    while inner is not None:
+        chain.append(inner)
+        inner = getattr(inner, "__cause__", None)
+    return chain
 
 
 def _date(name: str) -> pl.Expr:
@@ -233,23 +247,23 @@ class CapitalCorporateTushareAdapter(BaseTushareAdapter):
                 )
             except Exception as error:
                 # #517（2026-10-06 实测）：代理 transport 未开通 rights 端点
-                # （code=50101「请指定正确的接口名」，tenacity 重试耗尽后以
-                # RetryError 包装抛出）。按传输能力边界降级：组合退回
-                # repurchase+share_float 并留痕，不阻塞既有公司行为摄取；
+                # （code=50101，tenacity 重试耗尽后以 RetryError 包装抛出）。
+                # 按传输能力边界降级：组合退回 repurchase+share_float 并留痕，
+                # 不阻塞既有公司行为摄取；判别用结构化错误码（cause 链上任何
+                # 一层 SourceFetchError.details.code==50101），不匹配消息文本；
                 # 其余错误（限流/网络/其他业务错）照常 fail-closed。
-                chain = [error]
-                inner = getattr(error, "__cause__", None)
-                while inner is not None:
-                    chain.append(inner)
-                    inner = getattr(inner, "__cause__", None)
-                chain_text = " | ".join(str(item) for item in chain)
-                if "请指定正确的接口名" not in chain_text:
+                chain_codes: list[object] = [
+                    item.details["code"]
+                    for item in _exception_chain(error)
+                    if isinstance(item, DittoError) and "code" in item.details
+                ]
+                if _RIGHTS_ENDPOINT_UNKNOWN_CODE not in chain_codes:
                     raise
                 logger.warning(
                     "rights endpoint unavailable on this transport; "
                     + "corporate_actions degraded to repurchase+share_float",
                     event="tushare_rights_endpoint_unavailable",
-                    reason=chain_text[:120],
+                    reason=str(error)[:120],
                 )
                 rights = pl.DataFrame()
             result = _normalized_corporate_actions(repurchase, share_float, rights)

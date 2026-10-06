@@ -247,7 +247,7 @@ class PathGroups:
 
         settings = DataStoreSettings(data_root=Path("/data"))
         settings.paths.market.stock_bars   # /data/market/stock/bars/daily
-        settings.paths.capital.flow        # /data/capital/flow
+        settings.paths.capital.moneyflow   # /data/capital/moneyflow
     """
 
     __slots__ = ("_capital", "_fundamental", "_macro", "_market", "_utility")

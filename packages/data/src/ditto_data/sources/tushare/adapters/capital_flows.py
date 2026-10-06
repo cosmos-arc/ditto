@@ -207,9 +207,10 @@ class CapitalFlowsTushareAdapter(BaseTushareAdapter):
         龙虎榜席位明细（金额元；exalter+side 进主键，#519）.
 
         源端「机构专用」是多家机构的共用席位名，同 (标的, 日, 席位, 方向,
-        原因) 可出现多行；存储主键无席位 ID 维度，按身份键去重保末行
+        原因) 可出现多行；存储主键无席位 ID 维度，按身份键去重
         （#482 同披露键去重先例），同名多机构的合并损失在 mapping 头注释
-        留档。
+        留档。挑选行按整行哈希排序 keep-last——同一行集合无论源端返回
+        顺序如何都选出同一行（重试幂等，correctness review #1）。
         """
         frame = self._fetch_daily_frame(
             "top_inst",
@@ -225,14 +226,18 @@ class CapitalFlowsTushareAdapter(BaseTushareAdapter):
         )
         if frame.is_empty():
             return frame
-        return frame.unique(
-            subset=[
-                "source_ticker",
-                "trade_date",
-                "exalter",
-                "side",
-                "reason",
-            ],
-            keep="last",
-            maintain_order=True,
+        return (
+            frame.with_columns(pl.struct(pl.all()).hash().alias("_dedupe_hash"))
+            .sort("_dedupe_hash")
+            .unique(
+                subset=[
+                    "source_ticker",
+                    "trade_date",
+                    "exalter",
+                    "side",
+                    "reason",
+                ],
+                keep="last",
+            )
+            .drop("_dedupe_hash")
         )

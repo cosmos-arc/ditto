@@ -67,6 +67,11 @@ MARKET_KEY_COLUMNS = ("instrument_id", "trade_date")
 MARKET_DATE_COLUMN = "trade_date"
 MARKET_INSTRUMENT_COLUMN = "instrument_id"
 
+# #517 stock_limit：spec 主键含 knowledge_date（修订以新 kd 行呈现），
+# 不能复用 (instrument_id, trade_date) 共享 store——读侧 unique 会折叠
+# 多 kd 观察行（correctness review #2）。
+STOCK_LIMIT_KEY_COLUMNS = ("instrument_id", "trade_date", "knowledge_date")
+
 
 class MarketProvider(Provider):
     """Market Domain Provider - 股票/ETF/指数行情、状态、复权因子."""
@@ -93,7 +98,7 @@ class MarketProvider(Provider):
             instrument=instrument_reader,
             etf_adj=EtfAdjFactorReader(store),
             etf_nav=EtfNavReader(store),
-            stock_limit=StockLimitReader(store),
+            stock_limit=StockLimitReader(_stock_limit_parquet_store(settings)),
             index_bars=IndexBarsReader(store),
             global_index_bars=GlobalIndexBarsReader(global_store),
             index_constituent=IndexConstituentReader(data_root=settings.data_root),
@@ -123,7 +128,7 @@ class MarketProvider(Provider):
             etf_status=EtfStatusWriter(store),
             etf_adj=EtfAdjFactorWriter(store),
             etf_nav=EtfNavWriter(store),
-            stock_limit=StockLimitWriter(store),
+            stock_limit=StockLimitWriter(_stock_limit_parquet_store(settings)),
             index_bars=IndexBarsWriter(store),
             global_index_bars=GlobalIndexBarsWriter(global_store),
             index_constituent=IndexConstituentWriter(data_root=settings.data_root),
@@ -187,6 +192,16 @@ def _futures_basic_parquet_store(settings: DataStoreSettings) -> ParquetStore:
         key_columns=("source", "source_ticker", "knowledge_date"),
         date_column="knowledge_date",
         instrument_column="source_ticker",
+    )
+
+
+def _stock_limit_parquet_store(settings: DataStoreSettings) -> ParquetStore:
+    """涨跌停价格按 (instrument_id, trade_date, knowledge_date) 幂等."""
+    return ParquetStore(
+        settings.data_root,
+        key_columns=STOCK_LIMIT_KEY_COLUMNS,
+        date_column="trade_date",
+        instrument_column="instrument_id",
     )
 
 

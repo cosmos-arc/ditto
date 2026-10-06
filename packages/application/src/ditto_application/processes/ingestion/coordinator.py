@@ -12,11 +12,9 @@ from ditto_data.services.fundamental_store import FundamentalStore
 from ditto_data.services.macro_service import MacroService
 from ditto_data.services.market_service import MarketService
 from ditto_data.services.market_write_service import MarketWriteService
+from ditto_data.services.metadata import SecurityQuery
 from ditto_data.services.metadata_service import MetadataService
 from ditto_data.sources.reference_config import EtfReferenceConfigSource
-from ditto_data.storage.metadata.instrument.instrument_reader import (
-    SecurityQuery,
-)
 from ditto_kernel.instrument import InstrumentIngestParams
 from ditto_platform.foundation import OnDuplicate, WriteResult, logger
 

@@ -1,6 +1,7 @@
 """Tests for CapitalTushareAdapter."""
 
 from datetime import date
+from unittest.mock import MagicMock
 
 import polars as pl
 import pytest
@@ -724,7 +725,11 @@ class TestCorporateActionsRightsTransportBoundary:
         mock_client.query.side_effect = [
             pl.DataFrame(),
             pl.DataFrame(),
-            SourceFetchError(message="请指定正确的接口名", source="tushare"),
+            SourceFetchError(
+                message="请指定正确的接口名",
+                source="tushare",
+                details={"code": 50101},
+            ),
         ]
         result = CapitalCorporateTushareAdapter(
             _client=mock_client
@@ -748,5 +753,44 @@ class TestCorporateActionsRightsTransportBoundary:
         ]
         with pytest.raises(SourceFetchError, match="Failed to fetch"):
             CapitalCorporateTushareAdapter(_client=mock_client).fetch_corporate_actions(
+                ann_date="20260930"
+            )
+
+
+class TestRightsBoundaryCodeMatching:
+    """rights 降级判别走结构化错误码（details.code==50101）."""
+
+    def _client_with_rights_error(self, message: str, details: dict | None):
+        from ditto_data.errors import SourceFetchError
+
+        client = MagicMock()
+        client.query.side_effect = [
+            pl.DataFrame(),
+            pl.DataFrame(),
+            SourceFetchError(message=message, source="tushare", details=details),
+        ]
+        return client
+
+    def test_degrades_on_structured_code(self, mocker) -> None:
+        from ditto_data.sources.tushare.adapters.capital_corporate import (
+            CapitalCorporateTushareAdapter,
+        )
+
+        client = self._client_with_rights_error("请指定正确的接口名", {"code": 50101})
+        result = CapitalCorporateTushareAdapter(_client=client).fetch_corporate_actions(
+            ann_date="20260930"
+        )
+        assert result.is_empty()
+
+    def test_message_without_code_still_fails_closed(self, mocker) -> None:
+        import pytest
+        from ditto_data.errors import SourceFetchError
+        from ditto_data.sources.tushare.adapters.capital_corporate import (
+            CapitalCorporateTushareAdapter,
+        )
+
+        client = self._client_with_rights_error("请指定正确的接口名", None)
+        with pytest.raises(SourceFetchError, match="Failed to fetch"):
+            CapitalCorporateTushareAdapter(_client=client).fetch_corporate_actions(
                 ann_date="20260930"
             )
