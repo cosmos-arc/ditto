@@ -19,8 +19,10 @@ from ditto_analysis.experiments import (
     ExperimentDesiredState,
     ExperimentFailureCode,
     ExperimentId,
+    ExperimentReaderProtocol,
     ExperimentStage,
     ExperimentStatus,
+    ExperimentWriterProtocol,
     FoldId,
     FoldKey,
     FoldPersistenceSpec,
@@ -71,6 +73,7 @@ from ditto_application.processes.experiments.r2_live_gate_evidence import (
 )
 from ditto_application.processes.experiments.scheduler_store import (
     ExperimentSchedulerSnapshot,
+    ExperimentSchedulerStoreProtocol,
 )
 from ditto_application.processes.experiments.trial_evidence_bridge import (
     project_walk_forward_trial_outcomes,
@@ -360,10 +363,19 @@ def _collector(
                 selection_evidence_hash=str(published_selection.ledger.content_hash),
             ),
         )
+    # 纯内存替身各自只实现 collector 采集路径实际消费的单一成员（load_snapshot /
+    # list_status_events / publish_review_packet），协议其余成员与本套件无关，
+    # 在此单一构造点窄化对齐协议形参（与 planning_process 单测的 cast 先例一致）。
     collector = ExperimentEvidenceCollector(
-        scheduler_store=_Store(collector_snapshot),
-        reader=_Reader((_preflight_event(),) if events is None else events),
-        writer=writer,
+        scheduler_store=cast(
+            "ExperimentSchedulerStoreProtocol",
+            _Store(collector_snapshot),
+        ),
+        reader=cast(
+            "ExperimentReaderProtocol",
+            _Reader((_preflight_event(),) if events is None else events),
+        ),
+        writer=cast("ExperimentWriterProtocol", writer),
         walk_forward_assembler=WalkForwardEvidenceAssembler(
             report_reader=case.adapter,
             fold_selection_trace_reader=case.trace_adapter,

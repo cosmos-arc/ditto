@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass, field, replace
 from typing import Literal, cast
 
@@ -17,7 +19,8 @@ from ditto_application.processes.execution.signal_package import (
     SignalPackagePublishRequest,
 )
 from ditto_application.processes.execution.signal_snapshot import SignalSnapshotProcess
-from ditto_execution.models import FillRecord, SignalRecord
+from ditto_execution.errors import FillConflictError
+from ditto_execution.models import FillAdjustmentRecord, FillRecord, SignalRecord
 from ditto_kernel.identity import InstrumentId
 from ditto_strategy.alpha.models import TargetPortfolio
 from ditto_strategy.models import StrategyArtifactRecord
@@ -78,14 +81,32 @@ class _IntentPort:
         return False
 
 
+def _same_fill_payload(existing: FillRecord, candidate: FillRecord) -> bool:
+    """对齐生产 SqliteTradeService：忽略 created_at 的不可变成交事实相等."""
+    return replace(existing, created_at="") == replace(candidate, created_at="")
+
+
 @dataclass
 class _FillPort:
     rows: list[FillRecord] = field(default_factory=list)
     hidden_for_calls: int = 0
     calls: int = 0
 
-    def save_fill(self, record: FillRecord) -> None:
+    @contextmanager
+    def ledger_transaction(self) -> Iterator[None]:
+        yield
+
+    def save_fill(self, record: FillRecord) -> bool:
+        existing = self.get_fill(record.fill_id)
+        if existing is not None:
+            if _same_fill_payload(existing, record):
+                return False
+            raise FillConflictError(f"Fill ID conflict: {record.fill_id}")
         self.rows.append(record)
+        return True
+
+    def get_fill(self, fill_id: str) -> FillRecord | None:
+        return next((item for item in self.rows if item.fill_id == fill_id), None)
 
     def list_fills(
         self,
@@ -105,6 +126,44 @@ class _FillPort:
             and (intent_id is None or item.intent_id == intent_id)
             and (end_date is None or item.trade_date <= end_date)
         ]
+
+    def list_effective_fills(
+        self,
+        strategy_id: str,
+        trade_date: str | None = None,
+        intent_id: str | None = None,
+        end_date: str | None = None,
+    ) -> list[FillRecord]:
+        # 内存 fake 不产生 void/replace 调整事件，有效成交即原始成交。
+        return self.list_fills(
+            strategy_id,
+            trade_date=trade_date,
+            intent_id=intent_id,
+            end_date=end_date,
+        )
+
+    def get_fill_adjustment(self, adjustment_id: str) -> FillAdjustmentRecord | None:
+        del adjustment_id
+        return None
+
+    def list_fill_adjustments(
+        self,
+        strategy_id: str,
+        *,
+        fill_id: str | None = None,
+        intent_id: str | None = None,
+    ) -> list[FillAdjustmentRecord]:
+        del strategy_id, fill_id, intent_id
+        return []
+
+    def apply_fill_adjustment(
+        self,
+        record: FillAdjustmentRecord,
+        *,
+        replacement_fill: FillRecord | None = None,
+    ) -> bool:
+        del record, replacement_fill
+        raise AssertionError("signal package publication never adjusts fills")
 
 
 @dataclass
@@ -151,6 +210,23 @@ class _ArtifactStore:
                 self.rows[index] = replace(item, status=status)
                 return True
         return False
+
+    def transition_with_receipt(
+        self,
+        artifact_id: str,
+        status: str,
+        expected_current: str,
+        receipt: StrategyArtifactRecord,
+    ) -> bool:
+        if self._raw_get(receipt.artifact_id) is not None:
+            return False
+        if not self.update_status(
+            artifact_id,
+            status,
+            expected_current=(expected_current,),
+        ):
+            return False
+        return self.save(receipt)
 
     def claim_replacement(
         self,

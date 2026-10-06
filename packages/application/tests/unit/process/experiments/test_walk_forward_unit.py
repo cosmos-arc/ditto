@@ -446,7 +446,9 @@ def test_metrics_are_recomputed_from_one_stitched_equity_curve() -> None:
     assert candidate.metrics[ResearchMetricId.MAX_DRAWDOWN].value == pytest.approx(
         expected_drawdown
     )
-    assert candidate.metrics[ResearchMetricId.MAX_DRAWDOWN].value < min(
+    candidate_max_drawdown = candidate.metrics[ResearchMetricId.MAX_DRAWDOWN].value
+    assert candidate_max_drawdown is not None
+    assert candidate_max_drawdown < min(
         cast("float", fold.metrics[ResearchMetricId.MAX_DRAWDOWN].value)
         for fold in candidate.folds
     )
@@ -477,6 +479,7 @@ def test_execution_metrics_use_recomputed_scaling_and_capacity_is_explicit() -> 
 def test_execution_metrics_reweight_unequal_fold_capital_on_stitched_equity() -> None:
     first = _evidence("candidate-alpha", 2, 1, (110.0, 110.0))
     second_source = _evidence("candidate-alpha", 2, 2, (120.0, 120.0))
+    assert second_source.backtest_report is not None
     second_report = replace(
         second_source.backtest_report,
         initial_cash=1_000.0,

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import replace
 from datetime import UTC, datetime
+from typing import cast
 
 import pytest
 from ditto_application.processes.risk.agent_decision_briefing import (
@@ -15,6 +16,7 @@ from ditto_application.queries.decision_briefing_contracts import (
 from ditto_application.queries.decision_opinion import (
     DecisionOpinionIdentity,
     DecisionOpinionQueryService,
+    DecisionOpinionStoredView,
 )
 from ditto_application.queries.evidence_contracts import (
     EvidenceArtifactReference,
@@ -104,9 +106,14 @@ class _OpinionReader:
 
     def get_latest_by_v3_artifact_id(
         self, v3_artifact_id: str
-    ) -> DecisionOpinionRecord | None:
+    ) -> DecisionOpinionStoredView | None:
         self.artifact_ids.append(v3_artifact_id)
-        return self.record
+        if self.record is None:
+            return None
+        # DecisionOpinionStoredView 协议声明可写属性，而 DecisionOpinionRecord
+        # 是 frozen dataclass（属性只读），静态不可赋值属生产签名摩擦；
+        # 服务侧只读取字段，此处窄化安全。
+        return cast(DecisionOpinionStoredView, self.record)
 
 
 def _identity(

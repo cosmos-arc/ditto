@@ -42,7 +42,7 @@ def _market_snapshot(
     close: float = 10.5,
     low: float = 10.0,
     high: float = 11.0,
-    instrument_id: int = 1,
+    instrument_id: InstrumentId = InstrumentId(1),
     volume: float = 1_000_000,
     limit_up: float | None = None,
     limit_down: float | None = None,
@@ -67,7 +67,7 @@ def _market_snapshot(
 
 
 _DEFINITION = InstrumentDefinition(
-    instrument_id=1,
+    instrument_id=InstrumentId(1),
     asset_class="etf",
     exchange="XSHE",
     currency="CNY",
@@ -79,7 +79,7 @@ _DEFINITION = InstrumentDefinition(
 )
 
 _TRADING_RULE = TradingRuleSet(
-    instrument_id=1,
+    instrument_id=InstrumentId(1),
     as_of_date="2026-03-01",
     settlement_cycle=1,
     fund_settlement_cycle=1,

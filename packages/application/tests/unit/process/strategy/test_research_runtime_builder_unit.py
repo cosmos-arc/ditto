@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from copy import deepcopy
 from dataclasses import asdict, replace
 from inspect import signature
@@ -10,8 +11,14 @@ from unittest.mock import MagicMock
 
 import polars as pl
 import pytest
+from ditto_application.builders.research_runtime_builder import (
+    ResearchRuntimeBuilder,
+    ResearchSnapshotIdentity,
+    ResearchStrategyRuntime,
+)
 from ditto_application.exceptions import AppBuilderError
 from ditto_strategy.alpha.context import StrategyContext
+from ditto_strategy.alpha.models import TargetPortfolio
 from ditto_strategy.alpha.parameters import CandidateParameter, legacy_parameter_path
 from ditto_strategy.alpha.pipeline import StrategyInputBundle
 from ditto_strategy.alpha.seeds import SEED_STRATEGY_SPECS
@@ -26,6 +33,12 @@ from ditto_strategy.alpha.specs import (
     StrategySpec,
 )
 from ditto_strategy.models import StrategySpecRecord
+
+
+def _obj(value: object) -> Mapping[str, object]:
+    """窄化 JSON 节点为对象（运行时校验；node config 值静态为 object）."""
+    assert isinstance(value, Mapping)
+    return value
 
 
 def _legacy_spec() -> StrategySpec:
@@ -117,26 +130,18 @@ def _stock_record(
     )
 
 
-def _snapshot() -> Any:
-    from ditto_application.builders.research_runtime_builder import (
-        ResearchSnapshotIdentity,
-    )
-
+def _snapshot() -> ResearchSnapshotIdentity:
     return ResearchSnapshotIdentity(
         snapshot_id="rds-20260718-etf-daily",
         manifest_hash="c" * 64,
     )
 
 
-def _builder() -> object:
-    from ditto_application.builders.research_runtime_builder import (
-        ResearchRuntimeBuilder,
-    )
-
+def _builder() -> ResearchRuntimeBuilder:
     return ResearchRuntimeBuilder()
 
 
-def _run_pipeline(runtime: object, *, run_id: str) -> object:
+def _run_pipeline(runtime: ResearchStrategyRuntime, *, run_id: str) -> TargetPortfolio:
     pipeline = runtime.pipeline
     return pipeline.run(
         StrategyContext(),
@@ -290,8 +295,8 @@ def test_research_builder_uses_explicit_record_candidate_and_snapshot() -> None:
         for node in runtime.resolved_spec.pipeline.nodes
         if node.node_id == "legacy_factor_set"
     )
-    assert factor.config["params"]["top_k"] == 2
-    assert factor.config["params"]["lookback"] == 30
+    assert _obj(factor.config["params"])["top_k"] == 2
+    assert _obj(factor.config["params"])["lookback"] == 30
 
 
 def test_research_runtime_exposes_exact_used_factor_and_registry_bindings() -> None:
@@ -696,7 +701,7 @@ def test_lookback_candidate_changes_resolved_compiled_config_only() -> None:
         if node.node_id == "legacy_factor_set"
     )
 
-    assert factor.config["params"]["lookback"] == 35
+    assert _obj(factor.config["params"])["lookback"] == 35
     assert {item.path: item.value for item in runtime.effective_parameters}[
         legacy_parameter_path("lookback")
     ] == 35

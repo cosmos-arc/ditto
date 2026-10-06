@@ -15,6 +15,15 @@ from ditto_application.processes.ingestion.instrument_ingestion import (
 from ditto_application.processes.ingestion.result_handler import IngestionResultHandler
 from ditto_application.processes.ingestion.types import SourceFetchers
 from ditto_data.catalog import DataAssetRef, InMemoryDataCatalog
+from ditto_data.services.market_service import MarketService
+from ditto_data.services.metadata_service import MetadataService
+from ditto_data.sources.protocols import (
+    CapitalFetcher,
+    FundamentalFetcher,
+    MacroFetcher,
+    MarketFetcher,
+    MetadataFetcher,
+)
 from ditto_kernel.instrument import InstrumentIngestParams
 from ditto_platform.foundation import OnDuplicate, WriteResult
 
@@ -165,6 +174,18 @@ class _AdjFactorWriteRecorder:
         )
 
 
+def _single_source_fetchers(source: object) -> SourceFetchers:
+    """替身单点注入：假源只实现被测 stock_daily 路由消费的方法面，
+    五个协议槽位统一经此放宽为该替身（不再逐处 cast(object)）."""
+    return SourceFetchers(
+        metadata=cast(MetadataFetcher, source),
+        market=cast(MarketFetcher, source),
+        fundamental=cast(FundamentalFetcher, source),
+        capital=cast(CapitalFetcher, source),
+        macro=cast(MacroFetcher, source),
+    )
+
+
 def test_process_fetched_data_by_instrument_accepts_context() -> None:
     write_result = WriteResult(
         file_path="stock_daily/000001/2024",
@@ -218,16 +239,11 @@ def test_ingest_by_instrument_accepts_runtime_context() -> None:
     writer = _WriteDataRecorder(write_result)
     metadata = _MetadataService()
     market_source = _MarketSource()
-    fetchers = SourceFetchers(
-        metadata=cast(object, market_source),
-        market=cast(object, market_source),
-        fundamental=cast(object, market_source),
-        capital=cast(object, market_source),
-        macro=cast(object, market_source),
-    )
+    fetchers = _single_source_fetchers(market_source)
     ctx = InstrumentIngestContext(
         fetchers=fetchers,
-        metadata_service=cast(object, metadata),
+        # 最小替身只实现 resolve_source_ticker 消费面，声明类型为具体类，需单点放宽.
+        metadata_service=cast(MetadataService, metadata),
         source_name="tushare",
         result_handler=IngestionResultHandler(None, "tushare"),
         data_writer=cast(IngestionDataWriter, writer),
@@ -254,16 +270,12 @@ def test_backfill_adj_factor_accepts_runtime_context() -> None:
     metadata = _MetadataService()
     market_source = _MarketSource()
     writer = _AdjFactorWriteRecorder()
-    fetchers = SourceFetchers(
-        metadata=cast(object, market_source),
-        market=cast(object, market_source),
-        fundamental=cast(object, market_source),
-        capital=cast(object, market_source),
-        macro=cast(object, market_source),
-    )
+    fetchers = _single_source_fetchers(market_source)
     ctx = InstrumentBackfillContext(
-        metadata_service=cast(object, metadata),
-        market_service=cast(object, _MarketQueryService()),
+        # 最小替身只实现 resolve_source_ticker 消费面，声明类型为具体类，需单点放宽.
+        metadata_service=cast(MetadataService, metadata),
+        # 最小替身只实现 get_adj_factors 消费面，声明类型为具体类，需单点放宽.
+        market_service=cast(MarketService, _MarketQueryService()),
         fetchers=fetchers,
         source_name="tushare",
         data_writer=cast(IngestionDataWriter, writer),

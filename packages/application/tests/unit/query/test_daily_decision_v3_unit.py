@@ -91,7 +91,11 @@ def test_v3_preserves_v2_and_exposes_typed_risk_sections() -> None:
     assert report.v2 is v2
     assert report.readiness == "ready"
     assert report.blocking_reasons == ()
-    assert report.tail_risk.historical_es99 >= report.tail_risk.historical_var99
+    historical_es99 = report.tail_risk.historical_es99
+    historical_var99 = report.tail_risk.historical_var99
+    assert historical_es99 is not None
+    assert historical_var99 is not None
+    assert historical_es99 >= historical_var99
     assert report.factor_risk.availability == "partial"
     assert report.factor_risk.marginal_contributions == {
         "size": 0.2,

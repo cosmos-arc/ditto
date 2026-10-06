@@ -3,7 +3,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
 from dataclasses import replace
 from datetime import UTC, datetime
 from typing import cast
@@ -453,20 +453,22 @@ def test_comparison_builder_rejects_untyped_baseline() -> None:
 def test_comparison_builder_rejects_ambiguous_evidence_containers(
     evidence: object,
 ) -> None:
+    # 对抗输入：容器形状故意违反 evidence 声明契约，验证运行时 fail-closed。
     _assert_rejected(
         lambda: build_candidate_comparison(
             fixtures._baseline_identity(),
-            cast("object", evidence),
+            cast("Iterable[CandidateFoldEvidence]", evidence),
         ),
         "invalid_fold_evidence_sequence",
     )
 
 
 def test_comparison_builder_normalizes_noniterable_evidence() -> None:
+    # 对抗输入：非可迭代对象冒充 evidence，验证运行时 fail-closed。
     _assert_rejected(
         lambda: build_candidate_comparison(
             fixtures._baseline_identity(),
-            cast("object", object()),
+            cast("Iterable[CandidateFoldEvidence]", object()),
         ),
         "invalid_fold_evidence_sequence",
     )
@@ -476,10 +478,11 @@ def test_comparison_builder_normalizes_noniterable_evidence() -> None:
 def test_comparison_builder_requires_nonempty_exact_evidence_rows(
     evidence: object,
 ) -> None:
+    # 对抗输入：空序列或含裸 object 的行，验证运行时 fail-closed。
     _assert_rejected(
         lambda: build_candidate_comparison(
             fixtures._baseline_identity(),
-            cast("object", evidence),
+            cast("Iterable[CandidateFoldEvidence]", evidence),
         ),
         "invalid_fold_evidence_sequence",
     )

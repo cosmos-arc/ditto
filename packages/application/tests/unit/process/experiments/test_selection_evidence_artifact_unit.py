@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import replace
 from datetime import UTC, datetime
 from pathlib import Path
@@ -63,6 +64,12 @@ LEASE_FENCE = LeaseFence(
     "selection-owner",
     3,
 )
+
+
+def _obj(value: object) -> Mapping[str, object]:
+    """窄化 manifest JSON 节点为对象（运行时校验；递归联合无法静态窄化）."""
+    assert isinstance(value, Mapping)
+    return value
 
 
 def _preflight_event() -> StatusEventRecord:
@@ -253,7 +260,7 @@ def test_publish_replay_and_restart_load_return_exact_typed_ledger(
         }
     ).content_hash
     assert record.reproduction_fingerprint == expected_fingerprint
-    audit = record.manifest["audit"]
+    audit = _obj(record.manifest["audit"])
     assert audit["launch_spec_hash"] == str(
         encode_launch_spec(snapshot.launch_spec).content_hash
     )
@@ -429,7 +436,7 @@ def test_publish_after_control_revision_reuses_stage_event_identity(
     )
 
     assert published.record.created_at == SELECTION_AT
-    audit = published.record.manifest["audit"]
+    audit = _obj(published.record.manifest["audit"])
     assert (
         audit["selection_stage_subject_revision"] == _selection_event().subject_revision
     )
@@ -795,7 +802,7 @@ def test_rehashed_manifest_audit_drift_fails_record_spec_parity(
         now_epoch_us=NOW_US,
     )
     record = published.record
-    audit = dict(record.manifest["audit"])
+    audit = dict(_obj(record.manifest["audit"]))
     audit["tampered"] = True
     drifted_spec = ArtifactPublicationSpec(
         artifact_id=record.artifact_id,

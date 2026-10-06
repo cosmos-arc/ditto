@@ -19,7 +19,9 @@ from ditto_application.processes.experiments.research_policy_artifact import (
 )
 from ditto_kernel.identity import InstrumentId
 
-_SCHEMA_V1: dict[str, pl.DataType] = {
+# polars 1.x 的 schema 值同时接受 DataType 实例（pl.List(...)）与数据类型类
+# （pl.String 等），与 DataFrame(schema=...)/cast 的 PolarsDataType 形参一致。
+_SCHEMA_V1: dict[str, pl.DataType | type[pl.DataType]] = {
     "instrument_code": pl.String,
     "instrument_id": pl.Int64,
     "asset_class": pl.String,

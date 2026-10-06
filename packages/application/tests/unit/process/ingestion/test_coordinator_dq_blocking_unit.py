@@ -192,4 +192,5 @@ class TestDQBlockingBehavior:
         assert isinstance(log_entry, IngestionLog)
         assert log_entry.status == IngestionStatus.FAIL
         assert log_entry.error_code == "DQ_BLOCKED"
+        assert log_entry.error_message is not None
         assert "DQ L1 check failed" in log_entry.error_message

@@ -28,6 +28,7 @@ from ditto_portfolio.account_ledger import (
     AccountEventSource,
     AccountEventType,
     AccountKind,
+    AccountLedgerRevisionConflict,
     FlowPosition,
     create_account_event,
     ledger_hash,
@@ -106,6 +107,19 @@ class _Journal:
     def append(self, event: AccountEvent) -> AccountEvent:
         self.events.append(event)
         return event
+
+    def append_if_revision(
+        self,
+        event: AccountEvent,
+        *,
+        expected_ledger_hash: str,
+    ) -> AccountEvent:
+        # 协议成员补齐：按账户流哈希做乐观校验后复用 append 路径；
+        # 失配与生产同抛 AccountLedgerRevisionConflict；
+        # 时间序守卫未建模（替身无时间轴）。
+        if ledger_hash(self.list_events(event.account_id)) != expected_ledger_hash:
+            raise AccountLedgerRevisionConflict("test journal revision conflict")
+        return self.append(event)
 
     def get_event(self, account_id: str, event_id: str) -> AccountEvent | None:
         return next(

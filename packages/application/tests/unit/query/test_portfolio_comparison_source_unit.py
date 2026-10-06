@@ -68,6 +68,15 @@ class _AccountJournal:
     def append(self, event: AccountEvent) -> AccountEvent:
         raise AssertionError("comparison query must not append ledger events")
 
+    def append_if_revision(
+        self,
+        event: AccountEvent,
+        *,
+        expected_ledger_hash: str,
+    ) -> AccountEvent:
+        del expected_ledger_hash
+        raise AssertionError("comparison query must not append ledger events")
+
     def get_event(self, account_id: str, event_id: str) -> AccountEvent | None:
         return next(
             (
@@ -108,6 +117,35 @@ class _SnapshotReader:
 
     def get_snapshot(self, snapshot_id: str) -> ProviderSnapshot | None:
         return self._snapshot if snapshot_id == self._snapshot.snapshot_id else None
+
+    def get_observed_at(self, snapshot_id: str) -> datetime | None:
+        # 协议最小实现：本测试不依赖 catalog 观察时间。
+        del snapshot_id
+        return None
+
+    def get_predecessor(self, snapshot_id: str) -> str | None:
+        # 协议最小实现：本测试不依赖前驱快照链。
+        del snapshot_id
+        return None
+
+    def list_snapshots(
+        self,
+        *,
+        dataset_id: str | None = None,
+        source: str | None = None,
+        canonical_asset: DataAssetRef | None = None,
+    ) -> tuple[ProviderSnapshot, ...]:
+        # 协议最小实现：按产品/提供方过滤器原样返回唯一快照。
+        if (
+            (dataset_id is not None and dataset_id != self._snapshot.dataset_id)
+            or (source is not None and source != self._snapshot.source)
+            or (
+                canonical_asset is not None
+                and canonical_asset != self._snapshot.canonical_asset
+            )
+        ):
+            return ()
+        return (self._snapshot,)
 
 
 class _ValuationSource:

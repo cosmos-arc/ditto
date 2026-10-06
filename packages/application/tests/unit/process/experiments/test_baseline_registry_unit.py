@@ -3,28 +3,39 @@
 from __future__ import annotations
 
 import operator
-from collections.abc import Mapping
+from collections.abc import MutableMapping
 from dataclasses import FrozenInstanceError, replace
 from typing import cast
 
 import pytest
 from ditto_application.exceptions import AppProcessError
+from ditto_application.processes.experiments.baseline_registry import (
+    BaselineDescriptor,
+    BaselineExecutionPlan,
+    BaselinePlanBuilder,
+    BaselinePlanKind,
+    BaselinePlanRequest,
+    BaselineRef,
+    BaselineRegistration,
+    BaselineRegistry,
+    default_baseline_registry,
+)
+from ditto_application.processes.experiments.execution_contracts import (
+    ExactResearchSnapshot,
+    ExactStrategyIdentity,
+    ExactUniverseIdentity,
+    ResearchAssetLane,
+    ResearchExecutionPolicy,
+    default_etf_execution_policy,
+    default_stock_execution_policy,
+)
 
 
 def _request(
     *,
     baseline_key: str,
-    strategy: object | None = None,
-) -> object:
-    from ditto_application.processes.experiments.baseline_registry import (
-        BaselinePlanRequest,
-        BaselineRef,
-    )
-    from ditto_application.processes.experiments.execution_contracts import (
-        ExactResearchSnapshot,
-        ExactUniverseIdentity,
-    )
-
+    strategy: ExactStrategyIdentity | None = None,
+) -> BaselinePlanRequest:
     return BaselinePlanRequest(
         baseline_ref=BaselineRef(baseline_key, 1),
         snapshot=ExactResearchSnapshot("snapshot-1", "a" * 64),
@@ -34,10 +45,6 @@ def _request(
 
 
 def test_builtin_registry_has_stable_sorted_execution_manifest() -> None:
-    from ditto_application.processes.experiments.baseline_registry import (
-        default_baseline_registry,
-    )
-
     first = default_baseline_registry()
     second = default_baseline_registry()
 
@@ -51,11 +58,6 @@ def test_builtin_registry_has_stable_sorted_execution_manifest() -> None:
 
 
 def test_stock_equal_weight_builds_frozen_pit_plan_without_strategy_lookup() -> None:
-    from ditto_application.processes.experiments.baseline_registry import (
-        BaselinePlanKind,
-        default_baseline_registry,
-    )
-
     plan = default_baseline_registry().plan(
         _request(baseline_key="stock_universe_equal_weight"),
     )
@@ -75,31 +77,21 @@ def test_stock_equal_weight_builds_frozen_pit_plan_without_strategy_lookup() -> 
 
 
 def test_etf_current_active_requires_and_preserves_frozen_exact_identity() -> None:
-    from ditto_application.processes.experiments.baseline_registry import (
-        BaselinePlanKind,
-        default_baseline_registry,
-    )
-    from ditto_application.processes.experiments.execution_contracts import (
-        ExactStrategyIdentity,
-    )
-
     exact = ExactStrategyIdentity("r1_etf_rotation", 9, "c" * 64)
     plan = default_baseline_registry().plan(
         _request(baseline_key="etf_current_active", strategy=exact),
     )
 
     assert plan.kind is BaselinePlanKind.ETF_CURRENT_ACTIVE
-    assert plan.exact_strategy is exact
-    assert plan.exact_strategy.identity == "r1_etf_rotation@9"
+    strategy = plan.exact_strategy
+    assert strategy is not None
+    assert strategy is exact
+    assert strategy.identity == "r1_etf_rotation@9"
     assert plan.semantics == (("strategy_resolution", "frozen_exact_version"),)
     assert plan.execution_policy.identity == "a_share_etf_daily.v1"
 
 
 def test_etf_current_active_never_resolves_missing_identity_at_runtime() -> None:
-    from ditto_application.processes.experiments.baseline_registry import (
-        default_baseline_registry,
-    )
-
     with pytest.raises(AppProcessError) as exc_info:
         default_baseline_registry().plan(
             _request(baseline_key="etf_current_active"),
@@ -120,11 +112,6 @@ def test_etf_current_active_never_resolves_missing_identity_at_runtime() -> None
     ],
 )
 def test_unknown_baseline_key_or_version_fails_closed(key: str, version: int) -> None:
-    from ditto_application.processes.experiments.baseline_registry import (
-        BaselineRef,
-        default_baseline_registry,
-    )
-
     source = _request(baseline_key="stock_universe_equal_weight")
     request = replace(source, baseline_ref=BaselineRef(key, version))
 
@@ -139,11 +126,12 @@ def test_unknown_baseline_key_or_version_fails_closed(key: str, version: int) ->
 
 
 class _CustomBuilder:
-    def build(self, request: object, descriptor: object, policy: object) -> object:
-        from ditto_application.processes.experiments.baseline_registry import (
-            BaselineExecutionPlan,
-        )
-
+    def build(
+        self,
+        request: BaselinePlanRequest,
+        descriptor: BaselineDescriptor,
+        policy: ResearchExecutionPolicy,
+    ) -> BaselineExecutionPlan:
         return BaselineExecutionPlan(
             baseline_ref=descriptor.ref,
             kind=descriptor.kind,
@@ -158,18 +146,10 @@ class _CustomBuilder:
         )
 
 
-def _custom_registration(*, builder: object | None = None) -> object:
-    from ditto_application.processes.experiments.baseline_registry import (
-        BaselineDescriptor,
-        BaselinePlanKind,
-        BaselineRef,
-        BaselineRegistration,
-    )
-    from ditto_application.processes.experiments.execution_contracts import (
-        ResearchAssetLane,
-        default_stock_execution_policy,
-    )
-
+def _custom_registration(
+    *,
+    builder: BaselinePlanBuilder | None = None,
+) -> BaselineRegistration:
     return BaselineRegistration(
         descriptor=BaselineDescriptor(
             ref=BaselineRef("custom_quality_equal_weight", 1),
@@ -186,10 +166,6 @@ def _custom_registration(*, builder: object | None = None) -> object:
 
 
 def test_explicit_code_registration_supports_constrained_extension() -> None:
-    from ditto_application.processes.experiments.baseline_registry import (
-        BaselineRegistry,
-    )
-
     registry = BaselineRegistry((_custom_registration(),))
     plan = registry.plan(_request(baseline_key="custom_quality_equal_weight"))
 
@@ -198,10 +174,6 @@ def test_explicit_code_registration_supports_constrained_extension() -> None:
 
 
 def test_manifest_excludes_runtime_builder_object_identity() -> None:
-    from ditto_application.processes.experiments.baseline_registry import (
-        BaselineRegistry,
-    )
-
     first = BaselineRegistry((_custom_registration(builder=_CustomBuilder()),))
     second = BaselineRegistry((_custom_registration(builder=_CustomBuilder()),))
 
@@ -209,10 +181,6 @@ def test_manifest_excludes_runtime_builder_object_identity() -> None:
 
 
 def test_duplicate_explicit_registration_fails_closed() -> None:
-    from ditto_application.processes.experiments.baseline_registry import (
-        BaselineRegistry,
-    )
-
     registration = _custom_registration()
     with pytest.raises(AppProcessError) as exc_info:
         BaselineRegistry((registration, registration))
@@ -222,16 +190,6 @@ def test_duplicate_explicit_registration_fails_closed() -> None:
 
 
 def test_reserved_etf_identity_cannot_disable_exact_strategy_requirement() -> None:
-    from ditto_application.processes.experiments.baseline_registry import (
-        BaselineDescriptor,
-        BaselinePlanKind,
-        BaselineRef,
-    )
-    from ditto_application.processes.experiments.execution_contracts import (
-        ResearchAssetLane,
-        default_etf_execution_policy,
-    )
-
     policy = default_etf_execution_policy()
     with pytest.raises(AppProcessError) as exc_info:
         BaselineDescriptor(
@@ -252,16 +210,6 @@ def test_reserved_etf_identity_cannot_disable_exact_strategy_requirement() -> No
 
 
 def test_code_extension_cannot_impersonate_a_builtin_plan_kind() -> None:
-    from ditto_application.processes.experiments.baseline_registry import (
-        BaselineDescriptor,
-        BaselinePlanKind,
-        BaselineRef,
-    )
-    from ditto_application.processes.experiments.execution_contracts import (
-        ResearchAssetLane,
-        default_stock_execution_policy,
-    )
-
     policy = default_stock_execution_policy()
     with pytest.raises(AppProcessError) as exc_info:
         BaselineDescriptor(
@@ -282,18 +230,6 @@ def test_code_extension_cannot_impersonate_a_builtin_plan_kind() -> None:
 
 
 def test_reserved_identity_cannot_register_a_custom_builder() -> None:
-    from ditto_application.processes.experiments.baseline_registry import (
-        BaselineDescriptor,
-        BaselinePlanKind,
-        BaselineRef,
-        BaselineRegistration,
-        BaselineRegistry,
-    )
-    from ditto_application.processes.experiments.execution_contracts import (
-        ResearchAssetLane,
-        default_etf_execution_policy,
-    )
-
     policy = default_etf_execution_policy()
     registration = BaselineRegistration(
         descriptor=BaselineDescriptor(
@@ -320,16 +256,6 @@ def test_reserved_identity_cannot_register_a_custom_builder() -> None:
 
 
 def test_reserved_identity_hash_includes_executor_contract_version() -> None:
-    from ditto_application.processes.experiments.baseline_registry import (
-        BaselineDescriptor,
-        BaselinePlanKind,
-        BaselineRef,
-    )
-    from ditto_application.processes.experiments.execution_contracts import (
-        ResearchAssetLane,
-        default_stock_execution_policy,
-    )
-
     policy = default_stock_execution_policy()
     with pytest.raises(AppProcessError) as exc_info:
         BaselineDescriptor(
@@ -346,14 +272,12 @@ def test_reserved_identity_hash_includes_executor_contract_version() -> None:
 
 
 def test_registry_state_and_lookup_mapping_are_immutable_after_manifest() -> None:
-    from ditto_application.processes.experiments.baseline_registry import (
-        default_baseline_registry,
-    )
-
     registry = default_baseline_registry()
     lookup_field = "_by_identity"
     manifest_field = "_manifest_hash"
-    lookup = cast("Mapping[str, object]", getattr(registry, lookup_field))
+    # 运行时该字段是只读 MappingProxyType；按可变映射窄化只为通过 setitem 的
+    # 静态检查，负向断言要证明的正是这次写入必然抛 TypeError。
+    lookup = cast("MutableMapping[str, object]", getattr(registry, lookup_field))
 
     with pytest.raises(FrozenInstanceError):
         setattr(registry, manifest_field, "0" * 64)
@@ -362,17 +286,13 @@ def test_registry_state_and_lookup_mapping_are_immutable_after_manifest() -> Non
 
 
 def test_registry_rejects_builder_output_that_drifts_from_descriptor() -> None:
-    from ditto_application.processes.experiments.baseline_registry import (
-        BaselineRegistry,
-    )
-
     class _DriftingBuilder(_CustomBuilder):
         def build(
             self,
-            request: object,
-            descriptor: object,
-            policy: object,
-        ) -> object:
+            request: BaselinePlanRequest,
+            descriptor: BaselineDescriptor,
+            policy: ResearchExecutionPolicy,
+        ) -> BaselineExecutionPlan:
             result = super().build(request, descriptor, policy)
             return replace(result, implementation_key="x")
 

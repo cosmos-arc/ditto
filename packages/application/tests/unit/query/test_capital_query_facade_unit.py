@@ -36,6 +36,16 @@ class _StubCapitalData:
     ) -> pl.DataFrame:
         return self._valuation if self._valuation is not None else pl.DataFrame()
 
+    def get_moneyflows(self, start: str, end: str) -> pl.DataFrame:
+        # 协议成员补齐：facade 测试不消费全市场资金流帧。
+        del start, end
+        return pl.DataFrame()
+
+    def get_cyq_perfs(self, start: str, end: str) -> pl.DataFrame:
+        # 协议成员补齐：facade 测试不消费筹码/胜率帧。
+        del start, end
+        return pl.DataFrame()
+
 
 def test_stub_satisfies_protocol() -> None:
     """Stub 满足 CapitalDataPort Protocol（structural typing 验证）."""

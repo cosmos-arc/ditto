@@ -453,7 +453,9 @@ def test_comparison_binds_full_identity_and_analysis_owned_schema() -> None:
     assert row.source.result_hash == row.source.backtest_report.content_hash
     assert row.source.artifact_hash == row.source.result_hash
     assert row.metrics[ResearchMetricId.NET_RETURN].value == pytest.approx(-8.0)
-    assert row.metrics[ResearchMetricId.NET_RETURN].unit.value == "percent"
+    net_return_unit = row.metrics[ResearchMetricId.NET_RETURN].unit
+    assert net_return_unit is not None
+    assert net_return_unit.value == "percent"
     assert row.metrics[ResearchMetricId.TURNOVER].value == pytest.approx(20.0 / 94.0)
     assert row.metrics[ResearchMetricId.COST_DRAG].value == 1.0
     assert row.return_evidence is not None

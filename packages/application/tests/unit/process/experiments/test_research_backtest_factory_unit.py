@@ -9,10 +9,12 @@ from dataclasses import asdict, replace
 from datetime import UTC, date, datetime
 from inspect import signature
 from io import BytesIO
+from typing import cast
 
 import orjson
 import polars as pl
 import pytest
+from ditto_application.builders.node_pipeline_builder import AttestedNodePipeline
 from ditto_application.builders.research_backtest_factory import (
     ExactPublishedBaselineRuntimeBuilder,
     ExactResearchRuntimeBuilder,
@@ -120,7 +122,7 @@ from ditto_features.expression.contracts import (
 )
 from ditto_kernel.identity import InstrumentId
 from ditto_kernel.order import OrderSide, OrderType
-from ditto_kernel.trading import InstrumentRules, RulesGetter
+from ditto_kernel.trading import FeeSchedule, InstrumentRules, RulesGetter
 from ditto_portfolio.accounting import Account, CashBook, FillEvent
 from ditto_risk.pre_trade import (
     BuyingPowerCheck,
@@ -291,7 +293,7 @@ def _frames() -> FrozenResearchDataFrames:
     )
 
 
-_RULE_SCHEMA: dict[str, pl.DataType] = {
+_RULE_SCHEMA: dict[str, pl.DataType | type[pl.DataType]] = {
     "instrument_code": pl.String,
     "instrument_id": pl.Int64,
     "asset_class": pl.String,
@@ -932,8 +934,10 @@ def test_factory_builds_real_service_and_attests_constructed_objects() -> None:
     assert stop_calls == 0
     assert result.service._config.run_id == audit.backtest_run_id
     assert result.service._config.random_seed == audit.semantics.seed
+    # _data_feed 声明为 DataFeed 协议，实际注入 ResearchDataFeed。
+    data_feed = cast("ResearchDataFeed", result.service._data_feed)
     assert (
-        result.service._data_feed.evidence_manifest.canonical_hash
+        data_feed.evidence_manifest.canonical_hash
         == audit.semantics.backtest.data_feed_manifest_hash
     )
     assert reader.calls == [("stock-alpha", 3)]
@@ -997,10 +1001,11 @@ def test_factory_wires_one_fresh_selection_evidence_collector_per_build() -> Non
         first.graph.selection_evidence_collector,
         second.graph.selection_evidence_collector,
     ]
-    assert (
-        first.graph.pipeline_attestation.evidence_sink
-        is first.graph.selection_evidence_collector
-    )
+    pipeline_attestation = first.graph.pipeline_attestation
+    assert pipeline_attestation is not None
+    # pipeline_attestation 声明为 object | None，实际是 AttestedNodePipeline。
+    attested_pipeline = cast("AttestedNodePipeline", pipeline_attestation)
+    assert attested_pipeline.evidence_sink is first.graph.selection_evidence_collector
 
 
 def test_existing_runner_returns_real_selection_evidence_snapshot() -> None:
@@ -1424,13 +1429,13 @@ def test_existing_runner_rejects_factory_that_substitutes_stop_callback() -> Non
     class _WrongCallbackFactory:
         def build(
             self,
-            requested_audit: ResearchExecutionAudit,
+            audit: ResearchExecutionAudit,
             *,
             external_should_stop: Callable[[], bool],
         ) -> VerifiedResearchBacktestBuild:
             del external_should_stop
             return concrete.build(
-                requested_audit,
+                audit,
                 external_should_stop=_never_stop,
             )
 
@@ -1467,11 +1472,11 @@ def test_existing_runner_rejects_audit_graph_substitution() -> None:
     class _MixedAuditFactory:
         def build(
             self,
-            requested_audit: ResearchExecutionAudit,
+            audit: ResearchExecutionAudit,
             *,
             external_should_stop: Callable[[], bool],
         ) -> VerifiedResearchBacktestBuild:
-            del requested_audit
+            del audit
             build = concrete.build(
                 audit_b,
                 external_should_stop=external_should_stop,
@@ -1504,12 +1509,12 @@ def test_existing_runner_rejects_planner_method_shadow_after_official_build() ->
     class _PlannerShadowFactory:
         def build(
             self,
-            requested_audit: ResearchExecutionAudit,
+            audit: ResearchExecutionAudit,
             *,
             external_should_stop: Callable[[], bool],
         ) -> VerifiedResearchBacktestBuild:
             build = concrete.build(
-                requested_audit,
+                audit,
                 external_should_stop=external_should_stop,
             )
             object.__setattr__(build.graph.planner, "plan", _poisoned_plan)
@@ -1558,12 +1563,12 @@ def test_existing_runner_rejects_execution_method_shadow_after_official_build(
     class _MethodShadowFactory:
         def build(
             self,
-            requested_audit: ResearchExecutionAudit,
+            audit: ResearchExecutionAudit,
             *,
             external_should_stop: Callable[[], bool],
         ) -> VerifiedResearchBacktestBuild:
             build = concrete.build(
-                requested_audit,
+                audit,
                 external_should_stop=external_should_stop,
             )
             target = getattr(build.graph, target_name)
@@ -1586,12 +1591,12 @@ def test_existing_runner_rejects_mutated_rule_provider_after_official_build() ->
     class _RulePoisonFactory:
         def build(
             self,
-            requested_audit: ResearchExecutionAudit,
+            audit: ResearchExecutionAudit,
             *,
             external_should_stop: Callable[[], bool],
         ) -> VerifiedResearchBacktestBuild:
             build = concrete.build(
-                requested_audit,
+                audit,
                 external_should_stop=external_should_stop,
             )
             build.graph.rule_provider.inner._definitions.clear()
@@ -1612,12 +1617,12 @@ def test_existing_runner_rejects_slippage_value_mutation_after_official_build() 
     class _SlippagePoisonFactory:
         def build(
             self,
-            requested_audit: ResearchExecutionAudit,
+            audit: ResearchExecutionAudit,
             *,
             external_should_stop: Callable[[], bool],
         ) -> VerifiedResearchBacktestBuild:
             build = concrete.build(
-                requested_audit,
+                audit,
                 external_should_stop=external_should_stop,
             )
             object.__setattr__(build.graph.slippage_model, "bps", 9_999.0)
@@ -1640,16 +1645,16 @@ def test_existing_runner_rejects_coherent_audit_mutation_after_official_build() 
     class _AuditPoisonFactory:
         def build(
             self,
-            requested_audit: ResearchExecutionAudit,
+            audit: ResearchExecutionAudit,
             *,
             external_should_stop: Callable[[], bool],
         ) -> VerifiedResearchBacktestBuild:
             build = concrete.build(
-                requested_audit,
+                audit,
                 external_should_stop=external_should_stop,
             )
             object.__setattr__(
-                requested_audit.semantics.backtest,
+                audit.semantics.backtest,
                 "slippage_basis_points",
                 9_999,
             )
@@ -1671,12 +1676,12 @@ def test_existing_runner_derives_planner_order_type_from_audit() -> None:
     class _PlannerIdentityPoisonFactory:
         def build(
             self,
-            requested_audit: ResearchExecutionAudit,
+            audit: ResearchExecutionAudit,
             *,
             external_should_stop: Callable[[], bool],
         ) -> VerifiedResearchBacktestBuild:
             build = concrete.build(
-                requested_audit,
+                audit,
                 external_should_stop=external_should_stop,
             )
             object.__setattr__(
@@ -1703,12 +1708,12 @@ def test_existing_runner_rejects_unsealed_exact_build() -> None:
     class _UnsealedFactory:
         def build(
             self,
-            requested_audit: ResearchExecutionAudit,
+            audit: ResearchExecutionAudit,
             *,
             external_should_stop: Callable[[], bool],
         ) -> VerifiedResearchBacktestBuild:
             sealed = concrete.build(
-                requested_audit,
+                audit,
                 external_should_stop=external_should_stop,
             )
             return VerifiedResearchBacktestBuild(
@@ -1839,16 +1844,18 @@ def test_factory_rebuilds_typed_parameters_and_actual_compiled_factor_hash() -> 
     assert result.attestation == ResearchBacktestBuildAttestation.from_audit(
         exact_audit
     )
-    assert result.attestation.strategy.factor_bindings == (execution_factor,)
+    attested_strategy = result.attestation.strategy
+    assert isinstance(attested_strategy, StrategyExecutionBinding)
+    assert attested_strategy.factor_bindings == (execution_factor,)
 
     class _CompiledPoisonFactory:
         def build(
             self,
-            requested_audit: ResearchExecutionAudit,
+            audit: ResearchExecutionAudit,
             *,
             external_should_stop: Callable[[], bool],
         ) -> VerifiedResearchBacktestBuild:
-            assert requested_audit is exact_audit
+            assert audit is exact_audit
             assert external_should_stop is _never_stop
             assert result.graph.compiled_expressions is not None
             object.__setattr__(
@@ -2599,15 +2606,21 @@ def test_existing_runner_rejects_rule_provider_lookup_semantics_drift_after_buil
             for schedule in honest_schedules
         ]
 
-        class _LookupDrift(dict):
-            def get(self, key, default=None):
+        class _LookupDrift(dict[InstrumentId, list[FeeSchedule]]):
+            def get(
+                self,
+                key: InstrumentId,
+                default: list[FeeSchedule] | None = None,
+            ) -> list[FeeSchedule] | None:
                 if key == member_id:
                     return drifted_schedules
                 return super().get(key, default)
 
         drifted_store = _LookupDrift(provider._fee_schedules)
         assert drifted_store == provider._fee_schedules
-        assert drifted_store.get(member_id)[0].commission_rate == 1.0
+        drifted = drifted_store.get(member_id)
+        assert drifted is not None
+        assert drifted[0].commission_rate == 1.0
         object.__setattr__(provider, "_fee_schedules", drifted_store)
 
     _assert_post_build_mutation_rejected(

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from datetime import timedelta
 from pathlib import Path
 from typing import cast
@@ -11,6 +12,7 @@ from ditto_analysis.experiments import (
     CandidateId,
     ContentHash,
     ExperimentId,
+    GateEvaluation,
     GateOutcome,
     HardGateEvidenceView,
     LogicalTrialIdentity,
@@ -48,6 +50,13 @@ from packages.application.tests.integration import (
 from packages.application.tests.integration.r2_live_gate_binding_support import (
     ready_source,
 )
+
+
+def _observed(gate: GateEvaluation) -> Mapping[str, object]:
+    """窄化 gate.observed 为映射（运行时校验；生产侧声明为 object）."""
+    observed = gate.observed
+    assert isinstance(observed, Mapping)
+    return observed
 
 
 def _objective() -> PromotionObjective:
@@ -138,12 +147,13 @@ def test_verified_live_report_is_bound_into_the_persistable_packet(
         item for item in packet.gate_evaluations if item.rule_id == "r2_live_gate"
     )
     assert gate.outcome is GateOutcome.PASS
-    assert gate.observed["report_uri"] == source.report_uri
-    assert gate.observed["report_hash"] == str(source.expected_report_hash)
-    assert gate.observed["checked_at"] == "2026-07-31T12:00:00+00:00"
-    assert gate.observed["status"] == "ready"
-    assert gate.observed["reason_codes"] == ()
-    assert gate.observed["provider_entitlement_evidence_refs"] == (
+    observed = _observed(gate)
+    assert observed["report_uri"] == source.report_uri
+    assert observed["report_hash"] == str(source.expected_report_hash)
+    assert observed["checked_at"] == "2026-07-31T12:00:00+00:00"
+    assert observed["status"] == "ready"
+    assert observed["reason_codes"] == ()
+    assert observed["provider_entitlement_evidence_refs"] == (
         {
             "artifact_uri": source.provider_entitlement_artifacts[0].artifact_uri,
             "content_hash": str(
@@ -151,13 +161,13 @@ def test_verified_live_report_is_bound_into_the_persistable_packet(
             ),
         },
     )
-    assert gate.observed["performance_evidence_refs"]
-    assert gate.observed["recoverability_evidence_refs"]
-    assert gate.observed["idempotency_evidence_refs"]
+    assert observed["performance_evidence_refs"]
+    assert observed["recoverability_evidence_refs"]
+    assert observed["idempotency_evidence_refs"]
     bundle_hash = packet.bundle_hash
-    observed = cast("dict[str, object]", gate.observed)
+    frozen = cast("dict[str, object]", gate.observed)
     with pytest.raises(TypeError):
-        observed["report_hash"] = "forged"
+        frozen["report_hash"] = "forged"
     assert packet.bundle_hash == bundle_hash
 
 
@@ -238,12 +248,13 @@ def test_verified_live_gate_survives_real_collector_persistence_and_reopen(
         item for item in packet.gate_evaluations if item.rule_id == "r2_live_gate"
     )
     assert gate.outcome is GateOutcome.PASS
-    assert gate.observed["report_hash"] == source.expected_report_hash
-    assert gate.observed["checked_at"] == "2026-07-31T12:00:00+00:00"
-    assert gate.observed["provider_entitlement_evidence_refs"]
-    assert gate.observed["performance_evidence_refs"]
-    assert gate.observed["recoverability_evidence_refs"]
-    assert gate.observed["idempotency_evidence_refs"]
+    observed = _observed(gate)
+    assert observed["report_hash"] == source.expected_report_hash
+    assert observed["checked_at"] == "2026-07-31T12:00:00+00:00"
+    assert observed["provider_entitlement_evidence_refs"]
+    assert observed["performance_evidence_refs"]
+    assert observed["recoverability_evidence_refs"]
+    assert observed["idempotency_evidence_refs"]
     assert str(packet.bundle_hash) == bundle_hash
 
     database.close_all()

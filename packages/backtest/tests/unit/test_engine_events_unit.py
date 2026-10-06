@@ -18,6 +18,7 @@ from ditto_execution.orders.model import Order
 from ditto_kernel import SimpleEventBus
 from ditto_kernel.clock import SimulatedClock
 from ditto_kernel.events import DomainEvent
+from ditto_kernel.identity import InstrumentId
 from ditto_kernel.order import OrderSide, OrderType
 from ditto_kernel.strategy import RiskScope
 from ditto_kernel.synchronizer import Synchronizer, TimeSlice
@@ -66,7 +67,10 @@ def _make_account_view(cash: CashBook | None = None) -> AccountView:
     )
 
 
-def _make_snapshot(iid: int = 1, close: float = 10.0) -> MarketSnapshot:
+def _make_snapshot(
+    iid: InstrumentId = InstrumentId(1),
+    close: float = 10.0,
+) -> MarketSnapshot:
     return MarketSnapshot(
         trade_date="2026-03-01",
         instrument_id=iid,
@@ -84,11 +88,11 @@ def _make_slice(date: str = "2026-03-01") -> Slice:
     return Slice(
         trade_date=date,
         step_time=STEP_TIME,
-        bars={1: _make_snapshot()},
+        bars={InstrumentId(1): _make_snapshot()},
     )
 
 
-def _make_order(iid: int = 1, qty: int = 100) -> Order:
+def _make_order(iid: InstrumentId = InstrumentId(1), qty: int = 100) -> Order:
     return Order(
         client_id=ClientOrderId(value="order-001"),
         instrument_id=iid,
@@ -98,7 +102,7 @@ def _make_order(iid: int = 1, qty: int = 100) -> Order:
     )
 
 
-def _make_fill(iid: int = 1) -> FillEvent:
+def _make_fill(iid: InstrumentId = InstrumentId(1)) -> FillEvent:
     return FillEvent(
         fill_id="fill-001",
         order_id="order-001",
@@ -299,7 +303,7 @@ class TestEngineLoopEvents:
 
         risk_action = RiskAction(
             rule_id="max_drawdown",
-            instrument_id=1,
+            instrument_id=InstrumentId(1),
             scope=RiskScope.INSTRUMENT,
             severity=RiskSeverity.CRITICAL,
             action_type=RiskActionType.LIQUIDATE,

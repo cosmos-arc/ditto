@@ -410,7 +410,8 @@ def test_schema_change_after_partial_attestation_forks_new_revision(
         assert forked.chunk_id != request_v1.chunk_id
         assert forked.chunk_id.startswith(f"{request_v1.chunk_id}:revision:")
         assert any(
-            item.snapshot_id == request_v2.provider_snapshot.snapshot_id
+            isinstance(item, ProviderSnapshot)
+            and item.snapshot_id == request_v2.provider_snapshot.snapshot_id
             for item in snapshot.values
         )
         assert snapshot_completed(request_v2.provider_snapshot, lifecycle)

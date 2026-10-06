@@ -61,7 +61,9 @@ def _candidate(day: str, cutoff: datetime, snapshot: str) -> ETFCandidate:
     )
 
 
-def _facts() -> tuple[LiveETFPaperExecutionFacts, MagicMock, MagicMock]:
+def _facts() -> tuple[
+    LiveETFPaperExecutionFacts, MagicMock, MagicMock, MagicMock, MagicMock
+]:
     metadata = MagicMock()
     metadata.list_etf_candidates.side_effect = lambda **kwargs: [
         _candidate(

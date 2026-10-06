@@ -16,6 +16,7 @@ from ditto_application.processes.execution.strategy_run_process import (
 )
 from ditto_backtest.data_feed import Slice
 from ditto_backtest.statistics import BacktestReport
+from ditto_kernel.identity import InstrumentId
 from ditto_strategy.alpha.models import TargetPortfolio
 
 
@@ -33,7 +34,7 @@ class TestStrategyFacade:
                 trade_date="2026-03-24",
                 strategy_id="momentum-etf",
                 run_id="run-001",
-                positions={1: 0.5},
+                positions={InstrumentId(1): 0.5},
                 cash_target=0.5,
             ),
             mode=StrategyRunMode.RESEARCH,

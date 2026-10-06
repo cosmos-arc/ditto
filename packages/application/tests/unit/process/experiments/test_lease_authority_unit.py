@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 from threading import Event, RLock, Thread, get_ident
-from typing import Never, cast
+from typing import Any, Never, cast
 
 import pytest
 from ditto_analysis.errors import (
@@ -351,7 +351,9 @@ def test_release_clears_local_lease_without_poisoning_authority() -> None:
 def test_recoverable_publication_runs_in_one_outer_authority_section() -> None:
     authority, _store = _acquired_authority()
     lock = _ObservableRLock()
-    authority._lock = lock
+    # 白盒注入可观测锁：_lock 在生产中仅作上下文管理器使用，duck-typed 替身
+    # 无法满足 RLock 具体类型，以窄点 cast 跨过该注入边界。
+    cast("Any", authority)._lock = lock
     current_now_section_ids: list[int | None] = []
 
     def observed_clock() -> datetime:
@@ -401,7 +403,8 @@ def test_recoverable_publication_blocks_a_second_section_until_callback_returns(
     publication_started = Event()
 
     authority, _store = _acquired_authority()
-    authority._lock = lock
+    # 白盒注入可观测锁：同上，窄点 cast 跨过 RLock 具体类型注入边界。
+    cast("Any", authority)._lock = lock
     competitor_finished = Event()
     competitor_errors: list[BaseException] = []
     callback_observed: list[tuple[int | None, bool]] = []

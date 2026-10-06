@@ -22,6 +22,7 @@ from ditto_backtest.statistics import (
     PreTradeDecisionRecord,
 )
 from ditto_kernel.identity import InstrumentId
+from ditto_kernel.strategy import RiskScope
 from ditto_risk.post_trade import RiskActionType, RiskSeverity
 
 # ---------------------------------------------------------------------------
@@ -38,7 +39,7 @@ class TestEnrichRecordWithSymbol:
             trade_date="2026-03-24",
             rule_id="max-drawdown",
             instrument_id=InstrumentId(2_000_001),
-            scope="instrument",
+            scope=RiskScope.INSTRUMENT,
             severity=RiskSeverity.WARNING,
             action_taken=RiskActionType.REDUCE_POSITION,
             detail="drawdown exceeded",
@@ -78,7 +79,7 @@ class TestEnrichRecordWithSymbol:
             trade_date="2026-03-24",
             rule_id="max-drawdown",
             instrument_id=InstrumentId(9_999_999),
-            scope="instrument",
+            scope=RiskScope.INSTRUMENT,
             severity=RiskSeverity.WARNING,
             action_taken=RiskActionType.ALERT,
             detail="test",
@@ -356,7 +357,7 @@ class TestWriteBacktestArtifacts:
             trade_date="2026-03-24",
             rule_id="max-drawdown",
             instrument_id=InstrumentId(2_000_001),
-            scope="instrument",
+            scope=RiskScope.INSTRUMENT,
             severity=RiskSeverity.WARNING,
             action_taken=RiskActionType.ALERT,
             detail="drawdown -8%",
@@ -396,7 +397,7 @@ class TestWriteBacktestArtifacts:
             trade_date="2026-03-24",
             rule_id="max-drawdown",
             instrument_id=InstrumentId(2_000_001),
-            scope="instrument",
+            scope=RiskScope.INSTRUMENT,
             severity=RiskSeverity.WARNING,
             action_taken=RiskActionType.ALERT,
             detail="test",

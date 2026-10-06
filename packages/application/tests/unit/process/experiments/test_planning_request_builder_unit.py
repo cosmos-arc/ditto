@@ -355,13 +355,16 @@ def _planning_document() -> PlanningDocument:
     assert validation_plan.reserved_holdout is not None
     holdout = validation_plan.reserved_holdout.test_window
     spec_json = _plain_seed_spec()
+    raw_tags = spec_json["tags"]
+    assert isinstance(raw_tags, list)
     record = StrategySpecRecord(
         strategy_id=_STRATEGY_ID,
         name=cast("str", spec_json["name"]),
         spec_json=spec_json,
         version=2,
         created_at="2026-07-30T00:00:00Z",
-        tags=cast("tuple[str, ...]", tuple(spec_json["tags"])),
+        # seed spec 的 tags 恒为 list[str]（上方已窄化 list 形状）。
+        tags=cast("tuple[str, ...]", tuple(raw_tags)),
     )
     return {
         "experiment_id": _EXPERIMENT_ID,

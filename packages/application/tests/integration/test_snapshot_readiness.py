@@ -247,15 +247,19 @@ def test_replay_gate_rejects_datasets_without_instrument_trade_date_identity():
     with completed_evidence() as (readiness, request, _):
         from ditto_application.queries.provider_snapshot import (
             ProviderSnapshotQuery,
+            SnapshotReplayRequest,
         )
         from ditto_data.catalog.snapshot_reader import SnapshotReadService
 
         query = ProviderSnapshotQuery(
             cast(SnapshotReadService, SimpleNamespace()), readiness
         )
-        mismatched = replace(
-            request,
+        mismatched = SnapshotReplayRequest(
             fields=(FieldRequirement("macro_indicators", "amount", "snapshot:any"),),
+            instrument_ids=(1,),
+            required_from=request.required_from,
+            required_to=request.required_to,
+            knowledge_cutoff=_VISIBLE,
         )
 
         with pytest.raises(AppQueryError, match="instrument- and trade-date-keyed"):

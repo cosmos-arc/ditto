@@ -37,7 +37,7 @@ def _market_snapshot(
 ) -> MarketSnapshot:
     return MarketSnapshot(
         trade_date="2026-03-01",
-        instrument_id=1,
+        instrument_id=InstrumentId(1),
         open=10.0,
         high=10.5,
         low=9.5,
@@ -50,7 +50,7 @@ def _market_snapshot(
 
 
 _DEFINITION = InstrumentDefinition(
-    instrument_id=1,
+    instrument_id=InstrumentId(1),
     asset_class="etf",
     exchange="XSHE",
     currency="CNY",

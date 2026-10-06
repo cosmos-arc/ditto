@@ -1,5 +1,6 @@
 """Historical reads through actual immutable stores and snapshot readiness."""
 
+from collections.abc import Mapping, Sequence
 from dataclasses import replace
 from datetime import date
 
@@ -27,6 +28,27 @@ from packages.application.tests.integration.historical_universe_support import (
     retain_history,
     seed_history,
 )
+
+
+def _obj(value: object) -> Mapping[str, object]:
+    """窄化 evidence JSON 节点为对象（运行时校验；递归联合无法静态窄化）."""
+    assert isinstance(value, Mapping)
+    return value
+
+
+def _seq(value: object) -> Sequence[object]:
+    """窄化 evidence JSON 节点为数组（运行时校验；str/bytes 虽是 Sequence 但非数组）."""
+    assert isinstance(value, Sequence)
+    assert not isinstance(value, (str, bytes))
+    return value
+
+
+def _dig(value: object, *path: str | int) -> object:
+    """按 JSON 路径逐级取 evidence 值（测试断言侧窄化器）."""
+    node: object = value
+    for key in path:
+        node = _seq(node)[key] if isinstance(key, int) else _obj(node)[key]
+    return node
 
 
 @pytest.mark.integration
@@ -252,8 +274,12 @@ def test_snapshot_chain_resolves_day_visible_member_and_pins_reads_once(tmp_path
         )
         assert after.frame["investable"].to_list() == [False]
         assert after.frame["exclusion_reasons"].to_list() == [["SUSPENDED"]]
-        assert after.evidence["readiness"][1]["snapshot_id"] == second.snapshot_id
-        assert before.evidence["readiness"][1]["snapshot_id"] == first.snapshot_id
+        assert _dig(after.evidence, "readiness", 1, "snapshot_id") == (
+            second.snapshot_id
+        )
+        assert _dig(before.evidence, "readiness", 1, "snapshot_id") == (
+            first.snapshot_id
+        )
         # Pinned payloads serve every projection: no extra reads per day.
         assert reader.reads == 3
         # A cutoff before any member was observed locally still fails closed.

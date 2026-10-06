@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import date
+from typing import cast
 from unittest.mock import MagicMock
 
 import polars as pl
@@ -150,7 +151,9 @@ class TestFactorEvaluationFacade:
         facade.evaluate("factor.test", 1, options=opts)
 
         # Verify artifact reader was called with correct params
-        facade._artifact_reader.read_frame.assert_called_once_with(
+        # （_make_facade 注入的 artifact_reader 是 MagicMock；经私有属性读回的
+        # 静态类型是协议方法，单点窄化回 mock 以断言调用.）
+        cast(MagicMock, facade._artifact_reader).read_frame.assert_called_once_with(
             derived_id="factor.test",
             version=1,
             start="2024-01-02",
@@ -164,7 +167,8 @@ class TestFactorEvaluationFacade:
         report = facade.evaluate("factor.test", 1)
 
         assert report.factor_id == "factor.test"
-        facade._artifact_reader.read_frame.assert_called_once_with(
+        # 同 test_evaluate_passes_parameters_to_evaluator：窄化回注入的 mock.
+        cast(MagicMock, facade._artifact_reader).read_frame.assert_called_once_with(
             derived_id="factor.test",
             version=1,
             start=None,

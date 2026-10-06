@@ -176,7 +176,8 @@ def test_identity_free_receipt_validation_rejects_self_hashed_invalid_fields() -
 def test_receipt_reader_rejects_bool_schema_version_with_recomputed_hash() -> None:
     identity = _identity()
     detail = mutation_receipt_detail(identity, response={"revision": 8})
-    envelope = dict(detail["mutation_idempotency"])  # type: ignore[arg-type]
+    # 信封由 mutation_receipt_detail 写入为 str->object dict。
+    envelope = dict(cast("Mapping[str, object]", detail["mutation_idempotency"]))
     envelope["schema_version"] = True
     body = {key: value for key, value in envelope.items() if key != "receipt_hash"}
     envelope["receipt_hash"] = canonical_request_hash(body)

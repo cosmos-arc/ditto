@@ -12,6 +12,7 @@ from ditto_data.catalog.source_snapshot import (
 )
 from ditto_data.ingestion.partition_state import (
     PartitionCheckpoint,
+    PartitionLifecycleEvent,
     PartitionLifecycleStatus,
 )
 from ditto_data.provider import BarQuery, InstrumentQuery
@@ -62,7 +63,28 @@ class _SnapshotReader:
         self._snapshots = snapshots
         self.calls: list[DataAssetRef] = []
 
-    def list_snapshots(self, *, canonical_asset: DataAssetRef | None = None):
+    def get_snapshot(self, snapshot_id: str) -> ProviderSnapshot | None:
+        for snapshot in self._snapshots:
+            if snapshot.snapshot_id == snapshot_id:
+                return snapshot
+        return None
+
+    def get_observed_at(self, snapshot_id: str) -> datetime | None:
+        snapshot = self.get_snapshot(snapshot_id)
+        if snapshot is None:
+            return None
+        return min(snapshot.observations) if snapshot.observations else None
+
+    def get_predecessor(self, snapshot_id: str) -> str | None:
+        return None
+
+    def list_snapshots(
+        self,
+        *,
+        dataset_id: str | None = None,
+        source: str | None = None,
+        canonical_asset: DataAssetRef | None = None,
+    ) -> tuple[ProviderSnapshot, ...]:
         if canonical_asset is not None:
             self.calls.append(canonical_asset)
         return tuple(
@@ -76,14 +98,30 @@ class _LifecycleReader:
     def __init__(self, reader: _SnapshotReader) -> None:
         self.reader = reader
 
-    def list_incomplete(self, *, dataset_id: str):
+    def get_latest_checkpoint(self, chunk_id: str) -> PartitionCheckpoint | None:
+        return None
+
+    def get_checkpoint(self, chunk_id: str) -> PartitionCheckpoint | None:
+        return None
+
+    def list_incomplete(
+        self,
+        *,
+        dataset_id: str | None = None,
+        source: str | None = None,
+    ) -> tuple[PartitionCheckpoint, ...]:
         return ()
 
-    def list_complete(self, *, dataset_id: str):
+    def list_complete(
+        self,
+        *,
+        dataset_id: str | None = None,
+        source: str | None = None,
+    ) -> tuple[PartitionCheckpoint, ...]:
         return tuple(
             PartitionCheckpoint(
                 chunk_id=snapshot.snapshot_id,
-                dataset_id=dataset_id,
+                dataset_id=snapshot.dataset_id,
                 source=snapshot.source,
                 request_start=snapshot.request_start,
                 request_end=snapshot.request_end,
@@ -94,8 +132,11 @@ class _LifecycleReader:
                 updated_at=snapshot.created_at,
             )
             for snapshot in self.reader._snapshots
-            if snapshot.dataset_id == dataset_id
+            if dataset_id is None or snapshot.dataset_id == dataset_id
         )
+
+    def list_events(self, chunk_id: str) -> tuple[PartitionLifecycleEvent, ...]:
+        return ()
 
 
 class TestServiceBackedDataProvider:

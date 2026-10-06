@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime
 from typing import cast
 from unittest.mock import Mock
@@ -281,19 +281,56 @@ class _ControlNotifierDouble:
             raise self._error
 
 
+_ControlCommand = (
+    PauseExperimentCommand
+    | CancelExperimentCommand
+    | ResumeExperimentCommand
+    | RetryExperimentFoldCommand
+)
+
+
+def _handle_control_command(
+    process: ExperimentControlProcess,
+    notifier: ExperimentControlNotifier,
+    command: _ControlCommand,
+) -> ExperimentControlReceipt:
+    """把命令分发给与其类型严格配对的 handler.
+
+    parametrize 无法在类型上关联 (handler, command) 两列，因此由命令类型的
+    isinstance 分发在单点恢复这层配对关系。
+    """
+    if isinstance(command, PauseExperimentCommand):
+        return PauseExperimentHandler(
+            process=process,
+            notifier=notifier,
+        ).handle(command)
+    if isinstance(command, CancelExperimentCommand):
+        return CancelExperimentHandler(
+            process=process,
+            notifier=notifier,
+        ).handle(command)
+    if isinstance(command, ResumeExperimentCommand):
+        return ResumeExperimentHandler(
+            process=process,
+            notifier=notifier,
+        ).handle(command)
+    return RetryExperimentFoldHandler(
+        process=process,
+        notifier=notifier,
+    ).handle(command)
+
+
 @pytest.mark.parametrize(
-    ("action", "handler_type", "command", "status", "desired_state"),
+    ("action", "command", "status", "desired_state"),
     [
         (
             "pause",
-            PauseExperimentHandler,
             PauseExperimentCommand("experiment-1", 7, NOW),
             "pause_requested",
             "pause",
         ),
         (
             "cancel",
-            CancelExperimentHandler,
             CancelExperimentCommand("experiment-1", 7, NOW),
             "cancel_requested",
             "cancel",
@@ -302,7 +339,6 @@ class _ControlNotifierDouble:
 )
 def test_pause_and_cancel_persist_before_notifying_exact_live_runs(
     action: str,
-    handler_type: type[PauseExperimentHandler] | type[CancelExperimentHandler],
     command: PauseExperimentCommand | CancelExperimentCommand,
     status: str,
     desired_state: str,
@@ -315,12 +351,12 @@ def test_pause_and_cancel_persist_before_notifying_exact_live_runs(
     )
     process = _ControlProcessDouble(receipts={action: receipt}, timeline=timeline)
     notifier = _ControlNotifierDouble(timeline=timeline)
-    handler = handler_type(
-        process=cast("ExperimentControlProcess", process),
-        notifier=cast("ExperimentControlNotifier", notifier),
-    )
 
-    result = handler.handle(command)
+    result = _handle_control_command(
+        cast("ExperimentControlProcess", process),
+        cast("ExperimentControlNotifier", notifier),
+        command,
+    )
 
     assert result is receipt
     assert timeline == [
@@ -397,33 +433,35 @@ def test_exact_control_replay_does_not_repeat_post_commit_notification() -> None
 
 
 @pytest.mark.parametrize(
-    ("operation_id", "handler_type", "command", "process_action", "notification"),
+    ("operation_id", "command", "process_action", "notification"),
     [
         (
             "research_pause_experiment",
-            PauseExperimentHandler,
-            PauseExperimentCommand,
+            PauseExperimentCommand("experiment-1", 7, NOW),
             "pause",
             "notify_run_stop",
         ),
         (
             "research_cancel_experiment",
-            CancelExperimentHandler,
-            CancelExperimentCommand,
+            CancelExperimentCommand("experiment-1", 7, NOW),
             "cancel",
             "notify_run_stop",
         ),
         (
             "research_resume_experiment",
-            ResumeExperimentHandler,
-            ResumeExperimentCommand,
+            ResumeExperimentCommand("experiment-1", 7, NOW),
             "resume",
             "notify_scheduler",
         ),
         (
             "research_retry_fold_experiment",
-            RetryExperimentFoldHandler,
-            RetryExperimentFoldCommand,
+            RetryExperimentFoldCommand(
+                "experiment-1",
+                "candidate-2",
+                "fold-3",
+                7,
+                NOW,
+            ),
             "retry_fold",
             "notify_scheduler",
         ),
@@ -431,18 +469,7 @@ def test_exact_control_replay_does_not_repeat_post_commit_notification() -> None
 )
 def test_first_notification_failure_and_same_key_replay_return_exact_response(
     operation_id: str,
-    handler_type: type[
-        PauseExperimentHandler
-        | CancelExperimentHandler
-        | ResumeExperimentHandler
-        | RetryExperimentFoldHandler
-    ],
-    command: type[
-        PauseExperimentCommand
-        | CancelExperimentCommand
-        | ResumeExperimentCommand
-        | RetryExperimentFoldCommand
-    ],
+    command: _ControlCommand,
     process_action: str,
     notification: str,
 ) -> None:
@@ -453,7 +480,6 @@ def test_first_notification_failure_and_same_key_replay_return_exact_response(
         "experiment",
         {"experiment_id": "experiment-1"},
     )
-    command_values: tuple[object, ...] = ("experiment-1", 7, NOW)
     receipt_status = {
         "pause": ("pause_requested", "pause"),
         "cancel": ("cancel_requested", "cancel"),
@@ -474,7 +500,6 @@ def test_first_notification_failure_and_same_key_replay_return_exact_response(
                 "fold_id": "fold-3",
             },
         )
-        command_values = ("experiment-1", "candidate-2", "fold-3", 7, NOW)
     identity = build_mutation_idempotency(
         operation_id=operation_id,
         resource_id=resource_id,
@@ -514,20 +539,18 @@ def test_first_notification_failure_and_same_key_replay_return_exact_response(
         resume = _result
         retry_fold = _result
 
-    handler = handler_type(
-        process=cast("ExperimentControlProcess", ReplayProcess()),
-        notifier=cast(
-            "ExperimentControlNotifier",
-            _ControlNotifierDouble(
-                timeline=timeline,
-                error=RuntimeError("transport unavailable"),
-            ),
+    process = cast("ExperimentControlProcess", ReplayProcess())
+    notifier = cast(
+        "ExperimentControlNotifier",
+        _ControlNotifierDouble(
+            timeline=timeline,
+            error=RuntimeError("transport unavailable"),
         ),
     )
-    request = command(*command_values, identity)
+    request = replace(command, idempotency=identity)
 
-    first = handler.handle(request)
-    replay = handler.handle(request)
+    first = _handle_control_command(process, notifier, request)
+    replay = _handle_control_command(process, notifier, request)
 
     assert first == replay
     assert [item for item in timeline if item[0] == notification] == [
@@ -537,17 +560,15 @@ def test_first_notification_failure_and_same_key_replay_return_exact_response(
 
 
 @pytest.mark.parametrize(
-    ("handler_type", "command", "status", "desired_state", "command_name"),
+    ("command", "status", "desired_state", "command_name"),
     [
         (
-            PauseExperimentHandler,
             PauseExperimentCommand("experiment-1", 7, NOW),
             "pause_requested",
             "pause",
             "pause_experiment",
         ),
         (
-            CancelExperimentHandler,
             CancelExperimentCommand("experiment-1", 7, NOW),
             "cancel_requested",
             "cancel",
@@ -556,7 +577,6 @@ def test_first_notification_failure_and_same_key_replay_return_exact_response(
     ],
 )
 def test_stop_notification_failure_preserves_durable_receipt_without_retry(
-    handler_type: type[PauseExperimentHandler] | type[CancelExperimentHandler],
     command: PauseExperimentCommand | CancelExperimentCommand,
     status: str,
     desired_state: str,
@@ -582,12 +602,12 @@ def test_stop_notification_failure_preserves_durable_receipt_without_retry(
         "ditto_application.commands.experiments.logger.warning",
         warning,
     )
-    handler = handler_type(
-        process=cast("ExperimentControlProcess", process),
-        notifier=cast("ExperimentControlNotifier", notifier),
-    )
 
-    result = handler.handle(command)
+    result = _handle_control_command(
+        cast("ExperimentControlProcess", process),
+        cast("ExperimentControlNotifier", notifier),
+        command,
+    )
 
     assert result is receipt
     assert timeline == [
@@ -681,16 +701,14 @@ def test_retry_fold_persists_then_notifies_scheduler_without_child_run() -> None
 
 
 @pytest.mark.parametrize(
-    ("handler_type", "command", "process_action", "command_name"),
+    ("command", "process_action", "command_name"),
     [
         (
-            ResumeExperimentHandler,
             ResumeExperimentCommand("experiment-1", 8, NOW),
             "resume",
             "resume_experiment",
         ),
         (
-            RetryExperimentFoldHandler,
             RetryExperimentFoldCommand(
                 "experiment-1",
                 "candidate-2",
@@ -704,7 +722,6 @@ def test_retry_fold_persists_then_notifies_scheduler_without_child_run() -> None
     ],
 )
 def test_scheduler_notification_failure_preserves_durable_receipt(
-    handler_type: type[ResumeExperimentHandler | RetryExperimentFoldHandler],
     command: ResumeExperimentCommand | RetryExperimentFoldCommand,
     process_action: str,
     command_name: str,
@@ -725,12 +742,12 @@ def test_scheduler_notification_failure_preserves_durable_receipt(
         "ditto_application.commands.experiments.logger.warning",
         warning,
     )
-    handler = handler_type(
-        process=cast("ExperimentControlProcess", process),
-        notifier=cast("ExperimentControlNotifier", notifier),
-    )
 
-    result = handler.handle(command)
+    result = _handle_control_command(
+        cast("ExperimentControlProcess", process),
+        cast("ExperimentControlNotifier", notifier),
+        command,
+    )
 
     assert result is receipt
     assert timeline[-1] == (
@@ -754,28 +771,24 @@ def test_scheduler_notification_failure_preserves_durable_receipt(
 
 
 @pytest.mark.parametrize(
-    ("handler_type", "command", "process_action", "command_name"),
+    ("command", "process_action", "command_name"),
     [
         (
-            PauseExperimentHandler,
             PauseExperimentCommand("experiment-1", 7, NOW),
             "pause",
             "pause_experiment",
         ),
         (
-            CancelExperimentHandler,
             CancelExperimentCommand("experiment-1", 7, NOW),
             "cancel",
             "cancel_experiment",
         ),
         (
-            ResumeExperimentHandler,
             ResumeExperimentCommand("experiment-1", 7, NOW),
             "resume",
             "resume_experiment",
         ),
         (
-            RetryExperimentFoldHandler,
             RetryExperimentFoldCommand(
                 "experiment-1",
                 "candidate-2",
@@ -789,18 +802,7 @@ def test_scheduler_notification_failure_preserves_durable_receipt(
     ],
 )
 def test_control_handlers_translate_process_errors_without_notification(
-    handler_type: type[
-        PauseExperimentHandler
-        | CancelExperimentHandler
-        | ResumeExperimentHandler
-        | RetryExperimentFoldHandler
-    ],
-    command: (
-        PauseExperimentCommand
-        | CancelExperimentCommand
-        | ResumeExperimentCommand
-        | RetryExperimentFoldCommand
-    ),
+    command: _ControlCommand,
     process_action: str,
     command_name: str,
 ) -> None:
@@ -815,13 +817,13 @@ def test_control_handlers_translate_process_errors_without_notification(
         error=process_error,
     )
     notifier = _ControlNotifierDouble(timeline=timeline)
-    handler = handler_type(
-        process=cast("ExperimentControlProcess", process),
-        notifier=cast("ExperimentControlNotifier", notifier),
-    )
 
     with pytest.raises(AppCommandError) as exc_info:
-        handler.handle(command)
+        _handle_control_command(
+            cast("ExperimentControlProcess", process),
+            cast("ExperimentControlNotifier", notifier),
+            command,
+        )
 
     assert len(timeline) == 1
     assert timeline[0][0:2] == ("process", process_action)

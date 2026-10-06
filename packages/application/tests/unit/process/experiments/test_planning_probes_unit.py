@@ -8,6 +8,8 @@ from types import SimpleNamespace
 from typing import cast
 
 import pytest
+from ditto_analysis.research.catalog_service import ResearchCatalogService
+from ditto_analysis.research.records import ResearchDatasetSnapshotRecord
 from ditto_application.builders.published_baseline_runtime_builder import (
     PublishedBaselineRuntimeBuilder,
 )
@@ -44,6 +46,12 @@ from ditto_application.processes.experiments.planning_probes import (
 )
 from ditto_application.queries.research_certification import (
     DataReadinessCertificationProbe,
+)
+from ditto_application.queries.snapshot_readiness import (
+    SnapshotReadiness,
+    SnapshotReadinessQuery,
+    SnapshotReadinessReport,
+    SnapshotReadinessRequest,
 )
 from ditto_application.research_validation_contracts import RuntimeValidationEvidence
 from ditto_strategy.alpha.selection_evidence import SelectionEvidenceCollector
@@ -287,7 +295,7 @@ def test_production_probe_returns_exact_registered_baseline_evidence() -> None:
             "PublishedBaselineRuntimeBuilder",
             baseline_builder,
         ),
-        strategy_reader=cast("object", strategy_reader),
+        strategy_reader=strategy_reader,
     )
     candidate = BinderCandidatePlan(ordinal=2, binder_parameters=())
 
@@ -390,7 +398,7 @@ def test_production_probe_includes_longer_published_baseline_lookback() -> None:
             "PublishedBaselineRuntimeBuilder",
             baseline_builder,
         ),
-        strategy_reader=cast("object", _StrategyReader()),
+        strategy_reader=_StrategyReader(),
     )
 
     result = probe.probe(
@@ -444,7 +452,7 @@ def test_production_probe_rejects_rebuilt_baseline_strategy_identity_drift(
                 baseline_strategy_version=strategy_version,
             ),
         ),
-        strategy_reader=cast("object", _StrategyReader()),
+        strategy_reader=_StrategyReader(),
     )
 
     result = probe.probe(
@@ -491,7 +499,7 @@ def test_production_probe_keeps_synthetic_stock_baseline_runtime_identity_empty(
             "PublishedBaselineRuntimeBuilder",
             baseline_builder,
         ),
-        strategy_reader=cast("object", strategy_reader),
+        strategy_reader=strategy_reader,
     )
 
     result = probe.probe(
@@ -524,7 +532,7 @@ def test_production_probe_keeps_synthetic_stock_baseline_runtime_identity_empty(
 def test_production_probe_rejects_moving_etf_baseline_identity() -> None:
     probe = BuilderBackedResearchExecutorProbe(
         cast("ResearchRuntimeBuilder", _Builder()),
-        strategy_reader=cast("object", _StrategyReader()),
+        strategy_reader=_StrategyReader(),
     )
 
     result = probe.probe(
@@ -556,7 +564,7 @@ def test_production_probe_rejects_moving_etf_baseline_identity() -> None:
 def test_production_probe_rejects_baseline_runtime_lane_mismatch() -> None:
     probe = BuilderBackedResearchExecutorProbe(
         cast("ResearchRuntimeBuilder", _Builder()),
-        strategy_reader=cast("object", _StrategyReader()),
+        strategy_reader=_StrategyReader(),
     )
 
     result = probe.probe(
@@ -586,14 +594,14 @@ def test_production_probe_rejects_baseline_runtime_lane_mismatch() -> None:
 
 
 class _ReadinessFacade:
-    def assess(self, request: object) -> object:
-        fields = cast("tuple[object, ...]", request.fields)
+    def assess(self, request: SnapshotReadinessRequest) -> SnapshotReadinessReport:
         reasons: dict[str, tuple[str, ...]] = {}
-        for item in fields:
+        for item in request.fields:
             reasons.setdefault(item.dataset_id, ())
-        return SimpleNamespace(
+        return SnapshotReadinessReport(
+            ready=True,
             fields=tuple(
-                SimpleNamespace(
+                SnapshotReadiness(
                     dataset_id=dataset_id,
                     field="",
                     snapshot_id="",
@@ -606,24 +614,34 @@ class _ReadinessFacade:
 
 
 class _ResearchCatalog:
-    def get_dataset_snapshot(self, snapshot_id: str) -> object:
+    def get_dataset_snapshot(
+        self,
+        snapshot_id: str,
+    ) -> ResearchDatasetSnapshotRecord | None:
         assert snapshot_id == "research-snapshot-1"
-        return SimpleNamespace(
+        return ResearchDatasetSnapshotRecord(
             snapshot_id=snapshot_id,
             dataset_id="research-etf-rotation",
-            manifest_hash="d" * 64,
-            source_snapshot_ids=("provider-snapshot-1",),
+            dataset_spec_version=1,
+            spine_snapshot_id="",
             snapshot_start="2016-01-01",
             snapshot_end="2025-12-31",
+            row_count=0,
+            data_path="",
+            manifest_hash="d" * 64,
             known_at_policy="sample_time",
+            effective_cutoff=None,
+            source_snapshot_ids=("provider-snapshot-1",),
             builder_version="research-builder-v1",
         )
 
 
 def test_certification_probe_reads_authoritative_research_snapshot_identity() -> None:
     probe = DataReadinessCertificationProbe(
-        cast("object", _ReadinessFacade()),
-        cast("object", _ResearchCatalog()),
+        # 声明类型是具体类（非协议），替身只实现 assess 消费面，经此单点放宽.
+        cast(SnapshotReadinessQuery, _ReadinessFacade()),
+        # 声明类型是具体类（非协议），替身只实现 get_dataset_snapshot 消费面.
+        cast(ResearchCatalogService, _ResearchCatalog()),
     )
     identity = ExperimentSnapshotIdentity("research-snapshot-1", "d" * 64)
 

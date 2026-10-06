@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping, Sequence
 from datetime import UTC, datetime, timedelta
 
 import pytest
@@ -29,6 +30,19 @@ KNOWN_AT = datetime(2026, 8, 12, 8, tzinfo=UTC)
 
 def _hash(character: str) -> ContentHash:
     return ContentHash(character * 64)
+
+
+def _obj(value: object) -> Mapping[str, object]:
+    """窄化 JSON 节点为对象（运行时校验；EvidenceValue 递归 union 无法静态窄化）."""
+    assert isinstance(value, Mapping)
+    return value
+
+
+def _seq(value: object) -> Sequence[object]:
+    """窄化 JSON 节点为数组（运行时校验；str/bytes 虽是 Sequence 但非数组）."""
+    assert isinstance(value, Sequence)
+    assert not isinstance(value, (str, bytes))
+    return value
 
 
 def _knowledge(
@@ -104,9 +118,8 @@ def test_query_uses_exact_host_scope_and_returns_only_active_visible_items() -> 
 
     result = facade.list_visible(scope=scope, context=_context())
 
-    assert [item["knowledge_id"] for item in result.payload.value["items"]] == [
-        "active"
-    ]
+    items = _seq(result.payload.value["items"])
+    assert [_obj(item)["knowledge_id"] for item in items] == ["active"]
     assert result.scope == scope
     assert result.temporal_context == _context()
     assert reader.calls == [

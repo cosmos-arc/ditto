@@ -7,6 +7,7 @@ from datetime import datetime
 import pytest
 from ditto_application.processes.execution.strategy_input import StrategyInputAssembler
 from ditto_backtest.data_feed import Slice
+from ditto_kernel.identity import InstrumentId
 from ditto_kernel.trading import MarketSnapshot
 
 # ---------------------------------------------------------------------------
@@ -23,7 +24,7 @@ def _make_snapshot(
     """创建 MarketSnapshot 测试辅助函数。"""
     return MarketSnapshot(
         trade_date="2026-03-01",
-        instrument_id=iid,
+        instrument_id=InstrumentId(iid),
         open=prev_close,
         high=max(close, prev_close) + 0.2,
         low=min(close, prev_close) - 0.2,
@@ -35,12 +36,12 @@ def _make_snapshot(
 
 
 def _make_slice(
-    bars: dict[int, MarketSnapshot] | None = None,
+    bars: dict[InstrumentId, MarketSnapshot] | None = None,
     benchmark_close: float | None = None,
 ) -> Slice:
     """创建 Slice 测试辅助函数。"""
     if bars is None:
-        bars = {1: _make_snapshot()}
+        bars = {InstrumentId(1): _make_snapshot()}
     return Slice(
         trade_date="2026-03-01",
         step_time=datetime(2026, 3, 1, 15, 0),
@@ -75,7 +76,7 @@ class TestStrategyInputAssemblerInit:
 
     def test_parameters_is_copy(self) -> None:
         """parameters 属性返回副本，不暴露内部状态。"""
-        params = {"key": "value"}
+        params: dict[str, object] = {"key": "value"}
         assembler = StrategyInputAssembler(parameters=params)
         assert assembler.parameters is not assembler._parameters
         assert assembler.parameters == params
@@ -90,7 +91,7 @@ class TestBasicAssembly:
             strategy_id="test",
             run_id="run-001",
         )
-        bars = {1: _make_snapshot()}
+        bars = {InstrumentId(1): _make_snapshot()}
         slice_ = _make_slice(bars)
         bundle = assembler.assemble("2026-03-01", slice_)
 
@@ -106,9 +107,9 @@ class TestBasicAssembly:
         """多标的 bundle 组装。"""
         assembler = StrategyInputAssembler()
         bars = {
-            1: _make_snapshot(1, close=10.0, prev_close=9.8),
-            2: _make_snapshot(2, close=20.0, prev_close=19.5),
-            3: _make_snapshot(3, close=15.0, prev_close=15.0),
+            InstrumentId(1): _make_snapshot(1, close=10.0, prev_close=9.8),
+            InstrumentId(2): _make_snapshot(2, close=20.0, prev_close=19.5),
+            InstrumentId(3): _make_snapshot(3, close=15.0, prev_close=15.0),
         }
         slice_ = _make_slice(bars)
         bundle = assembler.assemble("2026-03-01", slice_)
@@ -129,7 +130,7 @@ class TestMarketData:
     def test_market_data_columns(self) -> None:
         """market_data 包含 OHLCV 列。"""
         assembler = StrategyInputAssembler()
-        bars = {1: _make_snapshot()}
+        bars = {InstrumentId(1): _make_snapshot()}
         slice_ = _make_slice(bars)
         bundle = assembler.assemble("2026-03-01", slice_)
 
@@ -145,7 +146,7 @@ class TestMarketData:
         """market_data 中的 OHLCV 值正确。"""
         assembler = StrategyInputAssembler()
         bar = _make_snapshot(1, close=10.5, prev_close=10.0, volume=500_000.0)
-        slice_ = _make_slice({1: bar})
+        slice_ = _make_slice({InstrumentId(1): bar})
         bundle = assembler.assemble("2026-03-01", slice_)
 
         row = bundle.market_data.row(0, named=True)
@@ -162,7 +163,7 @@ class TestSignalComputation:
         """价格上涨，信号值为正。"""
         assembler = StrategyInputAssembler()
         bar = _make_snapshot(1, close=11.0, prev_close=10.0)
-        slice_ = _make_slice({1: bar})
+        slice_ = _make_slice({InstrumentId(1): bar})
         bundle = assembler.assemble("2026-03-01", slice_)
 
         assert bundle.signal_values is not None
@@ -173,7 +174,7 @@ class TestSignalComputation:
         """价格下跌，信号值为负。"""
         assembler = StrategyInputAssembler()
         bar = _make_snapshot(1, close=9.0, prev_close=10.0)
-        slice_ = _make_slice({1: bar})
+        slice_ = _make_slice({InstrumentId(1): bar})
         bundle = assembler.assemble("2026-03-01", slice_)
 
         assert bundle.signal_values is not None
@@ -184,7 +185,7 @@ class TestSignalComputation:
         """价格不变，信号值为 0。"""
         assembler = StrategyInputAssembler()
         bar = _make_snapshot(1, close=10.0, prev_close=10.0)
-        slice_ = _make_slice({1: bar})
+        slice_ = _make_slice({InstrumentId(1): bar})
         bundle = assembler.assemble("2026-03-01", slice_)
 
         assert bundle.signal_values is not None
@@ -195,7 +196,7 @@ class TestSignalComputation:
         """prev_close 为 0 时，信号值为 0.0（避免除零错误）。"""
         assembler = StrategyInputAssembler()
         bar = _make_snapshot(1, close=10.0, prev_close=0.0)
-        slice_ = _make_slice({1: bar})
+        slice_ = _make_slice({InstrumentId(1): bar})
         bundle = assembler.assemble("2026-03-01", slice_)
 
         assert bundle.signal_values is not None
@@ -338,8 +339,8 @@ class TestReusability:
             run_id="run-001",
             parameters={"lookback": 20},
         )
-        bars_day1 = {1: _make_snapshot(1, close=10.0, prev_close=9.5)}
-        bars_day2 = {1: _make_snapshot(1, close=10.5, prev_close=10.0)}
+        bars_day1 = {InstrumentId(1): _make_snapshot(1, close=10.0, prev_close=9.5)}
+        bars_day2 = {InstrumentId(1): _make_snapshot(1, close=10.5, prev_close=10.0)}
 
         slice1 = Slice(
             trade_date="2026-03-01",
@@ -361,6 +362,8 @@ class TestReusability:
         assert bundle1.run_id == bundle2.run_id == "run-001"
 
         # 信号值应不同（不同日期的动量不同）
+        assert bundle1.signal_values is not None
+        assert bundle2.signal_values is not None
         sig1 = bundle1.signal_values.row(0, named=True)["signal_value"]
         sig2 = bundle2.signal_values.row(0, named=True)["signal_value"]
         assert sig1 != sig2

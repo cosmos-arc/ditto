@@ -648,6 +648,7 @@ class TestIngestDate:
         result = coordinator.ingest_date("stock_daily", "2024-12-27")
 
         assert result.status == "success"
+        assert result.checksum is not None
         # #394:数据集级行,partition_keys 恒空;snapshot id 为展示用 canonical id。
         asset = DataAssetRef(dataset_id="stock_daily", namespace="market")
         entry = catalog.get_asset(asset)

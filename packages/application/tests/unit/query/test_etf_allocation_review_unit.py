@@ -12,6 +12,8 @@ from ditto_application.queries.etf_allocation_review import (
     _actual_indexes,
 )
 from ditto_application.queries.etf_candidates import _validate_cutoff
+from ditto_data.query.contracts import PITQueryContext
+from ditto_features.technical_analysis.contracts import TechnicalBar
 from ditto_kernel.identity import InstrumentId
 from ditto_strategy.models import ArtifactKind, StrategyArtifactRecord
 
@@ -156,7 +158,7 @@ def test_same_day_index_uses_saved_canonical_cutoff_and_later_date_is_unknown() 
         ]
 
     metadata.list_etf_candidates.side_effect = candidates
-    saved = {
+    saved: dict[str, object] = {
         "asof": "2026-09-01",
         "knowledge_cutoff": "2026-09-01T09:00:00Z",
         "source_snapshot_id": "etf-reference-1",
@@ -165,12 +167,44 @@ def test_same_day_index_uses_saved_canonical_cutoff_and_later_date_is_unknown() 
     assert _actual_indexes(metadata, saved, "2026-09-02") == {}
 
 
+class _ValuationSource:
+    """TechnicalAnalysisSourcePort 最小 fake：记录实际请求定价的标的。"""
+
+    def __init__(self) -> None:
+        self.loaded_ids: list[InstrumentId] = []
+
+    def load(
+        self,
+        context: PITQueryContext,
+        *,
+        instrument_id: InstrumentId,
+        instrument_code: str,
+    ) -> tuple[TechnicalBar, ...]:
+        del context
+        self.loaded_ids.append(instrument_id)
+        assert instrument_code == "600519.SH"
+        return (
+            TechnicalBar(
+                occurred_at=datetime(2026, 9, 1, 7, 0, tzinfo=UTC),
+                knowledge_at=datetime(2026, 9, 2, 1, 0, tzinfo=UTC),
+                publication_at=datetime(2026, 9, 2, 1, 0, tzinfo=UTC),
+                source_snapshot_id="price-1",
+                open=99.0,
+                high=101.0,
+                low=98.0,
+                close=100.0,
+                volume=1000.0,
+                turnover=100_000.0,
+                adjustment_factor=1.0,
+                suspended=False,
+            ),
+        )
+
+
 @pytest.mark.pit
 def test_zero_weight_target_without_price_or_holding_does_not_fail_review() -> None:
     """An unused zero-weight ETF needs no price of its own."""
     from decimal import Decimal
-
-    from ditto_features.technical_analysis.contracts import TechnicalBar
 
     cutoff = datetime(2026, 9, 2, 9, 0, tzinfo=UTC)
     artifact = StrategyArtifactRecord(
@@ -213,36 +247,14 @@ def test_zero_weight_target_without_price_or_holding_does_not_fail_review() -> N
     )
     metadata = MagicMock()
     metadata.get_source_ticker.return_value = "600519.SH"
-    loaded_ids: list[InstrumentId] = []
-
-    def load(
-        _context: object, *, instrument_id: InstrumentId, instrument_code: str
-    ) -> tuple[TechnicalBar, ...]:
-        loaded_ids.append(instrument_id)
-        assert instrument_code == "600519.SH"
-        return (
-            TechnicalBar(
-                occurred_at=datetime(2026, 9, 1, 7, 0, tzinfo=UTC),
-                knowledge_at=datetime(2026, 9, 2, 1, 0, tzinfo=UTC),
-                publication_at=datetime(2026, 9, 2, 1, 0, tzinfo=UTC),
-                source_snapshot_id="price-1",
-                open=99.0,
-                high=101.0,
-                low=98.0,
-                close=100.0,
-                volume=1000.0,
-                turnover=100_000.0,
-                adjustment_factor=1.0,
-                suspended=False,
-            ),
-        )
+    valuation = _ValuationSource()
 
     query = GetETFAllocationReviewQuery(
         artifacts=artifacts,
         accounts=accounts,
         metadata=metadata,
         snapshots=snapshots,
-        valuation=SimpleNamespace(load=load),
+        valuation=valuation,
     )
     view = query.get(
         ETFAllocationReviewRequest(
@@ -257,7 +269,7 @@ def test_zero_weight_target_without_price_or_holding_does_not_fail_review() -> N
     )
     # Only the positive-weight instrument was priced; the zero-weight ETF did
     # not force a missing-price failure.
-    assert loaded_ids == [InstrumentId(2000001)]
+    assert valuation.loaded_ids == [InstrumentId(2000001)]
     assert [position.instrument_id for position in view.target.positions] == [2000001]
     assert view.actual.cash == Decimal("100000")
     assert view.knowledge_cutoff == cutoff.isoformat()

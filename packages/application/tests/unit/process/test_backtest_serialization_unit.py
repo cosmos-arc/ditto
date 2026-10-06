@@ -17,7 +17,9 @@ from ditto_backtest.statistics import (
     TradeStatistics,
 )
 from ditto_execution.trade_builder import TradeRecord
+from ditto_kernel.identity import InstrumentId
 from ditto_kernel.order import OrderSide
+from ditto_kernel.strategy import RiskScope
 from ditto_portfolio.accounting import FillEvent
 from ditto_risk.post_trade import RiskActionType, RiskSeverity
 
@@ -57,7 +59,7 @@ def _make_trade_stats() -> list[TradeStatistics]:
     return [
         TradeStatistics(
             trade_id="T-001",
-            instrument_id=1,
+            instrument_id=InstrumentId(1),
             direction="buy",
             entry_date="2026-03-20",
             exit_date="2026-03-21",
@@ -121,7 +123,7 @@ def _make_trade_log() -> list[TradeRecord]:
     return [
         TradeRecord(
             trade_id="T-001",
-            instrument_id=1,
+            instrument_id=InstrumentId(1),
             direction=OrderSide.BUY,
             entry_date="2026-03-20",
             exit_date="2026-03-21",
@@ -144,7 +146,7 @@ def _make_fill_log() -> list[FillEvent]:
         FillEvent(
             fill_id="F-001",
             order_id="ORD-001",
-            instrument_id=1,
+            instrument_id=InstrumentId(1),
             direction=OrderSide.BUY,
             filled_quantity=1000,
             fill_price=4.0,
@@ -163,7 +165,7 @@ def _make_risk_log() -> list[RiskScanRecord]:
             trade_date="2026-03-20",
             rule_id="max_drawdown",
             instrument_id=None,
-            scope="portfolio",
+            scope=RiskScope.PORTFOLIO,
             severity=RiskSeverity.WARNING,
             action_taken=RiskActionType.ALERT,
             detail="drawdown test",
@@ -178,7 +180,7 @@ def _make_pre_trade_log() -> list[PreTradeDecisionRecord]:
         PreTradeDecisionRecord(
             trade_date="2026-03-20",
             order_id="ORD-001",
-            instrument_id=1,
+            instrument_id=InstrumentId(1),
             direction="buy",
             original_quantity=1000,
             final_quantity=1000,

@@ -58,7 +58,8 @@ from ditto_features.expression.contracts import CompileIdentity
 from ditto_strategy.alpha.selection_evidence import SelectionEvidenceCollector
 from ditto_strategy.models import StrategySpecRecord
 
-_RULES_SCHEMA_V1: dict[str, pl.DataType] = {
+# schema 混用 dtype 类与实例，按 polars SchemaDict 语义注解。
+_RULES_SCHEMA_V1: dict[str, pl.DataType | type[pl.DataType]] = {
     "instrument_code": pl.String,
     "instrument_id": pl.Int64,
     "asset_class": pl.String,

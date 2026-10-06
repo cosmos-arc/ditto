@@ -98,6 +98,21 @@ class _BarrierIntentPort:
         self._barrier = barrier
         self._thread_state = local()
 
+    def save_intent(self, record: SignalRecord) -> None:
+        self._trade.save_intent(record)
+
+    def list_intents(
+        self,
+        strategy_id: str,
+        signal_date: str | None = None,
+        status: str | None = None,
+    ) -> list[SignalRecord]:
+        return self._trade.list_intents(
+            strategy_id,
+            signal_date=signal_date,
+            status=status,
+        )
+
     def get_intent(self, intent_id: str) -> SignalRecord | None:
         intent = self._trade.get_intent(intent_id)
         if not getattr(self._thread_state, "prelock_read_done", False):

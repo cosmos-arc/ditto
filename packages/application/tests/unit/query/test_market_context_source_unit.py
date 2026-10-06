@@ -26,6 +26,14 @@ class _SnapshotReader:
     def get_snapshot(self, snapshot_id: str) -> ProviderSnapshot | None:
         return self._values.get(snapshot_id)
 
+    def get_observed_at(self, snapshot_id: str) -> datetime | None:
+        # 协议最小实现：本测试不依赖 catalog 观察时间。
+        return None
+
+    def get_predecessor(self, snapshot_id: str) -> str | None:
+        # 协议最小实现：本测试不依赖前驱快照链。
+        return None
+
     def list_snapshots(
         self,
         *,
@@ -584,8 +592,10 @@ def _index_edge_frame(variant: str, cutoff: datetime) -> pl.DataFrame:
         values["source_ticker"] = [None] * observations
         values["close"] = [100.0 + index for index in range(observations)]
     elif variant == "short":
-        values["event_time"] = values["event_time"][:2]
-        values["source_ticker"] = values["source_ticker"][:2]
+        values["event_time"] = [
+            cutoff - timedelta(days=observations - index) for index in range(2)
+        ]
+        values["source_ticker"] = ["000300.SH"] * 2
         values["close"] = [100.0, 101.0]
     elif variant == "zero_start":
         values["close"] = [0.0, *(100.0 + index for index in range(20))]

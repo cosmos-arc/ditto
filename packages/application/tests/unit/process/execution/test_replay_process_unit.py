@@ -497,8 +497,12 @@ class TestLoadManifest:
         tmp_path: Path,
     ) -> None:
         evidence = _make_replay_evidence_raw()
-        artifacts = list(evidence["required_artifacts"])
-        artifacts.append(dict(artifacts[0]))
+        artifacts_raw = evidence["required_artifacts"]
+        assert isinstance(artifacts_raw, list)
+        artifacts: list[object] = list(artifacts_raw)
+        first_artifact = artifacts[0]
+        assert isinstance(first_artifact, dict)
+        artifacts.append(dict(first_artifact))
         evidence["required_artifacts"] = artifacts
         raw = _make_manifest_raw(replay_evidence=evidence)
         (tmp_path / "manifest.json").write_bytes(orjson.dumps(raw))

@@ -29,6 +29,12 @@ from ditto_strategy.storage.sqlite.services.strategy_catalog_service import (
 )
 
 
+def _obj(value: object) -> dict[str, object]:
+    """窄化 JSON 节点为可变 dict（asdict 产物运行时必为 dict，静态为 object）."""
+    assert isinstance(value, dict)
+    return value
+
+
 def _make_rotation_spec(
     *,
     default_order_type: OrderType = OrderType.MARKET,
@@ -290,7 +296,7 @@ class TestStrategyRuntimeBuilder:
         """显式非法订单类型不得静默回落到 market。"""
         record = _make_spec_record(_make_rotation_spec(), version=7)
         spec_json = dict(record.spec_json)
-        execution = dict(spec_json["execution"])  # type: ignore[arg-type]
+        execution = dict(_obj(spec_json["execution"]))
         execution["default_order_type"] = invalid_value
         spec_json["execution"] = execution
         invalid_record = StrategySpecRecord(
@@ -315,7 +321,7 @@ class TestStrategyRuntimeBuilder:
         """旧 record 缺字段时保持既有 market 默认兼容。"""
         record = _make_spec_record(_make_rotation_spec(), version=7)
         spec_json = dict(record.spec_json)
-        execution = dict(spec_json["execution"])  # type: ignore[arg-type]
+        execution = dict(_obj(spec_json["execution"]))
         execution.pop("default_order_type")
         spec_json["execution"] = execution
         legacy_record = StrategySpecRecord(

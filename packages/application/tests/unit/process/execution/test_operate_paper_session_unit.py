@@ -21,6 +21,7 @@ from ditto_execution.paper.sqlite_store import SqlitePaperSessionStore
 from ditto_execution.storage.sqlite.account_journal import SqliteAccountEventJournal
 from ditto_portfolio.account_ledger import (
     AccountDefinition,
+    AccountEvent,
     AccountKind,
     AccountLedgerRevisionConflict,
 )
@@ -180,7 +181,11 @@ def test_concurrent_fill_append_preserves_the_execution_record(
 
         real_append = journal.append_if_revision
 
-        def losing_view(event: object, *, expected_ledger_hash: str) -> object:
+        def losing_view(
+            event: AccountEvent,
+            *,
+            expected_ledger_hash: str,
+        ) -> AccountEvent:
             real_append(event, expected_ledger_hash=expected_ledger_hash)
             raise AccountLedgerRevisionConflict("loser snapshot")
 

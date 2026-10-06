@@ -39,6 +39,7 @@ from ditto_application.processes.experiments.execution_bundle import (
     CodeEnvironmentLock,
     ContentAddressedResearchInput,
     ResearchExecutionAudit,
+    ResearchExecutionSemantics,
     ResearchFactorExecutionBinding,
     StrategyExecutionBinding,
 )
@@ -101,7 +102,8 @@ def _audit_from(
     original: ResearchExecutionAudit, semantics: object
 ) -> ResearchExecutionAudit:
     return ResearchExecutionAudit.create(
-        semantics=cast(type(original.semantics), semantics),
+        # 对抗输入：semantics 参数故意传入替身对象，验证 create 的运行时类型栅栏。
+        semantics=cast("ResearchExecutionSemantics", semantics),
         attempt_id=original.attempt_id,
         attempt_ordinal=original.attempt_ordinal,
         backtest_run_id=original.backtest_run_id,

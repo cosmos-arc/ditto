@@ -115,7 +115,7 @@ class TestBackfillResult:
             success_count=1,
             skipped_count=1,
             failed_count=1,
-            results=results,
+            results=tuple(results),
         )
 
         assert result.dataset == "stock_daily"
@@ -190,6 +190,23 @@ class TestBackfillRange:
             def __init__(self) -> None:
                 self.calls: list[tuple[str, str, tuple[str, ...]]] = []
 
+            def ingest_date(
+                self,
+                dataset: str,
+                trade_date: str,
+                force: bool = False,
+            ) -> IngestionResult:
+                raise AssertionError("chunk coordinator does not ingest by date")
+
+            def ingest_range(
+                self,
+                dataset: str,
+                start_date: str,
+                end_date: str,
+                force: bool = False,
+            ) -> list[IngestionResult]:
+                raise AssertionError("chunk coordinator does not ingest by range")
+
             def ingest_chunk(
                 self,
                 dataset: str,
@@ -208,6 +225,32 @@ class TestBackfillRange:
                     status="success",
                     row_count=len(partition_dates),
                 )
+
+            def ingest_by_instrument(
+                self,
+                dataset: str,
+                params: InstrumentIngestParams,
+                force: bool = False,
+            ) -> IngestionResult:
+                raise AssertionError("chunk coordinator does not ingest by instrument")
+
+            def ingest_planned_instrument_chunk(
+                self,
+                dataset: str,
+                *,
+                chunk_id: str,
+                params: InstrumentIngestParams,
+                force: bool = False,
+            ) -> IngestionResult:
+                raise AssertionError("chunk coordinator: no instrument chunks")
+
+            def backfill_adj_factor(
+                self,
+                instrument_id: int,
+                start: str,
+                end: str,
+            ) -> dict[str, object]:
+                raise AssertionError("chunk coordinator does not backfill adj factors")
 
         mock_metadata_service.list_trading_days.return_value = [
             "2026-01-30",
@@ -246,6 +289,43 @@ class TestBackfillRange:
             def __init__(self) -> None:
                 self.calls: list[tuple[str, str, InstrumentIngestParams]] = []
 
+            def ingest_date(
+                self,
+                dataset: str,
+                trade_date: str,
+                force: bool = False,
+            ) -> IngestionResult:
+                raise AssertionError("instrument coordinator does not ingest by date")
+
+            def ingest_range(
+                self,
+                dataset: str,
+                start_date: str,
+                end_date: str,
+                force: bool = False,
+            ) -> list[IngestionResult]:
+                raise AssertionError("instrument coordinator does not ingest by range")
+
+            def ingest_chunk(
+                self,
+                dataset: str,
+                *,
+                chunk_id: str,
+                request_start: str,
+                request_end: str,
+                partition_dates: tuple[str, ...],
+                force: bool = False,
+            ) -> IngestionResult:
+                raise AssertionError("instrument coordinator: no date chunks")
+
+            def ingest_by_instrument(
+                self,
+                dataset: str,
+                params: InstrumentIngestParams,
+                force: bool = False,
+            ) -> IngestionResult:
+                raise AssertionError("instrument coordinator: no per-instrument")
+
             def ingest_planned_instrument_chunk(
                 self,
                 dataset: str,
@@ -262,6 +342,14 @@ class TestBackfillRange:
                     status="success",
                     row_count=1,
                 )
+
+            def backfill_adj_factor(
+                self,
+                instrument_id: int,
+                start: str,
+                end: str,
+            ) -> dict[str, object]:
+                raise AssertionError("instrument coordinator: no adj factors")
 
         mock_metadata_service.list_trading_days.return_value = [
             "2026-01-05",

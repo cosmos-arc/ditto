@@ -33,6 +33,7 @@ from ditto_analysis.experiments import (
     ResearchMetricDirection,
     ResearchMetricId,
     ResearchMetricValue,
+    SchedulerLease,
     SnapshotId,
     StrategyVersion,
 )
@@ -70,6 +71,7 @@ from ditto_application.processes.execution.replay_process import (
     build_research_replay_metadata,
 )
 from ditto_application.queries.backtest import BacktestQueryFacade
+from ditto_application.queries.run import RunReadModel
 from ditto_backtest.manifest import RunManifest, RunMode, serialize_manifest
 from ditto_backtest.manifest_types import ReplayArtifactRef, ResearchReplayEvidence
 from ditto_strategy.models import ArtifactKind, StrategyArtifactRecord
@@ -77,12 +79,16 @@ from ditto_strategy.runs.models import StrategyRunRecord
 from ditto_strategy.storage.sqlite.services.backtest_artifact_reader import (
     BacktestArtifactReader,
 )
+from ditto_strategy.storage.sqlite.services.strategy_artifact_service import (
+    StrategyArtifactService,
+)
 
 
-class _RunModel:
+class _RunModel(RunReadModel):
     """Minimal run read model for synthetic artifact composition."""
 
     def __init__(self, runs: dict[str, StrategyRunRecord]) -> None:
+        # 内存替身：不经过 StrategyRunLifecycleStore，直接持有记录字典.
         self._runs = runs
 
     def get_run(self, run_id: str) -> StrategyRunRecord | None:
@@ -102,10 +108,11 @@ class _RunModel:
         return list(self._runs.values())
 
 
-class _ArtifactService:
+class _ArtifactService(StrategyArtifactService):
     """Minimal artifact service exposing the query-side list contract."""
 
     def __init__(self, artifacts: list[StrategyArtifactRecord]) -> None:
+        # 内存替身：绕过 reader/writer 端口，直接持有记录列表.
         self._artifacts = artifacts
 
     def list_artifacts(self) -> list[StrategyArtifactRecord]:
@@ -298,7 +305,7 @@ def _indexed_launch_spec() -> ExperimentLaunchSpec:
 
 def _prepare_indexed_attempt(
     writer: SQLiteExperimentWriter,
-) -> object:
+) -> SchedulerLease:
     experiment_id = ExperimentId("experiment-1")
     fold_key = FoldKey(
         experiment_id,

@@ -38,7 +38,7 @@ def completed_evidence(
 ):
     """One retained snapshot with its own ingestion lifecycle evidence."""
     directory = TemporaryDirectory(prefix="ditto-snapshot-readiness-")
-    pool = SQLitePool(Path(directory.name) / "evidence.sqlite")
+    pool = SQLitePool(str(Path(directory.name) / "evidence.sqlite"))
     client = SQLiteClient(pool)
     snapshots = SQLiteProviderSnapshotStore(client)
     snapshot = ProviderSnapshot.create(

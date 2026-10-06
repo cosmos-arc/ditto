@@ -14,6 +14,7 @@ from ditto_application.builders import (
 from ditto_application.exceptions import AppBuilderError
 from ditto_data.provider import DataProvider
 from ditto_data.services.metadata_service import MetadataService
+from ditto_kernel.identity import InstrumentId
 from ditto_strategy.alpha.node_registry import default_node_registry
 from ditto_strategy.alpha.parameters import ParameterBinder
 from ditto_strategy.alpha.pipeline import StrategyPipeline
@@ -146,7 +147,7 @@ class TestStrategySliceBuilder:
 
         assert slice_.trade_date == "2026-01-13"
         assert set(slice_.bars) == {2_000_001, 2_000_002}
-        assert slice_.bars[2_000_001].prev_close == 10.5
+        assert slice_.bars[InstrumentId(2_000_001)].prev_close == 10.5
         assert slice_.benchmark_close == 3025.0
         runtime_builder.build_published_runtime.assert_called_once_with(
             "momentum-etf",

@@ -5,6 +5,7 @@ from ditto_backtest.simulation.settlement import (
     AShareSettlementModel,
     SimpleSettlementModel,
 )
+from ditto_kernel.identity import InstrumentId
 from ditto_kernel.order import OrderSide
 from ditto_kernel.trading import TradingRuleSet
 from ditto_portfolio.accounting import Position
@@ -27,7 +28,7 @@ _CALENDAR = (
 )
 
 _T1_RULE = TradingRuleSet(
-    instrument_id=1,
+    instrument_id=InstrumentId(1),
     as_of_date="2026-03-02",
     settlement_cycle=1,
     fund_settlement_cycle=1,
@@ -37,7 +38,7 @@ _T1_RULE = TradingRuleSet(
 )
 
 _T0_RULE = TradingRuleSet(
-    instrument_id=99,
+    instrument_id=InstrumentId(99),
     as_of_date="2026-03-02",
     settlement_cycle=0,
     fund_settlement_cycle=0,
@@ -47,7 +48,7 @@ _T0_RULE = TradingRuleSet(
 )
 
 _POSITION = Position(
-    instrument_id=1,
+    instrument_id=InstrumentId(1),
     quantity=1000,
     available_quantity=500,
     average_cost=10.0,
@@ -67,14 +68,14 @@ class TestSimpleSettlementModel:
     def test_always_tradable(self) -> None:
         model = SimpleSettlementModel()
         assert model.is_tradable(
-            1,
+            InstrumentId(1),
             "2026-03-01",
             OrderSide.BUY,
             _POSITION,
             _T1_RULE,
         )
         assert model.is_tradable(
-            1,
+            InstrumentId(1),
             "2026-03-01",
             OrderSide.SELL,
             _POSITION,
@@ -96,7 +97,7 @@ class TestAShareSettlementModel:
     def test_buy_always_tradable(self) -> None:
         model = AShareSettlementModel()
         assert model.is_tradable(
-            1,
+            InstrumentId(1),
             "2026-03-02",
             OrderSide.BUY,
             _POSITION,
@@ -106,7 +107,7 @@ class TestAShareSettlementModel:
     def test_t0_sell_tradable(self) -> None:
         model = AShareSettlementModel()
         assert model.is_tradable(
-            99,
+            InstrumentId(99),
             "2026-03-02",
             OrderSide.SELL,
             _POSITION,
@@ -117,7 +118,7 @@ class TestAShareSettlementModel:
         """SettlementModel 总是返回 True, 冻结逻辑在 Brokerage 层。"""
         model = AShareSettlementModel()
         assert model.is_tradable(
-            1,
+            InstrumentId(1),
             "2026-03-02",
             OrderSide.SELL,
             _POSITION,
@@ -127,7 +128,7 @@ class TestAShareSettlementModel:
     def test_no_position_sell_tradable(self) -> None:
         model = AShareSettlementModel()
         assert model.is_tradable(
-            1,
+            InstrumentId(1),
             "2026-03-02",
             OrderSide.SELL,
             None,

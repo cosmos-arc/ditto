@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import date
+from typing import NamedTuple
 from unittest.mock import MagicMock
 
 import polars as pl
@@ -17,8 +18,17 @@ from ditto_data.models import Dataset
 from ditto_kernel.instrument import InstrumentIngestParams
 
 
+class _MockSources(NamedTuple):
+    """组装好的 fetchers 供生产入口消费，mock 句柄供断言侧访问."""
+
+    fetchers: SourceFetchers
+    metadata: MagicMock
+    market: MagicMock
+    macro: MagicMock
+
+
 @pytest.fixture
-def fetchers() -> SourceFetchers:
+def sources() -> _MockSources:
     metadata = MagicMock()
     market = MagicMock()
     fundamental = MagicMock()
@@ -29,21 +39,26 @@ def fetchers() -> SourceFetchers:
     market.fetch_adj_factor_by_ticker.return_value = pl.DataFrame(
         {"dataset": ["adj_factor"]}
     )
-    return SourceFetchers(
+    return _MockSources(
+        fetchers=SourceFetchers(
+            metadata=metadata,
+            market=market,
+            fundamental=fundamental,
+            capital=capital,
+            macro=macro,
+        ),
         metadata=metadata,
         market=market,
-        fundamental=fundamental,
-        capital=capital,
         macro=macro,
     )
 
 
 @pytest.mark.unit
 def test_daily_handlers_are_built_from_registry(
-    fetchers: SourceFetchers,
+    sources: _MockSources,
 ) -> None:
     handlers = build_daily_fetch_handlers(
-        fetchers,
+        sources.fetchers,
         "2024-05-20",
         DailyContextCallbacks(
             fetch_commodity_daily=lambda trade_date: pl.DataFrame(
@@ -56,7 +71,7 @@ def test_daily_handlers_are_built_from_registry(
     result = handlers[Dataset.CALENDAR]()
 
     assert result.to_dict(as_series=False) == {"dataset": ["calendar"]}
-    fetchers.metadata.fetch_calendar.assert_called_once_with(
+    sources.metadata.fetch_calendar.assert_called_once_with(
         "2024-01-01",
         # One forward month past the year boundary keeps a year-end Paper
         # handoff's next-session lookup cutoff-visible.
@@ -66,7 +81,7 @@ def test_daily_handlers_are_built_from_registry(
 
 @pytest.mark.unit
 def test_instrument_handlers_are_built_from_registry(
-    fetchers: SourceFetchers,
+    sources: _MockSources,
 ) -> None:
     params = InstrumentIngestParams(
         ticker="000001",
@@ -75,14 +90,14 @@ def test_instrument_handlers_are_built_from_registry(
     )
 
     handlers = build_instrument_fetch_handlers(
-        fetchers,
+        sources.fetchers,
         "000001.SZ",
         params,
     )
     result = handlers[Dataset.STOCK_DAILY]()
 
     assert result.to_dict(as_series=False) == {"dataset": ["stock_daily"]}
-    fetchers.market.fetch_stock_daily.assert_called_once_with(
+    sources.market.fetch_stock_daily.assert_called_once_with(
         source_ticker="000001.SZ",
         start_date="2024-01-01",
         end_date="2024-01-31",
@@ -91,7 +106,7 @@ def test_instrument_handlers_are_built_from_registry(
 
 @pytest.mark.unit
 def test_stock_status_has_no_instrument_handler(
-    fetchers: SourceFetchers,
+    sources: _MockSources,
 ) -> None:
     params = InstrumentIngestParams(
         ticker="000001",
@@ -99,19 +114,19 @@ def test_stock_status_has_no_instrument_handler(
         end_date="2024-01-31",
     )
 
-    handlers = build_instrument_fetch_handlers(fetchers, "000001.SZ", params)
+    handlers = build_instrument_fetch_handlers(sources.fetchers, "000001.SZ", params)
 
     assert Dataset.STOCK_STATUS not in handlers
 
 
 @pytest.mark.unit
 def test_macro_handler_fetches_the_certified_china_batch(
-    fetchers: SourceFetchers,
+    sources: _MockSources,
 ) -> None:
     """Daily orchestration snapshots growth, prices, money, and survey data."""
-    fetchers.macro.fetch_macro_indicators_by_codes.return_value = pl.DataFrame()
+    sources.macro.fetch_macro_indicators_by_codes.return_value = pl.DataFrame()
     handlers = build_daily_fetch_handlers(
-        fetchers,
+        sources.fetchers,
         "2026-09-01",
         DailyContextCallbacks(
             fetch_commodity_daily=lambda _trade_date: pl.DataFrame(),
@@ -121,7 +136,7 @@ def test_macro_handler_fetches_the_certified_china_batch(
 
     handlers[Dataset.MACRO_INDICATORS]()
 
-    fetchers.macro.fetch_macro_indicators_by_codes.assert_called_once_with(
+    sources.macro.fetch_macro_indicators_by_codes.assert_called_once_with(
         [
             "CN_GDP_YOY",
             "CN_CPI_YOY",
@@ -140,12 +155,12 @@ def test_macro_handler_fetches_the_certified_china_batch(
 
 @pytest.mark.unit
 def test_macro_handler_preserves_non_tushare_provider_contract(
-    fetchers: SourceFetchers,
+    sources: _MockSources,
 ) -> None:
     """FRED and future macro providers keep their provider-native daily API."""
-    fetchers.macro.fetch_macro_indicators.return_value = pl.DataFrame()
+    sources.macro.fetch_macro_indicators.return_value = pl.DataFrame()
     handlers = build_daily_fetch_handlers(
-        fetchers,
+        sources.fetchers,
         "2026-09-01",
         DailyContextCallbacks(
             fetch_commodity_daily=lambda _trade_date: pl.DataFrame(),
@@ -156,18 +171,18 @@ def test_macro_handler_preserves_non_tushare_provider_contract(
 
     handlers[Dataset.MACRO_INDICATORS]()
 
-    fetchers.macro.fetch_macro_indicators.assert_called_once_with("2026-09-01")
-    fetchers.macro.fetch_macro_indicators_by_codes.assert_not_called()
+    sources.macro.fetch_macro_indicators.assert_called_once_with("2026-09-01")
+    sources.macro.fetch_macro_indicators_by_codes.assert_not_called()
 
 
 @pytest.mark.unit
 def test_industry_mapping_handler_binds_partition_asof_and_retrieval_date(
-    fetchers: SourceFetchers,
+    sources: _MockSources,
 ) -> None:
     """Historical partitions must not ingest the provider's current members."""
-    fetchers.metadata.fetch_sw_industry_concepts.return_value = pl.DataFrame()
+    sources.metadata.fetch_sw_industry_concepts.return_value = pl.DataFrame()
     handlers = build_daily_fetch_handlers(
-        fetchers,
+        sources.fetchers,
         "2024-03-29",
         DailyContextCallbacks(
             fetch_commodity_daily=lambda _trade_date: pl.DataFrame(),
@@ -177,7 +192,7 @@ def test_industry_mapping_handler_binds_partition_asof_and_retrieval_date(
 
     handlers[Dataset.INDUSTRY_MAPPING]()
 
-    fetchers.metadata.fetch_sw_industry_concepts.assert_called_once_with(
+    sources.metadata.fetch_sw_industry_concepts.assert_called_once_with(
         asof_date="2024-03-29",
         level=1,
         knowledge_date=date.today(),
@@ -186,10 +201,10 @@ def test_industry_mapping_handler_binds_partition_asof_and_retrieval_date(
 
 @pytest.mark.unit
 def test_industry_classification_handler_concats_sw_and_csrc(
-    fetchers: SourceFetchers,
+    sources: _MockSources,
 ) -> None:
     """#517：分类快照 = 申万 L1 + 证监会两源拼接，级别统一 L 前缀。"""
-    fetchers.metadata.fetch_sw_industry.return_value = pl.DataFrame(
+    sources.metadata.fetch_sw_industry.return_value = pl.DataFrame(
         {
             "source_ticker": ["801010.SI"],
             "industry_name": ["农林牧渔"],
@@ -197,7 +212,7 @@ def test_industry_classification_handler_concats_sw_and_csrc(
             "industry_level": [1],
         }
     )
-    fetchers.metadata.fetch_csrc_industry.return_value = pl.DataFrame(
+    sources.metadata.fetch_csrc_industry.return_value = pl.DataFrame(
         {
             "industry_id": ["C39"],
             "industry_name": ["计算机、通信和其他电子设备制造业"],
@@ -206,7 +221,7 @@ def test_industry_classification_handler_concats_sw_and_csrc(
         }
     )
     handlers = build_daily_fetch_handlers(
-        fetchers,
+        sources.fetchers,
         "2026-09-01",
         DailyContextCallbacks(
             fetch_commodity_daily=lambda _trade_date: pl.DataFrame(),
@@ -236,12 +251,12 @@ def test_industry_classification_handler_concats_sw_and_csrc(
 
 @pytest.mark.unit
 def test_industry_classification_degrades_to_sw_on_csrc_auth_reject(
-    fetchers: SourceFetchers,
+    sources: _MockSources,
 ) -> None:
     """#517：csrc 端点被 transport 权限拒（2002）时降级 SW-only 留痕."""
     from ditto_data.errors import SourceAuthenticationError
 
-    fetchers.metadata.fetch_sw_industry.return_value = pl.DataFrame(
+    sources.metadata.fetch_sw_industry.return_value = pl.DataFrame(
         {
             "source_ticker": ["801010.SI"],
             "industry_name": ["农林牧渔"],
@@ -249,11 +264,11 @@ def test_industry_classification_degrades_to_sw_on_csrc_auth_reject(
             "industry_level": [1],
         }
     )
-    fetchers.metadata.fetch_csrc_industry.side_effect = SourceAuthenticationError(
+    sources.metadata.fetch_csrc_industry.side_effect = SourceAuthenticationError(
         message="token不对", source="tushare"
     )
     handlers = build_daily_fetch_handlers(
-        fetchers,
+        sources.fetchers,
         "2026-09-01",
         DailyContextCallbacks(
             fetch_commodity_daily=lambda _trade_date: pl.DataFrame(),

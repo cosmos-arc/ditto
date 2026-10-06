@@ -13,6 +13,7 @@ from ditto_application.builders.template_builders import (
     build_stock_selection_trend_config,
 )
 from ditto_portfolio.rebalancing import AllocationStage, MeanVarianceAllocator
+from ditto_strategy.alpha.context import StrategyContext
 from ditto_strategy.alpha.specs import ConstraintSpec, StrategySpec
 
 
@@ -180,7 +181,7 @@ class TestBuildPortfolioStagesLaunchConstraints:
 def _run_portfolio_stages(spec: StrategySpec, frame: pl.DataFrame) -> pl.DataFrame:
     result = frame
     for stage in build_portfolio_stages(spec):
-        result = stage.process(result, object())
+        result = stage.process(result, StrategyContext())
     return result
 
 

@@ -21,7 +21,14 @@ from ditto_application.processes.experiments.baseline_planning import (
 from ditto_application.processes.experiments.baseline_registry import (
     default_baseline_registry,
 )
-from ditto_application.processes.experiments.planning import BaselineDescriptor
+from ditto_application.processes.experiments.planning import (
+    BaselineDescriptor,
+    CandidateMatrixPlan,
+    ExperimentWorkPlan,
+)
+from ditto_application.processes.experiments.planning_contracts import (
+    ExperimentPlanningRequest,
+)
 from ditto_application.processes.experiments.planning_probes import (
     BaselineRuntimeExecutorEvidence,
     ResearchDatasetRequirement,
@@ -107,8 +114,10 @@ def test_preflight_semantics_rejects_baseline_lookback_above_global_envelope() -
             "candidates": [],
         }
     }
+    # 结构化替身只携带 _validate_executor 消费的 candidate_matrix 成员，
+    # 窄点 cast 对齐形参类型。
     work = cast(
-        "object",
+        "ExperimentWorkPlan",
         SimpleNamespace(
             candidate_matrix=SimpleNamespace(
                 binder_candidates=(),
@@ -141,6 +150,10 @@ def test_executor_gate_rejects_baseline_lookback_above_global_envelope() -> None
         },
     )
     baseline = resolve_planning_baseline(descriptor, default_baseline_registry())
+    baseline_ref = baseline.ref.identity
+    baseline_descriptor_hash = baseline.registration.descriptor.canonical_hash
+    exact_strategy = baseline.exact_strategy
+    assert exact_strategy is not None
     result = ResearchExecutorProbeResult(
         available=True,
         code=None,
@@ -157,23 +170,27 @@ def test_executor_gate_rejects_baseline_lookback_above_global_envelope() -> None
             max_lookback_sessions=63,
             requires_pit_universe=True,
         ),
-        baseline_ref=baseline.ref.identity,
-        baseline_descriptor_hash=baseline.registration.descriptor.canonical_hash,
+        baseline_ref=baseline_ref,
+        baseline_descriptor_hash=baseline_descriptor_hash,
         baseline_registry_manifest_hash=baseline.registry_manifest_hash,
-        baseline_exact_strategy_hash=baseline.exact_strategy.canonical_hash,
+        baseline_exact_strategy_hash=exact_strategy.canonical_hash,
         factor_registry_manifest_hash="5" * 64,
         factor_binding_hashes=("2" * 64,),
         baseline_runtime=_evidence(),
     )
+    # 结构化替身只携带 executor_check 消费的 binder_candidates 成员，
+    # 窄点 cast 对齐形参类型。
     matrix = cast(
-        "object",
+        "CandidateMatrixPlan",
         SimpleNamespace(
             binder_candidates=(),
             baseline_candidate=SimpleNamespace(descriptor=descriptor),
         ),
     )
+    # 结构化替身只携带 executor_check 消费的 dataset_requirements 成员，
+    # 窄点 cast 对齐形参类型。
     request = cast(
-        "object",
+        "ExperimentPlanningRequest",
         SimpleNamespace(
             dataset_requirements=(
                 ResearchDatasetRequirement("etf_daily", ("snapshot-1",)),

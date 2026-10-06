@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+from collections.abc import Mapping
 from dataclasses import replace
 from datetime import UTC, date, datetime, timedelta
 from io import BytesIO
@@ -82,6 +83,7 @@ from ditto_application.processes.experiments.execution_bundle import (
     CodeEnvironmentLock,
     ContentAddressedResearchInput,
     ResearchExecutionSemantics,
+    StrategyExecutionBinding,
 )
 from ditto_application.processes.experiments.execution_contracts import (
     ExactResearchSnapshot,
@@ -501,10 +503,10 @@ def _persisted_snapshot(reader: SQLiteExperimentReader, receipt):
     assert len(enqueue_events) == 1
     detail = enqueue_events[0].detail
     assert detail["plan_hash"] == receipt.plan_hash
-    assert (
-        detail["preflight_hash"]
-        == canonical_payload(detail["preflight"]).content_hash.value
-    )
+    preflight = detail["preflight"]
+    # 窄化事件详情 JSON 节点为对象（运行时校验；detail 值类型是 object）.
+    assert isinstance(preflight, Mapping)
+    assert detail["preflight_hash"] == canonical_payload(preflight).content_hash.value
     assert enqueue_events[0].detail_hash == canonical_payload(detail).content_hash
     return launch_spec, projection, candidates, folds, gates, events
 
@@ -1215,6 +1217,9 @@ def _assert_exact_baseline_runtime_is_frozen(
     assert baseline.is_baseline is True
     assert baseline.baseline_plan is not None
     assert baseline.baseline_plan.exact_strategy is not None
+    # baseline.strategy 声明为 StrategyExecutionBinding | BaselineExecutorBinding 联合，
+    # exact-lane 的运行时绑定为前者，窄化后才能读取 exact_strategy。
+    assert isinstance(baseline.strategy, StrategyExecutionBinding)
     assert baseline.strategy.exact_strategy.version == 2
     durable_launch = read_durable_launch(reader, baseline_fold)
     assert durable_launch.executor["baseline_runtime"] == {
@@ -1241,6 +1246,21 @@ def _assert_exact_context_inputs_resolved(
         for item in input_resolver.calls
     )
     assert request.context_input_refs
+
+
+def _exact_strategy_version(semantics: ResearchExecutionSemantics) -> int:
+    """候选 lane 的 strategy 绑定为 StrategyExecutionBinding（exact identity），
+    联合声明经运行时校验窄化后才能读取 exact_strategy。"""
+    strategy = semantics.strategy
+    assert isinstance(strategy, StrategyExecutionBinding)
+    return strategy.exact_strategy.version
+
+
+def _assert_drift_fields(error: AppProcessError, expected: str) -> None:
+    """窄化错误详情字段名（运行时校验；details 值类型是 object）."""
+    fields = error.details["fields"]
+    assert isinstance(fields, tuple)
+    assert expected in fields
 
 
 # 超集成预算（本机无 cov 串行 5.75s > 5s）：打 slow 进慢车道治理（#330 时长治理），
@@ -1304,7 +1324,7 @@ def test_durable_execution_resolver_uses_only_exact_strategy_and_snapshot_identi
             binder.reproduction_fingerprint,
             binder.is_baseline,
             binder.baseline_plan,
-            binder.strategy.exact_strategy.version,
+            _exact_strategy_version(binder),
         ) == (
             replay.reproduction_fingerprint,
             False,
@@ -1423,6 +1443,6 @@ def test_durable_execution_resolver_uses_only_exact_strategy_and_snapshot_identi
                 environment=CodeEnvironmentLock("git:test", "7" * 64),
             ).resolve(binder_fold)
         assert missing_fold.value.details["reason"] == "launch_spec_preflight_drift"
-        assert "persisted_folds" in missing_fold.value.details["fields"]
+        _assert_drift_fields(missing_fold.value, "persisted_folds")
     finally:
         database.close_all()

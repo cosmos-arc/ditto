@@ -26,6 +26,33 @@ class _SnapshotReader:
     def get_snapshot(self, snapshot_id: str) -> ProviderSnapshot | None:
         return self._value if snapshot_id == self._value.snapshot_id else None
 
+    def get_observed_at(self, snapshot_id: str) -> datetime | None:
+        # 协议最小实现：本测试不依赖 catalog 观察时间。
+        return None
+
+    def get_predecessor(self, snapshot_id: str) -> str | None:
+        # 协议最小实现：本测试不依赖前驱快照链。
+        return None
+
+    def list_snapshots(
+        self,
+        *,
+        dataset_id: str | None = None,
+        source: str | None = None,
+        canonical_asset: DataAssetRef | None = None,
+    ) -> tuple[ProviderSnapshot, ...]:
+        # 协议最小实现：按产品/提供方过滤器原样返回唯一快照。
+        if (
+            (dataset_id is not None and dataset_id != self._value.dataset_id)
+            or (source is not None and source != self._value.source)
+            or (
+                canonical_asset is not None
+                and canonical_asset != self._value.canonical_asset
+            )
+        ):
+            return ()
+        return (self._value,)
+
 
 @pytest.mark.pit
 def test_etf_paper_market_excludes_future_publication_and_wrong_instrument(

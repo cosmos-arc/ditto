@@ -7,6 +7,7 @@ from datetime import UTC, datetime
 from decimal import Decimal
 from pathlib import Path
 from types import SimpleNamespace
+from typing import cast
 from unittest.mock import MagicMock
 
 import pytest
@@ -216,6 +217,11 @@ def _process(
     )
 
 
+def _package_publisher_mock(process: ETFPaperExecution) -> MagicMock:
+    """单点替身访问：_packages 声明为 SignalPackagePublisher，实际注入 MagicMock."""
+    return cast("MagicMock", process._packages)
+
+
 def test_etf_paper_fill_replays_without_a_second_ledger_event(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -225,17 +231,19 @@ def test_etf_paper_fill_replays_without_a_second_ledger_event(
         SqlitePaperSessionStore(str(path)) as sessions,
         SqliteAccountEventJournal(str(path)) as journal,
     ):
-        process = _process(sessions, journal, _live_facts(journal))
+        facts = _live_facts(journal)
+        process = _process(sessions, journal, facts)
         first = process.execute(_request())
         assert len(first) == 1
         assert first[0].status == "filled"
         assert first[0].ledger_event_id is not None
-        resolve = process._facts.resolve.call_args.kwargs
+        resolve = facts.resolve.call_args.kwargs
         assert resolve["signal_snapshot_id"] == "reference-signal"
         assert resolve["signal_cutoff"] == SIGNAL
         assert resolve["valuation_cutoff"] == SIGNAL
+        packages = _package_publisher_mock(process)
         assert (
-            process._packages.find_active_paper.call_args.kwargs["run_id"]
+            packages.find_active_paper.call_args.kwargs["run_id"]
             == "eod-2026-09-01-etf-allocation:demo-version-a-paper-a"
         )
         assert len(journal.list_events("paper-a")) == 1
@@ -297,7 +305,7 @@ def test_etf_paper_rejects_package_without_pinned_valuation_cutoff(
     ):
         process = _process(sessions, journal, _live_facts(journal))
         package = _package()
-        process._packages.find_active_paper.return_value = replace(
+        _package_publisher_mock(process).find_active_paper.return_value = replace(
             package,
             dataset_snapshot_ids={
                 key: value
@@ -461,7 +469,7 @@ def test_etf_rotation_funds_the_buy_with_execution_day_proceeds(
             current_weight=1.0,
             delta_weight=-1.0,
         )
-        process._packages.find_active_paper.return_value = replace(
+        _package_publisher_mock(process).find_active_paper.return_value = replace(
             package, intents=(sell, package.intents[0])
         )
         outcomes = process.execute(_request())
@@ -514,7 +522,7 @@ def test_etf_sizing_rounds_to_the_execution_day_lot(tmp_path: Path) -> None:
         )
         process = _process(sessions, journal, facts)
         package = _package()
-        process._packages.find_active_paper.return_value = replace(
+        _package_publisher_mock(process).find_active_paper.return_value = replace(
             package,
             intents=(
                 replace(package.intents[0], target_weight=0.49, delta_weight=0.49),
@@ -632,7 +640,7 @@ def test_etf_partial_fill_recovers_with_new_evidence_for_pending_intent(
         facts.resolve.side_effect = resolve
         process = _process(sessions, journal, facts)
         package = _package()
-        process._packages.find_active_paper.return_value = replace(
+        _package_publisher_mock(process).find_active_paper.return_value = replace(
             package,
             intents=(
                 *package.intents,

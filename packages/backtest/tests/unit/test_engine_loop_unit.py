@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from dataclasses import replace
 from datetime import date, datetime
 from types import MappingProxyType
@@ -118,7 +118,7 @@ def _make_account_view_with_position() -> AccountView:
 
 
 def _make_snapshot(
-    iid: int = 1,
+    iid: InstrumentId = InstrumentId(1),
     close: float = 10.0,
 ) -> MarketSnapshot:
     return MarketSnapshot(
@@ -134,8 +134,11 @@ def _make_snapshot(
     )
 
 
-def _make_slice(date: str, bars: dict[int, MarketSnapshot] | None = None) -> Slice:
-    bars = bars or {1: _make_snapshot()}
+def _make_slice(
+    date: str,
+    bars: dict[InstrumentId, MarketSnapshot] | None = None,
+) -> Slice:
+    bars = bars or {InstrumentId(1): _make_snapshot()}
     return Slice(
         trade_date=date,
         step_time=datetime(2026, 3, 1, 15, 0),
@@ -148,13 +151,13 @@ def _make_target(date: str = "2026-03-01") -> TargetPortfolio:
         trade_date=date,
         strategy_id="default",
         run_id="run-001",
-        positions={1: 0.5},
+        positions={InstrumentId(1): 0.5},
         cash_target=0.5,
     )
 
 
 def _make_order(
-    iid: int = 1,
+    iid: InstrumentId = InstrumentId(1),
     qty: int = 100,
     direction: OrderSide = OrderSide.BUY,
 ) -> Order:
@@ -201,7 +204,7 @@ def _make_synchronizer(
     sync = Mock(spec=Synchronizer)
     sync.clock.return_value = clock
 
-    def _make_stream() -> list[TimeSlice]:
+    def _make_stream() -> Iterator[TimeSlice]:
         from datetime import timedelta
 
         step_time = datetime(2026, 3, 1, 15, 0)
@@ -274,7 +277,7 @@ class _WiredMocks(NamedTuple):
 
 def _make_wired_engine_loop(
     should_stop: Callable[[], bool] | None = None,
-    on_checkpoint: Callable[[object], None] | None = None,
+    on_checkpoint: Callable[[BacktestCheckpoint], None] | None = None,
     execution_delay: int = 0,
     checkpoint_interval_days: int = 1,
 ) -> _WiredMocks:
@@ -405,8 +408,8 @@ class TestDefaultInputBundlePitBoundary:
             end_date="2026-03-01",
         )
         iid = InstrumentId(1)
-        synchronizer_bar = _make_snapshot(iid=1, close=10.0)
-        polluted_second_read_bar = _make_snapshot(iid=1, close=99.0)
+        synchronizer_bar = _make_snapshot(iid=InstrumentId(1), close=10.0)
+        polluted_second_read_bar = _make_snapshot(iid=InstrumentId(1), close=99.0)
 
         data_feed = Mock()
         data_feed.trading_days.return_value = ["2026-03-01"]
@@ -477,8 +480,8 @@ class TestDefaultInputBundlePitBoundary:
             end_date="2026-03-01",
         )
         iid = InstrumentId(1)
-        synchronizer_bar = _make_snapshot(iid=1, close=10.0)
-        polluted_second_read_bar = _make_snapshot(iid=1, close=99.0)
+        synchronizer_bar = _make_snapshot(iid=InstrumentId(1), close=10.0)
+        polluted_second_read_bar = _make_snapshot(iid=InstrumentId(1), close=99.0)
 
         data_feed = Mock()
         data_feed.trading_days.return_value = ["2026-03-01"]
@@ -552,8 +555,8 @@ class TestRunManifestSourceSnapshots:
             end_date="2026-03-01",
         )
         iid = InstrumentId(1)
-        synchronizer_bar = _make_snapshot(iid=1, close=10.0)
-        polluted_second_read_bar = _make_snapshot(iid=1, close=99.0)
+        synchronizer_bar = _make_snapshot(iid=InstrumentId(1), close=10.0)
+        polluted_second_read_bar = _make_snapshot(iid=InstrumentId(1), close=99.0)
         snapshot_id = "snapshot:tushare:stock_daily:2026-03-01:sync"
 
         data_feed = Mock()
@@ -616,6 +619,7 @@ class TestRunManifestSourceSnapshots:
 
         result = loop.run()
 
+        assert result.manifest is not None
         assert result.manifest.input_ref_details[0].source_snapshot_id == snapshot_id
 
 
@@ -790,8 +794,8 @@ class TestRollingContextUpdates:
         pipeline = Mock()
         pipeline.run.return_value = _make_target()
 
-        order1 = _make_order(iid=1)
-        order2 = _make_order(iid=2)
+        order1 = _make_order(iid=InstrumentId(1))
+        order2 = _make_order(iid=InstrumentId(2))
         planner = Mock()
         plan = Mock(
             plan_id="plan-001",
@@ -864,8 +868,8 @@ class TestProcessInputConversion:
 
         config = _make_config()
         bars = {
-            1: _make_snapshot(iid=1, close=10.0),
-            2: _make_snapshot(iid=2, close=20.0),
+            InstrumentId(1): _make_snapshot(iid=InstrumentId(1), close=10.0),
+            InstrumentId(2): _make_snapshot(iid=InstrumentId(2), close=20.0),
         }
         slice_data = Slice(
             trade_date="2026-03-01",
@@ -930,8 +934,8 @@ class TestProcessInputConversion:
         assert call_arg.trade_date == "2026-03-01"
         assert 1 in call_arg.bars
         assert 2 in call_arg.bars
-        assert call_arg.bars[1].close == 10.0
-        assert call_arg.bars[2].close == 20.0
+        assert call_arg.bars[InstrumentId(1)].close == 10.0
+        assert call_arg.bars[InstrumentId(2)].close == 20.0
 
 
 class TestRuleProviderInjection:
@@ -943,8 +947,8 @@ class TestRuleProviderInjection:
 
         config = _make_config()
         bars = {
-            1: _make_snapshot(iid=1),
-            2: _make_snapshot(iid=2),
+            InstrumentId(1): _make_snapshot(iid=InstrumentId(1)),
+            InstrumentId(2): _make_snapshot(iid=InstrumentId(2)),
         }
         data_feed = Mock()
         data_feed.trading_days.return_value = ["2026-03-01"]
@@ -1706,7 +1710,7 @@ class TestExecutionDelay:
         self,
         execution_delay: int = 1,
         targets: list[TargetPortfolio] | None = None,
-        on_checkpoint: Callable[[object], None] | None = None,
+        on_checkpoint: Callable[[BacktestCheckpoint], None] | None = None,
         restore_runtime_state: BacktestRuntimeStateSnapshot | None = None,
     ) -> tuple[EngineLoop, Mock, Mock, Mock]:
         """构建 execution_delay 测试用的 EngineLoop + 关键 mock。"""
@@ -2178,8 +2182,8 @@ class TestExecutionDelay:
             execution_delay=1,
         )
         iid = InstrumentId(1)
-        frozen_bar = _make_snapshot(iid=1, close=10.0)
-        polluted_bar = _make_snapshot(iid=1, close=99.0)
+        frozen_bar = _make_snapshot(iid=InstrumentId(1), close=10.0)
+        polluted_bar = _make_snapshot(iid=InstrumentId(1), close=99.0)
 
         data_feed = Mock()
         data_feed.trading_days.return_value = ["2026-03-01"]

@@ -10,7 +10,9 @@ from ditto_application.processes.ingestion.data_writer import IngestionDataWrite
 from ditto_application.processes.ingestion.evidence_commit import (
     EvidenceCommitOutcome,
     EvidenceCommitPorts,
+    EvidenceCommitRequest,
     IngestionEvidenceCommitter,
+    PartitionWriteIntent,
 )
 from ditto_application.processes.ingestion.list_date_inference import (
     ListDateInferenceService,
@@ -36,6 +38,7 @@ from ditto_data.catalog.provider_payload import (
     ProviderPayloadArtifact,
 )
 from ditto_data.catalog.source_snapshot import snapshot_identity
+from ditto_data.ingestion.ingestion_log_store import IngestionLogStore
 from ditto_data.models.ingestion import IngestionLog
 from ditto_platform.foundation import ChecksumCompute, OnDuplicate, WriteResult
 from packages.application.tests.unit.process.ingestion import (
@@ -95,9 +98,9 @@ class _FailingCatalogWriter:
 class _PassingQualityChecker:
     def handle(
         self,
-        command: CheckDataQualityCommand,
+        cmd: CheckDataQualityCommand,
     ) -> tuple[pl.DataFrame, bool]:
-        return command.df, False
+        return cmd.df, False
 
 
 class _IngestionLogRecorder:
@@ -127,14 +130,24 @@ class _IngestionLogRecorder:
 class _EvidenceCommitRecorder:
     def __init__(self, outcome: EvidenceCommitOutcome) -> None:
         self.outcome = outcome
-        self.requests: list[object] = []
+        self.requests: list[EvidenceCommitRequest] = []
 
-    def prepare_payload_write(self, intent: object) -> None:
-        pass
+    def prepare_payload_write(self, intent: PartitionWriteIntent) -> None:
+        _ = intent
 
-    def commit(self, request: object) -> EvidenceCommitOutcome:
+    def commit(self, request: EvidenceCommitRequest) -> EvidenceCommitOutcome:
         self.requests.append(request)
         return self.outcome
+
+
+def _result_handler(
+    logs: _IngestionLogRecorder | None, source_name: str
+) -> IngestionResultHandler:
+    """IngestionLogStore 是具体类,handler 只消费 get_log/save_log;
+    _IngestionLogRecorder 与该表面结构兼容,替身注入经此单点放宽。"""
+    return IngestionResultHandler(
+        None if logs is None else cast(IngestionLogStore, logs), source_name
+    )
 
 
 def test_index_basic_skips_unbounded_per_instrument_list_date_inference() -> None:
@@ -380,7 +393,7 @@ def test_r2_evidence_failure_never_returns_success(tmp_path: Path) -> None:
     )
     logs = _IngestionLogRecorder()
     ctx = PostIngestContext(
-        result_handler=IngestionResultHandler(cast(object, logs), "tushare"),
+        result_handler=_result_handler(logs, "tushare"),
         data_writer=cast(IngestionDataWriter, writer),
         list_date_inference=cast(ListDateInferenceService, None),
         source_name="tushare",
@@ -421,7 +434,7 @@ def test_r2_evidence_success_does_not_duplicate_success_log(tmp_path: Path) -> N
     )
     logs = _IngestionLogRecorder()
     ctx = PostIngestContext(
-        result_handler=IngestionResultHandler(cast(object, logs), "tushare"),
+        result_handler=_result_handler(logs, "tushare"),
         data_writer=cast(IngestionDataWriter, writer),
         list_date_inference=cast(ListDateInferenceService, None),
         source_name="tushare",
@@ -502,12 +515,14 @@ def test_r2_provider_payload_uri_remains_bound_to_pre_future_response(
     assert first_success_log.checksum == "canonical-year-partition"
     assert first_success_log.rows == 1
     assert first_success_log.checksum != first_snapshot.checksum
+    payload_uri = first_snapshot.payload_uri
+    assert payload_uri is not None
     first_artifact = ProviderPayloadArtifact(
         dataset_id=first_snapshot.dataset_id,
         source=first_snapshot.source,
         checksum=first_snapshot.checksum,
         row_count=first_snapshot.row_count,
-        uri=first_snapshot.payload_uri,
+        uri=payload_uri,
     )
     assert payload_store.read_payload(first_artifact).to_dicts() == original.to_dicts()
 
@@ -677,11 +692,11 @@ def test_sparse_nonempty_attests_prior_and_current_pit_snapshots(
                 snapshot_writer=stores.snapshots,
                 snapshot_reader=stores.snapshots,
                 catalog_writer=catalog,
-                ingestion_log_store=cast(object, logs),
+                ingestion_log_store=logs,
             )
         )
         ctx = PostIngestContext(
-            result_handler=IngestionResultHandler(cast(object, logs), "tushare"),
+            result_handler=_result_handler(logs, "tushare"),
             data_writer=cast(IngestionDataWriter, writer),
             list_date_inference=cast(ListDateInferenceService, None),
             catalog_reader=catalog,
@@ -837,11 +852,11 @@ def test_index_weight_uses_observation_date_as_pit_axis(
                 snapshot_writer=stores.snapshots,
                 snapshot_reader=stores.snapshots,
                 catalog_writer=catalog,
-                ingestion_log_store=cast(object, logs),
+                ingestion_log_store=logs,
             )
         )
         ctx = PostIngestContext(
-            result_handler=IngestionResultHandler(cast(object, logs), "tushare"),
+            result_handler=_result_handler(logs, "tushare"),
             data_writer=cast(IngestionDataWriter, writer),
             list_date_inference=cast(ListDateInferenceService, None),
             catalog_reader=catalog,
@@ -920,7 +935,7 @@ def test_success_uses_persisted_rows_written_for_result_log_and_quality() -> Non
     )
     log_store = _IngestionLogRecorder()
     ctx = PostIngestContext(
-        result_handler=IngestionResultHandler(cast(object, log_store), "tushare"),
+        result_handler=_result_handler(log_store, "tushare"),
         data_writer=cast(IngestionDataWriter, writer),
         list_date_inference=cast(ListDateInferenceService, None),
         catalog_writer=InMemoryDataCatalog(),
@@ -960,7 +975,7 @@ def test_sparse_nonempty_fails_closed_when_catalog_evidence_cannot_persist() -> 
         data_writer=cast(IngestionDataWriter, writer),
         list_date_inference=cast(ListDateInferenceService, None),
         catalog_reader=InMemoryDataCatalog(),
-        catalog_writer=cast(object, _FailingCatalogWriter()),
+        catalog_writer=_FailingCatalogWriter(),
         quality_checker=_PassingQualityChecker(),
         source_name="tushare",
     )
@@ -1023,11 +1038,11 @@ def test_sparse_range_resolves_pit_snapshot_at_request_end(
                 snapshot_writer=stores.snapshots,
                 snapshot_reader=stores.snapshots,
                 catalog_writer=catalog,
-                ingestion_log_store=cast(object, logs),
+                ingestion_log_store=logs,
             )
         )
         ctx = PostIngestContext(
-            result_handler=IngestionResultHandler(cast(object, logs), "tushare"),
+            result_handler=_result_handler(logs, "tushare"),
             data_writer=cast(IngestionDataWriter, writer),
             list_date_inference=cast(ListDateInferenceService, None),
             catalog_reader=catalog,

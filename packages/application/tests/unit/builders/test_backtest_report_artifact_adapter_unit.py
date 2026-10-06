@@ -512,7 +512,8 @@ def test_existing_record_audit_run_or_attempt_drift_fails_closed(
         now_epoch_us=NOW_US,
     )
     manifest = dict(record.manifest)
-    audit = dict(manifest["audit"])
+    # manifest 是 Mapping[str, object]；audit 由 publish 写入为 str->str dict。
+    audit = dict(cast("Mapping[str, object]", manifest["audit"]))
     audit[field_name] = drifted
     manifest["audit"] = audit
     index.records[identity.artifact_id] = replace(record, manifest=manifest)

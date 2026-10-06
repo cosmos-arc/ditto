@@ -12,7 +12,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from datetime import UTC, datetime
 from threading import Lock, RLock
-from typing import cast
+from typing import Any, cast
 from unittest.mock import MagicMock
 
 import pytest
@@ -256,7 +256,9 @@ class TestRetryFoldUnderTransientLease:
         store = _ControlStore(probe=probe)
         store_port = cast(ExperimentSchedulerStoreProtocol, store)
         authority = _authority(store_port)
-        authority._lock = lock
+        # 白盒注入间谍锁：_lock 在生产中仅作上下文管理器使用，duck-typed 替身
+        # 无法满足 RLock 具体类型，以窄点 cast 跨过该注入边界。
+        cast("Any", authority)._lock = lock
 
         receipt = _retry(
             authority,

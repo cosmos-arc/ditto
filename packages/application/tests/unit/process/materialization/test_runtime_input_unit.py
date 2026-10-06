@@ -24,6 +24,8 @@ from ditto_data.catalog.contracts import (
     DataCatalogEntry,
     DataSchemaFingerprint,
 )
+from ditto_data.catalog.source_snapshot import ProviderSnapshotReader
+from ditto_data.ingestion.partition_state import PartitionLifecycleReader
 from ditto_features.derived_types import (
     DerivedRole,
     DerivedSpec,
@@ -220,8 +222,8 @@ class TestRuntimeDerivedInputProvider:
         mock_market_service: MagicMock | None = None,
         data_catalog: InMemoryDataCatalog | None = None,
         catalog_coverage_dates: tuple[str, ...] | None = None,
-        snapshots: object | None = None,
-        lifecycle: object | None = None,
+        snapshots: ProviderSnapshotReader | None = None,
+        lifecycle: PartitionLifecycleReader | None = None,
     ) -> RuntimeDerivedInputProvider:
         catalog_service = MagicMock()
         catalog_service.resolve_offline_version.return_value = 1
