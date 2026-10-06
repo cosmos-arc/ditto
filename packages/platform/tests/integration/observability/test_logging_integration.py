@@ -127,12 +127,14 @@ class TestConfigureLogging:
             pytest_running=True,  # [REVIEW]
             assertions_enabled=False,
             verbose_logging=False,
+            # 显式覆盖 preset 的 log_to_file=False，让 pytest_running 早退成为唯一防线
+            log_to_file=True,
         )
 
         configure_logging(config)
 
-        # [REVIEW] TESTING 且 pytest_running：configure_logging 早退，不得落任何文件
-        assert not (tmp_path / "logs" / "ditto.log").exists()
+        # [REVIEW] 早退先于 _resolve_log_dir 的 mkdir：连日志目录都不应出现
+        assert not (tmp_path / "logs").exists()
         # [REVIEW]
 
     def test_configure_logging_verbose_format(self, tmp_path: Path) -> None:
