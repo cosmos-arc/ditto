@@ -221,3 +221,76 @@ class TestIndexAdapter:
         assert [
             call.kwargs["api_name"] for call in mock_client.query.call_args_list
         ] == ["index_daily", "sw_daily"]
+
+
+@pytest.mark.unit
+class TestIndexDailyPerCodeTolerance:
+    """逐码容错显式化（#511）：失败 fail closed，空响应记名告警."""
+
+    @staticmethod
+    def _row(ts_code: str) -> pl.DataFrame:
+        return pl.DataFrame(
+            {
+                "ts_code": [ts_code],
+                "trade_date": ["20240329"],
+                "open": [4000.0],
+                "high": [4010.0],
+                "low": [3990.0],
+                "close": [4005.0],
+                "pre_close": [4000.0],
+                "pct_chg": [0.12],
+                "vol": [1_000.0],
+                "amount": [2_000.0],
+            }
+        )
+
+    def test_single_code_failure_fails_the_day(self) -> None:
+        """单码失败不得静默跳过——整日拒绝，游标不前进（#511/#1861）."""
+        from ditto_data.errors.network import SourceFetchError
+        from ditto_data.sources.tushare.adapters.index import IndexTushareAdapter
+
+        mock_client = MagicMock()
+        mock_client.query.side_effect = [
+            self._row("000001.SH"),
+            SourceFetchError(message="proxy glitch", source="tushare"),
+        ]
+        adapter = IndexTushareAdapter(_client=mock_client)
+
+        with pytest.raises(SourceFetchError, match=r"000300\.SH"):
+            adapter.fetch_daily(
+                trade_date="2024-03-29",
+                ts_codes=["000001.SH", "000300.SH"],
+            )
+
+    def test_empty_code_is_logged_not_fatal(self) -> None:
+        """空响应（200 且 0 行）保留跳过——上市前窗口依赖该语义."""
+        from ditto_data.sources.tushare.adapters.index import IndexTushareAdapter
+
+        mock_client = MagicMock()
+        mock_client.query.side_effect = [
+            self._row("000001.SH"),
+            pl.DataFrame(),  # 000852.CSI 上市前窗口：0 行
+        ]
+        adapter = IndexTushareAdapter(_client=mock_client)
+
+        result = adapter.fetch_daily(
+            trade_date="2014-09-30",
+            ts_codes=["000001.SH", "000852.CSI"],
+        )
+
+        assert result.get_column("source_ticker").to_list() == ["000001.SH"]
+
+    def test_all_empty_keeps_empty_frame_contract(self) -> None:
+        """全部空响应维持空帧契约（EMPTY_DATA 路径接手）."""
+        from ditto_data.sources.tushare.adapters.index import IndexTushareAdapter
+
+        mock_client = MagicMock()
+        mock_client.query.return_value = pl.DataFrame()
+        adapter = IndexTushareAdapter(_client=mock_client)
+
+        result = adapter.fetch_daily(
+            trade_date="2024-03-29",
+            ts_codes=["000001.SH", "000300.SH"],
+        )
+
+        assert result.is_empty()

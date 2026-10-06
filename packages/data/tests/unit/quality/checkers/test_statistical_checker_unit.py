@@ -339,7 +339,118 @@ class TestCompletenessChecker:
 
         # Should detect missing trading day (overall, not per-group)
         assert len(issues) == 1
-        assert "Missing data" in issues[0].message
+        assert "missing data" in issues[0].message.lower()
+
+
+class TestCompletenessHistoricalFrame:
+    """completeness 的存量窗口帧与 per-instrument 维度（#511）."""
+
+    @pytest.fixture
+    def calendar_data(self):
+        """最近 5 个工作日作为开市日."""
+        dates = [
+            date.today() - timedelta(days=i)
+            for i in range(6, 0, -1)
+            if (date.today() - timedelta(days=i)).weekday() < 5
+        ][:5]
+        return pl.DataFrame({"trade_date": dates, "is_open": [True] * len(dates)})
+
+    def test_frame_historical_uses_stored_window(self, calendar_data):
+        """frame=historical 时用存量窗口而非单日 current（修结构性误报）.
+
+        单日 current 为空但存量窗口完整时不得告警。
+        """
+        window_data = pl.DataFrame(
+            {
+                "trade_date": calendar_data["trade_date"].to_list(),
+                "instrument_id": [1] * len(calendar_data),
+                "close": [100.0] * len(calendar_data),
+            }
+        )
+        current_data = window_data.filter(
+            pl.col("trade_date") == calendar_data["trade_date"][-1]
+        )
+
+        rule = {"rule": "completeness", "frame": "historical"}
+        checker = StatisticalChecker()
+
+        issues = checker.check(
+            current=current_data,
+            historical=window_data,
+            calendar=calendar_data,
+            rules=[rule],
+        )
+
+        assert len(issues) == 0
+
+    def test_group_by_instrument_locates_gap(self, calendar_data):
+        """单标的中段缺行被定位到 instrument_id（#1861 形态）.
+
+        数据集级日期并集不缺（另一标的覆盖了该日），只有
+        per-instrument 维度能发现。
+        """
+        dates = calendar_data["trade_date"].to_list()
+        window_data = pl.DataFrame(
+            {
+                "trade_date": dates + dates,
+                "instrument_id": [1] * len(dates) + [2] * len(dates),
+                "close": [100.0] * (len(dates) * 2),
+            }
+        )
+        # 标的 1 缺中段一日；标的 2 完整——数据集级日期并集完整
+        gap_date = dates[len(dates) // 2]
+        window_data = window_data.filter(
+            ~((pl.col("instrument_id") == 1) & (pl.col("trade_date") == gap_date))
+        )
+
+        rule = {
+            "rule": "completeness",
+            "frame": "historical",
+            "group_by_instrument": True,
+        }
+        checker = StatisticalChecker()
+
+        issues = checker.check(
+            current=window_data.head(1),
+            historical=window_data,
+            calendar=calendar_data,
+            rules=[rule],
+        )
+
+        assert len(issues) == 1
+        assert issues[0].severity == DQSeverity.ALERT
+        assert "1 instrument(s)" in issues[0].message
+        assert gap_date.isoformat() in issues[0].message
+
+    def test_group_by_instrument_ignores_pre_presence_dates(self, calendar_data):
+        """标的首见日期之前的开市日不计入期望集（上市前窗口不误报）."""
+        dates = calendar_data["trade_date"].to_list()
+        late_entry_count = max(len(dates) - 2, 1)
+        late_dates = dates[len(dates) - late_entry_count :]
+        window_data = pl.DataFrame(
+            {
+                # 标的 2 只在后段交易日出现（新上市形态）
+                "trade_date": dates + late_dates,
+                "instrument_id": [1] * len(dates) + [2] * late_entry_count,
+                "close": [100.0] * (len(dates) + late_entry_count),
+            }
+        )
+
+        rule = {
+            "rule": "completeness",
+            "frame": "historical",
+            "group_by_instrument": True,
+        }
+        checker = StatisticalChecker()
+
+        issues = checker.check(
+            current=window_data.head(1),
+            historical=window_data,
+            calendar=calendar_data,
+            rules=[rule],
+        )
+
+        assert len(issues) == 0
 
 
 class TestMultipleRules:
@@ -439,7 +550,7 @@ class TestErrorHandling:
             "lookback_days": 5,
         }
 
-        result = checker._check_completeness(current, calendar, rule)
+        result = checker._check_completeness(current, None, calendar, rule)
 
         # 应该返回 DQIssue 而非 None
         assert result is not None, "Exception should return ALERT issue, not None"

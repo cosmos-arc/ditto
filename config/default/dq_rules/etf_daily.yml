@@ -62,4 +62,8 @@ statistical:
     name: missing_data_check
     expected_dates: "trade_calendar"
     lookback_days: 5
-    message: "最近 5 个交易日存在缺失数据"
+    # #511：与 index_daily 同款 per-instrument 完备性——fund_daily 个别
+    # 日期丢失会复发（Tushare #1176/#1228），单 ETF 缺行需可定位。
+    frame: historical
+    group_by_instrument: true
+    message: "最近交易日存在缺失数据（数据集级或单 ETF 缺行）"
