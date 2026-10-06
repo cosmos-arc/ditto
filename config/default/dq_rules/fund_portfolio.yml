@@ -1,0 +1,32 @@
+# 基金季度持仓 DQ 规则（#522）
+# 单位：market_value 元、holding_shares 股、比率 %。季度披露可修订
+# （新 ann_date 版本追加，#452 观察事实语义）；holding_symbol 原码进主键
+# （持仓代码不强求注册）。
+dataset: fund_portfolio
+description: "fund_portfolio 数据质量检查规则"
+
+technical:
+  - rule: not_null
+    columns: [instrument_id, report_date, holding_symbol, knowledge_date]
+    message: "必填字段不能为空"
+
+  - rule: unique
+    columns: [instrument_id, report_date, holding_symbol, knowledge_date]
+    message: "主键 (instrument_id, report_date, holding_symbol, knowledge_date) 重复"
+
+  - rule: foreign_key
+    column: instrument_id
+    reference: instrument.instrument_id
+    message: "Instrument ID 不存在于证券主表"
+
+  - rule: type_check
+    columns:
+      instrument_id: int
+      report_date: date
+      knowledge_date: date
+      holding_symbol: string
+      market_value: float
+    message: "字段类型不匹配"
+
+# 业务类: 业务规则（写入时警告但不阻断）
+business: []

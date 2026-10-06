@@ -117,6 +117,35 @@ _PRIMARY_KEYS: dict[str, tuple[str, ...]] = {
     "adj_factor": ("instrument_id", "trade_date", "knowledge_date"),
     "fund_adj": ("instrument_id", "trade_date", "knowledge_date"),
     "etf_nav": ("instrument_id", "trade_date", "knowledge_date"),
+    # #517 涨跌停价格：日频确定性参考，kd=T+1 对齐日行情口径
+    "stock_limit": ("instrument_id", "trade_date", "knowledge_date"),
+    # #518/#523 日频资金面/筹码：全市场单日帧，kd=T+1
+    "moneyflow": ("instrument_id", "trade_date", "knowledge_date"),
+    "cyq_perf": ("instrument_id", "trade_date", "knowledge_date"),
+    # #520 北向：hk_hold 改制后北向仅季度末披露（申报节奏）；top10 每日 20 行
+    "hk_hold": ("instrument_id", "trade_date", "knowledge_date"),
+    "hsgt_top10": ("instrument_id", "trade_date", "market_type", "knowledge_date"),
+    # #519 事件型：reason/exalter+side 进主键（同标的同日多上榜原因/多席位）
+    "limit_list": ("instrument_id", "trade_date", "limit_type", "knowledge_date"),
+    "top_list": ("instrument_id", "trade_date", "reason", "knowledge_date"),
+    "top_inst": (
+        "instrument_id",
+        "trade_date",
+        "exalter",
+        "side",
+        "reason",
+        "knowledge_date",
+    ),
+    # #521 官方口径财务指标：披露键三元组（修订=新 ann_date 版本）
+    "fina_indicator": ("instrument_id", "report_date", "knowledge_date"),
+    # #522 ETF 份额逐日申报 / 持仓季度披露（holding_symbol 原码进主键）
+    "fund_share": ("instrument_id", "trade_date", "knowledge_date"),
+    "fund_portfolio": (
+        "instrument_id",
+        "report_date",
+        "holding_symbol",
+        "knowledge_date",
+    ),
     "etf_reference": ("instrument_id", "field", "observed_on"),
     "balance_sheet": (
         "instrument_id",
@@ -222,6 +251,17 @@ _PROVIDER_DATASETS: dict[str, tuple[str, ...]] = {
     "adj_factor": ("tushare:adj_factor",),
     "fund_adj": ("tushare:fund_adj",),
     "etf_nav": ("tushare:fund_nav",),
+    "stock_limit": ("tushare:stk_limit",),
+    "moneyflow": ("tushare:moneyflow",),
+    "cyq_perf": ("tushare:cyq_perf",),
+    "hk_hold": ("tushare:hk_hold",),
+    "hsgt_top10": ("tushare:hsgt_top10",),
+    "limit_list": ("tushare:limit_list_d",),
+    "top_list": ("tushare:top_list",),
+    "top_inst": ("tushare:top_inst",),
+    "fina_indicator": ("tushare:fina_indicator",),
+    "fund_share": ("tushare:fund_share",),
+    "fund_portfolio": ("tushare:fund_portfolio",),
     "etf_reference": ("config:etf_reference",),
     "balance_sheet": ("tushare:balancesheet",),
     "income_statement": ("tushare:income",),
@@ -240,9 +280,13 @@ _PROVIDER_DATASETS: dict[str, tuple[str, ...]] = {
         "fred:commodity_series",
         "tushare:commodity_reference",
     ),
-    "corporate_actions": ("tushare:corporate_actions",),
+    # #517：corporate_actions 组合纳入 rights（配股）
+    "corporate_actions": ("tushare:corporate_actions", "tushare:rights"),
     "index_weight": ("tushare:index_weight",),
-    "industry_classification": ("tushare:index_classify",),
+    "industry_classification": (
+        "tushare:index_classify",
+        "tushare:csrc_industrial",
+    ),
     "industry_mapping": ("tushare:index_member_all",),
     "namechange": ("tushare:namechange",),
     "st_history": ("tushare:namechange",),
@@ -266,6 +310,17 @@ _BOOTSTRAP_CHUNKS: dict[str, BootstrapChunk] = {
     "adj_factor": "month",
     "fund_adj": "month",
     "etf_nav": "month",
+    "stock_limit": "month",
+    "moneyflow": "month",
+    "cyq_perf": "month",
+    "hk_hold": "month",
+    "hsgt_top10": "month",
+    "limit_list": "month",
+    "top_list": "month",
+    "top_inst": "month",
+    "fina_indicator": "quarter",
+    "fund_share": "month",
+    "fund_portfolio": "quarter",
     "etf_reference": "source_defined",
     "balance_sheet": "quarter",
     "income_statement": "quarter",
@@ -312,6 +367,17 @@ _DATASET_DOMAINS: dict[str, str] = {
     "adj_factor": "market",
     "fund_adj": "market",
     "etf_nav": "market",
+    "stock_limit": "market",
+    "limit_list": "market",
+    "fund_share": "market",
+    "moneyflow": "capital",
+    "cyq_perf": "capital",
+    "hk_hold": "capital",
+    "hsgt_top10": "capital",
+    "top_list": "capital",
+    "top_inst": "capital",
+    "fina_indicator": "fundamental",
+    "fund_portfolio": "fundamental",
     "etf_reference": "metadata",
     "balance_sheet": "fundamental",
     "income_statement": "fundamental",
@@ -340,10 +406,28 @@ _STATIC_DATASETS = frozenset(
     {"stock_basic", "etf_basic", "index_basic", "futures_basic"}
 )
 _QUARTERLY_DATASETS = frozenset(
-    {"balance_sheet", "income_statement", "cash_flow", "pledge_ratio"}
+    {
+        "balance_sheet",
+        "income_statement",
+        "cash_flow",
+        "pledge_ratio",
+        "fina_indicator",
+        "fund_portfolio",
+    }
 )
+# 事件型：有事件才有行，勿套用日历期望（龙虎榜/涨跌停名单/北向披露节奏）
 _EVENT_DATASETS = frozenset(
-    {"dividend", "corporate_actions", "earnings_forecast", "earnings_express"}
+    {
+        "dividend",
+        "corporate_actions",
+        "earnings_forecast",
+        "earnings_express",
+        "limit_list",
+        "top_list",
+        "top_inst",
+        "hk_hold",
+        "hsgt_top10",
+    }
 )
 _MONTHLY_DATASETS = frozenset({"index_weight"})
 _SOURCE_DEFINED_DATASETS = frozenset(
@@ -372,6 +456,15 @@ _CNY_DATASETS = frozenset(
         "margin_trading",
         "pledge_ratio",
         "corporate_actions",
+        "stock_limit",
+        "moneyflow",
+        "cyq_perf",
+        "hsgt_top10",
+        "limit_list",
+        "top_list",
+        "top_inst",
+        "fina_indicator",
+        "fund_portfolio",
         "futures_daily",
         "earnings_forecast",
         "earnings_express",
@@ -386,6 +479,19 @@ _APPEND_ONLY_DATASETS = frozenset(
     {
         "adj_factor",
         "fund_adj",
+        # #517 涨跌停价格：追加观察行（价格由规则推导，源修订以新 kd 行呈现）
+        "stock_limit",
+        # #518-#523 增补：日频观察行 + 披露锚版本行，均追加不改写
+        "moneyflow",
+        "cyq_perf",
+        "hk_hold",
+        "hsgt_top10",
+        "limit_list",
+        "top_list",
+        "top_inst",
+        "fina_indicator",
+        "fund_share",
+        "fund_portfolio",
         "balance_sheet",
         "income_statement",
         "cash_flow",
@@ -477,6 +583,9 @@ def _partition_keys(dataset_id: str) -> tuple[str, ...]:
         # #434: 公告事件按公告日分区
         "earnings_forecast": ("ann_date",),
         "earnings_express": ("ann_date",),
+        # #521/#522: 披露锚数据集按知识日分区
+        "fina_indicator": ("knowledge_date",),
+        "fund_portfolio": ("knowledge_date",),
     }
     if dataset_id in overrides:
         return overrides[dataset_id]
@@ -489,6 +598,15 @@ def _partition_keys(dataset_id: str) -> tuple[str, ...]:
         "stock_status",
         "adj_factor",
         "fund_adj",
+        "stock_limit",
+        "moneyflow",
+        "cyq_perf",
+        "hk_hold",
+        "hsgt_top10",
+        "limit_list",
+        "top_list",
+        "top_inst",
+        "fund_share",
         "valuation_metrics",
         "margin_trading",
         "fx_daily",

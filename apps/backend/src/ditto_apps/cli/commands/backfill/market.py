@@ -20,6 +20,9 @@ _fund_adj_impl = create_backfill_command("fund_adj", "回补ETF/基金复权因�
 # status (股票状态)
 _stock_status_impl = create_backfill_command("stock_status", "回补股票状态")
 
+# limit (涨跌停价格, #517)
+_stock_limit_impl = create_backfill_command("stock_limit", "回补股票涨跌停价格")
+
 
 @app.command("stock")
 def stock(
@@ -77,3 +80,14 @@ def status(
 ) -> None:
     """回补股票状态."""
     return _stock_status_impl(ctx, start, end, parallel)
+
+
+@app.command("limit")
+def limit(
+    ctx: typer.Context,
+    start: str = typer.Option(..., "--start", "-s", help="开始日期 (YYYY-MM-DD)"),
+    end: str = typer.Option(..., "--end", "-e", help="结束日期 (YYYY-MM-DD)"),
+    parallel: int = typer.Option(1, "--parallel", "-p", help="并行度"),
+) -> None:
+    """回补股票涨跌停价格 (#517)."""
+    return _stock_limit_impl(ctx, start, end, parallel)

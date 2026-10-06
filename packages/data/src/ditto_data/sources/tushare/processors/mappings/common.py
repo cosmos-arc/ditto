@@ -93,10 +93,30 @@ ETF_NAV_MAPPING = ColumnMapping(
     ),
 )
 
+# #522 基金份额（fund_share）：ETF 逐日申报（OF 基金节奏不定），
+# fd_share 单位**万份**；market 为交易所（SH/SZ），kd=T+1
+FUND_SHARE_MAPPING = ColumnMapping(
+    rename={"ts_code": "source_ticker", "market": "exchange"},
+    date_columns={"trade_date": "%Y%m%d"},
+    float_columns=["fd_share"],
+    computed_columns={
+        "knowledge_date": pl.col("trade_date") + pl.duration(days=1),
+    },
+    output_columns=(
+        "source_ticker",
+        "trade_date",
+        "knowledge_date",
+        "fd_share",
+        "fund_type",
+        "exchange",
+    ),
+)
+
 __all__ = [
     "ADJ_FACTOR_MAPPING",
     "CALENDAR_MAPPING",
     "DAILY_OHLCV_MAPPING",
     "ETF_NAV_MAPPING",
     "FUND_ADJ_MAPPING",
+    "FUND_SHARE_MAPPING",
 ]

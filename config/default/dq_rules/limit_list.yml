@@ -1,0 +1,34 @@
+# 涨跌停/炸板名单 DQ 规则（#519 limit_list_d）
+# 单位（与 daily_basic.total_mv 万元不同！）：amount/limit_amount/fd_amount/
+# float_mv/total_mv 均元；turnover_ratio %；limit U=涨停 D=跌停 Z=炸板。
+# 事件型：有上榜才有行，勿套用日历完整性期望。
+dataset: limit_list
+description: "limit_list 数据质量检查规则"
+
+technical:
+  - rule: not_null
+    columns: [instrument_id, trade_date, limit_type, knowledge_date]
+    message: "必填字段不能为空"
+
+  - rule: unique
+    columns: [instrument_id, trade_date, limit_type, knowledge_date]
+    message: "主键 (instrument_id, trade_date, limit_type, knowledge_date) 重复"
+
+  - rule: foreign_key
+    column: instrument_id
+    reference: instrument.instrument_id
+    message: "Instrument ID 不存在于证券主表"
+
+  - rule: type_check
+    columns:
+      instrument_id: int
+      trade_date: date
+      knowledge_date: date
+      limit_type: string
+      close: float
+      amount: float
+      open_times: int
+    message: "字段类型不匹配"
+
+# 业务类: 业务规则（写入时警告但不阻断）
+business: []

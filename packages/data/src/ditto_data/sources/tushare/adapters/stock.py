@@ -15,6 +15,7 @@ from ditto_data.sources.tushare.processors.error_handler import (
 )
 from ditto_data.sources.tushare.processors.mappings import (
     ADJ_FACTOR_MAPPING,
+    LIMIT_LIST_MAPPING,
     STOCK_BASIC_MAPPING,
     STOCK_LIMIT_MAPPING,
 )
@@ -392,6 +393,72 @@ class StockTushareAdapter(BaseTushareAdapter):
             return TushareDataTransformer.transform(
                 response, "stock_limit", STOCK_LIMIT_MAPPING
             )
+
+    @traced("source.tushare.fetch_limit_list")
+    def fetch_limit_list(
+        self,
+        ts_code: str | None = None,
+        trade_date: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> pl.DataFrame:
+        """
+        获取涨跌停/炸板名单 (#519 limit_list_d，事件型).
+
+        Args:
+            ts_code: 股票代码 (e.g., "000001.SZ")
+            trade_date: 交易日期 (YYYYMMDD)
+            start_date: 开始日期 (YYYYMMDD)
+            end_date: 结束日期 (YYYYMMDD)
+
+        Returns:
+            DataFrame with columns:
+            - source_ticker: Source code
+            - trade_date: Date
+            - knowledge_date: Date (T+1)
+            - industry / name / close / pct_change
+            - amount / limit_amount / float_mv / total_mv (元)
+            - turnover_ratio (%) / fd_amount (元)
+            - first_time / last_time (HHMMSS 串)
+            - open_times (int) / up_stat / limit_times
+            - limit_type: U=涨停 D=跌停 Z=炸板
+
+        Raises:
+            SourceFetchError: If fetch fails.
+
+        """
+        logger.info(
+            "Fetching Tushare limit list",
+            event="tushare_limit_list_fetch_start",
+            ts_code=ts_code,
+            trade_date=trade_date,
+        )
+        with tushare_fetch_error_handler("limit_list", "limit_list_d"):
+            params: dict[str, str] = {
+                "api_name": "limit_list_d",
+                "fields": (
+                    "trade_date,ts_code,industry,name,close,pct_chg,amount,"
+                    "limit_amount,float_mv,total_mv,turnover_ratio,fd_amount,"
+                    "first_time,last_time,open_times,up_stat,limit_times,limit"
+                ),
+            }
+            if ts_code:
+                params["ts_code"] = ts_code
+            if trade_date:
+                params["trade_date"] = trade_date.replace("-", "")
+            if start_date:
+                params["start_date"] = start_date.replace("-", "")
+            if end_date:
+                params["end_date"] = end_date.replace("-", "")
+            response = self._client.query(**params)
+            result = TushareDataTransformer.transform(
+                response, "limit_list", LIMIT_LIST_MAPPING
+            )
+            Metrics.data_records.add(
+                len(result),
+                {"source": "tushare", "dataset": "limit_list", "status": "success"},
+            )
+            return result
 
     @traced("source.tushare.fetch_stock_status")
     def fetch_stock_status(self, trade_date: str) -> pl.DataFrame:

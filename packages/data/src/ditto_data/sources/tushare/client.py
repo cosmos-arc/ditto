@@ -150,7 +150,15 @@ class TushareClient:
         )
 
     def _get_api_group(self, api_name: str) -> TushareAPIGroup:
-        """根据 API 名称返回分组."""
+        """
+        根据 API 名称返回分组.
+
+        #518-#523 增补端点（moneyflow/cyq_perf/hk_hold/hsgt_top10/
+        limit_list_d/top_list/top_inst/fina_indicator/fund_share/
+        fund_portfolio）按官方口径归 SPECIAL（最严格档）：
+        - cyq_perf 是 15000 积分档特色数据（无总量限制、按分钟限频）；
+        - 其余端点官方文档均为单一限频档，未核实更宽配额前不放宽。
+        """
         if api_name in ["daily", "weekly", "monthly"]:
             return TushareAPIGroup.DAILY
         elif api_name.startswith("f_") or api_name.startswith("adj"):

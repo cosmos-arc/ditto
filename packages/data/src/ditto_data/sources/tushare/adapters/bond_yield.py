@@ -1,4 +1,10 @@
-"""Tushare bond yield curve adapter for Chinese government bonds."""
+"""
+Tushare bond yield curve adapter for Chinese government bonds.
+
+yc_cb 权限口径留档（#505/#517）：yc_cb 是与常规积分档位脱钩的独立权限接口
+（不属于 2000/5000/15000 积分阶梯），当前代理 transport 不可用；本 adapter
+仅保留接口形状与指标定义，不接入摄取计划。获取权限变化后须先实测再接线。
+"""
 
 from __future__ import annotations
 

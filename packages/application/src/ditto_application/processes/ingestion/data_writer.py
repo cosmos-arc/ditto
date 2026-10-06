@@ -261,6 +261,9 @@ class IngestionDataWriter:
         WriteKind.ADJ_FACTOR: "_handler_adj_factor",
         WriteKind.FUND_ADJ: "_handler_fund_adj",
         WriteKind.ETF_NAV: "_handler_etf_nav",
+        WriteKind.STOCK_LIMIT: "_handler_stock_limit",
+        WriteKind.LIMIT_LIST: "_handler_limit_list",
+        WriteKind.FUND_SHARE: "_handler_fund_share",
         WriteKind.INDEX_WEIGHT: "_handler_index_weight",
         WriteKind.FUNDAMENTAL: "_handler_fundamental",
         WriteKind.CAPITAL: "_handler_capital",
@@ -321,6 +324,16 @@ class IngestionDataWriter:
             ctx.dataset, ctx.df, ctx.year, ctx.on_duplicate, ctx.source_ticker_col
         )
 
+    def _handler_futures_bars(self, ctx: _WriteContext) -> Callable[[], WriteResult]:
+        return lambda: self._write_futures_bars(
+            ctx.dataset, ctx.df, ctx.year, ctx.on_duplicate
+        )
+
+    def _handler_futures_basic(self, ctx: _WriteContext) -> Callable[[], WriteResult]:
+        return lambda: self._write_futures_basic(
+            ctx.dataset, ctx.df, ctx.year, ctx.on_duplicate
+        )
+
     def _handler_fund_adj(self, ctx: _WriteContext) -> Callable[[], WriteResult]:
         return lambda: self._write_fund_adj(
             ctx.dataset, ctx.df, ctx.year, ctx.on_duplicate, ctx.source_ticker_col
@@ -331,19 +344,48 @@ class IngestionDataWriter:
             ctx.dataset, ctx.df, ctx.year, ctx.on_duplicate, ctx.source_ticker_col
         )
 
+    def _handler_stock_limit(self, ctx: _WriteContext) -> Callable[[], WriteResult]:
+        return lambda: self._write_stock_limit(
+            ctx.dataset, ctx.df, ctx.year, ctx.on_duplicate, ctx.source_ticker_col
+        )
+
+    def _handler_limit_list(self, ctx: _WriteContext) -> Callable[[], WriteResult]:
+        return lambda: self._write_limit_list(
+            ctx.dataset, ctx.df, ctx.year, ctx.on_duplicate, ctx.source_ticker_col
+        )
+
+    def _handler_fund_share(self, ctx: _WriteContext) -> Callable[[], WriteResult]:
+        return lambda: self._write_fund_share(
+            ctx.dataset, ctx.df, ctx.year, ctx.on_duplicate, ctx.source_ticker_col
+        )
+
     def _handler_index_weight(self, ctx: _WriteContext) -> Callable[[], WriteResult]:
         return lambda: self._write_index_weight(
             ctx.dataset, ctx.df, ctx.year, ctx.source_ticker_col
         )
 
+    def _handler_earnings_event(self, ctx: _WriteContext) -> Callable[[], WriteResult]:
+        return lambda: self._write_earnings_event(
+            ctx.dataset, ctx.dataset_enum, ctx.df, ctx.year, ctx.on_duplicate
+        )
+
+    def _handler_index_valuation(self, ctx: _WriteContext) -> Callable[[], WriteResult]:
+        return lambda: self._write_index_valuation(
+            ctx.dataset, ctx.df, ctx.year, ctx.on_duplicate, ctx.source_ticker_col
+        )
+
     def _handler_fundamental(self, ctx: _WriteContext) -> Callable[[], WriteResult]:
         return lambda: self._write_fundamental(
-            ctx.dataset, ctx.dataset_enum, ctx.df, ctx.year
+            ctx.dataset,
+            ctx.dataset_enum,
+            ctx.df,
+            ctx.year,
+            on_duplicate=ctx.on_duplicate,
         )
 
     def _handler_capital(self, ctx: _WriteContext) -> Callable[[], WriteResult]:
         return lambda: self._write_capital(
-            ctx.dataset, ctx.dataset_enum, ctx.df, ctx.year
+            ctx.dataset, ctx.dataset_enum, ctx.df, ctx.year, ctx.on_duplicate
         )
 
     def _handler_macro(self, ctx: _WriteContext) -> Callable[[], WriteResult]:
@@ -736,6 +778,93 @@ class IngestionDataWriter:
             on_duplicate=on_duplicate,
         )
 
+    def _write_futures_bars(
+        self,
+        dataset: str,
+        df: pl.DataFrame,
+        year: int,
+        on_duplicate: OnDuplicate,
+    ) -> WriteResult:
+        """Write futures bars keyed by provider contract code (no FK enrichment)."""
+        rows_written = self._market_write_service.save_futures_daily(
+            df=df,
+            year=year,
+            on_duplicate=on_duplicate,
+        )
+        return _to_write_result(
+            dataset, year, df, rows_written, on_duplicate=on_duplicate
+        )
+
+    def _write_futures_basic(
+        self,
+        dataset: str,
+        df: pl.DataFrame,
+        year: int,
+        on_duplicate: OnDuplicate,
+    ) -> WriteResult:
+        """Write the futures contract reference snapshot (knowledge-dated)."""
+        rows_written = self._market_write_service.save_futures_basic(
+            df=df,
+            year=year,
+            on_duplicate=on_duplicate,
+        )
+        return _to_write_result(
+            dataset, year, df, rows_written, on_duplicate=on_duplicate
+        )
+
+    def _write_earnings_event(
+        self,
+        dataset: str,
+        dataset_enum: Dataset,
+        df: pl.DataFrame,
+        year: int,
+        on_duplicate: OnDuplicate,
+    ) -> WriteResult:
+        """Write announcement-event rows keyed by provider ticker (no instrument FK)."""
+        save_methods = {
+            Dataset.EARNINGS_FORECAST: self._fundamental_store.save_earnings_forecast,
+            Dataset.EARNINGS_EXPRESS: self._fundamental_store.save_earnings_express,
+        }
+        try:
+            save_method = save_methods[dataset_enum]
+        except KeyError:
+            valid = ", ".join(str(member) for member in save_methods)
+            raise AppProcessError(
+                f"Unknown earnings dataset: {dataset}. Expected: {valid}",
+                field="dataset",
+                value=dataset,
+            ) from None
+        rows_written = save_method(df, year, on_duplicate=on_duplicate)
+        return _to_write_result(
+            dataset, year, df, rows_written, on_duplicate=on_duplicate
+        )
+
+    def _write_index_valuation(
+        self,
+        dataset: str,
+        df: pl.DataFrame,
+        year: int,
+        on_duplicate: OnDuplicate,
+        source_ticker_col: str,
+    ) -> WriteResult:
+        """Write index daily valuation rows (instrument FK enriched)."""
+        enriched_df = self._enrich_and_filter_fk_dataframe(
+            df,
+            dataset,
+            year,
+            source_ticker_col,
+        )
+        if enriched_df is None:
+            return _to_write_result(dataset, year, df, 0)
+        rows_written = self._capital_store.save_index_valuation(
+            enriched_df,
+            year,
+            on_duplicate=on_duplicate,
+        )
+        return _to_write_result(
+            dataset, year, enriched_df, rows_written, on_duplicate=on_duplicate
+        )
+
     def _write_fund_adj(
         self,
         dataset: str,
@@ -780,6 +909,84 @@ class IngestionDataWriter:
         if enriched_df is None:
             return _to_write_result(dataset, year, df, 0)
         rows_written = self._market_write_service.save_fund_nav(
+            df=enriched_df,
+            year=year,
+            on_duplicate=on_duplicate,
+        )
+        return _to_write_result(
+            dataset, year, enriched_df, rows_written, on_duplicate=on_duplicate
+        )
+
+    def _write_stock_limit(
+        self,
+        dataset: str,
+        df: pl.DataFrame,
+        year: int,
+        on_duplicate: OnDuplicate,
+        source_ticker_col: str,
+    ) -> WriteResult:
+        """Write up/down limit prices（元）through the stock-owned port（#517）."""
+        enriched_df = self._enrich_and_filter_fk_dataframe(
+            df,
+            dataset,
+            year,
+            source_ticker_col,
+        )
+        if enriched_df is None:
+            return _to_write_result(dataset, year, df, 0)
+        rows_written = self._market_write_service.save_stock_limit(
+            df=enriched_df,
+            year=year,
+            on_duplicate=on_duplicate,
+        )
+        return _to_write_result(
+            dataset, year, enriched_df, rows_written, on_duplicate=on_duplicate
+        )
+
+    def _write_limit_list(
+        self,
+        dataset: str,
+        df: pl.DataFrame,
+        year: int,
+        on_duplicate: OnDuplicate,
+        source_ticker_col: str,
+    ) -> WriteResult:
+        """Write limit-up/down list rows through the stock-owned port（#519）."""
+        enriched_df = self._enrich_and_filter_fk_dataframe(
+            df,
+            dataset,
+            year,
+            source_ticker_col,
+        )
+        if enriched_df is None:
+            return _to_write_result(dataset, year, df, 0)
+        rows_written = self._market_write_service.save_limit_list(
+            df=enriched_df,
+            year=year,
+            on_duplicate=on_duplicate,
+        )
+        return _to_write_result(
+            dataset, year, enriched_df, rows_written, on_duplicate=on_duplicate
+        )
+
+    def _write_fund_share(
+        self,
+        dataset: str,
+        df: pl.DataFrame,
+        year: int,
+        on_duplicate: OnDuplicate,
+        source_ticker_col: str,
+    ) -> WriteResult:
+        """Write fund share rows through the ETF-owned port（#522）."""
+        enriched_df = self._enrich_and_filter_fk_dataframe(
+            df,
+            dataset,
+            year,
+            source_ticker_col,
+        )
+        if enriched_df is None:
+            return _to_write_result(dataset, year, df, 0)
+        rows_written = self._market_write_service.save_fund_share(
             df=enriched_df,
             year=year,
             on_duplicate=on_duplicate,
@@ -930,6 +1137,7 @@ class IngestionDataWriter:
         dataset_enum: Dataset,
         df: pl.DataFrame,
         year: int,
+        on_duplicate: OnDuplicate = OnDuplicate.ERROR,
     ) -> WriteResult:
         enriched_df = self._enrich_and_filter_fk_dataframe(df, dataset, year)
         if enriched_df is None:
@@ -943,8 +1151,19 @@ class IngestionDataWriter:
             Dataset.DIVIDEND: self._fundamental_store.save_dividend,
             Dataset.CORPORATE_ACTIONS: self._fundamental_store.save_corporate_actions,
         }
-        save_method = save_methods[dataset_enum]
-        records_written = save_method(enriched_df)
+        # #521/#522：parquet 追加观察行，签名带 year/on_duplicate，分表分发
+        parquet_save_methods = {
+            Dataset.FINA_INDICATOR: self._fundamental_store.save_fina_indicator,
+            Dataset.FUND_PORTFOLIO: self._fundamental_store.save_fund_portfolio,
+        }
+        parquet_method = parquet_save_methods.get(dataset_enum)
+        if parquet_method is not None:
+            records_written = parquet_method(
+                enriched_df, year, on_duplicate=on_duplicate
+            )
+        else:
+            save_method = save_methods[dataset_enum]
+            records_written = save_method(enriched_df)
         return _to_write_result(
             dataset,
             year,
@@ -958,6 +1177,7 @@ class IngestionDataWriter:
         dataset_enum: Dataset,
         df: pl.DataFrame,
         year: int,
+        on_duplicate: OnDuplicate = OnDuplicate.ERROR,
     ) -> WriteResult:
         enriched_df = self._enrich_and_filter_fk_dataframe(df, dataset, year)
         if enriched_df is None:
@@ -968,6 +1188,12 @@ class IngestionDataWriter:
                 "valuation_metrics",
                 "margin_trading",
                 "pledge_ratio",
+                "moneyflow",
+                "cyq_perf",
+                "hk_hold",
+                "hsgt_top10",
+                "top_list",
+                "top_inst",
             ],
             dataset_enum.value,
         )
@@ -976,14 +1202,34 @@ class IngestionDataWriter:
             "margin_trading": self._capital_store.save_margin_trading,
             "pledge_ratio": self._capital_store.save_pledge_ratio,
         }
+        capital_parquet_methods = {
+            "moneyflow": self._capital_store.save_moneyflow,
+            "cyq_perf": self._capital_store.save_cyq_perf,
+            "hk_hold": self._capital_store.save_hk_hold,
+            "hsgt_top10": self._capital_store.save_hsgt_top10,
+            "top_list": self._capital_store.save_top_list,
+            "top_inst": self._capital_store.save_top_inst,
+        }
+        # #518-#523 parquet 日频资金面帧：签名带 year
+        parquet_method = capital_parquet_methods.get(capital_dataset)
+        if parquet_method is not None:
+            records_written = parquet_method(
+                enriched_df, year, on_duplicate=on_duplicate
+            )
+            return _to_write_result(
+                dataset,
+                year,
+                enriched_df,
+                records_written,
+            )
         save_method = capital_methods.get(capital_dataset)
         if save_method is None:
-            valid = ", ".join(capital_methods)
+            valid = ", ".join([*capital_methods, *capital_parquet_methods])
             raise AppProcessError(
                 f"Unknown capital_dataset: {capital_dataset}. Expected: {valid}",
                 field="dataset",
                 value=capital_dataset,
-                expected=tuple(capital_methods),
+                expected=(*capital_methods, *capital_parquet_methods),
             )
         records_written = save_method(enriched_df)
         return _to_write_result(

@@ -23,7 +23,17 @@ from ditto_data.sources.tushare._fundamental import (
     fetch_corporate_actions as _fetch_corporate_actions,
 )
 from ditto_data.sources.tushare._fundamental import (
+    fetch_disclosure_delta,
+    parse_iso,
+)
+from ditto_data.sources.tushare._fundamental import (
     fetch_dividend as _fetch_dividend,
+)
+from ditto_data.sources.tushare._fundamental import (
+    fetch_fina_indicator as _fetch_fina_indicator,
+)
+from ditto_data.sources.tushare._fundamental import (
+    fetch_fund_portfolio as _fetch_fund_portfolio,
 )
 from ditto_data.sources.tushare._fundamental import (
     fetch_income_statement as _fetch_income_statement,
@@ -307,6 +317,186 @@ def fetch_earnings_express(
     """Fetch earnings express reports (amounts in 元; #434)."""
     return fundamental.fetch_earnings_express(
         ann_date=ann_date,
+        source_ticker=source_ticker,
+        start_date=start_date,
+        end_date=end_date,
+    )
+
+
+def fetch_moneyflow(
+    capital: CapitalTushareAdapter,
+    *,
+    trade_date: str | None = None,
+    source_ticker: str | None = None,
+    start_date: str | None = None,
+    end_date: str | None = None,
+) -> pl.DataFrame:
+    """Fetch 个股资金流向（金额万元/量手，#518）."""
+    if trade_date and source_ticker:
+        raise ValueError("trade_date 和 source_ticker 互斥, 不能同时指定")
+    if not trade_date and not source_ticker:
+        raise ValueError("必须指定 trade_date 或 source_ticker 之一")
+    if trade_date:
+        return capital.fetch_moneyflow(trade_date=trade_date)
+    return capital.fetch_moneyflow(
+        ts_code=source_ticker,
+        start_date=start_date,
+        end_date=end_date,
+    )
+
+
+def fetch_cyq_perf(
+    capital: CapitalTushareAdapter,
+    *,
+    trade_date: str | None = None,
+    source_ticker: str | None = None,
+    start_date: str | None = None,
+    end_date: str | None = None,
+) -> pl.DataFrame:
+    """Fetch 每日筹码及胜率（#523）."""
+    if trade_date and source_ticker:
+        raise ValueError("trade_date 和 source_ticker 互斥, 不能同时指定")
+    if not trade_date and not source_ticker:
+        raise ValueError("必须指定 trade_date 或 source_ticker 之一")
+    if trade_date:
+        return capital.fetch_cyq_perf(trade_date=trade_date)
+    return capital.fetch_cyq_perf(
+        ts_code=source_ticker,
+        start_date=start_date,
+        end_date=end_date,
+    )
+
+
+def fetch_hk_hold(
+    capital: CapitalTushareAdapter,
+    *,
+    trade_date: str | None = None,
+    source_ticker: str | None = None,
+    start_date: str | None = None,
+    end_date: str | None = None,
+) -> pl.DataFrame:
+    """Fetch 沪深港通持股（#520）."""
+    if trade_date and source_ticker:
+        raise ValueError("trade_date 和 source_ticker 互斥, 不能同时指定")
+    if not trade_date and not source_ticker:
+        raise ValueError("必须指定 trade_date 或 source_ticker 之一")
+    if trade_date:
+        return capital.fetch_hk_hold(trade_date=trade_date)
+    return capital.fetch_hk_hold(
+        ts_code=source_ticker,
+        start_date=start_date,
+        end_date=end_date,
+    )
+
+
+def fetch_hsgt_top10(
+    capital: CapitalTushareAdapter,
+    *,
+    trade_date: str | None = None,
+    source_ticker: str | None = None,
+    start_date: str | None = None,
+    end_date: str | None = None,
+) -> pl.DataFrame:
+    """Fetch 沪深港通十大成交股（#520）."""
+    if trade_date and source_ticker:
+        raise ValueError("trade_date 和 source_ticker 互斥, 不能同时指定")
+    if not trade_date and not source_ticker:
+        raise ValueError("必须指定 trade_date 或 source_ticker 之一")
+    if trade_date:
+        return capital.fetch_hsgt_top10(trade_date=trade_date)
+    return capital.fetch_hsgt_top10(
+        ts_code=source_ticker,
+        start_date=start_date,
+        end_date=end_date,
+    )
+
+
+def fetch_top_list(
+    capital: CapitalTushareAdapter,
+    *,
+    trade_date: str | None = None,
+    source_ticker: str | None = None,
+    start_date: str | None = None,
+    end_date: str | None = None,
+) -> pl.DataFrame:
+    """Fetch 龙虎榜个股明细（#519）."""
+    if trade_date and source_ticker:
+        raise ValueError("trade_date 和 source_ticker 互斥, 不能同时指定")
+    if not trade_date and not source_ticker:
+        raise ValueError("必须指定 trade_date 或 source_ticker 之一")
+    if trade_date:
+        return capital.fetch_top_list(trade_date=trade_date)
+    return capital.fetch_top_list(
+        ts_code=source_ticker,
+        start_date=start_date,
+        end_date=end_date,
+    )
+
+
+def fetch_top_inst(
+    capital: CapitalTushareAdapter,
+    *,
+    trade_date: str | None = None,
+    source_ticker: str | None = None,
+    start_date: str | None = None,
+    end_date: str | None = None,
+) -> pl.DataFrame:
+    """Fetch 龙虎榜席位明细（#519）."""
+    if trade_date and source_ticker:
+        raise ValueError("trade_date 和 source_ticker 互斥, 不能同时指定")
+    if not trade_date and not source_ticker:
+        raise ValueError("必须指定 trade_date 或 source_ticker 之一")
+    if trade_date:
+        return capital.fetch_top_inst(trade_date=trade_date)
+    return capital.fetch_top_inst(
+        ts_code=source_ticker,
+        start_date=start_date,
+        end_date=end_date,
+    )
+
+
+def fetch_fina_indicator(
+    fundamental: FundamentalTushareAdapter,
+    *,
+    trade_date: str | None = None,
+    source_ticker: str | None = None,
+    start_date: str | None = None,
+    end_date: str | None = None,
+) -> pl.DataFrame:
+    """
+    Fetch official financial indicators（#521 披露增量语义）.
+
+    日更走 fina_indicator_vip 按 period 批量（代理 transport 非 VIP 端点
+    必填 ts_code，2026-10-06 实测）；按标的回填走非 VIP 端点。
+    """
+    if trade_date:
+        return fetch_disclosure_delta(
+            fundamental.fetch_fina_indicator_vip,
+            asof_date=parse_iso(trade_date),
+        )
+    return _fetch_fina_indicator(
+        fundamental,
+        to_compact_date,
+        trade_date=None,
+        source_ticker=source_ticker,
+        start_date=start_date,
+        end_date=end_date,
+    )
+
+
+def fetch_fund_portfolio(
+    fundamental: FundamentalTushareAdapter,
+    *,
+    trade_date: str | None = None,
+    source_ticker: str | None = None,
+    start_date: str | None = None,
+    end_date: str | None = None,
+) -> pl.DataFrame:
+    """Fetch fund quarterly holdings（#522 公告日驱动）."""
+    return _fetch_fund_portfolio(
+        fundamental,
+        to_compact_date,
+        trade_date=trade_date,
         source_ticker=source_ticker,
         start_date=start_date,
         end_date=end_date,

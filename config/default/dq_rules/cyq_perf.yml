@@ -1,0 +1,39 @@
+# 每日筹码及胜率 DQ 规则（#523，15000 档特色数据）
+# 单位：cost_*/his_*/weight_avg 元，winner_rate %（0-100）；his_low 可为 0
+# （源端标记，不得填值）。
+dataset: cyq_perf
+description: "cyq_perf 数据质量检查规则"
+
+technical:
+  - rule: not_null
+    columns: [instrument_id, trade_date, knowledge_date]
+    message: "必填字段不能为空"
+
+  - rule: unique
+    columns: [instrument_id, trade_date, knowledge_date]
+    message: "主键 (instrument_id, trade_date, knowledge_date) 重复"
+
+  - rule: foreign_key
+    column: instrument_id
+    reference: instrument.instrument_id
+    message: "Instrument ID 不存在于证券主表"
+
+  - rule: type_check
+    columns:
+      instrument_id: int
+      trade_date: date
+      knowledge_date: date
+      weight_avg: float
+      winner_rate: float
+    message: "字段类型不匹配"
+
+# 业务类: 业务规则（写入时警告但不阻断）
+business: []
+
+# 统计类: 批量统计检查（L3，交易日历完整性，#511 单标的维度）
+statistical:
+  - rule: completeness
+    expected_dates: trade_calendar
+    lookback_days: 5
+    group_by_instrument: true
+    message: "cyq_perf 交易日覆盖不完整"

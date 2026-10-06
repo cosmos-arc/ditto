@@ -57,6 +57,13 @@ class QualityCompletenessService:
                 end=request.trade_date,
                 allow_experimental_data=True,
             )
+        # 全市场日频参考帧共用 facade 专读分支（#517 stock_limit）
+        if request.dataset == "stock_limit":
+            return self._market.get_stock_limits(
+                start=request.trade_date,
+                end=request.trade_date,
+                allow_experimental_data=True,
+            )
         asset_class = _MARKET_BAR_ASSET_CLASS_BY_DATASET.get(request.dataset)
         if asset_class is None:
             raise AppProcessError(

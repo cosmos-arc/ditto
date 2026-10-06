@@ -52,7 +52,7 @@ def _recent_quarter_ends(
     return ends
 
 
-def _fetch_disclosure_delta(
+def fetch_disclosure_delta(
     vip_fetch: Callable[..., pl.DataFrame],
     *,
     asof_date: date,
@@ -96,14 +96,14 @@ def fetch_disclosure_range(
 
     报告期超集拉取后按披露锚过滤区间；与单日增量共用同一窗口语义。
     """
-    return _fetch_disclosure_delta(
+    return fetch_disclosure_delta(
         vip_fetch,
-        asof_date=_parse_iso(end_date),
-        start_date=_parse_iso(start_date),
+        asof_date=parse_iso(end_date),
+        start_date=parse_iso(start_date),
     )
 
 
-def _parse_iso(value: str) -> date:
+def parse_iso(value: str) -> date:
     return date.fromisoformat(value)
 
 
@@ -148,9 +148,9 @@ def _fetch_statement(
     """
     _require_statement_mode(trade_date=trade_date, source_ticker=source_ticker)
     if trade_date:
-        return _fetch_disclosure_delta(
+        return fetch_disclosure_delta(
             vip_fetch,
-            asof_date=_parse_iso(trade_date),
+            asof_date=parse_iso(trade_date),
         )
     source_ticker, start_date, end_date = _require_ticker_range(
         source_ticker=source_ticker,
@@ -302,3 +302,93 @@ def fetch_corporate_actions(
     return fundamental.fetch_corporate_actions(
         ann_date=compact_date,
     )
+
+
+def fetch_fina_indicator(
+    fundamental: FundamentalTushareAdapter,
+    to_compact_date: Callable[[str], str],
+    *,
+    trade_date: str | None = None,
+    source_ticker: str | None = None,
+    start_date: str | None = None,
+    end_date: str | None = None,
+) -> pl.DataFrame:
+    """
+    Fetch official financial indicators (#521, ann_date disclosure anchor).
+
+    与财务三表共用披露增量语义：近期报告期超集 + knowledge_date ≤ 截止日
+    过滤；修订以新 ann_date 版本追加，不做同披露键去重。
+    """
+    return _fetch_statement(
+        to_compact_date,
+        vip_fetch=fundamental.fetch_fina_indicator,
+        standard_fetch=fundamental.fetch_fina_indicator,
+        trade_date=trade_date,
+        source_ticker=source_ticker,
+        start_date=start_date,
+        end_date=end_date,
+    )
+
+
+def fetch_fund_portfolio(
+    fundamental: FundamentalTushareAdapter,
+    to_compact_date: Callable[[str], str],
+    *,
+    trade_date: str | None = None,
+    source_ticker: str | None = None,
+    start_date: str | None = None,
+    end_date: str | None = None,
+) -> pl.DataFrame:
+    """
+    Fetch fund quarterly holdings (#522, ann_date disclosure anchor).
+
+    三种模式：
+    - 日更（trade_date）：全市场按公告日抓取——仅用于官方直连等能承受
+      30 万+行翻页的 transport；
+    - 逐标的披露（trade_date + source_ticker）：ts_code+ann_date 单标的
+      单日（#522 代理 transport 全市场翻页会撞上限，日更走此模式）；
+    - 按基金回填（source_ticker + start/end）：区间内报告期逐期抓取。
+    """
+    if trade_date and source_ticker:
+        return fundamental.fetch_fund_portfolio(
+            ts_code=source_ticker,
+            ann_date=to_compact_date(trade_date),
+        )
+    if trade_date:
+        return fundamental.fetch_fund_portfolio(
+            ann_date=to_compact_date(trade_date),
+        )
+    if source_ticker is None:
+        raise ValueError(
+            "fund_portfolio fetch requires either trade_date or source_ticker"
+        )
+    if start_date is None or end_date is None:
+        raise ValueError(
+            "fund_portfolio instrument fetch requires start_date and end_date"
+        )
+    frames = [
+        fundamental.fetch_fund_portfolio(
+            ts_code=source_ticker,
+            period=period,
+        )
+        for period in _recent_quarter_ends(
+            end_date,
+            count=max_quarters_in_range(start_date, end_date),
+        )
+    ]
+    merged = pl.concat(frames, how="diagonal_relaxed") if frames else pl.DataFrame()
+    return _knowable_by_end(merged, end_date)
+
+
+def max_quarters_in_range(start_date: str, end_date: str) -> int:
+    """
+    报告期窗口大小：区间覆盖的季度数 + 2（两端边界季度）.
+
+    区间起点前的季末报告期可能仍在区间内晚披露（correctness review
+    #9：-s 2025-12-01 -e 2026-01-31 需覆盖 20250930 期的区间内更正），
+    两端各留一个边界季度。
+    """
+    start = date.fromisoformat(start_date)
+    end = date.fromisoformat(end_date)
+    quarters = (end.year - start.year) * 4 + (end.month - start.month) // 3
+    return max(quarters + 2, 2)

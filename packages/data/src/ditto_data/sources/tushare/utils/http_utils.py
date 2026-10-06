@@ -55,6 +55,9 @@ def validate_tushare_response(response_json: dict[str, object]) -> dict[str, obj
         raise SourceFetchError(
             message=error_msg,
             source="tushare",
+            # 结构化错误码随行（correctness review #7 / standards #2）：
+            # 调用方按码判别（如 rights 端点 50101 传输边界降级），不匹配消息文本。
+            details={"code": code},
         )
 
     # 检查 data 字段

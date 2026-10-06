@@ -63,3 +63,49 @@ def index_weight(
     with create_executor() as executor:
         result = executor.ingest_daily("index_weight", date, force)
         print_ingestion_result(result, ctx.obj["verbose"])
+
+
+# ── #518-#523 增补：资金面/席位/北向/筹码 ──
+
+app.command("moneyflow")(
+    create_instrument_command(
+        "moneyflow",
+        "摄取个股资金流向",
+        cli_path="ingest capital moneyflow",
+    )
+)
+app.command("cyq")(
+    create_instrument_command(
+        "cyq_perf",
+        "摄取每日筹码及胜率",
+        cli_path="ingest capital cyq",
+    )
+)
+app.command("hk-hold")(
+    create_instrument_command(
+        "hk_hold",
+        "摄取沪深港通持股(北向)",
+        cli_path="ingest capital hk-hold",
+    )
+)
+app.command("hsgt-top10")(
+    create_instrument_command(
+        "hsgt_top10",
+        "摄取沪深港通十大成交股",
+        cli_path="ingest capital hsgt-top10",
+    )
+)
+app.command("top-list")(
+    create_instrument_command(
+        "top_list",
+        "摄取龙虎榜个股明细",
+        cli_path="ingest capital top-list",
+    )
+)
+app.command("top-inst")(
+    create_instrument_command(
+        "top_inst",
+        "摄取龙虎榜席位明细",
+        cli_path="ingest capital top-inst",
+    )
+)

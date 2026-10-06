@@ -11,6 +11,7 @@ from typing import Literal
 
 import polars as pl
 from ditto_data.catalog import default_dataset_metadata
+from ditto_data.errors import SourceAuthenticationError
 from ditto_data.models import (
     FX_CODE_TO_INSTRUMENT_ID,
     GLOBAL_INDEX_CODES,
@@ -18,6 +19,7 @@ from ditto_data.models import (
     DateScheduleType,
 )
 from ditto_kernel.instrument import InstrumentIngestParams
+from ditto_platform.foundation import logger
 
 from ditto_application.exceptions import AppProcessError  # noqa: RUF100
 from ditto_application.processes.ingestion.types import SourceFetchers
@@ -48,6 +50,8 @@ class DailyFetchContext:
     source_name: str = "tushare"
     # 维护者确认的 ETF 参考事实声明读取（#408）；缺配置时 fail closed。
     fetch_etf_reference_config: Callable[[], pl.DataFrame] | None = None
+    # 注册表内 ETF universe（#522 fund_portfolio 按标的披露拉取用）
+    get_cached_etf_tickers: Callable[[], list[str]] | None = None
 
 
 @dataclass(frozen=True)
@@ -75,6 +79,10 @@ class WriteKind(StrEnum):
     ADJ_FACTOR = "adj_factor"
     FUND_ADJ = "fund_adj"
     ETF_NAV = "etf_nav"
+    STOCK_LIMIT = "stock_limit"
+    # #518-#523 增补路由
+    LIMIT_LIST = "limit_list"
+    FUND_SHARE = "fund_share"
     INDEX_WEIGHT = "index_weight"
     FUNDAMENTAL = "fundamental"
     CAPITAL = "capital"
@@ -367,6 +375,30 @@ def _earnings_instrument_fetch(
     return factory
 
 
+def _fund_portfolio_disclosure_fetch(ctx: DailyFetchContext) -> DailyFetchHandler:
+    """#522：按注册 ETF universe 逐标的拉当日披露（ts_code+ann_date）."""
+
+    def fetch() -> pl.DataFrame:
+        if ctx.get_cached_etf_tickers is None:
+            raise AppProcessError(
+                "fund_portfolio disclosure fetch requires the registered "
+                + "ETF universe; get_cached_etf_tickers is not configured"
+            )
+        fetcher = ctx.fetchers.fundamental
+        frames = [
+            frame
+            for ticker in ctx.get_cached_etf_tickers()
+            if not (
+                frame := fetcher.fetch_fund_portfolio(
+                    trade_date=ctx.trade_date, source_ticker=ticker
+                )
+            ).is_empty()
+        ]
+        return pl.concat(frames, how="diagonal_relaxed") if frames else pl.DataFrame()
+
+    return fetch
+
+
 def _history_fetch(group: str, method: str) -> DailyFetchFactory:
     """``ctx.fetchers.<group>.<method>()`` — 全量事件历史，不随 trade_date 推进。"""
 
@@ -378,13 +410,46 @@ def _history_fetch(group: str, method: str) -> DailyFetchFactory:
 
 
 def _industry_classification_fetch(ctx: DailyFetchContext) -> DailyFetchHandler:
+    """SW L1 + 证监会分类两源拼接（#517）；级别统一 L 前缀，观察日=当天."""
+
     def fetch() -> pl.DataFrame:
-        frame = ctx.fetchers.metadata.fetch_sw_industry(level=1)
-        return frame.rename({"source_ticker": "industry_id"}).with_columns(
-            pl.lit(date.today()).alias("knowledge_date"),
-            pl.lit("SW2021").alias("classification_version"),
-            pl.lit("sw").alias("source"),
+        sw = (
+            ctx.fetchers.metadata.fetch_sw_industry(level=1)
+            .rename({"source_ticker": "industry_id"})
+            .select(
+                pl.col("industry_id"),
+                pl.col("industry_name"),
+                pl.concat_str(
+                    pl.lit("L"), pl.col("industry_level").cast(pl.String)
+                ).alias("industry_level"),
+            )
+            .with_columns(
+                pl.lit(date.today()).alias("knowledge_date"),
+                pl.lit("SW2021").alias("classification_version"),
+                pl.lit("sw").alias("source"),
+            )
         )
+        # csrc_industrial 返回行业树（L1/L2），级别串已是 L 前缀、source=csrc。
+        # #517（2026-10-06 实测）：代理 transport 对该端点回 code=2002 权限拒
+        # （非本 token 问题——同期其余端点全部可用）。按传输能力边界降级：
+        # 仅保留 SW 快照并留痕，不阻塞分类摄取；其余错误照常抛出。
+        try:
+            csrc = ctx.fetchers.metadata.fetch_csrc_industry().select(
+                pl.col("industry_id"),
+                pl.col("industry_name"),
+                pl.col("industry_level").cast(pl.String),
+                pl.lit(date.today()).alias("knowledge_date"),
+                pl.lit("CSRC2012").alias("classification_version"),
+                pl.col("source"),
+            )
+        except SourceAuthenticationError:
+            logger.warning(
+                "csrc_industrial rejected by transport; "
+                + "industry_classification degraded to SW-only",
+                event="tushare_csrc_endpoint_unavailable",
+            )
+            return sw
+        return pl.concat([sw, csrc], how="vertical_relaxed")
 
     return fetch
 
@@ -554,6 +619,19 @@ _MARKET_REGISTRATIONS: tuple[DatasetRegistration, ...] = (
         write_kind=WriteKind.STOCK_STATUS,
         daily_fetch_factory=_daily_fetch("market", "fetch_stock_status"),
     ),
+    # #519 涨跌停/炸板名单（事件型）
+    DatasetRegistration(
+        dataset=Dataset.LIMIT_LIST,
+        write_kind=WriteKind.LIMIT_LIST,
+        daily_fetch_factory=_daily_fetch("market", "fetch_limit_list"),
+    ),
+    # #522 基金份额（ETF 逐日申报）
+    DatasetRegistration(
+        dataset=Dataset.FUND_SHARE,
+        write_kind=WriteKind.FUND_SHARE,
+        daily_fetch_factory=_daily_fetch("market", "fetch_fund_share"),
+        instrument_fetch_factory=_instrument_fetch("market", "fetch_fund_share"),
+    ),
 )
 
 _ADJ_FACTOR_REGISTRATIONS: tuple[DatasetRegistration, ...] = (
@@ -580,6 +658,12 @@ _ADJ_FACTOR_REGISTRATIONS: tuple[DatasetRegistration, ...] = (
         write_kind=WriteKind.ETF_NAV,
         daily_fetch_factory=_daily_fetch("market", "fetch_fund_nav"),
         instrument_fetch_factory=_instrument_fetch("market", "fetch_fund_nav"),
+    ),
+    # #517 涨跌停价格：stk_limit 单日全市场抓取
+    DatasetRegistration(
+        dataset=Dataset.STOCK_LIMIT,
+        write_kind=WriteKind.STOCK_LIMIT,
+        daily_fetch_factory=_daily_fetch("market", "fetch_stock_limit"),
     ),
 )
 
@@ -623,6 +707,27 @@ _FUNDAMENTAL_REGISTRATIONS: tuple[DatasetRegistration, ...] = (
         date_schedule=DateScheduleType.NATURAL_DAYS,
         daily_fetch_factory=_daily_fetch("fundamental", "fetch_corporate_actions"),
     ),
+    # #521 官方口径财务指标（披露增量，对齐三表）
+    DatasetRegistration(
+        dataset=Dataset.FINA_INDICATOR,
+        write_kind=WriteKind.FUNDAMENTAL,
+        daily_fetch_factory=_daily_fetch("fundamental", "fetch_fina_indicator"),
+        instrument_fetch_factory=_instrument_fetch(
+            "fundamental", "fetch_fina_indicator"
+        ),
+    ),
+    # #522 基金季度持仓：全市场单日 30 万+行会撞传输翻页上限（2026-10-06
+    # 实测 153 页后失败），日更按注册 ETF universe 逐标的披露拉取；
+    # 按基金回填走 instrument 路由（区间内报告期逐期）。
+    DatasetRegistration(
+        dataset=Dataset.FUND_PORTFOLIO,
+        write_kind=WriteKind.FUNDAMENTAL,
+        date_schedule=DateScheduleType.NATURAL_DAYS,
+        daily_fetch_factory=_fund_portfolio_disclosure_fetch,
+        instrument_fetch_factory=_earnings_instrument_fetch(
+            "fundamental", "fetch_fund_portfolio"
+        ),
+    ),
 )
 
 _CAPITAL_REGISTRATIONS: tuple[DatasetRegistration, ...] = (
@@ -647,6 +752,41 @@ _CAPITAL_REGISTRATIONS: tuple[DatasetRegistration, ...] = (
         write_kind=WriteKind.CAPITAL,
         daily_fetch_factory=_daily_fetch("capital", "fetch_pledge_ratio"),
         instrument_fetch_factory=_instrument_fetch("capital", "fetch_pledge_ratio"),
+    ),
+    # #518/#523 日频资金面/筹码（全市场单日 + 按标的回填）
+    DatasetRegistration(
+        dataset=Dataset.MONEYFLOW,
+        write_kind=WriteKind.CAPITAL,
+        daily_fetch_factory=_daily_fetch("capital", "fetch_moneyflow"),
+        instrument_fetch_factory=_instrument_fetch("capital", "fetch_moneyflow"),
+    ),
+    DatasetRegistration(
+        dataset=Dataset.CYQ_PERF,
+        write_kind=WriteKind.CAPITAL,
+        daily_fetch_factory=_daily_fetch("capital", "fetch_cyq_perf"),
+    ),
+    # #519 龙虎榜（事件型，无按标的回填路由）
+    DatasetRegistration(
+        dataset=Dataset.TOP_LIST,
+        write_kind=WriteKind.CAPITAL,
+        daily_fetch_factory=_daily_fetch("capital", "fetch_top_list"),
+    ),
+    DatasetRegistration(
+        dataset=Dataset.TOP_INST,
+        write_kind=WriteKind.CAPITAL,
+        daily_fetch_factory=_daily_fetch("capital", "fetch_top_inst"),
+    ),
+    # #520 北向两接口（hk_hold 改制后北向季度末节奏）
+    DatasetRegistration(
+        dataset=Dataset.HK_HOLD,
+        write_kind=WriteKind.CAPITAL,
+        daily_fetch_factory=_daily_fetch("capital", "fetch_hk_hold"),
+        instrument_fetch_factory=_instrument_fetch("capital", "fetch_hk_hold"),
+    ),
+    DatasetRegistration(
+        dataset=Dataset.HSGT_TOP10,
+        write_kind=WriteKind.CAPITAL,
+        daily_fetch_factory=_daily_fetch("capital", "fetch_hsgt_top10"),
     ),
 )
 

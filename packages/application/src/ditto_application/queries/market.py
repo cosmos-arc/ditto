@@ -251,6 +251,24 @@ class MarketQueryFacade:
             raise AppQueryError(msg)
         return self._service.get_adj_factors(start, end)
 
+    def get_stock_limits(
+        self,
+        *,
+        start: str,
+        end: str,
+        allow_experimental_data: bool = False,
+    ) -> pl.DataFrame:
+        """Query the persisted market-wide up/down limit prices（#517）."""
+        blocked = blocked_catalog_datasets(
+            ("stock_limit",),
+            allow_experimental_data=allow_experimental_data,
+        )
+        if blocked:
+            joined = ", ".join(blocked)
+            msg = f"stock-limit query requires experimental dataset maturity: {joined}"
+            raise AppQueryError(msg)
+        return self._service.get_stock_limits(start, end)
+
     def indicator_series(
         self,
         *,

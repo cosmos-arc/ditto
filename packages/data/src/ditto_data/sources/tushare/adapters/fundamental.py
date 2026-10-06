@@ -18,6 +18,8 @@ from ditto_data.sources.tushare.processors.mappings import (
     BALANCE_SHEET_MAPPING,
     CASH_FLOW_MAPPING,
     DIVIDEND_MAPPING,
+    FINA_INDICATOR_MAPPING,
+    FUND_PORTFOLIO_MAPPING,
     INCOME_STATEMENT_MAPPING,
 )
 from ditto_data.sources.tushare.processors.transformer import (
@@ -103,6 +105,55 @@ def _empty_with_schema(
     schema: dict[str, pl.DataType | type[pl.DataType]],
 ) -> pl.DataFrame:
     return pl.DataFrame(schema=schema)
+
+
+_FINA_PAGE_SIZE = 2000
+
+
+def _normalize_fina_numeric_columns(frame: pl.DataFrame) -> pl.DataFrame:
+    """
+    118 指标列统一 Float64（correctness review #4）.
+
+    透传列的 dtype 由响应推断（Int64/Float64/Null 随当日值漂移）；
+    不归一则日更全窗口重拉在 VERIFY_IDENTICAL 下因 dtype 漂移硬失败。
+    身份/日期列之外全部 cast Float64（strict 容忍偶发字符串）。
+    """
+    if frame.is_empty():
+        return frame
+    identity = {"source_ticker", "report_date", "knowledge_date"}
+    casts = [
+        pl.col(name).cast(pl.Float64, strict=False)
+        for name, dtype in frame.schema.items()
+        if name not in identity and dtype != pl.Float64
+    ]
+    return frame.with_columns(casts) if casts else frame
+
+
+def _dedupe_fina_disclosure_key(frame: pl.DataFrame) -> pl.DataFrame:
+    """
+    同披露键（标的, 报告期, 公告日）多版本行去重（#484 先例）.
+
+    fina_indicator 无 update_flag 身份列，同键多行是源端多版本发布；
+    全字段请求下行彼此可区分。挑选行时按整行哈希排序 keep-last——
+    同一行集合无论源端返回顺序如何都选出同一行（重试幂等，
+    correctness review #6）。
+    """
+    if frame.is_empty():
+        return frame
+    return (
+        frame.with_columns(_row_hash_expr(frame).alias("_dedupe_hash"))
+        .sort("_dedupe_hash")
+        .unique(
+            subset=["source_ticker", "report_date", "knowledge_date"],
+            keep="last",
+        )
+        .drop("_dedupe_hash")
+    )
+
+
+def _row_hash_expr(frame: pl.DataFrame) -> pl.Expr:
+    """整行确定性哈希（列序固定于调用时的 schema）."""
+    return pl.struct(pl.all()).hash()
 
 
 class FundamentalTushareAdapter(BaseTushareAdapter):
@@ -511,6 +562,163 @@ class FundamentalTushareAdapter(BaseTushareAdapter):
                 "end_date": end_date,
             },
         )
+
+    @traced("source.tushare.fetch_fina_indicator")
+    def fetch_fina_indicator(
+        self,
+        ts_code: str | None = None,
+        period: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> pl.DataFrame:
+        """
+        获取官方口径财务指标 (#521).
+
+        三表衍生指标的官方对照源：118 指标列透传（mapping 无 output_columns），
+        kd=ann_date（公告锚）。无 report_type/update_flag 列（2026-10-06 实测），
+        行身份 = (ts_code, end_date, ann_date)；跨公告日的修订以新 ann_date
+        版本呈现；**同披露键**（同 ts_code/end_date/ann_date）的字节级
+        重复行按确定性去重（见 _dedupe_fina_disclosure_key）。
+        单位：每股指标元/股、比率 %、绝对额元。
+
+        Args:
+            ts_code: 股票代码 (e.g., "600519.SH")
+            period: 报告期 (YYYYMMDD，如 "20240331")，全市场批量
+            start_date: 公告开始日期 (YYYYMMDD，配 ts_code)
+            end_date: 公告结束日期 (YYYYMMDD，配 ts_code)
+
+        """
+        # 全字段请求：只请求身份列会让同披露键的多版本行折叠成重复行，
+        # 触发翻页守卫拒绝（2026-10-06 实测 in-page 重复 875 行）；
+        # 全字段行彼此可区分，再到映射后按披露键去重 keep-last。
+        result = self._fetch_financial(
+            dataset="fina_indicator",
+            api_name="fina_indicator",
+            fields="",
+            mapping=FINA_INDICATOR_MAPPING,
+            log_name="fina indicator",
+            extra_params={
+                "ts_code": ts_code,
+                "period": period,
+                "start_date": start_date,
+                "end_date": end_date,
+            },
+            add_pit=False,
+        )
+        return _dedupe_fina_disclosure_key(_normalize_fina_numeric_columns(result))
+
+    @traced("source.tushare.fetch_fina_indicator_vip")
+    def fetch_fina_indicator_vip(
+        self,
+        period: str | None = None,
+        ann_date: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> pl.DataFrame:
+        """
+        获取官方口径财务指标——VIP 批量端点 (#521).
+
+        代理 transport 的非 VIP fina_indicator 必填 ts_code（2026-10-06
+        实测 code=「必填参数, 标的」），日更披露增量走本端点按 period
+        全市场批量（与 forecast/express 的 vip 形态一致）。
+        """
+        # 源端存在字节级重复行（2026-10-06 实测同 period 响应 in-page 重复
+        # 875+ 行，且与请求字段集无关）——自动翻页的重复守卫会拒收。fina
+        # 端点走调用方自管分页（单页语义），取尽后统一按披露键去重。
+        params: dict[str, str | None] = {
+            "period": period,
+            "ann_date": ann_date,
+            "start_date": start_date,
+            "end_date": end_date,
+        }
+        active = {k: v for k, v in params.items() if v}
+        with tushare_fetch_error_handler("fina_indicator", "fina_indicator_vip"):
+            pages: list[pl.DataFrame] = []
+            offset = 0
+            while True:
+                page = self._client.query(
+                    api_name="fina_indicator_vip",
+                    fields="",
+                    limit=_FINA_PAGE_SIZE,
+                    offset=offset,
+                    **active,
+                )
+                if page.height > 0:
+                    # 终页（总行数恰为页宽整数倍时）是 all-String 空 schema，
+                    # 进 concat 会把数值列拉成 String——空页丢弃。
+                    pages.append(page)
+                if page.height < _FINA_PAGE_SIZE:
+                    break
+                offset += _FINA_PAGE_SIZE
+            raw = pl.concat(pages, how="diagonal_relaxed") if pages else pl.DataFrame()
+            logger.info(
+                "Tushare fina indicator (VIP) fetched",
+                event="tushare_fina_indicator_fetch_complete",
+                row_count=raw.height,
+            )
+            Metrics.data_records.add(
+                raw.height,
+                {"source": "tushare", "dataset": "fina_indicator", "status": "success"},
+            )
+        result = TushareDataTransformer.transform(
+            raw, "fina_indicator", FINA_INDICATOR_MAPPING
+        )
+        return _dedupe_fina_disclosure_key(_normalize_fina_numeric_columns(result))
+
+    @traced("source.tushare.fetch_fund_portfolio")
+    def fetch_fund_portfolio(
+        self,
+        ts_code: str | None = None,
+        ann_date: str | None = None,
+        period: str | None = None,
+    ) -> pl.DataFrame:
+        """
+        获取基金持仓 (#522，公告日驱动).
+
+        季度持仓披露，修订以新 ann_date 行呈现（#452 观察事实语义）；
+        market_value 元、holding_shares 股、比率 %。响应含全部基金类型
+        （含 .OF 场外），未注册身份在写入层过滤留痕。
+
+        Args:
+            ts_code: 基金代码 (e.g., "510300.SH")
+            ann_date: 公告日期 (YYYYMMDD)，全市场按披露日抓取
+            period: 报告期 (YYYYMMDD)
+
+        """
+        logger.info(
+            "Fetching Tushare fund portfolio",
+            event="tushare_fund_portfolio_fetch_start",
+            ts_code=ts_code,
+            ann_date=ann_date,
+            period=period,
+        )
+        with tushare_fetch_error_handler("fund_portfolio", "fund_portfolio"):
+            params: dict[str, str] = {
+                "api_name": "fund_portfolio",
+                "fields": (
+                    "ts_code,ann_date,end_date,symbol,mkv,amount,"
+                    "stk_mkv_ratio,stk_float_ratio"
+                ),
+            }
+            if ts_code:
+                params["ts_code"] = ts_code
+            if ann_date:
+                params["ann_date"] = ann_date
+            if period:
+                params["period"] = period
+            response = self._client.query(**params)
+            result = TushareDataTransformer.transform(
+                response, "fund_portfolio", FUND_PORTFOLIO_MAPPING
+            )
+            Metrics.data_records.add(
+                len(result),
+                {
+                    "source": "tushare",
+                    "dataset": "fund_portfolio",
+                    "status": "success",
+                },
+            )
+            return result
 
     # ========== VIP API 方法（需要 5000+ 积分）==========
     # VIP API 可以按 period 或 ann_date 批量获取全部股票数据，无需 ts_code

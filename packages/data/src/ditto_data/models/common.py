@@ -112,6 +112,26 @@ class Dataset(StrEnum):
     EARNINGS_EXPRESS = "earnings_express"
     INDEX_VALUATION = "index_valuation"
 
+    # #517 涨跌停价格（stk_limit）
+    STOCK_LIMIT = "stock_limit"
+
+    # #518 个股资金流向
+    MONEYFLOW = "moneyflow"
+    # #519 涨跌停/炸板名单 + 龙虎榜
+    LIMIT_LIST = "limit_list"
+    TOP_LIST = "top_list"
+    TOP_INST = "top_inst"
+    # #520 北向两接口
+    HK_HOLD = "hk_hold"
+    HSGT_TOP10 = "hsgt_top10"
+    # #521 官方口径财务指标
+    FINA_INDICATOR = "fina_indicator"
+    # #522 基金份额/持仓
+    FUND_SHARE = "fund_share"
+    FUND_PORTFOLIO = "fund_portfolio"
+    # #523 每日筹码及胜率
+    CYQ_PERF = "cyq_perf"
+
     # 证券可信历史（#395：退市/名称/ST 历史写侧）
     NAME_CHANGE = "namechange"
     ST_HISTORY = "st_history"
@@ -130,10 +150,25 @@ class Dataset(StrEnum):
             Dataset.DIVIDEND,
             Dataset.MARGIN_TRADING,
             Dataset.PLEDGE_RATIO,
+            Dataset.STOCK_LIMIT,
+            Dataset.MONEYFLOW,
+            Dataset.CYQ_PERF,
+            Dataset.HK_HOLD,
+            Dataset.HSGT_TOP10,
+            Dataset.LIMIT_LIST,
+            Dataset.TOP_LIST,
+            Dataset.TOP_INST,
+            Dataset.FINA_INDICATOR,
         ):
             return AssetClass.STOCK
         # ETF 数据集
-        if self in (Dataset.ETF_DAILY, Dataset.FUND_ADJ, Dataset.ETF_NAV):
+        if self in (
+            Dataset.ETF_DAILY,
+            Dataset.FUND_ADJ,
+            Dataset.ETF_NAV,
+            Dataset.FUND_SHARE,
+            Dataset.FUND_PORTFOLIO,
+        ):
             return AssetClass.ETF
         # Index 数据集
         if self in (

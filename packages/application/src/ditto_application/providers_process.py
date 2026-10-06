@@ -143,6 +143,7 @@ from ditto_application.processes.research_dataset import ResearchDatasetBuildPro
 from ditto_application.processes.strategy.promotion import StrategyPromotionProcess
 from ditto_application.providers_builder import get_trading_calendar_range
 from ditto_application.queries.account import AccountBaselineQuery
+from ditto_application.queries.capital import CapitalQueryFacade
 from ditto_application.queries.historical_universe import HistoricalUniverseQuery
 from ditto_application.queries.market import MarketQueryFacade
 from ditto_application.queries.metadata import MetadataQueryFacade
@@ -551,6 +552,7 @@ class AppProcessProvider(Provider):
         market_facade: MarketQueryFacade,
         metadata_facade: MetadataQueryFacade,
         alert_manager: AlertManager,
+        capital_facade: CapitalQueryFacade,
     ) -> QualityPatrolService:
         """质量巡检服务."""
         return QualityPatrolService(
@@ -558,6 +560,7 @@ class AppProcessProvider(Provider):
             market_facade=market_facade,
             metadata_facade=metadata_facade,
             alert_manager=alert_manager,
+            capital_facade=capital_facade,
         )
 
     @provide

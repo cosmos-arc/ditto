@@ -7,6 +7,9 @@ fund_daily/fund_adj/fund_nav 的全市场响应会混入 LOF 等非 ETF 品种
 
 from __future__ import annotations
 
+from datetime import date
+from unittest.mock import MagicMock
+
 import polars as pl
 import pytest
 from ditto_data.errors.network import SourceFetchError
@@ -221,3 +224,39 @@ class TestFundNavUniverseIntersection:
                 start_date="2024-01-01",
                 end_date="2024-03-29",
             )
+
+
+@pytest.mark.unit
+class TestFundShareAdapter:
+    """#522 fund_share：fd_share 万份，market→exchange 重命名，kd=T+1."""
+
+    def test_fetch_fund_share_market_wide_day(self) -> None:
+        client = MagicMock()
+        client.query.return_value = pl.DataFrame(
+            {
+                "ts_code": ["551300.SH", "510300.SH"],
+                "trade_date": ["20260930", "20260930"],
+                "fd_share": [7040.75, 2411958.77],
+                "fund_type": ["ETF", "ETF"],
+                "market": ["SH", "SH"],
+            }
+        )
+        adapter = ETFTushareAdapter(_client=client)
+
+        frame = adapter.fetch_fund_share(trade_date="2026-09-30")
+
+        kwargs = client.query.call_args.kwargs
+        assert kwargs["api_name"] == "fund_share"
+        assert kwargs["trade_date"] == "20260930"
+        assert frame.columns == [
+            "source_ticker",
+            "trade_date",
+            "knowledge_date",
+            "fd_share",
+            "fund_type",
+            "exchange",
+        ]
+        rows = {r["source_ticker"]: r for r in frame.to_dicts()}
+        assert rows["510300.SH"]["fd_share"] == pytest.approx(2411958.77)
+        assert rows["510300.SH"]["exchange"] == "SH"
+        assert rows["510300.SH"]["knowledge_date"] == date(2026, 10, 1)

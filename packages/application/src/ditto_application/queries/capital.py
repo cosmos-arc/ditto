@@ -13,6 +13,8 @@ __all__ = ["CapitalDataPort", "CapitalQueryFacade"]
 
 _MARGIN_TRADING_DATASET = "margin_trading"
 _VALUATION_METRICS_DATASET = "valuation_metrics"
+_MONEYFLOW_DATASET = "moneyflow"
+_CYQ_PERF_DATASET = "cyq_perf"
 
 
 class CapitalDataPort(Protocol):
@@ -32,6 +34,14 @@ class CapitalDataPort(Protocol):
         as_of_date: date,
     ) -> pl.DataFrame:
         """查询估值指标数据."""
+        ...
+
+    def get_moneyflows(self, start: str, end: str) -> pl.DataFrame:
+        """查询全市场资金流向帧（L3 巡检）."""
+        ...
+
+    def get_cyq_perfs(self, start: str, end: str) -> pl.DataFrame:
+        """查询全市场每日筹码及胜率帧（L3 巡检）."""
         ...
 
 
@@ -73,6 +83,34 @@ class CapitalQueryFacade:
             allow_experimental_data=allow_experimental_data,
         )
         return self._service.get_margin_trading(instrument_id, as_of_date)
+
+    def get_moneyflows(
+        self,
+        *,
+        start: str,
+        end: str,
+        allow_experimental_data: bool = False,
+    ) -> pl.DataFrame:
+        """查询全市场资金流向帧（L3 巡检用，金额万元/量手）."""
+        self._assert_dataset_allowed(
+            _MONEYFLOW_DATASET,
+            allow_experimental_data=allow_experimental_data,
+        )
+        return self._service.get_moneyflows(start, end)
+
+    def get_cyq_perfs(
+        self,
+        *,
+        start: str,
+        end: str,
+        allow_experimental_data: bool = False,
+    ) -> pl.DataFrame:
+        """查询全市场每日筹码及胜率帧（L3 巡检用）."""
+        self._assert_dataset_allowed(
+            _CYQ_PERF_DATASET,
+            allow_experimental_data=allow_experimental_data,
+        )
+        return self._service.get_cyq_perfs(start, end)
 
     def get_valuation_metrics(
         self,

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dishka import Provider, Scope, provide
-from ditto_platform.foundation import ParquetStore, SQLiteClient
+from ditto_platform.foundation import FileLockManager, ParquetStore, SQLiteClient
 
 from ditto_data.config.data_store import DataStoreSettings
 from ditto_data.services.deps import FundamentalReaders, FundamentalWriters
@@ -28,6 +28,10 @@ from ditto_data.storage.fundamental.earnings.forecast import (
     EarningsForecastReader,
     EarningsForecastWriter,
 )
+from ditto_data.storage.fundamental.fina_indicator import (
+    FinaIndicatorReader,
+    FinaIndicatorWriter,
+)
 from ditto_data.storage.fundamental.financial.balance_sheet_reader import (
     BalanceSheetReader,
 )
@@ -45,6 +49,10 @@ from ditto_data.storage.fundamental.financial.income_statement_reader import (
 )
 from ditto_data.storage.fundamental.financial.income_statement_writer import (
     IncomeStatementWriter,
+)
+from ditto_data.storage.fundamental.fund_portfolio import (
+    FundPortfolioReader,
+    FundPortfolioWriter,
 )
 from ditto_data.storage.fundamental.specs import (
     BALANCE_SHEET_SPEC,
@@ -87,6 +95,8 @@ class FundamentalProvider(Provider):
             earnings_express=EarningsExpressReader(
                 _earnings_express_parquet_store(settings)
             ),
+            fina_indicator=FinaIndicatorReader(_fina_indicator_parquet_store(settings)),
+            fund_portfolio=FundPortfolioReader(_fund_portfolio_parquet_store(settings)),
         )
 
     @provide
@@ -114,6 +124,8 @@ class FundamentalProvider(Provider):
             earnings_express=EarningsExpressWriter(
                 _earnings_express_parquet_store(settings)
             ),
+            fina_indicator=FinaIndicatorWriter(_fina_indicator_parquet_store(settings)),
+            fund_portfolio=FundPortfolioWriter(_fund_portfolio_parquet_store(settings)),
         )
 
     @provide
@@ -121,11 +133,13 @@ class FundamentalProvider(Provider):
         self,
         read_ports: FundamentalReaders,
         write_ports: FundamentalWriters,
+        file_lock_manager: FileLockManager,
     ) -> FundamentalStore:
         """Fundamental domain unified service."""
         return FundamentalStore(
             read_ports=read_ports,
             write_ports=write_ports,
+            file_lock=file_lock_manager,
         )
 
 
@@ -153,4 +167,29 @@ def _earnings_express_parquet_store(settings: DataStoreSettings) -> ParquetStore
         key_columns=("source_ticker", "ann_date", "report_date", "knowledge_date"),
         date_column="ann_date",
         instrument_column="source_ticker",
+    )
+
+
+def _fina_indicator_parquet_store(settings: DataStoreSettings) -> ParquetStore:
+    """官方指标行以 (标的, 报告期, 公告日) 为自然键（修订=新公告日版本）."""
+    return ParquetStore(
+        settings.data_root,
+        key_columns=("instrument_id", "report_date", "knowledge_date"),
+        date_column="report_date",
+        instrument_column="instrument_id",
+    )
+
+
+def _fund_portfolio_parquet_store(settings: DataStoreSettings) -> ParquetStore:
+    """基金持仓行以 (基金, 报告期, 持仓代码, 公告日) 为自然键."""
+    return ParquetStore(
+        settings.data_root,
+        key_columns=(
+            "instrument_id",
+            "report_date",
+            "holding_symbol",
+            "knowledge_date",
+        ),
+        date_column="report_date",
+        instrument_column="instrument_id",
     )

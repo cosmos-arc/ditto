@@ -128,6 +128,11 @@ class CapitalIndexTushareAdapter(BaseTushareAdapter):
         只用于 industry.py 的申万路径，两者不得混用。官方同样不提供公告时刻，
         effective_from/effective_to 仅承载源端 in/out 边界，不得据此推导公告可知性。
 
+        #517 接线裁决留档：本 adapter 不接入摄取计划——当前指数成分/权重的
+        消费需求由 index_weight（月度权重观察，#452 语义）覆盖，index_member
+        的独立价值（成员进出区间）尚无消费者；为假想需求扩表违反最小设计，
+        出现真实消费场景（如按成员区间的 PIT 成分重建）时再接线并实测配额。
+
         Args:
             index_code: 指数代码 (e.g., "000001.SH")
             asof_date: 历史查询日期 (YYYY-MM-DD), None 表示最新

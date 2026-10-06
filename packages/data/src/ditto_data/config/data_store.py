@@ -65,6 +65,21 @@ class _MarketPaths:
         """ETF 净值路径."""
         return self._root / "market" / "etf" / "nav"
 
+    @property
+    def stock_limit(self) -> Path:
+        """涨跌停价格路径（#517）."""
+        return self._root / "market" / "stock" / "limit"
+
+    @property
+    def limit_list(self) -> Path:
+        """涨跌停/炸板名单路径（#519）."""
+        return self._root / "market" / "stock" / "limit_list"
+
+    @property
+    def fund_share(self) -> Path:
+        """基金份额路径（#522）."""
+        return self._root / "market" / "etf" / "fund_share"
+
     def directories(self) -> list[str]:
         """该子域下的所有相对目录."""
         return [
@@ -77,11 +92,14 @@ class _MarketPaths:
             "market/stock/adj",
             "market/etf/adj",
             "market/etf/nav",
+            "market/stock/limit",
+            "market/stock/limit_list",
+            "market/etf/fund_share",
         ]
 
 
 class _CapitalPaths:
-    """资金流路径组."""
+    """资金流路径组（#518-#523 数据集路径对齐真实接线）."""
 
     __slots__ = ("_root",)
 
@@ -89,38 +107,50 @@ class _CapitalPaths:
         self._root = root
 
     @property
-    def flow(self) -> Path:
-        """资金流路径."""
-        return self._root / "capital" / "flow"
-
-    @property
     def margin(self) -> Path:
         """融资融券路径."""
         return self._root / "capital" / "margin"
 
     @property
-    def top_board(self) -> Path:
-        """龙虎榜路径."""
-        return self._root / "capital" / "top_board"
+    def moneyflow(self) -> Path:
+        """个股资金流向路径（#518）."""
+        return self._root / "capital" / "moneyflow"
 
     @property
-    def limit_board(self) -> Path:
-        """涨跌停路径."""
-        return self._root / "capital" / "limit_board"
+    def cyq_perf(self) -> Path:
+        """每日筹码及胜率路径（#523）."""
+        return self._root / "capital" / "cyq_perf"
 
     @property
-    def chip(self) -> Path:
-        """筹码分布路径."""
-        return self._root / "capital" / "chip"
+    def top_list(self) -> Path:
+        """龙虎榜个股明细路径（#519）."""
+        return self._root / "capital" / "top_list"
+
+    @property
+    def top_inst(self) -> Path:
+        """龙虎榜席位明细路径（#519）."""
+        return self._root / "capital" / "top_inst"
+
+    @property
+    def hk_hold(self) -> Path:
+        """北向持股路径（#520）."""
+        return self._root / "capital" / "hk_hold"
+
+    @property
+    def hsgt_top10(self) -> Path:
+        """沪深港通十大成交股路径（#520）."""
+        return self._root / "capital" / "hsgt_top10"
 
     def directories(self) -> list[str]:
         """该子域下的所有相对目录."""
         return [
-            "capital/flow",
             "capital/margin",
-            "capital/top_board",
-            "capital/limit_board",
-            "capital/chip",
+            "capital/moneyflow",
+            "capital/cyq_perf",
+            "capital/top_list",
+            "capital/top_inst",
+            "capital/hk_hold",
+            "capital/hsgt_top10",
         ]
 
 
@@ -138,21 +168,21 @@ class _FundamentalPaths:
         return self._root / "fundamental" / "financial"
 
     @property
-    def indicator(self) -> Path:
-        """财务指标路径."""
-        return self._root / "fundamental" / "indicator"
+    def fina_indicator(self) -> Path:
+        """官方口径财务指标路径（#521）."""
+        return self._root / "fundamental" / "fina_indicator"
 
     @property
-    def holding(self) -> Path:
-        """持股数据路径."""
-        return self._root / "fundamental" / "holding"
+    def fund_portfolio(self) -> Path:
+        """基金季度持仓路径（#522）."""
+        return self._root / "fundamental" / "fund_portfolio"
 
     def directories(self) -> list[str]:
         """该子域下的所有相对目录."""
         return [
             "fundamental/financial",
-            "fundamental/indicator",
-            "fundamental/holding",
+            "fundamental/fina_indicator",
+            "fundamental/fund_portfolio",
         ]
 
 
@@ -217,7 +247,7 @@ class PathGroups:
 
         settings = DataStoreSettings(data_root=Path("/data"))
         settings.paths.market.stock_bars   # /data/market/stock/bars/daily
-        settings.paths.capital.flow        # /data/capital/flow
+        settings.paths.capital.moneyflow   # /data/capital/moneyflow
     """
 
     __slots__ = ("_capital", "_fundamental", "_macro", "_market", "_utility")

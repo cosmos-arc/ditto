@@ -234,6 +234,39 @@ class MarketService:
 
         return df
 
+    @traced("market.get_stock_limits")
+    def get_stock_limits(self, start: str, end: str) -> pl.DataFrame:
+        """
+        查询股票涨跌停价格（#517）.
+
+        供 L3 完整性巡检等上层组件使用；不传 instrument_ids，
+        返回日期范围内全部证券的涨跌停价格行。
+
+        Args:
+            start: 开始日期 (YYYY-MM-DD).
+            end: 结束日期 (YYYY-MM-DD).
+
+        Returns:
+            涨跌停价格 DataFrame，包含 instrument_id、trade_date、
+            knowledge_date、up_limit、down_limit 列。
+
+        """
+        reader = self._read_ports.stock_limit
+        if reader is None:
+            raise ValueError("stock_limit reader not configured")
+        logger.debug(
+            "Fetching stock limit prices",
+            event="market_stock_limits_get_start",
+            start=start,
+            end=end,
+        )
+        df = reader.read(start_date=start, end_date=end)
+        Metrics.data_records.add(
+            len(df),
+            {"dataset": "stock_limit", "operation": "get"},
+        )
+        return df
+
     @traced("market.get_etf_nav")
     def get_etf_nav(
         self,

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import polars as pl
+from ditto_kernel.exceptions import DittoError
 from ditto_platform.foundation import Metrics, logger, traced
 
 from ditto_data.sources.tushare.adapters.base import BaseTushareAdapter
@@ -38,6 +39,19 @@ def _empty_corporate_actions() -> pl.DataFrame:
             "description": pl.String,
         }
     )
+
+
+_RIGHTS_ENDPOINT_UNKNOWN_CODE = 50101  # 代理未开通端点：请指定正确的接口名
+
+
+def _exception_chain(error: BaseException) -> list[BaseException]:
+    """异常及其全部 __cause__ 链（tenacity RetryError 包装下取原始层）."""
+    chain = [error]
+    inner = getattr(error, "__cause__", None)
+    while inner is not None:
+        chain.append(inner)
+        inner = getattr(inner, "__cause__", None)
+    return chain
 
 
 def _date(name: str) -> pl.Expr:
@@ -100,14 +114,41 @@ def _normalized_share_float(value: pl.DataFrame) -> pl.DataFrame:
     )
 
 
+def _normalized_rights_issue(value: pl.DataFrame) -> pl.DataFrame:
+    """配股 → corporate_actions 行（#517：rights 接入公司行为组合）."""
+    if value.is_empty():
+        return _empty_corporate_actions()
+    knowledge_date = _date("ann_date")
+    # 行为日取除权日（真实生效锚），缺失回退股权登记日/公告日
+    action_date = pl.coalesce(_date("ex_date"), _date("reg_date"), _date("ann_date"))
+    return value.select(
+        pl.col("ts_code").cast(pl.String).alias("source_ticker"),
+        pl.lit("rights_issue").alias("action_type"),
+        action_date.alias("action_date"),
+        knowledge_date.alias("knowledge_date"),
+        knowledge_date.alias("effective_from"),
+        pl.lit(None, dtype=pl.Date).alias("effective_to"),
+        pl.concat_str(
+            pl.lit("rights_type="),
+            pl.col("rights_type").cast(pl.String).fill_null("unknown"),
+            pl.lit(";rights_price="),
+            pl.col("rights_price").cast(pl.String).fill_null("unknown"),
+            pl.lit(";rights_ratio="),
+            pl.col("rights_ratio").cast(pl.String).fill_null("unknown"),
+        ).alias("description"),
+    )
+
+
 def _normalized_corporate_actions(
     repurchase: pl.DataFrame,
     share_float: pl.DataFrame,
+    rights: pl.DataFrame,
 ) -> pl.DataFrame:
     normalized = pl.concat(
         (
             _normalized_repurchase(repurchase),
             _normalized_share_float(share_float),
+            _normalized_rights_issue(rights),
         )
     )
     if normalized.is_empty():
@@ -169,7 +210,7 @@ class CapitalCorporateTushareAdapter(BaseTushareAdapter):
 
         with tushare_fetch_error_handler(
             "corporate_actions",
-            "repurchase+share_float",
+            "repurchase+share_float+rights",
         ):
             common = {
                 key: value
@@ -194,7 +235,38 @@ class CapitalCorporateTushareAdapter(BaseTushareAdapter):
                 ),
                 **common,
             )
-            result = _normalized_corporate_actions(repurchase, share_float)
+            rights: pl.DataFrame
+            try:
+                rights = self._client.query(
+                    api_name="rights",
+                    fields=(
+                        "ts_code,rights_type,ann_date,reg_date,ex_date,"
+                        "rights_price,rights_ratio"
+                    ),
+                    **common,
+                )
+            except Exception as error:
+                # #517（2026-10-06 实测）：代理 transport 未开通 rights 端点
+                # （code=50101，tenacity 重试耗尽后以 RetryError 包装抛出）。
+                # 按传输能力边界降级：组合退回 repurchase+share_float 并留痕，
+                # 不阻塞既有公司行为摄取；判别用结构化错误码（cause 链上任何
+                # 一层 SourceFetchError.details.code==50101），不匹配消息文本；
+                # 其余错误（限流/网络/其他业务错）照常 fail-closed。
+                chain_codes: list[object] = [
+                    item.details["code"]
+                    for item in _exception_chain(error)
+                    if isinstance(item, DittoError) and "code" in item.details
+                ]
+                if _RIGHTS_ENDPOINT_UNKNOWN_CODE not in chain_codes:
+                    raise
+                logger.warning(
+                    "rights endpoint unavailable on this transport; "
+                    + "corporate_actions degraded to repurchase+share_float",
+                    event="tushare_rights_endpoint_unavailable",
+                    reason=str(error)[:120],
+                )
+                rights = pl.DataFrame()
+            result = _normalized_corporate_actions(repurchase, share_float, rights)
 
             row_count = len(result)
             logger.info(

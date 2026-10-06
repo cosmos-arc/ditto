@@ -8,6 +8,7 @@ from unittest.mock import MagicMock
 import polars as pl
 import pytest
 from ditto_application.processes.ingestion.fetch_handlers import (
+    DailyContextCallbacks,
     build_daily_fetch_handlers,
     build_instrument_fetch_handlers,
 )
@@ -44,10 +45,12 @@ def test_daily_handlers_are_built_from_registry(
     handlers = build_daily_fetch_handlers(
         fetchers,
         "2024-05-20",
-        fetch_commodity_daily=lambda trade_date: pl.DataFrame(
-            {"trade_date": [trade_date]}
+        DailyContextCallbacks(
+            fetch_commodity_daily=lambda trade_date: pl.DataFrame(
+                {"trade_date": [trade_date]}
+            ),
+            get_cached_index_codes=lambda: ["000300.SH"],
         ),
-        get_cached_index_codes=lambda: ["000300.SH"],
     )
 
     result = handlers[Dataset.CALENDAR]()
@@ -110,8 +113,10 @@ def test_macro_handler_fetches_the_certified_china_batch(
     handlers = build_daily_fetch_handlers(
         fetchers,
         "2026-09-01",
-        fetch_commodity_daily=lambda _trade_date: pl.DataFrame(),
-        get_cached_index_codes=lambda: [],
+        DailyContextCallbacks(
+            fetch_commodity_daily=lambda _trade_date: pl.DataFrame(),
+            get_cached_index_codes=lambda: [],
+        ),
     )
 
     handlers[Dataset.MACRO_INDICATORS]()
@@ -142,8 +147,10 @@ def test_macro_handler_preserves_non_tushare_provider_contract(
     handlers = build_daily_fetch_handlers(
         fetchers,
         "2026-09-01",
-        fetch_commodity_daily=lambda _trade_date: pl.DataFrame(),
-        get_cached_index_codes=lambda: [],
+        DailyContextCallbacks(
+            fetch_commodity_daily=lambda _trade_date: pl.DataFrame(),
+            get_cached_index_codes=lambda: [],
+        ),
         source_name="fred",
     )
 
@@ -162,8 +169,10 @@ def test_industry_mapping_handler_binds_partition_asof_and_retrieval_date(
     handlers = build_daily_fetch_handlers(
         fetchers,
         "2024-03-29",
-        fetch_commodity_daily=lambda _trade_date: pl.DataFrame(),
-        get_cached_index_codes=lambda: [],
+        DailyContextCallbacks(
+            fetch_commodity_daily=lambda _trade_date: pl.DataFrame(),
+            get_cached_index_codes=lambda: [],
+        ),
     )
 
     handlers[Dataset.INDUSTRY_MAPPING]()
@@ -173,3 +182,86 @@ def test_industry_mapping_handler_binds_partition_asof_and_retrieval_date(
         level=1,
         knowledge_date=date.today(),
     )
+
+
+@pytest.mark.unit
+def test_industry_classification_handler_concats_sw_and_csrc(
+    fetchers: SourceFetchers,
+) -> None:
+    """#517：分类快照 = 申万 L1 + 证监会两源拼接，级别统一 L 前缀。"""
+    fetchers.metadata.fetch_sw_industry.return_value = pl.DataFrame(
+        {
+            "source_ticker": ["801010.SI"],
+            "industry_name": ["农林牧渔"],
+            "level": [1],
+            "industry_level": [1],
+        }
+    )
+    fetchers.metadata.fetch_csrc_industry.return_value = pl.DataFrame(
+        {
+            "industry_id": ["C39"],
+            "industry_name": ["计算机、通信和其他电子设备制造业"],
+            "industry_level": ["L2"],
+            "source": ["csrc"],
+        }
+    )
+    handlers = build_daily_fetch_handlers(
+        fetchers,
+        "2026-09-01",
+        DailyContextCallbacks(
+            fetch_commodity_daily=lambda _trade_date: pl.DataFrame(),
+            get_cached_index_codes=lambda: [],
+        ),
+    )
+
+    frame = handlers[Dataset.INDUSTRY_CLASSIFICATION]()
+
+    assert frame.columns == [
+        "industry_id",
+        "industry_name",
+        "industry_level",
+        "knowledge_date",
+        "classification_version",
+        "source",
+    ]
+    rows = frame.sort("industry_id").to_dicts()
+    assert [row["industry_id"] for row in rows] == ["801010.SI", "C39"]
+    assert [row["industry_level"] for row in rows] == ["L1", "L2"]
+    assert [row["source"] for row in rows] == ["sw", "csrc"]
+    assert [row["classification_version"] for row in rows] == [
+        "SW2021",
+        "CSRC2012",
+    ]
+
+
+@pytest.mark.unit
+def test_industry_classification_degrades_to_sw_on_csrc_auth_reject(
+    fetchers: SourceFetchers,
+) -> None:
+    """#517：csrc 端点被 transport 权限拒（2002）时降级 SW-only 留痕."""
+    from ditto_data.errors import SourceAuthenticationError
+
+    fetchers.metadata.fetch_sw_industry.return_value = pl.DataFrame(
+        {
+            "source_ticker": ["801010.SI"],
+            "industry_name": ["农林牧渔"],
+            "level": [1],
+            "industry_level": [1],
+        }
+    )
+    fetchers.metadata.fetch_csrc_industry.side_effect = SourceAuthenticationError(
+        message="token不对", source="tushare"
+    )
+    handlers = build_daily_fetch_handlers(
+        fetchers,
+        "2026-09-01",
+        DailyContextCallbacks(
+            fetch_commodity_daily=lambda _trade_date: pl.DataFrame(),
+            get_cached_index_codes=lambda: [],
+        ),
+    )
+
+    frame = handlers[Dataset.INDUSTRY_CLASSIFICATION]()
+
+    assert frame.height == 1
+    assert frame.row(0, named=True)["source"] == "sw"

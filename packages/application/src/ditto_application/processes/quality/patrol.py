@@ -17,6 +17,7 @@ from ditto_platform.services import AlertManager, NotificationLevel
 
 from ditto_application.processes.quality.batch_policy import QualityAssetClass
 from ditto_application.processes.quality.types import L3CheckResult
+from ditto_application.queries.capital import CapitalQueryFacade
 from ditto_application.queries.market import MarketQueryFacade
 from ditto_application.queries.metadata import MetadataQueryFacade
 
@@ -30,7 +31,19 @@ _MARKET_BAR_L3_DATASETS = frozenset(
         "commodity_daily",
     }
 )
-_FACTOR_L3_DATASETS = frozenset({"adj_factor"})
+# 全市场日频参考帧（非 bars）：L3 统计检查按 facade 专读方法取数；
+# 数据集 → MarketQueryFacade 方法名（#517 起 stock_limit 加入）
+_FACTOR_L3_READERS: dict[str, str] = {
+    "adj_factor": "get_adj_factors",
+    "stock_limit": "get_stock_limits",
+}
+_FACTOR_L3_DATASETS = frozenset(_FACTOR_L3_READERS)
+# #518/#523：capital 域日频资金面帧走 CapitalQueryFacade（域读取器分离）
+_CAPITAL_L3_READERS: dict[str, str] = {
+    "moneyflow": "get_moneyflows",
+    "cyq_perf": "get_cyq_perfs",
+}
+_CAPITAL_L3_DATASETS = frozenset(_CAPITAL_L3_READERS)
 
 
 class QualityPatrolService:
@@ -47,6 +60,7 @@ class QualityPatrolService:
         market_facade: MarketQueryFacade,
         metadata_facade: MetadataQueryFacade,
         alert_manager: AlertManager | None = None,
+        capital_facade: CapitalQueryFacade | None = None,
     ) -> None:
         """
         初始化质量巡检服务.
@@ -56,12 +70,15 @@ class QualityPatrolService:
             market_facade: 行情查询 facade，用于数据访问
             metadata_facade: 元数据查询 facade，用于数据访问
             alert_manager: 告警管理器，可选。未配置时退化为日志告警。
+            capital_facade: capital 域查询 facade，可选。缺省时 moneyflow/
+                cyq_perf 的 L3 检查显式失败（不静默跳过）。
 
         """
         self._engine = engine
         self._market_facade = market_facade
         self._metadata_facade = metadata_facade
         self._alert_manager = alert_manager
+        self._capital_facade = capital_facade
 
     def check_dataset(
         self,
@@ -98,7 +115,17 @@ class QualityPatrolService:
                 issue_count=0,
                 applicable=False,
             )
-        if dataset not in _MARKET_BAR_L3_DATASETS | _FACTOR_L3_DATASETS:
+        if dataset in _CAPITAL_L3_DATASETS and self._capital_facade is None:
+            return L3CheckResult(
+                dataset=dataset,
+                trade_date=trade_date,
+                passed=False,
+                issue_count=0,
+                error="L3_CAPITAL_FACADE_UNAVAILABLE",
+            )
+        if dataset not in (
+            _MARKET_BAR_L3_DATASETS | _FACTOR_L3_DATASETS | _CAPITAL_L3_DATASETS
+        ):
             return L3CheckResult(
                 dataset=dataset,
                 trade_date=trade_date,
@@ -235,12 +262,32 @@ class QualityPatrolService:
         start_date = start_dt.strftime("%Y-%m-%d")
 
         if dataset in _FACTOR_L3_DATASETS:
-            historical = self._market_facade.get_adj_factors(
+            reader = getattr(self._market_facade, _FACTOR_L3_READERS[dataset])
+            historical = reader(
                 start=start_date,
                 end=trade_date,
                 allow_experimental_data=True,
             )
-            current = self._market_facade.get_adj_factors(
+            current = reader(
+                start=trade_date,
+                end=trade_date,
+                allow_experimental_data=True,
+            )
+            return historical, current
+
+        if dataset in _CAPITAL_L3_DATASETS:
+            if self._capital_facade is None:
+                # check_dataset 已在入口拦截；此处防御重复判定
+                raise ValueError(
+                    f"capital L3 reader requires capital_facade; dataset={dataset}"
+                )
+            reader = getattr(self._capital_facade, _CAPITAL_L3_READERS[dataset])
+            historical = reader(
+                start=start_date,
+                end=trade_date,
+                allow_experimental_data=True,
+            )
+            current = reader(
                 start=trade_date,
                 end=trade_date,
                 allow_experimental_data=True,

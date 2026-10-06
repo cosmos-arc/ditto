@@ -14,6 +14,10 @@ from ditto_data.storage.market.commodity.bars import (
 from ditto_data.storage.market.etf.adj.adj_factor_reader import EtfAdjFactorReader
 from ditto_data.storage.market.etf.adj.adj_factor_writer import EtfAdjFactorWriter
 from ditto_data.storage.market.etf.bars import EtfBarsReader, EtfBarsWriter
+from ditto_data.storage.market.etf.fund_share import (
+    FundShareReader,
+    FundShareWriter,
+)
 from ditto_data.storage.market.etf.nav.nav_reader import EtfNavReader
 from ditto_data.storage.market.etf.nav.nav_writer import EtfNavWriter
 from ditto_data.storage.market.etf.status import EtfStatusReader, EtfStatusWriter
@@ -43,6 +47,14 @@ from ditto_data.storage.market.stock.adj import (
     StockAdjFactorWriter,
 )
 from ditto_data.storage.market.stock.bars import StockBarsReader, StockBarsWriter
+from ditto_data.storage.market.stock.limit import (
+    StockLimitReader,
+    StockLimitWriter,
+)
+from ditto_data.storage.market.stock.limit_list import (
+    LimitListReader,
+    LimitListWriter,
+)
 from ditto_data.storage.market.stock.status import (
     StockStatusReader,
     StockStatusWriter,
@@ -54,6 +66,11 @@ __all__ = ["MarketProvider"]
 MARKET_KEY_COLUMNS = ("instrument_id", "trade_date")
 MARKET_DATE_COLUMN = "trade_date"
 MARKET_INSTRUMENT_COLUMN = "instrument_id"
+
+# #517 stock_limit：spec 主键含 knowledge_date（修订以新 kd 行呈现），
+# 不能复用 (instrument_id, trade_date) 共享 store——读侧 unique 会折叠
+# 多 kd 观察行（correctness review #2）。
+STOCK_LIMIT_KEY_COLUMNS = ("instrument_id", "trade_date", "knowledge_date")
 
 
 class MarketProvider(Provider):
@@ -81,6 +98,7 @@ class MarketProvider(Provider):
             instrument=instrument_reader,
             etf_adj=EtfAdjFactorReader(store),
             etf_nav=EtfNavReader(store),
+            stock_limit=StockLimitReader(_stock_limit_parquet_store(settings)),
             index_bars=IndexBarsReader(store),
             global_index_bars=GlobalIndexBarsReader(global_store),
             index_constituent=IndexConstituentReader(data_root=settings.data_root),
@@ -88,6 +106,8 @@ class MarketProvider(Provider):
             commodity_bars=CommodityBarsReader(store),
             futures_daily=FuturesDailyReader(futures_store),
             futures_basic=FuturesBasicReader(futures_basic_store),
+            limit_list=LimitListReader(_limit_list_parquet_store(settings)),
+            fund_share=FundShareReader(_fund_share_parquet_store(settings)),
         )
 
     @provide
@@ -108,6 +128,7 @@ class MarketProvider(Provider):
             etf_status=EtfStatusWriter(store),
             etf_adj=EtfAdjFactorWriter(store),
             etf_nav=EtfNavWriter(store),
+            stock_limit=StockLimitWriter(_stock_limit_parquet_store(settings)),
             index_bars=IndexBarsWriter(store),
             global_index_bars=GlobalIndexBarsWriter(global_store),
             index_constituent=IndexConstituentWriter(data_root=settings.data_root),
@@ -115,6 +136,8 @@ class MarketProvider(Provider):
             commodity_bars=CommodityBarsWriter(store),
             futures_daily=FuturesDailyWriter(futures_store),
             futures_basic=FuturesBasicWriter(futures_basic_store),
+            limit_list=LimitListWriter(_limit_list_parquet_store(settings)),
+            fund_share=FundShareWriter(_fund_share_parquet_store(settings)),
         )
 
     @provide
@@ -169,4 +192,34 @@ def _futures_basic_parquet_store(settings: DataStoreSettings) -> ParquetStore:
         key_columns=("source", "source_ticker", "knowledge_date"),
         date_column="knowledge_date",
         instrument_column="source_ticker",
+    )
+
+
+def _stock_limit_parquet_store(settings: DataStoreSettings) -> ParquetStore:
+    """涨跌停价格按 (instrument_id, trade_date, knowledge_date) 幂等."""
+    return ParquetStore(
+        settings.data_root,
+        key_columns=STOCK_LIMIT_KEY_COLUMNS,
+        date_column="trade_date",
+        instrument_column="instrument_id",
+    )
+
+
+def _limit_list_parquet_store(settings: DataStoreSettings) -> ParquetStore:
+    """涨跌停名单行以 (标的, 交易日, 类型, kd) 为自然键（事件型）."""
+    return ParquetStore(
+        settings.data_root,
+        key_columns=("instrument_id", "trade_date", "limit_type", "knowledge_date"),
+        date_column="trade_date",
+        instrument_column="instrument_id",
+    )
+
+
+def _fund_share_parquet_store(settings: DataStoreSettings) -> ParquetStore:
+    """基金份额行以 (标的, 交易日, kd) 为自然键（万份）."""
+    return ParquetStore(
+        settings.data_root,
+        key_columns=("instrument_id", "trade_date", "knowledge_date"),
+        date_column="trade_date",
+        instrument_column="instrument_id",
     )

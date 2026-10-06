@@ -66,3 +66,20 @@ def corporate_actions(
 ) -> None:
     """摄取公司行为."""
     return _corporate_actions_impl(ctx, date, force)
+
+
+# ── #521/#522 增补：官方财务指标/基金持仓 ──
+app.command("fina-indicator")(
+    create_instrument_command(
+        "fina_indicator",
+        "摄取官方口径财务指标",
+        cli_path="ingest fundamental fina-indicator",
+    )
+)
+app.command("portfolio")(
+    create_instrument_command(
+        "fund_portfolio",
+        "摄取基金季度持仓",
+        cli_path="ingest fundamental portfolio",
+    )
+)

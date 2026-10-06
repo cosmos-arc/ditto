@@ -1,0 +1,33 @@
+# 沪深港通十大成交股 DQ 规则（#520）
+# 单位：amount/buy/sell/net_amount 元；2024-08-19 改制后 buy/sell/
+# net_amount 官方停披（null 保留，不得填零）。market_type 1=沪股通
+# 3=深股通 4/5=港股通。事件型（每日 20 行），勿套用 universe 完整性。
+dataset: hsgt_top10
+description: "hsgt_top10 数据质量检查规则"
+
+technical:
+  - rule: not_null
+    columns: [instrument_id, trade_date, market_type, knowledge_date]
+    message: "必填字段不能为空"
+
+  - rule: unique
+    columns: [instrument_id, trade_date, market_type, knowledge_date]
+    message: "主键 (instrument_id, trade_date, market_type, knowledge_date) 重复"
+
+  - rule: foreign_key
+    column: instrument_id
+    reference: instrument.instrument_id
+    message: "Instrument ID 不存在于证券主表"
+
+  - rule: type_check
+    columns:
+      instrument_id: int
+      trade_date: date
+      knowledge_date: date
+      market_type: string
+      rank: int
+      amount: float
+    message: "字段类型不匹配"
+
+# 业务类: 业务规则（写入时警告但不阻断）
+business: []

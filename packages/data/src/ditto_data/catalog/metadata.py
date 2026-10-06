@@ -121,6 +121,12 @@ _MARKET_DOMAINS: frozenset[str] = frozenset(
         "adj_factor",
         "fund_adj",
         "etf_nav",
+        # #517 涨跌停价格
+        "stock_limit",
+        # #519 涨跌停/炸板名单（事件型）
+        "limit_list",
+        # #522 基金份额（ETF 逐日申报）
+        "fund_share",
         "st_history",
         "futures_daily",
         "futures_basic",
@@ -135,6 +141,13 @@ _CAPITAL_DOMAINS: frozenset[str] = frozenset(
         "pledge_ratio",
         "corporate_actions",
         "index_valuation",
+        # #518/#519/#520/#523 资金面/席位/北向/筹码
+        "moneyflow",
+        "top_list",
+        "top_inst",
+        "hk_hold",
+        "hsgt_top10",
+        "cyq_perf",
     }
 )
 
@@ -147,6 +160,9 @@ _FUNDAMENTAL_DOMAINS: frozenset[str] = frozenset(
         "dividend",
         "earnings_forecast",
         "earnings_express",
+        # #521/#522 官方财务指标/基金持仓
+        "fina_indicator",
+        "fund_portfolio",
     }
 )
 
@@ -211,6 +227,19 @@ _EXPERIMENTAL_DATASETS: frozenset[str] = frozenset(
         "index_valuation",
         # #483 ETF 单位净值：PIT/回放覆盖未验收前 experimental
         "etf_nav",
+        # #517 涨跌停价格：PIT/回放覆盖未验收前 experimental
+        "stock_limit",
+        # #518-#523 增补：PIT/回放覆盖未验收前 experimental
+        "moneyflow",
+        "limit_list",
+        "top_list",
+        "top_inst",
+        "hk_hold",
+        "hsgt_top10",
+        "fina_indicator",
+        "fund_share",
+        "fund_portfolio",
+        "cyq_perf",
     }
 )
 
@@ -271,9 +300,25 @@ def _resolve_asset_class(dataset_id: str) -> DatasetAssetClass | None:
         "corporate_actions",
         "namechange",
         "st_history",
+        "stock_limit",
+        "moneyflow",
+        "cyq_perf",
+        "hk_hold",
+        "hsgt_top10",
+        "limit_list",
+        "top_list",
+        "top_inst",
+        "fina_indicator",
     }:
         return "stock"
-    if dataset_id in {"etf_daily", "fund_adj", "etf_nav", "etf_reference"}:
+    if dataset_id in {
+        "etf_daily",
+        "fund_adj",
+        "etf_nav",
+        "etf_reference",
+        "fund_share",
+        "fund_portfolio",
+    }:
         return "etf"
     if dataset_id in {"index_daily", "global_index_daily", "index_weight"}:
         return "index"
@@ -293,6 +338,8 @@ def _resolve_schedule(dataset_id: str) -> DatasetSchedule:
         "corporate_actions",
         "earnings_forecast",
         "earnings_express",
+        # #522 基金持仓：公告日驱动（披露日不一定是交易日）
+        "fund_portfolio",
     }:
         return "natural_days"
     # Source-defined datasets
@@ -580,6 +627,19 @@ _ALL_DATASET_IDS: tuple[str, ...] = (
     "adj_factor",
     "fund_adj",
     "etf_nav",
+    # #517 涨跌停价格（stk_limit）
+    "stock_limit",
+    # #518-#523 增补
+    "moneyflow",
+    "limit_list",
+    "top_list",
+    "top_inst",
+    "hk_hold",
+    "hsgt_top10",
+    "fina_indicator",
+    "fund_share",
+    "fund_portfolio",
+    "cyq_perf",
     # Maintainer-confirmed ETF reference facts (config source, #408)
     "etf_reference",
     # Fundamental
@@ -634,6 +694,11 @@ _INSTRUMENT_INGESTION_DATASETS: frozenset[str] = frozenset(
         "earnings_forecast",
         "earnings_express",
         "index_valuation",
+        "moneyflow",
+        "hk_hold",
+        "fina_indicator",
+        "fund_share",
+        "fund_portfolio",
     }
 )
 

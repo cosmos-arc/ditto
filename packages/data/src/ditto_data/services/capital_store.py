@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import date
 
 import polars as pl
-from ditto_platform.foundation import OnDuplicate, logger
+from ditto_platform.foundation import FileLockManager, OnDuplicate, logger
 
 from ditto_data.services.deps import CapitalReaders, CapitalWriters
 
@@ -22,6 +22,7 @@ class CapitalStore:
         self,
         read_ports: CapitalReaders,
         write_ports: CapitalWriters,
+        file_lock: FileLockManager | None = None,
     ) -> None:
         """
         Initialize CapitalStore.
@@ -29,10 +30,12 @@ class CapitalStore:
         Args:
             read_ports: Capital domain read ports (all readers).
             write_ports: Capital domain write ports (all writers).
+            file_lock: 文件锁（可选；parquet 车道并发写防护）.
 
         """
         self._read_ports = read_ports
         self._write_ports = write_ports
+        self._file_lock = file_lock
 
         logger.debug(
             "CapitalStore initialized",
@@ -169,3 +172,127 @@ class CapitalStore:
     def save_index_weight(self, df: pl.DataFrame) -> int:
         """Save canonical effective-dated index weights."""
         return self._write_ports.index_composition.write(df)
+
+    # ── #518/#519/#520/#523 日频资金面/席位/北向/筹码（parquet 追加观察）──
+
+    def save_moneyflow(
+        self,
+        df: pl.DataFrame,
+        year: int,
+        on_duplicate: OnDuplicate = OnDuplicate.ERROR,
+    ) -> int:
+        """Save moneyflow rows（金额万元/量手）."""
+        writer = self._write_ports.moneyflow
+        if writer is None:
+            raise ValueError("moneyflow writer not configured")
+        # backfill --parallel 并发写同年分区的丢失更新防护（#517-523 评审）
+        if self._file_lock is not None:
+            with self._file_lock.acquire(f"moneyflow_write_{year}", timeout=60.0):
+                result = writer.write(df, year, on_duplicate=on_duplicate)
+        else:
+            result = writer.write(df, year, on_duplicate=on_duplicate)
+        return result.added + result.updated
+
+    def save_cyq_perf(
+        self,
+        df: pl.DataFrame,
+        year: int,
+        on_duplicate: OnDuplicate = OnDuplicate.ERROR,
+    ) -> int:
+        """Save daily chip performance rows（价格元/winner_rate %）."""
+        writer = self._write_ports.cyq_perf
+        if writer is None:
+            raise ValueError("cyq_perf writer not configured")
+        # backfill --parallel 并发写同年分区的丢失更新防护（#517-523 评审）
+        if self._file_lock is not None:
+            with self._file_lock.acquire(f"cyq_perf_write_{year}", timeout=60.0):
+                result = writer.write(df, year, on_duplicate=on_duplicate)
+        else:
+            result = writer.write(df, year, on_duplicate=on_duplicate)
+        return result.added + result.updated
+
+    def save_hk_hold(
+        self,
+        df: pl.DataFrame,
+        year: int,
+        on_duplicate: OnDuplicate = OnDuplicate.ERROR,
+    ) -> int:
+        """Save northbound holding rows（vol 股/ratio %）."""
+        writer = self._write_ports.hk_hold
+        if writer is None:
+            raise ValueError("hk_hold writer not configured")
+        # backfill --parallel 并发写同年分区的丢失更新防护（#517-523 评审）
+        if self._file_lock is not None:
+            with self._file_lock.acquire(f"hk_hold_write_{year}", timeout=60.0):
+                result = writer.write(df, year, on_duplicate=on_duplicate)
+        else:
+            result = writer.write(df, year, on_duplicate=on_duplicate)
+        return result.added + result.updated
+
+    def save_hsgt_top10(
+        self,
+        df: pl.DataFrame,
+        year: int,
+        on_duplicate: OnDuplicate = OnDuplicate.ERROR,
+    ) -> int:
+        """Save HSGT top-10 rows（金额元；改制后买/卖/净为 null）."""
+        writer = self._write_ports.hsgt_top10
+        if writer is None:
+            raise ValueError("hsgt_top10 writer not configured")
+        # backfill --parallel 并发写同年分区的丢失更新防护（#517-523 评审）
+        if self._file_lock is not None:
+            with self._file_lock.acquire(f"hsgt_top10_write_{year}", timeout=60.0):
+                result = writer.write(df, year, on_duplicate=on_duplicate)
+        else:
+            result = writer.write(df, year, on_duplicate=on_duplicate)
+        return result.added + result.updated
+
+    def save_top_list(
+        self,
+        df: pl.DataFrame,
+        year: int,
+        on_duplicate: OnDuplicate = OnDuplicate.ERROR,
+    ) -> int:
+        """Save dragon-tiger stock rows（金额元，reason 进主键）."""
+        writer = self._write_ports.top_list
+        if writer is None:
+            raise ValueError("top_list writer not configured")
+        # backfill --parallel 并发写同年分区的丢失更新防护（#517-523 评审）
+        if self._file_lock is not None:
+            with self._file_lock.acquire(f"top_list_write_{year}", timeout=60.0):
+                result = writer.write(df, year, on_duplicate=on_duplicate)
+        else:
+            result = writer.write(df, year, on_duplicate=on_duplicate)
+        return result.added + result.updated
+
+    def save_top_inst(
+        self,
+        df: pl.DataFrame,
+        year: int,
+        on_duplicate: OnDuplicate = OnDuplicate.ERROR,
+    ) -> int:
+        """Save dragon-tiger seat rows（金额元，exalter+side 进主键）."""
+        writer = self._write_ports.top_inst
+        if writer is None:
+            raise ValueError("top_inst writer not configured")
+        # backfill --parallel 并发写同年分区的丢失更新防护（#517-523 评审）
+        if self._file_lock is not None:
+            with self._file_lock.acquire(f"top_inst_write_{year}", timeout=60.0):
+                result = writer.write(df, year, on_duplicate=on_duplicate)
+        else:
+            result = writer.write(df, year, on_duplicate=on_duplicate)
+        return result.added + result.updated
+
+    def get_moneyflows(self, start: str, end: str) -> pl.DataFrame:
+        """Read market-wide moneyflow rows（L3 巡检用）."""
+        reader = self._read_ports.moneyflow
+        if reader is None:
+            raise ValueError("moneyflow reader not configured")
+        return reader.read(start_date=start, end_date=end)
+
+    def get_cyq_perfs(self, start: str, end: str) -> pl.DataFrame:
+        """Read market-wide chip performance rows（L3 巡检用）."""
+        reader = self._read_ports.cyq_perf
+        if reader is None:
+            raise ValueError("cyq_perf reader not configured")
+        return reader.read(start_date=start, end_date=end)
