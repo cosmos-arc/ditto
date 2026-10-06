@@ -27,7 +27,11 @@ from ditto_application.commands.paper_account import (
     CreatePaperAccountCommand,
     CreatePaperAccountHandler,
 )
-from ditto_application.etf_paper_contracts import ETFPaperHandoffRequest
+from ditto_application.etf_paper_contracts import (
+    ETFPaperExecutionRequest,
+    ETFPaperHandoffRequest,
+)
+from ditto_application.etf_paper_execution import ETFPaperExecution
 from ditto_application.etf_paper_handoff import ETFPaperHandoff
 from ditto_application.processes.portfolio.etf_allocation import (
     ETFAllocationCommand,
@@ -70,28 +74,52 @@ def canonical_now() -> str:
 
 
 def main() -> None:
-    """Run the isolated full ETF Paper acceptance journey."""
+    """Run the isolated full ETF Paper acceptance journey (signal or execute phase)."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", type=Path, required=True)
     parser.add_argument("--config-root", type=Path, required=True)
+    parser.add_argument(
+        "--phase",
+        choices=("signal", "execute"),
+        default="signal",
+        help="signal=signal-evening full chain; execute=next-evening fill leg",
+    )
+    parser.add_argument(
+        "--signal-date",
+        default=None,
+        help="override signal day (default: today in Asia/Shanghai)",
+    )
     args = parser.parse_args()
     root = args.root.resolve()
-    root.mkdir(parents=True, exist_ok=False)
+    global SIGNAL_DATE  # noqa: PLW0603
+    if args.signal_date:
+        SIGNAL_DATE = args.signal_date
+    else:
+        SIGNAL_DATE = datetime.now(ZoneInfo("Asia/Shanghai")).date().isoformat()
     os.environ.update(
         DITTO_CONFIG_ROOT=str(args.config_root.resolve()),
         DITTO_STATE_ROOT=str(root / "state"),
         DITTO_CACHE_ROOT=str(root / "cache"),
     )
-    (root / "state").mkdir()
-    if not MetadataDbInitProvider().initialize(root / "state").success:
-        raise RuntimeError("metadata initialization failed")
     git = shutil.which("git")
     if git is None:
         raise RuntimeError("git is required to bind the code identity")
-    report: dict[str, object] = {
-        "sha": subprocess.check_output(  # noqa: S603 - resolved git, fixed read-only arguments
-            [git, "rev-parse", "HEAD"], text=True
-        ).strip(),
+    if args.phase == "execute":
+        if not (root / "report.json").is_file():
+            raise RuntimeError(f"execute phase needs a prior signal-phase root: {root}")
+        report = json.loads((root / "report.json").read_text())
+        report["execute_sha"] = _git_sha(git)
+        _execute_phase(root, report)
+        report["finished_at"] = datetime.now(UTC).isoformat()
+        _write_report(root, report)
+        sys.stdout.write(str(root / "report.json") + "\n")
+        return
+    root.mkdir(parents=True, exist_ok=False)
+    (root / "state").mkdir()
+    if not MetadataDbInitProvider().initialize(root / "state").success:
+        raise RuntimeError("metadata initialization failed")
+    report = {
+        "sha": _git_sha(git),
         "root": str(root),
         "started_at": datetime.now(UTC).isoformat(),
         "scope": (
@@ -99,13 +127,77 @@ def main() -> None:
             "config rules, authorized handoff and simulated execution"
         ),
         "signal_date": SIGNAL_DATE,
-        "intended_trade_date": TRADE_DATE,
     }
     _ingest_phase(root, report)
     _journey_phase(root, report)
     report["finished_at"] = datetime.now(UTC).isoformat()
     _write_report(root, report)
     sys.stdout.write(str(root / "report.json") + "\n")
+
+
+def _git_sha(git: str) -> str:
+    return subprocess.check_output(  # noqa: S603 - resolved git, fixed read-only arguments
+        [git, "rev-parse", "HEAD"], text=True
+    ).strip()
+
+
+def _execute_phase(root: Path, report: dict[str, object]) -> None:
+    """Fill the handed-off session after the trade-day close (live cadence)."""
+    global SIGNAL_DATE, TRADE_DATE  # noqa: PLW0603
+    SIGNAL_DATE = str(report["signal_date"])
+    TRADE_DATE = str(report["intended_trade_date"])
+    report.update(
+        phase="execute",
+        executed_at=datetime.now(UTC).isoformat(),
+    )
+    with create_ingestion_bundle("tushare") as bundle:
+        result = bundle.coordinator.ingest_date("etf_daily", TRADE_DATE)
+        report["execution_day_ingestion"] = asdict(result)
+        if result.status != "success":
+            _write_report(root, report)
+            raise RuntimeError(f"etf_daily@{TRADE_DATE}: {result.status}")
+    with closing(make_app_container()) as container:
+        snapshots = container.get(ProviderSnapshotReader)
+        execution_daily = next(
+            item
+            for item in snapshots.list_snapshots()
+            if item.dataset_id == "etf_daily" and item.request_end == TRADE_DATE
+        )
+        prior_snapshots = report["snapshots"]
+        if not isinstance(prior_snapshots, dict):
+            raise RuntimeError("prior report has no snapshots section")
+        version = report["allocation_version"]
+        if not isinstance(version, dict):
+            raise RuntimeError("prior report has no allocation version")
+        outcomes, replay_equal = _run_execution(
+            container,
+            dict(prior_snapshots),
+            execution_daily,
+            str(version["version_id"]),
+            str(report["authorization_id"]),
+        )
+        report["snapshots"] = {
+            **prior_snapshots,
+            "etf_daily_execution": execution_daily.snapshot_id,
+        }
+        report["execution_outcomes"] = [asdict(outcome) for outcome in outcomes]
+        report["execution_replay_equal"] = replay_equal
+        wait_for_cutoff_boundary()
+        statement = container.get(AccountLedgerQuery).get_paper(
+            account_id=ACCOUNT_ID,
+            as_of=TRADE_DATE,
+            valuation_prices={},
+            recorded_through=datetime.now(UTC),
+        )
+        report["ledger_after_execution"] = {
+            "events": [asdict(event) for event in statement.events],
+            "valuation_complete": statement.snapshot.valuation_complete,
+        }
+        report["journey_status"] = (
+            "EXECUTED"
+            if outcomes and all(outcome.status == "filled" for outcome in outcomes)
+            else "PARTIAL"
+        )
 
 
 def _ingest_phase(root: Path, report: dict[str, object]) -> None:
@@ -150,6 +242,9 @@ def _journey_phase(root: Path, report: dict[str, object]) -> None:
         report["account_receipt"] = asdict(_fund_account(container))
         preview = _preview_handoff_facts(container, snapshots, by_dataset, signal_daily)
         report["handoff_preview"] = preview
+        global TRADE_DATE  # noqa: PLW0603
+        TRADE_DATE = str(preview["next_trading_day"])
+        report["intended_trade_date"] = TRADE_DATE
         instrument_id = next(iter(preview["investable_instrument_ids"]))
         version, authorization_id = _approval_chain(
             container, by_dataset, instrument_id
@@ -177,12 +272,10 @@ def _journey_phase(root: Path, report: dict[str, object]) -> None:
         }
         report["journey_status"] = "COMPLETED"
         report["execution_leg"] = (
-            "Execution requires the version cutoff to fall on the signal day "
-            "after its close (etf_paper_execution._after_close); this replayed "
-            "version was saved after the signal session, so its lifecycle ends "
-            "at handoff + valuation by design. A same-evening live run "
-            "(ingest → save → authorize → handoff on signal day, execute after "
-            "the trade-day close) is the follow-up cadence."
+            "Same-evening live cadence: this version was saved on the signal day "
+            "after its close, so it stays executable. Run the fill leg after the "
+            f"trade-day ({TRADE_DATE}) close: paper_journey.py --phase execute "
+            f"--root {root}"
         )
 
 
@@ -342,6 +435,37 @@ def _run_valuation(
             source_snapshot_ids=(market_snapshot_id,),
         )
     )
+
+
+def _run_execution(
+    container: object,
+    by_dataset: dict[str, object],
+    execution_daily: object,
+    version_id: str,
+    authorization_id: str,
+) -> tuple[tuple[object, ...], bool]:
+    """Evaluate the approved target with execution-day evidence and replay it."""
+    executor = container.get(ETFPaperExecution)  # type: ignore[attr-defined]
+    request = ETFPaperExecutionRequest(
+        allocation_id=ALLOCATION_ID,
+        version_id=version_id,
+        authorization_id=authorization_id,
+        account_id=ACCOUNT_ID,
+        session_id=SESSION_ID,
+        signal_date=SIGNAL_DATE,
+        intended_trade_date=TRADE_DATE,
+        execution_cutoff=datetime.now(UTC),
+        reference_snapshot_id=by_dataset["etf_basic"].snapshot_id,  # type: ignore[attr-defined]
+        market_snapshot_id=execution_daily.snapshot_id,  # type: ignore[attr-defined]
+        input_snapshot_ids={
+            "etf_daily": execution_daily.snapshot_id,  # type: ignore[attr-defined]
+            "etf_reference": by_dataset["etf_reference"].snapshot_id,  # type: ignore[attr-defined]
+        },
+        idempotency_key="execute-1",
+    )
+    outcomes = executor.execute(request)
+    replayed = executor.execute(request)
+    return outcomes, replayed == outcomes
 
 
 def _write_report(root: Path, report: dict[str, object]) -> None:
