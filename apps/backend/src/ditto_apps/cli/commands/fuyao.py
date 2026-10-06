@@ -11,11 +11,11 @@ import polars as pl
 import typer
 from dishka import Container
 from ditto_application.processes.ingestion.date_range import list_ingestion_dates
-from ditto_data.sources.fuyao.source import DumpKind
 
 from ditto_apps.registry.container import make_app_container
 from ditto_apps.registry.contexts.ingestion import create_ingestion_bundle
 from ditto_apps.registry.infra.protocol_adapters import (
+    DumpKind,
     FuyaoDailyKDumpFetcher,
     FuyaoSource,
     InstrumentService,

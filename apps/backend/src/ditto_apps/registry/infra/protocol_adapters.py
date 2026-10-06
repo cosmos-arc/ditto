@@ -43,12 +43,17 @@ from ditto_data.services.metadata.instrument import InstrumentService
 from ditto_data.services.metadata_service import MetadataService
 from ditto_data.services.source_accessor import SourceAccessor
 from ditto_data.sources.base import SourceFetchError
-from ditto_data.sources.fuyao.source import FuyaoDailyKDumpFetcher, FuyaoSource
+from ditto_data.sources.fuyao.source import (
+    DumpKind,
+    FuyaoDailyKDumpFetcher,
+    FuyaoSource,
+)
 from ditto_data.storage.base.sqlite_table_reader import SqliteTableReader
 from ditto_data.storage.metadata.instrument import InstrumentReader
 from ditto_data.storage.runtime.quality import ComparisonWriter
 
 __all__ = [
+    "DumpKind",
     "FinancialReconcileContextProtocol",
     "FundamentalFinancialReconcileContext",
     "FuyaoDailyKDumpFetcher",
