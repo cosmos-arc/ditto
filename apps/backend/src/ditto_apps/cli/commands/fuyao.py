@@ -4,12 +4,14 @@ from __future__ import annotations
 
 from datetime import date, datetime
 from pathlib import Path
+from typing import Any, cast
 from zoneinfo import ZoneInfo
 
 import polars as pl
 import typer
 from dishka import Container
 from ditto_application.processes.ingestion.date_range import list_ingestion_dates
+from ditto_data.sources.fuyao.source import DumpKind
 
 from ditto_apps.registry.container import make_app_container
 from ditto_apps.registry.contexts.ingestion import create_ingestion_bundle
@@ -42,12 +44,14 @@ _OVERLAP_COMPARE_FIELDS = (
 
 def _fuyao_source(container: Container) -> FuyaoSource:
     """从容器解析 FuyaoSource, 未配置时退出."""
-    source = container.get(FuyaoSource | None)
+    # dishka 运行时支持 Optional 提供键（di/sources.py fuyao_source 的返回
+    # 类型即键），但 get() 注解只声明 type[_T]，联合键需显式放宽。
+    source = container.get(cast(Any, FuyaoSource | None))
     if source is None:
         typer.secho(
             "fuyao 未配置: 在 DITTO_CONFIG_ROOT 的 data_source 配置中设置 "
-            "FUYAO_API_KEY (经 DataSourceSettings.fuyao_api_key 注入), "
-            "源未创建",
+            + "FUYAO_API_KEY (经 DataSourceSettings.fuyao_api_key 注入), "
+            + "源未创建",
             fg=typer.colors.RED,
             err=True,
         )
@@ -55,7 +59,7 @@ def _fuyao_source(container: Container) -> FuyaoSource:
     return source
 
 
-def _dump_dest(data_root: Path, kind: str) -> Path:
+def _dump_dest(data_root: Path, kind: DumpKind) -> Path:
     # 北京日期命名：陈旧守卫（protocol_adapters）与交易日语义同用北京日界；
     # 早前 UTC 命名会让北京 00:00-07:59 生成的当日 dump 被误判为陈旧
     # （#515 correctness F4）。字典序 = 时间序不变。
@@ -63,7 +67,7 @@ def _dump_dest(data_root: Path, kind: str) -> Path:
     return Path(data_root) / "fuyao" / "dumps" / kind / f"{stamp}.parquet"
 
 
-def _verify_dump(frame: pl.DataFrame, kind: str) -> None:
+def _verify_dump(frame: pl.DataFrame, kind: DumpKind) -> None:
     """打印快照统计并校验主键唯一性(复现官方解读脚本的检查)."""
     rows = len(frame)
     typer.echo(f"rows={rows}")
@@ -96,7 +100,7 @@ def _verify_dump(frame: pl.DataFrame, kind: str) -> None:
         typer.secho("主键唯一性校验通过", fg=typer.colors.GREEN)
 
 
-def _run_dump(kind: str, description: str) -> None:
+def _run_dump(kind: DumpKind, description: str) -> None:
     container: Container = make_app_container()
     try:
         source = _fuyao_source(container)
@@ -173,7 +177,7 @@ def _overlap_report(
         ]
         samples.append(
             f"instrument_id={row['instrument_id']} {row['trade_date']} "
-            f"差异字段={','.join(differing)}"
+            + f"差异字段={','.join(differing)}"
         )
     return unresolved, joined.height, conflicts.height, samples
 
@@ -340,7 +344,7 @@ def _execute_backfill(
             )
     typer.echo(
         f"回填完成: 成功 {counts['success']} / 跳过 {counts['skipped']} / "
-        f"失败 {counts['failed']}, 写入行数 {rows_written}"
+        + f"失败 {counts['failed']}, 写入行数 {rows_written}"
     )
     typer.echo(
         "证据: 每成功日独立 ProviderSnapshot(source=fuyao), 观察时间为真实回填时刻"

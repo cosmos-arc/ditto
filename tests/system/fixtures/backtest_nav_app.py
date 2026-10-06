@@ -39,10 +39,10 @@ from ditto_backtest.engine import (
     EngineOptions,
 )
 from ditto_backtest.simulation import BrokerageModel
-from ditto_backtest.statistics import build_report
+from ditto_backtest.statistics import BacktestReport, build_report
 from ditto_backtest.synchronizer import BacktestSynchronizer
 from ditto_data.models.metadata import InstrumentRegistration
-from ditto_data.provider import BarQuery
+from ditto_data.provider import BarQuery, InstrumentQuery
 from ditto_data.storage.metadata.instrument.instrument_writer import InstrumentWriter
 from ditto_execution.audit.execution_audit_service import ExecutionAuditService
 from ditto_execution.orders.book import OrderBook
@@ -201,13 +201,28 @@ class _SeededStoreProvider:
         )
         return pl.DataFrame({"trade_date": dates})
 
+    def get_instruments(self, query: InstrumentQuery) -> pl.DataFrame:
+        """本 fixture 不消费标的元数据查询（协议完备性占位）."""
+        raise NotImplementedError("fixture provider does not serve instrument queries")
+
+    def get_factor(
+        self,
+        name: str,
+        instruments: tuple[str, ...],
+        start: str,
+        end: str,
+        asof: str | None = None,
+    ) -> pl.DataFrame:
+        """本 fixture 不消费因子查询（协议完备性占位）."""
+        raise NotImplementedError("fixture provider does not serve factor queries")
+
 
 _ID_MAP: dict[str, InstrumentId] = {
     str(instrument_id): InstrumentId(instrument_id) for instrument_id in UNIVERSE_IDS
 }
 
 
-def _run_engine(run_id: str, provider: _SeededStoreProvider) -> object:
+def _run_engine(run_id: str, provider: _SeededStoreProvider) -> BacktestReport:
     """跑一次真实回测引擎（golden E2E 同款装配），返回 BacktestReport."""
     account = Account(
         cash=CashBook(available=INITIAL_CASH, settled=INITIAL_CASH, frozen=0.0),
@@ -376,7 +391,7 @@ def _retain_chart_evidence(client: SQLiteClient, prices: pl.DataFrame) -> None:
 def _persist_run(
     *,
     run_id: str,
-    report: object,
+    report: BacktestReport,
     benchmark_id: int | None,
     run_service: StrategyRunLifecycleStore,
     audit_service: ExecutionAuditService,

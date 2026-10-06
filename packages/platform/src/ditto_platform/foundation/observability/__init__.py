@@ -14,6 +14,7 @@ from .metrics import (
 )
 from .testing import get_recorded_metrics, get_recorded_spans, reset_for_testing
 from .tracing import (
+    SpanKind,
     get_span_id,
     get_trace_id,
     span,
@@ -27,6 +28,7 @@ __all__ = [
     "SafeCounter",
     "SafeGauge",
     "SafeHistogram",
+    "SpanKind",
     "get_recorded_metrics",
     "get_recorded_spans",
     "get_span_id",

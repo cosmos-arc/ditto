@@ -181,7 +181,7 @@ def restore_workstation_state(
     if data_root.exists() and any(data_root.iterdir()):
         raise RecipeError(
             f"restore target must be empty: {data_root} "
-            "(move the old root aside, verify after restore)"
+            + "(move the old root aside, verify after restore)"
         )
     restored: list[dict[str, Any]] = []
     for entry in entries:

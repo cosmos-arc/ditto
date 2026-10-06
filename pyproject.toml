@@ -314,8 +314,8 @@ venv = ".venv"
 # 核心：standard 模式打底（比 basic 严格，比 strict 宽松）
 typeCheckingMode = "standard"
 
-# 源码目录
-include = ["packages/**/src"]
+# 源码目录（tests 用独立配置 pyright.tests.json）
+include = ["packages/**/src", "apps/backend/src"]
 
 # 排除目录（tests 用独立配置）
 exclude = [

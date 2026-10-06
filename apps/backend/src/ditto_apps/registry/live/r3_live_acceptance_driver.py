@@ -24,6 +24,12 @@ from ditto_application.commands.experiments import (
     LaunchExperimentCommand,
 )
 from ditto_application.commands.strategy import UpdateStrategyHandler
+from ditto_application.commands.strategy_governance import (
+    ApproveReviewHandler,
+    PublishStrategyVersionHandler,
+    ReactivateStrategyHandler,
+    SubmitReviewHandler,
+)
 from ditto_application.exceptions import AppCommandError
 from ditto_application.mutation_idempotency import (
     build_mutation_idempotency,
@@ -81,10 +87,14 @@ from ditto_apps.registry.live.r3_live_recovery_driver import (
 )
 
 __all__ = [
+    "ApproveReviewHandler",
     "LiveBackupRestoreResult",
     "LiveGoldenLaneResult",
     "LiveGovernanceLaneResult",
     "LiveGovernanceLifecycleResult",
+    "PublishStrategyVersionHandler",
+    "ReactivateStrategyHandler",
+    "SubmitReviewHandler",
     "run_live_backup_restore",
     "run_live_golden_lane",
     "run_live_governance_lifecycle",
@@ -94,13 +104,6 @@ __all__ = [
 LiveLane = _governance.LiveLane
 LiveGovernanceLaneResult = _governance.LiveGovernanceLaneResult
 LiveGovernanceLifecycleResult = _governance.LiveGovernanceLifecycleResult
-
-# Preserve the original module's test/composition lookup points while the command
-# choreography is owned by the governance lane module.
-ApproveReviewHandler = _governance.ApproveReviewHandler
-PublishStrategyVersionHandler = _governance.PublishStrategyVersionHandler
-ReactivateStrategyHandler = _governance.ReactivateStrategyHandler
-SubmitReviewHandler = _governance.SubmitReviewHandler
 
 
 class SchedulerTick(Protocol):
