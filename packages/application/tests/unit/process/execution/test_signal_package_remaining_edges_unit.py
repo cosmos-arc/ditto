@@ -19,6 +19,7 @@ from ditto_application.processes.execution.signal_package import (
     SignalPackagePublishRequest,
 )
 from ditto_application.processes.execution.signal_snapshot import SignalSnapshotProcess
+from ditto_execution.errors import FillConflictError
 from ditto_execution.models import FillAdjustmentRecord, FillRecord, SignalRecord
 from ditto_kernel.identity import InstrumentId
 from ditto_strategy.alpha.models import TargetPortfolio
@@ -80,6 +81,11 @@ class _IntentPort:
         return False
 
 
+def _same_fill_payload(existing: FillRecord, candidate: FillRecord) -> bool:
+    """对齐生产 SqliteTradeService：忽略 created_at 的不可变成交事实相等."""
+    return replace(existing, created_at="") == replace(candidate, created_at="")
+
+
 @dataclass
 class _FillPort:
     rows: list[FillRecord] = field(default_factory=list)
@@ -91,8 +97,11 @@ class _FillPort:
         yield
 
     def save_fill(self, record: FillRecord) -> bool:
-        if self.get_fill(record.fill_id) is not None:
-            return False
+        existing = self.get_fill(record.fill_id)
+        if existing is not None:
+            if _same_fill_payload(existing, record):
+                return False
+            raise FillConflictError(f"Fill ID conflict: {record.fill_id}")
         self.rows.append(record)
         return True
 

@@ -23,6 +23,7 @@ from ditto_application.processes.execution.signal_package import (
     SignalPackagePublishRequest,
 )
 from ditto_application.processes.execution.signal_snapshot import SignalSnapshotProcess
+from ditto_execution.errors import FillConflictError
 from ditto_execution.models import FillAdjustmentRecord, FillRecord, SignalRecord
 from ditto_kernel.identity import InstrumentId
 from ditto_strategy.alpha.models import TargetPortfolio
@@ -84,6 +85,11 @@ class _IntentPort:
         return False
 
 
+def _same_fill_payload(existing: FillRecord, candidate: FillRecord) -> bool:
+    """对齐生产 SqliteTradeService：忽略 created_at 的不可变成交事实相等."""
+    return replace(existing, created_at="") == replace(candidate, created_at="")
+
+
 @dataclass
 class _FillPort:
     rows: list[FillRecord]
@@ -93,8 +99,11 @@ class _FillPort:
         yield
 
     def save_fill(self, record: FillRecord) -> bool:
-        if self.get_fill(record.fill_id) is not None:
-            return False
+        existing = self.get_fill(record.fill_id)
+        if existing is not None:
+            if _same_fill_payload(existing, record):
+                return False
+            raise FillConflictError(f"Fill ID conflict: {record.fill_id}")
         self.rows.append(record)
         return True
 
@@ -1072,3 +1081,25 @@ def test_retry_fails_closed_when_active_artifact_metadata_is_inconsistent() -> N
     assert artifacts.rows[1].status == "conflict"
     assert artifacts.rows[1].metadata["conflicting_artifact_id"] == active.artifact_id
     assert artifacts.rows[1].metadata["conflict_reason"] == "CHECKSUM_MISMATCH"
+
+
+def test_fill_port_fake_matches_production_conflict_contract() -> None:
+    """替身保真守卫：save_fill 三态与生产 SqliteTradeService 对齐."""
+    port = _FillPort(rows=[])
+    fill = FillRecord(
+        fill_id="fill-contract-1",
+        intent_id="intent-1",
+        strategy_id="stock-selection",
+        trade_date="2026-02-02",
+        instrument_id=1,
+        direction="buy",
+        quantity=100,
+        fill_price=10.0,
+        fee=1.0,
+    )
+
+    assert port.save_fill(fill) is True
+    assert port.save_fill(fill) is False
+    assert port.save_fill(replace(fill, created_at="2026-02-03T00:00:00Z")) is False
+    with pytest.raises(FillConflictError):
+        port.save_fill(replace(fill, quantity=200))

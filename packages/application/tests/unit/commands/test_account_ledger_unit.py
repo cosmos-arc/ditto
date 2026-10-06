@@ -22,6 +22,7 @@ from ditto_portfolio.account_ledger import (
     AccountDefinition,
     AccountEvent,
     AccountKind,
+    AccountLedgerRevisionConflict,
     ledger_hash,
 )
 
@@ -54,9 +55,12 @@ class _MemoryJournal:
         *,
         expected_ledger_hash: str,
     ) -> AccountEvent:
+        # 协议成员补齐：按账户流哈希做乐观校验后复用 append 路径；
+        # 失配与生产同抛 AccountLedgerRevisionConflict；
+        # 时间序守卫未建模（替身无时间轴）。
         current = tuple(self.events.get(event.account_id, ()))
         if ledger_hash(current) != expected_ledger_hash:
-            raise RuntimeError("stale ledger revision")
+            raise AccountLedgerRevisionConflict("stale ledger revision")
         return self.append(event)
 
     def get_event(self, account_id: str, event_id: str) -> AccountEvent | None:
