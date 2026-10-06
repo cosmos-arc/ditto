@@ -40,7 +40,7 @@ def _observe(
     db: SQLiteClient,
     index_id: str,
     trade_date: date,
-    members: list[tuple[int, float]],
+    members: list[tuple[int, float | None]],
 ) -> None:
     for instrument_id, weight in members:
         db.execute(

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from typing import TypedDict, Unpack
 from unittest.mock import MagicMock
 
 import pytest
@@ -18,13 +19,27 @@ from ditto_strategy.storage.sqlite.services.strategy_run_service import (
 # ---------------------------------------------------------------------------
 
 
+class _Overrides(TypedDict, total=False):
+    """_make_record 覆写参数的精确键型（调用侧受检）。"""
+
+    started_at: str
+    completed_at: str
+    error_message: str
+    parent_run_id: str
+    progress_pct: float
+    current_step: str
+    completed_days: int
+    total_days: int
+    config_json: str
+
+
 def _make_record(
     run_id: str = "run-001",
     strategy_id: str = "momentum-etf",
     strategy_version: str = "1.0",
     mode: str = "backtest",
     status: str = "pending",
-    **overrides: object,
+    **overrides: Unpack[_Overrides],
 ) -> StrategyRunRecord:
     """创建 StrategyRunRecord 测试辅助函数。"""
     return StrategyRunRecord(

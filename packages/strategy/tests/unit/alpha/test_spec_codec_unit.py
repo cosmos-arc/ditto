@@ -272,7 +272,9 @@ class TestCanonicalSpecCodec:
         parameter = constructor(
             name="allocation_method",
             dtype="str",
-            allowed_values=source,
+            # 构造器显式接受并快照 list（__post_init__ "Normalize mutable inputs"），
+            # 字段签名只声明 tuple；此处单点 cast 保持运行时传 list 的行为
+            allowed_values=cast("tuple[str, ...]", source),
         )
         spec = replace(_make_v2_spec(), parameter_schema=(parameter,))
         original_hash = canonical_spec_hash(spec)

@@ -10,6 +10,7 @@ import sys
 
 import polars as pl
 import pytest
+from ditto_kernel.identity import InstrumentId
 from ditto_strategy.alpha.context import StrategyContext
 from ditto_strategy.alpha.frame import FrameCol, validate_frame
 from ditto_strategy.errors import StrategySpecError
@@ -151,7 +152,9 @@ class TestValidateFramePerStage:
 
         frame = pl.DataFrame({"instrument_id": [1, 2, 3]})
         ctx = StrategyContext()
-        stage = UniverseStage(instrument_ids=frozenset({1, 2}))
+        stage = UniverseStage(
+            instrument_ids=frozenset({InstrumentId(1), InstrumentId(2)}),
+        )
         result = stage.process(frame, ctx)
         validate_frame(result, (FrameCol.INSTRUMENT_ID,))
 

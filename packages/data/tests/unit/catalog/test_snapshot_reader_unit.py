@@ -13,7 +13,10 @@ from ditto_data.catalog.source_snapshot import (
     ProviderSnapshot,
     ProviderSnapshotDraft,
 )
-from ditto_data.ingestion.partition_state import PartitionCheckpoint
+from ditto_data.ingestion.partition_state import (
+    PartitionCheckpoint,
+    PartitionLifecycleEvent,
+)
 
 pytestmark = pytest.mark.pit
 
@@ -46,7 +49,26 @@ def _snapshot() -> ProviderSnapshot:
 
 def _lifecycle(snapshot: ProviderSnapshot):
     class _Lifecycle:
-        def list_complete(self, *, dataset_id=None, source=None):
+        def get_latest_checkpoint(self, chunk_id: str) -> PartitionCheckpoint | None:
+            raise AssertionError(f"reads must not inspect latest: {chunk_id}")
+
+        def get_checkpoint(self, chunk_id: str) -> PartitionCheckpoint | None:
+            raise AssertionError(f"reads must not inspect checkpoints: {chunk_id}")
+
+        def list_incomplete(
+            self,
+            *,
+            dataset_id: str | None = None,
+            source: str | None = None,
+        ) -> tuple[PartitionCheckpoint, ...]:
+            raise AssertionError("reads must not list incomplete chunks")
+
+        def list_complete(
+            self,
+            *,
+            dataset_id: str | None = None,
+            source: str | None = None,
+        ) -> tuple[PartitionCheckpoint, ...]:
             checkpoint = PartitionCheckpoint(
                 chunk_id="chunk-1",
                 dataset_id=snapshot.dataset_id,
@@ -63,21 +85,30 @@ def _lifecycle(snapshot: ProviderSnapshot):
             )
             return (checkpoint,)
 
+        def list_events(self, chunk_id: str) -> tuple[PartitionLifecycleEvent, ...]:
+            raise AssertionError(f"reads must not inspect events: {chunk_id}")
+
     return _Lifecycle()
 
 
 def _service(frame: pl.DataFrame, snapshot: ProviderSnapshot) -> SnapshotReadService:
     class _Snapshots:
-        def get_snapshot(self, snapshot_id):
+        def get_snapshot(self, snapshot_id: str) -> ProviderSnapshot | None:
             return snapshot if snapshot_id == snapshot.snapshot_id else None
 
-        def get_observed_at(self, snapshot_id):
+        def get_observed_at(self, snapshot_id: str) -> datetime | None:
             return _VISIBLE
 
-        def get_predecessor(self, snapshot_id):
+        def get_predecessor(self, snapshot_id: str) -> str | None:
             return None
 
-        def list_snapshots(self, *, dataset_id=None):
+        def list_snapshots(
+            self,
+            *,
+            dataset_id: str | None = None,
+            source: str | None = None,
+            canonical_asset: DataAssetRef | None = None,
+        ) -> tuple[ProviderSnapshot, ...]:
             return (snapshot,)
 
     class _Payloads:

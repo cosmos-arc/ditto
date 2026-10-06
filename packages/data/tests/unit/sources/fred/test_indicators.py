@@ -71,8 +71,12 @@ def test_revisable_series_need_pit() -> None:
     """UNRATE/M2 会发布修订，need_pit 不得为 False（#432）."""
     from ditto_data.sources.fred.indicators import get_fred_indicator
 
-    assert get_fred_indicator("US_UNRATE").need_pit is True
-    assert get_fred_indicator("US_M2").need_pit is True
+    unrate = get_fred_indicator("US_UNRATE")
+    assert unrate is not None
+    assert unrate.need_pit is True
+    m2 = get_fred_indicator("US_M2")
+    assert m2 is not None
+    assert m2.need_pit is True
 
 
 def test_dollar_index_indicators_exist() -> None:

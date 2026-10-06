@@ -238,7 +238,10 @@ class TestCommodityFredAdapter:
         )
 
         # Act & Assert
-        with CommodityFredAdapter(api_key="test_key") as adapter:
+        # BaseFredAdapter.__enter__ 静态声明返回基类（非 Self），
+        # 先绑定具体 adapter 再进入上下文，行为与 with 构造完全一致。
+        adapter = CommodityFredAdapter(api_key="test_key")
+        with adapter:
             result = adapter.fetch_commodities(
                 codes=["COMMOD_WTI"],
                 start_date="2024-01-01",

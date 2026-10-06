@@ -14,6 +14,12 @@ from ditto_data.catalog.metadata import (
 from ditto_data.models.common import Dataset
 
 
+def _spec(metadata: DatasetMetadata) -> DatasetSpec:
+    """窄化 registry 条目的 dataset_spec（默认注册表全量注入；运行时 fail-closed）."""
+    assert metadata.dataset_spec is not None
+    return metadata.dataset_spec
+
+
 class TestDatasetMetadataFrozen:
     """DatasetMetadata must be frozen (immutable)."""
 
@@ -390,30 +396,33 @@ class TestDefaultMetadataDomainAssignments:
         assert global_index.domain == "market"
         assert global_index.schedule == "source_defined"
         assert global_index.asset_class == "index"
-        assert global_index.dataset_spec.primary_key == (
+        global_spec = _spec(global_index)
+        assert global_spec.primary_key == (
             "source_ticker",
             "trade_date",
             "knowledge_date",
         )
-        assert global_index.dataset_spec.provider_datasets == ("tushare:index_global",)
-        assert global_index.dataset_spec.timezone == "source_defined"
-        assert global_index.dataset_spec.currency == "mixed"
-        assert global_index.dataset_spec.knowledge_date_field == "knowledge_date"
-        assert global_index.dataset_spec.revision_policy == "append_only"
+        assert global_spec.provider_datasets == ("tushare:index_global",)
+        assert global_spec.timezone == "source_defined"
+        assert global_spec.currency == "mixed"
+        assert global_spec.knowledge_date_field == "knowledge_date"
+        assert global_spec.revision_policy == "append_only"
 
         classification = registry["industry_classification"]
         mapping = registry["industry_mapping"]
+        classification_spec = _spec(classification)
+        mapping_spec = _spec(mapping)
         assert classification.domain == mapping.domain == "metadata"
         assert classification.schedule == mapping.schedule == "source_defined"
-        assert classification.dataset_spec.provider_datasets == (
+        assert classification_spec.provider_datasets == (
             "tushare:index_classify",
             "tushare:csrc_industrial",  # #517 证监会分类第二来源
         )
-        assert mapping.dataset_spec.provider_datasets == ("tushare:index_member_all",)
-        assert classification.dataset_spec.knowledge_date_field == "knowledge_date"
-        assert mapping.dataset_spec.knowledge_date_field == "knowledge_date"
-        assert classification.dataset_spec.revision_policy == "effective_dated"
-        assert mapping.dataset_spec.revision_policy == "effective_dated"
+        assert mapping_spec.provider_datasets == ("tushare:index_member_all",)
+        assert classification_spec.knowledge_date_field == "knowledge_date"
+        assert mapping_spec.knowledge_date_field == "knowledge_date"
+        assert classification_spec.revision_policy == "effective_dated"
+        assert mapping_spec.revision_policy == "effective_dated"
 
 
 class TestDefaultMetadataSourceCapabilities:
@@ -583,12 +592,12 @@ class TestR2DataProductContracts:
         hard_scope = {
             dataset_id
             for dataset_id, metadata in registry.items()
-            if metadata.dataset_spec.r2_scope == "hard"
+            if _spec(metadata).r2_scope == "hard"
         }
         deferred_scope = {
             dataset_id
             for dataset_id, metadata in registry.items()
-            if metadata.dataset_spec.r2_scope == "deferred"
+            if _spec(metadata).r2_scope == "deferred"
         }
 
         assert hard_scope == self.HARD_SCOPE
@@ -635,22 +644,19 @@ class TestR2DataProductContracts:
         registry = default_dataset_metadata()
 
         for dataset_id in self.HARD_SCOPE:
-            contract = registry[dataset_id].dataset_spec
+            contract = _spec(registry[dataset_id])
             assert contract.coverage_start_rule
             assert contract.coverage_start_rule != "outside R2 release gate"
 
         assert (
-            registry["stock_status"].dataset_spec.coverage_start_rule
+            _spec(registry["stock_status"]).coverage_start_rule
             == "provider history starts in 2016"
         )
         assert (
-            registry["macro_indicators"].dataset_spec.knowledge_date_field
-            == "knowledge_date"
+            _spec(registry["macro_indicators"]).knowledge_date_field == "knowledge_date"
         )
-        assert registry["index_weight"].dataset_spec.revision_policy == "append_only"
-        assert (
-            registry["index_weight"].dataset_spec.knowledge_date_field == "trade_date"
-        )
+        assert _spec(registry["index_weight"]).revision_policy == "append_only"
+        assert _spec(registry["index_weight"]).knowledge_date_field == "trade_date"
 
     def test_dataset_spec_identity_must_match_metadata(self) -> None:
         stock_spec = default_dataset_metadata()["stock_daily"].dataset_spec

@@ -893,7 +893,9 @@ class TestTushareErrorHandler:
 
         # Verify错误信息包含原始错误
         assert "test_dataset" in str(exc_info.value)
-        assert "Generic error" in exc_info.value.details.get("original_error", "")
+        original_error = exc_info.value.details.get("original_error", "")
+        assert isinstance(original_error, str)
+        assert "Generic error" in original_error
 
 
 class TestTushareSourceMacroIndicators:

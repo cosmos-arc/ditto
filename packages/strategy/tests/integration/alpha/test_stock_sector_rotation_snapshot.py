@@ -27,6 +27,7 @@ from ditto_strategy.alpha.templates.stock_sector_rotation import (
 
 _conftest_path = Path(__file__).parent / "conftest.py"
 _spec = importlib.util.spec_from_file_location("_conftest", _conftest_path)
+assert _spec is not None
 _mod = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(_mod)  # type: ignore[union-attr]
 
@@ -77,8 +78,13 @@ class SectorRotationEngineLoop(EngineLoop):
     ) -> StrategyInputBundle:
         """构建 StrategyInputBundle — 含 sector_id / is_sector 列。"""
         instrument_ids = list(slice_.bars.keys())
-        sector_ids = [_SECTOR_MAP.get(iid, (iid, False))[0] for iid in instrument_ids]
-        is_sectors = [_SECTOR_MAP.get(iid, (iid, False))[1] for iid in instrument_ids]
+        # 生产签名 extra_instrument_columns 为 dict[str, list[object]]（不变型）。
+        sector_ids: list[object] = [
+            _SECTOR_MAP.get(iid, (iid, False))[0] for iid in instrument_ids
+        ]
+        is_sectors: list[object] = [
+            _SECTOR_MAP.get(iid, (iid, False))[1] for iid in instrument_ids
+        ]
 
         return build_input_bundle(
             trade_date=date,

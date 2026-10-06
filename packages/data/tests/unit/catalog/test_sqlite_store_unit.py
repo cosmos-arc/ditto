@@ -93,6 +93,7 @@ class TestSQLiteDataCatalogPersistence:
 
             persisted = catalog.get_asset(entry_v1.asset)
             assert persisted == entry_v2
+            assert persisted is not None
             assert (
                 persisted.source_snapshot_id
                 == "snapshot:tushare:stock_daily:2026-06-01:def"

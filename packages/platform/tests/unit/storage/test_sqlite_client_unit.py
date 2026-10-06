@@ -1,6 +1,7 @@
 """Unit tests for SQLiteClient identifier validation."""
 
 import tempfile
+from collections.abc import Iterator
 from pathlib import Path
 
 import pytest
@@ -12,7 +13,7 @@ from ditto_platform.foundation.storage.sqlite_client import (
 
 
 @pytest.fixture
-def client() -> SQLiteClient:
+def client() -> Iterator[SQLiteClient]:
     """Create a SQLiteClient with a temporary database."""
     with tempfile.TemporaryDirectory() as tmp_dir:
         db_path = Path(tmp_dir) / "test.db"

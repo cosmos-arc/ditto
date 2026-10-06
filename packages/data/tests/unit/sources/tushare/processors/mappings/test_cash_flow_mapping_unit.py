@@ -47,6 +47,8 @@ def test_official_field_names_survive_transform() -> None:
 
 def test_decorative_dead_fields_dropped_from_output() -> None:
     """官方端点已无同名字段且无消费者的三个装饰字段不再出现在输出。"""
+    output_columns = CASH_FLOW_MAPPING.output_columns
+    assert output_columns is not None  # 显式输出清单契约的前提
     for column in ("depreciation", "interest_paid", "tax_paid"):
-        assert column not in CASH_FLOW_MAPPING.output_columns
+        assert column not in output_columns
         assert column not in CASH_FLOW_MAPPING.float_columns

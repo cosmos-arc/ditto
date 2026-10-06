@@ -1,5 +1,6 @@
 """Tests for SQLiteClient."""
 
+from collections.abc import Generator
 from pathlib import Path
 from typing import Any
 
@@ -14,7 +15,7 @@ def db_path(tmp_path: Path) -> Path:
 
 
 @pytest.fixture
-def sqlite_pool(db_path: Path) -> SQLitePool:
+def sqlite_pool(db_path: Path) -> Generator[SQLitePool]:
     """Provide SQLite pool with temporary database."""
     # Get schema path - use relative path from test file
     # Test file: packages/data/tests/unit/stores/test_sqlite_client_unit.py

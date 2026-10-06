@@ -2,6 +2,7 @@
 
 from dataclasses import replace
 from pathlib import Path
+from typing import Any, cast
 
 import polars as pl
 import pytest
@@ -134,7 +135,8 @@ def test_publishing_race_keeps_one_schema_per_checksum(tmp_path: Path) -> None:
                 dataset_id="stock_daily", source="tushare", payload=int32
             )
 
-    pl.DataFrame.write_parquet = delayed_write
+    # 竞态注入：monkeypatch 类方法（测试专用边界），单点放宽以通过类型检查。
+    cast("Any", pl.DataFrame).write_parquet = delayed_write
     try:
         with pytest.raises(ValueError, match="collides across schemas"):
             store.retain_payload(

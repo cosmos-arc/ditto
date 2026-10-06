@@ -9,7 +9,7 @@ from prometheus_client import CollectorRegistry
 
 
 @pytest.fixture
-def metrics_registry() -> Generator[CollectorRegistry]:
+def metrics_registry() -> CollectorRegistry:
     """提供内存 Registry（不依赖外部服务）。
 
     使用方式:
@@ -23,9 +23,9 @@ def metrics_registry() -> Generator[CollectorRegistry]:
                     if sample.name == "api_requests_total":
                         assert sample.value == 1.0
     """
-    registry = CollectorRegistry()
-    yield registry
-    registry.clear()  # 清理
+    # CollectorRegistry 无 clear()；与 apps/backend 同名 fixture 一致，
+    # registry 随 fixture 作用域丢弃，无需 teardown。
+    return CollectorRegistry()
 
 
 @pytest.fixture(autouse=True)

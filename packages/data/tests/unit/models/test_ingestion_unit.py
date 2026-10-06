@@ -1,6 +1,7 @@
 """Unit tests for Models - ingestion."""
 
 import dataclasses
+from typing import Any, cast
 
 import pytest
 from ditto_data.errors import DataChangedError, NotTradingDayError
@@ -126,7 +127,8 @@ class TestIngestionLog:
             rows=1000,
         )
         with pytest.raises(dataclasses.FrozenInstanceError):
-            log.dataset = "other_dataset"
+            # 故意对冻结实例赋值（被测行为）；单点 cast 放宽静态检查.
+            cast("Any", log).dataset = "other_dataset"
 
 
 @pytest.mark.unit
@@ -184,7 +186,8 @@ class TestIngestionCursor:
             updated_at="2024-01-02T10:00:00Z",
         )
         with pytest.raises(dataclasses.FrozenInstanceError):
-            cursor.last_success = "2024-01-03"
+            # 故意对冻结实例赋值（被测行为）；单点 cast 放宽静态检查.
+            cast("Any", cursor).last_success = "2024-01-03"
 
 
 @pytest.mark.unit

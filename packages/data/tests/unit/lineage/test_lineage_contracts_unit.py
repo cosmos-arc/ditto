@@ -43,6 +43,20 @@ def test_lineage_event_is_frozen_and_uses_tuple_relationships() -> None:
         event.operation = "rewrite"  # type: ignore[misc]
 
 
+def _recorder_view(value: DataLineageRecorder) -> DataLineageRecorder:
+    """协议视角恒等函数：参数类型即静态一致性检查，返回值恢复声明类型.
+
+    assert_type 对比的是窄化类型（InMemoryLineage），协议断言须先经
+    函数边界回到声明类型。
+    """
+    return value
+
+
+def _reader_view(value: DataLineageReader) -> DataLineageReader:
+    """同 _recorder_view（DataLineageReader 视角）."""
+    return value
+
+
 def test_lineage_protocols_accept_structural_in_memory_fake() -> None:
     class InMemoryLineage:
         def __init__(self) -> None:
@@ -80,8 +94,8 @@ def test_lineage_protocols_accept_structural_in_memory_fake() -> None:
     assert isinstance(lineage, DataLineageReader)
     recorder: DataLineageRecorder = lineage
     reader: DataLineageReader = lineage
-    assert_type(recorder, DataLineageRecorder)
-    assert_type(reader, DataLineageReader)
+    assert_type(_recorder_view(recorder), DataLineageRecorder)
+    assert_type(_reader_view(reader), DataLineageReader)
 
     recorder.record_event(event)
 

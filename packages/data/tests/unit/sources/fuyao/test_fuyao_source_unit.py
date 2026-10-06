@@ -316,7 +316,7 @@ class TestFuyaoRestWindowSharding:
 
     def _source_with_windows(
         self, windows: dict[tuple[date, date], list[dict[str, object]]]
-    ) -> FuyaoSource:
+    ) -> tuple[FuyaoSource, MagicMock]:
         client = MagicMock()
 
         def fake_get(path: str, params: dict[str, object] | None = None):
@@ -329,7 +329,7 @@ class TestFuyaoRestWindowSharding:
             raise AssertionError(f"unexpected window {(start, end)}")
 
         client.get.side_effect = fake_get
-        return FuyaoSource(client=client)
+        return FuyaoSource(client=client), client
 
     def test_multi_year_request_is_sharded_into_safe_windows(self) -> None:
         """10 年请求按 ≤3 年窗口分片（尾部静默截断防护）."""
@@ -343,13 +343,13 @@ class TestFuyaoRestWindowSharding:
             w3: [_bar(date_to_ms(date(2021, 1, 4)), 12.0)],
             w4: [_bar(date_to_ms(date(2024, 1, 2)), 13.0)],
         }
-        source = self._source_with_windows(bars)
+        source, client = self._source_with_windows(bars)
 
         frame = source.fetch_stock_daily(
             source_ticker="600519", start_date="2015-01-01", end_date="2024-12-31"
         )
 
-        assert source._client.get.call_count == 4
+        assert client.get.call_count == 4
         assert frame["close"].to_list() == [10.0, 11.0, 12.0, 13.0]
         # 分窗边界不丢 pre_close：窗口首条的 pre_close 是上一窗口末根收盘
         assert frame["pre_close"].to_list() == [None, 10.0, 11.0, 12.0]
@@ -357,7 +357,7 @@ class TestFuyaoRestWindowSharding:
     def test_out_of_window_bar_raises(self) -> None:
         """响应日期越窗 = 契约违约，fail-closed 而非静默截断."""
         window = (date(2024, 1, 1), date(2024, 12, 31))
-        source = self._source_with_windows(
+        source, _ = self._source_with_windows(
             {window: [_bar(date_to_ms(date(2023, 12, 29)), 10.0)]}
         )
 
@@ -374,7 +374,7 @@ class TestFuyaoRestWindowSharding:
         """
         window = (date(2024, 1, 1), date(2026, 12, 30))
         dup_ms = date_to_ms(date(2025, 6, 3))
-        source = self._source_with_windows(
+        source, _ = self._source_with_windows(
             {window: [_bar(dup_ms, 10.0), _bar(dup_ms, 11.0)]}
         )
 
@@ -387,7 +387,7 @@ class TestFuyaoRestWindowSharding:
         """空窗（停牌/上市前/退市后）合法：返回有数据窗口的行，不报错."""
         w1 = (date(2024, 1, 1), date(2026, 12, 30))
         w2 = (date(2026, 12, 31), date(2027, 12, 31))  # 末期退市（合法空窗）
-        source = self._source_with_windows(
+        source, _ = self._source_with_windows(
             {w1: [_bar(date_to_ms(date(2025, 6, 3)), 10.0)], w2: []}
         )
 
@@ -401,7 +401,7 @@ class TestFuyaoRestWindowSharding:
     def test_all_empty_returns_typed_empty_frame(self) -> None:
         """全空（如请求未来区间）返回 schema 一致空帧，不伪造成功."""
         w1 = (date(2024, 1, 1), date(2024, 12, 31))
-        source = self._source_with_windows({w1: []})
+        source, _ = self._source_with_windows({w1: []})
 
         frame = source.fetch_stock_daily(
             source_ticker="600519", start_date="2024-01-01", end_date="2024-12-31"
@@ -415,13 +415,15 @@ class TestFuyaoRestWindowSharding:
 class TestFuyaoSourceBars:
     """原始日线帧转换与两模式校验."""
 
-    def _source_with_items(self, items: list[dict[str, object]]) -> FuyaoSource:
+    def _source_with_items(
+        self, items: list[dict[str, object]]
+    ) -> tuple[FuyaoSource, MagicMock]:
         client = MagicMock()
         client.get.return_value = {"item": items}
-        return FuyaoSource(client=client)
+        return FuyaoSource(client=client), client
 
     def test_ticker_mode_builds_source_schema_frame(self) -> None:
-        source = self._source_with_items(_historical_items())
+        source, client = self._source_with_items(_historical_items())
 
         frame = source.fetch_stock_daily(
             source_ticker="600519", start_date="2025-08-18", end_date="2025-08-19"
@@ -436,12 +438,12 @@ class TestFuyaoSourceBars:
         ]
         assert frame["pct_change"][1] == pytest.approx(4.761904, abs=1e-4)
         # 原始价：REST 请求显式 adjust=none
-        kwargs = source._client.get.call_args.kwargs
+        kwargs = client.get.call_args.kwargs
         assert kwargs["params"]["adjust"] == "none"
         assert kwargs["params"]["thscode"] == "600519.SH"
 
     def test_ticker_mode_empty_items_returns_typed_empty_frame(self) -> None:
-        source = self._source_with_items([])
+        source, _ = self._source_with_items([])
 
         frame = source.fetch_stock_daily(
             source_ticker="600519", start_date="2025-08-18", end_date="2025-08-18"
@@ -451,7 +453,7 @@ class TestFuyaoSourceBars:
         assert "knowledge_date" in frame.columns
 
     def test_mode_validation(self) -> None:
-        source = self._source_with_items([])
+        source, _ = self._source_with_items([])
         with pytest.raises(ValueError, match="互斥"):
             source.fetch_stock_daily(trade_date="2025-08-18", source_ticker="600519.SH")
         with pytest.raises(ValueError, match="必须指定"):
@@ -461,7 +463,7 @@ class TestFuyaoSourceBars:
 
     def test_reconciliation_frame_uses_bare_ticker(self) -> None:
         # 对账单日窗：响应只含请求日 bar（窗外 bar 属契约违约，见分窗测试）
-        source = self._source_with_items([_historical_items()[1]])
+        source, _ = self._source_with_items([_historical_items()[1]])
 
         frame = source.fetch_stock_daily_bars(["600519"], "2025-08-19")
 

@@ -16,10 +16,10 @@ from ditto_features.storage.sqlite.derived.writer import (
 from ditto_platform.foundation import SQLiteClient
 
 
-def _make_writer() -> SQLiteDerivedCatalogWriter:
-    """Create a writer backed by a mock SQLite client."""
+def _make_writer() -> tuple[SQLiteDerivedCatalogWriter, MagicMock]:
+    """Writer backed by a mock SQLite client; 返回 mock 供调用断言."""
     mock_client = MagicMock(spec=SQLiteClient)
-    return SQLiteDerivedCatalogWriter(mock_client)
+    return SQLiteDerivedCatalogWriter(mock_client), mock_client
 
 
 class TestWriteVersionStatusGuard:
@@ -27,7 +27,7 @@ class TestWriteVersionStatusGuard:
 
     def test_accepts_valid_status(self) -> None:
         """Valid DerivedVersionStatus values should not raise."""
-        writer = _make_writer()
+        writer, _ = _make_writer()
         for status in ("draft", "materialized", "published", "deprecated", "archived"):
             record = DerivedVersionRecord(
                 derived_id="factor.test",
@@ -43,7 +43,7 @@ class TestWriteVersionStatusGuard:
 
     def test_rejects_invalid_status(self) -> None:
         """Invalid status string should raise FeatureStorageError."""
-        writer = _make_writer()
+        writer, _ = _make_writer()
         record = DerivedVersionRecord(
             derived_id="factor.test",
             version=1,
@@ -63,7 +63,7 @@ class TestWriteRunStatusGuard:
 
     def test_accepts_valid_status(self) -> None:
         """Valid DerivedRunStatus values should not raise."""
-        writer = _make_writer()
+        writer, _ = _make_writer()
         for status in ("RUNNING", "SUCCESS", "FAILED"):
             record = DerivedRunRecord(
                 run_id="run-001",
@@ -88,7 +88,7 @@ class TestWriteRunStatusGuard:
 
     def test_rejects_invalid_status(self) -> None:
         """Invalid status string should raise FeatureStorageError."""
-        writer = _make_writer()
+        writer, _ = _make_writer()
         record = DerivedRunRecord(
             run_id="run-001",
             derived_id="factor.test",
@@ -117,7 +117,7 @@ class TestUnitOfWorkExecuteMethods:
 
     def test_execute_run_does_not_commit(self) -> None:
         """execute_run() should execute SQL but NOT call commit."""
-        writer = _make_writer()
+        writer, client = _make_writer()
         record = DerivedRunRecord(
             run_id="run-001",
             derived_id="factor.test",
@@ -139,12 +139,12 @@ class TestUnitOfWorkExecuteMethods:
         )
         writer.execute_run(record)
 
-        writer._sqlite_client.execute.assert_called_once()
-        assert writer._sqlite_client.commit.call_count == 0
+        client.execute.assert_called_once()
+        assert client.commit.call_count == 0
 
     def test_write_run_commits_after_execute(self) -> None:
         """write_run() should call execute then commit."""
-        writer = _make_writer()
+        writer, client = _make_writer()
         record = DerivedRunRecord(
             run_id="run-001",
             derived_id="factor.test",
@@ -166,17 +166,17 @@ class TestUnitOfWorkExecuteMethods:
         )
         writer.write_run(record)
 
-        assert writer._sqlite_client.execute.call_count == 1
-        assert writer._sqlite_client.commit.call_count == 1
+        assert client.execute.call_count == 1
+        assert client.commit.call_count == 1
 
     def test_commit_delegates_to_sqlite_client(self) -> None:
         """Public commit() should delegate to sqlite_client.commit()."""
-        writer = _make_writer()
+        writer, client = _make_writer()
         writer.commit()
-        writer._sqlite_client.commit.assert_called_once()
+        client.commit.assert_called_once()
 
     def test_rollback_delegates_to_sqlite_client(self) -> None:
         """Public rollback() should delegate to sqlite_client.rollback()."""
-        writer = _make_writer()
+        writer, client = _make_writer()
         writer.rollback()
-        writer._sqlite_client.rollback.assert_called_once()
+        client.rollback.assert_called_once()

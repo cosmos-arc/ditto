@@ -522,8 +522,10 @@ class TestFredClientRobustness:
         monkeypatch.setattr(fred_client_module, "_RATE_LIMIT_BACKOFF_BASE_SECONDS", 5.0)
         wait_fn = fred_client_module._rate_limit_aware_wait
 
-        def _state_with(error: BaseException, attempt: int) -> object:
-            state = fred_client_module.RetryCallState(None, None, (), {})
+        def _state_with(error: BaseException, attempt: int) -> tenacity.RetryCallState:
+            # RetryCallState 需要具体 BaseRetrying；退避计算只读
+            # outcome/attempt_number，最小 Retrying() 即满足契约。
+            state = fred_client_module.RetryCallState(tenacity.Retrying(), None, (), {})
             state.attempt_number = attempt
             state.set_exception((type(error), error, None))
             return state

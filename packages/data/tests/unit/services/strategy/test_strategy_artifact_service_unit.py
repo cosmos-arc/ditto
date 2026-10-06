@@ -3,28 +3,45 @@
 from __future__ import annotations
 
 from dataclasses import FrozenInstanceError, replace
+from typing import Any, TypedDict, Unpack, cast
 
 import pytest
-from ditto_strategy.models import StrategyArtifactRecord
+from ditto_strategy.models import ArtifactKind, StrategyArtifactRecord
 from ditto_strategy.storage.sqlite.services.strategy_artifact_service import (
     StrategyArtifactService,
 )
 from pytest_mock import MockerFixture
 
 
-def _make_artifact(**overrides: object) -> StrategyArtifactRecord:
+class _Defaults(TypedDict, total=False):
+    """_make_artifact 覆写参数的精确键型（调用侧受检）。"""
+
+    artifact_id: str
+    strategy_id: str
+    run_id: str
+    artifact_type: ArtifactKind
+    file_path: str
+    metadata: dict[str, object]
+    status: str
+    created_at: str
+
+
+_DEFAULTS: dict[str, object] = {
+    "artifact_id": "art-backtest-001",
+    "strategy_id": "strat.momentum_20d",
+    "run_id": "run-20260323-001",
+    "artifact_type": ArtifactKind.BACKTEST_REPORT,
+    "file_path": "artifacts/strat.momentum_20d/run-20260323-001/report.parquet",
+    "metadata": {"total_return": 0.15, "sharpe": 1.2},
+    "status": "active",
+    "created_at": "2026-03-23T12:00:00+08:00",
+}
+
+
+def _make_artifact(**overrides: Unpack[_Defaults]) -> StrategyArtifactRecord:
     """构建测试用 StrategyArtifactRecord."""
-    defaults: dict[str, object] = {
-        "artifact_id": "art-backtest-001",
-        "strategy_id": "strat.momentum_20d",
-        "run_id": "run-20260323-001",
-        "artifact_type": "backtest_report",
-        "file_path": "artifacts/strat.momentum_20d/run-20260323-001/report.parquet",
-        "metadata": {"total_return": 0.15, "sharpe": 1.2},
-        "status": "active",
-        "created_at": "2026-03-23T12:00:00+08:00",
-    }
-    return StrategyArtifactRecord(**{**defaults, **overrides})
+    # 覆写参数经 Unpack[TypedDict] 调用侧受检；合并字典构造点单点放宽。
+    return StrategyArtifactRecord(**cast("dict[str, Any]", {**_DEFAULTS, **overrides}))
 
 
 # ── Model Tests ──────────────────────────────────────────────────────────────
@@ -48,7 +65,7 @@ class TestStrategyArtifactRecord:
             artifact_id="art-001",
             strategy_id="strat.test",
             run_id="run-001",
-            artifact_type="signal_snapshot",
+            artifact_type=ArtifactKind.SIGNAL_SNAPSHOT,
             file_path="/tmp/art.parquet",
         )
         assert record.metadata == {}

@@ -278,7 +278,13 @@ class TestGetFilteredUniverse:
             "universe_reader"
         ].get_constituent_instrument_ids.return_value = [1, 2, 3, 4, 5]
 
-        volume_map = {1: 1000000, 2: 500000, 3: 100000, 4: 50000, 5: 10}
+        volume_map: dict[int, float] = {
+            1: 1000000,
+            2: 500000,
+            3: 100000,
+            4: 50000,
+            5: 10,
+        }
 
         result = service.universe.get_filtered_universe(
             "csi300",
@@ -300,7 +306,7 @@ class TestGetFilteredUniverse:
             "universe_reader"
         ].get_constituent_instrument_ids.return_value = [1, 2, 3]
 
-        volume_map = {1: 1000000}  # 2, 3 不在 map 中
+        volume_map: dict[int, float] = {1: 1000000}  # 2, 3 不在 map 中
 
         result = service.universe.get_filtered_universe(
             "csi300",
@@ -462,7 +468,7 @@ class TestGetFilteredUniverseMinListDays:
             }
         ).with_columns(pl.col("list_date").cast(pl.Date))
 
-        volume_map = {1: 1000000, 2: 50000}  # 2 fails volume
+        volume_map: dict[int, float] = {1: 1000000, 2: 50000}  # 2 fails volume
 
         result = service.universe.get_filtered_universe(
             "csi300",

@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import os
+from collections.abc import Callable
 from pathlib import Path
+from typing import cast
 
 import orjson
 import polars as pl
@@ -144,8 +146,10 @@ class TestExportDataset:
         frame = pl.DataFrame({"x": [1]})
 
         service = ResearchArtifactService(artifact_root=tmp_path)
+        # 负向用例：fmt 为 Literal 导出格式白名单，非法值由运行时校验拒绝。
+        exporter = cast("Callable[..., object]", service.export_dataset)
         with pytest.raises(ResearchDatasetError, match="unsupported format"):
-            service.export_dataset("data.xlsx", frame, fmt="xlsx")
+            exporter("data.xlsx", frame, fmt="xlsx")
 
     def test_export_refuses_existing_different_file(self, tmp_path: Path) -> None:
         """Export conflicts preserve the existing file."""

@@ -12,6 +12,7 @@ from ditto_data.catalog.snapshot_completion import (
 from ditto_data.catalog.source_snapshot import ProviderSnapshot, ProviderSnapshotDraft
 from ditto_data.ingestion.partition_state import (
     PartitionCheckpoint,
+    PartitionLifecycleEvent,
     PartitionLifecycleStatus,
 )
 
@@ -86,16 +87,38 @@ class TestCheckpointMatchesSnapshot:
 class _Lifecycle:
     """Minimal completion reader over synthetic checkpoints."""
 
-    def __init__(self, *checkpoints: PartitionCheckpoint) -> None:
-        self._checkpoints = checkpoints
+    def get_latest_checkpoint(self, chunk_id: str) -> PartitionCheckpoint | None:
+        raise AssertionError(f"completion checks must not read latest: {chunk_id}")
 
-    def list_complete(self, *, dataset_id: str) -> tuple[PartitionCheckpoint, ...]:
+    def get_checkpoint(self, chunk_id: str) -> PartitionCheckpoint | None:
+        raise AssertionError(f"completion checks must not read checkpoints: {chunk_id}")
+
+    def list_incomplete(
+        self,
+        *,
+        dataset_id: str | None = None,
+        source: str | None = None,
+    ) -> tuple[PartitionCheckpoint, ...]:
+        raise AssertionError("completion checks must not list incomplete chunks")
+
+    def list_complete(
+        self,
+        *,
+        dataset_id: str | None = None,
+        source: str | None = None,
+    ) -> tuple[PartitionCheckpoint, ...]:
         return tuple(
             checkpoint
             for checkpoint in self._checkpoints
             if checkpoint.dataset_id == dataset_id
             and checkpoint.status is PartitionLifecycleStatus.COMPLETE
         )
+
+    def list_events(self, chunk_id: str) -> tuple[PartitionLifecycleEvent, ...]:
+        raise AssertionError(f"completion checks must not read events: {chunk_id}")
+
+    def __init__(self, *checkpoints: PartitionCheckpoint) -> None:
+        self._checkpoints = checkpoints
 
 
 class TestSnapshotCompleted:

@@ -1,6 +1,7 @@
 """Tests for QualityEngine."""
 
 from datetime import date, timedelta
+from typing import Literal
 
 import polars as pl
 import pytest
@@ -118,7 +119,7 @@ class TestQualityEngine:
     )
     def test_check_with_specific_levels(
         self,
-        levels: list[str],
+        levels: list[Literal["l1", "l2"]],
         expected_has_warnings: bool,
         expected_has_errors: bool,
     ) -> None:

@@ -56,8 +56,14 @@ class TestFredDollarIndexIngestion:
 
         # 验证数值范围合理（美元指数通常在 90-130 之间）
         values = dollar_df["value"].drop_nulls()
-        assert values.min() > 80, "美元指数应该大于 80"
-        assert values.max() < 150, "美元指数应该小于 150"
+        min_value = values.min()
+        max_value = values.max()
+        assert min_value is not None, "美元指数列不应为空"
+        assert max_value is not None, "美元指数列不应为空"
+        assert isinstance(min_value, int | float), "美元指数取值应为数值"
+        assert isinstance(max_value, int | float), "美元指数取值应为数值"
+        assert min_value > 80, "美元指数应该大于 80"
+        assert max_value < 150, "美元指数应该小于 150"
 
     def test_fetch_dollar_index_schema(self, fred_adapter: MacroFredAdapter) -> None:
         """测试美元指数返回的 schema 符合 MACRO_INDICATOR_SOURCE_SCHEMA."""

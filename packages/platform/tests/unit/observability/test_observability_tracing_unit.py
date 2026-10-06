@@ -13,7 +13,7 @@ from ditto_platform.foundation.observability.tracing import (
     get_trace_id,
     reset_tracing,
 )
-from opentelemetry.trace import StatusCode
+from opentelemetry.trace.status import StatusCode
 
 
 @pytest.mark.unit

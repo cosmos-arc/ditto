@@ -132,10 +132,9 @@ class TestFailFastBehavior:
 
         assert "failing_provider" in exc_info.value.failed_providers
         assert "failing_provider" in exc_info.value.details
-        assert (
-            "Intentional failure for testing"
-            in exc_info.value.details["failing_provider"]
-        )
+        detail = exc_info.value.details["failing_provider"]
+        assert isinstance(detail, str)
+        assert "Intentional failure for testing" in detail
 
     def test_startup_fail_fast_on_exception(self) -> None:
         """STARTUP 场景下 provider 抛出异常应抛出 ConfigInitError."""
@@ -152,7 +151,9 @@ class TestFailFastBehavior:
             )
 
         assert "exception_provider" in exc_info.value.failed_providers
-        assert "RuntimeError" in exc_info.value.details["exception_provider"]
+        detail = exc_info.value.details["exception_provider"]
+        assert isinstance(detail, str)
+        assert "RuntimeError" in detail
 
     def test_startup_no_fail_fast_when_all_succeed(self) -> None:
         """STARTUP 场景下所有 provider 成功不应抛出异常."""

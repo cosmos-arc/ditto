@@ -195,5 +195,6 @@ class TestSQLiteResearchCatalogStore:
 
         read_back = reader.read_dataset_snapshot("rds-v2")
         assert read_back == record
+        assert read_back is not None
         assert read_back.dataset_spec_version == 2
         assert read_back.spine_spec_version == 1

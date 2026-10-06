@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import date
+from typing import cast
 from unittest.mock import MagicMock
 
 import polars as pl
@@ -252,7 +253,10 @@ class TestFundamentalStoreSaveMethods:
         result = service.save_balance_sheet(sample_df)
 
         assert result == 5
-        service._write_ports.balance_sheet.write.assert_called_once_with(sample_df)
+        # fixture 注入的 writer 是 MagicMock 替身，窄化后断言调用。
+        cast(
+            "MagicMock", service._write_ports.balance_sheet.write
+        ).assert_called_once_with(sample_df)
 
     def test_save_income_statement(
         self, service: FundamentalStore, sample_df: pl.DataFrame
@@ -261,7 +265,10 @@ class TestFundamentalStoreSaveMethods:
         result = service.save_income_statement(sample_df)
 
         assert result == 5
-        service._write_ports.income_statement.write.assert_called_once_with(sample_df)
+        # fixture 注入的 writer 是 MagicMock 替身，窄化后断言调用。
+        cast(
+            "MagicMock", service._write_ports.income_statement.write
+        ).assert_called_once_with(sample_df)
 
     def test_save_cash_flow(
         self, service: FundamentalStore, sample_df: pl.DataFrame
@@ -270,7 +277,10 @@ class TestFundamentalStoreSaveMethods:
         result = service.save_cash_flow(sample_df)
 
         assert result == 5
-        service._write_ports.cash_flow.write.assert_called_once_with(sample_df)
+        # fixture 注入的 writer 是 MagicMock 替身，窄化后断言调用。
+        cast("MagicMock", service._write_ports.cash_flow.write).assert_called_once_with(
+            sample_df
+        )
 
     def test_save_dividend(
         self, service: FundamentalStore, sample_df: pl.DataFrame
@@ -279,7 +289,10 @@ class TestFundamentalStoreSaveMethods:
         result = service.save_dividend(sample_df)
 
         assert result == 5
-        service._write_ports.dividend.write.assert_called_once_with(sample_df)
+        # fixture 注入的 writer 是 MagicMock 替身，窄化后断言调用。
+        cast("MagicMock", service._write_ports.dividend.write).assert_called_once_with(
+            sample_df
+        )
 
     def test_save_corporate_actions(
         self, service: FundamentalStore, sample_df: pl.DataFrame
@@ -288,4 +301,7 @@ class TestFundamentalStoreSaveMethods:
         result = service.save_corporate_actions(sample_df)
 
         assert result == 5
-        service._write_ports.corporate_actions.write.assert_called_once_with(sample_df)
+        # fixture 注入的 writer 是 MagicMock 替身，窄化后断言调用。
+        cast(
+            "MagicMock", service._write_ports.corporate_actions.write
+        ).assert_called_once_with(sample_df)

@@ -8,17 +8,43 @@
 from __future__ import annotations
 
 from collections.abc import Iterator
-from typing import Any
+from typing import Any, Protocol, cast
 
+import opentelemetry.metrics._internal as otel_metrics_internal
 import pytest
+from opentelemetry import trace as otel_trace_module
 from opentelemetry.metrics import Meter
 from opentelemetry.sdk.metrics import MeterProvider
 from opentelemetry.sdk.metrics.export import InMemoryMetricReader
 from opentelemetry.sdk.metrics.view import ExplicitBucketHistogramAggregation, View
 from opentelemetry.sdk.resources import Resource
+from opentelemetry.trace import TracerProvider
 
 # serial 由根 layering 规则按 tests/integration 目录赋予；conftest 的
 # pytestmark 声明从不生效，已删除该 no-op（#330 B1）。
+
+
+class _OnceFlag(Protocol):
+    """OTel ``Once`` 的最小可变形状（仅 ``_done`` 标志位）."""
+
+    _done: bool
+
+
+class _TraceApiGlobals(Protocol):
+    """``opentelemetry.trace`` 私有 provider 全局的真实模块形状.
+
+    仓库 ``typings/opentelemetry/trace.pyi`` 窄 stub 未声明私有全局；
+    运行时加载的是 uv.lock 钉住的真实包（#348），cast 收窄后符号
+    漂移仍会在首个属性访问处响亮失败（AttributeError）.
+    """
+
+    _TRACER_PROVIDER: TracerProvider | None
+    _TRACER_PROVIDER_SET_ONCE: _OnceFlag
+
+
+# stub 不声明 _TRACER_PROVIDER/_TRACER_PROVIDER_SET_ONCE；cast 安全因为
+# 运行时模块即 site-packages 真实 opentelemetry.trace（py.typed 包）.
+otel_trace = cast("_TraceApiGlobals", otel_trace_module)
 
 
 def _snapshot_otel_api_globals() -> dict[str, Any]:
@@ -30,9 +56,6 @@ def _snapshot_otel_api_globals() -> dict[str, Any]:
     在 ``opentelemetry.trace``，metrics 全局在 ``_internal`` 子模块，且
     metrics 的 proxy 持有已绑定 meter 状态，需一并恢复。
     """
-    import opentelemetry.metrics._internal as otel_metrics_internal
-    import opentelemetry.trace as otel_trace
-
     metrics_proxy = otel_metrics_internal._PROXY_METER_PROVIDER
     return {
         "tracer_provider": otel_trace._TRACER_PROVIDER,
@@ -55,9 +78,6 @@ def _detach_otel_api_globals() -> None:
     窗口 = 外来被插桩代码在本树测试执行期间绑定测试 provider（当前
     不存在该调用路径）。
     """
-    import opentelemetry.metrics._internal as otel_metrics_internal
-    import opentelemetry.trace as otel_trace
-
     otel_trace._TRACER_PROVIDER = None
     otel_trace._TRACER_PROVIDER_SET_ONCE._done = False
     otel_metrics_internal._METER_PROVIDER = None
@@ -69,9 +89,6 @@ def _detach_otel_api_globals() -> None:
 
 def _restore_otel_api_globals(snapshot: dict[str, Any]) -> None:
     """恢复 OTel API 进程级 provider 全局到快照值."""
-    import opentelemetry.metrics._internal as otel_metrics_internal
-    import opentelemetry.trace as otel_trace
-
     otel_trace._TRACER_PROVIDER = snapshot["tracer_provider"]
     otel_trace._TRACER_PROVIDER_SET_ONCE._done = snapshot["tracer_set"]
     otel_metrics_internal._METER_PROVIDER = snapshot["meter_provider"]
@@ -163,7 +180,7 @@ def metric_reader() -> InMemoryMetricReader:
 
 
 @pytest.fixture
-def meter_provider(metric_reader: InMemoryMetricReader) -> MeterProvider:
+def meter_provider(metric_reader: InMemoryMetricReader) -> Iterator[MeterProvider]:
     """
     提供配置好的 MeterProvider fixture.
 

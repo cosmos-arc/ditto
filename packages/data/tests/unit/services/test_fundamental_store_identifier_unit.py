@@ -5,6 +5,7 @@ and correctly pass it through the call chain.
 """
 
 from datetime import date
+from unittest.mock import Mock
 
 import polars as pl
 import pytest
@@ -15,11 +16,11 @@ from pytest_mock import MockerFixture
 
 def _make_service(
     mocker: MockerFixture,
-    **override_readers: object,
+    **override_readers: Mock,
 ) -> FundamentalStore:
     """Create a FundamentalStore with mocked dependencies."""
     mock_reader = mocker.Mock()
-    readers = {
+    readers: dict[str, Mock] = {
         "balance_sheet": override_readers.get("balance_sheet", mock_reader),
         "income_statement": override_readers.get("income_statement", mock_reader),
         "cash_flow": override_readers.get("cash_flow", mock_reader),

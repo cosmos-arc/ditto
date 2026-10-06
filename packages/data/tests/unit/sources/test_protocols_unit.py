@@ -15,6 +15,9 @@ from ditto_data.sources.registry import SourceRegistry
 
 # ---------------------------------------------------------------------------
 # Helpers: concrete implementations for Protocol structural typing tests
+#
+# 各 stub 只实现测试真实消费的成员；协议其余成员按真实签名补齐并
+# raise AssertionError fail-closed（stub 误被当真实源调用时立即暴露）。
 # ---------------------------------------------------------------------------
 
 
@@ -35,6 +38,9 @@ class _StubMetadataFetcher:
 
     def fetch_sw_industry(self, level: int = 1) -> pl.DataFrame:
         return pl.DataFrame()
+
+    def fetch_csrc_industry(self) -> pl.DataFrame:
+        raise AssertionError("stub member not exercised by these tests")
 
     def fetch_sw_industry_concepts(
         self,
@@ -107,8 +113,66 @@ class _StubMarketFetcher:
     ) -> pl.DataFrame:
         return pl.DataFrame()
 
+    def fetch_fund_nav(
+        self,
+        trade_date: str | None = None,
+        source_ticker: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> pl.DataFrame:
+        raise AssertionError("stub member not exercised by these tests")
+
     def fetch_stock_status(self, trade_date: str) -> pl.DataFrame:
         return pl.DataFrame()
+
+    def fetch_stock_limit(self, trade_date: str) -> pl.DataFrame:
+        raise AssertionError("stub member not exercised by these tests")
+
+    def fetch_st_history(
+        self,
+        ts_code: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> pl.DataFrame:
+        raise AssertionError("stub member not exercised by these tests")
+
+    def fetch_limit_list(
+        self,
+        trade_date: str | None = None,
+        source_ticker: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> pl.DataFrame:
+        raise AssertionError("stub member not exercised by these tests")
+
+    def fetch_fund_share(
+        self,
+        trade_date: str | None = None,
+        source_ticker: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> pl.DataFrame:
+        raise AssertionError("stub member not exercised by these tests")
+
+    def fetch_name_history(
+        self,
+        ts_code: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> pl.DataFrame:
+        raise AssertionError("stub member not exercised by these tests")
+
+    def fetch_futures_daily(
+        self,
+        trade_date: str | None = None,
+        source_ticker: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> pl.DataFrame:
+        raise AssertionError("stub member not exercised by these tests")
+
+    def fetch_futures_basic(self) -> pl.DataFrame:
+        raise AssertionError("stub member not exercised by these tests")
 
 
 class _StubFundamentalFetcher:
@@ -153,6 +217,42 @@ class _StubFundamentalFetcher:
     def fetch_corporate_actions(self, trade_date: str) -> pl.DataFrame:
         return pl.DataFrame()
 
+    def fetch_fina_indicator(
+        self,
+        trade_date: str | None = None,
+        source_ticker: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> pl.DataFrame:
+        raise AssertionError("stub member not exercised by these tests")
+
+    def fetch_fund_portfolio(
+        self,
+        trade_date: str | None = None,
+        source_ticker: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> pl.DataFrame:
+        raise AssertionError("stub member not exercised by these tests")
+
+    def fetch_earnings_forecast(
+        self,
+        ann_date: str | None = None,
+        source_ticker: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> pl.DataFrame:
+        raise AssertionError("stub member not exercised by these tests")
+
+    def fetch_earnings_express(
+        self,
+        ann_date: str | None = None,
+        source_ticker: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> pl.DataFrame:
+        raise AssertionError("stub member not exercised by these tests")
+
 
 class _StubCapitalFetcher:
     """Stub implementing CapitalFetcher Protocol."""
@@ -183,6 +283,78 @@ class _StubCapitalFetcher:
         end_date: str | None = None,
     ) -> pl.DataFrame:
         return pl.DataFrame()
+
+    def fetch_index_weight(
+        self,
+        index_code: str,
+        trade_date: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> pl.DataFrame:
+        raise AssertionError("stub member not exercised by these tests")
+
+    def fetch_index_valuation(
+        self,
+        trade_date: str | None = None,
+        source_ticker: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> pl.DataFrame:
+        raise AssertionError("stub member not exercised by these tests")
+
+    def fetch_moneyflow(
+        self,
+        trade_date: str | None = None,
+        source_ticker: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> pl.DataFrame:
+        raise AssertionError("stub member not exercised by these tests")
+
+    def fetch_cyq_perf(
+        self,
+        trade_date: str | None = None,
+        source_ticker: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> pl.DataFrame:
+        raise AssertionError("stub member not exercised by these tests")
+
+    def fetch_hk_hold(
+        self,
+        trade_date: str | None = None,
+        source_ticker: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> pl.DataFrame:
+        raise AssertionError("stub member not exercised by these tests")
+
+    def fetch_hsgt_top10(
+        self,
+        trade_date: str | None = None,
+        source_ticker: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> pl.DataFrame:
+        raise AssertionError("stub member not exercised by these tests")
+
+    def fetch_top_list(
+        self,
+        trade_date: str | None = None,
+        source_ticker: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> pl.DataFrame:
+        raise AssertionError("stub member not exercised by these tests")
+
+    def fetch_top_inst(
+        self,
+        trade_date: str | None = None,
+        source_ticker: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> pl.DataFrame:
+        raise AssertionError("stub member not exercised by these tests")
 
 
 class _StubMacroFetcher:

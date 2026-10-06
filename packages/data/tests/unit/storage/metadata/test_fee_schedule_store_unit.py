@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import FrozenInstanceError
-from typing import Any
+from typing import Any, TypedDict, Unpack, cast
 
 import pytest
 from ditto_data.storage.metadata.fee_schedule_reader import (
@@ -11,9 +11,24 @@ from ditto_data.storage.metadata.fee_schedule_reader import (
     FeeScheduleRecord,
 )
 from ditto_data.storage.metadata.fee_schedule_writer import FeeScheduleWriter
+from ditto_kernel.identity import InstrumentId
+
+
+class _Defaults(TypedDict, total=False):
+    """_make 覆写参数的精确键型（调用侧受检）。"""
+
+    instrument_id: InstrumentId
+    as_of_date: str
+    commission_rate: float
+    min_commission: float
+    stamp_duty_rate: float
+    transfer_fee_rate: float
+    effective_from: str
+    effective_to: str | None
+
 
 _DEFAULTS: dict[str, object] = {
-    "instrument_id": 1,
+    "instrument_id": InstrumentId(1),
     "as_of_date": "2026-01-01",
     "commission_rate": 0.0003,
     "min_commission": 5.0,
@@ -24,8 +39,9 @@ _DEFAULTS: dict[str, object] = {
 }
 
 
-def _make(**overrides: object) -> FeeScheduleRecord:
-    return FeeScheduleRecord(**{**_DEFAULTS, **overrides})
+def _make(**overrides: Unpack[_Defaults]) -> FeeScheduleRecord:
+    # 覆写参数经 Unpack[TypedDict] 调用侧受检；合并字典构造点单点放宽。
+    return FeeScheduleRecord(**cast("dict[str, Any]", {**_DEFAULTS, **overrides}))
 
 
 def _seed_reader(records: list[FeeScheduleRecord]) -> FeeScheduleReader:
@@ -43,7 +59,7 @@ def _check_effective_from_boundary(
     effective_from: str = "2026-02-01",
     match_date: str = "2026-02-01",
     miss_date: str = "2026-01-31",
-    instrument_id: int = 1,
+    instrument_id: InstrumentId = InstrumentId(1),
 ) -> None:
     """effective_from <= as_of_date: as_of_date == effective_from 应匹配."""
     reader = _seed_reader([_make(effective_from=effective_from)])
@@ -57,7 +73,7 @@ def _check_effective_to_boundary(
     effective_to: str = "2026-02-15",
     match_date: str = "2026-02-14",
     miss_date: str = "2026-02-15",
-    instrument_id: int = 1,
+    instrument_id: InstrumentId = InstrumentId(1),
 ) -> None:
     """effective_to > as_of_date: boundary 是 exclusive, == 应不匹配."""
     reader = _seed_reader([_make(effective_to=effective_to)])
@@ -68,14 +84,14 @@ def _check_effective_to_boundary(
 def _check_latest_version(
     reader: FeeScheduleReader,
     *,
-    old_attrs: dict[str, Any],
-    new_attrs: dict[str, Any],
+    old_attrs: _Defaults,
+    new_attrs: _Defaults,
     check_field: str,
     old_value: Any,
     new_value: Any,
     old_date: str,
     new_date: str,
-    instrument_id: int = 1,
+    instrument_id: InstrumentId = InstrumentId(1),
 ) -> None:
     """多个版本匹配时, 选择 effective_from 最大的版本."""
     reader = _seed_reader([_make(**old_attrs), _make(**new_attrs)])
@@ -91,7 +107,7 @@ def _check_null_effective_to(
     reader: FeeScheduleReader,
     *,
     far_future_date: str = "2099-12-31",
-    instrument_id: int = 1,
+    instrument_id: InstrumentId = InstrumentId(1),
 ) -> None:
     """effective_to IS NULL 表示版本仍然有效."""
     reader = _seed_reader([_make()])
@@ -110,7 +126,7 @@ class TestFeeScheduleRecord:
 
     def test_record_fields_accessible(self) -> None:
         record = _make(
-            instrument_id=3,
+            instrument_id=InstrumentId(3),
             stamp_duty_rate=0.0005,
             transfer_fee_rate=0.00001,
         )
@@ -159,7 +175,7 @@ class TestFeeScheduleReaderPIT:
                 ),
             ]
         )
-        result = reader.get(1, "2023-01-15")
+        result = reader.get(InstrumentId(1), "2023-01-15")
         assert result is not None
         assert result.stamp_duty_rate == pytest.approx(0.0005)
 

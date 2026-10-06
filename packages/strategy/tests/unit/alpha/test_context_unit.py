@@ -9,38 +9,48 @@ class TestStrategyContext:
         assert ctx.risk_locked_instruments == {}
 
     def test_lock_and_unlock(self) -> None:
+        from ditto_kernel.identity import InstrumentId
         from ditto_strategy.alpha.context import StrategyContext
 
         ctx = StrategyContext()
-        ctx.lock_instrument(1, "max_drawdown")
-        assert ctx.is_locked(1)
-        assert not ctx.is_locked(2)
-        assert ctx.risk_locked_instruments[1] == ("max_drawdown", None)
+        ctx.lock_instrument(InstrumentId(1), "max_drawdown")
+        assert ctx.is_locked(InstrumentId(1))
+        assert not ctx.is_locked(InstrumentId(2))
+        assert ctx.risk_locked_instruments[InstrumentId(1)] == (
+            "max_drawdown",
+            None,
+        )
 
     def test_clear_locks(self) -> None:
+        from ditto_kernel.identity import InstrumentId
         from ditto_strategy.alpha.context import StrategyContext
 
         ctx = StrategyContext()
-        ctx.lock_instrument(1, "max_drawdown")
-        ctx.lock_instrument(2, "single_loss_limit")
+        ctx.lock_instrument(InstrumentId(1), "max_drawdown")
+        ctx.lock_instrument(InstrumentId(2), "single_loss_limit")
         ctx.clear_locks("2026-01-15")
         assert ctx.risk_locked_instruments == {}
 
     def test_lock_instrument_overwrite(self) -> None:
+        from ditto_kernel.identity import InstrumentId
         from ditto_strategy.alpha.context import StrategyContext
 
         ctx = StrategyContext()
-        ctx.lock_instrument(1, "max_drawdown")
-        ctx.lock_instrument(1, "single_loss_limit")  # 覆盖
-        assert ctx.risk_locked_instruments[1] == ("single_loss_limit", None)
+        ctx.lock_instrument(InstrumentId(1), "max_drawdown")
+        ctx.lock_instrument(InstrumentId(1), "single_loss_limit")  # 覆盖
+        assert ctx.risk_locked_instruments[InstrumentId(1)] == (
+            "single_loss_limit",
+            None,
+        )
 
 
 class TestStrategyContextPositions:
     def test_create_with_positions(self) -> None:
+        from ditto_kernel.identity import InstrumentId
         from ditto_strategy.alpha.context import StrategyContext
 
         ctx = StrategyContext(
-            positions={1: 0.85, 2: 4.20},
+            positions={InstrumentId(1): 0.85, InstrumentId(2): 4.20},
         )
         assert ctx.positions == {1: 0.85, 2: 4.20}
 
@@ -51,11 +61,12 @@ class TestStrategyContextPositions:
         assert ctx.positions == {}
 
     def test_positions_not_cleared_by_clear_locks(self) -> None:
+        from ditto_kernel.identity import InstrumentId
         from ditto_strategy.alpha.context import StrategyContext
 
         ctx = StrategyContext(
-            risk_locked_instruments={1: ("max_drawdown", None)},
-            positions={1: 0.85, 2: 4.20},
+            risk_locked_instruments={InstrumentId(1): ("max_drawdown", None)},
+            positions={InstrumentId(1): 0.85, InstrumentId(2): 4.20},
         )
         ctx.clear_locks("2026-01-15")
         assert ctx.risk_locked_instruments == {}

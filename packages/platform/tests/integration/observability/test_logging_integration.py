@@ -96,7 +96,7 @@ class TestConfigureLogging:
         configure_logging(config)
 
         # [REVIEW] JSON 文件
-        tmp_path / "logs" / "ditto.jsonl"
+        assert (tmp_path / "logs" / "ditto.jsonl").exists()
         # [REVIEW]
         # logger.info("test message")
 
@@ -116,7 +116,7 @@ class TestConfigureLogging:
         configure_logging(config)
 
         # [REVIEW]
-        tmp_path / "logs" / "ditto.log"
+        assert (tmp_path / "logs" / "ditto.log").exists()
 
     def test_configure_logging_testing_no_file_output(self, tmp_path: Path) -> None:
         """测试测试环境不输出文件."""
@@ -127,12 +127,14 @@ class TestConfigureLogging:
             pytest_running=True,  # [REVIEW]
             assertions_enabled=False,
             verbose_logging=False,
+            # 显式覆盖 preset 的 log_to_file=False，让 pytest_running 早退成为唯一防线
+            log_to_file=True,
         )
 
         configure_logging(config)
 
-        # [REVIEW]
-        tmp_path / "logs" / "ditto.log"
+        # [REVIEW] 早退先于 _resolve_log_dir 的 mkdir：连日志目录都不应出现
+        assert not (tmp_path / "logs").exists()
         # [REVIEW]
 
     def test_configure_logging_verbose_format(self, tmp_path: Path) -> None:
@@ -178,7 +180,7 @@ class TestConfigureLogging:
         configure_logging(config)
 
         # [REVIEW]
-        tmp_path / "logs" / "ditto_error.log"
+        assert (tmp_path / "logs" / "ditto_error.log").exists()
 
     def test_configure_logging_respects_log_level(self, tmp_path: Path) -> None:
         """测试日志级别设置."""

@@ -9,13 +9,17 @@
 from unittest.mock import MagicMock
 
 import pytest
-from ditto_platform.foundation.observability.metrics import _MetricsRegistry
+from ditto_platform.foundation.observability.metrics._registry import (
+    _MetricsRegistry,
+)
 from opentelemetry import metrics
 from opentelemetry.sdk.metrics.export import InMemoryMetricReader
 
 
 def test_platform_metrics_are_technology_only() -> None:
-    from ditto_platform.foundation.observability.metrics import METRIC_DEFINITIONS
+    from ditto_platform.foundation.observability.metrics._types import (
+        METRIC_DEFINITIONS,
+    )
 
     names = {item["instrument_name"] for item in METRIC_DEFINITIONS}
     assert not any(".data." in name for name in names)

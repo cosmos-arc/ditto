@@ -57,6 +57,9 @@ from ditto_data.sources.tushare.processors.mappings import (
 )
 from ditto_data.sources.tushare.processors.transformer import TushareDataTransformer
 
+# dtype 契约值允许类型类或实例（SourceSchema.SchemaType / transformer 空帧 schema 并存）
+_DType = pl.DataType | type[pl.DataType]
+
 # 帧原生携带 instrument_id 的数据集（adapter 内联 Int64 键）
 _NATIVE_INSTRUMENT_DATASETS = frozenset({"fx_daily", "commodity_daily"})
 # 已知不配置 type_check 的数据集（index_weight：weight dtype 随 API 推断漂移，
@@ -82,7 +85,7 @@ def _load_yml_specs() -> dict[str, DatasetRules]:
     return specs
 
 
-def _mapping_schema(mapping, *, add_pit: bool = False) -> dict[str, pl.DataType]:
+def _mapping_schema(mapping, *, add_pit: bool = False) -> dict[str, _DType]:
     """按 transformer 空帧路径派生映射权威 schema；PIT 内联列为适配器统一后置步.
 
     transformer 空帧对计算列的类型推断回退 String（多根表达式）或不可见
@@ -91,9 +94,9 @@ def _mapping_schema(mapping, *, add_pit: bool = False) -> dict[str, pl.DataType]
     表达式取真实 dtype（0 行求值仅定 dtype，不触数据）。
     """
     typed = TushareDataTransformer.transform(pl.DataFrame(), "wiring", mapping)
-    schema = dict(typed.schema)
+    schema: dict[str, _DType] = dict(typed.schema)
     if mapping.computed_columns:
-        intermediate = dict(schema)
+        intermediate: dict[str, _DType] = dict(schema)
         for col in mapping.date_columns:
             intermediate.setdefault(col, pl.Date)
         for col in mapping.float_columns:
@@ -115,8 +118,8 @@ def _mapping_schema(mapping, *, add_pit: bool = False) -> dict[str, pl.DataType]
     return schema
 
 
-def _frame_dtype_table() -> dict[str, dict[str, pl.DataType]]:
-    table: dict[str, dict[str, pl.DataType]] = {
+def _frame_dtype_table() -> dict[str, dict[str, _DType]]:
+    table: dict[str, dict[str, _DType]] = {
         "adj_factor": _mapping_schema(ADJ_FACTOR_MAPPING),
         "fund_adj": _mapping_schema(FUND_ADJ_MAPPING),
         "etf_nav": _mapping_schema(ETF_NAV_MAPPING),

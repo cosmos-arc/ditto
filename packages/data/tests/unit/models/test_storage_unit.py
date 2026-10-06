@@ -1,6 +1,7 @@
 """Unit tests for Models - storage."""
 
 import dataclasses
+from typing import Any, cast
 
 import pytest
 from ditto_platform.foundation import (
@@ -52,7 +53,8 @@ class TestWriteResult:
             blocked=False,
         )
         with pytest.raises(dataclasses.FrozenInstanceError):
-            result.file_path = "/other/path"
+            # 故意对冻结实例赋值（被测行为）；单点 cast 放宽静态检查.
+            cast("Any", result).file_path = "/other/path"
 
 
 @pytest.mark.unit
@@ -118,4 +120,5 @@ class TestWriteStoreResult:
             is_merge=False,
         )
         with pytest.raises(dataclasses.FrozenInstanceError):
-            result.added = 200
+            # 故意对冻结实例赋值（被测行为）；单点 cast 放宽静态检查.
+            cast("Any", result).added = 200
