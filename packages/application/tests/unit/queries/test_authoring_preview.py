@@ -144,6 +144,7 @@ def test_draft_rejects_unknown_nodes_and_config_type_mismatches(
     reason: str,
 ) -> None:
     candidate = _v2_candidate()
+    # 参数化 lambda 无法携带注解（推断会扩散进 lambda 体），调用侧窄化 cast。
     cast("Callable[[dict[str, object]], None]", mutate)(candidate)
 
     result = _facade().create_draft(spec_json=candidate)
