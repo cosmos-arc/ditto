@@ -2,6 +2,11 @@
 dataset: fund_adj
 description: "ETF/基金复权因子数据质量检查规则"
 
+# 只登记 BusinessChecker 实际分派的规则类型（positive 有分支；
+# monotonic_decrease 与裸 expr 求值在 checkers/business.py 无分派，
+# adj_factor.yml 的同名规则是既有死配置——补分派或清理归 P2 治理，
+# 不在新建文件里复制虚假覆盖）。
+
 # 技术类: 技术校验（写入时强制阻断）
 technical:
   - rule: not_null
@@ -29,18 +34,6 @@ business:
   - rule: positive
     columns: [adj_factor]
     message: "复权因子必须为正数"
-
-  - rule: monotonic_decrease
-    column: adj_factor
-    group_by: instrument_id
-    severity: warning
-    message: "复权因子应单调递减（分红除息时会跳跃）"
-
-  - rule: expression
-    name: reasonable_range
-    expr: "adj_factor BETWEEN 0.1 AND 100.0"
-    severity: warning
-    message: "复权因子超出合理范围 [0.1, 100.0]"
 
 # 统计类（L3 patrol）暂不配置：fund_adj 未接入 patrol 的
 # _FACTOR_L3_DATASETS 读取器（当前仅 adj_factor 有专用读取路径），

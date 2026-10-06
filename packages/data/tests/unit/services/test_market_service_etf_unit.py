@@ -202,6 +202,33 @@ class TestGetEtfBars:
         with pytest.raises(AdjustmentFactorMissingError, match="fund_adj"):
             market_service.get_etf_bars(start="2024-01-01", end="2024-01-31", adj="qfq")
 
+    def test_get_etf_bars_hfq_partial_coverage_fails_closed(
+        self,
+        market_service: MarketService,
+        mock_readers: dict[str, MagicMock],
+    ) -> None:
+        """混合覆盖：部分 ETF 无因子时整请求 fail closed 并点名标的（#514）.
+
+        行级缺失比整窗空更隐蔽——这是 510050/150001 在全市场帧里的
+        实际形态。
+        """
+        # Arrange：两 ETF 的行情，因子只覆盖其一
+        uncovered_id = ETF_ID + 1
+        bars = pl.concat(
+            [
+                SAMPLE_ETF_BARS,
+                SAMPLE_ETF_BARS.with_columns(
+                    pl.lit(uncovered_id, dtype=pl.Int64).alias("instrument_id")
+                ),
+            ]
+        )
+        mock_readers["etf_bars"].read.return_value = bars
+        mock_readers["etf_adj"].read.return_value = SAMPLE_ETF_ADJ
+
+        # Act / Assert
+        with pytest.raises(AdjustmentFactorMissingError, match=str(uncovered_id)):
+            market_service.get_etf_bars(start="2024-01-01", end="2024-01-31", adj="hfq")
+
     def test_get_etf_bars_qfq_no_etf_adj_port(
         self,
         market_service_no_etf_adj: MarketService,

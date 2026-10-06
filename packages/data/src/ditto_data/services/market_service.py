@@ -150,8 +150,12 @@ class MarketService:
 
         Returns:
             行情 DataFrame，包含 instrument_id、trade_date、open、high、
-            low、close、volume、amount 等列。如果请求复权但无复权因子
-            数据，则返回未复权的原始数据。
+            low、close、volume、amount 等列。
+
+        Raises:
+            AdjustmentFactorMissingError: 请求复权（qfq/hfq）但任一 ETF
+                在窗口内关联不到 fund_adj 因子——fail closed 不产出失真
+                复权值（#514）；需要未复权价格请显式 adj="none"。
 
         """
         logger.debug(
