@@ -15,6 +15,7 @@ from ditto_application.processes.experiments.evidence_collector import (
     project_r2_live_gate_fact,
 )
 from ditto_application.processes.experiments.r2_live_gate_evidence import (
+    _R2_HARD_DATASET_PROVIDER_CONTRACTS,
     FileR2LiveGateEvidenceReader,
     NullR2LiveGateEvidenceReader,
     R2LiveGateArtifactSource,
@@ -23,34 +24,9 @@ from ditto_application.processes.experiments.r2_live_gate_evidence import (
     VerifiedR2LiveGateEvidence,
 )
 
-_R2_CONTRACTS = {
-    "stock_basic": ("tushare:stock_basic", "tushare:bak_basic"),
-    "etf_basic": ("tushare:etf_basic",),
-    "index_basic": ("tushare:index_basic",),
-    "calendar": ("tushare:trade_cal",),
-    "stock_daily": ("tushare:daily", "fuyao:historical_prices"),
-    "etf_daily": ("tushare:fund_daily",),
-    "index_daily": ("tushare:index_daily",),
-    "global_index_daily": ("tushare:index_global",),
-    "stock_status": ("tushare:stock_st", "tushare:suspend_d", "tushare:bak_basic"),
-    "adj_factor": ("tushare:adj_factor",),
-    "fund_adj": ("tushare:fund_adj",),
-    "balance_sheet": ("tushare:balancesheet",),
-    "income_statement": ("tushare:income",),
-    "cash_flow": ("tushare:cashflow",),
-    "dividend": ("tushare:dividend",),
-    "valuation_metrics": ("tushare:daily_basic",),
-    "macro_indicators": (
-        "tushare:cn_macro",
-        "fred:series_observations",
-        "alfred:vintages",
-    ),
-    "commodity_daily": ("fred:commodity_series", "tushare:commodity_reference"),
-    "corporate_actions": ("tushare:corporate_actions",),
-    "index_weight": ("tushare:index_weight",),
-    "industry_classification": ("tushare:index_classify",),
-    "industry_mapping": ("tushare:index_member_all",),
-}
+# 跟随生产契约表（#529 收口：fixture 副本漂移曾使 #534 的 provider 面扩展
+# 未同步到这里，ready 报告静默 fail closed）。
+_R2_CONTRACTS = _R2_HARD_DATASET_PROVIDER_CONTRACTS
 
 
 def _hash(payload: bytes) -> str:
@@ -81,7 +57,7 @@ def _ready_report(*, mode: str = "live", status: str = "ready") -> dict[str, obj
         "preflight": {
             "status": "ready" if status == "ready" else "configuration_blocked",
             "checked_at": "2026-07-31T12:00:00+00:00",
-            "contract_count": 22,
+            "contract_count": len(_R2_CONTRACTS),
             "products": products,
             "reason_codes": ([] if status == "ready" else ["entitlement_unverified"]),
             "performance": {
@@ -485,3 +461,30 @@ def test_hand_constructed_boolean_cannot_enter_gate_projection() -> None:
 
     assert exc_info.value.details["code"] == "EXPERIMENT_INTEGRITY_FAILED"
     assert exc_info.value.details["reason"] == "r2_live_gate_reader_contract_invalid"
+
+
+def test_hard_provider_contracts_match_catalog_dataset_spec() -> None:
+    """#529：冻结 provider 契约表与 catalog 权威 dataset_spec 双表一致性守卫.
+
+    R2 门禁的冻结表是 dataset_spec provider 面的门禁侧镜像（#534 扩展
+    rights/csrc 时两表漂移、ready 判定静默 fail closed 才暴露）。此守卫
+    让下一次 provider 面演进在测试侧立即红，而非等线上证据链拒收。
+    键集与计数同守：冻结表键集必须等于 catalog hard scope 全集，且与
+    读取/生成两侧 _EXPECTED_CONTRACT_COUNT 三点一致——否则 hard 数据集
+    增减会复现同一静默 fail closed（#533 correctness-review W1）。
+    """
+    from ditto_data.catalog.dataset_spec import _R2_HARD_SCOPE, resolve_dataset_spec
+
+    for dataset_id, providers in _R2_CONTRACTS.items():
+        assert resolve_dataset_spec(dataset_id).provider_datasets == providers, (
+            dataset_id
+        )
+    assert frozenset(_R2_CONTRACTS) == _R2_HARD_SCOPE
+    from ditto_application.processes.experiments.r2_live_gate_evidence import (
+        _EXPECTED_CONTRACT_COUNT as _READER_COUNT,
+    )
+    from ditto_application.processes.ingestion.r2_preflight import (
+        _EXPECTED_CONTRACT_COUNT as _PREFLIGHT_COUNT,
+    )
+
+    assert len(_R2_CONTRACTS) == _READER_COUNT == _PREFLIGHT_COUNT

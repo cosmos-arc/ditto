@@ -177,6 +177,7 @@ def test_artifact_byte_drift_cannot_produce_a_live_pass_packet(tmp_path: Path) -
     }
 
 
+@pytest.mark.slow  # 负载下 5.8-6.5s+，曾触 test-fast 10s 硬顶（#328 >5s 治理）
 def test_verified_live_gate_survives_real_collector_persistence_and_reopen(
     tmp_path: Path,
 ) -> None:

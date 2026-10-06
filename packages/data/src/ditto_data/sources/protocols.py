@@ -136,6 +136,10 @@ class MarketFetcher(Protocol):
         """获取股票交易状态."""
         ...
 
+    def fetch_stock_limit(self, trade_date: str) -> pl.DataFrame:
+        """获取全市场涨跌停价格（#517 stk_limit 单日全市场）."""
+        ...
+
     def fetch_st_history(
         self,
         ts_code: str | None = None,

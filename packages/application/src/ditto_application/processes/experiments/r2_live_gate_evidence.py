@@ -70,9 +70,10 @@ _R2_HARD_DATASET_PROVIDER_CONTRACTS = {
         "alfred:vintages",
     ),
     "commodity_daily": ("fred:commodity_series", "tushare:commodity_reference"),
-    "corporate_actions": ("tushare:corporate_actions",),
+    # #534：dataset_spec 扩展 provider 面（#517 rights 配股/csrc 行业第二来源）
+    "corporate_actions": ("tushare:corporate_actions", "tushare:rights"),
     "index_weight": ("tushare:index_weight",),
-    "industry_classification": ("tushare:index_classify",),
+    "industry_classification": ("tushare:index_classify", "tushare:csrc_industrial"),
     "industry_mapping": ("tushare:index_member_all",),
 }
 _REPRESENTATIVE_DATASETS = frozenset(

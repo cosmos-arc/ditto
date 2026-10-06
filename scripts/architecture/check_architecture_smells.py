@@ -406,6 +406,7 @@ APPS_REGISTRY_COMPOSITION_ALLOWANCES = (
                 "ditto_data.sources.exchange_transformers",
                 "ditto_data.sources.fuyao.source",
                 "ditto_data.sources.protocols",
+                "ditto_data.sources.reference_config",
                 "ditto_data.sources.registry",
             }
         ),
@@ -503,6 +504,7 @@ APPS_REGISTRY_COMPOSITION_ALLOWANCES = (
                 "ditto_data.config.data_source_validation",
                 "ditto_data.config.data_store",
                 "ditto_data.quality.config",
+                "ditto_data.sources.reference_config",
                 "ditto_features.config",
             }
         ),
