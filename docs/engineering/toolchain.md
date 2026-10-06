@@ -142,19 +142,16 @@ basedpyright 中不展开（仅 `**` 生效）——12 个包 1020 个测试文�
 
 语义与维护：
 
-- tests 门存量债（2480 错，按包分布见 #539）钉在入库 `pyright.tests.baseline.json`
-  （basedpyright 原生 baselineFile，由配置自动消费）；**新文件与新形状错误立即红**，
-  存量不计。已知边界（correctness 取证）：baseline 按 规则+列宽+行数 对齐匹配、
-  不含行号——同文件同规则同列宽的「修一增一」交换会被吸收到下轮重生成之前；
-  每批清偿后重生成即闭合该窗口。
-- 绿档运行若存量缩水，basedpyright 会**自动改写** baseline 文件（1.39.9 无 CLI
-  关闭项）——收缩应随修复提交，或 `git checkout` 丢弃；不请自来的 diff 以此解释。
-- 每批清偿后重生成收缩：修错 → `rm pyright.tests.baseline.json` →
-  `basedpyright --project pyright.tests.json --writebaseline` → 提交新基线；清零时
-  连 `baselineFile` 配置一并移除。
+- ~~tests 门存量债（2480 错，按包分布见 #539）钉在入库 `pyright.tests.baseline.json`~~
+  **已退役（#540 三批清零，2026-10-07）**：baseline 文件、`baselineFile` 配置与
+  `.gitignore` 白名单已随清零移除，tests 门回到零基线的严格态。历史语义存档：
+  baseline 曾按 规则+列宽+行数 对齐匹配（不含行号），同文件同规则同列宽的
+  「修一增一」交换会被吸收到下轮重生成之前；绿档运行存量缩水时 basedpyright
+  会自动改写 baseline（1.39.9 无 CLI 关闭项）。
 - `tooling/quality/tests/test_type_gate_coverage.py` 守卫：tests include 必须与磁盘
-  tests 目录集合完全一致、禁用通配符、生产门必须含 `apps/backend/src`——新包/新
-  tooling tests 目录不登记即红，杜绝静默漏保。
+  tests 目录集合完全一致、禁用通配符、生产门必须含 `apps/backend/src`、tests 门
+  不得挂 `baselineFile`（#540 清零后防存量债回潮）——新包/新 tooling tests 目录
+  不登记即红，杜绝静默漏保。
 
 CI 侧（9 次成功全量 PR + 3 次后端 squash push，2026-09-27 取样）：
 
