@@ -102,6 +102,9 @@ def _mapping_schema(mapping, *, add_pit: bool = False) -> dict[str, pl.DataType]
             intermediate.setdefault(col, pl.Int64)
         for col in mapping.boolean_columns:
             intermediate.setdefault(col, pl.Boolean)
+        for col in mapping.output_columns or ():
+            # 透传输出列按 JSON 推断的 String 语义预置（计算列 cast 引用时）
+            intermediate.setdefault(col, pl.String)
         evaluated = pl.DataFrame(schema=intermediate).select(
             [expr.alias(name) for name, expr in mapping.computed_columns.items()]
         )
@@ -297,6 +300,30 @@ class TestTypeCheckWiring:
             schema=schema,
         )
         assert engine.check(df=frame, dataset="stock_daily").passed
+
+    def test_all_null_passthrough_column_passes_gate(self) -> None:
+        """全 null 透传列（合法可选，如 fund_share.fund_type）不得被误阻断.
+
+        #529 correctness-review F1 复现收口：透传列非空批次全 null 时
+        JSON 推断 Null dtype，靠 mapping 计算列显式 cast 归一为 String
+        后过闸。空帧契约（String 兜底）与非空路径（JSON 推断）在此对齐。
+        """
+        raw = pl.DataFrame(
+            {
+                "ts_code": ["510300.SH"],
+                "trade_date": ["20260930"],
+                "fd_share": [1_000_000.0],
+                "fund_type": [None],
+                "market": ["SH"],
+            }
+        )
+        from ditto_data.sources.tushare.processors.mappings import FUND_SHARE_MAPPING
+
+        frame = TushareDataTransformer.transform(raw, "fund_share", FUND_SHARE_MAPPING)
+        assert str(frame.schema["fund_type"]) == "String"
+        rules = _load_yml_specs()["fund_share"]
+        engine = QualityEngine(config=DQSpec(datasets={"fund_share": rules}))
+        assert engine.check(df=frame, dataset="fund_share").passed
 
 
 @pytest.mark.unit

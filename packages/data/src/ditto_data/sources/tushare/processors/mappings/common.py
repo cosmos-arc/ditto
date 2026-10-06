@@ -94,13 +94,16 @@ ETF_NAV_MAPPING = ColumnMapping(
 )
 
 # #522 基金份额（fund_share）：ETF 逐日申报（OF 基金节奏不定），
-# fd_share 单位**万份**；market 为交易所（SH/SZ），kd=T+1
+# fd_share 单位**万份**；market 为交易所（SH/SZ），kd=T+1。
+# fund_type 显式 String cast：透传列全 null 批次 JSON 推断 Null dtype，
+# 会被 #529 复活的 type_check(string) 误阻断（合法可选列）。
 FUND_SHARE_MAPPING = ColumnMapping(
     rename={"ts_code": "source_ticker", "market": "exchange"},
     date_columns={"trade_date": "%Y%m%d"},
     float_columns=["fd_share"],
     computed_columns={
         "knowledge_date": pl.col("trade_date") + pl.duration(days=1),
+        "fund_type": pl.col("fund_type").cast(pl.String, strict=False),
     },
     output_columns=(
         "source_ticker",
