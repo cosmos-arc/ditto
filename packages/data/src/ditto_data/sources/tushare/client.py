@@ -76,6 +76,13 @@ def _rate_limit_config(settings: DataSourceSettings) -> TushareRateLimitConfig:
         config,
         global_rate=(settings.rate_limit_global_rate or config.global_rate),
         daily_rate=(settings.rate_limit_daily_rate or config.daily_rate),
+        # 日配额覆盖（#507 G1）：显式设置优先，None 沿用档位默认
+        # （官方档 100000/天，代理档 None 无约束）
+        daily_quota=(
+            settings.rate_limit_daily_quota
+            if settings.rate_limit_daily_quota is not None
+            else config.daily_quota
+        ),
     )
 
 

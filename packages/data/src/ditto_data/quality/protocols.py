@@ -65,6 +65,7 @@ class QualityEngineProtocol(Protocol):
         current: pl.DataFrame,
         historical: pl.DataFrame | None = None,
         calendar: pl.DataFrame | None = None,
+        reference: pl.DataFrame | None = None,
     ) -> DQResult:
         """执行统计类异常检查."""
         ...

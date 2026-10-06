@@ -312,6 +312,9 @@ class TestTushareClientQuery:
         assert resolve_page_size("fund_daily") == 5000
         assert resolve_page_size("fund_adj") == 2000
         assert resolve_page_size("index_global") == 4000
+        # 单次上限低于保守默认 2000 的端点（超限会静默截断，#507 G3）
+        assert resolve_page_size("pledge_stat") == 1000
+        assert resolve_page_size("stock_st") == 1000
         assert resolve_page_size("unknown_endpoint") == 2000
 
     def test_in_page_duplicate_rows_raise(

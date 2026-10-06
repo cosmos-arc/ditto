@@ -22,6 +22,8 @@ class DataSourceSettings(BaseModel):
     rate_limit_profile: str = Field(default="free")
     rate_limit_global_rate: int | None = Field(default=None)
     rate_limit_daily_rate: int | None = Field(default=None)
+    # 日配额覆盖（次/天，官方直连档位默认 100000；None = 沿用档位默认）
+    rate_limit_daily_quota: int | None = Field(default=None)
 
     # Token
     tushare_token: str = Field(default="")

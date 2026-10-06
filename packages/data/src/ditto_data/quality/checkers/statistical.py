@@ -18,6 +18,7 @@ class StatisticalChecker:
         historical: pl.DataFrame | None = None,
         calendar: pl.DataFrame | None = None,
         rules: list[dict[str, Any]] | None = None,
+        reference: pl.DataFrame | None = None,
     ) -> list[DQIssue]:
         """
         Execute L3 statistical checks.
@@ -28,6 +29,9 @@ class StatisticalChecker:
                 (optional, for zscore)
             calendar: Trading calendar (optional, for completeness check)
             rules: List of L3 rule configurations
+            reference: Companion-dataset frame for cross-dataset
+                consistency rules (optional, e.g. stock_status for
+                suspension_contradiction)
 
         Returns:
             List of DQIssue (ALERT severity)
@@ -39,7 +43,7 @@ class StatisticalChecker:
         issues: list[DQIssue] = []
 
         for rule in rules:
-            issue = self._check_rule(current, historical, calendar, rule)
+            issue = self._check_rule(current, historical, calendar, rule, reference)
             if issue:
                 issues.append(issue)
 
@@ -51,6 +55,7 @@ class StatisticalChecker:
         historical: pl.DataFrame | None,
         calendar: pl.DataFrame | None,
         rule: dict[str, Any],
+        reference: pl.DataFrame | None = None,
     ) -> DQIssue | None:
         """
         Check a single rule.
@@ -60,6 +65,7 @@ class StatisticalChecker:
             historical: Historical data for statistical calculations
             calendar: Trading calendar
             rule: Rule configuration
+            reference: Companion-dataset frame (consistency rules)
 
         Returns:
             DQIssue if rule violated, None otherwise
@@ -71,6 +77,8 @@ class StatisticalChecker:
             return self._check_zscore(current, historical, rule)
         elif rule_type == "completeness":
             return self._check_completeness(current, historical, calendar, rule)
+        elif rule_type == "suspension_contradiction":
+            return self._check_suspension_contradiction(current, reference)
 
         return None
 
@@ -225,6 +233,112 @@ class StatisticalChecker:
             if instrument_gaps:
                 gaps[str(instrument_id)] = instrument_gaps
         return gaps
+
+    def _check_suspension_contradiction(
+        self,
+        current: pl.DataFrame,
+        reference: pl.DataFrame | None,
+    ) -> DQIssue | None:
+        """
+        Check daily×stock_status contradiction（#507 C1，#1797 实测形态）.
+
+        矛盾行 = 同 (instrument_id, trade_date) 上 ``is_suspended=True`` 但
+        日线 ``volume > 0``（停牌却成交）。上游两接口独立更新、无裁决字段，
+        本检查只告警不裁决（哪侧正确需人工判定）。
+
+        ``reference`` 缺失/为空时跳过（stock_status 未摄取的日子无法检查，
+        不视为通过也不告警）；``is_suspended`` 为 null 的行不参与
+        （suspend_d 空响应≠无停牌，null 不是 False 的证明）。
+
+        Args:
+            current: 当日 stock_daily 行（patrol 单日 current 帧）
+            reference: 同日 stock_status 行（is_suspended 列）
+
+        Returns:
+            DQIssue if contradiction rows detected, None otherwise
+
+        """
+        if reference is None or reference.is_empty():
+            logger.debug(
+                "dq_suspension_contradiction_no_reference",
+                event="dq_check",
+            )
+            return None
+        required_reference = {"instrument_id", "trade_date", "is_suspended"}
+        if (
+            not required_reference.issubset(reference.columns)
+            or "volume" not in current.columns
+            or current.is_empty()
+        ):
+            logger.debug(
+                "dq_suspension_contradiction_schema_mismatch",
+                event="dq_check",
+            )
+            return None
+
+        try:
+            # 两侧键先去重：伴生帧重复键会把行数按笛卡尔积放大告警计数
+            # （stock_status 无 unique L1 断言，不能假设键唯一）。
+            contradictions = (
+                current.select("instrument_id", "trade_date", "volume")
+                .with_columns(pl.col("trade_date").cast(pl.String))
+                .unique(subset=["instrument_id", "trade_date"])
+                .join(
+                    reference.select("instrument_id", "trade_date", "is_suspended")
+                    .with_columns(pl.col("trade_date").cast(pl.String))
+                    .unique(subset=["instrument_id", "trade_date"]),
+                    on=["instrument_id", "trade_date"],
+                    how="inner",
+                )
+                .filter(pl.col("is_suspended") & (pl.col("volume") > 0))
+            )
+        # PolarsError 基类：dtype 漂移（如 is_suspended 变 String）抛
+        # InvalidOperationError，与 ComputeError/SchemaError 是兄弟类——
+        # 围栏必须兜住全部 polars 计算错误，否则击穿到 patrol 会拖垮当日
+        # stock_daily 的其他 L3 规则（#515 correctness F2）。
+        except pl_exceptions.PolarsError as e:
+            logger.exception(
+                "dq_suspension_contradiction_check_failed",
+                error_type=type(e).__name__,
+                rule_type="suspension_contradiction",
+            )
+            return DQIssue(
+                level=DQLevel.STATISTICAL,
+                severity=DQSeverity.ALERT,
+                rule_name="suspension_contradiction",
+                message=(f"Suspension contradiction check failed: {type(e).__name__}"),
+                affected_rows=0,
+                sample_data=[],
+            )
+
+        if contradictions.is_empty():
+            return None
+
+        sample = sorted(
+            f"{inst}@{day}"
+            for inst, day in contradictions.select(
+                "instrument_id", "trade_date"
+            ).iter_rows()
+        )
+        logger.warning(
+            "dq_rule_suspension_contradiction",
+            event="dq_check",
+            contradiction_count=contradictions.height,
+            sample=sample[:10],
+        )
+        msg = (
+            f"Suspension contradiction: {contradictions.height} row(s) with "
+            + "is_suspended=True but volume>0 (daily vs suspend_d, #1797); "
+            + f"sample: {sample[:5]}"
+        )
+        return DQIssue(
+            level=DQLevel.STATISTICAL,
+            severity=DQSeverity.ALERT,
+            rule_name="suspension_contradiction",
+            message=msg,
+            affected_rows=contradictions.height,
+            sample_data=contradictions.head(10).to_dicts(),
+        )
 
     def _check_completeness(
         self,

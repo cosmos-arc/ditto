@@ -12,7 +12,7 @@ import os
 from collections.abc import Callable
 from collections.abc import Mapping as MappingABC
 from contextlib import AbstractContextManager
-from datetime import date
+from datetime import date, datetime
 from importlib import import_module
 from pathlib import Path
 from typing import Protocol, cast
@@ -140,12 +140,32 @@ class FuyaoAdjustmentEventsSource:
         self._data_root = data_root
 
     def fetch_adjustment_events(self, trade_date: str) -> pl.DataFrame:
-        """最新 dump → 目标日事件帧 [ticker, trade_date, 分红/送转/配股字段]."""
+        """
+        最新 dump → 目标日事件帧 [ticker, trade_date, 分红/送转/配股字段].
+
+        dump 陈旧守卫（#515 A3）：dump 文件名日期早于目标日时拒绝取数——
+        陈旧 dump 过滤目标日后同样得到零事件，会在对账层被误读为
+        「无除权事件的正常日」。例行调度后该守卫是零事件语义的前提。
+        """
         dump = latest_fuyao_dump(self._data_root, "adjustment-factors")
         if dump is None:
             raise RuntimeError(
                 "fuyao adjustment-factors dump not found: run 'ditto fuyao "
                 "dump-adjustment-factors' before adj_factor reconciliation"
+            )
+        target = date.fromisoformat(trade_date)
+        try:
+            dump_date = datetime.strptime(dump.stem, "%Y%m%d").date()
+        except ValueError as error:
+            raise RuntimeError(
+                "fuyao adjustment-factors dump has unexpected name "
+                + f"'{dump.name}' (expected YYYYMMDD.parquet)"
+            ) from error
+        if dump_date < target:
+            raise RuntimeError(
+                f"fuyao adjustment-factors dump {dump.name} predates target "
+                + f"date {trade_date}: a stale dump would read as 'no events' — "
+                + "rerun 'ditto fuyao dump-adjustment-factors' first"
             )
         logger.info(
             "adj_factor reconciliation using fuyao adjustment-factors dump",
@@ -153,7 +173,6 @@ class FuyaoAdjustmentEventsSource:
             dump=str(dump),
             trade_date=trade_date,
         )
-        target = date.fromisoformat(trade_date)
         frame = FuyaoSource.adjustment_factors_frame(dump)
         return frame.filter(pl.col("trade_date") == target)
 

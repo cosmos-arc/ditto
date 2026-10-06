@@ -34,9 +34,11 @@ def test_nav_preserves_unknown_disclosure_and_remains_comparable(
     )
     if disclosure == "missing":
         raw = raw.drop("ann_date")
-    adapter = ETFTushareAdapter.__new__(ETFTushareAdapter)
-    adapter._client = MagicMock()
-    adapter._client.query.return_value = raw
+    client = MagicMock()
+    client.query.return_value = raw
+    adapter = ETFTushareAdapter(_client=client)
+    # 预热 universe 缓存：#513 起 fund_nav 按标的路径先过 ETF universe 边界
+    adapter._etf_universe = frozenset({"510300.SH"})
     frame = adapter.fetch_fund_nav(
         source_ticker="510300.SH", start_date="2026-09-29", end_date="2026-09-30"
     )

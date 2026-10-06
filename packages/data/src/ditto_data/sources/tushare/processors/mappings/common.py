@@ -8,6 +8,13 @@ from ditto_data.sources.tushare.processors.column_mapping import ColumnMapping
 
 # OHLCV 数据的通用配置
 # knowledge_date = trade_date + 1（日行情数据 T+1 可知）
+#
+# 单位合同（#506 坑 B 组，#507 B1）：Tushare daily/fund_daily/index_daily 的
+# vol 单位为手、amount 单位为千元，原值入库不做换算——这是全仓库的操作口径
+# （fuyao 对账在源侧归一为手/千元，见 config/default/dq_rules/stock_daily.yml
+# 与 index_daily.yml 的换算系数）。消费方比较或换算时以本注释为准；
+# daily_basic.total_mv（万元）、index_dailybasic（元/股）等其他端点单位不同，
+# 见各自 mapping 注释，不得跨端点套用。
 DAILY_OHLCV_MAPPING = ColumnMapping(
     rename={"ts_code": "source_ticker", "vol": "volume", "pct_chg": "pct_change"},
     date_columns={"trade_date": "%Y%m%d"},

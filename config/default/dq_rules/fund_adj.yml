@@ -2,15 +2,15 @@
 dataset: fund_adj
 description: "ETF/基金复权因子数据质量检查规则"
 
-# 只登记 BusinessChecker 实际分派的规则类型（positive 有分支；
-# monotonic_decrease 与裸 expr 求值在 checkers/business.py 无分派，
-# adj_factor.yml 的同名规则是既有死配置——补分派或清理归 P2 治理，
-# 不在新建文件里复制虚假覆盖）。
+# 只登记 checker 实际分派的规则类型：monotonic_decrease 与裸 expr 求值
+# 在 checkers/business.py 无分派（adj_factor.yml 的同名死配置已在 #515
+# 清理），本文件不复制虚假覆盖。
 
 # 技术类: 技术校验（写入时强制阻断）
 technical:
   - rule: not_null
-    columns: [instrument_id, trade_date, adj_factor]
+    # #515 G2：knowledge_date=trade_date 由映射构造、恒非空，纳入 not_null
+    columns: [instrument_id, trade_date, knowledge_date, adj_factor]
     message: "必填字段不能为空"
 
   - rule: unique

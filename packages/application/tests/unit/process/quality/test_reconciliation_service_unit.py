@@ -727,7 +727,7 @@ class TestAdjFactorReconciliation:
         mock_instrument_store,
         mock_secondary_identity_resolver,
     ) -> None:
-        """零事件 = 零交集：不可比较，不算通过."""
+        """零事件但主侧有因子变化：零交集，不可比较，不算通过（#515 A3）."""
         events_source = MagicMock()
         events_source.fetch_adjustment_events.return_value = pl.DataFrame()
         handler = self._handler(
@@ -749,7 +749,101 @@ class TestAdjFactorReconciliation:
 
         assert result.passed is False
         assert result.comparable is False
+        # primary_count 报当日因子变化行数（1000001 一行），非全量行数
+        assert result.primary_count == 1
         mock_quality_engine.check_cross_source.assert_not_called()
+
+    def test_no_events_no_primary_changes_normal_day_skips(
+        self,
+        mock_quality_engine,
+        mock_comparison_writer,
+        mock_instrument_store,
+        mock_secondary_identity_resolver,
+    ) -> None:
+        """零事件且主侧无因子变化：无除权事件的正常日，显式 skip 通过
+        （#515 A3——例行调度前提，旧语义一律 failed 会在无事件日全误报）."""
+        events_source = MagicMock()
+        events_source.fetch_adjustment_events.return_value = pl.DataFrame()
+        context = self._context_mock()
+        # 因子窗口两日相同 → 当日无变化
+        context.factor_window.return_value = pl.DataFrame(
+            {
+                "instrument_id": [1000001, 1000001],
+                "trade_date": [date(2025, 6, 24), date(2025, 6, 25)],
+                "adj_factor": [10.0, 10.0],
+            },
+            schema={
+                "instrument_id": pl.Int64,
+                "trade_date": pl.Date,
+                "adj_factor": pl.Float64,
+            },
+        )
+        handler = self._handler(
+            mock_quality_engine,
+            mock_comparison_writer,
+            mock_instrument_store,
+            mock_secondary_identity_resolver,
+            events_source,
+            context,
+        )
+
+        result = handler.handle(
+            ReconcileSourcesCommand(
+                primary_df=_adj_factor_primary_df(),
+                trade_date="2025-06-25",
+                dataset="adj_factor",
+            )
+        )
+
+        assert result.passed is True
+        assert result.skipped is True
+        assert result.skip_reason == "no_adjustment_events"
+        mock_quality_engine.check_cross_source.assert_not_called()
+
+    def test_no_events_empty_primary_not_a_normal_day(
+        self,
+        mock_quality_engine,
+        mock_comparison_writer,
+        mock_instrument_store,
+        mock_secondary_identity_resolver,
+    ) -> None:
+        """零事件且主侧当日无存量帧：缺数日不可证为正常日，fail-closed
+        （#515 review 修复——空主帧不得经「无变化」路径伪装成通过。
+        直接调 adj 策略：handle 的 enrich 层对空帧另有既有短路）。"""
+        events_source = MagicMock()
+        events_source.fetch_adjustment_events.return_value = pl.DataFrame()
+        context = self._context_mock()
+        context.factor_window.return_value = pl.DataFrame(
+            schema={
+                "instrument_id": pl.Int64,
+                "trade_date": pl.Date,
+                "adj_factor": pl.Float64,
+            }
+        )
+        handler = self._handler(
+            mock_quality_engine,
+            mock_comparison_writer,
+            mock_instrument_store,
+            mock_secondary_identity_resolver,
+            events_source,
+            context,
+        )
+
+        result = handler._execute_adj_factor_comparison(
+            pl.DataFrame(
+                schema={
+                    "instrument_id": pl.Int64,
+                    "trade_date": pl.Date,
+                    "adj_factor": pl.Float64,
+                }
+            ),
+            "2025-06-25",
+            "adj_factor",
+        )
+
+        assert result.passed is False
+        assert result.comparable is False
+        assert result.skipped is False
 
     def test_missing_dependencies_return_error_result(
         self,

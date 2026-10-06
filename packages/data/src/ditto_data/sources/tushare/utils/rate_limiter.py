@@ -2,9 +2,13 @@
 
 import time
 from dataclasses import dataclass
+from datetime import date, datetime
 from enum import Enum
+from zoneinfo import ZoneInfo
 
 from limits import parse, storage, strategies
+
+from ditto_data.sources.base import SourceRateLimitError
 
 
 # ============ API 端点分组 ============
@@ -60,6 +64,11 @@ class TushareRateLimitConfig:
     special_rate: int = 20  # 特殊接口限制
     special_window: int = 60
 
+    # 每日总量预算（官方直连档位；None = 无日总量约束，如代理 transport）
+    # #507 G1：官方按「次/天」计日总量，客户端预算计数在耗尽前拒绝请求，
+    # 避免日中把配额烧在注定被服务端拒绝的调用上。按北京时间日历日重置。
+    daily_quota: int | None = None
+
     # 预设配置（代理 transport 档位）
     @classmethod
     def free(cls) -> "TushareRateLimitConfig":
@@ -105,6 +114,7 @@ class TushareRateLimitConfig:
             daily_rate=50,
             derived_rate=50,
             special_rate=50,
+            daily_quota=100_000,
         )
 
     @classmethod
@@ -115,6 +125,7 @@ class TushareRateLimitConfig:
             daily_rate=500,
             derived_rate=500,
             special_rate=500,
+            daily_quota=100_000,
         )
 
 
@@ -127,7 +138,7 @@ class TushareRateLimiter:
         初始化限流器.
 
         Args:
-            config: 限流配置
+            config: 限流配置.
 
         """
         self._config = config
@@ -147,6 +158,10 @@ class TushareRateLimiter:
         self._special_rate = parse(
             f"{config.special_rate}/{config.special_window}seconds"
         )
+
+        # 日配额计数（北京时间日历日重置；官方档位专用，#507 G1）
+        self._daily_quota_count = 0
+        self._daily_quota_date: date | None = None
 
     def check_limit(self, group: TushareAPIGroup) -> bool:
         """
@@ -175,6 +190,8 @@ class TushareRateLimiter:
 
     def wait_if_needed(self, group: TushareAPIGroup) -> None:
         """等待直到可以请求."""
+        self._consume_daily_quota()
+
         rate = {
             TushareAPIGroup.BASIC: self._global_rate,
             TushareAPIGroup.DAILY: self._daily_rate,
@@ -197,3 +214,34 @@ class TushareRateLimiter:
         self._limiter.hit(self._global_rate, "tushare", "global")
         # 消费分组限流额度
         self._limiter.hit(rate, "tushare", group.value)
+
+    @property
+    def daily_quota_used(self) -> int:
+        """当前日历日（北京时间）已消费的日配额请求数."""
+        return self._daily_quota_count
+
+    def _consume_daily_quota(self) -> None:
+        """
+        日配额预算计数（#507 G1，官方直连档位）.
+
+        耗尽即抛 :class:`SourceRateLimitError`（与官方服务端「每天最多访问」
+        同类错误、客户端提前拒绝），避免继续发送注定被拒的请求；
+        代理档位 ``daily_quota=None`` 无此约束。
+        """
+        quota = self._config.daily_quota
+        if quota is None:
+            return
+        today = datetime.now(tz=ZoneInfo("Asia/Shanghai")).date()
+        if self._daily_quota_date != today:
+            self._daily_quota_date = today
+            self._daily_quota_count = 0
+        if self._daily_quota_count >= quota:
+            raise SourceRateLimitError(
+                message=(
+                    f"Tushare daily quota exhausted: {quota}/{quota} requests "
+                    + "used (official daily budget); quota resets at Beijing "
+                    + "midnight — resume tomorrow or switch transport profile"
+                ),
+                source="tushare",
+            )
+        self._daily_quota_count += 1

@@ -114,11 +114,13 @@ class QualityPatrolService:
                 asset_class,
                 market_wide,
             )
+            reference = self._fetch_consistency_reference(dataset, trade_date)
             result = self._engine.check_statistical(
                 dataset=dataset,
                 current=current,
                 historical=historical,
                 calendar=calendar,
+                reference=reference,
             )
             return self._format_check_result(dataset, trade_date, result)
         except (pl_exceptions.ComputeError, pl_exceptions.SchemaError, ValueError) as e:
@@ -275,7 +277,7 @@ class QualityPatrolService:
         通过 MetadataQueryFacade 获取交易日历.
 
         Args:
-            trade_date: 交易日期（YYYY-MM-DD）
+            trade_date: 交易日期
             lookback_days: 回溯天数
 
         Returns:
@@ -294,6 +296,39 @@ class QualityPatrolService:
             end=trade_date,
             only_open=True,
         )
+
+    def _fetch_consistency_reference(
+        self,
+        dataset: str,
+        trade_date: str,
+    ) -> pl.DataFrame | None:
+        """
+        跨数据集一致性规则的伴生帧（#507 C1）.
+
+        stock_daily 的 suspension_contradiction 规则需要同日 stock_status
+        （is_suspended）作对照；其余数据集无伴生帧。规则是否启用由
+        stock_daily.yml 决定，这里只负责取数——伴生数据缺失/读取失败时
+        返回 None（该检查跳过，不阻塞其他 L3 规则），并留日志可查。
+        """
+        if dataset != "stock_daily":
+            return None
+        try:
+            return self._market_facade.get_stock_status(
+                start=trade_date,
+                end=trade_date,
+                allow_experimental_data=True,
+            )
+        except Exception as error:
+            logger.warning(
+                "L3 consistency reference fetch failed; "
+                + "suspension_contradiction skipped",
+                event="l3_reference_fetch_failed",
+                dataset=dataset,
+                reference_dataset="stock_status",
+                trade_date=trade_date,
+                error_type=type(error).__name__,
+            )
+            return None
 
     def _send_alert(
         self,

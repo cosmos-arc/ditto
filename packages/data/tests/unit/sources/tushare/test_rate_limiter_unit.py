@@ -61,6 +61,8 @@ class TestTushareRateLimitConfig:
         assert config.daily_rate == 50
         assert config.derived_rate == 50
         assert config.special_rate == 50
+        # 日配额预算（#507 G1）：官方档位有日总量约束
+        assert config.daily_quota == 100_000
 
     def test_official_15000_preset_matches_official_quota(self) -> None:
         """官方 15000 积分档 500/分，低于代理 paid 的 1000/分."""
@@ -69,6 +71,13 @@ class TestTushareRateLimitConfig:
         assert config.daily_rate == 500
         assert config.derived_rate == 500
         assert config.special_rate == 500
+        assert config.daily_quota == 100_000
+
+    def test_proxy_presets_have_no_daily_quota(self) -> None:
+        """代理 transport 档位无日总量承诺，daily_quota=None."""
+        assert TushareRateLimitConfig.free().daily_quota is None
+        assert TushareRateLimitConfig.paid().daily_quota is None
+        assert TushareRateLimitConfig.conservative().daily_quota is None
 
 
 class TestTushareRateLimiter:
@@ -126,3 +135,53 @@ class TestTushareRateLimiter:
 
         # Second call should block (we won't actually wait in test)
         # In real scenario, this would sleep until window resets
+
+    def test_daily_quota_exhaustion_raises(self) -> None:
+        """日配额耗尽抛 SourceRateLimitError，不发注定被拒的请求（#507 G1）."""
+        import pytest
+        from ditto_data.sources.base import SourceRateLimitError
+
+        config = TushareRateLimitConfig(
+            global_rate=100,
+            global_window=60,
+            daily_quota=3,
+        )
+        limiter = TushareRateLimiter(config)
+
+        for _ in range(3):
+            limiter.wait_if_needed(TushareAPIGroup.BASIC)
+
+        with pytest.raises(SourceRateLimitError, match="daily quota exhausted"):
+            limiter.wait_if_needed(TushareAPIGroup.BASIC)
+        assert limiter.daily_quota_used == 3
+
+    def test_daily_quota_resets_on_new_calendar_day(self) -> None:
+        """北京时间日历日切换后计数归零."""
+        from datetime import datetime, timedelta
+        from zoneinfo import ZoneInfo
+
+        config = TushareRateLimitConfig(
+            global_rate=100, global_window=60, daily_quota=2
+        )
+        limiter = TushareRateLimiter(config)
+        limiter.wait_if_needed(TushareAPIGroup.BASIC)
+        limiter.wait_if_needed(TushareAPIGroup.BASIC)
+        assert limiter.daily_quota_used == 2
+
+        # 模拟跨日：内部日期戳指到昨天
+        limiter._daily_quota_date = datetime.now(
+            tz=ZoneInfo("Asia/Shanghai")
+        ).date() - timedelta(days=1)
+
+        limiter.wait_if_needed(TushareAPIGroup.BASIC)
+        assert limiter.daily_quota_used == 1
+
+    def test_none_daily_quota_never_raises(self) -> None:
+        """daily_quota=None（代理档位）不做日预算计数."""
+        config = TushareRateLimitConfig(global_rate=1000, global_window=60)
+        limiter = TushareRateLimiter(config)
+
+        for _ in range(50):
+            limiter.wait_if_needed(TushareAPIGroup.BASIC)
+
+        assert limiter.daily_quota_used == 0

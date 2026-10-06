@@ -1,6 +1,7 @@
 """Tests for StatisticalChecker."""
 
 from datetime import date, timedelta
+from typing import ClassVar
 
 import polars as pl
 import pytest
@@ -556,3 +557,162 @@ class TestErrorHandling:
         assert result is not None, "Exception should return ALERT issue, not None"
         assert result.severity == DQSeverity.ALERT
         assert "error" in result.message.lower() or "failed" in result.message.lower()
+
+
+class TestSuspensionContradictionChecker:
+    """daily×stock_status 矛盾检查（#507 C1，#1797 形态）."""
+
+    RULE: ClassVar[dict[str, str]] = {
+        "rule": "suspension_contradiction",
+        "name": "suspended_but_traded",
+    }
+
+    @staticmethod
+    def _bars(rows: list[tuple[int, str, float]]) -> pl.DataFrame:
+        return pl.DataFrame(
+            {
+                "instrument_id": [r[0] for r in rows],
+                "trade_date": [r[1] for r in rows],
+                "volume": [r[2] for r in rows],
+            },
+            schema={
+                "instrument_id": pl.Int64,
+                "trade_date": pl.String,
+                "volume": pl.Float64,
+            },
+        )
+
+    @staticmethod
+    def _status(rows: list[tuple[int, str, bool | None]]) -> pl.DataFrame:
+        return pl.DataFrame(
+            {
+                "instrument_id": [r[0] for r in rows],
+                "trade_date": [r[1] for r in rows],
+                "is_suspended": [r[2] for r in rows],
+            },
+            schema={
+                "instrument_id": pl.Int64,
+                "trade_date": pl.String,
+                "is_suspended": pl.Boolean,
+            },
+        )
+
+    def test_contradiction_rows_flagged(self) -> None:
+        """is_suspended=True 且 volume>0 的行应产出 ALERT."""
+        checker = StatisticalChecker()
+        current = self._bars([(1, "2024-01-02", 1_000.0), (2, "2024-01-02", 0.0)])
+        reference = self._status([(1, "2024-01-02", True), (2, "2024-01-02", True)])
+
+        issues = checker.check(current=current, rules=[self.RULE], reference=reference)
+
+        assert len(issues) == 1
+        issue = issues[0]
+        assert issue.rule_name == "suspension_contradiction"
+        assert issue.severity == DQSeverity.ALERT
+        assert issue.level == DQLevel.STATISTICAL
+        assert issue.affected_rows == 1
+        assert "1@" in issue.message
+
+    def test_duplicate_keys_do_not_amplify_count(self) -> None:
+        """伴生帧重复键不得按行数放大告警计数（#515 correctness F3）."""
+        checker = StatisticalChecker()
+        current = self._bars([(1, "2024-01-02", 1_000.0)])
+        reference = self._status([(1, "2024-01-02", True), (1, "2024-01-02", True)])
+
+        issues = checker.check(current=current, rules=[self.RULE], reference=reference)
+
+        assert len(issues) == 1
+        assert issues[0].affected_rows == 1
+
+    def test_dtype_drift_degrades_to_alert_not_crash(self) -> None:
+        """is_suspended dtype 漂移（String）只降级本检查，不击穿整个 L3
+        （#515 correctness F2：InvalidOperationError 是 ComputeError 的
+        兄弟类，三兄弟元组围不住）。"""
+        checker = StatisticalChecker()
+        current = self._bars([(1, "2024-01-02", 1_000.0)])
+        reference = pl.DataFrame(
+            {
+                "instrument_id": [1],
+                "trade_date": ["2024-01-02"],
+                "is_suspended": ["true"],
+            },
+            schema={
+                "instrument_id": pl.Int64,
+                "trade_date": pl.String,
+                "is_suspended": pl.String,
+            },
+        )
+
+        issues = checker.check(current=current, rules=[self.RULE], reference=reference)
+
+        assert len(issues) == 1
+        assert issues[0].severity == DQSeverity.ALERT
+        assert "failed" in issues[0].message.lower()
+
+    def test_clean_data_passes(self) -> None:
+        """停牌且无成交/正常交易不停牌的行都不告警."""
+        checker = StatisticalChecker()
+        current = self._bars([(1, "2024-01-02", 0.0), (2, "2024-01-02", 5_000.0)])
+        reference = self._status([(1, "2024-01-02", True), (2, "2024-01-02", False)])
+
+        issues = checker.check(current=current, rules=[self.RULE], reference=reference)
+
+        assert issues == []
+
+    def test_null_suspension_flag_not_flagged(self) -> None:
+        """is_suspended=null 不是 False 的证明，也不构成矛盾证据."""
+        checker = StatisticalChecker()
+        current = self._bars([(1, "2024-01-02", 1_000.0)])
+        reference = self._status([(1, "2024-01-02", None)])
+
+        issues = checker.check(current=current, rules=[self.RULE], reference=reference)
+
+        assert issues == []
+
+    def test_missing_reference_skips(self) -> None:
+        """伴生帧缺失（stock_status 未摄取）时跳过，不告警不报错."""
+        checker = StatisticalChecker()
+        current = self._bars([(1, "2024-01-02", 1_000.0)])
+
+        issues = checker.check(current=current, rules=[self.RULE])
+        assert issues == []
+
+        issues_empty = checker.check(
+            current=current,
+            rules=[self.RULE],
+            reference=pl.DataFrame(
+                schema={
+                    "instrument_id": pl.Int64,
+                    "trade_date": pl.String,
+                    "is_suspended": pl.Boolean,
+                }
+            ),
+        )
+        assert issues_empty == []
+
+    def test_date_dtype_mismatch_tolerated(self) -> None:
+        """current 为 Date、reference 为 String 的日期列应可比较."""
+        checker = StatisticalChecker()
+        current = pl.DataFrame(
+            {
+                "instrument_id": [1],
+                "trade_date": [date(2024, 1, 2)],
+                "volume": [1_000.0],
+            }
+        )
+        reference = self._status([(1, "2024-01-02", True)])
+
+        issues = checker.check(current=current, rules=[self.RULE], reference=reference)
+
+        assert len(issues) == 1
+        assert issues[0].affected_rows == 1
+
+    def test_reference_missing_columns_skips(self) -> None:
+        """伴生帧缺 is_suspended 列时跳过（schema 不匹配）."""
+        checker = StatisticalChecker()
+        current = self._bars([(1, "2024-01-02", 1_000.0)])
+        reference = pl.DataFrame({"instrument_id": [1], "trade_date": ["2024-01-02"]})
+
+        issues = checker.check(current=current, rules=[self.RULE], reference=reference)
+
+        assert issues == []
