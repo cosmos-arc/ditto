@@ -2,6 +2,12 @@
 复权计算纯函数模块。
 
 包含 QFQ/HFQ 公式实现，可独立测试。
+
+因子缺失 fail-closed（#514）：行情行关联不到复权因子（行级 join miss
+或整个窗口无因子）时抛 :class:`AdjustmentFactorMissingError`，不再
+coalesce 1.0 静默退化为未复权价格——那会让 hfq/qfq 收益失真且无告警
+（510050/150001/920xxx 因子缺失案例）。消费方需要未复权价格时应显式
+请求 raw/adj=none。
 """
 
 from __future__ import annotations
@@ -14,6 +20,52 @@ from ditto_data.helpers.pit import (
     filter_by_knowledge_date,
     parse_asof_date,
 )
+
+_SAMPLE_LIMIT = 5
+
+
+class AdjustmentFactorMissingError(ValueError):
+    """复权因子缺失——复权计算拒绝产出失真值（fail closed）."""
+
+
+def _reject_missing_adjustment(
+    df: pl.DataFrame,
+    *,
+    check_baseline: bool = False,
+) -> None:
+    """
+    Raise when any joined row lacks an adjustment factor.
+
+    行级缺失 = (instrument_id, trade_date) 行关联不到因子；baseline 缺失
+    （仅 qfq）= 标的在 baseline 中完全没有因子，latest_factor 为 null。
+    PIT 语义下（PIT contract）缺失 cutoff/可见数据即为错误，回退不安全。
+    """
+    missing_rows = df.filter(pl.col("adj_factor").is_null())
+    if missing_rows.height:
+        sample = sorted(
+            {
+                f"{inst}@{day}"
+                for inst, day in missing_rows.select(
+                    "instrument_id", "trade_date"
+                ).iter_rows()
+            }
+        )
+        instruments = sorted(missing_rows["instrument_id"].unique().to_list())
+        raise AdjustmentFactorMissingError(
+            f"adj_factor missing for {missing_rows.height} bar row(s) "
+            + f"(instruments: {instruments}); "
+            + f"sample: {sample[:_SAMPLE_LIMIT]} — refusing to emit unadjusted "
+            + "prices as adjusted (#514)"
+        )
+    if check_baseline:
+        missing_baseline = df.filter(pl.col("latest_factor").is_null())
+        if missing_baseline.height:
+            instruments = sorted(missing_baseline["instrument_id"].unique().to_list())
+            raise AdjustmentFactorMissingError(
+                "latest_factor missing (no factor rows in the qfq baseline "
+                + f"window) for instruments: {instruments} — refusing to emit "
+                + "unadjusted prices as adjusted (#514)"
+            )
 
 
 def apply_qfq_adj(
@@ -32,6 +84,10 @@ def apply_qfq_adj(
     - Tushare 返回的 pre_close 已经是除权参考价（已处理除权除息）
     - 只对 open/high/low/close 进行复权（这些是原始价格）
     - pre_close 保持原样即可，当日涨跌幅计算已正确
+
+    Raises:
+        AdjustmentFactorMissingError: 任一行关联不到因子，或标的在
+            baseline 窗口内完全没有因子（fail closed，#514）。
 
     Args:
         df: 已关联 adj_factor 的 K线数据。
@@ -60,29 +116,23 @@ def apply_qfq_adj(
     )
     df = df.join(latest_factors, on="instrument_id", how="left")
 
-    # 应用 QFQ 公式，缺失值使用 1.0（返回原始价格）
+    _reject_missing_adjustment(df, check_baseline=True)
+
+    # 应用 QFQ 公式
     df = df.with_columns(
         [
-            (
-                pl.col("open")
-                * pl.coalesce("adj_factor", 1.0)
-                / pl.coalesce("latest_factor", 1.0)
-            ).alias("open"),
-            (
-                pl.col("high")
-                * pl.coalesce("adj_factor", 1.0)
-                / pl.coalesce("latest_factor", 1.0)
-            ).alias("high"),
-            (
-                pl.col("low")
-                * pl.coalesce("adj_factor", 1.0)
-                / pl.coalesce("latest_factor", 1.0)
-            ).alias("low"),
-            (
-                pl.col("close")
-                * pl.coalesce("adj_factor", 1.0)
-                / pl.coalesce("latest_factor", 1.0)
-            ).alias("close"),
+            (pl.col("open") * pl.col("adj_factor") / pl.col("latest_factor")).alias(
+                "open"
+            ),
+            (pl.col("high") * pl.col("adj_factor") / pl.col("latest_factor")).alias(
+                "high"
+            ),
+            (pl.col("low") * pl.col("adj_factor") / pl.col("latest_factor")).alias(
+                "low"
+            ),
+            (pl.col("close") * pl.col("adj_factor") / pl.col("latest_factor")).alias(
+                "close"
+            ),
         ]
     )
     return df.drop(["adj_factor", "latest_factor"])
@@ -95,13 +145,15 @@ def apply_hfq_adj(
     """
     应用后复权（HFQ）调整。
 
-    后复权：adj_price = orig_price * cur_factor
-    缺失值使用 1.0（返回原始价格）。
+    后复权：adj_price = orig_price * cur_factor。
 
     注意：pre_close 字段不需要复权调整
     - Tushare 返回的 pre_close 已经是除权参考价（已处理除权除息）
     - 只对 open/high/low/close 进行复权（这些是原始价格）
     - pre_close 保持原样即可，当日涨跌幅计算已正确
+
+    Raises:
+        AdjustmentFactorMissingError: 任一行关联不到因子（fail closed，#514）。
 
     Args:
         df: 已关联 adj_factor 的 K线数据。
@@ -111,13 +163,15 @@ def apply_hfq_adj(
         HFQ 调整后的 DataFrame.
 
     """
-    # 应用 HFQ 公式，缺失值使用 1.0
+    _reject_missing_adjustment(df)
+
+    # 应用 HFQ 公式
     df = df.with_columns(
         [
-            (pl.col("open") * pl.coalesce("adj_factor", 1.0)).alias("open"),
-            (pl.col("high") * pl.coalesce("adj_factor", 1.0)).alias("high"),
-            (pl.col("low") * pl.coalesce("adj_factor", 1.0)).alias("low"),
-            (pl.col("close") * pl.coalesce("adj_factor", 1.0)).alias("close"),
+            (pl.col("open") * pl.col("adj_factor")).alias("open"),
+            (pl.col("high") * pl.col("adj_factor")).alias("high"),
+            (pl.col("low") * pl.col("adj_factor")).alias("low"),
+            (pl.col("close") * pl.col("adj_factor")).alias("close"),
         ]
     )
     return df.drop("adj_factor")

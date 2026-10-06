@@ -12,7 +12,11 @@ from datetime import date
 import polars as pl
 from ditto_platform.foundation import logger
 
-from ditto_data.helpers.adjustment import apply_hfq_adj, apply_qfq_adj
+from ditto_data.helpers.adjustment import (
+    AdjustmentFactorMissingError,
+    apply_hfq_adj,
+    apply_qfq_adj,
+)
 from ditto_data.services.deps import MarketReaders
 from ditto_data.services.market_types import AdjType
 
@@ -53,13 +57,21 @@ def apply_adjustment(
     )
 
     if adj_df.is_empty():
-        # 对于 ETF 和 Index，没有复权因子是正常情况
-        logger.info(
-            "No adjustment factor data available (normal for ETF/Index)",
+        # 股票复权请求在窗口内完全没有因子 = 摄取缺口，fail closed
+        # （#514：此前静默返回 raw 价，hfq/qfq 收益失真无告警）。
+        # 指数/未复权读取不经此路径（query_bars 仅对 asset_class=stock
+        # 调用本函数，raw/adj=none 不进入）。
+        logger.warning(
+            "No adjustment factor data available for stock adjustment request",
             event="market_bars_adj_not_available",
             adj_type=adj.value,
+            instrument_count=len(instrument_ids),
         )
-        return df
+        raise AdjustmentFactorMissingError(
+            f"stock adjustment requested ({adj.value}) but the adj_factor "
+            + f"window has no rows for {len(instrument_ids)} instrument(s) — "
+            + "ingest adj_factor or query with adj=none/raw (#514)"
+        )
 
     # 确保排序以正确处理 last() 聚合
     adj_df = adj_df.sort(["instrument_id", "trade_date"])
@@ -98,7 +110,9 @@ def apply_etf_adjustment(
     应用 ETF 价格调整.
 
     与 apply_adjustment() 类似，但使用 etf_adj 依赖读取复权因子。
-    当 adj_df 为空时，优雅回退返回原始数据。
+    adj_df 为空（fund_adj 摄取缺口，如 510050/150001 因子缺失案例）时
+    fail closed 抛错（#514）；etf_adj 端口未配置属部署选择，保持警告 +
+    raw 返回。
 
     Args:
         df: ETF K线数据 DataFrame.
@@ -108,7 +122,10 @@ def apply_etf_adjustment(
         readers: Market 域读取依赖.
 
     Returns:
-        调整后的 DataFrame（无复权因子时返回原始数据）.
+        调整后的 DataFrame.
+
+    Raises:
+        AdjustmentFactorMissingError: 请求的窗口内没有任何 fund_adj 行。
 
     """
     etf_adj = readers.etf_adj
@@ -124,11 +141,15 @@ def apply_etf_adjustment(
 
     if adj_df.is_empty():
         logger.warning(
-            "No ETF adjustment factor data available, returning raw data",
+            "No ETF adjustment factor data available for adjustment request",
             event="market_etf_bars_adj_not_available",
             adj_type=adj.value,
         )
-        return df
+        raise AdjustmentFactorMissingError(
+            f"ETF adjustment requested ({adj.value}) but the fund_adj "
+            + f"window [{start}, {end}] has no rows — ingest fund_adj or "
+            + "query with adj=none (#514)"
+        )
 
     # 确保排序以正确处理 last() 聚合
     adj_df = adj_df.sort(["instrument_id", "trade_date"])

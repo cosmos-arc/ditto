@@ -9,6 +9,7 @@ from unittest.mock import MagicMock
 
 import polars as pl
 import pytest
+from ditto_data.helpers.adjustment import AdjustmentFactorMissingError
 from ditto_data.services.deps import MarketReaders
 from ditto_data.services.market_service import MarketService
 
@@ -183,25 +184,23 @@ class TestGetEtfBars:
         # etf_adj.read 应被调用
         mock_readers["etf_adj"].read.assert_called_once()
 
-    def test_get_etf_bars_qfq_no_adj_data(
+    def test_get_etf_bars_qfq_no_adj_data_fails_closed(
         self,
         market_service: MarketService,
         mock_readers: dict[str, MagicMock],
     ) -> None:
-        """adj='qfq' 但没有 ETF 复权因子数据时应优雅回退返回原始数据."""
+        """adj='qfq' 但窗口内没有任何 fund_adj 行时 fail closed（#514）.
+
+        此前静默返回 raw 价（510050/150001 因子缺失案例的失真形态）；
+        需要未复权价格必须显式 adj='none'。
+        """
         # Arrange
         mock_readers["etf_bars"].read.return_value = SAMPLE_ETF_BARS
         mock_readers["etf_adj"].read.return_value = pl.DataFrame()
 
-        # Act
-        result = market_service.get_etf_bars(
-            start="2024-01-01", end="2024-01-31", adj="qfq"
-        )
-
-        # Assert
-        assert len(result) == 2
-        # 应返回原始数据（close 未变）
-        assert result["close"].to_list() == [1.03, 1.05]
+        # Act / Assert
+        with pytest.raises(AdjustmentFactorMissingError, match="fund_adj"):
+            market_service.get_etf_bars(start="2024-01-01", end="2024-01-31", adj="qfq")
 
     def test_get_etf_bars_qfq_no_etf_adj_port(
         self,
