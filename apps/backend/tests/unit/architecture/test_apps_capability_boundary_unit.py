@@ -175,6 +175,7 @@ def test_apps_registry_composition_allowances_are_owned_and_reasoned() -> None:
             "ditto_data.sources.exchange_transformers",
             "ditto_data.sources.fuyao.source",
             "ditto_data.sources.protocols",
+            "ditto_data.sources.reference_config",
             "ditto_data.sources.registry",
         }
     )
