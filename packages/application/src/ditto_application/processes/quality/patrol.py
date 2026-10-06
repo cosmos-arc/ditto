@@ -15,6 +15,7 @@ from ditto_data.quality.quality_types import DQIssue, DQResult
 from ditto_platform.foundation import logger
 from ditto_platform.services import AlertManager, NotificationLevel
 
+from ditto_application.exceptions import AppProcessError
 from ditto_application.processes.quality.batch_policy import QualityAssetClass
 from ditto_application.processes.quality.types import L3CheckResult
 from ditto_application.queries.capital import CapitalQueryFacade
@@ -278,7 +279,7 @@ class QualityPatrolService:
         if dataset in _CAPITAL_L3_DATASETS:
             if self._capital_facade is None:
                 # check_dataset 已在入口拦截；此处防御重复判定
-                raise ValueError(
+                raise AppProcessError(
                     f"capital L3 reader requires capital_facade; dataset={dataset}"
                 )
             reader = getattr(self._capital_facade, _CAPITAL_L3_READERS[dataset])
