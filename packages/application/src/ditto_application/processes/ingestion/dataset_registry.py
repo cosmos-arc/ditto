@@ -382,7 +382,7 @@ def _fund_portfolio_disclosure_fetch(ctx: DailyFetchContext) -> DailyFetchHandle
         if ctx.get_cached_etf_tickers is None:
             raise AppProcessError(
                 "fund_portfolio disclosure fetch requires the registered "
-                "ETF universe; get_cached_etf_tickers is not configured"
+                + "ETF universe; get_cached_etf_tickers is not configured"
             )
         fetcher = ctx.fetchers.fundamental
         frames = [

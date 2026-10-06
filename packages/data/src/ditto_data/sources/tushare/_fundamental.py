@@ -52,7 +52,7 @@ def _recent_quarter_ends(
     return ends
 
 
-def _fetch_disclosure_delta(
+def fetch_disclosure_delta(
     vip_fetch: Callable[..., pl.DataFrame],
     *,
     asof_date: date,
@@ -96,14 +96,14 @@ def fetch_disclosure_range(
 
     报告期超集拉取后按披露锚过滤区间；与单日增量共用同一窗口语义。
     """
-    return _fetch_disclosure_delta(
+    return fetch_disclosure_delta(
         vip_fetch,
-        asof_date=_parse_iso(end_date),
-        start_date=_parse_iso(start_date),
+        asof_date=parse_iso(end_date),
+        start_date=parse_iso(start_date),
     )
 
 
-def _parse_iso(value: str) -> date:
+def parse_iso(value: str) -> date:
     return date.fromisoformat(value)
 
 
@@ -148,9 +148,9 @@ def _fetch_statement(
     """
     _require_statement_mode(trade_date=trade_date, source_ticker=source_ticker)
     if trade_date:
-        return _fetch_disclosure_delta(
+        return fetch_disclosure_delta(
             vip_fetch,
-            asof_date=_parse_iso(trade_date),
+            asof_date=parse_iso(trade_date),
         )
     source_ticker, start_date, end_date = _require_ticker_range(
         source_ticker=source_ticker,
