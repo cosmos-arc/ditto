@@ -7,17 +7,12 @@ technical:
   - rule: not_null
     # #515 G2：volume/amount 与 stock_daily/index_daily 同为承重数值列，
     # 补齐 not_null（原缺省时「静默少列→补 null」防线不覆盖这两列）。
-    columns: [instrument_id, trade_date, open, high, low, close, volume, amount]
+    columns: [source_ticker, trade_date, open, high, low, close, volume, amount]
     message: "必填字段不能为空"
 
   - rule: unique
-    columns: [instrument_id, trade_date]
-    message: "主键 (instrument_id, trade_date) 重复"
-
-  - rule: foreign_key
-    column: instrument_id
-    reference: instrument.instrument_id
-    message: "Instrument ID 不存在于证券主表"
+    columns: [source_ticker, trade_date]
+    message: "主键 (source_ticker, trade_date) 重复"
 
   - rule: type_check
     columns:

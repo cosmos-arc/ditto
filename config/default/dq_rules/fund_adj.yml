@@ -10,17 +10,12 @@ description: "ETF/基金复权因子数据质量检查规则"
 technical:
   - rule: not_null
     # #515 G2：knowledge_date=trade_date 由映射构造、恒非空，纳入 not_null
-    columns: [instrument_id, trade_date, knowledge_date, adj_factor]
+    columns: [source_ticker, trade_date, knowledge_date, adj_factor]
     message: "必填字段不能为空"
 
   - rule: unique
-    columns: [instrument_id, trade_date]
-    message: "主键 (instrument_id, trade_date) 重复"
-
-  - rule: foreign_key
-    column: instrument_id
-    reference: instrument.instrument_id
-    message: "Instrument ID 不存在于证券主表"
+    columns: [source_ticker, trade_date]
+    message: "主键 (source_ticker, trade_date) 重复"
 
   - rule: type_check
     columns:

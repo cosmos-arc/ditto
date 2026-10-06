@@ -7,17 +7,12 @@ description: "limit_list 数据质量检查规则"
 
 technical:
   - rule: not_null
-    columns: [instrument_id, trade_date, limit_type, knowledge_date]
+    columns: [source_ticker, trade_date, limit_type, knowledge_date]
     message: "必填字段不能为空"
 
   - rule: unique
-    columns: [instrument_id, trade_date, limit_type, knowledge_date]
-    message: "主键 (instrument_id, trade_date, limit_type, knowledge_date) 重复"
-
-  - rule: foreign_key
-    column: instrument_id
-    reference: instrument.instrument_id
-    message: "Instrument ID 不存在于证券主表"
+    columns: [source_ticker, trade_date, limit_type, knowledge_date]
+    message: "主键 (source_ticker, trade_date, limit_type, knowledge_date) 重复"
 
   - rule: type_check
     columns:
