@@ -70,7 +70,7 @@ class StatisticalChecker:
         if rule_type == "zscore":
             return self._check_zscore(current, historical, rule)
         elif rule_type == "completeness":
-            return self._check_completeness(current, calendar, rule)
+            return self._check_completeness(current, historical, calendar, rule)
 
         return None
 
@@ -202,19 +202,59 @@ class StatisticalChecker:
                 sample_data=[],
             )
 
+    @staticmethod
+    def _instrument_date_gaps(
+        frame: pl.DataFrame,
+        expected_set: set[str],
+    ) -> dict[str, list[str]]:
+        """
+        Per-instrument date-coverage gaps（#511）.
+
+        期望集 = 该标的首见日期之后的开市日（避免上市前/窗口前段误报）。
+        帧内完全缺席的标的不在检测面内（需要 universe 期望清单接线）。
+        """
+        gaps: dict[str, list[str]] = {}
+        per_instrument = frame.group_by("instrument_id").agg(
+            pl.col("trade_date").cast(str).unique().sort()
+        )
+        for instrument_id, inst_dates in per_instrument.iter_rows():
+            inst_set = set(inst_dates)
+            first_seen = min(inst_set)
+            expected_for_inst = {d for d in expected_set if d >= first_seen}
+            instrument_gaps = sorted(expected_for_inst - inst_set)
+            if instrument_gaps:
+                gaps[str(instrument_id)] = instrument_gaps
+        return gaps
+
     def _check_completeness(
         self,
         current: pl.DataFrame,
+        historical: pl.DataFrame | None,
         calendar: pl.DataFrame | None,
         rule: dict[str, Any],
     ) -> DQIssue | None:
         """
         Check data completeness.
 
+        规则键（#511）：
+
+        - ``frame: historical`` —— 用存量窗口帧（patrol 的 historical，
+          ~120 交易日）替代单日 ``current`` 做日期比对。此前 patrol 只喂
+          单日 current 却对 ~10 个交易日历求差，结构性常误报；存量窗口
+          才是 completeness 的正确语义（覆盖缺口 vs 已存数据）。
+        - ``group_by_instrument: true`` —— 增加 per-instrument 维度：
+          对帧内每个标的，以其首见日期起的开市日为期望集，检测单标的
+          缺行（#1861 单指数缺口形态）。帧内完全缺席的标的不在检测面
+          内（需要 universe 期望清单接线，见 #511 票评论边界）。
+
+        规则键 ``lookback_days`` 本检查器不消费（遗留键）：期望集窗口
+        由调用方传入的 calendar 帧决定（patrol 取 ~10 个开市日）。
+
         Args:
             current: Current data (must contain 'trade_date' column)
+            historical: Stored window frame (patrol ~120 trade days)
             calendar: Trading calendar (must contain 'trade_date' and 'is_open' columns)
-            rule: Rule config with lookback_days
+            rule: Rule config with lookback_days / frame / group_by_instrument
 
         Returns:
             DQIssue if missing data detected, None otherwise
@@ -227,7 +267,8 @@ class StatisticalChecker:
             )
             return None
 
-        if current.is_empty():
+        frame = historical if rule.get("frame") == "historical" else current
+        if frame is None or frame.is_empty():
             msg = "No data found for completeness check"
             return DQIssue(
                 level=DQLevel.STATISTICAL,
@@ -239,34 +280,59 @@ class StatisticalChecker:
 
         try:
             # Get expected trading days (open days only)
-            expected_dates = set(
+            expected_set = set(
                 calendar.filter(pl.col("is_open"))["trade_date"].cast(str).to_list()
             )
 
             # Get actual data dates
-            actual_dates = set(current["trade_date"].cast(str).unique().to_list())
+            actual_dates = set(frame["trade_date"].cast(str).unique().to_list())
 
             # Check for missing dates
-            missing_dates = expected_dates - actual_dates
+            missing_dates = expected_set - actual_dates
 
-            if missing_dates:
-                sorted_missing = sorted(missing_dates)
-                logger.warning(
-                    "dq_rule_completeness_gap",
-                    event="dq_check",
-                    missing_count=len(missing_dates),
-                    missing_dates=sorted_missing,
-                )
-                msg = (
-                    f"Missing data for {len(missing_dates)} trading days: "
-                    f"{sorted_missing}"
-                )
+            # Per-instrument date coverage (group_by_instrument, #511)
+            instrument_gaps: dict[str, list[str]] = {}
+            if rule.get("group_by_instrument") and "instrument_id" in frame.columns:
+                instrument_gaps = self._instrument_date_gaps(frame, expected_set)
+
+            if missing_dates or instrument_gaps:
+                parts: list[str] = []
+                affected = len(missing_dates)
+                if missing_dates:
+                    sorted_missing = sorted(missing_dates)
+                    logger.warning(
+                        "dq_rule_completeness_gap",
+                        event="dq_check",
+                        missing_count=len(missing_dates),
+                        missing_dates=sorted_missing,
+                    )
+                    parts.append(
+                        f"missing data for {len(missing_dates)} trading days: "
+                        + f"{sorted_missing}"
+                    )
+                if instrument_gaps:
+                    total_gap_rows = sum(len(g) for g in instrument_gaps.values())
+                    affected += total_gap_rows
+                    sample = {
+                        inst: g[:5] for inst, g in sorted(instrument_gaps.items())[:5]
+                    }
+                    logger.warning(
+                        "dq_rule_completeness_instrument_gap",
+                        event="dq_check",
+                        instruments=len(instrument_gaps),
+                        gaps=sample,
+                    )
+                    parts.append(
+                        f"{len(instrument_gaps)} instrument(s) with per-date "
+                        + f"gaps ({total_gap_rows} instrument-day rows): {sample}"
+                    )
+                msg = "Completeness: " + "; ".join(parts)
                 return DQIssue(
                     level=DQLevel.STATISTICAL,
                     severity=DQSeverity.ALERT,
                     rule_name="completeness",
                     message=msg,
-                    affected_rows=len(missing_dates),
+                    affected_rows=affected,
                 )
 
         except (

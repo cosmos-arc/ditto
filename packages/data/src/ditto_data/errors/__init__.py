@@ -24,6 +24,9 @@ from ditto_data.errors.instrument import (
     InstrumentIdNotFoundError,
 )
 
+# --- integrity ---
+from ditto_data.errors.integrity import AdjustmentFactorMissingError
+
 # --- network / data source ---
 from ditto_data.errors.network import (
     AuthError,
@@ -51,6 +54,7 @@ from ditto_data.errors.persistence import (
 )
 
 __all__ = [
+    "AdjustmentFactorMissingError",
     "AuthError",
     "CalendarError",
     "DataChangedError",

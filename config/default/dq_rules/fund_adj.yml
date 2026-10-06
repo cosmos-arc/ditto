@@ -1,0 +1,40 @@
+# ETF/基金复权因子 DQ 规则（#514：fund_adj 此前无 dq 规则文件）
+dataset: fund_adj
+description: "ETF/基金复权因子数据质量检查规则"
+
+# 只登记 BusinessChecker 实际分派的规则类型（positive 有分支；
+# monotonic_decrease 与裸 expr 求值在 checkers/business.py 无分派，
+# adj_factor.yml 的同名规则是既有死配置——补分派或清理归 P2 治理，
+# 不在新建文件里复制虚假覆盖）。
+
+# 技术类: 技术校验（写入时强制阻断）
+technical:
+  - rule: not_null
+    columns: [instrument_id, trade_date, adj_factor]
+    message: "必填字段不能为空"
+
+  - rule: unique
+    columns: [instrument_id, trade_date]
+    message: "主键 (instrument_id, trade_date) 重复"
+
+  - rule: foreign_key
+    column: instrument_id
+    reference: instrument.instrument_id
+    message: "Instrument ID 不存在于证券主表"
+
+  - rule: type_check
+    columns:
+      instrument_id: int
+      trade_date: date
+      adj_factor: float
+    message: "字段类型不匹配"
+
+# 业务类: 业务规则（写入时警告但不阻断）
+business:
+  - rule: positive
+    columns: [adj_factor]
+    message: "复权因子必须为正数"
+
+# 统计类（L3 patrol）暂不配置：fund_adj 未接入 patrol 的
+# _FACTOR_L3_DATASETS 读取器（当前仅 adj_factor 有专用读取路径），
+# per-ETF 因子覆盖断言依赖该接线，待后续票补（见 #511/#514 票评论）。

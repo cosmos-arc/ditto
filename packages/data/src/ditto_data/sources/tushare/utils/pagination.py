@@ -37,6 +37,7 @@ _DOCUMENTED_PAGE_SIZES: dict[str, int] = {
     "forecast": 3500,  # doc_id=45，全市场按 ann_date 走 forecast_vip
     "sf_month": 2000,  # doc_id=310，月度窗口参数 start_m/end_m
     "index_dailybasic": 3000,  # doc_id=128，实测日覆盖 15 个大盘指数
+    "pledge_stat": 1000,  # doc_id=110，单次最大 1000 行；默认 2000 会短页截断
 }
 
 _DEFAULT_PAGE_SIZE = 2000

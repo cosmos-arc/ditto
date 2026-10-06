@@ -4,6 +4,7 @@ from datetime import date
 
 import polars as pl
 import pytest
+from ditto_data.errors.integrity import AdjustmentFactorMissingError
 from ditto_data.helpers.adjustment import apply_hfq_adj, apply_qfq_adj
 from ditto_data.helpers.pit import filter_by_knowledge_date, parse_asof_date
 
@@ -227,21 +228,25 @@ class TestApplyQfqAdj:
 
         # All prices adjusted using latest_factor = 1.1
         expected_latest = 1.1
-        assert result["open"].to_list() == [
-            10.0 * 1.0 / expected_latest,
-            11.0 * 1.1 / expected_latest,
-            12.0 * 1.2 / expected_latest,
-            13.0 * 1.3 / expected_latest,
-        ]
-        assert result["close"].to_list() == [
-            10.0 * 1.0 / expected_latest,
-            11.0 * 1.1 / expected_latest,
-            12.0 * 1.2 / expected_latest,
-            13.0 * 1.3 / expected_latest,
-        ]
+        assert result["open"].to_list() == pytest.approx(
+            [
+                10.0 * 1.0 / expected_latest,
+                11.0 * 1.1 / expected_latest,
+                12.0 * 1.2 / expected_latest,
+                13.0 * 1.3 / expected_latest,
+            ]
+        )
+        assert result["close"].to_list() == pytest.approx(
+            [
+                10.0 * 1.0 / expected_latest,
+                11.0 * 1.1 / expected_latest,
+                12.0 * 1.2 / expected_latest,
+                13.0 * 1.3 / expected_latest,
+            ]
+        )
 
-    def test_qfq_missing_factor(self) -> None:
-        """Test QFQ adjustment with missing adj_factor."""
+    def test_qfq_missing_factor_fails_closed(self) -> None:
+        """QFQ 拒绝因子缺失行——不再 coalesce 1.0 产出失真复权值（#514）."""
         df = pl.DataFrame(
             {
                 "instrument_id": [1, 1, 2],
@@ -269,19 +274,38 @@ class TestApplyQfqAdj:
             }
         )
 
-        result = apply_qfq_adj(df, adj_df)
+        with pytest.raises(AdjustmentFactorMissingError, match="2@2024-01-01"):
+            apply_qfq_adj(df, adj_df)
 
-        # Instrument ID 2 should have unchanged prices (coalesce to 1.0)
-        assert result["open"].to_list() == [
-            10.0 * 1.0 / 1.1,
-            11.0 * 1.1 / 1.1,
-            20.0,  # No factor, unchanged
-        ]
-        assert result["close"].to_list() == [
-            10.0 * 1.0 / 1.1,
-            11.0 * 1.1 / 1.1,
-            20.0,  # No factor, unchanged
-        ]
+    def test_qfq_baseline_missing_fails_closed(self) -> None:
+        """标的在 qfq baseline 窗口内完全没有因子时显式失败（#514）.
+
+        公开路径形态：行情行已由调用方 join 到当日因子（adj_factor 齐全），
+        但标的从不出现在 baseline 因子表中——latest_factor 为 null。
+        """
+        df = pl.DataFrame(
+            {
+                "instrument_id": [1, 2],
+                "trade_date": [date(2024, 1, 1), date(2024, 1, 1)],
+                "open": [10.0, 20.0],
+                "high": [10.5, 20.5],
+                "low": [9.5, 19.5],
+                "close": [10.0, 20.0],
+                "adj_factor": [1.0, 1.0],
+            }
+        )
+        adj_df = pl.DataFrame(
+            {
+                # 标的 2 不存在于因子表：行级因子经调用方 join 补齐，
+                # 但 baseline 分组永远缺它
+                "instrument_id": [1],
+                "trade_date": [date(2024, 1, 1)],
+                "adj_factor": [1.1],
+            }
+        )
+
+        with pytest.raises(AdjustmentFactorMissingError, match="latest_factor"):
+            apply_qfq_adj(df, adj_df)
 
     def test_qfq_with_asof_string(self) -> None:
         """Test QFQ adjustment with asof as string."""
@@ -366,8 +390,8 @@ class TestApplyHfqAdj:
         # adj_factor should be dropped
         assert "adj_factor" not in result.columns
 
-    def test_hfq_missing_factor(self) -> None:
-        """Test HFQ adjustment with missing adj_factor."""
+    def test_hfq_missing_factor_fails_closed(self) -> None:
+        """HFQ 拒绝因子缺失行——不再 coalesce 1.0 产出失真复权值（#514）."""
         df = pl.DataFrame(
             {
                 "instrument_id": [1, 1, 2],
@@ -395,8 +419,5 @@ class TestApplyHfqAdj:
             }
         )
 
-        result = apply_hfq_adj(df, adj_df)
-
-        # Instrument ID 2 should have unchanged prices (coalesce to 1.0)
-        assert result["open"].to_list() == pytest.approx([10.0, 12.1, 20.0])
-        assert result["close"].to_list() == pytest.approx([10.0, 12.1, 20.0])
+        with pytest.raises(AdjustmentFactorMissingError, match="adj_factor missing"):
+            apply_hfq_adj(df, adj_df)

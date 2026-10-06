@@ -60,7 +60,11 @@ statistical:
     name: missing_data_check
     expected_dates: "trade_calendar"
     lookback_days: 5
-    message: "最近 5 个交易日存在缺失数据"
+    # #511：存量窗口帧 + per-instrument 维度——单指数缺行（#1861 形态）
+    # 在数据集级日期并集下不可见，逐标的差集告警才能定位到指数。
+    frame: historical
+    group_by_instrument: true
+    message: "最近交易日存在缺失数据（数据集级或单指数缺行）"
 
   # 跨源对比：主源 Tushare 指数日 K vs 辅源 fuyao 指数历史（#474）。
   # 已知口径缺陷（2026-09-30 实测）：399001 深证成指 fuyao 量额=深市

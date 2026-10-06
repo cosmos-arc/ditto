@@ -305,7 +305,10 @@ class CapitalMarketTushareAdapter(BaseTushareAdapter):
 
         Args:
             ts_code: 股票代码 (e.g., "000001.SZ")
-            report_date: 报告期 (YYYYMMDD)
+            report_date: 周快照日 (YYYYMMDD，通常为周五；pledge_stat 的
+                end_date 参数为精确匹配语义，非快照日请求返回空——
+                2026-10-06 代理 t.xiaodefa.top 实测：end_date=周五返回
+                当周全市场快照，end_date=下周一返回 0 行)
             start_date: 开始日期 (YYYYMMDD) — 未使用，保留接口兼容
             end_date: 结束日期 (YYYYMMDD) — 未使用，保留接口兼容
 
@@ -339,6 +342,10 @@ class CapitalMarketTushareAdapter(BaseTushareAdapter):
 
             if ts_code:
                 params["ts_code"] = ts_code
+            if report_date:
+                # #512：透传快照日过滤。此前 report_date 被静默丢弃，
+                # 「按期拉取」退化为全表翻页（且被单次 1000 行上限截断）。
+                params["end_date"] = report_date
 
             response = self._client.query(**params)
 

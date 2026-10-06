@@ -9,6 +9,7 @@ from zoneinfo import ZoneInfo
 import polars as pl
 from ditto_platform.foundation import logger, traced
 
+from ditto_data.errors.network import SourceFetchError
 from ditto_data.sources.tushare.adapters.base import BaseTushareAdapter
 from ditto_data.sources.tushare.processors.error_handler import (
     tushare_fetch_error_handler,
@@ -312,8 +313,14 @@ class IndexTushareAdapter(BaseTushareAdapter):
 
         ts_date = trade_date.replace("-", "")
         dfs: list[pl.DataFrame] = []
+        failed_codes: list[str] = []
+        empty_codes: list[str] = []
 
-        # 逐个查询每个指数
+        # 逐个查询每个指数。
+        # #511：逐码失败不再静默吞掉——单码缺口曾整段不可见（#1861）。
+        # 失败使当日摄取 fail closed（游标不前进，重试自愈）；空响应
+        # （200 且 0 行）保留跳过但显式记名告警，因历史上也可能是源侧
+        # 静默缺口的形态（是否真缺由 L3 per-instrument completeness 判定）。
         for ts_code in ts_codes:
             try:
                 provider_api = self._daily_api_name(ts_code)
@@ -326,6 +333,8 @@ class IndexTushareAdapter(BaseTushareAdapter):
                     )
                     if response.height > 0:
                         dfs.append(response)
+                    else:
+                        empty_codes.append(ts_code)
             except Exception as e:
                 logger.warning(
                     f"Failed to fetch index {ts_code}",
@@ -333,7 +342,26 @@ class IndexTushareAdapter(BaseTushareAdapter):
                     ts_code=ts_code,
                     error=str(e),
                 )
-                continue
+                failed_codes.append(ts_code)
+
+        if empty_codes:
+            logger.warning(
+                "Index codes returned no rows for trade date",
+                event="tushare_index_daily_code_empty",
+                trade_date=trade_date,
+                ts_codes=sorted(empty_codes),
+            )
+
+        if failed_codes:
+            raise SourceFetchError(
+                message=(
+                    f"Tushare index_daily failed for {len(failed_codes)} "
+                    f"index code(s) on {trade_date}: {sorted(failed_codes)} "
+                    f"({len(dfs)}/{len(ts_codes)} codes fetched) — "
+                    "partial day rejected, retry the partition (#511)"
+                ),
+                source="tushare",
+            )
 
         if not dfs:
             logger.warning(
