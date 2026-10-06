@@ -152,7 +152,7 @@ def test_cloud_evidence_omits_free_text_identifiers_and_exact_amounts() -> None:
         assert secret is not None
         assert secret not in serialized
     assert evidence.payload.value["redaction"] == "cloud_redacted"
-    assert _dig(evidence.payload.value, "events", 0, "event_hash") == (event.event_hash)
+    assert _dig(evidence.payload.value, "events", 0, "event_hash") == event.event_hash
     assert _dig(evidence.payload.value, "events", 0, "instrument_id") == 600519
     assert evidence.artifact_refs[0].content_hash in evidence.ledger_hash
 

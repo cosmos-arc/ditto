@@ -58,6 +58,7 @@ _TRADE_DEFAULTS: dict[str, float | int] = {
 
 
 def _make_trade_stats(**overrides: float | int) -> AggregatedTradeStatistics:
+    """字段级覆写进交易统计，构造点单点放宽（与 _make_alpha_stats 同款）."""
     return AggregatedTradeStatistics(
         **cast("dict[str, Any]", {**_TRADE_DEFAULTS, **overrides})
     )

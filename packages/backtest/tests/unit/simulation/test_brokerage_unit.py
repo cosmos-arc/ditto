@@ -310,7 +310,7 @@ class TestProcessMarketOrder:
 
         view = brokerage.get_account()
         # Position created
-        assert 1 in view.positions
+        assert InstrumentId(1) in view.positions
         pos = view.positions[InstrumentId(1)]
         assert pos.quantity == 1000
         assert pos.average_cost == pytest.approx(10.5)
