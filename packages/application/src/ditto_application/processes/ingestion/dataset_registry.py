@@ -11,6 +11,7 @@ from typing import Literal
 
 import polars as pl
 from ditto_data.catalog import default_dataset_metadata
+from ditto_data.errors import SourceAuthenticationError
 from ditto_data.models import (
     FX_CODE_TO_INSTRUMENT_ID,
     GLOBAL_INDEX_CODES,
@@ -18,6 +19,7 @@ from ditto_data.models import (
     DateScheduleType,
 )
 from ditto_kernel.instrument import InstrumentIngestParams
+from ditto_platform.foundation import logger
 
 from ditto_application.exceptions import AppProcessError  # noqa: RUF100
 from ditto_application.processes.ingestion.types import SourceFetchers
@@ -48,6 +50,8 @@ class DailyFetchContext:
     source_name: str = "tushare"
     # 维护者确认的 ETF 参考事实声明读取（#408）；缺配置时 fail closed。
     fetch_etf_reference_config: Callable[[], pl.DataFrame] | None = None
+    # 注册表内 ETF universe（#522 fund_portfolio 按标的披露拉取用）
+    get_cached_etf_tickers: Callable[[], list[str]] | None = None
 
 
 @dataclass(frozen=True)
@@ -371,6 +375,30 @@ def _earnings_instrument_fetch(
     return factory
 
 
+def _fund_portfolio_disclosure_fetch(ctx: DailyFetchContext) -> DailyFetchHandler:
+    """#522：按注册 ETF universe 逐标的拉当日披露（ts_code+ann_date）."""
+
+    def fetch() -> pl.DataFrame:
+        if ctx.get_cached_etf_tickers is None:
+            raise AppProcessError(
+                "fund_portfolio disclosure fetch requires the registered "
+                "ETF universe; get_cached_etf_tickers is not configured"
+            )
+        fetcher = ctx.fetchers.fundamental
+        frames = [
+            frame
+            for ticker in ctx.get_cached_etf_tickers()
+            if not (
+                frame := fetcher.fetch_fund_portfolio(
+                    trade_date=ctx.trade_date, source_ticker=ticker
+                )
+            ).is_empty()
+        ]
+        return pl.concat(frames, how="diagonal_relaxed") if frames else pl.DataFrame()
+
+    return fetch
+
+
 def _history_fetch(group: str, method: str) -> DailyFetchFactory:
     """``ctx.fetchers.<group>.<method>()`` — 全量事件历史，不随 trade_date 推进。"""
 
@@ -401,15 +429,26 @@ def _industry_classification_fetch(ctx: DailyFetchContext) -> DailyFetchHandler:
                 pl.lit("sw").alias("source"),
             )
         )
-        # csrc_industrial 返回行业树（L1/L2），级别串已是 L 前缀、source=csrc
-        csrc = ctx.fetchers.metadata.fetch_csrc_industry().select(
-            pl.col("industry_id"),
-            pl.col("industry_name"),
-            pl.col("industry_level").cast(pl.String),
-            pl.lit(date.today()).alias("knowledge_date"),
-            pl.lit("CSRC2012").alias("classification_version"),
-            pl.col("source"),
-        )
+        # csrc_industrial 返回行业树（L1/L2），级别串已是 L 前缀、source=csrc。
+        # #517（2026-10-06 实测）：代理 transport 对该端点回 code=2002 权限拒
+        # （非本 token 问题——同期其余端点全部可用）。按传输能力边界降级：
+        # 仅保留 SW 快照并留痕，不阻塞分类摄取；其余错误照常抛出。
+        try:
+            csrc = ctx.fetchers.metadata.fetch_csrc_industry().select(
+                pl.col("industry_id"),
+                pl.col("industry_name"),
+                pl.col("industry_level").cast(pl.String),
+                pl.lit(date.today()).alias("knowledge_date"),
+                pl.lit("CSRC2012").alias("classification_version"),
+                pl.col("source"),
+            )
+        except SourceAuthenticationError:
+            logger.warning(
+                "csrc_industrial rejected by transport; "
+                + "industry_classification degraded to SW-only",
+                event="tushare_csrc_endpoint_unavailable",
+            )
+            return sw
         return pl.concat([sw, csrc], how="vertical_relaxed")
 
     return fetch
@@ -677,13 +716,15 @@ _FUNDAMENTAL_REGISTRATIONS: tuple[DatasetRegistration, ...] = (
             "fundamental", "fetch_fina_indicator"
         ),
     ),
-    # #522 基金季度持仓（公告日驱动，NATURAL_DAYS 对齐 dividend/corporate_actions）
+    # #522 基金季度持仓：全市场单日 30 万+行会撞传输翻页上限（2026-10-06
+    # 实测 153 页后失败），日更按注册 ETF universe 逐标的披露拉取；
+    # 按基金回填走 instrument 路由（区间内报告期逐期）。
     DatasetRegistration(
         dataset=Dataset.FUND_PORTFOLIO,
         write_kind=WriteKind.FUNDAMENTAL,
         date_schedule=DateScheduleType.NATURAL_DAYS,
-        daily_fetch_factory=_daily_fetch("fundamental", "fetch_fund_portfolio"),
-        instrument_fetch_factory=_instrument_fetch(
+        daily_fetch_factory=_fund_portfolio_disclosure_fetch,
+        instrument_fetch_factory=_earnings_instrument_fetch(
             "fundamental", "fetch_fund_portfolio"
         ),
     ),

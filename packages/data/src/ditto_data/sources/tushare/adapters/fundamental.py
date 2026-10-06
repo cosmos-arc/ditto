@@ -107,6 +107,25 @@ def _empty_with_schema(
     return pl.DataFrame(schema=schema)
 
 
+_FINA_PAGE_SIZE = 2000
+
+
+def _dedupe_fina_disclosure_key(frame: pl.DataFrame) -> pl.DataFrame:
+    """
+    同披露键（标的, 报告期, 公告日）多版本行去重 keep-last（#484 先例）.
+
+    fina_indicator 无 update_flag 身份列，同键多行是源端多版本发布；
+    全字段请求下行彼此可区分，取源序末行（最新发布）。
+    """
+    if frame.is_empty():
+        return frame
+    return frame.unique(
+        subset=["source_ticker", "report_date", "knowledge_date"],
+        keep="last",
+        maintain_order=True,
+    )
+
+
 class FundamentalTushareAdapter(BaseTushareAdapter):
     """
     Fundamental domain Tushare adapter implementation.
@@ -537,10 +556,13 @@ class FundamentalTushareAdapter(BaseTushareAdapter):
             end_date: 公告结束日期 (YYYYMMDD，配 ts_code)
 
         """
-        return self._fetch_financial(
+        # 全字段请求：只请求身份列会让同披露键的多版本行折叠成重复行，
+        # 触发翻页守卫拒绝（2026-10-06 实测 in-page 重复 875 行）；
+        # 全字段行彼此可区分，再到映射后按披露键去重 keep-last。
+        result = self._fetch_financial(
             dataset="fina_indicator",
             api_name="fina_indicator",
-            fields="ts_code,ann_date,end_date",
+            fields="",
             mapping=FINA_INDICATOR_MAPPING,
             log_name="fina indicator",
             extra_params={
@@ -551,6 +573,62 @@ class FundamentalTushareAdapter(BaseTushareAdapter):
             },
             add_pit=False,
         )
+        return _dedupe_fina_disclosure_key(result)
+
+    @traced("source.tushare.fetch_fina_indicator_vip")
+    def fetch_fina_indicator_vip(
+        self,
+        period: str | None = None,
+        ann_date: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> pl.DataFrame:
+        """
+        获取官方口径财务指标——VIP 批量端点 (#521).
+
+        代理 transport 的非 VIP fina_indicator 必填 ts_code（2026-10-06
+        实测 code=「必填参数, 标的」），日更披露增量走本端点按 period
+        全市场批量（与 forecast/express 的 vip 形态一致）。
+        """
+        # 源端存在字节级重复行（2026-10-06 实测同 period 响应 in-page 重复
+        # 875+ 行，且与请求字段集无关）——自动翻页的重复守卫会拒收。fina
+        # 端点走调用方自管分页（单页语义），取尽后统一按披露键去重。
+        params: dict[str, str | None] = {
+            "period": period,
+            "ann_date": ann_date,
+            "start_date": start_date,
+            "end_date": end_date,
+        }
+        active = {k: v for k, v in params.items() if v}
+        with tushare_fetch_error_handler("fina_indicator", "fina_indicator_vip"):
+            pages: list[pl.DataFrame] = []
+            offset = 0
+            while True:
+                page = self._client.query(
+                    api_name="fina_indicator_vip",
+                    fields="",
+                    limit=_FINA_PAGE_SIZE,
+                    offset=offset,
+                    **active,
+                )
+                pages.append(page)
+                if page.height < _FINA_PAGE_SIZE:
+                    break
+                offset += _FINA_PAGE_SIZE
+            raw = pl.concat(pages, how="diagonal_relaxed") if pages else pl.DataFrame()
+            logger.info(
+                "Tushare fina indicator (VIP) fetched",
+                event="tushare_fina_indicator_fetch_complete",
+                row_count=raw.height,
+            )
+            Metrics.data_records.add(
+                raw.height,
+                {"source": "tushare", "dataset": "fina_indicator", "status": "success"},
+            )
+        result = TushareDataTransformer.transform(
+            raw, "fina_indicator", FINA_INDICATOR_MAPPING
+        )
+        return _dedupe_fina_disclosure_key(result)
 
     @traced("source.tushare.fetch_fund_portfolio")
     def fetch_fund_portfolio(

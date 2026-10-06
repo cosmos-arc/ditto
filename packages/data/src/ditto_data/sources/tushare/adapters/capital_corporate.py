@@ -221,14 +221,37 @@ class CapitalCorporateTushareAdapter(BaseTushareAdapter):
                 ),
                 **common,
             )
-            rights = self._client.query(
-                api_name="rights",
-                fields=(
-                    "ts_code,rights_type,ann_date,reg_date,ex_date,"
-                    "rights_price,rights_ratio"
-                ),
-                **common,
-            )
+            rights: pl.DataFrame
+            try:
+                rights = self._client.query(
+                    api_name="rights",
+                    fields=(
+                        "ts_code,rights_type,ann_date,reg_date,ex_date,"
+                        "rights_price,rights_ratio"
+                    ),
+                    **common,
+                )
+            except Exception as error:
+                # #517（2026-10-06 实测）：代理 transport 未开通 rights 端点
+                # （code=50101「请指定正确的接口名」，tenacity 重试耗尽后以
+                # RetryError 包装抛出）。按传输能力边界降级：组合退回
+                # repurchase+share_float 并留痕，不阻塞既有公司行为摄取；
+                # 其余错误（限流/网络/其他业务错）照常 fail-closed。
+                chain = [error]
+                inner = getattr(error, "__cause__", None)
+                while inner is not None:
+                    chain.append(inner)
+                    inner = getattr(inner, "__cause__", None)
+                chain_text = " | ".join(str(item) for item in chain)
+                if "请指定正确的接口名" not in chain_text:
+                    raise
+                logger.warning(
+                    "rights endpoint unavailable on this transport; "
+                    + "corporate_actions degraded to repurchase+share_float",
+                    event="tushare_rights_endpoint_unavailable",
+                    reason=chain_text[:120],
+                )
+                rights = pl.DataFrame()
             result = _normalized_corporate_actions(repurchase, share_float, rights)
 
             row_count = len(result)

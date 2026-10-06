@@ -203,8 +203,15 @@ class CapitalFlowsTushareAdapter(BaseTushareAdapter):
         start_date: str | None = None,
         end_date: str | None = None,
     ) -> pl.DataFrame:
-        """龙虎榜席位明细（金额元；exalter+side 进主键，#519）."""
-        return self._fetch_daily_frame(
+        """
+        龙虎榜席位明细（金额元；exalter+side 进主键，#519）.
+
+        源端「机构专用」是多家机构的共用席位名，同 (标的, 日, 席位, 方向,
+        原因) 可出现多行；存储主键无席位 ID 维度，按身份键去重保末行
+        （#482 同披露键去重先例），同名多机构的合并损失在 mapping 头注释
+        留档。
+        """
+        frame = self._fetch_daily_frame(
             "top_inst",
             "top_inst",
             _TOP_INST_FIELDS,
@@ -215,4 +222,17 @@ class CapitalFlowsTushareAdapter(BaseTushareAdapter):
                 "start_date": start_date,
                 "end_date": end_date,
             },
+        )
+        if frame.is_empty():
+            return frame
+        return frame.unique(
+            subset=[
+                "source_ticker",
+                "trade_date",
+                "exalter",
+                "side",
+                "reason",
+            ],
+            keep="last",
+            maintain_order=True,
         )

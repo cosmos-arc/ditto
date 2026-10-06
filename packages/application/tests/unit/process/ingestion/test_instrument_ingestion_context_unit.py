@@ -279,3 +279,40 @@ def test_backfill_adj_factor_accepts_runtime_context() -> None:
     assert result == {"status": "ok", "gap_count": 1, "filled_dates": 1}
     assert market_source.calls == [("000001.SZ", "20240102", "20240102")]
     assert writer.calls == [("adj_factor", "2024-01-02", OnDuplicate.KEEP_LAST)]
+
+
+def _patch_market_source_for_registry() -> None:
+    """#518-#523 增补后 instrument 注册表急切 getattr 新方法；给测试假源补齐."""
+    for name in (
+        "fetch_moneyflow",
+        "fetch_hk_hold",
+        "fetch_fina_indicator",
+        "fetch_fund_portfolio",
+        "fetch_fund_share",
+        "fetch_etf_daily",
+        "fetch_fund_nav",
+        "fetch_fund_adj",
+        "fetch_valuation_metrics",
+        "fetch_margin_trading",
+        "fetch_pledge_ratio",
+        "fetch_index_valuation",
+        "fetch_balance_sheet",
+        "fetch_income_statement",
+        "fetch_cash_flow",
+        "fetch_dividend",
+        "fetch_earnings_forecast",
+        "fetch_earnings_express",
+        "fetch_futures_daily",
+    ):
+        if not hasattr(_MarketSource, name):
+
+            def _stub(
+                *args: object, _name: str = name, **kwargs: object
+            ) -> pl.DataFrame:
+                return pl.DataFrame()
+
+            _stub.__name__ = name
+            setattr(_MarketSource, name, staticmethod(_stub))
+
+
+_patch_market_source_for_registry()

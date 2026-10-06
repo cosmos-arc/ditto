@@ -62,16 +62,8 @@ _stock_status_impl = create_daily_command("stock_status", "摄取股票状态")
 _stock_limit_impl = create_daily_command("stock_limit", "摄取股票涨跌停价格")
 
 # limit-list (涨跌停/炸板名单, #519) 与 fund-share (基金份额, #522)
-_limit_list_impl = create_instrument_command(
-    "limit_list",
-    "摄取涨跌停与炸板名单",
-    cli_path="ingest market limit-list",
-)
-_fund_share_impl = create_instrument_command(
-    "fund_share",
-    "摄取基金份额",
-    cli_path="ingest market fund-share",
-)
+_limit_list_impl = create_daily_command("limit_list", "摄取涨跌停与炸板名单")
+_fund_share_impl = create_daily_command("fund_share", "摄取基金份额")
 
 # fx (汇率)
 _fx_daily_impl = create_daily_command("fx_daily", "摄取汇率日线数据")

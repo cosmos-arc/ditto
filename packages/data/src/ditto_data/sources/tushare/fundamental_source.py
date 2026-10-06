@@ -14,6 +14,10 @@ from datetime import date, timedelta
 import polars as pl
 
 from ditto_data.sources.tushare._fundamental import (
+    _fetch_disclosure_delta,
+    _parse_iso,
+)
+from ditto_data.sources.tushare._fundamental import (
     fetch_balance_sheet as _fetch_balance_sheet,
 )
 from ditto_data.sources.tushare._fundamental import (
@@ -459,11 +463,21 @@ def fetch_fina_indicator(
     start_date: str | None = None,
     end_date: str | None = None,
 ) -> pl.DataFrame:
-    """Fetch official financial indicators（#521 披露增量语义）."""
+    """
+    Fetch official financial indicators（#521 披露增量语义）.
+
+    日更走 fina_indicator_vip 按 period 批量（代理 transport 非 VIP 端点
+    必填 ts_code，2026-10-06 实测）；按标的回填走非 VIP 端点。
+    """
+    if trade_date:
+        return _fetch_disclosure_delta(
+            fundamental.fetch_fina_indicator_vip,
+            asof_date=_parse_iso(trade_date),
+        )
     return _fetch_fina_indicator(
         fundamental,
         to_compact_date,
-        trade_date=trade_date,
+        trade_date=None,
         source_ticker=source_ticker,
         start_date=start_date,
         end_date=end_date,

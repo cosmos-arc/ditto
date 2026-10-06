@@ -3,6 +3,7 @@
 from datetime import date
 
 import polars as pl
+import pytest
 import pytest_mock
 from ditto_data.sources.tushare.adapters.capital import CapitalTushareAdapter
 
@@ -708,3 +709,44 @@ class TestCorporateActionsRightsComposition:
         # 除权/登记日缺失 → 回退公告日，不用未来日期冒充生效锚
         assert row["action_date"] == date(2024, 1, 1)
         assert "rights_price=unknown" in row["description"]
+
+
+class TestCorporateActionsRightsTransportBoundary:
+    """#517：代理未开通 rights 端点（50101）时组合降级留痕."""
+
+    def test_rights_50101_degrades_to_two_legs(self, mocker) -> None:
+        from ditto_data.errors import SourceFetchError
+        from ditto_data.sources.tushare.adapters.capital_corporate import (
+            CapitalCorporateTushareAdapter,
+        )
+
+        mock_client = mocker.Mock()
+        mock_client.query.side_effect = [
+            pl.DataFrame(),
+            pl.DataFrame(),
+            SourceFetchError(message="请指定正确的接口名", source="tushare"),
+        ]
+        result = CapitalCorporateTushareAdapter(
+            _client=mock_client
+        ).fetch_corporate_actions(ann_date="20260930")
+        assert result.is_empty()
+        assert mock_client.query.call_count == 3
+
+    def test_rights_other_errors_still_fail_closed(
+        self, mocker: pytest_mock.MockFixture
+    ) -> None:
+        from ditto_data.errors import SourceFetchError
+        from ditto_data.sources.tushare.adapters.capital_corporate import (
+            CapitalCorporateTushareAdapter,
+        )
+
+        mock_client = mocker.Mock()
+        mock_client.query.side_effect = [
+            pl.DataFrame(),
+            pl.DataFrame(),
+            SourceFetchError(message="network error", source="tushare"),
+        ]
+        with pytest.raises(SourceFetchError, match="Failed to fetch"):
+            CapitalCorporateTushareAdapter(_client=mock_client).fetch_corporate_actions(
+                ann_date="20260930"
+            )
