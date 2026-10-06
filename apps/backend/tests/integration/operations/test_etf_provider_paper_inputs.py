@@ -389,7 +389,7 @@ def test_config_declaration_supplements_paper_reference_facts(
         assert rules["trading_currency"] == "CNY"
         assert rules["trading_restriction"] == "none"
         assert {
-            name: float(value)
+            name: value
             for name, value in rules.items()
             if name not in ("trading_currency", "trading_restriction")
         } == pytest.approx(
