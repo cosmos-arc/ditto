@@ -536,3 +536,99 @@ def test_fuyao_unsorted_bars_preserve_early_identity(
     written = mock_market_write_service.save_bars.call_args.kwargs["df"]
     assert written["close"].to_list() == [11.0, 12.0]
     assert written["instrument_id"].to_list() == [1000001, 1000001]
+
+
+@pytest.mark.unit
+def test_every_write_route_resolves_to_a_handler_method():
+    """#434 回归：_HANDLER_NAMES 曾映射 4 个从未定义的方法名（futures/earnings/
+    index_valuation 写入路径 AttributeError，每日流静默失败）。契约：映射表里
+    每个路由都能在 IngestionDataWriter 上解析到可调用方法。"""
+    for write_kind, handler_name in IngestionDataWriter._HANDLER_NAMES.items():
+        handler = getattr(IngestionDataWriter, handler_name, None)
+        assert callable(handler), (
+            f"{write_kind.value} maps to missing method {handler_name!r}"
+        )
+
+
+@pytest.mark.unit
+def test_every_registered_dataset_has_a_write_route():
+    """契约：注册表中每个非 UNSUPPORTED 数据集的 write_kind 都有映射条目。"""
+    from ditto_application.processes.ingestion.dataset_registry import (
+        WriteKind,
+        default_dataset_registry,
+    )
+
+    routes = IngestionDataWriter._HANDLER_NAMES
+    for registration in default_dataset_registry().registrations():
+        if registration.write_kind is WriteKind.UNSUPPORTED:
+            continue
+        assert registration.write_kind in routes, (
+            f"{registration.dataset.value} has write_kind "
+            f"{registration.write_kind.value} without a handler route"
+        )
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    ("dataset", "store_call"),
+    [
+        ("futures_daily", ("market", "save_futures_daily")),
+        ("futures_basic", ("market", "save_futures_basic")),
+        ("earnings_forecast", ("fundamental", "save_earnings_forecast")),
+        ("earnings_express", ("fundamental", "save_earnings_express")),
+    ],
+)
+def test_previously_unrouted_writes_dispatch_to_store(
+    data_writer,
+    mock_market_write_service,
+    mock_fundamental_store,
+    mock_capital_store,
+    dataset,
+    store_call,
+):
+    """#434 回归：这四个数据集的 write_data 之前在 handler 解析处 AttributeError。"""
+    mock_market_write_service.save_futures_daily.return_value = 1
+    mock_market_write_service.save_futures_basic.return_value = 1
+    mock_fundamental_store.save_earnings_forecast.return_value = 1
+    mock_fundamental_store.save_earnings_express.return_value = 1
+    frame = pl.DataFrame(
+        {
+            "source_ticker": ["RB2410.SHF"],
+            "trade_date": [date(2024, 10, 11)],
+            "knowledge_date": [date(2024, 10, 11)],
+        }
+    )
+    result = data_writer.write_data(dataset, frame, "2024-10-11")
+    store_group, method_name = store_call
+    store = {
+        "market": mock_market_write_service,
+        "fundamental": mock_fundamental_store,
+    }[store_group]
+    getattr(store, method_name).assert_called_once()
+    assert result.rows_written == 1
+
+
+@pytest.mark.unit
+def test_index_valuation_write_enriches_and_persists(
+    data_writer,
+    mock_market_write_service,
+    mock_fundamental_store,
+    mock_capital_store,
+    mock_metadata_service,
+):
+    """#434 回归：index_valuation 走 instrument_id 富集后写 capital store。"""
+    mock_metadata_service.instrument.resolve_instrument_ids_batch.return_value = {
+        "000001.SH": 101
+    }
+    frame = pl.DataFrame(
+        {
+            "source_ticker": ["000001.SH"],
+            "trade_date": [date(2024, 10, 11)],
+            "knowledge_date": [date(2024, 10, 12)],
+            "total_mv": [1.0],
+        }
+    )
+    mock_capital_store.save_index_valuation.return_value = 1
+    result = data_writer.write_data("index_valuation", frame, "2024-10-11")
+    mock_capital_store.save_index_valuation.assert_called_once()
+    assert result.rows_written == 1

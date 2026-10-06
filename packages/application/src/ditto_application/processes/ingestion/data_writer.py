@@ -321,6 +321,16 @@ class IngestionDataWriter:
             ctx.dataset, ctx.df, ctx.year, ctx.on_duplicate, ctx.source_ticker_col
         )
 
+    def _handler_futures_bars(self, ctx: _WriteContext) -> Callable[[], WriteResult]:
+        return lambda: self._write_futures_bars(
+            ctx.dataset, ctx.df, ctx.year, ctx.on_duplicate
+        )
+
+    def _handler_futures_basic(self, ctx: _WriteContext) -> Callable[[], WriteResult]:
+        return lambda: self._write_futures_basic(
+            ctx.dataset, ctx.df, ctx.year, ctx.on_duplicate
+        )
+
     def _handler_fund_adj(self, ctx: _WriteContext) -> Callable[[], WriteResult]:
         return lambda: self._write_fund_adj(
             ctx.dataset, ctx.df, ctx.year, ctx.on_duplicate, ctx.source_ticker_col
@@ -334,6 +344,16 @@ class IngestionDataWriter:
     def _handler_index_weight(self, ctx: _WriteContext) -> Callable[[], WriteResult]:
         return lambda: self._write_index_weight(
             ctx.dataset, ctx.df, ctx.year, ctx.source_ticker_col
+        )
+
+    def _handler_earnings_event(self, ctx: _WriteContext) -> Callable[[], WriteResult]:
+        return lambda: self._write_earnings_event(
+            ctx.dataset, ctx.dataset_enum, ctx.df, ctx.year, ctx.on_duplicate
+        )
+
+    def _handler_index_valuation(self, ctx: _WriteContext) -> Callable[[], WriteResult]:
+        return lambda: self._write_index_valuation(
+            ctx.dataset, ctx.df, ctx.year, ctx.on_duplicate, ctx.source_ticker_col
         )
 
     def _handler_fundamental(self, ctx: _WriteContext) -> Callable[[], WriteResult]:
@@ -734,6 +754,93 @@ class IngestionDataWriter:
             enriched_df,
             rows_written,
             on_duplicate=on_duplicate,
+        )
+
+    def _write_futures_bars(
+        self,
+        dataset: str,
+        df: pl.DataFrame,
+        year: int,
+        on_duplicate: OnDuplicate,
+    ) -> WriteResult:
+        """Write futures bars keyed by provider contract code (no FK enrichment)."""
+        rows_written = self._market_write_service.save_futures_daily(
+            df=df,
+            year=year,
+            on_duplicate=on_duplicate,
+        )
+        return _to_write_result(
+            dataset, year, df, rows_written, on_duplicate=on_duplicate
+        )
+
+    def _write_futures_basic(
+        self,
+        dataset: str,
+        df: pl.DataFrame,
+        year: int,
+        on_duplicate: OnDuplicate,
+    ) -> WriteResult:
+        """Write the futures contract reference snapshot (knowledge-dated)."""
+        rows_written = self._market_write_service.save_futures_basic(
+            df=df,
+            year=year,
+            on_duplicate=on_duplicate,
+        )
+        return _to_write_result(
+            dataset, year, df, rows_written, on_duplicate=on_duplicate
+        )
+
+    def _write_earnings_event(
+        self,
+        dataset: str,
+        dataset_enum: Dataset,
+        df: pl.DataFrame,
+        year: int,
+        on_duplicate: OnDuplicate,
+    ) -> WriteResult:
+        """Write announcement-event rows keyed by provider ticker (no instrument FK)."""
+        save_methods = {
+            Dataset.EARNINGS_FORECAST: self._fundamental_store.save_earnings_forecast,
+            Dataset.EARNINGS_EXPRESS: self._fundamental_store.save_earnings_express,
+        }
+        try:
+            save_method = save_methods[dataset_enum]
+        except KeyError:
+            valid = ", ".join(str(member) for member in save_methods)
+            raise AppProcessError(
+                f"Unknown earnings dataset: {dataset}. Expected: {valid}",
+                field="dataset",
+                value=dataset,
+            ) from None
+        rows_written = save_method(df, year, on_duplicate=on_duplicate)
+        return _to_write_result(
+            dataset, year, df, rows_written, on_duplicate=on_duplicate
+        )
+
+    def _write_index_valuation(
+        self,
+        dataset: str,
+        df: pl.DataFrame,
+        year: int,
+        on_duplicate: OnDuplicate,
+        source_ticker_col: str,
+    ) -> WriteResult:
+        """Write index daily valuation rows (instrument FK enriched)."""
+        enriched_df = self._enrich_and_filter_fk_dataframe(
+            df,
+            dataset,
+            year,
+            source_ticker_col,
+        )
+        if enriched_df is None:
+            return _to_write_result(dataset, year, df, 0)
+        rows_written = self._capital_store.save_index_valuation(
+            enriched_df,
+            year,
+            on_duplicate=on_duplicate,
+        )
+        return _to_write_result(
+            dataset, year, enriched_df, rows_written, on_duplicate=on_duplicate
         )
 
     def _write_fund_adj(
