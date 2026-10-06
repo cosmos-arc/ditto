@@ -7,8 +7,9 @@ from ditto_platform.foundation import logger
 
 from ditto_data.quality.quality_types import DQIssue, DQLevel, DQSeverity
 
-# yml 期望记号 → Polars dtype 基名（str 为 macro_indicators.yml 既有记号）
-_EXPECTED_DTYPE_ALIASES = {"str": "string", "bool": "boolean"}
+# yml 期望记号 → Polars dtype 基名（str 为 macro_indicators/corporate_actions
+# 既有记号）
+_EXPECTED_DTYPE_ALIASES = {"str": "string"}
 
 
 def _dtype_base(actual_dtype: str) -> str:
@@ -181,6 +182,10 @@ class TechnicalChecker:
         # ETFTushareAdapter 在源层按 etf_basic universe 交集/拒绝把关
         # （写入前过滤），写入时 instrument 解析本身即天然 FK；此处
         # reference_values 机制留给未来需要跨数据集值域校验的规则。
+        # #529 收口：各 dq_rules yml 的 foreign_key instrument_id 死规则
+        # （reference_values 从未接线，自始静默跳过）已全部删除；身份
+        # FK 实际由写入器富集解析（data_writer 过滤不可解析标的并留痕）
+        # + 存储 PK 约束承担。
         if not context or "reference_values" not in context:
             logger.debug(
                 "dq_fk_skip_no_context",

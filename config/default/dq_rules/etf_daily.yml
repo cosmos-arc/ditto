@@ -16,7 +16,6 @@ technical:
 
   - rule: type_check
     columns:
-      instrument_id: int
       trade_date: date
       open: float
       high: float

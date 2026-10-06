@@ -14,7 +14,6 @@ technical:
 
   - rule: type_check
     columns:
-      instrument_id: int
       report_date: date
       pledge_ratio: float
       total_shares: float

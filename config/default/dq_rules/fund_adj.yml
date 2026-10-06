@@ -19,7 +19,6 @@ technical:
 
   - rule: type_check
     columns:
-      instrument_id: int
       trade_date: date
       adj_factor: float
     message: "字段类型不匹配"

@@ -159,7 +159,11 @@ def _type_check_columns(rules: DatasetRules) -> dict[str, str]:
 @pytest.mark.unit
 class TestTypeCheckWiring:
     def test_expected_dtypes_match_source_frame_contract(self) -> None:
-        """yml type_check 期望必须与摄取帧权威 dtype 契约逐列一致."""
+        """yml type_check 期望必须与摄取帧权威 dtype 契约逐列一致.
+
+        instrument_id 仅 fx_daily/commodity_daily（帧原生 Int64）可声明；
+        其余数据集在门禁帧上无此列，声明即死配置（#529 一并收口删除）。
+        """
         table = _frame_dtype_table()
         specs = _load_yml_specs()
         checked = 0
@@ -173,14 +177,6 @@ class TestTypeCheckWiring:
             assert dataset in table, f"{dataset} 缺帧契约接线 wiring 表"
             frame = table[dataset]
             for column, expected in columns.items():
-                if column == "instrument_id" and dataset not in (
-                    _NATIVE_INSTRUMENT_DATASETS
-                ):
-                    # 富集后注入列（Int64），门禁帧上 inert——期望记号必须是 int
-                    assert _expected_dtype_base(expected) == "int", (
-                        f"{dataset}.instrument_id 期望应为 int"
-                    )
-                    continue
                 assert column in frame, f"{dataset}.{column} 不在摄取帧中"
                 assert _dtype_base(str(frame[column])) == _expected_dtype_base(
                     expected
@@ -188,11 +184,31 @@ class TestTypeCheckWiring:
                 checked += 1
         assert checked > 100  # 防接线表整体失效的哨兵
 
+    def test_key_rule_columns_exist_on_gate_frame(self) -> None:
+        """not_null/unique 引用的每一列必须真实存在于门禁帧.
+
+        checker 对缺列静默跳过（not_null 逐列 continue / unique 整条
+        return None）——键列写错名等于规则死亡。此守卫使任何缺列引用
+        在测试侧立即红（Spec 轴评审 a1 收口：防 instrument_id 之外的
+        同类静默惰性复发）。
+        """
+        table = _frame_dtype_table()
+        for dataset, rules in _load_yml_specs().items():
+            if dataset not in table:
+                continue  # index_weight：帧 dtype 随 API 推断，另行治理
+            for rule in rules.technical:
+                if rule.get("rule") not in {"not_null", "unique"}:
+                    continue
+                for column in rule.get("columns") or []:
+                    assert column in table[dataset], (
+                        f"{dataset}.{rule['rule']} 引用门禁帧不存在的 {column}"
+                    )
+
     def test_technical_key_rules_use_gate_frame_key(self) -> None:
         """#529 裁决守卫：键规则写门禁帧真实键，FK 死规则不得回流.
 
-        - not_null/unique 引用 instrument_id 仅允许帧原生携带它的
-          fx_daily/commodity_daily；其余数据集键为 source_ticker
+        - not_null/unique/type_check 引用 instrument_id 仅允许帧原生
+          携带它的 fx_daily/commodity_daily；其余数据集键为 source_ticker
           （或 macro_indicators 的 indicator_code）。
         - foreign_key instrument_id 为死配置（#513 裁决不接线
           reference_values；身份 FK 由写入器富集解析 + 存储 PK 承担），
@@ -203,13 +219,16 @@ class TestTypeCheckWiring:
                 assert rule.get("rule") != "foreign_key", (
                     f"{dataset} 含已裁决删除的 FK 死规则"
                 )
-                if rule.get("rule") not in {"not_null", "unique"}:
-                    continue  # type_check 的 instrument_id 期望是留档的富集后契约
-                columns = rule.get("columns") or []
                 if dataset in _NATIVE_INSTRUMENT_DATASETS:
                     continue
+                if rule.get("rule") in {"not_null", "unique"}:
+                    columns = rule.get("columns") or []
+                elif rule.get("rule") == "type_check":
+                    columns = list(rule.get("columns", {}))
+                else:
+                    continue
                 assert "instrument_id" not in columns, (
-                    f"{dataset} 键规则引用富集前不存在的 instrument_id"
+                    f"{dataset} 规则引用富集前不存在的 instrument_id"
                 )
 
     def test_stock_daily_type_check_fires_on_dtype_drift(self) -> None:

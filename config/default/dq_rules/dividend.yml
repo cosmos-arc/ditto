@@ -14,7 +14,6 @@ technical:
 
   - rule: type_check
     columns:
-      instrument_id: int
       ex_dividend_date: date
       dividend_per_share: float
       dividend_yield: float
