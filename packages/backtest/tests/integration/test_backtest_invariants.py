@@ -32,6 +32,7 @@ from ditto_execution.orders.trigger import OrderTrigger
 from ditto_execution.planner import SimpleExecutionPlanner
 from ditto_execution.reality import SimpleFeeModel
 from ditto_kernel.clock import SimulatedClock
+from ditto_kernel.identity import InstrumentId
 from ditto_kernel.order import OrderSide, OrderType
 from ditto_kernel.trading import (
     FeeSchedule,
@@ -57,8 +58,10 @@ from ditto_strategy.alpha.pipeline import StrategyPipeline
 
 _conftest_path = Path(__file__).parent / "conftest.py"
 _spec = importlib.util.spec_from_file_location("_conftest", _conftest_path)
+assert _spec is not None
+assert _spec.loader is not None
 _mod = importlib.util.module_from_spec(_spec)
-_spec.loader.exec_module(_mod)  # type: ignore[union-attr]
+_spec.loader.exec_module(_mod)
 
 INITIAL_CASH = _mod.INITIAL_CASH
 
@@ -74,7 +77,7 @@ def _ob() -> OrderBook:
 
 
 def _make_market_snapshot(
-    instrument_id: int,
+    instrument_id: InstrumentId,
     close: float,
     low: float | None = None,
     high: float | None = None,
@@ -95,7 +98,7 @@ def _make_market_snapshot(
 
 
 def _make_process_input(
-    bars: dict[int, MarketSnapshot],
+    bars: dict[InstrumentId, MarketSnapshot],
     trade_date: str = "2026-01-05",
 ) -> ProcessInput:
     """构建 ProcessInput 用于直接调用 BacktestBrokerage。"""
@@ -107,7 +110,7 @@ def _make_process_input(
 
 
 def _make_instrument_rules(
-    instrument_id: int = 1,
+    instrument_id: InstrumentId = InstrumentId(1),
     lot_size: int = 100,
 ) -> InstrumentRules:
     """构造 InstrumentRules 元组。"""
@@ -144,12 +147,12 @@ def _make_instrument_rules(
 
 def _make_pre_trade_context(
     account_view: AccountView,
-    close_prices: dict[int, float] | None = None,
+    close_prices: dict[InstrumentId, float] | None = None,
     fee_model: SimpleFeeModel | None = None,
     lot_size: int = 100,
 ) -> PreTradeContext:
     """构建 V3 PreTradeContext — 便捷 helper。"""
-    prices = close_prices or {1: 10.0}
+    prices = close_prices or {InstrumentId(1): 10.0}
     rules = {iid: _make_instrument_rules(iid, lot_size) for iid in prices}
     snapshots = {
         iid: _make_market_snapshot(iid, close) for iid, close in prices.items()
@@ -181,7 +184,7 @@ class TestFrozenImmutability:
         """OrderTicket frozen 不可直接修改。"""
         order = Order(
             client_id=ClientOrderId(value="o-1"),
-            instrument_id=1,
+            instrument_id=InstrumentId(1),
             order_type=OrderType.MARKET,
             direction=OrderSide.BUY,
             quantity=100,
@@ -195,7 +198,7 @@ class TestFrozenImmutability:
         from ditto_portfolio.accounting import Position
 
         pos = Position(
-            instrument_id=1,
+            instrument_id=InstrumentId(1),
             quantity=100,
             available_quantity=100,
             average_cost=10.0,
@@ -205,7 +208,7 @@ class TestFrozenImmutability:
             total_fees=0.0,
         )
         view = AccountView(
-            positions=MappingProxyType({1: pos}),
+            positions=MappingProxyType({InstrumentId(1): pos}),
             cash=CashBook(available=500_000.0, settled=500_000.0, frozen=0.0),
             total_value=501_000.0,
             nav=501_000.0,
@@ -227,7 +230,7 @@ class TestTerminalState:
         """FILLED 状态的 OrderTicket 不能撤销。"""
         order = Order(
             client_id=ClientOrderId(value="o-1"),
-            instrument_id=1,
+            instrument_id=InstrumentId(1),
             order_type=OrderType.MARKET,
             direction=OrderSide.BUY,
             quantity=100,
@@ -259,7 +262,7 @@ class TestTerminalState:
         """INVALID 状态也不能撤销。"""
         order = Order(
             client_id=ClientOrderId(value="o-1"),
-            instrument_id=1,
+            instrument_id=InstrumentId(1),
             order_type=OrderType.MARKET,
             direction=OrderSide.BUY,
             quantity=100,
@@ -306,7 +309,7 @@ class TestNoFillNoFillEvent:
 
         order = Order(
             client_id=ClientOrderId(value="o-missing"),
-            instrument_id=999,  # 不存在
+            instrument_id=InstrumentId(999),  # 不存在
             order_type=OrderType.MARKET,
             direction=OrderSide.BUY,
             quantity=100,
@@ -316,8 +319,8 @@ class TestNoFillNoFillEvent:
         # bars 中没有 999
         process_input = _make_process_input(
             bars={
-                1: _make_market_snapshot(
-                    1,
+                InstrumentId(1): _make_market_snapshot(
+                    InstrumentId(1),
                     close=10.0,
                     low=9.9,
                     high=10.1,
@@ -340,13 +343,13 @@ class TestRiskLockClears:
     def test_risk_lock_cleared_on_new_context(self) -> None:
         """新建 StrategyContext 不继承前一次的锁定。"""
         ctx1 = StrategyContext()
-        ctx1.lock_instrument(1, "stop-loss")
+        ctx1.lock_instrument(InstrumentId(1), "stop-loss")
 
-        assert ctx1.is_locked(1)
+        assert ctx1.is_locked(InstrumentId(1))
 
         # 新建 context — 锁定自动清除
         ctx2 = StrategyContext()
-        assert not ctx2.is_locked(1)
+        assert not ctx2.is_locked(InstrumentId(1))
 
 
 # ---------------------------------------------------------------------------
@@ -369,12 +372,12 @@ class TestRollingPreTradeContext:
         )
         ctx = _make_pre_trade_context(
             account_view=view,
-            close_prices={1: 10.0},
+            close_prices={InstrumentId(1): 10.0},
         )
 
         order1 = Order(
             client_id=ClientOrderId(value="o-1"),
-            instrument_id=1,
+            instrument_id=InstrumentId(1),
             order_type=OrderType.MARKET,
             direction=OrderSide.BUY,
             quantity=100,
@@ -384,7 +387,7 @@ class TestRollingPreTradeContext:
 
         order2 = Order(
             client_id=ClientOrderId(value="o-2"),
-            instrument_id=1,
+            instrument_id=InstrumentId(1),
             order_type=OrderType.MARKET,
             direction=OrderSide.BUY,
             quantity=100,
@@ -406,7 +409,7 @@ class TestPendingAwarePlanner:
         from ditto_portfolio.accounting import Position
 
         pos = Position(
-            instrument_id=1,
+            instrument_id=InstrumentId(1),
             quantity=500,
             available_quantity=500,
             average_cost=10.0,
@@ -417,7 +420,7 @@ class TestPendingAwarePlanner:
         )
 
         view = AccountView(
-            positions=MappingProxyType({1: pos}),
+            positions=MappingProxyType({InstrumentId(1): pos}),
             cash=CashBook(available=500_000.0, settled=500_000.0, frozen=0.0),
             total_value=505_000.0,
             nav=505_000.0,
@@ -438,7 +441,7 @@ class TestPendingAwarePlanner:
         ob = _ob()
         pending_sell = Order(
             client_id=ClientOrderId(value="pending-sell-1"),
-            instrument_id=1,
+            instrument_id=InstrumentId(1),
             order_type=OrderType.MARKET,
             direction=OrderSide.SELL,
             quantity=500,
@@ -451,7 +454,7 @@ class TestPendingAwarePlanner:
             target=target,
             account_view=view,
             trade_date="2026-01-05",
-            order_book=ob,
+            order_book=ob.readonly_view(),
         )
 
         # effective_qty = 500 (current) + (-500) (pending delta) = 0
@@ -484,7 +487,11 @@ class TestPlannerLock:
             trade_date="2026-01-05",
             strategy_id="test",
             run_id="run",
-            positions={1: 0.3, 2: 0.3, 3: 0.4},
+            positions={
+                InstrumentId(1): 0.3,
+                InstrumentId(2): 0.3,
+                InstrumentId(3): 0.4,
+            },
         )
 
         planner = SimpleExecutionPlanner()
@@ -493,7 +500,7 @@ class TestPlannerLock:
             target=target,
             account_view=view,
             trade_date="2026-01-05",
-            locked_instruments={1},
+            locked_instruments={InstrumentId(1)},
         )
 
         # ETF-001 应被 blocked，不生成 buy order
@@ -527,7 +534,7 @@ class TestResizeRecheck:
         )
         ctx = _make_pre_trade_context(
             account_view=view,
-            close_prices={1: 10.0},
+            close_prices={InstrumentId(1): 10.0},
         )
         composite = CompositePreTradeCheck(
             checks=(LotSizeCheck(), BuyingPowerCheck()),
@@ -536,7 +543,7 @@ class TestResizeRecheck:
         # 350 → resize to 400 → cost 4000 + fee > 3500 → reject
         order = Order(
             client_id=ClientOrderId(value="o-resize"),
-            instrument_id=1,
+            instrument_id=InstrumentId(1),
             order_type=OrderType.MARKET,
             direction=OrderSide.BUY,
             quantity=350,
@@ -571,7 +578,7 @@ class TestCashConservation:
 
         order = Order(
             client_id=ClientOrderId(value="o-buy"),
-            instrument_id=1,
+            instrument_id=InstrumentId(1),
             order_type=OrderType.MARKET,
             direction=OrderSide.BUY,
             quantity=100,
@@ -580,8 +587,8 @@ class TestCashConservation:
 
         process_input = _make_process_input(
             bars={
-                1: _make_market_snapshot(
-                    1,
+                InstrumentId(1): _make_market_snapshot(
+                    InstrumentId(1),
                     close=10.0,
                     low=9.9,
                     high=10.1,
@@ -613,7 +620,7 @@ class TestCashConservation:
         from ditto_portfolio.accounting import Position
 
         pos = Position(
-            instrument_id=1,
+            instrument_id=InstrumentId(1),
             quantity=200,
             available_quantity=200,
             average_cost=10.0,
@@ -623,7 +630,7 @@ class TestCashConservation:
             total_fees=0.0,
         )
         account = Account(
-            positions={1: pos},
+            positions={InstrumentId(1): pos},
             cash=CashBook(available=500_000.0, settled=500_000.0, frozen=0.0),
         )
         brokerage = BacktestBrokerage(account=account, order_book=_ob())
@@ -633,7 +640,7 @@ class TestCashConservation:
 
         order = Order(
             client_id=ClientOrderId(value="o-sell"),
-            instrument_id=1,
+            instrument_id=InstrumentId(1),
             order_type=OrderType.MARKET,
             direction=OrderSide.SELL,
             quantity=100,
@@ -642,8 +649,8 @@ class TestCashConservation:
 
         process_input = _make_process_input(
             bars={
-                1: _make_market_snapshot(
-                    1,
+                InstrumentId(1): _make_market_snapshot(
+                    InstrumentId(1),
                     close=11.0,
                     low=10.9,
                     high=11.1,
@@ -675,7 +682,7 @@ class TestNoOversell:
         from ditto_portfolio.accounting import Position
 
         pos = Position(
-            instrument_id=1,
+            instrument_id=InstrumentId(1),
             quantity=100,
             available_quantity=100,
             average_cost=10.0,
@@ -685,7 +692,7 @@ class TestNoOversell:
             total_fees=0.0,
         )
         account = Account(
-            positions={1: pos},
+            positions={InstrumentId(1): pos},
             cash=CashBook(available=500_000.0, settled=500_000.0, frozen=0.0),
         )
         brokerage = BacktestBrokerage(account=account, order_book=_ob())
@@ -693,7 +700,7 @@ class TestNoOversell:
         # Try to sell 200 — only 100 available
         order = Order(
             client_id=ClientOrderId(value="o-oversell"),
-            instrument_id=1,
+            instrument_id=InstrumentId(1),
             order_type=OrderType.MARKET,
             direction=OrderSide.SELL,
             quantity=200,
@@ -702,8 +709,8 @@ class TestNoOversell:
 
         process_input = _make_process_input(
             bars={
-                1: _make_market_snapshot(
-                    1,
+                InstrumentId(1): _make_market_snapshot(
+                    InstrumentId(1),
                     close=10.0,
                     low=9.9,
                     high=10.1,
@@ -721,7 +728,7 @@ class TestNoOversell:
         from ditto_portfolio.accounting import Position
 
         pos = Position(
-            instrument_id=1,
+            instrument_id=InstrumentId(1),
             quantity=100,
             available_quantity=100,
             average_cost=10.0,
@@ -731,7 +738,7 @@ class TestNoOversell:
             total_fees=0.0,
         )
         view = AccountView(
-            positions=MappingProxyType({1: pos}),
+            positions=MappingProxyType({InstrumentId(1): pos}),
             cash=CashBook(available=500_000.0, settled=500_000.0, frozen=0.0),
             total_value=501_000.0,
             nav=501_000.0,
@@ -739,12 +746,12 @@ class TestNoOversell:
         )
         ctx = _make_pre_trade_context(
             account_view=view,
-            close_prices={1: 10.0},
+            close_prices={InstrumentId(1): 10.0},
         )
 
         sell = Order(
             client_id=ClientOrderId(value="o-sell"),
-            instrument_id=1,
+            instrument_id=InstrumentId(1),
             order_type=OrderType.MARKET,
             direction=OrderSide.SELL,
             quantity=100,
@@ -752,7 +759,7 @@ class TestNoOversell:
         new_ctx = ctx.with_order_accepted(sell)
 
         # available_quantity should be 0 (clamped)
-        assert new_ctx.account_view.positions[1].available_quantity == 0
+        assert new_ctx.account_view.positions[InstrumentId(1)].available_quantity == 0
 
 
 # ---------------------------------------------------------------------------
@@ -786,7 +793,7 @@ class TestStatsPostFillSnapshot:
         # Execute a buy
         order = Order(
             client_id=ClientOrderId(value="o-buy"),
-            instrument_id=1,
+            instrument_id=InstrumentId(1),
             order_type=OrderType.MARKET,
             direction=OrderSide.BUY,
             quantity=100,
@@ -795,8 +802,8 @@ class TestStatsPostFillSnapshot:
 
         process_input = _make_process_input(
             bars={
-                1: _make_market_snapshot(
-                    1,
+                InstrumentId(1): _make_market_snapshot(
+                    InstrumentId(1),
                     close=10.0,
                     low=9.9,
                     high=10.1,
@@ -829,7 +836,7 @@ class TestPriceLimitInvariants:
 
     def _make_snapshot_with_limits(
         self,
-        instrument_id: int,
+        instrument_id: InstrumentId,
         close: float,
         limit_up: float | None,
         limit_down: float | None,
@@ -867,7 +874,7 @@ class TestPriceLimitInvariants:
         # ETF-001: close=11.0 = limit_up (prev=10.0, +10%)
         order = Order(
             client_id=ClientOrderId(value="o-buy"),
-            instrument_id=1,
+            instrument_id=InstrumentId(1),
             order_type=OrderType.MARKET,
             direction=OrderSide.BUY,
             quantity=100,
@@ -875,13 +882,13 @@ class TestPriceLimitInvariants:
         brokerage.place_order(order)
 
         snapshot = self._make_snapshot_with_limits(
-            1,
+            InstrumentId(1),
             close=11.0,
             limit_up=11.0,
             limit_down=9.0,
             prev_close=10.0,
         )
-        process_input = _make_process_input(bars={1: snapshot})
+        process_input = _make_process_input(bars={InstrumentId(1): snapshot})
         fills = brokerage.process_pending(process_input)
 
         assert len(fills) == 0
@@ -892,7 +899,7 @@ class TestPriceLimitInvariants:
         from ditto_portfolio.accounting import Position
 
         pos = Position(
-            instrument_id=1,
+            instrument_id=InstrumentId(1),
             quantity=100,
             available_quantity=100,
             average_cost=10.0,
@@ -902,7 +909,7 @@ class TestPriceLimitInvariants:
             total_fees=0.0,
         )
         account = Account(
-            positions={1: pos},
+            positions={InstrumentId(1): pos},
             cash=CashBook(
                 available=500_000.0,
                 settled=500_000.0,
@@ -915,7 +922,7 @@ class TestPriceLimitInvariants:
         # ETF-001: close=9.0 = limit_down (prev=10.0, -10%)
         order = Order(
             client_id=ClientOrderId(value="o-sell"),
-            instrument_id=1,
+            instrument_id=InstrumentId(1),
             order_type=OrderType.MARKET,
             direction=OrderSide.SELL,
             quantity=100,
@@ -923,13 +930,13 @@ class TestPriceLimitInvariants:
         brokerage.place_order(order)
 
         snapshot = self._make_snapshot_with_limits(
-            1,
+            InstrumentId(1),
             close=9.0,
             limit_up=11.0,
             limit_down=9.0,
             prev_close=10.0,
         )
-        process_input = _make_process_input(bars={1: snapshot})
+        process_input = _make_process_input(bars={InstrumentId(1): snapshot})
         fills = brokerage.process_pending(process_input)
 
         assert len(fills) == 0
@@ -940,7 +947,7 @@ class TestPriceLimitInvariants:
         from ditto_portfolio.accounting import Position
 
         pos = Position(
-            instrument_id=1,
+            instrument_id=InstrumentId(1),
             quantity=100,
             available_quantity=100,
             average_cost=10.0,
@@ -950,7 +957,7 @@ class TestPriceLimitInvariants:
             total_fees=0.0,
         )
         account = Account(
-            positions={1: pos},
+            positions={InstrumentId(1): pos},
             cash=CashBook(
                 available=500_000.0,
                 settled=500_000.0,
@@ -962,7 +969,7 @@ class TestPriceLimitInvariants:
 
         order = Order(
             client_id=ClientOrderId(value="o-sell"),
-            instrument_id=1,
+            instrument_id=InstrumentId(1),
             order_type=OrderType.MARKET,
             direction=OrderSide.SELL,
             quantity=100,
@@ -970,13 +977,13 @@ class TestPriceLimitInvariants:
         brokerage.place_order(order)
 
         snapshot = self._make_snapshot_with_limits(
-            1,
+            InstrumentId(1),
             close=11.0,
             limit_up=11.0,
             limit_down=9.0,
             prev_close=10.0,
         )
-        process_input = _make_process_input(bars={1: snapshot})
+        process_input = _make_process_input(bars={InstrumentId(1): snapshot})
         fills = brokerage.process_pending(process_input)
 
         assert len(fills) == 1
@@ -998,7 +1005,7 @@ class TestPriceLimitInvariants:
 
         order = Order(
             client_id=ClientOrderId(value="o-buy"),
-            instrument_id=1,
+            instrument_id=InstrumentId(1),
             order_type=OrderType.MARKET,
             direction=OrderSide.BUY,
             quantity=100,
@@ -1006,13 +1013,13 @@ class TestPriceLimitInvariants:
         brokerage.place_order(order)
 
         snapshot = self._make_snapshot_with_limits(
-            1,
+            InstrumentId(1),
             close=9.0,
             limit_up=11.0,
             limit_down=9.0,
             prev_close=10.0,
         )
-        process_input = _make_process_input(bars={1: snapshot})
+        process_input = _make_process_input(bars={InstrumentId(1): snapshot})
         fills = brokerage.process_pending(process_input)
 
         assert len(fills) == 1
@@ -1024,7 +1031,7 @@ class TestPriceLimitInvariants:
         from ditto_portfolio.accounting import Position
 
         pos = Position(
-            instrument_id=1,
+            instrument_id=InstrumentId(1),
             quantity=100,
             available_quantity=100,
             average_cost=10.0,
@@ -1034,7 +1041,7 @@ class TestPriceLimitInvariants:
             total_fees=0.0,
         )
         account = Account(
-            positions={1: pos},
+            positions={InstrumentId(1): pos},
             cash=CashBook(
                 available=500_000.0,
                 settled=500_000.0,
@@ -1046,14 +1053,14 @@ class TestPriceLimitInvariants:
 
         sell_order = Order(
             client_id=ClientOrderId(value="o-sell"),
-            instrument_id=1,
+            instrument_id=InstrumentId(1),
             order_type=OrderType.MARKET,
             direction=OrderSide.SELL,
             quantity=100,
         )
         buy_order = Order(
             client_id=ClientOrderId(value="o-buy"),
-            instrument_id=2,
+            instrument_id=InstrumentId(2),
             order_type=OrderType.MARKET,
             direction=OrderSide.BUY,
             quantity=100,
@@ -1062,19 +1069,19 @@ class TestPriceLimitInvariants:
         brokerage.place_order(buy_order)
 
         snapshot_1 = self._make_snapshot_with_limits(
-            1,
+            InstrumentId(1),
             close=10.0,
             limit_up=None,
             limit_down=None,
         )
         snapshot_2 = self._make_snapshot_with_limits(
-            2,
+            InstrumentId(2),
             close=20.0,
             limit_up=None,
             limit_down=None,
         )
         process_input = _make_process_input(
-            bars={1: snapshot_1, 2: snapshot_2},
+            bars={InstrumentId(1): snapshot_1, InstrumentId(2): snapshot_2},
         )
         fills = brokerage.process_pending(process_input)
 
@@ -1104,14 +1111,14 @@ class TestLotSizeRounding:
         )
         ctx = _make_pre_trade_context(
             account_view=view,
-            close_prices={1: 10.0},
+            close_prices={InstrumentId(1): 10.0},
         )
         composite = CompositePreTradeCheck(checks=(LotSizeCheck(),))
 
         # 50 股 → resize to 100
         order = Order(
             client_id=ClientOrderId(value="o-resize"),
-            instrument_id=1,
+            instrument_id=InstrumentId(1),
             order_type=OrderType.MARKET,
             direction=OrderSide.BUY,
             quantity=50,
@@ -1135,13 +1142,13 @@ class TestLotSizeRounding:
         )
         ctx = _make_pre_trade_context(
             account_view=view,
-            close_prices={1: 10.0},
+            close_prices={InstrumentId(1): 10.0},
         )
         composite = CompositePreTradeCheck(checks=(LotSizeCheck(),))
 
         order = Order(
             client_id=ClientOrderId(value="o-ok"),
-            instrument_id=1,
+            instrument_id=InstrumentId(1),
             order_type=OrderType.MARKET,
             direction=OrderSide.BUY,
             quantity=300,
@@ -1155,7 +1162,7 @@ class TestLotSizeRounding:
         from ditto_portfolio.accounting import Position
 
         pos = Position(
-            instrument_id=1,
+            instrument_id=InstrumentId(1),
             quantity=350,
             available_quantity=350,
             average_cost=10.0,
@@ -1165,7 +1172,7 @@ class TestLotSizeRounding:
             total_fees=0.0,
         )
         view = AccountView(
-            positions=MappingProxyType({1: pos}),
+            positions=MappingProxyType({InstrumentId(1): pos}),
             cash=CashBook(
                 available=500_000.0,
                 settled=500_000.0,
@@ -1177,14 +1184,14 @@ class TestLotSizeRounding:
         )
         ctx = _make_pre_trade_context(
             account_view=view,
-            close_prices={1: 10.0},
+            close_prices={InstrumentId(1): 10.0},
         )
         composite = CompositePreTradeCheck(checks=(LotSizeCheck(),))
 
         # 卖出 350（含零股）→ 不被 resize
         order = Order(
             client_id=ClientOrderId(value="o-sell-350"),
-            instrument_id=1,
+            instrument_id=InstrumentId(1),
             order_type=OrderType.MARKET,
             direction=OrderSide.SELL,
             quantity=350,
@@ -1227,7 +1234,8 @@ class TestSuspendedE2E:
         write_parquet_data = _mod.write_parquet_data
 
         suspended_data: dict[int, pl.DataFrame] = {}
-        for iid in INSTRUMENT_IDS:
+        for raw_iid in INSTRUMENT_IDS:
+            iid = InstrumentId(raw_iid)
             if iid == 1:
                 # 全部日期 is_suspended=True
                 df = pl.DataFrame(
@@ -1385,7 +1393,7 @@ class TestExitOrderRules:
 
         # 创建已有持仓 — ETF-001 持有 1000 股
         pos_etf001 = Position(
-            instrument_id=1,
+            instrument_id=InstrumentId(1),
             quantity=1000,
             available_quantity=1000,
             average_cost=10.0,
@@ -1395,7 +1403,7 @@ class TestExitOrderRules:
             total_fees=0.0,
         )
         account = Account(
-            positions={1: pos_etf001},
+            positions={InstrumentId(1): pos_etf001},
             cash=CashBook(
                 available=INITIAL_CASH,
                 settled=INITIAL_CASH,
@@ -1404,10 +1412,11 @@ class TestExitOrderRules:
         )
 
         # InMemoryRuleProvider — 为所有 3 个 ETF 提供规则
-        definitions: dict[str, InstrumentDefinition] = {}
-        trading_rules: dict[str, list[TradingRuleSet]] = {}
-        fee_schedules: dict[str, list[FeeSchedule]] = {}
-        for iid in INSTRUMENT_IDS:
+        definitions: dict[InstrumentId, InstrumentDefinition] = {}
+        trading_rules: dict[InstrumentId, list[TradingRuleSet]] = {}
+        fee_schedules: dict[InstrumentId, list[FeeSchedule]] = {}
+        for raw_iid in INSTRUMENT_IDS:
+            iid = InstrumentId(raw_iid)
             rules = _make_instrument_rules(iid)
             definitions[iid] = rules[0]
             trading_rules[iid] = [rules[1]]
@@ -1527,20 +1536,21 @@ class TestRuleRefsPreserved:
         )
 
         # 创建 InMemoryRuleProvider — ETF-001 有 3 个版本（每天一个）
-        definitions: dict[str, InstrumentDefinition] = {}
-        trading_rules: dict[str, list[TradingRuleSet]] = {}
-        fee_schedules: dict[str, list[FeeSchedule]] = {}
+        definitions: dict[InstrumentId, InstrumentDefinition] = {}
+        trading_rules: dict[InstrumentId, list[TradingRuleSet]] = {}
+        fee_schedules: dict[InstrumentId, list[FeeSchedule]] = {}
 
-        for iid in INSTRUMENT_IDS:
+        for raw_iid in INSTRUMENT_IDS:
+            iid = InstrumentId(raw_iid)
             rules = _make_instrument_rules(iid)
             definitions[iid] = rules[0]
             trading_rules[iid] = [rules[1]]
             fee_schedules[iid] = [rules[2]]
 
         # ETF-001 有 3 个 trading_rule 版本 — 不同 as_of_date
-        trading_rules[1] = [
+        trading_rules[InstrumentId(1)] = [
             TradingRuleSet(
-                instrument_id=1,
+                instrument_id=InstrumentId(1),
                 as_of_date="2025-12-01",
                 settlement_cycle=1,
                 fund_settlement_cycle=1,
@@ -1549,7 +1559,7 @@ class TestRuleRefsPreserved:
                 call_auction_sessions=("open", "close"),
             ),
             TradingRuleSet(
-                instrument_id=1,
+                instrument_id=InstrumentId(1),
                 as_of_date="2026-01-03",
                 settlement_cycle=1,
                 fund_settlement_cycle=0,
@@ -1558,7 +1568,7 @@ class TestRuleRefsPreserved:
                 call_auction_sessions=("open", "close"),
             ),
             TradingRuleSet(
-                instrument_id=1,
+                instrument_id=InstrumentId(1),
                 as_of_date="2026-01-06",
                 settlement_cycle=0,
                 fund_settlement_cycle=0,
