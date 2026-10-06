@@ -296,3 +296,29 @@ def fetch_name_history(
         start_date=start_date,
         end_date=end_date,
     )
+
+
+def fetch_limit_list(
+    stock: StockTushareAdapter,
+    *,
+    trade_date: str | None = None,
+    source_ticker: str | None = None,
+    start_date: str | None = None,
+    end_date: str | None = None,
+) -> pl.DataFrame:
+    """
+    Fetch limit-up/down list (#519 limit_list_d, event-typed).
+
+    双模式：单日全市场（trade_date）或单标的区间（source_ticker + 日期区间）。
+    """
+    if trade_date and source_ticker:
+        raise ValueError("trade_date 和 source_ticker 互斥, 不能同时指定")
+    if not trade_date and not source_ticker:
+        raise ValueError("必须指定 trade_date 或 source_ticker 之一")
+    if trade_date:
+        return stock.fetch_limit_list(trade_date=trade_date)
+    return stock.fetch_limit_list(
+        ts_code=source_ticker,
+        start_date=start_date,
+        end_date=end_date,
+    )

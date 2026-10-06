@@ -191,6 +191,107 @@ INGESTION_SPECS: dict[_Dataset, DatasetSpec] = {
         task_name="ingest_stock_limit",
         priority=32,
     ),
+    # #518 个股资金流向：唯一缺失的核心个股资金面因子
+    _Dataset.MONEYFLOW: create_t1_config(
+        dataset=_Dataset.MONEYFLOW,
+        description="个股资金流向",
+        typical_available_time=time(18, 30),
+        depends_on=[_Dataset.STOCK_BASIC],
+        critical_fields=["instrument_id", "trade_date", "net_mf_amount"],
+        task_name="ingest_moneyflow",
+        priority=33,
+    ),
+    # #523 每日筹码及胜率（15000 档特色数据）
+    _Dataset.CYQ_PERF: create_t1_config(
+        dataset=_Dataset.CYQ_PERF,
+        description="每日筹码及胜率",
+        typical_available_time=time(18, 30),
+        depends_on=[_Dataset.STOCK_BASIC],
+        critical_fields=["instrument_id", "trade_date", "winner_rate"],
+        task_name="ingest_cyq_perf",
+        priority=34,
+    ),
+    # #519 涨跌停/炸板名单（事件型：有上榜才有行）
+    _Dataset.LIMIT_LIST: create_t1_config(
+        dataset=_Dataset.LIMIT_LIST,
+        description="涨跌停与炸板名单",
+        typical_available_time=time(18, 0),
+        depends_on=[_Dataset.STOCK_BASIC],
+        critical_fields=["instrument_id", "trade_date", "limit_type"],
+        task_name="ingest_limit_list",
+        priority=35,
+    ),
+    # #519 龙虎榜个股（事件型，reason 进主键）
+    _Dataset.TOP_LIST: create_t1_config(
+        dataset=_Dataset.TOP_LIST,
+        description="龙虎榜个股明细",
+        typical_available_time=time(18, 30),
+        depends_on=[_Dataset.STOCK_BASIC],
+        critical_fields=["instrument_id", "trade_date", "reason", "l_buy"],
+        task_name="ingest_top_list",
+        priority=36,
+    ),
+    # #519 龙虎榜席位（事件型，exalter+side 进主键）
+    _Dataset.TOP_INST: create_t1_config(
+        dataset=_Dataset.TOP_INST,
+        description="龙虎榜席位明细",
+        typical_available_time=time(18, 30),
+        depends_on=[_Dataset.TOP_LIST],
+        critical_fields=["instrument_id", "trade_date", "exalter", "side"],
+        task_name="ingest_top_inst",
+        priority=37,
+    ),
+    # #520 北向持股（改制后北向季度末披露，南向过滤）
+    _Dataset.HK_HOLD: create_t1_config(
+        dataset=_Dataset.HK_HOLD,
+        description="沪深港通持股(北向)",
+        typical_available_time=time(19, 0),
+        depends_on=[_Dataset.STOCK_BASIC],
+        critical_fields=["instrument_id", "trade_date", "vol", "ratio"],
+        task_name="ingest_hk_hold",
+        priority=38,
+    ),
+    # #520 沪深港通十大成交股（改制后 buy/sell/net 停披）
+    _Dataset.HSGT_TOP10: create_t1_config(
+        dataset=_Dataset.HSGT_TOP10,
+        description="沪深港通十大成交股",
+        typical_available_time=time(19, 0),
+        depends_on=[_Dataset.STOCK_BASIC],
+        critical_fields=["instrument_id", "trade_date", "market_type", "amount"],
+        task_name="ingest_hsgt_top10",
+        priority=39,
+    ),
+    # #521 官方口径财务指标（披露增量语义对齐三表）
+    _Dataset.FINA_INDICATOR: create_t1_config(
+        dataset=_Dataset.FINA_INDICATOR,
+        description="官方口径财务指标",
+        typical_available_time=time(20, 30),
+        depends_on=[_Dataset.STOCK_BASIC],
+        critical_fields=["instrument_id", "report_date", "knowledge_date", "roe"],
+        task_name="ingest_fina_indicator",
+        priority=40,
+        timeout_seconds=900,
+    ),
+    # #522 基金份额（ETF 逐日申报）
+    _Dataset.FUND_SHARE: create_t1_config(
+        dataset=_Dataset.FUND_SHARE,
+        description="基金份额",
+        typical_available_time=time(21, 0),
+        depends_on=[_Dataset.ETF_BASIC],
+        critical_fields=["instrument_id", "trade_date", "fd_share"],
+        task_name="ingest_fund_share",
+        priority=41,
+    ),
+    # #522 基金季度持仓（公告日驱动）
+    _Dataset.FUND_PORTFOLIO: create_t1_config(
+        dataset=_Dataset.FUND_PORTFOLIO,
+        description="基金季度持仓",
+        typical_available_time=time(21, 0),
+        depends_on=[_Dataset.ETF_BASIC],
+        critical_fields=["instrument_id", "report_date", "holding_symbol"],
+        task_name="ingest_fund_portfolio",
+        priority=42,
+    ),
     _Dataset.BALANCE_SHEET: create_t1_config(
         dataset=_Dataset.BALANCE_SHEET,
         description="资产负债表",

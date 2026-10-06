@@ -308,3 +308,52 @@ append-only（涨跌停价由规则推导，源修订以新 kd 行呈现）。�
 uv run --no-sync ditto ingest market limit 2026-09-30
 uv run --no-sync ditto backfill market limit -s 2024-01-01 -e 2024-12-31 -p 2
 ```
+
+## 15. #518-#523 十数据集增补（资金面/情绪/席位/北向/财务指标/基金）
+
+单位与身份合同（2026-10-06 代理实测，t.xiaodefa.top）：
+
+- `moneyflow`：个股资金流向，金额**万元**、量**手**，net=买入-卖出；
+  PK `(instrument_id, trade_date, knowledge_date)`，kd=T+1。
+- `cyq_perf`：每日筹码及胜率（15000 档特色数据），价格类**元**、
+  winner_rate **%**；his_low=0 是源端标记不得填值；kd=T+1。
+- `limit_list`（limit_list_d）：涨跌停/炸板名单，事件型（有上榜才有行）；
+  amount/limit_amount/fd_amount/float_mv/total_mv 均**元**（注意与
+  daily_basic.total_mv 万元不同）；limit U/D/Z；PK 含 limit_type。
+- `top_list`/`top_inst`（龙虎榜）：金额**元**、比率 **%**；top_list
+  同标的同日可因多个上榜原因出现多行（reason 进主键）；top_inst
+  exalter+side+reason 进主键。
+- `hk_hold`：北向持股 vol**股**/ratio**%**；2024-08-19 披露改制后北向
+  仅季度末披露（600519.SH 2024-09~12 仅 09-30/12-31 两行实测），
+  申报节奏口径勿套用日历完整性；南向 HK 行在身份富集处过滤。
+- `hsgt_top10`：十大成交股，金额**元**；改制后 buy/sell/net_amount
+  官方停披（null 保留不填零）；market_type 进主键。
+- `fina_indicator`：官方口径财务指标 118 列透传；每股指标**元/股**、
+  比率 **%**、绝对额**元**；kd=ann_date 披露锚，修订=新公告日版本；
+  与自算三表衍生指标是对照关系不是替换（比例比较参照 #476）。
+- `fund_share`：基金份额 fd_share**万份**；ETF 逐日申报（OF 节奏不定），
+  申报节奏口径；kd=T+1。
+- `fund_portfolio`：基金季度持仓 market_value**元**/holding_shares**股**；
+  kd=ann_date 公告日驱动（NATURAL_DAYS）；修订以新公告日版本追加
+  （#452 观察事实语义）。
+- **etf_share_size 未接入**（#522 裁决留档）：其实 total_share 与
+  fund_share.fd_share 逐字节相同（510300.SH 2026-09 全月 21 个交易日
+  实测一致），total_size=份额×净值可推导；双源同值摄取徒增对账面。
+
+cyq_chips（筹码分布）未接入（#523 裁决留档）：逐价档位分布数据量
+~200×日行×universe，无当前消费者，避免为假想需求扩表。
+
+```bash
+uv run --no-sync ditto ingest capital moneyflow 2026-09-30
+uv run --no-sync ditto ingest capital cyq 2026-09-30
+uv run --no-sync ditto ingest market limit-list 2026-09-30
+uv run --no-sync ditto ingest capital top-list 2026-09-22
+uv run --no-sync ditto ingest capital top-inst 2026-09-22
+uv run --no-sync ditto ingest capital hk-hold 2026-09-30
+uv run --no-sync ditto ingest capital hsgt-top10 2026-09-30
+uv run --no-sync ditto ingest fundamental fina-indicator 2026-04-27
+uv run --no-sync ditto ingest market fund-share 2026-09-30
+uv run --no-sync ditto ingest fundamental portfolio 2026-07-21
+# 回补示例（月度分片）
+uv run --no-sync ditto backfill capital moneyflow -s 2026-01-01 -e 2026-09-30 -p 2
+```

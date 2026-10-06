@@ -76,6 +76,9 @@ class WriteKind(StrEnum):
     FUND_ADJ = "fund_adj"
     ETF_NAV = "etf_nav"
     STOCK_LIMIT = "stock_limit"
+    # #518-#523 增补路由
+    LIMIT_LIST = "limit_list"
+    FUND_SHARE = "fund_share"
     INDEX_WEIGHT = "index_weight"
     FUNDAMENTAL = "fundamental"
     CAPITAL = "capital"
@@ -577,6 +580,19 @@ _MARKET_REGISTRATIONS: tuple[DatasetRegistration, ...] = (
         write_kind=WriteKind.STOCK_STATUS,
         daily_fetch_factory=_daily_fetch("market", "fetch_stock_status"),
     ),
+    # #519 涨跌停/炸板名单（事件型）
+    DatasetRegistration(
+        dataset=Dataset.LIMIT_LIST,
+        write_kind=WriteKind.LIMIT_LIST,
+        daily_fetch_factory=_daily_fetch("market", "fetch_limit_list"),
+    ),
+    # #522 基金份额（ETF 逐日申报）
+    DatasetRegistration(
+        dataset=Dataset.FUND_SHARE,
+        write_kind=WriteKind.FUND_SHARE,
+        daily_fetch_factory=_daily_fetch("market", "fetch_fund_share"),
+        instrument_fetch_factory=_instrument_fetch("market", "fetch_fund_share"),
+    ),
 )
 
 _ADJ_FACTOR_REGISTRATIONS: tuple[DatasetRegistration, ...] = (
@@ -652,6 +668,25 @@ _FUNDAMENTAL_REGISTRATIONS: tuple[DatasetRegistration, ...] = (
         date_schedule=DateScheduleType.NATURAL_DAYS,
         daily_fetch_factory=_daily_fetch("fundamental", "fetch_corporate_actions"),
     ),
+    # #521 官方口径财务指标（披露增量，对齐三表）
+    DatasetRegistration(
+        dataset=Dataset.FINA_INDICATOR,
+        write_kind=WriteKind.FUNDAMENTAL,
+        daily_fetch_factory=_daily_fetch("fundamental", "fetch_fina_indicator"),
+        instrument_fetch_factory=_instrument_fetch(
+            "fundamental", "fetch_fina_indicator"
+        ),
+    ),
+    # #522 基金季度持仓（公告日驱动，NATURAL_DAYS 对齐 dividend/corporate_actions）
+    DatasetRegistration(
+        dataset=Dataset.FUND_PORTFOLIO,
+        write_kind=WriteKind.FUNDAMENTAL,
+        date_schedule=DateScheduleType.NATURAL_DAYS,
+        daily_fetch_factory=_daily_fetch("fundamental", "fetch_fund_portfolio"),
+        instrument_fetch_factory=_instrument_fetch(
+            "fundamental", "fetch_fund_portfolio"
+        ),
+    ),
 )
 
 _CAPITAL_REGISTRATIONS: tuple[DatasetRegistration, ...] = (
@@ -676,6 +711,41 @@ _CAPITAL_REGISTRATIONS: tuple[DatasetRegistration, ...] = (
         write_kind=WriteKind.CAPITAL,
         daily_fetch_factory=_daily_fetch("capital", "fetch_pledge_ratio"),
         instrument_fetch_factory=_instrument_fetch("capital", "fetch_pledge_ratio"),
+    ),
+    # #518/#523 日频资金面/筹码（全市场单日 + 按标的回填）
+    DatasetRegistration(
+        dataset=Dataset.MONEYFLOW,
+        write_kind=WriteKind.CAPITAL,
+        daily_fetch_factory=_daily_fetch("capital", "fetch_moneyflow"),
+        instrument_fetch_factory=_instrument_fetch("capital", "fetch_moneyflow"),
+    ),
+    DatasetRegistration(
+        dataset=Dataset.CYQ_PERF,
+        write_kind=WriteKind.CAPITAL,
+        daily_fetch_factory=_daily_fetch("capital", "fetch_cyq_perf"),
+    ),
+    # #519 龙虎榜（事件型，无按标的回填路由）
+    DatasetRegistration(
+        dataset=Dataset.TOP_LIST,
+        write_kind=WriteKind.CAPITAL,
+        daily_fetch_factory=_daily_fetch("capital", "fetch_top_list"),
+    ),
+    DatasetRegistration(
+        dataset=Dataset.TOP_INST,
+        write_kind=WriteKind.CAPITAL,
+        daily_fetch_factory=_daily_fetch("capital", "fetch_top_inst"),
+    ),
+    # #520 北向两接口（hk_hold 改制后北向季度末节奏）
+    DatasetRegistration(
+        dataset=Dataset.HK_HOLD,
+        write_kind=WriteKind.CAPITAL,
+        daily_fetch_factory=_daily_fetch("capital", "fetch_hk_hold"),
+        instrument_fetch_factory=_instrument_fetch("capital", "fetch_hk_hold"),
+    ),
+    DatasetRegistration(
+        dataset=Dataset.HSGT_TOP10,
+        write_kind=WriteKind.CAPITAL,
+        daily_fetch_factory=_daily_fetch("capital", "fetch_hsgt_top10"),
     ),
 )
 

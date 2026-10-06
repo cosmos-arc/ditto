@@ -92,9 +92,59 @@ STOCK_LIMIT_MAPPING = ColumnMapping(
     ),
 )
 
+# 涨跌停/炸板名单（#519 limit_list_d，事件型：有上榜才有行）
+# 单位（2026-10-06 实测）：amount/limit_amount/fd_amount/float_mv/total_mv
+# 均**元**（注意 daily_basic.total_mv 是万元，不得跨端点套用）；
+# turnover_ratio %；first/last_time 为 HHMMSS 串；limit U=涨停 D=跌停 Z=炸板
+LIMIT_LIST_MAPPING = ColumnMapping(
+    rename={
+        "ts_code": "source_ticker",
+        "pct_chg": "pct_change",
+        "limit": "limit_type",
+    },
+    date_columns={"trade_date": "%Y%m%d"},
+    float_columns=[
+        "close",
+        "pct_change",
+        "amount",
+        "limit_amount",
+        "float_mv",
+        "total_mv",
+        "turnover_ratio",
+        "fd_amount",
+        "limit_times",
+    ],
+    int_columns=("open_times",),
+    computed_columns={
+        "knowledge_date": pl.col("trade_date") + pl.duration(days=1),
+    },
+    output_columns=(
+        "source_ticker",
+        "trade_date",
+        "knowledge_date",
+        "industry",
+        "name",
+        "close",
+        "pct_change",
+        "amount",
+        "limit_amount",
+        "float_mv",
+        "total_mv",
+        "turnover_ratio",
+        "fd_amount",
+        "first_time",
+        "last_time",
+        "open_times",
+        "up_stat",
+        "limit_times",
+        "limit_type",
+    ),
+)
+
 __all__ = [
     "ETF_BASIC_MAPPING",
     "INDEX_BASIC_MAPPING",
+    "LIMIT_LIST_MAPPING",
     "STOCK_BASIC_MAPPING",
     "STOCK_LIMIT_MAPPING",
 ]

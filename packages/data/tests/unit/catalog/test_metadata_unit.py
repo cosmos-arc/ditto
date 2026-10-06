@@ -272,6 +272,17 @@ class TestDefaultMetadataMaturityAssignments:
             "etf_nav",
             # #517 涨跌停价格
             "stock_limit",
+            # #518-#523 十数据集增补
+            "moneyflow",
+            "limit_list",
+            "top_list",
+            "top_inst",
+            "hk_hold",
+            "hsgt_top10",
+            "fina_indicator",
+            "fund_share",
+            "fund_portfolio",
+            "cyq_perf",
         }
     )
 
@@ -550,6 +561,17 @@ class TestR2DataProductContracts:
             "etf_nav",
             # #517 涨跌停价格
             "stock_limit",
+            # #518-#523 十数据集增补
+            "moneyflow",
+            "limit_list",
+            "top_list",
+            "top_inst",
+            "hk_hold",
+            "hsgt_top10",
+            "fina_indicator",
+            "fund_share",
+            "fund_portfolio",
+            "cyq_perf",
             # #408 维护者确认的 ETF 参考事实（配置源）
             "etf_reference",
         }

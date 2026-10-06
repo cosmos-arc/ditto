@@ -27,11 +27,11 @@ class TestDataStoreSettingsAllDirectories:
         dirs = settings.all_directories()
         assert "market/etf/bars/daily" in dirs
 
-    def test_includes_capital_flow(self) -> None:
-        """应包含 capital/flow."""
+    def test_includes_capital_moneyflow(self) -> None:
+        """应包含 capital/moneyflow（#518）."""
         settings = DataStoreSettings()
         dirs = settings.all_directories()
-        assert "capital/flow" in dirs
+        assert "capital/moneyflow" in dirs
 
     def test_includes_fundamental_financial(self) -> None:
         """应包含 fundamental/financial."""
@@ -99,7 +99,7 @@ class TestDataStoreSettingsAllDirectories:
         """目录清单应包含全球指数和不可变 provider payload 归档（24 个）."""
         settings = DataStoreSettings()
         dirs = settings.all_directories()
-        assert len(dirs) == 24, f"Expected 24 directories, got {len(dirs)}"
+        assert len(dirs) == 29, f"Expected 29 directories, got {len(dirs)}"
         assert "market/index/global_bars" in dirs
         assert "provider_payloads" in dirs
 
@@ -128,11 +128,13 @@ class TestPathGroupsStructure:
         settings = DataStoreSettings(data_root=root)
         capital = settings.paths.capital
 
-        assert capital.flow == root / "capital" / "flow"
         assert capital.margin == root / "capital" / "margin"
-        assert capital.top_board == root / "capital" / "top_board"
-        assert capital.limit_board == root / "capital" / "limit_board"
-        assert capital.chip == root / "capital" / "chip"
+        assert capital.moneyflow == root / "capital" / "moneyflow"
+        assert capital.cyq_perf == root / "capital" / "cyq_perf"
+        assert capital.top_list == root / "capital" / "top_list"
+        assert capital.top_inst == root / "capital" / "top_inst"
+        assert capital.hk_hold == root / "capital" / "hk_hold"
+        assert capital.hsgt_top10 == root / "capital" / "hsgt_top10"
 
     def test_fundamental_paths_group(self) -> None:
         """paths.fundamental 应包含全部基本面路径."""
@@ -141,8 +143,8 @@ class TestPathGroupsStructure:
         fundamental = settings.paths.fundamental
 
         assert fundamental.financial == root / "fundamental" / "financial"
-        assert fundamental.indicator == root / "fundamental" / "indicator"
-        assert fundamental.holding == root / "fundamental" / "holding"
+        assert fundamental.fina_indicator == root / "fundamental" / "fina_indicator"
+        assert fundamental.fund_portfolio == root / "fundamental" / "fund_portfolio"
 
     def test_macro_paths_group(self) -> None:
         """paths.macro 应包含宏观指标路径."""
@@ -176,9 +178,9 @@ class TestPathGroupsStructure:
         """PathGroups.all_directories() 应返回完整的目录清单."""
         pg = PathGroups(Path("/data"))
         dirs = pg.all_directories()
-        assert len(dirs) == 24
+        assert len(dirs) == 29
         assert "market/stock/bars/daily" in dirs
-        assert "capital/flow" in dirs
+        assert "capital/moneyflow" in dirs
         assert "fundamental/financial" in dirs
         assert "macro/indicators" in dirs
         assert "metadata" in dirs
@@ -247,7 +249,7 @@ class TestPathGroupsSubdomainDirectories:
         """market.directories() 应返回 9 个市场目录."""
         pg = PathGroups(Path("/data"))
         dirs = pg.market.directories()
-        assert len(dirs) == 9
+        assert len(dirs) == 12
         assert "market/index/global_bars" in dirs
         assert all(d.startswith("market/") for d in dirs)
 
@@ -255,7 +257,7 @@ class TestPathGroupsSubdomainDirectories:
         """capital.directories() 应返回 5 个资金目录."""
         pg = PathGroups(Path("/data"))
         dirs = pg.capital.directories()
-        assert len(dirs) == 5
+        assert len(dirs) == 7
         assert all(d.startswith("capital/") for d in dirs)
 
     def test_fundamental_directories(self) -> None:

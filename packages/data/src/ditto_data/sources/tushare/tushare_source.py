@@ -39,6 +39,7 @@ from ditto_data.sources.tushare.etf_index_source import (
     fetch_etf_daily,
     fetch_fund_adj,
     fetch_fund_nav,
+    fetch_fund_share,
     fetch_global_index_daily,
     fetch_index_basic,
     fetch_index_daily,
@@ -49,12 +50,20 @@ from ditto_data.sources.tushare.fundamental_source import (
     fetch_balance_sheet,
     fetch_cash_flow,
     fetch_corporate_actions,
+    fetch_cyq_perf,
     fetch_dividend,
     fetch_earnings_express,
     fetch_earnings_forecast,
+    fetch_fina_indicator,
+    fetch_fund_portfolio,
+    fetch_hk_hold,
+    fetch_hsgt_top10,
     fetch_income_statement,
     fetch_margin_trading,
+    fetch_moneyflow,
     fetch_pledge_ratio,
+    fetch_top_inst,
+    fetch_top_list,
     fetch_valuation_metrics,
 )
 from ditto_data.sources.tushare.futures_source import (
@@ -73,6 +82,7 @@ from ditto_data.sources.tushare.stock_source import (
     fetch_adj_factor,
     fetch_adj_factor_by_ticker,
     fetch_calendar,
+    fetch_limit_list,
     fetch_name_history,
     fetch_st_history,
     fetch_stock_basic,
@@ -835,6 +845,166 @@ class TushareSource:
         return self._capital.fetch_index_valuation(
             trade_date=trade_date,
             ts_code=source_ticker,
+            start_date=start_date,
+            end_date=end_date,
+        )
+
+    def fetch_moneyflow(
+        self,
+        trade_date: str | None = None,
+        source_ticker: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> pl.DataFrame:
+        """获取个股资金流向（#518）. 委托给 fundamental_source."""
+        return fetch_moneyflow(
+            self._capital,
+            trade_date=trade_date,
+            source_ticker=source_ticker,
+            start_date=start_date,
+            end_date=end_date,
+        )
+
+    def fetch_cyq_perf(
+        self,
+        trade_date: str | None = None,
+        source_ticker: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> pl.DataFrame:
+        """获取每日筹码及胜率（#523）. 委托给 fundamental_source."""
+        return fetch_cyq_perf(
+            self._capital,
+            trade_date=trade_date,
+            source_ticker=source_ticker,
+            start_date=start_date,
+            end_date=end_date,
+        )
+
+    def fetch_hk_hold(
+        self,
+        trade_date: str | None = None,
+        source_ticker: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> pl.DataFrame:
+        """获取沪深港通持股（#520）. 委托给 fundamental_source."""
+        return fetch_hk_hold(
+            self._capital,
+            trade_date=trade_date,
+            source_ticker=source_ticker,
+            start_date=start_date,
+            end_date=end_date,
+        )
+
+    def fetch_hsgt_top10(
+        self,
+        trade_date: str | None = None,
+        source_ticker: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> pl.DataFrame:
+        """获取沪深港通十大成交股（#520）. 委托给 fundamental_source."""
+        return fetch_hsgt_top10(
+            self._capital,
+            trade_date=trade_date,
+            source_ticker=source_ticker,
+            start_date=start_date,
+            end_date=end_date,
+        )
+
+    def fetch_top_list(
+        self,
+        trade_date: str | None = None,
+        source_ticker: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> pl.DataFrame:
+        """获取龙虎榜个股明细（#519）. 委托给 fundamental_source."""
+        return fetch_top_list(
+            self._capital,
+            trade_date=trade_date,
+            source_ticker=source_ticker,
+            start_date=start_date,
+            end_date=end_date,
+        )
+
+    def fetch_top_inst(
+        self,
+        trade_date: str | None = None,
+        source_ticker: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> pl.DataFrame:
+        """获取龙虎榜席位明细（#519）. 委托给 fundamental_source."""
+        return fetch_top_inst(
+            self._capital,
+            trade_date=trade_date,
+            source_ticker=source_ticker,
+            start_date=start_date,
+            end_date=end_date,
+        )
+
+    def fetch_fina_indicator(
+        self,
+        trade_date: str | None = None,
+        source_ticker: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> pl.DataFrame:
+        """获取官方口径财务指标（#521）. 委托给 fundamental_source."""
+        return fetch_fina_indicator(
+            self._fundamental,
+            trade_date=trade_date,
+            source_ticker=source_ticker,
+            start_date=start_date,
+            end_date=end_date,
+        )
+
+    def fetch_fund_portfolio(
+        self,
+        trade_date: str | None = None,
+        source_ticker: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> pl.DataFrame:
+        """获取基金季度持仓（#522）. 委托给 fundamental_source."""
+        return fetch_fund_portfolio(
+            self._fundamental,
+            trade_date=trade_date,
+            source_ticker=source_ticker,
+            start_date=start_date,
+            end_date=end_date,
+        )
+
+    def fetch_limit_list(
+        self,
+        trade_date: str | None = None,
+        source_ticker: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> pl.DataFrame:
+        """获取涨跌停/炸板名单（#519）. 委托给 stock_source."""
+        return fetch_limit_list(
+            self._stock,
+            trade_date=trade_date,
+            source_ticker=source_ticker,
+            start_date=start_date,
+            end_date=end_date,
+        )
+
+    def fetch_fund_share(
+        self,
+        trade_date: str | None = None,
+        source_ticker: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> pl.DataFrame:
+        """获取基金份额（#522）. 委托给 etf_index_source."""
+        return fetch_fund_share(
+            self._etf,
+            trade_date=trade_date,
+            source_ticker=source_ticker,
             start_date=start_date,
             end_date=end_date,
         )

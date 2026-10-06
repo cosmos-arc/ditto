@@ -411,6 +411,64 @@ class MarketWriteService:
         )
         return rows_written
 
+    @traced("market.save_limit_list")
+    def save_limit_list(
+        self,
+        df: pl.DataFrame,
+        year: int,
+        on_duplicate: OnDuplicate = OnDuplicate.ERROR,
+    ) -> int:
+        """Save limit-up/down list rows through the stock-owned writer（#519）."""
+        writer = self._write_ports.limit_list
+        if writer is None:
+            raise ValueError("limit_list writer not configured")
+        logger.info(
+            "Writing limit list rows",
+            event="market_write_limit_list_start",
+            dataset="limit_list",
+            year=year,
+            row_count=len(df),
+        )
+        lock_name = f"limit_list_write_{year}"
+        with self._file_lock.acquire(lock_name, timeout=60.0):
+            write_result = writer.write(
+                df, year, on_duplicate=self._map_on_duplicate(on_duplicate)
+            )
+        rows_written = write_result.added + write_result.updated
+        Metrics.data_records.add(
+            len(df), {"dataset": "limit_list", "operation": "write"}
+        )
+        return rows_written
+
+    @traced("market.save_fund_share")
+    def save_fund_share(
+        self,
+        df: pl.DataFrame,
+        year: int,
+        on_duplicate: OnDuplicate = OnDuplicate.ERROR,
+    ) -> int:
+        """Save fund share rows through the ETF-owned writer（#522）."""
+        writer = self._write_ports.fund_share
+        if writer is None:
+            raise ValueError("fund_share writer not configured")
+        logger.info(
+            "Writing fund share rows",
+            event="market_write_fund_share_start",
+            dataset="fund_share",
+            year=year,
+            row_count=len(df),
+        )
+        lock_name = f"fund_share_write_{year}"
+        with self._file_lock.acquire(lock_name, timeout=60.0):
+            write_result = writer.write(
+                df, year, on_duplicate=self._map_on_duplicate(on_duplicate)
+            )
+        rows_written = write_result.added + write_result.updated
+        Metrics.data_records.add(
+            len(df), {"dataset": "fund_share", "operation": "write"}
+        )
+        return rows_written
+
     @traced("market.save_stock_status")
     def save_stock_status(
         self,

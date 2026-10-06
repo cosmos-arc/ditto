@@ -632,3 +632,56 @@ def test_index_valuation_write_enriches_and_persists(
     result = data_writer.write_data("index_valuation", frame, "2024-10-11")
     mock_capital_store.save_index_valuation.assert_called_once()
     assert result.rows_written == 1
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    ("dataset", "store_method"),
+    [
+        ("moneyflow", "save_moneyflow"),
+        ("cyq_perf", "save_cyq_perf"),
+        ("hk_hold", "save_hk_hold"),
+        ("hsgt_top10", "save_hsgt_top10"),
+        ("top_list", "save_top_list"),
+        ("top_inst", "save_top_inst"),
+        ("fina_indicator", "save_fina_indicator"),
+        ("fund_portfolio", "save_fund_portfolio"),
+        ("limit_list", "save_limit_list"),
+        ("fund_share", "save_fund_share"),
+    ],
+)
+def test_new_dataset_routes_dispatch_to_stores(
+    data_writer,
+    mock_market_write_service,
+    mock_fundamental_store,
+    mock_capital_store,
+    mock_metadata_service,
+    dataset,
+    store_method,
+):
+    """#518-#523：十条新写入路由全路径分发（防 #434 类缺失 handler 复发）."""
+    mock_metadata_service.instrument.resolve_instrument_ids_batch.return_value = {
+        "600519.SH": 101
+    }
+    for store in (
+        mock_capital_store,
+        mock_fundamental_store,
+        mock_market_write_service,
+    ):
+        getattr(store, store_method).return_value = 1
+    frame = pl.DataFrame(
+        {
+            "source_ticker": ["600519.SH"],
+            "trade_date": [date(2026, 9, 30)],
+            "knowledge_date": [date(2026, 10, 1)],
+        }
+    )
+    result = data_writer.write_data(dataset, frame, "2026-09-30")
+    calls = [
+        (mock_capital_store, store_method),
+        (mock_fundamental_store, store_method),
+        (mock_market_write_service, store_method),
+    ]
+    dispatched = [name for store, name in calls if getattr(store, name).call_count == 1]
+    assert dispatched, f"{dataset} did not dispatch to any store"
+    assert result.rows_written == 1

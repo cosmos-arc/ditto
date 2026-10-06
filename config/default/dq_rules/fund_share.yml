@@ -1,0 +1,31 @@
+# 基金份额 DQ 规则（#522）
+# 单位：fd_share 万份。ETF 逐日申报、OF 基金节奏不定——申报节奏口径，
+# 勿套用日历完整性期望。
+dataset: fund_share
+description: "fund_share 数据质量检查规则"
+
+technical:
+  - rule: not_null
+    columns: [instrument_id, trade_date, knowledge_date]
+    message: "必填字段不能为空"
+
+  - rule: unique
+    columns: [instrument_id, trade_date, knowledge_date]
+    message: "主键 (instrument_id, trade_date, knowledge_date) 重复"
+
+  - rule: foreign_key
+    column: instrument_id
+    reference: instrument.instrument_id
+    message: "Instrument ID 不存在于证券主表"
+
+  - rule: type_check
+    columns:
+      instrument_id: int
+      trade_date: date
+      knowledge_date: date
+      fd_share: float
+      fund_type: string
+    message: "字段类型不匹配"
+
+# 业务类: 业务规则（写入时警告但不阻断）
+business: []

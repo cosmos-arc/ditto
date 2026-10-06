@@ -330,16 +330,287 @@ RIGHTS_ISSUE_MAPPING = ColumnMapping(
     ),
 )
 
+# ---------------------------------------------------------------------------
+# #518/#519/#520/#521/#522 资金面/情绪/席位/财务指标/基金持仓增补
+# 单位口径登记（#506 坑 F，2026-10-06 代理实测）：
+# - moneyflow：金额字段全部**万元**、量字段全部**手**（buy/sell_elg|lg|md|sm_*
+#   与 net_mf_*，net=买入-卖出）；
+# - cyq_perf：cost_5/15/50/85/95pct、his_high/low、weight_avg 单位**元**，
+#   winner_rate 为 **%**；
+# - hk_hold：vol 单位**股**、ratio **%**（2024-08 披露改制后北向仅季度末披露）；
+# - hsgt_top10：amount/buy/sell/net_amount 单位**元**，改制后 buy/sell/
+#   net_amount 官方停披（null 保留，不得填零）；
+# - top_list/top_inst：金额**元**、比率 **%**，side '0'=买 '1'=卖；
+# - fina_indicator：每股指标**元/股**、比率 **%**、绝对额**元**，118 列透传；
+# - fund_portfolio：market_value(mkv) **元**、holding_shares(amount) **股**、
+#   比率 **%**；fund_share fd_share 单位**万份**（见 common.py）。
+# 日频数据集 kd=T+1 对齐日行情口径；披露锚数据集（fina_indicator/
+# fund_portfolio）kd=公告日。
+# ---------------------------------------------------------------------------
+
+# 个股资金流向（moneyflow，金额万元/量手）
+MONEYFLOW_MAPPING = ColumnMapping(
+    rename={"ts_code": "source_ticker"},
+    date_columns={"trade_date": "%Y%m%d"},
+    float_columns=[
+        "buy_elg_amount",
+        "buy_elg_vol",
+        "buy_lg_amount",
+        "buy_lg_vol",
+        "buy_md_amount",
+        "buy_md_vol",
+        "buy_sm_amount",
+        "buy_sm_vol",
+        "sell_elg_amount",
+        "sell_elg_vol",
+        "sell_lg_amount",
+        "sell_lg_vol",
+        "sell_md_amount",
+        "sell_md_vol",
+        "sell_sm_amount",
+        "sell_sm_vol",
+        "net_mf_amount",
+        "net_mf_vol",
+    ],
+    computed_columns={
+        "knowledge_date": pl.col("trade_date") + pl.duration(days=1),
+    },
+    output_columns=(
+        "source_ticker",
+        "trade_date",
+        "knowledge_date",
+        "buy_elg_amount",
+        "buy_elg_vol",
+        "buy_lg_amount",
+        "buy_lg_vol",
+        "buy_md_amount",
+        "buy_md_vol",
+        "buy_sm_amount",
+        "buy_sm_vol",
+        "sell_elg_amount",
+        "sell_elg_vol",
+        "sell_lg_amount",
+        "sell_lg_vol",
+        "sell_md_amount",
+        "sell_md_vol",
+        "sell_sm_amount",
+        "sell_sm_vol",
+        "net_mf_amount",
+        "net_mf_vol",
+    ),
+)
+
+# 每日筹码及胜率（cyq_perf，价格类元、winner_rate %）
+CYQ_PERF_MAPPING = ColumnMapping(
+    rename={"ts_code": "source_ticker"},
+    date_columns={"trade_date": "%Y%m%d"},
+    float_columns=[
+        "cost_5pct",
+        "cost_15pct",
+        "cost_50pct",
+        "cost_85pct",
+        "cost_95pct",
+        "his_high",
+        "his_low",
+        "weight_avg",
+        "winner_rate",
+    ],
+    computed_columns={
+        "knowledge_date": pl.col("trade_date") + pl.duration(days=1),
+    },
+    output_columns=(
+        "source_ticker",
+        "trade_date",
+        "knowledge_date",
+        "cost_5pct",
+        "cost_15pct",
+        "cost_50pct",
+        "cost_85pct",
+        "cost_95pct",
+        "his_high",
+        "his_low",
+        "weight_avg",
+        "winner_rate",
+    ),
+)
+
+# 沪深港通持股（hk_hold：北向 SH/SZ 行入库，南向 HK 行在身份富集处过滤）
+HK_HOLD_MAPPING = ColumnMapping(
+    rename={"ts_code": "source_ticker"},
+    date_columns={"trade_date": "%Y%m%d"},
+    float_columns=["vol", "ratio"],
+    computed_columns={
+        "knowledge_date": pl.col("trade_date") + pl.duration(days=1),
+    },
+    output_columns=(
+        "source_ticker",
+        "trade_date",
+        "knowledge_date",
+        "vol",
+        "ratio",
+        "exchange",
+    ),
+)
+
+# 沪深港通十大成交股（hsgt_top10：改制后 buy/sell/net_amount 停披为 null）
+HSGT_TOP10_MAPPING = ColumnMapping(
+    rename={"ts_code": "source_ticker", "change": "pct_change"},
+    date_columns={"trade_date": "%Y%m%d"},
+    float_columns=[
+        "close",
+        "pct_change",
+        "amount",
+        "net_amount",
+        "buy",
+        "sell",
+    ],
+    int_columns=("rank",),
+    computed_columns={
+        "knowledge_date": pl.col("trade_date") + pl.duration(days=1),
+    },
+    output_columns=(
+        "source_ticker",
+        "trade_date",
+        "knowledge_date",
+        "close",
+        "pct_change",
+        "rank",
+        "market_type",
+        "amount",
+        "net_amount",
+        "buy",
+        "sell",
+    ),
+)
+
+# 龙虎榜个股（top_list：同标的同日可因多个上榜原因出现多行，reason 进主键）
+TOP_LIST_MAPPING = ColumnMapping(
+    rename={"ts_code": "source_ticker"},
+    date_columns={"trade_date": "%Y%m%d"},
+    float_columns=[
+        "close",
+        "pct_change",
+        "turnover_rate",
+        "amount",
+        "l_sell",
+        "l_buy",
+        "l_amount",
+        "net_amount",
+        "net_rate",
+        "amount_rate",
+        "float_values",
+    ],
+    computed_columns={
+        "knowledge_date": pl.col("trade_date") + pl.duration(days=1),
+    },
+    output_columns=(
+        "source_ticker",
+        "trade_date",
+        "knowledge_date",
+        "name",
+        "close",
+        "pct_change",
+        "turnover_rate",
+        "amount",
+        "l_sell",
+        "l_buy",
+        "l_amount",
+        "net_amount",
+        "net_rate",
+        "amount_rate",
+        "float_values",
+        "reason",
+    ),
+)
+
+# 龙虎榜席位明细（top_inst：side '0'=买 '1'=卖，exalter=席位名称）
+TOP_INST_MAPPING = ColumnMapping(
+    rename={"ts_code": "source_ticker"},
+    date_columns={"trade_date": "%Y%m%d"},
+    float_columns=["buy", "buy_rate", "sell", "sell_rate", "net_buy"],
+    computed_columns={
+        "knowledge_date": pl.col("trade_date") + pl.duration(days=1),
+    },
+    output_columns=(
+        "source_ticker",
+        "trade_date",
+        "knowledge_date",
+        "exalter",
+        "side",
+        "buy",
+        "buy_rate",
+        "sell",
+        "sell_rate",
+        "net_buy",
+        "reason",
+    ),
+)
+
+# 官方口径财务指标（fina_indicator：118 指标列透传，kd=公告日 ann_date）
+FINA_INDICATOR_MAPPING = ColumnMapping(
+    rename={
+        "ts_code": "source_ticker",
+        "ann_date": "knowledge_date",
+        "end_date": "report_date",
+    },
+    date_columns={
+        "knowledge_date": "%Y%m%d",
+        "report_date": "%Y%m%d",
+    },
+    float_columns=[],
+    output_columns=None,
+)
+
+# 基金持仓（fund_portfolio：公告日驱动，holding_symbol=持仓股票代码）
+FUND_PORTFOLIO_MAPPING = ColumnMapping(
+    rename={
+        "ts_code": "source_ticker",
+        "ann_date": "knowledge_date",
+        "end_date": "report_date",
+        "symbol": "holding_symbol",
+        "mkv": "market_value",
+        "amount": "holding_shares",
+    },
+    date_columns={
+        "knowledge_date": "%Y%m%d",
+        "report_date": "%Y%m%d",
+    },
+    float_columns=[
+        "market_value",
+        "holding_shares",
+        "stk_mkv_ratio",
+        "stk_float_ratio",
+    ],
+    output_columns=(
+        "source_ticker",
+        "report_date",
+        "knowledge_date",
+        "holding_symbol",
+        "market_value",
+        "holding_shares",
+        "stk_mkv_ratio",
+        "stk_float_ratio",
+    ),
+)
+
 __all__ = [
     "BALANCE_SHEET_MAPPING",
     "CASH_FLOW_MAPPING",
     "CORPORATE_ACTIONS_MAPPING",
+    "CYQ_PERF_MAPPING",
     "DIVIDEND_MAPPING",
+    "FINA_INDICATOR_MAPPING",
+    "FUND_PORTFOLIO_MAPPING",
+    "HK_HOLD_MAPPING",
+    "HSGT_TOP10_MAPPING",
     "INCOME_STATEMENT_MAPPING",
     "INDEX_COMPOSITION_MAPPING",
     "MARGIN_TRADING_MAPPING",
+    "MONEYFLOW_MAPPING",
     "PLEDGE_RATIO_MAPPING",
     "RIGHTS_ISSUE_MAPPING",
     "SHARE_BUYBACK_MAPPING",
+    "TOP_INST_MAPPING",
+    "TOP_LIST_MAPPING",
     "VALUATION_METRICS_MAPPING",
 ]

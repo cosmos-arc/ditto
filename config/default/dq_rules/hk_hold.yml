@@ -1,0 +1,31 @@
+# 沪深港通持股 DQ 规则（#520）
+# 单位：vol 股、ratio %。2024-08-19 披露改制后北向仅季度末披露——
+# 申报节奏口径，勿套用日历完整性期望；南向 HK 行在身份富集处过滤。
+dataset: hk_hold
+description: "hk_hold 数据质量检查规则"
+
+technical:
+  - rule: not_null
+    columns: [instrument_id, trade_date, knowledge_date]
+    message: "必填字段不能为空"
+
+  - rule: unique
+    columns: [instrument_id, trade_date, knowledge_date]
+    message: "主键 (instrument_id, trade_date, knowledge_date) 重复"
+
+  - rule: foreign_key
+    column: instrument_id
+    reference: instrument.instrument_id
+    message: "Instrument ID 不存在于证券主表"
+
+  - rule: type_check
+    columns:
+      instrument_id: int
+      trade_date: date
+      knowledge_date: date
+      vol: float
+      ratio: float
+    message: "字段类型不匹配"
+
+# 业务类: 业务规则（写入时警告但不阻断）
+business: []

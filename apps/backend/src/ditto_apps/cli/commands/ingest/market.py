@@ -61,6 +61,18 @@ _stock_status_impl = create_daily_command("stock_status", "摄取股票状态")
 # limit (涨跌停价格, #517)
 _stock_limit_impl = create_daily_command("stock_limit", "摄取股票涨跌停价格")
 
+# limit-list (涨跌停/炸板名单, #519) 与 fund-share (基金份额, #522)
+_limit_list_impl = create_instrument_command(
+    "limit_list",
+    "摄取涨跌停与炸板名单",
+    cli_path="ingest market limit-list",
+)
+_fund_share_impl = create_instrument_command(
+    "fund_share",
+    "摄取基金份额",
+    cli_path="ingest market fund-share",
+)
+
 # fx (汇率)
 _fx_daily_impl = create_daily_command("fx_daily", "摄取汇率日线数据")
 
@@ -167,3 +179,23 @@ def index_valuation(
 ) -> None:
     """摄取指数每日估值（市值元/股本股）."""
     return _index_valuation_impl(ctx, date, force)
+
+
+@app.command("limit-list")
+def limit_list(
+    ctx: typer.Context,
+    date: str = typer.Argument(..., help="交易日期 (YYYY-MM-DD)"),
+    force: bool = typer.Option(False, "--force", "-f", help="强制重新摄取"),
+) -> None:
+    """摄取涨跌停与炸板名单 (#519)."""
+    return _limit_list_impl(ctx, date, force)
+
+
+@app.command("fund-share")
+def fund_share(
+    ctx: typer.Context,
+    date: str = typer.Argument(..., help="交易日期 (YYYY-MM-DD)"),
+    force: bool = typer.Option(False, "--force", "-f", help="强制重新摄取"),
+) -> None:
+    """摄取基金份额 (#522)."""
+    return _fund_share_impl(ctx, date, force)

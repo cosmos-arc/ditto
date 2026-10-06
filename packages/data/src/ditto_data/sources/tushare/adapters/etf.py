@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import date, timedelta
 
 import polars as pl
-from ditto_platform.foundation import logger, traced
+from ditto_platform.foundation import Metrics, logger, traced
 
 from ditto_data.config import DataSourceSettings
 from ditto_data.errors.network import SourceFetchError
@@ -18,6 +18,7 @@ from ditto_data.sources.tushare.processors.mappings import (
     ETF_BASIC_MAPPING,
     ETF_NAV_MAPPING,
     FUND_ADJ_MAPPING,
+    FUND_SHARE_MAPPING,
 )
 from ditto_data.sources.tushare.processors.transformer import TushareDataTransformer
 
@@ -475,4 +476,54 @@ class ETFTushareAdapter(BaseTushareAdapter):
                     row_count=result.height,
                     missing_disclosure_count=missing,
                 )
+            return result
+
+    @traced("source.tushare.fetch_fund_share")
+    def fetch_fund_share(
+        self,
+        trade_date: str | None = None,
+        source_ticker: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> pl.DataFrame:
+        """
+        获取基金份额 (#522, fd_share 万份).
+
+        支持两种查询模式：
+        - 按日期：trade_date 全市场单日（ETF 逐日申报，OF 基金节奏不定，
+          申报节奏口径勿套用日历期望）；
+        - 按标的+时间段：source_ticker + start_date/end_date.
+
+        Returns:
+            [source_ticker, trade_date, knowledge_date(T+1), fd_share,
+            fund_type, exchange].
+
+        """
+        logger.info(
+            "Fetching Tushare fund share",
+            event="tushare_fund_share_fetch_start",
+            trade_date=trade_date,
+            source_ticker=source_ticker,
+        )
+        with tushare_fetch_error_handler("fund_share", "fund_share"):
+            params: dict[str, str] = {
+                "api_name": "fund_share",
+                "fields": "ts_code,trade_date,fd_share,fund_type,market",
+            }
+            if trade_date:
+                params["trade_date"] = trade_date.replace("-", "")
+            if source_ticker:
+                params["ts_code"] = source_ticker
+            if start_date:
+                params["start_date"] = start_date.replace("-", "")
+            if end_date:
+                params["end_date"] = end_date.replace("-", "")
+            response = self._client.query(**params)
+            result = TushareDataTransformer.transform(
+                response, "fund_share", FUND_SHARE_MAPPING
+            )
+            Metrics.data_records.add(
+                len(result),
+                {"source": "tushare", "dataset": "fund_share", "status": "success"},
+            )
             return result

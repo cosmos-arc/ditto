@@ -10,6 +10,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from ditto_data.storage.base.sqlite_table_writer import SqliteTableWriter
+from ditto_data.storage.capital.cyq_perf import CyqPerfReader, CyqPerfWriter
+from ditto_data.storage.capital.hk_hold import HkHoldReader, HkHoldWriter
+from ditto_data.storage.capital.hsgt_top10 import HsgtTop10Reader, HsgtTop10Writer
 from ditto_data.storage.capital.index_composition.index_composition_reader import (
     IndexCompositionReader,
 )
@@ -23,8 +26,11 @@ from ditto_data.storage.capital.margin.margin_trading_reader import (
 from ditto_data.storage.capital.margin.margin_trading_writer import (
     MarginTradingWriter,
 )
+from ditto_data.storage.capital.moneyflow import MoneyflowReader, MoneyflowWriter
 from ditto_data.storage.capital.pledge.pledge_ratio_reader import PledgeRatioReader
 from ditto_data.storage.capital.pledge.pledge_ratio_writer import PledgeRatioWriter
+from ditto_data.storage.capital.top_inst import TopInstReader, TopInstWriter
+from ditto_data.storage.capital.top_list import TopListReader, TopListWriter
 from ditto_data.storage.capital.valuation.valuation_metrics_reader import (
     ValuationMetricsReader,
 )
@@ -47,6 +53,10 @@ from ditto_data.storage.fundamental.earnings.forecast import (
     EarningsForecastReader,
     EarningsForecastWriter,
 )
+from ditto_data.storage.fundamental.fina_indicator import (
+    FinaIndicatorReader,
+    FinaIndicatorWriter,
+)
 from ditto_data.storage.fundamental.financial.balance_sheet_reader import (
     BalanceSheetReader,
 )
@@ -61,12 +71,20 @@ from ditto_data.storage.fundamental.financial.income_statement_reader import (
 from ditto_data.storage.fundamental.financial.income_statement_writer import (
     IncomeStatementWriter,
 )
+from ditto_data.storage.fundamental.fund_portfolio import (
+    FundPortfolioReader,
+    FundPortfolioWriter,
+)
 from ditto_data.storage.market.commodity.bars import (
     CommodityBarsReader,
     CommodityBarsWriter,
 )
 from ditto_data.storage.market.etf.adj import EtfAdjFactorReader, EtfAdjFactorWriter
 from ditto_data.storage.market.etf.bars import EtfBarsReader, EtfBarsWriter
+from ditto_data.storage.market.etf.fund_share import (
+    FundShareReader,
+    FundShareWriter,
+)
 from ditto_data.storage.market.etf.nav import EtfNavReader, EtfNavWriter
 from ditto_data.storage.market.etf.status import EtfStatusReader, EtfStatusWriter
 from ditto_data.storage.market.futures.basic import (
@@ -95,6 +113,10 @@ from ditto_data.storage.market.stock.bars import StockBarsReader, StockBarsWrite
 from ditto_data.storage.market.stock.limit import (
     StockLimitReader,
     StockLimitWriter,
+)
+from ditto_data.storage.market.stock.limit_list import (
+    LimitListReader,
+    LimitListWriter,
 )
 from ditto_data.storage.market.stock.status import (
     StockStatusReader,
@@ -145,6 +167,8 @@ class MarketReaders:
     commodity_bars: CommodityBarsReader | None = None
     futures_daily: FuturesDailyReader | None = None
     futures_basic: FuturesBasicReader | None = None
+    limit_list: LimitListReader | None = None
+    fund_share: FundShareReader | None = None
 
 
 @dataclass(frozen=True)
@@ -187,6 +211,8 @@ class MarketWriters:
     commodity_bars: CommodityBarsWriter | None = None
     futures_daily: FuturesDailyWriter | None = None
     futures_basic: FuturesBasicWriter | None = None
+    limit_list: LimitListWriter | None = None
+    fund_share: FundShareWriter | None = None
 
 
 @dataclass(frozen=True)
@@ -212,6 +238,8 @@ class FundamentalReaders:
     corporate_actions: CorporateActionsReader
     earnings_forecast: EarningsForecastReader | None = None
     earnings_express: EarningsExpressReader | None = None
+    fina_indicator: FinaIndicatorReader | None = None
+    fund_portfolio: FundPortfolioReader | None = None
 
 
 @dataclass(frozen=True)
@@ -237,6 +265,8 @@ class FundamentalWriters:
     corporate_actions: CorporateActionsWriter
     earnings_forecast: EarningsForecastWriter | None = None
     earnings_express: EarningsExpressWriter | None = None
+    fina_indicator: FinaIndicatorWriter | None = None
+    fund_portfolio: FundPortfolioWriter | None = None
 
 
 @dataclass(frozen=True)
@@ -259,6 +289,12 @@ class CapitalReaders:
     valuation_metrics: ValuationMetricsReader
     index_composition: IndexCompositionReader
     index_valuation: IndexValuationReader | None = None
+    moneyflow: MoneyflowReader | None = None
+    cyq_perf: CyqPerfReader | None = None
+    hk_hold: HkHoldReader | None = None
+    hsgt_top10: HsgtTop10Reader | None = None
+    top_list: TopListReader | None = None
+    top_inst: TopInstReader | None = None
 
 
 @dataclass(frozen=True)
@@ -281,6 +317,12 @@ class CapitalWriters:
     valuation_metrics: ValuationMetricsWriter
     index_composition: SqliteTableWriter
     index_valuation: IndexValuationWriter | None = None
+    moneyflow: MoneyflowWriter | None = None
+    cyq_perf: CyqPerfWriter | None = None
+    hk_hold: HkHoldWriter | None = None
+    hsgt_top10: HsgtTop10Writer | None = None
+    top_list: TopListWriter | None = None
+    top_inst: TopInstWriter | None = None
 
 
 __all__ = [

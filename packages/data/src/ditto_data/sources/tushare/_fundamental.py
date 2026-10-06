@@ -302,3 +302,78 @@ def fetch_corporate_actions(
     return fundamental.fetch_corporate_actions(
         ann_date=compact_date,
     )
+
+
+def fetch_fina_indicator(
+    fundamental: FundamentalTushareAdapter,
+    to_compact_date: Callable[[str], str],
+    *,
+    trade_date: str | None = None,
+    source_ticker: str | None = None,
+    start_date: str | None = None,
+    end_date: str | None = None,
+) -> pl.DataFrame:
+    """
+    Fetch official financial indicators (#521, ann_date disclosure anchor).
+
+    与财务三表共用披露增量语义：近期报告期超集 + knowledge_date ≤ 截止日
+    过滤；修订以新 ann_date 版本追加，不做同披露键去重。
+    """
+    return _fetch_statement(
+        to_compact_date,
+        vip_fetch=fundamental.fetch_fina_indicator,
+        standard_fetch=fundamental.fetch_fina_indicator,
+        trade_date=trade_date,
+        source_ticker=source_ticker,
+        start_date=start_date,
+        end_date=end_date,
+    )
+
+
+def fetch_fund_portfolio(
+    fundamental: FundamentalTushareAdapter,
+    to_compact_date: Callable[[str], str],
+    *,
+    trade_date: str | None = None,
+    source_ticker: str | None = None,
+    start_date: str | None = None,
+    end_date: str | None = None,
+) -> pl.DataFrame:
+    """
+    Fetch fund quarterly holdings (#522, ann_date disclosure anchor).
+
+    日更模式按公告日全市场抓取（含 .OF 场外基金，写入层过滤未注册身份）；
+    按基金回补按区间内报告期逐期抓取，剔除披露晚于 end_date 的行。
+    """
+    if trade_date:
+        return fundamental.fetch_fund_portfolio(
+            ann_date=to_compact_date(trade_date),
+        )
+    if source_ticker is None:
+        raise ValueError(
+            "fund_portfolio fetch requires either trade_date or source_ticker"
+        )
+    if start_date is None or end_date is None:
+        raise ValueError(
+            "fund_portfolio instrument fetch requires start_date and end_date"
+        )
+    frames = [
+        fundamental.fetch_fund_portfolio(
+            ts_code=source_ticker,
+            period=period,
+        )
+        for period in _recent_quarter_ends(
+            end_date,
+            count=max_quarters_in_range(start_date, end_date),
+        )
+    ]
+    merged = pl.concat(frames, how="diagonal_relaxed") if frames else pl.DataFrame()
+    return _knowable_by_end(merged, end_date)
+
+
+def max_quarters_in_range(start_date: str, end_date: str) -> int:
+    """报告期窗口大小：区间覆盖的季度数 + 1（边界季度）."""
+    start = date.fromisoformat(start_date)
+    end = date.fromisoformat(end_date)
+    quarters = (end.year - start.year) * 4 + (end.month - start.month) // 3
+    return max(quarters + 1, 1)

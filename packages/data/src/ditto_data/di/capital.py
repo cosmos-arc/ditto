@@ -9,6 +9,9 @@ from ditto_data.config.data_store import DataStoreSettings
 from ditto_data.services.capital_store import CapitalStore
 from ditto_data.services.deps import CapitalReaders, CapitalWriters
 from ditto_data.storage.base.sqlite_table_writer import SqliteTableWriter
+from ditto_data.storage.capital.cyq_perf import CyqPerfReader, CyqPerfWriter
+from ditto_data.storage.capital.hk_hold import HkHoldReader, HkHoldWriter
+from ditto_data.storage.capital.hsgt_top10 import HsgtTop10Reader, HsgtTop10Writer
 from ditto_data.storage.capital.index_composition.index_composition_reader import (
     IndexCompositionReader,
 )
@@ -22,6 +25,7 @@ from ditto_data.storage.capital.margin.margin_trading_reader import (
 from ditto_data.storage.capital.margin.margin_trading_writer import (
     MarginTradingWriter,
 )
+from ditto_data.storage.capital.moneyflow import MoneyflowReader, MoneyflowWriter
 from ditto_data.storage.capital.pledge.pledge_ratio_reader import (
     PledgeRatioReader,
 )
@@ -34,6 +38,8 @@ from ditto_data.storage.capital.specs import (
     PLEDGE_RATIO_SPEC,
     VALUATION_METRICS_SPEC,
 )
+from ditto_data.storage.capital.top_inst import TopInstReader, TopInstWriter
+from ditto_data.storage.capital.top_list import TopListReader, TopListWriter
 from ditto_data.storage.capital.valuation.valuation_metrics_reader import (
     ValuationMetricsReader,
 )
@@ -78,6 +84,12 @@ class CapitalProvider(Provider):
             index_valuation=IndexValuationReader(
                 _index_valuation_parquet_store(settings)
             ),
+            moneyflow=MoneyflowReader(_moneyflow_parquet_store(settings)),
+            cyq_perf=CyqPerfReader(_cyq_perf_parquet_store(settings)),
+            hk_hold=HkHoldReader(_hk_hold_parquet_store(settings)),
+            hsgt_top10=HsgtTop10Reader(_hsgt_top10_parquet_store(settings)),
+            top_list=TopListReader(_top_list_parquet_store(settings)),
+            top_inst=TopInstReader(_top_inst_parquet_store(settings)),
         )
 
     @provide
@@ -101,6 +113,12 @@ class CapitalProvider(Provider):
             index_valuation=IndexValuationWriter(
                 _index_valuation_parquet_store(settings)
             ),
+            moneyflow=MoneyflowWriter(_moneyflow_parquet_store(settings)),
+            cyq_perf=CyqPerfWriter(_cyq_perf_parquet_store(settings)),
+            hk_hold=HkHoldWriter(_hk_hold_parquet_store(settings)),
+            hsgt_top10=HsgtTop10Writer(_hsgt_top10_parquet_store(settings)),
+            top_list=TopListWriter(_top_list_parquet_store(settings)),
+            top_inst=TopInstWriter(_top_inst_parquet_store(settings)),
         )
 
     @provide
@@ -123,4 +141,54 @@ def _index_valuation_parquet_store(settings: DataStoreSettings) -> ParquetStore:
         key_columns=("instrument_id", "trade_date", "knowledge_date"),
         date_column="trade_date",
         instrument_column="instrument_id",
+    )
+
+
+def _daily_factor_parquet_store(
+    settings: DataStoreSettings,
+    key_columns: tuple[str, ...],
+) -> ParquetStore:
+    """日频资金面帧 Parquet store（键形参数化，date_column=trade_date）."""
+    return ParquetStore(
+        settings.data_root,
+        key_columns=key_columns,
+        date_column="trade_date",
+        instrument_column="instrument_id",
+    )
+
+
+def _moneyflow_parquet_store(settings: DataStoreSettings) -> ParquetStore:
+    return _daily_factor_parquet_store(
+        settings, ("instrument_id", "trade_date", "knowledge_date")
+    )
+
+
+def _cyq_perf_parquet_store(settings: DataStoreSettings) -> ParquetStore:
+    return _daily_factor_parquet_store(
+        settings, ("instrument_id", "trade_date", "knowledge_date")
+    )
+
+
+def _hk_hold_parquet_store(settings: DataStoreSettings) -> ParquetStore:
+    return _daily_factor_parquet_store(
+        settings, ("instrument_id", "trade_date", "knowledge_date")
+    )
+
+
+def _hsgt_top10_parquet_store(settings: DataStoreSettings) -> ParquetStore:
+    return _daily_factor_parquet_store(
+        settings, ("instrument_id", "trade_date", "market_type", "knowledge_date")
+    )
+
+
+def _top_list_parquet_store(settings: DataStoreSettings) -> ParquetStore:
+    return _daily_factor_parquet_store(
+        settings, ("instrument_id", "trade_date", "reason", "knowledge_date")
+    )
+
+
+def _top_inst_parquet_store(settings: DataStoreSettings) -> ParquetStore:
+    return _daily_factor_parquet_store(
+        settings,
+        ("instrument_id", "trade_date", "exalter", "side", "reason", "knowledge_date"),
     )

@@ -54,6 +54,12 @@ class TestSupportedInstrumentDatasets:
             Dataset.EARNINGS_FORECAST,
             Dataset.EARNINGS_EXPRESS,
             Dataset.INDEX_VALUATION,
+            # #518-#523：资金流/北向/官方指标/基金份额与持仓支持按标的回填
+            Dataset.MONEYFLOW,
+            Dataset.HK_HOLD,
+            Dataset.FINA_INDICATOR,
+            Dataset.FUND_SHARE,
+            Dataset.FUND_PORTFOLIO,
         }
         assert expected == SUPPORTED_INSTRUMENT_DATASETS
 

@@ -18,6 +18,8 @@ from ditto_data.sources.tushare.processors.mappings import (
     BALANCE_SHEET_MAPPING,
     CASH_FLOW_MAPPING,
     DIVIDEND_MAPPING,
+    FINA_INDICATOR_MAPPING,
+    FUND_PORTFOLIO_MAPPING,
     INCOME_STATEMENT_MAPPING,
 )
 from ditto_data.sources.tushare.processors.transformer import (
@@ -511,6 +513,99 @@ class FundamentalTushareAdapter(BaseTushareAdapter):
                 "end_date": end_date,
             },
         )
+
+    @traced("source.tushare.fetch_fina_indicator")
+    def fetch_fina_indicator(
+        self,
+        ts_code: str | None = None,
+        period: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> pl.DataFrame:
+        """
+        获取官方口径财务指标 (#521).
+
+        三表衍生指标的官方对照源：118 指标列透传（mapping 无 output_columns），
+        kd=ann_date（公告锚）。无 report_type/update_flag 列（2026-10-06 实测），
+        行身份 = (ts_code, end_date, ann_date)；修订以新 ann_date 版本呈现，
+        不做同披露键去重。单位：每股指标元/股、比率 %、绝对额元。
+
+        Args:
+            ts_code: 股票代码 (e.g., "600519.SH")
+            period: 报告期 (YYYYMMDD，如 "20240331")，全市场批量
+            start_date: 公告开始日期 (YYYYMMDD，配 ts_code)
+            end_date: 公告结束日期 (YYYYMMDD，配 ts_code)
+
+        """
+        return self._fetch_financial(
+            dataset="fina_indicator",
+            api_name="fina_indicator",
+            fields="ts_code,ann_date,end_date",
+            mapping=FINA_INDICATOR_MAPPING,
+            log_name="fina indicator",
+            extra_params={
+                "ts_code": ts_code,
+                "period": period,
+                "start_date": start_date,
+                "end_date": end_date,
+            },
+            add_pit=False,
+        )
+
+    @traced("source.tushare.fetch_fund_portfolio")
+    def fetch_fund_portfolio(
+        self,
+        ts_code: str | None = None,
+        ann_date: str | None = None,
+        period: str | None = None,
+    ) -> pl.DataFrame:
+        """
+        获取基金持仓 (#522，公告日驱动).
+
+        季度持仓披露，修订以新 ann_date 行呈现（#452 观察事实语义）；
+        market_value 元、holding_shares 股、比率 %。响应含全部基金类型
+        （含 .OF 场外），未注册身份在写入层过滤留痕。
+
+        Args:
+            ts_code: 基金代码 (e.g., "510300.SH")
+            ann_date: 公告日期 (YYYYMMDD)，全市场按披露日抓取
+            period: 报告期 (YYYYMMDD)
+
+        """
+        logger.info(
+            "Fetching Tushare fund portfolio",
+            event="tushare_fund_portfolio_fetch_start",
+            ts_code=ts_code,
+            ann_date=ann_date,
+            period=period,
+        )
+        with tushare_fetch_error_handler("fund_portfolio", "fund_portfolio"):
+            params: dict[str, str] = {
+                "api_name": "fund_portfolio",
+                "fields": (
+                    "ts_code,ann_date,end_date,symbol,mkv,amount,"
+                    "stk_mkv_ratio,stk_float_ratio"
+                ),
+            }
+            if ts_code:
+                params["ts_code"] = ts_code
+            if ann_date:
+                params["ann_date"] = ann_date
+            if period:
+                params["period"] = period
+            response = self._client.query(**params)
+            result = TushareDataTransformer.transform(
+                response, "fund_portfolio", FUND_PORTFOLIO_MAPPING
+            )
+            Metrics.data_records.add(
+                len(result),
+                {
+                    "source": "tushare",
+                    "dataset": "fund_portfolio",
+                    "status": "success",
+                },
+            )
+            return result
 
     # ========== VIP API 方法（需要 5000+ 积分）==========
     # VIP API 可以按 period 或 ann_date 批量获取全部股票数据，无需 ts_code

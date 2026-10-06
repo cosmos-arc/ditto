@@ -145,6 +145,26 @@ class MarketFetcher(Protocol):
         """获取 ST 状态变更历史（事件流）."""
         ...
 
+    def fetch_limit_list(
+        self,
+        trade_date: str | None = None,
+        source_ticker: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> pl.DataFrame:
+        """获取涨跌停/炸板名单（#519 事件型，金额元）."""
+        ...
+
+    def fetch_fund_share(
+        self,
+        trade_date: str | None = None,
+        source_ticker: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> pl.DataFrame:
+        """获取基金份额（#522 fd_share 万份）."""
+        ...
+
     def fetch_name_history(
         self,
         ts_code: str | None = None,
@@ -214,6 +234,26 @@ class FundamentalFetcher(Protocol):
 
     def fetch_corporate_actions(self, trade_date: str) -> pl.DataFrame:
         """获取公司行动数据."""
+        ...
+
+    def fetch_fina_indicator(
+        self,
+        trade_date: str | None = None,
+        source_ticker: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> pl.DataFrame:
+        """获取官方口径财务指标（#521，118 列透传，kd=公告日）."""
+        ...
+
+    def fetch_fund_portfolio(
+        self,
+        trade_date: str | None = None,
+        source_ticker: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> pl.DataFrame:
+        """获取基金季度持仓（#522 公告日驱动，kd=公告日）."""
         ...
 
     def fetch_earnings_forecast(
@@ -288,6 +328,66 @@ class CapitalFetcher(Protocol):
         end_date: str | None = None,
     ) -> pl.DataFrame:
         """获取指数每日估值（市值元、股本股）."""
+        ...
+
+    def fetch_moneyflow(
+        self,
+        trade_date: str | None = None,
+        source_ticker: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> pl.DataFrame:
+        """获取个股资金流向（#518 金额万元/量手）."""
+        ...
+
+    def fetch_cyq_perf(
+        self,
+        trade_date: str | None = None,
+        source_ticker: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> pl.DataFrame:
+        """获取每日筹码及胜率（#523）."""
+        ...
+
+    def fetch_hk_hold(
+        self,
+        trade_date: str | None = None,
+        source_ticker: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> pl.DataFrame:
+        """获取沪深港通持股（#520 vol 股/ratio %）."""
+        ...
+
+    def fetch_hsgt_top10(
+        self,
+        trade_date: str | None = None,
+        source_ticker: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> pl.DataFrame:
+        """获取沪深港通十大成交股（#520 金额元）."""
+        ...
+
+    def fetch_top_list(
+        self,
+        trade_date: str | None = None,
+        source_ticker: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> pl.DataFrame:
+        """获取龙虎榜个股明细（#519 金额元，reason 进主键）."""
+        ...
+
+    def fetch_top_inst(
+        self,
+        trade_date: str | None = None,
+        source_ticker: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> pl.DataFrame:
+        """获取龙虎榜席位明细（#519 金额元）."""
         ...
 
 

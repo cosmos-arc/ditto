@@ -1,0 +1,32 @@
+# 官方口径财务指标 DQ 规则（#521）
+# 单位：每股指标元/股、比率 %、绝对额元（118 列透传）。
+# 披露锚=ann_date（kd），修订以新公告日版本追加；与自算三表衍生指标
+# 是对照关系（比例比较口径参照 #476 先例），不是替换。
+dataset: fina_indicator
+description: "fina_indicator 数据质量检查规则"
+
+technical:
+  - rule: not_null
+    columns: [instrument_id, report_date, knowledge_date]
+    message: "必填字段不能为空"
+
+  - rule: unique
+    columns: [instrument_id, report_date, knowledge_date]
+    message: "主键 (instrument_id, report_date, knowledge_date) 重复"
+
+  - rule: foreign_key
+    column: instrument_id
+    reference: instrument.instrument_id
+    message: "Instrument ID 不存在于证券主表"
+
+  - rule: type_check
+    columns:
+      instrument_id: int
+      report_date: date
+      knowledge_date: date
+      eps: float
+      roe: float
+    message: "字段类型不匹配"
+
+# 业务类: 业务规则（写入时警告但不阻断）
+business: []

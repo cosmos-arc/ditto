@@ -131,3 +131,29 @@ class FundamentalStore:
             raise ValueError("earnings_express writer not configured")
         result = writer.write(df, year, on_duplicate=on_duplicate)
         return result.added + result.updated
+
+    def save_fina_indicator(
+        self,
+        df: pl.DataFrame,
+        year: int,
+        on_duplicate: OnDuplicate = OnDuplicate.ERROR,
+    ) -> int:
+        """Save official financial-indicator rows (#521, 118 列透传)."""
+        writer = self._write_ports.fina_indicator
+        if writer is None:
+            raise ValueError("fina_indicator writer not configured")
+        result = writer.write(df, year, on_duplicate=on_duplicate)
+        return result.added + result.updated
+
+    def save_fund_portfolio(
+        self,
+        df: pl.DataFrame,
+        year: int,
+        on_duplicate: OnDuplicate = OnDuplicate.ERROR,
+    ) -> int:
+        """Save fund quarterly holding rows (#522, 公告日驱动)."""
+        writer = self._write_ports.fund_portfolio
+        if writer is None:
+            raise ValueError("fund_portfolio writer not configured")
+        result = writer.write(df, year, on_duplicate=on_duplicate)
+        return result.added + result.updated

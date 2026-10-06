@@ -10,6 +10,9 @@ from ditto_data.sources.tushare.adapters.base import BaseTushareAdapter
 from ditto_data.sources.tushare.adapters.capital_corporate import (
     CapitalCorporateTushareAdapter,
 )
+from ditto_data.sources.tushare.adapters.capital_flows import (
+    CapitalFlowsTushareAdapter,
+)
 from ditto_data.sources.tushare.adapters.capital_index import (
     CapitalIndexTushareAdapter,
 )
@@ -51,6 +54,7 @@ class CapitalTushareAdapter(BaseTushareAdapter):
         self._market = CapitalMarketTushareAdapter(_client=self._client)
         self._index = CapitalIndexTushareAdapter(_client=self._client)
         self._corporate = CapitalCorporateTushareAdapter(_client=self._client)
+        self._flows = CapitalFlowsTushareAdapter(_client=self._client)
         logger.debug(
             f"{self.__class__.__name__} sub-adapters initialized",
             event="tushare_capital_facade_init",
@@ -129,6 +133,98 @@ class CapitalTushareAdapter(BaseTushareAdapter):
         return self._market.fetch_pledge_ratio(
             ts_code=ts_code,
             report_date=report_date,
+            start_date=start_date,
+            end_date=end_date,
+        )
+
+    # --- flows: moneyflow / cyq_perf / hk_hold / hsgt_top10 / top_list / top_inst ---
+
+    def fetch_moneyflow(
+        self,
+        ts_code: str | None = None,
+        trade_date: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> pl.DataFrame:
+        """获取个股资金流向（金额万元/量手，#518）."""
+        return self._flows.fetch_moneyflow(
+            ts_code=ts_code,
+            trade_date=trade_date,
+            start_date=start_date,
+            end_date=end_date,
+        )
+
+    def fetch_cyq_perf(
+        self,
+        ts_code: str | None = None,
+        trade_date: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> pl.DataFrame:
+        """获取每日筹码及胜率（#523）."""
+        return self._flows.fetch_cyq_perf(
+            ts_code=ts_code,
+            trade_date=trade_date,
+            start_date=start_date,
+            end_date=end_date,
+        )
+
+    def fetch_hk_hold(
+        self,
+        ts_code: str | None = None,
+        trade_date: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> pl.DataFrame:
+        """获取沪深港通持股（#520）."""
+        return self._flows.fetch_hk_hold(
+            ts_code=ts_code,
+            trade_date=trade_date,
+            start_date=start_date,
+            end_date=end_date,
+        )
+
+    def fetch_hsgt_top10(
+        self,
+        ts_code: str | None = None,
+        trade_date: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> pl.DataFrame:
+        """获取沪深港通十大成交股（#520）."""
+        return self._flows.fetch_hsgt_top10(
+            ts_code=ts_code,
+            trade_date=trade_date,
+            start_date=start_date,
+            end_date=end_date,
+        )
+
+    def fetch_top_list(
+        self,
+        ts_code: str | None = None,
+        trade_date: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> pl.DataFrame:
+        """获取龙虎榜个股明细（#519）."""
+        return self._flows.fetch_top_list(
+            ts_code=ts_code,
+            trade_date=trade_date,
+            start_date=start_date,
+            end_date=end_date,
+        )
+
+    def fetch_top_inst(
+        self,
+        ts_code: str | None = None,
+        trade_date: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> pl.DataFrame:
+        """获取龙虎榜席位明细（#519）."""
+        return self._flows.fetch_top_inst(
+            ts_code=ts_code,
+            trade_date=trade_date,
             start_date=start_date,
             end_date=end_date,
         )

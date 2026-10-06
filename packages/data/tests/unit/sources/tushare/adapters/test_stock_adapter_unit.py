@@ -256,3 +256,46 @@ class TestStockAdapterFetchLimitKnowledgeDate:
         row = frame.row(0, named=True)
         assert row["trade_date"] == date(2024, 1, 2)
         assert row["knowledge_date"] == date(2024, 1, 3)
+
+
+@pytest.mark.unit
+class TestLimitListAdapter:
+    """#519 limit_list_d：事件型映射（limit→limit_type，元单位透传）."""
+
+    def test_fetch_limit_list_mapping(self) -> None:
+        from ditto_data.sources.tushare.adapters.stock import StockTushareAdapter
+
+        client = MagicMock()
+        client.query.return_value = pl.DataFrame(
+            {
+                "trade_date": ["20260930"],
+                "ts_code": ["000011.SZ"],
+                "industry": ["房地产开发"],
+                "name": ["深物业A"],
+                "close": [12.24],
+                "pct_chg": [9.97],
+                "amount": [971267920.0],
+                "limit_amount": [None],
+                "float_mv": [6444060646.32],
+                "total_mv": [7294784037.12],
+                "turnover_ratio": [17.07],
+                "fd_amount": [40166967.0],
+                "first_time": ["93145"],
+                "last_time": ["131124"],
+                "open_times": [2],
+                "up_stat": ["3/3"],
+                "limit_times": [3.0],
+                "limit": ["U"],
+            }
+        )
+        adapter = StockTushareAdapter(_client=client)
+
+        frame = adapter.fetch_limit_list(trade_date="2026-09-30")
+
+        assert client.query.call_args.kwargs["api_name"] == "limit_list_d"
+        row = frame.row(0, named=True)
+        assert row["limit_type"] == "U"
+        assert row["pct_change"] == pytest.approx(9.97)
+        assert row["open_times"] == 2
+        assert row["first_time"] == "93145"
+        assert row["knowledge_date"] == date(2026, 10, 1)
