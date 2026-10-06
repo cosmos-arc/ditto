@@ -596,7 +596,9 @@ class StockTushareAdapter(BaseTushareAdapter):
             - published_at: 公告日期 (Date)，NULL 表示 provider 未提供
 
         Raises:
-            SourceFetchError: If fetch fails.
+            SourceFetchError: If fetch fails, or if the response contains
+                duplicate (ts_code, start_date) rows（#515 fail closed，
+                区间链 ill-defined 时拒绝产出）.
 
         """
         logger.info(
@@ -651,18 +653,48 @@ class StockTushareAdapter(BaseTushareAdapter):
                 )
             )
 
-            row_count = len(result)
-            logger.info(
-                "Tushare name change history fetched",
-                event="tushare_namechange_fetch_complete",
-                row_count=row_count,
+        # #507 C4：上游实测存在同 (ts_code,start_date) 多条记录（同 ann_date
+        # 重复披露）。区间表依赖 sort(ts_code,start_date)+shift(1) 推 old_name，
+        # 键重复时行序由服务端决定、old_name 链不确定——fail closed，不静默
+        # 接受链外数据（否则下游按 (source_ticker,changed_date) 幂等上写也会
+        # 因键重复产生不可重放的写入结果）。
+        duplicate_keys = (
+            result.group_by("source_ticker", "changed_date")
+            .len()
+            .filter(pl.col("len") > 1)
+        )
+        if not duplicate_keys.is_empty():
+            sample = sorted(
+                f"{ticker}@{day}"
+                for ticker, day in duplicate_keys.select(
+                    "source_ticker", "changed_date"
+                ).iter_rows()
             )
-            Metrics.data_records.add(
-                row_count,
-                {"source": "tushare", "dataset": "namechange", "status": "success"},
+            raise SourceFetchError(
+                message=(
+                    "Tushare namechange returned duplicate "
+                    f"(ts_code, start_date) rows ({duplicate_keys.height} key(s)); "
+                    f"interval chain is ill-defined, sample: {sample[:5]} (#515)"
+                ),
+                source="tushare",
+                details={
+                    "dataset": "namechange",
+                    "duplicate_key_count": duplicate_keys.height,
+                },
             )
 
-            return result
+        row_count = len(result)
+        logger.info(
+            "Tushare name change history fetched",
+            event="tushare_namechange_fetch_complete",
+            row_count=row_count,
+        )
+        Metrics.data_records.add(
+            row_count,
+            {"source": "tushare", "dataset": "namechange", "status": "success"},
+        )
+
+        return result
 
     # ==================== Private Methods for Stock Status ====================
 

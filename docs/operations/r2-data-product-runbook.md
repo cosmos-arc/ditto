@@ -220,6 +220,11 @@ NDX；IXIC 是纳斯达克综合指数，不能替代纳斯达克 100（跨境�
   `global_return_1d` 恒为 None 并计入 declared_missing_inputs。
 - 发布时刻官方不可知：published_at/available_at 恒为实际采集时刻；
   close_time 仅是 event_time 会话元数据（标 approx 的为最佳已知近似）。
+- **调度语义（#507 H3）**：欧美指数的当日行情要等当地收盘（北京时间
+  凌晨/早上）后才可得——白天跑日更会缺最新日。这不是错误：knowledge_date
+  =采集日使其 fail-safe（不会把隔日数据当当日），缺的行由下一次摄取自然
+  补齐；操作上把全球指数补数安排在午后（欧美均已收盘）即可取到前一当地
+  交易日全量。
 - 2026-10-05 实测可得区间：主流指数 1990 起；XIN9 2004-07、HKAH/AS51
   2007、SPTSX 2001、CSX5P 1998、CKLSE 1995、HKTECH 2020-07、
   RTS 2020-01 起；RUT/RTS/XIN9/HKAH/HKTECH vol 缺失率 100%，

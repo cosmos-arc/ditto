@@ -75,6 +75,13 @@ statistical:
     lookback_days: 5
     message: "最近 5 个交易日存在缺失数据"
 
+  # daily × suspend_d 矛盾（#507 C1）：同日 is_suspended=True 却 volume>0
+  # （#1797 实测形态）。伴生帧 stock_status 由 patrol 在 stock_daily 检查时
+  # 自动取数；只告警不裁决（两接口独立更新，哪侧正确需人工判定）。
+  - rule: suspension_contradiction
+    name: suspended_but_traded
+    message: "停牌标记与成交矛盾（is_suspended=True 且 volume>0）"
+
   - rule: stale_price
     name: price_frozen
     column: close

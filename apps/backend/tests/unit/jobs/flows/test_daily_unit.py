@@ -98,6 +98,17 @@ def test_sync_runner_ingests_only_explicit_dependency_closed_scope(
         "run_dq_batch_check",
         return_value={"trade_date": "2026-07-16", "results_by_dataset": {}},
     )
+    mocker.patch.object(
+        daily_module,
+        "run_dq_reconcile_adj_factor",
+        return_value={
+            "trade_date": "2026-07-16",
+            "dataset": "adj_factor",
+            "passed": True,
+            "skipped": True,
+            "skip_reason": "no_adjustment_events",
+        },
+    )
 
     result = daily_module.run_daily_ingestion(
         trade_date="2026-07-16",
@@ -172,6 +183,17 @@ def test_sync_runner_uses_plain_business_functions_without_prefect_entrypoints(
             },
         },
     )
+    reconcile = mocker.patch.object(
+        daily_module,
+        "run_dq_reconcile_adj_factor",
+        return_value={
+            "trade_date": "2026-07-16",
+            "dataset": "adj_factor",
+            "passed": True,
+            "skipped": True,
+            "skip_reason": "no_adjustment_events",
+        },
+    )
     prefect_check = mocker.patch.object(daily_module, "check_trading_day")
     prefect_dq = mocker.patch.object(daily_module, "dq_batch_check")
     prefect_t0 = mocker.patch.object(daily_module, "create_ingest_task_t0")
@@ -183,6 +205,13 @@ def test_sync_runner_uses_plain_business_functions_without_prefect_entrypoints(
     )
 
     assert result["skipped"] is False
+    assert result["reconcile_results"] == {
+        "trade_date": "2026-07-16",
+        "dataset": "adj_factor",
+        "passed": True,
+        "skipped": True,
+        "skip_reason": "no_adjustment_events",
+    }
     assert result["summary"] == {
         "trade_date": "2026-07-16",
         "total_tasks": 2,
@@ -228,6 +257,7 @@ def test_sync_runner_uses_plain_business_functions_without_prefect_entrypoints(
     prefect_dq.assert_not_called()
     prefect_t0.assert_not_called()
     prefect_t1.assert_not_called()
+    reconcile.assert_called_once_with("2026-07-16")
 
 
 def test_sync_runner_second_same_day_run_keeps_authoritative_dq_evidence(
@@ -376,6 +406,17 @@ def test_sync_runner_second_same_day_run_keeps_authoritative_dq_evidence(
         "run_dq_batch_check",
         side_effect=dq_batch_module.run_dq_batch_check,
     )
+    mocker.patch.object(
+        daily_module,
+        "run_dq_reconcile_adj_factor",
+        return_value={
+            "trade_date": "2026-07-16",
+            "dataset": "adj_factor",
+            "passed": True,
+            "skipped": True,
+            "skip_reason": "no_adjustment_events",
+        },
+    )
 
     first = daily_module.run_daily_ingestion("2026-07-16")
     second = daily_module.run_daily_ingestion("2026-07-16")
@@ -406,7 +447,23 @@ def mock_daily_dq_batch_check(mocker: MockerFixture):
     }
     mock_task = mocker.Mock()
     mock_task.submit.return_value = mock_future
-    return mocker.patch("ditto_apps.jobs.flows.daily.dq_batch_check", mock_task)
+    mocker.patch("ditto_apps.jobs.flows.daily.dq_batch_check", mock_task)
+    # 例行 adj_factor 对账 task（#515 A3）：同样替换为轻量 future
+    reconcile_future = mocker.Mock()
+    reconcile_future.result.return_value = {
+        "trade_date": "2024-01-02",
+        "dataset": "adj_factor",
+        "passed": True,
+        "issue_count": 0,
+        "skipped": True,
+        "skip_reason": "no_adjustment_events",
+    }
+    reconcile_task = mocker.Mock()
+    reconcile_task.submit.return_value = reconcile_future
+    return mocker.patch(
+        "ditto_apps.jobs.flows.daily.dq_reconcile_adj_factor",
+        reconcile_task,
+    )
 
 
 @pytest.mark.unit

@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
-from datetime import UTC, date, datetime
+from datetime import date, datetime
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 import polars as pl
 import typer
@@ -55,7 +56,10 @@ def _fuyao_source(container: Container) -> FuyaoSource:
 
 
 def _dump_dest(data_root: Path, kind: str) -> Path:
-    stamp = datetime.now(UTC).strftime("%Y%m%d")
+    # 北京日期命名：陈旧守卫（protocol_adapters）与交易日语义同用北京日界；
+    # 早前 UTC 命名会让北京 00:00-07:59 生成的当日 dump 被误判为陈旧
+    # （#515 correctness F4）。字典序 = 时间序不变。
+    stamp = datetime.now(ZoneInfo("Asia/Shanghai")).strftime("%Y%m%d")
     return Path(data_root) / "fuyao" / "dumps" / kind / f"{stamp}.parquet"
 
 

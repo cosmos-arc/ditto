@@ -12,6 +12,8 @@ from ditto_application.processes.selection.assemble_facts import (
     AssembleSelectionFacts,
     AssembleSelectionFactsRequest,
     SnapshotWindow,
+    _in_unrestricted_window,
+    _unrestricted_sessions,
 )
 from ditto_application.processes.selection.facade import (
     SelectionFactorWeightDraft,
@@ -1131,6 +1133,51 @@ def test_ipo_unrestricted_sessions_are_not_limited() -> None:
     assert request.instruments[0].listing_days == 0
     # One session since listing is inside the main-board no-limit window.
     assert request.instruments[0].limit_state == "normal"
+
+
+def test_pre_reform_listings_keep_price_band() -> None:
+    """改革前 IPO 首日起即有涨跌幅，不适用 5 日无涨跌幅窗口（#507 H4）.
+
+    历史交叉日（如 2021 年研究快照）上新上市的创业板/主板标的，真实规则
+    是首日 44%、次日起 10% 带宽——若误套无涨跌幅窗口，触及带宽的行权日
+    会被标成 normal 而非 limit_up。
+    """
+    # 改革前上市：不进无涨跌幅窗口
+    assert _unrestricted_sessions("300001.SZ", date(2020, 1, 6)) is None
+    assert _unrestricted_sessions("000001.SZ", date(2022, 6, 1)) is None
+    assert _unrestricted_sessions("600001.SH", date(2021, 3, 1)) is None
+    # 核准制收尾期主板新股（规则 2023-02-17 发布、首批注册制 4-10 上市，
+    # 之间按核准制带宽发行，如 603061 2023-03-03 上市）不进窗口
+    assert _unrestricted_sessions("603061.SH", date(2023, 3, 3)) is None
+    # 改革当日及之后上市：5 日窗口（北交所 1 日）；主板门控=首批注册制
+    # 上市日 2023-04-10（601061 为当日首批），非规则发布日 02-17
+    assert _unrestricted_sessions("300001.SZ", date(2020, 8, 24)) == 5
+    assert _unrestricted_sessions("601061.SH", date(2023, 4, 10)) == 5
+    assert _unrestricted_sessions("000001.SZ", date(2023, 4, 10)) == 5
+    # 科创板/北交所开市即带规则，无改革前形态
+    assert _unrestricted_sessions("688001.SH", date(2019, 7, 22)) == 5
+    assert _unrestricted_sessions("830001.BJ", date(2021, 11, 15)) == 1
+
+    # 窗口判定：改革前一日上市、首会话在交叉日的创业板标的不进窗口
+    assert (
+        _in_unrestricted_window(
+            raw_ticker="300001.SZ",
+            list_date=date(2020, 8, 21),
+            cross_date=date(2020, 8, 24),
+            ipo_sessions=[date(2020, 8, 24)],
+        )
+        is False
+    )
+    # 改革当日上市、两个会话都在窗内的标的进窗口
+    assert (
+        _in_unrestricted_window(
+            raw_ticker="300001.SZ",
+            list_date=date(2020, 8, 24),
+            cross_date=date(2020, 8, 25),
+            ipo_sessions=[date(2020, 8, 24), date(2020, 8, 25)],
+        )
+        is True
+    )
 
 
 @pytest.mark.pit

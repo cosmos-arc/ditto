@@ -1277,7 +1277,17 @@ def _listing_days(list_date: object, as_of_date: date) -> int | None:
 
 
 # Registration-reform rules: every board trades its first five sessions
-# after listing without a price limit.
+# after listing without a price limit — but only for listings on/after the
+# board's no-limit rule came into force（#507 H4）. Pre-reform IPOs kept a
+# price band from day one（主板/创业板首日 44%、次日起 10%），必须走常规
+# 带宽分类，不能套用 5 日无涨跌幅窗口。
+_STAR_LAUNCH = date(2019, 7, 22)  # 科创板开市即带前 5 日无涨跌幅
+_CHINEXT_REFORM = date(2020, 8, 24)  # 创业板注册制改革（存量注册制前 IPO 有带宽）
+_BJ_LAUNCH = date(2021, 11, 15)  # 北交所开市即带首日无涨跌幅
+# 全面注册制规则 2023-02-17 发布施行，但首批注册制主板新股 2023-04-10
+# 才上市；此前核准制批文的主板新股（如 603061 2023-03-03）仍按首日
+# ±44%/次日起 ±10% 带宽发行——门控用首批上市日，不用规则发布日。
+_MAINBOARD_REFORM = date(2023, 4, 10)
 _UNRESTRICTED_SESSIONS = 5
 _BJ_UNRESTRICTED_SESSIONS = 1
 _YOUNG_LISTING_CALENDAR_DAYS = 30
@@ -1291,28 +1301,40 @@ def _in_unrestricted_window(
     ipo_sessions: Sequence[date],
 ) -> bool:
     """Derive the IPO no-limit window from pre-fetched trading sessions."""
-    sessions = _unrestricted_sessions(raw_ticker)
-    if sessions is None or not isinstance(list_date, date):
+    if not isinstance(list_date, date):
         return False
-    if not ipo_sessions:
+    sessions = _unrestricted_sessions(raw_ticker, list_date)
+    if sessions is None or not ipo_sessions:
         return False
     count = len([value for value in ipo_sessions if list_date <= value <= cross_date])
     return 1 <= count <= sessions
 
 
-def _unrestricted_sessions(source_ticker: object) -> int | None:
+# 板块 → （无涨跌幅规则生效日，无涨跌幅会话数）；主板走默认分支
+_BOARD_NO_LIMIT_RULES: tuple[tuple[tuple[str, ...], date, int], ...] = (
+    (("4", "8", "92"), _BJ_LAUNCH, _BJ_UNRESTRICTED_SESSIONS),
+    (("300", "301"), _CHINEXT_REFORM, _UNRESTRICTED_SESSIONS),
+    (("688", "689"), _STAR_LAUNCH, _UNRESTRICTED_SESSIONS),
+)
+
+
+def _unrestricted_sessions(source_ticker: object, list_date: date) -> int | None:
     """
     Board-specific count of post-listing sessions without price limits.
 
     Main boards, ChiNext and STAR trade five unrestricted sessions after
-    listing; Beijing-exchange listings are unrestricted only on the
-    listing session itself.
+    listing; Beijing-exchange listings are unrestricted only on the listing
+    session itself. Returns ``None`` when the listing predates the board's
+    no-limit rule（改革前 IPO 首日起即有涨跌幅，不适用无涨跌幅窗口）.
     """
     if not isinstance(source_ticker, str):
         return None
     ticker = source_ticker.partition(".")[0]
-    if ticker.startswith(("4", "8", "92")):
-        return _BJ_UNRESTRICTED_SESSIONS
+    for prefixes, effective_from, sessions in _BOARD_NO_LIMIT_RULES:
+        if ticker.startswith(prefixes):
+            return sessions if list_date >= effective_from else None
+    if list_date < _MAINBOARD_REFORM:
+        return None
     return _UNRESTRICTED_SESSIONS
 
 

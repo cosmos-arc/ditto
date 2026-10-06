@@ -153,6 +153,85 @@ class TestQualityPatrolServiceContract:
         )
         mock_market_service.find_bars.assert_not_called()
 
+    def test_stock_daily_fetches_stock_status_as_consistency_reference(
+        self,
+        mock_statistical_engine: MagicMock,
+        mock_market_service: MagicMock,
+        mock_metadata_service: MagicMock,
+    ) -> None:
+        """stock_daily 的 L3 检查应取同日 stock_status 作伴生帧（#507 C1）."""
+        mock_statistical_engine.has_statistical_rules.return_value = True
+        status_frame = pl.DataFrame(
+            {
+                "instrument_id": [1],
+                "trade_date": ["2026-07-16"],
+                "is_suspended": [False],
+            }
+        )
+        mock_market_service.get_stock_status.return_value = status_frame
+        service = QualityPatrolService(
+            engine=mock_statistical_engine,
+            market_facade=mock_market_service,
+            metadata_facade=mock_metadata_service,
+        )
+
+        service.check_dataset(dataset="stock_daily", trade_date="2026-07-16")
+
+        mock_market_service.get_stock_status.assert_called_once_with(
+            start="2026-07-16",
+            end="2026-07-16",
+            allow_experimental_data=True,
+        )
+        assert (
+            mock_statistical_engine.check_statistical.call_args.kwargs["reference"]
+            is status_frame
+        )
+
+    def test_non_stock_daily_dataset_passes_no_reference(
+        self,
+        mock_statistical_engine: MagicMock,
+        mock_market_service: MagicMock,
+        mock_metadata_service: MagicMock,
+    ) -> None:
+        """非 stock_daily 数据集不取 stock_status 伴生帧."""
+        mock_statistical_engine.has_statistical_rules.return_value = True
+        service = QualityPatrolService(
+            engine=mock_statistical_engine,
+            market_facade=mock_market_service,
+            metadata_facade=mock_metadata_service,
+        )
+
+        service.check_dataset(dataset="etf_daily", trade_date="2026-07-16")
+
+        mock_market_service.get_stock_status.assert_not_called()
+        assert (
+            mock_statistical_engine.check_statistical.call_args.kwargs.get("reference")
+            is None
+        )
+
+    def test_reference_fetch_failure_skips_contradiction_not_whole_check(
+        self,
+        mock_statistical_engine: MagicMock,
+        mock_market_service: MagicMock,
+        mock_metadata_service: MagicMock,
+    ) -> None:
+        """伴生帧读取失败只跳过矛盾检查，不拖垮整个 stock_daily L3."""
+        mock_statistical_engine.has_statistical_rules.return_value = True
+        mock_market_service.get_stock_status.side_effect = RuntimeError("boom")
+        service = QualityPatrolService(
+            engine=mock_statistical_engine,
+            market_facade=mock_market_service,
+            metadata_facade=mock_metadata_service,
+        )
+
+        result = service.check_dataset(dataset="stock_daily", trade_date="2026-07-16")
+
+        assert result.passed is True
+        assert (
+            mock_statistical_engine.check_statistical.call_args.kwargs.get("reference")
+            is None
+        )
+
     @pytest.mark.parametrize(
         ("dataset", "asset_class"),
         [

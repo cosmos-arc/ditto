@@ -164,6 +164,26 @@ class MarketQueryFacade:
             allow_experimental_data=allow_experimental_data,
         )
 
+    def get_stock_status(
+        self,
+        *,
+        start: str,
+        end: str,
+        allow_experimental_data: bool = False,
+    ) -> pl.DataFrame:
+        """
+        查询股票状态帧（is_suspended/is_st/suspend_timing 等）.
+
+        供质量巡检等内部流程读取 stock_status 伴生数据集（#507 C1 的
+        daily×suspend 矛盾检查）；与行情读取同惯例走 catalog 成熟度门。
+        """
+        if not self.allows_suspension_evidence(
+            allow_experimental_data=allow_experimental_data,
+        ):
+            msg = "stock_status query requires experimental dataset maturity"
+            raise AppQueryError(msg)
+        return self._service.get_stock_status(start, end)
+
     def get_constituents(
         self,
         index_id: int,

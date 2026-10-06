@@ -38,6 +38,10 @@ from ditto_apps.jobs.tasks import (
     dq_batch_check,
 )
 from ditto_apps.jobs.tasks.dq_batch import run_dq_batch_check
+from ditto_apps.jobs.tasks.dq_reconcile import (
+    dq_reconcile_adj_factor,
+    run_dq_reconcile_adj_factor,
+)
 from ditto_apps.jobs.tasks.t0_meta import run_ingest_dataset
 from ditto_apps.registry import create_ingestion_bundle
 
@@ -119,6 +123,7 @@ def _skipped_ingestion_result(trade_date: str) -> dict[str, object]:
         "t0_results": {},
         "t1_results": {},
         "dqc_results": {},
+        "reconcile_results": {},
         "summary": {
             "trade_date": trade_date,
             "total_tasks": 0,
@@ -135,6 +140,7 @@ def _completed_ingestion_result(
     t0_results: dict[str, dict[str, object]],
     t1_results: dict[str, dict[str, object]],
     dqc_results: dict[str, Any],
+    reconcile_results: dict[str, Any],
 ) -> dict[str, object]:
     """由同一业务结果构造同步与 Prefect 返回契约。"""
     all_results = {**t0_results, **t1_results}
@@ -146,6 +152,7 @@ def _completed_ingestion_result(
         "t0_results": t0_results,
         "t1_results": t1_results,
         "dqc_results": dqc_results,
+        "reconcile_results": reconcile_results,
         "summary": {
             "trade_date": trade_date,
             "total_tasks": len(all_results),
@@ -194,11 +201,13 @@ def run_daily_ingestion(
         market_wide=True,
         ingestion_results=ingestion_results,
     )
+    reconcile_results = run_dq_reconcile_adj_factor(trade_date)
     return _completed_ingestion_result(
         trade_date=trade_date,
         t0_results=t0_results,
         t1_results=t1_results,
         dqc_results=dqc_results,
+        reconcile_results=reconcile_results,
     )
 
 
@@ -310,10 +319,19 @@ def daily_ingestion_flow(
         dqc_future.result(),  # pyright: ignore[reportUnknownMemberType]
     )
 
+    # 5.5 例行 adj_factor 跨源对账（#515 A3）：排在 DQC 之后，失败显式
+    # skip 不拖垮摄取链（结果在 reconcile_results 键下报告）
+    reconcile_future: PrefectFuture[dict[str, Any]] = dq_reconcile_adj_factor.submit(  # pyright: ignore[reportCallIssue]
+        trade_date=trade_date,
+        wait_for=[dqc_future],
+    )
+    reconcile_results = cast(dict[str, Any], reconcile_future.result())
+
     # 6. 汇总统计
     return _completed_ingestion_result(
         trade_date=trade_date,
         t0_results=t0_results,
         t1_results=t1_results,
         dqc_results=dqc_results,
+        reconcile_results=reconcile_results,
     )

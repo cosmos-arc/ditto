@@ -122,6 +122,7 @@ class QualityEngine:
         current: pl.DataFrame,
         historical: pl.DataFrame | None = None,
         calendar: pl.DataFrame | None = None,
+        reference: pl.DataFrame | None = None,
     ) -> DQResult:
         """
         Execute statistical class anomaly checks (batch).
@@ -131,6 +132,8 @@ class QualityEngine:
             current: Current data to check
             historical: Historical data for statistical calculations (for zscore)
             calendar: Trading calendar (for completeness check)
+            reference: Companion-dataset frame for cross-dataset consistency
+                rules (e.g. stock_status for suspension_contradiction)
 
         Returns:
             DQResult with statistical class check results
@@ -150,6 +153,7 @@ class QualityEngine:
                 historical=historical,
                 calendar=calendar,
                 rules=dataset_rules.statistical,
+                reference=reference,
             )
             issues.extend(l3_issues)
 

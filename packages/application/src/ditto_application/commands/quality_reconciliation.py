@@ -278,12 +278,40 @@ class ReconcileSourcesHandler:
                 "adj_factor reconciliation requires events source and factor context"
             )
 
+        target = date.fromisoformat(trade_date)
+        allowed_ids = primary_df["instrument_id"].unique().to_list()
+        primary_cmp = derive_factor_ratios(
+            self._adj_factor_context.factor_window(trade_date), target
+        ).filter(pl.col("instrument_id").is_in(allowed_ids))
+
         events = self._secondary_events_source.fetch_adjustment_events(trade_date)
         if events.height == 0:
+            # 零事件区分两种情形（#515 A3，例行调度前提）：
+            # - 主侧当日有因子存量且无变化 → 无除权事件的正常日，通过并
+            #   显式 skip（旧语义一律 failed，例行跑会在无事件日全部误报）；
+            # - 主侧有变化却零事件、或主侧当日无存量帧（缺数日不可证为
+            #   正常日）→ 保持零交集不可通过，fail-closed。
+            if not primary_df.is_empty() and primary_cmp.is_empty():
+                logger.info(
+                    "No adjustment events and no primary factor changes",
+                    event="reconciliation_no_events_normal_day",
+                    trade_date=trade_date,
+                    dataset=dataset,
+                )
+                return ReconciliationResult(
+                    trade_date=trade_date,
+                    dataset=dataset,
+                    passed=True,
+                    issue_count=0,
+                    skipped=True,
+                    skip_reason="no_adjustment_events",
+                )
             logger.warning(
-                "No secondary adjustment events found for comparison",
+                "Primary factor changes without secondary adjustment events",
                 event="reconciliation_no_secondary",
                 trade_date=trade_date,
+                primary_changed=primary_cmp.height,
+                primary_rows=primary_df.height,
             )
             return ReconciliationResult(
                 trade_date=trade_date,
@@ -291,7 +319,7 @@ class ReconcileSourcesHandler:
                 passed=False,
                 issue_count=1,
                 comparable=False,
-                primary_count=primary_df.height,
+                primary_count=primary_cmp.height,
                 secondary_count=0,
             )
         events = self._resolve_secondary_identities(events, trade_date)
@@ -302,17 +330,12 @@ class ReconcileSourcesHandler:
 
         # 黄金集（或当日主源帧）限定比较范围：与 stock_daily 路径的
         # 过滤语义一致，未经允许的事件/因子变化行不参与本次对账。
-        allowed_ids = primary_df["instrument_id"].unique().to_list()
         events = events.filter(pl.col("instrument_id").is_in(allowed_ids))
         if events.is_empty():
             return self._zero_intersection_result(
                 trade_date, dataset, primary_df.height, 0
             )
 
-        target = date.fromisoformat(trade_date)
-        primary_cmp = derive_factor_ratios(
-            self._adj_factor_context.factor_window(trade_date), target
-        ).filter(pl.col("instrument_id").is_in(allowed_ids))
         secondary_cmp = derive_event_adjustment_ratios(
             events, self._adj_factor_context.previous_closes(trade_date)
         )

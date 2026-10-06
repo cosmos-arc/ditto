@@ -136,3 +136,86 @@ class TestStockAdapterFetchMutualExclusiveParams:
                 start_date="",
                 end_date="",
             )
+
+
+@pytest.mark.unit
+class TestStockAdapterNameHistory:
+    """测试 fetch_name_history 区间链与 (ts_code,start_date) 唯一性断言."""
+
+    @staticmethod
+    def _response(rows: dict[str, list[str | None]]) -> pl.DataFrame:
+        # 真实 client 返回全 String 帧；显式 dtype 避免全 None 列被推断为 Null
+        return pl.DataFrame(
+            {
+                "ts_code": pl.Series(rows["ts_code"], dtype=pl.String),
+                "name": pl.Series(rows["name"], dtype=pl.String),
+                "start_date": pl.Series(rows["start_date"], dtype=pl.String),
+                "end_date": pl.Series(rows.get("end_date"), dtype=pl.String),
+                "change_reason": pl.Series(rows.get("change_reason"), dtype=pl.String),
+                "ann_date": pl.Series(rows.get("ann_date"), dtype=pl.String),
+            }
+        )
+
+    def test_unique_rows_build_interval_chain(self) -> None:
+        """唯一键输入应产出正确 old_name 区间链（相邻更早区间的名称）."""
+        from ditto_data.sources.tushare.adapters.stock import StockTushareAdapter
+
+        mock_client = MagicMock()
+        mock_client.query.return_value = self._response(
+            {
+                "ts_code": ["000001.SZ", "000001.SZ", "000002.SZ"],
+                "name": ["深发展", "平安银行", "万科A"],
+                "start_date": ["20100101", "20120801", "19930101"],
+                "end_date": ["20120731", None, None],
+                "change_reason": [None, None, None],
+                "ann_date": [None, None, None],
+            }
+        )
+        adapter = StockTushareAdapter(_client=mock_client)
+
+        result = adapter.fetch_name_history()
+
+        assert result.height == 3
+        chain = result.filter(pl.col("source_ticker") == "000001.SZ").sort(
+            "changed_date"
+        )
+        assert chain["old_name"].to_list() == [None, "深发展"]
+        assert chain["new_name"].to_list() == ["深发展", "平安银行"]
+        # 其他标的的记录不串链（over("ts_code") 分组）
+        assert result.filter(pl.col("source_ticker") == "000002.SZ")[
+            "old_name"
+        ].to_list() == [None]
+
+    def test_duplicate_start_date_fails_closed(self) -> None:
+        """同 (ts_code,start_date) 双记录（#1932 实测形态）应 fail closed."""
+        from ditto_data.sources.base import SourceFetchError
+        from ditto_data.sources.tushare.adapters.stock import StockTushareAdapter
+
+        mock_client = MagicMock()
+        mock_client.query.return_value = self._response(
+            {
+                "ts_code": ["000001.SZ", "000001.SZ"],
+                "name": ["平安银行", "平安银行股份有限公司"],
+                "start_date": ["20120801", "20120801"],
+                "end_date": [None, None],
+                "change_reason": [None, None],
+                "ann_date": ["20120801", "20120801"],
+            }
+        )
+        adapter = StockTushareAdapter(_client=mock_client)
+
+        with pytest.raises(SourceFetchError, match=r"duplicate.*start_date"):
+            adapter.fetch_name_history()
+
+    def test_empty_response_returns_empty_frame(self) -> None:
+        """空响应契约保持：返回带 schema 的空帧."""
+        from ditto_data.sources.tushare.adapters.stock import StockTushareAdapter
+
+        mock_client = MagicMock()
+        mock_client.query.return_value = pl.DataFrame()
+        adapter = StockTushareAdapter(_client=mock_client)
+
+        result = adapter.fetch_name_history()
+
+        assert result.is_empty()
+        assert "changed_date" in result.columns
