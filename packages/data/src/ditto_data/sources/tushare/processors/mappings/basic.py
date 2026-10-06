@@ -74,12 +74,22 @@ STOCK_BASIC_MAPPING = ColumnMapping(
     ),
 )
 
-# 涨跌停价格配置
+# 涨跌停价格配置（#517 接线）：随日行情当日盘后可知，kd=T+1 对齐 DAILY_OHLCV；
+# up_limit/down_limit 单位为元
 STOCK_LIMIT_MAPPING = ColumnMapping(
     rename={"ts_code": "source_ticker"},
     date_columns={"trade_date": "%Y%m%d"},
     float_columns=["up_limit", "down_limit"],
-    output_columns=("source_ticker", "trade_date", "up_limit", "down_limit"),
+    computed_columns={
+        "knowledge_date": pl.col("trade_date") + pl.duration(days=1),
+    },
+    output_columns=(
+        "source_ticker",
+        "trade_date",
+        "knowledge_date",
+        "up_limit",
+        "down_limit",
+    ),
 )
 
 __all__ = [

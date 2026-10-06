@@ -43,6 +43,10 @@ from ditto_data.storage.market.stock.adj import (
     StockAdjFactorWriter,
 )
 from ditto_data.storage.market.stock.bars import StockBarsReader, StockBarsWriter
+from ditto_data.storage.market.stock.limit import (
+    StockLimitReader,
+    StockLimitWriter,
+)
 from ditto_data.storage.market.stock.status import (
     StockStatusReader,
     StockStatusWriter,
@@ -81,6 +85,7 @@ class MarketProvider(Provider):
             instrument=instrument_reader,
             etf_adj=EtfAdjFactorReader(store),
             etf_nav=EtfNavReader(store),
+            stock_limit=StockLimitReader(store),
             index_bars=IndexBarsReader(store),
             global_index_bars=GlobalIndexBarsReader(global_store),
             index_constituent=IndexConstituentReader(data_root=settings.data_root),
@@ -108,6 +113,7 @@ class MarketProvider(Provider):
             etf_status=EtfStatusWriter(store),
             etf_adj=EtfAdjFactorWriter(store),
             etf_nav=EtfNavWriter(store),
+            stock_limit=StockLimitWriter(store),
             index_bars=IndexBarsWriter(store),
             global_index_bars=GlobalIndexBarsWriter(global_store),
             index_constituent=IndexConstituentWriter(data_root=settings.data_root),

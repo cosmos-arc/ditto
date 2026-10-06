@@ -181,6 +181,16 @@ INGESTION_SPECS: dict[_Dataset, DatasetSpec] = {
         task_name="ingest_etf_nav",
         priority=31,
     ),
+    # #517 涨跌停价格（stk_limit）：随日行情盘后可得
+    _Dataset.STOCK_LIMIT: create_t1_config(
+        dataset=_Dataset.STOCK_LIMIT,
+        description="股票涨跌停价格",
+        typical_available_time=time(17, 30),
+        depends_on=[_Dataset.STOCK_BASIC],
+        critical_fields=["instrument_id", "trade_date", "up_limit", "down_limit"],
+        task_name="ingest_stock_limit",
+        priority=32,
+    ),
     _Dataset.BALANCE_SHEET: create_t1_config(
         dataset=_Dataset.BALANCE_SHEET,
         description="资产负债表",

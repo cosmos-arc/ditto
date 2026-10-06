@@ -58,6 +58,9 @@ app.command("nav")(
 # status (股票状态)
 _stock_status_impl = create_daily_command("stock_status", "摄取股票状态")
 
+# limit (涨跌停价格, #517)
+_stock_limit_impl = create_daily_command("stock_limit", "摄取股票涨跌停价格")
+
 # fx (汇率)
 _fx_daily_impl = create_daily_command("fx_daily", "摄取汇率日线数据")
 
@@ -104,6 +107,16 @@ def status(
 ) -> None:
     """摄取股票状态."""
     return _stock_status_impl(ctx, date, force)
+
+
+@app.command("limit")
+def limit(
+    ctx: typer.Context,
+    date: str = typer.Argument(..., help="交易日期 (YYYY-MM-DD)"),
+    force: bool = typer.Option(False, "--force", "-f", help="强制重新摄取"),
+) -> None:
+    """摄取股票涨跌停价格 (#517)."""
+    return _stock_limit_impl(ctx, date, force)
 
 
 @app.command("fx")

@@ -294,3 +294,17 @@ ETF Paper 参考事实：交易限制、交易币种、lot/tick/结算周期/涨
 - **变更**：修改事实 = 编辑声明文件后按新摄取日期重新摄取（追加
   观察行）；已记录证据不改写。账户费用变化须同步更新 `basis` 与
   生效日。
+
+## 14. #517 涨跌停价格（stock_limit）
+
+单位与身份合同：`stock_limit` 来自 Tushare `stk_limit`（2000 分档），
+`up_limit/down_limit` 单位**元**，与前收盘价同单位。PK
+`(instrument_id, trade_date, knowledge_date)`，kd=T+1 对齐日行情口径，
+append-only（涨跌停价由规则推导，源修订以新 kd 行呈现）。主板 2023-04-10
+注册制改革前后涨跌幅规则不同，价格本身不受影响，但跨期比较涨停率等
+衍生指标时须注意规则日（见 #515 改革日门控）。
+
+```bash
+uv run --no-sync ditto ingest market limit 2026-09-30
+uv run --no-sync ditto backfill market limit -s 2024-01-01 -e 2024-12-31 -p 2
+```

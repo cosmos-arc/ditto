@@ -356,6 +356,8 @@ class TestFundamentalAdapterDividendAndActions:
                     "share_type": [],
                 }
             ),
+            # #517：第三路 rights（配股）空响应
+            pl.DataFrame(),
         ]
 
         result = adapter.fetch_corporate_actions(
@@ -364,10 +366,11 @@ class TestFundamentalAdapterDividendAndActions:
             end_date="20240531",
         )
 
-        assert client.query.call_count == 2
+        assert client.query.call_count == 3
         assert [call.kwargs["api_name"] for call in client.query.call_args_list] == [
             "repurchase",
             "share_float",
+            "rights",
         ]
         assert all(
             call.kwargs["start_date"] == "20240501"
@@ -383,7 +386,7 @@ class TestFundamentalAdapterDividendAndActions:
 
         result = adapter.fetch_corporate_actions()
 
-        assert client.query.call_count == 2
+        assert client.query.call_count == 3
         assert all("ts_code" not in call.kwargs for call in client.query.call_args_list)
         assert result.is_empty()
         assert result.columns == [

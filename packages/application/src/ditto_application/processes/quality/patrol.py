@@ -30,7 +30,13 @@ _MARKET_BAR_L3_DATASETS = frozenset(
         "commodity_daily",
     }
 )
-_FACTOR_L3_DATASETS = frozenset({"adj_factor"})
+# 全市场日频参考帧（非 bars）：L3 统计检查按 facade 专读方法取数；
+# 数据集 → MarketQueryFacade 方法名（#517 起 stock_limit 加入）
+_FACTOR_L3_READERS: dict[str, str] = {
+    "adj_factor": "get_adj_factors",
+    "stock_limit": "get_stock_limits",
+}
+_FACTOR_L3_DATASETS = frozenset(_FACTOR_L3_READERS)
 
 
 class QualityPatrolService:
@@ -235,12 +241,13 @@ class QualityPatrolService:
         start_date = start_dt.strftime("%Y-%m-%d")
 
         if dataset in _FACTOR_L3_DATASETS:
-            historical = self._market_facade.get_adj_factors(
+            reader = getattr(self._market_facade, _FACTOR_L3_READERS[dataset])
+            historical = reader(
                 start=start_date,
                 end=trade_date,
                 allow_experimental_data=True,
             )
-            current = self._market_facade.get_adj_factors(
+            current = reader(
                 start=trade_date,
                 end=trade_date,
                 allow_experimental_data=True,

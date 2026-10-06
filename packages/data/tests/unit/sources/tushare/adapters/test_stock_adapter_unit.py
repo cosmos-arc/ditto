@@ -1,5 +1,6 @@
 """Tests for Stock adapter."""
 
+from datetime import date
 from unittest.mock import MagicMock
 
 import polars as pl
@@ -219,3 +220,39 @@ class TestStockAdapterNameHistory:
 
         assert result.is_empty()
         assert "changed_date" in result.columns
+
+
+class TestStockAdapterFetchLimitKnowledgeDate:
+    """#517：stk_limit 接线——mapping 输出带 kd=T+1."""
+
+    def test_fetch_stock_limit_schema_and_knowledge_date(self) -> None:
+        from ditto_data.sources.tushare.adapters.stock import StockTushareAdapter
+
+        client = MagicMock()
+        client.query.return_value = pl.DataFrame(
+            {
+                "ts_code": ["000001.SZ"],
+                "trade_date": ["20240102"],
+                "up_limit": [11.1],
+                "down_limit": [9.1],
+            }
+        )
+        adapter = StockTushareAdapter(_client=client)
+
+        frame = adapter.fetch_stock_limit("2024-01-02")
+
+        client.query.assert_called_once_with(
+            api_name="stk_limit",
+            trade_date="20240102",
+            fields="ts_code,trade_date,up_limit,down_limit",
+        )
+        assert frame.schema == {
+            "source_ticker": pl.String,
+            "trade_date": pl.Date,
+            "knowledge_date": pl.Date,
+            "up_limit": pl.Float64,
+            "down_limit": pl.Float64,
+        }
+        row = frame.row(0, named=True)
+        assert row["trade_date"] == date(2024, 1, 2)
+        assert row["knowledge_date"] == date(2024, 1, 3)

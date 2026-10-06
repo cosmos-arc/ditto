@@ -398,8 +398,9 @@ class TestCapitalTushareAdapterFetchCorporateActions:
             }
         )
 
+        # #517：第三路 rights（配股）也并入公司行为组合；此处给空帧
         mock_client = mocker.Mock()
-        mock_client.query.side_effect = [repurchase, share_float]
+        mock_client.query.side_effect = [repurchase, share_float, pl.DataFrame()]
 
         # Act
         adapter = CapitalTushareAdapter(_client=mock_client)
@@ -441,6 +442,7 @@ class TestCapitalTushareAdapterFetchCorporateActions:
         assert api_names == [
             "repurchase",
             "share_float",
+            "rights",
         ]
 
     def test_fetch_corporate_actions_fills_missing_provider_dates_without_lookahead(
@@ -471,7 +473,7 @@ class TestCapitalTushareAdapterFetchCorporateActions:
             }
         )
         mock_client = mocker.Mock()
-        mock_client.query.side_effect = [repurchase, share_float]
+        mock_client.query.side_effect = [repurchase, share_float, pl.DataFrame()]
 
         result = CapitalTushareAdapter(_client=mock_client).fetch_corporate_actions(
             start_date="20240101",
@@ -498,7 +500,11 @@ class TestCapitalTushareAdapterFetchCorporateActions:
     ) -> None:
         """Both constituent APIs are bounded by the same exact knowledge date."""
         mock_client = mocker.Mock()
-        mock_client.query.side_effect = [pl.DataFrame(), pl.DataFrame()]
+        mock_client.query.side_effect = [
+            pl.DataFrame(),
+            pl.DataFrame(),
+            pl.DataFrame(),
+        ]
 
         CapitalTushareAdapter(_client=mock_client).fetch_corporate_actions(
             ann_date="20240102"
@@ -515,6 +521,14 @@ class TestCapitalTushareAdapterFetchCorporateActions:
                 "fields": (
                     "ts_code,ann_date,float_date,float_share,float_ratio,"
                     "holder_name,share_type"
+                ),
+                "ann_date": "20240102",
+            },
+            {
+                "api_name": "rights",
+                "fields": (
+                    "ts_code,rights_type,ann_date,reg_date,ex_date,"
+                    "rights_price,rights_ratio"
                 ),
                 "ann_date": "20240102",
             },
@@ -631,3 +645,66 @@ class TestCapitalTushareAdapterFetchRightsIssue:
         # Assert
         assert len(result) == 0
         assert "source_ticker" in result.columns
+
+
+class TestCorporateActionsRightsComposition:
+    """#517：rights（配股）并入公司行为组合的归一锁定."""
+
+    def test_rights_row_normalized_with_ex_date_anchor(
+        self, mocker: pytest_mock.MockFixture
+    ) -> None:
+        repurchase = pl.DataFrame()
+        share_float = pl.DataFrame()
+        rights = pl.DataFrame(
+            {
+                "ts_code": ["600000.SH"],
+                "rights_type": ["A"],
+                "ann_date": ["20240101"],
+                "reg_date": ["20240110"],
+                "ex_date": ["20240115"],
+                "rights_price": [5.0],
+                "rights_ratio": [0.3],
+            }
+        )
+        mock_client = mocker.Mock()
+        mock_client.query.side_effect = [repurchase, share_float, rights]
+
+        result = CapitalTushareAdapter(_client=mock_client).fetch_corporate_actions(
+            ann_date="20240101"
+        )
+
+        assert result.height == 1
+        row = result.row(0, named=True)
+        assert row["source_ticker"] == "600000.SH"
+        assert row["action_type"] == "rights_issue"
+        # 行为日=除权日（真实生效锚），知识日=公告日
+        assert row["action_date"] == date(2024, 1, 15)
+        assert row["knowledge_date"] == date(2024, 1, 1)
+        assert "rights_type=A" in row["description"]
+        assert "rights_price=5.0" in row["description"]
+
+    def test_rights_missing_ex_date_falls_back_to_reg_then_ann(
+        self, mocker: pytest_mock.MockFixture
+    ) -> None:
+        rights = pl.DataFrame(
+            {
+                "ts_code": ["600000.SH"],
+                "rights_type": ["A"],
+                "ann_date": ["20240101"],
+                "reg_date": [None],
+                "ex_date": [None],
+                "rights_price": [None],
+                "rights_ratio": [None],
+            }
+        )
+        mock_client = mocker.Mock()
+        mock_client.query.side_effect = [pl.DataFrame(), pl.DataFrame(), rights]
+
+        result = CapitalTushareAdapter(_client=mock_client).fetch_corporate_actions(
+            ann_date="20240101"
+        )
+
+        row = result.row(0, named=True)
+        # 除权/登记日缺失 → 回退公告日，不用未来日期冒充生效锚
+        assert row["action_date"] == date(2024, 1, 1)
+        assert "rights_price=unknown" in row["description"]

@@ -100,14 +100,41 @@ def _normalized_share_float(value: pl.DataFrame) -> pl.DataFrame:
     )
 
 
+def _normalized_rights_issue(value: pl.DataFrame) -> pl.DataFrame:
+    """配股 → corporate_actions 行（#517：rights 接入公司行为组合）."""
+    if value.is_empty():
+        return _empty_corporate_actions()
+    knowledge_date = _date("ann_date")
+    # 行为日取除权日（真实生效锚），缺失回退股权登记日/公告日
+    action_date = pl.coalesce(_date("ex_date"), _date("reg_date"), _date("ann_date"))
+    return value.select(
+        pl.col("ts_code").cast(pl.String).alias("source_ticker"),
+        pl.lit("rights_issue").alias("action_type"),
+        action_date.alias("action_date"),
+        knowledge_date.alias("knowledge_date"),
+        knowledge_date.alias("effective_from"),
+        pl.lit(None, dtype=pl.Date).alias("effective_to"),
+        pl.concat_str(
+            pl.lit("rights_type="),
+            pl.col("rights_type").cast(pl.String).fill_null("unknown"),
+            pl.lit(";rights_price="),
+            pl.col("rights_price").cast(pl.String).fill_null("unknown"),
+            pl.lit(";rights_ratio="),
+            pl.col("rights_ratio").cast(pl.String).fill_null("unknown"),
+        ).alias("description"),
+    )
+
+
 def _normalized_corporate_actions(
     repurchase: pl.DataFrame,
     share_float: pl.DataFrame,
+    rights: pl.DataFrame,
 ) -> pl.DataFrame:
     normalized = pl.concat(
         (
             _normalized_repurchase(repurchase),
             _normalized_share_float(share_float),
+            _normalized_rights_issue(rights),
         )
     )
     if normalized.is_empty():
@@ -169,7 +196,7 @@ class CapitalCorporateTushareAdapter(BaseTushareAdapter):
 
         with tushare_fetch_error_handler(
             "corporate_actions",
-            "repurchase+share_float",
+            "repurchase+share_float+rights",
         ):
             common = {
                 key: value
@@ -194,7 +221,15 @@ class CapitalCorporateTushareAdapter(BaseTushareAdapter):
                 ),
                 **common,
             )
-            result = _normalized_corporate_actions(repurchase, share_float)
+            rights = self._client.query(
+                api_name="rights",
+                fields=(
+                    "ts_code,rights_type,ann_date,reg_date,ex_date,"
+                    "rights_price,rights_ratio"
+                ),
+                **common,
+            )
+            result = _normalized_corporate_actions(repurchase, share_float, rights)
 
             row_count = len(result)
             logger.info(

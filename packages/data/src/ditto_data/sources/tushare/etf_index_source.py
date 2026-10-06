@@ -265,6 +265,27 @@ def fetch_sw_industry(
     return industry.fetch_sw_industry(level)
 
 
+def fetch_csrc_industry(industry: IndustryTushareAdapter) -> pl.DataFrame:
+    """
+    获取证监会行业分类（#517：csrc_industrial 接入 industry_classification）.
+
+    Args:
+        industry: Industry 数据适配器.
+
+    Returns:
+        DataFrame with columns:
+        - industry_id: 行业代码 (e.g., "C39")
+        - industry_name: 行业名称
+        - industry_level: 行业级别 ("L1"/"L2")
+        - source: 固定 "csrc"
+
+    Raises:
+        SourceFetchError: If fetch fails.
+
+    """
+    return industry.fetch_csrc_industry()
+
+
 def fetch_sw_industry_concepts(
     industry: IndustryTushareAdapter,
     asof_date: str | None = None,

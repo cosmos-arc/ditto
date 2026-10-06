@@ -34,6 +34,7 @@ from ditto_data.sources.tushare.adapters.metal import MetalTushareAdapter
 from ditto_data.sources.tushare.adapters.stock import StockTushareAdapter
 from ditto_data.sources.tushare.client import TushareClient
 from ditto_data.sources.tushare.etf_index_source import (
+    fetch_csrc_industry,
     fetch_etf_basic,
     fetch_etf_daily,
     fetch_fund_adj,
@@ -492,6 +493,10 @@ class TushareSource:
     def fetch_sw_industry(self, level: int = 1) -> pl.DataFrame:
         """获取申万行业分类. 委托给 etf_index_source.fetch_sw_industry."""
         return fetch_sw_industry(self._industry, level)
+
+    def fetch_csrc_industry(self) -> pl.DataFrame:
+        """获取证监会行业分类（#517）. 委托给 etf_index_source.fetch_csrc_industry."""
+        return fetch_csrc_industry(self._industry)
 
     def fetch_global_index_daily(
         self,

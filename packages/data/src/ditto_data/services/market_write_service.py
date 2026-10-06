@@ -375,6 +375,42 @@ class MarketWriteService:
         )
         return rows_written
 
+    @traced("market.save_stock_limit")
+    def save_stock_limit(
+        self,
+        df: pl.DataFrame,
+        year: int,
+        on_duplicate: OnDuplicate = OnDuplicate.ERROR,
+    ) -> int:
+        """Save up/down limit prices through the stock-owned writer（#517）."""
+        writer = self._write_ports.stock_limit
+        if writer is None:
+            raise ValueError("stock_limit writer not configured")
+        logger.info(
+            "Writing stock limit prices",
+            event="market_write_stock_limit_start",
+            dataset="stock_limit",
+            year=year,
+            row_count=len(df),
+        )
+        lock_name = f"stock_limit_write_{year}"
+        with self._file_lock.acquire(lock_name, timeout=60.0):
+            write_result = writer.write(
+                df, year, on_duplicate=self._map_on_duplicate(on_duplicate)
+            )
+        rows_written = write_result.added + write_result.updated
+        Metrics.data_records.add(
+            len(df), {"dataset": "stock_limit", "operation": "write"}
+        )
+        logger.info(
+            "Stock limit prices written",
+            event="market_write_stock_limit_complete",
+            dataset="stock_limit",
+            year=year,
+            rows_written=rows_written,
+        )
+        return rows_written
+
     @traced("market.save_stock_status")
     def save_stock_status(
         self,

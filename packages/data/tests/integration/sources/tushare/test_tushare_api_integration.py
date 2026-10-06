@@ -217,19 +217,21 @@ class TestTushareEndToEnd:
         """
         source = TushareSource(settings=_settings_from_env())
 
-        # 1. 测试 stock_limit 获取
+        # 1. 测试 stock_limit 获取（#517：kd=T+1 进 schema）
         stock_limit = source.fetch_stock_limit("2024-01-02")
         assert stock_limit.height > 0, "Stock limit 数据不应为空"
         assert stock_limit.schema == {
             "source_ticker": pl.String,
             "trade_date": pl.Date,
+            "knowledge_date": pl.Date,
             "up_limit": pl.Float64,
             "down_limit": pl.Float64,
         }
 
-        # Verify涨跌停价逻辑
+        # Verify涨跌停价逻辑（kd=T+1 对齐日行情口径）
         limit_dict = stock_limit.to_dicts()
         for row in limit_dict:
+            assert row["knowledge_date"] > row["trade_date"]
             assert row["up_limit"] > row["down_limit"], "涨停价应大于跌停价"
             assert row["up_limit"] > 0, "涨停价应大于 0"
             assert row["down_limit"] > 0, "跌停价应大于 0"

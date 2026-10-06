@@ -117,6 +117,8 @@ _PRIMARY_KEYS: dict[str, tuple[str, ...]] = {
     "adj_factor": ("instrument_id", "trade_date", "knowledge_date"),
     "fund_adj": ("instrument_id", "trade_date", "knowledge_date"),
     "etf_nav": ("instrument_id", "trade_date", "knowledge_date"),
+    # #517 涨跌停价格：日频确定性参考，kd=T+1 对齐日行情口径
+    "stock_limit": ("instrument_id", "trade_date", "knowledge_date"),
     "etf_reference": ("instrument_id", "field", "observed_on"),
     "balance_sheet": (
         "instrument_id",
@@ -222,6 +224,7 @@ _PROVIDER_DATASETS: dict[str, tuple[str, ...]] = {
     "adj_factor": ("tushare:adj_factor",),
     "fund_adj": ("tushare:fund_adj",),
     "etf_nav": ("tushare:fund_nav",),
+    "stock_limit": ("tushare:stk_limit",),
     "etf_reference": ("config:etf_reference",),
     "balance_sheet": ("tushare:balancesheet",),
     "income_statement": ("tushare:income",),
@@ -240,9 +243,13 @@ _PROVIDER_DATASETS: dict[str, tuple[str, ...]] = {
         "fred:commodity_series",
         "tushare:commodity_reference",
     ),
-    "corporate_actions": ("tushare:corporate_actions",),
+    # #517：corporate_actions 组合纳入 rights（配股）
+    "corporate_actions": ("tushare:corporate_actions", "tushare:rights"),
     "index_weight": ("tushare:index_weight",),
-    "industry_classification": ("tushare:index_classify",),
+    "industry_classification": (
+        "tushare:index_classify",
+        "tushare:csrc_industrial",
+    ),
     "industry_mapping": ("tushare:index_member_all",),
     "namechange": ("tushare:namechange",),
     "st_history": ("tushare:namechange",),
@@ -266,6 +273,7 @@ _BOOTSTRAP_CHUNKS: dict[str, BootstrapChunk] = {
     "adj_factor": "month",
     "fund_adj": "month",
     "etf_nav": "month",
+    "stock_limit": "month",
     "etf_reference": "source_defined",
     "balance_sheet": "quarter",
     "income_statement": "quarter",
@@ -312,6 +320,7 @@ _DATASET_DOMAINS: dict[str, str] = {
     "adj_factor": "market",
     "fund_adj": "market",
     "etf_nav": "market",
+    "stock_limit": "market",
     "etf_reference": "metadata",
     "balance_sheet": "fundamental",
     "income_statement": "fundamental",
@@ -372,6 +381,7 @@ _CNY_DATASETS = frozenset(
         "margin_trading",
         "pledge_ratio",
         "corporate_actions",
+        "stock_limit",
         "futures_daily",
         "earnings_forecast",
         "earnings_express",
@@ -386,6 +396,8 @@ _APPEND_ONLY_DATASETS = frozenset(
     {
         "adj_factor",
         "fund_adj",
+        # #517 涨跌停价格：追加观察行（价格由规则推导，源修订以新 kd 行呈现）
+        "stock_limit",
         "balance_sheet",
         "income_statement",
         "cash_flow",
@@ -489,6 +501,7 @@ def _partition_keys(dataset_id: str) -> tuple[str, ...]:
         "stock_status",
         "adj_factor",
         "fund_adj",
+        "stock_limit",
         "valuation_metrics",
         "margin_trading",
         "fx_daily",

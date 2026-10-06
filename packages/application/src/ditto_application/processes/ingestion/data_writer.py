@@ -261,6 +261,7 @@ class IngestionDataWriter:
         WriteKind.ADJ_FACTOR: "_handler_adj_factor",
         WriteKind.FUND_ADJ: "_handler_fund_adj",
         WriteKind.ETF_NAV: "_handler_etf_nav",
+        WriteKind.STOCK_LIMIT: "_handler_stock_limit",
         WriteKind.INDEX_WEIGHT: "_handler_index_weight",
         WriteKind.FUNDAMENTAL: "_handler_fundamental",
         WriteKind.CAPITAL: "_handler_capital",
@@ -338,6 +339,11 @@ class IngestionDataWriter:
 
     def _handler_etf_nav(self, ctx: _WriteContext) -> Callable[[], WriteResult]:
         return lambda: self._write_etf_nav(
+            ctx.dataset, ctx.df, ctx.year, ctx.on_duplicate, ctx.source_ticker_col
+        )
+
+    def _handler_stock_limit(self, ctx: _WriteContext) -> Callable[[], WriteResult]:
+        return lambda: self._write_stock_limit(
             ctx.dataset, ctx.df, ctx.year, ctx.on_duplicate, ctx.source_ticker_col
         )
 
@@ -887,6 +893,32 @@ class IngestionDataWriter:
         if enriched_df is None:
             return _to_write_result(dataset, year, df, 0)
         rows_written = self._market_write_service.save_fund_nav(
+            df=enriched_df,
+            year=year,
+            on_duplicate=on_duplicate,
+        )
+        return _to_write_result(
+            dataset, year, enriched_df, rows_written, on_duplicate=on_duplicate
+        )
+
+    def _write_stock_limit(
+        self,
+        dataset: str,
+        df: pl.DataFrame,
+        year: int,
+        on_duplicate: OnDuplicate,
+        source_ticker_col: str,
+    ) -> WriteResult:
+        """Write up/down limit prices（元）through the stock-owned port（#517）."""
+        enriched_df = self._enrich_and_filter_fk_dataframe(
+            df,
+            dataset,
+            year,
+            source_ticker_col,
+        )
+        if enriched_df is None:
+            return _to_write_result(dataset, year, df, 0)
+        rows_written = self._market_write_service.save_stock_limit(
             df=enriched_df,
             year=year,
             on_duplicate=on_duplicate,

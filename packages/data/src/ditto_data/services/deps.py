@@ -92,6 +92,10 @@ from ditto_data.storage.market.stock.adj import (
     StockAdjFactorWriter,
 )
 from ditto_data.storage.market.stock.bars import StockBarsReader, StockBarsWriter
+from ditto_data.storage.market.stock.limit import (
+    StockLimitReader,
+    StockLimitWriter,
+)
 from ditto_data.storage.market.stock.status import (
     StockStatusReader,
     StockStatusWriter,
@@ -133,6 +137,7 @@ class MarketReaders:
     # 可选依赖
     etf_adj: EtfAdjFactorReader | None = None
     etf_nav: EtfNavReader | None = None
+    stock_limit: StockLimitReader | None = None
     index_bars: IndexBarsReader | None = None
     global_index_bars: GlobalIndexBarsReader | None = None
     index_constituent: IndexConstituentReader | None = None
@@ -174,6 +179,7 @@ class MarketWriters:
     # 可选依赖
     etf_adj: EtfAdjFactorWriter | None = None
     etf_nav: EtfNavWriter | None = None
+    stock_limit: StockLimitWriter | None = None
     index_bars: IndexBarsWriter | None = None
     global_index_bars: GlobalIndexBarsWriter | None = None
     index_constituent: IndexConstituentWriter | None = None

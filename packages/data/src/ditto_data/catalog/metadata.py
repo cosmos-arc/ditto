@@ -121,6 +121,8 @@ _MARKET_DOMAINS: frozenset[str] = frozenset(
         "adj_factor",
         "fund_adj",
         "etf_nav",
+        # #517 涨跌停价格
+        "stock_limit",
         "st_history",
         "futures_daily",
         "futures_basic",
@@ -211,6 +213,8 @@ _EXPERIMENTAL_DATASETS: frozenset[str] = frozenset(
         "index_valuation",
         # #483 ETF 单位净值：PIT/回放覆盖未验收前 experimental
         "etf_nav",
+        # #517 涨跌停价格：PIT/回放覆盖未验收前 experimental
+        "stock_limit",
     }
 )
 
@@ -271,6 +275,7 @@ def _resolve_asset_class(dataset_id: str) -> DatasetAssetClass | None:
         "corporate_actions",
         "namechange",
         "st_history",
+        "stock_limit",
     }:
         return "stock"
     if dataset_id in {"etf_daily", "fund_adj", "etf_nav", "etf_reference"}:
@@ -580,6 +585,8 @@ _ALL_DATASET_IDS: tuple[str, ...] = (
     "adj_factor",
     "fund_adj",
     "etf_nav",
+    # #517 涨跌停价格（stk_limit）
+    "stock_limit",
     # Maintainer-confirmed ETF reference facts (config source, #408)
     "etf_reference",
     # Fundamental

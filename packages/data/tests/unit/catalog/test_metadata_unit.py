@@ -270,6 +270,8 @@ class TestDefaultMetadataMaturityAssignments:
             "index_valuation",
             # #483 ETF 单位净值
             "etf_nav",
+            # #517 涨跌停价格
+            "stock_limit",
         }
     )
 
@@ -394,6 +396,7 @@ class TestDefaultMetadataDomainAssignments:
         assert classification.schedule == mapping.schedule == "source_defined"
         assert classification.dataset_spec.provider_datasets == (
             "tushare:index_classify",
+            "tushare:csrc_industrial",  # #517 证监会分类第二来源
         )
         assert mapping.dataset_spec.provider_datasets == ("tushare:index_member_all",)
         assert classification.dataset_spec.knowledge_date_field == "knowledge_date"
@@ -545,6 +548,8 @@ class TestR2DataProductContracts:
             "index_valuation",
             # #483 ETF 单位净值
             "etf_nav",
+            # #517 涨跌停价格
+            "stock_limit",
             # #408 维护者确认的 ETF 参考事实（配置源）
             "etf_reference",
         }

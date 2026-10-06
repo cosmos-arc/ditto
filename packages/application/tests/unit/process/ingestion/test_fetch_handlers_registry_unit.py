@@ -173,3 +173,51 @@ def test_industry_mapping_handler_binds_partition_asof_and_retrieval_date(
         level=1,
         knowledge_date=date.today(),
     )
+
+
+@pytest.mark.unit
+def test_industry_classification_handler_concats_sw_and_csrc(
+    fetchers: SourceFetchers,
+) -> None:
+    """#517：分类快照 = 申万 L1 + 证监会两源拼接，级别统一 L 前缀。"""
+    fetchers.metadata.fetch_sw_industry.return_value = pl.DataFrame(
+        {
+            "source_ticker": ["801010.SI"],
+            "industry_name": ["农林牧渔"],
+            "level": [1],
+            "industry_level": [1],
+        }
+    )
+    fetchers.metadata.fetch_csrc_industry.return_value = pl.DataFrame(
+        {
+            "industry_id": ["C39"],
+            "industry_name": ["计算机、通信和其他电子设备制造业"],
+            "industry_level": ["L2"],
+            "source": ["csrc"],
+        }
+    )
+    handlers = build_daily_fetch_handlers(
+        fetchers,
+        "2026-09-01",
+        fetch_commodity_daily=lambda _trade_date: pl.DataFrame(),
+        get_cached_index_codes=lambda: [],
+    )
+
+    frame = handlers[Dataset.INDUSTRY_CLASSIFICATION]()
+
+    assert frame.columns == [
+        "industry_id",
+        "industry_name",
+        "industry_level",
+        "knowledge_date",
+        "classification_version",
+        "source",
+    ]
+    rows = frame.sort("industry_id").to_dicts()
+    assert [row["industry_id"] for row in rows] == ["801010.SI", "C39"]
+    assert [row["industry_level"] for row in rows] == ["L1", "L2"]
+    assert [row["source"] for row in rows] == ["sw", "csrc"]
+    assert [row["classification_version"] for row in rows] == [
+        "SW2021",
+        "CSRC2012",
+    ]

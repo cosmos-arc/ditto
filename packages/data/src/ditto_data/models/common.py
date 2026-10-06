@@ -112,6 +112,9 @@ class Dataset(StrEnum):
     EARNINGS_EXPRESS = "earnings_express"
     INDEX_VALUATION = "index_valuation"
 
+    # #517 涨跌停价格（stk_limit）
+    STOCK_LIMIT = "stock_limit"
+
     # 证券可信历史（#395：退市/名称/ST 历史写侧）
     NAME_CHANGE = "namechange"
     ST_HISTORY = "st_history"
@@ -130,6 +133,7 @@ class Dataset(StrEnum):
             Dataset.DIVIDEND,
             Dataset.MARGIN_TRADING,
             Dataset.PLEDGE_RATIO,
+            Dataset.STOCK_LIMIT,
         ):
             return AssetClass.STOCK
         # ETF 数据集

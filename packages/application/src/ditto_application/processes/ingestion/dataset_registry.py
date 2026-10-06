@@ -75,6 +75,7 @@ class WriteKind(StrEnum):
     ADJ_FACTOR = "adj_factor"
     FUND_ADJ = "fund_adj"
     ETF_NAV = "etf_nav"
+    STOCK_LIMIT = "stock_limit"
     INDEX_WEIGHT = "index_weight"
     FUNDAMENTAL = "fundamental"
     CAPITAL = "capital"
@@ -378,13 +379,35 @@ def _history_fetch(group: str, method: str) -> DailyFetchFactory:
 
 
 def _industry_classification_fetch(ctx: DailyFetchContext) -> DailyFetchHandler:
+    """SW L1 + 证监会分类两源拼接（#517）；级别统一 L 前缀，观察日=当天."""
+
     def fetch() -> pl.DataFrame:
-        frame = ctx.fetchers.metadata.fetch_sw_industry(level=1)
-        return frame.rename({"source_ticker": "industry_id"}).with_columns(
-            pl.lit(date.today()).alias("knowledge_date"),
-            pl.lit("SW2021").alias("classification_version"),
-            pl.lit("sw").alias("source"),
+        sw = (
+            ctx.fetchers.metadata.fetch_sw_industry(level=1)
+            .rename({"source_ticker": "industry_id"})
+            .select(
+                pl.col("industry_id"),
+                pl.col("industry_name"),
+                pl.concat_str(
+                    pl.lit("L"), pl.col("industry_level").cast(pl.String)
+                ).alias("industry_level"),
+            )
+            .with_columns(
+                pl.lit(date.today()).alias("knowledge_date"),
+                pl.lit("SW2021").alias("classification_version"),
+                pl.lit("sw").alias("source"),
+            )
         )
+        # csrc_industrial 返回行业树（L1/L2），级别串已是 L 前缀、source=csrc
+        csrc = ctx.fetchers.metadata.fetch_csrc_industry().select(
+            pl.col("industry_id"),
+            pl.col("industry_name"),
+            pl.col("industry_level").cast(pl.String),
+            pl.lit(date.today()).alias("knowledge_date"),
+            pl.lit("CSRC2012").alias("classification_version"),
+            pl.col("source"),
+        )
+        return pl.concat([sw, csrc], how="vertical_relaxed")
 
     return fetch
 
@@ -580,6 +603,12 @@ _ADJ_FACTOR_REGISTRATIONS: tuple[DatasetRegistration, ...] = (
         write_kind=WriteKind.ETF_NAV,
         daily_fetch_factory=_daily_fetch("market", "fetch_fund_nav"),
         instrument_fetch_factory=_instrument_fetch("market", "fetch_fund_nav"),
+    ),
+    # #517 涨跌停价格：stk_limit 单日全市场抓取
+    DatasetRegistration(
+        dataset=Dataset.STOCK_LIMIT,
+        write_kind=WriteKind.STOCK_LIMIT,
+        daily_fetch_factory=_daily_fetch("market", "fetch_stock_limit"),
     ),
 )
 

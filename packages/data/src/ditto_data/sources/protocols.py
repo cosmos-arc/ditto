@@ -39,6 +39,10 @@ class MetadataFetcher(Protocol):
         """获取申万行业分类."""
         ...
 
+    def fetch_csrc_industry(self) -> pl.DataFrame:
+        """获取证监会行业分类（#517 industry_classification 第二来源）."""
+        ...
+
     def fetch_sw_industry_concepts(
         self,
         asof_date: str | None = None,
