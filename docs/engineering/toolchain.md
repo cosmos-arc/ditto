@@ -143,7 +143,12 @@ basedpyright 中不展开（仅 `**` 生效）——12 个包 1020 个测试文�
 语义与维护：
 
 - tests 门存量债（2480 错，按包分布见 #539）钉在入库 `pyright.tests.baseline.json`
-  （basedpyright 原生 baselineFile，由配置自动消费）；**新错误立即红**，存量不计。
+  （basedpyright 原生 baselineFile，由配置自动消费）；**新文件与新形状错误立即红**，
+  存量不计。已知边界（correctness 取证）：baseline 按 规则+列宽+行数 对齐匹配、
+  不含行号——同文件同规则同列宽的「修一增一」交换会被吸收到下轮重生成之前；
+  每批清偿后重生成即闭合该窗口。
+- 绿档运行若存量缩水，basedpyright 会**自动改写** baseline 文件（1.39.9 无 CLI
+  关闭项）——收缩应随修复提交，或 `git checkout` 丢弃；不请自来的 diff 以此解释。
 - 每批清偿后重生成收缩：修错 → `rm pyright.tests.baseline.json` →
   `basedpyright --project pyright.tests.json --writebaseline` → 提交新基线；清零时
   连 `baselineFile` 配置一并移除。
