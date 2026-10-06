@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from datetime import UTC, datetime
 from typing import cast
 
@@ -22,6 +23,12 @@ from ditto_application.queries.evidence_contracts import (
     EvidencePayloadReadModel,
     EvidenceTemporalContext,
 )
+
+
+def _obj(value: object) -> Mapping[str, object]:
+    """窄化 JSON 节点为对象（运行时校验；冻结证据的递归结构无法静态窄化）."""
+    assert isinstance(value, Mapping)
+    return value
 
 
 class _Facade:
@@ -98,7 +105,7 @@ def test_tool_derives_shanghai_date_and_cloud_redaction_from_host_context() -> N
     ]
     assert evidence.result["kind"] == "manual_account_events"
     assert evidence.verify_integrity()
-    assert set(tool.spec.input_schema["properties"]) == {"account_id"}
+    assert set(_obj(tool.spec.input_schema["properties"])) == {"account_id"}
 
 
 def test_tool_fails_before_query_when_egress_is_prohibited() -> None:

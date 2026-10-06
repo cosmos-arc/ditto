@@ -157,8 +157,12 @@ class TestExpressionCompiler:
         assert "value" in result.columns
         non_null = result.drop_nulls("value")
         assert non_null.height == 10
-        assert non_null["value"].min() >= 0.0
-        assert non_null["value"].max() <= 1.0
+        min_value = non_null["value"].min()
+        max_value = non_null["value"].max()
+        assert isinstance(min_value, float)
+        assert isinstance(max_value, float)
+        assert min_value >= 0.0
+        assert max_value <= 1.0
 
     def test_codegen_supports_scalar_conditionals_and_math(self) -> None:
         """Compiler should support scalar math branches used by derived formulas."""
@@ -264,8 +268,12 @@ class TestExpressionCompiler:
         non_null = result.drop_nulls("value")
         # 4 per instrument (rolling_rank includes null slots)
         assert non_null.height == 8
-        assert non_null["value"].min() >= 0.0
-        assert non_null["value"].max() <= 1.0
+        min_value = non_null["value"].min()
+        max_value = non_null["value"].max()
+        assert isinstance(min_value, float)
+        assert isinstance(max_value, float)
+        assert min_value >= 0.0
+        assert max_value <= 1.0
 
     def test_codegen_ts_argmax(self) -> None:
         """ts_argmax should return the position of the maximum in the window."""

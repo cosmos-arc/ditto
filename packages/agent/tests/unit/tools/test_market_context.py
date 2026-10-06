@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Mapping, Sequence
 from datetime import UTC, datetime
 from typing import cast
 
@@ -17,6 +18,19 @@ from ditto_application.queries.evidence_contracts import (
     MarketContextEvidenceQueryPort,
     MarketContextEvidenceReadModel,
 )
+
+
+def _obj(value: object) -> Mapping[str, object]:
+    """窄化 JSON 节点为对象（运行时校验；冻结证据的递归结构无法静态窄化）."""
+    assert isinstance(value, Mapping)
+    return value
+
+
+def _seq(value: object) -> Sequence[object]:
+    """窄化 JSON 节点为数组（运行时校验；str/bytes 虽是 Sequence 但非数组）."""
+    assert isinstance(value, Sequence)
+    assert not isinstance(value, (str, bytes))
+    return value
 
 
 def _context() -> TemporalToolContext:
@@ -99,7 +113,8 @@ def test_market_context_tool_hides_temporal_and_snapshot_arguments() -> None:
         "snapshot-stock",
         "snapshot-index",
     )
-    assert envelope.result["payload"]["metrics"][0]["value"] == 0.42
+    metrics = _seq(_obj(envelope.result["payload"])["metrics"])
+    assert _obj(metrics[0])["value"] == 0.42
     assert envelope.artifact_refs == (
         f"market-context:sha256:{envelope.result['payload_hash']}",
         f"artifact:dataset_certification:report-market-context:sha256:{'a' * 64}",

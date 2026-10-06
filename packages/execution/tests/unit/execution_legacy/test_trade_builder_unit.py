@@ -10,6 +10,7 @@ from ditto_execution.trade_builder import (
     TradeMatchingMethod,
     TradeRecord,
 )
+from ditto_kernel.identity import InstrumentId
 from ditto_kernel.order import OrderSide
 from ditto_portfolio.accounting import (
     AccountView,
@@ -37,7 +38,7 @@ def account_view() -> AccountView:
 def _fill(
     fill_id: str,
     order_id: str = "order-1",
-    instrument_id: int = 1,
+    instrument_id: InstrumentId = InstrumentId(1),
     direction: OrderSide = OrderSide.BUY,
     quantity: int = 100,
     price: float = 10.0,
@@ -69,7 +70,7 @@ class TestTradeRecord:
     def test_frozen(self) -> None:
         record = TradeRecord(
             trade_id="t-1",
-            instrument_id=1,
+            instrument_id=InstrumentId(1),
             direction=OrderSide.BUY,
             entry_date="2026-03-01",
             exit_date=None,
@@ -446,12 +447,24 @@ class TestFifoMultiInstrument:
         """Sell instrument A only matches buys of instrument A."""
         builder = FifoTradeBuilder()
 
-        buy_a = _fill("f-1", order_id="o-1", instrument_id=2, quantity=100, price=10.0)
-        buy_b = _fill("f-2", order_id="o-2", instrument_id=3, quantity=200, price=20.0)
+        buy_a = _fill(
+            "f-1",
+            order_id="o-1",
+            instrument_id=InstrumentId(2),
+            quantity=100,
+            price=10.0,
+        )
+        buy_b = _fill(
+            "f-2",
+            order_id="o-2",
+            instrument_id=InstrumentId(3),
+            quantity=200,
+            price=20.0,
+        )
         sell_a = _fill(
             "f-3",
             order_id="o-3",
-            instrument_id=2,
+            instrument_id=InstrumentId(2),
             direction=OrderSide.SELL,
             quantity=100,
             price=11.0,
@@ -846,7 +859,7 @@ class TestFlatToFlatMultiInstrument:
         buy_a = _fill(
             "f-1",
             order_id="o-a1",
-            instrument_id=2,
+            instrument_id=InstrumentId(2),
             quantity=100,
             price=10.0,
             fee=5.0,
@@ -854,7 +867,7 @@ class TestFlatToFlatMultiInstrument:
         buy_b = _fill(
             "f-2",
             order_id="o-b1",
-            instrument_id=3,
+            instrument_id=InstrumentId(3),
             quantity=200,
             price=20.0,
             fee=10.0,
@@ -862,7 +875,7 @@ class TestFlatToFlatMultiInstrument:
         sell_a = _fill(
             "f-3",
             order_id="o-a2",
-            instrument_id=2,
+            instrument_id=InstrumentId(2),
             direction=OrderSide.SELL,
             quantity=100,
             price=11.0,

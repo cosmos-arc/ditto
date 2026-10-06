@@ -74,6 +74,7 @@ class TestFactorSpecWithContext:
             expression="close",
             calendar_context=ctx,
         )
+        assert spec.calendar_context is not None
         assert spec.calendar_context.exchange == "SZSE"
         assert spec.calendar_context.is_half_day is True
 

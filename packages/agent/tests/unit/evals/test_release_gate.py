@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import replace
 from decimal import Decimal
 from pathlib import Path
@@ -352,8 +353,12 @@ def test_release_report_rejects_forged_observation_manifest() -> None:
         profile="fake-regression",
     )
     first = dict(report.observation_manifest[0])
-    observation = dict(first["observation"])
-    observation["latency_ms"] = observation["latency_ms"] + 1
+    raw_observation = first["observation"]
+    assert isinstance(raw_observation, Mapping)
+    observation = dict(raw_observation)
+    latency_ms = observation["latency_ms"]
+    assert isinstance(latency_ms, int)
+    observation["latency_ms"] = latency_ms + 1
     first["observation"] = observation
 
     with pytest.raises(ValueError, match="observation hash"):

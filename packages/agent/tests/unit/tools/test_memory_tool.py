@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping, Sequence
 from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 
@@ -34,6 +35,19 @@ from ditto_application.queries.research_memory_contracts import (
 )
 
 KNOWN_AT = datetime(2026, 8, 12, 8, tzinfo=UTC)
+
+
+def _obj(value: object) -> Mapping[str, object]:
+    """窄化 JSON 节点为对象（运行时校验；冻结证据的递归结构无法静态窄化）."""
+    assert isinstance(value, Mapping)
+    return value
+
+
+def _seq(value: object) -> Sequence[object]:
+    """窄化 JSON 节点为数组（运行时校验；str/bytes 虽是 Sequence 但非数组）."""
+    assert isinstance(value, Sequence)
+    assert not isinstance(value, (str, bytes))
+    return value
 
 
 def _hash(character: str) -> ContentHash:
@@ -133,9 +147,8 @@ def test_tool_injects_scope_and_seals_visible_memory() -> None:
     )
 
     assert evidence.tool_name == "research_memory"
-    assert evidence.result["payload"]["items"][0]["knowledge_id"] == (
-        "knowledge-visible"
-    )
+    items = _seq(_obj(evidence.result["payload"])["items"])
+    assert _obj(items[0])["knowledge_id"] == "knowledge-visible"
     assert evidence.verify_integrity()
 
 
@@ -152,8 +165,9 @@ def test_tool_rejects_model_supplied_scope_override() -> None:
             ),
         )
 
-    assert "campaign_id" not in tool.spec.input_schema["properties"]
-    assert "strategy_family_ref" not in tool.spec.input_schema["properties"]
+    properties = _obj(tool.spec.input_schema["properties"])
+    assert "campaign_id" not in properties
+    assert "strategy_family_ref" not in properties
 
 
 def test_tool_fails_closed_on_non_hash_evidence_reference() -> None:

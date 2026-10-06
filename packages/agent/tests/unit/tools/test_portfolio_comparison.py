@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import replace
 from datetime import UTC, datetime
 from typing import cast
@@ -36,6 +37,12 @@ from ditto_application.queries.portfolio_comparison_evidence_contracts import (
 )
 
 _SNAPSHOT_SET = "snapshot-set:sha256:" + "a" * 64
+
+
+def _obj(value: object) -> Mapping[str, object]:
+    """窄化 JSON 节点为对象（运行时校验；冻结证据的递归结构无法静态窄化）."""
+    assert isinstance(value, Mapping)
+    return value
 
 
 def _context() -> TemporalToolContext:
@@ -211,8 +218,8 @@ def test_tools_seal_host_comparison_and_preview_without_temporal_arguments() -> 
         "valuation_snapshot_id",
         "target_weights",
     }
-    assert forbidden.isdisjoint(comparison_tool.spec.input_schema["properties"])
-    assert forbidden.isdisjoint(scenario_tool.spec.input_schema["properties"])
+    assert forbidden.isdisjoint(_obj(comparison_tool.spec.input_schema["properties"]))
+    assert forbidden.isdisjoint(_obj(scenario_tool.spec.input_schema["properties"]))
 
 
 def test_tools_reject_model_attempt_to_override_host_snapshot() -> None:

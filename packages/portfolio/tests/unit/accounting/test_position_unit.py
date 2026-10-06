@@ -3,6 +3,7 @@
 from dataclasses import FrozenInstanceError
 
 import pytest
+from ditto_kernel.identity import InstrumentId
 
 
 class TestPosition:
@@ -10,7 +11,7 @@ class TestPosition:
         from ditto_portfolio.accounting.position import Position
 
         pos = Position(
-            instrument_id=1,
+            instrument_id=InstrumentId(1),
             quantity=1000,
             available_quantity=0,  # T+1: 买入当日不可卖
             average_cost=0.4520,
@@ -29,7 +30,7 @@ class TestPosition:
         from ditto_portfolio.accounting.position import Position
 
         pos = Position(
-            instrument_id=1,
+            instrument_id=InstrumentId(1),
             quantity=1000,
             available_quantity=0,
             average_cost=0.4520,
@@ -45,7 +46,7 @@ class TestPosition:
         from ditto_portfolio.accounting.position import Position
 
         pos = Position(
-            instrument_id=1,
+            instrument_id=InstrumentId(1),
             quantity=1000,
             available_quantity=0,
             average_cost=0.4520,
@@ -68,7 +69,7 @@ class TestPosition:
         from ditto_portfolio.accounting.position import Position
 
         pos = Position(
-            instrument_id=1,
+            instrument_id=InstrumentId(1),
             quantity=500,
             available_quantity=500,
             average_cost=0.4520,

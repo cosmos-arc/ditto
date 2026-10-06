@@ -14,6 +14,7 @@ from ditto_features.risk_estimation.factor_risk import (
     FactorRiskRequest,
     StockFactorRiskEstimator,
 )
+from ditto_kernel.identity import InstrumentId
 
 _STYLE_FACTORS = (
     "size",
@@ -71,7 +72,7 @@ def _request(positions: tuple[FactorRiskPosition, ...]) -> FactorRiskRequest:
         exposure_frame=_exposures(),
         factor_names=factors,
         factor_covariance=np.diag([0.01] * len(factors)),
-        idiosyncratic_variances={1: 0.001, 2: 0.002},
+        idiosyncratic_variances={InstrumentId(1): 0.001, InstrumentId(2): 0.002},
         evidence=_evidence(),
     )
 
@@ -80,8 +81,8 @@ def test_stock_factor_risk_euler_contributions_reconcile_total_variance() -> Non
     result = StockFactorRiskEstimator().estimate(
         _request(
             (
-                FactorRiskPosition(1, 0.6, "stock"),
-                FactorRiskPosition(2, 0.4, "stock"),
+                FactorRiskPosition(InstrumentId(1), 0.6, "stock"),
+                FactorRiskPosition(InstrumentId(2), 0.4, "stock"),
             )
         )
     )
@@ -106,8 +107,8 @@ def test_stock_factor_risk_euler_contributions_reconcile_total_variance() -> Non
 def test_factor_risk_rejects_portfolio_weights_above_one() -> None:
     request = _request(
         (
-            FactorRiskPosition(1, 0.7, "stock"),
-            FactorRiskPosition(2, 0.4, "stock"),
+            FactorRiskPosition(InstrumentId(1), 0.7, "stock"),
+            FactorRiskPosition(InstrumentId(2), 0.4, "stock"),
         )
     )
 
@@ -117,7 +118,7 @@ def test_factor_risk_rejects_portfolio_weights_above_one() -> None:
 
 def test_pure_etf_factor_risk_is_explicitly_unavailable() -> None:
     result = StockFactorRiskEstimator().estimate(
-        _request((FactorRiskPosition(10, 1.0, "etf"),))
+        _request((FactorRiskPosition(InstrumentId(10), 1.0, "etf"),))
     )
 
     assert result.availability == "unavailable"
@@ -129,8 +130,8 @@ def test_mixed_portfolio_reports_partial_without_inventing_etf_exposure() -> Non
     result = StockFactorRiskEstimator().estimate(
         _request(
             (
-                FactorRiskPosition(1, 0.5, "stock"),
-                FactorRiskPosition(10, 0.5, "etf"),
+                FactorRiskPosition(InstrumentId(1), 0.5, "stock"),
+                FactorRiskPosition(InstrumentId(10), 0.5, "etf"),
             )
         )
     )
@@ -143,8 +144,8 @@ def test_mixed_portfolio_reports_partial_without_inventing_etf_exposure() -> Non
 def test_missing_stock_style_or_industry_exposure_fails_closed() -> None:
     request = _request(
         (
-            FactorRiskPosition(1, 0.5, "stock"),
-            FactorRiskPosition(2, 0.5, "stock"),
+            FactorRiskPosition(InstrumentId(1), 0.5, "stock"),
+            FactorRiskPosition(InstrumentId(2), 0.5, "stock"),
         )
     )
     request = FactorRiskRequest(
@@ -161,7 +162,7 @@ def test_missing_stock_style_or_industry_exposure_fails_closed() -> None:
 
 
 def test_factor_model_catalog_cannot_omit_stock_industry_dimension() -> None:
-    request = _request((FactorRiskPosition(1, 1.0, "stock"),))
+    request = _request((FactorRiskPosition(InstrumentId(1), 1.0, "stock"),))
     factors = _STYLE_FACTORS
     without_industry = FactorRiskRequest(
         positions=request.positions,
@@ -178,7 +179,7 @@ def test_factor_model_catalog_cannot_omit_stock_industry_dimension() -> None:
 
 @pytest.mark.pit
 def test_future_factor_exposure_sentinel_is_excluded() -> None:
-    request = _request((FactorRiskPosition(1, 1.0, "stock"),))
+    request = _request((FactorRiskPosition(InstrumentId(1), 1.0, "stock"),))
     future = _exposures(include_second_stock=False).with_columns(
         pl.lit(999.0).alias("exposure"),
         pl.lit(datetime(2026, 4, 2, tzinfo=UTC)).alias("knowledge_time"),

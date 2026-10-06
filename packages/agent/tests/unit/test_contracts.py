@@ -35,6 +35,13 @@ from ditto_agent.contracts.temporal import (
 LOCAL = timezone(timedelta(hours=8))
 
 
+class _MutableContractView:
+    """冻结契约负向赋值视图：cast 不改变运行时对象，仅静态打开待测字段."""
+
+    status: RunStatus
+    search_axis: str
+
+
 def _temporal_context() -> TemporalToolContext:
     return TemporalToolContext.from_host(
         TemporalContextInput(
@@ -92,7 +99,7 @@ def test_runtime_contracts_are_frozen_validated_and_utc_normalized() -> None:
     assert run.created_at.tzinfo is UTC
     assert event.occurred_at.tzinfo is UTC
     with pytest.raises(FrozenInstanceError):
-        run.status = RunStatus.RUNNING
+        cast(_MutableContractView, run).status = RunStatus.RUNNING
 
 
 @pytest.mark.parametrize(
@@ -263,7 +270,7 @@ def test_campaign_authorization_is_immutable_and_excludes_forbidden_actions() ->
     assert authorization.expires_at > authorization.authorized_at
     assert authorization.verify_authorization_hash()
     with pytest.raises(FrozenInstanceError):
-        authorization.search_axis = "threshold"
+        cast(_MutableContractView, authorization).search_axis = "threshold"
     with pytest.raises(ValueError, match="forbidden"):
         CampaignAuthorization.issue(
             authorization_id="campaign-auth-002",

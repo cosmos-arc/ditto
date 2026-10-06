@@ -2,17 +2,30 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import fields, replace
 from datetime import UTC, datetime
+from typing import TYPE_CHECKING, Any, cast
 
 import pytest
 from ditto_analysis.errors import ExperimentSpecError
 from ditto_analysis.experiments import CandidateId, ContentHash, ExperimentId
 
+if TYPE_CHECKING:
+    # 类型层引用生产契约；运行时导入保持在 _api 内以维持首跑 RED 语义。
+    from ditto_analysis.experiments.holdout import (
+        HoldoutClaimAuthorityCommand,
+        HoldoutSelectionReason,
+    )
+
 NOW = datetime(2026, 7, 22, 2, 0, tzinfo=UTC)
 
 
-def _api() -> tuple[type[object], type[object], object]:
+def _api() -> tuple[
+    type[HoldoutClaimAuthorityCommand],
+    type[HoldoutSelectionReason],
+    Callable[[HoldoutClaimAuthorityCommand], dict[str, object]],
+]:
     """Import Task 12 contracts inside tests so the first run is a true RED."""
     from ditto_analysis.experiments.holdout import (
         HoldoutClaimAuthorityCommand,
@@ -27,7 +40,7 @@ def _api() -> tuple[type[object], type[object], object]:
     )
 
 
-def _command() -> object:
+def _command() -> HoldoutClaimAuthorityCommand:
     command_type, reason_type, _ = _api()
     return command_type(
         experiment_id=ExperimentId("experiment-1"),
@@ -110,7 +123,8 @@ def test_holdout_authority_command_rejects_ambiguous_inputs(
     values[field] = value
 
     with pytest.raises(ExperimentSpecError):
-        command_type(**values)
+        # 合并点单点放宽：负向用例按字段注入坏值，键集合与 __init__ 一一对应。
+        command_type(**cast("dict[str, Any]", values))
 
 
 def test_holdout_selection_reason_rejects_free_form_shape_drift() -> None:

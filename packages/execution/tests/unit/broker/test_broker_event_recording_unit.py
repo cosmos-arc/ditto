@@ -3515,10 +3515,12 @@ def test_callback_derived_active_same_fill_claim_blocks_later_report_actions(
     ]
     assert amendment_source.requested_action_ids == []
     assert amendment_source.requested_fill_ids == []
-    assert [
-        workflow_store.get_action(f"{report_b_id}:{index:04d}").status
-        for index in range(2)
-    ] == [RepairActionStatus.APPROVED, RepairActionStatus.APPROVED]
+    first_approved = workflow_store.get_action(f"{report_b_id}:0000")
+    second_approved = workflow_store.get_action(f"{report_b_id}:0001")
+    assert first_approved is not None
+    assert second_approved is not None
+    assert first_approved.status == RepairActionStatus.APPROVED
+    assert second_approved.status == RepairActionStatus.APPROVED
     assert [
         (
             payload["action_id"],
@@ -4064,16 +4066,14 @@ def test_callback_derived_failed_import_blocks_later_same_fill_amendment(
     assert amendment_source.requested_action_ids == []
     assert amendment_source.requested_fill_ids == []
     assert local_fills.records == {}
-    assert [
-        (
-            workflow_store.get_action(f"{report_id}:{index:04d}").status,
-            workflow_store.get_action(f"{report_id}:{index:04d}").executor,
-        )
-        for index in range(2)
-    ] == [
-        (RepairActionStatus.APPROVED, None),
-        (RepairActionStatus.APPROVED, None),
-    ]
+    action_0000 = workflow_store.get_action(f"{report_id}:0000")
+    action_0001 = workflow_store.get_action(f"{report_id}:0001")
+    assert action_0000 is not None
+    assert action_0001 is not None
+    assert action_0000.status == RepairActionStatus.APPROVED
+    assert action_0000.executor is None
+    assert action_0001.status == RepairActionStatus.APPROVED
+    assert action_0001.executor is None
     assert [
         (
             payload["action_id"],
@@ -4255,16 +4255,14 @@ def test_callback_derived_failed_amendment_blocks_later_same_fill_import(
     assert import_source.requested_action_ids == []
     assert import_source.requested_fill_ids == []
     assert local_fills.get_fill(fill_id) == current_fill
-    assert [
-        (
-            workflow_store.get_action(f"{report_id}:{index:04d}").status,
-            workflow_store.get_action(f"{report_id}:{index:04d}").executor,
-        )
-        for index in range(2)
-    ] == [
-        (RepairActionStatus.APPROVED, None),
-        (RepairActionStatus.APPROVED, None),
-    ]
+    amendment_action = workflow_store.get_action(f"{report_id}:0000")
+    import_action = workflow_store.get_action(f"{report_id}:0001")
+    assert amendment_action is not None
+    assert import_action is not None
+    assert amendment_action.status == RepairActionStatus.APPROVED
+    assert amendment_action.executor is None
+    assert import_action.status == RepairActionStatus.APPROVED
+    assert import_action.executor is None
     assert [
         (
             payload["action_id"],

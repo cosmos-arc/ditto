@@ -239,6 +239,7 @@ def test_control_event_zero_cash_roundtrips_with_identical_hash(tmp_path: Path) 
 
         recovered = journal.get_event(account.account_id, reversal.event_id)
 
+    assert recovered is not None
     assert recovered == reversal
     assert recovered.event_hash == reversal.event_hash
 

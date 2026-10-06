@@ -827,7 +827,9 @@ class TestPrepareData:
 
         f_clean, _ = prepare_data(factor_df, return_df, end="2024-02-15")
         assert f_clean.height == 2
-        assert f_clean["trade_date"].max() <= date(2024, 2, 15)
+        max_trade_date = f_clean["trade_date"].max()
+        assert isinstance(max_trade_date, date)
+        assert max_trade_date <= date(2024, 2, 15)
 
     def test_drops_null_values(self) -> None:
         """Rows with null values should be dropped."""
@@ -1178,7 +1180,10 @@ class TestComputeICDecaySafe:
 class TestClosePriceProvider:
     """Tests for ClosePriceProvider protocol integration."""
 
-    def test_evaluator_accepts_close_price_provider(self) -> None:
+    def test_evaluator_accepts_close_price_provider(
+        self,
+        mock_provider: MockForwardReturnProvider,
+    ) -> None:
         """FactorEvaluator should accept an optional close_price_provider."""
 
         class MockClosePriceProvider:

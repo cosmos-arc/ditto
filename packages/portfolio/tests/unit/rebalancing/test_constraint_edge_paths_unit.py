@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Hashable
+
 import polars as pl
 import pytest
 from ditto_portfolio.rebalancing.constraints import (
@@ -21,9 +23,14 @@ def _frame(**columns: list[object]) -> pl.DataFrame:
     return pl.DataFrame(values, strict=False)
 
 
+def _weights() -> dict[Hashable, float]:
+    """约束契约的权重输入键为 Hashable（含字符串键回退路径）。"""
+    return {1: 0.6, 2: 0.4}
+
+
 def test_optional_market_columns_leave_weights_unchanged_when_absent() -> None:
     frame = _frame()
-    weights = {1: 0.6, 2: 0.4}
+    weights = _weights()
 
     assert (
         IndustryMaxWeightConstraint().check(weights, frame).adjusted_weights == weights
@@ -33,7 +40,7 @@ def test_optional_market_columns_leave_weights_unchanged_when_absent() -> None:
 
 
 def test_liquidity_rejects_unparseable_scalar_evidence() -> None:
-    weights = {1: 0.6, 2: 0.4}
+    weights = _weights()
     object_frame = pl.DataFrame(
         {
             "instrument_id": [1, 2],
@@ -64,7 +71,7 @@ def test_tradability_parses_missing_and_canonical_string_flags() -> None:
 
 def test_turnover_noop_and_previous_weight_identifier_fallbacks() -> None:
     frame = _frame(previous_weight=["0.6", "invalid"])
-    weights = {1: 0.6, 2: 0.4}
+    weights = _weights()
 
     no_previous = MaxTurnoverConstraint(max_turnover=0.0).check(weights, _frame())
     assert no_previous.adjusted_weights == weights

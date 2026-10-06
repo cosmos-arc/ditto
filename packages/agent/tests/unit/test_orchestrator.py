@@ -4,6 +4,7 @@ from collections.abc import AsyncIterator, Mapping
 from dataclasses import replace
 from datetime import UTC, datetime
 from decimal import Decimal
+from typing import Any, cast
 
 import pytest
 from ditto_agent.contracts.evidence import EvidenceEnvelope
@@ -217,7 +218,8 @@ def _limits(**overrides: object) -> BudgetLimits:
         "max_retries": 1,
     }
     values.update(overrides)
-    return BudgetLimits(**values)
+    # **overrides 是负向注入的宽松参数（按字段名塞非法值），构造点单点放宽。
+    return BudgetLimits(**cast("dict[str, Any]", values))
 
 
 def _runtime(
@@ -351,6 +353,7 @@ async def test_orchestrator_publishes_sanitized_terminal_projection() -> None:
     assert update.evidence_refs == ("evidence-experiment-001",)
     assert update.artifact_refs == ("experiment:001:sha256:" + "a" * 64,)
     assert update.guardrail.status == "passed"
+    assert update.usage is not None
     assert update.usage.tool_calls == 1
     assert "metric" not in repr(update.tool_records).lower()
     assert model.requests[0].input_text == (
@@ -433,7 +436,9 @@ async def test_budget_overrun_pauses_without_any_further_provider_call() -> None
     assert outcome.answer is None
     assert outcome.episode is None
     assert len(model.requests) == 1
-    assert model.requests[0].max_turns == 2
+    first_request = model.requests[0]
+    assert isinstance(first_request, ModelRequest)
+    assert first_request.max_turns == 2
 
 
 @pytest.mark.asyncio

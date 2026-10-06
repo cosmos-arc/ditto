@@ -137,7 +137,10 @@ def _plan(schema_version: int = 1, **overrides: object) -> dict[str, object]:
         if schema_version == 1
         else preflight_authority._PLAN_PREIMAGE_KEYS_V2
     )
-    value = dict.fromkeys(keys)
+    # fromkeys 的 None 重载返回 dict[str, Any | None]，与声明类型不变冲突。
+    value: dict[str, object] = {}
+    for key in keys:
+        value[key] = None
     value["schema_version"] = schema_version
     value.update(overrides)
     return value

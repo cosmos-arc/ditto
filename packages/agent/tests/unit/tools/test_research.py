@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
 from datetime import UTC, datetime
 from typing import cast
 
@@ -25,6 +26,12 @@ from ditto_application.queries.evidence_contracts import (
     ResearchEvidenceQueryPort,
     ResearchEvidenceReadModel,
 )
+
+
+def _obj(value: object) -> Mapping[str, object]:
+    """窄化 JSON 节点为对象（运行时校验；冻结证据的递归结构无法静态窄化）."""
+    assert isinstance(value, Mapping)
+    return value
 
 
 def _context(*, snapshot_id: str = "snapshot-20260812") -> TemporalToolContext:
@@ -235,8 +242,9 @@ def test_factor_tool_injects_snapshot_and_does_not_expose_trusted_context() -> N
     facade = _ResearchFacade(context=context)
     tool = FactorEvidenceTool(facade=cast(ResearchEvidenceQueryPort, facade))
 
-    assert "source_snapshot_id" not in tool.spec.input_schema["properties"]
-    assert "catalog_snapshot_id" not in tool.spec.input_schema["properties"]
+    properties = _obj(tool.spec.input_schema["properties"])
+    assert "source_snapshot_id" not in properties
+    assert "catalog_snapshot_id" not in properties
     with pytest.raises(ValueError, match="unexpected arguments"):
         tool.invoke(
             arguments={

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from datetime import UTC, datetime
 
 import pytest
@@ -202,7 +203,9 @@ def test_invalid_preview_or_hash_conflict_fails_closed() -> None:
     )
     conflicting = _preview("author_diff_strategy", "diff")
     conflicting_result = dict(conflicting.result)
-    payload = dict(conflicting_result["payload"])
+    raw_payload = conflicting_result["payload"]
+    assert isinstance(raw_payload, Mapping)
+    payload = dict(raw_payload)
     payload["canonical_hash"] = "f" * 64
     conflicting_result["payload"] = payload
     conflicting = EvidenceEnvelope.seal(

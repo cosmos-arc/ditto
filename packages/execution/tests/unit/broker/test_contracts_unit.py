@@ -11,7 +11,7 @@ from ditto_execution.broker.contracts import (
     BrokerGatewayMode,
     validate_broker_gateway_descriptor,
 )
-from ditto_execution.models import STANDARD_BROKER_EVENT_TYPES
+from ditto_execution.models import STANDARD_BROKER_EVENT_TYPES, BrokerEventType
 
 
 def test_broker_gateway_is_protocol() -> None:
@@ -52,11 +52,15 @@ def test_broker_gateway_descriptor_rejects_missing_required_capabilities() -> No
 
 
 def test_broker_gateway_descriptor_rejects_unknown_event_types() -> None:
+    # 负向测试：custom_callback 不是 BrokerEventType 成员，cast 仅满足静态签名，
+    # 运行时仍以原始字符串传给校验器触发 ValueError。
     descriptor = BrokerGatewayDescriptor(
         gateway_id="paper",
         mode="paper",
         capabilities=REQUIRED_BROKER_GATEWAY_CAPABILITIES,
-        supported_event_types=("connect", "custom_callback"),
+        supported_event_types=cast(
+            "tuple[BrokerEventType, ...]", ("connect", "custom_callback")
+        ),
     )
 
     with pytest.raises(ValueError, match="Unsupported broker event type"):

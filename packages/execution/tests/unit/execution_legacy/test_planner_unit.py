@@ -721,7 +721,7 @@ class TestPlanStatistics:
         )
         target = _target({1: 0.3})
         # no price → target_qty=30000, current=20000, diff=10000 BUY
-        market = {1: _market_snapshot(close=1.0)}
+        market = {InstrumentId(1): _market_snapshot(close=1.0)}
 
         planner = SimpleExecutionPlanner()
         plan = planner.plan(
@@ -746,9 +746,9 @@ class TestPlanStatistics:
             },
             exposure=20000.0,
         )
-        rules = {1: _instrument_rules(1, commission_rate=0.001)}
+        rules = {InstrumentId(1): _instrument_rules(1, commission_rate=0.001)}
         target = _target({1: 0.3})
-        market = {1: _market_snapshot(close=1.0)}
+        market = {InstrumentId(1): _market_snapshot(close=1.0)}
 
         planner = SimpleExecutionPlanner()
         plan = planner.plan(
@@ -981,8 +981,8 @@ class TestProtocolUpgrade:
         """plan() 接受 dict[int, InstrumentRules] 类型的 rules。"""
         av = _account_view()
         target = _target({1: 0.5})
-        rules = {1: _instrument_rules()}
-        snap = {1: _market_snapshot()}
+        rules = {InstrumentId(1): _instrument_rules()}
+        snap = {InstrumentId(1): _market_snapshot()}
 
         planner = SimpleExecutionPlanner()
         plan = planner.plan(
@@ -1017,8 +1017,8 @@ class TestProtocolUpgrade:
         """不同标的使用不同 lot_size (从 InstrumentDefinition 读取)。"""
         av = _account_view()
         rules = {
-            1: _instrument_rules(1, lot_size=200),
-            2: _instrument_rules(2, lot_size=100),
+            InstrumentId(1): _instrument_rules(1, lot_size=200),
+            InstrumentId(2): _instrument_rules(2, lot_size=100),
         }
         target = _target({1: 0.5, 2: 0.5})
 
@@ -1062,7 +1062,7 @@ class TestTPlusOne:
             },
             exposure=10000.0,
         )
-        rules = {1: _instrument_rules(1, settlement_cycle=1)}
+        rules = {InstrumentId(1): _instrument_rules(1, settlement_cycle=1)}
         target = _target({1: 0.0})  # 全部清仓
 
         planner = SimpleExecutionPlanner()
@@ -1098,7 +1098,7 @@ class TestTPlusOne:
             },
             exposure=10000.0,
         )
-        rules = {1: _instrument_rules(1, settlement_cycle=0)}
+        rules = {InstrumentId(1): _instrument_rules(1, settlement_cycle=0)}
         target = _target({1: 0.0})
 
         planner = SimpleExecutionPlanner()
@@ -1156,7 +1156,7 @@ class TestLimitUpDown:
         """买入 + 涨停 → BlockedOrder(reason=limit_up_no_buy)。"""
         av = _account_view()
         target = _target({1: 0.5})
-        market = {1: _market_snapshot(close=11.0, limit_up=11.0)}
+        market = {InstrumentId(1): _market_snapshot(close=11.0, limit_up=11.0)}
 
         planner = SimpleExecutionPlanner()
         plan = planner.plan(
@@ -1180,7 +1180,7 @@ class TestLimitUpDown:
             exposure=10000.0,
         )
         target = _target({1: 0.0})
-        market = {1: _market_snapshot(close=10.0, limit_down=10.0)}
+        market = {InstrumentId(1): _market_snapshot(close=10.0, limit_down=10.0)}
 
         planner = SimpleExecutionPlanner()
         plan = planner.plan(
@@ -1203,7 +1203,7 @@ class TestLimitUpDown:
             exposure=10000.0,
         )
         target = _target({1: 0.0})
-        market = {1: _market_snapshot(close=11.0, limit_up=11.0)}
+        market = {InstrumentId(1): _market_snapshot(close=11.0, limit_up=11.0)}
 
         planner = SimpleExecutionPlanner()
         plan = planner.plan(
@@ -1221,7 +1221,7 @@ class TestLimitUpDown:
         """买入 + 跌停 → 允许买入。"""
         av = _account_view()
         target = _target({1: 0.5})
-        market = {1: _market_snapshot(close=10.0, limit_down=10.0)}
+        market = {InstrumentId(1): _market_snapshot(close=10.0, limit_down=10.0)}
 
         planner = SimpleExecutionPlanner()
         plan = planner.plan(
@@ -1239,7 +1239,7 @@ class TestLimitUpDown:
         """limit_up=None / limit_down=None → 正常交易。"""
         av = _account_view()
         target = _target({1: 0.5})
-        market = {1: _market_snapshot(close=11.0)}
+        market = {InstrumentId(1): _market_snapshot(close=11.0)}
 
         planner = SimpleExecutionPlanner()
         plan = planner.plan(
@@ -1265,7 +1265,7 @@ class TestSuspended:
         """买入 + 停牌 → BlockedOrder(reason=suspended, severity=block)。"""
         av = _account_view()
         target = _target({1: 0.5})
-        market = {1: _market_snapshot(is_suspended=True)}
+        market = {InstrumentId(1): _market_snapshot(is_suspended=True)}
 
         planner = SimpleExecutionPlanner()
         plan = planner.plan(
@@ -1289,7 +1289,7 @@ class TestSuspended:
             exposure=10000.0,
         )
         target = _target({1: 0.0})
-        market = {1: _market_snapshot(is_suspended=True)}
+        market = {InstrumentId(1): _market_snapshot(is_suspended=True)}
 
         planner = SimpleExecutionPlanner()
         plan = planner.plan(
@@ -1504,7 +1504,7 @@ class TestCombinedScenarios:
             },
             exposure=3500.0,
         )
-        rules = {1: _instrument_rules(1, settlement_cycle=1)}
+        rules = {InstrumentId(1): _instrument_rules(1, settlement_cycle=1)}
         target = _target({1: 0.0})
 
         planner = SimpleExecutionPlanner()
@@ -1544,7 +1544,7 @@ class TestCombinedScenarios:
             },
             exposure=50000.0,
         )
-        rules = {1: _instrument_rules(1, settlement_cycle=1)}
+        rules = {InstrumentId(1): _instrument_rules(1, settlement_cycle=1)}
         target = _target({1: 0.0})
 
         planner = SimpleExecutionPlanner()
@@ -1567,7 +1567,7 @@ class TestCombinedScenarios:
         av = _account_view()
         target = _target({1: 0.5})
         market = {
-            1: _market_snapshot(
+            InstrumentId(1): _market_snapshot(
                 is_suspended=True,
                 limit_up=11.0,
                 close=11.0,
@@ -1609,7 +1609,7 @@ class TestEstimatedPriceFromSnapshot:
         target = _target({1: 0.3})
         # price=1.5 → target_value=30000, target_shares=20000, target_qty=20000
         # current=10000, diff=10000 BUY → turnover=10000*1.5=15000
-        market = {1: _market_snapshot(close=1.5)}
+        market = {InstrumentId(1): _market_snapshot(close=1.5)}
 
         planner = SimpleExecutionPlanner()
         plan = planner.plan(
@@ -1634,10 +1634,10 @@ class TestEstimatedPriceFromSnapshot:
             },
             exposure=10000.0,
         )
-        rules = {1: _instrument_rules(1, commission_rate=0.001)}
+        rules = {InstrumentId(1): _instrument_rules(1, commission_rate=0.001)}
         target = _target({1: 0.3})
         # price=1.5 → target_qty=20000, current=10000, diff=10000 BUY
-        market = {1: _market_snapshot(close=1.5)}
+        market = {InstrumentId(1): _market_snapshot(close=1.5)}
 
         planner = SimpleExecutionPlanner()
         plan = planner.plan(

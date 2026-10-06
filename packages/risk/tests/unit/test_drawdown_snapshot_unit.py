@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
-from types import MappingProxyType, SimpleNamespace
+from collections.abc import Mapping
+from types import MappingProxyType
 
+from ditto_kernel.identity import InstrumentId
 from ditto_portfolio.accounting import AccountView, CashBook
 from ditto_risk.drawdown.rules import DrawdownStateSnapshot, MaxDrawdownRule
-from ditto_risk.post_trade import RiskAction
+from ditto_risk.post_trade import BarSlice, RiskAction, SliceView
 
 
 def _account_view(nav: float = 100_000.0) -> AccountView:
@@ -19,8 +21,15 @@ def _account_view(nav: float = 100_000.0) -> AccountView:
     )
 
 
-def _slice() -> SimpleNamespace:
-    return SimpleNamespace(bars={})
+class _EmptySlice:
+    """SliceView 协议最小 fake — 本文件只测回撤，bars 恒为空。"""
+
+    def __init__(self) -> None:
+        self.bars: Mapping[InstrumentId, BarSlice] = MappingProxyType({})
+
+
+def _slice() -> SliceView:
+    return _EmptySlice()
 
 
 class TestDrawdownStateSnapshot:

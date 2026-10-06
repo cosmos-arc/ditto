@@ -10,6 +10,7 @@ from ditto_execution.orders.model import Order
 from ditto_kernel.identity import InstrumentId
 from ditto_kernel.order import OrderSide, OrderType
 from ditto_portfolio.accounting import AccountView, BuyingPowerModel, CashBook
+from ditto_risk.contracts import PreTradeOrder
 from ditto_risk.pre_trade import (
     CompositePreTradeCheck,
     Decision,
@@ -48,7 +49,7 @@ def _order(quantity: int = 100) -> Order:
 class _AlwaysAccept:
     def check_order(
         self,
-        order: Order,
+        order: PreTradeOrder,
         context: PreTradeContext,
     ) -> OrderCheckResult:
         return OrderCheckResult(decision=Decision.ACCEPT, order_id=order.order_id)
@@ -57,7 +58,7 @@ class _AlwaysAccept:
 class _AlwaysReject:
     def check_order(
         self,
-        order: Order,
+        order: PreTradeOrder,
         context: PreTradeContext,
     ) -> OrderCheckResult:
         return OrderCheckResult(
@@ -73,7 +74,7 @@ class _AlwaysResize:
 
     def check_order(
         self,
-        order: Order,
+        order: PreTradeOrder,
         context: PreTradeContext,
     ) -> OrderCheckResult:
         return OrderCheckResult(
@@ -93,7 +94,7 @@ class _ResizeOnceThenAccept:
 
     def check_order(
         self,
-        order: Order,
+        order: PreTradeOrder,
         context: PreTradeContext,
     ) -> OrderCheckResult:
         self.called += 1
@@ -144,7 +145,7 @@ class TestCompositePreTradeCheck:
 
         class ResizeTwice:
             def check_order(
-                self, order: Order, context: PreTradeContext
+                self, order: PreTradeOrder, context: PreTradeContext
             ) -> OrderCheckResult:
                 nonlocal call_count
                 call_count += 1

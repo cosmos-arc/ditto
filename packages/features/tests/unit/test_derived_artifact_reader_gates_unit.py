@@ -13,6 +13,8 @@ from ditto_features.errors import DerivedIntegrityError, DerivedVersionError
 from ditto_features.models.derived import (
     DerivedCheckpointRecord,
     DerivedCheckpointStatus,
+    DerivedPartitionRecord,
+    DerivedRunRecord,
     DerivedSpecRecord,
     DerivedStateRecord,
     DerivedVersionRecord,
@@ -59,6 +61,17 @@ class _FakeCatalog:
             )
         }
         self._checkpoints: dict[tuple[str, int, str], DerivedCheckpointRecord] = {}
+
+    def get_run(
+        self, derived_id: str, version: int, run_id: str
+    ) -> DerivedRunRecord | None:
+        # reader 门禁测试不触达 run 维度，误用即测试假设失效。
+        raise AssertionError("reader gate tests must not query catalog runs")
+
+    def list_partitions(
+        self, derived_id: str, version: int, run_id: str
+    ) -> list[DerivedPartitionRecord]:
+        raise AssertionError("reader gate tests must not list catalog partitions")
 
     def get_spec(self, derived_id: str, version: int) -> DerivedSpecRecord | None:
         return self._specs.get((derived_id, version))

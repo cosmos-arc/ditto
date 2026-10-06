@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import replace
+from typing import cast
 
 import numpy as np
 import pytest
+from ditto_kernel.identity import InstrumentId
 from ditto_portfolio.rebalancing._optimization_input import PreparedOptimizationInput
 from ditto_portfolio.rebalancing.optimization_models import (
     OptimizationMethod,
@@ -33,7 +36,7 @@ def _request(
             max_weight=max_weight,
             min_observations=min_observations,
         ),
-        instrument_ids=tuple(range(1, count + 1)),
+        instrument_ids=tuple(InstrumentId(i) for i in range(1, count + 1)),
         covariance=covariance,
         scenario_returns=scenarios,
         candidate_weights=tuple(1.0 / count for _ in range(count)),
@@ -252,9 +255,11 @@ def test_policy_digest_covers_timeout_and_verification_tolerances() -> None:
 )
 def test_policy_rejects_non_finite_verification_and_solver_values(field: str) -> None:
     kwargs = {field: float("nan")}
+    # 负向测试：按字段名动态注入非有限值，cast 放宽构造器关键字检查。
+    ctor = cast("Callable[..., object]", PortfolioConstructionPolicy)
 
     with pytest.raises(ValueError, match="finite"):
-        PortfolioConstructionPolicy(
+        ctor(
             policy_id="non-finite",
             version=1,
             method=OptimizationMethod.MVO,
@@ -370,7 +375,7 @@ def test_min_weight_active_set_is_nonempty_when_all_initial_weights_are_small() 
             turnover_penalty_bps=0.0,
             min_weight=0.30,
         ),
-        instrument_ids=tuple(range(1, count + 1)),
+        instrument_ids=tuple(InstrumentId(i) for i in range(1, count + 1)),
         covariance=np.eye(count),
         scenario_returns=None,
         candidate_weights=tuple(1.0 / count for _ in range(count)),

@@ -21,7 +21,6 @@
     "tests"
   ],
   "exclude": ["**/__pycache__", ".venv"],
-  "baselineFile": "pyright.tests.baseline.json",
   "pythonVersion": "3.13",
   "pythonPlatform": "All",
   "stubPath": "typings",

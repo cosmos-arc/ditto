@@ -82,8 +82,10 @@ class TestTimeSpec:
 
     def test_frozen(self) -> None:
         spec = TimeSpec(event_time_key="trade_date")
+        # 经 __setattr__ 触发 frozen 检查以绕过静态赋值检查；
+        # FrozenInstanceError 是 AttributeError 子类。
         with pytest.raises(AttributeError):
-            spec.event_time_key = "bar_time"
+            spec.__setattr__("event_time_key", "bar_time")
 
     def test_has_availability_time_true(self) -> None:
         spec = TimeSpec(

@@ -64,8 +64,10 @@ class TestOrderBookUpdate:
             event=_make_event(cid, OrderTrigger.FILL, OrderStatus.FILLED),
         )
         book.update(filled)
-        assert book.get(cid) is filled
-        assert book.get(cid).status == OrderStatus.FILLED
+        replaced = book.get(cid)
+        assert replaced is not None
+        assert replaced is filled
+        assert replaced.status == OrderStatus.FILLED
 
     def test_update_with_event_appends_journal(self) -> None:
         """update(ticket, event) 应将 fill 事件写入 journal."""
@@ -114,7 +116,9 @@ class TestOrderBookCancel:
         book.submit(order)
 
         book.cancel(cid)
-        assert book.get(cid).status == OrderStatus.CANCELED
+        canceled = book.get(cid)
+        assert canceled is not None
+        assert canceled.status == OrderStatus.CANCELED
         assert len(journal.events_for(cid)) == 2  # SUBMIT + CANCEL
 
     def test_cancel_unknown_raises(self) -> None:
@@ -138,7 +142,9 @@ class TestOrderBookCancel:
         )
         events_before = len(journal.events_for(cid))
         book.cancel(cid)  # no-op
-        assert book.get(cid).status == OrderStatus.FILLED
+        terminal = book.get(cid)
+        assert terminal is not None
+        assert terminal.status == OrderStatus.FILLED
         assert len(journal.events_for(cid)) == events_before
 
     def test_cancel_canceled_order_is_noop(self) -> None:
@@ -149,11 +155,15 @@ class TestOrderBookCancel:
         cid = order.client_id
         book.submit(order)
         book.cancel(cid)  # 第一次 cancel
-        assert book.get(cid).status == OrderStatus.CANCELED
+        first_canceled = book.get(cid)
+        assert first_canceled is not None
+        assert first_canceled.status == OrderStatus.CANCELED
         events_after_first = len(journal.events_for(cid))
 
         book.cancel(cid)  # 第二次 cancel — no-op
-        assert book.get(cid).status == OrderStatus.CANCELED
+        second_canceled = book.get(cid)
+        assert second_canceled is not None
+        assert second_canceled.status == OrderStatus.CANCELED
         assert len(journal.events_for(cid)) == events_after_first
 
 
@@ -192,8 +202,9 @@ class TestOrderBookReadonlyView:
 
         view = book.readonly_view()
         assert isinstance(view, OrderBookReadOnly)
-        assert view.get(cid) is not None
-        assert view.get(cid).status == OrderStatus.SUBMITTED
+        snapshot = view.get(cid)
+        assert snapshot is not None
+        assert snapshot.status == OrderStatus.SUBMITTED
 
     def test_readonly_view_reflects_mutable_state(self) -> None:
         book = OrderBook(journal=InMemoryOrderEventJournal())

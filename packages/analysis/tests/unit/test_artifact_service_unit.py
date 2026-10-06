@@ -79,8 +79,9 @@ FENCE = LeaseFence(
 class _MemoryArtifactIndex:
     """Thread-safe test port with the same immutable/CAS semantics as SQLite."""
 
-    def __init__(self, artifact_root: Path | None = None) -> None:
-        self.artifact_root = None if artifact_root is None else artifact_root.resolve()
+    def __init__(self, artifact_root: Path = Path()) -> None:
+        # 占位根：无根构造后由 _indexed_service 在交给服务前绑定真实根。
+        self.artifact_root = artifact_root.resolve()
         self.records: dict[str, ArtifactRecord] = {}
         self.add_calls = 0
         self.pin_calls = 0

@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from math import inf, nan
+from typing import cast
 
 import pytest
 from ditto_execution.errors import OrderStateError
@@ -204,8 +206,11 @@ def test_fill_assumption_rejects_ambiguous_or_invalid_policy(
         "slippage_bps": 0.0,
     }
     values.update(changes)
+    # kwargs 名固定为 FillAssumption 的四个字段且运行时值类型匹配声明；
+    # object 只是参数化容器的静态类型，坏值由 __post_init__ 校验抛 ValueError。
+    ctor = cast("Callable[..., FillAssumption]", FillAssumption)
     with pytest.raises(ValueError, match=message):
-        FillAssumption(**values)
+        ctor(**values)
 
 
 @pytest.mark.parametrize("field", ["dataset_id", "source", "source_snapshot_id"])

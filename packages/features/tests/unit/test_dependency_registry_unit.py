@@ -22,6 +22,7 @@ class TestResolveDependency:
 
     def test_market_dependency_resolves_dataset_column_and_persistent_ref(self) -> None:
         resolved = resolve_dependency("market.close")
+        assert resolved is not None
 
         assert resolved.source == "market.close"
         assert resolved.kind == "dataset"
@@ -33,6 +34,7 @@ class TestResolveDependency:
 
     def test_etf_dependency_resolves_dataset_column_and_persistent_ref(self) -> None:
         resolved = resolve_dependency("etf.pct_change")
+        assert resolved is not None
 
         assert resolved.source == "etf.pct_change"
         assert resolved.kind == "dataset"
@@ -41,6 +43,7 @@ class TestResolveDependency:
 
     def test_dotted_derived_dependency_remains_derived_ref(self) -> None:
         resolved = resolve_dependency("factor.alpha_upstream")
+        assert resolved is not None
 
         assert resolved.source == "factor.alpha_upstream"
         assert resolved.kind == "derived"
@@ -124,6 +127,7 @@ class TestDependencyContracts:
         contract = contract_for_ref(
             DependencyRef(kind="dataset", ref="market.stock_daily")
         )
+        assert contract is not None
 
         assert contract == DependencyContract(
             ref=DependencyRef(kind="dataset", ref="market.stock_daily"),

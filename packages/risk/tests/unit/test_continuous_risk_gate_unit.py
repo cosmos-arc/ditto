@@ -6,6 +6,7 @@ from dataclasses import dataclass, replace
 from datetime import UTC, datetime
 
 import pytest
+from ditto_kernel.identity import InstrumentId
 from ditto_kernel.order import OrderSide, OrderType
 from ditto_portfolio.accounting import (
     Account,
@@ -24,10 +25,13 @@ from ditto_risk.continuous_gate import (
     RiskStateError,
 )
 
+# NewType 恒等构造；模块常量作默认值（RUF009 禁止函数调用默认值）。
+_DEFAULT_INSTRUMENT_ID = InstrumentId(1)
+
 
 @dataclass(frozen=True)
 class _Order:
-    instrument_id: int = 1
+    instrument_id: InstrumentId = _DEFAULT_INSTRUMENT_ID
     quantity: int = 100
     direction: OrderSide = OrderSide.BUY
     order_id: str = "order-1"
@@ -73,7 +77,7 @@ def _fill() -> FillEvent:
     return FillEvent(
         fill_id="fill-1",
         order_id="order-1",
-        instrument_id=1,
+        instrument_id=InstrumentId(1),
         direction=OrderSide.BUY,
         filled_quantity=100,
         fill_price=10.0,
@@ -325,7 +329,7 @@ def test_daily_scan_fails_closed_on_invalid_position_value(
     market_value: float,
 ) -> None:
     position = Position(
-        instrument_id=1,
+        instrument_id=InstrumentId(1),
         quantity=100,
         available_quantity=100,
         average_cost=10.0,
@@ -335,7 +339,7 @@ def test_daily_scan_fails_closed_on_invalid_position_value(
         total_fees=0.0,
     )
     account_view = Account(
-        positions={1: position},
+        positions={InstrumentId(1): position},
         cash=CashBook(available=100_000.0, settled=100_000.0, frozen=0.0),
     ).get_view()
     context = replace(_context(), account_view=account_view)

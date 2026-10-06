@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import inspect
+from collections.abc import Mapping
 from datetime import UTC, datetime
 from typing import cast
 
@@ -112,12 +113,20 @@ class _Commands:
         return _receipt("strategies_submit_strategy_review", command.call_id)
 
 
-def _tools(commands: _Commands) -> tuple[object, object]:
+def _tools(
+    commands: _Commands,
+) -> tuple[AuthorSaveStrategyDraftTool, AuthorSubmitStrategyReviewTool]:
     port = cast(AgentAuthoringCommandPort, commands)
     return (
         AuthorSaveStrategyDraftTool(commands=port),
         AuthorSubmitStrategyReviewTool(commands=port),
     )
+
+
+def _obj(value: object) -> Mapping[str, object]:
+    """窄化 JSON 节点为对象（运行时校验；冻结证据的递归结构无法静态窄化）."""
+    assert isinstance(value, Mapping)
+    return value
 
 
 def test_only_save_and_submit_are_registered_and_both_require_approval() -> None:
@@ -165,8 +174,9 @@ def test_save_tool_injects_run_episode_and_call_identity_and_seals_receipt() -> 
     assert envelope.tool_name == "author_save_strategy_draft"
     assert envelope.temporal_context == context
     assert envelope.result["kind"] == "agent_authoring_command_receipt"
-    assert envelope.result["receipt"]["approval_id"] == "approval-001"
-    assert envelope.result["receipt"]["run_id"] == "run-001"
+    receipt = _obj(envelope.result["receipt"])
+    assert receipt["approval_id"] == "approval-001"
+    assert receipt["run_id"] == "run-001"
     artifact_ref = f"command-receipt:sha256:{envelope.result['receipt_hash']}"
     assert envelope.artifact_refs == (artifact_ref,)
     assert envelope.verify_integrity()
@@ -191,7 +201,7 @@ def test_submit_tool_is_thin_application_adapter_and_never_publishes() -> None:
 
     command = commands.calls[0]
     assert isinstance(command, AgentSubmitStrategyReviewCommand)
-    assert envelope.result["receipt"]["operation_id"] == (
+    assert _obj(envelope.result["receipt"])["operation_id"] == (
         "strategies_submit_strategy_review"
     )
     assert "publish" not in repr(commands.calls).lower()
@@ -256,8 +266,9 @@ async def test_provider_invoker_binds_call_to_run_and_records_receipt_evidence()
         call_id="call-save-001",
     )
 
-    assert payload["tool_name"] == "author_save_strategy_draft"
-    assert payload["result"]["receipt"]["run_id"] == "run-001"
+    result = _obj(payload)
+    assert result["tool_name"] == "author_save_strategy_draft"
+    assert _obj(_obj(result["result"])["receipt"])["run_id"] == "run-001"
     assert len(invoker.executions) == 1
     assert invoker.executions[0].call_id == "call-save-001"
     with pytest.raises(ValueError, match="duplicate"):

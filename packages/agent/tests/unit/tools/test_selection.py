@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping, Sequence
 from datetime import UTC, datetime
 from typing import cast
 
@@ -27,6 +28,19 @@ from ditto_application.queries.evidence_contracts import (
 
 _SNAPSHOT_ID = "industry-rotation:sha256:" + "a" * 64
 _RUN_ID = "selection-run:sha256:" + "b" * 64
+
+
+def _obj(value: object) -> Mapping[str, object]:
+    """窄化 JSON 节点为对象（运行时校验；冻结证据的递归结构无法静态窄化）."""
+    assert isinstance(value, Mapping)
+    return value
+
+
+def _seq(value: object) -> Sequence[object]:
+    """窄化 JSON 节点为数组（运行时校验；str/bytes 虽是 Sequence 但非数组）."""
+    assert isinstance(value, Sequence)
+    assert not isinstance(value, (str, bytes))
+    return value
 
 
 def _context() -> TemporalToolContext:
@@ -139,10 +153,10 @@ def test_tools_preserve_exact_rank_and_exclusion_evidence() -> None:
         facade=cast(SelectionRunEvidenceQueryPort, _SelectionFacade())
     ).invoke(arguments={"run_id": _RUN_ID}, context=_context())
 
-    assert rotation.result["payload"]["rankings"][0]["rank"] == 1
-    assert selection.result["payload"]["exclusions"][0]["reason_code"] == (
-        "insufficient_liquidity"
-    )
+    ranking = _obj(_seq(_obj(rotation.result["payload"])["rankings"])[0])
+    exclusion = _obj(_seq(_obj(selection.result["payload"])["exclusions"])[0])
+    assert ranking["rank"] == 1
+    assert exclusion["reason_code"] == "insufficient_liquidity"
     assert rotation.verify_integrity()
     assert selection.verify_integrity()
 

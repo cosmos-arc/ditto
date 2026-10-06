@@ -201,6 +201,7 @@ def test_failure_code_is_stable_and_only_present_for_failure_outcomes() -> None:
         failure_code=ExperimentFailureCode.SYSTEM_ERROR,
     )
 
+    assert record.failure_code is not None
     assert record.failure_code.value == "system_error"
 
 
