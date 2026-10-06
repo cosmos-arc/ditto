@@ -24,6 +24,9 @@ from ditto_application.commands.experiments import (
     LaunchExperimentCommand,
 )
 from ditto_application.commands.strategy import UpdateStrategyHandler
+
+# 直接从定义模块导入并经 __all__ 再导出：保留既有测试/组合查找点，
+# 命令编排在 governance lane 模块。
 from ditto_application.commands.strategy_governance import (
     ApproveReviewHandler,
     PublishStrategyVersionHandler,

@@ -13,8 +13,6 @@ import json
 import tomllib
 from pathlib import Path
 
-import pytest
-
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 _TESTS_CONFIG = _REPO_ROOT / "pyright.tests.json"
 _BASELINE = _REPO_ROOT / "pyright.tests.baseline.json"
@@ -91,7 +89,6 @@ def test_prod_include_covers_backend_source() -> None:
         assert "*" not in entry or "**" in entry, f"单星 glob 不可用: {entry}"
 
 
-@pytest.mark.unit
 def test_guard_self_check_disk_enumeration_is_non_trivial() -> None:
     """守卫自身的枚举必须看见真实规模，防止跳过逻辑误伤成空集."""
     roots = _on_disk_test_roots()

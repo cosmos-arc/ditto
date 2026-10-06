@@ -45,8 +45,12 @@ _OVERLAP_COMPARE_FIELDS = (
 def _fuyao_source(container: Container) -> FuyaoSource:
     """从容器解析 FuyaoSource, 未配置时退出."""
     # dishka 运行时支持 Optional 提供键（di/sources.py fuyao_source 的返回
-    # 类型即键），但 get() 注解只声明 type[_T]，联合键需显式放宽。
-    source = container.get(cast(Any, FuyaoSource | None))
+    # 类型即键），但 get() 注解只声明 type[_T]，联合键需显式放宽；外层
+    # cast 恢复 source 的静态类型。
+    source = cast(
+        "FuyaoSource | None",
+        container.get(cast(Any, FuyaoSource | None)),
+    )
     if source is None:
         typer.secho(
             "fuyao 未配置: 在 DITTO_CONFIG_ROOT 的 data_source 配置中设置 "
