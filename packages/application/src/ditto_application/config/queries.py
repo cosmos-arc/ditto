@@ -64,6 +64,15 @@ INGESTION_SPECS: dict[_Dataset, DatasetSpec] = {
         critical_fields=["ts_code", "name", "market"],
         task_name="ingest_index_basic",
     ),
+    # 维护者确认的 ETF 参考事实（#408）：声明文件驱动，source=config；
+    # 在 tushare 源的默认调度中按 SOURCE_UNSUPPORTED 精确跳过。
+    _Dataset.ETF_REFERENCE: create_t0_config(
+        dataset=_Dataset.ETF_REFERENCE,
+        description="维护者确认的ETF参考事实(config源)",
+        typical_available_time=time(8, 30),
+        critical_fields=["source_ticker", "field", "value", "effective_from"],
+        task_name="ingest_etf_reference",
+    ),
     # T1: Incremental datasets
     _Dataset.ETF_DAILY: create_t1_config(
         dataset=_Dataset.ETF_DAILY,

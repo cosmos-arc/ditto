@@ -14,6 +14,10 @@ from ditto_data.config import DataSourceSettings, FileStorageSettings
 from ditto_data.config.data_source_validation import DataSourceValidationProvider
 from ditto_data.config.data_store import DataStoreSettings as _DataStoreSettings
 from ditto_data.quality.config import DQSettings
+from ditto_data.sources.reference_config import (
+    EtfReferenceConfigSource,
+    get_default_etf_reference_config_path,
+)
 from ditto_features.config import FeatureArtifactStoreSettings
 from ditto_platform.foundation import (
     ConfigInitCoordinator,
@@ -194,6 +198,15 @@ class ConfigProvider(Provider):
     ) -> ConfigLoader:
         """提供配置文件加载器。"""
         return ConfigLoader(environment, config_root=runtime_paths.config_root)
+
+    @provide
+    def etf_reference_config_source(
+        self, config_loader: ConfigLoader
+    ) -> EtfReferenceConfigSource:
+        """维护者确认的 ETF 参考事实声明源（#408）——按配置根解析默认声明文件。"""
+        return EtfReferenceConfigSource(
+            get_default_etf_reference_config_path(config_loader.config_root)
+        )
 
     @provide
     def runtime_paths(self, environment: Environment) -> RuntimePaths:

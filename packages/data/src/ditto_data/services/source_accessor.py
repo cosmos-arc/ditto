@@ -17,7 +17,7 @@ class SourceAccessor:
     """
     外部数据源访问服务.
 
-    封装 DataSources accessor，提供统一的数据源访问接口。
+    封装 DataSources，为 Port 层提供统一的外部数据源访问接口.
 
     职责：
     - 提供数据源的统一访问入口

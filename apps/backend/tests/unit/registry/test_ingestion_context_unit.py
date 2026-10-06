@@ -48,6 +48,7 @@ def test_create_ingestion_bundle_wires_runtime_ports(mocker) -> None:
         ingestion_context.IngestionCursorStore: MagicMock(),
         ingestion_context.ExchangeTransformers: MagicMock(),
         ingestion_context.CheckDataQualityHandler: MagicMock(),
+        ingestion_context.EtfReferenceConfigSource: MagicMock(),
         SourceRegistry: source_registry,
         DataCatalogReader: catalog,
         DataCatalogWriter: catalog,

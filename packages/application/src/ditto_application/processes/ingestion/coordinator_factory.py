@@ -30,6 +30,7 @@ from ditto_data.sources.protocols import (
     MarketFetcher,
     MetadataFetcher,
 )
+from ditto_data.sources.reference_config import EtfReferenceConfigSource
 from ditto_platform.foundation import logger
 
 from ditto_application.exceptions import AppProcessError
@@ -73,6 +74,7 @@ class CoordinatorServices:
     source_accessor: SourceAccessor
     ingestion_log_store: IngestionLogStore
     source_registry: SourceRegistryLike | None = None
+    etf_reference_config: EtfReferenceConfigSource | None = None
 
 
 @dataclass(frozen=True)
@@ -247,6 +249,7 @@ def _build_coordinator(
         fetchers=_source_fetchers_for(services, source_key),
         fred_source=fred_source,
         sina_source=services.source_accessor.sina,
+        etf_reference_config=services.etf_reference_config,
         config=IngestionCoordinatorConfig(
             source_name=source_key.value,
             ingestion_log_store=services.ingestion_log_store,

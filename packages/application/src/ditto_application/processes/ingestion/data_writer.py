@@ -273,6 +273,7 @@ class IngestionDataWriter:
         WriteKind.NAME_HISTORY: "_handler_name_history",
         WriteKind.ST_CHANGE_HISTORY: "_handler_st_change_history",
         WriteKind.ETF_REFERENCE: "_handler_etf_reference",
+        WriteKind.ETF_REFERENCE_CONFIG: "_handler_etf_reference_config",
         WriteKind.FUTURES_BARS: "_handler_futures_bars",
         WriteKind.FUTURES_BASIC: "_handler_futures_basic",
         WriteKind.EARNINGS_EVENT: "_handler_earnings_event",
@@ -440,6 +441,46 @@ class IngestionDataWriter:
             ctx.df, ctx.trade_date, asset_class
         )
 
+    def _handler_etf_reference_config(
+        self, ctx: _WriteContext
+    ) -> Callable[[], WriteResult]:
+        """etf_reference 声明摄取：登记 config 身份映射，观察行在 post-ingest 落库。"""
+        return lambda: self._write_etf_reference_config(ctx.df, ctx.trade_date)
+
+    def _write_etf_reference_config(
+        self, df: pl.DataFrame, trade_date: str
+    ) -> WriteResult:
+        """按声明登记 source='config' 映射；未解析身份的标的 fail closed。"""
+        if df.is_empty() or "source_ticker" not in df.columns:
+            raise AppProcessError(
+                "etf_reference declaration is empty; refusing identity-free write"
+            )
+        evidence_dates: dict[str, str] = {}
+        for row in df.to_dicts():
+            ticker = str(row["source_ticker"])
+            day = _normalize_iso_date(str(row["effective_from"]))
+            # 身份锚定取该标的最早有证据日期（与映射登记合同一致），
+            # 不随声明字段排序/增删漂移。
+            if ticker not in evidence_dates or day < evidence_dates[ticker]:
+                evidence_dates[ticker] = day
+        resolved = (
+            self._metadata_service.instrument.resolve_config_reference_instruments(
+                sorted(evidence_dates),
+                evidence_dates=evidence_dates,
+                observed_at=datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
+            )
+        )
+        unresolved = sorted(set(evidence_dates) - set(resolved))
+        if unresolved:
+            raise AppProcessError(
+                "etf_reference declaration identity is unresolved: "
+                + ", ".join(unresolved)
+                + "; ingest etf_basic first",
+                field="source_ticker",
+                value=tuple(unresolved),
+            )
+        return _to_write_result("etf_reference", 0, df, len(df))
+
     def _write_etf_basic_with_reference(
         self,
         df: pl.DataFrame,
@@ -459,13 +500,16 @@ class IngestionDataWriter:
     def write_etf_reference(self, df: pl.DataFrame, snapshot: ProviderSnapshot) -> None:
         """Project only available basic facts, bound to the actual retained snapshot."""
         if (
-            snapshot.dataset_id not in {"etf_basic", "etf_daily"}
+            snapshot.dataset_id not in {"etf_basic", "etf_daily", "etf_reference"}
             or not snapshot.payload_retained
         ):
             raise AppProcessError(
                 "ETF observations require retained basic or raw daily evidence"
             )
         if df.is_empty() or "source_ticker" not in df.columns:
+            return
+        if snapshot.dataset_id == "etf_reference":
+            self._save_config_observations(df, snapshot)
             return
         observed_on = snapshot.request_end
         published_at = snapshot.created_at.astimezone(UTC).strftime(
@@ -526,6 +570,35 @@ class IngestionDataWriter:
                     }
                 )
         self._metadata_service.instrument.save_etf_reference_observations(rows)
+
+    def _save_config_observations(
+        self, df: pl.DataFrame, snapshot: ProviderSnapshot
+    ) -> None:
+        """声明式事实：观察日=本次摄取请求日，生效日=声明确认的生效日。"""
+        observed_on = _normalize_iso_date(snapshot.request_end)
+        published_at = snapshot.created_at.astimezone(UTC).strftime(
+            "%Y-%m-%dT%H:%M:%SZ"
+        )
+        observations: list[dict[str, object]] = []
+        for row in df.to_dicts():
+            value = row.get("value")
+            if value is None or str(value) == "":
+                continue  # 观察缺失不推断
+            observations.append(
+                {
+                    "source_ticker": str(row["source_ticker"]),
+                    "field": str(row["field"]),
+                    "value": str(value),
+                    "unit": str(row["unit"]),
+                    "observed_on": observed_on,
+                    "published_at": published_at,
+                    "effective_from": _normalize_iso_date(str(row["effective_from"])),
+                    "effective_to": None,
+                    "source": self._source_name,
+                    "source_snapshot_id": snapshot.snapshot_id,
+                }
+            )
+        self._metadata_service.instrument.save_etf_reference_observations(observations)
 
     def _write_traded_bars(
         self,

@@ -248,6 +248,8 @@ class TestDefaultMetadataMaturityAssignments:
             # #395 可信历史
             "namechange",
             "st_history",
+            # #408 ETF Paper 生产参考事实（配置源）
+            "etf_reference",
         }
     )
 
@@ -543,6 +545,8 @@ class TestR2DataProductContracts:
             "index_valuation",
             # #483 ETF 单位净值
             "etf_nav",
+            # #408 维护者确认的 ETF 参考事实（配置源）
+            "etf_reference",
         }
     )
 

@@ -105,6 +105,8 @@ _METADATA_DOMAINS: frozenset[str] = frozenset(
         "industry_classification",
         "industry_mapping",
         "namechange",
+        # 维护者确认的 ETF 参考事实（配置源，#408）
+        "etf_reference",
     }
 )
 
@@ -187,6 +189,8 @@ _INITIAL_FOCUS_DATASETS: frozenset[str] = frozenset(
         # 可信历史（#395）
         "namechange",
         "st_history",
+        # ETF Paper 生产参考事实（#408 主线验收车道，配置源）
+        "etf_reference",
     }
 )
 
@@ -269,7 +273,7 @@ def _resolve_asset_class(dataset_id: str) -> DatasetAssetClass | None:
         "st_history",
     }:
         return "stock"
-    if dataset_id in {"etf_daily", "fund_adj", "etf_nav"}:
+    if dataset_id in {"etf_daily", "fund_adj", "etf_nav", "etf_reference"}:
         return "etf"
     if dataset_id in {"index_daily", "global_index_daily", "index_weight"}:
         return "index"
@@ -303,6 +307,8 @@ def _resolve_schedule(dataset_id: str) -> DatasetSchedule:
         "st_history",
         # 合约信息快照：按交易所分片全量抓取
         "futures_basic",
+        # 维护者确认的声明式快照（#408）
+        "etf_reference",
     }:
         return "source_defined"
     # All others default to trading_days (basic datasets are also
@@ -574,6 +580,8 @@ _ALL_DATASET_IDS: tuple[str, ...] = (
     "adj_factor",
     "fund_adj",
     "etf_nav",
+    # Maintainer-confirmed ETF reference facts (config source, #408)
+    "etf_reference",
     # Fundamental
     "balance_sheet",
     "income_statement",
@@ -652,6 +660,9 @@ def _resolve_supported_sources(dataset_id: str) -> tuple[str, ...]:
     if dataset_id == "stock_daily":
         # fuyao 冗余源：原始价日线，source=auto 故障日降级（ADR dual-source）
         return ("tushare", "fuyao")
+    if dataset_id == "etf_reference":
+        # 维护者确认的声明式配置是唯一合法来源（#408）
+        return ("config",)
     return ("tushare",)
 
 
@@ -674,7 +685,7 @@ def _resolve_freshness_sla_hours(dataset_id: str) -> int | None:
     """Resolve operational freshness SLA for catalog status overlays."""
     if dataset_id in _UNSUPPORTED_INGESTION_DATASETS:
         return None
-    if dataset_id in {"stock_basic", "etf_basic", "index_basic"}:
+    if dataset_id in {"stock_basic", "etf_basic", "index_basic", "etf_reference"}:
         return 168
     if dataset_id in _MACRO_DOMAINS:
         return 72
