@@ -7,6 +7,7 @@ import os
 from datetime import UTC, date, datetime
 from decimal import Decimal
 from pathlib import Path
+from typing import Any
 
 import polars as pl
 from ditto_application.commands.paper_account import (
@@ -134,8 +135,11 @@ def _snapshot(
     return snapshot
 
 
-def _reference_rows(snapshot: ProviderSnapshot, day: date) -> list[list[object]]:
-    rows: list[list[object]] = []
+def _reference_rows(
+    snapshot: ProviderSnapshot, day: date
+) -> list[list[Any] | tuple[Any, ...]]:
+    """SQL 参数行（异构元素，与 executemany 的参数类型精确对齐）."""
+    rows: list[list[Any] | tuple[Any, ...]] = []
     for instrument, restriction, tracking in (
         (ETF_ID, "none", "000300.SH"),
         (BLOCKED_ID, "suspended", "000300.SH"),

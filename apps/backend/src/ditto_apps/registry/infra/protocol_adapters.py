@@ -43,12 +43,17 @@ from ditto_data.services.metadata.instrument import InstrumentService
 from ditto_data.services.metadata_service import MetadataService
 from ditto_data.services.source_accessor import SourceAccessor
 from ditto_data.sources.base import SourceFetchError
-from ditto_data.sources.fuyao.source import FuyaoDailyKDumpFetcher, FuyaoSource
+from ditto_data.sources.fuyao.source import (
+    DumpKind,
+    FuyaoDailyKDumpFetcher,
+    FuyaoSource,
+)
 from ditto_data.storage.base.sqlite_table_reader import SqliteTableReader
 from ditto_data.storage.metadata.instrument import InstrumentReader
 from ditto_data.storage.runtime.quality import ComparisonWriter
 
 __all__ = [
+    "DumpKind",
     "FinancialReconcileContextProtocol",
     "FundamentalFinancialReconcileContext",
     "FuyaoDailyKDumpFetcher",
@@ -151,7 +156,7 @@ class FuyaoAdjustmentEventsSource:
         if dump is None:
             raise RuntimeError(
                 "fuyao adjustment-factors dump not found: run 'ditto fuyao "
-                "dump-adjustment-factors' before adj_factor reconciliation"
+                + "dump-adjustment-factors' before adj_factor reconciliation"
             )
         target = date.fromisoformat(trade_date)
         try:
@@ -209,7 +214,7 @@ class FundamentalFinancialReconcileContext:
         if not self._golden or not self._golden.is_enabled:
             raise RuntimeError(
                 "financial reconciliation requires the golden dataset "
-                "(config/default/golden_dataset.yml) to scope instruments"
+                + "(config/default/golden_dataset.yml) to scope instruments"
             )
         return list(self._golden.get_tickers())
 
@@ -255,7 +260,7 @@ class ProtocolAdapterProvider(Provider):
             return fuyao_source
         raise RuntimeError(
             "secondary bars source is unconfigured: set FUYAO_API_KEY to enable "
-            "cross-source reconciliation"
+            + "cross-source reconciliation"
         )
 
     @provide
@@ -276,7 +281,7 @@ class ProtocolAdapterProvider(Provider):
             return fuyao_source
         raise RuntimeError(
             "secondary index source is unconfigured: set FUYAO_API_KEY to enable "
-            "index_daily reconciliation"
+            + "index_daily reconciliation"
         )
 
     @provide
@@ -289,7 +294,7 @@ class ProtocolAdapterProvider(Provider):
             return fuyao_source
         raise RuntimeError(
             "secondary financials source is unconfigured: set FUYAO_API_KEY to "
-            "enable financial reconciliation"
+            + "enable financial reconciliation"
         )
 
     @provide
@@ -302,7 +307,7 @@ class ProtocolAdapterProvider(Provider):
             return fuyao_source
         raise RuntimeError(
             "secondary fund NAV source is unconfigured: set FUYAO_API_KEY to "
-            "enable etf_nav reconciliation"
+            + "enable etf_nav reconciliation"
         )
 
     @provide

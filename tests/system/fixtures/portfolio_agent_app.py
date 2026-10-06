@@ -9,6 +9,7 @@ import sqlite3
 from collections.abc import AsyncIterator, Mapping
 from contextlib import asynccontextmanager
 from pathlib import Path
+from typing import cast
 from unittest.mock import patch
 
 import orjson
@@ -72,10 +73,15 @@ class _ComparisonModel(ScriptedAgentModel):
                 "paper_session_id": "cmp-live-session",
             },
         )
-        evidence = await self.invoker.invoke(
-            call.tool_name,
-            orjson.dumps(dict(call.arguments)).decode(),
-            call_id=call.call_id,
+        # invoker 协议面向任意工具返回 object；本 fixture 的确定性工具
+        # 约定返回含 evidence_id 的 JSON 对象。
+        evidence = cast(
+            "Mapping[str, object]",
+            await self.invoker.invoke(
+                call.tool_name,
+                orjson.dumps(dict(call.arguments)).decode(),
+                call_id=call.call_id,
+            ),
         )
         _model_evidence.append(jsonable_encoder(evidence))
         return ModelResult(

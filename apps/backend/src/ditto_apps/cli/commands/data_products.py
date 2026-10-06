@@ -67,7 +67,7 @@ def execute_data_product_operation(
                     "--start-date",
                     operation,
                 ),
-                end_date=_required(options.end_date, "--end-date"),
+                end_date=_required(options.end_date, "--end-date", operation),
                 parallel=options.parallel,
                 instrument_ids=options.instrument_ids,
             )

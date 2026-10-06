@@ -347,9 +347,9 @@ def main(argv: Sequence[str] | None = None) -> int:
                 args.image,
                 "-c",
                 "import platform; from pathlib import Path; "
-                "assert not Path('/usr/lib/python3.13').exists(), "
-                "'untracked Debian stdlib'; "
-                "print(platform.python_version())",
+                + "assert not Path('/usr/lib/python3.13').exists(), "
+                + "'untracked Debian stdlib'; "
+                + "print(platform.python_version())",
             ),
         )
         .decode("utf-8")

@@ -22,7 +22,7 @@ from .infra.risk_persistence import RiskPersistenceProvider
 from .infra.trading_storage import TradingStorageProvider
 from .research_case import ResearchCaseCompositionProvider
 
-__all__ = ["make_app_container", "make_async_app_container"]
+__all__ = ["Container", "make_app_container", "make_async_app_container"]
 
 
 def _get_base_providers() -> tuple[Provider, ...]:

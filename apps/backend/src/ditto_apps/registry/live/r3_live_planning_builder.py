@@ -295,7 +295,7 @@ def _planning_time(
 ) -> datetime:
     values = [datetime.fromisoformat(candidate.created_at.replace("Z", "+00:00"))]
     values.extend(
-        datetime.fromisoformat(item.certified_at) for item in snapshot.dataset_bindings
+        datetime.fromisoformat(item.observed_at) for item in snapshot.dataset_bindings
     )
     if any(value.tzinfo is None for value in values):
         raise ValueError("live planning authority timestamps must be timezone-aware")
@@ -457,7 +457,7 @@ def build_live_planning_artifact(
         data_root=data_root,
         artifact_service=services.artifact_service,
         catalog_service=services.research_catalog,
-        certification_reader=services.certification_reader,
+        lifecycle_reader=services.lifecycle_reader,
         snapshot_reader=services.snapshot_reader,
         options=LiveResearchSnapshotOptions(etf_tickers=selected.etf_tickers),
     )

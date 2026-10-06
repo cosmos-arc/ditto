@@ -203,6 +203,54 @@ def test_planning_authority_time_must_be_timezone_aware() -> None:
         subject._planning_time(candidate, snapshot)
 
 
+def test_planning_authority_time_reads_binding_observed_at() -> None:
+    """#539 回归：绑定的时间权威字段是 observed_at（#410 改名曾漏改此点）."""
+    from datetime import UTC, datetime
+
+    candidate = replace(
+        fixtures._seed_record("seed_stock_selection_rotation", 2),
+        created_at="2026-08-01T00:00:00+00:00",
+    )
+    snapshot = cast(
+        subject.LiveResearchSnapshotBuild,
+        SimpleNamespace(
+            dataset_bindings=(
+                SimpleNamespace(observed_at="2026-07-01T00:00:00+00:00"),
+                SimpleNamespace(observed_at="2026-09-01T08:30:00+00:00"),
+            )
+        ),
+    )
+
+    assert subject._planning_time(candidate, snapshot) == datetime(
+        2026, 9, 1, 8, 30, tzinfo=UTC
+    )
+
+
+def test_snapshot_builder_signature_covers_planning_builder_call_kwargs() -> None:
+    """#539 回归：planning_builder 透传的 kwargs 必须与 snapshot_builder 签名一致.
+
+    #410 的 certification_reader→lifecycle_reader 改名曾在门外调用点漏改三天；
+    此契约钉住形参集合，任何增删改在这里先红。
+    """
+    import inspect
+
+    from ditto_apps.registry.live import r3_live_snapshot_builder
+
+    assert set(
+        inspect.signature(
+            r3_live_snapshot_builder.build_live_research_snapshot
+        ).parameters
+    ) == {
+        "lane",
+        "data_root",
+        "artifact_service",
+        "catalog_service",
+        "snapshot_reader",
+        "lifecycle_reader",
+        "options",
+    }
+
+
 def test_requirements_reject_missing_certification_binding() -> None:
     snapshot = cast(
         subject.LiveResearchSnapshotBuild,

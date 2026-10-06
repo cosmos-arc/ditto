@@ -12,7 +12,7 @@ from ditto_agent.observability import (
     AgentSpanRecord,
     NoopAgentTelemetrySink,
 )
-from ditto_platform.foundation import Metrics, span
+from ditto_platform.foundation import Metrics, SpanKind, span
 from ditto_platform.foundation.observability.metrics import SafeCounter, SafeHistogram
 
 _COUNTER_NAMES = {
@@ -32,7 +32,11 @@ class OTelAgentTelemetrySink:
 
     def emit_span(self, record: AgentSpanRecord) -> None:
         """Bridge one redacted record into a Ditto OTel span."""
-        with span(record.name, **dict(record.attributes)):
+        # "kind" 是 span() 的保留关键字参数，桥接属性不得与其冲突。
+        attributes = {
+            key: value for key, value in record.attributes.items() if key != "kind"
+        }
+        with span(record.name, kind=SpanKind.INTERNAL, **attributes):
             pass
 
     def emit_metric(self, record: AgentMetricRecord) -> None:

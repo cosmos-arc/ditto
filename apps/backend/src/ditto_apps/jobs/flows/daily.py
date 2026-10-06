@@ -307,7 +307,7 @@ def daily_ingestion_flow(
     ingestion_results = {**t0_results, **t1_results}
 
     # 5. 触发 DQC（等待 T1 任务完成）
-    dqc_future: PrefectFuture[dict[str, Any]] = dq_batch_check.submit(  # pyright: ignore[reportCallIssue, reportUnknownMemberType, reportUnknownVariableType]
+    dqc_future: PrefectFuture[dict[str, Any]] = dq_batch_check.submit(  # pyright: ignore[reportCallIssue]
         trade_date=trade_date,
         datasets=list(ingestion_results),
         market_wide=True,
@@ -316,7 +316,7 @@ def daily_ingestion_flow(
     )
     dqc_results = cast(
         dict[str, Any],
-        dqc_future.result(),  # pyright: ignore[reportUnknownMemberType]
+        dqc_future.result(),
     )
 
     # 5.5 例行 adj_factor 跨源对账（#515 A3）：排在 DQC 之后，失败显式

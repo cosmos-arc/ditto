@@ -131,6 +131,31 @@ application 4295 例 124.6s/134.5s（两复测；改动前同机 4469 例 110.5s
 语义稳定而非时长）、backend 2108 例 62.3s。上表其余组件构成未变。
 `task type-all` 40.6s 为全仓检查，单包档也整付（记录观察，本票不改）。
 
+### 2026-10-06 类型门覆盖完整性（[Issue 539](https://github.com/cosmos-arc/ditto/issues/539)）
+
+排查 #533 时发现 `pyright.tests.json` 的 `packages/*/tests` 单星 glob 在
+basedpyright 中不展开（仅 `**` 生效）——12 个包 1020 个测试文件长期在类型门
+外；`apps/backend/src` 248 个生产文件也仅是生产门的 extraPaths 而从未被报告。
+同批修复：include 全部改字面目录清单（含根 `tests/`），生产门 include 显式纳
+入 `apps/backend/src`，并真修暴露出的 backend 29 错与根 tests 5 错（其中
+`r3_live_planning_builder` 三处为 #410 改名漏改的运行时断裂）。
+
+语义与维护：
+
+- tests 门存量债（2480 错，按包分布见 #539）钉在入库 `pyright.tests.baseline.json`
+  （basedpyright 原生 baselineFile，由配置自动消费）；**新文件与新形状错误立即红**，
+  存量不计。已知边界（correctness 取证）：baseline 按 规则+列宽+行数 对齐匹配、
+  不含行号——同文件同规则同列宽的「修一增一」交换会被吸收到下轮重生成之前；
+  每批清偿后重生成即闭合该窗口。
+- 绿档运行若存量缩水，basedpyright 会**自动改写** baseline 文件（1.39.9 无 CLI
+  关闭项）——收缩应随修复提交，或 `git checkout` 丢弃；不请自来的 diff 以此解释。
+- 每批清偿后重生成收缩：修错 → `rm pyright.tests.baseline.json` →
+  `basedpyright --project pyright.tests.json --writebaseline` → 提交新基线；清零时
+  连 `baselineFile` 配置一并移除。
+- `tooling/quality/tests/test_type_gate_coverage.py` 守卫：tests include 必须与磁盘
+  tests 目录集合完全一致、禁用通配符、生产门必须含 `apps/backend/src`——新包/新
+  tooling tests 目录不登记即红，杜绝静默漏保。
+
 CI 侧（9 次成功全量 PR + 3 次后端 squash push，2026-09-27 取样）：
 
 - PR 全量 wall 778–831s（如 [run 36301251107](https://github.com/cosmos-arc/ditto/actions/runs/36301251107)）；

@@ -118,6 +118,36 @@ def test_exact_confirmation_executes_selected_operation_once(
 
 
 @pytest.mark.unit
+def test_confirmed_bootstrap_without_end_date_fails_closed(
+    runner: CliRunner,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """#539 回归：缺 --end-date 的已确认 bootstrap 走 AppCommandError 而非 TypeError."""
+    from contextlib import nullcontext
+
+    bundle = MagicMock()
+    monkeypatch.setattr(
+        "ditto_apps.cli.commands.data_products.create_ingestion_bundle",
+        MagicMock(return_value=nullcontext(bundle)),
+    )
+    result = runner.invoke(
+        app,
+        [
+            "data-products",
+            "bootstrap",
+            "stock_daily",
+            "--start-date",
+            "2020-01-01",
+            "--confirm",
+            "data-product:bootstrap:stock_daily:confirm",
+        ],
+    )
+    assert result.exit_code == 2
+    assert "--end-date is required to execute bootstrap" in result.output
+    bundle.backfill_manager.backfill_range.assert_not_called()
+
+
+@pytest.mark.unit
 @pytest.mark.parametrize("operation", ["bootstrap", "repair"])
 def test_ingestion_operation_exits_nonzero_when_any_chunk_failed(
     runner: CliRunner,
