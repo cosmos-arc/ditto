@@ -36,6 +36,7 @@ from ditto_data.services.metadata._identity import (
 from ditto_data.services.metadata._identity import (
     resolve_source_ticker as _resolve_source_ticker,
 )
+from ditto_data.sources.base import SourceFetchError
 from ditto_data.sources.exchange_transformers import ExchangeTransformers
 from ditto_data.sources.fuyao.source import to_thscode
 from ditto_data.storage.market.stock.status import (
@@ -260,13 +261,27 @@ class InstrumentService:
         """
         if not source_tickers:
             return {}
-        # 输入键 → thscode（含裸码前缀规则转换），单一事实源在 fuyao source
-        thscode_by_input = {
-            str(ticker): (
-                str(ticker) if "." in str(ticker) else to_thscode(str(ticker))
+        # 输入键 → thscode（含裸码前缀规则转换），单一事实源在 fuyao source；
+        # 未识别前缀（如 900xxx B 股，#516）按规则 5 不解析——键缺席即
+        # 调用方拒绝该行，warning 留痕不中断整批。
+        thscode_by_input: dict[str, str] = {}
+        unrecognized_prefix: list[str] = []
+        for raw_ticker in source_tickers:
+            key = str(raw_ticker)
+            if "." in key:
+                thscode_by_input[key] = key
+                continue
+            try:
+                thscode_by_input[key] = to_thscode(key)
+            except SourceFetchError:
+                unrecognized_prefix.append(key)
+        if unrecognized_prefix:
+            logger.warning(
+                "fuyao tickers with unrecognized prefix left unresolved",
+                event="fuyao_thscode_unrecognized_prefix",
+                tickers=unrecognized_prefix[:20],
+                count=len(unrecognized_prefix),
             )
-            for ticker in source_tickers
-        }
         thscodes = sorted(set(thscode_by_input.values()))
         evidence_by_thscode = {
             thscode_by_input[key]: value

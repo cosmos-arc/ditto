@@ -151,10 +151,26 @@ _BARS_RAW_SCHEMA: dict[str, type[pl.DataType]] = {
 
 
 def to_thscode(ticker: str) -> str:
-    """裸码 → thscode（与 ts_code 同构；对账反解按同一前缀规则）。"""
-    return (
-        ticker if "." in ticker else f"{ticker}{_TICKER_SUFFIX.get(ticker[0], '.SZ')}"
-    )
+    """
+    裸码 → thscode（与 ts_code 同构；对账反解按同一前缀规则）.
+
+    未识别前缀(如 900xxx 沪 B / 200xxx 深 B)显式拒绝而非静默补 .SZ
+    (#516)：当前 A+ETF+北交所宇宙不触达 B 股，错标后缀会污染对账身份
+    反解；B 股进入宇宙时须带实测登记 '9'→.SH、'2'→.SZ。抛
+    SourceFetchError 使对账路径按标的隔离留痕(metadata 路径按行拒绝).
+    """
+    if "." in ticker:
+        return ticker
+    suffix = _TICKER_SUFFIX.get(ticker[:1])
+    if suffix is None:
+        raise SourceFetchError(
+            source="fuyao",
+            message=(
+                f"fuyao ticker 前缀未识别: {ticker!r} 无法确定交易所后缀"
+                f" (已知前缀 {sorted(_TICKER_SUFFIX)}): 拒绝猜测 (#516)"
+            ),
+        )
+    return f"{ticker}{suffix}"
 
 
 _to_thscode = to_thscode  # 模块内旧名兼容

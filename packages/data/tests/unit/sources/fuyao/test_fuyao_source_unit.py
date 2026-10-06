@@ -45,6 +45,126 @@ class TestFuyaoTimeConversions:
         assert _to_thscode("830799") == "830799.BJ"
         assert _to_thscode("600519.SH") == "600519.SH"
 
+    def test_ticker_suffix_unknown_prefix_rejected(self) -> None:
+        """#516：未识别前缀（900/200xxx B 股、空串）显式拒绝，不静默落 .SZ."""
+        for bad_ticker in ("900901", "200001", "739001", ""):
+            with pytest.raises(SourceFetchError, match="前缀未识别"):
+                _to_thscode(bad_ticker)
+
+
+@pytest.mark.unit
+class TestFuyaoClientRateLimit:
+    """#516 限流治理 — 节流 + 429/4001 退避重试 + fail-closed 保持."""
+
+    @respx.mock
+    def test_code_4001_retried_then_succeeds_and_interval_adapts(self) -> None:
+        """code=4001 退避后重试成功；节流间隔自适应翻倍（官方：降频重试）."""
+        endpoint = respx.get(f"{_BASE}/api/x").mock(
+            side_effect=[
+                httpx.Response(
+                    200,
+                    json={"code": 4001, "message": "rate limit", "data": None},
+                ),
+                httpx.Response(
+                    200, json={"code": 0, "message": "success", "data": {"item": [1]}}
+                ),
+            ]
+        )
+        client = FuyaoClient(base_url=_BASE, api_key="k", min_request_interval=0.1)
+
+        assert client.get("/api/x") == {"item": [1]}
+        assert endpoint.call_count == 2
+        assert client._min_request_interval == pytest.approx(0.2)
+
+    @respx.mock
+    def test_code_4001_exhaustion_fails_closed(self) -> None:
+        """重试耗尽仍 4001 → 按信封错误 fail-closed（隔离语义不变）."""
+        endpoint = respx.get(f"{_BASE}/api/x").mock(
+            return_value=httpx.Response(
+                200, json={"code": 4001, "message": "rate limit", "data": None}
+            )
+        )
+
+        with pytest.raises(SourceFetchError, match="code=4001"):
+            FuyaoClient(base_url=_BASE, api_key="k").get("/api/x")
+
+        assert endpoint.call_count == 4  # 首发 + 3 次退避重试
+
+    @respx.mock
+    def test_http_429_retried_like_4001(self) -> None:
+        """HTTP 429 与 code=4001 同为限流信号（官方 llms.txt），退避重试."""
+        endpoint = respx.get(f"{_BASE}/api/x").mock(
+            side_effect=[
+                httpx.Response(429, json={"code": 4001, "message": "limit"}),
+                httpx.Response(
+                    200, json={"code": 0, "message": "success", "data": {"item": []}}
+                ),
+            ]
+        )
+
+        assert _client().get("/api/x") == {"item": []}
+        assert endpoint.call_count == 2
+
+    @respx.mock
+    def test_http_error_wrapped_without_retry(self) -> None:
+        """非限流 HTTP 错误包装为 SourceFetchError（原为裸 httpx 错误）."""
+        endpoint = respx.get(f"{_BASE}/api/x").mock(
+            return_value=httpx.Response(500, text="internal error")
+        )
+
+        with pytest.raises(SourceFetchError, match="http error: 500"):
+            _client().get("/api/x")
+
+        assert endpoint.call_count == 1
+
+    @respx.mock
+    def test_non_json_body_wrapped(self) -> None:
+        """200 非 JSON 响应体 → 包装为 SourceFetchError，不裸抛（#516）."""
+        endpoint = respx.get(f"{_BASE}/api/x").mock(
+            return_value=httpx.Response(200, text="<html>bad gateway</html>")
+        )
+
+        with pytest.raises(SourceFetchError, match="non-JSON"):
+            _client().get("/api/x")
+
+        assert endpoint.call_count == 1
+
+    @respx.mock
+    def test_non_object_envelope_rejected(self) -> None:
+        """200 JSON 但信封不是对象 → 拒绝，不裸抛 AttributeError."""
+        respx.get(f"{_BASE}/api/x").mock(
+            return_value=httpx.Response(200, json=[1, 2, 3])
+        )
+
+        with pytest.raises(SourceFetchError, match="non-object JSON"):
+            _client().get("/api/x")
+
+    def test_throttle_spaces_request_starts(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """默认节流维持相邻请求起点间隔（mock 时钟，不真实 sleep）."""
+        from ditto_data.sources.fuyao import client as fuyao_client_module
+
+        client = FuyaoClient(base_url=_BASE, api_key="k", min_request_interval=0.1)
+        sleeps: list[float] = []
+        clock = {"now": 100.0}
+
+        def _fake_monotonic() -> float:
+            return clock["now"]
+
+        def _fake_sleep(seconds: float) -> None:
+            sleeps.append(seconds)
+            clock["now"] += seconds
+
+        monkeypatch.setattr(fuyao_client_module.time, "monotonic", _fake_monotonic)
+        monkeypatch.setattr(fuyao_client_module.time, "sleep", _fake_sleep)
+
+        client._throttle()  # 首个请求：无间隔要求
+        assert sleeps == []
+        clock["now"] += 0.02  # 只过了 0.02s
+        client._throttle()  # 需补 0.08s
+        assert sleeps == [pytest.approx(0.08)]
+
 
 @pytest.mark.unit
 class TestFuyaoClientEnvelope:

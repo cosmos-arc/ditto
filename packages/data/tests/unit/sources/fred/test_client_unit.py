@@ -6,11 +6,14 @@ import logging
 
 import httpx
 import pytest
+import tenacity
 from ditto_data.sources.base import (
     SourceAuthenticationError,
     SourceConfigurationError,
     SourceFetchError,
+    SourceRateLimitError,
 )
+from ditto_data.sources.fred import client as fred_client_module
 from ditto_data.sources.fred.client import FredClient
 
 
@@ -307,3 +310,175 @@ class TestFredClientResourceManagement:
 
         # After with block, client should be closed
         assert client._client.is_closed
+
+
+class TestFredClientRobustness:
+    """#516 健壮性收口 — 限流退避 / 确定性 4xx / 响应体防护 / 缺失值."""
+
+    def test_missing_value_dot_becomes_null(self, respx_mock) -> None:
+        """官方缺失值 '.' → null（Float64 非严格 cast），行为锁定（#508）."""
+        respx_mock.get("https://api.stlouisfed.org/fred/series/observations").mock(
+            return_value=httpx.Response(
+                200,
+                json={
+                    "observations": [
+                        {
+                            "realtime_start": "2024-02-01",
+                            "realtime_end": "2024-12-31",
+                            "date": "2024-01-01",
+                            "value": ".",
+                        },
+                        {
+                            "realtime_start": "2024-02-01",
+                            "realtime_end": "2024-12-31",
+                            "date": "2024-02-01",
+                            "value": "3.9",
+                        },
+                    ],
+                },
+            )
+        )
+
+        result = FredClient(api_key="test_key").get_series_observations(
+            series_id="UNRATE",
+            observation_start="2024-01-01",
+            observation_end="2024-12-31",
+        )
+
+        assert result.height == 2
+        assert result["value"][0] is None
+        assert result["value"][1] == 3.9
+        assert str(result["value"].dtype) == "Float64"
+
+    def test_rate_limit_429_retries_then_succeeds(self, respx_mock) -> None:
+        """429 → SourceRateLimitError 专用退避后重试成功，不中断（#516）."""
+        endpoint = respx_mock.get("https://api.stlouisfed.org/fred/series/observations")
+        endpoint.side_effect = [
+            httpx.Response(429, json={"error_code": 429, "error_message": "limit"}),
+            httpx.Response(200, json={"observations": []}),
+        ]
+
+        result = FredClient(api_key="test_key").get_series_observations(
+            series_id="UNRATE",
+            observation_start="2024-01-01",
+            observation_end="2024-12-31",
+        )
+
+        assert result.height == 0
+        assert endpoint.call_count == 2
+
+    def test_rate_limit_retry_after_header_parsed(self) -> None:
+        """Retry-After 秒数头被解析进 details，供退避优先遵从."""
+        response = httpx.Response(429, headers={"Retry-After": "30"})
+        request = httpx.Request("GET", "https://api.stlouisfed.org/fred/x")
+        error = FredClient._rate_limit_error(
+            httpx.HTTPStatusError("429", request=request, response=response)
+        )
+        assert isinstance(error, SourceRateLimitError)
+        assert error.details["retry_after_seconds"] == 30
+
+    def test_permanent_4xx_not_retried(self, respx_mock) -> None:
+        """404 等确定性 4xx 立即失败，不做无意义重试（#508 缺陷）."""
+        endpoint = respx_mock.get("https://api.stlouisfed.org/fred/series/observations")
+        endpoint.mock(return_value=httpx.Response(404, text="Not Found"))
+
+        with pytest.raises(SourceFetchError, match="404") as exc_info:
+            FredClient(api_key="test_key").get_series_observations(
+                series_id="BAD_SERIES",
+                observation_start="2024-01-01",
+                observation_end="2024-12-31",
+            )
+
+        assert not isinstance(exc_info.value, tenacity.RetryError)
+        assert endpoint.call_count == 1
+
+    def test_non_json_200_raises_permanent_fetch_error(self, respx_mock) -> None:
+        """200 但非 JSON 响应体 → 包装为确定性失败，不裸抛（#516）."""
+        endpoint = respx_mock.get("https://api.stlouisfed.org/fred/series/observations")
+        endpoint.mock(return_value=httpx.Response(200, text="<html>gateway</html>"))
+
+        with pytest.raises(SourceFetchError, match="non-JSON"):
+            FredClient(api_key="test_key").get_series_observations(
+                series_id="UNRATE",
+                observation_start="2024-01-01",
+                observation_end="2024-12-31",
+            )
+
+        assert endpoint.call_count == 1
+
+    def test_non_observations_json_body_rejected(self, respx_mock) -> None:
+        """200 JSON 但不是 observations 文档（如数组）→ 确定性失败，不裸抛."""
+        respx_mock.get("https://api.stlouisfed.org/fred/series/observations").mock(
+            return_value=httpx.Response(200, json=[1, 2, 3])
+        )
+
+        with pytest.raises(SourceFetchError, match="observations document"):
+            FredClient(api_key="test_key").get_series_observations(
+                series_id="UNRATE",
+                observation_start="2024-01-01",
+                observation_end="2024-12-31",
+            )
+
+    def test_transient_503_retried_then_wrapped(self, respx_mock) -> None:
+        """5xx 瞬态错误照旧走 3 次重试，耗尽后 RetryError 包 SourceFetchError."""
+        endpoint = respx_mock.get("https://api.stlouisfed.org/fred/series/observations")
+        endpoint.mock(return_value=httpx.Response(503, text="Service Unavailable"))
+
+        with pytest.raises(tenacity.RetryError) as exc_info:
+            FredClient(api_key="test_key").get_series_observations(
+                series_id="UNRATE",
+                observation_start="2024-01-01",
+                observation_end="2024-12-31",
+            )
+
+        assert isinstance(exc_info.value.__cause__, SourceFetchError)
+        assert endpoint.call_count == 3
+
+    def test_throttle_spaces_request_starts(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """默认节流把相邻请求起点间隔压到官方 2 req/s 以内（mock 时钟）."""
+        client = FredClient(api_key="test_key", min_request_interval=0.5)
+        sleeps: list[float] = []
+        clock = {"now": 100.0}
+
+        def _fake_monotonic() -> float:
+            return clock["now"]
+
+        def _fake_sleep(seconds: float) -> None:
+            sleeps.append(seconds)
+            clock["now"] += seconds
+
+        monkeypatch.setattr(fred_client_module.time, "monotonic", _fake_monotonic)
+        monkeypatch.setattr(fred_client_module.time, "sleep", _fake_sleep)
+
+        client._throttle()  # 首个请求：无间隔要求
+        assert sleeps == []
+        clock["now"] += 0.1  # 只过了 0.1s
+        client._throttle()  # 需补 0.4s
+        assert sleeps == [pytest.approx(0.4)]
+
+    def test_rate_limit_wait_uses_dedicated_backoff(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """429 走专用指数退避并尊重 Retry-After；其他错误沿用通用退避."""
+        monkeypatch.setattr(fred_client_module, "_RATE_LIMIT_BACKOFF_BASE_SECONDS", 5.0)
+        wait_fn = fred_client_module._rate_limit_aware_wait
+
+        def _state_with(error: BaseException, attempt: int) -> object:
+            state = fred_client_module.RetryCallState(None, None, (), {})
+            state.attempt_number = attempt
+            state.set_exception((type(error), error, None))
+            return state
+
+        rate_limited = SourceRateLimitError(message="x", source="fred")
+        assert wait_fn(_state_with(rate_limited, 1)) == 5.0
+        assert wait_fn(_state_with(rate_limited, 2)) == 10.0
+        assert wait_fn(_state_with(rate_limited, 9)) == 60.0  # 封顶
+
+        with_retry_after = SourceRateLimitError(message="x", source="fred")
+        with_retry_after.details["retry_after_seconds"] = 7
+        assert wait_fn(_state_with(with_retry_after, 1)) == 7.0
+
+        transient = SourceFetchError(message="x", source="fred")
+        assert wait_fn(_state_with(transient, 1)) == 2.0  # min=2

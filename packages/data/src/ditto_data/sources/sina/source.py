@@ -11,6 +11,8 @@
 - 占位零语义：CL/GC 的 volume/position/settlement 实测恒为 0（ZSD 缺
   settlement 字段），不证明真实成交/持仓/结算，一律不入库；仅存真实
   日线 OHLC。单位/币种逐品种见白名单登记。
+- OHLC 非空校验：源字段改名会经宽松 String+非严格 cast 静默得 null，
+  入库前对窗口内行 fail-closed（#516），拒绝整段静默空数据。
 - trade_date_utc 为交易日纽约午夜占位时间戳（schema 要求），外盘真实
   收盘时刻未验证，不用于可见性判断。
 """
@@ -24,6 +26,7 @@ import polars as pl
 from ditto_platform.foundation import logger
 
 from ditto_data.models import SINA_FOREIGN_FUTURES
+from ditto_data.sources.base import SourceFetchError
 from ditto_data.sources.schemas.commodity_schemas import COMMODITY_SOURCE_SCHEMA
 
 if TYPE_CHECKING:
@@ -102,6 +105,29 @@ class SinaSource:
             )
             if transformed.is_empty():
                 continue
+            # 字段解析为宽松 String + 非严格 cast：源端字段改名会静默得
+            # null OHLC 而非报错（drop_nulls 只保护 trade_date）。入库前
+            # 对窗口内行做非空校验，fail-closed 防整段静默空数据（#516）。
+            null_ohlc = transformed.filter(
+                pl.any_horizontal(
+                    pl.col("open").is_null(),
+                    pl.col("high").is_null(),
+                    pl.col("low").is_null(),
+                    pl.col("close").is_null(),
+                )
+            )
+            if not null_ohlc.is_empty():
+                sample_dates = (
+                    null_ohlc["trade_date"].head(3).dt.strftime("%Y-%m-%d").to_list()
+                )
+                raise SourceFetchError(
+                    source="sina",
+                    message=(
+                        f"sina {symbol} 窗口内 {null_ohlc.height} 行 OHLC 为 null"
+                        f" (样本 {sample_dates}):"
+                        " 源字段契约疑似变更 拒绝静默入库 (#516)"
+                    ),
+                )
             transformed = transformed.with_columns(
                 pl.lit(instrument_id).alias("instrument_id"),
                 pl.col("trade_date")

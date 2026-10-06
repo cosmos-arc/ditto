@@ -7,6 +7,7 @@ from unittest.mock import MagicMock
 
 import pytest
 from ditto_data.models import SINA_FOREIGN_FUTURES
+from ditto_data.sources.base import SourceFetchError
 from ditto_data.sources.schemas.commodity_schemas import COMMODITY_SOURCE_SCHEMA
 from ditto_data.sources.sina.client import SinaClient
 from ditto_data.sources.sina.source import SinaSource
@@ -112,6 +113,62 @@ class TestSinaSource:
 
         assert result.height == 0
         assert set(result.columns) == set(COMMODITY_SOURCE_SCHEMA.schema)
+
+
+class TestSinaRobustness:
+    """#516 健壮性收口 — Referer 头 + OHLC 非空校验."""
+
+    def test_client_sends_referer_header(self) -> None:
+        """社区反爬案例：新浪系接口常要求站内 Referer（#508），构造即携带."""
+        client = SinaClient(base_url="https://example.com")
+        assert client._client.headers["Referer"] == "https://finance.sina.com.cn/"
+
+    def test_null_ohlc_in_window_rejected_fail_closed(self) -> None:
+        """源字段改名 → null OHLC：窗口内整段拒绝，显式报错（#516）."""
+        rows = [
+            *_rows(),
+            {
+                "date": "2026-10-02",
+                "open": "",  # 空串经非严格 cast 得 null
+                "high": "91.000",
+                "low": "90.200",
+                "close": "90.500",
+                "volume": "0",
+                "position": "0",
+                "s": "0.000",
+                "settlement": "0",
+            },
+        ]
+        mock_client = MagicMock()
+        mock_client.get_global_futures_daily_kline.return_value = rows
+        source = SinaSource(client=mock_client)
+
+        with pytest.raises(SourceFetchError, match="OHLC 为 null"):
+            source.fetch_commodities(["CL"], "2026-09-30", "2026-10-02")
+
+    def test_null_ohlc_outside_window_tolerated(self) -> None:
+        """窗口外行的 null OHLC 不参与校验（本地过滤语义不变）."""
+        rows = [
+            *_rows(),
+            {
+                "date": "2026-11-01",
+                "open": "",
+                "high": "91.000",
+                "low": "90.200",
+                "close": "90.500",
+                "volume": "0",
+                "position": "0",
+                "s": "0.000",
+                "settlement": "0",
+            },
+        ]
+        mock_client = MagicMock()
+        mock_client.get_global_futures_daily_kline.return_value = rows
+        source = SinaSource(client=mock_client)
+
+        result = source.fetch_commodities(["CL"], "2026-09-30", "2026-10-01")
+
+        assert result.height == 2
 
 
 class TestSinaWhitelist:
