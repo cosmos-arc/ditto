@@ -57,7 +57,7 @@ def _ready_report(*, mode: str = "live", status: str = "ready") -> dict[str, obj
         "preflight": {
             "status": "ready" if status == "ready" else "configuration_blocked",
             "checked_at": "2026-07-31T12:00:00+00:00",
-            "contract_count": 22,
+            "contract_count": len(_R2_CONTRACTS),
             "products": products,
             "reason_codes": ([] if status == "ready" else ["entitlement_unverified"]),
             "performance": {
@@ -461,3 +461,18 @@ def test_hand_constructed_boolean_cannot_enter_gate_projection() -> None:
 
     assert exc_info.value.details["code"] == "EXPERIMENT_INTEGRITY_FAILED"
     assert exc_info.value.details["reason"] == "r2_live_gate_reader_contract_invalid"
+
+
+def test_hard_provider_contracts_match_catalog_dataset_spec() -> None:
+    """#529：冻结 provider 契约表与 catalog 权威 dataset_spec 双表一致性守卫.
+
+    R2 门禁的冻结表是 dataset_spec provider 面的门禁侧镜像（#534 扩展
+    rights/csrc 时两表漂移、ready 判定静默 fail closed 才暴露）。此守卫
+    让下一次 provider 面演进在测试侧立即红，而非等线上证据链拒收。
+    """
+    from ditto_data.catalog.dataset_spec import resolve_dataset_spec
+
+    for dataset_id, providers in _R2_CONTRACTS.items():
+        assert resolve_dataset_spec(dataset_id).provider_datasets == providers, (
+            dataset_id
+        )

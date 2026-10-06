@@ -59,7 +59,7 @@ def ready_source(root: Path) -> R2LiveGateEvidenceSource:
         "preflight": {
             "status": "ready",
             "checked_at": checked_at,
-            "contract_count": 22,
+            "contract_count": len(_R2_CONTRACTS),
             "products": products,
             "reason_codes": [],
             "performance": {
