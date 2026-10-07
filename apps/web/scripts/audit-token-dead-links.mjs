@@ -80,7 +80,8 @@ function extractVarRefs(cssText) {
 //
 // Component-local declarations `[--token: value]` (Tailwind arbitrary
 // property) define a scoped variable, not a design-token reference —
-// collectLocalVarDeclarations returns them for per-file exemption.
+// collectLocalVarDeclarations returns them for per-file exemption (file
+// granularity: a declaration anywhere in the file exempts its references).
 
 function extractShorthandRefs(sourceText) {
   const refs = [];

@@ -259,7 +259,6 @@
 	--color-interaction-active-bg: var(--interaction-active-bg);
 	--color-interaction-selected-bg: var(--interaction-selected-bg);
 	--color-interaction-selected-border: var(--interaction-selected-border);
-	--color-interaction-focus-ring: var(--interaction-focus-ring);
 	--color-toast-info: var(--feedback-toast-info);
 	--color-toast-success: var(--green-500);
 	--color-toast-warning: var(--amber-500);

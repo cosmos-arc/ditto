@@ -255,7 +255,7 @@ function ScenarioPanel({ identity }: { readonly identity: PortfolioComparisonIde
 	const [marketShock, setMarketShock] = useState("-0.05");
 	const scenario = useMutation({ mutationFn: previewPortfolioScenario });
 	const fieldClass =
-		"mt-1 h-9 w-full rounded-(--radius-sm) border border-(--color-border-subtle) bg-(--color-surface-1) px-2.5 font-data text-sm text-(--color-foreground) outline-none focus:border-(--color-interaction-focus-ring)";
+		"mt-1 h-9 w-full rounded-(--radius-sm) border border-(--color-border-subtle) bg-(--color-surface-1) px-2.5 font-data text-sm text-(--color-foreground) outline-none focus:border-(--color-focus-ring)";
 
 	return (
 		<Panel>
