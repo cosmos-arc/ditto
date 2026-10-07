@@ -98,7 +98,8 @@ function extractShorthandRefs(sourceText) {
 
 function collectLocalVarDeclarations(sourceText) {
   const declared = new Set();
-  const re = /\[--([a-zA-Z0-9_-]+)\s*:/g;
+  // requires a non-empty value after the colon — empty `[--x:]` doesn't exempt
+  const re = /\[--([a-zA-Z0-9_-]+)\s*:[^\s\]]/g;
   let match;
   while ((match = re.exec(sourceText)) !== null) {
     declared.add(`--${match[1]}`);
