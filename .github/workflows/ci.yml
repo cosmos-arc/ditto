@@ -230,8 +230,6 @@ jobs:
           persist-credentials: false
           fetch-depth: 0
       - uses: ./.github/actions/setup-toolchain
-        with:
-          workspace: python
       - name: Architecture boundaries
         run: task arch-check
       - name: Agent harness
@@ -274,8 +272,6 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
       - uses: ./.github/actions/setup-toolchain
-        with:
-          workspace: python
       - name: Prepare contract toolchain
         run: task contract-toolchain-bootstrap
       - name: Contract gate
