@@ -4,7 +4,7 @@
 // Scans var(--xxx) references and verifies :root definitions exist
 // ─────────────────────────────────────────────
 
-import { existsSync, readFileSync, readdirSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { resolve, dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -70,6 +70,33 @@ function extractVarRefs(cssText) {
     refs.push(`--${match[1]}`);
   }
   return refs;
+}
+
+// ── Extract Tailwind arbitrary-value variable shorthands from TS/TSX ──
+// Matches `bg-(--token)`, `p-(--density-…)` etc. The `-(` prefix excludes
+// `var(--token)` in JS template strings; `[--token]` bracket form is unused
+// in this codebase.
+
+function extractShorthandRefs(sourceText) {
+  const refs = [];
+  const re = /-\(--([a-zA-Z0-9_-]+)\)/g;
+  let match;
+  while ((match = re.exec(sourceText)) !== null) {
+    refs.push(`--${match[1]}`);
+  }
+  return refs;
+}
+
+function walkSourceFiles(dir, extensions, exclude, files = []) {
+  for (const entry of readdirSync(dir)) {
+    const path = join(dir, entry);
+    if (statSync(path).isDirectory()) {
+      walkSourceFiles(path, extensions, exclude, files);
+    } else if (extensions.some((ext) => entry.endsWith(ext)) && !exclude.some((ex) => entry.includes(ex))) {
+      files.push(path);
+    }
+  }
+  return files;
 }
 
 function extractDeclarations(cssText) {
@@ -141,6 +168,41 @@ const SAFE_REFS = new Set([
   "--tw-gradient-to",
   "--tw-gradient-stops",
   "--tw-gradient-position",
+]);
+
+// ── Known pre-existing dead shorthand links (#553 cleanup) ──
+// #237 审计扩展首次扫描时仓内已存在的未声明 token（131 处引用/80+ 文件）。
+// 钉住使门禁语义 = 不允许新增死链；#553 清偿后删除本集合即收紧为全量。
+
+const KNOWN_SHORTHAND_GAPS = new Set([
+  "--color-accent-foreground",
+  "--color-accent-primary",
+  "--color-agent-running-fg",
+  "--color-border-emphasis",
+  "--color-border-warning",
+  "--color-interaction-focus-ring",
+  "--color-led-danger",
+  "--color-led-danger-bg",
+  "--color-led-info",
+  "--color-led-info-bg",
+  "--color-led-success-bg",
+  "--color-led-warning",
+  "--color-led-warning-bg",
+  "--color-model-degrading-fg",
+  "--color-model-drifting-fg",
+  "--color-model-stable-fg",
+  "--color-risk-danger",
+  "--color-risk-high-border",
+  "--color-risk-medium-bg",
+  "--color-risk-medium-fg",
+  "--color-risk-warning-bg",
+  "--color-risk-warning-fg",
+  "--color-status-healthy-bg",
+  "--color-status-healthy-fg",
+  "--color-surface-inset",
+  "--factor-summary-height",
+  "--radius-xs",
+  "--shadow-dragging",
 ]);
 
 // ── Main ──
@@ -302,7 +364,50 @@ function main() {
   totalDead += protoDeadLinks;
   console.log(`Checked ${protoFilesChecked} prototype files, ${protoDeadLinks} dead link(s).\n`);
 
-  // 6. Summary
+  // 6. Check Tailwind variable shorthands in src TS/TSX (#237: 弥补 audit 未覆盖
+  //    任意值简写用法导致的死链漏报；测试文件排除——注释/示例文本非真实引用。
+  //    KNOWN_SHORTHAND_GAPS 钉住本审计上线时的存量，门禁语义 = 禁止新增)
+  console.log("### src/ TS/TSX Tailwind variable shorthands\n");
+  const sourceFiles = walkSourceFiles(join(ROOT, "src"), [".tsx", ".ts"], [".test.", ".stories."]);
+  let shorthandChecked = 0;
+  let shorthandDeadLinks = 0;
+  let shorthandKnownGaps = 0;
+  for (const filePath of sourceFiles) {
+    const source = readFileSync(filePath, "utf-8");
+    const refs = extractShorthandRefs(source);
+    if (refs.length === 0) continue;
+    shorthandChecked++;
+    const fileDeadLinks = new Map();
+    for (const ref of refs) {
+      if (SAFE_REFS.has(ref)) continue;
+      if (themeInlineDecls.has(ref)) continue;
+      if (declarations.has(ref)) continue;
+      if (KNOWN_SHORTHAND_GAPS.has(ref)) {
+        fileDeadLinks.set(ref, "known-gap");
+        continue;
+      }
+      fileDeadLinks.set(ref, "dead");
+    }
+    const dead = [...fileDeadLinks.entries()].filter(([, kind]) => kind === "dead");
+    if (dead.length > 0) {
+      shorthandDeadLinks += dead.length;
+      console.log(`  - ${relative(ROOT, filePath)}`);
+      for (const [link] of dead) {
+        console.log(`      ${link}`);
+      }
+    }
+    shorthandKnownGaps += [...fileDeadLinks.values()].filter((kind) => kind === "known-gap").length;
+  }
+  totalDead += shorthandDeadLinks;
+  console.log(`Checked ${shorthandChecked} source files, ${shorthandDeadLinks} new dead link(s).`);
+  if (shorthandKnownGaps > 0) {
+    console.log(
+      `(${shorthandKnownGaps} occurrences are KNOWN_SHORTHAND_GAPS — pre-existing, see cleanup ticket; remove the set once cleared.)`,
+    );
+  }
+  console.log("");
+
+  // 7. Summary
   console.log("---\n");
   console.log(`Total dead links: ${totalDead}`);
   if (totalDead === 0) {

@@ -24,6 +24,8 @@
 	--surface-muted: oklch(0.17 0.01 253);
 	/* Elevated: raised interactive — buttons, gallery headers, overlay cards */
 	--surface-elevated: var(--neutral-75);
+	/* Canvas: workspace backdrop — full-bleed area behind workbench panels */
+	--surface-canvas: var(--surface-app);
 	--surface-hover: oklch(1 0 0 / 0.05);
 
 	/* ── Text Hierarchy (5 levels) ──
@@ -176,6 +178,7 @@
 	/* Surface Semantic Aliases */
 	--surface-muted: var(--neutral-50);
 	--surface-elevated: var(--neutral-75);
+	--surface-canvas: var(--surface-app);
 
 	/* Text Hierarchy — dark on light (usage rules mirror dark mode) */
 	--text-primary: oklch(0.14 0.015 253);
