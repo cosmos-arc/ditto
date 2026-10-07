@@ -8,6 +8,7 @@ import {
 	getIndustryRotation,
 	getSelectionRun,
 	listSelectionRuns,
+	listUniverseOptions,
 } from "./api";
 
 const policyBody: AssembleSelectionRunBody = {
@@ -72,5 +73,29 @@ describe("selection API", () => {
 
 	it("fails closed before compare when exact run identities are not distinct", () => {
 		expect(() => compareSelectionRuns("same", "same")).toThrow("distinct exact run IDs");
+	});
+});
+
+describe("listUniverseOptions pagination", () => {
+	it("keeps fetching pages until a short page arrives", async () => {
+		const requested: string[] = [];
+		const fullPage = Array.from({ length: 100 }, (_, i) => ({
+			universe_id: `u-${i}`,
+			name: `U${i}`,
+			universe_type: "custom",
+		}));
+		server.use(
+			http.get("/api/v1/universes", ({ request }) => {
+				requested.push(request.url);
+				const offset = Number(new URL(request.url).searchParams.get("offset") ?? "0");
+				return HttpResponse.json({ data: offset === 0 ? fullPage : fullPage.slice(0, 3) });
+			}),
+		);
+
+		const options = await listUniverseOptions();
+		expect(options).toHaveLength(103);
+		expect(requested).toHaveLength(2);
+		expect(new URL(requested[0]!).searchParams.get("offset")).toBe("0");
+		expect(new URL(requested[1]!).searchParams.get("offset")).toBe("100");
 	});
 });

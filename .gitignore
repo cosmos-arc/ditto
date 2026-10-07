@@ -89,6 +89,11 @@ packages/*/data/
 docs/archive/web/reviews/visual-audit/
 /.tmp/
 
+# Turborepo 本地缓存（#526 四条件之二）：默认缓存写共享 worktree 目录，
+# 一律以 --cache-dir/.turbo-local 显式隔离，两者不入库
+.turbo/
+.turbo-local/
+
 # 大型数据文件
 *.parquet
 *.h5
@@ -101,6 +106,8 @@ docs/archive/web/reviews/visual-audit/
 /*.csv
 /*.json
 !/package.json
+# Turborepo 图事实源（#538）：根级 json 忽略规则的显式例外
+!turbo.json
 config/**/*.json
 !config/**/*.example.json
 # 维护者确认的 ETF 参考事实声明（#408）：版本化事实，非本地产物

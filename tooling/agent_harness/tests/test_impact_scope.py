@@ -411,3 +411,46 @@ def test_production_imports_stay_within_declared_workspace_deps() -> None:
                             f"{module_root} not declared by {owner}"
                         )
     assert violations == []
+
+
+def test_turbo_scope_verdict_covers_policy_closure() -> None:
+    """#538 缝 2：turbo 选择 ∪ wrapper 升级 ⊇ 策略闭包的单调性纯判定."""
+    from tooling.agent_harness.impact_scope import turbo_scope_verdict
+
+    mapping = {
+        "ditto_kernel": "packages/kernel",
+        "ditto_agent": "packages/agent",
+        "ditto_apps": "apps/backend",
+    }
+    turbo_tasks = [
+        {"package": "ditto-agent"},
+        {"package": "ditto-apps"},
+        {"package": "@ditto/web"},
+        {"package": "ditto-python-root"},
+        "not-a-dict",
+    ]
+    covered = turbo_scope_verdict(
+        {"packages/agent", "apps/backend"},
+        turbo_tasks,
+        mapping,
+        wrapper_escalated=False,
+    )
+    assert covered["monotonic"] is True
+    assert covered["missing_from_turbo"] == []
+    assert covered["turbo_affected_owners"] == ["apps/backend", "packages/agent"]
+
+    gap = turbo_scope_verdict(
+        {"packages/kernel", "packages/agent"},
+        turbo_tasks,
+        mapping,
+        wrapper_escalated=False,
+    )
+    assert gap["monotonic"] is False
+    assert gap["missing_from_turbo"] == ["packages/kernel"]
+
+    # turbo 对未知路径 fail-open（选空）时，wrapper 升级仍满足组合单调性。
+    escalated = turbo_scope_verdict(
+        {"packages/kernel"}, [], mapping, wrapper_escalated=True
+    )
+    assert escalated["monotonic"] is True
+    assert escalated["turbo_overwidth"] == []

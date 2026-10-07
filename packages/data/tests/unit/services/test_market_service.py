@@ -4,6 +4,7 @@ MarketService 单元测试.
 测试 Market 域服务的查询功能。
 """
 
+from datetime import date
 from unittest.mock import MagicMock
 
 import polars as pl
@@ -226,3 +227,126 @@ class TestMarketServiceGetConstituents:
             NotImplementedError, match="IndexConstituentReader not configured"
         ):
             market_service.get_constituents(1)
+
+
+class TestApplyAdjustmentPitAsof:
+    """apply_adjustment 的 PIT as-of 语义回归（#538 CI 恢复阻塞项）."""
+
+    @staticmethod
+    def _readers(adj_df: pl.DataFrame) -> MarketReaders:
+        stock_adj = MagicMock()
+        stock_adj.read.return_value = adj_df
+        return MarketReaders(
+            stock_bars=MagicMock(),
+            stock_status=MagicMock(),
+            stock_adj=stock_adj,
+            etf_bars=MagicMock(),
+            etf_status=MagicMock(),
+            instrument=MagicMock(),
+        )
+
+    @staticmethod
+    def _bars() -> pl.DataFrame:
+        return pl.DataFrame(
+            {
+                "instrument_id": [1_000_001, 1_000_001, 1_000_002, 1_000_002],
+                "trade_date": [
+                    date(2024, 6, 2),
+                    date(2024, 6, 10),
+                    date(2024, 6, 2),
+                    date(2024, 6, 10),
+                ],
+                "open": [10.0, 12.0, 20.0, 22.0],
+                "high": [10.5, 12.5, 20.5, 22.5],
+                "low": [9.5, 11.5, 19.5, 21.5],
+                "close": [10.0, 12.0, 20.0, 22.0],
+                "volume": [1000, 1100, 2000, 2100],
+                "amount": [10000, 11000, 20000, 21000],
+            }
+        )
+
+    @staticmethod
+    def _factors(with_knowledge: bool) -> pl.DataFrame:
+        data: dict[str, list[object]] = {
+            "instrument_id": [1_000_001, 1_000_002] * 5,
+            "trade_date": [date(2024, 6, d) for d in (2, 4, 6, 8, 10) for _ in (0, 1)],
+            "adj_factor": [1.0, 1.0, 1.0, 1.0, 2.0, 1.0, 2.0, 1.0, 2.0, 1.0],
+        }
+        if with_knowledge:
+            # 因子发布滞后：6/6 起生效的 2.0 在 6/7 才可知。
+            data["knowledge_date"] = [
+                date(2024, 6, d) for d in (2, 4, 6, 6, 7, 7, 8, 8, 10, 10)
+            ]
+        return pl.DataFrame(data)
+
+    def test_asof_backfills_post_asof_rows_with_last_known_factor(self) -> None:
+        """窗口越过 asof 的行用截至 asof 已知的最近因子，不因精确 join miss 失败."""
+        from ditto_data.services.market_adjustment import apply_adjustment
+
+        result = apply_adjustment(
+            self._bars(),
+            AdjType.QFQ,
+            [1_000_001, 1_000_002],
+            date(2024, 6, 2),
+            date(2024, 6, 10),
+            date(2024, 6, 5),
+            self._readers(self._factors(with_knowledge=True)),
+        )
+        # asof=6/5：已知因子均为 1.0 → 价格不变；6/6 起的 2.0 不可见。
+        assert result["close"].to_list() == [10.0, 12.0, 20.0, 22.0]
+
+    def test_asof_and_non_asof_queries_share_row_order(self) -> None:
+        """同一查询 asof 与非 asof 返回一致行序（limit 语义不因分支漂移）."""
+        from ditto_data.services.market_adjustment import apply_adjustment
+
+        bars = self._bars()
+        plain = apply_adjustment(
+            bars,
+            AdjType.QFQ,
+            [1_000_001, 1_000_002],
+            date(2024, 6, 1),
+            date(2024, 6, 10),
+            None,
+            self._readers(self._factors(with_knowledge=True)),
+        )
+        asof = apply_adjustment(
+            bars,
+            AdjType.QFQ,
+            [1_000_001, 1_000_002],
+            date(2024, 6, 1),
+            date(2024, 6, 10),
+            date(2024, 6, 10),
+            self._readers(self._factors(with_knowledge=True)),
+        )
+        assert plain["instrument_id"].to_list() == bars["instrument_id"].to_list()
+        assert asof["instrument_id"].to_list() == bars["instrument_id"].to_list()
+        assert asof["trade_date"].to_list() == bars["trade_date"].to_list()
+
+    def test_revision_tie_break_takes_latest_known_factor(self) -> None:
+        """同 trade_date 多条修订时，join 取 knowledge_date 最大者（晚知者胜）."""
+        from ditto_data.services.market_adjustment import apply_adjustment
+
+        revisions = pl.DataFrame(
+            {
+                "instrument_id": [1_000_001, 1_000_001, 1_000_002],
+                "trade_date": [date(2024, 6, 2)] * 3,
+                "knowledge_date": [
+                    date(2024, 6, 2),
+                    date(2024, 6, 3),
+                    date(2024, 6, 2),
+                ],
+                "adj_factor": [1.0, 3.0, 1.0],
+            }
+        )
+        result = apply_adjustment(
+            self._bars(),
+            AdjType.HFQ,
+            [1_000_001, 1_000_002],
+            date(2024, 6, 1),
+            date(2024, 6, 10),
+            date(2024, 6, 10),
+            self._readers(revisions),
+        )
+        # 1_000_001 的两行都拿到 3.0（最大 knowledge_date 的修订，
+        # 6/10 行回填同因子）；1_000_002 为 1.0。
+        assert result["close"].to_list() == [30.0, 36.0, 20.0, 22.0]

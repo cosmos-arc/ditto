@@ -49,3 +49,39 @@ describe("fetchComparisonAttribution", () => {
 		expect(request.method).toBe("GET");
 	});
 });
+
+describe("fetchComparisonAttribution with null metrics", () => {
+	it("renders em-dash placeholders for null metric fields", async () => {
+		const fetchMock = vi.fn<typeof fetch>(
+			async () =>
+				new Response(
+					JSON.stringify({
+						data: {
+							backtest_return: null,
+							actual_return: null,
+							return_diff_bps: null,
+							backtest_sharpe: 1.3,
+							actual_sharpe: 1.1,
+							backtest_total_cost: null,
+							actual_total_cost: null,
+							cost_drag_bps: null,
+							nav_correlation: 0.98,
+							max_nav_diff_bps: null,
+							avg_daily_tracking_error_bps: null,
+						},
+					}),
+					{ status: 200, headers: { "Content-Type": "application/json" } },
+				),
+		);
+		vi.stubGlobal("fetch", fetchMock);
+
+		await expect(fetchComparisonAttribution({ runId: "run-null" })).resolves.toEqual({
+			rows: [
+				{ label: "收益差异", value: "—", detail: "actual — vs backtest —" },
+				{ label: "成本拖累", value: "—", detail: "actual cost — vs backtest cost —" },
+				{ label: "跟踪误差", value: "—", detail: "NAV corr 0.9800, max diff —" },
+				{ label: "Sharpe 差异", value: "-0.20", detail: "actual 1.10 vs backtest 1.30" },
+			],
+		});
+	});
+});

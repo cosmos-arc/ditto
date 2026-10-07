@@ -499,3 +499,8 @@ version = "0.1.0"
 tag_format = "v$version"
 update_changelog_on_bump = true
 changelog_incremental = true
+
+# Turborepo uv workspace 探测前置（#526 PoC/#538）：名称不得与根 package.json
+# 的 @ditto/workspace 归一化名冲突，实验 flag 见 turbo.json。
+[tool.turbo]
+name = "ditto-python-root"

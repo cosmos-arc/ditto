@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { capturedRequest, requestPath } from "@/test/request";
 import {
 	correctManualAccountEvent,
 	createManualAccount,
@@ -395,5 +396,32 @@ describe("paper account runtime boundary", () => {
 		await expect(recoverPaperSession("paper-s-1", { idempotency_key: "recover-1" })).rejects.toThrow(
 			/idempotency_key/u,
 		);
+	});
+});
+
+describe("ledger query identity", () => {
+	it("forwards recorded_through on the ledger request when provided", async () => {
+		const fetchMock = vi.fn<typeof fetch>(async () =>
+			Promise.resolve(
+				new Response(
+					JSON.stringify({
+						data: {
+							account: manualAccount,
+							events: [],
+							ledger_revision: { event_count: 0, ledger_hash: "account-ledger:sha256:x" },
+							snapshot: { account_kind: "manual" },
+						},
+					}),
+					{ status: 200, headers: { "Content-Type": "application/json" } },
+				),
+			),
+		);
+		vi.stubGlobal("fetch", fetchMock);
+		const pending = fetchManualAccountLedger("manual-a", "2026-09-04", "2026-09-05");
+		const request = capturedRequest(fetchMock.mock.calls);
+		expect(requestPath(request)).toBe(
+			"/api/v1/manual/accounts/manual-a/ledger?as_of=2026-09-04&recorded_through=2026-09-05",
+		);
+		await expect(pending).rejects.toThrow();
 	});
 });

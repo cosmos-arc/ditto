@@ -18,5 +18,5 @@ review 和适用验证，完成后统一重构 CI。未修改业务代码或 wor
 变更前快照；`main-ruleset-request.json` 是实际更新内容，两个 `*-after.json`
 是变更后回读结果。快照用于追溯，不是自动恢复指令。
 
-本地交付遵循[临时交付策略](../../../engineering/development-workflow.md#整改期间的临时交付策略2026-10-03)。
+本地交付遵循[临时交付策略](../../../engineering/development-workflow.md#整改期间的临时交付策略2026-10-03已由-538-重构收束)。
 整改结束后先重构 CI，由维护者确认重新启用 Actions 及新的合并检查要求，不自动恢复旧门禁。

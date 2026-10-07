@@ -28,6 +28,19 @@ class EvidenceError(ValueError):
     """Required-suite evidence is missing, duplicated or inconsistent."""
 
 
+def load_marker_dump(path: Path) -> dict[str, list[str]]:
+    """Load a pre-collected marker dump; malformed files fail closed (#538)."""
+    try:
+        dump = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as error:
+        raise EvidenceError(f"marker dump unreadable: {error}") from error
+    if not isinstance(dump, dict) or not all(
+        isinstance(markers, list) for markers in dump.values()
+    ):
+        raise EvidenceError("marker dump is not a {nodeid: [markers]} mapping")
+    return dump
+
+
 def collect_marker_dump(dump_path: Path) -> dict[str, list[str]]:
     """Collect the unfiltered marker dump for this working tree (#350 P2)."""
     environment = {
@@ -180,19 +193,35 @@ def run_checks(
 
 
 def main(argv: list[str] | None = None) -> int:
-    """Collect markers live, then verify shard artifacts fail-closed."""
+    """Collect markers live or from the parallel dump job, then verify fail-closed."""
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--nodes-glob", required=True)
-    parser.add_argument("--junit-glob", required=True)
+    parser.add_argument("--nodes-glob")
+    parser.add_argument("--junit-glob")
+    # #538 串行 PIT 并行化：marker 收集可由独立并行 job 预先产出
+    # （--dump-to），合并 job 用 --markers 复用，收集不再坐在关键路径尾部。
+    parser.add_argument("--dump-to", type=Path)
+    parser.add_argument("--markers", type=Path)
     selectors = parser.add_argument_group("required suite selectors (union)")
     selectors.add_argument("--pit-marker", action="store_true")
     selectors.add_argument("--path")
     args = parser.parse_args(argv)
+    if args.dump_to:
+        if args.nodes_glob or args.junit_glob or args.markers:
+            parser.error("--dump-to runs alone")
+        args.dump_to.parent.mkdir(parents=True, exist_ok=True)
+        dump = collect_marker_dump(args.dump_to)
+        sys.stdout.write(json.dumps({"dumped": len(dump)}) + "\n")
+        return 0
     if not (args.pit_marker or args.path):
         parser.error("at least one selector (--pit-marker or --path) is required")
+    if not (args.nodes_glob and args.junit_glob):
+        parser.error("--nodes-glob and --junit-glob are required for verification")
 
-    with tempfile.TemporaryDirectory() as tmp:
-        dump = collect_marker_dump(Path(tmp) / "markers.json")
+    if args.markers is not None:
+        dump = load_marker_dump(args.markers)
+    else:
+        with tempfile.TemporaryDirectory() as tmp:
+            dump = collect_marker_dump(Path(tmp) / "markers.json")
     required = required_from_dump(dump, pit_marker=args.pit_marker, path=args.path)
     result = run_checks(
         required, nodes_glob=args.nodes_glob, junit_glob=args.junit_glob
