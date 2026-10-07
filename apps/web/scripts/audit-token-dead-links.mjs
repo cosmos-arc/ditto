@@ -77,6 +77,11 @@ function extractVarRefs(cssText) {
 // opacity `(--token/50)`, fallback `(--token|--fallback)`, data-type
 // prefix `(length:--token)`. The `-(`/`-[` prefixes exclude `var(--token)`
 // in JS template strings.
+//
+// Component-local declarations `[--token: value]` (Tailwind arbitrary
+// property) define a scoped variable, not a design-token reference —
+// collectLocalVarDeclarations returns them for per-file exemption (file
+// granularity: a declaration anywhere in the file exempts its references).
 
 function extractShorthandRefs(sourceText) {
   const refs = [];
@@ -89,6 +94,17 @@ function extractShorthandRefs(sourceText) {
     }
   }
   return refs;
+}
+
+function collectLocalVarDeclarations(sourceText) {
+  const declared = new Set();
+  // requires a non-empty value after the colon — empty `[--x:]` doesn't exempt
+  const re = /\[--([a-zA-Z0-9_-]+)\s*:[^\s\]]/g;
+  let match;
+  while ((match = re.exec(sourceText)) !== null) {
+    declared.add(`--${match[1]}`);
+  }
+  return declared;
 }
 
 function walkSourceFiles(dir, extensions, exclude, files = []) {
@@ -172,42 +188,6 @@ const SAFE_REFS = new Set([
   "--tw-gradient-to",
   "--tw-gradient-stops",
   "--tw-gradient-position",
-]);
-
-// ── Known pre-existing dead shorthand links (#553 cleanup) ──
-// #237 审计扩展首次扫描时仓内已存在的未声明 token：值 = 基线出现次数（逐次计数）。
-// 门禁语义 = 不允许新增死链，也不允许存量死链的引用次数增长（防同名复发）；
-// 当前次数 ≤ 基线只报告不拦截。#553 清偿后删除本表即收紧为全量。
-
-const KNOWN_SHORTHAND_GAPS = new Map([
-  ["--color-accent-foreground", 3],
-  ["--color-accent-primary", 2],
-  ["--color-agent-running-fg", 2],
-  ["--color-border-emphasis", 1],
-  ["--color-border-warning", 1],
-  ["--color-interaction-focus-ring", 1],
-  ["--color-led-danger", 65],
-  ["--color-led-danger-bg", 1],
-  ["--color-led-info", 2],
-  ["--color-led-info-bg", 1],
-  ["--color-led-success-bg", 4],
-  ["--color-led-warning", 19],
-  ["--color-led-warning-bg", 6],
-  ["--color-model-degrading-fg", 3],
-  ["--color-model-drifting-fg", 2],
-  ["--color-model-stable-fg", 3],
-  ["--color-risk-danger", 2],
-  ["--color-risk-high-border", 2],
-  ["--color-risk-medium-bg", 1],
-  ["--color-risk-medium-fg", 11],
-  ["--color-risk-warning-bg", 13],
-  ["--color-risk-warning-fg", 53],
-  ["--color-status-healthy-bg", 1],
-  ["--color-status-healthy-fg", 21],
-  ["--color-surface-inset", 1],
-  ["--factor-summary-height", 1],
-  ["--radius-xs", 1],
-  ["--shadow-dragging", 1],
 ]);
 
 // ── Main ──
@@ -369,56 +349,35 @@ function main() {
   totalDead += protoDeadLinks;
   console.log(`Checked ${protoFilesChecked} prototype files, ${protoDeadLinks} dead link(s).\n`);
 
-  // 6. Check Tailwind variable shorthands in src TS/TSX (#237: 弥补 audit 未覆盖
-  //    任意值简写用法导致的死链漏报；测试文件排除——注释/示例文本非真实引用。
-  //    KNOWN_SHORTHAND_GAPS 钉基线计数：新 token 或存量次数增长都算新死链)
+  // 6. Check Tailwind variable shorthands in src TS/TSX (#237/#553: 全量门禁。
+  //    测试/故事文件排除——注释/示例文本非真实引用；同文件 `[--x:]`
+  //    本地声明的变量按组件作用域豁免)
   console.log("### src/ TS/TSX Tailwind variable shorthands\n");
   const sourceFiles = walkSourceFiles(join(ROOT, "src"), [".tsx", ".ts"], [".test.", ".stories."]);
   let shorthandChecked = 0;
   let shorthandDeadLinks = 0;
-  const gapOccurrences = new Map(); // token -> current count
-  const newViolations = []; // { file, token, reason }
   for (const filePath of sourceFiles) {
     const source = readFileSync(filePath, "utf-8");
     const refs = extractShorthandRefs(source);
     if (refs.length === 0) continue;
     shorthandChecked++;
+    const localDeclarations = collectLocalVarDeclarations(source);
+    const fileDeadLinks = new Map(); // token -> occurrences
     for (const ref of refs) {
       if (SAFE_REFS.has(ref) || themeInlineDecls.has(ref) || declarations.has(ref)) continue;
-      gapOccurrences.set(ref, (gapOccurrences.get(ref) ?? 0) + 1);
-      if (!KNOWN_SHORTHAND_GAPS.has(ref)) {
-        newViolations.push({ file: relative(ROOT, filePath), token: ref, reason: "undeclared" });
+      if (localDeclarations.has(ref)) continue;
+      fileDeadLinks.set(ref, (fileDeadLinks.get(ref) ?? 0) + 1);
+    }
+    if (fileDeadLinks.size > 0) {
+      shorthandDeadLinks += [...fileDeadLinks.values()].reduce((sum, n) => sum + n, 0);
+      console.log(`  - ${relative(ROOT, filePath)}`);
+      for (const [link] of fileDeadLinks) {
+        console.log(`      ${link}`);
       }
     }
   }
-  for (const [token, baseline] of KNOWN_SHORTHAND_GAPS) {
-    const current = gapOccurrences.get(token) ?? 0;
-    if (current > baseline) {
-      newViolations.push({
-        file: "(multiple)",
-        token,
-        reason: `grew: ${current} > baseline ${baseline}`,
-      });
-    }
-  }
-  if (newViolations.length > 0) {
-    shorthandDeadLinks += newViolations.length;
-    for (const violation of newViolations) {
-      console.log(`  - ${violation.file}: ${violation.token} (${violation.reason})`);
-    }
-  }
   totalDead += shorthandDeadLinks;
-  const knownTotal = [...gapOccurrences.entries()].reduce(
-    (sum, [token, count]) => sum + (KNOWN_SHORTHAND_GAPS.has(token) ? count : 0),
-    0,
-  );
-  console.log(`Checked ${shorthandChecked} source files, ${shorthandDeadLinks} new dead link(s).`);
-  if (knownTotal > 0) {
-    console.log(
-      `(${knownTotal} occurrences are KNOWN_SHORTHAND_GAPS baseline — pre-existing, see #553; remove the map once cleared.)`,
-    );
-  }
-  console.log("");
+  console.log(`Checked ${shorthandChecked} source files, ${shorthandDeadLinks} dead link(s).\n`);
 
   // 7. Summary
   console.log("---\n");

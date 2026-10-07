@@ -52,7 +52,7 @@ export function MarketPulseSection({
 		>
 			{isLoading && <LoadingSkeleton variant="table" rows={4} />}
 			{isError && (
-				<div role="alert" className="mx-2 rounded-(--radius-sm) border border-(--color-risk-high-border) p-2 text-xs">
+				<div role="alert" className="mx-2 rounded-(--radius-sm) border border-(--color-risk-high) p-2 text-xs">
 					<p className="font-medium text-(--color-risk-high-fg)">MarketContext 不可用</p>
 					<p className="mt-1 text-(--color-foreground-tertiary)">
 						{error instanceof Error ? error.message : "无法解析认证数据证据"}
@@ -127,7 +127,7 @@ export function MarketPulseSection({
 									Knowledge cutoff · {new Date(data.brief.knowledgeCutoff).toLocaleString("zh-CN")}
 								</p>
 								{data.brief.riskItems.length > 0 && (
-									<div className="mt-2 border-l-2 border-(--color-risk-high-border) pl-2">
+									<div className="mt-2 border-l-2 border-(--color-risk-high) pl-2">
 										<p className="font-medium text-(--color-foreground-secondary)">风险与缺口</p>
 										{data.brief.riskItems.slice(0, 2).map((item) => (
 											<p key={item} className="mt-0.5 text-(--color-foreground-tertiary)">

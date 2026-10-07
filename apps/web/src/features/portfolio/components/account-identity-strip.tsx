@@ -7,7 +7,7 @@ const KIND_COPY: Record<
 	model: {
 		label: "MODEL 目标组合",
 		boundary: "版本化目标，不接受成交或现金流水",
-		tone: "border-(--color-accent-primary) text-(--color-accent-primary)",
+		tone: "border-(--color-accent) text-(--color-accent)",
 	},
 	paper: {
 		label: "PAPER 模拟账户",

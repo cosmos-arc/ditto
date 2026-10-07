@@ -94,6 +94,16 @@
 /* ── Light Mode Domain Adjustments ── */
 /* Light mode uses lighter backgrounds for domain colors */
 [data-theme="light"] {
+	/* Domain fg 白底校准（#553）：palette fg 为 dark-first，light 下对比不足；
+	   覆写为同色相深色版（surface-app/panel-base 上 ≥4.5:1，chart light 段同模式） */
+	--risk-medium-fg: oklch(0.542 0.118 79.66);
+	--risk-critical-fg: oklch(0.55 0.148 21.89);
+	--execution-filled-fg: oklch(0.532 0.054 156.74);
+	--system-healthy-fg: oklch(0.532 0.054 156.74);
+	--model-stable-fg: oklch(0.532 0.054 156.74);
+	--model-degrading-fg: oklch(0.542 0.118 79.66);
+	--model-drifting-fg: oklch(0.545 0.128 47.45);
+
 	--market-up-bg: oklch(0.67 0.17 20 / 0.08);
 	--market-up-subtle: oklch(0.67 0.17 20 / 0.06);
 	--market-down-bg: oklch(0.68 0.12 155 / 0.08);
