@@ -110,9 +110,9 @@
 	--status-led-healthy: oklch(0.72 0.17 155);
 	--status-led-degraded: oklch(0.78 0.14 65);
 	--status-led-warning: oklch(0.8 0.16 90);
-	--status-led-critical: oklch(0.6 0.22 25);
+	--status-led-critical: oklch(0.62 0.22 25); /* #555：0.6→0.62 dark 双底 ≥4.6:1 */
 	--status-led-live: oklch(0.75 0.15 195);
-	--status-led-idle: oklch(0.55 0.03 253);
+	--status-led-idle: oklch(0.593 0.03 253); /* #555：0.55→0.593 dark 双底 ≥4.6:1 */
 	--status-led-error: oklch(0.65 0.2 25);
 	--status-led-info: oklch(0.68 0.12 253);
 	--risk-gauge-track: oklch(1 0 0 / 0.06);
@@ -126,9 +126,14 @@
  * 双主题均过 WCAG AA 4.5:1，由 audit:tokens:contrast 双主题段守护）。
  */
 [data-theme="light"] {
-	/* Status LED 白底校准（#553）：LED fg 为 dark-first，light 表面 ≥4.5:1 */
-	--status-led-critical: oklch(0.558 0.22 25);
+	/* Status LED 白底校准（#553/#555）：LED fg 为 dark-first，light 表面 ≥4.5:1 */
+	--status-led-healthy: oklch(0.504 0.17 155);
+	--status-led-degraded: oklch(0.542 0.14 65);
 	--status-led-warning: oklch(0.533 0.096 90);
+	--status-led-critical: oklch(0.558 0.22 25);
+	--status-led-live: oklch(0.495 0.15 195);
+	--status-led-idle: oklch(0.533 0.03 253);
+	--status-led-error: oklch(0.558 0.2 25);
 	--status-led-info: oklch(0.535 0.12 253);
 
 	--chart-grid: oklch(0 0 0 / 0.06);
