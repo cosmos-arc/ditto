@@ -1,0 +1,24 @@
+{
+  "$schema": "https://turborepo.dev/schema.v2.json",
+  "futureFlags": {
+    "experimentalPythonWorkspaces": true,
+    "experimentalTaskCommand": true
+  },
+  "tasks": {
+    "lint": {
+      "cache": true,
+      "inputs": ["$TURBO_DEFAULT$"]
+    },
+    "test": {
+      "cache": true,
+      "inputs": ["$TURBO_DEFAULT$"],
+      "env": ["PYTEST_ADDOPTS", "UV_PROJECT_ENVIRONMENT", "CI"]
+    },
+    "pkg-test": {
+      "command": ["uv", "run", "--active", "--frozen", "--project", "../..", "pytest", "-q"],
+      "cache": true,
+      "inputs": ["$TURBO_DEFAULT$"],
+      "env": ["PYTEST_ADDOPTS", "UV_PROJECT_ENVIRONMENT", "CI"]
+    }
+  }
+}

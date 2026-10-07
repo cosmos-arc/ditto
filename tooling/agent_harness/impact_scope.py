@@ -30,10 +30,12 @@ from __future__ import annotations
 
 import argparse
 import ast
+import json
+import os
 import subprocess
 import sys
 import tomllib
-from collections.abc import Iterator, Sequence
+from collections.abc import Iterator, Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -355,6 +357,110 @@ def shadow_report(root: Path, base: str, head: str) -> dict[str, object]:
     }
 
 
+def turbo_scope_verdict(
+    scope_owners: set[str],
+    turbo_tasks: Sequence[object],
+    module_root_to_owner: Mapping[str, str],
+    *,
+    wrapper_escalated: bool,
+) -> dict[str, object]:
+    """Pure monotonicity verdict for turbo ∪ wrapper against the policy scope.
+
+    ``turbo_tasks`` is the ``tasks`` field of a turbo ``--dry=json`` run; only
+    member packages resolvable through ``module_root_to_owner`` count (the JS
+    workspace member and the uv root aggregate are not policy owners).
+    """
+    turbo_owners = {
+        module_root_to_owner[task["package"].replace("-", "_")]
+        for task in turbo_tasks
+        if isinstance(task, dict)
+        and task.get("package", "").replace("-", "_") in module_root_to_owner
+    }
+    missing = sorted(scope_owners - turbo_owners) if not wrapper_escalated else []
+    return {
+        "policy_test_owners": sorted(scope_owners),
+        "turbo_affected_owners": sorted(turbo_owners),
+        "turbo_overwidth": sorted(turbo_owners - scope_owners),
+        "wrapper_escalated": wrapper_escalated,
+        "missing_from_turbo": missing,
+        "monotonic": not missing,
+    }
+
+
+def turbo_compare(
+    root: Path,
+    base: str,
+    head: str,
+    *,
+    turbo_bin: str = "./node_modules/.bin/turbo",
+) -> dict[str, object]:
+    """Migration acceptance comparator for the turbo adoption (#538).
+
+    Replays one historical base/head pair through both engines and checks the
+    monotonicity contract from the #526 PoC: turbo's affected selection ∪ the
+    wrapper's fail-closed escalation must cover every owner the policy closure
+    says owes tests. turbo is structurally fail-open on unknown paths, so an
+    escalation on the wrapper side satisfies the contract by widening to the
+    full gate; a backend-lane miss with no escalation is a real gap.
+    """
+    # hook 在模块级导入本模块（脚本直跑回退），此处只能延迟反向导入。
+    from tooling.agent_harness.hook import classify_diff  # noqa: PLC0415 - 防 hook 环
+
+    paths = diff_paths(root, base, head)
+    graph = load_workspace_graph(root)
+    usage = test_usage_edges(root, graph)
+    plan = plan_backend_scope(paths, graph=graph, usage=usage)
+    scope_owners = {directory.removesuffix("/tests") for directory in plan.test_dirs}
+
+    environment = {
+        **os.environ,
+        "TURBO_SCM_BASE": base,
+        "TURBO_SCM_HEAD": head,
+    }
+    result = subprocess.run(
+        [
+            turbo_bin,
+            "run",
+            "pkg-test",
+            "--affected",
+            "--dry=json",
+            "--cache-dir",
+            str((root / ".turbo-local/cache").resolve()),
+        ],
+        cwd=root,
+        env=environment,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if result.returncode != 0:
+        raise RuntimeError(
+            f"turbo affected dry-run failed ({turbo_bin}):\n{result.stderr[-2000:]}"
+        )
+    payload = json.loads(result.stdout)
+    level = classify_diff(paths)
+    wrapper_escalated = bool(plan.escalation) or level not in {
+        "backend",
+        "backend-tests",
+        "web",
+        "docs",
+        "skills",
+        "none",
+    }
+    verdict = turbo_scope_verdict(
+        scope_owners,
+        payload.get("tasks", []),
+        graph.module_root_to_owner,
+        wrapper_escalated=wrapper_escalated,
+    )
+    return {
+        "base": base,
+        "head": head,
+        "changed_paths": len(paths),
+        **verdict,
+    }
+
+
 def main(argv: list[str] | None = None) -> int:
     """Print a shadow report for a base/head pair (replay evidence tool)."""
     parser = argparse.ArgumentParser(description=__doc__)
@@ -364,6 +470,13 @@ def main(argv: list[str] | None = None) -> int:
     )
     report_command.add_argument("--base", required=True)
     report_command.add_argument("--head", required=True)
+    turbo_command = subcommands.add_parser(
+        "turbo-compare",
+        help="replay a pair through turbo affected and check monotonicity (#538)",
+    )
+    turbo_command.add_argument("--base", required=True)
+    turbo_command.add_argument("--head", required=True)
+    turbo_command.add_argument("--turbo-bin", default="./node_modules/.bin/turbo")
     arguments = parser.parse_args(argv)
     root = Path(
         subprocess.check_output(
@@ -371,13 +484,26 @@ def main(argv: list[str] | None = None) -> int:
         ).strip()
     )
     try:
-        report = shadow_report(root.resolve(), arguments.base, arguments.head)
+        if arguments.command == "turbo-compare":
+            report = turbo_compare(
+                root.resolve(),
+                arguments.base,
+                arguments.head,
+                turbo_bin=arguments.turbo_bin,
+            )
+        else:
+            report = shadow_report(root.resolve(), arguments.base, arguments.head)
     except subprocess.CalledProcessError as error:
         print(f"impact-scope: {error}", file=sys.stderr)
         return 1
     for key, value in report.items():
         print(f"{key}: {value}")
-    return 0 if report["monotonic_vs_direct"] else 1
+    verdict = (
+        report["monotonic"]
+        if arguments.command == "turbo-compare"
+        else report["monotonic_vs_direct"]
+    )
+    return 0 if verdict else 1
 
 
 if __name__ == "__main__":
