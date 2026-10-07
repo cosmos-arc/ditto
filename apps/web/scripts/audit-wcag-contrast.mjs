@@ -56,6 +56,9 @@ const TEXT_USAGE_TIERS = Object.freeze({
   "text-data-stale": "operational",
   "text-tertiary": "metadata",
   "text-secondary": "operational",
+  // 弱化状态（平盘/已取消）视觉意图即弱于常规操作文本（#555 裁决留档）
+  "market-flat-fg": "metadata",
+  "execution-cancelled-fg": "metadata",
 });
 
 const USAGE_TIER_GATES = Object.freeze({
@@ -88,7 +91,7 @@ const USAGE_TIER_GATES = Object.freeze({
 
 const BG_PATTERNS = ["overlay-2", "overlay-3", "overlay-4", "overlay-6", "overlay-8", "overlay-10", "overlay-12"];
 
-// Domain fg tokens audited against the two primary surfaces in BOTH themes (#555:
+// Domain/LED fg tokens audited against the two primary surfaces in BOTH themes (#555:
 // 此前 domain fg 不在对集——dark 亦未守护，light 校准值首次获得门禁覆盖)。
 const DOMAIN_FG_PATTERNS = [
   "market-up-fg",
@@ -334,10 +337,7 @@ function auditDomainFgs(themes, results, counts, unresolved) {
           continue;
         }
         const ratio = contrastRatio(surfColor.luminance, fgColor.luminance);
-        // 平盘/已取消是弱化状态（视觉意图即弱于常规操作文本），按 metadata 档
-        // （3:1 gate + 4.5 warn）而非 operational 评估（#555 裁决留档）。
-        const tier = fgName === "market-flat-fg" || fgName === "execution-cancelled-fg" ? "metadata" : "operational";
-        const classification = classifyByTier(tier, ratio);
+        const classification = classifyContrast(fgName, ratio);
         updateCounts(classification, counts);
         results.push({
           surface: `${surfName} (${themeName})`,
@@ -542,15 +542,7 @@ function main() {
         continue;
       }
 
-      const alpha = bgColor.alpha;
-      const effR = bgColor.rgb[0] * alpha + surfColor.rgb[0] * (1 - alpha);
-      const effG = bgColor.rgb[1] * alpha + surfColor.rgb[1] * (1 - alpha);
-      const effB = bgColor.rgb[2] * alpha + surfColor.rgb[2] * (1 - alpha);
-
-      const effLum =
-        0.2126 * ((effR <= 0.03928 ? effR / 12.92 : ((effR + 0.055) / 1.055) ** 2.4)) +
-        0.7152 * ((effG <= 0.03928 ? effG / 12.92 : ((effG + 0.055) / 1.055) ** 2.4)) +
-        0.0722 * ((effB <= 0.03928 ? effB / 12.92 : ((effB + 0.055) / 1.055) ** 2.4));
+      const effLum = compositeEffLuminance(bgColor, surfColor);
 
       const ratio = contrastRatio(effLum, textColor.luminance);
       const level = wcagLevel(ratio);

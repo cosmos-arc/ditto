@@ -110,9 +110,9 @@
 	--status-led-healthy: oklch(0.72 0.17 155);
 	--status-led-degraded: oklch(0.78 0.14 65);
 	--status-led-warning: oklch(0.8 0.16 90);
-	--status-led-critical: oklch(0.62 0.22 25);
+	--status-led-critical: oklch(0.62 0.22 25); /* #555：0.6→0.62 dark 双底 ≥4.6:1 */
 	--status-led-live: oklch(0.75 0.15 195);
-	--status-led-idle: oklch(0.593 0.03 253);
+	--status-led-idle: oklch(0.593 0.03 253); /* #555：0.55→0.593 dark 双底 ≥4.6:1 */
 	--status-led-error: oklch(0.65 0.2 25);
 	--status-led-info: oklch(0.68 0.12 253);
 	--risk-gauge-track: oklch(1 0 0 / 0.06);

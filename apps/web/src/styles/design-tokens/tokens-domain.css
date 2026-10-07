@@ -94,8 +94,8 @@
 /* ── Light Mode Domain Adjustments ── */
 /* Light mode uses lighter backgrounds for domain colors */
 [data-theme="light"] {
-	/* Domain fg 白底校准（#553）：palette fg 为 dark-first，light 下对比不足；
-	   覆写为同色相深色版（surface-app/panel-base 上 ≥4.5:1，chart light 段同模式） */
+	/* Domain fg 白底校准（#553 十值 + #555 全量收口）：palette fg 为 dark-first，
+	   light 下对比不足；覆写为同色相深色版（surface-app/panel-base 上 ≥4.5:1） */
 	--risk-low-fg: oklch(0.52 0.1203 156.74);
 	--risk-medium-fg: oklch(0.542 0.118 79.66);
 	--risk-high-fg: oklch(0.545 0.127 50.23);
