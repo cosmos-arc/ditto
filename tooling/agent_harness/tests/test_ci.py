@@ -11,7 +11,12 @@ from pathlib import Path
 
 import yaml
 
-from tooling.agent_harness.ci import REQUIRED_JOBS, required_jobs
+from tooling.agent_harness.ci import (
+    DEEP_JOBS,
+    FAST_JOBS,
+    deep_jobs,
+    required_jobs,
+)
 
 
 def gate_failures(required: set[str], results: Mapping[str, object]) -> bool:
@@ -33,6 +38,27 @@ def gate_failures(required: set[str], results: Mapping[str, object]) -> bool:
     return completed.returncode != 0
 
 
+def deep_gate_failures(deep: set[str], results: Mapping[str, object]) -> bool:
+    workflow = yaml.safe_load(
+        (
+            Path(__file__).resolve().parents[3] / ".github/workflows/deep-ci.yml"
+        ).read_text()
+    )
+    script = workflow["jobs"]["deep-gate"]["steps"][0]["run"]
+    completed = subprocess.run(
+        ["bash", "-c", script],
+        env={
+            **os.environ,
+            "DEEP_JOBS": json.dumps(sorted(deep)),
+            "NEEDS_JSON": json.dumps(results),
+        },
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    return completed.returncode != 0
+
+
 class CiTests(unittest.TestCase):
     def test_skill_changes_select_lightweight_validation(self) -> None:
         for path in (
@@ -42,23 +68,48 @@ class CiTests(unittest.TestCase):
             with self.subTest(path=path):
                 assert required_jobs([path, "docs/guide.md"]) == {
                     "repository-policy",
-                    "security-supply-chain",
+                    "security-quick",
                     "skill-validation",
                 }
+                assert deep_jobs([path, "docs/guide.md"]) == set()
 
     def test_scope_preserves_shared_and_risk_checks(self) -> None:
         assert required_jobs(["packages/data/AGENTS.md"]) == {
             "repository-policy",
-            "security-supply-chain",
+            "security-quick",
         }
         assert "backend-tests" in required_jobs(
             ["packages/risk/src/ditto_risk/rules.py"]
         )
-        assert "system-e2e" in required_jobs(["contracts/openapi/v1.json"])
+        assert "system-e2e" in deep_jobs(["contracts/openapi/v1.json"])
         assert "web-quality" in required_jobs(["apps/web/src/app.tsx"])
         for path in ["pixi.lock", "tooling/dev/system.py", "unknown.bin"]:
-            assert required_jobs([path]) == REQUIRED_JOBS
-        assert required_jobs(["docs/guide.md"], full=True) == REQUIRED_JOBS
+            assert required_jobs([path]) == FAST_JOBS
+            assert deep_jobs([path]) == DEEP_JOBS
+        assert required_jobs(["docs/guide.md"], full=True) == FAST_JOBS
+        assert deep_jobs(["docs/guide.md"], full=True) == DEEP_JOBS
+
+    def test_two_tier_split_keeps_red_lines_blocking(self) -> None:
+        """#538：PIT/OpenAPI 证据留快速门；深度层归属与 merge freeze 兜底."""
+        for path in (
+            "packages/risk/src/ditto_risk/rules.py",
+            "apps/web/src/app.tsx",
+            "tooling/dev/unknown.py",
+        ):
+            fast = required_jobs([path])
+            deep = deep_jobs([path])
+            assert "backend-shards" in fast or "web-quality" in fast
+            assert not (deep & FAST_JOBS), deep
+            assert not (fast & DEEP_JOBS), fast
+        backend_fast = required_jobs(["packages/risk/src/ditto_risk/rules.py"])
+        assert {"backend-shards", "backend-tests", "marker-dump"} <= backend_fast
+        assert {
+            "backend-capacity",
+            "system-e2e",
+            "security-full",
+        } <= deep_jobs(["packages/risk/src/ditto_risk/rules.py"])
+        assert "web-prototype" in deep_jobs(["apps/web/src/app.tsx"])
+        assert "web-prototype" not in required_jobs(["apps/web/src/app.tsx"])
 
     def test_real_selector_checks_both_git_modes(self) -> None:
         repo = Path(__file__).resolve().parents[3]
@@ -109,22 +160,27 @@ class CiTests(unittest.TestCase):
                     check=True,
                     capture_output=True,
                 )
-                selected = json.loads(
-                    output.read_text().splitlines()[0].removeprefix("required=")
+                content = output.read_text()
+                selected = json.loads(content.splitlines()[0].removeprefix("required="))
+                deep = json.loads(
+                    next(
+                        line.removeprefix("deep=")
+                        for line in content.splitlines()
+                        if line.startswith("deep=")
+                    )
                 )
                 assert set(selected) == (
-                    REQUIRED_JOBS
+                    set(FAST_JOBS)
                     if kind == "executable"
                     else {
                         "repository-policy",
-                        "security-supply-chain",
+                        "security-quick",
                     }
                     | ({"skill-validation"} if kind == "skills" else set())
                 )
-                assert (
-                    f"analysis={str(kind == 'executable').lower()}"
-                    in output.read_text()
-                )
+                assert set(deep) == (DEEP_JOBS if kind == "executable" else set())
+                expected_full = kind == "executable"
+                assert f"full={str(expected_full).lower()}" in content
 
     def test_push_event_narrows_to_platform_smoke_only(self) -> None:
         """push+证据 verified 时收窄；未验证/缺失退回全量（#351）."""
@@ -149,15 +205,18 @@ class CiTests(unittest.TestCase):
                 check=True,
                 capture_output=True,
             )
-            selected = json.loads(
-                output.read_text().splitlines()[0].removeprefix("required=")
+            content = output.read_text()
+            selected = json.loads(content.splitlines()[0].removeprefix("required="))
+            assert selected == ["repository-policy", "security-quick"]
+            deep = json.loads(
+                next(
+                    line.removeprefix("deep=")
+                    for line in content.splitlines()
+                    if line.startswith("deep=")
+                )
             )
-            assert selected == [
-                "platform-smoke",
-                "repository-policy",
-                "security-supply-chain",
-            ]
-            assert "full=false" in output.read_text()
+            assert deep == ["platform-smoke"]
+            assert "full=false" in content
 
     def test_push_without_verified_evidence_requires_full_gate(self) -> None:
         """#351：证据未 verified（缺失/不匹配/API 失败）时 push 退回全量."""
@@ -165,12 +224,13 @@ class CiTests(unittest.TestCase):
         import tempfile as tmp
 
         repo = Path(__file__).resolve().parents[3]
-        for outcome, expected in (
-            ("full-required", REQUIRED_JOBS),
-            ("", REQUIRED_JOBS),
+        for outcome, expected_fast, expected_deep in (
+            ("full-required", FAST_JOBS, DEEP_JOBS),
+            ("", FAST_JOBS, DEEP_JOBS),
             (
                 "verified",
-                {"platform-smoke", "repository-policy", "security-supply-chain"},
+                {"repository-policy", "security-quick"},
+                {"platform-smoke"},
             ),
         ):
             with self.subTest(outcome=outcome or "missing"):
@@ -189,21 +249,33 @@ class CiTests(unittest.TestCase):
                         check=True,
                         capture_output=True,
                     )
+                    content = output.read_text()
                     selected = json.loads(
-                        output.read_text().splitlines()[0].removeprefix("required=")
+                        content.splitlines()[0].removeprefix("required=")
                     )
-                    assert set(selected) == set(expected)
+                    assert set(selected) == set(expected_fast)
+                    deep = json.loads(
+                        next(
+                            line.removeprefix("deep=")
+                            for line in content.splitlines()
+                            if line.startswith("deep=")
+                        )
+                    )
+                    assert set(deep) == set(expected_deep)
 
     def test_backend_scope_selects_capacity_lane(self) -> None:
-        required = required_jobs(["packages/application/src/ditto_application/x.py"])
-        assert "backend-capacity" in required
-        assert "backend-shards" in required
+        assert "backend-capacity" in deep_jobs(
+            ["packages/application/src/ditto_application/x.py"]
+        )
+        assert "backend-shards" in required_jobs(
+            ["packages/application/src/ditto_application/x.py"]
+        )
 
     def test_gate_accepts_only_explicitly_unneeded_skips(self) -> None:
-        required = {"repository-policy", "security-supply-chain", "web-quality"}
+        required = {"repository-policy", "security-quick", "web-quality"}
         results = {
             job: {"result": "success" if job in required else "skipped"}
-            for job in REQUIRED_JOBS
+            for job in FAST_JOBS
         }
         assert not gate_failures(required, results)
         for status in ["failure", "cancelled", "skipped"]:
@@ -217,17 +289,54 @@ class CiTests(unittest.TestCase):
         assert gate_failures(set(), {})
         assert gate_failures({"unknown-job"}, results)
 
+    def test_deep_gate_validates_selection_and_results(self) -> None:
+        assert not deep_gate_failures(
+            set(), {"repository-policy": {"result": "success"}}
+        )
+        assert not deep_gate_failures(
+            {"backend-capacity"},
+            {
+                "repository-policy": {"result": "success"},
+                "backend-capacity": {"result": "success"},
+                "platform-smoke": {"result": "skipped"},
+            },
+        )
+        assert deep_gate_failures(
+            {"backend-capacity"},
+            {
+                "repository-policy": {"result": "success"},
+                "backend-capacity": {"result": "failure"},
+            },
+        )
+        assert deep_gate_failures(
+            set(),
+            {
+                "repository-policy": {"result": "failure"},
+                "backend-capacity": {"result": "skipped"},
+            },
+        )
+        assert deep_gate_failures(
+            set(),
+            {
+                "repository-policy": {"result": "success"},
+                "platform-smoke": {"result": "failure"},
+            },
+        )
+
 
 def test_ordinary_scopes_keep_required_cross_stack_proof() -> None:
-    web = required_jobs(["apps/web/src/features/watchlist/card.tsx"])
+    web_fast = required_jobs(["apps/web/src/features/watchlist/card.tsx"])
     assert {
         "web-build",
         "web-quality",
-        "web-prototype",
         "api-contract",
+    } <= web_fast
+    assert {
+        "web-prototype",
         "system-e2e",
-    } <= web
-    assert "backend-shards" not in web
+        "security-full",
+    } <= deep_jobs(["apps/web/src/features/watchlist/card.tsx"])
+    assert "backend-shards" not in web_fast
     backend = required_jobs(
         ["packages/platform/src/ditto_platform/foundation/logging.py"]
     )
@@ -235,12 +344,20 @@ def test_ordinary_scopes_keep_required_cross_stack_proof() -> None:
         "backend-shards",
         "backend-tests",
         "api-contract",
-        "system-e2e",
     } <= backend
+    assert {
+        "system-e2e",
+        "backend-capacity",
+        "security-full",
+    } <= deep_jobs(["packages/platform/src/ditto_platform/foundation/logging.py"])
     # platform-smoke runs weekly, on demand, and on platform-sensitive paths
     # (pyproject/Dockerfile/deploy select the full gate below), not per PR.
-    assert "platform-smoke" not in backend
-    assert "container-smoke" not in backend
+    assert "platform-smoke" not in deep_jobs(
+        ["packages/platform/src/ditto_platform/foundation/logging.py"]
+    )
+    assert "container-smoke" not in deep_jobs(
+        ["packages/platform/src/ditto_platform/foundation/logging.py"]
+    )
     for path in [
         "apps/web/package.json",
         "apps/web/vite.config.ts",
@@ -249,5 +366,7 @@ def test_ordinary_scopes_keep_required_cross_stack_proof() -> None:
         "packages/platform/pyproject.toml",
         "deploy/docker/Dockerfile",
         ".github/workflows/ci.yml",
+        ".github/workflows/deep-ci.yml",
     ]:
-        assert required_jobs([path]) == REQUIRED_JOBS
+        assert required_jobs([path]) == FAST_JOBS
+        assert deep_jobs([path]) == DEEP_JOBS

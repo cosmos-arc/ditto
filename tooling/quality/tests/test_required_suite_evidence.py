@@ -153,3 +153,26 @@ def test_main_rejects_missing_selectors(tmp_path: Path) -> None:
 
     with pytest.raises(SystemExit):
         main(["--nodes-glob", "x", "--junit-glob", "y"])
+
+
+def test_load_marker_dump_fails_closed_on_garbage(tmp_path: Path) -> None:
+    """#538 --markers 复用路径：不可读/非映射文件必须失败，不静默漏证据。"""
+    from tooling.quality.required_suite_evidence import load_marker_dump
+
+    valid = tmp_path / "markers.json"
+    valid.write_text('{"a/test_pit.py::t": ["pit"]}', encoding="utf-8")
+    assert load_marker_dump(valid) == {"a/test_pit.py::t": ["pit"]}
+
+    broken = tmp_path / "broken.json"
+    broken.write_text("{not json", encoding="utf-8")
+    with pytest.raises(EvidenceError, match="marker dump unreadable"):
+        load_marker_dump(broken)
+
+    not_mapping = tmp_path / "list.json"
+    not_mapping.write_text("[1, 2]", encoding="utf-8")
+    with pytest.raises(EvidenceError, match="mapping"):
+        load_marker_dump(not_mapping)
+
+    missing = tmp_path / "absent.json"
+    with pytest.raises(EvidenceError, match="marker dump unreadable"):
+        load_marker_dump(missing)

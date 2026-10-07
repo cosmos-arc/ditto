@@ -7,8 +7,6 @@ name: CI
     branches:
       - main
   merge_group: null
-  schedule:
-    - cron: 11 1 * * 1
   workflow_dispatch: null
 permissions:
   contents: read
@@ -20,7 +18,7 @@ jobs:
     name: Repository policy
     outputs:
       required: ${{ steps.scope.outputs.required }}
-      analysis: ${{ steps.scope.outputs.analysis }}
+      deep: ${{ steps.scope.outputs.deep }}
       full: ${{ steps.scope.outputs.full }}
       main-evidence: ${{ steps.evidence.outputs.outcome }}
     permissions:
@@ -118,11 +116,37 @@ jobs:
           workspace: python
       - name: Strict type check
         run: task type -- --all --clean
+  # #538 串行 PIT 并行化：无过滤 marker 收集是 PIT/OpenAPI 红线证据的慢尾，
+  # 抽成与分片并行的独立 job，合并 job 只做核对。
+  marker-dump:
+    needs: repository-policy
+    if: ${{ contains(fromJSON(needs.repository-policy.outputs.required || '[]'), 'marker-dump') }}
+    name: Unfiltered marker dump
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-toolchain
+        with:
+          workspace: python
+      - name: Collect marker dump
+        run: >-
+          uv run --no-sync python -m tooling.quality.required_suite_evidence
+          --dump-to build/marker-dump/markers.json
+      - name: Upload marker dump
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: marker-dump-${{ github.run_id }}
+          path: build/marker-dump
+          if-no-files-found: error
+          retention-days: 14
   backend-tests:
     needs:
       - repository-policy
       - backend-shards
-      - backend-capacity
+      - marker-dump
     if: ${{ contains(fromJSON(needs.repository-policy.outputs.required || '[]'), 'backend-tests') }}
     name: Backend tests and coverage
     permissions:
@@ -145,25 +169,25 @@ jobs:
           merge-multiple: true
       - uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # v8.0.0
         with:
-          name: backend-capacity-${{ github.run_id }}
-          path: build/test-shards
+          name: marker-dump-${{ github.run_id }}
+          path: build/marker-dump
       # download-artifact 无 if-no-files-found 输入（那是 upload-artifact 的）：
       # 必要产物缺失在此点名失败（#342），不等下游合并才以 ShardError 暴露。
       - name: Verify required artifacts present
         run: |-
           shopt -s nullglob
           shards=(build/test-shards/shard-*.json)
-          if [ "${#shards[@]}" -ne 6 ]; then
-            echo "CI fail-closed: expected 6 shard manifests, found ${#shards[@]}" >&2
+          if [ "${#shards[@]}" -ne 10 ]; then
+            echo "CI fail-closed: expected 10 shard manifests, found ${#shards[@]}" >&2
             exit 1
           fi
-          test -f build/test-shards/capacity.json || {
-            echo "CI fail-closed: backend-capacity artifact missing" >&2
+          test -f build/marker-dump/markers.json || {
+            echo "CI fail-closed: marker-dump artifact missing" >&2
             exit 1
           }
       - name: Verify shard completeness and coverage floor
         run: |-
-          task backend-coverage-combine -- --count 6 --commit "$GITHUB_SHA"
+          task backend-coverage-combine -- --count 10 --skip-capacity --commit "$GITHUB_SHA"
           uv run --no-sync python -c "import json; t = json.load(open('coverage.json'))['totals']; assert t['covered_lines'] / t['num_statements'] >= 0.90, f\"line coverage {t['covered_lines'] / t['num_statements']:.2%} < 90%\""
       - name: New test duration report
         if: ${{ github.event_name == 'pull_request' }}
@@ -173,6 +197,7 @@ jobs:
           uv run --no-sync python -m tooling.quality.required_suite_evidence \
             --nodes-glob 'build/test-shards/nodes-*.txt' \
             --junit-glob 'build/test-shards/junit-*.xml' \
+            --markers build/marker-dump/markers.json \
             --pit-marker \
             --path apps/backend/tests/contract/test_openapi_conformance.py
       - name: Upload coverage evidence
@@ -205,6 +230,8 @@ jobs:
           persist-credentials: false
           fetch-depth: 0
       - uses: ./.github/actions/setup-toolchain
+        with:
+          workspace: python
       - name: Architecture boundaries
         run: task arch-check
       - name: Agent harness
@@ -247,6 +274,8 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
       - uses: ./.github/actions/setup-toolchain
+        with:
+          workspace: python
       - name: Prepare contract toolchain
         run: task contract-toolchain-bootstrap
       - name: Contract gate
@@ -258,50 +287,6 @@ jobs:
       - name: Contract conformance (no shard evidence this run)
         if: ${{ !contains(fromJSON(needs.repository-policy.outputs.required || '[]'), 'backend-shards') }}
         run: task contract-conformance
-  system-e2e:
-    needs:
-      - repository-policy
-      - web-build
-    if: ${{ contains(fromJSON(needs.repository-policy.outputs.required || '[]'), 'system-e2e') }}
-    name: Supervised backend-Web system test
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: ./.github/actions/setup-toolchain
-      - uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # v8.0.0
-        with:
-          name: web-dist-${{ github.run_id }}
-          path: apps/web/dist
-      - name: Verify web-dist artifact present
-        run: |-
-          test -f apps/web/dist/index.html || {
-            echo "CI fail-closed: web-dist artifact missing for system-e2e" >&2
-            exit 1
-          }
-      - name: Cache Playwright browsers
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ hashFiles('bun.lock') }}
-          restore-keys: |
-            playwright-${{ runner.os }}-
-      - name: Prepare system browser
-        run: node node_modules/@playwright/test/cli.js install --with-deps chromium
-      - name: Run supervised system test
-        run: task test-system
-        env:
-          DITTO_REUSE_WEB_BUILD: '1'
-      - name: Upload system browser evidence
-        if: ${{ always() }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: system-e2e-${{ github.run_id }}
-          path: build/system-e2e
-          if-no-files-found: warn
-          retention-days: ${{ github.event_name == 'pull_request' && 14 || 30 }}
   release-policy:
     needs: repository-policy
     if: ${{ contains(fromJSON(needs.repository-policy.outputs.required || '[]'), 'release-policy') }}
@@ -317,140 +302,17 @@ jobs:
           workspace: python
       - name: Test release and security policy
         run: uv run --no-sync python -m pytest tooling/release/tests -q -n 0
-  container-smoke:
-    needs:
-      - repository-policy
-      - web-build
-    if: ${{ contains(fromJSON(needs.repository-policy.outputs.required || '[]'), 'container-smoke') }}
-    name: Container build and readiness smoke
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: ./.github/actions/setup-toolchain
-        with:
-          workspace: python
-      - uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # v8.0.0
-        with:
-          name: web-dist-${{ github.run_id }}
-          path: apps/web/dist
-      - name: Build once, scan, attest subject and smoke
-        run: uv run --no-sync python -m tooling.release.artifact_gate
-      - name: Upload artifact evidence
-        if: ${{ always() }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: release-evidence-${{ github.run_id }}
-          path: dist
-          if-no-files-found: error
-          retention-days: 14
-  platform-smoke:
+  security-quick:
     needs: repository-policy
-    if: ${{ contains(fromJSON(needs.repository-policy.outputs.required || '[]'), 'platform-smoke') }}
-    name: Platform smoke (${{ matrix.name }})
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - name: macos-arm64
-            os: macos-14
-          - name: windows-x64
-            os: windows-2025
-    runs-on: ${{ matrix.os }}
-    timeout-minutes: 45
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: ./.github/actions/setup-toolchain
-      - name: Native wheel behavior
-        run: task platform-native-test
-      - name: macOS backend gate
-        if: ${{ matrix.name == 'macos-arm64' && (needs.repository-policy.outputs.full == 'true' || github.event_name == 'push') }}
-        run: task check-backend
-      - name: macOS Web gate
-        if: ${{ matrix.name == 'macos-arm64' && (needs.repository-policy.outputs.full == 'true' || github.event_name == 'push') }}
-        run: task check-web
-      - name: Windows backend type gate
-        if: ${{ matrix.name == 'windows-x64' && (needs.repository-policy.outputs.full == 'true' || github.event_name == 'push') }}
-        run: task type-all
-      - name: Windows Web type gate
-        if: ${{ matrix.name == 'windows-x64' && (needs.repository-policy.outputs.full == 'true' || github.event_name == 'push') }}
-        run: task web-type
-      - name: Windows backend core unit
-        if: ${{ matrix.name == 'windows-x64' }}
-        run: task platform-backend-unit
-      - name: Windows Web unit
-        if: ${{ matrix.name == 'windows-x64' }}
-        run: task platform-web-unit
-      - name: Windows loopback API smoke
-        if: ${{ matrix.name == 'windows-x64' }}
-        run: task platform-api-smoke
-      - name: macOS backend core unit
-        if: ${{ matrix.name == 'macos-arm64' && needs.repository-policy.outputs.full != 'true' && github.event_name != 'push' }}
-        run: task platform-backend-unit
-      - name: macOS loopback API smoke
-        if: ${{ matrix.name == 'macos-arm64' && needs.repository-policy.outputs.full != 'true' && github.event_name != 'push' }}
-        run: task platform-api-smoke
-  security-supply-chain:
-    needs: repository-policy
-    if: ${{ contains(fromJSON(needs.repository-policy.outputs.required || '[]'), 'security-supply-chain') }}
-    name: Security and supply chain
+    if: ${{ contains(fromJSON(needs.repository-policy.outputs.required || '[]'), 'security-quick') }}
+    name: Security quick gate
     permissions:
       actions: read
       contents: read
       security-events: write
     uses: ./.github/workflows/security.yml
     with:
-      full-analysis: ${{ needs.repository-policy.outputs.analysis == 'true' }}
-  ci-gate:
-    name: CI gate
-    if: ${{ always() }}
-    needs:
-      - repository-policy
-      - backend-quality
-      - backend-types
-      - backend-tests
-      - architecture-harness
-      - skill-validation
-      - web-quality
-      - api-contract
-      - system-e2e
-      - release-policy
-      - container-smoke
-      - platform-smoke
-      - security-supply-chain
-      - backend-shards
-      - backend-capacity
-      - web-prototype
-      - web-build
-    permissions: {}
-    runs-on: ubuntu-latest
-    steps:
-      - name: Require every selected job to succeed
-        env:
-          REQUIRED_JOBS: ${{ needs.repository-policy.outputs.required }}
-          NEEDS_JSON: ${{ toJSON(needs) }}
-        run: |
-          python3 - <<'PYTHON'
-          import json
-          import os
-
-          required = json.loads(os.environ["REQUIRED_JOBS"])
-          needs = json.loads(os.environ["NEEDS_JSON"])
-          if not isinstance(required, list) or not {"repository-policy", "security-supply-chain"} <= set(required):
-              raise SystemExit("CI fail-closed: invalid selection")
-          failures = {
-              name: needs.get(name, {}).get("result", "missing")
-              for name in set(required) | set(needs)
-              if needs.get(name, {}).get("result") != "success"
-              and not (name not in required and needs.get(name, {}).get("result") == "skipped")
-          }
-          if failures:
-              raise SystemExit(f"CI fail-closed: {failures}")
-          PYTHON
+      full-analysis: false
   backend-shards:
     needs: repository-policy
     if: ${{ contains(fromJSON(needs.repository-policy.outputs.required || '[]'), 'backend-shards') }}
@@ -465,7 +327,7 @@ jobs:
         with:
           workspace: python
       - name: Run isolated shard
-        run: task backend-test-shard -- --index ${{ matrix.index }} --count 6 --commit "$GITHUB_SHA"
+        run: task backend-test-shard -- --index ${{ matrix.index }} --count 10 --commit "$GITHUB_SHA"
       - name: Preserve shard coverage and inventory
         if: ${{ always() }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -478,75 +340,14 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        index:
-          - 0
-          - 1
-          - 2
-          - 3
-          - 4
-          - 5
-      max-parallel: 6
+        index: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+      max-parallel: 10
     env:
       OMP_NUM_THREADS: '1'
       OPENBLAS_NUM_THREADS: '1'
       MKL_NUM_THREADS: '1'
       POLARS_MAX_THREADS: '1'
       PYTHON_KEYRING_BACKEND: keyring.backends.null.Keyring
-  backend-capacity:
-    needs: repository-policy
-    if: ${{ contains(fromJSON(needs.repository-policy.outputs.required || '[]'), 'backend-capacity') }}
-    name: backend-capacity
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: ./.github/actions/setup-toolchain
-        with:
-          workspace: python
-      - name: Run scheduler-capacity slow lane
-        run: task backend-test-capacity -- --commit "$GITHUB_SHA"
-      - name: Preserve capacity evidence
-        if: ${{ always() }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: backend-capacity-${{ github.run_id }}
-          path: build/test-shards
-          if-no-files-found: error
-          retention-days: ${{ github.event_name == 'pull_request' && 14 || 30 }}
-          include-hidden-files: true
-    env:
-      OMP_NUM_THREADS: '1'
-      OPENBLAS_NUM_THREADS: '1'
-      MKL_NUM_THREADS: '1'
-      POLARS_MAX_THREADS: '1'
-      PYTHON_KEYRING_BACKEND: keyring.backends.null.Keyring
-
-  web-prototype:
-    needs: repository-policy
-    if: ${{ contains(fromJSON(needs.repository-policy.outputs.required || '[]'), 'web-prototype') }}
-    name: web-prototype
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: ./.github/actions/setup-toolchain
-        with:
-          workspace: web
-      - name: Cache Playwright browsers
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ hashFiles('bun.lock') }}
-          restore-keys: |
-            playwright-${{ runner.os }}-
-      - name: Prepare browser
-        run: task browser-install -- --with-deps
-      - name: Prototype coverage of product flows
-        run: task web-prototype
   web-build:
     needs: repository-policy
     if: ${{ contains(fromJSON(needs.repository-policy.outputs.required || '[]'), 'web-build') }}
@@ -569,3 +370,71 @@ jobs:
           path: apps/web/dist
           if-no-files-found: error
           retention-days: ${{ github.event_name == 'pull_request' && 14 || 30 }}
+  ci-gate:
+    name: CI gate
+    if: ${{ always() }}
+    needs:
+      - repository-policy
+      - backend-quality
+      - backend-types
+      - backend-tests
+      - architecture-harness
+      - skill-validation
+      - web-quality
+      - api-contract
+      - release-policy
+      - security-quick
+      - backend-shards
+      - marker-dump
+      - web-build
+    permissions:
+      actions: read
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require every selected job to succeed
+        env:
+          REQUIRED_JOBS: ${{ needs.repository-policy.outputs.required }}
+          NEEDS_JSON: ${{ toJSON(needs) }}
+        run: |
+          python3 - <<'PYTHON'
+          import json
+          import os
+
+          required = json.loads(os.environ["REQUIRED_JOBS"])
+          needs = json.loads(os.environ["NEEDS_JSON"])
+          if not isinstance(required, list) or not {"repository-policy", "security-quick"} <= set(required):
+              raise SystemExit("CI fail-closed: invalid selection")
+          failures = {
+              name: needs.get(name, {}).get("result", "missing")
+              for name in set(required) | set(needs)
+              if needs.get(name, {}).get("result") != "success"
+              and not (name not in required and needs.get(name, {}).get("result") == "skipped")
+          }
+          if failures:
+              raise SystemExit(f"CI fail-closed: {failures}")
+          PYTHON
+      # #538 merge freeze：main 上深度层未消红期间拒绝新合并；解冻=深度层复绿。
+      # 非 200/404 的读取失败同样判冻结（fail-closed）。解除走 deep-ci 重跑复绿。
+      - name: Merge freeze check (deep layer red on main)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          code=$(curl -s -o /tmp/freeze.json -w '%{http_code}' \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/$GITHUB_REPOSITORY/actions/variables/DEEP_LAYER_MERGE_FREEZE")
+          case "$code" in
+            200)
+              echo "CI frozen: deep layer is red on main — new merges rejected until it recovers." >&2
+              cat /tmp/freeze.json >&2
+              exit 1
+              ;;
+            404)
+              echo "merge freeze: not set (deep layer green on main)"
+              ;;
+            *)
+              echo "merge freeze: unexpected variables API status $code (fail-closed)" >&2
+              cat /tmp/freeze.json >&2 || true
+              exit 1
+              ;;
+          esac

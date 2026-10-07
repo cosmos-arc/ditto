@@ -17,7 +17,7 @@ Ditto 是面向个人全栈量化投资者的本地优先 A 股与 ETF 量化决
 
 ## 关键不变量
 
-- 根 Task 是唯一跨栈任务 DAG；Web 使用 Bun，根保留唯一 `bun.lock`。不以 pip/poetry/conda 或 npm/yarn/pnpm 修改环境。
+- 根 `turbo.json` 是任务图/缓存/affected 的唯一事实源（turbo 精确 pin，本地缓存一律 `--cache-dir` 隔离）；根 Taskfile 是零改动 facade，`task` 入口保持稳定，验证范围的 fail-closed 选择权在 `tooling/agent_harness` 策略层。Web 使用 Bun，根保留唯一 `bun.lock`。不以 pip/poetry/conda 或 npm/yarn/pnpm 修改环境。
 - 数据帧与表计算用 Polars；外部高性能序列化优先 orjson，现有 schema、SQLite、测试和规范化场景允许标准库 json。
 - `application` 编排能力包，产品 `agent` 只经 application 使用业务能力，`apps/backend` 是唯一 Python composition root；kernel 零第三方依赖、零 I/O。
 - 跨栈方向为 FastAPI → 本地 OpenAPI snapshot → generated types/runtime metadata → typed transport → feature adapter → UI。生成物通过生成器更新，组件使用 view model。
@@ -34,7 +34,7 @@ Ditto 是面向个人全栈量化投资者的本地优先 A 股与 ETF 量化决
 
 ## 工作与授权
 
-整改期间（2026-10-03 起）暂停远端 GitHub Actions CI，交付以本地 review 和适用验证为准；临时例外、恢复条件见[交付约定](docs/engineering/development-workflow.md#整改期间的临时交付策略2026-10-03)。
+远端 CI 已按 #538 重构为双层门禁（快速门阻断 + 深度层异步 + merge freeze）并恢复运行；结构与恢复记录见 [Actions 治理](.github/workflows/README.md)。整改期（2026-10-03 起）的临时交付策略已由 #538 重构取代。
 
 局部可逆编辑、读取和非破坏性验证直接执行。通用规划、调试、审查由宿主和模型按任务选择；普通工作不要求固定角色、评分、重复确认或隐式 commit/tag。
 

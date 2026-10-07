@@ -451,6 +451,9 @@ def main() -> int:
     parser.add_argument("--index", type=int, default=0)
     parser.add_argument("--junit-glob", action="append", default=[])
     parser.add_argument("--manifest", type=Path, default=_DURATION_MANIFEST)
+    # #538：容量慢车道移深度层后，快速门合并只核分片证据；默认仍要求
+    # capacity 证据（本地全量口径不变），快速门显式声明跳过。
+    parser.add_argument("--skip-capacity", action="store_true")
     args = parser.parse_args()
     os.environ["PYTHON_KEYRING_BACKEND"] = "keyring.backends.null.Keyring"
     os.environ["_TYPER_FORCE_DISABLE_TERMINAL"] = "1"
@@ -467,7 +470,8 @@ def main() -> int:
             run_capacity(args.output, args.commit)
         else:
             data = verify_manifests(args.output, args.commit, args.count)
-            data += _verify_capacity(args.output, args.commit)
+            if not args.skip_capacity:
+                data += _verify_capacity(args.output, args.commit)
             _run("-m", "coverage", "combine", "--keep", *map(str, data))
             _run("-m", "coverage", "json", "-o", "coverage.json")
             _run("-m", "coverage", "xml", "-o", "coverage.xml")

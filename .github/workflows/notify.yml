@@ -1,0 +1,68 @@
+name: Loop notify
+# #538/#500 事件驱动通知：评审落单与 CI/深度层完成事件以机器可读 JSON
+# 呈现在 run 摘要与日志里；配置 DITTO_AGENT_PAT secret 后，额外发
+# repository_dispatch（ditto-loop-event）——PAT 触发可被 agent 侧自动化
+# 消费，绕开 GITHUB_TOKEN 事件的防递归限制。宿主会话轮询仍是本地兜底。
+'on':
+  pull_request_review:
+    types:
+      - submitted
+  workflow_run:
+    workflows:
+      - CI
+      - Deep CI
+    types:
+      - completed
+permissions:
+  contents: read
+jobs:
+  notify:
+    name: Loop event notification
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Emit machine-readable event summary
+        run: |
+          python3 - <<'PYTHON'
+          import json
+          import os
+
+          event = os.environ["GITHUB_EVENT_NAME"]
+          payload = json.load(open(os.environ["GITHUB_EVENT_PATH"], encoding="utf-8"))
+          if event == "pull_request_review":
+              review = payload["review"]
+              summary = {
+                  "event": "review-submitted",
+                  "pr": payload["pull_request"]["number"],
+                  "state": review["state"],
+                  "reviewer": review["user"]["login"],
+                  "head_sha": payload["pull_request"]["head"]["sha"],
+                  "url": review["html_url"],
+              }
+          else:
+              run = payload["workflow_run"]
+              summary = {
+                  "event": "workflow-completed",
+                  "workflow": run["name"],
+                  "conclusion": run["conclusion"],
+                  "head_sha": run["head_sha"],
+                  "pr": (run.get("pull_requests") or [{}])[0].get("number"),
+                  "url": run["html_url"],
+              }
+          print(json.dumps(summary, sort_keys=True))
+          with open("/tmp/loop-event.json", "w", encoding="utf-8") as sink:
+              json.dump(summary, sink, sort_keys=True)
+          with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as sink:
+              json.dump(summary, sink, sort_keys=True)
+              sink.write("\n")
+          PYTHON
+      - name: Dispatch loop event to agent automation
+        env:
+          DITTO_AGENT_PAT: ${{ secrets.DITTO_AGENT_PAT }}
+        if: ${{ env.DITTO_AGENT_PAT != '' }}
+        run: |
+          curl -sS --fail-with-body -X POST \
+            -H "Authorization: Bearer $DITTO_AGENT_PAT" \
+            -H "Accept: application/vnd.github+json" \
+            -d "{\"event_type\":\"ditto-loop-event\",\"client_payload\":$(cat /tmp/loop-event.json)}" \
+            "https://api.github.com/repos/$GITHUB_REPOSITORY/dispatches"

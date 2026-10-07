@@ -1,0 +1,322 @@
+name: Deep CI
+'on':
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+  schedule:
+    - cron: 11 1 * * 1
+  workflow_dispatch: null
+# 深度层不阻断当前 PR（#538 双层门禁）：红由 merge freeze 兜底——main 上
+# 本层未消红期间，CI 快速门的 ci-gate 拒绝新合并；复绿即解冻。周度
+# schedule 强制全量，深度层不会因路径选择被永久跳过。
+permissions:
+  contents: read
+concurrency:
+  group: deep-ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+jobs:
+  repository-policy:
+    name: Repository policy (deep)
+    outputs:
+      deep: ${{ steps.scope.outputs.deep }}
+      full: ${{ steps.scope.outputs.full }}
+      main-evidence: ${{ steps.evidence.outputs.outcome }}
+    permissions:
+      contents: read
+      pull-requests: read
+      checks: read
+      actions: read
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Verify main merge evidence
+        id: evidence
+        if: ${{ github.event_name == 'push' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |-
+          python3 -m tooling.agent_harness.main_evidence verify             --commit "$GITHUB_SHA" --output "$GITHUB_OUTPUT"
+      - name: Select deep checks from changed scope
+        id: scope
+        env:
+          CHECK_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          MAIN_EVIDENCE: ${{ steps.evidence.outputs.outcome }}
+        run: python3 -m tooling.agent_harness.ci select
+  platform-smoke:
+    needs: repository-policy
+    if: ${{ contains(fromJSON(needs.repository-policy.outputs.deep || '[]'), 'platform-smoke') }}
+    name: Platform smoke (${{ matrix.name }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: macos-arm64
+            os: macos-14
+          - name: windows-x64
+            os: windows-2025
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-toolchain
+      - name: Native wheel behavior
+        run: task platform-native-test
+      # #538 macOS 双栈门并行化：backend 326s + Web 229s 串行改并行，墙钟≈max。
+      - name: macOS dual-stack gates (parallel)
+        if: ${{ matrix.name == 'macos-arm64' && (needs.repository-policy.outputs.full == 'true' || github.event_name == 'push') }}
+        run: |
+          mkdir -p build
+          task check-backend >build/backend-gate.log 2>&1 &
+          backend_pid=$!
+          task check-web >build/web-gate.log 2>&1 &
+          web_pid=$!
+          status=0
+          wait "$backend_pid" || { echo "check-backend failed (tail):"; tail -50 build/backend-gate.log; status=1; }
+          wait "$web_pid" || { echo "check-web failed (tail):"; tail -50 build/web-gate.log; status=1; }
+          exit $status
+      - name: Windows backend type gate
+        if: ${{ matrix.name == 'windows-x64' && (needs.repository-policy.outputs.full == 'true' || github.event_name == 'push') }}
+        run: task type-all
+      - name: Windows Web type gate
+        if: ${{ matrix.name == 'windows-x64' && (needs.repository-policy.outputs.full == 'true' || github.event_name == 'push') }}
+        run: task web-type
+      - name: Windows backend core unit
+        if: ${{ matrix.name == 'windows-x64' }}
+        run: task platform-backend-unit
+      - name: Windows Web unit
+        if: ${{ matrix.name == 'windows-x64' }}
+        run: task platform-web-unit
+      - name: Windows loopback API smoke
+        if: ${{ matrix.name == 'windows-x64' }}
+        run: task platform-api-smoke
+      - name: macOS backend core unit
+        if: ${{ matrix.name == 'macos-arm64' && needs.repository-policy.outputs.full != 'true' && github.event_name != 'push' }}
+        run: task platform-backend-unit
+      - name: macOS loopback API smoke
+        if: ${{ matrix.name == 'macos-arm64' && needs.repository-policy.outputs.full != 'true' && github.event_name != 'push' }}
+        run: task platform-api-smoke
+  system-e2e:
+    needs: repository-policy
+    if: ${{ contains(fromJSON(needs.repository-policy.outputs.deep || '[]'), 'system-e2e') }}
+    name: Supervised backend-Web system test
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-toolchain
+      # 深度层自含构建：不再跨工作流复用快速门 web-dist 工件（#538）。
+      - name: Build production Web
+        run: task web-build
+      - name: Cache Playwright browsers
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('bun.lock') }}
+          restore-keys: |
+            playwright-${{ runner.os }}-
+      - name: Prepare system browser
+        run: node node_modules/@playwright/test/cli.js install --with-deps chromium
+      - name: Run supervised system test
+        run: task test-system
+        env:
+          DITTO_REUSE_WEB_BUILD: '1'
+      - name: Upload system browser evidence
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: system-e2e-${{ github.run_id }}
+          path: build/system-e2e
+          if-no-files-found: warn
+          retention-days: ${{ github.event_name == 'pull_request' && 14 || 30 }}
+  container-smoke:
+    needs: repository-policy
+    if: ${{ contains(fromJSON(needs.repository-policy.outputs.deep || '[]'), 'container-smoke') }}
+    name: Container build and readiness smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-toolchain
+      # 深度层自含构建：web-build 后直接走 artifact_gate（#538）。
+      - name: Build production Web
+        run: task web-build
+      - name: Build once, scan, attest subject and smoke
+        run: uv run --no-sync python -m tooling.release.artifact_gate
+      - name: Upload artifact evidence
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: release-evidence-${{ github.run_id }}
+          path: dist
+          if-no-files-found: error
+          retention-days: 14
+  backend-capacity:
+    needs: repository-policy
+    if: ${{ contains(fromJSON(needs.repository-policy.outputs.deep || '[]'), 'backend-capacity') }}
+    name: backend-capacity
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-toolchain
+        with:
+          workspace: python
+      - name: Run scheduler-capacity slow lane
+        run: task backend-test-capacity -- --commit "$GITHUB_SHA"
+      - name: Preserve capacity evidence
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: backend-capacity-${{ github.run_id }}
+          path: build/test-shards
+          if-no-files-found: error
+          retention-days: ${{ github.event_name == 'pull_request' && 14 || 30 }}
+          include-hidden-files: true
+    env:
+      OMP_NUM_THREADS: '1'
+      OPENBLAS_NUM_THREADS: '1'
+      MKL_NUM_THREADS: '1'
+      POLARS_MAX_THREADS: '1'
+      PYTHON_KEYRING_BACKEND: keyring.backends.null.Keyring
+  web-prototype:
+    needs: repository-policy
+    if: ${{ contains(fromJSON(needs.repository-policy.outputs.deep || '[]'), 'web-prototype') }}
+    name: web-prototype
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-toolchain
+        with:
+          workspace: web
+      - name: Cache Playwright browsers
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('bun.lock') }}
+          restore-keys: |
+            playwright-${{ runner.os }}-
+      - name: Prepare browser
+        run: task browser-install -- --with-deps
+      - name: Prototype coverage of product flows
+        run: task web-prototype
+  security-full:
+    needs: repository-policy
+    if: ${{ contains(fromJSON(needs.repository-policy.outputs.deep || '[]'), 'security-full') }}
+    name: Security full analysis
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+    uses: ./.github/workflows/security.yml
+    with:
+      full-analysis: true
+      skip-quick: ${{ github.event_name != 'schedule' }}
+  deep-gate:
+    name: Deep CI gate
+    if: ${{ always() }}
+    needs:
+      - repository-policy
+      - platform-smoke
+      - system-e2e
+      - container-smoke
+      - backend-capacity
+      - web-prototype
+      - security-full
+    permissions: {}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Require every selected deep job to succeed
+        env:
+          DEEP_JOBS: ${{ needs.repository-policy.outputs.deep }}
+          NEEDS_JSON: ${{ toJSON(needs) }}
+        run: |
+          python3 - <<'PYTHON'
+          import json
+          import os
+
+          deep = json.loads(os.environ["DEEP_JOBS"])
+          needs = json.loads(os.environ["NEEDS_JSON"])
+          if not isinstance(deep, list) or needs.get("repository-policy", {}).get("result") != "success":
+              raise SystemExit("Deep CI fail-closed: policy selection missing")
+          failures = {
+              name: needs.get(name, {}).get("result", "missing")
+              for name in set(deep) | {
+                  key for key in needs if key != "repository-policy"
+              }
+              if needs.get(name, {}).get("result") != "success"
+              and not (name not in deep and needs.get(name, {}).get("result") == "skipped")
+          }
+          if failures:
+              raise SystemExit(f"Deep CI fail-closed: {failures}")
+          PYTHON
+  # merge freeze 管理器（#538）：只在 main（push/周度/dispatch）上运行——
+  # PR 分支的深度层结果不改变冻结状态。深度层红→写 DEEP_LAYER_MERGE_FREEZE
+  # 变量（值带冻结来源 run），绿→删除变量解冻。管理器自身失败=冻结仍在，
+  # 方向 fail-safe。flake 复绿可用 workflow_dispatch 在 main 上重跑本层。
+  freeze-manager:
+    name: Merge freeze state
+    if: ${{ always() && github.event_name != 'pull_request' && github.ref == 'refs/heads/main' }}
+    needs:
+      - repository-policy
+      - platform-smoke
+      - system-e2e
+      - container-smoke
+      - backend-capacity
+      - web-prototype
+      - security-full
+      - deep-gate
+    permissions:
+      actions: write
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Set or clear the merge freeze variable
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DEEP_RESULT: ${{ needs.deep-gate.result }}
+        run: |
+          set -eu
+          endpoint="repos/$GITHUB_REPOSITORY/actions/variables/DEEP_LAYER_MERGE_FREEZE"
+          if test "$DEEP_RESULT" = "success"; then
+            gh api -X DELETE "$endpoint" 2>/dev/null \
+              && echo "merge freeze cleared (deep layer green)" \
+              || echo "merge freeze already absent"
+            exit 0
+          fi
+          value="deep layer red on main ($DEEP_RESULT); frozen by Deep CI run $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID at $GITHUB_SHA"
+          # 写冻结是安全侧动作：API 瞬时失败重试三次，仍败则让本步失败，
+          # 冻结缺口由下一次 main 深度层运行或人工补写兜底。
+          for _ in 1 2 3; do
+            if gh api -X POST "repos/$GITHUB_REPOSITORY/actions/variables" \
+                -f name=DEEP_LAYER_MERGE_FREEZE -f "value=$value" 2>/dev/null; then
+              echo "merge freeze set (created)"
+              exit 0
+            fi
+            if gh api -X PATCH "$endpoint" -f "value=$value" 2>/dev/null; then
+              echo "merge freeze set (updated)"
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "failed to set merge freeze variable after retries" >&2
+          exit 1

@@ -39,16 +39,61 @@ def test_ci_runs_parallel_semantic_jobs_and_has_fail_closed_gate() -> None:
     assert triggers["push"]["branches"] == ["main"]
     assert triggers["pull_request"]["branches"] == ["main"]
     assert all("paths" not in value for value in triggers.values() if value)
+    # 周度全量强制移深度层（#538）：快速门不排程。
+    assert "schedule" not in triggers
 
     jobs = workflow["jobs"]
     assert set(jobs["ci-gate"]["needs"]) == set(jobs) - {"ci-gate"}
     assert jobs["ci-gate"]["if"] == "${{ always() }}"
     assert "required" in jobs["repository-policy"]["outputs"]
-    assert "schedule" in triggers
+    assert "deep" in jobs["repository-policy"]["outputs"]
     for name, job in jobs.items():
         if name not in {"ci-gate", "repository-policy"}:
             assert "repository-policy" in job["needs"]
             assert name in job["if"]
+
+    deep = _workflow("deep-ci.yml")
+    deep_triggers = deep["on"]
+    assert {"pull_request", "push", "schedule", "workflow_dispatch"} <= set(
+        deep_triggers
+    )
+    deep_jobs = deep["jobs"]
+    assert set(deep_jobs["deep-gate"]["needs"]) == set(deep_jobs) - {
+        "deep-gate",
+        "freeze-manager",
+    }
+    assert deep_jobs["deep-gate"]["if"] == "${{ always() }}"
+    for name, job in deep_jobs.items():
+        if name not in {"deep-gate", "freeze-manager", "repository-policy"}:
+            assert "repository-policy" in job["needs"]
+            assert name in job["if"]
+
+
+def test_merge_freeze_backstops_the_async_deep_layer() -> None:
+    """#538 兜底三件套之 merge freeze：深度层红期间快速门拒绝新合并."""
+    ci_workflow = _workflow("ci.yml")
+    freeze_check = next(
+        step
+        for step in ci_workflow["jobs"]["ci-gate"]["steps"]
+        if step.get("name") == "Merge freeze check (deep layer red on main)"
+    )
+    script = freeze_check["run"]
+    assert "DEEP_LAYER_MERGE_FREEZE" in script
+    # 非 200/404（如 API 故障）必须同样判冻结：fail-closed 方向。
+    assert "*)" in script
+    assert "exit 1" in script
+
+    deep = _workflow("deep-ci.yml")
+    manager = deep["jobs"]["freeze-manager"]
+    assert manager["permissions"] == {"actions": "write"}
+    assert "always()" in manager["if"]
+    assert "github.event_name != 'pull_request'" in manager["if"]
+    assert "github.ref == 'refs/heads/main'" in manager["if"]
+    assert "deep-gate" in manager["needs"]
+    manager_script = manager["steps"][0]["run"]
+    assert 'test "$DEEP_RESULT" = "success"' in manager_script
+    assert "-X DELETE" in manager_script
+    assert "DEEP_LAYER_MERGE_FREEZE" in manager_script
 
 
 def test_ci_preserves_system_failure_evidence_and_checks_diff_hygiene() -> None:
@@ -62,7 +107,7 @@ def test_ci_preserves_system_failure_evidence_and_checks_diff_hygiene() -> None:
     assert 'git diff --check "$base" "$GITHUB_SHA"' in diff_hygiene
     assert 'git show --check --format= "$GITHUB_SHA"' in diff_hygiene
 
-    system_steps = workflow["jobs"]["system-e2e"]["steps"]
+    system_steps = _workflow("deep-ci.yml")["jobs"]["system-e2e"]["steps"]
     upload = next(
         step
         for step in system_steps
@@ -72,6 +117,12 @@ def test_ci_preserves_system_failure_evidence_and_checks_diff_hygiene() -> None:
     assert upload["with"]["path"] == "build/system-e2e"
     assert "github.event_name == 'pull_request'" in str(
         upload["with"]["retention-days"]
+    )
+    # 深度层自含构建（#538）：system-e2e 在 job 内构建 web，不再吃快速门工件。
+    assert any(
+        step.get("name") == "Build production Web"
+        and step.get("run") == "task web-build"
+        for step in system_steps
     )
 
     for job_name, step_name in (
@@ -100,13 +151,20 @@ def test_backend_coverage_merges_shards_and_enforces_the_floor() -> None:
         for step in backend["steps"]
         if "backend-coverage-combine" in step.get("run", "")
     )
-    assert "--count 6" in coverage_step["run"]
+    assert "--count 10" in coverage_step["run"]
+    assert "--skip-capacity" in coverage_step["run"]
     assert "covered_lines" in coverage_step["run"]
     assert "0.90" in coverage_step["run"]
-    # 分片证据 + capacity 慢车道证据都必须参与合并（#225）
+    # 分片证据参与合并（#225）；capacity 慢车道移深度层（#538），快速门
+    # 合并不再消费其工件——其自身证据由深度层 job 保全。
     artifact_downloads = json.dumps(backend["steps"])
     assert "backend-shard-" in artifact_downloads
-    assert "backend-capacity-" in artifact_downloads
+    assert "marker-dump-" in artifact_downloads
+    assert "backend-capacity-" not in artifact_downloads
+    deep_capacity = _workflow("deep-ci.yml")["jobs"]["backend-capacity"]["steps"]
+    assert any(
+        step.get("name") == "Preserve capacity evidence" for step in deep_capacity
+    )
     # 必要产物缺失在下载后点名失败（#342）：download-artifact 无
     # if-no-files-found 输入（属 upload-artifact），用显式存在性校验步。
     verify = next(
@@ -115,18 +173,11 @@ def test_backend_coverage_merges_shards_and_enforces_the_floor() -> None:
         if step.get("name") == "Verify required artifacts present"
     )
     assert "shard-*.json" in verify["run"]
-    assert "-ne 6" in verify["run"]
-    assert "capacity.json" in verify["run"]
+    assert "-ne 10" in verify["run"]
+    assert "markers.json" in verify["run"]
     for step in backend["steps"]:
         if "download-artifact" in str(step.get("uses", "")):
             assert "if-no-files-found" not in step.get("with", {})
-    system_e2e = _workflow("ci.yml")["jobs"]["system-e2e"]
-    e2e_verify = next(
-        step
-        for step in system_e2e["steps"]
-        if step.get("name") == "Verify web-dist artifact present"
-    )
-    assert "apps/web/dist/index.html" in e2e_verify["run"]
 
 
 def test_ci_has_explicit_pit_and_supported_platform_gates() -> None:
@@ -137,10 +188,15 @@ def test_ci_has_explicit_pit_and_supported_platform_gates() -> None:
     backend_steps = json.dumps(jobs["backend-tests"])
     assert "required_suite_evidence" in backend_steps
     assert "--pit-marker" in backend_steps
+    assert "--markers" in backend_steps
     assert "test_openapi_conformance.py" in backend_steps
+    # PIT 红线证据的无过滤收集在并行 marker-dump job（#538 串行 PIT 并行化）。
+    marker_job = jobs["marker-dump"]
+    assert "--dump-to" in json.dumps(marker_job["steps"])
+    assert marker_job["needs"] == "repository-policy"
+    assert "marker-dump" in jobs["backend-tests"]["needs"]
 
-    platform = jobs["platform-smoke"]
-    platform = jobs["platform-smoke"]
+    platform = _workflow("deep-ci.yml")["jobs"]["platform-smoke"]
     matrix = platform["strategy"]["matrix"]["include"]
     by_name = {entry["name"]: entry for entry in matrix}
     assert by_name["macos-arm64"]["os"] == "macos-14"
@@ -155,7 +211,7 @@ def test_ci_has_explicit_pit_and_supported_platform_gates() -> None:
 
 def test_windows_gate_runs_representative_units_and_a_real_loopback_api() -> None:
     """Windows support must execute behavior, not only compile both stacks."""
-    workflow = _workflow("ci.yml")
+    workflow = _workflow("deep-ci.yml")
     steps = workflow["jobs"]["platform-smoke"]["steps"]
     windows_steps = {
         step.get("name"): step
@@ -341,17 +397,25 @@ def test_gitleaks_false_positives_are_individually_fingerprinted() -> None:
 
 def test_ci_gate_calls_and_requires_the_complete_security_workflow() -> None:
     ci_workflow = _workflow("ci.yml")
-    security_job = ci_workflow["jobs"]["security-supply-chain"]
+    security_job = ci_workflow["jobs"]["security-quick"]
     assert security_job["uses"] == "./.github/workflows/security.yml"
+    assert security_job["with"] == {"full-analysis": False}
     assert security_job["permissions"] == {
         "actions": "read",
         "contents": "read",
         "security-events": "write",
     }
-    assert "security-supply-chain" in ci_workflow["jobs"]["ci-gate"]["needs"]
+    assert "security-quick" in ci_workflow["jobs"]["ci-gate"]["needs"]
+
+    deep_workflow = _workflow("deep-ci.yml")
+    security_full = deep_workflow["jobs"]["security-full"]
+    assert security_full["uses"] == "./.github/workflows/security.yml"
+    assert security_full["with"]["full-analysis"] is True
+    assert "security-full" in deep_workflow["jobs"]["deep-gate"]["needs"]
 
     security_workflow = _workflow("security.yml")
     assert "workflow_call" in security_workflow["on"]
+    assert "skip-quick" in security_workflow["on"]["workflow_call"]["inputs"]
 
 
 def test_gitleaks_scan_is_single_version_and_digest_pinned() -> None:
@@ -537,13 +601,18 @@ def test_docker_runtime_is_digest_pinned_non_root_and_readyz_gated() -> None:
 
 def test_container_readiness_smoke_uses_runtime_only_offline_credential() -> None:
     """A secret-free image is ready only after deployment supplies a credential."""
-    workflow = _workflow("ci.yml")
+    workflow = _workflow("deep-ci.yml")
     steps = workflow["jobs"]["container-smoke"]["steps"]
     assert any(
         step.get("run") == "uv run --no-sync python -m tooling.release.artifact_gate"
         for step in steps
     )
-    assert "web-build" in workflow["jobs"]["container-smoke"]["needs"]
+    # 深度层自含构建（#538）：容器烟测在 job 内构建 web 后走 artifact_gate。
+    assert any(
+        step.get("name") == "Build production Web"
+        and step.get("run") == "task web-build"
+        for step in steps
+    )
     # Runtime credentials, exact identity and immutable build/export/smoke binding
     # are exercised by test_artifact_gate, rather than duplicated shell snippets.
     dockerfile = (ROOT / "deploy" / "docker" / "Dockerfile").read_text()

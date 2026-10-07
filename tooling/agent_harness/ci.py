@@ -1,4 +1,11 @@
-"""GitHub CI selection and fail-closed aggregation using the local scope policy."""
+"""GitHub CI selection and fail-closed aggregation using the local scope policy.
+
+#538 双层门禁：阻断合并的快速门（质量/类型/分片/coverage 与 PIT、OpenAPI
+红线）与异步深度层（平台/容器/安全全量/系统 E2E/容量慢车道）。深度层红由
+merge freeze 兜底：main 上深度层未消红期间快速门拒绝新合并。路径分类与
+fail-closed 升级留在本层（turbo 只承担图/缓存事实，对未知路径 fail-open，
+兜底职责在此，#526 四条件之一）。
+"""
 
 from __future__ import annotations
 
@@ -15,70 +22,83 @@ from tooling.agent_harness.impact_scope import (
     is_web_source_path,
 )
 
-REQUIRED_JOBS = frozenset(
+FAST_JOBS = frozenset(
     {
         "skill-validation",
         "repository-policy",
-        "backend-shards",
-        "backend-capacity",
-        "web-build",
-        "web-prototype",
+        "security-quick",
         "backend-quality",
         "backend-types",
+        "marker-dump",
+        "backend-shards",
         "backend-tests",
         "architecture-harness",
-        "web-quality",
         "api-contract",
-        "system-e2e",
         "release-policy",
-        "container-smoke",
-        "platform-smoke",
-        "security-supply-chain",
+        "web-quality",
+        "web-build",
     }
 )
-_ALWAYS = {"repository-policy", "security-supply-chain"}
+DEEP_JOBS = frozenset(
+    {
+        "platform-smoke",
+        "container-smoke",
+        "system-e2e",
+        "backend-capacity",
+        "web-prototype",
+        "security-full",
+    }
+)
+_ALWAYS = {"repository-policy", "security-quick"}
+_FAST_WEB = {"web-quality", "web-build", "api-contract"}
+_DEEP_WEB = {"web-prototype", "system-e2e", "security-full"}
+_FAST_BACKEND = {
+    "backend-quality",
+    "backend-types",
+    "marker-dump",
+    "backend-shards",
+    "backend-tests",
+    "architecture-harness",
+    "api-contract",
+    "web-build",
+}
+_DEEP_BACKEND = {"backend-capacity", "system-e2e", "security-full"}
 
 
-def required_jobs(paths: Sequence[str], *, full: bool = False) -> set[str]:
-    """Select every proof required by a changed scope; unknowns take the full gate."""
+def _tiers(paths: Sequence[str], *, full: bool) -> tuple[set[str], set[str]]:
+    """Resolve the (fast, deep) job pair a changed scope owes; unknowns go full."""
     level = classify_diff(paths)
     if full:
-        return set(REQUIRED_JOBS)
+        return set(FAST_JOBS), set(DEEP_JOBS)
     if level == "skills":
-        return _ALWAYS | {"skill-validation"}
+        return _ALWAYS | {"skill-validation"}, set()
     if level in {"docs", "none"}:
-        return set(_ALWAYS)
+        return set(_ALWAYS), set()
     if level == "web" and all(map(is_web_source_path, paths)):
-        return _ALWAYS | {
-            "web-quality",
-            "web-prototype",
-            "web-build",
-            "api-contract",
-            "system-e2e",
-        }
+        return _ALWAYS | _FAST_WEB, set(_DEEP_WEB)
     if level in {"backend", "backend-tests"} and all(
         map(is_backend_source_path, paths)
     ):
-        return _ALWAYS | {
-            "backend-quality",
-            "backend-types",
-            "backend-shards",
-            "backend-capacity",
-            "backend-tests",
-            "architecture-harness",
-            "api-contract",
-            "system-e2e",
-            "web-build",
-        }
+        return _ALWAYS | _FAST_BACKEND, set(_DEEP_BACKEND)
     # Contracts, toolchain, security, unknown and high-risk paths use all gates.
-    return set(REQUIRED_JOBS)
+    return set(FAST_JOBS), set(DEEP_JOBS)
 
 
-def _emit(required: set[str]) -> None:
-    analysis = bool(required - _ALWAYS - {"skill-validation"})
+def required_jobs(paths: Sequence[str], *, full: bool = False) -> set[str]:
+    """Blocking fast-gate jobs owed by a changed scope; unknowns take the full gate."""
+    return _tiers(paths, full=full)[0]
+
+
+def deep_jobs(paths: Sequence[str], *, full: bool = False) -> set[str]:
+    """Async deep-layer jobs for the same scope; red there freezes new merges."""
+    return _tiers(paths, full=full)[1]
+
+
+def _emit(required: set[str], deep: set[str]) -> None:
+    full = required == set(FAST_JOBS) and deep == set(DEEP_JOBS)
     output = (
-        f"required={json.dumps(sorted(required))}\nanalysis={str(analysis).lower()}\n"
-        f"full={str(required == set(REQUIRED_JOBS)).lower()}\n"
+        f"required={json.dumps(sorted(required))}\ndeep={json.dumps(sorted(deep))}\n"
+        f"full={str(full).lower()}\n"
     )
     with Path(os.environ["GITHUB_OUTPUT"]).open("a", encoding="utf-8") as stream:
         stream.write(output)
@@ -95,10 +115,10 @@ def main() -> int:
         # 机器核验身份链——合并 PR 关联/head CI gate 成功/tested tree ==
         # final tree）；核验未通过或缺失时退回全量。
         if os.environ.get("MAIN_EVIDENCE") == "verified":
-            required = _ALWAYS | {"platform-smoke"}
+            required, deep = set(_ALWAYS), {"platform-smoke"}
         else:
-            required = set(REQUIRED_JOBS)
-        _emit(required)
+            required, deep = set(FAST_JOBS), set(DEEP_JOBS)
+        _emit(required, deep)
         return 0
     full = event != "pull_request"
     paths: list[str] = []
@@ -125,7 +145,8 @@ def main() -> int:
             modes = header.split()[:2]
             if any(mode.lstrip(":") not in {"100644", "000000"} for mode in modes):
                 full = True
-    _emit(required_jobs(paths, full=full))
+    required, deep = _tiers(paths, full=full)
+    _emit(required, deep)
     return 0
 
 
