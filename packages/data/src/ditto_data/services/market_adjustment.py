@@ -70,24 +70,34 @@ def apply_adjustment(
             + "ingest adj_factor or query with adj=none/raw (#514)"
         )
 
-    # 确保排序以正确处理 last() 聚合
-    adj_df = adj_df.sort(["instrument_id", "trade_date"])
+    # 确保排序以正确处理 last() 聚合；knowledge_date 参与排序使同
+    # trade_date 的修订晚知者胜（PIT 回放取最新已发布版本）。
+    sort_keys = ["instrument_id", "trade_date"]
+    if "knowledge_date" in adj_df.columns:
+        sort_keys.append("knowledge_date")
+    adj_df = adj_df.sort(sort_keys)
 
-    # PIT 安全：如果提供了 asof，可能需要过滤
-    join_adj_df = adj_df
-    if asof is not None and "knowledge_date" in adj_df.columns:
-        # 只保留在 asof 日期前已知的因子
-        join_adj_df = adj_df.filter(pl.col("knowledge_date") <= asof)
-
-    # 关联调整因子
+    # 关联调整因子。PIT 安全：asof 语义下 bar 行关联"截至 asof 已知、不晚于
+    # 该行 trade_date"的最近因子（join_asof backward）——窗口越过 asof 的行
+    # 不得因精确 join miss 而 fail-closed，PIT 回放正是要用 asof 时点已知
+    # 因子覆盖整窗；标的完全无已知因子仍由 #514 行级守卫拦截。
     cols = ["instrument_id", "trade_date", "adj_factor"]
     if "knowledge_date" in adj_df.columns:
         cols.append("knowledge_date")
-    df = df.join(
-        join_adj_df.select(cols),
-        on=["instrument_id", "trade_date"],
-        how="left",
-    )
+    if asof is not None and "knowledge_date" in adj_df.columns:
+        join_adj_df = adj_df.filter(pl.col("knowledge_date") <= asof)
+        df = df.sort("trade_date").join_asof(
+            join_adj_df.select(cols).sort("trade_date"),
+            on="trade_date",
+            by="instrument_id",
+            strategy="backward",
+        )
+    else:
+        df = df.join(
+            adj_df.select(cols),
+            on=["instrument_id", "trade_date"],
+            how="left",
+        )
 
     # 根据调整类型调用相应方法
     if adj == AdjType.QFQ:
