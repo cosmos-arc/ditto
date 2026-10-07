@@ -79,9 +79,72 @@ const USAGE_TIER_GATES = Object.freeze({
     warnBelow: null,
     requiresNonColorMarker: true,
   },
+  badge: {
+    failBelow: 3,
+    warnBelow: 4.5,
+    requiresNonColorMarker: false,
+  },
 });
 
 const BG_PATTERNS = ["overlay-2", "overlay-3", "overlay-4", "overlay-6", "overlay-8", "overlay-10", "overlay-12"];
+
+// Domain fg tokens audited against the two primary surfaces in BOTH themes (#555:
+// 此前 domain fg 不在对集——dark 亦未守护，light 校准值首次获得门禁覆盖)。
+const DOMAIN_FG_PATTERNS = [
+  "market-up-fg",
+  "market-down-fg",
+  "market-flat-fg",
+  "market-strong-fg",
+  "market-weak-fg",
+  "risk-low-fg",
+  "risk-medium-fg",
+  "risk-high-fg",
+  "risk-critical-fg",
+  "risk-near-limit-fg",
+  "risk-breach-fg",
+  "execution-pending-fg",
+  "execution-partial-fg",
+  "execution-filled-fg",
+  "execution-rejected-fg",
+  "execution-cancelled-fg",
+  "system-healthy-fg",
+  "system-degraded-fg",
+  "system-stale-fg",
+  "system-down-fg",
+  "data-quality-fresh-fg",
+  "data-quality-delayed-fg",
+  "data-quality-missing-fg",
+  "model-stable-fg",
+  "model-degrading-fg",
+  "model-drifting-fg",
+  "model-invalid-fg",
+  "agent-running-fg",
+  "agent-failed-fg",
+  "status-led-healthy",
+  "status-led-degraded",
+  "status-led-warning",
+  "status-led-critical",
+  "status-led-live",
+  "status-led-idle",
+  "status-led-error",
+  "status-led-info",
+];
+const DOMAIN_FG_SURFACES = ["surface-app", "surface-panel-base"];
+
+// 同色系淡底徽章组合（fg on its α-tint bg composited over panel-base）。
+// #555 裁决：badge 按 UI 组件级 3:1 gate（WCAG 1.4.11）——状态徽章有
+// border/bg/text 三重编码；4.5 以上记 pass，3–4.5 记 warn 提示。
+const BADGE_COMBOS = [
+  ["status-led-critical", "risk-critical-bg"],
+  ["status-led-warning", "risk-medium-bg"],
+  ["status-led-info", "execution-partial-bg"],
+  ["execution-filled-fg", "execution-filled-bg"],
+  ["system-healthy-fg", "system-healthy-bg"],
+  ["risk-medium-fg", "risk-medium-bg"],
+  ["risk-critical-fg", "risk-critical-bg"],
+  ["market-up-fg", "market-up-bg"],
+  ["market-down-fg", "market-down-bg"],
+];
 
 // Chart Cockpit series tokens audited against the chart pane surface in BOTH themes.
 // 涨跌 up/down 在 intl 市场配色下互为同值换位，对比度等价，不重复设对。
@@ -134,7 +197,10 @@ function buildTokenMap(theme = "dark") {
   for (const { css } of files) {
     allCss += extractBlocks(css, ":root");
     if (theme === "light") {
-      themeCss += extractBlocks(css, '\\[data-theme="light"\\]');
+      // extractBlocks escapes the selector itself — pass the RAW selector.
+      // （历史 bug：此处曾传已转义的 \[data-theme="light"\]，双重转义使
+      // light 覆写从未进入 token map，chart「双主题」段实际审计了两遍 dark。）
+      themeCss += extractBlocks(css, '[data-theme="light"]');
     }
   }
   const tokens = extractTokensFromCss(allCss + (theme === "light" ? themeCss : ""));
@@ -210,15 +276,14 @@ function getTextUsageTier(textName) {
   return "operational";
 }
 
-function classifyContrast(textName, ratio) {
-  const usageTier = getTextUsageTier(textName);
+function classifyByTier(usageTier, ratio) {
   const gate = USAGE_TIER_GATES[usageTier];
 
   if (usageTier === "decorative") {
     return { usageTier, status: "report", pass: true, requiresNonColorMarker: gate.requiresNonColorMarker };
   }
 
-  if (usageTier === "metadata") {
+  if (usageTier === "metadata" || usageTier === "badge") {
     if (ratio < gate.failBelow) return { usageTier, status: "fail", pass: false, requiresNonColorMarker: gate.requiresNonColorMarker };
     if (ratio < gate.warnBelow) return { usageTier, status: "warn", pass: true, requiresNonColorMarker: gate.requiresNonColorMarker };
     return { usageTier, status: "pass", pass: true, requiresNonColorMarker: gate.requiresNonColorMarker };
@@ -232,6 +297,10 @@ function classifyContrast(textName, ratio) {
   };
 }
 
+function classifyContrast(textName, ratio) {
+  return classifyByTier(getTextUsageTier(textName), ratio);
+}
+
 function updateCounts(classification, counts) {
   if (classification.status === "fail") counts.fail += 1;
   else if (classification.status === "warn") counts.warn += 1;
@@ -242,6 +311,94 @@ function updateCounts(classification, counts) {
 function addUnresolved(unresolved, token, role, reason) {
   if (unresolved.some((entry) => entry.token === token && entry.role === role && entry.reason === reason)) return;
   unresolved.push({ token, role, reason });
+}
+
+function auditDomainFgs(themes, results, counts, unresolved) {
+  for (const { name: themeName, tokens } of themes) {
+    for (const surfName of DOMAIN_FG_SURFACES) {
+      const surfVal = tokens[surfName];
+      const surfColor = surfVal ? resolveAuditColor(surfVal, tokens) : null;
+      if (!surfColor) {
+        addUnresolved(unresolved, surfName, `domain-fg surface (${themeName})`, surfVal ? `could not resolve ${surfVal}` : "missing from token map");
+        continue;
+      }
+      for (const fgName of DOMAIN_FG_PATTERNS) {
+        const fgVal = tokens[fgName];
+        if (!fgVal) {
+          addUnresolved(unresolved, fgName, `domain-fg (${themeName})`, "token is declared for audit but missing from token map");
+          continue;
+        }
+        const fgColor = resolveAuditColor(fgVal, tokens);
+        if (!fgColor) {
+          addUnresolved(unresolved, fgName, `domain-fg (${themeName})`, `could not resolve ${fgVal}`);
+          continue;
+        }
+        const ratio = contrastRatio(surfColor.luminance, fgColor.luminance);
+        // 平盘/已取消是弱化状态（视觉意图即弱于常规操作文本），按 metadata 档
+        // （3:1 gate + 4.5 warn）而非 operational 评估（#555 裁决留档）。
+        const tier = fgName === "market-flat-fg" || fgName === "execution-cancelled-fg" ? "metadata" : "operational";
+        const classification = classifyByTier(tier, ratio);
+        updateCounts(classification, counts);
+        results.push({
+          surface: `${surfName} (${themeName})`,
+          text: fgName,
+          ratio,
+          level: wcagLevel(ratio),
+          ...classification,
+        });
+      }
+    }
+  }
+}
+
+function compositeEffLuminance(bgColor, surfColor) {
+  // CSS alpha compositing happens per channel in gamma-encoded sRGB space,
+  // then converts to relative luminance for the WCAG ratio.
+  const alpha = bgColor.alpha;
+  const effR = bgColor.rgb[0] * alpha + surfColor.rgb[0] * (1 - alpha);
+  const effG = bgColor.rgb[1] * alpha + surfColor.rgb[1] * (1 - alpha);
+  const effB = bgColor.rgb[2] * alpha + surfColor.rgb[2] * (1 - alpha);
+  return (
+    0.2126 * (effR <= 0.03928 ? effR / 12.92 : ((effR + 0.055) / 1.055) ** 2.4) +
+    0.7152 * (effG <= 0.03928 ? effG / 12.92 : ((effG + 0.055) / 1.055) ** 2.4) +
+    0.0722 * (effB <= 0.03928 ? effB / 12.92 : ((effB + 0.055) / 1.055) ** 2.4)
+  );
+}
+
+function auditBadgeCombos(themes, results, counts, unresolved) {
+  for (const { name: themeName, tokens } of themes) {
+    const surfVal = tokens["surface-panel-base"];
+    const surfColor = surfVal ? resolveAuditColor(surfVal, tokens) : null;
+    if (!surfColor) {
+      addUnresolved(unresolved, "surface-panel-base", `badge base (${themeName})`, "badge composite base is missing or unresolvable");
+      continue;
+    }
+    for (const [fgName, bgName] of BADGE_COMBOS) {
+      const fgVal = tokens[fgName];
+      const bgVal = tokens[bgName];
+      if (!fgVal || !bgVal) {
+        addUnresolved(unresolved, `${fgName}/${bgName}`, `badge (${themeName})`, "combo token missing from token map");
+        continue;
+      }
+      const fgColor = resolveAuditColor(fgVal, tokens);
+      const bgColor = resolveAuditColor(bgVal, tokens);
+      if (!fgColor || !bgColor) {
+        addUnresolved(unresolved, `${fgName}/${bgName}`, `badge (${themeName})`, "combo color unresolvable");
+        continue;
+      }
+      const ratio = contrastRatio(compositeEffLuminance(bgColor, surfColor), fgColor.luminance);
+      const classification = classifyByTier("badge", ratio);
+      updateCounts(classification, counts);
+      results.push({
+        surface: `${bgName} (on panel-base, ${themeName})`,
+        text: fgName,
+        ratio,
+        level: wcagLevel(ratio),
+        composited: true,
+        ...classification,
+      });
+    }
+  }
 }
 
 // ── Main ──
@@ -412,15 +569,17 @@ function main() {
   }
 
   // Chart Cockpit series × chart pane surface, audited in BOTH themes (dark :root + light overlay)
-  auditChartSeries(
-    [
-      { name: "dark", tokens },
-      { name: "light", tokens: buildTokenMap("light") },
-    ],
-    results,
-    counts,
-    unresolved,
-  );
+  const themes = [
+    { name: "dark", tokens },
+    { name: "light", tokens: buildTokenMap("light") },
+  ];
+  auditChartSeries(themes, results, counts, unresolved);
+
+  // Domain fg × primary surfaces, BOTH themes (#555)
+  auditDomainFgs(themes, results, counts, unresolved);
+
+  // Badge 同色淡底组合（UI 组件级 3:1 裁决档），BOTH themes（#555）
+  auditBadgeCombos(themes, results, counts, unresolved);
 
   // Sort: failures first, then warnings, then reports, then passes
   const statusOrder = { fail: 0, warn: 1, report: 2, pass: 3 };
@@ -431,7 +590,7 @@ function main() {
 
   // ── Output ──
 
-  console.log("\n## WCAG 2.1 Contrast Audit — Dark Mode (:root defaults) + chart series in both themes\n");
+  console.log("\n## WCAG 2.1 Contrast Audit — Dark Mode (:root defaults) + chart/domain fg/badge in both themes\n");
   console.log(`Pairs checked: ${results.length}`);
   console.log(
     `${emoji(7)} Pass: ${counts.pass}  ${emoji(3)} Warn: ${counts.warn}  ${emoji(1)} Failed pairs: ${counts.fail}  Unresolved: ${unresolved.length}  Report: ${counts.report}\n`,

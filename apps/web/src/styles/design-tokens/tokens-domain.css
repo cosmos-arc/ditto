@@ -96,13 +96,38 @@
 [data-theme="light"] {
 	/* Domain fg 白底校准（#553）：palette fg 为 dark-first，light 下对比不足；
 	   覆写为同色相深色版（surface-app/panel-base 上 ≥4.5:1，chart light 段同模式） */
+	--risk-low-fg: oklch(0.52 0.1203 156.74);
 	--risk-medium-fg: oklch(0.542 0.118 79.66);
+	--risk-high-fg: oklch(0.545 0.127 50.23);
 	--risk-critical-fg: oklch(0.55 0.148 21.89);
+	--risk-near-limit-fg: oklch(0.538 0.111 77.09);
+	--risk-breach-fg: oklch(0.552 0.1479 21.89);
+	--execution-pending-fg: oklch(0.537 0.1177 79.66);
+	--execution-partial-fg: oklch(0.52 0.1106 220);
 	--execution-filled-fg: oklch(0.532 0.054 156.74);
+	--execution-rejected-fg: oklch(0.552 0.1479 21.89);
 	--system-healthy-fg: oklch(0.532 0.054 156.74);
+	--system-degraded-fg: oklch(0.537 0.1177 79.66);
+	--system-stale-fg: oklch(0.545 0.127 50.23);
+	--system-down-fg: oklch(0.552 0.1479 21.89);
+	--data-quality-fresh-fg: oklch(0.52 0.1203 156.74);
+	--data-quality-delayed-fg: oklch(0.537 0.1177 79.66);
+	--data-quality-missing-fg: oklch(0.553 0.16 21.89);
 	--model-stable-fg: oklch(0.532 0.054 156.74);
 	--model-degrading-fg: oklch(0.542 0.118 79.66);
 	--model-drifting-fg: oklch(0.545 0.128 47.45);
+	--model-invalid-fg: oklch(0.552 0.1479 21.89);
+	--agent-failed-fg: oklch(0.552 0.1479 21.89);
+	--agent-running-fg: oklch(0.52 0.1 235);
+
+	/* Market fg 白底校准（#555）：涨跌/强弱 fg 在 light 下 2.19–3.15:1，
+	   同法校准（双底 ≥4.6:1）。badge 同色淡底组合按 UI 组件级 3:1 裁决留档：
+	   状态徽章 border/bg/text 三重编码，不单靠文本色传达状态（WCAG 1.4.11），
+	   审计 audit:tokens 的 badge 段以 3:1 为 gate、4.5 为 warn。 */
+	--market-up-fg: oklch(0.555 0.17 20);
+	--market-down-fg: oklch(0.52 0.12 155);
+	--market-strong-fg: oklch(0.552 0.1479 21.89);
+	--market-weak-fg: oklch(0.519 0.1278 153.45);
 
 	--market-up-bg: oklch(0.67 0.17 20 / 0.08);
 	--market-up-subtle: oklch(0.67 0.17 20 / 0.06);
@@ -146,4 +171,10 @@
 	--market-down-fg: oklch(0.67 0.17 20); /* red */
 	--market-down-bg: oklch(0.67 0.17 20 / 0.1);
 	--market-down-subtle: oklch(0.67 0.17 20 / 0.08);
+}
+
+/* intl 区 light 校准（#555）：与主区 light fg 同值、涨跌色相互换 */
+[data-theme="light"][data-market-region="intl"] {
+	--market-up-fg: oklch(0.52 0.12 155);
+	--market-down-fg: oklch(0.555 0.17 20);
 }
