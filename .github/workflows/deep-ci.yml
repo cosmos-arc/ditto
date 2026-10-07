@@ -271,8 +271,11 @@ jobs:
           PYTHON
   # merge freeze 管理器（#538）：只在 main（push/周度/dispatch）上运行——
   # PR 分支的深度层结果不改变冻结状态。深度层红→写 DEEP_LAYER_MERGE_FREEZE
-  # 变量（值带冻结来源 run），绿→删除变量解冻。管理器自身失败=冻结仍在，
-  # 方向 fail-safe。flake 复绿可用 workflow_dispatch 在 main 上重跑本层。
+  # 变量（值记录红车道 lanes= 与来源 run）；绿→仅当本轮实际跑绿的车道覆盖
+  # 冻结值记录的全部红车道才解冻（红被解决，不是被 outranked——例如
+  # platform-smoke-only 的普通 push 不得清掉 container-smoke 的冻结）。
+  # 写/删失败重试后让本步失败（loud）；重跑历史红 run 会以其原 SHA 重写
+  # 冻结，解冻以 main 当前树的 dispatch/周度全量复跑为准。优先 DITTO_AGENT_PAT。
   freeze-manager:
     name: Merge freeze state
     if: ${{ always() && github.event_name != 'pull_request' && github.ref == 'refs/heads/main' }}
@@ -292,31 +295,98 @@ jobs:
     steps:
       - name: Set or clear the merge freeze variable
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ secrets.DITTO_AGENT_PAT || github.token }}
           DEEP_RESULT: ${{ needs.deep-gate.result }}
+          NEEDS_JSON: ${{ toJSON(needs) }}
         run: |
-          set -eu
-          endpoint="repos/$GITHUB_REPOSITORY/actions/variables/DEEP_LAYER_MERGE_FREEZE"
-          if test "$DEEP_RESULT" = "success"; then
-            gh api -X DELETE "$endpoint" 2>/dev/null \
-              && echo "merge freeze cleared (deep layer green)" \
-              || echo "merge freeze already absent"
-            exit 0
-          fi
-          value="deep layer red on main ($DEEP_RESULT); frozen by Deep CI run $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID at $GITHUB_SHA"
-          # 写冻结是安全侧动作：API 瞬时失败重试三次，仍败则让本步失败，
-          # 冻结缺口由下一次 main 深度层运行或人工补写兜底。
-          for _ in 1 2 3; do
-            if gh api -X POST "repos/$GITHUB_REPOSITORY/actions/variables" \
-                -f name=DEEP_LAYER_MERGE_FREEZE -f "value=$value" 2>/dev/null; then
-              echo "merge freeze set (created)"
-              exit 0
-            fi
-            if gh api -X PATCH "$endpoint" -f "value=$value" 2>/dev/null; then
-              echo "merge freeze set (updated)"
-              exit 0
-            fi
-            sleep 5
-          done
-          echo "failed to set merge freeze variable after retries" >&2
-          exit 1
+          python3 - <<'PY'
+          import json
+          import os
+          import sys
+          import time
+          import urllib.error
+          import urllib.request
+
+          token = os.environ["GH_TOKEN"]
+          repo = os.environ["GITHUB_REPOSITORY"]
+          needs = json.loads(os.environ["NEEDS_JSON"])
+          deep_result = os.environ["DEEP_RESULT"]
+          name = "DEEP_LAYER_MERGE_FREEZE"
+          run_url = (
+              f"{os.environ['GITHUB_SERVER_URL']}/{repo}/actions/runs/"
+              f"{os.environ['GITHUB_RUN_ID']}"
+          )
+          api = f"https://api.github.com/repos/{repo}/actions/variables"
+
+          def call(url, method, payload=None):
+              request = urllib.request.Request(
+                  url,
+                  method=method,
+                  data=json.dumps(payload).encode() if payload is not None else None,
+                  headers={
+                      "Authorization": f"Bearer {token}",
+                      "Accept": "application/vnd.github+json",
+                      "Content-Type": "application/json",
+                  },
+              )
+              try:
+                  with urllib.request.urlopen(request) as response:
+                      return response.status, response.read().decode()
+              except urllib.error.HTTPError as error:
+                  return error.code, error.read().decode()
+
+          lanes = {
+              key: value.get("result")
+              for key, value in needs.items()
+              if key not in {"repository-policy", "deep-gate"}
+          }
+          if deep_result != "success":
+              failed = sorted(k for k, v in lanes.items() if v != "success")
+              value = (
+                  f"deep layer red on main; lanes={','.join(failed)}; "
+                  f"run={run_url}; sha={os.environ['GITHUB_SHA']}"
+              )
+              for attempt in range(3):
+                  status, body = call(api, "POST", {"name": name, "value": value})
+                  if status in (201, 204):
+                      print(f"merge freeze set (created): {value}")
+                      sys.exit(0)
+                  status, body = call(f"{api}/{name}", "PATCH", {"value": value})
+                  if status in (200, 204):
+                      print(f"merge freeze set (updated): {value}")
+                      sys.exit(0)
+                  print(f"freeze write attempt {attempt + 1} failed: {status} {body[:200]}", file=sys.stderr)
+                  time.sleep(5)
+              print("failed to set merge freeze variable after retries", file=sys.stderr)
+              sys.exit(1)
+
+          status, body = call(f"{api}/{name}", "GET")
+          if status == 404:
+              print("merge freeze absent and deep layer green; nothing to do")
+              sys.exit(0)
+          if status != 200:
+              print(f"freeze read failed with {status}; leaving state untouched", file=sys.stderr)
+              sys.exit(1)
+          frozen_value = json.loads(body)["value"]
+          frozen_raw = {
+              part.strip().removeprefix("lanes=")
+              for part in frozen_value.split(";")
+              if part.strip().startswith("lanes=")
+          }
+          frozen_lanes = (
+              set(next(iter(frozen_raw)).split(",")) if frozen_raw else set()
+          )
+          green = {k for k, v in lanes.items() if v == "success"}
+          if not frozen_lanes <= green:
+              print(
+                  "merge freeze kept: red lanes not re-run green this run; "
+                  f"frozen={sorted(frozen_lanes)} green={sorted(green)}",
+              )
+              sys.exit(0)
+          status, body = call(f"{api}/{name}", "DELETE")
+          if status in (200, 204, 404):
+              print("merge freeze cleared (all red lanes re-run green)")
+              sys.exit(0)
+          print(f"freeze delete failed with {status}: {body[:200]}", file=sys.stderr)
+          sys.exit(1)
+          PY

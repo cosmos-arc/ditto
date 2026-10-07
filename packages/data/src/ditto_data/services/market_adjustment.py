@@ -70,10 +70,12 @@ def apply_adjustment(
             + "ingest adj_factor or query with adj=none/raw (#514)"
         )
 
-    # 确保排序以正确处理 last() 聚合；knowledge_date 参与排序使同
-    # trade_date 的修订晚知者胜（PIT 回放取最新已发布版本）。
+    # 确保排序以正确处理 last() 聚合；knowledge_date 参与排序使 join_asof
+    # 的同 trade_date 并列取"最新已知修订"成为结构性保证（join_asof 取右帧
+    # ≤ 键的最后一行，排序键含 knowledge_date 即晚知者胜）。
     sort_keys = ["instrument_id", "trade_date"]
-    if "knowledge_date" in adj_df.columns:
+    has_knowledge = "knowledge_date" in adj_df.columns
+    if has_knowledge:
         sort_keys.append("knowledge_date")
     adj_df = adj_df.sort(sort_keys)
 
@@ -82,12 +84,15 @@ def apply_adjustment(
     # 不得因精确 join miss 而 fail-closed，PIT 回放正是要用 asof 时点已知
     # 因子覆盖整窗；标的完全无已知因子仍由 #514 行级守卫拦截。
     cols = ["instrument_id", "trade_date", "adj_factor"]
-    if "knowledge_date" in adj_df.columns:
+    if has_knowledge:
         cols.append("knowledge_date")
-    if asof is not None and "knowledge_date" in adj_df.columns:
+    # 行序契约：asof 与非 asof 路径对同一查询返回一致行序（下游 limit 依赖），
+    # join 的任何重排以行号还原。
+    df = df.with_row_index("__ditto_input_order")
+    if asof is not None and has_knowledge:
         join_adj_df = adj_df.filter(pl.col("knowledge_date") <= asof)
         df = df.sort("trade_date").join_asof(
-            join_adj_df.select(cols).sort("trade_date"),
+            join_adj_df.select(cols).sort(sort_keys),
             on="trade_date",
             by="instrument_id",
             strategy="backward",
@@ -101,9 +106,10 @@ def apply_adjustment(
 
     # 根据调整类型调用相应方法
     if adj == AdjType.QFQ:
-        return apply_qfq_adj(df, adj_df, asof)
+        adjusted = apply_qfq_adj(df, adj_df, asof)
     else:  # HFQ
-        return apply_hfq_adj(df, adj_df)
+        adjusted = apply_hfq_adj(df, adj_df)
+    return adjusted.sort("__ditto_input_order").drop("__ditto_input_order")
 
 
 def apply_etf_adjustment(

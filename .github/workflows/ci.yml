@@ -413,11 +413,13 @@ jobs:
           if failures:
               raise SystemExit(f"CI fail-closed: {failures}")
           PYTHON
-      # #538 merge freeze：main 上深度层未消红期间拒绝新合并；解冻=深度层复绿。
-      # 非 200/404 的读取失败同样判冻结（fail-closed）。解除走 deep-ci 重跑复绿。
+      # #538 merge freeze：main 上深度层未消红期间拒绝新合并；解冻=红车道复绿。
+      # 200=冻结（fail）；404=未冻结；403=token 无变量能力（freeze 写侧同样
+      # 不可用，机制整体离线——降级放行但显著告警，避免仓库被不可自愈的
+      # 配置错误砖死）；其余状态按冻结处理（fail-closed）。优先 DITTO_AGENT_PAT。
       - name: Merge freeze check (deep layer red on main)
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ secrets.DITTO_AGENT_PAT || github.token }}
         run: |
           code=$(curl -s -o /tmp/freeze.json -w '%{http_code}' \
             -H "Authorization: Bearer $GH_TOKEN" \
@@ -431,6 +433,9 @@ jobs:
               ;;
             404)
               echo "merge freeze: not set (deep layer green on main)"
+              ;;
+            403)
+              echo "::warning::merge freeze variable unreadable with this token (403); freeze mechanism is OFF — configure DITTO_AGENT_PAT or grant variables access to enable it" >&2
               ;;
             *)
               echo "merge freeze: unexpected variables API status $code (fail-closed)" >&2

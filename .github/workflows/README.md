@@ -19,11 +19,14 @@ merge freeze 变量与发布 attestation 的 job 局部开放。
 ### Merge freeze（深度层兜底）
 
 `deep-ci.yml` 在 main（push/周度/手动 dispatch）上以 `freeze-manager` 维护仓库变量
-`DEEP_LAYER_MERGE_FREEZE`：深度层红 → 写入变量（值含冻结来源 run），此时 `ci.yml`
-的 `ci-gate` 对所有 PR 拒绝通过（变量 API 非 200/404 亦判冻结，fail-closed）；深度层
-复绿 → 删除变量即解冻。flake 复绿用 `workflow_dispatch` 在 main 重跑深度层。冻结期间
-的修复 PR 经维护者确认其 PR 深度层结果后由维护者手动合并（仓库既有 `--admin` 通道），
-合入后 main 深度层复绿自动解冻。
+`DEEP_LAYER_MERGE_FREEZE`：深度层红 → 写入变量（值记录红车道与来源 run），此时
+`ci.yml` 的 `ci-gate` 对所有 PR 拒绝通过（变量 API 意外状态亦判冻结，fail-closed；
+token 无变量能力时降级告警放行——此时写侧同样不可用，机制整体离线）；解冻条件是
+冻结值记录的全部红车道在本轮实际跑绿（普通证据链 push 只跑 platform-smoke，不得
+清掉其他车道的冻结——红要被解决，不是被 outranked）。写/删失败重试后 loud 失败。
+重跑历史红 run 会以其原 SHA 重写冻结，解冻以 main 当前树的 dispatch/周度复跑为准。
+冻结期间的修复 PR 经维护者确认其 PR 深度层结果后由维护者手动合并（仓库既有
+`--admin` 通道），合入后 main 深度层复绿自动解冻。变量读写优先 `DITTO_AGENT_PAT`。
 
 ### 事件驱动通知（`notify.yml`）
 
