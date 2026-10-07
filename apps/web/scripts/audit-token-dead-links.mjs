@@ -73,13 +73,15 @@ function extractVarRefs(cssText) {
 }
 
 // ── Extract Tailwind arbitrary-value variable shorthands from TS/TSX ──
-// Matches `bg-(--token)` / `text-[--token]` shorthands. The `-(`/`-[`
-// prefixes exclude `var(--token)` in JS template strings.
+// Matches `bg-(--token)` / `text-[--token]` shorthands, incl. modifiers:
+// opacity `(--token/50)`, fallback `(--token|--fallback)`, data-type
+// prefix `(length:--token)`. The `-(`/`-[` prefixes exclude `var(--token)`
+// in JS template strings.
 
 function extractShorthandRefs(sourceText) {
   const refs = [];
-  const paren = /-\(--([a-zA-Z0-9_-]+)\)/g;
-  const bracket = /-\[--([a-zA-Z0-9_-]+)\]/g;
+  const paren = /-\((?:[a-z-]+:)?--([a-zA-Z0-9_-]+)(?:[/|][^)]*)?\)/g;
+  const bracket = /-\[(?:[a-z-]+:)?--([a-zA-Z0-9_-]+)(?:[/|][^\]]*)?\]/g;
   for (const re of [paren, bracket]) {
     let match;
     while ((match = re.exec(sourceText)) !== null) {
