@@ -234,10 +234,12 @@ class TestApplyAdjustmentPitAsof:
 
     @staticmethod
     def _readers(adj_df: pl.DataFrame) -> MarketReaders:
+        stock_adj = MagicMock()
+        stock_adj.read.return_value = adj_df
         return MarketReaders(
             stock_bars=MagicMock(),
             stock_status=MagicMock(),
-            stock_adj=MagicMock(**{"read.return_value": adj_df}),
+            stock_adj=stock_adj,
             etf_bars=MagicMock(),
             etf_status=MagicMock(),
             instrument=MagicMock(),

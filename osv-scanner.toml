@@ -1,0 +1,6 @@
+# OSV 扫描豁免（#538 恢复 CI 时建立）。豁免逐条给理由与到期复审日，
+# 到期后 osv-scanner 会重新报出，倒逼重评——不允许无期限静默。
+[[IgnoredVulns]]
+id = "GHSA-vfj7-8cjw-p6xm"
+reason = "braces 3.0.3 栈耗尽 DoS：仅存在于构建期 dev 依赖链（chokidar/vite watcher），不进 Web 运行时产物；上游尚无修复版本（Last Affected 3.0.3），chokidar 4 已移除该依赖，随工具链升级出豁免。"
+ignoreUntil = 2027-01-07

@@ -9,7 +9,8 @@
   ],
   "trustedDependencies": [],
   "overrides": {
-    "js-yaml": "4.3.2"
+    "js-yaml": "4.3.2",
+    "source-map-js": "1.2.2"
   },
   "scripts": {
     "web:lint": "bun run --cwd apps/web lint",
@@ -26,5 +27,8 @@
     "playwright": "1.62.1",
     "turbo": "2.11.7",
     "typescript": "5.9.3"
+  },
+  "dependencies": {
+    "source-map-js": "^1.2.2"
   }
 }
