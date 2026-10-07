@@ -106,7 +106,7 @@ function StrategyToolbar({
 					value={query}
 					onChange={(event) => onQueryChange(event.currentTarget.value)}
 					placeholder="名称、ID 或标签"
-					className="h-7 w-full rounded-(--radius-sm) border border-(--color-border-subtle) bg-(--color-surface-1) pl-8 pr-3 text-xs text-(--color-foreground) outline-none transition-colors placeholder:text-(--color-foreground-tertiary) focus:border-(--color-border-emphasis)"
+					className="h-7 w-full rounded-(--radius-sm) border border-(--color-border-subtle) bg-(--color-surface-1) pl-8 pr-3 text-xs text-(--color-foreground) outline-none transition-colors placeholder:text-(--color-foreground-tertiary) focus:border-(--color-border-strong)"
 				/>
 			</label>
 			<div className="flex items-center gap-1 rounded-(--radius-sm) border border-(--color-border-subtle) bg-(--color-surface-1) p-0.5">

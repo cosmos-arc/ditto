@@ -93,7 +93,7 @@ function ExecutionScopeForm({ scope }: { readonly scope: TradingExecutionScope }
 			</label>
 			<button
 				type="submit"
-				className="rounded-(--radius-sm) bg-(--color-accent) px-3 py-2 text-xs font-medium text-(--color-accent-foreground)"
+				className="rounded-(--radius-sm) bg-(--color-accent) px-3 py-2 text-xs font-medium text-(--color-accent-fg)"
 			>
 				加载决策
 			</button>

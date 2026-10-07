@@ -100,6 +100,7 @@
 	--color-border-subtle: var(--border-subtle);
 	--color-border-strong: var(--border-strong);
 	--color-border-default: var(--border-default);
+	--color-border-warning: var(--border-warning);
 
 	/* ── 品牌强调 ── */
 	--color-accent: var(--brand-accent);
@@ -153,6 +154,10 @@
 	--color-risk-high-fg: var(--risk-high-fg);
 	--color-risk-high-bg: var(--risk-high-bg);
 	--color-risk-warning: var(--risk-medium-fg);
+	--color-risk-warning-fg: var(--risk-medium-fg);
+	--color-risk-warning-bg: var(--risk-medium-bg);
+	--color-risk-medium-fg: var(--risk-medium-fg);
+	--color-risk-medium-bg: var(--risk-medium-bg);
 	--color-risk-moderate: var(--risk-medium-fg);
 	--color-risk-normal: var(--risk-low-fg);
 	--color-risk-info: var(--neutral-500);
@@ -166,12 +171,15 @@
 
 	/* ── AI Agent 域 ── */
 	--color-agent-running: var(--agent-running-fg);
+	--color-agent-running-fg: var(--agent-running-fg);
 	--color-agent-idle: var(--agent-idle-fg);
 	--color-agent-error: var(--agent-failed-fg);
 	--color-agent-success: var(--execution-filled-fg);
 	--color-agent-thinking: var(--cyan-500);
 
 	/* ── 系统域 ── */
+	--color-status-healthy-fg: var(--system-healthy-fg);
+	--color-status-healthy-bg: var(--system-healthy-bg);
 	--color-system-healthy: var(--system-healthy-fg);
 	--color-system-healthy-fg: var(--system-healthy-fg);
 	--color-system-healthy-bg: var(--system-healthy-bg);
@@ -181,6 +189,11 @@
 	--color-system-down: var(--system-down-fg);
 	--color-system-down-fg: var(--system-down-fg);
 	--color-system-down-bg: var(--system-down-bg);
+
+	/* ── 模型健康域 ── */
+	--color-model-stable-fg: var(--model-stable-fg);
+	--color-model-degrading-fg: var(--model-degrading-fg);
+	--color-model-drifting-fg: var(--model-drifting-fg);
 
 	/* ── 数据质量域 ── */
 	--color-quality-good: var(--data-quality-fresh-fg);
@@ -221,6 +234,13 @@
 	--color-led-idle: var(--status-led-idle);
 	--color-led-error: var(--status-led-error);
 	--color-led-success: var(--execution-filled-fg);
+	--color-led-danger: var(--status-led-critical);
+	--color-led-danger-bg: var(--risk-critical-bg);
+	--color-led-warning: var(--status-led-warning);
+	--color-led-warning-bg: var(--risk-medium-bg);
+	--color-led-info: var(--status-led-info);
+	--color-led-info-bg: var(--execution-partial-bg);
+	--color-led-success-bg: var(--execution-filled-bg);
 	--color-status-led-healthy: var(--status-led-healthy);
 	--color-status-led-degraded: var(--status-led-degraded);
 	--color-status-led-warning: var(--status-led-warning);
@@ -239,6 +259,7 @@
 	--color-interaction-active-bg: var(--interaction-active-bg);
 	--color-interaction-selected-bg: var(--interaction-selected-bg);
 	--color-interaction-selected-border: var(--interaction-selected-border);
+	--color-interaction-focus-ring: var(--interaction-focus-ring);
 	--color-toast-info: var(--feedback-toast-info);
 	--color-toast-success: var(--green-500);
 	--color-toast-warning: var(--amber-500);
@@ -272,6 +293,7 @@
 	--spacing-12: 48px;
 
 	/* ── 圆角 ── */
+	--radius-xs: var(--radius-2);
 	--radius-sm: 6px;
 	--radius-md: 8px;
 	--radius-lg: 12px;

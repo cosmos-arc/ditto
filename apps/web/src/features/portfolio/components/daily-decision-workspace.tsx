@@ -116,7 +116,7 @@ function BlockedDecision({ report }: { readonly report: DailyDecisionV2Response 
 									<code
 										// biome-ignore lint/a11y/noNoninteractiveTabindex: Long recovery commands must be keyboard-focusable when they overflow on narrow screens.
 										tabIndex={0}
-										className="mt-2 block overflow-x-auto whitespace-nowrap rounded-(--radius-sm) bg-(--color-surface-inset) px-2 py-1.5 font-data text-xs text-(--color-foreground) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-focus-ring)"
+										className="mt-2 block overflow-x-auto whitespace-nowrap rounded-(--radius-sm) bg-(--color-surface-muted) px-2 py-1.5 font-data text-xs text-(--color-foreground) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-focus-ring)"
 									>
 										{command}
 									</code>

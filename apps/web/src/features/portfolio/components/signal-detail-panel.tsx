@@ -623,7 +623,7 @@ export function SignalDetailPanel({ signalId }: SignalDetailPanelProps) {
 							{canRetryFill ? (
 								<button
 									type="button"
-									className="rounded-(--radius-sm) bg-(--color-accent) px-3 py-1.5 text-(length:--text-sm) font-medium text-(--color-accent-foreground)"
+									className="rounded-(--radius-sm) bg-(--color-accent) px-3 py-1.5 text-(length:--text-sm) font-medium text-(--color-accent-fg)"
 									onClick={() => executeRecordFill(lastFillPayload)}
 								>
 									使用同一标识重试
@@ -632,7 +632,7 @@ export function SignalDetailPanel({ signalId }: SignalDetailPanelProps) {
 								<button
 									type="submit"
 									disabled={recordFillMutation.isPending}
-									className="rounded-(--radius-sm) bg-(--color-accent) px-3 py-1.5 text-(length:--text-sm) font-medium text-(--color-accent-foreground) disabled:opacity-50"
+									className="rounded-(--radius-sm) bg-(--color-accent) px-3 py-1.5 text-(length:--text-sm) font-medium text-(--color-accent-fg) disabled:opacity-50"
 								>
 									{recordFillMutation.isPending ? "提交中" : "提交手工成交"}
 								</button>

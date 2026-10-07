@@ -38,7 +38,7 @@ export function ViewPreferencesMenu() {
 					role="menu"
 					aria-label="账户与视图偏好"
 					data-view-preferences-menu=""
-					className="absolute right-0 top-[calc(100%+var(--spacing-2))] z-20 min-w-44 rounded-[var(--radius-md)] border border-[var(--color-border-subtle)] bg-[var(--color-surface-overlay)] p-[var(--spacing-2)] shadow-(--shadow-dragging)"
+					className="absolute right-0 top-[calc(100%+var(--spacing-2))] z-20 min-w-44 rounded-[var(--radius-md)] border border-[var(--color-border-subtle)] bg-[var(--color-surface-overlay)] p-[var(--spacing-2)] shadow-(--interaction-dragging-shadow)"
 				>
 					<div className="space-y-1">
 						<p className="px-1 text-xs font-medium uppercase text-(--color-foreground-tertiary)">密度</p>

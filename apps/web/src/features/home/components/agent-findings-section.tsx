@@ -97,7 +97,7 @@ export function AgentFindingsSection({
 								)}
 							</div>
 							{market.isError && (
-								<p className="mt-3 text-xs text-(--color-risk-danger)">MarketContext 不可用，Agent Brief 已阻断。</p>
+								<p className="mt-3 text-xs text-(--color-risk-critical)">MarketContext 不可用，Agent Brief 已阻断。</p>
 							)}
 							{!capability.isLoading && !agentAvailable && !market.isError && (
 								<p className="mt-3 text-xs text-(--color-foreground-tertiary)">
@@ -105,7 +105,7 @@ export function AgentFindingsSection({
 								</p>
 							)}
 							{createBrief.isPending && <p className="mt-3 text-xs">正在读取认证 MarketContext 并生成引用…</p>}
-							{mutationError && <p className="mt-3 text-xs text-(--color-risk-danger)">{mutationError}</p>}
+							{mutationError && <p className="mt-3 text-xs text-(--color-risk-critical)">{mutationError}</p>}
 							{agentRun && (
 								<div className="mt-3 space-y-2">
 									<p className="text-xs leading-relaxed text-(--color-foreground-secondary)">
