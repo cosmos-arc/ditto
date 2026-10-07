@@ -351,9 +351,18 @@ jobs:
                   if status in (201, 204):
                       print(f"merge freeze set (created): {value}")
                       sys.exit(0)
-                  status, body = call(f"{api}/{name}", "PATCH", {"value": value})
-                  if status in (200, 204):
+                  patch_status, _ = call(f"{api}/{name}", "PATCH", {"value": value})
+                  if patch_status in (200, 204):
                       print(f"merge freeze set (updated): {value}")
+                      sys.exit(0)
+                  if status == 403:
+                      # 与读侧一致的降级：POST 403=token 无变量写能力，机制
+                      # 离线非状态危害。
+                      print(
+                          "::warning::merge freeze cannot be set with this token "
+                          "(403); freeze mechanism is OFF — configure "
+                          "DITTO_AGENT_PAT or grant variables access to enable it"
+                      )
                       sys.exit(0)
                   print(f"freeze write attempt {attempt + 1} failed: {status} {body[:200]}", file=sys.stderr)
                   time.sleep(5)
@@ -363,6 +372,16 @@ jobs:
           status, body = call(f"{api}/{name}", "GET")
           if status == 404:
               print("merge freeze absent and deep layer green; nothing to do")
+              sys.exit(0)
+          # 403=token 无变量能力（live 实证 GITHUB_TOKEN 即如此）：读侧降级
+          # 告警放行与 ci-gate 一致——此时写侧同样不可用，机制整体离线，
+          # 失败退出只产生每次 push 的永久红噪。其余状态仍 fail-loud。
+          if status == 403:
+              print(
+                  "::warning::merge freeze variable unreadable with this token "
+                  "(403); freeze mechanism is OFF — configure DITTO_AGENT_PAT "
+                  "or grant variables access to enable it"
+              )
               sys.exit(0)
           if status != 200:
               print(f"freeze read failed with {status}; leaving state untouched", file=sys.stderr)
