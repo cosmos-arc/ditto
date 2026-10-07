@@ -231,6 +231,28 @@ def test_merge_freeze_state_machine() -> None:
         assert code == 1
         assert "retries" in output
 
+    with pytest.MonkeyPatch().context() as patches:
+        patches.delenv("GH_TOKEN", raising=False)
+        # 403=token 无变量能力（live 实证 GITHUB_TOKEN）：读写双侧一致降级
+        # 告警放行，机制整体离线，不允许每次 push 的永久红噪。
+        code, output = _run_freeze_manager(
+            patches,
+            {"container-smoke": {"result": "success"}},
+            "success",
+            {"GET /DEEP_LAYER_MERGE_FREEZE": [403, {}]},
+        )
+        assert code == 0
+        assert "mechanism is OFF" in output
+
+        code, output = _run_freeze_manager(
+            patches,
+            {"container-smoke": {"result": "failure"}},
+            "failure",
+            {"POST /variables": [403, {}]},
+        )
+        assert code == 0
+        assert "mechanism is OFF" in output
+
 
 def test_ci_preserves_system_failure_evidence_and_checks_diff_hygiene() -> None:
     workflow = _workflow("ci.yml")
