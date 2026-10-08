@@ -589,7 +589,7 @@ function main() {
 
   // ── Output ──
 
-  console.log("\n## WCAG 2.1 Contrast Audit — Dark Mode (:root defaults) + chart/domain fg/badge in both themes\n");
+  console.log("\n## WCAG 2.1 Contrast Audit — surface×text/chart/domain fg/badge, both themes\n");
   console.log(`Pairs checked: ${results.length}`);
   console.log(
     `${emoji(7)} Pass: ${counts.pass}  ${emoji(3)} Warn: ${counts.warn}  ${emoji(1)} Failed pairs: ${counts.fail}  Unresolved: ${unresolved.length}  Report: ${counts.report}\n`,
