@@ -46,9 +46,10 @@ const TEXT_PATTERNS = [
   "text-warning",
   "text-success",
   "code-text",
-  "brand-accent-fg",
   "brand-signature-fg",
 ];
+// brand-accent-fg 是 on-accent 按钮白字（配 --brand-accent 蓝底），不是
+// on-surface 文本——从 surface 对集移除，改由 BADGE_COMBOS 的 accent 对守护。
 
 const TEXT_USAGE_TIERS = Object.freeze({
   "text-disabled": "decorative",
@@ -147,6 +148,9 @@ const BADGE_COMBOS = [
   ["risk-critical-fg", "risk-critical-bg"],
   ["market-up-fg", "market-up-bg"],
   ["market-down-fg", "market-down-bg"],
+  // accent 按钮前景：白字配 brand-accent 蓝底（不透明 α=1），同按 UI 组件级
+  // 3:1 裁决（dark 3.20 / light 4.63，按钮形状+底色多重编码）
+  ["brand-accent-fg", "brand-accent"],
 ];
 
 // Chart Cockpit series tokens audited against the chart pane surface in BOTH themes.
@@ -458,50 +462,57 @@ function main() {
   const unresolved = [];
   const skipped = [];
 
-  // Surface × Text pairs
-  for (const surfName of SURFACE_PATTERNS) {
-    for (const textName of TEXT_PATTERNS) {
-      const surfVal = tokens[surfName];
-      const textVal = tokens[textName];
-      if (!surfVal) {
-        addUnresolved(unresolved, surfName, "surface", "token is declared for audit but missing from token map");
-        continue;
-      }
-      if (!textVal) {
-        addUnresolved(unresolved, textName, "text", "token is declared for audit but missing from token map");
-        continue;
-      }
+  const themes = [
+    { name: "dark", tokens },
+    { name: "light", tokens: buildTokenMap("light") },
+  ];
 
-      const surfColor = resolveAuditColor(surfVal, tokens);
-      const textColor = resolveAuditColor(textVal, tokens);
-
-      if (!surfColor) {
-        addUnresolved(unresolved, surfName, "surface", `could not resolve ${surfVal}`);
-        continue;
-      }
-      if (!textColor) {
-        addUnresolved(unresolved, textName, "text", `could not resolve ${textVal}`);
-        continue;
-      }
-      if (surfColor.alpha < 0.5) {
-        if (!skipped.some((entry) => entry.token === surfName)) {
-          skipped.push({ token: surfName, reason: `near-transparent background alpha ${surfColor.alpha.toFixed(2)}` });
+  // Surface × Text pairs, BOTH themes (#558：text 家族 light 校准获得工具守护)
+  for (const { name: themeName, tokens: themeTokens } of themes) {
+    for (const surfName of SURFACE_PATTERNS) {
+      for (const textName of TEXT_PATTERNS) {
+        const surfVal = themeTokens[surfName];
+        const textVal = themeTokens[textName];
+        if (!surfVal) {
+          addUnresolved(unresolved, surfName, `surface (${themeName})`, "token is declared for audit but missing from token map");
+          continue;
         }
-        continue;
+        if (!textVal) {
+          addUnresolved(unresolved, textName, `text (${themeName})`, "token is declared for audit but missing from token map");
+          continue;
+        }
+
+        const surfColor = resolveAuditColor(surfVal, themeTokens);
+        const textColor = resolveAuditColor(textVal, themeTokens);
+
+        if (!surfColor) {
+          addUnresolved(unresolved, surfName, `surface (${themeName})`, `could not resolve ${surfVal}`);
+          continue;
+        }
+        if (!textColor) {
+          addUnresolved(unresolved, textName, `text (${themeName})`, `could not resolve ${textVal}`);
+          continue;
+        }
+        if (surfColor.alpha < 0.5) {
+          if (!skipped.some((entry) => entry.token === surfName)) {
+            skipped.push({ token: surfName, reason: `near-transparent background alpha ${surfColor.alpha.toFixed(2)}` });
+          }
+          continue;
+        }
+
+        const ratio = contrastRatio(surfColor.luminance, textColor.luminance);
+        const level = wcagLevel(ratio);
+        const classification = classifyContrast(textName, ratio);
+        updateCounts(classification, counts);
+
+        results.push({
+          surface: `${surfName} (${themeName})`,
+          text: textName,
+          ratio,
+          level,
+          ...classification,
+        });
       }
-
-      const ratio = contrastRatio(surfColor.luminance, textColor.luminance);
-      const level = wcagLevel(ratio);
-      const classification = classifyContrast(textName, ratio);
-      updateCounts(classification, counts);
-
-      results.push({
-        surface: surfName,
-        text: textName,
-        ratio,
-        level,
-        ...classification,
-      });
     }
   }
 
@@ -561,10 +572,6 @@ function main() {
   }
 
   // Chart Cockpit series × chart pane surface, audited in BOTH themes (dark :root + light overlay)
-  const themes = [
-    { name: "dark", tokens },
-    { name: "light", tokens: buildTokenMap("light") },
-  ];
   auditChartSeries(themes, results, counts, unresolved);
 
   // Domain fg × primary surfaces, BOTH themes (#555)
@@ -582,7 +589,7 @@ function main() {
 
   // ── Output ──
 
-  console.log("\n## WCAG 2.1 Contrast Audit — Dark Mode (:root defaults) + chart/domain fg/badge in both themes\n");
+  console.log("\n## WCAG 2.1 Contrast Audit — surface×text/chart/domain fg/badge, both themes\n");
   console.log(`Pairs checked: ${results.length}`);
   console.log(
     `${emoji(7)} Pass: ${counts.pass}  ${emoji(3)} Warn: ${counts.warn}  ${emoji(1)} Failed pairs: ${counts.fail}  Unresolved: ${unresolved.length}  Report: ${counts.report}\n`,
