@@ -257,6 +257,47 @@ class TestTushareClientQuery:
         assert result["cal_date"].to_list() == ["1", "2"]
         assert route.call_count == 2
 
+    def test_exact_full_page_with_schemaless_empty_tail_completes(
+        self,
+        respx_mock,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """页宽整除时真实服务端的越界页返回 fields=[]（零列）：必须取尽而非炸 concat."""
+        monkeypatch.setitem(pagination._DOCUMENTED_PAGE_SIZES, "trade_cal", 2)
+        pages = [
+            {"fields": ["cal_date"], "items": [["1"], ["2"]]},
+            {"fields": [], "items": []},
+        ]
+        route = respx_mock.post("http://api.tushare.pro").mock(
+            side_effect=[
+                httpx.Response(200, json={"code": 0, "msg": None, "data": page})
+                for page in pages
+            ]
+        )
+
+        client = TushareClient(token="test_token", settings=_settings())
+        result = client.query("trade_cal", "cal_date")
+
+        assert result["cal_date"].to_list() == ["1", "2"]
+        assert route.call_count == 2
+
+    def test_empty_first_page_returns_schemaless_empty_frame(
+        self,
+        respx_mock,
+    ) -> None:
+        """首页即空（服务端 fields=[]）：返回零行帧，不发第二次请求."""
+        respx_mock.post("http://api.tushare.pro").mock(
+            return_value=httpx.Response(
+                200,
+                json={"code": 0, "msg": None, "data": {"fields": [], "items": []}},
+            )
+        )
+
+        client = TushareClient(token="test_token", settings=_settings())
+        result = client.query("trade_cal", "cal_date")
+
+        assert result.height == 0
+
     def test_duplicate_page_raises_instead_of_looping(
         self,
         respx_mock,

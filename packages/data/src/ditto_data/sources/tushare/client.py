@@ -285,6 +285,13 @@ class TushareClient:
                 api_name, fields, limit=page_size, offset=offset, **params
             )
             page = response_to_dataframe(data)
+            # 空尾页即取尽；真实服务端越界页返回 fields=[]（零列 schema），
+            # 参与后续 concat 会抛 "schema lengths differ"。首页空保留原样
+            # 返回（含 fields schema 的零行帧，不经过 concat 路径）。
+            if page.height == 0:
+                if not pages:
+                    pages.append(page)
+                break
             page_rows = {hash(row) for row in page.iter_rows()}
             # 页内主键/整行重复（同响应重复行）
             in_page_duplicates = page.height - len(page_rows)
