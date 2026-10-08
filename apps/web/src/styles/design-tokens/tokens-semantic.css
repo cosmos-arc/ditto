@@ -188,6 +188,14 @@
 	--text-disabled: oklch(0.75 0.006 253);
 	--text-inverse: oklch(0.99 0.002 253);
 	--text-data-stale: oklch(0.5 0.018 55);
+	/* 语义 text 白底校准（#558）：error/warning/success/link 此前无 light 覆写
+	   （1.95–3.7:1），计算器法按最亮 light 底（strip/muted 0.944）≥4.5:1；
+	   hover 取更深更饱和（light 反馈方向） */
+	--text-link: oklch(0.511 0.1 235);
+	--text-link-hover: oklch(0.46 0.11 235);
+	--text-error: oklch(0.534 0.15 22);
+	--text-warning: oklch(0.519 0.1177 79.66);
+	--text-success: oklch(0.501 0.1203 156.74);
 
 	/* Border — subtle gray steps */
 	--border-subtle: oklch(0.88 0.006 253);
