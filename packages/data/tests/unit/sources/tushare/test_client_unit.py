@@ -358,25 +358,26 @@ class TestTushareClientQuery:
         assert resolve_page_size("stock_st") == 1000
         assert resolve_page_size("unknown_endpoint") == 2000
 
-    def test_in_page_duplicate_rows_raise(
+    def test_in_page_duplicate_rows_pass_through_with_warning(
         self,
         respx_mock,
     ) -> None:
-        """同响应内整行重复（主键重复）fail-closed，不得静默入库."""
+        """同响应内整行重复放行并告警——事件型数据集存在真实业务冗余行.
+
+        告警走 loguru（不经过 stdlib logging），此处只断言数据放行行为。
+        """
         page = {
             "code": 0,
             "msg": None,
-            "data": {"fields": ["cal_date"], "items": [["1"], ["1"]]},
+            "data": {"fields": ["cal_date"], "items": [["1"], ["1"], ["2"]]},
         }
         respx_mock.post("http://api.tushare.pro").mock(
             return_value=httpx.Response(200, json=page)
         )
 
         client = TushareClient(token="test_token", settings=_settings())
-        # 重复行错误参与现有 SourceFetchError 重试语义，耗尽后以 RetryError 冒泡
-        with pytest.raises(tenacity.RetryError) as exc_info:
-            client.query("trade_cal", "cal_date")
-        assert "in-page=1" in str(exc_info.value.last_attempt.exception())
+        result = client.query("trade_cal", "cal_date")
+        assert result["cal_date"].to_list() == ["1", "1", "2"]
 
     def test_rate_limit_message_classified_as_rate_limit_error(
         self, respx_mock

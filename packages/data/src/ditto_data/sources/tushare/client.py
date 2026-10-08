@@ -267,8 +267,9 @@ class TushareClient:
             SourceRateLimitError: If rate limit exceeded after retries.
             SourceAuthenticationError: If authentication fails.
             SourceFetchError: If query fails after retries, or pagination
-                returns duplicate rows（服务端忽略 offset / 排序不稳定 /
-                翻页期间源端变更，拒绝静默截断或无限翻页）.
+                returns cross-page duplicate rows（服务端忽略 offset / 排序不稳定 /
+                翻页期间源端变更，拒绝静默截断或无限翻页）。页内整行重复是
+                事件型数据集的真实业务冗余，放行并告警。
 
         """
         if "limit" in params or "offset" in params:
@@ -293,11 +294,24 @@ class TushareClient:
                     pages.append(page)
                 break
             page_rows = {hash(row) for row in page.iter_rows()}
-            # 页内主键/整行重复（同响应重复行）
+            # 页内整行重复：事件型数据集（dividend 等）存在字段全同的真实
+            # 业务冗余行，区间层有 .unique() 兜底——降级告警放行（#196 回补
+            # dividend 实测单页 2 行真实重复被误伤，整 chunk fail-closed）。
             in_page_duplicates = page.height - len(page_rows)
+            if in_page_duplicates:
+                logger.warning(
+                    f"Tushare {api_name} page contained {in_page_duplicates} "
+                    f"in-page duplicate rows at offset={offset}; "
+                    "passing through (source data redundancy)",
+                    event="tushare_pagination_in_page_duplicates",
+                    api_name=api_name,
+                    offset=offset,
+                    duplicate_rows=in_page_duplicates,
+                )
             # 跨页重复（服务端忽略 offset、排序不稳定、翻页期间源端变更）
+            # 是 offset 损坏的直接指纹，维持 fail-closed 硬拦。
             cross_page_duplicates = len(page_rows & seen_rows)
-            if in_page_duplicates or cross_page_duplicates:
+            if cross_page_duplicates:
                 raise SourceFetchError(
                     message=(
                         f"Tushare {api_name} pagination returned duplicate rows "
