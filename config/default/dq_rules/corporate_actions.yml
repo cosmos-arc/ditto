@@ -9,8 +9,8 @@ technical:
     message: "必填字段不能为空"
 
   - rule: unique
-    columns: [source_ticker, action_type, action_date]
-    message: "主键 (source_ticker, action_type, action_date) 重复"
+    columns: [source_ticker, action_type, action_date, description]
+    message: "事件行 (source_ticker, action_type, action_date, description) 重复"
 
   - rule: type_check
     columns:
