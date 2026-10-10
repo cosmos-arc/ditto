@@ -43,6 +43,16 @@ _DOCUMENTED_PAGE_SIZES: dict[str, int] = {
     # limit=20000 单响应正常返回；页宽 10000 一页覆盖披露季高峰日，
     # 避免 1000 页宽把单日拆 3 页（#196 回补实测 3 倍吞吐损失）。
     "fina_indicator_vip": 10000,
+    # 2026-10-10 实测（t.xiaodefa.top transport）：以下全市场日频端点单日
+    # 5000-5400 行，limit=10000 单响应正常返回；默认 2000 会拆 3 页/日
+    # （#196 回补实测 adj_factor/stock_limit/moneyflow/cyq_perf/valuation
+    # 吞吐损失 2-3 倍，日常增量同样每天多打 2 次请求）。
+    "adj_factor": 10000,
+    "stk_limit": 10000,
+    "moneyflow": 10000,
+    "cyq_perf": 10000,
+    "daily_basic": 10000,
+    "bak_basic": 10000,
 }
 
 _DEFAULT_PAGE_SIZE = 2000
