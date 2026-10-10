@@ -356,6 +356,8 @@ class TestTushareClientQuery:
         # 单次上限低于保守默认 2000 的端点（超限会静默截断，#507 G3）
         assert resolve_page_size("pledge_stat") == 1000
         assert resolve_page_size("stock_st") == 1000
+        # 实测单响应支持大页（#196 回补：披露日单日 2353 行一页拉尽）
+        assert resolve_page_size("fina_indicator_vip") == 10000
         assert resolve_page_size("unknown_endpoint") == 2000
 
     def test_in_page_duplicate_rows_pass_through_with_warning(
