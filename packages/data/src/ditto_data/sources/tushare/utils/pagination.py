@@ -39,11 +39,11 @@ _DOCUMENTED_PAGE_SIZES: dict[str, int] = {
     "index_dailybasic": 3000,  # doc_id=128，实测日覆盖 15 个大盘指数
     "pledge_stat": 1000,  # doc_id=110，单次最大 1000 行；默认 2000 会短页截断
     "stock_st": 1000,  # doc_id=397，单次最大 1000 行；默认 2000 会短页截断（#507 G3）
-    # 2026-10-10 实测（t.xiaodefa.top transport）：披露日单日峰值 2353 行；
-    # limit=10000 批量传输时代理中途掐断大响应（RemoteProtocolError
-    # incomplete chunked read，#196 回补 51 chunk 全失败），回退 5000
-    # 多数天单页覆盖且传输稳定。
-    "fina_indicator_vip": 5000,
+    # 2026-10-11 实测定档（t.xiaodefa.top transport）：5000/10000 大响应在
+    # 并发批量传输下被代理中途掐断（RemoteProtocolError incomplete chunked
+    # read，51 chunk 全败/17% 失败率）；2000 页宽串行 6 小时仅 0.7% 偶发
+    # 且自愈——保持 2000（显式登记实验结论，防止未来误调大）。
+    "fina_indicator_vip": 2000,
     # 2026-10-10 实测（t.xiaodefa.top transport）：以下全市场日频端点单日
     # 5000-5400 行，limit=10000 单响应正常返回；默认 2000 会拆 3 页/日
     # （#196 回补实测 adj_factor/stock_limit/moneyflow/cyq_perf/valuation
