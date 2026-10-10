@@ -55,6 +55,36 @@ def test_historical_status_uses_date_scoped_provider_queries() -> None:
     )
 
 
+def test_suspend_fill_to_limit_rows_are_deduped() -> None:
+    """代理 fill-to-limit：停牌名单重复填充行按 ts_code 去重后才是干净名单."""
+    client = MagicMock()
+
+    def query(**params):
+        match params["api_name"]:
+            case "suspend_d":
+                # 同一 ts_code 重复三行（代理填充形态）
+                return pl.DataFrame(
+                    {
+                        "ts_code": ["600000.SH"] * 3,
+                        "suspend_timing": ["09:30-15:00"] * 3,
+                    }
+                )
+            case "stock_st":
+                return pl.DataFrame(schema={"ts_code": pl.String, "name": pl.String})
+            case "bak_basic":
+                return pl.DataFrame({"ts_code": ["600000.SH"], "name": ["浦发银行"]})
+            case unexpected:
+                pytest.fail(f"unexpected provider API: {unexpected}")
+
+    client.query.side_effect = query
+    adapter = StockTushareAdapter(_client=client)
+
+    result = adapter.fetch_stock_status("2026-09-30")
+
+    assert result.height == 1
+    assert result["is_suspended"].to_list() == [True]
+
+
 def test_pre_2016_stock_status_fails_closed() -> None:
     client = MagicMock()
     adapter = StockTushareAdapter(_client=client)

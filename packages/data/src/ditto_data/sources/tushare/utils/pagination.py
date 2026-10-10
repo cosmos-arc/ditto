@@ -53,6 +53,11 @@ _DOCUMENTED_PAGE_SIZES: dict[str, int] = {
     "cyq_perf": 10000,
     "daily_basic": 10000,
     "bak_basic": 10000,
+    # 2026-10-10 实测（t.xiaodefa.top transport）：真实停牌名单约 1000 只/
+    # 日，代理 fill-to-limit 填充到页宽且小页宽会截断唯一集（limit=2000
+    # 仅 870 唯一）；limit=10000 单响应 5000 行含 1008 唯一稳定收敛，
+    # 配合 fetch 层按 ts_code 去重取干净名单（#196）。
+    "suspend_d": 10000,
 }
 
 _DEFAULT_PAGE_SIZE = 2000

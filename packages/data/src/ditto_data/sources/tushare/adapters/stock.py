@@ -786,7 +786,13 @@ class StockTushareAdapter(BaseTushareAdapter):
             return pl.DataFrame(
                 schema={"ts_code": pl.String, "suspend_timing": pl.String}
             )
-        return suspend_response.select("ts_code", "suspend_timing")
+        # 代理 transport 对该端点存在 fill-to-limit 行为：真实名单被重复
+        # 行填充到请求页宽（#196 实测 2026-09-30 真实 1008 只、limit=10000
+        # 单页 5000 行含 1008 唯一且稳定收敛）。停牌名单是集合语义，
+        # 按 ts_code 去重后即为干净名单。
+        return suspend_response.select("ts_code", "suspend_timing").unique(
+            subset=["ts_code"], keep="first"
+        )
 
     def _fetch_st_data(
         self,
