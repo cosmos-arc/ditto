@@ -356,8 +356,8 @@ class TestTushareClientQuery:
         # 单次上限低于保守默认 2000 的端点（超限会静默截断，#507 G3）
         assert resolve_page_size("pledge_stat") == 1000
         assert resolve_page_size("stock_st") == 1000
-        # 代理大响应并发传输掐断，实测回退稳定值（#196 回补三轮实验定档）
-        assert resolve_page_size("fina_indicator_vip") == 2000
+        # 独占串行实测稳定（#196：并发/进程重叠下的全败结论已推翻）
+        assert resolve_page_size("fina_indicator_vip") == 10000
         # 实测全市场日频端点单日 5000-5400 行一页拉尽（#196 回补提速）
         assert resolve_page_size("adj_factor") == 10000
         assert resolve_page_size("stk_limit") == 10000
