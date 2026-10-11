@@ -624,12 +624,35 @@ class IngestionCoordinator:
                 sparse=True,
             )
         frames: list[pl.DataFrame] = []
+        first_failure: IngestionResult | None = None
+        failed_dates: list[str] = []
         for partition_date in partition_dates:
             fetched = self._try_fetch_data(dataset, partition_date)
             if isinstance(fetched, IngestionResult):
-                return fetched
+                # 单日 fetch 失败不丢弃整月 chunk——失败日已有 ingestion_log
+                # FAIL 记录且无天级 evidence，缺口由 repair/backfill_missing 的
+                # 天级对比兜底发现（#196：月级原子丢弃在偶发失败率下使
+                # fina_indicator 51 个月全部无法提交）。
+                if first_failure is None:
+                    first_failure = fetched
+                failed_dates.append(partition_date)
+                continue
             if not fetched.is_empty():
                 frames.append(fetched)
+        if failed_dates and not frames:
+            # 全月失败维持 fail-closed，整 chunk 判败可整体重试。
+            return first_failure if first_failure is not None else pl.DataFrame()
+        if failed_dates:
+            logger.warning(
+                f"{dataset} chunk {request_start}~{request_end}: "
+                f"{len(failed_dates)} partition day(s) failed and were "
+                "skipped; gaps are repairable via backfill_missing",
+                event="ingest_chunk_partial_days_skipped",
+                dataset=dataset,
+                request_start=request_start,
+                request_end=request_end,
+                failed_dates=failed_dates,
+            )
         return pl.concat(frames, how="diagonal_relaxed") if frames else pl.DataFrame()
 
     def _fetch_range_chunk(
