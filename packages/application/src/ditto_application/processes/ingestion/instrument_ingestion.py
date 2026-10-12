@@ -42,7 +42,9 @@ from ditto_application.processes.ingestion.ports import QualityCheckerProtocol
 from ditto_application.processes.ingestion.post_ingest import (
     CatalogWriteContext,
     DataWriteContext,
+    ZeroRowEvidencePorts,
     build_evidence_commit_request,
+    commit_zero_row_provider_observation,
     handle_fetch_error,
     prepare_payload_write,
     record_data_catalog_entry,
@@ -249,7 +251,7 @@ def _process_fetched_data_by_instrument(  # noqa: PLR0911 - fail-closed stages
 ) -> IngestionResult:
     """按标的处理获取的数据：写入。"""
     if df.is_empty():
-        return ctx.result_handler.handle_empty_data(dataset, params.start_date)
+        return _handle_instrument_empty(df, dataset, params, chunk_id=chunk_id, ctx=ctx)
     prerequisite_failure = _instrument_evidence_prerequisite_failure(
         dataset,
         params.start_date,
@@ -353,6 +355,42 @@ def _process_fetched_data_by_instrument(  # noqa: PLR0911 - fail-closed stages
             catalog_writer=ctx.catalog_writer,
         )
     return result
+
+
+def _handle_instrument_empty(
+    df: pl.DataFrame,
+    dataset: str,
+    params: InstrumentIngestParams,
+    *,
+    chunk_id: str | None,
+    ctx: InstrumentPostIngestContext,
+) -> IngestionResult:
+    """
+    空区间与日期路径同一语义（#196）：提交零行 provider 证据而非判失败。
+
+    发布前指数年份/无披露区间是真实空态；证据端口缺失时保留旧
+    EMPTY_DATA 失败语义兜底。
+    """
+    error_code = commit_zero_row_provider_observation(
+        df,
+        dataset=dataset,
+        trade_date=params.start_date,
+        request_start=params.start_date,
+        request_end=params.end_date,
+        chunk_id=chunk_id,
+        ports=ZeroRowEvidencePorts(
+            source_name=ctx.source_name,
+            quality_checker=ctx.quality_checker,
+            evidence_committer=ctx.evidence_committer,
+        ),
+    )
+    if error_code is None:
+        return ctx.result_handler.handle_empty_success(
+            dataset,
+            params.start_date,
+            message="provider 已验证区间无数据并提交零行证据",
+        )
+    return ctx.result_handler.handle_empty_data(dataset, params.start_date)
 
 
 def _instrument_evidence_prerequisite_failure(
