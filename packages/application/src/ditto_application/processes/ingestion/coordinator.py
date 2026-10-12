@@ -653,7 +653,12 @@ class IngestionCoordinator:
                 failed_days=len(failed_dates),
                 failed_dates=failed_dates,
             )
-        return pl.concat(frames, how="diagonal_relaxed") if frames else pl.DataFrame()
+        if not frames:
+            return pl.DataFrame()
+        # 逐日 fetch 的重叠（周快照折叠 pledge_ratio、滚动窗 etf_nav [D-7,D]）
+        # 会在合并帧里造出同键重复行，L1 unique 把我们自己的合并产物误判为
+        # 供应商重复——整行去重后再进 DQ；单帧内的真实重复不受影响（#196）。
+        return pl.concat(frames, how="diagonal_relaxed").unique(maintain_order=True)
 
     def _fetch_range_chunk(
         self,

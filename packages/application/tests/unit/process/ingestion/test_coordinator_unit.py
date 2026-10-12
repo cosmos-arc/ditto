@@ -1432,6 +1432,51 @@ class TestIngestRange:
         assert result.status == "success"
         assert result.row_count == 2
 
+    def test_ingest_chunk_merges_overlapping_day_fetches_deduped(
+        self,
+        coordinator,
+        mock_source,
+        mock_market_write_service,
+        in_memory_catalog,
+    ) -> None:
+        """周快照折叠/滚动窗重叠的逐日 fetch 合并整行去重——L1 unique 不误杀（#196）."""
+        folded_frame = pl.DataFrame(
+            {
+                "source_ticker": ["000001.SZ"],
+                "trade_date": [date(2024, 12, 27)],
+                "open": [10.0],
+                "close": [10.2],
+                "pre_close": [10.0],
+                "volume": [1_000_000],
+                "amount": [10_200_000],
+                "pct_change": [2.0],
+                "high": [10.5],
+                "low": [9.8],
+            }
+        )
+        # 两个交易日折叠到同一份周快照
+        mock_source.fetch_stock_daily.side_effect = [folded_frame, folded_frame]
+        written_frames: list[pl.DataFrame] = []
+
+        def _capture_save_bars(df: pl.DataFrame, **_: object) -> int:
+            written_frames.append(df)
+            return df.height
+
+        mock_market_write_service.save_bars.side_effect = _capture_save_bars
+
+        result = coordinator.ingest_chunk(
+            "stock_daily",
+            chunk_id="chunk:tushare:stock_daily:2024-12:2024-12-27:2024-12-30",
+            request_start="2024-12-27",
+            request_end="2024-12-30",
+            partition_dates=("2024-12-27", "2024-12-30"),
+        )
+
+        assert result.status == "success"
+        assert result.row_count == 1
+        assert len(written_frames) == 1
+        assert written_frames[0].height == 1
+
     def test_ingest_chunk_fetches_each_partition_but_writes_one_range_payload(
         self,
         coordinator,
