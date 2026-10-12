@@ -591,7 +591,7 @@ class IngestionCoordinator:
         if len({value[:4] for value in normalized_dates}) != 1:
             raise AppProcessError("ingestion chunk cannot cross a storage year")
 
-        combined = self._fetch_planned_chunk(
+        combined, failed_days = self._fetch_planned_chunk(
             dataset,
             normalized_dates,
             request_start=request_start,
@@ -599,7 +599,7 @@ class IngestionCoordinator:
         )
         if isinstance(combined, IngestionResult):
             return combined
-        return _process_fetched_data(
+        result = _process_fetched_data(
             combined,
             dataset,
             request_start,
@@ -621,6 +621,13 @@ class IngestionCoordinator:
             request_window=RequestWindow(None, request_end),
             chunk_id=chunk_id,
         )
+        if failed_days and result.status == "success":
+            # chunk SUCCESS 日志锚在 request_start，会覆盖首个失败日的
+            # FAIL 日志（同 ingestion_log 主键）——提交后重写失败日标记，
+            # 让 retry_failed 持续可见（correctness review #196）。
+            for failed_day in failed_days:
+                self._result_handler.persist_failed_day_marker(dataset, failed_day)
+        return result
 
     def _fetch_planned_chunk(
         self,
@@ -629,14 +636,17 @@ class IngestionCoordinator:
         *,
         request_start: str,
         request_end: str,
-    ) -> pl.DataFrame | IngestionResult:
-        """Fetch one planned range while preserving typed fetch failures."""
+    ) -> tuple[pl.DataFrame | IngestionResult, tuple[str, ...]]:
+        """Fetch one planned range, preserving typed failures and skipped days."""
         if dataset in {"macro_indicators", "commodity_daily"}:
-            return self._fetch_range_chunk(
-                dataset,
-                request_start=request_start,
-                request_end=request_end,
-                sparse=False,
+            return (
+                self._fetch_range_chunk(
+                    dataset,
+                    request_start=request_start,
+                    request_end=request_end,
+                    sparse=False,
+                ),
+                (),
             )
         if dataset in {
             "balance_sheet",
@@ -646,11 +656,14 @@ class IngestionCoordinator:
             "dividend",
             "corporate_actions",
         }:
-            return self._fetch_range_chunk(
-                dataset,
-                request_start=request_start,
-                request_end=request_end,
-                sparse=True,
+            return (
+                self._fetch_range_chunk(
+                    dataset,
+                    request_start=request_start,
+                    request_end=request_end,
+                    sparse=True,
+                ),
+                (),
             )
         frames: list[pl.DataFrame] = []
         first_failure: IngestionResult | None = None
@@ -658,9 +671,8 @@ class IngestionCoordinator:
         for partition_date in partition_dates:
             fetched = self._try_fetch_data(dataset, partition_date)
             if isinstance(fetched, IngestionResult):
-                # 单日 fetch 失败不丢弃整月 chunk——失败日已有 ingestion_log
-                # FAIL 记录且无天级 evidence，缺口由 repair/backfill_missing 的
-                # 天级对比兜底发现（#196：月级原子丢弃在偶发失败率下使
+                # 单日 fetch 失败不丢弃整月 chunk——失败日缺口由 retry_failed
+                # 兜底重试（#196：月级原子丢弃在偶发失败率下使
                 # fina_indicator 51 个月全部无法提交）。
                 if first_failure is None:
                     first_failure = fetched
@@ -670,10 +682,13 @@ class IngestionCoordinator:
                 frames.append(fetched)
         if failed_dates and not frames:
             # 全月失败维持 fail-closed，整 chunk 判败可整体重试。
-            return first_failure if first_failure is not None else pl.DataFrame()
+            return (
+                first_failure if first_failure is not None else pl.DataFrame(),
+                tuple(failed_dates),
+            )
         if failed_dates:
             logger.warning(
-                "chunk partition days failed and skipped; repair via backfill_missing",
+                "chunk partition days failed and skipped; repair via retry_failed",
                 event="ingest_chunk_partial_days_skipped",
                 dataset=dataset,
                 request_start=request_start,
@@ -682,8 +697,11 @@ class IngestionCoordinator:
                 failed_dates=failed_dates,
             )
         if not frames:
-            return pl.DataFrame()
-        return _merge_day_fetches(frames, dataset, request_start, request_end)
+            return pl.DataFrame(), tuple(failed_dates)
+        return (
+            _merge_day_fetches(frames, dataset, request_start, request_end),
+            tuple(failed_dates),
+        )
 
     def _fetch_range_chunk(
         self,

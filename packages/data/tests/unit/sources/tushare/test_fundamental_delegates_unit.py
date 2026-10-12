@@ -332,7 +332,12 @@ class TestDisclosureRange:
         # 闭区间：past(05-05)/edge(05-06) 在界内，future(05-07) 剔除；
         # null 无披露锚不可判界，出口丢弃（#196）
         assert set(result["source_ticker"].to_list()) == {"past", "edge"}
-        assert vip_fetch.call_count == _fundamental._DISCLOSURE_PERIOD_WINDOW
+        # 窗口 = 8 季基准 + 区间覆盖季度数（correctness review #196：
+        # 纯 end 锚对区间前段发布的老期更正不可见）
+        expected_window = _fundamental._DISCLOSURE_PERIOD_WINDOW + (
+            _fundamental.max_quarters_in_range("2024-05-05", "2024-05-06")
+        )
+        assert vip_fetch.call_count == expected_window
 
 
 @pytest.mark.unit

@@ -110,3 +110,32 @@ def test_component_fetch_error_does_not_turn_into_false_statuses() -> None:
 
     with pytest.raises(SourceFetchError, match="stock_status"):
         adapter.fetch_stock_status("2018-06-15")
+
+
+def test_suspend_same_code_different_timing_rows_survive() -> None:
+    """整行去重（correctness review #196）：同股不同 suspend_timing 是真实两行."""
+    client = MagicMock()
+
+    def query(**params):
+        match params["api_name"]:
+            case "suspend_d":
+                return pl.DataFrame(
+                    {
+                        "ts_code": ["600000.SH", "600000.SH"],
+                        "suspend_timing": ["上午", "全天"],
+                    }
+                )
+            case "stock_st":
+                return pl.DataFrame(schema={"ts_code": pl.String, "name": pl.String})
+            case "bak_basic":
+                return pl.DataFrame({"ts_code": ["600000.SH"], "name": ["浦发银行"]})
+            case unexpected:
+                pytest.fail(f"unexpected provider API: {unexpected}")
+
+    client.query.side_effect = query
+    adapter = StockTushareAdapter(_client=client)
+
+    result = adapter.fetch_stock_status("2026-09-30")
+
+    assert result.height == 1
+    assert result["is_suspended"].to_list() == [True]

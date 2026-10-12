@@ -2475,3 +2475,61 @@ class TestIndexDatasetSupport:
         assert result.status == "success"
         assert result.row_count == 2
         mock_source.fetch_index_basic.assert_called_once()
+
+
+@pytest.mark.unit
+class TestChunkSkippedDayMarker:
+    """跳天提交后失败日标记必须存活（correctness review #196 F1）."""
+
+    def test_first_failed_day_marker_survives_chunk_success(
+        self,
+        coordinator,
+        mock_source,
+        mock_market_write_service,
+        in_memory_catalog,
+        mock_ingestion_log_store,
+    ) -> None:
+        ok_frame = lambda day: pl.DataFrame(  # noqa: E731 - test-local
+            {
+                "source_ticker": ["000001.SZ"],
+                "trade_date": [date(2024, 12, day)],
+                "open": [10.0],
+                "close": [10.2],
+                "pre_close": [10.0],
+                "volume": [1_000_000],
+                "amount": [10_200_000],
+                "pct_change": [2.0],
+                "high": [10.5],
+                "low": [9.8],
+            }
+        )
+        mock_source.fetch_stock_daily.side_effect = [
+            SourceFetchError(message="transient", source="tushare"),
+            ok_frame(26),
+            ok_frame(27),
+        ]
+        mock_market_write_service.save_bars.return_value = 2
+
+        result = coordinator.ingest_chunk(
+            "stock_daily",
+            chunk_id="chunk:tushare:stock_daily:2024-12:2024-12-25:2024-12-27",
+            request_start="2024-12-25",
+            request_end="2024-12-27",
+            partition_dates=("2024-12-25", "2024-12-26", "2024-12-27"),
+        )
+
+        assert result.status == "success"
+        # 失败日（含与 chunk SUCCESS 同键的首日）的 FAIL 标记被重写存续
+        saved = [
+            call.kwargs.get("log") or call.args[0]
+            for call in mock_ingestion_log_store.save_log.call_args_list
+        ]
+        fail_markers = [
+            log
+            for log in saved
+            if getattr(log, "trade_date", None) == "2024-12-25"
+            and getattr(log, "status", None) == IngestionStatus.FAIL
+        ]
+        assert fail_markers, (
+            "skipped first day must keep a FAIL marker after chunk success"
+        )

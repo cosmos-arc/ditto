@@ -383,6 +383,30 @@ class IngestionResultHandler:
         if self._ingestion_log_store:
             self._ingestion_log_store.save_log(log)
 
+    def persist_failed_day_marker(
+        self,
+        dataset: str,
+        trade_date: str,
+        error_code: str = "FETCH_ERROR",
+    ) -> None:
+        """
+        Re-persist a FAIL log entry for a chunk-skipped partition day.
+
+        chunk 成功提交的 SUCCESS 日志锚在 request_start——首个失败日的
+        FAIL 日志会被同键覆盖；跳天提交后重写失败标记，保证 repair
+        路径（retry_failed）持续可见（correctness review #196）。
+        """
+        self._save_log(
+            IngestionLog(
+                dataset=dataset,
+                source=self._source_name,
+                trade_date=trade_date,
+                status=IngestionStatus.FAIL,
+                error_code=error_code,
+                error_message="chunk skipped failed partition day; repair pending",
+            )
+        )
+
     def handle_fetch_error(
         self, dataset: str, trade_date: str, error: SourceFetchError
     ) -> IngestionResult:

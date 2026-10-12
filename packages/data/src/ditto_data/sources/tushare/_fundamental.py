@@ -58,6 +58,7 @@ def fetch_disclosure_delta(
     *,
     asof_date: date,
     start_date: date | None = None,
+    window: int = _DISCLOSURE_PERIOD_WINDOW,
 ) -> pl.DataFrame:
     """
     Pull trailing report periods and keep only rows knowable by the cutoff.
@@ -68,7 +69,7 @@ def fetch_disclosure_delta(
     """
     frames = [
         vip_fetch(period=period)
-        for period in _recent_quarter_ends(asof_date.isoformat())
+        for period in _recent_quarter_ends(asof_date.isoformat(), count=window)
     ]
     merged = pl.concat(frames, how="diagonal_relaxed")
     knowledge = pl.col("knowledge_date")
@@ -111,11 +112,16 @@ def fetch_disclosure_range(
     Fetch disclosure events with knowledge_date inside [start_date, end_date].
 
     报告期超集拉取后按披露锚过滤区间；与单日增量共用同一窗口语义。
+    窗口锚在区间末并在 8 季基础上扩区间覆盖的季度数——旧逐日模式对
+    区间内每天各回看 8Q，区间起点附近的老期更正（发布于区间前段、
+    报告期早于 end-8Q）对纯 end 锚不可见（correctness review #196）。
     """
+    window = _DISCLOSURE_PERIOD_WINDOW + max_quarters_in_range(start_date, end_date)
     return fetch_disclosure_delta(
         vip_fetch,
         asof_date=parse_iso(end_date),
         start_date=parse_iso(start_date),
+        window=window,
     )
 
 

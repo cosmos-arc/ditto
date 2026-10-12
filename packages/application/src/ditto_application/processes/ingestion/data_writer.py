@@ -1029,9 +1029,12 @@ class IngestionDataWriter:
                 field="trade_date",
                 value=None,
             )
+        # 同源键不同值（上游修订同披露键）保留后见者，与写侧同键替换
+        # last-wins 语义同向（correctness review #196：keep=first 依赖页序
+        # 稳定，重试可落不同值）。
         deduped = df.unique(
             subset=["index_id", source_ticker_col, "trade_date"],
-            keep="first",
+            keep="last",
             maintain_order=True,
         )
         if deduped.height != df.height:

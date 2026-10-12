@@ -788,10 +788,10 @@ class StockTushareAdapter(BaseTushareAdapter):
             )
         # 代理 transport 对该端点存在 fill-to-limit 行为：真实名单被重复
         # 行填充到请求页宽（#196 实测 2026-09-30 真实 1008 只、limit=10000
-        # 单页 5000 行含 1008 唯一且稳定收敛）。停牌名单是集合语义，
-        # 按 ts_code 去重后即为干净名单。
+        # 单页 5000 行含 1008 唯一且稳定收敛）。fill-to-limit 重复是整行
+        # 重复——按整行去重，同股不同 suspend_timing 的真实两行保留。
         return suspend_response.select("ts_code", "suspend_timing").unique(
-            subset=["ts_code"], keep="first"
+            keep="first", maintain_order=True
         )
 
     def _fetch_st_data(
