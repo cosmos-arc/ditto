@@ -159,8 +159,9 @@ def _fetch_statement(
     Financial-statement fetch shared by balance sheet / income / cash flow.
 
     披露增量模式（trade_date）：按近期报告期超集拉取，保留 knowledge_date
-    ≤ trade_date 的行；按标的模式：ann_date 窗口拉取后剔除披露晚于
-    end_date 的行。两种模式均保留 null knowledge_date 行交由 PIT 校验拒收。
+    ≤ trade_date 的行（null 锚行在 delta 出口丢弃，见 fetch_disclosure_delta）；
+    按标的模式：ann_date 窗口拉取后剔除披露晚于 end_date 的行（null 锚
+    行保留，交由写入侧 FK/PIT 校验处置）。
     """
     _require_statement_mode(trade_date=trade_date, source_ticker=source_ticker)
     if trade_date:

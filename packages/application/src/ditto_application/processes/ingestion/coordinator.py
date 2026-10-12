@@ -97,6 +97,34 @@ def _validate_dataset(dataset: str) -> Dataset:
         ) from e
 
 
+def _merge_day_fetches(
+    frames: list[pl.DataFrame],
+    dataset: str,
+    request_start: str,
+    request_end: str,
+) -> pl.DataFrame:
+    """
+    合并 chunk 逐日帧并整行去重.
+
+    逐日 fetch 的重叠（周快照折叠 pledge_ratio、滚动窗 etf_nav [D-7,D]）
+    会在合并帧里造出同键重复行，L1 unique 把我们自己的合并产物误判为
+    供应商重复——整行去重后再进 DQ；单帧内的真实重复不受影响（#196）。
+    """
+    merged = pl.concat(frames, how="diagonal_relaxed")
+    deduped = merged.unique(maintain_order=True)
+    if deduped.height != merged.height:
+        logger.info(
+            "chunk day-fetch merge deduped overlapping rows",
+            event="chunk_merge_overlap_dedup",
+            dataset=dataset,
+            request_start=request_start,
+            request_end=request_end,
+            merged_rows=merged.height,
+            deduped_rows=deduped.height,
+        )
+    return deduped
+
+
 class MarketServices(NamedTuple):
     """Market 域读写服务聚合."""
 
@@ -655,10 +683,7 @@ class IngestionCoordinator:
             )
         if not frames:
             return pl.DataFrame()
-        # 逐日 fetch 的重叠（周快照折叠 pledge_ratio、滚动窗 etf_nav [D-7,D]）
-        # 会在合并帧里造出同键重复行，L1 unique 把我们自己的合并产物误判为
-        # 供应商重复——整行去重后再进 DQ；单帧内的真实重复不受影响（#196）。
-        return pl.concat(frames, how="diagonal_relaxed").unique(maintain_order=True)
+        return _merge_day_fetches(frames, dataset, request_start, request_end)
 
     def _fetch_range_chunk(
         self,

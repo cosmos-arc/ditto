@@ -1,8 +1,8 @@
 """
 摄取协调器共享常量 + 指数工具函数.
 
-指数静态清单的权威定义在 dataset_registry（fetch 路由层）,
-此处再导出保持历史导入路径稳定.
+指数静态清单（MARKET/STYLE_INDEX_CODES）的权威定义在
+dataset_registry（fetch 路由层），本模块不 re-export.
 """
 
 from __future__ import annotations
@@ -81,8 +81,6 @@ def get_all_index_codes(
 __all__ = [
     "A_SHARE_CODE_LENGTH",
     "EXCHANGE_PREFIX_MAP",
-    "MARKET_INDEX_CODES",
-    "STYLE_INDEX_CODES",
     "SUPPORTED_INSTRUMENT_DATASETS",
     "SWIndustryProvider",
     "get_all_index_codes",

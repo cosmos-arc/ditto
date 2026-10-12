@@ -147,13 +147,22 @@ class BackfillManager:
                 event="index_weight_universe_unresolved",
                 codes=unresolved,
             )
+        instrument_ids = tuple(sorted(set(resolved.values())))
+        if not instrument_ids:
+            # 空 instrument_ids 的契约语义是"按日期全市场回补"——恰好落回
+            # 逐日全宇宙的不可行路径，fail fast 而非静默退化。
+            raise AppProcessError(
+                "index_weight universe resolved to zero instruments",
+                field="instrument_ids",
+                value=unresolved,
+            )
         return self.backfill_range(
             "index_weight",
             start_date,
             end_date,
             parallel=parallel,
             source=source,
-            instrument_ids=tuple(sorted(set(resolved.values()))),
+            instrument_ids=instrument_ids,
         )
 
     def backfill_missing(

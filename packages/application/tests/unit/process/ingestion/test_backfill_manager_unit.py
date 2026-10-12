@@ -1,6 +1,7 @@
 """Tests for BackfillManager."""
 
 import pytest
+from ditto_application.exceptions import AppProcessError
 from ditto_application.processes.ingestion.backfill_manager import BackfillManager
 from ditto_application.processes.ingestion.bootstrap_planner import BootstrapPlanner
 from ditto_data.models.ingestion import (
@@ -1094,3 +1095,18 @@ class TestBackfillIndexWeight:
         backfill_manager.backfill_index_weight("2014-01-01", "2014-12-31")
 
         assert spy.call_args.kwargs["instrument_ids"] == (3000000,)
+
+
+@pytest.mark.unit
+class TestBackfillIndexWeightFailFast:
+    """宇宙全未解析时 fail fast 而非退化到逐日全市场（评审修复）."""
+
+    def test_zero_resolved_instruments_raises(
+        self,
+        backfill_manager,
+        mock_metadata_service,
+    ) -> None:
+        mock_metadata_service.instrument.resolve_instrument_ids_batch.return_value = {}
+
+        with pytest.raises(AppProcessError, match="zero instruments"):
+            backfill_manager.backfill_index_weight("2014-01-01", "2026-09-30")

@@ -1029,11 +1029,20 @@ class IngestionDataWriter:
                 field="trade_date",
                 value=None,
             )
-        df = df.unique(
+        deduped = df.unique(
             subset=["index_id", source_ticker_col, "trade_date"],
             keep="first",
             maintain_order=True,
         )
+        if deduped.height != df.height:
+            logger.warning(
+                "index_weight dropped source-key duplicate rows before validation",
+                event="index_weight_source_key_dedup",
+                year=year,
+                merged_rows=df.height,
+                deduped_rows=deduped.height,
+            )
+        df = deduped
         _validate_index_weight_totals(df)
         enriched_df = self._enrich_and_filter_fk_dataframe(
             df,
