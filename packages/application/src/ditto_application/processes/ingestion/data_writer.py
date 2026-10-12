@@ -116,9 +116,13 @@ def _normalize_iso_date(value: str) -> str:
 
 
 def _validate_index_weight_totals(df: pl.DataFrame) -> None:
-    """Reject incomplete index snapshots using provider percentage tolerance."""
+    """
+    Reject incomplete index snapshots using provider percentage tolerance.
+
+    校验对象是供应商帧（FK 富化前），不要求 instrument_id 列。
+    """
     percentage_scale_threshold = 2.0
-    required = {"index_id", "instrument_id", "trade_date", "weight"}
+    required = {"index_id", "trade_date", "weight"}
     missing = required - set(df.columns)
     if missing:
         raise AppProcessError(
@@ -1006,8 +1010,31 @@ class IngestionDataWriter:
         Write monthly weight observations as append-only facts (#452).
 
         trade_date 是月度权重观察日；公告/生效时刻官方未知，不伪造
-        effective_from/effective_to 区间。
+        effective_from/effective_to 区间。总额校验作用于供应商原始帧
+        （FK 过滤前）——注册表覆盖度（B股/北交所老码未注册）不是供应商
+        完整性问题；上游偶发整月重复行先按源键去重（#196：899050.BJ
+        2023-11 双份行，写侧 PK 本就是同键替换语义）。
         """
+        if "index_code" in df.columns and "index_id" not in df.columns:
+            df = df.rename({"index_code": "index_id"})
+        if "index_id" not in df.columns:
+            raise AppProcessError(
+                "index_weight requires index_code",
+                field="index_code",
+                value=None,
+            )
+        if "trade_date" not in df.columns:
+            raise AppProcessError(
+                "index_weight requires trade_date",
+                field="trade_date",
+                value=None,
+            )
+        df = df.unique(
+            subset=["index_id", source_ticker_col, "trade_date"],
+            keep="first",
+            maintain_order=True,
+        )
+        _validate_index_weight_totals(df)
         enriched_df = self._enrich_and_filter_fk_dataframe(
             df,
             dataset,
@@ -1016,21 +1043,6 @@ class IngestionDataWriter:
         )
         if enriched_df is None:
             return _to_write_result(dataset, year, df, 0)
-        if "index_id" not in enriched_df.columns:
-            if "index_code" not in enriched_df.columns:
-                raise AppProcessError(
-                    "index_weight requires index_code",
-                    field="index_code",
-                    value=None,
-                )
-            enriched_df = enriched_df.rename({"index_code": "index_id"})
-        if "trade_date" not in enriched_df.columns:
-            raise AppProcessError(
-                "index_weight requires trade_date",
-                field="trade_date",
-                value=None,
-            )
-        _validate_index_weight_totals(enriched_df)
         rows_written = self._capital_store.save_index_weight(enriched_df)
         return _to_write_result(dataset, year, enriched_df, rows_written)
 
