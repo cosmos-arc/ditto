@@ -1531,6 +1531,37 @@ class TestIngestRange:
             "2024-01-31",
         )
 
+    def test_fina_indicator_chunk_routes_to_sparse_range(
+        self,
+        coordinator,
+        mock_source,
+    ) -> None:
+        """fina_indicator 走 range 端点而非逐日 12-period 循环（#196）。"""
+        expected = pl.DataFrame(
+            {
+                "source_ticker": ["000001.SZ"],
+                "knowledge_date": [date(2024, 1, 31)],
+                "report_date": [date(2023, 12, 31)],
+                "roe": [10.0],
+            }
+        )
+        mock_source.fetch_fina_indicator_range.return_value = expected
+
+        coordinator.ingest_chunk(
+            "fina_indicator",
+            chunk_id="chunk:tushare:fina_indicator:2024-Q1:2024-01-02:2024-03-31",
+            request_start="2024-01-02",
+            request_end="2024-03-31",
+            partition_dates=("2024-01-02", "2024-03-31"),
+        )
+
+        # range 端点恰好一次；逐日 delta 端点不进入 chunk 路径
+        mock_source.fetch_fina_indicator_range.assert_called_once_with(
+            "2024-01-02",
+            "2024-03-31",
+        )
+        mock_source.fetch_fina_indicator.assert_not_called()
+
     def test_ingest_range_with_skipped_dates(
         self,
         coordinator,

@@ -614,6 +614,7 @@ class IngestionCoordinator:
             "balance_sheet",
             "income_statement",
             "cash_flow",
+            "fina_indicator",
             "dividend",
             "corporate_actions",
         }:
