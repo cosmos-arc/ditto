@@ -645,13 +645,12 @@ class IngestionCoordinator:
             return first_failure if first_failure is not None else pl.DataFrame()
         if failed_dates:
             logger.warning(
-                f"{dataset} chunk {request_start}~{request_end}: "
-                f"{len(failed_dates)} partition day(s) failed and were "
-                "skipped; gaps are repairable via backfill_missing",
+                "chunk partition days failed and skipped; repair via backfill_missing",
                 event="ingest_chunk_partial_days_skipped",
                 dataset=dataset,
                 request_start=request_start,
                 request_end=request_end,
+                failed_days=len(failed_dates),
                 failed_dates=failed_dates,
             )
         return pl.concat(frames, how="diagonal_relaxed") if frames else pl.DataFrame()

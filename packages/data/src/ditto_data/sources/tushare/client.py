@@ -300,9 +300,7 @@ class TushareClient:
             in_page_duplicates = page.height - len(page_rows)
             if in_page_duplicates:
                 logger.warning(
-                    f"Tushare {api_name} page contained {in_page_duplicates} "
-                    f"in-page duplicate rows at offset={offset}; "
-                    "passing through (source data redundancy)",
+                    "page contained in-page duplicates; passing through (redundancy)",
                     event="tushare_pagination_in_page_duplicates",
                     api_name=api_name,
                     offset=offset,
