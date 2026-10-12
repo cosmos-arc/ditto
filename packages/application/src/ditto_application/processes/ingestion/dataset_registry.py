@@ -26,6 +26,9 @@ from ditto_application.processes.ingestion.types import SourceFetchers
 
 __all__ = [
     "GLOBAL_CONTEXT_INDEX_CODES",
+    "INDEX_WEIGHT_UNIVERSE",
+    "MARKET_INDEX_CODES",
+    "STYLE_INDEX_CODES",
     "DailyFetchContext",
     "DailyFetchFactory",
     "DailyFetchHandler",
@@ -300,7 +303,7 @@ def _etf_reference_config_fetch(ctx: DailyFetchContext) -> DailyFetchHandler:
 
 
 def _index_weight_fetch(ctx: DailyFetchContext) -> DailyFetchHandler:
-    """Fetch every configured index for one effective date."""
+    """Fetch every weight-served index for one effective date."""
 
     def fetch() -> pl.DataFrame:
         frames = [
@@ -308,7 +311,7 @@ def _index_weight_fetch(ctx: DailyFetchContext) -> DailyFetchHandler:
                 index_code,
                 trade_date=ctx.trade_date.replace("-", ""),
             )
-            for index_code in ctx.get_cached_index_codes()
+            for index_code in INDEX_WEIGHT_UNIVERSE
         ]
         non_empty = [frame for frame in frames if not frame.is_empty()]
         return (
@@ -333,6 +336,51 @@ def _index_weight_instrument_fetch(
 
 # 官方 21 指数全量篮子（#435）；权威清单在 ditto_data.models.GLOBAL_INDEX_CODES
 GLOBAL_CONTEXT_INDEX_CODES: list[str] = list(GLOBAL_INDEX_CODES)
+
+# 市场基准指数（Tushare source_ticker 格式）
+# 2026-10-10 #196 扩展：补中证800/国证2000/中证2000/北证50/中证全指
+# 五个宽基（代理实测全部可取；小市值与微盘风格基准 + 全A 加权基准）。
+# 申万A指 801003.SI 代理 sw_daily 未覆盖市场级（实测 0 行），不在此列。
+MARKET_INDEX_CODES: list[str] = [
+    "000001.SH",  # 上证指数
+    "399001.SZ",  # 深证成指
+    "000300.SH",  # 沪深300
+    "000905.SH",  # 中证500
+    "000852.SH",  # 中证1000
+    "000016.SH",  # 上证50
+    "399006.SZ",  # 创业板指
+    "000688.SH",  # 科创50
+    "399673.SZ",  # 创业板50
+    "000906.SH",  # 中证800（大中盘池基准）
+    "399303.SZ",  # 国证2000（小市值风格基准）
+    "932000.CSI",  # 中证2000（微盘风格基准，2023-08 发布、基日 2013-12-31）
+    "899050.BJ",  # 北证50（北交所覆盖，2022-11 发布）
+    "000985.SH",  # 中证全指（全A 市值加权基准，~4900 只）
+]
+
+# 风格指数（Tushare source_ticker 格式）
+STYLE_INDEX_CODES: list[str] = [
+    "399373.SZ",  # 大盘价值
+    "399374.SZ",  # 大盘成长
+    "399375.SZ",  # 中盘价值
+    "399376.SZ",  # 中盘成长
+    "399377.SZ",  # 小盘价值
+    "399378.SZ",  # 小盘成长
+    "000992.SH",  # 全指价值
+    "000993.SH",  # 全指成长
+    "000991.SH",  # 全指红利
+]
+
+# index_weight 端点服务宇宙（#196 全宇宙逐指数探针，2026-09-30）：仅
+# 宽基+风格 23 指数有月度权重，SW 行业指数无权重数据（156/178 空响应），
+# 逐日 fetch 与历史回补共用本清单。000985 中证全指权重端点仅认 .CSI 后缀。
+_INDEX_WEIGHT_CODE_ALIASES = {"000985.SH": "000985.CSI"}
+INDEX_WEIGHT_UNIVERSE: tuple[str, ...] = tuple(
+    sorted(
+        _INDEX_WEIGHT_CODE_ALIASES.get(code, code)
+        for code in (*MARKET_INDEX_CODES, *STYLE_INDEX_CODES)
+    )
+)
 
 
 def _global_index_fetch(ctx: DailyFetchContext) -> DailyFetchHandler:

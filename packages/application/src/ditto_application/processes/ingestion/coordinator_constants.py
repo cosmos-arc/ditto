@@ -1,4 +1,9 @@
-"""摄取协调器共享常量 + 指数工具函数 — 零 ditto_application 内部模块间依赖."""
+"""
+摄取协调器共享常量 + 指数工具函数.
+
+指数静态清单的权威定义在 dataset_registry（fetch 路由层）,
+此处再导出保持历史导入路径稳定.
+"""
 
 from __future__ import annotations
 
@@ -8,6 +13,8 @@ import polars as pl
 from ditto_data.models import Dataset
 
 from ditto_application.processes.ingestion.dataset_registry import (
+    MARKET_INDEX_CODES,
+    STYLE_INDEX_CODES,
     default_dataset_registry,
 )
 
@@ -26,40 +33,6 @@ EXCHANGE_PREFIX_MAP: dict[str, str] = {
     "8": "BJ",  # 北交所
     "4": "BJ",  # 北交所
 }
-
-# 市场基准指数（Tushare source_ticker 格式）
-# 2026-10-10 #196 扩展：补中证800/国证2000/中证2000/北证50/中证全指
-# 五个宽基（代理实测全部可取；小市值与微盘风格基准 + 全A 加权基准）。
-# 申万A指 801003.SI 代理 sw_daily 未覆盖市场级（实测 0 行），不在此列。
-MARKET_INDEX_CODES: list[str] = [
-    "000001.SH",  # 上证指数
-    "399001.SZ",  # 深证成指
-    "000300.SH",  # 沪深300
-    "000905.SH",  # 中证500
-    "000852.SH",  # 中证1000
-    "000016.SH",  # 上证50
-    "399006.SZ",  # 创业板指
-    "000688.SH",  # 科创50
-    "399673.SZ",  # 创业板50
-    "000906.SH",  # 中证800（大中盘池基准）
-    "399303.SZ",  # 国证2000（小市值风格基准）
-    "932000.CSI",  # 中证2000（微盘风格基准，2023-08 发布、基日 2013-12-31）
-    "899050.BJ",  # 北证50（北交所覆盖，2022-11 发布）
-    "000985.SH",  # 中证全指（全A 市值加权基准，~4900 只）
-]
-
-# 风格指数（Tushare source_ticker 格式）
-STYLE_INDEX_CODES: list[str] = [
-    "399373.SZ",  # 大盘价值
-    "399374.SZ",  # 大盘成长
-    "399375.SZ",  # 中盘价值
-    "399376.SZ",  # 中盘成长
-    "399377.SZ",  # 小盘价值
-    "399378.SZ",  # 小盘成长
-    "000992.SH",  # 全指价值
-    "000993.SH",  # 全指成长
-    "000991.SH",  # 全指红利
-]
 
 
 class SWIndustryProvider(Protocol):
