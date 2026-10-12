@@ -11,8 +11,8 @@ fetch_dividend / fetch_corporate_actions 模块级函数，
   漂移可达数千天（年报更正公告），不能以 ann_date 窗口作为披露事件边界；
 - 数据代理不支持 f_ann_date 过滤参数，但支持 period 报告期过滤。
 故披露增量统一按"近期报告期超集拉取 + 本地按 knowledge_date 过滤"，
-未来行（knowledge_date > 截止日）在 fetch 层剔除，null 行保留交给
-sparse PIT fail-closed 校验。
+未来行（knowledge_date > 截止日）与 null 行（无披露锚，不可判）均在
+fetch 层出口剔除，null 丢弃带告警（#196）。
 """
 
 from __future__ import annotations
@@ -21,6 +21,7 @@ from collections.abc import Callable
 from datetime import date
 
 import polars as pl
+from ditto_platform.foundation import logger
 
 from ditto_data.sources.tushare.adapters.fundamental import FundamentalTushareAdapter
 
@@ -61,7 +62,9 @@ def fetch_disclosure_delta(
     """
     Pull trailing report periods and keep only rows knowable by the cutoff.
 
-    knowledge_date 为 null 的行保留，交由 sparse PIT 校验 fail-closed 拒收。
+    knowledge_date 为 null 的行在出口丢弃并告警（#196：历史报告期含少量
+    无披露锚的行，整批保留会使 sparse PIT 校验 fail-closed 拒收整月
+    chunk；丢弃不可判行不引入未来数据）。
     """
     frames = [
         vip_fetch(period=period)
@@ -69,10 +72,23 @@ def fetch_disclosure_delta(
     ]
     merged = pl.concat(frames, how="diagonal_relaxed")
     knowledge = pl.col("knowledge_date")
+    null_rows = (
+        merged.get_column("knowledge_date").null_count()
+        if ("knowledge_date" in merged.columns)
+        else 0
+    )
+    if null_rows:
+        logger.warning(
+            f"disclosure delta dropped {null_rows} rows with null knowledge_date",
+            event="disclosure_delta_null_knowledge_dropped",
+            asof_date=asof_date.isoformat(),
+            dropped_rows=null_rows,
+        )
+        merged = merged.filter(knowledge.is_not_null())
     if start_date is None:
-        knowable = knowledge.is_null() | (knowledge <= pl.lit(asof_date))
+        knowable = knowledge <= pl.lit(asof_date)
     else:
-        knowable = knowledge.is_null() | knowledge.is_between(
+        knowable = knowledge.is_between(
             pl.lit(start_date), pl.lit(asof_date), closed="both"
         )
     return merged.filter(knowable)
