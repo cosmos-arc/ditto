@@ -8,10 +8,10 @@ technical:
     columns: [source_ticker, action_type, action_date]
     message: "必填字段不能为空"
 
-  - rule: unique
-    columns: [source_ticker, action_type, action_date]
-    message: "主键 (source_ticker, action_type, action_date) 重复"
-
+  # 不设 unique：事件表无稳定业务主键——同股同日同类型同持有人可存在
+  # 多笔独立事件（分笔解禁/分笔回购，2014H1 实测三列键 92% 撞、四列键
+  # 含 description 后仍 28/24.9万 行真实多笔）；重复摄取由 partition
+  # checkpoint 幂等防，不靠表级唯一性。
   - rule: type_check
     columns:
       action_type: str

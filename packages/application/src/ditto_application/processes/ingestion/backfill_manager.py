@@ -21,6 +21,9 @@ from ditto_application.processes.ingestion.bootstrap_planner import (
     BootstrapPlan,
     BootstrapPlanner,
 )
+from ditto_application.processes.ingestion.dataset_registry import (
+    INDEX_WEIGHT_UNIVERSE,
+)
 from ditto_application.processes.ingestion.result_handler import count_results
 from ditto_application.processes.ingestion.source_selection import (
     IngestionCoordinatorLike,
@@ -115,6 +118,52 @@ class BackfillManager:
             log_event="backfill_range_complete",
         )
         return result
+
+    def backfill_index_weight(
+        self,
+        start_date: str,
+        end_date: str,
+        parallel: int = 1,
+        source: str = "tushare",
+    ) -> BackfillResult:
+        """
+        按权重端点服务宇宙逐指数回补月度权重（#196）.
+
+        index_weight 是月度观察事实，逐日全宇宙回补不可行（trading_days
+        规划 × 178 指数/日）；改为把权重服务宇宙（宽基+风格 23 指数）
+        解析为 instrument_ids 走 instrument_range 年度 chunk——每指数每年
+        一次区间请求，checkpoint 断点续传。
+        """
+        codes = list(INDEX_WEIGHT_UNIVERSE)
+        resolved = self._metadata_service.instrument.resolve_instrument_ids_batch(
+            identifiers=codes,
+            source=source,
+            asof=None,
+        )
+        unresolved = sorted(set(codes) - resolved.keys())
+        if unresolved:
+            logger.warning(
+                "index_weight 回补宇宙存在未注册指数, 已跳过",
+                event="index_weight_universe_unresolved",
+                codes=unresolved,
+            )
+        instrument_ids = tuple(sorted(set(resolved.values())))
+        if not instrument_ids:
+            # 空 instrument_ids 的契约语义是"按日期全市场回补"——恰好落回
+            # 逐日全宇宙的不可行路径，fail fast 而非静默退化。
+            raise AppProcessError(
+                "index_weight universe resolved to zero instruments",
+                field="instrument_ids",
+                value=unresolved,
+            )
+        return self.backfill_range(
+            "index_weight",
+            start_date,
+            end_date,
+            parallel=parallel,
+            source=source,
+            instrument_ids=instrument_ids,
+        )
 
     def backfill_missing(
         self,

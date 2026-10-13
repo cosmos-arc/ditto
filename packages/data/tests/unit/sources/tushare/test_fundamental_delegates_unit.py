@@ -86,7 +86,8 @@ class TestFinancialStatementDelegates:
         ]
         assert periods == sorted(periods, reverse=True)
         getattr(fundamental, standard_method).assert_not_called()
-        assert set(result["source_ticker"].to_list()) == {"past", "edge", "null"}
+        # null 披露锚行在出口丢弃（#196）
+        assert set(result["source_ticker"].to_list()) == {"past", "edge"}
 
     @pytest.mark.pit
     @pytest.mark.parametrize(("fetch_fn", "vip_method", "_standard"), _STATEMENT_PARAMS)
@@ -96,15 +97,15 @@ class TestFinancialStatementDelegates:
         vip_method: str,
         _standard: str,
     ) -> None:
-        """Future disclosure rows are dropped; null anchors survive to the gate."""
+        """Future disclosure rows are dropped; null anchors dropped at exit."""
         fundamental = MagicMock()
         getattr(fundamental, vip_method).return_value = _knowledge_frame()
 
         result = fetch_fn(fundamental, _compact, trade_date="2024-05-06")
 
         assert result["knowledge_date"].drop_nulls().max() == date(2024, 5, 6)
-        # null 锚未被静默剔除，交由 sparse PIT 校验 fail-closed 拒收
-        assert result["knowledge_date"].null_count() >= 1
+        # null 锚在出口丢弃并告警（#196），不可判行不再进入 sparse PIT 校验
+        assert result["knowledge_date"].null_count() == 0
 
     @pytest.mark.parametrize(
         ("fetch_fn", "vip_method", "standard_method"), _STATEMENT_PARAMS
@@ -321,16 +322,22 @@ class TestRecentQuarterEnds:
 class TestDisclosureRange:
     """Bounded disclosure-interval fetch used by sparse PIT backfill."""
 
-    def test_range_keeps_rows_inside_interval_and_nulls(self) -> None:
+    def test_range_keeps_rows_inside_interval_drops_nulls(self) -> None:
         vip_fetch = MagicMock(return_value=_knowledge_frame())
 
         result = _fundamental.fetch_disclosure_range(
             vip_fetch, "2024-05-05", "2024-05-06"
         )
 
-        # 闭区间：past(05-05)/edge(05-06) 在界内，future(05-07) 剔除，null 保留
-        assert set(result["source_ticker"].to_list()) == {"past", "edge", "null"}
-        assert vip_fetch.call_count == _fundamental._DISCLOSURE_PERIOD_WINDOW
+        # 闭区间：past(05-05)/edge(05-06) 在界内，future(05-07) 剔除；
+        # null 无披露锚不可判界，出口丢弃（#196）
+        assert set(result["source_ticker"].to_list()) == {"past", "edge"}
+        # 窗口 = 8 季基准 + 区间覆盖季度数（correctness review #196：
+        # 纯 end 锚对区间前段发布的老期更正不可见）
+        expected_window = _fundamental._DISCLOSURE_PERIOD_WINDOW + (
+            _fundamental.max_quarters_in_range("2024-05-05", "2024-05-06")
+        )
+        assert vip_fetch.call_count == expected_window
 
 
 @pytest.mark.unit

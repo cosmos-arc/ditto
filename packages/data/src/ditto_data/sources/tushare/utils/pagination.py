@@ -39,6 +39,24 @@ _DOCUMENTED_PAGE_SIZES: dict[str, int] = {
     "index_dailybasic": 3000,  # doc_id=128，实测日覆盖 15 个大盘指数
     "pledge_stat": 1000,  # doc_id=110，单次最大 1000 行；默认 2000 会短页截断
     "stock_st": 1000,  # doc_id=397，单次最大 1000 行；默认 2000 会短页截断（#507 G3）
+    # 2026-10-11 定档 10000（用户裁定）：独占串行运行；此前全败结论系
+    # 4 并发+进程重叠污染，独占环境复测。
+    "fina_indicator_vip": 10000,
+    # 2026-10-10 实测（t.xiaodefa.top transport）：以下全市场日频端点单日
+    # 5000-5400 行，limit=10000 单响应正常返回；默认 2000 会拆 3 页/日
+    # （#196 回补实测 adj_factor/stock_limit/moneyflow/cyq_perf/valuation
+    # 吞吐损失 2-3 倍，日常增量同样每天多打 2 次请求）。
+    "adj_factor": 10000,
+    "stk_limit": 10000,
+    "moneyflow": 10000,
+    "cyq_perf": 10000,
+    "daily_basic": 10000,
+    "bak_basic": 10000,
+    # 2026-10-10 实测（t.xiaodefa.top transport）：真实停牌名单约 1000 只/
+    # 日，代理 fill-to-limit 填充到页宽且小页宽会截断唯一集（limit=2000
+    # 仅 870 唯一）；limit=10000 单响应 5000 行含 1008 唯一稳定收敛，
+    # 配合 fetch 层按 ts_code 去重取干净名单（#196）。
+    "suspend_d": 10000,
 }
 
 _DEFAULT_PAGE_SIZE = 2000

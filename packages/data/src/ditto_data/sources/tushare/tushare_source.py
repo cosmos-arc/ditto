@@ -267,6 +267,22 @@ class _FundamentalFacade:
             end_date,
         )
 
+    def fetch_fina_indicator_range(
+        self, start_date: str, end_date: str
+    ) -> pl.DataFrame:
+        """
+        Fetch fina-indicator disclosure events in a bounded knowledge interval.
+
+        对齐三表 range 端点（#196）：无 range 时 chunk 逐日分支每天回看
+        12 个报告期，季度 chunk 需 ~700 请求；range 模式一次请求覆盖
+        区间 knowledge 事件。
+        """
+        return _fetch_disclosure_range(
+            self._fundamental.fetch_fina_indicator_vip,
+            start_date,
+            end_date,
+        )
+
     def fetch_dividend_range(self, start_date: str, end_date: str) -> pl.DataFrame:
         """Fetch dividend announcements in one bounded natural-day interval."""
         return _fetch_dividend_range(
@@ -693,6 +709,12 @@ class TushareSource:
     def fetch_cash_flow_range(self, start_date: str, end_date: str) -> pl.DataFrame:
         """Fetch cash-flow disclosure events in a bounded f_ann_date interval."""
         return self._fundamental_facade.fetch_cash_flow_range(start_date, end_date)
+
+    def fetch_fina_indicator_range(
+        self, start_date: str, end_date: str
+    ) -> pl.DataFrame:
+        """Fetch fina-indicator disclosure events in a bounded knowledge interval."""
+        return self._fundamental_facade.fetch_fina_indicator_range(start_date, end_date)
 
     def fetch_dividend_range(self, start_date: str, end_date: str) -> pl.DataFrame:
         """Fetch dividend announcements in a bounded natural-day interval."""

@@ -108,6 +108,37 @@ class CLIExecutor:
             "failed_count": result.failed_count,
         }
 
+    def backfill_index_weight(
+        self,
+        start_date: str,
+        end_date: str,
+        parallel: int = 1,
+    ) -> dict[str, Any]:
+        """
+        按权重服务宇宙逐指数回补月度权重（#196）.
+
+        Args:
+            start_date: 开始日期 (YYYY-MM-DD)
+            end_date: 结束日期 (YYYY-MM-DD)
+            parallel: 并行度
+
+        Returns:
+            包含回补结果的字典
+
+        """
+        result = self.backfill_manager.backfill_index_weight(
+            start_date=start_date,
+            end_date=end_date,
+            parallel=parallel,
+        )
+        return {
+            "dataset": "index_weight",
+            "total_dates": result.total_dates,
+            "success_count": result.success_count,
+            "skipped_count": result.skipped_count,
+            "failed_count": result.failed_count,
+        }
+
     def ingest_by_instrument(
         self,
         dataset: str,

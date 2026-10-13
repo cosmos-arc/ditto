@@ -267,8 +267,9 @@ class TushareClient:
             SourceRateLimitError: If rate limit exceeded after retries.
             SourceAuthenticationError: If authentication fails.
             SourceFetchError: If query fails after retries, or pagination
-                returns duplicate rows（服务端忽略 offset / 排序不稳定 /
-                翻页期间源端变更，拒绝静默截断或无限翻页）.
+                returns cross-page duplicate rows（服务端忽略 offset / 排序不稳定 /
+                翻页期间源端变更，拒绝静默截断或无限翻页）。页内整行重复是
+                事件型数据集的真实业务冗余，放行并告警。
 
         """
         if "limit" in params or "offset" in params:
@@ -285,12 +286,30 @@ class TushareClient:
                 api_name, fields, limit=page_size, offset=offset, **params
             )
             page = response_to_dataframe(data)
+            # 空尾页即取尽；真实服务端越界页返回 fields=[]（零列 schema），
+            # 参与后续 concat 会抛 "schema lengths differ"。首页空保留原样
+            # 返回（含 fields schema 的零行帧，不经过 concat 路径）。
+            if page.height == 0:
+                if not pages:
+                    pages.append(page)
+                break
             page_rows = {hash(row) for row in page.iter_rows()}
-            # 页内主键/整行重复（同响应重复行）
+            # 页内整行重复：事件型数据集（dividend 等）存在字段全同的真实
+            # 业务冗余行，区间层有 .unique() 兜底——降级告警放行（#196 回补
+            # dividend 实测单页 2 行真实重复被误伤，整 chunk fail-closed）。
             in_page_duplicates = page.height - len(page_rows)
+            if in_page_duplicates:
+                logger.warning(
+                    "page contained in-page duplicates; passing through (redundancy)",
+                    event="tushare_pagination_in_page_duplicates",
+                    api_name=api_name,
+                    offset=offset,
+                    duplicate_rows=in_page_duplicates,
+                )
             # 跨页重复（服务端忽略 offset、排序不稳定、翻页期间源端变更）
+            # 是 offset 损坏的直接指纹，维持 fail-closed 硬拦。
             cross_page_duplicates = len(page_rows & seen_rows)
-            if in_page_duplicates or cross_page_duplicates:
+            if cross_page_duplicates:
                 raise SourceFetchError(
                     message=(
                         f"Tushare {api_name} pagination returned duplicate rows "

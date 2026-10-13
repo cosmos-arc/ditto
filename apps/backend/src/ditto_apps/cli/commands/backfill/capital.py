@@ -4,7 +4,13 @@ from __future__ import annotations
 
 import typer
 
-from ditto_apps.cli.commands.factory import create_backfill_command
+from ditto_apps.cli.commands.factory import (
+    _raise_if_backfill_failed,
+    create_backfill_command,
+)
+from ditto_apps.cli.context import create_executor
+from ditto_apps.cli.utils.output import print_backfill_summary
+from ditto_apps.cli.utils.validation import validate_date_format
 
 app = typer.Typer(help="资本面数据回补")
 
@@ -49,6 +55,27 @@ def pledge(
 ) -> None:
     """回补股权质押."""
     return _pledge_impl(ctx, start, end, parallel)
+
+
+@app.command("index-weight")
+def index_weight(
+    ctx: typer.Context,
+    start: str = typer.Option(..., "--start", "-s", help="开始日期 (YYYY-MM-DD)"),
+    end: str = typer.Option(..., "--end", "-e", help="结束日期 (YYYY-MM-DD)"),
+    parallel: int = typer.Option(1, "--parallel", "-p", help="并行度"),
+) -> None:
+    """
+    回补指数成分股权重 (#196).
+
+    月度观察事实，按权重服务宇宙（宽基+风格）逐指数年度区间回补.
+    """
+    validate_date_format(start)
+    validate_date_format(end)
+
+    with create_executor() as executor:
+        result = executor.backfill_index_weight(start, end, parallel)
+        print_backfill_summary(result)
+        _raise_if_backfill_failed(result)
 
 
 # ── #518-#523 增补回补命令 ──

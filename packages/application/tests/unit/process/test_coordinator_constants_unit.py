@@ -5,12 +5,14 @@ from unittest.mock import MagicMock
 import polars as pl
 import pytest
 from ditto_application.processes.ingestion.coordinator_constants import (
-    MARKET_INDEX_CODES,
-    STYLE_INDEX_CODES,
     SUPPORTED_INSTRUMENT_DATASETS,
     get_all_index_codes,
     get_default_index_codes,
     get_sw_index_codes,
+)
+from ditto_application.processes.ingestion.dataset_registry import (
+    MARKET_INDEX_CODES,
+    STYLE_INDEX_CODES,
 )
 from ditto_data.models import Dataset
 

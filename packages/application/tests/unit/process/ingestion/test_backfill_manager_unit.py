@@ -1,6 +1,7 @@
 """Tests for BackfillManager."""
 
 import pytest
+from ditto_application.exceptions import AppProcessError
 from ditto_application.processes.ingestion.backfill_manager import BackfillManager
 from ditto_application.processes.ingestion.bootstrap_planner import BootstrapPlanner
 from ditto_data.models.ingestion import (
@@ -1020,3 +1021,92 @@ class TestBackfillMissing:
                 start_date="2024-12-25",
                 end_date="2024-12-26",
             )
+
+
+@pytest.mark.unit
+class TestBackfillIndexWeight:
+    """按权重服务宇宙逐指数回补（#196）。"""
+
+    def test_resolves_universe_to_instrument_ids(
+        self,
+        backfill_manager,
+        mock_metadata_service,
+        mocker,
+    ) -> None:
+        from ditto_application.processes.ingestion.dataset_registry import (
+            INDEX_WEIGHT_UNIVERSE,
+        )
+
+        resolved = {code: 3000000 + i for i, code in enumerate(INDEX_WEIGHT_UNIVERSE)}
+        mock_metadata_service.instrument.resolve_instrument_ids_batch.return_value = (
+            dict(resolved)
+        )
+        spy = mocker.patch.object(
+            backfill_manager,
+            "backfill_range",
+            return_value=BackfillResult(
+                dataset="index_weight",
+                total_dates=0,
+                success_count=0,
+                skipped_count=0,
+                failed_count=0,
+                results=(),
+            ),
+        )
+
+        backfill_manager.backfill_index_weight("2014-01-01", "2026-09-30")
+
+        resolve = mock_metadata_service.instrument.resolve_instrument_ids_batch
+        resolve_kwargs = resolve.call_args.kwargs
+        # 别名后的宇宙进入解析（.CSI 形态），.SH 原码不在
+        assert "000985.CSI" in resolve_kwargs["identifiers"]
+        assert "000985.SH" not in resolve_kwargs["identifiers"]
+        call = spy.call_args
+        assert call.args == ("index_weight", "2014-01-01", "2026-09-30")
+        assert call.kwargs["instrument_ids"] == tuple(sorted(resolved.values()))
+
+    def test_unresolved_codes_are_skipped(
+        self,
+        backfill_manager,
+        mock_metadata_service,
+        mocker,
+    ) -> None:
+        from ditto_application.processes.ingestion.dataset_registry import (
+            INDEX_WEIGHT_UNIVERSE,
+        )
+
+        resolved = dict.fromkeys(INDEX_WEIGHT_UNIVERSE[:2], 3000000)
+        mock_metadata_service.instrument.resolve_instrument_ids_batch.return_value = (
+            dict(resolved)
+        )
+        spy = mocker.patch.object(
+            backfill_manager,
+            "backfill_range",
+            return_value=BackfillResult(
+                dataset="index_weight",
+                total_dates=0,
+                success_count=0,
+                skipped_count=0,
+                failed_count=0,
+                results=(),
+            ),
+        )
+
+        backfill_manager.backfill_index_weight("2014-01-01", "2014-12-31")
+
+        assert spy.call_args.kwargs["instrument_ids"] == (3000000,)
+
+
+@pytest.mark.unit
+class TestBackfillIndexWeightFailFast:
+    """宇宙全未解析时 fail fast 而非退化到逐日全市场（评审修复）."""
+
+    def test_zero_resolved_instruments_raises(
+        self,
+        backfill_manager,
+        mock_metadata_service,
+    ) -> None:
+        mock_metadata_service.instrument.resolve_instrument_ids_batch.return_value = {}
+
+        with pytest.raises(AppProcessError, match="zero instruments"):
+            backfill_manager.backfill_index_weight("2014-01-01", "2026-09-30")

@@ -97,6 +97,34 @@ def _validate_dataset(dataset: str) -> Dataset:
         ) from e
 
 
+def _merge_day_fetches(
+    frames: list[pl.DataFrame],
+    dataset: str,
+    request_start: str,
+    request_end: str,
+) -> pl.DataFrame:
+    """
+    合并 chunk 逐日帧并整行去重.
+
+    逐日 fetch 的重叠（周快照折叠 pledge_ratio、滚动窗 etf_nav [D-7,D]）
+    会在合并帧里造出同键重复行，L1 unique 把我们自己的合并产物误判为
+    供应商重复——整行去重后再进 DQ；单帧内的真实重复不受影响（#196）。
+    """
+    merged = pl.concat(frames, how="diagonal_relaxed")
+    deduped = merged.unique(maintain_order=True)
+    if deduped.height != merged.height:
+        logger.info(
+            "chunk day-fetch merge deduped overlapping rows",
+            event="chunk_merge_overlap_dedup",
+            dataset=dataset,
+            request_start=request_start,
+            request_end=request_end,
+            merged_rows=merged.height,
+            deduped_rows=deduped.height,
+        )
+    return deduped
+
+
 class MarketServices(NamedTuple):
     """Market 域读写服务聚合."""
 
@@ -563,7 +591,7 @@ class IngestionCoordinator:
         if len({value[:4] for value in normalized_dates}) != 1:
             raise AppProcessError("ingestion chunk cannot cross a storage year")
 
-        combined = self._fetch_planned_chunk(
+        combined, failed_days = self._fetch_planned_chunk(
             dataset,
             normalized_dates,
             request_start=request_start,
@@ -571,7 +599,7 @@ class IngestionCoordinator:
         )
         if isinstance(combined, IngestionResult):
             return combined
-        return _process_fetched_data(
+        result = _process_fetched_data(
             combined,
             dataset,
             request_start,
@@ -593,6 +621,13 @@ class IngestionCoordinator:
             request_window=RequestWindow(None, request_end),
             chunk_id=chunk_id,
         )
+        if failed_days and result.status == "success":
+            # chunk SUCCESS 日志锚在 request_start，会覆盖首个失败日的
+            # FAIL 日志（同 ingestion_log 主键）——提交后重写失败日标记，
+            # 让 retry_failed 持续可见（correctness review #196）。
+            for failed_day in failed_days:
+                self._result_handler.persist_failed_day_marker(dataset, failed_day)
+        return result
 
     def _fetch_planned_chunk(
         self,
@@ -601,36 +636,72 @@ class IngestionCoordinator:
         *,
         request_start: str,
         request_end: str,
-    ) -> pl.DataFrame | IngestionResult:
-        """Fetch one planned range while preserving typed fetch failures."""
+    ) -> tuple[pl.DataFrame | IngestionResult, tuple[str, ...]]:
+        """Fetch one planned range, preserving typed failures and skipped days."""
         if dataset in {"macro_indicators", "commodity_daily"}:
-            return self._fetch_range_chunk(
-                dataset,
-                request_start=request_start,
-                request_end=request_end,
-                sparse=False,
+            return (
+                self._fetch_range_chunk(
+                    dataset,
+                    request_start=request_start,
+                    request_end=request_end,
+                    sparse=False,
+                ),
+                (),
             )
         if dataset in {
             "balance_sheet",
             "income_statement",
             "cash_flow",
+            "fina_indicator",
             "dividend",
             "corporate_actions",
         }:
-            return self._fetch_range_chunk(
-                dataset,
-                request_start=request_start,
-                request_end=request_end,
-                sparse=True,
+            return (
+                self._fetch_range_chunk(
+                    dataset,
+                    request_start=request_start,
+                    request_end=request_end,
+                    sparse=True,
+                ),
+                (),
             )
         frames: list[pl.DataFrame] = []
+        first_failure: IngestionResult | None = None
+        failed_dates: list[str] = []
         for partition_date in partition_dates:
             fetched = self._try_fetch_data(dataset, partition_date)
             if isinstance(fetched, IngestionResult):
-                return fetched
+                # 单日 fetch 失败不丢弃整月 chunk——失败日缺口由 retry_failed
+                # 兜底重试（#196：月级原子丢弃在偶发失败率下使
+                # fina_indicator 51 个月全部无法提交）。
+                if first_failure is None:
+                    first_failure = fetched
+                failed_dates.append(partition_date)
+                continue
             if not fetched.is_empty():
                 frames.append(fetched)
-        return pl.concat(frames, how="diagonal_relaxed") if frames else pl.DataFrame()
+        if failed_dates and not frames:
+            # 全月失败维持 fail-closed，整 chunk 判败可整体重试。
+            return (
+                first_failure if first_failure is not None else pl.DataFrame(),
+                tuple(failed_dates),
+            )
+        if failed_dates:
+            logger.warning(
+                "chunk partition days failed and skipped; repair via retry_failed",
+                event="ingest_chunk_partial_days_skipped",
+                dataset=dataset,
+                request_start=request_start,
+                request_end=request_end,
+                failed_days=len(failed_dates),
+                failed_dates=failed_dates,
+            )
+        if not frames:
+            return pl.DataFrame(), tuple(failed_dates)
+        return (
+            _merge_day_fetches(frames, dataset, request_start, request_end),
+            tuple(failed_dates),
+        )
 
     def _fetch_range_chunk(
         self,

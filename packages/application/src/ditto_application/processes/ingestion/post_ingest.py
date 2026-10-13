@@ -438,7 +438,16 @@ def _write_etf_observations(
     return None
 
 
-def _commit_empty_provider_observation(
+@dataclass(frozen=True)
+class ZeroRowEvidencePorts:
+    """Shared dependency bundle for zero-row provider observation commits."""
+
+    source_name: str
+    quality_checker: QualityCheckerProtocol | None
+    evidence_committer: IngestionEvidenceCommitter | None
+
+
+def commit_zero_row_provider_observation(
     df: pl.DataFrame,
     *,
     dataset: str,
@@ -446,17 +455,25 @@ def _commit_empty_provider_observation(
     request_start: str | None,
     request_end: str | None,
     chunk_id: str | None,
-    ctx: PostIngestContext,
-) -> IngestionResult:
-    """Persist an auditable zero-row provider response without inventing payload."""
-    if ctx.quality_checker is None:
-        return ctx.result_handler.handle_quality_check_required(dataset, trade_date)
+    ports: ZeroRowEvidencePorts,
+) -> str | None:
+    """
+    Persist an auditable zero-row provider response without inventing payload.
+
+    日期路径与按标的路径共用（#196：按标的空区间同样提交零行证据而非
+    直接判 EMPTY_DATA 失败）。返回 None 表示证据已提交；返回错误码表示
+    守卫失败，由调用方落失败结果。
+    """
+    if ports.quality_checker is None:
+        return "QUALITY_CHECK_REQUIRED"
+    if ports.evidence_committer is None:
+        return "EVIDENCE_COMMITTER_REQUIRED"
     range_end = request_end or trade_date
     digest = sha256(
         orjson.dumps(
             [
                 dataset,
-                ctx.source_name,
+                ports.source_name,
                 trade_date,
                 range_end,
                 [(name, str(dtype)) for name, dtype in df.schema.items()],
@@ -466,7 +483,7 @@ def _commit_empty_provider_observation(
     observation = CatalogWriteContext(
         dataset=dataset,
         trade_date=trade_date,
-        source_name=ctx.source_name,
+        source_name=ports.source_name,
         write_result=WriteResult(
             file_path=(
                 f"{dataset}/observations/no-data/{trade_date}:{range_end}:sha256:{digest}"
@@ -483,18 +500,51 @@ def _commit_empty_provider_observation(
         chunk_id=chunk_id,
         payload_retained=False,
     )
-    committer = ctx.evidence_committer
-    if committer is None:
-        raise AppProcessError("empty provider observation requires evidence committer")
-    outcome = committer.commit(build_evidence_commit_request(observation))
+    outcome = ports.evidence_committer.commit(
+        build_evidence_commit_request(observation)
+    )
     if not outcome.completed:
+        return outcome.error_code or "R2_EVIDENCE_COMMIT_FAILED"
+    return None
+
+
+def _commit_empty_provider_observation(
+    df: pl.DataFrame,
+    *,
+    dataset: str,
+    trade_date: str,
+    request_start: str | None,
+    request_end: str | None,
+    chunk_id: str | None,
+    ctx: PostIngestContext,
+) -> IngestionResult:
+    """Commit zero-row evidence, then attach sparse as-of snapshot for sparse sets."""
+    error_code = commit_zero_row_provider_observation(
+        df,
+        dataset=dataset,
+        trade_date=trade_date,
+        request_start=request_start,
+        request_end=request_end,
+        chunk_id=chunk_id,
+        ports=ZeroRowEvidencePorts(
+            source_name=ctx.source_name,
+            quality_checker=ctx.quality_checker,
+            evidence_committer=ctx.evidence_committer,
+        ),
+    )
+    if error_code == "QUALITY_CHECK_REQUIRED":
+        return ctx.result_handler.handle_quality_check_required(dataset, trade_date)
+    if error_code == "EVIDENCE_COMMITTER_REQUIRED":
+        raise AppProcessError("empty provider observation requires evidence committer")
+    if error_code is not None:
         return IngestionResult(
             dataset=dataset,
             trade_date=trade_date,
             status="failed",
-            error=outcome.error_code or "R2_EVIDENCE_COMMIT_FAILED",
+            error=error_code,
             message="R2 空响应证据提交失败, 分区已进入可修复状态",
         )
+    range_end = request_end or trade_date
     snapshot = (
         resolve_sparse_asof_snapshot(
             dataset=dataset,
