@@ -17,7 +17,6 @@ from ditto_application.processes.ingestion.backfill_manager import BackfillManag
 from ditto_application.processes.ingestion.source_selection import (
     IngestionCoordinatorLike,
 )
-from ditto_data.models.ingestion import BackfillResult
 from ditto_kernel import InstrumentIngestParams
 
 
@@ -101,7 +100,13 @@ class CLIExecutor:
             end_date=end_date,
             parallel=parallel,
         )
-        return _backfill_summary(dataset, result)
+        return {
+            "dataset": dataset,
+            "total_dates": result.total_dates,
+            "success_count": result.success_count,
+            "skipped_count": result.skipped_count,
+            "failed_count": result.failed_count,
+        }
 
     def backfill_index_weight(
         self,
@@ -126,7 +131,13 @@ class CLIExecutor:
             end_date=end_date,
             parallel=parallel,
         )
-        return _backfill_summary("index_weight", result)
+        return {
+            "dataset": "index_weight",
+            "total_dates": result.total_dates,
+            "success_count": result.success_count,
+            "skipped_count": result.skipped_count,
+            "failed_count": result.failed_count,
+        }
 
     def ingest_by_instrument(
         self,
@@ -176,14 +187,3 @@ class CLIExecutor:
             "message": result.message,
             "error": result.error,
         }
-
-
-def _backfill_summary(dataset: str, result: BackfillResult) -> dict[str, Any]:
-    """把 BackfillResult 折成 CLI 回补摘要字典."""
-    return {
-        "dataset": dataset,
-        "total_dates": result.total_dates,
-        "success_count": result.success_count,
-        "skipped_count": result.skipped_count,
-        "failed_count": result.failed_count,
-    }
