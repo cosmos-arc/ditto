@@ -257,6 +257,47 @@ class TestTushareClientQuery:
         assert result["cal_date"].to_list() == ["1", "2"]
         assert route.call_count == 2
 
+    def test_exact_full_page_with_schemaless_empty_tail_completes(
+        self,
+        respx_mock,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """页宽整除时真实服务端的越界页返回 fields=[]（零列）：必须取尽而非炸 concat."""
+        monkeypatch.setitem(pagination._DOCUMENTED_PAGE_SIZES, "trade_cal", 2)
+        pages = [
+            {"fields": ["cal_date"], "items": [["1"], ["2"]]},
+            {"fields": [], "items": []},
+        ]
+        route = respx_mock.post("http://api.tushare.pro").mock(
+            side_effect=[
+                httpx.Response(200, json={"code": 0, "msg": None, "data": page})
+                for page in pages
+            ]
+        )
+
+        client = TushareClient(token="test_token", settings=_settings())
+        result = client.query("trade_cal", "cal_date")
+
+        assert result["cal_date"].to_list() == ["1", "2"]
+        assert route.call_count == 2
+
+    def test_empty_first_page_returns_schemaless_empty_frame(
+        self,
+        respx_mock,
+    ) -> None:
+        """首页即空（服务端 fields=[]）：返回零行帧，不发第二次请求."""
+        respx_mock.post("http://api.tushare.pro").mock(
+            return_value=httpx.Response(
+                200,
+                json={"code": 0, "msg": None, "data": {"fields": [], "items": []}},
+            )
+        )
+
+        client = TushareClient(token="test_token", settings=_settings())
+        result = client.query("trade_cal", "cal_date")
+
+        assert result.height == 0
+
     def test_duplicate_page_raises_instead_of_looping(
         self,
         respx_mock,
@@ -315,27 +356,37 @@ class TestTushareClientQuery:
         # 单次上限低于保守默认 2000 的端点（超限会静默截断，#507 G3）
         assert resolve_page_size("pledge_stat") == 1000
         assert resolve_page_size("stock_st") == 1000
+        # 独占串行实测稳定（#196：并发/进程重叠下的全败结论已推翻）
+        assert resolve_page_size("fina_indicator_vip") == 10000
+        # 实测全市场日频端点单日 5000-5400 行一页拉尽（#196 回补提速）
+        assert resolve_page_size("adj_factor") == 10000
+        assert resolve_page_size("stk_limit") == 10000
+        assert resolve_page_size("moneyflow") == 10000
+        assert resolve_page_size("cyq_perf") == 10000
+        assert resolve_page_size("daily_basic") == 10000
+        assert resolve_page_size("bak_basic") == 10000
         assert resolve_page_size("unknown_endpoint") == 2000
 
-    def test_in_page_duplicate_rows_raise(
+    def test_in_page_duplicate_rows_pass_through_with_warning(
         self,
         respx_mock,
     ) -> None:
-        """同响应内整行重复（主键重复）fail-closed，不得静默入库."""
+        """同响应内整行重复放行并告警——事件型数据集存在真实业务冗余行.
+
+        告警走 loguru（不经过 stdlib logging），此处只断言数据放行行为。
+        """
         page = {
             "code": 0,
             "msg": None,
-            "data": {"fields": ["cal_date"], "items": [["1"], ["1"]]},
+            "data": {"fields": ["cal_date"], "items": [["1"], ["1"], ["2"]]},
         }
         respx_mock.post("http://api.tushare.pro").mock(
             return_value=httpx.Response(200, json=page)
         )
 
         client = TushareClient(token="test_token", settings=_settings())
-        # 重复行错误参与现有 SourceFetchError 重试语义，耗尽后以 RetryError 冒泡
-        with pytest.raises(tenacity.RetryError) as exc_info:
-            client.query("trade_cal", "cal_date")
-        assert "in-page=1" in str(exc_info.value.last_attempt.exception())
+        result = client.query("trade_cal", "cal_date")
+        assert result["cal_date"].to_list() == ["1", "1", "2"]
 
     def test_rate_limit_message_classified_as_rate_limit_error(
         self, respx_mock

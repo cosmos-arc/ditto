@@ -4,6 +4,10 @@ from typing import cast
 
 import polars as pl
 from ditto_application.processes.ingestion.data_writer import IngestionDataWriter
+from ditto_application.processes.ingestion.evidence_commit import (
+    EvidenceCommitOutcome,
+    IngestionEvidenceCommitter,
+)
 from ditto_application.processes.ingestion.instrument_ingestion import (
     InstrumentBackfillContext,
     InstrumentIngestContext,
@@ -12,6 +16,7 @@ from ditto_application.processes.ingestion.instrument_ingestion import (
     backfill_adj_factor,
     ingest_by_instrument,
 )
+from ditto_application.processes.ingestion.ports import QualityCheckerProtocol
 from ditto_application.processes.ingestion.result_handler import IngestionResultHandler
 from ditto_application.processes.ingestion.types import SourceFetchers
 from ditto_data.catalog import DataAssetRef, InMemoryDataCatalog
@@ -328,3 +333,55 @@ def _patch_market_source_for_registry() -> None:
 
 
 _patch_market_source_for_registry()
+
+
+def test_process_fetched_data_by_instrument_empty_commits_zero_row_evidence() -> None:
+    """#196: 按标的空区间提交零行 provider 证据并返回成功，不再判 EMPTY_DATA。"""
+
+    class _Committer:
+        def __init__(self) -> None:
+            self.chunk_ids: list[str | None] = []
+
+        def commit(self, request: object) -> "EvidenceCommitOutcome":
+            self.chunk_ids.append(getattr(request, "chunk_id", None))
+            return EvidenceCommitOutcome(chunk_id="chunk-1", completed=True)
+
+    committer = _Committer()
+    ctx = InstrumentPostIngestContext(
+        result_handler=IngestionResultHandler(None, "tushare"),
+        data_writer=cast(
+            IngestionDataWriter, _WriteDataRecorder(_unused_write_result())
+        ),
+        source_name="tushare",
+        quality_checker=cast(QualityCheckerProtocol, object()),
+        evidence_committer=cast(IngestionEvidenceCommitter, committer),
+    )
+
+    result = _process_fetched_data_by_instrument(
+        pl.DataFrame(),
+        "index_weight",
+        "932000.CSI",
+        InstrumentIngestParams(
+            instrument_id=3009282,
+            start_date="2014-01-02",
+            end_date="2014-12-31",
+        ),
+        ctx=ctx,
+        chunk_id="chunk:tushare:index_weight:2014:2014-01-02:2014-12-31",
+    )
+
+    assert result.status == "success"
+    assert result.row_count == 0
+    assert committer.chunk_ids == [
+        "chunk:tushare:index_weight:2014:2014-01-02:2014-12-31"
+    ]
+
+
+def _unused_write_result() -> WriteResult:
+    return WriteResult(
+        file_path="index_weight/2014",
+        checksum="checksum",
+        rows_written=0,
+        rows_total=0,
+        blocked=False,
+    )

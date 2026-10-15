@@ -313,6 +313,58 @@ def test_index_weight_rejects_incomplete_weight_total(
     mock_capital_store.save_index_weight.assert_not_called()
 
 
+@pytest.mark.unit
+def test_index_weight_dedups_doubled_provider_month(
+    data_writer,
+    mock_metadata_service,
+    mock_capital_store,
+) -> None:
+    """上游整月双份行（#196 实测 899050.BJ 2023-11）按源键去重后写入。"""
+    mock_metadata_service.instrument.resolve_instrument_ids_batch.return_value = {
+        "600000.SH": 1_000_001,
+        "600036.SH": 1_000_002,
+    }
+    df = pl.DataFrame(
+        {
+            "index_code": ["000300.SH"] * 4,
+            "source_ticker": ["600000.SH", "600036.SH", "600000.SH", "600036.SH"],
+            "trade_date": [date(2024, 11, 29)] * 4,
+            "weight": [60.0, 40.0, 60.0, 40.0],
+        }
+    )
+
+    result = data_writer.write_data("index_weight", df, "2024-11-29")
+
+    assert result.file_path == "index_weight/2024"
+    written = mock_capital_store.save_index_weight.call_args.args[0]
+    assert written.height == 2
+
+
+@pytest.mark.unit
+def test_index_weight_total_validated_before_fk_filter(
+    data_writer,
+    mock_metadata_service,
+    mock_capital_store,
+) -> None:
+    """注册表覆盖度不是供应商完整性：未解析成分股丢弃后 chunk 不再失败。"""
+    mock_metadata_service.instrument.resolve_instrument_ids_batch.return_value = {
+        "600000.SH": 1_000_001,
+    }
+    df = pl.DataFrame(
+        {
+            "index_code": ["000300.SH", "000300.SH"],
+            "source_ticker": ["600000.SH", "900901.SH"],
+            "trade_date": [date(2024, 12, 27), date(2024, 12, 27)],
+            "weight": [99.5, 0.5],
+        }
+    )
+
+    data_writer.write_data("index_weight", df, "2024-12-27")
+
+    written = mock_capital_store.save_index_weight.call_args.args[0]
+    assert written.select("source_ticker").to_series().to_list() == ["600000.SH"]
+
+
 @pytest.fixture
 def mock_macro_service(mocker):
     """创建 Mock MacroService。"""

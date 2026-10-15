@@ -1,4 +1,9 @@
-"""摄取协调器共享常量 + 指数工具函数 — 零 ditto_application 内部模块间依赖."""
+"""
+摄取协调器共享常量 + 指数工具函数.
+
+指数静态清单（MARKET/STYLE_INDEX_CODES）的权威定义在
+dataset_registry（fetch 路由层），本模块不 re-export.
+"""
 
 from __future__ import annotations
 
@@ -8,6 +13,8 @@ import polars as pl
 from ditto_data.models import Dataset
 
 from ditto_application.processes.ingestion.dataset_registry import (
+    MARKET_INDEX_CODES,
+    STYLE_INDEX_CODES,
     default_dataset_registry,
 )
 
@@ -26,32 +33,6 @@ EXCHANGE_PREFIX_MAP: dict[str, str] = {
     "8": "BJ",  # 北交所
     "4": "BJ",  # 北交所
 }
-
-# 市场基准指数（Tushare source_ticker 格式）
-MARKET_INDEX_CODES: list[str] = [
-    "000001.SH",  # 上证指数
-    "399001.SZ",  # 深证成指
-    "000300.SH",  # 沪深300
-    "000905.SH",  # 中证500
-    "000852.SH",  # 中证1000
-    "000016.SH",  # 上证50
-    "399006.SZ",  # 创业板指
-    "000688.SH",  # 科创50
-    "399673.SZ",  # 创业板50
-]
-
-# 风格指数（Tushare source_ticker 格式）
-STYLE_INDEX_CODES: list[str] = [
-    "399373.SZ",  # 大盘价值
-    "399374.SZ",  # 大盘成长
-    "399375.SZ",  # 中盘价值
-    "399376.SZ",  # 中盘成长
-    "399377.SZ",  # 小盘价值
-    "399378.SZ",  # 小盘成长
-    "000992.SH",  # 全指价值
-    "000993.SH",  # 全指成长
-    "000991.SH",  # 全指红利
-]
 
 
 class SWIndustryProvider(Protocol):
@@ -100,8 +81,6 @@ def get_all_index_codes(
 __all__ = [
     "A_SHARE_CODE_LENGTH",
     "EXCHANGE_PREFIX_MAP",
-    "MARKET_INDEX_CODES",
-    "STYLE_INDEX_CODES",
     "SUPPORTED_INSTRUMENT_DATASETS",
     "SWIndustryProvider",
     "get_all_index_codes",

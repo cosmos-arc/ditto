@@ -11,8 +11,8 @@ fetch_dividend / fetch_corporate_actions 模块级函数，
   漂移可达数千天（年报更正公告），不能以 ann_date 窗口作为披露事件边界；
 - 数据代理不支持 f_ann_date 过滤参数，但支持 period 报告期过滤。
 故披露增量统一按"近期报告期超集拉取 + 本地按 knowledge_date 过滤"，
-未来行（knowledge_date > 截止日）在 fetch 层剔除，null 行保留交给
-sparse PIT fail-closed 校验。
+未来行（knowledge_date > 截止日）与 null 行（无披露锚，不可判）均在
+fetch 层出口剔除，null 丢弃带告警（#196）。
 """
 
 from __future__ import annotations
@@ -21,6 +21,7 @@ from collections.abc import Callable
 from datetime import date
 
 import polars as pl
+from ditto_platform.foundation import logger
 
 from ditto_data.sources.tushare.adapters.fundamental import FundamentalTushareAdapter
 
@@ -57,22 +58,38 @@ def fetch_disclosure_delta(
     *,
     asof_date: date,
     start_date: date | None = None,
+    window: int = _DISCLOSURE_PERIOD_WINDOW,
 ) -> pl.DataFrame:
     """
     Pull trailing report periods and keep only rows knowable by the cutoff.
 
-    knowledge_date 为 null 的行保留，交由 sparse PIT 校验 fail-closed 拒收。
+    knowledge_date 为 null 的行在出口丢弃并告警（#196：历史报告期含少量
+    无披露锚的行，整批保留会使 sparse PIT 校验 fail-closed 拒收整月
+    chunk；丢弃不可判行不引入未来数据）。
     """
     frames = [
         vip_fetch(period=period)
-        for period in _recent_quarter_ends(asof_date.isoformat())
+        for period in _recent_quarter_ends(asof_date.isoformat(), count=window)
     ]
     merged = pl.concat(frames, how="diagonal_relaxed")
     knowledge = pl.col("knowledge_date")
+    null_rows = (
+        merged.get_column("knowledge_date").null_count()
+        if ("knowledge_date" in merged.columns)
+        else 0
+    )
+    if null_rows:
+        logger.warning(
+            f"disclosure delta dropped {null_rows} rows with null knowledge_date",
+            event="disclosure_delta_null_knowledge_dropped",
+            asof_date=asof_date.isoformat(),
+            dropped_rows=null_rows,
+        )
+        merged = merged.filter(knowledge.is_not_null())
     if start_date is None:
-        knowable = knowledge.is_null() | (knowledge <= pl.lit(asof_date))
+        knowable = knowledge <= pl.lit(asof_date)
     else:
-        knowable = knowledge.is_null() | knowledge.is_between(
+        knowable = knowledge.is_between(
             pl.lit(start_date), pl.lit(asof_date), closed="both"
         )
     return merged.filter(knowable)
@@ -95,11 +112,16 @@ def fetch_disclosure_range(
     Fetch disclosure events with knowledge_date inside [start_date, end_date].
 
     报告期超集拉取后按披露锚过滤区间；与单日增量共用同一窗口语义。
+    窗口锚在区间末并在 8 季基础上扩区间覆盖的季度数——旧逐日模式对
+    区间内每天各回看 8Q，区间起点附近的老期更正（发布于区间前段、
+    报告期早于 end-8Q）对纯 end 锚不可见（correctness review #196）。
     """
+    window = _DISCLOSURE_PERIOD_WINDOW + max_quarters_in_range(start_date, end_date)
     return fetch_disclosure_delta(
         vip_fetch,
         asof_date=parse_iso(end_date),
         start_date=parse_iso(start_date),
+        window=window,
     )
 
 
@@ -143,8 +165,9 @@ def _fetch_statement(
     Financial-statement fetch shared by balance sheet / income / cash flow.
 
     披露增量模式（trade_date）：按近期报告期超集拉取，保留 knowledge_date
-    ≤ trade_date 的行；按标的模式：ann_date 窗口拉取后剔除披露晚于
-    end_date 的行。两种模式均保留 null knowledge_date 行交由 PIT 校验拒收。
+    ≤ trade_date 的行（null 锚行在 delta 出口丢弃，见 fetch_disclosure_delta）；
+    按标的模式：ann_date 窗口拉取后剔除披露晚于 end_date 的行（null 锚
+    行保留，交由写入侧 FK/PIT 校验处置）。
     """
     _require_statement_mode(trade_date=trade_date, source_ticker=source_ticker)
     if trade_date:

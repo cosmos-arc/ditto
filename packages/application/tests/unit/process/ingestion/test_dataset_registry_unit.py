@@ -5,6 +5,7 @@ from __future__ import annotations
 import pytest
 from ditto_application.exceptions import AppProcessError
 from ditto_application.processes.ingestion.dataset_registry import (
+    DailyFetchContext,
     DatasetRegistration,
     DatasetRegistry,
     WriteKind,
@@ -253,3 +254,54 @@ class TestDateScheduleField:
             "2026-01-01",
             "2027-01-31",
         )
+
+
+@pytest.mark.unit
+class TestIndexWeightUniverse:
+    """index_weight 端点服务宇宙（#196 全宇宙探针收窄）."""
+
+    def test_universe_alias_applies_and_excludes_sw(self) -> None:
+        from ditto_application.processes.ingestion.dataset_registry import (
+            INDEX_WEIGHT_UNIVERSE,
+            MARKET_INDEX_CODES,
+            STYLE_INDEX_CODES,
+        )
+
+        # 000985 权重端点仅认 .CSI 后缀（实测 .SH 0 行、.CSI 5121 行）
+        assert "000985.CSI" in INDEX_WEIGHT_UNIVERSE
+        assert "000985.SH" not in INDEX_WEIGHT_UNIVERSE
+        # SW 行业指数无权重数据（156/178 空响应），不进宇宙
+        assert not any(code.endswith(".SI") for code in INDEX_WEIGHT_UNIVERSE)
+        assert len(INDEX_WEIGHT_UNIVERSE) == len(MARKET_INDEX_CODES) + len(
+            STYLE_INDEX_CODES
+        )
+
+    def test_daily_fetch_iterates_weight_universe_not_cached_codes(self) -> None:
+        from unittest.mock import MagicMock
+
+        from ditto_application.processes.ingestion.dataset_registry import (
+            INDEX_WEIGHT_UNIVERSE,
+        )
+        from ditto_application.processes.ingestion.types import SourceFetchers
+
+        capital = MagicMock()
+        registration = default_dataset_registry().require(Dataset.INDEX_WEIGHT)
+        assert registration.daily_fetch_factory is not None
+        context = DailyFetchContext(
+            fetchers=SourceFetchers(
+                metadata=MagicMock(),
+                market=MagicMock(),
+                fundamental=MagicMock(),
+                capital=capital,
+                macro=MagicMock(),
+            ),
+            trade_date="2026-09-30",
+            fetch_commodity_daily=MagicMock(),
+            get_cached_index_codes=MagicMock(return_value=["801010.SI"]),
+        )
+
+        registration.daily_fetch_factory(context)()
+
+        requested = [call.args[0] for call in capital.fetch_index_weight.call_args_list]
+        assert requested == list(INDEX_WEIGHT_UNIVERSE)
+        context.get_cached_index_codes.assert_not_called()

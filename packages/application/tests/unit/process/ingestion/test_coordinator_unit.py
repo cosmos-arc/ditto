@@ -1392,6 +1392,91 @@ class TestIngestRange:
         )
         assert mock_source.fetch_stock_daily.call_count == 3
 
+    def test_ingest_chunk_skips_failed_partition_days_instead_of_dropping_month(
+        self,
+        coordinator,
+        mock_source,
+        mock_market_write_service,
+        in_memory_catalog,
+    ) -> None:
+        """单日 fetch 失败跳过而非丢弃整月 chunk——缺口由 repair 兜底（#196）."""
+        ok_frame = lambda day: pl.DataFrame(  # noqa: E731 - test-local
+            {
+                "source_ticker": ["000001.SZ"],
+                "trade_date": [date(2024, 12, day)],
+                "open": [10.0],
+                "close": [10.2],
+                "pre_close": [10.0],
+                "volume": [1_000_000],
+                "amount": [10_200_000],
+                "pct_change": [2.0],
+                "high": [10.5],
+                "low": [9.8],
+            }
+        )
+        mock_source.fetch_stock_daily.side_effect = [
+            ok_frame(25),
+            SourceFetchError(message="transient", source="tushare"),
+            ok_frame(27),
+        ]
+        mock_market_write_service.save_bars.return_value = 2
+
+        result = coordinator.ingest_chunk(
+            "stock_daily",
+            chunk_id="chunk:tushare:stock_daily:2024-12:2024-12-25:2024-12-27",
+            request_start="2024-12-25",
+            request_end="2024-12-27",
+            partition_dates=("2024-12-25", "2024-12-26", "2024-12-27"),
+        )
+
+        assert result.status == "success"
+        assert result.row_count == 2
+
+    def test_ingest_chunk_merges_overlapping_day_fetches_deduped(
+        self,
+        coordinator,
+        mock_source,
+        mock_market_write_service,
+        in_memory_catalog,
+    ) -> None:
+        """周快照折叠/滚动窗重叠的逐日 fetch 合并整行去重——L1 unique 不误杀（#196）."""
+        folded_frame = pl.DataFrame(
+            {
+                "source_ticker": ["000001.SZ"],
+                "trade_date": [date(2024, 12, 27)],
+                "open": [10.0],
+                "close": [10.2],
+                "pre_close": [10.0],
+                "volume": [1_000_000],
+                "amount": [10_200_000],
+                "pct_change": [2.0],
+                "high": [10.5],
+                "low": [9.8],
+            }
+        )
+        # 两个交易日折叠到同一份周快照
+        mock_source.fetch_stock_daily.side_effect = [folded_frame, folded_frame]
+        written_frames: list[pl.DataFrame] = []
+
+        def _capture_save_bars(df: pl.DataFrame, **_: object) -> int:
+            written_frames.append(df)
+            return df.height
+
+        mock_market_write_service.save_bars.side_effect = _capture_save_bars
+
+        result = coordinator.ingest_chunk(
+            "stock_daily",
+            chunk_id="chunk:tushare:stock_daily:2024-12:2024-12-27:2024-12-30",
+            request_start="2024-12-27",
+            request_end="2024-12-30",
+            partition_dates=("2024-12-27", "2024-12-30"),
+        )
+
+        assert result.status == "success"
+        assert result.row_count == 1
+        assert len(written_frames) == 1
+        assert written_frames[0].height == 1
+
     def test_ingest_chunk_fetches_each_partition_but_writes_one_range_payload(
         self,
         coordinator,
@@ -1490,6 +1575,37 @@ class TestIngestRange:
             "2024-01-01",
             "2024-01-31",
         )
+
+    def test_fina_indicator_chunk_routes_to_sparse_range(
+        self,
+        coordinator,
+        mock_source,
+    ) -> None:
+        """fina_indicator 走 range 端点而非逐日 12-period 循环（#196）。"""
+        expected = pl.DataFrame(
+            {
+                "source_ticker": ["000001.SZ"],
+                "knowledge_date": [date(2024, 1, 31)],
+                "report_date": [date(2023, 12, 31)],
+                "roe": [10.0],
+            }
+        )
+        mock_source.fetch_fina_indicator_range.return_value = expected
+
+        coordinator.ingest_chunk(
+            "fina_indicator",
+            chunk_id="chunk:tushare:fina_indicator:2024-Q1:2024-01-02:2024-03-31",
+            request_start="2024-01-02",
+            request_end="2024-03-31",
+            partition_dates=("2024-01-02", "2024-03-31"),
+        )
+
+        # range 端点恰好一次；逐日 delta 端点不进入 chunk 路径
+        mock_source.fetch_fina_indicator_range.assert_called_once_with(
+            "2024-01-02",
+            "2024-03-31",
+        )
+        mock_source.fetch_fina_indicator.assert_not_called()
 
     def test_ingest_range_with_skipped_dates(
         self,
@@ -2359,3 +2475,61 @@ class TestIndexDatasetSupport:
         assert result.status == "success"
         assert result.row_count == 2
         mock_source.fetch_index_basic.assert_called_once()
+
+
+@pytest.mark.unit
+class TestChunkSkippedDayMarker:
+    """跳天提交后失败日标记必须存活（correctness review #196 F1）."""
+
+    def test_first_failed_day_marker_survives_chunk_success(
+        self,
+        coordinator,
+        mock_source,
+        mock_market_write_service,
+        in_memory_catalog,
+        mock_ingestion_log_store,
+    ) -> None:
+        ok_frame = lambda day: pl.DataFrame(  # noqa: E731 - test-local
+            {
+                "source_ticker": ["000001.SZ"],
+                "trade_date": [date(2024, 12, day)],
+                "open": [10.0],
+                "close": [10.2],
+                "pre_close": [10.0],
+                "volume": [1_000_000],
+                "amount": [10_200_000],
+                "pct_change": [2.0],
+                "high": [10.5],
+                "low": [9.8],
+            }
+        )
+        mock_source.fetch_stock_daily.side_effect = [
+            SourceFetchError(message="transient", source="tushare"),
+            ok_frame(26),
+            ok_frame(27),
+        ]
+        mock_market_write_service.save_bars.return_value = 2
+
+        result = coordinator.ingest_chunk(
+            "stock_daily",
+            chunk_id="chunk:tushare:stock_daily:2024-12:2024-12-25:2024-12-27",
+            request_start="2024-12-25",
+            request_end="2024-12-27",
+            partition_dates=("2024-12-25", "2024-12-26", "2024-12-27"),
+        )
+
+        assert result.status == "success"
+        # 失败日（含与 chunk SUCCESS 同键的首日）的 FAIL 标记被重写存续
+        saved = [
+            call.kwargs.get("log") or call.args[0]
+            for call in mock_ingestion_log_store.save_log.call_args_list
+        ]
+        fail_markers = [
+            log
+            for log in saved
+            if getattr(log, "trade_date", None) == "2024-12-25"
+            and getattr(log, "status", None) == IngestionStatus.FAIL
+        ]
+        assert fail_markers, (
+            "skipped first day must keep a FAIL marker after chunk success"
+        )
