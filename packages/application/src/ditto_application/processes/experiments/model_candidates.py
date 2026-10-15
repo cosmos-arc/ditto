@@ -47,7 +47,11 @@ __all__ = [
     "ModelFoldTrainingRequest",
     "ModelTrainingFailure",
     "ModelTrainingSuccess",
+    "canonical_model_state_bytes",
+    "lightgbm_predictions_from_state",
+    "model_state_sha256",
     "train_model_candidate",
+    "transform_feature_matrix",
     "validate_fold_label_isolation",
 ]
 
@@ -300,8 +304,23 @@ def validate_fold_label_isolation(
     return retained_frame, report
 
 
-def _canonical_state_bytes(payload: Mapping[str, object]) -> bytes:
+def canonical_model_state_bytes(payload: Mapping[str, object]) -> bytes:
+    """
+    Encode one frozen model/transform state deterministically.
+
+    Shared by training, publication, and recovery so checksums always refer to
+    one serialization authority.
+    """
     return orjson.dumps(dict(payload), option=orjson.OPT_SORT_KEYS)
+
+
+def model_state_sha256(payload: Mapping[str, object]) -> str:
+    """Return the canonical content checksum of one frozen state."""
+    return hashlib.sha256(canonical_model_state_bytes(payload)).hexdigest()
+
+
+def _canonical_state_bytes(payload: Mapping[str, object]) -> bytes:
+    return canonical_model_state_bytes(payload)
 
 
 def _sha256_hex(payload: bytes) -> str:
@@ -341,12 +360,17 @@ def _fit_transform_state(
     return state, _canonical_state_bytes(state)
 
 
-def _transform_matrix(
+def transform_feature_matrix(
     frame: pl.DataFrame,
     feature_names: tuple[str, ...],
-    transform_state: dict[str, dict[str, float]],
+    transform_state: Mapping[str, dict[str, float]],
 ) -> np.ndarray:
-    """Apply the fitted impute/winsorize/scale recipe to raw feature columns."""
+    """
+    Apply the fitted impute/winsorize/scale recipe to raw feature columns.
+
+    Shared by fold training and recovered-model inference so both paths apply
+    exactly one frozen transform implementation.
+    """
     columns: list[np.ndarray] = []
     for name in feature_names:
         stats = transform_state[name]
@@ -420,7 +444,7 @@ def _fit_model_state(
             "ranking_feature": cast("str", lineage.hyperparameters["ranking_feature"])
         }
         return model_state, _canonical_state_bytes(model_state)
-    matrix = _transform_matrix(joined, lineage.feature_names, transform_state)
+    matrix = transform_feature_matrix(joined, lineage.feature_names, transform_state)
     targets = joined.get_column("label_value").to_numpy().astype(np.float64, copy=False)
     if lineage.model_kind is ModelKind.LIGHTGBM:
         return _fit_lightgbm_state(lineage, matrix, targets, seed=seed)
@@ -468,11 +492,16 @@ def _fit_lightgbm_state(
     return state, _canonical_state_bytes(state)
 
 
-def _lightgbm_predictions(
+def lightgbm_predictions_from_state(
     model_state: Mapping[str, object],
     matrix: np.ndarray,
 ) -> np.ndarray:
-    """Score with a frozen LightGBM booster, failing closed on bad state."""
+    """
+    Score with a frozen LightGBM booster, failing closed on bad state.
+
+    Shared by fold training and recovered-model inference so booster
+    reconstruction has exactly one authority.
+    """
     import lightgbm as lgb  # noqa: PLC0415 - lazy import keeps ML-only cost
 
     booster_model = model_state.get("booster_model")
@@ -529,12 +558,12 @@ def _prediction_frame_for_test_window(
             cast("str", lineage.hyperparameters["ranking_feature"])
         )
     else:
-        test_matrix = _transform_matrix(
+        test_matrix = transform_feature_matrix(
             test_features, lineage.feature_names, transform_state
         )
         if lineage.model_kind is ModelKind.LIGHTGBM:
             prediction_values = pl.Series(
-                _lightgbm_predictions(model_state, test_matrix)
+                lightgbm_predictions_from_state(model_state, test_matrix)
             )
         else:
             weights_array, intercept_value = _linear_prediction_inputs(model_state)
