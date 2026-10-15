@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from pathlib import Path
 
 import orjson
@@ -29,6 +30,9 @@ from ditto_application.processes.experiments.model_artifact_publication import (
     IndexedModelArtifactSink,
     ModelArtifactPublicationContext,
 )
+from ditto_application.processes.experiments.model_candidates import (
+    model_state_sha256,
+)
 from ditto_features.evaluation.research_labels import label_spec_hash
 
 from .conftest import MemoryArtifactIndex
@@ -53,7 +57,7 @@ def _context() -> ModelArtifactPublicationContext:
     )
 
 
-def _training() -> ModelTrainingRecord:
+def _training(alpha: float = 1.0) -> ModelTrainingRecord:
     registration_payload: dict[str, object] = {
         "model_kind": "linear",
         "feature_names": ["momentum_20d"],
@@ -65,7 +69,7 @@ def _training() -> ModelTrainingRecord:
             "winsorize_upper_quantile": 0.99,
             "scaling": "zscore",
         },
-        "hyperparameters": {"alpha": 1.0},
+        "hyperparameters": {"alpha": alpha},
         "seed": 7,
         "code_environment": {
             "implementation_key": "ditto_application.model_candidates.ridge.v1",
@@ -73,6 +77,9 @@ def _training() -> ModelTrainingRecord:
             "lockfile_sha256": "b" * 64,
         },
     }
+    model_state: dict[str, object] = {"coef": [0.1], "intercept": 0.01}
+    transform_state: dict[str, object] = {"momentum_20d": {"median": 1.0}}
+    _ = alpha  # registration-only difference; state bytes stay shared
     return ModelTrainingRecord(
         schema=MODEL_TRAINING_ARTIFACT_SCHEMA,
         registration_hash=canonical_payload(registration_payload).content_hash.value,
@@ -83,8 +90,8 @@ def _training() -> ModelTrainingRecord:
         label_maturity_cutoff_epoch_us=1_000,
         trained_at_epoch_us=2_000,
         sample_count=10,
-        model_state_sha256="3" * 64,
-        transform_state_sha256="4" * 64,
+        model_state_sha256=model_state_sha256(model_state),
+        transform_state_sha256=model_state_sha256(transform_state),
         feature_names=("momentum_20d",),
     )
 
@@ -106,10 +113,8 @@ def test_publish_training_writes_three_indexed_artifacts(
     artifact_service: ResearchArtifactService,
 ) -> None:
     sink = IndexedModelArtifactSink(artifact_service)
-    model_bytes = orjson.dumps({"coef": [0.1], "intercept": 0.01})
-    transform_bytes = orjson.dumps({"momentum_20d": {"median": 1.0}})
     record, model, transform = sink.publish_training(
-        _context(), _training(), model_bytes, transform_bytes
+        _context(), _training(), *_state_bytes()
     )
     base = "experiments/experiment-1/candidates/candidate-1/folds/fold-1"
     assert record.relative_path == f"{base}/model-training.json"
@@ -132,7 +137,9 @@ def test_publish_predictions_binds_model_artifact(
 ) -> None:
     sink = IndexedModelArtifactSink(artifact_service)
     training = _training()
-    published = sink.publish_predictions(_context(), _predictions(training))
+    published = sink.publish_predictions(
+        _context(), _predictions(training), trained_at_epoch_us=2_000
+    )
     assert published.artifact_kind == "model_predictions"
     assert published.relative_path.endswith("model-predictions.json")
     payload = orjson.loads((tmp_path / published.relative_path).read_bytes())
@@ -147,10 +154,11 @@ def test_publication_replay_is_idempotent(
     sink = IndexedModelArtifactSink(artifact_service)
     context = _context()
     training = _training()
-    model_bytes = orjson.dumps({"coef": [0.1]})
-    transform_bytes = orjson.dumps({"momentum_20d": {"median": 1.0}})
-    first = sink.publish_training(context, training, model_bytes, transform_bytes)
-    second = sink.publish_training(context, training, model_bytes, transform_bytes)
+    first = sink.publish_training(context, training, *_state_bytes())
+    # A crash retry arrives with a different lease clock; the batch timestamp
+    # derives from the record, so the replay must still complete.
+    retried_context = replace(context, now_epoch_us=_NOW_US + 987_654_321)
+    second = sink.publish_training(retried_context, training, *_state_bytes())
     assert [item.artifact_id for item in first] == [item.artifact_id for item in second]
     assert len(memory_artifact_index.records) == 3
 
@@ -178,3 +186,44 @@ def test_context_rejects_lineage_gap_and_untyped_fence() -> None:
             lease_fence="not-a-fence",  # type: ignore[arg-type]
             now_epoch_us=_NOW_US,
         )
+
+
+def _state_bytes(*, alpha: float = 1.0) -> tuple[bytes, bytes]:
+    _ = alpha  # sibling candidates share identical frozen state bytes
+    return (
+        orjson.dumps({"coef": [0.1], "intercept": 0.01}),
+        orjson.dumps({"momentum_20d": {"median": 1.0}}),
+    )
+
+
+def test_publish_refuses_state_bytes_contradicting_record_checksums(
+    artifact_service: ResearchArtifactService,
+    memory_artifact_index: MemoryArtifactIndex,
+) -> None:
+    sink = IndexedModelArtifactSink(artifact_service)
+    with pytest.raises(AppProcessError) as error:
+        sink.publish_training(
+            _context(),
+            _training(),
+            orjson.dumps({"coef": [0.42], "intercept": 0.0}),
+            orjson.dumps({"momentum_20d": {"median": 1.0}}),
+        )
+    assert error.value.details["reason"] == "state_checksum_unbound"
+    assert len(memory_artifact_index.records) == 0
+
+
+def test_sibling_candidates_sharing_fold_and_states_can_all_publish(
+    artifact_service: ResearchArtifactService,
+    memory_artifact_index: MemoryArtifactIndex,
+) -> None:
+    """#269 场景：同 fold 同特征集的兄弟候选不因共享状态字节冲突。"""
+    sink = IndexedModelArtifactSink(artifact_service)
+    sibling = replace(_CANDIDATE, value="candidate-2")
+    for candidate, training in ((_CANDIDATE, _training()), (sibling, _training(2.0))):
+        context = replace(_context(), candidate_id=candidate)
+        record, _model, _transform = sink.publish_training(
+            context, training, *_state_bytes(alpha=2.0)
+        )
+        assert record.artifact_id.startswith("model-training-")
+        assert str(candidate) in record.relative_path
+    assert len(memory_artifact_index.records) == 6

@@ -270,6 +270,16 @@ def validate_fold_label_isolation(
         & (pl.col("mature_at_epoch_us") <= knowledge_cutoff_epoch_us)
     )
     excluded_immature = candidates.height - mature.height
+    unmapped_exits = (
+        mature.get_column("exit_session").is_in(list(ordinals)).not_().sum()
+    )
+    if unmapped_exits:
+        # Exit sessions outside the request calendar cannot be gap-measured on
+        # real sessions; refuse instead of letting polars mapping errors escape.
+        raise _training_error(
+            "label_exit_session_not_in_calendar",
+            unmapped_exit_sessions=int(unmapped_exits),
+        )
     exit_ordinal = mature.get_column("exit_session").replace_strict(
         ordinals, return_dtype=pl.Int64
     )
@@ -552,10 +562,16 @@ def _prediction_frame_for_test_window(
     test_features = request.feature_frame.filter(
         (pl.col(_SESSION_COLUMN) >= request.fold.test_window.start)
         & (pl.col(_SESSION_COLUMN) <= request.fold.test_window.end)
+        & pl.col(_SESSION_COLUMN).is_in(list(request.trading_sessions))
     )
     if lineage.model_kind is ModelKind.RULE:
-        prediction_values = test_features.get_column(
-            cast("str", lineage.hyperparameters["ranking_feature"])
+        # The rule baseline ranks the registered factor directly; row-level
+        # nulls follow the same frozen median policy as the other kinds so all
+        # baselines score the same cross-section.
+        ranking_feature = cast("str", lineage.hyperparameters["ranking_feature"])
+        stats = transform_state[ranking_feature]
+        prediction_values = test_features.get_column(ranking_feature).fill_null(
+            value=stats["median"]
         )
     else:
         test_matrix = transform_feature_matrix(

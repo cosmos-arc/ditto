@@ -11,7 +11,7 @@ scheduler lease; nothing here can mark a trial successful by itself.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Protocol, cast
 
 import orjson
@@ -37,6 +37,9 @@ from ditto_analysis.experiments.persistence import (
 )
 
 from ditto_application.exceptions import AppProcessError
+from ditto_application.processes.experiments.model_candidates import (
+    model_state_sha256,
+)
 
 __all__ = [
     "IndexedModelArtifactSink",
@@ -46,6 +49,12 @@ __all__ = [
 
 _ARTIFACT_KIND_TRAINING = "model_training_state"
 _ARTIFACT_KIND_PREDICTIONS = "model_predictions"
+_EPOCH = datetime(1970, 1, 1, tzinfo=UTC)
+
+
+def _decode_epoch_us(value: int) -> datetime:
+    """Decode epoch microseconds without a floating-point round trip."""
+    return _EPOCH + timedelta(microseconds=value)
 
 
 def _publication_error(reason: str, **details: object) -> AppProcessError:
@@ -155,10 +164,31 @@ class IndexedModelArtifactSink:
         transform_state_bytes: bytes,
     ) -> tuple[ArtifactRecord, ArtifactRecord, ArtifactRecord]:
         """Publish record, model state, and transform state immutably."""
-        # Replays of the same publication batch must carry the same timestamp,
-        # so the immutable-replay contract stays byte-stable.
-        created_at = datetime.fromtimestamp(context.now_epoch_us / 1_000_000, tz=UTC)
-        record_payload = dict(training.canonical_payload())
+        # Replay timestamps derive from the record's own completion time (and
+        # decode without a floating-point round trip), so crash retries stay
+        # byte-stable regardless of the caller's clock.
+        created_at = _decode_epoch_us(training.trained_at_epoch_us)
+        decoded_model: object = orjson.loads(model_state_bytes)
+        decoded_transform: object = orjson.loads(transform_state_bytes)
+        if not isinstance(decoded_model, dict) or not isinstance(
+            decoded_transform, dict
+        ):
+            raise _publication_error("state_bytes_not_json_object")
+        model_state = cast("dict[str, object]", decoded_model)
+        transform_state = cast("dict[str, object]", decoded_transform)
+        # Refuse to publish states that contradict the record's checksums:
+        # publishing first and failing at load time would leave durable
+        # evidence claiming a binding it does not have.
+        if model_state_sha256(model_state) != training.model_state_sha256:
+            raise _publication_error(
+                "state_checksum_unbound",
+                field="model_state_sha256",
+            )
+        if model_state_sha256(transform_state) != training.transform_state_sha256:
+            raise _publication_error(
+                "state_checksum_unbound",
+                field="transform_state_sha256",
+            )
         record_spec = self._spec(
             context,
             "model-training.json",
@@ -169,27 +199,22 @@ class IndexedModelArtifactSink:
         model_spec = self._spec(
             context,
             "model-state.json",
-            model_state_artifact_id(training.model_state_sha256).removeprefix("model-"),
+            model_state_artifact_id(
+                training.registration_hash, training.model_state_sha256
+            ).removeprefix("model-"),
             _ARTIFACT_KIND_TRAINING,
             created_at,
         )
         transform_spec = self._spec(
             context,
             "transform-state.json",
-            transform_state_artifact_id(training.transform_state_sha256).removeprefix(
-                "model-"
-            ),
+            transform_state_artifact_id(
+                training.registration_hash, training.transform_state_sha256
+            ).removeprefix("model-"),
             _ARTIFACT_KIND_TRAINING,
             created_at,
         )
-        decoded_model: object = orjson.loads(model_state_bytes)
-        decoded_transform: object = orjson.loads(transform_state_bytes)
-        if not isinstance(decoded_model, dict) or not isinstance(
-            decoded_transform, dict
-        ):
-            raise _publication_error("state_bytes_not_json_object")
-        model_state = cast("dict[str, object]", decoded_model)
-        transform_state = cast("dict[str, object]", decoded_transform)
+        record_payload = dict(training.canonical_payload())
         record = self._service.publish_indexed_json(
             record_spec,
             record_payload,
@@ -215,13 +240,22 @@ class IndexedModelArtifactSink:
         self,
         context: ModelArtifactPublicationContext,
         predictions: ModelPredictionRecord,
+        *,
+        trained_at_epoch_us: int,
     ) -> ArtifactRecord:
         """Publish one prediction artifact bound to its training artifact."""
-        created_at = datetime.fromtimestamp(context.now_epoch_us / 1_000_000, tz=UTC)
+        created_at = _decode_epoch_us(trained_at_epoch_us)
+        predictions_suffix = "-".join(
+            (
+                "predictions",
+                predictions.registration_hash[:16],
+                predictions.artifact_hash[:16],
+            )
+        )
         spec = self._spec(
             context,
             "model-predictions.json",
-            f"predictions-{predictions.artifact_hash}",
+            predictions_suffix,
             _ARTIFACT_KIND_PREDICTIONS,
             created_at,
         )

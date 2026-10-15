@@ -399,6 +399,43 @@ def test_deterministic_retraining_is_bit_identical() -> None:
     assert first.training.artifact_hash == second.training.artifact_hash
 
 
+def test_label_calendar_mismatch_returns_typed_failure() -> None:
+    # Labels built on the full calendar; the request calendar drops sessions
+    # 12..16, so the retained decision d11 has exit d16 off-calendar. The
+    # training must refuse with an explicit reason, not a polars mapping error.
+    request = ModelFoldTrainingRequest(
+        lineage=_lineage(),
+        fold=_fold(),
+        feature_frame=_feature_frame(),
+        labels=build_forward_return_labels(_price_frame(), list(SESSIONS)),
+        trading_sessions=SESSIONS[:12] + SESSIONS[17:],
+        snapshot_id="snap-test-1",
+        knowledge_cutoff_epoch_us=_KNOWLEDGE_CUTOFF,
+        trained_at_epoch_us=_TRAINED_AT,
+    )
+    result = train_model_candidate(request)
+    assert isinstance(result, ModelTrainingFailure)
+    assert result.reason == "label_exit_session_not_in_calendar"
+
+
+def test_null_feature_rows_keep_rule_and_linear_row_counts_parity() -> None:
+    features = _feature_frame().with_columns(
+        pl.when(pl.col("session") == SESSIONS[27])
+        .then(None)
+        .otherwise(pl.col("momentum_20d"))
+        .alias("momentum_20d")
+    )
+    rule = train_model_candidate(_request(kind=ModelKind.RULE, features=features))
+    linear = train_model_candidate(_request(kind=ModelKind.LINEAR, features=features))
+    assert isinstance(rule, ModelTrainingSuccess)
+    assert isinstance(linear, ModelTrainingSuccess)
+    rule_keys = {(row.entity_id, row.decision_session) for row in rule.predictions.rows}
+    linear_keys = {
+        (row.entity_id, row.decision_session) for row in linear.predictions.rows
+    }
+    assert rule_keys == linear_keys  # 同一缺失策略：null 行同被中位数填补
+
+
 def test_isolation_report_counts_by_real_intervals() -> None:
     from ditto_features.evaluation.research_labels import (
         build_forward_return_labels,

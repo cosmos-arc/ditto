@@ -147,10 +147,12 @@ def load_model_training_artifact(
     except (KeyError, TypeError) as error:
         raise _inference_error("training_artifact_payload_invalid") from error
     model_state = reader.read_indexed_json(
-        model_state_artifact_id(training.model_state_sha256)
+        model_state_artifact_id(training.registration_hash, training.model_state_sha256)
     )
     transform_raw = reader.read_indexed_json(
-        transform_state_artifact_id(training.transform_state_sha256)
+        transform_state_artifact_id(
+            training.registration_hash, training.transform_state_sha256
+        )
     )
     if model_state_sha256(model_state) != training.model_state_sha256:
         raise _inference_error("model_state_checksum_drift")
@@ -168,7 +170,7 @@ def verify_loaded_model_integrity(
     artifact: LoadedModelArtifact,
     lineage: ModelCandidateLineage,
 ) -> None:
-    """Verify registration identity and feature schema before inference."""
+    """Verify registration identity and kind state before inference."""
     if (
         artifact.training.registration_hash != lineage.registration_hash
         or artifact.training.feature_names != lineage.feature_names
@@ -179,10 +181,18 @@ def verify_loaded_model_integrity(
             observed=artifact.training.registration_hash,
         )
     if lineage.model_kind is ModelKind.RULE:
-        if artifact.model_state.get("ranking_feature") not in lineage.feature_names:
+        if (
+            artifact.model_state.get("ranking_feature")
+            != lineage.hyperparameters["ranking_feature"]
+        ):
             raise _inference_error("rule_model_state_invalid")
     elif lineage.model_kind is ModelKind.LIGHTGBM:
-        if not isinstance(artifact.model_state.get("booster_model"), str):
+        state = artifact.model_state
+        if (
+            not isinstance(state.get("booster_model"), str)
+            or tuple(state.get("feature_names") or ())  # type: ignore[arg-type]
+            != lineage.feature_names
+        ):
             raise _inference_error("lightgbm_model_state_invalid")
     elif not isinstance(artifact.model_state.get("coef"), list):
         raise _inference_error("linear_model_state_invalid")
@@ -197,9 +207,11 @@ class ModelInferenceRequest:
     feature_frame: pl.DataFrame
     decision_sessions: tuple[date, ...]
     decision_time_epoch_us: int
+    feature_snapshot_id: str
+    knowledge_cutoff_epoch_us: int
 
     def __post_init__(self) -> None:
-        """Validate frame schema, sessions, and decision-time binding."""
+        """Validate frame schema, sessions, and the as-of decision binding."""
         if type(self.feature_frame) is not pl.DataFrame:
             raise _inference_error("feature_frame_invalid")
         schema = self.feature_frame.schema
@@ -226,10 +238,16 @@ class ModelInferenceRequest:
         )
         if not observed_sessions or not observed_sessions <= allowed:
             raise _inference_error("feature_frame_sessions_outside_decision_context")
-        if type(self.decision_time_epoch_us) is not int or (
-            self.decision_time_epoch_us < 0
+        for field_name in (
+            "decision_time_epoch_us",
+            "knowledge_cutoff_epoch_us",
         ):
-            raise _inference_error("decision_time_invalid")
+            if type(getattr(self, field_name)) is not int or (
+                getattr(self, field_name) < 0
+            ):
+                raise _inference_error(f"{field_name}_invalid")
+        if type(self.feature_snapshot_id) is not str or not self.feature_snapshot_id:
+            raise _inference_error("feature_snapshot_invalid")
 
 
 @dataclass(frozen=True, slots=True)
@@ -270,7 +288,7 @@ def _linear_weights_from_state(
     return weights, float(intercept)
 
 
-def infer_model_predictions(
+def infer_model_predictions(  # noqa: PLR0911, C901 - fail-closed recovery stages
     request: ModelInferenceRequest,
 ) -> ModelInferenceSuccess | ModelInferenceFailure:
     """Score one decision context with a recovered model, or refuse."""
@@ -283,38 +301,56 @@ def infer_model_predictions(
     training = request.artifact.training
     if training.trained_at_epoch_us > request.decision_time_epoch_us:
         return ModelInferenceFailure("model_not_complete_at_decision_time")
+    if request.feature_snapshot_id != training.snapshot_id:
+        return ModelInferenceFailure("feature_snapshot_mismatch")
+    if request.knowledge_cutoff_epoch_us > request.decision_time_epoch_us:
+        # Feature knowledge must not reach past the decision itself.
+        return ModelInferenceFailure("knowledge_cutoff_after_decision_time")
     lineage = request.lineage
     frame = request.feature_frame
     if lineage.model_kind is ModelKind.RULE:
-        prediction_values = frame.get_column(
-            cast("str", lineage.hyperparameters["ranking_feature"])
+        # Same frozen median policy as the other kinds: all baselines score
+        # the same cross-section, row-level nulls included.
+        ranking_feature = cast("str", lineage.hyperparameters["ranking_feature"])
+        stats = request.artifact.transform_state[ranking_feature]
+        prediction_values = frame.get_column(ranking_feature).fill_null(
+            value=stats["median"]
         )
-    elif lineage.model_kind is ModelKind.LIGHTGBM:
+        scored = _scored_frame(frame, prediction_values)
+        if scored.height == 0:
+            return ModelInferenceFailure("predictions_non_finite")
+        return _success(training, scored)
+    try:
         matrix = transform_feature_matrix(
             frame, lineage.feature_names, request.artifact.transform_state
         )
-        try:
+        if lineage.model_kind is ModelKind.LIGHTGBM:
             prediction_values = pl.Series(
                 lightgbm_predictions_from_state(request.artifact.model_state, matrix)
             )
-        except AppProcessError as error:
-            return ModelInferenceFailure(
-                str(error.details.get("reason", "lightgbm_inference_failed"))
+        else:
+            linear = _linear_weights_from_state(
+                request.artifact.model_state, len(lineage.feature_names)
             )
-    else:
-        linear = _linear_weights_from_state(
-            request.artifact.model_state, len(lineage.feature_names)
+            if linear is None:
+                return ModelInferenceFailure("linear_model_state_invalid")
+            weights, intercept_value = linear
+            prediction_values = pl.Series(
+                matrix @ np.asarray(weights, dtype=np.float64) + intercept_value
+            )
+    except AppProcessError as error:
+        return ModelInferenceFailure(
+            str(error.details.get("reason", "inference_execution_failed"))
         )
-        if linear is None:
-            return ModelInferenceFailure("linear_model_state_invalid")
-        weights, intercept_value = linear
-        matrix = transform_feature_matrix(
-            frame, lineage.feature_names, request.artifact.transform_state
-        )
-        prediction_values = pl.Series(
-            matrix @ np.asarray(weights, dtype=np.float64) + intercept_value
-        )
-    scored = (
+    scored = _scored_frame(frame, prediction_values)
+    if scored.height == 0:
+        return ModelInferenceFailure("predictions_non_finite")
+    return _success(training, scored)
+
+
+def _scored_frame(frame: pl.DataFrame, prediction_values: pl.Series) -> pl.DataFrame:
+    """Attach finite-filtered prediction values to the decision frame."""
+    return (
         frame.select(
             [
                 pl.col(_ENTITY_COLUMN),
@@ -324,8 +360,13 @@ def infer_model_predictions(
         .with_columns(prediction_values.alias("prediction"))
         .filter(pl.col("prediction").is_not_null() & pl.col("prediction").is_finite())
     )
-    if scored.height == 0:
-        return ModelInferenceFailure("predictions_non_finite")
+
+
+def _success(
+    training: ModelTrainingRecord,
+    scored: pl.DataFrame,
+) -> ModelInferenceSuccess:
+    """Freeze verified rows bound to the recovered training artifact."""
     rows = tuple(
         ModelPredictionRow(
             entity_id=item[_ENTITY_COLUMN],

@@ -463,11 +463,23 @@ def training_artifact_id(training_record_hash: str) -> str:
     return f"model-training-{training_record_hash}"
 
 
-def model_state_artifact_id(model_state_sha256: str) -> str:
-    """Return the indexed artifact id of one frozen model state."""
-    return f"model-model-state-{model_state_sha256}"
+def model_state_artifact_id(registration_hash: str, model_state_sha256: str) -> str:
+    """
+    Return the indexed artifact id of one frozen model state.
+
+    Ids are scoped by the candidate registration AND content: sibling
+    candidates sharing one fold and feature set often produce byte-identical
+    transform states, and the indexed store requires one id to resolve to
+    exactly one candidate-scoped path.
+    """
+    return f"model-model-state-{registration_hash[:16]}-{model_state_sha256[:16]}"
 
 
-def transform_state_artifact_id(transform_state_sha256: str) -> str:
+def transform_state_artifact_id(
+    registration_hash: str,
+    transform_state_sha256: str,
+) -> str:
     """Return the indexed artifact id of one frozen transform state."""
-    return f"model-transform-state-{transform_state_sha256}"
+    return (
+        f"model-transform-state-{registration_hash[:16]}-{transform_state_sha256[:16]}"
+    )

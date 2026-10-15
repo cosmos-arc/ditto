@@ -192,7 +192,9 @@ def _publish(service: ResearchArtifactService, kind: ModelKind) -> ModelTraining
         result.model_state_bytes,
         result.transform_state_bytes,
     )
-    sink.publish_predictions(context, result.predictions)
+    sink.publish_predictions(
+        context, result.predictions, trained_at_epoch_us=_TRAINED_AT
+    )
     return result
 
 
@@ -217,6 +219,8 @@ def test_recovery_inference_round_trips_published_artifacts(
             feature_frame=_decision_frame(),
             decision_sessions=(SESSIONS[27],),
             decision_time_epoch_us=_DECISION_TIME,
+            feature_snapshot_id="snap-inference-1",
+            knowledge_cutoff_epoch_us=_TRAINED_AT,
         )
     )
     assert isinstance(result, ModelInferenceSuccess)
@@ -248,6 +252,8 @@ def test_recovery_inference_refuses_model_incomplete_at_decision(
             feature_frame=_decision_frame(),
             decision_sessions=(SESSIONS[27],),
             decision_time_epoch_us=_TRAINED_AT - 1,
+            feature_snapshot_id="snap-inference-1",
+            knowledge_cutoff_epoch_us=_TRAINED_AT,
         )
     )
     assert isinstance(result, ModelInferenceFailure)
@@ -278,6 +284,8 @@ def test_recovery_refuses_registration_identity_mismatch(
             feature_frame=_decision_frame(),
             decision_sessions=(SESSIONS[27],),
             decision_time_epoch_us=_DECISION_TIME,
+            feature_snapshot_id="snap-inference-1",
+            knowledge_cutoff_epoch_us=_TRAINED_AT,
         )
     )
     assert isinstance(result, ModelInferenceFailure)
@@ -316,6 +324,8 @@ def test_inference_refuses_schema_drift_frame(
             feature_frame=drifted,
             decision_sessions=(SESSIONS[27],),
             decision_time_epoch_us=_DECISION_TIME,
+            feature_snapshot_id="snap-inference-1",
+            knowledge_cutoff_epoch_us=_TRAINED_AT,
         )
     assert error.value.details["reason"] == "feature_frame_schema_drift"
 
@@ -334,11 +344,73 @@ def test_inference_refuses_sessions_outside_decision_context(
             feature_frame=_feature_frame().filter(pl.col("session") <= SESSIONS[27]),
             decision_sessions=(SESSIONS[27],),
             decision_time_epoch_us=_DECISION_TIME,
+            feature_snapshot_id="snap-inference-1",
+            knowledge_cutoff_epoch_us=_TRAINED_AT,
         )
     assert (
         error.value.details["reason"]
         == "feature_frame_sessions_outside_decision_context"
     )
+
+
+def test_inference_returns_typed_failure_for_all_null_feature_column(
+    artifact_service: ResearchArtifactService,
+) -> None:
+    published = _publish(artifact_service, ModelKind.LINEAR)
+    artifact = load_model_training_artifact(
+        artifact_service, f"model-training-{published.training.artifact_hash}"
+    )
+    frame = _decision_frame().with_columns(
+        pl.lit(None, dtype=pl.Float64).alias("ep_ttm")
+    )
+    result = infer_model_predictions(
+        ModelInferenceRequest(
+            lineage=_lineage(),
+            artifact=artifact,
+            feature_frame=frame,
+            decision_sessions=(SESSIONS[27],),
+            decision_time_epoch_us=_DECISION_TIME,
+            feature_snapshot_id="snap-inference-1",
+            knowledge_cutoff_epoch_us=_TRAINED_AT,
+        )
+    )
+    assert isinstance(result, ModelInferenceFailure)
+    assert result.reason == "feature_column_missing"
+
+
+def test_inference_refuses_snapshot_and_cutoff_violations(
+    artifact_service: ResearchArtifactService,
+) -> None:
+    published = _publish(artifact_service, ModelKind.LINEAR)
+    artifact = load_model_training_artifact(
+        artifact_service, f"model-training-{published.training.artifact_hash}"
+    )
+    wrong_snapshot = infer_model_predictions(
+        ModelInferenceRequest(
+            lineage=_lineage(),
+            artifact=artifact,
+            feature_frame=_decision_frame(),
+            decision_sessions=(SESSIONS[27],),
+            decision_time_epoch_us=_DECISION_TIME,
+            feature_snapshot_id="snap-other",
+            knowledge_cutoff_epoch_us=_TRAINED_AT,
+        )
+    )
+    assert isinstance(wrong_snapshot, ModelInferenceFailure)
+    assert wrong_snapshot.reason == "feature_snapshot_mismatch"
+    late_cutoff = infer_model_predictions(
+        ModelInferenceRequest(
+            lineage=_lineage(),
+            artifact=artifact,
+            feature_frame=_decision_frame(),
+            decision_sessions=(SESSIONS[27],),
+            decision_time_epoch_us=_DECISION_TIME,
+            feature_snapshot_id="snap-inference-1",
+            knowledge_cutoff_epoch_us=_DECISION_TIME + 1,
+        )
+    )
+    assert isinstance(late_cutoff, ModelInferenceFailure)
+    assert late_cutoff.reason == "knowledge_cutoff_after_decision_time"
 
 
 def test_checksum_verification_binds_published_state_bytes(
@@ -347,15 +419,14 @@ def test_checksum_verification_binds_published_state_bytes(
     published = _publish(artifact_service, ModelKind.LINEAR)
     training_id = f"model-training-{published.training.artifact_hash}"
     record = artifact_service.read_indexed_json(training_id)
-    state = artifact_service.read_indexed_json(
-        f"model-model-state-{record['model_state_sha256']}"
+    state_id = (
+        f"model-model-state-{str(record['registration_hash'])[:16]}"
+        f"-{str(record['model_state_sha256'])[:16]}"
     )
+    state = artifact_service.read_indexed_json(state_id)
     tampered = dict(state)
     tampered["intercept"] = float(tampered["intercept"]) + 1.0  # type: ignore[operator]
-    tampered_reader = _TamperedReader(
-        artifact_service,
-        {f"model-model-state-{record['model_state_sha256']}": tampered},
-    )
+    tampered_reader = _TamperedReader(artifact_service, {state_id: tampered})
     with pytest.raises(AppProcessError) as error:
         load_model_training_artifact(tampered_reader, training_id)
     assert error.value.details["reason"] == "model_state_checksum_drift"
