@@ -445,6 +445,18 @@ def test_production_analysis_wiring_allowances_are_owned_and_reasoned():
             "packages/application/src/ditto_application/processes/experiments/"
             "generated_candidate_pit.py"
         ),
+        (
+            "packages/application/src/ditto_application/processes/experiments/"
+            "model_candidates.py"
+        ),
+        (
+            "packages/application/src/ditto_application/processes/experiments/"
+            "model_artifact_publication.py"
+        ),
+        (
+            "packages/application/src/ditto_application/processes/experiments/"
+            "model_inference.py"
+        ),
     } == {allowance.path for allowance in allowances}
     assert not any(hasattr(allowance, "match") for allowance in allowances)
 
