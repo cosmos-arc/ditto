@@ -3,7 +3,8 @@
 
 Runs against a brand-new isolated root with the configured Tushare source and
 the maintainer-confirmed config declaration. Never places broker orders and
-never reuses an existing root (the script refuses to overwrite).
+never reuses an existing root (the script refuses to overwrite; --resume is
+the explicit opt-in for idempotent recovery).
 """
 
 from __future__ import annotations
@@ -89,13 +90,23 @@ def main() -> None:
         default=None,
         help="override signal day (default: today in Asia/Shanghai)",
     )
+    parser.add_argument(
+        "--resume",
+        action="store_true",
+        help="reuse an existing root: skip init/ingest and re-run the "
+        "idempotent journey chain to (re)write report.json",
+    )
     args = parser.parse_args()
     root = args.root.resolve()
     global SIGNAL_DATE  # noqa: PLW0603
     if args.signal_date:
         SIGNAL_DATE = args.signal_date
+    elif args.resume and (root / "report.json").is_file():
+        SIGNAL_DATE = str(json.loads((root / "report.json").read_text())["signal_date"])
     else:
         SIGNAL_DATE = datetime.now(ZoneInfo("Asia/Shanghai")).date().isoformat()
+    if not args.resume and (root / "report.json").is_file():
+        raise RuntimeError(f"root already has a report; use --resume: {root}")
     os.environ.update(
         DITTO_CONFIG_ROOT=str(args.config_root.resolve()),
         DITTO_STATE_ROOT=str(root / "state"),
@@ -110,6 +121,20 @@ def main() -> None:
         report = json.loads((root / "report.json").read_text())
         report["execute_sha"] = _git_sha(git)
         _execute_phase(root, report)
+        report["finished_at"] = datetime.now(UTC).isoformat()
+        _write_report(root, report)
+        sys.stdout.write(str(root / "report.json") + "\n")
+        return
+    if args.resume:
+        if not root.is_dir():
+            raise RuntimeError(f"--resume needs an existing root: {root}")
+        report: dict[str, object] = {
+            "sha": _git_sha(git),
+            "root": str(root),
+            "resumed_at": datetime.now(UTC).isoformat(),
+            "signal_date": SIGNAL_DATE,
+        }
+        _journey_phase(root, report)
         report["finished_at"] = datetime.now(UTC).isoformat()
         _write_report(root, report)
         sys.stdout.write(str(root / "report.json") + "\n")
@@ -182,6 +207,14 @@ def _execute_phase(root: Path, report: dict[str, object]) -> None:
         }
         report["execution_outcomes"] = [asdict(outcome) for outcome in outcomes]
         report["execution_replay_equal"] = replay_equal
+        # 估值在 T+1 晚跑：此刻 trade-day bar(knowledge_date=T+1)已可见。
+        report["valuation"] = asdict(
+            _run_valuation(
+                container,
+                str(version["version_id"]),
+                execution_daily.snapshot_id,
+            )
+        )
         wait_for_cutoff_boundary()
         statement = container.get(AccountLedgerQuery).get_paper(
             account_id=ACCOUNT_ID,
@@ -255,10 +288,8 @@ def _journey_phase(root: Path, report: dict[str, object]) -> None:
             container, by_dataset, signal_daily, version.version_id, authorization_id
         )
         report["handoff_receipt"] = asdict(handoff)
-        valuation = _run_valuation(
-            container, version.version_id, signal_daily.snapshot_id
-        )
-        report["valuation"] = asdict(valuation)
+        # 估值不在信号晚跑：日线生产者按 knowledge_date=T+1 盖章，当日 bar
+        # 对当晚 cutoff 不可见；估值随 execute 相位在 T+1 晚执行。
         wait_for_cutoff_boundary()
         statement = container.get(AccountLedgerQuery).get_paper(
             account_id=ACCOUNT_ID,
@@ -273,9 +304,10 @@ def _journey_phase(root: Path, report: dict[str, object]) -> None:
         report["journey_status"] = "COMPLETED"
         report["execution_leg"] = (
             "Same-evening live cadence: this version was saved on the signal day "
-            "after its close, so it stays executable. Run the fill leg after the "
-            f"trade-day ({TRADE_DATE}) close: paper_journey.py --phase execute "
-            f"--root {root}"
+            "after its close, so it stays executable. The daily-bar producer "
+            "stamps knowledge_date = trade_date + 1, so run the fill leg one "
+            f"calendar day after the trade day ({TRADE_DATE}): "
+            f"paper_journey.py --phase execute --root {root}"
         )
 
 
