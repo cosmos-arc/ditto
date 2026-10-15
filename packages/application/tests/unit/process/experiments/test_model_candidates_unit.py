@@ -30,13 +30,14 @@ from ditto_application.processes.experiments.model_candidates import (
 from ditto_application.research_validation_windows import ValidationFoldPlan
 from ditto_features.evaluation.research_labels import (
     build_forward_return_labels,
+    label_spec_hash,
 )
 
 _START = date(2026, 3, 2)
 SESSIONS = tuple(_START + timedelta(days=index) for index in range(30))
 ENTITIES = ("000001.SZ", "000002.SZ", "600000.SH")
 _EPOCH_BASE = 5_000_000_000_000_000
-_LABEL_HASH = "a" * 64
+_LABEL_HASH = label_spec_hash()
 _CODE_ENV = {
     "implementation_key": "ditto_application.model_candidates.ridge.v1",
     "python": "3.13.14",
@@ -305,6 +306,7 @@ def test_rule_model_predicts_registered_factor_value() -> None:
     assert observed == pytest.approx(expected)
 
 
+@pytest.mark.pit
 def test_future_labels_do_not_change_early_training() -> None:
     baseline = train_model_candidate(_request())
     assert isinstance(baseline, ModelTrainingSuccess)
@@ -317,6 +319,7 @@ def test_future_labels_do_not_change_early_training() -> None:
     assert modified.predictions.artifact_hash == baseline.predictions.artifact_hash
 
 
+@pytest.mark.pit
 def test_validation_period_outliers_do_not_change_training() -> None:
     baseline = train_model_candidate(_request())
     assert isinstance(baseline, ModelTrainingSuccess)
@@ -329,6 +332,7 @@ def test_validation_period_outliers_do_not_change_training() -> None:
     assert outlier.predictions.artifact_hash != baseline.predictions.artifact_hash
 
 
+@pytest.mark.pit
 def test_future_constituents_do_not_change_early_training() -> None:
     baseline = train_model_candidate(_request())
     assert isinstance(baseline, ModelTrainingSuccess)
@@ -447,6 +451,7 @@ def test_lightgbm_retraining_is_reproducible_within_tolerance() -> None:
     )
 
 
+@pytest.mark.pit
 def test_lightgbm_future_labels_do_not_change_early_training() -> None:
     baseline = train_model_candidate(_request(kind=ModelKind.LIGHTGBM))
     modified = train_model_candidate(

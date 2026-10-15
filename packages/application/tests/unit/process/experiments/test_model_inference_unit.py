@@ -2,12 +2,8 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
 from datetime import date, timedelta
-from pathlib import Path
-from threading import Lock
 
-import orjson
 import polars as pl
 import pytest
 from ditto_analysis.experiments.model_lineage import (
@@ -22,7 +18,6 @@ from ditto_analysis.experiments.models import (
     FoldId,
 )
 from ditto_analysis.experiments.persistence import (
-    ArtifactRecord,
     DateWindow,
     FoldRole,
     LeaseFence,
@@ -46,13 +41,16 @@ from ditto_application.processes.experiments.model_inference import (
     load_model_training_artifact,
 )
 from ditto_application.research_validation_windows import ValidationFoldPlan
-from ditto_features.evaluation.research_labels import build_forward_return_labels
+from ditto_features.evaluation.research_labels import (
+    build_forward_return_labels,
+    label_spec_hash,
+)
 
 _START = date(2026, 3, 2)
 SESSIONS = tuple(_START + timedelta(days=index) for index in range(30))
 ENTITIES = ("000001.SZ", "000002.SZ", "600000.SH")
 _EPOCH_BASE = 5_000_000_000_000_000
-_LABEL_HASH = "a" * 64
+_LABEL_HASH = label_spec_hash()
 _CODE_ENV = {
     "implementation_key": "ditto_application.model_candidates.ridge.v1",
     "python": "3.13.14",
@@ -171,66 +169,6 @@ def _training_request(kind: ModelKind = ModelKind.LINEAR) -> ModelFoldTrainingRe
     )
 
 
-class _MemoryArtifactIndex:
-    """Minimal reader/writer port pair backed by an in-memory record map."""
-
-    def __init__(self, root: Path) -> None:
-        self.artifact_root = root
-        self.records: dict[str, ArtifactRecord] = {}
-        self._lock = Lock()
-
-    def get_artifact(self, artifact_id: str) -> ArtifactRecord | None:
-        return self.records.get(artifact_id)
-
-    def get_artifact_by_relative_path(
-        self, relative_path: str
-    ) -> ArtifactRecord | None:
-        for record in self.records.values():
-            if record.relative_path == relative_path:
-                return record
-        return None
-
-    def add_artifact(
-        self,
-        record: ArtifactRecord,
-        *,
-        lease_fence: LeaseFence,
-        now_epoch_us: int,
-        commit_guard: Callable[[], None],
-    ) -> None:
-        _ = lease_fence, now_epoch_us
-        with self._lock:
-            existing = self.records.get(record.artifact_id)
-            if existing is not None:
-                if existing.content_hash != record.content_hash:
-                    raise AppProcessError("artifact replay drift")
-                commit_guard()
-                return
-            self.records[record.artifact_id] = record
-            commit_guard()
-
-    def pin_artifact(
-        self,
-        artifact_id: str,
-        *,
-        expected_revision: int,
-        pinned_at: object,
-        commit_guard: Callable[[], None],
-    ) -> ArtifactRecord:
-        raise NotImplementedError
-
-
-@pytest.fixture
-def service(tmp_path: Path) -> ResearchArtifactService:
-    index = _MemoryArtifactIndex(tmp_path)
-    return ResearchArtifactService(
-        artifact_root=tmp_path,
-        indexed_artifact_root=tmp_path,
-        artifact_reader=index,
-        artifact_writer=index,
-    )
-
-
 def _publish(service: ResearchArtifactService, kind: ModelKind) -> ModelTrainingSuccess:
     result = train_model_candidate(_training_request(kind))
     assert isinstance(result, ModelTrainingSuccess)
@@ -265,11 +203,11 @@ def _decision_frame() -> pl.DataFrame:
 @pytest.mark.parametrize("kind", [ModelKind.LINEAR, ModelKind.RULE, ModelKind.LIGHTGBM])
 @pytest.mark.slow  # lightgbm 首次导入约 1s（#328 >0.5s 治理）
 def test_recovery_inference_round_trips_published_artifacts(
-    service: ResearchArtifactService, kind: ModelKind
+    artifact_service: ResearchArtifactService, kind: ModelKind
 ) -> None:
-    published = _publish(service, kind)
+    published = _publish(artifact_service, kind)
     artifact = load_model_training_artifact(
-        service, f"model-training-{published.training.artifact_hash}"
+        artifact_service, f"model-training-{published.training.artifact_hash}"
     )
     assert artifact.training.artifact_hash == published.training.artifact_hash
     result = infer_model_predictions(
@@ -297,11 +235,11 @@ def test_recovery_inference_round_trips_published_artifacts(
 
 
 def test_recovery_inference_refuses_model_incomplete_at_decision(
-    service: ResearchArtifactService,
+    artifact_service: ResearchArtifactService,
 ) -> None:
-    published = _publish(service, ModelKind.LINEAR)
+    published = _publish(artifact_service, ModelKind.LINEAR)
     artifact = load_model_training_artifact(
-        service, f"model-training-{published.training.artifact_hash}"
+        artifact_service, f"model-training-{published.training.artifact_hash}"
     )
     result = infer_model_predictions(
         ModelInferenceRequest(
@@ -317,11 +255,11 @@ def test_recovery_inference_refuses_model_incomplete_at_decision(
 
 
 def test_recovery_refuses_registration_identity_mismatch(
-    service: ResearchArtifactService,
+    artifact_service: ResearchArtifactService,
 ) -> None:
-    published = _publish(service, ModelKind.LINEAR)
+    published = _publish(artifact_service, ModelKind.LINEAR)
     artifact = load_model_training_artifact(
-        service, f"model-training-{published.training.artifact_hash}"
+        artifact_service, f"model-training-{published.training.artifact_hash}"
     )
     other = ModelCandidateLineage(
         model_kind=ModelKind.LINEAR,
@@ -364,11 +302,11 @@ class _TamperedReader:
 
 
 def test_inference_refuses_schema_drift_frame(
-    service: ResearchArtifactService,
+    artifact_service: ResearchArtifactService,
 ) -> None:
-    published = _publish(service, ModelKind.LINEAR)
+    published = _publish(artifact_service, ModelKind.LINEAR)
     artifact = load_model_training_artifact(
-        service, f"model-training-{published.training.artifact_hash}"
+        artifact_service, f"model-training-{published.training.artifact_hash}"
     )
     drifted = _decision_frame().drop("ep_ttm")
     with pytest.raises(AppProcessError) as error:
@@ -383,11 +321,11 @@ def test_inference_refuses_schema_drift_frame(
 
 
 def test_inference_refuses_sessions_outside_decision_context(
-    service: ResearchArtifactService,
+    artifact_service: ResearchArtifactService,
 ) -> None:
-    published = _publish(service, ModelKind.LINEAR)
+    published = _publish(artifact_service, ModelKind.LINEAR)
     artifact = load_model_training_artifact(
-        service, f"model-training-{published.training.artifact_hash}"
+        artifact_service, f"model-training-{published.training.artifact_hash}"
     )
     with pytest.raises(AppProcessError) as error:
         ModelInferenceRequest(
@@ -404,20 +342,20 @@ def test_inference_refuses_sessions_outside_decision_context(
 
 
 def test_checksum_verification_binds_published_state_bytes(
-    service: ResearchArtifactService,
+    artifact_service: ResearchArtifactService,
 ) -> None:
-    published = _publish(service, ModelKind.LINEAR)
+    published = _publish(artifact_service, ModelKind.LINEAR)
     training_id = f"model-training-{published.training.artifact_hash}"
-    record = service.read_indexed_json(training_id)
-    state = service.read_indexed_json(
+    record = artifact_service.read_indexed_json(training_id)
+    state = artifact_service.read_indexed_json(
         f"model-model-state-{record['model_state_sha256']}"
     )
     tampered = dict(state)
     tampered["intercept"] = float(tampered["intercept"]) + 1.0  # type: ignore[operator]
     tampered_reader = _TamperedReader(
-        service, {f"model-model-state-{record['model_state_sha256']}": tampered}
+        artifact_service,
+        {f"model-model-state-{record['model_state_sha256']}": tampered},
     )
     with pytest.raises(AppProcessError) as error:
         load_model_training_artifact(tampered_reader, training_id)
     assert error.value.details["reason"] == "model_state_checksum_drift"
-    _ = orjson  # keep orjson import meaningful for payload assertions

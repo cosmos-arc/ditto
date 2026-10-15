@@ -13,8 +13,8 @@ from ditto_analysis.experiments.model_lineage import (
     ModelPredictionRow,
     ModelTrainingRecord,
     TrainFittedTransformSpec,
-    freeze_prediction_rows,
 )
+from ditto_analysis.experiments.persistence import canonical_payload
 
 _LABEL_HASH = "a" * 64
 _CODE_ENV = {
@@ -152,10 +152,18 @@ def test_transform_spec_rejects_recipe_drift() -> None:
         )
 
 
+def _registration_payload() -> dict[str, object]:
+    """Return one valid lineage payload bound to the linear test lineage."""
+    return _lineage().canonical_payload()
+
+
 def _training_record(**overrides: object) -> ModelTrainingRecord:
+    payload = _registration_payload()
+    registration_hash = canonical_payload(payload).content_hash.value
     fields: dict[str, object] = {
         "schema": MODEL_TRAINING_ARTIFACT_SCHEMA,
-        "registration_hash": "c" * 64,
+        "registration_hash": registration_hash,
+        "registration_payload": payload,
         "snapshot_id": "snap-1",
         "train_window_start": "2025-01-01",
         "train_window_end": "2025-06-30",
@@ -173,6 +181,14 @@ def _training_record(**overrides: object) -> ModelTrainingRecord:
 def test_training_record_accepts_complete_contract() -> None:
     record = _training_record()
     assert record.artifact_hash == _training_record().artifact_hash
+    assert record.registration_hash == _lineage().registration_hash
+
+
+def test_training_record_rejects_registration_payload_drift() -> None:
+    tampered = dict(_registration_payload())
+    tampered["seed"] = 99
+    with pytest.raises(ExperimentSpecError):
+        _training_record(registration_payload=tampered)
 
 
 def test_training_record_rejects_training_before_maturity() -> None:
@@ -231,19 +247,3 @@ def test_prediction_record_rejects_duplicates_and_empty() -> None:
 def test_prediction_row_rejects_nonfinite() -> None:
     with pytest.raises(ExperimentSpecError):
         ModelPredictionRow("000001.SZ", "2025-07-01", float("nan"))
-
-
-def test_freeze_prediction_rows_coerces_mappings() -> None:
-    frozen = freeze_prediction_rows(
-        [
-            {
-                "entity_id": "000001.SZ",
-                "decision_session": "2025-07-01",
-                "prediction": 1,
-            },
-            ModelPredictionRow("000002.SZ", "2025-07-02", 0.5),
-        ]
-    )
-    assert frozen[0].prediction == 1.0
-    with pytest.raises(ExperimentSpecError):
-        freeze_prediction_rows([{"entity_id": "x"}])

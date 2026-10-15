@@ -17,7 +17,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import date
 from itertools import pairwise
-from typing import Protocol, TypeGuard, cast
+from typing import TypeGuard, cast
 
 import numpy as np
 import orjson
@@ -31,18 +31,19 @@ from ditto_analysis.experiments.model_lineage import (
     ModelPredictionRecord,
     ModelPredictionRow,
     ModelTrainingRecord,
+    TrainFittedTransformSpec,
 )
 from ditto_analysis.experiments.persistence import DateWindow
 from ditto_features.evaluation.research_labels import (
     LABEL_STATUS_MATURE,
     ResearchLabelFrame,
+    label_spec_hash,
 )
 
 from ditto_application.exceptions import AppProcessError
 from ditto_application.research_validation_windows import ValidationFoldPlan
 
 __all__ = [
-    "ModelArtifactSink",
     "ModelFoldIsolationReport",
     "ModelFoldTrainingRequest",
     "ModelTrainingFailure",
@@ -113,12 +114,7 @@ class ModelFoldTrainingRequest:
             raise _training_error("fold_train_window_missing")
         if type(self.labels) is not ResearchLabelFrame:
             raise _training_error("labels_invalid")
-        if self.labels.label_id != self.lineage.label_id:
-            raise _training_error(
-                "label_identity_mismatch",
-                registered=self.lineage.label_id,
-                provided=self.labels.label_id,
-            )
+        _require_label_binding(self.labels, self.lineage)
         if type(self.feature_frame) is not pl.DataFrame:
             raise _training_error("feature_frame_invalid")
         _require_feature_frame(self.feature_frame, self.lineage.feature_names)
@@ -135,6 +131,25 @@ class ModelFoldTrainingRequest:
                 or getattr(self, field_name) < 0
             ):
                 raise _training_error("cutoff_invalid", field=field_name)
+
+
+def _require_label_binding(
+    labels: ResearchLabelFrame,
+    lineage: ModelCandidateLineage,
+) -> None:
+    """Bind the registration to the label identity and builder actually in use."""
+    if labels.label_id != lineage.label_id:
+        raise _training_error(
+            "label_identity_mismatch",
+            registered=lineage.label_id,
+            provided=labels.label_id,
+        )
+    if lineage.label_spec_hash != label_spec_hash():
+        raise _training_error(
+            "label_spec_hash_not_bound_to_builder",
+            registered=lineage.label_spec_hash,
+            builder=label_spec_hash(),
+        )
 
 
 def _require_feature_frame(
@@ -215,27 +230,6 @@ class ModelTrainingFailure:
     details: Mapping[str, object] | None = None
 
 
-class ModelArtifactSink(Protocol):
-    """Durable publication port for frozen model bytes and records."""
-
-    def publish_training(
-        self,
-        training: ModelTrainingRecord,
-        model_state_bytes: bytes,
-        transform_state_bytes: bytes,
-    ) -> None:
-        """Persist immutable training evidence before any success marking."""
-        ...
-
-    def publish_predictions(
-        self,
-        predictions: ModelPredictionRecord,
-        payload_bytes: bytes,
-    ) -> None:
-        """Persist immutable prediction rows bound to their model artifact."""
-        ...
-
-
 def _session_ordinals(sessions: tuple[date, ...]) -> dict[date, int]:
     return {session: ordinal for ordinal, session in enumerate(sessions)}
 
@@ -246,7 +240,6 @@ def validate_fold_label_isolation(
     trading_sessions: tuple[date, ...],
     *,
     knowledge_cutoff_epoch_us: int,
-    holding_sessions: int = 5,
 ) -> tuple[pl.DataFrame, ModelFoldIsolationReport]:
     """
     Retain only training labels isolated from the test window by real dates.
@@ -254,17 +247,17 @@ def validate_fold_label_isolation(
     Purge and embargo are applied on the actual label intervals using session
     ordinals, never on row counts. Labels whose exit session reaches the
     required gap are excluded (purge); immature labels are excluded; the
-    registered embargo must still cover the full label window or the fold is
-    refused outright.
+    registered embargo must still cover the label window carried by the
+    supplied frame or the fold is refused outright.
     """
     if fold.train_window is None:
         raise _training_error("fold_train_window_missing")
     required_gap = max(fold.purge_sessions, fold.embargo_sessions)
-    if fold.embargo_sessions < holding_sessions:
+    if fold.embargo_sessions < labels.holding_sessions:
         raise _training_error(
             "embargo_below_label_window",
             embargo_sessions=fold.embargo_sessions,
-            holding_sessions=holding_sessions,
+            holding_sessions=labels.holding_sessions,
         )
     ordinals = _session_ordinals(trading_sessions)
     test_start_ordinal = ordinals[fold.test_window.start]
@@ -319,27 +312,33 @@ def model_state_sha256(payload: Mapping[str, object]) -> str:
     return hashlib.sha256(canonical_model_state_bytes(payload)).hexdigest()
 
 
-def _canonical_state_bytes(payload: Mapping[str, object]) -> bytes:
-    return canonical_model_state_bytes(payload)
-
-
 def _sha256_hex(payload: bytes) -> str:
     return hashlib.sha256(payload).hexdigest()
 
 
 def _fit_transform_state(
     train_frame: pl.DataFrame,
+    transform_spec: TrainFittedTransformSpec,
     feature_names: tuple[str, ...],
 ) -> tuple[dict[str, dict[str, float]], bytes]:
-    """Fit median imputation, winsorize bounds, and z-score on train rows only."""
+    """
+    Fit median imputation, winsorize bounds, and z-score on train rows only.
+
+    The winsorize bounds come from the registered spec, never from defaults,
+    so changing the registration changes the fitted transform.
+    """
     state: dict[str, dict[str, float]] = {}
     for name in feature_names:
         column = train_frame.get_column(name).drop_nulls()
         if column.len() == 0:
             raise _training_error("train_feature_all_null", feature=name)
         median = cast("float | None", column.median())
-        lower: float | None = column.quantile(0.01, interpolation="linear")
-        upper: float | None = column.quantile(0.99, interpolation="linear")
+        lower: float | None = column.quantile(
+            transform_spec.winsorize_lower_quantile, interpolation="linear"
+        )
+        upper: float | None = column.quantile(
+            transform_spec.winsorize_upper_quantile, interpolation="linear"
+        )
         if median is None or lower is None or upper is None:
             raise _training_error("train_feature_non_finite", feature=name)
         clipped = column.clip(lower_bound=lower, upper_bound=upper)
@@ -357,7 +356,7 @@ def _fit_transform_state(
             "mean": mean,
             "std": std,
         }
-    return state, _canonical_state_bytes(state)
+    return state, canonical_model_state_bytes(state)
 
 
 def transform_feature_matrix(
@@ -369,18 +368,19 @@ def transform_feature_matrix(
     Apply the fitted impute/winsorize/scale recipe to raw feature columns.
 
     Shared by fold training and recovered-model inference so both paths apply
-    exactly one frozen transform implementation.
+    exactly one frozen transform implementation. Row-level nulls follow the
+    frozen training policy (train median); an entirely missing feature column
+    is a different failure and is refused outright.
     """
     columns: list[np.ndarray] = []
     for name in feature_names:
         stats = transform_state[name]
-        column = (
-            frame.get_column(name)
-            .fill_null(value=stats["median"])
-            .clip(
-                lower_bound=stats["winsor_lower"],
-                upper_bound=stats["winsor_upper"],
-            )
+        raw_column = frame.get_column(name)
+        if raw_column.null_count() == raw_column.len():
+            raise _training_error("feature_column_missing", feature=name)
+        column = raw_column.fill_null(value=stats["median"]).clip(
+            lower_bound=stats["winsor_lower"],
+            upper_bound=stats["winsor_upper"],
         )
         scaled = (column - stats["mean"]) / stats["std"]
         columns.append(scaled.to_numpy())
@@ -443,7 +443,7 @@ def _fit_model_state(
         model_state: dict[str, object] = {
             "ranking_feature": cast("str", lineage.hyperparameters["ranking_feature"])
         }
-        return model_state, _canonical_state_bytes(model_state)
+        return model_state, canonical_model_state_bytes(model_state)
     matrix = transform_feature_matrix(joined, lineage.feature_names, transform_state)
     targets = joined.get_column("label_value").to_numpy().astype(np.float64, copy=False)
     if lineage.model_kind is ModelKind.LIGHTGBM:
@@ -454,7 +454,7 @@ def _fit_model_state(
         "coef": [float(value) for value in weights],
         "intercept": intercept,
     }
-    return state, _canonical_state_bytes(state)
+    return state, canonical_model_state_bytes(state)
 
 
 def _fit_lightgbm_state(
@@ -489,7 +489,7 @@ def _fit_lightgbm_state(
         "booster_model": booster.model_to_string(),
         "feature_names": list(lineage.feature_names),
     }
-    return state, _canonical_state_bytes(state)
+    return state, canonical_model_state_bytes(state)
 
 
 def lightgbm_predictions_from_state(
@@ -606,6 +606,7 @@ def _assemble_success(
         training_record = ModelTrainingRecord(
             schema=MODEL_TRAINING_ARTIFACT_SCHEMA,
             registration_hash=lineage.registration_hash,
+            registration_payload=lineage.canonical_payload(),
             snapshot_id=request.snapshot_id,
             train_window_start=train_window.start.isoformat(),
             train_window_end=train_window.end.isoformat(),
@@ -677,7 +678,7 @@ def train_model_candidate(  # noqa: PLR0911 - fail-closed training stages
         return ModelTrainingFailure("label_values_non_finite")
     try:
         transform_state, transform_bytes = _fit_transform_state(
-            joined, lineage.feature_names
+            joined, lineage.transform_spec, lineage.feature_names
         )
         model_state, model_bytes = _fit_model_state(
             lineage, joined, transform_state, seed=lineage.seed

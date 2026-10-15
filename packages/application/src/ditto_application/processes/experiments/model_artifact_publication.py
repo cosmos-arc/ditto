@@ -19,6 +19,9 @@ from ditto_analysis.experiments.artifact_manifest import ArtifactPublicationSpec
 from ditto_analysis.experiments.model_lineage import (
     ModelPredictionRecord,
     ModelTrainingRecord,
+    model_state_artifact_id,
+    training_artifact_id,
+    transform_state_artifact_id,
 )
 from ditto_analysis.experiments.models import (
     AttemptId,
@@ -159,21 +162,23 @@ class IndexedModelArtifactSink:
         record_spec = self._spec(
             context,
             "model-training.json",
-            f"training-{training.artifact_hash}",
+            training_artifact_id(training.artifact_hash).removeprefix("model-"),
             _ARTIFACT_KIND_TRAINING,
             created_at,
         )
         model_spec = self._spec(
             context,
             "model-state.json",
-            f"model-state-{training.model_state_sha256}",
+            model_state_artifact_id(training.model_state_sha256).removeprefix("model-"),
             _ARTIFACT_KIND_TRAINING,
             created_at,
         )
         transform_spec = self._spec(
             context,
             "transform-state.json",
-            f"transform-state-{training.transform_state_sha256}",
+            transform_state_artifact_id(training.transform_state_sha256).removeprefix(
+                "model-"
+            ),
             _ARTIFACT_KIND_TRAINING,
             created_at,
         )

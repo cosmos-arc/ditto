@@ -2,9 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
 from pathlib import Path
-from threading import Lock
 
 import orjson
 import pytest
@@ -22,7 +20,6 @@ from ditto_analysis.experiments.models import (
     FoldId,
 )
 from ditto_analysis.experiments.persistence import (
-    ArtifactRecord,
     LeaseFence,
     canonical_payload,
 )
@@ -32,6 +29,9 @@ from ditto_application.processes.experiments.model_artifact_publication import (
     IndexedModelArtifactSink,
     ModelArtifactPublicationContext,
 )
+from ditto_features.evaluation.research_labels import label_spec_hash
+
+from .conftest import MemoryArtifactIndex
 
 _EXPERIMENT = ExperimentId("experiment-1")
 _CANDIDATE = CandidateId("candidate-1")
@@ -39,72 +39,6 @@ _FOLD = FoldId("fold-1")
 _FINGERPRINT = ContentHash("1" * 64)
 _FENCE = LeaseFence(experiment_id=_EXPERIMENT, owner_token="owner-1", revision=3)
 _NOW_US = 1_000_000
-
-
-class _MemoryArtifactIndex:
-    """Minimal reader/writer port pair for indexed publication tests."""
-
-    def __init__(self, root: Path) -> None:
-        self.artifact_root = root
-        self.records: dict[str, ArtifactRecord] = {}
-        self._lock = Lock()
-
-    # -- reader ---------------------------------------------------------------
-    def get_artifact(self, artifact_id: str) -> ArtifactRecord | None:
-        return self.records.get(artifact_id)
-
-    def get_artifact_by_relative_path(
-        self, relative_path: str
-    ) -> ArtifactRecord | None:
-        for record in self.records.values():
-            if record.relative_path == relative_path:
-                return record
-        return None
-
-    # -- writer ---------------------------------------------------------------
-    def add_artifact(
-        self,
-        record: ArtifactRecord,
-        *,
-        lease_fence: LeaseFence,
-        now_epoch_us: int,
-        commit_guard: Callable[[], None],
-    ) -> None:
-        _ = lease_fence, now_epoch_us
-        with self._lock:
-            existing = self.records.get(record.artifact_id)
-            if existing is not None:
-                if existing.content_hash != record.content_hash:
-                    raise AppProcessError("artifact replay drift")
-                commit_guard()
-                return
-            self.records[record.artifact_id] = record
-            commit_guard()
-
-    def pin_artifact(
-        self,
-        artifact_id: str,
-        *,
-        expected_revision: int,
-        pinned_at: object,
-        commit_guard: Callable[[], None],
-    ) -> ArtifactRecord:
-        raise NotImplementedError
-
-
-@pytest.fixture
-def index(tmp_path: Path) -> _MemoryArtifactIndex:
-    return _MemoryArtifactIndex(tmp_path)
-
-
-@pytest.fixture
-def service(tmp_path: Path, index: _MemoryArtifactIndex) -> ResearchArtifactService:
-    return ResearchArtifactService(
-        artifact_root=tmp_path,
-        indexed_artifact_root=tmp_path,
-        artifact_reader=index,
-        artifact_writer=index,
-    )
 
 
 def _context() -> ModelArtifactPublicationContext:
@@ -120,9 +54,29 @@ def _context() -> ModelArtifactPublicationContext:
 
 
 def _training() -> ModelTrainingRecord:
+    registration_payload: dict[str, object] = {
+        "model_kind": "linear",
+        "feature_names": ["momentum_20d"],
+        "label_id": "research.label.forward_return.next_open_hold5.v1",
+        "label_spec_hash": label_spec_hash(),
+        "transform_spec": {
+            "imputation": "median",
+            "winsorize_lower_quantile": 0.01,
+            "winsorize_upper_quantile": 0.99,
+            "scaling": "zscore",
+        },
+        "hyperparameters": {"alpha": 1.0},
+        "seed": 7,
+        "code_environment": {
+            "implementation_key": "ditto_application.model_candidates.ridge.v1",
+            "python": "3.13.14",
+            "lockfile_sha256": "b" * 64,
+        },
+    }
     return ModelTrainingRecord(
         schema=MODEL_TRAINING_ARTIFACT_SCHEMA,
-        registration_hash="2" * 64,
+        registration_hash=canonical_payload(registration_payload).content_hash.value,
+        registration_payload=registration_payload,
         snapshot_id="snap-1",
         train_window_start="2025-01-01",
         train_window_end="2025-06-30",
@@ -147,9 +101,11 @@ def _predictions(training: ModelTrainingRecord) -> ModelPredictionRecord:
 
 
 def test_publish_training_writes_three_indexed_artifacts(
-    tmp_path: Path, index: _MemoryArtifactIndex, service: ResearchArtifactService
+    tmp_path: Path,
+    memory_artifact_index: MemoryArtifactIndex,
+    artifact_service: ResearchArtifactService,
 ) -> None:
-    sink = IndexedModelArtifactSink(service)
+    sink = IndexedModelArtifactSink(artifact_service)
     model_bytes = orjson.dumps({"coef": [0.1], "intercept": 0.01})
     transform_bytes = orjson.dumps({"momentum_20d": {"median": 1.0}})
     record, model, transform = sink.publish_training(
@@ -162,7 +118,7 @@ def test_publish_training_writes_three_indexed_artifacts(
     assert record.artifact_kind == "model_training_state"
     for published in (record, model, transform):
         assert (tmp_path / published.relative_path).is_file()
-        assert index.get_artifact(published.artifact_id) is published
+        assert memory_artifact_index.get_artifact(published.artifact_id) is published
     expected_hash = canonical_payload(
         dict(_training().canonical_payload())
     ).content_hash
@@ -170,9 +126,11 @@ def test_publish_training_writes_three_indexed_artifacts(
 
 
 def test_publish_predictions_binds_model_artifact(
-    tmp_path: Path, index: _MemoryArtifactIndex, service: ResearchArtifactService
+    tmp_path: Path,
+    memory_artifact_index: MemoryArtifactIndex,
+    artifact_service: ResearchArtifactService,
 ) -> None:
-    sink = IndexedModelArtifactSink(service)
+    sink = IndexedModelArtifactSink(artifact_service)
     training = _training()
     published = sink.publish_predictions(_context(), _predictions(training))
     assert published.artifact_kind == "model_predictions"
@@ -183,9 +141,10 @@ def test_publish_predictions_binds_model_artifact(
 
 
 def test_publication_replay_is_idempotent(
-    index: _MemoryArtifactIndex, service: ResearchArtifactService
+    memory_artifact_index: MemoryArtifactIndex,
+    artifact_service: ResearchArtifactService,
 ) -> None:
-    sink = IndexedModelArtifactSink(service)
+    sink = IndexedModelArtifactSink(artifact_service)
     context = _context()
     training = _training()
     model_bytes = orjson.dumps({"coef": [0.1]})
@@ -193,7 +152,7 @@ def test_publication_replay_is_idempotent(
     first = sink.publish_training(context, training, model_bytes, transform_bytes)
     second = sink.publish_training(context, training, model_bytes, transform_bytes)
     assert [item.artifact_id for item in first] == [item.artifact_id for item in second]
-    assert len(index.records) == 3
+    assert len(memory_artifact_index.records) == 3
 
 
 def test_context_rejects_lineage_gap_and_untyped_fence() -> None:

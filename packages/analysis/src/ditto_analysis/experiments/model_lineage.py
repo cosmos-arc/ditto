@@ -13,11 +13,10 @@ from __future__ import annotations
 
 import math
 import re
-from collections.abc import Mapping, Sequence
+from collections.abc import Mapping
 from dataclasses import dataclass
 from enum import StrEnum
 from types import MappingProxyType
-from typing import cast
 
 from ditto_analysis.errors import ExperimentSpecError
 from ditto_analysis.experiments.persistence import (
@@ -33,6 +32,9 @@ __all__ = [
     "ModelPredictionRow",
     "ModelTrainingRecord",
     "TrainFittedTransformSpec",
+    "model_state_artifact_id",
+    "training_artifact_id",
+    "transform_state_artifact_id",
 ]
 
 _SHA256_PATTERN = re.compile(r"^[0-9a-f]{64}$")
@@ -279,6 +281,26 @@ def _hyperparameter_json_value(value: object) -> str | float:
     return float(value)
 
 
+def _require_registration_payload(
+    payload: Mapping[str, object],
+    registration_hash: str,
+) -> None:
+    """
+    Require the registered payload to re-hash to the recorded identity.
+
+    This keeps seed/code-environment/label identity auditable after recovery
+    instead of trusting a bare hash.
+    """
+    try:
+        matches = (
+            canonical_payload(dict(payload)).content_hash.value == registration_hash
+        )
+    except (TypeError, ValueError):
+        matches = False
+    if not matches:
+        raise _lineage_error("registration_payload_hash_mismatch")
+
+
 @dataclass(frozen=True, slots=True)
 class ModelTrainingRecord:
     """Content contract of one published immutable training artifact."""
@@ -294,12 +316,14 @@ class ModelTrainingRecord:
     model_state_sha256: str
     transform_state_sha256: str
     feature_names: tuple[str, ...]
+    registration_payload: Mapping[str, object]
 
     def __post_init__(self) -> None:
         """Reject partial or untyped training evidence."""
         if self.schema != MODEL_TRAINING_ARTIFACT_SCHEMA:
             raise _lineage_error("training_artifact_schema_invalid")
         _require_sha256(self.registration_hash, "registration_hash")
+        _require_registration_payload(self.registration_payload, self.registration_hash)
         if type(self.snapshot_id) is not str or not self.snapshot_id:
             raise _lineage_error("snapshot_id_invalid")
         _require_iso_date(self.train_window_start, "train_window_start")
@@ -328,12 +352,18 @@ class ModelTrainingRecord:
             or any(type(name) is not str for name in self.feature_names)
         ):
             raise _lineage_error("feature_names_invalid")
+        object.__setattr__(
+            self,
+            "registration_payload",
+            MappingProxyType(dict(self.registration_payload)),
+        )
 
     def canonical_payload(self) -> dict[str, object]:
         """Return every field a training-artifact reader must verify."""
         return {
             "schema": self.schema,
             "registration_hash": self.registration_hash,
+            "registration_payload": dict(self.registration_payload),
             "snapshot_id": self.snapshot_id,
             "train_window_start": self.train_window_start,
             "train_window_end": self.train_window_end,
@@ -428,32 +458,16 @@ class ModelPredictionRecord:
         return canonical_payload(self.canonical_payload()).content_hash.value
 
 
-def freeze_prediction_rows(rows: object) -> tuple[ModelPredictionRow, ...]:
-    """Freeze runtime prediction rows into validated contract rows."""
-    if not isinstance(rows, Sequence) or isinstance(rows, (str, bytes, bytearray)):
-        raise _lineage_error("prediction_rows_invalid")
-    return tuple(
-        row if type(row) is ModelPredictionRow else _coerce_prediction_row(row)
-        for row in cast("Sequence[object]", rows)
-    )
+def training_artifact_id(training_record_hash: str) -> str:
+    """Return the indexed artifact id of one training record."""
+    return f"model-training-{training_record_hash}"
 
 
-def _coerce_prediction_row(raw: object) -> ModelPredictionRow:
-    """Build one contract row from a plain mapping, failing closed."""
-    if not isinstance(raw, Mapping):
-        raise _lineage_error("prediction_row_invalid")
-    mapping = cast("Mapping[str, object]", raw)
-    if set(mapping) != {"entity_id", "decision_session", "prediction"}:
-        raise _lineage_error("prediction_row_invalid")
-    entity_id = mapping["entity_id"]
-    decision_session = mapping["decision_session"]
-    prediction = mapping["prediction"]
-    if type(entity_id) is not str or type(decision_session) is not str:
-        raise _lineage_error("prediction_row_invalid")
-    if isinstance(prediction, bool) or not isinstance(prediction, (int, float)):
-        raise _lineage_error("prediction_value_invalid")
-    return ModelPredictionRow(
-        entity_id=entity_id,
-        decision_session=decision_session,
-        prediction=float(prediction),
-    )
+def model_state_artifact_id(model_state_sha256: str) -> str:
+    """Return the indexed artifact id of one frozen model state."""
+    return f"model-model-state-{model_state_sha256}"
+
+
+def transform_state_artifact_id(transform_state_sha256: str) -> str:
+    """Return the indexed artifact id of one frozen transform state."""
+    return f"model-transform-state-{transform_state_sha256}"

@@ -23,6 +23,8 @@ from ditto_analysis.experiments.model_lineage import (
     ModelKind,
     ModelPredictionRow,
     ModelTrainingRecord,
+    model_state_artifact_id,
+    transform_state_artifact_id,
 )
 
 from ditto_application.exceptions import AppProcessError
@@ -45,9 +47,6 @@ __all__ = [
 
 _ENTITY_COLUMN = "instrument_id"
 _SESSION_COLUMN = "session"
-_TRAINING_ARTIFACT_PREFIX = "model-training-"
-_MODEL_STATE_PREFIX = "model-model-state-"
-_TRANSFORM_STATE_PREFIX = "model-transform-state-"
 
 
 def _inference_error(reason: str, **details: object) -> AppProcessError:
@@ -115,7 +114,7 @@ def load_model_training_artifact(
     training_artifact_id: str,
 ) -> LoadedModelArtifact:
     """Load one training record and its bound states, verifying checksums."""
-    if not training_artifact_id.startswith(_TRAINING_ARTIFACT_PREFIX):
+    if not training_artifact_id.startswith("model-training-"):
         raise _inference_error(
             "training_artifact_id_invalid",
             artifact_id=training_artifact_id,
@@ -123,10 +122,14 @@ def load_model_training_artifact(
     payload = reader.read_indexed_json(training_artifact_id)
     if payload.get("schema") != MODEL_TRAINING_ARTIFACT_SCHEMA:
         raise _inference_error("training_artifact_schema_invalid")
+    registration_payload = payload.get("registration_payload")
+    if not isinstance(registration_payload, dict):
+        raise _inference_error("training_artifact_payload_invalid")
     try:
         training = ModelTrainingRecord(
             schema=cast("str", payload["schema"]),
             registration_hash=cast("str", payload["registration_hash"]),
+            registration_payload=cast("dict[str, object]", registration_payload),
             snapshot_id=cast("str", payload["snapshot_id"]),
             train_window_start=cast("str", payload["train_window_start"]),
             train_window_end=cast("str", payload["train_window_end"]),
@@ -141,15 +144,13 @@ def load_model_training_artifact(
                 cast("list[str]", payload["feature_names"]),
             ),
         )
-    except (KeyError, TypeError, AppProcessError) as error:
-        if isinstance(error, AppProcessError):
-            raise
+    except (KeyError, TypeError) as error:
         raise _inference_error("training_artifact_payload_invalid") from error
     model_state = reader.read_indexed_json(
-        f"{_MODEL_STATE_PREFIX}{training.model_state_sha256}"
+        model_state_artifact_id(training.model_state_sha256)
     )
     transform_raw = reader.read_indexed_json(
-        f"{_TRANSFORM_STATE_PREFIX}{training.transform_state_sha256}"
+        transform_state_artifact_id(training.transform_state_sha256)
     )
     if model_state_sha256(model_state) != training.model_state_sha256:
         raise _inference_error("model_state_checksum_drift")
