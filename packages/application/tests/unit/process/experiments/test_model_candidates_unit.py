@@ -8,6 +8,7 @@ refusals must carry explicit reasons and never partial artifacts.
 from __future__ import annotations
 
 from datetime import date, timedelta
+from typing import cast
 
 import numpy as np
 import orjson
@@ -62,7 +63,7 @@ def _price_frame(
         "sell_fillable_close": [],
         "session_close_known_at_epoch_us": [],
     }
-    instruments = list(ENTITIES)
+    instruments: list[str] = list(ENTITIES)
     if extra_entities_sessions:
         instruments.append("300999.SZ")
     for instrument in instruments:
@@ -209,6 +210,12 @@ def test_linear_training_succeeds_with_expected_shape() -> None:
     assert all(np.isfinite(row.prediction) for row in result.predictions.rows)
 
 
+def _as_float(value: object) -> float:
+    """Narrow a polars scalar aggregate to a plain float for hand checks."""
+    assert value is not None
+    return float(cast("float", value))
+
+
 def test_ridge_prediction_matches_reference_implementation() -> None:
     result = train_model_candidate(_request())
     assert isinstance(result, ModelTrainingSuccess)
@@ -220,15 +227,15 @@ def test_ridge_prediction_matches_reference_implementation() -> None:
     stats: dict[str, dict[str, float]] = {}
     for name in ("momentum_20d", "ep_ttm"):
         column = train.get_column(name)
-        lower = float(column.quantile(0.01, interpolation="linear"))
-        upper = float(column.quantile(0.99, interpolation="linear"))
+        lower = _as_float(column.quantile(0.01, interpolation="linear"))
+        upper = _as_float(column.quantile(0.99, interpolation="linear"))
         clipped = column.clip(lower_bound=lower, upper_bound=upper)
         stats[name] = {
-            "median": float(column.median()),
+            "median": _as_float(column.median()),
             "winsor_lower": lower,
             "winsor_upper": upper,
-            "mean": float(clipped.mean()),
-            "std": float(clipped.std()),
+            "mean": _as_float(clipped.mean()),
+            "std": _as_float(clipped.std()),
         }
     labels = build_forward_return_labels(_price_frame(), list(SESSIONS)).frame
     joined = train.join(
@@ -484,7 +491,9 @@ def test_lightgbm_retraining_is_reproducible_within_tolerance() -> None:
         ]
     )[75:80]
     np.testing.assert_allclose(
-        booster_one.predict(matrix), booster_two.predict(matrix), rtol=1e-12
+        np.asarray(booster_one.predict(matrix)),
+        np.asarray(booster_two.predict(matrix)),
+        rtol=1e-12,
     )
 
 

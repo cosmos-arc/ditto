@@ -11,6 +11,7 @@ signal — a recovery path may never emit an unfounded score.
 from __future__ import annotations
 
 import math
+from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import date
 from typing import Protocol, cast
@@ -109,6 +110,17 @@ def _decode_transform_state(
     return state
 
 
+def _required_field(
+    document: Mapping[str, object],
+    key: str,
+) -> object:
+    """Read one required training-record field with a typed refusal."""
+    value = document.get(key)
+    if value is None:
+        raise _inference_error("training_artifact_payload_invalid", missing=key)
+    return value
+
+
 def load_model_training_artifact(
     reader: IndexedJsonReaderPort,
     training_artifact_id: str,
@@ -119,33 +131,42 @@ def load_model_training_artifact(
             "training_artifact_id_invalid",
             artifact_id=training_artifact_id,
         )
-    payload = reader.read_indexed_json(training_artifact_id)
-    if payload.get("schema") != MODEL_TRAINING_ARTIFACT_SCHEMA:
+    record_document = reader.read_indexed_json(training_artifact_id)
+    if record_document.get("schema") != MODEL_TRAINING_ARTIFACT_SCHEMA:
         raise _inference_error("training_artifact_schema_invalid")
-    registration_payload = payload.get("registration_payload")
+    registration_payload = record_document.get("registration_payload")
     if not isinstance(registration_payload, dict):
         raise _inference_error("training_artifact_payload_invalid")
-    try:
-        training = ModelTrainingRecord(
-            schema=cast("str", payload["schema"]),
-            registration_hash=cast("str", payload["registration_hash"]),
-            registration_payload=cast("dict[str, object]", registration_payload),
-            snapshot_id=cast("str", payload["snapshot_id"]),
-            train_window_start=cast("str", payload["train_window_start"]),
-            train_window_end=cast("str", payload["train_window_end"]),
-            label_maturity_cutoff_epoch_us=cast(
-                "int", payload["label_maturity_cutoff_epoch_us"]
-            ),
-            trained_at_epoch_us=cast("int", payload["trained_at_epoch_us"]),
-            sample_count=cast("int", payload["sample_count"]),
-            model_state_sha256=cast("str", payload["model_state_sha256"]),
-            transform_state_sha256=cast("str", payload["transform_state_sha256"]),
-            feature_names=tuple(
-                cast("list[str]", payload["feature_names"]),
-            ),
-        )
-    except (KeyError, TypeError) as error:
-        raise _inference_error("training_artifact_payload_invalid") from error
+    training = ModelTrainingRecord(
+        schema=cast("str", _required_field(record_document, "schema")),
+        registration_hash=cast(
+            "str", _required_field(record_document, "registration_hash")
+        ),
+        registration_payload=cast("dict[str, object]", registration_payload),
+        snapshot_id=cast("str", _required_field(record_document, "snapshot_id")),
+        train_window_start=cast(
+            "str", _required_field(record_document, "train_window_start")
+        ),
+        train_window_end=cast(
+            "str", _required_field(record_document, "train_window_end")
+        ),
+        label_maturity_cutoff_epoch_us=cast(
+            "int", _required_field(record_document, "label_maturity_cutoff_epoch_us")
+        ),
+        trained_at_epoch_us=cast(
+            "int", _required_field(record_document, "trained_at_epoch_us")
+        ),
+        sample_count=cast("int", _required_field(record_document, "sample_count")),
+        model_state_sha256=cast(
+            "str", _required_field(record_document, "model_state_sha256")
+        ),
+        transform_state_sha256=cast(
+            "str", _required_field(record_document, "transform_state_sha256")
+        ),
+        feature_names=tuple(
+            cast("list[str]", _required_field(record_document, "feature_names")),
+        ),
+    )
     model_state = reader.read_indexed_json(
         model_state_artifact_id(training.registration_hash, training.model_state_sha256)
     )

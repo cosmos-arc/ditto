@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 import pytest
 from ditto_analysis.errors import ExperimentSpecError
 from ditto_analysis.experiments.model_lineage import (
@@ -129,7 +131,6 @@ def test_feature_names_must_be_unique_nonempty_strings() -> None:
 def test_code_environment_requires_exact_identity_keys() -> None:
     environment = dict(_CODE_ENV)
     del environment["lockfile_sha256"]
-    lineage_kwargs: dict[str, object] = {"code_environment": environment}
     with pytest.raises(ExperimentSpecError):
         ModelCandidateLineage(
             model_kind=ModelKind.LINEAR,
@@ -139,7 +140,7 @@ def test_code_environment_requires_exact_identity_keys() -> None:
             transform_spec=TrainFittedTransformSpec(),
             hyperparameters={"alpha": 2.0},
             seed=1,
-            **lineage_kwargs,
+            code_environment=environment,
         )
 
 
@@ -160,7 +161,7 @@ def _registration_payload() -> dict[str, object]:
 def _training_record(**overrides: object) -> ModelTrainingRecord:
     payload = _registration_payload()
     registration_hash = canonical_payload(payload).content_hash.value
-    fields: dict[str, object] = {
+    fields: dict[str, Any] = {
         "schema": MODEL_TRAINING_ARTIFACT_SCHEMA,
         "registration_hash": registration_hash,
         "registration_payload": payload,
@@ -211,7 +212,7 @@ def test_training_record_rejects_bad_hash_and_dates() -> None:
 
 
 def _prediction_record(**overrides: object) -> ModelPredictionRecord:
-    fields: dict[str, object] = {
+    fields: dict[str, Any] = {
         "schema": MODEL_PREDICTION_ARTIFACT_SCHEMA,
         "registration_hash": "c" * 64,
         "model_artifact_hash": "f" * 64,

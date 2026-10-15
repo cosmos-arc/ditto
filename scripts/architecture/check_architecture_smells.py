@@ -1568,6 +1568,41 @@ APPLICATION_ANALYSIS_WIRING_ALLOWANCES = (
             "PIT windows to a fresh sandbox without owning storage I/O."
         ),
     ),
+    ApplicationAnalysisWiringAllowance(
+        path=(
+            "packages/application/src/ditto_application/processes/experiments/"
+            "model_candidates.py"
+        ),
+        owner="application model-candidate fold training",
+        reason=(
+            "Fold-scoped training consumes analysis-owned lineage and artifact "
+            "contracts to freeze rule/linear/LightGBM candidates; bytes stay in "
+            "the application execution implementation per the P1-ML spec."
+        ),
+    ),
+    ApplicationAnalysisWiringAllowance(
+        path=(
+            "packages/application/src/ditto_application/processes/experiments/"
+            "model_artifact_publication.py"
+        ),
+        owner="application model artifact publication sink",
+        reason=(
+            "Publishes frozen model training/prediction records through the "
+            "analysis-owned indexed artifact store behind an injected port."
+        ),
+    ),
+    ApplicationAnalysisWiringAllowance(
+        path=(
+            "packages/application/src/ditto_application/processes/experiments/"
+            "model_inference.py"
+        ),
+        owner="application model recovery inference",
+        reason=(
+            "Reloads analysis-owned training artifacts via an injected verified "
+            "reader and scores one decision context without emitting signals "
+            "on any identity, checksum, or as-of drift."
+        ),
+    ),
 )
 
 
