@@ -30,9 +30,16 @@ def _lineage(
     feature_names: tuple[str, ...] = ("momentum_20d", "ep_ttm"),
 ) -> ModelCandidateLineage:
     if hyperparameters is None:
-        hyperparameters = {"alpha": 1.0} if kind is ModelKind.LINEAR else None
-    if kind is ModelKind.RULE and hyperparameters is None:
-        hyperparameters = {"ranking_feature": feature_names[0]}
+        if kind is ModelKind.LINEAR:
+            hyperparameters = {"alpha": 1.0}
+        elif kind is ModelKind.RULE:
+            hyperparameters = {"ranking_feature": feature_names[0]}
+        else:
+            hyperparameters = {
+                "num_leaves": 4,
+                "learning_rate": 0.1,
+                "num_iterations": 5,
+            }
     return ModelCandidateLineage(
         model_kind=kind,
         feature_names=feature_names,
@@ -69,6 +76,47 @@ def test_linear_alpha_must_be_positive_finite() -> None:
         _lineage(ModelKind.LINEAR, {"alpha": float("inf")})
     with pytest.raises(ExperimentSpecError):
         _lineage(ModelKind.LINEAR, {})
+
+
+def test_lightgbm_lineage_freezes_registered_hyperparameters() -> None:
+    lineage = _lineage(
+        ModelKind.LIGHTGBM,
+        {"num_leaves": 8, "learning_rate": 0.05, "num_iterations": 20},
+    )
+    payload = lineage.canonical_payload()
+    assert payload["model_kind"] == "lightgbm"
+    assert payload["hyperparameters"] == {
+        "num_leaves": 8.0,
+        "learning_rate": 0.05,
+        "num_iterations": 20.0,
+    }
+    assert (
+        lineage.registration_hash
+        == _lineage(
+            ModelKind.LIGHTGBM,
+            {"num_leaves": 8, "learning_rate": 0.05, "num_iterations": 20},
+        ).registration_hash
+    )
+
+
+def test_lightgbm_hyperparameters_are_range_checked() -> None:
+    with pytest.raises(ExperimentSpecError):
+        _lineage(
+            ModelKind.LIGHTGBM,
+            {"num_leaves": 1, "learning_rate": 0.1, "num_iterations": 5},
+        )
+    with pytest.raises(ExperimentSpecError):
+        _lineage(
+            ModelKind.LIGHTGBM,
+            {"num_leaves": 8, "learning_rate": 0.0, "num_iterations": 5},
+        )
+    with pytest.raises(ExperimentSpecError):
+        _lineage(
+            ModelKind.LIGHTGBM,
+            {"num_leaves": 8, "learning_rate": 0.1, "num_iterations": 0},
+        )
+    with pytest.raises(ExperimentSpecError):
+        _lineage(ModelKind.LIGHTGBM, {"alpha": 1.0})
 
 
 def test_feature_names_must_be_unique_nonempty_strings() -> None:

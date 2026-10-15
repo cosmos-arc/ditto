@@ -1,12 +1,12 @@
 """
 Registered model-candidate lineage and immutable training/prediction records.
 
-#268/#269 contract layer: the identity of a registered model candidate (rule
-or linear; LightGBM joins the same contract later), the fail-closed content
-contract for one immutable training artifact, and the prediction artifact that
-a trained model emits for a fold's test window. Execution (fit/predict) lives
-in the application layer; this module only owns identity, freezing, and
-validation, so it stays numpy-free and I/O-free.
+#268/#269 contract layer: the identity of a registered model candidate (rule,
+linear, or LightGBM), the fail-closed content contract for one immutable
+training artifact, and the prediction artifact that a trained model emits for a
+fold's test window. Execution (fit/predict) lives in the application layer;
+this module only owns identity, freezing, and validation, so it stays
+numpy-free and I/O-free.
 """
 
 from __future__ import annotations
@@ -42,6 +42,9 @@ MODEL_PREDICTION_ARTIFACT_SCHEMA = "ditto.model.prediction-artifact.v1"
 _HYPERPARAMETER_KEYS_BY_KIND: dict[str, frozenset[str]] = {
     "rule": frozenset({"ranking_feature"}),
     "linear": frozenset({"alpha"}),
+    "lightgbm": frozenset(
+        {"num_leaves", "learning_rate", "num_iterations"},
+    ),
 }
 _REQUIRED_CODE_ENVIRONMENT_KEYS = frozenset(
     {"implementation_key", "python", "lockfile_sha256"}
@@ -75,6 +78,7 @@ class ModelKind(StrEnum):
 
     RULE = "rule"
     LINEAR = "linear"
+    LIGHTGBM = "lightgbm"
 
 
 @dataclass(frozen=True, slots=True)
@@ -129,7 +133,7 @@ def _validated_hyperparameters(
         ranking_feature = values["ranking_feature"]
         if type(ranking_feature) is not str or ranking_feature not in feature_names:
             raise _lineage_error("ranking_feature_not_registered")
-    else:
+    elif model_kind is ModelKind.LINEAR:
         if isinstance(values["alpha"], bool) or not isinstance(
             values["alpha"], (int, float)
         ):
@@ -137,7 +141,40 @@ def _validated_hyperparameters(
         alpha = float(values["alpha"])
         if not math.isfinite(alpha) or alpha <= 0.0:
             raise _lineage_error("alpha_invalid")
+    else:
+        _validated_lightgbm_parameters(values)
     return values
+
+
+_LIGHTGBM_MIN_NUM_LEAVES = 2
+_LIGHTGBM_MAX_NUM_LEAVES = 1024
+_LIGHTGBM_MAX_NUM_ITERATIONS = 1000
+
+
+def _validated_lightgbm_parameters(values: Mapping[str, object]) -> None:
+    """Validate the fixed registered LightGBM shape hyperparameters."""
+    num_leaves = values["num_leaves"]
+    num_iterations = values["num_iterations"]
+    learning_rate = values["learning_rate"]
+    if (
+        isinstance(num_leaves, bool)
+        or not isinstance(num_leaves, int)
+        or not _LIGHTGBM_MIN_NUM_LEAVES <= num_leaves <= _LIGHTGBM_MAX_NUM_LEAVES
+    ):
+        raise _lineage_error("lightgbm_num_leaves_invalid")
+    if (
+        isinstance(num_iterations, bool)
+        or not isinstance(num_iterations, int)
+        or not 1 <= num_iterations <= _LIGHTGBM_MAX_NUM_ITERATIONS
+    ):
+        raise _lineage_error("lightgbm_num_iterations_invalid")
+    if (
+        isinstance(learning_rate, bool)
+        or not isinstance(learning_rate, (int, float))
+        or not math.isfinite(float(learning_rate))
+        or not 0.0 < float(learning_rate) <= 1.0
+    ):
+        raise _lineage_error("lightgbm_learning_rate_invalid")
 
 
 @dataclass(frozen=True, slots=True)

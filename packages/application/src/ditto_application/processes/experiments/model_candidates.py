@@ -411,6 +411,8 @@ def _fit_model_state(
     lineage: ModelCandidateLineage,
     joined: pl.DataFrame,
     transform_state: dict[str, dict[str, float]],
+    *,
+    seed: int,
 ) -> tuple[dict[str, object], bytes]:
     """Fit the registered model kind on the transformed training matrix."""
     if lineage.model_kind is ModelKind.RULE:
@@ -420,6 +422,8 @@ def _fit_model_state(
         return model_state, _canonical_state_bytes(model_state)
     matrix = _transform_matrix(joined, lineage.feature_names, transform_state)
     targets = joined.get_column("label_value").to_numpy().astype(np.float64, copy=False)
+    if lineage.model_kind is ModelKind.LIGHTGBM:
+        return _fit_lightgbm_state(lineage, matrix, targets, seed=seed)
     alpha = float(cast("int | float", lineage.hyperparameters["alpha"]))
     weights, intercept = _fit_ridge(matrix, targets, alpha)
     state: dict[str, object] = {
@@ -427,6 +431,63 @@ def _fit_model_state(
         "intercept": intercept,
     }
     return state, _canonical_state_bytes(state)
+
+
+def _fit_lightgbm_state(
+    lineage: ModelCandidateLineage,
+    matrix: np.ndarray,
+    targets: np.ndarray,
+    *,
+    seed: int,
+) -> tuple[dict[str, object], bytes]:
+    """Train the registered LightGBM regressor with deterministic settings."""
+    import lightgbm as lgb  # noqa: PLC0415 - lazy import keeps ML-only cost
+
+    params = {
+        "objective": "regression",
+        "num_leaves": int(cast("int", lineage.hyperparameters["num_leaves"])),
+        "learning_rate": float(
+            cast("int | float", lineage.hyperparameters["learning_rate"])
+        ),
+        "seed": seed,
+        "deterministic": True,
+        "force_col_wise": True,
+        "num_threads": 1,
+        "verbosity": -1,
+    }
+    dataset = lgb.Dataset(matrix, label=targets)
+    booster = lgb.train(  # pyright: ignore[reportUnknownMemberType] - stub gap
+        params,
+        dataset,
+        num_boost_round=int(cast("int", lineage.hyperparameters["num_iterations"])),
+    )
+    state: dict[str, object] = {
+        "booster_model": booster.model_to_string(),
+        "feature_names": list(lineage.feature_names),
+    }
+    return state, _canonical_state_bytes(state)
+
+
+def _lightgbm_predictions(
+    model_state: Mapping[str, object],
+    matrix: np.ndarray,
+) -> np.ndarray:
+    """Score with a frozen LightGBM booster, failing closed on bad state."""
+    import lightgbm as lgb  # noqa: PLC0415 - lazy import keeps ML-only cost
+
+    booster_model = model_state.get("booster_model")
+    if type(booster_model) is not str or not booster_model:
+        raise _training_error("model_state_invalid")
+    try:
+        booster = lgb.Booster(model_file=None, model_str=booster_model)
+    except (lgb.basic.LightGBMError, ValueError, TypeError) as error:
+        raise _training_error("booster_state_corrupt") from error
+    scores = booster.predict(  # pyright: ignore[reportUnknownMemberType] - stub gap
+        matrix
+    )
+    if not isinstance(scores, np.ndarray) or scores.shape != (matrix.shape[0],):
+        raise _training_error("booster_output_invalid")
+    return scores.astype(np.float64, copy=False)
 
 
 def _linear_prediction_inputs(
@@ -471,8 +532,13 @@ def _prediction_frame_for_test_window(
         test_matrix = _transform_matrix(
             test_features, lineage.feature_names, transform_state
         )
-        weights_array, intercept_value = _linear_prediction_inputs(model_state)
-        prediction_values = pl.Series(test_matrix @ weights_array + intercept_value)
+        if lineage.model_kind is ModelKind.LIGHTGBM:
+            prediction_values = pl.Series(
+                _lightgbm_predictions(model_state, test_matrix)
+            )
+        else:
+            weights_array, intercept_value = _linear_prediction_inputs(model_state)
+            prediction_values = pl.Series(test_matrix @ weights_array + intercept_value)
     return (
         test_features.select(
             [
@@ -584,7 +650,9 @@ def train_model_candidate(  # noqa: PLR0911 - fail-closed training stages
         transform_state, transform_bytes = _fit_transform_state(
             joined, lineage.feature_names
         )
-        model_state, model_bytes = _fit_model_state(lineage, joined, transform_state)
+        model_state, model_bytes = _fit_model_state(
+            lineage, joined, transform_state, seed=lineage.seed
+        )
     except AppProcessError as error:
         return ModelTrainingFailure(
             str(error.details.get("reason", "transform_fit_failed")),

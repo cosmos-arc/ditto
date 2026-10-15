@@ -10,6 +10,7 @@ from __future__ import annotations
 from datetime import date, timedelta
 
 import numpy as np
+import orjson
 import polars as pl
 import pytest
 from ditto_analysis.experiments.model_lineage import (
@@ -135,11 +136,16 @@ def _feature_frame(
 
 
 def _lineage(kind: ModelKind = ModelKind.LINEAR) -> ModelCandidateLineage:
-    hyperparameters = (
-        {"alpha": 1.0}
-        if kind is ModelKind.LINEAR
-        else {"ranking_feature": "momentum_20d"}
-    )
+    if kind is ModelKind.LINEAR:
+        hyperparameters: dict[str, object] = {"alpha": 1.0}
+    elif kind is ModelKind.RULE:
+        hyperparameters = {"ranking_feature": "momentum_20d"}
+    else:
+        hyperparameters = {
+            "num_leaves": 4,
+            "learning_rate": 0.1,
+            "num_iterations": 5,
+        }
     return ModelCandidateLineage(
         model_kind=kind,
         feature_names=("momentum_20d", "ep_ttm"),
@@ -405,3 +411,48 @@ def test_isolation_report_counts_by_real_intervals() -> None:
     assert report.excluded_gap_count == 15
     assert report.worst_retained_exit_session == SESSIONS[19]
     assert retained.height == 45
+
+
+@pytest.mark.slow  # lightgbm 首次导入+训练 1.4s（#328 >0.5s 治理）
+def test_lightgbm_training_succeeds_under_same_protocol() -> None:
+    result = train_model_candidate(_request(kind=ModelKind.LIGHTGBM))
+    assert isinstance(result, ModelTrainingSuccess)
+    assert result.training.sample_count == 45
+    assert len(result.predictions.rows) == 15
+    assert all(np.isfinite(row.prediction) for row in result.predictions.rows)
+    state = orjson.loads(result.model_state_bytes)
+    assert state["feature_names"] == ["momentum_20d", "ep_ttm"]
+    assert "booster_model" in state
+
+
+def test_lightgbm_retraining_is_reproducible_within_tolerance() -> None:
+    import lightgbm as lgb
+
+    first = train_model_candidate(_request(kind=ModelKind.LIGHTGBM))
+    second = train_model_candidate(_request(kind=ModelKind.LIGHTGBM))
+    assert isinstance(first, ModelTrainingSuccess)
+    assert isinstance(second, ModelTrainingSuccess)
+    first_state = orjson.loads(first.model_state_bytes)
+    second_state = orjson.loads(second.model_state_bytes)
+    booster_one = lgb.Booster(model_str=first_state["booster_model"])
+    booster_two = lgb.Booster(model_str=second_state["booster_model"])
+    matrix = np.column_stack(
+        [
+            _feature_frame().get_column("momentum_20d").to_numpy(),
+            _feature_frame().get_column("ep_ttm").to_numpy(),
+        ]
+    )[75:80]
+    np.testing.assert_allclose(
+        booster_one.predict(matrix), booster_two.predict(matrix), rtol=1e-12
+    )
+
+
+def test_lightgbm_future_labels_do_not_change_early_training() -> None:
+    baseline = train_model_candidate(_request(kind=ModelKind.LIGHTGBM))
+    modified = train_model_candidate(
+        _request(kind=ModelKind.LIGHTGBM, prices=_price_frame(price_multiplier=10.0))
+    )
+    assert isinstance(baseline, ModelTrainingSuccess)
+    assert isinstance(modified, ModelTrainingSuccess)
+    assert modified.model_state_bytes == baseline.model_state_bytes
+    assert modified.transform_state_bytes == baseline.transform_state_bytes
