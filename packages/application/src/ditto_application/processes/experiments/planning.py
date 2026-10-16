@@ -47,6 +47,7 @@ from ditto_application.processes.experiments._planning_values import (
 
 __all__ = [
     "BASELINE_PARAMETER_KEY",
+    "MODEL_PARAMETER_KEY",
     "BaselineCandidatePlan",
     "BaselineDescriptor",
     "BinderCandidatePlan",
@@ -59,6 +60,8 @@ __all__ = [
     "ExperimentPlanningSpec",
     "ExperimentTrack",
     "ExperimentWorkPlan",
+    "ModelCandidateDescriptor",
+    "ModelCandidatePlan",
     "ParameterAxis",
     "ResourceCostModel",
     "ResourceEstimate",
@@ -70,13 +73,16 @@ __all__ = [
 ]
 
 BASELINE_PARAMETER_KEY = "__ditto_baseline__"
+MODEL_PARAMETER_KEY = "__ditto_model__"
 _BASELINE_SCHEMA_VERSION = 1
+_MODEL_SCHEMA_VERSION = 1
 _CANDIDATE_SCHEMA_VERSION = 1
 _MAX_CANDIDATES = 128
 _ALLOWED_WORKER_COUNTS = (2, 4)
 _FIRST_BINDER_ORDINAL = 2
+_MODEL_PAYLOAD_KEYS = frozenset({"lineage", "inputs", "top_k"})
 
-type PlannedCandidate = BaselineCandidatePlan | BinderCandidatePlan
+type PlannedCandidate = BaselineCandidatePlan | BinderCandidatePlan | ModelCandidatePlan
 
 
 def _plain_json_value(value: BaselineValue) -> object:
@@ -140,6 +146,73 @@ class BaselineDescriptor:
         object.__setattr__(self, "canonical_json", encoded.decode("utf-8"))
 
 
+@dataclass(frozen=True, slots=True)
+class ModelCandidateDescriptor:
+    """
+    Lossless application-owned description of one explicit model candidate.
+
+    The payload mirrors the model-candidate planning contract: ``lineage``
+    (the registered training semantics), ``inputs`` (the three frozen
+    training frames), and ``top_k``. Planning only freezes canonical JSON;
+    semantic validation of the lineage happens where the executor probe and
+    the durable resolver decode it, exactly like the baseline envelope.
+    """
+
+    descriptor_type: str
+    payload: Mapping[str, BaselineInputValue]
+    schema_version: int = _MODEL_SCHEMA_VERSION
+    canonical_json: str = field(init=False)
+
+    def __post_init__(self) -> None:
+        """Validate, deeply freeze, and canonically encode the descriptor."""
+        raw_type = cast("object", self.descriptor_type)
+        if (
+            type(self) is not ModelCandidateDescriptor
+            or type(raw_type) is not str
+            or not raw_type.strip()
+            or raw_type != raw_type.strip()
+        ):
+            _planning_error(
+                "model descriptor_type must be a canonical non-empty string",
+                reason="invalid_model_descriptor_type",
+            )
+        if type(self.schema_version) is not int or self.schema_version <= 0:
+            _planning_error(
+                "model schema_version must be a positive integer",
+                reason="invalid_model_schema_version",
+            )
+        frozen = _freeze_baseline_mapping(cast("object", self.payload))
+        if set(frozen) != set(_MODEL_PAYLOAD_KEYS):
+            _planning_error(
+                "model descriptor payload keys are invalid",
+                reason="invalid_model_descriptor_payload",
+                expected=sorted(_MODEL_PAYLOAD_KEYS),
+            )
+        top_k = frozen.get("top_k")
+        if type(top_k) is not int or top_k <= 0:
+            _planning_error(
+                "model descriptor top_k must be a positive integer",
+                reason="invalid_model_descriptor_top_k",
+            )
+        if not isinstance(frozen.get("lineage"), Mapping) or not isinstance(
+            frozen.get("inputs"),
+            Mapping,
+        ):
+            _planning_error(
+                "model descriptor lineage/inputs must be mappings",
+                reason="invalid_model_descriptor_payload",
+            )
+        object.__setattr__(self, "payload", frozen)
+        encoded = _canonical_json_bytes(
+            {
+                "schema_version": self.schema_version,
+                "descriptor_type": self.descriptor_type,
+                "payload": _plain_json_value(frozen),
+            },
+        )
+        object.__setattr__(self, "canonical_json", encoded.decode("utf-8"))
+
+
 def _parameter_type(value: ParameterValue) -> str:
     if type(value) is bool:
         return "bool"
@@ -188,9 +261,9 @@ class ParameterAxis:
                 "matrix parameter name must be a canonical non-empty string",
                 reason="invalid_matrix_parameter_name",
             )
-        if self.name == BASELINE_PARAMETER_KEY:
+        if self.name in {BASELINE_PARAMETER_KEY, MODEL_PARAMETER_KEY}:
             _planning_error(
-                "matrix parameter name collides with the baseline envelope",
+                "matrix parameter name collides with a reserved envelope",
                 reason="reserved_matrix_parameter_name",
                 parameter_name=self.name,
             )
@@ -222,10 +295,11 @@ class CandidateMatrixSpec:
 
     baseline: BaselineDescriptor
     axes: Sequence[ParameterAxis] = ()
+    model_candidates: Sequence[ModelCandidateDescriptor] = ()
     candidate_limit: int = _MAX_CANDIDATES
 
     def __post_init__(self) -> None:
-        """Freeze axes in canonical parameter-name order."""
+        """Freeze axes and model descriptors in canonical order."""
         if type(self) is not CandidateMatrixSpec:
             _planning_error(
                 "matrix spec must be an exact CandidateMatrixSpec",
@@ -255,6 +329,28 @@ class CandidateMatrixSpec:
                 "matrix parameter names must be unique",
                 reason="duplicate_matrix_parameter_name",
             )
+        raw_models: object = self.model_candidates
+        if type(raw_models) not in (tuple, list):
+            _planning_error(
+                "matrix model_candidates must be an explicit descriptor list",
+                reason="invalid_matrix_model_candidates",
+            )
+        model_items = tuple(cast("Sequence[object]", raw_models))
+        if any(
+            type(descriptor) is not ModelCandidateDescriptor
+            for descriptor in model_items
+        ):
+            _planning_error(
+                "matrix model_candidates must be an explicit descriptor list",
+                reason="invalid_matrix_model_candidates",
+            )
+        models = cast("tuple[ModelCandidateDescriptor, ...]", model_items)
+        model_jsons = [descriptor.canonical_json for descriptor in models]
+        if len(set(model_jsons)) != len(model_jsons):
+            _planning_error(
+                "matrix model candidate descriptors must be unique",
+                reason="duplicate_matrix_model_candidate",
+            )
         if (
             type(self.candidate_limit) is not int
             or self.candidate_limit <= 0
@@ -270,6 +366,16 @@ class CandidateMatrixSpec:
             "axes",
             tuple(sorted(axes, key=lambda axis: axis.name.encode("utf-8"))),
         )
+        object.__setattr__(
+            self,
+            "model_candidates",
+            tuple(
+                sorted(
+                    models,
+                    key=lambda descriptor: descriptor.canonical_json.encode("utf-8"),
+                )
+            ),
+        )
 
 
 class CandidateRole(StrEnum):
@@ -278,6 +384,7 @@ class CandidateRole(StrEnum):
     BASELINE = "baseline"
     DEFAULT = "default"
     MATRIX = "matrix"
+    MODEL = "model"
 
 
 def _parameter_hash(
@@ -418,23 +525,73 @@ class BinderCandidatePlan:
 
 
 @dataclass(frozen=True, slots=True)
+class ModelCandidatePlan:
+    """Explicit model candidate with a persistence-only envelope payload."""
+
+    descriptor: ModelCandidateDescriptor
+    ordinal: int
+    role: CandidateRole = field(init=False, default=CandidateRole.MODEL)
+    persistence_parameters: Mapping[str, str] = field(init=False)
+    candidate_hash: str = field(init=False)
+
+    def __post_init__(self) -> None:
+        """Create the reserved persistence envelope and role-aware identity."""
+        if (
+            type(self) is not ModelCandidatePlan
+            or type(cast("object", self.descriptor)) is not ModelCandidateDescriptor
+        ):
+            _planning_error(
+                "model candidate must use exact planning graph nodes",
+                reason="invalid_model_candidate",
+            )
+        if type(self.ordinal) is not int or self.ordinal < _FIRST_BINDER_ORDINAL:
+            _planning_error(
+                "model candidate ordinal must be at least two",
+                reason="invalid_candidate_ordinal",
+                ordinal=self.ordinal,
+            )
+        envelope = MappingProxyType(
+            {MODEL_PARAMETER_KEY: self.descriptor.canonical_json},
+        )
+        object.__setattr__(self, "persistence_parameters", envelope)
+        parameter = CandidateParameter(
+            path=MODEL_PARAMETER_KEY,
+            value=self.descriptor.canonical_json,
+        )
+        object.__setattr__(
+            self,
+            "candidate_hash",
+            _parameter_hash(
+                ordinal=self.ordinal,
+                role=self.role,
+                parameters=(parameter,),
+            ),
+        )
+
+
+@dataclass(frozen=True, slots=True)
 class CandidateMatrixPlan:
     """Deterministic baseline-first expansion of one finite matrix."""
 
     candidate_limit: int
     baseline_candidate: BaselineCandidatePlan
     binder_candidates: tuple[BinderCandidatePlan, ...]
+    model_candidates: tuple[ModelCandidatePlan, ...]
     matrix_hash: str
 
     @property
     def candidates(self) -> tuple[PlannedCandidate, ...]:
         """Return baseline plus executable candidates in stable ordinal order."""
-        return (self.baseline_candidate, *self.binder_candidates)
+        return (
+            self.baseline_candidate,
+            *self.binder_candidates,
+            *self.model_candidates,
+        )
 
     @property
     def candidate_count(self) -> int:
         """Count every executable configuration, including the baseline."""
-        return 1 + len(self.binder_candidates)
+        return 1 + len(self.binder_candidates) + len(self.model_candidates)
 
 
 @dataclass(frozen=True, slots=True)
@@ -459,7 +616,7 @@ def inspect_candidate_matrix_size(spec: CandidateMatrixSpec) -> CandidateMatrixS
         )
     combination_count = math.prod(len(axis.values) for axis in spec.axes)
     return CandidateMatrixSize(
-        candidate_count=1 + combination_count,
+        candidate_count=1 + combination_count + len(spec.model_candidates),
         candidate_limit=spec.candidate_limit,
     )
 
@@ -494,10 +651,21 @@ def expand_candidate_matrix(spec: CandidateMatrixSpec) -> CandidateMatrixPlan:
         )
         for ordinal, values in enumerate(combinations, start=2)
     )
+    model_candidates = tuple(
+        ModelCandidatePlan(
+            descriptor=descriptor,
+            ordinal=ordinal,
+        )
+        for ordinal, descriptor in enumerate(
+            spec.model_candidates,
+            start=2 + len(combinations),
+        )
+    )
     baseline = BaselineCandidatePlan(descriptor=spec.baseline)
     candidate_hashes = (
         baseline.candidate_hash,
         *(candidate.candidate_hash for candidate in candidates),
+        *(candidate.candidate_hash for candidate in model_candidates),
     )
     matrix_hash = hashlib.sha256(
         _canonical_json_bytes(
@@ -512,6 +680,7 @@ def expand_candidate_matrix(spec: CandidateMatrixSpec) -> CandidateMatrixPlan:
         candidate_limit=spec.candidate_limit,
         baseline_candidate=baseline,
         binder_candidates=candidates,
+        model_candidates=model_candidates,
         matrix_hash=matrix_hash,
     )
 

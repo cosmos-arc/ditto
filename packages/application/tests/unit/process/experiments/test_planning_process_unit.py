@@ -63,11 +63,18 @@ from ditto_application.processes.experiments._launch_saga import (
 from ditto_application.processes.experiments._planning_request_identity import (
     planning_request_hash,
 )
+from ditto_application.processes.experiments._planning_values import (
+    BaselineInputValue,
+)
 from ditto_application.processes.experiments.baseline_planning import (
     resolve_planning_baseline,
 )
 from ditto_application.processes.experiments.baseline_registry import (
     default_baseline_registry,
+)
+from ditto_application.processes.experiments.model_candidate_plans import (
+    decode_model_candidate_descriptor,
+    model_descriptor_hash,
 )
 from ditto_application.processes.experiments.planning import (
     BaselineDescriptor,
@@ -76,6 +83,7 @@ from ditto_application.processes.experiments.planning import (
     ExperimentPlanningError,
     ExperimentPlanningSpec,
     ExperimentTrack,
+    ModelCandidateDescriptor,
     ParameterAxis,
     ResourceCostModel,
     ValidationWorkload,
@@ -86,6 +94,7 @@ from ditto_application.processes.experiments.planning_contracts import (
 )
 from ditto_application.processes.experiments.planning_probes import (
     BaselineRuntimeExecutorEvidence,
+    ModelExecutorEvidence,
 )
 from ditto_application.processes.experiments.planning_process import (
     R3_RESEARCH_CERTIFICATION_PROFILE,
@@ -572,6 +581,19 @@ class _ExecutorProbe:
                     compiled_factor_set_hash=(hex(candidate.ordinal + 6)[2:] * 64)[:64],
                 )
                 for candidate in request.candidates
+            ),
+            model_candidates=tuple(
+                ModelExecutorEvidence(
+                    candidate_hash=candidate.candidate_hash,
+                    model_kind=decode_model_candidate_descriptor(
+                        candidate.descriptor
+                    ).lineage.model_kind.value,
+                    lineage_hash=decode_model_candidate_descriptor(
+                        candidate.descriptor
+                    ).lineage.registration_hash,
+                    descriptor_hash=model_descriptor_hash(candidate.descriptor),
+                )
+                for candidate in request.model_candidates
             ),
             runtime_validation_evidence=RuntimeValidationEvidence(
                 lane="etf_rotation",
@@ -3379,3 +3401,105 @@ def test_concurrent_exact_root_create_after_absent_projection_reconciles() -> No
     assert receipt.status == "queued"
     assert len(store.events) == 1
     assert len(store.folds) == receipt.fold_count
+
+
+def _model_descriptor_payload() -> dict[str, object]:
+    digest = "a" * 64
+    return {
+        "lineage": {
+            "model_kind": "rule",
+            "feature_names": ["momentum_20d", "ep_ttm"],
+            "label_id": "research.label.forward_return.next_open_hold5.v1",
+            "label_spec_hash": digest,
+            "transform_spec": {
+                "imputation": "median",
+                "winsorize_lower_quantile": 0.01,
+                "winsorize_upper_quantile": 0.99,
+                "scaling": "zscore",
+            },
+            "hyperparameters": {"ranking_feature": "momentum_20d"},
+            "seed": 7,
+            "code_environment": {
+                "implementation_key": "ditto_application.model_candidates.ridge.v1",
+                "python": "3.13.14",
+                "lockfile_sha256": digest,
+            },
+        },
+        "inputs": {
+            "label_prices": {
+                "input_id": "model-input-label_prices",
+                "content_hash": digest,
+                "schema_hash": digest,
+                "source_snapshot_ids": ["provider-snapshot-1"],
+            },
+            "features": {
+                "input_id": "model-input-features",
+                "content_hash": digest,
+                "schema_hash": digest,
+                "source_snapshot_ids": ["provider-snapshot-1"],
+            },
+            "calendar": {
+                "input_id": "model-input-calendar",
+                "content_hash": digest,
+                "schema_hash": digest,
+                "source_snapshot_ids": ["provider-snapshot-1"],
+            },
+        },
+        "top_k": 3,
+    }
+
+
+def test_launch_with_model_candidates_writes_v3_preimage_and_replays() -> None:
+    store = _Store()
+    process = _process(store)
+    matrix = CandidateMatrixSpec(
+        baseline=BaselineDescriptor(
+            descriptor_type="etf-current-active",
+            payload={
+                "strategy_id": "seed_etf_rotation",
+                "version": 2,
+                "spec_hash": "f" * 64,
+            },
+        ),
+        model_candidates=(
+            ModelCandidateDescriptor(
+                descriptor_type="rule",
+                payload=cast(
+                    "Mapping[str, BaselineInputValue]",
+                    _model_descriptor_payload(),
+                ),
+            ),
+        ),
+    )
+    request = replace(_request(), matrix_spec=matrix)
+    request = replace(
+        request,
+        promotion_objective=_objective(request.experiment_id, matrix),
+    )
+
+    report = process.preflight(request)
+    assert report.plan_hash is not None
+    receipt = process.launch(request, confirmed_plan_hash=report.plan_hash)
+
+    # The enqueue detail carries the V3 plan preimage with model evidence.
+    enqueue = cast("dict[str, object]", store.events[-1].detail)
+    preimage = cast("dict[str, object]", enqueue["plan_preimage"])
+    assert preimage["schema_version"] == 3
+    model_entries = cast(
+        "list[dict[str, object]]",
+        preimage["model_executor_candidates"],
+    )
+    assert len(model_entries) == 1
+    assert model_entries[0]["model_kind"] == "rule"
+    preflight = cast("dict[str, object]", enqueue["preflight"])
+    executor = cast("dict[str, object]", preflight["executor"])
+    assert len(cast("list[object]", executor["model_candidates"])) == 1
+    # The launch spec materializes the model candidate with its envelope.
+    assert store.spec is not None
+    non_baseline = [item for item in store.spec.candidates if not item.is_baseline]
+    model_spec = non_baseline[-1]
+    assert "__ditto_model__" in model_spec.parameters
+
+    # Launching the same request again replays the durable receipt exactly.
+    replay = process.launch(request, confirmed_plan_hash=report.plan_hash)
+    assert replay == receipt

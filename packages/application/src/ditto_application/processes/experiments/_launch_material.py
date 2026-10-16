@@ -56,6 +56,7 @@ from ditto_application.processes.experiments.planning import (
     BinderCandidatePlan,
     CandidateMatrixSpec,
     ExperimentWorkPlan,
+    ModelCandidatePlan,
 )
 from ditto_application.processes.experiments.planning_contracts import (
     ExperimentPlanningRequest,
@@ -192,7 +193,7 @@ def _parameter_type(value: object) -> str:
 
 
 def _candidate_payload(
-    candidate: BaselineCandidatePlan | BinderCandidatePlan,
+    candidate: (BaselineCandidatePlan | BinderCandidatePlan | ModelCandidatePlan),
 ) -> Mapping[str, object]:
     if isinstance(candidate, BaselineCandidatePlan):
         return {
@@ -200,6 +201,19 @@ def _candidate_payload(
             "role": candidate.role.value,
             "candidate_hash": candidate.candidate_hash,
             "baseline_descriptor": {
+                "descriptor_type": candidate.descriptor.descriptor_type,
+                "payload": candidate.descriptor.payload,
+                "schema_version": candidate.descriptor.schema_version,
+            },
+            "parameters": [],
+        }
+    if isinstance(candidate, ModelCandidatePlan):
+        return {
+            "ordinal": candidate.ordinal,
+            "role": candidate.role.value,
+            "candidate_hash": candidate.candidate_hash,
+            "baseline_descriptor": None,
+            "model_descriptor": {
                 "descriptor_type": candidate.descriptor.descriptor_type,
                 "payload": candidate.descriptor.payload,
                 "schema_version": candidate.descriptor.schema_version,
@@ -223,7 +237,7 @@ def _candidate_payload(
 
 
 def _matrix_spec_payload(matrix: CandidateMatrixSpec) -> Mapping[str, object]:
-    return {
+    payload: dict[str, object] = {
         "baseline": {
             "descriptor_type": matrix.baseline.descriptor_type,
             "payload": matrix.baseline.payload,
@@ -241,6 +255,18 @@ def _matrix_spec_payload(matrix: CandidateMatrixSpec) -> Mapping[str, object]:
         ],
         "candidate_limit": matrix.candidate_limit,
     }
+    # Keep the legacy document shape when no model candidates are declared,
+    # matching the shared matrix codec's compatibility rule.
+    if matrix.model_candidates:
+        payload["model_candidates"] = [
+            {
+                "descriptor_type": model.descriptor_type,
+                "payload": model.payload,
+                "schema_version": model.schema_version,
+            }
+            for model in matrix.model_candidates
+        ]
+    return payload
 
 
 def _work_payload(
@@ -307,13 +333,22 @@ def _executor_payload(result: ResearchExecutorProbeResult) -> Mapping[str, objec
         "required_datasets": list(result.required_datasets),
         "candidates": [
             {
-                "candidate_hash": candidate.candidate_hash,
-                "resolved_spec_hash": candidate.resolved_spec_hash,
-                "parameter_hash": candidate.parameter_hash,
-                "pipeline_execution_hash": candidate.pipeline_execution_hash,
-                "compiled_factor_set_hash": candidate.compiled_factor_set_hash,
+                "candidate_hash": item.candidate_hash,
+                "resolved_spec_hash": item.resolved_spec_hash,
+                "parameter_hash": item.parameter_hash,
+                "pipeline_execution_hash": item.pipeline_execution_hash,
+                "compiled_factor_set_hash": item.compiled_factor_set_hash,
             }
-            for candidate in result.candidates
+            for item in result.candidates
+        ],
+        "model_candidates": [
+            {
+                "candidate_hash": item.candidate_hash,
+                "model_kind": item.model_kind,
+                "lineage_hash": item.lineage_hash,
+                "descriptor_hash": item.descriptor_hash,
+            }
+            for item in result.model_candidates
         ],
         "runtime_validation_evidence": (
             None if runtime is None else runtime.as_payload()
@@ -499,7 +534,9 @@ def _plan_preimage(
         material
     )
     request_hash = planning_request_hash(request)
-    return {
+    # The preimage keeps the exact V2 shape for launches without model
+    # candidates; V3 adds the model executor evidence key only when present.
+    payload: dict[str, object] = {
         "schema_version": 2,
         "launch_spec_hash": str(spec_payload.content_hash),
         "gate_payload_hashes": [str(gate.payload_hash) for gate in gates],
@@ -551,6 +588,18 @@ def _plan_preimage(
         },
         "preflight_hash": str(preflight_hash),
     }
+    if executor.model_candidates:
+        payload["schema_version"] = 3
+        payload["model_executor_candidates"] = [
+            {
+                "candidate_hash": item.candidate_hash,
+                "model_kind": item.model_kind,
+                "lineage_hash": item.lineage_hash,
+                "descriptor_hash": item.descriptor_hash,
+            }
+            for item in executor.model_candidates
+        ]
+    return payload
 
 
 def compile_launch_material(
@@ -571,6 +620,7 @@ def compile_launch_material(
         return None, None
     snapshot = certification.snapshot_evidence
     experiment_id = ExperimentId(request.experiment_id)
+    model_candidate_count = len(work.candidate_matrix.model_candidates)
     candidate_specs = tuple(
         CandidateSpec(
             candidate_id=CandidateId(
@@ -589,8 +639,31 @@ def compile_launch_material(
         )
         for candidate in work.candidate_matrix.candidates
     )
-    if len(executor.candidates) != len(candidate_specs) - 1:
+    strategy_candidate_specs = candidate_specs[
+        : len(candidate_specs) - model_candidate_count
+    ]
+    if len(executor.candidates) != len(strategy_candidate_specs) - 1:
         return None, None
+    model_evidence_by_hash = {
+        item.candidate_hash: item for item in executor.model_candidates
+    }
+    model_execution_bindings: list[CandidateExecutionBinding] = []
+    for candidate, plan in zip(
+        candidate_specs[len(strategy_candidate_specs) :],
+        work.candidate_matrix.model_candidates,
+        strict=True,
+    ):
+        evidence = model_evidence_by_hash.get(plan.candidate_hash)
+        if evidence is None:
+            return None, None
+        model_execution_bindings.append(
+            CandidateExecutionBinding(
+                candidate.candidate_id,
+                candidate.ordinal,
+                candidate.parameter_hash,
+                ContentHash(evidence.descriptor_hash),
+            )
+        )
     baseline_resolved_spec_hash = (
         executor.baseline_runtime.resolved_spec_hash
         if executor.baseline_runtime is not None
@@ -613,11 +686,12 @@ def compile_launch_material(
                 ContentHash(runtime.resolved_spec_hash),
             )
             for candidate, runtime in zip(
-                candidate_specs[1:],
+                strategy_candidate_specs[1:],
                 executor.candidates,
                 strict=True,
             )
         ),
+        *tuple(model_execution_bindings),
     )
     validation_payload = _validation_plan_payload(validation)
     spec = ExperimentLaunchSpec(

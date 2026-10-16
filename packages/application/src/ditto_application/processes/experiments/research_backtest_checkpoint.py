@@ -32,12 +32,11 @@ from ditto_application.exceptions import AppProcessError
 from ditto_application.processes.execution.backtest_process import (
     BacktestServiceConfig,
 )
-from ditto_application.processes.experiments._execution_bundle_inputs import (
-    BaselineExecutorBinding,
-    PredictionExecutorBinding,
-)
 from ditto_application.processes.experiments.execution_bundle import (
+    BaselineExecutorBinding,
     ExactBenchmarkBinding,
+    ModelCandidateExecutionBinding,
+    PredictionExecutorBinding,
     ResearchExecutionAudit,
     StrategyExecutionBinding,
 )
@@ -121,7 +120,10 @@ class ResearchBacktestStrategyConfig:
 
 def build_research_backtest_strategy_config(
     strategy: (
-        StrategyExecutionBinding | BaselineExecutorBinding | PredictionExecutorBinding
+        StrategyExecutionBinding
+        | BaselineExecutorBinding
+        | PredictionExecutorBinding
+        | ModelCandidateExecutionBinding
     ),
     *,
     effective_parameters: tuple[EffectiveParameter, ...],
@@ -260,7 +262,10 @@ def resolve_research_backtest_resume(
     *,
     audit: ResearchExecutionAudit,
     strategy: (
-        StrategyExecutionBinding | BaselineExecutorBinding | PredictionExecutorBinding
+        StrategyExecutionBinding
+        | BaselineExecutorBinding
+        | PredictionExecutorBinding
+        | ModelCandidateExecutionBinding
     ),
     trading_days: tuple[str, ...],
     checkpoint_reader: StrategyRunCheckpointReaderProtocol,
@@ -323,7 +328,10 @@ def require_research_resume_runtime_state(
 
 def _run_identity(
     strategy: (
-        StrategyExecutionBinding | BaselineExecutorBinding | PredictionExecutorBinding
+        StrategyExecutionBinding
+        | BaselineExecutorBinding
+        | PredictionExecutorBinding
+        | ModelCandidateExecutionBinding
     ),
 ) -> tuple[str, str]:
     if type(strategy) is StrategyExecutionBinding:

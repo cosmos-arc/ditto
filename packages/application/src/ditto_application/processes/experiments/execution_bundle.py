@@ -20,23 +20,25 @@ from ditto_application.processes.experiments._execution_bundle_inputs import (
     EXECUTABLE_FOLD_ROLES as _FOLD_ROLES,
 )
 from ditto_application.processes.experiments._execution_bundle_inputs import (
-    PARTS_PER_MILLION as _PARTS_PER_MILLION,
-)
-from ditto_application.processes.experiments._execution_bundle_inputs import (
-    POLICY_MODEL_ROLES as _POLICY_MODEL_ROLES,
-)
-from ditto_application.processes.experiments._execution_bundle_inputs import (
+    MODEL_CANDIDATE_IMPLEMENTATION_KEY,
     PREDICTION_EXECUTOR_IMPLEMENTATION_KEY,
     BaselineExecutorBinding,
     CodeEnvironmentLock,
     ContentAddressedResearchInput,
     ExecutionEvidenceSource,
+    ModelCandidateExecutionBinding,
     PolicyModelEvidenceBinding,
     PredictionExecutorBinding,
     ResearchFillMode,
     ResearchSnapshotBinding,
     VersionedExecutionComponent,
     research_data_feed_manifest_hash,
+)
+from ditto_application.processes.experiments._execution_bundle_inputs import (
+    PARTS_PER_MILLION as _PARTS_PER_MILLION,
+)
+from ditto_application.processes.experiments._execution_bundle_inputs import (
+    POLICY_MODEL_ROLES as _POLICY_MODEL_ROLES,
 )
 from ditto_application.processes.experiments._execution_bundle_inputs import (
     execution_bundle_error as _error,
@@ -63,6 +65,7 @@ from ditto_application.processes.experiments.execution_contracts import (
 )
 
 __all__ = [
+    "MODEL_CANDIDATE_IMPLEMENTATION_KEY",
     "PREDICTION_EXECUTOR_IMPLEMENTATION_KEY",
     "BacktestExecutionConfigBinding",
     "BaselineExecutorBinding",
@@ -70,6 +73,7 @@ __all__ = [
     "ContentAddressedResearchInput",
     "ExactBenchmarkBinding",
     "ExecutionEvidenceSource",
+    "ModelCandidateExecutionBinding",
     "PolicyModelEvidenceBinding",
     "PredictionExecutorBinding",
     "ResearchExecutionAudit",
@@ -619,7 +623,10 @@ class ResearchExecutionSemantics:
     launch_spec_hash: str
     fold_spec_hash: str
     strategy: (
-        StrategyExecutionBinding | BaselineExecutorBinding | PredictionExecutorBinding
+        StrategyExecutionBinding
+        | BaselineExecutorBinding
+        | PredictionExecutorBinding
+        | ModelCandidateExecutionBinding
     )
     backtest: BacktestExecutionConfigBinding
     snapshot: ResearchSnapshotBinding

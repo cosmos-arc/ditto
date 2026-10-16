@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from enum import StrEnum
+from typing import cast
 
 from ditto_application.exceptions import AppProcessError
 from ditto_application.processes.execution.backtest_process import BacktestService
@@ -16,6 +17,7 @@ from ditto_application.processes.experiments.execution_bundle import (
     BacktestExecutionConfigBinding,
     BaselineExecutorBinding,
     CodeEnvironmentLock,
+    ModelCandidateExecutionBinding,
     PredictionExecutorBinding,
     ResearchExecutionAudit,
     ResearchSnapshotBinding,
@@ -79,6 +81,18 @@ class ResearchBacktestBuildAttestation:
         """Build the only attestation accepted by the fold runner."""
         semantics = audit.semantics
         backtest = semantics.backtest
+        if type(semantics.strategy) is ModelCandidateExecutionBinding:
+            # Attestations prove built services; a claim-time model plan must
+            # be upgraded to its published prediction executor first.
+            raise _attestation_error(
+                "model_candidate_plan_requires_fold_runner_upgrade",
+            )
+        # The guard above keeps the attestation to built executor kinds; the
+        # annotation is narrowed explicitly because type() checks do not.
+        strategy = cast(
+            "StrategyExecutionBinding | BaselineExecutorBinding | PredictionExecutorBinding",  # noqa: E501
+            semantics.strategy,
+        )
         benchmark_hash = (
             None if backtest.benchmark is None else backtest.benchmark.canonical_hash
         )
@@ -87,7 +101,7 @@ class ResearchBacktestBuildAttestation:
             audit_bundle_hash=audit.bundle_hash,
             reproduction_fingerprint=audit.reproduction_fingerprint,
             backtest_run_id=audit.backtest_run_id,
-            strategy=semantics.strategy,
+            strategy=strategy,
             snapshot=semantics.snapshot,
             execution_config=backtest,
             execution_config_hash=backtest.canonical_hash,

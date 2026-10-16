@@ -351,6 +351,7 @@ def test_executor_probe_result_subclass_is_normalized_to_typed_blocker() -> None
     matrix = SimpleNamespace(
         baseline_candidate=SimpleNamespace(descriptor=object()),
         binder_candidates=(),
+        model_candidates=(),
     )
 
     result = probe_executor(

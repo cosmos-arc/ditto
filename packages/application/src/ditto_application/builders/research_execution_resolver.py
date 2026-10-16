@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import date, timedelta
+from datetime import UTC, date, timedelta
+from datetime import datetime as dt_datetime
 
 from ditto_application.builders._research_execution_bindings import (
     build_backtest_execution_binding,
+    build_model_candidate_backtest_binding,
     build_research_runtime,
     build_strategy_execution_binding,
     build_synthetic_baseline_backtest_binding,
@@ -63,19 +65,27 @@ from ditto_application.processes.experiments.baseline_registry import (
     default_baseline_registry,
 )
 from ditto_application.processes.experiments.execution_bundle import (
+    MODEL_CANDIDATE_IMPLEMENTATION_KEY,
     BacktestExecutionConfigBinding,
     BaselineExecutorBinding,
     CodeEnvironmentLock,
+    ModelCandidateExecutionBinding,
     ResearchExecutionSemantics,
     StrategyExecutionBinding,
 )
 from ditto_application.processes.experiments.execution_contracts import (
     ExactStrategyIdentity,
+    ResearchAssetLane,
     ResearchExecutionPolicy,
+)
+from ditto_application.processes.experiments.model_candidate_plans import (
+    decode_model_candidate_descriptor,
+    model_descriptor_hash,
 )
 from ditto_application.processes.experiments.planning import (
     BaselineCandidatePlan,
     BinderCandidatePlan,
+    ModelCandidatePlan,
     PlannedCandidate,
 )
 
@@ -96,6 +106,53 @@ class ResearchExecutionRuntimeBuilders:
     candidate: ResearchRuntimeBuilder
     candidate_replay: ResearchEvidenceReplayRuntimeBuilder
     published_baseline: PublishedBaselineRuntimeBuilder
+
+
+def _launch_clock_epoch_us(launch_spec: object) -> int:
+    """Pin the model training clock from durable launch creation time."""
+    created_at = getattr(launch_spec, "created_at", None)
+    if not isinstance(created_at, dt_datetime) or created_at.tzinfo is None:
+        raise research_execution_error("launch_creation_clock_missing")
+    return int(created_at.timestamp() * 1_000_000)
+
+
+def _knowledge_cutoff_epoch_us(knowledge_date: date) -> int:
+    """
+    Derive the fold's label-maturity cutoff from its knowledge date.
+
+    The v1 convention freezes the cutoff at UTC midnight of the fold's
+    ``test_start - knowledge_lag_days`` date, mirroring how the benchmark
+    knowledge date is derived: only labels whose maturity stamps fall on or
+    before that midnight count as usable at decision time.
+    """
+    return int(
+        dt_datetime(
+            knowledge_date.year,
+            knowledge_date.month,
+            knowledge_date.day,
+            tzinfo=UTC,
+        ).timestamp()
+        * 1_000_000,
+    )
+
+
+def _model_executor_evidence(
+    launch: DurableLaunchEvidence,
+    planned: ModelCandidatePlan,
+) -> dict[str, object]:
+    decoded = tuple(
+        require_evidence_mapping(item, "executor.model")
+        for item in require_evidence_list(
+            launch.executor.get("model_candidates", []),
+            "executor.model_candidates",
+        )
+    )
+    evidence = tuple(
+        item for item in decoded if item.get("candidate_hash") == planned.candidate_hash
+    )
+    if len(evidence) != 1:
+        raise research_execution_error("model_executor_evidence_missing_or_ambiguous")
+    return evidence[0]
 
 
 class DurableResearchExecutionResolver:
@@ -180,6 +237,7 @@ class DurableResearchExecutionResolver:
             benchmark_knowledge_date=(
                 fold.spec.test_window.start - timedelta(days=self._knowledge_lag_days)
             ),
+            trained_at_epoch_us=_launch_clock_epoch_us(launch_spec),
         )
         isolation = require_evidence_mapping(
             runtime_evidence.get("isolation"),
@@ -233,8 +291,11 @@ class DurableResearchExecutionResolver:
         inputs: FrozenResearchExecutionInputs,
         baseline_resolution: BaselinePlanningResolution,
         benchmark_knowledge_date: date,
+        trained_at_epoch_us: int,
     ) -> tuple[
-        StrategyExecutionBinding | BaselineExecutorBinding,
+        StrategyExecutionBinding
+        | BaselineExecutorBinding
+        | ModelCandidateExecutionBinding,
         BaselineExecutionPlan | None,
         ResearchExecutionPolicy,
         BacktestExecutionConfigBinding,
@@ -246,6 +307,14 @@ class DurableResearchExecutionResolver:
                 inputs,
                 baseline_resolution,
                 benchmark_knowledge_date=benchmark_knowledge_date,
+            )
+        if type(planned) is ModelCandidatePlan:
+            return self._model_candidate_binding(
+                launch,
+                planned,
+                inputs,
+                benchmark_knowledge_date=benchmark_knowledge_date,
+                trained_at_epoch_us=trained_at_epoch_us,
             )
         if type(planned) is not BinderCandidatePlan:
             raise research_execution_error("invalid_binder_candidate_plan")
@@ -331,6 +400,54 @@ class DurableResearchExecutionResolver:
                 "candidate_executor_evidence_missing_or_ambiguous"
             )
         return evidence[0]
+
+    def _model_candidate_binding(
+        self,
+        launch: DurableLaunchEvidence,
+        planned: ModelCandidatePlan,
+        inputs: FrozenResearchExecutionInputs,
+        *,
+        benchmark_knowledge_date: date,
+        trained_at_epoch_us: int,
+    ) -> tuple[
+        ModelCandidateExecutionBinding,
+        None,
+        ResearchExecutionPolicy,
+        BacktestExecutionConfigBinding,
+    ]:
+        """Materialize the claim-time plan binding for one model candidate."""
+        evidence = _model_executor_evidence(launch, planned)
+        decoded = decode_model_candidate_descriptor(planned.descriptor)
+        if (
+            decoded.lineage.registration_hash != evidence.get("lineage_hash")
+            or decoded.lineage.model_kind.value != evidence.get("model_kind")
+            or model_descriptor_hash(planned.descriptor)
+            != evidence.get("descriptor_hash")
+        ):
+            raise research_execution_error("model_executor_identity_drift")
+        policy = execution_policy_for_lane(ResearchAssetLane.STOCK)
+        binding = ModelCandidateExecutionBinding(
+            model_kind=decoded.lineage.model_kind.value,
+            lineage_hash=decoded.lineage.registration_hash,
+            lineage_payload=decoded.lineage.canonical_payload(),
+            inputs=decoded.inputs,
+            top_k=decoded.top_k,
+            trained_at_epoch_us=trained_at_epoch_us,
+            knowledge_cutoff_epoch_us=_knowledge_cutoff_epoch_us(
+                benchmark_knowledge_date,
+            ),
+            implementation_key=MODEL_CANDIDATE_IMPLEMENTATION_KEY,
+            executor_contract_version=1,
+        )
+        return (
+            binding,
+            None,
+            policy,
+            build_model_candidate_backtest_binding(
+                policy,
+                inputs,
+            ),
+        )
 
     def _baseline_binding(
         self,

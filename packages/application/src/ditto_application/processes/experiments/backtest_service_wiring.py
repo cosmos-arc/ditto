@@ -63,6 +63,7 @@ from ditto_application.processes.experiments._prediction_pipeline import (
 from ditto_application.processes.experiments.execution_bundle import (
     BaselineExecutorBinding,
     ExactBenchmarkBinding,
+    ModelCandidateExecutionBinding,
     PredictionExecutorBinding,
     ResearchExecutionAudit,
     ResearchFillMode,
@@ -297,6 +298,16 @@ def _require_exact_state_keys(
         )
 
 
+def _require_built_executor_binding(
+    strategy: object,
+) -> None:
+    """Refuse claim-time model plan bindings at every build boundary."""
+    if type(strategy) is ModelCandidateExecutionBinding:
+        # Plan bindings are claim-time identities; only the upgraded
+        # prediction executor may ever build or attest a backtest service.
+        raise _error("model_candidate_plan_requires_fold_runner_upgrade")
+
+
 def _expected_service_config(
     graph: ClosedBacktestServiceGraph,
     checkpoint_control: ResearchBacktestCheckpointControl,
@@ -305,6 +316,7 @@ def _expected_service_config(
     semantics = audit.semantics
     strategy = semantics.strategy
     config = graph.config
+    _require_built_executor_binding(strategy)
     if type(strategy) is not PredictionExecutorBinding and (
         graph.prediction_signals is not None
     ):
@@ -386,6 +398,7 @@ def _require_pipeline_state(graph: ClosedBacktestServiceGraph) -> None:
     stages = pipeline.stages
     collector = graph.selection_evidence_collector
     strategy = graph.audit.semantics.strategy
+    _require_built_executor_binding(strategy)
     _selection_evidence_graph.require_pristine_selection_evidence_graph(
         pipeline=pipeline,
         collector=collector,

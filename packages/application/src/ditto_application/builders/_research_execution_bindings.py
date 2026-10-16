@@ -404,6 +404,45 @@ def build_synthetic_baseline_backtest_binding(
     )
 
 
+def build_model_candidate_backtest_binding(
+    policy: ResearchExecutionPolicy,
+    inputs: FrozenResearchExecutionInputs,
+) -> BacktestExecutionConfigBinding:
+    """Build model-candidate controls: benchmark-free fold-schedule execution."""
+    return BacktestExecutionConfigBinding(
+        initial_cash_minor_units=_R3_INITIAL_CASH_MINOR_UNITS,
+        currency="CNY",
+        engine=_versioned("ditto_backtest.engine_loop"),
+        engine_version=_R3_ENGINE_VERSION,
+        # The fold-schedule rebalance implementation is registered once and
+        # shared with the synthetic baseline executor.
+        rebalance_policy=_versioned("research.baseline.fold_schedule"),
+        rebalance_frequency="fold_schedule",
+        participation_rate_ppm=_R3_PARTICIPATION_RATE_PPM,
+        fill_mode=ResearchFillMode.PARTIAL,
+        fill_model=_versioned("ditto_backtest.a_share_fill.partial"),
+        brokerage_model=_versioned("ditto_backtest.backtest_brokerage"),
+        execution_planner=_versioned(
+            "ditto_execution.simple_execution_planner.market",
+        ),
+        slippage_basis_points=policy.slippage.basis_points,
+        benchmark=None,
+        policy_hash=policy.canonical_hash,
+        policy_model_evidence=_policy_model_evidence(
+            policy,
+            inputs.instrument_rules.input_evidence,
+        ),
+        pre_trade_checks=(
+            _versioned("ditto_risk.lot_size_check"),
+            _versioned("ditto_risk.buying_power_check"),
+        ),
+        post_trade_guard=None,
+        data_feed_manifest_hash=research_data_feed_manifest_hash(
+            inputs.snapshot_binding,
+        ),
+    )
+
+
 def resolve_persisted_runtime_lane(launch: DurableLaunchEvidence) -> ResearchAssetLane:
     runtime = require_evidence_mapping(
         launch.executor.get("runtime_validation_evidence"),

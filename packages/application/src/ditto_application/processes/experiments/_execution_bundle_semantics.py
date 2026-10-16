@@ -13,6 +13,7 @@ from ditto_application.processes.experiments._execution_bundle_inputs import (
     CodeEnvironmentLock,
     ContentAddressedResearchInput,
     ExecutionEvidenceSource,
+    ModelCandidateExecutionBinding,
     PolicyModelEvidenceBinding,
     PredictionExecutorBinding,
     ResearchSnapshotBinding,
@@ -124,6 +125,7 @@ def _validate_bindings(
         strategy_binding_type,
         BaselineExecutorBinding,
         PredictionExecutorBinding,
+        ModelCandidateExecutionBinding,
     }:
         raise _error("strategy binding is invalid", "invalid_strategy_binding")
     if (
@@ -136,6 +138,8 @@ def _validate_bindings(
         )
     if type(semantics.strategy) is PredictionExecutorBinding:
         _validate_prediction_inputs(semantics)
+    if type(semantics.strategy) is ModelCandidateExecutionBinding:
+        _validate_model_candidate_plan(semantics)
     if type(semantics.backtest) is not backtest_binding_type:
         raise _error(
             "backtest execution binding is invalid",
@@ -281,6 +285,36 @@ def _validate_prediction_inputs(semantics: _SemanticsView) -> None:
     strategy.resolve_predictions_input(semantics.snapshot.inputs)
 
 
+def _validate_model_candidate_plan(semantics: _SemanticsView) -> None:
+    """
+    Bind the claim-time model plan to non-baseline fold execution.
+
+    The plan binding never reaches a backtest build: the model fold runner
+    upgrades it to a prediction executor over the published artifacts first.
+    Baseline co-riding and missing fold identity are refused here so a
+    misrouted audit fails before any training work starts.
+    """
+    strategy = cast("ModelCandidateExecutionBinding", semantics.strategy)
+    if semantics.is_baseline or semantics.baseline_plan is not None:
+        raise _error(
+            "model candidate plan cannot ride a baseline candidate",
+            "unexpected_model_candidate_executor",
+        )
+    if semantics.train_start is None or semantics.train_end is None:
+        raise _error(
+            "model candidate plan requires a training window",
+            "model_candidate_train_window_missing",
+        )
+    input_sources = {
+        source for item in strategy.inputs for source in item.source_snapshot_ids
+    }
+    if not input_sources.issubset(set(semantics.snapshot.source_snapshot_ids)):
+        raise _error(
+            "model training inputs drifted from the frozen snapshot provenance",
+            "model_input_source_snapshot_drift",
+        )
+
+
 def _validate_data_feed_manifest(
     semantics: _SemanticsView,
     backtest: _BacktestBindingView,
@@ -418,6 +452,8 @@ def build_research_execution_payload(
         strategy_kind = "catalog_strategy"
     elif type(view.strategy) is BaselineExecutorBinding:
         strategy_kind = "baseline_executor"
+    elif type(view.strategy) is ModelCandidateExecutionBinding:
+        strategy_kind = "model_candidate_executor"
     else:
         strategy_kind = "prediction_executor"
     return {

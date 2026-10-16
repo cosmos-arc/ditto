@@ -23,6 +23,20 @@ def _object(value: object, name: str, keys: set[str]) -> dict[str, object]:
     return payload
 
 
+def _object_with_optional(
+    value: object,
+    name: str,
+    keys: set[str],
+    optional_keys: set[str],
+) -> dict[str, object]:
+    """Accept one exact key set with optional additive keys (#565 W2)."""
+    payload = _open_object(value, name)
+    actual = set(payload)
+    if actual != keys and actual != keys | optional_keys:
+        raise experiment_process_error(f"{name} has an invalid shape")
+    return payload
+
+
 def _array(value: object, name: str) -> list[object]:
     if type(value) is not list:
         raise experiment_process_error(f"{name} must be an array")
@@ -171,7 +185,7 @@ def _work_shape(value: object) -> None:
         matrix["candidates"],
         "work.candidate_matrix.candidates",
     ):
-        candidate = _object(
+        candidate = _object_with_optional(
             raw_candidate,
             "work.candidate",
             {
@@ -181,27 +195,36 @@ def _work_shape(value: object) -> None:
                 "baseline_descriptor",
                 "parameters",
             },
+            {"model_descriptor"},
         )
         if candidate["baseline_descriptor"] is not None:
             _descriptor(candidate["baseline_descriptor"], "work.candidate.baseline")
+        if candidate.get("model_descriptor") is not None:
+            _descriptor(candidate["model_descriptor"], "work.candidate.model")
         _objects(
             candidate["parameters"],
             "work.candidate.parameters",
             {"path", "type", "value"},
         )
-    matrix_spec = _object(
+    matrix_spec = _object_with_optional(
         work["matrix_spec"],
         "work.matrix_spec",
         {"baseline", "axes", "candidate_limit"},
+        {"model_candidates"},
     )
     _descriptor(matrix_spec["baseline"], "work.matrix_spec.baseline")
     for raw_axis in _array(matrix_spec["axes"], "work.matrix_spec.axes"):
         axis = _object(raw_axis, "work.matrix_spec.axis", {"name", "values"})
         _objects(axis["values"], "work.matrix_spec.axis.values", {"type", "value"})
+    for raw_model in _array(
+        matrix_spec.get("model_candidates", []),
+        "work.matrix_spec.model_candidates",
+    ):
+        _descriptor(raw_model, "work.matrix_spec.model")
 
 
 def _executor_shape(value: object) -> None:
-    executor = _object(
+    executor = _object_with_optional(
         value,
         "executor",
         {
@@ -222,6 +245,12 @@ def _executor_shape(value: object) -> None:
             "candidates",
             "runtime_validation_evidence",
         },
+        {"model_candidates"},
+    )
+    _objects(
+        executor.get("model_candidates", []),
+        "executor.model_candidates",
+        {"candidate_hash", "model_kind", "lineage_hash", "descriptor_hash"},
     )
     _objects(
         executor["candidates"],
