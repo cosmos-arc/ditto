@@ -108,12 +108,18 @@ class ResearchExecutionRuntimeBuilders:
     published_baseline: PublishedBaselineRuntimeBuilder
 
 
+_EPOCH_ORIGIN = dt_datetime(1970, 1, 1, tzinfo=UTC)
+_MICROSECOND = timedelta(microseconds=1)
+
+
 def _launch_clock_epoch_us(launch_spec: object) -> int:
     """Pin the model training clock from durable launch creation time."""
     created_at = getattr(launch_spec, "created_at", None)
     if not isinstance(created_at, dt_datetime) or created_at.tzinfo is None:
         raise research_execution_error("launch_creation_clock_missing")
-    return int(created_at.timestamp() * 1_000_000)
+    # Integer floor division avoids the float round trip documented against
+    # in model_artifact_publication; the clock is a byte-stable identity input.
+    return (created_at - _EPOCH_ORIGIN) // _MICROSECOND
 
 
 def _knowledge_cutoff_epoch_us(knowledge_date: date) -> int:
@@ -125,15 +131,15 @@ def _knowledge_cutoff_epoch_us(knowledge_date: date) -> int:
     knowledge date is derived: only labels whose maturity stamps fall on or
     before that midnight count as usable at decision time.
     """
-    return int(
+    return (
         dt_datetime(
             knowledge_date.year,
             knowledge_date.month,
             knowledge_date.day,
             tzinfo=UTC,
-        ).timestamp()
-        * 1_000_000,
-    )
+        )
+        - _EPOCH_ORIGIN
+    ) // _MICROSECOND
 
 
 def _model_executor_evidence(
@@ -416,6 +422,11 @@ class DurableResearchExecutionResolver:
         BacktestExecutionConfigBinding,
     ]:
         """Materialize the claim-time plan binding for one model candidate."""
+        if resolve_persisted_runtime_lane(launch) is not ResearchAssetLane.STOCK:
+            # v1 model candidates execute under the stock cost/participation
+            # policy only; a model declared in another lane must not silently
+            # ride stock semantics.
+            raise research_execution_error("model_candidate_lane_mismatch")
         evidence = _model_executor_evidence(launch, planned)
         decoded = decode_model_candidate_descriptor(planned.descriptor)
         if (

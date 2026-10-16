@@ -27,7 +27,6 @@ from ditto_analysis.experiments.models import (
     FoldId,
 )
 from ditto_analysis.experiments.persistence import (
-    ArtifactRecord,
     DateWindow,
     FoldRole,
     LeaseFence,
@@ -206,6 +205,8 @@ from ditto_strategy.alpha.specs import (
 from ditto_strategy.errors import StrategySpecError
 from ditto_strategy.models import StrategySpecRecord
 from ditto_strategy.runs.models import StrategyRunCheckpointRecord
+
+from .conftest import MemoryArtifactIndex
 
 _NOW = datetime(2026, 7, 20, 9, tzinfo=UTC)
 _DATES = ("2026-01-02", "2026-01-05")
@@ -3075,61 +3076,14 @@ def test_factory_rejects_actual_pipeline_poison_with_unchanged_hash() -> None:
 # --- #565 W2: model-candidate plan binding → fold runner → prediction backtest ---
 
 
-class _LocalMemoryArtifactIndex:
-    """In-memory indexed-artifact port pair (mirrors the shared conftest)."""
-
-    def __init__(self, root: Path) -> None:
-        self.artifact_root = root
-        self.records: dict[str, ArtifactRecord] = {}
-
-    def get_artifact(self, artifact_id: str) -> ArtifactRecord | None:
-        return self.records.get(artifact_id)
-
-    def get_artifact_by_relative_path(
-        self, relative_path: str
-    ) -> ArtifactRecord | None:
-        return next(
-            (
-                record
-                for record in self.records.values()
-                if record.relative_path == relative_path
-            ),
-            None,
-        )
-
-    def add_artifact(
-        self,
-        record: ArtifactRecord,
-        *,
-        lease_fence: LeaseFence,
-        now_epoch_us: int,
-        commit_guard: Callable[[], None],
-    ) -> None:
-        _ = lease_fence, now_epoch_us
-        existing = self.records.get(record.artifact_id)
-        if existing is not None:
-            if existing.content_hash != record.content_hash:
-                raise AppProcessError("artifact replay drift")
-            commit_guard()
-            return
-        self.records[record.artifact_id] = record
-        commit_guard()
-
-    def pin_artifact(
-        self,
-        artifact_id: str,
-        *,
-        expected_revision: int,
-        pinned_at: object,
-        commit_guard: Callable[[], None],
-    ) -> ArtifactRecord:
-        raise NotImplementedError
-
-
 @pytest.fixture
 def model_artifact_service(tmp_path: Path) -> ResearchArtifactService:
-    """Artifact service with separated roots for the frozen-input namespace."""
-    index = _LocalMemoryArtifactIndex(tmp_path / "indexed")
+    """Artifact service with separated roots for the frozen-input namespace.
+
+    The index port root must match the configured indexed root, so build the
+    shared in-memory index at that root instead of reusing the tmp_path one.
+    """
+    index = MemoryArtifactIndex(tmp_path / "indexed")
     return ResearchArtifactService(
         artifact_root=tmp_path / "legacy",
         indexed_artifact_root=tmp_path / "indexed",
@@ -3429,8 +3383,7 @@ def _publish_feed_inputs(
 
 def test_binding_routed_runner_dispatches_by_strategy_variant() -> None:
     class _MarkerRunner:
-        def __init__(self, marker: str) -> None:
-            self.marker = marker
+        def __init__(self) -> None:
             self.audits: list[ResearchExecutionAudit] = []
 
         def run(
@@ -3463,7 +3416,7 @@ def test_binding_routed_runner_dispatches_by_strategy_variant() -> None:
     plan = _model_plan_binding(inputs)
     model_audit = _model_audit(plan, snapshot, _model_backtest(snapshot, rules))
 
-    model_side = _MarkerRunner("model")
+    model_side = _MarkerRunner()
     routing = BindingRoutedResearchFoldRunner(
         backtest_runner=cast("ResearchFoldRunner", _RaisingRunner()),
         model_runner=model_side,
@@ -3596,30 +3549,7 @@ def test_model_plan_binding_never_builds_a_backtest_directly() -> None:
     frames = _frames()
     rules = _rules()
     snapshot = _snapshot(frames, rules)
-    inputs = (
-        ModelFoldInputEvidence(
-            input_kind="label_prices",
-            input_id="model-input-label_prices",
-            content_hash=_sha("9"),
-            schema_hash=_sha("9"),
-            source_snapshot_ids=(_SOURCE,),
-        ),
-        ModelFoldInputEvidence(
-            input_kind="features",
-            input_id="model-input-features",
-            content_hash=_sha("8"),
-            schema_hash=_sha("8"),
-            source_snapshot_ids=(_SOURCE,),
-        ),
-        ModelFoldInputEvidence(
-            input_kind="calendar",
-            input_id="model-input-calendar",
-            content_hash=_sha("7"),
-            schema_hash=_sha("7"),
-            source_snapshot_ids=(_SOURCE,),
-        ),
-    )
-    plan = _model_plan_binding(inputs)
+    plan = _model_plan_binding(_publish_model_inputs_stub())
     audit = _model_audit(plan, snapshot, _model_backtest(snapshot, rules))
     factory, _candidate_audit, _reader, _builder, _loader = _fixture()
 

@@ -21,6 +21,9 @@ from ditto_application.exceptions import AppProcessError
 from ditto_application.processes.experiments._baseline_runtime_evidence import (
     decode_baseline_runtime_evidence,
 )
+from ditto_application.processes.experiments._execution_bundle_inputs import (
+    REGISTERED_MODEL_KINDS,
+)
 from ditto_application.processes.experiments._preflight_certification_codec import (
     validate_certification_preimage,
 )
@@ -522,7 +525,7 @@ def _validate_executor_and_authority(
         is_canonical_content_hash(item.candidate_hash)
         and is_canonical_content_hash(item.lineage_hash)
         and is_canonical_content_hash(item.descriptor_hash)
-        and item.model_kind in {"rule", "linear", "lightgbm"}
+        and item.model_kind in REGISTERED_MODEL_KINDS
         for item in model_candidates
     ):
         raise experiment_process_error(

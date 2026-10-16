@@ -51,6 +51,7 @@ from ditto_application.processes.experiments.model_artifact_publication import (
     IndexedModelArtifactSink,
 )
 from ditto_application.processes.experiments.model_candidate_folds import (
+    ModelCandidateFoldFailure,
     ModelCandidateFoldRequest,
     ModelCandidateFoldSuccess,
     ModelFoldDataPort,
@@ -173,7 +174,9 @@ def _prediction_frame_source_snapshot(
 ) -> str:
     """Stamp predictions with the feature frame's primary source snapshot."""
     features = tuple(item for item in binding.inputs if item.input_kind == "features")
-    if len(features) != 1 or not features[0].source_snapshot_ids:  # pragma: no cover
+    if (  # pragma: no cover - binding validation guarantees the shapes
+        len(features) != 1 or not features[0].source_snapshot_ids
+    ):
         raise _runner_error("model_fold_input_evidence_missing", input_kind="features")
     return features[0].source_snapshot_ids[0]
 
@@ -302,16 +305,14 @@ class ModelCandidateFoldRunner:
                 now_epoch_us=now_epoch_us,
             )
         )
-        if type(result) is not ModelCandidateFoldSuccess:
+        if isinstance(result, ModelCandidateFoldFailure):
             raise _runner_error(
                 "model_candidate_fold_stage_failed",
-                stage=(
-                    str(getattr(result, "stage", "unknown"))
-                    if result is not None
-                    else "unknown"
-                ),
-                stage_reason=str(getattr(result, "reason", "unknown")),
+                stage=result.stage.value,
+                stage_reason=result.reason,
             )
+        if type(result) is not ModelCandidateFoldSuccess:
+            raise _runner_error("invalid_model_candidate_fold_result")
         success = result
         if external_should_stop():
             return ResearchFoldRunResult(ResearchFoldRunState.STOPPED, None)

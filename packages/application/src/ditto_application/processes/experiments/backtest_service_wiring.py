@@ -57,6 +57,9 @@ from ditto_application.processes.experiments._backtest_service_contract import (
 from ditto_application.processes.experiments._backtest_service_contract import (
     backtest_construction_error as _error,
 )
+from ditto_application.processes.experiments._execution_bundle_inputs import (
+    MODEL_PLAN_REQUIRES_RUNNER_UPGRADE_REASON,
+)
 from ditto_application.processes.experiments._prediction_pipeline import (
     build_frozen_prediction_pipeline,
 )
@@ -305,7 +308,7 @@ def _require_built_executor_binding(
     if type(strategy) is ModelCandidateExecutionBinding:
         # Plan bindings are claim-time identities; only the upgraded
         # prediction executor may ever build or attest a backtest service.
-        raise _error("model_candidate_plan_requires_fold_runner_upgrade")
+        raise _error(MODEL_PLAN_REQUIRES_RUNNER_UPGRADE_REASON)
 
 
 def _expected_service_config(

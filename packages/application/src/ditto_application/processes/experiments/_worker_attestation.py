@@ -9,6 +9,9 @@ from typing import cast
 
 from ditto_application.exceptions import AppProcessError
 from ditto_application.processes.execution.backtest_process import BacktestService
+from ditto_application.processes.experiments._execution_bundle_inputs import (
+    MODEL_PLAN_REQUIRES_RUNNER_UPGRADE_REASON,
+)
 from ditto_application.processes.experiments.backtest_service_wiring import (
     ClosedBacktestServiceGraph,
     require_closed_backtest_service,
@@ -84,9 +87,7 @@ class ResearchBacktestBuildAttestation:
         if type(semantics.strategy) is ModelCandidateExecutionBinding:
             # Attestations prove built services; a claim-time model plan must
             # be upgraded to its published prediction executor first.
-            raise _attestation_error(
-                "model_candidate_plan_requires_fold_runner_upgrade",
-            )
+            raise _attestation_error(MODEL_PLAN_REQUIRES_RUNNER_UPGRADE_REASON)
         # The guard above keeps the attestation to built executor kinds; the
         # annotation is narrowed explicitly because type() checks do not.
         strategy = cast(

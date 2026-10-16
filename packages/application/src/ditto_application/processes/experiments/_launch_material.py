@@ -62,6 +62,9 @@ from ditto_application.processes.experiments.planning_contracts import (
     ExperimentPlanningRequest,
     ExperimentPreflightCheck,
 )
+from ditto_application.processes.experiments.planning_document_codec import (
+    candidate_matrix_spec_payload,
+)
 from ditto_application.processes.experiments.planning_probes import (
     ResearchCertificationResult,
     ResearchExecutorProbeResult,
@@ -236,39 +239,6 @@ def _candidate_payload(
     }
 
 
-def _matrix_spec_payload(matrix: CandidateMatrixSpec) -> Mapping[str, object]:
-    payload: dict[str, object] = {
-        "baseline": {
-            "descriptor_type": matrix.baseline.descriptor_type,
-            "payload": matrix.baseline.payload,
-            "schema_version": matrix.baseline.schema_version,
-        },
-        "axes": [
-            {
-                "name": axis.name,
-                "values": [
-                    {"type": _parameter_type(value), "value": value}
-                    for value in axis.values
-                ],
-            }
-            for axis in matrix.axes
-        ],
-        "candidate_limit": matrix.candidate_limit,
-    }
-    # Keep the legacy document shape when no model candidates are declared,
-    # matching the shared matrix codec's compatibility rule.
-    if matrix.model_candidates:
-        payload["model_candidates"] = [
-            {
-                "descriptor_type": model.descriptor_type,
-                "payload": model.payload,
-                "schema_version": model.schema_version,
-            }
-            for model in matrix.model_candidates
-        ]
-    return payload
-
-
 def _work_payload(
     work: ExperimentWorkPlan,
     matrix_spec: CandidateMatrixSpec,
@@ -310,13 +280,13 @@ def _work_payload(
                 for candidate in work.candidate_matrix.candidates
             ],
         },
-        "matrix_spec": _matrix_spec_payload(matrix_spec),
+        "matrix_spec": candidate_matrix_spec_payload(matrix_spec),
     }
 
 
 def _executor_payload(result: ResearchExecutorProbeResult) -> Mapping[str, object]:
     runtime = result.runtime_validation_evidence
-    return {
+    payload: dict[str, object] = {
         "available": result.available,
         "code": result.code,
         "reason": result.reason,
@@ -341,7 +311,14 @@ def _executor_payload(result: ResearchExecutorProbeResult) -> Mapping[str, objec
             }
             for item in result.candidates
         ],
-        "model_candidates": [
+        "runtime_validation_evidence": (
+            None if runtime is None else runtime.as_payload()
+        ),
+    }
+    # Keep the pre-W2 executor document byte-stable for launches without
+    # model candidates: the key appears only when model evidence exists.
+    if result.model_candidates:
+        payload["model_candidates"] = [
             {
                 "candidate_hash": item.candidate_hash,
                 "model_kind": item.model_kind,
@@ -349,11 +326,8 @@ def _executor_payload(result: ResearchExecutorProbeResult) -> Mapping[str, objec
                 "descriptor_hash": item.descriptor_hash,
             }
             for item in result.model_candidates
-        ],
-        "runtime_validation_evidence": (
-            None if runtime is None else runtime.as_payload()
-        ),
-    }
+        ]
+    return payload
 
 
 def _authority_payload(

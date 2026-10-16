@@ -24,7 +24,9 @@ from ditto_application.processes.experiments.execution_contracts import (
 __all__ = [
     "MODEL_CANDIDATE_IMPLEMENTATION_KEY",
     "MODEL_FOLD_INPUT_KINDS",
+    "MODEL_PLAN_REQUIRES_RUNNER_UPGRADE_REASON",
     "PREDICTION_EXECUTOR_IMPLEMENTATION_KEY",
+    "REGISTERED_MODEL_KINDS",
     "BaselineExecutorBinding",
     "CodeEnvironmentLock",
     "ContentAddressedResearchInput",
@@ -530,7 +532,10 @@ class BaselineExecutorBinding:
 
 
 PREDICTION_EXECUTOR_IMPLEMENTATION_KEY = "research.prediction.raw_score_equal_weight.v1"
-_PREDICTION_MODEL_KINDS = frozenset({"rule", "linear", "lightgbm"})
+# One application-side registry of the registered model kinds; the analysis
+# ModelKind enum owns the semantic authority and both executors pin to this.
+REGISTERED_MODEL_KINDS = frozenset({"rule", "linear", "lightgbm"})
+_PREDICTION_MODEL_KINDS = REGISTERED_MODEL_KINDS
 
 
 @dataclass(frozen=True, slots=True)
@@ -639,7 +644,10 @@ class PredictionExecutorBinding:
 MODEL_CANDIDATE_IMPLEMENTATION_KEY = (
     "research.model_candidate.train_publish_backtest.v1"
 )
-_MODEL_CANDIDATE_KINDS = frozenset({"rule", "linear", "lightgbm"})
+MODEL_PLAN_REQUIRES_RUNNER_UPGRADE_REASON = (
+    "model_candidate_plan_requires_fold_runner_upgrade"
+)
+_MODEL_CANDIDATE_KINDS = REGISTERED_MODEL_KINDS
 MODEL_FOLD_INPUT_KINDS = frozenset(
     {"label_prices", "features", "calendar"},
 )

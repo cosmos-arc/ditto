@@ -522,6 +522,16 @@ class _CertificationProbe:
         )
 
 
+def _model_executor_evidence(candidate) -> ModelExecutorEvidence:
+    decoded = decode_model_candidate_descriptor(candidate.descriptor)
+    return ModelExecutorEvidence(
+        candidate_hash=candidate.candidate_hash,
+        model_kind=decoded.lineage.model_kind.value,
+        lineage_hash=decoded.lineage.registration_hash,
+        descriptor_hash=model_descriptor_hash(candidate.descriptor),
+    )
+
+
 class _ExecutorProbe:
     def __init__(
         self,
@@ -583,16 +593,7 @@ class _ExecutorProbe:
                 for candidate in request.candidates
             ),
             model_candidates=tuple(
-                ModelExecutorEvidence(
-                    candidate_hash=candidate.candidate_hash,
-                    model_kind=decode_model_candidate_descriptor(
-                        candidate.descriptor
-                    ).lineage.model_kind.value,
-                    lineage_hash=decode_model_candidate_descriptor(
-                        candidate.descriptor
-                    ).lineage.registration_hash,
-                    descriptor_hash=model_descriptor_hash(candidate.descriptor),
-                )
+                _model_executor_evidence(candidate)
                 for candidate in request.model_candidates
             ),
             runtime_validation_evidence=RuntimeValidationEvidence(
