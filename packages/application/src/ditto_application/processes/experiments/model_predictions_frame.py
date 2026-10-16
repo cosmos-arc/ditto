@@ -78,6 +78,11 @@ def require_prediction_frame(frame: pl.DataFrame) -> None:
         .any()
     ):
         raise _frame_error("prediction_frame_duplicate_keys")
+    # Nulls anywhere in the frozen contract are evidence gaps, not missing
+    # data to impute: is_finite ignores nulls, so check them explicitly.
+    for column in ("trade_date", "instrument_id", "signal_value", "source_snapshot_id"):
+        if frame.get_column(column).null_count():
+            raise _frame_error("prediction_frame_null_values", column=column)
     if not frame.get_column("signal_value").is_finite().all():
         raise _frame_error("prediction_frame_values_non_finite")
 
@@ -105,12 +110,22 @@ def prediction_frame_from_record(
         # The backtest joins on canonical integer instrument ids; refuse
         # non-canonical (e.g. ticker-style or zero-padded) identities rather
         # than silently mapping them onto the wrong instrument.
-        if not entity.isdigit() or (len(entity) > 1 and entity.startswith("0")):
+        if (
+            not entity.isascii()
+            or not entity.isdecimal()
+            or (len(entity) > 1 and entity.startswith("0"))
+        ):
             raise _frame_error(
                 "prediction_entity_not_canonical",
                 entity_id=entity,
             )
-        canonical_ids.append(int(entity))
+        try:
+            canonical_ids.append(int(entity))
+        except ValueError as error:
+            raise _frame_error(
+                "prediction_entity_not_canonical",
+                entity_id=entity,
+            ) from error
     frame = pl.DataFrame(
         {
             "trade_date": [row.decision_session for row in predictions.rows],
@@ -125,8 +140,9 @@ def prediction_frame_from_record(
             "source_snapshot_id": pl.String,
         },
     )
-    # decision_session is ISO text; parse to the date dtype the contract pins.
-    frame = frame.with_columns(pl.col("trade_date").str.to_date())
+    # decision_session is ISO text; parse under the pinned strict format so
+    # lenient variants (2026/01/05, 2026-1-5) refuse instead of passing.
+    frame = frame.with_columns(pl.col("trade_date").str.to_date("%Y-%m-%d"))
     frame = frame.sort(["trade_date", "instrument_id"])
     require_prediction_frame(frame)
     return frame

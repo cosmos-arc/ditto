@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass, replace
 from datetime import date, timedelta
 
+import polars as pl
 from ditto_backtest.brokerage import BacktestBrokerage
 from ditto_backtest.data_feed import (
     DataFeed,
@@ -175,6 +176,28 @@ def build_frozen_baseline_pipeline(
     return StrategyPipeline((), evidence_sink=evidence_sink)
 
 
+@dataclass(frozen=True)
+class _NullScoreFilterStage:
+    """
+    Drop unscored instruments before selection (#565 W3).
+
+    A null ``score`` after raw scoring means the frozen model emitted no
+    score for that instrument this session. The prediction executor has no
+    frozen imputation policy for missing scores, so such instruments carry
+    no signal and must not ride into top-k selection on identity ordering.
+    """
+
+    score_column: str = "score"
+
+    def process(
+        self,
+        frame: pl.DataFrame,
+        context: object,
+    ) -> pl.DataFrame:
+        _ = context
+        return frame.filter(pl.col(self.score_column).is_not_null())
+
+
 def build_frozen_prediction_pipeline(
     binding: PredictionExecutorBinding,
     *,
@@ -185,10 +208,12 @@ def build_frozen_prediction_pipeline(
 
     The strategy layer consumes the frozen model scores as its precomputed
     ``signal_value`` column: raw pass-through scoring (descending — higher
-    prediction ranks first), top-k selection, and the pipeline's equal-weight
-    fallback for allocation. No factor evaluation, no catalog lookup, and no
-    analysis import — the score's provenance lives entirely in the frozen
-    binding and its content-addressed predictions input.
+    prediction ranks first), null-score instruments dropped (no frozen
+    imputation policy exists for missing model scores), top-k selection,
+    and the pipeline's equal-weight fallback for allocation. No factor
+    evaluation, no catalog lookup, and no analysis import — the score's
+    provenance lives entirely in the frozen binding and its
+    content-addressed predictions input.
     """
     if type(binding) is not PredictionExecutorBinding:
         raise AppBuilderError(
@@ -217,6 +242,7 @@ def build_frozen_prediction_pipeline(
             factor_bindings=(),
             evidence_sink=evidence_sink,
         ),
+        _NullScoreFilterStage(),
         SelectionStage(top_k=binding.top_k, evidence_sink=evidence_sink),
     )
     return StrategyPipeline(

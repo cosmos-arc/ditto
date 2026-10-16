@@ -303,6 +303,12 @@ def _expected_service_config(
     semantics = audit.semantics
     strategy = semantics.strategy
     config = graph.config
+    if type(strategy) is not PredictionExecutorBinding and (
+        graph.prediction_signals is not None
+    ):
+        # Model-score frames may only feed a prediction executor; a drifted
+        # graph must not score a strategy or baseline run with them.
+        raise _error("prediction_signals_without_prediction_executor")
     if type(strategy) is StrategyExecutionBinding:
         if (
             canonical_parameter_hash(config.effective_parameters)

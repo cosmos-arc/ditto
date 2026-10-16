@@ -15,6 +15,9 @@ from ditto_analysis.experiments.model_lineage import (
     ModelPredictionRecord,
     ModelPredictionRow,
 )
+from ditto_application.builders.service_factory import (
+    build_frozen_prediction_pipeline,
+)
 from ditto_application.exceptions import AppProcessError
 from ditto_application.processes.execution._factor_bundle import (
     build_prediction_aware_bundle_builder,
@@ -34,6 +37,7 @@ from ditto_application.processes.experiments.model_predictions_frame import (
     prediction_frame_parquet_bytes,
     prediction_input_evidence,
 )
+from ditto_strategy.alpha.selection_evidence import SelectionEvidenceCollector
 
 _REGISTRATION = "a" * 64
 _OTHER_HASH = "b" * 64
@@ -257,3 +261,57 @@ def test_prediction_builder_refuses_unscored_session() -> None:
     with pytest.raises(AppProcessError) as error:
         builder(_Ctx())  # type: ignore[arg-type]
     assert error.value.details["reason"] == "prediction_session_scores_missing"
+
+
+def test_prediction_pipeline_drops_unscored_instruments() -> None:
+    pipeline = build_frozen_prediction_pipeline(
+        _binding(top_k=3),
+        evidence_sink=SelectionEvidenceCollector(),
+    )
+    frame = pl.DataFrame(
+        {
+            "instrument_id": [2000001, 2000002],
+            "signal_value": [0.5, None],
+        },
+        schema={"instrument_id": pl.Int64, "signal_value": pl.Float64},
+    ).with_columns(pl.col("signal_value").alias("score"))
+    scored = pipeline.stages[2].process(frame, None)  # type: ignore[arg-type]
+    # The unscored instrument carries no signal: it must not ride into
+    # top-k selection on identity ordering.
+    assert scored.get_column("instrument_id").to_list() == [2000001]
+
+
+def test_prediction_frame_refuses_null_contract_values() -> None:
+    nulled = pl.DataFrame(
+        {
+            "trade_date": [date(2026, 1, 2), date(2026, 1, 5)],
+            "instrument_id": [2000001, 2000002],
+            "signal_value": [0.5, None],
+            "source_snapshot_id": ["snap-1", "snap-1"],
+        },
+        schema={
+            "trade_date": pl.Date,
+            "instrument_id": pl.Int64,
+            "signal_value": pl.Float64,
+            "source_snapshot_id": pl.String,
+        },
+    )
+    with pytest.raises(AppProcessError) as error:
+        prediction_frame_parquet_bytes(nulled)
+    assert error.value.details["reason"] == "prediction_frame_null_values"
+    assert error.value.details["column"] == "signal_value"
+
+
+def test_prediction_frame_refuses_full_width_identity() -> None:
+    record = _record()
+    fullwidth = ModelPredictionRecord(
+        schema=record.schema,
+        registration_hash=record.registration_hash,
+        model_artifact_hash=record.model_artifact_hash,
+        prediction_window_start=record.prediction_window_start,
+        prediction_window_end=record.prediction_window_end,
+        rows=(ModelPredictionRow("\uff11\uff12\uff13", "2026-01-02", 0.25),),
+    )
+    with pytest.raises(AppProcessError) as error:
+        prediction_frame_from_record(fullwidth, source_snapshot_id="snap-1")
+    assert error.value.details["reason"] == "prediction_entity_not_canonical"

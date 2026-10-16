@@ -49,6 +49,7 @@ from ditto_application.processes.experiments._report_evidence import (
     backtest_report_content_hash,
 )
 from ditto_application.processes.experiments.baseline_registry import (
+    BaselinePlanKind,
     BaselinePlanRequest,
     BaselineRef,
     default_baseline_registry,
@@ -2123,6 +2124,36 @@ def test_factory_builds_prediction_executor_and_runs_real_service() -> None:
     selection_events = result.graph.selection_evidence_collector.snapshot().selections
     assert selection_events
     assert all(str(item.instrument_id) == str(_MEMBER_ID) for item in selection_events)
+    # A drifted audit must not score a non-prediction run with model frames.
+    object.__setattr__(
+        audit.semantics,
+        "strategy",
+        BaselineExecutorBinding(
+            baseline_ref="stock_universe_equal_weight.v1",
+            kind=BaselinePlanKind.STOCK_UNIVERSE_EQUAL_WEIGHT,
+            descriptor_hash=_sha("2"),
+            implementation_key="research.baseline.stock_universe_equal_weight.v1",
+            executor_contract_version=1,
+            registry_manifest_hash=_sha("3"),
+            factor_versions=(),
+        ),
+    )
+    from ditto_application.processes.experiments.backtest_service_wiring import (
+        require_closed_backtest_service as _require_closed,
+    )
+
+    with pytest.raises(AppProcessError) as drift:
+        _require_closed(
+            result.graph,
+            expected_audit=audit,
+            expected_should_stop=_never_stop,
+        )
+    # The poisoned audit is refused — either at the config-identity gate
+    # (earliest) or at the prediction-frame pin; both prove the drift gate.
+    assert drift.value.details["reason"] in {
+        "constructed_backtest_service_wiring_drift",
+        "prediction_signals_without_prediction_executor",
+    }
 
 
 def test_factory_rejects_prediction_executor_with_unloadable_input() -> None:
