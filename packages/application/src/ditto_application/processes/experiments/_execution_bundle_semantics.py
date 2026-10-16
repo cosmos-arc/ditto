@@ -278,28 +278,7 @@ def _validate_prediction_inputs(semantics: _SemanticsView) -> None:
             "prediction executor cannot ride a baseline candidate",
             "unexpected_prediction_executor",
         )
-    matches = [
-        item
-        for item in semantics.snapshot.inputs
-        if item.input_id == strategy.predictions_input_id
-    ]
-    if len(matches) != 1:
-        raise _error(
-            "prediction input is not bound exactly once in the frozen snapshot",
-            "prediction_input_binding_missing",
-            input_id=strategy.predictions_input_id,
-        )
-    evidence = matches[0]
-    if (
-        evidence.artifact_kind != "predictions"
-        or evidence.content_hash != strategy.predictions_content_hash
-        or evidence.schema_hash != strategy.predictions_schema_hash
-    ):
-        raise _error(
-            "prediction executor drifted from its frozen snapshot input",
-            "prediction_input_binding_drift",
-            input_id=strategy.predictions_input_id,
-        )
+    strategy.resolve_predictions_input(semantics.snapshot.inputs)
 
 
 def _validate_data_feed_manifest(

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import re
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from datetime import date, datetime
 from enum import StrEnum
@@ -597,6 +597,38 @@ class PredictionExecutorBinding:
             "implementation_key": self.implementation_key,
             "executor_contract_version": self.executor_contract_version,
         }
+
+    @property
+    def runner_identity(self) -> str:
+        """Return the one canonical run/strategy identity of this executor."""
+        return f"model-{self.model_kind}-{self.model_registration_hash[:16]}"
+
+    def resolve_predictions_input(
+        self,
+        inputs: Sequence[ContentAddressedResearchInput],
+    ) -> ContentAddressedResearchInput:
+        """Bind to the exactly-once frozen predictions input and its hashes."""
+        matches = [
+            item for item in inputs if item.input_id == self.predictions_input_id
+        ]
+        if len(matches) != 1:
+            raise _error(
+                "prediction input is not bound exactly once in the frozen snapshot",
+                "prediction_input_binding_missing",
+                input_id=self.predictions_input_id,
+            )
+        evidence = matches[0]
+        if (
+            evidence.artifact_kind != "predictions"
+            or evidence.content_hash != self.predictions_content_hash
+            or evidence.schema_hash != self.predictions_schema_hash
+        ):
+            raise _error(
+                "prediction executor drifted from its frozen snapshot input",
+                "prediction_input_binding_drift",
+                input_id=self.predictions_input_id,
+            )
+        return evidence
 
 
 @dataclass(frozen=True, slots=True)

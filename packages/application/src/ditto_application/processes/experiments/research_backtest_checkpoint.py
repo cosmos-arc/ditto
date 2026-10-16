@@ -156,9 +156,7 @@ def build_research_backtest_strategy_config(
         )
     if type(strategy) is PredictionExecutorBinding and not effective_parameters:
         return ResearchBacktestStrategyConfig(
-            strategy_id=(
-                f"model-{strategy.model_kind}-{strategy.model_registration_hash[:16]}"
-            ),
+            strategy_id=strategy.runner_identity,
             strategy_version=str(strategy.executor_contract_version),
             base_spec_hash=strategy.binding_hash,
             spec_hash=strategy.binding_hash,
@@ -333,10 +331,7 @@ def _run_identity(
     if type(strategy) is BaselineExecutorBinding:
         return strategy.baseline_ref, str(strategy.executor_contract_version)
     if type(strategy) is PredictionExecutorBinding:
-        return (
-            f"model-{strategy.model_kind}-{strategy.model_registration_hash[:16]}",
-            str(strategy.executor_contract_version),
-        )
+        return strategy.runner_identity, str(strategy.executor_contract_version)
     raise _error("invalid_strategy_execution_binding")
 
 

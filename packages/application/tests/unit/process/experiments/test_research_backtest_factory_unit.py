@@ -2194,7 +2194,7 @@ def test_factory_rejects_prediction_executor_with_unloadable_input() -> None:
     )
     with pytest.raises(AppProcessError) as error:
         factory.build(audit, external_should_stop=_never_stop)
-    assert error.value.details["reason"] == "prediction_input_identity_missing"
+    assert error.value.details["reason"] == "prediction_input_binding_missing"
 
 
 def _poison_component(

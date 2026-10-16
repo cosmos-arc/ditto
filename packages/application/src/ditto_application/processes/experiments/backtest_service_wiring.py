@@ -334,6 +334,10 @@ def _expected_service_config(
             or graph.prediction_signals is None
         ):
             raise _error("prediction_executor_execution_drift")
+        if semantics.backtest.benchmark is not None:
+            # The v1 prediction executor freezes benchmark-free execution,
+            # re-pinned here so a drifted audit cannot smuggle one in.
+            raise _error("prediction_executor_execution_drift")
         resolved = build_research_backtest_strategy_config(
             strategy,
             effective_parameters=(),

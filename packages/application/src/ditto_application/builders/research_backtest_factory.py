@@ -434,26 +434,7 @@ class FrozenAuditResearchBacktestFactory:
         binding: PredictionExecutorBinding,
     ) -> pl.DataFrame:
         """Load and contract-verify the frozen prediction frame one fold scores with."""
-        matches = [
-            item
-            for item in semantics.snapshot.inputs
-            if item.input_id == binding.predictions_input_id
-        ]
-        if len(matches) != 1:
-            raise _error(
-                "prediction_input_identity_missing",
-                input_id=binding.predictions_input_id,
-            )
-        evidence = matches[0]
-        if (
-            evidence.artifact_kind != "predictions"
-            or evidence.content_hash != binding.predictions_content_hash
-            or evidence.schema_hash != binding.predictions_schema_hash
-        ):
-            raise _error(
-                "prediction_input_binding_drift",
-                input_id=binding.predictions_input_id,
-            )
+        evidence = binding.resolve_predictions_input(semantics.snapshot.inputs)
         loaded = self._artifacts.load_frame(evidence)
         if (
             type(loaded) is not VerifiedResearchFrame

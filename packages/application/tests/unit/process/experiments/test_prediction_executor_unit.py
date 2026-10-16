@@ -16,6 +16,9 @@ from ditto_analysis.experiments.model_lineage import (
     ModelPredictionRow,
 )
 from ditto_application.exceptions import AppProcessError
+from ditto_application.processes.execution._factor_bundle import (
+    build_prediction_aware_bundle_builder,
+)
 from ditto_application.processes.execution.backtest_process import (
     BacktestServiceOptions,
 )
@@ -223,3 +226,34 @@ def test_prediction_frame_adapter_rejects_bad_contracts() -> None:
     with pytest.raises(AppProcessError) as dup_error:
         prediction_frame_parquet_bytes(duplicated)
     assert dup_error.value.details["reason"] == "prediction_frame_duplicate_keys"
+
+
+def test_prediction_builder_refuses_unscored_session() -> None:
+    frame = pl.DataFrame(
+        {
+            "trade_date": [date(2026, 1, 2)],
+            "instrument_id": [2000001],
+            "signal_value": [0.5],
+            "source_snapshot_id": ["snap-1"],
+        },
+        schema={
+            "trade_date": pl.Date,
+            "instrument_id": pl.Int64,
+            "signal_value": pl.Float64,
+            "source_snapshot_id": pl.String,
+        },
+    )
+
+    class _Ctx:
+        class time_context:  # noqa: N801
+            trade_date = "2026-01-05"
+
+    builder = build_prediction_aware_bundle_builder(
+        prediction_signals=frame,
+        data_feed=None,  # type: ignore[arg-type]
+        strategy_id="s",
+        run_id="r",
+    )
+    with pytest.raises(AppProcessError) as error:
+        builder(_Ctx())  # type: ignore[arg-type]
+    assert error.value.details["reason"] == "prediction_session_scores_missing"

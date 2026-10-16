@@ -127,18 +127,24 @@ def build_prediction_aware_bundle_builder(
     """
 
     def _build(ctx: StepContext) -> StrategyInputBundle:
-        base = _exposure_aware_bundle(
-            ctx,
-            data_feed=data_feed,
-            strategy_id=strategy_id,
-            run_id=run_id,
-        )
         session_scores = prediction_signals.filter(
             pl.col("trade_date") == pl.lit(ctx.time_context.trade_date).str.to_date(),
         ).select(
             pl.col("instrument_id"),
             pl.col("signal_value"),
         )
+        if session_scores.is_empty():
+            # A trading session the frozen frame does not score is an
+            # evidence gap, not a signal: fail closed instead of trading
+            # null-score instruments ranked by identity.
+            raise AppProcessError(
+                "frozen prediction frame has no scores for this session",
+                details={
+                    "code": "REPRODUCIBILITY_FAILED",
+                    "reason": "prediction_session_scores_missing",
+                    "trade_date": ctx.time_context.trade_date,
+                },
+            )
         if session_scores.is_duplicated().any():
             raise AppProcessError(
                 "frozen prediction frame carries duplicate session scores",
@@ -148,6 +154,12 @@ def build_prediction_aware_bundle_builder(
                     "trade_date": ctx.time_context.trade_date,
                 },
             )
+        base = _exposure_aware_bundle(
+            ctx,
+            data_feed=data_feed,
+            strategy_id=strategy_id,
+            run_id=run_id,
+        )
         return replace(base, signal_values=session_scores)
 
     return _build
