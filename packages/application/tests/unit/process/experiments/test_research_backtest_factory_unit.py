@@ -40,6 +40,10 @@ from ditto_application.processes.execution.factor_bridge import (
     CompiledExpressions,
     compiled_expressions_execution_hash,
 )
+from ditto_application.processes.experiments._execution_bundle_inputs import (
+    PREDICTION_EXECUTOR_IMPLEMENTATION_KEY,
+    PredictionExecutorBinding,
+)
 from ditto_application.processes.experiments._report_evidence import (
     BacktestReportEvidence,
     backtest_report_content_hash,
@@ -2034,6 +2038,163 @@ def test_factory_builds_synthetic_baseline_without_catalog_runtime_lookup() -> N
     # the executable quantity, so prove the baseline target from original_qty.
     first_day_notional = first_day_orders[0].original_quantity * 10.0
     assert first_day_notional / report.initial_cash == pytest.approx(1.0)
+
+
+def test_factory_builds_prediction_executor_and_runs_real_service() -> None:
+    factory, candidate_audit, reader, builder, loader = _fixture()
+    # One frozen model-score frame: the sole PIT member scores on both days.
+    predictions_frame = pl.DataFrame(
+        {
+            "trade_date": [date.fromisoformat(item) for item in _DATES],
+            "instrument_id": [_MEMBER_ID] * len(_DATES),
+            "signal_value": [0.9, 0.4],
+            "source_snapshot_id": [_SOURCE] * len(_DATES),
+        },
+        schema={
+            "trade_date": pl.Date,
+            "instrument_id": pl.Int64,
+            "signal_value": pl.Float64,
+            "source_snapshot_id": pl.String,
+        },
+    )
+    verified = _verified(ResearchFrameKind.PREDICTIONS, predictions_frame)
+    loader.frames[verified.input_evidence] = verified
+    binding = PredictionExecutorBinding(
+        model_registration_hash=_sha("1"),
+        model_kind="linear",
+        predictions_input_id=verified.input_evidence.input_id,
+        predictions_content_hash=verified.input_evidence.content_hash,
+        predictions_schema_hash=verified.input_evidence.schema_hash,
+        top_k=1,
+        implementation_key=PREDICTION_EXECUTOR_IMPLEMENTATION_KEY,
+        executor_contract_version=1,
+    )
+    snapshot = replace(
+        candidate_audit.semantics.snapshot,
+        inputs=(
+            *candidate_audit.semantics.snapshot.inputs,
+            verified.input_evidence,
+        ),
+    )
+    backtest = replace(
+        candidate_audit.semantics.backtest,
+        rebalance_policy=VersionedExecutionComponent(
+            "research.baseline.fold_schedule",
+            1,
+        ),
+        rebalance_frequency="fold_schedule",
+        benchmark=None,
+    )
+    semantics = replace(
+        candidate_audit.semantics,
+        candidate_id="candidate-model-1",
+        strategy=binding,
+        backtest=backtest,
+        snapshot=snapshot,
+    )
+    audit = ResearchExecutionAudit.create(
+        semantics=semantics,
+        attempt_id="attempt-prediction-1",
+        attempt_ordinal=1,
+        backtest_run_id="backtest-prediction-1",
+        parent_attempt_id=None,
+        resume_from_run_id=None,
+        created_at=_NOW,
+    )
+
+    result = factory.build(audit, external_should_stop=_never_stop)
+    report = result.service.run()
+
+    assert result.attestation == ResearchBacktestBuildAttestation.from_audit(audit)
+    assert result.service._config.strategy_id == (f"model-linear-{_sha('1')[:16]}")
+    assert result.service._config.rebalance_freq == "fold_schedule"
+    assert result.service._options.prediction_signals is not None
+    assert loader.frame_calls[-1] == verified.input_evidence
+    assert reader.calls == []
+    assert builder.calls == 0
+    # The frozen scores selected the sole member on the first session.
+    first_day_orders = tuple(
+        item for item in report.pre_trade_log if item.trade_date == _DATES[0]
+    )
+    assert len(first_day_orders) == 1
+    assert first_day_orders[0].instrument_id == InstrumentId(_MEMBER_ID)
+    evidence = BacktestReportEvidence.from_report(report)
+    assert evidence.final_nav > 0
+    selection_events = result.graph.selection_evidence_collector.snapshot().selections
+    assert selection_events
+    assert all(str(item.instrument_id) == str(_MEMBER_ID) for item in selection_events)
+
+
+def test_factory_rejects_prediction_executor_with_unloadable_input() -> None:
+    factory, candidate_audit, *_ = _fixture()
+    verified = _verified(
+        ResearchFrameKind.PREDICTIONS,
+        pl.DataFrame(
+            {
+                "trade_date": [date.fromisoformat(item) for item in _DATES],
+                "instrument_id": [_MEMBER_ID] * len(_DATES),
+                "signal_value": [0.9, 0.4],
+                "source_snapshot_id": [_SOURCE] * len(_DATES),
+            },
+            schema={
+                "trade_date": pl.Date,
+                "instrument_id": pl.Int64,
+                "signal_value": pl.Float64,
+                "source_snapshot_id": pl.String,
+            },
+        ),
+    )
+    binding = PredictionExecutorBinding(
+        model_registration_hash=_sha("1"),
+        model_kind="linear",
+        predictions_input_id=verified.input_evidence.input_id,
+        predictions_content_hash=verified.input_evidence.content_hash,
+        predictions_schema_hash=verified.input_evidence.schema_hash,
+        top_k=1,
+        implementation_key=PREDICTION_EXECUTOR_IMPLEMENTATION_KEY,
+        executor_contract_version=1,
+    )
+    snapshot = replace(
+        candidate_audit.semantics.snapshot,
+        inputs=(*candidate_audit.semantics.snapshot.inputs, verified.input_evidence),
+    )
+    backtest = replace(
+        candidate_audit.semantics.backtest,
+        rebalance_policy=VersionedExecutionComponent(
+            "research.baseline.fold_schedule",
+            1,
+        ),
+        rebalance_frequency="fold_schedule",
+        benchmark=None,
+    )
+    semantics = replace(
+        candidate_audit.semantics,
+        strategy=binding,
+        backtest=backtest,
+        snapshot=snapshot,
+    )
+    audit = ResearchExecutionAudit.create(
+        semantics=semantics,
+        attempt_id="attempt-prediction-2",
+        attempt_ordinal=1,
+        backtest_run_id="backtest-prediction-2",
+        parent_attempt_id=None,
+        resume_from_run_id=None,
+        created_at=_NOW,
+    )
+    # Defense in depth: semantics already validated the original binding, so
+    # poison the frozen audit afterwards to prove the factory-level refusal.
+    object.__setattr__(
+        audit.semantics,
+        "strategy",
+        replace(
+            audit.semantics.strategy,
+            predictions_input_id="model-predictions-fold-9",
+        ),
+    )
+    with pytest.raises(AppProcessError) as error:
+        factory.build(audit, external_should_stop=_never_stop)
+    assert error.value.details["reason"] == "prediction_input_identity_missing"
 
 
 def _poison_component(

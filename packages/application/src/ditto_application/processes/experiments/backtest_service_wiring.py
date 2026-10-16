@@ -6,6 +6,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, fields
 from typing import cast
 
+import polars as pl
 from ditto_backtest.brokerage import BacktestBrokerage
 from ditto_backtest.simulation import (
     AShareFillModel,
@@ -33,6 +34,7 @@ from ditto_strategy.alpha.parameters import canonical_parameter_hash
 from ditto_strategy.alpha.pipeline import StrategyPipeline
 from ditto_strategy.alpha.selection_evidence import SelectionEvidenceCollector
 
+from ditto_application.builders.service_factory import build_frozen_prediction_pipeline
 from ditto_application.exceptions import AppBuilderError
 from ditto_application.processes.execution.backtest_process import (
     BacktestService,
@@ -59,6 +61,7 @@ from ditto_application.processes.experiments._backtest_service_contract import (
 from ditto_application.processes.experiments.execution_bundle import (
     BaselineExecutorBinding,
     ExactBenchmarkBinding,
+    PredictionExecutorBinding,
     ResearchExecutionAudit,
     ResearchFillMode,
     StrategyExecutionBinding,
@@ -135,6 +138,7 @@ class ClosedBacktestServiceGraph:
     slippage_model: FixedBpsSlippage
     rule_provider: KnowledgeLagRuleProvider
     compiled_expressions: CompiledExpressions | None
+    prediction_signals: pl.DataFrame | None
     pipeline_attestation: object | None
     external_should_stop: Callable[[], bool]
     components: ConstructedBacktestComponents
@@ -200,6 +204,7 @@ def require_closed_backtest_service(
         "slippage_model": graph.slippage_model,
         "rule_provider": graph.rule_provider,
         "compiled_expressions": graph.compiled_expressions,
+        "prediction_signals": graph.prediction_signals,
         "external_should_stop": expected_should_stop,
         "checkpoint_writer": checkpoint_control.writer,
         "restore_runtime_state": (
@@ -322,6 +327,18 @@ def _expected_service_config(
             effective_parameters=(),
             rebalance_frequency=semantics.backtest.rebalance_frequency,
         )
+    elif type(strategy) is PredictionExecutorBinding:
+        if (
+            graph.compiled_expressions is not None
+            or config.effective_parameters
+            or graph.prediction_signals is None
+        ):
+            raise _error("prediction_executor_execution_drift")
+        resolved = build_research_backtest_strategy_config(
+            strategy,
+            effective_parameters=(),
+            rebalance_frequency=semantics.backtest.rebalance_frequency,
+        )
     else:
         raise _error("invalid_strategy_execution_binding")
     return build_research_backtest_config(
@@ -368,6 +385,9 @@ def _require_pipeline_state(graph: ClosedBacktestServiceGraph) -> None:
         if graph.pipeline_attestation is not None or stages != ():
             raise _error("synthetic_baseline_execution_drift")
         return
+    if type(strategy) is PredictionExecutorBinding:
+        _require_prediction_pipeline_state(graph, stages, collector, strategy)
+        return
     if type(strategy) is not StrategyExecutionBinding:
         raise _error("invalid_strategy_execution_binding")
     attestation = graph.pipeline_attestation
@@ -396,6 +416,26 @@ def _require_pipeline_state(graph: ClosedBacktestServiceGraph) -> None:
         ) from error
     if verified is not pipeline:
         raise _error("research_pipeline_execution_drift")
+
+
+def _require_prediction_pipeline_state(
+    graph: ClosedBacktestServiceGraph,
+    stages: tuple[object, ...],
+    collector: SelectionEvidenceCollector,
+    strategy: PredictionExecutorBinding,
+) -> None:
+    """Pin the prediction pipeline to its registered stage shape."""
+    # The frozen prediction pipeline carries no attested node pipeline (it
+    # is registered, not compiled); its exact stage shape is pinned by
+    # rebuilding the registered pipeline and requiring equality.
+    if graph.pipeline_attestation is not None:
+        raise _error("prediction_executor_execution_drift")
+    expected_stages = build_frozen_prediction_pipeline(
+        strategy,
+        evidence_sink=collector,
+    ).stages
+    if stages != expected_stages:
+        raise _error("prediction_executor_execution_drift")
 
 
 def _require_rules_state(graph: ClosedBacktestServiceGraph) -> None:

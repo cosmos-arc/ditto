@@ -83,7 +83,14 @@ def _exact_knowledge_lag_days(value: object) -> int:
     return value
 
 
-_FRAME_KINDS_BY_VALUE = {kind.value: kind for kind in ResearchFrameKind}
+# The feed owns market/calendar/membership/classification frames only;
+# prediction score frames are strategy inputs consumed by the prediction
+# executor path, never by the data feed itself.
+_FRAME_KINDS_BY_VALUE = {
+    kind.value: kind
+    for kind in ResearchFrameKind
+    if kind is not ResearchFrameKind.PREDICTIONS
+}
 _SUPPORTED_KNOWN_AT_POLICIES = frozenset({"sample_time"})
 
 

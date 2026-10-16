@@ -26,11 +26,13 @@ from ditto_application.processes.experiments._execution_bundle_inputs import (
     POLICY_MODEL_ROLES as _POLICY_MODEL_ROLES,
 )
 from ditto_application.processes.experiments._execution_bundle_inputs import (
+    PREDICTION_EXECUTOR_IMPLEMENTATION_KEY,
     BaselineExecutorBinding,
     CodeEnvironmentLock,
     ContentAddressedResearchInput,
     ExecutionEvidenceSource,
     PolicyModelEvidenceBinding,
+    PredictionExecutorBinding,
     ResearchFillMode,
     ResearchSnapshotBinding,
     VersionedExecutionComponent,
@@ -61,6 +63,7 @@ from ditto_application.processes.experiments.execution_contracts import (
 )
 
 __all__ = [
+    "PREDICTION_EXECUTOR_IMPLEMENTATION_KEY",
     "BacktestExecutionConfigBinding",
     "BaselineExecutorBinding",
     "CodeEnvironmentLock",
@@ -68,6 +71,7 @@ __all__ = [
     "ExactBenchmarkBinding",
     "ExecutionEvidenceSource",
     "PolicyModelEvidenceBinding",
+    "PredictionExecutorBinding",
     "ResearchExecutionAudit",
     "ResearchExecutionSemantics",
     "ResearchFactorExecutionBinding",
@@ -614,7 +618,9 @@ class ResearchExecutionSemantics:
     plan_hash: str
     launch_spec_hash: str
     fold_spec_hash: str
-    strategy: StrategyExecutionBinding | BaselineExecutorBinding
+    strategy: (
+        StrategyExecutionBinding | BaselineExecutorBinding | PredictionExecutorBinding
+    )
     backtest: BacktestExecutionConfigBinding
     snapshot: ResearchSnapshotBinding
     membership_hash: str

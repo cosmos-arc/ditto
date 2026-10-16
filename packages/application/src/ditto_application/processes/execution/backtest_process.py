@@ -9,6 +9,7 @@ from datetime import UTC, date, datetime
 from typing import Literal
 
 import orjson
+import polars as pl
 from ditto_backtest.audit import ExecutionAuditCollector
 from ditto_backtest.config import EngineConfig, EngineMode
 from ditto_backtest.context_inputs import (
@@ -275,6 +276,8 @@ class BacktestServiceOptions:
         checkpoint_writer: 策略运行 checkpoint 写入端口 (None = 跳过恢复点持久化)
         checkpoint_interval_days: 构造可恢复 checkpoint 的完成交易日间隔
         compiled_expressions: 编译后的因子表达式 (None = 使用默认信号)
+        prediction_signals: 冻结模型预测评分帧 (None = 非预测驱动；与
+            compiled_expressions 互斥)
         lineage_recorder: 数据血缘记录器 (None = 跳过 lineage 记录)
         allow_experimental_data: 是否显式允许 experimental 数据集进入运行时
         restore_runtime_state: 已解析的 checkpoint runtime-state
@@ -296,6 +299,7 @@ class BacktestServiceOptions:
     checkpoint_writer: StrategyRunCheckpointWriterProtocol | None = None
     checkpoint_interval_days: int = 1
     compiled_expressions: CompiledExpressions | None = None
+    prediction_signals: pl.DataFrame | None = None
     lineage_recorder: DataLineageRecorder | None = None
     allow_experimental_data: bool = False
     restore_runtime_state: BacktestRuntimeStateSnapshot | None = None
@@ -577,6 +581,7 @@ class BacktestService:
             data_feed=self._data_feed,
             strategy_id=self._config.strategy_id,
             run_id=run_id,
+            prediction_signals=self._options.prediction_signals,
         )
         run_svc = self._options.run_service
         should_stop: Callable[[], bool] | None = None

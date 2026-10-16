@@ -35,7 +35,10 @@ from ditto_application.builders.research_runtime_builder import (
     ResearchSnapshotIdentity,
     ResearchStrategyRuntime,
 )
-from ditto_application.builders.service_factory import build_frozen_baseline_pipeline
+from ditto_application.builders.service_factory import (
+    build_frozen_baseline_pipeline,
+    build_frozen_prediction_pipeline,
+)
 from ditto_application.exceptions import AppBuilderError, AppProcessError
 from ditto_application.processes.execution.factor_bridge import (
     CompiledExpressions,
@@ -43,6 +46,7 @@ from ditto_application.processes.execution.factor_bridge import (
 )
 from ditto_application.processes.experiments._execution_bundle_inputs import (
     BaselineExecutorBinding,
+    PredictionExecutorBinding,
     ResearchSnapshotBinding,
 )
 from ditto_application.processes.experiments._worker_attestation import (
@@ -64,6 +68,9 @@ from ditto_application.processes.experiments.execution_bundle import (
 )
 from ditto_application.processes.experiments.execution_contracts import (
     ResearchAssetLane,
+)
+from ditto_application.processes.experiments.model_predictions_frame import (
+    require_prediction_frame,
 )
 from ditto_application.processes.experiments.research_backtest_checkpoint import (
     ResearchBacktestCheckpointControl,
@@ -421,6 +428,52 @@ class FrozenAuditResearchBacktestFactory:
             rules=rules,
         )
 
+    def _load_prediction_frame(
+        self,
+        semantics: ResearchExecutionSemantics,
+        binding: PredictionExecutorBinding,
+    ) -> pl.DataFrame:
+        """Load and contract-verify the frozen prediction frame one fold scores with."""
+        matches = [
+            item
+            for item in semantics.snapshot.inputs
+            if item.input_id == binding.predictions_input_id
+        ]
+        if len(matches) != 1:
+            raise _error(
+                "prediction_input_identity_missing",
+                input_id=binding.predictions_input_id,
+            )
+        evidence = matches[0]
+        if (
+            evidence.artifact_kind != "predictions"
+            or evidence.content_hash != binding.predictions_content_hash
+            or evidence.schema_hash != binding.predictions_schema_hash
+        ):
+            raise _error(
+                "prediction_input_binding_drift",
+                input_id=binding.predictions_input_id,
+            )
+        loaded = self._artifacts.load_frame(evidence)
+        if (
+            type(loaded) is not VerifiedResearchFrame
+            or loaded.input_evidence != evidence
+        ):
+            raise _error(
+                "artifact_loader_identity_drift",
+                input_id=evidence.input_id,
+            )
+        frame = loaded.frame
+        require_prediction_frame(frame)
+        if not set(loaded.source_snapshot_ids).issubset(
+            semantics.snapshot.source_snapshot_ids,
+        ):
+            raise _error(
+                "prediction_frame_source_snapshot_unbound",
+                input_id=evidence.input_id,
+            )
+        return frame
+
     def _build_strategy(
         self,
         semantics: ResearchExecutionSemantics,
@@ -429,6 +482,35 @@ class FrozenAuditResearchBacktestFactory:
         evidence_collector: SelectionEvidenceCollector,
     ) -> FrozenBacktestStrategyBuild:
         declared = semantics.strategy
+        if type(declared) is PredictionExecutorBinding:
+            prediction_signals = self._load_prediction_frame(semantics, declared)
+            actual = PredictionExecutorBinding(
+                model_registration_hash=declared.model_registration_hash,
+                model_kind=declared.model_kind,
+                predictions_input_id=declared.predictions_input_id,
+                predictions_content_hash=declared.predictions_content_hash,
+                predictions_schema_hash=declared.predictions_schema_hash,
+                top_k=declared.top_k,
+                implementation_key=declared.implementation_key,
+                executor_contract_version=declared.executor_contract_version,
+            )
+            pipeline = build_frozen_prediction_pipeline(
+                actual,
+                evidence_sink=evidence_collector,
+            )
+            if actual != declared or semantics.backtest.benchmark is not None:
+                raise _error("prediction_executor_execution_drift")
+            return FrozenBacktestStrategyBuild(
+                binding=actual,
+                pipeline=pipeline,
+                pipeline_attestation=None,
+                compiled_expressions=None,
+                prediction_signals=prediction_signals,
+                effective_parameters=(),
+                planner_order_type=OrderType.MARKET,
+                rebalance_frequency="fold_schedule",
+                selection_evidence_collector=evidence_collector,
+            )
         if type(declared) is BaselineExecutorBinding:
             if semantics.baseline_plan is None:
                 raise _error("synthetic_baseline_plan_missing")
@@ -452,6 +534,7 @@ class FrozenAuditResearchBacktestFactory:
                 pipeline=pipeline,
                 pipeline_attestation=None,
                 compiled_expressions=None,
+                prediction_signals=None,
                 effective_parameters=(),
                 planner_order_type=OrderType.MARKET,
                 rebalance_frequency="fold_schedule",
@@ -487,6 +570,7 @@ class FrozenAuditResearchBacktestFactory:
             pipeline=pipeline,
             pipeline_attestation=runtime.attested_pipeline,
             compiled_expressions=runtime.compiled_expressions,
+            prediction_signals=None,
             effective_parameters=runtime.effective_parameters,
             planner_order_type=order_type,
             rebalance_frequency=frequency,
@@ -774,7 +858,11 @@ class FrozenAuditResearchBacktestFactory:
     @staticmethod
     def _attest(
         audit: ResearchExecutionAudit,
-        strategy: StrategyExecutionBinding | BaselineExecutorBinding,
+        strategy: (
+            StrategyExecutionBinding
+            | BaselineExecutorBinding
+            | PredictionExecutorBinding
+        ),
         backtest: BacktestExecutionConfigBinding,
         feed: ResearchDataFeed,
         environment: CodeEnvironmentLock,

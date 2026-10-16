@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal
 
+import polars as pl
 from ditto_backtest.brokerage import BacktestBrokerage
 from ditto_backtest.simulation import (
     AShareFillModel,
@@ -45,6 +46,7 @@ from ditto_application.processes.execution.backtest_process import (
 from ditto_application.processes.execution.factor_bridge import CompiledExpressions
 from ditto_application.processes.experiments._execution_bundle_inputs import (
     BaselineExecutorBinding,
+    PredictionExecutorBinding,
 )
 from ditto_application.processes.experiments.backtest_service_wiring import (
     ClosedBacktestServiceGraph,
@@ -106,10 +108,13 @@ def _error(reason: str, **details: object) -> AppProcessError:
 class FrozenBacktestStrategyBuild:
     """Rebuilt strategy values consumed by the real backtest path."""
 
-    binding: StrategyExecutionBinding | BaselineExecutorBinding
+    binding: (
+        StrategyExecutionBinding | BaselineExecutorBinding | PredictionExecutorBinding
+    )
     pipeline: StrategyPipeline
     pipeline_attestation: object | None
     compiled_expressions: CompiledExpressions | None
+    prediction_signals: pl.DataFrame | None
     effective_parameters: tuple[EffectiveParameter, ...]
     planner_order_type: OrderType
     rebalance_frequency: str
@@ -201,6 +206,7 @@ def build_research_backtest_service(
         slippage_model=slippage_model,
         rule_provider=rule_provider,
         compiled_expressions=strategy.compiled_expressions,
+        prediction_signals=strategy.prediction_signals,
         external_should_stop=external_should_stop,
         checkpoint_writer=checkpoint_control.writer,
         checkpoint_interval_days=RESEARCH_CHECKPOINT_INTERVAL_DAYS,
@@ -255,6 +261,7 @@ def build_research_backtest_service(
         slippage_model=components.slippage_model,
         rule_provider=components.rule_provider,
         compiled_expressions=strategy.compiled_expressions,
+        prediction_signals=strategy.prediction_signals,
         pipeline_attestation=strategy.pipeline_attestation,
         external_should_stop=external_should_stop,
         checkpoint_control=checkpoint_control,

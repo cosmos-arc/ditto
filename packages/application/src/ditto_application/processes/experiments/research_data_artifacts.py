@@ -71,6 +71,7 @@ class ResearchFrameKind(StrEnum):
     MEMBERSHIP = "membership"
     FUNDAMENTAL = "fundamental"
     CLASSIFICATION = "classification"
+    PREDICTIONS = "predictions"
 
 
 REQUIRED_COLUMNS: dict[ResearchFrameKind, frozenset[str]] = {
@@ -117,6 +118,9 @@ REQUIRED_COLUMNS: dict[ResearchFrameKind, frozenset[str]] = {
     ResearchFrameKind.CLASSIFICATION: frozenset(
         {"instrument_id", "known_at", "sector_id", "source_snapshot_id"},
     ),
+    ResearchFrameKind.PREDICTIONS: frozenset(
+        {"trade_date", "instrument_id", "signal_value", "source_snapshot_id"},
+    ),
 }
 
 NUMERIC_COLUMNS = frozenset(
@@ -134,6 +138,7 @@ NUMERIC_COLUMNS = frozenset(
         "roe",
         "net_margin",
         "eps",
+        "signal_value",
     },
 )
 BOOLEAN_COLUMNS = frozenset({"is_open", "is_member", "is_suspended"})
@@ -145,6 +150,7 @@ KEY_COLUMNS: dict[ResearchFrameKind, tuple[str, ...]] = {
     ResearchFrameKind.MEMBERSHIP: ("trade_date", "instrument_id"),
     ResearchFrameKind.FUNDAMENTAL: ("instrument_id", "known_at"),
     ResearchFrameKind.CLASSIFICATION: ("instrument_id", "known_at"),
+    ResearchFrameKind.PREDICTIONS: ("trade_date", "instrument_id"),
 }
 
 

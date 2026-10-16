@@ -14,6 +14,7 @@ from ditto_application.processes.experiments._execution_bundle_inputs import (
     ContentAddressedResearchInput,
     ExecutionEvidenceSource,
     PolicyModelEvidenceBinding,
+    PredictionExecutorBinding,
     ResearchSnapshotBinding,
     VersionedExecutionComponent,
     research_data_feed_manifest_hash,
@@ -122,6 +123,7 @@ def _validate_bindings(
     if type(semantics.strategy) not in {
         strategy_binding_type,
         BaselineExecutorBinding,
+        PredictionExecutorBinding,
     }:
         raise _error("strategy binding is invalid", "invalid_strategy_binding")
     if (
@@ -132,6 +134,8 @@ def _validate_bindings(
             "synthetic baseline binding requires a baseline candidate",
             "unexpected_baseline_executor",
         )
+    if type(semantics.strategy) is PredictionExecutorBinding:
+        _validate_prediction_inputs(semantics)
     if type(semantics.backtest) is not backtest_binding_type:
         raise _error(
             "backtest execution binding is invalid",
@@ -263,6 +267,38 @@ def _validate_factor_inputs(
         raise _error(
             "factor artifacts drifted from authoritative runtime bindings",
             "factor_input_binding_drift",
+        )
+
+
+def _validate_prediction_inputs(semantics: _SemanticsView) -> None:
+    """Bind the prediction executor to one exact frozen snapshot input."""
+    strategy = cast("PredictionExecutorBinding", semantics.strategy)
+    if semantics.is_baseline or semantics.baseline_plan is not None:
+        raise _error(
+            "prediction executor cannot ride a baseline candidate",
+            "unexpected_prediction_executor",
+        )
+    matches = [
+        item
+        for item in semantics.snapshot.inputs
+        if item.input_id == strategy.predictions_input_id
+    ]
+    if len(matches) != 1:
+        raise _error(
+            "prediction input is not bound exactly once in the frozen snapshot",
+            "prediction_input_binding_missing",
+            input_id=strategy.predictions_input_id,
+        )
+    evidence = matches[0]
+    if (
+        evidence.artifact_kind != "predictions"
+        or evidence.content_hash != strategy.predictions_content_hash
+        or evidence.schema_hash != strategy.predictions_schema_hash
+    ):
+        raise _error(
+            "prediction executor drifted from its frozen snapshot input",
+            "prediction_input_binding_drift",
+            input_id=strategy.predictions_input_id,
         )
 
 
@@ -399,11 +435,12 @@ def build_research_execution_payload(
     view = cast("_SemanticsView", semantics)
     strategy = cast("_PayloadBinding", view.strategy)
     backtest = cast("_PayloadBinding", view.backtest)
-    strategy_kind = (
-        "catalog_strategy"
-        if type(view.strategy) is strategy_binding_type
-        else "baseline_executor"
-    )
+    if type(view.strategy) is strategy_binding_type:
+        strategy_kind = "catalog_strategy"
+    elif type(view.strategy) is BaselineExecutorBinding:
+        strategy_kind = "baseline_executor"
+    else:
+        strategy_kind = "prediction_executor"
     return {
         "schema_version": 1,
         "experiment_id": view.experiment_id,
