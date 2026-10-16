@@ -10,6 +10,10 @@ import orjson
 import pytest
 from ditto_analysis.experiments import ContentHash
 from ditto_application.exceptions import AppProcessError
+from ditto_application.processes.experiments._execution_bundle_inputs import (
+    PREDICTION_EXECUTOR_IMPLEMENTATION_KEY,
+    PredictionExecutorBinding,
+)
 from ditto_application.processes.experiments.baseline_registry import (
     BaselinePlanKind,
     BaselinePlanRequest,
@@ -953,3 +957,97 @@ def test_semantics_rejects_inverted_windows_and_unregistered_baseline() -> None:
     with pytest.raises(AppProcessError) as baseline:
         replace(original, is_baseline=True)
     assert baseline.value.details["reason"] == "baseline_plan_required"
+
+
+def _predictions_evidence() -> ContentAddressedResearchInput:
+    return ContentAddressedResearchInput(
+        input_id="model-predictions-fold-1",
+        artifact_kind="predictions",
+        content_hash=_sha("c"),
+        schema_hash=_sha("d"),
+    )
+
+
+def _prediction_semantics() -> ResearchExecutionSemantics:
+    base = _semantics()
+    evidence = _predictions_evidence()
+    snapshot = replace(base.snapshot, inputs=(*base.snapshot.inputs, evidence))
+    backtest = replace(
+        base.backtest,
+        data_feed_manifest_hash=research_data_feed_manifest_hash(snapshot),
+    )
+    binding = PredictionExecutorBinding(
+        model_registration_hash=_sha("f"),
+        model_kind="lightgbm",
+        predictions_input_id=evidence.input_id,
+        predictions_content_hash=evidence.content_hash,
+        predictions_schema_hash=evidence.schema_hash,
+        top_k=10,
+        implementation_key=PREDICTION_EXECUTOR_IMPLEMENTATION_KEY,
+        executor_contract_version=1,
+    )
+    return replace(base, strategy=binding, snapshot=snapshot, backtest=backtest)
+
+
+def test_prediction_executor_semantics_binds_snapshot_input() -> None:
+    semantics = _prediction_semantics()
+    document = orjson.loads(semantics.canonical_payload)
+    assert document["strategy"]["kind"] == "prediction_executor"
+    assert document["strategy"]["binding"]["predictions_input_id"] == (
+        "model-predictions-fold-1"
+    )
+    # The frozen fingerprint covers the prediction executor identity.
+    drifted = replace(
+        semantics.strategy,
+        top_k=5,
+    )
+    assert replace(semantics, strategy=drifted).reproduction_fingerprint != (
+        semantics.reproduction_fingerprint
+    )
+
+
+def test_prediction_executor_refuses_missing_or_drifted_input() -> None:
+    semantics = _prediction_semantics()
+    with pytest.raises(AppProcessError) as missing:
+        replace(
+            semantics,
+            snapshot=replace(
+                semantics.snapshot,
+                inputs=tuple(
+                    item
+                    for item in semantics.snapshot.inputs
+                    if item.artifact_kind != "predictions"
+                ),
+            ),
+        )
+    assert missing.value.details["reason"] == "prediction_input_binding_missing"
+
+    drifted_binding = replace(
+        semantics.strategy,
+        predictions_content_hash=_sha("e"),
+    )
+    with pytest.raises(AppProcessError) as drift:
+        replace(semantics, strategy=drifted_binding)
+    assert drift.value.details["reason"] == "prediction_input_binding_drift"
+
+
+def test_prediction_executor_refuses_baseline_candidacy() -> None:
+    semantics = _prediction_semantics()
+    with pytest.raises(AppProcessError) as error:
+        replace(semantics, is_baseline=True)
+    # The prediction executor refuses baseline candidacy before the generic
+    # baseline-plan rule fires.
+    assert error.value.details["reason"] == "unexpected_prediction_executor"
+    with pytest.raises(AppProcessError) as plan_error:
+        replace(
+            semantics,
+            baseline_plan=default_baseline_registry().plan(
+                BaselinePlanRequest(
+                    baseline_ref=BaselineRef("stock_universe_equal_weight", 1),
+                    snapshot=semantics.snapshot.exact_snapshot,
+                    universe=ExactUniverseIdentity("stock-pit-universe", _sha("4")),
+                    exact_strategy=None,
+                )
+            ),
+        )
+    assert plan_error.value.details["reason"] == "unexpected_prediction_executor"

@@ -47,6 +47,9 @@ from ditto_application.processes.execution._factor_bundle import (
 from ditto_application.processes.execution._factor_bundle import (
     build_factor_bundle as _build_factor_bundle,
 )
+from ditto_application.processes.execution._factor_bundle import (
+    build_prediction_aware_bundle_builder as _build_prediction_aware_bundle_builder,
+)
 from ditto_application.processes.execution._factor_signal_spec import (
     build_signal_spec,
     factor_normalized_column,
@@ -68,6 +71,7 @@ __all__ = [
 ]
 
 build_exposure_aware_bundle_builder = _build_exposure_aware_bundle_builder
+build_prediction_aware_bundle_builder = _build_prediction_aware_bundle_builder
 
 
 def build_backtest_input_bundle_builder(
@@ -77,12 +81,28 @@ def build_backtest_input_bundle_builder(
     data_feed: DataFeed,
     strategy_id: str,
     run_id: str,
+    prediction_signals: pl.DataFrame | None = None,
 ) -> Callable[[StepContext], StrategyInputBundle] | None:
-    """Select the factor, stock-exposure, or engine-default bundle path."""
+    """Select the factor, prediction, stock-exposure, or engine-default path."""
+    if compiled is not None and prediction_signals is not None:
+        raise AppProcessError(
+            "factor expressions and frozen predictions are mutually exclusive",
+            details={
+                "code": "SPEC_INVALID",
+                "reason": "prediction_and_factor_signals_conflict",
+            },
+        )
     if compiled is not None:
         return build_factor_aware_bundle_builder(
             bridge=FactorBridge(),
             compiled=compiled,
+            data_feed=data_feed,
+            strategy_id=strategy_id,
+            run_id=run_id,
+        )
+    if prediction_signals is not None:
+        return build_prediction_aware_bundle_builder(
+            prediction_signals=prediction_signals,
             data_feed=data_feed,
             strategy_id=strategy_id,
             run_id=run_id,

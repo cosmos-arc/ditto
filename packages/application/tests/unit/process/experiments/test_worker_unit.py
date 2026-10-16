@@ -142,6 +142,7 @@ def _forged_graph(service: BacktestService) -> ClosedBacktestServiceGraph:
         slippage_model=MagicMock(),
         rule_provider=MagicMock(),
         compiled_expressions=None,
+        prediction_signals=None,
         pipeline_attestation=None,
         external_should_stop=lambda: False,
         components=MagicMock(),

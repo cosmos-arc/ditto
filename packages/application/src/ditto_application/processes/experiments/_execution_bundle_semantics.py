@@ -14,6 +14,7 @@ from ditto_application.processes.experiments._execution_bundle_inputs import (
     ContentAddressedResearchInput,
     ExecutionEvidenceSource,
     PolicyModelEvidenceBinding,
+    PredictionExecutorBinding,
     ResearchSnapshotBinding,
     VersionedExecutionComponent,
     research_data_feed_manifest_hash,
@@ -122,6 +123,7 @@ def _validate_bindings(
     if type(semantics.strategy) not in {
         strategy_binding_type,
         BaselineExecutorBinding,
+        PredictionExecutorBinding,
     }:
         raise _error("strategy binding is invalid", "invalid_strategy_binding")
     if (
@@ -132,6 +134,8 @@ def _validate_bindings(
             "synthetic baseline binding requires a baseline candidate",
             "unexpected_baseline_executor",
         )
+    if type(semantics.strategy) is PredictionExecutorBinding:
+        _validate_prediction_inputs(semantics)
     if type(semantics.backtest) is not backtest_binding_type:
         raise _error(
             "backtest execution binding is invalid",
@@ -264,6 +268,17 @@ def _validate_factor_inputs(
             "factor artifacts drifted from authoritative runtime bindings",
             "factor_input_binding_drift",
         )
+
+
+def _validate_prediction_inputs(semantics: _SemanticsView) -> None:
+    """Bind the prediction executor to one exact frozen snapshot input."""
+    strategy = cast("PredictionExecutorBinding", semantics.strategy)
+    if semantics.is_baseline or semantics.baseline_plan is not None:
+        raise _error(
+            "prediction executor cannot ride a baseline candidate",
+            "unexpected_prediction_executor",
+        )
+    strategy.resolve_predictions_input(semantics.snapshot.inputs)
 
 
 def _validate_data_feed_manifest(
@@ -399,11 +414,12 @@ def build_research_execution_payload(
     view = cast("_SemanticsView", semantics)
     strategy = cast("_PayloadBinding", view.strategy)
     backtest = cast("_PayloadBinding", view.backtest)
-    strategy_kind = (
-        "catalog_strategy"
-        if type(view.strategy) is strategy_binding_type
-        else "baseline_executor"
-    )
+    if type(view.strategy) is strategy_binding_type:
+        strategy_kind = "catalog_strategy"
+    elif type(view.strategy) is BaselineExecutorBinding:
+        strategy_kind = "baseline_executor"
+    else:
+        strategy_kind = "prediction_executor"
     return {
         "schema_version": 1,
         "experiment_id": view.experiment_id,

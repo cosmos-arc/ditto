@@ -34,6 +34,7 @@ from ditto_application.processes.execution.backtest_process import (
 )
 from ditto_application.processes.experiments._execution_bundle_inputs import (
     BaselineExecutorBinding,
+    PredictionExecutorBinding,
 )
 from ditto_application.processes.experiments.execution_bundle import (
     ExactBenchmarkBinding,
@@ -119,7 +120,9 @@ class ResearchBacktestStrategyConfig:
 
 
 def build_research_backtest_strategy_config(
-    strategy: StrategyExecutionBinding | BaselineExecutorBinding,
+    strategy: (
+        StrategyExecutionBinding | BaselineExecutorBinding | PredictionExecutorBinding
+    ),
     *,
     effective_parameters: tuple[EffectiveParameter, ...],
     rebalance_frequency: str,
@@ -145,6 +148,18 @@ def build_research_backtest_strategy_config(
             strategy_version=str(strategy.executor_contract_version),
             base_spec_hash=strategy.descriptor_hash,
             spec_hash=strategy.descriptor_hash,
+            parameter_hash=canonical_parameter_hash(()),
+            candidate_parameters=(),
+            effective_parameters=(),
+            factor_report_refs=(),
+            rebalance_frequency=rebalance_frequency,
+        )
+    if type(strategy) is PredictionExecutorBinding and not effective_parameters:
+        return ResearchBacktestStrategyConfig(
+            strategy_id=strategy.runner_identity,
+            strategy_version=str(strategy.executor_contract_version),
+            base_spec_hash=strategy.binding_hash,
+            spec_hash=strategy.binding_hash,
             parameter_hash=canonical_parameter_hash(()),
             candidate_parameters=(),
             effective_parameters=(),
@@ -244,7 +259,9 @@ def build_research_backtest_config(
 def resolve_research_backtest_resume(
     *,
     audit: ResearchExecutionAudit,
-    strategy: StrategyExecutionBinding | BaselineExecutorBinding,
+    strategy: (
+        StrategyExecutionBinding | BaselineExecutorBinding | PredictionExecutorBinding
+    ),
     trading_days: tuple[str, ...],
     checkpoint_reader: StrategyRunCheckpointReaderProtocol,
 ) -> ResearchBacktestResumeState | None:
@@ -305,12 +322,16 @@ def require_research_resume_runtime_state(
 
 
 def _run_identity(
-    strategy: StrategyExecutionBinding | BaselineExecutorBinding,
+    strategy: (
+        StrategyExecutionBinding | BaselineExecutorBinding | PredictionExecutorBinding
+    ),
 ) -> tuple[str, str]:
     if type(strategy) is StrategyExecutionBinding:
         return strategy.exact_strategy.strategy_id, str(strategy.exact_strategy.version)
     if type(strategy) is BaselineExecutorBinding:
         return strategy.baseline_ref, str(strategy.executor_contract_version)
+    if type(strategy) is PredictionExecutorBinding:
+        return strategy.runner_identity, str(strategy.executor_contract_version)
     raise _error("invalid_strategy_execution_binding")
 
 

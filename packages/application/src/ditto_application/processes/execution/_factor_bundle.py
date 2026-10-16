@@ -22,6 +22,7 @@ __all__ = [
     "build_exposure_aware_bundle_builder",
     "build_factor_aware_bundle_builder",
     "build_factor_bundle",
+    "build_prediction_aware_bundle_builder",
 ]
 
 
@@ -54,40 +55,112 @@ def build_exposure_aware_bundle_builder(
         slice_ = ctx.slice_
         if slice_ is None:
             raise AppProcessError("slice_ required")
-        bundle = build_input_bundle(
-            ctx.time_context.trade_date,
-            strategy_id,
-            run_id,
-            slice_.bars,
-            getattr(slice_, "benchmark_close", None),
-        )
-        instrument_ids = list(slice_.bars)
-        market_data = bundle.market_data.with_columns(
-            pl.lit(ctx.time_context.trade_date).alias("trade_date"),
-        )
-        market_data = _enrich_with_fundamentals(
-            market_data,
+        return _exposure_aware_bundle(
+            ctx,
             data_feed=data_feed,
-            instrument_ids=instrument_ids,
-            knowledge_date=ctx.time_context.knowledge_date,
-            trade_date=ctx.time_context.trade_date,
+            strategy_id=strategy_id,
+            run_id=run_id,
         )
-        market_data = _enrich_with_classification(
-            market_data,
-            data_feed=data_feed,
-            instrument_ids=instrument_ids,
-            knowledge_date=ctx.time_context.knowledge_date,
-            trade_date=ctx.time_context.trade_date,
-        )
-        return replace(
-            bundle,
-            instruments=_exposure_source_instruments(
-                bundle.instruments,
-                market_data=market_data,
-                trade_date=ctx.time_context.trade_date,
-            ),
+
+    return _build
+
+
+def _exposure_aware_bundle(
+    ctx: StepContext,
+    *,
+    data_feed: DataFeed,
+    strategy_id: str,
+    run_id: str,
+) -> StrategyInputBundle:
+    slice_ = ctx.slice_
+    if slice_ is None:
+        raise AppProcessError("slice_ required")
+    bundle = build_input_bundle(
+        ctx.time_context.trade_date,
+        strategy_id,
+        run_id,
+        slice_.bars,
+        getattr(slice_, "benchmark_close", None),
+    )
+    instrument_ids = list(slice_.bars)
+    market_data = bundle.market_data.with_columns(
+        pl.lit(ctx.time_context.trade_date).alias("trade_date"),
+    )
+    market_data = _enrich_with_fundamentals(
+        market_data,
+        data_feed=data_feed,
+        instrument_ids=instrument_ids,
+        knowledge_date=ctx.time_context.knowledge_date,
+        trade_date=ctx.time_context.trade_date,
+    )
+    market_data = _enrich_with_classification(
+        market_data,
+        data_feed=data_feed,
+        instrument_ids=instrument_ids,
+        knowledge_date=ctx.time_context.knowledge_date,
+        trade_date=ctx.time_context.trade_date,
+    )
+    return replace(
+        bundle,
+        instruments=_exposure_source_instruments(
+            bundle.instruments,
             market_data=market_data,
+            trade_date=ctx.time_context.trade_date,
+        ),
+        market_data=market_data,
+    )
+
+
+def build_prediction_aware_bundle_builder(
+    *,
+    prediction_signals: pl.DataFrame,
+    data_feed: DataFeed,
+    strategy_id: str,
+    run_id: str,
+) -> Callable[[StepContext], StrategyInputBundle]:
+    """
+    Build the exposure-aware bundle plus this session's frozen model scores.
+
+    The frozen prediction frame is keyed ``(trade_date, instrument_id)``;
+    each session sees exactly its own scores as the precomputed
+    ``signal_value`` column the strategy pipeline already consumes.
+    """
+
+    def _build(ctx: StepContext) -> StrategyInputBundle:
+        session_scores = prediction_signals.filter(
+            pl.col("trade_date") == pl.lit(ctx.time_context.trade_date).str.to_date(),
+        ).select(
+            pl.col("instrument_id"),
+            pl.col("signal_value"),
         )
+        if session_scores.is_empty():
+            # A trading session the frozen frame does not score is an
+            # evidence gap, not a signal: fail closed instead of trading
+            # null-score instruments ranked by identity.
+            raise AppProcessError(
+                "frozen prediction frame has no scores for this session",
+                details={
+                    "code": "REPRODUCIBILITY_FAILED",
+                    "reason": "prediction_session_scores_missing",
+                    "trade_date": ctx.time_context.trade_date,
+                },
+            )
+        if session_scores.is_duplicated().any():
+            raise AppProcessError(
+                "frozen prediction frame carries duplicate session scores",
+                details={
+                    "code": "REPRODUCIBILITY_FAILED",
+                    "reason": "prediction_frame_duplicate_session_scores",
+                    "trade_date": ctx.time_context.trade_date,
+                },
+            )
+        base = _exposure_aware_bundle(
+            ctx,
+            data_feed=data_feed,
+            strategy_id=strategy_id,
+            run_id=run_id,
+        )
+        return replace(base, signal_values=session_scores)
 
     return _build
 

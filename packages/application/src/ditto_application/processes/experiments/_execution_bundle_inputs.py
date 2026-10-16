@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import hashlib
 import re
-from collections.abc import Mapping
-from dataclasses import dataclass
+from collections.abc import Mapping, Sequence
+from dataclasses import dataclass, field
 from datetime import date, datetime
 from enum import StrEnum
 from typing import cast
@@ -21,11 +21,13 @@ from ditto_application.processes.experiments.execution_contracts import (
 )
 
 __all__ = [
+    "PREDICTION_EXECUTOR_IMPLEMENTATION_KEY",
     "BaselineExecutorBinding",
     "CodeEnvironmentLock",
     "ContentAddressedResearchInput",
     "ExecutionEvidenceSource",
     "PolicyModelEvidenceBinding",
+    "PredictionExecutorBinding",
     "ResearchFillMode",
     "ResearchSnapshotBinding",
     "VersionedExecutionComponent",
@@ -520,6 +522,113 @@ class BaselineExecutorBinding:
                 for factor_id, version in self.factor_versions
             ],
         }
+
+
+PREDICTION_EXECUTOR_IMPLEMENTATION_KEY = "research.prediction.raw_score_equal_weight.v1"
+_PREDICTION_MODEL_KINDS = frozenset({"rule", "linear", "lightgbm"})
+
+
+@dataclass(frozen=True, slots=True)
+class PredictionExecutorBinding:
+    """
+    Frozen prediction-scored executor identity (#565 W3).
+
+    One model candidate fold declares this binding instead of a catalog
+    strategy: the frozen model scores ride a content-addressed predictions
+    frame, and the executor's registered rule consumes them as the
+    ``signal_value`` ranking column with equal-weight top-k allocation.
+    The strategy layer only ever sees a precomputed score column.
+    """
+
+    model_registration_hash: str
+    model_kind: str
+    predictions_input_id: str
+    predictions_content_hash: str
+    predictions_schema_hash: str
+    top_k: int
+    implementation_key: str
+    executor_contract_version: int
+    binding_hash: str = field(init=False)
+
+    def __post_init__(self) -> None:
+        """Freeze the registered deterministic prediction executor."""
+        _hash(self.model_registration_hash, "prediction_model_registration_hash")
+        if self.model_kind not in _PREDICTION_MODEL_KINDS:
+            raise _error(
+                "prediction model kind must be exact and registered",
+                "invalid_prediction_executor_binding",
+                model_kind=self.model_kind,
+            )
+        _identity(self.predictions_input_id, "prediction_input_id")
+        _hash(self.predictions_content_hash, "prediction_content_hash")
+        _hash(self.predictions_schema_hash, "prediction_schema_hash")
+        _positive_integer(self.top_k, "prediction_top_k")
+        if self.implementation_key != PREDICTION_EXECUTOR_IMPLEMENTATION_KEY:
+            raise _error(
+                "prediction executor implementation key is not registered",
+                "invalid_prediction_executor_binding",
+                implementation_key=self.implementation_key,
+            )
+        if self.executor_contract_version != 1:
+            raise _error(
+                "prediction executor contract version is not registered",
+                "invalid_prediction_executor_binding",
+                executor_contract_version=self.executor_contract_version,
+            )
+        payload = orjson.dumps(
+            dict(self.as_payload()),
+            option=orjson.OPT_SORT_KEYS,
+        )
+        object.__setattr__(
+            self,
+            "binding_hash",
+            hashlib.sha256(payload).hexdigest(),
+        )
+
+    def as_payload(self) -> Mapping[str, object]:
+        """Return exact prediction runner evidence."""
+        return {
+            "model_registration_hash": self.model_registration_hash,
+            "model_kind": self.model_kind,
+            "predictions_input_id": self.predictions_input_id,
+            "predictions_content_hash": self.predictions_content_hash,
+            "predictions_schema_hash": self.predictions_schema_hash,
+            "top_k": self.top_k,
+            "implementation_key": self.implementation_key,
+            "executor_contract_version": self.executor_contract_version,
+        }
+
+    @property
+    def runner_identity(self) -> str:
+        """Return the one canonical run/strategy identity of this executor."""
+        return f"model-{self.model_kind}-{self.model_registration_hash[:16]}"
+
+    def resolve_predictions_input(
+        self,
+        inputs: Sequence[ContentAddressedResearchInput],
+    ) -> ContentAddressedResearchInput:
+        """Bind to the exactly-once frozen predictions input and its hashes."""
+        matches = [
+            item for item in inputs if item.input_id == self.predictions_input_id
+        ]
+        if len(matches) != 1:
+            raise _error(
+                "prediction input is not bound exactly once in the frozen snapshot",
+                "prediction_input_binding_missing",
+                input_id=self.predictions_input_id,
+            )
+        evidence = matches[0]
+        if (
+            evidence.artifact_kind != "predictions"
+            or evidence.content_hash != self.predictions_content_hash
+            or evidence.schema_hash != self.predictions_schema_hash
+        ):
+            raise _error(
+                "prediction executor drifted from its frozen snapshot input",
+                "prediction_input_binding_drift",
+                input_id=self.predictions_input_id,
+            )
+        return evidence
 
 
 @dataclass(frozen=True, slots=True)

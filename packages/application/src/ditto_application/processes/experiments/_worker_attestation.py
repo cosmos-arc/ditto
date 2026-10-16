@@ -16,6 +16,7 @@ from ditto_application.processes.experiments.execution_bundle import (
     BacktestExecutionConfigBinding,
     BaselineExecutorBinding,
     CodeEnvironmentLock,
+    PredictionExecutorBinding,
     ResearchExecutionAudit,
     ResearchSnapshotBinding,
     StrategyExecutionBinding,
@@ -58,7 +59,9 @@ class ResearchBacktestBuildAttestation:
     audit_bundle_hash: ContentHash
     reproduction_fingerprint: ContentHash
     backtest_run_id: str
-    strategy: StrategyExecutionBinding | BaselineExecutorBinding
+    strategy: (
+        StrategyExecutionBinding | BaselineExecutorBinding | PredictionExecutorBinding
+    )
     snapshot: ResearchSnapshotBinding
     execution_config: BacktestExecutionConfigBinding
     execution_config_hash: ContentHash

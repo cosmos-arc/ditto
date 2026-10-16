@@ -44,7 +44,9 @@ from ditto_risk.pre_trade import (
 )
 from ditto_strategy.alpha.parameters import EffectiveParameter
 from ditto_strategy.alpha.pipeline import StrategyPipeline
-from ditto_strategy.alpha.selection_evidence import SelectionEvidenceSink
+from ditto_strategy.alpha.selection_evidence import (
+    SelectionEvidenceSink,
+)
 from ditto_strategy.alpha.specs import StrategySpec
 from ditto_strategy.models import StrategySpecRecord
 from ditto_strategy.storage.sqlite.services.strategy_artifact_service import (
@@ -83,6 +85,9 @@ from ditto_application.processes.execution.strategy_run_process import (
     StrategyRunServiceConfig,
 )
 from ditto_application.processes.execution.strategy_types import RunLifecycleService
+from ditto_application.processes.experiments._prediction_pipeline import (
+    build_frozen_prediction_pipeline,
+)
 from ditto_application.processes.experiments.baseline_registry import (
     BaselinePlanKind,
     BaselineRegistry,
@@ -97,6 +102,7 @@ __all__ = [
     "PublishedBacktestRuntime",
     "StrategyServiceFactory",
     "build_frozen_baseline_pipeline",
+    "build_frozen_prediction_pipeline",
 ]
 
 

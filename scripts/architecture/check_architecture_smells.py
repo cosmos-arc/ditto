@@ -1615,6 +1615,18 @@ APPLICATION_ANALYSIS_WIRING_ALLOWANCES = (
             "behind an injected content-addressed data port (#565 W1)."
         ),
     ),
+    ApplicationAnalysisWiringAllowance(
+        path=(
+            "packages/application/src/ditto_application/processes/experiments/"
+            "model_predictions_frame.py"
+        ),
+        owner="application prediction frame bridge",
+        reason=(
+            "Projects analysis-owned prediction records into the frozen frame "
+            "contract the research backtest consumes; strategy stays on the "
+            "precomputed signal_value column (#565 W3)."
+        ),
+    ),
 )
 
 
