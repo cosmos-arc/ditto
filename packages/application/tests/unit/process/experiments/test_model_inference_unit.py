@@ -158,6 +158,9 @@ def _fold() -> ValidationFoldPlan:
 
 def _training_request(kind: ModelKind = ModelKind.LINEAR) -> ModelFoldTrainingRequest:
     return ModelFoldTrainingRequest(
+        experiment_id="experiment-1",
+        candidate_id="candidate-1",
+        fold_id="fold-1",
         lineage=_lineage(kind),
         fold=_fold(),
         feature_frame=_feature_frame(),
@@ -169,7 +172,9 @@ def _training_request(kind: ModelKind = ModelKind.LINEAR) -> ModelFoldTrainingRe
     )
 
 
-def _publish(service: ResearchArtifactService, kind: ModelKind) -> ModelTrainingSuccess:
+def _publish(
+    service: ResearchArtifactService, kind: ModelKind
+) -> tuple[ModelTrainingSuccess, tuple[str, str, str]]:
     result = train_model_candidate(_training_request(kind))
     assert isinstance(result, ModelTrainingSuccess)
     sink = IndexedModelArtifactSink(service)
@@ -186,7 +191,7 @@ def _publish(service: ResearchArtifactService, kind: ModelKind) -> ModelTraining
         ),
         now_epoch_us=_TRAINED_AT,
     )
-    sink.publish_training(
+    training, model_state, _transform = sink.publish_training(
         context,
         result.training,
         result.model_state_bytes,
@@ -195,7 +200,10 @@ def _publish(service: ResearchArtifactService, kind: ModelKind) -> ModelTraining
     sink.publish_predictions(
         context, result.predictions, trained_at_epoch_us=_TRAINED_AT
     )
-    return result
+    # Recovery consumers locate artifacts through the published record ids
+    # (lineage-scoped), never by re-deriving them from record content.
+    ids = (training.artifact_id, model_state.artifact_id, _transform.artifact_id)
+    return result, ids
 
 
 def _decision_frame() -> pl.DataFrame:
@@ -207,10 +215,10 @@ def _decision_frame() -> pl.DataFrame:
 def test_recovery_inference_round_trips_published_artifacts(
     artifact_service: ResearchArtifactService, kind: ModelKind
 ) -> None:
-    published = _publish(artifact_service, kind)
-    artifact = load_model_training_artifact(
-        artifact_service, f"model-training-{published.training.artifact_hash}"
+    published, (training_id, _model_state_id, _transform_state_id) = _publish(
+        artifact_service, kind
     )
+    artifact = load_model_training_artifact(artifact_service, training_id)
     assert artifact.training.artifact_hash == published.training.artifact_hash
     result = infer_model_predictions(
         ModelInferenceRequest(
@@ -241,10 +249,10 @@ def test_recovery_inference_round_trips_published_artifacts(
 def test_recovery_inference_refuses_model_incomplete_at_decision(
     artifact_service: ResearchArtifactService,
 ) -> None:
-    published = _publish(artifact_service, ModelKind.LINEAR)
-    artifact = load_model_training_artifact(
-        artifact_service, f"model-training-{published.training.artifact_hash}"
+    _published, (training_id, _model_state_id, _transform_state_id) = _publish(
+        artifact_service, ModelKind.LINEAR
     )
+    artifact = load_model_training_artifact(artifact_service, training_id)
     result = infer_model_predictions(
         ModelInferenceRequest(
             lineage=_lineage(),
@@ -263,10 +271,10 @@ def test_recovery_inference_refuses_model_incomplete_at_decision(
 def test_recovery_refuses_registration_identity_mismatch(
     artifact_service: ResearchArtifactService,
 ) -> None:
-    published = _publish(artifact_service, ModelKind.LINEAR)
-    artifact = load_model_training_artifact(
-        artifact_service, f"model-training-{published.training.artifact_hash}"
+    _published, (training_id, _model_state_id, _transform_state_id) = _publish(
+        artifact_service, ModelKind.LINEAR
     )
+    artifact = load_model_training_artifact(artifact_service, training_id)
     other = ModelCandidateLineage(
         model_kind=ModelKind.LINEAR,
         feature_names=("momentum_20d", "ep_ttm"),
@@ -312,10 +320,10 @@ class _TamperedReader:
 def test_inference_refuses_schema_drift_frame(
     artifact_service: ResearchArtifactService,
 ) -> None:
-    published = _publish(artifact_service, ModelKind.LINEAR)
-    artifact = load_model_training_artifact(
-        artifact_service, f"model-training-{published.training.artifact_hash}"
+    _published, (training_id, _model_state_id, _transform_state_id) = _publish(
+        artifact_service, ModelKind.LINEAR
     )
+    artifact = load_model_training_artifact(artifact_service, training_id)
     drifted = _decision_frame().drop("ep_ttm")
     with pytest.raises(AppProcessError) as error:
         ModelInferenceRequest(
@@ -333,10 +341,10 @@ def test_inference_refuses_schema_drift_frame(
 def test_inference_refuses_sessions_outside_decision_context(
     artifact_service: ResearchArtifactService,
 ) -> None:
-    published = _publish(artifact_service, ModelKind.LINEAR)
-    artifact = load_model_training_artifact(
-        artifact_service, f"model-training-{published.training.artifact_hash}"
+    _published, (training_id, _model_state_id, _transform_state_id) = _publish(
+        artifact_service, ModelKind.LINEAR
     )
+    artifact = load_model_training_artifact(artifact_service, training_id)
     with pytest.raises(AppProcessError) as error:
         ModelInferenceRequest(
             lineage=_lineage(),
@@ -356,10 +364,10 @@ def test_inference_refuses_sessions_outside_decision_context(
 def test_inference_returns_typed_failure_for_all_null_feature_column(
     artifact_service: ResearchArtifactService,
 ) -> None:
-    published = _publish(artifact_service, ModelKind.LINEAR)
-    artifact = load_model_training_artifact(
-        artifact_service, f"model-training-{published.training.artifact_hash}"
+    _published, (training_id, _model_state_id, _transform_state_id) = _publish(
+        artifact_service, ModelKind.LINEAR
     )
+    artifact = load_model_training_artifact(artifact_service, training_id)
     frame = _decision_frame().with_columns(
         pl.lit(None, dtype=pl.Float64).alias("ep_ttm")
     )
@@ -381,10 +389,10 @@ def test_inference_returns_typed_failure_for_all_null_feature_column(
 def test_inference_refuses_snapshot_and_cutoff_violations(
     artifact_service: ResearchArtifactService,
 ) -> None:
-    published = _publish(artifact_service, ModelKind.LINEAR)
-    artifact = load_model_training_artifact(
-        artifact_service, f"model-training-{published.training.artifact_hash}"
+    _published, (training_id, _model_state_id, _transform_state_id) = _publish(
+        artifact_service, ModelKind.LINEAR
     )
+    artifact = load_model_training_artifact(artifact_service, training_id)
     wrong_snapshot = infer_model_predictions(
         ModelInferenceRequest(
             lineage=_lineage(),
@@ -416,13 +424,10 @@ def test_inference_refuses_snapshot_and_cutoff_violations(
 def test_checksum_verification_binds_published_state_bytes(
     artifact_service: ResearchArtifactService,
 ) -> None:
-    published = _publish(artifact_service, ModelKind.LINEAR)
-    training_id = f"model-training-{published.training.artifact_hash}"
-    record = artifact_service.read_indexed_json(training_id)
-    state_id = (
-        f"model-model-state-{str(record['registration_hash'])[:16]}"
-        f"-{str(record['model_state_sha256'])[:16]}"
+    published, (training_id, state_id, _transform_state_id) = _publish(
+        artifact_service, ModelKind.LINEAR
     )
+    _ = published
     state = artifact_service.read_indexed_json(state_id)
     tampered = dict(state)
     tampered["intercept"] = float(tampered["intercept"]) + 1.0  # type: ignore[operator]

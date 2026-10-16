@@ -19,6 +19,7 @@ from ditto_analysis.experiments.artifact_manifest import ArtifactPublicationSpec
 from ditto_analysis.experiments.model_lineage import (
     ModelPredictionRecord,
     ModelTrainingRecord,
+    lineage_scope_digest,
     model_state_artifact_id,
     training_artifact_id,
     transform_state_artifact_id,
@@ -55,6 +56,27 @@ _EPOCH = datetime(1970, 1, 1, tzinfo=UTC)
 def _decode_epoch_us(value: int) -> datetime:
     """Decode epoch microseconds without a floating-point round trip."""
     return _EPOCH + timedelta(microseconds=value)
+
+
+def _require_publication_lineage(
+    context: ModelArtifactPublicationContext,
+    training: ModelTrainingRecord,
+) -> None:
+    """Bind the publication context to the record's own lineage fields."""
+    if (
+        str(context.experiment_id) != training.experiment_id
+        or str(context.candidate_id) != training.candidate_id
+        or (context.fold_id is not None and str(context.fold_id) != training.fold_id)
+    ):
+        raise _publication_error(
+            "publication_lineage_mismatch",
+            context_experiment=str(context.experiment_id),
+            record_experiment=training.experiment_id,
+            context_candidate=str(context.candidate_id),
+            record_candidate=training.candidate_id,
+            context_fold=(None if context.fold_id is None else str(context.fold_id)),
+            record_fold=training.fold_id,
+        )
 
 
 def _publication_error(reason: str, **details: object) -> AppProcessError:
@@ -125,6 +147,10 @@ class IndexedModelArtifactSink:
         artifact_kind: str,
         created_at: datetime,
     ) -> ArtifactPublicationSpec:
+        # Model evidence is fold-scoped and attempt-free: a successor attempt
+        # republishing identical bytes replays the same artifacts idempotently
+        # (the audit below records which attempt published first), while
+        # divergent bytes on the same fold fail closed on the id/path binding.
         parts = [
             "experiments",
             str(context.experiment_id),
@@ -133,22 +159,22 @@ class IndexedModelArtifactSink:
         ]
         if context.fold_id is not None:
             parts.extend(("folds", str(context.fold_id)))
-        if context.attempt_id is not None:
-            parts.extend(("attempts", str(context.attempt_id)))
         relative_path = "/".join([*parts, filename])
+        # The audit stays attempt-free: a successor attempt republishing
+        # identical bytes must replay byte-stable records, and attempt-level
+        # provenance is owned by the scheduler's attempt records.
         audit: dict[str, object] = {
             "created_at": created_at.isoformat(),
             "artifact_family": "model_candidate",
         }
-        if context.attempt_id is not None:
-            audit["run_id"] = f"model-{context.attempt_id}"
-            audit["attempt_id"] = str(context.attempt_id)
         return ArtifactPublicationSpec(
             artifact_id=f"model-{artifact_suffix}",
             experiment_id=context.experiment_id,
             candidate_id=context.candidate_id,
             fold_id=context.fold_id,
-            attempt_id=context.attempt_id,
+            # Attempt-free by design: fold-scoped evidence replays identically
+            # across successor attempts (see the path note above).
+            attempt_id=None,
             artifact_kind=artifact_kind,
             relative_path=relative_path,
             reproduction_fingerprint=context.reproduction_fingerprint,
@@ -164,6 +190,7 @@ class IndexedModelArtifactSink:
         transform_state_bytes: bytes,
     ) -> tuple[ArtifactRecord, ArtifactRecord, ArtifactRecord]:
         """Publish record, model state, and transform state immutably."""
+        _require_publication_lineage(context, training)
         # Replay timestamps derive from the record's own completion time (and
         # decode without a floating-point round trip), so crash retries stay
         # byte-stable regardless of the caller's clock.
@@ -200,7 +227,13 @@ class IndexedModelArtifactSink:
             context,
             "model-state.json",
             model_state_artifact_id(
-                training.registration_hash, training.model_state_sha256
+                training.registration_hash,
+                training.model_state_sha256,
+                scope=lineage_scope_digest(
+                    training.experiment_id,
+                    training.candidate_id,
+                    training.fold_id,
+                ),
             ).removeprefix("model-"),
             _ARTIFACT_KIND_TRAINING,
             created_at,
@@ -209,7 +242,13 @@ class IndexedModelArtifactSink:
             context,
             "transform-state.json",
             transform_state_artifact_id(
-                training.registration_hash, training.transform_state_sha256
+                training.registration_hash,
+                training.transform_state_sha256,
+                scope=lineage_scope_digest(
+                    training.experiment_id,
+                    training.candidate_id,
+                    training.fold_id,
+                ),
             ).removeprefix("model-"),
             _ARTIFACT_KIND_TRAINING,
             created_at,

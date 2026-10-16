@@ -163,6 +163,9 @@ def _training_record(**overrides: object) -> ModelTrainingRecord:
     registration_hash = canonical_payload(payload).content_hash.value
     fields: dict[str, Any] = {
         "schema": MODEL_TRAINING_ARTIFACT_SCHEMA,
+        "experiment_id": "experiment-1",
+        "candidate_id": "candidate-1",
+        "fold_id": "fold-1",
         "registration_hash": registration_hash,
         "registration_payload": payload,
         "snapshot_id": "snap-1",

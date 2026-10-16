@@ -12,6 +12,7 @@ from datetime import date, timedelta
 
 import polars as pl
 import pytest
+from ditto_analysis.errors import ExperimentConflictError
 from ditto_analysis.experiments.model_lineage import (
     ModelCandidateLineage,
     ModelKind,
@@ -152,14 +153,25 @@ def _feature_frame() -> pl.DataFrame:
     )
 
 
-def _lineage() -> ModelCandidateLineage:
+def _lineage(kind: ModelKind = ModelKind.LINEAR) -> ModelCandidateLineage:
+    hyperparameters: dict[str, object]
+    if kind is ModelKind.LINEAR:
+        hyperparameters = {"alpha": 1.0}
+    elif kind is ModelKind.RULE:
+        hyperparameters = {"ranking_feature": "momentum_20d"}
+    else:
+        hyperparameters = {
+            "num_leaves": 4,
+            "learning_rate": 0.1,
+            "num_iterations": 5,
+        }
     return ModelCandidateLineage(
-        model_kind=ModelKind.LINEAR,
+        model_kind=kind,
         feature_names=("momentum_20d", "ep_ttm"),
         label_id="research.label.forward_return.next_open_hold5.v1",
         label_spec_hash=_LABEL_HASH,
         transform_spec=TrainFittedTransformSpec(),
-        hyperparameters={"alpha": 1.0},
+        hyperparameters=hyperparameters,
         seed=7,
         code_environment=dict(_CODE_ENV),
     )
@@ -182,18 +194,22 @@ def _request(
     features: pl.DataFrame | None = None,
     attempt_id: AttemptId | None = None,
     knowledge_cutoff: int = _KNOWLEDGE_CUTOFF,
+    trained_at: int = _TRAINED_AT,
+    lineage: ModelCandidateLineage | None = None,
+    fold: ValidationFoldPlan | None = None,
+    fold_id: FoldId = _FOLD,
 ) -> ModelCandidateFoldRequest:
     return ModelCandidateFoldRequest(
         experiment_id=_EXPERIMENT,
         candidate_id=_CANDIDATE,
-        fold_id=_FOLD,
+        fold_id=fold_id,
         attempt_id=attempt_id,
-        lineage=_lineage(),
-        fold=_fold_plan(),
+        lineage=lineage if lineage is not None else _lineage(),
+        fold=fold if fold is not None else _fold_plan(),
         inputs=_inputs(),
         snapshot_id="snap-test-1",
         knowledge_cutoff_epoch_us=knowledge_cutoff,
-        trained_at_epoch_us=_TRAINED_AT,
+        trained_at_epoch_us=trained_at,
         reproduction_fingerprint=_FINGERPRINT,
     )
 
@@ -478,9 +494,96 @@ def test_execute_requires_typed_lease(artifact_service) -> None:
     assert error.value.details.get("reason") == "fold_lease_invalid"
 
 
-def test_attempt_id_flows_into_publication_path(artifact_service) -> None:
-    request = _request(attempt_id=AttemptId("attempt-1"))
-    result = _execute(request, artifact_service=artifact_service)
-    assert isinstance(result, ModelCandidateFoldSuccess)
-    paths = {record.relative_path for record in result.artifacts}
-    assert all("attempts/attempt-1/" in path for path in paths)
+def test_successor_attempt_replays_fold_scoped_artifacts_idempotently(
+    artifact_service, memory_artifact_index
+) -> None:
+    # Model evidence paths are fold-scoped and attempt-free: a successor
+    # attempt with identical pinned inputs replays the same artifacts.
+    first = _execute(
+        _request(attempt_id=AttemptId("attempt-1")),
+        artifact_service=artifact_service,
+    )
+    second = _execute(_request(), artifact_service=artifact_service)
+    assert isinstance(first, ModelCandidateFoldSuccess)
+    assert isinstance(second, ModelCandidateFoldSuccess)
+    assert [record.artifact_id for record in first.artifacts] == [
+        record.artifact_id for record in second.artifacts
+    ]
+    assert len(memory_artifact_index.records) == 4
+    paths = {record.relative_path for record in second.artifacts}
+    assert all("attempts/" not in path for path in paths)
+
+
+def test_rule_candidate_executes_two_folds(artifact_service) -> None:
+    # The rule baseline freezes byte-equal model state on every fold; fold
+    # scoped artifact identities must keep both folds publishable.
+    rule = _lineage(ModelKind.RULE)
+    second_fold = ValidationFoldPlan(
+        ordinal=2,
+        role=FoldRole.WALK_FORWARD,
+        train_window=DateWindow(start=SESSIONS[0], end=SESSIONS[17]),
+        test_window=DateWindow(start=SESSIONS[27], end=SESSIONS[29]),
+        purge_sessions=5,
+        embargo_sessions=5,
+    )
+    first = _execute(_request(lineage=rule), artifact_service=artifact_service)
+    second = _execute(
+        _request(lineage=rule, fold=second_fold, fold_id=FoldId("fold-2")),
+        artifact_service=artifact_service,
+    )
+    assert isinstance(first, ModelCandidateFoldSuccess)
+    assert isinstance(second, ModelCandidateFoldSuccess)
+    assert first.training.model_state_sha256 == second.training.model_state_sha256
+    first_ids = {record.artifact_id for record in first.artifacts}
+    second_ids = {record.artifact_id for record in second.artifacts}
+    assert first_ids
+    assert first_ids.isdisjoint(second_ids)
+
+
+def test_successor_attempt_with_divergent_bytes_refused(
+    artifact_service, memory_artifact_index
+) -> None:
+    # A successor attempt retraining the same fold with different bytes
+    # cannot overwrite the published fold evidence; publication refuses.
+    first = _execute(_request(), artifact_service=artifact_service)
+    assert isinstance(first, ModelCandidateFoldSuccess)
+    diverged = _execute(
+        _request(trained_at=_TRAINED_AT + 86_400_000_000),
+        artifact_service=artifact_service,
+    )
+    assert isinstance(diverged, ModelCandidateFoldFailure)
+    assert diverged.stage == "publish"
+    assert len(memory_artifact_index.records) == 4
+
+
+def test_analysis_publish_refusal_maps_to_publish_stage(artifact_service) -> None:
+    class ConflictSink:
+        def publish_training(self, *args: object, **kwargs: object) -> object:
+            raise ExperimentConflictError(
+                "artifact replay drift",
+                details={"reason": "artifact_path_identity_conflict"},
+            )
+
+        def publish_predictions(self, *args: object, **kwargs: object) -> object:
+            raise AssertionError("training publish must fail first")
+
+    result = _execute(
+        _request(),
+        artifact_service=artifact_service,
+        sink=ConflictSink(),  # type: ignore[arg-type]
+    )
+    assert isinstance(result, ModelCandidateFoldFailure)
+    assert result.stage == "publish"
+    assert result.reason == "artifact_path_identity_conflict"
+
+
+def test_path_unsafe_fold_identity_refused_before_publication(
+    artifact_service,
+) -> None:
+    result = _execute(
+        _request(fold_id=FoldId("fold/1")),
+        artifact_service=artifact_service,
+    )
+    assert isinstance(result, ModelCandidateFoldFailure)
+    assert result.stage == "train"
+    assert result.reason == "execution_lineage_invalid"

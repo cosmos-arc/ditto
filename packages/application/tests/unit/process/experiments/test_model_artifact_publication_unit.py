@@ -57,7 +57,12 @@ def _context() -> ModelArtifactPublicationContext:
     )
 
 
-def _training(alpha: float = 1.0) -> ModelTrainingRecord:
+def _training(
+    alpha: float = 1.0,
+    *,
+    candidate_id: str = "candidate-1",
+    fold_id: str = "fold-1",
+) -> ModelTrainingRecord:
     registration_payload: dict[str, object] = {
         "model_kind": "linear",
         "feature_names": ["momentum_20d"],
@@ -82,6 +87,9 @@ def _training(alpha: float = 1.0) -> ModelTrainingRecord:
     _ = alpha  # registration-only difference; state bytes stay shared
     return ModelTrainingRecord(
         schema=MODEL_TRAINING_ARTIFACT_SCHEMA,
+        experiment_id="experiment-1",
+        candidate_id=candidate_id,
+        fold_id=fold_id,
         registration_hash=canonical_payload(registration_payload).content_hash.value,
         registration_payload=registration_payload,
         snapshot_id="snap-1",
@@ -219,11 +227,41 @@ def test_sibling_candidates_sharing_fold_and_states_can_all_publish(
     """#269 场景：同 fold 同特征集的兄弟候选不因共享状态字节冲突。"""
     sink = IndexedModelArtifactSink(artifact_service)
     sibling = replace(_CANDIDATE, value="candidate-2")
-    for candidate, training in ((_CANDIDATE, _training()), (sibling, _training(2.0))):
+    for candidate, training in (
+        (_CANDIDATE, _training()),
+        (sibling, _training(2.0, candidate_id="candidate-2")),
+    ):
         context = replace(_context(), candidate_id=candidate)
         record, _model, _transform = sink.publish_training(
             context, training, *_state_bytes(alpha=2.0)
         )
         assert record.artifact_id.startswith("model-training-")
         assert str(candidate) in record.relative_path
+    assert len(memory_artifact_index.records) == 6
+
+
+def test_publish_training_scopes_artifact_ids_to_fold_lineage(
+    artifact_service: ResearchArtifactService,
+    memory_artifact_index: MemoryArtifactIndex,
+) -> None:
+    """#565 W1：同候选跨 fold 的字节相同状态不因 id/path 作用域不一致冲突。"""
+    sink = IndexedModelArtifactSink(artifact_service)
+    fold_two = replace(_FOLD, value="fold-2")
+    published_ids: list[str] = []
+    for fold in (_FOLD, fold_two):
+        context = replace(_context(), fold_id=fold)
+        record, _model, _transform = sink.publish_training(
+            context,
+            _training(fold_id=str(fold)),
+            *_state_bytes(),
+        )
+        published_ids.append(record.artifact_id)
+    assert published_ids[0] != published_ids[1]
+    assert len(memory_artifact_index.records) == 6
+    replay_record, _m, _t = sink.publish_training(
+        _context(),
+        _training(),
+        *_state_bytes(),
+    )
+    assert replay_record.artifact_id == published_ids[0]
     assert len(memory_artifact_index.records) == 6

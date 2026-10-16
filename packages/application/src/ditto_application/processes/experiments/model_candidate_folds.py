@@ -26,6 +26,7 @@ from enum import StrEnum
 from typing import Protocol, cast
 
 import polars as pl
+from ditto_analysis.errors import AnalysisError
 from ditto_analysis.experiments.model_lineage import (
     ModelCandidateLineage,
     ModelPredictionRecord,
@@ -335,12 +336,14 @@ class ModelCandidateFoldFailure:
 
 def _failure_from_error(
     stage: ModelFoldExecutionStage,
-    error: AppProcessError,
+    error: AppProcessError | AnalysisError,
 ) -> ModelCandidateFoldFailure:
     reason = error.details.get("reason")
     return ModelCandidateFoldFailure(
         stage=stage,
-        reason=(str(reason) if type(reason) is str else "fold_stage_failed"),
+        # Analysis-domain refusals often carry no reason code; the exception
+        # class name keeps every publish refusal stage-attributable.
+        reason=(str(reason) if type(reason) is str else type(error).__name__),
         details=dict(error.details),
     )
 
@@ -434,6 +437,9 @@ def _train_fold(
 ) -> ModelTrainingSuccess:
     try:
         training_request = ModelFoldTrainingRequest(
+            experiment_id=str(request.experiment_id),
+            candidate_id=str(request.candidate_id),
+            fold_id=str(request.fold_id),
             lineage=request.lineage,
             fold=request.fold,
             feature_frame=data.feature_frame,
@@ -494,7 +500,7 @@ def _publish_fold_artifacts(
             result.predictions,
             trained_at_epoch_us=request.trained_at_epoch_us,
         )
-    except AppProcessError as error:
+    except (AppProcessError, AnalysisError) as error:
         raise _FoldStageError(
             _failure_from_error(ModelFoldExecutionStage.PUBLISH, error)
         ) from error

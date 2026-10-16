@@ -24,6 +24,7 @@ from ditto_analysis.experiments.model_lineage import (
     ModelKind,
     ModelPredictionRow,
     ModelTrainingRecord,
+    lineage_scope_digest,
     model_state_artifact_id,
     transform_state_artifact_id,
 )
@@ -139,6 +140,9 @@ def load_model_training_artifact(
         raise _inference_error("training_artifact_payload_invalid")
     training = ModelTrainingRecord(
         schema=cast("str", _required_field(record_document, "schema")),
+        experiment_id=cast("str", _required_field(record_document, "experiment_id")),
+        candidate_id=cast("str", _required_field(record_document, "candidate_id")),
+        fold_id=cast("str", _required_field(record_document, "fold_id")),
         registration_hash=cast(
             "str", _required_field(record_document, "registration_hash")
         ),
@@ -167,12 +171,26 @@ def load_model_training_artifact(
             cast("list[str]", _required_field(record_document, "feature_names")),
         ),
     )
+    # State artifact ids carry the execution lineage scope; recovery
+    # re-derives it from the record's own lineage fields, mirroring
+    # publication exactly (one authority: ditto_analysis.model_lineage).
+    scope = lineage_scope_digest(
+        training.experiment_id,
+        training.candidate_id,
+        training.fold_id,
+    )
     model_state = reader.read_indexed_json(
-        model_state_artifact_id(training.registration_hash, training.model_state_sha256)
+        model_state_artifact_id(
+            training.registration_hash,
+            training.model_state_sha256,
+            scope=scope,
+        )
     )
     transform_raw = reader.read_indexed_json(
         transform_state_artifact_id(
-            training.registration_hash, training.transform_state_sha256
+            training.registration_hash,
+            training.transform_state_sha256,
+            scope=scope,
         )
     )
     if model_state_sha256(model_state) != training.model_state_sha256:

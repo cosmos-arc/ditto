@@ -183,6 +183,9 @@ def _request(
         prices if prices is not None else _price_frame(), list(SESSIONS)
     )
     return ModelFoldTrainingRequest(
+        experiment_id="experiment-1",
+        candidate_id="candidate-1",
+        fold_id="fold-1",
         lineage=_lineage(kind),
         fold=fold if fold is not None else _fold(),
         feature_frame=features if features is not None else _feature_frame(),
@@ -411,6 +414,9 @@ def test_label_calendar_mismatch_returns_typed_failure() -> None:
     # 12..16, so the retained decision d11 has exit d16 off-calendar. The
     # training must refuse with an explicit reason, not a polars mapping error.
     request = ModelFoldTrainingRequest(
+        experiment_id="experiment-1",
+        candidate_id="candidate-1",
+        fold_id="fold-1",
         lineage=_lineage(),
         fold=_fold(),
         feature_frame=_feature_frame(),
