@@ -83,6 +83,7 @@ def _inputs() -> ModelFoldInputSet:
 
 def _price_frame(
     *,
+    sessions: tuple[date, ...] = SESSIONS,
     unfillable_entry_sessions: tuple[date, ...] = (),
     corrupt_prices_after: date | None = None,
 ) -> pl.DataFrame:
@@ -97,7 +98,7 @@ def _price_frame(
         "session_close_known_at_epoch_us": [],
     }
     for offset, instrument in enumerate(ENTITIES):
-        for index, session in enumerate(SESSIONS):
+        for index, session in enumerate(sessions):
             base = 10.0 + offset
             multiplier = (
                 7.0
@@ -180,6 +181,7 @@ def _request(
     prices: pl.DataFrame | None = None,
     features: pl.DataFrame | None = None,
     attempt_id: AttemptId | None = None,
+    knowledge_cutoff: int = _KNOWLEDGE_CUTOFF,
 ) -> ModelCandidateFoldRequest:
     return ModelCandidateFoldRequest(
         experiment_id=_EXPERIMENT,
@@ -190,7 +192,7 @@ def _request(
         fold=_fold_plan(),
         inputs=_inputs(),
         snapshot_id="snap-test-1",
-        knowledge_cutoff_epoch_us=_KNOWLEDGE_CUTOFF,
+        knowledge_cutoff_epoch_us=knowledge_cutoff,
         trained_at_epoch_us=_TRAINED_AT,
         reproduction_fingerprint=_FINGERPRINT,
     )
@@ -214,11 +216,14 @@ def _data(
     *,
     prices: pl.DataFrame | None = None,
     features: pl.DataFrame | None = None,
+    sessions: tuple[date, ...] = SESSIONS,
 ) -> ModelFoldData:
     return ModelFoldData(
         feature_frame=features if features is not None else _feature_frame(),
-        label_prices=prices if prices is not None else _price_frame(),
-        trading_sessions=SESSIONS,
+        label_prices=(
+            prices if prices is not None else _price_frame(sessions=sessions)
+        ),
+        trading_sessions=sessions,
     )
 
 
@@ -246,17 +251,19 @@ def test_fold_execution_publishes_all_artifacts(artifact_service) -> None:
     assert len(result.artifacts) == 4
     joined_ids = "".join(record.artifact_id for record in result.artifacts)
     assert result.training.artifact_hash[:16] in joined_ids
-    # Label statistics partition the fold's decision samples.
+    # Label statistics partition the fold-span decision samples.
     stats = result.labels
     assert stats.decision_sample_count == 3 * 25  # decisions 0..24 x 3 instruments
     assert (
         stats.mature
+        + stats.mature_after_cutoff
         + stats.unfillable_entry
         + stats.unfillable_exit
         + stats.path_incomplete
         == stats.decision_sample_count
     )
     assert stats.mature == stats.decision_sample_count
+    assert stats.mature_after_cutoff == 0
     # Training-side isolation is surfaced as evidence.
     assert result.isolation.retained_sample_count == 45
 
@@ -302,20 +309,10 @@ def test_label_build_failure_maps_to_label_stage(artifact_service) -> None:
 
 def test_train_failure_maps_to_train_stage(artifact_service) -> None:
     # No label is mature at an early cutoff, so training refuses.
-    request = ModelCandidateFoldRequest(
-        experiment_id=_EXPERIMENT,
-        candidate_id=_CANDIDATE,
-        fold_id=_FOLD,
-        attempt_id=None,
-        lineage=_lineage(),
-        fold=_fold_plan(),
-        inputs=_inputs(),
-        snapshot_id="snap-test-1",
-        knowledge_cutoff_epoch_us=_EPOCH_BASE + 2 * 86_400_000_000,
-        trained_at_epoch_us=_TRAINED_AT,
-        reproduction_fingerprint=_FINGERPRINT,
+    result = _execute(
+        _request(knowledge_cutoff=_EPOCH_BASE + 2 * 86_400_000_000),
+        artifact_service=artifact_service,
     )
-    result = _execute(request, artifact_service=artifact_service)
     assert isinstance(result, ModelCandidateFoldFailure)
     assert result.stage == "train"
     assert result.reason == "no_mature_training_samples"
@@ -392,6 +389,51 @@ def test_unfillable_entry_counted_in_statistics(artifact_service) -> None:
     assert isinstance(result, ModelCandidateFoldSuccess)
     assert result.labels.unfillable_entry == 3 * 4
     assert result.labels.mature == 3 * 25 - 3 * 4
+    assert result.labels.mature_after_cutoff == 0
+
+
+@pytest.mark.pit
+def test_mature_after_cutoff_kept_in_separate_bucket(artifact_service) -> None:
+    # Cutoff at day 10: only decisions 0..5 (exit ordinal <= 10) are mature
+    # as of the cutoff; the remaining fold-span labels mature later.
+    result = _execute(
+        _request(knowledge_cutoff=_EPOCH_BASE + 10 * 86_400_000_000),
+        artifact_service=artifact_service,
+    )
+    assert isinstance(result, ModelCandidateFoldSuccess)
+    stats = result.labels
+    assert stats.mature == 3 * 6
+    assert stats.mature_after_cutoff == 3 * 25 - 3 * 6
+    assert stats.decision_sample_count == 3 * 25
+    # Training only consumed the as-of mature, isolated decisions.
+    assert result.isolation.retained_sample_count == 3 * 6
+
+
+def test_statistics_restricted_to_fold_span(artifact_service) -> None:
+    # A calendar extending ten sessions past the fold's test window yields
+    # decisions beyond the span; statistics must not count them.
+    extended = SESSIONS + tuple(
+        _START + timedelta(days=index) for index in range(30, 40)
+    )
+    result = _execute(
+        _request(),
+        data_port=MemoryFoldDataPort(_data(sessions=extended)),
+        artifact_service=artifact_service,
+    )
+    assert isinstance(result, ModelCandidateFoldSuccess)
+    stats = result.labels
+    assert stats.decision_sample_count == 3 * 30  # decisions 0..29 only
+    assert stats.mature_after_cutoff == 0
+
+
+def test_input_set_rejects_kind_field_mismatch() -> None:
+    with pytest.raises(AppProcessError) as error:
+        ModelFoldInputSet(
+            label_prices=_binding(ModelFoldInputKind.FEATURES),
+            feature_frame=_binding(ModelFoldInputKind.FEATURES),
+            calendar=_binding(ModelFoldInputKind.CALENDAR),
+        )
+    assert error.value.details.get("reason") == "input_set_kind_field_mismatch"
 
 
 def test_request_rejects_knowledge_cutoff_after_training_time() -> None:

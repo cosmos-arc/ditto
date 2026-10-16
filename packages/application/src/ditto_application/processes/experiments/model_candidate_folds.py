@@ -7,8 +7,15 @@ forward-return labels, train the registered candidate on the training range
 only, then publish the training and prediction artifacts under the caller's
 scheduler lease. Publication precedes the success return, so no fold can be
 reported complete without verified immutable evidence (publish-first). Every
-refusal names its stage and reason; nothing half-published is ever reported
-as success.
+expected refusal names its stage and reason; nothing half-published is ever
+reported as success.
+
+Contracts owned by the caller (W2 scheduler wiring): ``trained_at_epoch_us``
+is pinned from durable state, never re-read from the clock, so an identical
+crash-retry replays byte-stable artifact identities; unexpected exceptions
+propagate and map to system failures in the worker taxonomy; test-window
+predictions come from the train-frozen state here, while recovery inference
+(``model_inference``) is the consumer-side path over published artifacts.
 """
 
 from __future__ import annotations
@@ -64,6 +71,7 @@ __all__ = [
     "ModelCandidateFoldSuccess",
     "ModelFoldData",
     "ModelFoldDataPort",
+    "ModelFoldExecutionStage",
     "ModelFoldInputBinding",
     "ModelFoldInputKind",
     "ModelFoldInputSet",
@@ -71,10 +79,16 @@ __all__ = [
     "execute_model_candidate_fold",
 ]
 
-_STAGE_DATA = "data"
-_STAGE_LABEL = "label"
-_STAGE_TRAIN = "train"
-_STAGE_PUBLISH = "publish"
+
+class ModelFoldExecutionStage(StrEnum):
+    """Stage names every fold refusal is attributed to."""
+
+    DATA = "data"
+    LABEL = "label"
+    TRAIN = "train"
+    PUBLISH = "publish"
+
+
 _HASH_LENGTH = 64
 
 
@@ -89,7 +103,7 @@ class ModelFoldInputKind(StrEnum):
 def _fold_error(reason: str, **details: object) -> AppProcessError:
     return AppProcessError(
         "model candidate fold orchestration failed closed",
-        details={"code": "REPRODUCIBILITY_FAILED", "reason": reason, **details},
+        details={"code": "MODEL_CANDIDATE_FOLD_FAILED", "reason": reason, **details},
     )
 
 
@@ -153,18 +167,20 @@ class ModelFoldInputSet:
     calendar: ModelFoldInputBinding
 
     def __post_init__(self) -> None:
-        """Require one binding per input kind with no kind mixing."""
+        """Require each binding to sit in its own kind-named field."""
         bindings = (self.label_prices, self.feature_frame, self.calendar)
         for binding in bindings:
             if type(cast("object", binding)) is not ModelFoldInputBinding:
                 raise _fold_error("input_set_binding_invalid")
-        kinds = [binding.kind for binding in bindings]
-        if set(kinds) != {
-            ModelFoldInputKind.LABEL_PRICES,
-            ModelFoldInputKind.FEATURES,
-            ModelFoldInputKind.CALENDAR,
-        }:
-            raise _fold_error("input_set_kinds_incomplete", kinds=sorted(kinds))
+        if (
+            self.label_prices.kind is not ModelFoldInputKind.LABEL_PRICES
+            or self.feature_frame.kind is not ModelFoldInputKind.FEATURES
+            or self.calendar.kind is not ModelFoldInputKind.CALENDAR
+        ):
+            raise _fold_error(
+                "input_set_kind_field_mismatch",
+                kinds=sorted(binding.kind.value for binding in bindings),
+            )
 
 
 @dataclass(frozen=True, slots=True)
@@ -262,10 +278,18 @@ class ModelCandidateFoldRequest:
 
 @dataclass(frozen=True, slots=True)
 class ModelFoldLabelStatistics:
-    """Fold-scope label outcome counts surfaced as evaluation evidence."""
+    """
+    Fold-span label outcome counts surfaced as evaluation evidence.
+
+    ``mature`` counts labels already mature at the fold's knowledge cutoff;
+    labels whose maturity lands after the cutoff are kept in the separate
+    ``mature_after_cutoff`` bucket so usable-sample denominators never
+    conflate data maturity with as-of maturity.
+    """
 
     decision_sample_count: int
     mature: int
+    mature_after_cutoff: int
     unfillable_entry: int
     unfillable_exit: int
     path_incomplete: int
@@ -274,6 +298,7 @@ class ModelFoldLabelStatistics:
         """Require non-negative counts that exactly partition the samples."""
         counts = (
             self.mature,
+            self.mature_after_cutoff,
             self.unfillable_entry,
             self.unfillable_exit,
             self.path_incomplete,
@@ -303,13 +328,13 @@ class ModelCandidateFoldSuccess:
 class ModelCandidateFoldFailure:
     """One stage-scoped refusal; the fold must not be reported complete."""
 
-    stage: str
+    stage: ModelFoldExecutionStage
     reason: str
     details: dict[str, object] = field(default_factory=dict)
 
 
 def _failure_from_error(
-    stage: str,
+    stage: ModelFoldExecutionStage,
     error: AppProcessError,
 ) -> ModelCandidateFoldFailure:
     reason = error.details.get("reason")
@@ -320,28 +345,37 @@ def _failure_from_error(
     )
 
 
-def _label_statistics(labels: ResearchLabelFrame) -> ModelFoldLabelStatistics:
-    """Count label outcomes by status; every row must carry a known status."""
-    status_column = labels.frame.get_column("status")
-    counts = {
-        status: status_column.eq_missing(status).sum()
-        for status in (
-            LABEL_STATUS_MATURE,
-            LABEL_STATUS_UNFILLABLE_ENTRY,
-            LABEL_STATUS_UNFILLABLE_EXIT,
-            LABEL_STATUS_PATH_INCOMPLETE,
-        )
-    }
-    statistics = ModelFoldLabelStatistics(
-        decision_sample_count=labels.frame.height,
-        mature=int(counts[LABEL_STATUS_MATURE]),
-        unfillable_entry=int(counts[LABEL_STATUS_UNFILLABLE_ENTRY]),
-        unfillable_exit=int(counts[LABEL_STATUS_UNFILLABLE_EXIT]),
-        path_incomplete=int(counts[LABEL_STATUS_PATH_INCOMPLETE]),
+def _label_statistics(
+    labels: ResearchLabelFrame,
+    fold: ValidationFoldPlan,
+    *,
+    knowledge_cutoff_epoch_us: int,
+) -> ModelFoldLabelStatistics:
+    """Count fold-span label outcomes by status, mature split at the cutoff."""
+    train_window = fold.train_window
+    if train_window is None:  # pragma: no cover - guarded in request validation
+        raise _fold_error("fold_train_window_missing")
+    status = pl.col("status")
+    span = labels.frame.filter(
+        (pl.col("decision_session") >= train_window.start)
+        & (pl.col("decision_session") <= fold.test_window.end)
     )
-    if statistics.decision_sample_count == 0:
-        raise _fold_error("label_frame_empty")
-    return statistics
+    if span.height == 0:
+        raise _fold_error("label_frame_fold_span_empty")
+    mature_mask = status == LABEL_STATUS_MATURE
+    mature_at_cutoff = span.filter(
+        mature_mask & (pl.col("mature_at_epoch_us") <= knowledge_cutoff_epoch_us)
+    ).height
+    return ModelFoldLabelStatistics(
+        decision_sample_count=span.height,
+        mature=int(mature_at_cutoff),
+        mature_after_cutoff=int(span.filter(mature_mask).height - mature_at_cutoff),
+        unfillable_entry=int(
+            span.filter(status == LABEL_STATUS_UNFILLABLE_ENTRY).height
+        ),
+        unfillable_exit=int(span.filter(status == LABEL_STATUS_UNFILLABLE_EXIT).height),
+        path_incomplete=int(span.filter(status == LABEL_STATUS_PATH_INCOMPLETE).height),
+    )
 
 
 def _load_fold_data(
@@ -351,11 +385,13 @@ def _load_fold_data(
     try:
         data = data_port.load(request.inputs)
     except AppProcessError as error:
-        raise _FoldStageError(_failure_from_error(_STAGE_DATA, error)) from error
+        raise _FoldStageError(
+            _failure_from_error(ModelFoldExecutionStage.DATA, error)
+        ) from error
     if type(cast("object", data)) is not ModelFoldData:
         raise _FoldStageError(
             ModelCandidateFoldFailure(
-                stage=_STAGE_DATA,
+                stage=ModelFoldExecutionStage.DATA,
                 reason="fold_data_invalid",
             )
         )
@@ -363,6 +399,7 @@ def _load_fold_data(
 
 
 def _build_labels(
+    request: ModelCandidateFoldRequest,
     data: ModelFoldData,
 ) -> tuple[ResearchLabelFrame, ModelFoldLabelStatistics]:
     try:
@@ -370,17 +407,23 @@ def _build_labels(
             data.label_prices,
             data.trading_sessions,
         )
-        statistics = _label_statistics(labels)
+        statistics = _label_statistics(
+            labels,
+            request.fold,
+            knowledge_cutoff_epoch_us=request.knowledge_cutoff_epoch_us,
+        )
     except EvaluationError as error:
         raise _FoldStageError(
             ModelCandidateFoldFailure(
-                stage=_STAGE_LABEL,
+                stage=ModelFoldExecutionStage.LABEL,
                 reason=str(error.details.get("reason", "label_build_failed")),
                 details=dict(error.details),
             )
         ) from error
     except AppProcessError as error:
-        raise _FoldStageError(_failure_from_error(_STAGE_LABEL, error)) from error
+        raise _FoldStageError(
+            _failure_from_error(ModelFoldExecutionStage.LABEL, error)
+        ) from error
     return labels, statistics
 
 
@@ -401,20 +444,22 @@ def _train_fold(
             trained_at_epoch_us=request.trained_at_epoch_us,
         )
     except AppProcessError as error:
-        raise _FoldStageError(_failure_from_error(_STAGE_TRAIN, error)) from error
+        raise _FoldStageError(
+            _failure_from_error(ModelFoldExecutionStage.TRAIN, error)
+        ) from error
     result = train_model_candidate(training_request)
     if isinstance(result, ModelTrainingSuccess):
         if not result.predictions.rows:
             raise _FoldStageError(
                 ModelCandidateFoldFailure(
-                    stage=_STAGE_TRAIN,
+                    stage=ModelFoldExecutionStage.TRAIN,
                     reason="test_window_predictions_empty",
                 )
             )
         return result
     raise _FoldStageError(
         ModelCandidateFoldFailure(
-            stage=_STAGE_TRAIN,
+            stage=ModelFoldExecutionStage.TRAIN,
             reason=result.reason,
             details=({} if result.details is None else dict(result.details)),
         )
@@ -450,7 +495,9 @@ def _publish_fold_artifacts(
             trained_at_epoch_us=request.trained_at_epoch_us,
         )
     except AppProcessError as error:
-        raise _FoldStageError(_failure_from_error(_STAGE_PUBLISH, error)) from error
+        raise _FoldStageError(
+            _failure_from_error(ModelFoldExecutionStage.PUBLISH, error)
+        ) from error
     return (*published_training, published_predictions)
 
 
@@ -479,7 +526,7 @@ def execute_model_candidate_fold(
         raise _fold_error("fold_clock_invalid", field="now_epoch_us")
     try:
         data = _load_fold_data(request, data_port)
-        labels, statistics = _build_labels(data)
+        labels, statistics = _build_labels(request, data)
         result = _train_fold(request, data, labels)
         artifacts = _publish_fold_artifacts(
             request,
