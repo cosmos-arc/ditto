@@ -34,7 +34,6 @@ from ditto_strategy.alpha.parameters import canonical_parameter_hash
 from ditto_strategy.alpha.pipeline import StrategyPipeline
 from ditto_strategy.alpha.selection_evidence import SelectionEvidenceCollector
 
-from ditto_application.builders.service_factory import build_frozen_prediction_pipeline
 from ditto_application.exceptions import AppBuilderError
 from ditto_application.processes.execution.backtest_process import (
     BacktestService,
@@ -57,6 +56,9 @@ from ditto_application.processes.experiments._backtest_service_contract import (
 )
 from ditto_application.processes.experiments._backtest_service_contract import (
     backtest_construction_error as _error,
+)
+from ditto_application.processes.experiments._prediction_pipeline import (
+    build_frozen_prediction_pipeline,
 )
 from ditto_application.processes.experiments.execution_bundle import (
     BaselineExecutorBinding,

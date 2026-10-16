@@ -15,9 +15,6 @@ from ditto_analysis.experiments.model_lineage import (
     ModelPredictionRecord,
     ModelPredictionRow,
 )
-from ditto_application.builders.service_factory import (
-    build_frozen_prediction_pipeline,
-)
 from ditto_application.exceptions import AppProcessError
 from ditto_application.processes.execution._factor_bundle import (
     build_prediction_aware_bundle_builder,
@@ -31,6 +28,9 @@ from ditto_application.processes.execution.factor_bridge import (
 from ditto_application.processes.experiments._execution_bundle_inputs import (
     PREDICTION_EXECUTOR_IMPLEMENTATION_KEY,
     PredictionExecutorBinding,
+)
+from ditto_application.processes.experiments._prediction_pipeline import (
+    build_frozen_prediction_pipeline,
 )
 from ditto_application.processes.experiments.model_predictions_frame import (
     prediction_frame_from_record,

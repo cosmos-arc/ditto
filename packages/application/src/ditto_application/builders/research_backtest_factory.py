@@ -37,7 +37,6 @@ from ditto_application.builders.research_runtime_builder import (
 )
 from ditto_application.builders.service_factory import (
     build_frozen_baseline_pipeline,
-    build_frozen_prediction_pipeline,
 )
 from ditto_application.exceptions import AppBuilderError, AppProcessError
 from ditto_application.processes.execution.factor_bridge import (
@@ -48,6 +47,9 @@ from ditto_application.processes.experiments._execution_bundle_inputs import (
     BaselineExecutorBinding,
     PredictionExecutorBinding,
     ResearchSnapshotBinding,
+)
+from ditto_application.processes.experiments._prediction_pipeline import (
+    build_frozen_prediction_pipeline,
 )
 from ditto_application.processes.experiments._worker_attestation import (
     ResearchBacktestBuildAttestation,
