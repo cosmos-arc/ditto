@@ -95,6 +95,9 @@ class ModelFoldIsolationReport:
 class ModelFoldTrainingRequest:
     """Complete typed inputs for one candidate-fold training execution."""
 
+    experiment_id: str
+    candidate_id: str
+    fold_id: str
     lineage: ModelCandidateLineage
     fold: ValidationFoldPlan
     feature_frame: pl.DataFrame
@@ -106,6 +109,11 @@ class ModelFoldTrainingRequest:
 
     def __post_init__(self) -> None:
         """Validate typed identity before any training work."""
+        _require_execution_lineage(
+            self.experiment_id,
+            self.candidate_id,
+            self.fold_id,
+        )
         if type(self.lineage) is not ModelCandidateLineage:
             raise _training_error("lineage_invalid")
         if type(self.fold) is not ValidationFoldPlan:
@@ -131,6 +139,26 @@ class ModelFoldTrainingRequest:
                 or getattr(self, field_name) < 0
             ):
                 raise _training_error("cutoff_invalid", field=field_name)
+
+
+def _require_execution_lineage(
+    experiment_id: str,
+    candidate_id: str,
+    fold_id: str,
+) -> None:
+    """Reject blank, padded, or path-unsafe execution lineage identities."""
+    for field_name, value in (
+        ("experiment_id", experiment_id),
+        ("candidate_id", candidate_id),
+        ("fold_id", fold_id),
+    ):
+        if (
+            type(value) is not str
+            or not value
+            or value != value.strip()
+            or "/" in value
+        ):
+            raise _training_error("execution_lineage_invalid", field=field_name)
 
 
 def _require_label_binding(
@@ -621,6 +649,9 @@ def _assemble_success(
         )
         training_record = ModelTrainingRecord(
             schema=MODEL_TRAINING_ARTIFACT_SCHEMA,
+            experiment_id=request.experiment_id,
+            candidate_id=request.candidate_id,
+            fold_id=request.fold_id,
             registration_hash=lineage.registration_hash,
             registration_payload=lineage.canonical_payload(),
             snapshot_id=request.snapshot_id,

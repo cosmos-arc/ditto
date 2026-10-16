@@ -11,6 +11,7 @@ numpy-free and I/O-free.
 
 from __future__ import annotations
 
+import hashlib
 import math
 import re
 from collections.abc import Mapping
@@ -32,6 +33,7 @@ __all__ = [
     "ModelPredictionRow",
     "ModelTrainingRecord",
     "TrainFittedTransformSpec",
+    "lineage_scope_digest",
     "model_state_artifact_id",
     "training_artifact_id",
     "transform_state_artifact_id",
@@ -306,6 +308,9 @@ class ModelTrainingRecord:
     """Content contract of one published immutable training artifact."""
 
     schema: str
+    experiment_id: str
+    candidate_id: str
+    fold_id: str
     registration_hash: str
     snapshot_id: str
     train_window_start: str
@@ -322,6 +327,11 @@ class ModelTrainingRecord:
         """Reject partial or untyped training evidence."""
         if self.schema != MODEL_TRAINING_ARTIFACT_SCHEMA:
             raise _lineage_error("training_artifact_schema_invalid")
+        _require_execution_lineage(
+            self.experiment_id,
+            self.candidate_id,
+            self.fold_id,
+        )
         _require_sha256(self.registration_hash, "registration_hash")
         _require_registration_payload(self.registration_payload, self.registration_hash)
         if type(self.snapshot_id) is not str or not self.snapshot_id:
@@ -362,6 +372,9 @@ class ModelTrainingRecord:
         """Return every field a training-artifact reader must verify."""
         return {
             "schema": self.schema,
+            "experiment_id": self.experiment_id,
+            "candidate_id": self.candidate_id,
+            "fold_id": self.fold_id,
             "registration_hash": self.registration_hash,
             "registration_payload": dict(self.registration_payload),
             "snapshot_id": self.snapshot_id,
@@ -463,23 +476,69 @@ def training_artifact_id(training_record_hash: str) -> str:
     return f"model-training-{training_record_hash}"
 
 
-def model_state_artifact_id(registration_hash: str, model_state_sha256: str) -> str:
+def _require_execution_lineage(
+    experiment_id: str,
+    candidate_id: str,
+    fold_id: str,
+) -> None:
+    """Reject blank, padded, or path-unsafe execution lineage identities."""
+    for field_name, value in (
+        ("experiment_id", experiment_id),
+        ("candidate_id", candidate_id),
+        ("fold_id", fold_id),
+    ):
+        if (
+            type(value) is not str
+            or not value
+            or value != value.strip()
+            or "/" in value
+        ):
+            raise _lineage_error("training_lineage_invalid", field=field_name)
+
+
+def lineage_scope_digest(experiment_id: str, candidate_id: str, fold_id: str) -> str:
+    """
+    Return the canonical scope digest of one execution lineage.
+
+    Byte-equal frozen states recur across folds (the rule baseline is
+    fold-invariant), so state ids need the execution scope — experiment,
+    candidate, fold — appended to stay one-id-one-path in the indexed store.
+    Publication derives the scope from its context; recovery re-derives it
+    from the training record's own lineage fields. One authority, both ends.
+    """
+    digest = hashlib.sha256(
+        "|".join((experiment_id, candidate_id, fold_id)).encode()
+    ).hexdigest()
+    return digest[:8]
+
+
+def model_state_artifact_id(
+    registration_hash: str,
+    model_state_sha256: str,
+    *,
+    scope: str,
+) -> str:
     """
     Return the indexed artifact id of one frozen model state.
 
-    Ids are scoped by the candidate registration AND content: sibling
-    candidates sharing one fold and feature set often produce byte-identical
-    transform states, and the indexed store requires one id to resolve to
-    exactly one candidate-scoped path.
+    Ids are scoped by the candidate registration, content, AND the execution
+    lineage scope: sibling candidates sharing one fold, or folds sharing one
+    candidate, can produce byte-identical states, and the indexed store
+    requires one id to resolve to exactly one path.
     """
-    return f"model-model-state-{registration_hash[:16]}-{model_state_sha256[:16]}"
+    return (
+        f"model-model-state-{registration_hash[:16]}-{model_state_sha256[:16]}-{scope}"
+    )
 
 
 def transform_state_artifact_id(
     registration_hash: str,
     transform_state_sha256: str,
+    *,
+    scope: str,
 ) -> str:
     """Return the indexed artifact id of one frozen transform state."""
     return (
-        f"model-transform-state-{registration_hash[:16]}-{transform_state_sha256[:16]}"
+        f"model-transform-state-{registration_hash[:16]}"
+        f"-{transform_state_sha256[:16]}-{scope}"
     )

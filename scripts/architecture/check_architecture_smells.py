@@ -1603,6 +1603,18 @@ APPLICATION_ANALYSIS_WIRING_ALLOWANCES = (
             "on any identity, checksum, or as-of drift."
         ),
     ),
+    ApplicationAnalysisWiringAllowance(
+        path=(
+            "packages/application/src/ditto_application/processes/experiments/"
+            "model_candidate_folds.py"
+        ),
+        owner="application model-candidate fold orchestration",
+        reason=(
+            "Composes analysis-owned lineage/fold/artifact contracts and the "
+            "features-owned label builder into one publish-first fold execution "
+            "behind an injected content-addressed data port (#565 W1)."
+        ),
+    ),
 )
 
 
