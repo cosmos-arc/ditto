@@ -3589,7 +3589,10 @@ def test_model_runner_maps_fold_stage_failure_and_stops(model_artifact_service) 
     with pytest.raises(AppProcessError) as exc_info:
         runner.run(audit, external_should_stop=_never_stop)
 
-    assert exc_info.value.details["reason"] == "model_candidate_fold_stage_failed"
+    # Data-stage refusals keep the input-integrity failure family.
+    assert exc_info.value.details["code"] == "INPUT_HASH_MISMATCH"
+    assert exc_info.value.details["reason"] == "hash_mismatch"
+    assert exc_info.value.details["stage"] == "data"
 
     stopped = runner.run(audit, external_should_stop=lambda: True)
     assert stopped.state is ResearchFoldRunState.STOPPED

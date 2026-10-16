@@ -55,6 +55,7 @@ from ditto_application.processes.experiments.model_candidate_folds import (
     ModelCandidateFoldRequest,
     ModelCandidateFoldSuccess,
     ModelFoldDataPort,
+    ModelFoldExecutionStage,
     ModelFoldInputBinding,
     ModelFoldInputKind,
     ModelFoldInputSet,
@@ -306,6 +307,18 @@ class ModelCandidateFoldRunner:
             )
         )
         if isinstance(result, ModelCandidateFoldFailure):
+            # Keep the W1 stage taxonomy in the worker's failure family: data
+            # refusals are input-integrity failures, everything else stays a
+            # reproducibility failure with the stage recorded in the details.
+            if result.stage is ModelFoldExecutionStage.DATA:
+                raise AppProcessError(
+                    "model candidate fold execution failed closed",
+                    details={
+                        "code": "INPUT_HASH_MISMATCH",
+                        "reason": result.reason,
+                        "stage": result.stage.value,
+                    },
+                )
             raise _runner_error(
                 "model_candidate_fold_stage_failed",
                 stage=result.stage.value,

@@ -535,6 +535,20 @@ class BuilderBackedResearchExecutorProbe:
                 candidates=_candidate_evidence(runtimes),
             )
 
+        if request.model_candidates and facts.lane != "stock_selection":
+            # v1 model candidates execute only under the stock lane; refuse the
+            # launch pre-commit instead of failing every model fold at claim.
+            return ResearchExecutorProbeResult(
+                available=False,
+                code="REPRODUCIBILITY_FAILED",
+                reason="model_candidate_lane_mismatch",
+                remediation="launch model candidates in a stock-selection lane",
+                strategy_spec_hash=facts.base_spec_hash,
+                node_registry_manifest_hash=facts.node_registry_manifest_hash,
+                required_datasets=facts.required_datasets,
+                candidates=_candidate_evidence(runtimes),
+            )
+
         try:
             model_evidence = _model_candidate_evidence(request.model_candidates)
         except AppProcessError as exc:
