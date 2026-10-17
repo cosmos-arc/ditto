@@ -101,6 +101,8 @@ docs/archive/web/reviews/visual-audit/
 *.pkl
 *.pickle
 *.dat
+# 真实数据金样例（#565 W4）：小体量提取提交入库，测试可复现性依赖 fixture 在库
+!apps/backend/tests/fixtures/model_fold_inputs/*.parquet
 
 # CSV/JSON 精确忽略
 /*.csv
