@@ -562,6 +562,26 @@ APPS_REGISTRY_COMPOSITION_ALLOWANCES = (
         ),
     ),
     CompositionImportAllowance(
+        path=(
+            "apps/backend/src/ditto_apps/registry/model/"
+            "model_fold_input_materializer.py"
+        ),
+        allowed_modules=frozenset(
+            {
+                "ditto_analysis.research.artifact_service",
+                "ditto_data.catalog.source_snapshot",
+                "ditto_data.ingestion.partition_state",
+                "ditto_features.evaluation.research_labels",
+            }
+        ),
+        owner="apps model-fold input materializer composition",
+        reason=(
+            "#565 W4 freezes the real-data label-price and calendar fold inputs "
+            "against exact observed provider snapshots, pinning the features "
+            "label contract over the isolated data root."
+        ),
+    ),
+    CompositionImportAllowance(
         path=("apps/backend/src/ditto_apps/registry/live/r3_live_planning_builder.py"),
         allowed_modules=frozenset(
             {
