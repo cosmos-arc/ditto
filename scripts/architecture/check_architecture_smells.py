@@ -1627,6 +1627,42 @@ APPLICATION_ANALYSIS_WIRING_ALLOWANCES = (
             "precomputed signal_value column (#565 W3)."
         ),
     ),
+    ApplicationAnalysisWiringAllowance(
+        path=(
+            "packages/application/src/ditto_application/processes/experiments/"
+            "model_candidate_plans.py"
+        ),
+        owner="application model-candidate planning decode",
+        reason=(
+            "Single authority decoding the model planning envelope into the "
+            "analysis-owned lineage and content-addressed input identities "
+            "shared by the executor probe, resolver, and fold runner (#565 W2)."
+        ),
+    ),
+    ApplicationAnalysisWiringAllowance(
+        path=(
+            "packages/application/src/ditto_application/processes/experiments/"
+            "model_candidate_runner.py"
+        ),
+        owner="application model-candidate fold runner",
+        reason=(
+            "Routes claim-time model plan bindings through the W1 governed fold "
+            "execution and upgrades the audit onto analysis-owned prediction "
+            "records before the verified backtest leg (#565 W2)."
+        ),
+    ),
+    ApplicationAnalysisWiringAllowance(
+        path=(
+            "packages/application/src/ditto_application/builders/"
+            "research_model_fold_adapters.py"
+        ),
+        owner="application model fold production adapters",
+        reason=(
+            "Indexed production ports for model fold execution: loads frozen "
+            "training frames and registers prediction frames through the "
+            "analysis-owned indexed artifact store (#565 W2)."
+        ),
+    ),
 )
 
 

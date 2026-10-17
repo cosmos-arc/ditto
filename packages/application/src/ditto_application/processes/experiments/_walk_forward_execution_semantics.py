@@ -28,12 +28,16 @@ from ditto_application.processes.experiments._evidence_values import (
 )
 from ditto_application.processes.experiments.execution_bundle import (
     BaselineExecutorBinding,
+    ModelCandidateExecutionBinding,
     ResearchExecutionSemantics,
     ResearchSnapshotBinding,
     StrategyExecutionBinding,
 )
 from ditto_application.processes.experiments.execution_contracts import (
     ResearchExecutionPolicy,
+)
+from ditto_application.processes.experiments.planning import (
+    MODEL_PARAMETER_KEY,
 )
 from ditto_application.processes.experiments.scheduler_store import (
     ExperimentSchedulerSnapshot,
@@ -54,6 +58,11 @@ class WalkForwardExecutionSemanticsResolver(Protocol):
     def resolve(self, fold: FoldView) -> ResearchExecutionSemantics:
         """Resolve one fold without latest/provider fallback."""
         ...
+
+
+def _is_model_candidate(candidate: CandidateSpec) -> bool:
+    """Detect the reserved model-candidate persistence envelope."""
+    return MODEL_PARAMETER_KEY in candidate.parameters
 
 
 @dataclass(frozen=True, slots=True)
@@ -205,12 +214,18 @@ def _validate_semantics_fold(
             )
         )
         or (
-            not candidate.is_baseline and type(strategy) is not StrategyExecutionBinding
+            not candidate.is_baseline
+            and not _is_model_candidate(candidate)
+            and type(strategy) is not StrategyExecutionBinding
         )
         or (
             candidate.is_baseline
             and type(strategy)
             not in {StrategyExecutionBinding, BaselineExecutorBinding}
+        )
+        or (
+            _is_model_candidate(candidate)
+            and type(strategy) is not ModelCandidateExecutionBinding
         )
         or (
             attempt is not None

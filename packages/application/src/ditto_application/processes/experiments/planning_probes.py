@@ -12,6 +12,7 @@ from ditto_application.exceptions import AppProcessError
 from ditto_application.processes.experiments.planning import (
     BaselineDescriptor,
     BinderCandidatePlan,
+    ModelCandidatePlan,
 )
 from ditto_application.research_certification_contracts import (
     ExperimentSnapshotIdentity,
@@ -30,6 +31,7 @@ __all__ = [
     "BaselineRuntimeExecutorEvidence",
     "CandidateExecutorEvidence",
     "ExperimentSnapshotIdentity",
+    "ModelExecutorEvidence",
     "PlanningIdentityInput",
     "ResearchCertificationProbe",
     "ResearchCertificationRequest",
@@ -113,6 +115,16 @@ class CandidateExecutorEvidence:
 
 
 @dataclass(frozen=True, slots=True)
+class ModelExecutorEvidence:
+    """Build-time identity for one explicit model candidate."""
+
+    candidate_hash: str
+    model_kind: str
+    lineage_hash: str
+    descriptor_hash: str
+
+
+@dataclass(frozen=True, slots=True)
 class BaselineRuntimeExecutorEvidence:
     """Build-time identity for one exact-strategy baseline runtime."""
 
@@ -135,6 +147,7 @@ class ResearchExecutorProbeRequest:
     snapshot_identity: ExperimentSnapshotIdentity
     baseline: BaselineDescriptor
     candidates: tuple[BinderCandidatePlan, ...]
+    model_candidates: tuple[ModelCandidatePlan, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -157,6 +170,7 @@ class ResearchExecutorProbeResult:
     factor_registry_manifest_hash: str | None = None
     factor_binding_hashes: tuple[str, ...] = ()
     baseline_runtime: BaselineRuntimeExecutorEvidence | None = None
+    model_candidates: tuple[ModelExecutorEvidence, ...] = ()
 
 
 class ResearchExecutorProbe(Protocol):

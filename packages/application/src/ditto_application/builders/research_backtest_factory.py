@@ -44,7 +44,9 @@ from ditto_application.processes.execution.factor_bridge import (
     compiled_expressions_execution_hash,
 )
 from ditto_application.processes.experiments._execution_bundle_inputs import (
+    MODEL_PLAN_REQUIRES_RUNNER_UPGRADE_REASON,
     BaselineExecutorBinding,
+    ModelCandidateExecutionBinding,
     PredictionExecutorBinding,
     ResearchSnapshotBinding,
 )
@@ -494,6 +496,10 @@ class FrozenAuditResearchBacktestFactory:
                 rebalance_frequency="fold_schedule",
                 selection_evidence_collector=evidence_collector,
             )
+        if type(declared) is ModelCandidateExecutionBinding:
+            # Plan bindings are claim-time identities; the model fold runner
+            # upgrades them to a prediction executor before any build.
+            raise _error(MODEL_PLAN_REQUIRES_RUNNER_UPGRADE_REASON)
         if type(declared) is BaselineExecutorBinding:
             if semantics.baseline_plan is None:
                 raise _error("synthetic_baseline_plan_missing")

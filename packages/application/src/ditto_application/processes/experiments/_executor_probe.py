@@ -25,6 +25,8 @@ from ditto_application.processes.experiments.planning import (
     BaselineDescriptor,
     BinderCandidatePlan,
     CandidateMatrixPlan,
+    ModelCandidateDescriptor,
+    ModelCandidatePlan,
 )
 from ditto_application.processes.experiments.planning_contracts import (
     ExperimentPlanningRequest,
@@ -74,6 +76,7 @@ def _request_payload(
     snapshot = request.snapshot_identity
     baseline = request.baseline
     candidates = request.candidates
+    model_candidates = request.model_candidates
     if (
         type(strategy) is not StrategySpecRecord
         or type(strategy.spec_json) not in {dict, MappingProxyType}
@@ -93,6 +96,10 @@ def _request_payload(
         or type(baseline) is not BaselineDescriptor
         or type(candidates) is not tuple
         or not all(type(candidate) is BinderCandidatePlan for candidate in candidates)
+        or type(model_candidates) is not tuple
+        or not all(
+            type(candidate) is ModelCandidatePlan for candidate in model_candidates
+        )
     ):
         raise experiment_process_error(
             "executor request graph has a non-canonical node"
@@ -126,6 +133,19 @@ def _request_payload(
         "payload": baseline.payload,
         "schema_version": baseline.schema_version,
     }
+    model_payloads: list[Mapping[str, object]] = [
+        {
+            "ordinal": candidate.ordinal,
+            "role": candidate.role.value,
+            "candidate_hash": candidate.candidate_hash,
+            "descriptor": {
+                "descriptor_type": candidate.descriptor.descriptor_type,
+                "payload": candidate.descriptor.payload,
+                "schema_version": candidate.descriptor.schema_version,
+            },
+        }
+        for candidate in model_candidates
+    ]
     return {
         "strategy_record": {
             "strategy_id": strategy.strategy_id,
@@ -142,6 +162,7 @@ def _request_payload(
         },
         "baseline": baseline_payload,
         "candidates": candidate_payloads,
+        "model_candidates": model_payloads,
     }
 
 
@@ -221,6 +242,28 @@ def _isolated_request(
             for raw_candidate in _list(decoded.get("candidates"), "candidates")
             for candidate in (_mapping(raw_candidate, "candidate"),)
         ),
+        model_candidates=tuple(
+            ModelCandidatePlan(
+                descriptor=ModelCandidateDescriptor(
+                    descriptor_type=_string(
+                        descriptor.get("descriptor_type"),
+                        "model.descriptor_type",
+                    ),
+                    payload=cast(
+                        "Mapping[str, BaselineInputValue]",
+                        _mapping(descriptor.get("payload"), "model.payload"),
+                    ),
+                    schema_version=_integer(
+                        descriptor.get("schema_version"),
+                        "model.schema_version",
+                    ),
+                ),
+                ordinal=_integer(model.get("ordinal"), "model.ordinal"),
+            )
+            for raw_model in _list(decoded.get("model_candidates"), "model_candidates")
+            for model in (_mapping(raw_model, "model"),)
+            for descriptor in (_mapping(model.get("descriptor"), "model.descriptor"),)
+        ),
     )
     if canonical_payload(_request_payload(isolated)).json_bytes != sealed.json_bytes:
         raise experiment_process_error(
@@ -273,6 +316,7 @@ def probe_executor(
         request.snapshot_identity,
         matrix.baseline_candidate.descriptor,
         matrix.binder_candidates,
+        matrix.model_candidates,
     )
     try:
         isolated, sealed_json = _isolated_request(source)

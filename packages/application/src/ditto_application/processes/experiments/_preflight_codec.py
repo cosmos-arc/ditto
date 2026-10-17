@@ -21,6 +21,9 @@ from ditto_application.exceptions import AppProcessError
 from ditto_application.processes.experiments._baseline_runtime_evidence import (
     decode_baseline_runtime_evidence,
 )
+from ditto_application.processes.experiments._execution_bundle_inputs import (
+    REGISTERED_MODEL_KINDS,
+)
 from ditto_application.processes.experiments._preflight_certification_codec import (
     validate_certification_preimage,
 )
@@ -68,6 +71,7 @@ from ditto_application.processes.experiments.planning import (
     ExperimentPlanningSpec,
     ExperimentTrack,
     ExperimentWorkPlan,
+    ModelCandidatePlan,
     ResourceCostModel,
     ValidationWorkload,
     plan_experiment_work,
@@ -84,6 +88,7 @@ from ditto_application.processes.experiments.planning_document_codec import (
 from ditto_application.processes.experiments.planning_probes import (
     CandidateExecutorEvidence,
     ExperimentSnapshotIdentity,
+    ModelExecutorEvidence,
     is_canonical_content_hash,
 )
 from ditto_application.research_validation_contracts import (
@@ -218,7 +223,7 @@ def _validation_plan(value: object) -> ValidationProtocolPlan:
 
 
 def _candidate_payload(
-    candidate: BaselineCandidatePlan | BinderCandidatePlan,
+    candidate: BaselineCandidatePlan | BinderCandidatePlan | ModelCandidatePlan,
 ) -> Mapping[str, object]:
     if isinstance(candidate, BaselineCandidatePlan):
         return {
@@ -226,6 +231,19 @@ def _candidate_payload(
             "role": candidate.role.value,
             "candidate_hash": candidate.candidate_hash,
             "baseline_descriptor": {
+                "descriptor_type": candidate.descriptor.descriptor_type,
+                "payload": candidate.descriptor.payload,
+                "schema_version": candidate.descriptor.schema_version,
+            },
+            "parameters": [],
+        }
+    if isinstance(candidate, ModelCandidatePlan):
+        return {
+            "ordinal": candidate.ordinal,
+            "role": candidate.role.value,
+            "candidate_hash": candidate.candidate_hash,
+            "baseline_descriptor": None,
+            "model_descriptor": {
                 "descriptor_type": candidate.descriptor.descriptor_type,
                 "payload": candidate.descriptor.payload,
                 "schema_version": candidate.descriptor.schema_version,
@@ -477,6 +495,41 @@ def _validate_executor_and_authority(
     ):
         raise experiment_process_error(
             "executor candidate identity does not match the work plan"
+        )
+    model_candidates = tuple(
+        ModelExecutorEvidence(
+            candidate_hash=_string(
+                item.get("candidate_hash"), "executor.model.candidate_hash"
+            ),
+            model_kind=_string(item.get("model_kind"), "executor.model.model_kind"),
+            lineage_hash=_string(
+                item.get("lineage_hash"), "executor.model.lineage_hash"
+            ),
+            descriptor_hash=_string(
+                item.get("descriptor_hash"), "executor.model.descriptor_hash"
+            ),
+        )
+        for raw_item in _list(
+            # Documents persisted before model candidates carried no key.
+            executor.get("model_candidates", []),
+            "executor.model_candidates",
+        )
+        for item in (_mapping(raw_item, "executor.model"),)
+    )
+    expected_model_hashes = tuple(
+        candidate.candidate_hash for candidate in work.candidate_matrix.model_candidates
+    )
+    if tuple(
+        item.candidate_hash for item in model_candidates
+    ) != expected_model_hashes or not all(
+        is_canonical_content_hash(item.candidate_hash)
+        and is_canonical_content_hash(item.lineage_hash)
+        and is_canonical_content_hash(item.descriptor_hash)
+        and item.model_kind in REGISTERED_MODEL_KINDS
+        for item in model_candidates
+    ):
+        raise experiment_process_error(
+            "executor model candidate identity does not match the work plan"
         )
     authority = _mapping(preflight.get("authority"), "authority")
     authority_protocol_hash = _string(

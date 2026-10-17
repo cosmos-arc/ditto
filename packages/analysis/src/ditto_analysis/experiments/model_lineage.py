@@ -18,6 +18,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from enum import StrEnum
 from types import MappingProxyType
+from typing import cast
 
 from ditto_analysis.errors import ExperimentSpecError
 from ditto_analysis.experiments.persistence import (
@@ -34,6 +35,7 @@ __all__ = [
     "ModelTrainingRecord",
     "TrainFittedTransformSpec",
     "lineage_scope_digest",
+    "model_candidate_lineage_from_payload",
     "model_state_artifact_id",
     "training_artifact_id",
     "transform_state_artifact_id",
@@ -272,6 +274,132 @@ class ModelCandidateLineage:
     def registration_hash(self) -> str:
         """Return the canonical content identity of this registration."""
         return canonical_payload(self.canonical_payload()).content_hash.value
+
+
+_LINEAGE_PAYLOAD_KEYS = frozenset(
+    {
+        "model_kind",
+        "feature_names",
+        "label_id",
+        "label_spec_hash",
+        "transform_spec",
+        "hyperparameters",
+        "seed",
+        "code_environment",
+    },
+)
+
+
+def _decoded_transform_spec(payload: Mapping[str, object]) -> TrainFittedTransformSpec:
+    """Decode the frozen v1 preprocessing recipe from its canonical payload."""
+    transform = payload["transform_spec"]
+    if not isinstance(transform, Mapping):
+        raise _lineage_error("transform_spec_invalid")
+    recipe = dict(cast("Mapping[str, object]", transform))
+    if set(recipe) != {
+        "imputation",
+        "winsorize_lower_quantile",
+        "winsorize_upper_quantile",
+        "scaling",
+    }:
+        raise _lineage_error("transform_spec_invalid")
+    lower = recipe["winsorize_lower_quantile"]
+    upper = recipe["winsorize_upper_quantile"]
+    if type(lower) is not float or type(upper) is not float:
+        raise _lineage_error("transform_quantile_invalid")
+    imputation = recipe["imputation"]
+    scaling = recipe["scaling"]
+    if type(imputation) is not str or type(scaling) is not str:
+        raise _lineage_error("transform_spec_invalid")
+    return TrainFittedTransformSpec(
+        imputation=imputation,
+        winsorize_lower_quantile=lower,
+        winsorize_upper_quantile=upper,
+        scaling=scaling,
+    )
+
+
+def _decoded_hyperparameters(
+    payload: Mapping[str, object],
+) -> dict[str, object]:
+    """Copy one canonical hyperparameter mapping into a plain dict."""
+    raw = payload["hyperparameters"]
+    if not isinstance(raw, Mapping):
+        raise _lineage_error("hyperparameters_invalid")
+    # Frozen planning envelopes hand over MappingProxyType; copy into plain
+    # dicts so the registration validates one canonical shape.
+    return dict(cast("Mapping[str, object]", raw))
+
+
+def _decoded_code_environment(payload: Mapping[str, object]) -> dict[str, str]:
+    """Copy one canonical code-environment mapping into a plain string dict."""
+    raw = payload["code_environment"]
+    if not isinstance(raw, Mapping):
+        raise _lineage_error("code_environment_invalid")
+    values = dict(cast("Mapping[str, object]", raw))
+    if any(type(value) is not str for value in values.values()):
+        raise _lineage_error("code_environment_invalid")
+    return cast("dict[str, str]", values)
+
+
+def model_candidate_lineage_from_payload(
+    payload: Mapping[str, object],
+) -> ModelCandidateLineage:
+    """
+    Rebuild one lineage from its canonical payload exactly or fail closed.
+
+    The exact-key check keeps a drifted payload (extra, missing, or renamed
+    fields) from silently re-registering under a different identity: the
+    reconstructed object must re-hash to the payload's own canonical bytes,
+    which every durable consumer already records.
+    """
+    if set(payload) != set(_LINEAGE_PAYLOAD_KEYS):
+        raise _lineage_error(
+            "lineage_payload_keys_invalid",
+            expected=sorted(_LINEAGE_PAYLOAD_KEYS),
+        )
+    model_kind = payload["model_kind"]
+    if type(model_kind) is not str or model_kind not in _HYPERPARAMETER_KEYS_BY_KIND:
+        raise _lineage_error("model_kind_invalid")
+    raw_features = payload["feature_names"]
+    # Canonical JSON renders feature names as a list while frozen planning
+    # envelopes render them as a tuple; both decode to the same registration.
+    if (
+        type(raw_features) not in (list, tuple)
+        or not raw_features
+        or any(
+            type(name) is not str
+            for name in cast("tuple[object, ...] | list[object]", raw_features)
+        )
+    ):
+        raise _lineage_error("feature_names_invalid")
+    features = tuple(
+        cast("tuple[str, ...] | list[str]", raw_features),
+    )
+    hyperparameters = _decoded_hyperparameters(payload)
+    environment = _decoded_code_environment(payload)
+    label_id = payload["label_id"]
+    label_spec_hash = payload["label_spec_hash"]
+    seed = payload["seed"]
+    if type(label_id) is not str or type(label_spec_hash) is not str:
+        raise _lineage_error("lineage_payload_field_invalid")
+    if type(seed) is not int or seed < 0:
+        raise _lineage_error("seed_invalid")
+    try:
+        return ModelCandidateLineage(
+            model_kind=ModelKind(model_kind),
+            feature_names=features,
+            label_id=label_id,
+            label_spec_hash=label_spec_hash,
+            transform_spec=_decoded_transform_spec(payload),
+            hyperparameters=hyperparameters,
+            seed=seed,
+            code_environment=environment,
+        )
+    except (ExperimentSpecError, TypeError, ValueError) as error:
+        if isinstance(error, ExperimentSpecError):
+            raise
+        raise _lineage_error("lineage_payload_field_invalid") from error
 
 
 def _hyperparameter_json_value(value: object) -> str | float:

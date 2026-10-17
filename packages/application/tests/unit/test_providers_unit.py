@@ -984,8 +984,21 @@ class TestAppProviderIntegration:
             FrozenAuditResearchBacktestFactory,
         )
         assert isinstance(
-            app_container.get(ResearchFoldRunner),
+            app_container.get(ExistingBacktestResearchFoldRunner),
             ExistingBacktestResearchFoldRunner,
+        )
+        from ditto_application.processes.experiments.model_candidate_runner import (
+            BindingRoutedResearchFoldRunner,
+            ModelCandidateFoldRunner,
+        )
+
+        assert isinstance(
+            app_container.get(ResearchFoldRunner),
+            BindingRoutedResearchFoldRunner,
+        )
+        assert isinstance(
+            app_container.get(ModelCandidateFoldRunner),
+            ModelCandidateFoldRunner,
         )
         report_adapter = app_container.get(IndexedBacktestReportArtifactAdapter)
         assert isinstance(report_adapter, IndexedBacktestReportArtifactAdapter)

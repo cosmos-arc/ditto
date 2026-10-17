@@ -67,7 +67,7 @@ def _probe_result(required_datasets: tuple[str, ...]) -> ResearchExecutorProbeRe
             payload={"strategy_id": "seed_etf_rotation", "version": 1},
         ),
     )
-    matrix = CandidateMatrixPlan(128, baseline, (), "e" * 64)
+    matrix = CandidateMatrixPlan(128, baseline, (), (), "e" * 64)
     return probe_executor(_Probe(required_datasets), request, matrix)
 
 

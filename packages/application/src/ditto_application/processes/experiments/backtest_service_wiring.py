@@ -57,12 +57,16 @@ from ditto_application.processes.experiments._backtest_service_contract import (
 from ditto_application.processes.experiments._backtest_service_contract import (
     backtest_construction_error as _error,
 )
+from ditto_application.processes.experiments._execution_bundle_inputs import (
+    MODEL_PLAN_REQUIRES_RUNNER_UPGRADE_REASON,
+)
 from ditto_application.processes.experiments._prediction_pipeline import (
     build_frozen_prediction_pipeline,
 )
 from ditto_application.processes.experiments.execution_bundle import (
     BaselineExecutorBinding,
     ExactBenchmarkBinding,
+    ModelCandidateExecutionBinding,
     PredictionExecutorBinding,
     ResearchExecutionAudit,
     ResearchFillMode,
@@ -297,6 +301,16 @@ def _require_exact_state_keys(
         )
 
 
+def _require_built_executor_binding(
+    strategy: object,
+) -> None:
+    """Refuse claim-time model plan bindings at every build boundary."""
+    if type(strategy) is ModelCandidateExecutionBinding:
+        # Plan bindings are claim-time identities; only the upgraded
+        # prediction executor may ever build or attest a backtest service.
+        raise _error(MODEL_PLAN_REQUIRES_RUNNER_UPGRADE_REASON)
+
+
 def _expected_service_config(
     graph: ClosedBacktestServiceGraph,
     checkpoint_control: ResearchBacktestCheckpointControl,
@@ -305,6 +319,7 @@ def _expected_service_config(
     semantics = audit.semantics
     strategy = semantics.strategy
     config = graph.config
+    _require_built_executor_binding(strategy)
     if type(strategy) is not PredictionExecutorBinding and (
         graph.prediction_signals is not None
     ):
@@ -386,6 +401,7 @@ def _require_pipeline_state(graph: ClosedBacktestServiceGraph) -> None:
     stages = pipeline.stages
     collector = graph.selection_evidence_collector
     strategy = graph.audit.semantics.strategy
+    _require_built_executor_binding(strategy)
     _selection_evidence_graph.require_pristine_selection_evidence_graph(
         pipeline=pipeline,
         collector=collector,

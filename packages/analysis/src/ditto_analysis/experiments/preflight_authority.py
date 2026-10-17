@@ -91,6 +91,14 @@ _PLAN_PREIMAGE_KEYS_V1 = {
     "preflight_hash",
 }
 _PLAN_PREIMAGE_KEYS_V2 = _PLAN_PREIMAGE_KEYS_V1 | {"context_input_refs"}
+# V3 adds model-candidate executor evidence (#565 W2); launches without model
+# candidates keep the exact V2 shape so existing durable replays stay valid.
+_PLAN_PREIMAGE_KEYS_V3 = _PLAN_PREIMAGE_KEYS_V2 | {"model_executor_candidates"}
+_PLAN_PREIMAGE_KEYS_BY_VERSION = {
+    1: _PLAN_PREIMAGE_KEYS_V1,
+    2: _PLAN_PREIMAGE_KEYS_V2,
+    3: _PLAN_PREIMAGE_KEYS_V3,
+}
 _IDENTITY_KEYS = {
     "request_hash",
     "research_cycle_id",
@@ -723,12 +731,8 @@ def decode_preflight_authority(
         plan_schema_version = _integer(
             plan.get("schema_version"), "plan_preimage.schema_version"
         )
-        expected_plan_keys = (
-            _PLAN_PREIMAGE_KEYS_V1
-            if plan_schema_version == 1
-            else _PLAN_PREIMAGE_KEYS_V2
-        )
-        if plan_schema_version not in {1, 2} or set(plan) != expected_plan_keys:
+        expected_plan_keys = _PLAN_PREIMAGE_KEYS_BY_VERSION.get(plan_schema_version)
+        if expected_plan_keys is None or set(plan) != expected_plan_keys:
             raise _invalid("plan_preimage has an invalid shape")
         plan_hash = _hash(root.get("plan_hash"), "detail.plan_hash")
         preflight_hash = _hash(root.get("preflight_hash"), "detail.preflight_hash")
@@ -738,7 +742,7 @@ def decode_preflight_authority(
             raise _invalid("plan hash does not match its payload")
         if (
             _integer(preflight.get("schema_version"), "preflight.schema_version") != 1
-            or plan_schema_version not in {1, 2}
+            or plan_schema_version not in _PLAN_PREIMAGE_KEYS_BY_VERSION
             or _hash(plan.get("preflight_hash"), "plan_preimage.preflight_hash")
             != preflight_hash
         ):

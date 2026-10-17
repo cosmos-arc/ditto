@@ -35,6 +35,8 @@ from ditto_application.processes.experiments.execution_contracts import (
 from ditto_application.processes.experiments.planning import (
     BaselineDescriptor,
     BinderCandidatePlan,
+    ModelCandidateDescriptor,
+    ModelCandidatePlan,
 )
 from ditto_application.processes.experiments.planning_probes import (
     ExperimentSnapshotIdentity,
@@ -558,6 +560,85 @@ def test_production_probe_rejects_moving_etf_baseline_identity() -> None:
     assert result.available is False
     assert result.code == "SPEC_INVALID"
     assert result.reason == "invalid_etf_baseline_payload"
+    assert len(result.candidates) == 1
+
+
+def test_production_probe_rejects_model_candidate_lane_mismatch() -> None:
+    probe = BuilderBackedResearchExecutorProbe(
+        cast("ResearchRuntimeBuilder", _Builder()),
+        published_baseline_builder=cast(
+            "PublishedBaselineRuntimeBuilder",
+            _Builder(),
+        ),
+        strategy_reader=_StrategyReader(),
+    )
+
+    result = probe.probe(
+        ResearchExecutorProbeRequest(
+            strategy_record=StrategySpecRecord(
+                strategy_id="seed_etf_rotation",
+                name="ETF rotation",
+                spec_json={"strategy_id": "seed_etf_rotation"},
+                version=3,
+            ),
+            snapshot_identity=ExperimentSnapshotIdentity(
+                snapshot_id="snapshot-1",
+                manifest_hash="d" * 64,
+            ),
+            baseline=BaselineDescriptor(
+                descriptor_type="etf-current-active",
+                payload={
+                    "strategy_id": "seed_etf_rotation",
+                    "version": 2,
+                    "spec_hash": "f" * 64,
+                },
+            ),
+            candidates=(BinderCandidatePlan(ordinal=2, binder_parameters=()),),
+            model_candidates=(
+                ModelCandidatePlan(
+                    descriptor=ModelCandidateDescriptor(
+                        descriptor_type="rule",
+                        payload={
+                            "lineage": {
+                                "model_kind": "rule",
+                                "feature_names": ["momentum_20d"],
+                                "label_id": "research.label.v1",
+                                "label_spec_hash": "a" * 64,
+                                "transform_spec": {
+                                    "imputation": "median",
+                                    "winsorize_lower_quantile": 0.01,
+                                    "winsorize_upper_quantile": 0.99,
+                                    "scaling": "zscore",
+                                },
+                                "hyperparameters": {"ranking_feature": "momentum_20d"},
+                                "seed": 7,
+                                "code_environment": {
+                                    "implementation_key": "impl.v1",
+                                    "python": "3.13.14",
+                                    "lockfile_sha256": "b" * 64,
+                                },
+                            },
+                            "inputs": {
+                                kind: {
+                                    "input_id": f"model-input-{kind}",
+                                    "content_hash": "a" * 64,
+                                    "schema_hash": "a" * 64,
+                                    "source_snapshot_ids": ["snapshot-1"],
+                                }
+                                for kind in ("label_prices", "features", "calendar")
+                            },
+                            "top_k": 3,
+                        },
+                    ),
+                    ordinal=3,
+                ),
+            ),
+        )
+    )
+
+    assert result.available is False
+    assert result.code == "REPRODUCIBILITY_FAILED"
+    assert result.reason == "model_candidate_lane_mismatch"
     assert len(result.candidates) == 1
 
 

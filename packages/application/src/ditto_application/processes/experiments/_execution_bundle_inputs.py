@@ -8,6 +8,7 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from datetime import date, datetime
 from enum import StrEnum
+from types import MappingProxyType
 from typing import cast
 
 import orjson
@@ -21,11 +22,17 @@ from ditto_application.processes.experiments.execution_contracts import (
 )
 
 __all__ = [
+    "MODEL_CANDIDATE_IMPLEMENTATION_KEY",
+    "MODEL_FOLD_INPUT_KINDS",
+    "MODEL_PLAN_REQUIRES_RUNNER_UPGRADE_REASON",
     "PREDICTION_EXECUTOR_IMPLEMENTATION_KEY",
+    "REGISTERED_MODEL_KINDS",
     "BaselineExecutorBinding",
     "CodeEnvironmentLock",
     "ContentAddressedResearchInput",
     "ExecutionEvidenceSource",
+    "ModelCandidateExecutionBinding",
+    "ModelFoldInputEvidence",
     "PolicyModelEvidenceBinding",
     "PredictionExecutorBinding",
     "ResearchFillMode",
@@ -525,7 +532,10 @@ class BaselineExecutorBinding:
 
 
 PREDICTION_EXECUTOR_IMPLEMENTATION_KEY = "research.prediction.raw_score_equal_weight.v1"
-_PREDICTION_MODEL_KINDS = frozenset({"rule", "linear", "lightgbm"})
+# One application-side registry of the registered model kinds; the analysis
+# ModelKind enum owns the semantic authority and both executors pin to this.
+REGISTERED_MODEL_KINDS = frozenset({"rule", "linear", "lightgbm"})
+_PREDICTION_MODEL_KINDS = REGISTERED_MODEL_KINDS
 
 
 @dataclass(frozen=True, slots=True)
@@ -629,6 +639,196 @@ class PredictionExecutorBinding:
                 input_id=self.predictions_input_id,
             )
         return evidence
+
+
+MODEL_CANDIDATE_IMPLEMENTATION_KEY = (
+    "research.model_candidate.train_publish_backtest.v1"
+)
+MODEL_PLAN_REQUIRES_RUNNER_UPGRADE_REASON = (
+    "model_candidate_plan_requires_fold_runner_upgrade"
+)
+_MODEL_CANDIDATE_KINDS = REGISTERED_MODEL_KINDS
+MODEL_FOLD_INPUT_KINDS = frozenset(
+    {"label_prices", "features", "calendar"},
+)
+
+
+@dataclass(frozen=True, slots=True)
+class ModelFoldInputEvidence:
+    """Content-addressed identity of one frozen model-training input frame."""
+
+    input_kind: str
+    input_id: str
+    content_hash: str
+    schema_hash: str
+    source_snapshot_ids: tuple[str, ...]
+
+    def __post_init__(self) -> None:
+        """Reject nominal or partial training-input identities."""
+        if self.input_kind not in MODEL_FOLD_INPUT_KINDS:
+            raise _error(
+                "model fold input kind must be exact and registered",
+                "invalid_model_fold_input_evidence",
+                input_kind=self.input_kind,
+            )
+        _identity(self.input_id, "model_fold_input_id")
+        _hash(self.content_hash, "model_fold_input_content_hash")
+        _hash(self.schema_hash, "model_fold_input_schema_hash")
+        raw_sources: object = self.source_snapshot_ids
+        if (
+            type(raw_sources) is not tuple
+            or not raw_sources
+            or any(
+                type(item) is not str or not item or item != item.strip()
+                for item in cast("tuple[object, ...]", raw_sources)
+            )
+        ):
+            raise _error(
+                "model fold input must bind source snapshot identities",
+                "invalid_model_fold_input_evidence",
+                input_kind=self.input_kind,
+            )
+        sources = tuple(sorted(raw_sources))
+        if len(set(sources)) != len(sources):
+            raise _error(
+                "model fold input source identities must be unique",
+                "invalid_model_fold_input_evidence",
+                input_kind=self.input_kind,
+            )
+        object.__setattr__(self, "source_snapshot_ids", sources)
+
+    def as_payload(self) -> Mapping[str, object]:
+        """Return the deterministic training-input identity payload."""
+        return {
+            "input_kind": self.input_kind,
+            "input_id": self.input_id,
+            "content_hash": self.content_hash,
+            "schema_hash": self.schema_hash,
+            "source_snapshot_ids": list(self.source_snapshot_ids),
+        }
+
+
+@dataclass(frozen=True, slots=True)
+class ModelCandidateExecutionBinding:
+    """
+    Claim-time plan binding for one model candidate fold (#565 W2).
+
+    Pins everything deterministic before training exists: the registered
+    lineage payload (feature schema, label identity, transform recipe,
+    hyperparameters, seed, code environment), the three content-addressed
+    training input frames, top-k selection, and the fold's execution clocks.
+    ``trained_at_epoch_us`` is pinned from durable launch state so successor
+    attempts replay byte-stable artifact identities. The model fold runner
+    trains + publishes through this plan, then upgrades the semantics to a
+    :class:`PredictionExecutorBinding` over the exact published predictions.
+    """
+
+    model_kind: str
+    lineage_hash: str
+    lineage_payload: Mapping[str, object]
+    inputs: tuple[ModelFoldInputEvidence, ...]
+    top_k: int
+    trained_at_epoch_us: int
+    knowledge_cutoff_epoch_us: int
+    implementation_key: str
+    executor_contract_version: int
+    binding_hash: str = field(init=False)
+
+    def __post_init__(self) -> None:
+        """Freeze the registered model-candidate execution plan."""
+        if self.model_kind not in _MODEL_CANDIDATE_KINDS:
+            raise _error(
+                "model candidate kind must be exact and registered",
+                "invalid_model_candidate_binding",
+                model_kind=self.model_kind,
+            )
+        _hash(self.lineage_hash, "model_lineage_hash")
+        raw_inputs: object = self.inputs
+        if type(raw_inputs) is not tuple:
+            raise _error(
+                "model candidate inputs must be an explicit tuple",
+                "invalid_model_candidate_binding",
+            )
+        typed_inputs = cast("tuple[object, ...]", raw_inputs)
+        if any(type(item) is not ModelFoldInputEvidence for item in typed_inputs):
+            raise _error(
+                "model candidate inputs must use the exact evidence DTO",
+                "invalid_model_candidate_binding",
+            )
+        inputs = tuple(
+            sorted(
+                cast("tuple[ModelFoldInputEvidence, ...]", typed_inputs),
+                key=lambda item: item.input_kind.encode(),
+            )
+        )
+        if [item.input_kind for item in inputs] != sorted(MODEL_FOLD_INPUT_KINDS):
+            raise _error(
+                "model candidate inputs must bind exactly one frame per kind",
+                "invalid_model_candidate_binding",
+                kinds=[item.input_kind for item in inputs],
+            )
+        if len({item.input_id for item in inputs}) != len(inputs):
+            raise _error(
+                "model candidate input identities must be unique",
+                "invalid_model_candidate_binding",
+            )
+        object.__setattr__(self, "inputs", inputs)
+        _positive_integer(self.top_k, "model_candidate_top_k")
+        _nonnegative_integer(
+            self.trained_at_epoch_us,
+            "model_candidate_trained_at_epoch_us",
+        )
+        _nonnegative_integer(
+            self.knowledge_cutoff_epoch_us,
+            "model_candidate_knowledge_cutoff_epoch_us",
+        )
+        if self.knowledge_cutoff_epoch_us > self.trained_at_epoch_us:
+            raise _error(
+                "model candidate knowledge cutoff cannot follow training time",
+                "invalid_model_candidate_binding",
+                knowledge_cutoff_epoch_us=self.knowledge_cutoff_epoch_us,
+                trained_at_epoch_us=self.trained_at_epoch_us,
+            )
+        if self.implementation_key != MODEL_CANDIDATE_IMPLEMENTATION_KEY:
+            raise _error(
+                "model candidate implementation key is not registered",
+                "invalid_model_candidate_binding",
+                implementation_key=self.implementation_key,
+            )
+        if self.executor_contract_version != 1:
+            raise _error(
+                "model candidate contract version is not registered",
+                "invalid_model_candidate_binding",
+                executor_contract_version=self.executor_contract_version,
+            )
+        payload = orjson.dumps(
+            dict(self.as_payload()),
+            option=orjson.OPT_SORT_KEYS,
+        )
+        object.__setattr__(
+            self,
+            "binding_hash",
+            hashlib.sha256(payload).hexdigest(),
+        )
+        object.__setattr__(
+            self,
+            "lineage_payload",
+            MappingProxyType(dict(self.lineage_payload)),
+        )
+
+    def as_payload(self) -> Mapping[str, object]:
+        """Return exact model-candidate runner evidence."""
+        return {
+            "model_kind": self.model_kind,
+            "lineage_hash": self.lineage_hash,
+            "lineage_payload": dict(self.lineage_payload),
+            "inputs": [dict(item.as_payload()) for item in self.inputs],
+            "top_k": self.top_k,
+            "trained_at_epoch_us": self.trained_at_epoch_us,
+            "knowledge_cutoff_epoch_us": self.knowledge_cutoff_epoch_us,
+            "implementation_key": self.implementation_key,
+            "executor_contract_version": self.executor_contract_version,
+        }
 
 
 @dataclass(frozen=True, slots=True)

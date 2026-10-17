@@ -24,6 +24,7 @@ from ditto_application.processes.experiments._process_error import (
 from ditto_application.processes.experiments.planning import (
     BaselineDescriptor,
     CandidateMatrixSpec,
+    ModelCandidateDescriptor,
     ParameterAxis,
 )
 from ditto_application.processes.experiments.planning_probes import (
@@ -100,6 +101,31 @@ def decode_candidate_matrix_spec(value: object) -> CandidateMatrixSpec:
             ),
         ),
         axes=axes,
+        model_candidates=tuple(
+            ModelCandidateDescriptor(
+                descriptor_type=decode_string(
+                    model.get("descriptor_type"),
+                    "work.matrix_spec.model.descriptor_type",
+                ),
+                payload=cast(
+                    "Mapping[str, BaselineInputValue]",
+                    decode_mapping(
+                        model.get("payload"),
+                        "work.matrix_spec.model.payload",
+                    ),
+                ),
+                schema_version=decode_integer(
+                    model.get("schema_version"),
+                    "work.matrix_spec.model.schema_version",
+                ),
+            )
+            for raw_model in decode_list(
+                # Documents written before model candidates carry no key.
+                payload.get("model_candidates", []),
+                "work.matrix_spec.model_candidates",
+            )
+            for model in (decode_mapping(raw_model, "work.matrix_spec.model"),)
+        ),
         candidate_limit=decode_integer(
             payload.get("candidate_limit"),
             "work.matrix_spec.candidate_limit",
@@ -111,7 +137,7 @@ def candidate_matrix_spec_payload(
     matrix: CandidateMatrixSpec,
 ) -> Mapping[str, object]:
     """Project one matrix into the canonical planning-document shape."""
-    return {
+    payload: dict[str, object] = {
         "baseline": {
             "descriptor_type": matrix.baseline.descriptor_type,
             "payload": matrix.baseline.payload,
@@ -129,6 +155,18 @@ def candidate_matrix_spec_payload(
         ],
         "candidate_limit": matrix.candidate_limit,
     }
+    # Documents written before model candidates existed carry no key; keep
+    # their canonical re-encoding byte-stable by omitting the empty list.
+    if matrix.model_candidates:
+        payload["model_candidates"] = [
+            {
+                "descriptor_type": model.descriptor_type,
+                "payload": model.payload,
+                "schema_version": model.schema_version,
+            }
+            for model in matrix.model_candidates
+        ]
+    return payload
 
 
 def decode_dataset_requirements(

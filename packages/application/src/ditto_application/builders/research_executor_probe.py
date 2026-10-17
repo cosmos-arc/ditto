@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+
 from ditto_strategy.alpha.selection_evidence import SelectionEvidenceCollector
 from ditto_strategy.models import StrategySpecRecord
 
@@ -22,6 +24,7 @@ from ditto_application.processes.experiments._execution_resolution_evidence impo
     ExactStrategyVersionReader,
 )
 from ditto_application.processes.experiments.baseline_planning import (
+    BaselinePlanningResolution,
     resolve_planning_baseline,
 )
 from ditto_application.processes.experiments.baseline_registry import (
@@ -32,10 +35,18 @@ from ditto_application.processes.experiments.execution_contracts import (
     ExactStrategyIdentity,
     ResearchAssetLane,
 )
-from ditto_application.processes.experiments.planning import BinderCandidatePlan
+from ditto_application.processes.experiments.model_candidate_plans import (
+    decode_model_candidate_descriptor,
+    model_descriptor_hash,
+)
+from ditto_application.processes.experiments.planning import (
+    BinderCandidatePlan,
+    ModelCandidatePlan,
+)
 from ditto_application.processes.experiments.planning_probes import (
     BaselineRuntimeExecutorEvidence,
     CandidateExecutorEvidence,
+    ModelExecutorEvidence,
     ResearchExecutorProbeRequest,
     ResearchExecutorProbeResult,
 )
@@ -58,6 +69,20 @@ _REGISTERED_ISOLATION_BY_LANE = {
 }
 
 
+@dataclass(frozen=True, slots=True)
+class _RuntimeIdentityFacts:
+    """One validated runtime identity shared by every probe result branch."""
+
+    base_spec_hash: str
+    node_registry_manifest_hash: str
+    factor_registry_manifest_hash: str
+    factor_binding_hashes: tuple[str, ...]
+    required_datasets: tuple[str, ...]
+    lane: str
+    universe: str
+    candidate_max_lookback: int
+
+
 def _candidate_evidence(
     runtimes: list[tuple[BinderCandidatePlan, ResearchStrategyRuntime]],
 ) -> tuple[CandidateExecutorEvidence, ...]:
@@ -72,6 +97,22 @@ def _candidate_evidence(
             ),
         )
         for candidate, runtime in runtimes
+    )
+
+
+def _model_candidate_evidence(
+    candidates: tuple[ModelCandidatePlan, ...],
+) -> tuple[ModelExecutorEvidence, ...]:
+    """Validate every model envelope and derive its build-time identity."""
+    return tuple(
+        ModelExecutorEvidence(
+            candidate_hash=candidate.candidate_hash,
+            model_kind=decoded.lineage.model_kind.value,
+            lineage_hash=decoded.lineage.registration_hash,
+            descriptor_hash=model_descriptor_hash(candidate.descriptor),
+        )
+        for candidate in candidates
+        for decoded in (decode_model_candidate_descriptor(candidate.descriptor),)
     )
 
 
@@ -349,6 +390,16 @@ class BuilderBackedResearchExecutorProbe:
             runtime_lane = next(iter(lanes))
             runtime_universe = next(iter(universes))
             runtime_required_datasets = next(iter(required_sets))
+            facts = _RuntimeIdentityFacts(
+                base_spec_hash=next(iter(base_hashes)),
+                node_registry_manifest_hash=next(iter(registry_hashes)),
+                factor_registry_manifest_hash=next(iter(factor_registry_hashes)),
+                factor_binding_hashes=next(iter(factor_binding_hash_sets)),
+                required_datasets=tuple(sorted(runtime_required_datasets)),
+                lane=runtime_lane,
+                universe=runtime_universe,
+                candidate_max_lookback=candidate_max_lookback,
+            )
         except (AttributeError, TypeError, ValueError, AppProcessError):
             return ResearchExecutorProbeResult(
                 available=False,
@@ -435,48 +486,93 @@ class BuilderBackedResearchExecutorProbe:
                     factor_binding_hashes=next(iter(factor_binding_hash_sets)),
                 )
         if baseline_blocker is None:
-            baseline_max_lookback = (
-                0
-                if baseline_runtime is None
-                else baseline_runtime.max_lookback_sessions
-            )
-            isolation = _REGISTERED_ISOLATION_BY_LANE[runtime_lane]
-            runtime_validation = RuntimeValidationEvidence(
-                lane=runtime_lane,
-                universe_id=runtime_universe,
-                required_datasets=runtime_required_datasets,
-                max_lookback_sessions=max(
-                    candidate_max_lookback,
-                    baseline_max_lookback,
-                ),
-                requires_pit_universe=runtime_lane
-                in {"stock_selection", "etf_rotation"},
-                forward_horizon_sessions=isolation.forward_horizon_sessions,
-                holding_period_sessions=isolation.holding_period_sessions,
-                execution_lag_sessions=isolation.execution_lag_sessions,
-            )
-            baseline_blocker = ResearchExecutorProbeResult(
-                available=True,
-                code=None,
-                reason=None,
-                remediation=None,
-                strategy_spec_hash=next(iter(base_hashes)),
-                node_registry_manifest_hash=next(iter(registry_hashes)),
-                required_datasets=tuple(sorted(next(iter(required_sets)))),
-                candidates=_candidate_evidence(runtimes),
-                runtime_validation_evidence=runtime_validation,
-                baseline_ref=baseline.ref.identity,
-                baseline_descriptor_hash=(
-                    baseline.registration.descriptor.canonical_hash
-                ),
-                baseline_registry_manifest_hash=baseline.registry_manifest_hash,
-                baseline_exact_strategy_hash=(
-                    None
-                    if baseline.exact_strategy is None
-                    else baseline.exact_strategy.canonical_hash
-                ),
-                factor_registry_manifest_hash=next(iter(factor_registry_hashes)),
-                factor_binding_hashes=next(iter(factor_binding_hash_sets)),
+            baseline_blocker = self._assemble_available_result(
+                request=request,
+                runtimes=runtimes,
+                baseline=baseline,
                 baseline_runtime=baseline_runtime,
+                facts=facts,
             )
         return baseline_blocker
+
+    def _assemble_available_result(
+        self,
+        *,
+        request: ResearchExecutorProbeRequest,
+        runtimes: list[tuple[BinderCandidatePlan, ResearchStrategyRuntime]],
+        baseline: BaselinePlanningResolution,
+        baseline_runtime: BaselineRuntimeExecutorEvidence | None,
+        facts: _RuntimeIdentityFacts,
+    ) -> ResearchExecutorProbeResult:
+        """Validate model candidates and assemble one complete probe result."""
+        baseline_max_lookback = (
+            0 if baseline_runtime is None else baseline_runtime.max_lookback_sessions
+        )
+        isolation = _REGISTERED_ISOLATION_BY_LANE[facts.lane]
+        runtime_validation = RuntimeValidationEvidence(
+            lane=facts.lane,
+            universe_id=facts.universe,
+            required_datasets=facts.required_datasets,
+            max_lookback_sessions=max(
+                facts.candidate_max_lookback,
+                baseline_max_lookback,
+            ),
+            requires_pit_universe=facts.lane in {"stock_selection", "etf_rotation"},
+            forward_horizon_sessions=isolation.forward_horizon_sessions,
+            holding_period_sessions=isolation.holding_period_sessions,
+            execution_lag_sessions=isolation.execution_lag_sessions,
+        )
+
+        def _model_failure(exc: AppProcessError) -> ResearchExecutorProbeResult:
+            return ResearchExecutorProbeResult(
+                available=False,
+                code=str(exc.details.get("code", "SPEC_INVALID")),
+                reason=str(exc.details.get("reason", "model_candidate_invalid")),
+                remediation="fix the model candidate lineage, inputs, or top_k",
+                strategy_spec_hash=facts.base_spec_hash,
+                node_registry_manifest_hash=facts.node_registry_manifest_hash,
+                required_datasets=facts.required_datasets,
+                candidates=_candidate_evidence(runtimes),
+            )
+
+        if request.model_candidates and facts.lane != "stock_selection":
+            # v1 model candidates execute only under the stock lane; refuse the
+            # launch pre-commit instead of failing every model fold at claim.
+            return ResearchExecutorProbeResult(
+                available=False,
+                code="REPRODUCIBILITY_FAILED",
+                reason="model_candidate_lane_mismatch",
+                remediation="launch model candidates in a stock-selection lane",
+                strategy_spec_hash=facts.base_spec_hash,
+                node_registry_manifest_hash=facts.node_registry_manifest_hash,
+                required_datasets=facts.required_datasets,
+                candidates=_candidate_evidence(runtimes),
+            )
+
+        try:
+            model_evidence = _model_candidate_evidence(request.model_candidates)
+        except AppProcessError as exc:
+            return _model_failure(exc)
+        return ResearchExecutorProbeResult(
+            available=True,
+            code=None,
+            reason=None,
+            remediation=None,
+            strategy_spec_hash=facts.base_spec_hash,
+            node_registry_manifest_hash=facts.node_registry_manifest_hash,
+            required_datasets=facts.required_datasets,
+            candidates=_candidate_evidence(runtimes),
+            runtime_validation_evidence=runtime_validation,
+            baseline_ref=baseline.ref.identity,
+            baseline_descriptor_hash=baseline.registration.descriptor.canonical_hash,
+            baseline_registry_manifest_hash=baseline.registry_manifest_hash,
+            baseline_exact_strategy_hash=(
+                None
+                if baseline.exact_strategy is None
+                else baseline.exact_strategy.canonical_hash
+            ),
+            factor_registry_manifest_hash=facts.factor_registry_manifest_hash,
+            factor_binding_hashes=facts.factor_binding_hashes,
+            baseline_runtime=baseline_runtime,
+            model_candidates=model_evidence,
+        )

@@ -6,15 +6,36 @@ import hashlib
 from collections import defaultdict
 from collections.abc import Callable
 from dataclasses import asdict, replace
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 from inspect import signature
 from io import BytesIO
+from pathlib import Path
 from typing import cast
 
 import orjson
 import polars as pl
 import pytest
+from ditto_analysis.experiments.model_lineage import (
+    ModelCandidateLineage,
+    ModelKind,
+    TrainFittedTransformSpec,
+)
+from ditto_analysis.experiments.models import (
+    AttemptId,
+    CandidateId,
+    ExperimentId,
+    FoldId,
+)
+from ditto_analysis.experiments.persistence import (
+    DateWindow,
+    FoldRole,
+    LeaseFence,
+)
+from ditto_analysis.research.artifact_service import ResearchArtifactService
 from ditto_application.builders.node_pipeline_builder import AttestedNodePipeline
+from ditto_application.builders.research_artifact_loader import (
+    IndexedResearchArtifactLoader,
+)
 from ditto_application.builders.research_backtest_factory import (
     ExactPublishedBaselineRuntimeBuilder,
     ExactResearchRuntimeBuilder,
@@ -24,6 +45,10 @@ from ditto_application.builders.research_factor_registry import (
     ResearchFactorBinding,
     ResearchFactorRegistry,
     analysis_execution_hash,
+)
+from ditto_application.builders.research_model_fold_adapters import (
+    IndexedModelFoldDataPort,
+    IndexedPredictionFrameInputSink,
 )
 from ditto_application.builders.research_runtime_builder import (
     ResearchRuntimeBuilder,
@@ -41,7 +66,10 @@ from ditto_application.processes.execution.factor_bridge import (
     compiled_expressions_execution_hash,
 )
 from ditto_application.processes.experiments._execution_bundle_inputs import (
+    MODEL_CANDIDATE_IMPLEMENTATION_KEY,
     PREDICTION_EXECUTOR_IMPLEMENTATION_KEY,
+    ModelCandidateExecutionBinding,
+    ModelFoldInputEvidence,
     PredictionExecutorBinding,
 )
 from ditto_application.processes.experiments._report_evidence import (
@@ -78,6 +106,23 @@ from ditto_application.processes.experiments.execution_contracts import (
     ExactUniverseIdentity,
     default_stock_execution_policy,
 )
+from ditto_application.processes.experiments.model_artifact_publication import (
+    IndexedModelArtifactSink,
+)
+from ditto_application.processes.experiments.model_candidate_folds import (
+    ModelCandidateFoldRequest,
+    ModelCandidateFoldSuccess,
+    ModelFoldData,
+    ModelFoldInputBinding,
+    ModelFoldInputKind,
+    ModelFoldInputSet,
+    execute_model_candidate_fold,
+)
+from ditto_application.processes.experiments.model_candidate_runner import (
+    BindingRoutedResearchFoldRunner,
+    ModelCandidateFoldRunner,
+    upgrade_model_fold_semantics,
+)
 from ditto_application.processes.experiments.research_backtest_checkpoint import (
     RESEARCH_CHECKPOINT_INTERVAL_DAYS,
 )
@@ -94,9 +139,12 @@ from ditto_application.processes.experiments.worker import (
     ExistingBacktestResearchFoldRunner,
     ResearchBacktestBuildAttestation,
     ResearchCandidateExecutionError,
+    ResearchFoldRunner,
+    ResearchFoldRunResult,
     ResearchFoldRunState,
     VerifiedResearchBacktestBuild,
 )
+from ditto_application.research_validation_windows import ValidationFoldPlan
 from ditto_backtest.audit.state import ExecutionAuditStateSnapshot
 from ditto_backtest.brokerage import BacktestBrokerage
 from ditto_backtest.context_inputs import ContextInputKind, ReplayContextInputRef
@@ -120,6 +168,7 @@ from ditto_execution.trade_builder import (
     TradeBuilderStateSnapshot,
     TradeMatchingMethod,
 )
+from ditto_features.evaluation.research_labels import label_spec_hash
 from ditto_features.expression.contracts import (
     Analysis,
     CompiledDerivedExpression,
@@ -156,6 +205,8 @@ from ditto_strategy.alpha.specs import (
 from ditto_strategy.errors import StrategySpecError
 from ditto_strategy.models import StrategySpecRecord
 from ditto_strategy.runs.models import StrategyRunCheckpointRecord
+
+from .conftest import MemoryArtifactIndex
 
 _NOW = datetime(2026, 7, 20, 9, tzinfo=UTC)
 _DATES = ("2026-01-02", "2026-01-05")
@@ -3020,3 +3071,630 @@ def test_factory_rejects_actual_pipeline_poison_with_unchanged_hash() -> None:
         factory.build(audit, external_should_stop=_never_stop)
 
     assert exc_info.value.details["reason"] == "rebuilt_pipeline_execution_drift"
+
+
+# --- #565 W2: model-candidate plan binding → fold runner → prediction backtest ---
+
+
+@pytest.fixture
+def model_artifact_service(tmp_path: Path) -> ResearchArtifactService:
+    """Artifact service with separated roots for the frozen-input namespace.
+
+    The index port root must match the configured indexed root, so build the
+    shared in-memory index at that root instead of reusing the tmp_path one.
+    """
+    index = MemoryArtifactIndex(tmp_path / "indexed")
+    return ResearchArtifactService(
+        artifact_root=tmp_path / "legacy",
+        indexed_artifact_root=tmp_path / "indexed",
+        artifact_reader=index,
+        artifact_writer=index,
+    )
+
+
+_TEST_DATES = tuple(date.fromisoformat(item) for item in _DATES)
+_MODEL_ENTITY = str(_MEMBER_ID)
+_MODEL_TRAIN_SESSIONS = tuple(
+    date(2025, 12, 1) + timedelta(days=offset) for offset in range(24)
+)
+_MODEL_SESSIONS = (*_MODEL_TRAIN_SESSIONS, *_TEST_DATES)
+_MODEL_EPOCH_BASE = 6_000_000_000_000_000
+_MODEL_DAY_US = 86_400_000_000
+_MODEL_CUTOFF = _MODEL_EPOCH_BASE + 21 * _MODEL_DAY_US
+_MODEL_TRAINED_AT = _MODEL_CUTOFF + 1
+_MODEL_FENCE = LeaseFence(
+    experiment_id=ExperimentId("experiment-model-1"),
+    owner_token="owner-model-1",
+    revision=3,
+)
+_MODEL_PREDICTION_INPUT_ID = (
+    "experiment-model-1:model-predictions:candidate-model-1:fold-model-1"
+)
+
+
+class _NoopBacktestRunner:
+    """Backtest runner stub that must never be reached in failure tests."""
+
+    def run(
+        self,
+        audit: ResearchExecutionAudit,
+        *,
+        external_should_stop: Callable[[], bool],
+    ) -> ResearchFoldRunResult:
+        raise AssertionError("backtest runner reached after a fold failure")
+
+
+class _RecordingFrameSink:
+    """Production sink wrapper that records every registration."""
+
+    def __init__(self, inner: IndexedPredictionFrameInputSink) -> None:
+        self._inner = inner
+        self.registered: dict[str, bytes] = {}
+
+    def register_prediction_frame(self, input_id: str, frame_bytes: bytes) -> None:
+        self.registered[input_id] = frame_bytes
+        self._inner.register_prediction_frame(input_id, frame_bytes)
+
+
+class _ImmediatePublicationAuthority:
+    """Run each publication callback under the frozen test fence."""
+
+    def publish_fold_artifacts(
+        self,
+        callback: Callable[[LeaseFence, int], object],
+    ) -> object:
+        return callback(_MODEL_FENCE, 1_000_000)
+
+
+def _model_price_frame() -> pl.DataFrame:
+    rows: dict[str, list[object]] = {
+        "instrument_id": [],
+        "session": [],
+        "open": [],
+        "close": [],
+        "adj_factor": [],
+        "buy_fillable_open": [],
+        "sell_fillable_close": [],
+        "session_close_known_at_epoch_us": [],
+    }
+    for index, session in enumerate(_MODEL_SESSIONS):
+        rows["instrument_id"].append(_MODEL_ENTITY)
+        rows["session"].append(session)
+        rows["open"].append(10.0 + index)
+        rows["close"].append(10.5 + index)
+        rows["adj_factor"].append(1.0)
+        rows["buy_fillable_open"].append(True)
+        rows["sell_fillable_close"].append(True)
+        rows["session_close_known_at_epoch_us"].append(
+            _MODEL_EPOCH_BASE + index * _MODEL_DAY_US
+        )
+    return pl.DataFrame(
+        rows,
+        schema={
+            "instrument_id": pl.String,
+            "session": pl.Date,
+            "open": pl.Float64,
+            "close": pl.Float64,
+            "adj_factor": pl.Float64,
+            "buy_fillable_open": pl.Boolean,
+            "sell_fillable_close": pl.Boolean,
+            "session_close_known_at_epoch_us": pl.Int64,
+        },
+    )
+
+
+def _model_feature_frame() -> pl.DataFrame:
+    rows: dict[str, list[object]] = {
+        "instrument_id": [],
+        "session": [],
+        "momentum_20d": [],
+        "ep_ttm": [],
+    }
+    for index, session in enumerate(_MODEL_SESSIONS):
+        rows["instrument_id"].append(_MODEL_ENTITY)
+        rows["session"].append(session)
+        rows["momentum_20d"].append((index % 7) * 0.05)
+        rows["ep_ttm"].append((index % 5) * 0.03)
+    return pl.DataFrame(
+        rows,
+        schema={
+            "instrument_id": pl.String,
+            "session": pl.Date,
+            "momentum_20d": pl.Float64,
+            "ep_ttm": pl.Float64,
+        },
+    )
+
+
+def _model_calendar_frame() -> pl.DataFrame:
+    return pl.DataFrame(
+        {
+            "trade_date": list(_MODEL_SESSIONS),
+            "is_open": [True] * len(_MODEL_SESSIONS),
+            "source_snapshot_id": [_SOURCE] * len(_MODEL_SESSIONS),
+        }
+    )
+
+
+def _model_lineage() -> ModelCandidateLineage:
+    return ModelCandidateLineage(
+        model_kind=ModelKind.LINEAR,
+        feature_names=("momentum_20d", "ep_ttm"),
+        label_id="research.label.forward_return.next_open_hold5.v1",
+        label_spec_hash=label_spec_hash(),
+        transform_spec=TrainFittedTransformSpec(),
+        hyperparameters={"alpha": 1.0},
+        seed=7,
+        code_environment={
+            "implementation_key": "ditto_application.model_candidates.ridge.v1",
+            "python": "3.13.14",
+            "lockfile_sha256": "b" * 64,
+        },
+    )
+
+
+def _model_fold_input_bindings(
+    evidence: tuple[ModelFoldInputEvidence, ...],
+) -> ModelFoldInputSet:
+    by_kind = {item.input_kind: item for item in evidence}
+    return ModelFoldInputSet(
+        label_prices=ModelFoldInputBinding(
+            kind=ModelFoldInputKind.LABEL_PRICES,
+            input_id=by_kind["label_prices"].input_id,
+            content_hash=by_kind["label_prices"].content_hash,
+            schema_hash=by_kind["label_prices"].schema_hash,
+            source_snapshot_ids=by_kind["label_prices"].source_snapshot_ids,
+        ),
+        feature_frame=ModelFoldInputBinding(
+            kind=ModelFoldInputKind.FEATURES,
+            input_id=by_kind["features"].input_id,
+            content_hash=by_kind["features"].content_hash,
+            schema_hash=by_kind["features"].schema_hash,
+            source_snapshot_ids=by_kind["features"].source_snapshot_ids,
+        ),
+        calendar=ModelFoldInputBinding(
+            kind=ModelFoldInputKind.CALENDAR,
+            input_id=by_kind["calendar"].input_id,
+            content_hash=by_kind["calendar"].content_hash,
+            schema_hash=by_kind["calendar"].schema_hash,
+            source_snapshot_ids=by_kind["calendar"].source_snapshot_ids,
+        ),
+    )
+
+
+def _model_plan_binding(
+    inputs: tuple[ModelFoldInputEvidence, ...],
+) -> ModelCandidateExecutionBinding:
+    lineage = _model_lineage()
+    return ModelCandidateExecutionBinding(
+        model_kind=lineage.model_kind.value,
+        lineage_hash=lineage.registration_hash,
+        lineage_payload=lineage.canonical_payload(),
+        inputs=inputs,
+        top_k=1,
+        trained_at_epoch_us=_MODEL_TRAINED_AT,
+        knowledge_cutoff_epoch_us=_MODEL_CUTOFF,
+        implementation_key=MODEL_CANDIDATE_IMPLEMENTATION_KEY,
+        executor_contract_version=1,
+    )
+
+
+def _model_backtest(
+    snapshot: ResearchSnapshotBinding,
+    rules: VerifiedInstrumentRulesArtifact,
+) -> BacktestExecutionConfigBinding:
+    binding = replace(
+        _backtest(snapshot, rules),
+        rebalance_policy=VersionedExecutionComponent(
+            "research.baseline.fold_schedule",
+            1,
+        ),
+        rebalance_frequency="fold_schedule",
+        benchmark=None,
+    )
+    assert binding.benchmark is None
+    return binding
+
+
+def _model_audit(
+    binding: ModelCandidateExecutionBinding,
+    snapshot: ResearchSnapshotBinding,
+    backtest: BacktestExecutionConfigBinding,
+) -> ResearchExecutionAudit:
+    semantics = ResearchExecutionSemantics(
+        experiment_id="experiment-model-1",
+        candidate_id="candidate-model-1",
+        fold_id="fold-model-1",
+        fold_role="walk_forward",
+        is_baseline=False,
+        plan_hash=_sha("1"),
+        launch_spec_hash=_sha("2"),
+        fold_spec_hash=_sha("3"),
+        strategy=binding,
+        backtest=backtest,
+        snapshot=snapshot,
+        membership_hash=_sha("4"),
+        membership_projection_hash=_sha("5"),
+        train_start=_MODEL_TRAIN_SESSIONS[0],
+        train_end=_MODEL_TRAIN_SESSIONS[17],
+        test_start=_TEST_DATES[0],
+        test_end=_TEST_DATES[-1],
+        purge_sessions=5,
+        embargo_sessions=5,
+        seed=42,
+        knowledge_lag_days=1,
+        execution_delay_sessions=0,
+        baseline_registry_manifest_hash=_sha("6"),
+        baseline_plan=None,
+        policy=default_stock_execution_policy(),
+        environment=CodeEnvironmentLock("commit-abc", _sha("7")),
+    )
+    return ResearchExecutionAudit.create(
+        semantics=semantics,
+        attempt_id="attempt-model-1",
+        attempt_ordinal=1,
+        backtest_run_id="backtest-model-1",
+        parent_attempt_id=None,
+        resume_from_run_id=None,
+        created_at=_NOW,
+    )
+
+
+def _publish_model_inputs(
+    model_artifact_service: ResearchArtifactService,
+) -> tuple[ModelFoldInputEvidence, ...]:
+    frames = (
+        ("label_prices", _model_price_frame()),
+        ("features", _model_feature_frame()),
+        ("calendar", _model_calendar_frame()),
+    )
+    evidence = []
+    for kind, frame in frames:
+        payload = _parquet_bytes(frame)
+        input_id = f"model-input-{kind}"
+        model_artifact_service.publish_frozen_research_input(input_id, payload)
+        evidence.append(
+            ModelFoldInputEvidence(
+                input_kind=kind,
+                input_id=input_id,
+                content_hash=hashlib.sha256(payload).hexdigest(),
+                schema_hash=_schema_hash(frame),
+                source_snapshot_ids=(_SOURCE,),
+            )
+        )
+    return tuple(evidence)
+
+
+def _publish_feed_inputs(
+    model_artifact_service: ResearchArtifactService,
+    frames: FrozenResearchDataFrames,
+    rules: VerifiedInstrumentRulesArtifact,
+) -> None:
+    for _, frame in frames.items():
+        model_artifact_service.publish_frozen_research_input(
+            frame.input_evidence.input_id,
+            frame.artifact_bytes,
+        )
+    model_artifact_service.publish_frozen_research_input(
+        rules.input_evidence.input_id,
+        rules.artifact_bytes,
+    )
+
+
+def test_binding_routed_runner_dispatches_by_strategy_variant() -> None:
+    class _MarkerRunner:
+        def __init__(self) -> None:
+            self.audits: list[ResearchExecutionAudit] = []
+
+        def run(
+            self,
+            audit: ResearchExecutionAudit,
+            *,
+            external_should_stop: Callable[[], bool],
+        ) -> ResearchFoldRunResult:
+            self.audits.append(audit)
+            return ResearchFoldRunResult(ResearchFoldRunState.STOPPED, None)
+
+    class _NeverCompleted(ValueError):
+        pass
+
+    class _RaisingRunner:
+        marker = "unused"
+
+        def run(
+            self,
+            audit: ResearchExecutionAudit,
+            *,
+            external_should_stop: Callable[[], bool],
+        ) -> ResearchFoldRunResult:
+            raise _NeverCompleted("backtest runner must not see model audits")
+
+    frames = _frames()
+    rules = _rules()
+    snapshot = _snapshot(frames, rules)
+    inputs = _publish_model_inputs_stub()
+    plan = _model_plan_binding(inputs)
+    model_audit = _model_audit(plan, snapshot, _model_backtest(snapshot, rules))
+
+    model_side = _MarkerRunner()
+    routing = BindingRoutedResearchFoldRunner(
+        backtest_runner=cast("ResearchFoldRunner", _RaisingRunner()),
+        model_runner=model_side,
+    )
+    result = routing.run(model_audit, external_should_stop=_never_stop)
+    assert result.state is ResearchFoldRunState.STOPPED
+    assert model_side.audits == [model_audit]
+
+
+def _publish_model_inputs_stub() -> tuple[ModelFoldInputEvidence, ...]:
+    return (
+        ModelFoldInputEvidence(
+            input_kind="label_prices",
+            input_id="model-input-label_prices",
+            content_hash=_sha("9"),
+            schema_hash=_sha("9"),
+            source_snapshot_ids=(_SOURCE,),
+        ),
+        ModelFoldInputEvidence(
+            input_kind="features",
+            input_id="model-input-features",
+            content_hash=_sha("8"),
+            schema_hash=_sha("8"),
+            source_snapshot_ids=(_SOURCE,),
+        ),
+        ModelFoldInputEvidence(
+            input_kind="calendar",
+            input_id="model-input-calendar",
+            content_hash=_sha("7"),
+            schema_hash=_sha("7"),
+            source_snapshot_ids=(_SOURCE,),
+        ),
+    )
+
+
+def _model_e2e(
+    model_artifact_service: ResearchArtifactService,
+    audit: ResearchExecutionAudit,
+) -> tuple[
+    ModelCandidateFoldRunner,
+    BindingRoutedResearchFoldRunner,
+    _RecordingFrameSink,
+]:
+    checkpoints = _CheckpointStore()
+    loader = IndexedResearchArtifactLoader(artifact_service=model_artifact_service)
+    factory = FrozenAuditResearchBacktestFactory(
+        strategy_reader=_Reader(_strategy_record()),
+        runtime_builder=ResearchRuntimeBuilder(
+            factor_registry=ResearchFactorRegistry(),
+        ),
+        artifact_loader=loader,
+        environment=audit.semantics.environment,
+        checkpoint_reader=checkpoints,
+        checkpoint_writer=checkpoints,
+    )
+    frame_sink = _RecordingFrameSink(
+        IndexedPredictionFrameInputSink(artifact_service=model_artifact_service)
+    )
+    backtest = ExistingBacktestResearchFoldRunner(factory=factory)
+    runner = ModelCandidateFoldRunner(
+        data_port=IndexedModelFoldDataPort(artifact_service=model_artifact_service),
+        model_sink=IndexedModelArtifactSink(model_artifact_service),
+        frame_sink=frame_sink,
+        publication_authority=_ImmediatePublicationAuthority(),
+        backtest_runner=backtest,
+    )
+    routing = BindingRoutedResearchFoldRunner(
+        backtest_runner=backtest,
+        model_runner=runner,
+    )
+    return runner, routing, frame_sink
+
+
+def test_model_plan_binding_routed_and_upgraded_through_real_factory(
+    model_artifact_service: ResearchArtifactService,
+) -> None:
+    frames = _frames()
+    rules = _rules()
+    snapshot = _snapshot(frames, rules)
+    _publish_feed_inputs(model_artifact_service, frames, rules)
+    inputs = _publish_model_inputs(model_artifact_service)
+
+    plan = _model_plan_binding(inputs)
+    audit = _model_audit(plan, snapshot, _model_backtest(snapshot, rules))
+
+    _runner, routing, frame_sink = _model_e2e(model_artifact_service, audit)
+
+    result = routing.run(audit, external_should_stop=_never_stop)
+
+    assert result.state is ResearchFoldRunState.COMPLETED
+    assert type(result.report_evidence) is BacktestReportEvidence
+    # The real W1 execution trained and published; the real backtest path ran
+    # through the routed existing runner over the upgraded audit, and the
+    # published prediction frame round-trips under its lineage-scoped id.
+    assert list(frame_sink.registered) == [_MODEL_PREDICTION_INPUT_ID]
+    stored = model_artifact_service.read_frozen_research_input_bytes(
+        _MODEL_PREDICTION_INPUT_ID
+    )
+    assert stored == frame_sink.registered[_MODEL_PREDICTION_INPUT_ID]
+    decoded = pl.read_parquet(BytesIO(stored))
+    assert decoded.get_column("trade_date").to_list() == list(_TEST_DATES)
+    assert set(decoded.get_column("instrument_id").to_list()) == {_MEMBER_ID}
+
+
+def test_model_plan_binding_runs_the_real_service_end_to_end(
+    model_artifact_service: ResearchArtifactService,
+) -> None:
+    frames = _frames()
+    rules = _rules()
+    snapshot = _snapshot(frames, rules)
+    _publish_feed_inputs(model_artifact_service, frames, rules)
+    inputs = _publish_model_inputs(model_artifact_service)
+
+    plan = _model_plan_binding(inputs)
+    audit = _model_audit(plan, snapshot, _model_backtest(snapshot, rules))
+    _runner, routing, _frame_sink = _model_e2e(model_artifact_service, audit)
+
+    result = routing.run(audit, external_should_stop=_never_stop)
+
+    assert result.state is ResearchFoldRunState.COMPLETED
+    evidence = result.report_evidence
+    assert type(evidence) is BacktestReportEvidence
+    assert evidence.period == (_DATES[0], _DATES[-1])
+    assert evidence.run_id == "backtest-model-1"
+    assert result.selection_evidence is not None
+    assert result.selection_evidence.selections
+
+
+def test_model_plan_binding_never_builds_a_backtest_directly() -> None:
+    frames = _frames()
+    rules = _rules()
+    snapshot = _snapshot(frames, rules)
+    plan = _model_plan_binding(_publish_model_inputs_stub())
+    audit = _model_audit(plan, snapshot, _model_backtest(snapshot, rules))
+    factory, _candidate_audit, _reader, _builder, _loader = _fixture()
+
+    with pytest.raises(AppProcessError) as exc_info:
+        factory.build(audit, external_should_stop=_never_stop)
+
+    assert (
+        exc_info.value.details["reason"]
+        == "model_candidate_plan_requires_fold_runner_upgrade"
+    )
+
+
+def test_model_runner_maps_fold_stage_failure_and_stops(model_artifact_service) -> None:
+    frames = _frames()
+    rules = _rules()
+    snapshot = _snapshot(frames, rules)
+    inputs = _publish_model_inputs(model_artifact_service)
+    plan = _model_plan_binding(inputs)
+    audit = _model_audit(plan, snapshot, _model_backtest(snapshot, rules))
+
+    class _RefusingPort:
+        def load(self, inputs: ModelFoldInputSet) -> ModelFoldData:
+            raise AppProcessError(
+                "port refused",
+                details={"code": "X", "reason": "hash_mismatch"},
+            )
+
+    runner = ModelCandidateFoldRunner(
+        data_port=_RefusingPort(),
+        model_sink=IndexedModelArtifactSink(model_artifact_service),
+        frame_sink=IndexedPredictionFrameInputSink(
+            artifact_service=model_artifact_service
+        ),
+        publication_authority=_ImmediatePublicationAuthority(),
+        backtest_runner=_NoopBacktestRunner(),
+    )
+    with pytest.raises(AppProcessError) as exc_info:
+        runner.run(audit, external_should_stop=_never_stop)
+
+    # Data-stage refusals keep the input-integrity failure family.
+    assert exc_info.value.details["code"] == "INPUT_HASH_MISMATCH"
+    assert exc_info.value.details["reason"] == "hash_mismatch"
+    assert exc_info.value.details["stage"] == "data"
+
+    stopped = runner.run(audit, external_should_stop=lambda: True)
+    assert stopped.state is ResearchFoldRunState.STOPPED
+    assert stopped.report_evidence is None
+
+
+def test_model_runner_replays_idempotently_after_crash(
+    model_artifact_service: ResearchArtifactService,
+) -> None:
+    frames = _frames()
+    rules = _rules()
+    snapshot = _snapshot(frames, rules)
+    _publish_feed_inputs(model_artifact_service, frames, rules)
+    inputs = _publish_model_inputs(model_artifact_service)
+    plan = _model_plan_binding(inputs)
+    audit = _model_audit(plan, snapshot, _model_backtest(snapshot, rules))
+    _runner, routing, _frame_sink = _model_e2e(model_artifact_service, audit)
+
+    first = routing.run(audit, external_should_stop=_never_stop)
+    assert first.state is ResearchFoldRunState.COMPLETED
+    # A successor attempt replays the same fold: byte-equal artifacts replay
+    # idempotently and the second run completes over the same identities.
+    second = routing.run(audit, external_should_stop=_never_stop)
+    assert second.state is ResearchFoldRunState.COMPLETED
+
+
+def test_model_upgrade_refuses_registration_and_clock_drift(
+    model_artifact_service: ResearchArtifactService,
+) -> None:
+    frames = _frames()
+    rules = _rules()
+    snapshot = _snapshot(frames, rules)
+    inputs = _publish_model_inputs(model_artifact_service)
+    plan = _model_plan_binding(inputs)
+    audit = _model_audit(plan, snapshot, _model_backtest(snapshot, rules))
+    lineage = _model_lineage()
+
+    result = execute_model_candidate_fold(
+        ModelCandidateFoldRequest(
+            experiment_id=ExperimentId("experiment-model-1"),
+            candidate_id=CandidateId("candidate-model-1"),
+            fold_id=FoldId("fold-model-1"),
+            attempt_id=AttemptId("attempt-model-1"),
+            lineage=lineage,
+            fold=ValidationFoldPlan(
+                ordinal=1,
+                role=FoldRole.WALK_FORWARD,
+                train_window=DateWindow(
+                    _MODEL_TRAIN_SESSIONS[0],
+                    _MODEL_TRAIN_SESSIONS[17],
+                ),
+                test_window=DateWindow(_TEST_DATES[0], _TEST_DATES[-1]),
+                purge_sessions=5,
+                embargo_sessions=5,
+            ),
+            inputs=_model_fold_input_bindings(inputs),
+            snapshot_id=snapshot.exact_snapshot.snapshot_id,
+            knowledge_cutoff_epoch_us=_MODEL_CUTOFF,
+            trained_at_epoch_us=_MODEL_TRAINED_AT,
+            reproduction_fingerprint=audit.semantics.reproduction_fingerprint,
+        ),
+        data_port=IndexedModelFoldDataPort(artifact_service=model_artifact_service),
+        sink=IndexedModelArtifactSink(model_artifact_service),
+        lease_fence=_MODEL_FENCE,
+        now_epoch_us=1_000_000,
+    )
+    assert isinstance(result, ModelCandidateFoldSuccess)
+
+    registered: dict[str, bytes] = {}
+
+    upgraded = upgrade_model_fold_semantics(
+        audit,
+        plan,
+        lineage,
+        result,
+        register_frame=registered.__setitem__,
+    )
+    binding = upgraded.semantics.strategy
+    assert type(binding) is PredictionExecutorBinding
+    assert binding.model_registration_hash == plan.lineage_hash
+    assert binding.top_k == plan.top_k
+    assert binding.resolve_predictions_input(upgraded.semantics.snapshot.inputs)
+    assert list(registered) == [_MODEL_PREDICTION_INPUT_ID]
+
+    drifted_plan = replace(plan, lineage_hash=_sha("f"))
+    with pytest.raises(AppProcessError) as exc_info:
+        upgrade_model_fold_semantics(
+            audit,
+            drifted_plan,
+            lineage,
+            result,
+            register_frame=registered.__setitem__,
+        )
+    assert exc_info.value.details["reason"] == "model_registration_drift"
+
+    drifted_clock = replace(plan, trained_at_epoch_us=_MODEL_TRAINED_AT + 1)
+    with pytest.raises(AppProcessError) as exc_info:
+        upgrade_model_fold_semantics(
+            audit,
+            drifted_clock,
+            lineage,
+            result,
+            register_frame=registered.__setitem__,
+        )
+    assert exc_info.value.details["reason"] == "model_trained_at_drift"

@@ -51,6 +51,11 @@ from ditto_application.builders.research_execution_resolver import (
     DurableResearchExecutionResolver,
     ResearchExecutionRuntimeBuilders,
 )
+from ditto_application.builders.research_model_fold_adapters import (
+    CoordinatorBackedModelFoldPublicationAuthority,
+    IndexedModelFoldDataPort,
+    IndexedPredictionFrameInputSink,
+)
 from ditto_application.commands.candidate_selection import CandidateSelectionProcess
 from ditto_application.processes.experiments._control_runtime import (
     CONTROL_COORDINATOR_OWNER_TOKEN,
@@ -85,6 +90,13 @@ from ditto_application.processes.experiments.execution_bundle import CodeEnviron
 from ditto_application.processes.experiments.factor_diagnostics_reader import (
     FactorDiagnosticsReader,
     PersistedFactorDiagnosticsSource,
+)
+from ditto_application.processes.experiments.model_artifact_publication import (
+    IndexedModelArtifactSink,
+)
+from ditto_application.processes.experiments.model_candidate_runner import (
+    BindingRoutedResearchFoldRunner,
+    ModelCandidateFoldRunner,
 )
 from ditto_application.processes.experiments.regime_diagnostics_reader import (
     RegimeDiagnosticsReader,
@@ -336,9 +348,41 @@ class AppResearchExecutionProvider(Provider):
     def existing_backtest_research_fold_runner(
         self,
         factory: ResearchBacktestServiceFactory,
-    ) -> ResearchFoldRunner:
+    ) -> ExistingBacktestResearchFoldRunner:
         """薄 adapter 把 numerical execution 保留在 BacktestService。"""
         return ExistingBacktestResearchFoldRunner(factory=factory)
+
+    @provide
+    def model_candidate_fold_runner(
+        self,
+        artifact_service: ResearchArtifactService,
+        coordinator: ResearchWorkerCoordinator,
+        backtest_runner: ExistingBacktestResearchFoldRunner,
+    ) -> ModelCandidateFoldRunner:
+        """模型候选 fold：W1 训练发布 + W3 预测回测的组合 runner。"""
+        return ModelCandidateFoldRunner(
+            data_port=IndexedModelFoldDataPort(artifact_service=artifact_service),
+            model_sink=IndexedModelArtifactSink(artifact_service=artifact_service),
+            frame_sink=IndexedPredictionFrameInputSink(
+                artifact_service=artifact_service,
+            ),
+            publication_authority=(
+                CoordinatorBackedModelFoldPublicationAuthority(coordinator)
+            ),
+            backtest_runner=backtest_runner,
+        )
+
+    @provide
+    def research_fold_runner(
+        self,
+        backtest_runner: ExistingBacktestResearchFoldRunner,
+        model_runner: ModelCandidateFoldRunner,
+    ) -> ResearchFoldRunner:
+        """按 strategy 绑定变体路由：plan 绑定走模型 runner，其余走回测。"""
+        return BindingRoutedResearchFoldRunner(
+            backtest_runner=backtest_runner,
+            model_runner=model_runner,
+        )
 
     @provide
     def execution_bundle_first_attempt_factory(
