@@ -9,9 +9,11 @@ builder and the W1 fold orchestration consume. Both frames freeze as
 content-addressed research inputs carrying the observed provider snapshot
 identities of the partitions they were read from, so a planning request can
 pin them before launch and the fold data port re-verifies the bytes at claim
-time. Fillability mirrors the backtest fill rule matrix (suspension blocks
-both sides, open at limit-up blocks buys, close at limit-down blocks sells)
-keeping labels and executed backtests on one caliber.
+time. Suspension and sell-at-limit-down mirror the backtest fill rule
+matrix exactly; the buy side follows the label's own entry-at-next-open
+semantics (an open at limit-up is unfillable), which is deliberately
+stricter than the engine's close-based buy check (#571 tracks the shared
+limit-precision follow-up).
 """
 
 from __future__ import annotations
@@ -49,10 +51,10 @@ from ditto_features.evaluation.research_labels import LABEL_PRICE_FRAME_SCHEMA
 from ditto_apps.config.runtime import state_root_matches
 from ditto_apps.registry.container import make_app_container
 from ditto_apps.registry.live.r3_live_market_projection import (
-    _bar_history_grid,
-    _normalized_bars,
-    _scan_adj,
-    _scan_bars,
+    bar_history_grid,
+    deduplicate_physical_bars,
+    normalized_bars,
+    scan_market_store,
 )
 from ditto_apps.registry.live.r3_live_snapshot_frames import open_live_database
 
@@ -169,12 +171,58 @@ def _require_label_price_schema(frame: pl.DataFrame) -> None:
         )
 
 
+def _require_market_session_coverage(
+    raw: pl.DataFrame, sessions: tuple[date, ...]
+) -> None:
+    """
+    Fail closed when an open session has no observed market bar at all.
+
+    A fully silent session means a missing partition (or a stale calendar);
+    carrying it as suspension would fabricate prices and knowledge.
+    """
+    uncovered = sorted(set(sessions) - set(raw["trade_date"].to_list()))
+    if uncovered:
+        raise _materializer_error(
+            "model fold sessions have no observed market bars",
+            uncovered_sessions=[item.isoformat() for item in uncovered],
+        )
+
+
+def _require_factor_not_published_after_its_bar(
+    adjustment_rows: pl.DataFrame,
+    raw: pl.DataFrame,
+) -> None:
+    """
+    Fail closed when a factor's publication postdates the bar it scales.
+
+    Real stores publish factors same-day and bars T+1, so a later-published
+    restated factor would leak into labels whose declared maturity predates
+    it; this pins that invariant instead of expecting it.
+    """
+    late_factors = adjustment_rows.join(
+        raw.select("trade_date", "instrument_id", pl.col("knowledge_date")),
+        on=["trade_date", "instrument_id"],
+        how="inner",
+        suffix="_bar",
+    ).filter(pl.col("knowledge_date") > pl.col("knowledge_date_bar"))
+    if not late_factors.is_empty():
+        raise _materializer_error(
+            "model fold adjustment factor published after its bar",
+            sample=str(
+                late_factors.select("trade_date", "instrument_id", "knowledge_date")
+                .head(3)
+                .rows()
+            ),
+        )
+
+
 def build_model_fold_label_price_frame(
     data_root: Path,
     *,
     instrument_ids: tuple[int, ...],
     sessions: tuple[date, ...],
     authority_snapshot_id: str,
+    knowledge_cutoff: date,
 ) -> pl.DataFrame:
     """
     Project the label-price contract from the real stock bar/adj stores.
@@ -184,7 +232,10 @@ def build_model_fold_label_price_frame(
     calendar session) so strategy backtests and model labels read one price
     truth. Knowledge times come from the source bars' publication dates; a
     suspension-carried row inherits the carry source's publication date,
-    which is exactly when that close value became known.
+    which is exactly when that close value became known. Both stores are read
+    strictly as-of ``knowledge_cutoff`` (rows published later are invisible),
+    and every requested session must carry at least one real market bar so a
+    missing partition fails closed instead of fabricating suspensions.
     """
     root = data_root.expanduser().resolve(strict=True)
     raw_ids = instrument_ids
@@ -204,26 +255,33 @@ def build_model_fold_label_price_frame(
         raise _materializer_error("model fold sessions are invalid")
     if type(authority_snapshot_id) is not str or not authority_snapshot_id.strip():
         raise _materializer_error("model fold authority snapshot identity is invalid")
+    if type(knowledge_cutoff) is not date:
+        raise _materializer_error("model fold knowledge cutoff is invalid")
     window_end = sessions[-1]
-    member_filter = (pl.col("trade_date") <= window_end) & pl.col(
-        "instrument_id"
-    ).is_in(list(raw_ids))
-    raw = _scan_bars(root, "stock").filter(member_filter).collect()
-    adjustment = (
-        _scan_adj(root, "stock")
-        .filter(member_filter)
-        .select("trade_date", "instrument_id", "adj_factor")
-        .collect()
+    member_filter = (
+        (pl.col("trade_date") <= window_end)
+        & (pl.col("knowledge_date") <= knowledge_cutoff)
+        & pl.col("instrument_id").is_in(list(raw_ids))
     )
-    knowledge = (
-        _scan_bars(root, "stock")
+    # One scan, deduplicated once: the grid, the normalization, and the
+    # publication dates all read the same physical bar truth.
+    raw = deduplicate_physical_bars(
+        scan_market_store(root, "stock", "bars").filter(member_filter).collect()
+    )
+    _require_market_session_coverage(raw, sessions)
+    adjustment_rows = deduplicate_physical_bars(
+        scan_market_store(root, "stock", "adj")
         .filter(member_filter)
-        .select(
-            "trade_date",
-            "instrument_id",
-            pl.col("knowledge_date").alias("_knowledge_date"),
-        )
-        .collect()
+        .select("trade_date", "instrument_id", "adj_factor", "knowledge_date")
+        .collect(),
+        store="adjustment factor",
+    )
+    _require_factor_not_published_after_its_bar(adjustment_rows, raw)
+    adjustment = adjustment_rows.select("trade_date", "instrument_id", "adj_factor")
+    knowledge = raw.select(
+        "trade_date",
+        "instrument_id",
+        pl.col("knowledge_date").alias("_knowledge_date"),
     )
     membership = pl.DataFrame(
         {
@@ -232,8 +290,8 @@ def build_model_fold_label_price_frame(
         },
         schema={"trade_date": pl.Date, "instrument_id": pl.Int64},
     )
-    history_grid = _bar_history_grid(raw, membership, sessions)
-    normalized = _normalized_bars(
+    history_grid = bar_history_grid(raw, membership, sessions)
+    normalized = normalized_bars(
         raw,
         history_grid,
         authority_snapshot_id=authority_snapshot_id,
@@ -426,6 +484,10 @@ def materialize_model_fold_inputs(
 ) -> MaterializedModelFoldInputs:
     """Freeze the label-price and calendar fold inputs from real data."""
     _require_window(window_start, window_end)
+    if observed_cutoff is not None and observed_cutoff.tzinfo is None:
+        # A naive cutoff would silently bind to the machine timezone and
+        # shift snapshot visibility; require the caller to be explicit.
+        raise _materializer_error("model fold observed cutoff must be tz-aware")
     cutoff = (
         observed_cutoff.astimezone(UTC)
         if observed_cutoff is not None
@@ -477,6 +539,7 @@ def materialize_model_fold_inputs(
         instrument_ids=instrument_ids,
         sessions=sessions,
         authority_snapshot_id=authority.snapshot_id,
+        knowledge_cutoff=cutoff.date(),
     )
     label_sources = tuple(
         sorted(
@@ -521,11 +584,17 @@ def _parse_instruments(raw: str) -> tuple[int, ...]:
     ids: list[int] = []
     for token in raw.split(","):
         text = token.strip()
-        if not text.isdecimal():
+        if (
+            not text.isascii()
+            or not text.isdecimal()
+            or (len(text) > 1 and text.startswith("0"))
+        ):
             raise SystemExit(f"instrument identity is not canonical: {text!r}")
         ids.append(int(text))
     if not ids:
         raise SystemExit("at least one instrument identity is required")
+    if len(set(ids)) != len(ids):
+        raise SystemExit("instrument identities must be unique")
     return tuple(ids)
 
 

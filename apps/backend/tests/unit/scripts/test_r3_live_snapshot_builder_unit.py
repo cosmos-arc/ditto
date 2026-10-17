@@ -15,8 +15,8 @@ from ditto_application.processes.experiments.execution_bundle import (
 )
 from ditto_apps.registry.live.r3_live_market_projection import (
     _membership_with_observed_bar_history,
-    _normalized_bars,
     build_live_bars,
+    normalized_bars,
 )
 from ditto_apps.registry.live.r3_live_snapshot_builder import (
     _BENCHMARK_INSTRUMENT_ID,
@@ -81,7 +81,7 @@ def _membership(
 
 @pytest.mark.unit
 def test_normalized_bars_seed_first_suspension_from_pre_window_bar() -> None:
-    frame = _normalized_bars(
+    frame = normalized_bars(
         _raw_bars(
             (
                 (date(2015, 1, 30), 1, 10.0),
@@ -100,7 +100,7 @@ def test_normalized_bars_seed_first_suspension_from_pre_window_bar() -> None:
 
 @pytest.mark.unit
 def test_normalized_bars_emit_numeric_price_limits_and_complete_grid() -> None:
-    frame = _normalized_bars(
+    frame = normalized_bars(
         _raw_bars(((date(2015, 2, 2), 1, 10.0),)),
         _membership(((date(2015, 2, 2), 1), (date(2015, 2, 3), 1))),
         authority_snapshot_id="source-1",
@@ -116,7 +116,7 @@ def test_normalized_bars_emit_numeric_price_limits_and_complete_grid() -> None:
 @pytest.mark.unit
 def test_normalized_benchmark_bars_keep_required_price_limits_non_null() -> None:
     """Benchmark rows share the strict frozen bars schema used by the data feed."""
-    frame = _normalized_bars(
+    frame = normalized_bars(
         _raw_bars(((date(2015, 2, 2), _BENCHMARK_INSTRUMENT_ID, 3_500.0),)),
         _membership(((date(2015, 2, 2), _BENCHMARK_INSTRUMENT_ID),)),
         authority_snapshot_id="source-1",
@@ -132,7 +132,7 @@ def test_normalized_benchmark_bars_keep_required_price_limits_non_null() -> None
 def test_normalized_bars_collapse_identical_physical_partition_overlap() -> None:
     raw = _raw_bars(((date(2015, 2, 2), 1, 10.0),))
 
-    frame = _normalized_bars(
+    frame = normalized_bars(
         pl.concat((raw, raw)),
         _membership(((date(2015, 2, 2), 1),)),
         authority_snapshot_id="source-1",
@@ -151,7 +151,7 @@ def test_normalized_bars_reject_conflicting_physical_partition_overlap() -> None
     )
 
     with pytest.raises(ValueError, match="conflicting live bar duplicates"):
-        _normalized_bars(
+        normalized_bars(
             raw,
             _membership(((date(2015, 2, 2), 1),)),
             authority_snapshot_id="source-1",
@@ -271,7 +271,7 @@ def test_normalized_bars_join_adjustment_factor_on_every_grid_session() -> None:
         )
     )
 
-    frame = _normalized_bars(
+    frame = normalized_bars(
         raw,
         _membership(
             (
@@ -299,7 +299,7 @@ def test_normalized_bars_forward_fill_adjustment_gaps_within_instrument() -> Non
     )
     adjustment = _raw_adjustment(((date(2015, 2, 2), 1, 2.0),))
 
-    frame = _normalized_bars(
+    frame = normalized_bars(
         raw,
         _membership(((date(2015, 2, 2), 1), (date(2015, 2, 3), 1))),
         authority_snapshot_id="source-1",
@@ -314,7 +314,7 @@ def test_normalized_bars_reject_member_without_any_adjustment_factor() -> None:
     raw = _raw_bars(((date(2015, 2, 2), 1, 10.0),))
 
     with pytest.raises(ValueError, match="no adjustment factor"):
-        _normalized_bars(
+        normalized_bars(
             raw,
             _membership(((date(2015, 2, 2), 1),)),
             authority_snapshot_id="source-1",
@@ -324,7 +324,7 @@ def test_normalized_bars_reject_member_without_any_adjustment_factor() -> None:
 
 @pytest.mark.unit
 def test_normalized_bars_without_adjustment_project_neutral_factor() -> None:
-    frame = _normalized_bars(
+    frame = normalized_bars(
         _raw_bars(((date(2015, 2, 2), _BENCHMARK_INSTRUMENT_ID, 3_500.0),)),
         _membership(((date(2015, 2, 2), _BENCHMARK_INSTRUMENT_ID),)),
         authority_snapshot_id="source-1",
@@ -711,7 +711,7 @@ def test_live_mutable_inputs_use_content_addressed_artifact_ids() -> None:
     first, _ = _evidence(
         "stock_daily",
         "bars",
-        _normalized_bars(
+        normalized_bars(
             _raw_bars(((date(2015, 2, 2), 1, 10.0),)),
             membership,
             authority_snapshot_id="source-1",
@@ -720,7 +720,7 @@ def test_live_mutable_inputs_use_content_addressed_artifact_ids() -> None:
     changed, _ = _evidence(
         "stock_daily",
         "bars",
-        _normalized_bars(
+        normalized_bars(
             _raw_bars(((date(2015, 2, 2), 1, 11.0),)),
             membership,
             authority_snapshot_id="source-1",

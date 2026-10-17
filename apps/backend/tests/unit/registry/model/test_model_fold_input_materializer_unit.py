@@ -101,12 +101,16 @@ def _golden_sessions() -> tuple[date, ...]:
     return sessions
 
 
+_KNOWLEDGE_CUTOFF = date(2024, 12, 31)
+
+
 def _golden_label_frame(tmp_path: Path) -> pl.DataFrame:
     return build_model_fold_label_price_frame(
         _golden_data_root(tmp_path),
         instrument_ids=_INSTRUMENTS,
         sessions=_golden_sessions(),
         authority_snapshot_id="snapshot-authority",
+        knowledge_cutoff=_KNOWLEDGE_CUTOFF,
     )
 
 
@@ -284,6 +288,7 @@ def test_label_price_frame_rejects_member_without_adjustment_factor(tmp_path) ->
             instrument_ids=_INSTRUMENTS,
             sessions=_golden_sessions(),
             authority_snapshot_id="snapshot-authority",
+            knowledge_cutoff=_KNOWLEDGE_CUTOFF,
         )
 
 
@@ -298,6 +303,134 @@ def test_label_price_frame_rejects_non_monotonic_sessions(tmp_path) -> None:
             instrument_ids=_INSTRUMENTS,
             sessions=broken,
             authority_snapshot_id="snapshot-authority",
+            knowledge_cutoff=_KNOWLEDGE_CUTOFF,
+        )
+
+
+@pytest.mark.unit
+def test_label_price_frame_fails_closed_on_a_middle_partition_gap(tmp_path) -> None:
+    """A missing store month must refuse, not fabricate suspension carries."""
+    root = _golden_data_root(tmp_path)
+    bars_path = root / "market" / "stock" / "bars" / "2024.parquet"
+    july_free = pl.read_parquet(bars_path).filter(pl.col("trade_date").dt.month() != 7)
+    july_free.write_parquet(bars_path)
+
+    with pytest.raises(ValueError) as exc_info:
+        build_model_fold_label_price_frame(
+            root,
+            instrument_ids=_INSTRUMENTS,
+            sessions=_golden_sessions(),
+            authority_snapshot_id="snapshot-authority",
+            knowledge_cutoff=_KNOWLEDGE_CUTOFF,
+        )
+    details = orjson.loads(str(exc_info.value))
+    assert details["reason"] == "model fold sessions have no observed market bars"
+    assert len(details["uncovered_sessions"]) == 23
+    assert details["uncovered_sessions"][0] == "2024-07-01"
+
+
+@pytest.mark.unit
+def test_label_price_frame_collapses_identical_adjustment_overlap(tmp_path) -> None:
+    """Identical partition overlap collapses; conflicting factors refuse."""
+    root = _golden_data_root(tmp_path)
+    adj_path = root / "market" / "stock" / "adj" / "2024.parquet"
+    adj = pl.read_parquet(adj_path)
+    pl.concat((adj, adj)).write_parquet(adj_path)
+    frame = build_model_fold_label_price_frame(
+        root,
+        instrument_ids=_INSTRUMENTS,
+        sessions=_golden_sessions(),
+        authority_snapshot_id="snapshot-authority",
+        knowledge_cutoff=_KNOWLEDGE_CUTOFF,
+    )
+    assert frame.height == 192
+    assert frame.select("instrument_id", "session").is_duplicated().any() is False
+
+    conflicting = pl.concat(
+        (
+            adj,
+            adj.with_columns(pl.col("adj_factor") + 1.0).head(1),
+        )
+    )
+    conflicting.write_parquet(adj_path)
+    with pytest.raises(ValueError, match="conflicting live adjustment factor"):
+        build_model_fold_label_price_frame(
+            root,
+            instrument_ids=_INSTRUMENTS,
+            sessions=_golden_sessions(),
+            authority_snapshot_id="snapshot-authority",
+            knowledge_cutoff=_KNOWLEDGE_CUTOFF,
+        )
+
+
+@pytest.mark.unit
+def test_label_price_frame_excludes_rows_published_after_the_cutoff(tmp_path) -> None:
+    """As-of cutoff: a row published later is invisible; its session fails
+    closed as an uncovered market day instead of fabricating a carry."""
+    root = _golden_data_root(tmp_path)
+    bars_path = root / "market" / "stock" / "bars" / "2024.parquet"
+    bars = pl.read_parquet(bars_path).with_columns(
+        pl.when(pl.col("trade_date") == date(2024, 7, 1))
+        .then(pl.lit(date(2026, 1, 1)).cast(pl.Date))
+        .otherwise(pl.col("knowledge_date"))
+        .alias("knowledge_date")
+    )
+    bars.write_parquet(bars_path)
+
+    with pytest.raises(ValueError) as exc_info:
+        build_model_fold_label_price_frame(
+            root,
+            instrument_ids=_INSTRUMENTS,
+            sessions=_golden_sessions(),
+            authority_snapshot_id="snapshot-authority",
+            knowledge_cutoff=_KNOWLEDGE_CUTOFF,
+        )
+    details = orjson.loads(str(exc_info.value))
+    assert details["reason"] == "model fold sessions have no observed market bars"
+    assert details["uncovered_sessions"] == ["2024-07-01"]
+
+
+@pytest.mark.unit
+def test_label_price_frame_rejects_factor_published_after_its_bar(tmp_path) -> None:
+    root = _golden_data_root(tmp_path)
+    adj_path = root / "market" / "stock" / "adj" / "2024.parquet"
+    adj = pl.read_parquet(adj_path).with_columns(
+        pl.when(pl.col("trade_date") == date(2024, 6, 3))
+        .then(pl.lit(date(2024, 6, 10)).cast(pl.Date))
+        .otherwise(pl.col("knowledge_date"))
+        .alias("knowledge_date")
+    )
+    adj.write_parquet(adj_path)
+
+    with pytest.raises(ValueError) as exc_info:
+        build_model_fold_label_price_frame(
+            root,
+            instrument_ids=_INSTRUMENTS,
+            sessions=_golden_sessions(),
+            authority_snapshot_id="snapshot-authority",
+            knowledge_cutoff=_KNOWLEDGE_CUTOFF,
+        )
+    details = orjson.loads(str(exc_info.value))
+    assert details["reason"] == "model fold adjustment factor published after its bar"
+
+
+@pytest.mark.unit
+def test_materialize_rejects_a_naive_observed_cutoff(tmp_path) -> None:
+    root = _golden_data_root(tmp_path)
+    book = _SnapshotBook()
+
+    with pytest.raises(ValueError, match="must be tz-aware"):
+        materialize_model_fold_inputs(
+            data_root=root,
+            artifact_service=_artifact_service(tmp_path),
+            sources=ModelInputSnapshotSources(
+                snapshot_reader=cast("ProviderSnapshotReader", book),
+                lifecycle_reader=cast("PartitionLifecycleReader", book),
+            ),
+            instrument_ids=_INSTRUMENTS,
+            window_start=_WINDOW_START,
+            window_end=_WINDOW_END,
+            observed_cutoff=datetime(2026, 10, 2, 12, 0, 0),
         )
 
 
@@ -522,3 +655,18 @@ def test_freeze_model_feature_frame_content_addresses_caller_frame(tmp_path) -> 
             source_snapshot_ids=("stock_daily-current",),
             artifact_service=service,
         )
+
+
+@pytest.mark.unit
+def test_cli_instrument_parsing_accepts_only_canonical_identities() -> None:
+    from ditto_apps.registry.model.model_fold_input_materializer import (
+        _parse_instruments,
+    )
+
+    assert _parse_instruments("1000001, 1005674") == (1000001, 1005674)
+    with pytest.raises(SystemExit):
+        _parse_instruments(chr(0xFF11) + chr(0xFF10) * 5 + chr(0xFF11))
+    with pytest.raises(SystemExit):
+        _parse_instruments("000001")
+    with pytest.raises(SystemExit):
+        _parse_instruments("1000001,1000001")

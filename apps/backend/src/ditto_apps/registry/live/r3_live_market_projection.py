@@ -15,24 +15,35 @@ _BENCHMARK_INSTRUMENT_ID = 3_000_149
 _BAR_KEY = ("trade_date", "instrument_id")
 
 
-def _scan_bars(data_root: Path, asset_class: str) -> pl.LazyFrame:
-    paths = sorted((data_root / "market" / asset_class / "bars").glob("*.parquet"))
-    if not paths:
-        raise ValueError(f"live {asset_class} bar files are missing")
-    return pl.scan_parquet(paths)
+__all__ = [
+    "align_live_membership",
+    "bar_history_grid",
+    "build_live_bars",
+    "deduplicate_physical_bars",
+    "normalized_bars",
+    "scan_market_store",
+]
 
 
-def _scan_adj(data_root: Path, asset_class: str) -> pl.LazyFrame:
+def scan_market_store(
+    data_root: Path,
+    asset_class: str,
+    store: Literal["bars", "adj"],
+) -> pl.LazyFrame:
     """
-    Scan the adjustment-factor store covering every calendar session.
+    Scan one market Parquet store (bars or adjustment factors).
 
-    The factor store publishes rows on suspension days too, so the join with
-    the suspension-carried bar grid is total up to partition seams; residual
-    gaps inside one instrument close by forward-fill only.
+    The adjustment store publishes rows on suspension days too, so its join
+    with the suspension-carried bar grid is total up to partition seams;
+    residual gaps inside one instrument close by forward-fill only.
     """
-    paths = sorted((data_root / "market" / asset_class / "adj").glob("*.parquet"))
+    names = {
+        "bars": "bar",
+        "adj": "adjustment factor",
+    }
+    paths = sorted((data_root / "market" / asset_class / store).glob("*.parquet"))
     if not paths:
-        raise ValueError(f"live {asset_class} adjustment factor files are missing")
+        raise ValueError(f"live {asset_class} {names[store]} files are missing")
     return pl.scan_parquet(paths)
 
 
@@ -76,7 +87,7 @@ def align_live_membership(
     member_ids = membership["instrument_id"].unique().to_list()
     source_class = "stock" if lane == "stock" else "etf"
     raw = (
-        _scan_bars(data_root, source_class)
+        scan_market_store(data_root, source_class, "bars")
         .filter(
             (pl.col("trade_date") <= _END) & pl.col("instrument_id").is_in(member_ids)
         )
@@ -86,7 +97,7 @@ def align_live_membership(
     return _membership_with_observed_bar_history(raw, membership)
 
 
-def _bar_history_grid(
+def bar_history_grid(
     raw: pl.DataFrame,
     membership: pl.DataFrame,
     sessions: tuple[date, ...],
@@ -104,7 +115,11 @@ def _bar_history_grid(
     return _membership_with_observed_bar_history(raw, requested)
 
 
-def _deduplicate_physical_bars(raw: pl.DataFrame) -> pl.DataFrame:
+def deduplicate_physical_bars(
+    raw: pl.DataFrame,
+    *,
+    store: str = "bar",
+) -> pl.DataFrame:
     """Collapse identical partition overlap and reject ambiguous market truth."""
     unique_rows = raw.unique(maintain_order=True)
     conflicting_keys = (
@@ -112,11 +127,11 @@ def _deduplicate_physical_bars(raw: pl.DataFrame) -> pl.DataFrame:
     )
     if not conflicting_keys.is_empty():
         sample = conflicting_keys.select(*_BAR_KEY).head(3)
-        raise ValueError(f"conflicting live bar duplicates: {sample}")
+        raise ValueError(f"conflicting live {store} duplicates: {sample}")
     return unique_rows.sort(_BAR_KEY)
 
 
-def _normalized_bars(
+def normalized_bars(
     raw: pl.DataFrame,
     membership: pl.DataFrame,
     *,
@@ -130,7 +145,7 @@ def _normalized_bars(
     every calendar session; ``None`` projects the neutral factor 1.0 used for
     index benchmarks, which have no corporate-action adjustment by contract.
     """
-    raw = _deduplicate_physical_bars(raw)
+    raw = deduplicate_physical_bars(raw)
     selected = raw.select(
         "trade_date",
         "instrument_id",
@@ -172,11 +187,20 @@ def _normalized_bars(
         .sort(["instrument_id", "trade_date"])
     )
     if adjustment is not None:
+        # Adjustment partitions overlap exactly like bar partitions; collapse
+        # identical rows and refuse ambiguous factors before the grid join
+        # (a duplicated row would multiply every downstream grid row).
         grid = grid.join(
-            adjustment.select("trade_date", "instrument_id", "adj_factor"),
+            deduplicate_physical_bars(
+                adjustment.select("trade_date", "instrument_id", "adj_factor"),
+                store="adjustment factor",
+            ),
             on=["trade_date", "instrument_id"],
             how="left",
-        ).with_columns(
+        ).sort(["instrument_id", "trade_date"])
+        # Joins do not guarantee output order; every forward-fill below is a
+        # within-instrument time carry, so re-establish the order explicitly.
+        grid = grid.with_columns(
             pl.col("adj_factor").forward_fill().over("instrument_id"),
         )
         if grid["adj_factor"].null_count():
@@ -264,29 +288,29 @@ def build_live_bars(
     member_ids = membership["instrument_id"].unique().to_list()
     source_class = "stock" if lane == "stock" else "etf"
     raw = (
-        _scan_bars(data_root, source_class)
+        scan_market_store(data_root, source_class, "bars")
         .filter(
             (pl.col("trade_date") <= _END) & pl.col("instrument_id").is_in(member_ids)
         )
         .collect()
     )
     adjustment = (
-        _scan_adj(data_root, source_class)
+        scan_market_store(data_root, source_class, "adj")
         .filter(
             (pl.col("trade_date") <= _END) & pl.col("instrument_id").is_in(member_ids)
         )
         .select("trade_date", "instrument_id", "adj_factor")
         .collect()
     )
-    history_grid = _bar_history_grid(raw, membership, sessions)
-    member_bars = _normalized_bars(
+    history_grid = bar_history_grid(raw, membership, sessions)
+    member_bars = normalized_bars(
         raw,
         history_grid,
         authority_snapshot_id=authority_snapshot_id,
         adjustment=adjustment,
     )
     benchmark = (
-        _scan_bars(data_root, "index")
+        scan_market_store(data_root, "index", "bars")
         .filter(
             (pl.col("trade_date") <= _END)
             & (pl.col("instrument_id") == _BENCHMARK_INSTRUMENT_ID)
@@ -300,7 +324,7 @@ def build_live_bars(
         },
         schema={"trade_date": pl.Date, "instrument_id": pl.Int64},
     )
-    benchmark_bars = _normalized_bars(
+    benchmark_bars = normalized_bars(
         benchmark,
         benchmark_membership,
         # Index levels carry no corporate-action adjustment; the neutral

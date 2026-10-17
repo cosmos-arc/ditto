@@ -92,7 +92,9 @@ REQUIRED_COLUMNS: dict[ResearchFrameKind, frozenset[str]] = {
             "avg_volume_20d",
             # The adjustment factor rides the same suspension-carried grid so
             # forward-return labels project from one frozen price truth (#565
-            # W4); index benchmark rows carry the neutral factor 1.0.
+            # W4); index benchmark rows carry the neutral factor 1.0. Required
+            # since the live snapshot builder v6 — BARS artifacts frozen under
+            # v5 (without this column) fail closed here and must be re-frozen.
             "adj_factor",
             "source_snapshot_id",
         },
