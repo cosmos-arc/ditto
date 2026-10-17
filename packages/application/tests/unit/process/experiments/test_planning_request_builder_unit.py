@@ -1026,3 +1026,30 @@ class TestPlanningRequestIdentityEdges:
             "code": "REPRODUCIBILITY_FAILED",
             "reason": "planning_request_identity_mutated",
         }
+
+
+def test_model_less_request_hash_is_pinned_across_versions() -> None:
+    """Guard the identity algorithm: model-less documents keep the exact
+    pre-model bytes, so durable replays of strategy-only launches survive
+    identity-algorithm changes (#565 W2b)."""
+    request = build_experiment_planning_request(_planning_document())
+
+    assert planning_request_hash(request) == (
+        "1ebd3f6973043498e91204c4a354361284f16aed93dd052c01147d9ed4fd2fe6"
+    )
+
+
+def test_explicit_empty_model_candidates_document_is_rejected() -> None:
+    """The canonical document contract omits the empty model list; only the
+    transport projection may strip an explicitly-sent empty list. Pin the
+    application-layer refusal so the two layers cannot drift apart."""
+    document = _planning_document()
+    document["matrix"] = {
+        **_mapping_at(document, "matrix"),
+        "model_candidates": [],
+    }
+
+    with pytest.raises(AppProcessError) as exc_info:
+        build_experiment_planning_request(document)
+    assert exc_info.value.details["code"] == "SPEC_INVALID"
+    assert exc_info.value.details["reason"] == ("noncanonical_planning_document_matrix")
