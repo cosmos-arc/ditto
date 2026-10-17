@@ -5,6 +5,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from pathlib import Path
 from types import MappingProxyType
+from typing import cast
 from unittest.mock import MagicMock
 
 import orjson
@@ -219,6 +220,41 @@ def test_launch_document_uses_same_builder_and_launch_handler(
         "fold_count": 8,
         "plan_hash": "d" * 64,
     }
+
+
+def test_load_planning_document_omits_empty_and_keeps_model_candidates(
+    tmp_path: Path,
+) -> None:
+    """The CLI loads documents through the same canonical dump as HTTP."""
+    with_model = _document()
+    with_model["matrix"] = {
+        **cast("dict[str, object]", with_model["matrix"]),
+        "model_candidates": [
+            {"descriptor_type": "rule", "payload": {"top_k": 3}, "schema_version": 1},
+        ],
+    }
+    model_path = tmp_path / "with-model.json"
+    model_path.write_bytes(orjson.dumps(with_model))
+
+    loaded = research._load_planning_document(model_path)
+
+    loaded_matrix = cast("dict[str, object]", loaded["matrix"])
+    assert loaded_matrix["model_candidates"] == with_model["matrix"]["model_candidates"]
+
+    explicit_empty = _document()
+    explicit_empty["matrix"] = {
+        **cast("dict[str, object]", explicit_empty["matrix"]),
+        "model_candidates": [],
+    }
+    empty_path = tmp_path / "explicit-empty.json"
+    empty_path.write_bytes(orjson.dumps(explicit_empty))
+
+    loaded_empty = research._load_planning_document(empty_path)
+
+    assert "model_candidates" not in cast(
+        "dict[str, object]",
+        loaded_empty["matrix"],
+    )
 
 
 def test_get_experiment_serializes_immutable_candidate_parameters(

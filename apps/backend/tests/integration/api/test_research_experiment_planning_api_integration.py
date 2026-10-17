@@ -866,14 +866,15 @@ async def test_persistence_failure_is_stable_typed_500(
         database.close_all()
 
 
-async def test_model_candidate_document_launches_over_http_with_identical_plan_hash(
+async def test_model_candidate_document_launches_over_http_and_changes_plan_identity(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Model candidates ride the planning contract unchanged over HTTP: an
-    explicitly empty list canonicalizes to the same plan hash, the durable
-    launch spec carries the exact model envelope, and preflight/launch/replay
-    keep the zero-write guarantees proven for strategy-only documents."""
+    explicitly empty list canonicalizes to the same plan hash as an absent
+    key, a non-empty list changes the plan identity, the durable launch spec
+    carries the exact model envelope, and preflight/launch/replay keep the
+    zero-write guarantees proven for strategy-only documents."""
 
     async def run_inline(
         func: object,

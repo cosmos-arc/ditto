@@ -7,7 +7,10 @@ from copy import deepcopy
 from typing import Any
 
 import pytest
-from ditto_apps.models.research import ExperimentPlanningRequest
+from ditto_apps.models.research import (
+    ExperimentPlanningRequest,
+    canonical_planning_document,
+)
 from pydantic import ValidationError
 
 
@@ -81,12 +84,12 @@ def test_planning_request_preserves_complete_python_document() -> None:
     request = ExperimentPlanningRequest.model_validate(payload)
 
     # A plain dump materializes the optional model list at its empty default;
-    # omitting defaults reproduces the caller's document exactly.
+    # the canonical projection omits it and reproduces the caller's document.
     assert request.model_dump(mode="python") == {
         **payload,
         "matrix": {**payload["matrix"], "model_candidates": []},
     }
-    assert request.model_dump(mode="python", exclude_defaults=True) == payload
+    assert canonical_planning_document(request) == payload
 
 
 @pytest.mark.parametrize(

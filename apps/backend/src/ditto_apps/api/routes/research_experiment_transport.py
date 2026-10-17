@@ -59,6 +59,7 @@ from ditto_apps.models.research import (
     ReviewGateOutcomeResponse,
     ReviewSelectionExposureResponse,
     ReviewSelectionTraceRefResponse,
+    canonical_planning_document,
 )
 
 _PLANNING_CONFLICT_CODES = frozenset(
@@ -336,17 +337,7 @@ def build_transport_planning_request(
     ] = build_experiment_planning_request,
 ) -> ApplicationExperimentPlanningRequest:
     """Validate and decode one strict transport planning document."""
-    exclude = (
-        {"confirmed_plan_hash"} if type(request) is ExperimentLaunchRequest else None
-    )
-    # The canonical document omits optional keys left at their default (an
-    # empty model_candidates list), so an explicitly-sent empty list and an
-    # absent key decode to the same canonical planning document.
-    document = request.model_dump(
-        mode="python",
-        exclude=exclude,
-        exclude_defaults=True,
-    )
+    document = canonical_planning_document(request)
     try:
         return builder(document)
     except AppError as exc:

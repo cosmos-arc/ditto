@@ -109,6 +109,7 @@ from ditto_apps.models.research import (
     HoldoutEvaluationReceiptResponse,
     HoldoutEvaluationRequest,
     HoldoutSelectionReasonRequest,
+    canonical_planning_document,
 )
 
 pytestmark = pytest.mark.asyncio
@@ -600,11 +601,9 @@ async def test_preflight_builds_canonical_request_and_maps_every_typed_field(
 
     response = await _call_preflight(request, process)
 
-    # The transport omits keys left at their default (empty model list) so the
-    # document matches the canonical planning shape.
-    builder.assert_called_once_with(
-        request.model_dump(mode="python", exclude_defaults=True),
-    )
+    # The transport dumps through the canonical document projection: the
+    # empty model list is omitted exactly like the planning codec omits it.
+    builder.assert_called_once_with(canonical_planning_document(request))
     process.preflight.assert_called_once_with(application_request)
     assert response.data.model_dump(mode="json") == {
         "status": "ready",
