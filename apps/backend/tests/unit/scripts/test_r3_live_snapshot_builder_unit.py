@@ -220,6 +220,11 @@ def test_live_bars_retain_pre_membership_history_for_factor_lookback(
         path = tmp_path / "market" / asset_class / "bars" / "2015.parquet"
         path.parent.mkdir(parents=True)
         frame.write_parquet(path)
+    adj_path = tmp_path / "market" / "stock" / "adj" / "2015.parquet"
+    adj_path.parent.mkdir(parents=True)
+    _raw_adjustment(
+        tuple((trade_date, 1, 2.0) for trade_date in sessions)
+    ).write_parquet(adj_path)
 
     bars = build_live_bars(
         tmp_path,
@@ -232,6 +237,100 @@ def test_live_bars_retain_pre_membership_history_for_factor_lookback(
     assert bars.filter(pl.col("instrument_id") == 1)["trade_date"].to_list() == list(
         sessions
     )
+
+
+def _raw_adjustment(rows: tuple[tuple[date, int, float], ...]) -> pl.DataFrame:
+    return pl.DataFrame(
+        {
+            "trade_date": [item[0] for item in rows],
+            "instrument_id": [item[1] for item in rows],
+            "adj_factor": [item[2] for item in rows],
+        },
+        schema={
+            "trade_date": pl.Date,
+            "instrument_id": pl.Int64,
+            "adj_factor": pl.Float64,
+        },
+    )
+
+
+@pytest.mark.unit
+def test_normalized_bars_join_adjustment_factor_on_every_grid_session() -> None:
+    """Suspension days keep the factor because the factor store covers them."""
+    raw = _raw_bars(
+        (
+            (date(2015, 2, 2), 1, 10.0),
+            (date(2015, 2, 4), 1, 11.0),
+        )
+    )
+    adjustment = _raw_adjustment(
+        (
+            (date(2015, 2, 2), 1, 2.0),
+            (date(2015, 2, 3), 1, 2.5),
+            (date(2015, 2, 4), 1, 3.0),
+        )
+    )
+
+    frame = _normalized_bars(
+        raw,
+        _membership(
+            (
+                (date(2015, 2, 2), 1),
+                (date(2015, 2, 3), 1),
+                (date(2015, 2, 4), 1),
+            )
+        ),
+        authority_snapshot_id="source-1",
+        adjustment=adjustment,
+    ).sort("trade_date")
+
+    assert frame.schema["adj_factor"] == pl.Float64
+    assert frame["adj_factor"].to_list() == pytest.approx([2.0, 2.5, 3.0])
+    assert frame["is_suspended"].to_list() == [False, True, False]
+
+
+@pytest.mark.unit
+def test_normalized_bars_forward_fill_adjustment_gaps_within_instrument() -> None:
+    raw = _raw_bars(
+        (
+            (date(2015, 2, 2), 1, 10.0),
+            (date(2015, 2, 3), 1, 11.0),
+        )
+    )
+    adjustment = _raw_adjustment(((date(2015, 2, 2), 1, 2.0),))
+
+    frame = _normalized_bars(
+        raw,
+        _membership(((date(2015, 2, 2), 1), (date(2015, 2, 3), 1))),
+        authority_snapshot_id="source-1",
+        adjustment=adjustment,
+    ).sort("trade_date")
+
+    assert frame["adj_factor"].to_list() == pytest.approx([2.0, 2.0])
+
+
+@pytest.mark.unit
+def test_normalized_bars_reject_member_without_any_adjustment_factor() -> None:
+    raw = _raw_bars(((date(2015, 2, 2), 1, 10.0),))
+
+    with pytest.raises(ValueError, match="no adjustment factor"):
+        _normalized_bars(
+            raw,
+            _membership(((date(2015, 2, 2), 1),)),
+            authority_snapshot_id="source-1",
+            adjustment=_raw_adjustment(((date(2015, 2, 2), 2, 1.0),)),
+        )
+
+
+@pytest.mark.unit
+def test_normalized_bars_without_adjustment_project_neutral_factor() -> None:
+    frame = _normalized_bars(
+        _raw_bars(((date(2015, 2, 2), _BENCHMARK_INSTRUMENT_ID, 3_500.0),)),
+        _membership(((date(2015, 2, 2), _BENCHMARK_INSTRUMENT_ID),)),
+        authority_snapshot_id="source-1",
+    )
+
+    assert frame["adj_factor"].to_list() == pytest.approx([1.0])
 
 
 @pytest.mark.unit

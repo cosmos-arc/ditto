@@ -90,6 +90,10 @@ REQUIRED_COLUMNS: dict[ResearchFrameKind, frozenset[str]] = {
             "limit_up",
             "limit_down",
             "avg_volume_20d",
+            # The adjustment factor rides the same suspension-carried grid so
+            # forward-return labels project from one frozen price truth (#565
+            # W4); index benchmark rows carry the neutral factor 1.0.
+            "adj_factor",
             "source_snapshot_id",
         },
     ),
@@ -135,6 +139,7 @@ NUMERIC_COLUMNS = frozenset(
         "limit_up",
         "limit_down",
         "avg_volume_20d",
+        "adj_factor",
         "roe",
         "net_margin",
         "eps",

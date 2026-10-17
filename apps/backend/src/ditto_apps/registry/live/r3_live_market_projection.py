@@ -22,6 +22,20 @@ def _scan_bars(data_root: Path, asset_class: str) -> pl.LazyFrame:
     return pl.scan_parquet(paths)
 
 
+def _scan_adj(data_root: Path, asset_class: str) -> pl.LazyFrame:
+    """
+    Scan the adjustment-factor store covering every calendar session.
+
+    The factor store publishes rows on suspension days too, so the join with
+    the suspension-carried bar grid is total up to partition seams; residual
+    gaps inside one instrument close by forward-fill only.
+    """
+    paths = sorted((data_root / "market" / asset_class / "adj").glob("*.parquet"))
+    if not paths:
+        raise ValueError(f"live {asset_class} adjustment factor files are missing")
+    return pl.scan_parquet(paths)
+
+
 def _membership_with_observed_bar_history(
     raw: pl.DataFrame,
     membership: pl.DataFrame,
@@ -107,8 +121,15 @@ def _normalized_bars(
     membership: pl.DataFrame,
     *,
     authority_snapshot_id: str,
+    adjustment: pl.DataFrame | None = None,
 ) -> pl.DataFrame:
-    """Project a complete membership grid with suspension-safe carried prices."""
+    """
+    Project a complete membership grid with suspension-safe carried prices.
+
+    ``adjustment`` carries ``(trade_date, instrument_id, adj_factor)`` rows for
+    every calendar session; ``None`` projects the neutral factor 1.0 used for
+    index benchmarks, which have no corporate-action adjustment by contract.
+    """
     raw = _deduplicate_physical_bars(raw)
     selected = raw.select(
         "trade_date",
@@ -150,6 +171,19 @@ def _normalized_bars(
         .join(seeds, on="instrument_id", how="left")
         .sort(["instrument_id", "trade_date"])
     )
+    if adjustment is not None:
+        grid = grid.join(
+            adjustment.select("trade_date", "instrument_id", "adj_factor"),
+            on=["trade_date", "instrument_id"],
+            how="left",
+        ).with_columns(
+            pl.col("adj_factor").forward_fill().over("instrument_id"),
+        )
+        if grid["adj_factor"].null_count():
+            missing = grid.filter(pl.col("adj_factor").is_null()).select(
+                "trade_date", "instrument_id"
+            )
+            raise ValueError(f"live member has no adjustment factor: {missing.head(3)}")
     grid = grid.with_columns(
         pl.coalesce(
             pl.col("close").forward_fill().over("instrument_id"),
@@ -193,6 +227,11 @@ def _normalized_bars(
         .rolling_mean(window_size=20, min_samples=1)
         .over("instrument_id")
         .alias("avg_volume_20d"),
+        (
+            pl.lit(1.0, dtype=pl.Float64)
+            if adjustment is None
+            else pl.col("adj_factor")
+        ).alias("adj_factor"),
         pl.lit(authority_snapshot_id).alias("source_snapshot_id"),
     ).select(
         "trade_date",
@@ -208,6 +247,7 @@ def _normalized_bars(
         "limit_up",
         "limit_down",
         "avg_volume_20d",
+        "adj_factor",
         "source_snapshot_id",
     )
 
@@ -230,11 +270,20 @@ def build_live_bars(
         )
         .collect()
     )
+    adjustment = (
+        _scan_adj(data_root, source_class)
+        .filter(
+            (pl.col("trade_date") <= _END) & pl.col("instrument_id").is_in(member_ids)
+        )
+        .select("trade_date", "instrument_id", "adj_factor")
+        .collect()
+    )
     history_grid = _bar_history_grid(raw, membership, sessions)
     member_bars = _normalized_bars(
         raw,
         history_grid,
         authority_snapshot_id=authority_snapshot_id,
+        adjustment=adjustment,
     )
     benchmark = (
         _scan_bars(data_root, "index")
@@ -254,6 +303,8 @@ def build_live_bars(
     benchmark_bars = _normalized_bars(
         benchmark,
         benchmark_membership,
+        # Index levels carry no corporate-action adjustment; the neutral
+        # factor keeps the one-frame contract total for benchmark rows.
         authority_snapshot_id=authority_snapshot_id,
     )
     return pl.concat((member_bars, benchmark_bars)).sort(

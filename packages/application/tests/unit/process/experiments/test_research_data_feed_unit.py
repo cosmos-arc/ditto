@@ -123,6 +123,7 @@ def _bars(rows: tuple[tuple[str, int, float], ...]) -> pl.DataFrame:
             "limit_up": [item[2] * 1.1 for item in rows],
             "limit_down": [item[2] * 0.9 for item in rows],
             "avg_volume_20d": [90_000.0] * len(rows),
+            "adj_factor": [1.0] * len(rows),
             "source_snapshot_id": [_source_id(ResearchFrameKind.BARS)] * len(rows),
         },
     )
