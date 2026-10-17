@@ -65,7 +65,7 @@ export function ExperimentCreatePage({ onLaunched }: ExperimentCreatePageProps) 
 		planning = null;
 	}
 	const stale = preflight.data !== undefined && currentIdentity !== preflightIdentity;
-	const candidateCount = estimateCandidateCount(draft.axesJson);
+	const candidateCount = estimateCandidateCount(draft.axesJson, draft.modelCandidatesJson);
 	const canLaunch = Boolean(
 		planning && preflight.data?.planHash && preflight.data.status.toLowerCase() === "ready" && confirmed && !stale,
 	);

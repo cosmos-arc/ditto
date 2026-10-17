@@ -73,6 +73,9 @@ from ditto_application.processes.execution.factor_bridge import (
 from ditto_application.processes.experiments._execution_resolution_evidence import (
     read_durable_launch,
 )
+from ditto_application.processes.experiments._planning_values import (
+    BaselineInputValue,
+)
 from ditto_application.processes.experiments.baseline_planning import (
     resolve_planning_baseline,
 )
@@ -80,8 +83,10 @@ from ditto_application.processes.experiments.baseline_registry import (
     default_baseline_registry,
 )
 from ditto_application.processes.experiments.execution_bundle import (
+    MODEL_CANDIDATE_IMPLEMENTATION_KEY,
     CodeEnvironmentLock,
     ContentAddressedResearchInput,
+    ModelCandidateExecutionBinding,
     ResearchExecutionSemantics,
     StrategyExecutionBinding,
 )
@@ -90,10 +95,15 @@ from ditto_application.processes.experiments.execution_contracts import (
     ExactUniverseIdentity,
     ResearchAssetLane,
 )
+from ditto_application.processes.experiments.model_candidate_plans import (
+    decode_model_candidate_descriptor,
+    model_descriptor_hash,
+)
 from ditto_application.processes.experiments.planning import (
     BaselineDescriptor,
     CandidateMatrixSpec,
     ExperimentBudgetSpec,
+    ModelCandidateDescriptor,
     ResourceCostModel,
 )
 from ditto_application.processes.experiments.planning_contracts import (
@@ -101,6 +111,7 @@ from ditto_application.processes.experiments.planning_contracts import (
 )
 from ditto_application.processes.experiments.planning_probes import (
     BaselineRuntimeExecutorEvidence,
+    ModelExecutorEvidence,
 )
 from ditto_application.processes.experiments.planning_process import (
     R3_RESEARCH_CERTIFICATION_PROFILE,
@@ -430,6 +441,55 @@ class _ExecutorProbe:
                 node_registry_manifest_hash="e" * 64,
                 factor_registry_manifest_hash="d" * 64,
                 factor_binding_hashes=(factor_binding.binding_hash,),
+            ),
+        )
+
+
+class _ModelExecutorProbe(_ExecutorProbe):
+    """Probe stand-in: durable runtime lane plus certified model evidence.
+
+    Only the runtime lane (and optionally the certified lineage hash) differ
+    from the shared probe, so the launched durable evidence isolates exactly
+    the facts the resolver's model branch reads at claim time.
+    """
+
+    def __init__(
+        self,
+        *,
+        lane: str = "stock_selection",
+        lineage_hash_override: str | None = None,
+    ) -> None:
+        super().__init__()
+        self._lane = lane
+        self._lineage_hash_override = lineage_hash_override
+
+    def probe(
+        self,
+        request: ResearchExecutorProbeRequest,
+    ) -> ResearchExecutorProbeResult:
+        result = super().probe(request)
+        assert result.runtime_validation_evidence is not None
+        return replace(
+            result,
+            runtime_validation_evidence=replace(
+                result.runtime_validation_evidence,
+                lane=self._lane,
+            ),
+            model_candidates=tuple(
+                ModelExecutorEvidence(
+                    candidate_hash=candidate.candidate_hash,
+                    model_kind=decoded.lineage.model_kind.value,
+                    lineage_hash=(
+                        decoded.lineage.registration_hash
+                        if self._lineage_hash_override is None
+                        else self._lineage_hash_override
+                    ),
+                    descriptor_hash=model_descriptor_hash(candidate.descriptor),
+                )
+                for candidate in request.model_candidates
+                for decoded in (
+                    decode_model_candidate_descriptor(candidate.descriptor),
+                )
             ),
         )
 
@@ -1444,5 +1504,190 @@ def test_durable_execution_resolver_uses_only_exact_strategy_and_snapshot_identi
             ).resolve(binder_fold)
         assert missing_fold.value.details["reason"] == "launch_spec_preflight_drift"
         _assert_drift_fields(missing_fold.value, "persisted_folds")
+    finally:
+        database.close_all()
+
+
+def _model_matrix_spec() -> CandidateMatrixSpec:
+    digest = "a" * 64
+    payload: dict[str, BaselineInputValue] = {
+        "lineage": {
+            "model_kind": "rule",
+            "feature_names": ["momentum_20d", "ep_ttm"],
+            "label_id": "research.label.forward_return.next_open_hold5.v1",
+            "label_spec_hash": digest,
+            "transform_spec": {
+                "imputation": "median",
+                "winsorize_lower_quantile": 0.01,
+                "winsorize_upper_quantile": 0.99,
+                "scaling": "zscore",
+            },
+            "hyperparameters": {"ranking_feature": "momentum_20d"},
+            "seed": 7,
+            "code_environment": {
+                "implementation_key": "ditto_application.model_candidates.ridge.v1",
+                "python": "3.13.14",
+                "lockfile_sha256": digest,
+            },
+        },
+        "inputs": {
+            "label_prices": {
+                "input_id": "model-input-label_prices",
+                "content_hash": digest,
+                "schema_hash": digest,
+                "source_snapshot_ids": ["provider-snapshot-task8"],
+            },
+            "features": {
+                "input_id": "model-input-features",
+                "content_hash": digest,
+                "schema_hash": digest,
+                "source_snapshot_ids": ["provider-snapshot-task8"],
+            },
+            "calendar": {
+                "input_id": "model-input-calendar",
+                "content_hash": digest,
+                "schema_hash": digest,
+                "source_snapshot_ids": ["provider-snapshot-task8"],
+            },
+        },
+        "top_k": 3,
+    }
+    return CandidateMatrixSpec(
+        baseline=BaselineDescriptor(
+            descriptor_type="etf-current-active",
+            payload={
+                "strategy_id": "seed_etf_rotation",
+                "version": 2,
+                "spec_hash": "f" * 64,
+            },
+        ),
+        model_candidates=(
+            ModelCandidateDescriptor(
+                descriptor_type="rule",
+                payload=cast("Mapping[str, BaselineInputValue]", payload),
+            ),
+        ),
+    )
+
+
+def _launch_model_experiment(
+    *,
+    reader: SQLiteExperimentReader,
+    writer: SQLiteExperimentWriter,
+    probe: _ModelExecutorProbe,
+    experiment_id: str,
+) -> FoldView:
+    """Launch one model-candidate experiment and return its model fold."""
+    matrix = _model_matrix_spec()
+    request = replace(
+        _planning_request(),
+        experiment_id=experiment_id,
+        matrix_spec=matrix,
+        promotion_objective=_objective(experiment_id, matrix),
+    )
+    process = ExperimentPlanningProcess(
+        reader=reader,
+        writer=writer,
+        certification_probe=_CertificationProbe(),
+        executor_probe=probe,
+        authority_probe=_AuthorityProbe(),
+    )
+    report = process.preflight(request)
+    assert report.plan_hash is not None
+    process.launch(request, confirmed_plan_hash=report.plan_hash)
+    typed_id = ExperimentId(experiment_id)
+    model_row = next(
+        candidate
+        for candidate in reader.list_candidates(typed_id)
+        if "__ditto_model__" in candidate.parameters
+    )
+    return next(
+        fold
+        for fold in reader.list_folds(typed_id)
+        if fold.spec.key.candidate_id == model_row.candidate_id
+        and fold.spec.fold_role is FoldRole.WALK_FORWARD
+    )
+
+
+@pytest.mark.slow
+def test_durable_resolver_builds_model_candidate_plan_binding_from_launch_evidence(
+    tmp_path: Path,
+) -> None:
+    """The model fold claim reads only durable launch evidence (#565 W2b).
+
+    The plan binding pins lineage/inputs/top_k plus trained_at from the
+    persisted launch clock; the durable lane gate and the executor-evidence
+    parity check re-run at claim, refusing drifted durable evidence.
+    """
+    database = ResearchExperimentDatabase(tmp_path)
+    database.initialize()
+    reader = SQLiteExperimentReader(database)
+    writer = SQLiteExperimentWriter(database)
+    resolver = _resolver_with_distinct_runtime_lanes(
+        reader,
+        _ExactStrategyReader(),
+        _ExactInputsResolver(),
+    )[0]
+
+    try:
+        model_fold = _launch_model_experiment(
+            reader=reader,
+            writer=writer,
+            probe=_ModelExecutorProbe(),
+            experiment_id="exp-model-resolver-positive-1",
+        )
+        semantics = resolver.resolve(model_fold)
+        binding = semantics.strategy
+        assert isinstance(binding, ModelCandidateExecutionBinding)
+        decoded = decode_model_candidate_descriptor(
+            _model_matrix_spec().model_candidates[0],
+        )
+        assert binding.model_kind == "rule"
+        assert binding.lineage_hash == decoded.lineage.registration_hash
+        assert binding.lineage_payload == decoded.lineage.canonical_payload()
+        assert binding.inputs == decoded.inputs
+        assert binding.top_k == decoded.top_k
+        assert binding.implementation_key == MODEL_CANDIDATE_IMPLEMENTATION_KEY
+        assert binding.executor_contract_version == 1
+        # trained_at is pinned from the persisted launch clock, not claim time.
+        assert binding.trained_at_epoch_us == _NOW_US
+        cutoff_date = model_fold.spec.test_window.start - timedelta(days=1)
+        assert binding.knowledge_cutoff_epoch_us == int(
+            datetime(
+                cutoff_date.year,
+                cutoff_date.month,
+                cutoff_date.day,
+                tzinfo=UTC,
+            ).timestamp()
+            * 1_000_000,
+        )
+        assert semantics.policy.lane is ResearchAssetLane.STOCK
+        assert semantics.backtest.rebalance_frequency == "fold_schedule"
+        assert semantics.backtest.benchmark is None
+        replay = resolver.resolve(model_fold)
+        assert replay.reproduction_fingerprint == semantics.reproduction_fingerprint
+        assert replay.strategy == binding
+
+        lane_fold = _launch_model_experiment(
+            reader=reader,
+            writer=writer,
+            probe=_ModelExecutorProbe(lane="etf_rotation"),
+            experiment_id="exp-model-resolver-lane-1",
+        )
+        with pytest.raises(AppProcessError) as lane_mismatch:
+            resolver.resolve(lane_fold)
+        assert lane_mismatch.value.details["reason"] == "model_candidate_lane_mismatch"
+
+        drift_fold = _launch_model_experiment(
+            reader=reader,
+            writer=writer,
+            probe=_ModelExecutorProbe(lineage_hash_override="0" * 64),
+            experiment_id="exp-model-resolver-drift-1",
+        )
+        with pytest.raises(AppProcessError) as identity_drift:
+            resolver.resolve(drift_fold)
+        assert identity_drift.value.details["reason"] == (
+            "model_executor_identity_drift"
+        )
     finally:
         database.close_all()

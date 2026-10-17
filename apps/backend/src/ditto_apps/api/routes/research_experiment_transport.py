@@ -59,6 +59,7 @@ from ditto_apps.models.research import (
     ReviewGateOutcomeResponse,
     ReviewSelectionExposureResponse,
     ReviewSelectionTraceRefResponse,
+    canonical_planning_document,
 )
 
 _PLANNING_CONFLICT_CODES = frozenset(
@@ -336,10 +337,7 @@ def build_transport_planning_request(
     ] = build_experiment_planning_request,
 ) -> ApplicationExperimentPlanningRequest:
     """Validate and decode one strict transport planning document."""
-    exclude = (
-        {"confirmed_plan_hash"} if type(request) is ExperimentLaunchRequest else None
-    )
-    document = request.model_dump(mode="python", exclude=exclude)
+    document = canonical_planning_document(request)
     try:
         return builder(document)
     except AppError as exc:

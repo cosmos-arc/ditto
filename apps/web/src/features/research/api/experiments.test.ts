@@ -25,11 +25,80 @@ describe("experiment planning adapter", () => {
 	});
 
 	it("estimates baseline-only and matrix candidate counts against the 128 ceiling", () => {
-		expect(estimateCandidateCount("[]")).toBe(1);
+		// Empty axes still contribute the identity binder combination.
+		expect(estimateCandidateCount("[]")).toBe(2);
 		expect(estimateCandidateCount(createDefaultExperimentDraft().axesJson)).toBe(3);
 		expect(estimateCandidateCount("not-json")).toBeNull();
 		expect(estimateCandidateCount("[null]")).toBeNull();
 		expect(estimateCandidateCount('[{"values":[]} ]')).toBeNull();
+	});
+
+	it("embeds model candidates in the canonical matrix only when the list is non-empty", () => {
+		const envelope = {
+			descriptor_type: "rule",
+			payload: {
+				lineage: {
+					model_kind: "rule",
+					feature_names: ["momentum_20d"],
+					label_id: "research.label.forward_return.next_open_hold5.v1",
+					label_spec_hash: "a".repeat(64),
+					transform_spec: {
+						imputation: "median",
+						winsorize_lower_quantile: 0.01,
+						winsorize_upper_quantile: 0.99,
+						scaling: "zscore",
+					},
+					hyperparameters: { ranking_feature: "momentum_20d" },
+					seed: 7,
+					code_environment: {
+						implementation_key: "ditto_application.model_candidates.ridge.v1",
+						python: "3.13.14",
+						lockfile_sha256: "a".repeat(64),
+					},
+				},
+				inputs: {
+					label_prices: {
+						input_id: "model-input-label-prices",
+						content_hash: "b".repeat(64),
+						schema_hash: "b".repeat(64),
+						source_snapshot_ids: ["provider-snapshot-r3"],
+					},
+					features: {
+						input_id: "model-input-features",
+						content_hash: "b".repeat(64),
+						schema_hash: "b".repeat(64),
+						source_snapshot_ids: ["provider-snapshot-r3"],
+					},
+					calendar: {
+						input_id: "model-input-calendar",
+						content_hash: "b".repeat(64),
+						schema_hash: "b".repeat(64),
+						source_snapshot_ids: ["provider-snapshot-r3"],
+					},
+				},
+				top_k: 3,
+			},
+			schema_version: 1,
+		};
+		const draft = {
+			...createDefaultExperimentDraft(),
+			modelCandidatesJson: JSON.stringify([envelope], null, 2),
+		};
+
+		const request = buildExperimentPlanningRequest(draft);
+		expect(request.matrix.model_candidates).toEqual([envelope]);
+		const identity = planningRequestIdentity(request);
+		expect(identity).toContain('"model_candidates":');
+		expect(identity).toContain('"top_k": 3');
+
+		const empty = buildExperimentPlanningRequest(createDefaultExperimentDraft());
+		expect(empty.matrix.model_candidates).toBeUndefined();
+		expect(planningRequestIdentity(empty)).not.toContain("model_candidates");
+
+		expect(estimateCandidateCount("[]", JSON.stringify([envelope, envelope]))).toBe(4);
+		expect(estimateCandidateCount("[]", "[]")).toBe(2);
+		expect(estimateCandidateCount("[]", "not-json")).toBeNull();
+		expect(estimateCandidateCount("[]", "[1]")).toBeNull();
 	});
 
 	it("rejects non-object planning sections and non-finite numeric authority", () => {

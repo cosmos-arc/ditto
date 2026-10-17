@@ -30,7 +30,10 @@ from ditto_application.processes.experiments.planning_request_builder import (
 from pydantic import ValidationError
 
 from ditto_apps.cli.utils.output import output_json_dict
-from ditto_apps.models.research import ExperimentPlanningRequest
+from ditto_apps.models.research import (
+    ExperimentPlanningRequest,
+    canonical_planning_document,
+)
 from ditto_apps.registry.contexts import create_research_bundle
 from ditto_apps.registry.contexts.materialization import create_materialization_bundle
 
@@ -154,7 +157,10 @@ def _load_planning_document(document: Path) -> dict[str, object]:
             "document must contain one strict canonical planning request",
             param_hint="--document",
         ) from exc
-    return request.model_dump(mode="python")
+    return cast(
+        "dict[str, object]",
+        canonical_planning_document(request),
+    )
 
 
 @app.command("preflight")

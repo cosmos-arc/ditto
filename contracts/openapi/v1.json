@@ -13015,6 +13015,13 @@
           "candidate_limit": {
             "title": "Candidate Limit",
             "type": "integer"
+          },
+          "model_candidates": {
+            "items": {
+              "$ref": "#/components/schemas/ExperimentPlanningModelCandidateRequest"
+            },
+            "title": "Model Candidates",
+            "type": "array"
           }
         },
         "required": [
@@ -13023,6 +13030,34 @@
           "candidate_limit"
         ],
         "title": "ExperimentPlanningMatrixRequest",
+        "type": "object"
+      },
+      "ExperimentPlanningModelCandidateRequest": {
+        "additionalProperties": false,
+        "description": "Typed model-candidate descriptor envelope for the candidate matrix.",
+        "properties": {
+          "descriptor_type": {
+            "title": "Descriptor Type",
+            "type": "string"
+          },
+          "payload": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/JsonValue-Input"
+            },
+            "title": "Payload",
+            "type": "object"
+          },
+          "schema_version": {
+            "title": "Schema Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "descriptor_type",
+          "payload",
+          "schema_version"
+        ],
+        "title": "ExperimentPlanningModelCandidateRequest",
         "type": "object"
       },
       "ExperimentPlanningParameterAxisRequest": {

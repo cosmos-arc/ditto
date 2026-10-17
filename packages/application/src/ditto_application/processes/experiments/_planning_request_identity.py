@@ -29,6 +29,7 @@ from ditto_application.processes.experiments.planning import (
     CandidateMatrixSpec,
     ExperimentBudgetSpec,
     ExperimentFailurePolicy,
+    ModelCandidateDescriptor,
     ParameterAxis,
     ResourceCostModel,
     inspect_candidate_matrix_size,
@@ -115,7 +116,7 @@ def _parameter_type(value: object) -> str:
 
 
 def _matrix_payload(matrix: CandidateMatrixSpec) -> Mapping[str, object]:
-    return {
+    payload: dict[str, object] = {
         "baseline": {
             "descriptor_type": matrix.baseline.descriptor_type,
             "payload": plain_planning_value(matrix.baseline.payload),
@@ -133,12 +134,25 @@ def _matrix_payload(matrix: CandidateMatrixSpec) -> Mapping[str, object]:
         ],
         "candidate_limit": matrix.candidate_limit,
     }
+    # Mirrors the canonical matrix codec: requests without model candidates
+    # keep their exact pre-model identity bytes.
+    if matrix.model_candidates:
+        payload["model_candidates"] = [
+            {
+                "descriptor_type": model.descriptor_type,
+                "payload": plain_planning_value(model.payload),
+                "schema_version": model.schema_version,
+            }
+            for model in matrix.model_candidates
+        ]
+    return payload
 
 
 def _validated_matrix_payload(matrix: CandidateMatrixSpec) -> Mapping[str, object]:
     """Rebuild nested matrix nodes and reject stale derived identities."""
     raw_baseline_payload: object = matrix.baseline.payload
     raw_axes: object = matrix.axes
+    raw_models: object = matrix.model_candidates
     if (
         type(matrix) is not CandidateMatrixSpec
         or type(matrix.baseline) is not BaselineDescriptor
@@ -153,21 +167,45 @@ def _validated_matrix_payload(matrix: CandidateMatrixSpec) -> Mapping[str, objec
     axes = cast("tuple[ParameterAxis, ...]", raw_axis_items)
     if any(type(axis.values) is not tuple for axis in axes):
         _invalid("invalid_planning_request_matrix_graph")
+    if type(raw_models) is not tuple or any(
+        type(item) is not ModelCandidateDescriptor
+        or type(item.canonical_json) is not str
+        for item in cast("tuple[object, ...]", raw_models)
+    ):
+        _invalid("invalid_planning_request_matrix_graph")
+    models = cast("tuple[ModelCandidateDescriptor, ...]", raw_models)
     rebuilt_baseline = BaselineDescriptor(
         descriptor_type=matrix.baseline.descriptor_type,
         payload=cast("Mapping[str, BaselineInputValue]", raw_baseline_payload),
         schema_version=matrix.baseline.schema_version,
     )
     rebuilt_axes = tuple(ParameterAxis(axis.name, axis.values) for axis in axes)
+    rebuilt_models = tuple(
+        ModelCandidateDescriptor(
+            descriptor_type=model.descriptor_type,
+            payload=model.payload,
+            schema_version=model.schema_version,
+        )
+        for model in models
+    )
     rebuilt = CandidateMatrixSpec(
         baseline=rebuilt_baseline,
         axes=rebuilt_axes,
+        model_candidates=rebuilt_models,
         candidate_limit=matrix.candidate_limit,
     )
     payload = _matrix_payload(matrix)
     rebuilt_payload = _matrix_payload(rebuilt)
     if (
         matrix.baseline.canonical_json != rebuilt_baseline.canonical_json
+        or any(
+            original.canonical_json != rebuilt_model.canonical_json
+            for original, rebuilt_model in zip(
+                models,
+                rebuilt_models,
+                strict=True,
+            )
+        )
         or orjson.dumps(payload, option=orjson.OPT_SORT_KEYS)
         != orjson.dumps(rebuilt_payload, option=orjson.OPT_SORT_KEYS)
     ):

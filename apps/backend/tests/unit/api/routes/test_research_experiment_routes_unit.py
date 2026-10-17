@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Mapping
 from dataclasses import replace
 from datetime import UTC, date, datetime
 from functools import partial
@@ -31,6 +31,9 @@ from ditto_application.processes.experiments.comparison_reader import (
     ExperimentComparisonReader,
 )
 from ditto_application.processes.experiments.holdout import HoldoutClaimReceipt
+from ditto_application.processes.experiments.planning_contracts import (
+    ExperimentPlanningRequest as ApplicationPlanningRequest,
+)
 from ditto_application.processes.experiments.planning_contracts import (
     ExperimentPreflightCheck,
     PreflightOutcome,
@@ -106,6 +109,7 @@ from ditto_apps.models.research import (
     HoldoutEvaluationReceiptResponse,
     HoldoutEvaluationRequest,
     HoldoutSelectionReasonRequest,
+    canonical_planning_document,
 )
 
 pytestmark = pytest.mark.asyncio
@@ -217,6 +221,101 @@ def _planning_payload() -> dict[str, object]:
         "failure_policy": "fail_fast",
         "created_at": "2026-07-30T00:00:00Z",
     }
+
+
+def _model_candidate_envelope() -> dict[str, object]:
+    digest = "a" * 64
+    return {
+        "descriptor_type": "rule",
+        "payload": {
+            "lineage": {
+                "model_kind": "rule",
+                "feature_names": ["momentum_20d"],
+                "label_id": "research.label.forward_return.next_open_hold5.v1",
+                "label_spec_hash": digest,
+                "transform_spec": {
+                    "imputation": "median",
+                    "winsorize_lower_quantile": 0.01,
+                    "winsorize_upper_quantile": 0.99,
+                    "scaling": "zscore",
+                },
+                "hyperparameters": {"ranking_feature": "momentum_20d"},
+                "seed": 7,
+                "code_environment": {
+                    "implementation_key": "ditto_application.model_candidates.ridge.v1",
+                    "python": "3.13.14",
+                    "lockfile_sha256": digest,
+                },
+            },
+            "inputs": {
+                "label_prices": {
+                    "input_id": "model-input-label-prices",
+                    "content_hash": digest,
+                    "schema_hash": digest,
+                    "source_snapshot_ids": ["provider-snapshot-1"],
+                },
+                "features": {
+                    "input_id": "model-input-features",
+                    "content_hash": digest,
+                    "schema_hash": digest,
+                    "source_snapshot_ids": ["provider-snapshot-1"],
+                },
+                "calendar": {
+                    "input_id": "model-input-calendar",
+                    "content_hash": digest,
+                    "schema_hash": digest,
+                    "source_snapshot_ids": ["provider-snapshot-1"],
+                },
+            },
+            "top_k": 3,
+        },
+        "schema_version": 1,
+    }
+
+
+def test_transport_planning_dump_keeps_model_candidates_and_omits_empty_list() -> None:
+    """The transport dump mirrors the canonical matrix: entries ride through,
+    an empty list is omitted, and an absent key stays absent."""
+    captured: list[Mapping[str, object]] = []
+
+    def capture(document: Mapping[str, object]) -> ApplicationPlanningRequest:
+        captured.append(dict(document))
+        return cast("ApplicationPlanningRequest", object())
+
+    with_models = _planning_payload()
+    with_models["matrix"] = {
+        **cast("dict[str, object]", with_models["matrix"]),
+        "model_candidates": [_model_candidate_envelope()],
+    }
+    build_transport_planning_request(
+        ExperimentPlanningRequest.model_validate(with_models),
+        builder=capture,
+    )
+    dumped_matrix = cast("Mapping[str, object]", captured[0]["matrix"])
+    assert dumped_matrix["model_candidates"] == [_model_candidate_envelope()]
+
+    explicit_empty = _planning_payload()
+    explicit_empty["matrix"] = {
+        **cast("dict[str, object]", explicit_empty["matrix"]),
+        "model_candidates": [],
+    }
+    build_transport_planning_request(
+        ExperimentPlanningRequest.model_validate(explicit_empty),
+        builder=capture,
+    )
+    assert "model_candidates" not in cast(
+        "Mapping[str, object]",
+        captured[1]["matrix"],
+    )
+
+    build_transport_planning_request(
+        ExperimentPlanningRequest.model_validate(_planning_payload()),
+        builder=capture,
+    )
+    assert "model_candidates" not in cast(
+        "Mapping[str, object]",
+        captured[2]["matrix"],
+    )
 
 
 def _preflight_report() -> ExperimentPreflightReport:
@@ -502,7 +601,9 @@ async def test_preflight_builds_canonical_request_and_maps_every_typed_field(
 
     response = await _call_preflight(request, process)
 
-    builder.assert_called_once_with(request.model_dump(mode="python"))
+    # The transport dumps through the canonical document projection: the
+    # empty model list is omitted exactly like the planning codec omits it.
+    builder.assert_called_once_with(canonical_planning_document(request))
     process.preflight.assert_called_once_with(application_request)
     assert response.data.model_dump(mode="json") == {
         "status": "ready",

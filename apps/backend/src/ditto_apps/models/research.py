@@ -6,7 +6,7 @@ from datetime import date, datetime
 from typing import Literal
 
 from ditto_platform.foundation.json_types import JsonValue
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 __all__ = [
     "CandidateExclusionEventResponse",
@@ -27,6 +27,7 @@ __all__ = [
     "ExperimentGateResponse",
     "ExperimentLaunchRequest",
     "ExperimentLaunchResponse",
+    "ExperimentPlanningModelCandidateRequest",
     "ExperimentPlanningRequest",
     "ExperimentPreflightCheckResponse",
     "ExperimentPreflightResponse",
@@ -99,12 +100,25 @@ class ExperimentPlanningParameterAxisRequest(_StrictPlanningModel):
     values: list[ExperimentPlanningParameterValueRequest]
 
 
+class ExperimentPlanningModelCandidateRequest(_StrictPlanningModel):
+    """Typed model-candidate descriptor envelope for the candidate matrix."""
+
+    descriptor_type: str
+    payload: dict[str, JsonValue]
+    schema_version: int
+
+
 class ExperimentPlanningMatrixRequest(_StrictPlanningModel):
     """Complete candidate matrix preimage."""
 
     baseline: ExperimentPlanningBaselineRequest
     axes: list[ExperimentPlanningParameterAxisRequest]
     candidate_limit: int
+    # Absent on documents written before model candidates existed; the
+    # canonical matrix encoding omits the key while the list is empty.
+    model_candidates: list[ExperimentPlanningModelCandidateRequest] = Field(
+        default_factory=list,
+    )
 
 
 class ExperimentPlanningDatasetRequirementRequest(_StrictPlanningModel):
@@ -156,6 +170,26 @@ class ExperimentLaunchRequest(ExperimentPlanningRequest):
     """Canonical planning document plus the operator-confirmed plan identity."""
 
     confirmed_plan_hash: str
+
+
+def canonical_planning_document(
+    request: ExperimentPlanningRequest | ExperimentLaunchRequest,
+) -> dict[str, JsonValue]:
+    """
+    Dump one strict planning document into its canonical transport shape.
+
+    The canonical matrix omits ``model_candidates`` while the list is empty
+    (matching the planning codec), so an explicitly-sent empty list and an
+    absent key decode to the same canonical planning document.
+    """
+    exclude = (
+        {"confirmed_plan_hash"} if type(request) is ExperimentLaunchRequest else None
+    )
+    document = request.model_dump(mode="python", exclude=exclude)
+    matrix = document.get("matrix")
+    if isinstance(matrix, dict) and matrix.get("model_candidates") == []:
+        del matrix["model_candidates"]
+    return document
 
 
 class ExperimentPreflightCheckResponse(BaseModel):
