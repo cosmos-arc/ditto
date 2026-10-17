@@ -339,7 +339,14 @@ def build_transport_planning_request(
     exclude = (
         {"confirmed_plan_hash"} if type(request) is ExperimentLaunchRequest else None
     )
-    document = request.model_dump(mode="python", exclude=exclude)
+    # The canonical document omits optional keys left at their default (an
+    # empty model_candidates list), so an explicitly-sent empty list and an
+    # absent key decode to the same canonical planning document.
+    document = request.model_dump(
+        mode="python",
+        exclude=exclude,
+        exclude_defaults=True,
+    )
     try:
         return builder(document)
     except AppError as exc:

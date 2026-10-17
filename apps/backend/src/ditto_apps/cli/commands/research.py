@@ -154,7 +154,9 @@ def _load_planning_document(document: Path) -> dict[str, object]:
             "document must contain one strict canonical planning request",
             param_hint="--document",
         ) from exc
-    return request.model_dump(mode="python")
+    # Mirrors the HTTP transport dump: keys left at their default (the empty
+    # model-candidate list) are omitted so the document stays canonical.
+    return request.model_dump(mode="python", exclude_defaults=True)
 
 
 @app.command("preflight")

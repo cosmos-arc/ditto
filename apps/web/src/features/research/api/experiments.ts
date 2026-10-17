@@ -47,6 +47,7 @@ export type ExperimentConfigDraft = {
 	readonly baselineSchemaVersion: number;
 	readonly baselinePayloadJson: string;
 	readonly axesJson: string;
+	readonly modelCandidatesJson: string;
 	readonly candidateLimit: number;
 	readonly promotionObjectiveJson: string;
 	readonly datasetRequirementsJson: string;
@@ -122,6 +123,7 @@ function serializeExperimentPlanningDraft(draft: ExperimentConfigDraft): string 
 	const validation = draft.validationJson.trim();
 	const baselinePayload = draft.baselinePayloadJson.trim();
 	const axes = draft.axesJson.trim();
+	const modelCandidates = serializeModelCandidates(draft.modelCandidatesJson);
 	const promotionObjective = draft.promotionObjectiveJson.trim();
 	const datasetRequirements = draft.datasetRequirementsJson.trim();
 	return `{${[
@@ -131,7 +133,7 @@ function serializeExperimentPlanningDraft(draft: ExperimentConfigDraft): string 
 		`"strategy":{"strategy_id":${encodeScalar(draft.strategyId.trim(), "Strategy ID")},"version":${encodeScalar(draft.strategyVersion, "Strategy version")},"spec_hash":${encodeScalar(draft.strategySpecHash.trim(), "Strategy spec hash")},"spec_json":${strategySpec}}`,
 		`"snapshot":{"snapshot_id":${encodeScalar(draft.snapshotId.trim(), "Snapshot ID")},"manifest_hash":${encodeScalar(draft.snapshotManifestHash.trim(), "Snapshot manifest hash")}}`,
 		`"validation":${validation}`,
-		`"matrix":{"baseline":{"descriptor_type":${encodeScalar(draft.baselineDescriptorType.trim(), "Baseline descriptor")},"payload":${baselinePayload},"schema_version":${encodeScalar(draft.baselineSchemaVersion, "Baseline schema version")}},"axes":${axes},"candidate_limit":${encodeScalar(draft.candidateLimit, "Candidate limit")}}`,
+		`"matrix":{"baseline":{"descriptor_type":${encodeScalar(draft.baselineDescriptorType.trim(), "Baseline descriptor")},"payload":${baselinePayload},"schema_version":${encodeScalar(draft.baselineSchemaVersion, "Baseline schema version")}},"axes":${axes},"candidate_limit":${encodeScalar(draft.candidateLimit, "Candidate limit")}${modelCandidates}}`,
 		`"promotion_objective":${promotionObjective}`,
 		`"dataset_requirements":${datasetRequirements}`,
 		`"cost_model":{"bytes_per_run":${encodeScalar(draft.bytesPerRun, "Bytes per run")},"bytes_per_trading_session":${encodeScalar(draft.bytesPerTradingSession, "Bytes per trading session")}}`,
@@ -141,6 +143,12 @@ function serializeExperimentPlanningDraft(draft: ExperimentConfigDraft): string 
 		`"failure_policy":${encodeScalar(draft.failurePolicy, "Failure policy")}`,
 		`"created_at":${encodeScalar(draft.createdAt, "Created at")}`,
 	].join(",")}}`;
+}
+
+/** The canonical matrix omits `model_candidates` while the list is empty. */
+function serializeModelCandidates(value: string): string {
+	const parsed = parseArray(value, "Model candidates");
+	return parsed.length > 0 ? `,"model_candidates":${value.trim()}` : "";
 }
 
 export function createDefaultExperimentDraft(): ExperimentConfigDraft {
@@ -172,6 +180,7 @@ export function createDefaultExperimentDraft(): ExperimentConfigDraft {
 			2,
 		),
 		candidateLimit: 128,
+		modelCandidatesJson: "[]",
 		promotionObjectiveJson: JSON.stringify({ schema_id: "r3-promotion-objective", schema_version: 1 }, null, 2),
 		datasetRequirementsJson: JSON.stringify(
 			[
@@ -197,17 +206,21 @@ export function createDefaultExperimentDraft(): ExperimentConfigDraft {
 	};
 }
 
-export function estimateCandidateCount(axesJson: string): number | null {
+export function estimateCandidateCount(axesJson: string, modelCandidatesJson: string = "[]"): number | null {
 	try {
 		const axes = parseArray(axesJson, "Matrix axes");
-		if (axes.length === 0) return 1;
-		const combinations = axes.reduce<number>((count, axis) => {
-			if (typeof axis !== "object" || axis === null || Array.isArray(axis)) throw new Error("invalid axis");
-			const values = (axis as Record<string, unknown>)["values"];
-			if (!Array.isArray(values) || values.length === 0) throw new Error("invalid axis values");
-			return count * values.length;
-		}, 1);
-		return 1 + combinations;
+		const models = parseArray(modelCandidatesJson, "Model candidates");
+		if (models.some((item) => typeof item !== "object" || item === null || Array.isArray(item))) return null;
+		const combinations =
+			axes.length === 0
+				? 1
+				: axes.reduce<number>((count, axis) => {
+						if (typeof axis !== "object" || axis === null || Array.isArray(axis)) throw new Error("invalid axis");
+						const values = (axis as Record<string, unknown>)["values"];
+						if (!Array.isArray(values) || values.length === 0) throw new Error("invalid axis values");
+						return count * values.length;
+					}, 1);
+		return 1 + combinations + models.length;
 	} catch {
 		return null;
 	}
@@ -215,6 +228,8 @@ export function estimateCandidateCount(axesJson: string): number | null {
 
 /** Canonical planning document construction lives here and nowhere in the component tree. */
 export function buildExperimentPlanningRequest(draft: ExperimentConfigDraft): ExperimentPlanningRequest {
+	type ModelCandidateEnvelope = NonNullable<ExperimentPlanningRequest["matrix"]["model_candidates"]>[number];
+	const modelCandidates: unknown[] = parseArray(draft.modelCandidatesJson, "Model candidates");
 	const request: ExperimentPlanningRequest = {
 		experiment_id: draft.experimentId.trim(),
 		research_cycle_id: draft.researchCycleId.trim(),
@@ -235,6 +250,7 @@ export function buildExperimentPlanningRequest(draft: ExperimentConfigDraft): Ex
 			},
 			axes: parseArray(draft.axesJson, "Matrix axes") as ExperimentPlanningRequest["matrix"]["axes"],
 			candidate_limit: draft.candidateLimit,
+			...(modelCandidates.length > 0 ? { model_candidates: modelCandidates as ModelCandidateEnvelope[] } : {}),
 		},
 		promotion_objective: parseRecord(draft.promotionObjectiveJson, "Promotion objective"),
 		dataset_requirements: parseArray(

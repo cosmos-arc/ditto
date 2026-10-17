@@ -1,6 +1,6 @@
 /**
  * DO NOT EDIT: generated from contracts/openapi/v1.json.
- * Schema SHA-256: 5b7c7ab6088130433e6bcb8534331fe5604f76feb2f4e4c9e7bd54e5aef942a1
+ * Schema SHA-256: effa4ba3fdd58b5b570014546c99ef8f66917e3b271388d59d822ffb01ca3203
  * Generator: openapi-typescript 7.13.0
  */
 
@@ -9257,6 +9257,22 @@ export interface components {
             baseline: components["schemas"]["ExperimentPlanningBaselineRequest"];
             /** Candidate Limit */
             candidate_limit: number;
+            /** Model Candidates */
+            model_candidates?: components["schemas"]["ExperimentPlanningModelCandidateRequest"][];
+        };
+        /**
+         * ExperimentPlanningModelCandidateRequest
+         * @description Typed model-candidate descriptor envelope for the candidate matrix.
+         */
+        ExperimentPlanningModelCandidateRequest: {
+            /** Descriptor Type */
+            descriptor_type: string;
+            /** Payload */
+            payload: {
+                [key: string]: components["schemas"]["JsonValue-Input"];
+            };
+            /** Schema Version */
+            schema_version: number;
         };
         /**
          * ExperimentPlanningParameterAxisRequest

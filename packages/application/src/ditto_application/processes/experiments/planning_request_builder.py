@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import math
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import asdict, replace
 from datetime import UTC, datetime
 from hashlib import sha256
@@ -140,7 +140,7 @@ def _detach_mapping(
 
 
 def _detach_list(
-    items: list[object],
+    items: Sequence[object],
     *,
     active_ids: set[int],
 ) -> list[_JsonValue]:
@@ -172,8 +172,13 @@ def _detach_json(
             cast("Mapping[object, object]", value),
             active_ids=active_ids,
         )
-    if type(value) is list:
-        return _detach_list(cast("list[object]", value), active_ids=active_ids)
+    if type(value) in (list, tuple):
+        # Frozen planning envelopes render JSON arrays as tuples; both forms
+        # detach to the same canonical list.
+        return _detach_list(
+            cast("Sequence[object]", value),
+            active_ids=active_ids,
+        )
     _invalid("invalid_planning_document_value_type")
 
 

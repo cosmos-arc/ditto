@@ -80,7 +80,13 @@ def test_planning_request_preserves_complete_python_document() -> None:
 
     request = ExperimentPlanningRequest.model_validate(payload)
 
-    assert request.model_dump(mode="python") == payload
+    # A plain dump materializes the optional model list at its empty default;
+    # omitting defaults reproduces the caller's document exactly.
+    assert request.model_dump(mode="python") == {
+        **payload,
+        "matrix": {**payload["matrix"], "model_candidates": []},
+    }
+    assert request.model_dump(mode="python", exclude_defaults=True) == payload
 
 
 @pytest.mark.parametrize(

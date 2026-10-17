@@ -62,7 +62,7 @@ export function ExperimentConfigForm({ draft, onChange }: ExperimentConfigFormPr
 	const update = <K extends keyof ExperimentConfigDraft>(key: K, value: ExperimentConfigDraft[K]): void => {
 		onChange({ ...draft, [key]: value });
 	};
-	const candidateCount = estimateCandidateCount(draft.axesJson);
+	const candidateCount = estimateCandidateCount(draft.axesJson, draft.modelCandidatesJson);
 
 	return (
 		<div className="flex flex-col gap-(--section-gap)">
@@ -153,6 +153,13 @@ export function ExperimentConfigForm({ draft, onChange }: ExperimentConfigFormPr
 							onChange={(v) => update("baselinePayloadJson", v)}
 						/>
 						<JsonField label="Matrix axes JSON" value={draft.axesJson} onChange={(v) => update("axesJson", v)} />
+					</div>
+					<div className="sm:col-span-2 2xl:col-span-3">
+						<JsonField
+							label="Model candidates JSON"
+							value={draft.modelCandidatesJson}
+							onChange={(v) => update("modelCandidatesJson", v)}
+						/>
 					</div>
 					<div className="rounded-(--radius-sm) border border-(--color-border-subtle) p-3">
 						<span className="block text-xs text-(--color-foreground-tertiary)">Candidate estimate / hard ceiling</span>

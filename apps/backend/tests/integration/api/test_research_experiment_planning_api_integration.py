@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from copy import deepcopy
-from dataclasses import asdict
+from dataclasses import asdict, replace
 from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 from sqlite3 import Connection
@@ -43,21 +44,30 @@ from ditto_application.commands.experiments import LaunchExperimentHandler
 from ditto_application.processes.experiments._launch_idempotency import (
     bind_prepared_launch_idempotency,
 )
+from ditto_application.processes.experiments._planning_values import (
+    BaselineInputValue,
+)
 from ditto_application.processes.experiments.baseline_planning import (
     resolve_planning_baseline,
 )
 from ditto_application.processes.experiments.baseline_registry import (
     default_baseline_registry,
 )
+from ditto_application.processes.experiments.model_candidate_plans import (
+    decode_model_candidate_descriptor,
+    model_descriptor_hash,
+)
 from ditto_application.processes.experiments.planning import (
     BaselineDescriptor,
     CandidateMatrixSpec,
+    ModelCandidateDescriptor,
 )
 from ditto_application.processes.experiments.planning_contracts import (
     declare_trial_family,
 )
 from ditto_application.processes.experiments.planning_probes import (
     CandidateExecutorEvidence,
+    ModelExecutorEvidence,
     ResearchExecutorProbeRequest,
     ResearchExecutorProbeResult,
 )
@@ -210,6 +220,71 @@ def _matrix_spec() -> CandidateMatrixSpec:
     )
 
 
+def _model_candidate_payload() -> dict[str, object]:
+    digest = "a" * 64
+    return {
+        "lineage": {
+            "model_kind": "rule",
+            "feature_names": ["momentum_20d", "ep_ttm"],
+            "label_id": "research.label.forward_return.next_open_hold5.v1",
+            "label_spec_hash": digest,
+            "transform_spec": {
+                "imputation": "median",
+                "winsorize_lower_quantile": 0.01,
+                "winsorize_upper_quantile": 0.99,
+                "scaling": "zscore",
+            },
+            "hyperparameters": {"ranking_feature": "momentum_20d"},
+            "seed": 7,
+            "code_environment": {
+                "implementation_key": "ditto_application.model_candidates.ridge.v1",
+                "python": "3.13.14",
+                "lockfile_sha256": digest,
+            },
+        },
+        "inputs": {
+            "label_prices": {
+                "input_id": "model-input-label_prices",
+                "content_hash": digest,
+                "schema_hash": digest,
+                "source_snapshot_ids": [_SOURCE_SNAPSHOT_ID],
+            },
+            "features": {
+                "input_id": "model-input-features",
+                "content_hash": digest,
+                "schema_hash": digest,
+                "source_snapshot_ids": [_SOURCE_SNAPSHOT_ID],
+            },
+            "calendar": {
+                "input_id": "model-input-calendar",
+                "content_hash": digest,
+                "schema_hash": digest,
+                "source_snapshot_ids": [_SOURCE_SNAPSHOT_ID],
+            },
+        },
+        "top_k": 3,
+    }
+
+
+def _model_matrix_spec() -> CandidateMatrixSpec:
+    return CandidateMatrixSpec(
+        baseline=BaselineDescriptor(
+            descriptor_type="stock-universe-equal-weight",
+            payload={},
+        ),
+        model_candidates=(
+            ModelCandidateDescriptor(
+                descriptor_type="rule",
+                payload=cast(
+                    "Mapping[str, BaselineInputValue]",
+                    _model_candidate_payload(),
+                ),
+            ),
+        ),
+        candidate_limit=4,
+    )
+
+
 def _promotion_objective(matrix: CandidateMatrixSpec) -> PromotionObjective:
     family = declare_trial_family(
         experiment_id=_EXPERIMENT_ID,
@@ -247,12 +322,34 @@ def _plain_seed_spec() -> dict[str, object]:
     )
 
 
-def _planning_document() -> dict[str, object]:
+def _matrix_document_payload(matrix: CandidateMatrixSpec) -> dict[str, object]:
+    """Project one matrix into the transport document shape (plain JSON)."""
+    payload: dict[str, object] = {
+        "baseline": {
+            "descriptor_type": matrix.baseline.descriptor_type,
+            "payload": dict(matrix.baseline.payload),
+            "schema_version": matrix.baseline.schema_version,
+        },
+        "axes": [],
+        "candidate_limit": matrix.candidate_limit,
+    }
+    if matrix.model_candidates:
+        # Descriptors freeze MappingProxyType payloads; their canonical JSON is
+        # the one plain-form projection that round-trips byte-stably.
+        payload["model_candidates"] = [
+            orjson.loads(model.canonical_json) for model in matrix.model_candidates
+        ]
+    return payload
+
+
+def _planning_document(
+    matrix: CandidateMatrixSpec | None = None,
+) -> dict[str, object]:
     validation = _validation_request()
     validation_plan = compile_validation_protocol(validation)
     assert validation_plan.reserved_holdout is not None
     holdout = validation_plan.reserved_holdout.test_window
-    matrix = _matrix_spec()
+    matrix = matrix if matrix is not None else _matrix_spec()
     seed = SEED_STRATEGY_SPECS[_STRATEGY_ID]
     spec_json = _plain_seed_spec()
     strategy_record = StrategySpecRecord(
@@ -284,15 +381,7 @@ def _planning_document() -> dict[str, object]:
             "manifest_hash": _SNAPSHOT_HASH,
         },
         "validation": dict(canonical_validation_protocol_payload(validation)),
-        "matrix": {
-            "baseline": {
-                "descriptor_type": matrix.baseline.descriptor_type,
-                "payload": dict(matrix.baseline.payload),
-                "schema_version": matrix.baseline.schema_version,
-            },
-            "axes": [],
-            "candidate_limit": matrix.candidate_limit,
-        },
+        "matrix": _matrix_document_payload(matrix),
         "promotion_objective": dict(
             promotion_objective_payload(_promotion_objective(matrix))
         ),
@@ -400,6 +489,31 @@ class _ExecutorProbe:
         )
 
 
+class _ModelAwareExecutorProbe(_ExecutorProbe):
+    """Stock-lane executor stand-in that also certifies model candidates."""
+
+    def probe(
+        self,
+        request: ResearchExecutorProbeRequest,
+    ) -> ResearchExecutorProbeResult:
+        result = super().probe(request)
+        return replace(
+            result,
+            model_candidates=tuple(
+                ModelExecutorEvidence(
+                    candidate_hash=candidate.candidate_hash,
+                    model_kind=decoded.lineage.model_kind.value,
+                    lineage_hash=decoded.lineage.registration_hash,
+                    descriptor_hash=model_descriptor_hash(candidate.descriptor),
+                )
+                for candidate in request.model_candidates
+                for decoded in (
+                    decode_model_candidate_descriptor(candidate.descriptor),
+                )
+            ),
+        )
+
+
 class _AuthorityProbe:
     def probe(
         self,
@@ -462,7 +576,7 @@ async def _assert_planning_http_state(
     document: dict[str, object],
     reader: SQLiteExperimentReader,
     connection: Connection,
-) -> None:
+) -> str:
     experiment_id = str(document["experiment_id"])
     writes_before_preflight = connection.total_changes
     preflight = await client.post(
@@ -536,6 +650,7 @@ async def _assert_planning_http_state(
         reader.get_experiment_projection(ExperimentId(experiment_id))
         == first_projection
     )
+    return str(plan_hash)
 
 
 async def test_planning_routes_are_zero_write_for_preflight_and_replay_launch(
@@ -746,6 +861,99 @@ async def test_persistence_failure_is_stable_typed_500(
             assert failed.json()["error_code"] == "EXPERIMENT_PERSISTENCE_FAILED"
             assert reader.get_experiment_projection(ExperimentId(experiment_id)) is None
             assert reader.list_status_events(ExperimentId(experiment_id)) == ()
+    finally:
+        await container.close()
+        database.close_all()
+
+
+async def test_model_candidate_document_launches_over_http_with_identical_plan_hash(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Model candidates ride the planning contract unchanged over HTTP: an
+    explicitly empty list canonicalizes to the same plan hash, the durable
+    launch spec carries the exact model envelope, and preflight/launch/replay
+    keep the zero-write guarantees proven for strategy-only documents."""
+
+    async def run_inline(
+        func: object,
+        /,
+        *args: object,
+        **kwargs: object,
+    ) -> object:
+        assert callable(func)
+        return func(*args, **kwargs)
+
+    monkeypatch.setattr(research_experiment_routes, "run_blocking", run_inline)
+    database = ResearchExperimentDatabase(tmp_path)
+    database.initialize()
+    reader = SQLiteExperimentReader(database)
+    writer = SQLiteExperimentWriter(database)
+    planning = ExperimentPlanningProcess(
+        reader=reader,
+        writer=writer,
+        certification_probe=_CertificationProbe(),
+        executor_probe=_ModelAwareExecutorProbe(),
+        authority_probe=_AuthorityProbe(),
+    )
+    launch = LaunchExperimentHandler(planning)
+    document = _planning_document(_model_matrix_spec())
+    test_app, container = _planning_test_app(planning, launch)
+
+    try:
+        connection = database.get_connection()
+        async with httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=test_app),
+            base_url="http://testserver",
+        ) as client:
+            # A model-less document and its explicitly-empty-list twin decode
+            # to one canonical plan (the empty key is not part of identity).
+            plain_document = _planning_document()
+            explicit_empty = deepcopy(plain_document)
+            empty_matrix = cast("dict[str, object]", explicit_empty["matrix"])
+            empty_matrix["model_candidates"] = []
+            canonical_empty = await client.post(
+                f"/api/v1/research/experiments/{_EXPERIMENT_ID}/preflight",
+                json=explicit_empty,
+            )
+            assert canonical_empty.status_code == 200, canonical_empty.text
+            canonical_plain = await client.post(
+                f"/api/v1/research/experiments/{_EXPERIMENT_ID}/preflight",
+                json=plain_document,
+            )
+            assert canonical_plain.status_code == 200, canonical_plain.text
+            plain_plan_hash = canonical_plain.json()["data"]["plan_hash"]
+            assert isinstance(plain_plan_hash, str)
+            assert canonical_empty.json()["data"]["plan_hash"] == plain_plan_hash
+
+            plan_hash = await _assert_planning_http_state(
+                client=client,
+                document=document,
+                reader=reader,
+                connection=connection,
+            )
+            # Model candidates change the plan identity; they do not ride along
+            # under the strategy-only plan hash.
+            assert plan_hash != plain_plan_hash
+
+        launch_spec = reader.get_launch_spec(ExperimentId(_EXPERIMENT_ID))
+        assert launch_spec is not None
+        # Empty axes still contribute the identity binder combination.
+        assert len(launch_spec.candidates) == 3
+        model_rows = tuple(
+            candidate
+            for candidate in launch_spec.candidates
+            if "__ditto_model__" in candidate.parameters
+        )
+        assert len(model_rows) == 1
+        parameters = cast(
+            "Mapping[str, object]",
+            model_rows[0].parameters,
+        )
+        envelope = parameters["__ditto_model__"]
+        descriptor = _model_matrix_spec().model_candidates[0]
+        assert type(envelope) is str
+        assert envelope == descriptor.canonical_json
     finally:
         await container.close()
         database.close_all()
