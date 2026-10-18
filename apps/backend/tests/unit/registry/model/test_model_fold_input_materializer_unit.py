@@ -1,12 +1,12 @@
 """Golden tests for the real-data model-fold input materializer (#565 W4).
 
 The fixtures under ``fixtures/model_fold_inputs`` are exact extracts of the
-real 2024 stock bar, adjustment-factor, and trading-calendar stores for three
-instruments chosen to exercise the projection's semantics: 1000001 trades
-every session, 1005674 suspends mid-window and stops trading 2024-08-05, and
-1005790 stops trading 2024-05-15 (its adjustment factor keeps publishing and
-every window row is a suspension carry). Pinned literals below come from
-those real rows; they anchor the adapter to the stores it reads.
+real 2024 stock bar, adjustment-factor, price-limit, and trading-calendar
+stores for three instruments chosen to exercise the projection's semantics:
+1000001 trades every session, 1005674 suspends mid-window and stops trading
+2024-08-05, and 1005790 stops trading 2024-05-15 (its adjustment factor keeps
+publishing and every window row is a suspension carry). Pinned literals below
+come from those real rows; they anchor the adapter to the stores it reads.
 """
 
 from __future__ import annotations
@@ -34,6 +34,12 @@ from ditto_application.processes.experiments.model_candidate_folds import (
     ModelFoldInputBinding,
     ModelFoldInputKind,
     ModelFoldInputSet,
+)
+from ditto_apps.registry.live.r3_live_market_projection import (
+    bar_history_grid,
+    deduplicate_physical_bars,
+    normalized_bars,
+    scan_market_store,
 )
 from ditto_apps.registry.model.model_fold_input_materializer import (
     ModelInputSnapshotSources,
@@ -66,7 +72,7 @@ _KNOWLEDGE_CARRY_SOURCE = 1_715_817_600_000_000
 
 def _golden_data_root(tmp_path: Path) -> Path:
     root = tmp_path / "data"
-    for store in ("bars", "adj"):
+    for store in ("bars", "adj", "limit"):
         target = root / "market" / "stock" / store
         target.mkdir(parents=True, exist_ok=True)
         shutil.copy(_FIXTURES / f"{store}_2024.parquet", target / "2024.parquet")
@@ -391,6 +397,32 @@ def test_label_price_frame_excludes_rows_published_after_the_cutoff(tmp_path) ->
 
 
 @pytest.mark.unit
+def test_label_price_frame_fails_closed_without_provider_limit_for_traded_session(
+    tmp_path,
+) -> None:
+    """#571: a traded session without an exchange band is a gap, not a band
+    approximation; the build must refuse it."""
+    root = _golden_data_root(tmp_path)
+    limit_path = root / "market" / "stock" / "limit" / "2024.parquet"
+    limits = pl.read_parquet(limit_path).filter(
+        ~(
+            (pl.col("instrument_id") == 1000001)
+            & (pl.col("trade_date") == date(2024, 6, 3))
+        )
+    )
+    limits.write_parquet(limit_path)
+
+    with pytest.raises(ValueError, match="no provider price limit"):
+        build_model_fold_label_price_frame(
+            root,
+            instrument_ids=_INSTRUMENTS,
+            sessions=_golden_sessions(),
+            authority_snapshot_id="snapshot-authority",
+            knowledge_cutoff=_KNOWLEDGE_CUTOFF,
+        )
+
+
+@pytest.mark.unit
 def test_label_price_frame_rejects_factor_published_after_its_bar(tmp_path) -> None:
     root = _golden_data_root(tmp_path)
     adj_path = root / "market" / "stock" / "adj" / "2024.parquet"
@@ -412,6 +444,127 @@ def test_label_price_frame_rejects_factor_published_after_its_bar(tmp_path) -> N
         )
     details = orjson.loads(str(exc_info.value))
     assert details["reason"] == "model fold adjustment factor published after its bar"
+
+
+@pytest.mark.unit
+def test_label_price_frame_rejects_limit_published_after_its_bar(tmp_path) -> None:
+    """A price limit published later than its bar would freeze fillability
+    under a knowledge epoch that predates the value that decided it."""
+    root = _golden_data_root(tmp_path)
+    limit_path = root / "market" / "stock" / "limit" / "2024.parquet"
+    limits = pl.read_parquet(limit_path).with_columns(
+        pl.when(
+            (pl.col("instrument_id") == 1000001)
+            & (pl.col("trade_date") == date(2024, 6, 20))
+        )
+        .then(pl.lit(date(2024, 6, 27)).cast(pl.Date))
+        .otherwise(pl.col("knowledge_date"))
+        .alias("knowledge_date")
+    )
+    limits.write_parquet(limit_path)
+
+    with pytest.raises(ValueError) as exc_info:
+        build_model_fold_label_price_frame(
+            root,
+            instrument_ids=_INSTRUMENTS,
+            sessions=_golden_sessions(),
+            authority_snapshot_id="snapshot-authority",
+            knowledge_cutoff=_KNOWLEDGE_CUTOFF,
+        )
+    details = orjson.loads(str(exc_info.value))
+    assert details["reason"] == "model fold price limit published after its bar"
+
+
+@pytest.mark.unit
+def test_golden_fixtures_pin_provider_price_limits_on_real_rows(tmp_path) -> None:
+    """The golden trio anchors the adapter to the real provider store: the
+    exchange half-up band beats the synthetic cent, and the suspension-day
+    provider row covers the carried session (#571)."""
+    root = _golden_data_root(tmp_path)
+    ids = [1000001, 1005790]
+    # Scan the full retained history like the production read: 1005790 has
+    # no real bar inside the window (its last one is 2024-05-15), so the
+    # lower bound must come after the grid assembly, not the scan.
+    raw = deduplicate_physical_bars(
+        scan_market_store(root, "stock", "bars")
+        .filter(
+            (pl.col("trade_date") <= date(2024, 6, 20))
+            & pl.col("instrument_id").is_in(ids)
+        )
+        .collect()
+    )
+    adj = (
+        scan_market_store(root, "stock", "adj")
+        .filter(pl.col("instrument_id").is_in(ids))
+        .select("trade_date", "instrument_id", "adj_factor")
+        .collect()
+    )
+    limits = (
+        scan_market_store(root, "stock", "limits")
+        .filter(pl.col("instrument_id").is_in(ids))
+        .select("trade_date", "instrument_id", "up_limit", "down_limit")
+        .collect()
+    )
+    sessions = tuple(
+        item
+        for item in raw["trade_date"].unique().sort().to_list()
+        if item >= date(2024, 6, 3)
+    )
+    membership = pl.DataFrame(
+        {"trade_date": [sessions[0]] * len(ids), "instrument_id": ids},
+        schema={"trade_date": pl.Date, "instrument_id": pl.Int64},
+    )
+    frame = normalized_bars(
+        raw,
+        bar_history_grid(raw, membership, sessions),
+        authority_snapshot_id="snapshot-authority",
+        adjustment=adj,
+        limits=limits,
+    ).sort("instrument_id", "trade_date")
+
+    traded = frame.filter(
+        (pl.col("instrument_id") == 1000001)
+        & (pl.col("trade_date") == date(2024, 6, 20))
+    )
+    # prev_close 10.15 → synthetic band 11.16; the exchange publishes 11.17.
+    assert traded["limit_up"].to_list() == pytest.approx([11.17])
+    assert traded["limit_down"].to_list() == pytest.approx([9.14])
+    suspended = frame.filter(
+        (pl.col("instrument_id") == 1005790)
+        & (pl.col("trade_date") == date(2024, 6, 3))
+    )
+    assert suspended["is_suspended"].to_list() == [True]
+    # The limit store publishes on suspension days; the carried session keeps
+    # the provider band instead of falling back to the synthetic one.
+    assert suspended["limit_up"].to_list() == pytest.approx([0.45])
+    assert suspended["limit_down"].to_list() == pytest.approx([0.41])
+
+
+@pytest.mark.unit
+def test_materialize_requires_observed_stock_limit_snapshots(tmp_path) -> None:
+    """#571: the fillability truth is a gated input like bars and factors —
+    a fold build with no completed stock_limit snapshot must refuse."""
+    root = _golden_data_root(tmp_path)
+    book = _SnapshotBook(omit="stock_limit")
+
+    with pytest.raises(ValueError) as exc_info:
+        materialize_model_fold_inputs(
+            data_root=root,
+            artifact_service=_artifact_service(tmp_path),
+            sources=ModelInputSnapshotSources(
+                snapshot_reader=cast("ProviderSnapshotReader", book),
+                lifecycle_reader=cast("PartitionLifecycleReader", book),
+            ),
+            instrument_ids=_INSTRUMENTS,
+            window_start=_WINDOW_START,
+            window_end=_WINDOW_END,
+            observed_cutoff=datetime(2026, 10, 2, tzinfo=UTC),
+        )
+    details = orjson.loads(str(exc_info.value))
+    assert details["reason"] == (
+        "no completed observed snapshots cover the model fold window"
+    )
+    assert details["dataset_id"] == "stock_limit"
 
 
 @pytest.mark.unit
@@ -437,7 +590,7 @@ def test_materialize_rejects_a_naive_observed_cutoff(tmp_path) -> None:
 class _SnapshotBook:
     """Reader/lifecycle fakes exposing one completed snapshot per dataset."""
 
-    def __init__(self, *, covered_end: str = "2024-12-31") -> None:
+    def __init__(self, *, covered_end: str = "2024-12-31", omit: str = "") -> None:
         self._snapshots = {
             dataset_id: SimpleNamespace(
                 snapshot_id=f"{dataset_id}-current",
@@ -450,7 +603,8 @@ class _SnapshotBook:
                 payload_uri=f"artifact://{dataset_id}",
                 created_at=datetime(2026, 10, 1, tzinfo=UTC),
             )
-            for dataset_id in ("adj_factor", "calendar", "stock_daily")
+            for dataset_id in ("adj_factor", "calendar", "stock_daily", "stock_limit")
+            if dataset_id != omit
         }
 
     def list_snapshots(self, *, dataset_id: str) -> tuple[SimpleNamespace, ...]:
@@ -524,12 +678,14 @@ def test_materialize_publishes_inputs_the_fold_port_reads_back(tmp_path) -> None
         "adj_factor-current",
         "calendar-current",
         "stock_daily-current",
+        "stock_limit-current",
     )
     assert result.label_prices.input_kind == "label_prices"
     assert result.calendar.input_kind == "calendar"
     assert result.label_prices.source_snapshot_ids == (
         "adj_factor-current",
         "stock_daily-current",
+        "stock_limit-current",
     )
     assert result.calendar.source_snapshot_ids == ("calendar-current",)
     for evidence in (result.label_prices, result.calendar):

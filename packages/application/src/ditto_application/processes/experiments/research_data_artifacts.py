@@ -87,6 +87,11 @@ REQUIRED_COLUMNS: dict[ResearchFrameKind, frozenset[str]] = {
             "volume",
             "amount",
             "is_suspended",
+            # Since the live snapshot builder v7, stock rows carry the provider
+            # exchange band (Tushare stk_limit: half-up rounding, ST ±5%,
+            # STAR/ChiNext ±20%); ETF rows and index benchmark rows keep the
+            # ±10% band off prev_close — no provider limit store exists there
+            # (#571). Frozen values follow the builder version that wrote them.
             "limit_up",
             "limit_down",
             "avg_volume_20d",

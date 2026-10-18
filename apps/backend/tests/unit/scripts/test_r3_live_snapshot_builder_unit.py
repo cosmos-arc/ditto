@@ -188,7 +188,7 @@ def test_membership_fails_closed_when_member_has_no_observed_bar() -> None:
 
 
 @pytest.mark.unit
-def test_live_bars_retain_pre_membership_history_for_factor_lookback(
+def test_live_bars_retain_history_and_read_provider_price_limits(
     tmp_path,
 ) -> None:
     """PIT membership gates slices, not the frozen price history available to them."""
@@ -225,6 +225,16 @@ def test_live_bars_retain_pre_membership_history_for_factor_lookback(
     _raw_adjustment(
         tuple((trade_date, 1, 2.0) for trade_date in sessions)
     ).write_parquet(adj_path)
+    limit_path = tmp_path / "market" / "stock" / "limit" / "2015.parquet"
+    limit_path.parent.mkdir(parents=True)
+    # Provider 5% bands (ST-style) that visibly differ from the ±10% band.
+    _raw_limits(
+        (
+            (date(2015, 2, 2), 1, 9.45, 8.55),
+            (date(2015, 2, 3), 1, 10.5, 9.5),
+            (date(2015, 2, 4), 1, 11.55, 10.45),
+        )
+    ).write_parquet(limit_path)
 
     bars = build_live_bars(
         tmp_path,
@@ -234,9 +244,11 @@ def test_live_bars_retain_pre_membership_history_for_factor_lookback(
         authority_snapshot_id="source-1",
     )
 
-    assert bars.filter(pl.col("instrument_id") == 1)["trade_date"].to_list() == list(
-        sessions
-    )
+    member = bars.filter(pl.col("instrument_id") == 1)
+    assert member["trade_date"].to_list() == list(sessions)
+    # #571: the stock lane reads the exchange band from the provider store.
+    assert member["limit_up"].to_list() == pytest.approx([9.45, 10.5, 11.55])
+    assert member["limit_down"].to_list() == pytest.approx([8.55, 9.5, 10.45])
 
 
 def _raw_adjustment(rows: tuple[tuple[date, int, float], ...]) -> pl.DataFrame:
@@ -250,6 +262,25 @@ def _raw_adjustment(rows: tuple[tuple[date, int, float], ...]) -> pl.DataFrame:
             "trade_date": pl.Date,
             "instrument_id": pl.Int64,
             "adj_factor": pl.Float64,
+        },
+    )
+
+
+def _raw_limits(
+    rows: tuple[tuple[date, int, float, float], ...],
+) -> pl.DataFrame:
+    return pl.DataFrame(
+        {
+            "trade_date": [item[0] for item in rows],
+            "instrument_id": [item[1] for item in rows],
+            "up_limit": [item[2] for item in rows],
+            "down_limit": [item[3] for item in rows],
+        },
+        schema={
+            "trade_date": pl.Date,
+            "instrument_id": pl.Int64,
+            "up_limit": pl.Float64,
+            "down_limit": pl.Float64,
         },
     )
 
@@ -331,6 +362,75 @@ def test_normalized_bars_without_adjustment_project_neutral_factor() -> None:
     )
 
     assert frame["adj_factor"].to_list() == pytest.approx([1.0])
+
+
+@pytest.mark.unit
+def test_normalized_bars_prefer_provider_limits_with_band_fallback_on_carries() -> None:
+    """#571: traded sessions use the exchange band; carries fall back to ±10%."""
+    raw = _raw_bars(((date(2015, 2, 2), 1, 10.0),))
+    # prev_close 9.0 → band (9.9, 8.1); the provider publishes a 5% band.
+    limits = _raw_limits(((date(2015, 2, 2), 1, 9.45, 8.55),))
+
+    frame = normalized_bars(
+        raw,
+        _membership(((date(2015, 2, 2), 1), (date(2015, 2, 3), 1))),
+        authority_snapshot_id="source-1",
+        limits=limits,
+    ).sort("trade_date")
+
+    # The suspended carry has no provider row; its band derives from the
+    # carried close 10.0, not the stale provider row of 2015-02-02.
+    assert frame["is_suspended"].to_list() == [False, True]
+    assert frame["limit_up"].to_list() == pytest.approx([9.45, 11.0])
+    assert frame["limit_down"].to_list() == pytest.approx([8.55, 9.0])
+
+
+@pytest.mark.unit
+def test_normalized_bars_fail_closed_when_traded_session_lacks_provider_limit() -> None:
+    raw = _raw_bars(((date(2015, 2, 2), 1, 10.0),))
+
+    with pytest.raises(ValueError, match="no provider price limit"):
+        normalized_bars(
+            raw,
+            _membership(((date(2015, 2, 2), 1),)),
+            authority_snapshot_id="source-1",
+            limits=_raw_limits(((date(2015, 2, 2), 2, 9.45, 8.55),)),
+        )
+
+
+@pytest.mark.unit
+def test_normalized_bars_reject_conflicting_price_limit_duplicates() -> None:
+    raw = _raw_bars(((date(2015, 2, 2), 1, 10.0),))
+    limits = pl.concat(
+        (
+            _raw_limits(((date(2015, 2, 2), 1, 9.45, 8.55),)),
+            _raw_limits(((date(2015, 2, 2), 1, 9.5, 8.5),)),
+        )
+    )
+
+    with pytest.raises(ValueError, match="conflicting live price limit duplicates"):
+        normalized_bars(
+            raw,
+            _membership(((date(2015, 2, 2), 1),)),
+            authority_snapshot_id="source-1",
+            limits=limits,
+        )
+
+
+@pytest.mark.unit
+def test_normalized_bars_collapse_identical_price_limit_overlap() -> None:
+    raw = _raw_bars(((date(2015, 2, 2), 1, 10.0),))
+    limits = _raw_limits(((date(2015, 2, 2), 1, 9.45, 8.55),))
+
+    frame = normalized_bars(
+        raw,
+        _membership(((date(2015, 2, 2), 1),)),
+        authority_snapshot_id="source-1",
+        limits=pl.concat((limits, limits)),
+    )
+
+    assert frame.height == 1
+    assert frame["limit_up"].to_list() == pytest.approx([9.45])
 
 
 @pytest.mark.unit
