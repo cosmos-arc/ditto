@@ -22,7 +22,7 @@ from ditto_analysis.experiments.model_lineage import (
 )
 
 from ditto_application.exceptions import AppProcessError
-from ditto_application.processes.experiments._execution_bundle_inputs import (
+from ditto_application.processes.experiments.model_candidate_folds import (
     MODEL_FOLD_INPUT_KINDS,
     ModelFoldInputEvidence,
 )

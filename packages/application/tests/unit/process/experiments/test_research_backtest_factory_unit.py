@@ -69,7 +69,6 @@ from ditto_application.processes.experiments._execution_bundle_inputs import (
     MODEL_CANDIDATE_IMPLEMENTATION_KEY,
     PREDICTION_EXECUTOR_IMPLEMENTATION_KEY,
     ModelCandidateExecutionBinding,
-    ModelFoldInputEvidence,
     PredictionExecutorBinding,
 )
 from ditto_application.processes.experiments._report_evidence import (
@@ -114,6 +113,7 @@ from ditto_application.processes.experiments.model_candidate_folds import (
     ModelCandidateFoldSuccess,
     ModelFoldData,
     ModelFoldInputBinding,
+    ModelFoldInputEvidence,
     ModelFoldInputKind,
     ModelFoldInputSet,
     execute_model_candidate_fold,

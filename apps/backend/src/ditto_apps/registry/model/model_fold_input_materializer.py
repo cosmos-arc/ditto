@@ -31,10 +31,8 @@ import orjson
 import polars as pl
 from ditto_analysis.research.artifact_service import ResearchArtifactService
 from ditto_application.catalog_freshness import observed_snapshot_ids
-from ditto_application.processes.experiments._execution_bundle_inputs import (
-    ModelFoldInputEvidence,
-)
 from ditto_application.processes.experiments.model_candidate_folds import (
+    ModelFoldInputEvidence,
     ModelFoldInputKind,
 )
 from ditto_application.processes.experiments.research_data_artifacts import (
