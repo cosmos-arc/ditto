@@ -277,6 +277,7 @@ def _bars_frame(source_snapshot_id: str = SOURCE_SNAPSHOT_ID) -> pl.DataFrame:
             "limit_up": [False, False],
             "limit_down": [False, False],
             "avg_volume_20d": [950.0, 980.0],
+            "adj_factor": [1.0, 1.0],
             "source_snapshot_id": [source_snapshot_id, source_snapshot_id],
         },
     )

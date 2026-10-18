@@ -48,6 +48,7 @@ def _bars(*, future_close: float) -> bytes:
             "limit_up": [200.0] * len(dates),
             "limit_down": [50.0] * len(dates),
             "avg_volume_20d": [1_000.0] * len(dates),
+            "adj_factor": [1.0] * len(dates),
             "source_snapshot_id": ["provider-bars-v1"] * len(dates),
         }
     )

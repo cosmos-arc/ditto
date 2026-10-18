@@ -291,6 +291,7 @@ def _bars() -> pl.DataFrame:
             "limit_up": [item[2] * 1.1 for item in rows],
             "limit_down": [item[2] * 0.9 for item in rows],
             "avg_volume_20d": [1_000_000.0] * len(rows),
+            "adj_factor": [1.0] * len(rows),
             "source_snapshot_id": [_SOURCE] * len(rows),
         }
     )

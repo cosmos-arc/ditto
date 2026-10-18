@@ -184,6 +184,7 @@ def _fixture() -> tuple[_Artifacts, ResearchValidationAuthorityRequest]:
             "limit_up": (False,) * len(sessions),
             "limit_down": (False,) * len(sessions),
             "avg_volume_20d": (1000.0,) * len(sessions),
+            "adj_factor": (1.0,) * len(sessions),
             "source_snapshot_id": (SOURCE_ID,) * len(sessions),
         },
     )
