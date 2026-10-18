@@ -70,6 +70,8 @@ class BackfillManager:
         parallel: int = 1,
         source: str = "tushare",
         instrument_ids: tuple[int, ...] = (),
+        *,
+        include_complete: bool = False,
     ) -> BackfillResult:
         """
         全量回补指定日期范围。
@@ -81,6 +83,9 @@ class BackfillManager:
             parallel: 并行度，默认为 1（串行）。
             source: 数据源标识符（默认: "tushare"）。
             instrument_ids: 可选的显式标的范围；为空时按日期全市场回补。
+            include_complete: 连 COMPLETE 检查点的 chunk 一并重拉（行级
+                补数通道，#575：完成度台账是日期级事实，掩盖行级缺口；
+                重拉幂等去重，用于缺口修复而非常规回补）。
 
         Returns:
             BackfillResult: 回补结果。
@@ -101,6 +106,7 @@ class BackfillManager:
             start_date=start_date,
             end_date=end_date,
             instrument_ids=instrument_ids,
+            include_complete=include_complete,
         )
         if not plan.chunks:
             return BackfillResult(

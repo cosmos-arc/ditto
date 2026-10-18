@@ -131,6 +131,59 @@ class TestBackfillResult:
 class TestBackfillRange:
     """测试 backfill_range 方法。"""
 
+    def test_backfill_range_include_complete_refetches_completed_chunks(
+        self,
+        backfill_manager,
+        mock_coordinator,
+        mock_metadata_service,
+    ) -> None:
+        """#575 行级补数: include_complete 连 COMPLETE chunk 一并规划重拉."""
+
+        class _Planner:
+            def __init__(self) -> None:
+                self.include_complete: list[bool | None] = []
+
+            def plan(
+                self,
+                *,
+                dataset_id,
+                source,
+                start_date,
+                end_date,
+                instrument_ids=(),
+                include_complete=False,
+            ):
+                self.include_complete.append(include_complete)
+                from ditto_application.processes.ingestion.bootstrap_planner import (
+                    BootstrapPlan,
+                )
+
+                return BootstrapPlan(
+                    dataset_id=dataset_id,
+                    source=source,
+                    target_start=start_date,
+                    target_end=end_date,
+                    chunks=(),
+                )
+
+        planner = _Planner()
+        backfill_manager._bootstrap_planner = planner
+        mock_metadata_service.list_trading_days.return_value = []
+
+        backfill_manager.backfill_range(
+            dataset="stock_limit",
+            start_date="2024-08-01",
+            end_date="2024-08-31",
+        )
+        backfill_manager.backfill_range(
+            dataset="stock_limit",
+            start_date="2024-08-01",
+            end_date="2024-08-31",
+            include_complete=True,
+        )
+
+        assert planner.include_complete == [False, True]
+
     def test_backfill_range_success_all_dates(
         self,
         backfill_manager,

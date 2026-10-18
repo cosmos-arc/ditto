@@ -154,6 +154,7 @@ def test_backfill_range_success(
         start_date="2024-01-01",
         end_date="2024-01-05",
         parallel=2,
+        include_complete=False,
     )
 
 

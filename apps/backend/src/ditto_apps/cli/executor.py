@@ -80,6 +80,8 @@ class CLIExecutor:
         start_date: str,
         end_date: str,
         parallel: int = 1,
+        *,
+        include_complete: bool = False,
     ) -> dict[str, Any]:
         """
         执行日期范围回补.
@@ -89,6 +91,7 @@ class CLIExecutor:
             start_date: 开始日期 (YYYY-MM-DD)
             end_date: 结束日期 (YYYY-MM-DD)
             parallel: 并行度
+            include_complete: 连 COMPLETE 检查点一并重拉（行级补数，#575）
 
         Returns:
             包含回补结果的字典
@@ -99,6 +102,7 @@ class CLIExecutor:
             start_date=start_date,
             end_date=end_date,
             parallel=parallel,
+            include_complete=include_complete,
         )
         return {
             "dataset": dataset,
