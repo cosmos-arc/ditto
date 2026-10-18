@@ -70,8 +70,13 @@ __all__ = [
 
 # Model candidates are stock-lane only (W2 lane parity); every dataset read
 # here must be observed as a completed provider snapshot before use.
-MODEL_INPUT_DATASETS: tuple[str, ...] = ("adj_factor", "calendar", "stock_daily")
-_LABEL_PRICE_DATASETS: tuple[str, ...] = ("adj_factor", "stock_daily")
+MODEL_INPUT_DATASETS: tuple[str, ...] = (
+    "adj_factor",
+    "calendar",
+    "stock_daily",
+    "stock_limit",
+)
+_LABEL_PRICE_DATASETS: tuple[str, ...] = ("adj_factor", "stock_daily", "stock_limit")
 
 _LABEL_PRICE_COLUMNS: tuple[tuple[str, pl.DataType], ...] = (
     ("instrument_id", pl.String()),
@@ -188,28 +193,30 @@ def _require_market_session_coverage(
         )
 
 
-def _require_factor_not_published_after_its_bar(
-    adjustment_rows: pl.DataFrame,
+def _require_not_published_after_its_bar(
+    versioned_rows: pl.DataFrame,
     raw: pl.DataFrame,
+    *,
+    subject: str,
 ) -> None:
     """
-    Fail closed when a factor's publication postdates the bar it scales.
+    Fail closed when a versioned input's publication postdates its bar.
 
-    Real stores publish factors same-day and bars T+1, so a later-published
-    restated factor would leak into labels whose declared maturity predates
-    it; this pins that invariant instead of expecting it.
+    Real stores publish factors and price limits same-day and bars T+1, so a
+    later-published restated value would leak into labels whose declared
+    maturity predates it; this pins that invariant instead of expecting it.
     """
-    late_factors = adjustment_rows.join(
+    late = versioned_rows.join(
         raw.select("trade_date", "instrument_id", pl.col("knowledge_date")),
         on=["trade_date", "instrument_id"],
         how="inner",
         suffix="_bar",
     ).filter(pl.col("knowledge_date") > pl.col("knowledge_date_bar"))
-    if not late_factors.is_empty():
+    if not late.is_empty():
         raise _materializer_error(
-            "model fold adjustment factor published after its bar",
+            f"model fold {subject} published after its bar",
             sample=str(
-                late_factors.select("trade_date", "instrument_id", "knowledge_date")
+                late.select("trade_date", "instrument_id", "knowledge_date")
                 .head(3)
                 .rows()
             ),
@@ -228,7 +235,7 @@ def build_model_fold_label_price_frame(
     Project the label-price contract from the real stock bar/adj stores.
 
     Reuses the frozen BARS normalization (complete session grid, suspension
-    carried closes, computed price limits, adjustment factor joined per
+    carried closes, provider price limits, adjustment factor joined per
     calendar session) so strategy backtests and model labels read one price
     truth. Knowledge times come from the source bars' publication dates; a
     suspension-carried row inherits the carry source's publication date,
@@ -276,8 +283,24 @@ def build_model_fold_label_price_frame(
         .collect(),
         store="adjustment factor",
     )
-    _require_factor_not_published_after_its_bar(adjustment_rows, raw)
+    _require_not_published_after_its_bar(
+        adjustment_rows, raw, subject="adjustment factor"
+    )
     adjustment = adjustment_rows.select("trade_date", "instrument_id", "adj_factor")
+    # Fillability reads the provider exchange band, not the ±10% approximation
+    # (#571); the knowledge filter keeps limits as visible as the bars they
+    # gate, and the same publication-order invariant applies.
+    limit_rows = deduplicate_physical_bars(
+        scan_market_store(root, "stock", "limits")
+        .filter(member_filter)
+        .select(
+            "trade_date", "instrument_id", "up_limit", "down_limit", "knowledge_date"
+        )
+        .collect(),
+        store="price limit",
+    )
+    _require_not_published_after_its_bar(limit_rows, raw, subject="price limit")
+    limits = limit_rows.select("trade_date", "instrument_id", "up_limit", "down_limit")
     knowledge = raw.select(
         "trade_date",
         "instrument_id",
@@ -296,6 +319,7 @@ def build_model_fold_label_price_frame(
         history_grid,
         authority_snapshot_id=authority_snapshot_id,
         adjustment=adjustment,
+        limits=limits,
     )
     # Publication dates exist only on real bar rows; a suspension-carried row
     # inherits the last real bar's publication date through a backward as-of

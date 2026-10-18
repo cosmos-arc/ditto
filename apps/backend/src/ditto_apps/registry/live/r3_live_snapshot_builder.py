@@ -83,7 +83,11 @@ __all__ = [
     "build_live_research_snapshot",
 ]
 
-_BUILDER_VERSION = "r3-live-research-snapshot-v6"
+# v7 (#571)：stock 车道 BARS 帧的 limit_up/limit_down 从 ±10% 合成带切换为
+# provider 真实涨跌停（交易所 half-up 进位、ST ±5%、科创/创业 ±20%）；ETF
+# 车道与指数基准行保留合成带（无 provider limit 库）。v6 之前冻结的帧保持
+# 其冻结时的合成语义，不回写。
+_BUILDER_VERSION = "r3-live-research-snapshot-v7"
 _BENCHMARK_INSTRUMENT_ID = 3_000_149
 _CONTROL_PLANE_CREATED_AT = "2026-07-30T00:00:00Z"
 _FACTOR_ARTIFACT_SCHEMA = "ditto.r3-live-factor-registration.v1"
@@ -97,12 +101,19 @@ _LINEAGE_DATASETS = {
         "index_weight",
         "stock_basic",
         "stock_daily",
+        "stock_limit",
         "valuation_metrics",
     ),
     "etf": ("calendar", "etf_basic", "etf_daily", "index_daily"),
 }
 _REQUIRED_DEPENDENCIES = {
-    "stock": ("adj_factor", "balance_sheet", "income_statement", "valuation_metrics"),
+    "stock": (
+        "adj_factor",
+        "balance_sheet",
+        "income_statement",
+        "stock_limit",
+        "valuation_metrics",
+    ),
     "etf": (),
 }
 

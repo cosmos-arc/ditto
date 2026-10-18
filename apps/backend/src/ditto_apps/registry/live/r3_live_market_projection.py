@@ -28,22 +28,27 @@ __all__ = [
 def scan_market_store(
     data_root: Path,
     asset_class: str,
-    store: Literal["bars", "adj"],
+    store: Literal["bars", "adj", "limits"],
 ) -> pl.LazyFrame:
     """
-    Scan one market Parquet store (bars or adjustment factors).
+    Scan one market Parquet store (bars, adjustment factors, price limits).
 
-    The adjustment store publishes rows on suspension days too, so its join
-    with the suspension-carried bar grid is total up to partition seams;
-    residual gaps inside one instrument close by forward-fill only.
+    The adjustment and price-limit stores publish rows on suspension days
+    too, so their join with the suspension-carried bar grid is total up to
+    partition seams. Residual gaps inside one instrument close by
+    forward-fill for factors; for limits a traded session without a provider
+    row fails closed in ``normalized_bars`` — only suspension carries fall
+    back to the synthetic band.
     """
-    names = {
-        "bars": "bar",
-        "adj": "adjustment factor",
+    stores = {
+        "bars": ("bar", "bars"),
+        "adj": ("adjustment factor", "adj"),
+        "limits": ("price limit", "limit"),
     }
-    paths = sorted((data_root / "market" / asset_class / store).glob("*.parquet"))
+    name, directory = stores[store]
+    paths = sorted((data_root / "market" / asset_class / directory).glob("*.parquet"))
     if not paths:
-        raise ValueError(f"live {asset_class} {names[store]} files are missing")
+        raise ValueError(f"live {asset_class} {name} files are missing")
     return pl.scan_parquet(paths)
 
 
@@ -137,6 +142,7 @@ def normalized_bars(
     *,
     authority_snapshot_id: str,
     adjustment: pl.DataFrame | None = None,
+    limits: pl.DataFrame | None = None,
 ) -> pl.DataFrame:
     """
     Project a complete membership grid with suspension-safe carried prices.
@@ -144,6 +150,15 @@ def normalized_bars(
     ``adjustment`` carries ``(trade_date, instrument_id, adj_factor)`` rows for
     every calendar session; ``None`` projects the neutral factor 1.0 used for
     index benchmarks, which have no corporate-action adjustment by contract.
+
+    ``limits`` carries ``(trade_date, instrument_id, up_limit, down_limit)``
+    provider rows (#571). When present, every traded session must carry a
+    provider limit — the exchange band is the fillability truth, and the
+    ±10% band off the carried previous close diverges even for normal names
+    (exchange half-up rounding; ST ±5%; STAR/ChiNext ±20%). Rows without a
+    provider limit (suspension carries, cutoff-hidden publications) fall back
+    to the synthetic band, which stays the documented approximation for the
+    ETF lane and index benchmarks — no provider limit store exists there.
     """
     raw = deduplicate_physical_bars(raw)
     selected = raw.select(
@@ -244,9 +259,44 @@ def normalized_bars(
         pl.when(suspended).then(0.0).otherwise(pl.col("volume")).alias("volume"),
         pl.when(suspended).then(0.0).otherwise(pl.col("amount")).alias("amount"),
     ).drop("_carry_close", "_seed_close")
-    return normalized.with_columns(
-        (pl.col("prev_close") * 1.1).round(2).cast(pl.Float64).alias("limit_up"),
-        (pl.col("prev_close") * 0.9).round(2).cast(pl.Float64).alias("limit_down"),
+    band = normalized.with_columns(
+        (pl.col("prev_close") * 1.1).round(2).cast(pl.Float64).alias("_band_limit_up"),
+        (pl.col("prev_close") * 0.9)
+        .round(2)
+        .cast(pl.Float64)
+        .alias("_band_limit_down"),
+    )
+    if limits is None:
+        priced = band.with_columns(
+            pl.lit(None, dtype=pl.Float64).alias("up_limit"),
+            pl.lit(None, dtype=pl.Float64).alias("down_limit"),
+        )
+    else:
+        provider = deduplicate_physical_bars(
+            limits.select("trade_date", "instrument_id", "up_limit", "down_limit"),
+            store="price limit",
+        )
+        priced = band.join(provider, on=["trade_date", "instrument_id"], how="left")
+        # A traded session without a provider limit is an ingestion gap in the
+        # exchange truth, not a session to approximate with the band (#571);
+        # suspension carries may legitimately lack a provider row.
+        gap = priced.filter(
+            ~pl.col("is_suspended")
+            & (pl.col("up_limit").is_null() | pl.col("down_limit").is_null())
+        )
+        if not gap.is_empty():
+            sample = gap.select("trade_date", "instrument_id").head(3)
+            raise ValueError(
+                f"live member session has no provider price limit: {sample}"
+            )
+        # Joins do not guarantee output order; re-establish it before the
+        # within-instrument rolling mean below.
+        priced = priced.sort(["instrument_id", "trade_date"])
+    return priced.with_columns(
+        pl.coalesce("up_limit", "_band_limit_up").cast(pl.Float64).alias("limit_up"),
+        pl.coalesce("down_limit", "_band_limit_down")
+        .cast(pl.Float64)
+        .alias("limit_down"),
         pl.col("volume")
         .rolling_mean(window_size=20, min_samples=1)
         .over("instrument_id")
@@ -302,12 +352,25 @@ def build_live_bars(
         .select("trade_date", "instrument_id", "adj_factor")
         .collect()
     )
+    # Only the stock lane has a provider limit store (Tushare stk_limit
+    # covers stocks); the ETF lane keeps the ±10% band approximation.
+    limits = (
+        scan_market_store(data_root, source_class, "limits")
+        .filter(
+            (pl.col("trade_date") <= _END) & pl.col("instrument_id").is_in(member_ids)
+        )
+        .select("trade_date", "instrument_id", "up_limit", "down_limit")
+        .collect()
+        if lane == "stock"
+        else None
+    )
     history_grid = bar_history_grid(raw, membership, sessions)
     member_bars = normalized_bars(
         raw,
         history_grid,
         authority_snapshot_id=authority_snapshot_id,
         adjustment=adjustment,
+        limits=limits,
     )
     benchmark = (
         scan_market_store(data_root, "index", "bars")
