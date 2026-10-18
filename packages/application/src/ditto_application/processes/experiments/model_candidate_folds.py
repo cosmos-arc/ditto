@@ -20,6 +20,8 @@ predictions come from the train-frozen state here, while recovery inference
 
 from __future__ import annotations
 
+import re
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from datetime import date
 from enum import StrEnum
@@ -67,6 +69,7 @@ from ditto_application.processes.experiments.model_candidates import (
 from ditto_application.research_validation_windows import ValidationFoldPlan
 
 __all__ = [
+    "MODEL_FOLD_INPUT_KINDS",
     "ModelCandidateFoldFailure",
     "ModelCandidateFoldRequest",
     "ModelCandidateFoldSuccess",
@@ -74,6 +77,7 @@ __all__ = [
     "ModelFoldDataPort",
     "ModelFoldExecutionStage",
     "ModelFoldInputBinding",
+    "ModelFoldInputEvidence",
     "ModelFoldInputKind",
     "ModelFoldInputSet",
     "ModelFoldLabelStatistics",
@@ -182,6 +186,112 @@ class ModelFoldInputSet:
                 "input_set_kind_field_mismatch",
                 kinds=sorted(binding.kind.value for binding in bindings),
             )
+
+
+# The evidence contract below publishes frozen input identities into plan
+# payloads consumed across packages; it moved here from the private
+# ``_execution_bundle_inputs`` so cross-package consumers import it from a
+# public host (#572). Its failure payloads are contract — messages, reasons,
+# and the REPRODUCIBILITY_FAILED code mirror the execution-bundle family
+# verbatim and must not drift toward the fold-orchestration family above.
+MODEL_FOLD_INPUT_KINDS = frozenset(
+    {"label_prices", "features", "calendar"},
+)
+_SHA256 = re.compile(r"[0-9a-f]{64}")
+
+
+def _evidence_error(message: str, reason: str, **details: object) -> AppProcessError:
+    return AppProcessError(
+        message,
+        details={
+            "code": "REPRODUCIBILITY_FAILED",
+            "reason": reason,
+            **details,
+        },
+    )
+
+
+def _evidence_identity(value: object, field_name: str) -> str:
+    if type(value) is not str or not value or value != value.strip() or "\x00" in value:
+        raise _evidence_error(
+            f"{field_name} must be a canonical non-empty string",
+            "invalid_execution_identity",
+            field=field_name,
+        )
+    try:
+        value.encode("utf-8")
+    except UnicodeEncodeError:
+        raise _evidence_error(
+            f"{field_name} must have a canonical UTF-8 identity",
+            "invalid_execution_identity",
+            field=field_name,
+        ) from None
+    return value
+
+
+def _evidence_hash(value: object, field_name: str) -> str:
+    if type(value) is not str or _SHA256.fullmatch(value) is None:
+        raise _evidence_error(
+            f"{field_name} must be a canonical SHA-256 digest",
+            "invalid_content_hash",
+            field=field_name,
+        )
+    return value
+
+
+@dataclass(frozen=True, slots=True)
+class ModelFoldInputEvidence:
+    """Content-addressed identity of one frozen model-training input frame."""
+
+    input_kind: str
+    input_id: str
+    content_hash: str
+    schema_hash: str
+    source_snapshot_ids: tuple[str, ...]
+
+    def __post_init__(self) -> None:
+        """Reject nominal or partial training-input identities."""
+        if self.input_kind not in MODEL_FOLD_INPUT_KINDS:
+            raise _evidence_error(
+                "model fold input kind must be exact and registered",
+                "invalid_model_fold_input_evidence",
+                input_kind=self.input_kind,
+            )
+        _evidence_identity(self.input_id, "model_fold_input_id")
+        _evidence_hash(self.content_hash, "model_fold_input_content_hash")
+        _evidence_hash(self.schema_hash, "model_fold_input_schema_hash")
+        raw_sources: object = self.source_snapshot_ids
+        if (
+            type(raw_sources) is not tuple
+            or not raw_sources
+            or any(
+                type(item) is not str or not item or item != item.strip()
+                for item in cast("tuple[object, ...]", raw_sources)
+            )
+        ):
+            raise _evidence_error(
+                "model fold input must bind source snapshot identities",
+                "invalid_model_fold_input_evidence",
+                input_kind=self.input_kind,
+            )
+        sources = tuple(sorted(raw_sources))
+        if len(set(sources)) != len(sources):
+            raise _evidence_error(
+                "model fold input source identities must be unique",
+                "invalid_model_fold_input_evidence",
+                input_kind=self.input_kind,
+            )
+        object.__setattr__(self, "source_snapshot_ids", sources)
+
+    def as_payload(self) -> Mapping[str, object]:
+        """Return the deterministic training-input identity payload."""
+        return {
+            "input_kind": self.input_kind,
+            "input_id": self.input_id,
+            "content_hash": self.content_hash,
+            "schema_hash": self.schema_hash,
+            "source_snapshot_ids": list(self.source_snapshot_ids),
+        }
 
 
 @dataclass(frozen=True, slots=True)
