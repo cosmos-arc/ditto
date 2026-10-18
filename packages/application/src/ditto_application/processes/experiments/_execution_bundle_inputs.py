@@ -20,10 +20,13 @@ from ditto_application.processes.experiments.baseline_registry import (
 from ditto_application.processes.experiments.execution_contracts import (
     ExactResearchSnapshot,
 )
+from ditto_application.processes.experiments.model_candidate_folds import (
+    MODEL_FOLD_INPUT_KINDS,
+    ModelFoldInputEvidence,
+)
 
 __all__ = [
     "MODEL_CANDIDATE_IMPLEMENTATION_KEY",
-    "MODEL_FOLD_INPUT_KINDS",
     "MODEL_PLAN_REQUIRES_RUNNER_UPGRADE_REASON",
     "PREDICTION_EXECUTOR_IMPLEMENTATION_KEY",
     "REGISTERED_MODEL_KINDS",
@@ -32,7 +35,6 @@ __all__ = [
     "ContentAddressedResearchInput",
     "ExecutionEvidenceSource",
     "ModelCandidateExecutionBinding",
-    "ModelFoldInputEvidence",
     "PolicyModelEvidenceBinding",
     "PredictionExecutorBinding",
     "ResearchFillMode",
@@ -648,64 +650,6 @@ MODEL_PLAN_REQUIRES_RUNNER_UPGRADE_REASON = (
     "model_candidate_plan_requires_fold_runner_upgrade"
 )
 _MODEL_CANDIDATE_KINDS = REGISTERED_MODEL_KINDS
-MODEL_FOLD_INPUT_KINDS = frozenset(
-    {"label_prices", "features", "calendar"},
-)
-
-
-@dataclass(frozen=True, slots=True)
-class ModelFoldInputEvidence:
-    """Content-addressed identity of one frozen model-training input frame."""
-
-    input_kind: str
-    input_id: str
-    content_hash: str
-    schema_hash: str
-    source_snapshot_ids: tuple[str, ...]
-
-    def __post_init__(self) -> None:
-        """Reject nominal or partial training-input identities."""
-        if self.input_kind not in MODEL_FOLD_INPUT_KINDS:
-            raise _error(
-                "model fold input kind must be exact and registered",
-                "invalid_model_fold_input_evidence",
-                input_kind=self.input_kind,
-            )
-        _identity(self.input_id, "model_fold_input_id")
-        _hash(self.content_hash, "model_fold_input_content_hash")
-        _hash(self.schema_hash, "model_fold_input_schema_hash")
-        raw_sources: object = self.source_snapshot_ids
-        if (
-            type(raw_sources) is not tuple
-            or not raw_sources
-            or any(
-                type(item) is not str or not item or item != item.strip()
-                for item in cast("tuple[object, ...]", raw_sources)
-            )
-        ):
-            raise _error(
-                "model fold input must bind source snapshot identities",
-                "invalid_model_fold_input_evidence",
-                input_kind=self.input_kind,
-            )
-        sources = tuple(sorted(raw_sources))
-        if len(set(sources)) != len(sources):
-            raise _error(
-                "model fold input source identities must be unique",
-                "invalid_model_fold_input_evidence",
-                input_kind=self.input_kind,
-            )
-        object.__setattr__(self, "source_snapshot_ids", sources)
-
-    def as_payload(self) -> Mapping[str, object]:
-        """Return the deterministic training-input identity payload."""
-        return {
-            "input_kind": self.input_kind,
-            "input_id": self.input_id,
-            "content_hash": self.content_hash,
-            "schema_hash": self.schema_hash,
-            "source_snapshot_ids": list(self.source_snapshot_ids),
-        }
 
 
 @dataclass(frozen=True, slots=True)

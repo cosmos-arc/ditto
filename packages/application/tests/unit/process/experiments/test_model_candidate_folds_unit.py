@@ -36,6 +36,7 @@ from ditto_application.processes.experiments.model_candidate_folds import (
     ModelCandidateFoldSuccess,
     ModelFoldData,
     ModelFoldInputBinding,
+    ModelFoldInputEvidence,
     ModelFoldInputKind,
     ModelFoldInputSet,
     execute_model_candidate_fold,
@@ -50,6 +51,37 @@ _EPOCH_BASE = 5_000_000_000_000_000
 _KNOWLEDGE_CUTOFF = _EPOCH_BASE + 60 * 86_400_000_000
 _TRAINED_AT = _KNOWLEDGE_CUTOFF + 1
 _LABEL_HASH = label_spec_hash()
+
+
+@pytest.mark.unit
+def test_fold_input_evidence_failure_family_stays_reproducibility() -> None:
+    """#572: the evidence contract moved here from ``_execution_bundle_inputs``
+    verbatim; its refusals must keep the REPRODUCIBILITY_FAILED code family,
+    not drift toward the fold-orchestration family of this module."""
+    with pytest.raises(AppProcessError) as kind_error:
+        ModelFoldInputEvidence(
+            input_kind="not_a_kind",
+            input_id="model-input-stock-label_prices@sha256:" + "0" * 64,
+            content_hash="a" * 64,
+            schema_hash="b" * 64,
+            source_snapshot_ids=("snapshot:tushare:stock_daily:sha256:" + "1" * 64,),
+        )
+    assert kind_error.value.details["code"] == "REPRODUCIBILITY_FAILED"
+    assert kind_error.value.details["reason"] == "invalid_model_fold_input_evidence"
+
+    with pytest.raises(AppProcessError) as hash_error:
+        ModelFoldInputEvidence(
+            input_kind="label_prices",
+            input_id="model-input-stock-label_prices@sha256:" + "0" * 64,
+            content_hash="not-a-digest",
+            schema_hash="b" * 64,
+            source_snapshot_ids=("snapshot:tushare:stock_daily:sha256:" + "1" * 64,),
+        )
+    assert hash_error.value.details["code"] == "REPRODUCIBILITY_FAILED"
+    assert hash_error.value.details["reason"] == "invalid_content_hash"
+    assert hash_error.value.details["field"] == "model_fold_input_content_hash"
+
+
 _CODE_ENV = {
     "implementation_key": "ditto_application.model_candidates.ridge.v1",
     "python": "3.13.14",

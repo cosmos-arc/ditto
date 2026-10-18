@@ -18,10 +18,12 @@ from ditto_application.exceptions import AppProcessError
 from ditto_application.processes.experiments._execution_bundle_inputs import (
     MODEL_CANDIDATE_IMPLEMENTATION_KEY,
     ModelCandidateExecutionBinding,
-    ModelFoldInputEvidence,
 )
 from ditto_application.processes.experiments._planning_values import (
     BaselineInputValue,
+)
+from ditto_application.processes.experiments.model_candidate_folds import (
+    ModelFoldInputEvidence,
 )
 from ditto_application.processes.experiments.model_candidate_plans import (
     decode_model_candidate_descriptor,

@@ -27,11 +27,9 @@ from ditto_analysis.research.artifact_service import ResearchArtifactService
 from ditto_application.builders.research_model_fold_adapters import (
     IndexedModelFoldDataPort,
 )
-from ditto_application.processes.experiments._execution_bundle_inputs import (
-    ModelFoldInputEvidence,
-)
 from ditto_application.processes.experiments.model_candidate_folds import (
     ModelFoldInputBinding,
+    ModelFoldInputEvidence,
     ModelFoldInputKind,
     ModelFoldInputSet,
 )
