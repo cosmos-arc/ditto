@@ -13,6 +13,14 @@ type LiveLane = Literal["stock", "etf"]
 _END = date(2026, 7, 31)
 _BENCHMARK_INSTRUMENT_ID = 3_000_149
 _BAR_KEY = ("trade_date", "instrument_id")
+# Provider no-limit encodings (#575): Tushare stk_limit marks a session with
+# no exchange band by a ceiling sentinel (up_limit ≈ 100000, down_limit NULL —
+# new-listing windows) or its mirror (up_limit NULL, down_limit 0.0 — defunct
+# codes). Sessions under them are always fillable; the projected values below
+# can never bind a comparison.
+_NO_LIMIT_CEILING = 100_000.0
+_NO_LIMIT_CEILING_THRESHOLD = 99_999.0
+_NO_LIMIT_FLOOR = 0.0
 
 
 __all__ = [
@@ -159,6 +167,8 @@ def normalized_bars(
     provider limit (suspension carries, cutoff-hidden publications) fall back
     to the synthetic band, which stays the documented approximation for the
     ETF lane and index benchmarks — no provider limit store exists there.
+    Provider no-limit sentinel encodings (#575: ceiling sentinel or its
+    mirror) project to never-binding values instead of failing.
     """
     raw = deduplicate_physical_bars(raw)
     selected = raw.select(
@@ -277,18 +287,69 @@ def normalized_bars(
             store="price limit",
         )
         priced = band.join(provider, on=["trade_date", "instrument_id"], how="left")
-        # A traded session without a provider limit is an ingestion gap in the
-        # exchange truth, not a session to approximate with the band (#571);
-        # suspension carries may legitimately lack a provider row.
-        gap = priced.filter(
-            ~pl.col("is_suspended")
-            & (pl.col("up_limit").is_null() | pl.col("down_limit").is_null())
+        # A traded session whose provider row is absent is an ingestion gap in
+        # the exchange truth, not a session to approximate with the band
+        # (#571); suspension carries may legitimately lack a provider row.
+        provider_row = (
+            pl.col("up_limit").is_not_null() | pl.col("down_limit").is_not_null()
         )
-        if not gap.is_empty():
-            sample = gap.select("trade_date", "instrument_id").head(3)
+        absent = priced.filter(~pl.col("is_suspended") & ~provider_row)
+        if not absent.is_empty():
+            sample = absent.select("trade_date", "instrument_id").head(3)
             raise ValueError(
-                f"live member session has no provider price limit: {sample}"
+                f"live member session has no provider price limit row: {sample}"
             )
+        # Nulls that do not form a recognized no-limit encoding are a provider
+        # shape we refuse to guess (#575): one-sided null without the paired
+        # sentinel stays a fail-closed gap.
+        unrecognized = priced.filter(
+            ~pl.col("is_suspended")
+            & provider_row
+            & (
+                (
+                    pl.col("down_limit").is_null()
+                    & (
+                        pl.col("up_limit").is_null()
+                        | (pl.col("up_limit") < _NO_LIMIT_CEILING_THRESHOLD)
+                    )
+                )
+                | (
+                    pl.col("up_limit").is_null()
+                    & (pl.col("down_limit") != _NO_LIMIT_FLOOR)
+                )
+            )
+        )
+        if not unrecognized.is_empty():
+            sample = unrecognized.select("trade_date", "instrument_id").head(3)
+            raise ValueError(f"unrecognized provider limit shape: {sample}")
+        # Translate only traded sessions: recognized sentinels become the
+        # canonical never-binding pair (near-ceiling values normalize to the
+        # ceiling). Suspension carries keep the pre-#575 semantics — provider
+        # values pass through and null sides fall back to the band — so no
+        # previously-freezing frame changes bytes (#575 review F1).
+        translatable = ~pl.col("is_suspended") & provider_row
+        priced = priced.with_columns(
+            pl.when(
+                translatable
+                & (
+                    pl.col("up_limit").is_null()
+                    | (pl.col("up_limit") >= _NO_LIMIT_CEILING_THRESHOLD)
+                )
+            )
+            .then(pl.lit(_NO_LIMIT_CEILING))
+            .otherwise(pl.col("up_limit"))
+            .alias("up_limit"),
+            pl.when(
+                translatable
+                & (
+                    pl.col("down_limit").is_null()
+                    | (pl.col("down_limit") <= _NO_LIMIT_FLOOR)
+                )
+            )
+            .then(pl.lit(_NO_LIMIT_FLOOR))
+            .otherwise(pl.col("down_limit"))
+            .alias("down_limit"),
+        )
         # Joins do not guarantee output order; re-establish it before the
         # within-instrument rolling mean below.
         priced = priced.sort(["instrument_id", "trade_date"])

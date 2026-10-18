@@ -466,6 +466,13 @@ def _aggregate_metrics(
         _ResearchMetricId.RELATIVE_NET_RETURN: _not_evaluated(
             "baseline_comparison_pending"
         ),
+        # #271 增量：聚合层与逐 fold 同理由——标签统计绑定前显式不评估。
+        _ResearchMetricId.UNFILLABLE_ENTRY_RATIO: _not_evaluated(
+            "label_statistics_not_bound"
+        ),
+        _ResearchMetricId.UNFILLABLE_EXIT_RATIO: _not_evaluated(
+            "label_statistics_not_bound"
+        ),
         _ResearchMetricId.CAPACITY: _aggregate_fold_metric(
             _ResearchMetricId.CAPACITY, folds
         ),

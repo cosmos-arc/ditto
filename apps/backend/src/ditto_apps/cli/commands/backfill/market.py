@@ -4,7 +4,13 @@ from __future__ import annotations
 
 import typer
 
-from ditto_apps.cli.commands.factory import create_backfill_command
+from ditto_apps.cli.commands.factory import (
+    _raise_if_backfill_failed,
+    create_backfill_command,
+)
+from ditto_apps.cli.context import create_executor
+from ditto_apps.cli.utils.output import print_backfill_summary
+from ditto_apps.cli.utils.validation import validate_date_format
 
 app = typer.Typer(help="行情数据回补")
 
@@ -102,6 +108,20 @@ def limit(
     start: str = typer.Option(..., "--start", "-s", help="开始日期 (YYYY-MM-DD)"),
     end: str = typer.Option(..., "--end", "-e", help="结束日期 (YYYY-MM-DD)"),
     parallel: int = typer.Option(1, "--parallel", "-p", help="并行度"),
+    force: bool = typer.Option(
+        False,
+        "--force",
+        help="连 COMPLETE 检查点的月份 chunk 一并重拉; 行级补数通道 #575",
+    ),
 ) -> None:
     """回补股票涨跌停价格 (#517)."""
-    return _stock_limit_impl(ctx, start, end, parallel)
+    if not force:
+        return _stock_limit_impl(ctx, start, end, parallel)
+    validate_date_format(start)
+    validate_date_format(end)
+    with create_executor() as executor:
+        result = executor.backfill_range(
+            "stock_limit", start, end, parallel, include_complete=True
+        )
+        print_backfill_summary(result)
+        _raise_if_backfill_failed(result)

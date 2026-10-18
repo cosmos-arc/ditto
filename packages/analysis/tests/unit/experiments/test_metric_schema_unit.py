@@ -23,7 +23,8 @@ def test_r3_schema_has_versioned_typed_canonical_definitions() -> None:
     schema = R3_RESEARCH_METRIC_SCHEMA
 
     assert schema.schema_id == "r3-research-metrics"
-    assert schema.version == 1
+    # v2 (#271 增量)：比较语言加入 unfillable_entry/exit_ratio。
+    assert schema.version == 2
     assert tuple(item.metric_id for item in schema.definitions) == tuple(
         ResearchMetricId
     )
@@ -35,8 +36,17 @@ def test_r3_schema_has_versioned_typed_canonical_definitions() -> None:
         ResearchMetricId.MAX_DRAWDOWN,
         ResearchMetricId.TURNOVER,
         ResearchMetricId.COST_DRAG,
+        ResearchMetricId.UNFILLABLE_ENTRY_RATIO,
+        ResearchMetricId.UNFILLABLE_EXIT_RATIO,
         ResearchMetricId.CAPACITY,
     )
+    unfillable = schema.definition(ResearchMetricId.UNFILLABLE_ENTRY_RATIO)
+    assert unfillable.unit is ResearchMetricUnit.FRACTION
+    assert unfillable.domain is ResearchMetricDomain.EXECUTION
+    assert unfillable.direction is ResearchMetricDirection.CONTEXT_ONLY
+    assert unfillable.aggregation is ResearchMetricAggregation.RETAIN_BY_FOLD
+    assert unfillable.minimum == 0.0
+    assert unfillable.maximum == 1.0
     assert set(R3_DIAGNOSTIC_METRIC_IDS).issubset(set(ResearchMetricId))
     drawdown = schema.definition(ResearchMetricId.MAX_DRAWDOWN)
     assert drawdown.unit is ResearchMetricUnit.PERCENT

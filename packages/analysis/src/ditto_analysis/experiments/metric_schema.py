@@ -42,6 +42,8 @@ class ResearchMetricId(StrEnum):
     MAX_DRAWDOWN = "max_drawdown"
     TURNOVER = "turnover"
     COST_DRAG = "cost_drag"
+    UNFILLABLE_ENTRY_RATIO = "unfillable_entry_ratio"
+    UNFILLABLE_EXIT_RATIO = "unfillable_exit_ratio"
     CAPACITY = "capacity"
     COVERAGE = "coverage"
     MISSINGNESS = "missingness"
@@ -281,7 +283,8 @@ _PROFILE_OPTIONS = _MetricOptions(scale=_PROFILE_SCALE)
 
 R3_RESEARCH_METRIC_SCHEMA = ResearchMetricSchema(
     schema_id="r3-research-metrics",
-    version=1,
+    # v2 (#271 增量)：比较语言新增 unfillable_entry_ratio / unfillable_exit_ratio。
+    version=2,
     definitions=(
         _definition(
             ResearchMetricId.NET_RETURN,
@@ -338,6 +341,23 @@ R3_RESEARCH_METRIC_SCHEMA = ResearchMetricSchema(
             _MIN,
             ResearchMetricAggregation.RECOMPUTE_FILLS_AND_CAPITAL,
             _NONNEGATIVE_CUMULATIVE,
+        ),
+        # #271 增量：不可成交比例进入同口径比较语言。方向 CONTEXT_ONLY——
+        # 展示级证据（决策宇宙在窗口内的标签路径可执行性，种子来自 W1
+        # fold 标签统计），不参与排名；v2 起 producer 将标签统计绑定为值。
+        *(
+            _definition(
+                metric_id,
+                _F,
+                ResearchMetricDomain.EXECUTION,
+                _CONTEXT,
+                _RETAIN,
+                _FRACTION_DOMAIN,
+            )
+            for metric_id in (
+                ResearchMetricId.UNFILLABLE_ENTRY_RATIO,
+                ResearchMetricId.UNFILLABLE_EXIT_RATIO,
+            )
         ),
         _definition(
             ResearchMetricId.CAPACITY,
@@ -458,6 +478,8 @@ R3_COMPARISON_METRIC_IDS: tuple[ResearchMetricId, ...] = tuple(
         "max_drawdown",
         "turnover",
         "cost_drag",
+        "unfillable_entry_ratio",
+        "unfillable_exit_ratio",
         "capacity",
     )
 )
