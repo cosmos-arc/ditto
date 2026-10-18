@@ -1031,11 +1031,15 @@ class TestPlanningRequestIdentityEdges:
 def test_model_less_request_hash_is_pinned_across_versions() -> None:
     """Guard the identity algorithm: model-less documents keep the exact
     pre-model bytes, so durable replays of strategy-only launches survive
-    identity-algorithm changes (#565 W2b)."""
+    identity-algorithm changes (#565 W2b).
+
+    The pin shifts only by deliberate identity-relevant change: #271 增量
+    (metric schema v2, 2026-10-18) added the unfillable ratios to the
+    comparison language embedded in plan identity."""
     request = build_experiment_planning_request(_planning_document())
 
     assert planning_request_hash(request) == (
-        "1ebd3f6973043498e91204c4a354361284f16aed93dd052c01147d9ed4fd2fe6"
+        "73d57ac4ea78aca6535f8566738db74e485c2f994ece3d3218be79e7a6a9ee24"
     )
 
 

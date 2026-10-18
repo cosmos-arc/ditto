@@ -267,8 +267,9 @@ def _raw_adjustment(rows: tuple[tuple[date, int, float], ...]) -> pl.DataFrame:
 
 
 def _raw_limits(
-    rows: tuple[tuple[date, int, float, float], ...],
+    rows: tuple[tuple[date, int, float | None, float | None], ...],
 ) -> pl.DataFrame:
+    # None columns model the provider's no-limit sentinel encodings (#575).
     return pl.DataFrame(
         {
             "trade_date": [item[0] for item in rows],
@@ -383,6 +384,87 @@ def test_normalized_bars_prefer_provider_limits_with_band_fallback_on_carries() 
     assert frame["is_suspended"].to_list() == [False, True]
     assert frame["limit_up"].to_list() == pytest.approx([9.45, 11.0])
     assert frame["limit_down"].to_list() == pytest.approx([8.55, 9.0])
+
+
+@pytest.mark.unit
+def test_normalized_bars_project_no_limit_sentinels_as_never_binding() -> None:
+    """#575: new-listing windows publish (up≈100000, down NULL); the session
+    has no exchange band and must stay fillable, not fail closed."""
+    raw = _raw_bars(((date(2015, 2, 2), 1, 10.0),))
+    limits = _raw_limits(((date(2015, 2, 2), 1, 100_000.0, None),))
+
+    frame = normalized_bars(
+        raw,
+        _membership(((date(2015, 2, 2), 1),)),
+        authority_snapshot_id="source-1",
+        limits=limits,
+    )
+
+    assert frame["limit_up"].to_list() == pytest.approx([100_000.0])
+    assert frame["limit_down"].to_list() == pytest.approx([0.0])
+
+
+@pytest.mark.unit
+def test_normalized_bars_project_mirror_no_limit_encoding_as_never_binding() -> None:
+    """#575: defunct-code rows publish the mirror (up NULL, down 0.0)."""
+    raw = _raw_bars(((date(2015, 2, 2), 1, 10.0),))
+    limits = _raw_limits(((date(2015, 2, 2), 1, None, 0.0),))
+
+    frame = normalized_bars(
+        raw,
+        _membership(((date(2015, 2, 2), 1),)),
+        authority_snapshot_id="source-1",
+        limits=limits,
+    )
+
+    assert frame["limit_up"].to_list() == pytest.approx([100_000.0])
+    assert frame["limit_down"].to_list() == pytest.approx([0.0])
+
+
+@pytest.mark.unit
+def test_normalized_bars_reject_unrecognizable_provider_limit_shape() -> None:
+    """A one-sided null without its paired sentinel is not a no-limit
+    encoding; refuse instead of guessing which side is missing."""
+    raw = _raw_bars(((date(2015, 2, 2), 1, 10.0),))
+    limits = _raw_limits(((date(2015, 2, 2), 1, 9.45, None),))
+
+    with pytest.raises(ValueError, match="unrecognized provider limit shape"):
+        normalized_bars(
+            raw,
+            _membership(((date(2015, 2, 2), 1),)),
+            authority_snapshot_id="source-1",
+            limits=limits,
+        )
+
+
+@pytest.mark.unit
+def test_suspension_carries_keep_band_on_provider_null_sides() -> None:
+    """#575 review F1: suspension rows never receive sentinel translation —
+    provider values pass through, null sides fall back to the band, so no
+    previously-freezing frame changes bytes."""
+    raw = _raw_bars(((date(2015, 2, 2), 1, 10.0),))
+    # 2015-02-03 is a suspension carry; the provider publishes a new-listing
+    # sentinel row (up=100000, down NULL) for it.
+    limits = _raw_limits(
+        (
+            (date(2015, 2, 2), 1, 9.45, 8.55),
+            (date(2015, 2, 3), 1, 100_000.0, None),
+        )
+    )
+
+    frame = normalized_bars(
+        raw,
+        _membership(((date(2015, 2, 2), 1), (date(2015, 2, 3), 1))),
+        authority_snapshot_id="source-1",
+        limits=limits,
+    ).sort("trade_date")
+
+    carried = frame.filter(pl.col("trade_date") == date(2015, 2, 3))
+    assert carried["is_suspended"].to_list() == [True]
+    # Provider up passes through; the null down side falls back to the band
+    # off the carried close 10.0 (not the sentinel floor 0.0).
+    assert carried["limit_up"].to_list() == pytest.approx([100_000.0])
+    assert carried["limit_down"].to_list() == pytest.approx([9.0])
 
 
 @pytest.mark.unit

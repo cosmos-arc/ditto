@@ -738,6 +738,14 @@ def _project_metrics(
         _ResearchMetricId.RELATIVE_NET_RETURN: _not_evaluated(
             "baseline_comparison_pending"
         ),
+        # #271 增量：候选 fold 证据尚未绑定标签统计；比例值由 #271 的
+        # producer（W1 fold 标签统计种子）接线后评估。
+        _ResearchMetricId.UNFILLABLE_ENTRY_RATIO: _not_evaluated(
+            "label_statistics_not_bound"
+        ),
+        _ResearchMetricId.UNFILLABLE_EXIT_RATIO: _not_evaluated(
+            "label_statistics_not_bound"
+        ),
     }
     capacity = value.capacity
     projected[_ResearchMetricId.CAPACITY] = (
