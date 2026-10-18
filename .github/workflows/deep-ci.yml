@@ -69,6 +69,12 @@ jobs:
         with:
           persist-credentials: false
       - uses: ./.github/actions/setup-toolchain
+      # #567 lightgbm macOS wheel 内嵌 rpath /opt/homebrew/opt/libomp/lib（构建
+      # 机 brew libomp），runner 镜像未预装导致 dlopen 报 Library not loaded:
+      # @rpath/libomp.dylib；brew 装回同路径即恢复动态链接解析。
+      - name: Install libomp for native wheels (macOS)
+        if: ${{ matrix.name == 'macos-arm64' }}
+        run: brew install libomp
       - name: Native wheel behavior
         run: task platform-native-test
       # #538 macOS 双栈门并行化：backend 326s + Web 229s 串行改并行，墙钟≈max。
