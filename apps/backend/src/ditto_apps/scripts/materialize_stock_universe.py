@@ -8,7 +8,10 @@ instrument 注册表全部 A 股（含退市）按 list_date/delist_date 区间�
 
 ID 语义：``csi_a_share`` 是种子策略声明的 universe 句柄（见
 ``ditto_strategy/alpha/seeds.py`` 的 ``_seed_stock_selection_rotation``），
-内容为注册表全市场区间，不是中证指数成分声明。
+内容为注册表全市场区间，不是中证指数成分声明。注意：selection 装配
+车道（live 选池）要求宇宙成员==全量注册股票花名册，与本池的退市封闭
+区间结构不兼容——该车道用 ``universe.cn.all``；本池仅供回测/研究
+车道 PIT 成员消费。
 
 用法::
 
@@ -55,9 +58,19 @@ def build_constituent_records(
             pl.col("list_date").str.to_date(),
             pl.col("delist_date").str.to_date(strict=False),
         )
-    listed = frame.filter(
+    valid = frame.filter(
         pl.col("list_date").is_not_null()
         & (pl.col("list_date") >= _MIN_VALID_LIST_DATE)
+    )
+    # find_securities 对 instrument_mapping 的 LEFT JOIN 每条 source 映射
+    # 返回一行（fuyao 冗余源摄取会登记第二条映射）——同一 instrument 的
+    # 重复行若不去重，裸 INSERT 撞 universe_constituent 主键
+    # (universe_id, instrument_id, effective_from) 且发生在 create_universe
+    # 已提交之后，残留 0 成员宇宙。按 instrument_id 去重，优先保留带
+    # source_ticker 的映射行。
+    listed = valid.sort(["instrument_id", "source_ticker"], nulls_last=True).unique(
+        subset=["instrument_id"],
+        keep="first",
     )
     records = [
         {
@@ -71,7 +84,7 @@ def build_constituent_records(
         }
         for row in listed.iter_rows(named=True)
     ]
-    return records, frame.height - listed.height
+    return records, frame.height - valid.height
 
 
 def main(argv: list[str] | None = None) -> int:

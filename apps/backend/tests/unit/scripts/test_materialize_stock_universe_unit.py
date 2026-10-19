@@ -118,6 +118,38 @@ def test_skips_placeholder_list_dates_before_market_open() -> None:
     assert skipped == 1
 
 
+def test_dual_source_mapping_rows_deduplicate_by_instrument() -> None:
+    """find_securities 的 mapping join 扇出行去重到一条, 避免撞成分主键."""
+    frame = _frame(
+        [
+            {
+                "instrument_id": 21,
+                "ticker": "600000",
+                "asset_class": "stock",
+                "list_date": date(1999, 11, 10),
+                "delist_date": None,
+                "source_ticker": None,
+            },
+            {
+                "instrument_id": 21,
+                "ticker": "600000",
+                "asset_class": "stock",
+                "list_date": date(1999, 11, 10),
+                "delist_date": None,
+                "source_ticker": "600000.SH",
+            },
+        ],
+    )
+
+    records, skipped = build_constituent_records(frame)
+
+    assert skipped == 0
+    assert len(records) == 1
+    assert records[0]["instrument_id"] == 21
+    # 优先保留带 source_ticker 的映射行
+    assert records[0]["source_ticker"] == "600000.SH"
+
+
 def test_empty_frame_returns_empty() -> None:
     assert build_constituent_records(_frame([])) == ([], 0)
 

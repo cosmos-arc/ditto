@@ -257,6 +257,44 @@ class TestTushareClientQuery:
         assert result["cal_date"].to_list() == ["1", "2"]
         assert route.call_count == 2
 
+    def test_server_cap_below_documented_page_size_truncates(
+        self,
+        respx_mock,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """已知风险面固化（#196 correctness F4，非行为认可）。
+
+        「短页=取尽」依赖请求页宽 ≤ 服务端单响应上限。若某端点的实际上限
+        低于定档页宽（如代理硬顶 9000 而 vip 页宽定档恰为 9000 后再下调），
+        首页短页会被误判取尽而静默截断——跨页重复守卫只覆盖多页场景。
+        该测试把现状固化为契约：升级页宽定档或加每期行数 DQ 断言时，
+        此测试提醒同步评估此风险面。
+        """
+        monkeypatch.setitem(pagination._DOCUMENTED_PAGE_SIZES, "trade_cal", 9000)
+        total_rows = 10202
+        server_cap = 8500
+
+        def side_effect(request: httpx.Request) -> httpx.Response:
+            params = orjson.loads(request.content)["params"]
+            start = min(params["offset"], total_rows)
+            page = [[str(i)] for i in range(start, min(start + server_cap, total_rows))]
+            return httpx.Response(
+                200,
+                json={
+                    "code": 0,
+                    "msg": None,
+                    "data": {"fields": ["cal_date"], "items": page},
+                },
+            )
+
+        respx_mock.post("http://api.tushare.pro").mock(side_effect=side_effect)
+
+        client = TushareClient(token="test_token", settings=_settings())
+        result = client.query("trade_cal", "cal_date")
+
+        # 截断发生：8500 < 10202，但短页被当作取尽
+        assert result.height == server_cap
+
     def test_exact_full_page_with_schemaless_empty_tail_completes(
         self,
         respx_mock,

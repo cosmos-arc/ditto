@@ -499,6 +499,14 @@ class BacktestRuntimeBuilder:
             runtime.spec.universe,
             asof=config.start_date,
         )
+        if not universe_ids:
+            # 空成员放行会产出零标的的"成功"回测，静默掩盖上游数据损坏
+            # （宇宙缺失/成员区间不覆盖 start_date/物化中断残留）。
+            msg = (
+                f"universe {runtime.spec.universe} 在 {config.start_date} "
+                + "解析到 0 成员; 检查宇宙存在性与成员 PIT 区间"
+            )
+            raise AppBuilderError(msg)
         resolution = resolve_instrument_display(
             universe_ids,
             self._metadata_service,

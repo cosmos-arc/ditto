@@ -270,3 +270,36 @@ class TestStrategySliceBuilder:
             )
 
         data_provider.get_bars.assert_not_called()
+
+    def test_fails_closed_when_universe_resolves_empty(self) -> None:
+        """宇宙成员解析为空（缺失/区间不覆盖/物化残留）时拒绝构造空切片。"""
+        spec = _make_strategy_spec(
+            strategy_id="stock-alpha",
+            name="Stock Alpha",
+            template="stock_selection",
+            universe="csi_a_share",
+            asset_class="stock",
+            required_datasets=("stock_daily",),
+        )
+        runtime_builder = MagicMock()
+        runtime_builder.build_published_runtime.return_value = _make_published_runtime(
+            spec,
+            version=1,
+        )
+        data_provider = _make_data_provider()
+        metadata = _make_metadata_service()
+        metadata.get_universe.return_value = []
+        builder = StrategySliceBuilder(
+            strategy_runtime_builder=runtime_builder,
+            metadata_service=metadata,
+            data_provider=data_provider,
+        )
+
+        with pytest.raises(AppBuilderError, match="0 成员"):
+            builder.build_published_slice(
+                "stock-alpha",
+                trade_date="2026-01-13",
+                version=1,
+            )
+
+        data_provider.get_bars.assert_not_called()
