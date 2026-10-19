@@ -10,6 +10,7 @@ from ditto_application.exceptions import AppBuilderError
 from ditto_application.strategy_spec_legacy_deserialization import (
     default_required_datasets_for_template,
 )
+from ditto_strategy.alpha.seeds import SEED_STRATEGY_SPECS
 from ditto_strategy.alpha.specs import StrategySpec
 
 
@@ -74,18 +75,23 @@ class TestStrategyRuntimeDatasetIds:
 class TestAssertStrategyRuntimeDataAllowed:
     """strategy runtime fail-closed maturity gate."""
 
-    def test_blocks_fundamentals_consuming_spec_after_stock_promotion(self) -> None:
-        """股票数据晋级后,消费 experimental 财务数据集的规格仍被正式路径拦截。"""
+    def test_seed_stock_selection_rotation_passes_without_opt_in(self) -> None:
+        """#196 策略腿晋级后,种子股票模板声明数据集全部走正式路径。"""
+        spec = SEED_STRATEGY_SPECS["seed_stock_selection_rotation"]
+
+        assert_strategy_runtime_data_allowed(spec)
+
+    def test_blocks_experimental_statement_lane_after_promotion(self) -> None:
+        """两表晋级后,仍为 experimental 的 cash_flow 消费规格继续被拦截。"""
         spec = _stock_spec(
             required_datasets=(
                 "stock_daily",
                 "adj_factor",
-                "balance_sheet",
-                "income_statement",
+                "cash_flow",
             ),
         )
 
-        with pytest.raises(AppBuilderError, match="balance_sheet=experimental"):
+        with pytest.raises(AppBuilderError, match="cash_flow=experimental"):
             assert_strategy_runtime_data_allowed(spec)
 
     def test_stock_lane_allowed_by_static_assignment(self) -> None:
@@ -98,13 +104,13 @@ class TestAssertStrategyRuntimeDataAllowed:
 
         assert_strategy_runtime_data_allowed(spec)
 
-    def test_fundamental_lane_requires_explicit_research_opt_in(self) -> None:
-        """财务数据集保持 experimental,正式运行时必须显式研究放行。"""
+    def test_cash_flow_lane_requires_explicit_research_opt_in(self) -> None:
+        """无正式消费者的 cash_flow 保持 experimental,必须显式研究放行。"""
         spec = _stock_spec(
-            required_datasets=("balance_sheet",),
+            required_datasets=("cash_flow",),
         )
 
-        with pytest.raises(AppBuilderError, match="balance_sheet=experimental"):
+        with pytest.raises(AppBuilderError, match="cash_flow=experimental"):
             assert_strategy_runtime_data_allowed(spec)
 
         assert_strategy_runtime_data_allowed(
@@ -114,7 +120,7 @@ class TestAssertStrategyRuntimeDataAllowed:
 
     def test_research_opt_in_allows_experimental_required_datasets(self) -> None:
         spec = _stock_spec(
-            required_datasets=("stock_daily", "balance_sheet"),
+            required_datasets=("stock_daily", "cash_flow"),
         )
 
         assert_strategy_runtime_data_allowed(spec, allow_experimental_data=True)

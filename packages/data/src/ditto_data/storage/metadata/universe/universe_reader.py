@@ -129,7 +129,10 @@ class UniverseReader:
         if not rows:
             return pl.DataFrame()
 
-        return pl.DataFrame(rows)
+        # infer_schema_length=None：封闭退市区间（effective_to 非空）出现在
+        # 首批行之后时，默认 100 行推断会把前段全 NULL 列定为 Null 型，
+        # 后续日期字符串追加失败（#196 csi_a_share 物化池实测）。
+        return pl.DataFrame(rows, infer_schema_length=None)
 
     def get_constituent_instrument_ids(
         self,

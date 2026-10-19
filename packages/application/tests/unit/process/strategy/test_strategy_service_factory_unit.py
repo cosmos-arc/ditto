@@ -12,6 +12,7 @@ from ditto_application.builders import (
     PublishedBacktestRuntime,
     StrategyServiceFactory,
 )
+from ditto_application.builders.runtime_builder import StrategyRuntimeBuilder
 from ditto_application.builders.service_factory import build_frozen_baseline_pipeline
 from ditto_application.exceptions import AppBuilderError
 from ditto_application.processes.execution.backtest_process import (
@@ -31,6 +32,8 @@ from ditto_application.processes.experiments.execution_bundle import (
 from ditto_backtest.brokerage import BacktestBrokerage
 from ditto_backtest.data_feed import DataFeed
 from ditto_data.lineage import InMemoryDataLineage
+from ditto_data.provider import DataProvider
+from ditto_data.services.metadata_service import MetadataService
 from ditto_execution.audit import ExecutionAuditService
 from ditto_execution.planner import SimpleExecutionPlanner
 from ditto_execution.reality import AShareFeeModel
@@ -447,3 +450,47 @@ class TestBuildPublishedRuntimeCostModels:
         )
 
         assert service._options.slippage_model is custom_slippage
+
+
+class TestBacktestRuntimeBuilderUniverseGuard:
+    """catalog 回测 runtime 对空宇宙成员 fail-closed（correctness F2）。"""
+
+    def test_build_published_runtime_fails_closed_on_empty_universe(self) -> None:
+        """宇宙成员解析为空时拒绝构造回测 runtime，不产出零标的"成功"回测。"""
+        spec = StrategySpec(
+            strategy_id="stock-alpha",
+            name="Stock Alpha",
+            template="stock_selection",
+            universe="csi_a_share",
+            asset_class="stock",
+            benchmark="000300.SH",
+            tags=("seed",),
+        )
+        runtime = MagicMock()
+        runtime.spec = spec
+        runtime.record.version = 1
+        runtime.base_spec_hash = "a" * 64
+        runtime.spec_hash = "a" * 64
+        runtime.parameter_hash = canonical_parameter_hash(())
+        runtime.effective_parameters = ()
+        inner = MagicMock(spec=StrategyRuntimeBuilder)
+        inner.build_published_runtime.return_value = runtime
+        metadata = MagicMock(spec=MetadataService)
+        metadata.resolve_instrument_id.return_value = 3_000_001
+        metadata.get_universe.return_value = []
+        builder = BacktestRuntimeBuilder(
+            strategy_runtime_builder=inner,
+            metadata_service=metadata,
+            data_provider=MagicMock(spec=DataProvider),
+        )
+
+        with pytest.raises(AppBuilderError, match="0 成员"):
+            builder.build_published_runtime(
+                config=BacktestCatalogRequestConfig(
+                    strategy_id="stock-alpha",
+                    start_date="2026-01-01",
+                    end_date="2026-03-01",
+                    initial_cash=1_000_000.0,
+                ),
+                version=1,
+            )

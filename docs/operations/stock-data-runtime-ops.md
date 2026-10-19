@@ -2,6 +2,8 @@
 
 > 适用数据集:`stock_basic`、`stock_daily`、`stock_status`(Tushare 主源,经 `https://t.xiaodefa.top/` 代理;fuyao 为冗余源)。
 > 本文档源于 [#196](https://github.com/cosmos-arc/ditto/issues/196) 准则二「document runtime owner, freshness SLA, and source failover policy」的评审;原 license/promotion 记录已随 #392 治理删除,现行证据以 provider snapshots 与 fetch log 为准。
+>
+> 财务三表(`balance_sheet`/`income_statement`/`cash_flow`)的运行职责见文末[财务报表数据集段](#财务报表数据集运行职责2026-10-晋级材料)。
 
 ## 运行负责人（runtime owner）
 
@@ -86,3 +88,35 @@
 - 2026-10-03:#392 删除认证/晋级/license 治理后同步收口——failover 与停止条件改按完成快照事实表述(chevy)。
 - 2026-10-05:#515 新增「代理端点风险」段(#507 I2):零文档边界、fuyao 对账归因限制、官方直连采样通道与日配额计数。
 - 2026-10-06:#516 次源节流说明——fuyao 0.1s 间隔+限流退避(宽基对账耗时上升属预期)、FRED 0.5s 节流(chevy)。
+
+# 财务报表数据集运行职责（2026-10 晋级材料）
+
+> 适用数据集:`balance_sheet`、`income_statement`(2026-10-19 随 #196 策略腿晋级 initial-focus);`cash_flow` 同窗回补但**无正式消费者,维持 experimental**,消费方出现时按同一模板补评审。主源 Tushare vip 端点(`balancesheet_vip`/`income_vip`/`cashflow_vip`,经代理);无备源。
+
+## 运行负责人（runtime owner）
+
+- 同上:单操作者工作站(chevy)。披露季(4/8/10 月)后跑增量回补;上游同披露键重发布由 ingestion 通道 `VERIFY_IDENTICAL` 拒收,处置裁决记录于 #196(先例:fina_indicator Q2/Q3 拒收留档)。
+
+## 新鲜度 SLA 与历史版本证据
+
+| 数据集 | 频率 | SLA(metadata 权威值) | 披露锚 |
+|---|---|---|---|
+| `balance_sheet` | 披露事件 | 1080h(45 天) | `f_ann_date`(实际公告日) |
+| `income_statement` | 披露事件 | 1080h(45 天) | `f_ann_date` |
+
+- 历史版本证据(回应「不能只凭 f_ann_date 字段晋级」):披露锚 + 三层防护构成——(1) `report_type=1` 合并报表口径、同一披露键取 `update_flag` 最新行(#482 语义);(2) ingestion 通道对非 force 重拉一律 `VERIFY_IDENTICAL`(`instrument_ingestion`/`post_ingest` 两路径,fina_indicator Q2/Q3 拒收先例实证),不静默改史;(3) 回放读冻结 provider snapshot,不触活数据。上游无逐版本历史,残余风险=老披露键的静默修订不可检测,由(2)在重拉通道拦截。
+- 覆盖:回补窗口 2014-01-01 起(2014Q1 起报告期,披露超集窗口 8Q+区间);实际行数底账、PIT 抽查与缺口(如有)以 #196 票评论留证为准。
+
+## 主备与故障切换（source failover policy）
+
+1. 仅 Tushare vip 端点一源;fuyao 无财务三表 adapter。主源失败:保持缺口展示并重试(增量回补自带重试;已知瞬态=代理翻页 offset 重复触发 fail-closed,重试自愈)。
+2. 代理对大结果集的翻页重复是结构性风险(corporate_actions 先例):若某报告期持续失败且重试不愈,记名缺口并按代理端点风险段的官方直连采样通道对拍,不 force 覆盖。
+3. 同键修订冲突一律拒收留档,不得以 `KEEP_LAST` 覆盖存量好数据。
+
+## 前向观察窗
+
+自晋级日(2026-10-19)起 2 个披露季(至 2027-04-30):每季增量回补后核对 L1/L2 与拒收日志;上游同键修订事件如出现,按 #196 先例裁决。停止条件同上文股票面(覆盖回归/DQ 失败/provider 退化/消费者事故/许可变化),触发则回退 experimental 并修档。
+
+## 版本
+
+- 2026-10-19:#196 策略腿晋级——`balance_sheet`/`income_statement` 升 initial-focus(cash_flow 维持 experimental)(chevy)。

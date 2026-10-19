@@ -169,6 +169,16 @@ class SourceFetchError(DataSourceError):
         self.__cause__ = cause
 
 
+class PaginationCorruptionError(SourceFetchError):
+    """
+    翻页完整性损坏（跨页重复行）。
+
+    服务端忽略 offset / 排序不稳定 / 翻页期间源端变更的确定性指纹。
+    与一般 SourceFetchError 分开：调用方可以安全地对本错误换页宽几何
+    重试——守卫在重试几何上同样生效，真 offset 损坏仍会再次触发。
+    """
+
+
 class SourceConfigurationError(DataSourceError):
     """数据源配置错误（缺少环境变量、无效配置）。"""
 

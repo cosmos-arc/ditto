@@ -207,13 +207,17 @@ _INITIAL_FOCUS_DATASETS: frozenset[str] = frozenset(
         "st_history",
         # ETF Paper 生产参考事实（#408 主线验收车道，配置源）
         "etf_reference",
+        # 财务三表之两表（#196 策略腿晋级）：种子股票模板 quality_roe/value_pe
+        # 消费列；披露锚 f_ann_date + ingestion 通道 VERIFY_IDENTICAL 拒收
+        # 上游同键修订 + 冻结快照回放构成历史版本证据，回补底账与 PIT
+        # 覆盖证据记录于 #196。cash_flow 无正式消费者，维持 experimental。
+        "balance_sheet",
+        "income_statement",
     }
 )
 
 _EXPERIMENTAL_DATASETS: frozenset[str] = frozenset(
     {
-        "balance_sheet",
-        "income_statement",
         "cash_flow",
         "dividend",
         "valuation_metrics",

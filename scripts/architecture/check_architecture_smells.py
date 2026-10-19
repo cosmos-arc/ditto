@@ -434,6 +434,20 @@ APPS_REGISTRY_COMPOSITION_ALLOWANCES = (
         ),
     ),
     CompositionImportAllowance(
+        path="apps/backend/src/ditto_apps/registry/contexts/universe.py",
+        allowed_modules=frozenset(
+            {
+                "ditto_data.services.metadata_service",
+            }
+        ),
+        owner="apps universe registry context",
+        reason=(
+            "Universe registry context exposes MetadataService universe-domain "
+            "writes for ops entrypoints (#196 csi_a_share materialization) "
+            "behind the apps/data barrel boundary."
+        ),
+    ),
+    CompositionImportAllowance(
         path="apps/backend/src/ditto_apps/registry/contexts/strategy.py",
         allowed_modules=frozenset(
             {

@@ -64,6 +64,14 @@ class StrategySliceBuilder:
             runtime.spec.universe,
             asof=trade_date,
         )
+        if not universe_ids:
+            # 空成员（宇宙缺失/成员区间不覆盖 asof/物化中断残留）若放行，
+            # 会产出零标的的"成功"切片，静默掩盖上游数据损坏。
+            msg = (
+                f"universe {runtime.spec.universe} 在 {trade_date} 解析到 0 成员; "
+                + "检查宇宙存在性与成员 PIT 区间"
+            )
+            raise AppBuilderError(msg)
         resolution = resolve_instrument_display(
             universe_ids,
             self._metadata_service,

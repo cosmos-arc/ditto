@@ -89,7 +89,8 @@ def build_fundamental_snapshot_fn(
     Args:
         facade: 基本面读取 facade（FundamentalQueryFacade 满足 Protocol）。
         allow_experimental_data: 透传给 facade 的 maturity gate opt-in
-            （balance_sheet / income_statement 为 experimental dataset）。
+            （cash_flow/dividend 等仍为 experimental；两表已晋级免 opt-in，
+            透传保持门语义统一）。
 
     Returns:
         ``FundamentalSnapshotFn`` 闭包：接收 (instrument_ids, as_of_date)，
