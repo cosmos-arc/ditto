@@ -25,13 +25,14 @@ from __future__ import annotations
 
 import argparse
 import sys
+from collections.abc import Generator
+from contextlib import contextmanager
 from datetime import date
 
 import orjson
 import polars as pl
-from ditto_data.services.metadata_service import MetadataService
 
-from ditto_apps.registry.container import make_app_container
+from ditto_apps.registry.contexts.universe import create_universe_write_context
 
 __all__ = ["build_constituent_records", "main"]
 
@@ -87,15 +88,20 @@ def build_constituent_records(
     return records, frame.height - valid.height
 
 
+@contextmanager
+def _universe_service() -> Generator[object]:
+    """测试可替换的 registry 服务获取点（duck-typed MetadataService）."""
+    with create_universe_write_context() as metadata:
+        yield metadata
+
+
 def main(argv: list[str] | None = None) -> int:
     """物化 csi_a_share 证券池；成功返回 0，已存在/空注册表返回 2."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--force", action="store_true", help="已存在时删除重建")
     args = parser.parse_args(argv)
 
-    container = make_app_container()
-    try:
-        metadata = container.get(MetadataService)
+    with _universe_service() as metadata:
         existing = metadata.universe.get_universe_detail(UNIVERSE_ID)
         if existing is not None and not args.force:
             sys.stderr.write(
@@ -128,9 +134,7 @@ def main(argv: list[str] | None = None) -> int:
             "skipped_null_list_date": skipped,
         }
         sys.stdout.write(orjson.dumps(summary).decode() + "\n")
-        return 0
-    finally:
-        container.close()
+    return 0
 
 
 if __name__ == "__main__":

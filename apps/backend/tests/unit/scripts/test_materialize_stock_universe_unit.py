@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Generator
+from contextlib import contextmanager
 from datetime import date
 from unittest.mock import MagicMock, patch
 
@@ -223,10 +225,9 @@ def _stocks_frame() -> pl.DataFrame:
     )
 
 
-def _mock_container(metadata: MagicMock) -> MagicMock:
-    container = MagicMock()
-    container.get.return_value = metadata
-    return container
+@contextmanager
+def _mock_universe_service(metadata: MagicMock) -> Generator[MagicMock]:
+    yield metadata
 
 
 def test_main_creates_universe_when_absent(capsys: pytest.CaptureFixture[str]) -> None:
@@ -237,8 +238,8 @@ def test_main_creates_universe_when_absent(capsys: pytest.CaptureFixture[str]) -
 
     with patch.object(
         materialize_stock_universe,
-        "make_app_container",
-        return_value=_mock_container(metadata),
+        "_universe_service",
+        lambda: _mock_universe_service(metadata),
     ):
         code = materialize_stock_universe.main([])
 
@@ -264,8 +265,8 @@ def test_main_refuses_existing_universe_without_force() -> None:
 
     with patch.object(
         materialize_stock_universe,
-        "make_app_container",
-        return_value=_mock_container(metadata),
+        "_universe_service",
+        lambda: _mock_universe_service(metadata),
     ):
         code = materialize_stock_universe.main([])
 
@@ -282,8 +283,8 @@ def test_main_force_rebuilds_existing_universe() -> None:
 
     with patch.object(
         materialize_stock_universe,
-        "make_app_container",
-        return_value=_mock_container(metadata),
+        "_universe_service",
+        lambda: _mock_universe_service(metadata),
     ):
         code = materialize_stock_universe.main(["--force"])
 
@@ -301,8 +302,8 @@ def test_main_refuses_empty_registry() -> None:
 
     with patch.object(
         materialize_stock_universe,
-        "make_app_container",
-        return_value=_mock_container(metadata),
+        "_universe_service",
+        lambda: _mock_universe_service(metadata),
     ):
         code = materialize_stock_universe.main([])
 
