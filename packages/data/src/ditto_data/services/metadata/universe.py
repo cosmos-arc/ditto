@@ -253,6 +253,15 @@ class UniverseService:
 
     # ============ Universe CRUD ============
 
+    @traced("metadata.universe.add_constituents")
+    def add_constituents(
+        self,
+        universe_id: str,
+        records: list[dict[str, Any]],
+    ) -> int:
+        """批量添加成分股行（含 PIT effective_from/effective_to 区间）."""
+        return self._universe_writer.add_constituents(universe_id, records)
+
     @traced("metadata.universe.create_universe")
     def create_universe(
         self,

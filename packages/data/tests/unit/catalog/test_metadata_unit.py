@@ -256,13 +256,14 @@ class TestDefaultMetadataMaturityAssignments:
             "st_history",
             # #408 ETF Paper 生产参考事实（配置源）
             "etf_reference",
+            # #196 策略腿晋级：种子股票模板消费的两表（cash_flow 维持 experimental）
+            "balance_sheet",
+            "income_statement",
         }
     )
 
     EXPERIMENTAL: ClassVar[frozenset[str]] = frozenset(
         {
-            "balance_sheet",
-            "income_statement",
             "cash_flow",
             "dividend",
             "valuation_metrics",

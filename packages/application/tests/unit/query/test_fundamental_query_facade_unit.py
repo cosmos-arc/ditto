@@ -112,8 +112,6 @@ class TestFundamentalQueryFacadeMaturityGate:
     @pytest.mark.parametrize(
         ("method_name", "dataset_id", "args"),
         [
-            ("get_balance_sheet", "balance_sheet", (1, date(2026, 6, 1))),
-            ("get_income_statement", "income_statement", (1, date(2026, 6, 1))),
             ("get_cash_flow", "cash_flow", (1, date(2026, 6, 1))),
             ("get_dividend", "dividend", (1, date(2026, 6, 1))),
         ],
@@ -140,6 +138,36 @@ class TestFundamentalQueryFacadeMaturityGate:
 
         getattr(store, method_name).assert_not_called()
         assert dataset_id in str(exc.value)
+
+    @pytest.mark.parametrize(
+        ("method_name", "frame"),
+        [
+            ("get_balance_sheet", pl.DataFrame({"total_assets": [1e9]})),
+            ("get_income_statement", pl.DataFrame({"net_profit": [1e8]})),
+        ],
+    )
+    def test_promoted_statements_delegate_without_opt_in(
+        self,
+        method_name: str,
+        frame: pl.DataFrame,
+    ) -> None:
+        """#196 晋级后两表正式读路径免 opt-in。"""
+        store = MagicMock(
+            spec=[
+                "get_balance_sheet",
+                "get_income_statement",
+                "get_cash_flow",
+                "get_dividend",
+                "list_corporate_actions",
+            ]
+        )
+        getattr(store, method_name).return_value = frame
+        facade = FundamentalQueryFacade(fundamental_store=store)
+
+        result = getattr(facade, method_name)(1, date(2026, 6, 1))
+
+        assert result is frame
+        getattr(store, method_name).assert_called_once_with(1, date(2026, 6, 1))
 
     def test_allow_experimental_data_delegates_to_port(self) -> None:
         store = MagicMock(spec=["get_balance_sheet"])

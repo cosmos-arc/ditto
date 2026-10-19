@@ -240,15 +240,15 @@ class TestStrategySliceBuilder:
 
         assert slice_.trade_date == "2026-01-13"
 
-    def test_blocks_fundamentals_required_spec_in_default_runtime(self) -> None:
-        """声明财务数据集的规格不得进入默认运行时。"""
+    def test_blocks_experimental_required_spec_in_default_runtime(self) -> None:
+        """声明 experimental 数据集（如 cash_flow）的规格不得进入默认运行时。"""
         spec = _make_strategy_spec(
             strategy_id="stock-alpha",
             name="Stock Alpha",
             template="stock_selection",
             universe="cn_stock",
             asset_class="stock",
-            required_datasets=("stock_daily", "adj_factor", "balance_sheet"),
+            required_datasets=("stock_daily", "adj_factor", "cash_flow"),
         )
         runtime_builder = MagicMock()
         runtime_builder.build_published_runtime.return_value = _make_published_runtime(
@@ -262,7 +262,7 @@ class TestStrategySliceBuilder:
             data_provider=data_provider,
         )
 
-        with pytest.raises(AppBuilderError, match="balance_sheet=experimental"):
+        with pytest.raises(AppBuilderError, match="cash_flow=experimental"):
             builder.build_published_slice(
                 "stock-alpha",
                 trade_date="2026-01-13",
