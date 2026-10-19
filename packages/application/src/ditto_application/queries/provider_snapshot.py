@@ -76,7 +76,14 @@ class ProviderSnapshotQuery:
             raise AppQueryError(str(error)) from error
 
     def replay(self, request: SnapshotReplayRequest) -> SnapshotReplay:
-        """Read only the ready fields, instruments and interval at pinned cutoffs."""
+        """
+        Read only the ready fields, instruments and interval at pinned cutoffs.
+
+        Coverage is judged at dataset-union granularity over the bound
+        snapshots: each frame still carries only its own snapshot's rows,
+        so a multi-snapshot request returns the stitched patchwork, never
+        one snapshot stretched across the whole window.
+        """
         if any(
             _replay_identity_unsupported(item.dataset_id) for item in request.fields
         ):
