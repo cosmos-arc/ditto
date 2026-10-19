@@ -91,11 +91,11 @@
 
 # 财务报表数据集运行职责（2026-10 晋级材料）
 
-> 适用数据集:`balance_sheet`、`income_statement`(2026-10-19 随 #196 策略腿晋级 initial-focus);`cash_flow` 已同窗回补但**无正式消费者,维持 experimental**,消费方出现时按同一模板补评审。主源 Tushare vip 端点(`balancesheet_vip`/`income_vip`/`cashflow_vip`,经代理);无备源。
+> 适用数据集:`balance_sheet`、`income_statement`(2026-10-19 随 #196 策略腿晋级 initial-focus);`cash_flow` 同窗回补但**无正式消费者,维持 experimental**,消费方出现时按同一模板补评审。主源 Tushare vip 端点(`balancesheet_vip`/`income_vip`/`cashflow_vip`,经代理);无备源。
 
 ## 运行负责人（runtime owner）
 
-- 同上:单操作者工作站(chevy)。披露季(4/8/10 月)后跑增量回补;上游同披露键重发布由 `VERIFY_IDENTICAL` 拒收,处置裁决记录于 #196(先例:fina_indicator Q2/Q3 拒收留档)。
+- 同上:单操作者工作站(chevy)。披露季(4/8/10 月)后跑增量回补;上游同披露键重发布由 ingestion 通道 `VERIFY_IDENTICAL` 拒收,处置裁决记录于 #196(先例:fina_indicator Q2/Q3 拒收留档)。
 
 ## 新鲜度 SLA 与历史版本证据
 
@@ -104,8 +104,8 @@
 | `balance_sheet` | 披露事件 | 1080h(45 天) | `f_ann_date`(实际公告日) |
 | `income_statement` | 披露事件 | 1080h(45 天) | `f_ann_date` |
 
-- 历史版本证据(回应「不能只凭 f_ann_date 字段晋级」):披露锚 + 三层防护构成——(1) `report_type=1` 合并报表口径、同一披露键取 `update_flag` 最新行(#482 语义);(2) 重拉同键值变必须 `VERIFY_IDENTICAL` 拒收,不静默改史;(3) 回放读冻结 provider snapshot,不触活数据。上游无逐版本历史,残余风险=老披露键的静默修订不可检测,由(2)在重拉通道拦截。
-- 覆盖:2014-01-01 起全市场(2014Q1–2026Q3 报告期,披露超集窗口 8Q+区间)。回补底账与缺口(如有)记录于 #196 票评论。
+- 历史版本证据(回应「不能只凭 f_ann_date 字段晋级」):披露锚 + 三层防护构成——(1) `report_type=1` 合并报表口径、同一披露键取 `update_flag` 最新行(#482 语义);(2) ingestion 通道对非 force 重拉一律 `VERIFY_IDENTICAL`(`instrument_ingestion`/`post_ingest` 两路径,fina_indicator Q2/Q3 拒收先例实证),不静默改史;(3) 回放读冻结 provider snapshot,不触活数据。上游无逐版本历史,残余风险=老披露键的静默修订不可检测,由(2)在重拉通道拦截。
+- 覆盖:回补窗口 2014-01-01 起(2014Q1 起报告期,披露超集窗口 8Q+区间);实际行数底账、PIT 抽查与缺口(如有)以 #196 票评论留证为准。
 
 ## 主备与故障切换（source failover policy）
 
@@ -119,4 +119,4 @@
 
 ## 版本
 
-- 2026-10-19:#196 策略腿晋级——三表 2014 起回补,`balance_sheet`/`income_statement` 升 initial-focus(chevy)。
+- 2026-10-19:#196 策略腿晋级——`balance_sheet`/`income_statement` 升 initial-focus(cash_flow 维持 experimental)(chevy)。

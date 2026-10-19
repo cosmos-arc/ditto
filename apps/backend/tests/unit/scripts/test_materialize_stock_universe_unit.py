@@ -3,8 +3,11 @@
 from __future__ import annotations
 
 from datetime import date
+from unittest.mock import MagicMock, patch
 
 import polars as pl
+import pytest
+from ditto_apps.scripts import materialize_stock_universe
 from ditto_apps.scripts.materialize_stock_universe import build_constituent_records
 
 
@@ -162,3 +165,114 @@ def test_string_list_dates_are_normalized() -> None:
         },
     ]
     assert skipped == 1
+
+
+def _stocks_frame() -> pl.DataFrame:
+    return pl.DataFrame(
+        [
+            {
+                "instrument_id": 11,
+                "ticker": "600000",
+                "asset_class": "stock",
+                "list_date": date(1999, 11, 10),
+                "delist_date": None,
+                "source_ticker": "600000.SH",
+            },
+        ],
+        schema={
+            "instrument_id": pl.Int64,
+            "ticker": pl.String,
+            "asset_class": pl.String,
+            "list_date": pl.Date,
+            "delist_date": pl.Date,
+            "source_ticker": pl.String,
+        },
+        strict=False,
+    )
+
+
+def _mock_container(metadata: MagicMock) -> MagicMock:
+    container = MagicMock()
+    container.get.return_value = metadata
+    return container
+
+
+def test_main_creates_universe_when_absent(capsys: pytest.CaptureFixture[str]) -> None:
+    metadata = MagicMock()
+    metadata.universe.get_universe_detail.return_value = None
+    metadata.universe.add_constituents.return_value = 1
+    metadata.find_securities.return_value = _stocks_frame()
+
+    with patch.object(
+        materialize_stock_universe,
+        "make_app_container",
+        return_value=_mock_container(metadata),
+    ):
+        code = materialize_stock_universe.main([])
+
+    assert code == 0
+    metadata.universe.delete_universe.assert_not_called()
+    metadata.universe.create_universe.assert_called_once()
+    metadata.universe.add_constituents.assert_called_once()
+    assert metadata.universe.add_constituents.call_args.args[1] == [
+        {
+            "instrument_id": 11,
+            "effective_from": "1999-11-10",
+            "effective_to": None,
+            "source": "instrument_registry",
+            "source_ticker": "600000.SH",
+        },
+    ]
+    assert "constituents" in capsys.readouterr().out
+
+
+def test_main_refuses_existing_universe_without_force() -> None:
+    metadata = MagicMock()
+    metadata.universe.get_universe_detail.return_value = {"name": "已存在"}
+
+    with patch.object(
+        materialize_stock_universe,
+        "make_app_container",
+        return_value=_mock_container(metadata),
+    ):
+        code = materialize_stock_universe.main([])
+
+    assert code == 2
+    metadata.universe.delete_universe.assert_not_called()
+    metadata.universe.create_universe.assert_not_called()
+
+
+def test_main_force_rebuilds_existing_universe() -> None:
+    metadata = MagicMock()
+    metadata.universe.get_universe_detail.return_value = {"name": "已存在"}
+    metadata.universe.add_constituents.return_value = 1
+    metadata.find_securities.return_value = _stocks_frame()
+
+    with patch.object(
+        materialize_stock_universe,
+        "make_app_container",
+        return_value=_mock_container(metadata),
+    ):
+        code = materialize_stock_universe.main(["--force"])
+
+    assert code == 0
+    metadata.universe.delete_universe.assert_called_once_with(
+        materialize_stock_universe.UNIVERSE_ID,
+    )
+    metadata.universe.create_universe.assert_called_once()
+
+
+def test_main_refuses_empty_registry() -> None:
+    metadata = MagicMock()
+    metadata.universe.get_universe_detail.return_value = None
+    metadata.find_securities.return_value = pl.DataFrame()
+
+    with patch.object(
+        materialize_stock_universe,
+        "make_app_container",
+        return_value=_mock_container(metadata),
+    ):
+        code = materialize_stock_universe.main([])
+
+    assert code == 2
+    metadata.universe.create_universe.assert_not_called()

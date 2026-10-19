@@ -6,6 +6,10 @@ seed_stock_selection_rotation 声明 universe ``csi_a_share``，回测按
 instrument 注册表全部 A 股（含退市）按 list_date/delist_date 区间写入
 该证券池，使 2014 起任意 as_of 都有可投资证券池。
 
+ID 语义：``csi_a_share`` 是种子策略声明的 universe 句柄（见
+``ditto_strategy/alpha/seeds.py`` 的 ``_seed_stock_selection_rotation``），
+内容为注册表全市场区间，不是中证指数成分声明。
+
 用法::
 
     DITTO_CONFIG_ROOT=... DITTO_STATE_ROOT=... uv run --no-sync \\
@@ -28,11 +32,14 @@ from ditto_apps.registry.container import make_app_container
 
 __all__ = ["build_constituent_records", "main"]
 
+# 与 ditto_strategy/alpha/seeds.py::_seed_stock_selection_rotation 的
+# universe 声明同值；改动任一侧须同步另一侧。
 UNIVERSE_ID = "csi_a_share"
 
-# A 股最早上市日(1990-12-19 沪市开市)。早于此的 list_date 是注册表占位值
-# (实测 4 只 2026 新股为 1970-01-01, 代理 stock_basic 未提供), 按 PIT 语义
-# 视为不可判 → 跳过, 不进入任何历史成员区间。
+# 无效上市日下界：早于 A 股最早真实上市（1990-12-19，沪市开市首日）的
+# list_date 必然是注册表占位值（实测 4 只 2026 新股为 1970-01-01，代理
+# stock_basic 未提供），按 PIT 语义视为不可判 → 跳过，不进入任何历史
+# 成员区间。取 12-01 月首仅为可读下界，效果等同「开市前一律无效」。
 _MIN_VALID_LIST_DATE = date(1990, 12, 1)
 
 
