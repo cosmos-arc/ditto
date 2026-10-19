@@ -57,6 +57,16 @@ _DOCUMENTED_PAGE_SIZES: dict[str, int] = {
     # 仅 870 唯一）；limit=10000 单响应 5000 行含 1008 唯一稳定收敛，
     # 配合 fetch 层按 ts_code 去重取干净名单（#196）。
     "suspend_d": 10000,
+    # 2026-10-19 实测（t.xiaodefa.top transport）：财务三表 vip 端点
+    # 单响应硬顶 9000 行——limit=10000 仍返回 9000（2026Q2 balancesheet
+    # 全市场 10202 行=9000+1202 两页，offset 正常）。页宽必须 ≤9000：
+    # 请求 10000 时 9000 行短页会被「短页=取尽」误判而静默截断；默认
+    # 2000 则 6 页/期，代理 offset 间歇抖动触发跨页重复 fail-closed
+    # （#196 回补 41/47 期 FETCH_ERROR 实测）。9000=两页内完成，抖动
+    # 暴露面最小。
+    "balancesheet_vip": 9000,
+    "income_vip": 9000,
+    "cashflow_vip": 9000,
 }
 
 _DEFAULT_PAGE_SIZE = 2000
