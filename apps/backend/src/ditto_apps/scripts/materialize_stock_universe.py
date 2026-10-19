@@ -28,6 +28,7 @@ import sys
 from collections.abc import Generator
 from contextlib import contextmanager
 from datetime import date
+from typing import Any, Protocol
 
 import orjson
 import polars as pl
@@ -35,6 +36,44 @@ import polars as pl
 from ditto_apps.registry.contexts.universe import create_universe_write_context
 
 __all__ = ["build_constituent_records", "main"]
+
+
+class _UniverseDomain(Protocol):
+    """物化脚本消费的 universe 域写面（MetadataService.universe 的鸭子型）."""
+
+    def get_universe_detail(self, universe_id: str) -> dict[str, Any] | None: ...
+
+    def delete_universe(self, universe_id: str) -> None: ...
+
+    def create_universe(
+        self,
+        universe_id: str,
+        name: str,
+        description: str | None = None,
+        universe_type: str = "custom",
+        source_ref: str | None = None,
+    ) -> None: ...
+
+    def add_constituents(
+        self,
+        universe_id: str,
+        records: list[dict[str, Any]],
+    ) -> int: ...
+
+
+class _MetadataAccess(Protocol):
+    """registry universe 上下文产出物的鸭子型（避免脚本直导 ditto_data）."""
+
+    @property
+    def universe(self) -> _UniverseDomain: ...
+
+    def find_securities(
+        self,
+        *,
+        asset_class: str | None = ...,
+        is_active: bool | None = ...,
+    ) -> pl.DataFrame: ...
+
 
 # 与 ditto_strategy/alpha/seeds.py::_seed_stock_selection_rotation 的
 # universe 声明同值；改动任一侧须同步另一侧。
@@ -89,7 +128,7 @@ def build_constituent_records(
 
 
 @contextmanager
-def _universe_service() -> Generator[object]:
+def _universe_service() -> Generator[_MetadataAccess]:
     """测试可替换的 registry 服务获取点（duck-typed MetadataService）."""
     with create_universe_write_context() as metadata:
         yield metadata
