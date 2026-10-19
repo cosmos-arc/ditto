@@ -16,6 +16,7 @@ from ditto_data.catalog.source_snapshot import (
 )
 from ditto_data.ingestion.partition_state import (
     PartitionCheckpoint,
+    PartitionLifecycleEvent,
     PartitionLifecycleStatus,
 )
 
@@ -30,6 +31,25 @@ class _SnapshotReader:
 
     def get_snapshot(self, snapshot_id: str) -> ProviderSnapshot | None:
         return self._snapshots.get(snapshot_id)
+
+    def get_observed_at(self, snapshot_id: str) -> datetime | None:
+        return None
+
+    def get_predecessor(self, snapshot_id: str) -> str | None:
+        return None
+
+    def list_snapshots(
+        self,
+        *,
+        dataset_id: str | None = None,
+        source: str | None = None,
+        canonical_asset: DataAssetRef | None = None,
+    ) -> tuple[ProviderSnapshot, ...]:
+        return tuple(
+            item
+            for item in self._snapshots.values()
+            if dataset_id is None or item.dataset_id == dataset_id
+        )
 
 
 class _LifecycleReader:
@@ -57,6 +77,17 @@ class _LifecycleReader:
         self, *, dataset_id: str | None = None, source: str | None = None
     ) -> tuple[PartitionCheckpoint, ...]:
         return self._list(False, dataset_id=dataset_id)
+
+    def get_latest_checkpoint(self, chunk_id: str) -> PartitionCheckpoint | None:
+        return next(
+            (item for item in self._checkpoints if item.chunk_id == chunk_id), None
+        )
+
+    def get_checkpoint(self, chunk_id: str) -> PartitionCheckpoint | None:
+        return self.get_latest_checkpoint(chunk_id)
+
+    def list_events(self, chunk_id: str) -> tuple[PartitionLifecycleEvent, ...]:
+        return ()
 
 
 def _block(
