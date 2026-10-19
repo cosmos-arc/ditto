@@ -94,5 +94,71 @@ def test_skips_null_list_date_and_non_stock_rows() -> None:
     assert skipped == 1
 
 
+def test_skips_placeholder_list_dates_before_market_open() -> None:
+    """1970 占位上市日不可判真实上市时点, 不得进入历史成员区间."""
+    frame = _frame(
+        [
+            {
+                "instrument_id": 5,
+                "ticker": "301716",
+                "asset_class": "stock",
+                "list_date": date(1970, 1, 1),
+                "delist_date": None,
+                "source_ticker": None,
+            },
+        ],
+    )
+
+    records, skipped = build_constituent_records(frame)
+
+    assert records == []
+    assert skipped == 1
+
+
 def test_empty_frame_returns_empty() -> None:
     assert build_constituent_records(_frame([])) == ([], 0)
+
+
+def test_string_list_dates_are_normalized() -> None:
+    """sqlite 读取路径返回字符串日期, 归一后同样参与校验与区间构建."""
+    frame = pl.DataFrame(
+        [
+            {
+                "instrument_id": 6,
+                "ticker": "301999",
+                "asset_class": "stock",
+                "list_date": "2000-01-10",
+                "delist_date": None,
+                "source_ticker": None,
+            },
+            {
+                "instrument_id": 7,
+                "ticker": "301998",
+                "asset_class": "stock",
+                "list_date": "1970-01-01",
+                "delist_date": None,
+                "source_ticker": None,
+            },
+        ],
+        schema={
+            "instrument_id": pl.Int64,
+            "ticker": pl.String,
+            "asset_class": pl.String,
+            "list_date": pl.String,
+            "delist_date": pl.String,
+            "source_ticker": pl.String,
+        },
+    )
+
+    records, skipped = build_constituent_records(frame)
+
+    assert records == [
+        {
+            "instrument_id": 6,
+            "effective_from": "2000-01-10",
+            "effective_to": None,
+            "source": "instrument_registry",
+            "source_ticker": "301999",
+        },
+    ]
+    assert skipped == 1

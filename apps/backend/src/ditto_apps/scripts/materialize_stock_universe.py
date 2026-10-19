@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import argparse
 import sys
+from datetime import date
 
 import orjson
 import polars as pl
@@ -29,15 +30,28 @@ __all__ = ["build_constituent_records", "main"]
 
 UNIVERSE_ID = "csi_a_share"
 
+# A 股最早上市日(1990-12-19 沪市开市)。早于此的 list_date 是注册表占位值
+# (实测 4 只 2026 新股为 1970-01-01, 代理 stock_basic 未提供), 按 PIT 语义
+# 视为不可判 → 跳过, 不进入任何历史成员区间。
+_MIN_VALID_LIST_DATE = date(1990, 12, 1)
+
 
 def build_constituent_records(
     stocks: pl.DataFrame,
 ) -> tuple[list[dict[str, object]], int]:
-    """注册表行 → PIT 成分记录；返回 (records, 跳过的无上市日行数)."""
+    """注册表行 → PIT 成分记录；返回 (records, 跳过的无效上市日行数)."""
     if stocks.is_empty():
         return [], 0
     frame = stocks.filter(pl.col("asset_class") == "stock")
-    listed = frame.filter(pl.col("list_date").is_not_null())
+    if frame.schema.get("list_date") == pl.String:
+        frame = frame.with_columns(
+            pl.col("list_date").str.to_date(),
+            pl.col("delist_date").str.to_date(strict=False),
+        )
+    listed = frame.filter(
+        pl.col("list_date").is_not_null()
+        & (pl.col("list_date") >= _MIN_VALID_LIST_DATE)
+    )
     records = [
         {
             "instrument_id": row["instrument_id"],
