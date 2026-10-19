@@ -7,6 +7,7 @@ DataSource ABC 已被 5 个域级 Fetcher Protocol 替代（ISP 合规）。
 
 from ditto_data.errors import (
     DataSourceError,
+    PaginationCorruptionError,
     SourceAuthenticationError,
     SourceConfigurationError,
     SourceFetchError,
@@ -16,6 +17,7 @@ from ditto_data.errors import (
 
 __all__ = [
     "DataSourceError",
+    "PaginationCorruptionError",
     "SourceAuthenticationError",
     "SourceConfigurationError",
     "SourceFetchError",

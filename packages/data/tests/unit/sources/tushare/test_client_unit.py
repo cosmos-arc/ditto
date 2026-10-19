@@ -342,16 +342,24 @@ class TestTushareClientQuery:
         monkeypatch: pytest.MonkeyPatch,
         fake_time,
     ) -> None:
-        """服务端忽略 offset（重复页/不前进）时 fail-closed，不无限翻页。"""
+        """服务端忽略 offset（任意几何都重发整页）时 fail-closed，不无限翻页。"""
         monkeypatch.setitem(pagination._DOCUMENTED_PAGE_SIZES, "trade_cal", 2)
-        page = {
-            "code": 0,
-            "msg": None,
-            "data": {"fields": ["cal_date"], "items": [["1"], ["2"]]},
-        }
-        route = respx_mock.post("http://api.tushare.pro").mock(
-            return_value=httpx.Response(200, json=page)
-        )
+
+        def side_effect(request: httpx.Request) -> httpx.Response:
+            # 恒满页：无论 limit/offset 都返回 limit 行相同内容——真·offset
+            # 损坏在主几何与换档几何（2-1000 下限 500）上都触发跨页重复。
+            params = orjson.loads(request.content)["params"]
+            rows = [["dup"] for _ in range(params["limit"])]
+            return httpx.Response(
+                200,
+                json={
+                    "code": 0,
+                    "msg": None,
+                    "data": {"fields": ["cal_date"], "items": rows},
+                },
+            )
+
+        respx_mock.post("http://api.tushare.pro").mock(side_effect=side_effect)
 
         client = TushareClient(token="test_token", settings=_settings())
         # 重复页错误按 SourceFetchError 参与现有重试语义，耗尽后以 RetryError 冒泡
@@ -359,8 +367,88 @@ class TestTushareClientQuery:
             client.query("trade_cal", "cal_date")
 
         assert "duplicate rows" in str(exc_info.value.last_attempt.exception())
-        # 每次尝试在第二页（offset=2 收到重复页）即拦截，不会无限翻页
-        assert route.call_count == 2 * 3
+
+    def test_cross_page_duplicates_retry_with_shifted_page_size(
+        self,
+        respx_mock,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """排序不稳定在特定边界确定性复发时，换页宽几何重试后完整取回。
+
+        #196 实测形态：balancesheet_vip 2020Q4 期在 offset=9000 恒重 1 行、
+        offset=8000 干净（10869 行全量）。换档重试保持守卫语义——第二几何
+        若同样损坏仍会拒收。
+        """
+        monkeypatch.setitem(pagination._DOCUMENTED_PAGE_SIZES, "trade_cal", 3)
+        total_rows = [str(i) for i in range(5)]  # 主几何 3+2 两页，边界行不稳
+
+        def side_effect(request: httpx.Request) -> httpx.Response:
+            params = orjson.loads(request.content)["params"]
+            limit, offset = params["limit"], params["offset"]
+            if limit == 3:
+                # 主几何：第二页重复第一页首行（排序不稳定指纹）
+                page = (
+                    total_rows[:limit]
+                    if offset == 0
+                    else [total_rows[0], *total_rows[limit : limit + 2]]
+                )
+            else:
+                # 换档几何（3-1000 下限 500）：单页短页干净收尾
+                page = total_rows[:limit]
+            return httpx.Response(
+                200,
+                json={
+                    "code": 0,
+                    "msg": None,
+                    "data": {"fields": ["cal_date"], "items": [[r] for r in page]},
+                },
+            )
+
+        route = respx_mock.post("http://api.tushare.pro").mock(side_effect=side_effect)
+
+        client = TushareClient(token="test_token", settings=_settings())
+        result = client.query("trade_cal", "cal_date")
+
+        assert result["cal_date"].to_list() == total_rows
+        requested_limits = [
+            orjson.loads(call.request.content)["params"]["limit"]
+            for call in respx_mock.calls
+        ]
+        assert requested_limits == [3, 3, 500]
+        assert route.call_count == 3
+
+    def test_small_dataset_with_offset_ignoring_tail_converges_at_shifted_geometry(
+        self,
+        respx_mock,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """真总量小于页宽 + 越界页回显首页：主几何误报守卫，换档几何收敛。
+
+        服务端真总量 2 行但对越界 offset 回显首页（offset 损坏形态）。
+        主几何（页宽 2）第二页收到重复行触发守卫；换档几何（页宽 500）
+        首页即短页取尽——返回的正是全量 2 行，无数据损失。换档重试只
+        会在「短页=取尽」可证明完整时收敛，仍非绕过守卫的通道（上一
+        测试的恒满页形态两几何都拒收）。
+        """
+        monkeypatch.setitem(pagination._DOCUMENTED_PAGE_SIZES, "trade_cal", 2)
+
+        def side_effect(request: httpx.Request) -> httpx.Response:
+            rows = [["a"], ["b"]]
+            return httpx.Response(
+                200,
+                json={
+                    "code": 0,
+                    "msg": None,
+                    "data": {"fields": ["cal_date"], "items": rows},
+                },
+            )
+
+        respx_mock.post("http://api.tushare.pro").mock(side_effect=side_effect)
+
+        client = TushareClient(token="test_token", settings=_settings())
+        result = client.query("trade_cal", "cal_date")
+
+        assert result["cal_date"].to_list() == ["a", "b"]
 
     def test_documented_endpoint_uses_exact_page_size(self, respx_mock) -> None:
         """已核实上限的端点按精确页宽请求；未知端点用保守默认 2000。"""

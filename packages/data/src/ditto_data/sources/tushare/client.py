@@ -16,6 +16,7 @@ from tenacity import (
 
 from ditto_data.config import DataSourceSettings
 from ditto_data.sources.base import (
+    PaginationCorruptionError,
     SourceConfigurationError,
     SourceFetchError,
 )
@@ -30,6 +31,10 @@ from ditto_data.sources.tushare.utils.rate_limiter import (
     TushareRateLimitConfig,
     TushareRateLimiter,
 )
+
+# 跨页重复换几何重试的页宽位移；下限 500 防止默认 2000 页宽端点被移到
+# 过小页宽（页数增多、每页 offset 损坏暴露面反而变大）。
+_PAGINATION_RETRY_PAGE_SHIFT = 1000
 
 
 def _get_tushare_token(token: str | None) -> str:
@@ -277,7 +282,42 @@ class TushareClient:
             data = self._query(api_name, fields, **params)
             return response_to_dataframe(data)
 
-        page_size = resolve_page_size(api_name)
+        # 跨页重复是 offset 损坏的指纹，fail-closed 硬拦；但排序不稳定在
+        # 特定边界位置可确定性复发（#196 实测 balancesheet_vip 2020Q4 期
+        # 在 offset=9000 恒重 1 行、offset=8000 干净）。换页宽几何重试一次
+        # ——守卫在第二几何上同样生效，真 offset 损坏（整页重发）仍拒收。
+        primary_page_size = resolve_page_size(api_name)
+        page_size = primary_page_size
+        while True:
+            try:
+                return self._query_with_offset_pagination(
+                    api_name,
+                    fields,
+                    page_size=page_size,
+                    **params,
+                )
+            except PaginationCorruptionError:
+                if page_size != primary_page_size:
+                    raise
+                shifted = max(page_size - _PAGINATION_RETRY_PAGE_SHIFT, 500)
+                logger.warning(
+                    "pagination cross-page duplicates; retrying with shifted page size",
+                    event="tushare_pagination_shifted_page_retry",
+                    api_name=api_name,
+                    primary_page_size=primary_page_size,
+                    retry_page_size=shifted,
+                )
+                page_size = shifted
+
+    def _query_with_offset_pagination(
+        self,
+        api_name: str,
+        fields: str,
+        *,
+        page_size: int,
+        **params: str | int,
+    ) -> pl.DataFrame:
+        """按显式页宽做 offset 翻页，跨页重复行 fail-closed。"""
         pages: list[pl.DataFrame] = []
         seen_rows: set[int] = set()
         offset = 0
@@ -310,7 +350,7 @@ class TushareClient:
             # 是 offset 损坏的直接指纹，维持 fail-closed 硬拦。
             cross_page_duplicates = len(page_rows & seen_rows)
             if cross_page_duplicates:
-                raise SourceFetchError(
+                raise PaginationCorruptionError(
                     message=(
                         f"Tushare {api_name} pagination returned duplicate rows "
                         f"at offset={offset} "
