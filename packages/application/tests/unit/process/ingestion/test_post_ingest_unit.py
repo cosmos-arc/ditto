@@ -1096,8 +1096,48 @@ def test_process_fetched_data_marks_market_empty_as_failed() -> None:
     )
 
     assert result.status == "failed"
-    assert result.error == "EMPTY_DATA"
+    # #583：全市场交易日空响应=供应商未发布，走更精确的失败码。
+    assert result.error == "EMPTY_DATA_UNEXPECTED"
     assert writer.calls == []
+
+
+def test_full_market_daily_empty_fails_without_committing_observation() -> None:
+    # #583：全市场交易日快照的同晚 0 行是"供应商未发布"，不是
+    # "已验证无数据"——不得提交零行观察（否则非 force 重拉会被
+    # 已摄取成功跳过），落失败日志让重试通道可见。
+    writer = _WriteDataRecorder(
+        WriteResult(
+            file_path="unused",
+            checksum="unused",
+            rows_written=0,
+            rows_total=0,
+            blocked=False,
+        )
+    )
+    committer = _EvidenceCommitRecorder(
+        EvidenceCommitOutcome("chunk:tushare:stock_status:2026-10-19", completed=True)
+    )
+    ctx = PostIngestContext(
+        result_handler=IngestionResultHandler(None, "tushare"),
+        data_writer=cast(IngestionDataWriter, writer),
+        list_date_inference=cast(ListDateInferenceService, None),
+        source_name="tushare",
+        quality_checker=_PassingQualityChecker(),
+        evidence_committer=cast(IngestionEvidenceCommitter, committer),
+    )
+
+    result = process_fetched_data(
+        pl.DataFrame(schema={"trade_date": pl.Date, "is_suspended": pl.Boolean}),
+        "stock_status",
+        "2026-10-19",
+        False,
+        ctx=ctx,
+    )
+
+    assert result.status == "failed"
+    assert result.error == "EMPTY_DATA_UNEXPECTED"
+    assert writer.calls == []
+    assert committer.requests == []
 
 
 def test_r2_empty_range_commits_no_payload_provider_observation() -> None:

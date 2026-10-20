@@ -16,6 +16,7 @@ from ditto_data.catalog import (
     DataCatalogReader,
     DataCatalogWriter,
 )
+from ditto_data.catalog.dataset_spec import expects_rows_per_trading_day
 from ditto_data.catalog.provider_payload import (
     ProviderPayloadArtifact,
     ProviderPayloadWriter,
@@ -187,7 +188,7 @@ class RequestWindow(NamedTuple):
     advance_cursor: bool = True
 
 
-def process_fetched_data(  # noqa: C901, PLR0911, PLR0912 - fail-closed stages
+def process_fetched_data(  # noqa: C901, PLR0911, PLR0912, PLR0915 - fail-closed stages
     df: pl.DataFrame,
     dataset: str,
     trade_date: str,
@@ -214,6 +215,12 @@ def process_fetched_data(  # noqa: C901, PLR0911, PLR0912 - fail-closed stages
         else trade_date
     )
     if df.is_empty():
+        if expects_rows_per_trading_day(dataset):
+            # A full-market trading-day snapshot answering "no rows" means
+            # the provider has not published yet (or an outage): fail
+            # closed instead of committing a verified-empty observation
+            # that later gates would mistake for complete evidence (#583).
+            return ctx.result_handler.handle_unexpected_empty(dataset, trade_date)
         if ctx.evidence_committer is not None:
             return _commit_empty_provider_observation(
                 df,

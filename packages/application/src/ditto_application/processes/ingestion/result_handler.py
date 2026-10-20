@@ -503,6 +503,30 @@ class IngestionResultHandler:
             message="获取的数据为空",
         )
 
+    def handle_unexpected_empty(self, dataset: str, trade_date: str) -> IngestionResult:
+        """
+        全市场交易日快照返回空：供应商未发布或供给缺口（#583）。
+
+        落失败日志而非"已验证无数据"观察，重试与 EOD 健康检查都能看见。
+        """
+        self._save_log(
+            IngestionLog(
+                dataset=dataset,
+                source=self._source_name,
+                trade_date=trade_date,
+                status=IngestionStatus.FAIL,
+                error_code="EMPTY_DATA_UNEXPECTED",
+                error_message="全市场交易日快照空响应: 供应商未发布或供给缺口",
+            )
+        )
+        return IngestionResult(
+            dataset=dataset,
+            trade_date=trade_date,
+            status="failed",
+            error="EMPTY_DATA_UNEXPECTED",
+            message="全市场交易日快照空响应: 供应商未发布或供给缺口 (#583)",
+        )
+
     def handle_empty_success(
         self,
         dataset: str,

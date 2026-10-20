@@ -1100,8 +1100,8 @@ class TestIngestDate:
             source="tushare",
             trade_date="2024-12-27",
             status=IngestionStatus.FAIL,
-            error_code="EMPTY_DATA",
-            error_message="获取的数据为空",
+            error_code="EMPTY_DATA_UNEXPECTED",
+            error_message="全市场交易日快照空响应: 供应商未发布或供给缺口",
         )
 
         # Act
@@ -1109,7 +1109,8 @@ class TestIngestDate:
 
         # Assert
         assert result.status == "failed"
-        assert result.error == "EMPTY_DATA"
+        # #583：全市场交易日空响应=供应商未发布，走更精确的失败码。
+        assert result.error == "EMPTY_DATA_UNEXPECTED"
         assert "空" in result.message or "empty" in result.message.lower()
 
     def test_ingest_date_force_overwrites_previous_success(
