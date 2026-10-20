@@ -667,16 +667,17 @@ def test_explicit_past_knowledge_is_rejected_but_server_issuance_is_not() -> Non
 _SHANGHAI = ZoneInfo("Asia/Shanghai")
 
 
-def test_omitted_as_of_rolls_to_latest_complete_session() -> None:
+def test_default_as_of_rolls_to_latest_complete_session() -> None:
     provider = _FakeProvider(_bars_frame(rows_per_instrument={1: 30}))
     history = _FakeHistory(_roster_frame((1,)))
     process = _process(provider=provider, history=history)
 
-    request = process.assemble(_request(as_of=None))
+    default = process.default_as_of()
 
-    # The decision is dated at the session close; cutoffs issue from now
-    # and legitimately postdate it (#583).
-    assert request.as_of == datetime.combine(_CROSS, time(15, 0), tzinfo=_SHANGHAI)
+    # The decision is dated at the session close; assembling at it issues
+    # cutoffs from now that legitimately postdate it (#583).
+    assert default == datetime.combine(_CROSS, time(15, 0), tzinfo=_SHANGHAI)
+    request = process.assemble(_request(as_of=default))
     assert request.knowledge_cutoff == _AS_OF
     assert request.publication_cutoff == _AS_OF
 
@@ -706,9 +707,7 @@ def test_empty_observation_never_rolls_the_session_forward() -> None:
         ),
     )
 
-    request = process.assemble(_request(as_of=None))
-
-    assert request.as_of == datetime.combine(
+    assert process.default_as_of() == datetime.combine(
         date(2026, 9, 25), time(15, 0), tzinfo=_SHANGHAI
     )
 
@@ -743,9 +742,7 @@ def test_session_takes_the_minimum_across_prerequisites() -> None:
         ),
     )
 
-    request = process.assemble(_request(as_of=None))
-
-    assert request.as_of == datetime.combine(
+    assert process.default_as_of() == datetime.combine(
         date(2026, 9, 28), time(15, 0), tzinfo=_SHANGHAI
     )
 

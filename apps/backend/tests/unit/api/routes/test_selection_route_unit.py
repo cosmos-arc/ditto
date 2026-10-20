@@ -57,6 +57,8 @@ from packages.application.tests.integration.snapshot_readiness_support import (
 )
 
 _AS_OF = datetime(2026, 8, 31, 7, 0, tzinfo=UTC)
+# The session-close instant the fake process serves for omitted as-of (#583).
+_ROLLED_AS_OF = datetime(2026, 8, 28, 7, 0, tzinfo=UTC)
 
 
 class _Store:
@@ -186,6 +188,9 @@ class _FakeAssembleProcess(AssembleSelectionFacts):
     def assemble(self, request: AssembleSelectionFactsRequest):
         self.requests.append(request)
         return self._assembler(request)
+
+    def default_as_of(self) -> datetime:
+        return _ROLLED_AS_OF
 
 
 @pytest.fixture
@@ -342,7 +347,10 @@ def test_research_case_request_accepts_json_candidate_array() -> None:
 
 
 def test_assembly_request_lifts_policy_fields() -> None:
-    lifted = _assembly_request(_assembly_body())
+    process = _FakeAssembleProcess(
+        lambda request: cast(CreateSelectionRunRequest, request)
+    )
+    lifted = _assembly_request(_assembly_body(), process)
 
     assert lifted.universe_id == "a-share-main"
     assert lifted.asset_kind == "stock"
@@ -353,6 +361,17 @@ def test_assembly_request_lifts_policy_fields() -> None:
     assert lifted.lookback_days == 400
     assert lifted.factor_weights[0].name == "momentum"
     assert lifted.excluded_limit_states == ("limit_up", "limit_down")
+
+
+def test_assembly_request_rolls_omitted_as_of_to_session_close() -> None:
+    # #583：传输层留空 as_of 时，路由边界以最近完整交易日收盘滚动。
+    body = _assembly_body().model_copy(update={"as_of": None})
+    process = _FakeAssembleProcess(
+        lambda request: cast(CreateSelectionRunRequest, request)
+    )
+    lifted = _assembly_request(body, process)
+
+    assert lifted.as_of == _ROLLED_AS_OF
 
 
 def test_assemble_handler_round_trips_request_without_client_facts(gate) -> None:

@@ -73,7 +73,7 @@ class EodReadinessVerifier:
     def _attestations(
         self, datasets: Sequence[str], trade_date: date
     ) -> tuple[EodDatasetReadiness, ...]:
-        items = []
+        items: list[EodDatasetReadiness] = []
         for dataset in datasets:
             windows = self._index.windows(dataset)
             attested = latest_row_attested_day(windows, today=trade_date)

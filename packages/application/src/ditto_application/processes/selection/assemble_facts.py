@@ -58,7 +58,7 @@ from __future__ import annotations
 
 import math
 from collections.abc import Callable, Mapping, Sequence
-from dataclasses import dataclass, replace
+from dataclasses import dataclass
 from datetime import UTC, date, datetime, time, timedelta
 from typing import Literal, Protocol
 from zoneinfo import ZoneInfo
@@ -290,14 +290,13 @@ class AssembleSelectionFactsRequest:
 
     universe_id: str
     asset_kind: Literal["stock", "etf"]
+    as_of: datetime
     spec_id: str
     spec_version: str
     top_k: int
     min_average_turnover: float
     min_listing_days: int
     factor_weights: tuple[SelectionFactorWeightDraft, ...]
-    # Omitted as-of rolls to the latest complete session's close (#583).
-    as_of: datetime | None = None
     excluded_limit_states: tuple[Literal["normal", "limit_up", "limit_down"], ...] = (
         "limit_up",
         "limit_down",
@@ -342,6 +341,17 @@ class AssembleSelectionFacts:
         self._compiler = ExpressionCompiler()
         self._clock = clock or (lambda: datetime.now(UTC))
 
+    def default_as_of(self) -> datetime:
+        """
+        The live daily lane's default decision instant (#583).
+
+        The latest complete session's 15:00 Asia/Shanghai close; the
+        transport boundary substitutes this for an omitted ``as_of``.
+        """
+        return datetime.combine(
+            self.latest_complete_session(), _SESSION_CLOSE, tzinfo=_SHANGHAI
+        )
+
     def assemble(
         self, request: AssembleSelectionFactsRequest
     ) -> CreateSelectionRunRequest:
@@ -351,17 +361,12 @@ class AssembleSelectionFacts:
                 "server-side assembly currently supports the stock lane only",
                 details={"reason": "ASSEMBLY_ASSET_KIND_UNSUPPORTED"},
             )
-        session = self.latest_complete_session()
-        request = replace(
-            request,
-            as_of=request.as_of
-            or datetime.combine(session, _SESSION_CLOSE, tzinfo=_SHANGHAI),
-        )
         if request.as_of.tzinfo is None:
             raise AppProcessError(
                 "assembled selection as-of must carry a timezone",
                 details={"reason": "ASSEMBLY_TIME_INVALID"},
             )
+        session = self.latest_complete_session()
         knowledge, publication = self._resolve_cutoffs(request, session=session)
         self._validate_policy(request)
         # Windows resolve per request into a local catalog: shared
