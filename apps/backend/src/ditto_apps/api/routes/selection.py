@@ -117,8 +117,12 @@ async def create_selection_run(
     the same content-addressed run.
     """
     try:
+        # Resolution and assembly both run off the event loop; the residual
+        # sub-second race between the rolled as-of and the floor session
+        # (fresh ingestion landing mid-request) only ever fails closed and
+        # self-heals on retry (#583 correctness F4).
         assembled = await asyncio.to_thread(
-            process.assemble, _assembly_request(body, process)
+            lambda: process.assemble(_assembly_request(body, process))
         )
         receipt = await asyncio.to_thread(facade.create, assembled)
     except AppProcessError as exc:
@@ -142,7 +146,7 @@ async def assemble_selection_run(
     """Assemble every PIT fact server-side and preview the exact create body."""
     try:
         assembled = await asyncio.to_thread(
-            process.assemble, _assembly_request(body, process)
+            lambda: process.assemble(_assembly_request(body, process))
         )
     except AppProcessError as exc:
         raise UnprocessableEntityError(

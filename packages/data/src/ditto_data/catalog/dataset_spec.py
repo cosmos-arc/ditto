@@ -11,12 +11,14 @@ __all__ = [
     "resolve_dataset_spec",
 ]
 
-# Full-market per-trading-day snapshots: every A-share session yields rows
-# for the whole market, so a zero-row trading-day frame can only mean the
-# provider has not published yet (or an outage) — never a legitimate
-# "verified no data" answer (#583). Event-flavored dailies where a quiet
-# day can honestly be empty (limit_list, top_list, …) stay on the
-# zero-row observation path.
+# Full-market per-trading-day snapshots with whole-history coverage: every
+# A-share session yields rows for the whole market, so a zero-row
+# trading-day frame can only mean the provider has not published yet (or
+# an outage) — never a legitimate "verified no data" answer (#583).
+# Deliberately excluded: event-flavored dailies where a quiet day can
+# honestly be empty (limit_list, top_list, …), and datasets whose coverage
+# starts mid-history (valuation_metrics, margin_trading) — their
+# pre-coverage windows keep the zero-row observation path.
 _FULL_MARKET_DAILY_DATASETS = frozenset(
     {
         "stock_daily",
@@ -25,8 +27,6 @@ _FULL_MARKET_DAILY_DATASETS = frozenset(
         "adj_factor",
         "fund_adj",
         "stock_status",
-        "valuation_metrics",
-        "margin_trading",
     }
 )
 

@@ -174,6 +174,12 @@ def _metadata_identities(metadata: MetadataService) -> InstrumentIdentityReader:
     return _MetadataIdentities()
 
 
+def _market_wide(snapshot: ProviderSnapshot) -> bool:
+    """A restricted request never attests market-wide evidence (F2, #583)."""
+    scope = dict(snapshot.response_metadata)
+    return not (scope.get("source_ticker") or scope.get("exchange"))
+
+
 def completed_snapshot_index(
     lifecycle: PartitionLifecycleReader, snapshots: ProviderSnapshotReader
 ) -> SnapshotCoverageIndex:
@@ -184,7 +190,12 @@ def completed_snapshot_index(
             return tuple(
                 snapshot
                 for snapshot in snapshots.list_snapshots(dataset_id=dataset_id)
-                if snapshot.payload_retained and snapshot_completed(snapshot, lifecycle)
+                if snapshot.payload_retained
+                and snapshot_completed(snapshot, lifecycle)
+                # Same restricted-scope rule as covering_snapshots: a
+                # per-ticker/per-exchange request cannot prove the whole
+                # market, so it must not advance the live session (#583).
+                and _market_wide(snapshot)
             )
 
         def snapshot_ids(self, dataset_id: str) -> tuple[str, ...]:

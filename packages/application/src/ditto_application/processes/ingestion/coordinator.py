@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import NamedTuple
 
 import polars as pl
+from ditto_data.catalog.dataset_spec import expects_rows_per_trading_day
 from ditto_data.models import Dataset
 from ditto_data.models.ingestion import IngestionQualityEvidence, IngestionResult
 from ditto_data.services.capital_store import CapitalStore
@@ -599,6 +600,12 @@ class IngestionCoordinator:
         )
         if isinstance(combined, IngestionResult):
             return combined
+        # The committed window may only claim days the chunk actually
+        # answered: trailing failed/unpublished partition days are trimmed
+        # from the declared interval so snapshot attestation cannot cover
+        # a day with no rows (#583 correctness F1).
+        answered = [day for day in normalized_dates if day not in set(failed_days)]
+        committed_end = answered[-1] if answered else request_end
         result = _process_fetched_data(
             combined,
             dataset,
@@ -618,7 +625,7 @@ class IngestionCoordinator:
                 snapshot_reader=self._snapshot_reader,
                 lifecycle_reader=self._lifecycle_reader,
             ),
-            request_window=RequestWindow(None, request_end),
+            request_window=RequestWindow(None, committed_end),
             chunk_id=chunk_id,
         )
         if failed_days and result.status == "success":
@@ -665,21 +672,9 @@ class IngestionCoordinator:
                 ),
                 (),
             )
-        frames: list[pl.DataFrame] = []
-        first_failure: IngestionResult | None = None
-        failed_dates: list[str] = []
-        for partition_date in partition_dates:
-            fetched = self._try_fetch_data(dataset, partition_date)
-            if isinstance(fetched, IngestionResult):
-                # 单日 fetch 失败不丢弃整月 chunk——失败日缺口由 retry_failed
-                # 兜底重试（#196：月级原子丢弃在偶发失败率下使
-                # fina_indicator 51 个月全部无法提交）。
-                if first_failure is None:
-                    first_failure = fetched
-                failed_dates.append(partition_date)
-                continue
-            if not fetched.is_empty():
-                frames.append(fetched)
+        frames, first_failure, failed_dates = self._collect_day_fetches(
+            dataset, partition_dates
+        )
         if failed_dates and not frames:
             # 全月失败维持 fail-closed，整 chunk 判败可整体重试。
             return (
@@ -702,6 +697,40 @@ class IngestionCoordinator:
             _merge_day_fetches(frames, dataset, request_start, request_end),
             tuple(failed_dates),
         )
+
+    def _collect_day_fetches(
+        self, dataset: str, partition_dates: tuple[str, ...]
+    ) -> tuple[list[pl.DataFrame], IngestionResult | None, list[str]]:
+        """Fetch each partition day, classifying typed failures and empties."""
+        frames: list[pl.DataFrame] = []
+        first_failure: IngestionResult | None = None
+        failed_dates: list[str] = []
+        for partition_date in partition_dates:
+            fetched = self._try_fetch_data(dataset, partition_date)
+            failure: IngestionResult | None = None
+            if isinstance(fetched, IngestionResult):
+                # 单日 fetch 失败不丢弃整月 chunk——失败日缺口由 retry_failed
+                # 兜底重试（#196：月级原子丢弃在偶发失败率下使
+                # fina_indicator 51 个月全部无法提交）。
+                failure = fetched
+            elif fetched.is_empty() and expects_rows_per_trading_day(dataset):
+                # 全市场交易日快照的空应答=供应商未发布（#583 切片 B 的
+                # 日粒度形态）：记类型化失败日，chunk 的声明区间与重试
+                # 通道都能看见该日——否则滚动日/verify-eod 会越过无行日。
+                failure = IngestionResult(
+                    dataset=dataset,
+                    trade_date=partition_date,
+                    status="failed",
+                    error="EMPTY_DATA_UNEXPECTED",
+                    message="全市场交易日快照空响应: 供应商未发布或供给缺口 (#583)",
+                )
+            if failure is not None:
+                if first_failure is None:
+                    first_failure = failure
+                failed_dates.append(partition_date)
+            elif not fetched.is_empty():
+                frames.append(fetched)
+        return frames, first_failure, failed_dates
 
     def _fetch_range_chunk(
         self,
