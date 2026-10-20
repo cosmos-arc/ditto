@@ -150,9 +150,16 @@ _LIVE_SKEW = timedelta(minutes=5)
 # latest complete trading day (#583); knowledge/publication cutoffs still
 # issue from the server clock and may postdate that instant.
 _SESSION_CLOSE = time(15, 0)
-# Datasets every stock selection consumes regardless of its factors; the
-# adjustment lineage stays under its own dedicated window guard.
-_LIVE_SESSION_DATASETS: tuple[str, ...] = ("stock_daily", "stock_status")
+# Date-partitioned datasets every stock selection consumes (#583); the
+# adjustment lineage gates the session too so a late-publishing adj day
+# rolls the whole session back instead of failing the price-factor guard.
+# stock_basic is observation-keyed (no per-day windows) and stays under
+# the roster resolution's HISTORY_NOT_OBSERVED guard instead.
+_LIVE_SESSION_DATASETS: tuple[str, ...] = (
+    "stock_daily",
+    _ADJUSTMENT_DATASET,
+    "stock_status",
+)
 _TURNOVER_WINDOW = 20
 _CALENDAR_BUFFER_DAYS = 14
 _SESSION_BUFFER = 5
@@ -460,9 +467,7 @@ class AssembleSelectionFacts:
             universe_sources=sources,
         )
 
-    def latest_complete_session(
-        self, datasets: Sequence[str] = _LIVE_SESSION_DATASETS
-    ) -> date:
+    def latest_complete_session(self) -> date:
         """
         The latest trading day every prerequisite dataset attests with rows.
 
@@ -471,7 +476,7 @@ class AssembleSelectionFacts:
         """
         today = self._clock().astimezone(_SHANGHAI).date()
         latest: date | None = None
-        for dataset_id in datasets:
+        for dataset_id in _LIVE_SESSION_DATASETS:
             day = latest_row_attested_day(
                 self._snapshots.windows(dataset_id), today=today
             )

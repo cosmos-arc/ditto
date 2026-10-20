@@ -30,7 +30,6 @@ EOD (End-of-Day) 编排 Flow。
 
 from collections.abc import Callable, Mapping
 from dataclasses import asdict, dataclass
-from datetime import UTC, datetime
 from typing import Any, cast
 
 from ditto_application.config import resolve_ingestion_scope
@@ -67,6 +66,9 @@ from prefect import flow
 
 from ditto_apps.jobs.eod_evidence import (
     dataset_states_from_ingestion as _dataset_states_from_ingestion,
+)
+from ditto_apps.jobs.eod_evidence import (
+    send_alert_safely as _send_alert_safely,
 )
 from ditto_apps.jobs.flows.daily import (
     check_trading_day,
@@ -146,39 +148,6 @@ def _default_eod_pipeline_dependencies() -> EodPipelineDependencies:
         daily_ingestion=run_daily_ingestion,
         daily_materialization=run_daily_materialization,
     )
-
-
-def _send_alert_safely(
-    alert_manager: AlertManager,
-    template: str,
-    context: dict[str, Any],
-    level: NotificationLevel,
-) -> None:
-    """
-    安全发送告警通知，失败不阻断主流程。
-
-    Args:
-        alert_manager: 告警管理器
-        template: 模板名称
-        context: 模板上下文
-        level: 通知级别
-
-    """
-    try:
-        alert_manager.send_alert(
-            template=template,
-            context=context,
-            level=level,
-            timestamp=datetime.now(UTC),
-        )
-    except Exception as exc:
-        logger.error(
-            "发送告警失败",
-            event="eod_alert_send_failed",
-            error_code="EOD_ALERT_SEND_FAILED",
-            error_type=type(exc).__name__,
-            template=template,
-        )
 
 
 def _publish_eod_signals(

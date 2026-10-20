@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import math
 from datetime import UTC, date, datetime, time, timedelta
+from typing import cast
 from zoneinfo import ZoneInfo
 
 import polars as pl
@@ -13,8 +14,10 @@ from ditto_application.processes.selection.assemble_facts import (
     AssembleSelectionFacts,
     AssembleSelectionFactsRequest,
     SnapshotWindow,
+    _FactorNode,
     _in_unrestricted_window,
     _unrestricted_sessions,
+    data_fields,
 )
 from ditto_application.processes.selection.facade import (
     SelectionFactorWeightDraft,
@@ -24,6 +27,7 @@ from ditto_application.queries.historical_universe import (
     HistoricalUniverseSources,
 )
 from ditto_data.provider import BarQuery
+from ditto_features.expression.contracts import CompiledDerivedExpression
 from ditto_features.factors.factor_specs import ALL_FACTOR_SPECS
 from ditto_features.factors.spec import FactorSpec
 
@@ -667,6 +671,7 @@ def test_explicit_past_knowledge_is_rejected_but_server_issuance_is_not() -> Non
 _SHANGHAI = ZoneInfo("Asia/Shanghai")
 
 
+@pytest.mark.pit
 def test_default_as_of_rolls_to_latest_complete_session() -> None:
     provider = _FakeProvider(_bars_frame(rows_per_instrument={1: 30}))
     history = _FakeHistory(_roster_frame((1,)))
@@ -682,6 +687,7 @@ def test_default_as_of_rolls_to_latest_complete_session() -> None:
     assert request.publication_cutoff == _AS_OF
 
 
+@pytest.mark.pit
 def test_empty_observation_never_rolls_the_session_forward() -> None:
     provider = _FakeProvider(_bars_frame(rows_per_instrument={1: 30}))
     history = _FakeHistory(_roster_frame((1,)))
@@ -712,6 +718,7 @@ def test_empty_observation_never_rolls_the_session_forward() -> None:
     )
 
 
+@pytest.mark.pit
 def test_session_takes_the_minimum_across_prerequisites() -> None:
     # Bars stop at 09-28: daily is the laggard, so the evaluation window
     # must not extend past what the lagging dataset attests.
@@ -747,6 +754,7 @@ def test_session_takes_the_minimum_across_prerequisites() -> None:
     )
 
 
+@pytest.mark.pit
 def test_as_of_predating_the_latest_complete_session_is_rejected() -> None:
     provider = _FakeProvider(_bars_frame(rows_per_instrument={1: 30}))
     history = _FakeHistory(_roster_frame((1,)))
@@ -756,6 +764,7 @@ def test_as_of_predating_the_latest_complete_session_is_rejected() -> None:
     assert error.value.details["reason"] == "ASSEMBLY_CUTOFF_BACKDATED"
 
 
+@pytest.mark.pit
 def test_session_requires_row_evidence_for_every_prerequisite() -> None:
     provider = _FakeProvider(_bars_frame(rows_per_instrument={1: 30}))
     history = _FakeHistory(_roster_frame((1,)))
@@ -1016,13 +1025,18 @@ def test_future_as_of_is_rejected() -> None:
 
 
 def test_price_factors_require_completed_adjustment_window() -> None:
-    provider = _FakeProvider(_bars_frame(rows_per_instrument={1: 30}))
-    history = _FakeHistory(_roster_frame((1,)))
-    process = _process(
-        provider=provider, history=history, snapshots=_FakeSnapshots(adj=())
+    # adj_factor 进滚动前置集后，经 assemble 的"完全无 adj 窗口"路径先被
+    # ASSEMBLY_SESSION_INCOMPLETE 拦截；绑定构造层的复权窗口守卫在此直接
+    # 单测（部分覆盖的窗口会落到逐行缺失输入，不归本守卫管）。
+    node = _FactorNode(
+        factor_id="reversal_1w",
+        compiled=cast(CompiledDerivedExpression, object()),
+        requested=True,
+        leaves=frozenset({"market.close"}),
+        lookback=5,
     )
     with pytest.raises(AppProcessError) as error:
-        process.assemble(_request())
+        data_fields({"stock_daily": (_DAILY_WINDOW,)}, (node,))
     assert error.value.details["reason"] == "ASSEMBLY_ADJUSTMENT_WINDOW_MISSING"
 
 

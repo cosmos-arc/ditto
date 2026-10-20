@@ -19,7 +19,11 @@ from ditto_platform.services import AlertManager, NotificationLevel
 from ditto_apps.registry.container import make_app_container
 from ditto_apps.registry.contexts import create_ingestion_bundle
 
-__all__ = ["dataset_states_from_ingestion", "run_eod_readiness_verification"]
+__all__ = [
+    "dataset_states_from_ingestion",
+    "run_eod_readiness_verification",
+    "send_alert_safely",
+]
 
 
 def dataset_states_from_ingestion(  # noqa: C901, PLR0912, PLR0915 - evidence precedence
@@ -233,7 +237,16 @@ def run_eod_readiness_verification(
         container = make_app_container()
         try:
             alert_manager = container.get(AlertManager)
-            _send_readiness_alert_safely(alert_manager, trade_date, report.missing)
+            # 超高优先级：数据缺口意味着当日选池/信号车道整体不可用。
+            send_alert_safely(
+                alert_manager,
+                "eod_readiness_failure",
+                {
+                    "trade_date": trade_date,
+                    "missing_datasets": ", ".join(report.missing),
+                },
+                NotificationLevel.CRITICAL,
+            )
         finally:
             container.close()
     return payload
@@ -243,24 +256,25 @@ def _parse_day(trade_date: str) -> date:
     return date.fromisoformat(trade_date)
 
 
-def _send_readiness_alert_safely(
-    alert_manager: AlertManager, trade_date: str, missing: tuple[str, ...]
+def send_alert_safely(
+    alert_manager: AlertManager,
+    template: str,
+    context: dict[str, object],
+    level: NotificationLevel,
 ) -> None:
-    """超高优先级告警；发送失败只记日志，不阻断核验结果。"""
+    """发送告警；失败只记日志不阻断主流程（EOD 编排共用，#583 抽出）。"""
     try:
         alert_manager.send_alert(
-            template="eod_readiness_failure",
-            context={
-                "trade_date": trade_date,
-                "missing_datasets": ", ".join(missing),
-            },
-            level=NotificationLevel.ERROR,
+            template=template,
+            context=context,
+            level=level,
             timestamp=datetime.now(UTC),
         )
     except Exception as exc:
         logger.error(
-            "发送 EOD 就绪告警失败",
-            event="eod_readiness_alert_send_failed",
-            error_code="EOD_READINESS_ALERT_SEND_FAILED",
+            "发送告警失败",
+            event="eod_alert_send_failed",
+            error_code="EOD_ALERT_SEND_FAILED",
             error_type=type(exc).__name__,
+            template=template,
         )
