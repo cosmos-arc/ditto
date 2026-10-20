@@ -376,6 +376,8 @@ APPS_REGISTRY_COMPOSITION_ALLOWANCES = (
         path="apps/backend/src/ditto_apps/registry/contexts/bundle.py",
         allowed_modules=frozenset(
             {
+                "ditto_data.catalog.source_snapshot",
+                "ditto_data.ingestion.partition_state",
                 "ditto_data.sources.exchange_transformers",
                 "ditto_strategy.contracts",
             }
