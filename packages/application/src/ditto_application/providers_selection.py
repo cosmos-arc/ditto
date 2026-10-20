@@ -174,7 +174,7 @@ def _metadata_identities(metadata: MetadataService) -> InstrumentIdentityReader:
     return _MetadataIdentities()
 
 
-def _completed_snapshot_index(
+def completed_snapshot_index(
     lifecycle: PartitionLifecycleReader, snapshots: ProviderSnapshotReader
 ) -> SnapshotCoverageIndex:
     """Qualify snapshots through their own ingestion completion evidence."""
@@ -321,7 +321,7 @@ class AppSelectionProvider(Provider):
         snapshots: ProviderSnapshotReader,
     ) -> AssembleSelectionFacts:
         """Assemble policy-only selection requests from completed evidence."""
-        index = _completed_snapshot_index(lifecycle, snapshots)
+        index = completed_snapshot_index(lifecycle, snapshots)
         return AssembleSelectionFacts(
             provider=data_provider,
             history=historical_universe,

@@ -160,6 +160,26 @@ _DEFAULT_LOOKBACK_DAYS = 400
 _SHANGHAI = ZoneInfo("Asia/Shanghai")
 
 
+def latest_row_attested_day(
+    windows: Sequence[SnapshotWindow], *, today: date
+) -> date | None:
+    """
+    The latest day the completed windows attest with retained rows.
+
+    An empty observation (provider answered "no data") attests nothing, so
+    a day the provider publishes late never rolls forward until real rows
+    land; windows ending after today cannot attest either (#583).
+    """
+    return max(
+        (
+            window.request_end
+            for window in windows
+            if window.row_count > 0 and window.request_end <= today
+        ),
+        default=None,
+    )
+
+
 class UniverseSourcesDiscovery(Protocol):
     """Discover retained snapshot chains for one universe at a cutoff."""
 
@@ -441,21 +461,14 @@ class AssembleSelectionFacts:
         """
         The latest trading day every prerequisite dataset attests with rows.
 
-        A completed window with retained rows covers its whole request
-        range up to today; an empty observation (provider answered "no
-        data") attests nothing, so a day the provider publishes late never
-        rolls the session forward until real rows land (#583).
+        Delegates per-dataset attestation to ``latest_row_attested_day`` —
+        the same rule the EOD readiness verification applies (#583).
         """
         today = self._clock().astimezone(_SHANGHAI).date()
         latest: date | None = None
         for dataset_id in datasets:
-            day = max(
-                (
-                    window.request_end
-                    for window in self._snapshots.windows(dataset_id)
-                    if window.row_count > 0 and window.request_end <= today
-                ),
-                default=None,
+            day = latest_row_attested_day(
+                self._snapshots.windows(dataset_id), today=today
             )
             if day is None:
                 raise AppProcessError(

@@ -38,6 +38,7 @@ from ditto_platform.foundation.storage.sqlite_backup import (
 )
 
 from ditto_apps.cli.utils.output import output_json_dict, output_json_dicts
+from ditto_apps.jobs.eod_evidence import run_eod_readiness_verification
 from ditto_apps.jobs.flows.eod import run_eod_pipeline
 from ditto_apps.jobs.flows.repair import run_sparse_pit_reattestation
 from ditto_apps.registry.container import Container, make_app_container
@@ -148,6 +149,20 @@ def run_eod(
         in {"blocked", "failed", "rerun_conflict"}
         for item in cast("list[object]", strategies)
     ):
+        raise typer.Exit(1)
+
+
+@app.command("verify-eod")
+def verify_eod(
+    trade_date: str = typer.Option(
+        ..., "--date", help="核验交易日 YYYY-MM-DD (通常为当日)"
+    ),
+    no_retry: bool = typer.Option(False, "--no-retry", help="只核验不重拉缺失数据集"),
+) -> None:
+    """核验 EOD 数据就绪：缺则重拉一次，仍缺发超高优先级告警并退出非零。"""
+    result = run_eod_readiness_verification(trade_date, retry=not no_retry)
+    output_json_dict(result)
+    if result.get("status") == "incomplete":
         raise typer.Exit(1)
 
 
