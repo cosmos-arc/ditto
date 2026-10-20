@@ -30,7 +30,11 @@ function windowWellFormed(
 }
 
 /** 已声明的截止时刻必须可解析且不晚于声明边界（服务端只会更早）。 */
-function declaredInstantBound(returned: string, declared: string | undefined): boolean {
+function declaredInstantBound(
+	returned: string | null | undefined,
+	declared: string | null | undefined,
+): boolean {
+	if (returned == null) return false;
 	const parsed = Date.parse(returned);
 	if (!Number.isFinite(parsed)) return false;
 	if (declared == null) return true;
@@ -52,7 +56,9 @@ export function toAssembledRunView(value: AssembledSelectionRunResponse, submitt
 		windowWellFormed(request.data_from, request.data_to, anchorMs) &&
 		declaredInstantBound(request.knowledge_cutoff, submitted.knowledge_cutoff) &&
 		declaredInstantBound(request.publication_cutoff, submitted.publication_cutoff) &&
-		Date.parse(request.publication_cutoff) <= Date.parse(request.knowledge_cutoff) &&
+		(request.publication_cutoff != null &&
+			request.knowledge_cutoff != null &&
+			Date.parse(request.publication_cutoff) <= Date.parse(request.knowledge_cutoff)) &&
 		typeof spec === "object" &&
 		spec !== null &&
 		spec.asset_kind === "stock" &&
