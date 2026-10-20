@@ -54,12 +54,20 @@ def _raise_query_error(exc: AppQueryError) -> Never:
     ) from exc
 
 
-def _assembly_request(body: AssembleSelectionRunBody) -> AssembleSelectionFactsRequest:
-    """Lift the policy-only transport body into the assembly process."""
+def _assembly_request(
+    body: AssembleSelectionRunBody, process: AssembleSelectionFacts
+) -> AssembleSelectionFactsRequest:
+    """
+    Lift the policy-only transport body into the assembly process.
+
+    An omitted ``as_of`` rolls to the latest complete session's close
+    (#583); an explicit ``as_of`` still passes the process's session
+    floor guard unchanged.
+    """
     return AssembleSelectionFactsRequest(
         universe_id=body.universe_id,
         asset_kind=body.asset_kind,
-        as_of=body.as_of,
+        as_of=body.as_of or process.default_as_of(),
         spec_id=body.spec_id,
         spec_version=body.spec_version,
         top_k=body.top_k,
@@ -109,7 +117,13 @@ async def create_selection_run(
     the same content-addressed run.
     """
     try:
-        assembled = await asyncio.to_thread(process.assemble, _assembly_request(body))
+        # Resolution and assembly both run off the event loop; the residual
+        # sub-second race between the rolled as-of and the floor session
+        # (fresh ingestion landing mid-request) only ever fails closed and
+        # self-heals on retry (#583 correctness F4).
+        assembled = await asyncio.to_thread(
+            lambda: process.assemble(_assembly_request(body, process))
+        )
         receipt = await asyncio.to_thread(facade.create, assembled)
     except AppProcessError as exc:
         raise UnprocessableEntityError(
@@ -131,7 +145,9 @@ async def assemble_selection_run(
 ) -> APIResponse[AssembledSelectionRunResponse]:
     """Assemble every PIT fact server-side and preview the exact create body."""
     try:
-        assembled = await asyncio.to_thread(process.assemble, _assembly_request(body))
+        assembled = await asyncio.to_thread(
+            lambda: process.assemble(_assembly_request(body, process))
+        )
     except AppProcessError as exc:
         raise UnprocessableEntityError(
             str(exc),

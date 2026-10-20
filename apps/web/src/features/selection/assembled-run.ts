@@ -21,35 +21,40 @@ function sameLimitStates(left: readonly string[], right: readonly string[]): boo
 function windowWellFormed(
 	dataFrom: string | null | undefined,
 	dataTo: string | null | undefined,
-	submitted: AssembleSelectionRunBody,
+	anchorMs: number,
 ): boolean {
 	if (dataFrom == null || dataTo == null) return false;
 	const from = Date.parse(dataFrom);
 	const to = Date.parse(dataTo);
-	const asOf = Date.parse(submitted.as_of);
-	return Number.isFinite(from) && Number.isFinite(to) && Number.isFinite(asOf) && from <= to && to <= asOf;
+	return Number.isFinite(from) && Number.isFinite(to) && Number.isFinite(anchorMs) && from <= to && to <= anchorMs;
 }
 
-/** 返回的截止时刻必须可解析、不晚于表单声明的边界（未填按 as_of 收口）。 */
-function sameInstantBound(returned: string, submitted: string): boolean {
+/** 已声明的截止时刻必须可解析且不晚于声明边界（服务端只会更早）。 */
+function declaredInstantBound(returned: string | null | undefined, declared: string | null | undefined): boolean {
+	if (returned == null) return false;
 	const parsed = Date.parse(returned);
-	return Number.isFinite(parsed) && parsed <= Date.parse(submitted);
+	if (!Number.isFinite(parsed)) return false;
+	if (declared == null) return true;
+	return parsed <= Date.parse(declared);
 }
 
 export function toAssembledRunView(value: AssembledSelectionRunResponse, submitted: AssembleSelectionRunBody) {
 	const request = value.request;
 	const spec = request?.selection_spec;
+	// as_of 留空时由服务端滚动到最近完整交易日（issue 583）：以回显的决策时点为锚。
+	const asOfEchoOk =
+		submitted.as_of != null ? request.as_of === submitted.as_of : Number.isFinite(Date.parse(request.as_of));
+	const anchorMs = Date.parse(submitted.as_of ?? request.as_of);
 	const valid =
 		typeof request === "object" &&
 		request !== null &&
-		request.as_of === submitted.as_of &&
+		asOfEchoOk &&
 		request.seed === submitted.seed &&
-		windowWellFormed(request.data_from, request.data_to, submitted) &&
-		sameInstantBound(request.knowledge_cutoff, submitted.knowledge_cutoff ?? submitted.as_of) &&
-		sameInstantBound(
-			request.publication_cutoff,
-			submitted.publication_cutoff ?? submitted.knowledge_cutoff ?? submitted.as_of,
-		) &&
+		windowWellFormed(request.data_from, request.data_to, anchorMs) &&
+		declaredInstantBound(request.knowledge_cutoff, submitted.knowledge_cutoff) &&
+		declaredInstantBound(request.publication_cutoff, submitted.publication_cutoff) &&
+		request.publication_cutoff != null &&
+		request.knowledge_cutoff != null &&
 		Date.parse(request.publication_cutoff) <= Date.parse(request.knowledge_cutoff) &&
 		typeof spec === "object" &&
 		spec !== null &&

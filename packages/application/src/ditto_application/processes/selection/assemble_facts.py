@@ -15,11 +15,16 @@ Boundaries kept honest on purpose:
   are completed for formal research. Requested factors are emitted as
   cross-sectional fractional ranks (unit scores) because the selection
   contract scores weighted sums of unit-normalized values.
-- Bars are read through the live market read model at the request's as-of
-  instant. Any past instant — backdated cutoffs or a past as-of with omitted
-  cutoffs — is rejected because the live store cannot prove sub-day
-  visibility for it; the retained replay lane remains the exact-payload
-  path for historical evidence. Rows carry a required ``knowledge_date``
+- Bars are read through the live market read model. The daily lane's
+  as-of defaults to the latest complete session (every prerequisite
+  dataset attests the day with retained rows) at its 15:00 Asia/Shanghai
+  close; an explicit as-of may not predate that session, because the live
+  store cannot prove older sub-day visibility — the retained replay lane
+  remains the exact-payload path for historical evidence. Knowledge and
+  publication cutoffs default to the server instant and may legitimately
+  postdate the rolled as-of: the decision is dated at the session close
+  but made now, and per-row ``effective_from <= as_of`` gates keep
+  post-session facts out (#583). Rows carry a required ``knowledge_date``
   column, and rows claiming future knowledge are dropped fail-closed.
 - The readiness claim covers the full consumed read range (earliest
   observed bar through cross-section day): the computed values already
@@ -141,11 +146,45 @@ _BAR_PUBLICATION_TIME = time(18, 0)
 # Client and server clocks drift by seconds; only instants older than this
 # window count as genuinely past for the live read model.
 _LIVE_SKEW = timedelta(minutes=5)
+# The live daily lane dates its decision at the session close of the
+# latest complete trading day (#583); knowledge/publication cutoffs still
+# issue from the server clock and may postdate that instant.
+_SESSION_CLOSE = time(15, 0)
+# Date-partitioned datasets every stock selection consumes (#583); the
+# adjustment lineage gates the session too so a late-publishing adj day
+# rolls the whole session back instead of failing the price-factor guard.
+# stock_basic is observation-keyed (no per-day windows) and stays under
+# the roster resolution's HISTORY_NOT_OBSERVED guard instead.
+_LIVE_SESSION_DATASETS: tuple[str, ...] = (
+    "stock_daily",
+    _ADJUSTMENT_DATASET,
+    "stock_status",
+)
 _TURNOVER_WINDOW = 20
 _CALENDAR_BUFFER_DAYS = 14
 _SESSION_BUFFER = 5
 _DEFAULT_LOOKBACK_DAYS = 400
 _SHANGHAI = ZoneInfo("Asia/Shanghai")
+
+
+def latest_row_attested_day(
+    windows: Sequence[SnapshotWindow], *, today: date
+) -> date | None:
+    """
+    The latest day the completed windows attest with retained rows.
+
+    An empty observation (provider answered "no data") attests nothing, so
+    a day the provider publishes late never rolls forward until real rows
+    land; windows ending after today cannot attest either (#583).
+    """
+    return max(
+        (
+            window.request_end
+            for window in windows
+            if window.row_count > 0 and window.request_end <= today
+        ),
+        default=None,
+    )
 
 
 class UniverseSourcesDiscovery(Protocol):
@@ -203,6 +242,9 @@ class SnapshotWindow:
     snapshot_id: str
     request_start: date
     request_end: date
+    # Rows the snapshot attests for its range; a zero attests a verified
+    # provider answer of "no data" and never advances the live session.
+    row_count: int = 0
 
 
 class SnapshotCoverageIndex(Protocol):
@@ -271,12 +313,6 @@ class AssembleSelectionFactsRequest:
     seed: int = 0
     lookback_days: int = _DEFAULT_LOOKBACK_DAYS
 
-    def resolved_cutoffs(self) -> tuple[datetime, datetime]:
-        """Default the PIT cutoffs conservatively to the as-of instant."""
-        knowledge = self.knowledge_cutoff or self.as_of
-        publication = self.publication_cutoff or knowledge
-        return knowledge, publication
-
 
 @dataclass(frozen=True, slots=True)
 class _FactorNode:
@@ -312,6 +348,17 @@ class AssembleSelectionFacts:
         self._compiler = ExpressionCompiler()
         self._clock = clock or (lambda: datetime.now(UTC))
 
+    def default_as_of(self) -> datetime:
+        """
+        The live daily lane's default decision instant (#583).
+
+        The latest complete session's 15:00 Asia/Shanghai close; the
+        transport boundary substitutes this for an omitted ``as_of``.
+        """
+        return datetime.combine(
+            self.latest_complete_session(), _SESSION_CLOSE, tzinfo=_SHANGHAI
+        )
+
     def assemble(
         self, request: AssembleSelectionFactsRequest
     ) -> CreateSelectionRunRequest:
@@ -326,7 +373,8 @@ class AssembleSelectionFacts:
                 "assembled selection as-of must carry a timezone",
                 details={"reason": "ASSEMBLY_TIME_INVALID"},
             )
-        knowledge, publication = self._resolve_cutoffs(request)
+        session = self.latest_complete_session()
+        knowledge, publication = self._resolve_cutoffs(request, session=session)
         self._validate_policy(request)
         # Windows resolve per request into a local catalog: shared
         # instance state would race concurrent assemblies and go stale
@@ -419,17 +467,48 @@ class AssembleSelectionFacts:
             universe_sources=sources,
         )
 
+    def latest_complete_session(self) -> date:
+        """
+        The latest trading day every prerequisite dataset attests with rows.
+
+        Delegates per-dataset attestation to ``latest_row_attested_day`` —
+        the same rule the EOD readiness verification applies (#583).
+        """
+        today = self._clock().astimezone(_SHANGHAI).date()
+        latest: date | None = None
+        for dataset_id in _LIVE_SESSION_DATASETS:
+            day = latest_row_attested_day(
+                self._snapshots.windows(dataset_id), today=today
+            )
+            if day is None:
+                raise AppProcessError(
+                    "the live session lacks completed row evidence for " + dataset_id,
+                    details={"reason": "ASSEMBLY_SESSION_INCOMPLETE"},
+                )
+            latest = day if latest is None else min(latest, day)
+        if latest is None:
+            raise AppProcessError(
+                "the live session has no prerequisite datasets",
+                details={"reason": "ASSEMBLY_SESSION_INCOMPLETE"},
+            )
+        return latest
+
     def _resolve_cutoffs(
-        self, request: AssembleSelectionFactsRequest
+        self, request: AssembleSelectionFactsRequest, *, session: date
     ) -> tuple[datetime, datetime]:
         """
         Issue live cutoffs from one server instant, skew-tolerant.
 
-        Omitted cutoffs default to a single ``clock()`` read rather than the
-        client as-of, which may already be seconds old by comparison time.
-        Explicit cutoffs must still obey causal order and may only antedate
-        the server clock by the tolerated live skew; anything older belongs
-        to the retained replay lane.
+        The daily lane dates its decision at the latest complete session
+        but decides with the knowledge of now (#583): an as-of older than
+        that session has no provable sub-day visibility and belongs to the
+        retained replay lane, while knowledge/publication cutoffs default
+        to one ``clock()`` read and may legitimately postdate the rolled
+        as-of. Declared cutoffs must obey causal order (publication before
+        knowledge) and stay within the live skew of the server clock;
+        skew tolerance forgives validation, it never grants future
+        evidence (an 18:01 cutoff at server 17:59 must not unlock
+        same-day bars at the 18:00 publication boundary).
         """
         now = self._clock()
         for declared in (request.knowledge_cutoff, request.publication_cutoff):
@@ -443,42 +522,40 @@ class AssembleSelectionFacts:
                 "future decision instants cannot use the live read model",
                 details={"reason": "ASSEMBLY_TIME_INVALID"},
             )
-        # Never later than the decision instant nor the server clock:
-        # skew tolerance forgives validation, it never grants future
-        # evidence (an 18:01 cutoff at server 17:59 must not unlock
-        # same-day bars at the 18:00 publication boundary).
+        if request.as_of < datetime.combine(session, time(0, 0), tzinfo=_SHANGHAI):
+            raise AppProcessError(
+                "past instants cannot use the live read model; "
+                + "use the retained replay lane",
+                details={"reason": "ASSEMBLY_CUTOFF_BACKDATED"},
+            )
         declared_knowledge = request.knowledge_cutoff
-        if declared_knowledge is not None and (
-            declared_knowledge.tzinfo is None or declared_knowledge > request.as_of
-        ):
+        if declared_knowledge is not None and declared_knowledge > now + _LIVE_SKEW:
             raise AppProcessError(
                 "assembled selection cutoffs violate causal order",
                 details={"reason": "ASSEMBLY_CUTOFF_INVALID"},
             )
         declared_publication = request.publication_cutoff
-        if declared_publication is not None and (
-            declared_publication.tzinfo is None
-            or (
-                declared_knowledge is not None
-                and declared_publication > declared_knowledge
-            )
+        if (
+            declared_publication is not None
+            and declared_knowledge is not None
+            and declared_publication > declared_knowledge
         ):
             raise AppProcessError(
                 "assembled selection cutoffs violate causal order",
                 details={"reason": "ASSEMBLY_CUTOFF_INVALID"},
             )
-        # Effective cutoffs are additionally capped at the server clock:
-        # skew tolerance forgives validation, it never grants future
-        # evidence around the publication boundary.
-        knowledge = min(declared_knowledge or now, request.as_of, now)
+        # Effective cutoffs stay capped at the server clock: skew forgives
+        # validation, it never grants future evidence around the
+        # publication boundary.
+        knowledge = min(declared_knowledge or now, now)
+        publication = min(declared_publication or knowledge, knowledge)
         if knowledge < now - _LIVE_SKEW:
             raise AppProcessError(
                 "past instants cannot use the live read model; "
                 + "use the retained replay lane",
                 details={"reason": "ASSEMBLY_CUTOFF_BACKDATED"},
             )
-        publication = min(declared_publication or knowledge, knowledge, now)
-        if request.publication_cutoff is not None and publication < now - _LIVE_SKEW:
+        if declared_publication is not None and publication < now - _LIVE_SKEW:
             raise AppProcessError(
                 "backdated publication cutoffs cannot use the live read model",
                 details={"reason": "ASSEMBLY_CUTOFF_BACKDATED"},

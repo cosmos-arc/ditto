@@ -48,6 +48,8 @@ from ditto_application.processes.strategy.seed_bootstrap import SeedStrategyBoot
 from ditto_application.queries.experiments import ExperimentQueryFacade
 from ditto_application.queries.metadata import MetadataQueryFacade
 from ditto_application.queries.research import ResearchDatasetQuery
+from ditto_data.catalog.source_snapshot import ProviderSnapshotReader
+from ditto_data.ingestion.partition_state import PartitionLifecycleReader
 from ditto_data.sources.exchange_transformers import ExchangeTransformers
 from ditto_strategy.contracts import (
     StrategyCatalogReader,
@@ -70,6 +72,9 @@ class IngestionBundle:
     sparse_pit_reattestation: SparsePITReattestationProcess
     metadata_facade: MetadataQueryFacade
     exchange_transformers: ExchangeTransformers
+    # 账本证据读取口（#583 EOD 就绪核验等宿主能力复用）。
+    snapshot_reader: ProviderSnapshotReader
+    lifecycle_reader: PartitionLifecycleReader
 
 
 @dataclass(frozen=True)

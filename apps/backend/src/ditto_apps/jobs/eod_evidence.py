@@ -1,14 +1,29 @@
 """Translate ingestion and DQ results into EOD dataset readiness evidence."""
 
 from collections.abc import Mapping
+from datetime import UTC, date, datetime
 from typing import Any, cast
 
 from ditto_application.processes.execution.eod_coordinator import DatasetReadiness
+from ditto_application.processes.ingestion.eod_readiness import (
+    DEFAULT_EOD_VERIFICATION_DATASETS,
+    EodReadinessVerifier,
+)
 from ditto_application.processes.ingestion.result_handler import (
     validated_asof_snapshot_evidence,
 )
+from ditto_application.providers_selection import completed_snapshot_index
+from ditto_platform.foundation import logger
+from ditto_platform.services import AlertManager, NotificationLevel
 
-__all__ = ["dataset_states_from_ingestion"]
+from ditto_apps.registry.container import make_app_container
+from ditto_apps.registry.contexts import create_ingestion_bundle
+
+__all__ = [
+    "dataset_states_from_ingestion",
+    "run_eod_readiness_verification",
+    "send_alert_safely",
+]
 
 
 def dataset_states_from_ingestion(  # noqa: C901, PLR0912, PLR0915 - evidence precedence
@@ -175,3 +190,91 @@ def _asof_snapshot_mismatch_reason(
 
 def _is_non_negative_int(value: object) -> bool:
     return isinstance(value, int) and not isinstance(value, bool) and value >= 0
+
+
+def run_eod_readiness_verification(
+    trade_date: str,
+    *,
+    retry: bool = True,
+    datasets: tuple[str, ...] = DEFAULT_EOD_VERIFICATION_DATASETS,
+) -> dict[str, object]:
+    """
+    核验 EOD 数据就绪：缺则重拉一次，仍缺发超高优先级告警（#583）。
+
+    就绪判定以账本证据为准（与活体选池滚动日同一条规则），不信任
+    摄取结果的 success 字样——同晚空响应在切片 B 之后是失败，但
+    旧账本里的历史空观察同样不算覆盖。
+    """
+    with create_ingestion_bundle() as bundle:
+
+        def reingest(dataset: str, day: str) -> object:
+            return bundle.coordinator.ingest_date(dataset, day, False)
+
+        report = EodReadinessVerifier(
+            completed_snapshot_index(bundle.lifecycle_reader, bundle.snapshot_reader),
+            reingest=reingest if retry else None,
+        ).verify(datasets=datasets, trade_date=_parse_day(trade_date))
+
+    payload: dict[str, object] = {
+        "trade_date": trade_date,
+        "status": "ready" if not report.missing else "incomplete",
+        "refetched": list(report.refetched),
+        "datasets": [
+            {
+                "dataset": item.dataset,
+                "ready": item.ready,
+                "attested_through": (
+                    item.attested_through.isoformat()
+                    if item.attested_through is not None
+                    else None
+                ),
+            }
+            for item in report.datasets
+        ],
+        "missing": list(report.missing),
+    }
+    if report.missing:
+        container = make_app_container()
+        try:
+            alert_manager = container.get(AlertManager)
+            # 超高优先级：数据缺口意味着当日选池/信号车道整体不可用。
+            send_alert_safely(
+                alert_manager,
+                "eod_readiness_failure",
+                {
+                    "trade_date": trade_date,
+                    "missing_datasets": ", ".join(report.missing),
+                },
+                NotificationLevel.CRITICAL,
+            )
+        finally:
+            container.close()
+    return payload
+
+
+def _parse_day(trade_date: str) -> date:
+    return date.fromisoformat(trade_date)
+
+
+def send_alert_safely(
+    alert_manager: AlertManager,
+    template: str,
+    context: dict[str, object],
+    level: NotificationLevel,
+) -> None:
+    """发送告警；失败只记日志不阻断主流程（EOD 编排共用，#583 抽出）。"""
+    try:
+        alert_manager.send_alert(
+            template=template,
+            context=context,
+            level=level,
+            timestamp=datetime.now(UTC),
+        )
+    except Exception as exc:
+        logger.error(
+            "发送告警失败",
+            event="eod_alert_send_failed",
+            error_code="EOD_ALERT_SEND_FAILED",
+            error_type=type(exc).__name__,
+            template=template,
+        )

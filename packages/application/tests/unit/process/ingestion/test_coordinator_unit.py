@@ -5,6 +5,7 @@ from datetime import UTC, date, datetime
 import polars as pl
 import pytest
 from ditto_application.exceptions import AppProcessError
+from ditto_application.processes.ingestion import coordinator as coordinator_module
 from ditto_application.processes.ingestion.config import IngestionCoordinatorConfig
 from ditto_application.processes.ingestion.coordinator import (
     IngestionCoordinator,
@@ -12,6 +13,7 @@ from ditto_application.processes.ingestion.coordinator import (
     MarketServices,
     SourceFetchers,
 )
+from ditto_application.processes.ingestion.post_ingest import RequestWindow
 from ditto_data.catalog import (
     DataAssetRef,
     DataCatalogEntry,
@@ -1100,8 +1102,8 @@ class TestIngestDate:
             source="tushare",
             trade_date="2024-12-27",
             status=IngestionStatus.FAIL,
-            error_code="EMPTY_DATA",
-            error_message="获取的数据为空",
+            error_code="EMPTY_DATA_UNEXPECTED",
+            error_message="全市场交易日快照空响应: 供应商未发布或供给缺口",
         )
 
         # Act
@@ -1109,7 +1111,8 @@ class TestIngestDate:
 
         # Assert
         assert result.status == "failed"
-        assert result.error == "EMPTY_DATA"
+        # #583：全市场交易日空响应=供应商未发布，走更精确的失败码。
+        assert result.error == "EMPTY_DATA_UNEXPECTED"
         assert "空" in result.message or "empty" in result.message.lower()
 
     def test_ingest_date_force_overwrites_previous_success(
@@ -1431,6 +1434,75 @@ class TestIngestRange:
 
         assert result.status == "success"
         assert result.row_count == 2
+
+    def test_ingest_chunk_trims_window_past_unpublished_full_market_day(
+        self,
+        coordinator,
+        mock_source,
+        mock_market_write_service,
+        in_memory_catalog,
+        mocker,
+    ) -> None:
+        """尾部分区日空响应：声明区间收口到最后有行日，缺口留给重试（#583 F1）."""
+        ok_frame = lambda day: pl.DataFrame(  # noqa: E731 - test-local
+            {
+                "source_ticker": ["000001.SZ"],
+                "trade_date": [date(2024, 12, day)],
+                "open": [10.0],
+                "close": [10.2],
+                "pre_close": [10.0],
+                "volume": [1_000_000],
+                "amount": [10_200_000],
+                "pct_change": [2.0],
+                "high": [10.5],
+                "low": [9.8],
+            }
+        )
+        # 12-27 同晚空响应：供应商未发布，不得让快照声明区间冒充该日有行。
+        mock_source.fetch_stock_daily.side_effect = [
+            ok_frame(25),
+            ok_frame(26),
+            pl.DataFrame(),
+        ]
+        mock_market_write_service.save_bars.return_value = 2
+        captured: dict[str, RequestWindow] = {}
+        original = coordinator_module._process_fetched_data
+
+        def spy(
+            frame,
+            dataset,
+            trade_date,
+            force,
+            *,
+            ctx,
+            request_window,
+            chunk_id,
+        ):
+            captured["window"] = request_window
+            return original(
+                frame,
+                dataset,
+                trade_date,
+                force,
+                ctx=ctx,
+                request_window=request_window,
+                chunk_id=chunk_id,
+            )
+
+        mocker.patch.object(coordinator_module, "_process_fetched_data", spy)
+
+        result = coordinator.ingest_chunk(
+            "stock_daily",
+            chunk_id="chunk:tushare:stock_daily:2024-12:2024-12-25:2024-12-27",
+            request_start="2024-12-25",
+            request_end="2024-12-27",
+            partition_dates=("2024-12-25", "2024-12-26", "2024-12-27"),
+        )
+
+        assert result.status == "success"
+        assert result.row_count == 2
+        # 提交窗口收口到最后有行分区日：滚动日/verify-eod 不会越过 12-27。
+        assert captured["window"].end == "2024-12-26"
 
     def test_ingest_chunk_merges_overlapping_day_fetches_deduped(
         self,

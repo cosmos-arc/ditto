@@ -5,7 +5,36 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Literal
 
-__all__ = ["DatasetSpec", "resolve_dataset_spec"]
+__all__ = [
+    "DatasetSpec",
+    "expects_rows_per_trading_day",
+    "resolve_dataset_spec",
+]
+
+# Full-market per-trading-day snapshots with whole-history coverage: every
+# A-share session yields rows for the whole market, so a zero-row
+# trading-day frame can only mean the provider has not published yet (or
+# an outage) — never a legitimate "verified no data" answer (#583).
+# Deliberately excluded: event-flavored dailies where a quiet day can
+# honestly be empty (limit_list, top_list, …), and datasets whose coverage
+# starts mid-history (valuation_metrics, margin_trading) — their
+# pre-coverage windows keep the zero-row observation path.
+_FULL_MARKET_DAILY_DATASETS = frozenset(
+    {
+        "stock_daily",
+        "etf_daily",
+        "index_daily",
+        "adj_factor",
+        "fund_adj",
+        "stock_status",
+    }
+)
+
+
+def expects_rows_per_trading_day(dataset_id: str) -> bool:
+    """True when a trading-day fetch must return rows; zero rows is a supply gap."""
+    return dataset_id in _FULL_MARKET_DAILY_DATASETS
+
 
 type R2Scope = Literal["hard", "deferred"]
 type BootstrapChunk = Literal["month", "quarter", "year", "source_defined"]

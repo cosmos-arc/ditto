@@ -1,0 +1,11 @@
+EOD Readiness Alert [{{ level | upper }}]
+
+Trade Date: {{ trade_date }}
+Missing Datasets: {{ missing_datasets }}
+
+The EOD critical-path datasets above have no completed row-bearing
+snapshot evidence covering the trade date after a refetch pass.
+Daily selection stays rolled back to the previous complete session
+until real rows land (#583).
+
+Timestamp: {{ timestamp }}

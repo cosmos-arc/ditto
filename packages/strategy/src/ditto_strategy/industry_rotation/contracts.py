@@ -199,7 +199,13 @@ class IndustryRotationIndustryInput:
 
 @dataclass(frozen=True, slots=True)
 class IndustryRotationInputBundle:
-    """PIT-fenced input identity for one deterministic rotation run."""
+    """
+    PIT-fenced input identity for one deterministic rotation run.
+
+    Under the live daily lane (#583) ``knowledge_cutoff`` may postdate
+    ``as_of``: the decision is dated at the session close while cutoffs
+    issue from the making instant.
+    """
 
     as_of: datetime
     knowledge_cutoff: datetime
@@ -212,17 +218,12 @@ class IndustryRotationInputBundle:
     declared_missing_inputs: tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
-        """Freeze set-like inputs and reject future-visible evidence."""
+        """Freeze set-like inputs and reject incoherent cutoff order."""
         for field_name in ("as_of", "knowledge_cutoff", "publication_cutoff"):
             _aware(getattr(self, field_name), field_name=field_name)
         if self.publication_cutoff > self.knowledge_cutoff:
             raise _error(
                 "industry rotation publication_cutoff exceeds knowledge_cutoff",
-                reason="invalid_industry_rotation_cutoff",
-            )
-        if self.knowledge_cutoff > self.as_of:
-            raise _error(
-                "industry rotation knowledge_cutoff exceeds as_of",
                 reason="invalid_industry_rotation_cutoff",
             )
         object.__setattr__(
@@ -414,11 +415,8 @@ class IndustryRotationSnapshot:
                 "industry rotation publication_cutoff exceeds knowledge_cutoff",
                 reason="invalid_industry_rotation_cutoff",
             )
-        if self.knowledge_cutoff > self.as_of:
-            raise _error(
-                "industry rotation knowledge_cutoff exceeds as_of",
-                reason="invalid_industry_rotation_cutoff",
-            )
+        # knowledge_cutoff may postdate as_of on the live daily lane (#583);
+        # replay lanes pin cutoffs to the decision instant upstream.
         object.__setattr__(
             self,
             "source_snapshot_ids",

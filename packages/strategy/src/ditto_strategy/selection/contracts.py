@@ -381,7 +381,15 @@ class SelectionInstrumentInput:
 
 @dataclass(frozen=True, slots=True)
 class SelectionInputBundle:
-    """Exact PIT and source identity for one selection execution."""
+    """
+    Exact PIT and source identity for one selection execution.
+
+    Under the live daily lane (#583) the decision is dated at the latest
+    complete session's close while knowledge/publication cutoffs issue
+    from the making instant, so ``knowledge_cutoff`` may legitimately
+    postdate ``as_of``; per-row fact dates keep post-session evidence out.
+    Replay lanes keep pinning cutoffs to the decision instant upstream.
+    """
 
     as_of: datetime
     knowledge_cutoff: datetime
@@ -394,7 +402,7 @@ class SelectionInputBundle:
     instruments: tuple[SelectionInstrumentInput, ...]
 
     def __post_init__(self) -> None:
-        """Freeze input order and reject future-visible evidence."""
+        """Freeze input order and reject incoherent cutoff order."""
         for field_name in ("as_of", "knowledge_cutoff", "publication_cutoff"):
             value = getattr(self, field_name)
             if (
@@ -410,11 +418,6 @@ class SelectionInputBundle:
         if self.publication_cutoff > self.knowledge_cutoff:
             raise _error(
                 "selection publication_cutoff exceeds knowledge_cutoff",
-                reason="invalid_selection_cutoff",
-            )
-        if self.knowledge_cutoff > self.as_of:
-            raise _error(
-                "selection knowledge_cutoff exceeds as_of",
                 reason="invalid_selection_cutoff",
             )
         object.__setattr__(

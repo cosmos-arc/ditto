@@ -193,6 +193,8 @@ def create_ingestion_bundle(
                 sparse_pit_reattestation=sparse_pit_reattestation,
                 metadata_facade=metadata_facade,
                 exchange_transformers=exchange_transformers,
+                snapshot_reader=snapshot_reader,
+                lifecycle_reader=lifecycle_reader,
             )
     finally:
         container.close()
