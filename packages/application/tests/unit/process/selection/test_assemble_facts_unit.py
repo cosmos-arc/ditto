@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 import math
-from datetime import UTC, date, datetime, timedelta
+from datetime import UTC, date, datetime, time, timedelta
+from zoneinfo import ZoneInfo
 
 import polars as pl
 import pytest
@@ -31,10 +32,10 @@ _CROSS = date(2026, 9, 29)
 _BAR_DATES = tuple(date(2026, 8, 31) + timedelta(days=i) for i in range(30))
 
 _DAILY_WINDOW = SnapshotWindow(
-    "snapshot:tushare:stock_daily:sha256:d1", date(2026, 8, 1), _CROSS
+    "snapshot:tushare:stock_daily:sha256:d1", date(2026, 8, 1), _CROSS, row_count=100
 )
 _STATUS_WINDOW = SnapshotWindow(
-    "snapshot:tushare:stock_status:sha256:s1", date(2026, 9, 1), _CROSS
+    "snapshot:tushare:stock_status:sha256:s1", date(2026, 9, 1), _CROSS, row_count=100
 )
 _BASIC_WINDOW = SnapshotWindow(
     "snapshot:tushare:stock_basic:sha256:b1", date(2015, 1, 1), date(2026, 9, 30)
@@ -124,7 +125,7 @@ class _FakeIdentities:
 
 
 _ADJ_WINDOW = SnapshotWindow(
-    "snapshot:tushare:adj_factor:sha256:a1", date(2026, 8, 1), _CROSS
+    "snapshot:tushare:adj_factor:sha256:a1", date(2026, 8, 1), _CROSS, row_count=100
 )
 
 
@@ -654,10 +655,121 @@ def test_explicit_past_knowledge_is_rejected_but_server_issuance_is_not() -> Non
         )
     assert error.value.details["reason"] == "ASSEMBLY_CUTOFF_BACKDATED"
 
-    # Omitted cutoffs never exceed the decision instant, so a slightly
-    # stale client as-of still assembles with honestly labeled knowledge.
+    # Omitted cutoffs issue from the server clock: under the live daily
+    # lane (#583) knowledge may legitimately postdate the rolled as-of,
+    # so a slightly stale client as-of still assembles — now with the
+    # late-observed evidence the old as-of clamp used to hide.
     request = process.assemble(_request(as_of=_AS_OF - timedelta(minutes=1)))
-    assert request.knowledge_cutoff == _AS_OF - timedelta(minutes=1)
+    assert request.knowledge_cutoff == _AS_OF
+    assert request.publication_cutoff == _AS_OF
+
+
+_SHANGHAI = ZoneInfo("Asia/Shanghai")
+
+
+def test_omitted_as_of_rolls_to_latest_complete_session() -> None:
+    provider = _FakeProvider(_bars_frame(rows_per_instrument={1: 30}))
+    history = _FakeHistory(_roster_frame((1,)))
+    process = _process(provider=provider, history=history)
+
+    request = process.assemble(_request(as_of=None))
+
+    # The decision is dated at the session close; cutoffs issue from now
+    # and legitimately postdate it (#583).
+    assert request.as_of == datetime.combine(_CROSS, time(15, 0), tzinfo=_SHANGHAI)
+    assert request.knowledge_cutoff == _AS_OF
+    assert request.publication_cutoff == _AS_OF
+
+
+def test_empty_observation_never_rolls_the_session_forward() -> None:
+    provider = _FakeProvider(_bars_frame(rows_per_instrument={1: 30}))
+    history = _FakeHistory(_roster_frame((1,)))
+    process = _process(
+        provider=provider,
+        history=history,
+        snapshots=_FakeSnapshots(
+            status=(
+                SnapshotWindow(
+                    "snapshot:tushare:stock_status:sha256:s0",
+                    date(2026, 9, 21),
+                    date(2026, 9, 25),
+                    row_count=100,
+                ),
+                # Same-evening provider answer of "no data" attests nothing.
+                SnapshotWindow(
+                    "snapshot:tushare:stock_status:sha256:empty",
+                    _CROSS,
+                    _CROSS,
+                    row_count=0,
+                ),
+            )
+        ),
+    )
+
+    request = process.assemble(_request(as_of=None))
+
+    assert request.as_of == datetime.combine(
+        date(2026, 9, 25), time(15, 0), tzinfo=_SHANGHAI
+    )
+
+
+def test_session_takes_the_minimum_across_prerequisites() -> None:
+    # Bars stop at 09-28: daily is the laggard, so the evaluation window
+    # must not extend past what the lagging dataset attests.
+    provider = _FakeProvider(
+        _bars_frame(rows_per_instrument={1: 30}).filter(pl.col("trade_date") != _CROSS)
+    )
+    history = _FakeHistory(_roster_frame((1,)))
+    process = _process(
+        provider=provider,
+        history=history,
+        snapshots=_FakeSnapshots(
+            daily=(
+                SnapshotWindow(
+                    "snapshot:tushare:stock_daily:sha256:d0",
+                    date(2026, 8, 1),
+                    date(2026, 9, 28),
+                    row_count=100,
+                ),
+                # A window ending tomorrow cannot roll the session past
+                # today, so daily attests only through 09-28.
+                SnapshotWindow(
+                    "snapshot:tushare:stock_daily:sha256:future",
+                    date(2026, 9, 30),
+                    date(2026, 9, 30),
+                    row_count=100,
+                ),
+            )
+        ),
+    )
+
+    request = process.assemble(_request(as_of=None))
+
+    assert request.as_of == datetime.combine(
+        date(2026, 9, 28), time(15, 0), tzinfo=_SHANGHAI
+    )
+
+
+def test_as_of_predating_the_latest_complete_session_is_rejected() -> None:
+    provider = _FakeProvider(_bars_frame(rows_per_instrument={1: 30}))
+    history = _FakeHistory(_roster_frame((1,)))
+    process = _process(provider=provider, history=history)
+    with pytest.raises(AppProcessError) as error:
+        process.assemble(_request(as_of=datetime(2026, 9, 28, 10, 0, tzinfo=UTC)))
+    assert error.value.details["reason"] == "ASSEMBLY_CUTOFF_BACKDATED"
+
+
+def test_session_requires_row_evidence_for_every_prerequisite() -> None:
+    provider = _FakeProvider(_bars_frame(rows_per_instrument={1: 30}))
+    history = _FakeHistory(_roster_frame((1,)))
+    process = _process(
+        provider=provider,
+        history=history,
+        snapshots=_FakeSnapshots(daily=()),
+    )
+    with pytest.raises(AppProcessError) as error:
+        process.assemble(_request())
+    assert error.value.details["reason"] == "ASSEMBLY_SESSION_INCOMPLETE"
 
 
 def test_missing_knowledge_date_column_is_rejected() -> None:
@@ -687,6 +799,7 @@ def test_uncovered_daily_window_is_rejected_before_response() -> None:
                     "snapshot:tushare:stock_daily:sha256:d0",
                     date(2026, 8, 1),
                     date(2026, 8, 31),
+                    row_count=100,
                 ),
             )
         ),

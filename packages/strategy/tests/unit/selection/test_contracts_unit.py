@@ -134,16 +134,20 @@ def test_factor_order_is_canonical_but_duplicate_names_fail_closed() -> None:
         replace(baseline, factor_weights=(baseline.factor_weights[0],) * 2)
 
 
-def test_selection_inputs_are_immutable_and_reject_future_knowledge() -> None:
+def test_selection_inputs_are_immutable_and_allow_late_knowledge() -> None:
     bundle = _bundle()
 
     with pytest.raises(FrozenInstanceError):
         bundle.seed = 2  # type: ignore[misc]
-    with pytest.raises(StrategySpecError, match="knowledge_cutoff"):
-        replace(
-            bundle,
-            knowledge_cutoff=datetime(2026, 8, 31, 8, 0, tzinfo=UTC),
-        )
+
+    # Knowledge may postdate as_of on the live daily lane (#583): the
+    # decision is dated at the session close, cutoffs at the making
+    # instant; per-row fact dates keep post-session evidence out.
+    late = replace(
+        bundle,
+        knowledge_cutoff=datetime(2026, 8, 31, 8, 0, tzinfo=UTC),
+    )
+    assert late.knowledge_cutoff.hour == 8
 
 
 @pytest.mark.parametrize("value", [float("nan"), float("inf"), -1.01, 1.01])

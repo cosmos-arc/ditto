@@ -240,13 +240,18 @@ class CreateSelectionRunBody(BaseModel):
 
 
 class AssembleSelectionRunBody(BaseModel):
-    """Policy-only selection input; the server assembles every PIT fact."""
+    """
+    Policy-only selection input; the server assembles every PIT fact.
+
+    An omitted ``as_of`` rolls to the latest complete session's close
+    (#583); an explicit ``as_of`` may not predate that session.
+    """
 
     model_config = _REQUEST_CONFIG
 
     universe_id: str = Field(min_length=1)
     asset_kind: Literal["stock"] = "stock"
-    as_of: HttpDateTime
+    as_of: HttpDateTime | None = None
     spec_id: str = Field(min_length=1)
     spec_version: str = Field(min_length=1)
     top_k: int = Field(gt=0)

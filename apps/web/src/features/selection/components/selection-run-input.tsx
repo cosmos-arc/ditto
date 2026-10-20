@@ -10,20 +10,6 @@ const WEIGHT_SUM_TOLERANCE = 1e-9;
 // 全市场池的缺失输入证券可达数千只：预览只展开前 N 只，其余汇总计数。
 const MISSING_INSTRUMENT_PREVIEW_LIMIT = 20;
 
-function shanghaiLocalInput(date: Date): string {
-	const parts = new Intl.DateTimeFormat("en-CA", {
-		timeZone: "Asia/Shanghai",
-		year: "numeric",
-		month: "2-digit",
-		day: "2-digit",
-		hour: "2-digit",
-		minute: "2-digit",
-		hourCycle: "h23",
-	}).formatToParts(date);
-	const value = (type: Intl.DateTimeFormatPartTypes): string => parts.find((part) => part.type === type)?.value ?? "00";
-	return `${value("year")}-${value("month")}-${value("day")}T${value("hour")}:${value("minute")}`;
-}
-
 function shanghaiIso(localValue: string): string {
 	const withSeconds = localValue.length === 16 ? `${localValue}:00` : localValue;
 	return `${withSeconds}+08:00`;
@@ -71,7 +57,8 @@ const INITIAL_FACTORS: readonly FactorRow[] = [{ name: "momentum_1m", weight: "1
 function initialForm(): StrategyForm {
 	return {
 		universeId: "",
-		asOf: shanghaiLocalInput(new Date()),
+		// 留空 = 服务端滚动到最近完整交易日（#583）。
+		asOf: "",
 		specId: "stock-momentum-manual",
 		specVersion: "1",
 		topK: "5",
@@ -89,7 +76,6 @@ function initialForm(): StrategyForm {
 
 function strategyErrors(form: StrategyForm): readonly string[] {
 	const errors: string[] = [];
-	if (!form.asOf.trim()) errors.push("请填写决策时点 as_of");
 	if (!form.universeId.trim()) errors.push("请选择 universe 证券池");
 	if (!form.specId.trim()) errors.push("请填写 spec_id");
 	if (!form.specVersion.trim()) errors.push("请填写 spec_version");
@@ -132,7 +118,6 @@ function strategyErrors(form: StrategyForm): readonly string[] {
 
 function strategyBody(form: StrategyForm): AssembleSelectionRunBody {
 	const body: AssembleSelectionRunBody = {
-		as_of: shanghaiIso(form.asOf.trim()),
 		asset_kind: "stock",
 		excluded_limit_states: [
 			...(form.excludeLimitUp ? (["limit_up"] as const) : []),
@@ -151,6 +136,8 @@ function strategyBody(form: StrategyForm): AssembleSelectionRunBody {
 		top_k: parseInteger(form.topK) ?? 1,
 		universe_id: form.universeId.trim(),
 	};
+	// 留空的 as_of 由服务端滚动到最近完整交易日（#583）。
+	if (form.asOf.trim()) body.as_of = shanghaiIso(form.asOf.trim());
 	if (form.knowledgeCutoff.trim()) body.knowledge_cutoff = shanghaiIso(form.knowledgeCutoff.trim());
 	if (form.publicationCutoff.trim()) body.publication_cutoff = shanghaiIso(form.publicationCutoff.trim());
 	return body;
@@ -167,7 +154,6 @@ export function SelectionRunInput({
 	readonly onRun: (input: AssembleSelectionRunBody) => void;
 }) {
 	const [form, setForm] = useState<StrategyForm>(initialForm);
-	const [asOfEdited, setAsOfEdited] = useState(false);
 	const universes = useQuery({ queryKey: ["selection", "universe-options"], queryFn: listUniverseOptions });
 	useEffect(() => {
 		const options = universes.data;
@@ -209,12 +195,8 @@ export function SelectionRunInput({
 	}
 
 	function submitForm(): StrategyForm {
-		// 未手动改过的实时默认值在提交时刻刷新：留置页面数分钟后
-		// 的旧时点会被服务端偏差窗判为回溯。
-		const asOf = asOfEdited ? form.asOf : shanghaiLocalInput(new Date());
-		const nextForm = { ...form, asOf };
-		if (!asOfEdited) setForm(nextForm);
-		return nextForm;
+		// 留空的 as_of 由服务端滚动到最近完整交易日（#583），提交时刻无需刷新。
+		return form;
 	}
 
 	return (
@@ -253,16 +235,13 @@ export function SelectionRunInput({
 						)}
 					</div>
 					<label className="grid gap-1 text-xs">
-						决策时点 as_of（上海时区）
+						决策时点 as_of（上海时区，留空=最近完整交易日）
 						<input
 							aria-label="决策时点 as_of"
 							className={INPUT_CLASS}
 							type="datetime-local"
 							value={form.asOf}
-							onChange={(event) => {
-								setAsOfEdited(true);
-								updateForm({ asOf: event.currentTarget.value });
-							}}
+							onChange={(event) => updateForm({ asOf: event.currentTarget.value })}
 						/>
 					</label>
 					<label className="grid gap-1 text-xs">

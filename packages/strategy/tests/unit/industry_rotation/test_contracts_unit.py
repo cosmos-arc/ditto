@@ -90,12 +90,13 @@ def test_input_identity_tracks_every_replay_boundary(
     ) != canonical_industry_rotation_input_hash(baseline)
 
 
-def test_input_bundle_rejects_future_cutoffs_and_duplicate_industries() -> None:
-    with pytest.raises(StrategySpecError, match="knowledge_cutoff"):
-        replace(
-            _bundle(),
-            knowledge_cutoff=datetime(2026, 8, 31, 8, 0, tzinfo=UTC),
-        )
+def test_input_bundle_allows_late_knowledge_and_rejects_duplicate_industries() -> None:
+    # Knowledge may postdate as_of on the live daily lane (#583).
+    late = replace(
+        _bundle(),
+        knowledge_cutoff=datetime(2026, 8, 31, 8, 0, tzinfo=UTC),
+    )
+    assert late.knowledge_cutoff.hour == 8
 
     with pytest.raises(StrategySpecError, match="unique industry_id"):
         _bundle(industries=(_industry("801010"), _industry("801010")))

@@ -198,6 +198,7 @@ def _completed_snapshot_index(
                     snapshot.snapshot_id,
                     date.fromisoformat(snapshot.request_start),
                     date.fromisoformat(snapshot.request_end),
+                    row_count=snapshot.row_count,
                 )
                 for snapshot in self._completed(dataset_id)
             )

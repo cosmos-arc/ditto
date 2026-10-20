@@ -210,20 +210,21 @@ def test_input_bundle_rejects_invalid_sequences_and_lineage(
 
 
 @pytest.mark.pit
-def test_input_bundle_rejects_future_visible_cutoffs_but_allows_boundary() -> None:
+def test_input_bundle_allows_late_knowledge_but_rejects_publication_order() -> None:
     boundary = _bundle()
     future = datetime(2026, 9, 4, 0, 0, 1, tzinfo=UTC)
 
     assert boundary.publication_cutoff == boundary.knowledge_cutoff == boundary.as_of
     with pytest.raises(StrategySpecError) as publication_exc:
         replace(boundary, publication_cutoff=future)
-    with pytest.raises(StrategySpecError) as knowledge_exc:
-        replace(boundary, knowledge_cutoff=future)
-
     assert publication_exc.value.details["reason"] == (
         "invalid_industry_rotation_cutoff"
     )
-    assert knowledge_exc.value.details["reason"] == "invalid_industry_rotation_cutoff"
+
+    # The live daily lane (#583) decides at the session close with the
+    # knowledge of the making instant, so knowledge may postdate as_of.
+    late = replace(boundary, knowledge_cutoff=future)
+    assert late.knowledge_cutoff == future
 
 
 @pytest.mark.parametrize(
@@ -279,18 +280,18 @@ def test_snapshot_rejects_noncanonical_hash_and_unaware_time() -> None:
 
 
 @pytest.mark.pit
-def test_snapshot_rejects_future_visible_cutoffs() -> None:
+def test_snapshot_allows_late_knowledge_but_rejects_publication_order() -> None:
     future = datetime(2026, 9, 4, 0, 0, 1, tzinfo=UTC)
 
     with pytest.raises(StrategySpecError) as publication_exc:
         replace(_snapshot(), publication_cutoff=future)
-    with pytest.raises(StrategySpecError) as knowledge_exc:
-        replace(_snapshot(), knowledge_cutoff=future)
-
     assert publication_exc.value.details["reason"] == (
         "invalid_industry_rotation_cutoff"
     )
-    assert knowledge_exc.value.details["reason"] == "invalid_industry_rotation_cutoff"
+
+    # Knowledge may postdate as_of on the live daily lane (#583).
+    late = replace(_snapshot(), knowledge_cutoff=future)
+    assert late.knowledge_cutoff == future
 
 
 def test_snapshot_rejects_noncontiguous_and_duplicate_industry_rankings() -> None:

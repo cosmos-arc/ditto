@@ -86,9 +86,11 @@ export const ASSEMBLED_UNIVERSE_SNAPSHOT_ID = `universe:sha256:${"6".repeat(64)}
 
 /** Deterministic assembled facts echoing the submitted policy; mirrors the server's assemble endpoint. */
 export function assembledSelectionRunResponse(body: AssembleSelectionRunBody): AssembledSelectionRunResponse {
+	// 留空 as_of 的滚动由服务端决定：mock 以当下时刻近似已滚动的决策时点。
+	const decisionInstant = body.as_of ?? `${new Date().toISOString()}`;
 	return {
 		request: {
-			as_of: body.as_of,
+			as_of: decisionInstant,
 			data_fields: [
 				{
 					consumer_field: "universe_snapshot_id",
@@ -147,7 +149,7 @@ export function assembledSelectionRunResponse(body: AssembleSelectionRunBody): A
 				year: "numeric",
 				month: "2-digit",
 				day: "2-digit",
-			}).format(new Date(Date.parse(body.as_of) - 86_400_000)),
+			}).format(new Date(Date.parse(decisionInstant) - 86_400_000)),
 			industries: [],
 			instruments: [600519, 300750].map((instrument_id, index) => ({
 				declared_missing_inputs: [],
@@ -166,10 +168,10 @@ export function assembledSelectionRunResponse(body: AssembleSelectionRunBody): A
 				limit_state: "normal",
 				tracking_error: null,
 			})),
-			knowledge_cutoff: body.knowledge_cutoff ?? body.as_of,
+			knowledge_cutoff: body.knowledge_cutoff ?? decisionInstant,
 			market_context_feature_set_id: null,
 			membership_version: "sw-l1:mock",
-			publication_cutoff: body.publication_cutoff ?? body.knowledge_cutoff ?? body.as_of,
+			publication_cutoff: body.publication_cutoff ?? body.knowledge_cutoff ?? decisionInstant,
 			rotation_algorithm_version: "industry-rotation-v1",
 			rotation_missing_inputs: [],
 			rotation_source_snapshot_ids: ["stock-daily:sha256:mock"],

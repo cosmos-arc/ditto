@@ -6450,12 +6450,19 @@
       },
       "AssembleSelectionRunBody": {
         "additionalProperties": false,
-        "description": "Policy-only selection input; the server assembles every PIT fact.",
+        "description": "Policy-only selection input; the server assembles every PIT fact.\n\nAn omitted ``as_of`` rolls to the latest complete session's close\n(#583); an explicit ``as_of`` may not predate that session.",
         "properties": {
           "as_of": {
-            "format": "date-time",
-            "title": "As Of",
-            "type": "string"
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "As Of"
           },
           "asset_kind": {
             "const": "stock",
@@ -6548,7 +6555,6 @@
         },
         "required": [
           "universe_id",
-          "as_of",
           "spec_id",
           "spec_version",
           "top_k",
