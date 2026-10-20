@@ -707,28 +707,29 @@ class IngestionCoordinator:
         failed_dates: list[str] = []
         for partition_date in partition_dates:
             fetched = self._try_fetch_data(dataset, partition_date)
-            failure: IngestionResult | None = None
             if isinstance(fetched, IngestionResult):
                 # 单日 fetch 失败不丢弃整月 chunk——失败日缺口由 retry_failed
                 # 兜底重试（#196：月级原子丢弃在偶发失败率下使
                 # fina_indicator 51 个月全部无法提交）。
-                failure = fetched
-            elif fetched.is_empty() and expects_rows_per_trading_day(dataset):
+                if first_failure is None:
+                    first_failure = fetched
+                failed_dates.append(partition_date)
+                continue
+            if fetched.is_empty() and expects_rows_per_trading_day(dataset):
                 # 全市场交易日快照的空应答=供应商未发布（#583 切片 B 的
                 # 日粒度形态）：记类型化失败日，chunk 的声明区间与重试
                 # 通道都能看见该日——否则滚动日/verify-eod 会越过无行日。
-                failure = IngestionResult(
-                    dataset=dataset,
-                    trade_date=partition_date,
-                    status="failed",
-                    error="EMPTY_DATA_UNEXPECTED",
-                    message="全市场交易日快照空响应: 供应商未发布或供给缺口 (#583)",
-                )
-            if failure is not None:
                 if first_failure is None:
-                    first_failure = failure
+                    first_failure = IngestionResult(
+                        dataset=dataset,
+                        trade_date=partition_date,
+                        status="failed",
+                        error="EMPTY_DATA_UNEXPECTED",
+                        message="全市场交易日快照空响应: 供应商未发布或供给缺口 (#583)",
+                    )
                 failed_dates.append(partition_date)
-            elif not fetched.is_empty():
+                continue
+            if not fetched.is_empty():
                 frames.append(fetched)
         return frames, first_failure, failed_dates
 
