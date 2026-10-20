@@ -41,7 +41,7 @@ function declaredInstantBound(returned: string | null | undefined, declared: str
 export function toAssembledRunView(value: AssembledSelectionRunResponse, submitted: AssembleSelectionRunBody) {
 	const request = value.request;
 	const spec = request?.selection_spec;
-	// as_of 留空时由服务端滚动到最近完整交易日（#583）：以回显的决策时点为锚。
+	// as_of 留空时由服务端滚动到最近完整交易日（issue 583）：以回显的决策时点为锚。
 	const asOfEchoOk =
 		submitted.as_of != null ? request.as_of === submitted.as_of : Number.isFinite(Date.parse(request.as_of));
 	const anchorMs = Date.parse(submitted.as_of ?? request.as_of);

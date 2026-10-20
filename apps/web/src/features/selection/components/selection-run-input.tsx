@@ -57,7 +57,7 @@ const INITIAL_FACTORS: readonly FactorRow[] = [{ name: "momentum_1m", weight: "1
 function initialForm(): StrategyForm {
 	return {
 		universeId: "",
-		// 留空 = 服务端滚动到最近完整交易日（#583）。
+		// 留空 = 服务端滚动到最近完整交易日（issue 583）。
 		asOf: "",
 		specId: "stock-momentum-manual",
 		specVersion: "1",
@@ -136,7 +136,7 @@ function strategyBody(form: StrategyForm): AssembleSelectionRunBody {
 		top_k: parseInteger(form.topK) ?? 1,
 		universe_id: form.universeId.trim(),
 	};
-	// 留空的 as_of 由服务端滚动到最近完整交易日（#583）。
+	// 留空的 as_of 由服务端滚动到最近完整交易日（issue 583）。
 	if (form.asOf.trim()) body.as_of = shanghaiIso(form.asOf.trim());
 	if (form.knowledgeCutoff.trim()) body.knowledge_cutoff = shanghaiIso(form.knowledgeCutoff.trim());
 	if (form.publicationCutoff.trim()) body.publication_cutoff = shanghaiIso(form.publicationCutoff.trim());
@@ -195,7 +195,7 @@ export function SelectionRunInput({
 	}
 
 	function submitForm(): StrategyForm {
-		// 留空的 as_of 由服务端滚动到最近完整交易日（#583），提交时刻无需刷新。
+		// 留空的 as_of 由服务端滚动到最近完整交易日（issue 583），提交时刻无需刷新。
 		return form;
 	}
 

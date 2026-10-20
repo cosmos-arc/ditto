@@ -230,7 +230,7 @@ describe("SelectionWorkspacePage", () => {
 		expect(screen.getByRole("button", { name: "组装并预览" })).toBeEnabled();
 		expect(assembleError).not.toHaveBeenCalled();
 
-		// 留空的 as_of 由服务端滚动到最近完整交易日（#583）：不再阻断组装。
+		// 留空的 as_of 由服务端滚动到最近完整交易日（issue 583）：不再阻断组装。
 		fireEvent.change(screen.getByLabelText("决策时点 as_of"), { target: { value: "" } });
 		expect(screen.getByRole("button", { name: "组装并预览" })).toBeEnabled();
 		expect(assembleError).not.toHaveBeenCalled();
