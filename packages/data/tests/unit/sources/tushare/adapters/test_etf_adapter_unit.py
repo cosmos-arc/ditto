@@ -75,12 +75,17 @@ class TestFundDailyUniverseIntersection:
         assert _LOF not in result["source_ticker"].to_list()
 
     def test_universe_cached_across_fetches(self, mocker) -> None:
-        client = _client_mock(
-            mocker,
-            {
-                "etf_basic": _etf_basic_response(),
-                "fund_daily": _fund_daily_response(),
-            },
+        def fund_daily(**kw):
+            # #585 日期守卫：罐头响应的 trade_date 须与请求日一致。
+            return _fund_daily_response().with_columns(
+                pl.lit(kw["trade_date"]).alias("trade_date")
+            )
+
+        client = mocker.Mock()
+        client.query.side_effect = lambda **kw: (
+            fund_daily(**kw)
+            if kw["api_name"] == "fund_daily"
+            else _etf_basic_response()
         )
         adapter = ETFTushareAdapter(_client=client)
 
@@ -194,19 +199,22 @@ class TestFundNavUniverseIntersection:
     """fund_nav 全市场滚动窗拉取同样与 universe 交集（同根修复）."""
 
     def test_window_drops_non_etf_rows(self, mocker) -> None:
-        nav_row = {
-            "ts_code": [_ETF, _LOF],
-            "ann_date": ["20240401", "20240401"],
-            "nav_date": ["20240329", "20240329"],
-            "unit_nav": [4.05, 1.05],
-            "acc_nav": [4.2, 1.1],
-        }
-        client = _client_mock(
-            mocker,
-            {
-                "etf_basic": _etf_basic_response(),
-                "fund_nav": pl.DataFrame(nav_row),
-            },
+        # #585 日期守卫：滚动窗逐日查询的响应行落在请求 nav_date。
+        def fund_nav(**kw):
+            day = kw["nav_date"]
+            return pl.DataFrame(
+                {
+                    "ts_code": [_ETF, _LOF],
+                    "ann_date": ["20240401", "20240401"],
+                    "nav_date": [day, day],
+                    "unit_nav": [4.05, 1.05],
+                    "acc_nav": [4.2, 1.1],
+                }
+            )
+
+        client = mocker.Mock()
+        client.query.side_effect = lambda **kw: (
+            fund_nav(**kw) if kw["api_name"] == "fund_nav" else _etf_basic_response()
         )
         adapter = ETFTushareAdapter(_client=client)
 

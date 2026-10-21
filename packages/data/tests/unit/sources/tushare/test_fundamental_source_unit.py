@@ -408,15 +408,32 @@ class TestFetchFundNavDelegation:
         adapter = ETFTushareAdapter(_client=client)
         # 聚焦 nav 滚动窗行为：预热 universe 缓存避免 etf_basic 请求
         adapter._etf_universe = frozenset({"510300.SH"})
-        client.query.return_value = pl.DataFrame(
-            {
-                "ts_code": ["510300.SH"],
-                "ann_date": ["20261001"],
-                "nav_date": ["20260930"],
-                "unit_nav": [4.4312],
-                "acc_nav": [None],
-            }
-        )
+
+        # #585 日期守卫：逐日 nav_date 查询的响应行落在请求日；只有目标
+        # 披露日返回行，其余日空帧（QDII 迟披露语义不变）。
+        def nav_response(**kw):
+            day = kw["nav_date"]
+            if day != "20260930":
+                return pl.DataFrame(
+                    schema={
+                        "ts_code": pl.String,
+                        "ann_date": pl.String,
+                        "nav_date": pl.String,
+                        "unit_nav": pl.Float64,
+                        "acc_nav": pl.Float64,
+                    }
+                )
+            return pl.DataFrame(
+                {
+                    "ts_code": ["510300.SH"],
+                    "ann_date": ["20261001"],
+                    "nav_date": [day],
+                    "unit_nav": [4.4312],
+                    "acc_nav": [None],
+                }
+            )
+
+        client.query.side_effect = nav_response
 
         frame = adapter.fetch_fund_nav(trade_date="2026-09-30")
 

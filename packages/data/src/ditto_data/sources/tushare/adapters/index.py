@@ -10,6 +10,7 @@ import polars as pl
 from ditto_platform.foundation import logger, traced
 
 from ditto_data.errors.network import SourceFetchError
+from ditto_data.sources.tushare.adapters._guards import assert_single_trade_date
 from ditto_data.sources.tushare.adapters.base import BaseTushareAdapter
 from ditto_data.sources.tushare.processors.error_handler import (
     tushare_fetch_error_handler,
@@ -330,6 +331,11 @@ class IndexTushareAdapter(BaseTushareAdapter):
                         ts_code,
                         ts_date,
                         ts_date,
+                    )
+                    assert_single_trade_date(
+                        response,
+                        expected=ts_date,
+                        dataset=api_name,
                     )
                     if response.height > 0:
                         dfs.append(response)

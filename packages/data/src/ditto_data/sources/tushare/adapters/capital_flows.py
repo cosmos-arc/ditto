@@ -10,6 +10,7 @@ from __future__ import annotations
 import polars as pl
 from ditto_platform.foundation import Metrics, logger, traced
 
+from ditto_data.sources.tushare.adapters._guards import assert_single_trade_date
 from ditto_data.sources.tushare.adapters.base import BaseTushareAdapter
 from ditto_data.sources.tushare.processors.column_mapping import ColumnMapping
 from ditto_data.sources.tushare.processors.error_handler import (
@@ -72,6 +73,15 @@ class CapitalFlowsTushareAdapter(BaseTushareAdapter):
             }
             params.update({k: v.replace("-", "") for k, v in query.items() if v})
             response = self._client.query(**params)
+            # 单日全市场形态（trade_date 且无区间）守卫响应日=请求日（#585）；
+            # 单标的区间形态天然跨日，不守卫。
+            requested_day = query.get("trade_date")
+            if requested_day and not (query.get("start_date") or query.get("end_date")):
+                assert_single_trade_date(
+                    response,
+                    expected=requested_day.replace("-", ""),
+                    dataset=dataset,
+                )
             result = TushareDataTransformer.transform(response, dataset, mapping)
             row_count = len(result)
             logger.info(

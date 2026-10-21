@@ -18,6 +18,7 @@ from datetime import date
 import polars as pl
 from ditto_platform.foundation import Metrics, logger, traced
 
+from ditto_data.sources.tushare.adapters._guards import assert_single_trade_date
 from ditto_data.sources.tushare.adapters.base import BaseTushareAdapter
 from ditto_data.sources.tushare.processors.error_handler import (
     tushare_fetch_error_handler,
@@ -125,6 +126,13 @@ class FuturesTushareAdapter(BaseTushareAdapter):
         )
         with tushare_fetch_error_handler("futures_daily", "fut_daily"):
             response = self._client.query(**params)
+            if trade_date:
+                # 单日全市场形态守卫响应日（#585）。
+                assert_single_trade_date(
+                    response,
+                    expected=trade_date.replace("-", ""),
+                    dataset="futures_daily",
+                )
 
         if response.is_empty():
             return empty_futures_daily()
