@@ -8,6 +8,7 @@ import polars as pl
 from ditto_platform.foundation import Metrics, logger, traced
 
 from ditto_data.sources.base import SourceFetchError
+from ditto_data.sources.tushare.adapters._guards import assert_single_trade_date
 from ditto_data.sources.tushare.adapters.base import BaseTushareAdapter
 from ditto_data.sources.tushare.processors import StatusMerger
 from ditto_data.sources.tushare.processors.error_handler import (
@@ -224,6 +225,11 @@ class StockTushareAdapter(BaseTushareAdapter):
                 trade_date=ts_date,
                 fields="ts_code,trade_date,open,high,low,close,pre_close,vol,amount,pct_chg",
             )
+            assert_single_trade_date(
+                response,
+                expected=ts_date,
+                dataset="stock_daily",
+            )
 
             return TushareDataTransformer.transform_daily_ohlcv(
                 response,
@@ -295,6 +301,11 @@ class StockTushareAdapter(BaseTushareAdapter):
                 api_name="adj_factor",
                 fields="ts_code,trade_date,adj_factor",
                 trade_date=ts_date,
+            )
+            assert_single_trade_date(
+                response,
+                expected=ts_date,
+                dataset="adj_factor",
             )
 
             return TushareDataTransformer.transform(
@@ -389,6 +400,11 @@ class StockTushareAdapter(BaseTushareAdapter):
                 trade_date=ts_date,
                 fields="ts_code,trade_date,up_limit,down_limit",
             )
+            assert_single_trade_date(
+                response,
+                expected=ts_date,
+                dataset="stock_limit",
+            )
 
             return TushareDataTransformer.transform(
                 response, "stock_limit", STOCK_LIMIT_MAPPING
@@ -451,6 +467,13 @@ class StockTushareAdapter(BaseTushareAdapter):
             if end_date:
                 params["end_date"] = end_date.replace("-", "")
             response = self._client.query(**params)
+            if trade_date and not (start_date or end_date):
+                # 事件型端点单日形态同样守卫响应日（#585）。
+                assert_single_trade_date(
+                    response,
+                    expected=trade_date.replace("-", ""),
+                    dataset="limit_list",
+                )
             result = TushareDataTransformer.transform(
                 response, "limit_list", LIMIT_LIST_MAPPING
             )
@@ -779,17 +802,25 @@ class StockTushareAdapter(BaseTushareAdapter):
         """
         suspend_response = self._client.query(
             api_name="suspend_d",
-            suspend_date=ts_date,
-            fields="ts_code,suspend_timing",
+            # 官方接口无 suspend_date 参数（#585）：日期参数是 trade_date，
+            # 且必须显式 suspend_type="S" 只取停牌行（默认停复牌混合返回）。
+            trade_date=ts_date,
+            suspend_type="S",
+            fields="ts_code,trade_date,suspend_timing",
+        )
+        assert_single_trade_date(
+            suspend_response,
+            expected=ts_date,
+            dataset="stock_status.suspend_d",
         )
         if suspend_response.is_empty():
             return pl.DataFrame(
                 schema={"ts_code": pl.String, "suspend_timing": pl.String}
             )
-        # 代理 transport 对该端点存在 fill-to-limit 行为：真实名单被重复
-        # 行填充到请求页宽（#196 实测 2026-09-30 真实 1008 只、limit=10000
-        # 单页 5000 行含 1008 唯一且稳定收敛）。fill-to-limit 重复是整行
-        # 重复——按整行去重，同股不同 suspend_timing 的真实两行保留。
+        # 代理 transport 曾对该端点出现整行重复填充（#196 记录的
+        # fill-to-limit 形态）：按整行去重幂等无害，保留防御——同股不同
+        # suspend_timing 的真实两行仍保留。（原注释引 2026-09-30
+        # "真实 1008 只"系 #585 定案的参数错致全表首页，非当日真实名单。）
         return suspend_response.select("ts_code", "suspend_timing").unique(
             keep="first", maintain_order=True
         )
@@ -814,7 +845,12 @@ class StockTushareAdapter(BaseTushareAdapter):
         st_response = self._client.query(
             api_name="stock_st",
             trade_date=ts_date,
-            fields="ts_code,name",
+            fields="ts_code,name,trade_date",
+        )
+        assert_single_trade_date(
+            st_response,
+            expected=ts_date,
+            dataset="stock_status.stock_st",
         )
         if not st_response.is_empty():
             return st_response.select("ts_code", "name")
@@ -828,6 +864,11 @@ class StockTushareAdapter(BaseTushareAdapter):
             api_name="bak_basic",
             trade_date=ts_date,
             fields="ts_code,name,trade_date",
+        )
+        assert_single_trade_date(
+            response,
+            expected=ts_date,
+            dataset="stock_status.bak_basic",
         )
         required = {"ts_code", "name"}
         missing = required - set(response.columns)

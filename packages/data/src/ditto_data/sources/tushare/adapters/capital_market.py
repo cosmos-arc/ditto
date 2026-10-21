@@ -7,6 +7,7 @@ from datetime import date
 import polars as pl
 from ditto_platform.foundation import Metrics, logger, traced
 
+from ditto_data.sources.tushare.adapters._guards import assert_single_trade_date
 from ditto_data.sources.tushare.adapters.base import BaseTushareAdapter
 from ditto_data.sources.tushare.processors.error_handler import (
     tushare_fetch_error_handler,
@@ -102,6 +103,13 @@ class CapitalMarketTushareAdapter(BaseTushareAdapter):
                 params["end_date"] = end_date
 
             response = self._client.query(**params)
+            if trade_date and not (start_date or end_date):
+                # 单日形态守卫响应日（#585）。
+                assert_single_trade_date(
+                    response,
+                    expected=trade_date,
+                    dataset="valuation_metrics",
+                )
 
             result = TushareDataTransformer.transform(
                 response, "valuation_metrics", VALUATION_METRICS_MAPPING
@@ -264,6 +272,12 @@ class CapitalMarketTushareAdapter(BaseTushareAdapter):
                 params["end_date"] = end_date
 
             response = self._client.query(**params)
+            if trade_date and not (start_date or end_date):
+                assert_single_trade_date(
+                    response,
+                    expected=trade_date,
+                    dataset="margin_trading",
+                )
 
             result = TushareDataTransformer.transform(
                 response, "margin_trading", MARGIN_TRADING_MAPPING
@@ -432,6 +446,12 @@ class CapitalMarketTushareAdapter(BaseTushareAdapter):
 
         with tushare_fetch_error_handler("index_valuation", "index_dailybasic"):
             response = self._client.query(**params)
+            if trade_date and not (start_date or end_date):
+                assert_single_trade_date(
+                    response,
+                    expected=trade_date.replace("-", ""),
+                    dataset="index_valuation",
+                )
 
         if response.is_empty():
             return pl.DataFrame(schema=INDEX_VALUATION_SCHEMA)
