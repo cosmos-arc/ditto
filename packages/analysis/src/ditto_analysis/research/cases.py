@@ -71,10 +71,10 @@ def _temporal_lineage(
         publication_cutoff,
         field_name="publication_cutoff",
     )
-    if (
-        normalized_knowledge > normalized_as_of
-        or normalized_publication > normalized_knowledge
-    ):
+    # live 日频车道（#583）knowledge_cutoff 允许晚于 as_of（决策定在最近完整
+    # 交易日收盘、以当下知识做出）；重放车道由上游钉死截止时刻。因果序只
+    # 保留 publication ≤ knowledge。
+    if normalized_publication > normalized_knowledge:
         raise ValueError("Research Case temporal lineage must be PIT visible")
     return normalized_as_of, normalized_knowledge, normalized_publication
 

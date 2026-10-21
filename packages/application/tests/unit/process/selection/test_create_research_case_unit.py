@@ -116,6 +116,21 @@ def test_create_research_case_preserves_exact_selection_lineage() -> None:
     assert case.knowledge_cutoff == run.knowledge_cutoff
 
 
+def test_create_research_case_allows_live_lane_knowledge_after_as_of() -> None:
+    # #583：活体日频车道 knowledge 晚于 as_of 的已保存运行可建 ResearchCase——
+    # 因果序只保留 publication ≤ knowledge，重放车道由上游钉死。
+    from datetime import timedelta
+
+    run = replace(_run(), knowledge_cutoff=_run().as_of + timedelta(days=1))
+    process = CreateResearchCaseFromSelection(_Reader(run), _Factory())
+
+    case = process.create(
+        CreateResearchCaseRequest(run.run_id, "Live-lane case with current knowledge.")
+    )
+
+    assert case.knowledge_cutoff > case.as_of
+
+
 def test_create_research_case_fails_closed_for_missing_blocked_or_excluded_input() -> (
     None
 ):

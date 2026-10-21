@@ -84,7 +84,9 @@ def test_research_case_identity_tracks_selection_temporal_and_candidate_lineage(
                 InstrumentId(600001),
             )
         },
-        {"knowledge_cutoff": datetime(2026, 9, 1, tzinfo=UTC)},
+        # live 日频车道（#583）允许 knowledge 晚于 as_of；仍非法的是因果序倒置：
+        # publication 晚于 knowledge。
+        {"publication_cutoff": datetime(2026, 9, 1, tzinfo=UTC)},
         {"selection_status": "blocked"},
     ],
 )
@@ -93,3 +95,11 @@ def test_research_case_rejects_incomplete_or_non_pit_lineage(
 ) -> None:
     with pytest.raises(ValueError):
         _case(**overrides)
+
+
+def test_research_case_allows_live_lane_knowledge_after_as_of() -> None:
+    # #583：决策定在最近完整交易日收盘、以当下知识做出——knowledge 晚于
+    # as_of 的活体运行血缘合法（重放车道由上游钉死截止时刻）。
+    case = _case(knowledge_cutoff=datetime(2026, 9, 1, tzinfo=UTC))
+
+    assert case.knowledge_cutoff > case.as_of

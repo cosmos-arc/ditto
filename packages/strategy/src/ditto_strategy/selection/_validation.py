@@ -41,7 +41,14 @@ def _error(message: str, *, reason: str, **details: object) -> StrategySpecError
 
 
 def _validate_temporal_visibility(value: _TemporalVisibility) -> None:
-    """Validate the shared PIT boundary on input and result contracts."""
+    """
+    Validate the shared PIT boundary on input and result contracts.
+
+    Under the live daily lane (#583) the decision is dated at the latest
+    complete session's close while cutoffs issue from the making instant,
+    so ``knowledge_cutoff`` may legitimately postdate ``as_of``; replay
+    lanes keep pinning cutoffs to the decision instant upstream.
+    """
     for field_name in ("as_of", "knowledge_cutoff", "publication_cutoff"):
         timestamp = getattr(value, field_name)
         if timestamp.tzinfo is None or timestamp.utcoffset() is None:
@@ -50,9 +57,9 @@ def _validate_temporal_visibility(value: _TemporalVisibility) -> None:
                 reason="invalid_selection_time",
                 field_name=field_name,
             )
-    if not value.publication_cutoff <= value.knowledge_cutoff <= value.as_of:
+    if value.publication_cutoff > value.knowledge_cutoff:
         raise _error(
-            "selection cutoffs exceed their visibility boundary",
+            "selection publication_cutoff exceeds knowledge_cutoff",
             reason="invalid_selection_cutoff",
         )
 

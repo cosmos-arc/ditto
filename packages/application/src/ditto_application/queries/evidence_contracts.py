@@ -88,7 +88,13 @@ def _sha256_hex(value: object, *, field_name: str) -> str:
 
 @dataclass(frozen=True, slots=True)
 class EvidenceTemporalContext:
-    """Exact visibility boundary supplied by the trusted application caller."""
+    """
+    Exact visibility boundary supplied by the trusted application caller.
+
+    live 日频车道（#583）knowledge_cutoff 允许晚于 decision_time（决策定在
+    最近完整交易日收盘、以当下知识做出）；重放车道由上游钉死截止时刻。
+    因果序只保留 publication ≤ knowledge。
+    """
 
     decision_time: datetime
     knowledge_cutoff: datetime
@@ -103,10 +109,10 @@ class EvidenceTemporalContext:
             self.publication_cutoff,
             field_name="publication_cutoff",
         )
-        if not publication <= knowledge <= decision:
+        if publication > knowledge:
             raise _evidence_error(
                 "EVIDENCE_TEMPORAL_INVALID",
-                "publication_cutoff_must_precede_knowledge_and_decision",
+                "publication_cutoff_must_precede_knowledge",
             )
         object.__setattr__(self, "decision_time", decision)
         object.__setattr__(self, "knowledge_cutoff", knowledge)

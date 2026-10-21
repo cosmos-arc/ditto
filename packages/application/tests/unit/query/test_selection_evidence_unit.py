@@ -191,3 +191,23 @@ def test_evidence_rejects_temporal_or_snapshot_drift() -> None:
             run_id=run.run_id,
             context=replace(_context(), source_snapshot_id="snapshot-set:stale"),
         )
+
+
+def test_evidence_allows_live_lane_knowledge_after_decision() -> None:
+    # #583：活体日频车道决策定在最近完整交易日收盘、以当下知识做出——
+    # knowledge/decision 都晚于 as_of 的上下文可正常封证（重放车道上游钉死）。
+    from datetime import timedelta
+
+    rotation, run = _artifacts()
+    live_run = replace(run, knowledge_cutoff=_AS_OF + timedelta(days=1))
+    reader = _Reader(rotation, live_run)
+    live_context = replace(_context(), knowledge_cutoff=_AS_OF + timedelta(days=1))
+
+    evidence = SelectionRunEvidenceQueryFacade(reader).get_evidence(
+        run_id=live_run.run_id,
+        context=live_context,
+    )
+
+    assert _dig(evidence.payload.value, "candidates", 0, "instrument_id") == (
+        InstrumentId(600000)
+    )

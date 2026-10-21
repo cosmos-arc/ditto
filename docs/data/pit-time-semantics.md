@@ -63,9 +63,13 @@
 
 三层闸门：
 
-1. **cutoff 签发**（`APP/processes/selection/assemble_facts.py:422-486` `_resolve_cutoffs`）：
-   请求声明或服务器时钟；`_LIVE_SKEW=5min`（`:143`）拒过去/未来时刻；
-   因果序校验 `declared_knowledge <= as_of`。
+1. **cutoff 签发**（`APP/processes/selection/assemble_facts.py` `_resolve_cutoffs`）：
+   请求声明或服务器时钟；`_LIVE_SKEW`（5min）拒过去/未来时刻；
+   声明值钳制在服务器时钟，且允许晚于滚动的 as_of（决策定在昨收、以当下知识做出，
+   见 §1 `knowledge_date` 四类口径与 #583 裁决）。
+   单位注记：`average_turnover`/`min_average_turnover` 以**元**为口径（bars amount
+   千元入库、装配边界 ×1000 换算，#506/#507）；单位口径变更会改写 `input_hash`
+   内容寻址身份——跨口径边界的重发产生新 run 而非重放旧 run，属预期。
 2. **行级**（`assemble_facts.py:1174-1205` `_without_future_knowledge`）：
    bar 的 `knowledge_date <=` publication 截止的上海日；**同日知识行（kd==trade_date）
    当日 18:00（`_BAR_PUBLICATION_TIME`）前视为未发布；T+1 戳的行从自身 knowledge_date 起可见**。

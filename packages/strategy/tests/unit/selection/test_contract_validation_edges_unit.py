@@ -343,3 +343,17 @@ def test_run_revalidates_temporal_visibility() -> None:
 
     assert unaware_exc.value.details["reason"] == "invalid_selection_time"
     assert cutoff_exc.value.details["reason"] == "invalid_selection_cutoff"
+
+
+@pytest.mark.pit
+def test_run_allows_live_lane_knowledge_after_as_of() -> None:
+    # #583：活体日频车道决策定在最近完整交易日收盘、以当下知识做出，
+    # 已保存运行与输入包同律——knowledge_cutoff 允许晚于 as_of，
+    # 重放车道由上游钉死截止时刻，不经过本契约放宽。
+    run = replace(
+        _run(),
+        knowledge_cutoff=_NOW + timedelta(days=1),
+        publication_cutoff=_NOW + timedelta(days=1),
+    )
+
+    assert run.knowledge_cutoff > run.as_of

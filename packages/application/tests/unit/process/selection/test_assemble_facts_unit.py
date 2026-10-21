@@ -378,8 +378,9 @@ def test_factor_values_and_hard_filters_are_projected_per_instrument() -> None:
     values = {item.name: item.value for item in first.factor_values}
     assert set(values) == {"reversal_1w"}
     assert 0.0 < values["reversal_1w"] <= 1.0
-    # 30 rows ending at the cross-section: the 20-day amount mean is 20 500.
-    assert first.average_turnover == 20500.0
+    # 30 rows ending at the cross-section: the 20-day amount mean is 20 500
+    # thousand-yuan; average_turnover publishes in yuan (×1000, #506 单位合同).
+    assert first.average_turnover == 20_500_000.0
     # Only 10 rows for the second instrument: no full turnover window.
     assert second.average_turnover is None
     assert first.is_suspended is False
