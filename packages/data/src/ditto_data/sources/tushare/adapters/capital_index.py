@@ -7,6 +7,7 @@ from datetime import date
 import polars as pl
 from ditto_platform.foundation import Metrics, logger, traced
 
+from ditto_data.sources.tushare.adapters._guards import assert_single_trade_date
 from ditto_data.sources.tushare.adapters.base import BaseTushareAdapter
 from ditto_data.sources.tushare.processors.error_handler import (
     tushare_fetch_error_handler,
@@ -74,6 +75,14 @@ class CapitalIndexTushareAdapter(BaseTushareAdapter):
 
         with tushare_fetch_error_handler("index_weight", "index_weight"):
             df = self._client.query(**params)
+            if trade_date and "trade_date" in df.columns:
+                # 响应带 trade_date 列时守卫响应日（#585）；缺列时的补列
+                # 回退是 #452 的既定语义，不经守卫。
+                assert_single_trade_date(
+                    df,
+                    expected=trade_date,
+                    dataset="index_weight",
+                )
 
         if df.is_empty():
             logger.warning(

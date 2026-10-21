@@ -274,7 +274,8 @@ class TestIndexDailyPerCodeTolerance:
         adapter = IndexTushareAdapter(_client=mock_client)
 
         result = adapter.fetch_daily(
-            trade_date="2014-09-30",
+            # 夹具行固定 20240329（#585 日期守卫要求响应与请求日一致）。
+            trade_date="2024-03-29",
             ts_codes=["000001.SH", "000852.CSI"],
         )
 

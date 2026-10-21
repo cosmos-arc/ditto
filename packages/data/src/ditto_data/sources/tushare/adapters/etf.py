@@ -9,6 +9,7 @@ from ditto_platform.foundation import Metrics, logger, traced
 
 from ditto_data.config import DataSourceSettings
 from ditto_data.errors.network import SourceFetchError
+from ditto_data.sources.tushare.adapters._guards import assert_single_trade_date
 from ditto_data.sources.tushare.adapters.base import BaseTushareAdapter
 from ditto_data.sources.tushare.client import TushareClient
 from ditto_data.sources.tushare.processors.error_handler import (
@@ -203,6 +204,11 @@ class ETFTushareAdapter(BaseTushareAdapter):
                 trade_date=ts_date,
                 fields="ts_code,trade_date,open,high,low,close,pre_close,vol,amount,pct_chg",
             )
+            assert_single_trade_date(
+                response,
+                expected=ts_date,
+                dataset="etf_daily",
+            )
 
             response = self._filter_non_etf_rows(response)
             return TushareDataTransformer.transform_daily_ohlcv(
@@ -333,6 +339,11 @@ class ETFTushareAdapter(BaseTushareAdapter):
                 fields="ts_code,trade_date,adj_factor",
                 trade_date=ts_date,
             )
+            assert_single_trade_date(
+                response,
+                expected=ts_date,
+                dataset="fund_adj",
+            )
 
             response = self._filter_non_etf_rows(response)
             return TushareDataTransformer.transform(
@@ -445,11 +456,20 @@ class ETFTushareAdapter(BaseTushareAdapter):
                     end_date=ts_end,
                 )
             else:
-                # 全市场：端点只接受 nav_date 单日，滚动窗逐日查询后拼接
-                frames = [
-                    self._client.query(api_name="fund_nav", fields=fields, nav_date=day)
-                    for day in _yyyymmdd_range(ts_start, ts_end)
-                ]
+                # 全市场：端点只接受 nav_date 单日，滚动窗逐日查询后拼接；
+                # 逐日守卫响应行落在请求 nav_date（#585 日期一致性）。
+                frames: list[pl.DataFrame] = []
+                for day in _yyyymmdd_range(ts_start, ts_end):
+                    day_frame = self._client.query(
+                        api_name="fund_nav", fields=fields, nav_date=day
+                    )
+                    assert_single_trade_date(
+                        day_frame,
+                        expected=day,
+                        dataset="etf_nav:fund_nav",
+                        column="nav_date",
+                    )
+                    frames.append(day_frame)
                 response = (
                     pl.concat(frames, how="vertical_relaxed")
                     if frames
@@ -519,6 +539,13 @@ class ETFTushareAdapter(BaseTushareAdapter):
             if end_date:
                 params["end_date"] = end_date.replace("-", "")
             response = self._client.query(**params)
+            if trade_date and not (start_date or end_date):
+                # 单日形态守卫响应日（#585）。
+                assert_single_trade_date(
+                    response,
+                    expected=trade_date.replace("-", ""),
+                    dataset="fund_share",
+                )
             result = TushareDataTransformer.transform(
                 response, "fund_share", FUND_SHARE_MAPPING
             )
