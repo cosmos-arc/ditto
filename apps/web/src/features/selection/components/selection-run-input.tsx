@@ -275,9 +275,9 @@ export function SelectionRunInput({
 						/>
 					</label>
 					<label className="grid gap-1 text-xs">
-						最小日均成交额
+						最小日均成交额（元）
 						<input
-							aria-label="最小日均成交额"
+							aria-label="最小日均成交额（元）"
 							className={INPUT_CLASS}
 							type="number"
 							min={0}

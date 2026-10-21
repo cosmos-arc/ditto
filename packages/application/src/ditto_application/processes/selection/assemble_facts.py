@@ -161,6 +161,8 @@ _LIVE_SESSION_DATASETS: tuple[str, ...] = (
     "stock_status",
 )
 _TURNOVER_WINDOW = 20
+# bars amount 以千元原值入库（#506/#507 单位合同）；average_turnover 以元发布。
+_YUAN_PER_STORED_AMOUNT_UNIT = 1000.0
 _CALENDAR_BUFFER_DAYS = 14
 _SESSION_BUFFER = 5
 _DEFAULT_LOOKBACK_DAYS = 400
@@ -1066,7 +1068,9 @@ class AssembleSelectionFacts:
         cross = _unit_normalized(cross_section, nodes)
         cross_rows = {int(row["instrument_id"]): row for row in cross.to_dicts()}
         # Non-finite amounts (NaN/inf in the window) make the rolling mean
-        # unusable; treat them as a missing turnover observation.
+        # unusable; treat them as a missing turnover observation. The stored
+        # thousand-yuan mean converts to the yuan-denominated
+        # average_turnover here — the single assembly-boundary conversion.
         turnover = {
             int(row["instrument_id"]): row["_average_turnover"]
             for row in evaluation.group_by("instrument_id")
@@ -1085,6 +1089,7 @@ class AssembleSelectionFacts:
                 )
                 .then(
                     pl.col("amount").rolling_mean(window_size=_TURNOVER_WINDOW).last()
+                    * _YUAN_PER_STORED_AMOUNT_UNIT
                 )
                 .otherwise(None)
                 .alias("_average_turnover")

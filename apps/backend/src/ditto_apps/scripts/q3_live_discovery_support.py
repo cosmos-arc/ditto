@@ -420,6 +420,8 @@ def _selection_frame(
 
 
 def _selection_instruments(frame: pl.DataFrame) -> tuple[SelectionInstrumentDraft, ...]:
+    # bars amount 以千元原值入库（#506/#507 单位合同）；average_turnover 以元
+    # 发布（SelectionInstrumentInput 契约），此处是 ETF 验收脚本的单日近似。
     return tuple(
         SelectionInstrumentDraft(
             instrument_id=InstrumentId(int(row["instrument_id"])),
@@ -435,7 +437,7 @@ def _selection_instruments(frame: pl.DataFrame) -> tuple[SelectionInstrumentDraf
                     "momentum_1d_rank", float(row["momentum_score"])
                 ),
             ),
-            average_turnover=float(row["amount"]),
+            average_turnover=float(row["amount"]) * 1000.0,
             is_st=bool(row["is_st"]),
             is_suspended=bool(row["is_suspended"]),
             listing_days=int(row["listing_days"]),

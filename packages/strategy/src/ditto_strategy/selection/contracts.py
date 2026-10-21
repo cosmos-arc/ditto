@@ -203,7 +203,14 @@ def _validate_spec(value: StockSelectionSpec | EtfSelectionSpec) -> None:
 
 @dataclass(frozen=True, slots=True)
 class StockSelectionSpec:
-    """Stock-only hard filters and additive scoring policy."""
+    """
+    Stock-only hard filters and additive scoring policy.
+
+    ``min_average_turnover`` is denominated in yuan (see
+    ``SelectionInstrumentInput.average_turnover``): bars amount is stored
+    in the provider's thousand-yuan unit and converted once at the
+    assembly boundary.
+    """
 
     spec_id: str
     spec_version: str
@@ -228,7 +235,12 @@ class StockSelectionSpec:
 
 @dataclass(frozen=True, slots=True)
 class EtfSelectionSpec:
-    """ETF-only liquidity, age, tracking, and additive scoring policy."""
+    """
+    ETF-only liquidity, age, tracking, and additive scoring policy.
+
+    ``min_average_turnover`` is denominated in yuan (see
+    ``SelectionInstrumentInput.average_turnover``).
+    """
 
     spec_id: str
     spec_version: str
@@ -283,7 +295,13 @@ class SelectionFactorValue:
 
 @dataclass(frozen=True, slots=True)
 class SelectionInstrumentInput:
-    """Normalized feature and hard-filter facts for one instrument."""
+    """
+    Normalized feature and hard-filter facts for one instrument.
+
+    ``average_turnover`` is the canonical yuan-denominated mean daily
+    trading value across both lanes; producers convert from the stored
+    thousand-yuan bars unit at their boundary.
+    """
 
     instrument_id: InstrumentId
     instrument_name: str

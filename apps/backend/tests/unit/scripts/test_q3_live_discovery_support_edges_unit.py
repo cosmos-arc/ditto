@@ -471,3 +471,23 @@ def test_technical_evidence_rejects_invalid_product_before_io(
             payload=payload,
             context=context,
         )
+
+
+def test_selection_instruments_publish_yuan_turnover() -> None:
+    # #583 单位合同：bars amount 千元入库，average_turnover 以元发布（×1000）。
+    frame = subject._selection_frame(
+        asset_kind="etf",
+        daily=_daily_frame(),
+        basic=_basic_frame(),
+        metadata=_metadata_frame(),
+        industry_mapping=None,
+        stock_status=None,
+        limit=8,
+    )
+
+    drafts = subject._selection_instruments(frame)
+
+    amounts = frame.sort("instrument_id")["amount"].to_list()
+    assert [draft.average_turnover for draft in drafts] == [
+        amount * 1000.0 for amount in amounts
+    ]

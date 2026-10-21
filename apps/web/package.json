@@ -82,7 +82,7 @@
     "style-dictionary": "^5.4.0",
     "tailwindcss": "^4.2.2",
     "typescript": "~6.0.2",
-    "vite": "^8.0.2",
+    "vite": "^8.3.4",
     "vitest": "4.1.11"
   },
   "msw": {
