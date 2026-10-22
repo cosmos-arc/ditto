@@ -71,7 +71,7 @@
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.1",
-    "@vitest/coverage-v8": "4.1.11",
+    "@vitest/coverage-v8": "4.1.12",
     "ajv": "^8.18.0",
     "culori": "^4.0.2",
     "dependency-cruiser": "18.2.0",
@@ -83,7 +83,7 @@
     "tailwindcss": "^4.2.2",
     "typescript": "~6.0.2",
     "vite": "^8.3.4",
-    "vitest": "4.1.11"
+    "vitest": "4.1.12"
   },
   "msw": {
     "workerDirectory": [
