@@ -4,3 +4,28 @@
 id = "GHSA-vfj7-8cjw-p6xm"
 reason = "braces 3.0.3 栈耗尽 DoS：仅存在于构建期 dev 依赖链（chokidar/vite watcher），不进 Web 运行时产物；上游尚无修复版本（Last Affected 3.0.3），chokidar 4 已移除该依赖，随工具链升级出豁免。"
 ignoreUntil = 2027-01-07
+
+# 以下四条 virtualenv 公告（2026-10-22 批量爆出）修复版要求 packaging>=26.3，
+# 被 workspace prefect（各可选版本 packaging<26.x 上限）阻断，virtualenv 最高
+# 可锁 21.14.5（已真修 5vjq/8rjx/c947 三条）。virtualenv 仅为 pre-commit 的
+# hook 隔离环境工具，dev-only、不进任何运行时制品。prefect/fastapi 升级解阻后
+# 立即升 virtualenv 并删除以下豁免。
+[[IgnoredVulns]]
+id = "GHSA-43mp-35q3-x3fq"
+reason = "virtualenv 修复版 21.14.9 需 packaging>=26.3，被 prefect 依赖上限阻断；dev-only 工具，不进运行时制品。"
+ignoreUntil = 2027-01-07
+
+[[IgnoredVulns]]
+id = "GHSA-c978-59m8-c77v"
+reason = "virtualenv 修复版 21.14.9 需 packaging>=26.3，被 prefect 依赖上限阻断；dev-only 工具，不进运行时制品。"
+ignoreUntil = 2027-01-07
+
+[[IgnoredVulns]]
+id = "GHSA-cw65-gx24-rc82"
+reason = "virtualenv 修复版 21.14.9 需 packaging>=26.3，被 prefect 依赖上限阻断；dev-only 工具，不进运行时制品。"
+ignoreUntil = 2027-01-07
+
+[[IgnoredVulns]]
+id = "GHSA-vxj4-q4g9-crj7"
+reason = "virtualenv 修复版 21.14.7 起需 packaging>=26.3，被 prefect 依赖上限阻断；dev-only 工具，不进运行时制品。"
+ignoreUntil = 2027-01-07
