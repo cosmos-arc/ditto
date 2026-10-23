@@ -294,3 +294,65 @@ class TestFinaIndicatorDedupDeterminism:
         normalized = _normalize_fina_numeric_columns(self._flag_version_rows())
         assert normalized["update_flag"].dtype == pl.String
         assert normalized["fcff"].dtype == pl.Float64
+
+    def test_numeric_update_flag_normalized_to_string(self) -> None:
+        # correctness F2：源端改送数值 0/1 时不得 ComputeError
+        from ditto_data.sources.tushare.adapters.fundamental import (
+            _dedupe_fina_disclosure_key,
+            _normalize_fina_numeric_columns,
+        )
+
+        frame = pl.DataFrame(
+            {
+                "source_ticker": ["600519.SH", "600519.SH"],
+                "report_date": [date(2026, 3, 31)] * 2,
+                "knowledge_date": [date(2026, 4, 28)] * 2,
+                "update_flag": [0, 1],
+                "fcff": [None, 1234.5],
+            }
+        )
+        out = _dedupe_fina_disclosure_key(_normalize_fina_numeric_columns(frame))
+        assert out.height == 1
+        assert out["fcff"][0] == 1234.5
+
+    def test_nonvip_fetch_survives_update_flag_without_f_ann_date(self) -> None:
+        # correctness F1：非 VIP 请求集含 update_flag 且无 f_ann_date 时，
+        # 不得命中财务三表的通用去重块（ColumnNotFoundError）
+        from unittest.mock import MagicMock
+
+        from ditto_data.sources.tushare.adapters.fundamental import (
+            FundamentalTushareAdapter,
+        )
+
+        client = MagicMock()
+        client.query.return_value = pl.DataFrame(
+            {
+                "ts_code": ["600519.SH", "600519.SH"],
+                "ann_date": ["20260428", "20260428"],
+                "end_date": ["20260331", "20260331"],
+                "update_flag": ["0", "1"],
+                "eps": [None, 33.19],
+                "fcff": [None, 1234.5],
+            }
+        )
+        adapter = FundamentalTushareAdapter(_client=client)
+
+        frame = adapter.fetch_fina_indicator(ts_code="600519.SH", period="20260331")
+
+        assert frame.height == 1
+        assert frame["fcff"][0] == 1234.5
+        assert "update_flag" not in frame.columns
+
+    def test_nonvip_fetch_empty_response_ok(self) -> None:
+        from unittest.mock import MagicMock
+
+        from ditto_data.sources.tushare.adapters.fundamental import (
+            FundamentalTushareAdapter,
+        )
+
+        client = MagicMock()
+        client.query.return_value = pl.DataFrame()
+        adapter = FundamentalTushareAdapter(_client=client)
+
+        frame = adapter.fetch_fina_indicator(ts_code="600519.SH")
+        assert frame.height == 0
