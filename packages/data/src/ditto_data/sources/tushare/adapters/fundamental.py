@@ -109,6 +109,33 @@ def _empty_with_schema(
 
 _FINA_PAGE_SIZE = 2000
 
+# fina_indicator 显式请求字段集（#591）。源端默认列集（fields 省略）不含
+# update_flag，须显式点名才能拿到同披露键的版本判别列。列序对齐历史
+# 存量帧（server 默认序：ts_code,ann_date,end_date + 指标序），否则
+# parquet 追加 vstack 因列序不一致拒收；update_flag 附尾，选版后即弃。
+# 上游新增指标列不会自动透传，出现时在此追加（透传换确定性的既定取舍）。
+_FINA_INDICATOR_REQUEST_FIELDS = (
+    "ts_code,ann_date,end_date,eps,dt_eps,total_revenue_ps,revenue_ps,"
+    "capital_rese_ps,surplus_rese_ps,undist_profit_ps,extra_item,profit_dedt,"
+    "gross_margin,current_ratio,quick_ratio,cash_ratio,ar_turn,ca_turn,fa_turn,"
+    "assets_turn,op_income,ebit,ebitda,fcff,fcfe,current_exint,noncurrent_exint,"
+    "interestdebt,netdebt,tangible_asset,working_capital,networking_capital,"
+    "invest_capital,retained_earnings,diluted2_eps,bps,ocfps,retainedps,cfps,"
+    "ebit_ps,fcff_ps,fcfe_ps,netprofit_margin,grossprofit_margin,cogs_of_sales,"
+    "expense_of_sales,profit_to_gr,saleexp_to_gr,adminexp_of_gr,finaexp_of_gr,"
+    "impai_ttm,gc_of_gr,op_of_gr,ebit_of_gr,roe,roe_waa,roe_dt,roa,npta,roic,"
+    "roe_yearly,roa2_yearly,debt_to_assets,assets_to_eqt,dp_assets_to_eqt,"
+    "ca_to_assets,nca_to_assets,tbassets_to_totalassets,int_to_talcap,"
+    "eqt_to_talcapital,currentdebt_to_debt,longdeb_to_debt,ocf_to_shortdebt,"
+    "debt_to_eqt,eqt_to_debt,eqt_to_interestdebt,tangibleasset_to_debt,"
+    "tangasset_to_intdebt,tangibleasset_to_netdebt,ocf_to_debt,turn_days,"
+    "roa_yearly,roa_dp,fixed_assets,profit_to_op,q_saleexp_to_gr,q_gc_to_gr,"
+    "q_roe,q_dt_roe,q_npta,q_ocf_to_sales,basic_eps_yoy,dt_eps_yoy,cfps_yoy,"
+    "op_yoy,ebt_yoy,netprofit_yoy,dt_netprofit_yoy,ocf_yoy,roe_yoy,bps_yoy,"
+    "assets_yoy,eqt_yoy,tr_yoy,or_yoy,q_sales_yoy,q_op_qoq,equity_yoy,"
+    "update_flag"
+)
+
 
 def _normalize_fina_numeric_columns(frame: pl.DataFrame) -> pl.DataFrame:
     """
@@ -117,38 +144,61 @@ def _normalize_fina_numeric_columns(frame: pl.DataFrame) -> pl.DataFrame:
     透传列的 dtype 由响应推断（Int64/Float64/Null 随当日值漂移）；
     不归一则日更全窗口重拉在 VERIFY_IDENTICAL 下因 dtype 漂移硬失败。
     身份/日期列之外全部 cast Float64（strict 容忍偶发字符串）。
+    update_flag 是选版判别列（#591），显式 cast String——透传 dtype 由
+    响应推断，源端改送数值 0/1 时字符串比较会 ComputeError 硬失败
+    （correctness F2；防御先例见 fetch_earnings_forecast）。
     """
     if frame.is_empty():
         return frame
-    identity = {"source_ticker", "report_date", "knowledge_date"}
+    identity = {"source_ticker", "report_date", "knowledge_date", "update_flag"}
     casts = [
         pl.col(name).cast(pl.Float64, strict=False)
         for name, dtype in frame.schema.items()
         if name not in identity and dtype != pl.Float64
     ]
-    return frame.with_columns(casts) if casts else frame
+    flag_casts = (
+        [pl.col("update_flag").cast(pl.String)]
+        if "update_flag" in frame.columns
+        else []
+    )
+    return frame.with_columns([*casts, *flag_casts]) if casts or flag_casts else frame
 
 
 def _dedupe_fina_disclosure_key(frame: pl.DataFrame) -> pl.DataFrame:
     """
     同披露键（标的, 报告期, 公告日）多版本行去重（#484 先例）.
 
-    fina_indicator 无 update_flag 身份列，同键多行是源端多版本发布；
-    全字段请求下行彼此可区分。挑选行时按整行哈希排序 keep-last——
-    同一行集合无论源端返回顺序如何都选出同一行（重试幂等，
-    correctness review #6）。
+    #591 选版语义（2026-10-23 探针实证 period=20260331：值不同的同键行
+    1022/1022 为 update_flag 0/1 版本共存，旧行 null 新行有值，真同键
+    改值为 0）：**update_flag='1' 优先**；同 flag 平局按整行哈希排序
+    keep-last——同一行集合无论源端返回顺序如何都选出同一行（重试幂等，
+    correctness review #6）。update_flag 列缺失时回退纯哈希排序（旧行为）。
+    选版后 update_flag 即完成使命，不进输出帧（store schema 不变）。
     """
     if frame.is_empty():
         return frame
-    return (
-        frame.with_columns(_row_hash_expr(frame).alias("_dedupe_hash"))
-        .sort("_dedupe_hash")
-        .unique(
-            subset=["source_ticker", "report_date", "knowledge_date"],
-            keep="last",
+    work = frame.with_columns(_row_hash_expr(frame).alias("_dedupe_hash"))
+    if "update_flag" in frame.columns:
+        work = work.sort(
+            [
+                (pl.col("update_flag") == "1").cast(pl.UInt8).fill_null(0),
+                pl.col("_dedupe_hash"),
+            ]
         )
-        .drop("_dedupe_hash")
-    )
+        drop_cols = ["_dedupe_hash", "update_flag"]
+    else:
+        # 正常请求恒含 update_flag（显式字段集）；缺列意味着源端/代理
+        # 行为漂移，选版退化为纯哈希——告警可见，不静默（correctness F3）。
+        logger.warning(
+            "update_flag missing in fina response; hash-only dedup fallback",
+            event="fina_dedupe_update_flag_missing",
+        )
+        work = work.sort("_dedupe_hash")
+        drop_cols = ["_dedupe_hash"]
+    return work.unique(
+        subset=["source_ticker", "report_date", "knowledge_date"],
+        keep="last",
+    ).drop(drop_cols)
 
 
 def _row_hash_expr(frame: pl.DataFrame) -> pl.Expr:
@@ -225,11 +275,14 @@ class FundamentalTushareAdapter(BaseTushareAdapter):
             # 只保留合并报表（report_type=1；调整/更正类 vintage 排除，
             # 有消费需求再扩），同一披露键（ts_code, end_date, f_ann_date）
             # 取 update_flag=1（最新）行。
+            # #591：本块仅适用财务三表（披露锚 f_ann_date）；fina_indicator
+            # 披露锚是 ann_date 且选版由 _dedupe_fina_disclosure_key 承担，
+            # 不经此块。
             if "report_type" in response.columns:
                 response = response.filter(
                     pl.col("report_type").is_null() | (pl.col("report_type") == "1")
                 )
-            if "update_flag" in response.columns:
+            if "update_flag" in response.columns and "f_ann_date" in response.columns:
                 response = response.sort("update_flag").unique(
                     subset=["ts_code", "end_date", "f_ann_date"], keep="last"
                 )
@@ -574,11 +627,11 @@ class FundamentalTushareAdapter(BaseTushareAdapter):
         """
         获取官方口径财务指标 (#521).
 
-        三表衍生指标的官方对照源：118 指标列透传（mapping 无 output_columns），
-        kd=ann_date（公告锚）。无 report_type/update_flag 列（2026-10-06 实测），
-        行身份 = (ts_code, end_date, ann_date)；跨公告日的修订以新 ann_date
-        版本呈现；**同披露键**（同 ts_code/end_date/ann_date）的字节级
-        重复行按确定性去重（见 _dedupe_fina_disclosure_key）。
+        三表衍生指标的官方对照源：指标列透传（mapping 无 output_columns），
+        kd=ann_date（公告锚）。同披露键多版本共存：跨公告日的修订以新
+        ann_date 版本呈现；**同披露键**（同 ts_code/end_date/ann_date）的
+        update_flag 0/1 版本行按 #591 选版语义去重（'1' 优先，见
+        _dedupe_fina_disclosure_key）。
         单位：每股指标元/股、比率 %、绝对额元。
 
         Args:
@@ -588,13 +641,13 @@ class FundamentalTushareAdapter(BaseTushareAdapter):
             end_date: 公告结束日期 (YYYYMMDD，配 ts_code)
 
         """
-        # 全字段请求：只请求身份列会让同披露键的多版本行折叠成重复行，
-        # 触发翻页守卫拒绝（2026-10-06 实测 in-page 重复 875 行）；
-        # 全字段行彼此可区分，再到映射后按披露键去重 keep-last。
+        # 显式字段集（含 update_flag）：源端默认列集不含选版判别列（#591）；
+        # 全字段请求还让同披露键的多版本行彼此可区分，避免翻页守卫把同键
+        # 行折叠成 in-page 重复而拒收（2026-10-06 实测 in-page 重复 875 行）。
         result = self._fetch_financial(
             dataset="fina_indicator",
             api_name="fina_indicator",
-            fields="",
+            fields=_FINA_INDICATOR_REQUEST_FIELDS,
             mapping=FINA_INDICATOR_MAPPING,
             log_name="fina indicator",
             extra_params={
@@ -624,7 +677,8 @@ class FundamentalTushareAdapter(BaseTushareAdapter):
         """
         # 源端存在字节级重复行（2026-10-06 实测同 period 响应 in-page 重复
         # 875+ 行，且与请求字段集无关）——自动翻页的重复守卫会拒收。fina
-        # 端点走调用方自管分页（单页语义），取尽后统一按披露键去重。
+        # 端点走调用方自管分页（单页语义），取尽后统一按披露键去重
+        # （#591 显式字段集含 update_flag，选版 '1' 优先）。
         params: dict[str, str | None] = {
             "period": period,
             "ann_date": ann_date,
@@ -638,7 +692,7 @@ class FundamentalTushareAdapter(BaseTushareAdapter):
             while True:
                 page = self._client.query(
                     api_name="fina_indicator_vip",
-                    fields="",
+                    fields=_FINA_INDICATOR_REQUEST_FIELDS,
                     limit=_FINA_PAGE_SIZE,
                     offset=offset,
                     **active,
