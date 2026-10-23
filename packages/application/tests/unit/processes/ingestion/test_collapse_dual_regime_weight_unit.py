@@ -57,7 +57,7 @@ def test_duplicate_form_tie_keeps_old_regime() -> None:
     out = _collapse_dual_regime_weight_month(frame, "source_ticker")
     assert out.height == 2
     assert all(t.startswith("83") for t in out["source_ticker"])
-    assert abs(out["weight"].sum() - 100.0) < 0.01
+    assert abs(float(out["weight"].sum()) - 100.0) < 0.01
 
 
 @pytest.mark.unit
@@ -120,7 +120,7 @@ def test_complementary_month_keeps_union() -> None:
         _complementary_month_frame(), "source_ticker"
     )
     assert out.height == 5
-    assert abs(out["weight"].sum() - 100.0) < 0.01
+    assert abs(float(out["weight"].sum()) - 100.0) < 0.01
 
 
 @pytest.mark.unit

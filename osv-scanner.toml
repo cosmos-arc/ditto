@@ -29,3 +29,8 @@ ignoreUntil = 2027-01-07
 id = "GHSA-vxj4-q4g9-crj7"
 reason = "virtualenv 修复版 21.14.7 起需 packaging>=26.3，被 prefect 依赖上限阻断；dev-only 工具，不进运行时制品。"
 ignoreUntil = 2027-01-07
+
+[[IgnoredVulns]]
+id = "GHSA-558c-9hv2-4prj"
+reason = "virtualenv 修复版 21.14.9 需 packaging>=26.3，被 prefect 依赖上限阻断（2026-10-23 新公告，与上方 10-22 四条同根同阻）；dev-only 工具，不进运行时制品。"
+ignoreUntil = 2027-01-07
