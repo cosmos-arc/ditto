@@ -245,3 +245,52 @@ class TestFinaIndicatorDedupDeterminism:
 
         assert frame.height == 1
         assert frame["eps"].dtype == pl.Float64
+
+    def _flag_version_rows(self) -> pl.DataFrame:
+        # #591 形态：同披露键 update_flag 0/1 共存，旧版 null 新版有值
+        return pl.DataFrame(
+            {
+                "source_ticker": ["600519.SH", "600519.SH"],
+                "report_date": [date(2026, 3, 31), date(2026, 3, 31)],
+                "knowledge_date": [date(2026, 4, 28), date(2026, 4, 28)],
+                "update_flag": ["0", "1"],
+                "fcff": [None, 1234.5],
+                "fcfe": [None, 987.6],
+            }
+        )
+
+    def test_flag_one_row_wins_over_flag_zero(self) -> None:
+        from ditto_data.sources.tushare.adapters.fundamental import (
+            _dedupe_fina_disclosure_key,
+        )
+
+        for order in (self._flag_version_rows(), self._flag_version_rows().reverse()):
+            out = _dedupe_fina_disclosure_key(order)
+            assert out.height == 1
+            assert out["fcff"][0] == 1234.5
+            assert out["fcfe"][0] == 987.6
+            # 选版判别列完成使命后不进输出帧（store schema 不变）
+            assert "update_flag" not in out.columns
+
+    def test_flag_null_falls_back_to_hash_dedup(self) -> None:
+        from ditto_data.sources.tushare.adapters.fundamental import (
+            _dedupe_fina_disclosure_key,
+        )
+
+        frame = self._flag_version_rows().with_columns(
+            pl.lit(None, dtype=pl.String).alias("update_flag")
+        )
+        out = _dedupe_fina_disclosure_key(frame)
+        assert out.height == 1
+        # 回退旧行为：确定性哈希选行，两序一致
+        assert out.equals(_dedupe_fina_disclosure_key(frame.reverse()))
+        assert "update_flag" not in out.columns
+
+    def test_update_flag_stays_string_through_normalize(self) -> None:
+        from ditto_data.sources.tushare.adapters.fundamental import (
+            _normalize_fina_numeric_columns,
+        )
+
+        normalized = _normalize_fina_numeric_columns(self._flag_version_rows())
+        assert normalized["update_flag"].dtype == pl.String
+        assert normalized["fcff"].dtype == pl.Float64
