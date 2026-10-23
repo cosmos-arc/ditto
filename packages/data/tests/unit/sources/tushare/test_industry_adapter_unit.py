@@ -113,6 +113,21 @@ class TestIndustryTushareAdapterFetchSWIndustryConcepts:
                 "is_new": ["Y", "Y"],
             }
         )
+        exited = pl.DataFrame(
+            {
+                "l1_code": ["801010.SI"],
+                "l1_name": ["农林牧渔"],
+                "l2_code": ["801011.SI"],
+                "l2_name": ["种植业"],
+                "l3_code": ["850111.SI"],
+                "l3_name": ["种子"],
+                "ts_code": ["000663.SZ"],
+                "name": ["永安林业"],
+                "in_date": ["19961206"],
+                "out_date": ["20160630"],
+                "is_new": ["N"],
+            }
+        )
         mock_client.query.side_effect = [
             pl.DataFrame(
                 {
@@ -121,25 +136,27 @@ class TestIndustryTushareAdapterFetchSWIndustryConcepts:
                 }
             ),
             members,
+            exited,
         ]
 
         # Act
         adapter = IndustryTushareAdapter(_client=mock_client)
         result = adapter.fetch_sw_industry_concepts(knowledge_date=date(2026, 9, 1))
 
-        # Assert
-        assert len(result) == 2
+        # Assert：Y∪N 全量账本（#593），当前 2 行 + 退出 1 行
+        assert len(result) == 3
+        exited_rows = result.filter(pl.col("effective_to").is_not_null())
+        assert exited_rows["instrument_id"].to_list() == ["000663.SZ"]
+        assert exited_rows["effective_to"].to_list() == [date(2016, 6, 30)]
         assert "instrument_id" in result.columns
         assert "industry_name" in result.columns
         assert result["knowledge_date"].unique().to_list() == [date(2026, 9, 1)]
-        called_apis = [
-            call.kwargs["api_name"] for call in mock_client.query.call_args_list
-        ]
-        assert called_apis == [
-            "index_classify",
-            "index_member_all",
-        ]
-        assert mock_client.query.call_args_list[1].kwargs["l1_code"] == "801010.SI"
+        member_calls = mock_client.query.call_args_list[1:]
+        assert all(
+            call.kwargs["api_name"] == "index_member_all" for call in member_calls
+        )
+        assert {call.kwargs["is_new"] for call in member_calls} == {"Y", "N"}
+        assert all(call.kwargs["l1_code"] == "801010.SI" for call in member_calls)
 
     def test_fetch_sw_industry_concepts_historical_filter(
         self,
@@ -163,6 +180,8 @@ class TestIndustryTushareAdapterFetchSWIndustryConcepts:
                 "is_new": ["N", "Y", "Y"],
             }
         )
+        current = members.filter(pl.col("is_new") == "Y")
+        exited = members.filter(pl.col("is_new") == "N")
         mock_client.query.side_effect = [
             pl.DataFrame(
                 {
@@ -170,9 +189,13 @@ class TestIndustryTushareAdapterFetchSWIndustryConcepts:
                     "industry_name": ["农林牧渔", "采掘", "化工"],
                 }
             ),
-            members.filter(pl.col("l1_code") == "801010.SI"),
-            members.filter(pl.col("l1_code") == "801020.SI"),
-            members.filter(pl.col("l1_code") == "801030.SI"),
+            # 每行业 Y 帧后跟 N 帧（#593 两维全量账本）
+            current.filter(pl.col("l1_code") == "801010.SI"),
+            exited.filter(pl.col("l1_code") == "801010.SI"),
+            current.filter(pl.col("l1_code") == "801020.SI"),
+            exited.filter(pl.col("l1_code") == "801020.SI"),
+            current.filter(pl.col("l1_code") == "801030.SI"),
+            exited.filter(pl.col("l1_code") == "801030.SI"),
         ]
 
         # Act
@@ -182,7 +205,9 @@ class TestIndustryTushareAdapterFetchSWIndustryConcepts:
             knowledge_date=date(2026, 9, 1),
         )
 
-        # Only memberships effective on the requested historical date survive.
+        # 只有请求时点仍在生效的归属存活。000001 的退出边界（2019-12-31）
+        # 经 N 维进入账本后在 asof=2020-01-01 正确滤除——修复前该成员
+        # 根本不可达，历史快照对"仍在业成员"误报缺失。
         assert result["instrument_id"].to_list() == ["000002.SZ"]
         assert result["knowledge_date"].to_list() == [date(2026, 9, 1)]
         assert all(
@@ -195,6 +220,7 @@ class TestIndustryTushareAdapterFetchSWIndustryConcepts:
     ) -> None:
         """Only exchange-resolvable A-share tickers may enter mappings."""
         mock_client = mocker.Mock()
+        empty_n = pl.DataFrame({"l1_code": [], "ts_code": []})
         mock_client.query.side_effect = [
             pl.DataFrame(
                 {
@@ -217,6 +243,7 @@ class TestIndustryTushareAdapterFetchSWIndustryConcepts:
                     "is_new": ["Y", "Y"],
                 }
             ),
+            empty_n,
         ]
 
         result = IndustryTushareAdapter(_client=mock_client).fetch_sw_industry_concepts(
@@ -286,6 +313,7 @@ class TestIndustryTushareAdapterFetchSWIndustryL3:
                 }
             ),
             members,
+            members.head(0),
         ]
 
         # Act

@@ -176,10 +176,10 @@ def test_macro_handler_preserves_non_tushare_provider_contract(
 
 
 @pytest.mark.unit
-def test_industry_mapping_handler_binds_partition_asof_and_retrieval_date(
+def test_industry_mapping_handler_fetches_full_ledger(
     sources: _MockSources,
 ) -> None:
-    """Historical partitions must not ingest the provider's current members."""
+    """#593：摄取取全量成员账本（is_new Y∪N 含退出成员），asof 过滤交读取端。"""
     sources.metadata.fetch_sw_industry_concepts.return_value = pl.DataFrame()
     handlers = build_daily_fetch_handlers(
         sources.fetchers,
@@ -193,7 +193,7 @@ def test_industry_mapping_handler_binds_partition_asof_and_retrieval_date(
     handlers[Dataset.INDUSTRY_MAPPING]()
 
     sources.metadata.fetch_sw_industry_concepts.assert_called_once_with(
-        asof_date="2024-03-29",
+        asof_date=None,
         level=1,
         knowledge_date=date.today(),
     )

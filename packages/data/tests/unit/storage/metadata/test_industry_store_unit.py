@@ -412,3 +412,129 @@ class TestIndustryMappingReaderAllLevels:
         assert len(results_sw) == 3
         assert len(results_csrc) == 1
         assert results_csrc[0]["industry_id"] == "M0001"
+
+
+@pytest.mark.integration
+class TestIndustryMappingWriterLedgerTransitions:
+    """#593 correctness F1/F2：全量账本跨轮次区间转换语义."""
+
+    @pytest.fixture(autouse=True)
+    def setup(self, sqlite_client: SQLiteClient) -> None:
+        self.client = sqlite_client
+        self.writer = IndustryMappingWriter(self.client, _mock_cache())
+        self.client.execute(
+            """INSERT INTO instrument
+            (instrument_id, ticker, name, exchange, asset_class, list_date)
+            VALUES (1000001, '000001', '测试证券', 'SZSE', 'stock', '2020-01-01')"""
+        )
+        for iid, name in (("801010.SI", "农林牧渔"), ("801140.SI", "轻工制造")):
+            self.client.execute(
+                """INSERT INTO industry_basic
+                (industry_id, industry_name, industry_level, source)
+                VALUES (?, ?, 'L1', 'sw')""",
+                [iid, name],
+            )
+        self.client.commit()
+        self.reader = IndustryMappingReader(self.client, _mock_cache())
+
+    def _rows(self, instrument_id: int = 1000001) -> list[dict]:
+        return self.client.fetchall(
+            "SELECT * FROM industry_mapping WHERE instrument_id = ?",
+            [instrument_id],
+        )
+
+    def test_y_to_n_exit_closes_open_row_no_phantom(self) -> None:
+        # Run W：Y 开放行；Run W+1：同成员退出（N 行带 out_date）
+        self.writer.update_mapping(
+            IndustryMapping(
+                instrument_id=1000001,
+                industry_id="801010.SI",
+                source="sw",
+                effective_from="1996-12-06",
+                entry_reason="SW2021",
+            )
+        )
+        self.writer.update_mapping(
+            IndustryMapping(
+                instrument_id=1000001,
+                industry_id="801010.SI",
+                source="sw",
+                effective_from="1996-12-06",
+                effective_to="2026-10-20",
+                entry_reason="SW2021",
+            )
+        )
+        rows = self._rows()
+        assert len(rows) == 1  # 无幻影当前行
+        assert rows[0]["effective_to"] == "2026-10-20"
+        # 当前与 asof>out 都不再返回该行业
+        assert self.reader.get_stock_industry(1000001, None) is None
+        assert self.reader.get_stock_industry(1000001, "2030-01-01") is None
+        assert self.reader.get_stock_industry(1000001, "2020-01-01") is not None
+
+    def test_transition_a_to_b_intervals_disjoint(self) -> None:
+        # A 退出（out=2026-06-30）→ B 进入（in=2026-07-31）：区间不重叠
+        self.writer.update_mapping(
+            IndustryMapping(
+                instrument_id=1000001,
+                industry_id="801010.SI",
+                source="sw",
+                effective_from="2010-01-01",
+                effective_to="2026-06-30",
+                entry_reason="SW2021",
+            )
+        )
+        self.writer.update_mapping(
+            IndustryMapping(
+                instrument_id=1000001,
+                industry_id="801140.SI",
+                source="sw",
+                effective_from="2026-07-31",
+                entry_reason="SW2021",
+            )
+        )
+        # 退出窗口内 (2026-07-15) 两边都不在
+        assert self.reader.get_stock_industry(1000001, "2026-07-15") is None
+        assert (
+            self.reader.get_stock_industry(1000001, "2026-08-01")["industry_id"]
+            == "801140.SI"
+        )
+
+    def test_out_date_revision_updates_same_key(self) -> None:
+        for to in ("2026-06-30", "2026-07-31"):
+            self.writer.update_mapping(
+                IndustryMapping(
+                    instrument_id=1000001,
+                    industry_id="801010.SI",
+                    source="sw",
+                    effective_from="2010-01-01",
+                    effective_to=to,
+                    entry_reason="SW2021",
+                )
+            )
+        rows = self._rows()
+        assert len(rows) == 1
+        assert rows[0]["effective_to"] == "2026-07-31"
+
+    def test_full_ledger_rerun_idempotent(self) -> None:
+        ledger = [
+            IndustryMapping(
+                instrument_id=1000001,
+                industry_id="801010.SI",
+                source="sw",
+                effective_from="2010-01-01",
+                effective_to="2026-06-30",
+                entry_reason="SW2021",
+            ),
+            IndustryMapping(
+                instrument_id=1000001,
+                industry_id="801140.SI",
+                source="sw",
+                effective_from="2026-07-01",
+                entry_reason="SW2021",
+            ),
+        ]
+        for _ in range(2):
+            for m in ledger:
+                self.writer.update_mapping(m)
+        assert len(self._rows()) == 2

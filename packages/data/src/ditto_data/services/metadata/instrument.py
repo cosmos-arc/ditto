@@ -788,9 +788,11 @@ class InstrumentService:
         resolved = self.resolve_instrument_ids_batch(identifiers, source, None)
         unresolved = sorted(set(identifiers) - resolved.keys())
         if unresolved:
-            raise ValueError(
-                f"industry mapping contains unresolved instruments: {len(unresolved)}"
-            )
+            # #593：全量账本宇宙=历史全部成员，fail-closed 保留，但样本
+            # 进错误消息让周度失败一步可定位（注册缺口→刷 stock_basic）。
+            sample = ", ".join(unresolved[:10])
+            head = f"industry mapping unresolved instruments: {len(unresolved)}"
+            raise ValueError(f"{head} sample=[{sample}]")
         rows = sorted(
             df.to_dicts(),
             key=lambda row: (str(row["instrument_id"]), str(row["industry_date"])),
