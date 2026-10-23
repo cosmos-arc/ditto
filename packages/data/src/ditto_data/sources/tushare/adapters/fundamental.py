@@ -144,7 +144,9 @@ def _normalize_fina_numeric_columns(frame: pl.DataFrame) -> pl.DataFrame:
     透传列的 dtype 由响应推断（Int64/Float64/Null 随当日值漂移）；
     不归一则日更全窗口重拉在 VERIFY_IDENTICAL 下因 dtype 漂移硬失败。
     身份/日期列之外全部 cast Float64（strict 容忍偶发字符串）。
-    update_flag 是选版判别列（#591），保持 String 不参与数值归一。
+    update_flag 是选版判别列（#591），显式 cast String——透传 dtype 由
+    响应推断，源端改送数值 0/1 时字符串比较会 ComputeError 硬失败
+    （correctness F2；防御先例见 fetch_earnings_forecast）。
     """
     if frame.is_empty():
         return frame
@@ -154,7 +156,12 @@ def _normalize_fina_numeric_columns(frame: pl.DataFrame) -> pl.DataFrame:
         for name, dtype in frame.schema.items()
         if name not in identity and dtype != pl.Float64
     ]
-    return frame.with_columns(casts) if casts else frame
+    flag_casts = (
+        [pl.col("update_flag").cast(pl.String)]
+        if "update_flag" in frame.columns
+        else []
+    )
+    return frame.with_columns([*casts, *flag_casts]) if casts or flag_casts else frame
 
 
 def _dedupe_fina_disclosure_key(frame: pl.DataFrame) -> pl.DataFrame:
@@ -180,6 +187,12 @@ def _dedupe_fina_disclosure_key(frame: pl.DataFrame) -> pl.DataFrame:
         )
         drop_cols = ["_dedupe_hash", "update_flag"]
     else:
+        # 正常请求恒含 update_flag（显式字段集）；缺列意味着源端/代理
+        # 行为漂移，选版退化为纯哈希——告警可见，不静默（correctness F3）。
+        logger.warning(
+            "update_flag missing in fina response; hash-only dedup fallback",
+            event="fina_dedupe_update_flag_missing",
+        )
         work = work.sort("_dedupe_hash")
         drop_cols = ["_dedupe_hash"]
     return work.unique(
@@ -262,11 +275,14 @@ class FundamentalTushareAdapter(BaseTushareAdapter):
             # 只保留合并报表（report_type=1；调整/更正类 vintage 排除，
             # 有消费需求再扩），同一披露键（ts_code, end_date, f_ann_date）
             # 取 update_flag=1（最新）行。
+            # #591：本块仅适用财务三表（披露锚 f_ann_date）；fina_indicator
+            # 披露锚是 ann_date 且选版由 _dedupe_fina_disclosure_key 承担，
+            # 不经此块。
             if "report_type" in response.columns:
                 response = response.filter(
                     pl.col("report_type").is_null() | (pl.col("report_type") == "1")
                 )
-            if "update_flag" in response.columns:
+            if "update_flag" in response.columns and "f_ann_date" in response.columns:
                 response = response.sort("update_flag").unique(
                     subset=["ts_code", "end_date", "f_ann_date"], keep="last"
                 )
