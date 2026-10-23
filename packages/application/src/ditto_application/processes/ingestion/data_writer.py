@@ -147,6 +147,124 @@ def _validate_index_weight_totals(df: pl.DataFrame) -> None:
         )
 
 
+_DUAL_REGIME_TOLERANCE = 2.0
+
+
+def _collapse_dual_regime_weight_month(
+    df: pl.DataFrame, source_ticker_col: str
+) -> pl.DataFrame:
+    """
+    同一观察日的双制度月度权重归一 (#592，形态分化规则).
+
+    北交所 2025-10 换码过渡期，上游对同一 (index, 观察日) 会混发
+    43/83/87 老码与 920 新码两种制度行。两种实测形态（2026-10-23 全量
+    探针，899050.BJ）：
+    - **重复形**（2023-11）：两制度各为完整快照，子和各≈100、
+      合计≈200——保留行数多的制度；并列保留老码（与前后月连续）。
+    - **互补形**（2025-04~08）：两制度各携带部分成员（老码≈92 +
+      新码≈8），合计恰≈100——保留并集（同一快照的成员被拆到两种
+      代码制度）。
+    两种形态都不满足的月份不触碰，交由总额校验 fail-closed。
+    非北交所形状（无制度标注）不触碰。
+    """
+    if df.is_empty():
+        return df
+    ticker = pl.col(source_ticker_col)
+    old_regime = ticker.str.contains(r"^(43|83|87)\d{4}\.BJ$")
+    new_regime = ticker.str.contains(r"^920\d{3}\.BJ$")
+    if not df.filter(old_regime).height or not df.filter(new_regime).height:
+        return df
+    annotated = df.with_columns(
+        pl.when(old_regime)
+        .then(pl.lit("old"))
+        .when(new_regime)
+        .then(pl.lit("new"))
+        .otherwise(pl.lit(None))
+        .alias("_regime")
+    )
+    per_month = (
+        annotated.group_by("index_id", "trade_date")
+        .agg(
+            (pl.col("_regime") == "old").sum().alias("_old_rows"),
+            (pl.col("_regime") == "new").sum().alias("_new_rows"),
+            pl.when(pl.col("_regime") == "old")
+            .then(pl.col("weight"))
+            .otherwise(0.0)
+            .sum()
+            .alias("_old_sum"),
+            pl.when(pl.col("_regime") == "new")
+            .then(pl.col("weight"))
+            .otherwise(0.0)
+            .sum()
+            .alias("_new_sum"),
+        )
+        .filter((pl.col("_old_rows") > 0) & (pl.col("_new_rows") > 0))
+    )
+    if per_month.is_empty():
+        return df
+    # 重复形判定：两制度和都在 100±2 → 丢弃行数少的制度（并列丢新码）
+    duplicate_form = ((pl.col("_old_sum") - 100.0).abs() <= _DUAL_REGIME_TOLERANCE) & (
+        (pl.col("_new_sum") - 100.0).abs() <= _DUAL_REGIME_TOLERANCE
+    )
+    keep = per_month.select(
+        "index_id",
+        "trade_date",
+        pl.when(duplicate_form & (pl.col("_old_rows") >= pl.col("_new_rows")))
+        .then(pl.lit("old"))
+        .when(duplicate_form)
+        .then(pl.lit("new"))
+        # 互补形/未判定 → 保留全部（_keep_regime 为 null 时不过滤）
+        .otherwise(pl.lit(None))
+        .alias("_keep_regime"),
+    )
+    collapsed = keep.filter(pl.col("_keep_regime").is_not_null()).height
+    if collapsed:
+        logger.warning(
+            "index_weight collapsed dual-regime duplicate month",
+            event="index_weight_dual_regime_collapse",
+            months=collapsed,
+        )
+    return (
+        annotated.join(keep, on=["index_id", "trade_date"], how="left")
+        .filter(
+            pl.col("_keep_regime").is_null()
+            | pl.col("_regime").is_null()
+            | (pl.col("_regime") == pl.col("_keep_regime"))
+        )
+        .drop("_regime", "_keep_regime")
+    )
+
+
+def _settle_same_issuer_dual_code(
+    enriched_df: pl.DataFrame, source_ticker_col: str
+) -> pl.DataFrame:
+    """
+    FK 富化后的同发行人双码行确定性收敛 (#592 correctness F2).
+
+    互补形月里同一发行人可同时以新旧两码出现，别名解析后两行命中写侧
+    PK (index_id, instrument_id, trade_date)，ON CONFLICT 会静默吞行且
+    胜者随行序漂移。收敛：保 920 新码行（换码后权威口径），告警留痕。
+    """
+    pk_cols = ["index_id", "instrument_id", "trade_date"]
+    pk_dupes = enriched_df.group_by(pk_cols).len().filter(pl.col("len") > 1)
+    if not pk_dupes.height:
+        return enriched_df
+    is_new_code = pl.col(source_ticker_col).str.contains(r"^920\d{3}\.BJ$")
+    settled = (
+        enriched_df.with_columns(is_new_code.cast(pl.UInt8).alias("_r"))
+        .sort([*pk_cols, "_r"])
+        .unique(subset=pk_cols, keep="last")
+        .drop("_r")
+    )
+    logger.warning(
+        "index_weight settled same-issuer dual-code rows after FK",
+        event="index_weight_same_issuer_dual_code",
+        dropped_rows=enriched_df.height - settled.height,
+        affected_keys=pk_dupes.height,
+    )
+    return settled
+
+
 @dataclass(frozen=True)
 class _WriteContext:
     """Packed parameters for write handler dispatch."""
@@ -1046,6 +1164,7 @@ class IngestionDataWriter:
                 deduped_rows=deduped.height,
             )
         df = deduped
+        df = _collapse_dual_regime_weight_month(df, source_ticker_col)
         _validate_index_weight_totals(df)
         enriched_df = self._enrich_and_filter_fk_dataframe(
             df,
@@ -1055,6 +1174,10 @@ class IngestionDataWriter:
         )
         if enriched_df is None:
             return _to_write_result(dataset, year, df, 0)
+        # #592 correctness F2：互补形月里同一发行人可同时以新旧两码出现
+        # （FK 富化后同 instrument_id 双行，命中写侧 PK 会被 ON CONFLICT
+        # 静默吞行）。确定性收敛见 _settle_same_issuer_dual_code。
+        enriched_df = _settle_same_issuer_dual_code(enriched_df, source_ticker_col)
         rows_written = self._capital_store.save_index_weight(enriched_df)
         return _to_write_result(dataset, year, enriched_df, rows_written)
 

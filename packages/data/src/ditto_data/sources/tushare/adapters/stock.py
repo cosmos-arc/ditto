@@ -891,3 +891,29 @@ class StockTushareAdapter(BaseTushareAdapter):
             .unique()
             .with_columns(pl.lit("L").alias("list_status"))
         )
+
+    @traced("source.tushare.fetch_bse_code_mapping")
+    def fetch_bse_code_mapping(self) -> pl.DataFrame:
+        """
+        获取北交所新旧代码对照表 (#592).
+
+        官方专用端点 bse_mapping（doc_id=375）：北交所 2024-04~2025-10
+        存量切换 920 号段后的新旧代码映射，全量约 300 行内（一次拉全，
+        切换已完成、表为冻结历史）。列：o_code/n_code/name/list_date
+        （list_date 为旧代码上市日，作别名映射 effective_from 证据）。
+        """
+        with tushare_fetch_error_handler("bse_mapping", "bse_mapping"):
+            response = self._client.query(
+                api_name="bse_mapping",
+                fields="name,o_code,n_code,list_date",
+            )
+        if response.is_empty():
+            return pl.DataFrame(
+                schema={
+                    "name": pl.String,
+                    "o_code": pl.String,
+                    "n_code": pl.String,
+                    "list_date": pl.String,
+                }
+            )
+        return response.select("name", "o_code", "n_code", "list_date")

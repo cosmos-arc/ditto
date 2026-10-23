@@ -475,12 +475,31 @@ class InstrumentReader:
             包含证券数据的 DataFrame
 
         """
-        sql = """
+        # 枚举路径（无 ticker 过滤）用择优单行 JOIN：别名行（#592 北交所
+        # 老码等 is_primary=0 映射）会让同一 instrument fan-out 多行，
+        # 裸码解析/宇宙枚举按行数判歧义会误报。择优序 is_primary DESC →
+        # effective_from DESC → rowid（兼容 is_primary 缺省 0 的存量单行
+        # 映射——同 instrument 单行时该行即择优结果）。按 ticker 过滤的
+        # 路径必须宽 JOIN（别名老码查询靠它命中），不受此影响。
+        if query.source_tickers:
+            mapping_join = (
+                "LEFT JOIN instrument_mapping m ON s.instrument_id = m.instrument_id"
+            )
+        else:
+            mapping_join = (
+                "LEFT JOIN instrument_mapping m ON m.rowid = ("
+                "    SELECT mm.rowid FROM instrument_mapping mm"
+                "    WHERE mm.instrument_id = s.instrument_id"
+                "    ORDER BY mm.is_primary DESC, mm.effective_from DESC, mm.rowid"
+                "    LIMIT 1"
+                ")"
+            )
+        sql = f"""
             SELECT s.*, m.source, m.source_ticker
             FROM instrument s
-            LEFT JOIN instrument_mapping m ON s.instrument_id = m.instrument_id
+            {mapping_join}
             WHERE 1=1
-        """
+        """  # noqa: S608 - mapping_join 为上方受控字面量，不含外部输入
         params: list[Any] = []
 
         if query.instrument_ids:

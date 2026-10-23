@@ -1187,3 +1187,62 @@ class TestSqlInjectionProtection:
         # Verify the instrument table still exists
         result = self.client.fetchall("SELECT COUNT(*) as count FROM instrument")
         assert result[0]["count"] >= 1
+
+
+@pytest.mark.integration
+class TestBseAliasMappingReader:
+    """#592 correctness F1 回归：主映射 + 老码别名开放行的读取语义."""
+
+    @pytest.fixture(autouse=True)
+    def setup(self, sqlite_client: SQLiteClient) -> None:
+        self.client = sqlite_client
+        self.reader = InstrumentReader(self.client)
+        self.client.execute("""
+            INSERT INTO instrument (
+                instrument_id, ticker, name, exchange, asset_class, list_date
+            )
+            VALUES (1004807, '920418', '苏轴股份', 'BSE', 'stock', '2020-07-27')
+        """)
+        self.client.execute("""
+            INSERT INTO instrument_mapping
+            (instrument_id, source, source_ticker, effective_from, is_primary)
+            VALUES (1004807, 'tushare', '920418.BJ', '2020-07-27', 1)
+        """)
+        # 别名行：保守前史起点 + 开放区间（#592 写入形状）
+        self.client.execute("""
+            INSERT INTO instrument_mapping
+            (instrument_id, source, source_ticker, effective_from, is_primary)
+            VALUES (1004807, 'tushare', '430418.BJ', '1990-01-01', 0)
+        """)
+        self.client.commit()
+
+    def test_get_source_tickers_no_tie_conflict_with_alias(self) -> None:
+        out = self.reader.get_source_tickers(
+            1004807,
+            source="tushare",
+            asofs=["2024-06-01", "2025-12-01"],
+            cutoff="2026-10-24",
+        )
+        # 反查各时点都确定性回到主映射（effective_from 更大者）
+        assert out == {"2024-06-01": "920418.BJ", "2025-12-01": "920418.BJ"}
+
+    def test_find_securities_enumeration_single_row_per_instrument(self) -> None:
+        df = self.reader.find_securities(
+            SecurityQuery(asset_class="stock", source="tushare")
+        )
+        sub = df.filter(pl.col("instrument_id") == 1004807)
+        assert sub.height == 1
+        assert sub["source_ticker"][0] == "920418.BJ"
+
+    def test_find_securities_by_alias_ticker_still_resolves(self) -> None:
+        df = self.reader.find_securities(
+            SecurityQuery(source_tickers=["430418.BJ"], source="tushare")
+        )
+        assert df.height == 1
+        assert df["instrument_id"][0] == 1004807
+
+    def test_resolve_alias_current_semantics(self) -> None:
+        assert (
+            self.reader.resolve_instrument_id("430418.BJ", "tushare", asof=None)
+            == 1004807
+        )

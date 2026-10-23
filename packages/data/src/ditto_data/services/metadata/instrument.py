@@ -395,6 +395,85 @@ class InstrumentService:
         exchange = instrument.get("exchange")
         return str(exchange) if exchange is not None else None
 
+    @traced("metadata.identity.register_bse_code_aliases")
+    def register_bse_code_aliases(
+        self,
+        mappings: pl.DataFrame,
+        *,
+        observed_at: str,
+    ) -> dict[str, int]:
+        """
+        登记北交所新旧代码别名映射 (#592).
+
+        bse_mapping 权威对照（o_code→n_code）逐行：按当前注册表解析
+        n_code → instrument_id，经 register_source_mapping 为已注册证券
+        登记 ``instrument_mapping(source='tushare', source_ticker=o_code,
+        effective_from=1990-01-01, is_primary=0)`` 别名行。开放区间
+        （effective_to=NULL）使 FK 富化的当前语义可解析；effective_from
+        恒取保守前史起点而非旧码上市日——与主映射 effective_from（同一
+        上市日）并列会让 get_source_tickers 的 tie 守卫 fail-closed、
+        裸码枚举 fan-out 歧义（correctness F1，2026-10-23 实测 248/248
+        并列），早于主映射起点则反查排序天然选中新码主映射。
+
+        不推导规则（官方存在后三位冲突例外），仅接受权威表；n_code
+        未注册的行跳过并计数（fail open per-row，摘要告警），映射冲突
+        拒绝同样计数——两者都不中断整批。
+
+        Args:
+            mappings: bse_mapping 帧（列 name/o_code/n_code/list_date）.
+            observed_at: 观察时间（写入 created_at）.
+
+        Returns:
+            {"total", "available", "unresolved_n_code", "conflict"} 计数摘要
+            （available = 新写入或幂等已存在，register_source_mapping 的
+            True 不区分两者，对解析等效）.
+
+        """
+        if mappings.is_empty():
+            return {
+                "total": 0,
+                "available": 0,
+                "unresolved_n_code": 0,
+                "conflict": 0,
+            }
+        n_codes = sorted(set(mappings.get_column("n_code").to_list()))
+        resolved_new = self._instrument_reader.resolve_instrument_ids_batch(
+            n_codes, "tushare"
+        )
+        available = unresolved = conflict = 0
+        for row in mappings.iter_rows(named=True):
+            n_code = str(row["n_code"])
+            o_code = str(row["o_code"])
+            instrument_id = resolved_new.get(n_code)
+            if instrument_id is None:
+                unresolved += 1
+                continue
+            ok = self._instrument_writer.register_source_mapping(
+                instrument_id=instrument_id,
+                source="tushare",
+                source_ticker=o_code,
+                effective_from="1990-01-01",
+                observed_at=observed_at,
+            )
+            if ok:
+                available += 1
+            else:
+                conflict += 1
+        if unresolved or conflict:
+            logger.warning(
+                "bse alias registration left rows unresolved",
+                event="bse_alias_registration_incomplete",
+                total=mappings.height,
+                unresolved_n_code=unresolved,
+                conflict=conflict,
+            )
+        return {
+            "total": mappings.height,
+            "available": available,
+            "unresolved_n_code": unresolved,
+            "conflict": conflict,
+        }
+
     @traced("metadata.identity.resolve_config_reference_instruments")
     def resolve_config_reference_instruments(
         self,
