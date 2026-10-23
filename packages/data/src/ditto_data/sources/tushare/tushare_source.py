@@ -375,6 +375,10 @@ class TushareSource:
         """Fetch stock basic information. 委托给 stock_source.fetch_stock_basic."""
         return fetch_stock_basic(self._stock, source_ticker)
 
+    def fetch_bse_code_mapping(self) -> pl.DataFrame:
+        """Fetch BSE code mapping. 委托给 stock_source.fetch_bse_code_mapping (#592)."""
+        return self._stock.fetch_bse_code_mapping()
+
     def fetch_stock_daily(
         self,
         trade_date: str | None = None,
