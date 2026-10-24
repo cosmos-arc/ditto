@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -265,6 +266,82 @@ def _settle_same_issuer_dual_code(
     return settled
 
 
+# BSE 持仓码形：6 位数字 + .BJ（老码 43x/83x/87x 全段 + 新码 920 段，#592）。
+_BSE_CODE_PATTERN = re.compile(r"\d{6}\.BJ")
+
+
+def _settle_fund_portfolio_dual_code(
+    enriched_df: pl.DataFrame, holding_id_map: dict[str, int]
+) -> pl.DataFrame:
+    """
+    FK 富化后的 fund_portfolio 北交所双码持仓收敛 (#606).
+
+    tushare 可把同一 BSE 持仓同时挂新旧两码返回；写侧键含
+    holding_symbol 原码（双码=不同键），两行都落库后 instrument 级
+    聚合重复计数同一持仓（#599 F5）。收敛：holding_id_map 给出持仓码
+    →instrument 解析（含 #592 别名）时，同 (基金 instrument_id,
+    report_date, knowledge_date, 持仓 instrument) 的多码行保一行——
+    少 null 优先（保数据），平局取 920 新码（换码后权威口径），再平局
+    按 holding_symbol 升序保证全序。未解析码（map 外，如 .HK）各占
+    自身键，不参与收敛。确定性、重拉幂等。
+    """
+    if not holding_id_map:
+        return enriched_df
+    pk_cols = ["instrument_id", "report_date", "knowledge_date"]
+    joined = enriched_df.join(
+        pl.DataFrame(
+            {
+                "holding_symbol": list(holding_id_map),
+                "_holding_id": list(holding_id_map.values()),
+            }
+        ),
+        on="holding_symbol",
+        how="left",
+    ).with_columns(
+        # ponytail: null holding_symbol 行坍缩为同一 null 键且胜者随输入
+        # 行序漂移——与修复前 store 批内同键去重同类坍缩（非回归），
+        # 真要逐行保键时改用行唯一占位键。
+        pl.when(pl.col("_holding_id").is_not_null())
+        .then(pl.format("id:{}", pl.col("_holding_id")))
+        .otherwise(pl.format("code:{}", pl.col("holding_symbol")))
+        .alias("_holding_key")
+    )
+    settle_keys = [*pk_cols, "_holding_key"]
+    pk_dupes = joined.group_by(settle_keys).len().filter(pl.col("len") > 1)
+    if not pk_dupes.height:
+        return enriched_df
+    value_cols = [
+        c for c in enriched_df.columns if c not in {*pk_cols, "holding_symbol"}
+    ]
+    # 空 value_cols（仅键+代码列的帧）不能交给 sum_horizontal([])——空
+    # fold 会 ComputeError；此时收敛退化为纯代码偏好。
+    null_count = (
+        pl.sum_horizontal([pl.col(c).is_null().cast(pl.UInt32) for c in value_cols])
+        if value_cols
+        else pl.lit(0, dtype=pl.UInt32)
+    ).alias("_nulls")
+    is_new_code = pl.col("holding_symbol").str.contains(r"^920\d{3}\.BJ$")
+    settled = (
+        joined.with_columns(null_count, is_new_code.cast(pl.UInt8).alias("_r"))
+        .sort(
+            [*settle_keys, "_nulls", "_r", "holding_symbol"],
+            descending=[False, False, False, False, True, False, False],
+        )
+        .unique(subset=settle_keys, keep="last")
+        .drop("_nulls", "_r", "_holding_id", "_holding_key")
+        # unique 不保序——按写侧键全序输出，否则同输入的 checksum 逐次
+        # 漂移（correctness review #606 F2，fund_portfolio 缺席 _SORT_KEYS）。
+        .sort([*pk_cols, "holding_symbol"])
+    )
+    logger.warning(
+        "fund_portfolio settled BSE dual-code holding rows after FK",
+        event="fund_portfolio_bse_dual_code",
+        dropped_rows=enriched_df.height - settled.height,
+        affected_keys=pk_dupes.height,
+    )
+    return settled
+
+
 def _settle_fina_indicator_dual_code(
     enriched_df: pl.DataFrame, source_ticker_col: str = "source_ticker"
 ) -> pl.DataFrame:
@@ -303,6 +380,9 @@ def _settle_fina_indicator_dual_code(
         )
         .unique(subset=pk_cols, keep="last")
         .drop("_nulls", "_r")
+        # 同 #606 F2：全序输出防 checksum 逐次漂移（fina_indicator 同样
+        # 缺席 _SORT_KEYS）。
+        .sort([*pk_cols, source_ticker_col])
     )
     logger.warning(
         "fina_indicator settled BSE dual-code disclosure rows after FK",
@@ -1354,9 +1434,12 @@ class IngestionDataWriter:
         parquet_method = parquet_save_methods.get(dataset_enum)
         if parquet_method is not None:
             if dataset_enum is Dataset.FINA_INDICATOR:
-                # #599：BSE 新老双码同披露键收敛（fund_portfolio 键含
-                # holding_symbol，双码=不同键，不适用）。
+                # #599：BSE 新老双码同披露键收敛（fund_portfolio 见 #606）。
                 enriched_df = _settle_fina_indicator_dual_code(enriched_df)
+            elif dataset_enum is Dataset.FUND_PORTFOLIO:
+                # #606：键含 holding_symbol 原码，双码=不同键各存一行，
+                # instrument 级聚合重复计数 → 持仓解析后收敛。
+                enriched_df = self._settle_fund_portfolio_dual_code(enriched_df)
             records_written = parquet_method(
                 enriched_df, year, on_duplicate=on_duplicate
             )
@@ -1369,6 +1452,32 @@ class IngestionDataWriter:
             enriched_df,
             records_written,
         )
+
+    def _settle_fund_portfolio_dual_code(
+        self, enriched_df: pl.DataFrame
+    ) -> pl.DataFrame:
+        """fund_portfolio 双码持仓收敛入口（#606）：BSE 形持仓码批量解析."""
+        if "holding_symbol" not in enriched_df.columns:
+            return enriched_df
+        # 双码对只可能出现在 BSE 码形（6 位数字+.BJ——老码覆盖 43x/83x/
+        # 87x 全段、新码 920 段，#592 别名按权威 bse_mapping 逐行登记
+        # 不限前缀）；非 BSE 码不解析不收敛，省整批持仓解析开销。
+        bse_codes = sorted(
+            code
+            for code in enriched_df["holding_symbol"].unique().to_list()
+            if isinstance(code, str) and _BSE_CODE_PATTERN.fullmatch(code)
+        )
+        if not bse_codes:
+            return enriched_df
+        holding_id_map = self._metadata_service.instrument.resolve_instrument_ids_batch(
+            identifiers=bse_codes,
+            source=self._source_name,
+            asof=None,
+        )
+        if not holding_id_map:
+            # 全部未解析（别名未注册/被拒）：无可收敛对象，帧原样返回。
+            return enriched_df
+        return _settle_fund_portfolio_dual_code(enriched_df, holding_id_map)
 
     def _write_capital(
         self,
