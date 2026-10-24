@@ -1,0 +1,99 @@
+"""#599 fina_indicator 北交所双码同披露键收敛单元测试."""
+
+import polars as pl
+import pytest
+from ditto_application.processes.ingestion.data_writer import (
+    _settle_fina_indicator_dual_code,
+)
+
+
+def _dual_code_frame(
+    old_values: dict[str, object], new_values: dict[str, object]
+) -> pl.DataFrame:
+    """430017.BJ ↔ 920017.BJ 同披露键双行，指标列由参数给定."""
+    base = {
+        "instrument_id": [1005126, 1005126],
+        "report_date": ["2012-12-31", "2012-12-31"],
+        "knowledge_date": ["2013-04-27", "2013-04-27"],
+        "source_ticker": ["430017.BJ", "920017.BJ"],
+    }
+    indicators = sorted(set(old_values) | set(new_values))
+    for col in indicators:
+        base[col] = [old_values.get(col), new_values.get(col)]
+    return pl.DataFrame(base)
+
+
+@pytest.mark.unit
+def test_no_duplicate_keys_untouched() -> None:
+    frame = _dual_code_frame({"eps": 0.1}, {"eps": 0.1})
+    frame = frame.filter(pl.col("source_ticker") == "430017.BJ")
+    out = _settle_fina_indicator_dual_code(frame)
+    assert out.equals(frame)
+
+
+@pytest.mark.unit
+def test_identical_values_keeps_new_code() -> None:
+    # 52/55 实测形态：两码指标值完全相同 → 保 920 新码行
+    frame = _dual_code_frame({"eps": 0.4, "roe": 20.9}, {"eps": 0.4, "roe": 20.9})
+    out = _settle_fina_indicator_dual_code(frame)
+    assert out.height == 1
+    assert out["source_ticker"].to_list() == ["920017.BJ"]
+    assert out["eps"].to_list() == [0.4]
+
+
+@pytest.mark.unit
+def test_old_richer_keeps_old() -> None:
+    # 430017 实测形态：老码行 fcff 有值、新码行 null → 少 null 优先保老码
+    frame = _dual_code_frame(
+        {"eps": 0.1, "fcff": -112842757.9578}, {"eps": 0.1, "fcff": None}
+    )
+    out = _settle_fina_indicator_dual_code(frame)
+    assert out.height == 1
+    assert out["source_ticker"].to_list() == ["430017.BJ"]
+    assert out["fcff"].to_list() == [-112842757.9578]
+
+
+@pytest.mark.unit
+def test_new_richer_keeps_new() -> None:
+    frame = _dual_code_frame({"eps": 0.1, "fcff": None}, {"eps": 0.1, "fcff": 1.5})
+    out = _settle_fina_indicator_dual_code(frame)
+    assert out.height == 1
+    assert out["source_ticker"].to_list() == ["920017.BJ"]
+    assert out["fcff"].to_list() == [1.5]
+
+
+@pytest.mark.unit
+def test_equal_null_count_tie_keeps_new_code() -> None:
+    # 同 null 数、不同值：平局取 920 新码（换码后权威口径）
+    frame = _dual_code_frame({"eps": 0.1, "roe": None}, {"eps": 0.2, "roe": None})
+    out = _settle_fina_indicator_dual_code(frame)
+    assert out.height == 1
+    assert out["source_ticker"].to_list() == ["920017.BJ"]
+    assert out["eps"].to_list() == [0.2]
+
+
+@pytest.mark.unit
+def test_settle_is_idempotent() -> None:
+    frame = _dual_code_frame({"eps": 0.1, "fcff": None}, {"eps": 0.1, "fcff": 2.0})
+    once = _settle_fina_indicator_dual_code(frame)
+    twice = _settle_fina_indicator_dual_code(once)
+    assert once.equals(twice)
+
+
+@pytest.mark.unit
+def test_non_duplicate_groups_preserved() -> None:
+    # 其他披露键的行不触碰
+    frame = _dual_code_frame({"eps": 0.4}, {"eps": 0.4}).vstack(
+        pl.DataFrame(
+            {
+                "instrument_id": [1004807],
+                "report_date": ["2012-03-31"],
+                "knowledge_date": ["2012-06-01"],
+                "source_ticker": ["430418.BJ"],
+                "eps": [None],
+            }
+        )
+    )
+    out = _settle_fina_indicator_dual_code(frame)
+    assert out.height == 2
+    assert out.filter(pl.col("instrument_id") == 1004807).height == 1

@@ -265,6 +265,46 @@ def _settle_same_issuer_dual_code(
     return settled
 
 
+def _settle_fina_indicator_dual_code(
+    enriched_df: pl.DataFrame, source_ticker_col: str = "source_ticker"
+) -> pl.DataFrame:
+    """
+    FK 富化后的 fina_indicator 北交所双码同披露键收敛 (#599).
+
+    tushare 把 BSE 历史行同时挂在新旧两码下返回，#592 别名注册后两码都
+    解析到同一 instrument_id，适配器按 source_ticker 选版（两码不同键）
+    无法收敛，双行命中写侧键 (instrument_id, report_date, knowledge_date)
+    → 批内冲突 raise。收敛：少 null 行优先（920017 实测老码行多 4 个
+    fcff 族值，保数据），平局取 920 新码行（换码后权威口径）；确定性、
+    重拉幂等。同 ticker 同键行已被适配器选版合并，(null 数, 新码) 全平
+    的分歧不可达。
+    """
+    pk_cols = ["instrument_id", "report_date", "knowledge_date"]
+    pk_dupes = enriched_df.group_by(pk_cols).len().filter(pl.col("len") > 1)
+    if not pk_dupes.height:
+        return enriched_df
+    value_cols = [
+        c for c in enriched_df.columns if c not in {*pk_cols, source_ticker_col}
+    ]
+    null_count = pl.sum_horizontal(
+        [pl.col(c).is_null().cast(pl.UInt32) for c in value_cols]
+    ).alias("_nulls")
+    is_new_code = pl.col(source_ticker_col).str.contains(r"^920\d{3}\.BJ$")
+    settled = (
+        enriched_df.with_columns(null_count, is_new_code.cast(pl.UInt8).alias("_r"))
+        .sort([*pk_cols, "_nulls", "_r"], descending=[False, False, False, True, False])
+        .unique(subset=pk_cols, keep="last")
+        .drop("_nulls", "_r")
+    )
+    logger.warning(
+        "fina_indicator settled BSE dual-code disclosure rows after FK",
+        event="fina_indicator_bse_dual_code",
+        dropped_rows=enriched_df.height - settled.height,
+        affected_keys=pk_dupes.height,
+    )
+    return settled
+
+
 @dataclass(frozen=True)
 class _WriteContext:
     """Packed parameters for write handler dispatch."""
@@ -1305,6 +1345,10 @@ class IngestionDataWriter:
         }
         parquet_method = parquet_save_methods.get(dataset_enum)
         if parquet_method is not None:
+            if dataset_enum is Dataset.FINA_INDICATOR:
+                # #599：BSE 新老双码同披露键收敛（fund_portfolio 键含
+                # holding_symbol，双码=不同键，不适用）。
+                enriched_df = _settle_fina_indicator_dual_code(enriched_df)
             records_written = parquet_method(
                 enriched_df, year, on_duplicate=on_duplicate
             )
