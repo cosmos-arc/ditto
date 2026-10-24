@@ -725,6 +725,8 @@ def test_new_dataset_routes_dispatch_to_stores(
         {
             "source_ticker": ["600519.SH"],
             "trade_date": [date(2026, 9, 30)],
+            # fina_indicator 双码收敛按披露键分键（#599），路由帧须可分组
+            "report_date": [date(2026, 9, 30)],
             "knowledge_date": [date(2026, 10, 1)],
         }
     )

@@ -156,3 +156,43 @@ class TestMergeWithExisting:
         result = merge_with_existing(incoming, existing, ["id"], OnDuplicate.ERROR)
         assert result.added == 1
         assert len(result.df) == 2
+
+    def test_verify_identical_ignores_source_ticker_alias_flip(self) -> None:
+        """#599 F2：同键同值、仅别名出处列翻转 → 重试通过，保已存行."""
+        existing = _df_from_data(
+            {"id": [1], "source_ticker": ["920018.BJ"], "value": [10.5]}
+        )
+        incoming = _df_from_data(
+            {"id": [1], "source_ticker": ["430018.BJ"], "value": [10.5]}
+        )
+        result = merge_with_existing(
+            incoming, existing, ["id"], OnDuplicate.VERIFY_IDENTICAL
+        )
+        assert result.updated == 0
+        kept = result.df.filter(pl.col("id") == 1)
+        assert kept["value"].to_list() == [10.5]
+        assert kept["source_ticker"].to_list() == ["920018.BJ"]
+
+    def test_verify_identical_rejects_value_change_under_alias_flip(self) -> None:
+        """#599 F2：出处列翻转不能掩护事实值变化——仍 fail-closed."""
+        existing = _df_from_data(
+            {"id": [1], "source_ticker": ["920017.BJ"], "value": [None]}
+        )
+        incoming = _df_from_data(
+            {"id": [1], "source_ticker": ["430017.BJ"], "value": [-112842757.96]}
+        )
+        with pytest.raises(ValueError, match="changed values"):
+            merge_with_existing(
+                incoming, existing, ["id"], OnDuplicate.VERIFY_IDENTICAL
+            )
+
+    def test_verify_identical_rejects_schema_drift(self) -> None:
+        """列集差异（schema 漂移）照旧先拒——出处列忽略不放宽漂移检测."""
+        existing = _df_from_data({"id": [1], "source_ticker": ["a"], "value": [1.0]})
+        incoming = _df_from_data(
+            {"id": [1], "source_ticker": ["a"], "value": [1.0], "extra": ["x"]}
+        )
+        with pytest.raises(ValueError, match="changed values"):
+            merge_with_existing(
+                incoming, existing, ["id"], OnDuplicate.VERIFY_IDENTICAL
+            )
