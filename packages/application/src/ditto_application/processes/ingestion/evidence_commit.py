@@ -37,6 +37,15 @@ __all__ = [
 ]
 
 
+def _canonical_binding(metadata: tuple[tuple[str, str], ...]) -> dict[str, str]:
+    """Extract the commit-injected canonical write binding keys."""
+    return {
+        key: value
+        for key, value in metadata
+        if key in ("canonical_checksum", "canonical_row_count")
+    }
+
+
 class _IngestionLogWriter(Protocol):
     def get_log(
         self, dataset: str, source: str, trade_date: str
@@ -231,6 +240,29 @@ class IngestionEvidenceCommitter:
             and checkpoint.payload_id != payload_evidence_id
         )
 
+    def _assert_no_canonical_drift(self, snapshot: ProviderSnapshot) -> None:
+        """
+        拒绝同 id 快照上的 canonical 绑定漂移（#602）.
+
+        commit() 把 success_log 的 canonical_checksum/row_count 注入响应
+        元数据；force 重拉同载荷但富化输出漂移（别名注册/settle 收敛改
+        变富化帧）时注入值异于存量——同一不可变快照无法同时见证两个
+        canonical 版本，静默回放存量或覆写 success log 都会破坏
+        log×snapshot canonical 恒等（PersistedIngestionEvidenceVerifier）
+        且不可自愈。此处响亮失败（精确错误码，非泛化 PLF）；既有
+        append→persist log 顺序保证失败时 log 与存量配对完好、verify
+        保持可过。漂移场景的证据语义待裁决票裁定。
+        """
+        stored = self._ports.snapshot_reader.get_snapshot(snapshot.snapshot_id)
+        if stored is None:
+            return
+        if _canonical_binding(stored.response_metadata) != _canonical_binding(
+            snapshot.response_metadata
+        ):
+            raise AppProcessError(
+                f"canonical write drifted on immutable snapshot: {snapshot.snapshot_id}"
+            )
+
     def _prepare_payload(
         self, request: EvidenceCommitRequest
     ) -> EvidenceCommitOutcome | None:
@@ -242,6 +274,17 @@ class IngestionEvidenceCommitter:
                     return EvidenceCommitOutcome(
                         request.chunk_id, completed=False, error_code=evidence_error
                     )
+                try:
+                    self._assert_no_canonical_drift(request.provider_snapshot)
+                except AppProcessError:
+                    return EvidenceCommitOutcome(
+                        request.chunk_id,
+                        completed=False,
+                        error_code="SNAPSHOT_CANONICAL_DRIFT",
+                    )
+                # The idempotent append also backfills the observation ledger
+                # for upgraded stores whose legacy snapshot rows predate
+                # observations.
                 self._ports.snapshot_writer.append_snapshot(request.provider_snapshot)
                 self._persist_success_log(request.success_log)
                 return EvidenceCommitOutcome(request.chunk_id, completed=True)
@@ -263,7 +306,12 @@ class IngestionEvidenceCommitter:
         try:
             # The idempotent append also backfills the observation ledger for
             # upgraded stores whose legacy snapshot rows predate observations.
+            # #602：崩溃重试同载荷时注入的 canonical 元数据若漂移，先响亮
+            # 拒绝（见 _assert_no_canonical_drift）再触碰不可变端口。
+            self._assert_no_canonical_drift(request.provider_snapshot)
             self._ports.snapshot_writer.append_snapshot(request.provider_snapshot)
+        except AppProcessError:
+            return self._fail(request, error_code="SNAPSHOT_CANONICAL_DRIFT")
         except Exception:
             return self._fail(request, error_code="SNAPSHOT_WRITE_FAILED")
         try:
