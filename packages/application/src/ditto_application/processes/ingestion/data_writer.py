@@ -275,9 +275,10 @@ def _settle_fina_indicator_dual_code(
     解析到同一 instrument_id，适配器按 source_ticker 选版（两码不同键）
     无法收敛，双行命中写侧键 (instrument_id, report_date, knowledge_date)
     → 批内冲突 raise。收敛：少 null 行优先（920017 实测老码行多 4 个
-    fcff 族值，保数据），平局取 920 新码行（换码后权威口径）；确定性、
-    重拉幂等。同 ticker 同键行已被适配器选版合并，(null 数, 新码) 全平
-    的分歧不可达。
+    fcff 族值，保数据），平局取 920 新码行（换码后权威口径），再平局
+    按 source_ticker 升序保证全序——多段改名可让同一 instrument 挂两条
+    老码别名，(null 数, 新码) 全平仍可达，无最终键则胜者随行序漂移
+    （correctness review #599 F3）。确定性、重拉幂等。
     """
     pk_cols = ["instrument_id", "report_date", "knowledge_date"]
     pk_dupes = enriched_df.group_by(pk_cols).len().filter(pl.col("len") > 1)
@@ -286,13 +287,20 @@ def _settle_fina_indicator_dual_code(
     value_cols = [
         c for c in enriched_df.columns if c not in {*pk_cols, source_ticker_col}
     ]
-    null_count = pl.sum_horizontal(
-        [pl.col(c).is_null().cast(pl.UInt32) for c in value_cols]
+    # 空 value_cols（仅键+代码列的帧）不能交给 sum_horizontal([])——空 fold
+    # 会 ComputeError；此时收敛退化为纯代码偏好。
+    null_count = (
+        pl.sum_horizontal([pl.col(c).is_null().cast(pl.UInt32) for c in value_cols])
+        if value_cols
+        else pl.lit(0, dtype=pl.UInt32)
     ).alias("_nulls")
     is_new_code = pl.col(source_ticker_col).str.contains(r"^920\d{3}\.BJ$")
     settled = (
         enriched_df.with_columns(null_count, is_new_code.cast(pl.UInt8).alias("_r"))
-        .sort([*pk_cols, "_nulls", "_r"], descending=[False, False, False, True, False])
+        .sort(
+            [*pk_cols, "_nulls", "_r", source_ticker_col],
+            descending=[False, False, False, True, False, False],
+        )
         .unique(subset=pk_cols, keep="last")
         .drop("_nulls", "_r")
     )

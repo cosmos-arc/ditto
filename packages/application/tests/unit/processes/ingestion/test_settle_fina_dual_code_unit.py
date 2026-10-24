@@ -97,3 +97,41 @@ def test_non_duplicate_groups_preserved() -> None:
     out = _settle_fina_indicator_dual_code(frame)
     assert out.height == 2
     assert out.filter(pl.col("instrument_id") == 1004807).height == 1
+
+
+@pytest.mark.unit
+def test_two_old_code_tie_winner_stable_across_shuffles() -> None:
+    # #599 F3：多段改名可让同一 instrument 挂两条老码别名——(null 数,
+    # 新码) 全平时无最终键则胜者随行序漂移；source_ticker 升序兜底全序。
+    winners = set()
+    for seed in range(20):
+        frame = pl.DataFrame(
+            {
+                "instrument_id": [1005126, 1005126],
+                "report_date": ["2012-12-31", "2012-12-31"],
+                "knowledge_date": ["2013-04-27", "2013-04-27"],
+                "source_ticker": ["430001.BJ", "830001.BJ"],
+                "eps": [0.1, 0.2],
+            }
+        )
+        shuffled = frame.sample(fraction=1.0, shuffle=True, seed=seed)
+        winners.add(
+            _settle_fina_indicator_dual_code(shuffled)["source_ticker"].to_list()[0]
+        )
+    assert winners == {"830001.BJ"}
+
+
+@pytest.mark.unit
+def test_empty_value_columns_settles_by_code_preference() -> None:
+    # #599 F4：仅键+代码列的帧不能撞 sum_horizontal([]) 空 fold
+    frame = pl.DataFrame(
+        {
+            "instrument_id": [1005126, 1005126],
+            "report_date": ["2012-12-31", "2012-12-31"],
+            "knowledge_date": ["2013-04-27", "2013-04-27"],
+            "source_ticker": ["430017.BJ", "920017.BJ"],
+        }
+    )
+    out = _settle_fina_indicator_dual_code(frame)
+    assert out.height == 1
+    assert out["source_ticker"].to_list() == ["920017.BJ"]

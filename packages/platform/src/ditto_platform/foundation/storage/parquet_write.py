@@ -90,12 +90,26 @@ def _merge_verify_identical(
     key_columns: list[str],
     overlap_count: int,
 ) -> MergeResult:
-    """Accept retries only when every overlapping row is unchanged."""
-    incoming = df.join(existing.select(key_columns), on=key_columns, how="semi")
-    stored = existing.join(df.select(key_columns), on=key_columns, how="semi")
-    if set(incoming.columns) != set(stored.columns) or not incoming.sort(
-        key_columns
-    ).equals(stored.select(incoming.columns).sort(key_columns)):
+    """
+    Accept retries only when every overlapping row is unchanged.
+
+    source_ticker 是行到达所用的别名出处（身份溯源列），不是事实值：
+    同 instrument 在别名换码前后两码重拉同值行，出处列翻转不应判为
+    "changed values"（#599 F2：跨粒度双码同值重试被误拒）。事实值列
+    仍逐列 fail-closed；列集差异（schema 漂移）照旧先拒。
+    """
+    if set(df.columns) != set(existing.columns):
+        raise ValueError("Duplicate data conflict: retry contains changed values")
+    compare_columns = [c for c in df.columns if c != "source_ticker"]
+    incoming = df.select(compare_columns).join(
+        existing.select(key_columns), on=key_columns, how="semi"
+    )
+    stored = existing.select(compare_columns).join(
+        df.select(key_columns), on=key_columns, how="semi"
+    )
+    if not incoming.sort(key_columns).equals(
+        stored.select(incoming.columns).sort(key_columns)
+    ):
         raise ValueError("Duplicate data conflict: retry contains changed values")
     return _merge_keep_first(df, existing, key_columns, overlap_count)
 
