@@ -89,10 +89,3 @@ ignoreUntil = 2027-01-07
 id = "GHSA-cx28-75q4-x26q"
 reason = "virtualenv 修复版需 packaging>=26.3 被 prefect 阻断（同 10-22 批根因）；dev-only。"
 ignoreUntil = 2027-01-07
-
-# zod（8.2 High）：修复版仅在 zod 4（major，Web 运行时依赖，API 破坏性
-# 迁移），3.x 线无补丁。独立迁移票跟进；High 级给两周短复审线。
-[[IgnoredVulns]]
-id = "GHSA-mrhx-c7xc-m3w5"
-reason = "zod 修复版仅在 4.x major（Web 运行时依赖，破坏性迁移），3.x 无补丁；独立迁移票跟进。"
-ignoreUntil = 2026-11-07
