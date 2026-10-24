@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -265,6 +266,10 @@ def _settle_same_issuer_dual_code(
     return settled
 
 
+# BSE 持仓码形：6 位数字 + .BJ（老码 43x/83x/87x 全段 + 新码 920 段，#592）。
+_BSE_CODE_PATTERN = re.compile(r"\d{6}\.BJ")
+
+
 def _settle_fund_portfolio_dual_code(
     enriched_df: pl.DataFrame, holding_id_map: dict[str, int]
 ) -> pl.DataFrame:
@@ -280,6 +285,8 @@ def _settle_fund_portfolio_dual_code(
     按 holding_symbol 升序保证全序。未解析码（map 外，如 .HK）各占
     自身键，不参与收敛。确定性、重拉幂等。
     """
+    if not holding_id_map:
+        return enriched_df
     pk_cols = ["instrument_id", "report_date", "knowledge_date"]
     joined = enriched_df.join(
         pl.DataFrame(
@@ -1443,13 +1450,13 @@ class IngestionDataWriter:
         """fund_portfolio 双码持仓收敛入口（#606）：BSE 形持仓码批量解析."""
         if "holding_symbol" not in enriched_df.columns:
             return enriched_df
-        # 双码对只可能出现在 BSE 新老码形（43/83/87+4 位老码、920+3 位
-        # 新码，#592）；非 BSE 码不解析不收敛，省整批持仓解析开销。
+        # 双码对只可能出现在 BSE 码形（6 位数字+.BJ——老码覆盖 43x/83x/
+        # 87x 全段、新码 920 段，#592 别名按权威 bse_mapping 逐行登记
+        # 不限前缀）；非 BSE 码不解析不收敛，省整批持仓解析开销。
         bse_codes = sorted(
             code
             for code in enriched_df["holding_symbol"].unique().to_list()
-            if isinstance(code, str)
-            and (code.startswith(("430", "830", "870", "920")) and code.endswith(".BJ"))
+            if isinstance(code, str) and _BSE_CODE_PATTERN.fullmatch(code)
         )
         if not bse_codes:
             return enriched_df
@@ -1458,6 +1465,9 @@ class IngestionDataWriter:
             source=self._source_name,
             asof=None,
         )
+        if not holding_id_map:
+            # 全部未解析（别名未注册/被拒）：无可收敛对象，帧原样返回。
+            return enriched_df
         return _settle_fund_portfolio_dual_code(enriched_df, holding_id_map)
 
     def _write_capital(

@@ -1,8 +1,11 @@
 """#606 fund_portfolio 北交所双码持仓收敛单元测试."""
 
+from unittest.mock import MagicMock
+
 import polars as pl
 import pytest
 from ditto_application.processes.ingestion.data_writer import (
+    IngestionDataWriter,
     _settle_fund_portfolio_dual_code,
 )
 
@@ -146,3 +149,88 @@ def test_revision_knowledge_date_not_merged() -> None:
     )
     out = _settle_fund_portfolio_dual_code(frame, _map())
     assert out.height == 2
+
+
+@pytest.mark.unit
+def test_empty_map_returns_frame_unchanged() -> None:
+    # 全部未解析（resolve 返回空）不得因空帧 schema 崩写入（review 实测
+    # 复现：空 dict 构造 Null dtype 列 → join SchemaError）。
+    frame = _dual_code_frame({"market_value": 1.0}, {"market_value": 2.0})
+    out = _settle_fund_portfolio_dual_code(frame, {})
+    assert out.equals(frame)
+
+
+@pytest.mark.unit
+def test_settle_is_idempotent() -> None:
+    frame = _dual_code_frame(
+        {"market_value": 100.0, "stk_mkv_ratio": None},
+        {"market_value": 100.0, "stk_mkv_ratio": 3.4},
+    )
+    once = _settle_fund_portfolio_dual_code(frame, _map())
+    twice = _settle_fund_portfolio_dual_code(once, _map())
+    assert once.equals(twice)
+
+
+@pytest.mark.unit
+def test_key_only_frame_settles_by_code_preference() -> None:
+    # 仅键+代码列的帧（空 value_cols）不崩，退化为纯代码偏好保 920。
+    frame = _dual_code_frame({}, {})
+    out = _settle_fund_portfolio_dual_code(frame, _map())
+    assert out.height == 1
+    assert out["holding_symbol"].to_list() == ["920017.BJ"]
+
+
+def _writer_with_resolver(resolved: dict[str, int]) -> IngestionDataWriter:
+    metadata_service = MagicMock()
+    metadata_service.instrument.resolve_instrument_ids_batch.return_value = resolved
+    return IngestionDataWriter(
+        metadata_service=metadata_service,
+        market_write_service=MagicMock(),
+        fundamental_store=MagicMock(),
+        capital_store=MagicMock(),
+        macro_service=MagicMock(),
+        source_name="tushare",
+    )
+
+
+@pytest.mark.unit
+def test_entry_resolves_only_bse_shaped_codes() -> None:
+    # 43x/83x/87x 全段老码（833171/871981）+920 新码均入解析名单；
+    # 非 BSE 码（.SZ/.HK）不进名单（review：前缀白名单漏老码段）。
+    frame = pl.DataFrame(
+        {
+            "instrument_id": [2000001] * 4,
+            "report_date": ["2025-09-30"] * 4,
+            "knowledge_date": ["2025-10-25"] * 4,
+            "holding_symbol": ["833171.BJ", "871981.BJ", "000001.SZ", "00002.HK"],
+            "market_value": [1.0, 2.0, 3.0, 4.0],
+        }
+    )
+    writer = _writer_with_resolver({})
+    out = writer._settle_fund_portfolio_dual_code(frame)
+    assert out.equals(frame)
+    resolved_arg = (
+        writer._metadata_service.instrument.resolve_instrument_ids_batch.call_args
+    )
+    assert sorted(resolved_arg.kwargs["identifiers"]) == [
+        "833171.BJ",
+        "871981.BJ",
+    ]
+
+
+@pytest.mark.unit
+def test_entry_skips_resolve_without_bse_codes() -> None:
+    # 无 BSE 形持仓码：零解析零收敛，行为与修复前一致。
+    frame = pl.DataFrame(
+        {
+            "instrument_id": [2000001],
+            "report_date": ["2025-09-30"],
+            "knowledge_date": ["2025-10-25"],
+            "holding_symbol": ["000001.SZ"],
+            "market_value": [3.0],
+        }
+    )
+    writer = _writer_with_resolver({"000001.SZ": 1})
+    out = writer._settle_fund_portfolio_dual_code(frame)
+    assert out.equals(frame)
+    writer._metadata_service.instrument.resolve_instrument_ids_batch.assert_not_called()
