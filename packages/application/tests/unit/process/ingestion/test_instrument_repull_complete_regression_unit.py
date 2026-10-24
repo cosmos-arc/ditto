@@ -27,6 +27,7 @@ from ditto_data.catalog.source_snapshot import (
     ProviderSnapshotDraft,
     snapshot_identity,
 )
+from ditto_data.catalog.source_snapshot_store import SQLiteProviderSnapshotStore
 from ditto_data.ingestion.partition_state import PartitionLifecycleStatus
 from ditto_data.ingestion.partition_state_store import SQLitePartitionLifecycleStore
 from ditto_data.models.ingestion import IngestionLog, IngestionStatus
@@ -81,8 +82,10 @@ class _Recorder:
         return tuple(v for v in self.values if isinstance(v, ProviderSnapshot))
 
 
-def _request(payload_checksum: str) -> EvidenceCommitRequest:
-    """同 chunk 同区间的重拉载荷请求（载荷 checksum 由参数给定）."""
+def _request(
+    payload_checksum: str, canonical_checksum: str = "sha256:canonical-v1"
+) -> EvidenceCommitRequest:
+    """同 chunk 同区间的重拉载荷请求（载荷 checksum 与 canonical 输出独立给定）."""
     now = datetime(2026, 10, 25, 1, 0, tzinfo=UTC)
     canonical_asset = DataAssetRef(dataset_id="index_weight", namespace="capital")
     snapshot = ProviderSnapshot.create(
@@ -135,7 +138,7 @@ def _request(payload_checksum: str) -> EvidenceCommitRequest:
             source="tushare",
             trade_date=_START,
             status=IngestionStatus.SUCCESS,
-            checksum="sha256:canonical",
+            checksum=canonical_checksum,
             rows=12,
         ),
     )
@@ -263,5 +266,47 @@ def test_repull_sequence_never_emits_partition_lifecycle_failed(
             assert outcome.completed is True
             assert outcome.error_code != "PARTITION_LIFECYCLE_FAILED"
         assert not lifecycle.list_incomplete()
+    finally:
+        pool.close()
+
+
+@pytest.mark.unit
+def test_repull_same_payload_with_canonical_drift_reattests_over_real_store(
+    tmp_path: Path,
+) -> None:
+    """#602 根因形：同载荷重拉但 canonical 富化漂移（别名注册/settle 改变
+    富化输出）→ commit 注入的 canonical_checksum 异于存量快照 → 真快照
+    端口同 id 异内容冲突。期望幂等落证（快照不可变、漂移由 success log
+    承载），不得 PARTITION_LIFECYCLE_FAILED。
+    """
+    pool = SQLitePool(str(tmp_path / "runtime.sqlite"))
+    client = SQLiteClient(pool)
+    lifecycle = SQLitePartitionLifecycleStore(client)
+    snapshot_store = SQLiteProviderSnapshotStore(client)
+    recorder = _Recorder()
+    committer = IngestionEvidenceCommitter(
+        ports=EvidenceCommitPorts(
+            lifecycle_reader=lifecycle,
+            lifecycle_writer=lifecycle,
+            snapshot_writer=snapshot_store,
+            snapshot_reader=snapshot_store,
+            catalog_writer=recorder,
+            ingestion_log_store=recorder,
+        ),
+        now=lambda: datetime(2026, 10, 25, 1, 0, tzinfo=UTC),
+    )
+    try:
+        assert committer.commit(_request("a" * 32)).completed
+
+        drifted = _request("a" * 32, canonical_checksum="sha256:canonical-v2")
+        _prepare_repull_intent(committer, "a" * 32)
+        outcome = committer.commit(drifted)
+
+        assert outcome.completed is True
+        assert outcome.error_code is None
+        checkpoint = lifecycle.get_checkpoint(_CHUNK_ID)
+        assert checkpoint is not None
+        assert checkpoint.status is PartitionLifecycleStatus.COMPLETE
+        assert checkpoint.error_code is None
     finally:
         pool.close()
