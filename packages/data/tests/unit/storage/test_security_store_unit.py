@@ -1217,11 +1217,16 @@ class TestBseAliasMappingReader:
         self.client.commit()
 
     def test_get_source_tickers_no_tie_conflict_with_alias(self) -> None:
+        # cutoff 必须严格晚于行的 created_at（默认当前时刻）——硬编码日期
+        # 会在 UTC 越日后时间炸弹（CI 2026-10-24 实炸）。
+        from datetime import date, timedelta
+
+        cutoff = (date.today() + timedelta(days=1)).isoformat()
         out = self.reader.get_source_tickers(
             1004807,
             source="tushare",
             asofs=["2024-06-01", "2025-12-01"],
-            cutoff="2026-10-24",
+            cutoff=cutoff,
         )
         # 反查各时点都确定性回到主映射（effective_from 更大者）
         assert out == {"2024-06-01": "920418.BJ", "2025-12-01": "920418.BJ"}
