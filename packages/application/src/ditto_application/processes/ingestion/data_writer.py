@@ -298,6 +298,9 @@ def _settle_fund_portfolio_dual_code(
         on="holding_symbol",
         how="left",
     ).with_columns(
+        # ponytail: null holding_symbol 行坍缩为同一 null 键且胜者随输入
+        # 行序漂移——与修复前 store 批内同键去重同类坍缩（非回归），
+        # 真要逐行保键时改用行唯一占位键。
         pl.when(pl.col("_holding_id").is_not_null())
         .then(pl.format("id:{}", pl.col("_holding_id")))
         .otherwise(pl.format("code:{}", pl.col("holding_symbol")))
@@ -326,6 +329,9 @@ def _settle_fund_portfolio_dual_code(
         )
         .unique(subset=settle_keys, keep="last")
         .drop("_nulls", "_r", "_holding_id", "_holding_key")
+        # unique 不保序——按写侧键全序输出，否则同输入的 checksum 逐次
+        # 漂移（correctness review #606 F2，fund_portfolio 缺席 _SORT_KEYS）。
+        .sort([*pk_cols, "holding_symbol"])
     )
     logger.warning(
         "fund_portfolio settled BSE dual-code holding rows after FK",
@@ -374,6 +380,9 @@ def _settle_fina_indicator_dual_code(
         )
         .unique(subset=pk_cols, keep="last")
         .drop("_nulls", "_r")
+        # 同 #606 F2：全序输出防 checksum 逐次漂移（fina_indicator 同样
+        # 缺席 _SORT_KEYS）。
+        .sort([*pk_cols, source_ticker_col])
     )
     logger.warning(
         "fina_indicator settled BSE dual-code disclosure rows after FK",

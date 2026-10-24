@@ -135,3 +135,25 @@ def test_empty_value_columns_settles_by_code_preference() -> None:
     out = _settle_fina_indicator_dual_code(frame)
     assert out.height == 1
     assert out["source_ticker"].to_list() == ["920017.BJ"]
+
+
+@pytest.mark.unit
+def test_output_order_deterministic_across_input_shuffles() -> None:
+    # #606 F2 同修：unique 不保序——收敛路径须按写侧键全序输出，否则
+    # 同输入的 WriteResult.checksum 逐次漂移。
+    frame = pl.DataFrame(
+        {
+            "instrument_id": [1005126] * 4,
+            "report_date": ["2012-12-31"] * 2 + ["2012-09-30"] * 2,
+            "knowledge_date": ["2013-04-27"] * 4,
+            "source_ticker": ["430017.BJ", "920017.BJ", "430001.BJ", "920001.BJ"],
+            "eps": [0.1, 0.1, 0.2, 0.2],
+        }
+    )
+    outputs = set()
+    for seed in range(10):
+        shuffled = frame.sample(fraction=1.0, shuffle=True, seed=seed)
+        out = _settle_fina_indicator_dual_code(shuffled)
+        assert out.height == 2
+        outputs.add(str(out.hash_rows().to_list()))
+    assert len(outputs) == 1
