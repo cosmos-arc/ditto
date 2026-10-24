@@ -97,12 +97,14 @@ class TestSourceMappingIntervalPredicates:
             for r in rows
         ]
 
-    def test_head_corner_earlier_from_writes_new_row(
+    def test_head_corner_earlier_from_extends_open_row_backward(
         self, client: SQLiteClient, writer: InstrumentWriter
     ) -> None:
-        """头侧越界：自有开放区间 [2021,∞)，注册 f=1990 → 必须真写行。
+        """头侧越界：自有开放区间 [2021,∞)，注册 f=1990 → 向后延伸该行。
 
-        旧谓词按部分重叠直接判幂等 True，[1990,2021) 实际无覆盖。
+        旧谓词按部分重叠直接判幂等 True，[1990,2021) 实际无覆盖；修复
+        须兑现覆盖且不并列第二条开放行（读取侧 ticker 宽 JOIN 会因此
+        对同一 instrument 返回重复行）。
         """
         self._seed_instruments(client, [1])
         self._seed_mapping(client, 1, "2021-01-01", None)
@@ -116,10 +118,7 @@ class TestSourceMappingIntervalPredicates:
         )
 
         assert ok is True
-        assert self._mapping_rows(client) == [
-            (1, "1990-01-01", None),
-            (1, "2021-01-01", None),
-        ]
+        assert self._mapping_rows(client) == [(1, "1990-01-01", None)]
 
     def test_same_start_closed_reregister_fail_closed(
         self, client: SQLiteClient, writer: InstrumentWriter
@@ -143,12 +142,14 @@ class TestSourceMappingIntervalPredicates:
 
         assert ok is False
         assert self._mapping_rows(client) == [(1, "1990-01-01", "2025-10-09")]
+        # 拒收不得遗留隐式写事务（持 WAL 写锁会阻断其他连接）。
+        assert client.conn.in_transaction is False
 
-    def test_gap_before_own_open_row_writes_coverage(
+    def test_gap_before_own_open_row_extends_backward(
         self, client: SQLiteClient, writer: InstrumentWriter
     ) -> None:
         """缺口吞没：自有闭合 [2020,2024) + 自有开放 [2025-06,∞)，注册
-        f=2024-01-01 → 必须写行补 [2024,∞)，不得被后方开放行幂等吞掉。
+        f=2024-01-01 → 开放行向后延伸补 [2024,∞)，不得被幂等吞掉。
         """
         self._seed_instruments(client, [1])
         self._seed_mapping(client, 1, "2020-01-01", "2024-01-01")
@@ -166,7 +167,6 @@ class TestSourceMappingIntervalPredicates:
         assert self._mapping_rows(client) == [
             (1, "2020-01-01", "2024-01-01"),
             (1, "2024-01-01", None),
-            (1, "2025-06-01", None),
         ]
 
     def test_conflict_beats_own_overlap_regardless_of_row_order(

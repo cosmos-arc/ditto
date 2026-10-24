@@ -232,6 +232,41 @@ class InstrumentWriter:
             ],
         )
 
+    @staticmethod
+    def _classify_mapping_intervals(
+        rows: list[Any], instrument_id: int, effective_from: str
+    ) -> tuple[Any, bool, str | None]:
+        """
+        扫描同 (source, source_ticker) 既有区间对新注册的分类.
+
+        Returns:
+            (冲突行或 None, 自家开放区间是否已覆盖 [f, ∞),
+             自家最早开放行起点或 None).
+
+        """
+        conflict: Any = None
+        own_open_covers = False
+        own_open_earliest_from: str | None = None
+        for row in rows:
+            same_instrument = int(row["instrument_id"]) == instrument_id
+            # 与新开放区间 [effective_from, ∞) 重叠的已有区间：
+            # effective_to 为空或晚于新起点即重叠（排他端点）。
+            overlaps = row["effective_to"] is None or str(row["effective_to"]) > str(
+                effective_from
+            )
+            if overlaps and not same_instrument:
+                conflict = row
+                break
+            if same_instrument and row["effective_to"] is None:
+                row_from = str(row["effective_from"])
+                if row_from <= str(effective_from):
+                    own_open_covers = True
+                elif (
+                    own_open_earliest_from is None or row_from < own_open_earliest_from
+                ):
+                    own_open_earliest_from = row_from
+        return conflict, own_open_covers, own_open_earliest_from
+
     def register_source_mapping(
         self,
         *,
@@ -245,14 +280,18 @@ class InstrumentWriter:
         为已注册证券登记一条来源映射（幂等/冲突拒绝/形状不可写拒收）。
 
         语义（区间为半开 [effective_from, effective_to)，effective_to
-        排他端，与读取侧 as-of 谓词一致；新注册区间恒开放 [f, ∞)）：
+        排他端，与读取侧 as-of 谓词一致；新注册区间恒开放 [f, ∞)；
+        扫描+写入非原子，依赖仓内单写者纪律）：
         - 别家 (source, source_ticker) 区间与 [f, ∞) 重叠（effective_to
           为空或 > f）→ 拒绝（返回 False），冲突判定先于幂等判定。
         - 自家**开放**区间 effective_from ≤ f → 幂等跳过（返回 True）；
-          自家闭合区间或更晚起点的开放区间只构成部分覆盖，不授予幂等。
+          自家闭合区间只构成部分覆盖，不授予幂等。
+        - 自家开放区间起点晚于 f → 向后延伸该行 effective_from 至 f
+          （不并列第二条开放行——读取侧 ticker 宽 JOIN 会因此对同一
+          instrument 返回重复行）。
         - 否则写入开放映射行，created_at = 观察时间；同起点的自家闭合
-          区间占住 PRIMARY KEY 时写入不生效 → fail-closed 拒绝（重开放
-          既有闭合区间会破坏代码切换语义，不自动改写）。
+          区间占住 PRIMARY KEY 时写入不生效 → 回滚并 fail-closed 拒绝
+          （重开放既有闭合区间会破坏代码切换语义，不自动改写）。
 
         Args:
             instrument_id: 目标证券 ID.
@@ -262,8 +301,8 @@ class InstrumentWriter:
             observed_at: 观察时间（写入 created_at）.
 
         Returns:
-            True 表示映射可用（已全覆盖或新写入）；False 表示冲突或
-            区间形状不可写（fail-closed）.
+            True 表示映射可用（已全覆盖、向后延伸或新写入）；False 表示
+            冲突或区间形状不可写（fail-closed）.
 
         """
         rows = self._client.fetchall(
@@ -272,24 +311,9 @@ class InstrumentWriter:
             WHERE source = ? AND source_ticker = ?""",
             [source, source_ticker],
         )
-        conflict: Any = None
-        own_open_covers = False
-        for row in rows:
-            same_instrument = int(row["instrument_id"]) == instrument_id
-            # 与新开放区间 [effective_from, ∞) 重叠的已有区间：
-            # effective_to 为空或晚于新起点即重叠（排他端点）。
-            overlaps = row["effective_to"] is None or str(row["effective_to"]) > str(
-                effective_from
-            )
-            if overlaps and not same_instrument:
-                conflict = row
-                break
-            if (
-                same_instrument
-                and row["effective_to"] is None
-                and str(row["effective_from"]) <= str(effective_from)
-            ):
-                own_open_covers = True
+        conflict, own_open_covers, own_open_earliest_from = (
+            self._classify_mapping_intervals(rows, instrument_id, effective_from)
+        )
         if conflict is not None:
             logger.warning(
                 "Source mapping conflict rejected",
@@ -303,6 +327,40 @@ class InstrumentWriter:
             return False
         if own_open_covers:
             return True  # 幂等：自家开放区间已覆盖新起点之后全部时间
+        if own_open_earliest_from is not None:
+            # 向后延伸自家最早开放行。PK 目标位 (source, source_ticker, f)
+            # 必空闲——同起点行已在上方被幂等/冲突/闭合区间路径拦截，
+            # 更新 0 行视为竞态异常，fail-closed。
+            cursor = self._client.execute(
+                """UPDATE instrument_mapping
+                SET effective_from = ?
+                WHERE source = ? AND source_ticker = ? AND instrument_id = ?
+                  AND effective_from = ? AND effective_to IS NULL""",
+                [
+                    effective_from,
+                    source,
+                    source_ticker,
+                    instrument_id,
+                    own_open_earliest_from,
+                ],
+            )
+            if cursor.rowcount == 0:
+                self._client.rollback()
+                logger.warning(
+                    "Source mapping backward extension lost its row",
+                    event="instrument_source_mapping_extension_missed",
+                    source=source,
+                    source_ticker=source_ticker,
+                    instrument_id=instrument_id,
+                    effective_from=effective_from,
+                )
+                return False
+            self._client.commit()
+            if self._cache is not None:
+                self._cache.invalidate(
+                    f"instrument_id:{source_ticker}:{source}:current"
+                )
+            return True
         cursor = self._client.execute(
             """INSERT OR IGNORE INTO instrument_mapping
             (instrument_id, source, source_ticker, effective_from,
@@ -313,7 +371,8 @@ class InstrumentWriter:
         if cursor.rowcount == 0:
             # PRIMARY KEY (source, source_ticker, effective_from) 已被自家
             # 闭合区间占据（同起点重注册）：并列写入不生效，自动重开放会
-            # 破坏切换语义 → fail-closed。
+            # 破坏切换语义 → 回滚隐式事务后 fail-closed。
+            self._client.rollback()
             logger.warning(
                 "Source mapping registration rejected: unwritable interval shape",
                 event="instrument_source_mapping_unwritable_shape",
