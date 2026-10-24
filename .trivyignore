@@ -1,8 +1,9 @@
 # filelock CVE-2026-112940（HIGH）：3.32.7 经 prefect 运行时引入；修复版仅
 # 4.2.1，被 tox/virtualenv 传递依赖的 filelock<4 上限阻断在 3.32.7——与
 # osv-scanner.toml 2026-10-24 第四批 filelock×3 豁免同根同阻（Trivy NVD
-# 源 2026-10-24 收录本条后容器门开始命中）。复审线对齐 OSV 豁免 2027-01-07；
-# 解阻路径=prefect/packaging 工具链升级（见 osv-scanner.toml 台账）。
+# 源 2026-10-24 收录本条后容器门开始命中）。解阻路径=prefect/packaging
+# 工具链升级（见 osv-scanner.toml 台账）。
+# exp: 2027-01-07
 CVE-2026-112940
 
 # No other active suppressions.
