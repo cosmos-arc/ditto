@@ -177,6 +177,18 @@ def _prepare_repull_intent(
     )
 
 
+def _ports(lifecycle, snapshot, catalog, logs) -> EvidenceCommitPorts:
+    """Untyped port bundle（sibling 同款）：fake 端口经无类型中转绕开协议收窄."""
+    return EvidenceCommitPorts(
+        lifecycle_reader=lifecycle,
+        lifecycle_writer=lifecycle,
+        snapshot_writer=snapshot,
+        snapshot_reader=snapshot,
+        catalog_writer=catalog,
+        ingestion_log_store=logs,
+    )
+
+
 def _committer(
     tmp_path: Path,
 ) -> tuple[IngestionEvidenceCommitter, SQLitePartitionLifecycleStore, SQLitePool]:
@@ -184,14 +196,7 @@ def _committer(
     lifecycle = SQLitePartitionLifecycleStore(SQLiteClient(pool))
     recorder = _Recorder()
     committer = IngestionEvidenceCommitter(
-        ports=EvidenceCommitPorts(
-            lifecycle_reader=lifecycle,
-            lifecycle_writer=lifecycle,
-            snapshot_writer=recorder,
-            snapshot_reader=recorder,
-            catalog_writer=recorder,
-            ingestion_log_store=recorder,
-        ),
+        ports=_ports(lifecycle, recorder, recorder, recorder),
         now=lambda: datetime(2026, 10, 25, 1, 0, tzinfo=UTC),
     )
     return committer, lifecycle, pool
@@ -288,14 +293,7 @@ def test_repull_same_payload_with_canonical_drift_fails_loudly_over_real_store(
     snapshot_store = SQLiteProviderSnapshotStore(client)
     recorder = _Recorder()
     committer = IngestionEvidenceCommitter(
-        ports=EvidenceCommitPorts(
-            lifecycle_reader=lifecycle,
-            lifecycle_writer=lifecycle,
-            snapshot_writer=snapshot_store,
-            snapshot_reader=snapshot_store,
-            catalog_writer=recorder,
-            ingestion_log_store=recorder,
-        ),
+        ports=_ports(lifecycle, snapshot_store, recorder, recorder),
         now=lambda: datetime(2026, 10, 25, 1, 0, tzinfo=UTC),
     )
     try:
@@ -336,14 +334,7 @@ def test_non_injected_metadata_drift_still_rejected_by_port(
     snapshot_store = SQLiteProviderSnapshotStore(client)
     recorder = _Recorder()
     committer = IngestionEvidenceCommitter(
-        ports=EvidenceCommitPorts(
-            lifecycle_reader=lifecycle,
-            lifecycle_writer=lifecycle,
-            snapshot_writer=snapshot_store,
-            snapshot_reader=snapshot_store,
-            catalog_writer=recorder,
-            ingestion_log_store=recorder,
-        ),
+        ports=_ports(lifecycle, snapshot_store, recorder, recorder),
         now=lambda: datetime(2026, 10, 25, 1, 0, tzinfo=UTC),
     )
     try:
