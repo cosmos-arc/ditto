@@ -495,10 +495,9 @@ class TestIndustryMappingWriterLedgerTransitions:
         )
         # 退出窗口内 (2026-07-15) 两边都不在
         assert self.reader.get_stock_industry(1000001, "2026-07-15") is None
-        assert (
-            self.reader.get_stock_industry(1000001, "2026-08-01")["industry_id"]
-            == "801140.SI"
-        )
+        moved = self.reader.get_stock_industry(1000001, "2026-08-01")
+        assert moved is not None
+        assert moved["industry_id"] == "801140.SI"
 
     def test_out_date_revision_updates_same_key(self) -> None:
         for to in ("2026-06-30", "2026-07-31"):
