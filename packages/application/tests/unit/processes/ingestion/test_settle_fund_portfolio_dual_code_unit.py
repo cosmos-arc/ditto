@@ -172,6 +172,33 @@ def test_settle_is_idempotent() -> None:
 
 
 @pytest.mark.unit
+def test_output_order_deterministic_across_input_shuffles() -> None:
+    # unique 不保序——收敛路径必须按写侧键全序输出，否则同输入的
+    # WriteResult.checksum 逐次漂移（correctness #606 F2）。
+    frame = pl.DataFrame(
+        {
+            "instrument_id": [2000001] * 4,
+            "report_date": ["2025-09-30"] * 2 + ["2025-06-30"] * 2,
+            "knowledge_date": ["2025-10-25"] * 4,
+            "holding_symbol": ["430017.BJ", "920017.BJ", "830017.BJ", "430017.BJ"],
+            "market_value": [100.0, 100.0, 50.0, 50.0],
+        }
+    )
+    holding_map = {
+        "430017.BJ": _HOLDING_ID,
+        "920017.BJ": _HOLDING_ID,
+        "830017.BJ": _HOLDING_ID,
+    }
+    outputs = set()
+    for seed in range(10):
+        shuffled = frame.sample(fraction=1.0, shuffle=True, seed=seed)
+        out = _settle_fund_portfolio_dual_code(shuffled, holding_map)
+        assert out.height == 2
+        outputs.add(str(out.hash_rows().to_list()))
+    assert len(outputs) == 1
+
+
+@pytest.mark.unit
 def test_key_only_frame_settles_by_code_preference() -> None:
     # 仅键+代码列的帧（空 value_cols）不崩，退化为纯代码偏好保 920。
     frame = _dual_code_frame({}, {})
