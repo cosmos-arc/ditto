@@ -211,6 +211,32 @@ class TestSourceMappingIntervalPredicates:
             (1, "2022-06-01", None),
         ]
 
+    def test_closed_at_start_plus_later_open_fails_closed(
+        self, client: SQLiteClient, writer: InstrumentWriter
+    ) -> None:
+        """自家闭合行占住起点 + 更晚自家开放行并存：向后延伸会撞主键，
+        须前置拦截 fail-closed（correctness 复检反例：未拦截会抛
+        IntegrityError 且留悬挂事务）。
+        """
+        self._seed_instruments(client, [1])
+        self._seed_mapping(client, 1, "1990-01-01", "2025-10-09")
+        self._seed_mapping(client, 1, "2026-06-01", None)
+
+        ok = writer.register_source_mapping(
+            instrument_id=1,
+            source="tushare",
+            source_ticker="830001.BJ",
+            effective_from="1990-01-01",
+            observed_at="2026-10-25 00:00:00",
+        )
+
+        assert ok is False
+        assert self._mapping_rows(client) == [
+            (1, "1990-01-01", "2025-10-09"),
+            (1, "2026-06-01", None),
+        ]
+        assert client.conn.in_transaction is False
+
     def test_true_idempotent_open_row_no_write(
         self, client: SQLiteClient, writer: InstrumentWriter
     ) -> None:

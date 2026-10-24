@@ -235,18 +235,19 @@ class InstrumentWriter:
     @staticmethod
     def _classify_mapping_intervals(
         rows: list[Any], instrument_id: int, effective_from: str
-    ) -> tuple[Any, bool, str | None]:
+    ) -> tuple[Any, bool, str | None, bool]:
         """
         扫描同 (source, source_ticker) 既有区间对新注册的分类.
 
         Returns:
             (冲突行或 None, 自家开放区间是否已覆盖 [f, ∞),
-             自家最早开放行起点或 None).
+             自家最早开放行起点或 None, 自家闭合区间是否占住起点 f).
 
         """
         conflict: Any = None
         own_open_covers = False
         own_open_earliest_from: str | None = None
+        own_closed_at_start = False
         for row in rows:
             same_instrument = int(row["instrument_id"]) == instrument_id
             # 与新开放区间 [effective_from, ∞) 重叠的已有区间：
@@ -265,7 +266,11 @@ class InstrumentWriter:
                     own_open_earliest_from is None or row_from < own_open_earliest_from
                 ):
                     own_open_earliest_from = row_from
-        return conflict, own_open_covers, own_open_earliest_from
+            elif same_instrument and str(row["effective_from"]) == str(effective_from):
+                # 闭合行占住 PK 目标位 (source, source_ticker, f)——向后
+                # 延伸的 UPDATE 会撞主键抛未捕获异常，须前置拦截。
+                own_closed_at_start = True
+        return conflict, own_open_covers, own_open_earliest_from, own_closed_at_start
 
     def register_source_mapping(
         self,
@@ -311,7 +316,7 @@ class InstrumentWriter:
             WHERE source = ? AND source_ticker = ?""",
             [source, source_ticker],
         )
-        conflict, own_open_covers, own_open_earliest_from = (
+        conflict, own_open_covers, own_open_earliest_from, own_closed_at_start = (
             self._classify_mapping_intervals(rows, instrument_id, effective_from)
         )
         if conflict is not None:
@@ -329,53 +334,72 @@ class InstrumentWriter:
             return True  # 幂等：自家开放区间已覆盖新起点之后全部时间
         if own_open_earliest_from is not None:
             # 向后延伸自家最早开放行。PK 目标位 (source, source_ticker, f)
-            # 必空闲——同起点行已在上方被幂等/冲突/闭合区间路径拦截，
-            # 更新 0 行视为竞态异常，fail-closed。
-            cursor = self._client.execute(
-                """UPDATE instrument_mapping
-                SET effective_from = ?
-                WHERE source = ? AND source_ticker = ? AND instrument_id = ?
-                  AND effective_from = ? AND effective_to IS NULL""",
-                [
-                    effective_from,
-                    source,
-                    source_ticker,
-                    instrument_id,
-                    own_open_earliest_from,
-                ],
-            )
-            if cursor.rowcount == 0:
-                self._client.rollback()
-                logger.warning(
-                    "Source mapping backward extension lost its row",
-                    event="instrument_source_mapping_extension_missed",
+            # 若被自家闭合行占住（同起点重注册）则 UPDATE 撞主键，前置
+            # 拦截 fail-closed；更新 0 行视为竞态异常，回滚 fail-closed。
+            if not own_closed_at_start:
+                return self._extend_own_open_mapping_backward(
                     source=source,
                     source_ticker=source_ticker,
                     instrument_id=instrument_id,
                     effective_from=effective_from,
+                    own_open_earliest_from=own_open_earliest_from,
                 )
-                return False
-            self._client.commit()
-            if self._cache is not None:
-                self._cache.invalidate(
-                    f"instrument_id:{source_ticker}:{source}:current"
-                )
-            return True
+        elif not own_closed_at_start:
+            cursor = self._client.execute(
+                """INSERT OR IGNORE INTO instrument_mapping
+                (instrument_id, source, source_ticker, effective_from,
+                 is_primary, created_at)
+                VALUES (?, ?, ?, ?, FALSE, ?)""",
+                [instrument_id, source, source_ticker, effective_from, observed_at],
+            )
+            if cursor.rowcount > 0:
+                self._client.commit()
+                if self._cache is not None:
+                    self._cache.invalidate(
+                        f"instrument_id:{source_ticker}:{source}:current"
+                    )
+                return True
+        # 自家闭合行占住起点 f（含 PK 重叠形）：并列写入/延伸不生效，
+        # 自动重开放会破坏代码切换语义 → 回滚隐式事务后 fail-closed。
+        self._client.rollback()
+        logger.warning(
+            "Source mapping registration rejected: unwritable interval shape",
+            event="instrument_source_mapping_unwritable_shape",
+            source=source,
+            source_ticker=source_ticker,
+            instrument_id=instrument_id,
+            effective_from=effective_from,
+        )
+        return False
+
+    def _extend_own_open_mapping_backward(
+        self,
+        *,
+        source: str,
+        source_ticker: str,
+        instrument_id: int,
+        effective_from: str,
+        own_open_earliest_from: str,
+    ) -> bool:
+        """向后延伸自家最早开放行的 effective_from 至新起点."""
         cursor = self._client.execute(
-            """INSERT OR IGNORE INTO instrument_mapping
-            (instrument_id, source, source_ticker, effective_from,
-             is_primary, created_at)
-            VALUES (?, ?, ?, ?, FALSE, ?)""",
-            [instrument_id, source, source_ticker, effective_from, observed_at],
+            """UPDATE instrument_mapping
+            SET effective_from = ?
+            WHERE source = ? AND source_ticker = ? AND instrument_id = ?
+              AND effective_from = ? AND effective_to IS NULL""",
+            [
+                effective_from,
+                source,
+                source_ticker,
+                instrument_id,
+                own_open_earliest_from,
+            ],
         )
         if cursor.rowcount == 0:
-            # PRIMARY KEY (source, source_ticker, effective_from) 已被自家
-            # 闭合区间占据（同起点重注册）：并列写入不生效，自动重开放会
-            # 破坏切换语义 → 回滚隐式事务后 fail-closed。
             self._client.rollback()
             logger.warning(
-                "Source mapping registration rejected: unwritable interval shape",
-                event="instrument_source_mapping_unwritable_shape",
+                "Source mapping backward extension lost its row",
+                event="instrument_source_mapping_extension_missed",
                 source=source,
                 source_ticker=source_ticker,
                 instrument_id=instrument_id,
