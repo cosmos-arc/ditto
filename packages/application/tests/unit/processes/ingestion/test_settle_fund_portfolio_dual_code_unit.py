@@ -207,10 +207,12 @@ def test_key_only_frame_settles_by_code_preference() -> None:
     assert out["holding_symbol"].to_list() == ["920017.BJ"]
 
 
-def _writer_with_resolver(resolved: dict[str, int]) -> IngestionDataWriter:
+def _writer_with_resolver(
+    resolved: dict[str, int],
+) -> tuple[IngestionDataWriter, MagicMock]:
     metadata_service = MagicMock()
     metadata_service.instrument.resolve_instrument_ids_batch.return_value = resolved
-    return IngestionDataWriter(
+    writer = IngestionDataWriter(
         metadata_service=metadata_service,
         market_write_service=MagicMock(),
         fundamental_store=MagicMock(),
@@ -218,6 +220,7 @@ def _writer_with_resolver(resolved: dict[str, int]) -> IngestionDataWriter:
         macro_service=MagicMock(),
         source_name="tushare",
     )
+    return writer, metadata_service
 
 
 @pytest.mark.unit
@@ -233,12 +236,10 @@ def test_entry_resolves_only_bse_shaped_codes() -> None:
             "market_value": [1.0, 2.0, 3.0, 4.0],
         }
     )
-    writer = _writer_with_resolver({})
+    writer, metadata_service = _writer_with_resolver({})
     out = writer._settle_fund_portfolio_dual_code(frame)
     assert out.equals(frame)
-    resolved_arg = (
-        writer._metadata_service.instrument.resolve_instrument_ids_batch.call_args
-    )
+    resolved_arg = metadata_service.instrument.resolve_instrument_ids_batch.call_args
     assert sorted(resolved_arg.kwargs["identifiers"]) == [
         "833171.BJ",
         "871981.BJ",
@@ -257,7 +258,7 @@ def test_entry_skips_resolve_without_bse_codes() -> None:
             "market_value": [3.0],
         }
     )
-    writer = _writer_with_resolver({"000001.SZ": 1})
+    writer, metadata_service = _writer_with_resolver({"000001.SZ": 1})
     out = writer._settle_fund_portfolio_dual_code(frame)
     assert out.equals(frame)
-    writer._metadata_service.instrument.resolve_instrument_ids_batch.assert_not_called()
+    metadata_service.instrument.resolve_instrument_ids_batch.assert_not_called()
