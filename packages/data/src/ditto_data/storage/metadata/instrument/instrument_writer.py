@@ -242,7 +242,7 @@ class InstrumentWriter:
         observed_at: str,
     ) -> bool:
         """
-        为已注册证券登记一条来源映射（幂等，冲突拒绝）。
+        为已注册证券登记一条来源映射（幂等/冲突拒绝/形状不可写拒收）。
 
         语义（区间为半开 [effective_from, effective_to)，effective_to
         排他端，与读取侧 as-of 谓词一致；新注册区间恒开放 [f, ∞)）：

@@ -190,6 +190,27 @@ class TestSourceMappingIntervalPredicates:
 
         assert ok is False
 
+    def test_own_closed_interior_reregister_writes_open_row(
+        self, client: SQLiteClient, writer: InstrumentWriter
+    ) -> None:
+        """自家闭合区间内部起点重注册：写开放行兑现覆盖，不假幂等。"""
+        self._seed_instruments(client, [1])
+        self._seed_mapping(client, 1, "2020-01-01", "2024-01-01")
+
+        ok = writer.register_source_mapping(
+            instrument_id=1,
+            source="tushare",
+            source_ticker="830001.BJ",
+            effective_from="2022-06-01",
+            observed_at="2026-10-25 00:00:00",
+        )
+
+        assert ok is True
+        assert self._mapping_rows(client) == [
+            (1, "2020-01-01", "2024-01-01"),
+            (1, "2022-06-01", None),
+        ]
+
     def test_true_idempotent_open_row_no_write(
         self, client: SQLiteClient, writer: InstrumentWriter
     ) -> None:
