@@ -231,6 +231,28 @@ class IngestionEvidenceCommitter:
             and checkpoint.payload_id != payload_evidence_id
         )
 
+    def _append_snapshot_replay_stored(self, snapshot: ProviderSnapshot) -> None:
+        """
+        同 id 快照已在库时按存量元数据幂等回放（#602）.
+
+        commit() 会把 canonical_checksum/row_count 注入响应元数据；重拉
+        时富化输出漂移（别名注册/settle 收敛改变富化帧）会让注入值异于
+        存量，同 id 异内容在不可变端口上冲突，曾使 instrument 重拉跨
+        COMPLETE 分区以 PARTITION_LIFECYCLE_FAILED 收尾。快照守护的是
+        provider 事实——id 由请求参数+载荷 checksum 派生，注入键是本
+        run 派生注记：回放时以存量元数据为准，比较通过则行不动、更晚
+        created_at 的重观察事件照常追加；本次 canonical 漂移由紧随其后
+        的 success log 承载。provider 事实真漂移（payload_uri/row_count/
+        请求参数哈希等）仍由端口拒绝。
+        """
+        stored = self._ports.snapshot_reader.get_snapshot(snapshot.snapshot_id)
+        appendable = (
+            replace(snapshot, response_metadata=stored.response_metadata)
+            if stored is not None
+            else snapshot
+        )
+        self._ports.snapshot_writer.append_snapshot(appendable)
+
     def _prepare_payload(
         self, request: EvidenceCommitRequest
     ) -> EvidenceCommitOutcome | None:
@@ -242,7 +264,7 @@ class IngestionEvidenceCommitter:
                     return EvidenceCommitOutcome(
                         request.chunk_id, completed=False, error_code=evidence_error
                     )
-                self._ports.snapshot_writer.append_snapshot(request.provider_snapshot)
+                self._append_snapshot_replay_stored(request.provider_snapshot)
                 self._persist_success_log(request.success_log)
                 return EvidenceCommitOutcome(request.chunk_id, completed=True)
             self._advance_payload_stage(checkpoint, request)
@@ -263,7 +285,9 @@ class IngestionEvidenceCommitter:
         try:
             # The idempotent append also backfills the observation ledger for
             # upgraded stores whose legacy snapshot rows predate observations.
-            self._ports.snapshot_writer.append_snapshot(request.provider_snapshot)
+            # 同 id 存量回放（#602）：崩溃重试同载荷时注入的 canonical 元
+            # 数据可能已漂移，回放存量行避免不可变端口误拒。
+            self._append_snapshot_replay_stored(request.provider_snapshot)
         except Exception:
             return self._fail(request, error_code="SNAPSHOT_WRITE_FAILED")
         try:
