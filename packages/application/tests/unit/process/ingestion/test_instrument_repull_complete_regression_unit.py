@@ -9,6 +9,7 @@ revision 落证，不得 PARTITION_LIFECYCLE_FAILED。快照身份按 R2 契约�
 
 from __future__ import annotations
 
+from dataclasses import replace
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -271,13 +272,15 @@ def test_repull_sequence_never_emits_partition_lifecycle_failed(
 
 
 @pytest.mark.unit
-def test_repull_same_payload_with_canonical_drift_reattests_over_real_store(
+def test_repull_same_payload_with_canonical_drift_fails_loudly_over_real_store(
     tmp_path: Path,
 ) -> None:
-    """#602 根因形：同载荷重拉但 canonical 富化漂移（别名注册/settle 改变
-    富化输出）→ commit 注入的 canonical_checksum 异于存量快照 → 真快照
-    端口同 id 异内容冲突。期望幂等落证（快照不可变、漂移由 success log
-    承载），不得 PARTITION_LIFECYCLE_FAILED。
+    """#602 根因形：同载荷 force 重拉但 canonical 富化漂移（别名注册/
+    settle 收敛改变富化帧）→ commit 注入的 canonical_checksum 异于存量。
+    同一不可变快照无法见证两个 canonical 版本：静默回放存量或覆写
+    success log 都会破坏 log×snapshot 恒等且不可自愈（correctness
+    #602 F1 实证）→ 必须响亮失败（精确错误码，非泛化 PLF），既有
+    append→log 顺序保证失败时 C1 配对完好。
     """
     pool = SQLitePool(str(tmp_path / "runtime.sqlite"))
     client = SQLiteClient(pool)
@@ -302,11 +305,64 @@ def test_repull_same_payload_with_canonical_drift_reattests_over_real_store(
         _prepare_repull_intent(committer, "a" * 32)
         outcome = committer.commit(drifted)
 
-        assert outcome.completed is True
-        assert outcome.error_code is None
+        assert outcome.completed is False
+        assert outcome.error_code == "SNAPSHOT_CANONICAL_DRIFT"
+        # 快照行不可变、success log 保持存量 C1 配对（未被漂移值覆写）。
         checkpoint = lifecycle.get_checkpoint(_CHUNK_ID)
         assert checkpoint is not None
         assert checkpoint.status is PartitionLifecycleStatus.COMPLETE
         assert checkpoint.error_code is None
+        log = recorder.get_log("index_weight", "tushare", _START)
+        assert log is not None
+        assert log.checksum == "sha256:canonical-v1"
+        stored = snapshot_store.get_snapshot(drifted.provider_snapshot.snapshot_id)
+        assert stored is not None
+        assert dict(stored.response_metadata)["canonical_checksum"] == (
+            "sha256:canonical-v1"
+        )
+    finally:
+        pool.close()
+
+
+@pytest.mark.unit
+def test_non_injected_metadata_drift_still_rejected_by_port(
+    tmp_path: Path,
+) -> None:
+    """F2 钉死：非注入元数据键（如 provider_request_id）同 id 漂移不得
+    被静默吞没——仍由不可变端口拒绝。"""
+    pool = SQLitePool(str(tmp_path / "runtime.sqlite"))
+    client = SQLiteClient(pool)
+    lifecycle = SQLitePartitionLifecycleStore(client)
+    snapshot_store = SQLiteProviderSnapshotStore(client)
+    recorder = _Recorder()
+    committer = IngestionEvidenceCommitter(
+        ports=EvidenceCommitPorts(
+            lifecycle_reader=lifecycle,
+            lifecycle_writer=lifecycle,
+            snapshot_writer=snapshot_store,
+            snapshot_reader=snapshot_store,
+            catalog_writer=recorder,
+            ingestion_log_store=recorder,
+        ),
+        now=lambda: datetime(2026, 10, 25, 1, 0, tzinfo=UTC),
+    )
+    try:
+        assert committer.commit(_request("a" * 32)).completed
+
+        request = _request("a" * 32)
+        drifted_meta = replace(
+            request.provider_snapshot,
+            response_metadata=(
+                *request.provider_snapshot.response_metadata,
+                ("provider_request_id", "req-999"),
+            ),
+        )
+        outcome = committer.commit(replace(request, provider_snapshot=drifted_meta))
+
+        assert outcome.completed is False
+        assert outcome.error_code == "PARTITION_LIFECYCLE_FAILED"
+        stored = snapshot_store.get_snapshot(drifted_meta.snapshot_id)
+        assert stored is not None
+        assert ("provider_request_id", "req-999") not in stored.response_metadata
     finally:
         pool.close()
