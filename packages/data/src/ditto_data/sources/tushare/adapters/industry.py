@@ -190,7 +190,7 @@ class IndustryTushareAdapter(BaseTushareAdapter):
                 return pl.DataFrame(schema=_SW_INDUSTRY_CONCEPTS_SCHEMA)
             member_frames: list[pl.DataFrame] = []
             for industry_code in classifications.get_column("index_code").to_list():
-                params = {
+                base_params = {
                     "api_name": "index_member_all",
                     f"{provider_level}_code": industry_code,
                     "fields": (
@@ -198,13 +198,16 @@ class IndustryTushareAdapter(BaseTushareAdapter):
                         "ts_code,name,in_date,out_date,is_new"
                     ),
                 }
-                if asof_date is None:
-                    params["is_new"] = "Y"
-                frame = self._client.query(**params)
-                if frame.height > 0:
-                    member_frames.append(frame)
+                # #593 全量成员账本：is_new 不传只回当前成员（'Y'，探针
+                # 2026-10-23 实测 801010.SI=126 行），'N' 维携带已退出成员
+                # 与 out_date 退出边界（58 行）——缺它则历史 asof 快照对
+                # "asof 时点仍在业、其后退出"的成员漏配（幸存者偏差）。
+                for flag in ("Y", "N"):
+                    frame = self._client.query(**base_params, is_new=flag)
+                    if frame.height > 0:
+                        member_frames.append(frame)
             members = (
-                pl.concat(member_frames)
+                pl.concat(member_frames, how="diagonal_relaxed")
                 if member_frames
                 else pl.DataFrame(schema=_SW_INDUSTRY_CONCEPTS_SCHEMA)
             )

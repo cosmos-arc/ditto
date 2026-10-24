@@ -503,8 +503,12 @@ def _industry_classification_fetch(ctx: DailyFetchContext) -> DailyFetchHandler:
 
 
 def _industry_mapping_fetch(ctx: DailyFetchContext) -> DailyFetchHandler:
+    # #593 全量成员账本：asof=None 取 is_new Y∪N 全集（含退出成员与
+    # out_date 边界）。不得传 trade_date——asof 会在写入前滤掉已退出
+    # 成员，历史回放的行业归属永远缺幸存者偏差那一半。PIT 由读取端
+    # valid-time（effective_from/to）承担（观察事实语义同 index_weight）。
     return lambda: ctx.fetchers.metadata.fetch_sw_industry_concepts(
-        asof_date=ctx.trade_date,
+        asof_date=None,
         level=1,
         knowledge_date=date.today(),
     )

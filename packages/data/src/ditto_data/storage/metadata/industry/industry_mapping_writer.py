@@ -41,9 +41,14 @@ class IndustryMappingWriter:
     @traced("data.industry.update_mapping")
     def update_mapping(self, mapping: IndustryMapping) -> None:
         """
-        更新股票的行业映射.
+        更新股票的行业映射（同键最新观察胜出）.
 
-        先失效旧映射记录，然后插入新映射。
+        同键 = (instrument_id, industry_id, source, effective_from)。#593
+        全量账本下同一成员会以 Y 行（开放区间）与退出后的 N 行
+        （bounded 区间）跨轮次到达：键不得含 effective_to，否则
+        Y→N 转换会留下永不闭合的幻影当前行（correctness F1/F2，
+        2026-10-23 实证复现）。同键不同 effective_to = 退出边界修订
+        或重开，按最新观察 UPDATE；同键同值幂等跳过。
 
         Args:
             mapping: 行业映射信息.
@@ -53,18 +58,35 @@ class IndustryMappingWriter:
 
         """
         existing = self._client.fetchone(
-            """SELECT id FROM industry_mapping
+            """SELECT id, effective_to FROM industry_mapping
             WHERE instrument_id = ? AND industry_id = ? AND source = ?
-              AND effective_from IS ? AND effective_to IS ?""",
+              AND effective_from IS ?""",
             [
                 mapping.instrument_id,
                 mapping.industry_id,
                 mapping.source,
                 mapping.effective_from,
-                mapping.effective_to,
             ],
         )
         if existing is not None:
+            existing_to = existing["effective_to"]
+            if existing_to == mapping.effective_to:
+                return
+            self._client.execute(
+                """UPDATE industry_mapping
+                SET effective_to = ?, entry_reason = ?
+                WHERE id = ?""",
+                [mapping.effective_to, mapping.entry_reason, existing["id"]],
+            )
+            self._client.commit()
+            self._cache.invalidate_pattern("industry:mapping:*")
+            logger.info(
+                "Revised industry mapping interval",
+                instrument_id=mapping.instrument_id,
+                industry_id=mapping.industry_id,
+                effective_from=mapping.effective_from,
+                effective_to=mapping.effective_to,
+            )
             return
 
         # 只有新的 current 映射才失效同来源旧 current；历史区间不得改写当前态。

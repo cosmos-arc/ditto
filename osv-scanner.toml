@@ -34,3 +34,65 @@ ignoreUntil = 2027-01-07
 id = "GHSA-558c-9hv2-4prj"
 reason = "virtualenv 修复版 21.14.9 需 packaging>=26.3，被 prefect 依赖上限阻断（2026-10-23 新公告，与上方 10-22 四条同根同阻）；dev-only 工具，不进运行时制品。"
 ignoreUntil = 2027-01-07
+
+# ── 2026-10-24 第四批（#597 门禁解锁）──────────────────────────────
+# filelock：修复版仅 4.2.1（3.x 线无补丁），被 dev 工具链（tox/virtualenv
+# 传递依赖）的上限阻断在 3.32.7；dev-only，不进运行时制品。
+[[IgnoredVulns]]
+id = "GHSA-v4x8-3wr5-3wq8"
+reason = "filelock 修复版仅 4.2.1（3.x 无补丁），被 dev 工具链传递依赖上限阻断；dev-only。"
+ignoreUntil = 2027-01-07
+
+[[IgnoredVulns]]
+id = "GHSA-567q-5qvw-pf92"
+reason = "filelock 修复版仅 4.2.1（3.x 无补丁），被 dev 工具链传递依赖上限阻断；dev-only。"
+ignoreUntil = 2027-01-07
+
+[[IgnoredVulns]]
+id = "GHSA-9vhv-jxww-xfm5"
+reason = "filelock 修复版仅 4.2.1（3.x 无补丁），被 dev 工具链传递依赖上限阻断；dev-only。"
+ignoreUntil = 2027-01-07
+
+# virtualenv 2026-10-24 新增 7 条：与 10-22 批同根同阻（修复版 21.14.9
+# 需 packaging>=26.3 被 prefect 上限卡死）。
+[[IgnoredVulns]]
+id = "GHSA-394h-qwmc-48pf"
+reason = "virtualenv 修复版需 packaging>=26.3 被 prefect 阻断（同 10-22 批根因）；dev-only。"
+ignoreUntil = 2027-01-07
+
+[[IgnoredVulns]]
+id = "GHSA-6w3r-xr62-4xcp"
+reason = "virtualenv 修复版需 packaging>=26.3 被 prefect 阻断（同 10-22 批根因）；dev-only。"
+ignoreUntil = 2027-01-07
+
+[[IgnoredVulns]]
+id = "GHSA-494p-63j8-28p3"
+reason = "virtualenv 修复版需 packaging>=26.3 被 prefect 阻断（同 10-22 批根因）；dev-only。"
+ignoreUntil = 2027-01-07
+
+[[IgnoredVulns]]
+id = "GHSA-fc2g-4w5p-6whm"
+reason = "virtualenv 修复版需 packaging>=26.3 被 prefect 阻断（同 10-22 批根因）；dev-only。"
+ignoreUntil = 2027-01-07
+
+[[IgnoredVulns]]
+id = "GHSA-hhxq-47xx-j5xx"
+reason = "virtualenv 修复版需 packaging>=26.3 被 prefect 阻断（同 10-22 批根因）；dev-only。"
+ignoreUntil = 2027-01-07
+
+[[IgnoredVulns]]
+id = "GHSA-qmx5-4p3x-wvqf"
+reason = "virtualenv 修复版需 packaging>=26.3 被 prefect 阻断（同 10-22 批根因）；dev-only。"
+ignoreUntil = 2027-01-07
+
+[[IgnoredVulns]]
+id = "GHSA-cx28-75q4-x26q"
+reason = "virtualenv 修复版需 packaging>=26.3 被 prefect 阻断（同 10-22 批根因）；dev-only。"
+ignoreUntil = 2027-01-07
+
+# zod（8.2 High）：修复版仅在 zod 4（major，Web 运行时依赖，API 破坏性
+# 迁移），3.x 线无补丁。独立迁移票跟进；High 级给两周短复审线。
+[[IgnoredVulns]]
+id = "GHSA-mrhx-c7xc-m3w5"
+reason = "zod 修复版仅在 4.x major（Web 运行时依赖，破坏性迁移），3.x 无补丁；独立迁移票跟进。"
+ignoreUntil = 2026-11-07
