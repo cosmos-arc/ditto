@@ -66,6 +66,21 @@ class TestResolveTradeDate:
 
         assert daily_module.resolve_trade_date("") == "2026-10-26"
 
+    def test_scheduled_date_read_failure_degrades_to_wall_clock(
+        self, monkeypatch
+    ) -> None:
+        """计划日读取异常时退回墙钟并留下告警（correctness #613 F2）。"""
+        self._freeze_wall_clock(monkeypatch, "2026-10-26T21:55:00")
+
+        class _BoomRuntime:
+            @property
+            def scheduled_start_time(self):
+                raise RuntimeError("transient client error")
+
+        monkeypatch.setattr("prefect.runtime.flow_run", _BoomRuntime())
+
+        assert daily_module.resolve_trade_date("") == "2026-10-26"
+
     def test_sync_runner_resolves_empty_date_before_trading_day_check(
         self,
         mocker: MockerFixture,

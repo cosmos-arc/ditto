@@ -30,6 +30,7 @@ from ditto_application.config import (
     resolve_ingestion_scope,
 )
 from ditto_application.processes.ingestion.result_handler import count_results
+from ditto_platform.foundation import logger
 from prefect import flow, task
 from prefect.futures import PrefectFuture
 
@@ -85,7 +86,9 @@ def _scheduled_run_date() -> str | None:
     """
     Prefect 定时触发的计划日（Asia/Shanghai 日历日）。
 
-    非 flow 运行上下文（CLI/单测）返回 None。
+    非 flow 运行上下文（CLI/单测）返回 None。读取异常时告警并返回 None：
+    调用方退回执行时墙钟——迟执行补跑会因此归属执行日而非计划日，
+    该退化须在运行日志中可见（correctness #613 F2）。
     """
     try:
         from prefect.runtime import flow_run as runtime_flow_run  # noqa: PLC0415
@@ -93,7 +96,12 @@ def _scheduled_run_date() -> str | None:
         return None
     try:
         scheduled = runtime_flow_run.scheduled_start_time
-    except Exception:
+    except Exception as exc:
+        logger.warning(
+            "scheduled_start_time read failed; late run may fall back to "
+            + "execution day",
+            error=str(exc),
+        )
         return None
     if scheduled is None:
         return None

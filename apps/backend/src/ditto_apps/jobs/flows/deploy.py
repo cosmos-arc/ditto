@@ -306,6 +306,11 @@ def deploy_all_flows(
 
     注意: Prefect 3.x 移除了 Deployment API，改用 flow.deploy()。
 
+    警告: prefect.deploy() 只 upsert 本次调用内的部署，不回收既有部署
+    （correctness #613 F1）——曾以 scope=all 部署过后改用 --only ingestion，
+    服务器上的 eod-pipeline-prod 19:45 调度仍会存活并继续触发；下线
+    EOD/backtest 部署须显式 `prefect deployment delete`。
+
     """
     logger.info("开始部署 Prefect Flows", event="deploy_start", scope=scope)
 

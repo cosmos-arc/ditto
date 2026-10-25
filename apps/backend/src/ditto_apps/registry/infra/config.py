@@ -160,7 +160,9 @@ def _read_keyring_secret(service: str, key: str) -> str | None:
         done.set()
 
     # ponytail: 超时后该 daemon 线程永久滞留（每进程至多 3 个密钥）；
-    # 需要可重试语义时换子进程隔离读取
+    # 若服务端以 fork 方式派生 worker，滞留线程持有的 C 级锁会被子进程
+    # 继承（macOS 默认 spawn，概率低；correctness #613 F3）；
+    # 需要可重试/隔离语义时换子进程读取
     threading.Thread(
         target=_read_into_holder,
         name=f"keyring-read-{service}",
