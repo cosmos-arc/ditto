@@ -241,6 +241,9 @@ class TestDatasetRegistry:
         assert stock_status.tier == TaskTier.T1_INCREMENTAL
         assert stock_status.requires_trade_date is True
         assert stock_status.task_name == "ingest_stock_status"
+        # #613: #583 实测 bak_basic 当日终值 ~21:50 才可用（17:3x 恒空），
+        # 调度对齐 21:55，典型可用时间按实测修正
+        assert stock_status.typical_available_time == time(21, 50)
 
         # Adj factor should be T1
         adj_factor = INGESTION_SPECS[Dataset.ADJ_FACTOR]

@@ -81,15 +81,39 @@ def _dataset_value(dataset: object) -> str:
     return value if isinstance(value, str) else ""
 
 
+def _scheduled_run_date() -> str | None:
+    """
+    Prefect 定时触发的计划日（Asia/Shanghai 日历日）。
+
+    非 flow 运行上下文（CLI/单测）返回 None。
+    """
+    try:
+        from prefect.runtime import flow_run as runtime_flow_run  # noqa: PLC0415
+    except Exception:  # pragma: no cover - prefect 缺失仅出现于极端裁剪环境
+        return None
+    try:
+        scheduled = runtime_flow_run.scheduled_start_time
+    except Exception:
+        return None
+    if scheduled is None:
+        return None
+    return scheduled.astimezone(ZoneInfo("Asia/Shanghai")).date().isoformat()
+
+
 def resolve_trade_date(trade_date: str) -> str:
     """
-    空 trade_date 解析为 Asia/Shanghai 当日。
+    空 trade_date 解析为计划运行日的 Asia/Shanghai 日历日。
 
     Prefect 3.6 部署参数对纯字符串原样透传（`{{ date }}` 不再运行时渲染），
-    定时触发必须由 flow 运行时自取日历日；显式传入的日期原样保留。
+    定时触发必须由 flow 运行时自取日期。优先取 scheduled_start_time：
+    迟执行的补跑（worker 宕机恢复后）仍归属计划日；非 Prefect 上下文
+    退回墙钟当日。显式传入的日期原样保留。
     """
     if trade_date:
         return trade_date
+    scheduled_date = _scheduled_run_date()
+    if scheduled_date is not None:
+        return scheduled_date
     return datetime.now(ZoneInfo("Asia/Shanghai")).date().isoformat()
 
 
