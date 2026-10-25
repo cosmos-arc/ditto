@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import re
+import threading
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -108,6 +109,10 @@ def data_root_init_directories_from_data_store(
 _RUNTIME_SECRET_REFS = (("tushare", "token"), ("fred", "api_key"))
 _PRELOADED_KEYRING_SECRETS: dict[tuple[str, str], str] = {}
 
+# 无 GUI 进程的钥匙串密文读取限时（秒）；正常读取毫秒级，超时即视为
+# 授权弹框阻塞，降级 None（交互场景用户点「始终允许」通常在 30s 内）
+_KEYRING_READ_TIMEOUT_SECONDS = 30
+
 
 def _load_keyring_secret(service: str, key: str) -> str | None:
     """
@@ -128,18 +133,51 @@ def _load_keyring_secret(service: str, key: str) -> str | None:
 
 
 def _read_keyring_secret(service: str, key: str) -> str | None:
-    """Read one secret from the platform backend without caching it."""
+    """
+    Read one secret from the platform backend without caching it.
+
+    macOS 钥匙串在无 GUI 进程（守护/后台）里对密文读取可能阻塞在授权
+    弹框上永不返回（#613 实测：worker 子进程卡 SecItemCopyMatching）。
+    daemon 线程内限时等待，超时降级 None：缺 token 的数据集在 fetch/校验层
+    响亮失败，而不是整条摄取链悬挂；daemon 线程保证阻塞的钥匙串调用
+    不会在进程退出时被 join 卡死。正常读取毫秒级返回不受影响。
+    """
     try:
         import keyring  # noqa: PLC0415  # 可选依赖延迟加载
     except ImportError:
         logger.debug("keyring not available, skipping", service=service)
         return None
 
-    try:
-        return keyring.get_password(service, key)
-    except Exception as e:
-        logger.warning("keyring read failed", service=service, error=str(e))
+    holder: dict[str, str | None] = {}
+    done = threading.Event()
+
+    def _read_into_holder() -> None:
+        try:
+            holder["value"] = keyring.get_password(service, key)
+        except Exception as e:
+            logger.warning("keyring read failed", service=service, error=str(e))
+            holder["value"] = None
+        done.set()
+
+    # ponytail: 超时后该 daemon 线程永久滞留（每进程至多 3 个密钥）；
+    # 若服务端以 fork 方式派生 worker，滞留线程持有的 C 级锁会被子进程
+    # 继承（macOS 默认 spawn，概率低；correctness #613 F3）；
+    # 需要可重试/隔离语义时换子进程读取
+    threading.Thread(
+        target=_read_into_holder,
+        name=f"keyring-read-{service}",
+        daemon=True,
+    ).start()
+
+    if not done.wait(timeout=_KEYRING_READ_TIMEOUT_SECONDS):
+        logger.warning(
+            "keyring read timed out; falling back to None",
+            service=service,
+            key=key,
+            timeout_seconds=_KEYRING_READ_TIMEOUT_SECONDS,
+        )
         return None
+    return holder["value"]
 
 
 def preload_runtime_secrets() -> None:

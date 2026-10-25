@@ -254,6 +254,32 @@ class TestEodFlowNonTradingDay:
         assert dependencies.daily_ingestion is daily_ingestion_flow
         assert dependencies.daily_materialization is daily_materialization_flow
 
+    def test_empty_trade_date_resolves_from_scheduled_context(
+        self,
+        mocker: MockerFixture,
+    ) -> None:
+        """定时部署触发未携带日期时，wrapper 自取计划日（#613，时钟显式控制）。"""
+        from ditto_apps.jobs.flows import daily as daily_module
+
+        mocker.patch.object(
+            daily_module, "_scheduled_run_date", return_value="2026-10-26"
+        )
+        pipeline = mocker.patch(
+            f"{EOD_MODULE}.run_eod_pipeline",
+            create=True,
+            return_value={},
+        )
+
+        from ditto_apps.jobs.flows.eod import eod_flow
+
+        _prefect_runner(eod_flow)(
+            trade_date="",
+            strategy_id="alpha",
+            account_id="paper",
+        )
+
+        assert pipeline.call_args.kwargs["trade_date"] == "2026-10-26"
+
 
 # ===========================================================================
 # Test: 摄取全部成功 -> 物化 -> 策略运行

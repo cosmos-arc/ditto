@@ -30,6 +30,75 @@ CHECK_TRADING_DAY_RUNNER = _prefect_runner(check_trading_day)
 DAILY_INGESTION_FLOW_RUNNER = _prefect_runner(daily_ingestion_flow)
 
 
+@pytest.mark.unit
+class TestResolveTradeDate:
+    """测试定时触发路径的空 trade_date 派生（#613）。"""
+
+    @staticmethod
+    def _freeze_wall_clock(
+        monkeypatch: pytest.MonkeyPatch,
+        frozen: str,
+    ) -> None:
+        """显式控制墙钟（testing.md：时间必须显式控制），并屏蔽 Prefect 上下文。"""
+        from datetime import datetime as real_datetime
+
+        class _FrozenDateTime(real_datetime):
+            @classmethod
+            def now(cls, tz=None):
+                return real_datetime.fromisoformat(frozen).replace(tzinfo=tz)
+
+        monkeypatch.setattr(daily_module, "datetime", _FrozenDateTime)
+        monkeypatch.setattr(daily_module, "_scheduled_run_date", lambda: None)
+
+    def test_explicit_date_passes_through(self) -> None:
+        """显式传入的日期必须原样保留。"""
+        assert daily_module.resolve_trade_date("2026-10-26") == "2026-10-26"
+
+    def test_scheduled_run_date_takes_priority(self, monkeypatch) -> None:
+        """迟执行的补跑按 scheduled 计划日归属，不取执行时墙钟。"""
+        monkeypatch.setattr(daily_module, "_scheduled_run_date", lambda: "2026-10-26")
+
+        assert daily_module.resolve_trade_date("") == "2026-10-26"
+
+    def test_empty_date_falls_back_to_frozen_wall_clock(self, monkeypatch) -> None:
+        """无 Prefect 上下文时退回 Asia/Shanghai 墙钟当日（时钟显式冻结）。"""
+        self._freeze_wall_clock(monkeypatch, "2026-10-26T21:55:00")
+
+        assert daily_module.resolve_trade_date("") == "2026-10-26"
+
+    def test_scheduled_date_read_failure_degrades_to_wall_clock(
+        self, monkeypatch
+    ) -> None:
+        """计划日读取异常时退回墙钟并留下告警（correctness #613 F2）。"""
+        self._freeze_wall_clock(monkeypatch, "2026-10-26T21:55:00")
+
+        class _BoomRuntime:
+            @property
+            def scheduled_start_time(self):
+                raise RuntimeError("transient client error")
+
+        monkeypatch.setattr("prefect.runtime.flow_run", _BoomRuntime())
+
+        assert daily_module.resolve_trade_date("") == "2026-10-26"
+
+    def test_sync_runner_resolves_empty_date_before_trading_day_check(
+        self,
+        mocker: MockerFixture,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """同步入口先解析日期再做交易日判断。"""
+        self._freeze_wall_clock(monkeypatch, "2026-10-26T21:55:00")
+        check = mocker.patch.object(
+            daily_module, "run_check_trading_day", return_value=False
+        )
+        scope = mocker.patch.object(daily_module, "_daily_ingestion_scope")
+
+        daily_module.run_daily_ingestion(trade_date="")
+
+        assert check.call_args.args[0] == "2026-10-26"
+        scope.assert_not_called()
+
+
 def _assert_authoritative_dq_evidence(
     first: dict[str, object],
     second: dict[str, object],

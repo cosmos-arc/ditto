@@ -2,6 +2,7 @@
 
 import pytest
 from ditto_apps.jobs.flows.deploy import (
+    SCHEDULE_DAILY_INGESTION,
     SCHEDULE_DAILY_REPAIR,
     SCHEDULE_EOD,
     FlowDeploymentConfig,
@@ -10,6 +11,7 @@ from ditto_apps.jobs.flows.deploy import (
     deploy_all_flows,
     list_flows,
 )
+from prefect.types.entrypoint import EntrypointType
 from pytest_mock import MockerFixture
 
 
@@ -98,7 +100,6 @@ class TestGetFlowConfigs:
         config = _get_flow_configs()[0]
 
         assert config.parameters == {
-            "trade_date": "{{ date }}",
             "strategy_id": "etf-rotation",
             "account_id": "paper",
             "allow_experimental_data": False,
@@ -185,6 +186,68 @@ class TestGetFlowConfigs:
 
 
 @pytest.mark.unit
+class TestDeployScope:
+    """测试部署范围选择（#613 数据-only）。"""
+
+    def test_ingestion_scope_skips_eod_gate_without_env(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """数据-only 部署不得被 EOD sleeve 环境门槛拦截。"""
+        monkeypatch.delenv("DITTO_EOD_STRATEGY_ID", raising=False)
+        monkeypatch.delenv("DITTO_EOD_ACCOUNT_ID", raising=False)
+
+        configs = _get_flow_configs("ingestion")
+
+        assert [c.deployment_name for c in configs] == [
+            "daily-ingestion-prod",
+            "daily-repair-prod",
+            "retry-failed-prod",
+            "backfill-prod",
+            "repair-holes-prod",
+        ]
+
+    def test_ingestion_scope_can_include_backtest(self) -> None:
+        """ingestion 范围可显式追加 backtest 部署。"""
+        configs = _get_flow_configs("ingestion", include_backtest=True)
+        names = [c.deployment_name for c in configs]
+
+        assert len(names) == 6
+        assert names[-1] == "backtest-prod"
+        assert "eod-pipeline-prod" not in names
+
+    def test_all_scope_keeps_eod_gate(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """全量部署仍受 EOD sleeve 环境门槛约束。"""
+        monkeypatch.delenv("DITTO_EOD_STRATEGY_ID", raising=False)
+        monkeypatch.setenv("DITTO_EOD_ACCOUNT_ID", "paper")
+
+        with pytest.raises(ValueError, match="EOD_DEPLOYMENT_CONFIG_MISSING"):
+            _get_flow_configs("all")
+
+    def test_invalid_scope_fails_closed(self) -> None:
+        """未知部署范围不得静默降级为全量。"""
+        with pytest.raises(ValueError, match="DEPLOY_SCOPE_INVALID"):
+            _get_flow_configs("eod")
+
+    def test_deploy_all_flows_passes_scope(self, mocker: MockerFixture) -> None:
+        """scope/include_backtest 应透传给配置选择。"""
+        mocker.patch("ditto_apps.jobs.flows.deploy.deploy")
+        mock_get_configs = mocker.patch(
+            "ditto_apps.jobs.flows.deploy._get_flow_configs",
+            return_value=[],
+        )
+
+        deploy_all_flows(
+            work_pool_name="test-pool", scope="ingestion", include_backtest=True
+        )
+
+        mock_get_configs.assert_called_once_with("ingestion", include_backtest=True)
+
+
+@pytest.mark.unit
 class TestScheduleDefinitions:
     """测试 Cron 调度定义."""
 
@@ -193,6 +256,11 @@ class TestScheduleDefinitions:
         assert SCHEDULE_EOD is not None
         assert SCHEDULE_EOD.cron == "45 19 * * 1-5"
         assert SCHEDULE_EOD.timezone == "Asia/Shanghai"
+
+    def test_schedule_daily_ingestion_cron_and_timezone(self):
+        """测试每日摄取调度: 交易日 21:55 (bak_basic ~21:50 就绪后), Asia/Shanghai。"""
+        assert SCHEDULE_DAILY_INGESTION.cron == "55 21 * * 1-5"
+        assert SCHEDULE_DAILY_INGESTION.timezone == "Asia/Shanghai"
 
     def test_schedule_daily_repair_cron_and_timezone(self):
         """测试每日修补调度: 每日 02:00, Asia/Shanghai。"""
@@ -212,10 +280,10 @@ class TestScheduleAssignment:
 
         # 自动调度的部署
         assert config_map["eod-pipeline-prod"].schedule is SCHEDULE_EOD
+        assert config_map["daily-ingestion-prod"].schedule is SCHEDULE_DAILY_INGESTION
         assert config_map["daily-repair-prod"].schedule is SCHEDULE_DAILY_REPAIR
 
-        # 手动触发的部署（daily_ingestion_flow 改为手动触发，由 EOD 编排）
-        assert config_map["daily-ingestion-prod"].schedule is None
+        # 手动触发的部署
         assert config_map["retry-failed-prod"].schedule is None
         assert config_map["backfill-prod"].schedule is None
         assert config_map["repair-holes-prod"].schedule is None
@@ -344,6 +412,7 @@ class TestDeployAllFlows:
             tags=["test"],
             parameters={},
             schedule=SCHEDULE_EOD,
+            entrypoint_type=EntrypointType.MODULE_PATH,
         )
 
     def test_deploy_all_flows_with_image(self, mocker: MockerFixture):
@@ -461,8 +530,8 @@ class TestFlowDeploymentContracts:
         assert "config" in backfill_config.parameters
         assert "backfill_config" not in backfill_config.parameters
 
-    def test_eod_pipeline_uses_trade_date_parameter(self) -> None:
-        """EOD flow 应使用 trade_date 参数。"""
+    def test_eod_pipeline_omits_runtime_trade_date(self) -> None:
+        """EOD 部署参数不得携带 trade_date 模板（Prefect 3.6 纯字符串不渲染）。"""
         configs = _get_flow_configs()
 
         eod_config = next(
@@ -470,7 +539,18 @@ class TestFlowDeploymentContracts:
             None,
         )
         assert eod_config is not None
-        assert "trade_date" in eod_config.parameters
+        assert "trade_date" not in eod_config.parameters
+
+    def test_daily_ingestion_omits_runtime_trade_date(self) -> None:
+        """daily-ingestion 部署参数同理，日期由 flow 运行时自取。"""
+        configs = _get_flow_configs("ingestion")
+
+        ingestion_config = next(
+            (c for c in configs if c.deployment_name == "daily-ingestion-prod"),
+            None,
+        )
+        assert ingestion_config is not None
+        assert ingestion_config.parameters == {}
 
 
 @pytest.mark.unit

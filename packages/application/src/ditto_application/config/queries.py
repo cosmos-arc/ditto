@@ -142,7 +142,9 @@ INGESTION_SPECS: dict[_Dataset, DatasetSpec] = {
     _Dataset.STOCK_STATUS: create_t1_config(
         dataset=_Dataset.STOCK_STATUS,
         description="股票状态数据",
-        typical_available_time=time(17, 30),
+        # #583 实测（issue 评论）：支配端点 bak_basic 当日终值 ~21:50 才可用，
+        # 17:3x 恒空——典型可用时间按实测修正，调度对齐 21:55（#613）。
+        typical_available_time=time(21, 50),
         depends_on=[_Dataset.STOCK_DAILY],
         critical_fields=[
             "trade_date",

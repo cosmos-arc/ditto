@@ -1,5 +1,6 @@
 """ConfigProvider Data 配置测试."""
 
+import sys
 from pathlib import Path
 from typing import cast
 
@@ -127,6 +128,34 @@ class TestConfigProviderData:
             config_module._load_keyring_secret("tushare", "token")
             == "parent-resolved-secret"
         )
+
+    def test_read_keyring_secret_times_out_when_prompt_blocked(
+        self, monkeypatch
+    ) -> None:
+        """无 GUI 进程的钥匙串阻塞读取必须限时降级，不得悬挂守护进程（#613）。"""
+        import time
+        from unittest.mock import Mock
+
+        fake_keyring = Mock()
+        fake_keyring.get_password.side_effect = lambda *_: time.sleep(5)
+        monkeypatch.setitem(sys.modules, "keyring", fake_keyring)
+        monkeypatch.setattr(config_module, "_KEYRING_READ_TIMEOUT_SECONDS", 0.2)
+
+        start = time.monotonic()
+        result = config_module._read_keyring_secret("tushare", "token")
+
+        assert result is None
+        assert time.monotonic() - start < 3
+
+    def test_read_keyring_secret_passes_value_through(self, monkeypatch) -> None:
+        """正常路径毫秒级返回原值。"""
+        from unittest.mock import Mock
+
+        fake_keyring = Mock()
+        fake_keyring.get_password.return_value = "secret-value"
+        monkeypatch.setitem(sys.modules, "keyring", fake_keyring)
+
+        assert config_module._read_keyring_secret("tushare", "token") == "secret-value"
 
     def test_file_storage_settings_provider(self, monkeypatch):
         """测试 file_storage_settings provider."""

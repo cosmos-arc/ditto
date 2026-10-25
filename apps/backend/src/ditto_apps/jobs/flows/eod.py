@@ -73,6 +73,7 @@ from ditto_apps.jobs.eod_evidence import (
 from ditto_apps.jobs.flows.daily import (
     check_trading_day,
     daily_ingestion_flow,
+    resolve_trade_date,
     run_check_trading_day,
     run_daily_ingestion,
 )
@@ -646,15 +647,19 @@ def run_eod_pipeline(
     description="EOD 编排: 摄取 -> 物化 -> 策略运行",
 )
 def eod_flow(
-    trade_date: str,
+    trade_date: str = "",
     source: str = "tushare",
     strategy_id: str | None = None,
     account_id: str | None = None,
     allow_experimental_data: bool = False,
 ) -> dict[str, object]:
-    """用 Prefect adapters 调用共享 EOD pipeline。"""
+    """
+    用 Prefect adapters 调用共享 EOD pipeline。
+
+    trade_date 为空时取 Asia/Shanghai 当日（定时部署触发路径）。
+    """
     return run_eod_pipeline(
-        trade_date=trade_date,
+        trade_date=resolve_trade_date(trade_date),
         source=source,
         strategy_id=strategy_id,
         account_id=account_id,

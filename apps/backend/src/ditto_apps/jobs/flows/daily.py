@@ -17,8 +17,10 @@ Flow 功能：
 from __future__ import annotations
 
 from collections.abc import Iterable
+from datetime import datetime
 from itertools import chain
 from typing import Any, cast
+from zoneinfo import ZoneInfo
 
 from ditto_application.config import (
     IngestionScope,
@@ -28,6 +30,7 @@ from ditto_application.config import (
     resolve_ingestion_scope,
 )
 from ditto_application.processes.ingestion.result_handler import count_results
+from ditto_platform.foundation import logger
 from prefect import flow, task
 from prefect.futures import PrefectFuture
 
@@ -77,6 +80,49 @@ def _index_results(
 def _dataset_value(dataset: object) -> str:
     value = getattr(dataset, "value", None)
     return value if isinstance(value, str) else ""
+
+
+def _scheduled_run_date() -> str | None:
+    """
+    Prefect 定时触发的计划日（Asia/Shanghai 日历日）。
+
+    非 flow 运行上下文（CLI/单测）返回 None。读取异常时告警并返回 None：
+    调用方退回执行时墙钟——迟执行补跑会因此归属执行日而非计划日，
+    该退化须在运行日志中可见（correctness #613 F2）。
+    """
+    try:
+        from prefect.runtime import flow_run as runtime_flow_run  # noqa: PLC0415
+    except Exception:  # pragma: no cover - prefect 缺失仅出现于极端裁剪环境
+        return None
+    try:
+        scheduled = runtime_flow_run.scheduled_start_time
+    except Exception as exc:
+        logger.warning(
+            "scheduled_start_time read failed; late run may fall back to "
+            + "execution day",
+            error=str(exc),
+        )
+        return None
+    if scheduled is None:
+        return None
+    return scheduled.astimezone(ZoneInfo("Asia/Shanghai")).date().isoformat()
+
+
+def resolve_trade_date(trade_date: str) -> str:
+    """
+    空 trade_date 解析为计划运行日的 Asia/Shanghai 日历日。
+
+    Prefect 3.6 部署参数对纯字符串原样透传（`{{ date }}` 不再运行时渲染），
+    定时触发必须由 flow 运行时自取日期。优先取 scheduled_start_time：
+    迟执行的补跑（worker 宕机恢复后）仍归属计划日；非 Prefect 上下文
+    退回墙钟当日。显式传入的日期原样保留。
+    """
+    if trade_date:
+        return trade_date
+    scheduled_date = _scheduled_run_date()
+    if scheduled_date is not None:
+        return scheduled_date
+    return datetime.now(ZoneInfo("Asia/Shanghai")).date().isoformat()
 
 
 def _daily_ingestion_scope(
@@ -164,12 +210,17 @@ def _completed_ingestion_result(
 
 
 def run_daily_ingestion(
-    trade_date: str,
+    trade_date: str = "",
     source: str = "tushare",
     force: bool = False,
     required_datasets: tuple[str, ...] | None = None,
 ) -> dict[str, object]:
-    """顺序执行每日摄取业务，可限制为策略依赖闭包。"""
+    """
+    顺序执行每日摄取业务，可限制为策略依赖闭包。
+
+    trade_date 为空时取 Asia/Shanghai 当日（定时触发路径）。
+    """
+    trade_date = resolve_trade_date(trade_date)
     if not run_check_trading_day(trade_date):
         return _skipped_ingestion_result(trade_date)
 
@@ -213,7 +264,7 @@ def run_daily_ingestion(
 
 @flow(name="daily-ingestion", description="每日增量数据摄取流程")
 def daily_ingestion_flow(
-    trade_date: str,
+    trade_date: str = "",
     source: str = "tushare",
     force: bool = False,
     required_datasets: tuple[str, ...] | None = None,
@@ -230,7 +281,8 @@ def daily_ingestion_flow(
     使用 Prefect 原生依赖机制（@task + wait_for）实现声明式编排。
 
     Args:
-        trade_date: 交易日期 (YYYY-MM-DD)
+        trade_date: 交易日期 (YYYY-MM-DD)；为空时取 Asia/Shanghai 当日
+            （定时部署触发路径，Prefect 3.6 参数模板不渲染 `{{ date }}`）
         source: 数据源名称
         force: 是否强制重新摄取
         required_datasets: 显式策略依赖；提供时仅执行其依赖闭包。
@@ -246,6 +298,9 @@ def daily_ingestion_flow(
         - summary: 汇总统计
 
     """
+    # 0. 定时触发未携带日期时自取当日
+    trade_date = resolve_trade_date(trade_date)
+
     # 1. 检查交易日
     is_trading = check_trading_day(trade_date=trade_date)
 
