@@ -45,7 +45,8 @@ dependencies = [
     "keyring>=25.0,<26",
     "openai-agents>=0.20.0,<0.21",
     "dishka>=1.8,<2",
-    "socksio>=1.0,<2"
+    "socksio>=1.0,<2",
+    "importlib-metadata>=8",
 ]
 
 [dependency-groups]

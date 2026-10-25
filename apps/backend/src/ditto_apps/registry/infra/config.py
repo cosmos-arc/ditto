@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import re
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -108,6 +109,10 @@ def data_root_init_directories_from_data_store(
 _RUNTIME_SECRET_REFS = (("tushare", "token"), ("fred", "api_key"))
 _PRELOADED_KEYRING_SECRETS: dict[tuple[str, str], str] = {}
 
+# 无 GUI 进程的钥匙串密文读取限时（秒）；正常读取毫秒级，超时即视为
+# 授权弹框阻塞，降级 None（交互场景用户点「始终允许」通常在 30s 内）
+_KEYRING_READ_TIMEOUT_SECONDS = 30
+
 
 def _load_keyring_secret(service: str, key: str) -> str | None:
     """
@@ -128,18 +133,39 @@ def _load_keyring_secret(service: str, key: str) -> str | None:
 
 
 def _read_keyring_secret(service: str, key: str) -> str | None:
-    """Read one secret from the platform backend without caching it."""
+    """
+    Read one secret from the platform backend without caching it.
+
+    macOS 钥匙串在无 GUI 进程（守护/后台）里对密文读取可能阻塞在授权
+    弹框上永不返回（#613 实测：worker 子进程卡 SecItemCopyMatching）。
+    限时等待后降级 None：缺 token 的数据集在 fetch/校验层响亮失败，
+    而不是整条摄取链悬挂。正常读取毫秒级返回不受影响。
+    """
     try:
         import keyring  # noqa: PLC0415  # 可选依赖延迟加载
     except ImportError:
         logger.debug("keyring not available, skipping", service=service)
         return None
 
+    # ponytail: 超时线程无法回收，每次超时泄漏一个 daemon 线程（每进程至多 3 个密钥）；
+    # 若未来需要可重试语义，换子进程隔离读取
+    executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="keyring-read")
     try:
-        return keyring.get_password(service, key)
+        future = executor.submit(keyring.get_password, service, key)
+        return future.result(timeout=_KEYRING_READ_TIMEOUT_SECONDS)
+    except TimeoutError:
+        logger.warning(
+            "keyring read timed out; falling back to None",
+            service=service,
+            key=key,
+            timeout_seconds=_KEYRING_READ_TIMEOUT_SECONDS,
+        )
+        return None
     except Exception as e:
         logger.warning("keyring read failed", service=service, error=str(e))
         return None
+    finally:
+        executor.shutdown(wait=False)
 
 
 def preload_runtime_secrets() -> None:

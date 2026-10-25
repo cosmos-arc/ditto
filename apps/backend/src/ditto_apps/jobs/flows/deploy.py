@@ -1,15 +1,15 @@
 """
 部署脚本。
 
-该模块用于部署所有 Prefect Flows 到 Prefect Server。
+该模块用于部署 Prefect Flows 到 Prefect Server。
 
 使用 Prefect 3.x 新部署机制 (flow.deploy / prefect.deploy)。
 """
 
 from __future__ import annotations
 
+import argparse
 import os
-import sys
 from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any, cast
@@ -17,6 +17,7 @@ from typing import Any, cast
 from ditto_platform.foundation import logger
 from prefect import Flow, deploy
 from prefect.schedules import Cron, Schedule
+from prefect.types.entrypoint import EntrypointType
 
 from ditto_apps.jobs.flows import (
     backfill_flow,
@@ -35,12 +36,20 @@ from ditto_apps.jobs.flows.backtest import run_backtest_flow
 # Cron 表达式遵循标准 5 字段格式: 分 时 日 月 周。
 # ---------------------------------------------------------------------------
 
-# EOD: 交易日 19:45 — 每日 EOD 编排流程 (摄取 → 物化 → 策略)
-# 统一入口，替代原有的独立 daily_ingestion_flow 定时调度。
+# EOD: 交易日 19:45 — EOD 编排流程 (摄取 → 物化 → 策略)。
+# #613 数据-only 先行：仅 scope=all 部署（EOD sleeve 环境门槛只在此时生效）。
 SCHEDULE_EOD: Schedule = Cron("45 19 * * 1-5", timezone="Asia/Shanghai")
+
+# T1 摄取: 交易日 21:55 — 全量日频数据集一次跑完。
+# #583 实测（issue 评论）：stock_status 支配端点 bak_basic 当日终值 ~21:50 才可用。
+# EOD 编排后续接管摄取时需重新裁决此独立调度去留（#613 切片 6）。
+SCHEDULE_DAILY_INGESTION: Schedule = Cron("55 21 * * 1-5", timezone="Asia/Shanghai")
 
 # T2: 每日 02:00 — 空洞扫描 + 回补（非交易日亦可运行，无副作用）
 SCHEDULE_DAILY_REPAIR: Schedule = Cron("0 2 * * *", timezone="Asia/Shanghai")
+
+# 部署范围：all=全部（含 EOD/backtest）；ingestion=数据-only（#613，不含 EOD/backtest）
+_DEPLOY_SCOPES = frozenset({"all", "ingestion"})
 
 
 @dataclass(frozen=True)
@@ -152,7 +161,12 @@ def _parse_boolean_env(name: str, *, default: bool) -> bool:
 
 
 def _get_eod_deployment_parameters() -> dict[str, Any]:
-    """读取每日 EOD 的显式 execution sleeve，缺失时禁止部署。"""
+    """
+    读取每日 EOD 的显式 execution sleeve，缺失时禁止部署。
+
+    trade_date 不在部署参数中：Prefect 3.6 对纯字符串参数原样透传
+    （`{{ date }}` 不再运行时渲染），由 eod_flow 运行时自取当日。
+    """
     raw_values = {name: os.environ.get(name) for name in _REQUIRED_EOD_ENV_VARS}
     missing_names = [
         name
@@ -165,7 +179,6 @@ def _get_eod_deployment_parameters() -> dict[str, Any]:
         raise ValueError(f"EOD_DEPLOYMENT_CONFIG_MISSING: {detail}")
 
     return {
-        "trade_date": "{{ date }}",
         "strategy_id": cast(str, raw_values["DITTO_EOD_STRATEGY_ID"]).strip(),
         "account_id": cast(str, raw_values["DITTO_EOD_ACCOUNT_ID"]).strip(),
         "allow_experimental_data": _parse_boolean_env(
@@ -175,26 +188,33 @@ def _get_eod_deployment_parameters() -> dict[str, Any]:
     }
 
 
-def _get_flow_configs() -> list[FlowDeploymentConfig]:
-    """获取所有 flow 部署配置。"""
+def _get_flow_configs(
+    scope: str = "all",
+    *,
+    include_backtest: bool = False,
+) -> list[FlowDeploymentConfig]:
+    """
+    获取 flow 部署配置。
+
+    Args:
+        scope: "all"=全部部署（含 EOD，需 EOD sleeve 环境门槛）；
+            "ingestion"=数据-only（无 EOD/backtest，不受 EOD 门槛拦截）。
+        include_backtest: ingestion 范围下追加 backtest 部署（scope=all 恒含）。
+
+    """
+    if scope not in _DEPLOY_SCOPES:
+        valid = ", ".join(sorted(_DEPLOY_SCOPES))
+        raise ValueError(f"DEPLOY_SCOPE_INVALID: {scope}; expected one of {valid}")
+
     backfill_start, backfill_end = _get_backfill_date_range()
-    eod_parameters = _get_eod_deployment_parameters()
-    return [
-        FlowDeploymentConfig(
-            flow=lambda: _get_flow("eod_flow"),
-            deployment_name="eod-pipeline-prod",
-            description="EOD 编排流程 (摄取 → 物化 → 策略运行)",
-            parameters=eod_parameters,
-            tags=["production", "daily", "eod"],
-            schedule=SCHEDULE_EOD,
-        ),
+    configs: list[FlowDeploymentConfig] = [
         FlowDeploymentConfig(
             flow=lambda: _get_flow("daily_ingestion_flow"),
             deployment_name="daily-ingestion-prod",
             description="每日增量数据摄取流程 (T0 → T1 → T3)",
-            parameters={"trade_date": "{{ date }}"},
+            parameters={},
             tags=["production", "daily", "ingestion"],
-            schedule=None,
+            schedule=SCHEDULE_DAILY_INGESTION,
         ),
         FlowDeploymentConfig(
             flow=lambda: _get_flow("daily_repair_flow"),
@@ -231,46 +251,69 @@ def _get_flow_configs() -> list[FlowDeploymentConfig]:
             parameters={"dataset": "stock_daily"},
             tags=["production", "repair", "manual"],
         ),
-        FlowDeploymentConfig(
-            flow=lambda: _get_flow("run_backtest_flow"),
-            deployment_name="backtest-prod",
-            description="异步回测执行 (R3 — Prefect Worker 调度)",
-            parameters={},
-            tags=["backtest", "manual"],
-        ),
     ]
+    if scope == "all":
+        configs.insert(
+            0,
+            FlowDeploymentConfig(
+                flow=lambda: _get_flow("eod_flow"),
+                deployment_name="eod-pipeline-prod",
+                description="EOD 编排流程 (摄取 → 物化 → 策略运行)",
+                parameters=_get_eod_deployment_parameters(),
+                tags=["production", "daily", "eod"],
+                schedule=SCHEDULE_EOD,
+            ),
+        )
+    if scope == "all" or include_backtest:
+        configs.append(
+            FlowDeploymentConfig(
+                flow=lambda: _get_flow("run_backtest_flow"),
+                deployment_name="backtest-prod",
+                description="异步回测执行 (R3 — Prefect Worker 调度)",
+                parameters={},
+                tags=["backtest", "manual"],
+            ),
+        )
+    return configs
 
 
 def deploy_all_flows(
     work_pool_name: str = "my-work-pool",
     image: str | None = None,
     push: bool = False,
+    scope: str = "all",
+    *,
+    include_backtest: bool = False,
 ) -> None:
     """
-    部署所有 Flows 到 Prefect (3.x)。
+    部署 Flows 到 Prefect (3.x)。
 
     Args:
         work_pool_name: 工作池名称
         image: Docker 镜像 (可选)
         push: 是否推送镜像到注册表
+        scope: "all"=全部部署（EOD 门槛生效）；"ingestion"=数据-only（无 EOD/backtest）
+        include_backtest: ingestion 范围下追加 backtest 部署
 
     该函数会：
-    1. 部署 EOD 编排流程（定时: 交易日 19:45）
-    2. 部署每日增量摄取流程（手动触发，由 EOD 编排）
+    1. scope=all 时部署 EOD 编排流程（定时: 交易日 19:45，需 EOD sleeve 环境变量）
+    2. 部署每日增量摄取流程（定时: 交易日 21:55，日期由 flow 运行时自取）
     3. 部署每日修补流程（定时: 每日 02:00）
     4. 部署重试失败流程（手动触发）
     5. 部署全量回补流程（手动触发）
     6. 部署修补空洞流程（手动触发）
-    7. 部署异步回测流程（手动触发，R3）
+    7. 部署异步回测流程（手动触发，R3；scope=all 或 include_backtest）
 
     注意: Prefect 3.x 移除了 Deployment API，改用 flow.deploy()。
 
     """
-    logger.info("开始部署 Prefect Flows", event="deploy_start")
+    logger.info("开始部署 Prefect Flows", event="deploy_start", scope=scope)
 
     # 准备部署列表 (使用 to_deployment 方法)
+    # entrypoint_type=MODULE_PATH: worker 以本机 venv 按模块导入 flow，
+    # 无需 Docker 镜像或远端存储（process work pool 的本地部署形态）
     deployments: list[Any] = []
-    for config in _get_flow_configs():
+    for config in _get_flow_configs(scope, include_backtest=include_backtest):
         flow_obj = _resolve_flow(config.flow)
         deployment = flow_obj.to_deployment(
             name=config.deployment_name,
@@ -278,11 +321,11 @@ def deploy_all_flows(
             tags=config.tags,
             parameters=config.parameters,
             schedule=config.schedule,
+            entrypoint_type=EntrypointType.MODULE_PATH,
         )
         deployments.append(deployment)
 
     # 使用 prefect.deploy() 一次性部署所有 flows
-    # 注意: 这会构建一个共享的 Docker 镜像
     deploy(
         *deployments,
         work_pool_name=work_pool_name,
@@ -310,19 +353,45 @@ def list_flows() -> dict[str, str]:
 
 
 def main() -> None:
-    """主函数：部署所有 Flows。"""
-    # 检查命令行参数
-    if len(sys.argv) > 1:
-        command = sys.argv[1]
-        if command == "list":
-            # 列出所有 flows
-            flows = list_flows()
-            logger.info("Available flows", flows=list(flows.items()))
-            return
+    """主函数：部署 Flows（默认全量；`--only ingestion` 数据-only）。"""
+    parser = argparse.ArgumentParser(description="部署 Ditto Prefect Flows")
+    parser.add_argument(
+        "command",
+        nargs="?",
+        choices=["list", "deploy"],
+        default="deploy",
+        help="list=仅列出 flows; deploy=执行部署",
+    )
+    parser.add_argument(
+        "--only",
+        dest="scope",
+        choices=sorted(_DEPLOY_SCOPES),
+        default="all",
+        help="部署范围: ingestion=数据-only(无 EOD/backtest); all=全量",
+    )
+    parser.add_argument(
+        "--with-backtest",
+        action="store_true",
+        help="ingestion 范围下追加 backtest 部署",
+    )
+    parser.add_argument(
+        "--work-pool",
+        default="my-work-pool",
+        help="目标 work pool 名称(须预先创建)",
+    )
+    args = parser.parse_args()
 
-    # 部署所有 flows
+    if args.command == "list":
+        flows = list_flows()
+        logger.info("Available flows", flows=list(flows.items()))
+        return
+
     # 注意: 实际部署时需要指定 work_pool_name 和 image
-    deploy_all_flows()
+    deploy_all_flows(
+        work_pool_name=args.work_pool,
+        scope=args.scope,
+        include_backtest=args.with_backtest,
+    )
 
 
 if __name__ == "__main__":

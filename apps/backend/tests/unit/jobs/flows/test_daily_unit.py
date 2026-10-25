@@ -30,6 +30,43 @@ CHECK_TRADING_DAY_RUNNER = _prefect_runner(check_trading_day)
 DAILY_INGESTION_FLOW_RUNNER = _prefect_runner(daily_ingestion_flow)
 
 
+@pytest.mark.unit
+class TestResolveTradeDate:
+    """测试定时触发路径的空 trade_date 派生（#613）。"""
+
+    def test_explicit_date_passes_through(self) -> None:
+        """显式传入的日期必须原样保留。"""
+        assert daily_module.resolve_trade_date("2026-10-26") == "2026-10-26"
+
+    def test_empty_date_resolves_to_shanghai_today(self) -> None:
+        """空日期解析为 Asia/Shanghai 当日（Prefect 3.6 不渲染 {{ date }}）。"""
+        from datetime import datetime
+        from zoneinfo import ZoneInfo
+
+        expected = datetime.now(ZoneInfo("Asia/Shanghai")).date().isoformat()
+        assert daily_module.resolve_trade_date("") == expected
+
+    def test_sync_runner_resolves_empty_date_before_trading_day_check(
+        self,
+        mocker: MockerFixture,
+    ) -> None:
+        """同步入口先解析日期再做交易日判断。"""
+        from datetime import datetime
+        from zoneinfo import ZoneInfo
+
+        check = mocker.patch.object(
+            daily_module, "run_check_trading_day", return_value=False
+        )
+        scope = mocker.patch.object(daily_module, "_daily_ingestion_scope")
+
+        daily_module.run_daily_ingestion(trade_date="")
+
+        assert check.call_args.args[0] == (
+            datetime.now(ZoneInfo("Asia/Shanghai")).date().isoformat()
+        )
+        scope.assert_not_called()
+
+
 def _assert_authoritative_dq_evidence(
     first: dict[str, object],
     second: dict[str, object],

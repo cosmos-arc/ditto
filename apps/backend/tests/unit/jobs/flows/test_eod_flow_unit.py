@@ -254,6 +254,32 @@ class TestEodFlowNonTradingDay:
         assert dependencies.daily_ingestion is daily_ingestion_flow
         assert dependencies.daily_materialization is daily_materialization_flow
 
+    def test_empty_trade_date_resolves_to_shanghai_today(
+        self,
+        mocker: MockerFixture,
+    ) -> None:
+        """定时部署触发未携带日期时，wrapper 自取 Asia/Shanghai 当日（#613）。"""
+        from datetime import datetime
+        from zoneinfo import ZoneInfo
+
+        pipeline = mocker.patch(
+            f"{EOD_MODULE}.run_eod_pipeline",
+            create=True,
+            return_value={},
+        )
+
+        from ditto_apps.jobs.flows.eod import eod_flow
+
+        _prefect_runner(eod_flow)(
+            trade_date="",
+            strategy_id="alpha",
+            account_id="paper",
+        )
+
+        assert pipeline.call_args.kwargs["trade_date"] == (
+            datetime.now(ZoneInfo("Asia/Shanghai")).date().isoformat()
+        )
+
 
 # ===========================================================================
 # Test: 摄取全部成功 -> 物化 -> 策略运行

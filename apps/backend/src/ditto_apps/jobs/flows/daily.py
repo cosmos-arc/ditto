@@ -17,8 +17,10 @@ Flow 功能：
 from __future__ import annotations
 
 from collections.abc import Iterable
+from datetime import datetime
 from itertools import chain
 from typing import Any, cast
+from zoneinfo import ZoneInfo
 
 from ditto_application.config import (
     IngestionScope,
@@ -77,6 +79,18 @@ def _index_results(
 def _dataset_value(dataset: object) -> str:
     value = getattr(dataset, "value", None)
     return value if isinstance(value, str) else ""
+
+
+def resolve_trade_date(trade_date: str) -> str:
+    """
+    空 trade_date 解析为 Asia/Shanghai 当日。
+
+    Prefect 3.6 部署参数对纯字符串原样透传（`{{ date }}` 不再运行时渲染），
+    定时触发必须由 flow 运行时自取日历日；显式传入的日期原样保留。
+    """
+    if trade_date:
+        return trade_date
+    return datetime.now(ZoneInfo("Asia/Shanghai")).date().isoformat()
 
 
 def _daily_ingestion_scope(
@@ -164,12 +178,17 @@ def _completed_ingestion_result(
 
 
 def run_daily_ingestion(
-    trade_date: str,
+    trade_date: str = "",
     source: str = "tushare",
     force: bool = False,
     required_datasets: tuple[str, ...] | None = None,
 ) -> dict[str, object]:
-    """顺序执行每日摄取业务，可限制为策略依赖闭包。"""
+    """
+    顺序执行每日摄取业务，可限制为策略依赖闭包。
+
+    trade_date 为空时取 Asia/Shanghai 当日（定时触发路径）。
+    """
+    trade_date = resolve_trade_date(trade_date)
     if not run_check_trading_day(trade_date):
         return _skipped_ingestion_result(trade_date)
 
@@ -213,7 +232,7 @@ def run_daily_ingestion(
 
 @flow(name="daily-ingestion", description="每日增量数据摄取流程")
 def daily_ingestion_flow(
-    trade_date: str,
+    trade_date: str = "",
     source: str = "tushare",
     force: bool = False,
     required_datasets: tuple[str, ...] | None = None,
@@ -230,7 +249,8 @@ def daily_ingestion_flow(
     使用 Prefect 原生依赖机制（@task + wait_for）实现声明式编排。
 
     Args:
-        trade_date: 交易日期 (YYYY-MM-DD)
+        trade_date: 交易日期 (YYYY-MM-DD)；为空时取 Asia/Shanghai 当日
+            （定时部署触发路径，Prefect 3.6 参数模板不渲染 `{{ date }}`）
         source: 数据源名称
         force: 是否强制重新摄取
         required_datasets: 显式策略依赖；提供时仅执行其依赖闭包。
@@ -246,6 +266,9 @@ def daily_ingestion_flow(
         - summary: 汇总统计
 
     """
+    # 0. 定时触发未携带日期时自取当日
+    trade_date = resolve_trade_date(trade_date)
+
     # 1. 检查交易日
     is_trading = check_trading_day(trade_date=trade_date)
 
