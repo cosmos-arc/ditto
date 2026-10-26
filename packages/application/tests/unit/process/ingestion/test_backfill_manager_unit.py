@@ -808,6 +808,57 @@ class TestBackfillMissing:
             "2024-12-01", "2024-12-31"
         )
 
+    def test_backfill_missing_clamps_future_calendar_end(
+        self,
+        backfill_manager,
+        evidence,
+        mock_coordinator,
+        mock_metadata_service,
+        time_machine,
+    ) -> None:
+        """日历末端在未来时钳到上海昨日：未来会话不进空洞扫描（#613）。"""
+        # Arrange: nightly repair 时点，日历表已发布到 2027 年末
+        time_machine.move_to("2026-10-27 02:00:00+08:00", tick=False)
+        mock_metadata_service.calendar.get_first_trading_day.return_value = "2026-10-23"
+        mock_metadata_service.get_last_trading_day.return_value = "2027-12-31"
+        mock_metadata_service.list_trading_days.side_effect = lambda start, end: (
+            ["2026-10-26"] if end == "2026-10-26" else []
+        )
+        mock_coordinator.ingest_date.return_value = IngestionResult(
+            dataset="stock_daily",
+            trade_date="2026-10-26",
+            status="success",
+            row_count=1000,
+        )
+
+        # Act
+        result = backfill_manager.backfill_missing(dataset="stock_daily")
+
+        # Assert: 扫描上界=上海昨日（2026-10-26），2027 年的未来会话
+        # 不再被当作假空洞逐日请求。
+        assert result.total_dates == 1
+        mock_metadata_service.list_trading_days.assert_called_once_with(
+            "2026-10-23", "2026-10-26"
+        )
+
+    def test_repair_scan_horizon_converts_to_shanghai_calendar_day(
+        self,
+    ) -> None:
+        """上界取上海日历日的昨日（UTC 时钟也按上海日转换）。"""
+        from datetime import UTC, datetime
+
+        from ditto_application.processes.ingestion.backfill_manager import (
+            repair_scan_horizon,
+        )
+
+        # UTC 2026-10-26 18:00 = 上海 2026-10-27 02:00 → 昨日 2026-10-26
+        horizon = repair_scan_horizon(datetime(2026, 10, 26, 18, 0, tzinfo=UTC))
+        assert horizon == "2026-10-26"
+
+        # 朴素时钟会被宿主本地时区误判日界——响亮拒绝
+        with pytest.raises(ValueError, match="timezone-aware"):
+            repair_scan_horizon(datetime(2026, 10, 26, 18, 0))
+
     def test_backfill_missing_with_source(
         self,
         backfill_manager,
