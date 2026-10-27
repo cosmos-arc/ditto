@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from unittest.mock import MagicMock
+
 import pytest
 from ditto_application.exceptions import AppProcessError
 from ditto_application.processes.ingestion.dataset_registry import (
@@ -307,10 +309,10 @@ class TestIndexWeightUniverse:
         context.get_cached_index_codes.assert_not_called()
 
     @staticmethod
-    def _daily_context(trade_date: str) -> tuple[DailyFetchContext, object, object]:
+    def _daily_context(
+        trade_date: str,
+    ) -> tuple[DailyFetchContext, MagicMock, MagicMock]:
         """构造日更取数上下文，返回 (context, market, fundamental) 三个 mock."""
-        from unittest.mock import MagicMock
-
         from ditto_application.processes.ingestion.types import SourceFetchers
 
         market = MagicMock()
@@ -363,9 +365,15 @@ class TestIndexWeightUniverse:
         """空 trade_date（通用探测路径）start/end 同时锚定上海当日，不开半窗."""
         context, market, _ = self._daily_context("")
         registry = default_dataset_registry()
+        global_factory = registry.require(
+            Dataset.GLOBAL_INDEX_DAILY
+        ).daily_fetch_factory
+        name_factory = registry.require(Dataset.NAME_CHANGE).daily_fetch_factory
+        assert global_factory is not None
+        assert name_factory is not None
 
-        registry.require(Dataset.GLOBAL_INDEX_DAILY).daily_fetch_factory(context)()
-        registry.require(Dataset.NAME_CHANGE).daily_fetch_factory(context)()
+        global_factory(context)()
+        name_factory(context)()
 
         _, global_start, global_end = market.fetch_global_index_daily.call_args.args
         name_kwargs = market.fetch_name_history.call_args.kwargs
