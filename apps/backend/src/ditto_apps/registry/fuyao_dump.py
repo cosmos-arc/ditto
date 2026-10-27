@@ -9,14 +9,16 @@ adj_factor 对账（#515 A3）需要每日刷新 adjustment-factors dump（陈�
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-from datetime import date, datetime
+from dataclasses import dataclass, replace
+from datetime import UTC, date, datetime
 from pathlib import Path
 from typing import Any, cast
 from zoneinfo import ZoneInfo
 
 import polars as pl
 from dishka import Container
+from ditto_data.services.metadata_service import MetadataService
+from ditto_platform.foundation import logger
 
 from ditto_apps.registry.container import make_app_container
 from ditto_apps.registry.infra.protocol_adapters import DumpKind, FuyaoSource
@@ -43,6 +45,8 @@ class FuyaoDumpDownload:
     tickers: int
     duplicate_keys: int
     date_range: tuple[date, date] | None
+    identities_registered: int = 0
+    identities_unresolved: int = 0
 
 
 def dump_dest(data_root: Path, kind: DumpKind) -> Path:
@@ -105,6 +109,48 @@ def _resolve_fuyao_source(container: Container) -> FuyaoSource:
     return source
 
 
+def _register_fuyao_identities(
+    container: Container, frame: pl.DataFrame, dump_date: date
+) -> tuple[int, int]:
+    """
+    Dump thscodes → ``instrument_mapping(source='fuyao')`` 登记（#395 摄取路径）.
+
+    有证据日期 = dump 北京日（fuyao 当日服务这些身份是唯一证据；事件
+    ex_date 可能远早于 dump，不得回填）。幂等：同向映射不重写；未识别
+    前缀/裸码多命中按规则 5 保持未解析（对账只读反解兜底）。
+
+    登记失败不拖垮 dump：留 warning 次夜重试，对账可回退裸码前缀只读
+    反解（#395 只读路径），辅源缺席语义不受影响。
+    """
+    thscodes = sorted({str(code) for code in frame["thscode"].unique().to_list()})
+    try:
+        resolved = container.get(
+            MetadataService
+        ).instrument.resolve_fuyao_instrument_ids(
+            thscodes,
+            evidence_dates={code: dump_date.isoformat() for code in thscodes},
+            observed_at=datetime.now(UTC).strftime("%Y-%m-%d %H:%M:%S"),
+            register_missing=True,
+        )
+    except Exception as error:
+        logger.warning(
+            "fuyao identity registration failed; will retry next dump",
+            event="fuyao_identity_register_failed",
+            kind="dump",
+            error_type=type(error).__name__,
+        )
+        return 0, 0
+    unresolved = len(thscodes) - len(resolved)
+    if unresolved:
+        logger.info(
+            "fuyao identities left unresolved after dump registration",
+            event="fuyao_identity_unresolved",
+            tickers=len(thscodes),
+            unresolved=unresolved,
+        )
+    return len(resolved), unresolved
+
+
 def download_fuyao_dump(kind: DumpKind) -> FuyaoDumpDownload:
     """
     下载全市场 dump 不可变快照并返回统计；源未配置抛 FuyaoSourceUnconfiguredError.
@@ -131,6 +177,13 @@ def download_fuyao_dump(kind: DumpKind) -> FuyaoDumpDownload:
                 f"fuyao dump {kind} snapshot is empty "
                 + f"(rows={outcome.rows}, tickers={outcome.tickers}): rejected"
             )
-        return outcome
+        registered, unresolved = _register_fuyao_identities(
+            container, frame, datetime.strptime(dest.stem, "%Y%m%d").date()
+        )
+        return replace(
+            outcome,
+            identities_registered=registered,
+            identities_unresolved=unresolved,
+        )
     finally:
         container.close()
