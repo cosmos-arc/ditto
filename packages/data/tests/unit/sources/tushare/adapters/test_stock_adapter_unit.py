@@ -187,26 +187,27 @@ class TestStockAdapterNameHistory:
             "old_name"
         ].to_list() == [None]
 
-    def test_duplicate_start_date_fails_closed(self) -> None:
-        """同 (ts_code,start_date) 双记录（#1932 实测形态）应 fail closed."""
-        from ditto_data.sources.base import SourceFetchError
+    def test_name_conflicting_key_is_excluded_loudly(self) -> None:
+        """同键多名（退市日双名变体）响亮排除,不产出、不废整批."""
         from ditto_data.sources.tushare.adapters.stock import StockTushareAdapter
 
         mock_client = MagicMock()
         mock_client.query.return_value = self._response(
             {
-                "ts_code": ["000001.SZ", "000001.SZ"],
-                "name": ["平安银行", "平安银行股份有限公司"],
-                "start_date": ["20120801", "20120801"],
-                "end_date": [None, None],
-                "change_reason": [None, None],
-                "ann_date": ["20120801", "20120801"],
+                "ts_code": ["000001.SZ", "000001.SZ", "000002.SZ"],
+                "name": ["平安银行", "平安银行股份有限公司", "万科A"],
+                "start_date": ["20120801", "20120801", "19930101"],
+                "end_date": [None, None, None],
+                "change_reason": [None, None, None],
+                "ann_date": ["20120801", "20120801", None],
             }
         )
         adapter = StockTushareAdapter(_client=mock_client)
 
-        with pytest.raises(SourceFetchError, match=r"duplicate.*start_date"):
-            adapter.fetch_name_history()
+        result = adapter.fetch_name_history()
+
+        # 歧义键整体排除,无关标的照常产出
+        assert result["source_ticker"].to_list() == ["000002.SZ"]
 
     def test_identical_duplicate_rows_collapse_before_guard(self) -> None:
         """逐字节全同的冗余行（代理页内重复）收敛为单行，不触发 fail-closed."""

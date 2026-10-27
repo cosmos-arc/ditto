@@ -789,8 +789,11 @@ class StockTushareAdapter(BaseTushareAdapter):
         )
         result = pl.concat([collapsed, name_conflict_rows], how="vertical")
 
-        # #507 C4：此处剩余的键重复=同键多名，区间表依赖 sort+shift(1) 推
-        # old_name，链不确定——fail closed，不静默接受链外数据。
+        # #507 C4 剩余键重复=同键多名（典型：退市日双名变体，"退市印记"vs
+        # "印纪退"，2026-10-27 实测 002143.SZ/002680.SZ）。链不确定，不静默
+        # 接受；但整批 fail-closed 会因单个退市变体键废掉整年/整窗数据且
+        # 每逢退市事件复发——改为响亮排除歧义键（WARNING + 样本），其余
+        # 事件照常产出，排除面收敛在日志可追。
         duplicate_keys = (
             result.group_by("source_ticker", "changed_date")
             .len()
@@ -803,17 +806,17 @@ class StockTushareAdapter(BaseTushareAdapter):
                     "source_ticker", "changed_date"
                 ).iter_rows()
             )
-            raise SourceFetchError(
-                message=(
-                    "Tushare namechange returned duplicate "
-                    f"(ts_code, start_date) rows ({duplicate_keys.height} key(s)); "
-                    f"interval chain is ill-defined, sample: {sample[:5]} (#515)"
-                ),
-                source="tushare",
-                details={
-                    "dataset": "namechange",
-                    "duplicate_key_count": duplicate_keys.height,
-                },
+            result = result.join(
+                duplicate_keys.select("source_ticker", "changed_date"),
+                on=["source_ticker", "changed_date"],
+                how="anti",
+            )
+            logger.warning(
+                "namechange dropped ambiguous (ts_code, start_date) keys; "
+                "interval chain ill-defined (#515)",
+                event="tushare_namechange_ambiguous_keys_dropped",
+                dropped_keys=duplicate_keys.height,
+                sample=sample[:5],
             )
 
         row_count = len(result)
