@@ -33,14 +33,12 @@ class DailyContextCallbacks:
         fetch_commodity_daily: 商品日频取数（主源/冗余源合成）.
         get_cached_index_codes: 缓存的指数代码列表.
         fetch_etf_reference_config: 维护者确认的 ETF 参考声明读取（#408）.
-        get_cached_etf_tickers: 注册表内 ETF 源代码列表（#522）.
 
     """
 
     fetch_commodity_daily: Callable[[str], pl.DataFrame]
     get_cached_index_codes: Callable[[], list[str]]
     fetch_etf_reference_config: Callable[[], pl.DataFrame] | None = None
-    get_cached_etf_tickers: Callable[[], list[str]] | None = None
 
 
 def build_daily_fetch_handlers(
@@ -61,7 +59,6 @@ def build_daily_fetch_handlers(
             get_cached_index_codes=callbacks.get_cached_index_codes,
             source_name=source_name,
             fetch_etf_reference_config=callbacks.fetch_etf_reference_config,
-            get_cached_etf_tickers=callbacks.get_cached_etf_tickers,
         )
     )
 

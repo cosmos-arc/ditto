@@ -145,6 +145,42 @@ class TestMarketWriteServiceSaveBars:
         assert rows_written == 1
         mock_writers["global_index_bars"].write.assert_called_once()
 
+    def test_save_global_index_cross_year_window_splits_by_trade_year(
+        self,
+        market_write_service: MarketWriteService,
+        mock_writers: dict[str, MagicMock],
+    ) -> None:
+        """回看窗口跨年：行按 trade_date 年分片落各自分区（correctness F1）."""
+        df = pl.DataFrame(
+            {
+                "source_ticker": ["SPX", "SPX"],
+                "trade_date": [date(2026, 12, 30), date(2027, 1, 3)],
+                "knowledge_date": [date(2027, 1, 3), date(2027, 1, 3)],
+                "close": [7623.68, 7630.0],
+            }
+        )
+        mock_writers["global_index_bars"].write.return_value = MagicMock(
+            added=1,
+            updated=0,
+        )
+
+        rows_written = market_write_service.save_global_index_bars(df, 2027)
+
+        assert rows_written == 2
+        written_years = [
+            call.args[1]
+            for call in mock_writers["global_index_bars"].write.call_args_list
+        ]
+        assert written_years == [2026, 2027]
+        for call, expected_year in zip(
+            mock_writers["global_index_bars"].write.call_args_list,
+            [2026, 2027],
+            strict=True,
+        ):
+            assert call.args[0]["trade_date"].dt.year().unique().to_list() == [
+                expected_year
+            ]
+
 
 class TestMarketWriteServiceSaveAdjFactor:
     """测试 save_adj_factor() 方法."""

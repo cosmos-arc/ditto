@@ -187,26 +187,75 @@ class TestStockAdapterNameHistory:
             "old_name"
         ].to_list() == [None]
 
-    def test_duplicate_start_date_fails_closed(self) -> None:
-        """同 (ts_code,start_date) 双记录（#1932 实测形态）应 fail closed."""
-        from ditto_data.sources.base import SourceFetchError
+    def test_name_conflicting_key_is_excluded_loudly(self) -> None:
+        """同键多名（退市日双名变体）响亮排除,不产出、不废整批."""
         from ditto_data.sources.tushare.adapters.stock import StockTushareAdapter
 
         mock_client = MagicMock()
         mock_client.query.return_value = self._response(
             {
-                "ts_code": ["000001.SZ", "000001.SZ"],
-                "name": ["平安银行", "平安银行股份有限公司"],
-                "start_date": ["20120801", "20120801"],
-                "end_date": [None, None],
-                "change_reason": [None, None],
-                "ann_date": ["20120801", "20120801"],
+                "ts_code": ["000001.SZ", "000001.SZ", "000002.SZ"],
+                "name": ["平安银行", "平安银行股份有限公司", "万科A"],
+                "start_date": ["20120801", "20120801", "19930101"],
+                "end_date": [None, None, None],
+                "change_reason": [None, None, None],
+                "ann_date": ["20120801", "20120801", None],
             }
         )
         adapter = StockTushareAdapter(_client=mock_client)
 
-        with pytest.raises(SourceFetchError, match=r"duplicate.*start_date"):
-            adapter.fetch_name_history()
+        result = adapter.fetch_name_history()
+
+        # 歧义键整体排除,无关标的照常产出
+        assert result["source_ticker"].to_list() == ["000002.SZ"]
+
+    def test_identical_duplicate_rows_collapse_before_guard(self) -> None:
+        """逐字节全同的冗余行（代理页内重复）收敛为单行，不触发 fail-closed."""
+        from ditto_data.sources.tushare.adapters.stock import StockTushareAdapter
+
+        mock_client = MagicMock()
+        mock_client.query.return_value = self._response(
+            {
+                "ts_code": ["000010.SZ"] * 4,
+                "name": ["ST华新", "ST华新", "深华新", "深华新"],
+                "start_date": ["20130719", "20130719", "20131018", "20131018"],
+                "end_date": ["20131017", "20131017", "20160508", "20160508"],
+                "change_reason": ["完成股改"] * 4,
+                "ann_date": ["20130717", "20130717", "20131017", "20131017"],
+            }
+        )
+        adapter = StockTushareAdapter(_client=mock_client)
+
+        result = adapter.fetch_name_history()
+
+        assert result.height == 2
+        chain = result.sort("changed_date")
+        assert chain["old_name"].to_list() == [None, "ST华新"]
+        assert chain["new_name"].to_list() == ["ST华新", "深华新"]
+
+    def test_end_date_patch_pair_collapses_to_closed_interval(self) -> None:
+        """同名 end_date 闭合补丁对（开区间行+闭区间修订行）取闭区间代表."""
+        from ditto_data.sources.tushare.adapters.stock import StockTushareAdapter
+
+        mock_client = MagicMock()
+        mock_client.query.return_value = self._response(
+            {
+                "ts_code": ["000038.SZ"] * 3,
+                "name": ["深大通"] * 3,
+                "start_date": ["20130514"] * 3,
+                "end_date": [None, "20220505", "20220505"],
+                "change_reason": ["撤销*ST"] * 3,
+                "ann_date": ["20130513"] * 3,
+            }
+        )
+        adapter = StockTushareAdapter(_client=mock_client)
+
+        result = adapter.fetch_name_history()
+
+        assert result.height == 1
+        row = result.row(0, named=True)
+        assert row["new_name"] == "深大通"
+        assert row["effective_to"] == date(2022, 5, 5)
 
     def test_empty_response_returns_empty_frame(self) -> None:
         """空响应契约保持：返回带 schema 的空帧."""
@@ -299,3 +348,60 @@ class TestLimitListAdapter:
         assert row["open_times"] == 2
         assert row["first_time"] == "93145"
         assert row["knowledge_date"] == date(2026, 10, 1)
+
+
+class TestStockAdapterFetchStHistoryDedup:
+    """st_history 冗余行收敛(与 name_history 同源形态)。"""
+
+    def test_st_patch_pair_collapses_to_closed_interval(self) -> None:
+        """同名 end_date 闭合补丁对取闭区间代表,写入键不冲突."""
+        from ditto_data.sources.tushare.adapters.stock import StockTushareAdapter
+
+        mock_client = MagicMock()
+        mock_client.query.return_value = pl.DataFrame(
+            {
+                "ts_code": ["000038.SZ"] * 3,
+                "start_date": ["20130514"] * 3,
+                "end_date": [None, "20220505", "20220505"],
+                "change_reason": ["撤销*ST"] * 3,
+                "ann_date": ["20130513"] * 3,
+            }
+        )
+        adapter = StockTushareAdapter(_client=mock_client)
+
+        result = adapter.fetch_st_history()
+
+        assert result.height == 1
+        row = result.row(0, named=True)
+        assert row["end_date"] == date(2022, 5, 5)
+        assert row["change_reason"] == "撤销*ST"
+
+
+class TestStockAdapterNameHistoryDeterminism:
+    """old_name 推导确定性(坍缩先于 shift)。"""
+
+    def test_patch_pair_old_name_derives_from_real_predecessor(self) -> None:
+        """坍缩先于推导:patch 对幸存行的 old_name 取真实前驱事件,而非对内
+        另一变体(否则 old_name==new_name 自引用,且随服务端行序漂移)."""
+        from ditto_data.sources.tushare.adapters.stock import StockTushareAdapter
+
+        mock_client = MagicMock()
+        mock_client.query.return_value = pl.DataFrame(
+            {
+                "ts_code": ["002564.SZ"] * 2,
+                "name": ["天沃科技", "天沃科技"],
+                "start_date": ["20141211", "20141211"],
+                "end_date": [None, "20230629"],
+                "change_reason": ["改名", "改名"],
+                "ann_date": ["20141211", "20141211"],
+            }
+        )
+        adapter = StockTushareAdapter(_client=mock_client)
+
+        result = adapter.fetch_name_history()
+
+        assert result.height == 1
+        row = result.row(0, named=True)
+        assert row["old_name"] is None  # 键内唯一事件,前驱在窗口外
+        assert row["new_name"] == "天沃科技"
+        assert row["effective_to"] == date(2023, 6, 29)

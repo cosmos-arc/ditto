@@ -11,6 +11,11 @@ import polars as pl
 from ditto_platform.foundation.storage.types import OnDuplicate
 from ditto_platform.foundation.util.io import atomic_write
 
+# KEEP_LAST_FLAGGED 策略的瞬态标记列名：True 行可替换同键存量，合并后
+# 从存量剥离（存储 schema 不变）。生产唯一生产者是 fina_indicator 适配器
+# （供应商 update_flag 修正判别，#591/#613）。
+CORRECTION_FLAG_COLUMN = "is_provider_correction"
+
 
 @dataclass(frozen=True)
 class MergeResult:
@@ -114,11 +119,56 @@ def _merge_verify_identical(
     return _merge_keep_first(df, existing, key_columns, overlap_count)
 
 
+def _merge_keep_last_flagged(
+    df: pl.DataFrame,
+    existing: pl.DataFrame,
+    key_columns: list[str],
+    overlap_count: int,
+) -> MergeResult:
+    """
+    KEEP_LAST_FLAGGED 策略 — 布尔标记行可替换同键存量，未标记行只插新键。
+
+    携带 CORRECTION_FLAG_COLUMN 布尔列的行按 last-write-wins 升级存量
+    （典型：供应商 update_flag 修正版，如 fina_indicator #591/#613）；
+    未标记/假值行遇同键一律 keep-first——防数据源未同步的旧代快照把已
+    升级的值改回去。标记列不进存量（存储 schema 不变），列缺失时响亮
+    拒绝（策略误用）。
+    """
+    if CORRECTION_FLAG_COLUMN not in df.columns:
+        msg = (
+            f"KEEP_LAST_FLAGGED requires transient column "
+            f"{CORRECTION_FLAG_COLUMN!r} in incoming frame"
+        )
+        raise ValueError(msg)
+    if CORRECTION_FLAG_COLUMN in existing.columns:
+        msg = f"existing frame must not carry {CORRECTION_FLAG_COLUMN!r}"
+        raise ValueError(msg)
+    flagged = df.filter(pl.col(CORRECTION_FLAG_COLUMN).fill_null(False))
+    unflagged = df.filter(~pl.col(CORRECTION_FLAG_COLUMN).fill_null(False))
+    unflagged_new = unflagged.join(
+        existing.select(key_columns), on=key_columns, how="anti"
+    )
+    combined = pl.concat(
+        [
+            existing,
+            unflagged_new.drop(CORRECTION_FLAG_COLUMN),
+            flagged.drop(CORRECTION_FLAG_COLUMN),
+        ],
+        how="vertical_relaxed",
+    ).unique(subset=key_columns, keep="last")
+    flagged_overlap = flagged.join(
+        existing.select(key_columns), on=key_columns, how="semi"
+    ).height
+    added = len(unflagged_new) + (len(flagged) - flagged_overlap)
+    return MergeResult(df=combined, added=added, updated=flagged_overlap)
+
+
 _MERGE_STRATEGIES: dict[OnDuplicate, Callable[..., MergeResult]] = {
     OnDuplicate.ERROR: _merge_error,
     OnDuplicate.KEEP_FIRST: _merge_keep_first,
     OnDuplicate.KEEP_LAST: _merge_keep_last,
     OnDuplicate.VERIFY_IDENTICAL: _merge_verify_identical,
+    OnDuplicate.KEEP_LAST_FLAGGED: _merge_keep_last_flagged,
 }
 
 
@@ -135,6 +185,15 @@ def merge_with_existing(
         ValueError: If ``on_duplicate=ERROR`` and duplicates are found.
 
     """
+    if on_duplicate is OnDuplicate.KEEP_LAST_FLAGGED:
+        # 分发先于一切早退：标记列剥离与列校验必须在任何 concat 之前发生
+        # （无键/无重叠路径会把瞬态列带进存量或绕过误用校验）；无键列的
+        # 升级语义无从谈起，按误用响亮拒绝（correctness #613 G F5）。
+        if not key_columns:
+            msg = "KEEP_LAST_FLAGGED requires key columns"
+            raise ValueError(msg)
+        return _merge_keep_last_flagged(df, existing, key_columns, 0)
+
     if not key_columns:
         combined = pl.concat([existing, df])
         return MergeResult(df=combined, added=len(df), updated=0)

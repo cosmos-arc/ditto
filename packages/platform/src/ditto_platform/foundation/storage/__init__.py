@@ -1,7 +1,10 @@
 """Generic storage infrastructure shared across packages."""
 
 from ditto_platform.foundation.storage.parquet_store import ParquetStore
-from ditto_platform.foundation.storage.parquet_write import MergeResult
+from ditto_platform.foundation.storage.parquet_write import (
+    CORRECTION_FLAG_COLUMN,
+    MergeResult,
+)
 from ditto_platform.foundation.storage.partition_strategy import (
     PartitionStrategy,
     YearlyPartition,
@@ -20,6 +23,7 @@ from ditto_platform.foundation.storage.types import (
 )
 
 __all__ = [
+    "CORRECTION_FLAG_COLUMN",
     "DatasetReader",
     "DatasetWriter",
     "MergeResult",

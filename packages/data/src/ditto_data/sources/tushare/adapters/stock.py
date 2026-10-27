@@ -643,6 +643,21 @@ class StockTushareAdapter(BaseTushareAdapter):
                 pl.col("end_date").str.to_date("%Y%m%d", strict=False),
                 pl.col("published_at").str.to_date("%Y%m%d", strict=False),
             )
+            # 与 fetch_name_history 同源的冗余收敛（代理页内重复 + end_date
+            # 闭合补丁对，2026-10-27 实测）：写入键 (instrument_id,
+            # effective_from, source) 无修订维度，同键取闭区间/更晚披露代表。
+            result = (
+                result.unique()
+                .sort(
+                    by=[
+                        pl.col("end_date").is_null(),
+                        pl.col("published_at").is_null(),
+                        pl.col("published_at"),
+                    ],
+                    descending=[False, False, True],
+                )
+                .unique(subset=["source_ticker", "change_date"], keep="first")
+            )
 
             row_count = len(result)
             logger.info(
@@ -724,8 +739,38 @@ class StockTushareAdapter(BaseTushareAdapter):
                     }
                 )
 
+            # 同键冗余收敛必须在 old_name 推导之前：patch 对（开区间原始行
+            # + 闭区间修订行）若先 shift(1) 再选代表，幸存行的 old_name 取
+            # 决于服务端行序（非确定性，重拉会漂移甚至自引用）。顺序：全同
+            # 行去重 → 名称一致键取闭区间/更晚披露代表 → 名称分歧键保留
+            # 重复（下方响亮排除）→ 最后才 shift(1) 推导。
+            deduped = response.unique()
+            name_unambiguous_keys = (
+                deduped.group_by("ts_code", "start_date")
+                .agg(pl.col("name").n_unique().alias("_n_names"))
+                .filter(pl.col("_n_names") == 1)
+                .select("ts_code", "start_date")
+            )
+            collapsed = (
+                deduped.join(
+                    name_unambiguous_keys, on=["ts_code", "start_date"], how="semi"
+                )
+                .sort(
+                    by=[
+                        pl.col("end_date").is_null(),
+                        pl.col("ann_date").is_null(),
+                        pl.col("ann_date"),
+                    ],
+                    descending=[False, False, True],
+                )
+                .unique(subset=["ts_code", "start_date"], keep="first")
+            )
+            name_conflict_rows = deduped.join(
+                name_unambiguous_keys, on=["ts_code", "start_date"], how="anti"
+            )
             result = (
-                response.sort("ts_code", "start_date")
+                pl.concat([collapsed, name_conflict_rows], how="vertical")
+                .sort("ts_code", "start_date")
                 .with_columns(
                     pl.col("start_date").str.to_date("%Y%m%d"),
                     pl.col("end_date").str.to_date("%Y%m%d", strict=False),
@@ -743,11 +788,11 @@ class StockTushareAdapter(BaseTushareAdapter):
                 )
             )
 
-        # #507 C4：上游实测存在同 (ts_code,start_date) 多条记录（同 ann_date
-        # 重复披露）。区间表依赖 sort(ts_code,start_date)+shift(1) 推 old_name，
-        # 键重复时行序由服务端决定、old_name 链不确定——fail closed，不静默
-        # 接受链外数据（否则下游按 (source_ticker,changed_date) 幂等上写也会
-        # 因键重复产生不可重放的写入结果）。
+        # #507 C4 剩余键重复=同键多名（典型：退市日双名变体，"退市印记"vs
+        # "印纪退"，2026-10-27 实测 002143.SZ/002680.SZ）。链不确定，不静默
+        # 接受；但整批 fail-closed 会因单个退市变体键废掉整年/整窗数据且
+        # 每逢退市事件复发——改为响亮排除歧义键（WARNING + 样本），其余
+        # 事件照常产出，排除面收敛在日志可追。
         duplicate_keys = (
             result.group_by("source_ticker", "changed_date")
             .len()
@@ -760,17 +805,16 @@ class StockTushareAdapter(BaseTushareAdapter):
                     "source_ticker", "changed_date"
                 ).iter_rows()
             )
-            raise SourceFetchError(
-                message=(
-                    "Tushare namechange returned duplicate "
-                    f"(ts_code, start_date) rows ({duplicate_keys.height} key(s)); "
-                    f"interval chain is ill-defined, sample: {sample[:5]} (#515)"
-                ),
-                source="tushare",
-                details={
-                    "dataset": "namechange",
-                    "duplicate_key_count": duplicate_keys.height,
-                },
+            result = result.join(
+                duplicate_keys.select("source_ticker", "changed_date"),
+                on=["source_ticker", "changed_date"],
+                how="anti",
+            )
+            logger.warning(
+                "namechange dropped ambiguous (ts_code,start_date) keys (#515)",
+                event="tushare_namechange_ambiguous_keys_dropped",
+                dropped_keys=duplicate_keys.height,
+                sample=sample[:5],
             )
 
         row_count = len(result)

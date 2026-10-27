@@ -366,10 +366,11 @@ def fetch_fund_portfolio(
     Fetch fund quarterly holdings (#522, ann_date disclosure anchor).
 
     三种模式：
-    - 日更（trade_date）：全市场按公告日抓取——仅用于官方直连等能承受
-      30 万+行翻页的 transport；
+    - 日更（trade_date）：全市场按公告日单请求抓取（2026-10-27 代理实测
+      单日 ~1.4 万行 1-7 页取尽；披露峰值页数上涨，真翻页损坏由客户端
+      fail-closed 守卫响亮失败）；
     - 逐标的披露（trade_date + source_ticker）：ts_code+ann_date 单标的
-      单日（#522 代理 transport 全市场翻页会撞上限，日更走此模式）；
+      单日；
     - 按基金回填（source_ticker + start/end）：区间内报告期逐期抓取。
     """
     if trade_date and source_ticker:

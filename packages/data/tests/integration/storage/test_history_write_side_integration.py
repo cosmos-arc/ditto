@@ -215,6 +215,41 @@ class TestHistoryWriteSideIntegration:
         assert count is not None
         assert count["n"] == 2
 
+    def test_name_history_null_old_name_does_not_downgrade(
+        self, service: InstrumentService, client: SQLiteClient
+    ) -> None:
+        """滑窗重推导缺前驱（old_name=None）不追加影子版本（correctness F2）."""
+        full = pl.DataFrame(
+            {
+                "source_ticker": ["000001.SZ", "000001.SZ"],
+                "old_name": [None, "深发展A"],
+                "new_name": ["深发展A", "平安银行"],
+                "changed_date": [date(2010, 6, 1), date(2012, 1, 9)],
+                "effective_to": [date(2012, 1, 9), None],
+                "change_reason": ["x", "更名"],
+                "published_at": [None, None],
+            }
+        )
+        service.save_name_history(full, source="tushare", observed_at=_OBSERVED)
+
+        # 第二晚滑窗：前驱事件滑出窗口，重推导 old_name=None
+        slipped = full.filter(pl.col("changed_date") == date(2012, 1, 9)).with_columns(
+            pl.lit(None).alias("old_name")
+        )
+        again = service.save_name_history(
+            slipped, source="tushare", observed_at="2026-10-27 22:00:00"
+        )
+
+        assert again == 1  # 幂等跳过
+        row = client.fetchone(
+            """SELECT COUNT(*) AS n, MAX(old_name) AS latest_old
+               FROM instrument_name_history
+               WHERE changed_date = '2012-01-09'"""
+        )
+        assert row is not None
+        assert row["n"] == 1  # 未追加影子版本
+        assert row["latest_old"] == "深发展A"  # 真值未被 NULL 降级
+
     def test_name_history_rejects_unknown_identity(
         self, service: InstrumentService, client: SQLiteClient
     ) -> None:

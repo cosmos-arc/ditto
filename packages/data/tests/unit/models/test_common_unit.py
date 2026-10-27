@@ -129,9 +129,9 @@ class TestOnDuplicate:
         assert OnDuplicate.KEEP_FIRST.value == "keep_first"
         assert OnDuplicate.KEEP_LAST.value == "keep_last"
 
-    def test_should_have_three_members(self) -> None:
-        """应该有三个成员."""
-        assert len(OnDuplicate) == 4
+    def test_enum_member_count(self) -> None:
+        """成员数锁定(ERROR/VERIFY_IDENTICAL/KEEP_FIRST/KEEP_LAST/KEEP_LAST_FLAGGED)."""
+        assert len(OnDuplicate) == 5
 
 
 @pytest.mark.unit

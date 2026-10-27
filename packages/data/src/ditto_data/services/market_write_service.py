@@ -188,18 +188,37 @@ class MarketWriteService:
         year: int,
         on_duplicate: OnDuplicate = OnDuplicate.ERROR,
     ) -> int:
-        """Persist global-index bars with provider ticker and PIT revision keys."""
+        """
+        Persist global-index bars with provider ticker and PIT revision keys.
+
+        回看窗口跨年时行按 trade_date 年分片落各自年分区——锚年单分区写
+        会让前一年 12 月的行对该年有界读不可见（correctness F1）；空帧
+        保持单分区写（分区登记语义不变）。
+        """
         writer = self._write_ports.global_index_bars
         if writer is None:
             raise ValueError("global_index_daily writer not configured")
-        lock_name = f"bars_write_global_index_daily_{year}"
-        with self._file_lock.acquire(lock_name, timeout=60.0):
-            write_result = writer.write(
-                self._to_storage_columns(df),
-                year,
-                on_duplicate=self._map_on_duplicate(on_duplicate),
+        storage_df = self._to_storage_columns(df)
+        part_years = (
+            sorted(set(storage_df["trade_date"].dt.year().to_list()))
+            if storage_df.height
+            else [year]
+        )
+        rows_written = 0
+        for part_year in part_years:
+            part = (
+                storage_df.filter(pl.col("trade_date").dt.year() == part_year)
+                if storage_df.height
+                else storage_df
             )
-        rows_written = write_result.added + write_result.updated
+            lock_name = f"bars_write_global_index_daily_{part_year}"
+            with self._file_lock.acquire(lock_name, timeout=60.0):
+                write_result = writer.write(
+                    part,
+                    part_year,
+                    on_duplicate=self._map_on_duplicate(on_duplicate),
+                )
+            rows_written += write_result.added + write_result.updated
         Metrics.data_records.add(
             len(df),
             {"dataset": "global_index_daily", "operation": "write"},
