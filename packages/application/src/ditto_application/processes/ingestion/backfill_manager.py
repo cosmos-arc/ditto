@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 from concurrent.futures import Future, ThreadPoolExecutor, as_completed
+from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 
 from ditto_data.catalog.source_snapshot import ProviderSnapshotReader
 from ditto_data.ingestion.partition_state import PartitionLifecycleReader
@@ -28,6 +30,29 @@ from ditto_application.processes.ingestion.result_handler import count_results
 from ditto_application.processes.ingestion.source_selection import (
     IngestionCoordinatorLike,
 )
+
+# 修补扫描上界时区：A 股数据车道以上海日历日定义"已过去的会话"。
+_SHANGHAI = ZoneInfo("Asia/Shanghai")
+
+
+def repair_scan_horizon(now: datetime | None = None) -> str:
+    """
+    修补扫描的最新日期：上海昨日（ISO YYYY-MM-DD）。
+
+    ``get_last_trading_day`` 返回的是日历表末端——交易日历提前数年
+    发布，未来会话的数据尚未存在、对空洞修补恒为假阳性（#613 部署
+    后 nightly repair 曾扫到 2027-12-31，每晚 ~1.1k 请求纯烧配额并
+    灌 FAIL 账）。当日数据在 21:55 EOD 波前同样未发布，留给次日扫描。
+    """
+    current = now or datetime.now(_SHANGHAI)
+    if current.tzinfo is None:
+        # 朴素时钟在非上海宿主上会被 astimezone 当作宿主本地时间，
+        # 得出错误的日界——拒绝而不是猜。
+        raise AppProcessError(
+            "repair_scan_horizon requires a timezone-aware datetime",
+            details={"reason": "REPAIR_HORIZON_NAIVE_DATETIME"},
+        )
+    return (current.astimezone(_SHANGHAI).date() - timedelta(days=1)).isoformat()
 
 
 class BackfillManager:
@@ -207,6 +232,9 @@ class BackfillManager:
                 failed_count=0,
                 results=(),
             )
+        # 日历表末端是未来数年——钳到上海昨日，未来会话不进扫描
+        # （假空洞会以 EMPTY_DATA_UNEXPECTED 每晚重试烧配额）。
+        last_date = min(last_date, repair_scan_horizon())
 
         plan = self._bootstrap_planner.plan(
             dataset_id=dataset,
