@@ -726,6 +726,8 @@ class StockTushareAdapter(BaseTushareAdapter):
 
             result = (
                 response.sort("ts_code", "start_date")
+                .unique()
+                .sort("ts_code", "start_date")
                 .with_columns(
                     pl.col("start_date").str.to_date("%Y%m%d"),
                     pl.col("end_date").str.to_date("%Y%m%d", strict=False),
@@ -743,11 +745,11 @@ class StockTushareAdapter(BaseTushareAdapter):
                 )
             )
 
-        # #507 C4：上游实测存在同 (ts_code,start_date) 多条记录（同 ann_date
-        # 重复披露）。区间表依赖 sort(ts_code,start_date)+shift(1) 推 old_name，
-        # 键重复时行序由服务端决定、old_name 链不确定——fail closed，不静默
-        # 接受链外数据（否则下游按 (source_ticker,changed_date) 幂等上写也会
-        # 因键重复产生不可重放的写入结果）。
+        # #507 C4：上游实测存在同 (ts_code,start_date) 多条记录。逐字节全同的
+        # 冗余行（代理页内重复，2026-10-27 实测 2013 窗口 171 键）已在上游
+        # unique() 收敛；此处剩余的键重复=内容有分歧（跨 ann_date 修订或
+        # 同键多名），区间表依赖 sort+shift(1) 推 old_name，链不确定——
+        # fail closed，不静默接受链外数据。
         duplicate_keys = (
             result.group_by("source_ticker", "changed_date")
             .len()

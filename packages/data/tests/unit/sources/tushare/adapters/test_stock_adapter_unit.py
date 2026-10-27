@@ -208,6 +208,30 @@ class TestStockAdapterNameHistory:
         with pytest.raises(SourceFetchError, match=r"duplicate.*start_date"):
             adapter.fetch_name_history()
 
+    def test_identical_duplicate_rows_collapse_before_guard(self) -> None:
+        """逐字节全同的冗余行（代理页内重复）收敛为单行，不触发 fail-closed."""
+        from ditto_data.sources.tushare.adapters.stock import StockTushareAdapter
+
+        mock_client = MagicMock()
+        mock_client.query.return_value = self._response(
+            {
+                "ts_code": ["000010.SZ"] * 4,
+                "name": ["ST华新", "ST华新", "深华新", "深华新"],
+                "start_date": ["20130719", "20130719", "20131018", "20131018"],
+                "end_date": ["20131017", "20131017", "20160508", "20160508"],
+                "change_reason": ["完成股改"] * 4,
+                "ann_date": ["20130717", "20130717", "20131017", "20131017"],
+            }
+        )
+        adapter = StockTushareAdapter(_client=mock_client)
+
+        result = adapter.fetch_name_history()
+
+        assert result.height == 2
+        chain = result.sort("changed_date")
+        assert chain["old_name"].to_list() == [None, "ST华新"]
+        assert chain["new_name"].to_list() == ["ST华新", "深华新"]
+
     def test_empty_response_returns_empty_frame(self) -> None:
         """空响应契约保持：返回带 schema 的空帧."""
         from ditto_data.sources.tushare.adapters.stock import StockTushareAdapter
