@@ -3,6 +3,15 @@
 # （braces GHSA-vfj7-8cjw-p6xm 豁免已删——2026-10-28 扫描确认该公告不再
 # 匹配任何发现，保留会被 osv-scanner 按 unused ignores 拒绝。）
 
+# deepmerge（2026-10-28 新公告 GHSA-gcqx-w48m-w2h4，上游无修复版本）：
+# design-token 生成器 style-dictionary 构建期传递依赖
+# （@bundled-es-modules/deepmerge→deepmerge 4.3.1），dev-only、不进 Web
+# 运行时产物；随 style-dictionary 工具链升级出豁免。
+[[IgnoredVulns]]
+id = "GHSA-gcqx-w48m-w2h4"
+reason = "deepmerge 4.3.1 无上游修复版（fixed=--）；design-token 生成器 style-dictionary 构建期传递依赖，dev-only 工具，不进运行时制品。"
+ignoreUntil = 2027-01-28
+
 # 以下四条 virtualenv 公告（2026-10-22 批量爆出）修复版要求 packaging>=26.3，
 # 被 workspace prefect（各可选版本 packaging<26.x 上限）阻断，virtualenv 最高
 # 可锁 21.14.5（已真修 5vjq/8rjx/c947 三条）。virtualenv 仅为 pre-commit 的
