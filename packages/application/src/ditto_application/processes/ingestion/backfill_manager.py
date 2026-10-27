@@ -48,7 +48,10 @@ def repair_scan_horizon(now: datetime | None = None) -> str:
     if current.tzinfo is None:
         # 朴素时钟在非上海宿主上会被 astimezone 当作宿主本地时间，
         # 得出错误的日界——拒绝而不是猜。
-        raise ValueError("repair_scan_horizon requires a timezone-aware datetime")
+        raise AppProcessError(
+            "repair_scan_horizon requires a timezone-aware datetime",
+            details={"reason": "REPAIR_HORIZON_NAIVE_DATETIME"},
+        )
     return (current.astimezone(_SHANGHAI).date() - timedelta(days=1)).isoformat()
 
 

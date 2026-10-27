@@ -856,7 +856,9 @@ class TestBackfillMissing:
         assert horizon == "2026-10-26"
 
         # 朴素时钟会被宿主本地时区误判日界——响亮拒绝
-        with pytest.raises(ValueError, match="timezone-aware"):
+        from ditto_application.exceptions import AppProcessError
+
+        with pytest.raises(AppProcessError, match="timezone-aware"):
             repair_scan_horizon(datetime(2026, 10, 26, 18, 0))
 
     def test_backfill_missing_with_source(
