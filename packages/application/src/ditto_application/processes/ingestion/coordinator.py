@@ -13,7 +13,6 @@ from ditto_data.services.fundamental_store import FundamentalStore
 from ditto_data.services.macro_service import MacroService
 from ditto_data.services.market_service import MarketService
 from ditto_data.services.market_write_service import MarketWriteService
-from ditto_data.services.metadata import SecurityQuery
 from ditto_data.services.metadata_service import MetadataService
 from ditto_data.sources.reference_config import EtfReferenceConfigSource
 from ditto_kernel.instrument import InstrumentIngestParams
@@ -204,7 +203,6 @@ class IngestionCoordinator:
         )
 
         self._index_codes_cache: list[str] | None = None
-        self._etf_tickers_cache: list[str] | None = None
         self._registry = default_dataset_registry()
 
     def _fetch_commodity_daily(self, trade_date: str) -> pl.DataFrame:
@@ -279,27 +277,6 @@ class IngestionCoordinator:
     # ------------------------------------------------------------------
     # list_date 推断 + 指数代码缓存
     # ------------------------------------------------------------------
-
-    def _get_cached_etf_tickers(self) -> list[str]:
-        """获取缓存的注册 ETF 源代码列表（当前源，按映射有效性）."""
-        if self._etf_tickers_cache is None:
-            frame = self._metadata_service.find_securities(
-                SecurityQuery(
-                    source=self._source_name,
-                    asset_class="etf",
-                    is_active=True,
-                )
-            )
-            self._etf_tickers_cache = sorted(
-                str(value)
-                for value in frame["source_ticker"].drop_nulls().to_list()
-                if value
-            )
-            logger.debug(
-                "已缓存注册 ETF 代码",
-                count=len(self._etf_tickers_cache),
-            )
-        return self._etf_tickers_cache
 
     def _get_cached_index_codes(self) -> list[str]:
         """获取缓存的指数代码列表。"""
@@ -830,7 +807,6 @@ class IngestionCoordinator:
                 fetch_commodity_daily=self._fetch_commodity_daily,
                 get_cached_index_codes=self._get_cached_index_codes,
                 fetch_etf_reference_config=self._fetch_etf_reference_config,
-                get_cached_etf_tickers=self._get_cached_etf_tickers,
             ),
             source_name=self._source_name,
         )

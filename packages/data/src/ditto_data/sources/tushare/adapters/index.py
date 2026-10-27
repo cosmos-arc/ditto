@@ -253,7 +253,9 @@ class IndexTushareAdapter(BaseTushareAdapter):
         if not frames:
             return pl.DataFrame(schema=_GLOBAL_INDEX_SCHEMA)
 
-        result = pl.concat(frames).rename(
+        # 部分指数（如 XIN9/RTS）无 vol 值，响应列为 Null dtype；与 Float64
+        # 帧垂直拼接会 vstack 失败（2026-10-27 实测 nightly 首跑）——放宽对齐。
+        result = pl.concat(frames, how="diagonal_relaxed").rename(
             {
                 "ts_code": "source_ticker",
                 "pct_chg": "pct_change",

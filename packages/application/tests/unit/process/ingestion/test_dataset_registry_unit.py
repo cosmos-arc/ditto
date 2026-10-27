@@ -305,3 +305,89 @@ class TestIndexWeightUniverse:
         requested = [call.args[0] for call in capital.fetch_index_weight.call_args_list]
         assert requested == list(INDEX_WEIGHT_UNIVERSE)
         context.get_cached_index_codes.assert_not_called()
+
+    def test_global_index_daily_fetches_lookback_window(self) -> None:
+        """全球指数按回看窗口拉取（美/欧股 T+1 凌晨才收盘，单日恒缺）."""
+        from unittest.mock import MagicMock
+
+        from ditto_application.processes.ingestion.types import SourceFetchers
+
+        market = MagicMock()
+        registration = default_dataset_registry().require(Dataset.GLOBAL_INDEX_DAILY)
+        assert registration.daily_fetch_factory is not None
+        context = DailyFetchContext(
+            fetchers=SourceFetchers(
+                metadata=MagicMock(),
+                market=market,
+                fundamental=MagicMock(),
+                capital=MagicMock(),
+                macro=MagicMock(),
+            ),
+            trade_date="2026-09-30",
+            fetch_commodity_daily=MagicMock(),
+            get_cached_index_codes=MagicMock(return_value=[]),
+        )
+
+        registration.daily_fetch_factory(context)()
+
+        market.fetch_global_index_daily.assert_called_once()
+        codes, start, end = market.fetch_global_index_daily.call_args.args
+        assert start == "2026-09-23"
+        assert end == "2026-09-30"
+        assert codes  # 21 码篮子非空
+
+    def test_name_history_fetches_lookback_window(self) -> None:
+        """namechange 事件流按回看窗口拉取（全量翻页经代理确定性损坏）."""
+        from unittest.mock import MagicMock
+
+        from ditto_application.processes.ingestion.types import SourceFetchers
+
+        market = MagicMock()
+        registration = default_dataset_registry().require(Dataset.NAME_CHANGE)
+        assert registration.daily_fetch_factory is not None
+        context = DailyFetchContext(
+            fetchers=SourceFetchers(
+                metadata=MagicMock(),
+                market=market,
+                fundamental=MagicMock(),
+                capital=MagicMock(),
+                macro=MagicMock(),
+            ),
+            trade_date="2026-09-30",
+            fetch_commodity_daily=MagicMock(),
+            get_cached_index_codes=MagicMock(return_value=[]),
+        )
+
+        registration.daily_fetch_factory(context)()
+
+        market.fetch_name_history.assert_called_once_with(
+            start_date="2026-08-16", end_date="2026-09-30"
+        )
+
+    def test_fund_portfolio_fetches_market_wide_single_request(self) -> None:
+        """fund_portfolio 日更=市场级单请求（逐标的 1,864 循环超时且烧配额）."""
+        from unittest.mock import MagicMock
+
+        from ditto_application.processes.ingestion.types import SourceFetchers
+
+        fundamental = MagicMock()
+        registration = default_dataset_registry().require(Dataset.FUND_PORTFOLIO)
+        assert registration.daily_fetch_factory is not None
+        context = DailyFetchContext(
+            fetchers=SourceFetchers(
+                metadata=MagicMock(),
+                market=MagicMock(),
+                fundamental=fundamental,
+                capital=MagicMock(),
+                macro=MagicMock(),
+            ),
+            trade_date="2026-09-30",
+            fetch_commodity_daily=MagicMock(),
+            get_cached_index_codes=MagicMock(return_value=[]),
+        )
+
+        registration.daily_fetch_factory(context)()
+
+        fundamental.fetch_fund_portfolio.assert_called_once_with(
+            trade_date="2026-09-30"
+        )

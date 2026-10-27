@@ -115,6 +115,54 @@ class TestIndexAdapter:
             for call in mock_client.query.call_args_list
         )
 
+    def test_fetch_global_daily_concatenates_mixed_volume_schemas(self) -> None:
+        """无 vol 值指数（Null dtype）与有值指数（Float64）可同帧拼接."""
+        from ditto_data.sources.tushare.adapters.index import IndexTushareAdapter
+
+        mock_client = MagicMock()
+        mock_client.query.side_effect = [
+            pl.DataFrame(
+                {
+                    "ts_code": ["SPX"],
+                    "trade_date": ["20261023"],
+                    "open": [7620.0],
+                    "high": [7630.0],
+                    "low": [7610.0],
+                    "close": [7623.68],
+                    "pre_close": [7600.0],
+                    "change": [23.68],
+                    "pct_chg": [0.31],
+                    "vol": [1.0],
+                }
+            ),
+            pl.DataFrame(
+                {
+                    "ts_code": ["XIN9"],
+                    "trade_date": ["20261023"],
+                    "open": [None],
+                    "high": [None],
+                    "low": [None],
+                    "close": [4877.0],
+                    "pre_close": [4880.0],
+                    "change": [-3.0],
+                    "pct_chg": [-0.06],
+                    "vol": [None],
+                }
+            ),
+        ]
+        adapter = IndexTushareAdapter(_client=mock_client)
+
+        result = adapter.fetch_global_daily(
+            codes=["SPX", "XIN9"],
+            start_date="2026-10-23",
+            end_date="2026-10-23",
+            observed_at=datetime(2026, 10, 27, 4, 0, tzinfo=UTC),
+        ).sort("source_ticker")
+
+        assert result["source_ticker"].to_list() == ["SPX", "XIN9"]
+        assert result.schema["volume"] == pl.Float64
+        assert result["volume"].to_list() == [1.0, None]
+
     def test_fetch_global_daily_rejects_unknown_provider_code(self) -> None:
         from ditto_data.sources.tushare.adapters.index import IndexTushareAdapter
 
