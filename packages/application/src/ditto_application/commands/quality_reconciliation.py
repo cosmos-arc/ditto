@@ -146,7 +146,7 @@ class ReconcileSourcesHandler:
         if "ticker" not in primary_df.columns:
             raise AppCommandError("Failed to enrich primary_df with ticker")
 
-        primary_df = self._apply_golden_dataset_filter(primary_df)
+        primary_df = self._apply_golden_dataset_filter(primary_df, dataset)
 
         if primary_df.is_empty():
             logger.info(
@@ -887,8 +887,20 @@ class ReconcileSourcesHandler:
 
         return secondary_df
 
-    def _apply_golden_dataset_filter(self, df: pl.DataFrame) -> pl.DataFrame:
-        """应用黄金数据集过滤."""
+    def _apply_golden_dataset_filter(
+        self, df: pl.DataFrame, dataset: str
+    ) -> pl.DataFrame:
+        """
+        应用黄金数据集过滤.
+
+        adj_factor 是事件驱动对账：辅源是本地全市场 dump（零边际成本），
+        黄金集过滤会把比较范围收窄到黄金标的 ∩ 当日除权事件——正常交易日
+        恒为空集，每晚必然误报零交集不可比较（2026-10-27 nightly 实故障）。
+        比较范围由当日事件本身界定，不做黄金集过滤；stock_daily/财务/etf_nav
+        等按标的拉辅源的数据集保留黄金集过滤（约束辅源成本）。
+        """
+        if dataset == "adj_factor":
+            return df
         if not self._golden_dataset or not self._golden_dataset.is_enabled:
             return df
 
