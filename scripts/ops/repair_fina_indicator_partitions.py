@@ -18,17 +18,96 @@
 from __future__ import annotations
 
 import argparse
-import sys
 from pathlib import Path
 
 import polars as pl
 
 ROOT = Path(__file__).resolve().parents[2]
-if str(ROOT) not in sys.path:
-    sys.path.insert(0, str(ROOT))
 
 KEYS = ["instrument_id", "report_date", "knowledge_date"]
 SORT_KEYS = [*KEYS, "source_ticker"]
+
+
+def scan_misplaced(
+    partitions: dict[int, pl.DataFrame],
+) -> dict[int, pl.DataFrame]:
+    """各分区中报告期年 ≠ 分区年的错位行."""
+    misplaced: dict[int, pl.DataFrame] = {}
+    for part_year, df in partitions.items():
+        wrong = df.filter(pl.col("report_date").dt.year() != part_year)
+        if wrong.height:
+            misplaced[part_year] = wrong
+    return misplaced
+
+
+def plan_repair(
+    partitions: dict[int, pl.DataFrame],
+    misplaced: dict[int, pl.DataFrame],
+) -> tuple[int, pl.DataFrame]:
+    """错位行分类：正确分区已有同键（双胞胎→删）或没有（孤儿→移）."""
+    correct_keys = pl.concat(
+        [df.select(KEYS) for year, df in partitions.items() if year not in misplaced]
+        + [
+            partitions[year]
+            .filter(pl.col("report_date").dt.year() == year)
+            .select(KEYS)
+            for year in misplaced
+        ],
+    ).unique()
+
+    twins = 0
+    orphans = pl.DataFrame()
+    for wrong in misplaced.values():
+        orphan = wrong.join(correct_keys, on=KEYS, how="anti")
+        twins += wrong.height - orphan.height
+        if orphan.height:
+            orphans = pl.concat([orphans, orphan])
+    return twins, orphans
+
+
+def apply_repair(
+    dataset_dir: Path,
+    partitions: dict[int, pl.DataFrame],
+    misplaced: dict[int, pl.DataFrame],
+    orphans: pl.DataFrame,
+) -> None:
+    """受影响分区重写：删错位、收孤儿、按 SORT_KEYS 全序落盘."""
+    for part_year in misplaced:
+        df = partitions[part_year]
+        keep = df.filter(pl.col("report_date").dt.year() == part_year)
+        moved_in = (
+            orphans.filter(pl.col("report_date").dt.year() == part_year)
+            if orphans.height
+            else orphans
+        )
+        merged = pl.concat([keep, moved_in]) if moved_in.height else keep
+        merged = merged.sort(SORT_KEYS)
+        tmp = dataset_dir / f"{part_year}.parquet.tmp"
+        merged.write_parquet(tmp)
+        tmp.replace(dataset_dir / f"{part_year}.parquet")
+        print(f"partition {part_year}: {df.height} -> {merged.height}")
+
+
+def verify_repaired(dataset_dir: Path, total_before: int, twins: int) -> None:
+    """修复后校验：无错位、无跨分区同键、行数守恒（真实删除须显式 raise）."""
+    after = {
+        int(p.stem): pl.read_parquet(p) for p in sorted(dataset_dir.glob("*.parquet"))
+    }
+    total_after = sum(df.height for df in after.values())
+    if total_after != total_before - twins:
+        raise SystemExit(f"行数守恒失败: {total_before} - {twins} != {total_after}")
+    for part_year, df in after.items():
+        misplaced_after = df.filter(pl.col("report_date").dt.year() != part_year)
+        if misplaced_after.height:
+            raise SystemExit(
+                f"partition {part_year} 仍有 {misplaced_after.height} 行错位"
+            )
+    dup = pl.concat([df.select(KEYS) for df in after.values()]).unique().height
+    if dup != total_after:
+        raise SystemExit(f"跨分区同键残留: unique={dup} total={total_after}")
+    print(
+        f"verified: total_rows={total_after}, no misplacement, no cross-partition dups"
+    )
 
 
 def main() -> None:
@@ -51,70 +130,22 @@ def main() -> None:
     total_before = sum(df.height for df in partitions.values())
     print(f"partitions={sorted(partitions)} total_rows={total_before}")
 
-    misplaced: dict[int, pl.DataFrame] = {}
-    for part_year, df in partitions.items():
-        wrong = df.filter(pl.col("report_date").dt.year() != part_year)
-        if wrong.height:
-            misplaced[part_year] = wrong
+    misplaced = scan_misplaced(partitions)
     misplaced_total = sum(df.height for df in misplaced.values())
     print(f"misplaced_rows={misplaced_total} in partitions={sorted(misplaced)}")
     if not misplaced_total:
         print("nothing to do")
         return
 
-    correct_keys = pl.concat(
-        [df.select(KEYS) for year, df in partitions.items() if year not in misplaced]
-        + [
-            partitions[year]
-            .filter(pl.col("report_date").dt.year() == year)
-            .select(KEYS)
-            for year in misplaced
-        ],
-    ).unique()
-
-    twins = 0
-    orphans = pl.DataFrame()
-    for wrong in misplaced.values():
-        orphan = wrong.join(correct_keys, on=KEYS, how="anti")
-        twins += wrong.height - orphan.height
-        if orphan.height:
-            orphans = pl.concat([orphans, orphan])
+    twins, orphans = plan_repair(partitions, misplaced)
     print(f"twin_deletions={twins} orphan_moves={orphans.height}")
 
     if not args.apply:
         print("dry-run: no changes written (pass --apply)")
         return
 
-    for part_year in misplaced:
-        df = partitions[part_year]
-        keep = df.filter(pl.col("report_date").dt.year() == part_year)
-        moved_in = (
-            orphans.filter(pl.col("report_date").dt.year() == part_year)
-            if orphans.height
-            else orphans
-        )
-        merged = pl.concat([keep, moved_in]) if moved_in.height else keep
-        merged = merged.sort(SORT_KEYS)
-        tmp = dataset_dir / f"{part_year}.parquet.tmp"
-        merged.write_parquet(tmp)
-        tmp.replace(dataset_dir / f"{part_year}.parquet")
-        print(f"partition {part_year}: {df.height} -> {merged.height}")
-
-    # 修复后校验：无错位、无跨分区同键
-    after = {
-        int(p.stem): pl.read_parquet(p) for p in sorted(dataset_dir.glob("*.parquet"))
-    }
-    total_after = sum(df.height for df in after.values())
-    assert total_after == total_before - twins, (
-        f"行数守恒失败: {total_before} - {twins} != {total_after}"
-    )
-    for part_year, df in after.items():
-        assert df.filter(pl.col("report_date").dt.year() != part_year).height == 0
-    dup = pl.concat([df.select(KEYS) for df in after.values()]).unique().height
-    assert dup == total_after, f"跨分区同键残留: unique={dup} total={total_after}"
-    print(
-        f"verified: total_rows={total_after}, no misplacement, no cross-partition dups"
-    )
+    apply_repair(dataset_dir, partitions, misplaced, orphans)
+    verify_repaired(dataset_dir, total_before, twins)
 
 
 if __name__ == "__main__":

@@ -131,7 +131,7 @@ class TestGoldenDatasetFilter:
             },
         )
 
-        result = handler_with_golden._apply_golden_dataset_filter(df)
+        result = handler_with_golden._apply_golden_dataset_filter(df, "stock_daily")
 
         # 只保留 000001 和 510300
         assert result.height == 2
@@ -150,7 +150,7 @@ class TestGoldenDatasetFilter:
             },
         )
 
-        result = handler_without_golden._apply_golden_dataset_filter(df)
+        result = handler_without_golden._apply_golden_dataset_filter(df, "stock_daily")
 
         # 不过滤，保留所有
         assert result.height == 4
@@ -168,7 +168,7 @@ class TestGoldenDatasetFilter:
             },
         )
 
-        result = handler_with_golden._apply_golden_dataset_filter(df)
+        result = handler_with_golden._apply_golden_dataset_filter(df, "stock_daily")
 
         assert result.is_empty()
 

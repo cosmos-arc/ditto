@@ -17,6 +17,11 @@ from ditto_platform.foundation.observability import logger, span, traced
 # 标识符引号（"name"）与标点旁空格不是结构差异（DDL 书写差异）
 _QUOTED_IDENTIFIER = re.compile(r'"([^"]*)"')
 _PUNCT_ADJACENT_SPACES = re.compile(r"\s*([,()])\s*")
+# 纯常量 SQL，无外部输入
+_SQLITE_MASTER_SQL = (
+    "SELECT type, name, sql FROM sqlite_master"  # noqa: S608 - 纯常量 SQL
+    + " WHERE name NOT LIKE 'sqlite_%' AND sql IS NOT NULL"
+)
 
 
 class SQLitePool:
@@ -373,10 +378,7 @@ def _sqlite_master_objects(conn: sqlite3.Connection) -> dict[str, tuple[str, str
 
     sqlite_% 前缀内部对象（autoindex 等）与 sql 为 NULL 的条目排除。
     """
-    rows = conn.execute(
-        "SELECT type, name, sql FROM sqlite_master "
-        "WHERE name NOT LIKE 'sqlite_%' AND sql IS NOT NULL"
-    ).fetchall()
+    rows = conn.execute(_SQLITE_MASTER_SQL).fetchall()
     return {
         str(name): (str(obj_type), _normalize_ddl(str(sql)))
         for obj_type, name, sql in rows
