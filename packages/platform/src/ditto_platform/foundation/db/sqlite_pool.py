@@ -6,12 +6,17 @@ SQLite 连接池，用于并发访问.
 
 from __future__ import annotations
 
+import re
 import sqlite3
 import threading
 from pathlib import Path
 from typing import Any, cast
 
 from ditto_platform.foundation.observability import logger, span, traced
+
+# 标识符引号（"name"）与标点旁空格不是结构差异（DDL 书写差异）
+_QUOTED_IDENTIFIER = re.compile(r'"([^"]*)"')
+_PUNCT_ADJACENT_SPACES = re.compile(r"\s*([,()])\s*")
 
 
 class SQLitePool:
@@ -194,6 +199,7 @@ class SQLitePool:
 
         conn = self.get_connection()
         conn.executescript(schema)
+        self._validate_schema_shape(conn, schema)
         conn.commit()
 
         logger.info(
@@ -201,6 +207,50 @@ class SQLitePool:
             event="schema_init_complete",
             status="success",
         )
+
+    def _validate_schema_shape(self, conn: sqlite3.Connection, schema: str) -> None:
+        """
+        影子库结构校验：DDL 演进后既有库的静默漂移在此响亮失败.
+
+        ``CREATE ... IF NOT EXISTS`` 对既有对象静默跳过——schema.sql 演进后
+        存量库保持旧结构（曾致 instrument_name_history 3 列 PK 与权威 4 列
+        定义静默共存，写入器版本追加契约必然撞约束）。以同一 schema.sql 在
+        内存建影子库，逐对象比较 sqlite_master 存储定义（表/索引/视图/触发
+        器；sqlite_% 内部对象除外），任一定义漂移即拒绝启动。schema.sql 之
+        外的多余对象只 debug 留痕（运行时表由写入器代码自建，属既有架构）。
+
+        修复漂移 = 按对象手动迁移或携数据重建该表至与当前 schema.sql 一致
+        （对齐后本校验自然通过）。
+        """
+        expected = _master_objects(schema)
+        actual = _sqlite_master_objects(conn)
+        drift = [
+            f"{obj_type} {name}"
+            for name, (obj_type, sql) in sorted(expected.items())
+            if name in actual and actual[name][1] != sql
+        ]
+        extras = sorted(set(actual) - set(expected))
+        if extras:
+            logger.debug(
+                "Database contains objects outside schema.sql",
+                event="schema_extras",
+                db_path=str(self._db_path),
+                objects=extras,
+            )
+        if drift:
+            msg = (
+                "Database schema drift detected: "
+                + f"{', '.join(drift)} differ from schema.sql "
+                + "(CREATE IF NOT EXISTS never migrates existing objects); "
+                + "migrate or rebuild the drifted objects to match schema.sql"
+            )
+            logger.error(
+                "Database schema drift detected",
+                event="schema_drift",
+                db_path=str(self._db_path),
+                drifted=drift,
+            )
+            raise ValueError(msg)
 
     def _get_schema(self) -> str:
         """
@@ -302,3 +352,42 @@ class SQLitePool:
             event="all_connections_closed",
             closed_count=closed_count,
         )
+
+
+def _normalize_ddl(sql: str) -> str:
+    """
+    DDL 文本规范化：折叠空白、剥标识符引号、收标点旁空格.
+
+    同一引擎两侧各自存储原始文本，书写差异（`name (` vs `name(`、
+    带不带引号的标识符）不是结构漂移；列集/约束/索引列序的差异在此
+    规范化后仍必然保留。
+    """
+    text = " ".join(sql.split())
+    text = _QUOTED_IDENTIFIER.sub(r"\1", text)
+    return _PUNCT_ADJACENT_SPACES.sub(r"\1", text)
+
+
+def _sqlite_master_objects(conn: sqlite3.Connection) -> dict[str, tuple[str, str]]:
+    """
+    sqlite_master 对象清单：{name: (type, 规范化 DDL 文本)}.
+
+    sqlite_% 前缀内部对象（autoindex 等）与 sql 为 NULL 的条目排除。
+    """
+    rows = conn.execute(
+        "SELECT type, name, sql FROM sqlite_master "
+        "WHERE name NOT LIKE 'sqlite_%' AND sql IS NOT NULL"
+    ).fetchall()
+    return {
+        str(name): (str(obj_type), _normalize_ddl(str(sql)))
+        for obj_type, name, sql in rows
+    }
+
+
+def _master_objects(schema: str) -> dict[str, tuple[str, str]]:
+    """以 schema DDL 建内存影子库并返回其对象清单（结构权威期望值）."""
+    shadow = sqlite3.connect(":memory:")
+    try:
+        shadow.executescript(schema)
+        return _sqlite_master_objects(shadow)
+    finally:
+        shadow.close()

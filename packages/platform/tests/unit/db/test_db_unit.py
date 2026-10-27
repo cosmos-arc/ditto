@@ -256,6 +256,88 @@ class TestSQLitePoolSchema:
 
             pool.close()
 
+    def test_init_schema_detects_existing_object_drift(self) -> None:
+        """IF NOT EXISTS 对既有对象静默跳过——旧结构与 schema.sql 的漂移
+        必须在校验层响亮失败（instrument_name_history 3/4 列 PK 实故障形态）."""
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            db_path = Path(tmp_dir) / "test.db"
+            schema_path = Path(tmp_dir) / "schema.sql"
+
+            # 先以旧结构建库（模拟 DDL 演进前的存量库）
+            old_schema = Path(tmp_dir) / "old.sql"
+            old_schema.write_text(
+                "CREATE TABLE events (\n"
+                "  id INTEGER,\n"
+                "  day DATE,\n"
+                "  PRIMARY KEY (id, day)\n"
+                ");"
+            )
+            seed_pool = SQLitePool(str(db_path), schema_path=old_schema)
+            seed_pool.init_schema()
+            seed_pool.close()
+
+            # schema.sql 演进为 4 列 PK
+            schema_path.write_text(
+                "CREATE TABLE IF NOT EXISTS events (\n"
+                "  id INTEGER,\n"
+                "  day DATE,\n"
+                "  observed_at TIMESTAMP,\n"
+                "  PRIMARY KEY (id, day, observed_at)\n"
+                ");"
+            )
+            pool = SQLitePool(str(db_path), schema_path=schema_path)
+
+            with pytest.raises(ValueError, match=r"schema drift.*events"):
+                pool.init_schema()
+
+            pool.close()
+
+    def test_init_schema_accepts_matching_existing_schema(self) -> None:
+        """结构与 schema.sql 一致的既有库正常通过（重复 init 幂等）."""
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            db_path = Path(tmp_dir) / "test.db"
+            schema_path = Path(tmp_dir) / "schema.sql"
+            schema_path.write_text(
+                "CREATE TABLE IF NOT EXISTS events (\n"
+                "  id INTEGER,\n"
+                "  day DATE,\n"
+                "  observed_at TIMESTAMP,\n"
+                "  PRIMARY KEY (id, day, observed_at)\n"
+                ");\n"
+                "CREATE INDEX IF NOT EXISTS idx_events_day ON events(day);"
+            )
+            pool = SQLitePool(str(db_path), schema_path=schema_path)
+            pool.init_schema()
+            pool.init_schema()  # 幂等重入
+
+            pool.close()
+
+    def test_init_schema_drift_covers_indexes_too(self) -> None:
+        """索引列集漂移同样拦截（st_change_history 唯一索引 3/4 列实故障形态）."""
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            db_path = Path(tmp_dir) / "test.db"
+            schema_path = Path(tmp_dir) / "schema.sql"
+
+            old_schema = Path(tmp_dir) / "old.sql"
+            old_schema.write_text(
+                "CREATE TABLE t (a TEXT, b DATE, c DATE);"
+                "CREATE INDEX idx_t_key ON t(a, b);"
+            )
+            seed_pool = SQLitePool(str(db_path), schema_path=old_schema)
+            seed_pool.init_schema()
+            seed_pool.close()
+
+            schema_path.write_text(
+                "CREATE TABLE IF NOT EXISTS t (a TEXT, b DATE, c DATE);"
+                "CREATE INDEX IF NOT EXISTS idx_t_key ON t(a, b, c);"
+            )
+            pool = SQLitePool(str(db_path), schema_path=schema_path)
+
+            with pytest.raises(ValueError, match="index idx_t_key"):
+                pool.init_schema()
+
+            pool.close()
+
     def test_init_schema_empty_file(self) -> None:
         """Test init_schema with empty schema file."""
         with tempfile.TemporaryDirectory() as tmp_dir:
