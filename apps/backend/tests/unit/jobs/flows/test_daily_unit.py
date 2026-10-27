@@ -532,10 +532,6 @@ def mock_daily_dq_batch_check(mocker: MockerFixture):
     }
     reconcile_task = mocker.Mock()
     reconcile_task.submit.return_value = reconcile_future
-    mocker.patch(
-        "ditto_apps.jobs.flows.daily.dq_reconcile_adj_factor",
-        reconcile_task,
-    )
     # 例行 fuyao dump 刷新 task（#617）：轻量 future，接线断言见专用用例
     dump_future = mocker.Mock()
     dump_future.result.return_value = {
