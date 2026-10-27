@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import date
 from pathlib import Path
-from typing import cast
+from typing import IO, cast
 from unittest.mock import MagicMock
 
 import httpx
@@ -978,3 +978,68 @@ class TestFuyaoPerTickerIsolation:
 
         assert frame.height == 1
         assert frame["ticker"].to_list() == ["600519"]
+
+
+class TestDownloadMarketDumpAtomic:
+    """dump 下载临时文件原子替换（#617）：截断半成品不得以正式名落盘."""
+
+    @staticmethod
+    def _source(tmp_path: Path, download) -> tuple[FuyaoSource, Path]:
+        client = MagicMock()
+        client.get.return_value = {"presigned_url": "https://dump/fake"}
+        client.download.side_effect = download
+        dest = tmp_path / "fuyao" / "dumps" / "adjustment-factors" / "20261027.parquet"
+        return FuyaoSource(client=client), dest
+
+    def test_success_writes_dest_without_partial(self, tmp_path: Path) -> None:
+        def write(_url: str, fh: IO[bytes]) -> None:
+            fh.write(b"parquet-bytes")
+
+        source, dest = self._source(tmp_path, write)
+
+        result = source.download_market_dump("adjustment-factors", dest)
+
+        assert result == dest
+        assert dest.read_bytes() == b"parquet-bytes"
+        assert not dest.with_name(f"{dest.name}.part").exists()
+
+    def test_failure_leaves_no_dest_and_no_partial(self, tmp_path: Path) -> None:
+        def boom(_url: str, fh: IO[bytes]) -> None:
+            fh.write(b"partial")
+            raise RuntimeError("connection reset")
+
+        source, dest = self._source(tmp_path, boom)
+
+        with pytest.raises(RuntimeError, match="connection reset"):
+            source.download_market_dump("adjustment-factors", dest)
+
+        assert not dest.exists()
+        assert not dest.with_name(f"{dest.name}.part").exists()
+
+    def test_failure_preserves_existing_dest(self, tmp_path: Path) -> None:
+        def boom(_url: str, _fh: IO[bytes]) -> None:
+            raise RuntimeError("connection reset")
+
+        source, dest = self._source(tmp_path, boom)
+        dest.parent.mkdir(parents=True)
+        dest.write_bytes(b"old-dump")
+
+        with pytest.raises(RuntimeError, match="connection reset"):
+            source.download_market_dump("adjustment-factors", dest)
+
+        assert dest.read_bytes() == b"old-dump"
+        assert not dest.with_name(f"{dest.name}.part").exists()
+
+    def test_missing_presigned_url_raises_before_any_write(
+        self, tmp_path: Path
+    ) -> None:
+        client = MagicMock()
+        client.get.return_value = {}
+        source = FuyaoSource(client=client)
+        dest = tmp_path / "fuyao" / "dumps" / "x" / "20261027.parquet"
+
+        with pytest.raises(ValueError, match="presigned_url"):
+            source.download_market_dump("adjustment-factors", dest)
+
+        assert not dest.exists()
+        client.download.assert_not_called()

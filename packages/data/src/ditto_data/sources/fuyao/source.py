@@ -761,14 +761,22 @@ class FuyaoSource:
     # ── 全市场 dump（不可变快照落盘）─────────────────────────────
 
     def download_market_dump(self, kind: DumpKind, dest: Path) -> Path:
-        """获取预签名链接并流式下载 dump Parquet 到 dest."""
+        """获取预签名链接并流式下载 dump Parquet 到 dest（临时文件原子替换）."""
         data = self._client.get(_DUMP_PATHS[kind])
         presigned = data.get("presigned_url")
         if not presigned:
             raise ValueError(f"fuyao dump {kind} returned no presigned_url")
         dest.parent.mkdir(parents=True, exist_ok=True)
-        with dest.open("wb") as fh:
-            self._client.download(presigned, fh)
+        # 半成品不得以正式文件名留在 dumps 目录：latest_fuyao_dump 按文件名
+        # 取最新，当日截断文件会让对账辅源读到坏帧且当晚无法自愈——先写
+        # .part 再原子 replace，失败清理（#617）
+        partial = dest.with_name(f"{dest.name}.part")
+        try:
+            with partial.open("wb") as fh:
+                self._client.download(presigned, fh)
+            partial.replace(dest)
+        finally:
+            partial.unlink(missing_ok=True)
         logger.info(
             "Fuyao market dump downloaded",
             event="fuyao_dump_download_complete",

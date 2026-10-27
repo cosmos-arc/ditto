@@ -267,6 +267,7 @@ def test_sync_runner_uses_plain_business_functions_without_prefect_entrypoints(
     prefect_dq = mocker.patch.object(daily_module, "dq_batch_check")
     prefect_t0 = mocker.patch.object(daily_module, "create_ingest_task_t0")
     prefect_t1 = mocker.patch.object(daily_module, "create_ingest_task_t1_bars")
+    prefect_dump = mocker.patch.object(daily_module, "fuyao_dump_adjustment_factors")
 
     result = daily_module.run_daily_ingestion(
         trade_date="2026-07-16",
@@ -274,6 +275,7 @@ def test_sync_runner_uses_plain_business_functions_without_prefect_entrypoints(
     )
 
     assert result["skipped"] is False
+    assert result["fuyao_dump"] is None
     assert result["reconcile_results"] == {
         "trade_date": "2026-07-16",
         "dataset": "adj_factor",
@@ -326,6 +328,7 @@ def test_sync_runner_uses_plain_business_functions_without_prefect_entrypoints(
     prefect_dq.assert_not_called()
     prefect_t0.assert_not_called()
     prefect_t1.assert_not_called()
+    prefect_dump.assert_not_called()
     reconcile.assert_called_once_with("2026-07-16")
 
 
@@ -529,6 +532,27 @@ def mock_daily_dq_batch_check(mocker: MockerFixture):
     }
     reconcile_task = mocker.Mock()
     reconcile_task.submit.return_value = reconcile_future
+    mocker.patch(
+        "ditto_apps.jobs.flows.daily.dq_reconcile_adj_factor",
+        reconcile_task,
+    )
+    # 例行 fuyao dump 刷新 task（#617）：轻量 future，接线断言见专用用例
+    dump_future = mocker.Mock()
+    dump_future.result.return_value = {
+        "kind": "adjustment-factors",
+        "status": "success",
+        "path": "/data/fuyao/dumps/adjustment-factors/20240102.parquet",
+        "rows": 100,
+        "tickers": 50,
+        "duplicate_keys": 0,
+        "error": None,
+    }
+    dump_task = mocker.Mock()
+    dump_task.submit.return_value = dump_future
+    mocker.patch(
+        "ditto_apps.jobs.flows.daily.fuyao_dump_adjustment_factors",
+        dump_task,
+    )
     return mocker.patch(
         "ditto_apps.jobs.flows.daily.dq_reconcile_adj_factor",
         reconcile_task,
@@ -622,6 +646,9 @@ class TestDailyIngestionFlowNonTradingDay:
         mocker.patch(
             "ditto_apps.jobs.flows.daily.check_trading_day", return_value=False
         )
+        dump_task = mocker.patch(
+            "ditto_apps.jobs.flows.daily.fuyao_dump_adjustment_factors"
+        )
         result = DAILY_INGESTION_FLOW_RUNNER(
             trade_date="2024-01-06",
             source="tushare",
@@ -633,6 +660,10 @@ class TestDailyIngestionFlowNonTradingDay:
         assert result["t0_results"] == {}
         assert result["t1_results"] == {}
         assert result["dqc_results"] == {}
+        assert result["reconcile_results"] == {}
+        assert result["fuyao_dump"] is None
+        # 非交易日不触发 dump 下载（对账也不运行）
+        dump_task.submit.assert_not_called()
         assert result["summary"]["total_tasks"] == 0
         assert result["summary"]["success_count"] == 0
         assert result["summary"]["failed_count"] == 0
@@ -929,6 +960,84 @@ class TestDailyIngestionFlowT1Execution:
         )
 
         assert result["t1_results"] == {}
+
+
+@pytest.mark.unit
+class TestFuyaoDumpWiring:
+    """例行 fuyao dump 刷新任务的 flow 编排（#617）."""
+
+    @staticmethod
+    def _trading_day_with_empty_scope(mocker: MockerFixture) -> None:
+        mocker.patch("ditto_apps.jobs.flows.daily.check_trading_day", return_value=True)
+        mocker.patch(
+            "ditto_apps.jobs.flows.daily.get_datasets_by_tier",
+            return_value=[],
+        )
+        mocker.patch(
+            "ditto_apps.jobs.flows.daily.get_parallel_datasets",
+            return_value=[],
+        )
+
+    def test_flow_submits_dump_and_reconcile_waits_for_it(
+        self,
+        mocker: MockerFixture,
+        mock_daily_dq_batch_check: MagicMock,
+    ) -> None:
+        """交易日 dump 任务提交一次；对账 wait_for 同时含 DQC 与 dump future."""
+        self._trading_day_with_empty_scope(mocker)
+        dump_task = mocker.patch(
+            "ditto_apps.jobs.flows.daily.fuyao_dump_adjustment_factors"
+        )
+        dump_future = mocker.Mock()
+        dump_future.result.return_value = {
+            "kind": "adjustment-factors",
+            "status": "success",
+        }
+        dump_task.submit.return_value = dump_future
+
+        result = DAILY_INGESTION_FLOW_RUNNER(
+            trade_date="2026-10-26",
+            source="tushare",
+        )
+
+        dump_task.submit.assert_called_once_with()
+        wait_for = mock_daily_dq_batch_check.submit.call_args.kwargs["wait_for"]
+        assert len(wait_for) == 2
+        assert dump_future in wait_for
+        assert result["fuyao_dump"] == {
+            "kind": "adjustment-factors",
+            "status": "success",
+        }
+
+    def test_dump_failure_reported_without_breaking_flow(
+        self,
+        mocker: MockerFixture,
+        mock_daily_dq_batch_check: MagicMock,
+    ) -> None:
+        """dump 失败以 status=failed 回到 flow 结果，摄取与对账编排不受阻."""
+        self._trading_day_with_empty_scope(mocker)
+        dump_task = mocker.patch(
+            "ditto_apps.jobs.flows.daily.fuyao_dump_adjustment_factors"
+        )
+        dump_future = mocker.Mock()
+        dump_future.result.return_value = {
+            "kind": "adjustment-factors",
+            "status": "failed",
+            "error": "RuntimeError: network down",
+        }
+        dump_task.submit.return_value = dump_future
+
+        result = DAILY_INGESTION_FLOW_RUNNER(
+            trade_date="2026-10-26",
+            source="tushare",
+        )
+
+        assert result["skipped"] is False
+        assert result["fuyao_dump"]["status"] == "failed"
+        assert (
+            dump_future
+            in (mock_daily_dq_batch_check.submit.call_args.kwargs["wait_for"])
+        )
 
 
 @pytest.mark.unit
