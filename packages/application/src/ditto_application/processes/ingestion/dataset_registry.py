@@ -342,14 +342,24 @@ _GLOBAL_INDEX_LOOKBACK_DAYS = 7
 _HISTORY_LOOKBACK_DAYS = 45
 
 
-def _lookback_start(trade_date: str, days: int) -> str:
-    """回看窗口起点；空 trade_date（通用探测路径）退回上海当日。"""
+def _lookback_bounds(trade_date: str, days: int) -> tuple[str, str]:
+    """回看窗口 (start, end)；空 trade_date（通用探测路径）退回上海当日。"""
     anchor = (
         date.fromisoformat(trade_date)
         if trade_date
         else datetime.now(ZoneInfo("Asia/Shanghai")).date()
     )
-    return (anchor - timedelta(days=days)).isoformat()
+    return (anchor - timedelta(days=days)).isoformat(), anchor.isoformat()
+
+
+def _global_index_request_bounds(trade_date: str) -> tuple[str, str]:
+    """摄取证据记录真实请求区间（回看窗口而非单日）。"""
+    return _lookback_bounds(trade_date, _GLOBAL_INDEX_LOOKBACK_DAYS)
+
+
+def _history_request_bounds(trade_date: str) -> tuple[str, str]:
+    """摄取证据记录真实请求区间（回看窗口而非单日）。"""
+    return _lookback_bounds(trade_date, _HISTORY_LOOKBACK_DAYS)
 
 
 # 市场基准指数（Tushare source_ticker 格式）
@@ -402,11 +412,11 @@ def _global_index_fetch(ctx: DailyFetchContext) -> DailyFetchHandler:
     # 美股/欧股 T 日收盘落在 T+1 北京凌晨、代理端数据另有滞后——固定回看
     # 窗口让迟到的行在窗口内自愈；同值重拉由写入层 VERIFY_IDENTICAL 去重，
     # 每日新增观察版本符合本数据集"拉取即观察"的 PIT 语义。
-    start = _lookback_start(ctx.trade_date, _GLOBAL_INDEX_LOOKBACK_DAYS)
+    start, end = _lookback_bounds(ctx.trade_date, _GLOBAL_INDEX_LOOKBACK_DAYS)
     return lambda: ctx.fetchers.market.fetch_global_index_daily(
         GLOBAL_CONTEXT_INDEX_CODES,
         start,
-        ctx.trade_date,
+        end,
     )
 
 
@@ -460,21 +470,19 @@ def _fund_portfolio_disclosure_fetch(ctx: DailyFetchContext) -> DailyFetchHandle
 
 def _history_fetch(group: str, method: str) -> DailyFetchFactory:
     """
-    近窗增量拉取 namechange 事件流。
+    近窗增量拉取 namechange 事件流（namechange / st_history 两数据集共用）。
 
     全量历史经代理多页翻页确定性损坏（跨页重复触发 fail-closed 守卫，
-    2026-10-27 实测），改为回看窗口单页拉取。窗口首事件的 old_name 推导
-    缺前驱而为 NULL——old_name 是信息列（无读侧消费者），接受；全量
-    历史由一次性回补落库。
+    2026-10-27 实测），改为回看窗口单页拉取。name_history 窗口首事件的
+    old_name 推导缺前驱而为 NULL——old_name 是信息列（无读侧消费者），
+    接受；全量历史由一次性回补落库。
     """
 
     def factory(ctx: DailyFetchContext) -> DailyFetchHandler:
         fetcher = getattr(ctx.fetchers, group)
         fn = getattr(fetcher, method)
-        return lambda: fn(
-            start_date=_lookback_start(ctx.trade_date, _HISTORY_LOOKBACK_DAYS),
-            end_date=ctx.trade_date,
-        )
+        start, end = _lookback_bounds(ctx.trade_date, _HISTORY_LOOKBACK_DAYS)
+        return lambda: fn(start_date=start, end_date=end)
 
     return factory
 
@@ -648,6 +656,7 @@ _TRADED_BARS_REGISTRATIONS: tuple[DatasetRegistration, ...] = (
         write_kind=WriteKind.GLOBAL_INDEX_BARS,
         date_schedule=DateScheduleType.SOURCE_DEFINED,
         daily_fetch_factory=_global_index_fetch,
+        request_bounds=_global_index_request_bounds,
     ),
 )
 
@@ -677,6 +686,7 @@ _HISTORY_REGISTRATIONS: tuple[DatasetRegistration, ...] = (
         date_schedule=DateScheduleType.SOURCE_DEFINED,
         metadata_dataset=True,
         daily_fetch_factory=_history_fetch("market", "fetch_name_history"),
+        request_bounds=_history_request_bounds,
     ),
     DatasetRegistration(
         dataset=Dataset.ST_HISTORY,
@@ -684,6 +694,7 @@ _HISTORY_REGISTRATIONS: tuple[DatasetRegistration, ...] = (
         date_schedule=DateScheduleType.SOURCE_DEFINED,
         metadata_dataset=True,
         daily_fetch_factory=_history_fetch("market", "fetch_st_history"),
+        request_bounds=_history_request_bounds,
     ),
 )
 
@@ -790,8 +801,9 @@ _FUNDAMENTAL_REGISTRATIONS: tuple[DatasetRegistration, ...] = (
             "fundamental", "fetch_fina_indicator"
         ),
     ),
-    # #522 基金季度持仓：全市场单日 30 万+行会撞传输翻页上限（2026-10-06
-    # 实测 153 页后失败），日更按注册 ETF universe 逐标的披露拉取；
+    # #522 基金季度持仓：日更=市场级单日 ann_date 单请求（2026-10-27 代理
+    # 实测 ~1.4 万行 1-7 页取尽；披露峰值页数上涨，真翻页损坏由 fail-closed
+    # 守卫响亮失败，次日日更自愈）。未注册身份（.OF 场外）写入层过滤；
     # 按基金回填走 instrument 路由（区间内报告期逐期）。
     DatasetRegistration(
         dataset=Dataset.FUND_PORTFOLIO,
