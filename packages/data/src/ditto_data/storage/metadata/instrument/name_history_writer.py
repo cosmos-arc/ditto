@@ -119,9 +119,20 @@ class NameHistoryWriter:
                     str(row.get("source") or "tushare"),
                 ],
             )
-            if previous is not None and all(
-                previous[field] == row.get(field) for field in ("old_name", "new_name")
-            ):
+            same_content = previous is not None and (
+                all(
+                    previous[field] == row.get(field)
+                    for field in ("old_name", "new_name")
+                )
+                # 滑窗重推导缺前驱时 old_name 为 NULL——不为既有真值降级
+                # 追加影子版本（old_name 是派生信息列，correctness F2）
+                or (
+                    previous["old_name"] is not None
+                    and row.get("old_name") is None
+                    and previous["new_name"] == row.get("new_name")
+                )
+            )
+            if same_content:
                 written += 1
                 continue
             visible_at = row.get("observed_at")

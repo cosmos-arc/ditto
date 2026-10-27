@@ -802,9 +802,10 @@ _FUNDAMENTAL_REGISTRATIONS: tuple[DatasetRegistration, ...] = (
         ),
     ),
     # #522 基金季度持仓：日更=市场级单日 ann_date 单请求（2026-10-27 代理
-    # 实测 ~1.4 万行 1-7 页取尽；披露峰值页数上涨，真翻页损坏由 fail-closed
-    # 守卫响亮失败，次日日更自愈）。未注册身份（.OF 场外）写入层过滤；
-    # 按基金回填走 instrument 路由（区间内报告期逐期）。
+    # 实测 ~1.4 万行 1-7 页取尽）。披露峰值日页数上涨，翻页损坏时当夜
+    # 响亮失败（无部分写入），该日数据需按基金 instrument 回补——日更
+    # 不回补历史日。未注册身份（.OF 场外）写入层过滤；按基金回填走
+    # instrument 路由（区间内报告期逐期）。
     DatasetRegistration(
         dataset=Dataset.FUND_PORTFOLIO,
         write_kind=WriteKind.FUNDAMENTAL,
