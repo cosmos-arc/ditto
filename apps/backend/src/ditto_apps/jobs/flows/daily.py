@@ -45,6 +45,7 @@ from ditto_apps.jobs.tasks.dq_reconcile import (
     dq_reconcile_adj_factor,
     run_dq_reconcile_adj_factor,
 )
+from ditto_apps.jobs.tasks.fuyao_dump import fuyao_dump_adjustment_factors
 from ditto_apps.jobs.tasks.t0_meta import run_ingest_dataset
 from ditto_apps.registry import create_ingestion_bundle
 
@@ -170,6 +171,7 @@ def _skipped_ingestion_result(trade_date: str) -> dict[str, object]:
         "t1_results": {},
         "dqc_results": {},
         "reconcile_results": {},
+        "fuyao_dump": None,
         "summary": {
             "trade_date": trade_date,
             "total_tasks": 0,
@@ -187,8 +189,14 @@ def _completed_ingestion_result(
     t1_results: dict[str, dict[str, object]],
     dqc_results: dict[str, Any],
     reconcile_results: dict[str, Any],
+    fuyao_dump: dict[str, object] | None = None,
 ) -> dict[str, object]:
-    """由同一业务结果构造同步与 Prefect 返回契约。"""
+    """
+    由同一业务结果构造同步与 Prefect 返回契约.
+
+    fuyao dump 刷新仅在 Prefect 例行链执行（sync/CLI 路径不触网）；
+    None 表示本路径未运行 dump 任务。
+    """
     all_results = {**t0_results, **t1_results}
     counts = count_results(all_results)
     return {
@@ -199,6 +207,7 @@ def _completed_ingestion_result(
         "t1_results": t1_results,
         "dqc_results": dqc_results,
         "reconcile_results": reconcile_results,
+        "fuyao_dump": fuyao_dump,
         "summary": {
             "trade_date": trade_date,
             "total_tasks": len(all_results),
@@ -219,6 +228,9 @@ def run_daily_ingestion(
     顺序执行每日摄取业务，可限制为策略依赖闭包。
 
     trade_date 为空时取 Asia/Shanghai 当日（定时触发路径）。
+
+    仅同步执行 T0/T1/T3 业务函数与 adj_factor 对账；fuyao dump 例行刷新
+    只在 Prefect 部署链运行（不触网，保持 CLI/测试确定性，#617）。
     """
     trade_date = resolve_trade_date(trade_date)
     if not run_check_trading_day(trade_date):
@@ -274,9 +286,11 @@ def daily_ingestion_flow(
 
     该流程实现 T0 → T1 → T3 的依赖编排：
     1. 验证交易日
-    2. 执行 T0 元数据任务（并行）
-    3. 执行 T1 增量任务（并行，依赖 T0）
-    4. 触发 T3 数据质量检查（覆盖所有有 DQ 规则的数据集）
+    2. 提交例行 fuyao dump 刷新（与 T0/T1 并行，#617）
+    3. 执行 T0 元数据任务（并行）
+    4. 执行 T1 增量任务（并行，依赖 T0）
+    5. 触发 T3 数据质量检查（覆盖所有有 DQ 规则的数据集）
+    6. 例行 adj_factor 跨源对账（等待 DQC 与 fuyao dump，#515 A3）
 
     使用 Prefect 原生依赖机制（@task + wait_for）实现声明式编排。
 
@@ -309,6 +323,11 @@ def daily_ingestion_flow(
         return _skipped_ingestion_result(trade_date)
 
     scope = _daily_ingestion_scope(required_datasets)
+
+    # 1.5 例行 fuyao adjustment-factors dump 刷新（#617）：纯源下载，与
+    # T0/T1 并行；为链尾 adj_factor 对账提供当日 dump（陈旧守卫要求 dump
+    # 日期 ≥ 目标交易日）。任务内自兜失败，status 字段显式报告。
+    dump_future = fuyao_dump_adjustment_factors.submit()
 
     # 2. 提交 T0 任务（并行执行）
     t0_futures: list[PrefectFuture[dict[str, object]]] = []
@@ -375,12 +394,14 @@ def daily_ingestion_flow(
     )
 
     # 5.5 例行 adj_factor 跨源对账（#515 A3）：排在 DQC 之后，失败显式
-    # skip 不拖垮摄取链（结果在 reconcile_results 键下报告）
+    # skip 不拖垮摄取链（结果在 reconcile_results 键下报告）；同时等待
+    # 当日 fuyao dump（#617），对账辅源才能通过陈旧守卫读到当日事件
     reconcile_future: PrefectFuture[dict[str, Any]] = dq_reconcile_adj_factor.submit(  # pyright: ignore[reportCallIssue]
         trade_date=trade_date,
-        wait_for=[dqc_future],
+        wait_for=[dqc_future, dump_future],
     )
     reconcile_results = cast(dict[str, Any], reconcile_future.result())
+    fuyao_dump_result = cast(dict[str, object], dump_future.result())
 
     # 6. 汇总统计
     return _completed_ingestion_result(
@@ -389,4 +410,5 @@ def daily_ingestion_flow(
         t1_results=t1_results,
         dqc_results=dqc_results,
         reconcile_results=reconcile_results,
+        fuyao_dump=fuyao_dump_result,
     )

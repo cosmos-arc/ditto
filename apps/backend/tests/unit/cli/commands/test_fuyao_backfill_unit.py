@@ -19,18 +19,8 @@ CONTAINER_PATH = "ditto_apps.cli.commands.fuyao.make_app_container"
 BUNDLE_PATH = "ditto_apps.cli.commands.fuyao.create_ingestion_bundle"
 DATES_PATH = "ditto_application.processes.ingestion.date_range.list_ingestion_dates"
 
-
-def test_dump_dest_uses_beijing_calendar_date(time_machine) -> None:
-    """dump 文件名用北京日期：北京 00:00-07:59（UTC 前一日）生成的当日
-    dump 不得被陈旧守卫按 UTC 名误判（#515 correctness F4）."""
-    from ditto_apps.cli.commands.fuyao import _dump_dest
-
-    # 北京 2026-01-02 00:30 = UTC 2026-01-01 16:30；UTC 命名会得 20260101
-    time_machine.move_to("2026-01-01 16:30:00+00:00", tick=False)
-
-    dest = _dump_dest(Path("/data"), "adjustment-factors")
-
-    assert dest.name == "20260102.parquet"
+# dump 目标北京日命名测试随实现迁至
+# tests/unit/registry/test_fuyao_dump_unit.py（#617 单一权威）
 
 
 def _write_daily_k_dump(data_root: Path) -> Path:

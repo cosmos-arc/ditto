@@ -2,10 +2,8 @@
 
 from __future__ import annotations
 
-from datetime import date, datetime
+from datetime import date
 from pathlib import Path
-from typing import Any, cast
-from zoneinfo import ZoneInfo
 
 import polars as pl
 import typer
@@ -14,10 +12,13 @@ from ditto_application.processes.ingestion.date_range import list_ingestion_date
 
 from ditto_apps.registry.container import make_app_container
 from ditto_apps.registry.contexts.ingestion import create_ingestion_bundle
+from ditto_apps.registry.fuyao_dump import (
+    FuyaoSourceUnconfiguredError,
+    download_fuyao_dump,
+)
 from ditto_apps.registry.infra.protocol_adapters import (
     DumpKind,
     FuyaoDailyKDumpFetcher,
-    FuyaoSource,
     InstrumentService,
     MarketService,
     MetadataService,
@@ -42,80 +43,28 @@ _OVERLAP_COMPARE_FIELDS = (
 )
 
 
-def _fuyao_source(container: Container) -> FuyaoSource:
-    """从容器解析 FuyaoSource, 未配置时退出."""
-    # dishka 运行时支持 Optional 提供键（di/sources.py fuyao_source 的返回
-    # 类型即键），但 get() 注解只声明 type[_T]，联合键需显式放宽；外层
-    # cast 恢复 source 的静态类型。
-    source = cast(
-        "FuyaoSource | None",
-        container.get(cast(Any, FuyaoSource | None)),
-    )
-    if source is None:
-        typer.secho(
-            "fuyao 未配置: 在 DITTO_CONFIG_ROOT 的 data_source 配置中设置 "
-            + "FUYAO_API_KEY (经 DataSourceSettings.fuyao_api_key 注入), "
-            + "源未创建",
-            fg=typer.colors.RED,
-            err=True,
-        )
-        raise typer.Exit(1)
-    return source
-
-
-def _dump_dest(data_root: Path, kind: DumpKind) -> Path:
-    # 北京日期命名：陈旧守卫（protocol_adapters）与交易日语义同用北京日界；
-    # 早前 UTC 命名会让北京 00:00-07:59 生成的当日 dump 被误判为陈旧
-    # （#515 correctness F4）。字典序 = 时间序不变。
-    stamp = datetime.now(ZoneInfo("Asia/Shanghai")).strftime("%Y%m%d")
-    return Path(data_root) / "fuyao" / "dumps" / kind / f"{stamp}.parquet"
-
-
-def _verify_dump(frame: pl.DataFrame, kind: DumpKind) -> None:
-    """打印快照统计并校验主键唯一性(复现官方解读脚本的检查)."""
-    rows = len(frame)
-    typer.echo(f"rows={rows}")
-    if kind == "daily-k":
-        key = ["thscode", "date_ms"]
-        typer.echo(f"tickers={frame['thscode'].n_unique()}")
-        dates = (
-            frame["date_ms"]
-            .map_elements(
-                lambda ms: datetime.fromtimestamp(ms / 1000).date(),
-                return_dtype=pl.Date,
-            )
-            .min(),
-            frame["date_ms"]
-            .map_elements(
-                lambda ms: datetime.fromtimestamp(ms / 1000).date(),
-                return_dtype=pl.Date,
-            )
-            .max(),
-        )
-        typer.echo(f"date_range={dates[0]}..{dates[1]}")
-    else:
-        key = ["thscode", "ex_date_ms"]
-        typer.echo(f"tickers={frame['thscode'].n_unique()}")
+def _run_dump(kind: DumpKind, description: str) -> None:
+    # 下载/统计编排是 CLI 与例行任务共享的单一权威（registry/fuyao_dump）；
+    # 此处只负责控制台输出形态（#617 迁移自本模块）
+    try:
+        outcome = download_fuyao_dump(kind)
+    except FuyaoSourceUnconfiguredError as error:
+        typer.secho(str(error), fg=typer.colors.RED, err=True)
+        raise typer.Exit(1) from error
+    typer.echo(f"下载 {description} → {outcome.path}")
+    typer.echo(f"rows={outcome.rows}")
+    typer.echo(f"tickers={outcome.tickers}")
+    if outcome.date_range is not None:
+        typer.echo(f"date_range={outcome.date_range[0]}..{outcome.date_range[1]}")
     # 不可变快照保留上游原样, 重复键只告警(消费端按主键去重)
-    dup = frame.height - frame.unique(subset=key).height
-    if dup:
-        typer.secho(f"上游主键重复 {dup} 行(快照原样保留)", fg=typer.colors.YELLOW)
+    if outcome.duplicate_keys:
+        typer.secho(
+            f"上游主键重复 {outcome.duplicate_keys} 行(快照原样保留)",
+            fg=typer.colors.YELLOW,
+        )
     else:
         typer.secho("主键唯一性校验通过", fg=typer.colors.GREEN)
-
-
-def _run_dump(kind: DumpKind, description: str) -> None:
-    container: Container = make_app_container()
-    try:
-        source = _fuyao_source(container)
-        data_root = container.get(Path)
-        dest = _dump_dest(data_root, kind)
-        typer.echo(f"下载 {description} → {dest}")
-        source.download_market_dump(kind, dest)
-        _verify_dump(pl.read_parquet(dest), kind)
-        typer.secho(f"完成: {dest}", fg=typer.colors.GREEN)
-    finally:
-        container.close()
+    typer.secho(f"完成: {outcome.path}", fg=typer.colors.GREEN)
 
 
 @app.command("dump-daily-k")
