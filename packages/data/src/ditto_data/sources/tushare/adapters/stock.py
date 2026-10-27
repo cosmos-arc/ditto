@@ -643,6 +643,21 @@ class StockTushareAdapter(BaseTushareAdapter):
                 pl.col("end_date").str.to_date("%Y%m%d", strict=False),
                 pl.col("published_at").str.to_date("%Y%m%d", strict=False),
             )
+            # 与 fetch_name_history 同源的冗余收敛（代理页内重复 + end_date
+            # 闭合补丁对，2026-10-27 实测）：写入键 (instrument_id,
+            # effective_from, source) 无修订维度，同键取闭区间/更晚披露代表。
+            result = (
+                result.unique()
+                .sort(
+                    by=[
+                        pl.col("end_date").is_null(),
+                        pl.col("published_at").is_null(),
+                        pl.col("published_at"),
+                    ],
+                    descending=[False, False, True],
+                )
+                .unique(subset=["source_ticker", "change_date"], keep="first")
+            )
 
             row_count = len(result)
             logger.info(

@@ -347,3 +347,30 @@ class TestLimitListAdapter:
         assert row["open_times"] == 2
         assert row["first_time"] == "93145"
         assert row["knowledge_date"] == date(2026, 10, 1)
+
+
+class TestStockAdapterFetchStHistoryDedup:
+    """st_history 冗余行收敛(与 name_history 同源形态)。"""
+
+    def test_st_patch_pair_collapses_to_closed_interval(self) -> None:
+        """同名 end_date 闭合补丁对取闭区间代表,写入键不冲突."""
+        from ditto_data.sources.tushare.adapters.stock import StockTushareAdapter
+
+        mock_client = MagicMock()
+        mock_client.query.return_value = pl.DataFrame(
+            {
+                "ts_code": ["000038.SZ"] * 3,
+                "start_date": ["20130514"] * 3,
+                "end_date": [None, "20220505", "20220505"],
+                "change_reason": ["撤销*ST"] * 3,
+                "ann_date": ["20130513"] * 3,
+            }
+        )
+        adapter = StockTushareAdapter(_client=mock_client)
+
+        result = adapter.fetch_st_history()
+
+        assert result.height == 1
+        row = result.row(0, named=True)
+        assert row["end_date"] == date(2022, 5, 5)
+        assert row["change_reason"] == "撤销*ST"
