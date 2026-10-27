@@ -375,3 +375,33 @@ class TestStockAdapterFetchStHistoryDedup:
         row = result.row(0, named=True)
         assert row["end_date"] == date(2022, 5, 5)
         assert row["change_reason"] == "撤销*ST"
+
+
+class TestStockAdapterNameHistoryDeterminism:
+    """old_name 推导确定性(坍缩先于 shift)。"""
+
+    def test_patch_pair_old_name_derives_from_real_predecessor(self) -> None:
+        """坍缩先于推导:patch 对幸存行的 old_name 取真实前驱事件,而非对内
+        另一变体(否则 old_name==new_name 自引用,且随服务端行序漂移)."""
+        from ditto_data.sources.tushare.adapters.stock import StockTushareAdapter
+
+        mock_client = MagicMock()
+        mock_client.query.return_value = pl.DataFrame(
+            {
+                "ts_code": ["002564.SZ"] * 2,
+                "name": ["天沃科技", "天沃科技"],
+                "start_date": ["20141211", "20141211"],
+                "end_date": [None, "20230629"],
+                "change_reason": ["改名", "改名"],
+                "ann_date": ["20141211", "20141211"],
+            }
+        )
+        adapter = StockTushareAdapter(_client=mock_client)
+
+        result = adapter.fetch_name_history()
+
+        assert result.height == 1
+        row = result.row(0, named=True)
+        assert row["old_name"] is None  # 键内唯一事件,前驱在窗口外
+        assert row["new_name"] == "天沃科技"
+        assert row["effective_to"] == date(2023, 6, 29)

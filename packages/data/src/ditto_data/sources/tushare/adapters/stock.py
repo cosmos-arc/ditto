@@ -739,9 +739,37 @@ class StockTushareAdapter(BaseTushareAdapter):
                     }
                 )
 
+            # 同键冗余收敛必须在 old_name 推导之前：patch 对（开区间原始行
+            # + 闭区间修订行）若先 shift(1) 再选代表，幸存行的 old_name 取
+            # 决于服务端行序（非确定性，重拉会漂移甚至自引用）。顺序：全同
+            # 行去重 → 名称一致键取闭区间/更晚披露代表 → 名称分歧键保留
+            # 重复（下方响亮排除）→ 最后才 shift(1) 推导。
+            deduped = response.unique()
+            name_unambiguous_keys = (
+                deduped.group_by("ts_code", "start_date")
+                .agg(pl.col("name").n_unique().alias("_n_names"))
+                .filter(pl.col("_n_names") == 1)
+                .select("ts_code", "start_date")
+            )
+            collapsed = (
+                deduped.join(
+                    name_unambiguous_keys, on=["ts_code", "start_date"], how="semi"
+                )
+                .sort(
+                    by=[
+                        pl.col("end_date").is_null(),
+                        pl.col("ann_date").is_null(),
+                        pl.col("ann_date"),
+                    ],
+                    descending=[False, False, True],
+                )
+                .unique(subset=["ts_code", "start_date"], keep="first")
+            )
+            name_conflict_rows = deduped.join(
+                name_unambiguous_keys, on=["ts_code", "start_date"], how="anti"
+            )
             result = (
-                response.sort("ts_code", "start_date")
-                .unique()
+                pl.concat([collapsed, name_conflict_rows], how="vertical")
                 .sort("ts_code", "start_date")
                 .with_columns(
                     pl.col("start_date").str.to_date("%Y%m%d"),
@@ -759,35 +787,6 @@ class StockTushareAdapter(BaseTushareAdapter):
                     pl.col("ann_date").alias("published_at"),
                 )
             )
-
-        # 同键冗余二段收敛（2026-10-27 实测 2013 窗口）：全同行 unique 后
-        # 仍同键的行，典型形态是 end_date 闭合补丁对——开区间原始行 +
-        # 闭区间修订行，名称一致。名称一致的键取闭区间（更晚补丁）代表；
-        # 名称分歧的键不收敛，交由下方 fail-closed 守卫拒收。
-        name_unambiguous_keys = (
-            result.group_by("source_ticker", "changed_date")
-            .agg(pl.col("new_name").n_unique().alias("_n_names"))
-            .filter(pl.col("_n_names") == 1)
-            .select("source_ticker", "changed_date")
-        )
-        collapsed = (
-            result.join(
-                name_unambiguous_keys, on=["source_ticker", "changed_date"], how="semi"
-            )
-            .sort(
-                by=[
-                    pl.col("effective_to").is_null(),
-                    pl.col("published_at").is_null(),
-                    pl.col("published_at"),
-                ],
-                descending=[False, False, True],
-            )
-            .unique(subset=["source_ticker", "changed_date"], keep="first")
-        )
-        name_conflict_rows = result.join(
-            name_unambiguous_keys, on=["source_ticker", "changed_date"], how="anti"
-        )
-        result = pl.concat([collapsed, name_conflict_rows], how="vertical")
 
         # #507 C4 剩余键重复=同键多名（典型：退市日双名变体，"退市印记"vs
         # "印纪退"，2026-10-27 实测 002143.SZ/002680.SZ）。链不确定，不静默
