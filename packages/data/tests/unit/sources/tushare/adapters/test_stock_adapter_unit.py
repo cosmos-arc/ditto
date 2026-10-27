@@ -232,6 +232,30 @@ class TestStockAdapterNameHistory:
         assert chain["old_name"].to_list() == [None, "ST华新"]
         assert chain["new_name"].to_list() == ["ST华新", "深华新"]
 
+    def test_end_date_patch_pair_collapses_to_closed_interval(self) -> None:
+        """同名 end_date 闭合补丁对（开区间行+闭区间修订行）取闭区间代表."""
+        from ditto_data.sources.tushare.adapters.stock import StockTushareAdapter
+
+        mock_client = MagicMock()
+        mock_client.query.return_value = self._response(
+            {
+                "ts_code": ["000038.SZ"] * 3,
+                "name": ["深大通"] * 3,
+                "start_date": ["20130514"] * 3,
+                "end_date": [None, "20220505", "20220505"],
+                "change_reason": ["撤销*ST"] * 3,
+                "ann_date": ["20130513"] * 3,
+            }
+        )
+        adapter = StockTushareAdapter(_client=mock_client)
+
+        result = adapter.fetch_name_history()
+
+        assert result.height == 1
+        row = result.row(0, named=True)
+        assert row["new_name"] == "深大通"
+        assert row["effective_to"] == date(2022, 5, 5)
+
     def test_empty_response_returns_empty_frame(self) -> None:
         """空响应契约保持：返回带 schema 的空帧."""
         from ditto_data.sources.tushare.adapters.stock import StockTushareAdapter

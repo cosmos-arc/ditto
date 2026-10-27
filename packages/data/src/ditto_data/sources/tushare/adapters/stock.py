@@ -745,11 +745,37 @@ class StockTushareAdapter(BaseTushareAdapter):
                 )
             )
 
-        # #507 C4：上游实测存在同 (ts_code,start_date) 多条记录。逐字节全同的
-        # 冗余行（代理页内重复，2026-10-27 实测 2013 窗口 171 键）已在上游
-        # unique() 收敛；此处剩余的键重复=内容有分歧（跨 ann_date 修订或
-        # 同键多名），区间表依赖 sort+shift(1) 推 old_name，链不确定——
-        # fail closed，不静默接受链外数据。
+        # 同键冗余二段收敛（2026-10-27 实测 2013 窗口）：全同行 unique 后
+        # 仍同键的行，典型形态是 end_date 闭合补丁对——开区间原始行 +
+        # 闭区间修订行，名称一致。名称一致的键取闭区间（更晚补丁）代表；
+        # 名称分歧的键不收敛，交由下方 fail-closed 守卫拒收。
+        name_unambiguous_keys = (
+            result.group_by("source_ticker", "changed_date")
+            .agg(pl.col("new_name").n_unique().alias("_n_names"))
+            .filter(pl.col("_n_names") == 1)
+            .select("source_ticker", "changed_date")
+        )
+        collapsed = (
+            result.join(
+                name_unambiguous_keys, on=["source_ticker", "changed_date"], how="semi"
+            )
+            .sort(
+                by=[
+                    pl.col("effective_to").is_null(),
+                    pl.col("published_at").is_null(),
+                    pl.col("published_at"),
+                ],
+                descending=[False, False, True],
+            )
+            .unique(subset=["source_ticker", "changed_date"], keep="first")
+        )
+        name_conflict_rows = result.join(
+            name_unambiguous_keys, on=["source_ticker", "changed_date"], how="anti"
+        )
+        result = pl.concat([collapsed, name_conflict_rows], how="vertical")
+
+        # #507 C4：此处剩余的键重复=同键多名，区间表依赖 sort+shift(1) 推
+        # old_name，链不确定——fail closed，不静默接受链外数据。
         duplicate_keys = (
             result.group_by("source_ticker", "changed_date")
             .len()
