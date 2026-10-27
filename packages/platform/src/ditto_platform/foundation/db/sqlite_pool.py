@@ -44,7 +44,14 @@ class SQLitePool:
     # 连接数告警阈值（只告警，不限制）
     WARN_CONNECTION_COUNT = 50
 
-    def __init__(self, db_path: str, schema_path: Path | None = None) -> None:
+    def __init__(
+        self,
+        db_path: str,
+        schema_path: Path | None = None,
+        *,
+        validate_schema_shape: bool = False,
+        schema_drift_allowlist: frozenset[str] = frozenset(),
+    ) -> None:
         """
         初始化连接池.
 
@@ -52,10 +59,18 @@ class SQLitePool:
             db_path: 数据库文件路径
             schema_path: 可选的 Schema 文件路径。如果提供，init_schema() 将使用该文件
                         初始化数据库结构。如果为 None，init_schema() 将不执行任何操作。
+            validate_schema_shape: init_schema() 是否做影子库结构漂移校验（响亮
+                        失败）。默认关闭——共享 schema 的域可能有自己的惰性迁移
+                        （如 strategy_run，init 须容忍直至域迁移执行）；由知道
+                        域迁移状态的组合根显式开启。
+            schema_drift_allowlist: 漂移校验的豁免对象名（域自有惰性迁移的表，
+                        漂移仅告警不拒绝）。
 
         """
         self._db_path = Path(db_path)
         self._schema_path = schema_path
+        self._validate_schema_shape_enabled = validate_schema_shape
+        self._schema_drift_allowlist = schema_drift_allowlist
         self._local = threading.local()
         self._connection_count = 0  # 连接数计数器（仅用于告警）
         self._count_lock = threading.Lock()
@@ -205,7 +220,8 @@ class SQLitePool:
         conn = self.get_connection()
         # 先校验后建：漂移拒绝启动时库保持原状（correctness F5——executescript
         # 的 DDL 是 autocommit，先建后拒会留下「新增对象已落库」的部分迁移态）
-        self._validate_schema_shape(conn, schema)
+        if self._validate_schema_shape_enabled:
+            self._validate_schema_shape(conn, schema)
         conn.executescript(schema)
         conn.commit()
 
@@ -228,15 +244,32 @@ class SQLitePool:
         的多余对象（运行时表由写入器代码自建，属既有架构）只 debug 留痕。
 
         修复漂移 = 按对象手动迁移或携数据重建该表至与当前 schema.sql 一致
-        （对齐后本校验自然通过）。
+        （对齐后本校验自然通过）。``schema_drift_allowlist`` 内的对象（域自有
+        惰性迁移的表，如 strategy_run 由 strategy 存储层首用时迁移）漂移只
+        告警不拒绝。
         """
         expected = _master_objects(schema)
         actual = _sqlite_master_objects(conn)
-        drift = [
-            f"{obj_type} {name}"
-            for name, (obj_type, sql) in sorted(expected.items())
+        drifted = sorted(
+            (name, obj_type)
+            for name, (obj_type, sql) in expected.items()
             if name in actual and actual[name][1] != sql
+        )
+        blocking = [
+            f"{obj_type} {name}"
+            for name, obj_type in drifted
+            if name not in self._schema_drift_allowlist
         ]
+        tolerated = [
+            name for name, _obj_type in drifted if name in self._schema_drift_allowlist
+        ]
+        if tolerated:
+            logger.warning(
+                "Schema drift tolerated (owned by domain lazy migration)",
+                event="schema_drift_allowed",
+                db_path=str(self._db_path),
+                objects=tolerated,
+            )
         extras = sorted(set(actual) - set(expected))
         if extras:
             logger.debug(
@@ -245,10 +278,10 @@ class SQLitePool:
                 db_path=str(self._db_path),
                 objects=extras,
             )
-        if drift:
+        if blocking:
             msg = (
                 "Database schema drift detected: "
-                + f"{', '.join(drift)} differ from schema.sql "
+                + f"{', '.join(blocking)} differ from schema.sql "
                 + "(CREATE IF NOT EXISTS never migrates existing objects); "
                 + "migrate or rebuild the drifted objects to match schema.sql"
             )
@@ -256,7 +289,7 @@ class SQLitePool:
                 "Database schema drift detected",
                 event="schema_drift",
                 db_path=str(self._db_path),
-                drifted=drift,
+                drifted=blocking,
             )
             raise ValueError(msg)
 

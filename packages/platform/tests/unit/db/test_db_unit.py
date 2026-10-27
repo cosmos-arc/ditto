@@ -288,7 +288,11 @@ class TestSQLitePoolSchema:
                 "  id INTEGER PRIMARY KEY\n"
                 ");"
             )
-            pool = SQLitePool(str(db_path), schema_path=schema_path)
+            pool = SQLitePool(
+                str(db_path),
+                schema_path=schema_path,
+                validate_schema_shape=True,
+            )
 
             with pytest.raises(ValueError, match=r"schema drift.*events"):
                 pool.init_schema()
@@ -299,6 +303,40 @@ class TestSQLitePoolSchema:
                 + "WHERE type='table' AND name='brand_new'"
             )
             assert cursor.fetchone()["n"] == 0
+            pool.close()
+
+    def test_init_schema_allowlisted_drift_tolerated(self) -> None:
+        """豁免表（域自有惰性迁移）漂移只告警不拒绝（strategy_run 契约）."""
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            db_path = Path(tmp_dir) / "test.db"
+            schema_path = Path(tmp_dir) / "schema.sql"
+
+            old_schema = Path(tmp_dir) / "old.sql"
+            old_schema.write_text(
+                "CREATE TABLE strategy_run (\n"
+                "  run_id TEXT PRIMARY KEY,\n"
+                "  status TEXT NOT NULL DEFAULT 'pending'\n"
+                ");"
+            )
+            seed_pool = SQLitePool(str(db_path), schema_path=old_schema)
+            seed_pool.init_schema()
+            seed_pool.close()
+
+            schema_path.write_text(
+                "CREATE TABLE IF NOT EXISTS strategy_run (\n"
+                "  run_id TEXT PRIMARY KEY,\n"
+                "  status TEXT NOT NULL DEFAULT 'pending',\n"
+                "  parent_run_id TEXT NOT NULL DEFAULT ''\n"
+                ");"
+            )
+            pool = SQLitePool(
+                str(db_path),
+                schema_path=schema_path,
+                validate_schema_shape=True,
+                schema_drift_allowlist=frozenset({"strategy_run"}),
+            )
+            pool.init_schema()  # 豁免：不抛
+
             pool.close()
 
     def test_init_schema_ignores_comment_only_edits(self) -> None:
@@ -327,7 +365,11 @@ class TestSQLitePoolSchema:
                 "  PRIMARY KEY (id, day)\n"
                 ");"
             )
-            pool = SQLitePool(str(db_path), schema_path=schema_path)
+            pool = SQLitePool(
+                str(db_path),
+                schema_path=schema_path,
+                validate_schema_shape=True,
+            )
             pool.init_schema()  # 不抛 schema drift
 
             pool.close()
@@ -346,7 +388,11 @@ class TestSQLitePoolSchema:
                 ");\n"
                 "CREATE INDEX IF NOT EXISTS idx_events_day ON events(day);"
             )
-            pool = SQLitePool(str(db_path), schema_path=schema_path)
+            pool = SQLitePool(
+                str(db_path),
+                schema_path=schema_path,
+                validate_schema_shape=True,
+            )
             pool.init_schema()
             pool.init_schema()  # 幂等重入
 
@@ -371,7 +417,11 @@ class TestSQLitePoolSchema:
                 "CREATE TABLE IF NOT EXISTS t (a TEXT, b DATE, c DATE);"
                 "CREATE INDEX IF NOT EXISTS idx_t_key ON t(a, b, c);"
             )
-            pool = SQLitePool(str(db_path), schema_path=schema_path)
+            pool = SQLitePool(
+                str(db_path),
+                schema_path=schema_path,
+                validate_schema_shape=True,
+            )
 
             with pytest.raises(ValueError, match="index idx_t_key"):
                 pool.init_schema()
