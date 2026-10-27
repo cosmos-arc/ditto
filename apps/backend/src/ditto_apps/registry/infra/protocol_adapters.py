@@ -12,13 +12,13 @@ import os
 from collections.abc import Callable
 from collections.abc import Mapping as MappingABC
 from contextlib import AbstractContextManager
-from datetime import date, datetime
+from datetime import UTC, date, datetime
 from importlib import import_module
 from pathlib import Path
 from typing import Protocol, cast
 
 import polars as pl
-from dishka import Provider, Scope, provide
+from dishka import Container, Provider, Scope, provide
 from ditto_application.processes.experiments.r2_live_gate_evidence import (
     FileR2LiveGateEvidenceReader,
     NullR2LiveGateEvidenceReader,
@@ -180,6 +180,47 @@ class FuyaoAdjustmentEventsSource:
         )
         frame = FuyaoSource.adjustment_factors_frame(dump)
         return frame.filter(pl.col("trade_date") == target)
+
+
+def register_fuyao_dump_identities(
+    container: Container, thscodes: list[str], dump_date: date
+) -> tuple[int, int]:
+    """
+    Dump thscodes → ``instrument_mapping(source='fuyao')`` 登记（#395 摄取路径）.
+
+    有证据日期 = dump 北京日（fuyao 当日服务这些身份是唯一证据；事件
+    ex_date 可能远早于 dump，不得回填）。幂等：同向映射不重写；未识别
+    前缀/裸码多命中按规则 5 保持未解析（对账只读反解兜底）。
+
+    登记失败不拖垮 dump：留 warning 次夜重试，对账可回退裸码前缀只读
+    反解（#395 只读路径），辅源缺席语义不受影响。
+    """
+    try:
+        resolved = container.get(
+            MetadataService
+        ).instrument.resolve_fuyao_instrument_ids(
+            thscodes,
+            evidence_dates={code: dump_date.isoformat() for code in thscodes},
+            observed_at=datetime.now(UTC).strftime("%Y-%m-%d %H:%M:%S"),
+            register_missing=True,
+        )
+    except Exception as error:
+        logger.warning(
+            "fuyao identity registration failed; will retry next dump",
+            event="fuyao_identity_register_failed",
+            kind="dump",
+            error_type=type(error).__name__,
+        )
+        return 0, 0
+    unresolved = len(thscodes) - len(resolved)
+    if unresolved:
+        logger.info(
+            "fuyao identities left unresolved after dump registration",
+            event="fuyao_identity_unresolved",
+            tickers=len(thscodes),
+            unresolved=unresolved,
+        )
+    return len(resolved), unresolved
 
 
 class FundamentalFinancialReconcileContext:

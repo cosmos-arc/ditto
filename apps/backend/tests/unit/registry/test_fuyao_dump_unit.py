@@ -15,6 +15,7 @@ from ditto_apps.registry.fuyao_dump import (
     download_fuyao_dump,
     dump_dest,
 )
+from ditto_apps.registry.infra import protocol_adapters as protocol_adapters_module
 from ditto_data.sources.fuyao.client import date_to_ms
 from pytest_mock import MockerFixture
 
@@ -53,10 +54,11 @@ def _container(
     metadata_service: MagicMock | None = None,
 ) -> MagicMock:
     """容器替身：FuyaoSource|None 键 → source，Path 键 → data_root，
-    MetadataService 键 → 元数据服务替身（身份注册路径）。"""
+    MetadataService 键 → 元数据服务替身（身份注册路径，键定义在
+    protocol_adapters 组合豁免面）。"""
     container = MagicMock()
     fuyao_key = fuyao_dump_module.FuyaoSource | None
-    metadata_key = fuyao_dump_module.MetadataService
+    metadata_key = protocol_adapters_module.MetadataService
     container.get.side_effect = lambda key: (
         source
         if key == fuyao_key
