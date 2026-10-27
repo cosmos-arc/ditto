@@ -17,9 +17,9 @@ from zoneinfo import ZoneInfo
 
 import polars as pl
 from dishka import Container
-from ditto_data.sources.fuyao.source import DumpKind, FuyaoSource
 
 from ditto_apps.registry.container import make_app_container
+from ditto_apps.registry.infra.protocol_adapters import DumpKind, FuyaoSource
 
 # 各 dump 主键列（统计校验共用；不可变快照对重复键只统计不拒绝）
 _DUMP_KEYS: dict[DumpKind, tuple[str, ...]] = {
