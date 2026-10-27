@@ -283,12 +283,52 @@ class TestSQLitePoolSchema:
                 "  day DATE,\n"
                 "  observed_at TIMESTAMP,\n"
                 "  PRIMARY KEY (id, day, observed_at)\n"
+                ");\n"
+                "CREATE TABLE IF NOT EXISTS brand_new (\n"
+                "  id INTEGER PRIMARY KEY\n"
                 ");"
             )
             pool = SQLitePool(str(db_path), schema_path=schema_path)
 
             with pytest.raises(ValueError, match=r"schema drift.*events"):
                 pool.init_schema()
+
+            # 拒绝启动时库保持原状：本版新增对象不得已落库（correctness F5）
+            cursor = pool.execute(
+                "SELECT COUNT(*) AS n FROM sqlite_master "
+                + "WHERE type='table' AND name='brand_new'"
+            )
+            assert cursor.fetchone()["n"] == 0
+            pool.close()
+
+    def test_init_schema_ignores_comment_only_edits(self) -> None:
+        """注释-only 的 schema.sql 编辑不是结构漂移（sqlite_master 原样存注释，
+        不剥注释会让全部存量库拒绝启动——correctness F4）."""
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            db_path = Path(tmp_dir) / "test.db"
+            schema_path = Path(tmp_dir) / "schema.sql"
+
+            old_schema = Path(tmp_dir) / "old.sql"
+            old_schema.write_text(
+                "CREATE TABLE events (\n"
+                "  id INTEGER, -- 主键列\n"
+                "  day DATE,\n"
+                "  PRIMARY KEY (id, day)\n"
+                ");"
+            )
+            seed_pool = SQLitePool(str(db_path), schema_path=old_schema)
+            seed_pool.init_schema()
+            seed_pool.close()
+
+            schema_path.write_text(
+                "CREATE TABLE IF NOT EXISTS events (\n"
+                "  id INTEGER, -- 主键列, 注释文字改了\n"
+                "  day DATE,\n"
+                "  PRIMARY KEY (id, day)\n"
+                ");"
+            )
+            pool = SQLitePool(str(db_path), schema_path=schema_path)
+            pool.init_schema()  # 不抛 schema drift
 
             pool.close()
 

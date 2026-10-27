@@ -993,6 +993,38 @@ class TestAdjFactorReconciliation:
         call = mock_quality_engine.compare_cross_source.call_args
         assert len(call.kwargs["secondary"]["instrument_id"].to_list()) == 3
 
+    def test_empty_primary_for_adj_factor_fails_closed(
+        self,
+        mock_quality_engine,
+        mock_comparison_writer,
+        mock_instrument_store,
+        mock_secondary_identity_resolver,
+    ) -> None:
+        """adj_factor 空主帧=缺数日，按零事件分支声明 fail-closed（F7）：
+        不得走 golden_empty 跳过标签伪装通过。"""
+        events_source = MagicMock()
+        events_source.fetch_adjustment_events.return_value = pl.DataFrame()
+        handler = ReconcileSourcesHandler(
+            engine=mock_quality_engine,
+            secondary_source=MagicMock(),
+            comparison_store=mock_comparison_writer,
+            instrument_store=mock_instrument_store,
+            secondary_identity_resolver=mock_secondary_identity_resolver,
+            secondary_events_source=events_source,
+            adj_factor_context=self._context_mock(),
+        )
+
+        result = handler.handle(
+            ReconcileSourcesCommand(
+                primary_df=_adj_factor_primary_df().clear(),
+                trade_date="2025-06-25",
+                dataset="adj_factor",
+            )
+        )
+
+        assert result.passed is False
+        assert result.skipped is not True
+
 
 # ══ #473-#475 新数据集分支 ═══════════════════════════════════
 

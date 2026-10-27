@@ -7,12 +7,15 @@
 
 修复语义（有界读真相不变）：
 - 错位行的键在正确分区已有双胞胎 → 删除错位副本（正确分区行是例行
-  修正通道（KEEP_LAST_FLAGGED）持续升级的权威版本）；
-- 错位行的键在正确分区不存在（孤儿）→ 移动到正确分区。
+  修正通道（KEEP_LAST_FLAGGED）持续升级的权威版本）。双胞胎默认要求
+  非键值列逐列一致；值分歧组须 --allow-value-divergence 显式放行并留
+  计数（分歧按正确分区裁决，correctness F3）；
+- 错位行的键在正确分区不存在（孤儿）→ 移动到正确分区（重写集合 =
+  错位分区 ∪ 孤儿目标分区，correctness F2——否则孤儿会被静默丢弃）。
 
 用法（dev 根示例）:
     uv run --no-sync python scripts/ops/repair_fina_indicator_partitions.py \
-        [--data-root <root>] [--apply]
+        [--data-root <root>] [--apply] [--allow-value-divergence]
 """
 
 from __future__ import annotations
@@ -40,29 +43,48 @@ def scan_misplaced(
     return misplaced
 
 
+def correct_rows(
+    partitions: dict[int, pl.DataFrame], misplaced: dict[int, pl.DataFrame]
+) -> pl.DataFrame:
+    """全部「正确归位」行（非错位分区的行 + 错位分区中归属本区的行）."""
+    return pl.concat(
+        [df for year, df in partitions.items() if year not in misplaced]
+        + [
+            partitions[year].filter(pl.col("report_date").dt.year() == year)
+            for year in misplaced
+        ]
+    )
+
+
 def plan_repair(
     partitions: dict[int, pl.DataFrame],
     misplaced: dict[int, pl.DataFrame],
-) -> tuple[int, pl.DataFrame]:
-    """错位行分类：正确分区已有同键（双胞胎→删）或没有（孤儿→移）."""
-    correct_keys = pl.concat(
-        [df.select(KEYS) for year, df in partitions.items() if year not in misplaced]
-        + [
-            partitions[year]
-            .filter(pl.col("report_date").dt.year() == year)
-            .select(KEYS)
-            for year in misplaced
-        ],
-    ).unique()
-
+    *,
+    allow_value_divergence: bool,
+) -> tuple[int, pl.DataFrame, int]:
+    """错位行分类：正确分区同键（双胞胎→删，须值一致）或没有（孤儿→移）."""
+    correct = correct_rows(partitions, misplaced)
     twins = 0
+    divergent = 0
     orphans = pl.DataFrame()
     for wrong in misplaced.values():
-        orphan = wrong.join(correct_keys, on=KEYS, how="anti")
-        twins += wrong.height - orphan.height
+        joined = wrong.join(correct, on=KEYS, how="inner", suffix="_correct")
+        orphan = wrong.join(correct.select(KEYS), on=KEYS, how="anti")
+        if joined.height:
+            value_cols = [c for c in wrong.columns if c not in KEYS]
+            same_values = pl.all_horizontal(
+                [pl.col(c).eq_missing(pl.col(f"{c}_correct")) for c in value_cols]
+            )
+            divergent += joined.filter(~same_values).height
+        twins += joined.height
         if orphan.height:
             orphans = pl.concat([orphans, orphan])
-    return twins, orphans
+    if divergent and not allow_value_divergence:
+        raise SystemExit(
+            f"{divergent} 行错位双胞胎与正确分区同键行的非键值列不一致; "
+            "检查备份后以 --allow-value-divergence 放行, 按正确分区裁决"
+        )
+    return twins, orphans, divergent
 
 
 def apply_repair(
@@ -71,8 +93,11 @@ def apply_repair(
     misplaced: dict[int, pl.DataFrame],
     orphans: pl.DataFrame,
 ) -> None:
-    """受影响分区重写：删错位、收孤儿、按 SORT_KEYS 全序落盘."""
-    for part_year in misplaced:
+    """受影响分区重写（错位分区 ∪ 孤儿目标分区）：删错位、收孤儿、全序落盘."""
+    target_years = set(misplaced)
+    if orphans.height:
+        target_years |= set(orphans["report_date"].dt.year().unique().to_list())
+    for part_year in sorted(target_years):
         df = partitions[part_year]
         keep = df.filter(pl.col("report_date").dt.year() == part_year)
         moved_in = (
@@ -88,14 +113,16 @@ def apply_repair(
         print(f"partition {part_year}: {df.height} -> {merged.height}")
 
 
-def verify_repaired(dataset_dir: Path, total_before: int, twins: int) -> None:
+def verify_repaired(
+    dataset_dir: Path, total_before: int, deleted: int, moved: int
+) -> None:
     """修复后校验：无错位、无跨分区同键、行数守恒（真实删除须显式 raise）."""
     after = {
         int(p.stem): pl.read_parquet(p) for p in sorted(dataset_dir.glob("*.parquet"))
     }
     total_after = sum(df.height for df in after.values())
-    if total_after != total_before - twins:
-        raise SystemExit(f"行数守恒失败: {total_before} - {twins} != {total_after}")
+    if total_after != total_before - deleted:
+        raise SystemExit(f"行数守恒失败: {total_before} - {deleted} != {total_after}")
     for part_year, df in after.items():
         misplaced_after = df.filter(pl.col("report_date").dt.year() != part_year)
         if misplaced_after.height:
@@ -106,7 +133,8 @@ def verify_repaired(dataset_dir: Path, total_before: int, twins: int) -> None:
     if dup != total_after:
         raise SystemExit(f"跨分区同键残留: unique={dup} total={total_after}")
     print(
-        f"verified: total_rows={total_after}, no misplacement, no cross-partition dups"
+        f"verified: total_rows={total_after} (deleted={deleted}, moved={moved}), "
+        "no misplacement, no cross-partition dups"
     )
 
 
@@ -120,6 +148,11 @@ def main() -> None:
     )
     parser.add_argument(
         "--apply", action="store_true", help="执行写入, 默认 dry-run 只报告"
+    )
+    parser.add_argument(
+        "--allow-value-divergence",
+        action="store_true",
+        help="放行与正确分区同键但非键值列不一致的双胞胎, 按正确分区裁决",
     )
     args = parser.parse_args()
 
@@ -137,15 +170,20 @@ def main() -> None:
         print("nothing to do")
         return
 
-    twins, orphans = plan_repair(partitions, misplaced)
-    print(f"twin_deletions={twins} orphan_moves={orphans.height}")
+    twins, orphans, divergent = plan_repair(
+        partitions, misplaced, allow_value_divergence=args.allow_value_divergence
+    )
+    print(
+        f"twin_deletions={twins} (value_divergent={divergent}) "
+        f"orphan_moves={orphans.height}"
+    )
 
     if not args.apply:
         print("dry-run: no changes written (pass --apply)")
         return
 
     apply_repair(dataset_dir, partitions, misplaced, orphans)
-    verify_repaired(dataset_dir, total_before, twins)
+    verify_repaired(dataset_dir, total_before, twins, orphans.height)
 
 
 if __name__ == "__main__":

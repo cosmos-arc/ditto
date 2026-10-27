@@ -148,7 +148,11 @@ class ReconcileSourcesHandler:
 
         primary_df = self._apply_golden_dataset_filter(primary_df, dataset)
 
-        if primary_df.is_empty():
+        # adj_factor 不做黄金过滤，空主帧在此意味着目标日缺因子存量——
+        # 下传事件分支按缺数日 fail-closed（correctness F7：golden_empty
+        # 跳过标签对 adj_factor 失真，其零事件分支声明的缺数日 fail-closed
+        # 对空主帧本应可达）。
+        if dataset != "adj_factor" and primary_df.is_empty():
             logger.info(
                 "Golden dataset filter resulted in empty dataset",
                 event="reconciliation_golden_empty",
