@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import threading
 from datetime import date
 from pathlib import Path
 from typing import IO, cast
@@ -991,6 +992,11 @@ class TestDownloadMarketDumpAtomic:
         dest = tmp_path / "fuyao" / "dumps" / "adjustment-factors" / "20261027.parquet"
         return FuyaoSource(client=client), dest
 
+    @staticmethod
+    def _partials(dest: Path) -> list[Path]:
+        """partial 名含写入者标识（pid/uuid），断言按 glob 收集."""
+        return list(dest.parent.glob("*.part"))
+
     def test_success_writes_dest_without_partial(self, tmp_path: Path) -> None:
         def write(_url: str, fh: IO[bytes]) -> None:
             fh.write(b"parquet-bytes")
@@ -1001,7 +1007,7 @@ class TestDownloadMarketDumpAtomic:
 
         assert result == dest
         assert dest.read_bytes() == b"parquet-bytes"
-        assert not dest.with_name(f"{dest.name}.part").exists()
+        assert self._partials(dest) == []
 
     def test_failure_leaves_no_dest_and_no_partial(self, tmp_path: Path) -> None:
         def boom(_url: str, fh: IO[bytes]) -> None:
@@ -1014,7 +1020,7 @@ class TestDownloadMarketDumpAtomic:
             source.download_market_dump("adjustment-factors", dest)
 
         assert not dest.exists()
-        assert not dest.with_name(f"{dest.name}.part").exists()
+        assert self._partials(dest) == []
 
     def test_failure_preserves_existing_dest(self, tmp_path: Path) -> None:
         def boom(_url: str, _fh: IO[bytes]) -> None:
@@ -1028,7 +1034,7 @@ class TestDownloadMarketDumpAtomic:
             source.download_market_dump("adjustment-factors", dest)
 
         assert dest.read_bytes() == b"old-dump"
-        assert not dest.with_name(f"{dest.name}.part").exists()
+        assert self._partials(dest) == []
 
     def test_missing_presigned_url_raises_before_any_write(
         self, tmp_path: Path
@@ -1043,3 +1049,38 @@ class TestDownloadMarketDumpAtomic:
 
         assert not dest.exists()
         client.download.assert_not_called()
+
+    def test_concurrent_downloads_keep_dest_complete(self, tmp_path: Path) -> None:
+        """correctness F1 回归：例行任务与手动 CLI 并发同日下载（各写各的
+        partial），dest 任何时刻都是某一方完整快照，无交错字节."""
+        started = threading.Event()
+        release = threading.Event()
+
+        def slow_download(_url: str, fh: IO[bytes]) -> None:
+            fh.write(b"A" * 64)
+            fh.flush()
+            started.set()
+            assert release.wait(timeout=5)
+            fh.write(b"A" * 64)
+
+        def fast_download(_url: str, fh: IO[bytes]) -> None:
+            fh.write(b"B" * 128)
+
+        slow_source, dest = self._source(tmp_path, slow_download)
+        fast_source, _ = self._source(tmp_path, fast_download)
+
+        thread = threading.Thread(
+            target=slow_source.download_market_dump,
+            args=("adjustment-factors", dest),
+        )
+        thread.start()
+        assert started.wait(timeout=5)
+        # A 挂起在半途时 B 完整落盘并替换
+        fast_source.download_market_dump("adjustment-factors", dest)
+        assert dest.read_bytes() == b"B" * 128
+        release.set()
+        thread.join(timeout=5)
+        assert not thread.is_alive()
+        # A 恢复后以自己的完整快照收尾（last-writer-wins）
+        assert dest.read_bytes() == b"A" * 128
+        assert self._partials(dest) == []

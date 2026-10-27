@@ -63,14 +63,18 @@ def _dump_stats(frame: pl.DataFrame, kind: DumpKind, path: Path) -> FuyaoDumpDow
     date_range: tuple[date, date] | None = None
     if kind in ("daily-k", "daily-k-10d"):
         # date_ms 是北京零点毫秒戳（client.date_to_ms）：显式走 UTC→北京时区
-        # 链取日期，不依赖进程本地时区；空帧无覆盖（None）
-        day_values = frame.select(
-            pl.from_epoch(pl.col("date_ms"), time_unit="ms")
-            .dt.replace_time_zone("UTC")
-            .dt.convert_time_zone("Asia/Shanghai")
-            .dt.date()
-            .alias("d")
-        )["d"].to_list()
+        # 链取日期，不依赖进程本地时区；空帧/null 无覆盖（None）
+        day_values = [
+            day
+            for day in frame.select(
+                pl.from_epoch(pl.col("date_ms"), time_unit="ms")
+                .dt.replace_time_zone("UTC")
+                .dt.convert_time_zone("Asia/Shanghai")
+                .dt.date()
+                .alias("d")
+            )["d"].to_list()
+            if day is not None
+        ]
         if day_values:
             date_range = (min(day_values), max(day_values))
     return FuyaoDumpDownload(
@@ -102,13 +106,31 @@ def _resolve_fuyao_source(container: Container) -> FuyaoSource:
 
 
 def download_fuyao_dump(kind: DumpKind) -> FuyaoDumpDownload:
-    """下载全市场 dump 不可变快照并返回统计；源未配置抛 FuyaoSourceUnconfiguredError."""
+    """
+    下载全市场 dump 不可变快照并返回统计；源未配置抛 FuyaoSourceUnconfiguredError.
+
+    坏帧（不可读/空快照）当场清理并抛错——空 dump 过滤任何目标日同样得
+    零事件，会在对账层被误读为「无除权事件的正常日」（correctness F2）；
+    清掉当日名让 latest 回到上一份，陈旧守卫会响亮拒绝而非静默误判。
+    """
     container = make_app_container()
     try:
         source = _resolve_fuyao_source(container)
         data_root = container.get(Path)
         dest = dump_dest(data_root, kind)
         source.download_market_dump(kind, dest)
-        return _dump_stats(pl.read_parquet(dest), kind, dest)
+        try:
+            frame = pl.read_parquet(dest)
+        except Exception:
+            dest.unlink(missing_ok=True)
+            raise
+        outcome = _dump_stats(frame, kind, dest)
+        if outcome.rows == 0 or outcome.tickers == 0:
+            dest.unlink(missing_ok=True)
+            raise ValueError(
+                f"fuyao dump {kind} snapshot is empty "
+                + f"(rows={outcome.rows}, tickers={outcome.tickers}): rejected"
+            )
+        return outcome
     finally:
         container.close()

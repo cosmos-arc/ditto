@@ -161,3 +161,64 @@ def test_container_closed_after_download(
     with pytest.raises(RuntimeError, match="network down"):
         download_fuyao_dump("adjustment-factors")
     assert failing.close.call_count == 1
+
+
+def _dumps_dir(tmp_path: Path) -> Path:
+    return tmp_path / "fuyao" / "dumps" / "adjustment-factors"
+
+
+@pytest.mark.unit
+def test_empty_snapshot_rejected_and_not_left_on_dest(
+    tmp_path: Path,
+    mocker: MockerFixture,
+) -> None:
+    """correctness F2 回归：空快照（0 行）不占当日名——空 dump 过滤任何
+    目标日都得零事件，会在对账层被误读为「无除权事件的正常日」."""
+    frame = pl.DataFrame(schema={"thscode": pl.String, "ex_date_ms": pl.Int64})
+    _container(mocker, _FakeFuyaoSource(frame), tmp_path)
+
+    with pytest.raises(ValueError, match="snapshot is empty"):
+        download_fuyao_dump("adjustment-factors")
+
+    assert list(_dumps_dir(tmp_path).glob("*.parquet")) == []
+
+
+@pytest.mark.unit
+def test_unreadable_frame_cleaned_from_dest(
+    tmp_path: Path,
+    mocker: MockerFixture,
+) -> None:
+    """correctness F2 回归：传输完整但内容坏的 parquet 当场清理，latest
+    回到上一份（陈旧守卫响亮拒绝而非读到坏帧）."""
+
+    class _BadBytesSource(_FakeFuyaoSource):
+        def download_market_dump(self, kind: str, dest: Path) -> Path:
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            dest.write_bytes(b"not-a-parquet")
+            return dest
+
+    _container(mocker, _BadBytesSource(pl.DataFrame()), tmp_path)
+
+    with pytest.raises(pl.exceptions.PolarsError):
+        download_fuyao_dump("adjustment-factors")
+
+    assert list(_dumps_dir(tmp_path).glob("*.parquet")) == []
+
+
+@pytest.mark.unit
+def test_daily_k_stats_tolerate_null_date_ms(
+    tmp_path: Path,
+    mocker: MockerFixture,
+) -> None:
+    """correctness F3 回归：date_ms 含 null 不抛异常，覆盖取非 null 日期."""
+    frame = pl.DataFrame(
+        {
+            "thscode": ["600519.SH", "000001.SZ"],
+            "date_ms": [date_to_ms(date(2025, 8, 18)), None],
+        }
+    )
+    _container(mocker, _FakeFuyaoSource(frame), tmp_path)
+
+    outcome = download_fuyao_dump("daily-k")
+
+    assert outcome.date_range == (date(2025, 8, 18), date(2025, 8, 18))

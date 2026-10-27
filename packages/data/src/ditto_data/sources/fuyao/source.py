@@ -20,10 +20,12 @@ fuyao 数据源门面 — 冗余源（ADR：Tushare 主源，fuyao 对账与故�
 
 from __future__ import annotations
 
+import os
 import tempfile
 from datetime import date, timedelta
 from pathlib import Path
 from typing import Any, Literal
+from uuid import uuid4
 
 import polars as pl
 from ditto_platform.foundation import logger
@@ -769,8 +771,12 @@ class FuyaoSource:
         dest.parent.mkdir(parents=True, exist_ok=True)
         # 半成品不得以正式文件名留在 dumps 目录：latest_fuyao_dump 按文件名
         # 取最新，当日截断文件会让对账辅源读到坏帧且当晚无法自愈——先写
-        # .part 再原子 replace，失败清理（#617）
-        partial = dest.with_name(f"{dest.name}.part")
+        # .part 再原子 replace，失败清理（#617）。partial 名带写入者标识：
+        # 例行任务与手动 CLI 可能并发同日下载，固定名会让两个写方共享
+        # 同一 inode 交错写、先完成方 replace 后另一方 fd 直写已改名的
+        # dest（correctness F1）——各写各的 partial 后 last-writer-wins，
+        # 任何时刻 dest 都是某一方完整快照
+        partial = dest.with_name(f"{dest.name}.{os.getpid()}.{uuid4().hex[:8]}.part")
         try:
             with partial.open("wb") as fh:
                 self._client.download(presigned, fh)
