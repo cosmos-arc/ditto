@@ -811,8 +811,7 @@ class StockTushareAdapter(BaseTushareAdapter):
                 how="anti",
             )
             logger.warning(
-                "namechange dropped ambiguous (ts_code, start_date) keys; "
-                "interval chain ill-defined (#515)",
+                "namechange dropped ambiguous (ts_code,start_date) keys (#515)",
                 event="tushare_namechange_ambiguous_keys_dropped",
                 dropped_keys=duplicate_keys.height,
                 sample=sample[:5],
