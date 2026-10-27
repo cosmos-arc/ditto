@@ -185,6 +185,15 @@ def merge_with_existing(
         ValueError: If ``on_duplicate=ERROR`` and duplicates are found.
 
     """
+    if on_duplicate is OnDuplicate.KEEP_LAST_FLAGGED:
+        # 分发先于一切早退：标记列剥离与列校验必须在任何 concat 之前发生
+        # （无键/无重叠路径会把瞬态列带进存量或绕过误用校验）；无键列的
+        # 升级语义无从谈起，按误用响亮拒绝（correctness #613 G F5）。
+        if not key_columns:
+            msg = "KEEP_LAST_FLAGGED requires key columns"
+            raise ValueError(msg)
+        return _merge_keep_last_flagged(df, existing, key_columns, 0)
+
     if not key_columns:
         combined = pl.concat([existing, df])
         return MergeResult(df=combined, added=len(df), updated=0)
@@ -194,11 +203,6 @@ def merge_with_existing(
 
     merged_keys = existing_keys.join(new_keys, on=key_columns, how="inner")
     overlap_count = len(merged_keys)
-
-    if on_duplicate is OnDuplicate.KEEP_LAST_FLAGGED:
-        # 分发先于无重叠早退：标记列剥离与列校验必须在任何 concat 之前
-        # 发生，否则无重叠路径会把瞬态列带进存量或绕过误用校验。
-        return _merge_keep_last_flagged(df, existing, key_columns, overlap_count)
 
     if merged_keys.is_empty():
         combined = pl.concat([existing, df])

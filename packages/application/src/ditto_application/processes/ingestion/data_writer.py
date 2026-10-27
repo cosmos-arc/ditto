@@ -363,7 +363,9 @@ def _settle_fina_indicator_dual_code(
     if not pk_dupes.height:
         return enriched_df
     value_cols = [
-        c for c in enriched_df.columns if c not in {*pk_cols, source_ticker_col}
+        c
+        for c in enriched_df.columns
+        if c not in {*pk_cols, source_ticker_col, CORRECTION_FLAG_COLUMN}
     ]
     # 空 value_cols（仅键+代码列的帧）不能交给 sum_horizontal([])——空 fold
     # 会 ComputeError；此时收敛退化为纯代码偏好。
@@ -373,14 +375,23 @@ def _settle_fina_indicator_dual_code(
         else pl.lit(0, dtype=pl.UInt32)
     ).alias("_nulls")
     is_new_code = pl.col(source_ticker_col).str.contains(r"^920\d{3}\.BJ$")
+    # #613 G F2：修正标记是选版最高优先级——双码同键时未同步后端的陈旧
+    # 920 行不得挤掉老码上的 update_flag 修正行。缺列（非 fina 生产者）
+    # 退化为既有偏好序。
+    correction_pref = (
+        pl.col(CORRECTION_FLAG_COLUMN).fill_null(False).cast(pl.UInt8)
+        if CORRECTION_FLAG_COLUMN in enriched_df.columns
+        else pl.lit(0, dtype=pl.UInt8)
+    ).alias("_corr")
     settled = (
         enriched_df.with_columns(null_count, is_new_code.cast(pl.UInt8).alias("_r"))
+        .with_columns(correction_pref)
         .sort(
-            [*pk_cols, "_nulls", "_r", source_ticker_col],
-            descending=[False, False, False, True, False, False],
+            [*pk_cols, "_corr", "_nulls", "_r", source_ticker_col],
+            descending=[False, False, False, False, True, False, False],
         )
         .unique(subset=pk_cols, keep="last")
-        .drop("_nulls", "_r")
+        .drop("_nulls", "_r", "_corr")
         # 同 #606 F2：全序输出防 checksum 逐次漂移（fina_indicator 同样
         # 缺席 _SORT_KEYS）。
         .sort([*pk_cols, source_ticker_col])

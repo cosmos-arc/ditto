@@ -157,3 +157,35 @@ def test_output_order_deterministic_across_input_shuffles() -> None:
         assert out.height == 2
         outputs.add(str(out.hash_rows().to_list()))
     assert len(outputs) == 1
+
+
+@pytest.mark.unit
+def test_correction_marker_outranks_code_preference() -> None:
+    """#613 G F2:老码修正行(flag=True)胜过等全新码陈旧行。"""
+    frame = _dual_code_frame({"fcff": 5.5e8}, {"fcff": 3.9e8})
+    frame = frame.with_columns(
+        pl.Series(
+            "is_provider_correction",
+            [True, False],
+        )
+    )
+    out = _settle_fina_indicator_dual_code(frame)
+    assert out.height == 1
+    assert out["source_ticker"].to_list() == ["430017.BJ"]
+    assert out["fcff"].to_list() == [5.5e8]
+
+
+@pytest.mark.unit
+def test_correction_marker_outranks_richer_new_code() -> None:
+    """修正行胜过"更少 null"的新码行——未同步后端不得挤掉修正。"""
+    frame = _dual_code_frame({"fcff": 5.5e8}, {"fcff": 3.9e8, "roe": 20.9})
+    frame = frame.with_columns(
+        pl.Series(
+            "is_provider_correction",
+            [True, False],
+        )
+    )
+    out = _settle_fina_indicator_dual_code(frame)
+    assert out.height == 1
+    assert out["source_ticker"].to_list() == ["430017.BJ"]
+    assert out["fcff"].to_list() == [5.5e8]

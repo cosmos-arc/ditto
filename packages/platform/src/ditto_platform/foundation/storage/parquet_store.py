@@ -43,6 +43,7 @@ from ditto_platform.foundation.storage.parquet_read import (
     scan_parquet as _scan_parquet,
 )
 from ditto_platform.foundation.storage.parquet_write import (
+    CORRECTION_FLAG_COLUMN,
     MergeResult,
 )
 from ditto_platform.foundation.storage.parquet_write import (
@@ -227,29 +228,19 @@ class ParquetStore:
         is_merge = file_path.exists()
         strategy = OnDuplicate(on_duplicate)
         key_columns = self._get_key_columns()
+        # 瞬态修正标记列仅供 KEEP_LAST_FLAGGED 合并消费；其余策略（含
+        # force 的 KEEP_LAST）一律入口剥离——否则新分区首写路径
+        # （is_merge=False，不经过任何 merge）会把标记列持久化进存量并
+        # 毒化该分区（correctness #613 G F1）。
+        if (
+            strategy is not OnDuplicate.KEEP_LAST_FLAGGED
+            and CORRECTION_FLAG_COLUMN in df.columns
+        ):
+            df = df.drop(CORRECTION_FLAG_COLUMN)
         df = self._prepare_for_write(df)
         input_count = len(df)
 
-        # Batch internal dedup
-        if key_columns:
-            batch_dup = (
-                df.group_by(key_columns)
-                .agg(pl.len().alias("_count"))
-                .filter(pl.col("_count") > 1)
-            )
-            if not batch_dup.is_empty():
-                if strategy is OnDuplicate.VERIFY_IDENTICAL and len(df.unique()) != len(
-                    df.unique(subset=key_columns)
-                ):
-                    raise ValueError("Duplicate data conflict within input batch")
-                logger.warning(
-                    "Batch internal duplicates detected, auto-dedup (keep first)",
-                    event="batch_internal_duplicates",
-                    dataset=dataset,
-                    year=year,
-                    duplicate_count=len(batch_dup),
-                )
-                df = df.unique(subset=key_columns, keep="first")
+        df = self._dedup_batch_internal(df, dataset, year, key_columns, strategy)
 
         # Merge with existing
         added = 0
@@ -287,6 +278,45 @@ class ParquetStore:
             skipped=input_count - added - updated,
             is_merge=is_merge,
         )
+
+    def _dedup_batch_internal(
+        self,
+        df: pl.DataFrame,
+        dataset: str,
+        year: int,
+        key_columns: list[str],
+        strategy: OnDuplicate,
+    ) -> pl.DataFrame:
+        """批内同键预去重；KEEP_LAST_FLAGGED 批次修正行胜出(#613 G F5)。"""
+        if not key_columns:
+            return df
+        batch_dup = (
+            df.group_by(key_columns)
+            .agg(pl.len().alias("_count"))
+            .filter(pl.col("_count") > 1)
+        )
+        if batch_dup.is_empty():
+            return df
+        if strategy is OnDuplicate.VERIFY_IDENTICAL and len(df.unique()) != len(
+            df.unique(subset=key_columns)
+        ):
+            raise ValueError("Duplicate data conflict within input batch")
+        logger.warning(
+            "Batch internal duplicates detected, auto-dedup (keep first)",
+            event="batch_internal_duplicates",
+            dataset=dataset,
+            year=year,
+            duplicate_count=len(batch_dup),
+        )
+        if (
+            strategy is OnDuplicate.KEEP_LAST_FLAGGED
+            and CORRECTION_FLAG_COLUMN in df.columns
+        ):
+            # 同键混合 flag 批次须让修正行胜出——按 flag 升序排,keep="last"
+            # 留下 flag=True 行。
+            df = df.sort(CORRECTION_FLAG_COLUMN)
+        keep = "last" if strategy is OnDuplicate.KEEP_LAST_FLAGGED else "first"
+        return df.unique(subset=key_columns, keep=keep)
 
     # ============ Delete ============
 

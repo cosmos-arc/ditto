@@ -132,3 +132,91 @@ def test_identical_retry_recovers_partial_payload_and_rejects_revision(tmp_path)
             year=2026,
         )
     assert store.read("retry").equals(original)
+
+
+class TestParquetStoreTransientCorrectionFlag:
+    """瞬态修正标记列的入口剥离与非 FLAGGED 策略安全(#613 G F1/F5)。"""
+
+    @staticmethod
+    def _store(tmp_path):
+        return ParquetStore(
+            data_root=tmp_path,
+            key_columns=("id",),
+            date_column="date",
+        )
+
+    def test_force_keep_last_strips_flag_on_new_partition(self, tmp_path):
+        """force 首写新分区不得把标记列持久化(分区毒化修复)。"""
+        store = self._store(tmp_path)
+        store.write(
+            "fina",
+            pl.DataFrame(
+                {
+                    "id": [1],
+                    "date": [date(2026, 1, 1)],
+                    "value": [10],
+                    "is_provider_correction": [True],
+                }
+            ),
+            year=2026,
+            on_duplicate="keep_last",
+        )
+        stored = store.read("fina")
+        assert "is_provider_correction" not in stored.columns
+
+    def test_force_keep_last_strips_flag_on_existing_partition(self, tmp_path):
+        """force 覆写已有分区不再因列宽不齐 ShapeError。"""
+        store = self._store(tmp_path)
+        store.write(
+            "fina",
+            pl.DataFrame({"id": [1], "date": [date(2026, 1, 1)], "value": [10]}),
+            year=2026,
+        )
+        store.write(
+            "fina",
+            pl.DataFrame(
+                {
+                    "id": [1],
+                    "date": [date(2026, 1, 1)],
+                    "value": [99],
+                    "is_provider_correction": [True],
+                }
+            ),
+            year=2026,
+            on_duplicate="keep_last",
+        )
+        assert store.read("fina")["value"].to_list() == [99]
+        assert "is_provider_correction" not in store.read("fina").columns
+
+    def test_flagged_strategy_without_key_columns_raises(self) -> None:
+        existing = pl.DataFrame({"id": [1], "value": [1]})
+        from ditto_platform.foundation.storage.parquet_write import merge_with_existing
+        from ditto_platform.foundation.storage.types import OnDuplicate
+
+        with pytest.raises(ValueError, match="key columns"):
+            merge_with_existing(
+                pl.DataFrame(
+                    {"id": [2], "value": [2], "is_provider_correction": [True]}
+                ),
+                existing,
+                [],
+                OnDuplicate.KEEP_LAST_FLAGGED,
+            )
+
+    def test_batch_internal_dedup_flagged_row_wins(self, tmp_path):
+        """同键混合 flag 批次:批内预去重保留修正行。"""
+        store = self._store(tmp_path)
+        store.write(
+            "fina",
+            pl.DataFrame(
+                {
+                    "id": [1, 1],
+                    "date": [date(2026, 1, 1), date(2026, 1, 1)],
+                    "value": [10, 99],
+                    "is_provider_correction": [False, True],
+                }
+            ),
+            year=2026,
+            on_duplicate="keep_last_flagged",
+        )
+        assert store.read("fina")["value"].to_list() == [99]
