@@ -949,6 +949,82 @@ class TestAdjFactorReconciliation:
         call = mock_quality_engine.compare_cross_source.call_args
         assert call.kwargs["secondary"]["instrument_id"].to_list() == [1000001]
 
+    def test_golden_filter_bypassed_for_adj_factor(
+        self,
+        mock_quality_engine,
+        mock_comparison_writer,
+        mock_instrument_store,
+        mock_secondary_identity_resolver,
+    ) -> None:
+        """adj_factor 不做黄金集过滤：黄金∩当日事件恒空集会每晚误报零交集（#613）.
+
+        黄金集标的在主源有当日因子帧但无除权事件——旧行为把 allowed_ids
+        收窄到黄金标的，与市场级事件帧交集为空，正常交易日也报
+        "not comparable"（2026-10-27 nightly 实故障形态）。
+        """
+        golden = MagicMock()
+        golden.is_enabled = True
+        golden.get_tickers.return_value = ["600519"]
+        events_source = MagicMock()
+        events_source.fetch_adjustment_events.return_value = _adj_factor_events_df()
+        handler = ReconcileSourcesHandler(
+            engine=mock_quality_engine,
+            secondary_source=MagicMock(),
+            comparison_store=mock_comparison_writer,
+            instrument_store=mock_instrument_store,
+            secondary_identity_resolver=mock_secondary_identity_resolver,
+            secondary_events_source=events_source,
+            adj_factor_context=self._context_mock(),
+            golden_dataset=golden,
+        )
+
+        result = handler.handle(
+            ReconcileSourcesCommand(
+                primary_df=_adj_factor_primary_df(),
+                trade_date="2025-06-25",
+                dataset="adj_factor",
+            )
+        )
+
+        # 黄金集不含任何事件标的：过滤生效则交集为空不可比较；跳过过滤后
+        # 三事件全部参与对账并按既有通过路径收敛。
+        assert result.comparable is True
+        assert result.passed is True
+        call = mock_quality_engine.compare_cross_source.call_args
+        assert len(call.kwargs["secondary"]["instrument_id"].to_list()) == 3
+
+    def test_empty_primary_for_adj_factor_fails_closed(
+        self,
+        mock_quality_engine,
+        mock_comparison_writer,
+        mock_instrument_store,
+        mock_secondary_identity_resolver,
+    ) -> None:
+        """adj_factor 空主帧=缺数日，按零事件分支声明 fail-closed（F7）：
+        不得走 golden_empty 跳过标签伪装通过。"""
+        events_source = MagicMock()
+        events_source.fetch_adjustment_events.return_value = pl.DataFrame()
+        handler = ReconcileSourcesHandler(
+            engine=mock_quality_engine,
+            secondary_source=MagicMock(),
+            comparison_store=mock_comparison_writer,
+            instrument_store=mock_instrument_store,
+            secondary_identity_resolver=mock_secondary_identity_resolver,
+            secondary_events_source=events_source,
+            adj_factor_context=self._context_mock(),
+        )
+
+        result = handler.handle(
+            ReconcileSourcesCommand(
+                primary_df=_adj_factor_primary_df().clear(),
+                trade_date="2025-06-25",
+                dataset="adj_factor",
+            )
+        )
+
+        assert result.passed is False
+        assert result.skipped is not True
+
 
 # ══ #473-#475 新数据集分支 ═══════════════════════════════════
 

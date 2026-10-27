@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, datetime
 from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock
@@ -15,6 +15,7 @@ from ditto_apps.registry.fuyao_dump import (
     download_fuyao_dump,
     dump_dest,
 )
+from ditto_apps.registry.infra import protocol_adapters as protocol_adapters_module
 from ditto_data.sources.fuyao.client import date_to_ms
 from pytest_mock import MockerFixture
 
@@ -50,11 +51,21 @@ def _container(
     mocker: MockerFixture,
     source: Any,
     data_root: Path,
+    metadata_service: MagicMock | None = None,
 ) -> MagicMock:
-    """容器替身：FuyaoSource|None 键 → source，Path 键 → data_root."""
+    """容器替身：FuyaoSource|None 键 → source，Path 键 → data_root，
+    MetadataService 键 → 元数据服务替身（身份注册路径，键定义在
+    protocol_adapters 组合豁免面）。"""
     container = MagicMock()
     fuyao_key = fuyao_dump_module.FuyaoSource | None
-    container.get.side_effect = lambda key: source if key == fuyao_key else data_root
+    metadata_key = protocol_adapters_module.MetadataService
+    container.get.side_effect = lambda key: (
+        source
+        if key == fuyao_key
+        else metadata_service
+        if key == metadata_key
+        else data_root
+    )
     mocker.patch.object(fuyao_dump_module, "make_app_container", return_value=container)
     return container
 
@@ -161,6 +172,69 @@ def test_container_closed_after_download(
     with pytest.raises(RuntimeError, match="network down"):
         download_fuyao_dump("adjustment-factors")
     assert failing.close.call_count == 1
+
+
+@pytest.mark.unit
+def test_download_registers_fuyao_identities_with_dump_evidence_date(
+    tmp_path: Path,
+    mocker: MockerFixture,
+) -> None:
+    """#395 对账链最后一公里：dump thscode 经前缀规则登记 instrument_mapping，
+    有证据日期 = dump 北京日（事件 ex_date 不得回填为证据）。"""
+    frame = pl.DataFrame(
+        {
+            "thscode": ["600519.SH", "600519.SH", "000001.SZ"],
+            "ex_date_ms": [1000, 2000, 1000],
+        }
+    )
+    metadata_service = MagicMock()
+    metadata_service.instrument.resolve_fuyao_instrument_ids.return_value = {
+        "600519.SH": 1000782
+    }
+    _container(
+        mocker,
+        _FakeFuyaoSource(frame),
+        tmp_path,
+        metadata_service=metadata_service,
+    )
+
+    outcome = download_fuyao_dump("adjustment-factors")
+
+    call = metadata_service.instrument.resolve_fuyao_instrument_ids.call_args
+    assert call.args[0] == ["000001.SZ", "600519.SH"]
+    dump_date = datetime.strptime(outcome.path.stem, "%Y%m%d").date()
+    assert call.kwargs["evidence_dates"] == {
+        "000001.SZ": dump_date.isoformat(),
+        "600519.SH": dump_date.isoformat(),
+    }
+    assert call.kwargs["register_missing"] is True
+    assert outcome.identities_registered == 1
+    assert outcome.identities_unresolved == 1
+
+
+@pytest.mark.unit
+def test_identity_registration_failure_does_not_fail_dump(
+    tmp_path: Path,
+    mocker: MockerFixture,
+) -> None:
+    """登记失败只留痕不拖垮 dump：对账可回退只读裸码反解，次夜重试。"""
+    frame = pl.DataFrame({"thscode": ["600519.SH"], "ex_date_ms": [1000]})
+    metadata_service = MagicMock()
+    metadata_service.instrument.resolve_fuyao_instrument_ids.side_effect = RuntimeError(
+        "db locked"
+    )
+    _container(
+        mocker,
+        _FakeFuyaoSource(frame),
+        tmp_path,
+        metadata_service=metadata_service,
+    )
+
+    outcome = download_fuyao_dump("adjustment-factors")
+
+    assert outcome.rows == 1
+    assert outcome.identities_registered == 0
+    assert outcome.path.exists()
 
 
 def _dumps_dir(tmp_path: Path) -> Path:

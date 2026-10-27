@@ -102,10 +102,17 @@ def _merge_verify_identical(
     同 instrument 在别名换码前后两码重拉同值行，出处列翻转不应判为
     "changed values"（#599 F2：跨粒度双码同值重试被误拒）。事实值列
     仍逐列 fail-closed；列集差异（schema 漂移）照旧先拒。
+
+    溯源列剔除仅适用于它**不是键列**的数据集（如 instrument_id 键的
+    fina_indicator）：source_ticker 自身就是键的数据集（global_index
+    bars/futures 等），semi-join 需要左帧携带键列，剔除会把 join 打在
+    缺列帧上直接 ColumnNotFoundError（2026-10-27 nightly global_index
+    窗口重拉连续两晚失败根因）。
     """
     if set(df.columns) != set(existing.columns):
         raise ValueError("Duplicate data conflict: retry contains changed values")
-    compare_columns = [c for c in df.columns if c != "source_ticker"]
+    provenance_only = {"source_ticker"} - set(key_columns)
+    compare_columns = [c for c in df.columns if c not in provenance_only]
     incoming = df.select(compare_columns).join(
         existing.select(key_columns), on=key_columns, how="semi"
     )

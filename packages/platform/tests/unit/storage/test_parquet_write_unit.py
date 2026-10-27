@@ -197,6 +197,40 @@ class TestMergeWithExisting:
                 incoming, existing, ["id"], OnDuplicate.VERIFY_IDENTICAL
             )
 
+    def test_verify_identical_with_source_ticker_key_succeeds(self) -> None:
+        """source_ticker 自身是键列时不剔除：同键同值重拉通过（#613 回归）.
+
+        global_index bars/futures 等以 (source_ticker, trade_date, knowledge_date)
+        为键的数据集，窗口重拉必然与存量重叠——剔除出处列会让 semi-join 在
+        缺键列的左帧上 ColumnNotFoundError（2026-10-27 nightly 实故障）。
+        """
+        keys = ["source_ticker", "trade_date", "knowledge_date"]
+        row = {
+            "source_ticker": ["SPX"],
+            "trade_date": ["2026-10-23"],
+            "close": [5864.0],
+        }
+        existing = _df_from_data({**row, "knowledge_date": ["2026-10-24"]})
+        incoming = _df_from_data({**row, "knowledge_date": ["2026-10-24"]})
+        result = merge_with_existing(
+            incoming, existing, keys, OnDuplicate.VERIFY_IDENTICAL
+        )
+        assert result.added == 0
+        assert result.updated == 0
+        assert len(result.df) == 1
+
+    def test_verify_identical_with_source_ticker_key_rejects_change(self) -> None:
+        """键含 source_ticker 时事实值变化仍拒绝（键列参与比较不豁免）."""
+        keys = ["source_ticker", "trade_date"]
+        existing = _df_from_data(
+            {"source_ticker": ["SPX"], "trade_date": ["2026-10-23"], "close": [5864.0]}
+        )
+        incoming = _df_from_data(
+            {"source_ticker": ["SPX"], "trade_date": ["2026-10-23"], "close": [1.0]}
+        )
+        with pytest.raises(ValueError, match="changed values"):
+            merge_with_existing(incoming, existing, keys, OnDuplicate.VERIFY_IDENTICAL)
+
 
 class TestMergeKeepLastFlagged:
     """KEEP_LAST_FLAGGED: 修正行单调升级、非修正行只插新键。"""

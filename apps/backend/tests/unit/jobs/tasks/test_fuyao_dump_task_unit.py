@@ -39,6 +39,8 @@ def test_success_returns_stats(mocker: MockerFixture) -> None:
         "rows": 12_345,
         "tickers": 5_580,
         "duplicate_keys": 0,
+        "identities_registered": 0,
+        "identities_unresolved": 0,
         "error": None,
     }
 
@@ -99,5 +101,7 @@ def test_result_keys_stable_across_statuses(mocker: MockerFixture) -> None:
         "rows",
         "tickers",
         "duplicate_keys",
+        "identities_registered",
+        "identities_unresolved",
         "error",
     }

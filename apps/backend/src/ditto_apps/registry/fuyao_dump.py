@@ -9,7 +9,7 @@ adj_factor 对账（#515 A3）需要每日刷新 adjustment-factors dump（陈�
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import date, datetime
 from pathlib import Path
 from typing import Any, cast
@@ -19,7 +19,11 @@ import polars as pl
 from dishka import Container
 
 from ditto_apps.registry.container import make_app_container
-from ditto_apps.registry.infra.protocol_adapters import DumpKind, FuyaoSource
+from ditto_apps.registry.infra.protocol_adapters import (
+    DumpKind,
+    FuyaoSource,
+    register_fuyao_dump_identities,
+)
 
 # 各 dump 主键列（统计校验共用；不可变快照对重复键只统计不拒绝）
 _DUMP_KEYS: dict[DumpKind, tuple[str, ...]] = {
@@ -43,6 +47,8 @@ class FuyaoDumpDownload:
     tickers: int
     duplicate_keys: int
     date_range: tuple[date, date] | None
+    identities_registered: int = 0
+    identities_unresolved: int = 0
 
 
 def dump_dest(data_root: Path, kind: DumpKind) -> Path:
@@ -105,6 +111,19 @@ def _resolve_fuyao_source(container: Container) -> FuyaoSource:
     return source
 
 
+def _register_fuyao_identities(
+    container: Container, frame: pl.DataFrame, dump_date: date
+) -> tuple[int, int]:
+    """
+    Dump thscodes → ``instrument_mapping(source='fuyao')`` 登记（#395 摄取路径）.
+
+    语义实现在 protocol_adapters（组合根能力包导入豁免面）；有证据日期
+    = dump 北京日，幂等登记，失败不拖垮 dump——详见该函数 docstring。
+    """
+    thscodes = sorted({str(code) for code in frame["thscode"].unique().to_list()})
+    return register_fuyao_dump_identities(container, thscodes, dump_date)
+
+
 def download_fuyao_dump(kind: DumpKind) -> FuyaoDumpDownload:
     """
     下载全市场 dump 不可变快照并返回统计；源未配置抛 FuyaoSourceUnconfiguredError.
@@ -131,6 +150,13 @@ def download_fuyao_dump(kind: DumpKind) -> FuyaoDumpDownload:
                 f"fuyao dump {kind} snapshot is empty "
                 + f"(rows={outcome.rows}, tickers={outcome.tickers}): rejected"
             )
-        return outcome
+        registered, unresolved = _register_fuyao_identities(
+            container, frame, datetime.strptime(dest.stem, "%Y%m%d").date()
+        )
+        return replace(
+            outcome,
+            identities_registered=registered,
+            identities_unresolved=unresolved,
+        )
     finally:
         container.close()

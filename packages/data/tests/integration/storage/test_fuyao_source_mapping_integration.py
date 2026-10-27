@@ -368,3 +368,20 @@ class TestFuyaoSourceMappingIntegration:
             evidence_dates={"600000.SH": "2026-09-18"},
             register_missing=False,
         ) == {"600000.SH": 1000001}
+
+    def test_registered_identity_resolves_read_only_without_evidence_scope(
+        self, service
+    ) -> None:
+        """correctness F1：注册（evidence=今日）后，无 evidence_dates 的只读
+        反解（对账路径——身份取今日可见开放映射，asof 只键控数值比较）仍可
+        解析；迟执行 nightly 的 asof=计划日早于 dump 证据日不再翻转成零解析."""
+        service.resolve_fuyao_instrument_ids(
+            ["600000.SH"],
+            evidence_dates={"600000.SH": "2026-09-18"},
+            observed_at="2026-09-19 08:00:00",
+            register_missing=True,
+        )
+
+        assert service.resolve_fuyao_instrument_ids(
+            ["600000.SH"], register_missing=False
+        ) == {"600000.SH": 1_000_001}

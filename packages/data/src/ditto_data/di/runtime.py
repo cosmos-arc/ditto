@@ -76,13 +76,24 @@ class RuntimeProvider(Provider):
         self,
         settings: DataStoreSettings,
     ) -> Iterator[SQLitePool]:
-        """SQLite 连接池（应用级单例）."""
+        """
+        SQLite 连接池（应用级单例）.
+
+        开启影子库结构漂移校验（DDL 演进后的存量库响亮失败，修复=携数据
+        重建至 schema.sql 一致）；strategy_run 豁免——该表由 strategy 存储
+        层首用时惰性迁移（见 StrategyStorageProvider），init 须容忍。
+        """
         db_path = settings.resolved_sqlite_path
         db_path.parent.mkdir(parents=True, exist_ok=True)
 
         schema_traversable = files("ditto_data.scripts") / "schema.sql"
         schema_path = Path(str(schema_traversable))
-        pool = SQLitePool(str(db_path), schema_path=schema_path)
+        pool = SQLitePool(
+            str(db_path),
+            schema_path=schema_path,
+            validate_schema_shape=True,
+            schema_drift_allowlist=frozenset({"strategy_run"}),
+        )
         pool.init_schema()
         yield pool
         pool.close()

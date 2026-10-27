@@ -113,7 +113,7 @@ from ditto_application.queries.opening_baseline import OpeningBaselineResolver
 
 
 class _MetadataSecondaryIdentityResolver:
-    """辅源身份只读反解：fuyao 映射优先，裸码前缀规则唯一匹配兜底。"""
+    """辅源身份只读反解：fuyao 映射优先，裸码前缀规则唯一匹配兜底."""
 
     def __init__(self, metadata: MetadataService) -> None:
         self._metadata = metadata
@@ -121,12 +121,21 @@ class _MetadataSecondaryIdentityResolver:
     def resolve_secondary_ids(
         self, source_tickers: list[str], source: str, *, asof: str
     ) -> dict[str, int]:
-        """裸码/thscode → instrument_id（只读，不写映射；键与输入一致）。"""
+        """
+        裸码/thscode → instrument_id（只读，不写映射；键与输入一致）.
+
+        不传 evidence_dates：对账是「今日执行、按 trade_date 键控数值」的
+        比较——身份取今日注册表（开放映射优先、裸码兜底、已闭合身份
+        fail-closed），与主源 instrument_id 键控同视角；asof 只键控数值比较
+        不键控身份。若按 asof 过滤映射可见性（correctness F1），迟执行
+        nightly/补跑场景下 dump 注册证据日（D+1）晚于计划日（D）会让全部
+        身份「已映射但未生效」被拒，零交集误报——摄取路径的 PIT 证据严格性
+        （#395 evidence_dates 语义）不适用于此只读反解。
+        """
         if source != "fuyao" or not source_tickers:
             return {}
         return self._metadata.instrument.resolve_fuyao_instrument_ids(
             [str(ticker) for ticker in source_tickers],
-            evidence_dates={str(ticker): asof for ticker in source_tickers},
             register_missing=False,
         )
 
