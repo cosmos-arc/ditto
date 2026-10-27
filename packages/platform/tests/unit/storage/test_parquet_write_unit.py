@@ -196,3 +196,69 @@ class TestMergeWithExisting:
             merge_with_existing(
                 incoming, existing, ["id"], OnDuplicate.VERIFY_IDENTICAL
             )
+
+
+class TestMergeKeepLastFlagged:
+    """KEEP_LAST_FLAGGED: 修正行单调升级、非修正行只插新键。"""
+
+    @staticmethod
+    def _flagged(id_: int, value: int, flag: bool) -> pl.DataFrame:
+        return pl.DataFrame(
+            {"id": [id_], "value": [value], "is_provider_correction": [flag]}
+        )
+
+    def test_flagged_row_upgrades_existing(self) -> None:
+        existing = pl.DataFrame({"id": [1], "value": [10]})
+        result = merge_with_existing(
+            self._flagged(1, 99, True),
+            existing,
+            ["id"],
+            OnDuplicate.KEEP_LAST_FLAGGED,
+        )
+        assert result.df.filter(pl.col("id") == 1)["value"].to_list() == [99]
+        assert result.updated == 1
+        assert "is_provider_correction" not in result.df.columns
+
+    def test_unflagged_conflict_keeps_existing(self) -> None:
+        """未标记行不得降级存量(数据源旧代快照回写防护)。"""
+        existing = pl.DataFrame({"id": [1], "value": [99]})
+        result = merge_with_existing(
+            self._flagged(1, 10, False),
+            existing,
+            ["id"],
+            OnDuplicate.KEEP_LAST_FLAGGED,
+        )
+        assert result.df.filter(pl.col("id") == 1)["value"].to_list() == [99]
+        assert result.updated == 0
+        assert result.added == 0
+
+    def test_new_key_inserts_regardless_of_flag(self) -> None:
+        existing = pl.DataFrame({"id": [1], "value": [10]})
+        result = merge_with_existing(
+            pl.concat([self._flagged(2, 20, False), self._flagged(3, 30, True)]),
+            existing,
+            ["id"],
+            OnDuplicate.KEEP_LAST_FLAGGED,
+        )
+        assert result.df["id"].to_list() == [1, 2, 3]
+        assert result.added == 2
+
+    def test_missing_flag_column_raises(self) -> None:
+        existing = pl.DataFrame({"id": [1], "value": [10]})
+        incoming = pl.DataFrame({"id": [2], "value": [20]})
+        with pytest.raises(ValueError, match="KEEP_LAST_FLAGGED"):
+            merge_with_existing(
+                incoming, existing, ["id"], OnDuplicate.KEEP_LAST_FLAGGED
+            )
+
+    def test_existing_with_flag_column_raises(self) -> None:
+        existing = pl.DataFrame(
+            {"id": [1], "value": [10], "is_provider_correction": [True]}
+        )
+        with pytest.raises(ValueError, match="existing frame"):
+            merge_with_existing(
+                self._flagged(1, 99, True),
+                existing,
+                ["id"],
+                OnDuplicate.KEEP_LAST_FLAGGED,
+            )

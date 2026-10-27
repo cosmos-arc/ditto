@@ -19,6 +19,9 @@ class OnDuplicate(StrEnum):
     VERIFY_IDENTICAL = "verify_identical"  # Ignore exact rows, reject changed values
     KEEP_FIRST = "keep_first"  # Keep existing data, ignore new
     KEEP_LAST = "keep_last"  # Overwrite existing with new (Last-Write-Wins)
+    # 标记行 last-wins、未标记行 keep-first；标记列见
+    # parquet_write.CORRECTION_FLAG_COLUMN
+    KEEP_LAST_FLAGGED = "keep_last_flagged"
 
 
 @dataclass(frozen=True)

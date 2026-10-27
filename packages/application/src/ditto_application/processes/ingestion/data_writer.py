@@ -18,6 +18,7 @@ from ditto_data.services.macro_service import MacroService
 from ditto_data.services.market_write_service import MarketWriteService
 from ditto_data.services.metadata_service import MetadataService
 from ditto_platform.foundation import ChecksumCompute, OnDuplicate, WriteResult, logger
+from ditto_platform.foundation.storage import CORRECTION_FLAG_COLUMN
 
 from ditto_application.exceptions import AppProcessError
 from ditto_application.processes.ingestion.dataset_registry import (
@@ -1436,6 +1437,15 @@ class IngestionDataWriter:
             if dataset_enum is Dataset.FINA_INDICATOR:
                 # #599：BSE 新老双码同披露键收敛（fund_portfolio 见 #606）。
                 enriched_df = _settle_fina_indicator_dual_code(enriched_df)
+                # #613 G：fina_indicator 供应商以同披露键 update_flag='1' 行
+                # 下发修正（#591），代理后端池同步进度不一使重拉值在两代
+                # 快照间翻转——VERIFY_IDENTICAL 整批拒绝会把修正行永远挡在
+                # 存量外并陪葬当日新披露。改走 KEEP_LAST_FLAGGED：修正行
+                # （CORRECTION_FLAG_COLUMN=True）单调升级存量，非修正行只插
+                # 新键（防未同步后端回写降级）。force 的 KEEP_LAST 语义更强，
+                # 保持不变。
+                if on_duplicate is OnDuplicate.VERIFY_IDENTICAL:
+                    on_duplicate = OnDuplicate.KEEP_LAST_FLAGGED
             elif dataset_enum is Dataset.FUND_PORTFOLIO:
                 # #606：键含 holding_symbol 原码，双码=不同键各存一行，
                 # instrument 级聚合重复计数 → 持仓解析后收敛。
@@ -1443,6 +1453,12 @@ class IngestionDataWriter:
             records_written = parquet_method(
                 enriched_df, year, on_duplicate=on_duplicate
             )
+            if (
+                dataset_enum is Dataset.FINA_INDICATOR
+                and CORRECTION_FLAG_COLUMN in enriched_df.columns
+            ):
+                # 证据 checksum 按落库形状计算——瞬态标记列已在合并中消费。
+                enriched_df = enriched_df.drop(CORRECTION_FLAG_COLUMN)
         else:
             save_method = save_methods[dataset_enum]
             records_written = save_method(enriched_df)

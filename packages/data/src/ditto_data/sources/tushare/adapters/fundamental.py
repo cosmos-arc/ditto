@@ -6,6 +6,7 @@ from datetime import date
 
 import polars as pl
 from ditto_platform.foundation import Metrics, logger, traced
+from ditto_platform.foundation.storage import CORRECTION_FLAG_COLUMN
 
 from ditto_data.sources.tushare.adapters.base import BaseTushareAdapter
 from ditto_data.sources.tushare.adapters.capital_corporate import (
@@ -172,8 +173,11 @@ def _dedupe_fina_disclosure_key(frame: pl.DataFrame) -> pl.DataFrame:
     1022/1022 为 update_flag 0/1 版本共存，旧行 null 新行有值，真同键
     改值为 0）：**update_flag='1' 优先**；同 flag 平局按整行哈希排序
     keep-last——同一行集合无论源端返回顺序如何都选出同一行（重试幂等，
-    correctness review #6）。update_flag 列缺失时回退纯哈希排序（旧行为）。
-    选版后 update_flag 即完成使命，不进输出帧（store schema 不变）。
+    correctness review #6）。
+    选版后 update_flag 转为 CORRECTION_FLAG_COLUMN 布尔列保留（#613 G：
+    修正行经写入层 KEEP_LAST_FLAGGED 单调升级存量，防数据源两代快照
+    翻转；列由写入层剥离，不进存量 schema）。update_flag 列缺失时回退
+    纯哈希排序并置 False（旧行为）。
     """
     if frame.is_empty():
         return frame
@@ -186,6 +190,7 @@ def _dedupe_fina_disclosure_key(frame: pl.DataFrame) -> pl.DataFrame:
             ]
         )
         drop_cols = ["_dedupe_hash", "update_flag"]
+        winner_is_correction = (pl.col("update_flag") == "1").fill_null(False)
     else:
         # 正常请求恒含 update_flag（显式字段集）；缺列意味着源端/代理
         # 行为漂移，选版退化为纯哈希——告警可见，不静默（correctness F3）。
@@ -195,10 +200,15 @@ def _dedupe_fina_disclosure_key(frame: pl.DataFrame) -> pl.DataFrame:
         )
         work = work.sort("_dedupe_hash")
         drop_cols = ["_dedupe_hash"]
-    return work.unique(
-        subset=["source_ticker", "report_date", "knowledge_date"],
-        keep="last",
-    ).drop(drop_cols)
+        winner_is_correction = pl.lit(False)
+    return (
+        work.unique(
+            subset=["source_ticker", "report_date", "knowledge_date"],
+            keep="last",
+        )
+        .with_columns(winner_is_correction.alias(CORRECTION_FLAG_COLUMN))
+        .drop(drop_cols)
+    )
 
 
 def _row_hash_expr(frame: pl.DataFrame) -> pl.Expr:

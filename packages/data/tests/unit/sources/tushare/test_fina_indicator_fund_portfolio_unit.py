@@ -356,3 +356,44 @@ class TestFinaIndicatorDedupDeterminism:
 
         frame = adapter.fetch_fina_indicator(ts_code="600519.SH")
         assert frame.height == 0
+
+
+class TestFinaIndicatorCorrectionFlag:
+    """#613 G:选版胜者携带修正标记列,供写入层单调升级。"""
+
+    def test_flag_one_winner_carries_correction_marker(self) -> None:
+        from ditto_data.sources.tushare.adapters.fundamental import (
+            _dedupe_fina_disclosure_key,
+        )
+        from ditto_platform.foundation.storage import CORRECTION_FLAG_COLUMN
+
+        frame = pl.DataFrame(
+            {
+                "source_ticker": ["000001.SZ", "000001.SZ"],
+                "knowledge_date": ["2026-04-28", "2026-04-28"],
+                "report_date": ["2025-12-31", "2025-12-31"],
+                "fcff": [None, 5.5e8],
+                "update_flag": ["0", "1"],
+            }
+        )
+        result = _dedupe_fina_disclosure_key(frame)
+        assert result.height == 1
+        assert result[CORRECTION_FLAG_COLUMN].to_list() == [True]
+
+    def test_flag_zero_only_rows_carry_false_marker(self) -> None:
+        from ditto_data.sources.tushare.adapters.fundamental import (
+            _dedupe_fina_disclosure_key,
+        )
+        from ditto_platform.foundation.storage import CORRECTION_FLAG_COLUMN
+
+        frame = pl.DataFrame(
+            {
+                "source_ticker": ["000001.SZ"],
+                "knowledge_date": ["2026-04-28"],
+                "report_date": ["2025-12-31"],
+                "fcff": [3.9e8],
+                "update_flag": ["0"],
+            }
+        )
+        result = _dedupe_fina_disclosure_key(frame)
+        assert result[CORRECTION_FLAG_COLUMN].to_list() == [False]
