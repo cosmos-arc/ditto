@@ -1,0 +1,1678 @@
+meta:
+  contract_version: '1'
+  ticket: 'cosmos-arc/ditto#622 (parent #621)'
+  created: '2026-10-30'
+  measured_at: 2026-10-30T21:05+08:00
+  data_root: 'repo data/（DITTO_STATE_ROOT 注入；SQLite 只读 URI 扫描，不含活跃 WAL——跨库一致快照口径同 #621 Further Notes）'
+  measurement_method: 'ops status --json + Parquet 逐目录扫描（polars）+ SQLite 表级 count/min/max + 源探针（每接口一次最小调用，证据 issue
+    #622）'
+  status_vocabulary:
+    ready: 预期范围完整且当前（事件型=当期无事件不算缺口）
+    partial: 有历史但起点/末端/味道/品种有缺（源侧权限限制也写进 gaps 文本）
+    empty: 本地零行
+    unknown: 禁止出现——合同不允许未测量项冒充就绪
+  permission_matrix:
+    access_model: 积分=Tushare 15000 档位（档位决定接口权限与限频，非余额）；代理 t.xiaodefa.top 为 HTTP 透传层；实测成功以 probes 逐条为准，官方文档门槛未逐条核对——若未来触发补源比较再补门槛列
+    unit_dimension: 本合同单位维度仅记 currency；计量单位（万元/万份/倍/股）核验归 P2 价格口径与 P3c 股数单位反例等 lane 实施票，P0 不伪造
+    tushare_proxy: https://t.xiaodefa.top/
+    tushare_probed: 56
+    tushare_ok: 53
+    probes:
+      tushare:trade_cal:
+        result: ok
+        rows: 4
+      tushare:stock_basic:
+        result: ok
+        rows: 5577
+      tushare:etf_basic:
+        result: ok
+        rows: 3495
+      tushare:index_basic:
+        result: ok
+        rows: 8000
+      tushare:fut_basic:
+        result: ok
+        rows: 10000
+      tushare:daily:
+        result: ok
+        rows: 5572
+      tushare:fund_daily:
+        result: ok
+        rows: 2170
+      tushare:fund_nav:
+        result: ok
+        rows: 10500
+      tushare:index_daily:
+        result: ok
+        rows: 10568
+      tushare:index_global:
+        result: ok
+        rows: 21
+      tushare:bak_basic:
+        result: ok
+        rows: 5579
+      tushare:stock_st:
+        result: ok
+        rows: 0
+      tushare:suspend_d:
+        result: ok
+        rows: 7
+      tushare:adj_factor:
+        result: ok
+        rows: 5581
+      tushare:fund_adj:
+        result: ok
+        rows: 2000
+      tushare:stk_limit:
+        result: ok
+        rows: 5937
+      tushare:moneyflow:
+        result: ok
+        rows: 5577
+      tushare:cyq_perf:
+        result: ok
+        rows: 5570
+      tushare:limit_list_d:
+        result: ok
+        rows: 105
+      tushare:top_list:
+        result: ok
+        rows: 75
+      tushare:top_inst:
+        result: ok
+        rows: 750
+      tushare:hk_hold:
+        result: ok
+        rows: 4200
+      tushare:hsgt_top10:
+        result: ok
+        rows: 20
+      tushare:fina_indicator:
+        result: ok
+        rows: 1
+      tushare:fund_share:
+        result: ok
+        rows: 1807
+      tushare:fund_portfolio:
+        result: ok
+        rows: 0
+      tushare:balancesheet:
+        result: ok
+        rows: 2
+      tushare:income:
+        result: ok
+        rows: 2
+      tushare:cashflow:
+        result: ok
+        rows: 1
+      tushare:dividend:
+        result: ok
+        rows: 111
+      tushare:daily_basic:
+        result: ok
+        rows: 5570
+      tushare:margin_detail:
+        result: ok
+        rows: 4486
+      tushare:pledge_stat:
+        result: ok
+        rows: 645
+      tushare:cn_macro:
+        result: error
+        code: 50101
+        message: None
+      tushare:fx_daily:
+        result: ok
+        rows: 101
+      tushare:rights:
+        result: error
+        code: 50101
+        message: None
+      tushare:index_weight:
+        result: ok
+        rows: 6000
+      tushare:index_member_all:
+        result: ok
+        rows: 2000
+      tushare:index_classify:
+        result: ok
+        rows: 28
+      tushare:csrc_industrial:
+        result: error
+        code: 2002
+        message: None
+      tushare:namechange:
+        result: ok
+        rows: 8
+      tushare:forecast:
+        result: ok
+        rows: 16
+      tushare:forecast_vip:
+        result: ok
+        rows: 16
+      tushare:express:
+        result: ok
+        rows: 4
+      tushare:express_vip:
+        result: ok
+        rows: 4
+      tushare:index_dailybasic:
+        result: ok
+        rows: 15
+      tushare:repurchase:
+        result: ok
+        rows: 46
+      tushare:share_float:
+        result: ok
+        rows: 32
+      tushare:shibor:
+        result: ok
+        rows: 4
+      tushare:cn_gdp:
+        result: ok
+        rows: 178
+      tushare:cn_cpi:
+        result: ok
+        rows: 513
+      tushare:cn_ppi:
+        result: ok
+        rows: 420
+      tushare:cn_pmi:
+        result: ok
+        rows: 261
+      tushare:cn_m:
+        result: ok
+        rows: 585
+      tushare:sf_month:
+        result: ok
+        rows: 297
+      tushare:fut_daily:
+        result: ok
+        rows: 1075
+        code: 0
+      fred:series_observations:UNRATE:
+        result: ok
+        rows: 2
+      fred:series_observations:DCOILWTICO:
+        result: ok
+        rows: 2
+      fred:alfred:vintage_dates:UNRATE:
+        result: error
+        message: '{"error_code":404,"error_message":"Not Found"}'
+      fred:series_observations+realtime:UNRATE:
+        result: ok
+        rows: 3
+      fuyao:a-share/prices/snapshot:
+        result: error:SourceFetchError
+        message: 'fuyao /api/a-share/prices/snapshot business error: code=1002 message=Invalid parameter format:
+          thscodes'
+      fuyao:local:adjustment-factors-dump:
+        result: ok
+        latest_dump: 20261029.parquet
+    tushare_unreachable:
+      rights: 50101 代理不支持（#517-#523 降级裁决）→ corporate_actions 缺分配预案味道
+      csrc_industrial: 2002 权限不足 → industry_classification 仅申万线
+      cn_macro: 50101——非真实 API（标签假象）；真实 cn_gdp/cpi/ppi/pmi/m、sf_month、shibor 全部可达
+    fred: series_observations（UNRATE/DCOILWTICO）与 realtime 参数路径全部 200；vintage_dates 端点 404 为探针端点形状假象
+    fuyao: 'token 有效（业务参数探针 1002 为参数形状问题）；adjustment-factors dump 20261029 当日新鲜（夜链 #617）'
+    env_presence:
+      TUSHARE_TOKEN: true
+      FRED_API_KEY: true
+      FUYAO_API_KEY: true
+  environment_notes:
+  - 无 DITTO_STATE_ROOT 运行 CLI 会落到 ~/.local/state/ditto 陈旧库（2026-10-06）并被 schema 漂移守卫拦下——报错不指明库路径，运维改进归 P1
+  - etf_reference 存储 169 万行观察但 catalog 无条目（ops status 显示 missing）——登记口径缺口
+  - 10-29 夜链 5 个业务 failed 与 Prefect COMPLETED 并存：etf_nav/fina_indicator/cash_flow/pledge_ratio/macro_indicators
+datasets:
+  calendar:
+    domain: metadata
+    tier: t0_meta
+    sources:
+    - tushare
+    provider_apis:
+    - trade_cal
+    declared:
+      frequency: trading_daily
+      update_frequency: 每日
+      coverage_start_rule: R2 modern A-share window
+      currency: null
+      timezone: Asia/Shanghai
+      typical_available_time: 08:00:00
+    measured:
+      storage: sqlite:trading_calendar
+      rows: 5478
+      instruments: null
+      start: '2013-01-01'
+      end: '2027-12-31'
+    catalog_latest:
+      date: '2027-01-01'
+      status: success
+      partition_rows: 365
+      freshness: stale
+    status: ready
+    gaps: []
+    consumers:
+    - 回测/研究日历
+    - query instruments
+    - EOD verify
+    notes: 实测 2013-01-01~2027-12-31 全量交易日历（覆盖回测与研究目标窗）
+  stock_basic:
+    domain: metadata
+    tier: t0_meta
+    sources:
+    - tushare
+    provider_apis:
+    - stock_basic
+    - bak_basic
+    declared:
+      frequency: static
+      update_frequency: 每日
+      coverage_start_rule: daily historical universe reconstruction
+      currency: null
+      timezone: Asia/Shanghai
+      typical_available_time: 08:30:00
+    measured:
+      storage: sqlite:instrument_stock
+      rows: 5928
+      instruments: null
+      start: null
+      end: null
+    catalog_latest:
+      date: '2026-10-29'
+      status: success
+      partition_rows: 5919
+      freshness: fresh
+    status: ready
+    gaps: []
+    consumers:
+    - 全宇宙构建(#581)
+    - query instruments
+    - 选池
+    notes: 当前上市快照 5,928（含退市史在 instrument 表 28,678）
+  etf_basic:
+    domain: metadata
+    tier: t0_meta
+    sources:
+    - tushare
+    provider_apis:
+    - etf_basic
+    declared:
+      frequency: static
+      update_frequency: 每日
+      coverage_start_rule: not earlier than listing date
+      currency: null
+      timezone: Asia/Shanghai
+      typical_available_time: 08:30:00
+    measured:
+      storage: sqlite:instrument_etf
+      rows: 1864
+      instruments: null
+      start: null
+      end: null
+    catalog_latest:
+      date: '2026-10-29'
+      status: success
+      partition_rows: 1843
+      freshness: fresh
+    status: ready
+    gaps: []
+    consumers:
+    - ETF 链路
+    - query instruments
+    notes: ''
+  index_basic:
+    domain: metadata
+    tier: t0_meta
+    sources:
+    - tushare
+    provider_apis:
+    - index_basic
+    declared:
+      frequency: static
+      update_frequency: 每日
+      coverage_start_rule: R2 modern A-share window
+      currency: null
+      timezone: Asia/Shanghai
+      typical_available_time: 08:30:00
+    measured:
+      storage: sqlite:instrument_index
+      rows: 20886
+      instruments: null
+      start: null
+      end: null
+    catalog_latest:
+      date: '2026-10-29'
+      status: success
+      partition_rows: 20886
+      freshness: fresh
+    status: ready
+    gaps: []
+    consumers:
+    - 指数行情路由
+    - query instruments
+    notes: 20,886 只含大量细分/海外指数定义
+  etf_reference:
+    domain: metadata
+    tier: t0_meta
+    sources:
+    - config
+    provider_apis: []
+    declared:
+      frequency: source_defined
+      update_frequency: 每日
+      coverage_start_rule: outside R2 release gate
+      currency: null
+      timezone: source_defined
+      typical_available_time: 08:30:00
+    measured:
+      storage: sqlite:etf_reference_observation
+      rows: 1687182
+      instruments: null
+      start: null
+      end: null
+    catalog_latest:
+      date: null
+      status: null
+      partition_rows: null
+      freshness: missing
+    status: partial
+    gaps:
+    - catalog 无条目：ops status 显示 missing（存储 169 万行观察，消费者经 catalog 不可见——登记缺口归 P1）
+    consumers:
+    - ETF Paper 估值/执行(#408)
+    - etf_paper_execution
+    notes: config 源声明式配置，#408 两阶段映射
+  stock_daily:
+    domain: market
+    tier: t1_incremental
+    sources:
+    - tushare
+    - fuyao
+    provider_apis:
+    - daily
+    declared:
+      frequency: trading_daily
+      update_frequency: 每日
+      coverage_start_rule: R2 modern A-share window
+      currency: CNY
+      timezone: Asia/Shanghai
+      typical_available_time: '17:00:00'
+    measured:
+      storage: parquet:market/stock/bars
+      rows: 13017832
+      instruments: 5845
+      start: '2013-01-04'
+      end: '2026-10-29'
+    catalog_latest:
+      date: '2026-10-29'
+      status: success
+      partition_rows: 5571
+      freshness: fresh
+    status: ready
+    gaps: []
+    consumers:
+    - 看图/回测/研究 spine
+    - query bars
+    - 技术分析
+    - 选池
+    - 对账主源
+    notes: 2013-01-04 起（超 2014 目标）；BSE 不覆盖=#575 裁决
+  etf_daily:
+    domain: market
+    tier: t1_incremental
+    sources:
+    - tushare
+    provider_apis:
+    - fund_daily
+    declared:
+      frequency: trading_daily
+      update_frequency: 每日
+      coverage_start_rule: not earlier than listing date
+      currency: CNY
+      timezone: Asia/Shanghai
+      typical_available_time: '18:00:00'
+    measured:
+      storage: parquet:market/etf/bars
+      rows: 1616803
+      instruments: 1860
+      start: '2013-01-04'
+      end: '2026-10-29'
+    catalog_latest:
+      date: '2026-10-29'
+      status: success
+      partition_rows: 1713
+      freshness: fresh
+    status: ready
+    gaps: []
+    consumers:
+    - ETF 看图/Paper
+    - query bars
+    notes: 2013-01-04 起
+  index_daily:
+    domain: market
+    tier: t1_incremental
+    sources:
+    - tushare
+    provider_apis:
+    - index_daily
+    declared:
+      frequency: trading_daily
+      update_frequency: 每日
+      coverage_start_rule: R2 modern A-share window
+      currency: CNY
+      timezone: Asia/Shanghai
+      typical_available_time: '18:00:00'
+    measured:
+      storage: parquet:market/index/bars
+      rows: 545740
+      instruments: 178
+      start: '2014-01-02'
+      end: '2026-10-29'
+    catalog_latest:
+      date: '2026-10-29'
+      status: success
+      partition_rows: 178
+      freshness: fresh
+    status: ready
+    gaps: []
+    consumers:
+    - 看图/轮动/回测基准
+    - query bars
+    notes: 2014-01-02 起；178 只集合完整性逐指核验属 P2
+  global_index_daily:
+    domain: market
+    tier: t1_incremental
+    sources:
+    - tushare
+    provider_apis:
+    - index_global
+    declared:
+      frequency: source_defined
+      update_frequency: 每日
+      coverage_start_rule: per-market trading calendar and actual retrieval visibility
+      currency: mixed
+      timezone: source_defined
+      typical_available_time: '21:30:00'
+    measured:
+      storage: parquet:market/index/global_bars
+      rows: 60554
+      instruments: 21
+      start: '2014-01-01'
+      end: '2026-10-29'
+    catalog_latest:
+      date: '2026-10-29'
+      status: success
+      partition_rows: 113
+      freshness: fresh
+    status: ready
+    gaps: []
+    consumers:
+    - 市场背景上下文
+    - market_context
+    notes: 2014-01-01 起；#619 拼接修复后 28/29 连续成功，旧故障不重立；品种口径核验属 P5a；instrument 列为 source_ticker（21 个）
+  stock_status:
+    domain: market
+    tier: t1_incremental
+    sources:
+    - tushare
+    provider_apis:
+    - bak_basic
+    - suspend_d
+    - stock_st
+    declared:
+      frequency: trading_daily
+      update_frequency: 每日
+      coverage_start_rule: provider history starts in 2016
+      currency: null
+      timezone: Asia/Shanghai
+      typical_available_time: '21:50:00'
+    measured:
+      storage: parquet:market/stock/status
+      rows: 10883035
+      instruments: 5830
+      start: '2016-08-09'
+      end: '2026-10-29'
+    catalog_latest:
+      date: '2026-10-29'
+      status: success
+      partition_rows: 5575
+      freshness: fresh
+    status: partial
+    gaps:
+    - 起点 2016-08-09（bak_basic 官方可得起点），2014~2016-08 缺
+    - BSE 244 标的不覆盖（#575 裁决）
+    consumers:
+    - 选池(#581/#583)
+    - 涨跌停 provider
+    - EOD verify
+    notes: bak_basic 当日终值 21:50 就绪（#583 实测）
+  adj_factor:
+    domain: market
+    tier: t1_incremental
+    sources:
+    - tushare
+    provider_apis:
+    - adj_factor
+    declared:
+      frequency: trading_daily
+      update_frequency: 每日
+      coverage_start_rule: R2 modern A-share window
+      currency: null
+      timezone: Asia/Shanghai
+      typical_available_time: '19:00:00'
+    measured:
+      storage: parquet:market/stock/adj
+      rows: 13607479
+      instruments: 5845
+      start: '2013-01-04'
+      end: '2026-10-29'
+    catalog_latest:
+      date: '2026-10-29'
+      status: success
+      partition_rows: 5580
+      freshness: fresh
+    status: ready
+    gaps: []
+    consumers:
+    - 复权/回测
+    - query bars(复权)
+    - 跨源对账(#515)
+    notes: 2013-01-04 起；fuyao dump 每日刷新(#617)；黄金集作用域=#620
+  fund_adj:
+    domain: market
+    tier: t1_incremental
+    sources:
+    - tushare
+    provider_apis:
+    - fund_adj
+    declared:
+      frequency: trading_daily
+      update_frequency: 每日
+      coverage_start_rule: R2 modern A-share window
+      currency: null
+      timezone: Asia/Shanghai
+      typical_available_time: '19:00:00'
+    measured:
+      storage: parquet:market/etf/adj
+      rows: 1634454
+      instruments: 1841
+      start: '2013-01-04'
+      end: '2026-10-29'
+    catalog_latest:
+      date: '2026-10-29'
+      status: success
+      partition_rows: 1713
+      freshness: fresh
+    status: ready
+    gaps: []
+    consumers:
+    - ETF 复权
+    - query bars
+    notes: 2013-01-04 起
+  etf_nav:
+    domain: market
+    tier: t1_incremental
+    sources:
+    - tushare
+    provider_apis:
+    - fund_nav
+    declared:
+      frequency: trading_daily
+      update_frequency: 每日
+      coverage_start_rule: outside R2 release gate
+      currency: null
+      timezone: Asia/Shanghai
+      typical_available_time: '21:30:00'
+    measured:
+      storage: parquet:market/etf/nav
+      rows: 1521109
+      instruments: 1862
+      start: '2014-01-01'
+      end: '2026-10-26'
+    catalog_latest:
+      date: '2026-10-29'
+      status: failed
+      partition_rows: 8388
+      freshness: stale
+    status: partial
+    gaps:
+    - 末端 2026-10-26 后缺（10-29 摄取 failed 待 P1）
+    consumers:
+    - ETF 估值
+    - query nav
+    - 对账(#473-475)
+    notes: 2014-01-01 起
+  stock_limit:
+    domain: market
+    tier: t1_incremental
+    sources:
+    - tushare
+    provider_apis:
+    - stk_limit
+    declared:
+      frequency: trading_daily
+      update_frequency: 每日
+      coverage_start_rule: outside R2 release gate
+      currency: CNY
+      timezone: Asia/Shanghai
+      typical_available_time: '17:30:00'
+    measured:
+      storage: parquet:market/stock/limit
+      rows: 12697168
+      instruments: 6972
+      start: '2014-01-02'
+      end: '2026-10-29'
+    catalog_latest:
+      date: '2026-10-29'
+      status: success
+      partition_rows: 5858
+      freshness: fresh
+    status: ready
+    gaps: []
+    consumers:
+    - 涨跌停门控(#571)
+    - 回测拒单
+    - query bars
+    notes: '2014-01-02 起；停牌日发行语义 #571'
+  moneyflow:
+    domain: capital
+    tier: t1_incremental
+    sources:
+    - tushare
+    provider_apis:
+    - moneyflow
+    declared:
+      frequency: trading_daily
+      update_frequency: 每日
+      coverage_start_rule: outside R2 release gate
+      currency: CNY
+      timezone: Asia/Shanghai
+      typical_available_time: '18:30:00'
+    measured:
+      storage: parquet:capital/moneyflow
+      rows: 12036207
+      instruments: 5838
+      start: '2014-01-02'
+      end: '2026-10-29'
+    catalog_latest:
+      date: '2026-10-29'
+      status: success
+      partition_rows: 5576
+      freshness: fresh
+    status: ready
+    gaps: []
+    consumers:
+    - 资金面分析
+    - query margin/moneyflow
+    - patrol
+    notes: 2014-01-02 起 1,203 万行（#196 回补）
+  cyq_perf:
+    domain: capital
+    tier: t1_incremental
+    sources:
+    - tushare
+    provider_apis:
+    - cyq_perf
+    declared:
+      frequency: trading_daily
+      update_frequency: 每日
+      coverage_start_rule: outside R2 release gate
+      currency: CNY
+      timezone: Asia/Shanghai
+      typical_available_time: '18:30:00'
+    measured:
+      storage: parquet:capital/cyq_perf
+      rows: 9564705
+      instruments: 5629
+      start: '2018-01-02'
+      end: '2026-10-29'
+    catalog_latest:
+      date: '2026-10-29'
+      status: success
+      partition_rows: 5569
+      freshness: fresh
+    status: partial
+    gaps:
+    - 官方数据起点 2018-01-02，2014~2017 源侧不可得
+    consumers:
+    - 筹码分布
+    - query capital
+    notes: 15000 积分档特色数据
+  limit_list:
+    domain: market
+    tier: t1_incremental
+    sources:
+    - tushare
+    provider_apis:
+    - limit_list_d
+    declared:
+      frequency: event
+      update_frequency: 每日
+      coverage_start_rule: outside R2 release gate
+      currency: CNY
+      timezone: Asia/Shanghai
+      typical_available_time: '18:00:00'
+    measured:
+      storage: parquet:market/stock/limit_list
+      rows: 519
+      instruments: 406
+      start: '2026-09-30'
+      end: '2026-10-29'
+    catalog_latest:
+      date: '2026-10-29'
+      status: success
+      partition_rows: 105
+      freshness: fresh
+    status: partial
+    gaps:
+    - 仅 2026-09-30 起无历史回补
+    consumers:
+    - 涨停板观察
+    - query market
+    notes: ''
+  top_list:
+    domain: capital
+    tier: t1_incremental
+    sources:
+    - tushare
+    provider_apis:
+    - top_list
+    declared:
+      frequency: event
+      update_frequency: 每日
+      coverage_start_rule: outside R2 release gate
+      currency: CNY
+      timezone: Asia/Shanghai
+      typical_available_time: '18:30:00'
+    measured:
+      storage: parquet:capital/top_list
+      rows: 399
+      instruments: 251
+      start: '2026-09-22'
+      end: '2026-10-29'
+    catalog_latest:
+      date: '2026-10-29'
+      status: success
+      partition_rows: 73
+      freshness: fresh
+    status: partial
+    gaps:
+    - 仅 2026-09-22 起无历史回补
+    consumers:
+    - 龙虎榜观察
+    - query capital
+    notes: 席位不推导整体仓位（#621 语义）
+  top_inst:
+    domain: capital
+    tier: t1_incremental
+    sources:
+    - tushare
+    provider_apis:
+    - top_inst
+    declared:
+      frequency: event
+      update_frequency: 每日
+      coverage_start_rule: outside R2 release gate
+      currency: CNY
+      timezone: Asia/Shanghai
+      typical_available_time: '18:30:00'
+    measured:
+      storage: parquet:capital/top_inst
+      rows: 3555
+      instruments: 251
+      start: '2026-09-22'
+      end: '2026-10-29'
+    catalog_latest:
+      date: '2026-10-29'
+      status: success
+      partition_rows: 639
+      freshness: fresh
+    status: partial
+    gaps:
+    - 仅 2026-09-22 起无历史回补
+    consumers:
+    - 机构席位观察
+    - query capital
+    notes: ''
+  hk_hold:
+    domain: capital
+    tier: t1_incremental
+    sources:
+    - tushare
+    provider_apis:
+    - hk_hold
+    declared:
+      frequency: event
+      update_frequency: 每日
+      coverage_start_rule: outside R2 release gate
+      currency: null
+      timezone: Asia/Shanghai
+      typical_available_time: '19:00:00'
+    measured:
+      storage: （无落点）
+      rows: 0
+      instruments: null
+      start: null
+      end: null
+    catalog_latest:
+      date: '2026-10-29'
+      status: success
+      partition_rows: 0
+      freshness: fresh
+    status: empty
+    gaps:
+    - 本地 0 行；源可达（探针 2026-09-30 返回 4,200 行/日）——摄取链空转根因属 P1
+    consumers:
+    - 北向持股
+    - query capital
+    notes: '#621「北向空源」修正：源非空，链路问题'
+  hsgt_top10:
+    domain: capital
+    tier: t1_incremental
+    sources:
+    - tushare
+    provider_apis:
+    - hsgt_top10
+    declared:
+      frequency: event
+      update_frequency: 每日
+      coverage_start_rule: outside R2 release gate
+      currency: CNY
+      timezone: Asia/Shanghai
+      typical_available_time: '19:00:00'
+    measured:
+      storage: parquet:capital/hsgt_top10
+      rows: 100
+      instruments: 37
+      start: '2026-09-30'
+      end: '2026-10-29'
+    catalog_latest:
+      date: '2026-10-29'
+      status: success
+      partition_rows: 20
+      freshness: fresh
+    status: partial
+    gaps:
+    - 2026-09-30 起 100 行（约 5 个交易日×20 行），交易日覆盖稀疏待查（P1）
+    consumers:
+    - 沪深港通十大成交
+    - query capital
+    notes: ''
+  fina_indicator:
+    domain: fundamental
+    tier: t1_incremental
+    sources:
+    - tushare
+    provider_apis:
+    - fina_indicator
+    declared:
+      frequency: quarterly
+      update_frequency: 每日
+      coverage_start_rule: outside R2 release gate
+      currency: CNY
+      timezone: Asia/Shanghai
+      typical_available_time: '20:30:00'
+    measured:
+      storage: parquet:fundamental/fina_indicator
+      rows: 260609
+      instruments: 5886
+      start: '2012-03-31'
+      end: '2026-09-30'
+    catalog_latest:
+      date: '2026-10-29'
+      status: failed
+      partition_rows: 40432
+      freshness: fresh
+    status: ready
+    gaps: []
+    consumers:
+    - 财务因子
+    - query indicators
+    notes: 2012-03-31 起超目标；存量跨年错位 33,851 组遗留=#613 线（#620 后仍留档）；10-29 failed（无新报告期日失败语义待 P1；Q3 报告期数据完整）
+  fund_share:
+    domain: market
+    tier: t1_incremental
+    sources:
+    - tushare
+    provider_apis:
+    - fund_share
+    declared:
+      frequency: trading_daily
+      update_frequency: 每日
+      coverage_start_rule: outside R2 release gate
+      currency: null
+      timezone: Asia/Shanghai
+      typical_available_time: '21:00:00'
+    measured:
+      storage: parquet:market/etf/fund_share
+      rows: 1572733
+      instruments: 1857
+      start: '2014-01-02'
+      end: '2026-10-27'
+    catalog_latest:
+      date: '2026-10-29'
+      status: success
+      partition_rows: 0
+      freshness: fresh
+    status: partial
+    gaps:
+    - 末端 2026-10-27，近两日空（节奏根因待 P1）
+    consumers:
+    - ETF 份额观察
+    - query market
+    notes: 2014-01-02 起 157 万行；存量 LOF 已清（#503 线）
+  fund_portfolio:
+    domain: fundamental
+    tier: t1_incremental
+    sources:
+    - tushare
+    provider_apis:
+    - fund_portfolio
+    declared:
+      frequency: quarterly
+      update_frequency: 每日
+      coverage_start_rule: outside R2 release gate
+      currency: CNY
+      timezone: Asia/Shanghai
+      typical_available_time: '21:00:00'
+    measured:
+      storage: parquet:fundamental/fund_portfolio
+      rows: 16671
+      instruments: 1240
+      start: '2026-06-30'
+      end: '2026-09-30'
+    catalog_latest:
+      date: '2026-10-29'
+      status: success
+      partition_rows: 0
+      freshness: fresh
+    status: partial
+    gaps:
+    - 仅 2026 Q2/Q3（16,671 行），2014 起历史未回补；场外基金身份过滤未量化（P3c）
+    consumers:
+    - 基金持仓分析
+    - query fundamental
+    notes: 探针 period=2026 返回 0——参数形状与披露节奏待 P3c 核对
+  balance_sheet:
+    domain: fundamental
+    tier: t1_incremental
+    sources:
+    - tushare
+    provider_apis:
+    - balancesheet
+    declared:
+      frequency: quarterly
+      update_frequency: 每日
+      coverage_start_rule: knowledge_date on or after R2 operational window
+      currency: CNY
+      timezone: Asia/Shanghai
+      typical_available_time: '20:30:00'
+    measured:
+      storage: sqlite:balance_sheet
+      rows: 237390
+      instruments: null
+      start: '2011-12-31'
+      end: '2026-09-30'
+    catalog_latest:
+      date: '2026-10-29'
+      status: success
+      partition_rows: 44271
+      freshness: fresh
+    status: ready
+    gaps: []
+    consumers:
+    - 财务因子/回测
+    - query financials
+    - 对账
+    notes: 2011-12-31 起超目标，Q 报告期至 2026-09-30
+  income_statement:
+    domain: fundamental
+    tier: t1_incremental
+    sources:
+    - tushare
+    provider_apis:
+    - income
+    declared:
+      frequency: quarterly
+      update_frequency: 每日
+      coverage_start_rule: knowledge_date on or after R2 operational window
+      currency: CNY
+      timezone: Asia/Shanghai
+      typical_available_time: '20:30:00'
+    measured:
+      storage: sqlite:income_statement
+      rows: 242484
+      instruments: null
+      start: '2011-12-31'
+      end: '2026-09-30'
+    catalog_latest:
+      date: '2026-10-29'
+      status: success
+      partition_rows: 44372
+      freshness: fresh
+    status: ready
+    gaps: []
+    consumers:
+    - 财务因子/回测
+    - query financials
+    - 对账
+    notes: 同上；本地库对 schema.sql 有漂移守卫拦截记录（XDG 陈旧库，非本库）
+  cash_flow:
+    domain: fundamental
+    tier: t1_incremental
+    sources:
+    - tushare
+    provider_apis:
+    - cashflow
+    declared:
+      frequency: quarterly
+      update_frequency: 每日
+      coverage_start_rule: knowledge_date on or after R2 operational window
+      currency: CNY
+      timezone: Asia/Shanghai
+      typical_available_time: '20:30:00'
+    measured:
+      storage: sqlite:cash_flow
+      rows: 223484
+      instruments: null
+      start: '2011-12-31'
+      end: '2026-09-30'
+    catalog_latest:
+      date: '2026-10-29'
+      status: failed
+      partition_rows: 43483
+      freshness: fresh
+    status: ready
+    gaps: []
+    consumers:
+    - 财务因子/回测
+    - query financials
+    notes: 2011-12-31 起；12 分区代理 EOF 留档（#196）；10-29 摄取 failed 待 P1
+  dividend:
+    domain: fundamental
+    tier: t1_incremental
+    sources:
+    - tushare
+    provider_apis:
+    - dividend
+    declared:
+      frequency: event
+      update_frequency: 每日
+      coverage_start_rule: knowledge_date on or after R2 operational window
+      currency: CNY
+      timezone: Asia/Shanghai
+      typical_available_time: '20:00:00'
+    measured:
+      storage: sqlite:dividend
+      rows: 266395
+      instruments: null
+      start: '2014-02-12'
+      end: '2026-10-28'
+    catalog_latest:
+      date: '2026-10-29'
+      status: success
+      partition_rows: 0
+      freshness: fresh
+    status: ready
+    gaps: []
+    consumers:
+    - 分红/复权
+    - query dividend
+    notes: ex_date 2014-02-12 起；当日无除权事件=正常空
+  valuation_metrics:
+    domain: capital
+    tier: t1_incremental
+    sources:
+    - tushare
+    provider_apis:
+    - daily_basic
+    declared:
+      frequency: trading_daily
+      update_frequency: 每日
+      coverage_start_rule: R2 modern A-share window
+      currency: CNY
+      timezone: Asia/Shanghai
+      typical_available_time: '19:30:00'
+    measured:
+      storage: sqlite:valuation_metrics
+      rows: 12294818
+      instruments: null
+      start: '2014-01-02'
+      end: '2026-10-29'
+    catalog_latest:
+      date: '2026-10-29'
+      status: success
+      partition_rows: 5569
+      freshness: fresh
+    status: ready
+    gaps: []
+    consumers:
+    - 估值/选池/回测
+    - query valuation
+    notes: 2014-01-02 起 1,229 万行
+  margin_trading:
+    domain: capital
+    tier: t1_incremental
+    sources:
+    - tushare
+    provider_apis:
+    - margin_detail
+    declared:
+      frequency: trading_daily
+      update_frequency: 每日
+      coverage_start_rule: outside R2 release gate
+      currency: CNY
+      timezone: Asia/Shanghai
+      typical_available_time: '19:30:00'
+    measured:
+      storage: sqlite:margin_trading
+      rows: 0
+      instruments: null
+      start: null
+      end: null
+    catalog_latest:
+      date: '2026-10-29'
+      status: success
+      partition_rows: 0
+      freshness: fresh
+    status: empty
+    gaps:
+    - 本地 0 行；源可达（探针 2026-10-29 返回 4,486 行）——摄取链空转根因属 P1
+    consumers:
+    - 融资融券分析
+    - query margin
+    notes: '#621「融资空源」修正：源非空，链路问题'
+  pledge_ratio:
+    domain: capital
+    tier: t1_incremental
+    sources:
+    - tushare
+    provider_apis:
+    - pledge_stat
+    declared:
+      frequency: quarterly
+      update_frequency: 每日
+      coverage_start_rule: outside R2 release gate
+      currency: CNY
+      timezone: Asia/Shanghai
+      typical_available_time: '21:00:00'
+    measured:
+      storage: sqlite:pledge_ratio
+      rows: 1632293
+      instruments: null
+      start: '2014-03-07'
+      end: '2026-09-18'
+    catalog_latest:
+      date: '2026-10-29'
+      status: failed
+      partition_rows: 0
+      freshness: fresh
+    status: partial
+    gaps:
+    - 周更数据末端 2026-09-18，停更 6 周；10-27/10-29 摄取 failed 待 P1
+    consumers:
+    - 质押观察
+    - query capital
+    notes: 2014-03-07 起 163 万行（#503 线回补后）
+  macro_indicators:
+    domain: macro
+    tier: t1_incremental
+    sources:
+    - tushare
+    - fred
+    provider_apis:
+    - cn_gdp
+    - cn_cpi
+    - cn_ppi
+    - cn_pmi
+    - cn_m
+    - sf_month
+    - shibor
+    declared:
+      frequency: source_defined
+      update_frequency: 每日
+      coverage_start_rule: release and revision schedule
+      currency: mixed
+      timezone: source_defined
+      typical_available_time: '21:30:00'
+    measured:
+      storage: sqlite:macro_indicator_data
+      rows: 884
+      instruments: null
+      start: '2015-01-01'
+      end: '2026-09-01'
+    catalog_latest:
+      date: '2026-10-29'
+      status: failed
+      partition_rows: 0
+      freshness: fresh
+    status: partial
+    gaps:
+    - 月度数据末端 2026-09-01，10 月未更新；近期日链 failed 待 P1
+    - 884 行×7 指标，FRED 系列覆盖完整性属 P5a
+    consumers:
+    - 宏观背景
+    - query macro
+    - market_context
+    notes: tushare 全系+fred 探针可达；alfred:vintages=observations+realtime 参数
+  fx_daily:
+    domain: macro
+    tier: t1_incremental
+    sources:
+    - tushare
+    provider_apis:
+    - fx_daily
+    declared:
+      frequency: trading_daily
+      update_frequency: 每日
+      coverage_start_rule: outside R2 release gate
+      currency: mixed
+      timezone: source_defined
+      typical_available_time: '21:30:00'
+    measured:
+      storage: （无落点）
+      rows: 0
+      instruments: null
+      start: null
+      end: null
+    catalog_latest:
+      date: '2026-10-29'
+      status: success
+      partition_rows: 0
+      freshness: fresh
+    status: empty
+    gaps:
+    - 本地 0 行（无 parquet/sqlite 落点）；源可达（探针 101 行/日）——摄取链空转根因属 P1
+    consumers:
+    - 汇率背景
+    - query market
+    notes: '#434-437 交付通路后日链零产出'
+  commodity_daily:
+    domain: macro
+    tier: t1_incremental
+    sources:
+    - tushare
+    - aux:fred
+    provider_apis:
+    - fx_daily
+    declared:
+      frequency: source_defined
+      update_frequency: 每日
+      coverage_start_rule: declared product schedule
+      currency: mixed
+      timezone: source_defined
+      typical_available_time: '21:30:00'
+    measured:
+      storage: parquet:market/commodity/bars
+      rows: 12
+      instruments: 3
+      start: '2026-10-26'
+      end: '2026-10-29'
+    catalog_latest:
+      date: '2026-10-29'
+      status: success
+      partition_rows: 3
+      freshness: fresh
+    status: partial
+    gaps:
+    - 仅 2026-10-26 起 12 行×3 品种，历史未回补；FRED 辅源口径属 P5a
+    consumers:
+    - 大宗背景
+    - query market
+    - market_context
+    notes: SHFE 修正 ID 等坑=#434-437 留档；provider 标签 commodity_reference 非真实 API，tushare 侧走 fx_daily 端点（metal 通道），FRED
+      辅源
+  corporate_actions:
+    domain: capital
+    tier: t1_incremental
+    sources:
+    - tushare
+    provider_apis:
+    - repurchase
+    - share_float
+    - rights
+    declared:
+      frequency: event
+      update_frequency: 每日
+      coverage_start_rule: R2 modern A-share window
+      currency: CNY
+      timezone: Asia/Shanghai
+      typical_available_time: '20:00:00'
+    measured:
+      storage: sqlite:corporate_actions
+      rows: 92927
+      instruments: null
+      start: '2007-05-23'
+      end: '2034-01-20'
+    catalog_latest:
+      date: '2026-10-29'
+      status: success
+      partition_rows: 27
+      freshness: fresh
+    status: partial
+    gaps:
+    - rights（分配预案）经代理 50101 不可达（#517-#523 降级裁决）；repurchase/share_float 可达
+    consumers:
+    - 公司行动/回测
+    - query fundamental
+    notes: 2007-05-23 起 9.3 万行；含未来日期=预案计划日，PIT 由 knowledge_date 守
+  index_weight:
+    domain: market
+    tier: t1_incremental
+    sources:
+    - tushare
+    provider_apis:
+    - index_weight
+    declared:
+      frequency: monthly
+      update_frequency: 每日
+      coverage_start_rule: monthly observation snapshots
+      currency: null
+      timezone: Asia/Shanghai
+      typical_available_time: '19:00:00'
+    measured:
+      storage: sqlite:index_weight
+      rows: 1908665
+      instruments: null
+      start: '2014-01-30'
+      end: '2026-09-30'
+    catalog_latest:
+      date: '2026-10-29'
+      status: success
+      partition_rows: 0
+      freshness: fresh
+    status: ready
+    gaps: []
+    consumers:
+    - 轮动/指数归属(#452)
+    - historical_universe
+    - query market
+    notes: 2014-01-30 起 191 万行；月度数据末端 2026-09-30（10 月未结束，正常）
+  industry_classification:
+    domain: metadata
+    tier: t1_incremental
+    sources:
+    - tushare
+    provider_apis:
+    - index_classify
+    - index_member_all
+    - csrc_industrial
+    declared:
+      frequency: source_defined
+      update_frequency: 每日
+      coverage_start_rule: classification version and actual retrieval visibility
+      currency: null
+      timezone: source_defined
+      typical_available_time: '19:00:00'
+    measured:
+      storage: sqlite:industry_basic
+      rows: 31
+      instruments: null
+      start: null
+      end: null
+    catalog_latest:
+      date: '2026-10-29'
+      status: success
+      partition_rows: 31
+      freshness: fresh
+    status: partial
+    gaps:
+    - csrc_industrial 2002 权限不足（SW 申万线可用）
+    consumers:
+    - 行业轮动(#196)
+    - q3_live_discovery
+    notes: 申万 L1 28 分类（探针核实）+映射 7,919 行
+  industry_mapping:
+    domain: metadata
+    tier: t1_incremental
+    sources:
+    - tushare
+    provider_apis:
+    - index_member_all
+    declared:
+      frequency: source_defined
+      update_frequency: 每日
+      coverage_start_rule: effective interval and actual retrieval visibility
+      currency: null
+      timezone: source_defined
+      typical_available_time: '19:00:00'
+    measured:
+      storage: sqlite:industry_mapping
+      rows: 7919
+      instruments: null
+      start: '1984-05-09'
+      end: '2026-09-24'
+    catalog_latest:
+      date: '2026-10-29'
+      status: success
+      partition_rows: 7919
+      freshness: fresh
+    status: ready
+    gaps: []
+    consumers:
+    - 行业轮动
+    - q3_live_discovery
+    notes: as-of 语义=#452；周刷 cron 已建（#612）
+  namechange:
+    domain: metadata
+    tier: t1_incremental
+    sources:
+    - tushare
+    provider_apis:
+    - namechange
+    declared:
+      frequency: source_defined
+      update_frequency: 每日
+      coverage_start_rule: outside R2 release gate
+      currency: null
+      timezone: source_defined
+      typical_available_time: '20:30:00'
+    measured:
+      storage: sqlite:instrument_name_history
+      rows: 3538
+      instruments: null
+      start: '2013-01-10'
+      end: '2026-10-29'
+    catalog_latest:
+      date: '2026-10-29'
+      status: success
+      partition_rows: 16
+      freshness: fresh
+    status: ready
+    gaps: []
+    consumers:
+    - 历史身份(#395)
+    - instrument 历史层（经表而非 dataset id 消费）
+    notes: 2013-01-10 起 3,538 行；窗口拼接=#619
+  st_history:
+    domain: market
+    tier: t1_incremental
+    sources:
+    - tushare
+    provider_apis:
+    - namechange
+    declared:
+      frequency: source_defined
+      update_frequency: 每日
+      coverage_start_rule: outside R2 release gate
+      currency: null
+      timezone: source_defined
+      typical_available_time: '20:30:00'
+    measured:
+      storage: sqlite:st_change_history
+      rows: 1848
+      instruments: null
+      start: '2013-01-14'
+      end: '2026-10-20'
+    catalog_latest:
+      date: '2026-10-29'
+      status: success
+      partition_rows: 5
+      freshness: fresh
+    status: ready
+    gaps: []
+    consumers:
+    - 历史身份/ST 过滤
+    - instrument 历史层
+    notes: 1,848 行区间语义
+  futures_daily:
+    domain: market
+    tier: t1_incremental
+    sources:
+    - tushare
+    provider_apis:
+    - fut_daily
+    declared:
+      frequency: trading_daily
+      update_frequency: 每日
+      coverage_start_rule: outside R2 release gate
+      currency: CNY
+      timezone: Asia/Shanghai
+      typical_available_time: '21:30:00'
+    measured:
+      storage: parquet:market/futures/daily
+      rows: 4300
+      instruments: 1081
+      start: '2026-10-26'
+      end: '2026-10-29'
+    catalog_latest:
+      date: '2026-10-29'
+      status: success
+      partition_rows: 1075
+      freshness: fresh
+    status: partial
+    gaps:
+    - 仅 2026-10-26 起 4 日，历史未回补
+    consumers:
+    - 期货背景
+    - query market
+    notes: fut_daily 源可达
+  futures_basic:
+    domain: market
+    tier: t1_incremental
+    sources:
+    - tushare
+    provider_apis:
+    - fut_basic
+    declared:
+      frequency: static
+      update_frequency: 每日
+      coverage_start_rule: outside R2 release gate
+      currency: null
+      timezone: Asia/Shanghai
+      typical_available_time: '21:30:00'
+    measured:
+      storage: parquet:market/futures/basic
+      rows: 34057
+      instruments: 10691
+      start: '1995-04-17'
+      end: '2026-10-28'
+    catalog_latest:
+      date: '2026-10-29'
+      status: success
+      partition_rows: 11356
+      freshness: fresh
+    status: ready
+    gaps: []
+    consumers:
+    - 合约元数据
+    - query market
+    notes: 1995 起 34,057 行
+  earnings_forecast:
+    domain: fundamental
+    tier: t1_incremental
+    sources:
+    - tushare
+    provider_apis:
+    - forecast
+    - forecast_vip
+    declared:
+      frequency: event
+      update_frequency: 每日
+      coverage_start_rule: outside R2 release gate
+      currency: CNY
+      timezone: Asia/Shanghai
+      typical_available_time: '20:30:00'
+    measured:
+      storage: （无落点）
+      rows: 0
+      instruments: null
+      start: null
+      end: null
+    catalog_latest:
+      date: '2026-10-29'
+      status: success
+      partition_rows: 0
+      freshness: fresh
+    status: empty
+    gaps:
+    - 本地 0 行；源可达（探针 16 行）——日链零产出根因属 P1
+    consumers:
+    - 业绩预告
+    - query fundamental
+    notes: ''
+  earnings_express:
+    domain: fundamental
+    tier: t1_incremental
+    sources:
+    - tushare
+    provider_apis:
+    - express
+    - express_vip
+    declared:
+      frequency: event
+      update_frequency: 每日
+      coverage_start_rule: outside R2 release gate
+      currency: CNY
+      timezone: Asia/Shanghai
+      typical_available_time: '20:30:00'
+    measured:
+      storage: （无落点）
+      rows: 0
+      instruments: null
+      start: null
+      end: null
+    catalog_latest:
+      date: '2026-10-29'
+      status: success
+      partition_rows: 0
+      freshness: fresh
+    status: empty
+    gaps:
+    - 本地 0 行；源可达（探针 4 行）——日链零产出根因属 P1
+    consumers:
+    - 业绩快报
+    - query fundamental
+    notes: ''
+  index_valuation:
+    domain: capital
+    tier: t1_incremental
+    sources:
+    - tushare
+    provider_apis:
+    - index_dailybasic
+    declared:
+      frequency: trading_daily
+      update_frequency: 每日
+      coverage_start_rule: outside R2 release gate
+      currency: CNY
+      timezone: Asia/Shanghai
+      typical_available_time: '19:30:00'
+    measured:
+      storage: parquet:capital/index_valuation
+      rows: 60
+      instruments: 15
+      start: '2026-10-26'
+      end: '2026-10-29'
+    catalog_latest:
+      date: '2026-10-29'
+      status: success
+      partition_rows: 15
+      freshness: fresh
+    status: partial
+    gaps:
+    - 仅 2026-10-26 起 60 行×15 指数，历史未回补
+    consumers:
+    - 指数估值
+    - query capital
+    notes: ''

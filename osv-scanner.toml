@@ -96,3 +96,73 @@ ignoreUntil = 2027-01-07
 id = "GHSA-cx28-75q4-x26q"
 reason = "virtualenv 修复版需 packaging>=26.3 被 prefect 阻断（同 10-22 批根因）；dev-only。"
 ignoreUntil = 2027-01-07
+
+# ── 2026-10-30 第五批（#631 门禁解锁）──────────────────────────────
+# filelock 2026-10-28~30 新公告 10 条：修复版均在 4.x 线（多数 4.2.1，
+# GHSA-j8f7 为 4.0.9），3.x 线无补丁，与 10-24 批同根同阻——被 dev 工具链
+# （tox/virtualenv 传递依赖）的上限锁在 3.32.7；dev-only，不进运行时制品。
+# 随 #609（prefect/packaging 升级解阻）一并出豁免。
+[[IgnoredVulns]]
+id = "GHSA-6627-m3xw-93mp"
+reason = "filelock 修复版仅 4.x（3.x 无补丁），被 dev 工具链传递依赖上限阻断；dev-only。"
+ignoreUntil = 2027-01-07
+
+[[IgnoredVulns]]
+id = "GHSA-69hj-f68j-2879"
+reason = "filelock 修复版仅 4.x（3.x 无补丁），被 dev 工具链传递依赖上限阻断；dev-only。"
+ignoreUntil = 2027-01-07
+
+[[IgnoredVulns]]
+id = "GHSA-8mx5-7m5m-r77g"
+reason = "filelock 修复版仅 4.x（3.x 无补丁），被 dev 工具链传递依赖上限阻断；dev-only。"
+ignoreUntil = 2027-01-07
+
+[[IgnoredVulns]]
+id = "GHSA-9c4x-gm8v-wgc4"
+reason = "filelock 修复版仅 4.x（3.x 无补丁），被 dev 工具链传递依赖上限阻断；dev-only。"
+ignoreUntil = 2027-01-07
+
+[[IgnoredVulns]]
+id = "GHSA-9j6q-wvj5-jgjg"
+reason = "filelock 修复版仅 4.x（3.x 无补丁），被 dev 工具链传递依赖上限阻断；dev-only。"
+ignoreUntil = 2027-01-07
+
+[[IgnoredVulns]]
+id = "GHSA-cwqr-hh33-gh44"
+reason = "filelock 修复版仅 4.x（3.x 无补丁），被 dev 工具链传递依赖上限阻断；dev-only。"
+ignoreUntil = 2027-01-07
+
+[[IgnoredVulns]]
+id = "GHSA-fq56-3cx3-fjxp"
+reason = "filelock 修复版仅 4.x（3.x 无补丁），被 dev 工具链传递依赖上限阻断；dev-only。"
+ignoreUntil = 2027-01-07
+
+[[IgnoredVulns]]
+id = "GHSA-j8f7-rjxc-mr56"
+reason = "filelock 修复版仅 4.x（本条 4.0.9；3.x 无补丁），被 dev 工具链传递依赖上限阻断；dev-only。"
+ignoreUntil = 2027-01-07
+
+[[IgnoredVulns]]
+id = "GHSA-m462-7rxw-wvpg"
+reason = "filelock 修复版仅 4.x（3.x 无补丁），被 dev 工具链传递依赖上限阻断；dev-only。"
+ignoreUntil = 2027-01-07
+
+[[IgnoredVulns]]
+id = "GHSA-rfpc-qcw5-3pc4"
+reason = "filelock 修复版仅 4.x（3.x 无补丁），被 dev 工具链传递依赖上限阻断；dev-only。"
+ignoreUntil = 2027-01-07
+
+# glob/minimatch（2026-10-30 第三波新公告，扫描间 OSV 库新增）：构建期
+# 工具链传递依赖（glob 13.0.6、minimatch 10.2.6/5.1.9），修复版均为 major
+# 跳版（glob 14.0.2、minimatch 11.0.1）——嵌套 minimatch 5.1.9 父范围 ^5
+# 无 11.x 可取，glob 14 跨 major 未随工具链验证；dev-only 不进 Web 运行时
+# 产物。随构建工具链 major 升级批次真修后删除。
+[[IgnoredVulns]]
+id = "GHSA-3g3m-2fjr-6pw4"
+reason = "glob 修复版 14.0.2 为 major 跳版，构建期传递依赖未随工具链验证；dev-only，不进运行时制品。"
+ignoreUntil = 2027-01-07
+
+[[IgnoredVulns]]
+id = "GHSA-g3hv-75wg-m249"
+reason = "minimatch 修复版 11.0.1 为 major 跳版，嵌套 5.1.9 父范围 ^5 无法取 11.x；dev-only，不进运行时制品。"
+ignoreUntil = 2027-01-07
