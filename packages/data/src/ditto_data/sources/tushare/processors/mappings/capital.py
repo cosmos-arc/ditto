@@ -60,19 +60,23 @@ DIVIDEND_MAPPING = ColumnMapping(
 )
 
 # Margin Trading - PIT data
+# 单位口径（tushare doc_id=59）：rzye/rqye/rzmre 为元（金额），rqmcl 为
+# 股/份/手（数量，按标的类型各异）。#625 修正 rzmre 列名语义：融资买入
+# 额是金额不是量，此前误标 *_volume；margin_trading 表为 0 行时改名，
+# 无存量迁移。
 MARGIN_TRADING_MAPPING = ColumnMapping(
     rename={
         "ts_code": "source_ticker",
         "rzye": "margin_buy_balance",
         "rqye": "short_sell_balance",
-        "rzmre": "margin_buy_volume",
+        "rzmre": "margin_buy_amount",
         "rqmcl": "short_sell_volume",
     },
     date_columns={"trade_date": "%Y%m%d"},
     float_columns=[
         "margin_buy_balance",
         "short_sell_balance",
-        "margin_buy_volume",
+        "margin_buy_amount",
         "short_sell_volume",
     ],
     computed_columns={"knowledge_date": pl.col("trade_date") + pl.duration(days=1)},
@@ -82,7 +86,7 @@ MARGIN_TRADING_MAPPING = ColumnMapping(
         "knowledge_date",
         "margin_buy_balance",
         "short_sell_balance",
-        "margin_buy_volume",
+        "margin_buy_amount",
         "short_sell_volume",
     ),
 )

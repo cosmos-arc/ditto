@@ -28,7 +28,7 @@ def margin_df() -> pl.DataFrame:
             "trade_date": ["2024-01-15"],
             "margin_buy_balance": [1_500_000_000.0],
             "short_sell_balance": [200_000_000.0],
-            "margin_buy_volume": [50_000],
+            "margin_buy_amount": [50_000],
             "short_sell_volume": [10_000],
         }
     )

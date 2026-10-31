@@ -28,7 +28,7 @@ def in_memory_db() -> SQLiteClient:
         effective_to DATE,
         margin_buy_balance REAL,
         short_sell_balance REAL,
-        margin_buy_volume REAL,
+        margin_buy_amount REAL,
         short_sell_volume REAL,
         PRIMARY KEY (instrument_id, trade_date, effective_from)
     )"""
@@ -51,7 +51,7 @@ def test_get_returns_data(
     in_memory_db.execute(
         """INSERT INTO margin_trading
         (instrument_id, trade_date, knowledge_date, effective_from, effective_to,
-         margin_buy_balance, short_sell_balance, margin_buy_volume, short_sell_volume)
+         margin_buy_balance, short_sell_balance, margin_buy_amount, short_sell_volume)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
         [
             "600000.SH",
@@ -85,7 +85,7 @@ def test_get_no_data(reader: MarginTradingReader, in_memory_db: SQLiteClient) ->
     in_memory_db.execute(
         """INSERT INTO margin_trading
         (instrument_id, trade_date, knowledge_date, effective_from, effective_to,
-         margin_buy_balance, short_sell_balance, margin_buy_volume, short_sell_volume)
+         margin_buy_balance, short_sell_balance, margin_buy_amount, short_sell_volume)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
         [
             "000001.SZ",
@@ -111,7 +111,7 @@ def test_get_pit_query(reader: MarginTradingReader, in_memory_db: SQLiteClient) 
     in_memory_db.execute(
         """INSERT INTO margin_trading
         (instrument_id, trade_date, knowledge_date, effective_from, effective_to,
-         margin_buy_balance, short_sell_balance, margin_buy_volume, short_sell_volume)
+         margin_buy_balance, short_sell_balance, margin_buy_amount, short_sell_volume)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
         [
             "600000.SH",
@@ -128,7 +128,7 @@ def test_get_pit_query(reader: MarginTradingReader, in_memory_db: SQLiteClient) 
     in_memory_db.execute(
         """INSERT INTO margin_trading
         (instrument_id, trade_date, knowledge_date, effective_from, effective_to,
-         margin_buy_balance, short_sell_balance, margin_buy_volume, short_sell_volume)
+         margin_buy_balance, short_sell_balance, margin_buy_amount, short_sell_volume)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
         [
             "600000.SH",
@@ -158,7 +158,7 @@ def test_get_pit_query_excludes_expired_version(
     in_memory_db.execute(
         """INSERT INTO margin_trading
         (instrument_id, trade_date, knowledge_date, effective_from, effective_to,
-         margin_buy_balance, short_sell_balance, margin_buy_volume, short_sell_volume)
+         margin_buy_balance, short_sell_balance, margin_buy_amount, short_sell_volume)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
         [
             "600000.SH",
@@ -187,7 +187,7 @@ def test_get_ordering_by_trade_date(
     in_memory_db.execute(
         """INSERT INTO margin_trading
         (instrument_id, trade_date, knowledge_date, effective_from, effective_to,
-         margin_buy_balance, short_sell_balance, margin_buy_volume, short_sell_volume)
+         margin_buy_balance, short_sell_balance, margin_buy_amount, short_sell_volume)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
         [
             "600000.SH",
@@ -204,7 +204,7 @@ def test_get_ordering_by_trade_date(
     in_memory_db.execute(
         """INSERT INTO margin_trading
         (instrument_id, trade_date, knowledge_date, effective_from, effective_to,
-         margin_buy_balance, short_sell_balance, margin_buy_volume, short_sell_volume)
+         margin_buy_balance, short_sell_balance, margin_buy_amount, short_sell_volume)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
         [
             "600000.SH",
@@ -234,7 +234,7 @@ def test_get_handles_null_values(
     in_memory_db.execute(
         """INSERT INTO margin_trading
         (instrument_id, trade_date, knowledge_date, effective_from, effective_to,
-         margin_buy_balance, short_sell_balance, margin_buy_volume, short_sell_volume)
+         margin_buy_balance, short_sell_balance, margin_buy_amount, short_sell_volume)
         VALUES (?, ?, ?, ?, ?, NULL, NULL, NULL, NULL)""",
         ["600000.SH", date(2024, 5, 15), date(2024, 5, 15), date(2024, 5, 16), None],
     )

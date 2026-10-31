@@ -58,7 +58,7 @@ class TestMargin:
             trade_date="2024-01-15",
             margin_buy_balance=1000000.0,
             short_sell_balance=500000.0,
-            margin_buy_volume=100000,
+            margin_buy_amount=100000,
             short_sell_volume=50000,
         )
 
@@ -66,7 +66,7 @@ class TestMargin:
         assert margin.trade_date == "2024-01-15"
         assert margin.margin_buy_balance == 1000000.0
         assert margin.short_sell_balance == 500000.0
-        assert margin.margin_buy_volume == 100000
+        assert margin.margin_buy_amount == 100000
         assert margin.short_sell_volume == 50000
 
     def test_model_dump(self) -> None:
@@ -78,7 +78,7 @@ class TestMargin:
             trade_date="2024-01-15",
             margin_buy_balance=1000000.0,
             short_sell_balance=500000.0,
-            margin_buy_volume=100000,
+            margin_buy_amount=100000,
             short_sell_volume=50000,
         )
 
@@ -102,7 +102,7 @@ class TestToMargin:
             "trade_date": "2024-01-15",
             "margin_buy_balance": 1000000.0,
             "short_sell_balance": 500000.0,
-            "margin_buy_volume": 100000,
+            "margin_buy_amount": 100000,
             "short_sell_volume": 50000,
         }
 
@@ -113,7 +113,7 @@ class TestToMargin:
         assert margin.trade_date == "2024-01-15"
         assert margin.margin_buy_balance == 1000000.0
         assert margin.short_sell_balance == 500000.0
-        assert margin.margin_buy_volume == 100000
+        assert margin.margin_buy_amount == 100000
         assert margin.short_sell_volume == 50000
 
     def test_convert_string_instrument_id(self) -> None:
@@ -125,7 +125,7 @@ class TestToMargin:
             "trade_date": "2024-01-15",
             "margin_buy_balance": 1000000.0,
             "short_sell_balance": 500000.0,
-            "margin_buy_volume": 100000,
+            "margin_buy_amount": 100000,
             "short_sell_volume": 50000,
         }
 
@@ -157,7 +157,7 @@ class TestToMarginList:
                 "trade_date": ["2024-01-15"],
                 "margin_buy_balance": [1000000.0],
                 "short_sell_balance": [500000.0],
-                "margin_buy_volume": [100000],
+                "margin_buy_amount": [100000],
                 "short_sell_volume": [50000],
             }
         )
@@ -179,7 +179,7 @@ class TestToMarginList:
                 "trade_date": ["2024-01-15", "2024-01-16"],
                 "margin_buy_balance": [1000000.0, 1100000.0],
                 "short_sell_balance": [500000.0, 550000.0],
-                "margin_buy_volume": [100000, 110000],
+                "margin_buy_amount": [100000, 110000],
                 "short_sell_volume": [50000, 55000],
             }
         )

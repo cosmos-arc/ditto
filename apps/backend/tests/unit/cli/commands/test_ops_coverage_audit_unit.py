@@ -188,3 +188,94 @@ class TestAuditPriceCoverageCommand:
 
 if __name__ == "__main__":
     pytest.main([__file__])
+
+
+class TestAuditCapitalCoverageCommand:
+    """#625 ops audit-capital-coverage：moneyflow/fund_share 档位接线."""
+
+    def test_moneyflow_dataset_and_stock_roster_propagated(self, mocker: Any) -> None:
+        payload = dict(_PASSED_PAYLOAD)
+        payload["dataset"] = "moneyflow"
+        container = _mock_container(_ReportStub(payload))
+        mocker.patch(CONTAINER_PATH, return_value=container)
+        service = container.get.return_value
+        service.run = MagicMock(return_value=_ReportStub(payload))
+
+        result = runner.invoke(
+            root_app,
+            [
+                "ops",
+                "audit-capital-coverage",
+                "--dataset",
+                "moneyflow",
+                "--start",
+                "2014-01-01",
+                "--end",
+                "2026-10-29",
+                "--json",
+            ],
+        )
+
+        assert result.exit_code == 0
+        service.run.assert_called_once_with(
+            ops_module.PriceCoverageAuditRequest(
+                start_date="2014-01-01",
+                end_date="2026-10-29",
+                asset_class="stock",
+                dataset="moneyflow",
+                detail_limit=20,
+            )
+        )
+
+    def test_fund_share_defaults_to_etf_roster(self, mocker: Any) -> None:
+        payload = dict(_PASSED_PAYLOAD)
+        payload["dataset"] = "fund_share"
+        payload["asset_class"] = "etf"
+        container = _mock_container(_ReportStub(payload))
+        mocker.patch(CONTAINER_PATH, return_value=container)
+        service = container.get.return_value
+        service.run = MagicMock(return_value=_ReportStub(payload))
+
+        result = runner.invoke(
+            root_app,
+            [
+                "ops",
+                "audit-capital-coverage",
+                "--dataset",
+                "fund_share",
+                "--start",
+                "2014-01-01",
+                "--end",
+                "2026-10-29",
+                "--json",
+            ],
+        )
+
+        assert result.exit_code == 0
+        request = service.run.call_args.args[0]
+        assert request.asset_class == "etf"
+        assert request.dataset == "fund_share"
+
+    def test_nonzero_exit_when_not_passed(self, mocker: Any) -> None:
+        payload = dict(_PASSED_PAYLOAD)
+        payload["dataset"] = "moneyflow"
+        payload["passed"] = False
+        payload["gap_counts"] = {"status_trading_no_bar": 3}
+        container = _mock_container(_ReportStub(payload))
+        mocker.patch(CONTAINER_PATH, return_value=container)
+
+        result = runner.invoke(
+            root_app,
+            [
+                "ops",
+                "audit-capital-coverage",
+                "--start",
+                "2014-01-01",
+                "--end",
+                "2026-10-29",
+                "--json",
+            ],
+        )
+
+        assert result.exit_code == 1
+        assert orjson.loads(result.output)["passed"] is False

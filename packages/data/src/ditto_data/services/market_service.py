@@ -281,6 +281,35 @@ class MarketService:
         )
         return df
 
+    @traced("market.get_fund_share")
+    def get_fund_share(self, start: str, end: str) -> pl.DataFrame | None:
+        """
+        查询 ETF 场内份额（fund_share 数据集，物理存储 market/etf/fund_share）.
+
+        Args:
+            start: 开始日期 (YYYY-MM-DD).
+            end: 结束日期 (YYYY-MM-DD).
+
+        Returns:
+            份额 DataFrame（instrument_id/trade_date/fund_share 等）；
+            fund_share 读取端口未装配时返回 None（诚实降级，调用方可区分
+            「未装配」与「装配但窗口内零行」）.
+
+        """
+        if self._read_ports.fund_share is None:
+            logger.warning(
+                "fund_share reader not configured",
+                event="market_fund_share_reader_missing",
+            )
+            return None
+
+        df = self._read_ports.fund_share.read(start_date=start, end_date=end)
+        Metrics.data_records.add(
+            len(df),
+            {"dataset": "fund_share", "operation": "get"},
+        )
+        return df
+
     @traced("market.get_stock_limits")
     def get_stock_limits(self, start: str, end: str) -> pl.DataFrame:
         """

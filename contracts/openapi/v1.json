@@ -16783,22 +16783,22 @@
         "type": "object"
       },
       "Margin": {
-        "description": "融资融券响应模型.\n\nAttributes:\n    instrument_id: 标的 ID\n    trade_date: 交易日期\n    margin_buy_balance: 融资余额\n    short_sell_balance: 融券余额\n    margin_buy_volume: 融资买入量\n    short_sell_volume: 融券卖出量",
+        "description": "融资融券响应模型.\n\nAttributes:\n    instrument_id: 标的 ID\n    trade_date: 交易日期\n    margin_buy_balance: 融资余额（元）\n    short_sell_balance: 融券余额（元）\n    margin_buy_amount: 融资买入额（元，#625 修正语义：此前误标 volume）\n    short_sell_volume: 融券卖出量（股/份/手，按标的类型各异）",
         "properties": {
           "instrument_id": {
             "description": "标的 ID",
             "title": "Instrument Id",
             "type": "integer"
           },
+          "margin_buy_amount": {
+            "description": "融资买入额",
+            "title": "Margin Buy Amount",
+            "type": "number"
+          },
           "margin_buy_balance": {
             "description": "融资余额",
             "title": "Margin Buy Balance",
             "type": "number"
-          },
-          "margin_buy_volume": {
-            "description": "融资买入量",
-            "title": "Margin Buy Volume",
-            "type": "integer"
           },
           "short_sell_balance": {
             "description": "融券余额",
@@ -16821,7 +16821,7 @@
           "trade_date",
           "margin_buy_balance",
           "short_sell_balance",
-          "margin_buy_volume",
+          "margin_buy_amount",
           "short_sell_volume"
         ],
         "title": "Margin",

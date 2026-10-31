@@ -161,6 +161,11 @@ class TestTushareClientQuery:
                     "data": {"fields": ["cal_date"], "items": [["3"]]},
                 },
             ),
+            # 短页续探（#625）：offset=3 再取一行确认取尽
+            httpx.Response(
+                200,
+                json={"code": 0, "msg": None, "data": {"fields": [], "items": []}},
+            ),
         ]
         route = respx_mock.post("http://api.tushare.pro").mock(side_effect=pages)
 
@@ -168,10 +173,13 @@ class TestTushareClientQuery:
         result = client.query("trade_cal", "cal_date")
 
         assert result["cal_date"].to_list() == ["1", "2", "3"]
-        assert route.call_count == 2
+        assert route.call_count == 3
         second_body = orjson.loads(respx_mock.calls[1].request.content)["params"]
         assert second_body["offset"] == 2
         assert second_body["limit"] == 2
+        probe_body = orjson.loads(respx_mock.calls[2].request.content)["params"]
+        assert probe_body["offset"] == 3
+        assert probe_body["limit"] == 1
 
     def test_caller_managed_limit_stays_single_page(
         self,
@@ -226,12 +234,13 @@ class TestTushareClientQuery:
         result = client.query("trade_cal", "cal_date")
 
         assert result.height == 2501
-        assert route.call_count == 2
-        requested_limits = {
+        # 短页续探（#625）：末短页后 offset=2501 再取一行，空页证明取尽
+        assert route.call_count == 3
+        requested_limits = [
             orjson.loads(call.request.content)["params"]["limit"]
             for call in respx_mock.calls
-        }
-        assert requested_limits == {2000}
+        ]
+        assert requested_limits == [2000, 2000, 1]
 
     def test_exact_full_page_with_empty_tail_completes(
         self,
@@ -257,18 +266,18 @@ class TestTushareClientQuery:
         assert result["cal_date"].to_list() == ["1", "2"]
         assert route.call_count == 2
 
-    def test_server_cap_below_documented_page_size_truncates(
+    def test_server_cap_below_documented_page_size_self_heals(
         self,
         respx_mock,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        """已知风险面固化（#196 correctness F4，非行为认可）。
+        """#625 短页截断续探自愈：页宽超服务端上限时不再静默截断。
 
         「短页=取尽」依赖请求页宽 ≤ 服务端单响应上限。若某端点的实际上限
-        低于定档页宽（如代理硬顶 9000 而 vip 页宽定档恰为 9000 后再下调），
-        首页短页会被误判取尽而静默截断——跨页重复守卫只覆盖多页场景。
-        该测试把现状固化为契约：升级页宽定档或加每期行数 DQ 断言时，
-        此测试提醒同步评估此风险面。
+        低于定档页宽（#196 correctness F4 曾将其固化为已知风险面），首页
+        短页会被误判取尽而静默截断。#625 起，短页后续探一行：offset 处
+        出现未见过的行即截断实锤，按观测到的服务端上限降页宽续拉，
+        完整取回并保持告警可见。
         """
         monkeypatch.setitem(pagination._DOCUMENTED_PAGE_SIZES, "trade_cal", 9000)
         total_rows = 10202
@@ -277,7 +286,117 @@ class TestTushareClientQuery:
         def side_effect(request: httpx.Request) -> httpx.Response:
             params = orjson.loads(request.content)["params"]
             start = min(params["offset"], total_rows)
-            page = [[str(i)] for i in range(start, min(start + server_cap, total_rows))]
+            limit = min(params["limit"], server_cap)
+            page = [[str(i)] for i in range(start, min(start + limit, total_rows))]
+            return httpx.Response(
+                200,
+                json={
+                    "code": 0,
+                    "msg": None,
+                    "data": {"fields": ["cal_date"], "items": page},
+                },
+            )
+
+        route = respx_mock.post("http://api.tushare.pro").mock(side_effect=side_effect)
+
+        client = TushareClient(token="test_token", settings=_settings())
+        result = client.query("trade_cal", "cal_date")
+
+        # 截断被检测并自愈：8500 < 10202，降页宽续拉后完整取回
+        assert result.height == total_rows
+        request_sequence = [
+            (
+                orjson.loads(call.request.content)["params"]["limit"],
+                orjson.loads(call.request.content)["params"]["offset"],
+            )
+            for call in respx_mock.calls
+        ]
+        assert request_sequence == [
+            (9000, 0),  # 首页：短页 8500（cap < 页宽）
+            (1, 8500),  # 续探：未见行 → 截断实锤
+            (8500, 8500),  # 降页宽续拉：残段 1702 行短页
+            (1, 10202),  # 再续探：空页 → 取尽
+        ]
+        assert route.call_count == 4
+
+    def test_truncation_probe_seen_row_treated_as_exhausted(
+        self,
+        respx_mock,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """续探行已见于已见集合（越界回显首页形态）按取尽处理，不误判截断.
+
+        #431 实测形态：服务端对越界 offset 回显首页。续探取回的行是
+        已见行时应判定取尽——真截断的续探行不可能与已取回行重复
+        （一致的 offset 分页无重叠）。
+        """
+        monkeypatch.setitem(pagination._DOCUMENTED_PAGE_SIZES, "trade_cal", 2)
+
+        def side_effect(request: httpx.Request) -> httpx.Response:
+            # 回显首页：忽略 offset/limit，恒返回同两行
+            rows = [["a"], ["b"]]
+            return httpx.Response(
+                200,
+                json={
+                    "code": 0,
+                    "msg": None,
+                    "data": {"fields": ["cal_date"], "items": rows},
+                },
+            )
+
+        route = respx_mock.post("http://api.tushare.pro").mock(side_effect=side_effect)
+
+        client = TushareClient(token="test_token", settings=_settings())
+        result = client.query("trade_cal", "cal_date")
+
+        assert result["cal_date"].to_list() == ["a", "b"]
+        # 主几何（页宽 2）：首页满页 + 回显第二页触发跨页重复守卫；
+        # 换档几何（页宽 500）：首页即短页，续探取回已见行 → 取尽收敛
+        probe = orjson.loads(respx_mock.calls[-1].request.content)["params"]
+        assert probe["limit"] == 1
+        assert route.call_count == 4
+
+    def test_truncation_probe_failure_fails_open(
+        self,
+        respx_mock,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """续探请求自身瞬态失败时按取尽处理，不否决已取回数据."""
+        monkeypatch.setitem(pagination._DOCUMENTED_PAGE_SIZES, "trade_cal", 2)
+        pages = [
+            httpx.Response(
+                200,
+                json={
+                    "code": 0,
+                    "msg": None,
+                    "data": {"fields": ["cal_date"], "items": [["1"]]},
+                },
+            ),
+            httpx.Response(500, text="probe blew up"),
+        ]
+        respx_mock.post("http://api.tushare.pro").mock(side_effect=pages)
+
+        client = TushareClient(token="test_token", settings=_settings())
+        result = client.query("trade_cal", "cal_date")
+
+        assert result["cal_date"].to_list() == ["1"]
+
+    def test_truncation_below_page_floor_fails_closed(
+        self,
+        respx_mock,
+        monkeypatch: pytest.MonkeyPatch,
+        fake_time,
+    ) -> None:
+        """服务端上限低于页宽下限（500）时截断无法自愈，fail-closed 拒收."""
+        monkeypatch.setitem(pagination._DOCUMENTED_PAGE_SIZES, "trade_cal", 2000)
+        total_rows = 800
+        server_cap = 499
+
+        def side_effect(request: httpx.Request) -> httpx.Response:
+            params = orjson.loads(request.content)["params"]
+            start = min(params["offset"], total_rows)
+            limit = min(params["limit"], server_cap)
+            page = [[str(i)] for i in range(start, min(start + limit, total_rows))]
             return httpx.Response(
                 200,
                 json={
@@ -290,10 +409,10 @@ class TestTushareClientQuery:
         respx_mock.post("http://api.tushare.pro").mock(side_effect=side_effect)
 
         client = TushareClient(token="test_token", settings=_settings())
-        result = client.query("trade_cal", "cal_date")
+        with pytest.raises(tenacity.RetryError) as exc_info:
+            client.query("trade_cal", "cal_date")
 
-        # 截断发生：8500 < 10202，但短页被当作取尽
-        assert result.height == server_cap
+        assert "truncated below floor" in str(exc_info.value.last_attempt.exception())
 
     def test_exact_full_page_with_schemaless_empty_tail_completes(
         self,
@@ -414,8 +533,8 @@ class TestTushareClientQuery:
             orjson.loads(call.request.content)["params"]["limit"]
             for call in respx_mock.calls
         ]
-        assert requested_limits == [3, 3, 500]
-        assert route.call_count == 3
+        assert requested_limits == [3, 3, 500, 1]
+        assert route.call_count == 4
 
     def test_small_dataset_with_offset_ignoring_tail_converges_at_shifted_geometry(
         self,
@@ -466,12 +585,13 @@ class TestTushareClientQuery:
         client.query("fund_adj", "ts_code")
         client.query("not_documented", "ts_code")
 
+        # 每次查询末尾的短页续探（#625）取回已见行 → 取尽，limit=1
         requested_limits = [
             orjson.loads(call.request.content)["params"]["limit"]
             for call in respx_mock.calls
         ]
-        assert requested_limits == [6000, 2000, 2000]
-        assert route.call_count == 3
+        assert requested_limits == [6000, 1, 2000, 1, 2000, 1]
+        assert route.call_count == 6
 
     def test_resolve_page_size_uses_documented_contract(self) -> None:
         """端点分页契约表与官方专页一致。"""
@@ -491,6 +611,9 @@ class TestTushareClientQuery:
         assert resolve_page_size("cyq_perf") == 10000
         assert resolve_page_size("daily_basic") == 10000
         assert resolve_page_size("bak_basic") == 10000
+        # 官方专页核实（#625）：margin_detail 6000 / fund_share 2000
+        assert resolve_page_size("margin_detail") == 6000
+        assert resolve_page_size("fund_share") == 2000
         assert resolve_page_size("unknown_endpoint") == 2000
 
     def test_in_page_duplicate_rows_pass_through_with_warning(
@@ -555,8 +678,8 @@ class TestTushareClientQuery:
         # Act
         client.query("trade_cal", "cal_date", exchange="SSE")
 
-        # Assert
-        wait_spy.assert_called_once()
+        # Assert：主请求 + 短页续探（#625）各过一次限流
+        assert wait_spy.call_count == 2
 
     def test_retry_on_network_error(self, respx_mock, fake_time) -> None:
         """网络错误自动重试."""
@@ -584,7 +707,7 @@ class TestTushareClientQuery:
         result = client.query("trade_cal", "cal_date", exchange="SSE")
 
         # Assert
-        assert call_count == 2  # [REVIEW],第二次成功
+        assert call_count == 3  # 网络错误重试成功 + 短页续探（#625）
         assert result.height == 1
 
     def test_no_retry_on_auth_error(self, respx_mock) -> None:
@@ -628,7 +751,7 @@ class TestTushareClientQuery:
         result = client.query("trade_cal", "cal_date", exchange="SSE")
 
         # Assert
-        assert call_count == 2
+        assert call_count == 3  # 5xx 重试成功 + 短页续探（#625）
         assert result.height == 1
 
 

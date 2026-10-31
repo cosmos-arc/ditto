@@ -1557,6 +1557,14 @@ class IngestionDataWriter:
                 enriched_df,
                 records_written,
             )
+        # margin_trading 透传冲突策略（#625 correctness W1）：force→
+        # KEEP_LAST 使重取的值修正在 SQLite 通路同样收敛；pledge/valuation
+        # 的 spec 未声明冲突目标，维持既有冲突忽略语义。
+        if capital_dataset == "margin_trading":
+            records_written = self._capital_store.save_margin_trading(
+                enriched_df, on_duplicate=on_duplicate
+            )
+            return _to_write_result(dataset, year, enriched_df, records_written)
         save_method = capital_methods.get(capital_dataset)
         if save_method is None:
             valid = ", ".join([*capital_methods, *capital_parquet_methods])
