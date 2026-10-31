@@ -53,6 +53,9 @@ LATE_PUBLISHING_REFRESH_DATASETS: tuple[str, ...] = (
     "margin_trading",
     "fund_share",
 )
+# ponytail: 窗口=5 交易日是经验值（实测补发 ≤2 交易日），非源契约——源侧
+# 补发晚于窗口的部分行日会滑出重取范围，出窗残检由 ops audit-capital-coverage
+# 按需复跑承担；若源侧节奏劣化再扩窗或加出窗告警。
 LATE_PUBLISHING_REFRESH_WINDOW_DAYS = 5
 
 

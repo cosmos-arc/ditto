@@ -1317,3 +1317,67 @@ class TestBackfillIndexWeightFailFast:
 
         with pytest.raises(AppProcessError, match="zero instruments"):
             backfill_manager.backfill_index_weight("2014-01-01", "2026-09-30")
+
+
+class TestBackfillMissingForceScope:
+    """#625 correctness W2：force 只作用于晚发布近窗，普通空洞不 force."""
+
+    def test_plain_holes_not_forced_but_trailing_window_forced(
+        self,
+        backfill_manager,
+        evidence,
+        mock_coordinator,
+        mock_metadata_service,
+        mocker,
+    ) -> None:
+        mocker.patch(
+            "ditto_application.processes.ingestion.backfill_manager."
+            "repair_scan_horizon",
+            return_value="2024-12-27",
+        )
+        days = ["2024-12-23", "2024-12-24", "2024-12-25", "2024-12-26", "2024-12-27"]
+        mock_metadata_service.list_trading_days.return_value = days
+        mock_metadata_service.calendar.list_trading_days.side_effect = (
+            lambda start, end, only_open=True: [
+                day for day in days if start <= day <= end
+            ]
+        )
+        # 12-23 有完成快照（非空洞且不在近窗）；12-24 无快照 = 普通空洞；
+        # 近窗 3 日（12-25/26/27）其中 12-25 无快照、12-26/27 有快照。
+        for day in ("2024-12-23", "2024-12-26", "2024-12-27"):
+            _evidence_support.commit_snapshot(
+                evidence,
+                dataset="stock_daily",
+                request_start=day,
+                request_end=day,
+                checksum=f"{ord(day[-1]) * 16:x}".rjust(32, "0"),
+                row_count=1,
+                schema_version="market.stock_daily.v1",
+            )
+
+        def ingest_side_effect(dataset, trade_date, force=False):
+            return IngestionResult(
+                dataset=dataset,
+                trade_date=trade_date,
+                status="success",
+                row_count=1,
+            )
+
+        mock_coordinator.ingest_date.side_effect = ingest_side_effect
+
+        result = backfill_manager.backfill_missing(
+            dataset="stock_daily", force_refresh_days=3
+        )
+
+        assert result.total_dates == 4
+        force_flags = {
+            call.args[1]: call.args[2]
+            for call in mock_coordinator.ingest_date.call_args_list
+        }
+        # 普通空洞（12-24）不 force；近窗（12-25/26/27）force
+        assert force_flags == {
+            "2024-12-24": False,
+            "2024-12-25": True,
+            "2024-12-26": True,
+            "2024-12-27": True,
+        }

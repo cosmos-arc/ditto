@@ -16,6 +16,9 @@ class SqliteTableSpec:
     nullable_columns: frozenset[str] = frozenset()
     pit_columns: tuple[str, ...] = ("knowledge_date", "effective_from", "effective_to")
     order_by_column: str | None = None
+    # KEEP_LAST upsert 的冲突目标（表主键）；None 表示该表只支持默认的
+    # 冲突忽略（KEEP_FIRST）语义，KEEP_LAST 写入响亮失败。
+    conflict_columns: tuple[str, ...] | None = None
 
     @property
     def all_columns(self) -> tuple[str, ...]:

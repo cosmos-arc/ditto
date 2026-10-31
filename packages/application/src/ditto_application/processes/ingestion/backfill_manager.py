@@ -267,9 +267,12 @@ class BackfillManager:
             expected_dates=expected_dates,
         )
         missing_dates = set(expected_dates) - evidenced_dates
+        trailing_dates: set[str] = set()
         if force_refresh_days > 0:
-            missing_dates |= self._trailing_trading_days(force_refresh_days)
-        if not missing_dates:
+            trailing_dates = self._trailing_trading_days(
+                force_refresh_days, horizon=last_date
+            )
+        if not missing_dates and not trailing_dates:
             return BackfillResult(
                 dataset=dataset,
                 total_dates=0,
@@ -279,21 +282,48 @@ class BackfillManager:
                 results=(),
             )
 
-        sorted_missing_dates = sorted(missing_dates)
-
-        return self._execute_backfill(
+        # force 只作用于晚发布近窗（#625 correctness W2）：近窗日被 SUCCESS/
+        # 空帧或部分行观察固化，必须绕过 skip 决策；普通空洞（无 SUCCESS
+        # 日志）不 force 也会正常摄取，历史值不受 KEEP_LAST 覆写。
+        plain_dates = sorted(missing_dates - trailing_dates)
+        refresh_dates = sorted(trailing_dates)
+        results: list[IngestionResult] = []
+        if plain_dates:
+            results.extend(
+                self._execute_backfill(
+                    dataset=dataset,
+                    trade_dates=plain_dates,
+                    parallel=parallel,
+                    log_event="backfill_missing_complete",
+                ).results
+            )
+        if refresh_dates:
+            results.extend(
+                self._execute_backfill(
+                    dataset=dataset,
+                    trade_dates=refresh_dates,
+                    parallel=parallel,
+                    log_event="backfill_missing_complete",
+                    force=True,
+                ).results
+            )
+        counts = count_results(results)
+        return BackfillResult(
             dataset=dataset,
-            trade_dates=sorted_missing_dates,
-            parallel=parallel,
-            log_event="backfill_missing_complete",
-            # 近窗重取必须绕过 SUCCESS skip 决策：被固化的空帧/部分行观察
-            # 本身就是合法 SUCCESS 证据，不 force 则永远跳过。
-            force=force_refresh_days > 0,
+            total_dates=len(plain_dates) + len(refresh_dates),
+            success_count=counts.success,
+            skipped_count=counts.skipped,
+            failed_count=counts.failed,
+            results=tuple(results),
         )
 
-    def _trailing_trading_days(self, count: int) -> set[str]:
-        """扫描上界（上海昨日）往前的近 N 个交易日（#625 晚发布近窗）."""
-        horizon = repair_scan_horizon()
+    def _trailing_trading_days(self, count: int, *, horizon: str) -> set[str]:
+        """
+        扫描上界往前的近 N 个交易日（#625 晚发布近窗）.
+
+        horizon 复用调用方已钳制到上海昨日的上界，避免同一次调用内
+        双读时钟在午夜跨越时窗口漂移（correctness I3）。
+        """
         # 多取 30 个日历日保证覆盖长假后仍 ≥N 个交易日（黄金周 ≤8 天）。
         lookback_start = (date.fromisoformat(horizon) - timedelta(days=30)).isoformat()
         days = self._metadata_service.calendar.list_trading_days(

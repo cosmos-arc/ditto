@@ -12,6 +12,7 @@ from ditto_data.storage.capital.margin.margin_trading_writer import (
 )
 from ditto_data.storage.capital.specs import MARGIN_TRADING_SPEC
 from ditto_platform.foundation import SQLiteClient, SQLitePool
+from ditto_platform.foundation.storage.types import OnDuplicate
 
 
 @pytest.fixture
@@ -237,3 +238,41 @@ def test_write_multiple_records_same_instrument(
         ["600000.SH"],
     )
     assert len(rows) == 3
+
+
+def _row(amount: float) -> pl.DataFrame:
+    return pl.DataFrame(
+        {
+            "instrument_id": ["600000.SH"],
+            "trade_date": [date(2024, 5, 15)],
+            "knowledge_date": [date(2024, 5, 15)],
+            "effective_from": [date(2024, 5, 16)],
+            "effective_to": [None],
+            "margin_buy_balance": [1000000.0],
+            "short_sell_balance": [500000.0],
+            "margin_buy_amount": [amount],
+            "short_sell_volume": [20000000.0],
+        }
+    )
+
+
+def test_keep_last_overwrites_same_key_with_new_values(
+    writer: MarginTradingWriter, in_memory_db: SQLiteClient
+) -> None:
+    """#625 correctness W1：force 重取的值修正经 KEEP_LAST 收敛."""
+    writer.write(_row(50.0))
+    writer.write(_row(99.0), on_duplicate=OnDuplicate.KEEP_LAST)
+
+    rows = in_memory_db.fetchall("SELECT margin_buy_amount FROM margin_trading")
+    assert rows == [{"margin_buy_amount": 99.0}]
+
+
+def test_keep_first_keeps_original_values(
+    writer: MarginTradingWriter, in_memory_db: SQLiteClient
+) -> None:
+    """默认冲突语义不变：同键后写忽略."""
+    writer.write(_row(50.0))
+    writer.write(_row(99.0), on_duplicate=OnDuplicate.KEEP_FIRST)
+
+    rows = in_memory_db.fetchall("SELECT margin_buy_amount FROM margin_trading")
+    assert rows == [{"margin_buy_amount": 50.0}]

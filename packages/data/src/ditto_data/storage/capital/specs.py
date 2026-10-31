@@ -38,6 +38,7 @@ MARGIN_TRADING_SPEC = SqliteTableSpec(
             "short_sell_volume",
         }
     ),
+    conflict_columns=("instrument_id", "trade_date", "effective_from"),
 )
 
 PLEDGE_RATIO_SPEC = SqliteTableSpec(
