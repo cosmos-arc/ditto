@@ -4,6 +4,7 @@
 日历健全性核验 + 词汇闭合守卫。
 """
 
+from collections.abc import Sequence
 from datetime import date
 
 import polars as pl
@@ -54,7 +55,7 @@ def _keys(rows: list[tuple[int, date]]) -> pl.DataFrame:
     )
 
 
-def _status(rows: list[tuple[int, date, bool | None]]) -> pl.DataFrame:
+def _status(rows: Sequence[tuple[int, date, bool | None]]) -> pl.DataFrame:
     return pl.DataFrame(
         {
             "instrument_id": [r[0] for r in rows],
