@@ -59,10 +59,9 @@ def dataset_asset_class(dataset: str) -> str:
             f"未知数据集档位 {dataset!r}: 允许 {sorted(_DATASET_ASSET_CLASSES)}"
         )
     if len(allowed) != 1:
-        raise AppQueryError(
-            f"数据集档位 {dataset!r} 支持多资产类 {sorted(allowed)}: "
-            "须显式指定 asset_class"
-        )
+        names = sorted(allowed)
+        message = f"数据集档位 {dataset!r} 支持多资产类 {names}: 须显式指定 asset_class"
+        raise AppQueryError(message)
     return next(iter(allowed))
 
 

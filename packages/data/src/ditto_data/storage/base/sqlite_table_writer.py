@@ -39,27 +39,29 @@ class SqliteTableWriter:
             conflict_clause = "ON CONFLICT DO NOTHING"
         elif on_duplicate is OnDuplicate.KEEP_LAST:
             if not self._spec.conflict_columns:
-                raise ValueError(
+                message = (
                     f"KEEP_LAST upsert requires spec.conflict_columns on table "
                     f"'{self._spec.table}'"
                 )
+                raise ValueError(message)
             update_cols = [
                 col for col in all_cols if col not in self._spec.conflict_columns
             ]
             assignments = ", ".join(f"{col} = excluded.{col}" for col in update_cols)
-            conflict_clause = (
-                f"ON CONFLICT({', '.join(self._spec.conflict_columns)}) "
-                f"DO UPDATE SET {assignments}"
-            )
+            target = ", ".join(self._spec.conflict_columns)
+            conflict_clause = f"ON CONFLICT({target}) DO UPDATE SET {assignments}"
         else:
-            raise ValueError(
+            message = (
                 f"OnDuplicate.{on_duplicate.value} not supported by "
                 f"SqliteTableWriter ('{self._spec.table}')"
             )
-        sql = (
-            f"INSERT INTO {self._spec.table} ({col_names}) "  # noqa: S608
-            f"VALUES ({placeholders}) "
-            f"{conflict_clause}"
+            raise ValueError(message)
+        sql = "".join(
+            (
+                f"INSERT INTO {self._spec.table} ({col_names}) ",
+                f"VALUES ({placeholders}) ",
+                conflict_clause,
+            )
         )
 
         logger.info(

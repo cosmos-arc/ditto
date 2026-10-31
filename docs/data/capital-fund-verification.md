@@ -135,6 +135,11 @@ price-identity-verification.md）。
 | F5 | fund_share 源侧全量 1,807 vs 本地 1,714（~93/日差额） | LOF/非 ETF 名册标的 FK 过滤（#503 裁决），非缺口 |
 | F6 | margin_detail 深市周五数据下周一更新 | 更新节奏已入覆盖合同；晚发布近窗重取覆盖 |
 | F7 | 空洞扫描对 #447 前回补的历史日无完成证据（moneyflow 全史会被判缺失） | 本批以精确区间回补绕开全史重拉；证据账本补全归后续运维票 |
+| F8 | correctness W1：margin SQLite 通路丢弃 force→KEEP_LAST 契约（ON CONFLICT DO NOTHING 硬编码），值修正永不收敛 | 已修：SqliteTableWriter 支持 KEEP_LAST upsert（spec.conflict_columns 声明主键）+ `_write_capital` 仅对 margin_trading 透传；pledge/valuation 维持既有语义（spec 未声明冲突目标）；VERIFY_IDENTICAL 在 SQLite 通路退化为冲突忽略并留档 |
+| F9 | correctness W2：force 曾作用于全部未证实日期而非仅近窗（历史值受 KEEP_LAST 覆写、首启隐式全史回补） | 已修：force 限定晚发布近窗，普通空洞不 force 正常摄取；回归测试锁定 |
+| F10 | correctness W3（**待维护者裁决**）：margin knowledge_date=T+1 把深市/北交所周五数据（实际 T+3 周一发布）标为周六可知——PIT as_of 周六/周日回放存在 ≤2 交易日前视 | mapping 语义为仓库级既有约定（全日频数据集 kd=T+1 同型，含 moneyflow/fund_share 18:30 档）；仅改 margin 周五会引入兄弟数据集不一致，全量改口径超本票授权——升级维护者裁决，本票在覆盖合同与本报告落档前视窗口量化 |
+| F11 | correctness W4：近窗 5 交易日无出窗校验（源补发晚于窗口的部分行固化无告警） | 已留档为窗口天花板（ponytail 注释）；出窗残检由 `ops audit-capital-coverage` 按需复跑承担 |
+| F12 | margin 回补首轮 89 月块 DQ_BLOCKED 伪拦截 | 根因=dq_rules yml 撞列名改名（type_check 引用旧列），修 yml 后同日重取 SUCCESS；两轴评审 Spec 轴抓出 |
 
 ## 边界
 
