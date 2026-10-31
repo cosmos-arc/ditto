@@ -388,6 +388,7 @@ class DiffClassificationTests(unittest.TestCase):
         assert fast[4:] == _expected_fast_dirs([path])
         assert ["task", "lint"] in commands
         assert ["task", "type-all"] in commands
+        assert ["task", "arch-check"] in commands
         assert ["task", "pit"] in commands
 
     def test_application_and_backend_risk_entrypoints_keep_specialized_gates(
@@ -802,6 +803,7 @@ def test_single_and_cross_package_local_checks_share_the_package_gate() -> None:
     assert fast is not None
     assert fast[4:] == _expected_fast_dirs([path])
     assert ["task", "type-all"] in commands
+    assert ["task", "arch-check"] in commands
     both = [path, "packages/kernel/src/ditto_kernel/errors.py"]
     fast_both = _fast_command(verification_commands("backend", both))
     assert fast_both is not None

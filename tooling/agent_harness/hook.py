@@ -1199,10 +1199,13 @@ def _backend_source_commands(
             # 直接 owner 无可跑测试范围（如整包删除）时保持 fail-closed 全量；
             # 闭包/使用边成员本就无测试时不阻断（其缺席不是本差异造成的）。
             return [["task", "check"]]
+    # arch-check 与 lint/fmt/type 同级常驻：importlinter 契约面（src 包）
+    # 不随影响范围裁剪，scoped 阶梯漏跑会让 CI 才抓到架构违规（#633 实例）。
     return [
         ["task", "lint"],
         ["task", "fmt-check"],
         ["task", "type-all"],
+        ["task", "arch-check"],
         ["task", "test", "--", "--fast", *plan.test_dirs],
     ]
 
