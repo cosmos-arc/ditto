@@ -4573,3 +4573,243 @@ def test_shared_source_empty_revision_respects_ticker_scope(
             )
             == 2
         )
+
+
+# ---------------------------------------------------------------------------
+# #624 / #621 P2: 周月聚合数值、日/周/月一致性与未闭合周期标记
+# ---------------------------------------------------------------------------
+
+
+def _weekdays(start: date, end: date) -> list[date]:
+    return [
+        date.fromordinal(o)
+        for o in range(start.toordinal(), end.toordinal() + 1)
+        if date.fromordinal(o).weekday() < 5
+    ]
+
+
+def _days_inclusive(start: date, end: date) -> list[date]:
+    return [date.fromordinal(o) for o in range(start.toordinal(), end.toordinal() + 1)]
+
+
+# 周月周期边界会把请求窗口扩张到自然周/月末，快照 request 界须覆盖扩张后区间。
+_CONSISTENT_BOUNDS = ("2026-01-26", "2026-04-05")
+
+
+def _snapshot_wide(
+    store: FilesystemProviderPayloadStore,
+    dataset: str,
+    frame: pl.DataFrame,
+    created: datetime,
+) -> ProviderSnapshot:
+    artifact = store.retain_payload(dataset_id=dataset, source="tushare", payload=frame)
+    return ProviderSnapshot.create(
+        ProviderSnapshotDraft(
+            dataset_id=dataset,
+            source="tushare",
+            request_start=_CONSISTENT_BOUNDS[0],
+            request_end=_CONSISTENT_BOUNDS[1],
+            schema_version=f"{dataset}.v1",
+            checksum=artifact.checksum,
+            canonical_asset=DataAssetRef(dataset_id=dataset, namespace="market"),
+            request_parameters_hash="sha256:market-chart-consistency-test",
+            response_metadata=(),
+            row_count=artifact.row_count,
+            payload_uri=artifact.uri,
+            payload_retained=True,
+            created_at=created,
+        )
+    )
+
+
+def _consistent_chart(
+    tmp_path: Path,
+) -> tuple[MarketChartQueryFacade, list[date]]:
+    """多周跨月一致性夹具：2026-02-02 ~ 03-13 每个开市日均有确定 OHLCV.
+
+    值由日期序数推导（open=ord+0.5/high=ord+2/low=ord+0.25/close=ord+1.5/
+    volume=ord/amount=ord×10）；published/available = T+1 15:00 上海
+    （次日 07:00 UTC），使 `now`=03-14 08:00 UTC 时全部可见。日历快照
+    覆盖扩张后的周期边界（2026-02-01 ~ 2026-03-31）。
+    """
+    store = FilesystemProviderPayloadStore(tmp_path)
+    visible = datetime(2026, 3, 10, 7, tzinfo=UTC)
+    days = _weekdays(date(2026, 2, 2), date(2026, 3, 13))
+
+    def knowledge(day: date) -> datetime:
+        return datetime.fromordinal(day.toordinal() + 1).replace(hour=7, tzinfo=UTC)
+
+    bars = pl.DataFrame(
+        {
+            "source_ticker": ["600519.SH"] * len(days),
+            "event_time": [
+                datetime.fromordinal(d.toordinal()).replace(hour=7, tzinfo=UTC)
+                for d in days
+            ],
+            "published_at": [knowledge(d) for d in days],
+            "available_at": [knowledge(d) for d in days],
+            "open": [float(d.toordinal()) + 0.5 for d in days],
+            "high": [float(d.toordinal()) + 2.0 for d in days],
+            "low": [float(d.toordinal()) + 0.25 for d in days],
+            "close": [float(d.toordinal()) + 1.5 for d in days],
+            "volume": [float(d.toordinal()) for d in days],
+            "amount": [float(d.toordinal()) * 10.0 for d in days],
+        }
+    )
+    factors = pl.DataFrame(
+        {
+            "source_ticker": ["600519.SH"] * len(days),
+            "trade_date": [d.isoformat() for d in days],
+            "published_at": [knowledge(d) for d in days],
+            "available_at": [knowledge(d) for d in days],
+            "adj_factor": [1.0] * len(days),
+        }
+    )
+    calendar_days = _days_inclusive(date(2026, 2, 1), date(2026, 3, 31))
+    calendar = pl.DataFrame(
+        {
+            "trade_date": [d.isoformat() for d in calendar_days],
+            "is_open": [d.weekday() < 5 for d in calendar_days],
+        }
+    )
+    snapshots = (
+        _snapshot_wide(store, "stock_daily", bars, visible),
+        _snapshot_wide(store, "adj_factor", factors, visible),
+        _snapshot_wide(store, "calendar", calendar, visible - timedelta(days=1)),
+    )
+    reader = cast(ProviderSnapshotReader, _Snapshots(snapshots))
+    metadata = cast(
+        MetadataQueryFacade,
+        _ChartMetadata(
+            get_source_ticker=lambda *args, **kwargs: "600519.SH",
+            get_instrument=lambda instrument_id: (
+                {"asset_class": "stock", "list_date": "2001-08-27"}
+                if instrument_id == 1000001
+                else None
+            ),
+        ),
+    )
+    market = cast(
+        MarketQueryFacade,
+        SimpleNamespace(
+            assert_bars_allowed=lambda **kwargs: None,
+            assert_adjustment_allowed=lambda **kwargs: None,
+            allows_suspension_evidence=lambda **kwargs: True,
+        ),
+    )
+    return MarketChartQueryFacade(reader, store, metadata, market), days
+
+
+def _chart_request(
+    period: str, *, adjustment: str = "none", asset_class: str = "stock"
+) -> MarketChartRequest:
+    return MarketChartRequest(
+        instrument_id=1000001,
+        asset_class=asset_class,
+        start_date=date(2026, 2, 2),
+        end_date=date(2026, 3, 13),
+        period=period,
+        adjustment=adjustment,
+        allow_experimental_data=False,
+        now=datetime(2026, 3, 14, 8, tzinfo=UTC),
+    )
+
+
+@pytest.mark.pit
+def test_chart_monthly_aggregation_matches_daily_sessions(tmp_path: Path) -> None:
+    """月线聚合数值 = 周期内日线首开/末收/极值/求和（含首末日身份）."""
+    chart, days = _consistent_chart(tmp_path)
+    result = chart.get_chart(_chart_request("monthly"))
+    # bar 身份 = 周期末日会话（K 线时间戳惯例）。
+    assert [bar.trade_date for bar in result.bars] == ["2026-02-27", "2026-03-13"]
+    february, march = result.bars
+    feb_days = [d for d in days if d.month == 2]
+    mar_days = [d for d in days if d.month == 3]
+    assert (february.first_trade_date, february.last_trade_date) == (
+        feb_days[0].isoformat(),
+        feb_days[-1].isoformat(),
+    )
+    assert february.open == pytest.approx(float(feb_days[0].toordinal()) + 0.5)
+    assert february.close == pytest.approx(float(feb_days[-1].toordinal()) + 1.5)
+    assert february.high == pytest.approx(float(feb_days[-1].toordinal()) + 2.0)
+    assert february.low == pytest.approx(float(feb_days[0].toordinal()) + 0.25)
+    assert february.volume == pytest.approx(sum(float(d.toordinal()) for d in feb_days))
+    assert february.amount == pytest.approx(
+        sum(float(d.toordinal()) * 10.0 for d in feb_days)
+    )
+    assert (march.first_trade_date, march.last_trade_date) == (
+        mar_days[0].isoformat(),
+        mar_days[-1].isoformat(),
+    )
+    assert march.close == pytest.approx(float(mar_days[-1].toordinal()) + 1.5)
+
+
+@pytest.mark.pit
+def test_chart_weekly_and_monthly_consistent_with_daily(tmp_path: Path) -> None:
+    """日/周/月一致：周月 K 线可由同窗口日线逐项重建，交叉周期互相一致."""
+    chart, _ = _consistent_chart(tmp_path)
+    daily = chart.get_chart(_chart_request("daily"))
+    weekly = chart.get_chart(_chart_request("weekly"))
+    monthly = chart.get_chart(_chart_request("monthly"))
+    by_day = {bar.trade_date: bar for bar in daily.bars}
+    assert len(daily.bars) == len(by_day) > 0
+
+    for aggregate in (*weekly.bars, *monthly.bars):
+        sessions = [
+            day
+            for day in by_day
+            if aggregate.first_trade_date <= day <= aggregate.last_trade_date
+        ]
+        assert sessions, f"{aggregate.trade_date} 无可重建日线"
+        assert aggregate.first_trade_date == sessions[0]
+        assert aggregate.last_trade_date == sessions[-1]
+        assert aggregate.open == pytest.approx(by_day[sessions[0]].open)
+        assert aggregate.close == pytest.approx(by_day[sessions[-1]].close)
+        assert aggregate.high == pytest.approx(
+            max(by_day[day].high for day in sessions)
+        )
+        assert aggregate.low == pytest.approx(min(by_day[day].low for day in sessions))
+        assert aggregate.volume == pytest.approx(
+            sum(by_day[day].volume for day in sessions)
+        )
+        assert aggregate.amount == pytest.approx(
+            sum(by_day[day].amount for day in sessions)
+        )
+
+    # 交叉一致：月 close == 月内最后一根周线 close；周线会话计数守恒。
+    february = next(b for b in monthly.bars if b.last_trade_date.startswith("2026-02"))
+    feb_weeks = [b for b in weekly.bars if b.trade_date < "2026-03-01"]
+    assert february.close == pytest.approx(feb_weeks[-1].close)
+    weekly_session_count = sum(
+        1
+        for b in weekly.bars
+        for day in by_day
+        if b.first_trade_date <= day <= b.last_trade_date
+    )
+    assert weekly_session_count == len(daily.bars)
+
+
+@pytest.mark.pit
+def test_chart_marks_unclosed_monthly_period_partial(tmp_path: Path) -> None:
+    """未闭合周期明确标记：三月月线 partial=True，二月（已完整）False."""
+    chart, _ = _consistent_chart(tmp_path)
+    result = chart.get_chart(_chart_request("monthly"))
+    by_month = {bar.last_trade_date[:7]: bar for bar in result.bars}
+    assert by_month["2026-02"].partial is False
+    assert by_month["2026-03"].partial is True
+    weekly = chart.get_chart(_chart_request("weekly"))
+    assert weekly.bars[-1].trade_date == "2026-03-13"
+    assert weekly.bars[-1].partial is False  # 窗口内完整周（知识已到）
+
+
+def test_chart_etf_rejects_adjustment(tmp_path: Path) -> None:
+    """ETF 仅允许原始价：复权请求在取数前显式拒绝，不静默回落原始价."""
+    chart, _ = _consistent_chart(tmp_path)
+    with pytest.raises(
+        AppQueryError, match="unsupported source-bound chart adjustment"
+    ):
+        chart.get_chart(_chart_request("daily", adjustment="qfq", asset_class="etf"))
+    with pytest.raises(
+        AppQueryError, match="unsupported source-bound chart adjustment"
+    ):
+        chart.get_chart(_chart_request("daily", adjustment="hfq", asset_class="etf"))

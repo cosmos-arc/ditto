@@ -234,6 +234,35 @@ class MarketService:
 
         return df
 
+    @traced("market.get_fund_adj")
+    def get_fund_adj(self, start: str, end: str) -> pl.DataFrame | None:
+        """
+        查询 ETF 复权因子（fund_adj 数据集，物理存储 market/etf/adj）.
+
+        Args:
+            start: 开始日期 (YYYY-MM-DD).
+            end: 结束日期 (YYYY-MM-DD).
+
+        Returns:
+            复权因子 DataFrame（instrument_id/trade_date/adj_factor 等）；
+            etf_adj 读取端口未装配时返回 None（诚实降级，调用方可区分
+            「未装配」与「装配但窗口内零行」）.
+
+        """
+        if self._read_ports.etf_adj is None:
+            logger.warning(
+                "ETF adjustment factor reader not configured",
+                event="market_fund_adj_reader_missing",
+            )
+            return None
+
+        df = self._read_ports.etf_adj.read(start_date=start, end_date=end)
+        Metrics.data_records.add(
+            len(df),
+            {"dataset": "fund_adj", "operation": "get"},
+        )
+        return df
+
     @traced("market.get_stock_limits")
     def get_stock_limits(self, start: str, end: str) -> pl.DataFrame:
         """

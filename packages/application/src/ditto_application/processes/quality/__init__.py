@@ -4,6 +4,11 @@ from __future__ import annotations
 
 from ditto_application.processes.quality.batch import QualityBatchCoordinator
 from ditto_application.processes.quality.completeness import QualityCompletenessService
+from ditto_application.processes.quality.coverage_audit import (
+    PriceCoverageAuditReport,
+    PriceCoverageAuditRequest,
+    PriceCoverageAuditService,
+)
 from ditto_application.processes.quality.patrol import QualityPatrolService
 from ditto_application.processes.quality.types import (
     L3CheckResult,
@@ -17,6 +22,9 @@ from ditto_application.processes.quality.types import (
 
 __all__ = [
     "L3CheckResult",
+    "PriceCoverageAuditReport",
+    "PriceCoverageAuditRequest",
+    "PriceCoverageAuditService",
     "QualityBatchCoordinator",
     "QualityBatchDatasetResult",
     "QualityBatchRequest",

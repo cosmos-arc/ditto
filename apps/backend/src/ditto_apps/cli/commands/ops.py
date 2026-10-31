@@ -18,6 +18,10 @@ from ditto_application.exceptions import AppError
 from ditto_application.processes.materialization.orchestrator import (
     DerivedMaterializationOrchestrator,
 )
+from ditto_application.processes.quality.coverage_audit import (
+    PriceCoverageAuditRequest,
+    PriceCoverageAuditService,
+)
 from ditto_application.processes.quality.patrol import QualityPatrolService
 from ditto_application.queries.evaluation import (
     EvaluationOptions,
@@ -422,6 +426,17 @@ def _fetch_patrol_service() -> tuple[Container, QualityPatrolService]:
         raise typer.Exit(1) from exc
 
 
+def _fetch_coverage_audit_service() -> tuple[Container, PriceCoverageAuditService]:
+    """获取 PriceCoverageAuditService, 失败时退出."""
+    container: Container = make_app_container()
+    try:
+        return container, container.get(PriceCoverageAuditService)
+    except Exception as exc:
+        typer.secho(f"获取服务失败: {exc}", fg=typer.colors.RED, err=True)
+        container.close()
+        raise typer.Exit(1) from exc
+
+
 @app.command()
 def status(
     date: str | None = typer.Option(None, "--date", "-d", help="查询日期 YYYY-MM-DD"),
@@ -547,6 +562,85 @@ def dq(
         raise typer.Exit(1) from exc
     finally:
         container.close()
+
+
+# ---------------------------------------------------------------------------
+# audit-price-coverage: 价格与身份逐证券覆盖审计（#624 / #621 P2）
+# ---------------------------------------------------------------------------
+
+
+@app.command("audit-price-coverage")
+def audit_price_coverage(
+    start: str = typer.Option(..., "--start", help="窗口起始日 YYYY-MM-DD"),
+    end: str = typer.Option(..., "--end", help="窗口结束日 YYYY-MM-DD"),
+    asset_class: str = typer.Option(
+        "stock", "--asset-class", help="资产类: stock | etf"
+    ),
+    detail_limit: int = typer.Option(
+        20, "--detail-limit", help="缺口样本与缺口最多标的明细上限"
+    ),
+    json: bool = typer.Option(False, "--json", help="JSON 格式输出"),
+) -> None:
+    """逐证券交易日覆盖审计: 缺口归因 + 日历健全性 + 复权因子在场核验."""
+    container, service = _fetch_coverage_audit_service()
+    try:
+        report = service.run(
+            PriceCoverageAuditRequest(
+                start_date=start,
+                end_date=end,
+                asset_class=asset_class,
+                detail_limit=detail_limit,
+            )
+        )
+    except Exception as exc:
+        typer.secho(f"覆盖审计失败: {exc}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(1) from exc
+    finally:
+        container.close()
+
+    payload = report.to_dict()
+    if json:
+        output_json_dict(payload)
+    else:
+        _print_coverage_audit(payload)
+
+    if not report.passed:
+        raise typer.Exit(1)
+
+
+def _print_coverage_audit(payload: dict[str, Any]) -> None:
+    session = payload["session"]
+    calendar = payload["calendar"]
+    typer.echo(f"资产类 {payload['asset_class']}")
+    typer.echo(f"窗口 {payload['window'][0]} ~ {payload['window'][1]}")
+    typer.echo(f"交易日 {calendar['trading_days']}")
+    typer.echo(f"重复 {calendar['duplicate_days']} 周末 {calendar['weekend_days']}")
+    typer.echo(
+        f"缺年 {calendar['missing_years']} 区间外 {calendar['years_out_of_bounds']}"
+    )
+    typer.echo(f"名册 {session['roster_total']}")
+    typer.echo(f"有期望会话标的 {session['securities_with_sessions']}")
+    typer.echo(f"期望会话 {session['expected_sessions']}")
+    typer.echo(f"实际日线 {session['present_sessions']}")
+    if payload["gap_counts"]:
+        typer.echo("缺口归因:")
+        for kind, count in payload["gap_counts"].items():
+            typer.echo(f"  {kind}: {count}")
+    else:
+        typer.echo("缺口归因: 无缺失会话")
+    if payload["anomaly_counts"]:
+        typer.echo("异常事实:")
+        for kind, count in payload["anomaly_counts"].items():
+            typer.echo(f"  {kind}: {count}")
+    if session["adj_factor_checked"]:
+        typer.echo(f"复权因子: 日线会话 {session['bar_sessions']}")
+        typer.echo(f"缺因子 {session['adj_factor_missing']}")
+    if payload["top_gap_securities"]:
+        typer.echo("缺口最多标的:")
+        for row in payload["top_gap_securities"]:
+            typer.echo(f"  {row['ticker']} ({row['instrument_id']}): {row['gaps']}")
+    verdict = "通过" if payload["passed"] else "未通过"
+    typer.echo(f"审计结论: {verdict}")
 
 
 # ---------------------------------------------------------------------------

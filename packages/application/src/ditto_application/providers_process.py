@@ -135,6 +135,7 @@ from ditto_application.processes.materialization.source_snapshot_resolver import
     CatalogSourceSnapshotResolver,
 )
 from ditto_application.processes.quality import (
+    PriceCoverageAuditService,
     QualityBatchCoordinator,
     QualityCompletenessService,
     QualityPatrolService,
@@ -561,6 +562,18 @@ class AppProcessProvider(Provider):
             metadata_facade=metadata_facade,
             alert_manager=alert_manager,
             capital_facade=capital_facade,
+        )
+
+    @provide
+    def price_coverage_audit_service(
+        self,
+        market_service: MarketService,
+        metadata_service: MetadataService,
+    ) -> PriceCoverageAuditService:
+        """价格与身份覆盖审计服务（#624）."""
+        return PriceCoverageAuditService(
+            market=market_service,
+            metadata=metadata_service,
         )
 
     @provide
