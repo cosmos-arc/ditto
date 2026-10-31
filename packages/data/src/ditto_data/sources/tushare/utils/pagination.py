@@ -8,12 +8,15 @@ fut_basic=10000），不存在统一页宽。只有请求页宽不超过服务�
 （离线复现：2501 行源、服务端 cap 2000、请求 limit 9000 仅取回 2000）。
 
 本表只声明当前仓库实际消费的端点，官方上限以各端点专页为准
-（2026-10-04 核查，来源见 docs/research/2026-10-04-tushare-second-review.md）：
+（2026-10-04 核查，来源见 docs/research/2026-10-04-tushare-second-review.md；
+2026-10-31 增补 margin_detail/fund_share，#625）：
 
 - 已核实上限的端点用精确值；
 - 未核实上限的端点用保守默认 2000（已知官方列表端点上限的最小值；
   唯一低于 2000 的 vix_index=300 未被本仓库消费）。官方确认具体上限后
   应改为精确值，不得以默认值冒充接口合同。
+- 页宽超服务端上限时的静默截断由 client 的短页续探兜底（#625）：
+  续探发现未见行即降页宽续拉，检测不再单纯依赖本表定档正确。
 
 所有已消费端点均支持 pro HTTP 通用 ``limit/offset`` 参数；若未来接入不支持
 offset 的端点，须在本模块注明并让调用方按官方窗口参数分片，不得走自动
@@ -67,6 +70,12 @@ _DOCUMENTED_PAGE_SIZES: dict[str, int] = {
     "balancesheet_vip": 9000,
     "income_vip": 9000,
     "cashflow_vip": 9000,
+    # 2026-10-31 核实官方专页（#625）：margin_detail doc_id=59「单次请求
+    # 最大返回 6000 行」；fund_share doc_id=207「单次最大提取 2000 行」。
+    # margin_detail 全市场日 ~4,486 行=单页取尽；fund_share 日 ~1,809 行
+    # 单页。两者接入晚于 #431 定档故此前落默认 2000。
+    "margin_detail": 6000,  # doc_id=59
+    "fund_share": 2000,  # doc_id=207
 }
 
 _DEFAULT_PAGE_SIZE = 2000

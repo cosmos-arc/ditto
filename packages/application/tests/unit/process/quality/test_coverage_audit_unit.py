@@ -235,7 +235,7 @@ class TestPriceCoverageAuditService:
     def test_report_dict_shape(self) -> None:
         service, _, _ = _service("stock")
         report = service.run(
-            PriceCoverageAuditRequest("2024-01-01", "2024-01-05", "stock", 5)
+            PriceCoverageAuditRequest("2024-01-01", "2024-01-05", "stock", "daily", 5)
         )
         payload = report.to_dict()
         assert payload["asset_class"] == "stock"
@@ -385,3 +385,165 @@ class TestPriceCoverageAuditService:
             service.run(PriceCoverageAuditRequest("2024-01-01", "2024-01-05", "index"))
         with pytest.raises(AppError, match="end_date"):
             service.run(PriceCoverageAuditRequest("2024-01-05", "2024-01-01", "stock"))
+
+
+class _CapitalStub:
+    """CapitalStore 桩：moneyflow 业务键帧（#625）."""
+
+    def __init__(self, rows: list[tuple[int, date]] | None = None) -> None:
+        self.calls: list[str] = []
+        self._rows = rows
+
+    def get_moneyflows(self, start: str, end: str) -> pl.DataFrame:
+        self.calls.append(f"moneyflow:{start}:{end}")
+        rows = (
+            self._rows
+            if self._rows is not None
+            else [
+                (1, MON),
+                (1, THU),
+                (1, FRI),
+                (2, MON),
+                (2, TUE),
+            ]
+        )
+        return pl.DataFrame(
+            {
+                "instrument_id": [r[0] for r in rows],
+                "trade_date": [r[1] for r in rows],
+            },
+            schema={"instrument_id": pl.Int64, "trade_date": pl.Date},
+        )
+
+
+class _FundShareMarketStub(_MarketStub):
+    """fund_share 读口桩：ETF 份额业务键帧."""
+
+    def __init__(self, frame: pl.DataFrame | None = None) -> None:
+        super().__init__(asset_class="etf")
+        self._frame = frame
+        self.fund_share_calls: list[str] = []
+
+    def get_fund_share(self, start: str, end: str) -> pl.DataFrame | None:
+        self.fund_share_calls.append(f"fund_share:{start}:{end}")
+        if self._frame is None:
+            return pl.DataFrame(
+                {
+                    "instrument_id": [1, 2, 2],
+                    "trade_date": [MON, MON, TUE],
+                },
+                schema={"instrument_id": pl.Int64, "trade_date": pl.Date},
+            )
+        return self._frame
+
+
+class TestCapitalDatasetAudit:
+    """#625 资金面数据集档位：moneyflow 复用 stock 网格，fund_share 落证据边界."""
+
+    def test_moneyflow_reuses_stock_grid_and_status_attribution(self) -> None:
+        market = _MarketStub(asset_class="stock")
+        metadata = _MetadataStub(_days(), "stock")
+        capital = _CapitalStub()
+        service = PriceCoverageAuditService(
+            market=market,  # type: ignore[arg-type]
+            metadata=metadata,  # type: ignore[arg-type]
+            capital=capital,  # type: ignore[arg-type]
+        )
+
+        report = service.run(
+            PriceCoverageAuditRequest(
+                "2024-01-01", "2024-01-05", "stock", dataset="moneyflow"
+            )
+        )
+
+        # 证券 1 缺 TUE（未停牌 → 失败缺口）与 WED（停牌 → 正常缺席）
+        assert report.session.gap_counts == {
+            "status_trading_no_bar": 1,
+            "suspended": 1,
+        }
+        # 资金流档位不做复权因子在场核验
+        assert report.session.adj_factor_checked is False
+        assert report.dataset == "moneyflow"
+        assert capital.calls == ["moneyflow:2024-01-01:2024-01-05"]
+        # 复用价格档位的读口不被触碰
+        assert "stock_bars:2024-01-01:2024-01-05" not in market.calls
+
+    def test_moneyflow_without_capital_service_fails_loud(self) -> None:
+        service, _, _ = _service("stock")
+        with pytest.raises(AppError, match="capital"):
+            service.run(
+                PriceCoverageAuditRequest(
+                    "2024-01-01", "2024-01-05", "stock", dataset="moneyflow"
+                )
+            )
+
+    def test_fund_share_gaps_land_in_no_status_limitation(self) -> None:
+        market = _FundShareMarketStub()
+        metadata = _MetadataStub(_days(), "etf")
+        service = PriceCoverageAuditService(
+            market=market,  # type: ignore[arg-type]
+            metadata=metadata,  # type: ignore[arg-type]
+        )
+
+        report = service.run(
+            PriceCoverageAuditRequest(
+                "2024-01-01", "2024-01-05", "etf", dataset="fund_share"
+            )
+        )
+
+        # 证券 1（未退市）期望 5 会话仅 1 在场；ETF 无状态数据集 → 全部
+        # 落 no_status_dataset 证据边界（受限非失败）。
+        assert report.session.expected_sessions == 7
+        assert report.session.gap_counts == {"no_status_dataset": 4}
+        assert report.session.limitation_gaps == 4
+        assert report.session.failure_gaps == 0
+        assert report.passed
+        assert market.fund_share_calls == ["fund_share:2024-01-01:2024-01-05"]
+
+    def test_fund_share_port_not_assembled_fails_loud(self) -> None:
+        class _NoFundShareMarket(_MarketStub):
+            def get_fund_share(self, start: str, end: str) -> pl.DataFrame | None:
+                return None
+
+        market = _NoFundShareMarket(asset_class="etf")
+        metadata = _MetadataStub(_days(), "etf")
+        service = PriceCoverageAuditService(
+            market=market,  # type: ignore[arg-type]
+            metadata=metadata,  # type: ignore[arg-type]
+        )
+        with pytest.raises(AppError, match="fund_share 读取端口未装配"):
+            service.run(
+                PriceCoverageAuditRequest(
+                    "2024-01-01", "2024-01-05", "etf", dataset="fund_share"
+                )
+            )
+
+    def test_dataset_asset_class_combination_rejected(self) -> None:
+        service, _, _ = _service("stock")
+        with pytest.raises(AppError, match="不支持资产类"):
+            service.run(
+                PriceCoverageAuditRequest(
+                    "2024-01-01", "2024-01-05", "etf", dataset="moneyflow"
+                )
+            )
+        with pytest.raises(AppError, match="未知数据集档位"):
+            service.run(
+                PriceCoverageAuditRequest(
+                    "2024-01-01", "2024-01-05", "stock", dataset="margin_trading"
+                )
+            )
+
+    def test_daily_dataset_default_unchanged(self) -> None:
+        market = _MarketStub(asset_class="stock")
+        metadata = _MetadataStub(_days(), "stock")
+        service = PriceCoverageAuditService(
+            market=market,  # type: ignore[arg-type]
+            metadata=metadata,  # type: ignore[arg-type]
+        )
+        report = service.run(
+            PriceCoverageAuditRequest("2024-01-01", "2024-01-05", "stock")
+        )
+        assert report.dataset == "daily"
+        assert report.to_dict()["dataset"] == "daily"
+        # 价格档位保持复权因子核验
+        assert report.session.adj_factor_checked is True

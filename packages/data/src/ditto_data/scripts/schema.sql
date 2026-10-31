@@ -505,7 +505,7 @@ CREATE TABLE IF NOT EXISTS margin_trading (
     effective_to DATE,
     margin_buy_balance REAL,
     short_sell_balance REAL,
-    margin_buy_volume REAL,
+    margin_buy_amount REAL,
     short_sell_volume REAL,
     PRIMARY KEY (instrument_id, trade_date, effective_from),
     FOREIGN KEY (instrument_id) REFERENCES instrument(instrument_id)

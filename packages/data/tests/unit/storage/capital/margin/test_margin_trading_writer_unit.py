@@ -29,7 +29,7 @@ def in_memory_db() -> SQLiteClient:
         effective_to DATE,
         margin_buy_balance REAL,
         short_sell_balance REAL,
-        margin_buy_volume REAL,
+        margin_buy_amount REAL,
         short_sell_volume REAL,
         PRIMARY KEY (instrument_id, trade_date, effective_from)
     )"""
@@ -55,7 +55,7 @@ def test_write_success(writer: MarginTradingWriter) -> None:
             "effective_to": [None],
             "margin_buy_balance": [1000000.0],
             "short_sell_balance": [500000.0],
-            "margin_buy_volume": [50000000.0],
+            "margin_buy_amount": [50000000.0],
             "short_sell_volume": [20000000.0],
         }
     )
@@ -75,7 +75,7 @@ def test_write_returns_count(writer: MarginTradingWriter) -> None:
             "effective_to": [None, None],
             "margin_buy_balance": [1000000.0, 800000.0],
             "short_sell_balance": [500000.0, 400000.0],
-            "margin_buy_volume": [50000000.0, 40000000.0],
+            "margin_buy_amount": [50000000.0, 40000000.0],
             "short_sell_volume": [20000000.0, 16000000.0],
         }
     )
@@ -95,7 +95,7 @@ def test_write_empty_dataframe(writer: MarginTradingWriter) -> None:
             "effective_to": pl.Date,
             "margin_buy_balance": pl.Float64,
             "short_sell_balance": pl.Float64,
-            "margin_buy_volume": pl.Float64,
+            "margin_buy_amount": pl.Float64,
             "short_sell_volume": pl.Float64,
         }
     )
@@ -117,7 +117,7 @@ def test_write_with_nullable_effective_date(
             "effective_to": [None, date(2024, 5, 25)],
             "margin_buy_balance": [1000000.0, 800000.0],
             "short_sell_balance": [500000.0, 400000.0],
-            "margin_buy_volume": [50000000.0, 40000000.0],
+            "margin_buy_amount": [50000000.0, 40000000.0],
             "short_sell_volume": [20000000.0, 16000000.0],
         }
     )
@@ -142,7 +142,7 @@ def test_write_failure_rollback(writer: MarginTradingWriter) -> None:
             "effective_to": [None],
             "margin_buy_balance": [1000000.0],
             "short_sell_balance": [500000.0],
-            "margin_buy_volume": [50000000.0],
+            "margin_buy_amount": [50000000.0],
             "short_sell_volume": [20000000.0],
         }
     )
@@ -177,7 +177,7 @@ def test_write_on_conflict_do_nothing(
             "effective_to": [None],
             "margin_buy_balance": [1000000.0],
             "short_sell_balance": [500000.0],
-            "margin_buy_volume": [50000000.0],
+            "margin_buy_amount": [50000000.0],
             "short_sell_volume": [20000000.0],
         }
     )
@@ -222,7 +222,7 @@ def test_write_multiple_records_same_instrument(
             "effective_to": [None, None, None],
             "margin_buy_balance": [1000000.0, 1100000.0, 1200000.0],
             "short_sell_balance": [500000.0, 550000.0, 600000.0],
-            "margin_buy_volume": [50000000.0, 55000000.0, 60000000.0],
+            "margin_buy_amount": [50000000.0, 55000000.0, 60000000.0],
             "short_sell_volume": [20000000.0, 22000000.0, 24000000.0],
         }
     )

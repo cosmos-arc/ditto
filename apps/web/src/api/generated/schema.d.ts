@@ -1,6 +1,6 @@
 /**
  * DO NOT EDIT: generated from contracts/openapi/v1.json.
- * Schema SHA-256: bae60684e59751332361c982d7ea57efaf895bdae8a1f81e32e21c63cd90e4ac
+ * Schema SHA-256: f89009384a320452c6098c81657fe8fee47ddfc001b06eb9919ac0bafc1062e1
  * Generator: openapi-typescript 7.13.0
  */
 
@@ -11014,10 +11014,10 @@ export interface components {
          *     Attributes:
          *         instrument_id: 标的 ID
          *         trade_date: 交易日期
-         *         margin_buy_balance: 融资余额
-         *         short_sell_balance: 融券余额
-         *         margin_buy_volume: 融资买入量
-         *         short_sell_volume: 融券卖出量
+         *         margin_buy_balance: 融资余额（元）
+         *         short_sell_balance: 融券余额（元）
+         *         margin_buy_amount: 融资买入额（元，#625 修正语义：此前误标 volume）
+         *         short_sell_volume: 融券卖出量（股/份/手，按标的类型各异）
          */
         Margin: {
             /**
@@ -11026,15 +11026,15 @@ export interface components {
              */
             instrument_id: number;
             /**
+             * Margin Buy Amount
+             * @description 融资买入额
+             */
+            margin_buy_amount: number;
+            /**
              * Margin Buy Balance
              * @description 融资余额
              */
             margin_buy_balance: number;
-            /**
-             * Margin Buy Volume
-             * @description 融资买入量
-             */
-            margin_buy_volume: number;
             /**
              * Short Sell Balance
              * @description 融券余额
