@@ -109,12 +109,14 @@ class _MarketStub:
 
 
 class _InstrumentStub:
+    """名册桩：find_securities 以 kwargs 形态挂在 MetadataService 门面层."""
+
     def __init__(self, asset_class: str) -> None:
         self.asset_class = asset_class
-        self.seen_query: Any = None
+        self.seen_kwargs: dict[str, Any] = {}
 
-    def find_securities(self, query: Any) -> pl.DataFrame:
-        self.seen_query = query
+    def find_securities(self, **kwargs: Any) -> pl.DataFrame:
+        self.seen_kwargs = kwargs
         return pl.DataFrame(
             {
                 "instrument_id": [1, 2],
@@ -149,7 +151,14 @@ class _NoStatusMarketSchemaless(_MarketStub):
 class _MetadataStub:
     def __init__(self, days: list[str], asset_class: str) -> None:
         self.calendar = _CalendarStub(days)
-        self.instrument = _InstrumentStub(asset_class)
+        self._instrument = _InstrumentStub(asset_class)
+
+    def find_securities(self, **kwargs: Any) -> pl.DataFrame:
+        return self._instrument.find_securities(**kwargs)
+
+    @property
+    def instrument(self) -> _InstrumentStub:
+        return self._instrument
 
 
 def _days() -> list[str]:
@@ -175,8 +184,7 @@ class TestPriceCoverageAuditService:
             PriceCoverageAuditRequest("2024-01-01", "2024-01-05", "stock")
         )
         # 名册必须取全量（is_active=None）——退市证券保留。
-        assert instrument.seen_query.asset_class == "stock"
-        assert instrument.seen_query.is_active is None
+        assert instrument.seen_kwargs == {"asset_class": "stock", "is_active": None}
         # 状态期起点由窗口内状态帧最早会话推导（TUE）。
         assert "stock_status:2024-01-01:2024-01-05" in market.calls
         assert report.session.gap_counts == {"suspended": 1}
@@ -216,8 +224,7 @@ class TestPriceCoverageAuditService:
         report = service.run(
             PriceCoverageAuditRequest("2024-01-01", "2024-01-05", "etf")
         )
-        assert instrument.seen_query.asset_class == "etf"
-        assert instrument.seen_query.is_active is None
+        assert instrument.seen_kwargs == {"asset_class": "etf", "is_active": None}
         assert "etf_bars:2024-01-01:2024-01-05" in market.calls
         assert "fund_adj:2024-01-01:2024-01-05" in market.calls
         # WED 缺日线且无状态数据集 → 证据边界；fund_adj 缺证券 2 的 TUE → 缺口 1。

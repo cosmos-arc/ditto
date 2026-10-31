@@ -23,7 +23,6 @@ from ditto_data.quality.coverage_audit import (
 )
 from ditto_data.services.market_service import MarketService
 from ditto_data.services.metadata_service import MetadataService
-from ditto_data.storage.metadata.instrument import SecurityQuery
 
 from ditto_application.exceptions import AppQueryError
 
@@ -144,8 +143,10 @@ class PriceCoverageAuditService:
             trading_days, window_start=window_start, window_end=window_end
         )
 
-        roster = self._metadata.instrument.find_securities(
-            SecurityQuery(asset_class=request.asset_class, is_active=None)
+        # kwargs 重载走 MetadataService（其职责即隐藏 SecurityQuery 等
+        # storage 层内部类型；application 不得直 import ditto_data.storage）。
+        roster = self._metadata.find_securities(
+            asset_class=request.asset_class, is_active=None
         )
         if request.asset_class == "stock":
             bars = _ensure_schema(
