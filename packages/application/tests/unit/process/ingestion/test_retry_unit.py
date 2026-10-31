@@ -254,7 +254,7 @@ class TestGetFailedDates:
     ) -> None:
         """#394:按 success log 的尝试簿记排序——尝试少、更早的失败优先。"""
 
-        def _log(day: str, attempts: int, last: str) -> IngestionLog:
+        def _log(day: str, attempts: int, last: str | None) -> IngestionLog:
             return IngestionLog(
                 dataset="stock_daily",
                 source="tushare",

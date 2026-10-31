@@ -7,6 +7,7 @@ testing individual code paths and branches without full integration setup.
 
 from __future__ import annotations
 
+from typing import cast
 from unittest.mock import MagicMock
 
 import ditto_apps.jobs.flows.daily as daily_module
@@ -1307,7 +1308,8 @@ class TestDailyIngestionBusinessFailurePropagation:
             source="tushare",
         )
 
-        assert result["summary"]["failed_count"] == 1
+        summary = cast("dict[str, object]", result["summary"])
+        assert summary["failed_count"] == 1
 
 
 @pytest.mark.unit

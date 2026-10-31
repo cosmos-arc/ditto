@@ -10,11 +10,13 @@
 from __future__ import annotations
 
 from datetime import date
+from typing import cast
 
 import polars as pl
 import pytest
 from ditto_application.processes.ingestion.retry_manager import RetryManager
 from ditto_data.errors import SourceRateLimitError
+from ditto_data.ingestion.ingestion_log_store import IngestionLogStore
 from ditto_data.models.ingestion import (
     IngestionFailureKind,
     IngestionStatus,
@@ -77,7 +79,11 @@ def test_transient_rate_limit_recovers_via_classified_retry(
         )
 
         # 2. 补偿发现只选中瞬态失败数据集。
-        manager = RetryManager(coordinator=coordinator, ingestion_log_store=logs)
+        # harness 端口以最小协议类型暴露，运行时即 IngestionLogStore。
+        manager = RetryManager(
+            coordinator=coordinator,
+            ingestion_log_store=cast(IngestionLogStore, logs),
+        )
         retryable, excluded_groups = manager.compensation_selection()
         assert retryable == ["stock_daily"]
         assert [item["dataset"] for item in excluded_groups] == ["global_index_daily"]

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
+from typing import cast
 
 import pytest
 from ditto_application.processes.ingestion.result_handler import (
@@ -111,7 +112,11 @@ class TestHandleFetchErrorPersistsClassifiedCode:
     @staticmethod
     def _handler() -> tuple[IngestionResultHandler, _RecordingLogStore]:
         store = _RecordingLogStore()
-        return IngestionResultHandler(store, "tushare"), store
+        # 记录桩只为断言 save_log 入参，运行时形状与 IngestionLogStore 一致。
+        handler = IngestionResultHandler(
+            cast("IngestionLogStore | None", store), "tushare"
+        )
+        return handler, store
 
     def test_rate_limit_persisted_as_transient(self) -> None:
         handler, store = self._handler()
