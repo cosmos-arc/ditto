@@ -5,8 +5,11 @@ description: "融资融券数据质量检查规则"
 # 技术类: 技术校验（写入时强制阻断）
 technical:
   - rule: not_null
-    columns: [source_ticker, trade_date, margin_buy_balance, short_sell_balance]
-    message: "必填字段不能为空"
+    columns: [source_ticker, trade_date]
+    message: "业务键不能为空"
+    # 余额列（margin_buy_balance/short_sell_balance）不设 not_null（#625）：
+    # 交易所月末披露形态含 null 余额（2019-09-30 实测 DQ 拦截根因），存储
+    # schema 亦按 nullable 设计；未披露≠零值。
 
   - rule: unique
     columns: [source_ticker, trade_date, effective_from]
