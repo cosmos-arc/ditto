@@ -4,6 +4,7 @@ import json
 from datetime import UTC, date, datetime
 
 import httpx
+import orjson
 import polars as pl
 import pytest
 from ditto_data.config import DataSourceSettings
@@ -426,86 +427,54 @@ class TestTushareSourceStockBasic:
         respx_mock,
     ) -> None:
         """Mixed null/string delist dates from status batches should concat cleanly."""
-        responses = [
-            httpx.Response(
-                200,
-                json={
-                    "code": 0,
-                    "msg": None,
-                    "data": {
-                        "fields": [
-                            "ts_code",
-                            "symbol",
-                            "name",
-                            "exchange",
-                            "list_date",
-                            "delist_date",
-                            "list_status",
-                        ],
-                        "items": [
-                            [
-                                "000001.SZ",
-                                "000001",
-                                "平安银行",
-                                "SZSE",
-                                "19910403",
-                                None,
-                                "L",
-                            ]
-                        ],
-                    },
-                },
-            ),
-            httpx.Response(
-                200,
-                json={
-                    "code": 0,
-                    "msg": None,
-                    "data": {
-                        "fields": [
-                            "ts_code",
-                            "symbol",
-                            "name",
-                            "exchange",
-                            "list_date",
-                            "delist_date",
-                            "list_status",
-                        ],
-                        "items": [
-                            [
-                                "000002.SZ",
-                                "000002",
-                                "万科A",
-                                "SZSE",
-                                "19910129",
-                                "20240101",
-                                "D",
-                            ]
-                        ],
-                    },
-                },
-            ),
-            httpx.Response(
-                200,
-                json={
-                    "code": 0,
-                    "msg": None,
-                    "data": {
-                        "fields": [
-                            "ts_code",
-                            "symbol",
-                            "name",
-                            "exchange",
-                            "list_date",
-                            "delist_date",
-                            "list_status",
-                        ],
-                        "items": [],
-                    },
-                },
-            ),
+        # 按参数分派（#625 起每次 query 末尾的短页续探会追加 offset 探测
+        # 请求，顺序 mock 会跨批次串页）。
+        row_a = [
+            "000001.SZ",
+            "000001",
+            "平安银行",
+            "SZSE",
+            "19910403",
+            None,
+            "L",
         ]
-        respx_mock.post("http://api.tushare.pro").mock(side_effect=responses)
+        row_b = [
+            "000002.SZ",
+            "000002",
+            "万科A",
+            "SZSE",
+            "19910129",
+            "20240101",
+            "D",
+        ]
+        batch_rows = {"L": [row_a], "D": [row_b], "P": []}
+
+        def side_effect(request: httpx.Request) -> httpx.Response:
+            params = orjson.loads(request.content)["params"]
+            rows = batch_rows.get(params.get("list_status"), [])
+            offset = params.get("offset", 0)
+            page = rows[offset : offset + params.get("limit", 2000)]
+            return httpx.Response(
+                200,
+                json={
+                    "code": 0,
+                    "msg": None,
+                    "data": {
+                        "fields": [
+                            "ts_code",
+                            "symbol",
+                            "name",
+                            "exchange",
+                            "list_date",
+                            "delist_date",
+                            "list_status",
+                        ],
+                        "items": page,
+                    },
+                },
+            )
+
+        respx_mock.post("http://api.tushare.pro").mock(side_effect=side_effect)
 
         source = TushareSource(settings=_settings())
         result = source.fetch_stock_basic()
@@ -519,10 +488,8 @@ class TestTushareSourceStockBasic:
             "delist_date": pl.Date,
             "list_status": pl.String,
         }
-        assert result.select("source_ticker", "delist_date").to_dicts() == [
-            {"source_ticker": "000001.SZ", "delist_date": None},
-            {"source_ticker": "000002.SZ", "delist_date": date(2024, 1, 1)},
-        ]
+        rows = result.sort("source_ticker").to_dicts()
+        assert [row["delist_date"] for row in rows] == [None, date(2024, 1, 1)]
 
     def test_fetch_stock_basic_empty_response(self, respx_mock) -> None:
         """Test fetch_stock_basic handles empty response."""

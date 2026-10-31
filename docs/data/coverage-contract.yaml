@@ -690,22 +690,24 @@ datasets:
       typical_available_time: '18:30:00'
     measured:
       storage: parquet:capital/moneyflow
-      rows: 12036207
-      instruments: 5838
-      start: '2014-01-02'
-      end: '2026-10-29'
+      rows: 12557896
+      instruments: 5843
+      start: '2013-01-04'
+      end: '2026-10-30'
     catalog_latest:
-      date: '2026-10-29'
+      date: '2026-10-30'
       status: success
-      partition_rows: 5576
+      partition_rows: 5577
       freshness: fresh
-    status: ready
-    gaps: []
+    status: partial
+    gaps:
+    - BSE 2023-2026 ~20.5 万会话源端不覆盖（moneyflow 端点无北交所数据，#575 裁决 BSE 先不覆盖）
+    - stock_status 数据集空洞致 82,422 会话缺口无法归因（2021/2022 为主，P2 线既知边界）
     consumers:
     - 资金面分析
     - query margin/moneyflow
     - patrol
-    notes: 2014-01-02 起 1,203 万行（#196 回补）
+    notes: 2013-01-04 起 1,256 万行（#196 回补 + #625 补 2013 段与 2026-10 空洞）；#625 审计 present 95.1%、十月空洞治愈、对拍 3/3 一致
   cyq_perf:
     domain: capital
     tier: t1_incremental
@@ -945,22 +947,23 @@ datasets:
       typical_available_time: '21:00:00'
     measured:
       storage: parquet:market/etf/fund_share
-      rows: 1572733
-      instruments: 1857
-      start: '2014-01-02'
-      end: '2026-10-27'
+      rows: 1604079
+      instruments: 1865
+      start: '2013-01-04'
+      end: '2026-10-30'
     catalog_latest:
-      date: '2026-10-29'
+      date: '2026-10-30'
       status: success
-      partition_rows: 0
+      partition_rows: 1715
       freshness: fresh
     status: partial
     gaps:
-    - 末端 2026-10-27，近两日空（节奏根因待 P1）
+    - ETF 无状态数据集，份额非逐日必有——87.9% 会话在场为观测口径（no_status_dataset 证据边界）
+    - 源侧全量 ~1,807 行/日 vs 本地 ~1,714（LOF/非 ETF 名册标的 FK 过滤，#503 线裁决）
     consumers:
     - ETF 份额观察
     - query market
-    notes: 2014-01-02 起 157 万行；存量 LOF 已清（#503 线）
+    notes: 2013-01-04 起 160 万行、逐年交易日全覆盖；#625 晚发布近窗重取治愈尾部（10-26..30 各 1,713-1,715 行）；对拍 3/3 一致
   fund_portfolio:
     domain: fundamental
     tier: t1_incremental
