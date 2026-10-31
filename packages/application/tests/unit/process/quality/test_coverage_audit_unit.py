@@ -12,6 +12,7 @@ from typing import Any
 
 import polars as pl
 import pytest
+from ditto_application.exceptions import AppError
 from ditto_application.processes.quality.coverage_audit import (
     PriceCoverageAuditRequest,
     PriceCoverageAuditService,
@@ -373,7 +374,7 @@ class TestPriceCoverageAuditService:
 
     def test_rejects_unknown_asset_class_and_bad_window(self) -> None:
         service, _, _ = _service("stock")
-        with pytest.raises(ValueError, match="未知资产类"):
+        with pytest.raises(AppError, match="未知资产类"):
             service.run(PriceCoverageAuditRequest("2024-01-01", "2024-01-05", "index"))
-        with pytest.raises(ValueError, match="end_date"):
+        with pytest.raises(AppError, match="end_date"):
             service.run(PriceCoverageAuditRequest("2024-01-05", "2024-01-01", "stock"))

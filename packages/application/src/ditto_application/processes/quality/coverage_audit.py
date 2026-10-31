@@ -25,6 +25,8 @@ from ditto_data.services.market_service import MarketService
 from ditto_data.services.metadata_service import MetadataService
 from ditto_data.storage.metadata.instrument import SecurityQuery
 
+from ditto_application.exceptions import AppQueryError
+
 __all__ = [
     "PriceCoverageAuditReport",
     "PriceCoverageAuditRequest",
@@ -124,13 +126,13 @@ class PriceCoverageAuditService:
     def run(self, request: PriceCoverageAuditRequest) -> PriceCoverageAuditReport:
         """执行审计：读物理帧 → 纯函数归因 → 报告."""
         if request.asset_class not in _ASSET_CLASSES:
-            raise ValueError(
+            raise AppQueryError(
                 f"未知资产类 {request.asset_class!r}: 允许 {sorted(_ASSET_CLASSES)}"
             )
         window_start = date.fromisoformat(request.start_date)
         window_end = date.fromisoformat(request.end_date)
         if window_end < window_start:
-            raise ValueError("end_date 不得早于 start_date")
+            raise AppQueryError("end_date 不得早于 start_date")
 
         trading_days = [
             date.fromisoformat(day)
