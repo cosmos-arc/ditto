@@ -39,6 +39,7 @@ __all__ = [
     "PriceCoverageAuditReport",
     "PriceCoverageAuditRequest",
     "PriceCoverageAuditService",
+    "dataset_asset_class",
 ]
 
 _ASSET_CLASSES = frozenset({"stock", "etf"})
@@ -48,6 +49,23 @@ _DATASET_ASSET_CLASSES: Mapping[str, frozenset[str]] = {
     "moneyflow": frozenset({"stock"}),
     "fund_share": frozenset({"etf"}),
 }
+
+
+def dataset_asset_class(dataset: str) -> str:
+    """单资产类数据集档位的名册口径（CLI 用）；未知/多资产类档位响亮失败."""
+    allowed = _DATASET_ASSET_CLASSES.get(dataset)
+    if allowed is None:
+        raise AppQueryError(
+            f"未知数据集档位 {dataset!r}: 允许 {sorted(_DATASET_ASSET_CLASSES)}"
+        )
+    if len(allowed) != 1:
+        raise AppQueryError(
+            f"数据集档位 {dataset!r} 支持多资产类 {sorted(allowed)}: "
+            "须显式指定 asset_class"
+        )
+    return next(iter(allowed))
+
+
 # 空窗读取（窗口早于数据集起点）经 ParquetStore.read 可能返回无列空帧；
 # 补齐最小 schema 让审计产出归因报告而非在 select 上崩溃。
 _BAR_KEYS_SCHEMA: Mapping[str, type[pl.DataType]] = {

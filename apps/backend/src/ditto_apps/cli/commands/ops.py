@@ -21,6 +21,7 @@ from ditto_application.processes.materialization.orchestrator import (
 from ditto_application.processes.quality.coverage_audit import (
     PriceCoverageAuditRequest,
     PriceCoverageAuditService,
+    dataset_asset_class,
 )
 from ditto_application.processes.quality.patrol import QualityPatrolService
 from ditto_application.queries.evaluation import (
@@ -619,7 +620,11 @@ def audit_capital_coverage(
     margin_trading 无两融标的池名册，期望会话不可推导——不提供本审计，
     覆盖事实见 docs/data 覆盖合同与核验报告。
     """
-    asset_class = "stock" if dataset == "moneyflow" else "etf"
+    try:
+        asset_class = dataset_asset_class(dataset)
+    except Exception as exc:
+        typer.secho(f"资金面覆盖审计失败: {exc}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(1) from exc
     container, service = _fetch_coverage_audit_service()
     try:
         report = service.run(

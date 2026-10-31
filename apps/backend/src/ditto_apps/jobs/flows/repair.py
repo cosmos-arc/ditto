@@ -188,7 +188,11 @@ def repair_holes_flow(
             "repaired_count": result.success_count,
             "failed_count": result.failed_count,
             "message": (
-                f"修补完成: {result.success_count} 个空洞已修补"
+                (
+                    f"近窗重取完成: {result.success_count} 个会话已重取"
+                    if refetch_window_days > 0
+                    else f"修补完成: {result.success_count} 个空洞已修补"
+                )
                 if result.total_dates > 0
                 else "没有发现空洞"
             ),

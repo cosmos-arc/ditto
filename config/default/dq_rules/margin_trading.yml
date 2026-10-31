@@ -17,12 +17,12 @@ technical:
       trade_date: date
       margin_buy_balance: float
       short_sell_balance: float
-      margin_buy_volume: float
+      margin_buy_amount: float
       short_sell_volume: float
     message: "字段类型不匹配"
 
 # 业务类: 业务规则（写入时警告但不阻断）
 business:
   - rule: positive
-    columns: [margin_buy_balance, short_sell_balance, margin_buy_volume, short_sell_volume]
+    columns: [margin_buy_balance, short_sell_balance, margin_buy_amount, short_sell_volume]
     message: "融资融券余额和交易量必须为正数"
