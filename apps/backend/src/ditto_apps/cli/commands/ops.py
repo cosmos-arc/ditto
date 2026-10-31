@@ -406,9 +406,14 @@ def _print_history_table(
 
 def _fetch_status_facade() -> tuple[Container, IngestionStatusQueryFacade]:
     """获取 IngestionStatusQueryFacade, 失败时退出."""
+    return _fetch_service(IngestionStatusQueryFacade)
+
+
+def _fetch_service[T](service_type: type[T]) -> tuple[Container, T]:
+    """从应用容器取服务, 失败时退出."""
     container: Container = make_app_container()
     try:
-        return container, container.get(IngestionStatusQueryFacade)
+        return container, container.get(service_type)
     except Exception as exc:
         typer.secho(f"获取服务失败: {exc}", fg=typer.colors.RED, err=True)
         container.close()
@@ -417,24 +422,12 @@ def _fetch_status_facade() -> tuple[Container, IngestionStatusQueryFacade]:
 
 def _fetch_patrol_service() -> tuple[Container, QualityPatrolService]:
     """获取 QualityPatrolService, 失败时退出."""
-    container: Container = make_app_container()
-    try:
-        return container, container.get(QualityPatrolService)
-    except Exception as exc:
-        typer.secho(f"获取服务失败: {exc}", fg=typer.colors.RED, err=True)
-        container.close()
-        raise typer.Exit(1) from exc
+    return _fetch_service(QualityPatrolService)
 
 
 def _fetch_coverage_audit_service() -> tuple[Container, PriceCoverageAuditService]:
     """获取 PriceCoverageAuditService, 失败时退出."""
-    container: Container = make_app_container()
-    try:
-        return container, container.get(PriceCoverageAuditService)
-    except Exception as exc:
-        typer.secho(f"获取服务失败: {exc}", fg=typer.colors.RED, err=True)
-        container.close()
-        raise typer.Exit(1) from exc
+    return _fetch_service(PriceCoverageAuditService)
 
 
 @app.command()

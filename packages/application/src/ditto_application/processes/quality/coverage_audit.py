@@ -10,7 +10,7 @@ MarketService/MetadataService 取物理帧（日线/状态/复权因子/名册/�
 """
 
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, timedelta
 from typing import Any
 
 import polars as pl
@@ -31,6 +31,14 @@ __all__ = [
 ]
 
 _ASSET_CLASSES = frozenset({"stock", "etf"})
+_ONE_DAY = timedelta(days=1)
+
+# 空窗读取可能返回无列空帧；带 schema 空帧让纯函数走「状态集存在但窗口内无行」路径。
+_STATUS_KEYS_SCHEMA = {
+    "instrument_id": pl.Int64,
+    "trade_date": pl.Date,
+    "is_suspended": pl.Boolean,
+}
 
 
 @dataclass(frozen=True)
@@ -125,24 +133,26 @@ class PriceCoverageAuditService:
             adj_factors: pl.DataFrame | None = self._market.get_adj_factors(
                 request.start_date, request.end_date
             )
+            # 状态期起点 = 窗口内状态数据最早会话；窗口完全早于状态期
+            # （如仅审计 2014~2015）时，era 取窗口外首日，让全部缺失落到
+            # pre_status_era 证据边界——股票状态数据集存在，不得误标
+            # no_status_dataset（那是 ETF 无数据集的语义）。
+            status_frame: pl.DataFrame | None = (
+                status if status.height else pl.DataFrame(schema=_STATUS_KEYS_SCHEMA)
+            )
+            era_value = status["trade_date"].min() if status.height else None
+            status_available_from = (
+                era_value if isinstance(era_value, date) else window_end + _ONE_DAY
+            )
         else:
             bars = self._market.get_etf_bars(request.start_date, request.end_date)
             # ETF 无状态数据集（market/etf/status 未注册摄取）：缺口归因
             # 诚实落在 no_status_dataset 证据边界，不冒充停牌可判。
-            status = pl.DataFrame()
+            status_frame = None
+            status_available_from = None
             adj_factors = self._market.get_fund_adj(
                 request.start_date, request.end_date
             )
-
-        # 状态期起点 = 窗口内状态数据最早会话；窗口内零状态行时按无状态
-        # 证据处理（no_status_dataset），不把期前窗口误判为状态缺失失败。
-        if status.height:
-            era_value = status["trade_date"].min()
-            status_available_from = era_value if isinstance(era_value, date) else None
-            status_frame: pl.DataFrame | None = status
-        else:
-            status_available_from = None
-            status_frame = None
 
         session_audit = audit_session_coverage(
             trading_days=trading_days,

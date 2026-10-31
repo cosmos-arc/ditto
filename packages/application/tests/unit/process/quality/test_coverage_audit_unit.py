@@ -136,6 +136,11 @@ class _CalendarStub:
         return self.days
 
 
+class _NoStatusMarketSchemaless(_MarketStub):
+    def get_stock_status(self, start: str, end: str) -> pl.DataFrame:
+        return pl.DataFrame()
+
+
 class _MetadataStub:
     def __init__(self, days: list[str], asset_class: str) -> None:
         self.calendar = _CalendarStub(days)
@@ -231,8 +236,8 @@ class TestPriceCoverageAuditService:
         assert payload["gap_samples"][0]["ticker"] == "000001.SZ"
         assert payload["gap_samples"][0]["kind"] == "suspended"
 
-    def test_empty_status_window_treated_as_no_status_evidence(self) -> None:
-        """窗口内零状态行（如仅审计状态期前年份）→ 无状态证据，不误判失败."""
+    def test_pre_era_stock_window_attributed_to_pre_status_era(self) -> None:
+        """窗口完全早于状态期（股票）→ pre_status_era，不得误标 no_status_dataset."""
 
         class _NoStatusMarket(_MarketStub):
             def get_stock_status(self, start: str, end: str) -> pl.DataFrame:
@@ -253,9 +258,24 @@ class TestPriceCoverageAuditService:
         report = service.run(
             PriceCoverageAuditRequest("2024-01-01", "2024-01-05", "stock")
         )
-        assert report.session.gap_counts == {"no_status_dataset": 1}
+        # 状态数据集存在但窗口内零行 → 全部缺失归 pre_status_era 证据边界。
+        assert report.session.gap_counts == {"pre_status_era": 1}
         assert report.session.limitation_gaps == 1
         assert report.session.passed
+
+    def test_statusless_window_handles_schemaless_empty_frame(self) -> None:
+        """空窗读取返回无列空帧时服务补 schema，不因 select 失败."""
+
+        market = _NoStatusMarketSchemaless()
+        metadata = _MetadataStub(_days(), "stock")
+        service = PriceCoverageAuditService(
+            market=market,  # type: ignore[arg-type]
+            metadata=metadata,  # type: ignore[arg-type]
+        )
+        report = service.run(
+            PriceCoverageAuditRequest("2024-01-01", "2024-01-05", "stock")
+        )
+        assert report.session.gap_counts == {"pre_status_era": 1}
 
     def test_rejects_unknown_asset_class_and_bad_window(self) -> None:
         service, _, _ = _service("stock")

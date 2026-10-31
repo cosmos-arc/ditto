@@ -81,14 +81,15 @@ def _snapshot(
     created: datetime,
     *,
     source: str = "tushare",
+    bounds: tuple[str, str] = ("2026-03-09", "2026-03-15"),
 ) -> ProviderSnapshot:
     artifact = store.retain_payload(dataset_id=dataset, source=source, payload=frame)
     return ProviderSnapshot.create(
         ProviderSnapshotDraft(
             dataset_id=dataset,
             source=source,
-            request_start="2026-03-09",
-            request_end="2026-03-15",
+            request_start=bounds[0],
+            request_end=bounds[1],
             schema_version=f"{dataset}.v1",
             checksum=artifact.checksum,
             canonical_asset=DataAssetRef(dataset_id=dataset, namespace="market"),
@@ -4596,32 +4597,6 @@ def _days_inclusive(start: date, end: date) -> list[date]:
 _CONSISTENT_BOUNDS = ("2026-01-26", "2026-04-05")
 
 
-def _snapshot_wide(
-    store: FilesystemProviderPayloadStore,
-    dataset: str,
-    frame: pl.DataFrame,
-    created: datetime,
-) -> ProviderSnapshot:
-    artifact = store.retain_payload(dataset_id=dataset, source="tushare", payload=frame)
-    return ProviderSnapshot.create(
-        ProviderSnapshotDraft(
-            dataset_id=dataset,
-            source="tushare",
-            request_start=_CONSISTENT_BOUNDS[0],
-            request_end=_CONSISTENT_BOUNDS[1],
-            schema_version=f"{dataset}.v1",
-            checksum=artifact.checksum,
-            canonical_asset=DataAssetRef(dataset_id=dataset, namespace="market"),
-            request_parameters_hash="sha256:market-chart-consistency-test",
-            response_metadata=(),
-            row_count=artifact.row_count,
-            payload_uri=artifact.uri,
-            payload_retained=True,
-            created_at=created,
-        )
-    )
-
-
 def _consistent_chart(
     tmp_path: Path,
 ) -> tuple[MarketChartQueryFacade, list[date]]:
@@ -4673,9 +4648,15 @@ def _consistent_chart(
         }
     )
     snapshots = (
-        _snapshot_wide(store, "stock_daily", bars, visible),
-        _snapshot_wide(store, "adj_factor", factors, visible),
-        _snapshot_wide(store, "calendar", calendar, visible - timedelta(days=1)),
+        _snapshot(store, "stock_daily", bars, visible, bounds=_CONSISTENT_BOUNDS),
+        _snapshot(store, "adj_factor", factors, visible, bounds=_CONSISTENT_BOUNDS),
+        _snapshot(
+            store,
+            "calendar",
+            calendar,
+            visible - timedelta(days=1),
+            bounds=_CONSISTENT_BOUNDS,
+        ),
     )
     reader = cast(ProviderSnapshotReader, _Snapshots(snapshots))
     metadata = cast(

@@ -105,15 +105,23 @@ not_comparable）与本次配置根错误事故（fields=() → 不可比较 →
 契约与导出身份既有覆盖：`MarketChartResponse.adjustment` 回显 + 每 bar
 `source_snapshot_ids/available_at/published_at/partial`；CSV 导出身份列
 （as_of/snapshot_id/双 cutoff/adjustment/period/partial，#208-4）有
-`chart-data.test.ts` 逐列断言；NAV 走独立端点叠加。
+`chart-data.test.ts` 逐列断言。NAV 与价格通道分离：独立端点
+`/market/etf-nav`（unit_nav/acc_nav 双口径），真实库 1,526,180 行、近一周
+6,713 行（例 520790.SH 2026-10-27~29 unit_nav 0.7233/0.727/0.7098），
+叠加线在图表层不与 K 线价格混淆。
 
-**真实阻断**：当前库上 `/market/chart` 对任何窗口 fail-closed
+**真实阻断（F1）**：当前库上 `/market/chart` 对任何窗口 fail-closed
 （`retained chart calendar is unavailable at cutoff`）。根因：2026-10-08
 bootstrap 的 14 个年度日历快照 payload 全部带次年首月
 （如 2026 快照 payload 至 2027-01-31，request 界只声明至 2026-12-31），
 `retained_calendar` 的越界校验（payload 行不得超出自身快照 request 界，
 #308 引入）按设计拒绝。图表消费链因此整体不可用，需重拉日历快照修复
 （真实数据写入，另行授权）。
+
+**验收状态**：P2「图表/导出一致」条款中，导出身份列与价格身份字段由
+既有测试验收；**图表在真实数据上的端到端一致性受 F1 阻断，待日历快照
+重拉后复跑本节 LIVE 核验**（三周期重建的真实数据路径已由纯日线重建
+与集成测试双线覆盖）。
 
 ## 发现清单与后续行动
 
