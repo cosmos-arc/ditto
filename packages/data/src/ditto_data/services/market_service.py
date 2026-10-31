@@ -7,6 +7,7 @@ MarketService - Market 域统一查询入口（Facade）.
 
 from __future__ import annotations
 
+from datetime import date
 from typing import cast
 
 import polars as pl
@@ -232,6 +233,52 @@ class MarketService:
             {"dataset": "adj_factor", "operation": "get"},
         )
 
+        return df
+
+    @traced("market.get_stock_status_date_range")
+    def get_stock_status_date_range(self) -> tuple[date, date] | None:
+        """
+        查询股票状态数据集的物理覆盖范围（不受请求窗口约束）.
+
+        覆盖审计用其推导状态期起点：窗口内状态帧的最早行无法区分
+        「数据集尚未开始」与「窗口内前导摄取空洞」，后者是失败场景。
+
+        Returns:
+            (最早会话, 最晚会话)；数据集为空时返回 None.
+
+        """
+        start, end = self._read_ports.stock_status.get_date_range()
+        if start is None or end is None:
+            return None
+        return date.fromisoformat(start), date.fromisoformat(end)
+
+    @traced("market.get_fund_adj")
+    def get_fund_adj(self, start: str, end: str) -> pl.DataFrame | None:
+        """
+        查询 ETF 复权因子（fund_adj 数据集，物理存储 market/etf/adj）.
+
+        Args:
+            start: 开始日期 (YYYY-MM-DD).
+            end: 结束日期 (YYYY-MM-DD).
+
+        Returns:
+            复权因子 DataFrame（instrument_id/trade_date/adj_factor 等）；
+            etf_adj 读取端口未装配时返回 None（诚实降级，调用方可区分
+            「未装配」与「装配但窗口内零行」）.
+
+        """
+        if self._read_ports.etf_adj is None:
+            logger.warning(
+                "ETF adjustment factor reader not configured",
+                event="market_fund_adj_reader_missing",
+            )
+            return None
+
+        df = self._read_ports.etf_adj.read(start_date=start, end_date=end)
+        Metrics.data_records.add(
+            len(df),
+            {"dataset": "fund_adj", "operation": "get"},
+        )
         return df
 
     @traced("market.get_stock_limits")
