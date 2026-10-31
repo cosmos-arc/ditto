@@ -1,5 +1,5 @@
 """
-修补 Flow。
+修补 Flow.
 
 该模块实现数据修补功能：
 - 重试失败任务
@@ -14,17 +14,29 @@ from typing import cast
 from ditto_application.processes.ingestion.sparse_recovery_models import (
     SparsePITReattestationRequest,
 )
+from ditto_platform.foundation import logger
 from prefect import flow
 
 from ditto_apps.registry import create_ingestion_bundle
 
 __all__ = [
+    "CONSUMER_CRITICAL_HOLE_DATASETS",
     "daily_repair_flow",
     "repair_holes_flow",
     "retry_failed_flow",
     "run_sparse_pit_reattestation",
     "sparse_pit_reattestation_flow",
 ]
+
+# 空洞扫描的消费者关键数据集（#623：补偿按消费者依赖选择，禁全注册表
+# 盲扫）。只有这些核心价格链数据集按日历扫空洞；其余数据集只按真实
+# 失败记录进入重试补偿。
+CONSUMER_CRITICAL_HOLE_DATASETS: tuple[str, ...] = (
+    "etf_daily",
+    "stock_daily",
+    "adj_factor",
+    "fund_adj",
+)
 
 
 def run_sparse_pit_reattestation(
@@ -101,6 +113,17 @@ def retry_failed_flow(
             "retried_count": result.retried_count,
             "success_count": result.success_count,
             "still_failed_count": result.still_failed_count,
+            # #623：被失败分类排除出自动重试的失败（永久/源缺失/不支持），
+            # 保留原因与补偿范围供人工裁决。
+            "excluded_failures": [
+                {
+                    "trade_date": log.trade_date,
+                    "error_code": log.error_code,
+                    "error_message": log.error_message,
+                    "attempts": log.attempts,
+                }
+                for log in result.excluded_failures
+            ],
             "message": (
                 f"重试完成: {result.success_count}/{result.retried_count} 成功"
             ),
@@ -163,13 +186,18 @@ def daily_repair_flow(
     每日修补流程。
 
     该流程运行两个步骤：
-    1. 重试失败的任务
-    2. 扫描并修补数据空洞
+    1. 重试失败的任务（仅瞬态失败，#623 失败分类）
+    2. 扫描并修补数据空洞（仅消费者关键数据集）
+
+    补偿目标按真实失败记录选择（datasets=None 时自动发现有瞬态失败的
+    数据集），不做全注册表每日回补；被分类排除的失败（永久/源缺失/
+    不支持）在 summary.excluded_failure_groups 留痕待人工裁决。
 
     适合每日凌晨运行。
 
     Args:
-        datasets: 要修补的数据集列表，默认为 None（所有数据集）
+        datasets: 显式修补的数据集列表；None 时按失败记录自动发现
+            （重试=瞬态 FAIL 数据集，空洞=消费者关键数据集）
         max_attempts: 重试的最大尝试次数
         retry_limit: 重试的最大任务数
         source: 数据源名称
@@ -179,29 +207,72 @@ def daily_repair_flow(
         修补结果汇总
 
     """
-    # 默认数据集列表
+    excluded_groups: list[dict[str, object]] = []
     if datasets is None:
-        datasets = ["etf_daily", "stock_daily", "adj_factor", "fund_adj"]
+        # #623 补偿选择：重试目标=瞬态失败数据集（事件驱动、天然有界），
+        # 空洞扫描=消费者关键数据集白名单（低频源不按日盲目回补）。
+        with create_ingestion_bundle(source=source) as bundle:
+            retry_datasets, excluded_groups = (
+                bundle.retry_manager.compensation_selection(
+                    max_attempts=max_attempts,
+                )
+            )
+        holes_datasets = list(CONSUMER_CRITICAL_HOLE_DATASETS)
+        if excluded_groups:
+            logger.warning(
+                "非瞬态失败不自动补偿, 待人工裁决",
+                event="repair_excluded_failure_groups",
+                groups=excluded_groups,
+            )
+    else:
+        retry_datasets = list(datasets)
+        holes_datasets = list(datasets)
 
     retry_results: dict[str, dict[str, object]] = {}
     holes_results: dict[str, dict[str, object]] = {}
 
-    for dataset in datasets:
-        # 1. 重试失败任务
-        retry_result = retry_failed_flow(
-            dataset=dataset,
-            max_attempts=max_attempts,
-            limit=retry_limit,
-            source=source,
-        )
+    for dataset in retry_datasets:
+        # 逐数据集隔离（#623 correctness F2）：补偿发现来自 ingestion_log，
+        # 可能含已改名/移除/权限被撤的数据集名——单个数据集的编排异常
+        # 不得拖垮整晚修补（消费者关键数据集的空洞扫描仍须执行）。
+        try:
+            retry_result = retry_failed_flow(
+                dataset=dataset,
+                max_attempts=max_attempts,
+                limit=retry_limit,
+                source=source,
+            )
+        except Exception as exc:
+            logger.exception(
+                "重试数据集编排失败",
+                event="repair_retry_dataset_failed",
+                dataset=dataset,
+                error_type=type(exc).__name__,
+            )
+            retry_result: dict[str, object] = {
+                "dataset": dataset,
+                "error": f"{type(exc).__name__}: {exc}",
+            }
         retry_results[dataset] = retry_result
 
-        # 2. 修补空洞
-        holes_result = repair_holes_flow(
-            dataset=dataset,
-            source=source,
-            parallel=parallel,
-        )
+    for dataset in holes_datasets:
+        try:
+            holes_result = repair_holes_flow(
+                dataset=dataset,
+                source=source,
+                parallel=parallel,
+            )
+        except Exception as exc:
+            logger.exception(
+                "空洞扫描数据集编排失败",
+                event="repair_holes_dataset_failed",
+                dataset=dataset,
+                error_type=type(exc).__name__,
+            )
+            holes_result: dict[str, object] = {
+                "dataset": dataset,
+                "error": f"{type(exc).__name__}: {exc}",
+            }
         holes_results[dataset] = holes_result
 
     # 汇总结果
@@ -216,9 +287,11 @@ def daily_repair_flow(
         "retry_result": retry_results,
         "holes_result": holes_results,
         "summary": {
-            "datasets": datasets,
+            "retry_datasets": retry_datasets,
+            "holes_datasets": holes_datasets,
             "total_retried": total_retried,
             "total_repaired": total_repaired,
+            "excluded_failure_groups": excluded_groups,
             "message": (
                 f"修补完成: 重试 {total_retried} 个任务, 修补 {total_repaired} 个空洞"
             ),

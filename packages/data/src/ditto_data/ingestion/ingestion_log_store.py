@@ -6,8 +6,13 @@ IngestionLogStore - 数据摄入日志服务.
 
 from __future__ import annotations
 
-from ditto_data.models.ingestion import IngestionLog, IngestionStatus
+from ditto_data.models.ingestion import (
+    IngestionFailedErrorGroup,
+    IngestionLog,
+    IngestionStatus,
+)
 from ditto_data.storage.runtime.ingestion import (
+    FailureFilter,
     IngestionLogReader,
     IngestionLogWriter,
 )
@@ -102,21 +107,50 @@ class IngestionLogStore:
         source: str = "tushare",
         limit: int = 10,
         max_attempts: int = 3,
+        failure_filter: FailureFilter = "all",
     ) -> list[IngestionLog]:
         """
         获取需要重试的失败摄入日志.
 
         Args:
-            dataset: 数据集名称（如 "stock_daily"）
+            dataset: 数据集名称（例如 "stock_daily"）
             source: 数据源标识（默认 "tushare"）
             limit: 返回的最大日志数量
             max_attempts: 仅返回尝试次数小于此值的日志
+            failure_filter: "all"/"transient"/"non_transient"（SQL 内过滤）
 
         Returns:
-            需要重试的摄入日志列表
+            需要重试的摄入日志列表.
 
         """
-        return self._reader.list_failed_logs(dataset, source, limit, max_attempts)
+        return self._reader.list_failed_logs(
+            dataset,
+            source,
+            limit,
+            max_attempts,
+            failure_filter,
+        )
+
+    def list_failed_error_groups(
+        self,
+        source: str = "tushare",
+        max_attempts: int = 3,
+    ) -> list[IngestionFailedErrorGroup]:
+        """
+        按 (dataset, error_code) 分组统计待处理失败（#623 补偿发现）。
+
+        Args:
+            source: 数据源标识（默认 "tushare"）
+            max_attempts: 仅统计尝试次数小于此值的失败
+
+        Returns:
+            分组统计列表。
+
+        """
+        return self._reader.list_failed_error_groups(
+            source=source,
+            max_attempts=max_attempts,
+        )
 
     def count_success_rate(
         self,

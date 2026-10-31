@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
 from enum import StrEnum
+from types import MappingProxyType
 from typing import Literal
 
 # ============ New Ingestion System: Event Log + Cursor ============
@@ -14,6 +16,116 @@ class IngestionStatus(StrEnum):
 
     SUCCESS = "SUCCESS"  # Data successfully ingested
     FAIL = "FAIL"  # Ingestion failed (fetch error / DQ blocked / empty df)
+
+
+class IngestionFailureKind(StrEnum):
+    """
+    摄取失败的可行动分类（#623）。
+
+    与 :class:`IngestionStatus` 正交：status 只说明成败，kind 说明失败后
+    该做什么——自动重试（transient）、人工修复（permanent）、覆盖缺口
+    裁定（source_missing / unsupported）。正常无事件不是失败，零行
+    SUCCESS 不进入本分类。
+    """
+
+    TRANSIENT = "transient"  # 限流/网络/供应商晚发——自动重试有意义
+    PERMANENT = "permanent"  # 代码/配置/数据质量——重试无意义，保留原因人工处理
+    SOURCE_MISSING = "source_missing"  # 源可达但无该数据（覆盖缺口），不按日盲目回补
+    UNSUPPORTED = "unsupported"  # 管线声明该源不支持该数据集（能力缺口，非故障）
+
+
+@dataclass(frozen=True)
+class IngestionFailedErrorGroup:
+    """
+    One (dataset, error_code) failure summary for compensation selection (#623).
+
+    Reader 层投影：仅原始计数，无分类——失败分类词汇表的唯一权威
+    实现是本模块的 :data:`INGESTION_ERROR_CODE_KINDS`。
+    """
+
+    dataset: str
+    error_code: str | None
+    failure_count: int
+    oldest_trade_date: str | None
+    newest_trade_date: str | None
+
+
+# 闭合错误码词汇表：error_code → 失败分类。未知码 fail-closed 归
+# permanent（不可分类的失败不自动重试，由人工裁决——与 #608 响亮失败
+# 一致）。唯一例外是 FETCH_ERROR：它本身是已知类别"取数失败但原因
+# 未细分"（供应商 5xx 等），本质上多为瞬态，默认进入重试并由
+# attempts 上界兜底——与未知码的 fail-closed 区分是刻意设计。
+INGESTION_ERROR_CODE_KINDS: Mapping[str, IngestionFailureKind] = MappingProxyType(
+    {
+        # 瞬态：下一预算窗口/网络恢复/供应商发布后重试可恢复
+        "RATE_LIMIT": IngestionFailureKind.TRANSIENT,
+        "NETWORK_ERROR": IngestionFailureKind.TRANSIENT,
+        "FETCH_ERROR": IngestionFailureKind.TRANSIENT,
+        "EMPTY_DATA_UNEXPECTED": IngestionFailureKind.TRANSIENT,
+        # 永久：重试不改变结果
+        "UNKNOWN_ERROR": IngestionFailureKind.PERMANENT,
+        "WRITE_ERROR": IngestionFailureKind.PERMANENT,
+        "DQ_BLOCKED": IngestionFailureKind.PERMANENT,
+        # 认证/权限类：凭证或接口权限问题，人工处理后才会变化
+        "SOURCE_AUTH_ERROR": IngestionFailureKind.PERMANENT,
+        "SOURCE_PERMISSION_DENIED": IngestionFailureKind.PERMANENT,
+        "PARTITION_INTENT_FAILED": IngestionFailureKind.PERMANENT,
+        "PARTITION_LIFECYCLE_FAILED": IngestionFailureKind.PERMANENT,
+        "PARTITION_COMPLETE_FAILED": IngestionFailureKind.PERMANENT,
+        "PARTITION_FAILURE_RECORD_FAILED": IngestionFailureKind.PERMANENT,
+        "SNAPSHOT_WRITE_FAILED": IngestionFailureKind.PERMANENT,
+        "SNAPSHOT_CANONICAL_DRIFT": IngestionFailureKind.PERMANENT,
+        "CATALOG_WRITE_FAILED": IngestionFailureKind.PERMANENT,
+        "CATALOG_EVIDENCE_FAILED": IngestionFailureKind.PERMANENT,
+        "SUCCESS_LOG_WRITE_FAILED": IngestionFailureKind.PERMANENT,
+        "PIT_SNAPSHOT_MISSING": IngestionFailureKind.PERMANENT,
+        "PIT_CUTOFF_DATE_INVALID": IngestionFailureKind.PERMANENT,
+        "PIT_KNOWLEDGE_DATE_MISSING": IngestionFailureKind.PERMANENT,
+        "PIT_KNOWLEDGE_DATE_INVALID": IngestionFailureKind.PERMANENT,
+        "PIT_KNOWLEDGE_DATE_AFTER_CUTOFF": IngestionFailureKind.PERMANENT,
+        "INGESTION_QUALITY_CHECK_REQUIRED": IngestionFailureKind.PERMANENT,
+        "QUALITY_CHECK_REQUIRED": IngestionFailureKind.PERMANENT,
+        "EVIDENCE_COMMITTER_REQUIRED": IngestionFailureKind.PERMANENT,
+        "R2_PROVIDER_PAYLOAD_STORE_REQUIRED": IngestionFailureKind.PERMANENT,
+        "R2_PROVIDER_PAYLOAD_RETENTION_FAILED": IngestionFailureKind.PERMANENT,
+        "R2_EVIDENCE_COMMIT_FAILED": IngestionFailureKind.PERMANENT,
+        # DQ 证据校验失败（载荷与声明不符/证据无效）= 完整性问题
+        "INGESTION_DATASET_MISMATCH": IngestionFailureKind.PERMANENT,
+        "INGESTION_DATE_MISMATCH": IngestionFailureKind.PERMANENT,
+        "PERSISTED_ASOF_EVIDENCE_INVALID": IngestionFailureKind.PERMANENT,
+        # 源缺失：覆盖缺口，另行裁定（P0 覆盖合同），不按日盲目重试
+        "EMPTY_DATA": IngestionFailureKind.SOURCE_MISSING,
+        # 不支持：源能力声明（如 etf_reference 仅 config 源），非故障
+        "SOURCE_UNSUPPORTED": IngestionFailureKind.UNSUPPORTED,
+    }
+)
+
+
+def classify_ingestion_failure(error_code: str | None) -> IngestionFailureKind:
+    """
+    按 error_code 分类摄取失败。
+
+    未知码与缺失码 fail-closed 归 :attr:`PERMANENT`：不可分类的失败不
+    进入自动重试，由人工裁决（#623）。
+    """
+    if error_code is None:
+        return IngestionFailureKind.PERMANENT
+    return INGESTION_ERROR_CODE_KINDS.get(error_code, IngestionFailureKind.PERMANENT)
+
+
+def is_retryable_ingestion_failure(error_code: str | None) -> bool:
+    """该失败是否应进入自动重试（瞬态类）。"""
+    return classify_ingestion_failure(error_code) is IngestionFailureKind.TRANSIENT
+
+
+# 瞬态错误码集合（由词汇表派生的唯一权威值）——存储层 SQL 过滤与
+# 应用层分类共用，避免"SQL LIMIT 先截断、Python 再过滤"饿死瞬态行
+# （correctness #623 F1）。
+TRANSIENT_ERROR_CODES: frozenset[str] = frozenset(
+    code
+    for code, kind in INGESTION_ERROR_CODE_KINDS.items()
+    if kind is IngestionFailureKind.TRANSIENT
+)
 
 
 @dataclass(frozen=True)
@@ -188,7 +300,7 @@ class BackfillResult:
 
 @dataclass(frozen=True)
 class RetryResult:
-    """重试结果。"""
+    """重试结果统计."""
 
     dataset: str
     total_failed: int
@@ -196,3 +308,6 @@ class RetryResult:
     success_count: int
     still_failed_count: int
     results: tuple[IngestionResult, ...]
+    # #623：满足尝试次数门槛但按失败分类被排除出自动重试的日志
+    # （永久/源缺失/不支持）——保留原因与补偿范围供人工裁决。
+    excluded_failures: tuple[IngestionLog, ...] = ()

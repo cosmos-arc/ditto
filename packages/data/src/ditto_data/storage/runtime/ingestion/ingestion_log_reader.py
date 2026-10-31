@@ -4,11 +4,21 @@ Ingestion log reader for tracking per-trade-date ingestion events.
 Provides read-only access to ingestion log data.
 """
 
-from typing import Any
+from typing import Any, Literal
 
 from ditto_platform.foundation import SQLiteClient
 
-from ditto_data.models.ingestion import IngestionLog, IngestionStatus
+from ditto_data.models.ingestion import (
+    TRANSIENT_ERROR_CODES,
+    IngestionFailedErrorGroup,
+    IngestionLog,
+    IngestionStatus,
+)
+
+# 失败过滤口径："all"=全部（遗留语义）；"transient"=仅瞬态（自动重试
+# 资格）；"non_transient"=瞬态之外（永久/源缺失/不支持/未知码——
+# fail-closed 与分类一致：未知码按永久处理）。
+FailureFilter = Literal["all", "transient", "non_transient"]
 
 
 class IngestionLogReader:
@@ -234,15 +244,22 @@ class IngestionLogReader:
         source: str = "tushare",
         limit: int = 10,
         max_attempts: int = 3,
+        failure_filter: FailureFilter = "all",
     ) -> list[IngestionLog]:
         """
         Get failed ingestion logs that need retry.
 
+        过滤在 SQL 内完成（correctness #623 F1）：瞬态过滤若在 Python
+        侧做，永久失败行（attempts 冻结）会占满 LIMIT 窗口饿死更新的
+        瞬态失败。
+
         Args:
             dataset: Dataset name (e.g., "stock_daily")
-            source: Data source identifier (default: "tushare")
+            source: Data source identifier (default "tushare")
             limit: Maximum number of logs to return
             max_attempts: Only return logs with attempts < max_attempts
+            failure_filter: "all"（不过滤）/"transient"（仅瞬态错误码）/
+                "non_transient"（瞬态之外，含 NULL 与未知码）
 
         Returns:
             List of IngestionLog that need retry.
@@ -255,13 +272,66 @@ class IngestionLogReader:
             FROM ingestion_log
             WHERE dataset = ? AND source = ? AND status = 'FAIL'
               AND attempts < ?
+        """
+        params: list[object] = [dataset, source, max_attempts]
+        if failure_filter == "transient":
+            placeholders = ", ".join("?" for _ in TRANSIENT_ERROR_CODES)
+            sql += f" AND error_code IN ({placeholders})"
+            params.extend(sorted(TRANSIENT_ERROR_CODES))
+        elif failure_filter == "non_transient":
+            placeholders = ", ".join("?" for _ in TRANSIENT_ERROR_CODES)
+            sql += f" AND (error_code IS NULL OR error_code NOT IN ({placeholders}))"
+            params.extend(sorted(TRANSIENT_ERROR_CODES))
+        sql += """
             ORDER BY trade_date ASC
             LIMIT ?
         """
+        params.append(limit)
 
-        rows = self._client.fetchall(sql, [dataset, source, max_attempts, limit])
+        rows = self._client.fetchall(sql, params)
 
         return [self._row_to_log(row) for row in rows]
+
+    def list_failed_error_groups(
+        self,
+        source: str = "tushare",
+        max_attempts: int = 3,
+    ) -> list[IngestionFailedErrorGroup]:
+        """
+        按 (dataset, error_code) 分组统计待处理失败（#623 补偿发现）。
+
+        只返回 status=FAIL 且 attempts < max_attempts 的行——与
+        list_failed_logs 的重试资格口径一致；调用方按失败分类决定哪些
+        数据集进入自动补偿。
+
+        Args:
+            source: 数据源标识（默认 "tushare"）
+            max_attempts: 仅统计尝试次数小于此值的失败
+
+        Returns:
+            分组统计列表（dataset 升序，组内按 error_code 升序）。
+
+        """
+        sql = """
+            SELECT dataset, error_code, COUNT(*) as failure_count,
+                   MIN(trade_date) as oldest_trade_date,
+                   MAX(trade_date) as newest_trade_date
+            FROM ingestion_log
+            WHERE source = ? AND status = 'FAIL' AND attempts < ?
+            GROUP BY dataset, error_code
+            ORDER BY dataset ASC, error_code ASC
+        """
+        rows = self._client.fetchall(sql, [source, max_attempts])
+        return [
+            IngestionFailedErrorGroup(
+                dataset=row["dataset"],
+                error_code=row["error_code"],
+                failure_count=row["failure_count"],
+                oldest_trade_date=row["oldest_trade_date"],
+                newest_trade_date=row["newest_trade_date"],
+            )
+            for row in rows
+        ]
 
     def get_last_success_date(
         self,

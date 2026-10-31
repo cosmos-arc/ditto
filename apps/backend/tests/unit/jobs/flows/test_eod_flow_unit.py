@@ -223,8 +223,8 @@ class TestEodFlowNonTradingDay:
         )
 
         from ditto_apps.jobs.flows.eod import (
+            _eod_daily_ingestion,
             check_trading_day,
-            daily_ingestion_flow,
             daily_materialization_flow,
             eod_flow,
         )
@@ -251,7 +251,9 @@ class TestEodFlowNonTradingDay:
         }
         dependencies = call.kwargs["dependencies"]
         assert dependencies.check_trading_day is check_trading_day
-        assert dependencies.daily_ingestion is daily_ingestion_flow
+        # #623：EOD 用 opt-out 适配器包 daily_ingestion_flow——业务 FAIL
+        # 由 EOD 降级告警承担，摄取 flow 不重复以异常终止本编排。
+        assert dependencies.daily_ingestion is _eod_daily_ingestion
         assert dependencies.daily_materialization is daily_materialization_flow
 
     def test_empty_trade_date_resolves_from_scheduled_context(
@@ -348,10 +350,13 @@ class TestEodFlowHappyPath:
         )
 
         assert result["overall_status"] == "success"
+        # #623：opt-out 适配器显式传 fail_on_business_failure=False。
         ingestion.assert_called_once_with(
             trade_date="2026-04-15",
             source="tushare",
+            force=False,
             required_datasets=("etf_daily",),
+            fail_on_business_failure=False,
         )
         strategy_runner.assert_called_once_with(
             "2026-04-15",

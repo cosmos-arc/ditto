@@ -666,9 +666,27 @@ def eod_flow(
         allow_experimental_data=allow_experimental_data,
         dependencies=EodPipelineDependencies(
             check_trading_day=check_trading_day,
-            daily_ingestion=daily_ingestion_flow,
+            # #623：EOD 消费摄取 summary 自行降级（告警 + 跳过物化 +
+            # 逐策略 blocked outcome），摄取 flow 不重复以异常终止本编排。
+            daily_ingestion=_eod_daily_ingestion,
             daily_materialization=daily_materialization_flow,
         ),
+    )
+
+
+def _eod_daily_ingestion(
+    trade_date: str = "",
+    source: str = "tushare",
+    force: bool = False,
+    required_datasets: tuple[str, ...] | None = None,
+) -> dict[str, object]:
+    """daily_ingestion_flow 的 EOD 适配：业务 FAIL 由 EOD 降级处理。"""
+    return daily_ingestion_flow(
+        trade_date=trade_date,
+        source=source,
+        force=force,
+        required_datasets=required_datasets,
+        fail_on_business_failure=False,
     )
 
 
