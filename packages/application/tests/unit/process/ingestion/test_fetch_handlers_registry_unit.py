@@ -73,9 +73,9 @@ def test_daily_handlers_are_built_from_registry(
     assert result.to_dict(as_series=False) == {"dataset": ["calendar"]}
     sources.metadata.fetch_calendar.assert_called_once_with(
         "2024-01-01",
-        # One forward month past the year boundary keeps a year-end Paper
-        # handoff's next-session lookup cutoff-visible.
-        "2025-01-31",
+        # 自然年窗口与年度 chunk 的快照 request 声明一致（#635）：多拉的
+        # 次年首月会越出声明被 retained_calendar 严格校验拒绝。
+        "2024-12-31",
     )
 
 

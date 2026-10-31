@@ -576,9 +576,16 @@ def _macro_fetch(ctx: DailyFetchContext) -> DailyFetchHandler:
 # fmt: off
 
 def _calendar_request_bounds(trade_date: str) -> tuple[str, str]:
-    """日历日更按自然年抓取：年初到次年一月末。"""
+    """
+    日历按自然年抓取：fetch 窗口必须与 chunk/快照 request 声明一致.
+
+    曾取「年初到次年一月末」（年末 Paper 次会话预取）：payload 越出年度
+    chunk 的自然年声明，retained_calendar 严格校验按设计拒绝（#635）。
+    跨年窗口由次年自己的年度快照提供；SQLite 日历存量不受重拉影响，
+    远期年末空档以提前 bootstrap 次年兜底。
+    """
     year = int(trade_date[:4])
-    return (f"{year}-01-01", f"{year + 1}-01-31")
+    return (f"{year}-01-01", f"{year}-12-31")
 
 
 _METADATA_REGISTRATIONS: tuple[DatasetRegistration, ...] = (

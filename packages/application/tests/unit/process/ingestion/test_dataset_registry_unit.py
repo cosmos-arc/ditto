@@ -252,9 +252,11 @@ class TestDateScheduleField:
         registration = default_dataset_registry().require(Dataset.CALENDAR)
 
         assert registration.request_bounds is not None
+        # 自然年与年度 chunk/快照声明一致（#635）：越界窗口会被
+        # retained_calendar 严格校验拒绝。
         assert registration.request_bounds("2026-09-25") == (
             "2026-01-01",
-            "2027-01-31",
+            "2026-12-31",
         )
 
 
