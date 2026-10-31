@@ -7,6 +7,7 @@ MarketService - Market 域统一查询入口（Facade）.
 
 from __future__ import annotations
 
+from datetime import date
 from typing import cast
 
 import polars as pl
@@ -233,6 +234,23 @@ class MarketService:
         )
 
         return df
+
+    @traced("market.get_stock_status_date_range")
+    def get_stock_status_date_range(self) -> tuple[date, date] | None:
+        """
+        查询股票状态数据集的物理覆盖范围（不受请求窗口约束）.
+
+        覆盖审计用其推导状态期起点：窗口内状态帧的最早行无法区分
+        「数据集尚未开始」与「窗口内前导摄取空洞」，后者是失败场景。
+
+        Returns:
+            (最早会话, 最晚会话)；数据集为空时返回 None.
+
+        """
+        start, end = self._read_ports.stock_status.get_date_range()
+        if start is None or end is None:
+            return None
+        return date.fromisoformat(start), date.fromisoformat(end)
 
     @traced("market.get_fund_adj")
     def get_fund_adj(self, start: str, end: str) -> pl.DataFrame | None:

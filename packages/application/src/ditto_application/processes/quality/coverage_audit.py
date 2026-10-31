@@ -9,8 +9,9 @@ MarketService/MetadataService 取物理帧（日线/状态/复权因子/名册/�
 入口：``ops audit-price-coverage``（CLI）；无例行调度，按需复跑刷新证据。
 """
 
+from collections.abc import Mapping
 from dataclasses import dataclass
-from datetime import date, timedelta
+from datetime import date
 from typing import Any
 
 import polars as pl
@@ -31,14 +32,31 @@ __all__ = [
 ]
 
 _ASSET_CLASSES = frozenset({"stock", "etf"})
-_ONE_DAY = timedelta(days=1)
-
-# 空窗读取可能返回无列空帧；带 schema 空帧让纯函数走「状态集存在但窗口内无行」路径。
-_STATUS_KEYS_SCHEMA = {
+# 空窗读取（窗口早于数据集起点）经 ParquetStore.read 可能返回无列空帧；
+# 补齐最小 schema 让审计产出归因报告而非在 select 上崩溃。
+_BAR_KEYS_SCHEMA: Mapping[str, type[pl.DataType]] = {
+    "instrument_id": pl.Int64,
+    "trade_date": pl.Date,
+}
+_MASTER_KEYS_SCHEMA: Mapping[str, type[pl.DataType]] = {
+    "instrument_id": pl.Int64,
+    "list_date": pl.Date,
+    "delist_date": pl.Date,
+}
+_STATUS_KEYS_SCHEMA: Mapping[str, type[pl.DataType]] = {
     "instrument_id": pl.Int64,
     "trade_date": pl.Date,
     "is_suspended": pl.Boolean,
 }
+
+
+def _ensure_schema(
+    frame: pl.DataFrame, schema: Mapping[str, type[pl.DataType]]
+) -> pl.DataFrame:
+    """缺列帧（空窗读取形态）替换为带 schema 的空帧，其余原样返回."""
+    if all(column in frame.columns for column in schema):
+        return frame
+    return pl.DataFrame(schema=schema)
 
 
 @dataclass(frozen=True)
@@ -128,30 +146,40 @@ class PriceCoverageAuditService:
             SecurityQuery(asset_class=request.asset_class, is_active=None)
         )
         if request.asset_class == "stock":
-            bars = self._market.get_stock_bars(request.start_date, request.end_date)
-            status = self._market.get_stock_status(request.start_date, request.end_date)
-            adj_factors: pl.DataFrame | None = self._market.get_adj_factors(
-                request.start_date, request.end_date
+            bars = _ensure_schema(
+                self._market.get_stock_bars(request.start_date, request.end_date),
+                _BAR_KEYS_SCHEMA,
             )
-            # 状态期起点 = 窗口内状态数据最早会话；窗口完全早于状态期
-            # （如仅审计 2014~2015）时，era 取窗口外首日，让全部缺失落到
-            # pre_status_era 证据边界——股票状态数据集存在，不得误标
-            # no_status_dataset（那是 ETF 无数据集的语义）。
+            status = _ensure_schema(
+                self._market.get_stock_status(request.start_date, request.end_date),
+                _STATUS_KEYS_SCHEMA,
+            )
+            adj_factors: pl.DataFrame | None = _ensure_schema(
+                self._market.get_adj_factors(request.start_date, request.end_date),
+                _BAR_KEYS_SCHEMA,
+            )
+            # 状态期起点 = 数据集物理覆盖起点（不受请求窗口约束）。窗口内
+            # 状态帧最早行无法区分「数据集尚未开始」与「窗口内前导摄取
+            # 空洞」——后者按状态缺失失败处理，不得借 pre_status_era 豁免。
+            status_range = self._market.get_stock_status_date_range()
             status_frame: pl.DataFrame | None = (
-                status if status.height else pl.DataFrame(schema=_STATUS_KEYS_SCHEMA)
+                status if status_range is not None else None
             )
-            era_value = status["trade_date"].min() if status.height else None
-            status_available_from = (
-                era_value if isinstance(era_value, date) else window_end + _ONE_DAY
-            )
+            status_available_from = status_range[0] if status_range else None
         else:
-            bars = self._market.get_etf_bars(request.start_date, request.end_date)
+            bars = _ensure_schema(
+                self._market.get_etf_bars(request.start_date, request.end_date),
+                _BAR_KEYS_SCHEMA,
+            )
             # ETF 无状态数据集（market/etf/status 未注册摄取）：缺口归因
             # 诚实落在 no_status_dataset 证据边界，不冒充停牌可判。
             status_frame = None
             status_available_from = None
-            adj_factors = self._market.get_fund_adj(
-                request.start_date, request.end_date
+            fund_adj = self._market.get_fund_adj(request.start_date, request.end_date)
+            adj_factors = (
+                _ensure_schema(fund_adj, _BAR_KEYS_SCHEMA)
+                if fund_adj is not None
+                else None
             )
 
         session_audit = audit_session_coverage(

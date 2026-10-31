@@ -81,6 +81,10 @@ class _MarketStub:
             },
         )
 
+    def get_stock_status_date_range(self) -> tuple[date, date] | None:
+        # 状态数据集物理覆盖起点 = TUE（与状态帧首行一致）。
+        return TUE, FRI
+
     def get_adj_factors(self, start: str, end: str) -> pl.DataFrame:
         # 覆盖全部 6 个日线会话。
         return pl.DataFrame(
@@ -249,6 +253,9 @@ class TestPriceCoverageAuditService:
                     }
                 )
 
+            def get_stock_status_date_range(self) -> tuple[date, date] | None:
+                return date(2024, 2, 1), date(2024, 2, 28)  # 状态期在窗口之后
+
         market = _NoStatusMarket()
         metadata = _MetadataStub(_days(), "stock")
         service = PriceCoverageAuditService(
@@ -258,15 +265,63 @@ class TestPriceCoverageAuditService:
         report = service.run(
             PriceCoverageAuditRequest("2024-01-01", "2024-01-05", "stock")
         )
-        # 状态数据集存在但窗口内零行 → 全部缺失归 pre_status_era 证据边界。
+        # 状态数据集存在但覆盖在窗口之后 → 全部缺失归 pre_status_era 证据边界。
         assert report.session.gap_counts == {"pre_status_era": 1}
         assert report.session.limitation_gaps == 1
         assert report.session.passed
 
-    def test_statusless_window_handles_schemaless_empty_frame(self) -> None:
-        """空窗读取返回无列空帧时服务补 schema，不因 select 失败."""
+    def test_leading_status_hole_inside_window_fails_closed(self) -> None:
+        """F1 回归：窗口内状态前导摄取空洞不得借 pre_status_era 豁免.
 
-        market = _NoStatusMarketSchemaless()
+        数据集真实起点 MON（早于窗口内状态首行 WED）；MON 缺日线且缺
+        状态行 → status_row_missing 失败，而非证据边界。
+        """
+
+        class _LeadingHoleMarket(_MarketStub):
+            def get_stock_status(self, start: str, end: str) -> pl.DataFrame:
+                rows = [
+                    (1, WED, True),
+                    (1, THU, False),
+                    (1, FRI, False),
+                    (2, WED, False),
+                ]
+                return pl.DataFrame(
+                    {
+                        "instrument_id": [r[0] for r in rows],
+                        "trade_date": [r[1] for r in rows],
+                        "is_suspended": [r[2] for r in rows],
+                    },
+                    schema={
+                        "instrument_id": pl.Int64,
+                        "trade_date": pl.Date,
+                        "is_suspended": pl.Boolean,
+                    },
+                )
+
+            def get_stock_status_date_range(self) -> tuple[date, date] | None:
+                return MON, FRI
+
+            def _bars(self) -> pl.DataFrame:
+                # 证券 1 缺 MON/TUE（状态洞）与 WED（停牌）；证券 2 完整。
+                rows = [(1, THU), (1, FRI), (2, MON), (2, TUE)]
+                return pl.DataFrame(
+                    {
+                        "instrument_id": [r[0] for r in rows],
+                        "trade_date": [r[1] for r in rows],
+                    },
+                    schema={"instrument_id": pl.Int64, "trade_date": pl.Date},
+                )
+
+            def get_adj_factors(self, start: str, end: str) -> pl.DataFrame:
+                return pl.DataFrame(
+                    {
+                        "instrument_id": [1, 1, 2, 2],
+                        "trade_date": [THU, FRI, MON, TUE],
+                    },
+                    schema={"instrument_id": pl.Int64, "trade_date": pl.Date},
+                )
+
+        market = _LeadingHoleMarket()
         metadata = _MetadataStub(_days(), "stock")
         service = PriceCoverageAuditService(
             market=market,  # type: ignore[arg-type]
@@ -275,7 +330,46 @@ class TestPriceCoverageAuditService:
         report = service.run(
             PriceCoverageAuditRequest("2024-01-01", "2024-01-05", "stock")
         )
-        assert report.session.gap_counts == {"pre_status_era": 1}
+        # MON/TUE 早于窗口内状态首行 WED，但数据集起点是 MON → 状态洞失败；
+        # WED 有停牌行 → suspended。
+        assert report.session.gap_counts == {
+            "status_row_missing": 2,
+            "suspended": 1,
+        }
+        assert report.session.failure_gaps == 2
+        assert not report.passed
+
+    def test_schemaless_empty_frames_produce_report_not_crash(self) -> None:
+        """F2 回归：空窗读取的无列空帧（bars/status/adj）补 schema 产出归因报告.
+
+        数据集物理存在（覆盖在窗口之后）→ 全部期望会话缺失归 pre_status_era，
+        而非在纯函数 select 上抛 ColumnNotFoundError。
+        """
+
+        class _SchemalessAllMarket(_NoStatusMarketSchemaless):
+            def _bars(self) -> pl.DataFrame:
+                return pl.DataFrame()
+
+            def get_adj_factors(self, start: str, end: str) -> pl.DataFrame:
+                return pl.DataFrame()
+
+            def get_stock_status_date_range(self) -> tuple[date, date] | None:
+                return date(2024, 2, 1), date(2024, 2, 28)
+
+        market = _SchemalessAllMarket()
+        metadata = _MetadataStub(_days(), "stock")
+        service = PriceCoverageAuditService(
+            market=market,  # type: ignore[arg-type]
+            metadata=metadata,  # type: ignore[arg-type]
+        )
+        report = service.run(
+            PriceCoverageAuditRequest("2024-01-01", "2024-01-05", "stock")
+        )
+        # 两名册成员全部期望会话缺失（7 会话），数据集在窗口之后 → 证据边界。
+        assert report.session.expected_sessions == 7
+        assert report.session.gap_counts == {"pre_status_era": 7}
+        assert report.session.present_sessions == 0
+        assert report.passed
 
     def test_rejects_unknown_asset_class_and_bad_window(self) -> None:
         service, _, _ = _service("stock")
