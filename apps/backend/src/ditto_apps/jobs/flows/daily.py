@@ -29,7 +29,10 @@ from ditto_application.config import (
     get_parallel_datasets,
     resolve_ingestion_scope,
 )
-from ditto_application.processes.ingestion.result_handler import count_results
+from ditto_application.processes.ingestion.result_handler import (
+    count_results,
+    ingestion_failure_details,
+)
 from ditto_platform.foundation import logger
 from prefect import flow, task
 from prefect.futures import PrefectFuture
@@ -48,6 +51,18 @@ from ditto_apps.jobs.tasks.dq_reconcile import (
 from ditto_apps.jobs.tasks.fuyao_dump import fuyao_dump_adjustment_factors
 from ditto_apps.jobs.tasks.t0_meta import run_ingest_dataset
 from ditto_apps.registry import create_ingestion_bundle
+
+
+class DailyIngestionBusinessFailure(RuntimeError):
+    """
+    夜间摄取存在业务 FAIL（#623 状态一致传播）。
+
+    10-27/10-28/10-29 实证：业务 FAIL（限流/代码错误）与 Prefect
+    COMPLETED 并存，告警不可行动。flow 在全部任务跑完、汇总构建并
+    留痕后抛出本异常，使 flow run 状态与业务结果一致；消息携带
+    逐数据集 error 与失败分类。EOD 编排消费摄取结果自行降级告警，
+    以 ``fail_on_business_failure=False`` 显式退出本行为。
+    """
 
 
 def _collect_results(
@@ -199,6 +214,9 @@ def _completed_ingestion_result(
     """
     all_results = {**t0_results, **t1_results}
     counts = count_results(all_results)
+    failed_details = ingestion_failure_details(all_results)
+    reconcile_skipped = reconcile_results.get("skipped") is True
+    reconcile_skip_reason = reconcile_results.get("skip_reason")
     return {
         "trade_date": trade_date,
         "skipped": False,
@@ -214,8 +232,50 @@ def _completed_ingestion_result(
             "success_count": counts.success,
             "failed_count": counts.failed,
             "skipped_count": counts.skipped,
+            # #623：业务失败明细（error + 失败分类）与对账降级可见性
+            "failed_datasets": failed_details,
+            "reconcile_skipped": reconcile_skipped,
+            "reconcile_skip_reason": (
+                reconcile_skip_reason
+                if isinstance(reconcile_skip_reason, str)
+                else None
+            ),
         },
     }
+
+
+def _raise_on_business_failure(
+    result: dict[str, object],
+    *,
+    fail_on_business_failure: bool,
+) -> None:
+    """业务 FAIL 时使 flow 状态与业务结果一致（#623）。"""
+    if not fail_on_business_failure:
+        return
+    summary = cast(dict[str, object], result.get("summary", {}))
+    failed_count = cast(int, summary.get("failed_count", 0))
+    if failed_count <= 0:
+        return
+    details = cast(
+        list[dict[str, str]],
+        summary.get("failed_datasets", []),
+    )
+    trade_date = cast(str, result.get("trade_date", ""))
+    digest = ", ".join(
+        f"{item['dataset']}({item['error']}/{item['kind']})" for item in details
+    )
+    logger.error(
+        "daily ingestion business failures",
+        event="daily_ingestion_business_failure",
+        trade_date=trade_date,
+        failed_count=failed_count,
+        details=details,
+    )
+    msg = (
+        f"daily-ingestion {trade_date}: {failed_count} dataset failure(s) "
+        f"[dataset(error/kind)]: {digest}"
+    )
+    raise DailyIngestionBusinessFailure(msg)
 
 
 def run_daily_ingestion(
@@ -280,6 +340,7 @@ def daily_ingestion_flow(
     source: str = "tushare",
     force: bool = False,
     required_datasets: tuple[str, ...] | None = None,
+    fail_on_business_failure: bool = True,
 ) -> dict[str, object]:
     """
     每日增量数据摄取流程。
@@ -300,6 +361,10 @@ def daily_ingestion_flow(
         source: 数据源名称
         force: 是否强制重新摄取
         required_datasets: 显式策略依赖；提供时仅执行其依赖闭包。
+        fail_on_business_failure: 存在业务 FAIL 时抛
+            :class:`DailyIngestionBusinessFailure` 使 flow run 状态与
+            业务结果一致（#623）。消费摄取结果自行降级告警的编排
+            （EOD pipeline）显式传 False。
 
     Returns:
         摄取结果字典，包含：
@@ -310,6 +375,10 @@ def daily_ingestion_flow(
         - t1_results: T1 任务结果
         - dqc_results: DQC 检查结果
         - summary: 汇总统计
+
+    Raises:
+        DailyIngestionBusinessFailure: fail_on_business_failure=True 且
+            存在业务 FAIL（在汇总构建并留痕后抛出）。
 
     """
     # 0. 定时触发未携带日期时自取当日
@@ -404,7 +473,7 @@ def daily_ingestion_flow(
     fuyao_dump_result = cast(dict[str, object], dump_future.result())
 
     # 6. 汇总统计
-    return _completed_ingestion_result(
+    result = _completed_ingestion_result(
         trade_date=trade_date,
         t0_results=t0_results,
         t1_results=t1_results,
@@ -412,3 +481,11 @@ def daily_ingestion_flow(
         reconcile_results=reconcile_results,
         fuyao_dump=fuyao_dump_result,
     )
+
+    # 7. 业务 FAIL 不冒充可用：编排状态与业务结果一致传播（#623）。
+    #    全部任务已跑完、汇总已构建留痕后才抛出——不牺牲兄弟数据集。
+    _raise_on_business_failure(
+        result,
+        fail_on_business_failure=fail_on_business_failure,
+    )
+    return result

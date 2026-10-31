@@ -1060,10 +1060,10 @@ class TestIngestDate:
         assert "Network error" in result.message
 
     @pytest.mark.parametrize(
-        "provider_error",
+        ("provider_error", "expected_error_code"),
         [
-            SourceAuthenticationError(source="tushare"),
-            SourceRateLimitError(source="tushare"),
+            (SourceAuthenticationError(source="tushare"), "SOURCE_AUTH_ERROR"),
+            (SourceRateLimitError(source="tushare"), "RATE_LIMIT"),
         ],
     )
     def test_provider_control_plane_errors_are_typed_fetch_failures(
@@ -1072,8 +1072,9 @@ class TestIngestDate:
         mock_ingestion_log_store,
         mock_source,
         provider_error,
+        expected_error_code,
     ) -> None:
-        """Provider auth/limit outages must not collapse into UNKNOWN_ERROR."""
+        """Provider auth/limit outages carry their own error codes (#623)."""
         mock_ingestion_log_store.get_log.return_value = None
         mock_source.fetch_stock_daily.side_effect = provider_error
         mock_ingestion_log_store.save_log.return_value = IngestionLog(
@@ -1081,14 +1082,14 @@ class TestIngestDate:
             source="tushare",
             trade_date="2024-12-27",
             status=IngestionStatus.FAIL,
-            error_code="FETCH_ERROR",
+            error_code=expected_error_code,
             error_message="provider unavailable",
         )
 
         result = coordinator.ingest_date("stock_daily", "2024-12-27")
 
         assert result.status == "failed"
-        assert result.error == "FETCH_ERROR"
+        assert result.error == expected_error_code
 
     def test_ingest_date_empty_dataframe(
         self, coordinator, mock_ingestion_log_store, mock_source

@@ -7,6 +7,7 @@ testing individual code paths and branches without full integration setup.
 
 from __future__ import annotations
 
+from typing import cast
 from unittest.mock import MagicMock
 
 import ditto_apps.jobs.flows.daily as daily_module
@@ -14,6 +15,7 @@ import pytest
 from ditto_application.processes.quality.batch import QualityBatchCoordinator
 from ditto_application.processes.quality.types import L3CheckResult
 from ditto_apps.jobs.flows.daily import (
+    DailyIngestionBusinessFailure,
     _collect_results,
     check_trading_day,
     daily_ingestion_flow,
@@ -289,6 +291,11 @@ def test_sync_runner_uses_plain_business_functions_without_prefect_entrypoints(
         "success_count": 2,
         "failed_count": 0,
         "skipped_count": 0,
+        # #623：业务失败明细（空=无失败）与对账降级可见性（no_adjustment_events
+        # 为正常无事件 skip，可见但不算失败）。
+        "failed_datasets": [],
+        "reconcile_skipped": True,
+        "reconcile_skip_reason": "no_adjustment_events",
     }
     check_day.assert_called_once_with("2026-07-16")
     assert ingest.call_args_list == [
@@ -1095,14 +1102,20 @@ class TestDailyIngestionFlowResultAggregation:
         mock_task.submit.return_value = mock_future
         mock_factory.return_value = mock_task
 
+        # #623：业务 FAIL 默认使 flow 以异常终止（状态一致传播）；
+        # 聚合计数经 opt-out 路径断言。
         result = DAILY_INGESTION_FLOW_RUNNER(
             trade_date="2024-01-02",
             source="tushare",
+            fail_on_business_failure=False,
         )
 
         assert result["summary"]["success_count"] == 0
         assert result["summary"]["failed_count"] == 1
         assert result["summary"]["skipped_count"] == 0
+        assert result["summary"]["failed_datasets"] == [
+            {"dataset": "test", "error": "UNKNOWN_ERROR", "kind": "permanent"}
+        ]
 
     def test_aggregates_skipped_status(self, mocker: MockerFixture):
         """Test that skipped status is counted correctly."""
@@ -1157,7 +1170,7 @@ class TestDailyIngestionFlowResultAggregation:
         mock_future = mocker.Mock()
         mock_future.result.side_effect = [
             {"dataset": "test1", "status": "success"},
-            {"dataset": "test2", "status": "failed"},
+            {"dataset": "test2", "status": "failed", "error": "RATE_LIMIT"},
             {"dataset": "test3", "status": "skipped"},
         ]
         mock_task.submit.return_value = mock_future
@@ -1166,12 +1179,137 @@ class TestDailyIngestionFlowResultAggregation:
         result = DAILY_INGESTION_FLOW_RUNNER(
             trade_date="2024-01-02",
             source="tushare",
+            fail_on_business_failure=False,
         )
 
         assert result["summary"]["success_count"] == 1
         assert result["summary"]["failed_count"] == 1
         assert result["summary"]["skipped_count"] == 1
         assert result["summary"]["total_tasks"] == 3
+        assert result["summary"]["failed_datasets"] == [
+            {"dataset": "test2", "error": "RATE_LIMIT", "kind": "transient"}
+        ]
+
+
+@pytest.mark.unit
+class TestDailyIngestionBusinessFailurePropagation:
+    """#623 状态一致传播：业务 FAIL 不冒充可用的 COMPLETED flow。"""
+
+    @staticmethod
+    def _wire_single_result(
+        mocker: MockerFixture,
+        result_payload: dict[str, object],
+    ) -> None:
+        mocker.patch("ditto_apps.jobs.flows.daily.check_trading_day", return_value=True)
+        mocker.patch(
+            "ditto_apps.jobs.flows.daily.get_datasets_by_tier",
+            return_value=[],
+        )
+        mocker.patch(
+            "ditto_apps.jobs.flows.daily.get_parallel_datasets",
+            return_value=[[MockDataset("failed")]],
+        )
+        mock_factory = mocker.patch(
+            "ditto_apps.jobs.flows.daily.create_ingest_task_t1_bars"
+        )
+        mock_task = mocker.Mock()
+        mock_future = mocker.Mock()
+        mock_future.result.return_value = result_payload
+        mock_task.submit.return_value = mock_future
+        mock_factory.return_value = mock_task
+
+    def test_business_failure_raises_by_default(self, mocker: MockerFixture):
+        """默认路径：业务 FAIL → DailyIngestionBusinessFailure（flow FAILED）。"""
+        self._wire_single_result(
+            mocker,
+            {"dataset": "etf_nav", "status": "failed", "error": "RATE_LIMIT"},
+        )
+
+        with pytest.raises(
+            DailyIngestionBusinessFailure,
+            match=r"etf_nav\(RATE_LIMIT/transient\)",
+        ):
+            DAILY_INGESTION_FLOW_RUNNER(
+                trade_date="2026-10-29",
+                source="tushare",
+            )
+
+    def test_raise_message_names_every_failed_dataset(self, mocker: MockerFixture):
+        """异常消息逐数据集列出 error 与失败分类——告警可行动。"""
+        self._wire_single_result(
+            mocker,
+            {"dataset": "etf_nav", "status": "failed", "error": "RATE_LIMIT"},
+        )
+
+        with pytest.raises(
+            DailyIngestionBusinessFailure,
+            match=r"1 dataset failure\(s\).*etf_nav\(RATE_LIMIT/transient\)",
+        ):
+            DAILY_INGESTION_FLOW_RUNNER(trade_date="2026-10-29", source="tushare")
+
+    def test_eod_opt_out_returns_summary(self, mocker: MockerFixture):
+        """EOD 编排 opt-out：返回完整 summary 自行降级，不抛异常。"""
+        self._wire_single_result(
+            mocker,
+            {"dataset": "etf_nav", "status": "failed", "error": "RATE_LIMIT"},
+        )
+
+        result = DAILY_INGESTION_FLOW_RUNNER(
+            trade_date="2026-10-29",
+            source="tushare",
+            fail_on_business_failure=False,
+        )
+
+        assert result["summary"]["failed_count"] == 1
+        assert result["summary"]["failed_datasets"][0]["dataset"] == "etf_nav"
+
+    def test_sync_runner_never_raises_on_business_failure(self, mocker: MockerFixture):
+        """同步业务函数（EOD sync 消费方）不抛——降级由 EOD 承担。"""
+        mocker.patch.object(
+            daily_module,
+            "run_check_trading_day",
+            return_value=True,
+        )
+        mocker.patch.object(daily_module, "get_datasets_by_tier", return_value=[])
+        mocker.patch.object(
+            daily_module,
+            "get_parallel_datasets",
+            return_value=[[Dataset.STOCK_DAILY]],
+        )
+        mocker.patch.object(
+            daily_module,
+            "run_ingest_dataset",
+            return_value={
+                "dataset": "stock_daily",
+                "trade_date": "2026-10-29",
+                "status": "failed",
+                "error": "RATE_LIMIT",
+            },
+        )
+        mocker.patch.object(
+            daily_module,
+            "run_dq_batch_check",
+            return_value={"trade_date": "2026-10-29", "results_by_dataset": {}},
+        )
+        mocker.patch.object(
+            daily_module,
+            "run_dq_reconcile_adj_factor",
+            return_value={
+                "trade_date": "2026-10-29",
+                "dataset": "adj_factor",
+                "passed": True,
+                "skipped": True,
+                "skip_reason": "no_primary_data",
+            },
+        )
+
+        result = daily_module.run_daily_ingestion(
+            trade_date="2026-10-29",
+            source="tushare",
+        )
+
+        summary = cast("dict[str, object]", result["summary"])
+        assert summary["failed_count"] == 1
 
 
 @pytest.mark.unit

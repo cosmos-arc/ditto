@@ -32,6 +32,9 @@ def run_ingest_dataset(
     force: bool = False,
 ) -> dict[str, object]:
     """执行单数据集摄取业务，供 Prefect task 与同步 CLI 共用。"""
+    # #623：源不支持是能力缺口而非故障——结果 skipped 不进失败告警，
+    # 也不落 ingestion_log FAIL（会每夜刷屏"待人工裁决"告警）；持久化
+    # 可见性由 P0 覆盖合同（docs/data/coverage-contract.yaml）承担。
     try:
         with create_ingestion_bundle(source=source) as bundle:
             result = bundle.coordinator.ingest_date(

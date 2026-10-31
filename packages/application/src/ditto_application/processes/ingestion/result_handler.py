@@ -9,7 +9,13 @@ from datetime import date, datetime
 from typing import cast
 
 import polars as pl
-from ditto_data.errors import SourceFetchError
+from ditto_data.errors import (
+    AuthError,
+    NetworkError,
+    SourceAuthenticationError,
+    SourceFetchError,
+    SourceRateLimitError,
+)
 from ditto_data.ingestion.ingestion_log_store import (
     IngestionLogStore,
 )
@@ -20,11 +26,39 @@ from ditto_data.models.ingestion import (
     IngestionSnapshotEvidence,
     IngestionStatus,
     ResultCounts,
+    classify_ingestion_failure,
 )
 from ditto_platform.foundation import WriteResult
 
 from ditto_application.catalog_freshness import aggregate_source_snapshot_ids
 from ditto_application.processes.ingestion.sparse_pit import SparsePITCutoffError
+
+# 结构化业务码中已裁决为永久的 Tushare code（#517-#523 权限降级线）：
+# 50101=接口无权限。其余 code!=0 语义未证实，保持 FETCH_ERROR 瞬态
+# 由 attempts 上界兜底（correctness #623 F4）。
+_TUSHARE_PERMANENT_CODES: frozenset[int] = frozenset({50101})
+
+
+def classified_fetch_error_code(error: SourceFetchError) -> str:
+    """
+    按底层原因细分取数失败的 error_code（#623）。
+
+    SourceFetchError 的 ``__cause__`` 携带源层类型化异常（见
+    post_ingest.handle_fetch_error 的包装路径）；自身即为类型化
+    DataSourceError 子类时直接判型；Tushare 结构化业务码按
+    ``details["code"]`` 判定已裁决的永久类。未匹配返回 FETCH_ERROR。
+    """
+    cause = error.__cause__ or error
+    if isinstance(cause, SourceRateLimitError):
+        return "RATE_LIMIT"
+    if isinstance(cause, NetworkError):
+        return "NETWORK_ERROR"
+    if isinstance(cause, SourceAuthenticationError | AuthError):
+        return "SOURCE_AUTH_ERROR"
+    code = error.details.get("code")
+    if isinstance(code, int) and code in _TUSHARE_PERMANENT_CODES:
+        return "SOURCE_PERMISSION_DENIED"
+    return "FETCH_ERROR"
 
 
 @dataclass(frozen=True)
@@ -300,6 +334,32 @@ def validated_asof_snapshot_evidence(  # noqa: PLR0911 - fail-closed parser
     }
 
 
+def ingestion_failure_details(
+    results: Mapping[str, Mapping[str, object]],
+) -> list[dict[str, str]]:
+    """
+    逐数据集业务失败明细（error + 失败分类）（#623）。
+
+    宿主 flow（daily summary / 异常消息）消费的投影；分类词汇表归
+    ditto_data，投影归本层——Apps 层不直接触 data 类型。
+    """
+    details: list[dict[str, str]] = []
+    for dataset in sorted(results):
+        payload = results[dataset]
+        if payload.get("status") != "failed":
+            continue
+        error = payload.get("error")
+        error_code = error if isinstance(error, str) and error else "UNKNOWN_ERROR"
+        details.append(
+            {
+                "dataset": dataset,
+                "error": error_code,
+                "kind": classify_ingestion_failure(error_code).value,
+            }
+        )
+    return details
+
+
 def count_results(
     results: list[IngestionResult] | dict[str, dict[str, object]],
 ) -> ResultCounts:
@@ -413,6 +473,10 @@ class IngestionResultHandler:
         """
         处理数据获取错误。
 
+        #623 失败分类：按底层原因细分 error_code（限流/网络/认证各自成码），
+        供重试选择与告警按瞬态/永久分流；无已知原因的取数失败保持
+        FETCH_ERROR（默认瞬态，由 attempts 上界兜底）。
+
         Args:
             dataset: 数据集名称
             trade_date: 交易日期
@@ -422,13 +486,14 @@ class IngestionResultHandler:
             IngestionResult: 失败结果
 
         """
+        error_code = classified_fetch_error_code(error)
         self._save_log(
             IngestionLog(
                 dataset=dataset,
                 source=self._source_name,
                 trade_date=trade_date,
                 status=IngestionStatus.FAIL,
-                error_code="FETCH_ERROR",
+                error_code=error_code,
                 error_message=str(error),
             )
         )
@@ -436,7 +501,7 @@ class IngestionResultHandler:
             dataset=dataset,
             trade_date=trade_date,
             status="failed",
-            error="FETCH_ERROR",
+            error=error_code,
             message=f"获取数据失败: {error}",
         )
 
