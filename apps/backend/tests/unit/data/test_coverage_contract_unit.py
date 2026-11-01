@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+from itertools import pairwise
 from pathlib import Path
 
 import yaml
@@ -126,3 +127,32 @@ def test_entry_shape() -> None:
         if not entry["consumers"]:
             problems.append(f"{name}: consumer surface must be stated (traceability)")
     assert not problems, problems
+
+
+# #626：北向两接口受披露制度分段约束——无分段即退化成「连续日频事实」
+# 误读（2024-08-19 后北向仅季度末披露）。分段缺失/结构破损必须挡下。
+_SEGMENTED_DATASETS = ("hk_hold", "hsgt_top10")
+_SEGMENT_REQUIRED_KEYS = {"segment", "start", "end", "scope", "semantics", "evidence"}
+
+
+def test_northbound_disclosure_segments_documented() -> None:
+    contract = _load_contract()
+    for name in _SEGMENTED_DATASETS:
+        segments = contract["datasets"][name].get("disclosure_segments")
+        assert isinstance(segments, list), (
+            f"{name}: disclosure_segments missing - 制度分段是消费者可见事实,"
+            "不得以连续日频语义呈现 (#621 P3/#626)"
+        )
+        assert len(segments) >= 2, f"{name}: disclosure_segments 需覆盖制度分段边界"
+        for segment in segments:
+            missing = _SEGMENT_REQUIRED_KEYS - set(segment)
+            assert not missing, f"{name}: segment missing keys {missing}"
+        # 边界单调：非末段必有 end，且下一段 start 严格晚于前段 end；
+        # 仅末段允许 end=null（进行中制度）。
+        for prev, curr in pairwise(segments):
+            assert prev["end"] is not None, (
+                f"{name}: 中段 {prev['segment']} end 为 null (仅末段允许)"
+            )
+            assert curr["start"] > prev["end"], (
+                f"{name}: 分段边界交叉/重叠 {prev['segment']}->{curr['segment']}"
+            )

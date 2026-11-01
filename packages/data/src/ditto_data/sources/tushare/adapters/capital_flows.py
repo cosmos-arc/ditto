@@ -49,6 +49,48 @@ _TOP_INST_FIELDS = (
 )
 
 
+def _collapse_same_key_rows(
+    dataset: str,
+    frame: pl.DataFrame,
+    dedupe_subset: tuple[str, ...],
+) -> pl.DataFrame:
+    """
+    同披露键多行确定性收敛（#482/#519 先例，#626 扩到四个事件接口）.
+
+    源端两类同键多行形态（2026-11-01 探针实证）：
+    - 冗余重复：top_list 同 (标的, 日, 原因) 多行仅 float_values null/有值
+      差异（2020-02-03 600825.SH ×6）；
+    - 多持有者代码：hk_hold 季度末快照同标的两行 vol/ratio 各异
+      （2026-06-30 243 键；存储键无持有者维度，语义上不可分——两行
+      ratio 分母不一致，求和不可辩护，按先例单行留档损失）。
+    收敛规则：行内空值数降序（最完整行最后=keep-last 胜出）+ 整行哈希
+    平局——同一行集合无论源端返回顺序如何都选出同一行（重试幂等）。
+    """
+    if frame.is_empty():
+        return frame
+    rows_before = frame.height
+    collapsed = (
+        frame.with_columns(
+            _row_nulls=pl.sum_horizontal(pl.all().is_null().cast(pl.UInt32)),
+        )
+        .with_columns(_dedupe_hash=pl.struct(pl.all()).hash())
+        .sort(
+            [pl.col("_row_nulls"), pl.col("_dedupe_hash")],
+            descending=[True, False],
+        )
+        .unique(subset=list(dedupe_subset), keep="last")
+        .drop("_row_nulls", "_dedupe_hash")
+    )
+    if collapsed.height < rows_before:
+        logger.info(
+            f"Tushare {dataset} collapsed same-key rows",
+            event=f"tushare_{dataset}_key_dedupe",
+            rows_before=rows_before,
+            rows_after=collapsed.height,
+        )
+    return collapsed
+
+
 class CapitalFlowsTushareAdapter(BaseTushareAdapter):
     """资金面/情绪/席位六接口 Tushare 适配器."""
 
@@ -59,8 +101,15 @@ class CapitalFlowsTushareAdapter(BaseTushareAdapter):
         fields: str,
         mapping: ColumnMapping,
         query: dict[str, str | None],
+        dedupe_subset: tuple[str, ...] = (),
     ) -> pl.DataFrame:
-        """共用形状：单日全市场 / 单标的区间，mapping 统一 kd=T+1."""
+        """
+        共用形状：单日全市场 / 单标的区间，mapping 统一 kd=T+1.
+
+        ``dedupe_subset`` 非空时对事件接口做同披露键确定性收敛
+        （``_collapse_same_key_rows``）；moneyflow/cyq_perf 逐标的
+        单行契约不收敛，真重复交 DQ unique 响亮失败。
+        """
         logger.info(
             f"Fetching Tushare {dataset}",
             event=f"tushare_{dataset}_fetch_start",
@@ -83,6 +132,8 @@ class CapitalFlowsTushareAdapter(BaseTushareAdapter):
                     dataset=dataset,
                 )
             result = TushareDataTransformer.transform(response, dataset, mapping)
+            if dedupe_subset:
+                result = _collapse_same_key_rows(dataset, result, dedupe_subset)
             row_count = len(result)
             logger.info(
                 f"Tushare {dataset} fetched",
@@ -147,7 +198,13 @@ class CapitalFlowsTushareAdapter(BaseTushareAdapter):
         start_date: str | None = None,
         end_date: str | None = None,
     ) -> pl.DataFrame:
-        """沪深港通持股（vol 股/ratio %；北向 SH/SZ 入库，#520）."""
+        """
+        沪深港通持股（vol 股/ratio %；北向 SH/SZ 入库，#520）.
+
+        季度末快照同标的可因多个北向持有者代码出现多行（#626 实证
+        2026-06-30 243 键）——存储键无持有者维度，确定性收敛为单行，
+        损失在 mapping 头注释留档。
+        """
         return self._fetch_daily_frame(
             "hk_hold",
             "hk_hold",
@@ -159,6 +216,7 @@ class CapitalFlowsTushareAdapter(BaseTushareAdapter):
                 "start_date": start_date,
                 "end_date": end_date,
             },
+            dedupe_subset=("source_ticker", "trade_date"),
         )
 
     @traced("source.tushare.fetch_hsgt_top10")
@@ -181,6 +239,7 @@ class CapitalFlowsTushareAdapter(BaseTushareAdapter):
                 "start_date": start_date,
                 "end_date": end_date,
             },
+            dedupe_subset=("source_ticker", "trade_date", "market_type"),
         )
 
     @traced("source.tushare.fetch_top_list")
@@ -191,7 +250,13 @@ class CapitalFlowsTushareAdapter(BaseTushareAdapter):
         start_date: str | None = None,
         end_date: str | None = None,
     ) -> pl.DataFrame:
-        """龙虎榜个股明细（金额元；reason 进主键，#519）."""
+        """
+        龙虎榜个股明细（金额元；reason 进主键，#519）.
+
+        同 (标的, 日, 原因) 冗余多行仅 float_values null/有值差异
+        （#626 实证 2020-02-03 600825.SH ×6）——确定性收敛，最完整
+        行胜出。
+        """
         return self._fetch_daily_frame(
             "top_list",
             "top_list",
@@ -203,6 +268,7 @@ class CapitalFlowsTushareAdapter(BaseTushareAdapter):
                 "start_date": start_date,
                 "end_date": end_date,
             },
+            dedupe_subset=("source_ticker", "trade_date", "reason"),
         )
 
     @traced("source.tushare.fetch_top_inst")
@@ -218,11 +284,10 @@ class CapitalFlowsTushareAdapter(BaseTushareAdapter):
 
         源端「机构专用」是多家机构的共用席位名，同 (标的, 日, 席位, 方向,
         原因) 可出现多行；存储主键无席位 ID 维度，按身份键去重
-        （#482 同披露键去重先例），同名多机构的合并损失在 mapping 头注释
-        留档。挑选行按整行哈希排序 keep-last——同一行集合无论源端返回
-        顺序如何都选出同一行（重试幂等，correctness review #1）。
+        （#482 同披露键去重先例；#626 下沉为四事件接口共用收敛），
+        同名多机构的合并损失在 mapping 头注释留档。
         """
-        frame = self._fetch_daily_frame(
+        return self._fetch_daily_frame(
             "top_inst",
             "top_inst",
             _TOP_INST_FIELDS,
@@ -233,21 +298,11 @@ class CapitalFlowsTushareAdapter(BaseTushareAdapter):
                 "start_date": start_date,
                 "end_date": end_date,
             },
-        )
-        if frame.is_empty():
-            return frame
-        return (
-            frame.with_columns(pl.struct(pl.all()).hash().alias("_dedupe_hash"))
-            .sort("_dedupe_hash")
-            .unique(
-                subset=[
-                    "source_ticker",
-                    "trade_date",
-                    "exalter",
-                    "side",
-                    "reason",
-                ],
-                keep="last",
-            )
-            .drop("_dedupe_hash")
+            dedupe_subset=(
+                "source_ticker",
+                "trade_date",
+                "exalter",
+                "side",
+                "reason",
+            ),
         )

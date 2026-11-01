@@ -12,16 +12,19 @@ from ditto_data.sources.tushare.adapters.capital_flows import (
 )
 
 
+def _adapter_with_response(
+    response: pl.DataFrame,
+) -> tuple[CapitalFlowsTushareAdapter, MagicMock]:
+    client = MagicMock()
+    client.query.return_value = response
+    return CapitalFlowsTushareAdapter(_client=client), client
+
+
 @pytest.mark.unit
 class TestCapitalFlowsAdapters:
     """六接口共用 _fetch_daily_frame：映射列契约 + kd=T+1 + 参数归一."""
 
-    def _adapter_with_response(
-        self, response: pl.DataFrame
-    ) -> tuple[CapitalFlowsTushareAdapter, MagicMock]:
-        client = MagicMock()
-        client.query.return_value = response
-        return CapitalFlowsTushareAdapter(_client=client), client
+    _adapter_with_response = staticmethod(_adapter_with_response)
 
     def test_moneyflow_mapping_output(self) -> None:
         adapter, client = self._adapter_with_response(
@@ -174,3 +177,157 @@ class TestCapitalFlowsAdapters:
         assert kwargs["start_date"] == "20260901"
         assert kwargs["end_date"] == "20260930"
         assert "trade_date" not in kwargs
+
+
+@pytest.mark.unit
+class TestEventKeyCollapse:
+    """#626 事件接口同披露键确定性收敛（源端两类同键多行形态）."""
+
+    _adapter_with_response = staticmethod(_adapter_with_response)
+
+    def _hk_hold_rows(self) -> pl.DataFrame:
+        # 2026-06-30 实证形态：同标的两个北向持有者代码，vol/ratio 各异
+        return pl.DataFrame(
+            {
+                "code": ["30271", "78678"],
+                "trade_date": ["20260630", "20260630"],
+                "ts_code": ["603062.SH", "603062.SH"],
+                "name": ["信捷电气", "信捷电气"],
+                "vol": [5980314.0, 245360.0],
+                "ratio": [0.17, 0.66],
+                "exchange": ["SH", "SH"],
+            }
+        )
+
+    def _top_list_rows(self) -> pl.DataFrame:
+        # 2020-02-03 实证形态：同 (标的, 日, 原因) 冗余行，float_values
+        # null/有值差异
+        base = {
+            "trade_date": ["20200203", "20200203"],
+            "ts_code": ["600825.SH", "600825.SH"],
+            "name": ["新华传媒", "新华传媒"],
+            "close": [4.74, 4.74],
+            "pct_change": [-10.0569, -10.0569],
+            "turnover_rate": [27.03, 27.03],
+            "amount": [359175996.0, 359175996.0],
+            "l_sell": [268015059.7, 268015059.7],
+            "l_buy": [456795156.4, 456795156.4],
+            "l_amount": [724810216.1, 724810216.1],
+            "net_amount": [188780096.7, 188780096.7],
+            "net_rate": [52.51, 52.51],
+            "amount_rate": [52.51, 52.51],
+            "float_values": [None, 4952800000.0],
+            "reason": ["单只标的证券的当日融资买入数量达到当日该证券总交易量的50%…"]
+            * 2,
+        }
+        return pl.DataFrame(base)
+
+    def test_hk_hold_collapses_multi_holder_rows_order_independent(self) -> None:
+        forward, reversed_ = (
+            self._frame_rows_order("hk_hold", self._hk_hold_rows(), rev)
+            for rev in (False, True)
+        )
+        assert forward.height == 1
+        assert reversed_.height == 1
+        # 同一行集合无论源端返回顺序如何都选出同一行（重试幂等）
+        assert forward.equals(reversed_)
+
+    def test_top_list_keeps_most_complete_row(self) -> None:
+        adapter, _ = self._adapter_with_response(self._top_list_rows())
+        frame = adapter.fetch_top_list(trade_date="2020-02-03")
+        assert frame.height == 1
+        assert frame.row(0, named=True)["float_values"] == pytest.approx(4952800000.0)
+
+    def test_top_list_collapse_order_independent(self) -> None:
+        forward, reversed_ = (
+            self._frame_rows_order("top_list", self._top_list_rows(), rev)
+            for rev in (False, True)
+        )
+        assert forward.equals(reversed_)
+
+    def test_top_inst_shared_collapse_dedupes_same_seat_key(self) -> None:
+        rows = pl.DataFrame(
+            {
+                "trade_date": ["20260922", "20260922"],
+                "ts_code": ["000560.SZ", "000560.SZ"],
+                "exalter": ["机构专用", "机构专用"],
+                "side": ["0", "0"],
+                "buy": [27461627.53, 19999999.99],
+                "buy_rate": [18.75, 12.34],
+                "sell": [0.0, 0.0],
+                "sell_rate": [0.0, 0.0],
+                "net_buy": [27461627.53, 19999999.99],
+                "reason": ["日涨幅偏离值达到7%的前5只证券"] * 2,
+            }
+        )
+        forward, reversed_ = (
+            self._frame_rows_order("top_inst", rows, rev) for rev in (False, True)
+        )
+        assert forward.height == 1
+        assert forward.equals(reversed_)
+
+    def test_hsgt_top10_exact_duplicate_rows_collapse(self) -> None:
+        row = {
+            "trade_date": ["20261016", "20261016"],
+            "ts_code": ["000333.SZ", "000333.SZ"],
+            "name": ["美的集团", "美的集团"],
+            "close": [80.1, 80.1],
+            "change": [-1.56, -1.56],
+            "rank": [4, 4],
+            "market_type": ["3", "3"],
+            "amount": [1388236346.0, 1388236346.0],
+            "net_amount": [None, None],
+            "buy": [None, None],
+            "sell": [None, None],
+        }
+        forward, reversed_ = (
+            self._frame_rows_order("hsgt_top10", pl.DataFrame(row), rev)
+            for rev in (False, True)
+        )
+        assert forward.height == 1
+        assert forward.equals(reversed_)
+
+    def test_moneyflow_same_key_rows_pass_through_uncollapsed(self) -> None:
+        # moneyflow 逐标的单行契约：不收敛，真重复交 DQ unique 响亮失败
+        rows = pl.DataFrame(
+            {
+                "trade_date": ["20260930", "20260930"],
+                "ts_code": ["600519.SH", "600519.SH"],
+                "net_mf_amount": [60958.84, 11111.11],
+                "net_mf_vol": [4859.0, 1.0],
+                "buy_elg_amount": [1.0, 1.0],
+                "buy_elg_vol": [1.0, 1.0],
+                "buy_lg_amount": [1.0, 1.0],
+                "buy_lg_vol": [1.0, 1.0],
+                "buy_md_amount": [1.0, 1.0],
+                "buy_md_vol": [1.0, 1.0],
+                "buy_sm_amount": [1.0, 1.0],
+                "buy_sm_vol": [1.0, 1.0],
+                "sell_elg_amount": [1.0, 1.0],
+                "sell_elg_vol": [1.0, 1.0],
+                "sell_lg_amount": [1.0, 1.0],
+                "sell_lg_vol": [1.0, 1.0],
+                "sell_md_amount": [1.0, 1.0],
+                "sell_md_vol": [1.0, 1.0],
+                "sell_sm_amount": [1.0, 1.0],
+                "sell_sm_vol": [1.0, 1.0],
+            }
+        )
+        client = MagicMock()
+        client.query.return_value = rows
+        adapter = CapitalFlowsTushareAdapter(_client=client)
+        assert adapter.fetch_moneyflow(trade_date="2026-09-30").height == 2
+
+    def _frame_rows_order(
+        self, dataset: str, rows: pl.DataFrame, reverse: bool
+    ) -> pl.DataFrame:
+        client = MagicMock()
+        client.query.return_value = rows.reverse() if reverse else rows
+        adapter = CapitalFlowsTushareAdapter(_client=client)
+        fetch = {
+            "hk_hold": lambda: adapter.fetch_hk_hold(trade_date="2026-06-30"),
+            "top_list": lambda: adapter.fetch_top_list(trade_date="2020-02-03"),
+            "top_inst": lambda: adapter.fetch_top_inst(trade_date="2026-09-22"),
+            "hsgt_top10": lambda: adapter.fetch_hsgt_top10(trade_date="2026-10-16"),
+        }[dataset]
+        return fetch().sort("source_ticker")

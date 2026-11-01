@@ -799,11 +799,13 @@ datasets:
       freshness: fresh
     status: partial
     gaps:
-    - 仅 2026-09-22 起无历史回补
+    - 仅 2026-09-22 起无历史回补（#626 回补 2014-01-01 锚进行中）
     consumers:
     - 龙虎榜观察
     - query capital
-    notes: 席位不推导整体仓位（#621 语义）
+    notes: '席位不推导整体仓位（#621 语义）；源墙远早于 2014（#626 探针
+      2010-01-04 已有行），按 #621 2014 锚回补不承诺更早；同 (标的, 日,
+      原因) 冗余多行适配器确定性收敛（#626）'
   top_inst:
     domain: capital
     tier: t1_incremental
@@ -831,11 +833,14 @@ datasets:
       freshness: fresh
     status: partial
     gaps:
-    - 仅 2026-09-22 起无历史回补
+    - 仅 2026-09-22 起无历史回补（#626 回补 2014-01-01 锚进行中）
     consumers:
     - 机构席位观察
     - query capital
-    notes: ''
+    notes: '席位不推导整体仓位——「机构专用」是多家机构共用席位名，席位
+      金额≠机构持仓（#621/#626 语义）；源墙远早于 2014（#626 探针
+      2013-01-04 已有 754 行），按 #621 2014 锚回补不承诺更早；同键
+      「机构专用」多行适配器确定性收敛（#482 先例，#626 下沉共用）'
   hk_hold:
     domain: capital
     tier: t1_incremental
@@ -864,10 +869,30 @@ datasets:
     status: empty
     gaps:
     - 本地 0 行；源可达（探针 2026-09-30 返回 4,200 行/日）——摄取链空转根因属 P1
+    disclosure_segments:
+    - segment: daily_full_disclosure
+      start: '2016-06-29'
+      end: '2024-08-16'
+      scope: 北向 SH/SZ 每日逐股 + 南向 HK 每日（南向行入库时身份过滤）
+      semantics: 日频披露事实；起点 2016-06-29 是 Tushare 源墙（2014-11-17
+        沪港通/2016-12-05 深港通上线早于源墙，墙前不可得=源端限制）
+      evidence: '#626 探针：2016-06-28 空、06-29 起 608 行（SH only）；深市行
+        自 2016-12-05 起；2024-08-16 全构成（SH 1573/SZ 1764/HK 791）'
+    - segment: quarterly_northbound_only
+      start: '2024-08-19'
+      end: null
+      scope: 北向仅季度末快照（SH/SZ）；南向 HK 仍每日（过滤不入库）
+      semantics: HKEX 2024-04-12 公告的制度调整——非季末交易日无北向逐股
+        披露是制度性缺席而非数据缺口，不得按日历完整性当缺口
+      evidence: '#626 探针：2024-08-19 起平日仅 HK（792-1018 行/日）；
+        2024-09-30/12-31、2025 各季末、2026 各季末含北向快照
+        （3,540-5,423 行/日，含 2024-06-30 源端单日空洞）'
     consumers:
     - 北向持股
     - query capital
-    notes: '#621「北向空源」修正：源非空，链路问题'
+    notes: '#621「北向空源」修正：源非空，链路问题；#626 定根因=季度末帧
+      同股多北向持有者行撞存储主键（dq unique 整日拒绝），适配器确定性
+      收敛后季度末北向可入库'
   hsgt_top10:
     domain: capital
     tier: t1_incremental
@@ -895,7 +920,31 @@ datasets:
       freshness: fresh
     status: partial
     gaps:
-    - 2026-09-30 起 100 行（约 5 个交易日×20 行），交易日覆盖稀疏待查（P1）
+    - '2026-09-30 起仅 6 个交易日有行（老链 09-30 首跑+Prefect 10-26 起恢复，
+      中间为 #613 接管过渡窗口真空，与 moneyflow 同段位——历史回补归 #626）'
+    disclosure_segments:
+    - segment: sh_only
+      start: '2014-11-17'
+      end: '2016-12-02'
+      scope: 沪股通十大成交活跃股 10 行/日（深港通未上线）
+      semantics: 早期字段形态不完整（buy/sell 可 null、net_amount 0.0 占位）
+      evidence: '#626 探针：2014-11-10 空、2014-11-17（沪港通上线日）起
+        10 行 market_type=1；2015-06-01 同形态'
+    - segment: sh_sz_full
+      start: '2016-12-05'
+      end: '2024-08-16'
+      scope: 沪+深各十大 20 行/日（market_type 1/3），buy/sell/net_amount 完整
+      semantics: 日频完整披露事实
+      evidence: '#626 探针：2016-12-05 起 20 行且 buy/sell/net 非 null；
+        2023-06-15、2024-08-16 同形态'
+    - segment: amount_only
+      start: '2024-08-19'
+      end: null
+      scope: 沪+深各十大 20 行/日（market_type 1/3），仅 amount
+      semantics: HKEX 2024-04-12 公告的制度调整——buy/sell/net_amount 官方
+        停披，null 保留不得填零（DQ 规则同语义）
+      evidence: '#626 探针：2024-08-19 起 20 行 buy/sell/net 全 null；
+        2026-10-16 同形态；2024-08-16 仍完整'
     consumers:
     - 沪深港通十大成交
     - query capital
