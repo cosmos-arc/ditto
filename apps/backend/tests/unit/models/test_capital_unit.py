@@ -59,6 +59,7 @@ class TestMargin:
             margin_buy_balance=1000000.0,
             short_sell_balance=500000.0,
             margin_buy_amount=100000,
+            margin_buy_volume=100000,
             short_sell_volume=50000,
         )
 
@@ -79,6 +80,7 @@ class TestMargin:
             margin_buy_balance=1000000.0,
             short_sell_balance=500000.0,
             margin_buy_amount=100000,
+            margin_buy_volume=100000,
             short_sell_volume=50000,
         )
 
