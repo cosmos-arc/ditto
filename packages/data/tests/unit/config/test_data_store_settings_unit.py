@@ -96,10 +96,10 @@ class TestDataStoreSettingsAllDirectories:
             assert directory not in dirs
 
     def test_count_includes_provider_payload_archive(self) -> None:
-        """目录清单应包含全球指数和不可变 provider payload 归档（24 个）."""
+        """目录清单应包含全球指数和不可变 provider payload 归档（31 个）."""
         settings = DataStoreSettings()
         dirs = settings.all_directories()
-        assert len(dirs) == 29, f"Expected 29 directories, got {len(dirs)}"
+        assert len(dirs) == 31, f"Expected 31 directories, got {len(dirs)}"
         assert "market/index/global_bars" in dirs
         assert "provider_payloads" in dirs
 
@@ -178,9 +178,11 @@ class TestPathGroupsStructure:
         """PathGroups.all_directories() 应返回完整的目录清单."""
         pg = PathGroups(Path("/data"))
         dirs = pg.all_directories()
-        assert len(dirs) == 29
+        assert len(dirs) == 31
         assert "market/stock/bars/daily" in dirs
         assert "capital/moneyflow" in dirs
+        assert "capital/top10_holders" in dirs
+        assert "capital/top10_floatholders" in dirs
         assert "fundamental/financial" in dirs
         assert "macro/indicators" in dirs
         assert "metadata" in dirs
@@ -254,10 +256,10 @@ class TestPathGroupsSubdomainDirectories:
         assert all(d.startswith("market/") for d in dirs)
 
     def test_capital_directories(self) -> None:
-        """capital.directories() 应返回 5 个资金目录."""
+        """capital.directories() 应返回 9 个资金目录."""
         pg = PathGroups(Path("/data"))
         dirs = pg.capital.directories()
-        assert len(dirs) == 7
+        assert len(dirs) == 9
         assert all(d.startswith("capital/") for d in dirs)
 
     def test_fundamental_directories(self) -> None:

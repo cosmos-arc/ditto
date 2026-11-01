@@ -8,6 +8,7 @@ import polars as pl
 from ditto_platform.foundation import FileLockManager, OnDuplicate, logger
 
 from ditto_data.services.deps import CapitalReaders, CapitalWriters
+from ditto_data.storage.base.dataset_writer import ParquetDatasetWriter
 
 
 class CapitalStore:
@@ -288,6 +289,68 @@ class CapitalStore:
         else:
             result = writer.write(df, year, on_duplicate=on_duplicate)
         return result.added + result.updated
+
+    def save_top10_holders(
+        self,
+        df: pl.DataFrame,
+        year: int,
+        on_duplicate: OnDuplicate = OnDuplicate.ERROR,
+    ) -> int:
+        """
+        Save top-10 holder rows（hold_amount 股/比率 %，#627）.
+
+        行按 report_date 年分片落各自的年分区（correctness review #627 F1，
+        同 fina_indicator/fund_portfolio 的 #3 先例）：年报/Q4 行报告期与
+        公告年跨年时，单一摄取年分区会让按报告期年的范围读漏行。
+        """
+        return self._write_disclosure_frame_by_report_year(
+            self._write_ports.top10_holders,
+            "top10_holders",
+            df,
+            on_duplicate,
+        )
+
+    def save_top10_floatholders(
+        self,
+        df: pl.DataFrame,
+        year: int,
+        on_duplicate: OnDuplicate = OnDuplicate.ERROR,
+    ) -> int:
+        """Save top-10 float holder rows（#627，分片语义同 save_top10_holders）."""
+        return self._write_disclosure_frame_by_report_year(
+            self._write_ports.top10_floatholders,
+            "top10_floatholders",
+            df,
+            on_duplicate,
+        )
+
+    def _write_disclosure_frame_by_report_year(
+        self,
+        writer: ParquetDatasetWriter | None,
+        dataset: str,
+        df: pl.DataFrame,
+        on_duplicate: OnDuplicate,
+    ) -> int:
+        """披露锚帧按 report_date 年分片写入对应年分区（含同年文件锁）."""
+        if writer is None:
+            raise ValueError(f"{dataset} writer not configured")
+        if df.is_empty():
+            return 0
+        written = 0
+        for report_year in sorted(
+            {date_value.year for date_value in df["report_date"].to_list()}
+        ):
+            part = df.filter(pl.col("report_date").dt.year() == report_year)
+            if self._file_lock is not None:
+                # backfill --parallel 并发写同年分区的丢失更新防护
+                with self._file_lock.acquire(
+                    f"{dataset}_write_{report_year}", timeout=60.0
+                ):
+                    result = writer.write(part, report_year, on_duplicate=on_duplicate)
+            else:
+                result = writer.write(part, report_year, on_duplicate=on_duplicate)
+            written += result.added + result.updated
+        return written
 
     def get_moneyflows(self, start: str, end: str) -> pl.DataFrame:
         """Read market-wide moneyflow rows（L3 巡检用）."""

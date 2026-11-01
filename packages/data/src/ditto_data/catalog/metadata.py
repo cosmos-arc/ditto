@@ -148,6 +148,9 @@ _CAPITAL_DOMAINS: frozenset[str] = frozenset(
         "hk_hold",
         "hsgt_top10",
         "cyq_perf",
+        # #627 持仓披露：前十大股东两榜
+        "top10_holders",
+        "top10_floatholders",
     }
 )
 
@@ -244,6 +247,8 @@ _EXPERIMENTAL_DATASETS: frozenset[str] = frozenset(
         "fund_share",
         "fund_portfolio",
         "cyq_perf",
+        "top10_holders",
+        "top10_floatholders",
     }
 )
 
@@ -313,6 +318,8 @@ def _resolve_asset_class(dataset_id: str) -> DatasetAssetClass | None:
         "top_list",
         "top_inst",
         "fina_indicator",
+        "top10_holders",
+        "top10_floatholders",
     }:
         return "stock"
     if dataset_id in {
@@ -344,6 +351,9 @@ def _resolve_schedule(dataset_id: str) -> DatasetSchedule:
         "earnings_express",
         # #522 基金持仓：公告日驱动（披露日不一定是交易日）
         "fund_portfolio",
+        # #627 前十股东两榜：同随定期报告公告日驱动
+        "top10_holders",
+        "top10_floatholders",
     }:
         return "natural_days"
     # Source-defined datasets
@@ -644,6 +654,8 @@ _ALL_DATASET_IDS: tuple[str, ...] = (
     "fund_share",
     "fund_portfolio",
     "cyq_perf",
+    "top10_holders",
+    "top10_floatholders",
     # Maintainer-confirmed ETF reference facts (config source, #408)
     "etf_reference",
     # Fundamental
@@ -703,6 +715,8 @@ _INSTRUMENT_INGESTION_DATASETS: frozenset[str] = frozenset(
         "fina_indicator",
         "fund_share",
         "fund_portfolio",
+        "top10_holders",
+        "top10_floatholders",
     }
 )
 

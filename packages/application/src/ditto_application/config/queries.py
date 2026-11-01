@@ -294,6 +294,25 @@ INGESTION_SPECS: dict[_Dataset, DatasetSpec] = {
         task_name="ingest_fund_portfolio",
         priority=42,
     ),
+    # #627 前十大股东两榜（公告日驱动，随定期报告披露）
+    _Dataset.TOP10_HOLDERS: create_t1_config(
+        dataset=_Dataset.TOP10_HOLDERS,
+        description="前十大股东",
+        typical_available_time=time(20, 0),
+        depends_on=[_Dataset.STOCK_BASIC],
+        critical_fields=["instrument_id", "report_date", "holder_name", "hold_amount"],
+        task_name="ingest_top10_holders",
+        priority=43,
+    ),
+    _Dataset.TOP10_FLOATHOLDERS: create_t1_config(
+        dataset=_Dataset.TOP10_FLOATHOLDERS,
+        description="前十大流通股东",
+        typical_available_time=time(20, 0),
+        depends_on=[_Dataset.STOCK_BASIC],
+        critical_fields=["instrument_id", "report_date", "holder_name", "hold_amount"],
+        task_name="ingest_top10_floatholders",
+        priority=44,
+    ),
     _Dataset.BALANCE_SHEET: create_t1_config(
         dataset=_Dataset.BALANCE_SHEET,
         description="资产负债表",

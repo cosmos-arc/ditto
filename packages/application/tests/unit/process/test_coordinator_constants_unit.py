@@ -62,6 +62,9 @@ class TestSupportedInstrumentDatasets:
             Dataset.FINA_INDICATOR,
             Dataset.FUND_SHARE,
             Dataset.FUND_PORTFOLIO,
+            # #627：前十股东两榜支持按标的回填
+            Dataset.TOP10_HOLDERS,
+            Dataset.TOP10_FLOATHOLDERS,
         }
         assert expected == SUPPORTED_INSTRUMENT_DATASETS
 

@@ -137,7 +137,8 @@ class CapitalTushareAdapter(BaseTushareAdapter):
             end_date=end_date,
         )
 
-    # --- flows: moneyflow / cyq_perf / hk_hold / hsgt_top10 / top_list / top_inst ---
+    # --- flows: moneyflow / cyq_perf / hk_hold / hsgt_top10 / top_list / top_inst /
+    #     top10_holders / top10_floatholders ---
 
     def fetch_moneyflow(
         self,
@@ -225,6 +226,40 @@ class CapitalTushareAdapter(BaseTushareAdapter):
         return self._flows.fetch_top_inst(
             ts_code=ts_code,
             trade_date=trade_date,
+            start_date=start_date,
+            end_date=end_date,
+        )
+
+    def fetch_top10_holders(
+        self,
+        ts_code: str | None = None,
+        ann_date: str | None = None,
+        period: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> pl.DataFrame:
+        """获取前十大股东（#627 公告日驱动）."""
+        return self._flows.fetch_top10_holders(
+            ts_code=ts_code,
+            ann_date=ann_date,
+            period=period,
+            start_date=start_date,
+            end_date=end_date,
+        )
+
+    def fetch_top10_floatholders(
+        self,
+        ts_code: str | None = None,
+        ann_date: str | None = None,
+        period: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> pl.DataFrame:
+        """获取前十大流通股东（#627 公告日驱动）."""
+        return self._flows.fetch_top10_floatholders(
+            ts_code=ts_code,
+            ann_date=ann_date,
+            period=period,
             start_date=start_date,
             end_date=end_date,
         )

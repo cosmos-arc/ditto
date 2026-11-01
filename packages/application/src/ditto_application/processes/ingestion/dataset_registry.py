@@ -434,11 +434,16 @@ def _earnings_announcement_fetch(
     return factory
 
 
-def _earnings_instrument_fetch(
+def _announcement_instrument_fetch(
     group: str,
     method: str,
 ) -> InstrumentFetchFactory:
-    """公告回填：按标的+公告区间（参数即公告日区间）."""
+    """
+    公告锚数据集按标的回填：source_ticker + start/end.
+
+    earnings 两表为公告日区间，fina_indicator/fund_portfolio/#627 前十
+    股东两榜为报告期区间——区间语义由各分发器出口裁剪决定。
+    """
 
     def factory(ctx: InstrumentFetchContext) -> InstrumentFetchHandler:
         fetcher = getattr(ctx.fetchers, group)
@@ -466,6 +471,16 @@ def _fund_portfolio_disclosure_fetch(ctx: DailyFetchContext) -> DailyFetchHandle
         return ctx.fetchers.fundamental.fetch_fund_portfolio(trade_date=ctx.trade_date)
 
     return fetch
+
+
+def _capital_disclosure_fetch(method: str) -> DailyFetchFactory:
+    """``ctx.fetchers.capital.<method>(trade_date=…)`` — 公告日市场级单请求（#627）."""
+
+    def factory(ctx: DailyFetchContext) -> DailyFetchHandler:
+        fn = getattr(ctx.fetchers.capital, method)
+        return lambda: fn(trade_date=ctx.trade_date)
+
+    return factory
 
 
 def _history_fetch(group: str, method: str) -> DailyFetchFactory:
@@ -818,7 +833,7 @@ _FUNDAMENTAL_REGISTRATIONS: tuple[DatasetRegistration, ...] = (
         write_kind=WriteKind.FUNDAMENTAL,
         date_schedule=DateScheduleType.NATURAL_DAYS,
         daily_fetch_factory=_fund_portfolio_disclosure_fetch,
-        instrument_fetch_factory=_earnings_instrument_fetch(
+        instrument_fetch_factory=_announcement_instrument_fetch(
             "fundamental", "fetch_fund_portfolio"
         ),
     ),
@@ -882,6 +897,28 @@ _CAPITAL_REGISTRATIONS: tuple[DatasetRegistration, ...] = (
         write_kind=WriteKind.CAPITAL,
         daily_fetch_factory=_daily_fetch("capital", "fetch_hsgt_top10"),
     ),
+    # #627 前十股东两榜：日更=市场级单日 ann_date 单请求（2026-11-01 代理
+    # 实测文档标 ts_code 必选但市场级 ann_date 可用）；按标的回填走
+    # instrument 路由（报告期区间单请求，出口按披露锚裁剪区间外公告）。
+    # 未注册身份在写入层过滤；名单跌出不等于清仓，不推导整体持仓。
+    DatasetRegistration(
+        dataset=Dataset.TOP10_HOLDERS,
+        write_kind=WriteKind.CAPITAL,
+        date_schedule=DateScheduleType.NATURAL_DAYS,
+        daily_fetch_factory=_capital_disclosure_fetch("fetch_top10_holders"),
+        instrument_fetch_factory=_announcement_instrument_fetch(
+            "capital", "fetch_top10_holders"
+        ),
+    ),
+    DatasetRegistration(
+        dataset=Dataset.TOP10_FLOATHOLDERS,
+        write_kind=WriteKind.CAPITAL,
+        date_schedule=DateScheduleType.NATURAL_DAYS,
+        daily_fetch_factory=_capital_disclosure_fetch("fetch_top10_floatholders"),
+        instrument_fetch_factory=_announcement_instrument_fetch(
+            "capital", "fetch_top10_floatholders"
+        ),
+    ),
 )
 
 _MACRO_REGISTRATIONS: tuple[DatasetRegistration, ...] = (
@@ -942,7 +979,7 @@ _EARNINGS_REGISTRATIONS: tuple[DatasetRegistration, ...] = (
         daily_fetch_factory=_earnings_announcement_fetch(
             "fundamental", "fetch_earnings_forecast"
         ),
-        instrument_fetch_factory=_earnings_instrument_fetch(
+        instrument_fetch_factory=_announcement_instrument_fetch(
             "fundamental", "fetch_earnings_forecast"
         ),
     ),
@@ -953,7 +990,7 @@ _EARNINGS_REGISTRATIONS: tuple[DatasetRegistration, ...] = (
         daily_fetch_factory=_earnings_announcement_fetch(
             "fundamental", "fetch_earnings_express"
         ),
-        instrument_fetch_factory=_earnings_instrument_fetch(
+        instrument_fetch_factory=_announcement_instrument_fetch(
             "fundamental", "fetch_earnings_express"
         ),
     ),

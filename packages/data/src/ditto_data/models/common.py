@@ -131,6 +131,9 @@ class Dataset(StrEnum):
     FUND_PORTFOLIO = "fund_portfolio"
     # #523 每日筹码及胜率
     CYQ_PERF = "cyq_perf"
+    # #627 持仓披露：前十大股东/前十大流通股东（公告日驱动）
+    TOP10_HOLDERS = "top10_holders"
+    TOP10_FLOATHOLDERS = "top10_floatholders"
 
     # 证券可信历史（#395：退市/名称/ST 历史写侧）
     NAME_CHANGE = "namechange"
@@ -159,6 +162,8 @@ class Dataset(StrEnum):
             Dataset.TOP_LIST,
             Dataset.TOP_INST,
             Dataset.FINA_INDICATOR,
+            Dataset.TOP10_HOLDERS,
+            Dataset.TOP10_FLOATHOLDERS,
         ):
             return AssetClass.STOCK
         # ETF 数据集

@@ -21,6 +21,8 @@ from ditto_data.sources.tushare.processors.mappings import (
     HK_HOLD_MAPPING,
     HSGT_TOP10_MAPPING,
     MONEYFLOW_MAPPING,
+    TOP10_FLOATHOLDERS_MAPPING,
+    TOP10_HOLDERS_MAPPING,
     TOP_INST_MAPPING,
     TOP_LIST_MAPPING,
 )
@@ -46,6 +48,10 @@ _TOP_LIST_FIELDS = (
 )
 _TOP_INST_FIELDS = (
     "trade_date,ts_code,exalter,side,buy,buy_rate,sell,sell_rate,net_buy,reason"
+)
+_TOP10_HOLDERS_FIELDS = (
+    "ts_code,ann_date,end_date,holder_name,hold_amount,hold_ratio,"
+    "hold_float_ratio,hold_change,holder_type"
 )
 
 
@@ -338,5 +344,77 @@ class CapitalFlowsTushareAdapter(BaseTushareAdapter):
                 "exalter",
                 "side",
                 "reason",
+            ),
+        )
+
+    @traced("source.tushare.fetch_top10_holders")
+    def fetch_top10_holders(
+        self,
+        ts_code: str | None = None,
+        ann_date: str | None = None,
+        period: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> pl.DataFrame:
+        """
+        前十大股东（#627，公告日驱动）.
+
+        市场级按 ann_date/period 单请求（2026-11-01 代理实测文档标 ts_code
+        必选但市场级可用）；单标的按 ts_code + 报告期区间。hold_amount 股、
+        hold_ratio/hold_float_ratio %、hold_change 股（0=不变 null=新进）；
+        修订=新 ann_date 版本行。跨期名单跌出不等于清仓。
+        """
+        return self._fetch_daily_frame(
+            "top10_holders",
+            "top10_holders",
+            _TOP10_HOLDERS_FIELDS,
+            TOP10_HOLDERS_MAPPING,
+            {
+                "ts_code": ts_code,
+                "ann_date": ann_date,
+                "period": period,
+                "start_date": start_date,
+                "end_date": end_date,
+            },
+            dedupe_subset=(
+                "source_ticker",
+                "report_date",
+                "knowledge_date",
+                "holder_name",
+            ),
+        )
+
+    @traced("source.tushare.fetch_top10_floatholders")
+    def fetch_top10_floatholders(
+        self,
+        ts_code: str | None = None,
+        ann_date: str | None = None,
+        period: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> pl.DataFrame:
+        """
+        前十大流通股东（#627，字段同 top10_holders，名单口径为流通股东榜）.
+
+        两榜同名行值可一致（2026-11-01 实测 000002.SZ 2026Q1），语义
+        不同各存一行，不互推；不推导整体持仓。
+        """
+        return self._fetch_daily_frame(
+            "top10_floatholders",
+            "top10_floatholders",
+            _TOP10_HOLDERS_FIELDS,
+            TOP10_FLOATHOLDERS_MAPPING,
+            {
+                "ts_code": ts_code,
+                "ann_date": ann_date,
+                "period": period,
+                "start_date": start_date,
+                "end_date": end_date,
+            },
+            dedupe_subset=(
+                "source_ticker",
+                "report_date",
+                "knowledge_date",
+                "holder_name",
             ),
         )

@@ -392,3 +392,96 @@ class TestEventKeyCollapse:
         assert current.select(["vol", "ratio"]).equals(
             legacy_pick.select(["vol", "ratio"])
         )
+
+
+def _top10_holders_rows() -> pl.DataFrame:
+    """top10 两接口共用响应形状（2026-11-01 代理实测字段）."""
+    return pl.DataFrame(
+        {
+            "ts_code": ["600000.SH", "600000.SH"],
+            "ann_date": ["20260320", "20260320"],
+            "end_date": ["20251231", "20251231"],
+            "holder_name": ["上海国际集团有限公司", "香港中央结算有限公司"],
+            "hold_amount": [3.1575e9, 1.2e9],
+            "hold_ratio": [16.9272, 6.4],
+            "hold_float_ratio": [21.159, 7.9],
+            "hold_change": [0.0, None],
+            "holder_type": ["一般企业", "一般企业"],
+        }
+    )
+
+
+@pytest.mark.unit
+class TestTop10HoldersAdapters:
+    """#627 前十股东两榜：公告日锚（kd=ann_date 非 T+1）+ 同披露键收敛."""
+
+    def test_top10_holders_mapping_output(self) -> None:
+        adapter, client = _adapter_with_response(_top10_holders_rows())
+
+        frame = adapter.fetch_top10_holders(ann_date="2026-03-20")
+
+        kwargs = client.query.call_args.kwargs
+        assert kwargs["api_name"] == "top10_holders"
+        assert kwargs["ann_date"] == "20260320"
+        assert frame.columns == [
+            "source_ticker",
+            "report_date",
+            "knowledge_date",
+            "holder_name",
+            "hold_amount",
+            "hold_ratio",
+            "hold_float_ratio",
+            "hold_change",
+            "holder_type",
+        ]
+        row = frame.filter(pl.col("holder_name") == "上海国际集团有限公司").row(
+            0, named=True
+        )
+        # 披露锚数据集：知识日=公告日（对照日频事件的 T+1）
+        assert row["knowledge_date"] == date(2026, 3, 20)
+        assert row["report_date"] == date(2025, 12, 31)
+        assert row["hold_amount"] == pytest.approx(3.1575e9)
+        # hold_change 0=不变、null=新进——原值保留不填零
+        hkscc = frame.filter(pl.col("holder_name") == "香港中央结算有限公司")
+        assert hkscc.row(0, named=True)["hold_change"] is None
+
+    def test_top10_holders_period_and_range_params_forwarded(self) -> None:
+        adapter, client = _adapter_with_response(_top10_holders_rows())
+
+        adapter.fetch_top10_holders(
+            ts_code="600000.SH", start_date="2014-01-01", end_date="2014-12-31"
+        )
+        kwargs = client.query.call_args.kwargs
+        assert kwargs["ts_code"] == "600000.SH"
+        assert kwargs["start_date"] == "20140101"
+        assert kwargs["end_date"] == "20141231"
+
+        adapter.fetch_top10_holders(period="20231231")
+        assert client.query.call_args.kwargs["period"] == "20231231"
+
+    def test_top10_holders_same_key_collapses_most_complete_row(self) -> None:
+        rows = _top10_holders_rows()
+        # 同披露键冗余行：hold_float_ratio null/有值差异（top_list 同形态）
+        redundant = rows.with_columns(
+            pl.lit(None, dtype=pl.Float64).alias("hold_float_ratio")
+        )
+        adapter, _ = _adapter_with_response(pl.concat([rows, redundant]))
+
+        frame = adapter.fetch_top10_holders(ann_date="2026-03-20")
+
+        assert frame.height == 2
+        # 最完整行（hold_float_ratio 非空）胜出——两键冗余对全部收敛到有值行
+        assert frame["hold_float_ratio"].null_count() == 0
+        assert set(frame["hold_float_ratio"].to_list()) == {21.159, 7.9}
+
+    def test_top10_floatholders_mapping_output(self) -> None:
+        adapter, client = _adapter_with_response(_top10_holders_rows())
+
+        frame = adapter.fetch_top10_floatholders(ann_date="2026-03-20")
+
+        kwargs = client.query.call_args.kwargs
+        assert kwargs["api_name"] == "top10_floatholders"
+        assert set(frame["holder_name"].to_list()) == {
+            "上海国际集团有限公司",
+            "香港中央结算有限公司",
+        }

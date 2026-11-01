@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dishka import Provider, Scope, provide
-from ditto_platform.foundation import ParquetStore, SQLiteClient
+from ditto_platform.foundation import FileLockManager, ParquetStore, SQLiteClient
 
 from ditto_data.config.data_store import DataStoreSettings
 from ditto_data.services.capital_store import CapitalStore
@@ -37,6 +37,14 @@ from ditto_data.storage.capital.specs import (
     MARGIN_TRADING_SPEC,
     PLEDGE_RATIO_SPEC,
     VALUATION_METRICS_SPEC,
+)
+from ditto_data.storage.capital.top10_floatholders import (
+    Top10FloatholdersReader,
+    Top10FloatholdersWriter,
+)
+from ditto_data.storage.capital.top10_holders import (
+    Top10HoldersReader,
+    Top10HoldersWriter,
 )
 from ditto_data.storage.capital.top_inst import TopInstReader, TopInstWriter
 from ditto_data.storage.capital.top_list import TopListReader, TopListWriter
@@ -90,6 +98,8 @@ class CapitalProvider(Provider):
             hsgt_top10=HsgtTop10Reader(_hsgt_top10_parquet_store(settings)),
             top_list=TopListReader(_top_list_parquet_store(settings)),
             top_inst=TopInstReader(_top_inst_parquet_store(settings)),
+            top10_holders=Top10HoldersReader(_top10_parquet_store(settings)),
+            top10_floatholders=Top10FloatholdersReader(_top10_parquet_store(settings)),
         )
 
     @provide
@@ -119,6 +129,8 @@ class CapitalProvider(Provider):
             hsgt_top10=HsgtTop10Writer(_hsgt_top10_parquet_store(settings)),
             top_list=TopListWriter(_top_list_parquet_store(settings)),
             top_inst=TopInstWriter(_top_inst_parquet_store(settings)),
+            top10_holders=Top10HoldersWriter(_top10_parquet_store(settings)),
+            top10_floatholders=Top10FloatholdersWriter(_top10_parquet_store(settings)),
         )
 
     @provide
@@ -126,11 +138,13 @@ class CapitalProvider(Provider):
         self,
         capital_read_ports: CapitalReaders,
         capital_write_ports: CapitalWriters,
+        file_lock_manager: FileLockManager,
     ) -> CapitalStore:
-        """Capital domain unified store."""
+        """Capital domain unified store（parquet 车道并发写防护接线）."""
         return CapitalStore(
             read_ports=capital_read_ports,
             write_ports=capital_write_ports,
+            file_lock=file_lock_manager,
         )
 
 
@@ -191,4 +205,24 @@ def _top_inst_parquet_store(settings: DataStoreSettings) -> ParquetStore:
     return _daily_factor_parquet_store(
         settings,
         ("instrument_id", "trade_date", "exalter", "side", "reason", "knowledge_date"),
+    )
+
+
+def _top10_parquet_store(settings: DataStoreSettings) -> ParquetStore:
+    """
+    前十股东两榜共用存储配置.
+
+    行以 (标的, 报告期, 公告日, 持有人名) 为自然键；榜单目录由
+    reader/writer 构造参数区分（#627）。
+    """
+    return ParquetStore(
+        settings.data_root,
+        key_columns=(
+            "instrument_id",
+            "report_date",
+            "knowledge_date",
+            "holder_name",
+        ),
+        date_column="report_date",
+        instrument_column="instrument_id",
     )

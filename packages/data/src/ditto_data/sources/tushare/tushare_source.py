@@ -62,6 +62,8 @@ from ditto_data.sources.tushare.fundamental_source import (
     fetch_margin_trading,
     fetch_moneyflow,
     fetch_pledge_ratio,
+    fetch_top10_floatholders,
+    fetch_top10_holders,
     fetch_top_inst,
     fetch_top_list,
     fetch_valuation_metrics,
@@ -997,6 +999,38 @@ class TushareSource:
         """获取基金季度持仓（#522）. 委托给 fundamental_source."""
         return fetch_fund_portfolio(
             self._fundamental,
+            trade_date=trade_date,
+            source_ticker=source_ticker,
+            start_date=start_date,
+            end_date=end_date,
+        )
+
+    def fetch_top10_holders(
+        self,
+        trade_date: str | None = None,
+        source_ticker: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> pl.DataFrame:
+        """获取前十大股东（#627）. 委托给 fundamental_source."""
+        return fetch_top10_holders(
+            self._capital,
+            trade_date=trade_date,
+            source_ticker=source_ticker,
+            start_date=start_date,
+            end_date=end_date,
+        )
+
+    def fetch_top10_floatholders(
+        self,
+        trade_date: str | None = None,
+        source_ticker: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> pl.DataFrame:
+        """获取前十大流通股东（#627）. 委托给 fundamental_source."""
+        return fetch_top10_floatholders(
+            self._capital,
             trade_date=trade_date,
             source_ticker=source_ticker,
             start_date=start_date,

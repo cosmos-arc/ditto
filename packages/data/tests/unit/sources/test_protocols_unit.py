@@ -356,6 +356,25 @@ class _StubCapitalFetcher:
     ) -> pl.DataFrame:
         raise AssertionError("stub member not exercised by these tests")
 
+    # #627 前十股东两榜
+    def fetch_top10_holders(
+        self,
+        trade_date: str | None = None,
+        source_ticker: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> pl.DataFrame:
+        raise AssertionError("stub member not exercised by these tests")
+
+    def fetch_top10_floatholders(
+        self,
+        trade_date: str | None = None,
+        source_ticker: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> pl.DataFrame:
+        raise AssertionError("stub member not exercised by these tests")
+
 
 class _StubMacroFetcher:
     """Stub implementing MacroFetcher Protocol."""

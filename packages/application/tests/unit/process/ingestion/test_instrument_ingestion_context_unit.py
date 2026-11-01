@@ -141,6 +141,27 @@ class _MarketSource:
         _ = source_ticker, start_date, end_date
         return pl.DataFrame()
 
+    # #627 前十股东两榜 instrument 路由：同上构建期 getattr 存根。
+    def fetch_top10_holders(
+        self,
+        *,
+        source_ticker: str,
+        start_date: str,
+        end_date: str,
+    ) -> pl.DataFrame:
+        _ = source_ticker, start_date, end_date
+        return pl.DataFrame()
+
+    def fetch_top10_floatholders(
+        self,
+        *,
+        source_ticker: str,
+        start_date: str,
+        end_date: str,
+    ) -> pl.DataFrame:
+        _ = source_ticker, start_date, end_date
+        return pl.DataFrame()
+
     def fetch_index_valuation(
         self,
         *,

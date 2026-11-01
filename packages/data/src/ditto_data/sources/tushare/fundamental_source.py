@@ -9,9 +9,11 @@ fetch_margin_trading / fetch_pledge_ratio 模块级函数，
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from datetime import date, timedelta
 
 import polars as pl
+from ditto_platform.foundation import logger
 
 from ditto_data.sources.tushare._fundamental import (
     fetch_balance_sheet as _fetch_balance_sheet,
@@ -452,6 +454,135 @@ def fetch_top_inst(
         ts_code=source_ticker,
         start_date=start_date,
         end_date=end_date,
+    )
+
+
+def _drop_null_knowledge(
+    result: pl.DataFrame,
+    dataset: str,
+    *,
+    lane: str,
+) -> pl.DataFrame:
+    """
+    Null knowledge_date 行出口丢弃+WARN（两车道同语义，#196 同因）.
+
+    sparse PIT 对 null fail-closed 整批拒收且 force 不改校验——单条
+    源端 null/坏 ann_date 不得拖垮整日/整批。
+    """
+    null_rows = (
+        result.get_column("knowledge_date").null_count()
+        if "knowledge_date" in result.columns
+        else 0
+    )
+    if null_rows:
+        message = (
+            f"{dataset} {lane} fetch dropped {null_rows} rows with null knowledge_date"
+        )
+        logger.warning(
+            message,
+            event=f"{dataset}_null_knowledge_dropped",
+            dropped_rows=null_rows,
+        )
+        return result.filter(pl.col("knowledge_date").is_not_null())
+    return result
+
+
+def _top10_instrument_window(
+    fetcher: Callable[..., pl.DataFrame],
+    dataset: str,
+    source_ticker: str | None,
+    start_date: str,
+    end_date: str,
+) -> pl.DataFrame:
+    """
+    前十股东两榜按标的回填共用出口（#627，#522/#9 边界语义）.
+
+    请求的报告期窗口向 chunk 起点前回扩 ~2 季度——起点前完结的报告期
+    仍可能在 chunk 内晚披露；出口单侧裁剪 knowledge_date <= end_date
+    （chunk 末之后公告的行不进本 chunk，由后续 chunk 覆盖其报告期），
+    双侧下界会把「期末报告期次年披露」行永久丢进缝里。null kd 行为
+    见 ``_drop_null_knowledge``。
+    """
+    window_start = date.fromisoformat(start_date) - timedelta(days=190)
+    result = fetcher(
+        ts_code=source_ticker,
+        start_date=window_start.strftime("%Y%m%d"),
+        end_date=to_compact_date(end_date),
+    )
+    result = _drop_null_knowledge(result, dataset, lane="instrument")
+    return result.filter(
+        pl.col("knowledge_date") <= pl.lit(date.fromisoformat(end_date))
+    )
+
+
+def fetch_top10_holders(
+    capital: CapitalTushareAdapter,
+    *,
+    trade_date: str | None = None,
+    source_ticker: str | None = None,
+    start_date: str | None = None,
+    end_date: str | None = None,
+) -> pl.DataFrame:
+    """
+    Fetch 前十大股东（#627 公告日驱动）.
+
+    - 日更（trade_date）：全市场按公告日单请求（2026-11-01 代理实测
+      市场级 ann_date 可用），null kd 行出口丢弃（``_drop_null_knowledge``）；
+    - 按标的回填（source_ticker + start/end）：报告期区间+边界回扩，
+      见 ``_top10_instrument_window``。
+    """
+    if trade_date and source_ticker:
+        raise ValueError("trade_date 和 source_ticker 互斥, 不能同时指定")
+    if not trade_date and not source_ticker:
+        raise ValueError("必须指定 trade_date 或 source_ticker 之一")
+    if trade_date:
+        return _drop_null_knowledge(
+            capital.fetch_top10_holders(ann_date=to_compact_date(trade_date)),
+            "top10_holders",
+            lane="market_daily",
+        )
+    if start_date is None or end_date is None:
+        raise ValueError(
+            "top10_holders instrument fetch requires start_date and end_date"
+        )
+    return _top10_instrument_window(
+        capital.fetch_top10_holders,
+        "top10_holders",
+        source_ticker,
+        start_date,
+        end_date,
+    )
+
+
+def fetch_top10_floatholders(
+    capital: CapitalTushareAdapter,
+    *,
+    trade_date: str | None = None,
+    source_ticker: str | None = None,
+    start_date: str | None = None,
+    end_date: str | None = None,
+) -> pl.DataFrame:
+    """Fetch 前十大流通股东（#627，形状同 fetch_top10_holders）."""
+    if trade_date and source_ticker:
+        raise ValueError("trade_date 和 source_ticker 互斥, 不能同时指定")
+    if not trade_date and not source_ticker:
+        raise ValueError("必须指定 trade_date 或 source_ticker 之一")
+    if trade_date:
+        return _drop_null_knowledge(
+            capital.fetch_top10_floatholders(ann_date=to_compact_date(trade_date)),
+            "top10_floatholders",
+            lane="market_daily",
+        )
+    if start_date is None or end_date is None:
+        raise ValueError(
+            "top10_floatholders instrument fetch requires start_date and end_date"
+        )
+    return _top10_instrument_window(
+        capital.fetch_top10_floatholders,
+        "top10_floatholders",
+        source_ticker,
+        start_date,
+        end_date,
     )
 
 

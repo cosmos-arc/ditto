@@ -394,6 +394,26 @@ class CapitalFetcher(Protocol):
         """获取龙虎榜席位明细（#519 金额元）."""
         ...
 
+    def fetch_top10_holders(
+        self,
+        trade_date: str | None = None,
+        source_ticker: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> pl.DataFrame:
+        """获取前十大股东（#627 公告日驱动，kd=公告日）."""
+        ...
+
+    def fetch_top10_floatholders(
+        self,
+        trade_date: str | None = None,
+        source_ticker: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> pl.DataFrame:
+        """获取前十大流通股东（#627 公告日驱动，kd=公告日）."""
+        ...
+
 
 class MacroFetcher(Protocol):
     """Macro indicators, FX, commodities, and metals."""
