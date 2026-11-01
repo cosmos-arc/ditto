@@ -788,24 +788,25 @@ datasets:
       typical_available_time: '18:30:00'
     measured:
       storage: parquet:capital/top_list
-      rows: 399
-      instruments: 251
-      start: '2026-09-22'
-      end: '2026-10-29'
+      rows: 192527
+      instruments: 5927
+      start: '2014-01-02'
+      end: '2026-10-30'
     catalog_latest:
       date: '2026-10-29'
       status: success
       partition_rows: 73
       freshness: fresh
-    status: partial
-    gaps:
-    - 仅 2026-09-22 起无历史回补（#626 回补 2014-01-01 锚进行中）
+    status: ready
+    gaps: []
     consumers:
     - 龙虎榜观察
     - query capital
     notes: '席位不推导整体仓位（#621 语义）；源墙远早于 2014（#626 探针
       2010-01-04 已有行），按 #621 2014 锚回补不承诺更早；同 (标的, 日,
-      原因) 冗余多行适配器确定性收敛（#626）'
+      原因) 冗余多行适配器确定性收敛（#626）；#626 回补 2014-01-02 起
+      192,527 行/5,927 标的，逐年交易日全覆盖，可转债榜行（11x/12x 码）
+      身份过滤不入库——对拍与矩阵见 event-disclosure-verification.md'
   top_inst:
     domain: capital
     tier: t1_incremental
@@ -822,25 +823,27 @@ datasets:
       typical_available_time: '18:30:00'
     measured:
       storage: parquet:capital/top_inst
-      rows: 3555
-      instruments: 251
-      start: '2026-09-22'
-      end: '2026-10-29'
+      rows: 2343110
+      instruments: 5787
+      start: '2014-01-02'
+      end: '2026-10-30'
     catalog_latest:
       date: '2026-10-29'
       status: success
       partition_rows: 639
       freshness: fresh
-    status: partial
-    gaps:
-    - 仅 2026-09-22 起无历史回补（#626 回补 2014-01-01 锚进行中）
+    status: ready
+    gaps: []
     consumers:
     - 机构席位观察
     - query capital
     notes: '席位不推导整体仓位——「机构专用」是多家机构共用席位名，席位
       金额≠机构持仓（#621/#626 语义）；源墙远早于 2014（#626 探针
       2013-01-04 已有 754 行），按 #621 2014 锚回补不承诺更早；同键
-      「机构专用」多行适配器确定性收敛（#482 先例，#626 下沉共用）'
+      「机构专用」多行适配器确定性收敛（#482 先例，#626 下沉共用）；
+      #626 回补 2014-01-02 起 2,343,110 行/5,787 标的，存量 2026-09-22+
+      窗口已按新收敛规则 force 重拉收敛（F1b）；源端 buy/net 双侧 null
+      对称（席位单边披露），对拍零差异'
   hk_hold:
     domain: capital
     tier: t1_incremental
@@ -856,21 +859,23 @@ datasets:
       timezone: Asia/Shanghai
       typical_available_time: '19:00:00'
     measured:
-      storage: （无落点）
-      rows: 0
-      instruments: null
-      start: null
-      end: null
+      storage: parquet:capital/hk_hold
+      rows: 4224382
+      instruments: 4227
+      start: '2016-06-29'
+      end: '2026-09-30'
     catalog_latest:
       date: '2026-10-29'
       status: success
       partition_rows: 0
       freshness: fresh
-    status: empty
+    status: partial
     gaps:
     - '历史可得性受限：源墙 2016-06-29（探针 2016-06-28 空），2014-11-17
       沪港通上线至源墙间不可得=源端限制；2024-08-19 后非季末无北向披露
-      是制度性缺席（见 disclosure_segments），不计缺口'
+      是制度性缺席（见 disclosure_segments），不计缺口；日频段另有源端
+      真空日 ~55 个交易日（逐日 SUCCESS/0 落账，含 2024-06-30 单日空洞
+      实证）'
     disclosure_segments:
     - segment: daily_full_disclosure
       start: '2016-06-29'
@@ -894,7 +899,9 @@ datasets:
     - query capital
     notes: '#621「北向空源」修正：源非空，链路问题；#626 定根因=季度末帧
       同股多北向持有者行撞存储主键（dq unique 整日拒绝），适配器确定性
-      收敛后季度末北向可入库'
+      收敛后季度末北向可入库；#626 回补 2016-06-29 起 4,224,382 行/4,227
+      标的（日频段+季度末段），平日 0 行=南向过滤+制度性缺席，对拍与
+      矩阵见 event-disclosure-verification.md'
   hsgt_top10:
     domain: capital
     tier: t1_incremental
@@ -911,19 +918,17 @@ datasets:
       typical_available_time: '19:00:00'
     measured:
       storage: parquet:capital/hsgt_top10
-      rows: 100
-      instruments: 37
-      start: '2026-09-30'
-      end: '2026-10-29'
+      rows: 50730
+      instruments: 633
+      start: '2014-11-17'
+      end: '2026-10-30'
     catalog_latest:
       date: '2026-10-29'
       status: success
       partition_rows: 20
       freshness: fresh
-    status: partial
-    gaps:
-    - '2026-09-30 起仅 6 个交易日有行（老链 09-30 首跑+Prefect 10-26 起恢复，
-      中间为 #613 接管过渡窗口真空，与 moneyflow 同段位——历史回补归 #626）'
+    status: ready
+    gaps: []
     disclosure_segments:
     - segment: sh_only
       start: '2014-11-17'
@@ -950,7 +955,9 @@ datasets:
     consumers:
     - 沪深港通十大成交
     - query capital
-    notes: ''
+    notes: '#626 回补 2014-11-17 起 50,730 行/633 标的；源端历年共 130 个
+      交易日无披露（每年 5-16 天，逐日 SUCCESS/0 落账）非链路缺口；制度
+      分段见 disclosure_segments，对拍与矩阵见 event-disclosure-verification.md'
   fina_indicator:
     domain: fundamental
     tier: t1_incremental
