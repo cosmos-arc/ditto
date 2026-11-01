@@ -24,10 +24,8 @@ def _adapter_with_response(
 class TestCapitalFlowsAdapters:
     """六接口共用 _fetch_daily_frame：映射列契约 + kd=T+1 + 参数归一."""
 
-    _adapter_with_response = staticmethod(_adapter_with_response)
-
     def test_moneyflow_mapping_output(self) -> None:
-        adapter, client = self._adapter_with_response(
+        adapter, client = _adapter_with_response(
             pl.DataFrame(
                 {
                     "trade_date": ["20260930"],
@@ -65,7 +63,7 @@ class TestCapitalFlowsAdapters:
         assert frame.columns[0:3] == ["source_ticker", "trade_date", "knowledge_date"]
 
     def test_cyq_perf_mapping_output(self) -> None:
-        adapter, _ = self._adapter_with_response(
+        adapter, _ = _adapter_with_response(
             pl.DataFrame(
                 {
                     "ts_code": ["600519.SH"],
@@ -90,7 +88,7 @@ class TestCapitalFlowsAdapters:
         assert row["knowledge_date"] == date(2026, 10, 1)
 
     def test_hk_hold_drops_redundant_columns_keeps_exchange(self) -> None:
-        adapter, _ = self._adapter_with_response(
+        adapter, _ = _adapter_with_response(
             pl.DataFrame(
                 {
                     "code": ["90519"],
@@ -115,7 +113,7 @@ class TestCapitalFlowsAdapters:
 
     def test_hsgt_top10_preserves_stopped_disclosure_nulls(self) -> None:
         """2024-08 改制后 buy/sell/net_amount 停披为 null——原样保留不填零."""
-        adapter, _ = self._adapter_with_response(
+        adapter, _ = _adapter_with_response(
             pl.DataFrame(
                 {
                     "trade_date": ["20260930"],
@@ -141,7 +139,7 @@ class TestCapitalFlowsAdapters:
         assert row["market_type"] == "3"
 
     def test_top_list_reason_kept_in_output(self) -> None:
-        adapter, _ = self._adapter_with_response(
+        adapter, _ = _adapter_with_response(
             pl.DataFrame(
                 {
                     "trade_date": ["20260922"],
@@ -166,7 +164,7 @@ class TestCapitalFlowsAdapters:
         assert frame.row(0, named=True)["reason"] == "日涨幅偏离值达到7%的前5只证券"
 
     def test_instrument_mode_passes_range_params(self) -> None:
-        adapter, client = self._adapter_with_response(pl.DataFrame())
+        adapter, client = _adapter_with_response(pl.DataFrame())
         adapter.fetch_top_inst(
             ts_code="000560.SZ",
             start_date="2026-09-01",
@@ -182,8 +180,6 @@ class TestCapitalFlowsAdapters:
 @pytest.mark.unit
 class TestEventKeyCollapse:
     """#626 事件接口同披露键确定性收敛（源端两类同键多行形态）."""
-
-    _adapter_with_response = staticmethod(_adapter_with_response)
 
     def _hk_hold_rows(self) -> pl.DataFrame:
         # 2026-06-30 实证形态：同标的两个北向持有者代码，vol/ratio 各异
@@ -233,7 +229,7 @@ class TestEventKeyCollapse:
         assert forward.equals(reversed_)
 
     def test_top_list_keeps_most_complete_row(self) -> None:
-        adapter, _ = self._adapter_with_response(self._top_list_rows())
+        adapter, _ = _adapter_with_response(self._top_list_rows())
         frame = adapter.fetch_top_list(trade_date="2020-02-03")
         assert frame.height == 1
         assert frame.row(0, named=True)["float_values"] == pytest.approx(4952800000.0)
@@ -313,17 +309,13 @@ class TestEventKeyCollapse:
                 "sell_sm_vol": [1.0, 1.0],
             }
         )
-        client = MagicMock()
-        client.query.return_value = rows
-        adapter = CapitalFlowsTushareAdapter(_client=client)
+        adapter, _ = _adapter_with_response(rows)
         assert adapter.fetch_moneyflow(trade_date="2026-09-30").height == 2
 
     def _frame_rows_order(
         self, dataset: str, rows: pl.DataFrame, reverse: bool
     ) -> pl.DataFrame:
-        client = MagicMock()
-        client.query.return_value = rows.reverse() if reverse else rows
-        adapter = CapitalFlowsTushareAdapter(_client=client)
+        adapter, _ = _adapter_with_response(rows.reverse() if reverse else rows)
         fetch = {
             "hk_hold": lambda: adapter.fetch_hk_hold(trade_date="2026-06-30"),
             "top_list": lambda: adapter.fetch_top_list(trade_date="2020-02-03"),

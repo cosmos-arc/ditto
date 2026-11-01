@@ -868,7 +868,9 @@ datasets:
       freshness: fresh
     status: empty
     gaps:
-    - 本地 0 行；源可达（探针 2026-09-30 返回 4,200 行/日）——摄取链空转根因属 P1
+    - '历史可得性受限：源墙 2016-06-29（探针 2016-06-28 空），2014-11-17
+      沪港通上线至源墙间不可得=源端限制；2024-08-19 后非季末无北向披露
+      是制度性缺席（见 disclosure_segments），不计缺口'
     disclosure_segments:
     - segment: daily_full_disclosure
       start: '2016-06-29'

@@ -68,7 +68,8 @@ buy/sell/net 非 null；2024-08-16 20 行完整 → 2024-08-19 起 buy/sell/net
   合同是 P0 架构下消费者（readiness/PIT 门/研究）的绑定点，分段缺失即
   构建失败。
 - DQ 规则头注释（`config/default/dq_rules/hk_hold.yml`、`hsgt_top10.yml`）
-  声明申报节奏口径，勿套用日历完整性期望。
+  沿用 #520 已声明的申报节奏口径（勿套用日历完整性、停披 null 保留），
+  本票补充分段落档与其对齐。
 - 四数据集当前无 HTTP/查询读口消费者（`query capital` 现仅 margin/
   valuation）——待未来读口接线时以合同分段为披露语义真源，禁止把
   非季末北向缺席渲染为「零持仓」。
