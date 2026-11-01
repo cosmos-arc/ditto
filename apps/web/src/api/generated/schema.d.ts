@@ -1,6 +1,6 @@
 /**
  * DO NOT EDIT: generated from contracts/openapi/v1.json.
- * Schema SHA-256: 4b19380bca01001a1ddfea2405ab7082024946169e86ddb0c2c11da1602863e6
+ * Schema SHA-256: 50416b556179e97de3858ea761292904e1f99b35a52d5ebb1fbb6b390987b2f0
  * Generator: openapi-typescript 7.13.0
  */
 
@@ -11017,8 +11017,8 @@ export interface components {
          *         margin_buy_balance: 融资余额（元）
          *         short_sell_balance: 融券余额（元）
          *         margin_buy_amount: 融资买入额（元，#625 修正语义）
-         *         margin_buy_volume: 融资买入额（元，int 截断废弃别名——原字段名语义
-         *             误标，保留以走响应字段新增的兼容通道；移除须走废弃窗口）
+         *         margin_buy_volume: 融资买入额[元, int 截断废弃别名——原字段名语义
+         *             误标, 保留以走响应字段新增的兼容通道; 移除须走废弃窗口]
          *         short_sell_volume: 融券卖出量（股/份/手，按标的类型各异）
          */
         Margin: {
@@ -11039,7 +11039,7 @@ export interface components {
             margin_buy_balance: number;
             /**
              * Margin Buy Volume
-             * @description 融资买入额（元，int 截断废弃别名，用 margin_buy_amount）
+             * @description 融资买入额[元, int 截断废弃别名, 用 margin_buy_amount]
              */
             margin_buy_volume: number;
             /**
