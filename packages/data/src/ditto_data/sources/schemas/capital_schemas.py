@@ -153,7 +153,7 @@ MARGIN_TRADING_SOURCE_SCHEMA = SourceSchema(
         "effective_to": pl.Date,
         "margin_buy_balance": pl.Float64,
         "short_sell_balance": pl.Float64,
-        "margin_buy_volume": pl.Float64,
+        "margin_buy_amount": pl.Float64,
         "short_sell_volume": pl.Float64,
     },
     pit_columns=("effective_from", "effective_to"),

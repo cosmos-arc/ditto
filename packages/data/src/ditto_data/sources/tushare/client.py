@@ -36,6 +36,10 @@ from ditto_data.sources.tushare.utils.rate_limiter import (
 # 过小页宽（页数增多、每页 offset 损坏暴露面反而变大）。
 _PAGINATION_RETRY_PAGE_SHIFT = 1000
 
+# 截断自愈的页宽下限：服务端单次上限低于此值时无已知端点先例，降页宽
+# 循环不再收敛，fail-closed 拒收。
+_PAGINATION_MIN_PAGE_SIZE = 500
+
 
 def _get_tushare_token(token: str | None) -> str:
     """Resolve Tushare token from explicit input/settings."""
@@ -257,8 +261,10 @@ class TushareClient:
         """
         Query Tushare API with rate limiting, retry and offset pagination.
 
-        按端点契约页宽（utils/pagination.py）翻页；页宽不超过服务端单次
-        上限时，短页才可作为取尽条件，避免大结果集被静默截断。
+        按端点契约页宽（utils/pagination.py）翻页；页宽不超过服务端
+        单次上限时，短页才可作为取尽条件，避免大结果集被静默截断。
+        短页后追加一行续探（#625 分页截断可检测）：offset 之后仍有行
+        即截断实锤，按观测到的服务端上限降页宽续拉，不静默丢弃。
 
         Args:
             api_name: API name (e.g., "trade_cal", "daily").
@@ -273,7 +279,8 @@ class TushareClient:
             SourceAuthenticationError: If authentication fails.
             SourceFetchError: If query fails after retries, or pagination
                 returns cross-page duplicate rows（服务端忽略 offset / 排序不稳定 /
-                翻页期间源端变更，拒绝静默截断或无限翻页）。页内整行重复是
+                翻页期间源端变更，拒绝静默截断或无限翻页），或服务端单次
+                上限低于页宽下限导致截断无法自愈。页内整行重复是
                 事件型数据集的真实业务冗余，放行并告警。
 
         """
@@ -317,13 +324,14 @@ class TushareClient:
         page_size: int,
         **params: str | int,
     ) -> pl.DataFrame:
-        """按显式页宽做 offset 翻页，跨页重复行 fail-closed。"""
+        """按显式页宽做 offset 翻页，跨页重复行 fail-closed，短页截断续探自愈。"""
         pages: list[pl.DataFrame] = []
         seen_rows: set[int] = set()
         offset = 0
+        active_page_size = page_size
         while True:
             data = self._query(
-                api_name, fields, limit=page_size, offset=offset, **params
+                api_name, fields, limit=active_page_size, offset=offset, **params
             )
             page = response_to_dataframe(data)
             # 空尾页即取尽；真实服务端越界页返回 fields=[]（零列 schema），
@@ -336,7 +344,7 @@ class TushareClient:
             page_rows = {hash(row) for row in page.iter_rows()}
             # 页内整行重复：事件型数据集（dividend 等）存在字段全同的真实
             # 业务冗余行，区间层有 .unique() 兜底——降级告警放行（#196 回补
-            # dividend 实测单页 2 行真实重复被误伤，整 chunk fail-closed）。
+            # 实测单页 2 行真实重复被误伤，整 chunk fail-closed）。
             in_page_duplicates = page.height - len(page_rows)
             if in_page_duplicates:
                 logger.warning(
@@ -362,13 +370,78 @@ class TushareClient:
                 )
             seen_rows |= page_rows
             pages.append(page)
-            if len(page) < page_size:
+            if len(page) < active_page_size:
+                # 短页在「页宽 ≤ 服务端单次上限」时证明取尽；页宽超上限时
+                # 是静默截断（离线复现：2501 行源、cap 2000、limit 9000 仅
+                # 取回 2000）。续探一行区分两者：offset 处出现未见过的行 =
+                # 截断实锤，按观测到的服务端上限降页宽续拉（#625 可检测
+                # 条款）。探针行已见于已见集合 = 越界回显首页形态
+                # （#431 offset 损坏），按取尽处理，交由既有跨页重复守卫。
+                if self._probe_unseen_row_beyond(
+                    api_name,
+                    fields,
+                    offset=offset + len(page),
+                    seen_rows=seen_rows,
+                    **params,
+                ):
+                    if len(page) < _PAGINATION_MIN_PAGE_SIZE:
+                        raise SourceFetchError(
+                            message=(
+                                f"Tushare {api_name} pagination truncated below "
+                                f"floor: page={len(page)} at offset={offset} "
+                                f"but more rows exist (server cap < "
+                                f"{_PAGINATION_MIN_PAGE_SIZE})"
+                            ),
+                            source="tushare",
+                        )
+                    logger.warning(
+                        "pagination truncated by server cap; shrinking page size",
+                        event="tushare_pagination_truncation_detected",
+                        api_name=api_name,
+                        requested_page_size=active_page_size,
+                        server_cap=len(page),
+                        offset=offset,
+                    )
+                    active_page_size = len(page)
+                    offset += len(page)
+                    continue
                 break
             offset += len(page)
 
         if len(pages) == 1:
             return pages[0]
         return pl.concat(pages, how="vertical_relaxed")
+
+    def _probe_unseen_row_beyond(
+        self,
+        api_name: str,
+        fields: str,
+        *,
+        offset: int,
+        seen_rows: set[int],
+        **params: str | int,
+    ) -> bool:
+        """
+        短页之后的续探：offset 处再取一行，判断是否存在未见过的后续行。
+
+        探测请求自身失败时按取尽处理（告警可见）：探测是检测增益，不让
+        一次额外请求的瞬态失败否决已经取回的数据。
+        """
+        try:
+            data = self._query(api_name, fields, limit=1, offset=offset, **params)
+        except SourceFetchError:
+            logger.warning(
+                "truncation probe failed; assuming exhausted",
+                event="tushare_pagination_probe_failed",
+                api_name=api_name,
+                offset=offset,
+            )
+            return False
+        probe = response_to_dataframe(data)
+        if probe.height == 0:
+            return False
+        probe_rows = {hash(row) for row in probe.iter_rows()}
+        return not probe_rows.issubset(seen_rows)
 
     def close(self) -> None:
         """

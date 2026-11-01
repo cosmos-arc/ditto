@@ -9,7 +9,7 @@
 
 ## 头条结论
 
-1. **「空源」叙事修正（再定界 P1/P3a/P5a）**：`margin_trading`、`hk_hold`、`fx_daily`、`earnings_forecast`、`earnings_express` 本地零行，但逐接口探针证明**源全部可达**（margin_detail 4,486 行/日、hk_hold 4,200 行/日、fx_daily 101 行/日）——是摄取链空转，不是源缺口。五者的修复归 P1（失败分类与补偿），不在 P3 采购/补源范围。
+1. **「空源」叙事修正（再定界 P1/P3a/P5a）**：`margin_trading`、`hk_hold`、`fx_daily`、`earnings_forecast`、`earnings_express` 本地零行，但逐接口探针证明**源全部可达**（margin_detail 4,486 行/日、hk_hold 4,200 行/日、fx_daily 101 行/日）——是摄取链空转，不是源缺口。五者的修复归 P1（失败分类与补偿），不在 P3 采购/补源范围。**#625 已修 margin_trading 一员**：根因=margin_detail 官方口径 T+1 上午 8:30 更新（深市/北交所周五数据下周一更新），21:55 EOD 波恒空被 SUCCESS/0 固化；晚发布近窗重取（nightly repair force 近 5 交易日）+ 2013-01-04 起历史回补已落地，rzmre 列名语义修正（融资买入额·元，原误标 volume，#390 破坏窗口内改名），详见 docs/data/capital-fund-verification.md。
 2. **Tushare 15000 档经代理 55 接口探针 52 可达**。仅 `rights`（50101，#517-#523 已裁决降级→corporate_actions 缺分配预案味道）与 `csrc_industrial`（2002 权限不足→industry_classification 仅申万线）不可达；`cn_macro` 是 provider 标签假象，真实 `cn_gdp/cn_cpi/cn_ppi/cn_pmi/cn_m/sf_month/shibor` 全部可达。**当前凭据没有需要补源的证据。**
 3. **FRED 修通一半**：`series_observations`（含 ALFRED realtime 参数）全部 200，`.env` 有 key；夜链 macro/fx/commodity 仍 failed（10-29），根因在链路不在凭据（归 P1/P5a）。
 4. **2014 目标达成面**：核心价格链 `stock_daily/adj_factor/stock_limit/etf_daily/fund_adj/index_daily/global_index_daily/moneyflow/valuation_metrics/index_weight/dividend` 均为 ready（多数 2013 起超目标）；`etf_nav`（末端 10-26 后缺）与 `fund_share`（末端 10-27）为 partial。`stock_status` 起点 2016-08-09（bak_basic 官方可得起点）；`cyq_perf` 官方起点 2018；`fund_portfolio` 仅 2026 Q2/Q3；`limit_list/top_list/top_inst/hsgt_top10/index_valuation/futures_daily/commodity_daily` 均仅 2026-09/10 起无历史回补。
@@ -25,7 +25,7 @@
 | 看图/图表工作台（#193/#208） | stock_daily✓ adj_factor✓ etf_daily✓ etf_nav⚠ fund_adj✓ index_daily✓ global_index_daily✓ stock_limit✓ calendar✓ stock_basic✓ etf_basic✓ index_basic✓ etf_reference⚠（catalog 登记缺） limit_list⚠ moneyflow✓ top_list⚠ |
 | Price Action／威科夫研究 | stock_daily✓ adj_factor✓ stock_status⚠ namechange✓ st_history✓ calendar✓ |
 | 行业/指数轮动 | industry_classification⚠ industry_mapping✓ index_weight✓ index_daily✓ stock_daily✓ valuation_metrics✓ |
-| 资金面（#621 P3） | moneyflow✓ margin_trading✗ hk_hold✗ hsgt_top10⚠ fund_share⚠ top_list⚠ top_inst⚠ cyq_perf⚠ index_valuation⚠ pledge_ratio⚠ |
+| 资金面（#621 P3） | moneyflow⚠(BSE 源端限制,2026-10-31 起) margin_trading⚠(通路修复+回补,#625) hk_hold✗ hsgt_top10⚠ fund_share⚠(尾部已愈,#625) top_list⚠ top_inst⚠ cyq_perf⚠ index_valuation⚠ pledge_ratio⚠ |
 | 回测（严格 PIT，#621 P2/P4） | calendar✓ stock_daily✓ adj_factor✓ stock_status⚠ stock_limit✓ balance_sheet✓ income_statement✓ cash_flow✓ fina_indicator✓ dividend✓ corporate_actions⚠ valuation_metrics✓ index_daily✓ |
 | 宏观/市场背景（P5a） | macro_indicators⚠ fx_daily✗ commodity_daily⚠ global_index_daily✓ futures_daily⚠ futures_basic✓ |
 

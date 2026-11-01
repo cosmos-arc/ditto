@@ -5,6 +5,7 @@ from datetime import date
 import polars as pl
 from ditto_data.services.capital_store import CapitalStore
 from ditto_data.services.deps import CapitalReaders, CapitalWriters
+from ditto_platform.foundation.storage.types import OnDuplicate
 from pytest_mock import MockerFixture
 
 
@@ -167,7 +168,9 @@ class TestCapitalStoreSaveMethods:
 
         # Assert
         assert result == 5
-        mock_writer.write.assert_called_once_with(test_df)
+        mock_writer.write.assert_called_once_with(
+            test_df, on_duplicate=OnDuplicate.KEEP_FIRST
+        )
 
     def test_save_pledge_ratio_delegates_to_writer(self, mocker: MockerFixture) -> None:
         """Test save_pledge_ratio() delegates to PledgeRatioWriter."""

@@ -516,10 +516,10 @@ class IndustryMapping:
 | `knowledge_date` | Date | 数据可知日期 |
 | `effective_from` | Date | 版本生效开始日期 |
 | `effective_to` | Date | 版本生效结束日期 |
-| `margin_buy_balance` | Float64 | 融资余额 |
-| `short_sell_balance` | Float64 | 融券余额 |
-| `margin_buy_volume` | Float64 | 融资买入量 |
-| `short_sell_volume` | Float64 | 融券卖出量 |
+| `margin_buy_balance` | Float64 | 融资余额（元） |
+| `short_sell_balance` | Float64 | 融券余额（元） |
+| `margin_buy_amount` | Float64 | 融资买入额（元，#625 修正语义） |
+| `short_sell_volume` | Float64 | 融券卖出量（股/份/手） |
 
 **存储路径**：`capital/margin/`
 

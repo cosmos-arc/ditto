@@ -12,6 +12,7 @@ from ditto_data.storage.capital.margin.margin_trading_writer import (
 )
 from ditto_data.storage.capital.specs import MARGIN_TRADING_SPEC
 from ditto_platform.foundation import SQLiteClient, SQLitePool
+from ditto_platform.foundation.storage.types import OnDuplicate
 
 
 @pytest.fixture
@@ -29,7 +30,7 @@ def in_memory_db() -> SQLiteClient:
         effective_to DATE,
         margin_buy_balance REAL,
         short_sell_balance REAL,
-        margin_buy_volume REAL,
+        margin_buy_amount REAL,
         short_sell_volume REAL,
         PRIMARY KEY (instrument_id, trade_date, effective_from)
     )"""
@@ -55,7 +56,7 @@ def test_write_success(writer: MarginTradingWriter) -> None:
             "effective_to": [None],
             "margin_buy_balance": [1000000.0],
             "short_sell_balance": [500000.0],
-            "margin_buy_volume": [50000000.0],
+            "margin_buy_amount": [50000000.0],
             "short_sell_volume": [20000000.0],
         }
     )
@@ -75,7 +76,7 @@ def test_write_returns_count(writer: MarginTradingWriter) -> None:
             "effective_to": [None, None],
             "margin_buy_balance": [1000000.0, 800000.0],
             "short_sell_balance": [500000.0, 400000.0],
-            "margin_buy_volume": [50000000.0, 40000000.0],
+            "margin_buy_amount": [50000000.0, 40000000.0],
             "short_sell_volume": [20000000.0, 16000000.0],
         }
     )
@@ -95,7 +96,7 @@ def test_write_empty_dataframe(writer: MarginTradingWriter) -> None:
             "effective_to": pl.Date,
             "margin_buy_balance": pl.Float64,
             "short_sell_balance": pl.Float64,
-            "margin_buy_volume": pl.Float64,
+            "margin_buy_amount": pl.Float64,
             "short_sell_volume": pl.Float64,
         }
     )
@@ -117,7 +118,7 @@ def test_write_with_nullable_effective_date(
             "effective_to": [None, date(2024, 5, 25)],
             "margin_buy_balance": [1000000.0, 800000.0],
             "short_sell_balance": [500000.0, 400000.0],
-            "margin_buy_volume": [50000000.0, 40000000.0],
+            "margin_buy_amount": [50000000.0, 40000000.0],
             "short_sell_volume": [20000000.0, 16000000.0],
         }
     )
@@ -142,7 +143,7 @@ def test_write_failure_rollback(writer: MarginTradingWriter) -> None:
             "effective_to": [None],
             "margin_buy_balance": [1000000.0],
             "short_sell_balance": [500000.0],
-            "margin_buy_volume": [50000000.0],
+            "margin_buy_amount": [50000000.0],
             "short_sell_volume": [20000000.0],
         }
     )
@@ -177,7 +178,7 @@ def test_write_on_conflict_do_nothing(
             "effective_to": [None],
             "margin_buy_balance": [1000000.0],
             "short_sell_balance": [500000.0],
-            "margin_buy_volume": [50000000.0],
+            "margin_buy_amount": [50000000.0],
             "short_sell_volume": [20000000.0],
         }
     )
@@ -222,7 +223,7 @@ def test_write_multiple_records_same_instrument(
             "effective_to": [None, None, None],
             "margin_buy_balance": [1000000.0, 1100000.0, 1200000.0],
             "short_sell_balance": [500000.0, 550000.0, 600000.0],
-            "margin_buy_volume": [50000000.0, 55000000.0, 60000000.0],
+            "margin_buy_amount": [50000000.0, 55000000.0, 60000000.0],
             "short_sell_volume": [20000000.0, 22000000.0, 24000000.0],
         }
     )
@@ -237,3 +238,41 @@ def test_write_multiple_records_same_instrument(
         ["600000.SH"],
     )
     assert len(rows) == 3
+
+
+def _row(amount: float) -> pl.DataFrame:
+    return pl.DataFrame(
+        {
+            "instrument_id": ["600000.SH"],
+            "trade_date": [date(2024, 5, 15)],
+            "knowledge_date": [date(2024, 5, 15)],
+            "effective_from": [date(2024, 5, 16)],
+            "effective_to": [None],
+            "margin_buy_balance": [1000000.0],
+            "short_sell_balance": [500000.0],
+            "margin_buy_amount": [amount],
+            "short_sell_volume": [20000000.0],
+        }
+    )
+
+
+def test_keep_last_overwrites_same_key_with_new_values(
+    writer: MarginTradingWriter, in_memory_db: SQLiteClient
+) -> None:
+    """#625 correctness W1：force 重取的值修正经 KEEP_LAST 收敛."""
+    writer.write(_row(50.0))
+    writer.write(_row(99.0), on_duplicate=OnDuplicate.KEEP_LAST)
+
+    rows = in_memory_db.fetchall("SELECT margin_buy_amount FROM margin_trading")
+    assert rows == [{"margin_buy_amount": 99.0}]
+
+
+def test_keep_first_keeps_original_values(
+    writer: MarginTradingWriter, in_memory_db: SQLiteClient
+) -> None:
+    """默认冲突语义不变：同键后写忽略."""
+    writer.write(_row(50.0))
+    writer.write(_row(99.0), on_duplicate=OnDuplicate.KEEP_FIRST)
+
+    rows = in_memory_db.fetchall("SELECT margin_buy_amount FROM margin_trading")
+    assert rows == [{"margin_buy_amount": 50.0}]

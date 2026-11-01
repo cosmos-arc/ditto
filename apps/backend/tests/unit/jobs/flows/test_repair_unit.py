@@ -181,13 +181,33 @@ class TestDailyRepairCompensationSelection:
             "cash_flow",
             "etf_nav",
         ]
-        assert [c.kwargs["dataset"] for c in holes_flow.call_args_list] == list(
+        hole_calls = [
+            c
+            for c in holes_flow.call_args_list
+            if "refetch_window_days" not in c.kwargs
+        ]
+        refresh_calls = [
+            c for c in holes_flow.call_args_list if "refetch_window_days" in c.kwargs
+        ]
+        assert [c.kwargs["dataset"] for c in hole_calls] == list(
             repair_module.CONSUMER_CRITICAL_HOLE_DATASETS
+        )
+        # #625 晚发布数据集近窗 force 重取：margin_trading/fund_share
+        assert [c.kwargs["dataset"] for c in refresh_calls] == list(
+            repair_module.LATE_PUBLISHING_REFRESH_DATASETS
+        )
+        assert all(
+            c.kwargs["refetch_window_days"]
+            == repair_module.LATE_PUBLISHING_REFRESH_WINDOW_DAYS
+            for c in refresh_calls
         )
         summary = result["summary"]
         assert summary["retry_datasets"] == ["cash_flow", "etf_nav"]
         assert summary["holes_datasets"] == list(
             repair_module.CONSUMER_CRITICAL_HOLE_DATASETS
+        )
+        assert summary["refresh_datasets"] == list(
+            repair_module.LATE_PUBLISHING_REFRESH_DATASETS
         )
         # 永久/源缺失失败保留原因与补偿范围（人工裁决可见）。
         excluded = summary["excluded_failure_groups"]
@@ -221,10 +241,20 @@ class TestDailyRepairCompensationSelection:
         result = _prefect_runner(repair_module.daily_repair_flow)()
 
         retry_flow.assert_not_called()
-        assert len(holes_flow.call_args_list) == len(
-            repair_module.CONSUMER_CRITICAL_HOLE_DATASETS
-        )
+        hole_calls = [
+            c
+            for c in holes_flow.call_args_list
+            if "refetch_window_days" not in c.kwargs
+        ]
+        refresh_calls = [
+            c for c in holes_flow.call_args_list if "refetch_window_days" in c.kwargs
+        ]
+        assert len(hole_calls) == len(repair_module.CONSUMER_CRITICAL_HOLE_DATASETS)
+        assert len(refresh_calls) == len(repair_module.LATE_PUBLISHING_REFRESH_DATASETS)
         assert result["summary"]["retry_datasets"] == []
+        assert result["summary"]["refresh_datasets"] == list(
+            repair_module.LATE_PUBLISHING_REFRESH_DATASETS
+        )
 
     def test_explicit_datasets_keep_retry_and_holes_on_same_list(
         self, mocker: MockerFixture
@@ -256,6 +286,8 @@ class TestDailyRepairCompensationSelection:
         ]
         assert result["summary"]["retry_datasets"] == ["stock_daily"]
         assert result["summary"]["holes_datasets"] == ["stock_daily"]
+        # 显式 datasets 保持手动语义：不追加晚发布近窗刷新
+        assert result["summary"]["refresh_datasets"] == []
 
     def test_discovered_stale_dataset_does_not_kill_repair(
         self, mocker: MockerFixture
@@ -293,7 +325,10 @@ class TestDailyRepairCompensationSelection:
         # 失效数据集失败留痕，其余数据集与空洞扫描继续。
         assert "ValueError" in str(result["retry_result"]["stale_dataset"]["error"])
         assert result["retry_result"]["etf_nav"]["success_count"] == 1
-        assert len(holes_flow.call_args_list) == len(
-            repair_module.CONSUMER_CRITICAL_HOLE_DATASETS
-        )
+        hole_calls = [
+            c
+            for c in holes_flow.call_args_list
+            if "refetch_window_days" not in c.kwargs
+        ]
+        assert len(hole_calls) == len(repair_module.CONSUMER_CRITICAL_HOLE_DATASETS)
         assert retry_flow.call_count == 2

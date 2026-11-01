@@ -30,6 +30,7 @@ from ditto_data.ingestion.partition_state import (
 )
 from ditto_data.lineage import DataLineageRecorder
 from ditto_data.quality import QualityEngine
+from ditto_data.services.capital_store import CapitalStore
 from ditto_data.services.market_service import MarketService
 from ditto_data.services.metadata_service import MetadataService
 from ditto_execution.contracts import FillDataPort, IntentDataPort, PositionDataPort
@@ -569,11 +570,13 @@ class AppProcessProvider(Provider):
         self,
         market_service: MarketService,
         metadata_service: MetadataService,
+        capital_store: CapitalStore,
     ) -> PriceCoverageAuditService:
-        """价格与身份覆盖审计服务（#624）."""
+        """价格与身份覆盖审计服务（#624；#625 扩展 moneyflow/fund_share 档位）."""
         return PriceCoverageAuditService(
             market=market_service,
             metadata=metadata_service,
+            capital=capital_store,
         )
 
     @provide

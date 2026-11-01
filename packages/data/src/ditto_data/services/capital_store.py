@@ -104,18 +104,24 @@ class CapitalStore:
 
     # Write methods (save_*)
 
-    def save_margin_trading(self, df: pl.DataFrame) -> int:
+    def save_margin_trading(
+        self,
+        df: pl.DataFrame,
+        on_duplicate: OnDuplicate = OnDuplicate.KEEP_FIRST,
+    ) -> int:
         """
         Save margin trading data.
 
         Args:
             df: DataFrame with margin trading data to save.
+            on_duplicate: 冲突策略（KEEP_FIRST 忽略冲突行；KEEP_LAST
+                同主键后写覆盖——force 重取的值修正收敛依赖它）.
 
         Returns:
             Number of records written.
 
         """
-        return self._write_ports.margin_trading.write(df)
+        return self._write_ports.margin_trading.write(df, on_duplicate=on_duplicate)
 
     def save_pledge_ratio(self, df: pl.DataFrame) -> int:
         """

@@ -44,10 +44,12 @@ class Margin(BaseModel):
     Attributes:
         instrument_id: 标的 ID
         trade_date: 交易日期
-        margin_buy_balance: 融资余额
-        short_sell_balance: 融券余额
-        margin_buy_volume: 融资买入量
-        short_sell_volume: 融券卖出量
+        margin_buy_balance: 融资余额（元）
+        short_sell_balance: 融券余额（元）
+        margin_buy_amount: 融资买入额（元，#625 修正语义）
+        margin_buy_volume: 融资买入额[元, int 截断废弃别名——原字段名语义
+            误标, 保留以走响应字段新增的兼容通道; 移除须走废弃窗口]
+        short_sell_volume: 融券卖出量（股/份/手，按标的类型各异）
 
     """
 
@@ -55,7 +57,10 @@ class Margin(BaseModel):
     trade_date: str = Field(description="交易日期")
     margin_buy_balance: float = Field(description="融资余额")
     short_sell_balance: float = Field(description="融券余额")
-    margin_buy_volume: int = Field(description="融资买入量")
+    margin_buy_amount: float = Field(description="融资买入额")
+    margin_buy_volume: int = Field(
+        description="融资买入额[元, int 截断废弃别名, 用 margin_buy_amount]"
+    )
     short_sell_volume: int = Field(description="融券卖出量")
 
     model_config = ConfigDict(
@@ -70,18 +75,20 @@ def to_margin(row: dict[str, Any]) -> Margin:
 
     Args:
         row: 数据库行字典，包含 instrument_id, trade_date, margin_buy_balance,
-             short_sell_balance, margin_buy_volume, short_sell_volume 等字段
+             short_sell_balance, margin_buy_amount, short_sell_volume 等字段
 
     Returns:
         Margin 模型实例
 
     """
+    amount = float(row["margin_buy_amount"] or 0)
     return Margin(
         instrument_id=int(row["instrument_id"]),
         trade_date=row["trade_date"],
         margin_buy_balance=row["margin_buy_balance"],
         short_sell_balance=row["short_sell_balance"],
-        margin_buy_volume=int(row["margin_buy_volume"] or 0),
+        margin_buy_amount=amount,
+        margin_buy_volume=int(amount),
         short_sell_volume=int(row["short_sell_volume"] or 0),
     )
 

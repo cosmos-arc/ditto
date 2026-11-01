@@ -1,12 +1,20 @@
 """
-价格与身份覆盖审计服务（#624 / 父规格 #621 P2）.
+价格与身份覆盖审计服务（#624 / 父规格 #621 P2；#625 扩展资金面数据集）.
 
 编排 data 层纯审计函数（``ditto_data.quality.coverage_audit``）：从
-MarketService/MetadataService 取物理帧（日线/状态/复权因子/名册/日历），
-对给定窗口产出逐证券交易日缺口归因报告。物理覆盖核验语义与 PIT 消费
-查询的边界见纯函数模块 docstring。
+MarketService/MetadataService/CapitalStore 取物理帧（日线/状态/复权因子/
+名册/日历/资金面数据集），对给定窗口产出逐证券交易日缺口归因报告。
+物理覆盖核验语义与 PIT 消费查询的边界见纯函数模块 docstring。
 
-入口：``ops audit-price-coverage``（CLI）；无例行调度，按需复跑刷新证据。
+dataset 语义（#625）：
+- ``daily``：价格日线（#624 原语义，复权因子在场核验仅此档）；
+- ``moneyflow``：个股资金流（stock 名册 × 日历，停牌归因沿用 stock_status；
+  复用价格审计的会话网格，bars 换为 moneyflow 业务键）；
+- ``fund_share``：ETF 场内份额（etf 名册 × 日历；ETF 无状态数据集，
+  缺口诚实落 no_status_dataset 证据边界）。
+
+入口：``ops audit-price-coverage``（daily）与 ``ops audit-capital-coverage``
+（moneyflow/fund_share，CLI）；无例行调度，按需复跑刷新证据。
 """
 
 from collections.abc import Mapping
@@ -21,6 +29,7 @@ from ditto_data.quality.coverage_audit import (
     audit_session_coverage,
     audit_trading_calendar,
 )
+from ditto_data.services.capital_store import CapitalStore
 from ditto_data.services.market_service import MarketService
 from ditto_data.services.metadata_service import MetadataService
 
@@ -30,9 +39,32 @@ __all__ = [
     "PriceCoverageAuditReport",
     "PriceCoverageAuditRequest",
     "PriceCoverageAuditService",
+    "dataset_asset_class",
 ]
 
 _ASSET_CLASSES = frozenset({"stock", "etf"})
+# 数据集档位 → 允许的资产类（名册与状态归因口径由资产类决定）。
+_DATASET_ASSET_CLASSES: Mapping[str, frozenset[str]] = {
+    "daily": frozenset({"stock", "etf"}),
+    "moneyflow": frozenset({"stock"}),
+    "fund_share": frozenset({"etf"}),
+}
+
+
+def dataset_asset_class(dataset: str) -> str:
+    """单资产类数据集档位的名册口径（CLI 用）；未知/多资产类档位响亮失败."""
+    allowed = _DATASET_ASSET_CLASSES.get(dataset)
+    if allowed is None:
+        raise AppQueryError(
+            f"未知数据集档位 {dataset!r}: 允许 {sorted(_DATASET_ASSET_CLASSES)}"
+        )
+    if len(allowed) != 1:
+        names = sorted(allowed)
+        message = f"数据集档位 {dataset!r} 支持多资产类 {names}: 须显式指定 asset_class"
+        raise AppQueryError(message)
+    return next(iter(allowed))
+
+
 # 空窗读取（窗口早于数据集起点）经 ParquetStore.read 可能返回无列空帧；
 # 补齐最小 schema 让审计产出归因报告而非在 select 上崩溃。
 _BAR_KEYS_SCHEMA: Mapping[str, type[pl.DataType]] = {
@@ -63,14 +95,16 @@ def _ensure_schema(
 @dataclass(frozen=True)
 class PriceCoverageAuditRequest:
     """
-    审计请求：窗口 + 资产类.
+    审计请求：窗口 + 资产类 + 数据集档位.
 
     start_date/end_date 为 YYYY-MM-DD；窗口按交易日历裁剪。
+    dataset 须与 asset_class 组合合法（见 _DATASET_ASSET_CLASSES）。
     """
 
     start_date: str
     end_date: str
     asset_class: str = "stock"
+    dataset: str = "daily"
     detail_limit: int = 20
 
 
@@ -84,6 +118,7 @@ class PriceCoverageAuditReport:
     session: SessionCoverageAudit
     top_gap_securities: list[dict[str, Any]]
     gap_samples: list[dict[str, Any]]
+    dataset: str = "daily"
 
     @property
     def passed(self) -> bool:
@@ -93,6 +128,7 @@ class PriceCoverageAuditReport:
     def to_dict(self) -> dict[str, Any]:
         """CLI/JSON 可序列化形状."""
         return {
+            "dataset": self.dataset,
             "asset_class": self.asset_class,
             "window": list(self.window),
             "passed": self.passed,
@@ -118,20 +154,22 @@ class PriceCoverageAuditReport:
 class PriceCoverageAuditService:
     """编排物理帧并调用纯审计函数."""
 
-    def __init__(self, *, market: MarketService, metadata: MetadataService) -> None:
+    def __init__(
+        self,
+        *,
+        market: MarketService,
+        metadata: MetadataService,
+        capital: CapitalStore | None = None,
+    ) -> None:
         self._market = market
         self._metadata = metadata
+        self._capital = capital
 
     def run(self, request: PriceCoverageAuditRequest) -> PriceCoverageAuditReport:
         """执行审计：读物理帧 → 纯函数归因 → 报告."""
-        if request.asset_class not in _ASSET_CLASSES:
-            raise AppQueryError(
-                f"未知资产类 {request.asset_class!r}: 允许 {sorted(_ASSET_CLASSES)}"
-            )
+        self._validate_request(request)
         window_start = date.fromisoformat(request.start_date)
         window_end = date.fromisoformat(request.end_date)
-        if window_end < window_start:
-            raise AppQueryError("end_date 不得早于 start_date")
 
         trading_days = [
             date.fromisoformat(day)
@@ -148,42 +186,9 @@ class PriceCoverageAuditService:
         roster = self._metadata.find_securities(
             asset_class=request.asset_class, is_active=None
         )
-        if request.asset_class == "stock":
-            bars = _ensure_schema(
-                self._market.get_stock_bars(request.start_date, request.end_date),
-                _BAR_KEYS_SCHEMA,
-            )
-            status = _ensure_schema(
-                self._market.get_stock_status(request.start_date, request.end_date),
-                _STATUS_KEYS_SCHEMA,
-            )
-            adj_factors: pl.DataFrame | None = _ensure_schema(
-                self._market.get_adj_factors(request.start_date, request.end_date),
-                _BAR_KEYS_SCHEMA,
-            )
-            # 状态期起点 = 数据集物理覆盖起点（不受请求窗口约束）。窗口内
-            # 状态帧最早行无法区分「数据集尚未开始」与「窗口内前导摄取
-            # 空洞」——后者按状态缺失失败处理，不得借 pre_status_era 豁免。
-            status_range = self._market.get_stock_status_date_range()
-            status_frame: pl.DataFrame | None = (
-                status if status_range is not None else None
-            )
-            status_available_from = status_range[0] if status_range else None
-        else:
-            bars = _ensure_schema(
-                self._market.get_etf_bars(request.start_date, request.end_date),
-                _BAR_KEYS_SCHEMA,
-            )
-            # ETF 无状态数据集（market/etf/status 未注册摄取）：缺口归因
-            # 诚实落在 no_status_dataset 证据边界，不冒充停牌可判。
-            status_frame = None
-            status_available_from = None
-            fund_adj = self._market.get_fund_adj(request.start_date, request.end_date)
-            adj_factors = (
-                _ensure_schema(fund_adj, _BAR_KEYS_SCHEMA)
-                if fund_adj is not None
-                else None
-            )
+        bars, status_frame, status_available_from, adj_factors = (
+            self._load_audit_frames(request)
+        )
 
         session_audit = audit_session_coverage(
             trading_days=trading_days,
@@ -203,7 +208,100 @@ class PriceCoverageAuditService:
             session=session_audit,
             top_gap_securities=_top_gap_securities(session_audit, tickers, limit),
             gap_samples=_gap_samples(session_audit, tickers, limit),
+            dataset=request.dataset,
         )
+
+    @staticmethod
+    def _validate_request(request: PriceCoverageAuditRequest) -> None:
+        """资产类 × 数据集档位组合校验（fail-closed）."""
+        if request.asset_class not in _ASSET_CLASSES:
+            raise AppQueryError(
+                f"未知资产类 {request.asset_class!r}: 允许 {sorted(_ASSET_CLASSES)}"
+            )
+        allowed = _DATASET_ASSET_CLASSES.get(request.dataset)
+        if allowed is None:
+            known = sorted(_DATASET_ASSET_CLASSES)
+            raise AppQueryError(f"未知数据集档位 {request.dataset!r}: 允许 {known}")
+        if request.asset_class not in allowed:
+            names = sorted(allowed)
+            message = (
+                f"数据集 {request.dataset!r} 不支持资产类 "
+                f"{request.asset_class!r}: 允许 {names}"
+            )
+            raise AppQueryError(message)
+        if date.fromisoformat(request.end_date) < date.fromisoformat(
+            request.start_date
+        ):
+            raise AppQueryError("end_date 不得早于 start_date")
+
+    def _load_audit_frames(
+        self, request: PriceCoverageAuditRequest
+    ) -> tuple[pl.DataFrame, pl.DataFrame | None, date | None, pl.DataFrame | None]:
+        """按数据集档位装配审计帧: bars/status/status 期起点/复权因子."""
+        if request.dataset == "moneyflow":
+            # 资金流会话网格复用价格审计口径：bars 换成 moneyflow 业务键，
+            # 停牌归因沿用 stock_status（停牌日无资金流行是正常缺席）。
+            if self._capital is None:
+                raise AppQueryError("moneyflow 审计需要 capital 存储服务")
+            bars = _ensure_schema(
+                self._capital.get_moneyflows(request.start_date, request.end_date),
+                _BAR_KEYS_SCHEMA,
+            )
+            status = _ensure_schema(
+                self._market.get_stock_status(request.start_date, request.end_date),
+                _STATUS_KEYS_SCHEMA,
+            )
+            status_range = self._market.get_stock_status_date_range()
+            status_frame = status if status_range is not None else None
+            return bars, status_frame, (status_range[0] if status_range else None), None
+
+        if request.dataset == "fund_share":
+            fund_share = self._market.get_fund_share(
+                request.start_date, request.end_date
+            )
+            if fund_share is None:
+                raise AppQueryError(
+                    "fund_share 读取端口未装配: 无法执行场内份额覆盖审计"
+                )
+            # ETF 无状态数据集：缺口归因诚实落在 no_status_dataset 证据边界。
+            return _ensure_schema(fund_share, _BAR_KEYS_SCHEMA), None, None, None
+
+        if request.asset_class == "stock":
+            bars = _ensure_schema(
+                self._market.get_stock_bars(request.start_date, request.end_date),
+                _BAR_KEYS_SCHEMA,
+            )
+            status = _ensure_schema(
+                self._market.get_stock_status(request.start_date, request.end_date),
+                _STATUS_KEYS_SCHEMA,
+            )
+            adj_factors = _ensure_schema(
+                self._market.get_adj_factors(request.start_date, request.end_date),
+                _BAR_KEYS_SCHEMA,
+            )
+            # 状态期起点 = 数据集物理覆盖起点（不受请求窗口约束）。窗口内
+            # 状态帧最早行无法区分「数据集尚未开始」与「窗口内前导摄取
+            # 空洞」——后者按状态缺失失败处理，不得借 pre_status_era 豁免。
+            status_range = self._market.get_stock_status_date_range()
+            status_frame = status if status_range is not None else None
+            return (
+                bars,
+                status_frame,
+                status_range[0] if status_range else None,
+                adj_factors,
+            )
+
+        bars = _ensure_schema(
+            self._market.get_etf_bars(request.start_date, request.end_date),
+            _BAR_KEYS_SCHEMA,
+        )
+        # ETF 无状态数据集（market/etf/status 未注册摄取）：缺口归因
+        # 诚实落在 no_status_dataset 证据边界，不冒充停牌可判。
+        fund_adj = self._market.get_fund_adj(request.start_date, request.end_date)
+        adj_factors = (
+            _ensure_schema(fund_adj, _BAR_KEYS_SCHEMA) if fund_adj is not None else None
+        )
+        return bars, None, None, adj_factors
 
 
 def _roster_tickers(roster: pl.DataFrame) -> dict[int, str]:

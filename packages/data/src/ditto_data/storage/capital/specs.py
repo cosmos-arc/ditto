@@ -24,7 +24,7 @@ MARGIN_TRADING_SPEC = SqliteTableSpec(
     columns=(
         "margin_buy_balance",
         "short_sell_balance",
-        "margin_buy_volume",
+        "margin_buy_amount",
         "short_sell_volume",
     ),
     id_column="instrument_id",
@@ -34,10 +34,11 @@ MARGIN_TRADING_SPEC = SqliteTableSpec(
             "effective_to",
             "margin_buy_balance",
             "short_sell_balance",
-            "margin_buy_volume",
+            "margin_buy_amount",
             "short_sell_volume",
         }
     ),
+    conflict_columns=("instrument_id", "trade_date", "effective_from"),
 )
 
 PLEDGE_RATIO_SPEC = SqliteTableSpec(

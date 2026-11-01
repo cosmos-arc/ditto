@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from concurrent.futures import Future, ThreadPoolExecutor, as_completed
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo
 
 from ditto_data.catalog.source_snapshot import ProviderSnapshotReader
@@ -201,6 +201,8 @@ class BackfillManager:
         dataset: str,
         source: str = "tushare",
         parallel: int = 1,
+        *,
+        force_refresh_days: int = 0,
     ) -> BackfillResult:
         """
         回补缺失的交易日。
@@ -209,6 +211,11 @@ class BackfillManager:
             dataset: 数据集名称。
             source: 数据源标识符（默认: "tushare"）。
             parallel: 并行度，默认为 1（串行）。
+            force_refresh_days: 追加近 N 个交易日的 force 重取（#625 晚发布
+                数据集）。晚发布源的 T 日数据在当日 EOD 波常为空帧或部分行
+                （如 fund_share 2026-10-26 仅 765/1807 行），SUCCESS/部分行
+                被 skip 决策固化后空洞扫描不可见——近窗重取以同业务键幂等
+                合并，直到源侧补全后自然收敛。0 表示不启用。
 
         Returns:
             BackfillResult: 回补结果。
@@ -260,7 +267,12 @@ class BackfillManager:
             expected_dates=expected_dates,
         )
         missing_dates = set(expected_dates) - evidenced_dates
-        if not missing_dates:
+        trailing_dates: set[str] = set()
+        if force_refresh_days > 0:
+            trailing_dates = self._trailing_trading_days(
+                force_refresh_days, horizon=last_date
+            )
+        if not missing_dates and not trailing_dates:
             return BackfillResult(
                 dataset=dataset,
                 total_dates=0,
@@ -270,14 +282,54 @@ class BackfillManager:
                 results=(),
             )
 
-        sorted_missing_dates = sorted(missing_dates)
-
-        return self._execute_backfill(
+        # force 只作用于晚发布近窗（#625 correctness W2）：近窗日被 SUCCESS/
+        # 空帧或部分行观察固化，必须绕过 skip 决策；普通空洞（无 SUCCESS
+        # 日志）不 force 也会正常摄取，历史值不受 KEEP_LAST 覆写。
+        plain_dates = sorted(missing_dates - trailing_dates)
+        refresh_dates = sorted(trailing_dates)
+        results: list[IngestionResult] = []
+        if plain_dates:
+            results.extend(
+                self._execute_backfill(
+                    dataset=dataset,
+                    trade_dates=plain_dates,
+                    parallel=parallel,
+                    log_event="backfill_missing_complete",
+                ).results
+            )
+        if refresh_dates:
+            results.extend(
+                self._execute_backfill(
+                    dataset=dataset,
+                    trade_dates=refresh_dates,
+                    parallel=parallel,
+                    log_event="backfill_missing_complete",
+                    force=True,
+                ).results
+            )
+        counts = count_results(results)
+        return BackfillResult(
             dataset=dataset,
-            trade_dates=sorted_missing_dates,
-            parallel=parallel,
-            log_event="backfill_missing_complete",
+            total_dates=len(plain_dates) + len(refresh_dates),
+            success_count=counts.success,
+            skipped_count=counts.skipped,
+            failed_count=counts.failed,
+            results=tuple(results),
         )
+
+    def _trailing_trading_days(self, count: int, *, horizon: str) -> set[str]:
+        """
+        扫描上界往前的近 N 个交易日（#625 晚发布近窗）.
+
+        horizon 复用调用方已钳制到上海昨日的上界，避免同一次调用内
+        双读时钟在午夜跨越时窗口漂移（correctness I3）。
+        """
+        # 多取 30 个日历日保证覆盖长假后仍 ≥N 个交易日（黄金周 ≤8 天）。
+        lookback_start = (date.fromisoformat(horizon) - timedelta(days=30)).isoformat()
+        days = self._metadata_service.calendar.list_trading_days(
+            lookback_start, horizon
+        )
+        return set(days[-count:])
 
     def _completed_snapshot_dates(
         self,
@@ -313,6 +365,8 @@ class BackfillManager:
         trade_dates: list[str],
         parallel: int,
         log_event: str,
+        *,
+        force: bool = False,
     ) -> BackfillResult:
         """
         执行回补：并行/串行摄取 + 结果统计。
@@ -322,6 +376,7 @@ class BackfillManager:
             trade_dates: 待回补的交易日期列表。
             parallel: 并行度。
             log_event: 完成日志事件名。
+            force: 绕过 skip 决策强制重取（晚发布近窗刷新用）。
 
         Returns:
             BackfillResult: 回补结果。
@@ -332,14 +387,16 @@ class BackfillManager:
         if parallel > 1:
             with ThreadPoolExecutor(max_workers=parallel) as executor:
                 futures: dict[Future[IngestionResult], str] = {
-                    executor.submit(self._coordinator.ingest_date, dataset, d): d
+                    executor.submit(self._coordinator.ingest_date, dataset, d, force): d
                     for d in trade_dates
                 }
                 for future in as_completed(futures):
                     results.append(future.result())
         else:
             for trade_date in trade_dates:
-                results.append(self._coordinator.ingest_date(dataset, trade_date))
+                results.append(
+                    self._coordinator.ingest_date(dataset, trade_date, force)
+                )
 
         counts = count_results(results)
         backfill_result = BackfillResult(

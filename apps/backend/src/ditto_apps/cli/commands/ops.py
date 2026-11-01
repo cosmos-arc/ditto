@@ -21,6 +21,7 @@ from ditto_application.processes.materialization.orchestrator import (
 from ditto_application.processes.quality.coverage_audit import (
     PriceCoverageAuditRequest,
     PriceCoverageAuditService,
+    dataset_asset_class,
 )
 from ditto_application.processes.quality.patrol import QualityPatrolService
 from ditto_application.queries.evaluation import (
@@ -601,10 +602,65 @@ def audit_price_coverage(
         raise typer.Exit(1)
 
 
+@app.command("audit-capital-coverage")
+def audit_capital_coverage(
+    dataset: str = typer.Option(
+        "moneyflow", "--dataset", help="资金面数据集: moneyflow | fund_share"
+    ),
+    start: str = typer.Option(..., "--start", help="窗口起始日 YYYY-MM-DD"),
+    end: str = typer.Option(..., "--end", help="窗口结束日 YYYY-MM-DD"),
+    detail_limit: int = typer.Option(
+        20, "--detail-limit", help="缺口样本与缺口最多标的明细上限"
+    ),
+    json: bool = typer.Option(False, "--json", help="JSON 格式输出"),
+) -> None:
+    """
+    资金面数据集逐证券覆盖审计（#625）: moneyflow 个股资金流 / fund_share ETF 份额.
+
+    margin_trading 无两融标的池名册，期望会话不可推导——不提供本审计，
+    覆盖事实见 docs/data 覆盖合同与核验报告。
+    """
+    try:
+        asset_class = dataset_asset_class(dataset)
+    except Exception as exc:
+        typer.secho(f"资金面覆盖审计失败: {exc}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(1) from exc
+    container, service = _fetch_coverage_audit_service()
+    try:
+        report = service.run(
+            PriceCoverageAuditRequest(
+                start_date=start,
+                end_date=end,
+                asset_class=asset_class,
+                dataset=dataset,
+                detail_limit=detail_limit,
+            )
+        )
+    except Exception as exc:
+        typer.secho(f"资金面覆盖审计失败: {exc}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(1) from exc
+    finally:
+        container.close()
+
+    payload = report.to_dict()
+    if json:
+        output_json_dict(payload)
+    else:
+        _print_coverage_audit(payload)
+
+    if not report.passed:
+        raise typer.Exit(1)
+
+
 def _print_coverage_audit(payload: dict[str, Any]) -> None:
     session = payload["session"]
     calendar = payload["calendar"]
-    typer.echo(f"资产类 {payload['asset_class']}")
+    dataset = payload.get("dataset", "daily")
+    typer.echo(
+        f"数据集 {dataset} 资产类 {payload['asset_class']}"
+        if dataset != "daily"
+        else f"资产类 {payload['asset_class']}"
+    )
     typer.echo(f"窗口 {payload['window'][0]} ~ {payload['window'][1]}")
     typer.echo(f"交易日 {calendar['trading_days']}")
     typer.echo(f"重复 {calendar['duplicate_days']} 周末 {calendar['weekend_days']}")
@@ -614,7 +670,7 @@ def _print_coverage_audit(payload: dict[str, Any]) -> None:
     typer.echo(f"名册 {session['roster_total']}")
     typer.echo(f"有期望会话标的 {session['securities_with_sessions']}")
     typer.echo(f"期望会话 {session['expected_sessions']}")
-    typer.echo(f"实际日线 {session['present_sessions']}")
+    typer.echo(f"实际在场 {session['present_sessions']}")
     if payload["gap_counts"]:
         typer.echo("缺口归因:")
         for kind, count in payload["gap_counts"].items():

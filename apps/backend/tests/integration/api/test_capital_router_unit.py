@@ -94,7 +94,7 @@ class TestGetMargin:
                 "trade_date": ["2024-01-15"],
                 "margin_buy_balance": [1000000.0],
                 "short_sell_balance": [500000.0],
-                "margin_buy_volume": [100000],
+                "margin_buy_amount": [100000],
                 "short_sell_volume": [50000],
             }
         )
@@ -135,7 +135,7 @@ class TestGetMargin:
                 "trade_date": ["2024-01-15"],
                 "margin_buy_balance": [1000000.0],
                 "short_sell_balance": [500000.0],
-                "margin_buy_volume": [100000],
+                "margin_buy_amount": [100000],
                 "short_sell_volume": [50000],
             }
         )
