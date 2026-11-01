@@ -457,6 +457,36 @@ def fetch_top_inst(
     )
 
 
+def _drop_null_knowledge(
+    result: pl.DataFrame,
+    dataset: str,
+    *,
+    lane: str,
+) -> pl.DataFrame:
+    """
+    Null knowledge_date 行出口丢弃+WARN（两车道同语义，#196 同因）.
+
+    sparse PIT 对 null fail-closed 整批拒收且 force 不改校验——单条
+    源端 null/坏 ann_date 不得拖垮整日/整批。
+    """
+    null_rows = (
+        result.get_column("knowledge_date").null_count()
+        if "knowledge_date" in result.columns
+        else 0
+    )
+    if null_rows:
+        message = (
+            f"{dataset} {lane} fetch dropped {null_rows} rows with null knowledge_date"
+        )
+        logger.warning(
+            message,
+            event=f"{dataset}_null_knowledge_dropped",
+            dropped_rows=null_rows,
+        )
+        return result.filter(pl.col("knowledge_date").is_not_null())
+    return result
+
+
 def _top10_instrument_window(
     fetcher: Callable[..., pl.DataFrame],
     dataset: str,
@@ -470,9 +500,8 @@ def _top10_instrument_window(
     请求的报告期窗口向 chunk 起点前回扩 ~2 季度——起点前完结的报告期
     仍可能在 chunk 内晚披露；出口单侧裁剪 knowledge_date <= end_date
     （chunk 末之后公告的行不进本 chunk，由后续 chunk 覆盖其报告期），
-    双侧下界会把「期末报告期次年披露」行永久丢进缝里。knowledge_date
-    为 null 的行出口丢弃并 WARN——sparse PIT 对 null fail-closed 整批
-    拒收（#196 同因），不可判行不引入未来数据。
+    双侧下界会把「期末报告期次年披露」行永久丢进缝里。null kd 行为
+    见 ``_drop_null_knowledge``。
     """
     window_start = date.fromisoformat(start_date) - timedelta(days=190)
     result = fetcher(
@@ -480,25 +509,10 @@ def _top10_instrument_window(
         start_date=window_start.strftime("%Y%m%d"),
         end_date=to_compact_date(end_date),
     )
-    null_rows = (
-        result.get_column("knowledge_date").null_count()
-        if "knowledge_date" in result.columns
-        else 0
+    result = _drop_null_knowledge(result, dataset, lane="instrument")
+    return result.filter(
+        pl.col("knowledge_date") <= pl.lit(date.fromisoformat(end_date))
     )
-    knowledge = pl.col("knowledge_date")
-    if null_rows:
-        message = (
-            f"{dataset} instrument fetch dropped {null_rows} rows"
-            " with null knowledge_date"
-        )
-        logger.warning(
-            message,
-            event=f"{dataset}_null_knowledge_dropped",
-            source_ticker=source_ticker,
-            dropped_rows=null_rows,
-        )
-        result = result.filter(knowledge.is_not_null())
-    return result.filter(knowledge <= pl.lit(date.fromisoformat(end_date)))
 
 
 def fetch_top10_holders(
@@ -513,7 +527,7 @@ def fetch_top10_holders(
     Fetch 前十大股东（#627 公告日驱动）.
 
     - 日更（trade_date）：全市场按公告日单请求（2026-11-01 代理实测
-      市场级 ann_date 可用）；
+      市场级 ann_date 可用），null kd 行出口丢弃（``_drop_null_knowledge``）；
     - 按标的回填（source_ticker + start/end）：报告期区间+边界回扩，
       见 ``_top10_instrument_window``。
     """
@@ -522,8 +536,10 @@ def fetch_top10_holders(
     if not trade_date and not source_ticker:
         raise ValueError("必须指定 trade_date 或 source_ticker 之一")
     if trade_date:
-        return capital.fetch_top10_holders(
-            ann_date=to_compact_date(trade_date),
+        return _drop_null_knowledge(
+            capital.fetch_top10_holders(ann_date=to_compact_date(trade_date)),
+            "top10_holders",
+            lane="market_daily",
         )
     if start_date is None or end_date is None:
         raise ValueError(
@@ -552,8 +568,10 @@ def fetch_top10_floatholders(
     if not trade_date and not source_ticker:
         raise ValueError("必须指定 trade_date 或 source_ticker 之一")
     if trade_date:
-        return capital.fetch_top10_floatholders(
-            ann_date=to_compact_date(trade_date),
+        return _drop_null_knowledge(
+            capital.fetch_top10_floatholders(ann_date=to_compact_date(trade_date)),
+            "top10_floatholders",
+            lane="market_daily",
         )
     if start_date is None or end_date is None:
         raise ValueError(

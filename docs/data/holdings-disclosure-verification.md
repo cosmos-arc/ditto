@@ -151,6 +151,28 @@ hold_float_ratio/hold_change/holder_type。`hold_change` 0=不变、null=新进�
 - 与 holders 行量差（2.50M vs 2.10M）符合两榜口径：全量榜披露面略宽
   于流通榜（早期尤甚），两榜独立不互推。
 
+### 7.4 correctness review 修复与存量重分片（2026-11-02 05:3x）
+
+对抗性正确性审查（三轴第三轴）三 findings 全修复：
+
+- **F1 跨年报告期行漏读（error）**：回补期写侧按公告年落单一分区而
+  读侧按 report_date 年选分区文件——年报行（report=12-31 次年公告，
+  holders 645,273 行/25.8%、float 497,043 行/23.7%）在按报告期年的
+  范围读中静默漏行（实证 read(2025 全年)=128,472 vs 全量 184,287）。
+  修复=save_top10_* 按 report_date 年分片写（沿用 fina_indicator/
+  fund_portfolio 的 correctness #3 先例 `_write_disclosure_frame_by_
+  report_year`）+ 存量一次性重分片迁移（行数守恒 2,500,525/2,097,949
+  逐位一致、迁移后 misplaced=0、反例复跑 184,297 行全量可见）。
+- **F2 CapitalStore 文件锁死代码（error）**：组合根从未注入
+  FileLockManager，save_* 同年分区互斥分支为死代码（对 moneyflow 等
+  旧 capital 数据集同样存在的 pre-existing 缺口，本 PR 使其
+  load-bearing）。修复=di/capital.py 注入 file_lock_manager +
+  DI 单测钉住接线。
+- **F3 null kd 两车道分叉（warning）**：日更市场级路径原样透传 null
+  knowledge_date 行，单条源端坏 ann_date 会以 PIT_KNOWLEDGE_DATE_
+  INVALID 永久拒绝整日批且 force 不可恢复；instrument 车道同因行
+  丢行+WARN。修复=抽 `_drop_null_knowledge` 共享出口，两车道同语义。
+
 ### 7.3 fund_portfolio（终态）
 
 - **矩阵**：609,923 行 / 1,544 只交易所上市基金 / kd 2014-01-20→2026-10-26 /

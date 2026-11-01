@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dishka import Provider, Scope, provide
-from ditto_platform.foundation import ParquetStore, SQLiteClient
+from ditto_platform.foundation import FileLockManager, ParquetStore, SQLiteClient
 
 from ditto_data.config.data_store import DataStoreSettings
 from ditto_data.services.capital_store import CapitalStore
@@ -138,11 +138,13 @@ class CapitalProvider(Provider):
         self,
         capital_read_ports: CapitalReaders,
         capital_write_ports: CapitalWriters,
+        file_lock_manager: FileLockManager,
     ) -> CapitalStore:
-        """Capital domain unified store."""
+        """Capital domain unified store（parquet 车道并发写防护接线）."""
         return CapitalStore(
             read_ports=capital_read_ports,
             write_ports=capital_write_ports,
+            file_lock=file_lock_manager,
         )
 
 
