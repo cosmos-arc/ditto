@@ -1044,18 +1044,20 @@ datasets:
       typical_available_time: '21:00:00'
     measured:
       storage: parquet:fundamental/fund_portfolio
-      rows: FUNDPORTFOLIO_ROWS
-      instruments: FUNDPORTFOLIO_INSTRUMENTS
-      start: FUNDPORTFOLIO_START
-      end: FUNDPORTFOLIO_END
+      rows: 609923
+      instruments: 1544
+      start: '2014-01-20'
+      end: '2026-10-26'
     catalog_latest:
       date: '2026-10-29'
       status: success
       partition_rows: 0
       freshness: fresh
-    status: FUNDPORTFOLIO_STATUS
+    status: partial
     gaps:
-    - FUNDPORTFOLIO_GAPS
+    - 交易所上市基金子集边界（#627 量化定界非缺损）：单披露日 9,031 只公募中
+      ~97-100% 为 .OF 场外基金经写入层 FK 过滤不入库；扩域至公募全覆盖=
+      基金宇宙注册决策另票
     consumers:
     - 基金持仓分析
     - query fundamental
@@ -1083,18 +1085,17 @@ datasets:
       typical_available_time: '20:00:00'
     measured:
       storage: parquet:capital/top10_holders
-      rows: TOP10H_ROWS
-      instruments: TOP10H_INSTRUMENTS
-      start: TOP10H_START
-      end: TOP10H_END
+      rows: 2500525
+      instruments: 5841
+      start: '2014-01-02'
+      end: '2026-10-31'
     catalog_latest:
-      date: null
-      status: null
-      partition_rows: null
-      freshness: stale
-    status: TOP10H_STATUS
-    gaps:
-    - TOP10H_GAPS
+      date: '2026-04-30'
+      status: success
+      partition_rows: 13656
+      freshness: fresh
+    status: ready
+    gaps: []
     consumers:
     - 股东结构观察
     - query capital
@@ -1120,18 +1121,17 @@ datasets:
       typical_available_time: '20:00:00'
     measured:
       storage: parquet:capital/top10_floatholders
-      rows: TOP10F_ROWS
-      instruments: TOP10F_INSTRUMENTS
-      start: TOP10F_START
-      end: TOP10F_END
+      rows: 2097949
+      instruments: 5833
+      start: '2014-01-08'
+      end: '2026-10-31'
     catalog_latest:
-      date: null
-      status: null
-      partition_rows: null
-      freshness: stale
-    status: TOP10F_STATUS
-    gaps:
-    - TOP10F_GAPS
+      date: '2026-04-30'
+      status: success
+      partition_rows: 13002
+      freshness: fresh
+    status: ready
+    gaps: []
     consumers:
     - 股东结构观察
     - query capital
