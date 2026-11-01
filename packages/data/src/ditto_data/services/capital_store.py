@@ -289,6 +289,44 @@ class CapitalStore:
             result = writer.write(df, year, on_duplicate=on_duplicate)
         return result.added + result.updated
 
+    def save_top10_holders(
+        self,
+        df: pl.DataFrame,
+        year: int,
+        on_duplicate: OnDuplicate = OnDuplicate.ERROR,
+    ) -> int:
+        """Save top-10 holder rows（hold_amount 股/比率 %，#627）."""
+        writer = self._write_ports.top10_holders
+        if writer is None:
+            raise ValueError("top10_holders writer not configured")
+        # backfill --parallel 并发写同年分区的丢失更新防护（#517-523 评审）
+        if self._file_lock is not None:
+            with self._file_lock.acquire(f"top10_holders_write_{year}", timeout=60.0):
+                result = writer.write(df, year, on_duplicate=on_duplicate)
+        else:
+            result = writer.write(df, year, on_duplicate=on_duplicate)
+        return result.added + result.updated
+
+    def save_top10_floatholders(
+        self,
+        df: pl.DataFrame,
+        year: int,
+        on_duplicate: OnDuplicate = OnDuplicate.ERROR,
+    ) -> int:
+        """Save top-10 float holder rows（hold_amount 股/比率 %，#627）."""
+        writer = self._write_ports.top10_floatholders
+        if writer is None:
+            raise ValueError("top10_floatholders writer not configured")
+        # backfill --parallel 并发写同年分区的丢失更新防护（#517-523 评审）
+        if self._file_lock is not None:
+            with self._file_lock.acquire(
+                f"top10_floatholders_write_{year}", timeout=60.0
+            ):
+                result = writer.write(df, year, on_duplicate=on_duplicate)
+        else:
+            result = writer.write(df, year, on_duplicate=on_duplicate)
+        return result.added + result.updated
+
     def get_moneyflows(self, start: str, end: str) -> pl.DataFrame:
         """Read market-wide moneyflow rows（L3 巡检用）."""
         reader = self._read_ports.moneyflow

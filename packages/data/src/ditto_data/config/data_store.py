@@ -141,6 +141,16 @@ class _CapitalPaths:
         """沪深港通十大成交股路径（#520）."""
         return self._root / "capital" / "hsgt_top10"
 
+    @property
+    def top10_holders(self) -> Path:
+        """前十大股东路径（#627）."""
+        return self._root / "capital" / "top10_holders"
+
+    @property
+    def top10_floatholders(self) -> Path:
+        """前十大流通股东路径（#627）."""
+        return self._root / "capital" / "top10_floatholders"
+
     def directories(self) -> list[str]:
         """该子域下的所有相对目录."""
         return [
@@ -151,6 +161,8 @@ class _CapitalPaths:
             "capital/top_inst",
             "capital/hk_hold",
             "capital/hsgt_top10",
+            "capital/top10_holders",
+            "capital/top10_floatholders",
         ]
 
 

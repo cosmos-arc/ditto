@@ -109,3 +109,18 @@ app.command("top-inst")(
         cli_path="ingest capital top-inst",
     )
 )
+# ── #627 持仓披露：前十大股东两榜（公告日驱动）──
+app.command("top10-holders")(
+    create_instrument_command(
+        "top10_holders",
+        "摄取前十大股东",
+        cli_path="ingest capital top10-holders",
+    )
+)
+app.command("top10-floatholders")(
+    create_instrument_command(
+        "top10_floatholders",
+        "摄取前十大流通股东",
+        cli_path="ingest capital top10-floatholders",
+    )
+)

@@ -1529,6 +1529,8 @@ class IngestionDataWriter:
                 "hsgt_top10",
                 "top_list",
                 "top_inst",
+                "top10_holders",
+                "top10_floatholders",
             ],
             dataset_enum.value,
         )
@@ -1544,6 +1546,8 @@ class IngestionDataWriter:
             "hsgt_top10": self._capital_store.save_hsgt_top10,
             "top_list": self._capital_store.save_top_list,
             "top_inst": self._capital_store.save_top_inst,
+            "top10_holders": self._capital_store.save_top10_holders,
+            "top10_floatholders": self._capital_store.save_top10_floatholders,
         }
         # #518-#523 parquet 日频资金面帧：签名带 year
         parquet_method = capital_parquet_methods.get(capital_dataset)

@@ -290,6 +290,9 @@ class TestDefaultMetadataMaturityAssignments:
             "fund_share",
             "fund_portfolio",
             "cyq_perf",
+            # #627 前十股东两榜
+            "top10_holders",
+            "top10_floatholders",
         }
     )
 
@@ -582,6 +585,9 @@ class TestR2DataProductContracts:
             "fund_share",
             "fund_portfolio",
             "cyq_perf",
+            # #627 前十股东两榜
+            "top10_holders",
+            "top10_floatholders",
             # #408 维护者确认的 ETF 参考事实（配置源）
             "etf_reference",
         }

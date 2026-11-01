@@ -29,6 +29,14 @@ from ditto_data.storage.capital.margin.margin_trading_writer import (
 from ditto_data.storage.capital.moneyflow import MoneyflowReader, MoneyflowWriter
 from ditto_data.storage.capital.pledge.pledge_ratio_reader import PledgeRatioReader
 from ditto_data.storage.capital.pledge.pledge_ratio_writer import PledgeRatioWriter
+from ditto_data.storage.capital.top10_floatholders import (
+    Top10FloatholdersReader,
+    Top10FloatholdersWriter,
+)
+from ditto_data.storage.capital.top10_holders import (
+    Top10HoldersReader,
+    Top10HoldersWriter,
+)
 from ditto_data.storage.capital.top_inst import TopInstReader, TopInstWriter
 from ditto_data.storage.capital.top_list import TopListReader, TopListWriter
 from ditto_data.storage.capital.valuation.valuation_metrics_reader import (
@@ -295,6 +303,8 @@ class CapitalReaders:
     hsgt_top10: HsgtTop10Reader | None = None
     top_list: TopListReader | None = None
     top_inst: TopInstReader | None = None
+    top10_holders: Top10HoldersReader | None = None
+    top10_floatholders: Top10FloatholdersReader | None = None
 
 
 @dataclass(frozen=True)
@@ -323,6 +333,8 @@ class CapitalWriters:
     hsgt_top10: HsgtTop10Writer | None = None
     top_list: TopListWriter | None = None
     top_inst: TopInstWriter | None = None
+    top10_holders: Top10HoldersWriter | None = None
+    top10_floatholders: Top10FloatholdersWriter | None = None
 
 
 __all__ = [

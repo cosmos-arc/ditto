@@ -455,6 +455,88 @@ def fetch_top_inst(
     )
 
 
+def fetch_top10_holders(
+    capital: CapitalTushareAdapter,
+    *,
+    trade_date: str | None = None,
+    source_ticker: str | None = None,
+    start_date: str | None = None,
+    end_date: str | None = None,
+) -> pl.DataFrame:
+    """
+    Fetch 前十大股东（#627 公告日驱动）.
+
+    - 日更（trade_date）：全市场按公告日单请求（2026-11-01 代理实测
+      市场级 ann_date 可用）；
+    - 按标的回填（source_ticker + start/end）：ts_code + 报告期区间
+      单请求，出口按披露锚过滤区间外公告（PIT：区间末之后公告的
+      报告期行不进本 chunk）。
+    """
+    if trade_date and source_ticker:
+        raise ValueError("trade_date 和 source_ticker 互斥, 不能同时指定")
+    if not trade_date and not source_ticker:
+        raise ValueError("必须指定 trade_date 或 source_ticker 之一")
+    if trade_date:
+        return capital.fetch_top10_holders(
+            ann_date=to_compact_date(trade_date),
+        )
+    if start_date is None or end_date is None:
+        raise ValueError(
+            "top10_holders instrument fetch requires start_date and end_date"
+        )
+    result = capital.fetch_top10_holders(
+        ts_code=source_ticker,
+        start_date=to_compact_date(start_date),
+        end_date=to_compact_date(end_date),
+    )
+    knowledge = pl.col("knowledge_date")
+    return result.filter(
+        knowledge.is_null()
+        | knowledge.is_between(
+            pl.lit(date.fromisoformat(start_date)),
+            pl.lit(date.fromisoformat(end_date)),
+            closed="both",
+        )
+    )
+
+
+def fetch_top10_floatholders(
+    capital: CapitalTushareAdapter,
+    *,
+    trade_date: str | None = None,
+    source_ticker: str | None = None,
+    start_date: str | None = None,
+    end_date: str | None = None,
+) -> pl.DataFrame:
+    """Fetch 前十大流通股东（#627，形状同 fetch_top10_holders）."""
+    if trade_date and source_ticker:
+        raise ValueError("trade_date 和 source_ticker 互斥, 不能同时指定")
+    if not trade_date and not source_ticker:
+        raise ValueError("必须指定 trade_date 或 source_ticker 之一")
+    if trade_date:
+        return capital.fetch_top10_floatholders(
+            ann_date=to_compact_date(trade_date),
+        )
+    if start_date is None or end_date is None:
+        raise ValueError(
+            "top10_floatholders instrument fetch requires start_date and end_date"
+        )
+    result = capital.fetch_top10_floatholders(
+        ts_code=source_ticker,
+        start_date=to_compact_date(start_date),
+        end_date=to_compact_date(end_date),
+    )
+    knowledge = pl.col("knowledge_date")
+    return result.filter(
+        knowledge.is_null()
+        | knowledge.is_between(
+            pl.lit(date.fromisoformat(start_date)),
+            pl.lit(date.fromisoformat(end_date)),
+            closed="both",
+        )
+    )
+
+
 def fetch_fina_indicator(
     fundamental: FundamentalTushareAdapter,
     *,

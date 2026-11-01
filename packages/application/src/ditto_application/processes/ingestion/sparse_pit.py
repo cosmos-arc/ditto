@@ -37,6 +37,9 @@ _SPARSE_PIT_DATASETS: frozenset[str] = frozenset(
         # #521/#522：披露锚数据集（kd=公告日），与三表同走 as-of 快照证据
         "fina_indicator",
         "fund_portfolio",
+        # #627：前十股东两榜同为披露锚
+        "top10_holders",
+        "top10_floatholders",
     }
 )
 

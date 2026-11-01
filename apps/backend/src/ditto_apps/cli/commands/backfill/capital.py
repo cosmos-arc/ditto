@@ -89,6 +89,10 @@ _limit_list_bf = create_backfill_command("limit_list", "回补涨跌停与炸板
 _fund_share_bf = create_backfill_command("fund_share", "回补基金份额")
 _fina_indicator_bf = create_backfill_command("fina_indicator", "回补官方口径财务指标")
 _fund_portfolio_bf = create_backfill_command("fund_portfolio", "回补基金季度持仓")
+_top10_holders_bf = create_backfill_command("top10_holders", "回补前十大股东")
+_top10_floatholders_bf = create_backfill_command(
+    "top10_floatholders", "回补前十大流通股东"
+)
 
 
 @app.command("moneyflow")
@@ -199,3 +203,25 @@ def portfolio(
 ) -> None:
     """回补基金季度持仓 (#522)."""
     return _fund_portfolio_bf(ctx, start, end, parallel)
+
+
+@app.command("top10-holders")
+def top10_holders(
+    ctx: typer.Context,
+    start: str = typer.Option(..., "--start", "-s", help="开始日期 (YYYY-MM-DD)"),
+    end: str = typer.Option(..., "--end", "-e", help="结束日期 (YYYY-MM-DD)"),
+    parallel: int = typer.Option(1, "--parallel", "-p", help="并行度"),
+) -> None:
+    """回补前十大股东 (#627)."""
+    return _top10_holders_bf(ctx, start, end, parallel)
+
+
+@app.command("top10-floatholders")
+def top10_floatholders(
+    ctx: typer.Context,
+    start: str = typer.Option(..., "--start", "-s", help="开始日期 (YYYY-MM-DD)"),
+    end: str = typer.Option(..., "--end", "-e", help="结束日期 (YYYY-MM-DD)"),
+    parallel: int = typer.Option(1, "--parallel", "-p", help="并行度"),
+) -> None:
+    """回补前十大流通股东 (#627)."""
+    return _top10_floatholders_bf(ctx, start, end, parallel)

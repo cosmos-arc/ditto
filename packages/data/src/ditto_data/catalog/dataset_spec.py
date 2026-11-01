@@ -165,6 +165,20 @@ _PRIMARY_KEYS: dict[str, tuple[str, ...]] = {
         "reason",
         "knowledge_date",
     ),
+    # #627 前十股东两榜：披露键（标的, 报告期, 持有人名, 公告日）；
+    # 修订=新公告日版本行，holder_name 是唯一持有人维度（无持有人 ID）
+    "top10_holders": (
+        "instrument_id",
+        "report_date",
+        "holder_name",
+        "knowledge_date",
+    ),
+    "top10_floatholders": (
+        "instrument_id",
+        "report_date",
+        "holder_name",
+        "knowledge_date",
+    ),
     # #521 官方口径财务指标：披露键三元组（修订=新 ann_date 版本）
     "fina_indicator": ("instrument_id", "report_date", "knowledge_date"),
     # #522 ETF 份额逐日申报 / 持仓季度披露（holding_symbol 原码进主键）
@@ -288,6 +302,8 @@ _PROVIDER_DATASETS: dict[str, tuple[str, ...]] = {
     "limit_list": ("tushare:limit_list_d",),
     "top_list": ("tushare:top_list",),
     "top_inst": ("tushare:top_inst",),
+    "top10_holders": ("tushare:top10_holders",),
+    "top10_floatholders": ("tushare:top10_floatholders",),
     "fina_indicator": ("tushare:fina_indicator",),
     "fund_share": ("tushare:fund_share",),
     "fund_portfolio": ("tushare:fund_portfolio",),
@@ -347,6 +363,8 @@ _BOOTSTRAP_CHUNKS: dict[str, BootstrapChunk] = {
     "limit_list": "month",
     "top_list": "month",
     "top_inst": "month",
+    "top10_holders": "quarter",
+    "top10_floatholders": "quarter",
     "fina_indicator": "quarter",
     "fund_share": "month",
     "fund_portfolio": "quarter",
@@ -405,6 +423,8 @@ _DATASET_DOMAINS: dict[str, str] = {
     "hsgt_top10": "capital",
     "top_list": "capital",
     "top_inst": "capital",
+    "top10_holders": "capital",
+    "top10_floatholders": "capital",
     "fina_indicator": "fundamental",
     "fund_portfolio": "fundamental",
     "etf_reference": "metadata",
@@ -442,6 +462,9 @@ _QUARTERLY_DATASETS = frozenset(
         "pledge_ratio",
         "fina_indicator",
         "fund_portfolio",
+        # #627 前十股东两榜：随定期报告季度披露（修订以新公告日行呈现）
+        "top10_holders",
+        "top10_floatholders",
     }
 )
 # 事件型：有事件才有行，勿套用日历期望（龙虎榜/涨跌停名单/北向披露节奏）
@@ -494,6 +517,8 @@ _CNY_DATASETS = frozenset(
         "top_inst",
         "fina_indicator",
         "fund_portfolio",
+        "top10_holders",
+        "top10_floatholders",
         "futures_daily",
         "earnings_forecast",
         "earnings_express",
@@ -521,6 +546,8 @@ _APPEND_ONLY_DATASETS = frozenset(
         "fina_indicator",
         "fund_share",
         "fund_portfolio",
+        "top10_holders",
+        "top10_floatholders",
         "balance_sheet",
         "income_statement",
         "cash_flow",
@@ -615,6 +642,9 @@ def _partition_keys(dataset_id: str) -> tuple[str, ...]:
         # #521/#522: 披露锚数据集按知识日分区
         "fina_indicator": ("knowledge_date",),
         "fund_portfolio": ("knowledge_date",),
+        # #627: 前十股东两榜同为披露锚，按知识日分区
+        "top10_holders": ("knowledge_date",),
+        "top10_floatholders": ("knowledge_date",),
     }
     if dataset_id in overrides:
         return overrides[dataset_id]

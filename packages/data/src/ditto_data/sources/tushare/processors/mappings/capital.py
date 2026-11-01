@@ -557,6 +557,70 @@ TOP_INST_MAPPING = ColumnMapping(
     ),
 )
 
+# 前十大股东（top10_holders：公告日驱动，hold_amount 股、hold_ratio 占
+# 总股本 %、hold_float_ratio 占流通 %、hold_change 股 0=不变 null=新进；
+# 同披露键同名冗余行适配器确定性收敛（#626 先例）；跨期名单跌出≠清仓，
+# 不推导整体持仓，#621/#627 语义）
+TOP10_HOLDERS_MAPPING = ColumnMapping(
+    rename={
+        "ts_code": "source_ticker",
+        "ann_date": "knowledge_date",
+        "end_date": "report_date",
+    },
+    date_columns={
+        "knowledge_date": "%Y%m%d",
+        "report_date": "%Y%m%d",
+    },
+    float_columns=[
+        "hold_amount",
+        "hold_ratio",
+        "hold_float_ratio",
+        "hold_change",
+    ],
+    output_columns=(
+        "source_ticker",
+        "report_date",
+        "knowledge_date",
+        "holder_name",
+        "hold_amount",
+        "hold_ratio",
+        "hold_float_ratio",
+        "hold_change",
+        "holder_type",
+    ),
+)
+
+# 前十大流通股东（top10_floatholders：字段同 top10_holders，名单口径为
+# 流通股东榜——两榜同名行值可一致，语义不同各存一行，不互推）
+TOP10_FLOATHOLDERS_MAPPING = ColumnMapping(
+    rename={
+        "ts_code": "source_ticker",
+        "ann_date": "knowledge_date",
+        "end_date": "report_date",
+    },
+    date_columns={
+        "knowledge_date": "%Y%m%d",
+        "report_date": "%Y%m%d",
+    },
+    float_columns=[
+        "hold_amount",
+        "hold_ratio",
+        "hold_float_ratio",
+        "hold_change",
+    ],
+    output_columns=(
+        "source_ticker",
+        "report_date",
+        "knowledge_date",
+        "holder_name",
+        "hold_amount",
+        "hold_ratio",
+        "hold_float_ratio",
+        "hold_change",
+        "holder_type",
+    ),
+)
+
 # 官方口径财务指标（fina_indicator：118 指标列透传，kd=公告日 ann_date）
 FINA_INDICATOR_MAPPING = ColumnMapping(
     rename={
@@ -621,6 +685,8 @@ __all__ = [
     "PLEDGE_RATIO_MAPPING",
     "RIGHTS_ISSUE_MAPPING",
     "SHARE_BUYBACK_MAPPING",
+    "TOP10_FLOATHOLDERS_MAPPING",
+    "TOP10_HOLDERS_MAPPING",
     "TOP_INST_MAPPING",
     "TOP_LIST_MAPPING",
     "VALUATION_METRICS_MAPPING",

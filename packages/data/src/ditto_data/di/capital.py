@@ -38,6 +38,14 @@ from ditto_data.storage.capital.specs import (
     PLEDGE_RATIO_SPEC,
     VALUATION_METRICS_SPEC,
 )
+from ditto_data.storage.capital.top10_floatholders import (
+    Top10FloatholdersReader,
+    Top10FloatholdersWriter,
+)
+from ditto_data.storage.capital.top10_holders import (
+    Top10HoldersReader,
+    Top10HoldersWriter,
+)
 from ditto_data.storage.capital.top_inst import TopInstReader, TopInstWriter
 from ditto_data.storage.capital.top_list import TopListReader, TopListWriter
 from ditto_data.storage.capital.valuation.valuation_metrics_reader import (
@@ -90,6 +98,10 @@ class CapitalProvider(Provider):
             hsgt_top10=HsgtTop10Reader(_hsgt_top10_parquet_store(settings)),
             top_list=TopListReader(_top_list_parquet_store(settings)),
             top_inst=TopInstReader(_top_inst_parquet_store(settings)),
+            top10_holders=Top10HoldersReader(_top10_holders_parquet_store(settings)),
+            top10_floatholders=Top10FloatholdersReader(
+                _top10_floatholders_parquet_store(settings)
+            ),
         )
 
     @provide
@@ -119,6 +131,10 @@ class CapitalProvider(Provider):
             hsgt_top10=HsgtTop10Writer(_hsgt_top10_parquet_store(settings)),
             top_list=TopListWriter(_top_list_parquet_store(settings)),
             top_inst=TopInstWriter(_top_inst_parquet_store(settings)),
+            top10_holders=Top10HoldersWriter(_top10_holders_parquet_store(settings)),
+            top10_floatholders=Top10FloatholdersWriter(
+                _top10_floatholders_parquet_store(settings)
+            ),
         )
 
     @provide
@@ -191,4 +207,34 @@ def _top_inst_parquet_store(settings: DataStoreSettings) -> ParquetStore:
     return _daily_factor_parquet_store(
         settings,
         ("instrument_id", "trade_date", "exalter", "side", "reason", "knowledge_date"),
+    )
+
+
+def _top10_holders_parquet_store(settings: DataStoreSettings) -> ParquetStore:
+    """前十股东行以 (标的, 报告期, 持有人名, 公告日) 为自然键（#627）."""
+    return ParquetStore(
+        settings.data_root,
+        key_columns=(
+            "instrument_id",
+            "report_date",
+            "knowledge_date",
+            "holder_name",
+        ),
+        date_column="report_date",
+        instrument_column="instrument_id",
+    )
+
+
+def _top10_floatholders_parquet_store(settings: DataStoreSettings) -> ParquetStore:
+    """前十流通股东行以 (标的, 报告期, 持有人名, 公告日) 为自然键（#627）."""
+    return ParquetStore(
+        settings.data_root,
+        key_columns=(
+            "instrument_id",
+            "report_date",
+            "knowledge_date",
+            "holder_name",
+        ),
+        date_column="report_date",
+        instrument_column="instrument_id",
     )

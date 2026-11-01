@@ -468,6 +468,16 @@ def _fund_portfolio_disclosure_fetch(ctx: DailyFetchContext) -> DailyFetchHandle
     return fetch
 
 
+def _capital_disclosure_fetch(method: str) -> DailyFetchFactory:
+    """``ctx.fetchers.capital.<method>(trade_date=…)`` — 公告日市场级单请求（#627）."""
+
+    def factory(ctx: DailyFetchContext) -> DailyFetchHandler:
+        fn = getattr(ctx.fetchers.capital, method)
+        return lambda: fn(trade_date=ctx.trade_date)
+
+    return factory
+
+
 def _history_fetch(group: str, method: str) -> DailyFetchFactory:
     """
     近窗增量拉取 namechange 事件流（namechange / st_history 两数据集共用）。
@@ -881,6 +891,28 @@ _CAPITAL_REGISTRATIONS: tuple[DatasetRegistration, ...] = (
         dataset=Dataset.HSGT_TOP10,
         write_kind=WriteKind.CAPITAL,
         daily_fetch_factory=_daily_fetch("capital", "fetch_hsgt_top10"),
+    ),
+    # #627 前十股东两榜：日更=市场级单日 ann_date 单请求（2026-11-01 代理
+    # 实测文档标 ts_code 必选但市场级 ann_date 可用）；按标的回填走
+    # instrument 路由（报告期区间单请求，出口按披露锚裁剪区间外公告）。
+    # 未注册身份在写入层过滤；名单跌出不等于清仓，不推导整体持仓。
+    DatasetRegistration(
+        dataset=Dataset.TOP10_HOLDERS,
+        write_kind=WriteKind.CAPITAL,
+        date_schedule=DateScheduleType.NATURAL_DAYS,
+        daily_fetch_factory=_capital_disclosure_fetch("fetch_top10_holders"),
+        instrument_fetch_factory=_earnings_instrument_fetch(
+            "capital", "fetch_top10_holders"
+        ),
+    ),
+    DatasetRegistration(
+        dataset=Dataset.TOP10_FLOATHOLDERS,
+        write_kind=WriteKind.CAPITAL,
+        date_schedule=DateScheduleType.NATURAL_DAYS,
+        daily_fetch_factory=_capital_disclosure_fetch("fetch_top10_floatholders"),
+        instrument_fetch_factory=_earnings_instrument_fetch(
+            "capital", "fetch_top10_floatholders"
+        ),
     ),
 )
 
