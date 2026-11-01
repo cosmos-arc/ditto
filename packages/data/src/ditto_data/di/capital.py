@@ -98,10 +98,8 @@ class CapitalProvider(Provider):
             hsgt_top10=HsgtTop10Reader(_hsgt_top10_parquet_store(settings)),
             top_list=TopListReader(_top_list_parquet_store(settings)),
             top_inst=TopInstReader(_top_inst_parquet_store(settings)),
-            top10_holders=Top10HoldersReader(_top10_holders_parquet_store(settings)),
-            top10_floatholders=Top10FloatholdersReader(
-                _top10_floatholders_parquet_store(settings)
-            ),
+            top10_holders=Top10HoldersReader(_top10_parquet_store(settings)),
+            top10_floatholders=Top10FloatholdersReader(_top10_parquet_store(settings)),
         )
 
     @provide
@@ -131,10 +129,8 @@ class CapitalProvider(Provider):
             hsgt_top10=HsgtTop10Writer(_hsgt_top10_parquet_store(settings)),
             top_list=TopListWriter(_top_list_parquet_store(settings)),
             top_inst=TopInstWriter(_top_inst_parquet_store(settings)),
-            top10_holders=Top10HoldersWriter(_top10_holders_parquet_store(settings)),
-            top10_floatholders=Top10FloatholdersWriter(
-                _top10_floatholders_parquet_store(settings)
-            ),
+            top10_holders=Top10HoldersWriter(_top10_parquet_store(settings)),
+            top10_floatholders=Top10FloatholdersWriter(_top10_parquet_store(settings)),
         )
 
     @provide
@@ -210,23 +206,13 @@ def _top_inst_parquet_store(settings: DataStoreSettings) -> ParquetStore:
     )
 
 
-def _top10_holders_parquet_store(settings: DataStoreSettings) -> ParquetStore:
-    """前十股东行以 (标的, 报告期, 持有人名, 公告日) 为自然键（#627）."""
-    return ParquetStore(
-        settings.data_root,
-        key_columns=(
-            "instrument_id",
-            "report_date",
-            "knowledge_date",
-            "holder_name",
-        ),
-        date_column="report_date",
-        instrument_column="instrument_id",
-    )
+def _top10_parquet_store(settings: DataStoreSettings) -> ParquetStore:
+    """
+    前十股东两榜共用存储配置.
 
-
-def _top10_floatholders_parquet_store(settings: DataStoreSettings) -> ParquetStore:
-    """前十流通股东行以 (标的, 报告期, 持有人名, 公告日) 为自然键（#627）."""
+    行以 (标的, 报告期, 公告日, 持有人名) 为自然键；榜单目录由
+    reader/writer 构造参数区分（#627）。
+    """
     return ParquetStore(
         settings.data_root,
         key_columns=(

@@ -434,11 +434,16 @@ def _earnings_announcement_fetch(
     return factory
 
 
-def _earnings_instrument_fetch(
+def _announcement_instrument_fetch(
     group: str,
     method: str,
 ) -> InstrumentFetchFactory:
-    """公告回填：按标的+公告区间（参数即公告日区间）."""
+    """
+    公告锚数据集按标的回填：source_ticker + start/end.
+
+    earnings 两表为公告日区间，fina_indicator/fund_portfolio/#627 前十
+    股东两榜为报告期区间——区间语义由各分发器出口裁剪决定。
+    """
 
     def factory(ctx: InstrumentFetchContext) -> InstrumentFetchHandler:
         fetcher = getattr(ctx.fetchers, group)
@@ -828,7 +833,7 @@ _FUNDAMENTAL_REGISTRATIONS: tuple[DatasetRegistration, ...] = (
         write_kind=WriteKind.FUNDAMENTAL,
         date_schedule=DateScheduleType.NATURAL_DAYS,
         daily_fetch_factory=_fund_portfolio_disclosure_fetch,
-        instrument_fetch_factory=_earnings_instrument_fetch(
+        instrument_fetch_factory=_announcement_instrument_fetch(
             "fundamental", "fetch_fund_portfolio"
         ),
     ),
@@ -901,7 +906,7 @@ _CAPITAL_REGISTRATIONS: tuple[DatasetRegistration, ...] = (
         write_kind=WriteKind.CAPITAL,
         date_schedule=DateScheduleType.NATURAL_DAYS,
         daily_fetch_factory=_capital_disclosure_fetch("fetch_top10_holders"),
-        instrument_fetch_factory=_earnings_instrument_fetch(
+        instrument_fetch_factory=_announcement_instrument_fetch(
             "capital", "fetch_top10_holders"
         ),
     ),
@@ -910,7 +915,7 @@ _CAPITAL_REGISTRATIONS: tuple[DatasetRegistration, ...] = (
         write_kind=WriteKind.CAPITAL,
         date_schedule=DateScheduleType.NATURAL_DAYS,
         daily_fetch_factory=_capital_disclosure_fetch("fetch_top10_floatholders"),
-        instrument_fetch_factory=_earnings_instrument_fetch(
+        instrument_fetch_factory=_announcement_instrument_fetch(
             "capital", "fetch_top10_floatholders"
         ),
     ),
@@ -974,7 +979,7 @@ _EARNINGS_REGISTRATIONS: tuple[DatasetRegistration, ...] = (
         daily_fetch_factory=_earnings_announcement_fetch(
             "fundamental", "fetch_earnings_forecast"
         ),
-        instrument_fetch_factory=_earnings_instrument_fetch(
+        instrument_fetch_factory=_announcement_instrument_fetch(
             "fundamental", "fetch_earnings_forecast"
         ),
     ),
@@ -985,7 +990,7 @@ _EARNINGS_REGISTRATIONS: tuple[DatasetRegistration, ...] = (
         daily_fetch_factory=_earnings_announcement_fetch(
             "fundamental", "fetch_earnings_express"
         ),
-        instrument_fetch_factory=_earnings_instrument_fetch(
+        instrument_fetch_factory=_announcement_instrument_fetch(
             "fundamental", "fetch_earnings_express"
         ),
     ),

@@ -15,8 +15,8 @@ meta:
     access_model: 积分=Tushare 15000 档位（档位决定接口权限与限频，非余额）；代理 t.xiaodefa.top 为 HTTP 透传层；实测成功以 probes 逐条为准，官方文档门槛未逐条核对——若未来触发补源比较再补门槛列
     unit_dimension: 本合同单位维度仅记 currency；计量单位（万元/万份/倍/股）核验归 P2 价格口径与 P3c 股数单位反例等 lane 实施票，P0 不伪造
     tushare_proxy: https://t.xiaodefa.top/
-    tushare_probed: 56
-    tushare_ok: 53
+    tushare_probed: 58
+    tushare_ok: 55
     probes:
       tushare:trade_cal:
         result: ok
@@ -95,7 +95,13 @@ meta:
         rows: 1807
       tushare:fund_portfolio:
         result: ok
-        rows: 0
+        rows: 2000
+      tushare:top10_holders:
+        result: ok
+        rows: 2000
+      tushare:top10_floatholders:
+        result: ok
+        rows: 2000
       tushare:balancesheet:
         result: ok
         rows: 2
@@ -1038,22 +1044,101 @@ datasets:
       typical_available_time: '21:00:00'
     measured:
       storage: parquet:fundamental/fund_portfolio
-      rows: 16671
-      instruments: 1240
-      start: '2026-06-30'
-      end: '2026-09-30'
+      rows: FUNDPORTFOLIO_ROWS
+      instruments: FUNDPORTFOLIO_INSTRUMENTS
+      start: FUNDPORTFOLIO_START
+      end: FUNDPORTFOLIO_END
     catalog_latest:
       date: '2026-10-29'
       status: success
       partition_rows: 0
       freshness: fresh
-    status: partial
+    status: FUNDPORTFOLIO_STATUS
     gaps:
-    - 仅 2026 Q2/Q3（16,671 行），2014 起历史未回补；场外基金身份过滤未量化（P3c）
+    - FUNDPORTFOLIO_GAPS
     consumers:
     - 基金持仓分析
     - query fundamental
-    notes: 探针 period=2026 返回 0——参数形状与披露节奏待 P3c 核对
+    notes: '#627 量化定界：本地=交易所上市基金子集（ETF/LOF ~1,240 只≈单日
+      披露 9,031 只公募的 13.7%），非公募全覆盖；市场级 ann_date 响应
+      97-100% 为 .OF 场外基金，写入层 FK 过滤拒绝并 WARN 留痕。披露范围
+      分别标记：Q1/Q3 季报=前十大重仓、Q2/Q4 半年报/年报=全部持仓明细，
+      未披露≠零持仓；修订=同报告期多公告日版本行（kd=ann_date 分版本）。
+      P0 探针 period=2026 返回 0 的根因=参数形状（需完整季度末 YYYYMMDD），
+      #627 修正为 period=20141231 实测 ok。对拍与矩阵见
+      holdings-disclosure-verification.md'
+  top10_holders:
+    domain: capital
+    tier: t1_incremental
+    sources:
+    - tushare
+    provider_apis:
+    - top10_holders
+    declared:
+      frequency: quarterly
+      update_frequency: 每日
+      coverage_start_rule: outside R2 release gate
+      currency: CNY
+      timezone: Asia/Shanghai
+      typical_available_time: '20:00:00'
+    measured:
+      storage: parquet:capital/top10_holders
+      rows: TOP10H_ROWS
+      instruments: TOP10H_INSTRUMENTS
+      start: TOP10H_START
+      end: TOP10H_END
+    catalog_latest:
+      date: null
+      status: null
+      partition_rows: null
+      freshness: stale
+    status: TOP10H_STATUS
+    gaps:
+    - TOP10H_GAPS
+    consumers:
+    - 股东结构观察
+    - query capital
+    notes: '#627 新通路（Tushare doc 61）：公告日驱动市场级 ann_date 单请求
+      日更+按标的报告期区间回填；主键 (标的, 报告期, 持有人名, 公告日)，
+      kd=公告日，修订=新公告日版本行。跨期名单跌出≠清仓；hold_amount 股、
+      hold_ratio 占总股本 %、hold_change 0=不变 null=新进；送转使股数跳变
+      而比例持平，环比前须按公司行为调整。对拍与矩阵见
+      holdings-disclosure-verification.md'
+  top10_floatholders:
+    domain: capital
+    tier: t1_incremental
+    sources:
+    - tushare
+    provider_apis:
+    - top10_floatholders
+    declared:
+      frequency: quarterly
+      update_frequency: 每日
+      coverage_start_rule: outside R2 release gate
+      currency: CNY
+      timezone: Asia/Shanghai
+      typical_available_time: '20:00:00'
+    measured:
+      storage: parquet:capital/top10_floatholders
+      rows: TOP10F_ROWS
+      instruments: TOP10F_INSTRUMENTS
+      start: TOP10F_START
+      end: TOP10F_END
+    catalog_latest:
+      date: null
+      status: null
+      partition_rows: null
+      freshness: stale
+    status: TOP10F_STATUS
+    gaps:
+    - TOP10F_GAPS
+    consumers:
+    - 股东结构观察
+    - query capital
+    notes: '#627 新通路（Tushare doc 62）：字段同 top10_holders，名单口径=
+      流通股东榜——两榜同名行值可一致（2026-04-30 000002.SZ 实测），语义
+      不同各存一行不互推；不推导整体持仓。对拍与矩阵见
+      holdings-disclosure-verification.md'
   balance_sheet:
     domain: fundamental
     tier: t1_incremental
