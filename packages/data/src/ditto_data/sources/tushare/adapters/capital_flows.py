@@ -65,10 +65,16 @@ def _collapse_same_key_rows(
       ratio 分母不一致，求和不可辩护，按先例单行留档损失）。
     收敛规则：行内空值数降序（最完整行最后=keep-last 胜出）+ 整行哈希
     平局——同一行集合无论源端返回顺序如何都选出同一行（重试幂等）。
+    平局哈希是 polars 版本敏感的（<2 pin 内构建确定）；hk_hold 季度末
+    两全值持有者行属主导形态，胜者由哈希定，polars 升级后重拉同日可能
+    换行（correctness #626 F4 留档，升级后复跑存量季度日核对）。
+    同键行非空值互异（真冲突而非冗余）时 WARN 留痕可观测，不静默择一
+    （correctness #626 F2）。
     """
     if frame.is_empty():
         return frame
     rows_before = frame.height
+    _warn_conflicting_same_key_values(dataset, frame, dedupe_subset)
     collapsed = (
         frame.with_columns(
             _row_nulls=pl.sum_horizontal(pl.all().is_null().cast(pl.UInt32)),
@@ -89,6 +95,34 @@ def _collapse_same_key_rows(
             rows_after=collapsed.height,
         )
     return collapsed
+
+
+def _warn_conflicting_same_key_values(
+    dataset: str,
+    frame: pl.DataFrame,
+    dedupe_subset: tuple[str, ...],
+) -> None:
+    """同键行有互异非空值（真冲突）时告警——与良性冗余可区分（F2）."""
+    key_counts = frame.group_by(list(dedupe_subset)).len()
+    dup_keys = key_counts.filter(pl.col("len") > 1).drop("len")
+    if dup_keys.is_empty():
+        return
+    value_columns = [c for c in frame.columns if c not in dedupe_subset]
+    conflicts = (
+        frame.join(dup_keys, on=list(dedupe_subset), how="semi")
+        .group_by(list(dedupe_subset))
+        .agg(pl.col(name).drop_nulls().n_unique().alias(name) for name in value_columns)
+        .filter(pl.any_horizontal(pl.col(name) > 1 for name in value_columns))
+    )
+    for row in conflicts.iter_rows(named=True):
+        key = {k: row[k] for k in dedupe_subset}
+        differing = sorted(name for name in value_columns if row[name] > 1)
+        logger.warning(
+            f"Tushare {dataset} same-key rows carry conflicting values",
+            event=f"tushare_{dataset}_key_conflict",
+            key=key,
+            differing_columns=differing,
+        )
 
 
 class CapitalFlowsTushareAdapter(BaseTushareAdapter):

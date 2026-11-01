@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+from datetime import datetime
 from itertools import pairwise
 from pathlib import Path
 
@@ -147,6 +148,13 @@ def test_northbound_disclosure_segments_documented() -> None:
         for segment in segments:
             missing = _SEGMENT_REQUIRED_KEYS - set(segment)
             assert not missing, f"{name}: segment missing keys {missing}"
+            for boundary in ("start", "end"):
+                if segment[boundary] is not None:
+                    _assert_iso_date(name, segment[boundary])
+            if segment["end"] is not None:
+                assert segment["end"] >= segment["start"], (
+                    f"{name}: segment {segment['segment']} end 早于 start"
+                )
         # 边界单调：非末段必有 end，且下一段 start 严格晚于前段 end；
         # 仅末段允许 end=null（进行中制度）。
         for prev, curr in pairwise(segments):
@@ -156,3 +164,15 @@ def test_northbound_disclosure_segments_documented() -> None:
             assert curr["start"] > prev["end"], (
                 f"{name}: 分段边界交叉/重叠 {prev['segment']}->{curr['segment']}"
             )
+        assert segments[-1]["end"] is None, (
+            f"{name}: 末段 {segments[-1]['segment']} end 非 null"
+            " (进行中制度以 null 收口; 制度终止时更新本守卫)"
+        )
+
+
+def _assert_iso_date(name: str, value: object) -> None:
+    assert isinstance(value, str), f"{name}: 分段边界须为字符串日期: {value!r}"
+    try:
+        datetime.strptime(value, "%Y-%m-%d")
+    except ValueError as error:
+        raise AssertionError(f"{name}: 分段边界非 YYYY-MM-DD: {value!r}") from error

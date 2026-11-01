@@ -440,7 +440,9 @@ CYQ_PERF_MAPPING = ColumnMapping(
 
 # 沪深港通持股（hk_hold：北向 SH/SZ 行入库，南向 HK 行在身份富集处过滤；
 # 季度末快照同标的多北向持有者代码多行，存储键无持有者维度，适配器
-# 确定性收敛单行——少数持有者行损失留档 #626，不推导整体持仓加总）
+# 确定性收敛单行——少数持有者行损失留档 #626，不推导整体持仓加总；
+# 两全值行平局胜者由整行哈希定，polars 升级可能换行，升级后复跑存量
+# 季度日核对，correctness #626 F4）
 HK_HOLD_MAPPING = ColumnMapping(
     rename={"ts_code": "source_ticker"},
     date_columns={"trade_date": "%Y%m%d"},

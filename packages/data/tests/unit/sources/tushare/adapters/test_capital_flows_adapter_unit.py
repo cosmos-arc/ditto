@@ -323,3 +323,72 @@ class TestEventKeyCollapse:
             "hsgt_top10": lambda: adapter.fetch_hsgt_top10(trade_date="2026-10-16"),
         }[dataset]
         return fetch().sort("source_ticker")
+
+    def test_conflicting_same_key_values_warn_not_silent(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """同键非空值互异（真冲突）必须 WARN 可观测，与良性冗余可区分（F2）."""
+        from ditto_data.sources.tushare.adapters import capital_flows
+
+        warnings: list[tuple[object, ...]] = []
+
+        def fake_warning(message: str, **kwargs: object) -> None:
+            warnings.append((message, kwargs))
+
+        monkeypatch.setattr(capital_flows.logger, "warning", fake_warning)
+        adapter, _ = _adapter_with_response(self._hk_hold_rows())
+        frame = adapter.fetch_hk_hold(trade_date="2026-06-30")
+        assert frame.height == 1
+        conflicting = [w for w in warnings if "conflicting" in str(w[0])]
+        assert conflicting, "真冲突形态必须留下 warning 痕迹"
+        assert conflicting[0][1]["differing_columns"] == ["ratio", "vol"]
+
+    def test_benign_null_redundancy_does_not_warn(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """null/有值冗余不算冲突——只 warn 真值互异（F2 判定边界）."""
+        from ditto_data.sources.tushare.adapters import capital_flows
+
+        warnings: list[str] = []
+        monkeypatch.setattr(
+            capital_flows.logger,
+            "warning",
+            lambda message, **kwargs: warnings.append(str(message)),
+        )
+        adapter, _ = _adapter_with_response(self._top_list_rows())
+        adapter.fetch_top_list(trade_date="2020-02-03")
+        assert not [w for w in warnings if "conflicting" in w]
+
+    def test_equal_null_count_group_matches_legacy_hash_rule(self) -> None:
+        """F1a 兼容钉：空值数持平的组，胜者=旧 #519 纯哈希 keep-last 规则.
+
+        存量 top_inst（2026-09-22+）按旧规则写入；重拉按新规则时仅
+        组内空值数有差的组可能换行，空值持平组必须逐位一致，否则
+        VERIFY_IDENTICAL 重拉整批陪葬。旧规则在同一 transform 后帧上
+        复算（哈希覆盖列集必须一致）。
+        """
+        from ditto_data.sources.tushare.adapters.capital_flows import (
+            _collapse_same_key_rows,
+        )
+        from ditto_data.sources.tushare.processors.mappings import (
+            HK_HOLD_MAPPING,
+        )
+        from ditto_data.sources.tushare.processors.transformer import (
+            TushareDataTransformer,
+        )
+
+        transformed = TushareDataTransformer.transform(
+            self._hk_hold_rows(), "hk_hold", HK_HOLD_MAPPING
+        )
+        legacy_pick = (
+            transformed.with_columns(_dedupe_hash=pl.struct(pl.all()).hash())
+            .sort("_dedupe_hash")
+            .unique(subset=["source_ticker", "trade_date"], keep="last")
+            .drop("_dedupe_hash")
+        )
+        current = _collapse_same_key_rows(
+            "hk_hold", transformed, ("source_ticker", "trade_date")
+        )
+        assert current.select(["vol", "ratio"]).equals(
+            legacy_pick.select(["vol", "ratio"])
+        )
