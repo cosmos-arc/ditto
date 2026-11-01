@@ -330,7 +330,7 @@ class TestEventKeyCollapse:
         """同键非空值互异（真冲突）必须 WARN 可观测，与良性冗余可区分（F2）."""
         from ditto_data.sources.tushare.adapters import capital_flows
 
-        warnings: list[tuple[object, ...]] = []
+        warnings: list[tuple[str, dict[str, object]]] = []
 
         def fake_warning(message: str, **kwargs: object) -> None:
             warnings.append((message, kwargs))
