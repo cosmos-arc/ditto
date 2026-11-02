@@ -1,6 +1,6 @@
 /**
  * DO NOT EDIT: generated from contracts/openapi/v1.json.
- * Schema SHA-256: 50416b556179e97de3858ea761292904e1f99b35a52d5ebb1fbb6b390987b2f0
+ * Schema SHA-256: 89f10237753b3c7910a3977a7512e3cb899ff44da97379a3d3f576109d3e7304
  * Generator: openapi-typescript 7.13.0
  */
 
@@ -835,12 +835,15 @@ export interface paths {
         };
         /**
          * Get Margin
-         * @description 获取融资融券数据.
+         * @description 获取融资融券数据（pit_asof：as_of 可见版本，日粒度 as_of=上海日终）.
          *
          *     标识符三选一（优先级: instrument_id > standard_ticker > ticker）:
          *     - instrument_id: 内部 ID，如 1000001
          *     - standard_ticker: Ditto 标准格式，如 "000001.XSHE"
          *     - ticker: 裸代码，如 "000001"
+         *
+         *     Raises:
+         *         NotFoundError: 404 如果标识符在 as_of_date 不可解析
          *
          *     Capability maturity: `experimental`. Implemented or partly implemented; not production scope.
          */
@@ -862,12 +865,15 @@ export interface paths {
         };
         /**
          * Get Valuation
-         * @description 获取估值指标数据.
+         * @description 获取估值指标数据（pit_asof：as_of 可见版本，日粒度 as_of=上海日终）.
          *
          *     标识符三选一（优先级: instrument_id > standard_ticker > ticker）:
          *     - instrument_id: 内部 ID，如 1000001
          *     - standard_ticker: Ditto 标准格式，如 "000001.XSHE"
          *     - ticker: 裸代码，如 "000001"
+         *
+         *     Raises:
+         *         NotFoundError: 404 如果标识符在 as_of_date 不可解析
          *
          *     Capability maturity: `experimental`. Implemented or partly implemented; not production scope.
          */
@@ -891,7 +897,10 @@ export interface paths {
         put?: never;
         /**
          * Post Bars
-         * @description 查询商品 K 线数据.
+         * @description 查询商品 K 线数据（latest_available：库内现存行，无 PIT 过滤，#628 标注）.
+         *
+         *     commodity_daily 为 partial 覆盖（仅 2026-09 起，见 GET /datasets/coverage）；
+         *     空结果与不覆盖经覆盖注册表区分.
          *
          *     Args:
          *         query: 查询参数
@@ -913,6 +922,31 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/datasets/coverage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Coverage
+         * @description 列出全部数据集覆盖限制（latest_available 注册表读，测量时点快照）.
+         *
+         *     来源为 #622 覆盖合同的运行时蒸馏（docs/data/coverage-contract.yaml），
+         *     measured_at 为测量时点而非实时状态；消费方（API/图表/导出）据此区分
+         *     「正常空」与「不覆盖」，受限研究不包装为严格 PIT。状态词表：
+         *     ready=预期范围完整且当前 / partial=起点末端味道品种有缺 / empty=本地零行。
+         */
+        get: operations["datasets_list_coverage"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/fundamental/corporate-actions": {
         parameters: {
             query?: never;
@@ -924,6 +958,10 @@ export interface paths {
          * List Corporate Actions
          * @description 查询公司行动列表.
          *
+         *     读取语义由 as_of_date 决定（#628）：给定=pit_asof（同事实键多版本
+         *     收敛到最新可见披露）；缺省=latest_available（版本历史原样返回，
+         *     多版本行可见，行级 knowledge/effective 轴可区分）.
+         *
          *     标识符三选一（优先级: instrument_id > standard_ticker > ticker）:
          *     - instrument_id: 内部 ID，如 1000001
          *     - standard_ticker: Ditto 标准格式，如 "000001.XSHE"
@@ -932,6 +970,7 @@ export interface paths {
          *     Raises:
          *         DateRangeError: 400 如果 start_date > end_date
          *         FutureDateError: 400 如果 as_of_date 为未来日期
+         *         NotFoundError: 404 如果标识符不可解析
          *
          *     Capability maturity: `experimental`. Implemented or partly implemented; not production scope.
          */
@@ -953,15 +992,18 @@ export interface paths {
         };
         /**
          * Get Dividend
-         * @description 获取分红数据.
+         * @description 获取分红数据（pit_asof：as_of 可见版本，日粒度 as_of=上海日终）.
          *
          *     标识符三选一（优先级: instrument_id > standard_ticker > ticker）:
          *     - instrument_id: 内部 ID，如 1000001
          *     - standard_ticker: Ditto 标准格式，如 "000001.XSHE"
          *     - ticker: 裸代码，如 "000001"
          *
+         *     未披露数值以 null 透出，不零填充（#628）.
+         *
          *     Raises:
          *         FutureDateError: 400 如果 as_of_date 为未来日期
+         *         NotFoundError: 404 如果标识符在 as_of_date 不可解析
          *
          *     Capability maturity: `experimental`. Implemented or partly implemented; not production scope.
          */
@@ -983,15 +1025,19 @@ export interface paths {
         };
         /**
          * Get Financials
-         * @description 获取财务报表数据.
+         * @description 获取财务报表数据（pit_asof：as_of 可见版本，日粒度 as_of=上海日终）.
          *
          *     标识符三选一（优先级: instrument_id > standard_ticker > ticker）:
          *     - instrument_id: 内部 ID，如 1000001
          *     - standard_ticker: Ditto 标准格式，如 "000001.XSHE"
          *     - ticker: 裸代码，如 "000001"
          *
+         *     修订多版本收敛到 as_of 可见的最新披露版本；行级透出
+         *     knowledge_date/effective_from/effective_to（#628 事实/公告/版本分开）.
+         *
          *     Raises:
          *         FutureDateError: 400 如果 as_of_date 为未来日期
+         *         NotFoundError: 404 如果标识符在 as_of_date 不可解析
          *
          *     Capability maturity: `experimental`. Implemented or partly implemented; not production scope.
          */
@@ -1015,7 +1061,10 @@ export interface paths {
         put?: never;
         /**
          * Post Bars
-         * @description 查询外汇 K 线数据.
+         * @description 查询外汇 K 线数据（latest_available：库内现存行，无 PIT 过滤，#628 标注）.
+         *
+         *     fx_daily 当前本地零行（empty，见 GET /datasets/coverage）；
+         *     空列表=不覆盖而非正常无数据.
          *
          *     Args:
          *         query: 查询参数
@@ -1204,7 +1253,10 @@ export interface paths {
         put?: never;
         /**
          * Post Indicators
-         * @description 查询宏观指标数据.
+         * @description 查询宏观指标数据（latest_available：库内现存行，无 PIT 过滤，#628 标注）.
+         *
+         *     macro_indicators 为 partial 覆盖（见 GET /datasets/coverage）；空结果
+         *     与不覆盖经覆盖注册表区分，受限研究不包装为严格 PIT.
          *
          *     Args:
          *         query: 查询参数
@@ -1794,7 +1846,10 @@ export interface paths {
         put?: never;
         /**
          * Post Bars
-         * @description 查询 K 线数据.
+         * @description 查询 K 线数据（latest_available：库内现存行，无 PIT 过滤，#628 标注）.
+         *
+         *     受限研究读取——不作为严格 PIT 依据；覆盖限制按数据集经
+         *     GET /datasets/coverage 查询（stock_daily/etf_daily 等按资产类别）.
          *
          *     Args:
          *         query: 查询参数
@@ -1874,9 +1929,11 @@ export interface paths {
         put?: never;
         /**
          * Post Etf Nav
-         * @description 查询 ETF 净值序列.
+         * @description 查询 ETF 净值序列（latest_available：库内现存行，无 PIT 过滤，#628 标注）.
          *
-         *     数据不可得（读取器未配置或无数据）时返回空 points，由前端诚实降级。
+         *     数据不可得（读取器未配置或无数据）时返回空 points，由前端诚实降级；
+         *     data_coverage 携带 etf_nav 数据集覆盖限制（测量时点快照），用于区分
+         *     「正常空」与「库尾未更新/不覆盖」，并随图表与导出传播。
          *
          *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
          */
@@ -1900,6 +1957,7 @@ export interface paths {
          * Post Indicator Series
          * @description 查询叠加指标全序列（technical-analysis registry 既有公式）.
          *
+         *     latest_available 读取（#628 标注）：输入为库内现存 bars，无 PIT 过滤；
          *     maturity 门控与 /market/bars 一致；warm-up 段输出 null。
          *
          *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
@@ -4500,6 +4558,16 @@ export interface components {
              * @description 响应数据
              */
             data: components["schemas"]["CorporateAction"][];
+            /** @description 分页信息(可选) */
+            pagination?: components["schemas"]["PaginationResponse"] | null;
+        };
+        /** APIResponse[list[DataCoverageInfo]] */
+        APIResponse_list_DataCoverageInfo__: {
+            /**
+             * Data
+             * @description 响应数据
+             */
+            data: components["schemas"]["DataCoverageInfo"][];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
         };
@@ -7144,11 +7212,17 @@ export interface components {
          * CorporateAction
          * @description 公司行动响应模型.
          *
+         *     as_of_date 给定时为 pit_asof 语义（同事实键多版本收敛到最新可见披露）；
+         *     缺省时为 latest_available 语义（版本历史原样返回，多版本行可见）.
+         *
          *     Attributes:
          *         instrument_id: 标的 ID
          *         action_date: 行动日期
          *         action_type: 行动类型
          *         description: 行动描述
+         *         knowledge_date: 公告锚
+         *         effective_from: 版本生效起点
+         *         effective_to: 版本关闭日（空=当前版本开放）
          */
         CorporateAction: {
             /**
@@ -7167,10 +7241,25 @@ export interface components {
              */
             description: string;
             /**
+             * Effective From
+             * @description 版本生效起点
+             */
+            effective_from?: string | null;
+            /**
+             * Effective To
+             * @description 版本关闭日（空=当前版本开放）
+             */
+            effective_to?: string | null;
+            /**
              * Instrument Id
              * @description 标的 ID
              */
             instrument_id: number;
+            /**
+             * Knowledge Date
+             * @description 公告锚
+             */
+            knowledge_date?: string | null;
         };
         /**
          * CorrectManualEventBody
@@ -7914,6 +8003,54 @@ export interface components {
             parametric_var99: number | null;
         };
         /**
+         * DataCoverageInfo
+         * @description 数据集覆盖限制快照（#622 测量证据投影，测量时点非实时；#628 限制传播）.
+         */
+        DataCoverageInfo: {
+            /**
+             * Dataset
+             * @description 数据集 ID
+             */
+            dataset: string;
+            /**
+             * Domain
+             * @description 数据域
+             */
+            domain: string;
+            /**
+             * Gaps
+             * @description 缺口与限制说明（源端权限、末端滞后、制度分段等）
+             * @default []
+             */
+            gaps: string[];
+            /**
+             * Measured At
+             * @description 测量时点（ISO 日期；非实时）
+             */
+            measured_at: string;
+            /**
+             * Measured End
+             * @description 实测覆盖终点（ISO 日期）
+             */
+            measured_end?: string | null;
+            /**
+             * Measured Start
+             * @description 实测覆盖起点（ISO 日期）
+             */
+            measured_start?: string | null;
+            /**
+             * Notes
+             * @description 测量备注
+             */
+            notes?: string | null;
+            /**
+             * Status
+             * @description ready=预期范围完整且当前 / partial=起点末端味道品种有缺 / empty=本地零行
+             * @enum {string}
+             */
+            status: "ready" | "partial" | "empty";
+        };
+        /**
          * DataLineageAssetResponse
          * @description 数据资产身份响应.
          */
@@ -8405,35 +8542,63 @@ export interface components {
         Direction: "bullish" | "bearish" | "neutral" | "unknown";
         /**
          * Dividend
-         * @description 分红响应模型.
+         * @description 分红响应模型（pit_asof：as_of 可见版本）.
+         *
+         *     存储列：ex_dividend_date（事实日）、div_proc、dividend_per_share（元/股）、
+         *     dividend_yield；公告锚即 knowledge_date（#628 起按真实列映射，
+         *     旧 amount 恒 0.0 的伪映射废弃）.
          *
          *     Attributes:
          *         instrument_id: 标的 ID
-         *         announce_date: 公告日期
-         *         dividend_type: 分红类型
-         *         amount: 分红金额
+         *         ex_dividend_date: 除息日（事实日，可能为空=未定除息日）
+         *         div_proc: 分红流程阶段（预案/股东大会/实施等）
+         *         dividend_per_share: 每股分红（元；空=未披露数值）
+         *         dividend_yield: 股息率
+         *         knowledge_date: 公告锚（as_of 可见的披露日）
+         *         effective_from: 版本生效起点
+         *         effective_to: 版本关闭日（空=当前版本开放）
          */
         Dividend: {
             /**
-             * Amount
-             * @description 分红金额
+             * Div Proc
+             * @description 分红流程阶段
              */
-            amount: number;
+            div_proc: string | null;
             /**
-             * Announce Date
-             * @description 公告日期
+             * Dividend Per Share
+             * @description 每股分红（元）
              */
-            announce_date: string;
+            dividend_per_share: number | null;
             /**
-             * Dividend Type
-             * @description 分红类型
+             * Dividend Yield
+             * @description 股息率
              */
-            dividend_type: string;
+            dividend_yield: number | null;
+            /**
+             * Effective From
+             * @description 版本生效起点
+             */
+            effective_from?: string | null;
+            /**
+             * Effective To
+             * @description 版本关闭日（空=当前版本开放）
+             */
+            effective_to?: string | null;
+            /**
+             * Ex Dividend Date
+             * @description 除息日（事实日）
+             */
+            ex_dividend_date: string | null;
             /**
              * Instrument Id
              * @description 标的 ID
              */
             instrument_id: number;
+            /**
+             * Knowledge Date
+             * @description 公告锚（as_of 可见的披露日）
+             */
+            knowledge_date?: string | null;
         };
         /**
          * ETFAllocationBody
@@ -8846,9 +9011,14 @@ export interface components {
         };
         /**
          * EtfNavResponse
-         * @description ETF 净值响应（数据可得时返回点列，不可得时为空列表）。
+         * @description ETF 净值响应（latest_available：库内现存行，无 PIT 过滤，#628 标注）.
+         *
+         *     空点列与「库尾未更新/不覆盖」经 data_coverage 区分；
+         *     语义与覆盖随数据传播到图表与导出（受限研究不包装为严格 PIT）.
          */
         EtfNavResponse: {
+            /** @description etf_nav 数据集覆盖限制（测量时点快照；空点列时用于区分不覆盖） */
+            data_coverage?: components["schemas"]["DataCoverageInfo"] | null;
             /**
              * Instrument Id
              * @description 标的 ID
@@ -8859,6 +9029,13 @@ export interface components {
              * @description 净值点列
              */
             points: components["schemas"]["EtfNavPoint"][];
+            /**
+             * Read Semantics
+             * @description 读取时间语义：latest_available=现存行无 PIT 过滤
+             * @default latest_available
+             * @enum {string}
+             */
+            read_semantics: "latest_available" | "pit_asof" | "frozen_snapshot";
         };
         /**
          * EtfSelectionSpecRequest
@@ -9764,13 +9941,16 @@ export interface components {
         };
         /**
          * Financial
-         * @description 财务报表响应模型.
+         * @description 财务报表响应模型（pit_asof：as_of 可见版本，多版本收敛到最新披露）.
          *
          *     Attributes:
          *         instrument_id: 标的 ID
          *         report_date: 报告期
          *         report_type: 报表类型
-         *         data: 财务数据字典
+         *         data: 财务数据字典（读取器业务列）
+         *         knowledge_date: 公告锚（as_of 可见的披露日）
+         *         effective_from: 版本生效起点（=公告锚）
+         *         effective_to: 版本关闭日（空=当前版本开放）
          */
         Financial: {
             /**
@@ -9781,10 +9961,25 @@ export interface components {
                 [key: string]: unknown;
             };
             /**
+             * Effective From
+             * @description 版本生效起点
+             */
+            effective_from?: string | null;
+            /**
+             * Effective To
+             * @description 版本关闭日（空=当前版本开放）
+             */
+            effective_to?: string | null;
+            /**
              * Instrument Id
              * @description 标的 ID
              */
             instrument_id: number;
+            /**
+             * Knowledge Date
+             * @description 公告锚（as_of 可见的披露日）
+             */
+            knowledge_date?: string | null;
             /**
              * Report Date
              * @description 报告期
@@ -18306,6 +18501,92 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["APIResponse_list_CommodityBar__"];
+                };
+            };
+            /** @description Bad request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Resource not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Request conflicts with current state */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Request or domain validation failed */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Internal server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Structured Ditto API error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    datasets_list_coverage: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required. */
+                "X-Ditto-API-Contract-Version"?: "v1";
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_list_DataCoverageInfo__"];
                 };
             };
             /** @description Bad request */

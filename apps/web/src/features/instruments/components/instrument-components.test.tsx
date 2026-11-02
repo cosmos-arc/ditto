@@ -248,7 +248,10 @@ describe("InstrumentChartView", () => {
 		render(<InstrumentChartView id="1000004" />, { wrapper: createWrapper() });
 		await screen.findByTestId("cockpit-stub");
 		await user.click(screen.getByTestId("indicator-toggle-nav"));
-		expect(await screen.findByText("净值数据不可得")).toBeInTheDocument();
+		const badge = await screen.findByText("净值数据不可得", { exact: false });
+		expect(badge).toBeInTheDocument();
+		// #628：覆盖限制随数据传播——库尾测量窗口可见，空数据≠不覆盖
+		expect(badge.textContent).toContain("库内至 2026-10-26");
 	});
 });
 
