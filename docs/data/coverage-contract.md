@@ -36,6 +36,15 @@
 - adj_factor 黄金集作用域（#620）；global_index 拼接旧故障不重立（#619）。
 - fina 存量 33,851 组跨年错位遗留与 init_schema 漂移守卫行为（#613 线留档）。
 
+## 运行时消费（#628 起）
+
+本合同不再只是文档：`packages/data/src/ditto_data/coverage/limits.py` 是其
+运行时蒸馏（47 项 status/窗口/gaps/notes/measured_at），由
+`packages/data/tests/unit/coverage/test_limits_sync_unit.py` 守卫与 YAML 同步
+（刷新 YAML 后须同步蒸馏，否则测试响亮失败）。消费面：
+`GET /datasets/coverage`（API 全量）、etf-nav 响应 `data_coverage`（图表链）。
+验收记录见 [consumer-pit-verification.md](consumer-pit-verification.md)。
+
 ## 刷新方法
 
 复测按 YAML `meta.measurement_method` 重做：`ops status --json`（带 `DITTO_STATE_ROOT`）+ Parquet 逐目录扫描 + SQLite 只读 URI 表级统计 + 每接口一次最小探针；产出回填 YAML 后由守卫测试 `apps/backend/tests/unit/data/test_coverage_contract_unit.py` 校验结构与注册表一致性。刷新属有界实施动作，随 P1/P5 票走，不在本合同内自动进行。
