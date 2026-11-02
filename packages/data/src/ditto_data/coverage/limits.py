@@ -140,10 +140,13 @@ _DATASET_COVERAGE: dict[str, DatasetCoverageLimit] = {
         dataset="commodity_daily",
         domain="macro",
         status="partial",
-        measured_start="2026-10-26",
-        measured_end="2026-10-29",
-        gaps=("仅 2026-10-26 起 12 行×3 品种，历史未回补；FRED 辅源口径属 P5a",),
-        notes="SHFE 修正 ID 等坑=#434-437 留档；provider 标签 commodity_reference 非真实 API，tushare 侧走 fx_daily 端点（metal 通道），FRED 辅源",
+        measured_start="2014-01-01",
+        measured_end="2026-10-31",
+        gaps=(
+            "FRED 油/VIX 三品种腿「复合取数器内、运行时腿未配置」——R2 证据守卫下 tushare 车道不带 FRED 直连且无 fred 车道（#629 实测定界，接线需逐腿证据归属设计）",
+            "新浪 GC/SI 2016-11-02 起（端点历史深度），CL 2014-01-01 起",
+        ),
+        notes="#629 回补：金属腿（FXCM XAU/XAG bid）2014 全覆盖、新浪连续参考三品种、FRED 腿未接线（同 FRED 48 系列口径）；三腿 trade_date_utc 统一 ms 无时区合同精度；矩阵见 supporting-sources-verification.md",
     ),
     "corporate_actions": DatasetCoverageLimit(
         dataset="corporate_actions",
@@ -292,13 +295,11 @@ _DATASET_COVERAGE: dict[str, DatasetCoverageLimit] = {
     "fx_daily": DatasetCoverageLimit(
         dataset="fx_daily",
         domain="macro",
-        status="empty",
-        measured_start=None,
-        measured_end=None,
-        gaps=(
-            "本地 0 行（无 parquet/sqlite 落点）；源可达（探针 101 行/日）——摄取链空转根因属 P1",
-        ),
-        notes="#434-437 交付通路后日链零产出",
+        status="ready",
+        measured_start="2014-01-01",
+        measured_end="2026-10-31",
+        gaps=(),
+        notes="#629 回补 2014-01-01 起六对全覆盖；根因=GMT 日收盘 vs 北京当日单日请求恒空，7 日回看窗口修复；USDCNH 源端 2012-02-18 起（六对中最早起点最晚）；GMT 日 K/bid OHLC 口径见 supporting-sources-verification.md",
     ),
     "global_index_daily": DatasetCoverageLimit(
         dataset="global_index_daily",

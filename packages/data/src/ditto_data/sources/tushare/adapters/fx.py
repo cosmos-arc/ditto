@@ -115,6 +115,10 @@ class FxTushareAdapter:
                     .str.to_date(format="%Y%m%d", strict=False)
                     .dt.combine(time=pl.time(0, 0, 0))
                     .dt.replace_time_zone("UTC", ambiguous="earliest")
+                    # 合同列 ms 无时区精度（FX_SOURCE_SCHEMA，与 metal 腿/
+                    # commodity 三腿一致）：μs-UTC 会与按 schema 构造的空帧
+                    # concat 崩溃（correctness W2 #629）。
+                    .cast(pl.Datetime("ms"))
                     .alias("trade_date_utc"),
                     # 使用 bid 价格作为标准 OHLC
                     pl.col("bid_open").cast(pl.Float64).alias("open"),

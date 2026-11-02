@@ -91,6 +91,46 @@ class TestMarketWriteServiceSaveBars:
         assert rows_written == 2
         mock_writers["stock_bars"].write.assert_called_once()
 
+    def test_save_bars_cross_year_window_splits_by_trade_year(
+        self,
+        market_write_service: MarketWriteService,
+        mock_writers: dict[str, MagicMock],
+    ) -> None:
+        """回看窗口跨年：行按 trade_date 年分片落各自分区（correctness E1 #629）."""
+        df = pl.DataFrame(
+            {
+                "instrument_id": [4_000_001, 4_000_001],
+                "trade_date": [date(2026, 12, 30), date(2027, 1, 3)],
+                "open": [7.18, 7.19],
+                "close": [7.185, 7.195],
+            }
+        )
+        mock_write_result = MagicMock()
+        mock_write_result.added = 1
+        mock_write_result.updated = 0
+        mock_writers["stock_bars"].write.return_value = mock_write_result
+
+        rows_written = market_write_service.save_bars(
+            dataset="stock_daily",
+            df=df,
+            year=2027,
+            on_duplicate=OnDuplicate.VERIFY_IDENTICAL,
+        )
+
+        assert rows_written == 2
+        written_years = [
+            call.args[1] for call in mock_writers["stock_bars"].write.call_args_list
+        ]
+        assert written_years == [2026, 2027]
+        for call, expected_year in zip(
+            mock_writers["stock_bars"].write.call_args_list,
+            [2026, 2027],
+            strict=True,
+        ):
+            assert call.args[0]["trade_date"].dt.year().unique().to_list() == [
+                expected_year
+            ]
+
     def test_save_etf_daily(
         self,
         market_write_service: MarketWriteService,
