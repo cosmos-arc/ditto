@@ -19,8 +19,8 @@ from fastapi import APIRouter, Depends
 
 from ditto_apps.api.errors import DateRangeError, FutureDateError
 from ditto_apps.api.params import DateRangeQueryParams, PITQueryParams
-from ditto_apps.api.utils.identifier import resolve_identifier_for_api
-from ditto_apps.models.common import APIResponse
+from ditto_apps.api.utils.identifier import resolve_identifier_or_404
+from ditto_apps.models.common import APIResponse, ReadSemantics
 from ditto_apps.models.fundamental import (
     CorporateAction,
     Dividend,
@@ -109,20 +109,24 @@ async def get_financials(
     params: Annotated[PITQueryParams, Depends()],
 ) -> APIResponse[list[Financial]]:
     """
-    获取财务报表数据.
+    获取财务报表数据（pit_asof：as_of 可见版本，日粒度 as_of=上海日终）.
 
     标识符三选一（优先级: instrument_id > standard_ticker > ticker）:
     - instrument_id: 内部 ID，如 1000001
     - standard_ticker: Ditto 标准格式，如 "000001.XSHE"
     - ticker: 裸代码，如 "000001"
 
+    修订多版本收敛到 as_of 可见的最新披露版本；行级透出
+    knowledge_date/effective_from/effective_to（#628 事实/公告/版本分开）.
+
     Raises:
         FutureDateError: 400 如果 as_of_date 为未来日期
+        NotFoundError: 404 如果标识符在 as_of_date 不可解析
 
     """
     _reject_future_date(params.as_of_date, "as_of_date")
 
-    resolved_id = resolve_identifier_for_api(
+    resolved_id = resolve_identifier_or_404(
         metadata_facade,
         instrument_id=params.instrument_id,
         standard_ticker=params.standard_ticker,
@@ -130,9 +134,6 @@ async def get_financials(
         as_of_date=params.as_of_date,
         domain="fundamental",
     )
-
-    if resolved_id is None:
-        return APIResponse(data=[])
 
     # 根据报表类型调用对应的方法（在线程池中执行，避免阻塞事件循环）
     df = await asyncio.to_thread(
@@ -145,12 +146,12 @@ async def get_financials(
     )
 
     if df is None or df.is_empty():
-        return APIResponse(data=[])
+        return APIResponse(data=[], read_semantics="pit_asof")
 
     # 转换为模型列表
     financials = to_financial_list(df, report_type)
 
-    return APIResponse(data=financials)
+    return APIResponse(data=financials, read_semantics="pit_asof")
 
 
 @router.get(
@@ -165,20 +166,23 @@ async def get_dividend(
     params: Annotated[PITQueryParams, Depends()],
 ) -> APIResponse[list[Dividend]]:
     """
-    获取分红数据.
+    获取分红数据（pit_asof：as_of 可见版本，日粒度 as_of=上海日终）.
 
     标识符三选一（优先级: instrument_id > standard_ticker > ticker）:
     - instrument_id: 内部 ID，如 1000001
     - standard_ticker: Ditto 标准格式，如 "000001.XSHE"
     - ticker: 裸代码，如 "000001"
 
+    未披露数值以 null 透出，不零填充（#628）.
+
     Raises:
         FutureDateError: 400 如果 as_of_date 为未来日期
+        NotFoundError: 404 如果标识符在 as_of_date 不可解析
 
     """
     _reject_future_date(params.as_of_date, "as_of_date")
 
-    resolved_id = resolve_identifier_for_api(
+    resolved_id = resolve_identifier_or_404(
         metadata_facade,
         instrument_id=params.instrument_id,
         standard_ticker=params.standard_ticker,
@@ -186,9 +190,6 @@ async def get_dividend(
         as_of_date=params.as_of_date,
         domain="fundamental",
     )
-
-    if resolved_id is None:
-        return APIResponse(data=[])
 
     # 调用 facade（在线程池中执行，避免阻塞事件循环）
     df = await asyncio.to_thread(
@@ -200,12 +201,12 @@ async def get_dividend(
     )
 
     if df is None or df.is_empty():
-        return APIResponse(data=[])
+        return APIResponse(data=[], read_semantics="pit_asof")
 
     # 转换为模型列表
     dividends = to_dividend_list(df)
 
-    return APIResponse(data=dividends)
+    return APIResponse(data=dividends, read_semantics="pit_asof")
 
 
 @router.get(
@@ -222,6 +223,10 @@ async def list_corporate_actions(
     """
     查询公司行动列表.
 
+    读取语义由 as_of_date 决定（#628）：给定=pit_asof（同事实键多版本
+    收敛到最新可见披露）；缺省=latest_available（版本历史原样返回，
+    多版本行可见，行级 knowledge/effective 轴可区分）.
+
     标识符三选一（优先级: instrument_id > standard_ticker > ticker）:
     - instrument_id: 内部 ID，如 1000001
     - standard_ticker: Ditto 标准格式，如 "000001.XSHE"
@@ -230,6 +235,7 @@ async def list_corporate_actions(
     Raises:
         DateRangeError: 400 如果 start_date > end_date
         FutureDateError: 400 如果 as_of_date 为未来日期
+        NotFoundError: 404 如果标识符不可解析
 
     """
     # 验证日期范围
@@ -241,7 +247,7 @@ async def list_corporate_actions(
 
     _reject_future_date(params.as_of_date, "as_of_date")
 
-    resolved_id = resolve_identifier_for_api(
+    resolved_id = resolve_identifier_or_404(
         metadata_facade,
         instrument_id=params.instrument_id,
         standard_ticker=params.standard_ticker,
@@ -249,9 +255,6 @@ async def list_corporate_actions(
         as_of_date=params.as_of_date,
         domain="fundamental",
     )
-
-    if resolved_id is None:
-        return APIResponse(data=[])
 
     # 调用 facade（在线程池中执行，避免阻塞事件循环）
     df = await asyncio.to_thread(
@@ -264,10 +267,11 @@ async def list_corporate_actions(
         allow_experimental_data=params.allow_experimental_data,
     )
 
+    semantics: ReadSemantics = "pit_asof" if params.as_of_date else "latest_available"
     if df.is_empty():
-        return APIResponse(data=[])
+        return APIResponse(data=[], read_semantics=semantics)
 
     # 转换为模型列表
     actions = to_corporate_action_list(df)
 
-    return APIResponse(data=actions)
+    return APIResponse(data=actions, read_semantics=semantics)

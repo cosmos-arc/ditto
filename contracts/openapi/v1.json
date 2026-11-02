@@ -17,6 +17,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -41,6 +58,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -65,6 +99,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -89,6 +140,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -113,6 +181,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -137,6 +222,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -161,6 +263,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -185,6 +304,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -209,6 +345,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -233,6 +386,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -257,6 +427,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -281,6 +468,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -305,6 +509,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -329,6 +550,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -353,6 +591,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -377,6 +632,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -401,6 +673,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -425,6 +714,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -449,6 +755,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -473,6 +796,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -497,6 +837,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -521,6 +878,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -545,6 +919,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -569,6 +960,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -593,6 +1001,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -617,6 +1042,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -641,6 +1083,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -665,6 +1124,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -689,6 +1165,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -713,6 +1206,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -737,6 +1247,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -761,6 +1288,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -785,6 +1329,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -809,6 +1370,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -833,6 +1411,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -857,6 +1452,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -881,6 +1493,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -905,6 +1534,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -929,6 +1575,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -953,6 +1616,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -977,6 +1657,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -1001,6 +1698,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -1025,6 +1739,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -1049,6 +1780,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -1073,6 +1821,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -1097,6 +1862,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -1121,6 +1903,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -1145,6 +1944,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -1169,6 +1985,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -1193,6 +2026,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -1217,6 +2067,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -1241,6 +2108,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -1265,6 +2149,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -1289,6 +2190,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -1313,6 +2231,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -1337,6 +2272,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -1361,6 +2313,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -1385,6 +2354,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -1409,6 +2395,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -1433,6 +2436,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -1457,6 +2477,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -1481,6 +2518,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -1505,6 +2559,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -1529,6 +2600,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -1553,6 +2641,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -1577,6 +2682,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -1601,6 +2723,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -1625,6 +2764,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -1649,6 +2805,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -1673,6 +2846,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -1697,6 +2887,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -1721,6 +2928,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -1745,6 +2969,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -1769,6 +3010,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -1793,6 +3051,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -1817,6 +3092,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -1841,6 +3133,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -1865,6 +3174,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -1889,6 +3215,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -1913,6 +3256,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -1937,6 +3297,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -1961,6 +3338,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -1985,6 +3379,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -2009,6 +3420,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -2033,6 +3461,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -2057,6 +3502,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -2081,6 +3543,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -2105,6 +3584,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -2129,6 +3625,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -2153,6 +3666,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -2177,6 +3707,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -2201,6 +3748,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -2225,6 +3789,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -2249,6 +3830,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -2280,6 +3878,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -2304,6 +3919,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -2329,6 +3961,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -2357,6 +4006,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -2385,6 +4051,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -2413,6 +4096,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -2441,6 +4141,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -2469,6 +4186,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -2497,6 +4231,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -2525,6 +4276,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -2553,6 +4321,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -2581,12 +4366,74 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
           "data"
         ],
         "title": "APIResponse[list[CorporateAction]]",
+        "type": "object"
+      },
+      "APIResponse_list_DataCoverageInfo__": {
+        "properties": {
+          "data": {
+            "description": "响应数据",
+            "items": {
+              "$ref": "#/components/schemas/DataCoverageInfo"
+            },
+            "title": "Data",
+            "type": "array"
+          },
+          "pagination": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PaginationResponse"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "title": "APIResponse[list[DataCoverageInfo]]",
         "type": "object"
       },
       "APIResponse_list_DataLineageEventResponse__": {
@@ -2609,6 +4456,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -2637,6 +4501,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -2665,6 +4546,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -2693,6 +4591,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -2721,6 +4636,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -2749,6 +4681,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -2777,6 +4726,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -2805,6 +4771,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -2833,6 +4816,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -2861,6 +4861,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -2889,6 +4906,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -2917,6 +4951,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -2945,6 +4996,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -2973,6 +5041,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -3001,6 +5086,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -3029,6 +5131,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -3057,6 +5176,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -3085,6 +5221,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -3113,6 +5266,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -3141,6 +5311,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -3169,6 +5356,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -3197,6 +5401,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -3225,6 +5446,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -3253,6 +5491,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -3281,6 +5536,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -3309,6 +5581,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -3337,6 +5626,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -3365,6 +5671,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -3393,6 +5716,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -3421,6 +5761,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -3449,6 +5806,23 @@
               }
             ],
             "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
           }
         },
         "required": [
@@ -8282,7 +10656,7 @@
         "type": "object"
       },
       "CorporateAction": {
-        "description": "公司行动响应模型.\n\nAttributes:\n    instrument_id: 标的 ID\n    action_date: 行动日期\n    action_type: 行动类型\n    description: 行动描述",
+        "description": "公司行动响应模型.\n\nas_of_date 给定时为 pit_asof 语义（同事实键多版本收敛到最新可见披露）；\n缺省时为 latest_available 语义（版本历史原样返回，多版本行可见）.\n\nAttributes:\n    instrument_id: 标的 ID\n    action_date: 行动日期\n    action_type: 行动类型\n    description: 行动描述\n    knowledge_date: 公告锚\n    effective_from: 版本生效起点\n    effective_to: 版本关闭日（空=当前版本开放）",
         "properties": {
           "action_date": {
             "description": "行动日期",
@@ -8299,10 +10673,46 @@
             "title": "Description",
             "type": "string"
           },
+          "effective_from": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "版本生效起点",
+            "title": "Effective From"
+          },
+          "effective_to": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "版本关闭日（空=当前版本开放）",
+            "title": "Effective To"
+          },
           "instrument_id": {
             "description": "标的 ID",
             "title": "Instrument Id",
             "type": "integer"
+          },
+          "knowledge_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "公告锚",
+            "title": "Knowledge Date"
           }
         },
         "required": [
@@ -10141,6 +12551,107 @@
         "title": "DailyDecisionV3TailRiskResponse",
         "type": "object"
       },
+      "DataCoverageInfo": {
+        "description": "数据集覆盖限制快照（#622 测量证据投影，测量时点非实时；#628 限制传播）.",
+        "properties": {
+          "dataset": {
+            "description": "数据集 ID",
+            "title": "Dataset",
+            "type": "string"
+          },
+          "domain": {
+            "description": "数据域",
+            "title": "Domain",
+            "type": "string"
+          },
+          "gaps": {
+            "default": [],
+            "description": "缺口与限制说明（源端权限、末端滞后、制度分段等）",
+            "items": {
+              "type": "string"
+            },
+            "title": "Gaps",
+            "type": "array"
+          },
+          "knowledge_axis": {
+            "anyOf": [
+              {
+                "enum": [
+                  "provider_anchor",
+                  "derived_t1",
+                  "same_day",
+                  "observation"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "知识轴分类：provider_anchor=公告锚(日终语义) / derived_t1=T+1 推导 / same_day=即日 / observation=观察日(不宣称公告可知性)；None=未分类",
+            "title": "Knowledge Axis"
+          },
+          "measured_at": {
+            "description": "测量时点（ISO 日期；非实时）",
+            "title": "Measured At",
+            "type": "string"
+          },
+          "measured_end": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "实测覆盖终点（ISO 日期）",
+            "title": "Measured End"
+          },
+          "measured_start": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "实测覆盖起点（ISO 日期）",
+            "title": "Measured Start"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "测量备注",
+            "title": "Notes"
+          },
+          "status": {
+            "description": "ready=预期范围完整且当前 / partial=起点末端味道品种有缺 / empty=本地零行",
+            "enum": [
+              "ready",
+              "partial",
+              "empty"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "dataset",
+          "domain",
+          "status",
+          "measured_at"
+        ],
+        "title": "DataCoverageInfo",
+        "type": "object"
+      },
       "DataLineageAssetResponse": {
         "description": "数据资产身份响应.",
         "properties": {
@@ -10938,34 +13449,104 @@
         "type": "string"
       },
       "Dividend": {
-        "description": "分红响应模型.\n\nAttributes:\n    instrument_id: 标的 ID\n    announce_date: 公告日期\n    dividend_type: 分红类型\n    amount: 分红金额",
+        "description": "分红响应模型（pit_asof：as_of 可见版本）.\n\n存储列：ex_dividend_date（事实日）、div_proc、dividend_per_share（元/股）、\ndividend_yield；公告锚即 knowledge_date（#628 起按真实列映射，\n旧 amount 恒 0.0 的伪映射废弃）.\n\nAttributes:\n    instrument_id: 标的 ID\n    ex_dividend_date: 除息日（事实日，可能为空=未定除息日）\n    div_proc: 分红流程阶段（预案/股东大会/实施等）\n    dividend_per_share: 每股分红（元；空=未披露数值）\n    dividend_yield: 股息率\n    knowledge_date: 公告锚（as_of 可见的披露日）\n    effective_from: 版本生效起点\n    effective_to: 版本关闭日（空=当前版本开放）",
         "properties": {
-          "amount": {
-            "description": "分红金额",
-            "title": "Amount",
-            "type": "number"
+          "div_proc": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "分红流程阶段",
+            "title": "Div Proc"
           },
-          "announce_date": {
-            "description": "公告日期",
-            "title": "Announce Date",
-            "type": "string"
+          "dividend_per_share": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "每股分红（元）",
+            "title": "Dividend Per Share"
           },
-          "dividend_type": {
-            "description": "分红类型",
-            "title": "Dividend Type",
-            "type": "string"
+          "dividend_yield": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "股息率",
+            "title": "Dividend Yield"
+          },
+          "effective_from": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "版本生效起点",
+            "title": "Effective From"
+          },
+          "effective_to": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "版本关闭日（空=当前版本开放）",
+            "title": "Effective To"
+          },
+          "ex_dividend_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "除息日（事实日）",
+            "title": "Ex Dividend Date"
           },
           "instrument_id": {
             "description": "标的 ID",
             "title": "Instrument Id",
             "type": "integer"
+          },
+          "knowledge_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "公告锚（as_of 可见的披露日）",
+            "title": "Knowledge Date"
           }
         },
         "required": [
           "instrument_id",
-          "announce_date",
-          "dividend_type",
-          "amount"
+          "ex_dividend_date",
+          "div_proc",
+          "dividend_per_share",
+          "dividend_yield"
         ],
         "title": "Dividend",
         "type": "object"
@@ -12024,8 +14605,19 @@
         "type": "object"
       },
       "EtfNavResponse": {
-        "description": "ETF 净值响应（数据可得时返回点列，不可得时为空列表）。",
+        "description": "ETF 净值响应（latest_available：库内现存行，无 PIT 过滤，#628 标注）.\n\n空点列与「库尾未更新/不覆盖」经 data_coverage 区分；\n语义与覆盖随数据传播到图表与导出（受限研究不包装为严格 PIT）.",
         "properties": {
+          "data_coverage": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DataCoverageInfo"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "etf_nav 数据集覆盖限制（测量时点快照；空点列时用于区分不覆盖）"
+          },
           "instrument_id": {
             "description": "标的 ID",
             "title": "Instrument Id",
@@ -12038,6 +14630,17 @@
             },
             "title": "Points",
             "type": "array"
+          },
+          "read_semantics": {
+            "default": "latest_available",
+            "description": "读取时间语义：latest_available=现存行无 PIT 过滤",
+            "enum": [
+              "latest_available",
+              "pit_asof",
+              "frozen_snapshot"
+            ],
+            "title": "Read Semantics",
+            "type": "string"
           }
         },
         "required": [
@@ -14165,7 +16768,7 @@
         "type": "object"
       },
       "Financial": {
-        "description": "财务报表响应模型.\n\nAttributes:\n    instrument_id: 标的 ID\n    report_date: 报告期\n    report_type: 报表类型\n    data: 财务数据字典",
+        "description": "财务报表响应模型（pit_asof：as_of 可见版本，多版本收敛到最新披露）.\n\nAttributes:\n    instrument_id: 标的 ID\n    report_date: 报告期\n    report_type: 报表类型\n    data: 财务数据字典（读取器业务列）\n    knowledge_date: 公告锚（as_of 可见的披露日）\n    effective_from: 版本生效起点（=公告锚）\n    effective_to: 版本关闭日（空=当前版本开放）",
         "properties": {
           "data": {
             "additionalProperties": true,
@@ -14173,10 +16776,46 @@
             "title": "Data",
             "type": "object"
           },
+          "effective_from": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "版本生效起点",
+            "title": "Effective From"
+          },
+          "effective_to": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "版本关闭日（空=当前版本开放）",
+            "title": "Effective To"
+          },
           "instrument_id": {
             "description": "标的 ID",
             "title": "Instrument Id",
             "type": "integer"
+          },
+          "knowledge_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "公告锚（as_of 可见的披露日）",
+            "title": "Knowledge Date"
           },
           "report_date": {
             "description": "报告期",
@@ -21911,6 +24550,23 @@
             "title": "Query Time Ms",
             "type": "number"
           },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
+          },
           "resolved_source_ticker": {
             "title": "Resolved Source Ticker",
             "type": "string"
@@ -29205,7 +31861,7 @@
     },
     "/api/v1/capital/margin": {
       "get": {
-        "description": "获取融资融券数据.\n\n标识符三选一（优先级: instrument_id > standard_ticker > ticker）:\n- instrument_id: 内部 ID，如 1000001\n- standard_ticker: Ditto 标准格式，如 \"000001.XSHE\"\n- ticker: 裸代码，如 \"000001\"\n\nCapability maturity: `experimental`. Implemented or partly implemented; not production scope.",
+        "description": "获取融资融券数据（pit_asof：as_of 可见版本，日粒度 as_of=上海日终）.\n\n标识符三选一（优先级: instrument_id > standard_ticker > ticker）:\n- instrument_id: 内部 ID，如 1000001\n- standard_ticker: Ditto 标准格式，如 \"000001.XSHE\"\n- ticker: 裸代码，如 \"000001\"\n\nRaises:\n    NotFoundError: 404 如果标识符在 as_of_date 不可解析\n\nCapability maturity: `experimental`. Implemented or partly implemented; not production scope.",
         "operationId": "capital_get_margin",
         "parameters": [
           {
@@ -29390,7 +32046,7 @@
     },
     "/api/v1/capital/valuation": {
       "get": {
-        "description": "获取估值指标数据.\n\n标识符三选一（优先级: instrument_id > standard_ticker > ticker）:\n- instrument_id: 内部 ID，如 1000001\n- standard_ticker: Ditto 标准格式，如 \"000001.XSHE\"\n- ticker: 裸代码，如 \"000001\"\n\nCapability maturity: `experimental`. Implemented or partly implemented; not production scope.",
+        "description": "获取估值指标数据（pit_asof：as_of 可见版本，日粒度 as_of=上海日终）.\n\n标识符三选一（优先级: instrument_id > standard_ticker > ticker）:\n- instrument_id: 内部 ID，如 1000001\n- standard_ticker: Ditto 标准格式，如 \"000001.XSHE\"\n- ticker: 裸代码，如 \"000001\"\n\nRaises:\n    NotFoundError: 404 如果标识符在 as_of_date 不可解析\n\nCapability maturity: `experimental`. Implemented or partly implemented; not production scope.",
         "operationId": "capital_get_valuation",
         "parameters": [
           {
@@ -29575,7 +32231,7 @@
     },
     "/api/v1/commodity/bars": {
       "post": {
-        "description": "查询商品 K 线数据.\n\nArgs:\n    query: 查询参数\n        - commodity_codes: 商品代码列表 (可选)\n        - start_date: 开始日期 (可选)\n        - end_date: 结束日期 (可选)\n        - limit: 返回数量限制 (默认 1000, 范围 1-10000)\n    facade: CommodityQueryFacade 依赖注入\n\nReturns:\n    APIResponse 包含商品 K 线数据列表\n\nCapability maturity: `experimental`. Implemented or partly implemented; not production scope.",
+        "description": "查询商品 K 线数据（latest_available：库内现存行，无 PIT 过滤，#628 标注）.\n\ncommodity_daily 为 partial 覆盖（仅 2026-09 起，见 GET /datasets/coverage）；\n空结果与不覆盖经覆盖注册表区分.\n\nArgs:\n    query: 查询参数\n        - commodity_codes: 商品代码列表 (可选)\n        - start_date: 开始日期 (可选)\n        - end_date: 结束日期 (可选)\n        - limit: 返回数量限制 (默认 1000, 范围 1-10000)\n    facade: CommodityQueryFacade 依赖注入\n\nReturns:\n    APIResponse 包含商品 K 线数据列表\n\nCapability maturity: `experimental`. Implemented or partly implemented; not production scope.",
         "operationId": "commodity_post_bars",
         "parameters": [
           {
@@ -29690,9 +32346,116 @@
         "x-ditto-maturity": "experimental"
       }
     },
+    "/api/v1/datasets/coverage": {
+      "get": {
+        "description": "列出全部数据集覆盖限制（latest_available 注册表读，测量时点快照）.\n\n来源为 #622 覆盖合同的运行时蒸馏（docs/data/coverage-contract.yaml），\nmeasured_at 为测量时点而非实时状态；消费方（API/图表/导出）据此区分\n「正常空」与「不覆盖」，受限研究不包装为严格 PIT。状态词表：\nready=预期范围完整且当前 / partial=起点末端味道品种有缺 / empty=本地零行。\n\nCapability maturity: `experimental`. Implemented or partly implemented; not production scope.",
+        "operationId": "datasets_list_coverage",
+        "parameters": [
+          {
+            "description": "Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required.",
+            "in": "header",
+            "name": "X-Ditto-API-Contract-Version",
+            "required": false,
+            "schema": {
+              "const": "v1",
+              "description": "Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required.",
+              "title": "X-Ditto-Api-Contract-Version",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIResponse_list_DataCoverageInfo__"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad request"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Resource not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Request conflicts with current state"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Request or domain validation failed"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal server error"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Structured Ditto API error"
+          }
+        },
+        "summary": "List Coverage",
+        "tags": [
+          "datasets"
+        ],
+        "x-ditto-maturity": "experimental"
+      }
+    },
     "/api/v1/fundamental/corporate-actions": {
       "get": {
-        "description": "查询公司行动列表.\n\n标识符三选一（优先级: instrument_id > standard_ticker > ticker）:\n- instrument_id: 内部 ID，如 1000001\n- standard_ticker: Ditto 标准格式，如 \"000001.XSHE\"\n- ticker: 裸代码，如 \"000001\"\n\nRaises:\n    DateRangeError: 400 如果 start_date > end_date\n    FutureDateError: 400 如果 as_of_date 为未来日期\n\nCapability maturity: `experimental`. Implemented or partly implemented; not production scope.",
+        "description": "查询公司行动列表.\n\n读取语义由 as_of_date 决定（#628）：给定=pit_asof（同事实键多版本\n收敛到最新可见披露）；缺省=latest_available（版本历史原样返回，\n多版本行可见，行级 knowledge/effective 轴可区分）.\n\n标识符三选一（优先级: instrument_id > standard_ticker > ticker）:\n- instrument_id: 内部 ID，如 1000001\n- standard_ticker: Ditto 标准格式，如 \"000001.XSHE\"\n- ticker: 裸代码，如 \"000001\"\n\nRaises:\n    DateRangeError: 400 如果 start_date > end_date\n    FutureDateError: 400 如果 as_of_date 为未来日期\n    NotFoundError: 404 如果标识符不可解析\n\nCapability maturity: `experimental`. Implemented or partly implemented; not production scope.",
         "operationId": "fundamental_list_corporate_actions",
         "parameters": [
           {
@@ -29894,7 +32657,7 @@
     },
     "/api/v1/fundamental/dividend": {
       "get": {
-        "description": "获取分红数据.\n\n标识符三选一（优先级: instrument_id > standard_ticker > ticker）:\n- instrument_id: 内部 ID，如 1000001\n- standard_ticker: Ditto 标准格式，如 \"000001.XSHE\"\n- ticker: 裸代码，如 \"000001\"\n\nRaises:\n    FutureDateError: 400 如果 as_of_date 为未来日期\n\nCapability maturity: `experimental`. Implemented or partly implemented; not production scope.",
+        "description": "获取分红数据（pit_asof：as_of 可见版本，日粒度 as_of=上海日终）.\n\n标识符三选一（优先级: instrument_id > standard_ticker > ticker）:\n- instrument_id: 内部 ID，如 1000001\n- standard_ticker: Ditto 标准格式，如 \"000001.XSHE\"\n- ticker: 裸代码，如 \"000001\"\n\n未披露数值以 null 透出，不零填充（#628）.\n\nRaises:\n    FutureDateError: 400 如果 as_of_date 为未来日期\n    NotFoundError: 404 如果标识符在 as_of_date 不可解析\n\nCapability maturity: `experimental`. Implemented or partly implemented; not production scope.",
         "operationId": "fundamental_get_dividend",
         "parameters": [
           {
@@ -30069,7 +32832,7 @@
     },
     "/api/v1/fundamental/financials/{report_type}": {
       "get": {
-        "description": "获取财务报表数据.\n\n标识符三选一（优先级: instrument_id > standard_ticker > ticker）:\n- instrument_id: 内部 ID，如 1000001\n- standard_ticker: Ditto 标准格式，如 \"000001.XSHE\"\n- ticker: 裸代码，如 \"000001\"\n\nRaises:\n    FutureDateError: 400 如果 as_of_date 为未来日期\n\nCapability maturity: `experimental`. Implemented or partly implemented; not production scope.",
+        "description": "获取财务报表数据（pit_asof：as_of 可见版本，日粒度 as_of=上海日终）.\n\n标识符三选一（优先级: instrument_id > standard_ticker > ticker）:\n- instrument_id: 内部 ID，如 1000001\n- standard_ticker: Ditto 标准格式，如 \"000001.XSHE\"\n- ticker: 裸代码，如 \"000001\"\n\n修订多版本收敛到 as_of 可见的最新披露版本；行级透出\nknowledge_date/effective_from/effective_to（#628 事实/公告/版本分开）.\n\nRaises:\n    FutureDateError: 400 如果 as_of_date 为未来日期\n    NotFoundError: 404 如果标识符在 as_of_date 不可解析\n\nCapability maturity: `experimental`. Implemented or partly implemented; not production scope.",
         "operationId": "fundamental_get_financials",
         "parameters": [
           {
@@ -30252,7 +33015,7 @@
     },
     "/api/v1/fx/bars": {
       "post": {
-        "description": "查询外汇 K 线数据.\n\nArgs:\n    query: 查询参数\n        - currency_pairs: 货币对列表 (可选, 如 [\"USDCNH.FXCM\", \"EURUSD.FXCM\"])\n        - start_date: 开始日期 (可选)\n        - end_date: 结束日期 (可选)\n        - limit: 返回数量限制 (默认 1000, 范围 1-10000)\n    facade: FXQueryFacade 依赖注入\n\nReturns:\n    APIResponse 包含外汇 K 线数据列表\n\nCapability maturity: `experimental`. Implemented or partly implemented; not production scope.",
+        "description": "查询外汇 K 线数据（latest_available：库内现存行，无 PIT 过滤，#628 标注）.\n\nfx_daily 当前本地零行（empty，见 GET /datasets/coverage）；\n空列表=不覆盖而非正常无数据.\n\nArgs:\n    query: 查询参数\n        - currency_pairs: 货币对列表 (可选, 如 [\"USDCNH.FXCM\", \"EURUSD.FXCM\"])\n        - start_date: 开始日期 (可选)\n        - end_date: 结束日期 (可选)\n        - limit: 返回数量限制 (默认 1000, 范围 1-10000)\n    facade: FXQueryFacade 依赖注入\n\nReturns:\n    APIResponse 包含外汇 K 线数据列表\n\nCapability maturity: `experimental`. Implemented or partly implemented; not production scope.",
         "operationId": "fx_post_bars",
         "parameters": [
           {
@@ -31341,7 +34104,7 @@
     },
     "/api/v1/macro/indicators": {
       "post": {
-        "description": "查询宏观指标数据.\n\nArgs:\n    query: 查询参数\n        - indicators: 指标 ID 或代码列表 (可选)\n        - start_date: 开始日期 (可选)\n        - end_date: 结束日期 (可选)\n        - category: 类别过滤 (economic/interest_rate/exchange_rate/money_supply)\n        - frequency: 频率过滤 (daily/monthly/quarterly)\n    facade: MacroQueryFacade 依赖注入\n\nReturns:\n    APIResponse 包含宏观指标数据列表\n\nCapability maturity: `experimental`. Implemented or partly implemented; not production scope.",
+        "description": "查询宏观指标数据（latest_available：库内现存行，无 PIT 过滤，#628 标注）.\n\nmacro_indicators 为 partial 覆盖（见 GET /datasets/coverage）；空结果\n与不覆盖经覆盖注册表区分，受限研究不包装为严格 PIT.\n\nArgs:\n    query: 查询参数\n        - indicators: 指标 ID 或代码列表 (可选)\n        - start_date: 开始日期 (可选)\n        - end_date: 结束日期 (可选)\n        - category: 类别过滤 (economic/interest_rate/exchange_rate/money_supply)\n        - frequency: 频率过滤 (daily/monthly/quarterly)\n    facade: MacroQueryFacade 依赖注入\n\nReturns:\n    APIResponse 包含宏观指标数据列表\n\nCapability maturity: `experimental`. Implemented or partly implemented; not production scope.",
         "operationId": "macro_post_indicators",
         "parameters": [
           {
@@ -35337,7 +38100,7 @@
     },
     "/api/v1/market/bars": {
       "post": {
-        "description": "查询 K 线数据.\n\nArgs:\n    query: 查询参数\n        - instrument_ids: 标的 ID 列表 (可选)\n        - start_date: 开始日期 (可选)\n        - end_date: 结束日期 (可选)\n        - adjustment: 复权类型 (none/qfq/hfq)\n        - asset_class: 资产类别过滤 (可选)\n        - allow_experimental_data: 显式允许 experimental 数据集进入研究态查询\n        - limit: 返回数量限制 (1-10000)\n    facade: MarketQueryFacade 依赖注入\n\nReturns:\n    APIResponse 包含 K 线数据列表\n\nCapability maturity: `initial-focus`. Primary near-term product scope under architecture review.",
+        "description": "查询 K 线数据（latest_available：库内现存行，无 PIT 过滤，#628 标注）.\n\n受限研究读取——不作为严格 PIT 依据；覆盖限制按数据集经\nGET /datasets/coverage 查询（stock_daily/etf_daily 等按资产类别）.\n\nArgs:\n    query: 查询参数\n        - instrument_ids: 标的 ID 列表 (可选)\n        - start_date: 开始日期 (可选)\n        - end_date: 结束日期 (可选)\n        - adjustment: 复权类型 (none/qfq/hfq)\n        - asset_class: 资产类别过滤 (可选)\n        - allow_experimental_data: 显式允许 experimental 数据集进入研究态查询\n        - limit: 返回数量限制 (1-10000)\n    facade: MarketQueryFacade 依赖注入\n\nReturns:\n    APIResponse 包含 K 线数据列表\n\nCapability maturity: `initial-focus`. Primary near-term product scope under architecture review.",
         "operationId": "market_post_bars",
         "parameters": [
           {
@@ -35727,7 +38490,7 @@
     },
     "/api/v1/market/etf-nav": {
       "post": {
-        "description": "查询 ETF 净值序列.\n\n数据不可得（读取器未配置或无数据）时返回空 points，由前端诚实降级。\n\nCapability maturity: `initial-focus`. Primary near-term product scope under architecture review.",
+        "description": "查询 ETF 净值序列（latest_available：库内现存行，无 PIT 过滤，#628 标注）.\n\n数据不可得（读取器未配置或无数据）时返回空 points，由前端诚实降级；\ndata_coverage 携带 etf_nav 数据集覆盖限制（测量时点快照），用于区分\n「正常空」与「库尾未更新/不覆盖」，并随图表与导出传播。\n\nCapability maturity: `initial-focus`. Primary near-term product scope under architecture review.",
         "operationId": "market_post_etf_nav",
         "parameters": [
           {
@@ -35844,7 +38607,7 @@
     },
     "/api/v1/market/indicator-series": {
       "post": {
-        "description": "查询叠加指标全序列（technical-analysis registry 既有公式）.\n\nmaturity 门控与 /market/bars 一致；warm-up 段输出 null。\n\nCapability maturity: `initial-focus`. Primary near-term product scope under architecture review.",
+        "description": "查询叠加指标全序列（technical-analysis registry 既有公式）.\n\nlatest_available 读取（#628 标注）：输入为库内现存 bars，无 PIT 过滤；\nmaturity 门控与 /market/bars 一致；warm-up 段输出 null。\n\nCapability maturity: `initial-focus`. Primary near-term product scope under architecture review.",
         "operationId": "market_post_indicator_series",
         "parameters": [
           {
@@ -47892,6 +50655,11 @@
     {
       "description": "Capability maturity: `experimental`. Implemented or partly implemented; not production scope.",
       "name": "commodity",
+      "x-ditto-maturity": "experimental"
+    },
+    {
+      "description": "Capability maturity: `experimental`. Implemented or partly implemented; not production scope.",
+      "name": "datasets",
       "x-ditto-maturity": "experimental"
     },
     {

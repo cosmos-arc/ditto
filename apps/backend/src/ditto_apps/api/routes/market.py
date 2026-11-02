@@ -15,6 +15,7 @@ from ditto_application.processes.experiments.regime_diagnostics_reader import (
     RegimeDiagnosticsView,
     RegimeObservation,
 )
+from ditto_application.queries.dataset_coverage import DatasetCoverageQueryFacade
 from ditto_application.queries.market import MarketQueryFacade
 from ditto_application.queries.market_chart import (
     MarketChartQueryFacade,
@@ -33,7 +34,7 @@ from ditto_application.queries.snapshot_readiness import SnapshotReadinessQuery
 from fastapi import APIRouter, Query
 
 from ditto_apps.api.errors import NotFoundError, UnprocessableEntityError
-from ditto_apps.models.common import APIResponse
+from ditto_apps.models.common import APIResponse, DataCoverageInfo
 from ditto_apps.models.market import (
     Bar,
     BarsQuery,
@@ -287,7 +288,10 @@ async def post_bars(
     facade: Annotated[MarketQueryFacade, FromComponent()],
 ) -> APIResponse[list[Bar]]:
     """
-    查询 K 线数据.
+    查询 K 线数据（latest_available：库内现存行，无 PIT 过滤，#628 标注）.
+
+    受限研究读取——不作为严格 PIT 依据；覆盖限制按数据集经
+    GET /datasets/coverage 查询（stock_daily/etf_daily 等按资产类别）.
 
     Args:
         query: 查询参数
@@ -321,7 +325,7 @@ async def post_bars(
     # 应用 limit
     bars = bars[: query.limit]
 
-    return APIResponse(data=bars)
+    return APIResponse(data=bars, read_semantics="latest_available")
 
 
 @router.post(
@@ -337,6 +341,7 @@ async def post_indicator_series(
     """
     查询叠加指标全序列（technical-analysis registry 既有公式）.
 
+    latest_available 读取（#628 标注）：输入为库内现存 bars，无 PIT 过滤；
     maturity 门控与 /market/bars 一致；warm-up 段输出 null。
     """
     df = await asyncio.to_thread(
@@ -369,7 +374,8 @@ async def post_indicator_series(
             registry_version="technical-indicator-registry.v1",
             trade_dates=trade_dates,
             series=series,
-        )
+        ),
+        read_semantics="latest_available",
     )
 
 
@@ -382,11 +388,14 @@ async def post_indicator_series(
 async def post_etf_nav(
     query: EtfNavQuery,
     facade: Annotated[MarketQueryFacade, FromComponent()],
+    coverage_facade: Annotated[DatasetCoverageQueryFacade, FromComponent()],
 ) -> APIResponse[EtfNavResponse]:
     """
-    查询 ETF 净值序列.
+    查询 ETF 净值序列（latest_available：库内现存行，无 PIT 过滤，#628 标注）.
 
-    数据不可得（读取器未配置或无数据）时返回空 points，由前端诚实降级。
+    数据不可得（读取器未配置或无数据）时返回空 points，由前端诚实降级；
+    data_coverage 携带 etf_nav 数据集覆盖限制（测量时点快照），用于区分
+    「正常空」与「库尾未更新/不覆盖」，并随图表与导出传播。
     """
     df = await asyncio.to_thread(
         facade.get_etf_nav,
@@ -400,6 +409,16 @@ async def post_etf_nav(
         for row in df.to_dicts()
         if row.get("unit_nav") is not None
     ]
+    coverage_limit = coverage_facade.get("etf_nav")
     return APIResponse(
-        data=EtfNavResponse(instrument_id=query.instrument_id, points=points)
+        read_semantics="latest_available",
+        data=EtfNavResponse(
+            instrument_id=query.instrument_id,
+            points=points,
+            data_coverage=(
+                DataCoverageInfo.from_view(coverage_limit)
+                if coverage_limit is not None
+                else None
+            ),
+        ),
     )

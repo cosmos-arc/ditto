@@ -119,6 +119,25 @@ rotation 与 selection 的三元组必须逐项相等（`run_industry_and_securi
 market_context 请求校验三序 `publication <= knowledge <= as_of`
 （`DATA/query/contracts.py:44-64` `PITQueryContext`）。
 
+### 2.6 通用数据读取端点的语义声明与限制传播（#628 P4）
+
+- **语义词汇表**（backend `models/common.py` `ReadSemantics`）：
+  `latest_available`（现存行，无 PIT 过滤——受限研究）/ `pit_asof`
+  （as_of 可见版本；**日粒度 as_of=上海日终**，date 精度知识当日全天
+  不视为部分可见）/ `frozen_snapshot`（快照重放）。各数据端点 docstring
+  逐一声明所属语义；`/market/etf-nav` 响应内联 `read_semantics`。
+- **SQLite PIT 修订收敛**（`sqlite_table_reader.py _finalize`）：PIT 查询下
+  同事实键多版本（修订公告双开区间行）收敛到 knowledge 最新可见版本
+  （并列取 effective_from 更晚），输出确定性排序；非 PIT 读不收敛
+  （corporate_actions 版本史契约）。corporate_actions 事实键含
+  action_type（同日异类型≠修订）。回测/CLI/API 全消费端经此一层收敛。
+- **覆盖限制传播**：`ditto_data/coverage/limits.py` 是 #622 覆盖合同的
+  运行时蒸馏（守卫测试同步），`GET /datasets/coverage` 暴露全量；
+  etf-nav 响应携带 `data_coverage` 直达图表降级文案与导出链
+  （验收记录 docs/data/consumer-pit-verification.md）。
+- **fail-closed 补口**：fundamental/capital 标识符解析失败 404（原静默
+  空列表）；dividend 未披露数值 null 透出（原 amount 恒 0.0 伪映射）。
+
 ## 3. 三条车道的过滤规则（#583 讨论收敛的最终结论）
 
 | 车道 | 卡不卡入库时间 | 防前视靠什么 |

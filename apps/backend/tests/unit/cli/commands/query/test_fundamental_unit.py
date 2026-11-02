@@ -30,13 +30,18 @@ def _financial_df() -> pl.DataFrame:
     )
 
 
-def _dividend_df(amount: float = 0.5) -> pl.DataFrame:
+def _dividend_df(per_share: float | None = 0.5) -> pl.DataFrame:
+    """读取器真实列（#628）：ex_dividend_date/div_proc/dividend_per_share."""
     return pl.DataFrame(
         {
             "instrument_id": [1_000_001],
-            "announce_date": ["2024-05-01"],
-            "dividend_type": ["cash"],
-            "amount": [amount],
+            "ex_dividend_date": ["2024-06-15"],
+            "div_proc": ["实施"],
+            "dividend_per_share": [per_share],
+            "dividend_yield": [0.02],
+            "knowledge_date": ["2024-05-01"],
+            "effective_from": ["2024-05-01"],
+            "effective_to": [None],
         }
     )
 
@@ -244,7 +249,8 @@ class TestFundamentalDividendCommand:
         )
 
         assert result.exit_code == 0
-        assert '"dividend_type": "cash"' in result.output
+        assert '"dividend_per_share": 0.5' in result.output
+        assert '"knowledge_date": "2024-05-01"' in result.output
         metadata.resolve_instrument_identifier.assert_called_once_with(
             instrument_id=None,
             standard_ticker="000001.XSHE",
@@ -301,12 +307,35 @@ class TestFundamentalDividendCommand:
         assert result.exit_code == 0
         assert "未找到分红数据" in result.output
 
-    def test_dividend_table_renders_zero_amount_as_dash(
+    def test_dividend_table_renders_missing_amount_as_dash(
         self, runner: CliRunner, mocker: MockerFixture
     ) -> None:
-        """Table output uses the fallback display for zero dividend amounts."""
+        """Table output uses the fallback display for undisclosed amounts."""
         facade, _metadata = _patch_facades(mocker)
-        facade.get_dividend.return_value = _dividend_df(amount=0.0)
+        facade.get_dividend.return_value = _dividend_df(per_share=None)
+
+    def test_dividend_table_renders_disclosed_zero_as_zero(
+        self, runner: CliRunner, mocker: MockerFixture
+    ) -> None:
+        """correctness W3：已披露的 0 是数值（送转方案零分红），非未披露。"""
+        facade, _metadata = _patch_facades(mocker)
+        facade.get_dividend.return_value = _dividend_df(per_share=0.0)
+
+        result = runner.invoke(
+            app,
+            [
+                "query",
+                "fundamental",
+                "dividend",
+                "--instrument-id",
+                "1000001",
+                "--date",
+                "2024-12-31",
+            ],
+        )
+
+        assert result.exit_code == 0
+        assert "0.0000" in result.output
 
         result = runner.invoke(
             app,
@@ -323,7 +352,7 @@ class TestFundamentalDividendCommand:
 
         assert result.exit_code == 0
         assert "分红数据" in result.output
-        assert "cash" in result.output
+        assert "实施" in result.output
 
 
 @pytest.mark.unit

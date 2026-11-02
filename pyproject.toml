@@ -258,6 +258,11 @@ unfixable = []
 "packages/data/src/ditto_data/quality/golden.py" = ["RUF001"]
 "packages/data/src/ditto_data/sources/tushare/adapters/index.py" = ["RUF001"]
 "packages/data/src/ditto_data/sources/tushare/adapters/fundamental.py" = ["RUF001"]
+# #628：覆盖限制蒸馏数据与 API description 全角标点；limits.py 数据串不可换行
+"packages/data/src/ditto_data/coverage/limits.py" = ["RUF001", "E501"]
+"apps/backend/src/ditto_apps/models/common.py" = ["RUF001"]
+"apps/backend/src/ditto_apps/models/fundamental.py" = ["RUF001"]
+"apps/backend/src/ditto_apps/models/market.py" = ["RUF001"]
 
 # Kernel tracing — Protocol __call__ 和通用装饰器签名不可避免使用 Any
 "packages/kernel/src/ditto_kernel/tracing.py" = ["ANN401", "D102"]

@@ -108,6 +108,7 @@ class TestGetFinancials:
         assert "data" in data
         assert len(data["data"]) == 1
         assert data["data"][0]["instrument_id"] == 1000001
+        assert data["data"][0]["data"]["total_assets"] == 1000000.0
 
     def test_get_income_statement(
         self,
@@ -226,9 +227,13 @@ class TestGetDividend:
         mock_fundamental_facade.get_dividend.return_value = pl.DataFrame(
             {
                 "instrument_id": [1_000_001],
-                "announce_date": ["2024-03-31"],
-                "dividend_type": ["cash"],
-                "amount": [0.5],
+                "ex_dividend_date": ["2024-06-15"],
+                "div_proc": ["实施"],
+                "dividend_per_share": [0.5],
+                "dividend_yield": [0.02],
+                "knowledge_date": ["2024-03-31"],
+                "effective_from": ["2024-03-31"],
+                "effective_to": [None],
             }
         )
 
@@ -247,7 +252,8 @@ class TestGetDividend:
         assert "data" in data
         assert len(data["data"]) == 1
         assert data["data"][0]["instrument_id"] == 1000001
-        assert data["data"][0]["amount"] == 0.5
+        assert data["data"][0]["dividend_per_share"] == 0.5
+        assert data["data"][0]["knowledge_date"] == "2024-03-31"
 
     def test_get_dividend_empty_result(
         self,
@@ -486,3 +492,58 @@ class TestFutureDateValidation:
 
         # Assert — 不应命中未来日期校验
         assert response.status_code == 200
+
+
+@pytest.mark.integration
+class TestFundamentalP4Semantics:
+    """#628 P4：解析失败 404 fail-closed + 行级版本轴 + 真实业务列映射."""
+
+    def test_unresolved_identifier_returns_404_not_empty(
+        self,
+        client: TestClient,
+        mock_fundamental_facade: MagicMock,
+        mock_metadata_facade: MagicMock,
+    ) -> None:
+        """缺必需输入拒绝而非空列表：解析失败 404 + NOT_FOUND."""
+        mock_metadata_facade.resolve_instrument_identifier.return_value = None
+
+        response = client.get(
+            "/api/v1/fundamental/financials/balance_sheet",
+            params={"ticker": "NOTEXIST", "as_of_date": "2024-06-01"},
+        )
+
+        assert response.status_code == 404
+        body = response.json()
+        assert body["error_code"] == "NOT_FOUND"
+        mock_fundamental_facade.get_balance_sheet.assert_not_called()
+
+    def test_financials_row_carries_version_axes_and_business_columns(
+        self,
+        client: TestClient,
+        mock_fundamental_facade: MagicMock,
+    ) -> None:
+        """读取器平铺业务列 → data 字典 + knowledge/effective 版本轴（#628）."""
+        mock_fundamental_facade.get_balance_sheet.return_value = pl.DataFrame(
+            {
+                "instrument_id": [1_000_001],
+                "report_date": ["2024-03-31"],
+                "knowledge_date": ["2024-04-25"],
+                "effective_from": ["2024-04-25"],
+                "effective_to": [None],
+                "total_assets": [1_000_000.0],
+                "net_assets": [500_000.0],
+            }
+        )
+
+        response = client.get(
+            "/api/v1/fundamental/financials/balance_sheet",
+            params={"instrument_id": 1000001, "as_of_date": "2024-06-01"},
+        )
+
+        assert response.status_code == 200
+        row = response.json()["data"][0]
+        assert row["data"]["total_assets"] == 1_000_000.0
+        assert row["data"]["net_assets"] == 500_000.0
+        assert row["knowledge_date"] == "2024-04-25"
+        assert row["effective_from"] == "2024-04-25"
+        assert row["effective_to"] is None

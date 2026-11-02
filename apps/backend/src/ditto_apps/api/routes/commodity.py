@@ -35,7 +35,10 @@ async def post_bars(
     facade: Annotated[CommodityQueryFacade, FromComponent()],
 ) -> APIResponse[list[CommodityBar]]:
     """
-    查询商品 K 线数据.
+    查询商品 K 线数据（latest_available：库内现存行，无 PIT 过滤，#628 标注）.
+
+    commodity_daily 为 partial 覆盖（仅 2026-09 起，见 GET /datasets/coverage）；
+    空结果与不覆盖经覆盖注册表区分.
 
     Args:
         query: 查询参数

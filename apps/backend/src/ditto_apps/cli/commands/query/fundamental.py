@@ -196,15 +196,21 @@ def get_dividend(
             return
 
         table = Table(title="分红数据")
-        table.add_column("公告日期", style="cyan")
-        table.add_column("分红类型", style="green")
-        table.add_column("分红金额", style="yellow", justify="right")
+        table.add_column("公告锚", style="cyan")
+        table.add_column("除息日", style="cyan")
+        table.add_column("流程", style="green")
+        table.add_column("每股分红(元)", style="yellow", justify="right")
+        table.add_column("股息率", style="yellow", justify="right")
 
         for div in dividends:
             table.add_row(
-                str(div.announce_date) if div.announce_date else "-",
-                div.dividend_type or "-",
-                f"{div.amount:.4f}" if div.amount else "-",
+                str(div.knowledge_date) if div.knowledge_date else "-",
+                str(div.ex_dividend_date) if div.ex_dividend_date else "-",
+                div.div_proc or "-",
+                f"{div.dividend_per_share:.4f}"
+                if div.dividend_per_share is not None
+                else "-",
+                f"{div.dividend_yield:.4f}" if div.dividend_yield is not None else "-",
             )
 
         console.print(table)

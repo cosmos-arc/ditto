@@ -31,6 +31,7 @@ from ditto_features.technical_analysis.service import TechnicalAnalysisService
 from ditto_application.queries.capital import CapitalQueryFacade
 from ditto_application.queries.catalog import CatalogQueryFacade
 from ditto_application.queries.commodity import CommodityQueryFacade
+from ditto_application.queries.dataset_coverage import DatasetCoverageQueryFacade
 from ditto_application.queries.derived import DerivedQueryFacade
 from ditto_application.queries.evaluation import FactorEvaluationFacade
 from ditto_application.queries.forward_return_service import ForwardReturnService
@@ -290,6 +291,11 @@ class AppMarketQueryProvider(Provider):
     ) -> FundamentalQueryFacade:
         """基本面查询 facade — 隐藏 CQRS 端口类型."""
         return FundamentalQueryFacade(fundamental_store=fundamental_store)
+
+    @provide
+    def dataset_coverage_query_facade(self) -> DatasetCoverageQueryFacade:
+        """数据集覆盖限制查询 facade — #628 限制传播的无状态注册表读."""
+        return DatasetCoverageQueryFacade()
 
     @provide
     def macro_query_facade(

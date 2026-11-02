@@ -1,6 +1,6 @@
 /**
  * DO NOT EDIT: generated from contracts/openapi/v1.json.
- * Schema SHA-256: 50416b556179e97de3858ea761292904e1f99b35a52d5ebb1fbb6b390987b2f0
+ * Schema SHA-256: 619bd0612281657c9e6ddb9898c229e01c32ad284defcb35377496a7470fc1e9
  * Generator: ditto-operation-response-contracts 4
  */
 
@@ -288,6 +288,16 @@ export const operationResponseContracts = {
     "default": ["application/json"],
   },
   "get /api/v1/capital/valuation": {
+    "200": ["application/json"],
+    "400": ["application/json"],
+    "403": ["application/json"],
+    "404": ["application/json"],
+    "409": ["application/json"],
+    "422": ["application/json"],
+    "500": ["application/json"],
+    "default": ["application/json"],
+  },
+  "get /api/v1/datasets/coverage": {
     "200": ["application/json"],
     "400": ["application/json"],
     "403": ["application/json"],
@@ -1923,6 +1933,11 @@ export const operationRequestContracts = {
     parameters: {
       "header": ["X-Ditto-API-Contract-Version"],
       "query": ["allow_experimental_data", "as_of_date", "instrument_id", "standard_ticker", "ticker"],
+    },
+  },
+  "get /api/v1/datasets/coverage": {
+    parameters: {
+      "header": ["X-Ditto-API-Contract-Version"],
     },
   },
   "get /api/v1/fundamental/corporate-actions": {

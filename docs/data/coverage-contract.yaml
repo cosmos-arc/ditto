@@ -1202,7 +1202,7 @@ datasets:
     - 财务因子/回测
     - query financials
     - 对账
-    notes: 同上；本地库对 schema.sql 有漂移守卫拦截记录（XDG 陈旧库，非本库）
+    notes: 2011-12-31 起超目标（同 balance_sheet 家族口径）；本地库对 schema.sql 有漂移守卫拦截记录（XDG 陈旧库，非本库）
   cash_flow:
     domain: fundamental
     tier: t1_incremental

@@ -186,6 +186,7 @@ export function InstrumentChartView({ id, drill }: InstrumentChartViewProps) {
 		[indicatorQuery.data, indicatorsEnabled, toggles],
 	);
 	const navPoints = navQuery.data?.points ?? [];
+	const navCoverage = navQuery.data?.data_coverage ?? null;
 	const navOverlay = useMemo<CockpitOverlay | null>(() => {
 		if (!isEtf || !toggles.nav || navPoints.length === 0) return null;
 		return {
@@ -200,6 +201,9 @@ export function InstrumentChartView({ id, drill }: InstrumentChartViewProps) {
 		};
 	}, [isEtf, navPoints, toggles.nav]);
 	const navUnavailable = isEtf && toggles.nav && !navQuery.isLoading && navPoints.length === 0;
+	const navUnavailableTitle = navCoverage
+		? `本地净值库覆盖 ${navCoverage.measured_start ?? "?"} ~ ${navCoverage.measured_end ?? "?"}（${navCoverage.status}；${navCoverage.gaps.join("；") || "无缺口说明"}；测量时点 ${navCoverage.measured_at}）`
+		: "本地净值库无该标的数据（etf_nav 摄取未覆盖）";
 	const overlayShown = indicatorOverlaysList.length > 0 || indicatorSubPaneList.length > 0 || navOverlay !== null;
 
 	const experimentalBlocked =
@@ -347,9 +351,10 @@ export function InstrumentChartView({ id, drill }: InstrumentChartViewProps) {
 						<span
 							data-state="nav-unavailable"
 							className="text-xs text-(--color-foreground-muted)"
-							title="本地净值库无该标的数据（etf_nav 摄取未覆盖）"
+							title={navUnavailableTitle}
 						>
 							净值数据不可得
+							{navCoverage?.measured_end ? `（库内至 ${navCoverage.measured_end}）` : ""}
 						</span>
 					)}
 					{overlayShown && (
@@ -453,7 +458,9 @@ export function InstrumentChartView({ id, drill }: InstrumentChartViewProps) {
 							showVolumePane
 							height={360}
 							identity={{
-								dataSourceName: `K线 ${query.data?.sources.join(", ") ?? ""}${overlayShown ? "；叠加线来源未绑定" : ""}`,
+								// P4（issue 628）：叠加限制随身份进导出——NAV 不入 CSV，
+								// 其覆盖限制（状态/库尾/测量时点）随 dataSourceName 携带。
+								dataSourceName: `K线 ${query.data?.sources.join(", ") ?? ""}${overlayShown ? "；叠加线来源未绑定" : ""}${isEtf && toggles.nav ? `；etf_nav ${navCoverage ? `${navCoverage.status}(库内至 ${navCoverage.measured_end ?? "?"}, 测量 ${navCoverage.measured_at})` : "覆盖未知"}` : ""}`,
 								// Exports carry the actual chart cutoff: the bars
 								// always come from the server's current decision
 								// clock, so a drill timestamp would claim a
