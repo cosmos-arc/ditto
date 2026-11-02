@@ -20,7 +20,7 @@ from fastapi import APIRouter, Depends
 from ditto_apps.api.errors import DateRangeError, FutureDateError
 from ditto_apps.api.params import DateRangeQueryParams, PITQueryParams
 from ditto_apps.api.utils.identifier import resolve_identifier_or_404
-from ditto_apps.models.common import APIResponse
+from ditto_apps.models.common import APIResponse, ReadSemantics
 from ditto_apps.models.fundamental import (
     CorporateAction,
     Dividend,
@@ -146,12 +146,12 @@ async def get_financials(
     )
 
     if df is None or df.is_empty():
-        return APIResponse(data=[])
+        return APIResponse(data=[], read_semantics="pit_asof")
 
     # 转换为模型列表
     financials = to_financial_list(df, report_type)
 
-    return APIResponse(data=financials)
+    return APIResponse(data=financials, read_semantics="pit_asof")
 
 
 @router.get(
@@ -201,12 +201,12 @@ async def get_dividend(
     )
 
     if df is None or df.is_empty():
-        return APIResponse(data=[])
+        return APIResponse(data=[], read_semantics="pit_asof")
 
     # 转换为模型列表
     dividends = to_dividend_list(df)
 
-    return APIResponse(data=dividends)
+    return APIResponse(data=dividends, read_semantics="pit_asof")
 
 
 @router.get(
@@ -267,10 +267,11 @@ async def list_corporate_actions(
         allow_experimental_data=params.allow_experimental_data,
     )
 
+    semantics: ReadSemantics = "pit_asof" if params.as_of_date else "latest_available"
     if df.is_empty():
-        return APIResponse(data=[])
+        return APIResponse(data=[], read_semantics=semantics)
 
     # 转换为模型列表
     actions = to_corporate_action_list(df)
 
-    return APIResponse(data=actions)
+    return APIResponse(data=actions, read_semantics=semantics)

@@ -1,6 +1,6 @@
 /**
  * DO NOT EDIT: generated from contracts/openapi/v1.json.
- * Schema SHA-256: 27bca8e820840e5488ebef709b44a67cc24bb32bb5504d01b6bf4c2954c9ddb4
+ * Schema SHA-256: 619bd0612281657c9e6ddb9898c229e01c32ad284defcb35377496a7470fc1e9
  * Generator: openapi-typescript 7.13.0
  */
 
@@ -3797,6 +3797,11 @@ export interface components {
             data: components["schemas"]["AccountBaselineImportResponse"];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[AccountCommandReceiptResponse] */
         APIResponse_AccountCommandReceiptResponse_: {
@@ -3804,6 +3809,11 @@ export interface components {
             data: components["schemas"]["AccountCommandReceiptResponse"];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[AccountLedgerResponse] */
         APIResponse_AccountLedgerResponse_: {
@@ -3811,6 +3821,11 @@ export interface components {
             data: components["schemas"]["AccountLedgerResponse"];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[AgentApprovalDecisionResponse] */
         APIResponse_AgentApprovalDecisionResponse_: {
@@ -3818,6 +3833,11 @@ export interface components {
             data: components["schemas"]["AgentApprovalDecisionResponse"];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[AgentApprovalResponse] */
         APIResponse_AgentApprovalResponse_: {
@@ -3825,6 +3845,11 @@ export interface components {
             data: components["schemas"]["AgentApprovalResponse"];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[AgentCampaignResponse] */
         APIResponse_AgentCampaignResponse_: {
@@ -3832,6 +3857,11 @@ export interface components {
             data: components["schemas"]["AgentCampaignResponse"];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[AgentCampaignValidationResponse] */
         APIResponse_AgentCampaignValidationResponse_: {
@@ -3839,6 +3869,11 @@ export interface components {
             data: components["schemas"]["AgentCampaignValidationResponse"];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[AgentCapabilityResponse] */
         APIResponse_AgentCapabilityResponse_: {
@@ -3846,6 +3881,11 @@ export interface components {
             data: components["schemas"]["AgentCapabilityResponse"];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[AgentDecisionOpinionResponse] */
         APIResponse_AgentDecisionOpinionResponse_: {
@@ -3853,6 +3893,11 @@ export interface components {
             data: components["schemas"]["AgentDecisionOpinionResponse"];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[AgentRunResponse] */
         APIResponse_AgentRunResponse_: {
@@ -3860,6 +3905,11 @@ export interface components {
             data: components["schemas"]["AgentRunResponse"];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[AgentSessionResponse] */
         APIResponse_AgentSessionResponse_: {
@@ -3867,6 +3917,11 @@ export interface components {
             data: components["schemas"]["AgentSessionResponse"];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[AssembledSelectionRunResponse] */
         APIResponse_AssembledSelectionRunResponse_: {
@@ -3874,6 +3929,11 @@ export interface components {
             data: components["schemas"]["AssembledSelectionRunResponse"];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[BacktestReportResponse] */
         APIResponse_BacktestReportResponse_: {
@@ -3881,6 +3941,11 @@ export interface components {
             data: components["schemas"]["BacktestReportResponse"];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[BacktestRunTriggerResponse] */
         APIResponse_BacktestRunTriggerResponse_: {
@@ -3888,6 +3953,11 @@ export interface components {
             data: components["schemas"]["BacktestRunTriggerResponse"];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[BenchmarkNavResponse] */
         APIResponse_BenchmarkNavResponse_: {
@@ -3895,6 +3965,11 @@ export interface components {
             data: components["schemas"]["BenchmarkNavResponse"];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[CancelRunResponse] */
         APIResponse_CancelRunResponse_: {
@@ -3902,6 +3977,11 @@ export interface components {
             data: components["schemas"]["CancelRunResponse"];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[CandidateExclusionPageResponse] */
         APIResponse_CandidateExclusionPageResponse_: {
@@ -3909,6 +3989,11 @@ export interface components {
             data: components["schemas"]["CandidateExclusionPageResponse"];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[CandidateFactorContributionPageResponse] */
         APIResponse_CandidateFactorContributionPageResponse_: {
@@ -3916,6 +4001,11 @@ export interface components {
             data: components["schemas"]["CandidateFactorContributionPageResponse"];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[CandidateSelectionPageResponse] */
         APIResponse_CandidateSelectionPageResponse_: {
@@ -3923,6 +4013,11 @@ export interface components {
             data: components["schemas"]["CandidateSelectionPageResponse"];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[CandidateSelectionReceiptResponse] */
         APIResponse_CandidateSelectionReceiptResponse_: {
@@ -3930,6 +4025,11 @@ export interface components {
             data: components["schemas"]["CandidateSelectionReceiptResponse"];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[CatalogAssetResponse] */
         APIResponse_CatalogAssetResponse_: {
@@ -3937,6 +4037,11 @@ export interface components {
             data: components["schemas"]["CatalogAssetResponse"];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[CatalogSourceHealthReportResponse] */
         APIResponse_CatalogSourceHealthReportResponse_: {
@@ -3944,6 +4049,11 @@ export interface components {
             data: components["schemas"]["CatalogSourceHealthReportResponse"];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[CatalogSourceHealthSummaryReportResponse] */
         APIResponse_CatalogSourceHealthSummaryReportResponse_: {
@@ -3951,6 +4061,11 @@ export interface components {
             data: components["schemas"]["CatalogSourceHealthSummaryReportResponse"];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[ComparisonMetricsResponse] */
         APIResponse_ComparisonMetricsResponse_: {
@@ -3958,6 +4073,11 @@ export interface components {
             data: components["schemas"]["ComparisonMetricsResponse"];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[DQSummaryResponse] */
         APIResponse_DQSummaryResponse_: {
@@ -3965,6 +4085,11 @@ export interface components {
             data: components["schemas"]["DQSummaryResponse"];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[DailyDecisionReportResponse] */
         APIResponse_DailyDecisionReportResponse_: {
@@ -3972,6 +4097,11 @@ export interface components {
             data: components["schemas"]["DailyDecisionReportResponse"];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[DailyDecisionV2Response] */
         APIResponse_DailyDecisionV2Response_: {
@@ -3979,6 +4109,11 @@ export interface components {
             data: components["schemas"]["DailyDecisionV2Response"];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[DailyDecisionV3Response] */
         APIResponse_DailyDecisionV3Response_: {
@@ -3986,6 +4121,11 @@ export interface components {
             data: components["schemas"]["DailyDecisionV3Response"];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[DataLineageCatalogRunReportResponse] */
         APIResponse_DataLineageCatalogRunReportResponse_: {
@@ -3993,6 +4133,11 @@ export interface components {
             data: components["schemas"]["DataLineageCatalogRunReportResponse"];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[DataLineageGraphResponse] */
         APIResponse_DataLineageGraphResponse_: {
@@ -4000,6 +4145,11 @@ export interface components {
             data: components["schemas"]["DataLineageGraphResponse"];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[DataLineageRunResponse] */
         APIResponse_DataLineageRunResponse_: {
@@ -4007,6 +4157,11 @@ export interface components {
             data: components["schemas"]["DataLineageRunResponse"];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[DeviationResponse] */
         APIResponse_DeviationResponse_: {
@@ -4014,6 +4169,11 @@ export interface components {
             data: components["schemas"]["DeviationResponse"];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[ETFAllocationReviewResponse] */
         APIResponse_ETFAllocationReviewResponse_: {
@@ -4021,6 +4181,11 @@ export interface components {
             data: components["schemas"]["ETFAllocationReviewResponse"];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[ETFAllocationVersionResponse] */
         APIResponse_ETFAllocationVersionResponse_: {
@@ -4028,6 +4193,11 @@ export interface components {
             data: components["schemas"]["ETFAllocationVersionResponse"];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[ETFPaperAuthorizeResponse] */
         APIResponse_ETFPaperAuthorizeResponse_: {
@@ -4035,6 +4205,11 @@ export interface components {
             data: components["schemas"]["ETFPaperAuthorizeResponse"];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[ETFPaperExecutionResponse] */
         APIResponse_ETFPaperExecutionResponse_: {
@@ -4042,6 +4217,11 @@ export interface components {
             data: components["schemas"]["ETFPaperExecutionResponse"];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[EtfNavResponse] */
         APIResponse_EtfNavResponse_: {
@@ -4049,6 +4229,11 @@ export interface components {
             data: components["schemas"]["EtfNavResponse"];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[ExperimentComparisonResponse] */
         APIResponse_ExperimentComparisonResponse_: {
@@ -4056,6 +4241,11 @@ export interface components {
             data: components["schemas"]["ExperimentComparisonResponse"];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[ExperimentControlReceiptResponse] */
         APIResponse_ExperimentControlReceiptResponse_: {
@@ -4063,6 +4253,11 @@ export interface components {
             data: components["schemas"]["ExperimentControlReceiptResponse"];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[ExperimentDetailResponse] */
         APIResponse_ExperimentDetailResponse_: {
@@ -4070,6 +4265,11 @@ export interface components {
             data: components["schemas"]["ExperimentDetailResponse"];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[ExperimentLaunchResponse] */
         APIResponse_ExperimentLaunchResponse_: {
@@ -4077,6 +4277,11 @@ export interface components {
             data: components["schemas"]["ExperimentLaunchResponse"];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[ExperimentPreflightResponse] */
         APIResponse_ExperimentPreflightResponse_: {
@@ -4084,6 +4289,11 @@ export interface components {
             data: components["schemas"]["ExperimentPreflightResponse"];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[ExperimentReviewPacketResponse] */
         APIResponse_ExperimentReviewPacketResponse_: {
@@ -4091,6 +4301,11 @@ export interface components {
             data: components["schemas"]["ExperimentReviewPacketResponse"];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[ExperimentSelectionEvidenceResponse] */
         APIResponse_ExperimentSelectionEvidenceResponse_: {
@@ -4098,6 +4313,11 @@ export interface components {
             data: components["schemas"]["ExperimentSelectionEvidenceResponse"];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[FactorDiagnosticsResponse] */
         APIResponse_FactorDiagnosticsResponse_: {
@@ -4105,6 +4325,11 @@ export interface components {
             data: components["schemas"]["FactorDiagnosticsResponse"];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[FactorEvaluationSeriesResponse] */
         APIResponse_FactorEvaluationSeriesResponse_: {
@@ -4112,6 +4337,11 @@ export interface components {
             data: components["schemas"]["FactorEvaluationSeriesResponse"];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[FillAdjustmentResponse] */
         APIResponse_FillAdjustmentResponse_: {
@@ -4119,6 +4349,11 @@ export interface components {
             data: components["schemas"]["FillAdjustmentResponse"];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[FillResponse] */
         APIResponse_FillResponse_: {
@@ -4126,6 +4361,11 @@ export interface components {
             data: components["schemas"]["FillResponse"];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[HistoricalUniverseResponse] */
         APIResponse_HistoricalUniverseResponse_: {
@@ -4133,6 +4373,11 @@ export interface components {
             data: components["schemas"]["HistoricalUniverseResponse"];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[HistoryComparisonResponse] */
         APIResponse_HistoryComparisonResponse_: {
@@ -4140,6 +4385,11 @@ export interface components {
             data: components["schemas"]["HistoryComparisonResponse"];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[HoldoutEvaluationReceiptResponse] */
         APIResponse_HoldoutEvaluationReceiptResponse_: {
@@ -4147,6 +4397,11 @@ export interface components {
             data: components["schemas"]["HoldoutEvaluationReceiptResponse"];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[IndicatorSeriesResponse] */
         APIResponse_IndicatorSeriesResponse_: {
@@ -4154,6 +4409,11 @@ export interface components {
             data: components["schemas"]["IndicatorSeriesResponse"];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[IndustryRotationResponse] */
         APIResponse_IndustryRotationResponse_: {
@@ -4161,6 +4421,11 @@ export interface components {
             data: components["schemas"]["IndustryRotationResponse"];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[IngestionStatusResponse] */
         APIResponse_IngestionStatusResponse_: {
@@ -4168,6 +4433,11 @@ export interface components {
             data: components["schemas"]["IngestionStatusResponse"];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[Instrument] */
         APIResponse_Instrument_: {
@@ -4175,6 +4445,11 @@ export interface components {
             data: components["schemas"]["Instrument"];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[LineageResponse] */
         APIResponse_LineageResponse_: {
@@ -4182,6 +4457,11 @@ export interface components {
             data: components["schemas"]["LineageResponse"];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[ManualAccountCatalogResponse] */
         APIResponse_ManualAccountCatalogResponse_: {
@@ -4189,6 +4469,11 @@ export interface components {
             data: components["schemas"]["ManualAccountCatalogResponse"];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[ManualHistoryResponse] */
         APIResponse_ManualHistoryResponse_: {
@@ -4196,6 +4481,11 @@ export interface components {
             data: components["schemas"]["ManualHistoryResponse"];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[MarketChartResponse] */
         APIResponse_MarketChartResponse_: {
@@ -4203,6 +4493,11 @@ export interface components {
             data: components["schemas"]["MarketChartResponse"];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[MarketContextResponse] */
         APIResponse_MarketContextResponse_: {
@@ -4210,6 +4505,11 @@ export interface components {
             data: components["schemas"]["MarketContextResponse"];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[ModelHistoryResponse] */
         APIResponse_ModelHistoryResponse_: {
@@ -4217,6 +4517,11 @@ export interface components {
             data: components["schemas"]["ModelHistoryResponse"];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[PaperAccountCatalogResponse] */
         APIResponse_PaperAccountCatalogResponse_: {
@@ -4224,6 +4529,11 @@ export interface components {
             data: components["schemas"]["PaperAccountCatalogResponse"];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[PaperAccountLedgerResponse] */
         APIResponse_PaperAccountLedgerResponse_: {
@@ -4231,6 +4541,11 @@ export interface components {
             data: components["schemas"]["PaperAccountLedgerResponse"];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[PaperAccountReceiptResponse] */
         APIResponse_PaperAccountReceiptResponse_: {
@@ -4238,6 +4553,11 @@ export interface components {
             data: components["schemas"]["PaperAccountReceiptResponse"];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[PaperExecutionReceiptResponse] */
         APIResponse_PaperExecutionReceiptResponse_: {
@@ -4245,6 +4565,11 @@ export interface components {
             data: components["schemas"]["PaperExecutionReceiptResponse"];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[PaperHistoryResponse] */
         APIResponse_PaperHistoryResponse_: {
@@ -4252,6 +4577,11 @@ export interface components {
             data: components["schemas"]["PaperHistoryResponse"];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[PaperReconciliationResponse] */
         APIResponse_PaperReconciliationResponse_: {
@@ -4259,6 +4589,11 @@ export interface components {
             data: components["schemas"]["PaperReconciliationResponse"];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[PaperRecoverResponse] */
         APIResponse_PaperRecoverResponse_: {
@@ -4266,6 +4601,11 @@ export interface components {
             data: components["schemas"]["PaperRecoverResponse"];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[PaperSessionCatalogResponse] */
         APIResponse_PaperSessionCatalogResponse_: {
@@ -4273,6 +4613,11 @@ export interface components {
             data: components["schemas"]["PaperSessionCatalogResponse"];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[PaperSessionCommandResponse] */
         APIResponse_PaperSessionCommandResponse_: {
@@ -4280,6 +4625,11 @@ export interface components {
             data: components["schemas"]["PaperSessionCommandResponse"];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[PaperSessionReadResponse] */
         APIResponse_PaperSessionReadResponse_: {
@@ -4287,6 +4637,11 @@ export interface components {
             data: components["schemas"]["PaperSessionReadResponse"];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[PnlSummaryResponse] */
         APIResponse_PnlSummaryResponse_: {
@@ -4294,6 +4649,11 @@ export interface components {
             data: components["schemas"]["PnlSummaryResponse"];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[PortfolioComparisonResponse] */
         APIResponse_PortfolioComparisonResponse_: {
@@ -4301,6 +4661,11 @@ export interface components {
             data: components["schemas"]["PortfolioComparisonResponse"];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[PortfolioScenarioPreviewResponse] */
         APIResponse_PortfolioScenarioPreviewResponse_: {
@@ -4308,6 +4673,11 @@ export interface components {
             data: components["schemas"]["PortfolioScenarioPreviewResponse"];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[RegimeDiagnosticsResponse] */
         APIResponse_RegimeDiagnosticsResponse_: {
@@ -4315,6 +4685,11 @@ export interface components {
             data: components["schemas"]["RegimeDiagnosticsResponse"];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[ReplayEvidenceSummaryResponse] */
         APIResponse_ReplayEvidenceSummaryResponse_: {
@@ -4322,6 +4697,11 @@ export interface components {
             data: components["schemas"]["ReplayEvidenceSummaryResponse"];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[ReplayProofResponse] */
         APIResponse_ReplayProofResponse_: {
@@ -4329,6 +4709,11 @@ export interface components {
             data: components["schemas"]["ReplayProofResponse"];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[ReplayResponse] */
         APIResponse_ReplayResponse_: {
@@ -4336,6 +4721,11 @@ export interface components {
             data: components["schemas"]["ReplayResponse"];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[ResearchCaseResponse] */
         APIResponse_ResearchCaseResponse_: {
@@ -4343,6 +4733,11 @@ export interface components {
             data: components["schemas"]["ResearchCaseResponse"];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[ResumeRunResponse] */
         APIResponse_ResumeRunResponse_: {
@@ -4350,6 +4745,11 @@ export interface components {
             data: components["schemas"]["ResumeRunResponse"];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[RetryRunResponse] */
         APIResponse_RetryRunResponse_: {
@@ -4357,6 +4757,11 @@ export interface components {
             data: components["schemas"]["RetryRunResponse"];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[RunResponse] */
         APIResponse_RunResponse_: {
@@ -4364,6 +4769,11 @@ export interface components {
             data: components["schemas"]["RunResponse"];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[SelectionRunDiffResponse] */
         APIResponse_SelectionRunDiffResponse_: {
@@ -4371,6 +4781,11 @@ export interface components {
             data: components["schemas"]["SelectionRunDiffResponse"];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[SelectionRunResponse] */
         APIResponse_SelectionRunResponse_: {
@@ -4378,6 +4793,11 @@ export interface components {
             data: components["schemas"]["SelectionRunResponse"];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[SelectionWorkspaceReceiptResponse] */
         APIResponse_SelectionWorkspaceReceiptResponse_: {
@@ -4385,6 +4805,11 @@ export interface components {
             data: components["schemas"]["SelectionWorkspaceReceiptResponse"];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[StrategyActivePointerResponse] */
         APIResponse_StrategyActivePointerResponse_: {
@@ -4392,6 +4817,11 @@ export interface components {
             data: components["schemas"]["StrategyActivePointerResponse"];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[StrategyActiveResponse] */
         APIResponse_StrategyActiveResponse_: {
@@ -4399,6 +4829,11 @@ export interface components {
             data: components["schemas"]["StrategyActiveResponse"];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[StrategyAuthorPreviewResponse] */
         APIResponse_StrategyAuthorPreviewResponse_: {
@@ -4406,6 +4841,11 @@ export interface components {
             data: components["schemas"]["StrategyAuthorPreviewResponse"];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[StrategyResponse] */
         APIResponse_StrategyResponse_: {
@@ -4413,6 +4853,11 @@ export interface components {
             data: components["schemas"]["StrategyResponse"];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[StrategySpecValidationResponse] */
         APIResponse_StrategySpecValidationResponse_: {
@@ -4420,6 +4865,11 @@ export interface components {
             data: components["schemas"]["StrategySpecValidationResponse"];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[StrategyVersionDetailResponse] */
         APIResponse_StrategyVersionDetailResponse_: {
@@ -4427,6 +4877,11 @@ export interface components {
             data: components["schemas"]["StrategyVersionDetailResponse"];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[StrategyVersionDiffResponse] */
         APIResponse_StrategyVersionDiffResponse_: {
@@ -4434,6 +4889,11 @@ export interface components {
             data: components["schemas"]["StrategyVersionDiffResponse"];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[StrategyVersionStateResponse] */
         APIResponse_StrategyVersionStateResponse_: {
@@ -4441,6 +4901,11 @@ export interface components {
             data: components["schemas"]["StrategyVersionStateResponse"];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[TechnicalAnalysisSnapshotResponse] */
         APIResponse_TechnicalAnalysisSnapshotResponse_: {
@@ -4448,6 +4913,11 @@ export interface components {
             data: components["schemas"]["TechnicalAnalysisSnapshotResponse"];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[Union[AccountBaselineResponse, NoneType]] */
         APIResponse_Union_AccountBaselineResponse__NoneType__: {
@@ -4455,6 +4925,11 @@ export interface components {
             data: components["schemas"]["AccountBaselineResponse"] | null;
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[UniverseResponse] */
         APIResponse_UniverseResponse_: {
@@ -4462,6 +4937,11 @@ export interface components {
             data: components["schemas"]["UniverseResponse"];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[bool] */
         APIResponse_bool_: {
@@ -4472,6 +4952,11 @@ export interface components {
             data: boolean;
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[list[AgentApprovalResponse]] */
         APIResponse_list_AgentApprovalResponse__: {
@@ -4482,6 +4967,11 @@ export interface components {
             data: components["schemas"]["AgentApprovalResponse"][];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[list[AgentCampaignResponse]] */
         APIResponse_list_AgentCampaignResponse__: {
@@ -4492,6 +4982,11 @@ export interface components {
             data: components["schemas"]["AgentCampaignResponse"][];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[list[AgentRunResponse]] */
         APIResponse_list_AgentRunResponse__: {
@@ -4502,6 +4997,11 @@ export interface components {
             data: components["schemas"]["AgentRunResponse"][];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[list[AgentSessionResponse]] */
         APIResponse_list_AgentSessionResponse__: {
@@ -4512,6 +5012,11 @@ export interface components {
             data: components["schemas"]["AgentSessionResponse"][];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[list[AuditRecordResponse]] */
         APIResponse_list_AuditRecordResponse__: {
@@ -4522,6 +5027,11 @@ export interface components {
             data: components["schemas"]["AuditRecordResponse"][];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[list[Bar]] */
         APIResponse_list_Bar__: {
@@ -4532,6 +5042,11 @@ export interface components {
             data: components["schemas"]["Bar"][];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[list[CatalogAssetResponse]] */
         APIResponse_list_CatalogAssetResponse__: {
@@ -4542,6 +5057,11 @@ export interface components {
             data: components["schemas"]["CatalogAssetResponse"][];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[list[CommodityBar]] */
         APIResponse_list_CommodityBar__: {
@@ -4552,6 +5072,11 @@ export interface components {
             data: components["schemas"]["CommodityBar"][];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[list[CorporateAction]] */
         APIResponse_list_CorporateAction__: {
@@ -4562,6 +5087,11 @@ export interface components {
             data: components["schemas"]["CorporateAction"][];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[list[DataCoverageInfo]] */
         APIResponse_list_DataCoverageInfo__: {
@@ -4572,6 +5102,11 @@ export interface components {
             data: components["schemas"]["DataCoverageInfo"][];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[list[DataLineageEventResponse]] */
         APIResponse_list_DataLineageEventResponse__: {
@@ -4582,6 +5117,11 @@ export interface components {
             data: components["schemas"]["DataLineageEventResponse"][];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[list[Dividend]] */
         APIResponse_list_Dividend__: {
@@ -4592,6 +5132,11 @@ export interface components {
             data: components["schemas"]["Dividend"][];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[list[ETFAllocationVersionResponse]] */
         APIResponse_list_ETFAllocationVersionResponse__: {
@@ -4602,6 +5147,11 @@ export interface components {
             data: components["schemas"]["ETFAllocationVersionResponse"][];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[list[ETFCandidateResponse]] */
         APIResponse_list_ETFCandidateResponse__: {
@@ -4612,6 +5162,11 @@ export interface components {
             data: components["schemas"]["ETFCandidateResponse"][];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[list[ExperimentArtifactResponse]] */
         APIResponse_list_ExperimentArtifactResponse__: {
@@ -4622,6 +5177,11 @@ export interface components {
             data: components["schemas"]["ExperimentArtifactResponse"][];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[list[ExperimentCandidateResponse]] */
         APIResponse_list_ExperimentCandidateResponse__: {
@@ -4632,6 +5192,11 @@ export interface components {
             data: components["schemas"]["ExperimentCandidateResponse"][];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[list[ExperimentGateResponse]] */
         APIResponse_list_ExperimentGateResponse__: {
@@ -4642,6 +5207,11 @@ export interface components {
             data: components["schemas"]["ExperimentGateResponse"][];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[list[ExperimentSummaryResponse]] */
         APIResponse_list_ExperimentSummaryResponse__: {
@@ -4652,6 +5222,11 @@ export interface components {
             data: components["schemas"]["ExperimentSummaryResponse"][];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[list[FactorDescriptorResponse]] */
         APIResponse_list_FactorDescriptorResponse__: {
@@ -4662,6 +5237,11 @@ export interface components {
             data: components["schemas"]["FactorDescriptorResponse"][];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[list[FillAdjustmentResponse]] */
         APIResponse_list_FillAdjustmentResponse__: {
@@ -4672,6 +5252,11 @@ export interface components {
             data: components["schemas"]["FillAdjustmentResponse"][];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[list[FillResponse]] */
         APIResponse_list_FillResponse__: {
@@ -4682,6 +5267,11 @@ export interface components {
             data: components["schemas"]["FillResponse"][];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[list[Financial]] */
         APIResponse_list_Financial__: {
@@ -4692,6 +5282,11 @@ export interface components {
             data: components["schemas"]["Financial"][];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[list[FxBar]] */
         APIResponse_list_FxBar__: {
@@ -4702,6 +5297,11 @@ export interface components {
             data: components["schemas"]["FxBar"][];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[list[Indicator]] */
         APIResponse_list_Indicator__: {
@@ -4712,6 +5312,11 @@ export interface components {
             data: components["schemas"]["Indicator"][];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[list[IngestionHistoryItem]] */
         APIResponse_list_IngestionHistoryItem__: {
@@ -4722,6 +5327,11 @@ export interface components {
             data: components["schemas"]["IngestionHistoryItem"][];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[list[Instrument]] */
         APIResponse_list_Instrument__: {
@@ -4732,6 +5342,11 @@ export interface components {
             data: components["schemas"]["Instrument"][];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[list[Margin]] */
         APIResponse_list_Margin__: {
@@ -4742,6 +5357,11 @@ export interface components {
             data: components["schemas"]["Margin"][];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[list[MemberResponse]] */
         APIResponse_list_MemberResponse__: {
@@ -4752,6 +5372,11 @@ export interface components {
             data: components["schemas"]["MemberResponse"][];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[list[NavPointResponse]] */
         APIResponse_list_NavPointResponse__: {
@@ -4762,6 +5387,11 @@ export interface components {
             data: components["schemas"]["NavPointResponse"][];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[list[NodeDescriptorResponse]] */
         APIResponse_list_NodeDescriptorResponse__: {
@@ -4772,6 +5402,11 @@ export interface components {
             data: components["schemas"]["NodeDescriptorResponse"][];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[list[PositionSnapshotResponse]] */
         APIResponse_list_PositionSnapshotResponse__: {
@@ -4782,6 +5417,11 @@ export interface components {
             data: components["schemas"]["PositionSnapshotResponse"][];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[list[RunResponse]] */
         APIResponse_list_RunResponse__: {
@@ -4792,6 +5432,11 @@ export interface components {
             data: components["schemas"]["RunResponse"][];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[list[StrategyGovernanceEventResponse]] */
         APIResponse_list_StrategyGovernanceEventResponse__: {
@@ -4802,6 +5447,11 @@ export interface components {
             data: components["schemas"]["StrategyGovernanceEventResponse"][];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[list[StrategyResponse]] */
         APIResponse_list_StrategyResponse__: {
@@ -4812,6 +5462,11 @@ export interface components {
             data: components["schemas"]["StrategyResponse"][];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[list[StrategyVersionResponse]] */
         APIResponse_list_StrategyVersionResponse__: {
@@ -4822,6 +5477,11 @@ export interface components {
             data: components["schemas"]["StrategyVersionResponse"][];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[list[TradeIntentResponse]] */
         APIResponse_list_TradeIntentResponse__: {
@@ -4832,6 +5492,11 @@ export interface components {
             data: components["schemas"]["TradeIntentResponse"][];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[list[TradeResponse]] */
         APIResponse_list_TradeResponse__: {
@@ -4842,6 +5507,11 @@ export interface components {
             data: components["schemas"]["TradeResponse"][];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[list[UniverseResponse]] */
         APIResponse_list_UniverseResponse__: {
@@ -4852,6 +5522,11 @@ export interface components {
             data: components["schemas"]["UniverseResponse"][];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[list[Valuation]] */
         APIResponse_list_Valuation__: {
@@ -4862,6 +5537,11 @@ export interface components {
             data: components["schemas"]["Valuation"][];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[list[str]] */
         APIResponse_list_str__: {
@@ -4872,6 +5552,11 @@ export interface components {
             data: string[];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /** APIResponse[tuple[SelectionRunResponse, ...]] */
         APIResponse_tuple_SelectionRunResponse__________: {
@@ -4882,6 +5567,11 @@ export interface components {
             data: components["schemas"]["SelectionRunResponse"][];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
         /**
          * AccountBaselineImportResponse
@@ -8025,6 +8715,11 @@ export interface components {
              * @default []
              */
             gaps: string[];
+            /**
+             * Knowledge Axis
+             * @description 知识轴分类：provider_anchor=公告锚(日终语义) / derived_t1=T+1 推导 / same_day=即日 / observation=观察日(不宣称公告可知性)；None=未分类
+             */
+            knowledge_axis?: ("provider_anchor" | "derived_t1" | "same_day" | "observation") | null;
             /**
              * Measured At
              * @description 测量时点（ISO 日期；非实时）
@@ -13715,6 +14410,11 @@ export interface components {
             pagination?: components["schemas"]["PaginationResponse"] | null;
             /** Query Time Ms */
             query_time_ms: number;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
             /** Resolved Source Ticker */
             resolved_source_ticker: string;
             /** Row Count */

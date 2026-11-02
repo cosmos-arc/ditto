@@ -15,10 +15,14 @@ from typing import Literal, cast
 
 from ditto_data.coverage import (
     COVERAGE_MEASURED_AT,
+    KNOWLEDGE_AXIS_VOCABULARY,
     DatasetCoverageLimit,
     get_dataset_coverage,
+    get_knowledge_axis,
     list_dataset_coverage,
 )
+
+from ditto_application.exceptions import AppQueryError
 
 __all__ = [
     "DatasetCoverageQueryFacade",
@@ -27,6 +31,7 @@ __all__ = [
 
 
 type CoverageStatus = Literal["ready", "partial", "empty"]
+type KnowledgeAxis = Literal["provider_anchor", "derived_t1", "same_day", "observation"]
 
 _ALLOWED_STATUS: frozenset[str] = frozenset({"ready", "partial", "empty"})
 
@@ -44,6 +49,9 @@ class DatasetCoverageView:
     gaps: tuple[str, ...]
     notes: str | None
     measured_at: date
+    # 知识轴分类（provider_anchor/derived_t1/same_day/observation；
+    # None=未分类，如纯元数据集——不宣称公告可知性）
+    knowledge_axis: KnowledgeAxis | None
 
 
 def _to_view(limit: DatasetCoverageLimit) -> DatasetCoverageView:
@@ -52,7 +60,7 @@ def _to_view(limit: DatasetCoverageLimit) -> DatasetCoverageView:
             f"unknown coverage status {limit.status!r} for dataset "
             f"{limit.dataset!r}; vocabulary is ready/partial/empty"
         )
-        raise ValueError(message)
+        raise AppQueryError(message)
     return DatasetCoverageView(
         dataset=limit.dataset,
         domain=limit.domain,
@@ -62,7 +70,20 @@ def _to_view(limit: DatasetCoverageLimit) -> DatasetCoverageView:
         gaps=limit.gaps,
         notes=limit.notes,
         measured_at=COVERAGE_MEASURED_AT,
+        knowledge_axis=_knowledge_axis(limit.dataset),
     )
+
+
+def _knowledge_axis(dataset: str) -> KnowledgeAxis | None:
+    """词表校验后收敛为 Literal（与 status 同一单点模式）。"""
+    axis = get_knowledge_axis(dataset)
+    if axis is not None and axis not in KNOWLEDGE_AXIS_VOCABULARY:
+        message = (
+            f"unknown knowledge axis {axis!r} for dataset {dataset!r}; "
+            f"vocabulary is {sorted(KNOWLEDGE_AXIS_VOCABULARY)}"
+        )
+        raise AppQueryError(message)
+    return cast("KnowledgeAxis | None", axis)
 
 
 class DatasetCoverageQueryFacade:

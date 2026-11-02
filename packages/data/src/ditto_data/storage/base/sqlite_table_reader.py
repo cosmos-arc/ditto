@@ -72,12 +72,12 @@ class SqliteTableReader:
             params.append(end_date)
 
         if as_of_date is not None:
-            if len(self._spec.pit_columns) >= self._KNOWLEDGE_PIT_COLUMNS:
-                knowledge_column = self._spec.pit_columns[-self._KNOWLEDGE_PIT_COLUMNS]
+            knowledge_column = self._spec.knowledge_column
+            if knowledge_column is not None:
                 conditions.append(f"{knowledge_column} <= ?")
                 params.append(as_of_date)
-            pit_from = self._spec.pit_columns[-2]
-            pit_to = self._spec.pit_columns[-1]
+            pit_from = self._spec.effective_from_column
+            pit_to = self._spec.effective_to_column
             conditions.append(f"{pit_from} <= ?")
             params.append(as_of_date)
             conditions.append(f"({pit_to} IS NULL OR {pit_to} > ?)")
@@ -122,12 +122,7 @@ class SqliteTableReader:
             return df
         rank_columns = [
             column
-            for column in (
-                spec.pit_columns[-self._KNOWLEDGE_PIT_COLUMNS]
-                if len(spec.pit_columns) >= self._KNOWLEDGE_PIT_COLUMNS
-                else None,
-                spec.pit_columns[-self._MIN_PIT_COLUMNS],
-            )
+            for column in (spec.knowledge_column, spec.effective_from_column)
             if column is not None
         ]
         deduped = df.sort(rank_columns, descending=True).unique(
@@ -138,9 +133,9 @@ class SqliteTableReader:
         order_column = spec.order_by_column or spec.date_column
         if order_column is None:
             return deduped.sort(rank_columns, descending=True)
-        return deduped.sort(
-            [*rank_columns, order_column]
-            if order_column in rank_columns
-            else [order_column, *rank_columns],
-            descending=True,
-        )
+        sort_columns = [order_column, *rank_columns]
+        # 去重排序键（order_column 可能已在 rank_columns 中）
+        deduped_sort = [
+            c for i, c in enumerate(sort_columns) if c not in sort_columns[:i]
+        ]
+        return deduped.sort(deduped_sort, descending=True)

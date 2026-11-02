@@ -53,6 +53,11 @@ DIVIDEND_SPEC = SqliteTableSpec(
             "div_proc",
         }
     ),
+    # ex_dividend_date 可 NULL（预案阶段），数据不携带事件级稳定 ID——
+    # 无法区分「同一事件修订」与「不同分红事件」。事实键含 effective_from
+    # （公告锚）：每次公告独立成行，不跨公告收敛（NULL 相等性会把多条
+    # 预案事实误并为一条，#628 双轴评审发现）。
+    fact_key_columns=("instrument_id", "ex_dividend_date", "effective_from"),
 )
 
 CORPORATE_ACTIONS_SPEC = SqliteTableSpec(

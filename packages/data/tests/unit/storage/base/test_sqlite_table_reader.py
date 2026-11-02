@@ -693,3 +693,55 @@ class TestFactKeyColumns:
 
         assert result.height == 1
         assert result["description"][0] == "0.5/share revised"
+
+
+class TestDividendNullExDateFactKey:
+    """#628 双轴评审反例：ex_dividend_date NULL 的不同分红事实不得被收敛。"""
+
+    def test_distinct_null_ex_date_announcements_both_kept(
+        self, mock_client: MagicMock
+    ) -> None:
+        spec = SqliteTableSpec(
+            table="dividend",
+            columns=("dividend_per_share", "dividend_yield", "div_proc"),
+            id_column="instrument_id",
+            date_column="ex_dividend_date",
+            nullable_columns=frozenset(
+                {
+                    "effective_to",
+                    "ex_dividend_date",
+                    "dividend_per_share",
+                    "dividend_yield",
+                    "div_proc",
+                }
+            ),
+            fact_key_columns=("instrument_id", "ex_dividend_date", "effective_from"),
+        )
+        reader = SqliteTableReader(spec, mock_client)
+        mock_client.fetchall.return_value = [
+            {
+                "instrument_id": 1,
+                "ex_dividend_date": None,
+                "div_proc": "预案",
+                "dividend_per_share": 0.3,
+                "dividend_yield": None,
+                "knowledge_date": "2024-04-25",
+                "effective_from": "2024-04-25",
+                "effective_to": None,
+            },
+            {
+                "instrument_id": 1,
+                "ex_dividend_date": None,
+                "div_proc": "预案",
+                "dividend_per_share": 0.1,
+                "dividend_yield": None,
+                "knowledge_date": "2024-08-25",
+                "effective_from": "2024-08-25",
+                "effective_to": None,
+            },
+        ]
+
+        result = reader.get(1, date(2024, 12, 1))
+
+        assert result.height == 2
+        assert sorted(result["dividend_per_share"].to_list()) == [0.1, 0.3]

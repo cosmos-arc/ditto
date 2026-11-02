@@ -17,6 +17,11 @@
   （`test_no_as_of_date_returns_all_versions`）原样保留。
 - `corporate_actions` 事实键 = `(instrument_id, action_date, action_type)`：
   同日不同行动类型是不同事实，不因修订收敛误删。
+- `dividend` 事实键 = `(instrument_id, ex_dividend_date, effective_from)`
+  （双轴评审反例）：ex_dividend_date 可 NULL（预案阶段）且数据无事件级
+  稳定 ID——含公告锚防 NULL 相等性把多条预案事实误并为一条；代价是
+  dividend 不做跨公告修订收敛（每次公告独立成行，行级版本轴可区分），
+  诚实优先于便利。
 - 回测截面 `fundamental_snapshot._first_float` 取行不确定的隐患随根因消除。
 
 修复前的真实缺陷（探索实证）：三表修订多版本经 `effective_to=NULL` 双开区间
@@ -29,6 +34,11 @@
   measured_end/gaps/notes + `COVERAGE_MEASURED_AT=2026-10-30`）。应用运行时
   **不读取** `docs/`；守卫测试 `test_limits_sync_unit` 从 YAML 重新蒸馏比对，
   YAML 刷新未同步即响亮失败并列出差异条目。
+- **知识轴分类随限制传播**（票面范围 2）：`get_knowledge_axis` 按
+  pit-time-semantics §1.2 四类口径（provider_anchor/derived_t1/same_day/
+  observation）分类；观察锚（index_weight #452）不宣称公告可知性；
+  纯元数据集未分类（None），不伪造。经 facade View → `DataCoverageInfo.
+  knowledge_axis` 暴露；守卫测试断言词汇闭合与关键归类。
 - `DatasetCoverageQueryFacade`（application）+ `GET /datasets/coverage`
   （backend，新 operationId `datasets_list_coverage`）：限制经 API 可得，
   空数据与不覆盖可区分。
@@ -69,12 +79,12 @@ capital margin/valuation），不再 200 空列表与「无数据」不可区分
 | --- | --- |
 | 未来哨兵 + 截止内阳性对照 | `TestVersionDeduplicationRealSqlite.test_future_sentinel_and_positive_control`（真实 SQLite，pit 标记）：as_of=2024-04-24 空、as_of=2024-04-25（knowledge 当日=日终语义）可见 |
 | 晚到修订 | `test_late_revision_frozen_before_and_current_after`：修订落库后旧 as_of 读数逐字段 `equals` 冻结值；新 as_of 见修订值与修订 knowledge_date |
-| 旧快照逐字段稳定 | 同上 + reader 输出确定性排序（`test_output_order_stays_date_desc_across_reports`）；provider snapshot 内容寻址重放通路既有（§2.3 pit-time-semantics） |
+| 旧快照逐字段稳定 | 同上 + reader 输出确定性排序（`test_output_order_stays_date_desc_across_reports`）；provider snapshot 内容寻址重放通路既有双层验收：`test_provider_snapshot_replay.py::test_delayed_revision_replay_and_failed_completion_recovery`（晚到修订重放，application 集成）+ `test_schema_version_bump_sharing_artifact_still_replays_exact_bytes`（跨 schema 版本逐字节稳定） |
 | 半开区间边界 | `test_effective_to_closing_day_half_open_boundary`：effective_to 当日版本关闭、旧版本重新可见 |
 | 缺必需输入拒绝而非填零 | `test_unresolved_identifier_returns_404_not_empty` + `test_missing_values_stay_null_not_zero`（dividend null 不零填充） |
 | 限制经 API 保留 | `GET /datasets/coverage` 47 项（`test_datasets_router_unit`：etf_nav partial/末端 10-26、fx_daily empty+gaps、measured_at=2026-10-30） |
 | 限制经图表保留 | etf-nav 降级文案带覆盖窗口（web `instrument-components.test`：`库内至 2026-10-26`），title 携带 status/gaps/测量时点 |
-| 限制经导出保留 | 图表 CSV/PNG 导出既有身份列（as_of/snapshot/cutoffs/missing_sessions）不变；NAV 叠加线设计上不入 CSV（「CSV 仅含 K 线」契约），其限制经响应与 UI 传播——#193/#208 导出设计若纳入 NAV 序列则接 data_coverage |
+| 限制经导出保留 | 图表 CSV/PNG 导出身份列扩展：ETF 图开净值叠加时 dataSourceName 追加 `etf_nav partial(库内至 …, 测量 …)`（随 CSV data_source 列与 PNG footer 行导出）；NAV 序列本身设计上不入 CSV（「CSV 仅含 K 线」契约），#193/#208 若纳入 NAV 序列则接 data_coverage |
 
 ## 边界与留档
 

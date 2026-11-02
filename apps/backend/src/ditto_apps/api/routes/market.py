@@ -325,7 +325,7 @@ async def post_bars(
     # 应用 limit
     bars = bars[: query.limit]
 
-    return APIResponse(data=bars)
+    return APIResponse(data=bars, read_semantics="latest_available")
 
 
 @router.post(
@@ -374,7 +374,8 @@ async def post_indicator_series(
             registry_version="technical-indicator-registry.v1",
             trade_dates=trade_dates,
             series=series,
-        )
+        ),
+        read_semantics="latest_available",
     )
 
 

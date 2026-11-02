@@ -98,7 +98,7 @@ async def post_indicators(
     # 转换为模型列表
     indicators = to_indicator_list(df)
 
-    return APIResponse(data=indicators)
+    return APIResponse(data=indicators, read_semantics="latest_available")
 
 
 @router.get(
@@ -144,4 +144,4 @@ async def get_indicators_metadata(
     # 转换为模型列表
     indicators = to_indicator_list(df)
 
-    return APIResponse(data=indicators)
+    return APIResponse(data=indicators, read_semantics="latest_available")

@@ -4,6 +4,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+# PIT 列形态阈值：>=3 含知识轴（knowledge/from/to），>=2 仅版本区间
+_PIT_KNOWLEDGE_FORM = 3
+_PIT_INTERVAL_FORM = 2
+
 
 @dataclass(frozen=True)
 class SqliteTableSpec:
@@ -31,3 +35,24 @@ class SqliteTableSpec:
         if self.date_column:
             cols = (*cols, self.date_column)
         return (*cols, *self.pit_columns, *self.columns)
+
+    @property
+    def knowledge_column(self) -> str | None:
+        """知识轴列名（三列 PIT 形态），两列形态无知识轴。"""
+        if len(self.pit_columns) >= _PIT_KNOWLEDGE_FORM:
+            return self.pit_columns[-_PIT_KNOWLEDGE_FORM]
+        return None
+
+    @property
+    def effective_from_column(self) -> str | None:
+        """版本生效列名。"""
+        if len(self.pit_columns) >= _PIT_INTERVAL_FORM:
+            return self.pit_columns[-_PIT_INTERVAL_FORM]
+        return None
+
+    @property
+    def effective_to_column(self) -> str | None:
+        """版本关闭列名。"""
+        if self.pit_columns:
+            return self.pit_columns[-1]
+        return None

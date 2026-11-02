@@ -40,6 +40,15 @@ class DataCoverageInfo(BaseModel):
     )
     notes: str | None = Field(default=None, description="测量备注")
     measured_at: str = Field(description="测量时点（ISO 日期；非实时）")
+    knowledge_axis: (
+        Literal["provider_anchor", "derived_t1", "same_day", "observation"] | None
+    ) = Field(
+        default=None,
+        description=(
+            "知识轴分类：provider_anchor=公告锚(日终语义) / derived_t1=T+1 推导 / "
+            "same_day=即日 / observation=观察日(不宣称公告可知性)；None=未分类"
+        ),
+    )
 
     @classmethod
     def from_view(cls, view: DatasetCoverageView) -> DataCoverageInfo:
@@ -53,6 +62,7 @@ class DataCoverageInfo(BaseModel):
             gaps=view.gaps,
             notes=view.notes,
             measured_at=view.measured_at.isoformat(),
+            knowledge_axis=view.knowledge_axis,
         )
 
 
@@ -118,6 +128,13 @@ class APIResponse(BaseModel, Generic[T]):  # noqa: UP046  # Pydantic requires Ge
     data: T = Field(description="响应数据")
     pagination: PaginationResponse | None = Field(
         default=None, description="分页信息(可选)"
+    )
+    read_semantics: ReadSemantics | None = Field(
+        default=None,
+        description=(
+            "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / "
+            "pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放"
+        ),
     )
 
     model_config = ConfigDict(

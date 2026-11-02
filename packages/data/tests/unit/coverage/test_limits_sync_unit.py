@@ -70,3 +70,28 @@ def test_measured_at_matches_yaml_meta() -> None:
         f"运行时 COVERAGE_MEASURED_AT={COVERAGE_MEASURED_AT} 与 YAML "
         f"meta.measured_at={raw} 不一致"
     )
+
+
+def test_knowledge_axis_vocabulary_and_key_datasets() -> None:
+    """知识轴分类词汇闭合 + 关键数据集归类（pit-time-semantics §1.2）。"""
+    from ditto_data.coverage import (
+        KNOWLEDGE_AXIS_VOCABULARY,
+        get_knowledge_axis,
+    )
+
+    classified = {
+        dataset: axis
+        for dataset in {item.dataset for item in list_dataset_coverage()}
+        if (axis := get_knowledge_axis(dataset)) is not None
+    }
+    assert set(classified.values()) <= KNOWLEDGE_AXIS_VOCABULARY
+    assert classified["balance_sheet"] == "provider_anchor"
+    assert classified["fina_indicator"] == "provider_anchor"
+    assert classified["top10_holders"] == "provider_anchor"
+    assert classified["stock_daily"] == "derived_t1"
+    assert classified["adj_factor"] == "same_day"
+    # #452：观察锚数据集不宣称公告可知性
+    assert classified["index_weight"] == "observation"
+    # 纯元数据集未分类（None），不伪造知识轴
+    assert get_knowledge_axis("calendar") is None
+    assert get_knowledge_axis("stock_basic") is None

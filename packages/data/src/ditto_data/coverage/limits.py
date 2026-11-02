@@ -15,13 +15,74 @@ from datetime import date
 
 __all__ = [
     "COVERAGE_MEASURED_AT",
+    "KNOWLEDGE_AXIS_VOCABULARY",
     "DatasetCoverageLimit",
     "get_dataset_coverage",
+    "get_knowledge_axis",
     "list_dataset_coverage",
 ]
 
 # 覆盖合同测量时刻（coverage-contract.yaml meta.measured_at）
 COVERAGE_MEASURED_AT = date(2026, 10, 30)
+
+# 知识轴分类词汇表（pit-time-semantics.md §1.2 四类口径）：
+# - provider_anchor: 供应商公告锚（kd=披露日；date 精度，日终语义）
+# - derived_t1: 事实日 T+1 推导（日线族；bar 类另有日内发布时刻规则）
+# - same_day: 即日可知（=trade_date）
+# - observation: 观察日本身（无公告可知性，#452 类取舍——不宣称公告锚）
+KNOWLEDGE_AXIS_VOCABULARY = frozenset(
+    {"provider_anchor", "derived_t1", "same_day", "observation"}
+)
+
+_KNOWLEDGE_AXES: dict[str, str] = {
+    # 披露锚（sparse_pit 披露锚族 + 事件披露/持仓披露 lane 的公告日锚）
+    "balance_sheet": "provider_anchor",
+    "income_statement": "provider_anchor",
+    "cash_flow": "provider_anchor",
+    "dividend": "provider_anchor",
+    "corporate_actions": "provider_anchor",
+    "fina_indicator": "provider_anchor",
+    "fund_portfolio": "provider_anchor",
+    "top10_holders": "provider_anchor",
+    "top10_floatholders": "provider_anchor",
+    "etf_nav": "provider_anchor",
+    "hk_hold": "provider_anchor",
+    "hsgt_top10": "provider_anchor",
+    "top_list": "provider_anchor",
+    "top_inst": "provider_anchor",
+    "pledge_ratio": "provider_anchor",
+    "earnings_forecast": "provider_anchor",
+    "earnings_express": "provider_anchor",
+    # T+1 推导（日线族；#625 margin 官方口径 T+1 上午 8:30 更新亦归此类）
+    "stock_daily": "derived_t1",
+    "etf_daily": "derived_t1",
+    "index_daily": "derived_t1",
+    "global_index_daily": "derived_t1",
+    "moneyflow": "derived_t1",
+    "stock_limit": "derived_t1",
+    "limit_list": "derived_t1",
+    "fund_share": "derived_t1",
+    "valuation_metrics": "derived_t1",
+    "margin_trading": "derived_t1",
+    "cyq_perf": "derived_t1",
+    "index_valuation": "derived_t1",
+    "futures_daily": "derived_t1",
+    "commodity_daily": "derived_t1",
+    "fx_daily": "derived_t1",
+    "stock_status": "derived_t1",
+    # 即日
+    "adj_factor": "same_day",
+    "fund_adj": "same_day",
+    # 观察日（#452：官方无公告时刻，不伪造）
+    "index_weight": "observation",
+    "macro_indicators": "observation",
+    "fred_observation": "observation",
+}
+
+
+def get_knowledge_axis(dataset: str) -> str | None:
+    """返回数据集知识轴分类；未分类（如纯元数据集）返回 None。"""
+    return _KNOWLEDGE_AXES.get(dataset)
 
 
 @dataclass(frozen=True)
@@ -275,7 +336,7 @@ _DATASET_COVERAGE: dict[str, DatasetCoverageLimit] = {
         measured_start="2011-12-31",
         measured_end="2026-09-30",
         gaps=(),
-        notes="同上；本地库对 schema.sql 有漂移守卫拦截记录（XDG 陈旧库，非本库）",
+        notes="2011-12-31 起超目标（同 balance_sheet 家族口径）；本地库对 schema.sql 有漂移守卫拦截记录（XDG 陈旧库，非本库）",
     ),
     "index_basic": DatasetCoverageLimit(
         dataset="index_basic",

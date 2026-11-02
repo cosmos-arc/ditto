@@ -82,7 +82,7 @@ async def handle_bars_post(
 
     # 4. 空数据直接返回
     if df.is_empty():
-        return APIResponse(data=[])
+        return APIResponse(data=[], read_semantics="latest_available")
 
     # 5. 添加别名列（instrument_id → 代码）
     id_to_code_map = {
@@ -104,4 +104,4 @@ async def handle_bars_post(
     )
 
     bars = converter(df)
-    return APIResponse(data=bars)
+    return APIResponse(data=bars, read_semantics="latest_available")

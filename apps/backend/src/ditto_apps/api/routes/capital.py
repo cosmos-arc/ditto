@@ -116,7 +116,7 @@ async def get_margin(
     # 转换为模型列表
     margins = to_margin_list(df)
 
-    return APIResponse(data=margins)
+    return APIResponse(data=margins, read_semantics="pit_asof")
 
 
 @router.get(
@@ -170,4 +170,4 @@ async def get_valuation(
     # 转换为模型列表
     valuations = to_valuation_list(df)
 
-    return APIResponse(data=valuations)
+    return APIResponse(data=valuations, read_semantics="pit_asof")

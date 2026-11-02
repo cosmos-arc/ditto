@@ -458,7 +458,9 @@ export function InstrumentChartView({ id, drill }: InstrumentChartViewProps) {
 							showVolumePane
 							height={360}
 							identity={{
-								dataSourceName: `K线 ${query.data?.sources.join(", ") ?? ""}${overlayShown ? "；叠加线来源未绑定" : ""}`,
+								// #628：叠加限制随身份进导出——NAV 不入 CSV，
+								// 其覆盖限制（状态/库尾/测量时点）随 dataSourceName 携带。
+								dataSourceName: `K线 ${query.data?.sources.join(", ") ?? ""}${overlayShown ? "；叠加线来源未绑定" : ""}${isEtf && toggles.nav ? `；etf_nav ${navCoverage ? `${navCoverage.status}(库内至 ${navCoverage.measured_end ?? "?"}, 测量 ${navCoverage.measured_at})` : "覆盖未知"}` : ""}`,
 								// Exports carry the actual chart cutoff: the bars
 								// always come from the server's current decision
 								// clock, so a drill timestamp would claim a
