@@ -13,4 +13,4 @@ def test_atomic_bytes_write_can_skip_fsync(tmp_path: Path) -> None:
     atomic_bytes_write(b"evidence", target, fsync=False)
 
     assert target.read_bytes() == b"evidence"
-    assert not target.with_suffix(".bin.tmp").exists()
+    assert not list(target.parent.glob("*.tmp"))

@@ -144,3 +144,18 @@ def test_backup_does_not_remove_destination_when_creation_never_succeeded(
         backup_payload_tree(source, destination)
 
     assert not destination.exists()
+
+
+def test_inspection_ignores_writer_unique_tmp_leftovers(tmp_path: Path) -> None:
+    """#641 correctness F1：被杀写入者的 .tmp 残留不改变树逻辑身份——
+    rglob 全量哈希会把残留算进 root_sha256，备份 verify 误报漂移."""
+    source = _source_tree(tmp_path)
+    baseline = inspect_payload_tree(source)
+
+    (source / "payload.json.12345-deadbeef.tmp").write_bytes(b"half-written")
+    (source / "nested.tmp").write_bytes(b"stale")
+
+    with_leftovers = inspect_payload_tree(source)
+    assert with_leftovers.root_sha256 == baseline.root_sha256
+    assert with_leftovers.file_count == baseline.file_count
+    assert with_leftovers.total_bytes == baseline.total_bytes

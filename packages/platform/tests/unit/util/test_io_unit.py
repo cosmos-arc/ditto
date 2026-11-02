@@ -5,6 +5,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 
 import polars as pl
+import pytest
 from ditto_platform.foundation.util.io import (
     atomic_bytes_write,
     atomic_write,
@@ -221,12 +222,12 @@ class TestAtomicBytesWrite:
         assert target_path.exists()
 
     def test_no_temp_file_left_on_success(self) -> None:
-        """atomic_bytes_write should clean up the temp file after rename."""
+        """成功写入后不留 tmp（#641 后 tmp 名写入者唯一，按任意名断言）."""
         target_path = self.temp_path / "test.json"
 
         atomic_bytes_write(b"data", target_path)
 
-        assert not (target_path.with_suffix(".json.tmp")).exists()
+        assert not list(target_path.parent.glob("*.tmp"))
         assert target_path.exists()
 
 
@@ -337,6 +338,23 @@ class TestWriterUniqueTmp:
         assert loaded["tag"][0] in {"A", "B"}
         assert loaded.height == 50
 
+    def test_poisoned_shared_tmp_does_not_tear_new_writer(self) -> None:
+        """票面验收①确定性复现（共享 tmp 场景）：旧版写入者死亡留下的
+        半成品共享名 <file>.parquet.tmp 就地中毒——修复后新写入者用唯一
+        tmp 完成写入，目标完整可读，且不会把中毒 tmp rename 上目标."""
+        target = self.temp_path / "poison.parquet"
+        atomic_write(pl.DataFrame({"a": [1]}), target)
+        # 模拟旧版写入者：写半成品到共享 tmp 名后被杀（rename 未发生）
+        (target.parent / "poison.parquet.tmp").write_bytes(b"PAR1-half-written")
+
+        atomic_write(pl.DataFrame({"a": [2, 3]}), target, fsync=False)
+
+        assert pl.read_parquet(target).equals(pl.DataFrame({"a": [2, 3]}))
+        # 中毒 tmp 原样残留（惰性无害），未被消费
+        assert (
+            target.parent / "poison.parquet.tmp"
+        ).read_bytes() == b"PAR1-half-written"
+
     def test_interrupted_write_keeps_old_target(self, monkeypatch) -> None:
         """票面验收②：写入中途失败/被杀，目标保持旧完整版本（rename 前不落半成品）."""
         old = pl.DataFrame({"a": [1, 2, 3]})
@@ -348,10 +366,8 @@ class TestWriterUniqueTmp:
             raise RuntimeError("simulated kill mid-write")
 
         monkeypatch.setattr(pl.DataFrame, "write_parquet", partial_then_raise)
-        try:
+        with pytest.raises(RuntimeError, match="simulated kill"):
             atomic_write(pl.DataFrame({"a": [9]}), target, fsync=False)
-        except RuntimeError:
-            pass
 
         # 目标仍是旧完整版本；共享名 tmp 不存在，残留为写入者唯一名
         assert pl.read_parquet(target).equals(old)
@@ -370,10 +386,8 @@ class TestWriterUniqueTmp:
 
         monkeypatch.setattr(pl.DataFrame, "write_parquet", partial_then_raise)
         for _ in range(2):
-            try:
+            with pytest.raises(RuntimeError, match="kill"):
                 atomic_write(pl.DataFrame({"a": [1]}), target, fsync=False)
-            except RuntimeError:
-                pass
 
         leftovers = sorted(p.name for p in target.parent.glob("uniq.parquet.*.tmp"))
         assert len(leftovers) == 2
