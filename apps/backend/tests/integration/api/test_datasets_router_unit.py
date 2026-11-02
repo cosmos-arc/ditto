@@ -47,9 +47,11 @@ class TestListCoverage:
         by_dataset = {entry["dataset"]: entry for entry in entries}
         assert by_dataset["etf_nav"]["status"] == "partial"
         assert by_dataset["etf_nav"]["measured_end"] == "2026-10-26"
-        assert by_dataset["fx_daily"]["status"] == "empty"
+        # fx_daily 2014 起回补全覆盖（#629），ready 但非当天末端（GMT 日 K 口径）
+        assert by_dataset["fx_daily"]["status"] == "ready"
+        assert by_dataset["fx_daily"]["measured_start"] == "2014-01-01"
         assert by_dataset["stock_daily"]["status"] == "ready"
-        assert all(entry["measured_at"] == "2026-10-30" for entry in entries)
+        assert all(entry["measured_at"] == "2026-11-03" for entry in entries)
 
     def test_partial_entries_carry_gap_reasons(self, client: TestClient) -> None:
         """partial 条目携带缺口说明：空数据与不覆盖可区分（#628 验收条款）."""
@@ -58,5 +60,10 @@ class TestListCoverage:
         by_dataset = {entry["dataset"]: entry for entry in response.json()["data"]}
         assert by_dataset["etf_nav"]["gaps"]
         assert by_dataset["hk_hold"]["gaps"]
-        assert by_dataset["fx_daily"]["status"] == "empty"
-        assert by_dataset["fx_daily"]["gaps"]
+        # fx_daily 已 ready（#629）；「接线但不覆盖」的缺口样本换 earnings_forecast
+        # （2024-01-31 单日代理翻页损坏）与 commodity_daily（FRED 腿未接线）
+        assert by_dataset["fx_daily"]["status"] == "ready"
+        assert not by_dataset["fx_daily"]["gaps"]
+        assert by_dataset["earnings_forecast"]["status"] == "partial"
+        assert by_dataset["earnings_forecast"]["gaps"]
+        assert by_dataset["commodity_daily"]["gaps"]
