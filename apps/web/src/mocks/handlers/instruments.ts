@@ -211,7 +211,7 @@ export const instrumentsHandlers: RequestHandler[] = [
 	http.post("/api/v1/market/etf-nav", async ({ request }) => {
 		const body = (await request.json()) as { instrument_id?: number };
 		// 本地净值库对 mock 标的无可得数据：空 points 驱动诚实降级态；
-		// #628 起响应携带 read_semantics + 覆盖限制（测量时点快照）
+		// P4 起响应携带 read_semantics + 覆盖限制（测量时点快照；issue 628）
 		return HttpResponse.json({
 			data: {
 				instrument_id: body.instrument_id ?? 1000001,
