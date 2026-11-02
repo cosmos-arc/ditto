@@ -7,7 +7,10 @@ from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo
 
 from ditto_data.catalog.source_snapshot import ProviderSnapshotReader
-from ditto_data.ingestion.partition_state import PartitionLifecycleReader
+from ditto_data.ingestion.partition_state import (
+    PartitionLifecycleReader,
+    PartitionLifecycleStatus,
+)
 from ditto_data.models.ingestion import (
     BackfillResult,
     IngestionResult,
@@ -250,8 +253,16 @@ class BackfillManager:
             end_date=last_date,
             include_complete=True,
         )
-        expected_dates = _planned_dates(plan)
-        if not expected_dates:
+        # #640：非 COMPLETE 的既有 chunk（#640 阻断残留/进程中断）先按
+        # chunk 重放——日级补偿永不推进月块 checkpoint，has_pending_date
+        # 会让整月空洞扫描每晚重拉且永不收敛（correctness review #640 W1）。
+        replay_results, pending_chunk_dates = self._replay_incomplete_chunks(
+            plan, parallel=parallel
+        )
+        expected_dates = [
+            day for day in _planned_dates(plan) if day not in pending_chunk_dates
+        ]
+        if not expected_dates and not replay_results:
             return BackfillResult(
                 dataset=dataset,
                 total_dates=0,
@@ -273,6 +284,16 @@ class BackfillManager:
                 force_refresh_days, horizon=last_date
             )
         if not missing_dates and not trailing_dates:
+            if replay_results:
+                counts = count_results(replay_results)
+                return BackfillResult(
+                    dataset=dataset,
+                    total_dates=len(pending_chunk_dates),
+                    success_count=counts.success,
+                    skipped_count=counts.skipped,
+                    failed_count=counts.failed,
+                    results=tuple(replay_results),
+                )
             return BackfillResult(
                 dataset=dataset,
                 total_dates=0,
@@ -287,7 +308,7 @@ class BackfillManager:
         # 日志）不 force 也会正常摄取，历史值不受 KEEP_LAST 覆写。
         plain_dates = sorted(missing_dates - trailing_dates)
         refresh_dates = sorted(trailing_dates)
-        results: list[IngestionResult] = []
+        results: list[IngestionResult] = [*replay_results]
         if plain_dates:
             results.extend(
                 self._execute_backfill(
@@ -310,12 +331,64 @@ class BackfillManager:
         counts = count_results(results)
         return BackfillResult(
             dataset=dataset,
-            total_dates=len(plain_dates) + len(refresh_dates),
+            total_dates=(
+                len(plain_dates) + len(refresh_dates) + len(pending_chunk_dates)
+            ),
             success_count=counts.success,
             skipped_count=counts.skipped,
             failed_count=counts.failed,
             results=tuple(results),
         )
+
+    def _replay_incomplete_chunks(
+        self,
+        plan: BootstrapPlan,
+        *,
+        parallel: int,
+    ) -> tuple[list[IngestionResult], set[str]]:
+        """
+        按 chunk 重放非 COMPLETE 的既有分区（#640 收敛通道）.
+
+        日级补偿（retry_failed/backfill_missing 逐日通路）永不推进月块
+        checkpoint——被 #640 阻断或进程中断残留的月块若不按 chunk 重放，
+        has_pending_date 会让整月 skip/验证被拒、空洞扫描每晚重拉且永不
+        收敛。重放后仍非 COMPLETE 的 chunk 分区日从日级缺口剔除：其缺口
+        由 chunk 重试通道持有，日级重拉只烧配额不推进状态。无 lifecycle
+        读端口（降级装配）时退化为不重放，保持既有日级语义。
+        """
+        if self._lifecycle_reader is None:
+            return [], set()
+        pending = [
+            chunk
+            for chunk in plan.chunks
+            if (
+                checkpoint := self._lifecycle_reader.get_latest_checkpoint(
+                    chunk.chunk_id
+                )
+            )
+            is not None
+            and checkpoint.status is not PartitionLifecycleStatus.COMPLETE
+        ]
+        if not pending:
+            return [], set()
+        replay_plan = BootstrapPlan(
+            dataset_id=plan.dataset_id,
+            source=plan.source,
+            target_start=plan.target_start,
+            target_end=plan.target_end,
+            chunks=tuple(pending),
+        )
+        result = self._execute_plan(
+            plan=replay_plan,
+            parallel=parallel,
+            log_event="backfill_missing_chunk_replay",
+        )
+        pending_dates = {
+            partition_date
+            for chunk in pending
+            for partition_date in chunk.partition_dates
+        }
+        return list(result.results), pending_dates
 
     def _trailing_trading_days(self, count: int, *, horizon: str) -> set[str]:
         """

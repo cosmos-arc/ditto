@@ -56,9 +56,11 @@ from ditto_application.processes.ingestion.list_date_inference import (
 )
 from ditto_application.processes.ingestion.metadata_manager import MetadataManager
 from ditto_application.processes.ingestion.post_ingest import (
+    CHUNK_DAY_FETCH_FAILED,
     DataWriteContext,
     PostIngestContext,
     RequestWindow,
+    chunk_day_fetch_failed_result,
     is_sparse_pit_dataset,
     resolve_sparse_asof_snapshot,
 )
@@ -569,7 +571,7 @@ class IngestionCoordinator:
         if len({value[:4] for value in normalized_dates}) != 1:
             raise AppProcessError("ingestion chunk cannot cross a storage year")
 
-        combined, failed_days = self._fetch_planned_chunk(
+        combined, failed_days, fetch_error_days = self._fetch_planned_chunk(
             dataset,
             normalized_dates,
             request_start=request_start,
@@ -583,6 +585,12 @@ class IngestionCoordinator:
         # a day with no rows (#583 correctness F1).
         answered = [day for day in normalized_dates if day not in set(failed_days)]
         committed_end = answered[-1] if answered else request_end
+        # #640：日级 fetch 失败（代理瞬断等）意味着「未能问到源」，无依据
+        # 声明整月完成——证据链照常提交但阻断 COMPLETE，chunk 保持可重试
+        # （#626 实证：hsgt 2015-01-22 被块 COMPLETE 吞没后 planner 永不
+        # 再取、空洞扫描不可见）。供应商空应答不在此列（有明确答案，维持
+        # #583 的 trim 语义）。
+        block_complete_error = CHUNK_DAY_FETCH_FAILED if fetch_error_days else None
         result = _process_fetched_data(
             combined,
             dataset,
@@ -604,13 +612,22 @@ class IngestionCoordinator:
             ),
             request_window=RequestWindow(None, committed_end),
             chunk_id=chunk_id,
+            # 稀疏 PIT 数据集的日级证据走 as-of 快照链（#394/#521），
+            # 台账维持锚日单行——逐日落账仅适用 covering snapshot 验证
+            # 语义的非稀疏数据集。
+            partition_days=(() if is_sparse_pit_dataset(dataset) else tuple(answered)),
+            block_complete_error=block_complete_error,
         )
-        if failed_days and result.status == "success":
+        if failed_days:
             # chunk SUCCESS 日志锚在 request_start，会覆盖首个失败日的
             # FAIL 日志（同 ingestion_log 主键）——提交后重写失败日标记，
             # 让 retry_failed 持续可见（correctness review #196）。
             for failed_day in failed_days:
                 self._result_handler.persist_failed_day_marker(dataset, failed_day)
+        if block_complete_error and result.status == "success":
+            # 无 evidence committer 的降级路径没有 checkpoint 可挡——结果
+            # 层面判失败，让 BackfillResult/编排层看见可重试缺口。
+            return chunk_day_fetch_failed_result(dataset, request_start)
         return result
 
     def _fetch_planned_chunk(
@@ -620,8 +637,14 @@ class IngestionCoordinator:
         *,
         request_start: str,
         request_end: str,
-    ) -> tuple[pl.DataFrame | IngestionResult, tuple[str, ...]]:
-        """Fetch one planned range, preserving typed failures and skipped days."""
+    ) -> tuple[pl.DataFrame | IngestionResult, tuple[str, ...], tuple[str, ...]]:
+        """
+        Fetch one planned range, preserving typed failures and skipped days.
+
+        返回 (合并帧或整块失败结果, 全部失败日, 其中取数错误日)——末项是
+        #640 阻断 COMPLETE 的依据：取数错误=未获得源应答，与源端明确
+        空应答（#583 trim 语义）不同。
+        """
         if dataset in {"macro_indicators", "commodity_daily"}:
             return (
                 self._fetch_range_chunk(
@@ -630,6 +653,7 @@ class IngestionCoordinator:
                     request_end=request_end,
                     sparse=False,
                 ),
+                (),
                 (),
             )
         if dataset in {
@@ -648,15 +672,17 @@ class IngestionCoordinator:
                     sparse=True,
                 ),
                 (),
+                (),
             )
-        frames, first_failure, failed_dates = self._collect_day_fetches(
-            dataset, partition_dates
+        frames, first_failure, failed_dates, fetch_error_dates = (
+            self._collect_day_fetches(dataset, partition_dates)
         )
         if failed_dates and not frames:
             # 全月失败维持 fail-closed，整 chunk 判败可整体重试。
             return (
                 first_failure if first_failure is not None else pl.DataFrame(),
                 tuple(failed_dates),
+                tuple(fetch_error_dates),
             )
         if failed_dates:
             logger.warning(
@@ -669,19 +695,21 @@ class IngestionCoordinator:
                 failed_dates=failed_dates,
             )
         if not frames:
-            return pl.DataFrame(), tuple(failed_dates)
+            return pl.DataFrame(), tuple(failed_dates), tuple(fetch_error_dates)
         return (
             _merge_day_fetches(frames, dataset, request_start, request_end),
             tuple(failed_dates),
+            tuple(fetch_error_dates),
         )
 
     def _collect_day_fetches(
         self, dataset: str, partition_dates: tuple[str, ...]
-    ) -> tuple[list[pl.DataFrame], IngestionResult | None, list[str]]:
+    ) -> tuple[list[pl.DataFrame], IngestionResult | None, list[str], list[str]]:
         """Fetch each partition day, classifying typed failures and empties."""
         frames: list[pl.DataFrame] = []
         first_failure: IngestionResult | None = None
         failed_dates: list[str] = []
+        fetch_error_dates: list[str] = []
         for partition_date in partition_dates:
             fetched = self._try_fetch_data(dataset, partition_date)
             if isinstance(fetched, IngestionResult):
@@ -691,6 +719,8 @@ class IngestionCoordinator:
                 if first_failure is None:
                     first_failure = fetched
                 failed_dates.append(partition_date)
+                # #640：取数错误日单列——chunk 不得 COMPLETE 的依据。
+                fetch_error_dates.append(partition_date)
                 continue
             if fetched.is_empty() and expects_rows_per_trading_day(dataset):
                 # 全市场交易日快照的空应答=供应商未发布（#583 切片 B 的
@@ -708,7 +738,7 @@ class IngestionCoordinator:
                 continue
             if not fetched.is_empty():
                 frames.append(fetched)
-        return frames, first_failure, failed_dates
+        return frames, first_failure, failed_dates, fetch_error_dates
 
     def _fetch_range_chunk(
         self,

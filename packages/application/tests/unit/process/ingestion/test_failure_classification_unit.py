@@ -190,3 +190,62 @@ class TestIngestionLogStoreInterface:
 
 if __name__ == "__main__":  # pragma: no cover
     pytest.main([__file__])
+
+
+class TestFailedDayMarkerIdempotency:
+    """#640 W2：chunk 失败日标记幂等——重复标记不得虚增 attempts。"""
+
+    def test_marker_skips_when_same_code_fail_exists(self) -> None:
+        """同码 FAIL 已在账：跳过重写，UPSERT 的 attempts+1 不被标记触发。"""
+        existing = IngestionLog(
+            dataset="stock_daily",
+            source="tushare",
+            trade_date="2024-12-26",
+            status=IngestionStatus.FAIL,
+            error_code="FETCH_ERROR",
+            error_message="获取数据失败: transient",
+            attempts=1,
+        )
+
+        class _ExistingStore(_RecordingLogStore):
+            def get_log(
+                self, dataset: str, source: str, trade_date: str
+            ) -> IngestionLog | None:
+                return existing
+
+        store = _ExistingStore()
+        handler = IngestionResultHandler(
+            cast("IngestionLogStore | None", store), "tushare"
+        )
+
+        handler.persist_failed_day_marker("stock_daily", "2024-12-26")
+
+        assert store.logs == [], "同码 FAIL 已在账时标记必须跳过(防 attempts 虚增)"
+
+    def test_marker_rewrites_overwritten_success(self) -> None:
+        """锚日 FAIL 被块 SUCCESS 覆盖后：标记必须重写回 FAIL（可见性存续）。"""
+        existing = IngestionLog(
+            dataset="stock_daily",
+            source="tushare",
+            trade_date="2024-12-25",
+            status=IngestionStatus.SUCCESS,
+            checksum="checksum",
+            rows=2,
+        )
+
+        class _ExistingStore(_RecordingLogStore):
+            def get_log(
+                self, dataset: str, source: str, trade_date: str
+            ) -> IngestionLog | None:
+                return existing
+
+        store = _ExistingStore()
+        handler = IngestionResultHandler(
+            cast("IngestionLogStore | None", store), "tushare"
+        )
+
+        handler.persist_failed_day_marker("stock_daily", "2024-12-25")
+
+        assert len(store.logs) == 1
+        assert store.logs[0].status is IngestionStatus.FAIL
+        assert store.logs[0].error_code == "FETCH_ERROR"

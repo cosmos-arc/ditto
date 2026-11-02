@@ -455,7 +455,21 @@ class IngestionResultHandler:
         chunk 成功提交的 SUCCESS 日志锚在 request_start——首个失败日的
         FAIL 日志会被同键覆盖；跳天提交后重写失败标记，保证 repair
         路径（retry_failed）持续可见（correctness review #196）。
+
+        幂等：既有行已是同码 FAIL 时跳过——save_log 的 UPSERT 恒
+        attempts+1，重复标记会把一次真实取数记成两次尝试，两轮后
+        list_failed_logs(max_attempts) 即对存活缺口失明（#640 W2）。
         """
+        if self._ingestion_log_store is not None:
+            existing = self._ingestion_log_store.get_log(
+                dataset, self._source_name, trade_date
+            )
+            if (
+                existing is not None
+                and existing.status is IngestionStatus.FAIL
+                and existing.error_code == error_code
+            ):
+                return
         self._save_log(
             IngestionLog(
                 dataset=dataset,
@@ -464,6 +478,31 @@ class IngestionResultHandler:
                 status=IngestionStatus.FAIL,
                 error_code=error_code,
                 error_message="chunk skipped failed partition day; repair pending",
+            )
+        )
+
+    def persist_chunk_day_success(
+        self,
+        dataset: str,
+        trade_date: str,
+        *,
+        checksum: str | None,
+        rows: int,
+    ) -> None:
+        """
+        Persist one partition-day SUCCESS row carrying the chunk identity (#640).
+
+        无 evidence committer 的降级路径里月块同样逐日落账：每个已答分区日
+        与锚日共享同一 canonical 写入身份（R2 路径由 saga 落同样的行）。
+        """
+        self._save_log(
+            IngestionLog(
+                dataset=dataset,
+                source=self._source_name,
+                trade_date=trade_date,
+                status=IngestionStatus.SUCCESS,
+                checksum=checksum,
+                rows=rows,
             )
         )
 

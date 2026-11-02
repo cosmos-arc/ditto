@@ -85,6 +85,14 @@ class EvidenceCommitRequest:
     # 摄取/处理日，默认等于覆盖起点。success log 的 trade_date 必须等于它，
     # 而不是等于 provider 覆盖区间的起点（日历日更的覆盖起点是年初）。
     ingestion_date: str | None = None
+    # #640 月块逐日落账：chunk 实际应答的分区日集合。每个分区日落一条与
+    # 锚日同 canonical 身份的 SUCCESS 日志——日级台账与逐日写入对齐，
+    # skip 决策/空洞扫描不再把已覆盖日当缺口。
+    partition_days: tuple[str, ...] = ()
+    # #640 置位时证据链照常提交（payload/快照/日志），但不推进 COMPLETE：
+    # 分区停留可重试态并记该错误码——日级 fetch 失败的月块不得 COMPLETE，
+    # 否则 planner 永不再取且快照声明区间会掩盖失败日。
+    block_complete_error: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -177,6 +185,8 @@ class IngestionEvidenceCommitter:
         log_failure = self._commit_success_log(request)
         if log_failure is not None:
             return log_failure
+        if request.block_complete_error is not None:
+            return self._block_incomplete(request, request.block_complete_error)
         return self._complete(request)
 
     def _versioned_request(
@@ -287,6 +297,7 @@ class IngestionEvidenceCommitter:
                 # observations.
                 self._ports.snapshot_writer.append_snapshot(request.provider_snapshot)
                 self._persist_success_log(request.success_log)
+                self._persist_partition_day_logs(request)
                 return EvidenceCommitOutcome(request.chunk_id, completed=True)
             self._advance_payload_stage(checkpoint, request)
         except Exception:
@@ -325,9 +336,56 @@ class IngestionEvidenceCommitter:
     ) -> EvidenceCommitOutcome | None:
         try:
             self._persist_success_log(request.success_log)
+            self._persist_partition_day_logs(request)
         except Exception:
             return self._fail(request, error_code="SUCCESS_LOG_WRITE_FAILED")
         return None
+
+    def _persist_partition_day_logs(self, request: EvidenceCommitRequest) -> None:
+        """
+        #640 逐日落账：每个已答分区日与锚日共享同一 canonical 写入身份。
+
+        covering snapshot 按声明区间验证日级证据，整块 canonical 身份
+        （checksum/rows）可证区间内每一天——skip 决策与日级台账对齐，
+        月块不再「单日记整月行数」（#626 top_inst 实证形态）。
+        """
+        for partition_day in request.partition_days:
+            if partition_day == request.success_log.trade_date:
+                continue
+            self._persist_success_log(
+                IngestionLog(
+                    dataset=request.dataset_id,
+                    source=request.source,
+                    trade_date=partition_day,
+                    status=request.success_log.status,
+                    checksum=request.success_log.checksum,
+                    rows=request.success_log.rows,
+                )
+            )
+
+    def _block_incomplete(
+        self,
+        request: EvidenceCommitRequest,
+        error_code: str,
+    ) -> EvidenceCommitOutcome:
+        """#640：证据链已提交但分区不得 COMPLETE——记错误码停留可重试态."""
+        try:
+            self._ports.lifecycle_writer.record_partition_error(
+                request.chunk_id,
+                error_code=error_code,
+                occurred_at=self._now(),
+            )
+        except Exception:
+            return EvidenceCommitOutcome(
+                request.chunk_id,
+                completed=False,
+                error_code="PARTITION_FAILURE_RECORD_FAILED",
+            )
+        return EvidenceCommitOutcome(
+            request.chunk_id,
+            completed=False,
+            error_code=error_code,
+        )
 
     def _persist_success_log(self, log: IngestionLog) -> None:
         existing = self._ports.ingestion_log_store.get_log(
