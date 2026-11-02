@@ -42,13 +42,20 @@ class PayloadTreeReport:
 
 
 def inspect_payload_tree(directory: Path) -> PayloadTreeReport:
-    """Return deterministic per-file and whole-tree checksum evidence."""
+    """
+    Return deterministic per-file and whole-tree checksum evidence.
+
+    ``.tmp`` 后缀的写入者暂存文件（#641 写入者唯一 tmp）是瞬态半成品，
+    不属树逻辑身份——被杀写入者的残留不得使备份 verify 误报漂移。
+    """
     root = _validated_source(directory)
     files: list[PayloadFileReport] = []
     for path in sorted(root.rglob("*")):
         if path.is_symlink():
             raise PayloadBackupError("payload tree cannot contain symbolic links")
         if not path.is_file():
+            continue
+        if path.name.endswith(".tmp"):
             continue
         relative_path = path.relative_to(root).as_posix()
         files.append(
