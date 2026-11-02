@@ -29967,7 +29967,7 @@
     },
     "/api/v1/datasets/coverage": {
       "get": {
-        "description": "列出全部数据集覆盖限制（latest_available 注册表读，测量时点快照）.\n\n来源为 #622 覆盖合同的运行时蒸馏（docs/data/coverage-contract.yaml），\nmeasured_at 为测量时点而非实时状态；消费方（API/图表/导出）据此区分\n「正常空」与「不覆盖」，受限研究不包装为严格 PIT。状态词表：\nready=预期范围完整且当前 / partial=起点末端味道品种有缺 / empty=本地零行。",
+        "description": "列出全部数据集覆盖限制（latest_available 注册表读，测量时点快照）.\n\n来源为 #622 覆盖合同的运行时蒸馏（docs/data/coverage-contract.yaml），\nmeasured_at 为测量时点而非实时状态；消费方（API/图表/导出）据此区分\n「正常空」与「不覆盖」，受限研究不包装为严格 PIT。状态词表：\nready=预期范围完整且当前 / partial=起点末端味道品种有缺 / empty=本地零行。\n\nCapability maturity: `experimental`. Implemented or partly implemented; not production scope.",
         "operationId": "datasets_list_coverage",
         "parameters": [
           {
@@ -30068,7 +30068,8 @@
         "summary": "List Coverage",
         "tags": [
           "datasets"
-        ]
+        ],
+        "x-ditto-maturity": "experimental"
       }
     },
     "/api/v1/fundamental/corporate-actions": {
@@ -48273,6 +48274,11 @@
     {
       "description": "Capability maturity: `experimental`. Implemented or partly implemented; not production scope.",
       "name": "commodity",
+      "x-ditto-maturity": "experimental"
+    },
+    {
+      "description": "Capability maturity: `experimental`. Implemented or partly implemented; not production scope.",
+      "name": "datasets",
       "x-ditto-maturity": "experimental"
     },
     {

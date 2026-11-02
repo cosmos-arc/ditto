@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Generic, Literal, TypeVar
 
-from ditto_data.coverage import COVERAGE_MEASURED_AT, DatasetCoverageLimit
+from ditto_application.queries.dataset_coverage import DatasetCoverageView
 from pydantic import BaseModel, ConfigDict, Field, computed_field
 
 T = TypeVar("T")
@@ -42,17 +42,17 @@ class DataCoverageInfo(BaseModel):
     measured_at: str = Field(description="测量时点（ISO 日期；非实时）")
 
     @classmethod
-    def from_limit(cls, limit: DatasetCoverageLimit) -> DataCoverageInfo:
-        """从数据层覆盖限制真源构建（测量时点取合同常量）."""
+    def from_view(cls, view: DatasetCoverageView) -> DataCoverageInfo:
+        """从 application 覆盖限制 View 构建（状态词表已由 facade 收敛为 Literal）."""
         return cls(
-            dataset=limit.dataset,
-            domain=limit.domain,
-            status=limit.status,
-            measured_start=limit.measured_start,
-            measured_end=limit.measured_end,
-            gaps=limit.gaps,
-            notes=limit.notes,
-            measured_at=COVERAGE_MEASURED_AT.isoformat(),
+            dataset=view.dataset,
+            domain=view.domain,
+            status=view.status,
+            measured_start=view.measured_start,
+            measured_end=view.measured_end,
+            gaps=view.gaps,
+            notes=view.notes,
+            measured_at=view.measured_at.isoformat(),
         )
 
 

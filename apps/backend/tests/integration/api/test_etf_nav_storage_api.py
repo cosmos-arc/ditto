@@ -8,6 +8,7 @@ import polars as pl
 import pytest
 from dishka import Provider, Scope, make_async_container, provide
 from dishka.integrations.fastapi import setup_dishka
+from ditto_application.queries.dataset_coverage import DatasetCoverageQueryFacade
 from ditto_application.queries.market import MarketQueryFacade
 from ditto_apps.api.routes.market import router
 from ditto_data.observability.metrics import register_metrics
@@ -58,6 +59,10 @@ async def test_nav_api_reads_canonical_unit_nav(tmp_path: Path, mode: str) -> No
         @provide
         def market_facade(self) -> MarketQueryFacade:
             return facade
+
+        @provide
+        def coverage_facade(self) -> DatasetCoverageQueryFacade:
+            return DatasetCoverageQueryFacade()
 
     container = make_async_container(TestProvider())
     app = FastAPI()

@@ -414,7 +414,7 @@ async def post_etf_nav(
             instrument_id=query.instrument_id,
             points=points,
             data_coverage=(
-                DataCoverageInfo.from_limit(coverage_limit)
+                DataCoverageInfo.from_view(coverage_limit)
                 if coverage_limit is not None
                 else None
             ),

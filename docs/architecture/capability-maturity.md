@@ -166,6 +166,7 @@ OpenAPI prefix registry.
 | `/agent` | experimental | `api/routes/agent_routes.py` |
 | `/capital` | experimental | `api/routes/capital.py` |
 | `/commodity` | experimental | `api/routes/commodity.py` |
+| `/datasets` | experimental | `api/routes/datasets.py` |
 | `/fundamental` | experimental | `api/routes/fundamental.py` |
 | `/fx` | experimental | `api/routes/fx.py` |
 | `/macro` | experimental | `api/routes/macro.py` |

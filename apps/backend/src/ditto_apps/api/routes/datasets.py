@@ -1,7 +1,7 @@
 """
 数据集覆盖限制 API 路由（#628 P4 限制传播）.
 
-maturity: stable
+maturity: experimental
 """
 
 from __future__ import annotations
@@ -36,5 +36,5 @@ async def list_coverage(
     ready=预期范围完整且当前 / partial=起点末端味道品种有缺 / empty=本地零行。
     """
     return APIResponse(
-        data=[DataCoverageInfo.from_limit(limit) for limit in facade.list()]
+        data=[DataCoverageInfo.from_view(limit) for limit in facade.list()]
     )

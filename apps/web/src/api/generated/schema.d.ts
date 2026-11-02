@@ -1,6 +1,6 @@
 /**
  * DO NOT EDIT: generated from contracts/openapi/v1.json.
- * Schema SHA-256: 89f10237753b3c7910a3977a7512e3cb899ff44da97379a3d3f576109d3e7304
+ * Schema SHA-256: 27bca8e820840e5488ebef709b44a67cc24bb32bb5504d01b6bf4c2954c9ddb4
  * Generator: openapi-typescript 7.13.0
  */
 
@@ -937,6 +937,8 @@ export interface paths {
          *     measured_at 为测量时点而非实时状态；消费方（API/图表/导出）据此区分
          *     「正常空」与「不覆盖」，受限研究不包装为严格 PIT。状态词表：
          *     ready=预期范围完整且当前 / partial=起点末端味道品种有缺 / empty=本地零行。
+         *
+         *     Capability maturity: `experimental`. Implemented or partly implemented; not production scope.
          */
         get: operations["datasets_list_coverage"];
         put?: never;
