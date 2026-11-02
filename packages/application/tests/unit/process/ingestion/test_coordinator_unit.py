@@ -1403,7 +1403,11 @@ class TestIngestRange:
         mock_market_write_service,
         in_memory_catalog,
     ) -> None:
-        """单日 fetch 失败跳过而非丢弃整月 chunk——缺口由 repair 兜底（#196）."""
+        """单日 fetch 失败不丢弃整月数据，但 chunk 判败可重试（#196→#640）.
+
+        #640：日级取数错误不再被块 success 吞没——已答日照常写入，
+        结果层面 failed（无 committer 的降级路径没有 checkpoint 可挡）。
+        """
         ok_frame = lambda day: pl.DataFrame(  # noqa: E731 - test-local
             {
                 "source_ticker": ["000001.SZ"],
@@ -1433,8 +1437,10 @@ class TestIngestRange:
             partition_dates=("2024-12-25", "2024-12-26", "2024-12-27"),
         )
 
-        assert result.status == "success"
-        assert result.row_count == 2
+        assert result.status == "failed"
+        assert result.error == "CHUNK_DAY_FETCH_FAILED"
+        # 已答两日仍整月写入（月级原子丢弃的 #196 裁决维持）
+        assert mock_market_write_service.save_bars.call_count == 1
 
     def test_ingest_chunk_trims_window_past_unpublished_full_market_day(
         self,
@@ -1478,6 +1484,8 @@ class TestIngestRange:
             ctx,
             request_window,
             chunk_id,
+            partition_days=(),
+            block_complete_error=None,
         ):
             captured["window"] = request_window
             return original(
@@ -1488,6 +1496,8 @@ class TestIngestRange:
                 ctx=ctx,
                 request_window=request_window,
                 chunk_id=chunk_id,
+                partition_days=partition_days,
+                block_complete_error=block_complete_error,
             )
 
         mocker.patch.object(coordinator_module, "_process_fetched_data", spy)
@@ -2591,7 +2601,8 @@ class TestChunkSkippedDayMarker:
             partition_dates=("2024-12-25", "2024-12-26", "2024-12-27"),
         )
 
-        assert result.status == "success"
+        assert result.status == "failed"
+        assert result.error == "CHUNK_DAY_FETCH_FAILED"
         # 失败日（含与 chunk SUCCESS 同键的首日）的 FAIL 标记被重写存续
         saved = [
             call.kwargs.get("log") or call.args[0]
@@ -2606,3 +2617,325 @@ class TestChunkSkippedDayMarker:
         assert fail_markers, (
             "skipped first day must keep a FAIL marker after chunk success"
         )
+
+
+def _build_r2_chunk_coordinator(
+    services_mocks,
+    mock_source,
+    stores,
+    tmp_path,
+) -> IngestionCoordinator:
+    """R2 证据模式 coordinator（真实 saga + SQLite 证据库，#640 回归用）."""
+    from ditto_application.processes.ingestion.evidence_commit import (
+        EvidenceCommitPorts,
+        IngestionEvidenceCommitter,
+    )
+    from ditto_data.catalog.provider_payload import (
+        FilesystemProviderPayloadStore,
+    )
+
+    return IngestionCoordinator(
+        services=IngestionServices(
+            metadata=services_mocks["metadata"],
+            market=MarketServices(
+                query=services_mocks["market_write"],
+                write=services_mocks["market_write"],
+            ),
+            fundamental=services_mocks["fundamental"],
+            capital=services_mocks["capital"],
+            macro=services_mocks["macro"],
+        ),
+        fetchers=SourceFetchers(
+            metadata=mock_source,
+            market=mock_source,
+            fundamental=mock_source,
+            capital=mock_source,
+            macro=mock_source,
+        ),
+        config=IngestionCoordinatorConfig(
+            ingestion_log_store=stores.logs,
+            quality_checker=services_mocks["quality_checker"],
+            catalog_reader=InMemoryDataCatalog(),
+            catalog_writer=InMemoryDataCatalog(),
+            snapshot_reader=stores.snapshots,
+            lifecycle_reader=stores.lifecycle,
+            evidence_committer=IngestionEvidenceCommitter(
+                ports=EvidenceCommitPorts(
+                    lifecycle_reader=stores.lifecycle,
+                    lifecycle_writer=stores.lifecycle,
+                    snapshot_writer=stores.snapshots,
+                    snapshot_reader=stores.snapshots,
+                    catalog_writer=InMemoryDataCatalog(),
+                    ingestion_log_store=stores.logs,
+                )
+            ),
+            provider_payload_writer=FilesystemProviderPayloadStore(tmp_path),
+        ),
+    )
+
+
+def _event_day_frame(day: str, rows_per_day: int = 2) -> pl.DataFrame:
+    """一天的事件披露帧（含 instrument_id，跳过 FK 富化）."""
+    return pl.DataFrame(
+        {
+            "source_ticker": ["600000.SH"] * rows_per_day,
+            "instrument_id": [1] * rows_per_day,
+            "trade_date": [day] * rows_per_day,
+            "knowledge_date": [day] * rows_per_day,
+            "side": ["Buy", "Sell", "Buy"][:rows_per_day],
+            "amount": [1000.0] * rows_per_day,
+        }
+    )
+
+
+@pytest.mark.unit
+class TestChunkDayLoss640:
+    """月块回补日级丢失根因修复（#640；#626 实证形态回归）."""
+
+    @staticmethod
+    def _services(
+        mock_metadata_service,
+        mock_market_write_service,
+        mock_fundamental_store,
+        mock_capital_store,
+        mock_macro_service,
+        mock_quality_checker,
+    ) -> dict[str, object]:
+        return {
+            "metadata": mock_metadata_service,
+            "market_write": mock_market_write_service,
+            "fundamental": mock_fundamental_store,
+            "capital": mock_capital_store,
+            "macro": mock_macro_service,
+            "quality_checker": mock_quality_checker,
+        }
+
+    def test_transient_day_failure_keeps_chunk_retryable(
+        self,
+        mock_metadata_service,
+        mock_market_write_service,
+        mock_fundamental_store,
+        mock_capital_store,
+        mock_macro_service,
+        mock_quality_checker,
+        mock_source,
+        tmp_path,
+    ) -> None:
+        """#626 hsgt 2015-01-22 形态：日级瞬态失败不再被块 COMPLETE 吞没.
+
+        chunk 不得 COMPLETE（planner 会重新规划）、失败日 FAIL 台账可见、
+        空洞扫描（completed_covering_snapshot）对失败日不再视而不见。
+        """
+        from ditto_application.catalog_freshness import completed_covering_snapshot
+        from ditto_data.ingestion.partition_state import PartitionLifecycleStatus
+
+        with _evidence_support.evidence_stores() as stores:
+            coordinator = _build_r2_chunk_coordinator(
+                self._services(
+                    mock_metadata_service,
+                    mock_market_write_service,
+                    mock_fundamental_store,
+                    mock_capital_store,
+                    mock_macro_service,
+                    mock_quality_checker,
+                ),
+                mock_source,
+                stores,
+                tmp_path,
+            )
+            days = ("2015-01-21", "2015-01-22", "2015-01-23")
+            responses: list[object] = [
+                _event_day_frame(days[0]),
+                SourceFetchError(message="proxy transient", source="tushare"),
+                _event_day_frame(days[2]),
+            ]
+            mock_source.fetch_hsgt_top10.side_effect = responses
+            mock_capital_store.save_hsgt_top10.side_effect = (
+                lambda df, year, on_duplicate=None: df.height
+            )
+            chunk_id = "chunk:tushare:hsgt_top10:2015-01:2015-01-21:2015-01-23"
+
+            result = coordinator.ingest_chunk(
+                "hsgt_top10",
+                chunk_id=chunk_id,
+                request_start="2015-01-21",
+                request_end="2015-01-23",
+                partition_dates=days,
+            )
+
+            assert result.status == "failed"
+            assert result.error == "CHUNK_DAY_FETCH_FAILED"
+            checkpoint = stores.lifecycle.get_latest_checkpoint(chunk_id)
+            assert checkpoint is not None
+            assert checkpoint.status is not PartitionLifecycleStatus.COMPLETE
+            assert checkpoint.error_code == "CHUNK_DAY_FETCH_FAILED"
+            # 失败日 FAIL 台账可见（retry_failed 通道）
+            failed_log = stores.logs.get_log("hsgt_top10", "tushare", "2015-01-22")
+            assert failed_log is not None
+            assert failed_log.status is IngestionStatus.FAIL
+            # 已答日逐日 SUCCESS 落账（不再只有锚日一行）
+            for day in ("2015-01-21", "2015-01-23"):
+                day_log = stores.logs.get_log("hsgt_top10", "tushare", day)
+                assert day_log is not None
+                assert day_log.status is IngestionStatus.SUCCESS
+            # 空洞扫描：pending 分区使失败日不被 completed snapshot 掩盖
+            assert (
+                completed_covering_snapshot(
+                    stores.snapshots,
+                    stores.lifecycle,
+                    dataset="hsgt_top10",
+                    source="tushare",
+                    trade_date="2015-01-22",
+                )
+                is None
+            )
+
+    def test_retry_after_day_failure_completes_chunk(
+        self,
+        mock_metadata_service,
+        mock_market_write_service,
+        mock_fundamental_store,
+        mock_capital_store,
+        mock_macro_service,
+        mock_quality_checker,
+        mock_source,
+        tmp_path,
+    ) -> None:
+        """被阻断的月块可重试：瞬态失败恢复后同 chunk 收敛 COMPLETE."""
+        from ditto_data.ingestion.partition_state import PartitionLifecycleStatus
+
+        with _evidence_support.evidence_stores() as stores:
+            coordinator = _build_r2_chunk_coordinator(
+                self._services(
+                    mock_metadata_service,
+                    mock_market_write_service,
+                    mock_fundamental_store,
+                    mock_capital_store,
+                    mock_macro_service,
+                    mock_quality_checker,
+                ),
+                mock_source,
+                stores,
+                tmp_path,
+            )
+            days = ("2015-01-21", "2015-01-22", "2015-01-23")
+            mock_capital_store.save_hsgt_top10.side_effect = (
+                lambda df, year, on_duplicate=None: df.height
+            )
+            chunk_id = "chunk:tushare:hsgt_top10:2015-01:2015-01-21:2015-01-23"
+            common = {
+                "chunk_id": chunk_id,
+                "request_start": "2015-01-21",
+                "request_end": "2015-01-23",
+                "partition_dates": days,
+            }
+
+            # 第一次：中间日瞬态失败 → 阻断 COMPLETE
+            mock_source.fetch_hsgt_top10.side_effect = [
+                _event_day_frame(days[0]),
+                SourceFetchError(message="proxy transient", source="tushare"),
+                _event_day_frame(days[2]),
+            ]
+            first = coordinator.ingest_chunk("hsgt_top10", **common)
+            assert first.status == "failed"
+
+            # 第二次：全部应答 → 同 chunk 收敛 COMPLETE（重试语义）
+            mock_source.fetch_hsgt_top10.side_effect = [
+                _event_day_frame(days[0]),
+                _event_day_frame(days[1]),
+                _event_day_frame(days[2]),
+            ]
+            second = coordinator.ingest_chunk("hsgt_top10", **common)
+
+            assert second.status == "success", second.error
+            checkpoint = stores.lifecycle.get_latest_checkpoint(chunk_id)
+            assert checkpoint is not None
+            assert checkpoint.status is PartitionLifecycleStatus.COMPLETE
+            # 失败日的台账被成功重试覆盖
+            repaired = stores.logs.get_log("hsgt_top10", "tushare", "2015-01-22")
+            assert repaired is not None
+            assert repaired.status is IngestionStatus.SUCCESS
+
+    def test_full_month_chunk_records_per_partition_day_ledger(
+        self,
+        mock_metadata_service,
+        mock_market_write_service,
+        mock_fundamental_store,
+        mock_capital_store,
+        mock_macro_service,
+        mock_quality_checker,
+        mock_source,
+        tmp_path,
+    ) -> None:
+        """#626 top_inst 2026-09 形态：整月块逐日落账，不再单日记整月行数.
+
+        每个分区日一行 SUCCESS（携带 chunk canonical 身份），且身份可被
+        PersistedIngestionEvidenceVerifier 按 covering snapshot 验证——
+        skip 决策/日级台账与逐日写入对齐。
+        """
+        from ditto_application.catalog_freshness import (
+            PersistedIngestionEvidenceVerifier,
+        )
+        from ditto_data.ingestion.partition_state import PartitionLifecycleStatus
+
+        with _evidence_support.evidence_stores() as stores:
+            coordinator = _build_r2_chunk_coordinator(
+                self._services(
+                    mock_metadata_service,
+                    mock_market_write_service,
+                    mock_fundamental_store,
+                    mock_capital_store,
+                    mock_macro_service,
+                    mock_quality_checker,
+                ),
+                mock_source,
+                stores,
+                tmp_path,
+            )
+            days = ("2026-09-01", "2026-09-02", "2026-09-03")
+            mock_source.fetch_top_inst.side_effect = [
+                _event_day_frame(day, rows_per_day=3) for day in days
+            ]
+            mock_capital_store.save_top_inst.side_effect = (
+                lambda df, year, on_duplicate=None: df.height
+            )
+            chunk_id = "chunk:tushare:top_inst:2026-09:2026-09-01:2026-09-03"
+
+            result = coordinator.ingest_chunk(
+                "top_inst",
+                chunk_id=chunk_id,
+                request_start="2026-09-01",
+                request_end="2026-09-03",
+                partition_dates=days,
+            )
+
+            assert result.status == "success", result.error
+            checkpoint = stores.lifecycle.get_latest_checkpoint(chunk_id)
+            assert checkpoint is not None
+            assert checkpoint.status is PartitionLifecycleStatus.COMPLETE
+            day_logs = {
+                day: stores.logs.get_log("top_inst", "tushare", day) for day in days
+            }
+            # 逐日落账：每个分区日都有 SUCCESS 行，共享 chunk canonical 身份
+            verified_rows: dict[str, tuple[str, int]] = {}
+            for day, day_log in day_logs.items():
+                assert day_log is not None, f"{day} 缺少日级台账行"
+                assert day_log.status is IngestionStatus.SUCCESS
+                assert day_log.checksum is not None
+                assert day_log.rows is not None
+                assert day_log.checksum == result.checksum
+                assert day_log.rows == result.row_count
+                verified_rows[day] = (day_log.checksum, day_log.rows)
+            verifier = PersistedIngestionEvidenceVerifier(
+                snapshots=stores.snapshots,
+                lifecycle=stores.lifecycle,
+                ingestion_logs=stores.logs,
+            )
+            for day, (day_checksum, day_rows) in verified_rows.items():
+                assert verifier.verify_exact_date(
+                    dataset="top_inst",
+                    source="tushare",
+                    trade_date=day,
+                    checksum=day_checksum,
+                    row_count=day_rows,
+                ), f"{day} 的日级台账行未被完成快照证实"

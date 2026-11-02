@@ -52,6 +52,9 @@ class CatalogWriteContext:
     chunk_id: str | None = None
     payload_retained: bool = True
     provider_payload: ProviderPayloadArtifact | None = None
+    # #640 月块逐日落账/阻断完成的透传（语义见 EvidenceCommitRequest）。
+    partition_days: tuple[str, ...] = ()
+    block_complete_error: str | None = None
 
 
 def _dataset_namespace(dataset: str) -> str:
@@ -234,6 +237,8 @@ def build_evidence_commit_request(
             rows=ctx.write_result.rows_written,
         ),
         quality_attested=ctx.l1_l2_attested,
+        partition_days=ctx.partition_days,
+        block_complete_error=ctx.block_complete_error,
     )
 
 

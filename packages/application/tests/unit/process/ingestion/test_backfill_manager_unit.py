@@ -1,5 +1,7 @@
 """Tests for BackfillManager."""
 
+from datetime import UTC, datetime
+
 import pytest
 from ditto_application.exceptions import AppProcessError
 from ditto_application.processes.ingestion.backfill_manager import BackfillManager
@@ -1381,3 +1383,159 @@ class TestBackfillMissingForceScope:
             "2024-12-26": True,
             "2024-12-27": True,
         }
+
+
+@pytest.mark.unit
+class TestBackfillMissingChunkReplay:
+    """#640 W1：非 COMPLETE 月块按 chunk 重放收敛，日级补偿不烧配额。"""
+
+    def test_backfill_missing_replays_incomplete_chunk_instead_of_day_refetch(
+        self,
+        mock_metadata_service,
+        evidence,
+    ) -> None:
+        """阻断/中断残留的月块：backfill_missing 走 chunk 重放而非逐日重拉.
+
+        日级补偿永不推进月块 checkpoint——若不重放，has_pending_date 使
+        整月每晚被空洞扫描重拉且永不收敛。
+        """
+        from ditto_data.ingestion.partition_state import (
+            PartitionCheckpoint,
+            PartitionLifecycleStatus,
+        )
+
+        mock_metadata_service.list_trading_days.return_value = [
+            "2024-12-25",
+            "2024-12-26",
+        ]
+        chunk_id = "chunk:tushare:stock_daily:2024-12:2024-12-25:2024-12-26"
+        # 模拟 #640 阻断残留：PLANNED 起步（intent 已持久化）+ 日级失败错误码。
+        evidence.lifecycle.plan_partition(
+            PartitionCheckpoint(
+                chunk_id=chunk_id,
+                dataset_id="stock_daily",
+                source="tushare",
+                request_start="2024-12-25",
+                request_end="2024-12-26",
+                status=PartitionLifecycleStatus.PLANNED,
+                payload_id="intent:blocked",
+                complete_evidence_id=None,
+                error_code=None,
+                updated_at=datetime.now(UTC),
+            )
+        )
+        evidence.lifecycle.record_partition_error(
+            chunk_id,
+            error_code="CHUNK_DAY_FETCH_FAILED",
+            occurred_at=datetime.now(UTC),
+        )
+
+        class _ReplayCoordinator:
+            def __init__(self) -> None:
+                self.chunk_calls: list[tuple[str, tuple[str, ...]]] = []
+                self.day_calls: list[str] = []
+
+            def ingest_date(
+                self,
+                dataset: str,
+                trade_date: str,
+                force: bool = False,
+            ) -> IngestionResult:
+                _ = dataset, force
+                self.day_calls.append(trade_date)
+                return IngestionResult(
+                    dataset=dataset, trade_date=trade_date, status="success"
+                )
+
+            def ingest_chunk(
+                self,
+                dataset: str,
+                *,
+                chunk_id: str,
+                request_start: str,
+                request_end: str,
+                partition_dates: tuple[str, ...],
+                force: bool = False,
+            ) -> IngestionResult:
+                _ = chunk_id, request_end, force
+                self.chunk_calls.append((dataset, partition_dates))
+                return IngestionResult(
+                    dataset=dataset,
+                    trade_date=request_start,
+                    status="success",
+                    row_count=len(partition_dates),
+                )
+
+            def ingest_range(
+                self,
+                dataset: str,
+                start_date: str,
+                end_date: str,
+                force: bool = False,
+            ) -> list[IngestionResult]:
+                raise AssertionError("replay coordinator does not ingest by range")
+
+            def ingest_by_instrument(
+                self,
+                dataset: str,
+                params: InstrumentIngestParams,
+                force: bool = False,
+            ) -> IngestionResult:
+                raise AssertionError("replay coordinator does not ingest by instrument")
+
+            def ingest_planned_instrument_chunk(
+                self,
+                dataset: str,
+                *,
+                chunk_id: str,
+                params: InstrumentIngestParams,
+                force: bool = False,
+            ) -> IngestionResult:
+                raise AssertionError("replay coordinator does not ingest by instrument")
+
+            def backfill_adj_factor(
+                self,
+                instrument_id: int,
+                start: str,
+                end: str,
+            ) -> dict[str, object]:
+                raise AssertionError("replay coordinator does not backfill instruments")
+
+        coordinator = _ReplayCoordinator()
+        manager = BackfillManager(
+            coordinator=coordinator,
+            metadata_service=mock_metadata_service,
+            snapshot_reader=evidence.snapshots,
+            lifecycle_reader=evidence.lifecycle,
+        )
+
+        result = manager.backfill_missing(dataset="stock_daily")
+
+        # 月块按 chunk 重放（收敛 checkpoint），其分区日不进日级重拉
+        assert len(coordinator.chunk_calls) == 1
+        assert coordinator.chunk_calls[0][1] == ("2024-12-25", "2024-12-26")
+        assert coordinator.day_calls == []
+        assert result.total_dates == 2
+        assert result.success_count == 1
+
+    def test_backfill_missing_skips_replay_without_lifecycle_reader(
+        self,
+        mock_coordinator,
+        mock_metadata_service,
+    ) -> None:
+        """降级装配（无 lifecycle 读端口）不重放，保持既有日级语义。"""
+        mock_metadata_service.list_trading_days.return_value = ["2024-12-25"]
+        manager = BackfillManager(
+            coordinator=mock_coordinator,
+            metadata_service=mock_metadata_service,
+        )
+        mock_coordinator.ingest_date.return_value = IngestionResult(
+            dataset="stock_daily", trade_date="2024-12-25", status="success"
+        )
+
+        result = manager.backfill_missing(dataset="stock_daily")
+
+        assert result.total_dates == 1
+        mock_coordinator.ingest_date.assert_called_once_with(
+            "stock_daily", "2024-12-25", False
+        )

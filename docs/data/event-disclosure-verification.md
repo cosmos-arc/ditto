@@ -119,11 +119,20 @@ hk_hold ETF* 合成码按设计身份过滤不入库，计数单列）。判定=
 144 榜）、2026-09-30 季度末北向快照（5,422 行）；制度分段边界日
 2024-08-16（完整披露）/2024-08-19（停披首日）在探针段单列实证。
 
-## 摄取链块路径发现（follow-up 留档，非本票范围）
+## 摄取链块路径发现（根因已修：#640）
 
-月块回补路径存在两类日级丢失、块级结果仍记 success 的形态（本票以
-日模式补灌闭环，根因修复归失败分类线后续票）：
+月块回补路径曾存在两类日级丢失、块级结果仍记 success 的形态（本票以
+日模式补灌闭环，根因修复归 #640）：
 1. 日级 FETCH_ERROR（代理瞬断重试耗尽）被月块 success 吞没，checkpoint
-   COMPLETE 后空洞扫描不可见（hsgt 2015-01-22 等实证）；
+   COMPLETE 后空洞扫描不可见（hsgt 2015-01-22 等实证）——#640 后取数
+   错误日阻断 chunk COMPLETE（CHUNK_DAY_FETCH_FAILED，可重试），失败日
+   FAIL 台账与空洞扫描均可见；供应商空应答维持 #583 trim 语义；
 2. top_inst 2026-09-01..10-23 整月丢日形态（月帧 16,758 行按单日
-   落账 2026-01-05 SUCCESS/16758，日级台账与写入不齐）。
+   落账 2026-01-05 SUCCESS/16758，日级台账与写入不齐）——#640 后月块
+   每个已答分区日逐日落账（共享 chunk canonical 身份，可被
+   PersistedIngestionEvidenceVerifier 按 covering snapshot 证实）。
+
+配套（correctness review #640）：被阻断的月块由 `backfill_missing`
+按 chunk 重放收敛（日级补偿不推进月块 checkpoint，否则 has_pending_date
+使整月空洞扫描每晚重拉且永不收敛）；chunk 失败日标记幂等化（UPSERT
+attempts+1 不再被重复标记虚增，两轮后 retry_failed 不失明）。

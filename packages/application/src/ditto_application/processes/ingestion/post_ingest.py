@@ -69,10 +69,12 @@ from ditto_application.processes.ingestion.sparse_pit import (
 )
 
 __all__ = [
+    "CHUNK_DAY_FETCH_FAILED",
     "CatalogWriteContext",
     "DataWriteContext",
     "PostIngestContext",
     "build_evidence_commit_request",
+    "chunk_day_fetch_failed_result",
     "handle_fetch_error",
     "is_sparse_pit_dataset",
     "process_fetched_data",
@@ -188,7 +190,23 @@ class RequestWindow(NamedTuple):
     advance_cursor: bool = True
 
 
-def process_fetched_data(  # noqa: C901, PLR0911, PLR0912, PLR0915 - fail-closed stages
+# #640：月块含日级取数错误时的统一错误码/结果——R2 saga 阻断 COMPLETE 的
+# 映射与无 committer 降级路径共用，防止两处语义漂移。
+CHUNK_DAY_FETCH_FAILED = "CHUNK_DAY_FETCH_FAILED"
+
+
+def chunk_day_fetch_failed_result(dataset: str, trade_date: str) -> IngestionResult:
+    """月块含日级 fetch 失败：已答日已提交，缺口待重试（#640）."""
+    return IngestionResult(
+        dataset=dataset,
+        trade_date=trade_date,
+        status="failed",
+        error=CHUNK_DAY_FETCH_FAILED,
+        message="月块含日级 fetch 失败: 已答日已提交, 分区可重试 (#640)",
+    )
+
+
+def process_fetched_data(  # noqa: C901, PLR0911, PLR0912, PLR0913, PLR0915 - fail-closed stages
     df: pl.DataFrame,
     dataset: str,
     trade_date: str,
@@ -197,6 +215,8 @@ def process_fetched_data(  # noqa: C901, PLR0911, PLR0912, PLR0915 - fail-closed
     ctx: PostIngestContext,
     request_window: RequestWindow | None = None,
     chunk_id: str | None = None,
+    partition_days: tuple[str, ...] = (),
+    block_complete_error: str | None = None,
 ) -> IngestionResult:
     """处理获取的数据：DQ 检查 + 写入 + 后置钩子."""
     # Dateless snapshot datasets (basic lists) carry an empty trade_date; the
@@ -341,6 +361,8 @@ def process_fetched_data(  # noqa: C901, PLR0911, PLR0912, PLR0915 - fail-closed
         l1_l2_attested=ctx.quality_checker is not None,
         chunk_id=chunk_id,
         provider_payload=provider_payload,
+        partition_days=partition_days,
+        block_complete_error=block_complete_error,
     )
     snapshot_evidence: IngestionSnapshotEvidence | None = None
     if ctx.evidence_committer is not None:
@@ -351,6 +373,13 @@ def process_fetched_data(  # noqa: C901, PLR0911, PLR0912, PLR0915 - fail-closed
                 return failure
         outcome = ctx.evidence_committer.commit(evidence)
         if not outcome.completed:
+            if (
+                block_complete_error is not None
+                and outcome.error_code == block_complete_error
+            ):
+                # #640：证据链已提交，仅按日级失败阻断 COMPLETE——已答日
+                # 已落账，分区停留可重试态，planner 会重新规划该 chunk。
+                return chunk_day_fetch_failed_result(dataset, trade_date)
             return IngestionResult(
                 dataset=dataset,
                 trade_date=trade_date,
@@ -421,6 +450,18 @@ def process_fetched_data(  # noqa: C901, PLR0911, PLR0912, PLR0915 - fail-closed
         ),
         persist_log=ctx.evidence_committer is None,
     )
+    if partition_days and ctx.evidence_committer is None:
+        # #640 降级路径（无 evidence committer）同样逐日落账：月块每个
+        # 已答分区日携带 chunk canonical 身份落 SUCCESS 行。
+        for partition_day in partition_days:
+            if partition_day == trade_date:
+                continue
+            ctx.result_handler.persist_chunk_day_success(
+                dataset,
+                partition_day,
+                checksum=write_result.checksum,
+                rows=write_result.rows_written,
+            )
     if ctx.evidence_committer is None and not sparse_pit:
         record_data_catalog_entry(
             catalog_ctx,

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -562,5 +563,77 @@ def test_completed_chunk_rejects_same_chunk_different_checksum(
         assert base.status is PartitionLifecycleStatus.COMPLETE
         assert base.complete_evidence_id == request.provider_snapshot.snapshot_id
         assert not lifecycle.list_incomplete()
+    finally:
+        pool.close()
+
+
+@pytest.mark.unit
+def test_partition_days_persist_per_day_success_logs(tmp_path: Path) -> None:
+    """#640 逐日落账：月块的每个已答分区日与锚日共享 canonical 身份."""
+    lifecycle, pool = _store(tmp_path)
+    snapshot, catalog, logs = (_Recorder() for _ in range(3))
+    committer = IngestionEvidenceCommitter(
+        ports=_ports(lifecycle, snapshot, catalog, logs),
+        now=lambda: datetime(2026, 7, 18, 9, 0, tzinfo=UTC),
+    )
+    request = _request()
+    request = replace(
+        request,
+        partition_days=("2026-07-17", "2026-07-20", "2026-07-21"),
+    )
+
+    try:
+        outcome = committer.commit(request)
+
+        assert outcome.completed is True
+        saved = {
+            (log.trade_date, log.checksum, log.rows)
+            for log in logs.values
+            if isinstance(log, IngestionLog)
+        }
+        assert saved == {
+            ("2026-07-17", request.success_log.checksum, 1),
+            ("2026-07-20", request.success_log.checksum, 1),
+            ("2026-07-21", request.success_log.checksum, 1),
+        }
+    finally:
+        pool.close()
+
+
+@pytest.mark.unit
+def test_block_complete_error_commits_evidence_but_stays_retryable(
+    tmp_path: Path,
+) -> None:
+    """#640：日级 fetch 失败的月块证据链照常提交，但不得 COMPLETE."""
+    lifecycle, pool = _store(tmp_path)
+    snapshot, catalog, logs = (_Recorder() for _ in range(3))
+    committer = IngestionEvidenceCommitter(
+        ports=_ports(lifecycle, snapshot, catalog, logs),
+        now=lambda: datetime(2026, 7, 18, 9, 0, tzinfo=UTC),
+    )
+    request = replace(
+        _request(),
+        partition_days=("2026-07-17",),
+        block_complete_error="CHUNK_DAY_FETCH_FAILED",
+    )
+
+    try:
+        outcome = committer.commit(request)
+
+        assert outcome.completed is False
+        assert outcome.error_code == "CHUNK_DAY_FETCH_FAILED"
+        # 证据链已提交：快照/目录/日志照常落库，仅 COMPLETE 被阻断
+        assert len(snapshot.values) == 1
+        assert len(catalog.values) == 1
+        assert len(logs.values) == 1
+        checkpoint = lifecycle.get_checkpoint(outcome.chunk_id)
+        assert checkpoint is not None
+        assert checkpoint.status is PartitionLifecycleStatus.PAYLOAD_COMMITTED
+        assert checkpoint.error_code == "CHUNK_DAY_FETCH_FAILED"
+        # 阻断不落 COMPLETE 审计事件，planner 会重新规划该 chunk
+        event_statuses = [
+            event.to_status for event in lifecycle.list_events(outcome.chunk_id)
+        ]
+        assert PartitionLifecycleStatus.COMPLETE not in event_statuses
     finally:
         pool.close()
