@@ -17,7 +17,9 @@ from ditto_application.queries.capital import CapitalQueryFacade
 from ditto_application.queries.metadata import MetadataQueryFacade
 from fastapi import APIRouter, Query
 
-from ditto_apps.api.utils.identifier import resolve_identifier_for_api
+from ditto_apps.api.utils.identifier import (
+    resolve_identifier_or_404,
+)
 from ditto_apps.models.capital import (
     Margin,
     Valuation,
@@ -82,15 +84,18 @@ async def get_margin(
     ),
 ) -> APIResponse[list[Margin]]:
     """
-    获取融资融券数据.
+    获取融资融券数据（pit_asof：as_of 可见版本，日粒度 as_of=上海日终）.
 
     标识符三选一（优先级: instrument_id > standard_ticker > ticker）:
     - instrument_id: 内部 ID，如 1000001
     - standard_ticker: Ditto 标准格式，如 "000001.XSHE"
     - ticker: 裸代码，如 "000001"
 
+    Raises:
+        NotFoundError: 404 如果标识符在 as_of_date 不可解析
+
     """
-    resolved_id = resolve_identifier_for_api(
+    resolved_id = resolve_identifier_or_404(
         metadata_facade,
         instrument_id=instrument_id,
         standard_ticker=standard_ticker,
@@ -98,9 +103,6 @@ async def get_margin(
         as_of_date=as_of_date,
         domain="capital",
     )
-
-    if resolved_id is None:
-        return APIResponse(data=[])
 
     # 调用 facade（在线程池中执行，避免阻塞事件循环）
     df = await asyncio.to_thread(
@@ -136,15 +138,18 @@ async def get_valuation(
     ),
 ) -> APIResponse[list[Valuation]]:
     """
-    获取估值指标数据.
+    获取估值指标数据（pit_asof：as_of 可见版本，日粒度 as_of=上海日终）.
 
     标识符三选一（优先级: instrument_id > standard_ticker > ticker）:
     - instrument_id: 内部 ID，如 1000001
     - standard_ticker: Ditto 标准格式，如 "000001.XSHE"
     - ticker: 裸代码，如 "000001"
 
+    Raises:
+        NotFoundError: 404 如果标识符在 as_of_date 不可解析
+
     """
-    resolved_id = resolve_identifier_for_api(
+    resolved_id = resolve_identifier_or_404(
         metadata_facade,
         instrument_id=instrument_id,
         standard_ticker=standard_ticker,
@@ -152,9 +157,6 @@ async def get_valuation(
         as_of_date=as_of_date,
         domain="capital",
     )
-
-    if resolved_id is None:
-        return APIResponse(data=[])
 
     # 调用 facade（在线程池中执行，避免阻塞事件循环）
     df = await asyncio.to_thread(

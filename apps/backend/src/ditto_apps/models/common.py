@@ -4,9 +4,56 @@ from __future__ import annotations
 
 from typing import Generic, Literal, TypeVar
 
+from ditto_data.coverage import COVERAGE_MEASURED_AT, DatasetCoverageLimit
 from pydantic import BaseModel, ConfigDict, Field, computed_field
 
 T = TypeVar("T")
+
+# 读取时间语义词汇表（#628 P4）：
+# - latest_available: 返回库内现存行，无 PIT 过滤——受限研究，不得包装为严格 PIT
+# - pit_asof: 返回 as_of 可见版本（日粒度 as_of = 上海日终，date 精度知识当日
+#   全天不视为部分可见；修订多版本收敛到最新可见 knowledge 版本）
+# - frozen_snapshot: 快照重放，逐字段稳定，绑定 snapshot 身份
+ReadSemantics = Literal["latest_available", "pit_asof", "frozen_snapshot"]
+
+
+class DataCoverageInfo(BaseModel):
+    """数据集覆盖限制快照（#622 测量证据投影，测量时点非实时；#628 限制传播）."""
+
+    model_config = ConfigDict(strict=True, extra="ignore")
+
+    dataset: str = Field(description="数据集 ID")
+    domain: str = Field(description="数据域")
+    status: Literal["ready", "partial", "empty"] = Field(
+        description=(
+            "ready=预期范围完整且当前 / partial=起点末端味道品种有缺 / empty=本地零行"
+        )
+    )
+    measured_start: str | None = Field(
+        default=None, description="实测覆盖起点（ISO 日期）"
+    )
+    measured_end: str | None = Field(
+        default=None, description="实测覆盖终点（ISO 日期）"
+    )
+    gaps: tuple[str, ...] = Field(
+        default=(), description="缺口与限制说明（源端权限、末端滞后、制度分段等）"
+    )
+    notes: str | None = Field(default=None, description="测量备注")
+    measured_at: str = Field(description="测量时点（ISO 日期；非实时）")
+
+    @classmethod
+    def from_limit(cls, limit: DatasetCoverageLimit) -> DataCoverageInfo:
+        """从数据层覆盖限制真源构建（测量时点取合同常量）."""
+        return cls(
+            dataset=limit.dataset,
+            domain=limit.domain,
+            status=limit.status,
+            measured_start=limit.measured_start,
+            measured_end=limit.measured_end,
+            gaps=limit.gaps,
+            notes=limit.notes,
+            measured_at=COVERAGE_MEASURED_AT.isoformat(),
+        )
 
 
 class PaginationRequest(BaseModel):

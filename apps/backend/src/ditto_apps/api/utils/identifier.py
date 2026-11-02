@@ -8,7 +8,7 @@ from ditto_application.queries.metadata import MetadataQueryFacade
 from ditto_kernel import AmbiguousTickerError, NoIdentifierProvidedError
 from ditto_platform.foundation import logger
 
-from ditto_apps.api.errors import APIError, BadRequestError
+from ditto_apps.api.errors import APIError, BadRequestError, NotFoundError
 
 
 def resolve_identifier_for_api(
@@ -65,3 +65,32 @@ def resolve_identifier_for_api(
             status_code=500,
             error_code="INTERNAL_ERROR",
         ) from exc
+
+
+def resolve_identifier_or_404(
+    metadata_facade: MetadataQueryFacade,
+    *,
+    instrument_id: int | None,
+    standard_ticker: str | None,
+    ticker: str | None,
+    as_of_date: date | None = None,
+    domain: str = "",
+) -> int:
+    """解析标识符，查不到时 404 fail-closed（#628：缺必需输入拒绝而非空列表）."""
+    resolved = resolve_identifier_for_api(
+        metadata_facade,
+        instrument_id=instrument_id,
+        standard_ticker=standard_ticker,
+        ticker=ticker,
+        as_of_date=as_of_date,
+        domain=domain,
+    )
+    if resolved is not None:
+        return resolved
+    provided = (
+        f"instrument_id={instrument_id}"
+        if instrument_id is not None
+        else f"standard_ticker={standard_ticker!r}, ticker={ticker!r}"
+    )
+    anchor = as_of_date.isoformat() if as_of_date else "today"
+    raise NotFoundError(f"Instrument not found as of {anchor} ({provided})")

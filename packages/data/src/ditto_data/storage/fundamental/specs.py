@@ -61,4 +61,7 @@ CORPORATE_ACTIONS_SPEC = SqliteTableSpec(
     id_column="instrument_id",
     date_column="action_date",
     nullable_columns=frozenset({"effective_to"}),
+    # 同一 action_date 可承载多种行动类型：类型属于事实键，
+    # 只有同类型行动的多披露版本才互为修订（#628）。
+    fact_key_columns=("instrument_id", "action_date", "action_type"),
 )

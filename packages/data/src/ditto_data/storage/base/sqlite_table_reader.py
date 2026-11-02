@@ -50,7 +50,7 @@ class SqliteTableReader:
             params.append(as_of_date)
         params.extend((as_of_date, as_of_date))
         rows = self._client.fetchall(self._sql, params)
-        return pl.DataFrame(rows) if rows else pl.DataFrame()
+        return self._finalize(pl.DataFrame(rows) if rows else pl.DataFrame(), pit=True)
 
     def get_range(
         self,
@@ -96,4 +96,51 @@ class SqliteTableReader:
         ).rstrip()
 
         rows = self._client.fetchall(sql, params)
-        return pl.DataFrame(rows) if rows else pl.DataFrame()
+        return self._finalize(
+            pl.DataFrame(rows) if rows else pl.DataFrame(),
+            pit=as_of_date is not None,
+        )
+
+    def _finalize(self, df: pl.DataFrame, *, pit: bool) -> pl.DataFrame:
+        """
+        修订收敛 + 输出定序（#628 P4）。
+
+        PIT 查询下，同事实键存在多条可见版本（披露锚不同的修订公告、
+        双开区间行）时，收敛到 knowledge 最新（并列取 effective_from
+        更晚）的一条，再按构造时的排序键倒序输出，保证同输入读取结果
+        确定。非 PIT 读取（无 as_of）不收敛——版本历史按原样返回，
+        由消费方按需区分版本（corporate_actions 版本史契约）。
+        事实键 = spec.fact_key_columns，缺省 (id, date_column)。
+        """
+        spec = self._spec
+        if not pit or df.is_empty():
+            return df
+        fact_key = spec.fact_key_columns or (
+            (spec.id_column, spec.date_column) if spec.date_column is not None else None
+        )
+        if fact_key is None:
+            return df
+        rank_columns = [
+            column
+            for column in (
+                spec.pit_columns[-self._KNOWLEDGE_PIT_COLUMNS]
+                if len(spec.pit_columns) >= self._KNOWLEDGE_PIT_COLUMNS
+                else None,
+                spec.pit_columns[-self._MIN_PIT_COLUMNS],
+            )
+            if column is not None
+        ]
+        deduped = df.sort(rank_columns, descending=True).unique(
+            subset=list(fact_key),
+            keep="first",
+            maintain_order=True,
+        )
+        order_column = spec.order_by_column or spec.date_column
+        if order_column is None:
+            return deduped.sort(rank_columns, descending=True)
+        return deduped.sort(
+            [*rank_columns, order_column]
+            if order_column in rank_columns
+            else [order_column, *rank_columns],
+            descending=True,
+        )

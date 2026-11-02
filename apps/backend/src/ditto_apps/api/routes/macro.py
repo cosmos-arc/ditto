@@ -74,7 +74,10 @@ async def post_indicators(
     facade: Annotated[MacroQueryFacade, FromComponent()],
 ) -> APIResponse[list[Indicator]]:
     """
-    查询宏观指标数据.
+    查询宏观指标数据（latest_available：库内现存行，无 PIT 过滤，#628 标注）.
+
+    macro_indicators 为 partial 覆盖（见 GET /datasets/coverage）；空结果
+    与不覆盖经覆盖注册表区分，受限研究不包装为严格 PIT.
 
     Args:
         query: 查询参数

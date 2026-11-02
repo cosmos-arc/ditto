@@ -199,20 +199,39 @@ class TestDividend:
     """测试 Dividend 响应模型."""
 
     def test_basic_dividend(self) -> None:
-        """验证基本 Dividend 创建."""
+        """验证基本 Dividend 创建（真实存储列，#628 起伪 amount 映射废弃）."""
         from ditto_apps.models.fundamental import Dividend
 
         dividend = Dividend(
             instrument_id=1,
-            announce_date="2024-03-31",
-            dividend_type="cash",
-            amount=0.5,
+            ex_dividend_date="2024-06-15",
+            div_proc="实施",
+            dividend_per_share=0.5,
+            dividend_yield=0.02,
+            knowledge_date="2024-03-31",
+            effective_from="2024-03-31",
+            effective_to=None,
         )
 
         assert dividend.instrument_id == 1
-        assert dividend.announce_date == "2024-03-31"
-        assert dividend.dividend_type == "cash"
-        assert dividend.amount == 0.5
+        assert dividend.ex_dividend_date == "2024-06-15"
+        assert dividend.dividend_per_share == 0.5
+        assert dividend.knowledge_date == "2024-03-31"
+
+    def test_missing_values_stay_null_not_zero(self) -> None:
+        """未披露数值以 null 透出，不零填充（#628 验收条款）."""
+        from ditto_apps.models.fundamental import Dividend
+
+        dividend = Dividend(
+            instrument_id=1,
+            ex_dividend_date=None,
+            div_proc=None,
+            dividend_per_share=None,
+            dividend_yield=None,
+        )
+
+        assert dividend.dividend_per_share is None
+        assert dividend.dividend_yield is None
 
 
 @pytest.mark.unit
@@ -220,22 +239,26 @@ class TestToDividend:
     """测试 to_dividend 转换函数."""
 
     def test_convert_complete_row(self) -> None:
-        """验证完整行转换."""
+        """验证完整行转换（读取器真实列：ex_dividend_date/div_proc/…）."""
         from ditto_apps.models.fundamental import to_dividend
 
         row: dict[str, Any] = {
             "instrument_id": 1,
-            "announce_date": "2024-03-31",
-            "dividend_type": "cash",
-            "amount": 0.5,
+            "ex_dividend_date": "2024-06-15",
+            "div_proc": "实施",
+            "dividend_per_share": 0.5,
+            "dividend_yield": 0.02,
+            "knowledge_date": "2024-03-31",
+            "effective_from": "2024-03-31",
+            "effective_to": None,
         }
 
         dividend = to_dividend(row)
 
         assert dividend.instrument_id == 1
-        assert dividend.announce_date == "2024-03-31"
-        assert dividend.dividend_type == "cash"
-        assert dividend.amount == 0.5
+        assert dividend.ex_dividend_date == "2024-06-15"
+        assert dividend.dividend_per_share == 0.5
+        assert dividend.knowledge_date == "2024-03-31"
 
 
 @pytest.mark.unit

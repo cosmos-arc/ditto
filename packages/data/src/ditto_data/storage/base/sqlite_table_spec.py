@@ -19,6 +19,10 @@ class SqliteTableSpec:
     # KEEP_LAST upsert 的冲突目标（表主键）；None 表示该表只支持默认的
     # 冲突忽略（KEEP_FIRST）语义，KEEP_LAST 写入响亮失败。
     conflict_columns: tuple[str, ...] | None = None
+    # 事实业务键（PIT 修订收敛的分区分键）；None 表示 (id_column, date_column)。
+    # 同键多行视为同一事实的修订版本，键外列（如 corporate_actions 的
+    # action_type）参与键时，同日不同类型行动不会被误收敛（#628）。
+    fact_key_columns: tuple[str, ...] | None = None
 
     @property
     def all_columns(self) -> tuple[str, ...]:

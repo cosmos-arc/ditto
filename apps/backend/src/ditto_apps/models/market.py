@@ -19,6 +19,7 @@ import polars as pl
 from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, model_validator
 
 from ditto_apps.models._date_helpers import DateField, format_date, format_float
+from ditto_apps.models.common import DataCoverageInfo, ReadSemantics
 
 
 class Adjustment(StrEnum):
@@ -253,10 +254,23 @@ class EtfNavPoint(BaseModel):
 
 
 class EtfNavResponse(BaseModel):
-    """ETF 净值响应（数据可得时返回点列，不可得时为空列表）。"""
+    """
+    ETF 净值响应（latest_available：库内现存行，无 PIT 过滤，#628 标注）.
+
+    空点列与「库尾未更新/不覆盖」经 data_coverage 区分；
+    语义与覆盖随数据传播到图表与导出（受限研究不包装为严格 PIT）.
+    """
 
     instrument_id: int = Field(description="标的 ID")
     points: list[EtfNavPoint] = Field(description="净值点列")
+    read_semantics: ReadSemantics = Field(
+        default="latest_available",
+        description="读取时间语义：latest_available=现存行无 PIT 过滤",
+    )
+    data_coverage: DataCoverageInfo | None = Field(
+        default=None,
+        description="etf_nav 数据集覆盖限制（测量时点快照；空点列时用于区分不覆盖）",
+    )
 
 
 class RegimeIndicatorResponse(BaseModel):

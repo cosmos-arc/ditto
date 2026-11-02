@@ -29,7 +29,10 @@ async def post_bars(
     facade: Annotated[FXQueryFacade, FromComponent()],
 ) -> APIResponse[list[FxBar]]:
     """
-    查询外汇 K 线数据.
+    查询外汇 K 线数据（latest_available：库内现存行，无 PIT 过滤，#628 标注）.
+
+    fx_daily 当前本地零行（empty，见 GET /datasets/coverage）；
+    空列表=不覆盖而非正常无数据.
 
     Args:
         query: 查询参数
