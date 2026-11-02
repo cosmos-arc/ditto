@@ -314,6 +314,29 @@ class TestFundamentalDividendCommand:
         facade, _metadata = _patch_facades(mocker)
         facade.get_dividend.return_value = _dividend_df(per_share=None)
 
+    def test_dividend_table_renders_disclosed_zero_as_zero(
+        self, runner: CliRunner, mocker: MockerFixture
+    ) -> None:
+        """correctness W3：已披露的 0 是数值（送转方案零分红），非未披露。"""
+        facade, _metadata = _patch_facades(mocker)
+        facade.get_dividend.return_value = _dividend_df(per_share=0.0)
+
+        result = runner.invoke(
+            app,
+            [
+                "query",
+                "fundamental",
+                "dividend",
+                "--instrument-id",
+                "1000001",
+                "--date",
+                "2024-12-31",
+            ],
+        )
+
+        assert result.exit_code == 0
+        assert "0.0000" in result.output
+
         result = runner.invoke(
             app,
             [

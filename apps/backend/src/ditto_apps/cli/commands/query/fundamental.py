@@ -207,8 +207,10 @@ def get_dividend(
                 str(div.knowledge_date) if div.knowledge_date else "-",
                 str(div.ex_dividend_date) if div.ex_dividend_date else "-",
                 div.div_proc or "-",
-                f"{div.dividend_per_share:.4f}" if div.dividend_per_share else "-",
-                f"{div.dividend_yield:.4f}" if div.dividend_yield else "-",
+                f"{div.dividend_per_share:.4f}"
+                if div.dividend_per_share is not None
+                else "-",
+                f"{div.dividend_yield:.4f}" if div.dividend_yield is not None else "-",
             )
 
         console.print(table)

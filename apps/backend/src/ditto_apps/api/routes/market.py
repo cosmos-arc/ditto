@@ -411,6 +411,7 @@ async def post_etf_nav(
     ]
     coverage_limit = coverage_facade.get("etf_nav")
     return APIResponse(
+        read_semantics="latest_available",
         data=EtfNavResponse(
             instrument_id=query.instrument_id,
             points=points,
@@ -419,5 +420,5 @@ async def post_etf_nav(
                 if coverage_limit is not None
                 else None
             ),
-        )
+        ),
     )

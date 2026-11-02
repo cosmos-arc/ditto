@@ -108,9 +108,12 @@ class SqliteTableReader:
         PIT 查询下，同事实键存在多条可见版本（披露锚不同的修订公告、
         双开区间行）时，收敛到 knowledge 最新（并列取 effective_from
         更晚）的一条，再按构造时的排序键倒序输出，保证同输入读取结果
-        确定。非 PIT 读取（无 as_of）不收敛——版本历史按原样返回，
+        确定（maintain_order 显式声明，不依赖默认多线程排序的偶然稳定）。
+        非 PIT 读取（无 as_of）不收敛——版本历史按原样返回，
         由消费方按需区分版本（corporate_actions 版本史契约）。
         事实键 = spec.fact_key_columns，缺省 (id, date_column)。
+        NULL 日期与 SQL ORDER BY ... DESC 语义对齐（NULL 置末），
+        具体日期行先于未定日期行（correctness W1）。
         """
         spec = self._spec
         if not pit or df.is_empty():
@@ -125,17 +128,21 @@ class SqliteTableReader:
             for column in (spec.knowledge_column, spec.effective_from_column)
             if column is not None
         ]
-        deduped = df.sort(rank_columns, descending=True).unique(
+        deduped = df.sort(rank_columns, descending=True, maintain_order=True).unique(
             subset=list(fact_key),
             keep="first",
             maintain_order=True,
         )
         order_column = spec.order_by_column or spec.date_column
         if order_column is None:
-            return deduped.sort(rank_columns, descending=True)
+            return deduped.sort(
+                rank_columns, descending=True, nulls_last=True, maintain_order=True
+            )
         sort_columns = [order_column, *rank_columns]
         # 去重排序键（order_column 可能已在 rank_columns 中）
         deduped_sort = [
             c for i, c in enumerate(sort_columns) if c not in sort_columns[:i]
         ]
-        return deduped.sort(deduped_sort, descending=True)
+        return deduped.sort(
+            deduped_sort, descending=True, nulls_last=True, maintain_order=True
+        )

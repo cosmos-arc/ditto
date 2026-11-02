@@ -745,3 +745,71 @@ class TestDividendNullExDateFactKey:
 
         assert result.height == 2
         assert sorted(result["dividend_per_share"].to_list()) == [0.1, 0.3]
+
+
+class TestDividendPitOrderingAndRevisions:
+    """correctness W1/W2：dividend PIT 输出定序与具除息日多公告现状锁定。"""
+
+    def _dividend_reader(self, mock_client: MagicMock) -> SqliteTableReader:
+        spec = SqliteTableSpec(
+            table="dividend",
+            columns=("dividend_per_share", "dividend_yield", "div_proc"),
+            id_column="instrument_id",
+            date_column="ex_dividend_date",
+            nullable_columns=frozenset(
+                {
+                    "effective_to",
+                    "ex_dividend_date",
+                    "dividend_per_share",
+                    "dividend_yield",
+                    "div_proc",
+                }
+            ),
+            fact_key_columns=("instrument_id", "ex_dividend_date", "effective_from"),
+        )
+        return SqliteTableReader(spec, mock_client)
+
+    @staticmethod
+    def _row(
+        ex_date: str | None, knowledge: str, per_share: float
+    ) -> dict[str, object]:
+        return {
+            "instrument_id": 1,
+            "ex_dividend_date": ex_date,
+            "div_proc": "实施" if ex_date else "预案",
+            "dividend_per_share": per_share,
+            "dividend_yield": None,
+            "knowledge_date": knowledge,
+            "effective_from": knowledge,
+            "effective_to": None,
+        }
+
+    def test_concrete_ex_date_rows_sort_before_null(
+        self, mock_client: MagicMock
+    ) -> None:
+        """W1：SQL ORDER BY DESC 语义对齐——NULL 日期置末，具体日期在前。"""
+        mock_client.fetchall.return_value = [
+            self._row(None, "2024-08-01", 0.1),
+            self._row("2024-06-20", "2024-06-18", 0.5),
+        ]
+        result = self._dividend_reader(mock_client).get(1, date(2024, 12, 1))
+
+        assert result["ex_dividend_date"].to_list() == ["2024-06-20", None]
+
+    def test_same_ex_date_two_announcements_both_visible(
+        self, mock_client: MagicMock
+    ) -> None:
+        """W2 现状锁定：数据无事件级 ID，同一除息日预案→实施公告独立成行
+        （双行可见、kd 倒序）；跨公告收敛的取舍留档验证文档。"""
+        mock_client.fetchall.return_value = [
+            self._row("2024-06-20", "2024-04-10", 0.3),
+            self._row("2024-06-20", "2024-06-18", 0.5),
+        ]
+        result = self._dividend_reader(mock_client).get(1, date(2024, 12, 1))
+
+        assert result.height == 2
+        assert result["knowledge_date"].to_list() == [
+            "2024-06-18",
+            "2024-04-10",
+        ]
+        assert result["dividend_per_share"].to_list() == [0.5, 0.3]
