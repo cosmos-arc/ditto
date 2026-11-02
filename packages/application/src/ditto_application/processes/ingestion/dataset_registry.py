@@ -40,6 +40,7 @@ __all__ = [
     "InstrumentFetchHandler",
     "WriteKind",
     "default_dataset_registry",
+    "fx_commodity_request_bounds",
 ]
 
 
@@ -342,7 +343,7 @@ _GLOBAL_INDEX_LOOKBACK_DAYS = 7
 # FRED 油/VIX 系列按美东发布节奏 T+1 上市——21:30 夜链请求当日恒为
 # 未闭合/未发布日，单日请求恒空（#629 实测：fx 六对全空、commodity 仅
 # 新浪腿落地）。窗口让 GMT 昨日行每日落地、迟到行在窗口内自愈。
-FX_COMMODITY_LOOKBACK_DAYS = 7
+_FX_COMMODITY_LOOKBACK_DAYS = 7
 # namechange 事件流回看窗口：单页可容纳（远小于翻页损坏边界）
 _HISTORY_LOOKBACK_DAYS = 45
 
@@ -364,15 +365,15 @@ def _global_index_request_bounds(trade_date: str) -> tuple[str, str]:
 
 def fx_commodity_request_bounds(trade_date: str) -> tuple[str, str]:
     """fx/commodity 摄取真实请求区间（回看窗口）——coordinator 取数同源。"""
-    return _lookback_bounds(trade_date, FX_COMMODITY_LOOKBACK_DAYS)
+    return _lookback_bounds(trade_date, _FX_COMMODITY_LOOKBACK_DAYS)
 
 
 def _fx_fetch(ctx: DailyFetchContext) -> DailyFetchHandler:
     start, end = fx_commodity_request_bounds(ctx.trade_date)
     return lambda: ctx.fetchers.macro.fetch_fx_daily(
-        list(FX_CODE_TO_INSTRUMENT_ID.keys()),
-        start,
-        end,
+        ts_codes=list(FX_CODE_TO_INSTRUMENT_ID.keys()),
+        start_date=start,
+        end_date=end,
     )
 
 

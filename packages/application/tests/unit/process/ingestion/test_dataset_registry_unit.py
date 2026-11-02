@@ -414,9 +414,12 @@ class TestIndexWeightUniverse:
 
         registration.daily_fetch_factory(context)()
 
-        codes, start, end = macro.fetch_fx_daily.call_args.args
-        assert codes == list(FX_CODE_TO_INSTRUMENT_ID.keys())
-        assert (start, end) == ("2026-09-23", "2026-09-30")
+        kwargs = macro.fetch_fx_daily.call_args.kwargs
+        assert kwargs["ts_codes"] == list(FX_CODE_TO_INSTRUMENT_ID.keys())
+        assert (kwargs["start_date"], kwargs["end_date"]) == (
+            "2026-09-23",
+            "2026-09-30",
+        )
         assert registration.request_bounds is not None
         assert registration.request_bounds("2026-09-30") == (
             "2026-09-23",
@@ -445,8 +448,8 @@ class TestIndexWeightUniverse:
 
         fx_factory(context)()
 
-        _, start, end = macro.fetch_fx_daily.call_args.args
-        assert start < end
+        fx_kwargs = macro.fetch_fx_daily.call_args.kwargs
+        assert fx_kwargs["start_date"] < fx_kwargs["end_date"]
 
     def test_fund_portfolio_fetches_market_wide_single_request(self) -> None:
         """fund_portfolio 日更=市场级单请求（逐标的 1,864 循环超时且烧配额）."""
