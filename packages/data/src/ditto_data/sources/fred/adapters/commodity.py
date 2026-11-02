@@ -98,6 +98,9 @@ class CommodityFredAdapter(BaseFredAdapter):
                 .dt.combine(time=pl.time(0, 0, 0))
                 .dt.replace_time_zone("America/New_York", ambiguous="earliest")
                 .dt.convert_time_zone("UTC")
+                # 合同列 ms 精度（COMMODITY_SOURCE_SCHEMA）：combine 默认产出
+                # μs，与金属/新浪腿 concat 时类型不兼容（#629 回补实测）。
+                .cast(pl.Datetime("ms"))
                 .alias("trade_date_utc"),
                 pl.lit(None, dtype=pl.Float64).alias("open"),
                 pl.lit(None, dtype=pl.Float64).alias("high"),
