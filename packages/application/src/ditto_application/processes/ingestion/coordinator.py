@@ -8,6 +8,7 @@ import polars as pl
 from ditto_data.catalog.dataset_spec import expects_rows_per_trading_day
 from ditto_data.models import Dataset
 from ditto_data.models.ingestion import IngestionQualityEvidence, IngestionResult
+from ditto_data.models.source_codes import FX_CODE_TO_INSTRUMENT_ID
 from ditto_data.services.capital_store import CapitalStore
 from ditto_data.services.fundamental_store import FundamentalStore
 from ditto_data.services.macro_service import MacroService
@@ -23,9 +24,6 @@ from ditto_application.processes.ingestion.commodity_fetcher import (
     CommoditySource,
 )
 from ditto_application.processes.ingestion.commodity_fetcher import (
-    fetch_commodity_daily as _fetch_commodity_daily,
-)
-from ditto_application.processes.ingestion.commodity_fetcher import (
     fetch_commodity_range as _fetch_commodity_range,
 )
 from ditto_application.processes.ingestion.config import IngestionCoordinatorConfig
@@ -35,6 +33,7 @@ from ditto_application.processes.ingestion.coordinator_constants import (
 from ditto_application.processes.ingestion.data_writer import IngestionDataWriter
 from ditto_application.processes.ingestion.dataset_registry import (
     default_dataset_registry,
+    fx_commodity_request_bounds,
 )
 from ditto_application.processes.ingestion.date_range import list_ingestion_dates
 from ditto_application.processes.ingestion.fetch_handlers import (
@@ -208,9 +207,16 @@ class IngestionCoordinator:
         self._registry = default_dataset_registry()
 
     def _fetch_commodity_daily(self, trade_date: str) -> pl.DataFrame:
-        """获取商品数据（原油、贵金属、VIX），委托至 ``commodity_fetcher``。"""
-        return _fetch_commodity_daily(
-            trade_date,
+        """
+        获取商品数据（原油、贵金属、VIX），委托至 ``commodity_fetcher``。
+
+        按注册表声明的回看窗口取数（与 request_bounds 同源，#629）：
+        FRED 油/VIX 发布滞后与 FXCM 金属 GMT 收盘使单日请求恒空。
+        """
+        start, end = fx_commodity_request_bounds(trade_date)
+        return _fetch_commodity_range(
+            start,
+            end,
             primary_source=self._fetchers.macro,
             fred_source=self._fred_source,
             sina_source=self._sina_source,
@@ -238,6 +244,14 @@ class IngestionCoordinator:
                 primary_source=self._fetchers.macro,
                 fred_source=self._fred_source,
                 sina_source=self._sina_source,
+            )
+        if dataset == "fx_daily":
+            # fx 端点本身即区间 API：块级回补按月单请求（6 对×154 月），
+            # 相比日级循环（~28k 请求）同源同值且省配额。
+            return self._fetchers.macro.fetch_fx_daily(
+                ts_codes=list(FX_CODE_TO_INSTRUMENT_ID.keys()),
+                start_date=start_date,
+                end_date=end_date,
             )
         if dataset == "macro_indicators":
             range_fetch = getattr(
@@ -645,7 +659,7 @@ class IngestionCoordinator:
         #640 阻断 COMPLETE 的依据：取数错误=未获得源应答，与源端明确
         空应答（#583 trim 语义）不同。
         """
-        if dataset in {"macro_indicators", "commodity_daily"}:
+        if dataset in {"macro_indicators", "commodity_daily", "fx_daily"}:
             return (
                 self._fetch_range_chunk(
                     dataset,

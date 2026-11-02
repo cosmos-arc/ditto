@@ -382,6 +382,72 @@ class TestIndexWeightUniverse:
         assert global_start < global_end
         assert name_kwargs["start_date"] < name_kwargs["end_date"]
 
+    def _daily_context_with_macro(
+        self,
+        trade_date: str,
+    ) -> tuple[DailyFetchContext, MagicMock]:
+        """构造带 macro mock 的日更上下文（fx/commodity 取数走 macro fetcher）."""
+        from ditto_application.processes.ingestion.types import SourceFetchers
+
+        macro = MagicMock()
+        context = DailyFetchContext(
+            fetchers=SourceFetchers(
+                metadata=MagicMock(),
+                market=MagicMock(),
+                fundamental=MagicMock(),
+                capital=MagicMock(),
+                macro=macro,
+            ),
+            trade_date=trade_date,
+            fetch_commodity_daily=MagicMock(),
+            get_cached_index_codes=MagicMock(return_value=[]),
+        )
+        return context, macro
+
+    def test_fx_daily_fetches_lookback_window(self) -> None:
+        """fx 按 GMT 日收盘（北京次日凌晨闭合），单日请求恒空——回看窗口（#629）."""
+        from ditto_data.models.source_codes import FX_CODE_TO_INSTRUMENT_ID
+
+        context, macro = self._daily_context_with_macro("2026-09-30")
+        registration = default_dataset_registry().require(Dataset.FX_DAILY)
+        assert registration.daily_fetch_factory is not None
+
+        registration.daily_fetch_factory(context)()
+
+        codes, start, end = macro.fetch_fx_daily.call_args.args
+        assert codes == list(FX_CODE_TO_INSTRUMENT_ID.keys())
+        assert (start, end) == ("2026-09-23", "2026-09-30")
+        assert registration.request_bounds is not None
+        assert registration.request_bounds("2026-09-30") == (
+            "2026-09-23",
+            "2026-09-30",
+        )
+
+    def test_commodity_daily_declares_same_window_as_fx(self) -> None:
+        """commodity 与 fx 共用回看窗口声明；取数经 ctx.fetch_commodity_daily."""
+        context, _ = self._daily_context_with_macro("2026-09-30")
+        registration = default_dataset_registry().require(Dataset.COMMODITY_DAILY)
+        fx_registration = default_dataset_registry().require(Dataset.FX_DAILY)
+
+        assert registration.daily_fetch_factory is not None
+        registration.daily_fetch_factory(context)()
+
+        context.fetch_commodity_daily.assert_called_once_with("2026-09-30")
+        assert registration.request_bounds == fx_registration.request_bounds
+
+    def test_fx_factory_falls_back_on_empty_trade_date(self) -> None:
+        """空 trade_date（通用探测路径）不开半窗（与 global_index 同律）."""
+        context, macro = self._daily_context_with_macro("")
+        fx_factory = (
+            default_dataset_registry().require(Dataset.FX_DAILY).daily_fetch_factory
+        )
+        assert fx_factory is not None
+
+        fx_factory(context)()
+
+        _, start, end = macro.fetch_fx_daily.call_args.args
+        assert start < end
+
     def test_fund_portfolio_fetches_market_wide_single_request(self) -> None:
         """fund_portfolio 日更=市场级单请求（逐标的 1,864 循环超时且烧配额）."""
         context, _, fundamental = self._daily_context("2026-09-30")
