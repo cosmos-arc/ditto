@@ -1,5 +1,6 @@
 """Tests for IO utilities in ditto-foundation."""
 
+import os
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
@@ -298,3 +299,89 @@ class TestFileMd5:
 
         assert isinstance(md5_hash, str)
         assert len(md5_hash) == 32
+
+
+class TestWriterUniqueTmp:
+    """#641：tmp 路径写入者唯一——重叠写入/进程终止不再共享 tmp 名撕裂目标."""
+
+    def setup_method(self) -> None:
+        self.temp_dir = TemporaryDirectory()
+        self.temp_path = Path(self.temp_dir.name)
+
+    def teardown_method(self) -> None:
+        self.temp_dir.cleanup()
+
+    def test_concurrent_writers_target_always_complete(self) -> None:
+        """票面验收①：两写入者竞写同一目标，目标恒为二者之一的完整版本."""
+        import threading
+
+        frame_a = pl.DataFrame({"a": range(50), "tag": ["A"] * 50})
+        frame_b = pl.DataFrame({"a": range(50), "tag": ["B"] * 50})
+        target = self.temp_path / "race.parquet"
+        atomic_write(frame_a, target)
+
+        def churn(frame: pl.DataFrame) -> None:
+            for _ in range(50):
+                atomic_write(frame, target, fsync=False)
+
+        threads = [
+            threading.Thread(target=churn, args=(frame,))
+            for frame in (frame_a, frame_b)
+        ]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
+
+        loaded = pl.read_parquet(target)
+        assert loaded["tag"][0] in {"A", "B"}
+        assert loaded.height == 50
+
+    def test_interrupted_write_keeps_old_target(self, monkeypatch) -> None:
+        """票面验收②：写入中途失败/被杀，目标保持旧完整版本（rename 前不落半成品）."""
+        old = pl.DataFrame({"a": [1, 2, 3]})
+        target = self.temp_path / "keep.parquet"
+        atomic_write(old, target)
+
+        def partial_then_raise(df_self, path, *args, **kwargs):
+            Path(path).write_bytes(b"PAR1-half-written")  # 半成品落 tmp
+            raise RuntimeError("simulated kill mid-write")
+
+        monkeypatch.setattr(pl.DataFrame, "write_parquet", partial_then_raise)
+        try:
+            atomic_write(pl.DataFrame({"a": [9]}), target, fsync=False)
+        except RuntimeError:
+            pass
+
+        # 目标仍是旧完整版本；共享名 tmp 不存在，残留为写入者唯一名
+        assert pl.read_parquet(target).equals(old)
+        assert not (target.parent / "keep.parquet.tmp").exists()
+        leftovers = list(target.parent.glob("keep.parquet.*.tmp"))
+        assert len(leftovers) == 1
+        assert str(os.getpid()) in leftovers[0].name
+
+    def test_tmp_names_unique_across_interrupted_calls(self, monkeypatch) -> None:
+        """两次中断写入留下两个互不相同的 tmp 名——写入者唯一性核心断言."""
+        target = self.temp_path / "uniq.parquet"
+
+        def partial_then_raise(df_self, path, *args, **kwargs):
+            Path(path).write_bytes(b"x")
+            raise RuntimeError("kill")
+
+        monkeypatch.setattr(pl.DataFrame, "write_parquet", partial_then_raise)
+        for _ in range(2):
+            try:
+                atomic_write(pl.DataFrame({"a": [1]}), target, fsync=False)
+            except RuntimeError:
+                pass
+
+        leftovers = sorted(p.name for p in target.parent.glob("uniq.parquet.*.tmp"))
+        assert len(leftovers) == 2
+        assert len(set(leftovers)) == 2
+
+    def test_no_tmp_leftover_after_success_any_name(self) -> None:
+        """成功写入不留任何名字的 tmp（覆盖旧 .tmp 固定名断言）."""
+        target = self.temp_path / "clean.json"
+        atomic_bytes_write(b"payload", target)
+        assert target.read_bytes() == b"payload"
+        assert not list(target.parent.glob("*.tmp"))
