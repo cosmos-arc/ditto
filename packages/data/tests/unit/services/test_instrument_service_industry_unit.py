@@ -84,7 +84,7 @@ def test_save_industry_mapping_resolves_provider_ticker_and_preserves_interval()
 
 
 @pytest.mark.unit
-def test_save_industry_mapping_fails_closed_for_unresolved_ticker() -> None:
+def test_save_industry_mapping_fails_closed_when_nothing_resolves() -> None:
     service, ports = _service()
     ports["instrument_reader"].resolve_instrument_ids_batch.return_value = {}
     frame = pl.DataFrame(
@@ -95,7 +95,50 @@ def test_save_industry_mapping_fails_closed_for_unresolved_ticker() -> None:
         }
     )
 
-    with pytest.raises(ValueError, match="unresolved instruments: 1"):
+    with pytest.raises(ValueError, match="resolved nothing"):
         service.save_industry_mapping(frame, source="tushare")
 
     ports["industry_mapping_writer"].update_mapping.assert_not_called()
+
+
+@pytest.mark.unit
+def test_save_industry_mapping_empty_frame_returns_zero() -> None:
+    """空帧沿用家族契约返回 0，不落入「解析不到」失败分支."""
+    service, ports = _service()
+    ports["instrument_reader"].resolve_instrument_ids_batch.return_value = {}
+    frame = pl.DataFrame(
+        schema={
+            "instrument_id": pl.String,
+            "industry_id": pl.String,
+            "industry_date": pl.Date,
+        }
+    )
+
+    assert service.save_industry_mapping(frame, source="tushare") == 0
+
+    ports["industry_mapping_writer"].update_mapping.assert_not_called()
+
+
+@pytest.mark.unit
+def test_save_industry_mapping_skips_unresolvable_members_and_writes_rest() -> None:
+    """源端缺口成员（stock_basic 永不返回）跳过＋留痕，不阻断周刷."""
+    service, ports = _service()
+    ports["instrument_reader"].resolve_instrument_ids_batch.return_value = {
+        "000001.SZ": 1_000_001,
+        "600000.SH": 600_000_001,
+    }
+    frame = pl.DataFrame(
+        {
+            "instrument_id": ["000001.SZ", "600000.SH", "688827.SH", "920085.BJ"],
+            "industry_id": ["801780.SI", "801780.SI", "801730.SI", "801730.SI"],
+            "industry_date": [date(2026, 10, 30)] * 4,
+        }
+    )
+
+    assert service.save_industry_mapping(frame, source="tushare") == 2
+
+    written = [
+        call.args[0].instrument_id
+        for call in ports["industry_mapping_writer"].update_mapping.call_args_list
+    ]
+    assert written == [1_000_001, 600_000_001]
