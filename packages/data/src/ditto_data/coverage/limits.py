@@ -228,10 +228,10 @@ _DATASET_COVERAGE: dict[str, DatasetCoverageLimit] = {
         dataset="etf_reference",
         domain="metadata",
         status="partial",
-        measured_start=None,
-        measured_end=None,
+        measured_start="2013-01-04",
+        measured_end="2026-11-03",
         gaps=(
-            "catalog 无条目：ops status 显示 missing（存储 169 万行观察，消费者经 catalog 不可见——登记缺口归 P1）",
+            "config 声明源已登记（#658 批次2，2026-11-03 config 快照 10 行）；夜链 tushare 恒 SOURCE_UNSUPPORTED 属设计，SLA 168h 随时间转 stale——声明变更时手动重摄取 config 源（一次性命令，无自动节奏）",
         ),
         notes="config 源声明式配置，#408 两阶段映射",
     ),
