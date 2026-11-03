@@ -586,6 +586,20 @@ def main(argv: list[str] | None = None) -> int:
         )
         return 0
 
+    _emit(
+        _run_apply(datasets, impacts, data_root=data_root),
+        args.output,
+    )
+    return 0
+
+
+def _run_apply(
+    datasets: list[str],
+    impacts: list[DateImpact],
+    *,
+    data_root: Path,
+) -> dict[str, Any]:
+    """执行 apply（容器组装+逐数据集写入）并返回报告帧（主流程拆分）."""
     previous_root = os.environ.get("DITTO_STATE_ROOT")
     os.environ["DITTO_STATE_ROOT"] = str(data_root)
     try:
