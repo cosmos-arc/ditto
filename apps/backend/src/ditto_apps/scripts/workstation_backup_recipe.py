@@ -444,15 +444,17 @@ def verify_workstation_state(
     *,
     data_root: Path,
 ) -> dict[str, Any]:
-    """校验恢复结果：完整性＋每域必须可读的业务事实."""
+    """校验恢复结果：完整性＋每域必须可读的业务事实＋在册证据树内容身份."""
     data_root = _require_dir(data_root)
     results: list[dict[str, Any]] = []
     expected = {}
+    manifest_entries: list[dict[str, Any]] = []
     manifest_path = data_root / "restore-manifest.json"
     if manifest_path.exists():
+        manifest_entries = _read_manifest(manifest_path)["entries"]
         expected = {
             entry["path"]: entry
-            for entry in _read_manifest(manifest_path)["entries"]
+            for entry in manifest_entries
             if entry["kind"] == "database" and entry.get("present") is not False
         }
     failed = False
@@ -531,8 +533,55 @@ def verify_workstation_state(
                 **({"note": "该域当前无记录"} if count == 0 else {}),
             }
         )
+    # #658 批次1C：核对 manifest 在册的全部证据树——present=true 的树必须
+    # 存在且内容哈希与备份一致（复用备份侧同一树校验能力）；present=false
+    # 按恢复承诺显式报告不可重放。此前 verify 只核对数据库，恢复后
+    # payload 树丢失/损坏仍通过（#653 恢复验证漏检反例）。
+    tree_results = _verify_evidence_trees(data_root, manifest_entries)
+    failed = failed or any(row["status"] == "FAIL" for row in tree_results)
+    results.extend(tree_results)
     summary = {"results": results, "passed": not failed}
     return summary
+
+
+def _verify_evidence_trees(
+    data_root: Path,
+    manifest_entries: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """核对 manifest 在册证据树：present=true 存在+哈希；absent 显式不可重放."""
+    rows: list[dict[str, Any]] = []
+    for entry in manifest_entries:
+        if entry.get("kind") != "evidence_tree":
+            continue
+        relative = entry["path"]
+        tree = data_root / relative
+        if entry.get("present") is False:
+            rows.append(
+                {
+                    "path": relative,
+                    "check": "tree_present",
+                    "status": "WARN",
+                    "note": _evidence_tree_note(relative),
+                }
+            )
+            continue
+        if not tree.exists():
+            rows.append({"path": relative, "check": "tree_present", "status": "FAIL"})
+            continue
+        try:
+            root_sha256 = inspect_payload_tree(tree).root_sha256
+        except PayloadBackupError:
+            rows.append({"path": relative, "check": "tree_hash", "status": "FAIL"})
+            continue
+        matches = root_sha256 == entry.get("sha256")
+        rows.append(
+            {
+                "path": relative,
+                "check": "tree_hash",
+                "status": "PASS" if matches else "FAIL",
+            }
+        )
+    return rows
 
 
 def _parse_args(argv: list[str]) -> argparse.Namespace:

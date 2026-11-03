@@ -10,6 +10,7 @@ from ditto_data.models.ingestion import (
     IngestionFailedErrorGroup,
     IngestionLog,
     IngestionStatus,
+    UnresolvedFailureGroup,
 )
 from ditto_data.storage.runtime.ingestion import (
     FailureFilter,
@@ -148,6 +149,69 @@ class IngestionLogStore:
 
         """
         return self._reader.list_failed_error_groups(
+            source=source,
+            max_attempts=max_attempts,
+        )
+
+    def count_retryable_failures(
+        self,
+        dataset: str,
+        source: str = "tushare",
+        max_attempts: int = 3,
+    ) -> int:
+        """
+        瞬态且未耗尽的失败行数（#658 批次1B 精确 pending_beyond_limit）。
+
+        Args:
+            dataset: 数据集名称
+            source: 数据源标识（默认 "tushare"）
+            max_attempts: 仅统计尝试次数小于此值的失败
+
+        Returns:
+            符合自动重试资格的失败行数。
+
+        """
+        return self._reader.count_retryable_failures(
+            dataset=dataset,
+            source=source,
+            max_attempts=max_attempts,
+        )
+
+    def list_unresolved_failures(
+        self,
+        source: str = "tushare",
+        limit: int = 1000,
+    ) -> list[IngestionLog]:
+        """
+        全部未解决失败行（含耗尽与非瞬态，#658 批次1B 终态判定输入）。
+
+        Args:
+            source: 数据源标识（默认 "tushare"）
+            limit: 返回的最大行数
+
+        Returns:
+            未解决失败行（trade_date 升序）。
+
+        """
+        return self._reader.list_unresolved_failures(source=source, limit=limit)
+
+    def list_unresolved_failure_groups(
+        self,
+        source: str = "tushare",
+        max_attempts: int = 3,
+    ) -> list[UnresolvedFailureGroup]:
+        """
+        按数据集分桶统计最终未解决失败（#658 批次1B）。
+
+        Args:
+            source: 数据源标识（默认 "tushare"）
+            max_attempts: 耗尽阈值
+
+        Returns:
+            分桶统计列表（dataset 升序）。
+
+        """
+        return self._reader.list_unresolved_failure_groups(
             source=source,
             max_attempts=max_attempts,
         )

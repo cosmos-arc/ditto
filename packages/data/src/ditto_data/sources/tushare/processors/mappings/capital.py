@@ -64,6 +64,9 @@ DIVIDEND_MAPPING = ColumnMapping(
 # 股/份/手（数量，按标的类型各异）。#625 修正 rzmre 列名语义：融资买入
 # 额是金额不是量，此前误标 *_volume；margin_trading 表为 0 行时改名，
 # 无存量迁移。
+# knowledge_date 的自然日 T+1 仅为 schema 占位：写入路径按披露制度校准
+# 为下一 A 股交易日（交易所开市前公布前一交易日数据；深市周五数据
+# 下周一更新——#658 批次1E，见 knowledge_date_policy）。
 MARGIN_TRADING_MAPPING = ColumnMapping(
     rename={
         "ts_code": "source_ticker",

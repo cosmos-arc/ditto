@@ -21,6 +21,7 @@ dependencies = [
     "polars",
     "pydantic",
     "lightgbm>=4.7.0",
+    "tenacity",
 ]
 
 [build-system]

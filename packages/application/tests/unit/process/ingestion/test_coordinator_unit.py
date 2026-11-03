@@ -76,6 +76,23 @@ def mock_metadata_service(mocker):
     service.upsert.return_value = len
     service.list_trading_days.return_value = []
     service.get_securities.return_value = pl.DataFrame()
+    # #658 B1E 可知时间校准：hsgt_top10/hk_hold/margin_trading 写入路径按
+    # 日历校准 knowledge_date——calendar 子服务须返回真实日期序列。
+    service.calendar.list_trading_days.side_effect = lambda start, end, **kwargs: [
+        d.isoformat()
+        for d in (
+            date(2015, 1, 20),
+            date(2015, 1, 21),
+            date(2015, 1, 22),
+            date(2015, 1, 23),
+            date(2015, 1, 26),
+            date(2024, 12, 27),
+            date(2024, 12, 30),
+            date(2026, 9, 30),
+            date(2026, 10, 9),
+        )
+        if start <= d.isoformat() <= end
+    ]
 
     # Instrument 相关方法
     service.instrument.register_instruments_batch = mocker.Mock()

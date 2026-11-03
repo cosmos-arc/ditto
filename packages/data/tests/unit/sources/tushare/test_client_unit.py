@@ -326,9 +326,10 @@ class TestTushareClientQuery:
     ) -> None:
         """续探行已见于已见集合（越界回显首页形态）按取尽处理，不误判截断.
 
-        #431 实测形态：服务端对越界 offset 回显首页。续探取回的行是
-        已见行时应判定取尽——真截断的续探行不可能与已取回行重复
-        （一致的 offset 分页无重叠）。
+        #431 实测形态：服务端对越界 offset 回显首页。续探取回首页首行时
+        判定取尽——真截断的续探行不可能与已取回行重复（一致的 offset
+        分页无重叠）。回显必须含首页首行才算越界回显证据（#658 批次1
+        收窄：已见非首行回显在下一测试 fail-closed）。
         """
         monkeypatch.setitem(pagination._DOCUMENTED_PAGE_SIZES, "trade_cal", 2)
 
@@ -351,35 +352,122 @@ class TestTushareClientQuery:
 
         assert result["cal_date"].to_list() == ["a", "b"]
         # 主几何（页宽 2）：首页满页 + 回显第二页触发跨页重复守卫；
-        # 换档几何（页宽 500）：首页即短页，续探取回已见行 → 取尽收敛
+        # 换档几何（页宽 500）：首页即短页，续探取回首页首行 → 取尽收敛
         probe = orjson.loads(respx_mock.calls[-1].request.content)["params"]
         assert probe["limit"] == 1
         assert route.call_count == 4
 
-    def test_truncation_probe_failure_fails_open(
+    def test_truncation_probe_seen_non_first_row_fails_closed(
         self,
         respx_mock,
         monkeypatch: pytest.MonkeyPatch,
+        fake_time,
     ) -> None:
-        """续探请求自身瞬态失败时按取尽处理，不否决已取回数据."""
+        """续探回显已见行但不含首页首行＝offset 失效，不得判取尽发布 COMPLETE.
+
+        反例（#653/#658 批次1）：探针重复已见行若可以是任意回显位置，
+        服务端忽略 offset 截断真数据时会被误判取尽。仅首页首行回显有
+        #431 实测证据支撑取尽语义；其余已见行两几何都 fail-closed。
+        """
         monkeypatch.setitem(pagination._DOCUMENTED_PAGE_SIZES, "trade_cal", 2)
-        pages = [
-            httpx.Response(
+
+        def side_effect(request: httpx.Request) -> httpx.Response:
+            params = orjson.loads(request.content)["params"]
+            if params["limit"] == 1:
+                # 探针恒回显第二行（已见、非首页首行）
+                return httpx.Response(
+                    200,
+                    json={
+                        "code": 0,
+                        "msg": None,
+                        "data": {"fields": ["cal_date"], "items": [["b"]]},
+                    },
+                )
+            return httpx.Response(
+                200,
+                json={
+                    "code": 0,
+                    "msg": None,
+                    "data": {
+                        "fields": ["cal_date"],
+                        "items": [["a"], ["b"]],
+                    },
+                },
+            )
+
+        respx_mock.post("http://api.tushare.pro").mock(side_effect=side_effect)
+
+        client = TushareClient(token="test_token", settings=_settings())
+        with pytest.raises(tenacity.RetryError) as exc_info:
+            client.query("trade_cal", "cal_date")
+
+        assert "not the documented" in str(exc_info.value.last_attempt.exception())
+
+    def test_truncation_probe_transient_failure_recovers(
+        self,
+        respx_mock,
+        monkeypatch: pytest.MonkeyPatch,
+        fake_time,
+    ) -> None:
+        """续探瞬态失败沿既有重试传播：重试后完整取回（#653 反例一）.
+
+        探针失败不再按取尽吞掉——第一 attempt 探针 500，tenacity 重试
+        整个翻页，第二 attempt 干净收尾，返回完整数据。
+        """
+        monkeypatch.setitem(pagination._DOCUMENTED_PAGE_SIZES, "trade_cal", 2)
+        empty_tail = httpx.Response(
+            200,
+            json={"code": 0, "msg": None, "data": {"fields": [], "items": []}},
+        )
+        page_one = httpx.Response(
+            200,
+            json={
+                "code": 0,
+                "msg": None,
+                "data": {"fields": ["cal_date"], "items": [["1"]]},
+            },
+        )
+        respx_mock.post("http://api.tushare.pro").mock(
+            side_effect=[
+                page_one,
+                httpx.Response(500, text="probe blew up"),
+                page_one,
+                empty_tail,
+            ]
+        )
+
+        client = TushareClient(token="test_token", settings=_settings())
+        result = client.query("trade_cal", "cal_date")
+
+        assert result["cal_date"].to_list() == ["1"]
+
+    def test_truncation_probe_persistent_failure_fails_closed(
+        self,
+        respx_mock,
+        monkeypatch: pytest.MonkeyPatch,
+        fake_time,
+    ) -> None:
+        """续探持续失败＝无法证明取尽，最终失败不发布 COMPLETE（#653 反例二）."""
+        monkeypatch.setitem(pagination._DOCUMENTED_PAGE_SIZES, "trade_cal", 2)
+
+        def side_effect(request: httpx.Request) -> httpx.Response:
+            params = orjson.loads(request.content)["params"]
+            if params["limit"] == 1:
+                return httpx.Response(500, text="probe always down")
+            return httpx.Response(
                 200,
                 json={
                     "code": 0,
                     "msg": None,
                     "data": {"fields": ["cal_date"], "items": [["1"]]},
                 },
-            ),
-            httpx.Response(500, text="probe blew up"),
-        ]
-        respx_mock.post("http://api.tushare.pro").mock(side_effect=pages)
+            )
+
+        respx_mock.post("http://api.tushare.pro").mock(side_effect=side_effect)
 
         client = TushareClient(token="test_token", settings=_settings())
-        result = client.query("trade_cal", "cal_date")
-
-        assert result["cal_date"].to_list() == ["1"]
+        with pytest.raises(tenacity.RetryError):
+            client.query("trade_cal", "cal_date")
 
     def test_truncation_below_page_floor_fails_closed(
         self,

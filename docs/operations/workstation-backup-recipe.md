@@ -68,9 +68,12 @@ python -m ditto_apps.scripts.workstation_backup_recipe verify \
 `verify` 退出码非零＝恢复失败；每条检查输出 PASS/WARN/FAIL：
 - FAIL：必需库缺失（父目录存在而库被删，或备份在册而恢复后缺失）、
   完整性校验失败、恢复内容与备份业务身份不符、业务事实查询出错
-  （非缺表）。
+  （非缺表）、manifest 在册 `present:true` 证据树恢复后缺失或内容
+  哈希与备份不符（#658 批次1C——此前只核对数据库，payload 树丢失
+  不可见）。
 - WARN：业务表存在但 0 行（该域当前无记录）、表不存在（该域未初始化）、
-  库与父目录一起缺失（该域未初始化）。
+  库与父目录一起缺失（该域未初始化）、证据树 `present:false`（按恢复
+  承诺输出对应「不可重放」声明）。
 
 恢复在创建目标文件前校验 manifest schema（v2）、必需条目、路径及备份
 SHA-256。SQLite 恢复后按 schema 和完整有序字段值核对逻辑摘要；字节布局

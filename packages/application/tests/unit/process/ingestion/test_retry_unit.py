@@ -82,25 +82,27 @@ def mock_ingestion_log_store(mocker):
     service = mocker.Mock()
     service.list_failed_logs = mocker.Mock(return_value=[])
     service.list_failed_error_groups = mocker.Mock(return_value=[])
+    service.count_retryable_failures = mocker.Mock(return_value=0)
     return service
 
 
 def _wire_failed_logs(mock_ingestion_log_store, logs: list[IngestionLog]) -> None:
-    """按 failure_filter 语义分派的日志桩（与 SQL 过滤口径一致）。"""
+    """按 failure_filter/limit 语义分派的日志桩（与 SQL 过滤口径一致）。"""
     from ditto_data.models.ingestion import is_retryable_ingestion_failure
 
-    def _list(*, failure_filter="all", **kwargs):
+    def _list(*, failure_filter="all", limit=None, **kwargs):
+        selected = logs
         if failure_filter == "transient":
-            return [
+            selected = [
                 log for log in logs if is_retryable_ingestion_failure(log.error_code)
             ]
-        if failure_filter == "non_transient":
-            return [
+        elif failure_filter == "non_transient":
+            selected = [
                 log
                 for log in logs
                 if not is_retryable_ingestion_failure(log.error_code)
             ]
-        return logs
+        return selected[:limit] if isinstance(limit, int) else selected
 
     mock_ingestion_log_store.list_failed_logs.side_effect = _list
 
@@ -631,3 +633,100 @@ class TestRetryFailed:
         assert result.retried_count == 2
         assert result.success_count == 0
         assert result.still_failed_count == 2
+
+
+@pytest.mark.unit
+class TestPendingBeyondLimit:
+    """#658 B1B：limit 截断的未处理任务数必须如实报告。"""
+
+    def test_retry_failed_reports_beyond_limit(
+        self, retry_manager, mock_coordinator, mock_ingestion_log_store
+    ) -> None:
+        """3 条瞬态失败、limit=2：只重试 2 条，第 3 条不消失。"""
+        _wire_failed_logs(
+            mock_ingestion_log_store,
+            [
+                _failed_log("2024-12-25"),
+                _failed_log("2024-12-26"),
+                _failed_log("2024-12-27"),
+            ],
+        )
+        mock_ingestion_log_store.count_retryable_failures.return_value = 3
+        mock_coordinator.ingest_date.return_value = IngestionResult(
+            dataset="stock_daily",
+            trade_date="2024-12-25",
+            status="success",
+        )
+
+        result = retry_manager.retry_failed(dataset="stock_daily", limit=2)
+
+        assert result.retried_count == 2
+        assert result.pending_beyond_limit == 1
+
+    def test_pending_beyond_limit_counts_exact_backlog(
+        self, retry_manager, mock_coordinator, mock_ingestion_log_store
+    ) -> None:
+        """correctness F3：精确计数积压——50 条失败 limit=10 报 40，非 1."""
+        _wire_failed_logs(
+            mock_ingestion_log_store,
+            [
+                _failed_log("2024-12-25"),
+                _failed_log("2024-12-26"),
+            ],
+        )
+        mock_ingestion_log_store.count_retryable_failures.return_value = 50
+        mock_coordinator.ingest_date.return_value = IngestionResult(
+            dataset="stock_daily",
+            trade_date="2024-12-25",
+            status="success",
+        )
+
+        result = retry_manager.retry_failed(dataset="stock_daily", limit=10)
+
+        assert result.retried_count == 2
+        assert result.pending_beyond_limit == 40
+
+
+@pytest.mark.unit
+class TestFinalFailureState:
+    """#658 B1B：终态按账本未解决行投影（耗尽/非瞬态持续可见）。"""
+
+    def test_buckets_and_totals(self, retry_manager, mock_ingestion_log_store) -> None:
+        from ditto_data.models.ingestion import UnresolvedFailureGroup
+
+        mock_ingestion_log_store.list_unresolved_failure_groups.return_value = [
+            UnresolvedFailureGroup(
+                dataset="etf_nav",
+                total=3,
+                exhausted=2,
+                pending_transient=1,
+                pending_non_transient=0,
+                oldest_trade_date="2026-10-27",
+                newest_trade_date="2026-10-29",
+            )
+        ]
+        mock_ingestion_log_store.list_unresolved_failures.return_value = [
+            _failed_log("2026-10-27", dataset="etf_nav", attempts=3)
+        ]
+
+        state = retry_manager.final_failure_state(max_attempts=3, sample_limit=5)
+
+        assert state["unresolved_total"] == 3
+        assert state["unresolved_groups"][0]["exhausted"] == 2
+        assert state["unresolved_sample"][0]["trade_date"] == "2026-10-27"
+        assert state["sample_truncated"] is False
+
+    def test_sample_truncation_flagged(
+        self, retry_manager, mock_ingestion_log_store
+    ) -> None:
+        """样本超限时截断标记为真——全量计数在 unresolved_groups。"""
+        mock_ingestion_log_store.list_unresolved_failure_groups.return_value = []
+        mock_ingestion_log_store.list_unresolved_failures.return_value = [
+            _failed_log("2026-10-27"),
+            _failed_log("2026-10-28"),
+        ]
+
+        state = retry_manager.final_failure_state(sample_limit=1)
+
+        assert len(state["unresolved_sample"]) == 1
+        assert state["sample_truncated"] is True

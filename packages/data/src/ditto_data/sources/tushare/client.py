@@ -328,6 +328,7 @@ class TushareClient:
         """按显式页宽做 offset 翻页，跨页重复行 fail-closed，短页截断续探自愈。"""
         pages: list[pl.DataFrame] = []
         seen_rows: set[int] = set()
+        first_row_hash: int | None = None
         offset = 0
         active_page_size = page_size
         while True:
@@ -343,6 +344,10 @@ class TushareClient:
                     pages.append(page)
                 break
             page_rows = {hash(row) for row in page.iter_rows()}
+            # 首页首行指纹：续探时区分「越界回显首页」（#431 实测形态）与
+            # 其他已见行回显（offset 失效，不可判取尽）。
+            if first_row_hash is None:
+                first_row_hash = hash(next(iter(page.iter_rows())))
             # 页内整行重复：事件型数据集（dividend 等）存在字段全同的真实
             # 业务冗余行，区间层有 .unique() 兜底——降级告警放行（#196 回补
             # 实测单页 2 行真实重复被误伤，整 chunk fail-closed）。
@@ -373,45 +378,78 @@ class TushareClient:
             pages.append(page)
             if len(page) < active_page_size:
                 # 短页在「页宽 ≤ 服务端单次上限」时证明取尽；页宽超上限时
-                # 是静默截断（离线复现：2501 行源、cap 2000、limit 9000 仅
-                # 取回 2000）。续探一行区分两者：offset 处出现未见过的行 =
-                # 截断实锤，按观测到的服务端上限降页宽续拉（#625 可检测
-                # 条款）。探针行已见于已见集合 = 越界回显首页形态
-                # （#431 offset 损坏），按取尽处理，交由既有跨页重复守卫。
-                if self._probe_unseen_row_beyond(
+                # 是静默截断。续探区分两者并收窄回显语义（#658 批次1），
+                # 细节见 _short_page_next_geometry。
+                geometry = self._short_page_next_geometry(
                     api_name,
                     fields,
-                    offset=offset + len(page),
+                    page=page,
+                    offset=offset,
+                    active_page_size=active_page_size,
                     seen_rows=seen_rows,
+                    first_row_hash=first_row_hash,
                     **params,
-                ):
-                    if len(page) < _PAGINATION_MIN_PAGE_SIZE:
-                        raise SourceFetchError(
-                            message=(
-                                f"Tushare {api_name} pagination truncated below "
-                                f"floor: page={len(page)} at offset={offset} "
-                                f"but more rows exist (server cap < "
-                                f"{_PAGINATION_MIN_PAGE_SIZE})"
-                            ),
-                            source="tushare",
-                        )
-                    logger.warning(
-                        "pagination truncated by server cap; shrinking page size",
-                        event="tushare_pagination_truncation_detected",
-                        api_name=api_name,
-                        requested_page_size=active_page_size,
-                        server_cap=len(page),
-                        offset=offset,
-                    )
-                    active_page_size = len(page)
-                    offset += len(page)
-                    continue
-                break
+                )
+                if geometry is None:
+                    break
+                active_page_size, offset = geometry
+                continue
             offset += len(page)
 
         if len(pages) == 1:
             return pages[0]
         return pl.concat(pages, how="vertical_relaxed")
+
+    def _short_page_next_geometry(
+        self,
+        api_name: str,
+        fields: str,
+        *,
+        page: pl.DataFrame,
+        offset: int,
+        active_page_size: int,
+        seen_rows: set[int],
+        first_row_hash: int | None,
+        **params: str | int,
+    ) -> tuple[int, int] | None:
+        """
+        短页后的取数几何：None=取尽；(页宽, offset)=按观测上限续拉。
+
+        短页在「页宽 ≤ 服务端单次上限」时证明取尽；页宽超上限时是静默
+        截断（离线复现：2501 行源、cap 2000、limit 9000 仅取回 2000）。
+        续探一行区分两者：offset 处出现未见过的行 = 截断实锤，按观测到
+        的服务端上限降页宽续拉（#625 可检测条款）。探针为首页首行回显 =
+        越界回显形态（#431 实测），按取尽处理；已见非首行回显 = offset
+        失效证据不足，探针内 fail-closed（#658 批次1）。
+        """
+        if not self._probe_unseen_row_beyond(
+            api_name,
+            fields,
+            offset=offset + len(page),
+            seen_rows=seen_rows,
+            first_row_hash=first_row_hash,
+            **params,
+        ):
+            return None
+        if len(page) < _PAGINATION_MIN_PAGE_SIZE:
+            raise SourceFetchError(
+                message=(
+                    f"Tushare {api_name} pagination truncated below "
+                    f"floor: page={len(page)} at offset={offset} "
+                    f"but more rows exist (server cap < "
+                    f"{_PAGINATION_MIN_PAGE_SIZE})"
+                ),
+                source="tushare",
+            )
+        logger.warning(
+            "pagination truncated by server cap; shrinking page size",
+            event="tushare_pagination_truncation_detected",
+            api_name=api_name,
+            requested_page_size=active_page_size,
+            server_cap=len(page),
+            offset=offset,
+        )
+        return len(page), offset + len(page)
 
     def _probe_unseen_row_beyond(
         self,
@@ -420,29 +458,45 @@ class TushareClient:
         *,
         offset: int,
         seen_rows: set[int],
+        first_row_hash: int | None,
         **params: str | int,
     ) -> bool:
         """
-        短页之后的续探：offset 处再取一行，判断是否存在未见过的后续行。
+        短页之后的续探：offset 处再取一行，区分三种形态。
 
-        探测请求自身失败时按取尽处理（告警可见）：探测是检测增益，不让
-        一次额外请求的瞬态失败否决已经取回的数据。
+        - 空页 / 首行回显（#431 实测的越界回显首页形态）：取尽，返回
+          False。回显判定的独立完整性依据＝此前各页跨页无重复已证明
+          服务端在已走区间尊重 offset，而越界回显恰好从首页首行开始；
+          真截断的续探行不可能与已取回行重叠（一致 offset 分页无重叠）。
+        - 未见行：仍有后续数据（服务端截断），返回 True 交由调用方
+          按观测上限降页宽续拉。
+        - 已见行但不含首页首行：offset 失效且不构成越界回显证据，
+          抛 PaginationCorruptionError——不能仅凭「行已见过」判取尽并
+          发布 COMPLETE（#658 批次1 / #653 反例）。
+
+        探测请求自身失败不再吞掉（#653）：SourceFetchError 沿 query()
+        的既有 tenacity 重试传播——一次瞬态失败重试后完整取回，持续
+        失败最终以 RetryError 失败，不发布 COMPLETE。
         """
-        try:
-            data = self._query(api_name, fields, limit=1, offset=offset, **params)
-        except SourceFetchError:
-            logger.warning(
-                "truncation probe failed; assuming exhausted",
-                event="tushare_pagination_probe_failed",
-                api_name=api_name,
-                offset=offset,
-            )
-            return False
+        data = self._query(api_name, fields, limit=1, offset=offset, **params)
         probe = response_to_dataframe(data)
         if probe.height == 0:
             return False
         probe_rows = {hash(row) for row in probe.iter_rows()}
-        return not probe_rows.issubset(seen_rows)
+        if probe_rows <= seen_rows:
+            if first_row_hash is not None and first_row_hash in probe_rows:
+                return False
+            raise PaginationCorruptionError(
+                message=(
+                    f"Tushare {api_name} truncation probe at offset={offset} "
+                    "returned already-seen rows that are not the documented "
+                    "out-of-bounds first-page echo (#431): cannot prove "
+                    "exhaustion, refusing to publish truncated data as "
+                    "complete"
+                ),
+                source="tushare",
+            )
+        return True
 
     def close(self) -> None:
         """

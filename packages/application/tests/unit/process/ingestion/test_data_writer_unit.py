@@ -37,6 +37,22 @@ def mock_metadata_service(mocker):
     """创建 Mock MetadataService。"""
     service = mocker.Mock()
     service.is_trading_day.return_value = True
+    # #658 B1E 可知时间校准：日历读取返回真实交易日序列（2024-12-27 周五
+    # → 下一交易日 2024-12-30 周一；路由测试用 2026-09-30 → 2026-10-09），
+    # 否则 margin/hk/hsgt 写入路径取到 Mock。
+    service.calendar.list_trading_days.side_effect = lambda start, end, **kwargs: [
+        d.isoformat()
+        for d in (
+            date(2024, 12, 26),
+            date(2024, 12, 27),
+            date(2024, 12, 30),
+            date(2024, 12, 31),
+            date(2025, 1, 2),
+            date(2026, 9, 30),
+            date(2026, 10, 9),
+        )
+        if start <= d.isoformat() <= end
+    ]
 
     # Instrument 相关方法
     service.instrument.register_instruments_batch = mocker.Mock()
@@ -460,6 +476,32 @@ class TestWriteCapital:
         assert result.rows_written == 1
         assert not result.blocked
         mock_capital_store.save_margin_trading.assert_called_once()
+
+    def test_write_capital_margin_trading_calibrates_knowledge_date(
+        self,
+        data_writer,
+        mock_capital_store,
+    ) -> None:
+        """#658 B1E：写入路径按披露制度校准可知时间（周五→下周一）.
+
+        自然日 T+1（周六）早于交易所真实发布（下周一开市前），是 PIT 泄漏。
+        """
+        df = pl.DataFrame(
+            {
+                "instrument_id": [1],
+                "trade_date": [date(2024, 12, 27)],
+                "knowledge_date": [date(2024, 12, 28)],
+                "effective_from": [date(2024, 12, 28)],
+                "effective_to": [None],
+                "fin_buy_amount": [1000000.0],
+            }
+        )
+
+        data_writer.write_data(dataset="margin_trading", df=df, trade_date="2024-12-27")
+
+        written = mock_capital_store.save_margin_trading.call_args.args[0]
+        assert written["knowledge_date"].to_list() == [date(2024, 12, 30)]
+        assert written["effective_from"].to_list() == [date(2024, 12, 30)]
 
     def test_write_capital_pledge_ratio_writes_successfully(
         self,

@@ -50,6 +50,25 @@ class IngestionFailedErrorGroup:
     newest_trade_date: str | None
 
 
+@dataclass(frozen=True)
+class UnresolvedFailureGroup:
+    """
+    One dataset's final unresolved failures after compensation (#658 B1B).
+
+    Reader 层投影：按账本当前行（status=FAIL）分桶——后续成功按主键
+    upsert 翻转行状态即视为已解决；attempts 达上限（耗尽）与非瞬态行
+    不再出现在重试选择里，但仍是未解决事实，必须持续可见。
+    """
+
+    dataset: str
+    total: int
+    exhausted: int
+    pending_transient: int
+    pending_non_transient: int
+    oldest_trade_date: str | None
+    newest_trade_date: str | None
+
+
 # 闭合错误码词汇表：error_code → 失败分类。未知码 fail-closed 归
 # permanent（不可分类的失败不自动重试，由人工裁决——与 #608 响亮失败
 # 一致）。唯一例外是 FETCH_ERROR：它本身是已知类别"取数失败但原因
@@ -311,3 +330,6 @@ class RetryResult:
     # #623：满足尝试次数门槛但按失败分类被排除出自动重试的日志
     # （永久/源缺失/不支持）——保留原因与补偿范围供人工裁决。
     excluded_failures: tuple[IngestionLog, ...] = ()
+    # #658 B1B：满足重试资格但超出本轮 limit 未执行的任务数——limit
+    # 截断不得让未处理项从补偿报告中消失。
+    pending_beyond_limit: int = 0

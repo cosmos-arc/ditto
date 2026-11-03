@@ -229,23 +229,24 @@ class TestGetEtfBars:
         with pytest.raises(AdjustmentFactorMissingError, match=str(uncovered_id)):
             market_service.get_etf_bars(start="2024-01-01", end="2024-01-31", adj="hfq")
 
-    def test_get_etf_bars_qfq_no_etf_adj_port(
+    def test_get_etf_bars_qfq_no_etf_adj_port_fails_closed(
         self,
         market_service_no_etf_adj: MarketService,
         mock_readers: dict[str, MagicMock],
     ) -> None:
-        """adj='qfq' 但 etf_adj 端口为 None 时应返回未复权数据."""
+        """adj='qfq' 但 etf_adj 端口为 None 时应 fail closed 拒绝.
+
+        #658 批次1D：缺端口此前静默返回 raw——复权请求被无声降级为未复权
+        价格（#653 缺端口拒绝反例）；需要未复权价格必须显式 adj="none".
+        """
         # Arrange
         mock_readers["etf_bars"].read.return_value = SAMPLE_ETF_BARS
 
-        # Act
-        result = market_service_no_etf_adj.get_etf_bars(
-            start="2024-01-01", end="2024-01-31", adj="qfq"
-        )
-
-        # Assert
-        assert len(result) == 2
-        assert result["close"].to_list() == [1.03, 1.05]
+        # Act/Assert
+        with pytest.raises(AdjustmentFactorMissingError, match="etf_adj"):
+            market_service_no_etf_adj.get_etf_bars(
+                start="2024-01-01", end="2024-01-31", adj="qfq"
+            )
 
     def test_get_etf_bars_hfq_adjustment(
         self,
