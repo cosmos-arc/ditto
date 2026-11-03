@@ -40,6 +40,8 @@ from typing import Literal
 import polars as pl
 from ditto_platform.foundation import logger
 
+from ditto_application.exceptions import AppProcessError
+
 __all__ = [
     "CALENDAR_LOOKAHEAD_DAYS",
     "HK_HOLD_QUARTERLY_REGIME_START",
@@ -155,9 +157,11 @@ def _next_trading_day_one(
 ) -> date:
     index = bisect_right(trading_days, trade_date)
     if index >= len(trading_days):
-        raise ValueError(
+        raise AppProcessError(
             f"{dataset}: no trading day after {trade_date} in calendar "
             + f"(lookahead {CALENDAR_LOOKAHEAD_DAYS}d) — refusing to write "
-            + "unverifiable knowledge_date (#658 B1E)"
+            + "unverifiable knowledge_date (#658 B1E)",
+            field="trade_date",
+            value=trade_date.isoformat(),
         )
     return trading_days[index]

@@ -11,6 +11,7 @@ from datetime import date
 
 import polars as pl
 import pytest
+from ditto_application.exceptions import AppProcessError
 from ditto_application.processes.ingestion.knowledge_date_policy import (
     HK_HOLD_QUARTERLY_REGIME_START,
     calibrate_knowledge_dates,
@@ -99,7 +100,7 @@ class TestNextTradingDay:
 
     def test_calendar_exhausted_fails_closed(self) -> None:
         """日历给不出下一交易日＝可知时间不可证明，拒绝写入."""
-        with pytest.raises(ValueError, match="no trading day after"):
+        with pytest.raises(AppProcessError, match="no trading day after"):
             calibrate_knowledge_dates(
                 _frame([date(2024, 11, 5)]),
                 dataset="margin_trading",
