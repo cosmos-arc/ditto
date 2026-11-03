@@ -32,7 +32,11 @@ industry_mapping 11-02 窗口闭合、迟发窗口验证。工具与证据均为
 证据原样保留**（本地快照重放语义保留「当时机器所见」；PIT 读取按
 knowledge_date 收敛到新版本）；每个被纠正 (dataset, trade_date) 在
 ingestion_log 记 `source='kd_correction'` SUCCESS 原因行（rows=新版本
-行数、checksum=纠正计划哈希），与 tushare 源行互不干扰。
+行数、checksum=纠正计划哈希），与 tushare 源行互不干扰。三轴评审
+（correctness 轴）后追加五重守卫：账本行先于数据写（崩溃重跑收敛）、
+季度段首锚胜（锚漂移不重写存量）、观察锚按 Asia/Shanghai 取日、同日
+多旧版本歧义拒绝写入、期望版本守卫按行数而非存在性比较——真实根
+复扫 impacts=[] 幂等验证通过。
 
 ### 2.1 盘点与纠正总账（scan 2026-11-04T01:02，真实根）
 
