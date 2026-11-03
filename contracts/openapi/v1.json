@@ -19182,6 +19182,7 @@
         "description": "宏观指标频率枚举。",
         "enum": [
           "daily",
+          "weekly",
           "monthly",
           "quarterly"
         ],

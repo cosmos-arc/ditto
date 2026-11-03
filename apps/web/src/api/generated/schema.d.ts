@@ -1,6 +1,6 @@
 /**
  * DO NOT EDIT: generated from contracts/openapi/v1.json.
- * Schema SHA-256: bc2c3b0bc9ecd36743abf7796d5b3293dac3638a988e308be9103bf9e82910ba
+ * Schema SHA-256: 356a04c87621da72736ac74e4e700e2189082b52617aaf02890c57a2a1bb9552
  * Generator: openapi-typescript 7.13.0
  */
 
@@ -11838,7 +11838,7 @@ export interface components {
          * @description 宏观指标频率枚举。
          * @enum {string}
          */
-        MacroFrequency: "daily" | "monthly" | "quarterly";
+        MacroFrequency: "daily" | "weekly" | "monthly" | "quarterly";
         /**
          * ManifestDiffResponse
          * @description Manifest 差异报告.
