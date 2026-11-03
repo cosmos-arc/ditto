@@ -15,7 +15,7 @@
 按[覆盖合同](../data/coverage-contract.yaml)的 47 个 dataset_id 和 storage 定位采集：SQLite 使用 `mode=ro`、`PRAGMA query_only=ON`、同一 `BEGIN` 读取事务执行 `COUNT/MIN/MAX`；未使用 immutable、未执行 checkpoint。主扫描前两个运行库 WAL 均为 0 字节，此事实不替代事务隔离。
 Parquet 使用现有 Polars 对合同目录的文件执行 `scan_parquet(..., hive_partitioning=False)` 和列投影聚合，streaming 收集；本次所测文件扫描前后的大小／mtime 无变化。SQLite 与 Parquet **不是跨存储原子快照**。
 LIVE 复用[现有只读脚本](../../apps/backend/src/ditto_apps/scripts/data_live_gate.py)；FAIL 对照复用其完成快照 SQL 并追加同源约束。没有加载可能初始化数据目录／数据库的应用容器，没有执行摄取、回补、修复、迁移或恢复。
-原始 JSON 仅留在本地临时证据目录，含机器路径，不提交、不推送；下列摘要用其最终文件字节的 SHA-256 绑定。
+原始 JSON 已保存在本地私有证据归档，含机器路径，不提交、不推送；下列摘要用其最终文件字节的 SHA-256 绑定。
 
 | 本地证据名 | 内容与复核方法 | SHA-256 |
 | --- | --- | --- |
@@ -123,8 +123,88 @@ LIVE 复用[现有只读脚本](../../apps/backend/src/ditto_apps/scripts/data_l
 | `price-core-etf-2026-11-02.json` | `52f988a1b921728de3710d4651f1ed0ac81d6bd0455d8a15d20d404afbe62037` |
 | `price-core-runs.json` | `3a9f551b798043f11a59518e3202283fc3ed322578b9c1e5f487787e6de6d33e` |
 
-## 消费与未验证边界
+## 47 项消费入口静态核验
 
-本轮消费路径只做静态源码核验：已有 application 查询、通用／专用行情入口、账本及快照读取；没有在真实根进行 HTTP／CLI／浏览器研究旅程演示，不能以物理表或 API 存在替代可用性。
+同一代码基线下，47 项均追到来源与存储实现：**31 项有 application 读取路径，16 项仅到 storage／data service**，没有仅靠合同声称存在的项。这里的“应用路径”包括内部研究和运维读取，不能解读为 31 项研究闭环已完成。至少 `stock_limit`、`moneyflow`、`cyq_perf`、`fund_share` 四项本轮只追到运维 DQ／覆盖审计；`fund_adj` 有显式复权的应用研究方法和审计入口，通用 ETF 行情接口仍有复权缺陷。
+
+核验沿真实调用与依赖装配进行：来源／写入见[摄取注册表](../../packages/application/src/ditto_application/processes/ingestion/dataset_registry.py)和[DataWriter](../../packages/application/src/ditto_application/processes/ingestion/data_writer.py)；Reader／Store 装配见 data DI 的[行情](../../packages/data/src/ditto_data/di/market.py)、[资金](../../packages/data/src/ditto_data/di/capital.py)、[财务](../../packages/data/src/ditto_data/di/fundamental.py)、[元数据](../../packages/data/src/ditto_data/di/metadata.py)。[应用 providers](../../packages/application/src/ditto_application/providers_market.py)与[CLI query bundle](../../apps/backend/src/ditto_apps/registry/contexts/query.py)连接实际 facade，[HTTP route 注册表](../../apps/backend/src/ditto_apps/openapi_contract.py)确认外部路由已挂载。表中未将字符串命中、摄取／回补命令、catalog/status、稀疏证据恢复或通用 SQL／Parquet 检查算作研究消费者。
+
+| dataset_id | 入口类型 | 真实调用链符号（来源／写入已沿上述注册表核对） |
+| --- | --- | --- |
+| `calendar` | 内部应用／运维 | `CalendarReader` → `MetadataService.calendar.list_calendar_range/list_trading_days` → `MetadataQueryFacade`／`QualityPatrolService`／研究数据装配 |
+| `stock_basic` | HTTP／CLI 查询 | `InstrumentReader.find_securities` → `MetadataService` → `MetadataQueryFacade.find_securities/get_instrument` → metadata `list_instruments/get_instrument` |
+| `etf_basic` | HTTP／CLI 查询 | instruments／ETF 观察行 → `MetadataQueryFacade` → metadata 查询及 `ETFCandidateQuery.list_candidates` |
+| `index_basic` | HTTP／CLI 查询 | `InstrumentReader` → `MetadataQueryFacade.find_securities(asset_class=index)` → metadata `list_instruments`；目录可查不等于行情齐全 |
+| `etf_reference` | HTTP 查询 | config 声明及 ETF basic/daily 观察 → `EtfReferenceObservationWriter`／`InstrumentReader.find_etf_reference` → `ETFCandidateQuery.list_candidates` → metadata candidates |
+| `stock_daily` | HTTP／CLI 查询、研究 | `StockBarsReader` → `query_bars`／`MarketService.find_bars` → `MarketQueryFacade.find_bars` → market `post_bars`；另有图表／研究输入 |
+| `etf_daily` | HTTP／CLI 查询、研究 | `EtfBarsReader` → 同一 bars 链；通用 ETF qfq/hfq 被忽略的已证实缺陷仍在 |
+| `index_daily` | HTTP／CLI 查询、展示 | `IndexBarsReader` → bars 的 index 分支；保留 payload → MarketContext 指数收益投影 |
+| `global_index_daily` | HTTP 展示 | 保留 payload → `ProviderPayloadMarketContextSource.load` → `_global_display_facts` → `MarketContextFacade.get_context`；仅展示，不进入 regime 决策输入 |
+| `stock_status` | 内部研究／运维 | `StockStatusReader` → `MarketService.get_stock_status` → `RuntimeDerivedInputProvider._fetch_market_data`／`PriceCoverageAuditService`；另有图表状态证据 |
+| `adj_factor` | HTTP 复权、内部研究 | `StockAdjFactorReader` → `apply_adjustment` → `query_bars`；另有图表／研究输入／L3 |
+| `fund_adj` | 内部研究方法／运维 | `EtfAdjFactorReader` → `apply_etf_adjustment`／`get_etf_bars` → `ForwardReturnService.compute`／ETF runtime 输入；显式 adj 才复权，默认 factor-ic CLI 为 none；另有覆盖审计 |
+| `etf_nav` | HTTP 查询 | `EtfNavReader` → `MarketService.get_etf_nav` → `MarketQueryFacade.get_etf_nav` → market `post_etf_nav`，`latest_available` |
+| `stock_limit` | 运维读取 | `StockLimitReader` → `MarketQueryFacade.get_stock_limits` → `QualityPatrolService` → `ops dq`，statistical 规则已配置 |
+| `moneyflow` | 应用 facade／运维读取 | `MoneyflowReader` → `CapitalStore.get_moneyflows` → `CapitalQueryFacade.get_moneyflows` → L3／`ops dq`；另有 `ops audit-capital-coverage` |
+| `cyq_perf` | 应用 facade／运维读取 | `CyqPerfReader` → `CapitalStore.get_cyq_perfs` → 同名 facade → L3／`ops dq`，statistical 规则已配置 |
+| `limit_list` | 仅 storage | `LimitListReader` 已注入 `MarketReaders`；未追到应用读取调用 |
+| `top_list` | 仅 storage | `TopListReader` 已装配；`CapitalStore` 有保存方法，未追到对应应用读取 |
+| `top_inst` | 仅 storage | `TopInstReader` 已装配；未追到对应 Store／facade 读取 |
+| `hk_hold` | 仅 storage | `HkHoldReader` 已装配；未追到持仓研究应用读取 |
+| `hsgt_top10` | 仅 storage | `HsgtTop10Reader` 已装配；未追到应用读取 |
+| `fina_indicator` | 仅 storage | `FinaIndicatorReader` 已装配；未追到 Store／facade 读取或研究消费者 |
+| `fund_share` | 运维读取 | `FundShareReader` → `MarketService.get_fund_share` → `PriceCoverageAuditService` → `ops audit-capital-coverage` |
+| `fund_portfolio` | 仅 storage | `FundPortfolioReader` 已装配；未追到应用读取，摄取身份富化不算持仓研究 |
+| `top10_holders` | 仅 storage | `Top10HoldersReader` 已装配；未追到 Store／facade 读取 |
+| `top10_floatholders` | 仅 storage | `Top10FloatholdersReader` 已装配；未追到 Store／facade 读取 |
+| `balance_sheet` | HTTP／CLI 查询 | `BalanceSheetReader.get` → `FundamentalStore.get_balance_sheet` → 同名 facade → fundamental `get_financials`，`pit_asof` |
+| `income_statement` | HTTP／CLI 查询 | `IncomeStatementReader.get` → `FundamentalStore.get_income_statement` → 同名 facade → `get_financials`，`pit_asof` |
+| `cash_flow` | HTTP／CLI 查询 | `CashFlowReader.get` → `FundamentalStore.get_cash_flow` → 同名 facade → `get_financials`，`pit_asof` |
+| `dividend` | HTTP／CLI 查询 | `DividendReader.get` → `FundamentalStore.get_dividend` → 同名 facade → fundamental `get_dividend`，`pit_asof` |
+| `valuation_metrics` | HTTP／CLI 查询 | `ValuationMetricsReader.get` → `CapitalStore.get_valuation_metrics` → 同名 facade → capital `get_valuation`，`pit_asof` |
+| `margin_trading` | HTTP／CLI 查询 | `MarginTradingReader.get` → `CapitalStore.get_margin_trading` → `CapitalQueryFacade` → capital `get_margin`；标注 pit_asof，但 knowledge_date 错误仍阻断正确性 |
+| `pledge_ratio` | 仅 data service | `PledgeRatioReader.get` → `CapitalStore.get_pledge_ratio`；未追到 application／HTTP／CLI 调用者 |
+| `macro_indicators` | HTTP／CLI 查询 | `IndicatorReader.get` → `MacroService.find_indicators` → `MacroQueryFacade.find_indicators` → macro `post_indicators`；facade 未传 asof，为 `latest_available` |
+| `fx_daily` | HTTP 查询 | `FxBarsReader` → `MarketService.list_bars` → `FXQueryFacade`／`InstrumentCodeQueryFacade` → fx `post_bars`，`latest_available` |
+| `commodity_daily` | HTTP 查询 | `CommodityBarsReader` → `MarketService.list_bars` → `CommodityQueryFacade` → commodity `post_bars`，`latest_available`；来源腿有运行条件 |
+| `corporate_actions` | HTTP／CLI 查询 | `CorporateActionsReader.query` → `FundamentalStore.list_corporate_actions` → facade → 同名 route；有 as-of 为 pit_asof，缺省 latest_available |
+| `index_weight` | 历史证券池 HTTP | canonical `IndexCompositionWriter` 同时留 payload → `SnapshotReadService` → `HistoricalUniverseQuery.pin`／`PinnedHistoricalUniverse.resolve` → membership 投影 → universe `resolve_history` |
+| `industry_classification` | 仅 data service | `IndustryReader.get_all` → `InstrumentService.find_industries`；未追到应用调用，不能借行业映射消费证明分类目录闭环 |
+| `industry_mapping` | 回测内部应用 | `IndustryMappingReader.get_stock_industry` → `InstrumentService.get_stock_industry` → `build_classification_snapshot_fn` → `BacktestRuntimeBuilder` data feed／factor bundle |
+| `namechange` | 选股 HTTP | `NameHistoryReader.get_names_batch` → `InstrumentService.get_stock_names` → `_metadata_identities.names` → `AssembleSelectionFacts.assemble` → selection `assemble_selection_run` |
+| `st_history` | 选股 HTTP | `StChangeHistoryReader.get_st_status_batch` → `InstrumentService.get_st_status_batch` → `_metadata_identities.st_status` → 同一选股组装入口 |
+| `futures_daily` | 仅 storage | `FuturesDailyReader` 已注入 `MarketReaders.futures_daily`；`get_bars_reader` 无 futures 分支，未追到应用查询 |
+| `futures_basic` | 仅 storage | `FuturesBasicReader` 已装配；保存合约快照不等于注册为 metadata instruments，未追到应用读取 |
+| `earnings_forecast` | 仅 storage | `EarningsForecastReader` 已装配；未追到应用研究读取 |
+| `earnings_express` | 仅 storage | `EarningsExpressReader` 已装配；未追到应用研究读取 |
+| `index_valuation` | 仅 storage | `IndexValuationReader` 已装配；`CapitalStore` 无对应读取，股票 valuation API 不消费此表 |
+
+可复用消费家族的核对点：[行情 API](../../apps/backend/src/ditto_apps/api/routes/market.py)、[元数据 API](../../apps/backend/src/ditto_apps/api/routes/metadata.py)、[财务 API](../../apps/backend/src/ditto_apps/api/routes/fundamental.py)、[资金 API](../../apps/backend/src/ditto_apps/api/routes/capital.py)、[运维 CLI](../../apps/backend/src/ditto_apps/cli/commands/ops.py)、[历史证券池投影](../../packages/application/src/ditto_application/queries/historical_universe.py)、[回测分类截面](../../packages/application/src/ditto_application/processes/execution/classification_snapshot.py)与[选股身份装配](../../packages/application/src/ditto_application/providers_selection.py)。未接应用的 16 项是所查生产入口与调用链中的缺口，不是断言存储实现缺失。
+
+**FRED 已有条件接线，代码存在与实际落库分别判断。** [SourcesProvider.fred_source](../../packages/data/src/ditto_data/di/sources.py) 在有 key 时创建并注册 FredSource；[coordinator_factory._source_fetchers_for](../../packages/application/src/ditto_application/processes/ingestion/coordinator_factory.py) 在 Source.FRED 下选择 MacroFetcher，已有宏观 latest 查询可消费写入后的指标。这不改变现场事实：当前只有 7 个中国宏观 indicator_id、快照 source 全为 tushare，配置的 51 个 FRED 系列尚未在本次库存中形成落库证据。商品的 FXCM／FRED／Sina 腿由 [commodity_fetcher](../../packages/application/src/ditto_application/processes/ingestion/commodity_fetcher.py) 组织；R2 且非 FRED 协调器主动关闭 FRED 腿，Sina 依赖 sina_enabled。未配置跳过、已配置调用失败、已落库但未验收必须分别记录，商品 HTTP 已接不证明每条来源腿可用。
+
+## 单机备份容量决策
+
+容量于 **20:40:57 CST** 用 `df`／`statvfs`／文件 `st_size` 与 `st_blocks×512` 只读核对；metadata 页归属于 20:42:24 用只读 `dbstat` 分组（含索引）。卷总 **245.107 GB**、可用 **58.422 GB**。下表 GB 为十进制，allocated 为文件实际块数，不计目录／manifest 少量开销；日志及旧备份副本不纳入新备份集。
+
+| 内容 | 逻辑 GB | allocated GB |
+| --- | ---: | ---: |
+| metadata＋trading 库；独立 research／agent 库当前未初始化 | 5.150491 | 5.153825 |
+| 全部 provider payload／schema；research artifacts 当前无目录 | 5.097177 | 5.157204 |
+| 精简单份候选下限 B：上述所有不可重拉事实、现有证据及整份 metadata | 10.247668 | 10.311029 |
+| 全部 canonical Parquet C | 1.518040 | 1.518658 |
+| 完整单份 B＋C | 11.765707 | 11.829686 |
+
+现有[SQLite 备份](../../packages/platform/src/ditto_platform/foundation/storage/sqlite_backup.py)使用 Backup API 写 `.partial` 后硬链接发布同一 inode，[payload 备份](../../packages/platform/src/ditto_platform/foundation/storage/payload_backup.py)使用 `copy2`；均原样保存，无 zip/gzip，不假设压缩收益，也不把同一 `.partial` 再算成一份独立副本。
+若两代备份、一次隔离恢复、新一代暂存同时存在，仅四份内容就需完整 **47.319 GB**／候选精简 **41.244 GB**，还未计排序或重建工作区；因此选择**优先有证据的精简、日备份保留两代、备份与恢复互斥**。候选最大每份节省 1.519 GB canonical，保留整份 metadata、全部现有 payload 以及 paper/manual、策略、研究、agent 等不可重拉事实；不新增引用裁剪框架，不因研究快照表当前为空而删旧证据。
+本轮仅检查留存 payload 引用存在，**未证明全部 canonical 可省略**。实施前逐分区验证备份载荷覆盖、版本／变换身份与重建结果；仅可重建分区可省略，旧快照重放必须使用原留存证据，重新拉取当前版本不能替代。不能证明可重建的分区仍须备份：若其 allocated 为 P GB，保守峰值重算为 `3×(10.311028736+P)+5.082251264 GB`，不满足空间门就阻断。
+全部 canonical 通过重建验收时的候选峰值按 allocated 计算：`3B + W = 3×10.311028736 + 5.082251264 = 36.015337472 GB`。第三份槽位供新备份暂存或隔离恢复二选一；`W` **包含**恢复出的全部 canonical 1.518657536 GB，余 **3.563593728 GB** 供有界分区临时文件／WAL／校验排序，不能重复分配。完整方案同口径需 40.571310080 GB；候选精简峰值少 4.556 GB。
+精简预算后剩 `58.422366208−36.015337472=22.407028736 GB`。以 **20 GiB（21.474836480 GB）** 为本项目保守剩余空间门，仅多 **0.932 GB**；这是规划假设，**不是 Mac 官方要求或已实测的重建峰值**。按分区重建并监测共享工作区；超预算或空间门不足必须阻断，保留证据，不自动删数据、缩小 47 项目标或牺牲已承诺重放。47 项补齐增长尚不能精确量化，补齐后及每次备份前重测。
+metadata 的 5.080 GB 页占用中，11 张金融事实表及索引约 **3.350 GB**、ETF 参考观察 **0.845 GB**、其他身份／目录／摄取／策略等元数据 **0.210 GB**、freelist **0.674 GB**。金融事实是未来验证重建能力的候选，不是已证明可丢弃的数据；当前配方整体复制数据库，不把这些页算作现成节省，也不清理 freelist。进一步精简须先证明版本／来源与保存研究引用均可恢复。
+本地证据 `capacity.json` SHA-256：`080070d26b9feb815708463f9f3b8a4140af80564af6038173b011426e9da39a`；`metadata-page-usage.json`：`84590167cd57b0a9ea2924ce3613a1d59398a3ce1f182cc5730613025fc6e6c6`。本次没有创建备份、执行恢复或测得 24 小时恢复能力。
+
+## 未验证边界
+
+本轮未在真实根运行 HTTP／CLI／浏览器研究旅程；上述静态调用链不是实际演示通过、PIT 正确或完整性通过。尤其通用 ETF 复权、两融可知日等已证实缺陷仍存在；声明 pit_asof 的 API 也不能仅凭标签过关。
 核心价格复测沿用[旧审计](../data/price-identity-verification.md)的生命周期与状态归因规则，没有逐条核验这些基础身份／状态是否正确；旧截止数字可复现，不能据此把污染分母或源表达失真当作已解决。
 其余基金／合约／事件的应有分母、历史身份与退市／ST／停牌真值、公告类型、来源权限、修订和 PIT 正确性、真实消费者、备份可恢复性及性能/SLA 均未由本次扫描证明。新 ready 判定必须补足这些承诺范围内的证据。
