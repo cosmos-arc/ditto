@@ -41,6 +41,29 @@ class _StubCapitalData:
         del start, end
         return pl.DataFrame()
 
+    def get_moneyflow(self, instrument_id: int, start: str, end: str) -> pl.DataFrame:
+        # 协议成员补齐：画像窗口读不在此测试消费。
+        del instrument_id, start, end
+        return pl.DataFrame()
+
+    def get_top_list(self, instrument_id: int, start: str, end: str) -> pl.DataFrame:
+        del instrument_id, start, end
+        return pl.DataFrame()
+
+    def get_top_inst(self, instrument_id: int, start: str, end: str) -> pl.DataFrame:
+        del instrument_id, start, end
+        return pl.DataFrame()
+
+    def get_margin_trading_range(
+        self,
+        instrument_id: int,
+        start: str,
+        end: str,
+        as_of_date: date | None = None,
+    ) -> pl.DataFrame:
+        del instrument_id, start, end, as_of_date
+        return pl.DataFrame()
+
     def get_cyq_perfs(self, start: str, end: str) -> pl.DataFrame:
         # 协议成员补齐：facade 测试不消费筹码/胜率帧。
         del start, end

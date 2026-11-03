@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { type CapitalProfileRange, fetchCapitalProfile } from "../api/capital-profile";
 import { fetchEtfNav, fetchIndicatorSeries, type IndicatorSeriesRange } from "../api/indicator-overlays";
 import {
 	fetchInstrumentBars,
@@ -24,6 +25,7 @@ export const instrumentKeys = {
 		[...instrumentKeys.all, id, "indicator-series", range] as const,
 	nav: (id: string, range: { readonly startDate: string; readonly endDate: string }) =>
 		[...instrumentKeys.all, id, "etf-nav", range] as const,
+	profile: (id: string, range: CapitalProfileRange) => [...instrumentKeys.all, id, "capital-profile", range] as const,
 };
 
 export function useInstrumentDetail(id: string) {
@@ -55,5 +57,13 @@ export function useEtfNav(id: string, range: { readonly startDate: string; reado
 		queryKey: instrumentKeys.nav(id, range),
 		queryFn: () => fetchEtfNav(id, range),
 		enabled: hasValidId(id) && range.startDate.length > 0 && range.endDate.length > 0,
+	});
+}
+
+export function useCapitalProfile(id: string, range: CapitalProfileRange) {
+	return useQuery({
+		queryKey: instrumentKeys.profile(id, range),
+		queryFn: () => fetchCapitalProfile(parseInstrumentId(id), range),
+		enabled: hasValidId(id) && range.allowExperimental && range.startDate.length > 0 && range.endDate.length > 0,
 	});
 }

@@ -671,9 +671,15 @@ class ProviderPayloadTechnicalAnalysisSource:
         instrument_id: InstrumentId,
         instrument_code: str | Callable[[date], str | None],
         window: tuple[date, date] | None = None,
+        dataset_id: str = "adj_factor",
     ) -> dict[str, AdjustmentFactor]:
-        """Read exact visible adjustment factors without a latest-store fallback."""
-        frame = self._query.query(dataset_id="adj_factor", context=context)
+        """
+        Read exact visible adjustment factors without a latest-store fallback.
+
+        dataset_id 参数化：stock=adj_factor、etf=fund_adj（列名同源
+        adj_factor，#658 批次3）。
+        """
+        frame = self._query.query(dataset_id=dataset_id, context=context)
         selected = _instrument_rows(
             frame,
             context=context,

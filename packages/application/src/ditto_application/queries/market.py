@@ -148,14 +148,26 @@ class MarketQueryFacade:
             allow_experimental_data=allow_experimental_data,
         )
 
-    def assert_adjustment_allowed(self, *, allow_experimental_data: bool) -> None:
-        """Apply the catalog maturity gate to chart adjustment factors."""
+    def assert_adjustment_allowed(
+        self,
+        *,
+        allow_experimental_data: bool,
+        datasets: tuple[str, ...] = ("adj_factor",),
+    ) -> None:
+        """
+        Apply the catalog maturity gate to chart adjustment factors.
+
+        datasets＝本次复权实际消费的因子数据集（stock=adj_factor、
+        etf=fund_adj，#658 批次3）。
+        """
         blocked = blocked_catalog_datasets(
-            ("adj_factor",),
+            datasets,
             allow_experimental_data=allow_experimental_data,
         )
         if blocked:
-            raise AppQueryError("adj_factor requires experimental dataset maturity")
+            raise AppQueryError(
+                ", ".join(datasets) + " requires experimental dataset maturity"
+            )
 
     def allows_suspension_evidence(self, *, allow_experimental_data: bool) -> bool:
         """Unknown or unpromoted status must not suppress chart gaps."""

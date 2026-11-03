@@ -836,9 +836,11 @@ class MarketChartQueryFacade:
     ) -> tuple[dict[str, AdjustmentFactor], tuple[ProviderSnapshot, ...]]:
         factor_snapshots: tuple[ProviderSnapshot, ...] = ()
         factors: dict[str, AdjustmentFactor] = {}
+        factor_dataset = "fund_adj" if request.asset_class == "etf" else "adj_factor"
         if request.adjustment != "none":
             self._market.assert_adjustment_allowed(
-                allow_experimental_data=request.allow_experimental_data
+                allow_experimental_data=request.allow_experimental_data,
+                datasets=(factor_dataset,),
             )
             # Factors are consumed only for dates with price bars, so a
             # shard scoped solely to a suspended or authoritatively missing
@@ -856,7 +858,7 @@ class MarketChartQueryFacade:
                     - suspensions.keys()
                 )
             factor_snapshots = self._select_snapshots(
-                "adj_factor",
+                factor_dataset,
                 request.start_date,
                 request.end_date,
                 cutoff,
@@ -877,7 +879,7 @@ class MarketChartQueryFacade:
                 publication_cutoff=cutoff,
                 source_snapshots=(
                     DatasetSnapshot(
-                        dataset_id="adj_factor",
+                        dataset_id=factor_dataset,
                         dataset_version=factor_snapshots[0].schema_version,
                         source_snapshot_ids=tuple(
                             item.snapshot_id for item in factor_snapshots
@@ -892,6 +894,7 @@ class MarketChartQueryFacade:
                     instrument_id=InstrumentId(request.instrument_id),
                     instrument_code=instrument_code,
                     window=(request.start_date, request.end_date),
+                    dataset_id=factor_dataset,
                 )
                 if any(item.payload_retained for item in factor_snapshots)
                 else {}
@@ -1117,9 +1120,7 @@ class MarketChartQueryFacade:
         now = request.now
         if period not in {"daily", "weekly", "monthly"}:
             raise AppQueryError("unsupported chart period")
-        if adjustment not in {"none", "qfq", "hfq"} or (
-            asset_class == "etf" and adjustment != "none"
-        ):
+        if adjustment not in {"none", "qfq", "hfq"}:
             raise AppQueryError("unsupported source-bound chart adjustment")
         if asset_class not in {"stock", "etf"}:
             raise AppQueryError("source-bound chart supports stock and ETF only")

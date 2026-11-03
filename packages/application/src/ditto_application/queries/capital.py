@@ -15,6 +15,8 @@ _MARGIN_TRADING_DATASET = "margin_trading"
 _VALUATION_METRICS_DATASET = "valuation_metrics"
 _MONEYFLOW_DATASET = "moneyflow"
 _CYQ_PERF_DATASET = "cyq_perf"
+_TOP_LIST_DATASET = "top_list"
+_TOP_INST_DATASET = "top_inst"
 
 
 class CapitalDataPort(Protocol):
@@ -38,6 +40,28 @@ class CapitalDataPort(Protocol):
 
     def get_moneyflows(self, start: str, end: str) -> pl.DataFrame:
         """查询全市场资金流向帧（L3 巡检）."""
+        ...
+
+    def get_moneyflow(self, instrument_id: int, start: str, end: str) -> pl.DataFrame:
+        """逐标的资金流窗口读（画像链）."""
+        ...
+
+    def get_top_list(self, instrument_id: int, start: str, end: str) -> pl.DataFrame:
+        """逐标的龙虎榜窗口读（画像链）."""
+        ...
+
+    def get_top_inst(self, instrument_id: int, start: str, end: str) -> pl.DataFrame:
+        """逐标的龙虎榜席位窗口读（画像链）."""
+        ...
+
+    def get_margin_trading_range(
+        self,
+        instrument_id: int,
+        start: str,
+        end: str,
+        as_of_date: date | None = None,
+    ) -> pl.DataFrame:
+        """逐标的两融窗口读（PIT 可选；画像链）."""
         ...
 
     def get_cyq_perfs(self, start: str, end: str) -> pl.DataFrame:
@@ -111,6 +135,69 @@ class CapitalQueryFacade:
             allow_experimental_data=allow_experimental_data,
         )
         return self._service.get_cyq_perfs(start, end)
+
+    def get_moneyflow(
+        self,
+        instrument_id: int,
+        start: str,
+        end: str,
+        *,
+        allow_experimental_data: bool = False,
+    ) -> pl.DataFrame:
+        """逐标的资金流窗口读（万元/手；#658 批次3 画像链）."""
+        self._assert_dataset_allowed(
+            _MONEYFLOW_DATASET,
+            allow_experimental_data=allow_experimental_data,
+        )
+        return self._service.get_moneyflow(instrument_id, start, end)
+
+    def get_top_list(
+        self,
+        instrument_id: int,
+        start: str,
+        end: str,
+        *,
+        allow_experimental_data: bool = False,
+    ) -> pl.DataFrame:
+        """逐标的龙虎榜窗口读（事件按 reason 独立成行）."""
+        self._assert_dataset_allowed(
+            _TOP_LIST_DATASET,
+            allow_experimental_data=allow_experimental_data,
+        )
+        return self._service.get_top_list(instrument_id, start, end)
+
+    def get_top_inst(
+        self,
+        instrument_id: int,
+        start: str,
+        end: str,
+        *,
+        allow_experimental_data: bool = False,
+    ) -> pl.DataFrame:
+        """逐标的龙虎榜席位窗口读（单边 null 保真）."""
+        self._assert_dataset_allowed(
+            _TOP_INST_DATASET,
+            allow_experimental_data=allow_experimental_data,
+        )
+        return self._service.get_top_inst(instrument_id, start, end)
+
+    def get_margin_trading_range(
+        self,
+        instrument_id: int,
+        start: str,
+        end: str,
+        as_of_date: date | None = None,
+        *,
+        allow_experimental_data: bool = False,
+    ) -> pl.DataFrame:
+        """逐标的两融窗口读（pit_asof=as_of_date，缺省窗口终点）."""
+        self._assert_dataset_allowed(
+            _MARGIN_TRADING_DATASET,
+            allow_experimental_data=allow_experimental_data,
+        )
+        return self._service.get_margin_trading_range(
+            instrument_id, start, end, as_of_date
+        )
 
     def get_valuation_metrics(
         self,

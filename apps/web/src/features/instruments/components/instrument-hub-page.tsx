@@ -5,6 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ObjectHubLayout, StatusBar } from "@/features/shell";
 import { addToLocalWatchlist } from "@/lib/local-watchlist";
 import type { InstrumentDrillContext } from "../types";
+import { InstrumentCapitalView } from "./instrument-capital-view";
 import { InstrumentChartView } from "./instrument-chart-view";
 import { InstrumentMetaStrip } from "./instrument-meta-strip";
 import { InstrumentOverview } from "./instrument-overview";
@@ -12,7 +13,7 @@ import { type InstrumentOverlayId, InstrumentPageOverlays, instrumentActions } f
 
 export interface InstrumentHubSearch {
 	readonly selectionRunId?: string | undefined;
-	readonly tab?: "chart" | "fundamentals" | "overview" | "technical";
+	readonly tab?: "capital" | "chart" | "fundamentals" | "overview" | "technical";
 	readonly drill?: InstrumentDrillContext | undefined;
 }
 
@@ -65,6 +66,7 @@ export function InstrumentHubPage({
 							<TabsList>
 								<TabsTrigger value="overview">概览</TabsTrigger>
 								<TabsTrigger value="chart">行情</TabsTrigger>
+								<TabsTrigger value="capital">资金</TabsTrigger>
 								<TabsTrigger value="technical">技术证据</TabsTrigger>
 								<TabsTrigger value="fundamentals">数据边界</TabsTrigger>
 							</TabsList>
@@ -80,6 +82,11 @@ export function InstrumentHubPage({
 							<TabsContent value="chart">
 								<div data-info-level="l1" data-info-unit="instrument-chart">
 									<InstrumentChartView id={instrumentId} drill={search.drill} />
+								</div>
+							</TabsContent>
+							<TabsContent value="capital">
+								<div data-info-level="l1" data-info-unit="instrument-capital">
+									<InstrumentCapitalView id={instrumentId} />
 								</div>
 							</TabsContent>
 							<TabsContent value="technical" className="h-full min-h-0 overflow-hidden">

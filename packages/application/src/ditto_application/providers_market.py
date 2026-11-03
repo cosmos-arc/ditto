@@ -29,6 +29,7 @@ from ditto_features.services import (
 from ditto_features.technical_analysis.service import TechnicalAnalysisService
 
 from ditto_application.queries.capital import CapitalQueryFacade
+from ditto_application.queries.capital_profile import CapitalProfileQueryFacade
 from ditto_application.queries.catalog import CatalogQueryFacade
 from ditto_application.queries.commodity import CommodityQueryFacade
 from ditto_application.queries.dataset_coverage import DatasetCoverageQueryFacade
@@ -283,6 +284,18 @@ class AppMarketQueryProvider(Provider):
     ) -> CapitalQueryFacade:
         """资金查询 facade — 隐藏 CQRS 端口类型."""
         return CapitalQueryFacade(capital_store=capital_store)
+
+    @provide
+    def capital_profile_query_facade(
+        self,
+        capital_query_facade: CapitalQueryFacade,
+        metadata_service: MetadataService,
+    ) -> CapitalProfileQueryFacade:
+        """个股资金画像 facade — 四数据集窗口联看（#658 批次3）."""
+        return CapitalProfileQueryFacade(
+            capital=capital_query_facade,
+            calendar=metadata_service.calendar,
+        )
 
     @provide
     def fundamental_query_facade(
