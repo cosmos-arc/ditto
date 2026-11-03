@@ -103,17 +103,33 @@ class MarketWriteService:
         on_duplicate_enum = self._map_on_duplicate(on_duplicate)
         storage_df = self._to_storage_columns(df)
 
-        # 使用文件锁保护并发写入
-        lock_name = f"bars_write_{dataset}_{year}"
-        with self._file_lock.acquire(lock_name, timeout=60.0):
-            writer = self._get_bars_writer(dataset)
-            write_result = writer.write(
-                storage_df,
-                year,
-                on_duplicate=on_duplicate_enum,
+        # 回看窗口跨年时行按 trade_date 年分片落各自年分区（与
+        # save_global_index_bars 同律，correctness E1 #629）：锚年单分区写
+        # 会让前一年 12 月的行对该年有界读不可见；空帧保持单分区写
+        # （分区登记语义不变）。
+        _part_year_expr = pl.col("trade_date").cast(pl.Date).dt.year()
+        part_years = (
+            sorted(set(storage_df.select(_part_year_expr).to_series().to_list()))
+            if storage_df.height
+            else [year]
+        )
+        rows_written = 0
+        for part_year in part_years:
+            part = (
+                storage_df.filter(_part_year_expr == part_year)
+                if storage_df.height
+                else storage_df
             )
-
-        rows_written = write_result.added + write_result.updated
+            # 使用文件锁保护并发写入
+            lock_name = f"bars_write_{dataset}_{part_year}"
+            with self._file_lock.acquire(lock_name, timeout=60.0):
+                writer = self._get_bars_writer(dataset)
+                write_result = writer.write(
+                    part,
+                    part_year,
+                    on_duplicate=on_duplicate_enum,
+                )
+            rows_written += write_result.added + write_result.updated
 
         logger.info(
             "Bars data written",

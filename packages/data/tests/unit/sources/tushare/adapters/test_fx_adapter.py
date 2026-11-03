@@ -1,6 +1,5 @@
 """Tushare FX adapter tests."""
 
-from datetime import UTC
 from unittest.mock import MagicMock
 
 import polars as pl
@@ -95,8 +94,10 @@ class TestFxTushareAdapter:
         # 所以 2024-01-15 GMT = 2024-01-15 00:00:00 UTC
         from datetime import datetime
 
-        expected_utc = datetime(2024, 1, 15, 0, 0, 0, tzinfo=UTC)
-        # Polars 返回的是带时区的 datetime
+        # 合同 dtype 为 ms 无时区（FX_SOURCE_SCHEMA，correctness W2 #629）：
+        # UTC 语义由墙钟值承载（GMT 午夜），与空帧（按 schema 构造）可 concat。
+        assert df.schema["trade_date_utc"] == pl.Datetime("ms")
+        expected_utc = datetime(2024, 1, 15, 0, 0, 0)
         assert trade_date_utc == expected_utc
 
     def test_fetch_fx_daily_empty_response(self) -> None:

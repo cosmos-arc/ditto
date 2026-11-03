@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import httpx
+import polars as pl
 from ditto_data.sources.fred.adapters.commodity import (
     COMMODITY_CODE_TO_INSTRUMENT_ID,
     CommodityFredAdapter,
@@ -379,6 +380,46 @@ class TestCommodityFredAdapter:
         trade_date_utc = result["trade_date_utc"][0]
         assert trade_date_utc is not None
 
+    def test_fetch_commodities_matches_source_schema_precision(
+        self, respx_mock
+    ) -> None:
+        """trade_date_utc ms 精度——μs 会与金属/新浪腿 concat 崩溃（#629）。"""
+        respx_mock.get("https://api.stlouisfed.org/fred/series/observations").mock(
+            return_value=httpx.Response(
+                200,
+                json={
+                    "realtime_start": "2024-01-01",
+                    "realtime_end": "2024-12-31",
+                    "series_id": "DCOILWTICO",
+                    "observations": [
+                        {
+                            "realtime_start": "2024-01-14",
+                            "realtime_end": "2024-12-31",
+                            "date": "2024-01-15",
+                            "value": "72.50",
+                        },
+                    ],
+                },
+            )
+        )
+
+        adapter = CommodityFredAdapter(api_key="test_key")
+        result = adapter.fetch_commodities(
+            codes=["COMMOD_WTI"],
+            start_date="2024-01-15",
+            end_date="2024-01-15",
+        )
+
+        assert result.schema["trade_date_utc"] == pl.Datetime("ms")
+        # 金属/新浪腿同为 ms（UTC 墙钟、无时区标记）：三腿合流不抛 SchemaError
+        metals_shaped = pl.DataFrame(
+            schema={
+                "instrument_id": pl.Int32,
+                "trade_date_utc": pl.Datetime("ms"),
+            }
+        )
+        pl.concat([result, metals_shaped], how="diagonal")
+
     def test_fetch_commodities_uses_convert_to_utc_midnight(self, respx_mock) -> None:
         """trade_date_utc is generated using convert_to_utc_midnight."""
         # Arrange
@@ -409,11 +450,8 @@ class TestCommodityFredAdapter:
             end_date="2024-01-15",
         )
 
-        # Assert - verify UTC timezone is set and value is in datetime format
+        # Assert - verify the UTC wall time is preserved
         trade_date_utc = result["trade_date_utc"][0]
-        # The result should be timezone-aware (UTC)
-        # For 2024-01-15 in winter, NY is UTC-5, so midnight NY = 05:00 UTC
-        # But convert_to_utc_midnight returns based on the market timezone
-        assert str(trade_date_utc).endswith("+00:00") or "UTC" in str(
-            type(trade_date_utc)
-        )
+        # 合同 dtype 为 ms 无时区（#629）：UTC 语义由墙钟值承载——
+        # 2024-01-15 冬令时 NY=UTC-5，NY 午夜 = 05:00 UTC 墙钟。
+        assert str(trade_date_utc) == "2024-01-15 05:00:00"

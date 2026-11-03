@@ -40,6 +40,7 @@ __all__ = [
     "InstrumentFetchHandler",
     "WriteKind",
     "default_dataset_registry",
+    "fx_commodity_request_bounds",
 ]
 
 
@@ -338,6 +339,11 @@ GLOBAL_CONTEXT_INDEX_CODES: list[str] = list(GLOBAL_INDEX_CODES)
 
 # 全球指数回看窗口：美/欧股 T 日收盘在北京 T+1 凌晨，代理另有滞后
 _GLOBAL_INDEX_LOOKBACK_DAYS = 7
+# fx/commodity 回看窗口：FXCM 对 K 线按 GMT 日收盘（北京次日凌晨闭合）、
+# FRED 油/VIX 系列按美东发布节奏 T+1 上市——21:30 夜链请求当日恒为
+# 未闭合/未发布日，单日请求恒空（#629 实测：fx 六对全空、commodity 仅
+# 新浪腿落地）。窗口让 GMT 昨日行每日落地、迟到行在窗口内自愈。
+_FX_COMMODITY_LOOKBACK_DAYS = 7
 # namechange 事件流回看窗口：单页可容纳（远小于翻页损坏边界）
 _HISTORY_LOOKBACK_DAYS = 45
 
@@ -355,6 +361,20 @@ def _lookback_bounds(trade_date: str, days: int) -> tuple[str, str]:
 def _global_index_request_bounds(trade_date: str) -> tuple[str, str]:
     """摄取证据记录真实请求区间（回看窗口而非单日）。"""
     return _lookback_bounds(trade_date, _GLOBAL_INDEX_LOOKBACK_DAYS)
+
+
+def fx_commodity_request_bounds(trade_date: str) -> tuple[str, str]:
+    """fx/commodity 摄取真实请求区间（回看窗口）——coordinator 取数同源。"""
+    return _lookback_bounds(trade_date, _FX_COMMODITY_LOOKBACK_DAYS)
+
+
+def _fx_fetch(ctx: DailyFetchContext) -> DailyFetchHandler:
+    start, end = fx_commodity_request_bounds(ctx.trade_date)
+    return lambda: ctx.fetchers.macro.fetch_fx_daily(
+        ts_codes=list(FX_CODE_TO_INSTRUMENT_ID.keys()),
+        start_date=start,
+        end_date=end,
+    )
 
 
 def _history_request_bounds(trade_date: str) -> tuple[str, str]:
@@ -936,13 +956,8 @@ _FX_COMMODITY_REGISTRATIONS: tuple[DatasetRegistration, ...] = (
         write_kind=WriteKind.INSTRUMENT_CODE_BARS,
         write_dataset="fx_daily",
         date_schedule=DateScheduleType.NATURAL_DAYS,
-        daily_fetch_factory=lambda ctx: (
-            lambda: ctx.fetchers.macro.fetch_fx_daily(
-                ts_codes=list(FX_CODE_TO_INSTRUMENT_ID.keys()),
-                start_date=ctx.trade_date,
-                end_date=ctx.trade_date,
-            )
-        ),
+        daily_fetch_factory=_fx_fetch,
+        request_bounds=fx_commodity_request_bounds,
     ),
     DatasetRegistration(
         dataset=Dataset.COMMODITY_DAILY,
@@ -952,6 +967,7 @@ _FX_COMMODITY_REGISTRATIONS: tuple[DatasetRegistration, ...] = (
         daily_fetch_factory=lambda ctx: (
             lambda: ctx.fetch_commodity_daily(ctx.trade_date)
         ),
+        request_bounds=fx_commodity_request_bounds,
     ),
 )
 

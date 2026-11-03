@@ -1634,6 +1634,50 @@ class TestIngestRange:
             "2024-12-31",
         )
 
+    def test_fx_chunk_routes_to_single_range_fetch(
+        self,
+        coordinator,
+        mock_source,
+    ) -> None:
+        """fx 月块走区间单请求而非日级循环（#629：fx 端点本身即区间 API）。"""
+        from ditto_data.models.source_codes import FX_CODE_TO_INSTRUMENT_ID
+
+        expected = pl.DataFrame({"instrument_id": [4_000_001]})
+        mock_source.fetch_fx_daily.return_value = expected
+
+        result = coordinator._fetch_source_defined_range(
+            "fx_daily",
+            "2024-01-01",
+            "2024-01-31",
+        )
+
+        assert result is expected
+        mock_source.fetch_fx_daily.assert_called_once_with(
+            ts_codes=list(FX_CODE_TO_INSTRUMENT_ID.keys()),
+            start_date="2024-01-01",
+            end_date="2024-01-31",
+        )
+
+    def test_commodity_daily_fetches_declared_lookback_window(
+        self,
+        coordinator,
+        mock_source,
+    ) -> None:
+        """commodity 日更按注册表声明窗口取数，与 request_bounds 同源（#629）。"""
+        from ditto_application.processes.ingestion.dataset_registry import (
+            fx_commodity_request_bounds,
+        )
+
+        mock_source.fetch_metal_daily.return_value = pl.DataFrame()
+
+        coordinator._fetch_commodity_daily("2024-01-31")
+
+        metal_kwargs = mock_source.fetch_metal_daily.call_args.kwargs
+        assert (
+            metal_kwargs["start_date"],
+            metal_kwargs["end_date"],
+        ) == fx_commodity_request_bounds("2024-01-31")
+
     def test_sparse_pit_chunk_uses_one_bounded_range_fetch(
         self,
         coordinator,

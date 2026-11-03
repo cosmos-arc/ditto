@@ -29,6 +29,10 @@ _SORT_KEYS: dict[str, Sequence[str]] = {
     "stock_daily": ("trade_date", "instrument_id"),
     "etf_daily": ("trade_date", "instrument_id"),
     "global_index_daily": ("source_ticker", "trade_date", "knowledge_date"),
+    # fx/commodity：腿拼接序×API 返回序非确定，证据 checksum 需键排序
+    # 收敛（correctness I4 #629）
+    "fx_daily": ("trade_date", "instrument_id"),
+    "commodity_daily": ("trade_date", "instrument_id"),
     "adj_factor": ("trade_date", "instrument_id"),
     "fund_adj": ("trade_date", "instrument_id"),
     "calendar": ("trade_date",),
