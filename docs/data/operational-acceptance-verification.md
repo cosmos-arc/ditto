@@ -134,16 +134,26 @@ SQL 覆盖计数与 attested 判定，防规则漂移）。
   末端）、moneyflow（BSE 源端限制 2026-10-31 起）、rights/csrc 接口
   （#517-#523 降级裁决）均按合同在册。
 
-### 3.3 开放项（窗口后，补偿闭环进行中）
+### 3.3 开放项（2026-11-03 下午全数处置，见收口注记）
 
-- `index_daily` 2026-11-02：3/188 指数代码失败（801072/801074/801145.SI），
-  #511 部分日拒绝语义正确生效（拒绝半完成市场覆盖），4 次重试未果、
-  无覆盖 chunk——待 11-03 夜链修复重试；verify-eod 超高优先级告警通路
-  在值。
-- `industry_mapping` 2026-11-02：3 只未解析证券（含 920085.BJ，BSE
-  边界已知）致周刷失败，chunk PLANNED；现值覆盖至 10-30。
-- 账本卫生：`stock_basic` 存在一条空 trade_date 历史 FAIL 行（11-03
-  02:20 已以正常日期 SUCCESS 重取，5,920 行），建议随下次账本清理处置。
+- `index_daily` 2026-11-02：**已治愈**——`ops verify-eod --date 2026-11-02`
+  自动重拉后五数据集 attested through 11-02（status=ready）。根因定界：
+  801072/801074/801145.SI 三只申万指数代理已整体断供（10-31 起，直连
+  探针对本地已有的 10-20…10-30 旧窗也返回空 200、对照组正常）；白日
+  重试走「空响应跳过＋记名告警」容忍路径（`tushare_index_daily_code_empty`），
+  当日完成。若代理恢复供数，逐码重试自然补齐；持续断供则按源端缺口
+  口径留痕（同 index_weight 洞）。
+- `industry_mapping` 2026-11-02：**已修复＋重刷**——根因＝index_member_all
+  含 stock_basic 永不返回的成员（688827.SH/920085.BJ 实证；001381.SZ
+  为 11-03 上市新股，刷 stock_basic 后自愈），#593「刷 stock_basic」补救
+  对前两者已穷尽、周刷将永久失败。修复：可解析成员照常落库＋缺口成员
+  记名告警（`industry_mapping_unresolved_members`，fuyao 5,434/5,436 同款
+  语义）；全宇宙解析不到仍 fail-closed。重刷 SUCCESS 7,925 行
+  （≈7,927 成员−2 源端缺口）。
+- 账本卫生：`stock_basic` 空 trade_date 历史 FAIL 行已删除（全表唯一
+  畸形行；值留本节前版可复核）。
+- fx/commodity/macro 修复后绿窗自 11-02 起算，满五日后以
+  `data_live_gate` 滚动复验；index_daily 11-02 治愈后核心链窗口可延伸。
 
 ### 3.4 验收判定
 

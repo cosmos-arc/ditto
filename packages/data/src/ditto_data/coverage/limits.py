@@ -242,7 +242,7 @@ _DATASET_COVERAGE: dict[str, DatasetCoverageLimit] = {
         measured_start="2012-03-31",
         measured_end="2026-09-30",
         gaps=(),
-        notes="2012-03-31 起超目标；存量跨年错位 33,851 组遗留=#613 线（#620 后仍留档）；10-29 failed（无新报告期日失败语义待 P1；Q3 报告期数据完整）",
+        notes="2012-03-31 起超目标；存量跨年错位 33,851 组已由 #620 修复（2026-10-27 --apply 分区修复，2026-11-03 复测 263,672 行/0 跨分区同键）；10-29 failed（无新报告期日失败语义待 P1；Q3 报告期数据完整）",
     ),
     "fund_adj": DatasetCoverageLimit(
         dataset="fund_adj",

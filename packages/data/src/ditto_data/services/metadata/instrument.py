@@ -787,12 +787,26 @@ class InstrumentService:
         identifiers = [str(value) for value in df["instrument_id"].unique().to_list()]
         resolved = self.resolve_instrument_ids_batch(identifiers, source, None)
         unresolved = sorted(set(identifiers) - resolved.keys())
+        if df.height and not resolved:
+            # #593 fail-closed 保留：整个成员宇宙解析不到＝注册灾难
+            # （映射源配错/账本损坏），不是源端缺口，响亮失败；空帧
+            # 沿用家族契约返回 0（同 save_name_history 等）。
+            raise ValueError(
+                f"industry mapping resolved nothing: {len(unresolved)} unresolved"
+            )
         if unresolved:
-            # #593：全量账本宇宙=历史全部成员，fail-closed 保留，但样本
-            # 进错误消息让周度失败一步可定位（注册缺口→刷 stock_basic）。
-            sample = ", ".join(unresolved[:10])
-            head = f"industry mapping unresolved instruments: {len(unresolved)}"
-            raise ValueError(f"{head} sample=[{sample}]")
+            # #593 的「注册缺口→刷 stock_basic」补救对源端缺口已穷尽
+            # （2026-11-03 实证：index_member_all 含 688827.SH/920085.BJ
+            # 而 stock_basic 永不返回它们，周刷将永久失败）。可解析成员
+            # 照常落库，缺口成员记名告警留痕，下周重刷自然重试——与
+            # fuyao 身份注册「5,434/5,436 落多数、响亮报少数」同款语义。
+            logger.warning(
+                "Industry mapping skipped unresolved member tickers",
+                event="industry_mapping_unresolved_members",
+                unresolved=unresolved[:50],
+                unresolved_count=len(unresolved),
+            )
+            df = df.filter(pl.col("instrument_id").is_in(list(resolved)))
         rows = sorted(
             df.to_dicts(),
             key=lambda row: (str(row["instrument_id"]), str(row["industry_date"])),
