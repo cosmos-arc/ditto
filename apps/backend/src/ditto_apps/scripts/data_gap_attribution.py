@@ -229,14 +229,16 @@ def _attribute_anomalies(
                 str(suffix): int(count) for suffix, count in by_suffix.iter_rows()
             }
         elif kind in ("adj_factor_missing", "bar_on_non_trading_day"):
+            # 小样本（<=200 行）全量列出供归因关闭；大样本截断留档。
+            listed = rows.sort(["instrument_id", "trade_date"])
+            if listed.height > _SAMPLE_LIMIT * 25:
+                listed = listed.head(_SAMPLE_LIMIT * 4)
             entry["samples"] = [
                 {
                     "ticker": str(row["ticker"]),
                     "trade_date": str(row["trade_date"]),
                 }
-                for row in rows.sort(["instrument_id", "trade_date"])
-                .head(_SAMPLE_LIMIT * 4)
-                .iter_rows(named=True)
+                for row in listed.iter_rows(named=True)
             ]
         elif kind == "suspended_with_bar":
             head = (
