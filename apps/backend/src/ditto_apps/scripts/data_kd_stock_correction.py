@@ -54,12 +54,15 @@ from ditto_application.processes.ingestion.knowledge_date_policy import (
     HK_HOLD_QUARTERLY_REGIME_START,
     calibrate_knowledge_dates,
 )
-from ditto_data.ingestion.ingestion_log_store import IngestionLogStore
-from ditto_data.models.ingestion import IngestionLog, IngestionStatus
-from ditto_data.services.capital_store import CapitalStore
 from ditto_platform.foundation.storage.types import OnDuplicate
 
 from ditto_apps.registry.container import make_app_container
+from ditto_apps.registry.infra.protocol_adapters import (
+    CapitalStore,
+    IngestionLog,
+    IngestionLogStore,
+    IngestionStatus,
+)
 
 __all__ = [
     "KD_CORRECTION_SOURCE",
