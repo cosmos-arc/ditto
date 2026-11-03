@@ -26,7 +26,6 @@ from ditto_application.processes.experiments.r2_live_gate_evidence import (
     R2LiveGateEvidenceSource,
 )
 from ditto_application.queries.source import SourceDataPort
-from ditto_data.ingestion.ingestion_log_store import IngestionLogStore
 from ditto_data.quality.golden import GoldenDatasetSpec
 from ditto_data.quality.protocols import (
     ComparisonStoreProtocol,
@@ -38,7 +37,6 @@ from ditto_data.quality.protocols import (
     SecondaryFundNavSourceProtocol,
     SecondaryIndexBarsSourceProtocol,
 )
-from ditto_data.services.capital_store import CapitalStore
 from ditto_data.services.deps import FundamentalReaders, MarketReaders
 from ditto_data.services.market_service import MarketService
 from ditto_data.services.metadata.instrument import InstrumentService
@@ -55,13 +53,11 @@ from ditto_data.storage.metadata.instrument import InstrumentReader
 from ditto_data.storage.runtime.quality import ComparisonWriter
 
 __all__ = [
-    "CapitalStore",
     "DumpKind",
     "FinancialReconcileContextProtocol",
     "FundamentalFinancialReconcileContext",
     "FuyaoDailyKDumpFetcher",
     "FuyaoSource",
-    "IngestionLogStore",
     "InstrumentService",
     "MarketReaders",
     "MarketService",

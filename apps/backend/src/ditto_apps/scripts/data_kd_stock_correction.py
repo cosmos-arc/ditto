@@ -62,7 +62,7 @@ from ditto_application.processes.ingestion.knowledge_date_policy import (
 from ditto_platform.foundation.storage.types import OnDuplicate
 
 from ditto_apps.registry.container import make_app_container
-from ditto_apps.registry.infra.protocol_adapters import (
+from ditto_apps.registry.contexts.ingestion import (
     CapitalStore,
     IngestionLogStore,
 )
