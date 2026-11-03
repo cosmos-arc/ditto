@@ -147,3 +147,38 @@ def _roster() -> pl.DataFrame:
             ],
         }
     )
+
+
+class TestWindowEdgeAttribution:
+    def test_pre_window_listing_head_gap_is_silent_stretch(self) -> None:
+        """I3：窗口起点前已上市、首价在窗口内＝跨窗长停，归中段静默而非首价前."""
+        gap = pl.DataFrame(
+            {
+                "instrument_id": [10, 11],
+                "trade_date": [date(2024, 1, 5), date(2024, 1, 5)],
+                "kind": ["no_status_dataset"] * 2,
+            }
+        )
+        bars = pl.DataFrame(
+            {
+                "instrument_id": [10, 11],
+                "trade_date": [date(2024, 3, 1), date(2024, 2, 1)],
+            }
+        )
+        classified = classify_gap_rows(
+            gap,
+            tickers={10: "600010.SH", 11: "600011.SH"},
+            bars=bars,
+            list_dates={10: date(2020, 1, 1), 11: date(2024, 1, 20)},
+            window_start=date(2024, 1, 1),
+        )
+        buckets = dict(
+            zip(
+                classified["instrument_id"].to_list(),
+                classified["bucket"].to_list(),
+                strict=True,
+            )
+        )
+        # 10=窗口前上市（2020）→ 跨窗静默；11=窗口内上市（2024-01-20）→ 首价前。
+        assert buckets[10] == "silent_stretch"
+        assert buckets[11] == "head_before_first_bar"

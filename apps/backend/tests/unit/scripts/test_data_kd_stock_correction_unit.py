@@ -16,13 +16,16 @@ from typing import Any
 from zoneinfo import ZoneInfo
 
 import polars as pl
+import pytest
 from ditto_apps.scripts.data_kd_stock_correction import (
     _MARGIN_COLUMNS,
     _MARGIN_SCHEMA,
     KD_CORRECTION_SOURCE,
+    _shanghai_day,
     apply_dataset,
     scan_dataset,
 )
+from ditto_data.models.ingestion import IngestionLog
 from ditto_data.storage.capital.specs import MARGIN_TRADING_SPEC
 
 _SHANGHAI = ZoneInfo("Asia/Shanghai")
@@ -300,11 +303,12 @@ class TestApply:
         self,
         tmp_path: Path,
     ) -> None:
+        # 仅有旧版本行（无已锚版本——首锚胜守卫不触发）时按旧 kd 映射新锚。
         conn = _make_db(tmp_path)
         conn.execute(
             "INSERT INTO provider_snapshots VALUES "
             "('s1', 'hk_hold', 'tushare', '2024-09-16', '2024-09-30', 3000, "
-            "'2026-11-01T08:00:00')"
+            "'2026-11-01T08:00:00+00:00')"
         )
         conn.commit()
         _write_hk_hold_year(
@@ -316,12 +320,11 @@ class TestApply:
                     "trade_date": "2024-09-30",
                     "knowledge_date": "2024-10-01",
                 },
-                # 已是期望版本的行不被重复映射。
                 {
                     "source_ticker": "000002.SZ",
                     "instrument_id": 2,
                     "trade_date": "2024-09-30",
-                    "knowledge_date": "2026-11-01",
+                    "knowledge_date": "2024-10-01",
                 },
             ],
         )
@@ -338,10 +341,13 @@ class TestApply:
             run_at=datetime(2026, 11, 4, 3, 0, tzinfo=_SHANGHAI),
         )
 
-        assert result["rows_written"] == 1
+        assert result["rows_written"] == 2
         frame = store.hk_hold_frames[0]
-        assert frame["source_ticker"].to_list() == ["000001.SZ"]
-        assert frame["knowledge_date"].to_list() == [date(2026, 11, 1)]
+        assert frame["source_ticker"].to_list() == ["000001.SZ", "000002.SZ"]
+        assert frame["knowledge_date"].to_list() == [
+            date(2026, 11, 1),
+            date(2026, 11, 1),
+        ]
 
     def test_unanchorable_rows_are_not_written(self, tmp_path: Path) -> None:
         conn = _make_db(tmp_path)
@@ -387,3 +393,175 @@ class TestApply:
         )
         with pytest.raises(ValueError, match="not after trade_date"):
             _assert_knowledge_after_trade(frame, dataset="margin_trading")
+
+
+class TestCorrectnessRegressions:
+    """correctness 轴评审（W1-W5/I2/I4）回归锁。"""
+
+    def test_partial_expected_coverage_still_impacts(self, tmp_path: Path) -> None:
+        """W5：标的级局部重取后，期望版本行数不足旧版行数仍须纠正."""
+        conn = _make_db(tmp_path)
+        # 旧版本 3 行（instrument 1/2/3），期望版本仅 1 行（instrument 1）。
+        for iid in (1, 2, 3):
+            _insert_margin(
+                conn,
+                instrument_id=iid,
+                trade_date="2024-11-01",
+                knowledge_date="2024-11-02",
+            )
+        _insert_margin(
+            conn,
+            instrument_id=1,
+            trade_date="2024-11-01",
+            knowledge_date="2024-11-04",
+        )
+        conn.commit()
+        impacts = scan_dataset("margin_trading", conn=conn, data_root=tmp_path)
+        assert [(i.trade_date, i.status) for i in impacts] == [
+            ("2024-11-01", "correct")
+        ]
+        assert impacts[0].rows == 3
+
+    def test_ambiguous_multiple_wrong_versions_rejected(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """W4：同日两个旧版本＝值谱系不可分辨，拒绝写入并响亮报告."""
+        conn = _make_db(tmp_path)
+        for iid in (1, 2):
+            _insert_margin(
+                conn,
+                instrument_id=iid,
+                trade_date="2024-11-01",
+                knowledge_date="2024-11-02",
+            )
+        for iid in (3,):
+            _insert_margin(
+                conn,
+                instrument_id=iid,
+                trade_date="2024-11-01",
+                knowledge_date="2024-11-03",
+            )
+        conn.commit()
+        impacts = scan_dataset("margin_trading", conn=conn, data_root=tmp_path)
+        assert len(impacts) == 1
+        assert impacts[0].status == "ambiguous"
+        store, logs = _StubCapitalStore(), _StubLogStore()
+        result = apply_dataset(
+            "margin_trading",
+            impacts,
+            conn=conn,
+            data_root=tmp_path,
+            capital_store=store,
+            log_store=logs,
+            run_at=datetime(2026, 11, 4, 3, 0, tzinfo=_SHANGHAI),
+        )
+        assert result["dates_corrected"] == 0
+        assert store.margin_frames == []
+        assert logs.logs == []
+
+    def test_quarterly_already_anchored_not_rewritten(self, tmp_path: Path) -> None:
+        """W2：已有观察锚版本（kd>事实日+14d）的季度日不再重写（首锚胜）."""
+        conn = _make_db(tmp_path)
+        conn.execute(
+            "INSERT INTO provider_snapshots VALUES "
+            "('s1', 'hk_hold', 'tushare', '2024-09-16', '2024-09-30', 3000, "
+            "'2026-11-01T08:00:00+00:00')"
+        )
+        conn.commit()
+        _write_hk_hold_year(
+            tmp_path,
+            [
+                {
+                    "source_ticker": "000001.SZ",
+                    "instrument_id": 1,
+                    "trade_date": "2024-09-30",
+                    "knowledge_date": "2024-10-01",
+                },
+                {
+                    "source_ticker": "000002.SZ",
+                    "instrument_id": 2,
+                    "trade_date": "2024-09-30",
+                    "knowledge_date": "2026-11-01",
+                },
+            ],
+        )
+        impacts = scan_dataset("hk_hold", conn=conn, data_root=tmp_path)
+        assert impacts == []
+
+    def test_quarterly_anchor_on_trade_date_unanchorable(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """I2：锚不晚于事实日＝不可作为可知时间，拒绝动."""
+        conn = _make_db(tmp_path)
+        conn.execute(
+            "INSERT INTO provider_snapshots VALUES "
+            "('s1', 'hk_hold', 'tushare', '2024-09-16', '2024-09-30', 3000, "
+            "'2024-09-30T08:00:00+00:00')"
+        )
+        conn.commit()
+        _write_hk_hold_year(
+            tmp_path,
+            [
+                {
+                    "source_ticker": "000001.SZ",
+                    "instrument_id": 1,
+                    "trade_date": "2024-09-30",
+                    "knowledge_date": "2024-10-01",
+                },
+            ],
+        )
+        impacts = scan_dataset("hk_hold", conn=conn, data_root=tmp_path)
+        assert len(impacts) == 1
+        assert impacts[0].status == "unanchorable"
+
+    def test_shanghai_day_converts_utc_to_local(self) -> None:
+        """W3：UTC created_at 须转上海日（00:00-08:00 写入不锚早一天）."""
+        assert _shanghai_day("2026-11-01T18:00:00+00:00") == "2026-11-02"
+        assert _shanghai_day("2026-11-01T07:30:15.136676+00:00") == "2026-11-01"
+        assert _shanghai_day("2026-11-02T02:00:00") == "2026-11-02"
+
+    def test_ledger_written_before_data(self, tmp_path: Path) -> None:
+        """W1：账本原因行先于数据写（崩溃后重跑收敛，不永久失账）."""
+        conn = _make_db(tmp_path)
+        _insert_margin(
+            conn,
+            instrument_id=7,
+            trade_date="2024-11-01",
+            knowledge_date="2024-11-02",
+        )
+        conn.commit()
+        impacts = scan_dataset("margin_trading", conn=conn, data_root=tmp_path)
+        order: list[str] = []
+
+        class _OrderStore(_StubCapitalStore):
+            def save_margin_trading(
+                self, df: pl.DataFrame, on_duplicate: object = None
+            ) -> int:
+                order.append("data")
+                return super().save_margin_trading(df, on_duplicate)
+
+        class _OrderLogs(_StubLogStore):
+            def save_log(self, log: IngestionLog) -> IngestionLog:
+                order.append("ledger")
+                return super().save_log(log)
+
+        apply_dataset(
+            "margin_trading",
+            impacts,
+            conn=conn,
+            data_root=tmp_path,
+            capital_store=_OrderStore(),
+            log_store=_OrderLogs(),
+            run_at=datetime(2026, 11, 4, 3, 0, tzinfo=_SHANGHAI),
+        )
+        assert order[0] == "ledger"
+        assert order[-1] == "data"
+
+    def test_empty_dataset_selection_rejected(self) -> None:
+        """I4：--dataset 解析为空集时响亮拒绝而非静默空转."""
+        from ditto_apps.scripts import data_kd_stock_correction as mod
+
+        with pytest.raises(SystemExit):
+            mod.main(["scan", "--data-root", "/tmp", "--dataset", " "])

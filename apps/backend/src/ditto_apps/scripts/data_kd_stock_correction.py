@@ -42,7 +42,7 @@ import os
 import sqlite3
 import sys
 from dataclasses import dataclass
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from hashlib import sha256
 from pathlib import Path
 from typing import Any, Protocol
@@ -218,20 +218,31 @@ def _quarterly_impacts(
     impacts = []
     for t in sorted(by_date):
         expected = anchors.get(t)
-        if expected is None:
+        versions = by_date[t]
+        # 已有观察锚版本（kd 晚于事实日 14 天＝任何披露制度锚之外）则该日
+        # 首锚已立：后续新覆盖快照前移 MAX 锚不再重写（首锚胜，可见性不
+        # 随重复回补单调后移）。
+        anchored = any(
+            date.fromisoformat(k) > date.fromisoformat(t) + _ANCHOR_ALREADY_SET_DAYS
+            for k in versions
+        )
+        if anchored:
+            continue
+        if expected is None or date.fromisoformat(expected) <= date.fromisoformat(t):
+            # 无覆盖快照，或锚不晚于事实日（不可作为可知时间）——拒绝动。
             impacts.append(
                 DateImpact(
                     dataset=dataset,
                     trade_date=t,
-                    rows=sum(by_date[t].values()),
-                    old_knowledge_date="|".join(sorted(by_date[t])),
+                    rows=sum(versions.values()),
+                    old_knowledge_date="|".join(sorted(versions)),
                     new_knowledge_date="?",
                     anchor="observation_snapshot",
                     status="unanchorable",
                 )
             )
             continue
-        for k, c in sorted(by_date[t].items()):
+        for k, c in sorted(versions.items()):
             if k != expected:
                 impacts.append(
                     DateImpact(
@@ -254,28 +265,54 @@ def _impacts_from_groups(
     *,
     anchor: str,
 ) -> list[DateImpact]:
-    """下一交易日策略的纠正计划；同日已有期望版本行＝无需动作."""
+    """
+    下一交易日策略的纠正计划.
+
+    守卫（correctness W4/W5）：
+    - 期望版本**行数**已覆盖最大旧版行数 → 无需动作（存在性守卫会在
+      标的级局部重取后留下未纠正标的的泄漏行）；
+    - 同日存在多个旧版本（>1 个非期望 kd 组）→ 值谱系不可分辨，
+      status=ambiguous 拒绝写入、响亮报告，人工分流。
+    """
     by_date: dict[str, dict[str, int]] = {}
     for t, k, c in groups:
         by_date.setdefault(t, {})[k] = c
     impacts = []
     for t in sorted(by_date):
         expected = expectations.get(t)
-        if expected is None or expected in by_date[t]:
+        if expected is None:
             continue
-        for k, c in sorted(by_date[t].items()):
-            if k != expected:
-                impacts.append(
-                    DateImpact(
-                        dataset=dataset,
-                        trade_date=t,
-                        rows=c,
-                        old_knowledge_date=k,
-                        new_knowledge_date=expected,
-                        anchor=anchor,
-                        status="correct",
-                    )
+        versions = by_date[t]
+        wrong = {k: c for k, c in versions.items() if k != expected}
+        if not wrong:
+            continue
+        if len(wrong) > 1:
+            impacts.append(
+                DateImpact(
+                    dataset=dataset,
+                    trade_date=t,
+                    rows=sum(wrong.values()),
+                    old_knowledge_date="|".join(sorted(wrong)),
+                    new_knowledge_date=expected,
+                    anchor=anchor,
+                    status="ambiguous",
                 )
+            )
+            continue
+        if versions.get(expected, 0) >= max(wrong.values()):
+            continue
+        for k, c in sorted(wrong.items()):
+            impacts.append(
+                DateImpact(
+                    dataset=dataset,
+                    trade_date=t,
+                    rows=c,
+                    old_knowledge_date=k,
+                    new_knowledge_date=expected,
+                    anchor=anchor,
+                    status="correct",
+                )
+            )
     return impacts
 
 
@@ -289,13 +326,21 @@ def apply_dataset(
     log_store: _LogStorePort,
     run_at: datetime,
 ) -> dict[str, Any]:
-    """按已确认的纠正计划写新版本行并落账本原因行（幂等）."""
+    """
+    按已确认的纠正计划写新版本行并落账本原因行（幂等）.
+
+    账本原因行**先于**数据写落库（correctness W1）：数据写与账本是两个
+    提交，先账本后数据使崩溃后的重跑收敛——账本存在不阻止 scan 重产
+    impact（scan 看的是 canonical 版本而非账本），重跑补写数据并 upsert
+    账本；反向顺序会让「已写数据、缺账本」的日期被 scan 跳过而永久失账。
+    """
     correct = [i for i in impacts if i.status == "correct"]
     if not correct:
         return {"dataset": dataset, "dates_corrected": 0, "rows_written": 0}
     now = run_at.isoformat()
     written = 0
     dates: set[str] = set()
+    _write_ledger_rows(correct, log_store=log_store, now=now)
     if dataset == "margin_trading":
         frame = _margin_corrected_frame(conn, correct)
         if frame.height:
@@ -322,11 +367,23 @@ def apply_dataset(
                     frame, year, on_duplicate=OnDuplicate.KEEP_FIRST
                 )
             dates.update(frame["trade_date"].cast(pl.String).unique().to_list())
-    for trade_date in sorted(dates):
-        day_impacts = [i for i in correct if i.trade_date == trade_date]
+    return {"dataset": dataset, "dates_corrected": len(dates), "rows_written": written}
+
+
+_ANCHOR_ALREADY_SET_DAYS = timedelta(days=14)
+
+
+def _write_ledger_rows(
+    impacts: list[DateImpact], *, log_store: _LogStorePort, now: str
+) -> None:
+    """逐日落 kd_correction 原因行（幂等 upsert）."""
+    by_date: dict[str, list[DateImpact]] = {}
+    for impact in impacts:
+        by_date.setdefault(impact.trade_date, []).append(impact)
+    for trade_date, day_impacts in sorted(by_date.items()):
         log_store.save_log(
             IngestionLog(
-                dataset=dataset,
+                dataset=day_impacts[0].dataset,
                 source=KD_CORRECTION_SOURCE,
                 trade_date=trade_date,
                 status=IngestionStatus.SUCCESS,
@@ -337,7 +394,6 @@ def apply_dataset(
                 last_attempt_at=now,
             )
         )
-    return {"dataset": dataset, "dates_corrected": len(dates), "rows_written": written}
 
 
 def _open_days(conn: sqlite3.Connection) -> list[date]:
@@ -388,7 +444,7 @@ def _observation_anchors(
             (trade_date, trade_date),
         ).fetchone()
         if row and row[0]:
-            anchors[trade_date] = str(row[0])[:10]
+            anchors[trade_date] = _shanghai_day(str(row[0]))
     return anchors
 
 
@@ -449,6 +505,19 @@ def _parquet_corrected_frame(
     )
 
 
+def _shanghai_day(created_at: str) -> str:
+    """
+    快照 created_at（tz-aware UTC 或裸本地）→ 上海观察日（correctness W3）.
+
+    UTC 字符串直接截日期会把上海 00:00-08:00 的写入锚早一天（反「宁晚
+    不早」方向）；裸字符串按上海本地既有约定解释。
+    """
+    moment = datetime.fromisoformat(created_at)
+    if moment.tzinfo is None:
+        return moment.date().isoformat()
+    return moment.astimezone(_SHANGHAI).date().isoformat()
+
+
 def _assert_knowledge_after_trade(frame: pl.DataFrame, *, dataset: str) -> None:
     """防御：纠正后的可知时间必须晚于事实日（fail closed，不写前视行）."""
     td = frame["trade_date"].cast(pl.Date)
@@ -484,6 +553,8 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     datasets = [d.strip() for d in args.dataset.split(",") if d.strip()]
+    if not datasets:
+        parser.error("--dataset resolved to an empty selection")
     unknown = [d for d in datasets if d not in KD_DATASETS]
     if unknown:
         parser.error(f"unsupported dataset(s): {unknown}")
@@ -548,19 +619,16 @@ def main(argv: list[str] | None = None) -> int:
         else:
             os.environ["DITTO_STATE_ROOT"] = previous_root
 
-    _emit(
-        {
-            "schema": _SCHEMA,
-            "command": "apply",
-            "data_root": str(data_root),
-            "applied_at": datetime.now(_SHANGHAI).isoformat(),
-            "totals": _totals(impacts),
-            "results": results,
-            "unanchorable": [vars(i) for i in impacts if i.status == "unanchorable"],
-        },
-        args.output,
-    )
-    return 0
+    return {
+        "schema": _SCHEMA,
+        "command": "apply",
+        "data_root": str(data_root),
+        "applied_at": datetime.now(_SHANGHAI).isoformat(),
+        "totals": _totals(impacts),
+        "results": results,
+        "unanchorable": [vars(i) for i in impacts if i.status == "unanchorable"],
+        "ambiguous": [vars(i) for i in impacts if i.status == "ambiguous"],
+    }
 
 
 def _totals(impacts: list[DateImpact]) -> dict[str, dict[str, int]]:

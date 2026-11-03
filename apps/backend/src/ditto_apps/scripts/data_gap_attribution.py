@@ -31,7 +31,7 @@ import argparse
 import os
 import sys
 from collections import defaultdict
-from datetime import datetime
+from datetime import date, datetime
 from pathlib import Path
 from typing import Any
 from zoneinfo import ZoneInfo
@@ -70,6 +70,8 @@ def classify_gap_rows(
     *,
     tickers: dict[int, str],
     bars: pl.DataFrame,
+    list_dates: dict[int, date] | None = None,
+    window_start: date | None = None,
 ) -> pl.DataFrame:
     """
     给 gap_detail 逐行标注生命周期归因桶（纯函数）.
@@ -79,30 +81,50 @@ def classify_gap_rows(
         tickers: instrument_id -> source_ticker（主映射）。
         bars: 同窗口日线业务键帧（instrument_id/trade_date），用于推导
             每证券首末行情位置。
+        list_dates: instrument_id -> list_date；与 window_start 联用时把
+            「窗口起点前已上市、首价在窗口内」的头部缺口归中段静默
+            （跨窗口起点的长停不是上市初期静默——correctness I3）。
+        window_start: 归因窗口起点；None 时窗口相对语义（不精判）。
 
     """
     if gap_detail.is_empty():
         return gap_detail.with_columns(pl.lit("none").alias("bucket"))
-    ticker_frame = pl.DataFrame(
+    roster_frame = pl.DataFrame(
         {
             "instrument_id": list(tickers.keys()),
             "ticker": list(tickers.values()),
+            **(
+                {"list_date": [list_dates.get(i) for i in tickers]}
+                if list_dates is not None
+                else {}
+            ),
         },
-        schema={"instrument_id": pl.Int64, "ticker": pl.String},
+        schema={
+            "instrument_id": pl.Int64,
+            "ticker": pl.String,
+            **({"list_date": pl.Date} if list_dates is not None else {}),
+        },
     )
     bar_stats = bars.group_by("instrument_id").agg(
         pl.col("trade_date").min().alias("_first_bar"),
         pl.col("trade_date").max().alias("_last_bar"),
     )
+    head_condition = pl.col("trade_date") < pl.col("_first_bar")
+    if list_dates is not None and window_start is not None:
+        # 窗口起点前已上市的证券：首价前缺口＝窗口边缘停牌/静默，
+        # 不是上市初期——归 silent_stretch（残余真缺候选桶）。
+        head_condition = head_condition & (
+            pl.col("list_date").is_null() | (pl.col("list_date") >= window_start)
+        )
     annotated = (
         gap_detail.join(bar_stats, on="instrument_id", how="left")
-        .join(ticker_frame, on="instrument_id", how="left")
+        .join(roster_frame, on="instrument_id", how="left")
         .with_columns(
             pl.when(pl.col("ticker").cast(pl.String).str.ends_with(".BJ"))
             .then(pl.lit(BUCKETS[0]))
             .when(pl.col("_first_bar").is_null())
             .then(pl.lit(BUCKETS[1]))
-            .when(pl.col("trade_date") < pl.col("_first_bar"))
+            .when(head_condition)
             .then(pl.lit(BUCKETS[2]))
             .when(pl.col("trade_date") > pl.col("_last_bar"))
             .then(pl.lit(BUCKETS[3]))
@@ -138,6 +160,12 @@ def _attribute_asset_class(
         .drop_nulls()
         .iter_rows()
     }
+    list_dates = {
+        int(instrument_id): listing
+        for instrument_id, listing in roster.select("instrument_id", "list_date")
+        .drop_nulls()
+        .iter_rows()
+    }
     bars = (
         market.get_stock_bars(start, end)
         if asset_class == "stock"
@@ -147,7 +175,13 @@ def _attribute_asset_class(
         pl.col("instrument_id").cast(pl.Int64), pl.col("trade_date").cast(pl.Date)
     ).unique()
 
-    annotated = classify_gap_rows(session.gap_detail, tickers=tickers, bars=bars)
+    annotated = classify_gap_rows(
+        session.gap_detail,
+        tickers=tickers,
+        bars=bars,
+        list_dates=list_dates,
+        window_start=date.fromisoformat(start),
+    )
     attribution: dict[str, dict[str, int]] = defaultdict(dict)
     samples: dict[str, list[dict[str, str]]] = defaultdict(list)
     if annotated.height:
