@@ -115,17 +115,21 @@ def apply_adjustment(
 def apply_etf_adjustment(
     df: pl.DataFrame,
     adj: AdjType,
-    start: str,
-    end: str,
+    start: str | None,
+    end: str | None,
     readers: MarketReaders,
+    *,
+    instrument_ids: list[int] | None = None,
+    asof: date | None = None,
 ) -> pl.DataFrame:
     """
     应用 ETF 价格调整.
 
-    与 apply_adjustment() 类似，但使用 etf_adj 依赖读取复权因子。
-    adj_df 为空（fund_adj 摄取缺口，如 510050/150001 因子缺失案例）时
-    fail closed 抛错（#514）；etf_adj 端口未配置属部署选择，保持警告 +
-    raw 返回。
+    与 apply_adjustment() 同构，但读取 fund_adj（etf_adj 端口）。缺端口、
+    整窗无因子、部分行关联不到因子均 fail closed（#514/#658 批次1D——
+    此前缺端口静默返回 raw，通用入口则完全忽略 ETF 复权请求）。
+    asof 语义与股票路径一致：bar 行关联"截至 asof 已知、不晚于该行
+    trade_date"的最近因子（join_asof backward）。
 
     Args:
         df: ETF K线数据 DataFrame.
@@ -133,24 +137,30 @@ def apply_etf_adjustment(
         start: 开始日期 (YYYY-MM-DD).
         end: 结束日期 (YYYY-MM-DD).
         readers: Market 域读取依赖.
+        instrument_ids: 可选的标的范围（None=全市场，专用入口口径）.
+        asof: Point-in-Time 查询日期（通用入口 asof 查询）.
 
     Returns:
         调整后的 DataFrame.
 
     Raises:
-        AdjustmentFactorMissingError: 请求的窗口内没有任何 fund_adj 行。
+        AdjustmentFactorMissingError: etf_adj 端口未配置、请求窗口内没有
+            任何 fund_adj 行，或任一行关联不到因子（行级，#514）。
 
     """
     etf_adj = readers.etf_adj
     if etf_adj is None:
-        logger.warning(
-            "etf_adj port not configured, returning raw data",
-            event="market_etf_bars_adj_not_available",
-            adj_type=adj.value,
+        raise AdjustmentFactorMissingError(
+            f"ETF adjustment requested ({adj.value}) but the etf_adj reader "
+            + "is not configured — refusing to return raw prices as "
+            + "adjusted (#658 B1D); query with adj=none/raw explicitly"
         )
-        return df
 
-    adj_df = etf_adj.read(start_date=start, end_date=end)
+    adj_df = etf_adj.read(
+        instrument_ids=instrument_ids,
+        start_date=start,
+        end_date=end,
+    )
 
     if adj_df.is_empty():
         logger.warning(
@@ -164,21 +174,37 @@ def apply_etf_adjustment(
             + "query with adj=none (#514)"
         )
 
-    # 确保排序以正确处理 last() 聚合
-    adj_df = adj_df.sort(["instrument_id", "trade_date"])
+    # 确保排序以正确处理 last() 聚合；knowledge_date 参与排序使 join_asof
+    # 的同 trade_date 并列取"最新已知修订"（与股票路径同构）。
+    sort_keys = ["instrument_id", "trade_date"]
+    has_knowledge = "knowledge_date" in adj_df.columns
+    if has_knowledge:
+        sort_keys.append("knowledge_date")
+    adj_df = adj_df.sort(sort_keys)
 
-    # 关联调整因子
     cols = ["instrument_id", "trade_date", "adj_factor"]
-    if "knowledge_date" in adj_df.columns:
+    if has_knowledge:
         cols.append("knowledge_date")
-    df = df.join(
-        adj_df.select(cols),
-        on=["instrument_id", "trade_date"],
-        how="left",
-    )
+    # 行序契约：与非 asof 路径返回一致行序，join 重排以行号还原（同股票路径）。
+    df = df.with_row_index("__ditto_input_order")
+    if asof is not None and has_knowledge:
+        join_adj_df = adj_df.filter(pl.col("knowledge_date") <= asof)
+        df = df.sort("trade_date").join_asof(
+            join_adj_df.select(cols).sort(sort_keys),
+            on="trade_date",
+            by="instrument_id",
+            strategy="backward",
+        )
+    else:
+        df = df.join(
+            adj_df.select(cols),
+            on=["instrument_id", "trade_date"],
+            how="left",
+        )
 
     # 根据调整类型调用相应方法
     if adj == AdjType.QFQ:
-        return apply_qfq_adj(df, adj_df)
+        adjusted = apply_qfq_adj(df, adj_df, asof)
     else:  # HFQ
-        return apply_hfq_adj(df, adj_df)
+        adjusted = apply_hfq_adj(df, adj_df)
+    return adjusted.sort("__ditto_input_order").drop("__ditto_input_order")

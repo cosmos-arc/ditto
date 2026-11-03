@@ -16,7 +16,7 @@ from ditto_platform.foundation import Metrics, logger
 from ditto_data.models import InstrumentIdRange
 from ditto_data.services._enrichment import enrich_with_status, enrich_with_ticker
 from ditto_data.services.deps import MarketReaders
-from ditto_data.services.market_adjustment import apply_adjustment
+from ditto_data.services.market_adjustment import apply_adjustment, apply_etf_adjustment
 from ditto_data.services.market_types import AdjType
 from ditto_data.storage.market.commodity.bars import CommodityBarsReader
 from ditto_data.storage.market.etf.bars import EtfBarsReader
@@ -49,7 +49,9 @@ class MarketBarsQuery:
             获取全市场数据）.
         start: 开始日期 (YYYY-MM-DD).
         end: 结束日期 (YYYY-MM-DD).
-        adj: 复权类型（仅对 stock 数据有效，etf/index 数据不支持复权）.
+        adj: 复权类型（stock/etf 支持 qfq/hfq；index 等其余类别不支持，
+            显式请求会失败——#658 批次1D，此前 ETF/index 的复权请求被
+            静默忽略返回 raw）.
         asof: 时间点查询日期 (PIT-safe).
         asset_class: 资产类别过滤.
         with_ticker: 是否在结果中添加 ticker 列.
@@ -59,7 +61,8 @@ class MarketBarsQuery:
         limit: 返回数量限制（在 DataFrame 层应用）.
 
     Note:
-        - 复权功能 (adj) 仅支持股票数据，对 ETF 和 Index 数据无效
+        - 复权功能 (adj) 支持 stock（adj_factor）与 etf（fund_adj）；
+          缺端口/整窗缺因子/部分行缺因子均 fail closed。
         - 状态增强 (with_status) 仅支持股票数据
 
     Examples:
@@ -250,17 +253,38 @@ def query_bars(query: MarketBarsQuery, read_ports: MarketReaders) -> pl.DataFram
     if query.with_ticker and not query.raw:
         df = enrich_with_ticker(df, read_ports)
 
-    # 5. 应用复权（如果需要且不是 raw 模式）
-    if not query.raw and query.adj != AdjType.NONE and asset_class == "stock":
-        df = apply_adjustment(
-            df,
-            query.adj,
-            instrument_ids,
-            start_date,
-            end_date,
-            asof_date,
-            read_ports,
-        )
+    # 5. 应用复权（如果需要且不是 raw 模式）。#658 批次1D：通用入口此前
+    # 仅对 stock 应用复权——ETF 的 qfq/hfq 被静默忽略返回 raw；index/fx/
+    # commodity 的复权请求同样被静默忽略。现按资产类别分派：stock/etf
+    # 走各自复权链（缺端口/缺因子 fail closed），其余类别显式拒绝。
+    if not query.raw and query.adj != AdjType.NONE:
+        if asset_class == "stock":
+            df = apply_adjustment(
+                df,
+                query.adj,
+                instrument_ids,
+                start_date,
+                end_date,
+                asof_date,
+                read_ports,
+            )
+        elif asset_class == "etf":
+            df = apply_etf_adjustment(
+                df,
+                query.adj,
+                start_date.isoformat() if start_date else None,
+                end_date.isoformat() if end_date else None,
+                read_ports,
+                instrument_ids=instrument_ids,
+                asof=asof_date,
+            )
+        else:
+            msg = (
+                f"asset_class='{asset_class}' does not support adjustment "
+                f"adj='{query.adj.value}': no adjustment factors exist for "
+                "this asset class; query raw/adj=none explicitly for prices"
+            )
+            raise ValueError(msg)
 
     # 6. 添加状态列（如果需要且不是 raw 模式）
     if query.with_status and not query.raw and asset_class == "stock":

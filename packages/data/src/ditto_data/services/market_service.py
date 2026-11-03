@@ -154,9 +154,10 @@ class MarketService:
             low、close、volume、amount 等列。
 
         Raises:
-            AdjustmentFactorMissingError: 请求复权（qfq/hfq）但任一 ETF
-                在窗口内关联不到 fund_adj 因子——fail closed 不产出失真
-                复权值（#514）；需要未复权价格请显式 adj="none"。
+            AdjustmentFactorMissingError: 请求复权（qfq/hfq）但 etf_adj 端口
+                未配置，或任一 ETF 在窗口内关联不到 fund_adj 因子——
+                fail closed 不产出失真复权值（#514/#658 批次1D，缺端口
+                此前静默返回 raw）；需要未复权价格请显式 adj="none".
 
         """
         logger.debug(
@@ -169,9 +170,9 @@ class MarketService:
 
         df = self._read_ports.etf_bars.read(start_date=start, end_date=end)
 
-        # 应用复权（如果需要且 etf_adj 依赖可用）
+        # 应用复权（如果需要）——缺端口/缺因子均 fail closed（#658 批次1D）
         adj_type = AdjType.from_string(adj)
-        if adj_type != AdjType.NONE and self._read_ports.etf_adj is not None:
+        if adj_type != AdjType.NONE:
             df = apply_etf_adjustment(df, adj_type, start, end, self._read_ports)
 
         logger.debug(
