@@ -3,6 +3,13 @@ meta:
   ticket: 'cosmos-arc/ditto#622 (parent #621)'
   created: '2026-10-30'
   measured_at: 2026-11-03T00:15+08:00
+  baseline_calibration:
+    ticket: 'cosmos-arc/ditto#658 (批次0 冻结基线)'
+    freeze_doc: docs/data/readiness-freeze-2026-11.md
+    baseline_doc: docs/research/2026-11-03-data-readiness-baseline.md
+    scanned_at: '2026-11-03T20:17+08:00'
+    code_baseline: 9d7f84e6f5fc67b1d53cede25b8a30c0045f9362
+    note: 静态 ready/partial/empty 是测量快照，不构成 #652 统一证据门验收；正式期望集合以 freeze_doc 为准；先于 scanned_at 的末端/行数差异以 baseline_doc 为准，本合同数值刷新归后续实施批次，不在批次0 重做扫描
   data_root: 'repo data/（DITTO_STATE_ROOT 注入；SQLite 只读 URI 扫描，不含活跃 WAL——跨库一致快照口径同 #621 Further Notes）'
   measurement_method: 'ops status --json + Parquet 逐目录扫描（polars）+ SQLite 表级 count/min/max + 源探针（每接口一次最小调用，证据 issue
     #622）'

@@ -3,8 +3,24 @@
 机读真源：[coverage-contract.yaml](coverage-contract.yaml)（45 项逐条：声明侧 vs 实测侧、状态、缺口、消费者、真实接口）。
 本文给出场景→必需输入追踪、头条结论与刷新方法；逐项细节以 YAML 为准。
 
-- 实测时间：2026-10-30（夜链 10-29 之后）；方法与口径见 YAML `meta`。
+- 实测时间：2026-10-30（夜链 10-29 之后）；YAML `meta.measured_at` 为 2026-11-03T00:15+08:00 刷新；方法与口径见 YAML `meta`。
 - 状态词表：`ready`（预期范围完整且当前）/ `partial`（起点、末端、味道或品种有缺）/ `empty`（本地零行）。`unknown` 禁止出现——未测量项不得冒充就绪。
+- **基线校准（#658 批次 0，2026-11-03）**：静态标签是测量快照，不构成 [#652](https://github.com/cosmos-arc/ditto/issues/652) 统一证据门验收；
+  正式期望集合（47 项范围/起点/身份/限制/反例）已冻结于 [readiness-freeze-2026-11.md](readiness-freeze-2026-11.md)。
+  本文与 YAML 中先于 2026-11-03 20:17 [只读基线](../research/2026-11-03-data-readiness-baseline.md) 的末端/行数判断以基线为准，合同数值刷新归后续实施批次。
+
+## 基线校准详情（#658 批次 0）
+
+先于 2026-11-03 20:17 基线扫描的过时结论（下文头条保留原测量时点记录，不回改）：
+
+- `etf_nav` 末端已到 11-02（头条 4 的「末端 10-26 后缺」过时；1,528,803 行）；`fund_share` 末端 10-30；`margin_trading` 末端 10-30；`pledge_ratio` 报告日末端 09-18。
+- `limit_list` 本地仍从 2026-09-30 起（840 行）；`futures_daily`/`index_valuation` 仍从 2026-10-26 起——更晚末端不补历史缺口。
+- `macro_indicators` 885 行、indicator_id 仅 1–7、末端 09-01；51 个 FRED 系列探针可达但 0 落库。
+- `commodity_daily` 现存 instrument 5000003–5000007；配置中的 FRED 油/VIX（5000001/5000002/5100001）未落库（#629 定界）。
+- `earnings_forecast`/`earnings_express` 公告日追溯 2014，knowledge_date 最早却为 2026-10-30/11-02——历史回填不等于当年 as-of 可用。
+- `dividend` 除权末端 11-02 vs knowledge 末端 10-13；`corporate_actions` action_date 至 2034（计划日）——业务日期、公开日期与采集日期不得混成一个「最新日期」。
+- 消费入口静态核验：31 项有应用读取路径（含运维），16 项仅到 storage/data service——逐项现入口见冻结矩阵。
+- 请求矩阵（10-27..11-02，46 项×5 日）229/230 完成覆盖；唯一 uncovered＝`industry_mapping` 11-02。
 - 单位维度：本合同仅记 `currency`；计量单位（万元/万份/倍/股）核验归 P2 价格口径与 P3c 股数单位反例等 lane 实施票，P0 不伪造全覆盖。逐接口探针结果（62 条：tushare 56 + fred 4 + fuyao 2，含不可达归因）内嵌于 YAML `meta.permission_matrix.probes`。
 
 ## 头条结论
