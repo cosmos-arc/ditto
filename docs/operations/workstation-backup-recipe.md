@@ -1,4 +1,4 @@
-# 工作站备份配方（#446）
+# 工作站备份配方（#446；#630 扩展数据层不可重拉事实）
 
 单用户本地工作站的唯一备份入口。替代已删除的三层备份包装与发布候选
 验收链（成本审计 C7）；不提供自动调度、引用垃圾回收或云备份。
@@ -6,12 +6,17 @@
 ## 恢复边界（先读）
 
 - 备份保证**当前可用状态**：paper/manual 账本与用户输入、agent 状态、
-  当前策略/配置与 review/activation 事实、holdout 消费记录，以及恢复
-  当前所选运行配置必需的文件。
-- 旧实验的历史 raw payload 与 artifact 是**可选树**：缺失不阻断当前
-  恢复，但旧实验**显式不可重放**——重拉得到的是新观察与新快照，不冒
-  充旧版本；缺依赖的旧 COMPLETE 只说明曾经完成，不是新数据可读证据。
-- 大批量可重建市场缓存恢复后重拉。
+  当前策略/配置与 review/activation 事实、holdout 消费记录，以及**数据层
+  不可重拉事实**——catalog 摄取证据账本（flows/完成证据/快照链）与
+  provider payload 原始载荷留存。
+- 旧实验的历史 raw payload 与 artifact 是**证据树**：缺失不阻断当前
+  恢复，但对应历史**显式不可重放**——重拉得到的是新观察与新快照，不冒
+  充旧版本；payload 留存缺失时当前数据仍可读，但历史对账/审计锚不可
+  重放；缺依赖的旧 COMPLETE 只说明曾经完成，不是新数据可读证据。
+- **域未初始化语义（#630）**：库文件连同父目录一起缺失＝该域从未初始
+  化，manifest 记 `present:false`（恢复后该域无状态，verify 记 WARN）；
+  父目录存在而库缺失＝必需对象缺失，备份与恢复均 fail closed。
+- 大批量可重建市场缓存（Parquet 数据树）恢复后按覆盖合同重拉。
 - 恢复点＝最近一次成功手动备份；两次备份间新增状态可能丢失。天级恢复
   时间是目标，**不承诺 24 小时 RPO 或"不丢数据"**。
 - 停写窗口内逐库复制，单库一致性由 SQLite Backup API 保证，**跨库不原
@@ -24,14 +29,19 @@
 
 | 相对路径 | 恢复对象 |
 |---|---|
-| `metadata/metadata.sqlite` | 数据 catalog、策略治理/激活事实（`strategy_active_pointer`/`strategy_activation_event`） |
+| `metadata/metadata.sqlite` | 数据 catalog、摄取证据账本（ingestion_log／分区完成证据／供应商快照链）、策略治理/激活事实（`strategy_active_pointer`/`strategy_activation_event`） |
 | `research/research.sqlite` | 实验规格/run、**holdout 消费事实**（`holdout_claim`） |
 | `trading/trading.sqlite` | paper/manual 账本（`paper_sessions`、`account_journal_events`） |
 | `agent/agent.sqlite` | agent 运行状态（`agent_sessions` 等） |
 | `agent/agent-presentation.sqlite3` | agent 展示层状态 |
 | `agent/agent-shadow/decision-opinion.sqlite` | agent 影子意见 |
 
-可选树：`research/artifacts/**`（旧实验 artifact；缺失→旧实验不可重放）。
+证据树（存在则必须带内容身份恢复；缺失→对应历史显式不可重放）：
+
+| 相对路径 | 不可重放声明 |
+|---|---|
+| `provider_payloads/**` | 当前状态可恢复，历史对账/审计锚不可重放 |
+| `research/artifacts/**` | 当前状态可恢复，旧实验不可重放 |
 
 路径覆盖部署注意：`SQLITE_PATH`/`DITTO_TRADING_SQLITE_PATH` 等环境变量
 会搬走单个库；使用覆盖时不要直接套本配方默认路径，先停写并把各库实际
@@ -50,19 +60,23 @@ python -m ditto_apps.scripts.workstation_backup_recipe backup \
 python -m ditto_apps.scripts.workstation_backup_recipe restore \
     --backup-dir <备份目录> --data-root <空目标根>
 
-# 4) 校验：完整性 + 每域业务事实（账本/策略激活/holdout/agent）
+# 4) 校验：完整性 + 每域业务事实（账本/策略激活/数据层证据/holdout/agent）
 python -m ditto_apps.scripts.workstation_backup_recipe verify \
     --data-root <目标根>
 ```
 
 `verify` 退出码非零＝恢复失败；每条检查输出 PASS/WARN/FAIL：
-- FAIL：必需库缺失、完整性校验失败、恢复内容与备份业务身份不符、业务事实查询出错（非缺表）。
-- WARN：业务表存在但 0 行（该域当前无记录）或表不存在（该域未初始化）。
+- FAIL：必需库缺失（父目录存在而库被删，或备份在册而恢复后缺失）、
+  完整性校验失败、恢复内容与备份业务身份不符、业务事实查询出错
+  （非缺表）。
+- WARN：业务表存在但 0 行（该域当前无记录）、表不存在（该域未初始化）、
+  库与父目录一起缺失（该域未初始化）。
 
-恢复在创建目标文件前校验 manifest schema、必需条目、路径及备份 SHA-256。
-SQLite 恢复后按 schema 和完整有序字段值核对逻辑摘要；字节布局变化不影响业务等价。
-目标根的 `restore-manifest.json` 保留备份基线，`verify` 据此检查恢复后的内容漂移。
-此校验用于停写的恢复演练；恢复正常写入后，内容与旧恢复点不同是预期行为。
+恢复在创建目标文件前校验 manifest schema（v2）、必需条目、路径及备份
+SHA-256。SQLite 恢复后按 schema 和完整有序字段值核对逻辑摘要；字节布局
+变化不影响业务等价。目标根的 `restore-manifest.json` 保留备份基线，
+`verify` 据此检查恢复后的内容漂移。此校验用于停写的恢复演练；恢复正常
+写入后，内容与旧恢复点不同是预期行为。
 
 ## 恢复演练核对单
 
@@ -70,11 +84,16 @@ SQLite 恢复后按 schema 和完整有序字段值核对逻辑摘要；字节�
 
 1. 账本：会话、事件和金额与备份逻辑身份一致（FAIL 级）。
 2. 当前策略/配置与 review/activation 全部字段与备份一致（FAIL 级）。
-3. agent 各库状态与备份一致（FAIL 级）。
-4. holdout 消费身份和状态与备份一致（FAIL 级）。
-5. 当前运行必需文件缺失 → `verify` 明确失败。
-6. 可选旧 artifact 缺失 → 恢复继续，输出"旧实验不可重放"，不得清零
-   holdout 消费事实。
+3. 数据层证据账本：目录条目、摄取日志、分区完成证据、供应商快照、
+   证券身份、交易日历可读且与备份逻辑身份一致（FAIL 级）。
+4. agent 各库状态与备份一致（FAIL 级；域未初始化时 WARN）。
+5. holdout 消费身份和状态与备份一致（FAIL 级）。
+6. 当前运行必需文件缺失 → `verify` 明确失败。
+7. 可选证据树缺失 → 恢复继续，输出对应「不可重放」声明，不得清零
+   既有事实（holdout 消费、账本、catalog 证据）。
+
+最近一次真实根演练记录：[operational-acceptance-verification.md](
+../data/operational-acceptance-verification.md)（#630，2026-11-03）。
 
 ## 与其他恢复线的关系
 

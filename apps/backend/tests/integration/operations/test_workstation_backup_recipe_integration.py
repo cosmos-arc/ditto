@@ -35,6 +35,19 @@ _REQUIRED_DB_SEEDS: tuple[tuple[str, tuple[str, ...]], ...] = (
             "event_id TEXT PRIMARY KEY, strategy_id TEXT)",
             "INSERT INTO strategy_active_pointer VALUES ('strat-active')",
             "INSERT INTO strategy_activation_event VALUES ('evt-1', 'strat-active')",
+            # 数据层不可重拉事实（#630）：目录/摄取证据账本/完成证据/快照链
+            "CREATE TABLE data_catalog_entries (dataset_id TEXT PRIMARY KEY)",
+            "INSERT INTO data_catalog_entries VALUES ('stock_daily')",
+            "CREATE TABLE ingestion_log (id INTEGER PRIMARY KEY)",
+            "INSERT INTO ingestion_log VALUES (1)",
+            "CREATE TABLE ingestion_partition_checkpoints (chunk_id TEXT PRIMARY KEY)",
+            "INSERT INTO ingestion_partition_checkpoints VALUES ('chunk-1')",
+            "CREATE TABLE provider_snapshots (snapshot_id TEXT PRIMARY KEY)",
+            "INSERT INTO provider_snapshots VALUES ('snap-1')",
+            "CREATE TABLE instrument (instrument_id INTEGER PRIMARY KEY)",
+            "INSERT INTO instrument VALUES (1)",
+            "CREATE TABLE trading_calendar (trade_date TEXT PRIMARY KEY)",
+            "INSERT INTO trading_calendar VALUES ('2026-10-30')",
         ),
     ),
     (
@@ -74,6 +87,9 @@ def _seed_non_empty_root(root: Path, *, with_artifacts: bool = True) -> None:
         artifacts = root / "research" / "artifacts" / "exp-001"
         artifacts.mkdir(parents=True)
         (artifacts / "result.parquet").write_bytes(b"legacy-experiment-artifact")
+    payloads = root / "provider_payloads" / "tushare" / "stock_daily"
+    payloads.mkdir(parents=True)
+    (payloads / "abc.parquet").write_bytes(b"raw-provider-payload")
 
 
 class TestWorkstationBackupRecipeDrill:
@@ -275,6 +291,11 @@ def test_verify_detects_restored_business_fact_drift(tmp_path: Path) -> None:
             ("evt-1", "strat-active"),
         ),
         (
+            "metadata/metadata.sqlite",
+            "SELECT dataset_id FROM data_catalog_entries",
+            ("stock_daily",),
+        ),
+        (
             "research/research.sqlite",
             "SELECT * FROM holdout_claim",
             ("claim-1", "2026-10-01"),
@@ -286,3 +307,213 @@ def test_verify_detects_restored_business_fact_drift(tmp_path: Path) -> None:
     with sqlite3.connect(target / "trading/trading.sqlite") as conn:
         conn.execute("UPDATE account_journal_events SET amount = 1")
     assert not verify_workstation_state(data_root=target)["passed"]
+
+
+class TestDataLayerDrill:
+    """#630 数据层分支：未初始化域＋provider payload 证据树."""
+
+    @staticmethod
+    def _seed_data_layer_root(root: Path, *, with_payloads: bool = True) -> None:
+        """只有 catalog＋账本的数据根（research/agent 域从未初始化）."""
+        for relative in ("metadata/metadata.sqlite", "trading/trading.sqlite"):
+            statements = next(
+                seeds for path, seeds in _REQUIRED_DB_SEEDS if path == relative
+            )
+            database = root / relative
+            database.parent.mkdir(parents=True)
+            with sqlite3.connect(database) as connection:
+                for statement in statements:
+                    connection.execute(statement)
+        if with_payloads:
+            payloads = root / "provider_payloads" / "tushare"
+            payloads.mkdir(parents=True)
+            (payloads / "raw.parquet").write_bytes(b"payload-bytes")
+
+    def test_data_layer_drill_with_uninitialized_domains(self, tmp_path: Path) -> None:
+        source_root = tmp_path / "state"
+        backup_dir = tmp_path / "backup"
+        restored_root = tmp_path / "restored"
+        self._seed_data_layer_root(source_root)
+
+        manifest = backup_workstation_state(
+            data_root=source_root, backup_dir=backup_dir
+        )
+        by_path = {entry["path"]: entry for entry in manifest["entries"]}
+        assert by_path["research/research.sqlite"]["present"] is False
+        assert by_path["agent/agent.sqlite"]["present"] is False
+        assert by_path["provider_payloads"]["present"] is True
+
+        restore_report = restore_workstation_state(
+            backup_dir=backup_dir, data_root=restored_root
+        )
+        notes = {item["path"]: item for item in restore_report["restored"]}
+        assert notes["research/research.sqlite"]["restored"] is False
+        assert "域未初始化" in notes["research/research.sqlite"]["note"]
+
+        summary = verify_workstation_state(data_root=restored_root)
+        statuses = {
+            (item["check"], item["status"], item["path"]) for item in summary["results"]
+        }
+        assert summary["passed"] is True
+        # 数据层业务身份核对（不只库能打开）
+        for fact in (
+            "数据目录条目",
+            "摄取证据账本",
+            "分区完成证据",
+            "供应商快照证据",
+            "证券身份",
+            "交易日历",
+        ):
+            assert (
+                f"fact:{fact}",
+                "PASS",
+                "metadata/metadata.sqlite",
+            ) in statuses
+        # 未初始化域是 WARN，不是 FAIL
+        assert ("file_present", "WARN", "research/research.sqlite") in statuses
+        assert ("file_present", "WARN", "agent/agent.sqlite") in statuses
+        # 不可重拉 payload 证据树原样恢复
+        assert (
+            restored_root / "provider_payloads" / "tushare" / "raw.parquet"
+        ).read_bytes() == b"payload-bytes"
+
+    def test_required_database_missing_in_initialized_domain_fails(
+        self, tmp_path: Path
+    ) -> None:
+        """域目录存在而库缺失＝必需对象缺失，备份明确失败."""
+        source_root = tmp_path / "state"
+        self._seed_data_layer_root(source_root)
+        (source_root / "research").mkdir()
+        with pytest.raises(RecipeError, match="required database missing"):
+            backup_workstation_state(
+                data_root=source_root, backup_dir=tmp_path / "backup"
+            )
+
+    def test_absent_payload_tree_explicitly_non_replayable(
+        self, tmp_path: Path
+    ) -> None:
+        """payload 留存缺失不阻断恢复，但对账/审计锚显式不可重放."""
+        source_root = tmp_path / "state"
+        self._seed_data_layer_root(source_root, with_payloads=False)
+
+        manifest = backup_workstation_state(
+            data_root=source_root, backup_dir=tmp_path / "backup"
+        )
+        by_path = {entry["path"]: entry for entry in manifest["entries"]}
+        assert by_path["provider_payloads"]["present"] is False
+
+        restore_report = restore_workstation_state(
+            backup_dir=tmp_path / "backup", data_root=tmp_path / "restored"
+        )
+        payload_restore = next(
+            item
+            for item in restore_report["restored"]
+            if item["path"] == "provider_payloads"
+        )
+        assert payload_restore["restored"] is False
+        assert "不可重放" in payload_restore["note"]
+        assert "对账" in payload_restore["note"]
+
+    def test_tampered_payload_backup_rejected_before_restore(
+        self, tmp_path: Path
+    ) -> None:
+        source, backup, target = (
+            tmp_path / name for name in ("source", "backup", "target")
+        )
+        self._seed_data_layer_root(source)
+        backup_workstation_state(data_root=source, backup_dir=backup)
+        (backup / "provider_payloads" / "tushare" / "raw.parquet").write_bytes(
+            b"tampered"
+        )
+        with pytest.raises(RecipeError, match="identity mismatch"):
+            restore_workstation_state(backup_dir=backup, data_root=target)
+        assert not target.exists()
+
+    def test_v1_manifest_rejected(self, tmp_path: Path) -> None:
+        import orjson
+
+        source, backup = tmp_path / "source", tmp_path / "backup"
+        self._seed_data_layer_root(source)
+        backup_workstation_state(data_root=source, backup_dir=backup)
+        manifest_path = backup / "manifest.json"
+        manifest = orjson.loads(manifest_path.read_bytes())
+        manifest["schema"] = "ditto.workstation-backup-recipe.v1"
+        manifest_path.write_bytes(orjson.dumps(manifest))
+        with pytest.raises(RecipeError, match="unsupported"):
+            restore_workstation_state(backup_dir=backup, data_root=tmp_path / "t")
+
+    def test_manifest_declared_absent_but_backup_contains_it_fails(
+        self, tmp_path: Path
+    ) -> None:
+        """present:false 标志与备份内容分歧 → 响亮失败（防清单翻转静默跳过）."""
+        import orjson
+
+        source, backup, target = (
+            tmp_path / name for name in ("source", "backup", "target")
+        )
+        self._seed_data_layer_root(source)
+        backup_workstation_state(data_root=source, backup_dir=backup)
+        manifest_path = backup / "manifest.json"
+        manifest = orjson.loads(manifest_path.read_bytes())
+        entry = next(
+            item
+            for item in manifest["entries"]
+            if item["path"] == "metadata/metadata.sqlite"
+        )
+        entry.clear()
+        entry.update(
+            {"kind": "database", "path": "metadata/metadata.sqlite", "present": False}
+        )
+        manifest_path.write_bytes(orjson.dumps(manifest))
+        with pytest.raises(RecipeError, match="declares absent"):
+            restore_workstation_state(backup_dir=backup, data_root=target)
+        assert not target.exists()
+
+    def test_manifest_present_tree_deleted_from_backup_fails(
+        self, tmp_path: Path
+    ) -> None:
+        """present:true 证据树从备份目录丢失 → 必需对象缺失，不得冒充从未备份."""
+        import shutil
+
+        source, backup, target = (
+            tmp_path / name for name in ("source", "backup", "target")
+        )
+        self._seed_data_layer_root(source)
+        backup_workstation_state(data_root=source, backup_dir=backup)
+        shutil.rmtree(backup / "provider_payloads")
+        with pytest.raises(RecipeError, match="required backup missing"):
+            restore_workstation_state(backup_dir=backup, data_root=target)
+        assert not target.exists()
+
+    def test_manifest_with_stripped_tree_entries_rejected(self, tmp_path: Path) -> None:
+        """证据树条目被裁剪的 manifest 拒绝：恢复清单不得静默收窄."""
+        import orjson
+
+        source, backup = tmp_path / "source", tmp_path / "backup"
+        self._seed_data_layer_root(source)
+        backup_workstation_state(data_root=source, backup_dir=backup)
+        manifest_path = backup / "manifest.json"
+        manifest = orjson.loads(manifest_path.read_bytes())
+        manifest["entries"] = [
+            entry
+            for entry in manifest["entries"]
+            if entry.get("kind") != "evidence_tree"
+        ]
+        manifest_path.write_bytes(orjson.dumps(manifest))
+        with pytest.raises(RecipeError, match="required manifest entry missing"):
+            restore_workstation_state(backup_dir=backup, data_root=tmp_path / "t")
+
+    def test_restore_all_uninitialized_backup_creates_root_cleanly(
+        self, tmp_path: Path
+    ) -> None:
+        """全未初始化备份恢复到不存在的目标根：干净成功（WARN 语义）而非回溯."""
+        source, backup, target = (
+            tmp_path / name for name in ("source", "backup", "target")
+        )
+        source.mkdir()
+        backup_workstation_state(data_root=source, backup_dir=backup)
+        report = restore_workstation_state(backup_dir=backup, data_root=target)
+        assert all(item["restored"] is False for item in report["restored"])
+        assert (target / "restore-manifest.json").is_file()
+        summary = verify_workstation_state(data_root=target)
+        assert summary["passed"] is True

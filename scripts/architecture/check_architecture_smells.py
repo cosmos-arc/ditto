@@ -169,6 +169,26 @@ APPS_HOST_COMPOSITION_ALLOWANCES = (
         ),
     ),
     CompositionImportAllowance(
+        path="apps/backend/src/ditto_apps/scripts/data_live_gate.py",
+        allowed_modules=frozenset({"ditto_data.catalog"}),
+        owner="apps #630 LIVE gate matrix composition",
+        reason=(
+            "The operator-run gate probe attaches registry schedule/SLA "
+            "metadata to ledger facts it reads via read-only SQL; ordinary "
+            "API, CLI, and job modules remain behind application facades."
+        ),
+    ),
+    CompositionImportAllowance(
+        path="apps/backend/src/ditto_apps/scripts/data_perf_baseline.py",
+        allowed_modules=frozenset({"ditto_data.coverage.limits"}),
+        owner="apps #630 performance baseline composition",
+        reason=(
+            "The operator-run baseline times the /datasets/coverage consumer "
+            "path by loading the coverage distillate directly, mirroring the "
+            "application facade's runtime source of truth."
+        ),
+    ),
+    CompositionImportAllowance(
         path="apps/backend/src/ditto_apps/scripts/q2_live_market_context.py",
         allowed_modules=frozenset(
             {
