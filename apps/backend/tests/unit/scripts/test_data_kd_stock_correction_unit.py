@@ -17,10 +17,12 @@ from zoneinfo import ZoneInfo
 
 import polars as pl
 import pytest
+from ditto_application.processes.ingestion.correction_ledger import (
+    CORRECTION_LEDGER_SOURCE,
+)
 from ditto_apps.scripts.data_kd_stock_correction import (
     _MARGIN_COLUMNS,
     _MARGIN_SCHEMA,
-    KD_CORRECTION_SOURCE,
     _shanghai_day,
     apply_dataset,
     scan_dataset,
@@ -295,7 +297,7 @@ class TestApply:
         assert len(logs.logs) == 1
         log = logs.logs[0]
         assert log.dataset == "margin_trading"
-        assert log.source == KD_CORRECTION_SOURCE
+        assert log.source == CORRECTION_LEDGER_SOURCE
         assert log.trade_date == "2024-11-01"
         assert log.rows == 1
 

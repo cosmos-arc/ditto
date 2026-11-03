@@ -50,6 +50,11 @@ from zoneinfo import ZoneInfo
 
 import orjson
 import polars as pl
+from ditto_application.processes.ingestion.correction_ledger import (
+    CORRECTION_LEDGER_SOURCE,
+    CorrectionLogStore,
+    save_kd_correction_ledger_row,
+)
 from ditto_application.processes.ingestion.knowledge_date_policy import (
     HK_HOLD_QUARTERLY_REGIME_START,
     calibrate_knowledge_dates,
@@ -59,20 +64,17 @@ from ditto_platform.foundation.storage.types import OnDuplicate
 from ditto_apps.registry.container import make_app_container
 from ditto_apps.registry.infra.protocol_adapters import (
     CapitalStore,
-    IngestionLog,
     IngestionLogStore,
-    IngestionStatus,
 )
 
 __all__ = [
-    "KD_CORRECTION_SOURCE",
+    "CORRECTION_LEDGER_SOURCE",
     "KD_DATASETS",
     "apply_dataset",
     "main",
     "scan_dataset",
 ]
 
-KD_CORRECTION_SOURCE = "kd_correction"
 KD_DATASETS = ("margin_trading", "hsgt_top10", "hk_hold")
 _SCHEMA = "ditto.data-kd-stock-correction.v1"
 _SHANGHAI = ZoneInfo("Asia/Shanghai")
@@ -116,12 +118,6 @@ class _CapitalWriterPort(Protocol):
     def save_hsgt_top10(
         self, df: pl.DataFrame, year: int, on_duplicate: OnDuplicate = ...
     ) -> int: ...
-
-
-class _LogStorePort(Protocol):
-    """纠正所需的最小账本端口（IngestionLogStore 结构满足）."""
-
-    def save_log(self, log: IngestionLog) -> IngestionLog: ...
 
 
 @dataclass(frozen=True)
@@ -323,7 +319,7 @@ def apply_dataset(
     conn: sqlite3.Connection,
     data_root: Path,
     capital_store: _CapitalWriterPort,
-    log_store: _LogStorePort,
+    log_store: CorrectionLogStore,
     run_at: datetime,
 ) -> dict[str, Any]:
     """
@@ -374,25 +370,20 @@ _ANCHOR_ALREADY_SET_DAYS = timedelta(days=14)
 
 
 def _write_ledger_rows(
-    impacts: list[DateImpact], *, log_store: _LogStorePort, now: str
+    impacts: list[DateImpact], *, log_store: CorrectionLogStore, now: str
 ) -> None:
-    """逐日落 kd_correction 原因行（幂等 upsert）."""
+    """逐日落 kd_correction 原因行（模型构造在 application 助手）."""
     by_date: dict[str, list[DateImpact]] = {}
     for impact in impacts:
         by_date.setdefault(impact.trade_date, []).append(impact)
     for trade_date, day_impacts in sorted(by_date.items()):
-        log_store.save_log(
-            IngestionLog(
-                dataset=day_impacts[0].dataset,
-                source=KD_CORRECTION_SOURCE,
-                trade_date=trade_date,
-                status=IngestionStatus.SUCCESS,
-                checksum=_impact_checksum(day_impacts),
-                rows=sum(i.rows for i in day_impacts),
-                attempts=1,
-                first_attempt_at=now,
-                last_attempt_at=now,
-            )
+        save_kd_correction_ledger_row(
+            log_store,
+            dataset=day_impacts[0].dataset,
+            trade_date=trade_date,
+            rows=sum(i.rows for i in day_impacts),
+            checksum=_impact_checksum(day_impacts),
+            recorded_at=now,
         )
 
 
