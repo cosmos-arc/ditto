@@ -88,10 +88,10 @@ preflight 全量重哈希）≈6 分钟——单用户天级恢复目标内。
 ## 3. LIVE 建议门（连续五交易日逐数据集 SLA）
 
 工具：`ditto_apps.scripts.data_live_gate`（只读 SQL，完成判定精确镜像
-`snapshot_completion.snapshot_completed` 与 `completed_snapshot_index`
-市场级范围规则；单元测试 5 例锁定规则，其中
+`snapshot_completion.snapshot_completed` 与 `completed_snapshot_index` 的
+市场级范围＋payload 留存规则；单元测试 6 例锁定规则，其中
 `test_sql_completion_rule_matches_python_rule` 以 Python 真源逐格对拍
-SQL 覆盖计数，防规则漂移）。
+SQL 覆盖计数与 attested 判定，防规则漂移）。
 
 ### 3.1 窗口选择
 

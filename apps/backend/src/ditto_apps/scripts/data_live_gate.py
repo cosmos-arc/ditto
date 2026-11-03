@@ -12,10 +12,11 @@
 ``ditto_data.catalog.snapshot_completion.snapshot_completed``
 （COMPLETE 状态 + ``payload:{checksum}:…:{snapshot_id}`` 绑定 +
 ``complete_evidence_id`` 一致）与 ``completed_snapshot_index`` 的市场级
-范围规则（response_metadata 不含 source_ticker/exchange）；若上游规则
-演进，须同步本 SQL。输出仅含事实与机械分类
-（attested/covered_empty/uncovered），窗口裁量与受限项归类归
-docs/data 验收记录，不在本脚本内宣称通过。
+范围与 payload 留存规则（response_metadata 不含 source_ticker/exchange；
+attested 要求留存快照行数>0，非留存完成仅记 covered_empty）；若上游规则
+演进，须同步本 SQL（单元测试以 Python 真源逐格对拍防漂移）。输出仅含
+事实与机械分类（attested/covered_empty/uncovered），窗口裁量与受限项
+归类归 docs/data 验收记录，不在本脚本内宣称通过。
 
 用法::
 
@@ -52,9 +53,12 @@ _LOG_QUERY = (
     "WHERE dataset = ? AND trade_date = ? ORDER BY source"
 )
 
-# 覆盖该日的已完成市场级快照（完成绑定规则同 snapshot_completion.py）。
+# 覆盖该日的已完成市场级快照。完成绑定规则同 snapshot_completion.py；
+# 市场级范围与 payload_retained 同 completed_snapshot_index（非留存
+# 完成只作正常无事件证据，不构成行级覆盖）。假设：response_metadata 为
+# 合法 JSON、日期为标准 YYYY-MM-DD（现网写入器恒满足）。
 _COVERING_QUERY = """
-SELECT s.row_count, s.snapshot_id, c.updated_at
+SELECT s.row_count, s.snapshot_id, c.updated_at, s.payload_retained
 FROM provider_snapshots s
 JOIN ingestion_partition_checkpoints c
   ON c.dataset_id = s.dataset_id AND c.source = s.source
@@ -66,7 +70,7 @@ JOIN ingestion_partition_checkpoints c
 WHERE s.dataset_id = :dataset AND :day BETWEEN s.request_start AND s.request_end
   AND json_extract(s.response_metadata, '$.source_ticker') IS NULL
   AND json_extract(s.response_metadata, '$.exchange') IS NULL
-ORDER BY c.updated_at
+ORDER BY c.updated_at, s.snapshot_id
 """
 
 _DATASET_QUERY = (
@@ -75,6 +79,11 @@ _DATASET_QUERY = (
     "SELECT DISTINCT dataset_id FROM provider_snapshots "
     "WHERE request_end >= ? AND request_start <= ? "
     "ORDER BY 1"
+)
+
+_DATASET_EVER_QUERY = (
+    "SELECT DISTINCT dataset FROM ingestion_log "
+    "UNION SELECT DISTINCT dataset_id FROM provider_snapshots ORDER BY 1"
 )
 
 
@@ -93,11 +102,21 @@ def collect_live_gate_matrix(
         days = [row[0] for row in connection.execute(_DAYS_QUERY, (start, end))]
         if not days:
             raise ValueError(f"no open trading days between {start} and {end}")
-        datasets = [
+        window_datasets = {
             row[0]
             for row in connection.execute(_DATASET_QUERY, (start, end, start, end))
-        ]
+        }
         registry = default_dataset_metadata()
+        # 窗口内零证据的已注册数据集（调度死亡、改名、未跑）不得从矩阵
+        # 消失：历史上有账本证据且注册表带新鲜度 SLA 的数据集并入矩阵，
+        # 其窗口日按 uncovered 报告；窗口内有行的数据集无条件并入。
+        ledger_ever = {row[0] for row in connection.execute(_DATASET_EVER_QUERY)}
+        registered_sla = {
+            dataset_id
+            for dataset_id, metadata in registry.items()
+            if metadata.freshness_sla_hours is not None
+        }
+        datasets = sorted(window_datasets | (ledger_ever & registered_sla))
         matrix: dict[str, Any] = {}
         for dataset in datasets:
             metadata = registry.get(dataset)
@@ -107,8 +126,13 @@ def collect_live_gate_matrix(
                 covering = connection.execute(
                     _COVERING_QUERY, {"dataset": dataset, "day": day}
                 ).fetchall()
+                # attested 采信 completed_snapshot_index 同款严格语义
+                # （完成 ∧ 留存 ∧ 行数>0）；非留存的完成零行请求保留为
+                # covered_empty 正常无事件证据，不与行级覆盖混同。
+                retained_rows = [row[0] for row in covering if row[3]]
+                max_retained_rows = max(retained_rows, default=None)
                 max_rows = max((row[0] for row in covering), default=None)
-                if covering and max_rows:
+                if covering and max_retained_rows:
                     assessment = "attested"
                 elif covering:
                     assessment = "covered_empty"
@@ -131,6 +155,7 @@ def collect_live_gate_matrix(
                     ],
                     "covering_completed_snapshots": len(covering),
                     "max_covering_rows": max_rows,
+                    "max_retained_covering_rows": max_retained_rows,
                     "latest_snapshot_id": covering[-1][1] if covering else None,
                     "latest_completed_at": covering[-1][2] if covering else None,
                     "assessment": assessment,

@@ -47,19 +47,27 @@ def _collect(
     repeat: int,
 ) -> dict[str, Any]:
     # 与 ops/API 消费者同路：经组合根取真实读栈（registry 豁免边界），
-    # data_root 以 DITTO_STATE_ROOT 注入（r2 runner 同法，须绝对路径）。
+    # data_root 以 DITTO_STATE_ROOT 注入（r2 runner 同法，须绝对路径）；
+    # 进程级环境变量改动在结束时恢复（q5 脚本同款 save/restore）。
     data_root = data_root.absolute()
+    previous_root = os.environ.get("DITTO_STATE_ROOT")
     os.environ["DITTO_STATE_ROOT"] = str(data_root)
-    container = make_app_container()
     try:
-        readers = container.get(MarketReaders)
-        return _collect_with_readers(
-            readers=readers,
-            data_root=data_root,
-            repeat=repeat,
-        )
+        container = make_app_container()
+        try:
+            readers = container.get(MarketReaders)
+            return _collect_with_readers(
+                readers=readers,
+                data_root=data_root,
+                repeat=repeat,
+            )
+        finally:
+            container.close()
     finally:
-        container.close()
+        if previous_root is None:
+            os.environ.pop("DITTO_STATE_ROOT", None)
+        else:
+            os.environ["DITTO_STATE_ROOT"] = previous_root
 
 
 def _collect_with_readers(

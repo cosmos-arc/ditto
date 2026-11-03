@@ -441,3 +441,79 @@ class TestDataLayerDrill:
         manifest_path.write_bytes(orjson.dumps(manifest))
         with pytest.raises(RecipeError, match="unsupported"):
             restore_workstation_state(backup_dir=backup, data_root=tmp_path / "t")
+
+    def test_manifest_declared_absent_but_backup_contains_it_fails(
+        self, tmp_path: Path
+    ) -> None:
+        """present:false 标志与备份内容分歧 → 响亮失败（防清单翻转静默跳过）."""
+        import orjson
+
+        source, backup, target = (
+            tmp_path / name for name in ("source", "backup", "target")
+        )
+        self._seed_data_layer_root(source)
+        backup_workstation_state(data_root=source, backup_dir=backup)
+        manifest_path = backup / "manifest.json"
+        manifest = orjson.loads(manifest_path.read_bytes())
+        entry = next(
+            item
+            for item in manifest["entries"]
+            if item["path"] == "metadata/metadata.sqlite"
+        )
+        entry.clear()
+        entry.update(
+            {"kind": "database", "path": "metadata/metadata.sqlite", "present": False}
+        )
+        manifest_path.write_bytes(orjson.dumps(manifest))
+        with pytest.raises(RecipeError, match="declares absent"):
+            restore_workstation_state(backup_dir=backup, data_root=target)
+        assert not target.exists()
+
+    def test_manifest_present_tree_deleted_from_backup_fails(
+        self, tmp_path: Path
+    ) -> None:
+        """present:true 证据树从备份目录丢失 → 必需对象缺失，不得冒充从未备份."""
+        import shutil
+
+        source, backup, target = (
+            tmp_path / name for name in ("source", "backup", "target")
+        )
+        self._seed_data_layer_root(source)
+        backup_workstation_state(data_root=source, backup_dir=backup)
+        shutil.rmtree(backup / "provider_payloads")
+        with pytest.raises(RecipeError, match="required backup missing"):
+            restore_workstation_state(backup_dir=backup, data_root=target)
+        assert not target.exists()
+
+    def test_manifest_with_stripped_tree_entries_rejected(self, tmp_path: Path) -> None:
+        """证据树条目被裁剪的 manifest 拒绝：恢复清单不得静默收窄."""
+        import orjson
+
+        source, backup = tmp_path / "source", tmp_path / "backup"
+        self._seed_data_layer_root(source)
+        backup_workstation_state(data_root=source, backup_dir=backup)
+        manifest_path = backup / "manifest.json"
+        manifest = orjson.loads(manifest_path.read_bytes())
+        manifest["entries"] = [
+            entry
+            for entry in manifest["entries"]
+            if entry.get("kind") != "evidence_tree"
+        ]
+        manifest_path.write_bytes(orjson.dumps(manifest))
+        with pytest.raises(RecipeError, match="required manifest entry missing"):
+            restore_workstation_state(backup_dir=backup, data_root=tmp_path / "t")
+
+    def test_restore_all_uninitialized_backup_creates_root_cleanly(
+        self, tmp_path: Path
+    ) -> None:
+        """全未初始化备份恢复到不存在的目标根：干净成功（WARN 语义）而非回溯."""
+        source, backup, target = (
+            tmp_path / name for name in ("source", "backup", "target")
+        )
+        source.mkdir()
+        backup_workstation_state(data_root=source, backup_dir=backup)
+        report = restore_workstation_state(backup_dir=backup, data_root=target)
+        assert all(item["restored"] is False for item in report["restored"])
+        assert (target / "restore-manifest.json").is_file()
+        summary = verify_workstation_state(data_root=target)
+        assert summary["passed"] is True

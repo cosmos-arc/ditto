@@ -43,7 +43,7 @@ _DAYS = ("2026-10-30", "2026-11-02")
 
 
 class _Seed:
-    """一枚种子快照及其 checkpoint 绑定（五类完成形态）."""
+    """一枚种子快照及其 checkpoint 绑定（六类完成形态）."""
 
     def __init__(
         self,
@@ -57,6 +57,7 @@ class _Seed:
         *,
         completed: bool,
         evidence_mismatch: bool = False,
+        payload_retained: bool = True,
     ) -> None:
         self.snapshot_id = snapshot_id
         self.dataset = dataset
@@ -66,6 +67,7 @@ class _Seed:
         self.response_metadata = response_metadata
         self.row_count = row_count
         self.completed = completed
+        self.payload_retained = payload_retained
         if not completed:
             self.payload_id: str | None = None
             self.evidence_id: str | None = None
@@ -134,6 +136,20 @@ _SEEDS: tuple[_Seed, ...] = (
         completed=True,
         evidence_mismatch=True,
     ),
+    # ⑥ 完成且市场级但 payload 未留存（verified-empty 提交形态）：
+    # completed_snapshot_index 不认作行级覆盖 → 不 attested，只算
+    # covered_empty 的完成请求证据。
+    _Seed(
+        "snap-notretained",
+        "hsgt_top10",
+        "2026-10-30",
+        "2026-10-30",
+        "chk-nr",
+        "{}",
+        50,
+        completed=True,
+        payload_retained=False,
+    ),
 )
 
 
@@ -170,7 +186,7 @@ def _seed(tmp_path: Path) -> Path:
         for seed in _SEEDS:
             connection.execute(
                 "INSERT INTO provider_snapshots VALUES ("
-                "?, ?, 'tushare', ?, ?, 'v1', ?, ?, ?, 1, 't0', NULL, NULL,"
+                "?, ?, 'tushare', ?, ?, 'v1', ?, ?, ?, ?, 't0', NULL, NULL,"
                 "NULL, NULL)",
                 (
                     seed.snapshot_id,
@@ -180,6 +196,7 @@ def _seed(tmp_path: Path) -> Path:
                     seed.checksum,
                     seed.response_metadata,
                     seed.row_count,
+                    int(seed.payload_retained),
                 ),
             )
             status = "PLANNED" if seed.payload_id is None else "COMPLETE"
@@ -235,6 +252,51 @@ def test_matrix_assessment_rules(tmp_path: Path) -> None:
 
     etf = matrix["datasets"]["etf_daily"]
     assert etf["days"]["2026-11-02"]["assessment"] == "uncovered"
+
+    # ⑥ payload 未留存的完成（有行）不算行级覆盖：计入完成请求证据
+    # （covered_empty），不 attested——与 completed_snapshot_index 同口径。
+    hsgt = matrix["datasets"]["hsgt_top10"]
+    assert hsgt["days"]["2026-10-30"]["assessment"] == "covered_empty"
+    assert hsgt["days"]["2026-10-30"]["max_covering_rows"] == 50
+    assert hsgt["days"]["2026-10-30"]["max_retained_covering_rows"] is None
+
+
+def test_registered_dataset_with_zero_window_evidence_stays_visible(
+    tmp_path: Path,
+) -> None:
+    """窗口内零证据的已注册数据集不得从矩阵消失（调度死亡可见性）."""
+    database = tmp_path / "metadata" / "metadata.sqlite"
+    database.parent.mkdir()
+    with sqlite3.connect(database) as connection:
+        for statement in _DDL:
+            connection.execute(statement)
+        for day in _DAYS:
+            connection.execute(
+                "INSERT INTO trading_calendar VALUES (?, 1, 'SSE')", (day,)
+            )
+        # fund_portfolio 与 stock_daily 都有窗口外历史；窗口内 stock_daily
+        # 零证据（调度死亡形态：FAIL 行也不会有——没有任何运行尝试）。
+        connection.execute(
+            "INSERT INTO ingestion_log VALUES ("
+            "'fund_portfolio', 'tushare', '2026-10-30', 'SUCCESS', 'c', 0,"
+            "NULL, NULL, 1, 't0', 't1')"
+        )
+        connection.execute(
+            "INSERT INTO ingestion_log VALUES ("
+            "'stock_daily', 'tushare', '2026-10-20', 'SUCCESS', 'c2', 5000,"
+            "NULL, NULL, 1, 't0', 't1')"
+        )
+    matrix = collect_live_gate_matrix(
+        database=database, start="2026-10-30", end="2026-11-02"
+    )
+    # stock_daily 有账本历史且注册表带 SLA——并入矩阵并以 uncovered 报告，
+    # 不得从矩阵消失。
+    stock = matrix["datasets"].get("stock_daily")
+    assert stock is not None
+    assert all(
+        day["assessment"] == "uncovered" and day["logs"] == []
+        for day in stock["days"].values()
+    )
 
 
 def test_dataset_scope_includes_snapshot_only_datasets(tmp_path: Path) -> None:
@@ -352,11 +414,12 @@ def _python_snapshot(seed: _Seed) -> ProviderSnapshot:
 
 
 def test_sql_completion_rule_matches_python_rule(tmp_path: Path) -> None:
-    """脚本 SQL 完成判定与 snapshot_completed 真源逐格一致（防漂移守卫）.
+    """脚本 SQL 完成判定与 Python 真源逐格一致（防漂移守卫）.
 
-    期望值＝Σ（snapshot_completed 真源判定完成 ∧ 市场级范围 ∧ 请求窗覆盖
-    该日）。市场级过滤（response_metadata 无 source_ticker/exchange）与
-    ``completed_snapshot_index`` 同式，此处两行复刻并留注释锚定。
+    覆盖计数期望＝Σ（snapshot_completed 真源判定完成 ∧ 市场级范围 ∧
+    请求窗覆盖该日）；attested 期望＝存在（完成 ∧ 市场级 ∧ payload 留存
+    ∧ 行数>0）——与 completed_snapshot_index 同口径。市场级与留存两行
+    复刻自 providers_selection，留注释锚定。
     """
     database = _seed(tmp_path)
     matrix = collect_live_gate_matrix(
@@ -365,8 +428,8 @@ def test_sql_completion_rule_matches_python_rule(tmp_path: Path) -> None:
     lifecycle = _SeededLifecycle(_SEEDS)
     for dataset in sorted({seed.dataset for seed in _SEEDS}):
         for day in _DAYS:
-            expected = sum(
-                1
+            covering = [
+                seed
                 for seed in _SEEDS
                 if seed.dataset == dataset
                 and seed.request_start <= day <= seed.request_end
@@ -375,9 +438,18 @@ def test_sql_completion_rule_matches_python_rule(tmp_path: Path) -> None:
                 # 单标的/单交易所请求不能证明全市场。
                 and not dict(orjson.loads(seed.response_metadata)).keys()
                 & {"source_ticker", "exchange"}
-            )
+            ]
             day_facts = matrix["datasets"][dataset]["days"][day]
-            assert day_facts["covering_completed_snapshots"] == expected, (
+            assert day_facts["covering_completed_snapshots"] == len(covering), (
                 dataset,
                 day,
+            )
+            # attested 同 completed_snapshot_index：留存快照行数>0。
+            expected_attested = any(
+                seed.payload_retained and seed.row_count > 0 for seed in covering
+            )
+            assert (day_facts["assessment"] == "attested") == expected_attested, (
+                dataset,
+                day,
+                day_facts["assessment"],
             )

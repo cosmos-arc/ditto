@@ -265,6 +265,7 @@ def restore_workstation_state(
             )
         else:
             raise RecipeError(f"unknown manifest entry kind: {entry.get('kind')!r}")
+    data_root.mkdir(parents=True, exist_ok=True)
     (data_root / "restore-manifest.json").write_bytes(orjson.dumps(manifest))
     return {"restored": restored}
 
@@ -348,8 +349,11 @@ def _read_manifest(path: Path) -> dict[str, Any]:
             raise RecipeError(f"incorrect manifest kind: {relative}")
         seen.add(relative)
         _validate_entry_identity(entry, relative)
-    if not set(RECIPE_DATABASES).issubset(seen):
-        raise RecipeError("required database manifest entry missing")
+    required_paths = set(RECIPE_DATABASES) | {path for path, _ in EVIDENCE_TREES}
+    if not required_paths.issubset(seen):
+        # v2 备份恒写全部条目；缺失条目＝manifest 被裁剪，恢复清单
+        # 不得随之静默收窄。
+        raise RecipeError("required manifest entry missing")
     return manifest
 
 
@@ -369,28 +373,51 @@ def _validate_entry_identity(entry: dict[str, Any], relative: str) -> None:
 def _preflight(backup_dir: Path, entries: list[dict[str, Any]]) -> None:
     """Validate every required object before creating any restore target."""
     for entry in entries:
-        relative = entry["path"]
-        source = backup_dir / relative
-        if source.resolve() != backup_dir.resolve() / relative:
-            raise RecipeError(f"backup path escapes or follows a symlink: {relative}")
-        if entry.get("present") is False:
-            continue
-        try:
-            if entry["kind"] == "database":
-                if not source.is_file():
-                    raise RecipeError(f"required backup missing: {relative}")
-                report = inspect_database(source)
-                if (report.sha256, report.logical_sha256, report.size_bytes) != (
-                    entry["sha256"],
-                    entry["logical_sha256"],
-                    entry.get("size_bytes"),
-                ):
-                    raise RecipeError(f"backup identity mismatch: {relative}")
-            elif entry["kind"] == "evidence_tree" and source.exists():
-                if inspect_payload_tree(source).root_sha256 != entry.get("sha256"):
-                    raise RecipeError(f"backup identity mismatch: {relative}")
-        except (SQLiteBackupError, PayloadBackupError) as exc:
-            raise RecipeError(f"invalid backup object: {relative}: {exc}") from exc
+        _preflight_entry(backup_dir, entry)
+
+
+def _preflight_entry(backup_dir: Path, entry: dict[str, Any]) -> None:
+    relative = entry["path"]
+    source = backup_dir / relative
+    if source.resolve() != backup_dir.resolve() / relative:
+        raise RecipeError(f"backup path escapes or follows a symlink: {relative}")
+    if entry.get("present") is False:
+        # manifest 与备份内容不得静默分歧：标记未备份而备份里确有
+        # 该对象（如 manifest 被旧版覆盖）必须响亮失败，否则一个
+        # 翻转的标志位就能把「恢复 catalog」变成「带 WARN 通过」。
+        if source.exists():
+            raise RecipeError(
+                f"manifest declares absent but backup contains it: {relative}"
+            )
+        return
+    try:
+        if entry["kind"] == "database":
+            _verify_backup_database(source, entry, relative)
+        elif entry["kind"] == "evidence_tree":
+            _verify_backup_tree(source, entry, relative)
+    except (SQLiteBackupError, PayloadBackupError) as exc:
+        raise RecipeError(f"invalid backup object: {relative}: {exc}") from exc
+
+
+def _verify_backup_database(source: Path, entry: dict[str, Any], relative: str) -> None:
+    if not source.is_file():
+        raise RecipeError(f"required backup missing: {relative}")
+    report = inspect_database(source)
+    if (report.sha256, report.logical_sha256, report.size_bytes) != (
+        entry["sha256"],
+        entry["logical_sha256"],
+        entry.get("size_bytes"),
+    ):
+        raise RecipeError(f"backup identity mismatch: {relative}")
+
+
+def _verify_backup_tree(source: Path, entry: dict[str, Any], relative: str) -> None:
+    if not source.exists():
+        # manifest 记 present:true 而目录丢失＝备份媒体缺对象，
+        # 不得冒充「源从未有此树」的不可重放声明。
+        raise RecipeError(f"required backup missing: {relative}")
+    if inspect_payload_tree(source).root_sha256 != entry.get("sha256"):
+        raise RecipeError(f"backup identity mismatch: {relative}")
 
 
 def _missing_database_result(
