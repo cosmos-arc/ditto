@@ -2,9 +2,10 @@
 #446 工作站备份配方：停写→按真实运行时清单备份→校验→恢复演练.
 
 单用户本地工作站的唯一备份入口。恢复边界＝灾后恢复当前可用状态：
-账本/agent/策略治理/holdout 消费事实必须可恢复；旧实验 artifact 是
-可选树，缺失不阻断恢复但旧实验显式不可重放。不提供自动调度、引用
-垃圾回收或云备份。
+账本/agent/策略治理/holdout 消费事实必须可恢复；数据层不可重拉事实
+（目录/摄取证据账本＋provider payload 留存）按同一清单备份；旧实验
+artifact 与 payload 留存是证据树，缺失不阻断恢复但对应历史显式不可
+重放。不提供自动调度、引用垃圾回收或云备份。
 
 用法（详见 docs/operations/workstation-backup-recipe.md）::
 
@@ -40,7 +41,7 @@ from ditto_platform.foundation.storage.sqlite_backup import (
 )
 
 __all__ = [
-    "OPTIONAL_TREES",
+    "EVIDENCE_TREES",
     "RECIPE_DATABASES",
     "backup_workstation_state",
     "main",
@@ -52,6 +53,9 @@ __all__ = [
 # 真实运行时物理库清单（#446：6 个物理 SQLite 文件，非三个逻辑域）。
 # env 覆盖（SQLITE_PATH/DITTO_TRADING_SQLITE_PATH）的部署在文档中
 # 单独说明：本配方按默认相对路径操作，覆盖部署须先停写并显式传根。
+# 域未初始化语义（#630）：库文件连同其父目录一起缺失＝该域从未初始化，
+# manifest 记 present:false（恢复后该域无状态）；父目录存在而库缺失＝
+# 必需对象缺失，fail closed。
 RECIPE_DATABASES: tuple[str, ...] = (
     "metadata/metadata.sqlite",  # 数据 catalog + 策略治理/激活事实
     "research/research.sqlite",  # 实验规格/run + holdout 消费事实
@@ -61,8 +65,18 @@ RECIPE_DATABASES: tuple[str, ...] = (
     "agent/agent-shadow/decision-opinion.sqlite",
 )
 
-# 可选恢复对象：缺失不阻断当前恢复，但旧实验不可重放。
-OPTIONAL_TREES: tuple[str, ...] = ("research/artifacts",)
+# 证据树（#630）：备份时存在则必须带内容身份恢复；缺失不阻断当前
+# 状态恢复，但按树记录对应历史显式不可重放。
+EVIDENCE_TREES: tuple[tuple[str, str], ...] = (
+    # 旧实验 artifact：缺失→旧实验不可重放（#446 语义不变）。
+    ("research/artifacts", "旧实验 artifact 缺失: 当前状态可恢复, 旧实验不可重放"),
+    # 数据层原始载荷留存（内容寻址，对账/审计/重放的锚，#621 三件套）：
+    # 缺失→当前数据仍可读, 历史 payload 证据与对账锚不可重放。
+    (
+        "provider_payloads",
+        "provider payload 留存缺失: 当前状态可恢复, 历史对账/审计锚不可重放",
+    ),
+)
 
 # 每库一条必须可读的业务事实检查（不只检查库能打开/行数相同）。
 # (数据库相对路径, 事实名称, 查询)
@@ -88,6 +102,36 @@ REQUIRED_FACTS: tuple[tuple[str, str, str], ...] = (
         "SELECT COUNT(*) FROM strategy_activation_event",
     ),
     (
+        "metadata/metadata.sqlite",
+        "数据目录条目",
+        "SELECT COUNT(*) FROM data_catalog_entries",
+    ),
+    (
+        "metadata/metadata.sqlite",
+        "摄取证据账本",
+        "SELECT COUNT(*) FROM ingestion_log",
+    ),
+    (
+        "metadata/metadata.sqlite",
+        "分区完成证据",
+        "SELECT COUNT(*) FROM ingestion_partition_checkpoints",
+    ),
+    (
+        "metadata/metadata.sqlite",
+        "供应商快照证据",
+        "SELECT COUNT(*) FROM provider_snapshots",
+    ),
+    (
+        "metadata/metadata.sqlite",
+        "证券身份",
+        "SELECT COUNT(*) FROM instrument",
+    ),
+    (
+        "metadata/metadata.sqlite",
+        "交易日历",
+        "SELECT COUNT(*) FROM trading_calendar",
+    ),
+    (
         "research/research.sqlite",
         "holdout 消费事实",
         "SELECT COUNT(*) FROM holdout_claim",
@@ -106,12 +150,22 @@ def _require_dir(path: Path) -> Path:
     return path
 
 
+def _database_presence(data_root: Path, relative: str) -> Path | None:
+    """Return the present database path; None when the domain is uninitialized."""
+    source = data_root / relative
+    if source.exists():
+        return source
+    if source.parent.is_dir():
+        raise RecipeError(f"required database missing: {source}")
+    return None
+
+
 def backup_workstation_state(
     *,
     data_root: Path,
     backup_dir: Path,
 ) -> dict[str, Any]:
-    """按清单备份全部物理库与可选树，写 manifest 并逐项校验."""
+    """按清单备份全部物理库与证据树，写 manifest 并逐项校验."""
     data_root = _require_dir(data_root)
     if backup_dir.exists():
         raise RecipeError(f"backup dir already exists: {backup_dir}")
@@ -119,9 +173,17 @@ def backup_workstation_state(
     entries: list[dict[str, Any]] = []
     try:
         for relative in RECIPE_DATABASES:
-            source = data_root / relative
-            if not source.exists():
-                raise RecipeError(f"required database missing: {source}")
+            source = _database_presence(data_root, relative)
+            if source is None:
+                entries.append(
+                    {
+                        "kind": "database",
+                        "path": relative,
+                        "present": False,
+                        "note": "域未初始化: 恢复后该域无状态",
+                    }
+                )
+                continue
             report = backup_database(source, backup_dir / relative)
             entries.append(
                 {
@@ -133,17 +195,17 @@ def backup_workstation_state(
                     "integrity_check": report.integrity_check,
                 }
             )
-        for relative in OPTIONAL_TREES:
+        for relative, _absent_note in EVIDENCE_TREES:
             source = data_root / relative
             if not source.exists():
                 entries.append(
-                    {"kind": "optional_tree", "path": relative, "present": False}
+                    {"kind": "evidence_tree", "path": relative, "present": False}
                 )
                 continue
             report = backup_payload_tree(source, backup_dir / relative)
             entries.append(
                 {
-                    "kind": "optional_tree",
+                    "kind": "evidence_tree",
                     "path": relative,
                     "present": True,
                     "sha256": report.root_sha256,
@@ -151,7 +213,7 @@ def backup_workstation_state(
                 }
             )
         manifest = {
-            "schema": "ditto.workstation-backup-recipe.v1",
+            "schema": "ditto.workstation-backup-recipe.v2",
             "data_root": str(data_root),
             "entries": entries,
         }
@@ -170,7 +232,7 @@ def restore_workstation_state(
     backup_dir: Path,
     data_root: Path,
 ) -> dict[str, Any]:
-    """按 manifest 恢复全部物理库；可选树缺失时显式声明不可重放."""
+    """按 manifest 恢复全部物理库；证据树缺失时显式声明不可重放."""
     backup_dir = _require_dir(backup_dir)
     manifest_path = backup_dir / "manifest.json"
     if not manifest_path.is_file():
@@ -190,34 +252,68 @@ def restore_workstation_state(
         relative = str(entry.get("path"))
         source = backup_dir / relative
         if entry.get("kind") == "database":
-            if not source.exists():
-                raise RecipeError(f"required backup missing: {source}")
-            report = restore_database(source, data_root / relative)
-            if report.logical_sha256 != entry["logical_sha256"]:
-                raise RecipeError(f"restored business facts mismatch: {relative}")
             restored.append(
-                {
-                    "path": relative,
-                    "sha256": report.sha256,
-                    "integrity_check": report.integrity_check,
-                }
-            )
-        elif entry.get("kind") == "optional_tree":
-            if entry.get("present") is False or not source.exists():
-                restored.append(
-                    {
-                        "path": relative,
-                        "restored": False,
-                        "note": "旧实验 artifact 缺失: 当前状态可恢复, 旧实验不可重放",
-                    }
+                _restore_database_entry(
+                    entry=entry, source=source, target=data_root / relative
                 )
-                continue
-            report = restore_payload_tree(source, data_root / relative)
-            restored.append({"path": relative, "restored": True})
+            )
+        elif entry.get("kind") == "evidence_tree":
+            restored.append(
+                _restore_tree_entry(
+                    entry=entry, source=source, target=data_root / relative
+                )
+            )
         else:
             raise RecipeError(f"unknown manifest entry kind: {entry.get('kind')!r}")
     (data_root / "restore-manifest.json").write_bytes(orjson.dumps(manifest))
     return {"restored": restored}
+
+
+def _restore_database_entry(
+    *,
+    entry: dict[str, Any],
+    source: Path,
+    target: Path,
+) -> dict[str, Any]:
+    """恢复一个必需库；未初始化域零写入并留痕."""
+    if entry.get("present") is False:
+        return {
+            "path": entry["path"],
+            "restored": False,
+            "note": "域未初始化: 恢复后该域无状态",
+        }
+    if not source.exists():
+        raise RecipeError(f"required backup missing: {source}")
+    report = restore_database(source, target)
+    if report.logical_sha256 != entry["logical_sha256"]:
+        raise RecipeError(f"restored business facts mismatch: {entry['path']}")
+    return {
+        "path": entry["path"],
+        "sha256": report.sha256,
+        "integrity_check": report.integrity_check,
+    }
+
+
+def _restore_tree_entry(
+    *,
+    entry: dict[str, Any],
+    source: Path,
+    target: Path,
+) -> dict[str, Any]:
+    """恢复一个证据树；缺失时按树记录不可重放声明."""
+    note = _evidence_tree_note(str(entry.get("path")))
+    if entry.get("present") is False or not source.exists():
+        return {"path": entry["path"], "restored": False, "note": note}
+    restore_payload_tree(source, target)
+    return {"path": entry["path"], "restored": True}
+
+
+def _evidence_tree_note(relative: str) -> str:
+    """The explicit non-replay statement for one absent evidence tree."""
+    for path, note in EVIDENCE_TREES:
+        if path == relative:
+            return note
+    raise RecipeError(f"unknown evidence tree: {relative}")
 
 
 def _read_manifest(path: Path) -> dict[str, Any]:
@@ -227,7 +323,7 @@ def _read_manifest(path: Path) -> dict[str, Any]:
         raise RecipeError(f"invalid manifest: {path}") from exc
     if (
         not isinstance(manifest, dict)
-        or manifest.get("schema") != "ditto.workstation-backup-recipe.v1"
+        or manifest.get("schema") != "ditto.workstation-backup-recipe.v2"
     ):
         raise RecipeError("unsupported backup manifest schema")
     entries = manifest.get("entries")
@@ -235,7 +331,7 @@ def _read_manifest(path: Path) -> dict[str, Any]:
         raise RecipeError("manifest has no entries")
     expected = {
         **dict.fromkeys(RECIPE_DATABASES, "database"),
-        **dict.fromkeys(OPTIONAL_TREES, "optional_tree"),
+        **dict.fromkeys((path for path, _ in EVIDENCE_TREES), "evidence_tree"),
     }
     seen: set[str] = set()
     for entry in entries:
@@ -259,11 +355,11 @@ def _read_manifest(path: Path) -> dict[str, Any]:
 
 def _validate_entry_identity(entry: dict[str, Any], relative: str) -> None:
     """Require complete typed identities for each retained object."""
-    keys = ("sha256", "logical_sha256")
-    if entry["kind"] == "optional_tree":
+    if entry.get("present") is False:
         if type(entry.get("present")) is not bool:
-            raise RecipeError(f"invalid optional presence: {relative}")
-        keys = ("sha256",) if entry["present"] else ()
+            raise RecipeError(f"invalid presence flag: {relative}")
+        return
+    keys = ("sha256", "logical_sha256") if entry["kind"] == "database" else ("sha256",)
     if any(
         not re.fullmatch(r"sha256:[0-9a-f]{64}", str(entry.get(key))) for key in keys
     ):
@@ -277,6 +373,8 @@ def _preflight(backup_dir: Path, entries: list[dict[str, Any]]) -> None:
         source = backup_dir / relative
         if source.resolve() != backup_dir.resolve() / relative:
             raise RecipeError(f"backup path escapes or follows a symlink: {relative}")
+        if entry.get("present") is False:
+            continue
         try:
             if entry["kind"] == "database":
                 if not source.is_file():
@@ -288,11 +386,31 @@ def _preflight(backup_dir: Path, entries: list[dict[str, Any]]) -> None:
                     entry.get("size_bytes"),
                 ):
                     raise RecipeError(f"backup identity mismatch: {relative}")
-            elif entry.get("present") and source.exists():
+            elif entry["kind"] == "evidence_tree" and source.exists():
                 if inspect_payload_tree(source).root_sha256 != entry.get("sha256"):
                     raise RecipeError(f"backup identity mismatch: {relative}")
         except (SQLiteBackupError, PayloadBackupError) as exc:
             raise RecipeError(f"invalid backup object: {relative}: {exc}") from exc
+
+
+def _missing_database_result(
+    relative: str,
+    *,
+    database: Path,
+    in_manifest: bool,
+) -> dict[str, Any] | None:
+    """缺失库的核对行：None＝在册；FAIL＝必需对象缺失；WARN＝域未初始化."""
+    if database.exists():
+        return None
+    if database.parent.is_dir() or in_manifest:
+        # 备份时在册（或域目录存在而库被删）＝必需对象缺失。
+        return {"path": relative, "check": "file_present", "status": "FAIL"}
+    return {
+        "path": relative,
+        "check": "file_present",
+        "status": "WARN",
+        "note": "该域未初始化",
+    }
 
 
 def verify_workstation_state(
@@ -308,16 +426,17 @@ def verify_workstation_state(
         expected = {
             entry["path"]: entry
             for entry in _read_manifest(manifest_path)["entries"]
-            if entry["kind"] == "database"
+            if entry["kind"] == "database" and entry.get("present") is not False
         }
     failed = False
     for relative in RECIPE_DATABASES:
         database = data_root / relative
-        if not database.exists():
-            results.append(
-                {"path": relative, "check": "file_present", "status": "FAIL"}
-            )
-            failed = True
+        missing = _missing_database_result(
+            relative, database=database, in_manifest=relative in expected
+        )
+        if missing is not None:
+            results.append(missing)
+            failed = failed or missing["status"] == "FAIL"
             continue
         try:
             report = inspect_database(database)
