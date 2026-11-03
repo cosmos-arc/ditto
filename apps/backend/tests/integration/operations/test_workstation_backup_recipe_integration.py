@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import shutil
 import sqlite3
 from pathlib import Path
 
@@ -152,6 +153,61 @@ class TestWorkstationBackupRecipeDrill:
         assert summary["passed"] is False
         failures = [item for item in summary["results"] if item["status"] == "FAIL"]
         assert any(item["check"] == "file_present" for item in failures)
+
+    def test_verify_detects_missing_present_tree_after_restore(
+        self, tmp_path: Path
+    ) -> None:
+        """manifest 在册 present=true 的证据树恢复后丢失 → verify FAIL（#658 B1C）.
+
+        此前 verify 只核对数据库：恢复后 payload 树被删仍 passed=true，
+        「历史对账/审计锚不可重放」的损失不可见（#653 恢复验证漏检反例）。
+        """
+        source_root = tmp_path / "state"
+        backup_dir = tmp_path / "backup"
+        restored_root = tmp_path / "restored"
+        _seed_non_empty_root(source_root)
+        backup_workstation_state(data_root=source_root, backup_dir=backup_dir)
+        restore_workstation_state(backup_dir=backup_dir, data_root=restored_root)
+
+        shutil.rmtree(restored_root / "provider_payloads")
+
+        summary = verify_workstation_state(data_root=restored_root)
+        assert summary["passed"] is False
+        failures = [
+            item
+            for item in summary["results"]
+            if item["status"] == "FAIL" and item["path"] == "provider_payloads"
+        ]
+        assert any(item["check"] == "tree_present" for item in failures)
+
+    def test_verify_detects_tampered_present_tree_after_restore(
+        self, tmp_path: Path
+    ) -> None:
+        """present=true 证据树恢复后内容被改 → 哈希不一致 FAIL（#658 B1C）."""
+        source_root = tmp_path / "state"
+        backup_dir = tmp_path / "backup"
+        restored_root = tmp_path / "restored"
+        _seed_non_empty_root(source_root)
+        backup_workstation_state(data_root=source_root, backup_dir=backup_dir)
+        restore_workstation_state(backup_dir=backup_dir, data_root=restored_root)
+
+        payload = (
+            restored_root
+            / "provider_payloads"
+            / "tushare"
+            / "stock_daily"
+            / "abc.parquet"
+        )
+        payload.write_bytes(b"tampered-after-restore")
+
+        summary = verify_workstation_state(data_root=restored_root)
+        assert summary["passed"] is False
+        failures = [
+            item
+            for item in summary["results"]
+            if item["status"] == "FAIL" and item["path"] == "provider_payloads"
+        ]
+        assert any(item["check"] == "tree_hash" for item in failures)
 
     def test_missing_optional_artifacts_do_not_block_recovery(
         self, tmp_path: Path
