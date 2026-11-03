@@ -1,6 +1,6 @@
 # 数据集覆盖合同（#622 / 父规格 #621）
 
-机读真源：[coverage-contract.yaml](coverage-contract.yaml)（45 项逐条：声明侧 vs 实测侧、状态、缺口、消费者、真实接口）。
+机读真源：[coverage-contract.yaml](coverage-contract.yaml)（47 项逐条：声明侧 vs 实测侧、状态、缺口、消费者、真实接口）。
 本文给出场景→必需输入追踪、头条结论与刷新方法；逐项细节以 YAML 为准。
 
 - 实测时间：2026-10-30（夜链 10-29 之后）；YAML `meta.measured_at` 为 2026-11-03T00:15+08:00 刷新；方法与口径见 YAML `meta`。
