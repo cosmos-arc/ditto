@@ -75,19 +75,23 @@ preflight 全量重哈希）≈6 分钟——单用户天级恢复目标内。
 | adj_factor 单日全市场 | 5,581 | 2.6 ms | ≈0 |
 | index_daily 单日 | 0 | 0.6 ms | ≈0 |
 | etf_nav 单日横截面 | 895 | 1.2 ms | ≈0 |
-| 覆盖限制装载（GET /datasets/coverage） | 47 项 | <0.5 ms | ≈0 |
+| 覆盖限制蒸馏装载（/datasets/coverage 运行时真源） | 47 项 | <0.5 ms | ≈0 |
 | ingestion_log 账本计数（ops status） | 21,956 | 20.7 ms | — |
 
-进程峰值 RSS 899.5 MB（含容器装配；全年横截面主导）。结论：当前全部
-消费者路径毫秒级，无优化必要；唯一重查询（全年横截面 149 ms／549 MB）
-留档为未来因子/回测扩量时的对照锚点，不预设阈值。index_daily 参考日
-0 行＝11-02 未覆盖（见 §3.3 开放项），非性能属性。
+进程峰值 RSS 899.5 MB（含容器装配；全年横截面主导）。RSS 列为进程
+高水位增长：≈0 表示该查询未抬高进程峰值（非零内存占用），其整体
+内存足迹由进程峰值一列兜底。结论：当前全部消费者路径毫秒级，无优化
+必要；唯一重查询（全年横截面 149 ms／549 MB）留档为未来因子/回测
+扩量时的对照锚点，不预设阈值。index_daily 参考日 0 行＝11-02 未覆盖
+（见 §3.3 开放项），非性能属性。
 
 ## 3. LIVE 建议门（连续五交易日逐数据集 SLA）
 
 工具：`ditto_apps.scripts.data_live_gate`（只读 SQL，完成判定精确镜像
 `snapshot_completion.snapshot_completed` 与 `completed_snapshot_index`
-市场级范围规则；单元测试 4 例锁定规则）。
+市场级范围规则；单元测试 5 例锁定规则，其中
+`test_sql_completion_rule_matches_python_rule` 以 Python 真源逐格对拍
+SQL 覆盖计数，防规则漂移）。
 
 ### 3.1 窗口选择
 
@@ -95,23 +99,27 @@ preflight 全量重哈希）≈6 分钟——单用户天级恢复目标内。
 补偿闭环已收敛）。11-02 及以后的夜链补偿尚未收敛（§3.3），纳入会以
 未决项冒充终态；窗口参数为建议值，脚本可随时重跑滚动窗口。
 
-### 3.2 矩阵结论（46 数据集 × 5 日）
+### 3.2 矩阵结论（46 数据集 × 5 日＝230 格）
 
-- **46/46 数据集逐日 attested**（覆盖该日的已完成市场级快照窗口且
-  行数>0），核心链五数据集（stock_daily/adj_factor/stock_status/
-  stock_limit/index_daily）全部 SUCCESS 日志＋attested——**SLA 达标**。
-- **正常空结果（covered_empty）不冒充失败**：dividend（10-27/10-29 无
-  除权事件）、hk_hold（10-27 起北向季度披露制内无披露）、index_weight、
-  pledge_ratio（周披露节奏）——完成请求＋零行，与 #623 分类语义一致。
+- **230/230 格均有已完成市场级覆盖**：214 格 attested（覆盖窗口行数>0），
+  16 格 covered_empty（完成请求＋零行＝正常无事件，不冒充失败），0 格
+  uncovered。**核心链五数据集（stock_daily/adj_factor/stock_status/
+  stock_limit/index_daily）25/25 格逐日 attested 且当日 SUCCESS——
+  当夜完成，36h SLA 内，SLA 达标**。
+- **正常空结果明细（covered_empty 16 格）**：dividend（10-27/10-29 无
+  除权事件）、hk_hold（10-27…10-30 北向季度披露制内无披露）、
+  index_weight（5 日）、pledge_ratio（5 日，周披露节奏）——完成请求＋
+  零行，与 #623 分类语义一致。
 - **窗口内失败×2，均有补偿闭环**：
   - `fund_portfolio` 10-27：FETCH_ERROR「chunk skipped failed partition
     day; repair pending」（5 次尝试至 11-02 04:49 CST）；账本侧 10-27
     日分区 chunk 10-27 21:55 CST COMPLETE＋2026-Q4 chunk 11-02 04:49
-    CST COMPLETE 双重覆盖——日级数据已补，残余 FAIL 日志行留痕取数
-    历史。
+    CST COMPLETE 双重覆盖——日级数据已补（补偿完成于披露时限之外，
+    补偿闭环语义而非新鲜度 SLA 语义），残余 FAIL 日志行留痕取数历史。
   - `global_index_daily` 10-27：ColumnNotFoundError（source_ticker 列，
-    #629 修复对象）；后续 7 日窗口 chunk（10-23…10-30、10-26…11-02）
-    COMPLETE 覆盖 10-27——根因修复＋窗口回补双闭环。
+    #629 修复对象）；后续 7 日窗口 chunk（10-23…10-30 于 10-30 21:56
+    CST COMPLETE、10-26…11-02 于 11-02 21:56 CST COMPLETE）覆盖
+    10-27——根因修复＋窗口回补双闭环。
 - **事件/低频源不以五日无事件宣称通过**：龙虎榜/机构席位/北向分段以
   实际披露事件样本验证（[event-disclosure-verification.md](
   event-disclosure-verification.md) 对拍 9/9），基金持仓/前十大双榜以
@@ -121,9 +129,10 @@ preflight 全量重哈希）≈6 分钟——单用户天级恢复目标内。
   ready，#629 回补 23,993 行）、commodity_daily/macro_indicators（partial，
   forecast 2024-01-31 代理翻页损坏等缺口在册）——窗口内夜链失败由
   #629 窗口修复＋回补收敛（合同已按 2026-11-03T00:15 复测刷新），其
-  修复后连续绿窗自 11-02 起算，满五日后再以本脚本滚动复验；etf_nav
-  （partial 末端）、moneyflow（BSE 源端限制 2026-10-31 起）、rights/
-  csrc 接口（#517-#523 降级裁决）均按合同在册。
+  补偿完成时点晚于任何新鲜度窗（回补闭环而非 SLA 达标）；修复后连续
+  绿窗自 11-02 起算，满五日后再以本脚本滚动复验。etf_nav（partial
+  末端）、moneyflow（BSE 源端限制 2026-10-31 起）、rights/csrc 接口
+  （#517-#523 降级裁决）均按合同在册。
 
 ### 3.3 开放项（窗口后，补偿闭环进行中）
 

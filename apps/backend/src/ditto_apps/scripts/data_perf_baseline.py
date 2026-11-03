@@ -3,7 +3,8 @@
 
 「先实测后优化，不虚构性能预算」（#621 P5 条款）：本脚本对真实数据根
 执行一组代表性查询——图表窗口读、单标的全历史、逐日横截面、全年
-横截面（因子/回测式）、覆盖限制装载（/datasets/coverage 消费面）与
+横截面（因子/回测式）、覆盖限制蒸馏装载（/datasets/coverage 的运行时
+真源读取，不含 HTTP 序列化）与
 账本统计（ops status 消费面）——逐项记录耗时（中位/最大）与进程 RSS
 高水位增长，末尾另报整进程峰值 RSS。输出仅是观测值，预算与优化裁决归
 docs/data 性能基线记录。
@@ -23,6 +24,7 @@ import sqlite3
 import sys
 import time
 from collections.abc import Callable
+from contextlib import closing
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -115,7 +117,10 @@ def _collect_with_readers(
             "etf_nav 单日横截面",
             lambda: etf_nav.read(start_date=day, end_date=day).height,
         ),
-        ("覆盖限制装载 /datasets/coverage", lambda: len(list_dataset_coverage())),
+        (
+            "覆盖限制蒸馏装载 /datasets/coverage 运行时真源",
+            lambda: len(list_dataset_coverage()),
+        ),
     ]
     results: list[dict[str, Any]] = []
     for name, query in queries:
@@ -139,7 +144,9 @@ def _collect_with_readers(
     # 账本统计（ops status 消费面）：只读 URI + 表级统计。
     ledger_started = time.perf_counter()
     catalog = (data_root / "metadata" / "metadata.sqlite").absolute()
-    with sqlite3.connect(f"{catalog.as_uri()}?mode=ro", uri=True) as connection:
+    with closing(
+        sqlite3.connect(f"{catalog.as_uri()}?mode=ro", uri=True)
+    ) as connection:
         ledger_rows = connection.execute(
             "SELECT COUNT(*) FROM ingestion_log"
         ).fetchone()[0]

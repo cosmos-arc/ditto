@@ -4,8 +4,9 @@
 只读工具。对给定交易日窗口，从 catalog（``ingestion_log`` 三阶段日志与
 分区完成证据）逐数据集逐日提取两类事实：
 
-1. 当日摄取日志行（status/rows/error/attempts）；
-2. 覆盖该日的已完成市场级供应商快照（数量与行数）。
+1. 当日摄取日志行（逐源全量：status/rows/error/attempts）；
+2. 覆盖该日的已完成市场级供应商快照（数量、行数与最晚完成时刻——
+   补偿时点核对用，SLA 时限裁量归验收记录）。
 
 完成判定 SQL 精确镜像
 ``ditto_data.catalog.snapshot_completion.snapshot_completed``
@@ -46,8 +47,9 @@ _DAYS_QUERY = (
 )
 
 _LOG_QUERY = (
-    "SELECT status, rows, error_code, error_message, attempts, last_attempt_at "
-    "FROM ingestion_log WHERE dataset = ? AND trade_date = ?"
+    "SELECT source, status, rows, error_code, error_message, attempts, "
+    "last_attempt_at FROM ingestion_log "
+    "WHERE dataset = ? AND trade_date = ? ORDER BY source"
 )
 
 # 覆盖该日的已完成市场级快照（完成绑定规则同 snapshot_completion.py）。
@@ -101,7 +103,7 @@ def collect_live_gate_matrix(
             metadata = registry.get(dataset)
             day_facts: dict[str, Any] = {}
             for day in days:
-                log_row = connection.execute(_LOG_QUERY, (dataset, day)).fetchone()
+                log_rows = connection.execute(_LOG_QUERY, (dataset, day)).fetchall()
                 covering = connection.execute(
                     _COVERING_QUERY, {"dataset": dataset, "day": day}
                 ).fetchall()
@@ -113,19 +115,24 @@ def collect_live_gate_matrix(
                 else:
                     assessment = "uncovered"
                 day_facts[day] = {
-                    "log": None
-                    if log_row is None
-                    else {
-                        "status": log_row[0],
-                        "rows": log_row[1],
-                        "error_code": log_row[2],
-                        "error_message": log_row[3],
-                        "attempts": log_row[4],
-                        "last_attempt_at": log_row[5],
-                    },
+                    # ingestion_log 主键含 source（如 stock_daily 双源）；逐源
+                    # 全量列出，不挑任意一条冒充该日日志事实。
+                    "logs": [
+                        {
+                            "source": row[0],
+                            "status": row[1],
+                            "rows": row[2],
+                            "error_code": row[3],
+                            "error_message": row[4],
+                            "attempts": row[5],
+                            "last_attempt_at": row[6],
+                        }
+                        for row in log_rows
+                    ],
                     "covering_completed_snapshots": len(covering),
                     "max_covering_rows": max_rows,
                     "latest_snapshot_id": covering[-1][1] if covering else None,
+                    "latest_completed_at": covering[-1][2] if covering else None,
                     "assessment": assessment,
                 }
             matrix[dataset] = {
