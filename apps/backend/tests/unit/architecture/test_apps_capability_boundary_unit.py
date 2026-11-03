@@ -60,6 +60,12 @@ def test_apps_host_composition_allowances_are_owned_and_reasoned() -> None:
                 "ditto_features.compile_cache",
             }
         ),
+        "apps/backend/src/ditto_apps/scripts/data_live_gate.py": frozenset(
+            {"ditto_data.catalog"}
+        ),
+        "apps/backend/src/ditto_apps/scripts/data_perf_baseline.py": frozenset(
+            {"ditto_data.coverage.limits"}
+        ),
         "apps/backend/src/ditto_apps/scripts/q2_live_market_context.py": frozenset(
             {
                 "ditto_data.catalog.metadata",
