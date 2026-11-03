@@ -98,7 +98,7 @@ export function InstrumentChartView({ id, drill }: InstrumentChartViewProps) {
 	};
 
 	const detail = useInstrumentDetail(id);
-	// ETF 复权已接入服务端留存 payload 链（fund_adj，#658 批次3）——
+	// ETF 复权已接入服务端留存 payload 链（fund_adj，批次3）——
 	// 股票/ETF 同一复权切换，缺因子由服务端 fail closed 而非前端静默降级。
 	const isEtf = detail.data?.asset_class === "etf";
 	const effectiveAdjustment: BarAdjustment = adjustment;
