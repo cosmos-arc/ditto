@@ -12,6 +12,9 @@ industry_mapping 11-02 窗口闭合、迟发窗口验证。工具与证据均为
   （运行目录外；manifest v2＝metadata 5,079,531,520 B＋trading 70,959,104 B
   ＋provider payload 树 20,750 文件，全 sha256/logical_sha256 在册，
   integrity ok）。**本代次保留为 B2 有界纠正的回滚点。**
+- 空间门（执行前重算）：卷可用 55Gi（2026-11-04 00:20 实测）＞冻结口径
+  候选峰值 36.015GB（三份精简内容＋5.082GB 工作区）；本次实际占用＝
+  备份代次 ~10GB＋隔离恢复根 ~10GB（演练后清理），余量充足不触发阻断。
 - 隔离恢复演练（`/tmp` 空根）：restore preflight 重验身份后恢复；
   **verify（批次1C 强化版）passed=true，退出码 0**——2 库
   integrity+restored_content PASS、13 条业务事实全 PASS、payload 树
@@ -52,7 +55,10 @@ ingestion_log 记 `source='kd_correction'` SUCCESS 原因行（rows=新版本
 为 knowledge_date。九个季度日全部锚定 **2026-11-01**（#625 历史回补
 观察日）——旧值（季末自然日+1）对 2024Q3 起的行声称了长达两年余的
 虚假前知，纠正后可知时间诚实为本机实际观察日。无覆盖快照的行
-（unanchorable）拒绝改动（本次为 0 行）。
+（unanchorable）拒绝改动（本次为 0 行）。锚定取证：hk_hold 有行快照共
+116 个，created_at 全部落在 2026-10-06…2026-11-01（建站后窗口）——
+不存在更早的本机观察证据；MAX 锚与 MIN 锚对九季度日的差异仅 2026-09-30
+一季（10-06 vs 11-01），取 MAX 的保守方向留档。
 
 ### 2.3 隔离试跑（写入端口全链路）
 
@@ -77,6 +83,12 @@ unanchorable=0。真实根验证：margin 2013-01-04 instrument 1000001 双版�
 as_of=旧 kd 日可见旧行（本地快照重放语义），as_of≥新 kd 日收敛到新版本
 （`test_get_transition_dual_version_baseline` 同款）。执行时点在 11-03
 夜链波后、11-04 夜修波前的停写窗口；备份代次（§1）为回滚点。
+
+**受影响衍生物面（#653「先列受影响行、日期、消费者」）**：margin/hk_hold/
+hsgt_top10 当前无已接线的物化衍生物（因子物化键基于行情与复权因子，
+不消费资金面 kd；资金画像消费者按矩阵属批次3 首次落地）——本轮无衍生物
+失效/重验动作，重验义务随批次3 消费者接线执行（届时以 kd_correction
+账本行为重放依据）。
 
 ## 3. 逐证券缺口归因（基线计数关闭）
 
@@ -175,10 +187,19 @@ UNKNOWN_ERROR/permanent，不入重试通道）。B2 已用 force 收敛治愈�
 
 ## 7. 已知边界与移交
 
+- **同凭据预算机制未建**：本批全部补数（industry_mapping 57＋forecast
+  ~100＋三数据集治愈 ~5 请求）均安排在 EOD/T1/夜修车道外执行（总量
+  ~210 请求 vs 夜链数千/日），无预算冲突实例；但 #656 运行恢复#8 要求的
+  统一预算机制（跨任务共享凭据的预算协调）未实现——批次4 大规模回补
+  （51 FRED/期货历史）前需落地，移交后续批次。
 - **hk_hold 季度段写入路径 F1 根修未做**：新摄取仍按 run_date 锚定
   （当日写入确定性成立；跨日 force 重放同快照会 SNAPSHOT_CANONICAL_DRIFT
   响亮阻断——B1 已留档边界维持）。北向日历入库后按制度重算发布日并
   出新版本归后续批次；本批观察锚已消除存量前视。
+- **hk_hold Parquet 可重拉证据**：备份清单不含 capital Parquet 树属
+  #446 既有边界（可重拉缓存）；日频段（2016-06…2024-08）与季度段的
+  provider payload 均已留存（本批备份代次含 116 个 hk_hold 有行快照），
+  重拉能力以留存 payload 为重建证据。
 - **#629 七日窗口修订冲突回归**（§6）：fx_daily/commodity_daily/etf_nav
   夜链在窗口旧日值被修订时 deterministic 失败；立票跟踪。
 - **margin 出窗残检空白**：`audit-capital-coverage` 明确不含

@@ -17,12 +17,22 @@ from zoneinfo import ZoneInfo
 
 import polars as pl
 from ditto_apps.scripts.data_kd_stock_correction import (
+    _MARGIN_COLUMNS,
+    _MARGIN_SCHEMA,
     KD_CORRECTION_SOURCE,
     apply_dataset,
     scan_dataset,
 )
+from ditto_data.storage.capital.specs import MARGIN_TRADING_SPEC
 
 _SHANGHAI = ZoneInfo("Asia/Shanghai")
+
+
+def test_margin_columns_mirror_authoritative_spec() -> None:
+    """脚本列清单镜像 MARGIN_TRADING_SPEC（写入端口真源）——防漂移对拍."""
+    assert MARGIN_TRADING_SPEC.all_columns == _MARGIN_COLUMNS
+    assert set(_MARGIN_SCHEMA) == set(MARGIN_TRADING_SPEC.all_columns)
+
 
 # 覆盖国庆长假与普通周末的日历片段：08-16（周五，日频制度段末日）→
 # 08-19（周一，季度制度段起点）；09-30（节前）→10-08（节后首个交易日）；
