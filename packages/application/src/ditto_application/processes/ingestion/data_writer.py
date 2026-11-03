@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 from collections.abc import Callable
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime, timedelta
 from typing import ClassVar, Literal, cast
 
 import polars as pl
@@ -25,6 +25,11 @@ from ditto_application.processes.ingestion.dataset_registry import (
     DatasetRegistration,
     WriteKind,
     default_dataset_registry,
+)
+from ditto_application.processes.ingestion.knowledge_date_policy import (
+    CALENDAR_LOOKAHEAD_DAYS,
+    calibrate_knowledge_dates,
+    knowledge_date_policy_for,
 )
 
 
@@ -485,6 +490,8 @@ class IngestionDataWriter:
         registration = default_dataset_registry().require(dataset_enum)
         year = int(trade_date[:4]) if registration.requires_year_partition else 0
 
+        df = self._calibrate_knowledge_dates(df, dataset=dataset)
+
         ctx = _WriteContext(
             registration=registration,
             dataset=dataset,
@@ -497,6 +504,39 @@ class IngestionDataWriter:
         )
         handler = self._build_write_handler(ctx)
         return handler()
+
+    def _calibrate_knowledge_dates(
+        self, df: pl.DataFrame, *, dataset: str
+    ) -> pl.DataFrame:
+        """
+        #658 批次1E：两融/北向按披露制度与 A 股日历校准可知时间.
+
+        策略与制度依据见 knowledge_date_policy 模块；未注册策略的数据集
+        原样透传。
+        """
+        if knowledge_date_policy_for(dataset) is None:
+            return df
+        if df.is_empty() or "trade_date" not in df.columns:
+            return df
+        trade_dates = df["trade_date"].cast(pl.Date)
+        window_start = (
+            trade_dates.min() - timedelta(days=CALENDAR_LOOKAHEAD_DAYS)
+        ).isoformat()
+        window_end = (
+            trade_dates.max() + timedelta(days=CALENDAR_LOOKAHEAD_DAYS)
+        ).isoformat()
+        trading_days = tuple(
+            date.fromisoformat(day)
+            for day in self._metadata_service.calendar.list_trading_days(
+                window_start, window_end
+            )
+        )
+        return calibrate_knowledge_dates(
+            df,
+            dataset=dataset,
+            trading_days=trading_days,
+            run_date=date.today(),
+        )
 
     def _build_write_handler(self, ctx: _WriteContext) -> Callable[[], WriteResult]:
         """Build the writer callable from registry metadata."""
