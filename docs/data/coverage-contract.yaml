@@ -379,18 +379,18 @@ datasets:
       typical_available_time: 08:30:00
     measured:
       storage: sqlite:etf_reference_observation
-      rows: 1687182
+      rows: 1730639
       instruments: null
-      start: null
-      end: null
+      start: '2013-01-04'
+      end: '2026-11-03'
     catalog_latest:
-      date: null
-      status: null
-      partition_rows: null
-      freshness: missing
+      date: '2026-11-03'
+      status: success
+      partition_rows: 10
+      freshness: fresh
     status: partial
     gaps:
-    - catalog 无条目：ops status 显示 missing（存储 169 万行观察，消费者经 catalog 不可见——登记缺口归 P1）
+    - 'config 声明源已登记（#658 批次2，2026-11-03 config 快照 10 行）；夜链 tushare 恒 SOURCE_UNSUPPORTED 属设计，SLA 168h 随时间转 stale——声明变更时手动重摄取 config 源（一次性命令，无自动节奏）'
     consumers:
     - ETF Paper 估值/执行(#408)
     - etf_paper_execution
