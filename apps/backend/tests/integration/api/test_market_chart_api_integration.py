@@ -4783,14 +4783,129 @@ def test_chart_marks_unclosed_monthly_period_partial(tmp_path: Path) -> None:
     assert weekly.bars[-1].partial is False  # 窗口内完整周（知识已到）
 
 
-def test_chart_etf_rejects_adjustment(tmp_path: Path) -> None:
-    """ETF 仅允许原始价：复权请求在取数前显式拒绝，不静默回落原始价."""
-    chart, _ = _consistent_chart(tmp_path)
+def _etf_fund_adj_chart(
+    tmp_path: Path,
+) -> MarketChartQueryFacade:
+    """ETF 复权夹具：etf_daily 行情＋fund_adj 因子（末日 1.1 其余 1.0）."""
+    store = FilesystemProviderPayloadStore(tmp_path)
+    visible = datetime(2026, 3, 10, 7, tzinfo=UTC)
+    days = _weekdays(date(2026, 2, 2), date(2026, 3, 13))
+
+    def knowledge(day: date) -> datetime:
+        return datetime.fromordinal(day.toordinal() + 1).replace(hour=7, tzinfo=UTC)
+
+    bars = pl.DataFrame(
+        {
+            "source_ticker": ["510300.SH"] * len(days),
+            "event_time": [
+                datetime.fromordinal(d.toordinal()).replace(hour=7, tzinfo=UTC)
+                for d in days
+            ],
+            "published_at": [knowledge(d) for d in days],
+            "available_at": [knowledge(d) for d in days],
+            "open": [float(d.toordinal()) + 0.5 for d in days],
+            "high": [float(d.toordinal()) + 2.0 for d in days],
+            "low": [float(d.toordinal()) + 0.25 for d in days],
+            "close": [float(d.toordinal()) + 1.5 for d in days],
+            "volume": [float(d.toordinal()) for d in days],
+            "amount": [float(d.toordinal()) * 10.0 for d in days],
+        }
+    )
+    fund_factors = pl.DataFrame(
+        {
+            "source_ticker": ["510300.SH"] * len(days),
+            "trade_date": [d.isoformat() for d in days],
+            "published_at": [knowledge(d) for d in days],
+            "available_at": [knowledge(d) for d in days],
+            "adj_factor": [1.1 if d == days[-1] else 1.0 for d in days],
+        }
+    )
+    calendar_days = _days_inclusive(date(2026, 2, 1), date(2026, 3, 31))
+    calendar = pl.DataFrame(
+        {
+            "trade_date": [d.isoformat() for d in calendar_days],
+            "is_open": [d.weekday() < 5 for d in calendar_days],
+        }
+    )
+    snapshots = (
+        _snapshot(store, "etf_daily", bars, visible, bounds=_CONSISTENT_BOUNDS),
+        _snapshot(store, "fund_adj", fund_factors, visible, bounds=_CONSISTENT_BOUNDS),
+        _snapshot(
+            store,
+            "calendar",
+            calendar,
+            visible - timedelta(days=1),
+            bounds=_CONSISTENT_BOUNDS,
+        ),
+    )
+    reader = cast(ProviderSnapshotReader, _Snapshots(snapshots))
+    metadata = cast(
+        MetadataQueryFacade,
+        _ChartMetadata(
+            get_source_ticker=lambda *args, **kwargs: "510300.SH",
+            get_instrument=lambda instrument_id: (
+                {"asset_class": "etf", "list_date": "2012-05-28"}
+                if instrument_id == 2000001
+                else None
+            ),
+        ),
+    )
+    market = cast(
+        MarketQueryFacade,
+        SimpleNamespace(
+            assert_bars_allowed=lambda **kwargs: None,
+            assert_adjustment_allowed=lambda **kwargs: None,
+            allows_suspension_evidence=lambda **kwargs: True,
+        ),
+    )
+    return MarketChartQueryFacade(reader, store, metadata, market)
+
+
+def _etf_chart_request(adjustment: str) -> MarketChartRequest:
+    return MarketChartRequest(
+        instrument_id=2000001,
+        asset_class="etf",
+        start_date=date(2026, 2, 2),
+        end_date=date(2026, 3, 13),
+        period="daily",
+        adjustment=adjustment,
+        allow_experimental_data=False,
+        now=datetime(2026, 3, 14, 8, tzinfo=UTC),
+    )
+
+
+def test_chart_etf_adjustment_uses_fund_adj_factors(tmp_path: Path) -> None:
+    """ETF 复权经 fund_adj 留存 payload 链（#658 批次3）:
+
+    hfq=价×当日因子；qfq=价×当日因子/末日锚因子（末日 1.1）；
+    fund_adj 快照身份随 bars 传播；缺 fund_adj 快照 fail closed。
+    """
+    chart = _etf_fund_adj_chart(tmp_path)
+    raw = chart.get_chart(_etf_chart_request("none"))
+    hfq = chart.get_chart(_etf_chart_request("hfq"))
+    qfq = chart.get_chart(_etf_chart_request("qfq"))
+    last_raw = raw.bars[-1].close
+    first_raw = raw.bars[0].close
+    # hfq：末日因子 1.1，首日因子 1.0。
+    assert hfq.bars[-1].close == pytest.approx(last_raw * 1.1)
+    assert hfq.bars[0].close == pytest.approx(first_raw * 1.0)
+    # qfq：以末日因子为锚（1.1），首日 1.0/1.1。
+    assert qfq.bars[0].close == pytest.approx(first_raw / 1.1)
+    assert qfq.bars[-1].close == pytest.approx(last_raw)
+    # fund_adj 快照身份传播。
+    assert len(hfq.bars[-1].source_snapshot_ids) == 2
+
+    chart._snapshots = cast(
+        ProviderSnapshotReader,
+        _Snapshots(
+            tuple(
+                item
+                for item in chart._snapshots.list_snapshots()
+                if item.dataset_id != "fund_adj"
+            )
+        ),
+    )
     with pytest.raises(
-        AppQueryError, match="unsupported source-bound chart adjustment"
+        AppQueryError, match="retained chart fund_adj snapshots are unavailable"
     ):
-        chart.get_chart(_chart_request("daily", adjustment="qfq", asset_class="etf"))
-    with pytest.raises(
-        AppQueryError, match="unsupported source-bound chart adjustment"
-    ):
-        chart.get_chart(_chart_request("daily", adjustment="hfq", asset_class="etf"))
+        chart.get_chart(_etf_chart_request("hfq"))

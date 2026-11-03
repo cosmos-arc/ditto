@@ -98,10 +98,10 @@ export function InstrumentChartView({ id, drill }: InstrumentChartViewProps) {
 	};
 
 	const detail = useInstrumentDetail(id);
-	// ETF 复权在服务端 bars 查询未接线（apply_adjustment 仅覆盖股票）：
-	// 诚实降级为禁用复权切换，不静默返回未复权价格冒充已复权。
+	// ETF 复权已接入服务端留存 payload 链（fund_adj，批次3）——
+	// 股票/ETF 同一复权切换，缺因子由服务端 fail closed 而非前端静默降级。
 	const isEtf = detail.data?.asset_class === "etf";
-	const effectiveAdjustment: BarAdjustment = isEtf ? "none" : adjustment;
+	const effectiveAdjustment: BarAdjustment = adjustment;
 
 	const query = useInstrumentChart(id, {
 		adjustment: effectiveAdjustment,
@@ -250,8 +250,6 @@ export function InstrumentChartView({ id, drill }: InstrumentChartViewProps) {
 							options={ADJUSTMENT_OPTIONS}
 							value={effectiveAdjustment}
 							onChange={setAdjustment}
-							disabled={isEtf}
-							note={isEtf ? "ETF 复权暂未接入" : undefined}
 						/>
 						<label className="flex items-center gap-1.5 text-xs text-(--color-foreground-tertiary)">
 							<input

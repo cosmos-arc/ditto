@@ -114,9 +114,8 @@ test.describe
 			]);
 			expect(pngDownload.suggestedFilename()).toMatch(/\.png$/);
 
-			// ETF 复权未接线：切换禁用并给出原因
-			await expect(page.getByRole("button", { name: "前复权" })).toBeDisabled();
-			await expect(page.getByText("ETF 复权暂未接入")).toBeVisible();
+			// ETF 复权已接入 fund_adj 留存 payload 链(批次3):切换可用。
+			await expect(page.getByRole("button", { name: "前复权" })).toBeEnabled();
 
 			await expectNoSeriousAccessibilityViolations(page);
 			expect(browserErrors).toEqual([]);

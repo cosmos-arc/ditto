@@ -1,6 +1,6 @@
 /**
  * DO NOT EDIT: generated from contracts/openapi/v1.json.
- * Schema SHA-256: 619bd0612281657c9e6ddb9898c229e01c32ad284defcb35377496a7470fc1e9
+ * Schema SHA-256: bc2c3b0bc9ecd36743abf7796d5b3293dac3638a988e308be9103bf9e82910ba
  * Generator: ditto-operation-response-contracts 4
  */
 
@@ -1220,6 +1220,16 @@ export const operationResponseContracts = {
   },
   "post /api/v1/backtests/runs/{run_id}/retry": {
     "202": ["application/json"],
+    "400": ["application/json"],
+    "403": ["application/json"],
+    "404": ["application/json"],
+    "409": ["application/json"],
+    "422": ["application/json"],
+    "500": ["application/json"],
+    "default": ["application/json"],
+  },
+  "post /api/v1/capital/profile": {
+    "200": ["application/json"],
     "400": ["application/json"],
     "403": ["application/json"],
     "404": ["application/json"],
@@ -2489,6 +2499,11 @@ export const operationRequestContracts = {
     parameters: {
       "header": ["X-Ditto-API-Contract-Version"],
       "path": ["run_id"],
+    },
+  },
+  "post /api/v1/capital/profile": {
+    parameters: {
+      "header": ["X-Ditto-API-Contract-Version"],
     },
   },
   "post /api/v1/commodity/bars": {

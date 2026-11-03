@@ -359,6 +359,55 @@ class CapitalStore:
             raise ValueError("moneyflow reader not configured")
         return reader.read(start_date=start, end_date=end)
 
+    def get_moneyflow(self, instrument_id: int, start: str, end: str) -> pl.DataFrame:
+        """逐标的资金流窗口读（万元/手；#658 批次3 画像链）."""
+        reader = self._read_ports.moneyflow
+        if reader is None:
+            raise ValueError("moneyflow reader not configured")
+        frame = reader.read(
+            instrument_ids=[instrument_id], start_date=start, end_date=end
+        )
+        return frame if frame.is_empty() else frame.sort("trade_date")
+
+    def get_top_list(self, instrument_id: int, start: str, end: str) -> pl.DataFrame:
+        """逐标的龙虎榜窗口读（金额元；事件按 reason 独立成行）."""
+        reader = self._read_ports.top_list
+        if reader is None:
+            raise ValueError("top_list reader not configured")
+        frame = reader.read(
+            instrument_ids=[instrument_id], start_date=start, end_date=end
+        )
+        return frame if frame.is_empty() else frame.sort(["trade_date", "reason"])
+
+    def get_top_inst(self, instrument_id: int, start: str, end: str) -> pl.DataFrame:
+        """逐标的龙虎榜席位窗口读（单边 null 保真；席位≠总仓位）."""
+        reader = self._read_ports.top_inst
+        if reader is None:
+            raise ValueError("top_inst reader not configured")
+        frame = reader.read(
+            instrument_ids=[instrument_id], start_date=start, end_date=end
+        )
+        return (
+            frame
+            if frame.is_empty()
+            else frame.sort(["trade_date", "reason", "side", "exalter"])
+        )
+
+    def get_margin_trading_range(
+        self,
+        instrument_id: int,
+        start: str,
+        end: str,
+        as_of_date: date | None = None,
+    ) -> pl.DataFrame:
+        """逐标的两融窗口读（PIT 可选；修订收敛到 knowledge 最新版本）."""
+        return self._read_ports.margin_trading.get_range(
+            instrument_id,
+            start_date=date.fromisoformat(start) if start else None,
+            end_date=date.fromisoformat(end) if end else None,
+            as_of_date=as_of_date,
+        )
+
     def get_cyq_perfs(self, start: str, end: str) -> pl.DataFrame:
         """Read market-wide chip performance rows（L3 巡检用）."""
         reader = self._read_ports.cyq_perf

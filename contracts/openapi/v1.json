@@ -821,6 +821,47 @@
         "title": "APIResponse[CandidateSelectionReceiptResponse]",
         "type": "object"
       },
+      "APIResponse_CapitalProfileResponse_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/CapitalProfileResponse",
+            "description": "响应数据"
+          },
+          "pagination": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PaginationResponse"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "title": "APIResponse[CapitalProfileResponse]",
+        "type": "object"
+      },
       "APIResponse_CatalogAssetResponse_": {
         "properties": {
           "data": {
@@ -9786,6 +9827,115 @@
           "expected_revision"
         ],
         "title": "CandidateSelectionRequest",
+        "type": "object"
+      },
+      "CapitalProfileQuery": {
+        "description": "个股资金画像查询参数(必需 moneyflow/top_list/top_inst＋可选两融).",
+        "properties": {
+          "allow_experimental_data": {
+            "default": false,
+            "description": "显式允许 experimental 数据集(资金画像四数据集均 experimental)",
+            "title": "Allow Experimental Data",
+            "type": "boolean"
+          },
+          "end_date": {
+            "description": "窗口终点",
+            "format": "date",
+            "title": "End Date",
+            "type": "string"
+          },
+          "instrument_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "标的 ID(与 ticker/standard_ticker 三选一)",
+            "title": "Instrument Id"
+          },
+          "standard_ticker": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "标准代码,如 000001.SZ(与 instrument_id/ticker 三选一)",
+            "title": "Standard Ticker"
+          },
+          "start_date": {
+            "description": "窗口起点",
+            "format": "date",
+            "title": "Start Date",
+            "type": "string"
+          },
+          "ticker": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "内部代码(与 instrument_id/standard_ticker 三选一)",
+            "title": "Ticker"
+          }
+        },
+        "required": [
+          "start_date",
+          "end_date"
+        ],
+        "title": "CapitalProfileQuery",
+        "type": "object"
+      },
+      "CapitalProfileResponse": {
+        "description": "个股资金画像响应(四数据集同标的同窗口联看).",
+        "properties": {
+          "instrument_id": {
+            "description": "标的 ID",
+            "title": "Instrument Id",
+            "type": "integer"
+          },
+          "margin_trading": {
+            "$ref": "#/components/schemas/MarginBlock",
+            "description": "两融(可选,带待补语义)"
+          },
+          "moneyflow": {
+            "$ref": "#/components/schemas/MoneyflowBlock",
+            "description": "逐日资金流(必需)"
+          },
+          "top_inst": {
+            "$ref": "#/components/schemas/TopInstBlock",
+            "description": "龙虎榜席位(必需)"
+          },
+          "top_list": {
+            "$ref": "#/components/schemas/TopListBlock",
+            "description": "龙虎榜事件(必需)"
+          },
+          "window": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "查询窗口 {start, end}",
+            "title": "Window",
+            "type": "object"
+          }
+        },
+        "required": [
+          "instrument_id",
+          "window",
+          "moneyflow",
+          "top_list",
+          "top_inst",
+          "margin_trading"
+        ],
+        "title": "CapitalProfileResponse",
         "type": "object"
       },
       "CashSnapshotResponse": {
@@ -19472,6 +19622,143 @@
         "title": "Margin",
         "type": "object"
       },
+      "MarginBlock": {
+        "description": "画像块:两融(pit_asof=end_date;迟发数据按 09:15 承诺显示待补).",
+        "properties": {
+          "data_coverage": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DataCoverageInfo"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "freshness_promise": {
+            "default": "交易所于下一交易日开市前(约09:15)公布前一交易日两融数据",
+            "description": "披露制度承诺(新鲜度承诺,非 PIT 能力)",
+            "title": "Freshness Promise",
+            "type": "string"
+          },
+          "latest_trade_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latest Trade Date"
+          },
+          "pending_trade_dates": {
+            "description": "窗口内已有两融历史但缺失的交易日(迟发待补;无历史=非两融标的不适用)",
+            "items": {
+              "type": "string"
+            },
+            "title": "Pending Trade Dates",
+            "type": "array"
+          },
+          "read_error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "可选块读取失败原因(受限展示,其余块不受影响)",
+            "title": "Read Error"
+          },
+          "read_semantics": {
+            "default": "pit_asof",
+            "title": "Read Semantics",
+            "type": "string"
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/MarginProfileRow"
+            },
+            "title": "Rows",
+            "type": "array"
+          },
+          "sources": {
+            "description": "行来源",
+            "items": {
+              "type": "string"
+            },
+            "title": "Sources",
+            "type": "array"
+          }
+        },
+        "title": "MarginBlock",
+        "type": "object"
+      },
+      "MarginProfileRow": {
+        "description": "画像两融行(余额可空:月末披露含 null 余额为真实形态,null 非 0).",
+        "properties": {
+          "margin_buy_amount": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "融资买入额(元)",
+            "title": "Margin Buy Amount"
+          },
+          "margin_buy_balance": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "融资余额(元)",
+            "title": "Margin Buy Balance"
+          },
+          "short_sell_balance": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "融券余额(元)",
+            "title": "Short Sell Balance"
+          },
+          "short_sell_volume": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "融券卖出量",
+            "title": "Short Sell Volume"
+          },
+          "trade_date": {
+            "description": "交易日期",
+            "title": "Trade Date",
+            "type": "string"
+          }
+        },
+        "required": [
+          "trade_date"
+        ],
+        "title": "MarginProfileRow",
+        "type": "object"
+      },
       "MarketChartBarResponse": {
         "properties": {
           "amount": {
@@ -20134,6 +20421,190 @@
           "checksum"
         ],
         "title": "ModelTargetResponse",
+        "type": "object"
+      },
+      "MoneyflowBlock": {
+        "description": "画像块:逐日资金流(latest_available＝库内现存行,无 PIT 过滤).",
+        "properties": {
+          "data_coverage": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DataCoverageInfo"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "latest_trade_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "窗口内实际末端交易日(空窗为 null)",
+            "title": "Latest Trade Date"
+          },
+          "read_semantics": {
+            "default": "latest_available",
+            "title": "Read Semantics",
+            "type": "string"
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/MoneyflowRow"
+            },
+            "title": "Rows",
+            "type": "array"
+          },
+          "sources": {
+            "description": "行来源(tushare/fuyao 等)",
+            "items": {
+              "type": "string"
+            },
+            "title": "Sources",
+            "type": "array"
+          }
+        },
+        "title": "MoneyflowBlock",
+        "type": "object"
+      },
+      "MoneyflowRow": {
+        "description": "逐日资金流行(金额万元、量手;#518 口径).",
+        "properties": {
+          "buy_elg_amount": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "特大单买入金额(万元)",
+            "title": "Buy Elg Amount"
+          },
+          "buy_lg_amount": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "大单买入金额(万元)",
+            "title": "Buy Lg Amount"
+          },
+          "buy_md_amount": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "中单买入金额(万元)",
+            "title": "Buy Md Amount"
+          },
+          "buy_sm_amount": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "小单买入金额(万元)",
+            "title": "Buy Sm Amount"
+          },
+          "net_mf_amount": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "净流入额(万元)",
+            "title": "Net Mf Amount"
+          },
+          "net_mf_vol": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "净流入量(手)",
+            "title": "Net Mf Vol"
+          },
+          "sell_elg_amount": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "特大单卖出金额(万元)",
+            "title": "Sell Elg Amount"
+          },
+          "sell_lg_amount": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "大单卖出金额(万元)",
+            "title": "Sell Lg Amount"
+          },
+          "sell_md_amount": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "中单卖出金额(万元)",
+            "title": "Sell Md Amount"
+          },
+          "sell_sm_amount": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "小单卖出金额(万元)",
+            "title": "Sell Sm Amount"
+          },
+          "trade_date": {
+            "description": "交易日期",
+            "title": "Trade Date",
+            "type": "string"
+          }
+        },
+        "required": [
+          "trade_date"
+        ],
+        "title": "MoneyflowRow",
         "type": "object"
       },
       "MonthlyIcCell": {
@@ -26049,6 +26520,342 @@
           "weekly"
         ],
         "type": "string"
+      },
+      "TopInstBlock": {
+        "description": "画像块:龙虎榜席位(与 top_list 同事件范围).",
+        "properties": {
+          "data_coverage": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DataCoverageInfo"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "latest_trade_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latest Trade Date"
+          },
+          "read_semantics": {
+            "default": "latest_available",
+            "title": "Read Semantics",
+            "type": "string"
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/TopInstRow"
+            },
+            "title": "Rows",
+            "type": "array"
+          },
+          "sources": {
+            "description": "行来源",
+            "items": {
+              "type": "string"
+            },
+            "title": "Sources",
+            "type": "array"
+          }
+        },
+        "title": "TopInstBlock",
+        "type": "object"
+      },
+      "TopInstRow": {
+        "description": "龙虎榜席位明细行(单边 null 保真;席位事件≠机构总仓位).",
+        "properties": {
+          "buy": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "买入金额(元;卖方席位为 null)",
+            "title": "Buy"
+          },
+          "buy_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "买入占比(%)",
+            "title": "Buy Rate"
+          },
+          "exalter": {
+            "description": "营业部/席位名称",
+            "title": "Exalter",
+            "type": "string"
+          },
+          "net_buy": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "净买入(元)",
+            "title": "Net Buy"
+          },
+          "reason": {
+            "description": "上榜原因",
+            "title": "Reason",
+            "type": "string"
+          },
+          "sell": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "卖出金额(元;买方席位为 null)",
+            "title": "Sell"
+          },
+          "sell_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "卖出占比(%)",
+            "title": "Sell Rate"
+          },
+          "side": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "0=买方席位 1=卖方席位",
+            "title": "Side"
+          },
+          "trade_date": {
+            "description": "交易日期",
+            "title": "Trade Date",
+            "type": "string"
+          }
+        },
+        "required": [
+          "trade_date",
+          "reason",
+          "exalter"
+        ],
+        "title": "TopInstRow",
+        "type": "object"
+      },
+      "TopListBlock": {
+        "description": "画像块:龙虎榜事件(无事件＝合法空,不冒充失败).",
+        "properties": {
+          "data_coverage": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DataCoverageInfo"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "latest_trade_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latest Trade Date"
+          },
+          "read_semantics": {
+            "default": "latest_available",
+            "title": "Read Semantics",
+            "type": "string"
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/TopListRow"
+            },
+            "title": "Rows",
+            "type": "array"
+          },
+          "sources": {
+            "description": "行来源",
+            "items": {
+              "type": "string"
+            },
+            "title": "Sources",
+            "type": "array"
+          }
+        },
+        "title": "TopListBlock",
+        "type": "object"
+      },
+      "TopListRow": {
+        "description": "龙虎榜个股明细行(金额元;同日多 reason 独立成行).",
+        "properties": {
+          "amount": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "总成交额(元)",
+            "title": "Amount"
+          },
+          "amount_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "成交额占比(%)",
+            "title": "Amount Rate"
+          },
+          "close": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "收盘价(元)",
+            "title": "Close"
+          },
+          "l_amount": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "龙虎榜成交额(元)",
+            "title": "L Amount"
+          },
+          "l_buy": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "龙虎榜买入额(元)",
+            "title": "L Buy"
+          },
+          "l_sell": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "龙虎榜卖出额(元)",
+            "title": "L Sell"
+          },
+          "net_amount": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "龙虎榜净买入额(元)",
+            "title": "Net Amount"
+          },
+          "net_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "净买入率(%)",
+            "title": "Net Rate"
+          },
+          "pct_change": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "涨跌幅(%)",
+            "title": "Pct Change"
+          },
+          "reason": {
+            "description": "上榜原因",
+            "title": "Reason",
+            "type": "string"
+          },
+          "trade_date": {
+            "description": "交易日期",
+            "title": "Trade Date",
+            "type": "string"
+          },
+          "turnover_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "换手率(%)",
+            "title": "Turnover Rate"
+          }
+        },
+        "required": [
+          "trade_date",
+          "reason"
+        ],
+        "title": "TopListRow",
+        "type": "object"
       },
       "TradeIntentResponse": {
         "description": "交易意图响应.",
@@ -32038,6 +32845,123 @@
           }
         },
         "summary": "Get Margin",
+        "tags": [
+          "capital"
+        ],
+        "x-ditto-maturity": "experimental"
+      }
+    },
+    "/api/v1/capital/profile": {
+      "post": {
+        "description": "个股资金画像（#658 批次3：四数据集同标的同窗口联看）.\n\n必需块 moneyflow/top_list/top_inst（latest_available＝库内现存行，无 PIT\n过滤）；可选块 margin_trading（pit_asof=end_date）带实际末端与待补列表\n（迟发数据按 09:15 披露承诺，待补窗=尾部 5 个交易日，与夜修滑窗对齐）。\n每块携带 data_coverage 覆盖限制快照；无事件/空窗是合法状态，不冒充失败。\n\n标识符三选一（优先级 instrument_id > standard_ticker > ticker），\n按 end_date 解析。四数据集均 experimental，须显式\nallow_experimental_data=true。\n\nRaises:\n    NotFoundError: 404 如果标识符在 end_date 不可解析\n\nCapability maturity: `experimental`. Implemented or partly implemented; not production scope.",
+        "operationId": "capital_post_profile",
+        "parameters": [
+          {
+            "description": "Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required.",
+            "in": "header",
+            "name": "X-Ditto-API-Contract-Version",
+            "required": false,
+            "schema": {
+              "const": "v1",
+              "description": "Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required.",
+              "title": "X-Ditto-Api-Contract-Version",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CapitalProfileQuery"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIResponse_CapitalProfileResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad request"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Resource not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Request conflicts with current state"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Request or domain validation failed"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal server error"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Structured Ditto API error"
+          }
+        },
+        "summary": "Post Capital Profile",
         "tags": [
           "capital"
         ],

@@ -718,6 +718,7 @@ datasets:
     - stock_status 数据集空洞致 82,422 会话缺口无法归因（2021/2022 为主，P2 线既知边界）
     consumers:
     - 资金面分析
+    - 个股资金画像(/capital/profile, #658 批次3)
     - query margin/moneyflow
     - patrol
     notes: 2013-01-04 起 1,256 万行（#196 回补 + #625 补 2013 段与 2026-10 空洞）；#625 审计 present 95.1%、十月空洞治愈、对拍 3/3 一致
@@ -814,6 +815,7 @@ datasets:
     gaps: []
     consumers:
     - 龙虎榜观察
+    - 个股资金画像(/capital/profile, #658 批次3)
     - query capital
     notes: '席位不推导整体仓位（#621 语义）；源墙远早于 2014（#626 探针
       2010-01-04 已有行），按 #621 2014 锚回补不承诺更早；同 (标的, 日,
@@ -849,6 +851,7 @@ datasets:
     gaps: []
     consumers:
     - 机构席位观察
+    - 个股资金画像(/capital/profile, #658 批次3)
     - query capital
     notes: '席位不推导整体仓位——「机构专用」是多家机构共用席位名，席位
       金额≠机构持仓（#621/#626 语义）；源墙远早于 2014（#626 探针
@@ -1333,6 +1336,7 @@ datasets:
     - 2026-10-30 深市部分行（2,017/4,486，沪市先到）——源侧 T+3（周五数据下周一上午更新）节奏，晚发布近窗重取自动收敛
     consumers:
     - 融资融券分析
+    - 个股资金画像(/capital/profile 带 09:15 待补语义, #658 批次3)
     - query margin
     notes: 2013-01-04 起 3355/3355 交易日全覆盖、684 万行（#625 回补+通路修复）；列名语义修正
       margin_buy_amount（原误标 volume，#390 破坏窗口）；月末披露含 null 余额为真实形态（not_null
