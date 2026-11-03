@@ -369,8 +369,9 @@ def daily_repair_flow(
             "excluded_failure_groups": excluded_groups,
             "final_unresolved": final_unresolved,
             "message": (
-                f"修补完成: 重试 {total_retried} 个任务, 修补 {total_repaired} 个空洞, "
-                f"近窗刷新 {total_refreshed} 个会话"
+                "修补完成: 重试 "
+                + f"{total_retried} 个任务, 修补 {total_repaired} 个空洞, "
+                + f"近窗刷新 {total_refreshed} 个会话"
                 + _final_unresolved_suffix(final_unresolved)
             ),
         },

@@ -519,11 +519,13 @@ class IngestionDataWriter:
         if df.is_empty() or "trade_date" not in df.columns:
             return df
         trade_dates = df["trade_date"].cast(pl.Date)
+        min_trade_date = cast(date, trade_dates.min())
+        max_trade_date = cast(date, trade_dates.max())
         window_start = (
-            trade_dates.min() - timedelta(days=CALENDAR_LOOKAHEAD_DAYS)
+            min_trade_date - timedelta(days=CALENDAR_LOOKAHEAD_DAYS)
         ).isoformat()
         window_end = (
-            trade_dates.max() + timedelta(days=CALENDAR_LOOKAHEAD_DAYS)
+            max_trade_date + timedelta(days=CALENDAR_LOOKAHEAD_DAYS)
         ).isoformat()
         trading_days = tuple(
             date.fromisoformat(day)

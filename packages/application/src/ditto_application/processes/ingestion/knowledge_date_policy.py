@@ -151,7 +151,7 @@ def _next_trading_day_one(
     if index >= len(trading_days):
         raise ValueError(
             f"{dataset}: no trading day after {trade_date} in calendar "
-            f"(lookahead {CALENDAR_LOOKAHEAD_DAYS}d) — refusing to write "
-            "unverifiable knowledge_date (#658 B1E)"
+            + f"(lookahead {CALENDAR_LOOKAHEAD_DAYS}d) — refusing to write "
+            + "unverifiable knowledge_date (#658 B1E)"
         )
     return trading_days[index]
