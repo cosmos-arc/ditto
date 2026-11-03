@@ -42,10 +42,12 @@ from ditto_application.processes.quality.coverage_audit import (
     PriceCoverageAuditRequest,
     PriceCoverageAuditService,
 )
-from ditto_data.services.market_service import MarketService
-from ditto_data.services.metadata_service import MetadataService
 
 from ditto_apps.registry.container import make_app_container
+from ditto_apps.registry.infra.protocol_adapters import (
+    MarketService,
+    MetadataService,
+)
 
 __all__ = ["classify_gap_rows", "collect_attribution", "main"]
 
