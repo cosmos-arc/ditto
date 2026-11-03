@@ -49,7 +49,7 @@ class TestFredRealtimePitRealFetch:
         self, fred_source
     ) -> None:
         """ALFRED returns the publication date of each selected vintage."""
-        df = fred_source.fetch_macro_indicators_range(
+        df = fred_source.fetch_macro_indicators_by_codes_range(
             codes=["US_CPI_YOY"],  # need_pit=True
             start_date="2024-01-01",
             end_date="2024-03-31",
@@ -68,7 +68,7 @@ class TestFredRealtimePitRealFetch:
         self, fred_source
     ) -> None:
         """A non-revising series is still unavailable before publication."""
-        df = fred_source.fetch_macro_indicators_range(
+        df = fred_source.fetch_macro_indicators_by_codes_range(
             codes=["US_UNRATE"],  # need_pit=False
             start_date="2024-01-01",
             end_date="2024-03-31",
@@ -88,7 +88,7 @@ class TestFredRealtimePitRealFetch:
         """Each historical as-of sees only the GDP estimate published by then."""
         observations = []
         for cutoff in ("2024-04-29", "2024-05-31", "2024-06-28"):
-            frame = fred_source.fetch_macro_indicators_range(
+            frame = fred_source.fetch_macro_indicators_by_codes_range(
                 codes=["US_GDP_QOQ"],
                 start_date="2024-01-01",
                 end_date="2024-03-31",
@@ -107,7 +107,7 @@ class TestFredRealtimePitRealFetch:
 
     def test_gdp_is_empty_before_the_first_real_publication(self, fred_source) -> None:
         """The future sentinel remains invisible one day before first release."""
-        frame = fred_source.fetch_macro_indicators_range(
+        frame = fred_source.fetch_macro_indicators_by_codes_range(
             codes=["US_GDP_QOQ"],
             start_date="2024-01-01",
             end_date="2024-03-31",

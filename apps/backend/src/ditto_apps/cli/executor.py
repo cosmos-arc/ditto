@@ -80,6 +80,7 @@ class CLIExecutor:
         start_date: str,
         end_date: str,
         parallel: int = 1,
+        source: str = "tushare",
         *,
         include_complete: bool = False,
     ) -> dict[str, Any]:
@@ -91,6 +92,8 @@ class CLIExecutor:
             start_date: 开始日期 (YYYY-MM-DD)
             end_date: 结束日期 (YYYY-MM-DD)
             parallel: 并行度
+            source: 数据源（macro_indicators 的 fred 车道驱动,
+                #658 批次4——51 FRED 系列落库通道）
             include_complete: 连 COMPLETE 检查点一并重拉（行级补数，#575）
 
         Returns:
@@ -102,6 +105,7 @@ class CLIExecutor:
             start_date=start_date,
             end_date=end_date,
             parallel=parallel,
+            source=source,
             include_complete=include_complete,
         )
         return {

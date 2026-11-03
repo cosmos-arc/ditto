@@ -73,7 +73,7 @@ class TestMacroFrequency:
     """MacroFrequency 枚举测试."""
 
     def test_all_values(self) -> None:
-        expected = {"daily", "monthly", "quarterly"}
+        expected = {"daily", "weekly", "monthly", "quarterly"}
         assert {e.value for e in MacroFrequency} == expected
 
 
