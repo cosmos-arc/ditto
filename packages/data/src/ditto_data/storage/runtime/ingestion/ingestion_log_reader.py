@@ -293,6 +293,36 @@ class IngestionLogReader:
 
         return [self._row_to_log(row) for row in rows]
 
+    def count_retryable_failures(
+        self,
+        dataset: str,
+        source: str = "tushare",
+        max_attempts: int = 3,
+    ) -> int:
+        """
+        瞬态且未耗尽的失败行数（#658 批次1B 精确 pending_beyond_limit）.
+
+        与 list_failed_logs 的 transient 过滤同口径（SQL 内过滤），供
+        重试报告计算超出本轮 limit 的真实积压数——limit+1 探测只能给出
+        0/1 截断信号，会低估积压。
+
+        Args:
+            dataset: 数据集名称
+            source: 数据源标识（默认 "tushare"）
+            max_attempts: 仅统计尝试次数小于此值的失败
+
+        Returns:
+            符合自动重试资格的失败行数。
+
+        """
+        transient = sorted(TRANSIENT_ERROR_CODES)
+        placeholders = ", ".join("?" for _ in transient)
+        sql = "SELECT COUNT(*) as retryable FROM ingestion_log "
+        sql += "WHERE dataset = ? AND source = ? AND status = 'FAIL' "
+        sql += f"AND attempts < ? AND error_code IN ({placeholders})"
+        row = self._client.fetchall(sql, [dataset, source, max_attempts, *transient])
+        return int(row[0]["retryable"]) if row else 0
+
     def list_failed_error_groups(
         self,
         source: str = "tushare",

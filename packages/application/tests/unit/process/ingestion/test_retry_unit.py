@@ -82,25 +82,27 @@ def mock_ingestion_log_store(mocker):
     service = mocker.Mock()
     service.list_failed_logs = mocker.Mock(return_value=[])
     service.list_failed_error_groups = mocker.Mock(return_value=[])
+    service.count_retryable_failures = mocker.Mock(return_value=0)
     return service
 
 
 def _wire_failed_logs(mock_ingestion_log_store, logs: list[IngestionLog]) -> None:
-    """按 failure_filter 语义分派的日志桩（与 SQL 过滤口径一致）。"""
+    """按 failure_filter/limit 语义分派的日志桩（与 SQL 过滤口径一致）。"""
     from ditto_data.models.ingestion import is_retryable_ingestion_failure
 
-    def _list(*, failure_filter="all", **kwargs):
+    def _list(*, failure_filter="all", limit=None, **kwargs):
+        selected = logs
         if failure_filter == "transient":
-            return [
+            selected = [
                 log for log in logs if is_retryable_ingestion_failure(log.error_code)
             ]
-        if failure_filter == "non_transient":
-            return [
+        elif failure_filter == "non_transient":
+            selected = [
                 log
                 for log in logs
                 if not is_retryable_ingestion_failure(log.error_code)
             ]
-        return logs
+        return selected[:limit] if isinstance(limit, int) else selected
 
     mock_ingestion_log_store.list_failed_logs.side_effect = _list
 
@@ -649,6 +651,7 @@ class TestPendingBeyondLimit:
                 _failed_log("2024-12-27"),
             ],
         )
+        mock_ingestion_log_store.count_retryable_failures.return_value = 3
         mock_coordinator.ingest_date.return_value = IngestionResult(
             dataset="stock_daily",
             trade_date="2024-12-25",
@@ -659,6 +662,29 @@ class TestPendingBeyondLimit:
 
         assert result.retried_count == 2
         assert result.pending_beyond_limit == 1
+
+    def test_pending_beyond_limit_counts_exact_backlog(
+        self, retry_manager, mock_coordinator, mock_ingestion_log_store
+    ) -> None:
+        """correctness F3：精确计数积压——50 条失败 limit=10 报 40，非 1."""
+        _wire_failed_logs(
+            mock_ingestion_log_store,
+            [
+                _failed_log("2024-12-25"),
+                _failed_log("2024-12-26"),
+            ],
+        )
+        mock_ingestion_log_store.count_retryable_failures.return_value = 50
+        mock_coordinator.ingest_date.return_value = IngestionResult(
+            dataset="stock_daily",
+            trade_date="2024-12-25",
+            status="success",
+        )
+
+        result = retry_manager.retry_failed(dataset="stock_daily", limit=10)
+
+        assert result.retried_count == 2
+        assert result.pending_beyond_limit == 40
 
 
 @pytest.mark.unit

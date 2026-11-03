@@ -146,6 +146,45 @@ class TestHandleFetchErrorPersistsClassifiedCode:
         assert store.logs[0].error_code == "FETCH_ERROR"
 
 
+class TestRetryErrorUnwrappedAsTransient:
+    """#658 B1A correctness F2：tenacity RetryError 解包为瞬态，不固化为永久."""
+
+    def test_retry_error_wrapping_source_fetch_error_is_transient(self) -> None:
+        """探针/分页失败重试耗尽后以 RetryError 冒泡——解包 last_attempt
+        后应落 FETCH_ERROR（瞬态，保持自动补偿资格），而非 UNKNOWN_ERROR
+        （永久，被排除出自动重试）。"""
+        import tenacity
+        from ditto_application.processes.ingestion.post_ingest import (
+            handle_fetch_error as post_ingest_handle_fetch_error,
+        )
+
+        store = _RecordingLogStore()
+        result_handler = IngestionResultHandler(
+            cast("IngestionLogStore | None", store), "tushare"
+        )
+        attempt = tenacity.Future(attempt_number=3)
+        attempt.set_exception(
+            SourceFetchError(message="probe 5xx after retries", source="tushare")
+        )
+        retry_error = tenacity.RetryError(attempt)
+
+        result = post_ingest_handle_fetch_error(
+            retry_error,
+            dataset="etf_nav",
+            date_identifier="2026-10-29",
+            context="unit-test",
+            log_tag="unit_test",
+            source_name="tushare",
+            result_handler=result_handler,
+        )
+
+        assert result.error == "FETCH_ERROR"
+        assert store.logs[0].error_code == "FETCH_ERROR"
+        assert INGESTION_ERROR_CODE_KINDS["FETCH_ERROR"] is (
+            IngestionFailureKind.TRANSIENT
+        )
+
+
 class TestErrorCodeVocabularyClosure:
     """
     错误码词汇闭合守卫（#623）。

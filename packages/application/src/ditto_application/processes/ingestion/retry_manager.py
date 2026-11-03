@@ -235,14 +235,19 @@ class RetryManager:
         transient_logs = self._ingestion_log_store.list_failed_logs(
             dataset=dataset,
             source=self._source,
-            # limit+1 探测截断：#658 B1B——超限未处理项不得从补偿报告中
-            # 消失，pending_beyond_limit 如实报告本轮没碰到的任务数。
-            limit=limit + 1,
+            limit=limit,
             max_attempts=max_attempts,
             failure_filter="transient",
         )
-        pending_beyond_limit = max(len(transient_logs) - limit, 0)
-        transient_logs = transient_logs[:limit]
+        # #658 B1B correctness F3：精确计数超限积压——limit+1 探测只能给出
+        # 0/1 截断信号（50 条失败 limit=10 会误报 1），操作者据此误判
+        # 补偿轮数。非瞬态侧的全量计数由 daily 终态 unresolved_groups 覆盖。
+        retryable_total = self._ingestion_log_store.count_retryable_failures(
+            dataset=dataset,
+            source=self._source,
+            max_attempts=max_attempts,
+        )
+        pending_beyond_limit = max(retryable_total - limit, 0)
         excluded = self._ingestion_log_store.list_failed_logs(
             dataset=dataset,
             source=self._source,

@@ -207,3 +207,120 @@ class TestGenericEtfAdjustment:
         )
 
         assert result["close"].to_list() == [3040.0, 3050.0]
+
+
+class TestGenericEtfAdjustmentPit:
+    """ETF 复权 asof 语义（#658 批次1D，与股票路径同构 join_asof backward）."""
+
+    def _service_with_factors(
+        self, adj_frame: pl.DataFrame
+    ) -> tuple[MarketService, MagicMock]:
+        etf_adj = MagicMock()
+        etf_adj.read.return_value = adj_frame
+        etf_bars = MagicMock()
+        etf_bars.read.return_value = SAMPLE_ETF_BARS.with_columns(
+            pl.col("trade_date").str.to_date()
+        )
+        return (
+            MarketService(read_ports=_readers(etf_adj=etf_adj, etf_bars=etf_bars)),
+            etf_adj,
+        )
+
+    def test_asof_uses_factors_known_by_asof(self) -> None:
+        """asof 查询只用 knowledge_date ≤ asof 的因子——晚知修订不泄漏.
+
+        01-03 的因子修订版（factor=2.0，knowledge=01-05）在 asof=01-04
+        时不可见，行关联到旧因子 1.1（knowledge=01-03）；HFQ 值由此计算。
+        """
+        factors = self._revision_factors()
+        service, _ = self._service_with_factors(factors)
+
+        result = service.find_bars(
+            MarketBarsQuery(
+                instrument_ids=[ETF_ID],
+                start="2024-01-02",
+                end="2024-01-03",
+                adj=AdjType.HFQ,
+                asof="2024-01-04",
+            )
+        )
+
+        assert result["close"].to_list() == pytest.approx([1.03 * 1.0, 1.05 * 1.1])
+
+    def test_asof_after_revision_uses_latest_known(self) -> None:
+        """asof ≥ 修订 knowledge_date 时用最新已知因子（晚知者胜）."""
+        factors = self._revision_factors()
+        service, _ = self._service_with_factors(factors)
+
+        result = service.find_bars(
+            MarketBarsQuery(
+                instrument_ids=[ETF_ID],
+                start="2024-01-02",
+                end="2024-01-03",
+                adj=AdjType.HFQ,
+                asof="2024-01-06",
+            )
+        )
+
+        assert result["close"].to_list() == pytest.approx([1.03 * 1.0, 1.05 * 2.0])
+
+    @staticmethod
+    def _revision_factors() -> pl.DataFrame:
+        """01-02 因子 1.0；01-03 双版本（旧 1.1 当日可知、修订 2.0 晚两日知）."""
+        return pl.DataFrame(
+            {
+                "instrument_id": [ETF_ID, ETF_ID, ETF_ID],
+                "trade_date": pl.Series(
+                    ["2024-01-02", "2024-01-03", "2024-01-03"]
+                ).str.to_date(),
+                "adj_factor": [1.0, 1.1, 2.0],
+                "knowledge_date": pl.Series(
+                    ["2024-01-02", "2024-01-03", "2024-01-05"]
+                ).str.to_date(),
+            }
+        )
+
+    def test_asof_before_any_factor_fails_closed(self) -> None:
+        """asof 早于任何因子可知时间＝标的无已知因子，行级拒绝（#514）."""
+        factors = pl.DataFrame(
+            {
+                "instrument_id": [ETF_ID],
+                "trade_date": pl.Series(["2024-01-03"]).str.to_date(),
+                "adj_factor": [1.1],
+                "knowledge_date": pl.Series(["2024-01-03"]).str.to_date(),
+            }
+        )
+        service, _ = self._service_with_factors(factors)
+
+        with pytest.raises(AdjustmentFactorMissingError):
+            service.find_bars(
+                MarketBarsQuery(
+                    instrument_ids=[ETF_ID],
+                    start="2024-01-02",
+                    end="2024-01-03",
+                    adj=AdjType.HFQ,
+                    asof="2024-01-01",
+                )
+            )
+
+    def test_no_dates_market_wide_read_passes_none(self) -> None:
+        """通用入口不带日期的复权查询：日期透传 None（全窗因子读取）."""
+        factors = SAMPLE_ETF_ADJ.with_columns(pl.col("trade_date").str.to_date())
+        etf_adj = MagicMock()
+        etf_adj.read.return_value = factors
+        etf_bars = MagicMock()
+        etf_bars.read.return_value = SAMPLE_ETF_BARS.with_columns(
+            pl.col("trade_date").str.to_date()
+        )
+        service = MarketService(read_ports=_readers(etf_adj=etf_adj, etf_bars=etf_bars))
+
+        result = service.find_bars(
+            MarketBarsQuery(
+                instrument_ids=[ETF_ID],
+                adj=AdjType.HFQ,
+            )
+        )
+
+        assert etf_adj.read.call_args.kwargs["start_date"] is None
+        assert etf_adj.read.call_args.kwargs["end_date"] is None
+        assert result["close"].to_list() == pytest.approx([1.03, 1.155])

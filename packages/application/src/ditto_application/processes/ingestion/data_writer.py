@@ -7,6 +7,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, date, datetime, timedelta
 from typing import ClassVar, Literal, cast
+from zoneinfo import ZoneInfo
 
 import polars as pl
 from ditto_data.catalog.source_snapshot import ProviderSnapshot
@@ -537,7 +538,11 @@ class IngestionDataWriter:
             df,
             dataset=dataset,
             trading_days=trading_days,
-            run_date=date.today(),
+            # 观察日按上海时区锚定（#658 B1E correctness F4，与
+            # post_ingest 观察锚日同约定）：本地时区在西半球时裸
+            # date.today() 会早于上海观察日，季度段 knowledge_date
+            # 随之早于真实发布日构成 PIT 泄漏。
+            run_date=datetime.now(ZoneInfo("Asia/Shanghai")).date(),
         )
 
     def _build_write_handler(self, ctx: _WriteContext) -> Callable[[], WriteResult]:

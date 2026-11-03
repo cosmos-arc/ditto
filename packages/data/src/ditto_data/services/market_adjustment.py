@@ -18,6 +18,50 @@ from ditto_data.services.deps import MarketReaders
 from ditto_data.services.market_types import AdjType
 
 
+def _join_factors(
+    df: pl.DataFrame, adj_df: pl.DataFrame, asof: date | None
+) -> pl.DataFrame:
+    """
+    把因子关联到 bar 行（股票/ETF 复权共用，PIT 语义单一实现）.
+
+    确保排序以正确处理 last() 聚合；knowledge_date 参与排序使 join_asof
+    的同 trade_date 并列取"最新已知修订"成为结构性保证（join_asof 取右帧
+    ≤ 键的最后一行，排序键含 knowledge_date 即晚知者胜）。
+
+    PIT 安全：asof 语义下 bar 行关联"截至 asof 已知、不晚于该行
+    trade_date"的最近因子（join_asof backward）——窗口越过 asof 的行
+    不得因精确 join miss 而 fail-closed，PIT 回放正是要用 asof 时点已知
+    因子覆盖整窗；标的完全无已知因子仍由 #514 行级守卫拦截。
+
+    行序契约：asof 与非 asof 路径对同一查询返回一致行序（下游 limit
+    依赖）；join 的任何重排以行号还原（调用方计算复权后调
+    :func:`_restore_row_order`）。
+    """
+    sort_keys = ["instrument_id", "trade_date"]
+    has_knowledge = "knowledge_date" in adj_df.columns
+    if has_knowledge:
+        sort_keys.append("knowledge_date")
+    adj_df = adj_df.sort(sort_keys)
+    cols = ["instrument_id", "trade_date", "adj_factor"]
+    if has_knowledge:
+        cols.append("knowledge_date")
+    df = df.with_row_index("__ditto_input_order")
+    if asof is not None and has_knowledge:
+        join_adj_df = adj_df.filter(pl.col("knowledge_date") <= asof)
+        return df.sort("trade_date").join_asof(
+            join_adj_df.select(cols).sort(sort_keys),
+            on="trade_date",
+            by="instrument_id",
+            strategy="backward",
+        )
+    return df.join(adj_df.select(cols), on=["instrument_id", "trade_date"], how="left")
+
+
+def _restore_row_order(df: pl.DataFrame) -> pl.DataFrame:
+    """按 __ditto_input_order 还原 join 重排前的行序并删除行号列."""
+    return df.sort("__ditto_input_order").drop("__ditto_input_order")
+
+
 def apply_adjustment(
     df: pl.DataFrame,
     adj: AdjType,
@@ -70,46 +114,14 @@ def apply_adjustment(
             + "ingest adj_factor or query with adj=none/raw (#514)"
         )
 
-    # 确保排序以正确处理 last() 聚合；knowledge_date 参与排序使 join_asof
-    # 的同 trade_date 并列取"最新已知修订"成为结构性保证（join_asof 取右帧
-    # ≤ 键的最后一行，排序键含 knowledge_date 即晚知者胜）。
-    sort_keys = ["instrument_id", "trade_date"]
-    has_knowledge = "knowledge_date" in adj_df.columns
-    if has_knowledge:
-        sort_keys.append("knowledge_date")
-    adj_df = adj_df.sort(sort_keys)
-
-    # 关联调整因子。PIT 安全：asof 语义下 bar 行关联"截至 asof 已知、不晚于
-    # 该行 trade_date"的最近因子（join_asof backward）——窗口越过 asof 的行
-    # 不得因精确 join miss 而 fail-closed，PIT 回放正是要用 asof 时点已知
-    # 因子覆盖整窗；标的完全无已知因子仍由 #514 行级守卫拦截。
-    cols = ["instrument_id", "trade_date", "adj_factor"]
-    if has_knowledge:
-        cols.append("knowledge_date")
-    # 行序契约：asof 与非 asof 路径对同一查询返回一致行序（下游 limit 依赖），
-    # join 的任何重排以行号还原。
-    df = df.with_row_index("__ditto_input_order")
-    if asof is not None and has_knowledge:
-        join_adj_df = adj_df.filter(pl.col("knowledge_date") <= asof)
-        df = df.sort("trade_date").join_asof(
-            join_adj_df.select(cols).sort(sort_keys),
-            on="trade_date",
-            by="instrument_id",
-            strategy="backward",
-        )
-    else:
-        df = df.join(
-            adj_df.select(cols),
-            on=["instrument_id", "trade_date"],
-            how="left",
-        )
+    df = _join_factors(df, adj_df, asof)
 
     # 根据调整类型调用相应方法
     if adj == AdjType.QFQ:
         adjusted = apply_qfq_adj(df, adj_df, asof)
     else:  # HFQ
         adjusted = apply_hfq_adj(df, adj_df)
-    return adjusted.sort("__ditto_input_order").drop("__ditto_input_order")
+    return _restore_row_order(adjusted)
 
 
 def apply_etf_adjustment(
@@ -174,37 +186,11 @@ def apply_etf_adjustment(
             + "query with adj=none (#514)"
         )
 
-    # 确保排序以正确处理 last() 聚合；knowledge_date 参与排序使 join_asof
-    # 的同 trade_date 并列取"最新已知修订"（与股票路径同构）。
-    sort_keys = ["instrument_id", "trade_date"]
-    has_knowledge = "knowledge_date" in adj_df.columns
-    if has_knowledge:
-        sort_keys.append("knowledge_date")
-    adj_df = adj_df.sort(sort_keys)
-
-    cols = ["instrument_id", "trade_date", "adj_factor"]
-    if has_knowledge:
-        cols.append("knowledge_date")
-    # 行序契约：与非 asof 路径返回一致行序，join 重排以行号还原（同股票路径）。
-    df = df.with_row_index("__ditto_input_order")
-    if asof is not None and has_knowledge:
-        join_adj_df = adj_df.filter(pl.col("knowledge_date") <= asof)
-        df = df.sort("trade_date").join_asof(
-            join_adj_df.select(cols).sort(sort_keys),
-            on="trade_date",
-            by="instrument_id",
-            strategy="backward",
-        )
-    else:
-        df = df.join(
-            adj_df.select(cols),
-            on=["instrument_id", "trade_date"],
-            how="left",
-        )
+    df = _join_factors(df, adj_df, asof)
 
     # 根据调整类型调用相应方法
     if adj == AdjType.QFQ:
         adjusted = apply_qfq_adj(df, adj_df, asof)
     else:  # HFQ
         adjusted = apply_hfq_adj(df, adj_df)
-    return adjusted.sort("__ditto_input_order").drop("__ditto_input_order")
+    return _restore_row_order(adjusted)

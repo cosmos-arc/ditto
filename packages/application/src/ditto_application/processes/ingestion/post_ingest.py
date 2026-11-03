@@ -12,6 +12,7 @@ from zoneinfo import ZoneInfo
 import httpx
 import orjson
 import polars as pl
+import tenacity
 from ditto_data.catalog import (
     DataCatalogReader,
     DataCatalogWriter,
@@ -844,6 +845,15 @@ def handle_fetch_error(
     result_handler: IngestionResultHandler,
 ) -> IngestionResult:
     """统一的 fetch 错误处理。"""
+    # #658 B1A correctness F2：client 层 tenacity 重试耗尽后以 RetryError
+    # 冒泡，last_attempt 才是真实取数错误（分页探针在热路径上，代理瞬态
+    # 故障常态化触发）——不解包会把瞬态错误固化成 UNKNOWN_ERROR/PERMANENT，
+    # 永久排除出自动补偿（#623 词汇表）。
+    if isinstance(error, tenacity.RetryError):
+        last_error = error.last_attempt.exception()
+        if isinstance(last_error, Exception):
+            error = last_error
+
     if isinstance(error, (httpx.NetworkError, httpx.TimeoutException)):
         logger.exception(
             f"network_error_{log_tag}",

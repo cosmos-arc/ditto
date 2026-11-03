@@ -153,6 +153,30 @@ class IngestionLogStore:
             max_attempts=max_attempts,
         )
 
+    def count_retryable_failures(
+        self,
+        dataset: str,
+        source: str = "tushare",
+        max_attempts: int = 3,
+    ) -> int:
+        """
+        瞬态且未耗尽的失败行数（#658 批次1B 精确 pending_beyond_limit）。
+
+        Args:
+            dataset: 数据集名称
+            source: 数据源标识（默认 "tushare"）
+            max_attempts: 仅统计尝试次数小于此值的失败
+
+        Returns:
+            符合自动重试资格的失败行数。
+
+        """
+        return self._reader.count_retryable_failures(
+            dataset=dataset,
+            source=source,
+            max_attempts=max_attempts,
+        )
+
     def list_unresolved_failures(
         self,
         source: str = "tushare",

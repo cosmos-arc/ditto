@@ -72,6 +72,98 @@ def test_get_returns_data(
     assert result["margin_buy_balance"][0] == 1000000.0
 
 
+def test_get_respects_calibrated_disclosure_boundary(
+    reader: MarginTradingReader, in_memory_db: SQLiteClient
+) -> None:
+    """#658 B1E 发布前后对照：周五数据的可知边界=下周一开市前.
+
+    交易所规则（深交所问答/tushare doc_id=59）：交易日开市前公布前一
+    交易日数据，深市周五数据下周一上午更新。写入路径已把周五行的
+    knowledge_date 校准为下周一（自然日 T+1=周六是 PIT 泄漏）——
+    as_of 周六/周日不可见、下周一可见。
+    """
+    in_memory_db.execute(
+        """INSERT INTO margin_trading
+        (instrument_id, trade_date, knowledge_date, effective_from, effective_to,
+         margin_buy_balance, short_sell_balance, margin_buy_amount, short_sell_volume)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+        [
+            "000001.SZ",
+            date(2024, 11, 1),  # 周五
+            date(2024, 11, 4),  # 校准后 knowledge=下周一
+            date(2024, 11, 4),
+            None,
+            800000.0,
+            400000.0,
+            40000000.0,
+            16000000.0,
+        ],
+    )
+    in_memory_db.commit()
+
+    # 发布前（周六/周日）：不可见
+    assert reader.get("000001.SZ", date(2024, 11, 2)).height == 0
+    assert reader.get("000001.SZ", date(2024, 11, 3)).height == 0
+    # 发布后（下周一）：可见
+    visible = reader.get("000001.SZ", date(2024, 11, 4))
+    assert visible.height == 1
+    assert visible["margin_buy_balance"][0] == 800000.0
+
+
+def test_get_transition_dual_version_baseline(
+    reader: MarginTradingReader, in_memory_db: SQLiteClient
+) -> None:
+    """#658 B1E correctness F5 过渡态基线（批次2 存量纠正的盘点对象）.
+
+    存量占位行（自然日 T+1）与新校准行（下一交易日）冲突键不同
+    （effective_from 参与 KEEP_LAST 判定），共存为双开区间版本行：
+    as_of 落在占位与校准之间（周六）仍读旧行——泄漏窗口延续到批次2
+    重写存量；as_of ≥ 校准日收敛到新行。本测试固化现状语义供批次2 对照。
+    """
+    in_memory_db.executemany(
+        """INSERT INTO margin_trading
+        (instrument_id, trade_date, knowledge_date, effective_from, effective_to,
+         margin_buy_balance, short_sell_balance, margin_buy_amount, short_sell_volume)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+        [
+            # 存量占位行（旧自然日 T+1 语义，周六生效）
+            (
+                "000001.SZ",
+                date(2024, 11, 1),
+                date(2024, 11, 2),
+                date(2024, 11, 2),
+                None,
+                700000.0,
+                350000.0,
+                35000000.0,
+                14000000.0,
+            ),
+            # 新校准行（下一交易日，周一生效）
+            (
+                "000001.SZ",
+                date(2024, 11, 1),
+                date(2024, 11, 4),
+                date(2024, 11, 4),
+                None,
+                800000.0,
+                400000.0,
+                40000000.0,
+                16000000.0,
+            ),
+        ],
+    )
+    in_memory_db.commit()
+
+    # 周六：仅占位行可知（过渡态泄漏窗口，批次2 重写存量后关闭）
+    saturday = reader.get("000001.SZ", date(2024, 11, 3))
+    assert saturday.height == 1
+    assert saturday["margin_buy_balance"][0] == 700000.0
+    # 周一起：收敛到校准行
+    monday = reader.get("000001.SZ", date(2024, 11, 4))
+    assert monday.height == 1
+    assert monday["margin_buy_balance"][0] == 800000.0
+
+
 def test_get_empty_table(reader: MarginTradingReader) -> None:
     """测试空表返回空 DataFrame."""
     result = reader.get("600000.SH", date(2024, 5, 20))
