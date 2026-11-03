@@ -45,7 +45,7 @@ from dataclasses import dataclass
 from datetime import date, datetime
 from hashlib import sha256
 from pathlib import Path
-from typing import Any
+from typing import Any, Protocol
 from zoneinfo import ZoneInfo
 
 import orjson
@@ -86,7 +86,7 @@ _MARGIN_COLUMNS = (
     "margin_buy_amount",
     "short_sell_volume",
 )
-_MARGIN_SCHEMA: dict[str, pl.DataType] = {
+_MARGIN_SCHEMA: dict[str, Any] = {
     "instrument_id": pl.Int64,
     "trade_date": pl.String,
     "knowledge_date": pl.String,
@@ -97,6 +97,28 @@ _MARGIN_SCHEMA: dict[str, pl.DataType] = {
     "margin_buy_amount": pl.Float64,
     "short_sell_volume": pl.Float64,
 }
+
+
+class _CapitalWriterPort(Protocol):
+    """纠正所需的最小资金面写入端口（CapitalStore 结构满足）."""
+
+    def save_margin_trading(
+        self, df: pl.DataFrame, on_duplicate: OnDuplicate = ...
+    ) -> int: ...
+
+    def save_hk_hold(
+        self, df: pl.DataFrame, year: int, on_duplicate: OnDuplicate = ...
+    ) -> int: ...
+
+    def save_hsgt_top10(
+        self, df: pl.DataFrame, year: int, on_duplicate: OnDuplicate = ...
+    ) -> int: ...
+
+
+class _LogStorePort(Protocol):
+    """纠正所需的最小账本端口（IngestionLogStore 结构满足）."""
+
+    def save_log(self, log: IngestionLog) -> IngestionLog: ...
 
 
 @dataclass(frozen=True)
@@ -124,8 +146,8 @@ def scan_dataset(
     open_days = _open_days(conn)
     if dataset == "margin_trading":
         rows = conn.execute(
-            "SELECT trade_date, knowledge_date, COUNT(*) FROM margin_trading "
-            "GROUP BY trade_date, knowledge_date"
+            "SELECT trade_date, knowledge_date, COUNT(*) FROM margin_trading "  # noqa: S608
+            + "GROUP BY trade_date, knowledge_date"
         ).fetchall()
         groups = [(str(r[0]), str(r[1]), int(r[2])) for r in rows]
         expectations = _next_trading_day_expectations(
@@ -260,8 +282,8 @@ def apply_dataset(
     *,
     conn: sqlite3.Connection,
     data_root: Path,
-    capital_store: CapitalStore,
-    log_store: IngestionLogStore,
+    capital_store: _CapitalWriterPort,
+    log_store: _LogStorePort,
     run_at: datetime,
 ) -> dict[str, Any]:
     """按已确认的纠正计划写新版本行并落账本原因行（幂等）."""
@@ -357,9 +379,9 @@ def _observation_anchors(
     anchors: dict[str, str] = {}
     for trade_date in trade_dates:
         row = conn.execute(
-            "SELECT MAX(created_at) FROM provider_snapshots "
-            "WHERE dataset_id = 'hk_hold' AND source = 'tushare' "
-            "AND row_count > 0 AND request_start <= ? AND request_end >= ?",
+            "SELECT MAX(created_at) FROM provider_snapshots "  # noqa: S608
+            + "WHERE dataset_id = 'hk_hold' AND source = 'tushare' "
+            + "AND row_count > 0 AND request_start <= ? AND request_end >= ?",
             (trade_date, trade_date),
         ).fetchone()
         if row and row[0]:
@@ -376,7 +398,7 @@ def _margin_corrected_frame(
     for impact in impacts:
         rows = conn.execute(
             f"SELECT {', '.join(_MARGIN_COLUMNS)} FROM margin_trading "  # noqa: S608
-            "WHERE trade_date = ? AND knowledge_date = ?",
+            + "WHERE trade_date = ? AND knowledge_date = ?",
             (impact.trade_date, impact.old_knowledge_date),
         ).fetchall()
         frames.append(pl.DataFrame(rows, schema=_MARGIN_SCHEMA, orient="row"))
