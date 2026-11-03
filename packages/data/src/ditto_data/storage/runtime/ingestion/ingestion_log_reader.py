@@ -13,6 +13,7 @@ from ditto_data.models.ingestion import (
     IngestionFailedErrorGroup,
     IngestionLog,
     IngestionStatus,
+    UnresolvedFailureGroup,
 )
 
 # 失败过滤口径："all"=全部（遗留语义）；"transient"=仅瞬态（自动重试
@@ -327,6 +328,105 @@ class IngestionLogReader:
                 dataset=row["dataset"],
                 error_code=row["error_code"],
                 failure_count=row["failure_count"],
+                oldest_trade_date=row["oldest_trade_date"],
+                newest_trade_date=row["newest_trade_date"],
+            )
+            for row in rows
+        ]
+
+    def list_unresolved_failures(
+        self,
+        source: str = "tushare",
+        limit: int = 1000,
+    ) -> list[IngestionLog]:
+        """
+        全部未解决失败行（status=FAIL，不做尝试次数/瞬态过滤）.
+
+        #658 批次1B 终态判定输入：以账本当前行为准——后续成功按主键
+        upsert 翻转本行为 SUCCESS 即视为已解决；attempts 达上限（耗尽）
+        的行不出现在 list_failed_logs/list_failed_error_groups，但仍是
+        未解决事实，在此持续可见。
+
+        Args:
+            source: 数据源标识（默认 "tushare"）
+            limit: 返回的最大行数（防全量倾倒；配合汇总查询使用）
+
+        Returns:
+            未解决失败行（trade_date 升序）。
+
+        """
+        sql = """
+            SELECT dataset, source, trade_date, status,
+                   checksum, rows, error_code, error_message,
+                   attempts, first_attempt_at, last_attempt_at
+            FROM ingestion_log
+            WHERE source = ? AND status = 'FAIL'
+            ORDER BY trade_date ASC, dataset ASC
+            LIMIT ?
+        """
+        rows = self._client.fetchall(sql, [source, limit])
+        return [self._row_to_log(row) for row in rows]
+
+    def list_unresolved_failure_groups(
+        self,
+        source: str = "tushare",
+        max_attempts: int = 3,
+    ) -> list[UnresolvedFailureGroup]:
+        """
+        按数据集分桶统计最终未解决失败（#658 批次1B）.
+
+        桶口径（互斥）：exhausted=attempts≥max_attempts（重试耗尽）；
+        pending_transient=未耗尽且瞬态错误码（可继续自动重试）；
+        pending_non_transient=未耗尽且非瞬态（人工/覆盖缺口裁决）。
+
+        Args:
+            source: 数据源标识（默认 "tushare"）
+            max_attempts: 耗尽阈值
+
+        Returns:
+            分桶统计列表（dataset 升序；total=0 的数据集不出现）。
+
+        """
+        transient = sorted(TRANSIENT_ERROR_CODES)
+        transient_placeholders = ", ".join("?" for _ in transient)
+        sql = """
+            SELECT dataset, COUNT(*) as total,
+                   SUM(CASE WHEN attempts >= ? THEN 1 ELSE 0 END) as exhausted,
+        """
+        sql += f"""
+                   SUM(CASE WHEN attempts < ? AND error_code IN
+                        ({transient_placeholders}) THEN 1 ELSE 0 END)
+                        as pending_transient,
+        """
+        sql += f"""
+                   SUM(CASE WHEN attempts < ? AND (error_code IS NULL OR
+                        error_code NOT IN ({transient_placeholders}))
+                        THEN 1 ELSE 0 END) as pending_non_transient,
+        """
+        sql += """
+                   MIN(trade_date) as oldest_trade_date,
+                   MAX(trade_date) as newest_trade_date
+            FROM ingestion_log
+            WHERE source = ? AND status = 'FAIL'
+            GROUP BY dataset
+            ORDER BY dataset ASC
+        """
+        params: list[object] = [
+            max_attempts,
+            max_attempts,
+            *transient,
+            max_attempts,
+            *transient,
+            source,
+        ]
+        rows = self._client.fetchall(sql, params)
+        return [
+            UnresolvedFailureGroup(
+                dataset=row["dataset"],
+                total=row["total"],
+                exhausted=row["exhausted"],
+                pending_transient=row["pending_transient"],
+                pending_non_transient=row["pending_non_transient"],
                 oldest_trade_date=row["oldest_trade_date"],
                 newest_trade_date=row["newest_trade_date"],
             )

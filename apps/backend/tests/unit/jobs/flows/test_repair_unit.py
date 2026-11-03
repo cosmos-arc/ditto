@@ -116,6 +116,14 @@ def test_sparse_pit_prefect_flow_fails_when_evidence_does_not_pass(
 def _mock_bundle_context(mocker: MockerFixture, bundle: Any) -> None:
     from ditto_apps.jobs.flows import repair as repair_module
 
+    # #658 B1B：daily flow 收尾查询最终未解决失败——默认桩为无遗留，
+    # 需要断言终态的测试自行覆盖 final_failure_state 返回值。
+    bundle.retry_manager.final_failure_state.return_value = {
+        "unresolved_groups": [],
+        "unresolved_total": 0,
+        "unresolved_sample": [],
+        "sample_truncated": False,
+    }
     context = mocker.MagicMock()
     context.__enter__.return_value = bundle
     context.__exit__.return_value = None
@@ -332,3 +340,80 @@ class TestDailyRepairCompensationSelection:
         ]
         assert len(hole_calls) == len(repair_module.CONSUMER_CRITICAL_HOLE_DATASETS)
         assert retry_flow.call_count == 2
+
+
+@pytest.mark.unit
+class TestDailyRepairFinalState:
+    """#658 B1B：终态按账本未解决行判定，不以尝试次数加总冒充。"""
+
+    def test_final_unresolved_reported_in_summary(self, mocker: MockerFixture) -> None:
+        """三个 flow 执行后重查未解决失败，耗尽项如实报告不静默绿色收尾."""
+        from ditto_apps.jobs.flows import repair as repair_module
+
+        bundle = mocker.MagicMock()
+        bundle.retry_manager.compensation_selection.return_value = ([], [])
+        _mock_bundle_context(mocker, bundle)
+        bundle.retry_manager.final_failure_state.return_value = {
+            "unresolved_groups": [
+                {
+                    "dataset": "etf_nav",
+                    "total": 3,
+                    "exhausted": 2,
+                    "pending_transient": 1,
+                    "pending_non_transient": 0,
+                    "oldest_trade_date": "2026-10-27",
+                    "newest_trade_date": "2026-10-29",
+                }
+            ],
+            "unresolved_total": 3,
+            "unresolved_sample": [
+                {
+                    "dataset": "etf_nav",
+                    "source": "tushare",
+                    "trade_date": "2026-10-27",
+                    "error_code": "RATE_LIMIT",
+                    "attempts": 3,
+                }
+            ],
+            "sample_truncated": False,
+        }
+        mocker.patch.object(
+            repair_module,
+            "retry_failed_flow",
+            return_value={"retried_count": 0, "success_count": 0},
+        )
+        mocker.patch.object(
+            repair_module,
+            "repair_holes_flow",
+            return_value={"repaired_count": 0},
+        )
+
+        result = _prefect_runner(repair_module.daily_repair_flow)()
+
+        summary = result["summary"]
+        assert summary["final_unresolved"]["unresolved_total"] == 3
+        assert "遗留未解决 3 项" in summary["message"]
+        assert "重试耗尽 2 项" in summary["message"]
+
+    def test_zero_unresolved_keeps_clean_message(self, mocker: MockerFixture) -> None:
+        """无遗留时消息不带终态后缀（正常绿色收尾）。"""
+        from ditto_apps.jobs.flows import repair as repair_module
+
+        bundle = mocker.MagicMock()
+        bundle.retry_manager.compensation_selection.return_value = ([], [])
+        _mock_bundle_context(mocker, bundle)
+        mocker.patch.object(
+            repair_module,
+            "retry_failed_flow",
+            return_value={"retried_count": 1, "success_count": 1},
+        )
+        mocker.patch.object(
+            repair_module,
+            "repair_holes_flow",
+            return_value={"repaired_count": 0},
+        )
+
+        result = _prefect_runner(repair_module.daily_repair_flow)()
+
+        assert result["summary"]["final_unresolved"]["unresolved_total"] == 0
+        assert "遗留未解决" not in result["summary"]["message"]

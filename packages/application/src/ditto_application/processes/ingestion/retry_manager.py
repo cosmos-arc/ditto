@@ -161,6 +161,56 @@ class RetryManager:
             if not is_retryable_ingestion_failure(group.error_code)
         ]
 
+    def final_failure_state(
+        self,
+        max_attempts: int = DEFAULT_MAX_ATTEMPTS,
+        sample_limit: int = 20,
+    ) -> dict[str, object]:
+        """
+        三个补偿 flow 执行后的最终未解决失败投影（#658 批次1B）。
+
+        以账本当前行为准（status=FAIL）：先 retry 失败、后 holes/refresh
+        成功的 (dataset, source, trade_date) 已按主键翻转 SUCCESS，不算
+        最终失败；不以本轮各 flow 的尝试次数加总冒充终态。耗尽
+        （attempts≥max）、未耗尽非瞬态持续可见；样本行带截断标记，
+        全量计数见 unresolved_groups。
+        """
+        groups = self._ingestion_log_store.list_unresolved_failure_groups(
+            source=self._source,
+            max_attempts=max_attempts,
+        )
+        samples = self._ingestion_log_store.list_unresolved_failures(
+            source=self._source,
+            limit=sample_limit + 1,
+        )
+        truncated = len(samples) > sample_limit
+        return {
+            "unresolved_groups": [
+                {
+                    "dataset": group.dataset,
+                    "total": group.total,
+                    "exhausted": group.exhausted,
+                    "pending_transient": group.pending_transient,
+                    "pending_non_transient": group.pending_non_transient,
+                    "oldest_trade_date": group.oldest_trade_date,
+                    "newest_trade_date": group.newest_trade_date,
+                }
+                for group in groups
+            ],
+            "unresolved_total": sum(group.total for group in groups),
+            "unresolved_sample": [
+                {
+                    "dataset": log.dataset,
+                    "source": log.source,
+                    "trade_date": log.trade_date,
+                    "error_code": log.error_code,
+                    "attempts": log.attempts,
+                }
+                for log in samples[:sample_limit]
+            ],
+            "sample_truncated": truncated,
+        }
+
     def retry_failed(
         self,
         dataset: str,
@@ -185,10 +235,14 @@ class RetryManager:
         transient_logs = self._ingestion_log_store.list_failed_logs(
             dataset=dataset,
             source=self._source,
-            limit=limit,
+            # limit+1 探测截断：#658 B1B——超限未处理项不得从补偿报告中
+            # 消失，pending_beyond_limit 如实报告本轮没碰到的任务数。
+            limit=limit + 1,
             max_attempts=max_attempts,
             failure_filter="transient",
         )
+        pending_beyond_limit = max(len(transient_logs) - limit, 0)
+        transient_logs = transient_logs[:limit]
         excluded = self._ingestion_log_store.list_failed_logs(
             dataset=dataset,
             source=self._source,
@@ -247,6 +301,7 @@ class RetryManager:
             still_failed_count=counts.failed,
             results=tuple(results),
             excluded_failures=tuple(excluded),
+            pending_beyond_limit=pending_beyond_limit,
         )
 
         logger.info(

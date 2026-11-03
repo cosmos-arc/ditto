@@ -133,6 +133,9 @@ def retry_failed_flow(
             "retried_count": result.retried_count,
             "success_count": result.success_count,
             "still_failed_count": result.still_failed_count,
+            # #658 B1B：满足重试资格但超出本轮 limit 未执行的任务数——
+            # limit 截断不得让未处理项从补偿报告中消失。
+            "pending_beyond_limit": result.pending_beyond_limit,
             # #623：被失败分类排除出自动重试的失败（永久/源缺失/不支持），
             # 保留原因与补偿范围供人工裁决。
             "excluded_failures": [
@@ -344,6 +347,14 @@ def daily_repair_flow(
         cast(int, r.get("repaired_count", 0)) for r in refresh_results.values()
     )
 
+    # #658 批次1B：终态按账本当前未解决行判定——三个 flow 全部执行后重查
+    # (dataset, source, trade_date)，先 retry 失败后 holes/refresh 成功的不算
+    # 最终失败；耗尽/非瞬态持续可见，不以本轮尝试次数加总冒充终态。
+    with create_ingestion_bundle(source=source) as bundle:
+        final_unresolved = bundle.retry_manager.final_failure_state(
+            max_attempts=max_attempts,
+        )
+
     return {
         "retry_result": retry_results,
         "holes_result": holes_results,
@@ -356,9 +367,28 @@ def daily_repair_flow(
             "total_repaired": total_repaired,
             "total_refreshed": total_refreshed,
             "excluded_failure_groups": excluded_groups,
+            "final_unresolved": final_unresolved,
             "message": (
                 f"修补完成: 重试 {total_retried} 个任务, 修补 {total_repaired} 个空洞, "
                 f"近窗刷新 {total_refreshed} 个会话"
+                + _final_unresolved_suffix(final_unresolved)
             ),
         },
     }
+
+
+def _final_unresolved_suffix(final_unresolved: dict[str, object]) -> str:
+    """终态后缀：有遗留未解决失败时如实报告，不静默绿色收尾."""
+    unresolved_total = cast(int, final_unresolved.get("unresolved_total", 0))
+    if unresolved_total <= 0:
+        return ""
+    exhausted = sum(
+        cast(int, group["exhausted"])
+        for group in cast(
+            list[dict[str, object]], final_unresolved.get("unresolved_groups", [])
+        )
+    )
+    return (
+        f"; 遗留未解决 {unresolved_total} 项"
+        f"(其中重试耗尽 {exhausted} 项, 样本与分桶见 final_unresolved)"
+    )

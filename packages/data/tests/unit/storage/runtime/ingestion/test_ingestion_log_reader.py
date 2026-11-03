@@ -176,3 +176,63 @@ class TestListFailedLogsFailureFilter:
         assert [log.trade_date for log in logs] == [
             f"2024-12-{day:02d}" for day in range(1, 11)
         ]
+
+
+class TestUnresolvedFailures:
+    """最终未解决失败查询（#658 批次1B 终态判定）——耗尽项持续可见。"""
+
+    def test_exhausted_rows_stay_visible(self, sqlite_client) -> None:
+        """attempts≥max 的行从重试选择消失，但仍是未解决事实。"""
+        _write_log(
+            sqlite_client, "etf_nav", "2026-10-27", error_code="RATE_LIMIT", attempts=3
+        )
+        _write_log(
+            sqlite_client, "etf_nav", "2026-10-28", error_code="RATE_LIMIT", attempts=1
+        )
+
+        reader = IngestionLogReader(sqlite_client)
+        # 重试资格口径（既有）：只看到未耗尽行
+        eligible = reader.list_failed_logs(dataset="etf_nav", limit=10)
+        assert [log.trade_date for log in eligible] == ["2026-10-28"]
+        # 终态口径（新增）：耗尽行不消失
+        unresolved = reader.list_unresolved_failures()
+        assert [log.trade_date for log in unresolved] == [
+            "2026-10-27",
+            "2026-10-28",
+        ]
+
+    def test_success_rows_are_resolved(self, sqlite_client) -> None:
+        """后续成功按主键翻转——不再出现在未解决集合。"""
+        _write_log(sqlite_client, "etf_nav", "2026-10-27", error_code="RATE_LIMIT")
+        writer = IngestionLogWriter(sqlite_client)
+        writer.save_log(
+            IngestionLog(
+                dataset="etf_nav",
+                source="tushare",
+                trade_date="2026-10-27",
+                status=IngestionStatus.SUCCESS,
+            )
+        )
+
+        assert IngestionLogReader(sqlite_client).list_unresolved_failures() == []
+
+    def test_groups_bucket_exhausted_and_non_transient(self, sqlite_client) -> None:
+        """分桶汇总：耗尽/未耗尽瞬态/未耗尽非瞬态互斥分桶。"""
+        _write_log(
+            sqlite_client, "etf_nav", "2026-10-27", error_code="RATE_LIMIT", attempts=3
+        )
+        _write_log(sqlite_client, "etf_nav", "2026-10-28", error_code="NETWORK_ERROR")
+        _write_log(sqlite_client, "etf_nav", "2026-10-29", error_code="DQ_BLOCKED")
+        _write_log(sqlite_client, "stock_daily", "2026-10-27", error_code="FETCH_ERROR")
+
+        groups = IngestionLogReader(sqlite_client).list_unresolved_failure_groups(
+            max_attempts=3
+        )
+
+        by_dataset = {group.dataset: group for group in groups}
+        assert by_dataset["etf_nav"].total == 3
+        assert by_dataset["etf_nav"].exhausted == 1
+        assert by_dataset["etf_nav"].pending_transient == 1
+        assert by_dataset["etf_nav"].pending_non_transient == 1
+        assert by_dataset["stock_daily"].total == 1
+        assert by_dataset["stock_daily"].pending_transient == 1
