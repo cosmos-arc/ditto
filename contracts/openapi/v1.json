@@ -9830,11 +9830,11 @@
         "type": "object"
       },
       "CapitalProfileQuery": {
-        "description": "个股资金画像查询参数（必需 moneyflow/top_list/top_inst＋可选两融）.",
+        "description": "个股资金画像查询参数(必需 moneyflow/top_list/top_inst＋可选两融).",
         "properties": {
           "allow_experimental_data": {
             "default": false,
-            "description": "显式允许 experimental 数据集（资金画像四数据集均 experimental）",
+            "description": "显式允许 experimental 数据集(资金画像四数据集均 experimental)",
             "title": "Allow Experimental Data",
             "type": "boolean"
           },
@@ -9853,7 +9853,7 @@
                 "type": "null"
               }
             ],
-            "description": "标的 ID（与 ticker/standard_ticker 三选一）",
+            "description": "标的 ID(与 ticker/standard_ticker 三选一)",
             "title": "Instrument Id"
           },
           "standard_ticker": {
@@ -9865,7 +9865,7 @@
                 "type": "null"
               }
             ],
-            "description": "标准代码，如 000001.SZ（与 instrument_id/ticker 三选一）",
+            "description": "标准代码,如 000001.SZ(与 instrument_id/ticker 三选一)",
             "title": "Standard Ticker"
           },
           "start_date": {
@@ -9883,7 +9883,7 @@
                 "type": "null"
               }
             ],
-            "description": "内部代码（与 instrument_id/standard_ticker 三选一）",
+            "description": "内部代码(与 instrument_id/standard_ticker 三选一)",
             "title": "Ticker"
           }
         },
@@ -9895,7 +9895,7 @@
         "type": "object"
       },
       "CapitalProfileResponse": {
-        "description": "个股资金画像响应（四数据集同标的同窗口联看）.",
+        "description": "个股资金画像响应(四数据集同标的同窗口联看).",
         "properties": {
           "instrument_id": {
             "description": "标的 ID",
@@ -9904,19 +9904,19 @@
           },
           "margin_trading": {
             "$ref": "#/components/schemas/MarginBlock",
-            "description": "两融（可选，带待补语义）"
+            "description": "两融(可选,带待补语义)"
           },
           "moneyflow": {
             "$ref": "#/components/schemas/MoneyflowBlock",
-            "description": "逐日资金流（必需）"
+            "description": "逐日资金流(必需)"
           },
           "top_inst": {
             "$ref": "#/components/schemas/TopInstBlock",
-            "description": "龙虎榜席位（必需）"
+            "description": "龙虎榜席位(必需)"
           },
           "top_list": {
             "$ref": "#/components/schemas/TopListBlock",
-            "description": "龙虎榜事件（必需）"
+            "description": "龙虎榜事件(必需)"
           },
           "window": {
             "additionalProperties": {
@@ -19623,7 +19623,7 @@
         "type": "object"
       },
       "MarginBlock": {
-        "description": "画像块：两融（pit_asof=end_date；迟发数据按 09:15 承诺显示待补）.",
+        "description": "画像块:两融(pit_asof=end_date;迟发数据按 09:15 承诺显示待补).",
         "properties": {
           "data_coverage": {
             "anyOf": [
@@ -19636,8 +19636,8 @@
             ]
           },
           "freshness_promise": {
-            "default": "交易所于下一交易日开市前（约09:15）公布前一交易日两融数据",
-            "description": "披露制度承诺（新鲜度承诺，非 PIT 能力）",
+            "default": "交易所于下一交易日开市前(约09:15)公布前一交易日两融数据",
+            "description": "披露制度承诺(新鲜度承诺,非 PIT 能力)",
             "title": "Freshness Promise",
             "type": "string"
           },
@@ -19653,12 +19653,24 @@
             "title": "Latest Trade Date"
           },
           "pending_trade_dates": {
-            "description": "窗口内已有两融历史但缺失的交易日（迟发待补；无历史＝非两融标的不适用）",
+            "description": "窗口内已有两融历史但缺失的交易日(迟发待补;无历史=非两融标的不适用)",
             "items": {
               "type": "string"
             },
             "title": "Pending Trade Dates",
             "type": "array"
+          },
+          "read_error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "可选块读取失败原因(受限展示,其余块不受影响)",
+            "title": "Read Error"
           },
           "read_semantics": {
             "default": "pit_asof",
@@ -19667,13 +19679,84 @@
           },
           "rows": {
             "items": {
-              "$ref": "#/components/schemas/Margin"
+              "$ref": "#/components/schemas/MarginProfileRow"
             },
             "title": "Rows",
+            "type": "array"
+          },
+          "sources": {
+            "description": "行来源",
+            "items": {
+              "type": "string"
+            },
+            "title": "Sources",
             "type": "array"
           }
         },
         "title": "MarginBlock",
+        "type": "object"
+      },
+      "MarginProfileRow": {
+        "description": "画像两融行(余额可空:月末披露含 null 余额为真实形态,null 非 0).",
+        "properties": {
+          "margin_buy_amount": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "融资买入额(元)",
+            "title": "Margin Buy Amount"
+          },
+          "margin_buy_balance": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "融资余额(元)",
+            "title": "Margin Buy Balance"
+          },
+          "short_sell_balance": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "融券余额(元)",
+            "title": "Short Sell Balance"
+          },
+          "short_sell_volume": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "融券卖出量",
+            "title": "Short Sell Volume"
+          },
+          "trade_date": {
+            "description": "交易日期",
+            "title": "Trade Date",
+            "type": "string"
+          }
+        },
+        "required": [
+          "trade_date"
+        ],
+        "title": "MarginProfileRow",
         "type": "object"
       },
       "MarketChartBarResponse": {
@@ -20341,7 +20424,7 @@
         "type": "object"
       },
       "MoneyflowBlock": {
-        "description": "画像块：逐日资金流（latest_available＝库内现存行，无 PIT 过滤）.",
+        "description": "画像块:逐日资金流(latest_available＝库内现存行,无 PIT 过滤).",
         "properties": {
           "data_coverage": {
             "anyOf": [
@@ -20362,7 +20445,7 @@
                 "type": "null"
               }
             ],
-            "description": "窗口内实际末端交易日（空窗为 null）",
+            "description": "窗口内实际末端交易日(空窗为 null)",
             "title": "Latest Trade Date"
           },
           "read_semantics": {
@@ -20376,13 +20459,21 @@
             },
             "title": "Rows",
             "type": "array"
+          },
+          "sources": {
+            "description": "行来源(tushare/fuyao 等)",
+            "items": {
+              "type": "string"
+            },
+            "title": "Sources",
+            "type": "array"
           }
         },
         "title": "MoneyflowBlock",
         "type": "object"
       },
       "MoneyflowRow": {
-        "description": "逐日资金流行（金额万元、量手；#518 口径）.",
+        "description": "逐日资金流行(金额万元、量手;#518 口径).",
         "properties": {
           "buy_elg_amount": {
             "anyOf": [
@@ -20393,7 +20484,7 @@
                 "type": "null"
               }
             ],
-            "description": "特大单买入金额（万元）",
+            "description": "特大单买入金额(万元)",
             "title": "Buy Elg Amount"
           },
           "buy_lg_amount": {
@@ -20405,7 +20496,7 @@
                 "type": "null"
               }
             ],
-            "description": "大单买入金额（万元）",
+            "description": "大单买入金额(万元)",
             "title": "Buy Lg Amount"
           },
           "buy_md_amount": {
@@ -20417,7 +20508,7 @@
                 "type": "null"
               }
             ],
-            "description": "中单买入金额（万元）",
+            "description": "中单买入金额(万元)",
             "title": "Buy Md Amount"
           },
           "buy_sm_amount": {
@@ -20429,7 +20520,7 @@
                 "type": "null"
               }
             ],
-            "description": "小单买入金额（万元）",
+            "description": "小单买入金额(万元)",
             "title": "Buy Sm Amount"
           },
           "net_mf_amount": {
@@ -20441,7 +20532,7 @@
                 "type": "null"
               }
             ],
-            "description": "净流入额（万元）",
+            "description": "净流入额(万元)",
             "title": "Net Mf Amount"
           },
           "net_mf_vol": {
@@ -20453,7 +20544,7 @@
                 "type": "null"
               }
             ],
-            "description": "净流入量（手）",
+            "description": "净流入量(手)",
             "title": "Net Mf Vol"
           },
           "sell_elg_amount": {
@@ -20465,7 +20556,7 @@
                 "type": "null"
               }
             ],
-            "description": "特大单卖出金额（万元）",
+            "description": "特大单卖出金额(万元)",
             "title": "Sell Elg Amount"
           },
           "sell_lg_amount": {
@@ -20477,7 +20568,7 @@
                 "type": "null"
               }
             ],
-            "description": "大单卖出金额（万元）",
+            "description": "大单卖出金额(万元)",
             "title": "Sell Lg Amount"
           },
           "sell_md_amount": {
@@ -20489,7 +20580,7 @@
                 "type": "null"
               }
             ],
-            "description": "中单卖出金额（万元）",
+            "description": "中单卖出金额(万元)",
             "title": "Sell Md Amount"
           },
           "sell_sm_amount": {
@@ -20501,7 +20592,7 @@
                 "type": "null"
               }
             ],
-            "description": "小单卖出金额（万元）",
+            "description": "小单卖出金额(万元)",
             "title": "Sell Sm Amount"
           },
           "trade_date": {
@@ -26431,7 +26522,7 @@
         "type": "string"
       },
       "TopInstBlock": {
-        "description": "画像块：龙虎榜席位（与 top_list 同事件范围）.",
+        "description": "画像块:龙虎榜席位(与 top_list 同事件范围).",
         "properties": {
           "data_coverage": {
             "anyOf": [
@@ -26465,13 +26556,21 @@
             },
             "title": "Rows",
             "type": "array"
+          },
+          "sources": {
+            "description": "行来源",
+            "items": {
+              "type": "string"
+            },
+            "title": "Sources",
+            "type": "array"
           }
         },
         "title": "TopInstBlock",
         "type": "object"
       },
       "TopInstRow": {
-        "description": "龙虎榜席位明细行（单边 null 保真；席位事件≠机构总仓位）.",
+        "description": "龙虎榜席位明细行(单边 null 保真;席位事件≠机构总仓位).",
         "properties": {
           "buy": {
             "anyOf": [
@@ -26482,7 +26581,7 @@
                 "type": "null"
               }
             ],
-            "description": "买入金额（元；卖方席位为 null）",
+            "description": "买入金额(元;卖方席位为 null)",
             "title": "Buy"
           },
           "buy_rate": {
@@ -26494,7 +26593,7 @@
                 "type": "null"
               }
             ],
-            "description": "买入占比（%）",
+            "description": "买入占比(%)",
             "title": "Buy Rate"
           },
           "exalter": {
@@ -26511,7 +26610,7 @@
                 "type": "null"
               }
             ],
-            "description": "净买入（元）",
+            "description": "净买入(元)",
             "title": "Net Buy"
           },
           "reason": {
@@ -26528,7 +26627,7 @@
                 "type": "null"
               }
             ],
-            "description": "卖出金额（元；买方席位为 null）",
+            "description": "卖出金额(元;买方席位为 null)",
             "title": "Sell"
           },
           "sell_rate": {
@@ -26540,7 +26639,7 @@
                 "type": "null"
               }
             ],
-            "description": "卖出占比（%）",
+            "description": "卖出占比(%)",
             "title": "Sell Rate"
           },
           "side": {
@@ -26570,7 +26669,7 @@
         "type": "object"
       },
       "TopListBlock": {
-        "description": "画像块：龙虎榜事件（无事件＝合法空，不冒充失败）.",
+        "description": "画像块:龙虎榜事件(无事件＝合法空,不冒充失败).",
         "properties": {
           "data_coverage": {
             "anyOf": [
@@ -26604,13 +26703,21 @@
             },
             "title": "Rows",
             "type": "array"
+          },
+          "sources": {
+            "description": "行来源",
+            "items": {
+              "type": "string"
+            },
+            "title": "Sources",
+            "type": "array"
           }
         },
         "title": "TopListBlock",
         "type": "object"
       },
       "TopListRow": {
-        "description": "龙虎榜个股明细行（金额元；同日多 reason 独立成行）.",
+        "description": "龙虎榜个股明细行(金额元;同日多 reason 独立成行).",
         "properties": {
           "amount": {
             "anyOf": [
@@ -26621,7 +26728,7 @@
                 "type": "null"
               }
             ],
-            "description": "总成交额（元）",
+            "description": "总成交额(元)",
             "title": "Amount"
           },
           "amount_rate": {
@@ -26633,7 +26740,7 @@
                 "type": "null"
               }
             ],
-            "description": "成交额占比（%）",
+            "description": "成交额占比(%)",
             "title": "Amount Rate"
           },
           "close": {
@@ -26645,7 +26752,7 @@
                 "type": "null"
               }
             ],
-            "description": "收盘价（元）",
+            "description": "收盘价(元)",
             "title": "Close"
           },
           "l_amount": {
@@ -26657,7 +26764,7 @@
                 "type": "null"
               }
             ],
-            "description": "龙虎榜成交额（元）",
+            "description": "龙虎榜成交额(元)",
             "title": "L Amount"
           },
           "l_buy": {
@@ -26669,7 +26776,7 @@
                 "type": "null"
               }
             ],
-            "description": "龙虎榜买入额（元）",
+            "description": "龙虎榜买入额(元)",
             "title": "L Buy"
           },
           "l_sell": {
@@ -26681,7 +26788,7 @@
                 "type": "null"
               }
             ],
-            "description": "龙虎榜卖出额（元）",
+            "description": "龙虎榜卖出额(元)",
             "title": "L Sell"
           },
           "net_amount": {
@@ -26693,7 +26800,7 @@
                 "type": "null"
               }
             ],
-            "description": "龙虎榜净买入额（元）",
+            "description": "龙虎榜净买入额(元)",
             "title": "Net Amount"
           },
           "net_rate": {
@@ -26705,7 +26812,7 @@
                 "type": "null"
               }
             ],
-            "description": "净买入率（%）",
+            "description": "净买入率(%)",
             "title": "Net Rate"
           },
           "pct_change": {
@@ -26717,7 +26824,7 @@
                 "type": "null"
               }
             ],
-            "description": "涨跌幅（%）",
+            "description": "涨跌幅(%)",
             "title": "Pct Change"
           },
           "reason": {
@@ -26739,7 +26846,7 @@
                 "type": "null"
               }
             ],
-            "description": "换手率（%）",
+            "description": "换手率(%)",
             "title": "Turnover Rate"
           }
         },

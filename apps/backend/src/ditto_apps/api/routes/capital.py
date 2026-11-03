@@ -7,8 +7,9 @@ maturity: experimental
 from __future__ import annotations
 
 import asyncio
-from datetime import date
+from datetime import date, datetime
 from typing import Annotated
+from zoneinfo import ZoneInfo
 
 import polars as pl
 from dishka import FromComponent
@@ -35,6 +36,7 @@ from ditto_apps.models.capital import (
     TopListBlock,
     Valuation,
     to_margin_list,
+    to_margin_profile_rows,
     to_moneyflow_rows,
     to_top_inst_rows,
     to_top_list_rows,
@@ -43,6 +45,8 @@ from ditto_apps.models.capital import (
 from ditto_apps.models.common import APIResponse, DataCoverageInfo
 
 router = APIRouter(prefix="/capital", tags=["capital"])
+
+_SHANGHAI_TZ = ZoneInfo("Asia/Shanghai")
 
 
 def _experimental_kwargs(allow_experimental_data: bool) -> dict[str, bool]:
@@ -194,6 +198,13 @@ def _coverage(
     return DataCoverageInfo.from_view(limit) if limit is not None else None
 
 
+def _block_sources(rows: pl.DataFrame) -> list[str]:
+    """块内行来源去重升序(来源身份随画像传播)."""
+    if rows.is_empty() or "source" not in rows.columns:
+        return []
+    return sorted(str(item) for item in rows["source"].unique().to_list())
+
+
 @router.post(
     "/profile",
     response_model=APIResponse[CapitalProfileResponse],
@@ -237,6 +248,7 @@ async def post_capital_profile(
             start=query.start_date,
             end=query.end_date,
             allow_experimental_data=query.allow_experimental_data,
+            today=datetime.now(_SHANGHAI_TZ).date(),
         ),
     )
     profile = CapitalProfileResponse(
@@ -248,26 +260,30 @@ async def post_capital_profile(
         moneyflow=MoneyflowBlock(
             rows=to_moneyflow_rows(result.moneyflow.rows),
             latest_trade_date=result.moneyflow.latest_trade_date,
+            sources=_block_sources(result.moneyflow.rows),
             data_coverage=_coverage(coverage_facade, "moneyflow"),
         ),
         top_list=TopListBlock(
             rows=to_top_list_rows(result.top_list.rows),
             latest_trade_date=result.top_list.latest_trade_date,
+            sources=_block_sources(result.top_list.rows),
             data_coverage=_coverage(coverage_facade, "top_list"),
         ),
         top_inst=TopInstBlock(
             rows=to_top_inst_rows(result.top_inst.rows),
             latest_trade_date=result.top_inst.latest_trade_date,
+            sources=_block_sources(result.top_inst.rows),
             data_coverage=_coverage(coverage_facade, "top_inst"),
         ),
         margin_trading=MarginBlock(
-            rows=to_margin_list(result.margin_trading.rows),
+            rows=to_margin_profile_rows(result.margin_trading.rows),
             latest_trade_date=result.margin_trading.latest_trade_date,
+            sources=_block_sources(result.margin_trading.rows),
             pending_trade_dates=list(result.margin_trading.pending_trade_dates),
+            read_error=result.margin_trading.read_error,
             data_coverage=_coverage(coverage_facade, "margin_trading"),
         ),
     )
-    return APIResponse(
-        data=profile,
-        read_semantics="latest_available",
-    )
+    # 混合语义响应(margin=pit_asof、其余=latest_available):信封不声明
+    # 单一语义,各块 read_semantics 自持(correctness F4)。
+    return APIResponse(data=profile)

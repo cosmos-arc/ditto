@@ -88,12 +88,13 @@ class TradingDaysPort(Protocol):
 
 @dataclass(frozen=True)
 class CapitalProfileRequest:
-    """画像请求：标的＋窗口＋experimental 通道."""
+    """画像请求：标的＋窗口＋experimental 通道＋当前日."""
 
     instrument_id: int
     start: date
     end: date
     allow_experimental_data: bool = False
+    today: date | None = None  # 待补窗上界；None=不设上界(测试用)
 
 
 @dataclass(frozen=True)
@@ -103,6 +104,7 @@ class ProfileBlock:
     rows: pl.DataFrame
     latest_trade_date: str | None = None
     pending_trade_dates: tuple[str, ...] = ()
+    read_error: str | None = None
 
 
 @dataclass(frozen=True)
@@ -149,13 +151,19 @@ class CapitalProfileQueryFacade:
         top_inst = self._capital.get_top_inst(
             request.instrument_id, start, end, allow_experimental_data=flag
         )
-        margin = self._capital.get_margin_trading_range(
-            request.instrument_id,
-            start,
-            end,
-            as_of_date=request.end,
-            allow_experimental_data=flag,
-        )
+        # margin 是可选块(story 11):读取失败时受限展示,其余三块不受影响。
+        try:
+            margin = self._capital.get_margin_trading_range(
+                request.instrument_id,
+                start,
+                end,
+                as_of_date=request.end,
+                allow_experimental_data=flag,
+            )
+            margin_error: str | None = None
+        except Exception as error:
+            margin = pl.DataFrame()
+            margin_error = f"{type(error).__name__}: {error}"
         return CapitalProfileResult(
             instrument_id=request.instrument_id,
             start=request.start,
@@ -172,23 +180,35 @@ class CapitalProfileQueryFacade:
             margin_trading=ProfileBlock(
                 rows=margin,
                 latest_trade_date=_latest_trade_date(margin),
-                pending_trade_dates=self._margin_pending_dates(margin, start, end),
+                pending_trade_dates=self._margin_pending_dates(
+                    margin, start, end, today=request.today
+                ),
+                read_error=margin_error,
             ),
         )
 
     def _margin_pending_dates(
-        self, rows: pl.DataFrame, start: str, end: str
+        self,
+        rows: pl.DataFrame,
+        start: str,
+        end: str,
+        *,
+        today: date | None = None,
     ) -> tuple[str, ...]:
         """
-        两融待补日＝窗口尾部观察窗内、晚于实际末端的交易日.
+        两融待补日＝观察窗内、晚于实际末端且不超过当前日的交易日.
 
         仅当窗口内有两融行才推导（无行＝非两融标的或窗口外历史，
         待补语义不适用）；观察窗＝窗口尾部 MARGIN_PENDING_WINDOW_DAYS
         个交易日（与 02:00 夜修滑窗对齐，出窗归源端补发/运维复查）。
+        today 上界把未发生的会话排除在「迟发」之外（correctness F3）。
         """
         latest = _latest_trade_date(rows)
         if latest is None:
             return ()
         trading_days = self._calendar.list_trading_days(start, end)
         watch = trading_days[-MARGIN_PENDING_WINDOW_DAYS:]
-        return tuple(day for day in watch if day > latest)
+        ceiling = today.isoformat() if today is not None else None
+        return tuple(
+            day for day in watch if day > latest and (ceiling is None or day <= ceiling)
+        )

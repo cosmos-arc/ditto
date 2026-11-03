@@ -1,6 +1,6 @@
 /**
  * DO NOT EDIT: generated from contracts/openapi/v1.json.
- * Schema SHA-256: b381eba7b2ff4eefb9e59a5be58c3435dadf3c19ec64d41440ab8e6ac1cd57af
+ * Schema SHA-256: bc2c3b0bc9ecd36743abf7796d5b3293dac3638a988e308be9103bf9e82910ba
  * Generator: openapi-typescript 7.13.0
  */
 
@@ -7366,12 +7366,12 @@ export interface components {
         };
         /**
          * CapitalProfileQuery
-         * @description 个股资金画像查询参数（必需 moneyflow/top_list/top_inst＋可选两融）.
+         * @description 个股资金画像查询参数(必需 moneyflow/top_list/top_inst＋可选两融).
          */
         CapitalProfileQuery: {
             /**
              * Allow Experimental Data
-             * @description 显式允许 experimental 数据集（资金画像四数据集均 experimental）
+             * @description 显式允许 experimental 数据集(资金画像四数据集均 experimental)
              * @default false
              */
             allow_experimental_data: boolean;
@@ -7383,12 +7383,12 @@ export interface components {
             end_date: string;
             /**
              * Instrument Id
-             * @description 标的 ID（与 ticker/standard_ticker 三选一）
+             * @description 标的 ID(与 ticker/standard_ticker 三选一)
              */
             instrument_id?: number | null;
             /**
              * Standard Ticker
-             * @description 标准代码，如 000001.SZ（与 instrument_id/ticker 三选一）
+             * @description 标准代码,如 000001.SZ(与 instrument_id/ticker 三选一)
              */
             standard_ticker?: string | null;
             /**
@@ -7399,13 +7399,13 @@ export interface components {
             start_date: string;
             /**
              * Ticker
-             * @description 内部代码（与 instrument_id/standard_ticker 三选一）
+             * @description 内部代码(与 instrument_id/standard_ticker 三选一)
              */
             ticker?: string | null;
         };
         /**
          * CapitalProfileResponse
-         * @description 个股资金画像响应（四数据集同标的同窗口联看）.
+         * @description 个股资金画像响应(四数据集同标的同窗口联看).
          */
         CapitalProfileResponse: {
             /**
@@ -7413,13 +7413,13 @@ export interface components {
              * @description 标的 ID
              */
             instrument_id: number;
-            /** @description 两融（可选，带待补语义） */
+            /** @description 两融(可选,带待补语义) */
             margin_trading: components["schemas"]["MarginBlock"];
-            /** @description 逐日资金流（必需） */
+            /** @description 逐日资金流(必需) */
             moneyflow: components["schemas"]["MoneyflowBlock"];
-            /** @description 龙虎榜席位（必需） */
+            /** @description 龙虎榜席位(必需) */
             top_inst: components["schemas"]["TopInstBlock"];
-            /** @description 龙虎榜事件（必需） */
+            /** @description 龙虎榜事件(必需) */
             top_list: components["schemas"]["TopListBlock"];
             /**
              * Window
@@ -12063,30 +12063,71 @@ export interface components {
         };
         /**
          * MarginBlock
-         * @description 画像块：两融（pit_asof=end_date；迟发数据按 09:15 承诺显示待补）.
+         * @description 画像块:两融(pit_asof=end_date;迟发数据按 09:15 承诺显示待补).
          */
         MarginBlock: {
             data_coverage?: components["schemas"]["DataCoverageInfo"] | null;
             /**
              * Freshness Promise
-             * @description 披露制度承诺（新鲜度承诺，非 PIT 能力）
-             * @default 交易所于下一交易日开市前（约09:15）公布前一交易日两融数据
+             * @description 披露制度承诺(新鲜度承诺,非 PIT 能力)
+             * @default 交易所于下一交易日开市前(约09:15)公布前一交易日两融数据
              */
             freshness_promise: string;
             /** Latest Trade Date */
             latest_trade_date?: string | null;
             /**
              * Pending Trade Dates
-             * @description 窗口内已有两融历史但缺失的交易日（迟发待补；无历史＝非两融标的不适用）
+             * @description 窗口内已有两融历史但缺失的交易日(迟发待补;无历史=非两融标的不适用)
              */
             pending_trade_dates?: string[];
+            /**
+             * Read Error
+             * @description 可选块读取失败原因(受限展示,其余块不受影响)
+             */
+            read_error?: string | null;
             /**
              * Read Semantics
              * @default pit_asof
              */
             read_semantics: string;
             /** Rows */
-            rows?: components["schemas"]["Margin"][];
+            rows?: components["schemas"]["MarginProfileRow"][];
+            /**
+             * Sources
+             * @description 行来源
+             */
+            sources?: string[];
+        };
+        /**
+         * MarginProfileRow
+         * @description 画像两融行(余额可空:月末披露含 null 余额为真实形态,null 非 0).
+         */
+        MarginProfileRow: {
+            /**
+             * Margin Buy Amount
+             * @description 融资买入额(元)
+             */
+            margin_buy_amount?: number | null;
+            /**
+             * Margin Buy Balance
+             * @description 融资余额(元)
+             */
+            margin_buy_balance?: number | null;
+            /**
+             * Short Sell Balance
+             * @description 融券余额(元)
+             */
+            short_sell_balance?: number | null;
+            /**
+             * Short Sell Volume
+             * @description 融券卖出量
+             */
+            short_sell_volume?: number | null;
+            /**
+             * Trade Date
+             * @description 交易日期
+             */
+            trade_date: string;
         };
         /** MarketChartBarResponse */
         MarketChartBarResponse: {
@@ -12383,13 +12424,13 @@ export interface components {
         };
         /**
          * MoneyflowBlock
-         * @description 画像块：逐日资金流（latest_available＝库内现存行，无 PIT 过滤）.
+         * @description 画像块:逐日资金流(latest_available＝库内现存行,无 PIT 过滤).
          */
         MoneyflowBlock: {
             data_coverage?: components["schemas"]["DataCoverageInfo"] | null;
             /**
              * Latest Trade Date
-             * @description 窗口内实际末端交易日（空窗为 null）
+             * @description 窗口内实际末端交易日(空窗为 null)
              */
             latest_trade_date?: string | null;
             /**
@@ -12399,60 +12440,65 @@ export interface components {
             read_semantics: string;
             /** Rows */
             rows?: components["schemas"]["MoneyflowRow"][];
+            /**
+             * Sources
+             * @description 行来源(tushare/fuyao 等)
+             */
+            sources?: string[];
         };
         /**
          * MoneyflowRow
-         * @description 逐日资金流行（金额万元、量手；#518 口径）.
+         * @description 逐日资金流行(金额万元、量手;#518 口径).
          */
         MoneyflowRow: {
             /**
              * Buy Elg Amount
-             * @description 特大单买入金额（万元）
+             * @description 特大单买入金额(万元)
              */
             buy_elg_amount?: number | null;
             /**
              * Buy Lg Amount
-             * @description 大单买入金额（万元）
+             * @description 大单买入金额(万元)
              */
             buy_lg_amount?: number | null;
             /**
              * Buy Md Amount
-             * @description 中单买入金额（万元）
+             * @description 中单买入金额(万元)
              */
             buy_md_amount?: number | null;
             /**
              * Buy Sm Amount
-             * @description 小单买入金额（万元）
+             * @description 小单买入金额(万元)
              */
             buy_sm_amount?: number | null;
             /**
              * Net Mf Amount
-             * @description 净流入额（万元）
+             * @description 净流入额(万元)
              */
             net_mf_amount?: number | null;
             /**
              * Net Mf Vol
-             * @description 净流入量（手）
+             * @description 净流入量(手)
              */
             net_mf_vol?: number | null;
             /**
              * Sell Elg Amount
-             * @description 特大单卖出金额（万元）
+             * @description 特大单卖出金额(万元)
              */
             sell_elg_amount?: number | null;
             /**
              * Sell Lg Amount
-             * @description 大单卖出金额（万元）
+             * @description 大单卖出金额(万元)
              */
             sell_lg_amount?: number | null;
             /**
              * Sell Md Amount
-             * @description 中单卖出金额（万元）
+             * @description 中单卖出金额(万元)
              */
             sell_md_amount?: number | null;
             /**
              * Sell Sm Amount
-             * @description 小单卖出金额（万元）
+             * @description 小单卖出金额(万元)
              */
             sell_sm_amount?: number | null;
             /**
@@ -15297,7 +15343,7 @@ export interface components {
         Timeframe: "daily" | "weekly";
         /**
          * TopInstBlock
-         * @description 画像块：龙虎榜席位（与 top_list 同事件范围）.
+         * @description 画像块:龙虎榜席位(与 top_list 同事件范围).
          */
         TopInstBlock: {
             data_coverage?: components["schemas"]["DataCoverageInfo"] | null;
@@ -15310,20 +15356,25 @@ export interface components {
             read_semantics: string;
             /** Rows */
             rows?: components["schemas"]["TopInstRow"][];
+            /**
+             * Sources
+             * @description 行来源
+             */
+            sources?: string[];
         };
         /**
          * TopInstRow
-         * @description 龙虎榜席位明细行（单边 null 保真；席位事件≠机构总仓位）.
+         * @description 龙虎榜席位明细行(单边 null 保真;席位事件≠机构总仓位).
          */
         TopInstRow: {
             /**
              * Buy
-             * @description 买入金额（元；卖方席位为 null）
+             * @description 买入金额(元;卖方席位为 null)
              */
             buy?: number | null;
             /**
              * Buy Rate
-             * @description 买入占比（%）
+             * @description 买入占比(%)
              */
             buy_rate?: number | null;
             /**
@@ -15333,7 +15384,7 @@ export interface components {
             exalter: string;
             /**
              * Net Buy
-             * @description 净买入（元）
+             * @description 净买入(元)
              */
             net_buy?: number | null;
             /**
@@ -15343,12 +15394,12 @@ export interface components {
             reason: string;
             /**
              * Sell
-             * @description 卖出金额（元；买方席位为 null）
+             * @description 卖出金额(元;买方席位为 null)
              */
             sell?: number | null;
             /**
              * Sell Rate
-             * @description 卖出占比（%）
+             * @description 卖出占比(%)
              */
             sell_rate?: number | null;
             /**
@@ -15364,7 +15415,7 @@ export interface components {
         };
         /**
          * TopListBlock
-         * @description 画像块：龙虎榜事件（无事件＝合法空，不冒充失败）.
+         * @description 画像块:龙虎榜事件(无事件＝合法空,不冒充失败).
          */
         TopListBlock: {
             data_coverage?: components["schemas"]["DataCoverageInfo"] | null;
@@ -15377,55 +15428,60 @@ export interface components {
             read_semantics: string;
             /** Rows */
             rows?: components["schemas"]["TopListRow"][];
+            /**
+             * Sources
+             * @description 行来源
+             */
+            sources?: string[];
         };
         /**
          * TopListRow
-         * @description 龙虎榜个股明细行（金额元；同日多 reason 独立成行）.
+         * @description 龙虎榜个股明细行(金额元;同日多 reason 独立成行).
          */
         TopListRow: {
             /**
              * Amount
-             * @description 总成交额（元）
+             * @description 总成交额(元)
              */
             amount?: number | null;
             /**
              * Amount Rate
-             * @description 成交额占比（%）
+             * @description 成交额占比(%)
              */
             amount_rate?: number | null;
             /**
              * Close
-             * @description 收盘价（元）
+             * @description 收盘价(元)
              */
             close?: number | null;
             /**
              * L Amount
-             * @description 龙虎榜成交额（元）
+             * @description 龙虎榜成交额(元)
              */
             l_amount?: number | null;
             /**
              * L Buy
-             * @description 龙虎榜买入额（元）
+             * @description 龙虎榜买入额(元)
              */
             l_buy?: number | null;
             /**
              * L Sell
-             * @description 龙虎榜卖出额（元）
+             * @description 龙虎榜卖出额(元)
              */
             l_sell?: number | null;
             /**
              * Net Amount
-             * @description 龙虎榜净买入额（元）
+             * @description 龙虎榜净买入额(元)
              */
             net_amount?: number | null;
             /**
              * Net Rate
-             * @description 净买入率（%）
+             * @description 净买入率(%)
              */
             net_rate?: number | null;
             /**
              * Pct Change
-             * @description 涨跌幅（%）
+             * @description 涨跌幅(%)
              */
             pct_change?: number | null;
             /**
@@ -15440,7 +15496,7 @@ export interface components {
             trade_date: string;
             /**
              * Turnover Rate
-             * @description 换手率（%）
+             * @description 换手率(%)
              */
             turnover_rate?: number | null;
         };

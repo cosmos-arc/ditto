@@ -16,7 +16,7 @@ from datetime import date as dt_date
 from typing import Any
 
 import polars as pl
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from ditto_apps.models.common import DataCoverageInfo
 
@@ -296,6 +296,7 @@ __all__ = [
     "CapitalProfileResponse",
     "Margin",
     "MarginBlock",
+    "MarginProfileRow",
     "MarginQuery",
     "MoneyflowBlock",
     "MoneyflowRow",
@@ -317,6 +318,9 @@ __all__ = [
 # ---------------------------------------------------------------------------
 
 
+_MAX_PROFILE_WINDOW_DAYS = 366
+
+
 class CapitalProfileQuery(BaseModel):
     """个股资金画像查询参数(必需 moneyflow/top_list/top_inst＋可选两融)."""
 
@@ -336,6 +340,16 @@ class CapitalProfileQuery(BaseModel):
         default=False,
         description="显式允许 experimental 数据集(资金画像四数据集均 experimental)",
     )
+
+    @model_validator(mode="after")
+    def _validate_window(self) -> CapitalProfileQuery:
+        if self.start_date > self.end_date:
+            raise ValueError("start_date must not be after end_date")
+        if (self.end_date - self.start_date).days > _MAX_PROFILE_WINDOW_DAYS:
+            raise ValueError(
+                f"profile window must not exceed {_MAX_PROFILE_WINDOW_DAYS} days"
+            )
+        return self
 
     model_config = ConfigDict(extra="ignore")
 
@@ -402,6 +416,9 @@ class MoneyflowBlock(BaseModel):
 
     rows: list[MoneyflowRow] = Field(default_factory=list)
     read_semantics: str = Field(default="latest_available")
+    sources: list[str] = Field(
+        default_factory=list, description="行来源(tushare/fuyao 等)"
+    )
     latest_trade_date: str | None = Field(
         default=None, description="窗口内实际末端交易日(空窗为 null)"
     )
@@ -415,6 +432,7 @@ class TopListBlock(BaseModel):
 
     rows: list[TopListRow] = Field(default_factory=list)
     read_semantics: str = Field(default="latest_available")
+    sources: list[str] = Field(default_factory=list, description="行来源")
     latest_trade_date: str | None = Field(default=None)
     data_coverage: DataCoverageInfo | None = None
 
@@ -426,16 +444,50 @@ class TopInstBlock(BaseModel):
 
     rows: list[TopInstRow] = Field(default_factory=list)
     read_semantics: str = Field(default="latest_available")
+    sources: list[str] = Field(default_factory=list, description="行来源")
     latest_trade_date: str | None = Field(default=None)
     data_coverage: DataCoverageInfo | None = None
 
     model_config = ConfigDict(strict=True, extra="ignore")
 
 
+class MarginProfileRow(BaseModel):
+    """画像两融行(余额可空:月末披露含 null 余额为真实形态,null 非 0)."""
+
+    trade_date: str = Field(description="交易日期")
+    margin_buy_balance: float | None = Field(default=None, description="融资余额(元)")
+    short_sell_balance: float | None = Field(default=None, description="融券余额(元)")
+    margin_buy_amount: float | None = Field(default=None, description="融资买入额(元)")
+    short_sell_volume: float | None = Field(default=None, description="融券卖出量")
+
+    model_config = ConfigDict(strict=True, extra="ignore")
+
+
+def to_margin_profile_rows(df: pl.DataFrame) -> list[MarginProfileRow]:
+    """Margin 帧转画像行(null 原样传播,correctness F1)."""
+    if df.is_empty():
+        return []
+    return [
+        MarginProfileRow(
+            trade_date=_iso(row["trade_date"]),
+            margin_buy_balance=row.get("margin_buy_balance"),
+            short_sell_balance=row.get("short_sell_balance"),
+            margin_buy_amount=row.get("margin_buy_amount"),
+            short_sell_volume=row.get("short_sell_volume"),
+        )
+        for row in df.to_dicts()
+    ]
+
+
 class MarginBlock(BaseModel):
     """画像块:两融(pit_asof=end_date;迟发数据按 09:15 承诺显示待补)."""
 
-    rows: list[Margin] = Field(default_factory=list)
+    rows: list[MarginProfileRow] = Field(default_factory=list)
+    sources: list[str] = Field(default_factory=list, description="行来源")
+    read_error: str | None = Field(
+        default=None,
+        description="可选块读取失败原因(受限展示,其余块不受影响)",
+    )
     read_semantics: str = Field(default="pit_asof")
     latest_trade_date: str | None = Field(default=None)
     pending_trade_dates: list[str] = Field(

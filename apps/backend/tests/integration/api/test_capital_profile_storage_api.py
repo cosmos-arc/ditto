@@ -61,6 +61,7 @@ def _make_store(tmp_path: Path, mode: str) -> CapitalStore:
                     "knowledge_date": [date(2026, 10, 27)],
                     "net_mf_amount": [123.4],
                     "net_mf_vol": [500.0],
+                    "source": ["tushare"],
                 },
                 schema_overrides={"net_mf_amount": pl.Float64},
             ),
@@ -95,19 +96,20 @@ def _make_store(tmp_path: Path, mode: str) -> CapitalStore:
             ),
             2026,
         )
+    margin_rows = {
+        "instrument_id": [1, 1],
+        "trade_date": ["2026-10-26", "2026-10-27"],
+        "knowledge_date": ["2026-10-27", "2026-10-28"],
+        "effective_from": ["2026-10-27", "2026-10-28"],
+        "effective_to": [None, None],
+        "margin_buy_balance": [None, 1.0],
+        "short_sell_balance": [2.0, None],
+        "margin_buy_amount": [None, 3.0],
+        "short_sell_volume": [None, 4],
+    }
     margin_reader = MagicMock()
     margin_reader.get_range.return_value = pl.DataFrame(
-        {
-            "instrument_id": [1],
-            "trade_date": ["2026-10-26"],
-            "knowledge_date": ["2026-10-27"],
-            "effective_from": ["2026-10-27"],
-            "effective_to": [None],
-            "margin_buy_balance": [1.0],
-            "short_sell_balance": [2.0],
-            "margin_buy_amount": [3.0],
-            "short_sell_volume": [4],
-        },
+        margin_rows,
         schema_overrides={"effective_to": pl.String},
     )
     readers = CapitalReaders(
@@ -184,17 +186,18 @@ async def test_capital_profile_four_blocks(tmp_path: Path, mode: str) -> None:
             inst = payload["top_inst"]["rows"][0]
             assert inst["buy"] == 1000.0
             assert inst["sell"] is None
-            assert payload["margin_trading"]["rows"][0]["margin_buy_balance"] == 1.0
+            margin_rows_out = payload["margin_trading"]["rows"]
+            # null 余额月末行原样传播(correctness F1),不再 500 或填 0。
+            assert margin_rows_out[0]["margin_buy_balance"] is None
+            assert margin_rows_out[1]["margin_buy_balance"] == 1.0
             assert payload["margin_trading"]["read_semantics"] == "pit_asof"
+            assert payload["moneyflow"]["sources"] == ["tushare"]
         else:
             for block in ("moneyflow", "top_list", "top_inst"):
                 assert payload[block]["rows"] == []
                 assert payload[block]["latest_trade_date"] is None
-        # margin 末端 10-26，窗口尾部交易日 [10-26,10-27,10-28] 内 10-27/10-28 待补。
-        assert payload["margin_trading"]["pending_trade_dates"] == [
-            "2026-10-27",
-            "2026-10-28",
-        ]
+        # margin 末端 10-27(stub 恒有行),观察窗尾 10-28 待补(today 钳制排除未来)。
+        assert payload["margin_trading"]["pending_trade_dates"] == ["2026-10-28"]
         for block in ("moneyflow", "top_list", "top_inst", "margin_trading"):
             assert payload[block]["data_coverage"]["dataset"] == (
                 "margin_trading" if block == "margin_trading" else block
@@ -229,6 +232,71 @@ async def test_capital_profile_requires_experimental_gate(tmp_path: Path) -> Non
         )
     assert result.moneyflow.latest_trade_date == "2026-10-26"
     assert "experimental" in str(exc_info.value)
+
+
+@pytest.mark.asyncio
+async def test_capital_profile_window_validation(tmp_path: Path) -> None:
+    """F8: 倒挂窗口 422,不冒充全空 200."""
+    register_metrics()
+    capital_store = _make_store(tmp_path, "stored")
+    profile_facade = CapitalProfileQueryFacade(
+        capital=CapitalQueryFacade(capital_store=capital_store),
+        calendar=_StubCalendar(),
+    )
+    metadata_facade = MagicMock(spec=MetadataQueryFacade)
+    metadata_facade.resolve_instrument_identifier.return_value = 1
+
+    class TestProvider(Provider):
+        scope = Scope.REQUEST
+
+        @provide
+        def profile(self) -> CapitalProfileQueryFacade:
+            return profile_facade
+
+        @provide
+        def coverage(self) -> DatasetCoverageQueryFacade:
+            return DatasetCoverageQueryFacade()
+
+        @provide
+        def metadata(self) -> MetadataQueryFacade:
+            return metadata_facade
+
+    container = make_async_container(TestProvider())
+    app = FastAPI()
+    setup_dishka(container, app)
+    app.include_router(router, prefix="/api/v1")
+    try:
+        async with AsyncClient(
+            transport=ASGITransport(app=app), base_url="http://test"
+        ) as client:
+            response = await client.post(
+                "/api/v1/capital/profile",
+                json={
+                    "instrument_id": 1,
+                    "start_date": "2026-10-28",
+                    "end_date": "2026-10-26",
+                    "allow_experimental_data": True,
+                },
+            )
+        assert response.status_code == 422, response.text
+    finally:
+        await container.close()
+
+
+def test_margin_pending_excludes_future_sessions() -> None:
+    """F3: today 上界把未来交易日排除在待补之外."""
+    from datetime import date as date_type
+
+    from ditto_application.queries.capital_profile import (
+        CapitalProfileQueryFacade as F,
+    )
+
+    rows = pl.DataFrame({"trade_date": ["2026-10-26"]})
+    facade = F(capital=MagicMock(), calendar=_StubCalendar())
+    pending = facade._margin_pending_dates(
+        rows, "2026-10-26", "2026-10-28", today=date_type(2026, 10, 27)
+    )
+    assert pending == ("2026-10-27",)
 
 
 def test_margin_block_model_defaults() -> None:

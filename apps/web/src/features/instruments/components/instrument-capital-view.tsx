@@ -1,11 +1,11 @@
 import { useState } from "react";
 import { ContextSection } from "@/components/domain";
-import { useCapitalProfile } from "../hooks/use-instrument-workspace";
+import { useCapitalProfile, useInstrumentDetail } from "../hooks/use-instrument-workspace";
 
+// 上海日(chart view 同款 +8h 偏移,correctness F7)。
 function dateDaysAgo(days: number): string {
-	const date = new Date();
-	date.setUTCDate(date.getUTCDate() - days);
-	return date.toISOString().slice(0, 10);
+	const shanghaiNow = Date.now() + 8 * 3600 * 1000;
+	return new Date(shanghaiNow - days * 86400 * 1000).toISOString().slice(0, 10);
 }
 
 type CapitalProfile = {
@@ -36,10 +36,14 @@ type CapitalProfile = {
 		readonly data_coverage: CoverageInfo | null;
 	};
 	readonly margin_trading: {
-		readonly rows: ReadonlyArray<{ readonly trade_date: string; readonly margin_buy_balance: number }>;
+		readonly rows: ReadonlyArray<{
+			readonly trade_date: string;
+			readonly margin_buy_balance: number | null;
+		}>;
 		readonly latest_trade_date: string | null;
 		readonly pending_trade_dates: readonly string[];
 		readonly freshness_promise: string;
+		readonly read_error: string | null;
 		readonly data_coverage: CoverageInfo | null;
 	};
 };
@@ -84,12 +88,16 @@ export function InstrumentCapitalView({ id }: { readonly id: string }) {
 	const [startDate, setStartDate] = useState(() => dateDaysAgo(30));
 	const [endDate, setEndDate] = useState(() => dateDaysAgo(0));
 	const [includeExperimental, setIncludeExperimental] = useState(true);
+	const detail = useInstrumentDetail(id);
+	const assetClass = detail.data?.asset_class;
 	const query = useCapitalProfile(id, {
 		startDate,
 		endDate,
 		allowExperimental: includeExperimental,
 	});
 	const profile = query.data as CapitalProfile | undefined;
+	// 资金面四数据集均为沪深个股数据集:其他资产类显式不适用(correctness F5)。
+	const notApplicable = assetClass != null && assetClass !== "stock";
 
 	return (
 		<div className="p-[var(--density-panel-padding)]">
@@ -127,13 +135,25 @@ export function InstrumentCapitalView({ id }: { readonly id: string }) {
 					</label>
 				</div>
 
-				{query.isLoading && <p className="p-3 text-xs text-(--color-foreground-tertiary)">读取资金画像中</p>}
+				{notApplicable && (
+					<p className="p-3 text-xs text-(--color-foreground-muted)" data-testid="capital-not-applicable">
+						资金面数据不适用于该资产类({assetClass})——四数据集均为沪深个股数据集。
+					</p>
+				)}
+				{!notApplicable && !includeExperimental && (
+					<p className="p-3 text-xs text-(--color-foreground-muted)" data-testid="capital-experimental-required">
+						资金画像四数据集均 experimental——勾选「含 experimental 数据」后展示。
+					</p>
+				)}
+				{!notApplicable && includeExperimental && query.isLoading && (
+					<p className="p-3 text-xs text-(--color-foreground-tertiary)">读取资金画像中</p>
+				)}
 				{query.isError && (
 					<p className="p-3 text-xs text-(--color-foreground-muted)" data-testid="capital-profile-error">
 						资金画像不可用：{String(query.error)}
 					</p>
 				)}
-				{profile && (
+				{!notApplicable && includeExperimental && profile && (
 					<div className="flex flex-wrap">
 						<BlockShell
 							title="逐日资金流"
@@ -199,6 +219,9 @@ export function InstrumentCapitalView({ id }: { readonly id: string }) {
 							coverage={profile.margin_trading.data_coverage}
 						>
 							<p className="text-(--color-foreground-tertiary)">{profile.margin_trading.freshness_promise}</p>
+							{profile.margin_trading.read_error && (
+								<p data-testid="capital-margin-error">两融块读取失败(受限展示):{profile.margin_trading.read_error}</p>
+							)}
 							{profile.margin_trading.pending_trade_dates.length > 0 && (
 								<p data-testid="capital-margin-pending">
 									待补交易日：{profile.margin_trading.pending_trade_dates.join("、")}
@@ -212,7 +235,10 @@ export function InstrumentCapitalView({ id }: { readonly id: string }) {
 										{profile.margin_trading.rows.slice(-10).map((row) => (
 											<tr key={row.trade_date} className="font-data">
 												<td className="pr-3 text-(--color-foreground-tertiary)">{row.trade_date}</td>
-												<td className="text-right">融资余额 {(row.margin_buy_balance / 1e8).toFixed(2)} 亿元</td>
+												<td className="text-right">
+													融资余额{" "}
+													{row.margin_buy_balance == null ? "—" : `${(row.margin_buy_balance / 1e8).toFixed(2)} 亿元`}
+												</td>
 											</tr>
 										))}
 									</tbody>
