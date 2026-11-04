@@ -360,14 +360,27 @@ class CapitalStore:
         return reader.read(start_date=start, end_date=end)
 
     def get_moneyflow(self, instrument_id: int, start: str, end: str) -> pl.DataFrame:
-        """逐标的资金流窗口读（万元/手；#658 批次3 画像链）."""
+        """
+        逐标的资金流窗口读（万元/手；#658 批次3 画像链）.
+
+        当前 knowledge_date=映射层自然日 T+1（确定性，重取同键原位替换，
+        生产通路无多版本）；latest_available 收敛到最新 knowledge_date
+        （#628 词表；#667）是防御性统一——kd 策略若改为摄取日锚
+        （如 index_valuation）即产生真实多版本，读取语义不变。
+        """
         reader = self._read_ports.moneyflow
         if reader is None:
             raise ValueError("moneyflow reader not configured")
         frame = reader.read(
             instrument_ids=[instrument_id], start_date=start, end_date=end
         )
-        return frame if frame.is_empty() else frame.sort("trade_date")
+        if frame.is_empty():
+            return frame
+        return (
+            frame.sort("knowledge_date")
+            .unique(subset=["instrument_id", "trade_date"], keep="last")
+            .sort("trade_date")
+        )
 
     def get_top_list(self, instrument_id: int, start: str, end: str) -> pl.DataFrame:
         """逐标的龙虎榜窗口读（金额元；事件按 reason 独立成行）."""
