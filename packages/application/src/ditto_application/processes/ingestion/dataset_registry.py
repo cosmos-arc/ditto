@@ -20,7 +20,7 @@ from ditto_data.models import (
     DateScheduleType,
 )
 from ditto_kernel.instrument import InstrumentIngestParams
-from ditto_platform.foundation import logger
+from ditto_platform.foundation import OnDuplicate, logger
 
 from ditto_application.exceptions import AppProcessError  # noqa: RUF100
 from ditto_application.processes.ingestion.types import SourceFetchers
@@ -366,6 +366,27 @@ def _global_index_request_bounds(trade_date: str) -> tuple[str, str]:
 def fx_commodity_request_bounds(trade_date: str) -> tuple[str, str]:
     """fx/commodity 摄取真实请求区间（回看窗口）——coordinator 取数同源。"""
     return _lookback_bounds(trade_date, _FX_COMMODITY_LOOKBACK_DAYS)
+
+
+# #661：窗口旧日值的供应商例行修订按 last-write-wins 接受的数据集。
+# fx/commodity 无 PIT 列（pit_columns=()，参考数据集），供应商对窗口内
+# GMT 日的重算修订是例行事件——夜链非 force 写入若保持 VERIFY_IDENTICAL
+# 会确定性失败（2026-11-03 夜链三数据集实况）且分类为 UNKNOWN_ERROR/
+# permanent 不入夜修重试。KEEP_LAST 与 force 通道（B2 现场处置）同语义。
+# etf_nav 有 kd 列且窗口翻页损坏未根治（#661 票），保持 fail-closed 不入集。
+NIGHTLY_KEEP_LAST_DATASETS: frozenset[str] = frozenset({"fx_daily", "commodity_daily"})
+
+
+def nightly_on_duplicate(dataset: str, *, force: bool) -> OnDuplicate:
+    """
+    写入策略选择.
+
+    force 恒 KEEP_LAST；非 force 默认 VERIFY_IDENTICAL，
+    窗口修订容忍数据集（:data:`NIGHTLY_KEEP_LAST_DATASETS`）例外。
+    """
+    if force or dataset in NIGHTLY_KEEP_LAST_DATASETS:
+        return OnDuplicate.KEEP_LAST
+    return OnDuplicate.VERIFY_IDENTICAL
 
 
 def _fx_fetch(ctx: DailyFetchContext) -> DailyFetchHandler:

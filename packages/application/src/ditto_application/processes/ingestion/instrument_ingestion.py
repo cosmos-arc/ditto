@@ -16,7 +16,7 @@ from ditto_data.models.ingestion import IngestionQualityEvidence, IngestionResul
 from ditto_data.services.market_service import MarketService
 from ditto_data.services.metadata_service import MetadataService
 from ditto_kernel.instrument import InstrumentIngestParams
-from ditto_platform.foundation import OnDuplicate, logger
+from ditto_platform.foundation import logger
 
 from ditto_application.exceptions import AppProcessError
 from ditto_application.processes.ingestion.auto_init import (
@@ -32,6 +32,7 @@ from ditto_application.processes.ingestion.coordinator_constants import (
     SUPPORTED_INSTRUMENT_DATASETS,
 )
 from ditto_application.processes.ingestion.data_writer import IngestionDataWriter
+from ditto_application.processes.ingestion.dataset_registry import nightly_on_duplicate
 from ditto_application.processes.ingestion.evidence_commit import (
     IngestionEvidenceCommitter,
 )
@@ -283,7 +284,8 @@ def _process_fetched_data_by_instrument(  # noqa: PLR0911 - fail-closed stages
         return retained
     provider_payload = retained
 
-    on_duplicate = OnDuplicate.KEEP_LAST if force else OnDuplicate.VERIFY_IDENTICAL
+    # #661：与 post_ingest 同源策略（窗口修订容忍数据集 KEEP_LAST）。
+    on_duplicate = nightly_on_duplicate(dataset, force=force)
 
     write_result = write_data_safe(
         DataWriteContext(

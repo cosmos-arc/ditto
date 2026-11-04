@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import cast
 
 import polars as pl
+import pytest
 from ditto_application.contracts import CheckDataQualityCommand
 from ditto_application.processes.ingestion.data_writer import IngestionDataWriter
 from ditto_application.processes.ingestion.evidence_commit import (
@@ -311,6 +312,45 @@ def test_process_fetched_data_accepts_post_ingest_context() -> None:
     assert result.quality_evidence.checksum == "checksum123"
     assert writer.calls == [("stock_daily", "2024-12-27", OnDuplicate.VERIFY_IDENTICAL)]
     assert list_date_inference.asset_classes == []
+
+
+@pytest.mark.parametrize(
+    ("dataset", "force", "expected"),
+    [
+        # #661 复现 2026-11-03 夜链形态:fx/commodity 窗口旧日 GMT 重算修订
+        # 在非 force 写入下不再走 VERIFY_IDENTICAL(确定性 permanent 失败)。
+        ("fx_daily", False, OnDuplicate.KEEP_LAST),
+        ("commodity_daily", False, OnDuplicate.KEEP_LAST),
+        # etf_nav 有 kd 列且翻页损坏未根治——保持 fail-closed。
+        ("etf_nav", False, OnDuplicate.VERIFY_IDENTICAL),
+        ("fx_daily", True, OnDuplicate.KEEP_LAST),
+    ],
+)
+def test_process_fetched_data_selects_window_revision_policy(
+    dataset: str, force: bool, expected: OnDuplicate
+) -> None:
+    """#661:非 force 写入策略按数据集例外集选择,不再全局 VERIFY_IDENTICAL."""
+    writer = _WriteDataRecorder(
+        WriteResult("unused", "unused", 1, 1, False),
+    )
+    ctx = PostIngestContext(
+        result_handler=IngestionResultHandler(None, "tushare"),
+        data_writer=cast(IngestionDataWriter, writer),
+        list_date_inference=cast(ListDateInferenceService, None),
+        quality_checker=_PassingQualityChecker(),
+        source_name="tushare",
+    )
+
+    result = process_fetched_data(
+        pl.DataFrame({"trade_date": ["2026-11-03"], "close": [1.0]}),
+        dataset,
+        "2026-11-03",
+        force,
+        ctx=ctx,
+    )
+
+    assert result.status == "success"
+    assert writer.calls == [(dataset, "2026-11-03", expected)]
 
 
 def test_daily_request_window_keeps_processing_on_trade_date() -> None:
