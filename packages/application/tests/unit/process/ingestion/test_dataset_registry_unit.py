@@ -462,3 +462,77 @@ class TestIndexWeightUniverse:
         fundamental.fetch_fund_portfolio.assert_called_once_with(
             trade_date="2026-09-30"
         )
+
+
+class TestNightlyOnDuplicatePolicy:
+    """#661:窗口旧日值供应商例行修订的写入策略选择."""
+
+    def test_force_always_keep_last(self) -> None:
+        """force 通道不受数据集例外影响(与 B2 现场处置同语义)."""
+        from ditto_application.processes.ingestion.dataset_registry import (
+            nightly_on_duplicate,
+        )
+        from ditto_platform.foundation import OnDuplicate
+
+        assert nightly_on_duplicate("stock_daily", force=True) is OnDuplicate.KEEP_LAST
+        assert nightly_on_duplicate("fx_daily", force=True) is OnDuplicate.KEEP_LAST
+
+    def test_window_datasets_accept_vendor_revision_non_force(self) -> None:
+        """fx/commodity 非 force 走 KEEP_LAST——GMT 重算修订例行事件不再确定性失败."""
+        from ditto_application.processes.ingestion.dataset_registry import (
+            nightly_on_duplicate,
+        )
+        from ditto_platform.foundation import OnDuplicate
+
+        assert nightly_on_duplicate("fx_daily", force=False) is OnDuplicate.KEEP_LAST
+        assert (
+            nightly_on_duplicate("commodity_daily", force=False)
+            is OnDuplicate.KEEP_LAST
+        )
+
+    def test_other_datasets_remain_verify_identical(self) -> None:
+        """其余数据集保持 fail-closed(etf_nav 翻页损坏未根治,不入例外集)."""
+        from ditto_application.processes.ingestion.dataset_registry import (
+            NIGHTLY_KEEP_LAST_DATASETS,
+            nightly_on_duplicate,
+        )
+        from ditto_platform.foundation import OnDuplicate
+
+        assert "etf_nav" not in NIGHTLY_KEEP_LAST_DATASETS
+        assert (
+            nightly_on_duplicate("etf_nav", force=False) is OnDuplicate.VERIFY_IDENTICAL
+        )
+        assert (
+            nightly_on_duplicate("stock_daily", force=False)
+            is OnDuplicate.VERIFY_IDENTICAL
+        )
+
+    def test_exception_set_members_declare_window_request_bounds(self) -> None:
+        """例外集成员必须声明回看窗口请求区间(修订暴露面=窗口覆盖旧日)."""
+        from ditto_application.processes.ingestion.dataset_registry import (
+            NIGHTLY_KEEP_LAST_DATASETS,
+        )
+
+        registry = default_dataset_registry()
+        for dataset_id in sorted(NIGHTLY_KEEP_LAST_DATASETS):
+            registration = registry.require(Dataset(dataset_id))
+            assert registration.request_bounds is not None, dataset_id
+            start, end = registration.request_bounds("2026-11-03")
+            assert start < end, dataset_id
+
+    def test_exception_set_members_have_no_knowledge_date_key(self) -> None:
+        """KEEP_LAST 依赖的安全前提:成员 catalog 键不含 kd 且非 append_only.
+
+        kd 键数据集(如 global_index_daily 按摄取日存版本)加入例外集会被
+        夜链 KEEP_LAST 坍缩修订版本、销毁 PIT 历史——比本修复的故障更严重。
+        """
+        from ditto_application.processes.ingestion.dataset_registry import (
+            NIGHTLY_KEEP_LAST_DATASETS,
+        )
+        from ditto_data.catalog.dataset_spec import resolve_dataset_spec
+
+        for dataset_id in sorted(NIGHTLY_KEEP_LAST_DATASETS):
+            spec = resolve_dataset_spec(dataset_id)
+            assert "knowledge_date" not in spec.primary_key, dataset_id
+            assert spec.revision_policy != "append_only", dataset_id
+            assert spec.knowledge_date_field is None, dataset_id

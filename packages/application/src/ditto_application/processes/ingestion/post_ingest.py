@@ -45,6 +45,7 @@ from ditto_platform.foundation import OnDuplicate, WriteResult, logger
 
 from ditto_application.exceptions import AppProcessError
 from ditto_application.processes.ingestion.data_writer import IngestionDataWriter
+from ditto_application.processes.ingestion.dataset_registry import nightly_on_duplicate
 from ditto_application.processes.ingestion.evidence_commit import (
     IngestionEvidenceCommitter,
     PartitionWriteIntent,
@@ -333,7 +334,9 @@ def process_fetched_data(  # noqa: C901, PLR0911, PLR0912, PLR0913, PLR0915 - fa
         if failure is not None:
             return failure
 
-    on_duplicate = OnDuplicate.KEEP_LAST if force else OnDuplicate.VERIFY_IDENTICAL
+    # #661：窗口修订容忍数据集（fx/commodity）非 force 也走 KEEP_LAST，
+    # 其余保持 VERIFY_IDENTICAL fail-closed。
+    on_duplicate = nightly_on_duplicate(dataset, force=force)
 
     write_result = write_data_safe(
         DataWriteContext(
