@@ -1,0 +1,23 @@
+# Approved versioned breaks — consumed exactly-once by tooling/contracts gate.
+#
+# Each entry must match one live oasdiff finding (rule id + fingerprint) and
+# carry an approval reference. Unmatched findings still fail the gate; entries
+# whose finding no longer appears (merge base advanced past the break) are
+# stale and must be removed in the first PR that lands after the break.
+schema: ditto.approved-breaks.v1
+breaks:
+  - fingerprint: "695650e2a4fa"
+    id: response-property-enum-value-added
+    approved-by: "#658 (spec: FRED weekly series ingestion) / #664 (failure list quoted)"
+    added: "2026-11-04"
+    note: >
+      MacroFrequency adds WEEKLY for POST /macro/indicators items. The only
+      consumers are generated types regenerated atomically in the same commit;
+      no hand-written exhaustive enum consumer exists.
+  - fingerprint: "9b128d1b912d"
+    id: response-property-enum-value-added
+    approved-by: "#658 (spec: FRED weekly series ingestion) / #664 (failure list quoted)"
+    added: "2026-11-04"
+    note: >
+      Same WEEKLY enum addition surfaced by GET /macro/indicators/metadata;
+      same single-consumer rationale as 695650e2a4fa.

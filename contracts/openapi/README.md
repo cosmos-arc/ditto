@@ -43,6 +43,30 @@ against the merge base is expected to fail on those PRs; the failure list must
 be quoted in the PR description. The gate returns to fully green once the
 program lands and main carries the final contract.
 
+### Approved versioned breaks registry
+
+For individually approved breaking changes outside a blanket window, Required
+check 3's "an approved versioned break is documented" path is implemented as
+`contracts/openapi/approved-breaks.yaml`. The gate still fails on every oasdiff
+finding first; only then does it enumerate the findings in JSON form and match
+each one exactly (rule id plus the finding's stable fingerprint) against a
+registry entry that carries an approval reference (`approved-by`) and date.
+Any unmatched finding fails the gate — the registry cannot widen anything, and
+no wildcard or rule-level suppression exists.
+
+Rules of use:
+
+- An entry may only be added with an explicit maintainer approval reference
+  (issue or PR where the break was ruled on) and the failure list quoted in the
+  PR description.
+- Entries are consumed exactly once per gate run; oasdiff fingerprints are
+  content-addressed, so a leftover entry would silently re-approve an
+  identical future change. The gate therefore fails on any unconsumed entry:
+  once the merge base carries the change and the finding disappears, the
+  entries must be removed in the first PR that lands after the break.
+- The registry is parsed on every gate run; a malformed or non-UTF-8 registry
+  file fails the gate closed regardless of whether a break is being approved.
+
 ## Required runtime validation
 
 Compile-time OpenAPI types are insufficient when a malformed response could
@@ -55,7 +79,8 @@ risk decisions, ledger mutations, recovery receipts, and version negotiation.
 1. Canonical FastAPI export is byte-identical to `contracts/openapi/v1.json`.
 2. Redocly strict lint reports no errors.
 3. `oasdiff breaking` passes against merge base and the latest release baseline,
-   or an approved versioned break is documented.
+   or every finding is exactly matched in the approved-breaks registry
+   (`contracts/openapi/approved-breaks.yaml`) with an approval reference.
 4. `openapi-typescript` output in a temporary directory is byte-identical to the
    committed generated file, including schema hash and generator version.
 5. Web type tests reject a wrong path, method, parameter location, body, and
