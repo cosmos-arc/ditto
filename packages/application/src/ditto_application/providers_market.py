@@ -37,6 +37,7 @@ from ditto_application.queries.derived import DerivedQueryFacade
 from ditto_application.queries.evaluation import FactorEvaluationFacade
 from ditto_application.queries.forward_return_service import ForwardReturnService
 from ditto_application.queries.fundamental import FundamentalQueryFacade
+from ditto_application.queries.futures import FuturesQueryFacade
 from ditto_application.queries.fx import FXQueryFacade
 from ditto_application.queries.ingestion_status import IngestionStatusQueryFacade
 from ditto_application.queries.macro import MacroQueryFacade
@@ -325,6 +326,14 @@ class AppMarketQueryProvider(Provider):
     ) -> FXQueryFacade:
         """外汇查询 facade — 隐藏 FX 代码映射和资产类别."""
         return FXQueryFacade(market_service=market_service)
+
+    @provide
+    def futures_query_facade(
+        self,
+        market_service: MarketService,
+    ) -> FuturesQueryFacade:
+        """期货查询 facade — 期货双库消费接线（#658 批次4c）."""
+        return FuturesQueryFacade(futures_data=market_service)
 
     @provide
     def commodity_query_facade(
