@@ -129,6 +129,8 @@ class MacroFredAdapter(BaseFredAdapter):
                 continue
 
             # Transform to MACRO_INDICATOR_SOURCE_SCHEMA
+            # null 观测值（FRED "." 形态）＝当日无观测，不是 0——整行
+            # 丢弃（#658 批次4：DQ not_null(value) 阻断 null 值行写入）。
             transformed = (
                 df.with_columns(
                     pl.lit(code).alias("indicator_code"),
@@ -141,7 +143,10 @@ class MacroFredAdapter(BaseFredAdapter):
                     pl.lit(indicator.unit).alias("unit"),
                     pl.lit(indicator.description).alias("description"),
                 )
-                .filter(pl.col("knowledge_date").is_not_null())
+                .filter(
+                    pl.col("knowledge_date").is_not_null()
+                    & pl.col("value").is_not_null()
+                )
                 .select(
                     "indicator_code",
                     "indicator_name",

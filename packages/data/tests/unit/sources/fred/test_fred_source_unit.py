@@ -123,7 +123,7 @@ class TestFredSourceMacroMethods:
             return_value=mock_adapter,
         ):
             source = FredSource(api_key="test_key")
-            result = source.fetch_macro_indicators_range(
+            result = source.fetch_macro_indicators_by_codes_range(
                 codes=["US_CPI_INDEX"],
                 start_date="2024-01-01",
                 end_date="2024-01-31",
@@ -173,7 +173,7 @@ class TestFredSourceMacroMethods:
             return_value=mock_adapter,
         ):
             source = FredSource(api_key="test_key")
-            source.fetch_macro_indicators_range(
+            source.fetch_macro_indicators_by_codes_range(
                 codes=["US_CPI_INDEX"],
                 start_date="2024-01-01",
                 end_date="2024-01-31",

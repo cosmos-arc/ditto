@@ -136,6 +136,34 @@ class FredSource:
 
     def fetch_macro_indicators_range(
         self,
+        start_date: str,
+        end_date: str,
+    ) -> pl.DataFrame:
+        """
+        Fetch all configured FRED macro series for a date range (51 全码).
+
+        MacroFetcher 区间协议形态 (start_date, end_date)——与 tushare 车道
+        的 ``fetch_macro_indicators_range(start, end)`` 同签名，供协调器
+        ``_fetch_source_defined_range`` 统一绑定（#658 批次4——此前只有
+        codes-first 变体，51 系列区间回补因签名不匹配从未接通）。
+
+        Args:
+            start_date: 开始日期 (YYYY-MM-DD)。
+            end_date: 结束日期 (YYYY-MM-DD)。
+
+        Returns:
+            DataFrame with MACRO_INDICATOR_SOURCE_SCHEMA columns。
+
+        Raises:
+            SourceFetchError: If fetch fails。
+
+        """
+        return self.fetch_macro_indicators_by_codes_range(
+            ALL_FRED_CODES, start_date, end_date
+        )
+
+    def fetch_macro_indicators_by_codes_range(
+        self,
         codes: list[str],
         start_date: str,
         end_date: str,
@@ -144,14 +172,14 @@ class FredSource:
         realtime_end: str | None = None,
     ) -> pl.DataFrame:
         """
-        Fetch macro indicators for a date range from FRED.
+        Fetch macro indicators for a date range from FRED (codes-first).
 
         Args:
             codes: 指标代码列表 (如 ["US_CPI_INDEX", "US_GDP_QOY"])。
             start_date: 开始日期 (YYYY-MM-DD)。
             end_date: 结束日期 (YYYY-MM-DD)。
             realtime_start: 可选 ALFRED realtime 窗口起点 (YYYY-MM-DD).
-            realtime_end: 可选 ALFRED PIT 锚点 (YYYY-MM-DD).
+            realtime_end: 可选 ALFRED realtime PIT 锚点 (YYYY-MM-DD).
 
         Returns:
             DataFrame with MACRO_INDICATOR_SOURCE_SCHEMA columns。

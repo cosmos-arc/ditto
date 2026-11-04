@@ -49,6 +49,7 @@ class MacroFrequency(StrEnum):
     """宏观指标频率枚举。"""
 
     DAILY = "daily"
+    WEEKLY = "weekly"
     MONTHLY = "monthly"
     QUARTERLY = "quarterly"
 

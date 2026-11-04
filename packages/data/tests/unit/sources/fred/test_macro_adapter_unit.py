@@ -339,3 +339,80 @@ class TestMacroFredAdapterRealtimePit:
 
         assert "realtime_end" not in captured
         assert result["knowledge_date"][0] == datetime.date(2024, 2, 15)
+
+
+class TestNullValueFilter:
+    """#658 批次4a correctness F3：null 观测值行丢弃的回归锁."""
+
+    def test_null_value_rows_dropped_others_kept(self, respx_mock) -> None:
+        """默认模式：value=null('.')行整行丢弃，有值行保留（无观测≠0）."""
+        respx_mock.get("https://api.stlouisfed.org/fred/series/observations").mock(
+            return_value=httpx.Response(
+                200,
+                json={
+                    "realtime_start": "2026-01-01",
+                    "realtime_end": "2026-12-31",
+                    "series_id": "GASREGW",
+                    "observations": [
+                        {
+                            "realtime_start": "2026-03-02",
+                            "realtime_end": "9999-12-31",
+                            "date": "2026-02-23",
+                            "value": ".",  # FRED 缺测形态
+                        },
+                        {
+                            "realtime_start": "2026-03-02",
+                            "realtime_end": "9999-12-31",
+                            "date": "2026-03-02",
+                            "value": "3.15",
+                        },
+                    ],
+                },
+            )
+        )
+        adapter = MacroFredAdapter(api_key="test_key")
+        result = adapter.fetch_indicators(
+            codes=["COMMOD_GASREGW"],
+            start_date="2026-02-01",
+            end_date="2026-03-31",
+        )
+        assert result.height == 1
+        assert result["date"].to_list() == [datetime.date(2026, 3, 2)]
+
+    def test_latest_null_vintage_not_replaced_by_earlier_value(
+        self, respx_mock
+    ) -> None:
+        """ALFRED：最新 vintage 为 null 时不回退早 vintage 值（防错值）."""
+        respx_mock.get("https://api.stlouisfed.org/fred/series/observations").mock(
+            return_value=httpx.Response(
+                200,
+                json={
+                    "realtime_start": "2024-01-01",
+                    "realtime_end": "2026-12-31",
+                    "series_id": "UNRATE",
+                    "observations": [
+                        {
+                            "realtime_start": "2024-02-01",
+                            "realtime_end": "2024-03-01",
+                            "date": "2024-01-01",
+                            "value": "3.7",  # 早 vintage 有值
+                        },
+                        {
+                            "realtime_start": "2024-03-01",
+                            "realtime_end": "9999-12-31",
+                            "date": "2024-01-01",
+                            "value": ".",  # 修订后缺测——最新 vintage
+                        },
+                    ],
+                },
+            )
+        )
+        adapter = MacroFredAdapter(api_key="test_key")
+        result = adapter.fetch_indicators(
+            codes=["US_UNRATE"],
+            start_date="2024-01-01",
+            end_date="2024-12-31",
+            realtime_end="2024-06-01",
+        )
+        # 折叠取最新 vintage(null)→过滤后无行；绝不输出早 vintage 的 3.7。
+        assert result.height == 0

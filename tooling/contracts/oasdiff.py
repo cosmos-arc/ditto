@@ -21,6 +21,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
 
+from tooling.contracts import approved_breaks
 from tooling.contracts.generate_web_schema import load_local_schema
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -356,13 +357,14 @@ def _validate_baseline_json(payload: bytes) -> None:
         load_local_schema(path)
 
 
-def run_breaking_check(
+def _run_oasdiff_breaking(
     *,
     resolution: BaselineResolution,
     current_path: Path,
     dist_dir: Path,
-) -> int:
-    """Run ``oasdiff breaking`` on local files after all integrity checks."""
+    output_format: Literal["text", "json"],
+) -> subprocess.CompletedProcess[bytes]:
+    """Run one verified ``oasdiff breaking`` invocation in the given format."""
     if resolution.status != "found" or resolution.contract_bytes is None:
         raise OasdiffError("cannot run oasdiff without a found baseline")
     load_local_schema(current_path)
@@ -371,7 +373,7 @@ def run_breaking_check(
         baseline = Path(directory) / "v1.json"
         baseline.write_bytes(resolution.contract_bytes)
         with verified_oasdiff(dist_dir) as binary:
-            result = subprocess.run(  # noqa: S603 -- binary came from verified archive
+            return subprocess.run(  # noqa: S603 -- binary came from verified archive
                 [
                     str(binary),
                     "breaking",
@@ -380,14 +382,88 @@ def run_breaking_check(
                     "--fail-on",
                     "WARN",
                     "--format",
-                    "text",
+                    output_format,
                 ],
                 # Avoid implicitly loading a repository-level oasdiff config
                 # that could weaken this fixed compatibility policy.
                 cwd=baseline.parent,
                 check=False,
+                capture_output=True,
             )
+
+
+def run_breaking_check(
+    *,
+    resolution: BaselineResolution,
+    current_path: Path,
+    dist_dir: Path,
+) -> int:
+    """Run ``oasdiff breaking`` on local files after all integrity checks."""
+    result = _run_oasdiff_breaking(
+        resolution=resolution,
+        current_path=current_path,
+        dist_dir=dist_dir,
+        output_format="text",
+    )
+    if result.returncode != 0:
+        # Keep the pinned checker's failure detail visible in gate output.
+        if result.stdout:
+            sys.stdout.buffer.write(result.stdout)
+        if result.stderr:
+            sys.stderr.buffer.write(result.stderr)
     return result.returncode
+
+
+def collect_breaking_findings(
+    *,
+    resolution: BaselineResolution,
+    current_path: Path,
+    dist_dir: Path,
+) -> list[approved_breaks.Finding]:
+    """
+    Enumerate flagged changes as structured findings (JSON mode).
+
+    Called only after a failing ``run_breaking_check`` so the approved-breaks
+    registry can match exact findings. Refuses a passing run so the text gate
+    and the enumeration cannot disagree silently.
+    """
+    result = _run_oasdiff_breaking(
+        resolution=resolution,
+        current_path=current_path,
+        dist_dir=dist_dir,
+        output_format="json",
+    )
+    if result.returncode == 0:
+        raise OasdiffError("oasdiff JSON enumeration passed while the text gate failed")
+    try:
+        payload = json.loads(result.stdout.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError) as error:
+        raise OasdiffError(f"oasdiff JSON output is not valid JSON: {error}") from error
+    if not isinstance(payload, list):
+        raise OasdiffError("oasdiff JSON output must be a list of findings")
+    findings: list[approved_breaks.Finding] = []
+    for raw in payload:
+        if not isinstance(raw, dict):
+            raise OasdiffError(f"oasdiff JSON finding must be an object: {raw!r}")
+        rule_id = raw.get("id")
+        fingerprint = raw.get("fingerprint")
+        text = raw.get("text")
+        if not (
+            isinstance(rule_id, str)
+            and isinstance(fingerprint, str)
+            and isinstance(text, str)
+        ):
+            raise OasdiffError(
+                f"oasdiff JSON finding lacks id/fingerprint/text: {raw!r}"
+            )
+        findings.append(
+            approved_breaks.Finding(
+                rule_id=rule_id,
+                fingerprint=fingerprint,
+                text=text,
+            )
+        )
+    return findings
 
 
 def _parser() -> argparse.ArgumentParser:
