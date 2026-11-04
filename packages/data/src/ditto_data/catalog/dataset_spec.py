@@ -222,8 +222,12 @@ _PRIMARY_KEYS: dict[str, tuple[str, ...]] = {
     "margin_trading": ("instrument_id", "trade_date", "knowledge_date"),
     "pledge_ratio": ("instrument_id", "trade_date", "knowledge_date"),
     "macro_indicators": ("indicator_code", "observation_date", "knowledge_date"),
-    "fx_daily": ("instrument_code", "trade_date", "knowledge_date"),
-    "commodity_daily": ("instrument_code", "trade_date", "knowledge_date"),
+    # #661：fx/commodity 无 kd 列（参考数据集，供应商窗口旧日修订按
+    # last-write-wins 收敛）——键声明与物理 store (instrument_id, trade_date)
+    # 对齐去 kd。保留 instrument_code 逻辑名（物理列为 instrument_id；
+    # 改名会翻转 provider_snapshot 回放门槛语义，超出本票范围）。
+    "fx_daily": ("instrument_code", "trade_date"),
+    "commodity_daily": ("instrument_code", "trade_date"),
     "corporate_actions": (
         "instrument_id",
         "action_type",
@@ -556,8 +560,9 @@ _APPEND_ONLY_DATASETS = frozenset(
         "margin_trading",
         "pledge_ratio",
         "macro_indicators",
-        "fx_daily",
-        "commodity_daily",
+        # #661：fx/commodity 移出 append_only——供应商对 7 日回看窗内旧日
+        # 的 GMT 重算修订是例行事件，夜链/回补均按 KEEP_LAST 收敛
+        # （NIGHTLY_KEEP_LAST_DATASETS），无 kd 版本历史可追加。
         "global_index_daily",
         # 事件历史：追加观察行，不修订已记录的证据（#395）
         "namechange",

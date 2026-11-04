@@ -519,3 +519,20 @@ class TestNightlyOnDuplicatePolicy:
             assert registration.request_bounds is not None, dataset_id
             start, end = registration.request_bounds("2026-11-03")
             assert start < end, dataset_id
+
+    def test_exception_set_members_have_no_knowledge_date_key(self) -> None:
+        """KEEP_LAST 依赖的安全前提:成员 catalog 键不含 kd 且非 append_only.
+
+        kd 键数据集(如 global_index_daily 按摄取日存版本)加入例外集会被
+        夜链 KEEP_LAST 坍缩修订版本、销毁 PIT 历史——比本修复的故障更严重。
+        """
+        from ditto_application.processes.ingestion.dataset_registry import (
+            NIGHTLY_KEEP_LAST_DATASETS,
+        )
+        from ditto_data.catalog.dataset_spec import resolve_dataset_spec
+
+        for dataset_id in sorted(NIGHTLY_KEEP_LAST_DATASETS):
+            spec = resolve_dataset_spec(dataset_id)
+            assert "knowledge_date" not in spec.primary_key, dataset_id
+            assert spec.revision_policy != "append_only", dataset_id
+            assert spec.knowledge_date_field is None, dataset_id
