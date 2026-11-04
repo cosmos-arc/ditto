@@ -13700,6 +13700,11 @@
           },
           "read_semantics": {
             "description": "读取语义(latest_available/pit_asof)",
+            "enum": [
+              "latest_available",
+              "pit_asof",
+              "frozen_snapshot"
+            ],
             "title": "Read Semantics",
             "type": "string"
           },
@@ -33019,7 +33024,7 @@
             }
           },
           {
-            "description": "1=沪股通 3=深股通 4/5=港股通;缺省全通道",
+            "description": "1=沪股通 3=深股通(本地库仅北向);缺省全通道",
             "in": "query",
             "name": "market_type",
             "required": false,
@@ -33032,7 +33037,7 @@
                   "type": "null"
                 }
               ],
-              "description": "1=沪股通 3=深股通 4/5=港股通;缺省全通道",
+              "description": "1=沪股通 3=深股通(本地库仅北向);缺省全通道",
               "title": "Market Type"
             }
           },
@@ -34821,12 +34826,12 @@
         "operationId": "fundamental_get_earnings_express",
         "parameters": [
           {
-            "description": "裸代码, 如 000001(ticker 键库)",
+            "description": "源代码键(ts_code 形态), 如 000001.SZ",
             "in": "query",
             "name": "ticker",
             "required": true,
             "schema": {
-              "description": "裸代码, 如 000001(ticker 键库)",
+              "description": "源代码键(ts_code 形态), 如 000001.SZ",
               "title": "Ticker",
               "type": "string"
             }
@@ -34973,12 +34978,12 @@
         "operationId": "fundamental_get_earnings_forecast",
         "parameters": [
           {
-            "description": "裸代码, 如 000001(ticker 键库)",
+            "description": "源代码键(ts_code 形态), 如 000001.SZ",
             "in": "query",
             "name": "ticker",
             "required": true,
             "schema": {
-              "description": "裸代码, 如 000001(ticker 键库)",
+              "description": "源代码键(ts_code 形态), 如 000001.SZ",
               "title": "Ticker",
               "type": "string"
             }
@@ -35308,7 +35313,6 @@
         "operationId": "fundamental_get_indicators",
         "parameters": [
           {
-            "description": "Canonical 标的 ID",
             "in": "query",
             "name": "instrument_id",
             "required": false,
@@ -35321,12 +35325,10 @@
                   "type": "null"
                 }
               ],
-              "description": "Canonical 标的 ID",
               "title": "Instrument Id"
             }
           },
           {
-            "description": "裸代码",
             "in": "query",
             "name": "ticker",
             "required": false,
@@ -35339,12 +35341,10 @@
                   "type": "null"
                 }
               ],
-              "description": "裸代码",
               "title": "Ticker"
             }
           },
           {
-            "description": "标准代码",
             "in": "query",
             "name": "standard_ticker",
             "required": false,
@@ -35357,36 +35357,30 @@
                   "type": "null"
                 }
               ],
-              "description": "标准代码",
               "title": "Standard Ticker"
             }
           },
           {
-            "description": "报告期窗口起点",
             "in": "query",
             "name": "start_date",
             "required": true,
             "schema": {
-              "description": "报告期窗口起点",
               "format": "date",
               "title": "Start Date",
               "type": "string"
             }
           },
           {
-            "description": "报告期窗口终点",
             "in": "query",
             "name": "end_date",
             "required": true,
             "schema": {
-              "description": "报告期窗口终点",
               "format": "date",
               "title": "End Date",
               "type": "string"
             }
           },
           {
-            "description": "可选知识日选版(修订收敛)",
             "in": "query",
             "name": "as_of_date",
             "required": false,
@@ -35400,7 +35394,6 @@
                   "type": "null"
                 }
               ],
-              "description": "可选知识日选版(修订收敛)",
               "title": "As Of Date"
             }
           },

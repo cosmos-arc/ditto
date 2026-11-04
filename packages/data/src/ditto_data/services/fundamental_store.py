@@ -91,18 +91,25 @@ class FundamentalStore:
         reader = self._read_ports.fina_indicator
         if reader is None:
             raise ValueError("fina_indicator reader not configured")
-        filters = (
-            [pl.col("knowledge_date") <= pl.lit(as_of).str.to_date()] if as_of else None
-        )
         frame = reader.read(
             instrument_ids=[instrument_id],
             start_date=start,
             end_date=end,
-            filters=filters,
+            filters=(
+                [pl.col("knowledge_date") <= pl.lit(as_of).str.to_date()]
+                if as_of
+                else None
+            ),
         )
-        return (
-            frame if frame.is_empty() else frame.sort(["report_date", "knowledge_date"])
-        )
+        if frame.is_empty():
+            return frame
+        if as_of:
+            # pit_asof 词表:同 (instrument, report_date) 收敛到最新可见
+            # knowledge 版本(修订选版,#628)。
+            frame = frame.sort("knowledge_date").unique(
+                subset=["instrument_id", "report_date"], keep="last"
+            )
+        return frame.sort(["report_date", "knowledge_date"])
 
     def get_earnings_express(
         self, source_ticker: str, start: str, end: str

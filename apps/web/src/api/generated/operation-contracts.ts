@@ -1,6 +1,6 @@
 /**
  * DO NOT EDIT: generated from contracts/openapi/v1.json.
- * Schema SHA-256: ad1a4b5ea7bb40404c517278593c9abf13027573fc1c4f321f8b18a1dcd80154
+ * Schema SHA-256: 91aeb7472a515a49779d2bc19a3c2880a35bf8594048898fb28e545227a0b70f
  * Generator: ditto-operation-response-contracts 4
  */
 

@@ -307,6 +307,12 @@ async def get_indicators(
     knowledge_date=公告日;as_of 给定时按 knowledge_date<=as_of 收敛到
     最新公告版本(修订选版);跨年错位已由 #620 修复。
     """
+    if params.start_date > params.end_date:
+        raise DateRangeError(
+            start_date=params.start_date.isoformat(),
+            end_date=params.end_date.isoformat(),
+        )
+    _reject_future_date(params.as_of_date, "as_of_date")
     resolved_id = resolve_identifier_or_404(
         metadata_facade,
         instrument_id=params.instrument_id,
@@ -341,7 +347,7 @@ async def get_indicators(
 async def get_earnings_express(
     fundamental_facade: Annotated[FundamentalQueryFacade, FromComponent()],
     coverage_facade: Annotated[DatasetCoverageQueryFacade, FromComponent()],
-    ticker: str = Query(..., description="裸代码, 如 000001(ticker 键库)"),
+    ticker: str = Query(..., description="源代码键(ts_code 形态), 如 000001.SZ"),
     start_date: date_type = Query(..., description="公告日窗口起点"),
     end_date: date_type = Query(..., description="公告日窗口终点"),
     allow_experimental_data: bool = Query(False),
@@ -352,6 +358,10 @@ async def get_earnings_express(
     平日 0 行=无公告正常;audit_status 透出不伪称已审计;
     快报与三表非同颗粒度(已审数浓缩披露)。
     """
+    if start_date > end_date:
+        raise DateRangeError(
+            start_date=start_date.isoformat(), end_date=end_date.isoformat()
+        )
     df = await asyncio.to_thread(
         fundamental_facade.get_earnings_express,
         ticker,
@@ -377,7 +387,7 @@ async def get_earnings_express(
 async def get_earnings_forecast(
     fundamental_facade: Annotated[FundamentalQueryFacade, FromComponent()],
     coverage_facade: Annotated[DatasetCoverageQueryFacade, FromComponent()],
-    ticker: str = Query(..., description="裸代码, 如 000001(ticker 键库)"),
+    ticker: str = Query(..., description="源代码键(ts_code 形态), 如 000001.SZ"),
     start_date: date_type = Query(..., description="公告日窗口起点"),
     end_date: date_type = Query(..., description="公告日窗口终点"),
     allow_experimental_data: bool = Query(False),
@@ -388,6 +398,10 @@ async def get_earnings_forecast(
     同日修订按 update_flag 独立版本;2024-01-31 源端翻页损坏按
     证据归因关闭(#658 批次2 §5.1),chunk 保持可重试。
     """
+    if start_date > end_date:
+        raise DateRangeError(
+            start_date=start_date.isoformat(), end_date=end_date.isoformat()
+        )
     df = await asyncio.to_thread(
         fundamental_facade.get_earnings_forecast,
         ticker,

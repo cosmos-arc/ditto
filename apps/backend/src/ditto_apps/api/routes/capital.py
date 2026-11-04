@@ -23,6 +23,7 @@ from ditto_application.queries.dataset_coverage import DatasetCoverageQueryFacad
 from ditto_application.queries.metadata import MetadataQueryFacade
 from fastapi import APIRouter, Depends, Query
 
+from ditto_apps.api.errors import DateRangeError, FutureDateError
 from ditto_apps.api.params import DateRangeQueryParams, PITQueryParams
 from ditto_apps.api.utils.identifier import (
     resolve_identifier_or_404,
@@ -313,6 +314,7 @@ async def get_hk_hold(
     2024-08-19 起季度披露制:非季末交易日无行=制度性缺席不是缺口
     (docs/data/event-disclosure-verification.md 分段详证)。
     """
+    _validate_disclosure_window(params.start_date, params.end_date, params.as_of_date)
     resolved_id = resolve_identifier_or_404(
         metadata_facade,
         instrument_id=params.instrument_id,
@@ -349,7 +351,7 @@ async def get_hsgt_top10(
     start_date: date = Query(..., description="窗口起点"),
     end_date: date = Query(..., description="窗口终点"),
     market_type: str | None = Query(
-        None, description="1=沪股通 3=深股通 4/5=港股通;缺省全通道"
+        None, description="1=沪股通 3=深股通(本地库仅北向);缺省全通道"
     ),
     allow_experimental_data: bool = Query(False),
 ) -> APIResponse[DisclosureRowsResponse]:
@@ -358,6 +360,7 @@ async def get_hsgt_top10(
 
     2024-08-19 改制后 buy/sell/net_amount 官方停披——null 保留不填零。
     """
+    _validate_disclosure_window(start_date, end_date)
     df = await asyncio.to_thread(
         capital_facade.get_hsgt_top10s,
         start_date.isoformat(),
@@ -392,6 +395,7 @@ async def get_top10_holders(
     修订=新公告日(knowledge_date)版本行并存;名单跌出≠清仓;
     hold_change 0=不变 null=新进;两榜与流通榜语义独立不互推。
     """
+    _validate_disclosure_window(params.start_date, params.end_date, params.as_of_date)
     resolved_id = resolve_identifier_or_404(
         metadata_facade,
         instrument_id=params.instrument_id,
@@ -429,6 +433,7 @@ async def get_top10_floatholders(
     params: Annotated[DateRangeQueryParams, Depends()],
 ) -> APIResponse[DisclosureRowsResponse]:
     """逐标的前十大流通股东窗口读(独立流通股榜口径)."""
+    _validate_disclosure_window(params.start_date, params.end_date, params.as_of_date)
     resolved_id = resolve_identifier_or_404(
         metadata_facade,
         instrument_id=params.instrument_id,
@@ -466,6 +471,7 @@ async def get_pledge_ratio(
     params: Annotated[PITQueryParams, Depends()],
 ) -> APIResponse[DisclosureRowsResponse]:
     """逐标的质押比 PIT 读(report_date 锚;周频披露节奏非日历完整)."""
+    _validate_disclosure_window(as_of=params.as_of_date)
     resolved_id = resolve_identifier_or_404(
         metadata_facade,
         instrument_id=params.instrument_id,
@@ -487,3 +493,15 @@ async def get_pledge_ratio(
             data_coverage=_coverage(coverage_facade, "pledge_ratio"),
         ),
     )
+
+
+def _validate_disclosure_window(
+    start: date | None = None,
+    end: date | None = None,
+    as_of: date | None = None,
+) -> None:
+    """倒置窗口/未来 as_of fail-closed(fundamental corporate-actions 先例)."""
+    if start is not None and end is not None and start > end:
+        raise DateRangeError(start_date=start.isoformat(), end_date=end.isoformat())
+    if as_of is not None and as_of > date.today():
+        raise FutureDateError(field_name="as_of_date", date_value=as_of.isoformat())
