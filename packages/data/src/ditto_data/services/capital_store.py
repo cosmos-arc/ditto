@@ -363,9 +363,10 @@ class CapitalStore:
         """
         逐标的资金流窗口读（万元/手；#658 批次3 画像链）.
 
-        knowledge_date=摄取日（非源发布日），晚发布重取/滑窗 force 重取
-        （B1 生产机制）产生同 (instrument_id, trade_date) 多版本；
-        latest_available 收敛到最新 knowledge_date（#628 词表；#667）。
+        当前 knowledge_date=映射层自然日 T+1（确定性，重取同键原位替换，
+        生产通路无多版本）；latest_available 收敛到最新 knowledge_date
+        （#628 词表；#667）是防御性统一——kd 策略若改为摄取日锚
+        （如 index_valuation）即产生真实多版本，读取语义不变。
         """
         reader = self._read_ports.moneyflow
         if reader is None:

@@ -1,10 +1,14 @@
 """Tests for CapitalStore."""
 
 from datetime import date
+from pathlib import Path
+from unittest.mock import MagicMock
 
 import polars as pl
 from ditto_data.services.capital_store import CapitalStore
 from ditto_data.services.deps import CapitalReaders, CapitalWriters
+from ditto_data.storage.capital.moneyflow import MoneyflowReader, MoneyflowWriter
+from ditto_platform.foundation import ParquetStore
 from ditto_platform.foundation.storage.types import OnDuplicate
 from pytest_mock import MockerFixture
 
@@ -138,9 +142,9 @@ class TestCapitalStoreGetMethods:
 
     def test_get_moneyflow_converges_knowledge_date_versions(self) -> None:
         """#667:同 (instrument_id, trade_date) 多 knowledge_date 版本收敛到最新."""
-        # Arrange:晚发布重取产生同日双版本(10-26 两行 kd 10-27/10-28,值不同)。
-        from unittest.mock import MagicMock
-
+        # Arrange:多版本形态(10-26 两行 kd 10-27/10-28,值不同)。当前生产
+        # 通路 kd=映射层 T+1(确定性,同键原位替换)不会产生此形态;此测试
+        # 锁定 kd 策略改为摄取日锚(index_valuation 形)时读取语义不变。
         mock_reader = MagicMock()
         mock_reader.read.return_value = pl.DataFrame(
             {
@@ -188,8 +192,6 @@ class TestCapitalStoreGetMethods:
 
     def test_get_moneyflow_empty_frame_passthrough(self) -> None:
         """#667:空帧原样返回,不走收敛/排序."""
-        from unittest.mock import MagicMock
-
         mock_reader = MagicMock()
         mock_reader.read.return_value = pl.DataFrame(
             schema={
@@ -220,6 +222,75 @@ class TestCapitalStoreGetMethods:
         result = service.get_moneyflow(1, "2026-10-26", "2026-10-27")
 
         assert result.is_empty()
+
+    def test_get_moneyflow_real_store_double_version_converges(
+        self, tmp_path: Path
+    ) -> None:
+        """#667:真实 ParquetStore(生产键形)双版本落库→读取收敛单行最新值."""
+        # 生产键形见 di/capital.py _moneyflow_parquet_store:
+        # key=(instrument_id, trade_date, knowledge_date),date_column=trade_date。
+        store = ParquetStore(
+            tmp_path,
+            key_columns=("instrument_id", "trade_date", "knowledge_date"),
+            date_column="trade_date",
+            instrument_column="instrument_id",
+        )
+        base = {
+            "instrument_id": [1],
+            "trade_date": [date(2026, 10, 26)],
+            "buy_elg_amount": [10.0],
+            "buy_elg_vol": [1.0],
+            "buy_lg_amount": [20.0],
+            "buy_lg_vol": [2.0],
+            "buy_md_amount": [30.0],
+            "buy_md_vol": [3.0],
+            "buy_sm_amount": [40.0],
+            "buy_sm_vol": [4.0],
+            "sell_elg_amount": [11.0],
+            "sell_elg_vol": [1.1],
+            "sell_lg_amount": [21.0],
+            "sell_lg_vol": [2.1],
+            "sell_md_amount": [31.0],
+            "sell_md_vol": [3.1],
+            "sell_sm_amount": [41.0],
+            "sell_sm_vol": [4.1],
+            "net_mf_amount": [123.4],
+            "net_mf_vol": [500.0],
+            "source": ["tushare"],
+        }
+        # 双版本:同 (instrument_id, trade_date),kd 10-27 旧值/10-28 修订值。
+        MoneyflowWriter(store).write(
+            pl.DataFrame(base | {"knowledge_date": [date(2026, 10, 27)]}), 2026
+        )
+        MoneyflowWriter(store).write(
+            pl.DataFrame(
+                base
+                | {"knowledge_date": [date(2026, 10, 28)], "net_mf_amount": [130.0]}
+            ),
+            2026,
+        )
+        service = CapitalStore(
+            read_ports=CapitalReaders(
+                margin_trading=MagicMock(),
+                pledge_ratio=MagicMock(),
+                valuation_metrics=MagicMock(),
+                index_composition=MagicMock(),
+                moneyflow=MoneyflowReader(store),
+            ),
+            write_ports=CapitalWriters(
+                margin_trading=MagicMock(),
+                pledge_ratio=MagicMock(),
+                valuation_metrics=MagicMock(),
+                index_composition=MagicMock(),
+            ),
+        )
+
+        result = service.get_moneyflow(1, "2026-10-26", "2026-10-27")
+
+        # 收敛:该交易日单行,取最新 kd(10-28)的修订值。
+        day_26 = result.filter(pl.col("trade_date") == date(2026, 10, 26))
+        assert day_26.height == 1
+        assert day_26["net_mf_amount"].to_list() == [130.0]
 
 
 class TestCapitalStoreSaveMethods:
