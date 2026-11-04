@@ -56,12 +56,12 @@ B1=修正安全链、B2=补数与存量纠正、B3=首个真实流程、B4=其�
 | `calendar` | 覆盖 2014 目标及所需前后边界；市场交易日、北向交易日、结算日分开 | 2013-01-01 前后边界（实测至 2027） | 日历/研究/运维（应用+HTTP） | 北向/结算日历未分离 →B1（两融/北向适用日历） |
 | `stock_basic` | 沪深全生命周期名册含退市；历史身份与当时可见名册分别取证 | 全历史 | 名册/选池（HTTP+CLI） | 11-02 审计窗缺上市日名册 3 只 →B2 归因 |
 | `etf_basic` | 约定 ETF 全生命周期含退市/旧码；ETF/LOF/场外分类准确 | 全历史 | ETF 链路（HTTP+CLI） | 分类准确性核验 →B4 |
-| `index_basic` | 目录可保留；正式消费集合及历史定义版本明确 | 全历史 | 目录查询（HTTP+CLI） | 20,897 定义≠分母；正式集合冻结 →B4 |
+| `index_basic` | 目录可保留；正式消费集合及历史定义版本明确 | 全历史 | 目录查询（HTTP+CLI） | 20,897 定义≠分母；正式集合已冻结（178 码，[4d 声明包](formal-sets-and-declarations-2026-11.md)） |
 | `etf_reference` | 现有真实参考观察及后续；不伪造历史 config | 观察起点 2013-01-04 | ETF 候选（HTTP） | catalog 无登记条目（ops status missing）→B2 登记 |
 | `stock_daily` | 沪深 A 股（含退市），逐证券缺口及生命周期归因 | 2014-01-01 或上市起 | 图表/研究（HTTP+CLI+研究） | 10,201 个 trading_no_bar、上市日前 bar 76,267 →B2 归因纠正 |
 | `etf_daily` | 约定 ETF（含退市/旧码）；无状态证据与真实缺行情分开 | 2014-01-01 或上市起 | 图表/研究（HTTP+CLI+研究） | 通用入口 qfq/hfq 被忽略 →B1；no_status_dataset 210,870 会话归因 →B2 |
-| `index_daily` | 权威宽基/风格及消费申万集合；停供历史明确 | 2014-01-02 或实际发布/源起点 | 展示/研究（HTTP+CLI） | 正式代码名单冻结 →B4；三申万断供已治愈留档（#648） |
-| `global_index_daily` | 现有 21 个参考指数 | 2014 或真实起点 | 仅展示（HTTP） | knowledge_date 最早 2026-10-27（回填语义）→B4 版本限制声明 |
+| `index_daily` | 权威宽基/风格及消费申万集合；停供历史明确 | 2014-01-02 或实际发布/源起点 | 展示/研究（HTTP+CLI） | 代码名单已冻结（178 码，[4d 声明包](formal-sets-and-declarations-2026-11.md)）；三申万断供已治愈留档（#648） |
+| `global_index_daily` | 现有 21 个参考指数 | 2014 或真实起点 | 仅展示（HTTP） | knowledge_date 最早 2026-10-27（回填语义）；版本限制已声明（[4d 声明包](formal-sets-and-declarations-2026-11.md)） |
 | `stock_status` | 沪深（含退市）；更早无证据不造状态、不放行严格消费者 | 2016-08-09（已证源起点） | 研究/审计（内部应用） | 19,274 个缺状态会话 →B2 归因 |
 | `adj_factor` | 与正式股票行情逐证券逐会话对齐；值/生效日/版本共同验证 | 与行情同窗 | 复权/研究（HTTP+研究） | 股票侧有价缺因子=0（11-02 窗）；对齐验证 →B5 重测 |
 | `fund_adj` | 与 ETF 行情对齐 | 与行情同窗 | ETF 复权（内部方法+运维） | 92 个有价缺因子会话 →B1 接线、B2 归因关闭 |
@@ -82,20 +82,20 @@ B1=修正安全链、B2=补数与存量纠正、B3=首个真实流程、B4=其�
 | `top10_holders` | 沪深公告；名单退出/送转/股份类别/修订正确 | 2014-01-02 起（保留更早） | 持仓研究（现仅存储） | 查询接线 →B4 |
 | `top10_floatholders` | 同上，独立流通股榜口径 | 2014-01-08 起（保留更早） | 持仓研究（现仅存储） | 查询接线 →B4 |
 | `balance_sheet` | 2014 起可知事实及所需前值；时点和版本正确 | 2014-01-01（保留 2011 起） | 财务（HTTP+CLI，pit_asof） | 无新增反例；#628 修订收敛已修留档 |
-| `income_statement` | 同上；累计/单季与报表类型明确 | 同上 | 财务（HTTP+CLI，pit_asof） | 报表类型明确 →B4 |
+| `income_statement` | 同上；累计/单季与报表类型明确 | 同上 | 财务（HTTP+CLI，pit_asof） | 报表类型口径已声明（[4d 声明包](formal-sets-and-declarations-2026-11.md)） |
 | `cash_flow` | 同上；失败分区/末端真实闭合，不借其他财报推定完整 | 同上 | 财务（HTTP+CLI，pit_asof） | 12 分区代理 EOF 留档（#196）→B4 末端闭合核验 |
-| `dividend` | 2014 起公告及实施事件；公告/登记/除权/到账分开，null 非 0 | 2014-01-01 起 | 分红（HTTP+CLI，pit_asof） | 除权末端 11-02 vs knowledge 末端 10-13——口径分离声明 →B4 |
+| `dividend` | 2014 起公告及实施事件；公告/登记/除权/到账分开，null 非 0 | 2014-01-01 起 | 分红（HTTP+CLI，pit_asof） | 除权末端 11-02 vs knowledge 末端 10-13——口径分离已声明（[4d 声明包](formal-sets-and-declarations-2026-11.md)） |
 | `valuation_metrics` | 沪深逐证券；分母、负值/null、版本及单位 | 2014-01-02 或上市起 | 估值（HTTP+CLI，pit_asof） | 无新增反例 |
-| `corporate_actions` | 2014 起可知回购/解禁事件及生效日期；rights 排除，未来计划日合法 | 2014-01-01 起 | 公司行动（HTTP+CLI） | action_date 至 2034（计划日）——消费口径分离 →B4 |
+| `corporate_actions` | 2014 起可知回购/解禁事件及生效日期；rights 排除，未来计划日合法 | 2014-01-01 起 | 公司行动（HTTP+CLI） | action_date 至 2034（计划日）——消费口径分离已声明（[4d 声明包](formal-sets-and-declarations-2026-11.md)） |
 | `earnings_forecast` | 2014 起公告；历史发布时间/版本不能凭回填日期推定 | 2014-01-01 起 | 业绩预告（现仅存储） | 2024-01-31 源异常（代理翻页损坏）→B2 回补；查询 →B4 |
 | `earnings_express` | 2014 起公告；is_audit 与修订保真，不一概称已审计数 | 2014-01-01 起 | 业绩快报（现仅存储） | 查询接线 →B4 |
 | `macro_indicators` | 中国现有 7 类 + 51 FRED 宏观系列；latest 与 vintage 用途分开 | 2014 或真实起点 | 宏观背景（HTTP+CLI，latest） | 51 系列 0 落库（探针已到）→B4 接线落库；末端 2026-09-01 |
-| `fx_daily` | 现有 6 对；GMT 日/bid 口径 | 2014-01-01 起 | 外汇背景（HTTP） | 23,999 行全覆盖（#629）；历史用途限制声明 →B4 |
+| `fx_daily` | 现有 6 对；GMT 日/bid 口径 | 2014-01-01 起 | 外汇背景（HTTP） | 23,999 行全覆盖（#629）；历史用途限制已声明（[4d 声明包](formal-sets-and-declarations-2026-11.md)） |
 | `commodity_daily` | FXCM 金银、Sina CL/GC/SI、FRED 油/VIX 及配置项；逐腿证据 | 2014-01-01 或源真实起点 | 商品背景（HTTP） | FRED 油/VIX 腿未落库（#629 定界）→B4 逐腿接线；Sina GC/SI 2016-11 起（源深度） |
-| `index_weight` | 现有 23 个宽基/风格指数实际成员/权重历史；公开时间非观察日，成立前不回造 | 2014-01-30（实测最早） | 历史证券池（HTTP） | observation 锚语义声明 →B4（#452 as-of 语义留档） |
+| `index_weight` | 现有 23 个宽基/风格指数实际成员/权重历史；公开时间非观察日，成立前不回造 | 2014-01-30（实测最早） | 历史证券池（HTTP） | observation 锚语义已声明（[4d 声明包](formal-sets-and-declarations-2026-11.md)；#452 as-of 语义留档） |
 | `industry_classification` | 申万版本与分类定义；CSRC 排除 | 全历史版本 | 行业目录（现仅 data service） | 应用目录消费 →B4 |
 | `industry_mapping` | 2014 研究所需有效区间及前值；历史公开证据与当前有效日期分开 | 有效区间全历史 | 回测分类截面（内部应用） | 11-02 请求矩阵唯一 uncovered（FAIL attempts=3，11-03 重刷仅覆盖当日）→B2 窗口证据闭合 |
-| `namechange` | 沪深更名史含退市/旧码；公告与生效分开 | 2014 所需+前值 | 选股身份（HTTP） | 公告/生效口径核验 →B4 |
+| `namechange` | 沪深更名史含退市/旧码；公告与生效分开 | 2014 所需+前值 | 选股身份（HTTP） | 公告/生效口径已声明（[4d 声明包](formal-sets-and-declarations-2026-11.md)） |
 | `st_history` | 沪深 ST 变更史及前值；不能用当前简称造历史 | 2014 所需+前值 | 选股身份（HTTP） | 无新增反例 |
 | `futures_daily` | 六所实际合约日线 | 2014 或各合约上市/源起点 | 期货背景（现仅存储） | 本地仅 2026-10-26 起 →B4 历史回补+查询 |
 | `futures_basic` | 与期货日线同范围含到期合约；身份、上市/到期定义 | 全历史 | 期货背景（现仅存储） | 查询接线 →B4 |
