@@ -12,9 +12,9 @@ import pytest
 from ditto_apps.models.trade import DailyDecisionV2Response
 from ditto_apps.openapi_contract import (
     create_openapi_app,
+    iter_api_routes,
 )
 from fastapi import FastAPI
-from fastapi.routing import APIRoute
 
 _REPO_ROOT = Path(__file__).resolve().parents[5]
 _SNAPSHOT_PATH = _REPO_ROOT / "contracts/openapi/v1.json"
@@ -35,12 +35,11 @@ exporter = _load_exporter()
 
 
 def _operation_signatures(app: FastAPI) -> set[tuple[str, str, str]]:
-    routes = app.routes
     return {
-        (method, route.path, route.operation_id or route.name)
-        for route in routes
-        if isinstance(route, APIRoute) and route.path != _DEBUG_PATH
-        for method in route.methods
+        (method, path, route.operation_id or route.name)
+        for path, route in iter_api_routes(app)
+        if path != _DEBUG_PATH
+        for method in route.methods or ()
     }
 
 

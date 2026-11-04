@@ -2,9 +2,12 @@
 
 import pytest
 from ditto_apps.api.app_metadata import APP_VERSION, BuildMetadata
-from ditto_apps.openapi_contract import configure_openapi, create_openapi_app
+from ditto_apps.openapi_contract import (
+    configure_openapi,
+    create_openapi_app,
+    iter_api_routes,
+)
 from fastapi import FastAPI
-from fastapi.routing import APIRoute
 
 
 def test_build_metadata_uses_deployment_values() -> None:
@@ -116,9 +119,9 @@ def test_build_metadata_has_checkout_independent_fallbacks() -> None:
 
 def test_every_http_operation_has_an_explicit_stable_id() -> None:
     missing = [
-        f"{','.join(sorted(route.methods))} {route.path}"
-        for route in create_openapi_app(include_debug=True).routes
-        if isinstance(route, APIRoute) and route.operation_id is None
+        f"{','.join(sorted(route.methods or ()))} {route.path}"
+        for _path, route in iter_api_routes(create_openapi_app(include_debug=True))
+        if route.operation_id is None
     ]
 
     assert missing == []

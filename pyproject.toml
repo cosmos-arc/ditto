@@ -22,7 +22,9 @@ dependencies = [
     "ditto-apps",
     "numpy>=2.0,<3",
     "polars>=1.9,<2",
-    "fastapi>=0.115,<0.137",
+    # #609：prefect≥3.8 要求 fastapi≥0.139（0.136 钉住 prefect≤3.7.7→
+    # packaging<26.3→virtualenv 修复版不可锁）。取最小解锁跳版 0.139 线。
+    "fastapi>=0.139,<0.140",
     "pydantic>=2.10,<3",
     "pydantic-settings>=2.10,<3",
     "httpx>=0.28,<1",
@@ -36,7 +38,9 @@ dependencies = [
     "granian>=2.0,<3",
     "orjson>=3.10,<4",
     "xxhash>=3.5,<4",
-    "filelock>=3.16,<4",
+    # #609：filelock 3.x 线无补丁（13 条 OSV 公告修复版均在 4.x），
+    # FileLockManager 仅用 FileLock(path, timeout=)/Timeout，4.x 兼容。
+    "filelock>=4.2,<5",
     "opentelemetry-api>=1.28,<2",
     "opentelemetry-sdk>=1.28,<2",
     "opentelemetry-exporter-otlp-proto-http>=1.28,<2",

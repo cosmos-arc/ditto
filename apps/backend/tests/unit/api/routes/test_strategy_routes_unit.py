@@ -80,7 +80,7 @@ async def test_router_registers_only_evidence_gated_publish() -> None:
         route.path
         for route in router.routes
         if isinstance(route, APIRoute)
-        and "POST" in route.methods
+        and "POST" in (route.methods or ())
         and route.path.endswith("/publish")
     }
 
@@ -94,7 +94,7 @@ async def test_router_registers_exact_version_detail_operation() -> None:
         for route in router.routes
         if isinstance(route, APIRoute)
         and route.path == "/strategies/{strategy_id}/versions/{version}"
-        and "GET" in route.methods
+        and "GET" in (route.methods or ())
     ]
 
     assert len(matches) == 1
@@ -108,7 +108,7 @@ async def test_router_registers_exact_governance_events_operation() -> None:
         for route in router.routes
         if isinstance(route, APIRoute)
         and route.path == "/strategies/{strategy_id}/events"
-        and "GET" in route.methods
+        and "GET" in (route.methods or ())
     ]
 
     assert len(matches) == 1
