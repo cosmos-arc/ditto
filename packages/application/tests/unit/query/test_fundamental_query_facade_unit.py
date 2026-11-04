@@ -70,6 +70,28 @@ class _StubFundamentalData:
             return self._corporate_actions
         return pl.DataFrame()
 
+    def get_fina_indicator(
+        self,
+        instrument_id: int,
+        start: str,
+        end: str,
+        as_of: str | None = None,
+    ) -> pl.DataFrame:
+        del instrument_id, start, end, as_of
+        return pl.DataFrame()
+
+    def get_earnings_express(
+        self, source_ticker: str, start: str, end: str
+    ) -> pl.DataFrame:
+        del source_ticker, start, end
+        return pl.DataFrame()
+
+    def get_earnings_forecast(
+        self, source_ticker: str, start: str, end: str
+    ) -> pl.DataFrame:
+        del source_ticker, start, end
+        return pl.DataFrame()
+
 
 def test_stub_satisfies_protocol() -> None:
     """Stub 满足 FundamentalDataPort Protocol（structural typing 验证）."""

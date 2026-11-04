@@ -1354,6 +1354,47 @@
         "title": "APIResponse[DeviationResponse]",
         "type": "object"
       },
+      "APIResponse_DisclosureRowsResponse_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/DisclosureRowsResponse",
+            "description": "响应数据"
+          },
+          "pagination": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PaginationResponse"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "title": "APIResponse[DisclosureRowsResponse]",
+        "type": "object"
+      },
       "APIResponse_ETFAllocationReviewResponse_": {
         "properties": {
           "data": {
@@ -5780,6 +5821,52 @@
           "data"
         ],
         "title": "APIResponse[list[Valuation]]",
+        "type": "object"
+      },
+      "APIResponse_list_dict_str__object___": {
+        "properties": {
+          "data": {
+            "description": "响应数据",
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Data",
+            "type": "array"
+          },
+          "pagination": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PaginationResponse"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "title": "APIResponse[list[dict[str, object]]]",
         "type": "object"
       },
       "APIResponse_list_str__": {
@@ -13597,6 +13684,39 @@
           "unknown"
         ],
         "type": "string"
+      },
+      "DisclosureRowsResponse": {
+        "description": "通用披露行集响应（列随数据集真实 schema 透传,不伪造类型）.\n\n用于 B4b 消费接线:行已是写入路径校验后的 canonical 帧,列集\n随源演进;typed 行模型仅在消费者需要字段级契约时再建(B3 画像块\n先例),此处诚实透传并携带 read_semantics+data_coverage。",
+        "properties": {
+          "data_coverage": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DataCoverageInfo"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "read_semantics": {
+            "description": "读取语义(latest_available/pit_asof)",
+            "title": "Read Semantics",
+            "type": "string"
+          },
+          "rows": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Rows",
+            "type": "array"
+          }
+        },
+        "required": [
+          "read_semantics"
+        ],
+        "title": "DisclosureRowsResponse",
+        "type": "object"
       },
       "Dividend": {
         "description": "分红响应模型（pit_asof：as_of 可见版本）.\n\n存储列：ex_dividend_date（事实日）、div_proc、dividend_per_share（元/股）、\ndividend_yield；公告锚即 knowledge_date（#628 起按真实列映射，\n旧 amount 恒 0.0 的伪映射废弃）.\n\nAttributes:\n    instrument_id: 标的 ID\n    ex_dividend_date: 除息日（事实日，可能为空=未定除息日）\n    div_proc: 分红流程阶段（预案/股东大会/实施等）\n    dividend_per_share: 每股分红（元；空=未披露数值）\n    dividend_yield: 股息率\n    knowledge_date: 公告锚（as_of 可见的披露日）\n    effective_from: 版本生效起点\n    effective_to: 版本关闭日（空=当前版本开放）",
@@ -32667,6 +32787,367 @@
         "x-ditto-maturity": "initial-focus"
       }
     },
+    "/api/v1/capital/hk-hold": {
+      "get": {
+        "description": "逐标的北向持股窗口读(latest_available;2024-08-19 知识日分段).\n\n2024-08-19 起季度披露制:非季末交易日无行=制度性缺席不是缺口\n(docs/data/event-disclosure-verification.md 分段详证)。\n\nCapability maturity: `experimental`. Implemented or partly implemented; not production scope.",
+        "operationId": "capital_get_hk_hold",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "instrument_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Instrument Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "ticker",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Ticker"
+            }
+          },
+          {
+            "in": "query",
+            "name": "standard_ticker",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Standard Ticker"
+            }
+          },
+          {
+            "in": "query",
+            "name": "start_date",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "Start Date",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "end_date",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "End Date",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "as_of_date",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "As Of Date"
+            }
+          },
+          {
+            "in": "query",
+            "name": "allow_experimental_data",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Allow Experimental Data",
+              "type": "boolean"
+            }
+          },
+          {
+            "description": "Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required.",
+            "in": "header",
+            "name": "X-Ditto-API-Contract-Version",
+            "required": false,
+            "schema": {
+              "const": "v1",
+              "description": "Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required.",
+              "title": "X-Ditto-Api-Contract-Version",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIResponse_DisclosureRowsResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad request"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Resource not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Request conflicts with current state"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Request or domain validation failed"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal server error"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Structured Ditto API error"
+          }
+        },
+        "summary": "Get Hk Hold",
+        "tags": [
+          "capital"
+        ],
+        "x-ditto-maturity": "experimental"
+      }
+    },
+    "/api/v1/capital/hsgt-top10": {
+      "get": {
+        "description": "市场级沪深港通十大成交窗口读(latest_available;每日 20 行事件型).\n\n2024-08-19 改制后 buy/sell/net_amount 官方停披——null 保留不填零。\n\nCapability maturity: `experimental`. Implemented or partly implemented; not production scope.",
+        "operationId": "capital_get_hsgt_top10",
+        "parameters": [
+          {
+            "description": "窗口起点",
+            "in": "query",
+            "name": "start_date",
+            "required": true,
+            "schema": {
+              "description": "窗口起点",
+              "format": "date",
+              "title": "Start Date",
+              "type": "string"
+            }
+          },
+          {
+            "description": "窗口终点",
+            "in": "query",
+            "name": "end_date",
+            "required": true,
+            "schema": {
+              "description": "窗口终点",
+              "format": "date",
+              "title": "End Date",
+              "type": "string"
+            }
+          },
+          {
+            "description": "1=沪股通 3=深股通 4/5=港股通;缺省全通道",
+            "in": "query",
+            "name": "market_type",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "1=沪股通 3=深股通 4/5=港股通;缺省全通道",
+              "title": "Market Type"
+            }
+          },
+          {
+            "in": "query",
+            "name": "allow_experimental_data",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Allow Experimental Data",
+              "type": "boolean"
+            }
+          },
+          {
+            "description": "Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required.",
+            "in": "header",
+            "name": "X-Ditto-API-Contract-Version",
+            "required": false,
+            "schema": {
+              "const": "v1",
+              "description": "Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required.",
+              "title": "X-Ditto-Api-Contract-Version",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIResponse_DisclosureRowsResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad request"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Resource not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Request conflicts with current state"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Request or domain validation failed"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal server error"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Structured Ditto API error"
+          }
+        },
+        "summary": "Get Hsgt Top10",
+        "tags": [
+          "capital"
+        ],
+        "x-ditto-maturity": "experimental"
+      }
+    },
     "/api/v1/capital/margin": {
       "get": {
         "description": "获取融资融券数据（pit_asof：as_of 可见版本，日粒度 as_of=上海日终）.\n\n标识符三选一（优先级: instrument_id > standard_ticker > ticker）:\n- instrument_id: 内部 ID，如 1000001\n- standard_ticker: Ditto 标准格式，如 \"000001.XSHE\"\n- ticker: 裸代码，如 \"000001\"\n\nRaises:\n    NotFoundError: 404 如果标识符在 as_of_date 不可解析\n\nCapability maturity: `experimental`. Implemented or partly implemented; not production scope.",
@@ -32852,6 +33333,181 @@
         "x-ditto-maturity": "experimental"
       }
     },
+    "/api/v1/capital/pledge-ratio": {
+      "get": {
+        "description": "逐标的质押比 PIT 读(report_date 锚;周频披露节奏非日历完整).\n\nCapability maturity: `experimental`. Implemented or partly implemented; not production scope.",
+        "operationId": "capital_get_pledge_ratio",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "instrument_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Instrument Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "ticker",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Ticker"
+            }
+          },
+          {
+            "in": "query",
+            "name": "standard_ticker",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Standard Ticker"
+            }
+          },
+          {
+            "in": "query",
+            "name": "as_of_date",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "As Of Date",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "allow_experimental_data",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Allow Experimental Data",
+              "type": "boolean"
+            }
+          },
+          {
+            "description": "Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required.",
+            "in": "header",
+            "name": "X-Ditto-API-Contract-Version",
+            "required": false,
+            "schema": {
+              "const": "v1",
+              "description": "Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required.",
+              "title": "X-Ditto-Api-Contract-Version",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIResponse_DisclosureRowsResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad request"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Resource not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Request conflicts with current state"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Request or domain validation failed"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal server error"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Structured Ditto API error"
+          }
+        },
+        "summary": "Get Pledge Ratio",
+        "tags": [
+          "capital"
+        ],
+        "x-ditto-maturity": "experimental"
+      }
+    },
     "/api/v1/capital/profile": {
       "post": {
         "description": "个股资金画像（#658 批次3：四数据集同标的同窗口联看）.\n\n必需块 moneyflow/top_list/top_inst（latest_available＝库内现存行，无 PIT\n过滤）；可选块 margin_trading（pit_asof=end_date）带实际末端与待补列表\n（迟发数据按 09:15 披露承诺，待补窗=尾部 5 个交易日，与夜修滑窗对齐）。\n每块携带 data_coverage 覆盖限制快照；无事件/空窗是合法状态，不冒充失败。\n\n标识符三选一（优先级 instrument_id > standard_ticker > ticker），\n按 end_date 解析。四数据集均 experimental，须显式\nallow_experimental_data=true。\n\nRaises:\n    NotFoundError: 404 如果标识符在 end_date 不可解析\n\nCapability maturity: `experimental`. Implemented or partly implemented; not production scope.",
@@ -32963,6 +33619,410 @@
           }
         },
         "summary": "Post Capital Profile",
+        "tags": [
+          "capital"
+        ],
+        "x-ditto-maturity": "experimental"
+      }
+    },
+    "/api/v1/capital/top10-floatholders": {
+      "get": {
+        "description": "逐标的前十大流通股东窗口读(独立流通股榜口径).\n\nCapability maturity: `experimental`. Implemented or partly implemented; not production scope.",
+        "operationId": "capital_get_top10_floatholders",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "instrument_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Instrument Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "ticker",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Ticker"
+            }
+          },
+          {
+            "in": "query",
+            "name": "standard_ticker",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Standard Ticker"
+            }
+          },
+          {
+            "in": "query",
+            "name": "start_date",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "Start Date",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "end_date",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "End Date",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "as_of_date",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "As Of Date"
+            }
+          },
+          {
+            "in": "query",
+            "name": "allow_experimental_data",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Allow Experimental Data",
+              "type": "boolean"
+            }
+          },
+          {
+            "description": "Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required.",
+            "in": "header",
+            "name": "X-Ditto-API-Contract-Version",
+            "required": false,
+            "schema": {
+              "const": "v1",
+              "description": "Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required.",
+              "title": "X-Ditto-Api-Contract-Version",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIResponse_DisclosureRowsResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad request"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Resource not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Request conflicts with current state"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Request or domain validation failed"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal server error"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Structured Ditto API error"
+          }
+        },
+        "summary": "Get Top10 Floatholders",
+        "tags": [
+          "capital"
+        ],
+        "x-ditto-maturity": "experimental"
+      }
+    },
+    "/api/v1/capital/top10-holders": {
+      "get": {
+        "description": "逐标的前十大股东窗口读(latest_available;report_date 报告期粒度).\n\n修订=新公告日(knowledge_date)版本行并存;名单跌出≠清仓;\nhold_change 0=不变 null=新进;两榜与流通榜语义独立不互推。\n\nCapability maturity: `experimental`. Implemented or partly implemented; not production scope.",
+        "operationId": "capital_get_top10_holders",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "instrument_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Instrument Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "ticker",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Ticker"
+            }
+          },
+          {
+            "in": "query",
+            "name": "standard_ticker",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Standard Ticker"
+            }
+          },
+          {
+            "in": "query",
+            "name": "start_date",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "Start Date",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "end_date",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "End Date",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "as_of_date",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "As Of Date"
+            }
+          },
+          {
+            "in": "query",
+            "name": "allow_experimental_data",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Allow Experimental Data",
+              "type": "boolean"
+            }
+          },
+          {
+            "description": "Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required.",
+            "in": "header",
+            "name": "X-Ditto-API-Contract-Version",
+            "required": false,
+            "schema": {
+              "const": "v1",
+              "description": "Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required.",
+              "title": "X-Ditto-Api-Contract-Version",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIResponse_DisclosureRowsResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad request"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Resource not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Request conflicts with current state"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Request or domain validation failed"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal server error"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Structured Ditto API error"
+          }
+        },
+        "summary": "Get Top10 Holders",
         "tags": [
           "capital"
         ],
@@ -33755,6 +34815,310 @@
         "x-ditto-maturity": "experimental"
       }
     },
+    "/api/v1/fundamental/earnings-express": {
+      "get": {
+        "description": "逐标的业绩快报窗口读(ann_date 公告事件;金额元).\n\n平日 0 行=无公告正常;audit_status 透出不伪称已审计;\n快报与三表非同颗粒度(已审数浓缩披露)。\n\nCapability maturity: `experimental`. Implemented or partly implemented; not production scope.",
+        "operationId": "fundamental_get_earnings_express",
+        "parameters": [
+          {
+            "description": "裸代码, 如 000001(ticker 键库)",
+            "in": "query",
+            "name": "ticker",
+            "required": true,
+            "schema": {
+              "description": "裸代码, 如 000001(ticker 键库)",
+              "title": "Ticker",
+              "type": "string"
+            }
+          },
+          {
+            "description": "公告日窗口起点",
+            "in": "query",
+            "name": "start_date",
+            "required": true,
+            "schema": {
+              "description": "公告日窗口起点",
+              "format": "date",
+              "title": "Start Date",
+              "type": "string"
+            }
+          },
+          {
+            "description": "公告日窗口终点",
+            "in": "query",
+            "name": "end_date",
+            "required": true,
+            "schema": {
+              "description": "公告日窗口终点",
+              "format": "date",
+              "title": "End Date",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "allow_experimental_data",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Allow Experimental Data",
+              "type": "boolean"
+            }
+          },
+          {
+            "description": "Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required.",
+            "in": "header",
+            "name": "X-Ditto-API-Contract-Version",
+            "required": false,
+            "schema": {
+              "const": "v1",
+              "description": "Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required.",
+              "title": "X-Ditto-Api-Contract-Version",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIResponse_DisclosureRowsResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad request"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Resource not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Request conflicts with current state"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Request or domain validation failed"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal server error"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Structured Ditto API error"
+          }
+        },
+        "summary": "Get Earnings Express",
+        "tags": [
+          "fundamental"
+        ],
+        "x-ditto-maturity": "experimental"
+      }
+    },
+    "/api/v1/fundamental/earnings-forecast": {
+      "get": {
+        "description": "逐标的业绩预告窗口读(ann_date 公告事件;净利润上下界万元).\n\n同日修订按 update_flag 独立版本;2024-01-31 源端翻页损坏按\n证据归因关闭(#658 批次2 §5.1),chunk 保持可重试。\n\nCapability maturity: `experimental`. Implemented or partly implemented; not production scope.",
+        "operationId": "fundamental_get_earnings_forecast",
+        "parameters": [
+          {
+            "description": "裸代码, 如 000001(ticker 键库)",
+            "in": "query",
+            "name": "ticker",
+            "required": true,
+            "schema": {
+              "description": "裸代码, 如 000001(ticker 键库)",
+              "title": "Ticker",
+              "type": "string"
+            }
+          },
+          {
+            "description": "公告日窗口起点",
+            "in": "query",
+            "name": "start_date",
+            "required": true,
+            "schema": {
+              "description": "公告日窗口起点",
+              "format": "date",
+              "title": "Start Date",
+              "type": "string"
+            }
+          },
+          {
+            "description": "公告日窗口终点",
+            "in": "query",
+            "name": "end_date",
+            "required": true,
+            "schema": {
+              "description": "公告日窗口终点",
+              "format": "date",
+              "title": "End Date",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "allow_experimental_data",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Allow Experimental Data",
+              "type": "boolean"
+            }
+          },
+          {
+            "description": "Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required.",
+            "in": "header",
+            "name": "X-Ditto-API-Contract-Version",
+            "required": false,
+            "schema": {
+              "const": "v1",
+              "description": "Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required.",
+              "title": "X-Ditto-Api-Contract-Version",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIResponse_DisclosureRowsResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad request"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Resource not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Request conflicts with current state"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Request or domain validation failed"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal server error"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Structured Ditto API error"
+          }
+        },
+        "summary": "Get Earnings Forecast",
+        "tags": [
+          "fundamental"
+        ],
+        "x-ditto-maturity": "experimental"
+      }
+    },
     "/api/v1/fundamental/financials/{report_type}": {
       "get": {
         "description": "获取财务报表数据（pit_asof：as_of 可见版本，日粒度 as_of=上海日终）.\n\n标识符三选一（优先级: instrument_id > standard_ticker > ticker）:\n- instrument_id: 内部 ID，如 1000001\n- standard_ticker: Ditto 标准格式，如 \"000001.XSHE\"\n- ticker: 裸代码，如 \"000001\"\n\n修订多版本收敛到 as_of 可见的最新披露版本；行级透出\nknowledge_date/effective_from/effective_to（#628 事实/公告/版本分开）.\n\nRaises:\n    FutureDateError: 400 如果 as_of_date 为未来日期\n    NotFoundError: 404 如果标识符在 as_of_date 不可解析\n\nCapability maturity: `experimental`. Implemented or partly implemented; not production scope.",
@@ -33932,6 +35296,220 @@
           }
         },
         "summary": "Get Financials",
+        "tags": [
+          "fundamental"
+        ],
+        "x-ditto-maturity": "experimental"
+      }
+    },
+    "/api/v1/fundamental/indicators": {
+      "get": {
+        "description": "逐标的财务指标窗口读(report_date 窗口;110 指标列透传).\n\nknowledge_date=公告日;as_of 给定时按 knowledge_date<=as_of 收敛到\n最新公告版本(修订选版);跨年错位已由 #620 修复。\n\nCapability maturity: `experimental`. Implemented or partly implemented; not production scope.",
+        "operationId": "fundamental_get_indicators",
+        "parameters": [
+          {
+            "description": "Canonical 标的 ID",
+            "in": "query",
+            "name": "instrument_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Canonical 标的 ID",
+              "title": "Instrument Id"
+            }
+          },
+          {
+            "description": "裸代码",
+            "in": "query",
+            "name": "ticker",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "裸代码",
+              "title": "Ticker"
+            }
+          },
+          {
+            "description": "标准代码",
+            "in": "query",
+            "name": "standard_ticker",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "标准代码",
+              "title": "Standard Ticker"
+            }
+          },
+          {
+            "description": "报告期窗口起点",
+            "in": "query",
+            "name": "start_date",
+            "required": true,
+            "schema": {
+              "description": "报告期窗口起点",
+              "format": "date",
+              "title": "Start Date",
+              "type": "string"
+            }
+          },
+          {
+            "description": "报告期窗口终点",
+            "in": "query",
+            "name": "end_date",
+            "required": true,
+            "schema": {
+              "description": "报告期窗口终点",
+              "format": "date",
+              "title": "End Date",
+              "type": "string"
+            }
+          },
+          {
+            "description": "可选知识日选版(修订收敛)",
+            "in": "query",
+            "name": "as_of_date",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "可选知识日选版(修订收敛)",
+              "title": "As Of Date"
+            }
+          },
+          {
+            "in": "query",
+            "name": "allow_experimental_data",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Allow Experimental Data",
+              "type": "boolean"
+            }
+          },
+          {
+            "description": "Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required.",
+            "in": "header",
+            "name": "X-Ditto-API-Contract-Version",
+            "required": false,
+            "schema": {
+              "const": "v1",
+              "description": "Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required.",
+              "title": "X-Ditto-Api-Contract-Version",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIResponse_DisclosureRowsResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad request"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Resource not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Request conflicts with current state"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Request or domain validation failed"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal server error"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Structured Ditto API error"
+          }
+        },
+        "summary": "Get Indicators",
         "tags": [
           "fundamental"
         ],
@@ -40120,6 +41698,139 @@
           }
         },
         "summary": "List Etf Reference Snapshots",
+        "tags": [
+          "metadata"
+        ],
+        "x-ditto-maturity": "initial-focus"
+      }
+    },
+    "/api/v1/metadata/industries": {
+      "get": {
+        "description": "行业分类目录（SW;CSRC 2002 权限不足→coverage partial）.\n\nCapability maturity: `initial-focus`. Primary near-term product scope under architecture review.",
+        "operationId": "metadata_list_industries",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "is_active",
+            "required": false,
+            "schema": {
+              "default": true,
+              "title": "Is Active",
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "industry_level",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Industry Level"
+            }
+          },
+          {
+            "description": "Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required.",
+            "in": "header",
+            "name": "X-Ditto-API-Contract-Version",
+            "required": false,
+            "schema": {
+              "const": "v1",
+              "description": "Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required.",
+              "title": "X-Ditto-Api-Contract-Version",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIResponse_list_dict_str__object___"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad request"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Resource not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Request conflicts with current state"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Request or domain validation failed"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal server error"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Structured Ditto API error"
+          }
+        },
+        "summary": "List Industries",
         "tags": [
           "metadata"
         ],

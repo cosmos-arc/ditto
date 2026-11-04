@@ -155,3 +155,34 @@ async def list_instruments(
     all_instruments = to_instrument_list(df)
 
     return paginate(all_instruments, pagination)
+
+
+@router.get(
+    "/industries",
+    response_model=APIResponse[list[dict[str, object]]],
+    operation_id="metadata_list_industries",
+)
+@inject
+async def list_industries(
+    facade: Annotated[MetadataQueryFacade, FromComponent()],
+    is_active: bool = True,
+    industry_level: str | None = None,
+) -> APIResponse[list[dict[str, object]]]:
+    """行业分类目录（SW;CSRC 2002 权限不足→coverage partial）."""
+    df = await asyncio.to_thread(
+        facade.list_industries,
+        is_active=is_active,
+        industry_level=industry_level,
+    )
+    rows: list[dict[str, object]] = []
+    for row in df.to_dicts():
+        rows.append(
+            {
+                "industry_id": row.get("industry_id"),
+                "industry_name": row.get("industry_name"),
+                "industry_level": row.get("industry_level"),
+                "source": row.get("source"),
+                "is_active": row.get("is_active"),
+            }
+        )
+    return APIResponse(data=rows)
