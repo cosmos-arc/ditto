@@ -1,6 +1,6 @@
 /**
  * DO NOT EDIT: generated from contracts/openapi/v1.json.
- * Schema SHA-256: f4019278c37994a85a72c4963a9efb501cb552f76331b99f2dd03dc69d102c39
+ * Schema SHA-256: 56438b2d4a64c9f11e5a5c6d53156d5c578a5c4472c968b0de14e245e3d61418
  * Generator: openapi-typescript 7.13.0
  */
 
@@ -1337,6 +1337,8 @@ export interface paths {
          *
          *     Returns:
          *         APIResponse 包含期货日线数据（bars+语义+知界）
+         *
+         *     Capability maturity: `experimental`. Implemented or partly implemented; not production scope.
          */
         post: operations["futures_post_bars"];
         delete?: never;
@@ -1361,6 +1363,8 @@ export interface paths {
          *
          *     Raises:
          *         AppQueryError: 400 未显式 allow_experimental_data 时拒绝
+         *
+         *     Capability maturity: `experimental`. Implemented or partly implemented; not production scope.
          */
         get: operations["futures_get_contracts"];
         put?: never;
