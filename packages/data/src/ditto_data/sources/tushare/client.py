@@ -61,6 +61,12 @@ class _PageDuplicateContext:
     cross_page_duplicates: int
 
 
+def _append_empty_first_page(pages: list[pl.DataFrame], page: pl.DataFrame) -> None:
+    """首页为空时保留原样（含 fields schema 的零行帧，不经过 concat 路径）。"""
+    if not pages:
+        pages.append(page)
+
+
 def _warn_in_page_duplicates(
     page: pl.DataFrame,
     page_rows: set[int],
@@ -394,17 +400,19 @@ class TushareClient:
         offset = 0
         active_page_size = page_size
         echo_probes = 0
+        raw_rows_fetched = 0
+        dedup_merge_events = 0
         while True:
             data = self._query(
                 api_name, fields, limit=active_page_size, offset=offset, **params
             )
             raw_page = response_to_dataframe(data)
+            raw_rows_fetched += raw_page.height
             # 空尾页即取尽；真实服务端越界页返回 fields=[]（零列 schema），
             # 参与后续 concat 会抛 "schema lengths differ"。首页空保留原样
             # 返回（含 fields schema 的零行帧，不经过 concat 路径）。
             if raw_page.height == 0:
-                if not pages:
-                    pages.append(raw_page)
+                _append_empty_first_page(pages, raw_page)
                 break
             page_hash_list = [hash(row) for row in raw_page.iter_rows()]
             page_rows = set(page_hash_list)
@@ -419,6 +427,8 @@ class TushareClient:
             cross_page_duplicates = len(page_rows & seen_rows)
             page = raw_page
             if cross_page_duplicates:
+                if dedup_merge:
+                    dedup_merge_events += 1
                 page, echo_probes = self._merge_cross_duplicate_page(
                     raw_page,
                     page_hash_list,
@@ -437,6 +447,10 @@ class TushareClient:
                     # 决定是否收敛/硬拦。
                     offset += len(raw_page)
                     continue
+            else:
+                # 无跨页重复的干净页同样解除回显连续计数（correctness F1：
+                # 交替「干净页/整页回显」形态下，隔页回显不应累加成连续）。
+                echo_probes = 0
             seen_rows |= page_rows
             pages.append(page)
             if len(raw_page) < active_page_size:
@@ -460,8 +474,23 @@ class TushareClient:
             offset += len(raw_page)
 
         if len(pages) == 1:
-            return pages[0]
-        return pl.concat(pages, how="vertical_relaxed")
+            result = pages[0]
+        else:
+            result = pl.concat(pages, how="vertical_relaxed")
+        if dedup_merge and dedup_merge_events:
+            # correctness F2 终态信号：raw−返回 的差值=被丢弃的跨页重复行；
+            # 排序不稳定同时跳行时该机制不感知（offset 翻页的固有盲区，
+            # 与旧代码同级），ops 以此事件区分「重叠自愈」与异常放大。
+            logger.warning(
+                "pagination dedup-merge summary",
+                event="tushare_pagination_dedup_merge_summary",
+                api_name=api_name,
+                dedup_events=dedup_merge_events,
+                raw_rows_fetched=raw_rows_fetched,
+                rows_returned=result.height,
+                dropped_rows=raw_rows_fetched - result.height,
+            )
+        return result
 
     @staticmethod
     def _merge_cross_duplicate_page(
@@ -494,19 +523,20 @@ class TushareClient:
                 ),
                 source="tushare",
             )
+        new_mask = pl.Series(
+            [row_hash not in seen_rows for row_hash in page_hash_list],
+            dtype=pl.Boolean,
+        )
+        new_count = int(new_mask.sum())
         logger.warning(
             "pagination cross-page overlap; dedup-merging and continuing",
             event="tushare_pagination_dedup_merge",
             api_name=page_ctx.api_name,
             offset=page_ctx.offset,
             cross_page_duplicates=page_ctx.cross_page_duplicates,
-            new_rows=len(page_hash_list) - page_ctx.cross_page_duplicates,
+            # correctness F3：以 mask 实数为准（页内重复行不虚增 new_rows）。
+            new_rows=new_count,
         )
-        new_mask = pl.Series(
-            [row_hash not in seen_rows for row_hash in page_hash_list],
-            dtype=pl.Boolean,
-        )
-        new_count = int(new_mask.sum())
         if new_count:
             return raw_page.filter(new_mask), 0
         if echo_probes + 1 >= _PAGINATION_ZERO_NEW_ECHO_LIMIT:
