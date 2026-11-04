@@ -136,6 +136,91 @@ class TestCapitalStoreGetMethods:
         assert isinstance(result, pl.DataFrame)
         mock_reader.get.assert_called_once_with("399300.XSHE", date(2024, 1, 1))
 
+    def test_get_moneyflow_converges_knowledge_date_versions(self) -> None:
+        """#667:同 (instrument_id, trade_date) 多 knowledge_date 版本收敛到最新."""
+        # Arrange:晚发布重取产生同日双版本(10-26 两行 kd 10-27/10-28,值不同)。
+        from unittest.mock import MagicMock
+
+        mock_reader = MagicMock()
+        mock_reader.read.return_value = pl.DataFrame(
+            {
+                "instrument_id": [1, 1, 1],
+                "trade_date": [
+                    date(2026, 10, 26),
+                    date(2026, 10, 26),
+                    date(2026, 10, 27),
+                ],
+                "knowledge_date": [
+                    date(2026, 10, 27),
+                    date(2026, 10, 28),
+                    date(2026, 10, 28),
+                ],
+                "net_mf_amount": [123.4, 130.0, 131.0],
+                "net_mf_vol": [500.0, 520.0, 530.0],
+                "source": ["tushare"] * 3,
+            }
+        )
+        service = CapitalStore(
+            read_ports=CapitalReaders(
+                margin_trading=MagicMock(),
+                pledge_ratio=MagicMock(),
+                valuation_metrics=MagicMock(),
+                index_composition=MagicMock(),
+                moneyflow=mock_reader,
+            ),
+            write_ports=CapitalWriters(
+                margin_trading=MagicMock(),
+                pledge_ratio=MagicMock(),
+                valuation_metrics=MagicMock(),
+                index_composition=MagicMock(),
+            ),
+        )
+
+        # Act
+        result = service.get_moneyflow(1, "2026-10-26", "2026-10-27")
+
+        # Assert:每交易日单行,10-26 取最新 kd(10-28)的修订值,按 trade_date 排序。
+        assert result.height == 2
+        first = result.row(0, named=True)
+        assert first["trade_date"] == date(2026, 10, 26)
+        assert first["net_mf_amount"] == 130.0
+        assert result["net_mf_amount"].to_list() == [130.0, 131.0]
+
+    def test_get_moneyflow_empty_frame_passthrough(self) -> None:
+        """#667:空帧原样返回,不走收敛/排序."""
+        from unittest.mock import MagicMock
+
+        mock_reader = MagicMock()
+        mock_reader.read.return_value = pl.DataFrame(
+            schema={
+                "instrument_id": pl.Int64,
+                "trade_date": pl.Date,
+                "knowledge_date": pl.Date,
+                "net_mf_amount": pl.Float64,
+                "net_mf_vol": pl.Float64,
+                "source": pl.String,
+            }
+        )
+        service = CapitalStore(
+            read_ports=CapitalReaders(
+                margin_trading=MagicMock(),
+                pledge_ratio=MagicMock(),
+                valuation_metrics=MagicMock(),
+                index_composition=MagicMock(),
+                moneyflow=mock_reader,
+            ),
+            write_ports=CapitalWriters(
+                margin_trading=MagicMock(),
+                pledge_ratio=MagicMock(),
+                valuation_metrics=MagicMock(),
+                index_composition=MagicMock(),
+            ),
+        )
+
+        result = service.get_moneyflow(1, "2026-10-26", "2026-10-27")
+
+        assert result.is_empty()
+
 
 class TestCapitalStoreSaveMethods:
     """Tests for CapitalStore save_* methods."""

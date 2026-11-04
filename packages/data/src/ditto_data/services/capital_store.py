@@ -360,14 +360,26 @@ class CapitalStore:
         return reader.read(start_date=start, end_date=end)
 
     def get_moneyflow(self, instrument_id: int, start: str, end: str) -> pl.DataFrame:
-        """逐标的资金流窗口读（万元/手；#658 批次3 画像链）."""
+        """
+        逐标的资金流窗口读（万元/手；#658 批次3 画像链）.
+
+        knowledge_date=摄取日（非源发布日），晚发布重取/滑窗 force 重取
+        （B1 生产机制）产生同 (instrument_id, trade_date) 多版本；
+        latest_available 收敛到最新 knowledge_date（#628 词表；#667）。
+        """
         reader = self._read_ports.moneyflow
         if reader is None:
             raise ValueError("moneyflow reader not configured")
         frame = reader.read(
             instrument_ids=[instrument_id], start_date=start, end_date=end
         )
-        return frame if frame.is_empty() else frame.sort("trade_date")
+        if frame.is_empty():
+            return frame
+        return (
+            frame.sort("knowledge_date")
+            .unique(subset=["instrument_id", "trade_date"], keep="last")
+            .sort("trade_date")
+        )
 
     def get_top_list(self, instrument_id: int, start: str, end: str) -> pl.DataFrame:
         """逐标的龙虎榜窗口读（金额元；事件按 reason 独立成行）."""
