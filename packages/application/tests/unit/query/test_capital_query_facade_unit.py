@@ -64,6 +64,32 @@ class _StubCapitalData:
         del instrument_id, start, end, as_of_date
         return pl.DataFrame()
 
+    def get_hk_hold(self, instrument_id: int, start: str, end: str) -> pl.DataFrame:
+        del instrument_id, start, end
+        return pl.DataFrame()
+
+    def get_hsgt_top10s(
+        self, start: str, end: str, market_type: str | None = None
+    ) -> pl.DataFrame:
+        del start, end, market_type
+        return pl.DataFrame()
+
+    def get_top10_holders(
+        self, instrument_id: int, start: str, end: str
+    ) -> pl.DataFrame:
+        del instrument_id, start, end
+        return pl.DataFrame()
+
+    def get_top10_floatholders(
+        self, instrument_id: int, start: str, end: str
+    ) -> pl.DataFrame:
+        del instrument_id, start, end
+        return pl.DataFrame()
+
+    def get_pledge_ratio(self, instrument_id: int, as_of_date: date) -> pl.DataFrame:
+        del instrument_id, as_of_date
+        return pl.DataFrame()
+
     def get_cyq_perfs(self, start: str, end: str) -> pl.DataFrame:
         # 协议成员补齐：facade 测试不消费筹码/胜率帧。
         del start, end

@@ -21,20 +21,24 @@ from ditto_application.queries.capital_profile import (
 )
 from ditto_application.queries.dataset_coverage import DatasetCoverageQueryFacade
 from ditto_application.queries.metadata import MetadataQueryFacade
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Depends, Query
 
+from ditto_apps.api.errors import DateRangeError, FutureDateError
+from ditto_apps.api.params import DateRangeQueryParams, PITQueryParams
 from ditto_apps.api.utils.identifier import (
     resolve_identifier_or_404,
 )
 from ditto_apps.models.capital import (
     CapitalProfileQuery,
     CapitalProfileResponse,
+    DisclosureRowsResponse,
     Margin,
     MarginBlock,
     MoneyflowBlock,
     TopInstBlock,
     TopListBlock,
     Valuation,
+    to_disclosure_rows,
     to_margin_list,
     to_margin_profile_rows,
     to_moneyflow_rows,
@@ -287,3 +291,217 @@ async def post_capital_profile(
     # 混合语义响应(margin=pit_asof、其余=latest_available):信封不声明
     # 单一语义,各块 read_semantics 自持(correctness F4)。
     return APIResponse(data=profile)
+
+
+# ── #658 批次4b 消费接线：北向双库/持仓双榜 GET ────────────────────────
+
+
+@router.get(
+    "/hk-hold",
+    response_model=APIResponse[DisclosureRowsResponse],
+    operation_id="capital_get_hk_hold",
+)
+@inject
+async def get_hk_hold(
+    capital_facade: Annotated[CapitalQueryFacade, FromComponent()],
+    coverage_facade: Annotated[DatasetCoverageQueryFacade, FromComponent()],
+    metadata_facade: Annotated[MetadataQueryFacade, FromComponent()],
+    params: Annotated[DateRangeQueryParams, Depends()],
+) -> APIResponse[DisclosureRowsResponse]:
+    """
+    逐标的北向持股窗口读(latest_available;2024-08-19 知识日分段).
+
+    2024-08-19 起季度披露制:非季末交易日无行=制度性缺席不是缺口
+    (docs/data/event-disclosure-verification.md 分段详证)。
+    """
+    _validate_disclosure_window(params.start_date, params.end_date, params.as_of_date)
+    resolved_id = resolve_identifier_or_404(
+        metadata_facade,
+        instrument_id=params.instrument_id,
+        standard_ticker=params.standard_ticker,
+        ticker=params.ticker,
+        as_of_date=params.end_date,
+        domain="capital",
+    )
+    df = await asyncio.to_thread(
+        capital_facade.get_hk_hold,
+        resolved_id,
+        params.start_date.isoformat(),
+        params.end_date.isoformat(),
+        **_experimental_kwargs(params.allow_experimental_data),
+    )
+    return APIResponse(
+        data=DisclosureRowsResponse(
+            rows=to_disclosure_rows(df),
+            read_semantics="latest_available",
+            data_coverage=_coverage(coverage_facade, "hk_hold"),
+        ),
+    )
+
+
+@router.get(
+    "/hsgt-top10",
+    response_model=APIResponse[DisclosureRowsResponse],
+    operation_id="capital_get_hsgt_top10",
+)
+@inject
+async def get_hsgt_top10(
+    capital_facade: Annotated[CapitalQueryFacade, FromComponent()],
+    coverage_facade: Annotated[DatasetCoverageQueryFacade, FromComponent()],
+    start_date: date = Query(..., description="窗口起点"),
+    end_date: date = Query(..., description="窗口终点"),
+    market_type: str | None = Query(
+        None, description="1=沪股通 3=深股通(本地库仅北向);缺省全通道"
+    ),
+    allow_experimental_data: bool = Query(False),
+) -> APIResponse[DisclosureRowsResponse]:
+    """
+    市场级沪深港通十大成交窗口读(latest_available;每日 20 行事件型).
+
+    2024-08-19 改制后 buy/sell/net_amount 官方停披——null 保留不填零。
+    """
+    _validate_disclosure_window(start_date, end_date)
+    df = await asyncio.to_thread(
+        capital_facade.get_hsgt_top10s,
+        start_date.isoformat(),
+        end_date.isoformat(),
+        market_type,
+        **_experimental_kwargs(allow_experimental_data),
+    )
+    return APIResponse(
+        data=DisclosureRowsResponse(
+            rows=to_disclosure_rows(df),
+            read_semantics="latest_available",
+            data_coverage=_coverage(coverage_facade, "hsgt_top10"),
+        ),
+    )
+
+
+@router.get(
+    "/top10-holders",
+    response_model=APIResponse[DisclosureRowsResponse],
+    operation_id="capital_get_top10_holders",
+)
+@inject
+async def get_top10_holders(
+    capital_facade: Annotated[CapitalQueryFacade, FromComponent()],
+    coverage_facade: Annotated[DatasetCoverageQueryFacade, FromComponent()],
+    metadata_facade: Annotated[MetadataQueryFacade, FromComponent()],
+    params: Annotated[DateRangeQueryParams, Depends()],
+) -> APIResponse[DisclosureRowsResponse]:
+    """
+    逐标的前十大股东窗口读(latest_available;report_date 报告期粒度).
+
+    修订=新公告日(knowledge_date)版本行并存;名单跌出≠清仓;
+    hold_change 0=不变 null=新进;两榜与流通榜语义独立不互推。
+    """
+    _validate_disclosure_window(params.start_date, params.end_date, params.as_of_date)
+    resolved_id = resolve_identifier_or_404(
+        metadata_facade,
+        instrument_id=params.instrument_id,
+        standard_ticker=params.standard_ticker,
+        ticker=params.ticker,
+        as_of_date=params.end_date,
+        domain="capital",
+    )
+    df = await asyncio.to_thread(
+        capital_facade.get_top10_holders,
+        resolved_id,
+        params.start_date.isoformat(),
+        params.end_date.isoformat(),
+        **_experimental_kwargs(params.allow_experimental_data),
+    )
+    return APIResponse(
+        data=DisclosureRowsResponse(
+            rows=to_disclosure_rows(df),
+            read_semantics="latest_available",
+            data_coverage=_coverage(coverage_facade, "top10_holders"),
+        ),
+    )
+
+
+@router.get(
+    "/top10-floatholders",
+    response_model=APIResponse[DisclosureRowsResponse],
+    operation_id="capital_get_top10_floatholders",
+)
+@inject
+async def get_top10_floatholders(
+    capital_facade: Annotated[CapitalQueryFacade, FromComponent()],
+    coverage_facade: Annotated[DatasetCoverageQueryFacade, FromComponent()],
+    metadata_facade: Annotated[MetadataQueryFacade, FromComponent()],
+    params: Annotated[DateRangeQueryParams, Depends()],
+) -> APIResponse[DisclosureRowsResponse]:
+    """逐标的前十大流通股东窗口读(独立流通股榜口径)."""
+    _validate_disclosure_window(params.start_date, params.end_date, params.as_of_date)
+    resolved_id = resolve_identifier_or_404(
+        metadata_facade,
+        instrument_id=params.instrument_id,
+        standard_ticker=params.standard_ticker,
+        ticker=params.ticker,
+        as_of_date=params.end_date,
+        domain="capital",
+    )
+    df = await asyncio.to_thread(
+        capital_facade.get_top10_floatholders,
+        resolved_id,
+        params.start_date.isoformat(),
+        params.end_date.isoformat(),
+        **_experimental_kwargs(params.allow_experimental_data),
+    )
+    return APIResponse(
+        data=DisclosureRowsResponse(
+            rows=to_disclosure_rows(df),
+            read_semantics="latest_available",
+            data_coverage=_coverage(coverage_facade, "top10_floatholders"),
+        ),
+    )
+
+
+@router.get(
+    "/pledge-ratio",
+    response_model=APIResponse[DisclosureRowsResponse],
+    operation_id="capital_get_pledge_ratio",
+)
+@inject
+async def get_pledge_ratio(
+    capital_facade: Annotated[CapitalQueryFacade, FromComponent()],
+    coverage_facade: Annotated[DatasetCoverageQueryFacade, FromComponent()],
+    metadata_facade: Annotated[MetadataQueryFacade, FromComponent()],
+    params: Annotated[PITQueryParams, Depends()],
+) -> APIResponse[DisclosureRowsResponse]:
+    """逐标的质押比 PIT 读(report_date 锚;周频披露节奏非日历完整)."""
+    _validate_disclosure_window(as_of=params.as_of_date)
+    resolved_id = resolve_identifier_or_404(
+        metadata_facade,
+        instrument_id=params.instrument_id,
+        standard_ticker=params.standard_ticker,
+        ticker=params.ticker,
+        as_of_date=params.as_of_date,
+        domain="capital",
+    )
+    df = await asyncio.to_thread(
+        capital_facade.get_pledge_ratio,
+        resolved_id,
+        params.as_of_date,
+        **_experimental_kwargs(params.allow_experimental_data),
+    )
+    return APIResponse(
+        data=DisclosureRowsResponse(
+            rows=to_disclosure_rows(df),
+            read_semantics="pit_asof",
+            data_coverage=_coverage(coverage_facade, "pledge_ratio"),
+        ),
+    )
+
+
+def _validate_disclosure_window(
+    start: date | None = None,
+    end: date | None = None,
+    as_of: date | None = None,
+) -> None:
+    """倒置窗口/未来 as_of fail-closed(fundamental corporate-actions 先例)."""
+    if start is not None and end is not None and start > end:
+        raise DateRangeError(start_date=start.isoformat(), end_date=end.isoformat())
+    if as_of is not None and as_of > date.today():
+        raise FutureDateError(field_name="as_of_date", date_value=as_of.isoformat())

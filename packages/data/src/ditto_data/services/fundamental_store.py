@@ -75,6 +75,77 @@ class FundamentalStore:
 
     # list_* - Multi record queries
 
+    def get_fina_indicator(
+        self,
+        instrument_id: int,
+        start: str,
+        end: str,
+        as_of: str | None = None,
+    ) -> pl.DataFrame:
+        """
+        逐标的财务指标窗口读（report_date 窗口；118 列透传）.
+
+        knowledge_date=公告日 ann_date;as_of 给定时按 knowledge_date<=as_of
+        收敛到最新公告版本（修订选版）。
+        """
+        reader = self._read_ports.fina_indicator
+        if reader is None:
+            raise ValueError("fina_indicator reader not configured")
+        frame = reader.read(
+            instrument_ids=[instrument_id],
+            start_date=start,
+            end_date=end,
+            filters=(
+                [pl.col("knowledge_date") <= pl.lit(as_of).str.to_date()]
+                if as_of
+                else None
+            ),
+        )
+        if frame.is_empty():
+            return frame
+        if as_of:
+            # pit_asof 词表:同 (instrument, report_date) 收敛到最新可见
+            # knowledge 版本(修订选版,#628)。
+            frame = frame.sort("knowledge_date").unique(
+                subset=["instrument_id", "report_date"], keep="last"
+            )
+        return frame.sort(["report_date", "knowledge_date"])
+
+    def get_earnings_express(
+        self, source_ticker: str, start: str, end: str
+    ) -> pl.DataFrame:
+        """
+        逐标的业绩快报窗口读（ann_date 窗口=公告事件;金额元）.
+
+        平日 0 行=无公告正常;audit_status 透出不伪称已审计。
+        instrument_column=source_ticker（该库以 ticker 为仪器键过滤）。
+        """
+        reader = self._read_ports.earnings_express
+        if reader is None:
+            raise ValueError("earnings_express reader not configured")
+        # ParquetDatasetReader 的 instrument 过滤恒作用于 instrument_id 列,
+        # 该库仪器键是 source_ticker——经 filters 显式过滤。
+        frame = reader.read(
+            start_date=start,
+            end_date=end,
+            filters=[pl.col("source_ticker") == source_ticker],
+        )
+        return frame if frame.is_empty() else frame.sort("ann_date")
+
+    def get_earnings_forecast(
+        self, source_ticker: str, start: str, end: str
+    ) -> pl.DataFrame:
+        """逐标的业绩预告窗口读（ann_date 窗口;净利润上下界万元）."""
+        reader = self._read_ports.earnings_forecast
+        if reader is None:
+            raise ValueError("earnings_forecast reader not configured")
+        frame = reader.read(
+            start_date=start,
+            end_date=end,
+            filters=[pl.col("source_ticker") == source_ticker],
+        )
+        return frame if frame.is_empty() else frame.sort(["ann_date", "report_date"])
+
     def list_corporate_actions(
         self,
         instrument_id: int,

@@ -65,6 +65,23 @@ class MetadataQueryFacade:
             sort_field=sort_field,
         )
 
+    def list_industries(
+        self,
+        *,
+        is_active: bool = True,
+        industry_level: str | None = None,
+    ) -> pl.DataFrame:
+        """
+        行业分类目录（#658 批次4b 应用目录消费）.
+
+        返回列:industry_id/industry_name/industry_level/source/is_active;
+        SW 可用,CSRC 2002 权限不足（coverage partial）。
+        """
+        return self._service.instrument.find_industries(
+            is_active=is_active,
+            industry_level=industry_level,
+        )
+
     def get_instrument(self, instrument_id: int) -> dict[str, Any] | None:
         """
         获取单个证券信息.

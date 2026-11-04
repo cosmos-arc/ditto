@@ -17,6 +17,11 @@ _MONEYFLOW_DATASET = "moneyflow"
 _CYQ_PERF_DATASET = "cyq_perf"
 _TOP_LIST_DATASET = "top_list"
 _TOP_INST_DATASET = "top_inst"
+_HK_HOLD_DATASET = "hk_hold"
+_HSGT_TOP10_DATASET = "hsgt_top10"
+_TOP10_HOLDERS_DATASET = "top10_holders"
+_TOP10_FLOATHOLDERS_DATASET = "top10_floatholders"
+_PLEDGE_RATIO_DATASET = "pledge_ratio"
 
 
 class CapitalDataPort(Protocol):
@@ -62,6 +67,36 @@ class CapitalDataPort(Protocol):
         as_of_date: date | None = None,
     ) -> pl.DataFrame:
         """逐标的两融窗口读（PIT 可选；画像链）."""
+        ...
+
+    def get_hk_hold(self, instrument_id: int, start: str, end: str) -> pl.DataFrame:
+        """逐标的北向持股窗口读."""
+        ...
+
+    def get_hsgt_top10s(
+        self, start: str, end: str, market_type: str | None = None
+    ) -> pl.DataFrame:
+        """市场级沪深港通十大成交窗口读."""
+        ...
+
+    def get_top10_holders(
+        self, instrument_id: int, start: str, end: str
+    ) -> pl.DataFrame:
+        """逐标的前十大股东窗口读."""
+        ...
+
+    def get_top10_floatholders(
+        self, instrument_id: int, start: str, end: str
+    ) -> pl.DataFrame:
+        """逐标的前十大流通股东窗口读."""
+        ...
+
+    def get_pledge_ratio(
+        self,
+        instrument_id: int,
+        as_of_date: date,
+    ) -> pl.DataFrame:
+        """逐标的质押比 PIT 读."""
         ...
 
     def get_cyq_perfs(self, start: str, end: str) -> pl.DataFrame:
@@ -135,6 +170,80 @@ class CapitalQueryFacade:
             allow_experimental_data=allow_experimental_data,
         )
         return self._service.get_cyq_perfs(start, end)
+
+    def get_hk_hold(
+        self,
+        instrument_id: int,
+        start: str,
+        end: str,
+        *,
+        allow_experimental_data: bool = False,
+    ) -> pl.DataFrame:
+        """逐标的北向持股窗口读(2024-08-19 知识日分段语义随 coverage)."""
+        self._assert_dataset_allowed(
+            _HK_HOLD_DATASET,
+            allow_experimental_data=allow_experimental_data,
+        )
+        return self._service.get_hk_hold(instrument_id, start, end)
+
+    def get_hsgt_top10s(
+        self,
+        start: str,
+        end: str,
+        market_type: str | None = None,
+        *,
+        allow_experimental_data: bool = False,
+    ) -> pl.DataFrame:
+        """市场级沪深港通十大成交窗口读(改制后 buy/sell null 保真)."""
+        self._assert_dataset_allowed(
+            _HSGT_TOP10_DATASET,
+            allow_experimental_data=allow_experimental_data,
+        )
+        return self._service.get_hsgt_top10s(start, end, market_type)
+
+    def get_top10_holders(
+        self,
+        instrument_id: int,
+        start: str,
+        end: str,
+        *,
+        allow_experimental_data: bool = False,
+    ) -> pl.DataFrame:
+        """逐标的前十大股东窗口读(报告期粒度;公告日版本行)."""
+        self._assert_dataset_allowed(
+            _TOP10_HOLDERS_DATASET,
+            allow_experimental_data=allow_experimental_data,
+        )
+        return self._service.get_top10_holders(instrument_id, start, end)
+
+    def get_top10_floatholders(
+        self,
+        instrument_id: int,
+        start: str,
+        end: str,
+        *,
+        allow_experimental_data: bool = False,
+    ) -> pl.DataFrame:
+        """逐标的前十大流通股东窗口读(独立流通口径不互推)."""
+        self._assert_dataset_allowed(
+            _TOP10_FLOATHOLDERS_DATASET,
+            allow_experimental_data=allow_experimental_data,
+        )
+        return self._service.get_top10_floatholders(instrument_id, start, end)
+
+    def get_pledge_ratio(
+        self,
+        instrument_id: int,
+        as_of_date: date,
+        *,
+        allow_experimental_data: bool = False,
+    ) -> pl.DataFrame:
+        """逐标的质押比 PIT 读(report_date 锚;周频披露节奏)."""
+        self._assert_dataset_allowed(
+            _PLEDGE_RATIO_DATASET,
+            allow_experimental_data=allow_experimental_data,
+        )
+        return self._service.get_pledge_ratio(instrument_id, as_of_date)
 
     def get_moneyflow(
         self,

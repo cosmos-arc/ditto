@@ -414,3 +414,75 @@ class CapitalStore:
         if reader is None:
             raise ValueError("cyq_perf reader not configured")
         return reader.read(start_date=start, end_date=end)
+
+    # ── #658 批次4b 消费接线：北向双库/持仓双榜读取 ──────────────────────
+
+    def get_hk_hold(self, instrument_id: int, start: str, end: str) -> pl.DataFrame:
+        """
+        逐标的北向持股窗口读（vol 股/ratio %）.
+
+        知识日分段 2024-08-19（日频制度段=次交易日；季度段=账本观察日），
+        2024-08-19 后非季末无行＝制度性缺席不是缺口。
+        """
+        reader = self._read_ports.hk_hold
+        if reader is None:
+            raise ValueError("hk_hold reader not configured")
+        frame = reader.read(
+            instrument_ids=[instrument_id], start_date=start, end_date=end
+        )
+        return frame if frame.is_empty() else frame.sort("trade_date")
+
+    def get_hsgt_top10s(
+        self, start: str, end: str, market_type: str | None = None
+    ) -> pl.DataFrame:
+        """
+        市场级沪深港通十大成交窗口读（每日 20 行事件型）.
+
+        2024-08-19 改制后 buy/sell/net_amount 官方停披——null 保留不填零。
+        """
+        reader = self._read_ports.hsgt_top10
+        if reader is None:
+            raise ValueError("hsgt_top10 reader not configured")
+        filters = [pl.col("market_type") == market_type] if market_type else None
+        frame = reader.read(start_date=start, end_date=end, filters=filters)
+        return (
+            frame
+            if frame.is_empty()
+            else frame.sort(["trade_date", "market_type", "rank"])
+        )
+
+    def get_top10_holders(
+        self, instrument_id: int, start: str, end: str
+    ) -> pl.DataFrame:
+        """
+        逐标的前十大股东窗口读（报告期粒度;公告日=knowledge_date 版本行）.
+
+        窗口过滤 report_date;名单跌出≠清仓,两榜语义独立不互推。
+        """
+        reader = self._read_ports.top10_holders
+        if reader is None:
+            raise ValueError("top10_holders reader not configured")
+        frame = reader.read(
+            instrument_ids=[instrument_id], start_date=start, end_date=end
+        )
+        return (
+            frame
+            if frame.is_empty()
+            else frame.sort(["report_date", "knowledge_date", "holder_name"])
+        )
+
+    def get_top10_floatholders(
+        self, instrument_id: int, start: str, end: str
+    ) -> pl.DataFrame:
+        """逐标的前十大流通股东窗口读（独立流通股榜口径）."""
+        reader = self._read_ports.top10_floatholders
+        if reader is None:
+            raise ValueError("top10_floatholders reader not configured")
+        frame = reader.read(
+            instrument_ids=[instrument_id], start_date=start, end_date=end
+        )
+        return (
+            frame
+            if frame.is_empty()
+            else frame.sort(["report_date", "knowledge_date", "holder_name"])
+        )
