@@ -1,6 +1,6 @@
 /**
  * DO NOT EDIT: generated from contracts/openapi/v1.json.
- * Schema SHA-256: 91aeb7472a515a49779d2bc19a3c2880a35bf8594048898fb28e545227a0b70f
+ * Schema SHA-256: f4019278c37994a85a72c4963a9efb501cb552f76331b99f2dd03dc69d102c39
  * Generator: ditto-operation-response-contracts 4
  */
 
@@ -297,6 +297,16 @@ export const operationResponseContracts = {
     "500": ["application/json"],
     "default": ["application/json"],
   },
+  "get /api/v1/capital/index-valuation": {
+    "200": ["application/json"],
+    "400": ["application/json"],
+    "403": ["application/json"],
+    "404": ["application/json"],
+    "409": ["application/json"],
+    "422": ["application/json"],
+    "500": ["application/json"],
+    "default": ["application/json"],
+  },
   "get /api/v1/capital/margin": {
     "200": ["application/json"],
     "400": ["application/json"],
@@ -408,6 +418,16 @@ export const operationResponseContracts = {
     "default": ["application/json"],
   },
   "get /api/v1/fundamental/indicators": {
+    "200": ["application/json"],
+    "400": ["application/json"],
+    "403": ["application/json"],
+    "404": ["application/json"],
+    "409": ["application/json"],
+    "422": ["application/json"],
+    "500": ["application/json"],
+    "default": ["application/json"],
+  },
+  "get /api/v1/futures/contracts": {
     "200": ["application/json"],
     "400": ["application/json"],
     "403": ["application/json"],
@@ -1338,6 +1358,16 @@ export const operationResponseContracts = {
     "500": ["application/json"],
     "default": ["application/json"],
   },
+  "post /api/v1/futures/bars": {
+    "200": ["application/json"],
+    "400": ["application/json"],
+    "403": ["application/json"],
+    "404": ["application/json"],
+    "409": ["application/json"],
+    "422": ["application/json"],
+    "500": ["application/json"],
+    "default": ["application/json"],
+  },
   "post /api/v1/fx/bars": {
     "200": ["application/json"],
     "400": ["application/json"],
@@ -2035,6 +2065,12 @@ export const operationRequestContracts = {
       "query": ["allow_experimental_data", "end_date", "market_type", "start_date"],
     },
   },
+  "get /api/v1/capital/index-valuation": {
+    parameters: {
+      "header": ["X-Ditto-API-Contract-Version"],
+      "query": ["allow_experimental_data", "as_of_date", "end_date", "instrument_id", "standard_ticker", "start_date", "ticker"],
+    },
+  },
   "get /api/v1/capital/margin": {
     parameters: {
       "header": ["X-Ditto-API-Contract-Version"],
@@ -2105,6 +2141,12 @@ export const operationRequestContracts = {
     parameters: {
       "header": ["X-Ditto-API-Contract-Version"],
       "query": ["allow_experimental_data", "as_of_date", "end_date", "instrument_id", "standard_ticker", "start_date", "ticker"],
+    },
+  },
+  "get /api/v1/futures/contracts": {
+    parameters: {
+      "header": ["X-Ditto-API-Contract-Version"],
+      "query": ["allow_experimental_data", "exchange", "fut_code"],
     },
   },
   "get /api/v1/ingestion/catalog/asset": {
@@ -2651,6 +2693,11 @@ export const operationRequestContracts = {
     },
   },
   "post /api/v1/commodity/bars": {
+    parameters: {
+      "header": ["X-Ditto-API-Contract-Version"],
+    },
+  },
+  "post /api/v1/futures/bars": {
     parameters: {
       "header": ["X-Ditto-API-Contract-Version"],
     },

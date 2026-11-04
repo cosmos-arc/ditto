@@ -1,6 +1,6 @@
 /**
  * DO NOT EDIT: generated from contracts/openapi/v1.json.
- * Schema SHA-256: 91aeb7472a515a49779d2bc19a3c2880a35bf8594048898fb28e545227a0b70f
+ * Schema SHA-256: f4019278c37994a85a72c4963a9efb501cb552f76331b99f2dd03dc69d102c39
  * Generator: openapi-typescript 7.13.0
  */
 
@@ -875,6 +875,31 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/capital/index-valuation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Index Valuation
+         * @description 逐指数估值窗口读(latest_available;total_mv/float_mv 元).
+         *
+         *     市值单位元(与个股 daily_basic 万元不同,doc_id=128);同日多版本
+         *     (knowledge_date=摄取日)收敛到最新;标的须为指数(instrument 解析)。
+         *
+         *     Capability maturity: `experimental`. Implemented or partly implemented; not production scope.
+         */
+        get: operations["capital_get_index_valuation"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/capital/margin": {
         parameters: {
             query?: never;
@@ -1271,6 +1296,73 @@ export interface paths {
          *     Capability maturity: `experimental`. Implemented or partly implemented; not production scope.
          */
         get: operations["fundamental_get_indicators"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/futures/bars": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Post Bars
+         * @description 查询期货合约日线（latest_available：同日多版本收敛至最新摄取日）.
+         *
+         *     合约以 source_ticker（ts_code 形态，如 "RB2410.SHF"）为键，不映射
+         *     instrument_id；六所（SHFE/CZCE/DCE/INE/CFFEX/GFEX）实际合约，含到期
+         *     前完整日线。amount 万元；首日 pre_settle 与无成交日 OHLC 以 null 透出。
+         *     limit 取窗口内最新 N 行（按交易日）；空 source_tickers 列表拒绝。
+         *
+         *     Raises:
+         *         AppQueryError: 400 未显式 allow_experimental_data 时拒绝
+         *
+         *     Args:
+         *         query: 查询参数
+         *             - source_tickers: 合约代码列表 (可选, 缺省=全部合约, 空列表拒绝)
+         *             - start_date: 开始日期 (可选)
+         *             - end_date: 结束日期 (可选)
+         *             - limit: 窗口内最新 N 行 (默认 1000, 范围 1-10000)
+         *             - allow_experimental_data: 显式允许 experimental 数据集
+         *         facade: FuturesQueryFacade 依赖注入
+         *         coverage_facade: 覆盖限制查询 facade
+         *
+         *     Returns:
+         *         APIResponse 包含期货日线数据（bars+语义+知界）
+         */
+        post: operations["futures_post_bars"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/futures/contracts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Contracts
+         * @description 查询期货合约身份（与日线同范围，含已到期合约）.
+         *
+         *     list_date/delist_date 为源端声明窗口（非本地观察）；delist_date null=
+         *     未提供而非在市推断；source/knowledge_date 随行（来源与快照摄取日传播）。
+         *
+         *     Raises:
+         *         AppQueryError: 400 未显式 allow_experimental_data 时拒绝
+         */
+        get: operations["futures_get_contracts"];
         put?: never;
         post?: never;
         delete?: never;
@@ -4632,6 +4724,30 @@ export interface components {
         APIResponse_FillResponse_: {
             /** @description 响应数据 */
             data: components["schemas"]["FillResponse"];
+            /** @description 分页信息(可选) */
+            pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
+        };
+        /** APIResponse[FuturesBarsResponse] */
+        APIResponse_FuturesBarsResponse_: {
+            /** @description 响应数据 */
+            data: components["schemas"]["FuturesBarsResponse"];
+            /** @description 分页信息(可选) */
+            pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
+        };
+        /** APIResponse[FuturesContractsResponse] */
+        APIResponse_FuturesContractsResponse_: {
+            /** @description 响应数据 */
+            data: components["schemas"]["FuturesContractsResponse"];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
             /**
@@ -11075,6 +11191,231 @@ export interface components {
          * @enum {string}
          */
         FinancialType: "balance_sheet" | "income_statement" | "cash_flow";
+        /**
+         * FuturesBar
+         * @description 期货合约日线响应模型（amount 万元）.
+         *
+         *     Attributes:
+         *         source_ticker: 合约代码 (ts_code 形态, 如 RB2410.SHF)
+         *         trade_date: 交易日期 (YYYY-MM-DD, 中国交易日历)
+         *         open: 开盘价 (可选; 停牌/无成交日 null)
+         *         high: 最高价 (可选)
+         *         low: 最低价 (可选)
+         *         close: 收盘价 (可选)
+         *         settle: 结算价 (可选)
+         *         pre_settle: 昨结算价 (可选; 上市首日 null)
+         *         volume: 成交量 (手)
+         *         amount: 成交额 (万元)
+         *         open_interest: 持仓量 (手)
+         */
+        FuturesBar: {
+            /**
+             * Amount
+             * @description 成交额 (万元)
+             */
+            amount?: number | null;
+            /**
+             * Close
+             * @description 收盘价
+             */
+            close?: number | null;
+            /**
+             * High
+             * @description 最高价
+             */
+            high?: number | null;
+            /**
+             * Low
+             * @description 最低价
+             */
+            low?: number | null;
+            /**
+             * Open
+             * @description 开盘价
+             */
+            open?: number | null;
+            /**
+             * Open Interest
+             * @description 持仓量 (手)
+             */
+            open_interest?: number | null;
+            /**
+             * Pre Settle
+             * @description 昨结算价
+             */
+            pre_settle?: number | null;
+            /**
+             * Settle
+             * @description 结算价
+             */
+            settle?: number | null;
+            /**
+             * Source Ticker
+             * @description 合约代码 (ts_code 形态)
+             */
+            source_ticker: string;
+            /**
+             * Trade Date
+             * @description 交易日期
+             */
+            trade_date: string;
+            /**
+             * Volume
+             * @description 成交量 (手)
+             */
+            volume?: number | null;
+        };
+        /**
+         * FuturesBarsQuery
+         * @description 期货日线查询参数模型.
+         *
+         *     Attributes:
+         *         source_tickers: 合约代码列表 (可选, ts_code 形态如 ["RB2410.SHF"];
+         *             缺省=全部合约; 空列表拒绝——非缺省选择不得静默全量)
+         *         start_date: 开始日期
+         *         end_date: 结束日期
+         *         limit: 窗口内最新 N 行, 默认 1000, 范围 1-10000
+         *         allow_experimental_data: 显式允许 experimental 数据集
+         */
+        FuturesBarsQuery: {
+            /**
+             * Allow Experimental Data
+             * @description 显式允许 experimental 数据集进入研究态查询
+             * @default false
+             */
+            allow_experimental_data: boolean;
+            /**
+             * End Date
+             * @description 结束日期
+             */
+            end_date?: string | null;
+            /**
+             * Limit
+             * @description 窗口内最新 N 行(按交易日截断)
+             * @default 1000
+             */
+            limit: number;
+            /**
+             * Source Tickers
+             * @description 合约代码列表 (ts_code 形态, 如 RB2410.SHF)
+             */
+            source_tickers?: string[] | null;
+            /**
+             * Start Date
+             * @description 开始日期
+             */
+            start_date?: string | null;
+        };
+        /**
+         * FuturesBarsResponse
+         * @description 期货日线响应模型（语义+知界随行，DisclosureRowsResponse 同构）.
+         *
+         *     Attributes:
+         *         bars: 期货日线列表（同日多版本已收敛至最新 knowledge_date）
+         *         read_semantics: 读取时间语义
+         *         data_coverage: 数据集覆盖限制 (可选)
+         */
+        FuturesBarsResponse: {
+            /**
+             * Bars
+             * @description 期货日线列表
+             */
+            bars: components["schemas"]["FuturesBar"][];
+            /** @description 数据集覆盖限制 */
+            data_coverage?: components["schemas"]["DataCoverageInfo"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义
+             * @enum {string}
+             */
+            read_semantics: "latest_available" | "pit_asof" | "frozen_snapshot";
+        };
+        /**
+         * FuturesContract
+         * @description 期货合约身份响应模型（与日线同范围，含已到期合约）.
+         *
+         *     Attributes:
+         *         source_ticker: 合约代码 (ts_code 形态)
+         *         symbol: 合约简称 (如 RB2410)
+         *         exchange: 交易所 (SHFE/CZCE/DCE/INE/CFFEX/GFEX)
+         *         fut_code: 品种代码 (如 RB)
+         *         multiplier: 合约乘数
+         *         list_date: 上市日期 (源端声明)
+         *         delist_date: 到期日期 (源端声明; 可选)
+         *         source: 来源 (如 tushare)
+         *         knowledge_date: 快照摄取日
+         */
+        FuturesContract: {
+            /**
+             * Delist Date
+             * @description 到期日期
+             */
+            delist_date?: string | null;
+            /**
+             * Exchange
+             * @description 交易所
+             */
+            exchange: string;
+            /**
+             * Fut Code
+             * @description 品种代码
+             */
+            fut_code: string;
+            /**
+             * Knowledge Date
+             * @description 快照摄取日
+             */
+            knowledge_date: string;
+            /**
+             * List Date
+             * @description 上市日期
+             */
+            list_date: string;
+            /**
+             * Multiplier
+             * @description 合约乘数
+             */
+            multiplier?: number | null;
+            /**
+             * Source
+             * @description 来源
+             */
+            source: string;
+            /**
+             * Source Ticker
+             * @description 合约代码 (ts_code 形态)
+             */
+            source_ticker: string;
+            /**
+             * Symbol
+             * @description 合约简称
+             */
+            symbol: string;
+        };
+        /**
+         * FuturesContractsResponse
+         * @description 期货合约身份响应模型（语义+知界随行）.
+         *
+         *     Attributes:
+         *         contracts: 合约身份列表（与日线同范围，含已到期合约）
+         *         read_semantics: 读取时间语义
+         *         data_coverage: 数据集覆盖限制 (可选)
+         */
+        FuturesContractsResponse: {
+            /**
+             * Contracts
+             * @description 合约身份列表
+             */
+            contracts: components["schemas"]["FuturesContract"][];
+            /** @description 数据集覆盖限制 */
+            data_coverage?: components["schemas"]["DataCoverageInfo"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义
+             * @enum {string}
+             */
+            read_semantics: "latest_available" | "pit_asof" | "frozen_snapshot";
+        };
         /**
          * FxBar
          * @description 外汇 K 线响应模型.
@@ -19862,6 +20203,100 @@ export interface operations {
             };
         };
     };
+    capital_get_index_valuation: {
+        parameters: {
+            query: {
+                instrument_id?: number | null;
+                ticker?: string | null;
+                standard_ticker?: string | null;
+                start_date: string;
+                end_date: string;
+                as_of_date?: string | null;
+                allow_experimental_data?: boolean;
+            };
+            header?: {
+                /** @description Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required. */
+                "X-Ditto-API-Contract-Version"?: "v1";
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_DisclosureRowsResponse_"];
+                };
+            };
+            /** @description Bad request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Resource not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Request conflicts with current state */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Request or domain validation failed */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Internal server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Structured Ditto API error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     capital_get_margin: {
         parameters: {
             query: {
@@ -21097,6 +21532,189 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["APIResponse_DisclosureRowsResponse_"];
+                };
+            };
+            /** @description Bad request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Resource not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Request conflicts with current state */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Request or domain validation failed */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Internal server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Structured Ditto API error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    futures_post_bars: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required. */
+                "X-Ditto-API-Contract-Version"?: "v1";
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FuturesBarsQuery"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_FuturesBarsResponse_"];
+                };
+            };
+            /** @description Bad request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Resource not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Request conflicts with current state */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Request or domain validation failed */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Internal server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Structured Ditto API error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    futures_get_contracts: {
+        parameters: {
+            query?: {
+                /** @description 交易所过滤 (SHFE/CZCE/DCE/INE/CFFEX/GFEX) */
+                exchange?: string | null;
+                /** @description 品种代码过滤 (如 RB) */
+                fut_code?: string | null;
+                /** @description 显式允许 experimental 数据集进入研究态查询 */
+                allow_experimental_data?: boolean;
+            };
+            header?: {
+                /** @description Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required. */
+                "X-Ditto-API-Contract-Version"?: "v1";
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_FuturesContractsResponse_"];
                 };
             };
             /** @description Bad request */

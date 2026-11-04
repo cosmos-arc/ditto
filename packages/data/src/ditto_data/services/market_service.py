@@ -420,6 +420,87 @@ class MarketService:
 
         return df
 
+    # ── #658 批次4c 消费接线：期货双库读取 ─────────────────────────────
+
+    @traced("market.get_futures_daily")
+    def get_futures_daily(
+        self,
+        start: str | None,
+        end: str | None,
+        source_tickers: list[str] | None = None,
+    ) -> pl.DataFrame:
+        """
+        查询期货合约日线窗口（六所实际合约）.
+
+        Args:
+            start: 开始日期 (YYYY-MM-DD；None 为不设下界).
+            end: 结束日期 (YYYY-MM-DD；None 为不设上界).
+            source_tickers: 合约代码过滤（可选，None 为全部合约；ts_code 形态如
+                "RB2410.SHF"）.
+
+        Returns:
+            期货日线 DataFrame（source_ticker、trade_date、open/high/low/close、
+            settle、pre_settle、volume、amount 万元、open_interest）；读取器未
+            配置时抛 ValueError（fail-closed，不静默空帧）。
+
+        """
+        reader = self._read_ports.futures_daily
+        if reader is None:
+            raise ValueError("futures_daily reader not configured")
+        filters = (
+            [pl.col("source_ticker").is_in(source_tickers)] if source_tickers else None
+        )
+        df = reader.read(start_date=start, end_date=end, filters=filters)
+        if not df.is_empty():
+            # 修订收敛：存储键含 knowledge_date(摄取日)，重拉/回补产生同日
+            # 多版本；latest_available 收敛到最新 knowledge_date（#628 词表）。
+            df = (
+                df.sort("knowledge_date")
+                .unique(subset=["source_ticker", "trade_date"], keep="last")
+                .sort(["trade_date", "source_ticker"])
+            )
+        Metrics.data_records.add(
+            len(df),
+            {"dataset": "futures_daily", "operation": "get"},
+        )
+        return df
+
+    @traced("market.get_futures_contracts")
+    def get_futures_contracts(
+        self,
+        exchange: str | None = None,
+        fut_code: str | None = None,
+    ) -> pl.DataFrame:
+        """
+        查询期货合约身份快照（与期货日线同范围，含已到期合约）.
+
+        Args:
+            exchange: 交易所过滤（可选，如 "SHFE"）.
+            fut_code: 品种代码过滤（可选，如 "RB"）.
+
+        Returns:
+            合约身份 DataFrame（source_ticker、symbol、exchange、fut_code、
+            multiplier、list_date、delist_date、knowledge_date）；list/delist
+            为源端声明窗口，非本地观察。
+
+        """
+        reader = self._read_ports.futures_basic
+        if reader is None:
+            raise ValueError("futures_basic reader not configured")
+        expressions: list[pl.Expr] = []
+        if exchange:
+            expressions.append(pl.col("exchange") == exchange)
+        if fut_code:
+            expressions.append(pl.col("fut_code") == fut_code)
+        df = reader.read(filters=expressions or None)
+        Metrics.data_records.add(
+            len(df),
+            {"dataset": "futures_basic", "operation": "get"},
+        )
+        return (
+            df if df.is_empty() else df.sort(["exchange", "fut_code", "source_ticker"])
+        )
+
 
 def _normalize_list_bars_request(
     request: MarketBarsQuery | list[int] | None,

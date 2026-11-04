@@ -495,6 +495,49 @@ async def get_pledge_ratio(
     )
 
 
+@router.get(
+    "/index-valuation",
+    response_model=APIResponse[DisclosureRowsResponse],
+    operation_id="capital_get_index_valuation",
+)
+@inject
+async def get_index_valuation(
+    capital_facade: Annotated[CapitalQueryFacade, FromComponent()],
+    coverage_facade: Annotated[DatasetCoverageQueryFacade, FromComponent()],
+    metadata_facade: Annotated[MetadataQueryFacade, FromComponent()],
+    params: Annotated[DateRangeQueryParams, Depends()],
+) -> APIResponse[DisclosureRowsResponse]:
+    """
+    逐指数估值窗口读(latest_available;total_mv/float_mv 元).
+
+    市值单位元(与个股 daily_basic 万元不同,doc_id=128);同日多版本
+    (knowledge_date=摄取日)收敛到最新;标的须为指数(instrument 解析)。
+    """
+    _validate_disclosure_window(params.start_date, params.end_date, params.as_of_date)
+    resolved_id = resolve_identifier_or_404(
+        metadata_facade,
+        instrument_id=params.instrument_id,
+        standard_ticker=params.standard_ticker,
+        ticker=params.ticker,
+        as_of_date=params.end_date,
+        domain="capital",
+    )
+    df = await asyncio.to_thread(
+        capital_facade.get_index_valuation,
+        resolved_id,
+        params.start_date.isoformat(),
+        params.end_date.isoformat(),
+        **_experimental_kwargs(params.allow_experimental_data),
+    )
+    return APIResponse(
+        data=DisclosureRowsResponse(
+            rows=to_disclosure_rows(df),
+            read_semantics="latest_available",
+            data_coverage=_coverage(coverage_facade, "index_valuation"),
+        ),
+    )
+
+
 def _validate_disclosure_window(
     start: date | None = None,
     end: date | None = None,

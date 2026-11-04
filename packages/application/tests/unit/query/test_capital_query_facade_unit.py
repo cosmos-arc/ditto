@@ -36,6 +36,13 @@ class _StubCapitalData:
     ) -> pl.DataFrame:
         return self._valuation if self._valuation is not None else pl.DataFrame()
 
+    def get_index_valuation(
+        self, instrument_id: int, start: str, end: str
+    ) -> pl.DataFrame:
+        # 协议成员补齐：指数估值窗口读不在此测试消费。
+        del instrument_id, start, end
+        return pl.DataFrame()
+
     def get_moneyflows(self, start: str, end: str) -> pl.DataFrame:
         # 协议成员补齐：facade 测试不消费全市场资金流帧。
         del start, end

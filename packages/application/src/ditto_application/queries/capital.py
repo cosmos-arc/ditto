@@ -22,6 +22,7 @@ _HSGT_TOP10_DATASET = "hsgt_top10"
 _TOP10_HOLDERS_DATASET = "top10_holders"
 _TOP10_FLOATHOLDERS_DATASET = "top10_floatholders"
 _PLEDGE_RATIO_DATASET = "pledge_ratio"
+_INDEX_VALUATION_DATASET = "index_valuation"
 
 
 class CapitalDataPort(Protocol):
@@ -97,6 +98,12 @@ class CapitalDataPort(Protocol):
         as_of_date: date,
     ) -> pl.DataFrame:
         """逐标的质押比 PIT 读."""
+        ...
+
+    def get_index_valuation(
+        self, instrument_id: int, start: str, end: str
+    ) -> pl.DataFrame:
+        """逐指数估值窗口读（#658 批次4c）."""
         ...
 
     def get_cyq_perfs(self, start: str, end: str) -> pl.DataFrame:
@@ -332,6 +339,37 @@ class CapitalQueryFacade:
             allow_experimental_data=allow_experimental_data,
         )
         return self._service.get_valuation_metrics(instrument_id, as_of_date)
+
+    def get_index_valuation(
+        self,
+        instrument_id: int,
+        start: str,
+        end: str,
+        *,
+        allow_experimental_data: bool = False,
+    ) -> pl.DataFrame:
+        """
+        逐指数估值窗口读（latest_available；total_mv/float_mv 元）.
+
+        市值单位元（与个股 daily_basic 万元不同，doc_id=128）；同日多版本
+        （knowledge_date=摄取日）收敛到最新。
+
+        Args:
+            instrument_id: 指数标的 ID
+            start: 窗口开始 (YYYY-MM-DD)
+            end: 窗口结束 (YYYY-MM-DD)
+            allow_experimental_data: 显式允许 experimental 数据集进入研究态查询
+
+        Returns:
+            指数估值 DataFrame（trade_date、total_mv、float_mv、pe、pe_ttm、
+            pb、turnover_rate；每交易日一行）
+
+        """
+        self._assert_dataset_allowed(
+            _INDEX_VALUATION_DATASET,
+            allow_experimental_data=allow_experimental_data,
+        )
+        return self._service.get_index_valuation(instrument_id, start, end)
 
     def _assert_dataset_allowed(
         self,

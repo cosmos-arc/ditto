@@ -2051,6 +2051,88 @@
         "title": "APIResponse[FillResponse]",
         "type": "object"
       },
+      "APIResponse_FuturesBarsResponse_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/FuturesBarsResponse",
+            "description": "响应数据"
+          },
+          "pagination": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PaginationResponse"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "title": "APIResponse[FuturesBarsResponse]",
+        "type": "object"
+      },
+      "APIResponse_FuturesContractsResponse_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/FuturesContractsResponse",
+            "description": "响应数据"
+          },
+          "pagination": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PaginationResponse"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "title": "APIResponse[FuturesContractsResponse]",
+        "type": "object"
+      },
       "APIResponse_HistoricalUniverseResponse_": {
         "properties": {
           "data": {
@@ -17121,6 +17203,352 @@
         ],
         "title": "FinancialType",
         "type": "string"
+      },
+      "FuturesBar": {
+        "description": "期货合约日线响应模型（amount 万元）.\n\nAttributes:\n    source_ticker: 合约代码 (ts_code 形态, 如 RB2410.SHF)\n    trade_date: 交易日期 (YYYY-MM-DD, 中国交易日历)\n    open: 开盘价 (可选; 停牌/无成交日 null)\n    high: 最高价 (可选)\n    low: 最低价 (可选)\n    close: 收盘价 (可选)\n    settle: 结算价 (可选)\n    pre_settle: 昨结算价 (可选; 上市首日 null)\n    volume: 成交量 (手)\n    amount: 成交额 (万元)\n    open_interest: 持仓量 (手)",
+        "properties": {
+          "amount": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "成交额 (万元)",
+            "title": "Amount"
+          },
+          "close": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "收盘价",
+            "title": "Close"
+          },
+          "high": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "最高价",
+            "title": "High"
+          },
+          "low": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "最低价",
+            "title": "Low"
+          },
+          "open": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "开盘价",
+            "title": "Open"
+          },
+          "open_interest": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "持仓量 (手)",
+            "title": "Open Interest"
+          },
+          "pre_settle": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "昨结算价",
+            "title": "Pre Settle"
+          },
+          "settle": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "结算价",
+            "title": "Settle"
+          },
+          "source_ticker": {
+            "description": "合约代码 (ts_code 形态)",
+            "title": "Source Ticker",
+            "type": "string"
+          },
+          "trade_date": {
+            "description": "交易日期",
+            "title": "Trade Date",
+            "type": "string"
+          },
+          "volume": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "成交量 (手)",
+            "title": "Volume"
+          }
+        },
+        "required": [
+          "source_ticker",
+          "trade_date"
+        ],
+        "title": "FuturesBar",
+        "type": "object"
+      },
+      "FuturesBarsQuery": {
+        "description": "期货日线查询参数模型.\n\nAttributes:\n    source_tickers: 合约代码列表 (可选, ts_code 形态如 [\"RB2410.SHF\"];\n        缺省=全部合约; 空列表拒绝——非缺省选择不得静默全量)\n    start_date: 开始日期\n    end_date: 结束日期\n    limit: 窗口内最新 N 行, 默认 1000, 范围 1-10000\n    allow_experimental_data: 显式允许 experimental 数据集",
+        "properties": {
+          "allow_experimental_data": {
+            "default": false,
+            "description": "显式允许 experimental 数据集进入研究态查询",
+            "title": "Allow Experimental Data",
+            "type": "boolean"
+          },
+          "end_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "结束日期",
+            "title": "End Date"
+          },
+          "limit": {
+            "default": 1000,
+            "description": "窗口内最新 N 行(按交易日截断)",
+            "maximum": 10000.0,
+            "minimum": 1.0,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "source_tickers": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "合约代码列表 (ts_code 形态, 如 RB2410.SHF)",
+            "title": "Source Tickers"
+          },
+          "start_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "开始日期",
+            "title": "Start Date"
+          }
+        },
+        "title": "FuturesBarsQuery",
+        "type": "object"
+      },
+      "FuturesBarsResponse": {
+        "description": "期货日线响应模型（语义+知界随行，DisclosureRowsResponse 同构）.\n\nAttributes:\n    bars: 期货日线列表（同日多版本已收敛至最新 knowledge_date）\n    read_semantics: 读取时间语义\n    data_coverage: 数据集覆盖限制 (可选)",
+        "properties": {
+          "bars": {
+            "description": "期货日线列表",
+            "items": {
+              "$ref": "#/components/schemas/FuturesBar"
+            },
+            "title": "Bars",
+            "type": "array"
+          },
+          "data_coverage": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DataCoverageInfo"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "数据集覆盖限制"
+          },
+          "read_semantics": {
+            "description": "读取时间语义",
+            "enum": [
+              "latest_available",
+              "pit_asof",
+              "frozen_snapshot"
+            ],
+            "title": "Read Semantics",
+            "type": "string"
+          }
+        },
+        "required": [
+          "bars",
+          "read_semantics"
+        ],
+        "title": "FuturesBarsResponse",
+        "type": "object"
+      },
+      "FuturesContract": {
+        "description": "期货合约身份响应模型（与日线同范围，含已到期合约）.\n\nAttributes:\n    source_ticker: 合约代码 (ts_code 形态)\n    symbol: 合约简称 (如 RB2410)\n    exchange: 交易所 (SHFE/CZCE/DCE/INE/CFFEX/GFEX)\n    fut_code: 品种代码 (如 RB)\n    multiplier: 合约乘数\n    list_date: 上市日期 (源端声明)\n    delist_date: 到期日期 (源端声明; 可选)\n    source: 来源 (如 tushare)\n    knowledge_date: 快照摄取日",
+        "properties": {
+          "delist_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "到期日期",
+            "title": "Delist Date"
+          },
+          "exchange": {
+            "description": "交易所",
+            "title": "Exchange",
+            "type": "string"
+          },
+          "fut_code": {
+            "description": "品种代码",
+            "title": "Fut Code",
+            "type": "string"
+          },
+          "knowledge_date": {
+            "description": "快照摄取日",
+            "title": "Knowledge Date",
+            "type": "string"
+          },
+          "list_date": {
+            "description": "上市日期",
+            "title": "List Date",
+            "type": "string"
+          },
+          "multiplier": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "合约乘数",
+            "title": "Multiplier"
+          },
+          "source": {
+            "description": "来源",
+            "title": "Source",
+            "type": "string"
+          },
+          "source_ticker": {
+            "description": "合约代码 (ts_code 形态)",
+            "title": "Source Ticker",
+            "type": "string"
+          },
+          "symbol": {
+            "description": "合约简称",
+            "title": "Symbol",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source_ticker",
+          "symbol",
+          "exchange",
+          "fut_code",
+          "list_date",
+          "source",
+          "knowledge_date"
+        ],
+        "title": "FuturesContract",
+        "type": "object"
+      },
+      "FuturesContractsResponse": {
+        "description": "期货合约身份响应模型（语义+知界随行）.\n\nAttributes:\n    contracts: 合约身份列表（与日线同范围，含已到期合约）\n    read_semantics: 读取时间语义\n    data_coverage: 数据集覆盖限制 (可选)",
+        "properties": {
+          "contracts": {
+            "description": "合约身份列表",
+            "items": {
+              "$ref": "#/components/schemas/FuturesContract"
+            },
+            "title": "Contracts",
+            "type": "array"
+          },
+          "data_coverage": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DataCoverageInfo"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "数据集覆盖限制"
+          },
+          "read_semantics": {
+            "description": "读取时间语义",
+            "enum": [
+              "latest_available",
+              "pit_asof",
+              "frozen_snapshot"
+            ],
+            "title": "Read Semantics",
+            "type": "string"
+          }
+        },
+        "required": [
+          "contracts",
+          "read_semantics"
+        ],
+        "title": "FuturesContractsResponse",
+        "type": "object"
       },
       "FxBar": {
         "description": "外汇 K 线响应模型.\n\nAttributes:\n    currency_pair: 货币对 (如 USDCNH.FXCM)\n    trade_date_utc: 交易日期 (UTC, YYYY-MM-DD)\n    open: 开盘价\n    high: 最高价\n    low: 最低价\n    close: 收盘价",
@@ -33153,6 +33581,208 @@
         "x-ditto-maturity": "experimental"
       }
     },
+    "/api/v1/capital/index-valuation": {
+      "get": {
+        "description": "逐指数估值窗口读(latest_available;total_mv/float_mv 元).\n\n市值单位元(与个股 daily_basic 万元不同,doc_id=128);同日多版本\n(knowledge_date=摄取日)收敛到最新;标的须为指数(instrument 解析)。\n\nCapability maturity: `experimental`. Implemented or partly implemented; not production scope.",
+        "operationId": "capital_get_index_valuation",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "instrument_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Instrument Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "ticker",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Ticker"
+            }
+          },
+          {
+            "in": "query",
+            "name": "standard_ticker",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Standard Ticker"
+            }
+          },
+          {
+            "in": "query",
+            "name": "start_date",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "Start Date",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "end_date",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "End Date",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "as_of_date",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "As Of Date"
+            }
+          },
+          {
+            "in": "query",
+            "name": "allow_experimental_data",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Allow Experimental Data",
+              "type": "boolean"
+            }
+          },
+          {
+            "description": "Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required.",
+            "in": "header",
+            "name": "X-Ditto-API-Contract-Version",
+            "required": false,
+            "schema": {
+              "const": "v1",
+              "description": "Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required.",
+              "title": "X-Ditto-Api-Contract-Version",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIResponse_DisclosureRowsResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad request"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Resource not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Request conflicts with current state"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Request or domain validation failed"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal server error"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Structured Ditto API error"
+          }
+        },
+        "summary": "Get Index Valuation",
+        "tags": [
+          "capital"
+        ],
+        "x-ditto-maturity": "experimental"
+      }
+    },
     "/api/v1/capital/margin": {
       "get": {
         "description": "获取融资融券数据（pit_asof：as_of 可见版本，日粒度 as_of=上海日终）.\n\n标识符三选一（优先级: instrument_id > standard_ticker > ticker）:\n- instrument_id: 内部 ID，如 1000001\n- standard_ticker: Ditto 标准格式，如 \"000001.XSHE\"\n- ticker: 裸代码，如 \"000001\"\n\nRaises:\n    NotFoundError: 404 如果标识符在 as_of_date 不可解析\n\nCapability maturity: `experimental`. Implemented or partly implemented; not production scope.",
@@ -35507,6 +36137,276 @@
           "fundamental"
         ],
         "x-ditto-maturity": "experimental"
+      }
+    },
+    "/api/v1/futures/bars": {
+      "post": {
+        "description": "查询期货合约日线（latest_available：同日多版本收敛至最新摄取日）.\n\n合约以 source_ticker（ts_code 形态，如 \"RB2410.SHF\"）为键，不映射\ninstrument_id；六所（SHFE/CZCE/DCE/INE/CFFEX/GFEX）实际合约，含到期\n前完整日线。amount 万元；首日 pre_settle 与无成交日 OHLC 以 null 透出。\nlimit 取窗口内最新 N 行（按交易日）；空 source_tickers 列表拒绝。\n\nRaises:\n    AppQueryError: 400 未显式 allow_experimental_data 时拒绝\n\nArgs:\n    query: 查询参数\n        - source_tickers: 合约代码列表 (可选, 缺省=全部合约, 空列表拒绝)\n        - start_date: 开始日期 (可选)\n        - end_date: 结束日期 (可选)\n        - limit: 窗口内最新 N 行 (默认 1000, 范围 1-10000)\n        - allow_experimental_data: 显式允许 experimental 数据集\n    facade: FuturesQueryFacade 依赖注入\n    coverage_facade: 覆盖限制查询 facade\n\nReturns:\n    APIResponse 包含期货日线数据（bars+语义+知界）",
+        "operationId": "futures_post_bars",
+        "parameters": [
+          {
+            "description": "Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required.",
+            "in": "header",
+            "name": "X-Ditto-API-Contract-Version",
+            "required": false,
+            "schema": {
+              "const": "v1",
+              "description": "Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required.",
+              "title": "X-Ditto-Api-Contract-Version",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FuturesBarsQuery"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIResponse_FuturesBarsResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad request"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Resource not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Request conflicts with current state"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Request or domain validation failed"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal server error"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Structured Ditto API error"
+          }
+        },
+        "summary": "Post Bars",
+        "tags": [
+          "futures"
+        ]
+      }
+    },
+    "/api/v1/futures/contracts": {
+      "get": {
+        "description": "查询期货合约身份（与日线同范围，含已到期合约）.\n\nlist_date/delist_date 为源端声明窗口（非本地观察）；delist_date null=\n未提供而非在市推断；source/knowledge_date 随行（来源与快照摄取日传播）。\n\nRaises:\n    AppQueryError: 400 未显式 allow_experimental_data 时拒绝",
+        "operationId": "futures_get_contracts",
+        "parameters": [
+          {
+            "description": "交易所过滤 (SHFE/CZCE/DCE/INE/CFFEX/GFEX)",
+            "in": "query",
+            "name": "exchange",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "交易所过滤 (SHFE/CZCE/DCE/INE/CFFEX/GFEX)",
+              "title": "Exchange"
+            }
+          },
+          {
+            "description": "品种代码过滤 (如 RB)",
+            "in": "query",
+            "name": "fut_code",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "品种代码过滤 (如 RB)",
+              "title": "Fut Code"
+            }
+          },
+          {
+            "description": "显式允许 experimental 数据集进入研究态查询",
+            "in": "query",
+            "name": "allow_experimental_data",
+            "required": false,
+            "schema": {
+              "default": false,
+              "description": "显式允许 experimental 数据集进入研究态查询",
+              "title": "Allow Experimental Data",
+              "type": "boolean"
+            }
+          },
+          {
+            "description": "Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required.",
+            "in": "header",
+            "name": "X-Ditto-API-Contract-Version",
+            "required": false,
+            "schema": {
+              "const": "v1",
+              "description": "Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required.",
+              "title": "X-Ditto-Api-Contract-Version",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIResponse_FuturesContractsResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad request"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Resource not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Request conflicts with current state"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Request or domain validation failed"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal server error"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Structured Ditto API error"
+          }
+        },
+        "summary": "Get Contracts",
+        "tags": [
+          "futures"
+        ]
       }
     },
     "/api/v1/fx/bars": {

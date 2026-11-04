@@ -486,3 +486,29 @@ class CapitalStore:
             if frame.is_empty()
             else frame.sort(["report_date", "knowledge_date", "holder_name"])
         )
+
+    # ── #658 批次4c 消费接线：指数估值读取 ─────────────────────────────
+
+    def get_index_valuation(
+        self, instrument_id: int, start: str, end: str
+    ) -> pl.DataFrame:
+        """
+        逐指数估值窗口读（total_mv/float_mv 元，pe/pe_ttm/pb 倍数）.
+
+        单位合同与个股 daily_basic 不同：市值单位元、股本单位股（doc_id=128）。
+        knowledge_date=摄取日（非源发布日），重拉产生同日多版本；latest_available
+        收敛到最新 knowledge_date（#628 词表）。
+        """
+        reader = self._read_ports.index_valuation
+        if reader is None:
+            raise ValueError("index_valuation reader not configured")
+        frame = reader.read(
+            instrument_ids=[instrument_id], start_date=start, end_date=end
+        )
+        if frame.is_empty():
+            return frame
+        return (
+            frame.sort("knowledge_date")
+            .unique(subset=["instrument_id", "trade_date"], keep="last")
+            .sort("trade_date")
+        )
