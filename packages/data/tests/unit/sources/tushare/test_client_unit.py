@@ -870,3 +870,98 @@ class TestTushareClientResourceManagement:
 
         # After with block, client should be closed
         assert client._client.is_closed
+
+
+class TestPaginationDedupMerge:
+    """#672：换档重试几何的跨页重叠去重合并与零新行回显硬拦."""
+
+    def test_cross_page_overlap_at_both_geometries_dedup_merges(
+        self,
+        respx_mock,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """主几何与换档几何都边界重叠时,换档几何去重合并完整取回.
+
+        #661 B2 现场/#629 回补形态:etf_nav fund_nav / forecast 端点的
+        排序不稳定边界重叠换档后仍复发——修复前 force 通道被完全阻断。
+        """
+        monkeypatch.setitem(pagination._DOCUMENTED_PAGE_SIZES, "trade_cal", 3)
+        total_rows = [str(i) for i in range(990)]  # 换档几何 500×2 页
+
+        def side_effect(request: httpx.Request) -> httpx.Response:
+            params = orjson.loads(request.content)["params"]
+            limit, offset = params["limit"], params["offset"]
+            if limit == 3:
+                # 主几何：第二页重复第一页首行（严格几何 fail-closed 触发换档）
+                page = (
+                    total_rows[:limit]
+                    if offset == 0
+                    else [total_rows[0], *total_rows[limit : limit + 2]]
+                )
+            elif offset == 0:
+                page = total_rows[:500]
+            elif offset == 500:
+                # 换档几何第二页：头部 10 行与第一页尾部重叠（边界抖动）
+                page = total_rows[490:990]
+            else:
+                page = []
+            return httpx.Response(
+                200,
+                json={
+                    "code": 0,
+                    "msg": None,
+                    "data": {"fields": ["cal_date"], "items": [[r] for r in page]},
+                },
+            )
+
+        respx_mock.post("http://api.tushare.pro").mock(side_effect=side_effect)
+
+        client = TushareClient(token="test_token", settings=_settings())
+        result = client.query("trade_cal", "cal_date")
+
+        assert sorted(result["cal_date"].to_list()) == sorted(total_rows)
+        assert result.height == 990
+        requested_limits = [
+            orjson.loads(call.request.content)["params"]["limit"]
+            for call in respx_mock.calls
+        ]
+        assert requested_limits == [3, 3, 500, 500, 500]
+
+    def test_zero_new_page_echo_at_shifted_geometry_fails_closed(
+        self,
+        respx_mock,
+        monkeypatch: pytest.MonkeyPatch,
+        fake_time,
+    ) -> None:
+        """换档几何整页零新行连续两次=服务端忽略 offset 的整页回显,硬拦.
+
+        去重合并只自愈边界重叠（页内有新行推进）；整页回显无收敛
+        可能,维持 fail-closed 不无限翻页。
+        """
+        monkeypatch.setitem(pagination._DOCUMENTED_PAGE_SIZES, "trade_cal", 3)
+        echo_rows = [str(i) for i in range(500)]
+
+        def side_effect(request: httpx.Request) -> httpx.Response:
+            params = orjson.loads(request.content)["params"]
+            limit, offset = params["limit"], params["offset"]
+            if limit == 3:
+                page = echo_rows[:3] if offset == 0 else [echo_rows[0], *echo_rows[3:5]]
+            else:
+                # 换档几何：任何 offset 都回显同一整页（真·offset 失效）
+                page = echo_rows[:500]
+            return httpx.Response(
+                200,
+                json={
+                    "code": 0,
+                    "msg": None,
+                    "data": {"fields": ["cal_date"], "items": [[r] for r in page]},
+                },
+            )
+
+        respx_mock.post("http://api.tushare.pro").mock(side_effect=side_effect)
+
+        client = TushareClient(token="test_token", settings=_settings())
+        with pytest.raises(tenacity.RetryError) as exc_info:
+            client.query("trade_cal", "cal_date")
+
+        assert "dedup-merge echo" in str(exc_info.value.last_attempt.exception())
