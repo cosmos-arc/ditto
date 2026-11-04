@@ -5,10 +5,12 @@ from __future__ import annotations
 import hashlib
 import json
 import re
+from collections.abc import Iterable, Iterator
 from typing import Any, Final, Literal
 
 from fastapi import APIRouter, Depends, FastAPI, Header
 from fastapi.routing import APIRoute
+from starlette.routing import BaseRoute
 
 from ditto_apps.api.app_metadata import (
     APP_DESCRIPTION,
@@ -141,9 +143,37 @@ def configure_openapi(app: FastAPI) -> None:
     app.openapi = lambda: _validated_openapi_schema(app)
 
 
+def iter_api_routes(app: FastAPI) -> list[tuple[str, APIRoute]]:
+    """
+    展平 app.routes 为 (有效路径, APIRoute) 列表（含嵌套路由器）.
+
+    fastapi>=0.139 的 include_router 以惰性 _IncludedRouter 挂载（不再
+    include 时展开，前缀在 include_context 上），直接枚举 app.routes 会
+    漏掉全部应用路由且拿不到挂载前缀——校验/测试静默失真。这里递归
+    original_router.routes 并叠加 include_context.prefix 还原有效路径
+    （鸭子式 getattr：0.13x 无惰性挂载，同一实现自然退化）。
+    """
+
+    def _walk(
+        routes: Iterable[BaseRoute], prefix: str
+    ) -> Iterator[tuple[str, APIRoute]]:
+        for route in routes:
+            if isinstance(route, APIRoute):
+                yield prefix + route.path, route
+                continue
+            inner = getattr(route, "original_router", None)
+            if inner is None:
+                continue
+            context = getattr(route, "include_context", None)
+            child_prefix = prefix + (getattr(context, "prefix", "") or "")
+            yield from _walk(inner.routes, child_prefix)
+
+    return list(_walk(app.routes, ""))
+
+
 def _validated_openapi_schema(app: FastAPI) -> dict[str, Any]:
-    operation_routes = [route for route in app.routes if isinstance(route, APIRoute)]
-    missing = [route.path for route in operation_routes if route.operation_id is None]
+    flattened = iter_api_routes(app)
+    missing = [path for path, route in flattened if route.operation_id is None]
     if missing:
         raise RuntimeError(
             "every HTTP route requires an explicit operation_id: "
@@ -151,7 +181,7 @@ def _validated_openapi_schema(app: FastAPI) -> dict[str, Any]:
         )
     operation_ids = [
         route.operation_id
-        for route in operation_routes
+        for _path, route in flattened
         if route.operation_id is not None
     ]
     invalid = [
