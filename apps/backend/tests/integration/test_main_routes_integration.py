@@ -13,8 +13,8 @@
 import pytest
 from ditto_apps.api.routes import __all__ as expected_route_modules
 from ditto_apps.main import app
+from ditto_apps.openapi_contract import iter_api_routes
 from fastapi.routing import APIRoute
-from starlette.routing import Route
 
 
 @pytest.mark.integration
@@ -104,7 +104,7 @@ class TestMainRoutesAssembly:
     def test_health_endpoint_exists(self) -> None:
         """验证健康检查端点存在."""
         health_paths = {"/healthz", "/readyz", "/"}
-        actual_paths = {route.path for route in app.routes if isinstance(route, Route)}
+        actual_paths = {path for path, _route in iter_api_routes(app)}
 
         assert health_paths.issubset(actual_paths), (
             f"健康检查端点缺失\n期望: {health_paths}\n实际路径: {actual_paths}"
@@ -114,14 +114,12 @@ class TestMainRoutesAssembly:
         """验证没有重复的路由定义."""
         seen_paths: dict[str, list[str]] = {}
 
-        for route in app.routes:
-            if isinstance(route, APIRoute):
-                path = route.path
-                if path not in seen_paths:
-                    seen_paths[path] = []
-                # 记录每个路径的方法
-                for method in route.methods:
-                    seen_paths[path].append(method)
+        for path, route in iter_api_routes(app):
+            if path not in seen_paths:
+                seen_paths[path] = []
+            # 记录每个路径的方法
+            for method in route.methods:
+                seen_paths[path].append(method)
 
         # 检查重复（同一路径 + 同一方法）
         duplicates = []

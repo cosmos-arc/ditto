@@ -2,8 +2,8 @@
 
 import pytest
 from ditto_apps.main import app
+from ditto_apps.openapi_contract import iter_api_routes
 from ditto_platform.foundation import get_environment
-from starlette.routing import Route
 
 
 class TestDebugRouteConditionallyRegistered:
@@ -12,7 +12,7 @@ class TestDebugRouteConditionallyRegistered:
     def test_debug_route_registration_matches_environment(self):
         """调试路由注册状态与环境匹配."""
         env = get_environment()
-        routes = [route.path for route in app.routes if isinstance(route, Route)]
+        routes = [path for path, _route in iter_api_routes(app)]
         debug_route_exists = "/api/v1/logs/test" in routes
 
         if env.is_production:
@@ -26,7 +26,7 @@ class TestDebugRouteConditionallyRegistered:
         if env.is_production:
             pytest.skip("生产环境跳过此测试")
 
-        routes = [route.path for route in app.routes if isinstance(route, Route)]
+        routes = [path for path, _route in iter_api_routes(app)]
         assert "/api/v1/logs/test" in routes
 
     @pytest.mark.asyncio
