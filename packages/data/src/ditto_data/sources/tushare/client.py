@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import replace
+from dataclasses import dataclass, replace
 
 import httpx
 import polars as pl
@@ -35,6 +35,63 @@ from ditto_data.sources.tushare.utils.rate_limiter import (
 # 跨页重复换几何重试的页宽位移；下限 500 防止默认 2000 页宽端点被移到
 # 过小页宽（页数增多、每页 offset 损坏暴露面反而变大）。
 _PAGINATION_RETRY_PAGE_SHIFT = 1000
+# 去重合并模式下连续「整页零新行」的回显上限：达到即判定服务端忽略
+# offset（整页回显无法收敛），fail-closed（#672）。
+_PAGINATION_ZERO_NEW_ECHO_LIMIT = 2
+
+
+def _page_fingerprint(
+    page: pl.DataFrame,
+    page_hash_list: list[int],
+    current: int | None,
+) -> int | None:
+    """首页首行指纹：续探时区分「越界回显首页」（#431）与其他回显。"""
+    if current is None and page_hash_list:
+        return page_hash_list[0]
+    return current
+
+
+@dataclass(frozen=True, slots=True)
+class _PageDuplicateContext:
+    """一页重复记账的定位上下文（去重合并辅助方法的参数载体，#672）。"""
+
+    api_name: str
+    offset: int
+    in_page_duplicates: int
+    cross_page_duplicates: int
+
+
+def _append_empty_first_page(pages: list[pl.DataFrame], page: pl.DataFrame) -> None:
+    """首页为空时保留原样（含 fields schema 的零行帧，不经过 concat 路径）。"""
+    if not pages:
+        pages.append(page)
+
+
+def _warn_in_page_duplicates(
+    page: pl.DataFrame,
+    page_rows: set[int],
+    *,
+    api_name: str,
+    offset: int,
+) -> int:
+    """
+    页内整行重复记账（返回重复行数）.
+
+    事件型数据集（dividend 等）存在字段全同的真实业务冗余行，区间层
+    有 .unique() 兜底——降级告警放行（#196 回补实测单页 2 行真实重复
+    被误伤，整 chunk fail-closed）。
+    """
+    in_page_duplicates = page.height - len(page_rows)
+    if in_page_duplicates:
+        logger.warning(
+            "page contained in-page duplicates; passing through (redundancy)",
+            event="tushare_pagination_in_page_duplicates",
+            api_name=api_name,
+            offset=offset,
+            duplicate_rows=in_page_duplicates,
+        )
+    return in_page_duplicates
+
 
 # 截断自愈的页宽下限：服务端单次上限低于此值时无已知端点先例，降页宽
 # 循环不再收敛，fail-closed 拒收。
@@ -302,6 +359,9 @@ class TushareClient:
                     api_name,
                     fields,
                     page_size=page_size,
+                    # 换档几何（第二 attempts）降级为去重合并：边界重叠
+                    # （服务端排序不稳定）自愈，零新行回显仍硬拦（#672）。
+                    dedup_merge=page_size != primary_page_size,
                     **params,
                 )
             except PaginationCorruptionError:
@@ -323,67 +383,84 @@ class TushareClient:
         fields: str,
         *,
         page_size: int,
+        dedup_merge: bool = False,
         **params: str | int,
     ) -> pl.DataFrame:
-        """按显式页宽做 offset 翻页，跨页重复行 fail-closed，短页截断续探自愈。"""
+        """
+        按显式页宽做 offset 翻页，短页截断续探自愈.
+
+        跨页重复默认 fail-closed 硬拦；``dedup_merge``（换档重试几何）下
+        降级为去重合并——丢弃已见行继续翻页（服务端排序不稳定的边界重叠
+        自愈，#672），连续两次整页零新行（服务端忽略 offset 的整页回显）
+        仍硬拦。
+        """
         pages: list[pl.DataFrame] = []
         seen_rows: set[int] = set()
         first_row_hash: int | None = None
         offset = 0
         active_page_size = page_size
+        echo_probes = 0
+        raw_rows_fetched = 0
+        dedup_merge_events = 0
         while True:
             data = self._query(
                 api_name, fields, limit=active_page_size, offset=offset, **params
             )
-            page = response_to_dataframe(data)
+            raw_page = response_to_dataframe(data)
+            raw_rows_fetched += raw_page.height
             # 空尾页即取尽；真实服务端越界页返回 fields=[]（零列 schema），
             # 参与后续 concat 会抛 "schema lengths differ"。首页空保留原样
             # 返回（含 fields schema 的零行帧，不经过 concat 路径）。
-            if page.height == 0:
-                if not pages:
-                    pages.append(page)
+            if raw_page.height == 0:
+                _append_empty_first_page(pages, raw_page)
                 break
-            page_rows = {hash(row) for row in page.iter_rows()}
-            # 首页首行指纹：续探时区分「越界回显首页」（#431 实测形态）与
-            # 其他已见行回显（offset 失效，不可判取尽）。
-            if first_row_hash is None:
-                first_row_hash = hash(next(iter(page.iter_rows())))
-            # 页内整行重复：事件型数据集（dividend 等）存在字段全同的真实
-            # 业务冗余行，区间层有 .unique() 兜底——降级告警放行（#196 回补
-            # 实测单页 2 行真实重复被误伤，整 chunk fail-closed）。
-            in_page_duplicates = page.height - len(page_rows)
-            if in_page_duplicates:
-                logger.warning(
-                    "page contained in-page duplicates; passing through (redundancy)",
-                    event="tushare_pagination_in_page_duplicates",
-                    api_name=api_name,
-                    offset=offset,
-                    duplicate_rows=in_page_duplicates,
-                )
+            page_hash_list = [hash(row) for row in raw_page.iter_rows()]
+            page_rows = set(page_hash_list)
+            first_row_hash = _page_fingerprint(raw_page, page_hash_list, first_row_hash)
+            in_page_duplicates = _warn_in_page_duplicates(
+                raw_page, page_rows, api_name=api_name, offset=offset
+            )
             # 跨页重复（服务端忽略 offset、排序不稳定、翻页期间源端变更）
-            # 是 offset 损坏的直接指纹，维持 fail-closed 硬拦。
+            # 是 offset 损坏的直接指纹，默认 fail-closed 硬拦；换档几何上
+            # 降级去重合并（#672：etf_nav fund_nav / forecast 端点的边界
+            # 重叠换档后仍确定性复发，force 通道被完全阻断）。
             cross_page_duplicates = len(page_rows & seen_rows)
+            page = raw_page
             if cross_page_duplicates:
-                raise PaginationCorruptionError(
-                    message=(
-                        f"Tushare {api_name} pagination returned duplicate rows "
-                        f"at offset={offset} "
-                        f"(in-page={in_page_duplicates}, "
-                        f"cross-page={cross_page_duplicates}): "
-                        "服务端忽略 offset、排序不稳定或翻页期间源数据变更"
+                if dedup_merge:
+                    dedup_merge_events += 1
+                page, echo_probes = self._merge_cross_duplicate_page(
+                    raw_page,
+                    page_hash_list,
+                    seen_rows,
+                    _PageDuplicateContext(
+                        api_name=api_name,
+                        offset=offset,
+                        in_page_duplicates=in_page_duplicates,
+                        cross_page_duplicates=cross_page_duplicates,
                     ),
-                    source="tushare",
+                    dedup_merge=dedup_merge,
+                    echo_probes=echo_probes,
                 )
+                if page is None:
+                    # 整页零新行：按回显探测推进一页，由回显连续计数
+                    # 决定是否收敛/硬拦。
+                    offset += len(raw_page)
+                    continue
+            else:
+                # 无跨页重复的干净页同样解除回显连续计数（correctness F1：
+                # 交替「干净页/整页回显」形态下，隔页回显不应累加成连续）。
+                echo_probes = 0
             seen_rows |= page_rows
             pages.append(page)
-            if len(page) < active_page_size:
+            if len(raw_page) < active_page_size:
                 # 短页在「页宽 ≤ 服务端单次上限」时证明取尽；页宽超上限时
                 # 是静默截断。续探区分两者并收窄回显语义（#658 批次1），
                 # 细节见 _short_page_next_geometry。
                 geometry = self._short_page_next_geometry(
                     api_name,
                     fields,
-                    page=page,
+                    page=raw_page,
                     offset=offset,
                     active_page_size=active_page_size,
                     seen_rows=seen_rows,
@@ -394,11 +471,85 @@ class TushareClient:
                     break
                 active_page_size, offset = geometry
                 continue
-            offset += len(page)
+            offset += len(raw_page)
 
         if len(pages) == 1:
-            return pages[0]
-        return pl.concat(pages, how="vertical_relaxed")
+            result = pages[0]
+        else:
+            result = pl.concat(pages, how="vertical_relaxed")
+        if dedup_merge and dedup_merge_events:
+            # correctness F2 终态信号：raw−返回 的差值=被丢弃的跨页重复行；
+            # 排序不稳定同时跳行时该机制不感知（offset 翻页的固有盲区，
+            # 与旧代码同级），ops 以此事件区分「重叠自愈」与异常放大。
+            logger.warning(
+                "pagination dedup-merge summary",
+                event="tushare_pagination_dedup_merge_summary",
+                api_name=api_name,
+                dedup_events=dedup_merge_events,
+                raw_rows_fetched=raw_rows_fetched,
+                rows_returned=result.height,
+                dropped_rows=raw_rows_fetched - result.height,
+            )
+        return result
+
+    @staticmethod
+    def _merge_cross_duplicate_page(
+        raw_page: pl.DataFrame,
+        page_hash_list: list[int],
+        seen_rows: set[int],
+        page_ctx: _PageDuplicateContext,
+        *,
+        dedup_merge: bool,
+        echo_probes: int,
+    ) -> tuple[pl.DataFrame | None, int]:
+        """
+        处理一页的跨页重复（#672）.
+
+        主几何（``dedup_merge=False``）维持 fail-closed 硬拦——跨页重复
+        是 offset 损坏的直接指纹；换档重试几何降级为去重合并：丢弃已见
+        行继续翻页（服务端排序不稳定的边界重叠自愈），整页零新行连续
+        :data:`_PAGINATION_ZERO_NEW_ECHO_LIMIT` 次（服务端忽略 offset 的
+        整页回显）仍硬拦。返回 (追加页, echo_probes 新值)；追加页为
+        None 表示整页零新行（调用方推进一页续探）。
+        """
+        if not dedup_merge:
+            raise PaginationCorruptionError(
+                message=(
+                    f"Tushare {page_ctx.api_name} pagination returned "
+                    f"duplicate rows at offset={page_ctx.offset} "
+                    f"(in-page={page_ctx.in_page_duplicates}, "
+                    f"cross-page={page_ctx.cross_page_duplicates}): "
+                    "服务端忽略 offset、排序不稳定或翻页期间源数据变更"
+                ),
+                source="tushare",
+            )
+        new_mask = pl.Series(
+            [row_hash not in seen_rows for row_hash in page_hash_list],
+            dtype=pl.Boolean,
+        )
+        new_count = int(new_mask.sum())
+        logger.warning(
+            "pagination cross-page overlap; dedup-merging and continuing",
+            event="tushare_pagination_dedup_merge",
+            api_name=page_ctx.api_name,
+            offset=page_ctx.offset,
+            cross_page_duplicates=page_ctx.cross_page_duplicates,
+            # correctness F3：以 mask 实数为准（页内重复行不虚增 new_rows）。
+            new_rows=new_count,
+        )
+        if new_count:
+            return raw_page.filter(new_mask), 0
+        if echo_probes + 1 >= _PAGINATION_ZERO_NEW_ECHO_LIMIT:
+            raise PaginationCorruptionError(
+                message=(
+                    f"Tushare {page_ctx.api_name} pagination returned "
+                    f"duplicate rows at offset={page_ctx.offset} "
+                    "(dedup-merge echo, consecutive zero-new pages): "
+                    "服务端忽略 offset, 整页回显无法收敛"
+                ),
+                source="tushare",
+            )
+        return None, echo_probes + 1
 
     def _short_page_next_geometry(
         self,
