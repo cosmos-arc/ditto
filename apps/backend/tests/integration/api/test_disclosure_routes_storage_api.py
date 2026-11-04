@@ -319,3 +319,88 @@ async def test_disclosure_routes_require_experimental(tmp_path: Path) -> None:
             assert "experimental" in body
     finally:
         await container.close()
+
+
+@pytest.mark.asyncio
+async def test_disclosure_window_and_future_asof_rejected(tmp_path: Path) -> None:
+    """F3: 倒置窗口与未来 as_of 显式拒绝(400 DateRange/FutureDate)."""
+    register_metrics()
+    capital = _make_capital_store(tmp_path)
+    fundamental = _make_fundamental_store(tmp_path)
+    app, container = _build_app(capital, fundamental)
+    try:
+        async with AsyncClient(
+            transport=ASGITransport(app=app), base_url="http://test"
+        ) as client:
+            inverted = await client.get(
+                "/api/v1/capital/hk-hold",
+                params={
+                    "instrument_id": 1,
+                    "start_date": "2026-12-31",
+                    "end_date": "2026-01-01",
+                    "allow_experimental_data": True,
+                },
+            )
+            assert inverted.status_code == 400, inverted.text
+
+            future = await client.get(
+                "/api/v1/fundamental/indicators",
+                params={
+                    "instrument_id": 1,
+                    "start_date": "2025-01-01",
+                    "end_date": "2025-12-31",
+                    "as_of_date": "2099-01-01",
+                    "allow_experimental_data": True,
+                },
+            )
+            assert future.status_code == 400, future.text
+    finally:
+        await container.close()
+
+
+def test_fina_indicator_asof_converges_revisions(tmp_path: Path) -> None:
+    """F2: as_of 收敛——同 report_date 双版本只返回最新可见公告行."""
+    import datetime as dt
+
+    from ditto_data.storage.fundamental.fina_indicator import (
+        FinaIndicatorReader,
+        FinaIndicatorWriter,
+    )
+
+    store = ParquetStore(
+        tmp_path,
+        key_columns=("instrument_id", "report_date", "knowledge_date"),
+        date_column="report_date",
+        instrument_column="instrument_id",
+    )
+    FinaIndicatorWriter(store).write(
+        pl.DataFrame(
+            {
+                "instrument_id": [1, 1],
+                "report_date": [dt.date(2025, 12, 31)] * 2,
+                "knowledge_date": [
+                    dt.date(2026, 3, 15),
+                    dt.date(2026, 4, 29),
+                ],
+                "eps": [1.2, 9.9],
+                "source_ticker": ["000001.SZ"] * 2,
+                "source": ["tushare"] * 2,
+            }
+        ),
+        2025,
+    )
+    fundamental = FundamentalStore(
+        read_ports=MagicMock(fina_indicator=FinaIndicatorReader(store)),
+        write_ports=MagicMock(),
+    )
+    converged = fundamental.get_fina_indicator(
+        1, "2025-01-01", "2025-12-31", "2026-12-31"
+    )
+    assert converged.height == 1
+    assert converged["eps"].to_list() == [9.9]
+
+    between = fundamental.get_fina_indicator(
+        1, "2025-01-01", "2025-12-31", "2026-04-01"
+    )
+    assert between.height == 1
+    assert between["eps"].to_list() == [1.2]

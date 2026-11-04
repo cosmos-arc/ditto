@@ -18,7 +18,7 @@ from typing import Any
 import polars as pl
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-from ditto_apps.models.common import DataCoverageInfo
+from ditto_apps.models.common import DataCoverageInfo, ReadSemantics
 
 
 class MarginQuery(BaseModel):
@@ -531,7 +531,9 @@ class DisclosureRowsResponse(BaseModel):
     """
 
     rows: list[dict[str, Any]] = Field(default_factory=list)
-    read_semantics: str = Field(description="读取语义(latest_available/pit_asof)")
+    read_semantics: ReadSemantics = Field(
+        description="读取语义(latest_available/pit_asof)"
+    )
     data_coverage: DataCoverageInfo | None = None
 
     model_config = ConfigDict(extra="ignore")

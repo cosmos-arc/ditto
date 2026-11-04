@@ -1,6 +1,6 @@
 /**
  * DO NOT EDIT: generated from contracts/openapi/v1.json.
- * Schema SHA-256: ad1a4b5ea7bb40404c517278593c9abf13027573fc1c4f321f8b18a1dcd80154
+ * Schema SHA-256: 91aeb7472a515a49779d2bc19a3c2880a35bf8594048898fb28e545227a0b70f
  * Generator: openapi-typescript 7.13.0
  */
 
@@ -9605,8 +9605,9 @@ export interface components {
             /**
              * Read Semantics
              * @description 读取语义(latest_available/pit_asof)
+             * @enum {string}
              */
-            read_semantics: string;
+            read_semantics: "latest_available" | "pit_asof" | "frozen_snapshot";
             /** Rows */
             rows?: {
                 [key: string]: unknown;
@@ -19774,7 +19775,7 @@ export interface operations {
                 start_date: string;
                 /** @description 窗口终点 */
                 end_date: string;
-                /** @description 1=沪股通 3=深股通 4/5=港股通;缺省全通道 */
+                /** @description 1=沪股通 3=深股通(本地库仅北向);缺省全通道 */
                 market_type?: string | null;
                 allow_experimental_data?: boolean;
             };
@@ -20790,7 +20791,7 @@ export interface operations {
     fundamental_get_earnings_express: {
         parameters: {
             query: {
-                /** @description 裸代码, 如 000001(ticker 键库) */
+                /** @description 源代码键(ts_code 形态), 如 000001.SZ */
                 ticker: string;
                 /** @description 公告日窗口起点 */
                 start_date: string;
@@ -20884,7 +20885,7 @@ export interface operations {
     fundamental_get_earnings_forecast: {
         parameters: {
             query: {
-                /** @description 裸代码, 如 000001(ticker 键库) */
+                /** @description 源代码键(ts_code 形态), 如 000001.SZ */
                 ticker: string;
                 /** @description 公告日窗口起点 */
                 start_date: string;
@@ -21072,17 +21073,11 @@ export interface operations {
     fundamental_get_indicators: {
         parameters: {
             query: {
-                /** @description Canonical 标的 ID */
                 instrument_id?: number | null;
-                /** @description 裸代码 */
                 ticker?: string | null;
-                /** @description 标准代码 */
                 standard_ticker?: string | null;
-                /** @description 报告期窗口起点 */
                 start_date: string;
-                /** @description 报告期窗口终点 */
                 end_date: string;
-                /** @description 可选知识日选版(修订收敛) */
                 as_of_date?: string | null;
                 allow_experimental_data?: boolean;
             };
