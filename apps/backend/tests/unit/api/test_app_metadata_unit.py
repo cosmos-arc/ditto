@@ -119,7 +119,7 @@ def test_build_metadata_has_checkout_independent_fallbacks() -> None:
 
 def test_every_http_operation_has_an_explicit_stable_id() -> None:
     missing = [
-        f"{','.join(sorted(route.methods))} {route.path}"
+        f"{','.join(sorted(route.methods or ()))} {route.path}"
         for _path, route in iter_api_routes(create_openapi_app(include_debug=True))
         if route.operation_id is None
     ]

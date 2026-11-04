@@ -117,8 +117,8 @@ class TestMainRoutesAssembly:
         for path, route in iter_api_routes(app):
             if path not in seen_paths:
                 seen_paths[path] = []
-            # 记录每个路径的方法
-            for method in route.methods:
+            # 记录每个路径的方法（fastapi≥0.139 methods 类型为 Optional）
+            for method in route.methods or ():
                 seen_paths[path].append(method)
 
         # 检查重复（同一路径 + 同一方法）

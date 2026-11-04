@@ -39,7 +39,7 @@ def _operation_signatures(app: FastAPI) -> set[tuple[str, str, str]]:
         (method, path, route.operation_id or route.name)
         for path, route in iter_api_routes(app)
         if path != _DEBUG_PATH
-        for method in route.methods
+        for method in route.methods or ()
     }
 
 
