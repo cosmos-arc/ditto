@@ -514,3 +514,45 @@ class CapitalProfileResponse(BaseModel):
     margin_trading: MarginBlock = Field(description="两融(可选,带待补语义)")
 
     model_config = ConfigDict(strict=True, extra="ignore")
+
+
+# ---------------------------------------------------------------------------
+# #658 批次4b 通用披露行响应（北向/双榜等透传帧）
+# ---------------------------------------------------------------------------
+
+
+class DisclosureRowsResponse(BaseModel):
+    """
+    通用披露行集响应（列随数据集真实 schema 透传,不伪造类型）.
+
+    用于 B4b 消费接线:行已是写入路径校验后的 canonical 帧,列集
+    随源演进;typed 行模型仅在消费者需要字段级契约时再建(B3 画像块
+    先例),此处诚实透传并携带 read_semantics+data_coverage。
+    """
+
+    rows: list[dict[str, Any]] = Field(default_factory=list)
+    read_semantics: str = Field(description="读取语义(latest_available/pit_asof)")
+    data_coverage: DataCoverageInfo | None = None
+
+    model_config = ConfigDict(extra="ignore")
+
+
+def to_disclosure_rows(df: pl.DataFrame) -> list[dict[str, Any]]:
+    """Canonical 帧转透传行(date/datetime→ISO,null 原样保留)."""
+    if df.is_empty():
+        return []
+    return [_iso_row(row) for row in df.to_dicts()]
+
+
+def _iso_row(row: dict[str, Any]) -> dict[str, Any]:
+    out: dict[str, Any] = {}
+    for key, value in row.items():
+        if value is None or isinstance(value, (int, float, str, bool)):
+            out[key] = value
+        else:
+            out[key] = _iso(value)
+    return out
+
+
+__all__.append("DisclosureRowsResponse")
+__all__.append("to_disclosure_rows")

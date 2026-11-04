@@ -13,14 +13,23 @@ from typing import Annotated
 import polars as pl
 from dishka import FromComponent
 from dishka.integrations.fastapi import inject
+from ditto_application.queries.dataset_coverage import DatasetCoverageQueryFacade
 from ditto_application.queries.fundamental import FundamentalQueryFacade
 from ditto_application.queries.metadata import MetadataQueryFacade
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 
 from ditto_apps.api.errors import DateRangeError, FutureDateError
 from ditto_apps.api.params import DateRangeQueryParams, PITQueryParams
 from ditto_apps.api.utils.identifier import resolve_identifier_or_404
-from ditto_apps.models.common import APIResponse, ReadSemantics
+from ditto_apps.models.capital import (
+    DisclosureRowsResponse,
+    to_disclosure_rows,
+)
+from ditto_apps.models.common import (
+    APIResponse,
+    DataCoverageInfo,
+    ReadSemantics,
+)
 from ditto_apps.models.fundamental import (
     CorporateAction,
     Dividend,
@@ -275,3 +284,130 @@ async def list_corporate_actions(
     actions = to_corporate_action_list(df)
 
     return APIResponse(data=actions, read_semantics=semantics)
+
+
+# ── #658 批次4b 消费接线：披露帧窗口读 ────────────────────────────────
+
+
+@router.get(
+    "/indicators",
+    response_model=APIResponse[DisclosureRowsResponse],
+    operation_id="fundamental_get_indicators",
+)
+@inject
+async def get_indicators(
+    fundamental_facade: Annotated[FundamentalQueryFacade, FromComponent()],
+    coverage_facade: Annotated[DatasetCoverageQueryFacade, FromComponent()],
+    metadata_facade: Annotated[MetadataQueryFacade, FromComponent()],
+    params: Annotated[DateRangeQueryParams, Depends()],
+) -> APIResponse[DisclosureRowsResponse]:
+    """
+    逐标的财务指标窗口读(report_date 窗口;110 指标列透传).
+
+    knowledge_date=公告日;as_of 给定时按 knowledge_date<=as_of 收敛到
+    最新公告版本(修订选版);跨年错位已由 #620 修复。
+    """
+    resolved_id = resolve_identifier_or_404(
+        metadata_facade,
+        instrument_id=params.instrument_id,
+        standard_ticker=params.standard_ticker,
+        ticker=params.ticker,
+        as_of_date=params.end_date,
+        domain="fundamental",
+    )
+    df = await asyncio.to_thread(
+        fundamental_facade.get_fina_indicator,
+        resolved_id,
+        params.start_date.isoformat(),
+        params.end_date.isoformat(),
+        params.as_of_date.isoformat() if params.as_of_date else None,
+        **{"allow_experimental_data": params.allow_experimental_data},
+    )
+    return APIResponse(
+        data=DisclosureRowsResponse(
+            rows=to_disclosure_rows(df),
+            read_semantics="pit_asof" if params.as_of_date else "latest_available",
+            data_coverage=_disclosure_coverage(coverage_facade, "fina_indicator"),
+        ),
+    )
+
+
+@router.get(
+    "/earnings-express",
+    response_model=APIResponse[DisclosureRowsResponse],
+    operation_id="fundamental_get_earnings_express",
+)
+@inject
+async def get_earnings_express(
+    fundamental_facade: Annotated[FundamentalQueryFacade, FromComponent()],
+    coverage_facade: Annotated[DatasetCoverageQueryFacade, FromComponent()],
+    ticker: str = Query(..., description="裸代码, 如 000001(ticker 键库)"),
+    start_date: date_type = Query(..., description="公告日窗口起点"),
+    end_date: date_type = Query(..., description="公告日窗口终点"),
+    allow_experimental_data: bool = Query(False),
+) -> APIResponse[DisclosureRowsResponse]:
+    """
+    逐标的业绩快报窗口读(ann_date 公告事件;金额元).
+
+    平日 0 行=无公告正常;audit_status 透出不伪称已审计;
+    快报与三表非同颗粒度(已审数浓缩披露)。
+    """
+    df = await asyncio.to_thread(
+        fundamental_facade.get_earnings_express,
+        ticker,
+        start_date.isoformat(),
+        end_date.isoformat(),
+        **{"allow_experimental_data": allow_experimental_data},
+    )
+    return APIResponse(
+        data=DisclosureRowsResponse(
+            rows=to_disclosure_rows(df),
+            read_semantics="latest_available",
+            data_coverage=_disclosure_coverage(coverage_facade, "earnings_express"),
+        ),
+    )
+
+
+@router.get(
+    "/earnings-forecast",
+    response_model=APIResponse[DisclosureRowsResponse],
+    operation_id="fundamental_get_earnings_forecast",
+)
+@inject
+async def get_earnings_forecast(
+    fundamental_facade: Annotated[FundamentalQueryFacade, FromComponent()],
+    coverage_facade: Annotated[DatasetCoverageQueryFacade, FromComponent()],
+    ticker: str = Query(..., description="裸代码, 如 000001(ticker 键库)"),
+    start_date: date_type = Query(..., description="公告日窗口起点"),
+    end_date: date_type = Query(..., description="公告日窗口终点"),
+    allow_experimental_data: bool = Query(False),
+) -> APIResponse[DisclosureRowsResponse]:
+    """
+    逐标的业绩预告窗口读(ann_date 公告事件;净利润上下界万元).
+
+    同日修订按 update_flag 独立版本;2024-01-31 源端翻页损坏按
+    证据归因关闭(#658 批次2 §5.1),chunk 保持可重试。
+    """
+    df = await asyncio.to_thread(
+        fundamental_facade.get_earnings_forecast,
+        ticker,
+        start_date.isoformat(),
+        end_date.isoformat(),
+        **{"allow_experimental_data": allow_experimental_data},
+    )
+    return APIResponse(
+        data=DisclosureRowsResponse(
+            rows=to_disclosure_rows(df),
+            read_semantics="latest_available",
+            data_coverage=_disclosure_coverage(coverage_facade, "earnings_forecast"),
+        ),
+    )
+
+
+def _disclosure_coverage(
+    coverage_facade: DatasetCoverageQueryFacade, dataset: str
+) -> DataCoverageInfo | None:
+    limit = coverage_facade.get(dataset)
+    if limit is None:
+        return None
+    return DataCoverageInfo.from_view(limit)

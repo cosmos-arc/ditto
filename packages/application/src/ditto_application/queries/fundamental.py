@@ -16,6 +16,9 @@ _INCOME_STATEMENT_DATASET = "income_statement"
 _CASH_FLOW_DATASET = "cash_flow"
 _DIVIDEND_DATASET = "dividend"
 _CORPORATE_ACTIONS_DATASET = "corporate_actions"
+_FINA_INDICATOR_DATASET = "fina_indicator"
+_EARNINGS_EXPRESS_DATASET = "earnings_express"
+_EARNINGS_FORECAST_DATASET = "earnings_forecast"
 
 
 class FundamentalDataPort(Protocol):
@@ -61,6 +64,28 @@ class FundamentalDataPort(Protocol):
         as_of_date: date | None = None,
     ) -> pl.DataFrame:
         """查询公司行动数据."""
+        ...
+
+    def get_fina_indicator(
+        self,
+        instrument_id: int,
+        start: str,
+        end: str,
+        as_of: str | None = None,
+    ) -> pl.DataFrame:
+        """逐标的财务指标窗口读."""
+        ...
+
+    def get_earnings_express(
+        self, source_ticker: str, start: str, end: str
+    ) -> pl.DataFrame:
+        """逐标的业绩快报窗口读."""
+        ...
+
+    def get_earnings_forecast(
+        self, source_ticker: str, start: str, end: str
+    ) -> pl.DataFrame:
+        """逐标的业绩预告窗口读."""
         ...
 
 
@@ -220,3 +245,51 @@ class FundamentalQueryFacade:
             allow_experimental_data=allow_experimental_data,
             context=f"fundamental query {dataset_id}",
         )
+
+    # ── #658 批次4b 消费接线：披露帧窗口读 ─────────────────────────────
+
+    def get_fina_indicator(
+        self,
+        instrument_id: int,
+        start: str,
+        end: str,
+        as_of: str | None = None,
+        *,
+        allow_experimental_data: bool = False,
+    ) -> pl.DataFrame:
+        """逐标的财务指标窗口读(report_date 窗口;as_of 选版收敛修订)."""
+        self._assert_dataset_allowed(
+            _FINA_INDICATOR_DATASET,
+            allow_experimental_data=allow_experimental_data,
+        )
+        return self._service.get_fina_indicator(instrument_id, start, end, as_of)
+
+    def get_earnings_express(
+        self,
+        source_ticker: str,
+        start: str,
+        end: str,
+        *,
+        allow_experimental_data: bool = False,
+    ) -> pl.DataFrame:
+        """逐标的业绩快报窗口读(ann_date 公告事件;金额元;ticker 键)."""
+        self._assert_dataset_allowed(
+            _EARNINGS_EXPRESS_DATASET,
+            allow_experimental_data=allow_experimental_data,
+        )
+        return self._service.get_earnings_express(source_ticker, start, end)
+
+    def get_earnings_forecast(
+        self,
+        source_ticker: str,
+        start: str,
+        end: str,
+        *,
+        allow_experimental_data: bool = False,
+    ) -> pl.DataFrame:
+        """逐标的业绩预告窗口读(ann_date 公告事件;净利润万元;ticker 键)."""
+        self._assert_dataset_allowed(
+            _EARNINGS_FORECAST_DATASET,
+            allow_experimental_data=allow_experimental_data,
+        )
+        return self._service.get_earnings_forecast(source_ticker, start, end)

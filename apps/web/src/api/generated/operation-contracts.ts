@@ -1,6 +1,6 @@
 /**
  * DO NOT EDIT: generated from contracts/openapi/v1.json.
- * Schema SHA-256: 356a04c87621da72736ac74e4e700e2189082b52617aaf02890c57a2a1bb9552
+ * Schema SHA-256: ad1a4b5ea7bb40404c517278593c9abf13027573fc1c4f321f8b18a1dcd80154
  * Generator: ditto-operation-response-contracts 4
  */
 
@@ -277,7 +277,57 @@ export const operationResponseContracts = {
     "500": ["application/json"],
     "default": ["application/json"],
   },
+  "get /api/v1/capital/hk-hold": {
+    "200": ["application/json"],
+    "400": ["application/json"],
+    "403": ["application/json"],
+    "404": ["application/json"],
+    "409": ["application/json"],
+    "422": ["application/json"],
+    "500": ["application/json"],
+    "default": ["application/json"],
+  },
+  "get /api/v1/capital/hsgt-top10": {
+    "200": ["application/json"],
+    "400": ["application/json"],
+    "403": ["application/json"],
+    "404": ["application/json"],
+    "409": ["application/json"],
+    "422": ["application/json"],
+    "500": ["application/json"],
+    "default": ["application/json"],
+  },
   "get /api/v1/capital/margin": {
+    "200": ["application/json"],
+    "400": ["application/json"],
+    "403": ["application/json"],
+    "404": ["application/json"],
+    "409": ["application/json"],
+    "422": ["application/json"],
+    "500": ["application/json"],
+    "default": ["application/json"],
+  },
+  "get /api/v1/capital/pledge-ratio": {
+    "200": ["application/json"],
+    "400": ["application/json"],
+    "403": ["application/json"],
+    "404": ["application/json"],
+    "409": ["application/json"],
+    "422": ["application/json"],
+    "500": ["application/json"],
+    "default": ["application/json"],
+  },
+  "get /api/v1/capital/top10-floatholders": {
+    "200": ["application/json"],
+    "400": ["application/json"],
+    "403": ["application/json"],
+    "404": ["application/json"],
+    "409": ["application/json"],
+    "422": ["application/json"],
+    "500": ["application/json"],
+    "default": ["application/json"],
+  },
+  "get /api/v1/capital/top10-holders": {
     "200": ["application/json"],
     "400": ["application/json"],
     "403": ["application/json"],
@@ -327,7 +377,37 @@ export const operationResponseContracts = {
     "500": ["application/json"],
     "default": ["application/json"],
   },
+  "get /api/v1/fundamental/earnings-express": {
+    "200": ["application/json"],
+    "400": ["application/json"],
+    "403": ["application/json"],
+    "404": ["application/json"],
+    "409": ["application/json"],
+    "422": ["application/json"],
+    "500": ["application/json"],
+    "default": ["application/json"],
+  },
+  "get /api/v1/fundamental/earnings-forecast": {
+    "200": ["application/json"],
+    "400": ["application/json"],
+    "403": ["application/json"],
+    "404": ["application/json"],
+    "409": ["application/json"],
+    "422": ["application/json"],
+    "500": ["application/json"],
+    "default": ["application/json"],
+  },
   "get /api/v1/fundamental/financials/{report_type}": {
+    "200": ["application/json"],
+    "400": ["application/json"],
+    "403": ["application/json"],
+    "404": ["application/json"],
+    "409": ["application/json"],
+    "422": ["application/json"],
+    "500": ["application/json"],
+    "default": ["application/json"],
+  },
+  "get /api/v1/fundamental/indicators": {
     "200": ["application/json"],
     "400": ["application/json"],
     "403": ["application/json"],
@@ -618,6 +698,16 @@ export const operationResponseContracts = {
     "default": ["application/json"],
   },
   "get /api/v1/metadata/etf-reference-snapshots": {
+    "200": ["application/json"],
+    "400": ["application/json"],
+    "403": ["application/json"],
+    "404": ["application/json"],
+    "409": ["application/json"],
+    "422": ["application/json"],
+    "500": ["application/json"],
+    "default": ["application/json"],
+  },
+  "get /api/v1/metadata/industries": {
     "200": ["application/json"],
     "400": ["application/json"],
     "403": ["application/json"],
@@ -1933,10 +2023,40 @@ export const operationRequestContracts = {
       "query": ["end_date", "limit", "offset", "start_date"],
     },
   },
+  "get /api/v1/capital/hk-hold": {
+    parameters: {
+      "header": ["X-Ditto-API-Contract-Version"],
+      "query": ["allow_experimental_data", "as_of_date", "end_date", "instrument_id", "standard_ticker", "start_date", "ticker"],
+    },
+  },
+  "get /api/v1/capital/hsgt-top10": {
+    parameters: {
+      "header": ["X-Ditto-API-Contract-Version"],
+      "query": ["allow_experimental_data", "end_date", "market_type", "start_date"],
+    },
+  },
   "get /api/v1/capital/margin": {
     parameters: {
       "header": ["X-Ditto-API-Contract-Version"],
       "query": ["allow_experimental_data", "as_of_date", "instrument_id", "standard_ticker", "ticker"],
+    },
+  },
+  "get /api/v1/capital/pledge-ratio": {
+    parameters: {
+      "header": ["X-Ditto-API-Contract-Version"],
+      "query": ["allow_experimental_data", "as_of_date", "instrument_id", "standard_ticker", "ticker"],
+    },
+  },
+  "get /api/v1/capital/top10-floatholders": {
+    parameters: {
+      "header": ["X-Ditto-API-Contract-Version"],
+      "query": ["allow_experimental_data", "as_of_date", "end_date", "instrument_id", "standard_ticker", "start_date", "ticker"],
+    },
+  },
+  "get /api/v1/capital/top10-holders": {
+    parameters: {
+      "header": ["X-Ditto-API-Contract-Version"],
+      "query": ["allow_experimental_data", "as_of_date", "end_date", "instrument_id", "standard_ticker", "start_date", "ticker"],
     },
   },
   "get /api/v1/capital/valuation": {
@@ -1962,11 +2082,29 @@ export const operationRequestContracts = {
       "query": ["allow_experimental_data", "as_of_date", "instrument_id", "standard_ticker", "ticker"],
     },
   },
+  "get /api/v1/fundamental/earnings-express": {
+    parameters: {
+      "header": ["X-Ditto-API-Contract-Version"],
+      "query": ["allow_experimental_data", "end_date", "start_date", "ticker"],
+    },
+  },
+  "get /api/v1/fundamental/earnings-forecast": {
+    parameters: {
+      "header": ["X-Ditto-API-Contract-Version"],
+      "query": ["allow_experimental_data", "end_date", "start_date", "ticker"],
+    },
+  },
   "get /api/v1/fundamental/financials/{report_type}": {
     parameters: {
       "header": ["X-Ditto-API-Contract-Version"],
       "path": ["report_type"],
       "query": ["allow_experimental_data", "as_of_date", "instrument_id", "standard_ticker", "ticker"],
+    },
+  },
+  "get /api/v1/fundamental/indicators": {
+    parameters: {
+      "header": ["X-Ditto-API-Contract-Version"],
+      "query": ["allow_experimental_data", "as_of_date", "end_date", "instrument_id", "standard_ticker", "start_date", "ticker"],
     },
   },
   "get /api/v1/ingestion/catalog/asset": {
@@ -2141,6 +2279,12 @@ export const operationRequestContracts = {
     parameters: {
       "header": ["X-Ditto-API-Contract-Version"],
       "query": ["cutoff"],
+    },
+  },
+  "get /api/v1/metadata/industries": {
+    parameters: {
+      "header": ["X-Ditto-API-Contract-Version"],
+      "query": ["industry_level", "is_active"],
     },
   },
   "get /api/v1/metadata/instruments": {
