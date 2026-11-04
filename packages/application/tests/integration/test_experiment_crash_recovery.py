@@ -6,7 +6,7 @@ from collections.abc import Mapping
 from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
-from threading import Barrier
+from threading import Barrier, Thread
 from typing import cast
 
 import pytest
@@ -342,6 +342,45 @@ class _PostWriteRetryStore:
         )
         self._post_write_barrier.wait(timeout=5)
         self._post_write_barrier.wait(timeout=5)
+        return persisted
+
+
+class _PostRecoveryTakeoverStore:
+    """Pause recovery return after its SQLite commit（#638 复现窗口）.
+
+    b 的 recover_interrupted_fold 提交后阻塞，让并发协调器 c 在此窗口
+    完成同实验租约夺走+后继派发——b 恢复后的快照重载将看见 c 的 claim。
+    """
+
+    def __init__(
+        self,
+        delegate: ExperimentSchedulerStore,
+        barrier: Barrier,
+    ) -> None:
+        self._delegate = delegate
+        self._barrier = barrier
+
+    def __getattr__(self, name: str) -> object:
+        return getattr(self._delegate, name)
+
+    def recover_interrupted_fold(
+        self,
+        fold: FoldView,
+        attempt: AttemptView,
+        lease: SchedulerLease,
+        *,
+        now_epoch_us: int,
+        occurred_at: datetime,
+    ) -> tuple[FoldView, AttemptView]:
+        persisted = self._delegate.recover_interrupted_fold(
+            fold,
+            attempt,
+            lease,
+            now_epoch_us=now_epoch_us,
+            occurred_at=occurred_at,
+        )
+        self._barrier.wait(timeout=5)
+        self._barrier.wait(timeout=5)
         return persisted
 
 
@@ -1166,5 +1205,71 @@ def test_two_recovery_coordinators_cannot_create_two_live_successors(
         attempts[index].spec.parent_attempt_id == attempts[index - 1].spec.attempt_id
         for index in range(1, len(attempts))
     )
+    assert _live_attempt_count(database, launch.experiment_id) == 1
+    database.close_all()
+
+
+def test_recovery_stale_view_after_concurrent_takeover_reports_lease_lost(
+    tmp_path: Path,
+) -> None:
+    """#638：恢复提交被并发夺走后,陈旧视角报 LEASE_LOST 而非完整性告警.
+
+    确定性复现 2026-11-01 macOS CI 形态（真实线程竞争下 300 次 69 次的
+    交错）：b 提交 recover_interrupted_fold 后、恢复后快照重载前，c 同
+    实验夺走租约并派发后继——b 重载看见 c 的 claim，requires_recovery
+    为真。修复后 b 先读槽位核栅栏：租约已被夺走即按 LEASE_LOST 退出；
+    耐久不变量（单 live 后继）不受影响。修复前此路径抛
+    EXPERIMENT_INTEGRITY_FAILED（永久毒化 authority 且读作完整性事故）。
+    """
+    database, reader, launch = _setup(tmp_path, "experiment-recovery-takeover")
+    first_owner = _coordinator(
+        database,
+        owner="crashed-owner",
+        clock=NOW + timedelta(seconds=1),
+    )
+    first_tick = first_owner.tick(occurred_at=NOW + timedelta(seconds=1))
+    parent = first_owner.start_attempt(
+        first_tick.dispatches[0],
+        occurred_at=NOW + timedelta(seconds=2),
+    ).attempt
+
+    barrier = Barrier(2)
+    blocked_store = _PostRecoveryTakeoverStore(_store(database), barrier)
+    contender_b = _coordinator(
+        database,
+        owner="recovery-owner-b",
+        clock=NOW + timedelta(seconds=10),
+        scheduler_store=cast("ExperimentSchedulerStoreProtocol", blocked_store),
+    )
+    outcome: dict[str, str] = {}
+
+    def run_b() -> None:
+        try:
+            contender_b.tick(occurred_at=NOW + timedelta(seconds=10))
+            outcome["b"] = "dispatched"
+        except AppProcessError as error:
+            outcome["b"] = str(error.details.get("code"))
+
+    thread_b = Thread(target=run_b, daemon=True)
+    thread_b.start()
+    # b 已提交 recover（parent→FAILED+fold→QUEUED），在窗口内阻塞。
+    barrier.wait(timeout=5)
+    contender_c = _coordinator(
+        database,
+        owner="recovery-owner-c",
+        clock=NOW + timedelta(seconds=10),
+    )
+    c_state = contender_c.tick(occurred_at=NOW + timedelta(seconds=10)).state
+    # 放行 b：其恢复后重载将看到 c 的 claim。
+    barrier.wait(timeout=5)
+    thread_b.join(timeout=10)
+
+    assert c_state is SchedulerTickState.DISPATCHED
+    assert outcome["b"] == "LEASE_LOST"
+    attempts = reader.list_attempts(parent.spec.fold_key)
+    assert len(attempts) == 2
+    assert attempts[0].projection.status is ExperimentStatus.FAILED
+    assert attempts[0].projection.failure_code is ExperimentFailureCode.LEASE_LOST
+    assert attempts[1].spec.parent_attempt_id == attempts[0].spec.attempt_id
     assert _live_attempt_count(database, launch.experiment_id) == 1
     database.close_all()

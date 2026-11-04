@@ -457,6 +457,23 @@ class ExperimentExecutionCoordinator(
             return _result(SchedulerTickState.CANDIDATE_SELECTION, snapshot, ())
         return None
 
+    def _raise_recovery_incomplete_or_lease_lost(self, lease: SchedulerLease) -> None:
+        """
+        requires_recovery 触发时区分陈旧视角与真完整性缺陷（#638）.
+
+        恢复写入被并发协调器同实验夺走后，本方恢复后的快照重载会看见
+        对方的 claim——若其间再无本方栅栏写，栅栏失窃不会自然转成
+        LEASE_LOST（execute 只在写 CAS 失败时映射）。先读槽位核栅栏：
+        非本租约即按租约丢失退出；仍持栅栏才构成完整性告警。
+        """
+        slot = self._store.get_scheduler_slot()
+        if slot.owner_token != lease.owner_token or slot.revision != lease.revision:
+            raise _scheduler_error("LEASE_LOST", "scheduler_lease_superseded")
+        raise _scheduler_error(
+            "EXPERIMENT_INTEGRITY_FAILED",
+            "durable_recovery_incomplete",
+        )
+
     def _tick_owned(
         self,
         lease: SchedulerLease,
@@ -522,10 +539,7 @@ class ExperimentExecutionCoordinator(
             lease.owner_token,
             _SNAPSHOT_VOCABULARY,
         ):
-            raise _scheduler_error(
-                "EXPERIMENT_INTEGRITY_FAILED",
-                "durable_recovery_incomplete",
-            )
+            self._raise_recovery_incomplete_or_lease_lost(lease)
         if _snapshot_rules.must_stop_after_failure(
             snapshot,
             _SNAPSHOT_VOCABULARY,
