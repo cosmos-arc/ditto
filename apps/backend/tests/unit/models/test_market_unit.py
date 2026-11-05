@@ -151,6 +151,51 @@ class TestBarsQuery:
             BarsQuery(limit=10001)
         assert "less than or equal to 10000" in str(exc_info.value)
 
+    def test_instrument_ids_bounded(self) -> None:
+        """#685: instrument_ids 上限 1000，防全市场级列表放大查询."""
+        from ditto_apps.models.market import BarsQuery
+
+        query = BarsQuery(instrument_ids=list(range(1000)))
+        assert query.instrument_ids is not None
+        assert len(query.instrument_ids) == 1000
+
+        with pytest.raises(ValidationError) as exc_info:
+            BarsQuery(instrument_ids=list(range(1001)))
+        assert "too_long" in str(exc_info.value)
+
+
+@pytest.mark.unit
+class TestIndicatorSeriesQuery:
+    """测试 IndicatorSeriesQuery 定界（#685 审计批C）."""
+
+    def test_ma_windows_defaults(self) -> None:
+        """默认窗口 [5, 20, 60]."""
+        from ditto_apps.models.market import IndicatorSeriesQuery
+
+        query = IndicatorSeriesQuery(instrument_id=1)
+        assert query.ma_windows == [5, 20, 60]
+
+    def test_ma_windows_count_bounded(self) -> None:
+        """窗口数上限 16."""
+        from ditto_apps.models.market import IndicatorSeriesQuery
+
+        query = IndicatorSeriesQuery(instrument_id=1, ma_windows=list(range(1, 17)))
+        assert len(query.ma_windows) == 16
+
+        with pytest.raises(ValidationError) as exc_info:
+            IndicatorSeriesQuery(instrument_id=1, ma_windows=list(range(1, 18)))
+        assert "too_long" in str(exc_info.value)
+
+    def test_ma_windows_item_range(self) -> None:
+        """每窗口 1-500."""
+        from ditto_apps.models.market import IndicatorSeriesQuery
+
+        with pytest.raises(ValidationError, match="greater than or equal to 1"):
+            IndicatorSeriesQuery(instrument_id=1, ma_windows=[0])
+
+        with pytest.raises(ValidationError, match="less than or equal to 500"):
+            IndicatorSeriesQuery(instrument_id=1, ma_windows=[501])
+
 
 @pytest.mark.unit
 class TestBar:

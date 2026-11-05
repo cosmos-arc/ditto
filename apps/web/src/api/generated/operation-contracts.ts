@@ -1,6 +1,6 @@
 /**
  * DO NOT EDIT: generated from contracts/openapi/v1.json.
- * Schema SHA-256: 56438b2d4a64c9f11e5a5c6d53156d5c578a5c4472c968b0de14e245e3d61418
+ * Schema SHA-256: 9e880f24365299980706b11ed23b0a9a02955751818e13d53243d2e5cb44d16d
  * Generator: ditto-operation-response-contracts 4
  */
 
@@ -2528,7 +2528,7 @@ export const operationRequestContracts = {
     parameters: {
       "header": ["X-Ditto-API-Contract-Version"],
       "path": ["dataset", "source"],
-      "query": ["allow_experimental_data", "end_date", "instrument_id", "standard_ticker", "start_date", "ticker"],
+      "query": ["allow_experimental_data", "as_of_date", "end_date", "instrument_id", "standard_ticker", "start_date", "ticker"],
     },
   },
   "get /api/v1/status": {

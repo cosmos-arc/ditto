@@ -64,7 +64,9 @@ class BarsQuery(BaseModel):
 
     """
 
-    instrument_ids: list[int] | None = Field(default=None, description="标的 ID 列表")
+    instrument_ids: list[int] | None = Field(
+        default=None, max_length=1000, description="标的 ID 列表"
+    )
     start_date: DateField = Field(default=None, description="开始日期")
     end_date: DateField = Field(default=None, description="结束日期")
     adjustment: AdjustmentField = Field(default=Adjustment.NONE, description="复权类型")
@@ -214,8 +216,8 @@ class IndicatorSeriesQuery(BaseModel):
         default=False,
         description="显式允许 experimental 数据集进入研究态查询",
     )
-    ma_windows: list[int] = Field(
-        default_factory=lambda: [5, 20, 60], description="MA 窗口列表"
+    ma_windows: list[Annotated[int, Field(ge=1, le=500)]] = Field(
+        default_factory=lambda: [5, 20, 60], max_length=16, description="MA 窗口列表"
     )
     indicators: list[str] = Field(default_factory=list, description="叠加类别列表")
 

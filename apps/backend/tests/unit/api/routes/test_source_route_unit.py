@@ -5,6 +5,7 @@ Verify the extracted helpers:
 2. _resolve_source_ticker — identifier -> source ticker resolution with error handling
 """
 
+from datetime import date
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -17,6 +18,7 @@ from ditto_apps.api.routes.source import (
     _resolve_source_ticker,
 )
 from ditto_kernel import AmbiguousTickerError
+from pydantic import ValidationError
 
 # ---------------------------------------------------------------------------
 # _infer_asset_class
@@ -64,8 +66,8 @@ def query_params() -> SourceDataQueryParams:
         ticker="000001",
         standard_ticker=None,
         instrument_id=None,
-        start_date="2024-01-01",
-        end_date="2024-01-31",
+        start_date=date(2024, 1, 1),
+        end_date=date(2024, 1, 31),
     )
 
 
@@ -78,8 +80,8 @@ class TestSourceDataQueryParams:
             ticker="000001",
             standard_ticker=None,
             instrument_id=None,
-            start_date="2024-01-01",
-            end_date="2024-01-31",
+            start_date=date(2024, 1, 1),
+            end_date=date(2024, 1, 31),
         )
 
         assert params.allow_experimental_data is False
@@ -89,12 +91,36 @@ class TestSourceDataQueryParams:
             ticker="000001",
             standard_ticker=None,
             instrument_id=None,
-            start_date="2024-01-01",
-            end_date="2024-01-31",
+            start_date=date(2024, 1, 1),
+            end_date=date(2024, 1, 31),
             allow_experimental_data=True,
         )
 
         assert params.allow_experimental_data is True
+
+    def test_dates_coerce_to_typed_date(self) -> None:
+        """#685: 复用 DateRangeQueryParams 后字符串日期强制转换为 typed date."""
+        params = SourceDataQueryParams.model_validate(
+            {
+                "ticker": "000001",
+                "start_date": "2024-01-01",
+                "end_date": "2024-01-31",
+            }
+        )
+
+        assert params.start_date == date(2024, 1, 1)
+        assert params.end_date == date(2024, 1, 31)
+
+    def test_rejects_malformed_start_date(self) -> None:
+        """#685: 裸字符串坏日期在绑定层 422，不再直达 Source 适配器."""
+        with pytest.raises(ValidationError):
+            SourceDataQueryParams.model_validate(
+                {
+                    "ticker": "000001",
+                    "start_date": "2024/01/01",
+                    "end_date": "2024-01-31",
+                }
+            )
 
 
 @pytest.mark.unit
@@ -121,8 +147,8 @@ class TestResolveSourceTicker:
             ticker=None,
             standard_ticker="000001.XSHE",
             instrument_id=None,
-            start_date="2024-01-01",
-            end_date="2024-01-31",
+            start_date=date(2024, 1, 1),
+            end_date=date(2024, 1, 31),
         )
         mock_facade = MagicMock()
         mock_facade.resolve_source_ticker.return_value = "000001.SZ"
@@ -142,8 +168,8 @@ class TestResolveSourceTicker:
             ticker=None,
             standard_ticker=None,
             instrument_id=1_000_001,
-            start_date="2024-01-01",
-            end_date="2024-01-31",
+            start_date=date(2024, 1, 1),
+            end_date=date(2024, 1, 31),
         )
         mock_facade = MagicMock()
         mock_facade.resolve_source_ticker.return_value = "000001.SZ"

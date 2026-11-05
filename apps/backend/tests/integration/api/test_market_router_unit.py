@@ -138,18 +138,18 @@ class TestPostBars:
         client: TestClient,
         mock_market_facade: MagicMock,
     ) -> None:
-        """测试限制返回数量."""
-        # Arrange
+        """测试限制返回数量（#685: limit 下推到查询管道）."""
+        # Arrange — facade 模拟管道已应用 limit 后的结果
         mock_market_facade.find_bars.return_value = pl.DataFrame(
             {
-                "instrument_id": [1, 2, 3],
-                "trade_date": ["2024-01-15", "2024-01-15", "2024-01-15"],
-                "open": [10.0, 20.0, 30.0],
-                "high": [11.0, 21.0, 31.0],
-                "low": [9.5, 19.5, 29.5],
-                "close": [10.5, 20.5, 30.5],
-                "volume": [1000000, 2000000, 3000000],
-                "amount": [10500000.0, 41000000.0, 91500000.0],
+                "instrument_id": [1, 2],
+                "trade_date": ["2024-01-15", "2024-01-15"],
+                "open": [10.0, 20.0],
+                "high": [11.0, 21.0],
+                "low": [9.5, 19.5],
+                "close": [10.5, 20.5],
+                "volume": [1000000, 2000000],
+                "amount": [10500000.0, 41000000.0],
             }
         )
 
@@ -165,7 +165,10 @@ class TestPostBars:
         # Assert
         assert response.status_code == 200
         data = response.json()
-        # limit 应用于响应数据
+        # limit 经 facade 下推到查询管道，路由不再切片
+        mock_market_facade.find_bars.assert_called_once()
+        call_kwargs = mock_market_facade.find_bars.call_args.kwargs
+        assert call_kwargs["limit"] == 2
         assert len(data["data"]) == 2
 
     def test_post_bars_empty_result(

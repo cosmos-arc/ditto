@@ -308,7 +308,7 @@ async def post_bars(
         APIResponse 包含 K 线数据列表
 
     """
-    # 调用 facade（在线程池中执行，避免阻塞事件循环）
+    # 调用 facade（在线程池中执行，避免阻塞事件循环）；limit 下推到查询管道
     df = await asyncio.to_thread(
         facade.find_bars,
         instrument_ids=query.instrument_ids or [],
@@ -317,13 +317,11 @@ async def post_bars(
         adj=query.adjustment.value,
         asset_class=query.asset_class,
         allow_experimental_data=query.allow_experimental_data,
+        limit=query.limit,
     )
 
     # 转换为模型列表
     bars = to_bar_list(df)
-
-    # 应用 limit
-    bars = bars[: query.limit]
 
     return APIResponse(data=bars, read_semantics="latest_available")
 

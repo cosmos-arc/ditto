@@ -17,9 +17,9 @@ from ditto_application.exceptions import AppQueryError
 from ditto_application.queries.source import SourceQueryFacade
 from ditto_platform.foundation import logger
 from fastapi import APIRouter, Depends, Path
-from pydantic import BaseModel, Field
 
 from ditto_apps.api.errors import APIError, BadRequestError
+from ditto_apps.api.params import DateRangeQueryParams
 from ditto_apps.models.common import APIResponse
 
 router = APIRouter(prefix="/source", tags=["source"])
@@ -100,27 +100,13 @@ def _resolve_source_ticker(
 # ---------------------------------------------------------------------------
 
 
-class SourceDataQueryParams(BaseModel):
+class SourceDataQueryParams(DateRangeQueryParams):
     """
     Source 数据查询参数.
 
-    将标识符和时间范围查询参数组合为单一模型，
-    通过 FastAPI Depends() 注入路由函数。
+    复用公共标识符+日期范围参数（typed date 校验，#685）：
+    裸字符串日期不再直达 Source 适配器。
     """
-
-    ticker: str | None = Field(None, description="裸代码 (如 000001)")
-    standard_ticker: str | None = Field(
-        None, description="Ditto 标准格式 (如 000001.XSHE)"
-    )
-    instrument_id: int | None = Field(None, description="内部 ID")
-    start_date: str = Field(..., description="开始日期 (YYYY-MM-DD)")
-    end_date: str = Field(..., description="结束日期 (YYYY-MM-DD)")
-    allow_experimental_data: bool = Field(
-        default=False,
-        description="显式允许 experimental 数据集进入研究态查询",
-    )
-
-    model_config = {"extra": "ignore"}
 
 
 class SourceDataResponse(APIResponse[list[dict[str, Any]]]):
@@ -200,8 +186,8 @@ async def get_source_data(
             source,
             dataset,
             resolved_source_ticker,
-            params.start_date,
-            params.end_date,
+            params.start_date.isoformat(),
+            params.end_date.isoformat(),
             allow_experimental_data=params.allow_experimental_data,
         )
     except (AppQueryError, ValueError) as exc:
@@ -216,8 +202,8 @@ async def get_source_data(
         standard_ticker=params.standard_ticker,
         instrument_id=params.instrument_id,
         resolved_source_ticker=resolved_source_ticker,
-        start_date=params.start_date,
-        end_date=params.end_date,
+        start_date=params.start_date.isoformat(),
+        end_date=params.end_date.isoformat(),
         data=df.to_dicts() if not df.is_empty() else [],
         row_count=len(df),
         query_time_ms=query_time_ms,

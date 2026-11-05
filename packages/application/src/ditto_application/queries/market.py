@@ -1,5 +1,7 @@
 """Market query facade — 封装 MarketService，隐藏内部查询类型."""
 
+# ruff: noqa: PLR0913
+
 from __future__ import annotations
 
 from collections.abc import Sequence
@@ -56,6 +58,7 @@ class MarketQueryFacade:
         market_wide: bool = False,
         asset_class: str | None = None,
         allow_experimental_data: bool = False,
+        limit: int | None = None,
     ) -> pl.DataFrame:
         """
         查询 K 线数据（通过 MarketBarsQuery）.
@@ -69,6 +72,7 @@ class MarketQueryFacade:
                 （为 True 且 instrument_ids 为空时获取所有活跃证券）
             asset_class: 资产类别过滤
             allow_experimental_data: 显式允许 experimental 数据集进入研究态查询
+            limit: 返回数量限制（查询管道末尾应用）
 
         Returns:
             K 线数据 DataFrame
@@ -93,6 +97,7 @@ class MarketQueryFacade:
             adj=AdjType(adj),
             market_wide=market_wide,
             asset_class=asset_class,
+            limit=limit,
         )
         return self._service.find_bars(query)
 
