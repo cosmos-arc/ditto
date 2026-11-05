@@ -17,6 +17,7 @@ from zoneinfo import ZoneInfo
 
 import orjson
 import polars as pl
+from ditto_platform.foundation.util.io import canonical_json_bytes
 
 __all__ = [
     "BOOTSTRAP_SCHEMA",
@@ -127,13 +128,9 @@ class ApprovedAcceptance:
     paper_order_quantity: int
 
 
-def _canonical_bytes(value: object) -> bytes:
-    return orjson.dumps(value, option=orjson.OPT_SORT_KEYS)
-
-
 def canonical_hash(value: object) -> str:
     """Return the canonical SHA-256 digest for a JSON-compatible value."""
-    return hashlib.sha256(_canonical_bytes(value)).hexdigest()
+    return hashlib.sha256(canonical_json_bytes(value)).hexdigest()
 
 
 def _mapping(value: object, *, field: str) -> Mapping[str, object]:
@@ -658,7 +655,7 @@ def sign_payload(
         "previous_signature": previous_signature,
     }
     signature = hmac.new(
-        key, _canonical_bytes(signed_message), hashlib.sha256
+        key, canonical_json_bytes(signed_message), hashlib.sha256
     ).hexdigest()
     return {
         **payload,
@@ -692,7 +689,7 @@ def verify_signed_payload(
         raise ValueError("acceptance evidence signature metadata is invalid")
     expected = hmac.new(
         key,
-        _canonical_bytes(
+        canonical_json_bytes(
             {
                 "approval_hash": approval_hash,
                 "payload_hash": payload_hash,

@@ -207,6 +207,36 @@ class ManualBrokerGateway:
         return ()
 
 
+class ImmediateFillGateway(ManualBrokerGateway):
+    """Gateway fixture that acks a fully-filled ticket with a full fill."""
+
+    def submit_order(self, order: Order) -> OrderTicket:
+        return OrderTicket(
+            order=order,
+            status=OrderStatus.FILLED,
+            filled_quantity=order.quantity,
+            filled_price=10.0,
+            average_fill_price=10.0,
+        )
+
+    def query_fills(self, order_id: str) -> tuple[FillEvent, ...]:
+        return (
+            FillEvent(
+                fill_id="paper-fill-001",
+                order_id=order_id,
+                instrument_id=InstrumentId(510300),
+                direction=OrderSide.BUY,
+                filled_quantity=100,
+                fill_price=10.0,
+                fee=0.0,
+                slippage=0.0,
+                event_time=datetime(2026, 6, 1, 9, 31, tzinfo=UTC),
+                cumulative_quantity=100,
+                leaves_quantity=0,
+            ),
+        )
+
+
 class ReplayBrokerGateway(ManualBrokerGateway):
     """Gateway fixture that exposes replayed broker fills."""
 
@@ -1067,11 +1097,9 @@ def test_recording_gateway_descriptor_adds_recording_capabilities() -> None:
 
 
 def test_submit_records_ack_and_immediate_fill_events() -> None:
-    from ditto_execution.broker.gateways.paper import PaperBrokerGateway
-
     sink = InMemoryBrokerEventSink()
     gateway = BrokerEventRecordingGateway(
-        gateway=PaperBrokerGateway(initial_cash=100_000.0),
+        gateway=ImmediateFillGateway(),
         event_sink=sink,
         run_id="run-001",
         broker="paper",
@@ -1106,11 +1134,9 @@ def test_submit_records_ack_and_immediate_fill_events() -> None:
 
 
 def test_query_fills_records_fill_events_with_deterministic_ids() -> None:
-    from ditto_execution.broker.gateways.paper import PaperBrokerGateway
-
     sink = InMemoryBrokerEventSink()
     gateway = BrokerEventRecordingGateway(
-        gateway=PaperBrokerGateway(initial_cash=100_000.0),
+        gateway=ImmediateFillGateway(),
         event_sink=sink,
         run_id="run-001",
         broker="paper",
@@ -1130,11 +1156,9 @@ def test_query_fills_records_fill_events_with_deterministic_ids() -> None:
 
 
 def test_get_account_records_account_update_event() -> None:
-    from ditto_execution.broker.gateways.paper import PaperBrokerGateway
-
     sink = InMemoryBrokerEventSink()
     gateway = BrokerEventRecordingGateway(
-        gateway=PaperBrokerGateway(initial_cash=100_000.0),
+        gateway=ManualBrokerGateway(),
         event_sink=sink,
         run_id="run-account-001",
         broker="paper",

@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
 import os
 import shutil
 import sqlite3
@@ -38,6 +37,7 @@ from ditto_platform.foundation.storage.sqlite_backup import (
     inspect_database,
     restore_database,
 )
+from ditto_platform.foundation.util.io import canonical_json_bytes, sha256_file
 from pydantic import BaseModel, ConfigDict
 
 from ditto_apps.registry.container import make_app_container
@@ -456,19 +456,15 @@ def _acceptance_report(
     )
 
 
-def _canonical_json(value: object) -> bytes:
-    return orjson.dumps(value, option=orjson.OPT_SORT_KEYS)
-
-
 def _write_json(path: Path, value: object) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_bytes(_canonical_json(value))
+    path.write_bytes(canonical_json_bytes(value))
 
 
 def _content_entry(path: Path, *, root: Path) -> dict[str, str]:
     return {
         "relative_path": path.relative_to(root).as_posix(),
-        "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+        "sha256": sha256_file(path),
     }
 
 

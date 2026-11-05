@@ -578,7 +578,7 @@
       </div>
       <div class="compare-seam">seam ② · 成交模拟</div>
       <div class="compare-cols">
-        <div class="compare-col"><h5>生产</h5><div class="body"><code>BrokerGateway</code>（现仅 PaperBrokerGateway，真实券商 = reserved）</div></div>
+        <div class="compare-col"><h5>生产</h5><div class="body"><code>BrokerGateway</code>（paper 网关已按 #681 删除，仅剩 Protocol/recording seam，真实券商 = reserved）</div></div>
         <div class="compare-col"><h5>回测</h5><div class="body"><code>BrokerageModel</code>：FillModel + SlippageModel + AShareFeeModel + SettlementModel(T+1)</div></div>
       </div>
     </div>
@@ -900,7 +900,7 @@
     <tr><th>能力</th><th>成熟度</th><th>说明</th></tr>
     <tr><td>A 股 ETF 日频数据/研究/回测</td><td><span class="pill" style="background:#dbeafe;color:#2563eb">initial-focus</span></td><td>有 golden e2e（5 测试）gate PR</td></tr>
     <tr><td>OMS Lite / 回测引擎</td><td><span class="pill" style="background:#dbeafe;color:#2563eb">initial-focus</span></td><td>7 态 FSM + EngineLoop 完整</td></tr>
-    <tr><td>真实券商 adapter</td><td><span class="pill" style="background:#e2e8f0;color:#64748b">reserved</span></td><td>只有 PaperBrokerGateway</td></tr>
+    <tr><td>真实券商 adapter</td><td><span class="pill" style="background:#e2e8f0;color:#64748b">reserved</span></td><td>无（#681 裁决 A 删除）</td></tr>
     <tr><td>股票/基本面/宏观/外汇/商品数据</td><td><span class="pill" style="background:#fed7aa;color:#ea580c">experimental</span></td><td>需显式 opt-in 或晋级</td></tr>
   </table>
 </section>
@@ -972,7 +972,7 @@
     <div class="glos-item"><span class="term">Step Chain <span class="mark">🏠</span></span><div class="def">回测固定 7 步：DataFetch→RiskScan→Strategy→Planning→PreTrade→Execution→Audit。各步实现 TradingStep.execute(ctx)。</div></div>
     <div class="glos-item"><span class="term">BacktestBrokerage <span class="mark">🏠</span></span><div class="def">回测桥接点（state owner），内部用 execution 订单 FSM，但成交价/量/费/交收交给 BrokerageModel 模拟。</div></div>
     <div class="glos-item"><span class="term">BrokerageModel <span class="mark">🏠</span></span><div class="def">回测成交模拟模型（frozen），打包 FillModel+SlippageModel+AShareFeeModel+SettlementModel。</div></div>
-    <div class="glos-item"><span class="term">BrokerGateway <span class="mark">🏠</span></span><div class="def">券商网关 Protocol（6 必需方法 + describe()）。目前只有 PaperBrokerGateway，真实券商 adapter=reserved。</div></div>
+    <div class="glos-item"><span class="term">BrokerGateway <span class="mark">🏠</span></span><div class="def">券商网关 Protocol（6 必需方法 + describe()）。PaperBrokerGateway 已按 #681 删除，仅剩 Protocol/recording seam，真实券商 adapter=reserved。</div></div>
     <div class="glos-item"><span class="term">OMS Lite <span class="mark">🏠</span></span><div class="def">execution 的订单管理系统：7 状态 FSM + OrderBook + OrderTicket + 双 ID（ClientOrderId/BrokerOrderId）。</div></div>
     <div class="glos-item"><span class="term">RiskGate <span class="mark">🏠</span></span><div class="def">风控运行时 Protocol，4 生命周期钩子（pre_submit/pre_cancel/post_fill/daily_scan），backtest 与 paper-trading 共用。</div></div>
     <div class="glos-item"><span class="term">Account / AccountView <span class="mark">🏠</span></span><div class="def">portfolio 会计：Account 是可变状态唯一 owner，AccountView 是 frozen 只读快照（对外唯一形态）。apply_fill() 先算后赋原子更新。</div></div>

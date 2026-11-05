@@ -172,21 +172,19 @@ def create_backfill_command(dataset: str, description: str) -> Callable[..., Non
         description: 命令描述文档
 
     Returns:
-        可调用的命令函数
+        可直接注册为 Typer 命令的函数（参数注解内置一次）.
 
     Examples:
         >>> backfill_cmd = create_backfill_command("etf_daily", "回补ETF历史数据")
-        >>> @app.command()
-        >>> def backfill(ctx: typer.Context, start: str, end: str, parallel: int):
-        ...     return backfill_cmd(ctx, start, end, parallel)
+        >>> app.command("etf")(backfill_cmd)
 
     """
 
     def command(
         ctx: typer.Context,
-        start: str,
-        end: str,
-        parallel: int,
+        start: str = typer.Option(..., "--start", "-s", help="开始日期 (YYYY-MM-DD)"),
+        end: str = typer.Option(..., "--end", "-e", help="结束日期 (YYYY-MM-DD)"),
+        parallel: int = typer.Option(1, "--parallel", "-p", help="并行度"),
     ) -> None:
         validate_date_format(start)
         validate_date_format(end)

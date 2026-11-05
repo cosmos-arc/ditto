@@ -5,12 +5,12 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import date
 from enum import StrEnum
-from hashlib import file_digest
 from pathlib import Path
 from typing import Literal, Protocol, cast, overload
 
 import orjson
 import polars as pl
+from ditto_platform.foundation.util.io import sha256_file
 
 from ditto_features.errors import (
     DerivedIntegrityError,
@@ -197,7 +197,7 @@ class DerivedArtifactReader:
         frames: list[pl.DataFrame] = []
         for partition in partitions:
             path = self._artifact_root / partition.partition_path
-            if not path.is_file() or _file_sha256(path) != partition.checksum:
+            if not path.is_file() or sha256_file(path) != partition.checksum:
                 raise DerivedIntegrityError(
                     derived_id=derived_id,
                     version=version,
@@ -447,7 +447,7 @@ class DerivedArtifactReader:
                     partition_key=partition_key,
                     reason="complete partition has no recorded checksum",
                 )
-            actual = _file_sha256(path)
+            actual = sha256_file(path)
             if actual != record.checksum:
                 raise DerivedIntegrityError(
                     derived_id=derived_id,
@@ -457,12 +457,6 @@ class DerivedArtifactReader:
                     expected_checksum=record.checksum,
                     actual_checksum=actual,
                 )
-
-
-def _file_sha256(path: Path) -> str:
-    """Stream-hash one file（避免整分区载入内存）."""
-    with path.open("rb") as handle:
-        return file_digest(handle, "sha256").hexdigest()
 
 
 def _effective_time_key(spec_record: DerivedSpecRecord) -> str:

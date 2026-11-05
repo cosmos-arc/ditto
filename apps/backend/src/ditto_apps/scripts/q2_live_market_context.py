@@ -38,6 +38,7 @@ from ditto_data.catalog.source_snapshot import (
     ProviderSnapshot,
     ProviderSnapshotReader,
 )
+from ditto_platform.foundation.util.io import sha256_file
 
 from ditto_apps.config.runtime import state_root_matches
 from ditto_apps.registry.container import make_app_container
@@ -140,10 +141,6 @@ def inspect_global_session_visibility(
     return tuple(observations)
 
 
-def _sha256_file(path: Path) -> str:
-    return hashlib.sha256(path.read_bytes()).hexdigest()
-
-
 def _write_addressed(root: Path, stem: str, payload: object) -> tuple[Path, str]:
     content = canonical_bytes(payload)
     digest = hashlib.sha256(content).hexdigest()
@@ -163,7 +160,7 @@ def _validate_recovery_evidence(path: Path) -> tuple[Path, str]:
     payload = cast("dict[str, object]", decoded)
     if payload.get("passed") is not True:
         raise ValueError("Q2 recovery evidence must be a passing addressed artifact")
-    return resolved, _sha256_file(resolved)
+    return resolved, sha256_file(resolved)
 
 
 def _observed_dataset(
@@ -482,7 +479,7 @@ def main(argv: list[str] | None = None) -> int:
     sys.stdout.write(
         orjson.dumps(
             {
-                "evidence_sha256": _sha256_file(output),
+                "evidence_sha256": sha256_file(output),
                 "passed": result["passed"],
                 "source_snapshot_set_id": result["source_snapshot_set_id"],
             },

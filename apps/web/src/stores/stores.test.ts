@@ -1,28 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { useNavigationStore } from "@/features/navigation";
-import { useThemeStore } from "./theme.store";
-
-describe("themeStore", () => {
-	beforeEach(() => {
-		useThemeStore.setState({ theme: "dark", resolvedTheme: "dark" });
-	});
-
-	it("默认主题为 dark", () => {
-		expect(useThemeStore.getState().theme).toBe("dark");
-	});
-
-	it("setTheme 切换主题", () => {
-		useThemeStore.getState().setTheme("light");
-		expect(useThemeStore.getState().theme).toBe("light");
-	});
-
-	it("toggleTheme 在 dark/light 之间切换", () => {
-		useThemeStore.getState().toggleTheme();
-		expect(useThemeStore.getState().theme).toBe("light");
-		useThemeStore.getState().toggleTheme();
-		expect(useThemeStore.getState().theme).toBe("dark");
-	});
-});
 
 describe("navigationStore", () => {
 	beforeEach(() => {

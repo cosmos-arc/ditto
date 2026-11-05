@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
 import os
 import re
 import subprocess
@@ -12,6 +11,7 @@ from pathlib import Path
 from typing import cast
 
 import orjson
+from ditto_platform.foundation.util.io import sha256_file
 
 _IMAGE = re.compile(r"(?P<repository>[^@]+)@sha256:(?P<digest>[0-9a-f]{64})")
 
@@ -154,10 +154,6 @@ def build_spdx_sbom(
     }
 
 
-def _sha256(path: Path) -> str:
-    return hashlib.sha256(path.read_bytes()).hexdigest()
-
-
 def verify_image_manifest(
     *, repo_root: Path, approved_dependencies: Sequence[str]
 ) -> Mapping[str, object]:
@@ -182,12 +178,12 @@ def verify_image_manifest(
     for name, expected in cast("Mapping[str, object]", artifacts).items():
         if type(name) is not str or type(expected) is not str:
             raise ValueError("sandbox image artifact identity is invalid")
-        if _sha256(image_root / name) != expected:
+        if sha256_file(image_root / name) != expected:
             raise ValueError(f"sandbox image artifact drifted: {name}")
     sbom_hash = manifest.get("sbom_hash")
     if (
         type(sbom_hash) is not str
-        or _sha256(image_root / "sbom.spdx.json") != sbom_hash
+        or sha256_file(image_root / "sbom.spdx.json") != sbom_hash
     ):
         raise ValueError("sandbox SBOM drifted outside Approval A3")
     return manifest
@@ -363,7 +359,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         "seccomp-provenance.json",
         "seccomp.json",
     )
-    files = tuple((name, _sha256(image_root / name)) for name in artifact_names)
+    files = tuple((name, sha256_file(image_root / name)) for name in artifact_names)
     digest = match.group("digest")
     base_digest = args.base_image_digest.removeprefix("sha256:")
     sbom = build_spdx_sbom(
@@ -387,7 +383,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         "image_digest": digest,
         "image_repository": match.group("repository"),
         "platform": f"{inspect['Os']}/{inspect['Architecture']}",
-        "sbom_hash": _sha256(sbom_path),
+        "sbom_hash": sha256_file(sbom_path),
         "schema_id": "r5-candidate-image-manifest",
         "schema_version": 1,
         "size_bytes": inspect["Size"],

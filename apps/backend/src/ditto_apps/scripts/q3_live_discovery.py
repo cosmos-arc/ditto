@@ -43,6 +43,7 @@ from ditto_data.catalog.provider_payload import (
     ProviderPayloadReader,
 )
 from ditto_data.catalog.source_snapshot import ProviderSnapshotReader
+from ditto_platform.foundation.util.io import sha256_file
 
 from ditto_apps.config.runtime import state_root_matches
 from ditto_apps.registry.container import make_app_container
@@ -59,7 +60,6 @@ from ditto_apps.scripts.q3_live_discovery_support import (
     _rotation_observations,
     _selection_frame,
     _selection_instruments,
-    _sha256_file,
     _snapshot,
     _technical_consumer_evidence,
     _TechnicalEvidenceContext,
@@ -554,7 +554,7 @@ def main(argv: list[str] | None = None) -> int:
     sys.stdout.write(
         orjson.dumps(
             {
-                "evidence_sha256": _sha256_file(output),
+                "evidence_sha256": sha256_file(output),
                 "passed": result["passed"],
                 "stock_run_id": cast("Mapping[str, object]", result["stock_selection"])[
                     "run_id"

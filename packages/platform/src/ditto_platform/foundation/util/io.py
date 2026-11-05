@@ -6,6 +6,7 @@ import uuid
 from pathlib import Path
 from typing import Literal
 
+import orjson
 import polars as pl
 
 ParquetCompression = Literal["lz4", "uncompressed", "snappy", "gzip", "brotli", "zstd"]
@@ -116,3 +117,39 @@ def file_md5(path: Path) -> str:
             md5.update(chunk)
 
     return md5.hexdigest()
+
+
+def sha256_file(path: Path) -> str:
+    """
+    Stream-hash one file with SHA-256 without loading it into memory.
+
+    Args:
+        path: Path to the file.
+
+    Returns:
+        SHA-256 digest as a lowercase hex string.
+
+    """
+    digest = hashlib.sha256()
+    with Path(path).open("rb") as stream:
+        while chunk := stream.read(1024 * 1024):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def canonical_json_bytes(value: object) -> bytes:
+    """
+    Render compact sorted-key JSON bytes for identity hashes and manifests.
+
+    语义规范化（NFC/Decimal/datetime）另属 ditto_agent._canonical；本函数是
+    既有证据身份（备份清单回读、状态连续性哈希、签名验证）的权威字节形态，
+    改为语义规范化会破坏历史比对，勿合并两者。
+
+    Args:
+        value: JSON-serializable object.
+
+    Returns:
+        Deterministic compact bytes with sorted keys.
+
+    """
+    return orjson.dumps(value, option=orjson.OPT_SORT_KEYS)

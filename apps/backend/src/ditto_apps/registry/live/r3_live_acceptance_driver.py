@@ -62,6 +62,7 @@ from ditto_application.queries.experiments import (
 )
 from ditto_data.catalog.source_snapshot import ProviderSnapshotReader
 from ditto_data.ingestion.partition_state import PartitionLifecycleReader
+from ditto_platform.foundation.util.io import sha256_file
 from ditto_strategy.storage.sqlite.services.strategy_catalog_service import (
     StrategyCatalogService,
 )
@@ -74,7 +75,6 @@ from ditto_apps.registry.contexts.strategy import create_strategy_bundle
 from ditto_apps.registry.live import r3_live_governance_lane as _governance
 from ditto_apps.registry.live.r3_live_evidence_store import (
     canonical_bytes,
-    sha256_file,
     write_addressed,
 )
 from ditto_apps.registry.live.r3_live_planning_builder import (

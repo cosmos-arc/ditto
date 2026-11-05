@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import cast
 
 import orjson
+from ditto_platform.foundation.util.io import sha256_file
 
 __all__ = ["LiveReleaseEvidenceRequest", "build_live_release_evidence"]
 
@@ -53,14 +54,6 @@ def _canonical(value: object) -> bytes:
 
 def _hash_bytes(value: bytes) -> str:
     return hashlib.sha256(value).hexdigest()
-
-
-def _hash_file(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as stream:
-        while chunk := stream.read(1024 * 1024):
-            digest.update(chunk)
-    return digest.hexdigest()
 
 
 def _object(path: Path, *, label: str) -> dict[str, object]:
@@ -110,7 +103,7 @@ def _entry_path(root: Path, value: object, *, label: str) -> tuple[Path, str, st
     relative = _string(entry.get("relative_path"), label=f"{label}.relative_path")
     expected_hash = _content_hash(entry.get("sha256"), label=f"{label}.sha256")
     path, normalized = _inside(root, root / relative, label=label)
-    if _hash_file(path) != expected_hash:
+    if sha256_file(path) != expected_hash:
         raise ValueError(f"{label} hash drift")
     return path, normalized, expected_hash
 
@@ -232,7 +225,7 @@ def _lane_identity(root: Path, lane: str) -> dict[str, object]:
         index,
         label=f"{lane} result",
     )
-    if _hash_file(result_path) != expected_hash:
+    if sha256_file(result_path) != expected_hash:
         raise ValueError(f"{lane} result hash drift")
     result = _object(result_path, label=f"{lane} result")
     if result.get("lane") != lane:
@@ -290,7 +283,7 @@ def _lane_identity(root: Path, lane: str) -> dict[str, object]:
             label=f"{lane}.parameter_hash",
         ),
         "planning_document_hash": planning_hash,
-        "planning_document_sha256": _hash_file(planning_path),
+        "planning_document_sha256": sha256_file(planning_path),
         "registry_hash": _content_hash(
             result.get("registry_hash"),
             label=f"{lane}.registry_hash",
@@ -304,7 +297,7 @@ def _lane_identity(root: Path, lane: str) -> dict[str, object]:
 def _copy(source: Path, target: Path) -> None:
     target.parent.mkdir(parents=True, exist_ok=True)
     shutil.copyfile(source, target)
-    if _hash_file(source) != _hash_file(target):
+    if sha256_file(source) != sha256_file(target):
         raise ValueError(f"evidence copy hash drift: {source}")
 
 
@@ -327,7 +320,7 @@ def _archive_entry(
             target,
             label="workspace archive",
         ),
-        content_hash=_hash_file(target),
+        content_hash=sha256_file(target),
         generated_at=generated_at,
         source_commit=request.git_sha,
         command=command,
@@ -415,7 +408,7 @@ def _archive_r3_backend(
             _artifact_entry(
                 repository="monorepo",
                 relative_path=relative,
-                content_hash=_hash_file(resolved),
+                content_hash=sha256_file(resolved),
                 generated_at=generated_at,
                 source_commit=request.git_sha,
                 command=request.r3_command,
@@ -440,7 +433,7 @@ def _web_artifacts(
         _artifact_entry(
             repository="monorepo",
             relative_path=relative,
-            content_hash=_hash_file(resolved),
+            content_hash=sha256_file(resolved),
             generated_at=generated_at,
             source_commit=request.git_sha,
             command=request.web_command,
@@ -526,7 +519,7 @@ def build_live_release_evidence(
     unique_artifacts = {
         (item["repository"], item["relative_path"]): item for item in artifacts
     }
-    openapi_hash = _hash_file(request.openapi_path.resolve(strict=True))
+    openapi_hash = sha256_file(request.openapi_path.resolve(strict=True))
     lanes = {
         lane: {
             **identity,
@@ -545,8 +538,8 @@ def build_live_release_evidence(
         "lanes": lanes,
         "mode": "live",
         "openapi_hash": openapi_hash,
-        "r2_manifest_hash": _hash_file(request.r2_source_manifest),
-        "r2_report_hash": _hash_file(request.r2_report),
+        "r2_manifest_hash": sha256_file(request.r2_source_manifest),
+        "r2_report_hash": sha256_file(request.r2_report),
         "schema": "ditto.r3-live-release-evidence-manifest",
         "version": 2,
     }

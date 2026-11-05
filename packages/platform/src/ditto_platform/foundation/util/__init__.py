@@ -6,7 +6,9 @@ from ditto_platform.foundation.util.io import (
     ParquetCompression,
     atomic_bytes_write,
     atomic_write,
+    canonical_json_bytes,
     file_md5,
+    sha256_file,
 )
 
 __all__ = [
@@ -15,6 +17,8 @@ __all__ = [
     "ParquetCompression",
     "atomic_bytes_write",
     "atomic_write",
+    "canonical_json_bytes",
     "file_md5",
     "normalize_date",
+    "sha256_file",
 ]

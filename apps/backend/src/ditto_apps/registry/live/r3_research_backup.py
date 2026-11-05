@@ -25,6 +25,7 @@ from ditto_platform.foundation.storage.sqlite_backup import (
     inspect_database,
     restore_database,
 )
+from ditto_platform.foundation.util.io import canonical_json_bytes
 
 from ditto_apps.registry.contexts.r3_recovery import (
     DatabaseSchemaRecoveryEvidence,
@@ -232,7 +233,7 @@ def create_r3_research_backup(
         )
         manifest_path = root / _MANIFEST_NAME
         manifest_path.write_bytes(
-            _canonical_json(
+            canonical_json_bytes(
                 _manifest_record(
                     metadata=metadata,
                     research=research,
@@ -281,7 +282,7 @@ def verify_r3_research_backup(
         if not isinstance(loaded_manifest, dict):
             raise R3ResearchBackupError("invalid R3 backup manifest")
         manifest = cast("dict[str, object]", loaded_manifest)
-        if manifest_bytes != _canonical_json(manifest):
+        if manifest_bytes != canonical_json_bytes(manifest):
             raise R3ResearchBackupError("R3 backup manifest is not canonical JSON")
         if frozenset(manifest) != _MANIFEST_KEYS:
             raise R3ResearchBackupError("invalid R3 backup manifest")
@@ -575,10 +576,6 @@ def _json_record(
     ),
 ) -> object:
     return orjson.loads(orjson.dumps(asdict(value)))
-
-
-def _canonical_json(value: object) -> bytes:
-    return orjson.dumps(value, option=orjson.OPT_SORT_KEYS)
 
 
 def _inspect_standalone_database(database: Path) -> SQLiteDatabaseReport:

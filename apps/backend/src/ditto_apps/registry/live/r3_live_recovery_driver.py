@@ -6,10 +6,9 @@ from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 
-from ditto_apps.registry.live.r3_live_evidence_store import (
-    sha256_file,
-    write_addressed,
-)
+from ditto_platform.foundation.util.io import sha256_file
+
+from ditto_apps.registry.live.r3_live_evidence_store import write_addressed
 from ditto_apps.registry.live.r3_research_backup import (
     create_r3_research_backup,
     restore_r3_research_backup,
