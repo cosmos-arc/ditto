@@ -14,62 +14,14 @@ from ditto_apps.cli.utils.validation import validate_date_format
 
 app = typer.Typer(help="行情数据回补")
 
-# daily (stock/etf/index 日行情)
-_stock_daily_impl = create_backfill_command("stock_daily", "回补股票日行情")
-_etf_daily_impl = create_backfill_command("etf_daily", "回补ETF日行情")
-_index_daily_impl = create_backfill_command("index_daily", "回补指数日行情")
+# daily (stock/etf/index 日行情) — 注册顺序即 --help 命令面板顺序
+app.command("stock")(create_backfill_command("stock_daily", "回补股票日行情."))
+app.command("etf")(create_backfill_command("etf_daily", "回补ETF日行情."))
+app.command("index")(create_backfill_command("index_daily", "回补指数日行情."))
 
-# adj (复权因子)
+# adj (复权因子) — --fund 通道切换数据集
 _adj_factor_impl = create_backfill_command("adj_factor", "回补股票复权因子")
 _fund_adj_impl = create_backfill_command("fund_adj", "回补ETF/基金复权因子")
-
-# nav (ETF 单位净值, #196 P2)
-_etf_nav_impl = create_backfill_command("etf_nav", "回补ETF单位净值")
-
-# status (股票状态)
-_stock_status_impl = create_backfill_command("stock_status", "回补股票状态")
-
-# limit (涨跌停价格, #517)
-_stock_limit_impl = create_backfill_command("stock_limit", "回补股票涨跌停价格")
-
-# futures/index valuation (期货日线与指数估值, #658 批次4)
-_futures_daily_impl = create_backfill_command(
-    "futures_daily", "回补期货日线(六所实际合约)"
-)
-_index_valuation_impl = create_backfill_command("index_valuation", "回补指数估值")
-
-
-@app.command("stock")
-def stock(
-    ctx: typer.Context,
-    start: str = typer.Option(..., "--start", "-s", help="开始日期 (YYYY-MM-DD)"),
-    end: str = typer.Option(..., "--end", "-e", help="结束日期 (YYYY-MM-DD)"),
-    parallel: int = typer.Option(1, "--parallel", "-p", help="并行度"),
-) -> None:
-    """回补股票日行情."""
-    return _stock_daily_impl(ctx, start, end, parallel)
-
-
-@app.command("etf")
-def etf(
-    ctx: typer.Context,
-    start: str = typer.Option(..., "--start", "-s", help="开始日期 (YYYY-MM-DD)"),
-    end: str = typer.Option(..., "--end", "-e", help="结束日期 (YYYY-MM-DD)"),
-    parallel: int = typer.Option(1, "--parallel", "-p", help="并行度"),
-) -> None:
-    """回补ETF日行情."""
-    return _etf_daily_impl(ctx, start, end, parallel)
-
-
-@app.command("index")
-def index(
-    ctx: typer.Context,
-    start: str = typer.Option(..., "--start", "-s", help="开始日期 (YYYY-MM-DD)"),
-    end: str = typer.Option(..., "--end", "-e", help="结束日期 (YYYY-MM-DD)"),
-    parallel: int = typer.Option(1, "--parallel", "-p", help="并行度"),
-) -> None:
-    """回补指数日行情."""
-    return _index_daily_impl(ctx, start, end, parallel)
 
 
 @app.command("adj")
@@ -86,48 +38,22 @@ def adj(
     return _adj_factor_impl(ctx, start, end, parallel)
 
 
-@app.command("nav")
-def nav(
-    ctx: typer.Context,
-    start: str = typer.Option(..., "--start", "-s", help="开始日期 (YYYY-MM-DD)"),
-    end: str = typer.Option(..., "--end", "-e", help="结束日期 (YYYY-MM-DD)"),
-    parallel: int = typer.Option(1, "--parallel", "-p", help="并行度"),
-) -> None:
-    """回补ETF单位净值 (#196 P2)."""
-    return _etf_nav_impl(ctx, start, end, parallel)
+# nav (ETF 单位净值, #196 P2)
+app.command("nav")(create_backfill_command("etf_nav", "回补ETF单位净值 (#196 P2)."))
 
+# status (股票状态)
+app.command("status")(create_backfill_command("stock_status", "回补股票状态."))
 
-@app.command("status")
-def status(
-    ctx: typer.Context,
-    start: str = typer.Option(..., "--start", "-s", help="开始日期 (YYYY-MM-DD)"),
-    end: str = typer.Option(..., "--end", "-e", help="结束日期 (YYYY-MM-DD)"),
-    parallel: int = typer.Option(1, "--parallel", "-p", help="并行度"),
-) -> None:
-    """回补股票状态."""
-    return _stock_status_impl(ctx, start, end, parallel)
+# futures/index valuation (期货日线与指数估值, #658 批次4)
+app.command("futures")(
+    create_backfill_command("futures_daily", "回补期货日线(六所实际合约, #658 批次4).")
+)
+app.command("index-valuation")(
+    create_backfill_command("index_valuation", "回补指数估值(#658 批次4).")
+)
 
-
-@app.command("futures")
-def futures(
-    ctx: typer.Context,
-    start: str = typer.Option(..., "--start", "-s", help="开始日期 (YYYY-MM-DD)"),
-    end: str = typer.Option(..., "--end", "-e", help="结束日期 (YYYY-MM-DD)"),
-    parallel: int = typer.Option(1, "--parallel", "-p", help="并行度"),
-) -> None:
-    """回补期货日线(六所实际合约, #658 批次4)."""
-    return _futures_daily_impl(ctx, start, end, parallel)
-
-
-@app.command("index-valuation")
-def index_valuation(
-    ctx: typer.Context,
-    start: str = typer.Option(..., "--start", "-s", help="开始日期 (YYYY-MM-DD)"),
-    end: str = typer.Option(..., "--end", "-e", help="结束日期 (YYYY-MM-DD)"),
-    parallel: int = typer.Option(1, "--parallel", "-p", help="并行度"),
-) -> None:
-    """回补指数估值(#658 批次4)."""
-    return _index_valuation_impl(ctx, start, end, parallel)
+# limit (涨跌停价格, #517) — --force 行级补数通道 #575
+_stock_limit_impl = create_backfill_command("stock_limit", "回补股票涨跌停价格")
 
 
 @app.command("limit")

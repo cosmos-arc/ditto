@@ -25,6 +25,7 @@ from ditto_data.catalog.provider_payload import (
     ProviderPayloadReader,
 )
 from ditto_data.catalog.source_snapshot import ProviderSnapshot, ProviderSnapshotReader
+from ditto_platform.foundation.util.io import sha256_file
 
 _TARGET_DATE = date(2024, 3, 29)
 _WINDOWS = {
@@ -370,7 +371,7 @@ def test_recovery_evidence_requires_a_passing_addressed_payload(
     passing.write_bytes(orjson.dumps({"passed": True}))
     resolved, digest = subject._validate_recovery_evidence(passing)
     assert resolved == passing.resolve()
-    assert digest == subject._sha256_file(passing)
+    assert digest == sha256_file(passing)
 
 
 def test_global_payload_requires_retention_and_preserves_artifact_identity() -> None:
@@ -592,4 +593,4 @@ def test_main_writes_canonical_evidence_and_stdout_summary(
     summary = orjson.loads(capsys.readouterr().out)
     assert summary["passed"] is True
     assert summary["source_snapshot_set_id"] == "snapshot-set:sha256:test"
-    assert summary["evidence_sha256"] == subject._sha256_file(output)
+    assert summary["evidence_sha256"] == sha256_file(output)

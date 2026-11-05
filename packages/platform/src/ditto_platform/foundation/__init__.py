@@ -22,10 +22,7 @@ from ditto_platform.foundation.config import (
     XDGPaths,
     get_environment,
 )
-from ditto_platform.foundation.config.providers import (
-    ConfigValidationProvider,
-    DataRootInitProvider,
-)
+from ditto_platform.foundation.config.providers import DataRootInitProvider
 from ditto_platform.foundation.db import SQLitePool
 from ditto_platform.foundation.json_types import (
     JsonDict,
@@ -86,7 +83,6 @@ __all__ = [
     "ConfigInitError",
     "ConfigInitProvider",
     "ConfigLoader",
-    "ConfigValidationProvider",
     "DataCache",
     "DataRootInitProvider",
     "DatasetReader",

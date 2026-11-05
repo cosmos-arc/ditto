@@ -9,23 +9,12 @@ from ditto_apps.cli.commands.factory import create_backfill_command
 app = typer.Typer(help="元数据回补")
 
 # calendar
-_calendar_impl = create_backfill_command("calendar", "回补交易日历")
+app.command("calendar")(create_backfill_command("calendar", "回补交易日历."))
 
-# basic (stock/etf/index 基础信息)
+# basic (stock/etf/index 基础信息) — asset 参数选择数据集
 _stock_basic_impl = create_backfill_command("stock_basic", "回补股票基础信息")
 _etf_basic_impl = create_backfill_command("etf_basic", "回补ETF基础信息")
 _index_basic_impl = create_backfill_command("index_basic", "回补指数基础信息")
-
-
-@app.command("calendar")
-def calendar(
-    ctx: typer.Context,
-    start: str = typer.Option(..., "--start", "-s", help="开始日期 (YYYY-MM-DD)"),
-    end: str = typer.Option(..., "--end", "-e", help="结束日期 (YYYY-MM-DD)"),
-    parallel: int = typer.Option(1, "--parallel", "-p", help="并行度"),
-) -> None:
-    """回补交易日历."""
-    return _calendar_impl(ctx, start, end, parallel)
 
 
 @app.command("basic")

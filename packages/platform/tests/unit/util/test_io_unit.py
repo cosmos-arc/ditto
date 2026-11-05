@@ -10,6 +10,7 @@ from ditto_platform.foundation.util.io import (
     atomic_bytes_write,
     atomic_write,
     file_md5,
+    sha256_file,
 )
 
 
@@ -399,3 +400,23 @@ class TestWriterUniqueTmp:
         atomic_bytes_write(b"payload", target)
         assert target.read_bytes() == b"payload"
         assert not list(target.parent.glob("*.tmp"))
+
+
+class TestSha256File:
+    """sha256_file 流式哈希与 hashlib 标准实现逐位一致."""
+
+    def setup_method(self) -> None:
+        self.temp_dir = TemporaryDirectory()
+        self.temp_path = Path(self.temp_dir.name)
+
+    def teardown_method(self) -> None:
+        self.temp_dir.cleanup()
+
+    def test_matches_standard_sha256(self) -> None:
+        import hashlib
+
+        target = self.temp_path / "evidence.json"
+        payload = b"x" * (1024 * 1024 + 7)  # 跨 chunk 边界
+        target.write_bytes(payload)
+
+        assert sha256_file(target) == hashlib.sha256(payload).hexdigest()

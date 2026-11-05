@@ -1,0 +1,106 @@
+{
+ "capital": {
+  "help": {
+   "cyq": "回补每日筹码及胜率 (#523).",
+   "fina-indicator": "回补官方口径财务指标 (#521).",
+   "fund-share": "回补基金份额 (#522).",
+   "hk-hold": "回补沪深港通持股 (#520).",
+   "hsgt-top10": "回补沪深港通十大成交股 (#520).",
+   "index-weight": "回补指数成分股权重 (#196).",
+   "limit-list": "回补涨跌停与炸板名单 (#519).",
+   "margin": "回补融资融券.",
+   "moneyflow": "回补个股资金流向 (#518).",
+   "pledge": "回补股权质押.",
+   "portfolio": "回补基金季度持仓 (#522).",
+   "top-inst": "回补龙虎榜席位明细 (#519).",
+   "top-list": "回补龙虎榜个股明细 (#519).",
+   "top10-floatholders": "回补前十大流通股东 (#627).",
+   "top10-holders": "回补前十大股东 (#627).",
+   "valuation": "回补估值指标."
+  },
+  "order": [
+   "valuation",
+   "margin",
+   "pledge",
+   "index-weight",
+   "moneyflow",
+   "cyq",
+   "hk-hold",
+   "hsgt-top10",
+   "top-list",
+   "top-inst",
+   "limit-list",
+   "fund-share",
+   "fina-indicator",
+   "portfolio",
+   "top10-holders",
+   "top10-floatholders"
+  ]
+ },
+ "fundamental": {
+  "help": {
+   "balance": "回补资产负债表.",
+   "cash-flow": "回补现金流量表.",
+   "corporate-actions": "回补公司行为.",
+   "dividend": "回补分红送配.",
+   "express": "回补业绩快报（市场级公告日驱动）.",
+   "forecast": "回补业绩预告（市场级公告日驱动）.",
+   "income": "回补利润表."
+  },
+  "order": [
+   "balance",
+   "income",
+   "cash-flow",
+   "dividend",
+   "corporate-actions",
+   "forecast",
+   "express"
+  ]
+ },
+ "macro": {
+  "help": {
+   "commodity": "回补大宗商品日线（FRED 油/VIX + FXCM 金属 + 新浪外盘参考）.",
+   "fx": "回补汇率日线（FXCM 六对，GMT 日 K）.",
+   "indicators": "回补宏观指标(--source fred 驱动 51 FRED 系列落库)."
+  },
+  "order": [
+   "indicators",
+   "fx",
+   "commodity"
+  ]
+ },
+ "market": {
+  "help": {
+   "adj": "回补复权因子.",
+   "etf": "回补ETF日行情.",
+   "futures": "回补期货日线(六所实际合约, #658 批次4).",
+   "index": "回补指数日行情.",
+   "index-valuation": "回补指数估值(#658 批次4).",
+   "limit": "回补股票涨跌停价格 (#517).",
+   "nav": "回补ETF单位净值 (#196 P2).",
+   "status": "回补股票状态.",
+   "stock": "回补股票日行情."
+  },
+  "order": [
+   "stock",
+   "etf",
+   "index",
+   "adj",
+   "nav",
+   "status",
+   "futures",
+   "index-valuation",
+   "limit"
+  ]
+ },
+ "metadata": {
+  "help": {
+   "basic": "回补基础信息 (stock/etf/index).",
+   "calendar": "回补交易日历."
+  },
+  "order": [
+   "calendar",
+   "basic"
+  ]
+ }
+}

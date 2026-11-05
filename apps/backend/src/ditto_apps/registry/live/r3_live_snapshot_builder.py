@@ -11,7 +11,6 @@ from io import BytesIO
 from pathlib import Path
 from typing import cast
 
-import orjson
 import polars as pl
 from ditto_analysis.research.artifact_service import ResearchArtifactService
 from ditto_analysis.research.catalog_service import ResearchCatalogService
@@ -38,6 +37,7 @@ from ditto_application.processes.experiments.research_policy_artifact import (
 )
 from ditto_data.catalog.source_snapshot import ProviderSnapshot, ProviderSnapshotReader
 from ditto_data.ingestion.partition_state import PartitionLifecycleReader
+from ditto_platform.foundation.util.io import canonical_json_bytes
 
 from ditto_apps.registry.container import make_app_container
 from ditto_apps.registry.live.r3_live_market_projection import (
@@ -154,10 +154,6 @@ class LiveResearchSnapshotOptions:
     etf_tickers: tuple[str, ...] | None = None
 
 
-def _canonical(value: object) -> bytes:
-    return orjson.dumps(value, option=orjson.OPT_SORT_KEYS)
-
-
 def _parquet(frame: pl.DataFrame) -> bytes:
     buffer = BytesIO()
     frame.write_parquet(buffer, compression="zstd", statistics=True)
@@ -196,7 +192,7 @@ def _dependency_evidence(
     dataset_id: str,
     source_snapshot_ids: tuple[str, ...],
 ) -> tuple[ContentAddressedResearchInput, bytes]:
-    payload = _canonical(
+    payload = canonical_json_bytes(
         {
             "dataset_id": dataset_id,
             "schema": "ditto.r3-live-dependency.v1",
@@ -221,7 +217,7 @@ def _factor_evidence() -> tuple[tuple[ContentAddressedResearchInput, bytes], ...
     schema_hash = hashlib.sha256(_FACTOR_ARTIFACT_SCHEMA.encode()).hexdigest()
     artifacts: list[tuple[ContentAddressedResearchInput, bytes]] = []
     for registration in registry.registrations.values():
-        payload = _canonical(
+        payload = canonical_json_bytes(
             {
                 "schema": _FACTOR_ARTIFACT_SCHEMA,
                 "registry_manifest_hash": registry.manifest_hash,
@@ -538,7 +534,7 @@ def _ensure_live_catalog_parents(
         raise ValueError(f"live research dataset spec replay drift: {dataset_id}")
 
     spine_identity = hashlib.sha256(
-        _canonical(
+        canonical_json_bytes(
             {
                 "calendar_content_hash": calendar_input.content_hash,
                 "calendar_input_id": calendar_input.input_id,
@@ -717,7 +713,7 @@ def build_live_research_snapshot(
         "inputs": [dict(item.as_payload()) for item in published],
     }
     identity_hash = hashlib.sha256(
-        _canonical(
+        canonical_json_bytes(
             {
                 "created_at": created_at_text,
                 "manifest": manifest_preimage,
@@ -726,7 +722,7 @@ def build_live_research_snapshot(
     ).hexdigest()
     snapshot_id = f"r3-live-{lane}-{identity_hash}"
     manifest_preimage["snapshot_id"] = snapshot_id
-    manifest = _canonical(manifest_preimage)
+    manifest = canonical_json_bytes(manifest_preimage)
     manifest_hash = hashlib.sha256(manifest).hexdigest()
     if (
         artifact_service.publish_frozen_research_input(snapshot_id, manifest)

@@ -16,10 +16,6 @@ def test_feature_storage_adapters_raise_feature_storage_error() -> None:
             "packages/features/src/ditto_features/storage/parquet/factors/"
             "factor_writer.py"
         ),
-        Path(
-            "packages/features/src/ditto_features/storage/parquet/features/"
-            "technical/technical_indicator_writer.py"
-        ),
         Path("packages/features/src/ditto_features/storage/sqlite/derived/writer.py"),
     ]
 

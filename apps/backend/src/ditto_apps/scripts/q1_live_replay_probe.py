@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import cast
 
 import orjson
+from ditto_platform.foundation.util.io import canonical_json_bytes, sha256_file
 
 from ditto_apps.config.runtime import state_root_matches
 from ditto_apps.registry.contexts.ingestion import create_ingestion_bundle
@@ -69,20 +70,8 @@ class ReplayRunObservation:
     row_count: int | None
 
 
-def _canonical(value: object) -> bytes:
-    return orjson.dumps(value, option=orjson.OPT_SORT_KEYS)
-
-
-def _sha256_file(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as stream:
-        while chunk := stream.read(1024 * 1024):
-            digest.update(chunk)
-    return digest.hexdigest()
-
-
 def _state_sha256(state: RuntimeState) -> str:
-    return hashlib.sha256(_canonical(state)).hexdigest()
+    return hashlib.sha256(canonical_json_bytes(state)).hexdigest()
 
 
 def _is_durable_payload(name: str) -> bool:
@@ -113,7 +102,8 @@ def _observe_sqlite_tables(connection: sqlite3.Connection) -> dict[str, object]:
         # The identifier comes exclusively from this connection's sqlite_master.
         statement = f'SELECT * FROM "{table}"'  # noqa: S608
         rows = [
-            _canonical(dict(row)) for row in connection.execute(statement).fetchall()
+            canonical_json_bytes(dict(row))
+            for row in connection.execute(statement).fetchall()
         ]
         rows.sort()
         digest = hashlib.sha256()
@@ -148,7 +138,7 @@ def observe_runtime_state(
     payloads = [
         {
             "path": str(path.relative_to(root)),
-            "sha256": _sha256_file(path),
+            "sha256": sha256_file(path),
             "size_bytes": path.stat().st_size,
         }
         for path in _iter_durable_payload_paths(root)

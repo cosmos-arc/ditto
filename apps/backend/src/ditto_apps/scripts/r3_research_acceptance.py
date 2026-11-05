@@ -19,6 +19,7 @@ from ditto_application.processes.experiments.r2_live_gate_evidence import (
     FileR2LiveGateEvidenceReader,
     VerifiedR2LiveGateEvidence,
 )
+from ditto_platform.foundation.util.io import sha256_file
 
 from ditto_apps.r2_live_evidence_source import load_r2_live_gate_source
 
@@ -299,14 +300,6 @@ def _subprocess_runner(
     )
 
 
-def _hash_file(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as stream:
-        while chunk := stream.read(1024 * 1024):
-            digest.update(chunk)
-    return digest.hexdigest()
-
-
 def _run_command(
     spec: CommandSpec,
     *,
@@ -318,7 +311,7 @@ def _run_command(
     for relative_path in spec.artifact_paths:
         artifact = workspace_root / relative_path
         if artifact.is_file():
-            hashes[relative_path] = _hash_file(artifact)
+            hashes[relative_path] = sha256_file(artifact)
     return replace(result, artifact_hashes=hashes)
 
 
@@ -393,7 +386,7 @@ def _write_manifest(
                         output,
                         workspace_root=workspace_root,
                     ),
-                    "sha256": _hash_file(output),
+                    "sha256": sha256_file(output),
                     "source_commit": source_commit,
                 }
             ],

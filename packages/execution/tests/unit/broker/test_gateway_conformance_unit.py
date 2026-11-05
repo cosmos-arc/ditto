@@ -9,13 +9,7 @@ from __future__ import annotations
 
 from typing import get_type_hints
 
-from ditto_execution.broker.contracts import (
-    BROKER_GATEWAY_CONTRACT_VERSION,
-    BrokerGateway,
-    BrokerGatewayDescriptor,
-    validate_broker_gateway_descriptor,
-)
-from ditto_execution.models import STANDARD_BROKER_EVENT_TYPES
+from ditto_execution.broker.contracts import BrokerGateway
 
 
 def assert_gateway_conformance(gateway_cls: type) -> None:
@@ -54,99 +48,11 @@ def assert_gateway_conformance(gateway_cls: type) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Conformance: PaperBrokerGateway
+# Conformance: BrokerEventRecordingGateway
 # ---------------------------------------------------------------------------
-
-
-def test_paper_gateway_satisfies_broker_gateway_protocol() -> None:
-    from ditto_execution.broker.gateways.paper import PaperBrokerGateway
-
-    assert_gateway_conformance(PaperBrokerGateway)
 
 
 def test_broker_event_recording_gateway_satisfies_broker_gateway_protocol() -> None:
     from ditto_execution.broker.recording import BrokerEventRecordingGateway
 
     assert_gateway_conformance(BrokerEventRecordingGateway)
-
-
-def test_paper_gateway_instance_check() -> None:
-    from ditto_execution.broker.gateways.paper import PaperBrokerGateway
-
-    gw = PaperBrokerGateway()
-    assert isinstance(gw, BrokerGateway)
-
-
-def test_paper_gateway_descriptor_declares_protocol_contract() -> None:
-    from ditto_execution.broker.gateways.paper import PaperBrokerGateway
-
-    descriptor = PaperBrokerGateway().describe()
-
-    assert isinstance(descriptor, BrokerGatewayDescriptor)
-    assert validate_broker_gateway_descriptor(descriptor) is descriptor
-    assert descriptor.gateway_id == "paper"
-    assert descriptor.mode == "paper"
-    assert descriptor.contract_version == BROKER_GATEWAY_CONTRACT_VERSION
-    assert descriptor.supported_event_types == STANDARD_BROKER_EVENT_TYPES
-    assert "immediate_fill" in descriptor.capabilities
-    assert "manual_fill_simulation" in descriptor.capabilities
-
-
-# ---------------------------------------------------------------------------
-# Instance behavior: PaperBrokerGateway
-# ---------------------------------------------------------------------------
-
-
-def test_paper_gateway_connect_does_not_raise() -> None:
-    from ditto_execution.broker.gateways.paper import PaperBrokerGateway
-
-    gw = PaperBrokerGateway()
-    gw.connect()  # should not raise
-
-
-def test_paper_gateway_submit_order_returns_ticket() -> None:
-    from ditto_execution.broker.gateways.paper import PaperBrokerGateway
-    from ditto_execution.orders.ids import ClientOrderId
-    from ditto_execution.orders.model import Order
-    from ditto_kernel.identity import InstrumentId
-    from ditto_kernel.order import OrderSide, OrderType
-
-    gw = PaperBrokerGateway(initial_cash=100_000.0)
-    order = Order(
-        client_id=ClientOrderId(value="test-001"),
-        instrument_id=InstrumentId(510300),
-        order_type=OrderType.LIMIT,
-        direction=OrderSide.BUY,
-        quantity=100,
-        price=4.50,
-    )
-    ticket = gw.submit_order(order)
-    from ditto_execution.orders.ticket import OrderTicket
-
-    assert isinstance(ticket, OrderTicket)
-
-
-def test_paper_gateway_cancel_order_returns_bool() -> None:
-    from ditto_execution.broker.gateways.paper import PaperBrokerGateway
-
-    gw = PaperBrokerGateway()
-    result = gw.cancel_order("nonexistent")
-    assert isinstance(result, bool)
-    assert result is False
-
-
-def test_paper_gateway_query_fills_returns_tuple() -> None:
-    from ditto_execution.broker.gateways.paper import PaperBrokerGateway
-
-    gw = PaperBrokerGateway()
-    fills = gw.query_fills("nonexistent")
-    assert isinstance(fills, tuple)
-
-
-def test_paper_gateway_get_account_returns_account_view() -> None:
-    from ditto_execution.broker.gateways.paper import PaperBrokerGateway
-    from ditto_portfolio.accounting.account import AccountView
-
-    gw = PaperBrokerGateway()
-    account = gw.get_account()
-    assert isinstance(account, AccountView)

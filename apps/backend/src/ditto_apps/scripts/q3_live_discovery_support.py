@@ -53,7 +53,6 @@ __all__ = [
     "_rotation_observations",
     "_selection_frame",
     "_selection_instruments",
-    "_sha256_file",
     "_snapshot",
     "_technical_consumer_evidence",
     "_universe_snapshot_id",
@@ -253,10 +252,6 @@ def derive_limit_state(
         low=low,
         is_st=is_st,
     )
-
-
-def _sha256_file(path: Path) -> str:
-    return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def _write_addressed(root: Path, stem: str, payload: object) -> tuple[Path, str]:

@@ -7,7 +7,7 @@ from pathlib import Path
 
 import orjson
 
-__all__ = ["canonical_bytes", "sha256_file", "write_addressed"]
+__all__ = ["canonical_bytes", "write_addressed"]
 
 
 def canonical_bytes(value: object) -> bytes:
@@ -15,15 +15,6 @@ def canonical_bytes(value: object) -> bytes:
     return (
         orjson.dumps(value, option=orjson.OPT_INDENT_2 | orjson.OPT_SORT_KEYS) + b"\n"
     )
-
-
-def sha256_file(path: Path) -> str:
-    """Hash one evidence file without loading it into memory."""
-    digest = hashlib.sha256()
-    with path.open("rb") as stream:
-        while chunk := stream.read(1024 * 1024):
-            digest.update(chunk)
-    return digest.hexdigest()
 
 
 def write_addressed(
