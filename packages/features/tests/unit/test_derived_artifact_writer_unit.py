@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from datetime import date
 from pathlib import Path
+from typing import Any
 
 import polars as pl
 import pytest
@@ -161,9 +162,7 @@ def test_overlapping_runs_never_tear_each_other(
     gate: dict[str, threading.Barrier] = {"barrier": threading.Barrier(2)}
     real_write_parquet = pl.DataFrame.write_parquet
 
-    def _gated_write_parquet(
-        self: pl.DataFrame, *args: object, **kwargs: object
-    ) -> None:
+    def _gated_write_parquet(self: pl.DataFrame, *args: Any, **kwargs: Any) -> None:
         gate["barrier"].wait()
         real_write_parquet(self, *args, **kwargs)
 
