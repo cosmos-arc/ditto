@@ -170,8 +170,6 @@ class OperatePaperOrderBody(BaseModel):
     settlement_date: date = Field(strict=False)
     decision_at: datetime = Field(strict=False)
     execution_at: datetime = Field(strict=False)
-    position_quantity: int = Field(ge=0)
-    available_quantity: int = Field(ge=0)
     market: PaperMarketSnapshotBody
     rules: PaperInstrumentRulesBody
     assumption: PaperFillAssumptionBody

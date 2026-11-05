@@ -177,12 +177,9 @@ class ASharePaperReality:
             else 0.0
         )
         total_cost = commission + transfer_fee + tax
-        if (
-            order.direction is OrderSide.BUY
-            and context.cash_available is not None
-            and Decimal(str(amount)) + Decimal(str(total_cost))
-            > Decimal(str(context.cash_available))
-        ):
+        if order.direction is OrderSide.BUY and Decimal(str(amount)) + Decimal(
+            str(total_cost)
+        ) > Decimal(str(context.cash_available)):
             return ASharePaperReality._reject(
                 paper_order, "insufficient_cash", context.execution_at
             )

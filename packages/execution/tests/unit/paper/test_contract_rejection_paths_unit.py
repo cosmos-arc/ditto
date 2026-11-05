@@ -152,6 +152,7 @@ def _context(
     settlement_date: str = "2026-09-05",
     position_quantity: int = 100,
     available_quantity: int = 100,
+    cash_available: float = 1_000_000.0,
 ) -> PaperRealityContext:
     return PaperRealityContext(
         decision_at=_NOW,
@@ -159,6 +160,7 @@ def _context(
         settlement_date=settlement_date,
         position_quantity=position_quantity,
         available_quantity=available_quantity,
+        cash_available=cash_available,
     )
 
 

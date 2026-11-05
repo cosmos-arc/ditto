@@ -341,6 +341,24 @@ def test_control_commands_reject_suppressed_targets_and_restore_state() -> None:
             actor="user:chevy",
         )
     )
+    # Retries of already-recorded controls replay instead of tripping the
+    # suppressed-target guard.
+    replayed_correction = handler.correct(
+        CorrectManualEventCommand(
+            account_id="manual-main",
+            corrects_event_id=buy_event.event_id,
+            replacement=ManualEventInput.buy_or_sell(
+                side="buy",
+                trade_date="2026-08-31",
+                settlement_date="2026-09-01",
+                idempotency_key="correct-buy",
+                actor="user:chevy",
+                instrument_id=InstrumentId(600519),
+                terms=TradeEventTerms(quantity=Decimal("100"), price=Decimal("12")),
+            ),
+        )
+    )
+    assert replayed_correction.status == "replayed"
     restored = AccountLedgerRebuilder().rebuild(
         account=account,
         events=journal.list_events("manual-main"),

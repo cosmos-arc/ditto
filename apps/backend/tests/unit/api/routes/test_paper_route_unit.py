@@ -95,8 +95,6 @@ def _operate_body() -> OperatePaperOrderBody:
         settlement_date=date(2026, 9, 1),
         decision_at=NOW,
         execution_at=NOW,
-        position_quantity=0,
-        available_quantity=0,
         market=PaperMarketSnapshotBody(
             dataset_id="a-share-daily-bars",
             source="tushare",

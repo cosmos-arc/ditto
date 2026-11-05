@@ -59,7 +59,22 @@ class ReconcilePaperAccount:
             )
             if event is not None and event.external_reference == record.execution_id:
                 matched_hashes.append(event.event_hash)
-        balanced = len(matched_hashes) == len(filled)
+        # Reverse direction: every ledger event this session wrote must pair
+        # with exactly one filled execution, so ledger-side orphans (money
+        # moved without a store record) and duplicate claims cannot hide
+        # behind a coincidentally equal forward count.
+        filled_ids = {record.execution_id for record in filled}
+        claimed: set[str] = set()
+        orphans = 0
+        for event in account_events:
+            if event.actor != f"paper-session:{session_id}":
+                continue
+            reference = event.external_reference
+            if reference in filled_ids and reference not in claimed:
+                claimed.add(reference)
+            else:
+                orphans += 1
+        balanced = len(matched_hashes) == len(filled) and orphans == 0
         checksum = _checksum(
             session_id=session_id,
             trade_date=session.trade_date,

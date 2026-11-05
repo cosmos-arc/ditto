@@ -150,7 +150,7 @@ def _context(
     position_quantity: int = 0,
     available_quantity: int = 0,
     settlement_date: str = "2026-09-01",
-    cash_available: float | None = None,
+    cash_available: float = 1_000_000.0,
 ) -> PaperRealityContext:
     return PaperRealityContext(
         decision_at=decision_at,
@@ -386,6 +386,7 @@ class TestFillAssumptionLineage:
                 settlement_date="2026-09-01",
                 position_quantity=0,
                 available_quantity=0,
+                cash_available=100_000.0,
             ),
         )
 
