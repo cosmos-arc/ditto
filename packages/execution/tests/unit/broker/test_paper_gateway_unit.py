@@ -389,7 +389,9 @@ class TestPaperGatewayQueryFills:
         assert isinstance(fills[0].event_time, datetime)
 
     def test_sell_order_fill_direction(self) -> None:
-        gw = PaperBrokerGateway()
+        # 先建仓再卖出——裸卖自 #681（#684 批B）起在模型层拒绝
+        gw = PaperBrokerGateway(initial_cash=100_000.0)
+        gw.submit_order(_order("fill-sell-buy", price=20.0))
         order = _order("fill-sell-1", side=OrderSide.SELL, price=20.0)
         gw.submit_order(order)
         fills = gw.query_fills(order.order_id)
@@ -522,12 +524,28 @@ class TestPaperGatewayInsufficientFunds:
         with pytest.raises(InsufficientFundsError, match="资金不足"):
             gw.submit_order(order)
 
-    def test_sell_with_zero_cash_does_not_raise(self) -> None:
-        """SELL order does not require cash — no InsufficientFundsError."""
+    def test_sell_with_zero_cash_rejects_on_position_not_funds(self) -> None:
+        """SELL 不做资金校验：零资金下的失败原因是裸卖（#681，#684 批B）
+        而非 InsufficientFundsError——SELL 的约束在持仓侧不在现金侧。"""
         gw = PaperBrokerGateway()
         order = _order("sell-no-cash-1", side=OrderSide.SELL, price=10.0)
-        ticket = gw.submit_order(order)
-        assert ticket.status == OrderStatus.FILLED
+        with pytest.raises(ValueError, match="naked short"):
+            gw.submit_order(order)
+
+    def test_rejected_sell_leaves_no_phantom_fill(self) -> None:
+        """#684 批B correctness F2：模型层拒绝的成交不得留下 FILLED 票——
+        捕获异常继续执行的调用方看到的订单簿与账户保持一致。"""
+        gw = PaperBrokerGateway(initial_cash=100_000.0)
+        gw.submit_order(_order("phantom-buy", quantity=900, price=10.0))
+        order = _order("phantom-sell", side=OrderSide.SELL, quantity=5000, price=10.0)
+
+        with pytest.raises(ValueError, match="oversell"):
+            gw.submit_order(order)
+
+        assert gw.query_fills(order.order_id) == ()
+        view = gw.get_account()
+        pos = dict(view.positions)[InstrumentId(1)]  # 买入仓位仍在，卖出未入账
+        assert pos.quantity == 900
 
     def test_insufficient_funds_error_is_order_submit_error(self) -> None:
         """InsufficientFundsError is a subclass of OrderSubmitError."""

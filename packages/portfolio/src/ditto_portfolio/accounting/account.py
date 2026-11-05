@@ -202,6 +202,11 @@ class Account:
             dict with key "upsert" for add/update or "remove" for delete.
             Each entry maps instrument_id to new Position (upsert) or None (remove).
 
+        Raises:
+            ValueError: SELL 超过持仓数量（超卖）或无持仓卖出（裸卖）——
+                计算先于一切状态变更，抛错时持仓/现金均不变（裁决 #681：
+                回测 brokerage 与 projector 的裸卖静默入账路径全部封死）。
+
         """
         iid = fill.instrument_id
         existing = self._positions.get(iid)
@@ -235,23 +240,29 @@ class Account:
             return {"upsert": (iid, new_pos)}
 
         # SELL
-        if existing is not None:
-            new_qty = existing.quantity - qty
-            new_avail = existing.available_quantity - qty
-            realized = (price - existing.average_cost) * qty
-            if new_qty <= 0:
-                return {"remove": (iid, None)}
-            new_pos = replace(
-                existing,
-                quantity=new_qty,
-                available_quantity=new_avail,
-                market_value=price * new_qty,
-                realized_pnl=existing.realized_pnl + realized,
-                total_fees=existing.total_fees + fill.fee,
+        if existing is None:
+            message = f"naked short rejected: SELL {qty} of {iid} with no position"
+            raise ValueError(message)
+        if qty > existing.quantity:
+            message = (
+                f"oversell rejected: SELL {qty} exceeds position "
+                f"{existing.quantity} of {iid}"
             )
-            return {"upsert": (iid, new_pos)}
-
-        return {}
+            raise ValueError(message)
+        new_qty = existing.quantity - qty
+        new_avail = existing.available_quantity - qty
+        realized = (price - existing.average_cost) * qty
+        if new_qty == 0:
+            return {"remove": (iid, None)}
+        new_pos = replace(
+            existing,
+            quantity=new_qty,
+            available_quantity=new_avail,
+            market_value=price * new_qty,
+            realized_pnl=existing.realized_pnl + realized,
+            total_fees=existing.total_fees + fill.fee,
+        )
+        return {"upsert": (iid, new_pos)}
 
     def _apply_position_updates(
         self,
@@ -268,7 +279,14 @@ class Account:
             self._positions.pop(iid, None)
 
     def _calculate_new_cash(self, fill: FillEvent) -> CashBook:
-        """计算成交后的新现金状态（纯计算，无副作用）。"""
+        """
+        计算成交后的新现金状态（纯计算，无副作用）。
+
+        settled 口径（裁决 #680 A）：A 股当日买入占用不可提现（T+1 可取）
+        ——BUY 于 trade_date 从 settled 扣全额（amount+fee）；SELL 即时
+        计入 available 与 settled（in-memory 引擎无交收延迟；与 rebuilder
+        按 settlement_date<=as_of 的口径在全部交收完成的端态一致）。
+        """
         cash = self._cash
         price = fill.fill_price
         qty = fill.filled_quantity
@@ -278,7 +296,7 @@ class Account:
         if fill.direction == OrderSide.BUY:
             return CashBook(
                 available=cash.available - amount - fee,
-                settled=cash.settled - fee,
+                settled=cash.settled - amount - fee,
                 frozen=cash.frozen,
             )
         # SELL
