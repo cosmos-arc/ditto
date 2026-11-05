@@ -35,6 +35,7 @@ from ditto_application.processes.experiments.candidate_sandbox_port import (
     freeze_sandbox_artifact,
     sandbox_manifest_attestation_hash,
 )
+from ditto_platform.foundation import writer_unique_tmp
 
 from ditto_apps.registry.agent.oci_sandbox import (
     OciSandboxApprovalVerifier,
@@ -780,7 +781,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     report = run_live_acceptance(repo_root=args.repo_root)
     output = args.output
     output.parent.mkdir(parents=True, exist_ok=True)
-    temporary = output.with_suffix(output.suffix + ".tmp")
+    temporary = writer_unique_tmp(output)
     temporary.write_bytes(
         orjson.dumps(
             report,

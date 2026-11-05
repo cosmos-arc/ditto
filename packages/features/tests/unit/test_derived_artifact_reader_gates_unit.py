@@ -216,18 +216,16 @@ def test_checksum_drift_refused(tmp_path: Path) -> None:
         )
 
 
-def test_inflight_tmp_file_refused(tmp_path: Path) -> None:
-    """无窗口 glob 命中写入中的 tmp 文件时 fail closed."""
+def test_inflight_tmp_residue_not_globbed(tmp_path: Path) -> None:
+    """#694：写入者唯一名 tmp 残留不匹配 *.parquet glob，无窗口读取不受污染.
+
+    旧共享名 ``2026.tmp.parquet`` 会被无窗口 glob 命中并 fail closed；
+    新命名 ``*.tmp`` 结尾使残留惰性化——读取只见到 checkpoint 完整的分区.
+    """
     catalog = _FakeCatalog()
     path = _write_partition(tmp_path)
     catalog.put_checkpoint(_complete_checkpoint(path))
-    pl.DataFrame(
-        {
-            "instrument_id": [1],
-            "trade_date": [date(2026, 9, 30)],
-            "value": [0.3],
-        }
-    ).write_parquet(path.parent / "2026.tmp.parquet")
+    (path.parent / "2026.parquet.12345-deadbeef.tmp").write_bytes(b"half-written")
     reader = DerivedArtifactReader(catalog_service=catalog, artifact_root=tmp_path)
-    with pytest.raises(DerivedIntegrityError, match="not COMPLETE"):
-        reader.read_frame(derived_id="factor.momentum_1m", version=1)
+    frame = reader.read_frame(derived_id="factor.momentum_1m", version=1)
+    assert frame.height == 2
