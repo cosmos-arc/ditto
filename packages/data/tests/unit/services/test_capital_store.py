@@ -292,6 +292,46 @@ class TestCapitalStoreGetMethods:
         assert day_26.height == 1
         assert day_26["net_mf_amount"].to_list() == [130.0]
 
+    def test_get_hk_hold_converges_knowledge_date_versions(self) -> None:
+        """#693:存量纠正后同键三版本(伪造/官方/观察锚)收敛单行最新 kd."""
+        mock_reader = MagicMock()
+        mock_reader.read.return_value = pl.DataFrame(
+            {
+                "instrument_id": [1, 1, 1],
+                "trade_date": [date(2024, 9, 30)] * 3,
+                "knowledge_date": [
+                    date(2024, 10, 1),
+                    date(2024, 10, 15),
+                    date(2026, 11, 1),
+                ],
+                "vol": [100.0, 100.0, 100.0],
+                "ratio": [1.0, 1.0, 1.0],
+                "source": ["tushare"] * 3,
+            }
+        )
+        service = CapitalStore(
+            read_ports=CapitalReaders(
+                margin_trading=MagicMock(),
+                pledge_ratio=MagicMock(),
+                valuation_metrics=MagicMock(),
+                index_composition=MagicMock(),
+                hk_hold=mock_reader,
+            ),
+            write_ports=CapitalWriters(
+                margin_trading=MagicMock(),
+                pledge_ratio=MagicMock(),
+                valuation_metrics=MagicMock(),
+                index_composition=MagicMock(),
+            ),
+        )
+
+        result = service.get_hk_hold(1, "2024-09-01", "2024-12-31")
+
+        # latest_available：每 (instrument, trade_date) 单行取最新 kd——
+        # 无收敛时该窗口会向调用方重复三行（correctness #693 F1）。
+        assert result.height == 1
+        assert result["knowledge_date"].to_list() == [date(2026, 11, 1)]
+
 
 class TestCapitalStoreSaveMethods:
     """Tests for CapitalStore save_* methods."""

@@ -374,10 +374,13 @@ class CapitalStore:
 
     def get_hk_hold(self, instrument_id: int, start: str, end: str) -> pl.DataFrame:
         """
-        逐标的北向持股窗口读（vol 股/ratio %）.
+        逐标的北向持股窗口读（vol 股/ratio %；latest_available 收敛）.
 
-        知识日分段 2024-08-19（日频制度段=次交易日；季度段=账本观察日），
-        2024-08-19 后非季末无行＝制度性缺席不是缺口。
+        知识日分段 2024-08-19（日频制度段=次交易日；季度段=官方披露
+        发布日，#693；观察锚/伪造锚旧行作为多版本共存）——修订收敛到
+        最新 knowledge_date 版本（镜像 get_moneyflow；#628 词表），否则
+        存量多版本会向窗口读重复行。2024-08-19 后非季末无行＝制度性
+        缺席不是缺口。
         """
         reader = self._read_ports.hk_hold
         if reader is None:
@@ -385,7 +388,13 @@ class CapitalStore:
         frame = reader.read(
             instrument_ids=[instrument_id], start_date=start, end_date=end
         )
-        return frame if frame.is_empty() else frame.sort("trade_date")
+        if frame.is_empty():
+            return frame
+        return (
+            frame.sort("knowledge_date")
+            .unique(subset=["instrument_id", "trade_date"], keep="last")
+            .sort("trade_date")
+        )
 
     def get_hsgt_top10s(
         self, start: str, end: str, market_type: str | None = None
