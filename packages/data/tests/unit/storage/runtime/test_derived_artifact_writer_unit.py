@@ -253,8 +253,8 @@ class TestWriteDurablePartitions:
         version_root = (
             tmp_path / "derived" / "artifacts" / "series" / "factor.test_factor" / "v1"
         )
-        # .tmp file should not remain after write
-        assert not list(version_root.glob("*.tmp.parquet"))
+        # 写入者唯一名 tmp（#694）成功后不残留——旧 *.tmp.parquet 形态已退役
+        assert not list(version_root.glob("*.tmp"))
 
 
 class TestWriteArtifactMetadata:
@@ -511,8 +511,8 @@ class TestTwoPhaseCommit:
         version_root = (
             tmp_path / "derived" / "artifacts" / "series" / "factor.test_factor" / "v1"
         )
-        # No temp files should remain
-        temp_files = list(version_root.glob("*.tmp.parquet"))
+        # No temp files should remain（写入者唯一名 *.parquet.<pid>-<hex>.tmp）
+        temp_files = list(version_root.glob("*.tmp"))
         assert temp_files == [], (
             f"Expected no temp files after success, got: {temp_files}"
         )

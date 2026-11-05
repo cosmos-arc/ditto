@@ -144,15 +144,32 @@ def test_killed_writer_tmp_residue_is_inert(tmp_path: Path) -> None:
     assert not any(".tmp.parquet" in name for name in visible)
 
 
-def test_overlapping_runs_never_tear_each_other(tmp_path: Path) -> None:
-    """#694：重叠物化双线程同写尚不存在的分区，各自 run 的留存字节逐位等于自己的帧."""
+def test_overlapping_runs_never_tear_each_other(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """#694：重叠物化竞写零撕裂——每轮两线程同步越过 exists() 前置门后同写."""
+
     import threading
+
+    import ditto_features.storage.derived_artifact_writer as writer_module
 
     writer = DerivedArtifactWriter(tmp_path)
     errors: list[Exception] = []
-    start_gate = threading.Event()
+    rounds = 25
+    # 每轮新 barrier：两线程都在 extract_partition_keys（exists() 前置门
+    # 之前）处对齐后才放行，否则快线程可能整段完成、慢线程撞「既有分区
+    # 需已发布历史」守卫造成与撕裂无关的假红。
+    gate: dict[str, threading.Barrier] = {"barrier": threading.Barrier(2)}
+    real_extract = writer_module.extract_partition_keys
 
-    def _worker(run_id: str, value: float) -> None:
+    def _gated_extract(frame: pl.DataFrame, time_key: str) -> tuple[str, ...]:
+        gate["barrier"].wait()
+        return real_extract(frame, time_key)
+
+    monkeypatch.setattr(writer_module, "extract_partition_keys", _gated_extract)
+
+    def _worker(run_id: str, value: float, spec: DerivedSpecRecord) -> None:
         frame = pl.DataFrame(
             {
                 "instrument_id": [1, 1],
@@ -161,32 +178,49 @@ def test_overlapping_runs_never_tear_each_other(tmp_path: Path) -> None:
             }
         )
         try:
-            start_gate.wait()
             writer.write_durable_partitions(
-                spec=_spec_record(),
+                spec=spec,
                 time_key="trade_date",
                 run_id=run_id,
                 frame=frame,
                 request_start="2026-09-29",
                 request_end="2026-09-30",
             )
-            retained = _version_root(tmp_path) / "_runs" / run_id / "2026.parquet"
-            assert pl.read_parquet(retained)["value"].to_list() == [value, value]
         except Exception as exc:
             errors.append(exc)
 
-    left = threading.Thread(target=_worker, args=("drv-left", 0.25))
-    right = threading.Thread(target=_worker, args=("drv-right", 0.75))
-    left.start()
-    right.start()
-    start_gate.set()
-    left.join(timeout=60)
-    right.join(timeout=60)
-    assert not left.is_alive()
-    assert not right.is_alive()
-    assert errors == []
-    # 当前分区是某一方的完整帧（两值一致），绝不是撕裂混合。
-    current = pl.read_parquet(_version_root(tmp_path) / "2026.parquet")
-    values = current["value"].unique().to_list()
-    assert len(values) == 1
-    assert values[0] in (0.25, 0.75)
+    for round_index in range(rounds):
+        # 每轮换 version → 全新 version_root：写入器禁止无历史覆写既有
+        # 分区，重复竞写同一分区本身非法（#694 语义）。
+        gate["barrier"] = threading.Barrier(2)
+        spec = _spec_record_with_version(round_index + 1)
+        left = threading.Thread(target=_worker, args=("drv-left", 0.25, spec))
+        right = threading.Thread(target=_worker, args=("drv-right", 0.75, spec))
+        left.start()
+        right.start()
+        left.join(timeout=60)
+        right.join(timeout=60)
+        assert not left.is_alive()
+        assert not right.is_alive()
+        assert errors == []
+        version_root = (
+            tmp_path
+            / "derived"
+            / "artifacts"
+            / "series"
+            / "factor.momentum_1m"
+            / f"v{round_index + 1}"
+        )
+        for run_id, value in (("drv-left", 0.25), ("drv-right", 0.75)):
+            retained = version_root / "_runs" / run_id / "2026.parquet"
+            assert pl.read_parquet(retained)["value"].to_list() == [value, value]
+        # 当前分区是某一方的完整帧（两值一致），绝不是撕裂混合。
+        current = pl.read_parquet(version_root / "2026.parquet")
+        values = current["value"].unique().to_list()
+        assert len(values) == 1
+        assert values[0] in (0.25, 0.75)
+
+
+def _spec_record_with_version(version: int) -> DerivedSpecRecord:
+    record = _spec_record()
+    return record.__class__(**{**record.__dict__, "version": version})
