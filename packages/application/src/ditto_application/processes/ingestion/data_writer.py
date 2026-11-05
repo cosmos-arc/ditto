@@ -1385,7 +1385,11 @@ class IngestionDataWriter:
             source_ticker_col: 源代码列名
 
         Returns:
-            过滤后的 DataFrame，或 None 表示所有记录均被过滤。
+            过滤后的 DataFrame，或 None 表示输入为空（制度性缺席）。
+
+        Raises:
+            AppProcessError: 整批 instrument_id 解析失败（全滤空，审计
+                #684 批B #6——静默 SUCCESS(0) 会留下无声数据洞）。
 
         """
         if "instrument_id" not in df.columns:
@@ -1433,7 +1437,21 @@ class IngestionDataWriter:
             )
 
         if len(enriched_df) == 0:
-            return None
+            if total_count == 0:
+                # 输入本来就空（无公告日等制度性缺席）＝正常 SUCCESS(0)
+                return None
+            # 全滤空 = 整批 instrument_id 解析失败（按标的车道 BSE 重编码/
+            # 新上市解析失败），静默 SUCCESS(0) 会留下无声数据洞——抛错
+            # 让 write_data_safe 落账为写失败（审计 #684 批B #6）。
+            message = (
+                f"all {total_count} records filtered with null instrument_id "
+                f"for dataset {dataset}"
+            )
+            raise AppProcessError(
+                message,
+                field="dataset",
+                value=dataset,
+            )
         return enriched_df
 
     def _resolve_fuyao_ids_with_evidence(

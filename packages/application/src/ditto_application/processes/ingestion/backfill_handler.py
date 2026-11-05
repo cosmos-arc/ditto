@@ -91,7 +91,9 @@ def backfill_adj_factor(
         source=ctx.source_name,
     )
 
-    # 4. 逐段 fetch + 写入
+    # 4. 逐段 fetch + 写入（异常上抛至 coordinator 入口的调用方落账——
+    # 审计 #684 批B #13，不再吞成部分成功；后续接定时车道时须自带
+    # 错误处理器）
     gap_ranges = group_contiguous_dates(gap_dates)
     total_filled = 0
     for range_start, range_end in gap_ranges:
@@ -100,10 +102,9 @@ def backfill_adj_factor(
         )
         if gap_df.is_empty():
             continue
-        write_outcome = write_adj_factor_range(ctx.data_writer, gap_df, range_start)
-        if write_outcome is None:
-            continue
-        total_filled += write_outcome.filled_dates
+        total_filled += write_adj_factor_range(
+            ctx.data_writer, gap_df, range_start
+        ).filled_dates
 
     logger.info(
         "智能回补复权因子完成",
@@ -153,41 +154,22 @@ def fetch_adj_factor_range(
     range_start: str,
     range_end: str,
 ) -> pl.DataFrame:
-    """拉取单个连续区间的复权因子数据，失败时返回空 DataFrame."""
-    try:
-        return source.fetch_adj_factor_by_ticker(
-            ts_code=source_ticker,
-            start_date=range_start.replace("-", ""),
-            end_date=range_end.replace("-", ""),
-        )
-    except Exception as e:
-        logger.warning(
-            "回补 fetch 失败",
-            event="backfill_adj_factor_fetch_failed",
-            range_start=range_start,
-            range_end=range_end,
-            error=str(e),
-        )
-        return pl.DataFrame()
+    """拉取单个连续区间的复权因子数据；失败上抛由调用方错误处理器落账."""
+    return source.fetch_adj_factor_by_ticker(
+        ts_code=source_ticker,
+        start_date=range_start.replace("-", ""),
+        end_date=range_end.replace("-", ""),
+    )
 
 
 def write_adj_factor_range(
     data_writer: IngestionDataWriter,
     gap_df: pl.DataFrame,
     range_start: str,
-) -> BackfillWriteOutcome | None:
-    """写入单段复权因子数据，失败时返回 None."""
-    try:
-        data_writer.write_data("adj_factor", gap_df, range_start, OnDuplicate.KEEP_LAST)
-        return BackfillWriteOutcome(filled_dates=len(gap_df))
-    except Exception as e:
-        logger.warning(
-            "回补写入失败",
-            event="backfill_adj_factor_write_failed",
-            range_start=range_start,
-            error=str(e),
-        )
-        return None
+) -> BackfillWriteOutcome:
+    """写入单段复权因子数据；失败上抛由调用方错误处理器落账."""
+    data_writer.write_data("adj_factor", gap_df, range_start, OnDuplicate.KEEP_LAST)
+    return BackfillWriteOutcome(filled_dates=len(gap_df))
 
 
 def group_contiguous_dates(dates: list[str]) -> list[tuple[str, str]]:

@@ -538,12 +538,13 @@ class TestWriteCapital:
 class TestWriteFundamental:
     """测试基本面写入路径。"""
 
-    def test_write_fundamental_filters_unresolved_tickers_without_schema_error(
+    def test_write_fundamental_all_filtered_raises_typed_error(
         self,
         data_writer,
         mock_fundamental_store,
     ) -> None:
-        """空 instrument_id mapping 不应导致 Polars join dtype 错误。"""
+        """审计 #684 批B #6：整批 instrument_id 解析失败必须抛类型化错误
+        （此前静默 SUCCESS(0) 留下无声数据洞）；不得以 Polars dtype 崩溃。"""
         df = pl.DataFrame(
             {
                 "source_ticker": ["999999.SZ"],
@@ -556,6 +557,32 @@ class TestWriteFundamental:
             }
         )
 
+        with pytest.raises(AppProcessError, match="null instrument_id"):
+            data_writer.write_data(
+                dataset="balance_sheet",
+                df=df,
+                trade_date="2025-01-07",
+            )
+        mock_fundamental_store.save_balance_sheet.assert_not_called()
+
+    def test_write_fundamental_empty_input_frame_stays_success_zero(
+        self,
+        data_writer,
+        mock_fundamental_store,
+    ) -> None:
+        """制度性空帧（无公告日）不触发全滤空失败化，保持 SUCCESS(0)。"""
+        df = pl.DataFrame(
+            schema={
+                "source_ticker": pl.String,
+                "report_date": pl.Date,
+                "announcement_date": pl.Date,
+                "knowledge_date": pl.Date,
+                "effective_from": pl.Date,
+                "effective_to": pl.Date,
+                "total_assets": pl.Float64,
+            }
+        )
+
         result = data_writer.write_data(
             dataset="balance_sheet",
             df=df,
@@ -564,6 +591,38 @@ class TestWriteFundamental:
 
         assert result.rows_written == 0
         assert not result.blocked
+        mock_fundamental_store.save_balance_sheet.assert_not_called()
+
+    def test_fuyao_lane_all_filtered_raises_typed_error(
+        self,
+        mock_metadata_service,
+        mock_market_write_service,
+        mock_fundamental_store,
+        mock_capital_store,
+        mock_macro_service,
+    ) -> None:
+        """fuyao 分支（按 trade_date 分片解析）全滤空同样失败化。"""
+        mock_metadata_service.instrument.resolve_fuyao_instrument_ids.return_value = {}
+        writer = IngestionDataWriter(
+            metadata_service=mock_metadata_service,
+            market_write_service=mock_market_write_service,
+            fundamental_store=mock_fundamental_store,
+            capital_store=mock_capital_store,
+            macro_service=mock_macro_service,
+            source_name="fuyao",
+        )
+        df = pl.DataFrame(
+            {
+                "source_ticker": ["999999.SZ"],
+                "trade_date": [date(2025, 1, 7)],
+                "report_date": [date(2024, 12, 31)],
+                "knowledge_date": [date(2025, 1, 8)],
+                "total_assets": [1_000_000.0],
+            }
+        )
+
+        with pytest.raises(AppProcessError, match="null instrument_id"):
+            writer.write_data("balance_sheet", df, "2025-01-07")
         mock_fundamental_store.save_balance_sheet.assert_not_called()
 
 
