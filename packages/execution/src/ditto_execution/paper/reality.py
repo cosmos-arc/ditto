@@ -155,6 +155,13 @@ class ASharePaperReality:
             else 1.0 - slip_multiplier
         )
         fill_price = _round_to_tick(raw_fill, definition.tick_size)
+        # In-band close still evidences an opposite side, so a slippage-
+        # inflated fill is a tradable price once clamped to the band
+        # (#679 verdict A); out-of-band closes already defer above.
+        if order.direction is OrderSide.BUY and snapshot.limit_up is not None:
+            fill_price = min(fill_price, snapshot.limit_up)
+        if order.direction is OrderSide.SELL and snapshot.limit_down is not None:
+            fill_price = max(fill_price, snapshot.limit_down)
         limit_outcome = _limit_order_outcome(paper_order, fill_price)
         if limit_outcome is not None:
             return limit_outcome
