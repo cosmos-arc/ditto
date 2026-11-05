@@ -148,26 +148,26 @@ def test_overlapping_runs_never_tear_each_other(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """#694：重叠物化竞写零撕裂——每轮两线程同步越过 exists() 前置门后同写."""
+    """#694：重叠物化竞写零撕裂——两线程都越过 exists() 前置门后在写入期重叠."""
 
     import threading
-
-    import ditto_features.storage.derived_artifact_writer as writer_module
 
     writer = DerivedArtifactWriter(tmp_path)
     errors: list[Exception] = []
     rounds = 25
-    # 每轮新 barrier：两线程都在 extract_partition_keys（exists() 前置门
-    # 之前）处对齐后才放行，否则快线程可能整段完成、慢线程撞「既有分区
-    # 需已发布历史」守卫造成与撕裂无关的假红。
+    # 门设在 Phase-1 写入点（exists() 前置门之后）：两线程都在写 temp 前
+    # 对齐——既保证真实写入期重叠，又消除快线程整段完成后慢线程撞
+    # 「既有分区需已发布历史」守卫的调度器依赖假红。
     gate: dict[str, threading.Barrier] = {"barrier": threading.Barrier(2)}
-    real_extract = writer_module.extract_partition_keys
+    real_write_parquet = pl.DataFrame.write_parquet
 
-    def _gated_extract(frame: pl.DataFrame, time_key: str) -> tuple[str, ...]:
+    def _gated_write_parquet(
+        self: pl.DataFrame, *args: object, **kwargs: object
+    ) -> None:
         gate["barrier"].wait()
-        return real_extract(frame, time_key)
+        real_write_parquet(self, *args, **kwargs)
 
-    monkeypatch.setattr(writer_module, "extract_partition_keys", _gated_extract)
+    monkeypatch.setattr(pl.DataFrame, "write_parquet", _gated_write_parquet)
 
     def _worker(run_id: str, value: float, spec: DerivedSpecRecord) -> None:
         frame = pl.DataFrame(
