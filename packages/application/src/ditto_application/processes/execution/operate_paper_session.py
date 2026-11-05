@@ -568,6 +568,11 @@ def _ledger_event_id(execution_id: str) -> str:
     return f"account-event:{sha256(execution_id.encode()).hexdigest()[:32]}"
 
 
+def paper_session_actor(session_id: str) -> str:
+    """Return the ledger actor identity every fill of one session carries."""
+    return f"paper-session:{session_id}"
+
+
 def _account_event(
     *,
     record: PaperExecutionRecord,
@@ -590,7 +595,7 @@ def _account_event(
             settlement_date=fill.settlement_date,
             recorded_at=fill.event_time,
             idempotency_key=idempotency_key,
-            actor=f"paper-session:{record.session_id}",
+            actor=paper_session_actor(record.session_id),
             source=AccountEventSource.PAPER_ENGINE,
             instrument_id=fill.instrument_id,
             quantity=Decimal(str(fill.quantity)),

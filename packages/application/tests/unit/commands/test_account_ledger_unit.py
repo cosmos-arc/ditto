@@ -398,6 +398,14 @@ def test_control_commands_reject_suppressed_targets_and_restore_state() -> None:
                 actor="user:chevy",
             )
         )
+    # reverse→correct ends rejected-and-unchanged, i.e. also 恢复原状.
+    after_rejections = AccountLedgerRebuilder().rebuild(
+        account=account,
+        events=journal.list_events("manual-main"),
+        as_of="2026-09-01",
+    )
+    assert after_rejections.cash.available == Decimal("10000.00")
+    assert after_rejections.positions == ()
 
 
 def test_record_manual_event_rejects_unknown_or_non_manual_account() -> None:

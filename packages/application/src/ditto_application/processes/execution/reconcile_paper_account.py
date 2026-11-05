@@ -13,6 +13,9 @@ from ditto_execution.paper.session import (
 from ditto_portfolio.account_ledger import AccountEventJournalPort
 
 from ditto_application.exceptions import AppNotFoundError
+from ditto_application.processes.execution.operate_paper_session import (
+    paper_session_actor,
+)
 
 __all__ = ["ReconcilePaperAccount"]
 
@@ -67,7 +70,7 @@ class ReconcilePaperAccount:
         claimed: set[str] = set()
         orphans = 0
         for event in account_events:
-            if event.actor != f"paper-session:{session_id}":
+            if event.actor != paper_session_actor(session_id):
                 continue
             reference = event.external_reference
             if reference in filled_ids and reference not in claimed:
