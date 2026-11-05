@@ -1,10 +1,2 @@
 schema: ditto.approved-breaks.v1
-breaks:
-  - fingerprint: 1d31ee48ad38
-    id: request-property-removed
-    approved-by: "#683 audit finding #4 (ruled by #682): paper order facts move to ledger projection"
-    added: "2026-11-05"
-  - fingerprint: 8370fa60aed4
-    id: request-property-removed
-    approved-by: "#683 audit finding #4 (ruled by #682): paper order facts move to ledger projection"
-    added: "2026-11-05"
+breaks: []
