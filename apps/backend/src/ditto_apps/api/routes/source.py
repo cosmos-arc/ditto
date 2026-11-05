@@ -18,10 +18,10 @@ from ditto_application.exceptions import AppQueryError
 from ditto_application.queries.source import SourceQueryFacade
 from ditto_platform.foundation import logger
 from fastapi import APIRouter, Depends, Path
-from pydantic import field_validator
+from pydantic import Field
 
 from ditto_apps.api.errors import APIError, BadRequestError
-from ditto_apps.api.params import DateRangeQueryParams
+from ditto_apps.api.params import InstrumentIdentifierQuery
 from ditto_apps.models.common import APIResponse
 
 router = APIRouter(prefix="/source", tags=["source"])
@@ -102,25 +102,22 @@ def _resolve_source_ticker(
 # ---------------------------------------------------------------------------
 
 
-class SourceDataQueryParams(DateRangeQueryParams):
+class SourceDataQueryParams(InstrumentIdentifierQuery):
     """
     Source 数据查询参数.
 
-    复用公共标识符+日期范围参数（typed date 校验，#685）：
-    裸字符串日期不再直达 Source 适配器。
+    复用公共标识符参数；日期为 typed date 绑定校验（#685/#19）：
+    裸字符串坏日期 422 在绑定层，不再直达 Source 适配器。
+    Source 直读车道无 PIT 轴——不宣告 as_of_date（未声明参数按
+    extra=ignore 与任意未知查询参数同语义丢弃，不构成 PIT 陷阱）。
     """
 
-    @field_validator("as_of_date")
-    @classmethod
-    def _reject_as_of_date(cls, value: date | None) -> date | None:
-        """Source 直读车道无 PIT 语义：知识日期显式拒绝，不静默忽略."""
-        if value is not None:
-            msg = (
-                "Source direct reads carry no PIT semantics: "
-                "as_of_date is not accepted on this route"
-            )
-            raise ValueError(msg)
-        return value
+    start_date: date = Field(..., description="开始日期 (YYYY-MM-DD)")
+    end_date: date = Field(..., description="结束日期 (YYYY-MM-DD)")
+    allow_experimental_data: bool = Field(
+        default=False,
+        description="显式允许 experimental 数据集进入研究态查询",
+    )
 
 
 class SourceDataResponse(APIResponse[list[dict[str, Any]]]):

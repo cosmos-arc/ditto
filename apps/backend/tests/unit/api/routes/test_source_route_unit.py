@@ -99,7 +99,7 @@ class TestSourceDataQueryParams:
         assert params.allow_experimental_data is True
 
     def test_dates_coerce_to_typed_date(self) -> None:
-        """#685: 复用 DateRangeQueryParams 后字符串日期强制转换为 typed date."""
+        """#685: typed date 字符串强制转换为 date 对象."""
         params = SourceDataQueryParams.model_validate(
             {
                 "ticker": "000001",
@@ -122,27 +122,24 @@ class TestSourceDataQueryParams:
                 }
             )
 
-    def test_as_of_date_explicitly_rejected(self) -> None:
-        """Source 直读车道无 PIT 语义：as_of_date 非空即 422，不静默忽略."""
+    def test_no_declared_pit_axis(self) -> None:
+        """Source 直读车道无 PIT 语义：契约不宣告 as_of_date.
+
+        未声明参数按 extra=ignore 与任意未知查询参数同语义丢弃，
+        不构成「已宣告知识日期被静默忽略」的 PIT 陷阱。
+        """
+        assert "as_of_date" not in SourceDataQueryParams.model_fields
+
         params = SourceDataQueryParams.model_validate(
             {
                 "ticker": "000001",
                 "start_date": "2024-01-01",
                 "end_date": "2024-01-31",
-                "as_of_date": None,
+                "as_of_date": "2024-01-01",
             }
         )
-        assert params.as_of_date is None
 
-        with pytest.raises(ValidationError):
-            SourceDataQueryParams.model_validate(
-                {
-                    "ticker": "000001",
-                    "start_date": "2024-01-01",
-                    "end_date": "2024-01-31",
-                    "as_of_date": "2024-01-01",
-                }
-            )
+        assert not hasattr(params, "as_of_date")
 
 
 @pytest.mark.unit

@@ -1,6 +1,6 @@
 /**
  * DO NOT EDIT: generated from contracts/openapi/v1.json.
- * Schema SHA-256: 9e880f24365299980706b11ed23b0a9a02955751818e13d53243d2e5cb44d16d
+ * Schema SHA-256: 1d2d766b54c9291f859018bead5373dc315e3ec6da3d689f944582d8d3da2ae1
  * Generator: openapi-typescript 7.13.0
  */
 
@@ -30951,7 +30951,6 @@ export interface operations {
                 standard_ticker?: string | null;
                 start_date: string;
                 end_date: string;
-                as_of_date?: string | null;
                 allow_experimental_data?: boolean;
             };
             header?: {

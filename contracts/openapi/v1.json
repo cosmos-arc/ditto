@@ -50446,23 +50446,6 @@
           },
           {
             "in": "query",
-            "name": "as_of_date",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "format": "date",
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "As Of Date"
-            }
-          },
-          {
-            "in": "query",
             "name": "allow_experimental_data",
             "required": false,
             "schema": {
