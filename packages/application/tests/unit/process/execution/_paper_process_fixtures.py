@@ -124,3 +124,33 @@ def seed_paper_account_and_session(
                 updated_at=NOW,
             )
         )
+
+
+def append_cash_event(
+    database: Path,
+    *,
+    event_type: AccountEventType,
+    event_id: str,
+    idempotency_key: str,
+    amount: Decimal,
+) -> None:
+    """Append one arbitrary cash event straight to the journal."""
+    with SqliteAccountEventJournal(str(database)) as journal:
+        account = journal.get_account("paper-account-1")
+        assert account is not None
+        journal.append(
+            create_account_event(
+                account=account,
+                draft=AccountEventDraft(
+                    event_type=event_type,
+                    event_id=event_id,
+                    trade_date="2026-08-31",
+                    settlement_date="2026-08-31",
+                    recorded_at=NOW,
+                    idempotency_key=idempotency_key,
+                    actor="paper-engine:account-bootstrap",
+                    source=AccountEventSource.PAPER_ENGINE,
+                    gross_amount=amount,
+                ),
+            )
+        )

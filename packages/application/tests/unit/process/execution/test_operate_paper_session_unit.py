@@ -215,3 +215,132 @@ def test_generic_order_derives_position_and_t_plus_one_availability(
         assert deferred.execution.reality_status == "deferred"
         assert deferred.execution.reason == "t_plus1_not_sellable"
         assert deferred.execution.fill is None
+
+
+def test_unledgered_fill_gap_blocks_new_orders_until_recovery(
+    tmp_path: Path,
+) -> None:
+    """A crashed order's phantom cash must not fund a second order."""
+    database = tmp_path / "paper-gap.db"
+    _seed(database, opening_cash="5000")
+    overspend = replace(_command(), quantity=400)
+
+    def crash_after_execution_persisted() -> None:
+        raise RuntimeError("simulated process crash")
+
+    with (
+        SqlitePaperSessionStore(str(database)) as store,
+        SqliteAccountEventJournal(str(database)) as journal,
+    ):
+        process = OperatePaperSession(
+            store=store,
+            account_journal=journal,
+            after_execution_persisted=crash_after_execution_persisted,
+        )
+        with pytest.raises(RuntimeError, match="simulated process crash"):
+            process.execute(overspend)
+        assert len(store.list_executions("paper-session-1")) == 1
+
+        second = replace(
+            _command(),
+            idempotency_key="paper-operation-2",
+            order_id="paper-order-2",
+            quantity=400,
+        )
+        with pytest.raises(AppConflictError, match="unledgered fills"):
+            process.execute(second)
+        assert len(store.list_executions("paper-session-1")) == 1
+
+        recovered = OperatePaperSession(
+            store=store,
+            account_journal=journal,
+        ).recover("paper-session-1")
+        assert recovered[0].ledger_event_id is not None
+
+        # After recovery the ledger basis (~995 left) correctly rejects the
+        # second buy instead of spending the crashed order's phantom cash.
+        receipt = OperatePaperSession(store=store, account_journal=journal)
+        result = receipt.execute(second)
+        assert result.execution.reality_status == "rejected"
+        assert result.execution.reason == "insufficient_cash"
+
+
+def test_generic_order_fails_closed_when_the_ledger_changed_under_it(
+    tmp_path: Path,
+) -> None:
+    """The derived ledger revision must CAS-guard the fill append."""
+    from decimal import Decimal
+
+    from ditto_portfolio.account_ledger import AccountEventType
+
+    from ._paper_process_fixtures import append_cash_event
+
+    database = tmp_path / "paper-cas.db"
+    _seed(database)
+    second = replace(
+        _command(),
+        idempotency_key="paper-operation-2",
+        order_id="paper-order-2",
+    )
+
+    def crash_after_execution_persisted() -> None:
+        raise RuntimeError("simulated process crash")
+
+    with (
+        SqlitePaperSessionStore(str(database)) as store,
+        SqliteAccountEventJournal(str(database)) as journal,
+    ):
+        settled = OperatePaperSession(store=store, account_journal=journal)
+        assert settled.execute(_command()).execution.fill is not None
+
+        racing = OperatePaperSession(
+            store=store,
+            account_journal=journal,
+            after_execution_persisted=crash_after_execution_persisted,
+        )
+        with pytest.raises(RuntimeError, match="simulated process crash"):
+            racing.execute(second)
+
+        # A concurrent ledger write lands between the racing order's
+        # derivation and its ledger append.
+        append_cash_event(
+            database,
+            event_type=AccountEventType.DEPOSIT,
+            event_id="account-event:deposit",
+            idempotency_key="paper-deposit:test",
+            amount=Decimal("50000"),
+        )
+
+        with pytest.raises(
+            AppConflictError,
+            match="paper account ledger changed during execution",
+        ):
+            OperatePaperSession(store=store, account_journal=journal).execute(second)
+        assert len(store.list_executions("paper-session-1")) == 1
+
+
+def test_generic_order_fails_closed_on_an_overdrawn_ledger(tmp_path: Path) -> None:
+    """Legacy negative-cash accounts must surface a typed process error."""
+    from decimal import Decimal
+
+    from ditto_application.exceptions import AppProcessError
+    from ditto_portfolio.account_ledger import AccountEventType
+
+    from ._paper_process_fixtures import append_cash_event
+
+    database = tmp_path / "paper-overdrawn.db"
+    _seed(database, opening_cash="100")
+    append_cash_event(
+        database,
+        event_type=AccountEventType.WITHDRAWAL,
+        event_id="account-event:withdrawal",
+        idempotency_key="paper-withdrawal:test",
+        amount=Decimal("500"),
+    )
+    with (
+        SqlitePaperSessionStore(str(database)) as store,
+        SqliteAccountEventJournal(str(database)) as journal,
+    ):
+        process = OperatePaperSession(store=store, account_journal=journal)
+        with pytest.raises(AppProcessError, match="negative available cash"):
+            process.execute(_command())

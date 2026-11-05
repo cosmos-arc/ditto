@@ -46,6 +46,7 @@ from ditto_portfolio.account_ledger import (
     AccountLedgerError,
     AccountLedgerRevisionConflict,
     create_account_event,
+    ledger_hash,
 )
 from ditto_portfolio.account_projection import AccountLedgerRebuilder
 
@@ -209,11 +210,12 @@ class OperatePaperSession:
             order=resolved.order,
             account_id=session.account_id,
         )
-        position_quantity, available_quantity, cash_available = (
-            _declared_facts(command)
-            if governed_etf
-            else self._derived_facts(command, account)
-        )
+        if governed_etf:
+            facts = _declared_facts(command)
+            expected_ledger_hash = command.expected_ledger_hash
+        else:
+            facts, expected_ledger_hash = self._derived_facts(command, account)
+        position_quantity, available_quantity, cash_available = facts
         result = self._reality.execute(
             paper_order=paper_order,
             lineage=resolved.lineage,
@@ -238,7 +240,7 @@ class OperatePaperSession:
             assumption=resolved.assumption,
             lineage=resolved.lineage,
             created_at=command.decision_at,
-            expected_ledger_hash=command.expected_ledger_hash,
+            expected_ledger_hash=expected_ledger_hash,
             rule_snapshot_id=command.rule_snapshot_id,
             rule_cutoff=command.rule_cutoff,
         )
@@ -301,8 +303,20 @@ class OperatePaperSession:
         self,
         command: OperatePaperOrderCommand,
         account: AccountDefinition,
-    ) -> tuple[int, int, float]:
-        """Project position, availability, and cash from the account ledger."""
+    ) -> tuple[tuple[int, int, float], str]:
+        """Project position, availability, cash, and the ledger revision."""
+        # A persisted-but-unledgered fill is invisible to the journal, so a
+        # new order must not price against its phantom cash: fail closed
+        # until recover() closes the gap.
+        unledgered = [
+            record
+            for record in self._store.list_executions(command.session_id)
+            if record.result.fill is not None and record.ledger_event_id is None
+        ]
+        if unledgered:
+            raise AppConflictError(
+                "paper session has unledgered fills; run recovery before new orders"
+            )
         events = tuple(self._account_journal.list_events(account.account_id))
         try:
             snapshot = self._rebuilder.rebuild(
@@ -315,6 +329,13 @@ class OperatePaperSession:
                 "paper account ledger projection failed",
                 code="PAPER_LEDGER_PROJECTION_FAILED",
             ) from exc
+        if snapshot.cash.available < 0:
+            # A ledger overspent through the pre-fix declared-facts lane must
+            # fail loudly here, not as a raw context invariant downstream.
+            raise AppProcessError(
+                "paper account ledger has negative available cash",
+                code="PAPER_LEDGER_OVERDRAWN",
+            )
         instrument_id = InstrumentId(command.instrument_id)
         position = next(
             (
@@ -324,11 +345,12 @@ class OperatePaperSession:
             ),
             None,
         )
-        return (
+        facts = (
             int(position.quantity) if position is not None else 0,
             int(position.available_quantity) if position is not None else 0,
             float(snapshot.cash.available),
         )
+        return facts, ledger_hash(events)
 
     def _ensure_ledger(self, record: PaperExecutionRecord) -> PaperExecutionRecord:
         fill = record.result.fill
