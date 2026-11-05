@@ -47,7 +47,10 @@ HK_HOLD_PUBLICATION_DATES: frozenset[tuple[date, date]] = frozenset(
     }
 )
 
-DISCLOSURE_CALENDAR_HORIZON = date(2026, 12, 31)
+# 官方日历可锚定的最后一个季末（其发布日落在本日历覆盖内）。晚于它的
+# 季度（如 2026-12-31 季发布于 2027-01）在 2027 日历入库前走 run_date
+# fail-safe 并触发 horizon 警告。
+DISCLOSURE_CALENDAR_HORIZON = date(2026, 9, 30)
 
 _BY_QUARTER = dict(HK_HOLD_PUBLICATION_DATES)
 

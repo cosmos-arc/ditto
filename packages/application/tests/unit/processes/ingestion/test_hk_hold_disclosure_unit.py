@@ -50,9 +50,12 @@ def test_2024_entry_is_pinned_to_its_derivation() -> None:
 
 
 def test_table_is_pit_safe_and_horizon_consistent() -> None:
+    # 官方日历覆盖末日（2026-12-31 CSV 末行）内发布。
+    calendar_coverage_end = date(2026, 12, 31)
     for quarter_end, published in HK_HOLD_PUBLICATION_DATES:
         assert published > quarter_end
-        assert published <= DISCLOSURE_CALENDAR_HORIZON
+        assert published <= calendar_coverage_end
+    assert max(HK_HOLD_PUBLICATION_DATES)[0] == DISCLOSURE_CALENDAR_HORIZON
     # 官方日内的发布日必然晚于事实日（季末）且不越过日历地平线。
     assert hk_hold_quarterly_knowledge_date(
         date(2026, 9, 30),

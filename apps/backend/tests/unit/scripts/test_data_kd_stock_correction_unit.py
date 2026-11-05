@@ -346,7 +346,10 @@ class TestApply:
 
         assert result["rows_written"] == 2
         frame = store.hk_hold_frames[0]
-        assert frame["source_ticker"].to_list() == ["000001.SZ", "000002.SZ"]
+        assert sorted(frame["source_ticker"].to_list()) == [
+            "000001.SZ",
+            "000002.SZ",
+        ]
         # 表内季按官方披露发布日锚（#693），观察锚快照不再是期望值来源。
         assert frame["knowledge_date"].to_list() == [
             date(2024, 10, 15),
@@ -493,9 +496,11 @@ class TestCorrectnessRegressions:
         impacts = scan_dataset("hk_hold", conn=conn, data_root=tmp_path)
         assert impacts == []
 
-    def test_official_anchor_appends_and_is_idempotent(self, tmp_path: Path) -> None:
-        """#693：表内季为偏离版本追加官方锚行；official 版本已在=幂等零 impact."""
+    def test_official_anchor_impacts_until_coverage(self, tmp_path: Path) -> None:
+        """#693：表内季为偏离版本追加官方锚行；official 覆盖不足前持续 impact."""
         conn = _make_db(tmp_path)
+        # 比例覆盖守卫（镜像 W4）：official 版本 1 行 < 偏离版本 2 行
+        # → 未收敛，继续 impact（W5：标的级部分覆盖不因存在性跳过）。
         _write_hk_hold_year(
             tmp_path,
             [
@@ -509,7 +514,7 @@ class TestCorrectnessRegressions:
                     "source_ticker": "000002.SZ",
                     "instrument_id": 2,
                     "trade_date": "2024-09-30",
-                    "knowledge_date": "2026-11-01",
+                    "knowledge_date": "2024-10-01",
                 },
                 {
                     "source_ticker": "000003.SZ",
@@ -522,10 +527,38 @@ class TestCorrectnessRegressions:
         impacts = scan_dataset("hk_hold", conn=conn, data_root=tmp_path)
         assert [
             (i.old_knowledge_date, i.new_knowledge_date, i.anchor) for i in impacts
-        ] == [
-            ("2024-10-01", "2024-10-15", "official_disclosure"),
-            ("2026-11-01", "2024-10-15", "official_disclosure"),
-        ]
+        ] == [("2024-10-01", "2024-10-15", "official_disclosure")]
+        assert impacts[0].rows == 2
+
+    def test_official_anchor_scan_converges_after_apply(self, tmp_path: Path) -> None:
+        """#693 correctness F2：apply 后三版本共存（official 已覆盖最大
+        旧版行数）→ 重扫零 impact——scan→apply→scan 验证环可收敛."""
+        conn = _make_db(tmp_path)
+        _write_hk_hold_year(
+            tmp_path,
+            [
+                {
+                    "source_ticker": "000001.SZ",
+                    "instrument_id": 1,
+                    "trade_date": "2024-09-30",
+                    "knowledge_date": "2024-10-01",
+                },
+                {
+                    "source_ticker": "000001.SZ",
+                    "instrument_id": 1,
+                    "trade_date": "2024-09-30",
+                    "knowledge_date": "2024-10-15",
+                },
+                {
+                    "source_ticker": "000001.SZ",
+                    "instrument_id": 1,
+                    "trade_date": "2024-09-30",
+                    "knowledge_date": "2026-11-01",
+                },
+            ],
+        )
+        impacts = scan_dataset("hk_hold", conn=conn, data_root=tmp_path)
+        assert impacts == []
 
     def test_quarterly_anchor_on_trade_date_unanchorable(
         self,

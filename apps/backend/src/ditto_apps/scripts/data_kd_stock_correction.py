@@ -203,6 +203,39 @@ def scan_dataset(
     return impacts
 
 
+def _official_anchor_impacts(
+    dataset: str,
+    trade_date: str,
+    versions: dict[str, int],
+    official: date,
+) -> list[DateImpact]:
+    """
+    官方发布日锚（#693）的日期级 impacts.
+
+    为偏离版本追加 official 版本行（旧行保留证据；读取侧 latest_available
+    收敛/未来 as-of 过滤按 knowledge_date 生效）。覆盖守卫（镜像 W4）：
+    official 版本行数已覆盖最大旧版行数 → 该日已收敛，扫描幂等。
+    """
+    expected = official.isoformat()
+    wrong = {k: c for k, c in versions.items() if k != expected}
+    if not wrong:
+        return []
+    if versions.get(expected, 0) >= max(wrong.values()):
+        return []
+    return [
+        DateImpact(
+            dataset=dataset,
+            trade_date=trade_date,
+            rows=c,
+            old_knowledge_date=k,
+            new_knowledge_date=expected,
+            anchor="official_disclosure",
+            status="correct",
+        )
+        for k, c in sorted(wrong.items())
+    ]
+
+
 def _quarterly_impacts(
     dataset: str,
     groups: list[tuple[str, str, int]],
@@ -211,30 +244,16 @@ def _quarterly_impacts(
 ) -> list[DateImpact]:
     """hk_hold 季度段：官方披露发布日优先，表外回退账本观察锚."""
     anchors = _observation_anchors(conn, sorted({g[0] for g in groups}))
+    official_by_quarter = dict(HK_HOLD_PUBLICATION_DATES)
     by_date: dict[str, dict[str, int]] = {}
     for t, k, c in groups:
         by_date.setdefault(t, {})[k] = c
     impacts = []
     for t in sorted(by_date):
         versions = by_date[t]
-        official = dict(HK_HOLD_PUBLICATION_DATES).get(date.fromisoformat(t))
+        official = official_by_quarter.get(date.fromisoformat(t))
         if official is not None:
-            # 官方发布日锚（#693）：为每个偏离版本追加 official 版本行
-            # （旧行保留证据；as-of 读取按 ≤cutoff 最新版本收敛，历史
-            # 窗口即恢复官方可知性）。幂等：official 版本已在则零 impact。
-            for k, c in sorted(versions.items()):
-                if k != official.isoformat():
-                    impacts.append(
-                        DateImpact(
-                            dataset=dataset,
-                            trade_date=t,
-                            rows=c,
-                            old_knowledge_date=k,
-                            new_knowledge_date=official.isoformat(),
-                            anchor="official_disclosure",
-                            status="correct",
-                        )
-                    )
+            impacts.extend(_official_anchor_impacts(dataset, t, versions, official))
             continue
         expected = anchors.get(t)
         # 已有观察锚版本（kd 晚于事实日 14 天＝任何披露制度锚之外）则该日
@@ -403,7 +422,10 @@ def _write_ledger_rows(
             log_store,
             dataset=day_impacts[0].dataset,
             trade_date=trade_date,
-            rows=sum(i.rows for i in day_impacts),
+            # 同日多旧版本可映射到同一新锚（#693 官方锚）：写入侧按
+            # (instrument, trade_date) 去重后≈单版本行数，取 max 为
+            # 去重后新键数的稳定近似，避免 ledger 双计。
+            rows=max(i.rows for i in day_impacts),
             checksum=_impact_checksum(day_impacts),
             recorded_at=now,
         )
@@ -506,6 +528,14 @@ def _parquet_corrected_frame(
     }
     f = data_root / "capital" / dataset / f"{year}.parquet"
     df = pl.read_parquet(f)
+    if dataset == "hk_hold" and "knowledge_date" in df.columns and df.height > 1:
+        # 同键多旧版本映射到同一新锚时（#693），确定性保留最新旧版本的
+        # payload——否则下游 PK 去重 keep=first 在无序 sort 后任意胜。
+        # 只收窄 hk_hold（键=instrument+trade_date）；hsgt_top10 等带
+        # 额外键维度的数据集不适用该塌缩。
+        df = df.sort("knowledge_date").unique(
+            subset=["instrument_id", "trade_date"], keep="last"
+        )
     trade_keys = df["trade_date"].cast(pl.String).to_list()
     knowledge_keys = df["knowledge_date"].cast(pl.String).to_list()
     new_values = [
