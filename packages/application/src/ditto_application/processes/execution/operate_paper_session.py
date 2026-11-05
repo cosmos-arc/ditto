@@ -147,8 +147,7 @@ class OperatePaperSession:
             or command.cash_available is not None
         ):
             raise AppConflictError(
-                "ungoverned paper order cannot declare account facts: "
-                "position, availability and cash are derived from the ledger"
+                "ungoverned paper order cannot declare account facts"
             )
         return self._execute(command, governed_etf=False)
 
