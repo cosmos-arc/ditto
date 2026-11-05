@@ -224,6 +224,50 @@ class TestServiceBackedDataProvider:
         bars_query = call_args[0][0]
         assert bars_query.adj.value == "hfq"
 
+    def test_get_bars_propagates_asof_cutoff(self) -> None:
+        """审计 #684 批B #8：asof 必须传入 MarketBarsQuery——缺失时复权
+        因子读取不过滤 knowledge_date，cutoff 后发布的因子修订泄漏进
+        历史回放窗口（join 语义哨兵见 test_market_queries_etf_adj_unit）."""
+        provider, mocks = self._make_provider()
+
+        mocks["metadata"].instrument.resolve_instrument_ids_batch.return_value = {
+            "000001.SZ": 1,
+        }
+        mocks["market"].find_bars.return_value = pl.DataFrame()
+
+        provider.get_bars(
+            BarQuery(
+                instruments=["000001.SZ"],
+                start="2024-01-01",
+                end="2024-12-31",
+                adj="hfq",
+                asof="2024-01-04",
+            )
+        )
+
+        bars_query = mocks["market"].find_bars.call_args[0][0]
+        assert bars_query.asof == "2024-01-04"
+
+    def test_get_bars_without_asof_keeps_market_query_asof_none(self) -> None:
+        """未指定 asof 的查询保持 None（当前视角），不受默认值污染."""
+        provider, mocks = self._make_provider()
+
+        mocks["metadata"].instrument.resolve_instrument_ids_batch.return_value = {
+            "000001.SZ": 1,
+        }
+        mocks["market"].find_bars.return_value = pl.DataFrame()
+
+        provider.get_bars(
+            BarQuery(
+                instruments=["000001.SZ"],
+                start="2024-01-01",
+                end="2024-12-31",
+            )
+        )
+
+        bars_query = mocks["market"].find_bars.call_args[0][0]
+        assert bars_query.asof is None
+
     def test_get_bars_partial_ticker_resolution(self) -> None:
         """get_bars 只解析到部分 ticker 时应只查询已解析的."""
         provider, mocks = self._make_provider()
