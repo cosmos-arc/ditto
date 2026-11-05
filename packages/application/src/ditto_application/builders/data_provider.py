@@ -425,6 +425,10 @@ class ServiceBackedDataProvider:
             start=query.start,
             end=query.end,
             adj=AdjType.from_string(query.adj),
+            # PIT cutoff 必须贯穿复权因子读取（审计 #684 批B #8）：缺失时
+            # asof=None 走不过滤 join，cutoff 后发布的因子修订会泄漏进
+            # 历史回放窗口。
+            asof=query.asof,
         )
         bars = self._market.find_bars(bars_query)
         if self._snapshots is None:

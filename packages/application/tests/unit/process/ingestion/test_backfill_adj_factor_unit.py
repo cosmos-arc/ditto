@@ -401,3 +401,63 @@ class TestBackfillAdjFactor:
         assert result["status"] == "ok"
         assert result["gap_count"] == 1
         assert result["filled_dates"] == 0
+
+    def test_fetch_failure_propagates_instead_of_swallowing(
+        self,
+        coordinator: IngestionCoordinator,
+        mock_metadata_service: MagicMock,
+        mock_market_service: MagicMock,
+        mock_source: MagicMock,
+    ) -> None:
+        """审计 #684 批B #13：fetch 异常上抛由调用方错误处理器落账，
+        不再吞成空帧伪装成功。"""
+        instrument_id = 1
+        start = "2024-01-02"
+        end = "2024-01-04"
+        mock_metadata_service.list_trading_days.return_value = [
+            "2024-01-02",
+            "2024-01-03",
+            "2024-01-04",
+        ]
+        mock_market_service.get_adj_factors.return_value = pl.DataFrame()
+        mock_source.fetch_adj_factor_by_ticker.side_effect = RuntimeError(
+            "provider boom"
+        )
+
+        with pytest.raises(RuntimeError, match="provider boom"):
+            coordinator.backfill_adj_factor(instrument_id, start, end)
+
+    def test_write_failure_propagates_instead_of_swallowing(
+        self,
+        coordinator: IngestionCoordinator,
+        mock_metadata_service: MagicMock,
+        mock_market_service: MagicMock,
+        mock_source: MagicMock,
+    ) -> None:
+        """审计 #684 批B #13：写入异常上抛由调用方错误处理器落账。"""
+        from ditto_application.exceptions import AppProcessError
+
+        instrument_id = 1
+        start = "2024-01-02"
+        end = "2024-01-04"
+        mock_metadata_service.list_trading_days.return_value = [
+            "2024-01-02",
+            "2024-01-03",
+            "2024-01-04",
+        ]
+        mock_market_service.get_adj_factors.return_value = pl.DataFrame()
+        mock_source.fetch_adj_factor_by_ticker.return_value = pl.DataFrame(
+            {
+                "source_ticker": ["000001.SZ"],
+                "trade_date": [date(2024, 1, 3)],
+                "adj_factor": [1.0],
+            }
+        )
+        # write_data 为 MagicMock，直接以异常响应
+        coordinator._data_writer = MagicMock()
+        coordinator._data_writer.write_data.side_effect = AppProcessError(
+            "write boom", field="dataset", value="adj_factor"
+        )
+
+        with pytest.raises(AppProcessError, match="write boom"):
+            coordinator.backfill_adj_factor(instrument_id, start, end)
