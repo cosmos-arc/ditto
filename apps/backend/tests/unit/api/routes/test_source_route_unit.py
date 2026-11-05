@@ -122,6 +122,28 @@ class TestSourceDataQueryParams:
                 }
             )
 
+    def test_as_of_date_explicitly_rejected(self) -> None:
+        """Source 直读车道无 PIT 语义：as_of_date 非空即 422，不静默忽略."""
+        params = SourceDataQueryParams.model_validate(
+            {
+                "ticker": "000001",
+                "start_date": "2024-01-01",
+                "end_date": "2024-01-31",
+                "as_of_date": None,
+            }
+        )
+        assert params.as_of_date is None
+
+        with pytest.raises(ValidationError):
+            SourceDataQueryParams.model_validate(
+                {
+                    "ticker": "000001",
+                    "start_date": "2024-01-01",
+                    "end_date": "2024-01-31",
+                    "as_of_date": "2024-01-01",
+                }
+            )
+
 
 @pytest.mark.unit
 class TestResolveSourceTicker:

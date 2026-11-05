@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import asyncio
 import time
+from datetime import date
 from typing import Annotated, Any
 
 import polars as pl
@@ -17,6 +18,7 @@ from ditto_application.exceptions import AppQueryError
 from ditto_application.queries.source import SourceQueryFacade
 from ditto_platform.foundation import logger
 from fastapi import APIRouter, Depends, Path
+from pydantic import field_validator
 
 from ditto_apps.api.errors import APIError, BadRequestError
 from ditto_apps.api.params import DateRangeQueryParams
@@ -107,6 +109,18 @@ class SourceDataQueryParams(DateRangeQueryParams):
     复用公共标识符+日期范围参数（typed date 校验，#685）：
     裸字符串日期不再直达 Source 适配器。
     """
+
+    @field_validator("as_of_date")
+    @classmethod
+    def _reject_as_of_date(cls, value: date | None) -> date | None:
+        """Source 直读车道无 PIT 语义：知识日期显式拒绝，不静默忽略."""
+        if value is not None:
+            msg = (
+                "Source direct reads carry no PIT semantics: "
+                "as_of_date is not accepted on this route"
+            )
+            raise ValueError(msg)
+        return value
 
 
 class SourceDataResponse(APIResponse[list[dict[str, Any]]]):

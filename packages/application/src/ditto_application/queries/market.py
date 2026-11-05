@@ -1,7 +1,5 @@
 """Market query facade — 封装 MarketService，隐藏内部查询类型."""
 
-# ruff: noqa: PLR0913
-
 from __future__ import annotations
 
 from collections.abc import Sequence
@@ -48,7 +46,7 @@ class MarketQueryFacade:
         self._service = market_service
         self._capital_store = capital_store
 
-    def find_bars(
+    def find_bars(  # noqa: PLR0913 — 查询合同以显式关键字参数展开，调用方零组装
         self,
         *,
         instrument_ids: list[int] | None = None,

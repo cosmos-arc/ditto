@@ -9,6 +9,7 @@ from __future__ import annotations
 import math
 
 import pytest
+from ditto_apps.middleware import configure_exception_handlers
 from ditto_apps.models.backtest import CostConfigRequest, CreateBacktestRunRequest
 from ditto_apps.models.paper import (
     CreatePaperAccountBody,
@@ -16,6 +17,8 @@ from ditto_apps.models.paper import (
     PaperMarketSnapshotBody,
 )
 from ditto_apps.models.portfolio_comparison import PortfolioScenarioBody
+from fastapi import FastAPI
+from fastapi.testclient import TestClient
 from pydantic import ValidationError
 
 _BACKTEST_RUN_BODY: dict[str, object] = {
@@ -140,3 +143,61 @@ class TestPortfolioScenarioInfNan:
             PortfolioScenarioBody.model_validate(
                 {**_SCENARIO_BODY, "industry_shocks": {"801010": math.nan}}
             )
+
+
+@pytest.mark.unit
+class TestBareInfinityHttpRequest:
+    """HTTP 绑定链验收：裸 ``Infinity`` 请求体 422（422 先于任何 handler）.
+
+    用真实请求模型+真实异常处理器挂一条最小路由，覆盖 transport
+    ``json.loads`` 收裸 ``Infinity`` 后 pydantic 绑定拒绝的完整链条
+    （默认 handler 回显 inf 输入会导致渲染 500，生产 handler 无回显）。
+    """
+
+    @pytest.fixture
+    def client(self) -> TestClient:
+        app = FastAPI()
+        configure_exception_handlers(app)
+
+        @app.post("/backtest-run")
+        async def backtest_run(body: CreateBacktestRunRequest) -> dict[str, bool]:
+            return {"ok": True}
+
+        return TestClient(app)
+
+    def test_bare_infinity_body_rejected_422(self, client: TestClient) -> None:
+        response = client.post(
+            "/backtest-run",
+            content=(
+                b'{"strategy_id": "s", "start_date": "2024-01-01", '
+                b'"end_date": "2024-12-31", "initial_cash": Infinity}'
+            ),
+            headers={"Content-Type": "application/json"},
+        )
+
+        assert response.status_code == 422
+
+    def test_bare_nan_body_rejected_422(self, client: TestClient) -> None:
+        response = client.post(
+            "/backtest-run",
+            content=(
+                b'{"strategy_id": "s", "start_date": "2024-01-01", '
+                b'"end_date": "2024-12-31", "initial_cash": NaN}'
+            ),
+            headers={"Content-Type": "application/json"},
+        )
+
+        assert response.status_code == 422
+
+    def test_finite_body_accepted(self, client: TestClient) -> None:
+        response = client.post(
+            "/backtest-run",
+            content=(
+                b'{"strategy_id": "s", "start_date": "2024-01-01", '
+                b'"end_date": "2024-12-31", "initial_cash": 1000000}'
+            ),
+            headers={"Content-Type": "application/json"},
+        )
+
+        assert response.status_code == 200
+        assert response.json() == {"ok": True}
