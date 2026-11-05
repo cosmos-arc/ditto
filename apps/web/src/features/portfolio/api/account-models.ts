@@ -400,7 +400,6 @@ export interface PaperInstrumentRulesBody {
 
 export interface OperatePaperOrderBody {
 	assumption: PaperFillAssumptionBody;
-	available_quantity: number;
 	decision_at: string;
 	execution_at: string;
 	idempotency_key: string;
@@ -408,7 +407,6 @@ export interface OperatePaperOrderBody {
 	market: PaperMarketSnapshotBody;
 	order_id: string;
 	order_type: "market" | "limit";
-	position_quantity: number;
 	price?: number | null;
 	quantity: number;
 	rules: PaperInstrumentRulesBody;

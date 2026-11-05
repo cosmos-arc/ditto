@@ -233,8 +233,6 @@ function OrderComposer({
 	const [limitPrice, setLimitPrice] = useState("");
 	const [close, setClose] = useState("10.00");
 	const [prevClose, setPrevClose] = useState("9.90");
-	const [positionQuantity, setPositionQuantity] = useState("0");
-	const [availableQuantity, setAvailableQuantity] = useState("0");
 	const [settlementDate, setSettlementDate] = useState(() => nextCalendarDate(tradeDate));
 	const [sourceSnapshotId, setSourceSnapshotId] = useState(`paper-ui:${tradeDate}:600519`);
 
@@ -245,7 +243,6 @@ function OrderComposer({
 		const decisionAt = `${tradeDate}T15:00:00+08:00`;
 		await onSubmit({
 			assumption: { assumption_id: "paper-default-v1", reference_price_field: "close", slippage_bps: 1, version: 1 },
-			available_quantity: Number(availableQuantity),
 			decision_at: decisionAt,
 			execution_at: decisionAt,
 			idempotency_key: requestKey("paper-operate"),
@@ -270,7 +267,6 @@ function OrderComposer({
 			},
 			order_id: requestKey("paper-order"),
 			order_type: orderType,
-			position_quantity: Number(positionQuantity),
 			price: orderType === "limit" ? Number(limitPrice) : null,
 			quantity: Number(quantity),
 			rules: {
@@ -300,7 +296,7 @@ function OrderComposer({
 			<header className="border-b border-(--color-border-subtle) px-4 py-3">
 				<h2 className="text-sm font-semibold text-(--color-foreground)">模拟订单</h2>
 				<p className="mt-1 text-xs text-(--color-foreground-tertiary)">
-					提交完整市场快照与规则；撮合结果可能成交、推迟或拒绝。
+					提交完整市场快照与规则；现金与持仓由账本投影推导，撮合结果可能成交、推迟或拒绝。
 				</p>
 			</header>
 			<div className="grid gap-3 p-4 sm:grid-cols-2">
@@ -405,23 +401,6 @@ function OrderComposer({
 						value={prevClose}
 						onChange={(event) => setPrevClose(event.currentTarget.value)}
 					/>
-				</label>
-				<label className="flex flex-col gap-1 text-xs text-(--color-foreground-secondary)">
-					持仓 / T+1 可用
-					<div className="grid grid-cols-2 gap-2">
-						<input
-							aria-label="Paper 持仓数量"
-							className={INPUT_CLASS}
-							value={positionQuantity}
-							onChange={(event) => setPositionQuantity(event.currentTarget.value)}
-						/>
-						<input
-							aria-label="Paper 可用数量"
-							className={INPUT_CLASS}
-							value={availableQuantity}
-							onChange={(event) => setAvailableQuantity(event.currentTarget.value)}
-						/>
-					</div>
 				</label>
 				<label className="flex flex-col gap-1 text-xs text-(--color-foreground-secondary)">
 					交收日

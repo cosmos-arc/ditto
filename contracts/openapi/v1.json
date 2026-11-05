@@ -21508,11 +21508,6 @@
           "assumption": {
             "$ref": "#/components/schemas/PaperFillAssumptionBody"
           },
-          "available_quantity": {
-            "minimum": 0.0,
-            "title": "Available Quantity",
-            "type": "integer"
-          },
           "decision_at": {
             "format": "date-time",
             "title": "Decision At",
@@ -21550,11 +21545,6 @@
             ],
             "title": "Order Type",
             "type": "string"
-          },
-          "position_quantity": {
-            "minimum": 0.0,
-            "title": "Position Quantity",
-            "type": "integer"
           },
           "price": {
             "anyOf": [
@@ -21606,8 +21596,6 @@
           "settlement_date",
           "decision_at",
           "execution_at",
-          "position_quantity",
-          "available_quantity",
           "market",
           "rules",
           "assumption"
