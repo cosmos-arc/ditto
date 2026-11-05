@@ -308,7 +308,8 @@ class TestAccountApplyFillBuy:
         assert pos.total_fees == pytest.approx(7.0)
 
     def test_buy_debits_cash(self) -> None:
-        """BUY: 现金减少 = amount + fee。"""
+        """BUY: available/settled 均减 amount+fee（裁决 #680 A：当日买入
+        占用不可提现，settled 于 trade_date 扣全额）。"""
         account = _make_account(cash=100000.0)
         fill = _make_fill(filled_quantity=1000, fill_price=10.5, fee=5.0)
 
@@ -316,7 +317,7 @@ class TestAccountApplyFillBuy:
 
         amount = 10.5 * 1000
         expected_available = 100000.0 - amount - 5.0
-        expected_settled = 100000.0 - 5.0
+        expected_settled = 100000.0 - amount - 5.0
         assert account.cash.available == pytest.approx(expected_available)
         assert account.cash.settled == pytest.approx(expected_settled)
         # frozen 不变
@@ -601,8 +602,8 @@ class TestAccountApplyFillEdgeCases:
         # Cash: 100000 - 10*1000 - 5 + 11*1000 - 5 = 100990
         assert account.cash.available == pytest.approx(100990.0)
 
-    def test_sell_nonexistent_position_noop(self) -> None:
-        """SELL: 仓位不存在时无操作 (Brokerage 应在调用前检查)。"""
+    def test_sell_without_position_raises_and_mutates_nothing(self) -> None:
+        """SELL 无持仓 = 裸卖，拒绝入账（裁决 #681）：持仓与现金均不变。"""
         account = _make_account()
         fill = _make_fill(
             direction=OrderSide.SELL,
@@ -611,14 +612,41 @@ class TestAccountApplyFillEdgeCases:
             fee=5.0,
         )
 
-        account.apply_fill(fill, settle_date="2026-03-02")
+        with pytest.raises(ValueError, match="naked short"):
+            account.apply_fill(fill, settle_date="2026-03-02")
 
         assert _INSTRUMENT not in account.positions
-        # Cash 仍应更新 (SELL credits cash)
-        assert account.cash.available == pytest.approx(1_000_000.0 + 10000.0 - 5.0)
+        assert account.cash.available == pytest.approx(1_000_000.0)
+        assert account.cash.settled == pytest.approx(1_000_000.0)
+
+    def test_oversell_raises_and_mutates_nothing(self) -> None:
+        """SELL 超过持仓数量 = 超卖，拒绝入账（裁决 #681）。"""
+        existing = Position(
+            instrument_id=_INSTRUMENT,
+            quantity=500,
+            available_quantity=500,
+            average_cost=10.0,
+            market_value=5000.0,
+            unrealized_pnl=0.0,
+            realized_pnl=0.0,
+            total_fees=0.0,
+        )
+        account = _make_account(cash=100_000.0, positions={_INSTRUMENT: existing})
+        fill = _make_fill(
+            direction=OrderSide.SELL,
+            filled_quantity=600,
+            fill_price=10.0,
+            fee=5.0,
+        )
+
+        with pytest.raises(ValueError, match="oversell"):
+            account.apply_fill(fill, settle_date="2026-03-02")
+
+        assert account.positions[_INSTRUMENT].quantity == 500
+        assert account.cash.available == pytest.approx(100_000.0)
 
     def test_buy_zero_fee(self) -> None:
-        """BUY: 零手续费场景。"""
+        """BUY: 零手续费场景（settled 同步扣全额，#680）。"""
         account = _make_account()
         fill = _make_fill(filled_quantity=1000, fill_price=10.0, fee=0.0)
 
@@ -627,7 +655,7 @@ class TestAccountApplyFillEdgeCases:
         pos = account.positions[_INSTRUMENT]
         assert pos.total_fees == 0.0
         assert account.cash.available == pytest.approx(1_000_000.0 - 10000.0)
-        assert account.cash.settled == pytest.approx(1_000_000.0)
+        assert account.cash.settled == pytest.approx(1_000_000.0 - 10000.0)
 
 
 class TestAccountApplyFillAtomicity:

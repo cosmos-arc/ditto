@@ -134,7 +134,6 @@ class PaperBrokerGateway:
             price=fill_price,
             event=fill_event,
         )
-        self._book.update(filled_ticket, event=fill_event)
 
         gw_fill = self._build_gw_fill(
             order,
@@ -143,10 +142,15 @@ class PaperBrokerGateway:
             cumulative_quantity=order.quantity,
             leaves_quantity=0,
         )
+        # 入账先于订单簿 FILLED 落笔：模型层拒绝（#681 裸卖/超卖）时
+        # 抛错在任何簿记变更之前，不留下"已成交未入账"的幻影票
+        # （#684 批B correctness F2）。
         self._account.apply_fill(
             gw_fill,
             settle_date=gw_fill.event_time.strftime("%Y-%m-%d"),
         )
+        self._fills.setdefault(order.order_id, []).append(gw_fill)
+        self._book.update(filled_ticket, event=fill_event)
 
         return filled_ticket
 
@@ -215,7 +219,6 @@ class PaperBrokerGateway:
             price=price,
             event=event,
         )
-        self._book.update(filled_ticket, event=event)
 
         gw_fill = self._build_gw_fill(
             ticket.order,
@@ -224,10 +227,13 @@ class PaperBrokerGateway:
             cumulative_quantity=filled_ticket.filled_quantity,
             leaves_quantity=filled_ticket.leaves_quantity,
         )
+        # 同 submit_order：入账先于簿记（#684 批B correctness F2）
         self._account.apply_fill(
             gw_fill,
             settle_date=gw_fill.event_time.strftime("%Y-%m-%d"),
         )
+        self._fills.setdefault(ticket.order.order_id, []).append(gw_fill)
+        self._book.update(filled_ticket, event=event)
 
         return filled_ticket
 
@@ -288,7 +294,8 @@ class PaperBrokerGateway:
         cumulative_quantity: int,
         leaves_quantity: int,
     ) -> FillEvent:
-        gw_fill = FillEvent(
+        """构造成交事件（纯构造，无簿记副作用——注册时机在入账成功后）."""
+        return FillEvent(
             fill_id=f"paper-{uuid4().hex[:12]}",
             order_id=order.order_id,
             instrument_id=order.instrument_id,
@@ -301,5 +308,3 @@ class PaperBrokerGateway:
             cumulative_quantity=cumulative_quantity,
             leaves_quantity=leaves_quantity,
         )
-        self._fills.setdefault(order.order_id, []).append(gw_fill)
-        return gw_fill

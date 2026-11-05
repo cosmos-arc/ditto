@@ -7,7 +7,6 @@ from datetime import datetime
 import pytest
 from ditto_kernel.identity import InstrumentId
 from ditto_kernel.order import OrderSide
-from ditto_portfolio.accounting.account import Account
 from ditto_portfolio.accounting.cash import CashBook
 from ditto_portfolio.accounting.fills import FillEvent
 from ditto_portfolio.projection import AccountProjector, PortfolioStateSnapshot
@@ -168,10 +167,30 @@ class TestAccountProjectorSellFill:
 
 
 class TestAccountProjectorParity:
-    """AccountProjector 与 Account.apply_fill 一致性验证。"""
+    """in-memory 引擎与账本重建引擎的端态一致性（#680/#684 批B）。
 
-    def test_projection_matches_account_apply_fill(self) -> None:
-        """AccountProjector.project(fills) 与手动 Account.apply_fill 结果一致。"""
+    旧 parity 测试对 Account 手动 apply_fill 与 projector（内部同样走
+    Account）互拍＝套套逻辑；改为对 AccountLedgerRebuilder 断真不变量：
+    同一组成交在全部交收完成后（as_of ≥ 一切 settlement_date），两引擎
+    的持仓数量与 available/settled 现金必须一致。available_quantity 不在
+    断言内——两引擎的 T+0 解冻模型不同（in-memory 外部回调 vs rebuilder
+    按 settlement_date<=as_of）。
+    """
+
+    def test_end_state_cash_and_quantity_match_ledger_rebuilder(self) -> None:
+        from datetime import UTC
+        from decimal import Decimal
+
+        from ditto_portfolio.account_ledger import (
+            AccountDefinition,
+            AccountEventDraft,
+            AccountEventSource,
+            AccountEventType,
+            AccountKind,
+            create_account_event,
+        )
+        from ditto_portfolio.account_projection import AccountLedgerRebuilder
+
         initial_cash = CashBook(available=100_000.0, settled=100_000.0, frozen=0.0)
         fills = [
             _make_fill(
@@ -199,29 +218,67 @@ class TestAccountProjectorParity:
             ),
         ]
 
-        # 路径 A: AccountProjector
+        # 路径 A: in-memory 引擎（projector 与手动 apply_fill 同源同果）
         projector = AccountProjector(initial_cash=initial_cash)
         snapshot = projector.project(fills)
 
-        # 路径 B: 手动 Account.apply_fill
-        account = Account(cash=initial_cash)
+        # 路径 B: Decimal 账本全量重建（DEPOSIT 锚定初始现金）
+        account = AccountDefinition(
+            account_id="paper-parity",
+            kind=AccountKind.PAPER,
+            name="Parity",
+            opened_at=datetime(2026, 1, 5, tzinfo=UTC),
+        )
+        now = datetime(2026, 1, 6, 9, 30, tzinfo=UTC)
+        drafts = [
+            AccountEventDraft(
+                event_type=AccountEventType.DEPOSIT,
+                event_id="e0",
+                trade_date="2026-01-05",
+                settlement_date="2026-01-05",
+                recorded_at=now,
+                idempotency_key="k0",
+                actor="test",
+                source=AccountEventSource.PAPER_ENGINE,
+                gross_amount=Decimal("100000"),
+            ),
+        ]
         for fill in fills:
-            account.apply_fill(fill, settle_date="1970-01-01")
+            is_buy = fill.direction == OrderSide.BUY
+            drafts.append(
+                AccountEventDraft(
+                    event_type=(
+                        AccountEventType.BUY if is_buy else AccountEventType.SELL
+                    ),
+                    event_id=f"e-{fill.fill_id}",
+                    trade_date="2026-01-05",
+                    settlement_date="2026-01-05",
+                    recorded_at=now,
+                    idempotency_key=f"k-{fill.fill_id}",
+                    actor="test",
+                    source=AccountEventSource.PAPER_ENGINE,
+                    instrument_id=fill.instrument_id,
+                    quantity=Decimal(fill.filled_quantity),
+                    price=Decimal(str(fill.fill_price)),
+                    gross_amount=Decimal(str(fill.fill_price * fill.filled_quantity)),
+                    fees=Decimal(str(fill.fee)),
+                ),
+            )
+        events = [
+            create_account_event(account=account, draft=draft) for draft in drafts
+        ]
+        rebuilt = AccountLedgerRebuilder().rebuild(
+            account=account, events=events, as_of="2026-01-06"
+        )
 
-        # 验证 positions 一致
-        assert set(snapshot.positions.keys()) == set(account.positions.keys())
-        for iid in snapshot.positions:
-            snap_pos = snapshot.positions[iid]
-            acct_pos = dict(account.positions)[iid]
-            assert snap_pos.quantity == acct_pos.quantity
-            assert snap_pos.average_cost == pytest.approx(acct_pos.average_cost)
-            assert snap_pos.market_value == pytest.approx(acct_pos.market_value)
-            assert snap_pos.total_fees == pytest.approx(acct_pos.total_fees)
+        # 持仓数量一致
+        assert {pos.instrument_id: pos.quantity for pos in rebuilt.positions} == {
+            iid: pos.quantity for iid, pos in snapshot.positions.items()
+        }
 
-        # 验证 cash 一致
-        assert snapshot.cash.available == pytest.approx(account.cash.available)
-        assert snapshot.cash.settled == pytest.approx(account.cash.settled)
-        assert snapshot.cash.frozen == pytest.approx(account.cash.frozen)
+        # 端态现金一致（#680 口径：BUY 全额当日占 settled，端态两引擎相等）
+        assert float(rebuilt.cash.available) == pytest.approx(snapshot.cash.available)
+        assert float(rebuilt.cash.settled) == pytest.approx(snapshot.cash.settled)
 
 
 class TestAccountProjectorIdempotency:

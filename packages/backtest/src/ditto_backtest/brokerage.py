@@ -419,8 +419,11 @@ class BacktestBrokerage:
             price=fill.fill_price,
             event=order_evt,
         )
-        self._order_book.update(updated_ticket, event=order_evt)
+        # 入账先于订单簿 FILLED 落笔：模型层拒绝（#681 裸卖/超卖）时
+        # 抛错在任何簿记变更之前，不留下"已成交未入账"的幻影票
+        # （#684 批B correctness F2）。
         self._account.apply_fill(fill, settle_date, on_frozen=self._register_frozen)
+        self._order_book.update(updated_ticket, event=order_evt)
 
     def _register_frozen(
         self,
