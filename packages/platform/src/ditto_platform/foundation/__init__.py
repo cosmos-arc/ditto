@@ -74,6 +74,7 @@ from ditto_platform.foundation.util import (
     atomic_write,
     file_md5,
     normalize_date,
+    writer_unique_tmp,
 )
 
 __all__ = [
@@ -140,4 +141,5 @@ __all__ = [
     "shutdown",
     "span",
     "traced",
+    "writer_unique_tmp",
 ]

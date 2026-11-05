@@ -14,6 +14,7 @@ from ditto_platform.foundation import (
     atomic_bytes_write,
     atomic_write,
     logger,
+    writer_unique_tmp,
 )
 from ditto_platform.foundation.util import ParquetCompression
 
@@ -159,7 +160,9 @@ class DerivedArtifactWriter:
 
         Uses a two-phase commit to guarantee all-or-nothing semantics:
 
-        * **Phase 1** -- write every partition to a ``.tmp.parquet`` file.
+        * **Phase 1** -- write every partition to a writer-unique ``.tmp``
+          file（#694：共享固定名会被重叠物化互相撕裂，且残留匹配
+          ``*.parquet`` 读取 glob）.
         * **Phase 2** -- atomically rename all temp files to their final names.
 
         If Phase 1 raises, all temp files are cleaned up before re-raising and
@@ -200,7 +203,7 @@ class DerivedArtifactWriter:
                 partition_frame = _merge_partitions(
                     existing.filter(outside), partition_frame, time_key
                 )
-            temp_path = version_root / f"{partition_key}.tmp.parquet"
+            temp_path = writer_unique_tmp(partition_path)
             pending.append((partition_key, partition_frame, temp_path, partition_path))
 
         if not pending:

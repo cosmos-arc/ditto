@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from datetime import date
 from pathlib import Path
+from typing import Any
 
 import polars as pl
 import pytest
@@ -121,3 +122,104 @@ def test_phase1_failure_keeps_existing_artifacts(
         )
     version_root = _version_root(tmp_path)
     assert (version_root / "2026.parquet").exists()
+
+
+def test_killed_writer_tmp_residue_is_inert(tmp_path: Path) -> None:
+    """#694：被杀写入者的唯一名 tmp 残留不进 *.parquet 读取 glob."""
+    writer = DerivedArtifactWriter(tmp_path)
+    partitions = writer.write_durable_partitions(
+        spec=_spec_record(),
+        time_key="trade_date",
+        run_id="drv-ok",
+        frame=_frame(rows=2),
+        request_start="2026-09-30",
+        request_end="2026-09-30",
+    )
+    assert partitions != ()
+    version_root = _version_root(tmp_path)
+    # 模拟另一写入者被杀后的半成品残留（写入者唯一名、.tmp 结尾）。
+    (version_root / "2026.parquet.12345-deadbeef.tmp").write_bytes(b"half")
+    visible = sorted(p.name for p in version_root.glob("*.parquet"))
+    assert visible == ["2026.parquet"]
+    # 旧共享名（2026.tmp.parquet）才会污染 glob——新命名不再出现该形态。
+    assert not any(".tmp.parquet" in name for name in visible)
+
+
+def test_overlapping_runs_never_tear_each_other(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """#694：重叠物化竞写零撕裂——两线程都越过 exists() 前置门后在写入期重叠."""
+
+    import threading
+
+    writer = DerivedArtifactWriter(tmp_path)
+    errors: list[Exception] = []
+    rounds = 25
+    # 门设在 Phase-1 写入点（exists() 前置门之后）：两线程都在写 temp 前
+    # 对齐——既保证真实写入期重叠，又消除快线程整段完成后慢线程撞
+    # 「既有分区需已发布历史」守卫的调度器依赖假红。
+    gate: dict[str, threading.Barrier] = {"barrier": threading.Barrier(2)}
+    real_write_parquet = pl.DataFrame.write_parquet
+
+    def _gated_write_parquet(self: pl.DataFrame, *args: Any, **kwargs: Any) -> None:
+        gate["barrier"].wait()
+        real_write_parquet(self, *args, **kwargs)
+
+    monkeypatch.setattr(pl.DataFrame, "write_parquet", _gated_write_parquet)
+
+    def _worker(run_id: str, value: float, spec: DerivedSpecRecord) -> None:
+        frame = pl.DataFrame(
+            {
+                "instrument_id": [1, 1],
+                "trade_date": [date(2026, 9, 29), date(2026, 9, 30)],
+                "value": [value, value],
+            }
+        )
+        try:
+            writer.write_durable_partitions(
+                spec=spec,
+                time_key="trade_date",
+                run_id=run_id,
+                frame=frame,
+                request_start="2026-09-29",
+                request_end="2026-09-30",
+            )
+        except Exception as exc:
+            errors.append(exc)
+
+    for round_index in range(rounds):
+        # 每轮换 version → 全新 version_root：写入器禁止无历史覆写既有
+        # 分区，重复竞写同一分区本身非法（#694 语义）。
+        gate["barrier"] = threading.Barrier(2)
+        spec = _spec_record_with_version(round_index + 1)
+        left = threading.Thread(target=_worker, args=("drv-left", 0.25, spec))
+        right = threading.Thread(target=_worker, args=("drv-right", 0.75, spec))
+        left.start()
+        right.start()
+        left.join(timeout=60)
+        right.join(timeout=60)
+        assert not left.is_alive()
+        assert not right.is_alive()
+        assert errors == []
+        version_root = (
+            tmp_path
+            / "derived"
+            / "artifacts"
+            / "series"
+            / "factor.momentum_1m"
+            / f"v{round_index + 1}"
+        )
+        for run_id, value in (("drv-left", 0.25), ("drv-right", 0.75)):
+            retained = version_root / "_runs" / run_id / "2026.parquet"
+            assert pl.read_parquet(retained)["value"].to_list() == [value, value]
+        # 当前分区是某一方的完整帧（两值一致），绝不是撕裂混合。
+        current = pl.read_parquet(version_root / "2026.parquet")
+        values = current["value"].unique().to_list()
+        assert len(values) == 1
+        assert values[0] in (0.25, 0.75)
+
+
+def _spec_record_with_version(version: int) -> DerivedSpecRecord:
+    record = _spec_record()
+    return record.__class__(**{**record.__dict__, "version": version})

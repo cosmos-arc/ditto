@@ -12,7 +12,7 @@ import polars as pl
 ParquetCompression = Literal["lz4", "uncompressed", "snappy", "gzip", "brotli", "zstd"]
 
 
-def _writer_unique_tmp(path: Path) -> Path:
+def writer_unique_tmp(path: Path) -> Path:
     """
     写入者唯一的临时路径（#641）.
 
@@ -20,7 +20,8 @@ def _writer_unique_tmp(path: Path) -> Path:
     半成品 tmp 可被另一方 rename 到目标路径（#626 实证 parquet 撕裂）。
     pid+随机后缀保证互不相撞；被杀写入者的残留 tmp 因 rename 未发生而
     惰性无害（读取方从不碰 tmp），可安全手工清理——不做自动清扫，
-    删除他人进行中的 tmp 会重新引入竞态。
+    删除他人进行中的 tmp 会重新引入竞态。``.tmp`` 结尾不匹配 ``*.parquet``
+    等读取 glob（#694）.
     """
     return path.with_suffix(f"{path.suffix}.{os.getpid()}-{uuid.uuid4().hex[:8]}.tmp")
 
@@ -49,8 +50,8 @@ def atomic_write(
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
 
-    # Write to temporary file first (写入者唯一名，见 _writer_unique_tmp)
-    temp_path = _writer_unique_tmp(path)
+    # Write to temporary file first (写入者唯一名，见 writer_unique_tmp)
+    temp_path = writer_unique_tmp(path)
     df.write_parquet(temp_path, compression=compression)
 
     # Call fsync if requested
@@ -83,8 +84,8 @@ def atomic_bytes_write(
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
 
-    # Write to temporary file first (写入者唯一名，见 _writer_unique_tmp)
-    temp_path = _writer_unique_tmp(path)
+    # Write to temporary file first (写入者唯一名，见 writer_unique_tmp)
+    temp_path = writer_unique_tmp(path)
     temp_path.write_bytes(data)
 
     # Call fsync if requested
