@@ -69,8 +69,7 @@ def hk_hold_quarterly_knowledge_date(
         return published
     if trade_date > DISCLOSURE_CALENDAR_HORIZON:
         logger.warning(
-            "hk_hold disclosure calendar horizon exceeded; falling back to "
-            "run_date until the next official Stock Connect calendar lands",
+            "disclosure calendar horizon exceeded; run_date fallback in effect",
             event="hk_hold_disclosure_calendar_horizon",
             trade_date=trade_date.isoformat(),
             horizon=DISCLOSURE_CALENDAR_HORIZON.isoformat(),
