@@ -480,8 +480,6 @@ def record_acceptance_day(request: AcceptanceDayRequest) -> dict[str, object]:
                 decision_at=decision_at,
                 execution_at=now,
                 settlement_date=settlement_date,
-                position_quantity=position_quantity,
-                available_quantity=available_quantity,
             )
             execution = OperatePaperSession(
                 store=store,

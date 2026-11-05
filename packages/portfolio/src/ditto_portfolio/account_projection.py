@@ -66,6 +66,7 @@ __all__ = [
     "CashSnapshot",
     "PortfolioPositionSnapshot",
     "PortfolioSnapshot",
+    "resolve_control_state",
     "resolve_effective_events",
 ]
 
@@ -430,14 +431,31 @@ def _resolve_controls(
         if event.event_type is AccountEventType.REVERSAL:
             if event.reverses_event_id is not None:
                 suppressed.add(event.reverses_event_id)
+                # A reversal kills the target's whole correction chain, so a
+                # replacement registered for it must not survive.
+                replacements.pop(event.reverses_event_id, None)
         elif (
             event.event_type is AccountEventType.CORRECTION
             and event.corrects_event_id is not None
         ):
+            if event.corrects_event_id in suppressed:
+                # The target is already dead (reversed or re-corrected); a
+                # correction of it must stay inert instead of resurrecting it.
+                continue
             suppressed.add(event.corrects_event_id)
             replacements[event.corrects_event_id] = event
     active = {event.event_id for event in events if event.event_id not in suppressed}
     return active, replacements
+
+
+def resolve_control_state(
+    events: Iterable[AccountEvent],
+) -> tuple[set[str], set[str]]:
+    """Return (suppressed event ids, ids whose correction replacement is live)."""
+    retained = tuple(events)
+    active, replacements = _resolve_controls(retained)
+    suppressed = {event.event_id for event in retained} - active
+    return suppressed, set(replacements)
 
 
 def resolve_effective_events(

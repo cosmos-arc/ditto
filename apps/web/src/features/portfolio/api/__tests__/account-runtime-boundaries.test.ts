@@ -126,7 +126,6 @@ const paperSessionBody = {
 
 const paperOrderBody = {
 	assumption: { assumption_id: "default-v1", reference_price_field: "close", slippage_bps: 1, version: 1 },
-	available_quantity: 0,
 	decision_at: "2026-09-04T09:30:00Z",
 	execution_at: "2026-09-04T10:00:00Z",
 	idempotency_key: "operate-1",
@@ -148,7 +147,6 @@ const paperOrderBody = {
 	},
 	order_id: "order-1",
 	order_type: "market",
-	position_quantity: 0,
 	quantity: 100,
 	rules: {
 		asset_class: "etf",

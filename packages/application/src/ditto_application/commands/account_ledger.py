@@ -22,7 +22,10 @@ from ditto_portfolio.account_ledger import (
     FlowPosition,
     create_account_event,
 )
-from ditto_portfolio.account_projection import AccountLedgerRebuilder
+from ditto_portfolio.account_projection import (
+    AccountLedgerRebuilder,
+    resolve_control_state,
+)
 
 from ditto_application.exceptions import (
     AppCommandError,
@@ -309,6 +312,20 @@ class ManualAccountCommandHandler:
             AccountEventType.REVERSAL,
         }:
             raise AppConflictError("correction target must be a business event")
+        suppressed, _replaced = self._control_state(command.account_id)
+        if (
+            target.event_id in suppressed
+            and self._journal.find_by_idempotency_key(
+                command.account_id,
+                command.replacement.idempotency_key,
+            )
+            is None
+        ):
+            # A retry of an already-recorded control replays below; only a
+            # fresh control on a suppressed target fails loudly.
+            raise AppConflictError(
+                f"correction target is already corrected or reversed: {target.event_id}"
+            )
         return self._append(
             account=account,
             input_=command.replacement,
@@ -326,6 +343,22 @@ class ManualAccountCommandHandler:
         )
         if target is None:
             raise AppNotFoundError(f"event not found: {command.reverses_event_id}")
+        suppressed, replaced = self._control_state(command.account_id)
+        if (
+            target.event_id in suppressed
+            and target.event_id not in replaced
+            and self._journal.find_by_idempotency_key(
+                command.account_id,
+                command.idempotency_key,
+            )
+            is None
+        ):
+            # A corrected target is still reversible (kills its whole chain);
+            # an already-reversed target is dead and must fail loudly, while
+            # a retry of a recorded reversal replays below.
+            raise AppConflictError(
+                f"reversal target is already reversed: {target.event_id}"
+            )
         input_ = ManualEventInput(
             event_type=AccountEventType.REVERSAL,
             trade_date=command.trade_date,
@@ -348,6 +381,9 @@ class ManualAccountCommandHandler:
         if account.kind is not AccountKind.MANUAL:
             raise AppConflictError(f"account is not a MANUAL account: {account_id}")
         return account
+
+    def _control_state(self, account_id: str) -> tuple[set[str], set[str]]:
+        return resolve_control_state(self._journal.list_events(account_id))
 
     def _append(
         self,

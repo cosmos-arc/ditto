@@ -25,6 +25,7 @@ from ditto_portfolio.account_ledger import (
     AccountLedgerRevisionConflict,
     ledger_hash,
 )
+from ditto_portfolio.account_projection import AccountLedgerRebuilder
 
 NOW = datetime(2026, 8, 31, 9, 30, tzinfo=UTC)
 
@@ -268,6 +269,143 @@ def test_correction_and_reversal_return_immutable_receipts() -> None:
         "correction",
         "reversal",
     )
+
+
+def test_control_commands_reject_suppressed_targets_and_restore_state() -> None:
+    journal = _MemoryJournal()
+    _create_manual_account(journal)
+    handler = _manual(journal)
+    account = journal.get_account("manual-main")
+    assert account is not None
+    handler.record(
+        RecordManualEventCommand(
+            account_id="manual-main",
+            event=ManualEventInput.cash(
+                event_type="opening_cash",
+                trade_date="2026-08-31",
+                settlement_date="2026-08-31",
+                idempotency_key="opening",
+                actor="user:chevy",
+                amount=Decimal("10000"),
+            ),
+        )
+    )
+    buy = handler.record(
+        RecordManualEventCommand(
+            account_id="manual-main",
+            event=ManualEventInput.buy_or_sell(
+                side="buy",
+                trade_date="2026-08-31",
+                settlement_date="2026-09-01",
+                idempotency_key="buy",
+                actor="user:chevy",
+                instrument_id=InstrumentId(600519),
+                terms=TradeEventTerms(quantity=Decimal("100"), price=Decimal("10")),
+            ),
+        )
+    )
+    buy_event = buy.event
+    assert buy_event is not None
+
+    handler.correct(
+        CorrectManualEventCommand(
+            account_id="manual-main",
+            corrects_event_id=buy_event.event_id,
+            replacement=ManualEventInput.buy_or_sell(
+                side="buy",
+                trade_date="2026-08-31",
+                settlement_date="2026-09-01",
+                idempotency_key="correct-buy",
+                actor="user:chevy",
+                instrument_id=InstrumentId(600519),
+                terms=TradeEventTerms(quantity=Decimal("100"), price=Decimal("12")),
+            ),
+        )
+    )
+    corrected_snapshot = AccountLedgerRebuilder().rebuild(
+        account=account,
+        events=journal.list_events("manual-main"),
+        as_of="2026-08-31",
+    )
+    assert corrected_snapshot.cash.available == Decimal("8800.00")
+
+    # The corrected original stays reversible: the reversal must kill the
+    # whole correction chain, not be silently ignored.
+    handler.reverse(
+        ReverseManualEventCommand(
+            account_id="manual-main",
+            reverses_event_id=buy_event.event_id,
+            trade_date="2026-08-31",
+            settlement_date="2026-08-31",
+            idempotency_key="reverse-buy",
+            actor="user:chevy",
+        )
+    )
+    # Retries of already-recorded controls replay instead of tripping the
+    # suppressed-target guard.
+    replayed_correction = handler.correct(
+        CorrectManualEventCommand(
+            account_id="manual-main",
+            corrects_event_id=buy_event.event_id,
+            replacement=ManualEventInput.buy_or_sell(
+                side="buy",
+                trade_date="2026-08-31",
+                settlement_date="2026-09-01",
+                idempotency_key="correct-buy",
+                actor="user:chevy",
+                instrument_id=InstrumentId(600519),
+                terms=TradeEventTerms(quantity=Decimal("100"), price=Decimal("12")),
+            ),
+        )
+    )
+    assert replayed_correction.status == "replayed"
+    restored = AccountLedgerRebuilder().rebuild(
+        account=account,
+        events=journal.list_events("manual-main"),
+        as_of="2026-08-31",
+    )
+    assert restored.cash.available == Decimal("10000.00")
+    assert restored.positions == ()
+
+    # After the reversal the target is dead: both controls must fail loudly.
+    with pytest.raises(AppConflictError, match="already corrected or reversed"):
+        handler.correct(
+            CorrectManualEventCommand(
+                account_id="manual-main",
+                corrects_event_id=buy_event.event_id,
+                replacement=ManualEventInput.buy_or_sell(
+                    side="buy",
+                    trade_date="2026-08-31",
+                    settlement_date="2026-09-01",
+                    idempotency_key="correct-dead",
+                    actor="user:chevy",
+                    instrument_id=InstrumentId(600519),
+                    terms=TradeEventTerms(
+                        quantity=Decimal("100"),
+                        price=Decimal("9"),
+                    ),
+                ),
+            )
+        )
+    with pytest.raises(AppConflictError, match="already reversed"):
+        handler.reverse(
+            ReverseManualEventCommand(
+                account_id="manual-main",
+                reverses_event_id=buy_event.event_id,
+                trade_date="2026-09-01",
+                settlement_date="2026-09-01",
+                idempotency_key="reverse-dead",
+                actor="user:chevy",
+            )
+        )
+    # reverse→correct ends rejected-and-unchanged, i.e. also 恢复原状.
+    after_rejections = AccountLedgerRebuilder().rebuild(
+        account=account,
+        events=journal.list_events("manual-main"),
+        as_of="2026-09-01",
+    )
+    assert after_rejections.cash.available == Decimal("10000.00")
+    assert after_rejections.positions == ()
 
 
 def test_record_manual_event_rejects_unknown_or_non_manual_account() -> None:

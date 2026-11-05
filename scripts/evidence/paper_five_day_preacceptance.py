@@ -164,8 +164,6 @@ def _operate_command(spec: DaySpec, *, session_id: str) -> OperatePaperOrderComm
         decision_at=observed_at,
         execution_at=observed_at,
         settlement_date=spec.settlement_date.isoformat(),
-        position_quantity=0,
-        available_quantity=0,
     )
 
 

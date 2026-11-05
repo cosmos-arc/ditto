@@ -46,7 +46,9 @@ from ditto_portfolio.account_ledger import (
     AccountLedgerError,
     AccountLedgerRevisionConflict,
     create_account_event,
+    ledger_hash,
 )
+from ditto_portfolio.account_projection import AccountLedgerRebuilder
 
 from ditto_application.exceptions import (
     AppConflictError,
@@ -87,8 +89,8 @@ class OperatePaperOrderCommand:
     decision_at: datetime
     execution_at: datetime
     settlement_date: str
-    position_quantity: int
-    available_quantity: int
+    position_quantity: int | None = None
+    available_quantity: int | None = None
     cash_available: float | None = None
     request_identity_hash: str | None = None
     expected_ledger_hash: str | None = None
@@ -121,11 +123,13 @@ class OperatePaperSession:
         store: PaperSessionStorePort,
         account_journal: AccountEventJournalPort,
         reality: ASharePaperReality | None = None,
+        rebuilder: AccountLedgerRebuilder | None = None,
         after_execution_persisted: Callable[[], None] | None = None,
     ) -> None:
         self._store = store
         self._account_journal = account_journal
         self._reality = reality or ASharePaperReality()
+        self._rebuilder = rebuilder or AccountLedgerRebuilder()
         self._after_execution_persisted = after_execution_persisted
 
     def execute(self, command: OperatePaperOrderCommand) -> OperatePaperReceipt:
@@ -137,6 +141,14 @@ class OperatePaperSession:
         if command.expected_ledger_hash is not None:
             raise AppConflictError(
                 "governed Paper revision guard cannot use the generic order path"
+            )
+        if (
+            command.position_quantity is not None
+            or command.available_quantity is not None
+            or command.cash_available is not None
+        ):
+            raise AppConflictError(
+                "ungoverned paper order cannot declare account facts"
             )
         return self._execute(command, governed_etf=False)
 
@@ -198,6 +210,12 @@ class OperatePaperSession:
             order=resolved.order,
             account_id=session.account_id,
         )
+        if governed_etf:
+            facts = _declared_facts(command)
+            expected_ledger_hash = command.expected_ledger_hash
+        else:
+            facts, expected_ledger_hash = self._derived_facts(command, account)
+        position_quantity, available_quantity, cash_available = facts
         result = self._reality.execute(
             paper_order=paper_order,
             lineage=resolved.lineage,
@@ -207,9 +225,9 @@ class OperatePaperSession:
                 decision_at=command.decision_at,
                 execution_at=command.execution_at,
                 settlement_date=command.settlement_date,
-                position_quantity=command.position_quantity,
-                available_quantity=command.available_quantity,
-                cash_available=command.cash_available,
+                position_quantity=position_quantity,
+                available_quantity=available_quantity,
+                cash_available=cash_available,
             ),
         )
         execution = PaperExecutionRecord(
@@ -222,7 +240,7 @@ class OperatePaperSession:
             assumption=resolved.assumption,
             lineage=resolved.lineage,
             created_at=command.decision_at,
-            expected_ledger_hash=command.expected_ledger_hash,
+            expected_ledger_hash=expected_ledger_hash,
             rule_snapshot_id=command.rule_snapshot_id,
             rule_cutoff=command.rule_cutoff,
         )
@@ -280,6 +298,59 @@ class OperatePaperSession:
             )
         except PaperSessionConflictError:
             pass
+
+    def _derived_facts(
+        self,
+        command: OperatePaperOrderCommand,
+        account: AccountDefinition,
+    ) -> tuple[tuple[int, int, float], str]:
+        """Project position, availability, cash, and the ledger revision."""
+        # A persisted-but-unledgered fill is invisible to the journal, so a
+        # new order must not price against its phantom cash: fail closed
+        # until recover() closes the gap.
+        unledgered = [
+            record
+            for record in self._store.list_executions(command.session_id)
+            if record.result.fill is not None and record.ledger_event_id is None
+        ]
+        if unledgered:
+            raise AppConflictError(
+                "paper session has unledgered fills; run recovery before new orders"
+            )
+        events = tuple(self._account_journal.list_events(account.account_id))
+        try:
+            snapshot = self._rebuilder.rebuild(
+                account=account,
+                events=events,
+                as_of=command.trade_date,
+            )
+        except AccountLedgerError as exc:
+            raise AppProcessError(
+                "paper account ledger projection failed",
+                code="PAPER_LEDGER_PROJECTION_FAILED",
+            ) from exc
+        if snapshot.cash.available < 0:
+            # A ledger overspent through the pre-fix declared-facts lane must
+            # fail loudly here, not as a raw context invariant downstream.
+            raise AppProcessError(
+                "paper account ledger has negative available cash",
+                code="PAPER_LEDGER_OVERDRAWN",
+            )
+        instrument_id = InstrumentId(command.instrument_id)
+        position = next(
+            (
+                item
+                for item in snapshot.positions
+                if item.instrument_id == instrument_id
+            ),
+            None,
+        )
+        facts = (
+            int(position.quantity) if position is not None else 0,
+            int(position.available_quantity) if position is not None else 0,
+            float(snapshot.cash.available),
+        )
+        return facts, ledger_hash(events)
 
     def _ensure_ledger(self, record: PaperExecutionRecord) -> PaperExecutionRecord:
         fill = record.result.fill
@@ -384,6 +455,17 @@ def _reject_ungoverned_etf_session(strategy_id: str) -> None:
         )
 
 
+def _declared_facts(command: OperatePaperOrderCommand) -> tuple[int, int, float]:
+    """Return the governed ETF lane's frozen account facts, fail-closed."""
+    if (
+        command.position_quantity is None
+        or command.available_quantity is None
+        or command.cash_available is None
+    ):
+        raise AppConflictError("governed Paper order requires declared account facts")
+    return command.position_quantity, command.available_quantity, command.cash_available
+
+
 def _paper_order(
     command: OperatePaperOrderCommand,
     *,
@@ -403,6 +485,8 @@ def _request_hash(command: OperatePaperOrderCommand) -> str:
     if command.request_identity_hash is not None:
         return command.request_identity_hash
     resolved = _resolve_inputs(command)
+    # Deliberately excludes account facts: on the generic path they are ledger
+    # projections, not caller intent, so they must not enter the identity.
     payload: dict[str, object] = {
         "session_id": command.session_id,
         "idempotency_key": command.idempotency_key,
@@ -413,11 +497,7 @@ def _request_hash(command: OperatePaperOrderCommand) -> str:
         "decision_at": command.decision_at.isoformat(),
         "execution_at": command.execution_at.isoformat(),
         "settlement_date": command.settlement_date,
-        "position_quantity": command.position_quantity,
-        "available_quantity": command.available_quantity,
     }
-    if command.cash_available is not None:
-        payload["cash_available"] = command.cash_available
     encoded = orjson.dumps(
         payload,
         option=orjson.OPT_SERIALIZE_DATACLASS | orjson.OPT_SORT_KEYS,
@@ -510,6 +590,11 @@ def _ledger_event_id(execution_id: str) -> str:
     return f"account-event:{sha256(execution_id.encode()).hexdigest()[:32]}"
 
 
+def paper_session_actor(session_id: str) -> str:
+    """Return the ledger actor identity every fill of one session carries."""
+    return f"paper-session:{session_id}"
+
+
 def _account_event(
     *,
     record: PaperExecutionRecord,
@@ -532,7 +617,7 @@ def _account_event(
             settlement_date=fill.settlement_date,
             recorded_at=fill.event_time,
             idempotency_key=idempotency_key,
-            actor=f"paper-session:{record.session_id}",
+            actor=paper_session_actor(record.session_id),
             source=AccountEventSource.PAPER_ENGINE,
             instrument_id=fill.instrument_id,
             quantity=Decimal(str(fill.quantity)),

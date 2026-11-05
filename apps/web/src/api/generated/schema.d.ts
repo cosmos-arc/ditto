@@ -1,6 +1,6 @@
 /**
  * DO NOT EDIT: generated from contracts/openapi/v1.json.
- * Schema SHA-256: 1d2d766b54c9291f859018bead5373dc315e3ec6da3d689f944582d8d3da2ae1
+ * Schema SHA-256: 1fbced3af06450333740ecae23ba13e6351e2a636f86544211cee449b5204386
  * Generator: openapi-typescript 7.13.0
  */
 
@@ -13264,8 +13264,6 @@ export interface components {
          */
         OperatePaperOrderBody: {
             assumption: components["schemas"]["PaperFillAssumptionBody"];
-            /** Available Quantity */
-            available_quantity: number;
             /**
              * Decision At
              * Format: date-time
@@ -13288,8 +13286,6 @@ export interface components {
              * @enum {string}
              */
             order_type: "market" | "limit";
-            /** Position Quantity */
-            position_quantity: number;
             /** Price */
             price?: number | null;
             /** Quantity */

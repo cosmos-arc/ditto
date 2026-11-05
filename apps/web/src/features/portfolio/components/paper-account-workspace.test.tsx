@@ -222,7 +222,6 @@ describe("PaperAccountWorkspace", () => {
 				quantity: 100,
 				side: "buy",
 				trade_date: "2026-08-31",
-				available_quantity: 0,
 				assumption: { assumption_id: "paper-default-v1", slippage_bps: 1, version: 1 },
 				market: {
 					dataset_id: "stock_daily",
@@ -232,6 +231,8 @@ describe("PaperAccountWorkspace", () => {
 				rules: { lot_size: 100, settlement_cycle: 1, stamp_duty_rate: 0.0005 },
 			}),
 		);
+		expect(posted).not.toHaveProperty("available_quantity");
+		expect(posted).not.toHaveProperty("position_quantity");
 	});
 
 	it("submits ETF-specific dataset and fee rules without stock-tax leakage", async () => {

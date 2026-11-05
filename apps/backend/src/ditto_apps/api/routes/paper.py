@@ -407,8 +407,6 @@ def _operate_command(
         decision_at=body.decision_at,
         execution_at=body.execution_at,
         settlement_date=body.settlement_date.isoformat(),
-        position_quantity=body.position_quantity,
-        available_quantity=body.available_quantity,
         market=PaperMarketSnapshotInput(
             dataset_id=body.market.dataset_id,
             source=body.market.source,

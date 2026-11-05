@@ -155,6 +155,16 @@ class ASharePaperReality:
             else 1.0 - slip_multiplier
         )
         fill_price = _round_to_tick(raw_fill, definition.tick_size)
+        # In-band close still evidences an opposite side, so a slippage-
+        # inflated fill is a tradable price once clamped to the band
+        # (#679 verdict A); out-of-band closes already defer above.
+        # shortcut: an off-tick band edge clamps to that off-tick price; the
+        # band invariant wins over grid alignment, re-round when real data
+        # ever carries off-grid limits.
+        if order.direction is OrderSide.BUY and snapshot.limit_up is not None:
+            fill_price = min(fill_price, snapshot.limit_up)
+        if order.direction is OrderSide.SELL and snapshot.limit_down is not None:
+            fill_price = max(fill_price, snapshot.limit_down)
         limit_outcome = _limit_order_outcome(paper_order, fill_price)
         if limit_outcome is not None:
             return limit_outcome
@@ -170,12 +180,9 @@ class ASharePaperReality:
             else 0.0
         )
         total_cost = commission + transfer_fee + tax
-        if (
-            order.direction is OrderSide.BUY
-            and context.cash_available is not None
-            and Decimal(str(amount)) + Decimal(str(total_cost))
-            > Decimal(str(context.cash_available))
-        ):
+        if order.direction is OrderSide.BUY and Decimal(str(amount)) + Decimal(
+            str(total_cost)
+        ) > Decimal(str(context.cash_available)):
             return ASharePaperReality._reject(
                 paper_order, "insufficient_cash", context.execution_at
             )

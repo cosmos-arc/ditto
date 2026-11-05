@@ -150,7 +150,7 @@ def _context(
     position_quantity: int = 0,
     available_quantity: int = 0,
     settlement_date: str = "2026-09-01",
-    cash_available: float | None = None,
+    cash_available: float = 1_000_000.0,
 ) -> PaperRealityContext:
     return PaperRealityContext(
         decision_at=decision_at,
@@ -239,6 +239,47 @@ class TestASharePaperReality:
         )
         assert result.status is PaperRealityStatus.DEFERRED
         assert result.reason == reason
+
+    def test_buy_slippage_beyond_limit_up_clamps_to_band(self) -> None:
+        # close 10.98 is in-band (below limit_up 11.00), so the defer gate
+        # stays quiet; 30 bps slippage would fill at 11.01 — the clamp must
+        # pull the fill back to the limit-up price (#679 verdict A).
+        result = ASharePaperReality().execute(
+            paper_order=_paper_order(_order(side=OrderSide.BUY, quantity=100)),
+            lineage=_lineage(_snapshot(close=10.98, limit_up=11.0)),
+            rules=_rules(),
+            assumption=_assumption(slippage_bps=30.0),
+            context=_context(cash_available=100_000),
+        )
+        assert result.status is PaperRealityStatus.FILLED
+        assert result.fill is not None
+        assert result.fill.fill_price == pytest.approx(11.0)
+
+    def test_sell_slippage_beyond_limit_down_clamps_to_band(self) -> None:
+        result = ASharePaperReality().execute(
+            paper_order=_paper_order(_order(side=OrderSide.SELL, quantity=100)),
+            lineage=_lineage(_snapshot(close=9.02, limit_down=9.0)),
+            rules=_rules(),
+            assumption=_assumption(slippage_bps=30.0),
+            context=_context(position_quantity=100, available_quantity=100),
+        )
+        assert result.status is PaperRealityStatus.FILLED
+        assert result.fill is not None
+        assert result.fill.fill_price == pytest.approx(9.0)
+
+    def test_missing_limits_skip_the_clamp(self) -> None:
+        # ETF-style snapshots carry no price limits; the fill keeps its
+        # tick-rounded slippage price untouched.
+        result = ASharePaperReality().execute(
+            paper_order=_paper_order(_order(side=OrderSide.BUY, quantity=100)),
+            lineage=_lineage(_snapshot(close=10.98, limit_up=None, limit_down=None)),
+            rules=_rules(),
+            assumption=_assumption(slippage_bps=30.0),
+            context=_context(cash_available=100_000),
+        )
+        assert result.status is PaperRealityStatus.FILLED
+        assert result.fill is not None
+        assert result.fill.fill_price == pytest.approx(11.01)
 
     def test_sell_golden_cost_and_slippage(self) -> None:
         result = ASharePaperReality().execute(
@@ -345,6 +386,7 @@ class TestFillAssumptionLineage:
                 settlement_date="2026-09-01",
                 position_quantity=0,
                 available_quantity=0,
+                cash_available=100_000.0,
             ),
         )
 
