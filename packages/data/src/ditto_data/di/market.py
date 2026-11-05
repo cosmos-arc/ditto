@@ -114,12 +114,19 @@ class MarketProvider(Provider):
     def market_writers(
         self,
         settings: DataStoreSettings,
+        file_lock_manager: FileLockManager,
     ) -> MarketWriters:
-        """Market 域写入依赖聚合。"""
-        store = _market_parquet_store(settings)
-        global_store = _global_index_parquet_store(settings)
-        futures_store = _futures_daily_parquet_store(settings)
-        futures_basic_store = _futures_basic_parquet_store(settings)
+        """Market 域写入依赖聚合（parquet 车道写入锁经 store 下发）。"""
+        store = _market_parquet_store(settings, file_lock=file_lock_manager)
+        global_store = _global_index_parquet_store(
+            settings, file_lock=file_lock_manager
+        )
+        futures_store = _futures_daily_parquet_store(
+            settings, file_lock=file_lock_manager
+        )
+        futures_basic_store = _futures_basic_parquet_store(
+            settings, file_lock=file_lock_manager
+        )
         return MarketWriters(
             stock_bars=StockBarsWriter(store),
             stock_status=StockStatusWriter(store),
@@ -128,7 +135,9 @@ class MarketProvider(Provider):
             etf_status=EtfStatusWriter(store),
             etf_adj=EtfAdjFactorWriter(store),
             etf_nav=EtfNavWriter(store),
-            stock_limit=StockLimitWriter(_stock_limit_parquet_store(settings)),
+            stock_limit=StockLimitWriter(
+                _stock_limit_parquet_store(settings, file_lock=file_lock_manager)
+            ),
             index_bars=IndexBarsWriter(store),
             global_index_bars=GlobalIndexBarsWriter(global_store),
             index_constituent=IndexConstituentWriter(data_root=settings.data_root),
@@ -136,8 +145,12 @@ class MarketProvider(Provider):
             commodity_bars=CommodityBarsWriter(store),
             futures_daily=FuturesDailyWriter(futures_store),
             futures_basic=FuturesBasicWriter(futures_basic_store),
-            limit_list=LimitListWriter(_limit_list_parquet_store(settings)),
-            fund_share=FundShareWriter(_fund_share_parquet_store(settings)),
+            limit_list=LimitListWriter(
+                _limit_list_parquet_store(settings, file_lock=file_lock_manager)
+            ),
+            fund_share=FundShareWriter(
+                _fund_share_parquet_store(settings, file_lock=file_lock_manager)
+            ),
         )
 
     @provide
@@ -149,77 +162,97 @@ class MarketProvider(Provider):
     def market_write_service(
         self,
         write_ports: MarketWriters,
-        file_lock_manager: FileLockManager,
     ) -> MarketWriteService:
-        """Market 写入服务。"""
-        return MarketWriteService(write_ports=write_ports, file_lock=file_lock_manager)
+        """Market 写入服务（写入锁已下沉 ParquetDatasetWriter）。"""
+        return MarketWriteService(write_ports=write_ports)
 
 
-def _market_parquet_store(settings: DataStoreSettings) -> ParquetStore:
+def _market_parquet_store(
+    settings: DataStoreSettings, *, file_lock: FileLockManager | None = None
+) -> ParquetStore:
     """Create the market-owned Parquet store with explicit domain columns."""
     return ParquetStore(
         settings.data_root,
         key_columns=MARKET_KEY_COLUMNS,
         date_column=MARKET_DATE_COLUMN,
         instrument_column=MARKET_INSTRUMENT_COLUMN,
+        file_lock=file_lock,
     )
 
 
-def _global_index_parquet_store(settings: DataStoreSettings) -> ParquetStore:
+def _global_index_parquet_store(
+    settings: DataStoreSettings, *, file_lock: FileLockManager | None = None
+) -> ParquetStore:
     """Create the global-index store with revision-preserving natural keys."""
     return ParquetStore(
         settings.data_root,
         key_columns=("source_ticker", "trade_date", "knowledge_date"),
         date_column="trade_date",
         instrument_column="source_ticker",
+        file_lock=file_lock,
     )
 
 
-def _futures_daily_parquet_store(settings: DataStoreSettings) -> ParquetStore:
+def _futures_daily_parquet_store(
+    settings: DataStoreSettings, *, file_lock: FileLockManager | None = None
+) -> ParquetStore:
     """期货合约日线与全球指数共用 (source_ticker, trade_date, knowledge_date) 键形."""
     return ParquetStore(
         settings.data_root,
         key_columns=("source_ticker", "trade_date", "knowledge_date"),
         date_column="trade_date",
         instrument_column="source_ticker",
+        file_lock=file_lock,
     )
 
 
-def _futures_basic_parquet_store(settings: DataStoreSettings) -> ParquetStore:
+def _futures_basic_parquet_store(
+    settings: DataStoreSettings, *, file_lock: FileLockManager | None = None
+) -> ParquetStore:
     """合约信息快照按 (source, source_ticker, knowledge_date) 幂等."""
     return ParquetStore(
         settings.data_root,
         key_columns=("source", "source_ticker", "knowledge_date"),
         date_column="knowledge_date",
         instrument_column="source_ticker",
+        file_lock=file_lock,
     )
 
 
-def _stock_limit_parquet_store(settings: DataStoreSettings) -> ParquetStore:
+def _stock_limit_parquet_store(
+    settings: DataStoreSettings, *, file_lock: FileLockManager | None = None
+) -> ParquetStore:
     """涨跌停价格按 (instrument_id, trade_date, knowledge_date) 幂等."""
     return ParquetStore(
         settings.data_root,
         key_columns=STOCK_LIMIT_KEY_COLUMNS,
         date_column="trade_date",
         instrument_column="instrument_id",
+        file_lock=file_lock,
     )
 
 
-def _limit_list_parquet_store(settings: DataStoreSettings) -> ParquetStore:
+def _limit_list_parquet_store(
+    settings: DataStoreSettings, *, file_lock: FileLockManager | None = None
+) -> ParquetStore:
     """涨跌停名单行以 (标的, 交易日, 类型, kd) 为自然键（事件型）."""
     return ParquetStore(
         settings.data_root,
         key_columns=("instrument_id", "trade_date", "limit_type", "knowledge_date"),
         date_column="trade_date",
         instrument_column="instrument_id",
+        file_lock=file_lock,
     )
 
 
-def _fund_share_parquet_store(settings: DataStoreSettings) -> ParquetStore:
+def _fund_share_parquet_store(
+    settings: DataStoreSettings, *, file_lock: FileLockManager | None = None
+) -> ParquetStore:
     """基金份额行以 (标的, 交易日, kd) 为自然键（万份）."""
     return ParquetStore(
         settings.data_root,
         key_columns=("instrument_id", "trade_date", "knowledge_date"),
         date_column="trade_date",
         instrument_column="instrument_id",
+        file_lock=file_lock,
     )

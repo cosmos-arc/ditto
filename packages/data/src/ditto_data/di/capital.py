@@ -107,8 +107,9 @@ class CapitalProvider(Provider):
         self,
         sqlite_client: SQLiteClient,
         settings: DataStoreSettings,
+        file_lock_manager: FileLockManager,
     ) -> CapitalWriters:
-        """Capital 域写入依赖聚合。"""
+        """Capital 域写入依赖聚合（parquet 车道写入锁经 store 下发）。"""
         return CapitalWriters(
             margin_trading=MarginTradingWriter(MARGIN_TRADING_SPEC, sqlite_client),
             pledge_ratio=PledgeRatioWriter(PLEDGE_RATIO_SPEC, sqlite_client),
@@ -121,16 +122,32 @@ class CapitalProvider(Provider):
                 sqlite_client,
             ),
             index_valuation=IndexValuationWriter(
-                _index_valuation_parquet_store(settings)
+                _index_valuation_parquet_store(settings, file_lock=file_lock_manager)
             ),
-            moneyflow=MoneyflowWriter(_moneyflow_parquet_store(settings)),
-            cyq_perf=CyqPerfWriter(_cyq_perf_parquet_store(settings)),
-            hk_hold=HkHoldWriter(_hk_hold_parquet_store(settings)),
-            hsgt_top10=HsgtTop10Writer(_hsgt_top10_parquet_store(settings)),
-            top_list=TopListWriter(_top_list_parquet_store(settings)),
-            top_inst=TopInstWriter(_top_inst_parquet_store(settings)),
-            top10_holders=Top10HoldersWriter(_top10_parquet_store(settings)),
-            top10_floatholders=Top10FloatholdersWriter(_top10_parquet_store(settings)),
+            moneyflow=MoneyflowWriter(
+                _moneyflow_parquet_store(settings, file_lock=file_lock_manager)
+            ),
+            cyq_perf=CyqPerfWriter(
+                _cyq_perf_parquet_store(settings, file_lock=file_lock_manager)
+            ),
+            hk_hold=HkHoldWriter(
+                _hk_hold_parquet_store(settings, file_lock=file_lock_manager)
+            ),
+            hsgt_top10=HsgtTop10Writer(
+                _hsgt_top10_parquet_store(settings, file_lock=file_lock_manager)
+            ),
+            top_list=TopListWriter(
+                _top_list_parquet_store(settings, file_lock=file_lock_manager)
+            ),
+            top_inst=TopInstWriter(
+                _top_inst_parquet_store(settings, file_lock=file_lock_manager)
+            ),
+            top10_holders=Top10HoldersWriter(
+                _top10_parquet_store(settings, file_lock=file_lock_manager)
+            ),
+            top10_floatholders=Top10FloatholdersWriter(
+                _top10_parquet_store(settings, file_lock=file_lock_manager)
+            ),
         )
 
     @provide
@@ -138,29 +155,32 @@ class CapitalProvider(Provider):
         self,
         capital_read_ports: CapitalReaders,
         capital_write_ports: CapitalWriters,
-        file_lock_manager: FileLockManager,
     ) -> CapitalStore:
-        """Capital domain unified store（parquet 车道并发写防护接线）."""
+        """Capital domain unified store（写入锁已下沉 ParquetDatasetWriter）."""
         return CapitalStore(
             read_ports=capital_read_ports,
             write_ports=capital_write_ports,
-            file_lock=file_lock_manager,
         )
 
 
-def _index_valuation_parquet_store(settings: DataStoreSettings) -> ParquetStore:
+def _index_valuation_parquet_store(
+    settings: DataStoreSettings, *, file_lock: FileLockManager | None = None
+) -> ParquetStore:
     """指数估值行按 (instrument_id, trade_date, knowledge_date) 幂等."""
     return ParquetStore(
         settings.data_root,
         key_columns=("instrument_id", "trade_date", "knowledge_date"),
         date_column="trade_date",
         instrument_column="instrument_id",
+        file_lock=file_lock,
     )
 
 
 def _daily_factor_parquet_store(
     settings: DataStoreSettings,
     key_columns: tuple[str, ...],
+    *,
+    file_lock: FileLockManager | None = None,
 ) -> ParquetStore:
     """日频资金面帧 Parquet store（键形参数化，date_column=trade_date）."""
     return ParquetStore(
@@ -168,47 +188,73 @@ def _daily_factor_parquet_store(
         key_columns=key_columns,
         date_column="trade_date",
         instrument_column="instrument_id",
+        file_lock=file_lock,
     )
 
 
-def _moneyflow_parquet_store(settings: DataStoreSettings) -> ParquetStore:
+def _moneyflow_parquet_store(
+    settings: DataStoreSettings, *, file_lock: FileLockManager | None = None
+) -> ParquetStore:
     return _daily_factor_parquet_store(
-        settings, ("instrument_id", "trade_date", "knowledge_date")
+        settings,
+        ("instrument_id", "trade_date", "knowledge_date"),
+        file_lock=file_lock,
     )
 
 
-def _cyq_perf_parquet_store(settings: DataStoreSettings) -> ParquetStore:
+def _cyq_perf_parquet_store(
+    settings: DataStoreSettings, *, file_lock: FileLockManager | None = None
+) -> ParquetStore:
     return _daily_factor_parquet_store(
-        settings, ("instrument_id", "trade_date", "knowledge_date")
+        settings,
+        ("instrument_id", "trade_date", "knowledge_date"),
+        file_lock=file_lock,
     )
 
 
-def _hk_hold_parquet_store(settings: DataStoreSettings) -> ParquetStore:
+def _hk_hold_parquet_store(
+    settings: DataStoreSettings, *, file_lock: FileLockManager | None = None
+) -> ParquetStore:
     return _daily_factor_parquet_store(
-        settings, ("instrument_id", "trade_date", "knowledge_date")
+        settings,
+        ("instrument_id", "trade_date", "knowledge_date"),
+        file_lock=file_lock,
     )
 
 
-def _hsgt_top10_parquet_store(settings: DataStoreSettings) -> ParquetStore:
+def _hsgt_top10_parquet_store(
+    settings: DataStoreSettings, *, file_lock: FileLockManager | None = None
+) -> ParquetStore:
     return _daily_factor_parquet_store(
-        settings, ("instrument_id", "trade_date", "market_type", "knowledge_date")
+        settings,
+        ("instrument_id", "trade_date", "market_type", "knowledge_date"),
+        file_lock=file_lock,
     )
 
 
-def _top_list_parquet_store(settings: DataStoreSettings) -> ParquetStore:
+def _top_list_parquet_store(
+    settings: DataStoreSettings, *, file_lock: FileLockManager | None = None
+) -> ParquetStore:
     return _daily_factor_parquet_store(
-        settings, ("instrument_id", "trade_date", "reason", "knowledge_date")
+        settings,
+        ("instrument_id", "trade_date", "reason", "knowledge_date"),
+        file_lock=file_lock,
     )
 
 
-def _top_inst_parquet_store(settings: DataStoreSettings) -> ParquetStore:
+def _top_inst_parquet_store(
+    settings: DataStoreSettings, *, file_lock: FileLockManager | None = None
+) -> ParquetStore:
     return _daily_factor_parquet_store(
         settings,
         ("instrument_id", "trade_date", "exalter", "side", "reason", "knowledge_date"),
+        file_lock=file_lock,
     )
 
 
-def _top10_parquet_store(settings: DataStoreSettings) -> ParquetStore:
+def _top10_parquet_store(
+    settings: DataStoreSettings, *, file_lock: FileLockManager | None = None
+) -> ParquetStore:
     """
     前十股东两榜共用存储配置.
 
@@ -225,4 +271,5 @@ def _top10_parquet_store(settings: DataStoreSettings) -> ParquetStore:
         ),
         date_column="report_date",
         instrument_column="instrument_id",
+        file_lock=file_lock,
     )

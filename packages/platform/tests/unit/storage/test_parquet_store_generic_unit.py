@@ -220,3 +220,63 @@ class TestParquetStoreTransientCorrectionFlag:
             on_duplicate="keep_last_flagged",
         )
         assert store.read("fina")["value"].to_list() == [99]
+
+    def test_flagged_first_write_to_new_partition_strips_flag(self, tmp_path):
+        """审计 #684 批B #5：首写新分区无 merge 可消费标记列——schema 无
+        is_provider_correction，且第二次 FLAGGED 写（merge 路径）成功升级。"""
+        store = self._store(tmp_path)
+        store.write(
+            "fina",
+            pl.DataFrame(
+                {
+                    "id": [1, 2],
+                    "date": [date(2026, 1, 1), date(2026, 1, 2)],
+                    "value": [10, 20],
+                    "is_provider_correction": [False, False],
+                }
+            ),
+            year=2026,
+            on_duplicate="keep_last_flagged",
+        )
+
+        stored = store.read("fina")
+        assert "is_provider_correction" not in stored.columns
+        assert stored["value"].to_list() == [10, 20]
+
+        # 第二次 FLAGGED 写走 merge 路径，修正行正常升级
+        result = store.write(
+            "fina",
+            pl.DataFrame(
+                {
+                    "id": [1],
+                    "date": [date(2026, 1, 1)],
+                    "value": [99],
+                    "is_provider_correction": [True],
+                }
+            ),
+            year=2026,
+            on_duplicate="keep_last_flagged",
+        )
+        assert (result.added, result.updated) == (0, 1)
+        assert store.read("fina")["value"].sort().to_list() == [20, 99]
+        assert "is_provider_correction" not in store.read("fina").columns
+
+    def test_verify_identical_batch_dup_ignores_transient_flag(self, tmp_path):
+        """#684 批B correctness F2：仅 is_provider_correction 不同的同键行
+        在 VERIFY_IDENTICAL 批内去重不算 changed values（与剥离前语义一致）。"""
+        store = self._store(tmp_path)
+        store.write(
+            "fina",
+            pl.DataFrame(
+                {
+                    "id": [1, 1],
+                    "date": [date(2026, 1, 1), date(2026, 1, 1)],
+                    "value": [10, 10],
+                    "is_provider_correction": [False, True],
+                }
+            ),
+            year=2026,
+            on_duplicate="verify_identical",
+        )
+        assert store.read("fina")["value"].to_list() == [10]
+        assert "is_provider_correction" not in store.read("fina").columns

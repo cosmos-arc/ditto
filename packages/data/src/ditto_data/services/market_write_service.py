@@ -2,6 +2,9 @@
 MarketWriteService - Market 域写入服务。
 
 提供市场行情数据的写入接口，包括 K线、复权因子和股票状态。
+
+跨年分片与同年分区写入锁统一收口在 ParquetDatasetWriter.write
+（审计 #684 批B #7/#14），本服务只保留指标与日志编排。
 """
 
 from datetime import date
@@ -9,7 +12,6 @@ from typing import Literal
 
 import polars as pl
 from ditto_platform.foundation import (
-    FileLockManager,
     Metrics,
     OnDuplicate,
     logger,
@@ -45,18 +47,15 @@ class MarketWriteService:
     def __init__(
         self,
         write_ports: MarketWriters,
-        file_lock: FileLockManager,
     ) -> None:
         """
         初始化 MarketWriteService.
 
         Args:
             write_ports: Market 域写入依赖（包含所有 Writer）.
-            file_lock: 文件锁管理器（用于并发写入保护）.
 
         """
         self._write_ports = write_ports
-        self._file_lock = file_lock
 
     @staticmethod
     def _to_storage_columns(df: pl.DataFrame) -> pl.DataFrame:
@@ -100,36 +99,12 @@ class MarketWriteService:
             row_count=len(df),
         )
 
-        on_duplicate_enum = self._map_on_duplicate(on_duplicate)
-        storage_df = self._to_storage_columns(df)
-
-        # 回看窗口跨年时行按 trade_date 年分片落各自年分区（与
-        # save_global_index_bars 同律，correctness E1 #629）：锚年单分区写
-        # 会让前一年 12 月的行对该年有界读不可见；空帧保持单分区写
-        # （分区登记语义不变）。
-        _part_year_expr = pl.col("trade_date").cast(pl.Date).dt.year()
-        part_years = (
-            sorted(set(storage_df.select(_part_year_expr).to_series().to_list()))
-            if storage_df.height
-            else [year]
+        write_result = self._get_bars_writer(dataset).write(
+            self._to_storage_columns(df),
+            year,
+            on_duplicate=self._map_on_duplicate(on_duplicate),
         )
-        rows_written = 0
-        for part_year in part_years:
-            part = (
-                storage_df.filter(_part_year_expr == part_year)
-                if storage_df.height
-                else storage_df
-            )
-            # 使用文件锁保护并发写入
-            lock_name = f"bars_write_{dataset}_{part_year}"
-            with self._file_lock.acquire(lock_name, timeout=60.0):
-                writer = self._get_bars_writer(dataset)
-                write_result = writer.write(
-                    part,
-                    part_year,
-                    on_duplicate=on_duplicate_enum,
-                )
-            rows_written += write_result.added + write_result.updated
+        rows_written = write_result.added + write_result.updated
 
         logger.info(
             "Bars data written",
@@ -141,7 +116,7 @@ class MarketWriteService:
 
         # 记录指标
         Metrics.data_records.add(
-            len(storage_df),
+            len(df),
             {"dataset": dataset, "operation": "write"},
         )
 
@@ -158,13 +133,11 @@ class MarketWriteService:
         writer = self._write_ports.futures_daily
         if writer is None:
             raise ValueError("futures_daily writer not configured")
-        lock_name = f"bars_write_futures_daily_{year}"
-        with self._file_lock.acquire(lock_name, timeout=60.0):
-            write_result = writer.write(
-                self._to_storage_columns(df),
-                year,
-                on_duplicate=self._map_on_duplicate(on_duplicate),
-            )
+        write_result = writer.write(
+            self._to_storage_columns(df),
+            year,
+            on_duplicate=self._map_on_duplicate(on_duplicate),
+        )
         rows_written = write_result.added + write_result.updated
         Metrics.data_records.add(
             len(df),
@@ -183,13 +156,11 @@ class MarketWriteService:
         writer = self._write_ports.futures_basic
         if writer is None:
             raise ValueError("futures_basic writer not configured")
-        lock_name = "bars_write_futures_basic"
-        with self._file_lock.acquire(lock_name, timeout=60.0):
-            write_result = writer.write(
-                self._to_storage_columns(df),
-                year,
-                on_duplicate=self._map_on_duplicate(on_duplicate),
-            )
+        write_result = writer.write(
+            self._to_storage_columns(df),
+            year,
+            on_duplicate=self._map_on_duplicate(on_duplicate),
+        )
         rows_written = write_result.added + write_result.updated
         Metrics.data_records.add(
             len(df),
@@ -204,37 +175,16 @@ class MarketWriteService:
         year: int,
         on_duplicate: OnDuplicate = OnDuplicate.ERROR,
     ) -> int:
-        """
-        Persist global-index bars with provider ticker and PIT revision keys.
-
-        回看窗口跨年时行按 trade_date 年分片落各自年分区——锚年单分区写
-        会让前一年 12 月的行对该年有界读不可见（correctness F1）；空帧
-        保持单分区写（分区登记语义不变）。
-        """
+        """Persist global-index bars with provider ticker and PIT revision keys."""
         writer = self._write_ports.global_index_bars
         if writer is None:
             raise ValueError("global_index_daily writer not configured")
-        storage_df = self._to_storage_columns(df)
-        part_years = (
-            sorted(set(storage_df["trade_date"].dt.year().to_list()))
-            if storage_df.height
-            else [year]
+        write_result = writer.write(
+            self._to_storage_columns(df),
+            year,
+            on_duplicate=self._map_on_duplicate(on_duplicate),
         )
-        rows_written = 0
-        for part_year in part_years:
-            part = (
-                storage_df.filter(pl.col("trade_date").dt.year() == part_year)
-                if storage_df.height
-                else storage_df
-            )
-            lock_name = f"bars_write_global_index_daily_{part_year}"
-            with self._file_lock.acquire(lock_name, timeout=60.0):
-                write_result = writer.write(
-                    part,
-                    part_year,
-                    on_duplicate=self._map_on_duplicate(on_duplicate),
-                )
-            rows_written += write_result.added + write_result.updated
+        rows_written = write_result.added + write_result.updated
         Metrics.data_records.add(
             len(df),
             {"dataset": "global_index_daily", "operation": "write"},
@@ -306,18 +256,11 @@ class MarketWriteService:
             row_count=len(df),
         )
 
-        on_duplicate_enum = self._map_on_duplicate(on_duplicate)
-        storage_df = self._to_storage_columns(df)
-
-        # 使用文件锁保护并发写入
-        lock_name = f"adj_factor_write_adj_factor_{year}"
-        with self._file_lock.acquire(lock_name, timeout=60.0):
-            write_result = self._write_ports.stock_adj.write(
-                storage_df,
-                year,
-                on_duplicate=on_duplicate_enum,
-            )
-
+        write_result = self._write_ports.stock_adj.write(
+            self._to_storage_columns(df),
+            year,
+            on_duplicate=self._map_on_duplicate(on_duplicate),
+        )
         rows_written = write_result.added + write_result.updated
 
         logger.info(
@@ -330,7 +273,7 @@ class MarketWriteService:
 
         # 记录指标
         Metrics.data_records.add(
-            len(storage_df),
+            len(df),
             {"dataset": "adj_factor", "operation": "write"},
         )
 
@@ -354,17 +297,14 @@ class MarketWriteService:
             year=year,
             row_count=len(df),
         )
-        storage_df = self._to_storage_columns(df)
-        lock_name = f"adj_factor_write_fund_adj_{year}"
-        with self._file_lock.acquire(lock_name, timeout=60.0):
-            write_result = writer.write(
-                storage_df,
-                year,
-                on_duplicate=self._map_on_duplicate(on_duplicate),
-            )
+        write_result = writer.write(
+            self._to_storage_columns(df),
+            year,
+            on_duplicate=self._map_on_duplicate(on_duplicate),
+        )
         rows_written = write_result.added + write_result.updated
         Metrics.data_records.add(
-            len(storage_df),
+            len(df),
             {"dataset": "fund_adj", "operation": "write"},
         )
         logger.info(
@@ -394,11 +334,9 @@ class MarketWriteService:
             year=year,
             row_count=len(df),
         )
-        lock_name = f"etf_nav_write_{year}"
-        with self._file_lock.acquire(lock_name, timeout=60.0):
-            write_result = writer.write(
-                df, year, on_duplicate=self._map_on_duplicate(on_duplicate)
-            )
+        write_result = writer.write(
+            df, year, on_duplicate=self._map_on_duplicate(on_duplicate)
+        )
         rows_written = write_result.added + write_result.updated
         Metrics.data_records.add(len(df), {"dataset": "etf_nav", "operation": "write"})
         logger.info(
@@ -428,11 +366,9 @@ class MarketWriteService:
             year=year,
             row_count=len(df),
         )
-        lock_name = f"stock_limit_write_{year}"
-        with self._file_lock.acquire(lock_name, timeout=60.0):
-            write_result = writer.write(
-                df, year, on_duplicate=self._map_on_duplicate(on_duplicate)
-            )
+        write_result = writer.write(
+            df, year, on_duplicate=self._map_on_duplicate(on_duplicate)
+        )
         rows_written = write_result.added + write_result.updated
         Metrics.data_records.add(
             len(df), {"dataset": "stock_limit", "operation": "write"}
@@ -464,11 +400,9 @@ class MarketWriteService:
             year=year,
             row_count=len(df),
         )
-        lock_name = f"limit_list_write_{year}"
-        with self._file_lock.acquire(lock_name, timeout=60.0):
-            write_result = writer.write(
-                df, year, on_duplicate=self._map_on_duplicate(on_duplicate)
-            )
+        write_result = writer.write(
+            df, year, on_duplicate=self._map_on_duplicate(on_duplicate)
+        )
         rows_written = write_result.added + write_result.updated
         Metrics.data_records.add(
             len(df), {"dataset": "limit_list", "operation": "write"}
@@ -493,11 +427,9 @@ class MarketWriteService:
             year=year,
             row_count=len(df),
         )
-        lock_name = f"fund_share_write_{year}"
-        with self._file_lock.acquire(lock_name, timeout=60.0):
-            write_result = writer.write(
-                df, year, on_duplicate=self._map_on_duplicate(on_duplicate)
-            )
+        write_result = writer.write(
+            df, year, on_duplicate=self._map_on_duplicate(on_duplicate)
+        )
         rows_written = write_result.added + write_result.updated
         Metrics.data_records.add(
             len(df), {"dataset": "fund_share", "operation": "write"}
@@ -529,11 +461,8 @@ class MarketWriteService:
             row_count=len(df),
         )
 
-        lock_name = f"stock_status_write_{year}"
         storage_df = self._to_storage_columns(df)
-
-        with self._file_lock.acquire(lock_name, timeout=60.0):
-            self._write_ports.stock_status.write(storage_df, year)
+        self._write_ports.stock_status.write(storage_df, year)
 
         rows_written = len(storage_df)
 
