@@ -43,7 +43,7 @@ __all__ = [
     "RecoverPaperSessionBody",
 ]
 
-_REQUEST_CONFIG = ConfigDict(strict=True, extra="forbid")
+_REQUEST_CONFIG = ConfigDict(strict=True, extra="forbid", allow_inf_nan=False)
 _RESPONSE_CONFIG = ConfigDict(strict=True, frozen=True, from_attributes=True)
 
 

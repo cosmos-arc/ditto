@@ -8,9 +8,11 @@ from pydantic import BaseModel, Field
 class InstrumentIdentifierQuery(BaseModel):
     """标的标识符查询（三选一）."""
 
-    instrument_id: int | None = Field(None, description="Canonical 标的 ID")
-    ticker: str | None = Field(None, description="裸代码, 如 000001")
-    standard_ticker: str | None = Field(None, description="标准代码, 如 000001.XSHE")
+    instrument_id: int | None = Field(default=None, description="Canonical 标的 ID")
+    ticker: str | None = Field(default=None, description="裸代码, 如 000001")
+    standard_ticker: str | None = Field(
+        default=None, description="标准代码, 如 000001.XSHE"
+    )
 
     model_config = {"extra": "ignore"}
 
@@ -30,7 +32,7 @@ class DateRangeQueryParams(InstrumentIdentifierQuery):
 
     start_date: date = Field(..., description="开始日期")
     end_date: date = Field(..., description="结束日期")
-    as_of_date: date | None = Field(None, description="PIT 查询日期(可选)")
+    as_of_date: date | None = Field(default=None, description="PIT 查询日期(可选)")
     allow_experimental_data: bool = Field(
         default=False,
         description="显式允许 experimental 数据集进入研究态查询",

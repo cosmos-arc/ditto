@@ -1,6 +1,6 @@
 /**
  * DO NOT EDIT: generated from contracts/openapi/v1.json.
- * Schema SHA-256: 56438b2d4a64c9f11e5a5c6d53156d5c578a5c4472c968b0de14e245e3d61418
+ * Schema SHA-256: 1d2d766b54c9291f859018bead5373dc315e3ec6da3d689f944582d8d3da2ae1
  * Generator: openapi-typescript 7.13.0
  */
 
@@ -30946,9 +30946,9 @@ export interface operations {
     source_get_source_data: {
         parameters: {
             query: {
+                instrument_id?: number | null;
                 ticker?: string | null;
                 standard_ticker?: string | null;
-                instrument_id?: number | null;
                 start_date: string;
                 end_date: string;
                 allow_experimental_data?: boolean;

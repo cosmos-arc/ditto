@@ -9441,6 +9441,7 @@
                 "items": {
                   "type": "integer"
                 },
+                "maxItems": 1000,
                 "type": "array"
               },
               {
@@ -19077,8 +19078,11 @@
           "ma_windows": {
             "description": "MA 窗口列表",
             "items": {
+              "maximum": 500.0,
+              "minimum": 1.0,
               "type": "integer"
             },
+            "maxItems": 16,
             "title": "Ma Windows",
             "type": "array"
           },
@@ -50374,6 +50378,22 @@
           },
           {
             "in": "query",
+            "name": "instrument_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Instrument Id"
+            }
+          },
+          {
+            "in": "query",
             "name": "ticker",
             "required": false,
             "schema": {
@@ -50406,25 +50426,10 @@
           },
           {
             "in": "query",
-            "name": "instrument_id",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "integer"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Instrument Id"
-            }
-          },
-          {
-            "in": "query",
             "name": "start_date",
             "required": true,
             "schema": {
+              "format": "date",
               "title": "Start Date",
               "type": "string"
             }
@@ -50434,6 +50439,7 @@
             "name": "end_date",
             "required": true,
             "schema": {
+              "format": "date",
               "title": "End Date",
               "type": "string"
             }

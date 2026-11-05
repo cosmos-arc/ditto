@@ -164,7 +164,7 @@ class CostConfigRequest(BaseModel):
         description="冲击成本模型",
     )
 
-    model_config = ConfigDict(strict=True, extra="ignore")
+    model_config = ConfigDict(strict=True, extra="ignore", allow_inf_nan=False)
 
     @field_validator("impact_model", mode="before")
     @classmethod
@@ -193,7 +193,7 @@ class CreateBacktestRunRequest(BaseModel):
         description="显式允许 experimental 数据集进入研究态回测运行",
     )
 
-    model_config = ConfigDict(strict=True, extra="ignore")
+    model_config = ConfigDict(strict=True, extra="ignore", allow_inf_nan=False)
 
 
 class BacktestRunTriggerResponse(BaseModel):

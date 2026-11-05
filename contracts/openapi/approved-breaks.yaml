@@ -1,0 +1,22 @@
+schema: ditto.approved-breaks.v1
+breaks:
+  - fingerprint: 756633e37d8f
+    id: request-parameter-type-changed
+    approved-by: cosmos-arc/ditto#685
+    added: "2026-11-05"
+    note: source end_date 裸 str 收紧为 format=date（#19 日期复用）
+  - fingerprint: 3ff84b0d49e1
+    id: request-parameter-type-changed
+    approved-by: cosmos-arc/ditto#685
+    added: "2026-11-05"
+    note: source start_date 裸 str 收紧为 format=date（#19 日期复用）
+  - fingerprint: 1a54bb46bb83
+    id: request-property-max-set
+    approved-by: cosmos-arc/ditto#685
+    added: "2026-11-05"
+    note: indicator-series ma_windows 每窗口上限 500（#9 定界）
+  - fingerprint: f286ea8e2d73
+    id: request-property-min-set
+    approved-by: cosmos-arc/ditto#685
+    added: "2026-11-05"
+    note: indicator-series ma_windows 每窗口下限 1（#9 定界）

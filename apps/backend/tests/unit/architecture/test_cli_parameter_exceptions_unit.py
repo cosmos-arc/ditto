@@ -27,6 +27,10 @@ _APPROVED_PLR0913_NOQA_LINES: tuple[tuple[str, str], ...] = (
         "packages/application/src/ditto_application/providers_command.py",
         "def reconcile_sources_handler(  # noqa: PLR0913 — dishka 依赖注入聚合端口",
     ),
+    (
+        "packages/application/src/ditto_application/queries/market.py",
+        "def find_bars(  # noqa: PLR0913 — 查询合同以显式关键字参数展开，调用方零组装",  # noqa: RUF001 — 与被核对源码行逐字一致
+    ),
 )
 
 
