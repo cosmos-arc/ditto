@@ -55,6 +55,9 @@ from ditto_application.processes.ingestion.correction_ledger import (
     CorrectionLogStore,
     save_kd_correction_ledger_row,
 )
+from ditto_application.processes.ingestion.hk_hold_disclosure import (
+    HK_HOLD_PUBLICATION_DATES,
+)
 from ditto_application.processes.ingestion.knowledge_date_policy import (
     HK_HOLD_QUARTERLY_REGIME_START,
     calibrate_knowledge_dates,
@@ -206,15 +209,34 @@ def _quarterly_impacts(
     *,
     conn: sqlite3.Connection,
 ) -> list[DateImpact]:
-    """hk_hold 季度段：期望 knowledge_date=账本观察锚（无锚=拒绝动）."""
+    """hk_hold 季度段：官方披露发布日优先，表外回退账本观察锚."""
     anchors = _observation_anchors(conn, sorted({g[0] for g in groups}))
     by_date: dict[str, dict[str, int]] = {}
     for t, k, c in groups:
         by_date.setdefault(t, {})[k] = c
     impacts = []
     for t in sorted(by_date):
-        expected = anchors.get(t)
         versions = by_date[t]
+        official = dict(HK_HOLD_PUBLICATION_DATES).get(date.fromisoformat(t))
+        if official is not None:
+            # 官方发布日锚（#693）：为每个偏离版本追加 official 版本行
+            # （旧行保留证据；as-of 读取按 ≤cutoff 最新版本收敛，历史
+            # 窗口即恢复官方可知性）。幂等：official 版本已在则零 impact。
+            for k, c in sorted(versions.items()):
+                if k != official.isoformat():
+                    impacts.append(
+                        DateImpact(
+                            dataset=dataset,
+                            trade_date=t,
+                            rows=c,
+                            old_knowledge_date=k,
+                            new_knowledge_date=official.isoformat(),
+                            anchor="official_disclosure",
+                            status="correct",
+                        )
+                    )
+            continue
+        expected = anchors.get(t)
         # 已有观察锚版本（kd 晚于事实日 14 天＝任何披露制度锚之外）则该日
         # 首锚已立：后续新覆盖快照前移 MAX 锚不再重写（首锚胜，可见性不
         # 随重复回补单调后移）。

@@ -17,15 +17,11 @@ schema 占位、写入前必然被本策略覆写：
   hk_hold 日频制度段）。这不是机械的「普通交易日 T+1」——它以交易所
   开市前发布制度为依据（#653：不把自然日 T+1 换成无依据的日历规则）。
 - ``hk_hold`` 季度制度段（trade_date >= 2024-08-19）：真实发布日=
-  季末后第 5 个北向交易日，北向交易日历尚未入库，无发布日证据时
-  fail-safe 取 run_date（上海时区观察日）——宁可保守推迟可知时间，
-  不伪造早于发布的可知性。**已知边界（correctness F1，批次2 根修）**：
-  run_date 随墙钟变化，同一 retained payload 跨日重放会使 canonical
-  checksum 漂移、触发 SNAPSHOT_CANONICAL_DRIFT 响亮失败（不静默污染），
-  且按 (instrument, trade_date, knowledge_date) 新键追加版本行——
-  同日重试（常规路径）确定性成立，跨日 force 重取/中断重放会阻断该
-  分区直至批次2 以北向日历/发布日证据重算存量并出新版本。北向日历
-  入库后应按制度重算并走存量纠正（批次2）。
+  季末后第 5 个北向交易日（HKEX 2024-04-12 公告），按官方 Stock
+  Connect 日历落成的发布日表取值（见 :mod:`hk_hold_disclosure`，#693）
+  ——与 run_date 无关，跨日重放恒等。表外季度（未来季或日历未更新）
+  fail-safe 取 run_date（上海时区观察日）并响亮提示，宁可保守推迟
+  可知时间，不伪造早于发布的可知性。
 
 存量已落库的错误 knowledge_date 不在本模块处理（#653：先盘点受影响
 行，保留原证据、新身份纠正——批次2）。
@@ -41,6 +37,9 @@ import polars as pl
 from ditto_platform.foundation import logger
 
 from ditto_application.exceptions import AppProcessError
+from ditto_application.processes.ingestion.hk_hold_disclosure import (
+    hk_hold_quarterly_knowledge_date,
+)
 
 __all__ = [
     "CALENDAR_LOOKAHEAD_DAYS",
@@ -91,7 +90,8 @@ def calibrate_knowledge_dates(
         df: 源层帧，须含 trade_date 与 knowledge_date 列（Date 型）。
         dataset: 数据集名。
         trading_days: 升序交易日序列（含 trade_date 之后足够的日历覆盖）。
-        run_date: 本次写入的观察日（hk_hold 季度段的知识日下界）。
+        run_date: 本次写入的观察日（hk_hold 季度段官方发布日表外的
+            fail-safe 知识日下界，#693）。
 
     Raises:
         ValueError: 需要 next_trading_day 但日历无法给出 trade_date 之后
@@ -109,12 +109,12 @@ def calibrate_knowledge_dates(
         new_knowledge = _next_trading_days(
             trade_dates, dataset=dataset, trading_days=trading_days
         )
-    else:  # hk_hold 分段：日频段=下一交易日；季度段=观察日
+    else:  # hk_hold 分段：日频段=下一交易日；季度段=官方发布日
         new_knowledge = pl.Series(
             [
                 _next_trading_day_one(d, dataset=dataset, trading_days=trading_days)
                 if d < HK_HOLD_QUARTERLY_REGIME_START
-                else run_date
+                else hk_hold_quarterly_knowledge_date(d, run_date=run_date)
                 for d in trade_dates.to_list()
             ],
             dtype=pl.Date,

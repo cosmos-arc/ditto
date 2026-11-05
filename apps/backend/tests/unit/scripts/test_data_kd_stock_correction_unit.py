@@ -225,7 +225,7 @@ class TestScanHkHold:
                     "trade_date": "2024-08-16",
                     "knowledge_date": "2024-08-17",
                 },
-                # 季度段（>=2024-08-19）：期望观察锚 2026-11-01。
+                # 季度段（>=2024-08-19）：表内季优先官方披露发布日（#693）。
                 {
                     "source_ticker": "000001.SZ",
                     "instrument_id": 1,
@@ -239,22 +239,23 @@ class TestScanHkHold:
         by_date = {i.trade_date: i for i in impacts}
         assert by_date["2024-08-16"].new_knowledge_date == "2024-08-19"
         assert by_date["2024-08-16"].anchor == "next_trading_day"
-        assert by_date["2024-09-30"].new_knowledge_date == "2026-11-01"
-        assert by_date["2024-09-30"].anchor == "observation_snapshot"
+        assert by_date["2024-09-30"].new_knowledge_date == "2024-10-15"
+        assert by_date["2024-09-30"].anchor == "official_disclosure"
 
     def test_quarterly_without_observation_evidence_is_unanchorable(
         self,
         tmp_path: Path,
     ) -> None:
         conn = _make_db(tmp_path)
+        # 表外季（官方发布日表 horizon 之外）无观察证据 → unanchorable。
         _write_hk_hold_year(
             tmp_path,
             [
                 {
                     "source_ticker": "000001.SZ",
                     "instrument_id": 1,
-                    "trade_date": "2024-09-30",
-                    "knowledge_date": "2024-10-01",
+                    "trade_date": "2026-12-31",
+                    "knowledge_date": "2027-01-01",
                 },
             ],
         )
@@ -346,9 +347,10 @@ class TestApply:
         assert result["rows_written"] == 2
         frame = store.hk_hold_frames[0]
         assert frame["source_ticker"].to_list() == ["000001.SZ", "000002.SZ"]
+        # 表内季按官方披露发布日锚（#693），观察锚快照不再是期望值来源。
         assert frame["knowledge_date"].to_list() == [
-            date(2026, 11, 1),
-            date(2026, 11, 1),
+            date(2024, 10, 15),
+            date(2024, 10, 15),
         ]
 
     def test_unanchorable_rows_are_not_written(self, tmp_path: Path) -> None:
@@ -359,8 +361,8 @@ class TestApply:
                 {
                     "source_ticker": "000001.SZ",
                     "instrument_id": 1,
-                    "trade_date": "2024-09-30",
-                    "knowledge_date": "2024-10-01",
+                    "trade_date": "2026-12-31",
+                    "knowledge_date": "2027-01-01",
                 },
             ],
         )
@@ -463,14 +465,37 @@ class TestCorrectnessRegressions:
         assert logs.logs == []
 
     def test_quarterly_already_anchored_not_rewritten(self, tmp_path: Path) -> None:
-        """W2：已有观察锚版本（kd>事实日+14d）的季度日不再重写（首锚胜）."""
+        """W2：表外季已有观察锚版本（kd>事实日+14d）不再重写（首锚胜）."""
         conn = _make_db(tmp_path)
         conn.execute(
             "INSERT INTO provider_snapshots VALUES "
-            "('s1', 'hk_hold', 'tushare', '2024-09-16', '2024-09-30', 3000, "
-            "'2026-11-01T08:00:00+00:00')"
+            "('s1', 'hk_hold', 'tushare', '2026-12-16', '2026-12-31', 3000, "
+            "'2027-01-15T08:00:00+00:00')"
         )
         conn.commit()
+        _write_hk_hold_year(
+            tmp_path,
+            [
+                {
+                    "source_ticker": "000001.SZ",
+                    "instrument_id": 1,
+                    "trade_date": "2026-12-31",
+                    "knowledge_date": "2027-01-01",
+                },
+                {
+                    "source_ticker": "000002.SZ",
+                    "instrument_id": 2,
+                    "trade_date": "2026-12-31",
+                    "knowledge_date": "2027-01-15",
+                },
+            ],
+        )
+        impacts = scan_dataset("hk_hold", conn=conn, data_root=tmp_path)
+        assert impacts == []
+
+    def test_official_anchor_appends_and_is_idempotent(self, tmp_path: Path) -> None:
+        """#693：表内季为偏离版本追加官方锚行；official 版本已在=幂等零 impact."""
+        conn = _make_db(tmp_path)
         _write_hk_hold_year(
             tmp_path,
             [
@@ -486,21 +511,32 @@ class TestCorrectnessRegressions:
                     "trade_date": "2024-09-30",
                     "knowledge_date": "2026-11-01",
                 },
+                {
+                    "source_ticker": "000003.SZ",
+                    "instrument_id": 3,
+                    "trade_date": "2024-09-30",
+                    "knowledge_date": "2024-10-15",
+                },
             ],
         )
         impacts = scan_dataset("hk_hold", conn=conn, data_root=tmp_path)
-        assert impacts == []
+        assert [
+            (i.old_knowledge_date, i.new_knowledge_date, i.anchor) for i in impacts
+        ] == [
+            ("2024-10-01", "2024-10-15", "official_disclosure"),
+            ("2026-11-01", "2024-10-15", "official_disclosure"),
+        ]
 
     def test_quarterly_anchor_on_trade_date_unanchorable(
         self,
         tmp_path: Path,
     ) -> None:
-        """I2：锚不晚于事实日＝不可作为可知时间，拒绝动."""
+        """I2：锚不晚于事实日＝不可作为可知时间，拒绝动（表外季路径）."""
         conn = _make_db(tmp_path)
         conn.execute(
             "INSERT INTO provider_snapshots VALUES "
-            "('s1', 'hk_hold', 'tushare', '2024-09-16', '2024-09-30', 3000, "
-            "'2024-09-30T08:00:00+00:00')"
+            "('s1', 'hk_hold', 'tushare', '2026-12-16', '2026-12-31', 3000, "
+            "'2026-12-31T08:00:00+00:00')"
         )
         conn.commit()
         _write_hk_hold_year(
@@ -509,8 +545,8 @@ class TestCorrectnessRegressions:
                 {
                     "source_ticker": "000001.SZ",
                     "instrument_id": 1,
-                    "trade_date": "2024-09-30",
-                    "knowledge_date": "2024-10-01",
+                    "trade_date": "2026-12-31",
+                    "knowledge_date": "2027-01-01",
                 },
             ],
         )

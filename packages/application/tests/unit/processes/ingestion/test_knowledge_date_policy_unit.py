@@ -123,11 +123,51 @@ class TestHkHoldSegmented:
         )
         assert result["knowledge_date"].to_list() == [date(2024, 8, 19)]
 
-    def test_quarterly_regime_uses_observation_date(self) -> None:
-        """季度段真实发布=季末后第 5 个北向交易日；北向日历未入库前
-        以观察日兜底——保守推迟可知时间，不伪造早于发布的可知性."""
+    def test_quarterly_regime_uses_official_publication_date(self) -> None:
+        """季度段真实发布=季末后第 5 个北向交易日（官方日历落成的
+        发布日表，#693）——kd 与 run_date 无关."""
         result = calibrate_knowledge_dates(
             _frame([date(2024, 9, 30)]),
+            dataset="hk_hold",
+            trading_days=TRADING_DAYS,
+            run_date=RUN_DATE,
+        )
+        assert result["knowledge_date"].to_list() == [date(2024, 10, 15)]
+
+    def test_quarterly_regime_is_replay_deterministic(self) -> None:
+        """同一 payload 跨日重放 kd 恒等——根治 SNAPSHOT_CANONICAL_DRIFT
+        （#658 批次1 correctness F1）."""
+        quarters = [
+            date(2024, 9, 30),
+            date(2024, 12, 31),
+            date(2025, 3, 31),
+            date(2025, 6, 30),
+            date(2025, 9, 30),
+            date(2025, 12, 31),
+            date(2026, 3, 31),
+            date(2026, 6, 30),
+            date(2026, 9, 30),
+        ]
+        first = calibrate_knowledge_dates(
+            _frame(quarters),
+            dataset="hk_hold",
+            trading_days=TRADING_DAYS,
+            run_date=date(2026, 11, 1),
+        )
+        second = calibrate_knowledge_dates(
+            _frame(quarters),
+            dataset="hk_hold",
+            trading_days=TRADING_DAYS,
+            run_date=date(2026, 12, 25),
+        )
+        assert first["knowledge_date"].to_list() == second["knowledge_date"].to_list()
+
+    def test_quarterly_beyond_calendar_horizon_falls_back_to_run_date(
+        self,
+    ) -> None:
+        """表外季度（未来季/日历未更新）维持 run_date 下界 fail-safe."""
+        result = calibrate_knowledge_dates(
+            _frame([date(2026, 12, 31)]),
             dataset="hk_hold",
             trading_days=TRADING_DAYS,
             run_date=RUN_DATE,
@@ -147,7 +187,7 @@ class TestHkHoldSegmented:
         )
         assert result["knowledge_date"].to_list() == [
             date(2024, 8, 19),
-            RUN_DATE,
+            date(2024, 10, 15),
         ]
 
     def test_regime_boundary_is_2024_08_19(self) -> None:
