@@ -238,8 +238,6 @@ def _paper_command(
         decision_at=NOW,
         execution_at=NOW,
         settlement_date="2026-09-01",
-        position_quantity=0,
-        available_quantity=0,
     )
 
 
