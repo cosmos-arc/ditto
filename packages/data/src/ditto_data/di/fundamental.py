@@ -104,8 +104,9 @@ class FundamentalProvider(Provider):
         self,
         sqlite_client: SQLiteClient,
         settings: DataStoreSettings,
+        file_lock_manager: FileLockManager,
     ) -> FundamentalWriters:
-        """Fundamental 域写入依赖聚合。"""
+        """Fundamental 域写入依赖聚合（parquet 车道写入锁经 store 下发）。"""
         return FundamentalWriters(
             balance_sheet=BalanceSheetWriter(BALANCE_SHEET_SPEC, sqlite_client),
             income_statement=IncomeStatementWriter(
@@ -119,13 +120,17 @@ class FundamentalProvider(Provider):
                 sqlite_client,
             ),
             earnings_forecast=EarningsForecastWriter(
-                _earnings_forecast_parquet_store(settings)
+                _earnings_forecast_parquet_store(settings, file_lock=file_lock_manager)
             ),
             earnings_express=EarningsExpressWriter(
-                _earnings_express_parquet_store(settings)
+                _earnings_express_parquet_store(settings, file_lock=file_lock_manager)
             ),
-            fina_indicator=FinaIndicatorWriter(_fina_indicator_parquet_store(settings)),
-            fund_portfolio=FundPortfolioWriter(_fund_portfolio_parquet_store(settings)),
+            fina_indicator=FinaIndicatorWriter(
+                _fina_indicator_parquet_store(settings, file_lock=file_lock_manager)
+            ),
+            fund_portfolio=FundPortfolioWriter(
+                _fund_portfolio_parquet_store(settings, file_lock=file_lock_manager)
+            ),
         )
 
     @provide
@@ -133,17 +138,17 @@ class FundamentalProvider(Provider):
         self,
         read_ports: FundamentalReaders,
         write_ports: FundamentalWriters,
-        file_lock_manager: FileLockManager,
     ) -> FundamentalStore:
-        """Fundamental domain unified service."""
+        """Fundamental domain unified service（写入锁已下沉 writer 层）."""
         return FundamentalStore(
             read_ports=read_ports,
             write_ports=write_ports,
-            file_lock=file_lock_manager,
         )
 
 
-def _earnings_forecast_parquet_store(settings: DataStoreSettings) -> ParquetStore:
+def _earnings_forecast_parquet_store(
+    settings: DataStoreSettings, *, file_lock: FileLockManager | None = None
+) -> ParquetStore:
     """预告行以 (标的, 公告日, 报告期, 类型, 修订标志, 采集日) 为自然键."""
     return ParquetStore(
         settings.data_root,
@@ -157,30 +162,39 @@ def _earnings_forecast_parquet_store(settings: DataStoreSettings) -> ParquetStor
         ),
         date_column="ann_date",
         instrument_column="source_ticker",
+        file_lock=file_lock,
     )
 
 
-def _earnings_express_parquet_store(settings: DataStoreSettings) -> ParquetStore:
+def _earnings_express_parquet_store(
+    settings: DataStoreSettings, *, file_lock: FileLockManager | None = None
+) -> ParquetStore:
     """快报行以 (标的, 公告日, 报告期, 采集日) 为自然键."""
     return ParquetStore(
         settings.data_root,
         key_columns=("source_ticker", "ann_date", "report_date", "knowledge_date"),
         date_column="ann_date",
         instrument_column="source_ticker",
+        file_lock=file_lock,
     )
 
 
-def _fina_indicator_parquet_store(settings: DataStoreSettings) -> ParquetStore:
+def _fina_indicator_parquet_store(
+    settings: DataStoreSettings, *, file_lock: FileLockManager | None = None
+) -> ParquetStore:
     """官方指标行以 (标的, 报告期, 公告日) 为自然键（修订=新公告日版本）."""
     return ParquetStore(
         settings.data_root,
         key_columns=("instrument_id", "report_date", "knowledge_date"),
         date_column="report_date",
         instrument_column="instrument_id",
+        file_lock=file_lock,
     )
 
 
-def _fund_portfolio_parquet_store(settings: DataStoreSettings) -> ParquetStore:
+def _fund_portfolio_parquet_store(
+    settings: DataStoreSettings, *, file_lock: FileLockManager | None = None
+) -> ParquetStore:
     """基金持仓行以 (基金, 报告期, 持仓代码, 公告日) 为自然键."""
     return ParquetStore(
         settings.data_root,
@@ -192,4 +206,5 @@ def _fund_portfolio_parquet_store(settings: DataStoreSettings) -> ParquetStore:
         ),
         date_column="report_date",
         instrument_column="instrument_id",
+        file_lock=file_lock,
     )

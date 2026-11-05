@@ -17,7 +17,7 @@ from typing import Any
 
 import polars as pl
 
-from ditto_platform.foundation import logger, traced
+from ditto_platform.foundation import FileLockManager, logger, traced
 from ditto_platform.foundation.storage.parquet_metadata import (
     get_checksum as _get_checksum,
 )
@@ -81,17 +81,29 @@ class ParquetStore:
         key_columns: tuple[str, ...] = (),
         date_column: str | None = None,
         instrument_column: str | None = None,
+        file_lock: FileLockManager | None = None,
     ) -> None:
         self._data_root = Path(data_root)
         self._partition = partition_strategy
         self._key_columns = tuple(key_columns)
         self._date_column = date_column
         self._instrument_column = instrument_column
+        self._file_lock = file_lock
 
     @property
     def data_root(self) -> Path:
         """Get root directory path for data."""
         return self._data_root
+
+    @property
+    def date_column(self) -> str | None:
+        """Get the declared partition-anchor date column (None if unset)."""
+        return self._date_column
+
+    @property
+    def file_lock(self) -> FileLockManager | None:
+        """Get the optional write-lock manager carried by this store."""
+        return self._file_lock
 
     # ============ Hook methods (can be overridden by subclasses) ============
 
@@ -228,19 +240,21 @@ class ParquetStore:
         is_merge = file_path.exists()
         strategy = OnDuplicate(on_duplicate)
         key_columns = self._get_key_columns()
-        # 瞬态修正标记列仅供 KEEP_LAST_FLAGGED 合并消费；其余策略（含
-        # force 的 KEEP_LAST）一律入口剥离——否则新分区首写路径
-        # （is_merge=False，不经过任何 merge）会把标记列持久化进存量并
-        # 毒化该分区（correctness #613 G F1）。
-        if (
-            strategy is not OnDuplicate.KEEP_LAST_FLAGGED
-            and CORRECTION_FLAG_COLUMN in df.columns
-        ):
-            df = df.drop(CORRECTION_FLAG_COLUMN)
         df = self._prepare_for_write(df)
         input_count = len(df)
 
         df = self._dedup_batch_internal(df, dataset, year, key_columns, strategy)
+
+        # 瞬态修正标记列仅供 KEEP_LAST_FLAGGED 合并消费；其余策略（含
+        # force 的 KEEP_LAST）以及新分区首写路径（is_merge=False，不经
+        # 过任何 merge 可消费标记列）一律在持久化前剥离——否则标记列会
+        # 写入存量并毒化该分区 schema（correctness #613 G F1；审计
+        # #684 批B #5）。置于批内预去重之后：首写批次的修正行胜出仍由
+        # 标记列驱动。
+        if CORRECTION_FLAG_COLUMN in df.columns and (
+            not is_merge or strategy is not OnDuplicate.KEEP_LAST_FLAGGED
+        ):
+            df = df.drop(CORRECTION_FLAG_COLUMN)
 
         # Merge with existing
         added = 0
@@ -297,10 +311,14 @@ class ParquetStore:
         )
         if batch_dup.is_empty():
             return df
-        if strategy is OnDuplicate.VERIFY_IDENTICAL and len(df.unique()) != len(
-            df.unique(subset=key_columns)
-        ):
-            raise ValueError("Duplicate data conflict within input batch")
+        if strategy is OnDuplicate.VERIFY_IDENTICAL:
+            # 瞬态修正标记列不参与身份比对（#684 批B correctness F2：剥离
+            # 移至批内去重后，仅 flag 不同的同键行不得误判 changed values）。
+            identity_columns = [c for c in df.columns if c != CORRECTION_FLAG_COLUMN]
+            if len(df.unique(subset=identity_columns)) != len(
+                df.unique(subset=key_columns)
+            ):
+                raise ValueError("Duplicate data conflict within input batch")
         logger.warning(
             "Batch internal duplicates detected, auto-dedup (keep first)",
             event="batch_internal_duplicates",

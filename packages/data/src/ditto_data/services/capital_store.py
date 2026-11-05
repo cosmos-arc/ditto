@@ -5,10 +5,9 @@ from __future__ import annotations
 from datetime import date
 
 import polars as pl
-from ditto_platform.foundation import FileLockManager, OnDuplicate, logger
+from ditto_platform.foundation import OnDuplicate, logger
 
 from ditto_data.services.deps import CapitalReaders, CapitalWriters
-from ditto_data.storage.base.dataset_writer import ParquetDatasetWriter
 
 
 class CapitalStore:
@@ -17,13 +16,15 @@ class CapitalStore:
 
     Thin wrapper around Reader/Writer components with dependency injection.
     Delegates all operations to the underlying readers and writers.
+
+    跨年分片与同年分区写入锁统一收口在 ParquetDatasetWriter.write
+    （审计 #684 批B #7/#14）。
     """
 
     def __init__(
         self,
         read_ports: CapitalReaders,
         write_ports: CapitalWriters,
-        file_lock: FileLockManager | None = None,
     ) -> None:
         """
         Initialize CapitalStore.
@@ -31,12 +32,10 @@ class CapitalStore:
         Args:
             read_ports: Capital domain read ports (all readers).
             write_ports: Capital domain write ports (all writers).
-            file_lock: 文件锁（可选；parquet 车道并发写防护）.
 
         """
         self._read_ports = read_ports
         self._write_ports = write_ports
-        self._file_lock = file_lock
 
         logger.debug(
             "CapitalStore initialized",
@@ -192,12 +191,7 @@ class CapitalStore:
         writer = self._write_ports.moneyflow
         if writer is None:
             raise ValueError("moneyflow writer not configured")
-        # backfill --parallel 并发写同年分区的丢失更新防护（#517-523 评审）
-        if self._file_lock is not None:
-            with self._file_lock.acquire(f"moneyflow_write_{year}", timeout=60.0):
-                result = writer.write(df, year, on_duplicate=on_duplicate)
-        else:
-            result = writer.write(df, year, on_duplicate=on_duplicate)
+        result = writer.write(df, year, on_duplicate=on_duplicate)
         return result.added + result.updated
 
     def save_cyq_perf(
@@ -210,12 +204,7 @@ class CapitalStore:
         writer = self._write_ports.cyq_perf
         if writer is None:
             raise ValueError("cyq_perf writer not configured")
-        # backfill --parallel 并发写同年分区的丢失更新防护（#517-523 评审）
-        if self._file_lock is not None:
-            with self._file_lock.acquire(f"cyq_perf_write_{year}", timeout=60.0):
-                result = writer.write(df, year, on_duplicate=on_duplicate)
-        else:
-            result = writer.write(df, year, on_duplicate=on_duplicate)
+        result = writer.write(df, year, on_duplicate=on_duplicate)
         return result.added + result.updated
 
     def save_hk_hold(
@@ -228,12 +217,7 @@ class CapitalStore:
         writer = self._write_ports.hk_hold
         if writer is None:
             raise ValueError("hk_hold writer not configured")
-        # backfill --parallel 并发写同年分区的丢失更新防护（#517-523 评审）
-        if self._file_lock is not None:
-            with self._file_lock.acquire(f"hk_hold_write_{year}", timeout=60.0):
-                result = writer.write(df, year, on_duplicate=on_duplicate)
-        else:
-            result = writer.write(df, year, on_duplicate=on_duplicate)
+        result = writer.write(df, year, on_duplicate=on_duplicate)
         return result.added + result.updated
 
     def save_hsgt_top10(
@@ -246,12 +230,7 @@ class CapitalStore:
         writer = self._write_ports.hsgt_top10
         if writer is None:
             raise ValueError("hsgt_top10 writer not configured")
-        # backfill --parallel 并发写同年分区的丢失更新防护（#517-523 评审）
-        if self._file_lock is not None:
-            with self._file_lock.acquire(f"hsgt_top10_write_{year}", timeout=60.0):
-                result = writer.write(df, year, on_duplicate=on_duplicate)
-        else:
-            result = writer.write(df, year, on_duplicate=on_duplicate)
+        result = writer.write(df, year, on_duplicate=on_duplicate)
         return result.added + result.updated
 
     def save_top_list(
@@ -264,12 +243,7 @@ class CapitalStore:
         writer = self._write_ports.top_list
         if writer is None:
             raise ValueError("top_list writer not configured")
-        # backfill --parallel 并发写同年分区的丢失更新防护（#517-523 评审）
-        if self._file_lock is not None:
-            with self._file_lock.acquire(f"top_list_write_{year}", timeout=60.0):
-                result = writer.write(df, year, on_duplicate=on_duplicate)
-        else:
-            result = writer.write(df, year, on_duplicate=on_duplicate)
+        result = writer.write(df, year, on_duplicate=on_duplicate)
         return result.added + result.updated
 
     def save_top_inst(
@@ -282,12 +256,7 @@ class CapitalStore:
         writer = self._write_ports.top_inst
         if writer is None:
             raise ValueError("top_inst writer not configured")
-        # backfill --parallel 并发写同年分区的丢失更新防护（#517-523 评审）
-        if self._file_lock is not None:
-            with self._file_lock.acquire(f"top_inst_write_{year}", timeout=60.0):
-                result = writer.write(df, year, on_duplicate=on_duplicate)
-        else:
-            result = writer.write(df, year, on_duplicate=on_duplicate)
+        result = writer.write(df, year, on_duplicate=on_duplicate)
         return result.added + result.updated
 
     def save_top10_holders(
@@ -299,16 +268,16 @@ class CapitalStore:
         """
         Save top-10 holder rows（hold_amount 股/比率 %，#627）.
 
-        行按 report_date 年分片落各自的年分区（correctness review #627 F1，
-        同 fina_indicator/fund_portfolio 的 #3 先例）：年报/Q4 行报告期与
-        公告年跨年时，单一摄取年分区会让按报告期年的范围读漏行。
+        report_date 跨年分片由 ParquetDatasetWriter 统一处理：年报/Q4
+        行报告期与公告年跨年时，行须落报告期年的分区（#627 F1）。
         """
-        return self._write_disclosure_frame_by_report_year(
-            self._write_ports.top10_holders,
-            "top10_holders",
-            df,
-            on_duplicate,
-        )
+        writer = self._write_ports.top10_holders
+        if writer is None:
+            raise ValueError("top10_holders writer not configured")
+        if df.is_empty():
+            return 0
+        result = writer.write(df, year, on_duplicate=on_duplicate)
+        return result.added + result.updated
 
     def save_top10_floatholders(
         self,
@@ -317,40 +286,13 @@ class CapitalStore:
         on_duplicate: OnDuplicate = OnDuplicate.ERROR,
     ) -> int:
         """Save top-10 float holder rows（#627，分片语义同 save_top10_holders）."""
-        return self._write_disclosure_frame_by_report_year(
-            self._write_ports.top10_floatholders,
-            "top10_floatholders",
-            df,
-            on_duplicate,
-        )
-
-    def _write_disclosure_frame_by_report_year(
-        self,
-        writer: ParquetDatasetWriter | None,
-        dataset: str,
-        df: pl.DataFrame,
-        on_duplicate: OnDuplicate,
-    ) -> int:
-        """披露锚帧按 report_date 年分片写入对应年分区（含同年文件锁）."""
+        writer = self._write_ports.top10_floatholders
         if writer is None:
-            raise ValueError(f"{dataset} writer not configured")
+            raise ValueError("top10_floatholders writer not configured")
         if df.is_empty():
             return 0
-        written = 0
-        for report_year in sorted(
-            {date_value.year for date_value in df["report_date"].to_list()}
-        ):
-            part = df.filter(pl.col("report_date").dt.year() == report_year)
-            if self._file_lock is not None:
-                # backfill --parallel 并发写同年分区的丢失更新防护
-                with self._file_lock.acquire(
-                    f"{dataset}_write_{report_year}", timeout=60.0
-                ):
-                    result = writer.write(part, report_year, on_duplicate=on_duplicate)
-            else:
-                result = writer.write(part, report_year, on_duplicate=on_duplicate)
-            written += result.added + result.updated
-        return written
+        result = writer.write(df, year, on_duplicate=on_duplicate)
+        return result.added + result.updated
 
     def get_moneyflows(self, start: str, end: str) -> pl.DataFrame:
         """Read market-wide moneyflow rows（L3 巡检用）."""

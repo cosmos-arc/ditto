@@ -72,7 +72,6 @@ from ditto_data.storage.market.stock.bars import StockBarsWriter
 from ditto_data.storage.market.stock.status import StockStatusWriter
 from ditto_data.storage.runtime.ingestion import IngestionLogReader, IngestionLogWriter
 from ditto_platform.foundation import (
-    FileLockManager,
     ParquetStore,
     SQLiteClient,
     SQLitePool,
@@ -345,7 +344,6 @@ def _pipeline(
             etf_bars=EtfBarsWriter(store),
             etf_status=EtfStatusWriter(store),
         ),
-        FileLockManager(tmp_path / "locks"),
     )
     writer = IngestionDataWriter(
         metadata_service=cast(MetadataService, None),
