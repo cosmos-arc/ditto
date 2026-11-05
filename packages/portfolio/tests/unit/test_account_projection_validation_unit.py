@@ -176,6 +176,96 @@ def test_reversal_suppresses_exact_prior_effect_without_deleting_history() -> No
     assert snapshot.event_count == 2
 
 
+def test_reversal_after_correction_kills_the_whole_chain() -> None:
+    instrument_id = InstrumentId(600519)
+    opening = _event(
+        AccountEventType.OPENING_CASH,
+        "opening",
+        gross_amount="10000",
+    )
+    buy = _event(
+        AccountEventType.BUY,
+        "buy-1",
+        instrument_id=instrument_id,
+        quantity="100",
+        price="10",
+        gross_amount="1000",
+    )
+    corrected = _event(
+        AccountEventType.CORRECTION,
+        "correct-1",
+        instrument_id=instrument_id,
+        quantity="100",
+        price="12",
+        gross_amount="1200",
+        corrects_event_id=buy.event_id,
+        replacement_event_type=AccountEventType.BUY,
+    )
+    reversal = _event(
+        AccountEventType.REVERSAL,
+        "reverse-1",
+        reverses_event_id=buy.event_id,
+    )
+
+    corrected_snapshot = AccountLedgerRebuilder().rebuild(
+        account=_account(),
+        events=(opening, buy, corrected),
+        as_of=_AS_OF,
+    )
+    assert corrected_snapshot.cash.available == Decimal("8800.00")
+    assert corrected_snapshot.position(instrument_id).quantity == Decimal("100")
+
+    restored = AccountLedgerRebuilder().rebuild(
+        account=_account(),
+        events=(opening, buy, corrected, reversal),
+        as_of=_AS_OF,
+    )
+    assert restored.cash.available == Decimal("10000.00")
+    assert restored.positions == ()
+
+
+def test_correction_of_reversed_target_stays_inert() -> None:
+    # Defensive replay of a stream the command handler already rejects:
+    # a correction appended after its target was reversed must not resurrect
+    # the dead event through the replacement map.
+    opening = _event(
+        AccountEventType.OPENING_CASH,
+        "opening",
+        gross_amount="10000",
+    )
+    buy = _event(
+        AccountEventType.BUY,
+        "buy-1",
+        instrument_id=InstrumentId(600519),
+        quantity="100",
+        price="10",
+        gross_amount="1000",
+    )
+    reversal = _event(
+        AccountEventType.REVERSAL,
+        "reverse-1",
+        reverses_event_id=buy.event_id,
+    )
+    stale_correction = _event(
+        AccountEventType.CORRECTION,
+        "correct-1",
+        instrument_id=InstrumentId(600519),
+        quantity="100",
+        price="12",
+        gross_amount="1200",
+        corrects_event_id=buy.event_id,
+        replacement_event_type=AccountEventType.BUY,
+    )
+
+    snapshot = AccountLedgerRebuilder().rebuild(
+        account=_account(),
+        events=(opening, buy, reversal, stale_correction),
+        as_of=_AS_OF,
+    )
+    assert snapshot.cash.available == Decimal("10000.00")
+    assert snapshot.positions == ()
+
+
 def test_replay_rejects_tampered_non_business_event_type() -> None:
     business = _event(AccountEventType.DEPOSIT, "business", gross_amount="10")
     tampered = replace(
