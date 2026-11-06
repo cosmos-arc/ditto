@@ -67,10 +67,8 @@ MARKET_KEY_COLUMNS = ("instrument_id", "trade_date")
 MARKET_DATE_COLUMN = "trade_date"
 MARKET_INSTRUMENT_COLUMN = "instrument_id"
 
-# #517 stock_limit：spec 主键含 knowledge_date（修订以新 kd 行呈现），
-# 不能复用 (instrument_id, trade_date) 共享 store——读侧 unique 会折叠
-# 多 kd 观察行（correctness review #2）。
-STOCK_LIMIT_KEY_COLUMNS = ("instrument_id", "trade_date", "knowledge_date")
+# Disclosure versions must survive both writes and the store's read deduplication.
+DISCLOSED_MARKET_KEY_COLUMNS = ("instrument_id", "trade_date", "knowledge_date")
 
 
 class MarketProvider(Provider):
@@ -97,8 +95,8 @@ class MarketProvider(Provider):
             etf_status=EtfStatusReader(store),
             instrument=instrument_reader,
             etf_adj=EtfAdjFactorReader(store),
-            etf_nav=EtfNavReader(store),
-            stock_limit=StockLimitReader(_stock_limit_parquet_store(settings)),
+            etf_nav=EtfNavReader(_disclosed_market_parquet_store(settings)),
+            stock_limit=StockLimitReader(_disclosed_market_parquet_store(settings)),
             index_bars=IndexBarsReader(store),
             global_index_bars=GlobalIndexBarsReader(global_store),
             index_constituent=IndexConstituentReader(data_root=settings.data_root),
@@ -107,7 +105,7 @@ class MarketProvider(Provider):
             futures_daily=FuturesDailyReader(futures_store),
             futures_basic=FuturesBasicReader(futures_basic_store),
             limit_list=LimitListReader(_limit_list_parquet_store(settings)),
-            fund_share=FundShareReader(_fund_share_parquet_store(settings)),
+            fund_share=FundShareReader(_disclosed_market_parquet_store(settings)),
         )
 
     @provide
@@ -134,9 +132,11 @@ class MarketProvider(Provider):
             etf_bars=EtfBarsWriter(store),
             etf_status=EtfStatusWriter(store),
             etf_adj=EtfAdjFactorWriter(store),
-            etf_nav=EtfNavWriter(store),
+            etf_nav=EtfNavWriter(
+                _disclosed_market_parquet_store(settings, file_lock=file_lock_manager)
+            ),
             stock_limit=StockLimitWriter(
-                _stock_limit_parquet_store(settings, file_lock=file_lock_manager)
+                _disclosed_market_parquet_store(settings, file_lock=file_lock_manager)
             ),
             index_bars=IndexBarsWriter(store),
             global_index_bars=GlobalIndexBarsWriter(global_store),
@@ -149,7 +149,7 @@ class MarketProvider(Provider):
                 _limit_list_parquet_store(settings, file_lock=file_lock_manager)
             ),
             fund_share=FundShareWriter(
-                _fund_share_parquet_store(settings, file_lock=file_lock_manager)
+                _disclosed_market_parquet_store(settings, file_lock=file_lock_manager)
             ),
         )
 
@@ -219,13 +219,13 @@ def _futures_basic_parquet_store(
     )
 
 
-def _stock_limit_parquet_store(
+def _disclosed_market_parquet_store(
     settings: DataStoreSettings, *, file_lock: FileLockManager | None = None
 ) -> ParquetStore:
-    """涨跌停价格按 (instrument_id, trade_date, knowledge_date) 幂等."""
+    """Keep disclosed versions of NAV, share counts and stock limits."""
     return ParquetStore(
         settings.data_root,
-        key_columns=STOCK_LIMIT_KEY_COLUMNS,
+        key_columns=DISCLOSED_MARKET_KEY_COLUMNS,
         date_column="trade_date",
         instrument_column="instrument_id",
         file_lock=file_lock,
@@ -239,19 +239,6 @@ def _limit_list_parquet_store(
     return ParquetStore(
         settings.data_root,
         key_columns=("instrument_id", "trade_date", "limit_type", "knowledge_date"),
-        date_column="trade_date",
-        instrument_column="instrument_id",
-        file_lock=file_lock,
-    )
-
-
-def _fund_share_parquet_store(
-    settings: DataStoreSettings, *, file_lock: FileLockManager | None = None
-) -> ParquetStore:
-    """基金份额行以 (标的, 交易日, kd) 为自然键（万份）."""
-    return ParquetStore(
-        settings.data_root,
-        key_columns=("instrument_id", "trade_date", "knowledge_date"),
         date_column="trade_date",
         instrument_column="instrument_id",
         file_lock=file_lock,

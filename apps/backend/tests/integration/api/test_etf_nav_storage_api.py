@@ -16,31 +16,49 @@ from ditto_data.services.deps import MarketReaders
 from ditto_data.services.market_service import MarketService
 from ditto_data.storage.market.etf.nav.nav_reader import EtfNavReader
 from ditto_data.storage.market.etf.nav.nav_writer import EtfNavWriter
-from ditto_platform.foundation import ParquetStore
+from ditto_platform.foundation import OnDuplicate, ParquetStore
 from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("mode", ["stored", "empty", "missing_reader", "missing_value"])
+@pytest.mark.parametrize(
+    "mode", ["stored", "revisions", "empty", "missing_reader", "missing_value"]
+)
 async def test_nav_api_reads_canonical_unit_nav(tmp_path: Path, mode: str) -> None:
     register_metrics()
     store = ParquetStore(
-        tmp_path, key_columns=("instrument_id", "trade_date"), date_column="trade_date"
+        tmp_path,
+        key_columns=("instrument_id", "trade_date", "knowledge_date"),
+        date_column="trade_date",
     )
-    if mode in {"stored", "missing_value"}:
+    if mode in {"stored", "revisions", "missing_value"}:
         EtfNavWriter(store).write(
             pl.DataFrame(
                 {
                     "instrument_id": [1, 1],
                     "trade_date": [date(2026, 9, 29), date(2026, 9, 30)],
                     "knowledge_date": [None, date(2026, 10, 2)],
-                    "unit_nav": [4.4, 4.5] if mode == "stored" else [None, None],
+                    "unit_nav": [None, None] if mode == "missing_value" else [4.4, 4.5],
                     "acc_nav": [99.0, 99.0],
                 },
                 schema_overrides={"unit_nav": pl.Float64},
             ),
             2026,
+        )
+    if mode == "revisions":
+        EtfNavWriter(store).write(
+            pl.DataFrame(
+                {
+                    "instrument_id": [1],
+                    "trade_date": [date(2026, 9, 30)],
+                    "knowledge_date": [date(2026, 10, 3)],
+                    "unit_nav": [4.6],
+                    "acc_nav": [99.0],
+                }
+            ),
+            2026,
+            on_duplicate=OnDuplicate.VERIFY_IDENTICAL,
         )
     readers = MarketReaders(
         stock_bars=MagicMock(),
@@ -81,12 +99,13 @@ async def test_nav_api_reads_canonical_unit_nav(tmp_path: Path, mode: str) -> No
                 },
             )
         assert response.status_code == 200, response.text
+        assert response.json()["read_semantics"] == "latest_available"
         assert response.json()["data"]["points"] == (
             [
                 {"nav_date": "2026-09-29", "nav": 4.4},
-                {"nav_date": "2026-09-30", "nav": 4.5},
+                {"nav_date": "2026-09-30", "nav": 4.6 if mode == "revisions" else 4.5},
             ]
-            if mode == "stored"
+            if mode in {"stored", "revisions"}
             else []
         )
     finally:

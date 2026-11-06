@@ -70,8 +70,10 @@ def _merge_keep_first(
     """KEEP_FIRST 策略 — 保留已有数据，丢弃新数据中的重复行。"""
     existing_keys = existing.select(key_columns)
     new_keys = df.select(key_columns)
-    non_overlapping = new_keys.join(existing_keys, on=key_columns, how="anti")
-    df = df.join(non_overlapping, on=key_columns, how="inner")
+    non_overlapping = new_keys.join(
+        existing_keys, on=key_columns, how="anti", nulls_equal=True
+    )
+    df = df.join(non_overlapping, on=key_columns, how="inner", nulls_equal=True)
     combined = pl.concat([existing, df])
     return MergeResult(df=combined, added=len(df), updated=0)
 
@@ -114,10 +116,10 @@ def _merge_verify_identical(
     provenance_only = {"source_ticker"} - set(key_columns)
     compare_columns = [c for c in df.columns if c not in provenance_only]
     incoming = df.select(compare_columns).join(
-        existing.select(key_columns), on=key_columns, how="semi"
+        existing.select(key_columns), on=key_columns, how="semi", nulls_equal=True
     )
     stored = existing.select(compare_columns).join(
-        df.select(key_columns), on=key_columns, how="semi"
+        df.select(key_columns), on=key_columns, how="semi", nulls_equal=True
     )
     if not incoming.sort(key_columns).equals(
         stored.select(incoming.columns).sort(key_columns)
@@ -153,7 +155,7 @@ def _merge_keep_last_flagged(
     flagged = df.filter(pl.col(CORRECTION_FLAG_COLUMN).fill_null(False))
     unflagged = df.filter(~pl.col(CORRECTION_FLAG_COLUMN).fill_null(False))
     unflagged_new = unflagged.join(
-        existing.select(key_columns), on=key_columns, how="anti"
+        existing.select(key_columns), on=key_columns, how="anti", nulls_equal=True
     )
     combined = pl.concat(
         [
@@ -164,7 +166,7 @@ def _merge_keep_last_flagged(
         how="vertical_relaxed",
     ).unique(subset=key_columns, keep="last")
     flagged_overlap = flagged.join(
-        existing.select(key_columns), on=key_columns, how="semi"
+        existing.select(key_columns), on=key_columns, how="semi", nulls_equal=True
     ).height
     added = len(unflagged_new) + (len(flagged) - flagged_overlap)
     return MergeResult(df=combined, added=added, updated=flagged_overlap)
@@ -208,7 +210,11 @@ def merge_with_existing(
     existing_keys = existing.select(key_columns)
     new_keys = df.select(key_columns)
 
-    merged_keys = existing_keys.join(new_keys, on=key_columns, how="inner")
+    # Match null key components just as batch group_by/unique does; an unchanged
+    # retry must not append another row or evade changed-value rejection.
+    merged_keys = existing_keys.join(
+        new_keys, on=key_columns, how="inner", nulls_equal=True
+    )
     overlap_count = len(merged_keys)
 
     if merged_keys.is_empty():

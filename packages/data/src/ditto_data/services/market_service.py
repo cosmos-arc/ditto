@@ -379,6 +379,13 @@ class MarketService:
             )
             return pl.DataFrame()
         df = reader.read(instrument_ids=instrument_ids, start_date=start, end_date=end)
+        if not df.is_empty():
+            # This display query is latest_available; storage retains disclosures.
+            df = (
+                df.sort("knowledge_date", nulls_last=False)
+                .unique(subset=["instrument_id", "trade_date"], keep="last")
+                .sort(["trade_date", "instrument_id"])
+            )
         Metrics.data_records.add(
             len(df),
             {"dataset": "etf_nav", "operation": "get"},
