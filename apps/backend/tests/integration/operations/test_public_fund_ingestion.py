@@ -1,6 +1,7 @@
 """Recorded provider responses through the real ingestion and query composition."""
 
 import json
+import sqlite3
 from hashlib import sha256
 from pathlib import Path
 
@@ -12,11 +13,7 @@ from ditto_apps.registry.infra.init_providers import MetadataDbInitProvider
 from ditto_kernel.instrument import InstrumentIngestParams
 
 
-@pytest.mark.integration
-@pytest.mark.pit
-def test_otc_fund_reaches_query_without_tradable_identity(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, respx_mock
-) -> None:
+def _configure_state(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     repo = Path(__file__).parents[5]
     root = tmp_path / "state"
     root.mkdir()
@@ -25,7 +22,18 @@ def test_otc_fund_reaches_query_without_tradable_identity(
     monkeypatch.setenv("DITTO_STATE_ROOT", str(root))
     monkeypatch.setenv("DITTO_CACHE_ROOT", str(tmp_path / "cache"))
     monkeypatch.setenv("TUSHARE_TOKEN", "recorded-provider-test")
+    monkeypatch.setenv("SQLITE_PATH", str(root / "metadata" / "metadata.sqlite"))
     assert MetadataDbInitProvider().initialize(root).success
+
+    return root
+
+
+@pytest.mark.integration
+@pytest.mark.pit
+def test_otc_fund_reaches_query_without_tradable_identity(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, respx_mock
+) -> None:
+    root = _configure_state(tmp_path, monkeypatch)
 
     calls: list[dict] = []
 
@@ -67,7 +75,7 @@ def test_otc_fund_reaches_query_without_tradable_identity(
             ]
         else:
             raise AssertionError(body["api_name"])
-        if params.get("offset", 0):
+        if params.get("offset", 0) or params.get("end_date") == "20141231":
             rows = []
         return httpx.Response(
             200,
@@ -88,6 +96,7 @@ def test_otc_fund_reaches_query_without_tradable_identity(
         for _ in range(2):
             result = bundle.coordinator.ingest_by_instrument("fund_portfolio", params)
             assert result.status == "success", result
+        _assert_per_fund_empty_replay(bundle.coordinator, root)
         snapshots = bundle.snapshot_reader.list_snapshots(dataset_id="fund_portfolio")
         assert snapshots
         assert all(
@@ -122,11 +131,30 @@ def test_otc_fund_reaches_query_without_tradable_identity(
         assert frame["report_type"].to_list() == ["unknown"]
         observations = query.fundamental.list_fund_portfolio_observations("000001.OF")
         assert observations
-        assert all(row["payload_retained"] for row in observations)
+        assert {row["payload_retained"] for row in observations} == {True, False}
         assert observations[0]["snapshot_id"] in {s.snapshot_id for s in snapshots}
         assert query.fundamental.list_fund_portfolio_observations("999999.OF") == []
     _assert_report_round_trip(frame["holdings_sha256"][0])
     assert any(call["params"].get("offset", 0) > 0 for call in calls)
+
+
+def _assert_per_fund_empty_replay(coordinator, root: Path) -> None:
+    empty_params = InstrumentIngestParams(
+        ticker="000001.OF", start_date="2014-01-01", end_date="2014-12-31"
+    )
+    for _ in range(2):
+        empty = coordinator.ingest_by_instrument("fund_portfolio", empty_params)
+        assert empty.status == "success", empty
+        assert empty.row_count == 0
+    # Positive/zero observations and COMPLETE replay stay per fund.
+    with sqlite3.connect(root / "metadata" / "metadata.sqlite") as database:
+        assert (
+            database.execute(
+                "SELECT COUNT(*) FROM ingestion_log "
+                "WHERE dataset='fund_portfolio' AND status='SUCCESS'"
+            ).fetchone()[0]
+            == 0
+        )
 
 
 def _assert_report_round_trip(holdings_sha256: str) -> None:

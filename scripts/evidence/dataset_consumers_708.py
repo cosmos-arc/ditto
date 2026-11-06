@@ -75,6 +75,11 @@ with closing(make_app_container()) as c:
         try:
             value = fn()
             if isinstance(value, pl.DataFrame):
+                if (
+                    ds == "industry_mapping"
+                    and not value["sector_id"].drop_nulls().len()
+                ):
+                    raise RuntimeError("industry grouping requires a known sector_id")
                 r.update(
                     rows=value.height,
                     fields=value.columns,
