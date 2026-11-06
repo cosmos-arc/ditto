@@ -104,7 +104,7 @@ def test_nav_preserves_unknown_disclosure_and_remains_comparable(
             "nav_date": ["20260929", "20260930"],
             "ann_date": ["20260930", disclosure],
             "unit_nav": [4.4, 4.5],
-            "acc_nav": [5.4, 5.5],
+            "accum_nav": [5.4, 5.5],
         }
     )
     if disclosure == "missing":
@@ -128,6 +128,7 @@ def test_nav_preserves_unknown_disclosure_and_remains_comparable(
         else None
     )
     assert frame["knowledge_date"].dtype == pl.Date
+    assert frame["acc_nav"].to_list() == [5.4, 5.5]
     assert frame["knowledge_date"][1] == expected
     store = ParquetStore(
         tmp_path, key_columns=("instrument_id", "trade_date"), date_column="trade_date"

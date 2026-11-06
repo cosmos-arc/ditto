@@ -198,7 +198,8 @@ class TestFundAdjUniverseIntersection:
 class TestFundNavUniverseIntersection:
     """fund_nav 全市场滚动窗拉取同样与 universe 交集（同根修复）."""
 
-    def test_window_drops_non_etf_rows(self, mocker) -> None:
+    @pytest.mark.parametrize("cumulative", [4.2, None])
+    def test_window_drops_non_etf_rows(self, mocker, cumulative: float | None) -> None:
         # #585 日期守卫：滚动窗逐日查询的响应行落在请求 nav_date。
         def fund_nav(**kw):
             day = kw["nav_date"]
@@ -208,7 +209,7 @@ class TestFundNavUniverseIntersection:
                     "ann_date": ["20240401", "20240401"],
                     "nav_date": [day, day],
                     "unit_nav": [4.05, 1.05],
-                    "acc_nav": [4.2, 1.1],
+                    "accum_nav": [cumulative, 1.1],
                 }
             )
 
@@ -221,6 +222,18 @@ class TestFundNavUniverseIntersection:
         result = adapter.fetch_fund_nav(trade_date="2024-04-01")
 
         assert result["source_ticker"].unique().to_list() == [_ETF]
+        assert result["acc_nav"].dtype == pl.Float64
+        assert result["acc_nav"].unique().to_list() == [cumulative]
+        nav_calls = [
+            call
+            for call in client.query.call_args_list
+            if call.kwargs["api_name"] == "fund_nav"
+        ]
+        assert nav_calls
+        assert all(
+            call.kwargs["fields"] == "ts_code,ann_date,nav_date,unit_nav,accum_nav"
+            for call in nav_calls
+        )
 
     def test_ticker_mode_rejects_lof(self, mocker) -> None:
         client = _client_mock(mocker, {"etf_basic": _etf_basic_response()})

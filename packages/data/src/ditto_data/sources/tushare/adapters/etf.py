@@ -441,7 +441,7 @@ class ETFTushareAdapter(BaseTushareAdapter):
             trade_date=trade_date,
             source_ticker=source_ticker,
         )
-        fields = "ts_code,ann_date,nav_date,unit_nav,acc_nav"
+        fields = "ts_code,ann_date,nav_date,unit_nav,accum_nav"
         if source_ticker:
             self._require_etf_ticker(source_ticker, "etf_nav")
         else:
