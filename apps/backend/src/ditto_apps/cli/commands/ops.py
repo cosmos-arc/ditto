@@ -34,6 +34,7 @@ from ditto_application.queries.ingestion_status import (
     IngestionStatusQueryFacade,
     summarize_status_by_maturity,
 )
+from ditto_application.queries.market import MarketQueryFacade
 from ditto_kernel.exceptions import DittoError
 from ditto_platform.foundation.storage.sqlite_backup import (
     SQLiteBackupError,
@@ -214,9 +215,12 @@ def _reconcile_primary(
         # adj_factor 主源：当日因子帧（比例所需回看窗由 handler 上下文提供）
         market = container.get(MarketService)
         return market.get_adj_factors(date, date), container.get(Path)
-    if dataset in {"index_daily", "etf_nav"}:
+    if dataset == "etf_nav":
+        market_query = container.get(MarketQueryFacade)
+        return market_query.get_etf_nav(start=date, end=date), container.get(Path)
+    if dataset == "index_daily":
         readers = container.get(MarketReaders)
-        reader = readers.index_bars if dataset == "index_daily" else readers.etf_nav
+        reader = readers.index_bars
         if reader is None:
             typer.secho(f"主源 {dataset} 读取器未配置", fg=typer.colors.RED, err=True)
             raise typer.Exit(1)
