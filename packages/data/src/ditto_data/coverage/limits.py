@@ -62,8 +62,6 @@ _KNOWLEDGE_AXES: dict[str, str] = {
     "valuation_metrics": "derived_t1",
     "margin_trading": "derived_t1",
     "cyq_perf": "derived_t1",
-    "commodity_daily": "derived_t1",
-    "fx_daily": "derived_t1",
     "stock_status": "derived_t1",
     # 即日
     "adj_factor": "same_day",
@@ -82,7 +80,7 @@ _KNOWLEDGE_AXES: dict[str, str] = {
 
 
 def get_knowledge_axis(dataset: str) -> str | None:
-    """返回数据集知识轴分类；未分类（如纯元数据集）返回 None。"""
+    """返回已保存的知识轴分类；纯元数据和无知识轴参考序列返回 None。"""
     return _KNOWLEDGE_AXES.get(dataset)
 
 
@@ -123,8 +121,8 @@ _DATASET_COVERAGE: dict[str, DatasetCoverageLimit] = {
         dataset="calendar",
         domain="metadata",
         status="partial",
-        measured_start=None,
-        measured_end=None,
+        measured_start="2013-01-01",
+        measured_end="2027-12-31",
         gaps=("北向/结算日历未独立取证,严格跨市场公开时间用途依 #706。",),
         notes="SSE 交易日历覆盖目标窗及前后边界;不代表北向/结算日历。",
     ),
@@ -157,10 +155,12 @@ _DATASET_COVERAGE: dict[str, DatasetCoverageLimit] = {
     "corporate_actions": DatasetCoverageLimit(
         dataset="corporate_actions",
         domain="capital",
-        status="ready",
+        status="partial",
         measured_start="2007-05-23",
         measured_end="2034-01-20",
-        gaps=(),
+        gaps=(
+            "摄取账本仍有未归因失败,不能以库存或消费样本声称闭合;具体 source/date/error 见 current_failures。",
+        ),
         notes="冻结用途为回购/解禁,rights 排除;计划日可到 2034 年,不代表已实施,PIT 由可知时间守。",
     ),
     "cyq_perf": DatasetCoverageLimit(
@@ -208,11 +208,13 @@ _DATASET_COVERAGE: dict[str, DatasetCoverageLimit] = {
         measured_start=None,
         measured_end=None,
         gaps=(
-            "21 个历史 ETF 主表身份为 ETF 联接/LOF,分类异常保留待纠正;不将其源拒绝说成已补齐。",
+            "21 个历史错误分类已纠正且保留审计分解;历史分类公开版本未证,仅当前分类观察。",
         ),
         notes=(
-            "库存 1,868;当前 etf_basic 返回 1,847,另 21 个历史身份经 fund_"
-            "basic 证实为 ETF 联接/LOF。保留身份及历史,分类差额显式列出,不缩历史审计分母。"
+            "历史扩展表 1,868=1,847 ETF+21 联接/LOF。21 个 instrument."
+            "asset_class 已按 fund_basic 与 etf_basic 排除证据纠正为 fu"
+            "nd;ETF 名册/候选实际均为 1,847。旧 ID、映射、扩展和历史行情保留;当前分类纠错不"
+            "声称历史分类版本。"
         ),
     ),
     "etf_daily": DatasetCoverageLimit(
@@ -230,7 +232,10 @@ _DATASET_COVERAGE: dict[str, DatasetCoverageLimit] = {
         status="partial",
         measured_start="2014-01-01",
         measured_end="2026-11-02",
-        gaps=("末端 2026-11-02;当前失败/迟发治理由 #707 验收。",),
+        gaps=(
+            "末端 2026-11-02;当前失败/迟发治理由 #707 验收。",
+            "摄取账本仍有未归因失败,不能以库存或消费样本声称闭合;具体 source/date/error 见 current_failures。",
+        ),
         notes="单位/累计净值与公告锚,修订不补零;本地末端 11-02,夜链失败与迟发治理归 #707,不能称 11-05 已新鲜。",
     ),
     "etf_reference": DatasetCoverageLimit(
@@ -258,9 +263,17 @@ _DATASET_COVERAGE: dict[str, DatasetCoverageLimit] = {
         measured_start="2013-01-04",
         measured_end="2026-11-05",
         gaps=(
-            "补入缺失 ETF 价格后重新计算并补齐因子;非 ETF 历史身份和原生空响应按代码/区间单列,最终计数见 #708。",
+            (
+                "当前 ETF 有价缺因子残余 30 会话/3 码,fund_adj 同窗返回 0;原 21 个非"
+                " ETF 身份的 19 旧会话另列,不要求 ETF 源补 LOF。"
+            ),
+            "摄取账本仍有未归因失败,不能以库存或消费样本声称闭合;具体 source/date/error 见 current_failures。",
         ),
-        notes="ETF 后复权图表已实际消费;原 92 会话/65 代码逐项重取。源不返回和非 ETF 身份拒绝单列,缺因子仍 fail closed。",
+        notes=(
+            "ETF 后复权图表已实际消费;价格补齐后复测并逐项重取;当前 ETF 残余 30 会话属 512"
+            "390.SH/560000.SH/560650.SH 原生零响应。21 个已纠正普通基金的旧因子"
+            "缺口另列,缺因子仍 fail closed。"
+        ),
     ),
     "fund_portfolio": DatasetCoverageLimit(
         dataset="fund_portfolio",
@@ -272,6 +285,7 @@ _DATASET_COVERAGE: dict[str, DatasetCoverageLimit] = {
             "全持有人批量补数执行结果见 #708;未验证报告类型保持 unknown。",
             "原文对拍已证半年报/年报公告组缺前十股票;不支持要求完整持仓/全资产的消费。",
             "按需 T2 批次摄取;旧全市场日级调用在跳过检查前拒绝。后续须人工刷新,尚无自动全公募日更承诺。",
+            "摄取账本仍有未归因失败,不能以库存或消费样本声称闭合;具体 source/date/error 见 current_failures。",
         ),
         notes=(
             "fund_basic E/O×L/D/I 共 32,842 独立持有人;有界逐基金摄取。持仓金额"
@@ -284,10 +298,14 @@ _DATASET_COVERAGE: dict[str, DatasetCoverageLimit] = {
     "fund_share": DatasetCoverageLimit(
         dataset="fund_share",
         domain="market",
-        status="ready",
+        status="partial",
         measured_start="2013-01-04",
         measured_end="2026-11-04",
-        gaps=(),
+        gaps=(
+            "ETF 无状态全集;份额不承诺逐日必有,旧 87.9% 会话在场仅为观测口径,尚未逐正式集合闭合。",
+            "旧源全量与本地差额含 LOF/非 ETF;当前分类纠正不会把存量差额自动变为已补齐。",
+            "摄取账本仍有未归因失败,不能以库存或消费样本声称闭合;具体 source/date/error 见 current_failures。",
+        ),
         notes="正式 ETF 份额观察,万份;源不披露与零份额不同;末端及 LOF/旧码差额随正式范围展示。",
     ),
     "futures_basic": DatasetCoverageLimit(
@@ -331,6 +349,7 @@ _DATASET_COVERAGE: dict[str, DatasetCoverageLimit] = {
         measured_end="2026-11-04",
         gaps=(
             "RTS 的 2014–2019、IBOVESPA 的 2014–2026-07-02:index_global 原生请求返回 0。",
+            "摄取账本仍有未归因失败,不能以库存或消费样本声称闭合;具体 source/date/error 见 current_failures。",
         ),
         notes=(
             "21/21 参考指数;RTS 2020-01-03 起,IBOVESPA 2026-07-03 "
@@ -377,10 +396,12 @@ _DATASET_COVERAGE: dict[str, DatasetCoverageLimit] = {
     "index_daily": DatasetCoverageLimit(
         dataset="index_daily",
         domain="market",
-        status="ready",
+        status="partial",
         measured_start="2014-01-02",
         measured_end="2026-11-05",
-        gaps=(),
+        gaps=(
+            "摄取账本仍有未归因失败,不能以库存或消费样本声称闭合;具体 source/date/error 见 current_failures。",
+        ),
         notes="冻结 178/178 代码有行情;价格/成交量展示,早于指数发布或源实际起点不回造。",
     ),
     "index_valuation": DatasetCoverageLimit(
@@ -400,10 +421,11 @@ _DATASET_COVERAGE: dict[str, DatasetCoverageLimit] = {
         measured_end="2026-10-30",
         gaps=(
             "23/23 指数十月权重已逐代码补齐;观察日不等于公告/生效时刻,严格历史用途不放行。",
+            "摄取账本仍有未归因失败,不能以库存或消费样本声称闭合;具体 source/date/error 见 current_failures。",
         ),
         notes=(
             "冻结 23 指数;按单 index_code 取数。月度观察日不是公告或生效日;未知发布时刻不伪"
-            "造。10 月源端可取,需与本地尾部核对;不因今日名册回造成立前成员。"
+            "造。23/23 代码十月窗口已补齐并核对;不因今日名册回造成立前成员。"
         ),
     ),
     "industry_classification": DatasetCoverageLimit(
@@ -465,7 +487,10 @@ _DATASET_COVERAGE: dict[str, DatasetCoverageLimit] = {
         status="partial",
         measured_start="2013-01-04",
         measured_end="2026-11-04",
-        gaps=("迟发、错误旧版本与画像选版未由本票豁免;分别见 #706/#707。",),
+        gaps=(
+            "迟发、错误旧版本与画像选版未由本票豁免;分别见 #706/#707。",
+            "摄取账本仍有未归因失败,不能以库存或消费样本声称闭合;具体 source/date/error 见 current_failures。",
+        ),
         notes=(
             "沪深两融余额/融资买入额,元;T+1 上午发布,11-05 截面不因 EOD 零行视为完整。旧 "
             "knowledge_date 及画像选版归 #706,09:15 运行归 #707。"
@@ -553,6 +578,7 @@ _DATASET_COVERAGE: dict[str, DatasetCoverageLimit] = {
         gaps=(
             "官方 2016 年前不覆盖;精确库存起点 2016-08-09。",
             "历史缺状态与停牌有价矛盾尚有残余,严格消费者不得把未知当正常。",
+            "摄取账本仍有未归因失败,不能以库存或消费样本声称闭合;具体 source/date/error 见 current_failures。",
         ),
         notes="bak_basic 官方声明 2016 年起;本库存实测 2016-08-09 起,两者不可混写。缺状态与长停矛盾证据保留未知,不放行严格历史消费。",
     ),
@@ -568,10 +594,12 @@ _DATASET_COVERAGE: dict[str, DatasetCoverageLimit] = {
     "top10_holders": DatasetCoverageLimit(
         dataset="top10_holders",
         domain="capital",
-        status="ready",
+        status="partial",
         measured_start="2014-01-02",
         measured_end="2026-11-03",
-        gaps=(),
+        gaps=(
+            "摄取账本仍有未归因失败,不能以库存或消费样本声称闭合;具体 source/date/error 见 current_failures。",
+        ),
         notes="公告锚十大股东披露;持股股数/比例与股类透传,名单退出不推造清仓,保留版本限制。",
     ),
     "top_inst": DatasetCoverageLimit(
@@ -586,10 +614,12 @@ _DATASET_COVERAGE: dict[str, DatasetCoverageLimit] = {
     "top_list": DatasetCoverageLimit(
         dataset="top_list",
         domain="capital",
-        status="ready",
+        status="partial",
         measured_start="2014-01-02",
         measured_end="2026-11-05",
-        gaps=(),
+        gaps=(
+            "摄取账本仍有未归因失败,不能以库存或消费样本声称闭合;具体 source/date/error 见 current_failures。",
+        ),
         notes="沪深龙虎榜事件展示;无事件与抓取失败分开;当前夜链失败治理归 #707。",
     ),
     "valuation_metrics": DatasetCoverageLimit(

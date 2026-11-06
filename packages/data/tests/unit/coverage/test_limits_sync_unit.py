@@ -104,3 +104,6 @@ def test_knowledge_axis_vocabulary_and_key_datasets() -> None:
     # 纯元数据集未分类（None），不伪造知识轴
     assert get_knowledge_axis("calendar") is None
     assert get_knowledge_axis("stock_basic") is None
+    # FX/商品 schema 无 PIT 列，不能凭事实日期宣称保存了 T+1 知识轴。
+    assert get_knowledge_axis("fx_daily") is None
+    assert get_knowledge_axis("commodity_daily") is None

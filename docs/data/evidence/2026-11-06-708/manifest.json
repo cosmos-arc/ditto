@@ -4,8 +4,8 @@
     "bytes": 916
   },
   "consumer-results.json": {
-    "sha256": "ecfeb24897e3a6f029fca9c105962afd41e6b01ce8592389d23fa3445cf5efb8",
-    "bytes": 177820
+    "sha256": "d90b3bc769b9c4d4cecac55dbe62f2b0afe5faeb765596f18f6f0452480a813c",
+    "bytes": 180470
   },
   "daily.json": {
     "sha256": "84e0cf0631763688e6ee4bdf90c4204722fd60a9130cd3de693442fc60f8af5e",
@@ -15,21 +15,33 @@
     "sha256": "00a27e5ae85f256f8d8a6afb60042c715665de13a8e71bdb7adfcf5a9283fa05",
     "bytes": 211
   },
+  "etf-classification-consumer.json": {
+    "sha256": "8af69d31de62e6f4546546d4283225a1002f274d0caacf8ee20c372d2139a5d5",
+    "bytes": 10907
+  },
+  "etf-classification-correction.json": {
+    "sha256": "58cfdd9d10efecb046889d8c76368461d37392f5ea39a39fd008638bfc4ab76d",
+    "bytes": 17961
+  },
   "etf-classification.json": {
     "sha256": "f6a1bda97b58f0d405b068d3ffe9d7c6bfa4c4387b132259d9014c9e04bc7051",
     "bytes": 7533
   },
   "etf-factor-results.json": {
-    "sha256": "2ddd293556ec655c5254d6674702289ae3a2c34701b75042f34302431175d793",
-    "bytes": 112358
+    "sha256": "984c17d482c8b0ad5fec6bea6f5c9fdca9ff40954583ac63870dffd57fded65d",
+    "bytes": 112870
   },
   "etf-price-probes.csv": {
     "sha256": "af41100e32a20ea2a5287584f1b51061061c2927edc99a98ae592bea50a8a405",
     "bytes": 75224
   },
   "fund-backfill-progress.json": {
-    "sha256": "8fa49e40fc8ca0435d88ea307d4eaf2175661bfb0558e8847ba6dc2d525e1a91",
-    "bytes": 1160
+    "sha256": "d5517ff04a5d03065ebd0aef79006841577a029228c3f6a479d97c9fb3cc1879",
+    "bytes": 375
+  },
+  "fund-durable-summary.json": {
+    "sha256": "f910f557e0f497be78e88952b6f2ecf913aa4767646fe00df42e22fec6c85bd3",
+    "bytes": 1444
   },
   "fund_basic.json": {
     "sha256": "091806a9b88e755c84a491c622661908304dff0ee62a8db68eeede0c83aa66e1",
@@ -52,8 +64,8 @@
     "bytes": 31845
   },
   "inventory.json": {
-    "sha256": "e5128aed14626e48124f0b6d47230d86086faaa65656b4713b908c0dcd1f5e3f",
-    "bytes": 25469
+    "sha256": "9815fa01f14635540b4e95e0c5b60d9b1e248159a77d013ca013ec90ba9d4860",
+    "bytes": 26385
   },
   "macro-current-probes.json": {
     "sha256": "1d59cf456e80d766542171d4432d85c3c3fc01be1d04c7a2a6c40d1951c0ea0f",
@@ -88,8 +100,8 @@
     "bytes": 915
   },
   "stock-price-probes.csv": {
-    "sha256": "012004d593842b2627554a22d01a783431cf56b48435efb3ac3202460ea4b8a3",
-    "bytes": 221099
+    "sha256": "b6c79358525040854cdba41945a7f4f17b616065ce95b54ba2966d7b8599dc5f",
+    "bytes": 269287
   },
   "tail-set-probes.json": {
     "sha256": "d11972643bb63251bb21b8934b833c8e8d999acfa8c63b899dd3eefd3d00b4e3",

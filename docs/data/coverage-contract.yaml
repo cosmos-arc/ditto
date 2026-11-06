@@ -2,7 +2,7 @@ meta:
   contract_version: '1'
   ticket: 'cosmos-arc/ditto#622 (parent #621)'
   created: '2026-10-30'
-  measured_at: '2026-11-06T04:53:51.566539+00:00'
+  measured_at: '2026-11-06T05:20:05.276539+00:00'
   baseline_calibration:
     ticket: cosmos-arc/ditto#658 (批次0 冻结基线)
     freeze_doc: docs/data/readiness-freeze-2026-11.md
@@ -260,10 +260,10 @@ datasets:
       storage: sqlite:trading_calendar
       rows: 5478
       instruments: 1
-      start: null
-      end: null
-      date_axis: cal_date
-      measured_at: '2026-11-06T04:53:35.934066+00:00'
+      start: '2013-01-01'
+      end: '2027-12-31'
+      date_axis: trade_date
+      measured_at: '2026-11-06T05:19:28.397811+00:00'
     catalog_latest:
       date: null
       partition_rows: null
@@ -312,7 +312,7 @@ datasets:
       start: null
       end: null
       date_axis: null
-      measured_at: '2026-11-06T04:53:35.935832+00:00'
+      measured_at: '2026-11-06T05:19:28.403511+00:00'
     catalog_latest:
       date: null
       partition_rows: null
@@ -360,7 +360,7 @@ datasets:
       start: null
       end: null
       date_axis: null
-      measured_at: '2026-11-06T04:53:35.937461+00:00'
+      measured_at: '2026-11-06T05:19:28.407551+00:00'
     catalog_latest:
       date: null
       partition_rows: null
@@ -380,10 +380,11 @@ datasets:
         freshness_at: '2026-11-05T13:55:04.331895+00:00'
     status: partial
     gaps:
-    - 21 个历史 ETF 主表身份为 ETF 联接/LOF,分类异常保留待纠正;不将其源拒绝说成已补齐。
+    - 21 个历史错误分类已纠正且保留审计分解;历史分类公开版本未证,仅当前分类观察。
     consumers:
     - 标的代码/交易所/生命周期识别；application 实测入口/参数/结果见 readiness-708-2026-11.md
-    notes: 库存 1,868;当前 etf_basic 返回 1,847,另 21 个历史身份经 fund_basic 证实为 ETF 联接/LOF。保留身份及历史,分类差额显式列出,不缩历史审计分母。
+    notes: 历史扩展表 1,868=1,847 ETF+21 联接/LOF。21 个 instrument.asset_class 已按 fund_basic 与 etf_basic 排除证据纠正为
+      fund;ETF 名册/候选实际均为 1,847。旧 ID、映射、扩展和历史行情保留;当前分类纠错不声称历史分类版本。
     verification_report: docs/data/readiness-708-2026-11.md
     current_failures: []
   index_basic:
@@ -408,7 +409,7 @@ datasets:
       start: null
       end: null
       date_axis: null
-      measured_at: '2026-11-06T04:53:35.937838+00:00'
+      measured_at: '2026-11-06T05:19:28.408248+00:00'
     catalog_latest:
       date: null
       partition_rows: null
@@ -454,7 +455,7 @@ datasets:
       start: '2013-01-04'
       end: '2026-11-05'
       date_axis: observed_on
-      measured_at: '2026-11-06T04:53:35.944382+00:00'
+      measured_at: '2026-11-06T05:19:28.421011+00:00'
     catalog_latest:
       date: null
       partition_rows: null
@@ -502,7 +503,7 @@ datasets:
       start: '2013-01-04'
       end: '2026-11-05'
       date_axis: trade_date
-      measured_at: '2026-11-06T04:53:37.781047+00:00'
+      measured_at: '2026-11-06T05:19:32.581474+00:00'
     catalog_latest:
       date: null
       partition_rows: null
@@ -550,7 +551,7 @@ datasets:
       start: '2013-01-04'
       end: '2026-11-05'
       date_axis: trade_date
-      measured_at: '2026-11-06T04:53:37.827948+00:00'
+      measured_at: '2026-11-06T05:19:33.030238+00:00'
     catalog_latest:
       date: null
       partition_rows: null
@@ -598,7 +599,7 @@ datasets:
       start: '2014-01-02'
       end: '2026-11-05'
       date_axis: trade_date
-      measured_at: '2026-11-06T04:53:37.837457+00:00'
+      measured_at: '2026-11-06T05:19:33.122750+00:00'
     catalog_latest:
       date: null
       partition_rows: null
@@ -616,8 +617,9 @@ datasets:
           created_at: '2026-11-05T14:05:16.408057+00:00'
         source: tushare
         freshness_at: '2026-11-05T14:05:16.408057+00:00'
-    status: ready
-    gaps: []
+    status: partial
+    gaps:
+    - 摄取账本仍有未归因失败,不能以库存或消费样本声称闭合;具体 source/date/error 见 current_failures。
     consumers:
     - 当前价格序列及成交量展示；application 实测入口/参数/结果见 readiness-708-2026-11.md
     notes: 冻结 178/178 代码有行情;价格/成交量展示,早于指数发布或源实际起点不回造。
@@ -649,7 +651,7 @@ datasets:
       start: '2014-01-01'
       end: '2026-11-04'
       date_axis: trade_date
-      measured_at: '2026-11-06T04:53:37.843902+00:00'
+      measured_at: '2026-11-06T05:19:33.140672+00:00'
     catalog_latest:
       date: null
       partition_rows: null
@@ -670,6 +672,7 @@ datasets:
     status: partial
     gaps:
     - RTS 的 2014–2019、IBOVESPA 的 2014–2026-07-02:index_global 原生请求返回 0。
+    - 摄取账本仍有未归因失败,不能以库存或消费样本声称闭合;具体 source/date/error 见 current_failures。
     consumers:
     - 21全球指数展示参考,禁止策略输入；application 实测入口/参数/结果见 readiness-708-2026-11.md
     notes: 21/21 参考指数;RTS 2020-01-03 起,IBOVESPA 2026-07-03 起;对应此前窗口 index_global 实测空。HKTECH 2020-07-27
@@ -708,7 +711,7 @@ datasets:
       start: '2016-08-09'
       end: '2026-11-05'
       date_axis: trade_date
-      measured_at: '2026-11-06T04:53:37.852685+00:00'
+      measured_at: '2026-11-06T05:19:33.162849+00:00'
     catalog_latest:
       date: null
       partition_rows: null
@@ -730,6 +733,7 @@ datasets:
     gaps:
     - 官方 2016 年前不覆盖;精确库存起点 2016-08-09。
     - 历史缺状态与停牌有价矛盾尚有残余,严格消费者不得把未知当正常。
+    - 摄取账本仍有未归因失败,不能以库存或消费样本声称闭合;具体 source/date/error 见 current_failures。
     consumers:
     - 辨别停牌、ST与正常交易会话；application 实测入口/参数/结果见 readiness-708-2026-11.md
     notes: bak_basic 官方声明 2016 年起;本库存实测 2016-08-09 起,两者不可混写。缺状态与长停矛盾证据保留未知,不放行严格历史消费。
@@ -777,7 +781,7 @@ datasets:
       start: '2013-01-04'
       end: '2026-11-05'
       date_axis: trade_date
-      measured_at: '2026-11-06T04:53:37.881976+00:00'
+      measured_at: '2026-11-06T05:19:33.251071+00:00'
     catalog_latest:
       date: null
       partition_rows: null
@@ -819,12 +823,12 @@ datasets:
       scope: 与 ETF 行情对齐
     measured:
       storage: parquet:market/etf/adj
-      rows: 1643241
+      rows: 1643599
       instruments: 1845
       start: '2013-01-04'
       end: '2026-11-05'
       date_axis: trade_date
-      measured_at: '2026-11-06T04:53:37.922682+00:00'
+      measured_at: '2026-11-06T05:19:33.469334+00:00'
     catalog_latest:
       date: null
       partition_rows: null
@@ -844,16 +848,18 @@ datasets:
         freshness_at: '2026-11-06T03:54:12.550046+00:00'
     status: partial
     gaps:
-    - '补入缺失 ETF 价格后重新计算并补齐因子;非 ETF 历史身份和原生空响应按代码/区间单列,最终计数见 #708。'
+    - 当前 ETF 有价缺因子残余 30 会话/3 码,fund_adj 同窗返回 0;原 21 个非 ETF 身份的 19 旧会话另列,不要求 ETF 源补 LOF。
+    - 摄取账本仍有未归因失败,不能以库存或消费样本声称闭合;具体 source/date/error 见 current_failures。
     consumers:
     - ETF后复权图表的因子消费；application 实测入口/参数/结果见 readiness-708-2026-11.md
-    notes: ETF 后复权图表已实际消费;原 92 会话/65 代码逐项重取。源不返回和非 ETF 身份拒绝单列,缺因子仍 fail closed。
+    notes: ETF 后复权图表已实际消费;价格补齐后复测并逐项重取;当前 ETF 残余 30 会话属 512390.SH/560000.SH/560650.SH 原生零响应。21 个已纠正普通基金的旧因子缺口另列,缺因子仍
+      fail closed。
     verification_report: docs/data/readiness-708-2026-11.md
     current_failures:
     - source: tushare
-      trade_date: '2026-10-15'
-      error_code: FETCH_ERROR
-      attempts: 4
+      trade_date: '2026-09-30'
+      error_code: UNKNOWN_ERROR
+      attempts: 100
   etf_nav:
     domain: market
     tier: t1_incremental
@@ -876,7 +882,7 @@ datasets:
       start: '2014-01-01'
       end: '2026-11-02'
       date_axis: trade_date
-      measured_at: '2026-11-06T04:53:37.930901+00:00'
+      measured_at: '2026-11-06T05:19:33.542801+00:00'
     catalog_latest:
       date: null
       partition_rows: null
@@ -897,6 +903,7 @@ datasets:
     status: partial
     gaps:
     - '末端 2026-11-02;当前失败/迟发治理由 #707 验收。'
+    - 摄取账本仍有未归因失败,不能以库存或消费样本声称闭合;具体 source/date/error 见 current_failures。
     consumers:
     - ETF单位及累计净值展示,不伪造收益基准；application 实测入口/参数/结果见 readiness-708-2026-11.md
     notes: '单位/累计净值与公告锚,修订不补零;本地末端 11-02,夜链失败与迟发治理归 #707,不能称 11-05 已新鲜。'
@@ -936,7 +943,7 @@ datasets:
       start: '2014-01-02'
       end: '2026-11-05'
       date_axis: trade_date
-      measured_at: '2026-11-06T04:53:37.939614+00:00'
+      measured_at: '2026-11-06T05:19:33.589590+00:00'
     catalog_latest:
       date: null
       partition_rows: null
@@ -983,7 +990,7 @@ datasets:
       start: '2013-01-04'
       end: '2026-11-05'
       date_axis: trade_date
-      measured_at: '2026-11-06T04:53:37.984693+00:00'
+      measured_at: '2026-11-06T05:19:33.813850+00:00'
     catalog_latest:
       date: null
       partition_rows: null
@@ -1031,7 +1038,7 @@ datasets:
       start: '2018-01-02'
       end: '2026-11-05'
       date_axis: trade_date
-      measured_at: '2026-11-06T04:53:38.032817+00:00'
+      measured_at: '2026-11-06T05:19:33.993230+00:00'
     catalog_latest:
       date: null
       partition_rows: null
@@ -1079,7 +1086,7 @@ datasets:
       start: '2020-01-02'
       end: '2026-11-05'
       date_axis: trade_date
-      measured_at: '2026-11-06T04:53:38.066361+00:00'
+      measured_at: '2026-11-06T05:19:34.096975+00:00'
     catalog_latest:
       date: null
       partition_rows: null
@@ -1127,7 +1134,7 @@ datasets:
       start: '2014-01-02'
       end: '2026-11-05'
       date_axis: trade_date
-      measured_at: '2026-11-06T04:53:38.080619+00:00'
+      measured_at: '2026-11-06T05:19:34.166302+00:00'
     catalog_latest:
       date: null
       partition_rows: null
@@ -1145,8 +1152,9 @@ datasets:
           created_at: '2026-11-05T18:07:15.911166+00:00'
         source: tushare
         freshness_at: '2026-11-05T18:07:15.911166+00:00'
-    status: ready
-    gaps: []
+    status: partial
+    gaps:
+    - 摄取账本仍有未归因失败,不能以库存或消费样本声称闭合;具体 source/date/error 见 current_failures。
     consumers:
     - 个股资金/披露事实展示,不推导整体持仓；application 实测入口/参数/结果见 readiness-708-2026-11.md
     notes: '沪深龙虎榜事件展示;无事件与抓取失败分开;当前夜链失败治理归 #707。'
@@ -1186,7 +1194,7 @@ datasets:
       start: '2014-01-02'
       end: '2026-11-05'
       date_axis: trade_date
-      measured_at: '2026-11-06T04:53:38.089994+00:00'
+      measured_at: '2026-11-06T05:19:34.193368+00:00'
     catalog_latest:
       date: null
       partition_rows: null
@@ -1233,7 +1241,7 @@ datasets:
       start: '2016-06-29'
       end: '2026-09-30'
       date_axis: trade_date
-      measured_at: '2026-11-06T04:53:38.106960+00:00'
+      measured_at: '2026-11-06T05:19:34.230956+00:00'
     catalog_latest:
       date: null
       partition_rows: null
@@ -1296,7 +1304,7 @@ datasets:
       start: '2014-11-17'
       end: '2026-11-05'
       date_axis: trade_date
-      measured_at: '2026-11-06T04:53:38.131668+00:00'
+      measured_at: '2026-11-06T05:19:34.330776+00:00'
     catalog_latest:
       date: null
       partition_rows: null
@@ -1363,7 +1371,7 @@ datasets:
       start: '2012-03-31'
       end: '2026-09-30'
       date_axis: report_date
-      measured_at: '2026-11-06T04:53:38.141605+00:00'
+      measured_at: '2026-11-06T05:19:34.415952+00:00'
     catalog_latest:
       date: null
       partition_rows: null
@@ -1410,7 +1418,7 @@ datasets:
       start: '2013-01-04'
       end: '2026-11-04'
       date_axis: trade_date
-      measured_at: '2026-11-06T04:53:38.157207+00:00'
+      measured_at: '2026-11-06T05:19:34.448252+00:00'
     catalog_latest:
       date: null
       partition_rows: null
@@ -1428,8 +1436,11 @@ datasets:
           created_at: '2026-11-05T18:20:31.637250+00:00'
         source: tushare
         freshness_at: '2026-11-05T18:20:31.637250+00:00'
-    status: ready
-    gaps: []
+    status: partial
+    gaps:
+    - ETF 无状态全集;份额不承诺逐日必有,旧 87.9% 会话在场仅为观测口径,尚未逐正式集合闭合。
+    - 旧源全量与本地差额含 LOF/非 ETF;当前分类纠正不会把存量差额自动变为已补齐。
+    - 摄取账本仍有未归因失败,不能以库存或消费样本声称闭合;具体 source/date/error 见 current_failures。
     consumers:
     - ETF份额变化研究,万份,缺席不补零；application 实测入口/参数/结果见 readiness-708-2026-11.md
     notes: 正式 ETF 份额观察,万份;源不披露与零份额不同;末端及 LOF/旧码差额随正式范围展示。
@@ -1457,12 +1468,12 @@ datasets:
       scope: 全公募持有人含 `.OF`；独立身份、报告类型和原文证据
     measured:
       storage: parquet:fundamental/fund_portfolio
-      rows: 3691378
-      instruments: 5332
+      rows: 4481848
+      instruments: 6133
       start: '2013-09-30'
       end: '2026-09-30'
       date_axis: report_date
-      measured_at: '2026-11-06T04:53:38.173111+00:00'
+      measured_at: '2026-11-06T05:19:34.479915+00:00'
     catalog_latest:
       date: null
       partition_rows: null
@@ -1485,6 +1496,7 @@ datasets:
     - '全持有人批量补数执行结果见 #708;未验证报告类型保持 unknown。'
     - 原文对拍已证半年报/年报公告组缺前十股票;不支持要求完整持仓/全资产的消费。
     - 按需 T2 批次摄取;旧全市场日级调用在跳过检查前拒绝。后续须人工刷新,尚无自动全公募日更承诺。
+    - 摄取账本仍有未归因失败,不能以库存或消费样本声称闭合;具体 source/date/error 见 current_failures。
     consumers:
     - 公募已披露股票持仓与原文类型,非全资产；application 实测入口/参数/结果见 readiness-708-2026-11.md
     notes: fund_basic E/O×L/D/I 共 32,842 独立持有人;有界逐基金摄取。持仓金额元、数量股、源比率百分比;null 非零。报告类型仅取原文哈希与精确持仓内容绑定,其他
@@ -1533,7 +1545,7 @@ datasets:
       start: '2014-01-02'
       end: '2026-11-03'
       date_axis: knowledge_date
-      measured_at: '2026-11-06T04:53:38.188661+00:00'
+      measured_at: '2026-11-06T05:19:34.515548+00:00'
     catalog_latest:
       date: null
       partition_rows: null
@@ -1551,8 +1563,9 @@ datasets:
           created_at: '2026-11-05T13:55:34.751138+00:00'
         source: tushare
         freshness_at: '2026-11-05T13:55:34.751138+00:00'
-    status: ready
-    gaps: []
+    status: partial
+    gaps:
+    - 摄取账本仍有未归因失败,不能以库存或消费样本声称闭合;具体 source/date/error 见 current_failures。
     consumers:
     - 个股资金/披露事实展示,不推导整体持仓；application 实测入口/参数/结果见 readiness-708-2026-11.md
     notes: 公告锚十大股东披露;持股股数/比例与股类透传,名单退出不推造清仓,保留版本限制。
@@ -1600,7 +1613,7 @@ datasets:
       start: '2014-01-08'
       end: '2026-11-03'
       date_axis: knowledge_date
-      measured_at: '2026-11-06T04:53:38.207136+00:00'
+      measured_at: '2026-11-06T05:19:34.569761+00:00'
     catalog_latest:
       date: null
       partition_rows: null
@@ -1647,7 +1660,7 @@ datasets:
       start: '2011-12-31'
       end: '2026-09-30'
       date_axis: report_date
-      measured_at: '2026-11-06T04:53:38.222173+00:00'
+      measured_at: '2026-11-06T05:19:34.604481+00:00'
     catalog_latest:
       date: null
       partition_rows: null
@@ -1694,7 +1707,7 @@ datasets:
       start: '2011-12-31'
       end: '2026-09-30'
       date_axis: report_date
-      measured_at: '2026-11-06T04:53:38.383259+00:00'
+      measured_at: '2026-11-06T05:19:34.935438+00:00'
     catalog_latest:
       date: null
       partition_rows: null
@@ -1736,12 +1749,12 @@ datasets:
       scope: 同上；失败分区/末端真实闭合，不借其他财报推定完整
     measured:
       storage: sqlite:cash_flow
-      rows: 233393
+      rows: 233648
       instruments: 5880
       start: '2011-12-31'
       end: '2026-09-30'
       date_axis: report_date
-      measured_at: '2026-11-06T04:53:38.469809+00:00'
+      measured_at: '2026-11-06T05:19:35.231711+00:00'
     catalog_latest:
       date: null
       partition_rows: null
@@ -1766,15 +1779,7 @@ datasets:
     - 截至公告日可见的个股财务披露；application 实测入口/参数/结果见 readiness-708-2026-11.md
     notes: 现金流量表独立核验,金额元;旧失败分区不能借另外两表推定闭合,保留具体窗口复测。
     verification_report: docs/data/readiness-708-2026-11.md
-    current_failures:
-    - source: tushare
-      trade_date: '2023-10-09'
-      error_code: FETCH_ERROR
-      attempts: 8
-    - source: tushare
-      trade_date: '2023-07-03'
-      error_code: FETCH_ERROR
-      attempts: 10
+    current_failures: []
   dividend:
     domain: fundamental
     tier: t1_incremental
@@ -1797,7 +1802,7 @@ datasets:
       start: '2014-01-03'
       end: '2026-10-27'
       date_axis: knowledge_date
-      measured_at: '2026-11-06T04:53:38.584644+00:00'
+      measured_at: '2026-11-06T05:19:35.564839+00:00'
     catalog_latest:
       date: null
       partition_rows: null
@@ -1844,7 +1849,7 @@ datasets:
       start: '2014-01-02'
       end: '2026-11-05'
       date_axis: trade_date
-      measured_at: '2026-11-06T04:53:38.706355+00:00'
+      measured_at: '2026-11-06T05:19:35.791854+00:00'
     catalog_latest:
       date: null
       partition_rows: null
@@ -1891,7 +1896,7 @@ datasets:
       start: '2013-01-04'
       end: '2026-11-04'
       date_axis: trade_date
-      measured_at: '2026-11-06T04:53:46.378450+00:00'
+      measured_at: '2026-11-06T05:19:52.609516+00:00'
     catalog_latest:
       date: null
       partition_rows: null
@@ -1912,6 +1917,7 @@ datasets:
     status: partial
     gaps:
     - '迟发、错误旧版本与画像选版未由本票豁免;分别见 #706/#707。'
+    - 摄取账本仍有未归因失败,不能以库存或消费样本声称闭合;具体 source/date/error 见 current_failures。
     consumers:
     - 融资融券余额与买入额展示；application 实测入口/参数/结果见 readiness-708-2026-11.md
     notes: '沪深两融余额/融资买入额,元;T+1 上午发布,11-05 截面不因 EOD 零行视为完整。旧 knowledge_date 及画像选版归 #706,09:15 运行归 #707。'
@@ -1943,7 +1949,7 @@ datasets:
       start: '2014-03-07'
       end: '2026-09-18'
       date_axis: report_date
-      measured_at: '2026-11-06T04:53:49.605485+00:00'
+      measured_at: '2026-11-06T05:20:01.684635+00:00'
     catalog_latest:
       date: null
       partition_rows: null
@@ -1998,7 +2004,7 @@ datasets:
       start: '2014-01-01'
       end: '2026-11-05'
       date_axis: date
-      measured_at: '2026-11-06T04:53:50.448037+00:00'
+      measured_at: '2026-11-06T05:20:03.183814+00:00'
     catalog_latest:
       date: null
       partition_rows: null
@@ -2048,7 +2054,7 @@ datasets:
       start: '2014-01-01'
       end: '2026-11-04'
       date_axis: trade_date
-      measured_at: '2026-11-06T04:53:50.558494+00:00'
+      measured_at: '2026-11-06T05:20:03.439112+00:00'
     catalog_latest:
       date: null
       partition_rows: null
@@ -2096,7 +2102,7 @@ datasets:
       start: '2013-12-31'
       end: '2026-11-05'
       date_axis: trade_date
-      measured_at: '2026-11-06T04:53:50.574383+00:00'
+      measured_at: '2026-11-06T05:20:03.552358+00:00'
     catalog_latest:
       date: null
       partition_rows: null
@@ -2147,7 +2153,7 @@ datasets:
       start: '2007-05-23'
       end: '2034-01-20'
       date_axis: action_date
-      measured_at: '2026-11-06T04:53:50.601512+00:00'
+      measured_at: '2026-11-06T05:20:03.629508+00:00'
     catalog_latest:
       date: null
       partition_rows: null
@@ -2165,8 +2171,9 @@ datasets:
           created_at: '2026-11-05T18:01:21.279884+00:00'
         source: tushare
         freshness_at: '2026-11-05T18:01:21.279884+00:00'
-    status: ready
-    gaps: []
+    status: partial
+    gaps:
+    - 摄取账本仍有未归因失败,不能以库存或消费样本声称闭合;具体 source/date/error 见 current_failures。
     consumers:
     - 回购和解禁事件核对,计划日不等于已实施；application 实测入口/参数/结果见 readiness-708-2026-11.md
     notes: 冻结用途为回购/解禁,rights 排除;计划日可到 2034 年,不代表已实施,PIT 由可知时间守。
@@ -2210,7 +2217,7 @@ datasets:
       start: '2014-01-30'
       end: '2026-10-30'
       date_axis: trade_date
-      measured_at: '2026-11-06T04:53:50.734085+00:00'
+      measured_at: '2026-11-06T05:20:03.800343+00:00'
     catalog_latest:
       date: null
       partition_rows: null
@@ -2231,9 +2238,10 @@ datasets:
     status: partial
     gaps:
     - 23/23 指数十月权重已逐代码补齐;观察日不等于公告/生效时刻,严格历史用途不放行。
+    - 摄取账本仍有未归因失败,不能以库存或消费样本声称闭合;具体 source/date/error 见 current_failures。
     consumers:
     - 最新观察指数成分权重,非历史生效证明；application 实测入口/参数/结果见 readiness-708-2026-11.md
-    notes: 冻结 23 指数;按单 index_code 取数。月度观察日不是公告或生效日;未知发布时刻不伪造。10 月源端可取,需与本地尾部核对;不因今日名册回造成立前成员。
+    notes: 冻结 23 指数;按单 index_code 取数。月度观察日不是公告或生效日;未知发布时刻不伪造。23/23 代码十月窗口已补齐并核对;不因今日名册回造成立前成员。
     verification_report: docs/data/readiness-708-2026-11.md
     current_failures:
     - source: tushare
@@ -2272,7 +2280,7 @@ datasets:
       start: null
       end: null
       date_axis: null
-      measured_at: '2026-11-06T04:53:51.477433+00:00'
+      measured_at: '2026-11-06T05:20:05.032183+00:00'
     catalog_latest:
       date: null
       partition_rows: null
@@ -2320,7 +2328,7 @@ datasets:
       start: '1984-05-09'
       end: '2026-10-28'
       date_axis: effective_from
-      measured_at: '2026-11-06T04:53:51.477527+00:00'
+      measured_at: '2026-11-06T05:20:05.034577+00:00'
     catalog_latest:
       date: null
       partition_rows: null
@@ -2368,7 +2376,7 @@ datasets:
       start: '2013-01-10'
       end: '2026-11-10'
       date_axis: changed_date
-      measured_at: '2026-11-06T04:53:51.480802+00:00'
+      measured_at: '2026-11-06T05:20:05.042754+00:00'
     catalog_latest:
       date: null
       partition_rows: null
@@ -2415,7 +2423,7 @@ datasets:
       start: '2013-01-14'
       end: '2026-11-05'
       date_axis: effective_from
-      measured_at: '2026-11-06T04:53:51.482096+00:00'
+      measured_at: '2026-11-06T05:20:05.051813+00:00'
     catalog_latest:
       date: null
       partition_rows: null
@@ -2462,7 +2470,7 @@ datasets:
       start: '2014-01-02'
       end: '2026-11-05'
       date_axis: trade_date
-      measured_at: '2026-11-06T04:53:51.483061+00:00'
+      measured_at: '2026-11-06T05:20:05.054472+00:00'
     catalog_latest:
       date: null
       partition_rows: null
@@ -2510,7 +2518,7 @@ datasets:
       start: '1995-04-17'
       end: '2026-11-02'
       date_axis: list_date
-      measured_at: '2026-11-06T04:53:51.508522+00:00'
+      measured_at: '2026-11-06T05:20:05.128783+00:00'
     catalog_latest:
       date: null
       partition_rows: null
@@ -2558,7 +2566,7 @@ datasets:
       start: '2014-01-01'
       end: '2026-10-30'
       date_axis: ann_date
-      measured_at: '2026-11-06T04:53:51.512108+00:00'
+      measured_at: '2026-11-06T05:20:05.141013+00:00'
     catalog_latest:
       date: null
       partition_rows: null
@@ -2607,7 +2615,7 @@ datasets:
       start: '2014-01-04'
       end: '2026-10-21'
       date_axis: ann_date
-      measured_at: '2026-11-06T04:53:51.533677+00:00'
+      measured_at: '2026-11-06T05:20:05.196338+00:00'
     catalog_latest:
       date: null
       partition_rows: null
@@ -2654,7 +2662,7 @@ datasets:
       start: '2014-01-02'
       end: '2026-11-05'
       date_axis: trade_date
-      measured_at: '2026-11-06T04:53:51.550044+00:00'
+      measured_at: '2026-11-06T05:20:05.232108+00:00'
     catalog_latest:
       date: null
       partition_rows: null

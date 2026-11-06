@@ -1,43 +1,47 @@
 {
-  "started_at": "2026-11-06T04:53:35.933884+00:00",
+  "started_at": "2026-11-06T05:19:28.397396+00:00",
   "root": "/Users/chevy/Desktop/code/ditto/data",
   "datasets": {
     "calendar": {
-      "measured_at": "2026-11-06T04:53:35.934066+00:00",
+      "measured_at": "2026-11-06T05:19:28.397811+00:00",
       "storage": "sqlite:trading_calendar",
       "rows": 5478,
       "identities": 1,
       "trade_date_min": "2013-01-01",
       "trade_date_max": "2027-12-31",
       "identity_column": "exchange",
+      "failure_count": 0,
       "recent_failures": []
     },
     "stock_basic": {
-      "measured_at": "2026-11-06T04:53:35.935832+00:00",
+      "measured_at": "2026-11-06T05:19:28.403511+00:00",
       "storage": "sqlite:instrument_stock",
       "rows": 5930,
       "identities": 5930,
       "identity_column": "instrument_id",
+      "failure_count": 0,
       "recent_failures": []
     },
     "etf_basic": {
-      "measured_at": "2026-11-06T04:53:35.937461+00:00",
+      "measured_at": "2026-11-06T05:19:28.407551+00:00",
       "storage": "sqlite:instrument_etf",
       "rows": 1868,
       "identities": 1868,
       "identity_column": "instrument_id",
+      "failure_count": 0,
       "recent_failures": []
     },
     "index_basic": {
-      "measured_at": "2026-11-06T04:53:35.937838+00:00",
+      "measured_at": "2026-11-06T05:19:28.408248+00:00",
       "storage": "sqlite:instrument_index",
       "rows": 20897,
       "identities": 20897,
       "identity_column": "instrument_id",
+      "failure_count": 0,
       "recent_failures": []
     },
     "etf_reference": {
-      "measured_at": "2026-11-06T04:53:35.944382+00:00",
+      "measured_at": "2026-11-06T05:19:28.421011+00:00",
       "storage": "sqlite:etf_reference_observation",
       "rows": 1759605,
       "identities": 1868,
@@ -48,10 +52,11 @@
       "observed_on_min": "2013-01-04",
       "observed_on_max": "2026-11-05",
       "identity_column": "instrument_id",
+      "failure_count": 0,
       "recent_failures": []
     },
     "stock_daily": {
-      "measured_at": "2026-11-06T04:53:37.781047+00:00",
+      "measured_at": "2026-11-06T05:19:32.581474+00:00",
       "storage": "parquet:market/stock/bars",
       "rows": 13045695,
       "identities": 5847,
@@ -60,10 +65,11 @@
       "trade_date_min": "2013-01-04",
       "trade_date_max": "2026-11-05",
       "identity_column": "source_ticker",
+      "failure_count": 0,
       "recent_failures": []
     },
     "etf_daily": {
-      "measured_at": "2026-11-06T04:53:37.827948+00:00",
+      "measured_at": "2026-11-06T05:19:33.030238+00:00",
       "storage": "parquet:market/etf/bars",
       "rows": 1626130,
       "identities": 1864,
@@ -72,10 +78,11 @@
       "trade_date_min": "2013-01-04",
       "trade_date_max": "2026-11-05",
       "identity_column": "source_ticker",
+      "failure_count": 0,
       "recent_failures": []
     },
     "index_daily": {
-      "measured_at": "2026-11-06T04:53:37.837457+00:00",
+      "measured_at": "2026-11-06T05:19:33.122750+00:00",
       "storage": "parquet:market/index/bars",
       "rows": 546630,
       "identities": 178,
@@ -84,6 +91,7 @@
       "trade_date_min": "2014-01-02",
       "trade_date_max": "2026-11-05",
       "identity_column": "source_ticker",
+      "failure_count": 1,
       "recent_failures": [
         {
           "source": "tushare",
@@ -94,7 +102,7 @@
       ]
     },
     "global_index_daily": {
-      "measured_at": "2026-11-06T04:53:37.843902+00:00",
+      "measured_at": "2026-11-06T05:19:33.140672+00:00",
       "storage": "parquet:market/index/global_bars",
       "rows": 61007,
       "identities": 21,
@@ -103,6 +111,7 @@
       "trade_date_min": "2014-01-01",
       "trade_date_max": "2026-11-04",
       "identity_column": "source_ticker",
+      "failure_count": 2,
       "recent_failures": [
         {
           "source": "tushare",
@@ -119,13 +128,14 @@
       ]
     },
     "stock_status": {
-      "measured_at": "2026-11-06T04:53:37.852685+00:00",
+      "measured_at": "2026-11-06T05:19:33.162849+00:00",
       "storage": "parquet:market/stock/status",
       "rows": 10910918,
       "identities": 5832,
       "trade_date_min": "2016-08-09",
       "trade_date_max": "2026-11-05",
       "identity_column": "source_ticker",
+      "failure_count": 51,
       "recent_failures": [
         {
           "source": "tushare",
@@ -160,7 +170,7 @@
       ]
     },
     "adj_factor": {
-      "measured_at": "2026-11-06T04:53:37.881976+00:00",
+      "measured_at": "2026-11-06T05:19:33.251071+00:00",
       "storage": "parquet:market/stock/adj",
       "rows": 13635387,
       "identities": 5847,
@@ -169,29 +179,31 @@
       "trade_date_min": "2013-01-04",
       "trade_date_max": "2026-11-05",
       "identity_column": "source_ticker",
+      "failure_count": 0,
       "recent_failures": []
     },
     "fund_adj": {
-      "measured_at": "2026-11-06T04:53:37.922682+00:00",
+      "measured_at": "2026-11-06T05:19:33.469334+00:00",
       "storage": "parquet:market/etf/adj",
-      "rows": 1643241,
+      "rows": 1643599,
       "identities": 1845,
       "knowledge_date_min": "2013-01-04",
       "knowledge_date_max": "2026-11-05",
       "trade_date_min": "2013-01-04",
       "trade_date_max": "2026-11-05",
       "identity_column": "source_ticker",
+      "failure_count": 1,
       "recent_failures": [
         {
           "source": "tushare",
-          "trade_date": "2026-10-15",
-          "error_code": "FETCH_ERROR",
-          "attempts": 4
+          "trade_date": "2026-09-30",
+          "error_code": "UNKNOWN_ERROR",
+          "attempts": 100
         }
       ]
     },
     "etf_nav": {
-      "measured_at": "2026-11-06T04:53:37.930901+00:00",
+      "measured_at": "2026-11-06T05:19:33.542801+00:00",
       "storage": "parquet:market/etf/nav",
       "rows": 1528803,
       "identities": 1866,
@@ -200,6 +212,7 @@
       "trade_date_min": "2014-01-01",
       "trade_date_max": "2026-11-02",
       "identity_column": "source_ticker",
+      "failure_count": 3,
       "recent_failures": [
         {
           "source": "tushare",
@@ -222,7 +235,7 @@
       ]
     },
     "stock_limit": {
-      "measured_at": "2026-11-06T04:53:37.939614+00:00",
+      "measured_at": "2026-11-06T05:19:33.589590+00:00",
       "storage": "parquet:market/stock/limit",
       "rows": 12726466,
       "identities": 6974,
@@ -231,10 +244,11 @@
       "trade_date_min": "2014-01-02",
       "trade_date_max": "2026-11-05",
       "identity_column": "source_ticker",
+      "failure_count": 0,
       "recent_failures": []
     },
     "moneyflow": {
-      "measured_at": "2026-11-06T04:53:37.984693+00:00",
+      "measured_at": "2026-11-06T05:19:33.813850+00:00",
       "storage": "parquet:capital/moneyflow",
       "rows": 12582565,
       "identities": 5844,
@@ -243,10 +257,11 @@
       "trade_date_min": "2013-01-04",
       "trade_date_max": "2026-11-05",
       "identity_column": "source_ticker",
+      "failure_count": 0,
       "recent_failures": []
     },
     "cyq_perf": {
-      "measured_at": "2026-11-06T04:53:38.032817+00:00",
+      "measured_at": "2026-11-06T05:19:33.993230+00:00",
       "storage": "parquet:capital/cyq_perf",
       "rows": 9588927,
       "identities": 5631,
@@ -255,10 +270,11 @@
       "trade_date_min": "2018-01-02",
       "trade_date_max": "2026-11-05",
       "identity_column": "source_ticker",
+      "failure_count": 0,
       "recent_failures": []
     },
     "limit_list": {
-      "measured_at": "2026-11-06T04:53:38.066361+00:00",
+      "measured_at": "2026-11-06T05:19:34.096975+00:00",
       "storage": "parquet:market/stock/limit_list",
       "rows": 166265,
       "identities": 5578,
@@ -267,10 +283,11 @@
       "trade_date_min": "2020-01-02",
       "trade_date_max": "2026-11-05",
       "identity_column": "source_ticker",
+      "failure_count": 0,
       "recent_failures": []
     },
     "top_list": {
-      "measured_at": "2026-11-06T04:53:38.080619+00:00",
+      "measured_at": "2026-11-06T05:19:34.166302+00:00",
       "storage": "parquet:capital/top_list",
       "rows": 192840,
       "identities": 5928,
@@ -279,6 +296,7 @@
       "trade_date_min": "2014-01-02",
       "trade_date_max": "2026-11-05",
       "identity_column": "source_ticker",
+      "failure_count": 3,
       "recent_failures": [
         {
           "source": "tushare",
@@ -301,7 +319,7 @@
       ]
     },
     "top_inst": {
-      "measured_at": "2026-11-06T04:53:38.089994+00:00",
+      "measured_at": "2026-11-06T05:19:34.193368+00:00",
       "storage": "parquet:capital/top_inst",
       "rows": 2345125,
       "identities": 5788,
@@ -310,10 +328,11 @@
       "trade_date_min": "2014-01-02",
       "trade_date_max": "2026-11-05",
       "identity_column": "source_ticker",
+      "failure_count": 0,
       "recent_failures": []
     },
     "hk_hold": {
-      "measured_at": "2026-11-06T04:53:38.106960+00:00",
+      "measured_at": "2026-11-06T05:19:34.230956+00:00",
       "storage": "parquet:capital/hk_hold",
       "rows": 5169996,
       "identities": 4227,
@@ -322,10 +341,11 @@
       "trade_date_min": "2016-06-29",
       "trade_date_max": "2026-09-30",
       "identity_column": "source_ticker",
+      "failure_count": 0,
       "recent_failures": []
     },
     "hsgt_top10": {
-      "measured_at": "2026-11-06T04:53:38.131668+00:00",
+      "measured_at": "2026-11-06T05:19:34.330776+00:00",
       "storage": "parquet:capital/hsgt_top10",
       "rows": 61350,
       "identities": 633,
@@ -334,10 +354,11 @@
       "trade_date_min": "2014-11-17",
       "trade_date_max": "2026-11-05",
       "identity_column": "source_ticker",
+      "failure_count": 0,
       "recent_failures": []
     },
     "fina_indicator": {
-      "measured_at": "2026-11-06T04:53:38.141605+00:00",
+      "measured_at": "2026-11-06T05:19:34.415952+00:00",
       "storage": "parquet:fundamental/fina_indicator",
       "rows": 263675,
       "identities": 5925,
@@ -346,10 +367,11 @@
       "report_date_min": "2012-03-31",
       "report_date_max": "2026-09-30",
       "identity_column": "source_ticker",
+      "failure_count": 0,
       "recent_failures": []
     },
     "fund_share": {
-      "measured_at": "2026-11-06T04:53:38.157207+00:00",
+      "measured_at": "2026-11-06T05:19:34.448252+00:00",
       "storage": "parquet:market/etf/fund_share",
       "rows": 1609232,
       "identities": 1865,
@@ -358,6 +380,7 @@
       "trade_date_min": "2013-01-04",
       "trade_date_max": "2026-11-04",
       "identity_column": "source_ticker",
+      "failure_count": 1,
       "recent_failures": [
         {
           "source": "tushare",
@@ -368,15 +391,16 @@
       ]
     },
     "fund_portfolio": {
-      "measured_at": "2026-11-06T04:53:38.173111+00:00",
+      "measured_at": "2026-11-06T05:19:34.479915+00:00",
       "storage": "parquet:fundamental/fund_portfolio",
-      "rows": 3691378,
-      "identities": 5332,
+      "rows": 4481848,
+      "identities": 6133,
       "knowledge_date_min": "2013-10-23",
       "knowledge_date_max": "2026-10-26",
       "report_date_min": "2013-09-30",
       "report_date_max": "2026-09-30",
       "identity_column": "source_ticker",
+      "failure_count": 36,
       "recent_failures": [
         {
           "source": "tushare",
@@ -411,7 +435,7 @@
       ]
     },
     "top10_holders": {
-      "measured_at": "2026-11-06T04:53:38.188661+00:00",
+      "measured_at": "2026-11-06T05:19:34.515548+00:00",
       "storage": "parquet:capital/top10_holders",
       "rows": 2509826,
       "identities": 5841,
@@ -420,6 +444,7 @@
       "report_date_min": "2010-12-31",
       "report_date_max": "2026-09-30",
       "identity_column": "source_ticker",
+      "failure_count": 22,
       "recent_failures": [
         {
           "source": "tushare",
@@ -454,7 +479,7 @@
       ]
     },
     "top10_floatholders": {
-      "measured_at": "2026-11-06T04:53:38.207136+00:00",
+      "measured_at": "2026-11-06T05:19:34.569761+00:00",
       "storage": "parquet:capital/top10_floatholders",
       "rows": 2107405,
       "identities": 5833,
@@ -463,10 +488,11 @@
       "report_date_min": "2012-06-30",
       "report_date_max": "2026-09-30",
       "identity_column": "source_ticker",
+      "failure_count": 0,
       "recent_failures": []
     },
     "balance_sheet": {
-      "measured_at": "2026-11-06T04:53:38.222173+00:00",
+      "measured_at": "2026-11-06T05:19:34.604481+00:00",
       "storage": "sqlite:balance_sheet",
       "rows": 239385,
       "identities": 5884,
@@ -479,10 +505,11 @@
       "report_date_min": "2011-12-31",
       "report_date_max": "2026-09-30",
       "identity_column": "instrument_id",
+      "failure_count": 0,
       "recent_failures": []
     },
     "income_statement": {
-      "measured_at": "2026-11-06T04:53:38.383259+00:00",
+      "measured_at": "2026-11-06T05:19:34.935438+00:00",
       "storage": "sqlite:income_statement",
       "rows": 244553,
       "identities": 5884,
@@ -495,12 +522,13 @@
       "report_date_min": "2011-12-31",
       "report_date_max": "2026-09-30",
       "identity_column": "instrument_id",
+      "failure_count": 0,
       "recent_failures": []
     },
     "cash_flow": {
-      "measured_at": "2026-11-06T04:53:38.469809+00:00",
+      "measured_at": "2026-11-06T05:19:35.231711+00:00",
       "storage": "sqlite:cash_flow",
-      "rows": 233393,
+      "rows": 233648,
       "identities": 5880,
       "effective_from_min": "2014-01-02",
       "effective_from_max": "2026-11-02",
@@ -511,23 +539,11 @@
       "report_date_min": "2011-12-31",
       "report_date_max": "2026-09-30",
       "identity_column": "instrument_id",
-      "recent_failures": [
-        {
-          "source": "tushare",
-          "trade_date": "2023-10-09",
-          "error_code": "FETCH_ERROR",
-          "attempts": 8
-        },
-        {
-          "source": "tushare",
-          "trade_date": "2023-07-03",
-          "error_code": "FETCH_ERROR",
-          "attempts": 10
-        }
-      ]
+      "failure_count": 0,
+      "recent_failures": []
     },
     "dividend": {
-      "measured_at": "2026-11-06T04:53:38.584644+00:00",
+      "measured_at": "2026-11-06T05:19:35.564839+00:00",
       "storage": "sqlite:dividend",
       "rows": 266407,
       "identities": 5823,
@@ -538,10 +554,11 @@
       "knowledge_date_min": "2014-01-03",
       "knowledge_date_max": "2026-10-27",
       "identity_column": "instrument_id",
+      "failure_count": 0,
       "recent_failures": []
     },
     "valuation_metrics": {
-      "measured_at": "2026-11-06T04:53:38.706355+00:00",
+      "measured_at": "2026-11-06T05:19:35.791854+00:00",
       "storage": "sqlite:valuation_metrics",
       "rows": 12322673,
       "identities": 5843,
@@ -554,10 +571,11 @@
       "trade_date_min": "2014-01-02",
       "trade_date_max": "2026-11-05",
       "identity_column": "instrument_id",
+      "failure_count": 0,
       "recent_failures": []
     },
     "margin_trading": {
-      "measured_at": "2026-11-06T04:53:46.378450+00:00",
+      "measured_at": "2026-11-06T05:19:52.609516+00:00",
       "storage": "sqlite:margin_trading",
       "rows": 8318122,
       "identities": 5028,
@@ -570,6 +588,7 @@
       "trade_date_min": "2013-01-04",
       "trade_date_max": "2026-11-04",
       "identity_column": "instrument_id",
+      "failure_count": 1,
       "recent_failures": [
         {
           "source": "tushare",
@@ -580,7 +599,7 @@
       ]
     },
     "pledge_ratio": {
-      "measured_at": "2026-11-06T04:53:49.605485+00:00",
+      "measured_at": "2026-11-06T05:20:01.684635+00:00",
       "storage": "sqlite:pledge_ratio",
       "rows": 1632293,
       "identities": 4466,
@@ -593,10 +612,11 @@
       "report_date_min": "2014-03-07",
       "report_date_max": "2026-09-18",
       "identity_column": "instrument_id",
+      "failure_count": 0,
       "recent_failures": []
     },
     "macro_indicators": {
-      "measured_at": "2026-11-06T04:53:50.448037+00:00",
+      "measured_at": "2026-11-06T05:20:03.183814+00:00",
       "storage": "sqlite:macro_indicator_data",
       "rows": 112180,
       "identities": 60,
@@ -609,30 +629,33 @@
       "knowledge_date_min": "2026-10-25",
       "knowledge_date_max": "2026-11-06",
       "identity_column": "indicator_id",
+      "failure_count": 0,
       "recent_failures": []
     },
     "fx_daily": {
-      "measured_at": "2026-11-06T04:53:50.558494+00:00",
+      "measured_at": "2026-11-06T05:20:03.439112+00:00",
       "storage": "parquet:market/fx/bars",
       "rows": 24017,
       "identities": 6,
       "trade_date_min": "2014-01-01",
       "trade_date_max": "2026-11-04",
       "identity_column": "instrument_id",
+      "failure_count": 0,
       "recent_failures": []
     },
     "commodity_daily": {
-      "measured_at": "2026-11-06T04:53:50.574383+00:00",
+      "measured_at": "2026-11-06T05:20:03.552358+00:00",
       "storage": "parquet:market/commodity/bars",
       "rows": 25276,
       "identities": 8,
       "trade_date_min": "2013-12-31",
       "trade_date_max": "2026-11-05",
       "identity_column": "instrument_id",
+      "failure_count": 0,
       "recent_failures": []
     },
     "corporate_actions": {
-      "measured_at": "2026-11-06T04:53:50.601512+00:00",
+      "measured_at": "2026-11-06T05:20:03.629508+00:00",
       "storage": "sqlite:corporate_actions",
       "rows": 93000,
       "identities": 5302,
@@ -645,6 +668,7 @@
       "knowledge_date_min": "2014-01-02",
       "knowledge_date_max": "2026-11-05",
       "identity_column": "instrument_id",
+      "failure_count": 4,
       "recent_failures": [
         {
           "source": "tushare",
@@ -673,13 +697,14 @@
       ]
     },
     "index_weight": {
-      "measured_at": "2026-11-06T04:53:50.734085+00:00",
+      "measured_at": "2026-11-06T05:20:03.800343+00:00",
       "storage": "sqlite:index_weight",
       "rows": 1924666,
       "identities": 23,
       "trade_date_min": "2014-01-30",
       "trade_date_max": "2026-10-30",
       "identity_column": "index_id",
+      "failure_count": 3,
       "recent_failures": [
         {
           "source": "tushare",
@@ -702,14 +727,15 @@
       ]
     },
     "industry_classification": {
-      "measured_at": "2026-11-06T04:53:51.477433+00:00",
+      "measured_at": "2026-11-06T05:20:05.032183+00:00",
       "storage": "sqlite:industry_basic",
       "rows": 31,
       "identity_column": null,
+      "failure_count": 0,
       "recent_failures": []
     },
     "industry_mapping": {
-      "measured_at": "2026-11-06T04:53:51.477527+00:00",
+      "measured_at": "2026-11-06T05:20:05.034577+00:00",
       "storage": "sqlite:industry_mapping",
       "rows": 7925,
       "identities": 5919,
@@ -718,20 +744,22 @@
       "effective_to_min": "1999-08-31",
       "effective_to_max": "2026-08-20",
       "identity_column": "instrument_id",
+      "failure_count": 0,
       "recent_failures": []
     },
     "namechange": {
-      "measured_at": "2026-11-06T04:53:51.480802+00:00",
+      "measured_at": "2026-11-06T05:20:05.042754+00:00",
       "storage": "sqlite:instrument_name_history",
       "rows": 3542,
       "identities": 1606,
       "changed_date_min": "2013-01-10",
       "changed_date_max": "2026-11-10",
       "identity_column": "instrument_id",
+      "failure_count": 0,
       "recent_failures": []
     },
     "st_history": {
-      "measured_at": "2026-11-06T04:53:51.482096+00:00",
+      "measured_at": "2026-11-06T05:20:05.051813+00:00",
       "storage": "sqlite:st_change_history",
       "rows": 1849,
       "identities": 869,
@@ -740,10 +768,11 @@
       "effective_to_min": "2013-04-16",
       "effective_to_max": "2026-10-19",
       "identity_column": "instrument_id",
+      "failure_count": 0,
       "recent_failures": []
     },
     "futures_daily": {
-      "measured_at": "2026-11-06T04:53:51.483061+00:00",
+      "measured_at": "2026-11-06T05:20:05.054472+00:00",
       "storage": "parquet:market/futures/daily",
       "rows": 2385972,
       "identities": 9227,
@@ -752,10 +781,11 @@
       "trade_date_min": "2014-01-02",
       "trade_date_max": "2026-11-05",
       "identity_column": "source_ticker",
+      "failure_count": 0,
       "recent_failures": []
     },
     "futures_basic": {
-      "measured_at": "2026-11-06T04:53:51.508522+00:00",
+      "measured_at": "2026-11-06T05:20:05.128783+00:00",
       "storage": "parquet:market/futures/basic",
       "rows": 102221,
       "identities": 11363,
@@ -766,10 +796,11 @@
       "list_date_min": "1995-04-17",
       "list_date_max": "2026-11-02",
       "identity_column": "source_ticker",
+      "failure_count": 0,
       "recent_failures": []
     },
     "earnings_forecast": {
-      "measured_at": "2026-11-06T04:53:51.512108+00:00",
+      "measured_at": "2026-11-06T05:20:05.141013+00:00",
       "storage": "parquet:fundamental/earnings_forecast",
       "rows": 126176,
       "identities": 5902,
@@ -780,10 +811,11 @@
       "report_date_min": "2013-12-31",
       "report_date_max": "2027-12-31",
       "identity_column": "source_ticker",
+      "failure_count": 0,
       "recent_failures": []
     },
     "earnings_express": {
-      "measured_at": "2026-11-06T04:53:51.533677+00:00",
+      "measured_at": "2026-11-06T05:20:05.196338+00:00",
       "storage": "parquet:fundamental/earnings_express",
       "rows": 24412,
       "identities": 4398,
@@ -794,10 +826,11 @@
       "report_date_min": "2013-12-31",
       "report_date_max": "2026-09-30",
       "identity_column": "source_ticker",
+      "failure_count": 0,
       "recent_failures": []
     },
     "index_valuation": {
-      "measured_at": "2026-11-06T04:53:51.550044+00:00",
+      "measured_at": "2026-11-06T05:20:05.232108+00:00",
       "storage": "parquet:capital/index_valuation",
       "rows": 36880,
       "identities": 15,
@@ -806,8 +839,9 @@
       "trade_date_min": "2014-01-02",
       "trade_date_max": "2026-11-05",
       "identity_column": "source_ticker",
+      "failure_count": 0,
       "recent_failures": []
     }
   },
-  "finished_at": "2026-11-06T04:53:51.566539+00:00"
+  "finished_at": "2026-11-06T05:20:05.276539+00:00"
 }
