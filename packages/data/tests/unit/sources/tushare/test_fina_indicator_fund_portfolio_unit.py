@@ -137,11 +137,44 @@ class TestFundPortfolioModes:
         )
 
         fundamental.fetch_fund_portfolio.assert_called_once_with(
-            ts_code="510300.SH", start_date="20251231", end_date="20260331"
+            ts_code="510300.SH", start_date="20251231", end_date="20260531"
         )
         # 披露晚于 end_date 的 Q2 行被剔除，只剩 Q1
         assert result.height == 1
         assert result.row(0, named=True)["report_date"] == date(2026, 3, 31)
+
+    @pytest.mark.pit
+    def test_ann_date_filtered_source_keeps_tail_and_rejects_future(self) -> None:
+        fundamental = MagicMock(spec=FundamentalTushareAdapter)
+        observed = pl.DataFrame(
+            {
+                "source_ticker": ["561250.SH"] * 3,
+                "report_date": [date(2026, 9, 30)] * 3,
+                "knowledge_date": [
+                    date(2026, 10, 26),
+                    date(2026, 11, 5),
+                    date(2026, 11, 6),
+                ],
+                "market_value": [1.0, 2.0, 999999.0],
+            }
+        )
+        # Live #708 probe: this route returns nothing until the announcement
+        # date, even though the report period is already September 30.
+        fundamental.fetch_fund_portfolio.side_effect = lambda **params: (
+            observed if params["end_date"] >= "20261026" else observed.head(0)
+        )
+        for cutoff, expected in [
+            ("2026-11-05", [1.0, 2.0]),
+            ("2026-11-06", [1.0, 2.0, 999999.0]),
+        ]:
+            result = fetch_fund_portfolio(
+                fundamental,
+                _compact,
+                source_ticker="561250.SH",
+                start_date="2014-01-01",
+                end_date=cutoff,
+            )
+            assert result["market_value"].to_list() == expected
 
     def test_requires_mode_arguments(self) -> None:
         fundamental = MagicMock(spec=FundamentalTushareAdapter)

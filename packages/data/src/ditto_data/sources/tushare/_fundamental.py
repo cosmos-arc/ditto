@@ -367,7 +367,7 @@ def fetch_fund_portfolio(
 
     2026-11-05 起供应商要求单基金 ts_code，不再支持市场级请求。
     - 逐基金披露（trade_date + source_ticker）：ts_code+ann_date 单日；
-    - 按基金回填（source_ticker + start/end）：报告期区间请求，保留边界季度。
+    - 按基金回填：保留边界季度，下界兼容报告期，上界覆盖真实披露截止日。
     """
     if not source_ticker or "," in source_ticker:
         raise ValueError("fund_portfolio requires a single source_ticker")
@@ -384,7 +384,11 @@ def fetch_fund_portfolio(
         end_date, count=max_quarters_in_range(start_date, end_date)
     )
     frame = fundamental.fetch_fund_portfolio(
-        ts_code=source_ticker, start_date=min(periods), end_date=max(periods)
+        # Some configured routes apply end_date to ann_date despite the
+        # documented report-period meaning. The caller's cutoff covers both.
+        ts_code=source_ticker,
+        start_date=min(periods),
+        end_date=to_compact_date(end_date),
     )
     return _knowable_by_end(frame, end_date)
 
