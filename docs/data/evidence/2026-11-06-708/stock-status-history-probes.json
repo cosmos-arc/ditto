@@ -1,0 +1,104 @@
+{
+  "measured_at": "2026-11-06T06:55:37.257772+00:00",
+  "rows": [
+    {
+      "source_ticker": "301569.SZ",
+      "params": {
+        "ts_code": "301569.SZ"
+      },
+      "rows": 29,
+      "requested_missing": 2456,
+      "returned_missing": [],
+      "first": [
+        {
+          "ts_code": "301569.SZ",
+          "trade_date": "20261105",
+          "name": "联亚药业"
+        },
+        {
+          "ts_code": "301569.SZ",
+          "trade_date": "20261104",
+          "name": "联亚药业"
+        }
+      ],
+      "last": [
+        {
+          "ts_code": "301569.SZ",
+          "trade_date": "20260921",
+          "name": "联亚药业"
+        },
+        {
+          "ts_code": "301569.SZ",
+          "trade_date": "20260918",
+          "name": "联亚药业"
+        }
+      ]
+    },
+    {
+      "source_ticker": "301660.SZ",
+      "params": {
+        "ts_code": "301660.SZ"
+      },
+      "rows": 31,
+      "requested_missing": 2454,
+      "returned_missing": [],
+      "first": [
+        {
+          "ts_code": "301660.SZ",
+          "trade_date": "20261105",
+          "name": "粤芯半导-U"
+        },
+        {
+          "ts_code": "301660.SZ",
+          "trade_date": "20261104",
+          "name": "粤芯半导-U"
+        }
+      ],
+      "last": [
+        {
+          "ts_code": "301660.SZ",
+          "trade_date": "20260917",
+          "name": "粤芯半导体-U"
+        },
+        {
+          "ts_code": "301660.SZ",
+          "trade_date": "20260916",
+          "name": "粤芯半导体-U"
+        }
+      ]
+    },
+    {
+      "source_ticker": "001246.SZ",
+      "params": {
+        "ts_code": "001246.SZ"
+      },
+      "rows": 34,
+      "requested_missing": 2451,
+      "returned_missing": [],
+      "first": [
+        {
+          "ts_code": "001246.SZ",
+          "trade_date": "20261105",
+          "name": "力勤资源"
+        },
+        {
+          "ts_code": "001246.SZ",
+          "trade_date": "20261104",
+          "name": "力勤资源"
+        }
+      ],
+      "last": [
+        {
+          "ts_code": "001246.SZ",
+          "trade_date": "20260914",
+          "name": "力勤资源"
+        },
+        {
+          "ts_code": "001246.SZ",
+          "trade_date": "20260911",
+          "name": "力勤资源"
+        }
+      ]
+    }
+  ]
+}

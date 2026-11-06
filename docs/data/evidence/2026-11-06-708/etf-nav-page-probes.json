@@ -1,0 +1,518 @@
+[
+  {
+    "measured_at": "2026-11-06T06:14:50.247536+00:00",
+    "api": "fund_nav",
+    "params": {
+      "ts_code": "158001.SZ",
+      "start_date": "20140101",
+      "end_date": "20261105",
+      "fields": "ts_code,ann_date,nav_date,unit_nav,acc_nav",
+      "limit": 2000,
+      "offset": 0
+    },
+    "rows": 48,
+    "codes": [
+      "158001.SZ"
+    ],
+    "first_rows": [
+      {
+        "ts_code": "158001.SZ",
+        "ann_date": "20260820",
+        "nav_date": "20260819",
+        "unit_nav": 1.0,
+        "acc_nav": null
+      },
+      {
+        "ts_code": "158001.SZ",
+        "ann_date": "20260821",
+        "nav_date": "20260821",
+        "unit_nav": 0.9987,
+        "acc_nav": null
+      },
+      {
+        "ts_code": "158001.SZ",
+        "ann_date": "20260827",
+        "nav_date": "20260826",
+        "unit_nav": 1.0066,
+        "acc_nav": null
+      }
+    ],
+    "last_rows": [
+      {
+        "ts_code": "158001.SZ",
+        "ann_date": "20261103",
+        "nav_date": "20261103",
+        "unit_nav": 0.995,
+        "acc_nav": null
+      },
+      {
+        "ts_code": "158001.SZ",
+        "ann_date": "20261104",
+        "nav_date": "20261104",
+        "unit_nav": 0.9923,
+        "acc_nav": null
+      },
+      {
+        "ts_code": "158001.SZ",
+        "ann_date": "20261105",
+        "nav_date": "20261105",
+        "unit_nav": 0.9888,
+        "acc_nav": null
+      }
+    ],
+    "overlap_first_page": 48
+  },
+  {
+    "measured_at": "2026-11-06T06:14:51.689289+00:00",
+    "api": "fund_nav",
+    "params": {
+      "ts_code": "158001.SZ",
+      "start_date": "20140101",
+      "end_date": "20261105",
+      "fields": "ts_code,ann_date,nav_date,unit_nav,acc_nav",
+      "limit": 1,
+      "offset": 48
+    },
+    "rows": 1,
+    "codes": [
+      "158001.SZ"
+    ],
+    "first_rows": [
+      {
+        "ts_code": "158001.SZ",
+        "ann_date": "20261027",
+        "nav_date": "20261027",
+        "unit_nav": 0.9685,
+        "acc_nav": null
+      }
+    ],
+    "last_rows": [
+      {
+        "ts_code": "158001.SZ",
+        "ann_date": "20261027",
+        "nav_date": "20261027",
+        "unit_nav": 0.9685,
+        "acc_nav": null
+      }
+    ],
+    "overlap_first_page": 1
+  },
+  {
+    "measured_at": "2026-11-06T06:14:52.735618+00:00",
+    "api": "fund_nav",
+    "params": {
+      "ts_code": "158001.SZ",
+      "start_date": "20140101",
+      "end_date": "20261105",
+      "fields": "ts_code,ann_date,nav_date,unit_nav,acc_nav",
+      "limit": 2000,
+      "offset": 48
+    },
+    "rows": 8,
+    "codes": [
+      "158001.SZ"
+    ],
+    "first_rows": [
+      {
+        "ts_code": "158001.SZ",
+        "ann_date": "20261027",
+        "nav_date": "20261027",
+        "unit_nav": 0.9685,
+        "acc_nav": null
+      },
+      {
+        "ts_code": "158001.SZ",
+        "ann_date": "20261028",
+        "nav_date": "20261028",
+        "unit_nav": 0.969,
+        "acc_nav": null
+      },
+      {
+        "ts_code": "158001.SZ",
+        "ann_date": "20261029",
+        "nav_date": "20261029",
+        "unit_nav": 0.9719,
+        "acc_nav": null
+      }
+    ],
+    "last_rows": [
+      {
+        "ts_code": "158001.SZ",
+        "ann_date": "20261103",
+        "nav_date": "20261103",
+        "unit_nav": 0.995,
+        "acc_nav": null
+      },
+      {
+        "ts_code": "158001.SZ",
+        "ann_date": "20261104",
+        "nav_date": "20261104",
+        "unit_nav": 0.9923,
+        "acc_nav": null
+      },
+      {
+        "ts_code": "158001.SZ",
+        "ann_date": "20261105",
+        "nav_date": "20261105",
+        "unit_nav": 0.9888,
+        "acc_nav": null
+      }
+    ],
+    "overlap_first_page": 8
+  },
+  {
+    "measured_at": "2026-11-06T06:14:54.869122+00:00",
+    "api": "fund_nav",
+    "params": {
+      "ts_code": "158001.SZ",
+      "start_date": "20261001",
+      "end_date": "20261105",
+      "fields": "ts_code,ann_date,nav_date,unit_nav,acc_nav",
+      "limit": 2000,
+      "offset": 0
+    },
+    "rows": 21,
+    "codes": [
+      "158001.SZ"
+    ],
+    "first_rows": [
+      {
+        "ts_code": "158001.SZ",
+        "ann_date": "20261008",
+        "nav_date": "20261008",
+        "unit_nav": 0.987,
+        "acc_nav": null
+      },
+      {
+        "ts_code": "158001.SZ",
+        "ann_date": "20261009",
+        "nav_date": "20261009",
+        "unit_nav": 0.9912,
+        "acc_nav": null
+      },
+      {
+        "ts_code": "158001.SZ",
+        "ann_date": "20261012",
+        "nav_date": "20261012",
+        "unit_nav": 0.9943,
+        "acc_nav": null
+      }
+    ],
+    "last_rows": [
+      {
+        "ts_code": "158001.SZ",
+        "ann_date": "20261103",
+        "nav_date": "20261103",
+        "unit_nav": 0.995,
+        "acc_nav": null
+      },
+      {
+        "ts_code": "158001.SZ",
+        "ann_date": "20261104",
+        "nav_date": "20261104",
+        "unit_nav": 0.9923,
+        "acc_nav": null
+      },
+      {
+        "ts_code": "158001.SZ",
+        "ann_date": "20261105",
+        "nav_date": "20261105",
+        "unit_nav": 0.9888,
+        "acc_nav": null
+      }
+    ],
+    "overlap_first_page": 21
+  },
+  {
+    "measured_at": "2026-11-06T06:14:55.757979+00:00",
+    "api": "fund_nav",
+    "params": {
+      "ts_code": "158001.SZ",
+      "start_date": "20261001",
+      "end_date": "20261105",
+      "fields": "ts_code,ann_date,nav_date,unit_nav,acc_nav",
+      "limit": 1,
+      "offset": 21
+    },
+    "rows": 0,
+    "codes": [],
+    "first_rows": [],
+    "last_rows": [],
+    "overlap_first_page": 0
+  },
+  {
+    "measured_at": "2026-11-06T06:14:56.779321+00:00",
+    "api": "fund_nav",
+    "params": {
+      "ts_code": "158001.SZ",
+      "start_date": "20261001",
+      "end_date": "20261105",
+      "fields": "ts_code,ann_date,nav_date,unit_nav,acc_nav",
+      "limit": 2000,
+      "offset": 21
+    },
+    "rows": 0,
+    "codes": [],
+    "first_rows": [],
+    "last_rows": [],
+    "overlap_first_page": 0
+  },
+  {
+    "measured_at": "2026-11-06T06:14:59.920968+00:00",
+    "api": "fund_nav",
+    "params": {
+      "ts_code": "510300.SH",
+      "start_date": "20140101",
+      "end_date": "20261105",
+      "fields": "ts_code,ann_date,nav_date,unit_nav,acc_nav",
+      "limit": 2000,
+      "offset": 0
+    },
+    "rows": 1990,
+    "codes": [
+      "510300.SH"
+    ],
+    "first_rows": [
+      {
+        "ts_code": "510300.SH",
+        "ann_date": "20140103",
+        "nav_date": "20140102",
+        "unit_nav": 2.3703,
+        "acc_nav": null
+      },
+      {
+        "ts_code": "510300.SH",
+        "ann_date": "20140104",
+        "nav_date": "20140103",
+        "unit_nav": 2.3383,
+        "acc_nav": null
+      },
+      {
+        "ts_code": "510300.SH",
+        "ann_date": "20140107",
+        "nav_date": "20140106",
+        "unit_nav": 2.2847,
+        "acc_nav": null
+      }
+    ],
+    "last_rows": [
+      {
+        "ts_code": "510300.SH",
+        "ann_date": "20220219",
+        "nav_date": "20220218",
+        "unit_nav": 4.6487,
+        "acc_nav": null
+      },
+      {
+        "ts_code": "510300.SH",
+        "ann_date": "20220222",
+        "nav_date": "20220221",
+        "unit_nav": 4.6314,
+        "acc_nav": null
+      },
+      {
+        "ts_code": "510300.SH",
+        "ann_date": "20220223",
+        "nav_date": "20220222",
+        "unit_nav": 4.5714,
+        "acc_nav": null
+      }
+    ],
+    "overlap_first_page": 1990
+  },
+  {
+    "measured_at": "2026-11-06T06:15:01.438835+00:00",
+    "api": "fund_nav",
+    "params": {
+      "ts_code": "510300.SH",
+      "start_date": "20140101",
+      "end_date": "20261105",
+      "fields": "ts_code,ann_date,nav_date,unit_nav,acc_nav",
+      "limit": 1,
+      "offset": 1990
+    },
+    "rows": 1,
+    "codes": [
+      "510300.SH"
+    ],
+    "first_rows": [
+      {
+        "ts_code": "510300.SH",
+        "ann_date": "20220210",
+        "nav_date": "20220209",
+        "unit_nav": 4.6496,
+        "acc_nav": null
+      }
+    ],
+    "last_rows": [
+      {
+        "ts_code": "510300.SH",
+        "ann_date": "20220210",
+        "nav_date": "20220209",
+        "unit_nav": 4.6496,
+        "acc_nav": null
+      }
+    ],
+    "overlap_first_page": 1
+  },
+  {
+    "measured_at": "2026-11-06T06:15:53.428461+00:00",
+    "api": "fund_nav",
+    "params": {
+      "ts_code": "510300.SH",
+      "start_date": "20140101",
+      "end_date": "20261105",
+      "fields": "ts_code,ann_date,nav_date,unit_nav,acc_nav",
+      "limit": 2000,
+      "offset": 1990
+    },
+    "rows": 1155,
+    "codes": [
+      "510300.SH"
+    ],
+    "first_rows": [
+      {
+        "ts_code": "510300.SH",
+        "ann_date": "20220210",
+        "nav_date": "20220209",
+        "unit_nav": 4.6496,
+        "acc_nav": null
+      },
+      {
+        "ts_code": "510300.SH",
+        "ann_date": "20220211",
+        "nav_date": "20220210",
+        "unit_nav": 4.6377,
+        "acc_nav": null
+      },
+      {
+        "ts_code": "510300.SH",
+        "ann_date": "20220212",
+        "nav_date": "20220211",
+        "unit_nav": 4.5994,
+        "acc_nav": null
+      }
+    ],
+    "last_rows": [
+      {
+        "ts_code": "510300.SH",
+        "ann_date": "20261103",
+        "nav_date": "20261103",
+        "unit_nav": 4.0844,
+        "acc_nav": null
+      },
+      {
+        "ts_code": "510300.SH",
+        "ann_date": "20261104",
+        "nav_date": "20261104",
+        "unit_nav": 4.1785,
+        "acc_nav": null
+      },
+      {
+        "ts_code": "510300.SH",
+        "ann_date": "20261105",
+        "nav_date": "20261105",
+        "unit_nav": 4.1909,
+        "acc_nav": null
+      }
+    ],
+    "overlap_first_page": 10
+  },
+  {
+    "measured_at": "2026-11-06T06:15:55.471528+00:00",
+    "api": "fund_nav",
+    "params": {
+      "ts_code": "158000.SZ",
+      "start_date": "20140101",
+      "end_date": "20261105",
+      "fields": "ts_code,ann_date,nav_date,unit_nav,acc_nav",
+      "limit": 2000,
+      "offset": 0
+    },
+    "rows": 49,
+    "codes": [
+      "158000.SZ"
+    ],
+    "first_rows": [
+      {
+        "ts_code": "158000.SZ",
+        "ann_date": "20260815",
+        "nav_date": "20260814",
+        "unit_nav": 1.0,
+        "acc_nav": null
+      },
+      {
+        "ts_code": "158000.SZ",
+        "ann_date": "20260821",
+        "nav_date": "20260821",
+        "unit_nav": 1.0193,
+        "acc_nav": null
+      },
+      {
+        "ts_code": "158000.SZ",
+        "ann_date": "20260825",
+        "nav_date": "20260825",
+        "unit_nav": 1.0202,
+        "acc_nav": null
+      }
+    ],
+    "last_rows": [
+      {
+        "ts_code": "158000.SZ",
+        "ann_date": "20261103",
+        "nav_date": "20261103",
+        "unit_nav": 1.0242,
+        "acc_nav": null
+      },
+      {
+        "ts_code": "158000.SZ",
+        "ann_date": "20261104",
+        "nav_date": "20261104",
+        "unit_nav": 1.0337,
+        "acc_nav": null
+      },
+      {
+        "ts_code": "158000.SZ",
+        "ann_date": "20261105",
+        "nav_date": "20261105",
+        "unit_nav": 1.0517,
+        "acc_nav": null
+      }
+    ],
+    "overlap_first_page": 49
+  },
+  {
+    "measured_at": "2026-11-06T06:15:56.347965+00:00",
+    "api": "fund_nav",
+    "params": {
+      "ts_code": "158000.SZ",
+      "start_date": "20140101",
+      "end_date": "20261105",
+      "fields": "ts_code,ann_date,nav_date,unit_nav,acc_nav",
+      "limit": 1,
+      "offset": 49
+    },
+    "rows": 0,
+    "codes": [],
+    "first_rows": [],
+    "last_rows": [],
+    "overlap_first_page": 0
+  },
+  {
+    "measured_at": "2026-11-06T06:15:57.203350+00:00",
+    "api": "fund_nav",
+    "params": {
+      "ts_code": "158000.SZ",
+      "start_date": "20140101",
+      "end_date": "20261105",
+      "fields": "ts_code,ann_date,nav_date,unit_nav,acc_nav",
+      "limit": 2000,
+      "offset": 49
+    },
+    "rows": 0,
+    "codes": [],
+    "first_rows": [],
+    "last_rows": [],
+    "overlap_first_page": 0
+  }
+]

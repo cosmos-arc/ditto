@@ -1,5 +1,5 @@
 {
-  "measured_at": "2026-11-06T04:04:03.654166+00:00",
+  "measured_at": "2026-11-06T07:41:01.396255+00:00",
   "sets": {
     "global_index_daily": {
       "expected": [
@@ -28,129 +28,129 @@
       "actual": [
         {
           "source_ticker": "AS51",
-          "rows": 3281,
+          "rows": 3293,
           "start": "2014-01-02",
-          "end": "2026-11-04"
+          "end": "2026-11-05"
         },
         {
           "source_ticker": "CKLSE",
-          "rows": 3178,
+          "rows": 3190,
           "start": "2014-01-02",
-          "end": "2026-11-04"
+          "end": "2026-11-05"
         },
         {
           "source_ticker": "CSX5P",
-          "rows": 3318,
+          "rows": 3329,
           "start": "2014-01-02",
-          "end": "2026-11-03"
+          "end": "2026-11-04"
         },
         {
           "source_ticker": "DJI",
-          "rows": 3269,
+          "rows": 3280,
           "start": "2014-01-02",
-          "end": "2026-11-03"
+          "end": "2026-11-04"
         },
         {
           "source_ticker": "FCHI",
-          "rows": 3308,
+          "rows": 3319,
           "start": "2014-01-02",
-          "end": "2026-11-03"
+          "end": "2026-11-04"
         },
         {
           "source_ticker": "FTSE",
-          "rows": 3267,
+          "rows": 3278,
           "start": "2014-01-02",
-          "end": "2026-11-03"
+          "end": "2026-11-04"
         },
         {
           "source_ticker": "GDAXI",
-          "rows": 3279,
+          "rows": 3290,
           "start": "2014-01-02",
-          "end": "2026-11-03"
+          "end": "2026-11-04"
         },
         {
           "source_ticker": "HKAH",
-          "rows": 3187,
+          "rows": 3199,
           "start": "2014-01-02",
-          "end": "2026-11-04"
+          "end": "2026-11-05"
         },
         {
           "source_ticker": "HKTECH",
-          "rows": 1571,
+          "rows": 1583,
           "start": "2020-07-27",
-          "end": "2026-11-04"
+          "end": "2026-11-05"
         },
         {
           "source_ticker": "HSI",
-          "rows": 3187,
+          "rows": 3199,
           "start": "2014-01-02",
-          "end": "2026-11-04"
+          "end": "2026-11-05"
         },
         {
           "source_ticker": "IBOVESPA",
-          "rows": 108,
+          "rows": 118,
           "start": "2026-07-03",
-          "end": "2026-11-03"
+          "end": "2026-11-04"
         },
         {
           "source_ticker": "IXIC",
-          "rows": 3249,
+          "rows": 3260,
           "start": "2014-01-02",
-          "end": "2026-11-03"
+          "end": "2026-11-04"
         },
         {
           "source_ticker": "KS11",
-          "rows": 3180,
+          "rows": 3192,
           "start": "2014-01-02",
-          "end": "2026-11-04"
+          "end": "2026-11-05"
         },
         {
           "source_ticker": "N225",
-          "rows": 3165,
+          "rows": 3176,
           "start": "2014-01-06",
-          "end": "2026-11-04"
+          "end": "2026-11-05"
         },
         {
           "source_ticker": "RTS",
-          "rows": 1215,
+          "rows": 1226,
           "start": "2020-01-03",
-          "end": "2026-11-03"
+          "end": "2026-11-04"
         },
         {
           "source_ticker": "RUT",
-          "rows": 3251,
+          "rows": 3262,
           "start": "2014-01-02",
-          "end": "2026-11-03"
+          "end": "2026-11-04"
         },
         {
           "source_ticker": "SENSEX",
-          "rows": 3181,
+          "rows": 3192,
           "start": "2014-01-01",
-          "end": "2026-11-04"
+          "end": "2026-11-05"
         },
         {
           "source_ticker": "SPTSX",
-          "rows": 3243,
+          "rows": 3254,
           "start": "2014-01-02",
-          "end": "2026-11-03"
+          "end": "2026-11-04"
         },
         {
           "source_ticker": "SPX",
-          "rows": 3251,
+          "rows": 3262,
           "start": "2014-01-02",
-          "end": "2026-11-03"
+          "end": "2026-11-04"
         },
         {
           "source_ticker": "TWII",
-          "rows": 3152,
+          "rows": 3162,
           "start": "2014-01-02",
-          "end": "2026-11-04"
+          "end": "2026-11-05"
         },
         {
           "source_ticker": "XIN9",
-          "rows": 3167,
+          "rows": 3179,
           "start": "2014-01-02",
-          "end": "2026-11-04"
+          "end": "2026-11-05"
         }
       ],
       "missing": [],
@@ -1381,163 +1381,163 @@
       "actual": [
         {
           "index_id": "000001.SH",
-          "rows": 242919,
+          "rows": 245112,
           "start": "2014-01-30",
-          "end": "2026-09-30",
+          "end": "2026-10-30",
           "source_ticker": "000001.SH"
         },
         {
           "index_id": "000016.SH",
-          "rows": 7650,
+          "rows": 7700,
           "start": "2014-01-30",
-          "end": "2026-09-30",
+          "end": "2026-10-30",
           "source_ticker": "000016.SH"
         },
         {
           "index_id": "000300.SH",
-          "rows": 70200,
+          "rows": 70500,
           "start": "2014-01-30",
-          "end": "2026-09-30",
+          "end": "2026-10-30",
           "source_ticker": "000300.SH"
         },
         {
           "index_id": "000688.SH",
-          "rows": 3750,
+          "rows": 3800,
           "start": "2020-07-31",
-          "end": "2026-09-30",
+          "end": "2026-10-30",
           "source_ticker": "000688.SH"
         },
         {
           "index_id": "000852.SH",
-          "rows": 144200,
+          "rows": 145200,
           "start": "2014-10-31",
-          "end": "2026-09-30",
+          "end": "2026-10-30",
           "source_ticker": "000852.SH"
         },
         {
           "index_id": "000905.SH",
-          "rows": 76514,
+          "rows": 77014,
           "start": "2014-01-30",
-          "end": "2026-09-30",
+          "end": "2026-10-30",
           "source_ticker": "000905.SH"
         },
         {
           "index_id": "000906.SH",
-          "rows": 122414,
+          "rows": 123214,
           "start": "2014-01-30",
-          "end": "2026-09-30",
+          "end": "2026-10-30",
           "source_ticker": "000906.SH"
         },
         {
           "index_id": "000985.CSI",
-          "rows": 565806,
+          "rows": 570923,
           "start": "2014-01-30",
-          "end": "2026-09-30",
+          "end": "2026-10-30",
           "source_ticker": "000985.CSI"
         },
         {
           "index_id": "000991.SH",
-          "rows": 28024,
+          "rows": 28143,
           "start": "2014-01-30",
-          "end": "2026-09-30",
+          "end": "2026-10-30",
           "source_ticker": "000991.SH"
         },
         {
           "index_id": "000992.SH",
-          "rows": 22167,
+          "rows": 22294,
           "start": "2014-01-30",
-          "end": "2026-09-30",
+          "end": "2026-10-30",
           "source_ticker": "000992.SH"
         },
         {
           "index_id": "000993.SH",
-          "rows": 46590,
+          "rows": 46737,
           "start": "2014-01-30",
-          "end": "2026-09-30",
+          "end": "2026-10-30",
           "source_ticker": "000993.SH"
         },
         {
           "index_id": "399001.SZ",
-          "rows": 70154,
+          "rows": 70654,
           "start": "2014-01-30",
-          "end": "2026-09-30",
+          "end": "2026-10-30",
           "source_ticker": "399001.SZ"
         },
         {
           "index_id": "399006.SZ",
-          "rows": 15614,
+          "rows": 15714,
           "start": "2014-01-30",
-          "end": "2026-09-30",
+          "end": "2026-10-30",
           "source_ticker": "399006.SZ"
         },
         {
           "index_id": "399303.SZ",
-          "rows": 287235,
+          "rows": 289235,
           "start": "2014-03-31",
-          "end": "2026-09-30",
+          "end": "2026-10-30",
           "source_ticker": "399303.SZ"
         },
         {
           "index_id": "399373.SZ",
-          "rows": 10230,
+          "rows": 10296,
           "start": "2014-01-30",
-          "end": "2026-09-30",
+          "end": "2026-10-30",
           "source_ticker": "399373.SZ"
         },
         {
           "index_id": "399374.SZ",
-          "rows": 15500,
+          "rows": 15600,
           "start": "2014-01-30",
-          "end": "2026-09-30",
+          "end": "2026-10-30",
           "source_ticker": "399374.SZ"
         },
         {
           "index_id": "399375.SZ",
-          "rows": 15506,
+          "rows": 15606,
           "start": "2014-01-30",
-          "end": "2026-09-30",
+          "end": "2026-10-30",
           "source_ticker": "399375.SZ"
         },
         {
           "index_id": "399376.SZ",
-          "rows": 25754,
+          "rows": 25920,
           "start": "2014-01-30",
-          "end": "2026-09-30",
+          "end": "2026-10-30",
           "source_ticker": "399376.SZ"
         },
         {
           "index_id": "399377.SZ",
-          "rows": 25772,
+          "rows": 25938,
           "start": "2014-01-30",
-          "end": "2026-09-30",
+          "end": "2026-10-30",
           "source_ticker": "399377.SZ"
         },
         {
           "index_id": "399378.SZ",
-          "rows": 27000,
+          "rows": 27300,
           "start": "2014-01-30",
-          "end": "2026-09-30",
+          "end": "2026-10-30",
           "source_ticker": "399378.SZ"
         },
         {
           "index_id": "399673.SZ",
-          "rows": 7464,
+          "rows": 7514,
           "start": "2014-06-30",
-          "end": "2026-09-30",
+          "end": "2026-10-30",
           "source_ticker": "399673.SZ"
         },
         {
           "index_id": "899050.BJ",
-          "rows": 2300,
+          "rows": 2350,
           "start": "2022-12-30",
-          "end": "2026-09-30",
+          "end": "2026-10-30",
           "source_ticker": "899050.BJ"
         },
         {
           "index_id": "932000.CSI",
-          "rows": 75902,
+          "rows": 77902,
           "start": "2023-08-31",
-          "end": "2026-09-30",
+          "end": "2026-10-30",
           "source_ticker": "932000.CSI"
         }
       ],
@@ -2328,13 +2328,13 @@
       "missing_bars": [
         {
           "source": "tushare",
-          "source_ticker": "SCTAS2005.INE",
-          "symbol": "SC2005TAS",
+          "source_ticker": "SCTAS2009.INE",
+          "symbol": "SC2009TAS",
           "exchange": "INE",
           "fut_code": "SCTAS",
           "multiplier": null,
-          "list_date": "2020-03-20",
-          "delist_date": "2020-04-20",
+          "list_date": "2020-06-19",
+          "delist_date": "2020-08-19",
           "knowledge_date": "2026-11-05",
           "rows": null,
           "start": null,
@@ -2342,13 +2342,13 @@
         },
         {
           "source": "tushare",
-          "source_ticker": "SCTAS2003.INE",
-          "symbol": "SC2003TAS",
+          "source_ticker": "SCTAS2004.INE",
+          "symbol": "SC2004TAS",
           "exchange": "INE",
           "fut_code": "SCTAS",
           "multiplier": null,
-          "list_date": "2020-01-13",
-          "delist_date": "2020-02-18",
+          "list_date": "2020-02-19",
+          "delist_date": "2020-03-19",
           "knowledge_date": "2026-11-05",
           "rows": null,
           "start": null,
@@ -2370,20 +2370,6 @@
         },
         {
           "source": "tushare",
-          "source_ticker": "SCTAS2009.INE",
-          "symbol": "SC2009TAS",
-          "exchange": "INE",
-          "fut_code": "SCTAS",
-          "multiplier": null,
-          "list_date": "2020-06-19",
-          "delist_date": "2020-08-19",
-          "knowledge_date": "2026-11-05",
-          "rows": null,
-          "start": null,
-          "end": null
-        },
-        {
-          "source": "tushare",
           "source_ticker": "SCTAS2010.INE",
           "symbol": "SC2010TAS",
           "exchange": "INE",
@@ -2391,20 +2377,6 @@
           "multiplier": null,
           "list_date": "2020-07-22",
           "delist_date": "2020-09-11",
-          "knowledge_date": "2026-11-05",
-          "rows": null,
-          "start": null,
-          "end": null
-        },
-        {
-          "source": "tushare",
-          "source_ticker": "SCTAS2007.INE",
-          "symbol": "SC2007TAS",
-          "exchange": "INE",
-          "fut_code": "SCTAS",
-          "multiplier": null,
-          "list_date": "2020-04-21",
-          "delist_date": "2020-06-16",
           "knowledge_date": "2026-11-05",
           "rows": null,
           "start": null,
@@ -2426,13 +2398,41 @@
         },
         {
           "source": "tushare",
-          "source_ticker": "SCTAS2004.INE",
-          "symbol": "SC2004TAS",
+          "source_ticker": "SCTAS2003.INE",
+          "symbol": "SC2003TAS",
           "exchange": "INE",
           "fut_code": "SCTAS",
           "multiplier": null,
-          "list_date": "2020-02-19",
-          "delist_date": "2020-03-19",
+          "list_date": "2020-01-13",
+          "delist_date": "2020-02-18",
+          "knowledge_date": "2026-11-05",
+          "rows": null,
+          "start": null,
+          "end": null
+        },
+        {
+          "source": "tushare",
+          "source_ticker": "SCTAS2005.INE",
+          "symbol": "SC2005TAS",
+          "exchange": "INE",
+          "fut_code": "SCTAS",
+          "multiplier": null,
+          "list_date": "2020-03-20",
+          "delist_date": "2020-04-20",
+          "knowledge_date": "2026-11-05",
+          "rows": null,
+          "start": null,
+          "end": null
+        },
+        {
+          "source": "tushare",
+          "source_ticker": "SCTAS2007.INE",
+          "symbol": "SC2007TAS",
+          "exchange": "INE",
+          "fut_code": "SCTAS",
+          "multiplier": null,
+          "list_date": "2020-04-21",
+          "delist_date": "2020-06-16",
           "knowledge_date": "2026-11-05",
           "rows": null,
           "start": null,

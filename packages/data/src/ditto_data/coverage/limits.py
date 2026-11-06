@@ -106,7 +106,7 @@ _DATASET_COVERAGE: dict[str, DatasetCoverageLimit] = {
         measured_start="2013-01-04",
         measured_end="2026-11-05",
         gaps=(),
-        notes="因子与已存股票行情对齐;有价缺因子复测见 #708;黄金集/版本边界沿用 #620,不将最新因子称当年所见。",
+        notes="股票新补两条价格的复权因子已补齐;当前逐会话审计有价缺因子为 0。黄金集/版本边界沿用 #620,不将最新因子称当年所见。",
     ),
     "balance_sheet": DatasetCoverageLimit(
         dataset="balance_sheet",
@@ -155,12 +155,10 @@ _DATASET_COVERAGE: dict[str, DatasetCoverageLimit] = {
     "corporate_actions": DatasetCoverageLimit(
         dataset="corporate_actions",
         domain="capital",
-        status="partial",
+        status="ready",
         measured_start="2007-05-23",
         measured_end="2034-01-20",
-        gaps=(
-            "摄取账本仍有未归因失败,不能以库存或消费样本声称闭合;具体 source/date/error 见 current_failures。",
-        ),
+        gaps=(),
         notes="冻结用途为回购/解禁,rights 排除;计划日可到 2034 年,不代表已实施,PIT 由可知时间守。",
     ),
     "cyq_perf": DatasetCoverageLimit(
@@ -223,20 +221,31 @@ _DATASET_COVERAGE: dict[str, DatasetCoverageLimit] = {
         status="partial",
         measured_start="2013-01-04",
         measured_end="2026-11-05",
-        gaps=("无 ETF 状态全集;旧码、尾部和真实漏数逐项取证,剩余源缺席不等于停牌。",),
-        notes="ETF 价格/复权消费;历史缺口逐代码 fund_daily 探针与有界补齐,LOF 和无状态证据分开。缺价不补零。",
+        gaps=(
+            "162,244 个会话在精确 fund_daily 请求中未返回;无 ETF 状态全集,源缺席不等于停牌。",
+        ),
+        notes=(
+            "1,847 ETF 价格/复权消费;4 个转型日误作首次上市日已按交易所原文纠正,上市前价异常清"
+            "零。当前 162,244 个缺价会话均与 fund_daily 原生请求精确匹配,源返回未补入为"
+            " 0;无状态全集,源空不推断停牌。"
+        ),
     ),
     "etf_nav": DatasetCoverageLimit(
         dataset="etf_nav",
         domain="market",
         status="partial",
         measured_start="2014-01-01",
-        measured_end="2026-11-02",
+        measured_end="2026-11-05",
         gaps=(
-            "末端 2026-11-02;当前失败/迟发治理由 #707 验收。",
+            "尚余 1737 个标的未完成精确请求窗,具体窗口见请求覆盖 CSV;尚未执行或失败不称源不可取得。",
+            "公告版本与当前源修订分开;分页/同键变值失败保留 fail closed,不用一次最新读取授予严格历史用途。",
             "摄取账本仍有未归因失败,不能以库存或消费样本声称闭合;具体 source/date/error 见 current_failures。",
         ),
-        notes="单位/累计净值与公告锚,修订不补零;本地末端 11-02,夜链失败与迟发治理归 #707,不能称 11-05 已新鲜。",
+        notes=(
+            "正式 ETF 净值研究;110/1847 个标的已由本次成功请求覆盖 2014-01-01…20"
+            "26-11-05。每个完成窗绑定同码快照及载荷或源空观察,允许成功窗口并集覆盖,原失败请求不改写"
+            "。源披露不承诺逐交易日必有;净值公告锚与份额 T+1 派生分别保留。"
+        ),
     ),
     "etf_reference": DatasetCoverageLimit(
         dataset="etf_reference",
@@ -267,7 +276,6 @@ _DATASET_COVERAGE: dict[str, DatasetCoverageLimit] = {
                 "当前 ETF 有价缺因子残余 30 会话/3 码,fund_adj 同窗返回 0;原 21 个非"
                 " ETF 身份的 19 旧会话另列,不要求 ETF 源补 LOF。"
             ),
-            "摄取账本仍有未归因失败,不能以库存或消费样本声称闭合;具体 source/date/error 见 current_failures。",
         ),
         notes=(
             "ETF 后复权图表已实际消费;价格补齐后复测并逐项重取;当前 ETF 残余 30 会话属 512"
@@ -300,13 +308,15 @@ _DATASET_COVERAGE: dict[str, DatasetCoverageLimit] = {
         domain="market",
         status="partial",
         measured_start="2013-01-04",
-        measured_end="2026-11-04",
+        measured_end="2026-11-05",
         gaps=(
-            "ETF 无状态全集;份额不承诺逐日必有,旧 87.9% 会话在场仅为观测口径,尚未逐正式集合闭合。",
-            "旧源全量与本地差额含 LOF/非 ETF;当前分类纠正不会把存量差额自动变为已补齐。",
-            "摄取账本仍有未归因失败,不能以库存或消费样本声称闭合;具体 source/date/error 见 current_failures。",
+            "尚余 1010 个标的未完成精确请求窗,具体窗口见请求覆盖 CSV;尚未执行或失败不称源不可取得。",
         ),
-        notes="正式 ETF 份额观察,万份;源不披露与零份额不同;末端及 LOF/旧码差额随正式范围展示。",
+        notes=(
+            "正式 ETF 份额研究;837/1847 个标的已由本次成功请求覆盖 2014-01-01…20"
+            "26-11-05。每个完成窗绑定同码快照及载荷或源空观察,允许成功窗口并集覆盖,原失败请求不改写"
+            "。源披露不承诺逐交易日必有;净值公告锚与份额 T+1 派生分别保留。"
+        ),
     ),
     "futures_basic": DatasetCoverageLimit(
         dataset="futures_basic",
@@ -346,10 +356,9 @@ _DATASET_COVERAGE: dict[str, DatasetCoverageLimit] = {
         domain="market",
         status="partial",
         measured_start="2014-01-01",
-        measured_end="2026-11-04",
+        measured_end="2026-11-05",
         gaps=(
             "RTS 的 2014–2019、IBOVESPA 的 2014–2026-07-02:index_global 原生请求返回 0。",
-            "摄取账本仍有未归因失败,不能以库存或消费样本声称闭合;具体 source/date/error 见 current_failures。",
         ),
         notes=(
             "21/21 参考指数;RTS 2020-01-03 起,IBOVESPA 2026-07-03 "
@@ -542,8 +551,10 @@ _DATASET_COVERAGE: dict[str, DatasetCoverageLimit] = {
         measured_end=None,
         gaps=("3 个沪深历史代码缺上市日,未据行情推造。",),
         notes=(
-            "正式沪深名册 5,571(含退市);BSE 359 保留但个股链范围外;list_date 缺失"
-            "的 600849.SH/300060.SZ/002525.SZ 不造日期。"
+            "正式沪深名册 5,571(含退市与旧码);BSE 359 保留但个股链范围外。600849.SH"
+            " 旧码及 300060.SZ/002525.SZ 撤销发行保留身份并退出当前活跃池,不造日期;4"
+            " 个错误 1970 上市日及 601313 首次上市日已按原文纠正;另 4 个变更代码的旧身份退"
+            "出当前活跃池,仍保留完整历史分母。"
         ),
     ),
     "stock_daily": DatasetCoverageLimit(
@@ -553,11 +564,12 @@ _DATASET_COVERAGE: dict[str, DatasetCoverageLimit] = {
         measured_start="2013-01-04",
         measured_end="2026-11-05",
         gaps=(
-            "逐证券历史无价/缺状态桶仍需以原生接口证据归因;不可用分桶标签声称全部关闭。",
+            "206,620 个非停牌缺价会话在精确 daily 请求中未返回;缺价不等于停牌或现实无成交,旧码区间单列。",
         ),
         notes=(
-            "沪深全生命周期,2014 目标;逐证券会话审计及原生 daily 缺口探针见 #708 验收表。"
-            "BSE 存量单列保留;停牌、退市、旧码和源缺席不得互相替代。"
+            "沪深全生命周期,2014 目标;当前 206,620 个非停牌缺价会话均与逐码 daily 原生"
+            "请求精确匹配,未探测及源返回未补入均为 0。源缺价不证明现实无成交;停牌、退市、旧码和源缺席分别"
+            "取证,BSE 存量单列保留。"
         ),
     ),
     "stock_limit": DatasetCoverageLimit(
@@ -577,10 +589,18 @@ _DATASET_COVERAGE: dict[str, DatasetCoverageLimit] = {
         measured_end="2026-11-05",
         gaps=(
             "官方 2016 年前不覆盖;精确库存起点 2016-08-09。",
-            "历史缺状态与停牌有价矛盾尚有残余,严格消费者不得把未知当正常。",
+            (
+                "剩余缺状态逐代码 bak_basic 实测;6 个无停牌时段却有正成交量的会话在 suspend"
+                "_d/daily 原生响应中仍并存,保留未知,不放行严格交易消费者。"
+            ),
             "摄取账本仍有未归因失败,不能以库存或消费样本声称闭合;具体 source/date/error 见 current_failures。",
         ),
-        notes="bak_basic 官方声明 2016 年起;本库存实测 2016-08-09 起,两者不可混写。缺状态与长停矛盾证据保留未知,不放行严格历史消费。",
+        notes=(
+            "bak_basic 官方声明 2016 年起;本库存实测 2016-08-09 起,两者不可混写"
+            "。停牌有价物理 1,845 项中 1,448 有盘中时段、391 为零成交量、6 项时段空但正成"
+            "交量(两原生接口同样返回)。沪深正式异常 1,831 项,BSE 14 项另列;不从日线存在推断"
+            "允许交易。"
+        ),
     ),
     "top10_floatholders": DatasetCoverageLimit(
         dataset="top10_floatholders",
@@ -614,12 +634,10 @@ _DATASET_COVERAGE: dict[str, DatasetCoverageLimit] = {
     "top_list": DatasetCoverageLimit(
         dataset="top_list",
         domain="capital",
-        status="partial",
+        status="ready",
         measured_start="2014-01-02",
         measured_end="2026-11-05",
-        gaps=(
-            "摄取账本仍有未归因失败,不能以库存或消费样本声称闭合;具体 source/date/error 见 current_failures。",
-        ),
+        gaps=(),
         notes="沪深龙虎榜事件展示;无事件与抓取失败分开;当前夜链失败治理归 #707。",
     ),
     "valuation_metrics": DatasetCoverageLimit(

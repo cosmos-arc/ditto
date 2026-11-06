@@ -1,0 +1,73 @@
+{
+  "measured_at": "2026-11-06T05:57:55.277924+00:00",
+  "sources": [
+    {
+      "url": "https://www1.hkexnews.hk/listedco/listconews/sehk/2011/0520/ltn20110520382.pdf",
+      "local_file": "shanghai-pharma-2011.pdf",
+      "bytes": 5526829,
+      "sha256": "9766a550db10ac1b7708b8cee537190f07d1a603d0f943b9d0306bdbbe523192"
+    },
+    {
+      "url": "https://www.csrc.gov.cn/csrc/c105890/c1015093/content.shtml",
+      "local_file": "suzhou-hengjiu-revocation.html",
+      "bytes": 16084,
+      "sha256": "02aa6c7224985ce45e9833ce1a0682477817c773f872308b1ed695ed80d7c63e"
+    },
+    {
+      "url": "https://www.szse.cn/aboutus/research/secuities/documents/P020180328492443984767.pdf",
+      "local_file": "szse-ipo-study.pdf",
+      "bytes": 286637,
+      "sha256": "133f93f8e907635280110361c7ee1c5e8feb69f2775ee83e3598e26251c70277"
+    },
+    {
+      "url": "https://www.p5w.net/stock/ssgsyj/sme/201104/t3542394.htm",
+      "local_file": "shengjing-share-cancellation.html",
+      "bytes": 28746,
+      "sha256": "663fe878bed1c69e60a64fc21fced28212f39b43fe8ccb2a0e9561baa274652b"
+    },
+    {
+      "url": "https://www.csrc.gov.cn/csrc/c100024/c1492244/1492244/files/a23b9fc09dd04977bb49989379e1a862.pdf",
+      "local_file": "csrc-2011-04.pdf",
+      "bytes": 12343765,
+      "sha256": "c290e0250811a6742a37e521f918b6772370ef3e62f8a30236807327889b92f5",
+      "pdf_page": 49,
+      "printed_page": 41,
+      "verification": "Rendered page visually checked: 2011-04-06, CSRC permit 2011/499 revokes IPO authorization and requires repayment."
+    }
+  ],
+  "identities": [
+    {
+      "source_ticker": "600849.SH",
+      "instrument_id": 1005572,
+      "name": "上药转换",
+      "reason": "retired_source_code",
+      "fact": "Issuer history: original shares listed 1994-03-24; code changed from 600849 to 601607 in March 2010. Not a separately active stock in the 2014 target window.",
+      "source_file": "shanghai-pharma-2011.pdf",
+      "pdf_pages": [
+        76,
+        78
+      ],
+      "successor_code": "601607.SH"
+    },
+    {
+      "source_ticker": "300060.SZ",
+      "instrument_id": 1005575,
+      "name": "苏州恒久",
+      "reason": "ipo_authorization_revoked",
+      "fact": "CSRC permit 2010/806 dated 2010-06-13 revoked initial IPO authorization; exchange research explicitly identifies the cancelled 300060 listing. Do not borrow dates from the later 002808 identity.",
+      "source_file": "suzhou-hengjiu-revocation.html",
+      "code_evidence_file": "szse-ipo-study.pdf",
+      "code_evidence_pdf_page": 5
+    },
+    {
+      "source_ticker": "002525.SZ",
+      "instrument_id": 1005576,
+      "name": "胜景山河",
+      "reason": "ipo_authorization_revoked",
+      "fact": "CSRC permit 2011/499 dated 2011-04-06 revoked IPO authorization; issuer repayment notice calls for cancellation of all registered shares on 2011-04-12. No listing date inferred.",
+      "source_file": "csrc-2011-04.pdf",
+      "pdf_page": 49
+    }
+  ],
+  "scope": "Keep all three IDs, source mappings and historical audit denominator. Correct only current active flags; preserve unknown list/delist dates. These are separately attributed target-window exceptions, not native-source price gaps or suspensions."
+}

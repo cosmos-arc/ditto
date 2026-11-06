@@ -1,0 +1,88 @@
+{
+  "rows": [
+    {
+      "source_ticker": "001246.SZ",
+      "instrument_id": 1005567,
+      "observed_master_list_date": "1970-01-01",
+      "official_listing_date": "2026-09-30",
+      "api": "stock_basic",
+      "params": {
+        "ts_code": "001246.SZ",
+        "list_status": "L"
+      },
+      "measured_at": "2026-11-06T06:56:15.041363+00:00",
+      "source_row": {
+        "ts_code": "001246.SZ",
+        "name": "力勤资源",
+        "list_date": "20260930",
+        "delist_date": null,
+        "list_status": "L"
+      },
+      "primary_disclosure_url": "https://www.szse.cn/marketServices/listing/report/",
+      "reason": "1970-01-01 is a stale invalid stored date. Current native stock_basic and exchange listing disclosure agree on the 2026 listing. No first-price inference."
+    },
+    {
+      "source_ticker": "301569.SZ",
+      "instrument_id": 1005579,
+      "observed_master_list_date": "1970-01-01",
+      "official_listing_date": "2026-10-15",
+      "api": "stock_basic",
+      "params": {
+        "ts_code": "301569.SZ",
+        "list_status": "L"
+      },
+      "measured_at": "2026-11-06T06:56:16.547555+00:00",
+      "source_row": {
+        "ts_code": "301569.SZ",
+        "name": "联亚药业",
+        "list_date": "20261015",
+        "delist_date": null,
+        "list_status": "L"
+      },
+      "primary_disclosure_url": "https://www.szse.cn/certificate/secondb/GEMdynamice/t20261015_623313.html",
+      "reason": "1970-01-01 is a stale invalid stored date. Current native stock_basic and exchange listing disclosure agree on the 2026 listing. No first-price inference."
+    },
+    {
+      "source_ticker": "301660.SZ",
+      "instrument_id": 1005570,
+      "observed_master_list_date": "1970-01-01",
+      "official_listing_date": "2026-10-13",
+      "api": "stock_basic",
+      "params": {
+        "ts_code": "301660.SZ",
+        "list_status": "L"
+      },
+      "measured_at": "2026-11-06T06:56:18.140219+00:00",
+      "source_row": {
+        "ts_code": "301660.SZ",
+        "name": "粤芯半导体",
+        "list_date": "20261013",
+        "delist_date": null,
+        "list_status": "L"
+      },
+      "primary_disclosure_url": "https://www.szse.cn/disclosure/notice/t20261012_623256.html",
+      "reason": "1970-01-01 is a stale invalid stored date. Current native stock_basic and exchange listing disclosure agree on the 2026 listing. No first-price inference."
+    },
+    {
+      "source_ticker": "301716.SZ",
+      "instrument_id": 1005564,
+      "observed_master_list_date": "1970-01-01",
+      "official_listing_date": "2026-09-29",
+      "api": "stock_basic",
+      "params": {
+        "ts_code": "301716.SZ",
+        "list_status": "L"
+      },
+      "measured_at": "2026-11-06T06:56:19.675050+00:00",
+      "source_row": {
+        "ts_code": "301716.SZ",
+        "name": "鸿富诚",
+        "list_date": "20260929",
+        "delist_date": null,
+        "list_status": "L"
+      },
+      "primary_disclosure_url": "https://disc.static.szse.cn/download/disc/disk03/finalpage/2026-09-28/9b6d4f3f-452c-4717-83f4-b995dcec3dfc.PDF",
+      "reason": "1970-01-01 is a stale invalid stored date. Current native stock_basic and exchange listing disclosure agree on the 2026 listing. No first-price inference."
+    }
+  ]
+}

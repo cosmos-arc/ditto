@@ -1,0 +1,83 @@
+{
+  "measured_at": "2026-11-06T06:57:37.905627+00:00",
+  "consumer": "MetadataQueryFacade.find_securities + MetadataService.instrument.resolve_instrument_ids_batch",
+  "roster_rows": 4,
+  "actual": [
+    {
+      "instrument_id": 1005567,
+      "ticker": "001246",
+      "name": "N力勤",
+      "display_name": null,
+      "exchange": "SZSE",
+      "board": null,
+      "asset_class": "stock",
+      "list_date": "2026-09-30",
+      "delist_date": null,
+      "is_st": 0,
+      "is_active": 1,
+      "created_at": "2026-10-03 14:52:11",
+      "updated_at": null,
+      "source": "tushare",
+      "source_ticker": "001246.SZ"
+    },
+    {
+      "instrument_id": 1005579,
+      "ticker": "301569",
+      "name": "联亚药业",
+      "display_name": null,
+      "exchange": "SZSE",
+      "board": null,
+      "asset_class": "stock",
+      "list_date": "2026-10-15",
+      "delist_date": null,
+      "is_st": 0,
+      "is_active": 1,
+      "created_at": "2026-10-03 14:52:11",
+      "updated_at": null,
+      "source": "tushare",
+      "source_ticker": "301569.SZ"
+    },
+    {
+      "instrument_id": 1005570,
+      "ticker": "301660",
+      "name": "粤芯半导",
+      "display_name": null,
+      "exchange": "SZSE",
+      "board": null,
+      "asset_class": "stock",
+      "list_date": "2026-10-13",
+      "delist_date": null,
+      "is_st": 0,
+      "is_active": 1,
+      "created_at": "2026-10-03 14:52:11",
+      "updated_at": null,
+      "source": "tushare",
+      "source_ticker": "301660.SZ"
+    },
+    {
+      "instrument_id": 1005564,
+      "ticker": "301716",
+      "name": "C鸿富诚",
+      "display_name": null,
+      "exchange": "SZSE",
+      "board": null,
+      "asset_class": "stock",
+      "list_date": "2026-09-29",
+      "delist_date": null,
+      "is_st": 0,
+      "is_active": 1,
+      "created_at": "2026-10-03 14:52:11",
+      "updated_at": null,
+      "source": "tushare",
+      "source_ticker": "301716.SZ"
+    }
+  ],
+  "identity_asof": "2026-11-05",
+  "resolved": {
+    "001246.SZ": 1005567,
+    "301569.SZ": 1005579,
+    "301660.SZ": 1005570,
+    "301716.SZ": 1005564
+  },
+  "boundary": "Four current stock identities resolve after official listing and remain absent from 2015 mapping queries. Current names are not historical name versions."
+}

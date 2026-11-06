@@ -1,0 +1,36 @@
+[
+  {
+    "request": {
+      "source_ticker": "301718.SZ",
+      "start": "2026-10-22",
+      "end": "2026-10-23",
+      "missing_dates": [
+        "2026-10-22",
+        "2026-10-23"
+      ]
+    },
+    "measured_at": "2026-11-06T06:43:55.458779+00:00",
+    "result": {
+      "dataset": "adj_factor",
+      "trade_date": "2026-10-22",
+      "status": "success",
+      "row_count": 2,
+      "checksum": "a5da97e8e31692755ee54e24f9e3ab3f",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-10-22",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 2,
+        "checksum": "a5da97e8e31692755ee54e24f9e3ab3f"
+      }
+    }
+  }
+]

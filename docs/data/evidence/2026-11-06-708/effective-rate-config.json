@@ -1,8 +1,21 @@
 {
-  "measured_at": "2026-11-06T05:03:17.229673+00:00",
+  "measured_at": "2026-11-06T07:35:00.555203+00:00",
   "profile": "paid",
-  "global_rate_per_worker": 40,
-  "workers": 4,
-  "combined_upper_bound_per_minute": 160,
-  "direct_stock_probe_rate_per_minute": 30
+  "fund_worker_rate": 40,
+  "fund_workers": 4,
+  "fund_share_worker_rate": 25,
+  "etf_nav_worker_rate": 35,
+  "ledger_worker_rate": 10,
+  "status_probe_rate": 10,
+  "task_aggregate_upper_bound_per_minute": 240,
+  "boundary": "Per-process task caps; no production cross-process limiter added. Provider throttling and failures remain failures and are retried with recorded outcomes. This is an execution setting, not a statement of account entitlement.",
+  "previous": {
+    "measured_at": "2026-11-06T05:03:17.229673+00:00",
+    "profile": "paid",
+    "global_rate_per_worker": 40,
+    "workers": 4,
+    "combined_upper_bound_per_minute": 160,
+    "direct_stock_probe_rate_per_minute": 30,
+    "historical_note": "Prior snapshot at 05:03 UTC; workers subsequently ran 30/min from 06:50 UTC."
+  }
 }

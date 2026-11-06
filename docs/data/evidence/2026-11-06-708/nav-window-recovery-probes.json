@@ -1,0 +1,124 @@
+[
+  {
+    "params": {
+      "ts_code": "158005.SZ",
+      "start_date": "20140101",
+      "end_date": "20261105"
+    },
+    "measured_at": "2026-11-06T07:02:01.732172+00:00",
+    "status": "failed",
+    "errors": [
+      {
+        "type": "RetryError",
+        "message": "RetryError[<Future at 0x1101fa490 state=finished raised SourceFetchError>]"
+      },
+      {
+        "type": "SourceFetchError",
+        "message": "Tushare fund_nav pagination truncated below floor: page=51 at offset=0 but more rows exist (server cap < 500)"
+      }
+    ]
+  },
+  {
+    "params": {
+      "ts_code": "158005.SZ",
+      "start_date": "20140101",
+      "end_date": "20260930"
+    },
+    "measured_at": "2026-11-06T07:02:12.677767+00:00",
+    "status": "success",
+    "rows": 32,
+    "first": [
+      {
+        "ts_code": "158005.SZ",
+        "ann_date": "20260815",
+        "nav_date": "20260814",
+        "unit_nav": 1.0,
+        "acc_nav": null
+      },
+      {
+        "ts_code": "158005.SZ",
+        "ann_date": "20260821",
+        "nav_date": "20260820",
+        "unit_nav": 0.9872,
+        "acc_nav": null
+      }
+    ],
+    "last": [
+      {
+        "ts_code": "158005.SZ",
+        "ann_date": "20260923",
+        "nav_date": "20260923",
+        "unit_nav": 0.9278,
+        "acc_nav": null
+      },
+      {
+        "ts_code": "158005.SZ",
+        "ann_date": "20260930",
+        "nav_date": "20260930",
+        "unit_nav": 0.9116,
+        "acc_nav": null
+      }
+    ]
+  },
+  {
+    "params": {
+      "ts_code": "158005.SZ",
+      "start_date": "20261001",
+      "end_date": "20261031"
+    },
+    "measured_at": "2026-11-06T07:02:23.702206+00:00",
+    "status": "failed",
+    "errors": [
+      {
+        "type": "RetryError",
+        "message": "RetryError[<Future at 0x10f597f00 state=finished raised SourceFetchError>]"
+      },
+      {
+        "type": "SourceFetchError",
+        "message": "Tushare fund_nav pagination truncated below floor: page=3 at offset=22 but more rows exist (server cap < 500)"
+      }
+    ]
+  },
+  {
+    "params": {
+      "ts_code": "158005.SZ",
+      "start_date": "20261101",
+      "end_date": "20261105"
+    },
+    "measured_at": "2026-11-06T07:04:03.180864+00:00",
+    "status": "success",
+    "rows": 4,
+    "first": [
+      {
+        "ts_code": "158005.SZ",
+        "ann_date": "20261103",
+        "nav_date": "20261102",
+        "unit_nav": 0.8563,
+        "acc_nav": null
+      },
+      {
+        "ts_code": "158005.SZ",
+        "ann_date": "20261103",
+        "nav_date": "20261103",
+        "unit_nav": 0.8668,
+        "acc_nav": null
+      }
+    ],
+    "last": [
+      {
+        "ts_code": "158005.SZ",
+        "ann_date": "20261104",
+        "nav_date": "20261104",
+        "unit_nav": 0.8844,
+        "acc_nav": null
+      },
+      {
+        "ts_code": "158005.SZ",
+        "ann_date": "20261105",
+        "nav_date": "20261105",
+        "unit_nav": 0.8959,
+        "acc_nav": null
+      }
+    ]
+  }
+]

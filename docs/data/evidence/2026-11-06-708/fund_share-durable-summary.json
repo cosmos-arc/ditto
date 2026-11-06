@@ -1,0 +1,9 @@
+{
+  "measured_at": "2026-11-06T07:43:47.553196+00:00",
+  "dataset": "fund_share",
+  "expected_instruments": 1847,
+  "completed_instruments": 837,
+  "invalid_checkpoints": [],
+  "roster_sha256": "75e9e635d78739564f29ec1bdee0c03d79e5a8115b127d97674d339a7014d912",
+  "boundary": "Union of successful same-code COMPLETE checkpoints measured during this task covers the exact requested calendar interval. Each checkpoint has retained payload or verified zero observation. Failed overlapping requests remain failed; interval coverage does not certify every historical disclosure or revision."
+}

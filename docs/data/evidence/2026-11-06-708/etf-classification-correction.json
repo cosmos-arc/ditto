@@ -1,6 +1,6 @@
 {
   "measured_at": "2026-11-06T05:18:29.065844+00:00",
-  "evidence_sha256": "cf1165710eeed7b483141eaeae5fdc9162268b742dc8957f5023364a626853d3",
+  "evidence_sha256": "f6a1bda97b58f0d405b068d3ffe9d7c6bfa4c4387b132259d9014c9e04bc7051",
   "reason": "ETF universe exclusion plus fund_basic identifies ETF feeder/LOF funds; correct current metadata, retain historical ID and physical data namespace",
   "before": [
     {
@@ -657,5 +657,6 @@
       "updated_at": null
     }
   ],
-  "completed_at": "2026-11-06T05:18:29.073332+00:00"
+  "completed_at": "2026-11-06T05:18:29.073332+00:00",
+  "source_evidence_sha256_raw": "cf1165710eeed7b483141eaeae5fdc9162268b742dc8957f5023364a626853d3"
 }

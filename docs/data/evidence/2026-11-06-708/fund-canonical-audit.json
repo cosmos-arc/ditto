@@ -1,0 +1,10 @@
+{
+  "started_at": "2026-11-06T06:15:20.581972+00:00",
+  "finished_at": "2026-11-06T06:16:18.835922+00:00",
+  "durable_holders_checked": 12088,
+  "nonempty_holders": 7228,
+  "zero_observations": 4860,
+  "canonical_expected_rows": 6270009,
+  "failures": [],
+  "verification": "Existing ProviderPayloadReader verified payload checksum, row count and physical schema fingerprint. All normalized provider values matched canonical natural keys and nulls, after the existing BSE dual-code rule. Existing extra historical rows retained; verified zero responses are observations, not proof of no real holdings."
+}

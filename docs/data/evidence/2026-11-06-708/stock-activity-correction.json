@@ -1,0 +1,101 @@
+{
+  "measured_at": "2026-11-06T06:00:06.913732+00:00",
+  "evidence_sha256": "be6931209809db2786407be1df2cddb90756b86d2827fcb3220573470ad20695",
+  "before": [
+    {
+      "instrument_id": 1005572,
+      "ticker": "600849",
+      "name": "上药转换",
+      "display_name": null,
+      "exchange": "SSE",
+      "board": null,
+      "asset_class": "stock",
+      "list_date": null,
+      "delist_date": null,
+      "is_st": 0,
+      "is_active": 1,
+      "created_at": "2026-10-03 14:52:11",
+      "updated_at": null
+    },
+    {
+      "instrument_id": 1005575,
+      "ticker": "300060",
+      "name": "苏州恒久",
+      "display_name": null,
+      "exchange": "SZSE",
+      "board": null,
+      "asset_class": "stock",
+      "list_date": null,
+      "delist_date": null,
+      "is_st": 0,
+      "is_active": 1,
+      "created_at": "2026-10-03 14:52:11",
+      "updated_at": null
+    },
+    {
+      "instrument_id": 1005576,
+      "ticker": "002525",
+      "name": "胜景山河",
+      "display_name": null,
+      "exchange": "SZSE",
+      "board": null,
+      "asset_class": "stock",
+      "list_date": null,
+      "delist_date": null,
+      "is_st": 0,
+      "is_active": 1,
+      "created_at": "2026-10-03 14:52:11",
+      "updated_at": null
+    }
+  ],
+  "after": [
+    {
+      "instrument_id": 1005572,
+      "ticker": "600849",
+      "name": "上药转换",
+      "display_name": null,
+      "exchange": "SSE",
+      "board": null,
+      "asset_class": "stock",
+      "list_date": null,
+      "delist_date": null,
+      "is_st": 0,
+      "is_active": 0,
+      "created_at": "2026-10-03 14:52:11",
+      "updated_at": null
+    },
+    {
+      "instrument_id": 1005575,
+      "ticker": "300060",
+      "name": "苏州恒久",
+      "display_name": null,
+      "exchange": "SZSE",
+      "board": null,
+      "asset_class": "stock",
+      "list_date": null,
+      "delist_date": null,
+      "is_st": 0,
+      "is_active": 0,
+      "created_at": "2026-10-03 14:52:11",
+      "updated_at": null
+    },
+    {
+      "instrument_id": 1005576,
+      "ticker": "002525",
+      "name": "胜景山河",
+      "display_name": null,
+      "exchange": "SZSE",
+      "board": null,
+      "asset_class": "stock",
+      "list_date": null,
+      "delist_date": null,
+      "is_st": 0,
+      "is_active": 0,
+      "created_at": "2026-10-03 14:52:11",
+      "updated_at": null
+    }
+  ],
+  "reason": "Retired source code and revoked IPO identities cannot be current active securities; preserve identity and unknown lifecycle dates.",
+  "completed_at": "2026-11-06T06:00:06.922164+00:00",
+  "source_evidence_sha256_raw": "be6931209809db2786407be1df2cddb90756b86d2827fcb3220573470ad20695"
+}

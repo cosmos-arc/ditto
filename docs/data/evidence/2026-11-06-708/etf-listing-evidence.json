@@ -1,0 +1,97 @@
+{
+  "measured_at": "2026-11-06T06:45:34.033638+00:00",
+  "rows": [
+    {
+      "source_ticker": "159908.SZ",
+      "instrument_id": 2001576,
+      "observed_master_list_date": "2018-12-10",
+      "official_listing_date": "2011-07-13",
+      "conversion_date": "2018-12-10",
+      "url": "https://disc.static.szse.cn/disc/disk03/finalpage/2026-06-26/a550fdf6-bfc2-4567-b952-c375cdb42dd5.PDF",
+      "sha256": "9213798c48b56fbf1745383960d12bcbfc65d7c980b37b9f5545db0f6a123039",
+      "pdf_pages_with_code_and_listing": [
+        1
+      ],
+      "fund_holder_source_payload": {
+        "delist_date": null,
+        "due_date": null,
+        "found_date": "20181210",
+        "list_date": "20181210",
+        "market": "E",
+        "name": "博时创业板ETF",
+        "source_ticker": "159908.SZ",
+        "status": "L"
+      },
+      "reason": "Source listing date equals later fund conversion date. Primary fund disclosure preserves original exchange listing; same trading code continues. No historical mandate or index-composition continuity inferred."
+    },
+    {
+      "source_ticker": "510680.SH",
+      "instrument_id": 2001521,
+      "observed_master_list_date": "2015-12-15",
+      "official_listing_date": "2013-12-02",
+      "conversion_date": "2015-12-15",
+      "url": "https://www.sse.com.cn/disclosure/fund/announcement/c/new/2026-01-21/510680_20260121_82S2.pdf",
+      "sha256": "b07ad0d17e0d99d942e01c847794122df2929f8dcba7fca7bcd5f2070fc9ada8",
+      "pdf_pages_with_code_and_listing": [
+        1
+      ],
+      "fund_holder_source_payload": {
+        "delist_date": null,
+        "due_date": null,
+        "found_date": "20151215",
+        "list_date": "20151215",
+        "market": "E",
+        "name": "万家上证50ETF",
+        "source_ticker": "510680.SH",
+        "status": "L"
+      },
+      "reason": "Source listing date equals later fund conversion date. Primary fund disclosure preserves original exchange listing; same trading code continues. No historical mandate or index-composition continuity inferred."
+    },
+    {
+      "source_ticker": "511220.SH",
+      "instrument_id": 2001503,
+      "observed_master_list_date": "2019-04-24",
+      "official_listing_date": "2014-12-16",
+      "conversion_date": "2019-04-24",
+      "url": "https://www.sse.com.cn/disclosure/fund/announcement/c/new/2026-02-09/511220_20260209_YW9F.pdf",
+      "sha256": "f1568775355e80fa24031fb542e5bd4521240deab3c6b1e98cb707657fde1ccc",
+      "pdf_pages_with_code_and_listing": [
+        1
+      ],
+      "fund_holder_source_payload": {
+        "delist_date": null,
+        "due_date": null,
+        "found_date": "20190424",
+        "list_date": "20190424",
+        "market": "E",
+        "name": "海富通上证城投债ETF",
+        "source_ticker": "511220.SH",
+        "status": "L"
+      },
+      "reason": "Source listing date equals later fund conversion date. Primary fund disclosure preserves original exchange listing; same trading code continues. No historical mandate or index-composition continuity inferred."
+    },
+    {
+      "source_ticker": "512990.SH",
+      "instrument_id": 2001494,
+      "observed_master_list_date": "2018-09-17",
+      "official_listing_date": "2015-03-25",
+      "conversion_date": "2018-09-17",
+      "url": "https://www.sse.com.cn/disclosure/fund/announcement/c/new/2025-05-30/512990_20250530_V4G3.pdf",
+      "sha256": "6e7c073325003216ce1f44a4aec90519f4c3afca0930b20e75c331c4636d9fc7",
+      "pdf_pages_with_code_and_listing": [
+        1
+      ],
+      "fund_holder_source_payload": {
+        "delist_date": null,
+        "due_date": null,
+        "found_date": "20180917",
+        "list_date": "20180917",
+        "market": "E",
+        "name": "华夏MSCI中国A股国际通ETF",
+        "source_ticker": "512990.SH",
+        "status": "L"
+      },
+      "reason": "Source listing date equals later fund conversion date. Primary fund disclosure preserves original exchange listing; same trading code continues. No historical mandate or index-composition continuity inferred."
+    }
+  ]
+}

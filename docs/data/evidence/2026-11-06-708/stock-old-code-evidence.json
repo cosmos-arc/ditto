@@ -1,0 +1,73 @@
+{
+  "measured_at": "2026-11-06T07:25:14.519157+00:00",
+  "rows": [
+    {
+      "source_ticker": "601313.SH",
+      "instrument_id": 1005573,
+      "name": "江南嘉捷",
+      "new_code": "601360.SH",
+      "code_change_date": "2018-02-28",
+      "official_listing_date": "2012-01-16",
+      "sources": [
+        {
+          "url": "https://big5.sse.com.cn/site/cht/www.sse.com.cn/disclosure/listedinfo/announcement/c/new/2024-08-31/601360_20240831_M8VP.pdf",
+          "pdf_page": 82,
+          "sha256": "b6265379618c60c2d9dd2ab9c0aaabbedb43b7c1be5eb07409820eb269766aec"
+        },
+        {
+          "url": "https://static.cninfo.com.cn/finalpage/2012-04-10/60806232.PDF",
+          "pdf_page": 1,
+          "sha256": "9a35dba2ec6943beef8ae6d61c35a776cc2aaf1aab3bb52305241ebf648934c5"
+        }
+      ]
+    },
+    {
+      "source_ticker": "000022.SZ",
+      "instrument_id": 1005574,
+      "name": "深赤湾A",
+      "new_code": "001872.SZ",
+      "code_change_date": "2018-12-26",
+      "sources": [
+        {
+          "url": "https://static.cninfo.com.cn/finalpage/2018-12-26/1205690369.PDF",
+          "pdf_page": 1,
+          "sha256": "bf406b1759dd7fda45cc46927e36316840b0b1152bb40677a7b52e11568d4350"
+        }
+      ]
+    },
+    {
+      "source_ticker": "000043.SZ",
+      "instrument_id": 1005577,
+      "name": "中航善达",
+      "new_code": "001914.SZ",
+      "code_change_date": "2019-12-16",
+      "sources": [
+        {
+          "url": "https://static.cninfo.com.cn/finalpage/2019-12-06/1207141416.PDF",
+          "pdf_page": 1,
+          "sha256": "73b211e1d155d125203a3ea689439efbd64136f767ade3446de6b2e9d91adf9f"
+        }
+      ]
+    },
+    {
+      "source_ticker": "300114.SZ",
+      "instrument_id": 1005578,
+      "name": "中航电测",
+      "new_code": "302132.SZ",
+      "code_change_date": "2025-02-17",
+      "sources": [
+        {
+          "url": "https://static.cninfo.com.cn/finalpage/2025-02-07/1222485220.PDF",
+          "pdf_page": 1,
+          "sha256": "90427f29e153de4a4ebd236e25f226ac1b2a72911e0577a667a70076ad495f03"
+        },
+        {
+          "url": "https://www.cnindex.com.cn/zh_information/notices_news/2025/202502/P020250212310734081331.pdf",
+          "pdf_page": 1,
+          "sha256": "b33bebb1b6abe915250f3cc1be47a97ec407eb96789afe09cf149e1e8c875f95"
+        }
+      ]
+    }
+  ],
+  "boundary": "Four old source codes remain historical identities; code change is not corporate delisting or suspension. Provider-retrospective new-code histories are not merged or relabeled."
+}

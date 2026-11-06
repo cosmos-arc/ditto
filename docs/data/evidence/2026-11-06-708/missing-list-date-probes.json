@@ -1,0 +1,92 @@
+[
+  {
+    "measured_at": "2026-11-06T05:27:56.644205+00:00",
+    "api": "stock_basic",
+    "params": {
+      "ts_code": "600849.SH",
+      "list_status": "L",
+      "fields": "ts_code,name,exchange,market,list_status,list_date,delist_date"
+    },
+    "rows": []
+  },
+  {
+    "measured_at": "2026-11-06T05:27:57.761728+00:00",
+    "api": "stock_basic",
+    "params": {
+      "ts_code": "600849.SH",
+      "list_status": "D",
+      "fields": "ts_code,name,exchange,market,list_status,list_date,delist_date"
+    },
+    "rows": []
+  },
+  {
+    "measured_at": "2026-11-06T05:27:58.689539+00:00",
+    "api": "stock_basic",
+    "params": {
+      "ts_code": "600849.SH",
+      "list_status": "P",
+      "fields": "ts_code,name,exchange,market,list_status,list_date,delist_date"
+    },
+    "rows": []
+  },
+  {
+    "measured_at": "2026-11-06T05:27:59.967767+00:00",
+    "api": "stock_basic",
+    "params": {
+      "ts_code": "300060.SZ",
+      "list_status": "L",
+      "fields": "ts_code,name,exchange,market,list_status,list_date,delist_date"
+    },
+    "rows": []
+  },
+  {
+    "measured_at": "2026-11-06T05:28:01.301055+00:00",
+    "api": "stock_basic",
+    "params": {
+      "ts_code": "300060.SZ",
+      "list_status": "D",
+      "fields": "ts_code,name,exchange,market,list_status,list_date,delist_date"
+    },
+    "rows": []
+  },
+  {
+    "measured_at": "2026-11-06T05:28:02.005096+00:00",
+    "api": "stock_basic",
+    "params": {
+      "ts_code": "300060.SZ",
+      "list_status": "P",
+      "fields": "ts_code,name,exchange,market,list_status,list_date,delist_date"
+    },
+    "rows": []
+  },
+  {
+    "measured_at": "2026-11-06T05:28:02.687773+00:00",
+    "api": "stock_basic",
+    "params": {
+      "ts_code": "002525.SZ",
+      "list_status": "L",
+      "fields": "ts_code,name,exchange,market,list_status,list_date,delist_date"
+    },
+    "rows": []
+  },
+  {
+    "measured_at": "2026-11-06T05:28:03.368485+00:00",
+    "api": "stock_basic",
+    "params": {
+      "ts_code": "002525.SZ",
+      "list_status": "D",
+      "fields": "ts_code,name,exchange,market,list_status,list_date,delist_date"
+    },
+    "rows": []
+  },
+  {
+    "measured_at": "2026-11-06T05:28:04.962418+00:00",
+    "api": "stock_basic",
+    "params": {
+      "ts_code": "002525.SZ",
+      "list_status": "P",
+      "fields": "ts_code,name,exchange,market,list_status,list_date,delist_date"
+    },
+    "rows": []
+  }
+]

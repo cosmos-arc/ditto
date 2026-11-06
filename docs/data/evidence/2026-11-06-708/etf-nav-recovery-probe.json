@@ -1,0 +1,469 @@
+{
+  "measured_at": "2026-11-06T06:38:24.801109+00:00",
+  "api": "fund_nav",
+  "request": {
+    "trade_date": "2026-11-03"
+  },
+  "events": [
+    {
+      "time": "2026-11-06T14:38:41.014713+08:00",
+      "message": "pagination cross-page duplicates; retrying with shifted page size",
+      "extra": {
+        "event": "tushare_pagination_shifted_page_retry",
+        "api_name": "fund_nav",
+        "primary_page_size": 2000,
+        "retry_page_size": 1000
+      }
+    },
+    {
+      "time": "2026-11-06T14:38:52.515932+08:00",
+      "message": "pagination cross-page overlap; dedup-merging and continuing",
+      "extra": {
+        "event": "tushare_pagination_dedup_merge",
+        "api_name": "fund_nav",
+        "offset": 9000,
+        "cross_page_duplicates": 21,
+        "new_rows": 979
+      }
+    },
+    {
+      "time": "2026-11-06T14:38:53.188585+08:00",
+      "message": "pagination cross-page overlap; dedup-merging and continuing",
+      "extra": {
+        "event": "tushare_pagination_dedup_merge",
+        "api_name": "fund_nav",
+        "offset": 10000,
+        "cross_page_duplicates": 25,
+        "new_rows": 975
+      }
+    },
+    {
+      "time": "2026-11-06T14:39:29.705926+08:00",
+      "message": "pagination cross-page overlap; dedup-merging and continuing",
+      "extra": {
+        "event": "tushare_pagination_dedup_merge",
+        "api_name": "fund_nav",
+        "offset": 14000,
+        "cross_page_duplicates": 239,
+        "new_rows": 761
+      }
+    },
+    {
+      "time": "2026-11-06T14:39:31.901827+08:00",
+      "message": "pagination cross-page overlap; dedup-merging and continuing",
+      "extra": {
+        "event": "tushare_pagination_dedup_merge",
+        "api_name": "fund_nav",
+        "offset": 15000,
+        "cross_page_duplicates": 110,
+        "new_rows": 890
+      }
+    },
+    {
+      "time": "2026-11-06T14:39:50.952112+08:00",
+      "message": "pagination dedup-merge summary",
+      "extra": {
+        "event": "tushare_pagination_dedup_merge_summary",
+        "api_name": "fund_nav",
+        "dedup_events": 4,
+        "raw_rows_fetched": 27095,
+        "rows_returned": 26700,
+        "dropped_rows": 395
+      }
+    },
+    {
+      "time": "2026-11-06T14:40:42.772303+08:00",
+      "message": "pagination cross-page duplicates; retrying with shifted page size",
+      "extra": {
+        "event": "tushare_pagination_shifted_page_retry",
+        "api_name": "fund_nav",
+        "primary_page_size": 2000,
+        "retry_page_size": 1000
+      }
+    },
+    {
+      "time": "2026-11-06T14:40:50.624248+08:00",
+      "message": "pagination cross-page overlap; dedup-merging and continuing",
+      "extra": {
+        "event": "tushare_pagination_dedup_merge",
+        "api_name": "fund_nav",
+        "offset": 5000,
+        "cross_page_duplicates": 5,
+        "new_rows": 995
+      }
+    },
+    {
+      "time": "2026-11-06T14:40:51.875413+08:00",
+      "message": "pagination cross-page overlap; dedup-merging and continuing",
+      "extra": {
+        "event": "tushare_pagination_dedup_merge",
+        "api_name": "fund_nav",
+        "offset": 6000,
+        "cross_page_duplicates": 2,
+        "new_rows": 998
+      }
+    },
+    {
+      "time": "2026-11-06T14:40:55.130992+08:00",
+      "message": "pagination cross-page overlap; dedup-merging and continuing",
+      "extra": {
+        "event": "tushare_pagination_dedup_merge",
+        "api_name": "fund_nav",
+        "offset": 9000,
+        "cross_page_duplicates": 55,
+        "new_rows": 945
+      }
+    },
+    {
+      "time": "2026-11-06T14:41:45.963934+08:00",
+      "message": "pagination cross-page overlap; dedup-merging and continuing",
+      "extra": {
+        "event": "tushare_pagination_dedup_merge",
+        "api_name": "fund_nav",
+        "offset": 22000,
+        "cross_page_duplicates": 49,
+        "new_rows": 951
+      }
+    },
+    {
+      "time": "2026-11-06T14:41:47.148846+08:00",
+      "message": "pagination cross-page overlap; dedup-merging and continuing",
+      "extra": {
+        "event": "tushare_pagination_dedup_merge",
+        "api_name": "fund_nav",
+        "offset": 23000,
+        "cross_page_duplicates": 10,
+        "new_rows": 990
+      }
+    },
+    {
+      "time": "2026-11-06T14:41:53.759644+08:00",
+      "message": "pagination dedup-merge summary",
+      "extra": {
+        "event": "tushare_pagination_dedup_merge_summary",
+        "api_name": "fund_nav",
+        "dedup_events": 5,
+        "raw_rows_fetched": 27260,
+        "rows_returned": 27139,
+        "dropped_rows": 121
+      }
+    },
+    {
+      "time": "2026-11-06T14:42:47.497906+08:00",
+      "message": "pagination cross-page duplicates; retrying with shifted page size",
+      "extra": {
+        "event": "tushare_pagination_shifted_page_retry",
+        "api_name": "fund_nav",
+        "primary_page_size": 2000,
+        "retry_page_size": 1000
+      }
+    },
+    {
+      "time": "2026-11-06T14:43:41.885076+08:00",
+      "message": "pagination cross-page overlap; dedup-merging and continuing",
+      "extra": {
+        "event": "tushare_pagination_dedup_merge",
+        "api_name": "fund_nav",
+        "offset": 15000,
+        "cross_page_duplicates": 211,
+        "new_rows": 789
+      }
+    },
+    {
+      "time": "2026-11-06T14:43:56.822783+08:00",
+      "message": "ambiguous tail probe; continuing with guarded full page",
+      "extra": {
+        "event": "tushare_pagination_probe_continuation",
+        "api_name": "fund_nav",
+        "offset": 25998
+      }
+    },
+    {
+      "time": "2026-11-06T14:43:58.295184+08:00",
+      "message": "pagination cross-page overlap; dedup-merging and continuing",
+      "extra": {
+        "event": "tushare_pagination_dedup_merge",
+        "api_name": "fund_nav",
+        "offset": 25998,
+        "cross_page_duplicates": 2,
+        "new_rows": 995
+      }
+    },
+    {
+      "time": "2026-11-06T14:44:52.858860+08:00",
+      "message": "pagination cross-page duplicates; retrying with shifted page size",
+      "extra": {
+        "event": "tushare_pagination_shifted_page_retry",
+        "api_name": "fund_nav",
+        "primary_page_size": 2000,
+        "retry_page_size": 1000
+      }
+    },
+    {
+      "time": "2026-11-06T14:45:59.222145+08:00",
+      "message": "pagination cross-page overlap; dedup-merging and continuing",
+      "extra": {
+        "event": "tushare_pagination_dedup_merge",
+        "api_name": "fund_nav",
+        "offset": 24000,
+        "cross_page_duplicates": 27,
+        "new_rows": 973
+      }
+    },
+    {
+      "time": "2026-11-06T14:46:29.357602+08:00",
+      "message": "ambiguous tail probe; continuing with guarded full page",
+      "extra": {
+        "event": "tushare_pagination_probe_continuation",
+        "api_name": "fund_nav",
+        "offset": 25998
+      }
+    },
+    {
+      "time": "2026-11-06T14:46:31.268713+08:00",
+      "message": "pagination cross-page overlap; dedup-merging and continuing",
+      "extra": {
+        "event": "tushare_pagination_dedup_merge",
+        "api_name": "fund_nav",
+        "offset": 25998,
+        "cross_page_duplicates": 2,
+        "new_rows": 995
+      }
+    },
+    {
+      "time": "2026-11-06T14:46:32.764785+08:00",
+      "message": "pagination dedup-merge summary",
+      "extra": {
+        "event": "tushare_pagination_dedup_merge_summary",
+        "api_name": "fund_nav",
+        "dedup_events": 2,
+        "raw_rows_fetched": 26995,
+        "rows_returned": 26966,
+        "dropped_rows": 29
+      }
+    },
+    {
+      "time": "2026-11-06T14:46:57.488669+08:00",
+      "message": "pagination cross-page duplicates; retrying with shifted page size",
+      "extra": {
+        "event": "tushare_pagination_shifted_page_retry",
+        "api_name": "fund_nav",
+        "primary_page_size": 2000,
+        "retry_page_size": 1000
+      }
+    },
+    {
+      "time": "2026-11-06T14:47:27.735074+08:00",
+      "message": "pagination cross-page overlap; dedup-merging and continuing",
+      "extra": {
+        "event": "tushare_pagination_dedup_merge",
+        "api_name": "fund_nav",
+        "offset": 1000,
+        "cross_page_duplicates": 1,
+        "new_rows": 999
+      }
+    },
+    {
+      "time": "2026-11-06T14:47:45.088194+08:00",
+      "message": "pagination cross-page overlap; dedup-merging and continuing",
+      "extra": {
+        "event": "tushare_pagination_dedup_merge",
+        "api_name": "fund_nav",
+        "offset": 9000,
+        "cross_page_duplicates": 207,
+        "new_rows": 793
+      }
+    },
+    {
+      "time": "2026-11-06T14:47:58.870304+08:00",
+      "message": "pagination cross-page overlap; dedup-merging and continuing",
+      "extra": {
+        "event": "tushare_pagination_dedup_merge",
+        "api_name": "fund_nav",
+        "offset": 19000,
+        "cross_page_duplicates": 7,
+        "new_rows": 993
+      }
+    },
+    {
+      "time": "2026-11-06T14:48:00.894266+08:00",
+      "message": "pagination cross-page overlap; dedup-merging and continuing",
+      "extra": {
+        "event": "tushare_pagination_dedup_merge",
+        "api_name": "fund_nav",
+        "offset": 20000,
+        "cross_page_duplicates": 1,
+        "new_rows": 999
+      }
+    },
+    {
+      "time": "2026-11-06T14:48:28.247560+08:00",
+      "message": "pagination cross-page overlap; dedup-merging and continuing",
+      "extra": {
+        "event": "tushare_pagination_dedup_merge",
+        "api_name": "fund_nav",
+        "offset": 21000,
+        "cross_page_duplicates": 17,
+        "new_rows": 983
+      }
+    },
+    {
+      "time": "2026-11-06T14:48:41.046248+08:00",
+      "message": "ambiguous tail probe; continuing with guarded full page",
+      "extra": {
+        "event": "tushare_pagination_probe_continuation",
+        "api_name": "fund_nav",
+        "offset": 26991
+      }
+    },
+    {
+      "time": "2026-11-06T14:48:42.462738+08:00",
+      "message": "pagination cross-page overlap; dedup-merging and continuing",
+      "extra": {
+        "event": "tushare_pagination_dedup_merge",
+        "api_name": "fund_nav",
+        "offset": 26991,
+        "cross_page_duplicates": 9,
+        "new_rows": 743
+      }
+    },
+    {
+      "time": "2026-11-06T14:48:44.273166+08:00",
+      "message": "pagination dedup-merge summary",
+      "extra": {
+        "event": "tushare_pagination_dedup_merge_summary",
+        "api_name": "fund_nav",
+        "dedup_events": 6,
+        "raw_rows_fetched": 27743,
+        "rows_returned": 27501,
+        "dropped_rows": 242
+      }
+    },
+    {
+      "time": "2026-11-06T14:49:40.751340+08:00",
+      "message": "pagination cross-page duplicates; retrying with shifted page size",
+      "extra": {
+        "event": "tushare_pagination_shifted_page_retry",
+        "api_name": "fund_nav",
+        "primary_page_size": 2000,
+        "retry_page_size": 1000
+      }
+    },
+    {
+      "time": "2026-11-06T14:50:53.333231+08:00",
+      "message": "ambiguous tail probe; continuing with guarded full page",
+      "extra": {
+        "event": "tushare_pagination_probe_continuation",
+        "api_name": "fund_nav",
+        "offset": 25986
+      }
+    },
+    {
+      "time": "2026-11-06T14:50:55.315175+08:00",
+      "message": "pagination cross-page overlap; dedup-merging and continuing",
+      "extra": {
+        "event": "tushare_pagination_dedup_merge",
+        "api_name": "fund_nav",
+        "offset": 25986,
+        "cross_page_duplicates": 14,
+        "new_rows": 824
+      }
+    },
+    {
+      "time": "2026-11-06T14:50:57.429744+08:00",
+      "message": "pagination dedup-merge summary",
+      "extra": {
+        "event": "tushare_pagination_dedup_merge_summary",
+        "api_name": "fund_nav",
+        "dedup_events": 1,
+        "raw_rows_fetched": 26824,
+        "rows_returned": 26810,
+        "dropped_rows": 14
+      }
+    },
+    {
+      "time": "2026-11-06T14:51:56.935184+08:00",
+      "message": "pagination cross-page duplicates; retrying with shifted page size",
+      "extra": {
+        "event": "tushare_pagination_shifted_page_retry",
+        "api_name": "fund_nav",
+        "primary_page_size": 2000,
+        "retry_page_size": 1000
+      }
+    },
+    {
+      "time": "2026-11-06T14:53:36.690609+08:00",
+      "message": "ambiguous tail probe; continuing with guarded full page",
+      "extra": {
+        "event": "tushare_pagination_probe_continuation",
+        "api_name": "fund_nav",
+        "offset": 25975
+      }
+    },
+    {
+      "time": "2026-11-06T14:53:38.376965+08:00",
+      "message": "pagination cross-page overlap; dedup-merging and continuing",
+      "extra": {
+        "event": "tushare_pagination_dedup_merge",
+        "api_name": "fund_nav",
+        "offset": 25975,
+        "cross_page_duplicates": 25,
+        "new_rows": 862
+      }
+    },
+    {
+      "time": "2026-11-06T14:53:39.541010+08:00",
+      "message": "pagination dedup-merge summary",
+      "extra": {
+        "event": "tushare_pagination_dedup_merge_summary",
+        "api_name": "fund_nav",
+        "dedup_events": 1,
+        "raw_rows_fetched": 26862,
+        "rows_returned": 26837,
+        "dropped_rows": 25
+      }
+    },
+    {
+      "time": "2026-11-06T14:53:39.638548+08:00",
+      "message": "fund_daily returned non-ETF rows, dropped",
+      "extra": {
+        "event": "tushare_etf_daily_non_etf_dropped",
+        "dropped_rows": 150785,
+        "dropped_codes": [
+          "000001.OF",
+          "000003.OF",
+          "000004.OF",
+          "000005.OF",
+          "000006.OF",
+          "000008.OF",
+          "000011.OF",
+          "000014.OF",
+          "000015.OF",
+          "000016.OF",
+          "000017.OF",
+          "000020.OF",
+          "000021.OF",
+          "000024.OF",
+          "000025.OF",
+          "000028.OF",
+          "000029.OF",
+          "000030.OF",
+          "000031.OF",
+          "000032.OF"
+        ],
+        "dropped_code_count": 24835
+      }
+    }
+  ],
+  "status": "success",
+  "rows": 10139,
+  "dates": [
+    "2026-10-27",
+    "2026-10-28",
+    "2026-10-29",
+    "2026-10-30",
+    "2026-11-02",
+    "2026-11-03"
+  ],
+  "finished_at": "2026-11-06T06:53:39.672787+00:00"
+}

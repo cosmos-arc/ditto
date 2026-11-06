@@ -1,8 +1,8 @@
 {
-  "started_at": "2026-11-06T05:24:33.728361+00:00",
+  "started_at": "2026-11-06T07:41:04.213029+00:00",
   "datasets": {
     "calendar": {
-      "measured_at": "2026-11-06T05:24:34.171423+00:00",
+      "measured_at": "2026-11-06T07:41:04.340491+00:00",
       "purpose": "下一会话与自然日/交易日区分",
       "read_semantics": "latest_available",
       "coverage": {
@@ -73,7 +73,7 @@
       "status": "read"
     },
     "stock_basic": {
-      "measured_at": "2026-11-06T05:24:34.175385+00:00",
+      "measured_at": "2026-11-06T07:41:04.341028+00:00",
       "purpose": "标的代码/交易所/生命周期识别",
       "read_semantics": "latest_available",
       "coverage": {
@@ -164,7 +164,7 @@
       "status": "read"
     },
     "etf_basic": {
-      "measured_at": "2026-11-06T05:24:34.279202+00:00",
+      "measured_at": "2026-11-06T07:41:04.378885+00:00",
       "purpose": "标的代码/交易所/生命周期识别",
       "read_semantics": "latest_available",
       "coverage": {
@@ -255,7 +255,7 @@
       "status": "read"
     },
     "index_basic": {
-      "measured_at": "2026-11-06T05:24:34.318472+00:00",
+      "measured_at": "2026-11-06T07:41:04.404852+00:00",
       "purpose": "标的代码/交易所/生命周期识别",
       "read_semantics": "latest_available",
       "coverage": {
@@ -344,7 +344,7 @@
       "status": "read"
     },
     "stock_daily": {
-      "measured_at": "2026-11-06T05:24:35.379360+00:00",
+      "measured_at": "2026-11-06T07:41:04.606500+00:00",
       "purpose": "当前价格序列及成交量展示",
       "read_semantics": "latest_available",
       "coverage": {
@@ -427,7 +427,7 @@
       "status": "read"
     },
     "etf_daily": {
-      "measured_at": "2026-11-06T05:24:35.427688+00:00",
+      "measured_at": "2026-11-06T07:41:04.641935+00:00",
       "purpose": "当前价格序列及成交量展示",
       "read_semantics": "latest_available",
       "coverage": {
@@ -510,7 +510,7 @@
       "status": "read"
     },
     "index_daily": {
-      "measured_at": "2026-11-06T05:24:35.471251+00:00",
+      "measured_at": "2026-11-06T07:41:04.656510+00:00",
       "purpose": "当前价格序列及成交量展示",
       "read_semantics": "latest_available",
       "coverage": {
@@ -593,7 +593,7 @@
       "status": "read"
     },
     "global_index_daily": {
-      "measured_at": "2026-11-06T05:24:35.524970+00:00",
+      "measured_at": "2026-11-06T07:41:04.662342+00:00",
       "purpose": "21全球指数展示参考,禁止策略输入",
       "read_semantics": "latest_available",
       "coverage": {
@@ -610,7 +610,7 @@
         "measured_at": "2026-11-06",
         "knowledge_axis": "observation"
       },
-      "rows": 1025,
+      "rows": 1261,
       "fields": [
         "source_ticker",
         "trade_date",
@@ -633,44 +633,6 @@
       "business_values": [
         {
           "source_ticker": "XIN9",
-          "trade_date": "2026-11-03",
-          "event_time": "2026-11-03T08:35:00+00:00",
-          "published_at": "2026-11-03T13:55:35.883668+00:00",
-          "available_at": "2026-11-03T13:55:35.883668+00:00",
-          "knowledge_date": "2026-11-03",
-          "timezone": "Asia/Singapore",
-          "currency": "USD",
-          "open": 12975.15,
-          "high": 12975.15,
-          "low": 12723.82,
-          "close": 12857.16,
-          "pre_close": 12975.15,
-          "change": -117.99,
-          "pct_change": -0.9094,
-          "volume": null,
-          "amount": null
-        },
-        {
-          "source_ticker": "XIN9",
-          "trade_date": "2026-11-03",
-          "event_time": "2026-11-03T08:35:00+00:00",
-          "published_at": "2026-11-04T18:06:32.751275+00:00",
-          "available_at": "2026-11-04T18:06:32.751275+00:00",
-          "knowledge_date": "2026-11-05",
-          "timezone": "Asia/Singapore",
-          "currency": "USD",
-          "open": 12975.15,
-          "high": 12975.15,
-          "low": 12722.94,
-          "close": 12857.16,
-          "pre_close": 12975.15,
-          "change": -117.99,
-          "pct_change": -0.9094,
-          "volume": null,
-          "amount": null
-        },
-        {
-          "source_ticker": "XIN9",
           "trade_date": "2026-11-04",
           "event_time": "2026-11-04T08:35:00+00:00",
           "published_at": "2026-11-04T18:06:32.751275+00:00",
@@ -687,13 +649,51 @@
           "pct_change": 2.1581,
           "volume": null,
           "amount": null
+        },
+        {
+          "source_ticker": "XIN9",
+          "trade_date": "2026-11-04",
+          "event_time": "2026-11-04T08:35:00+00:00",
+          "published_at": "2026-11-06T06:58:38.786988+00:00",
+          "available_at": "2026-11-06T06:58:38.786988+00:00",
+          "knowledge_date": "2026-11-06",
+          "timezone": "Asia/Singapore",
+          "currency": "USD",
+          "open": 12857.16,
+          "high": 13155.26,
+          "low": 12780.53,
+          "close": 13134.63,
+          "pre_close": 12857.16,
+          "change": 277.47,
+          "pct_change": 2.1581,
+          "volume": null,
+          "amount": null
+        },
+        {
+          "source_ticker": "XIN9",
+          "trade_date": "2026-11-05",
+          "event_time": "2026-11-05T08:35:00+00:00",
+          "published_at": "2026-11-06T06:58:38.786988+00:00",
+          "available_at": "2026-11-06T06:58:38.786988+00:00",
+          "knowledge_date": "2026-11-06",
+          "timezone": "Asia/Singapore",
+          "currency": "USD",
+          "open": 13134.63,
+          "high": 13177.54,
+          "low": 12990.37,
+          "close": 13092.37,
+          "pre_close": 13134.63,
+          "change": -42.26,
+          "pct_change": -0.3217,
+          "volume": null,
+          "amount": null
         }
       ],
       "empty": false,
       "status": "read"
     },
     "stock_status": {
-      "measured_at": "2026-11-06T05:24:35.544125+00:00",
+      "measured_at": "2026-11-06T07:41:04.665625+00:00",
       "purpose": "辨别停牌、ST与正常交易会话",
       "read_semantics": "latest_available",
       "coverage": {
@@ -762,7 +762,7 @@
       "status": "read"
     },
     "adj_factor": {
-      "measured_at": "2026-11-06T05:24:35.597684+00:00",
+      "measured_at": "2026-11-06T07:41:04.669780+00:00",
       "purpose": "复权价格因子,保留观察版本",
       "read_semantics": "latest_available",
       "coverage": {
@@ -815,7 +815,7 @@
       "status": "read"
     },
     "fund_adj": {
-      "measured_at": "2026-11-06T05:24:35.623454+00:00",
+      "measured_at": "2026-11-06T07:41:04.676353+00:00",
       "purpose": "ETF后复权图表的因子消费",
       "read_semantics": "latest_available",
       "coverage": {
@@ -903,7 +903,7 @@
       "status": "read"
     },
     "etf_nav": {
-      "measured_at": "2026-11-06T05:24:35.747350+00:00",
+      "measured_at": "2026-11-06T07:41:04.686672+00:00",
       "purpose": "ETF单位及累计净值展示,不伪造收益基准",
       "read_semantics": "latest_available",
       "coverage": {
@@ -963,7 +963,7 @@
       "status": "read"
     },
     "stock_limit": {
-      "measured_at": "2026-11-06T05:24:35.779696+00:00",
+      "measured_at": "2026-11-06T07:41:04.690027+00:00",
       "purpose": "个股法定上下限价格,非封板时间",
       "read_semantics": "latest_available",
       "coverage": {
@@ -1020,7 +1020,7 @@
       "status": "read"
     },
     "limit_list": {
-      "measured_at": "2026-11-06T05:24:35.845752+00:00",
+      "measured_at": "2026-11-06T07:41:04.700633+00:00",
       "purpose": "披露涨跌停事件与炸板等原生字段,ST缺席未知",
       "read_semantics": "latest_available",
       "coverage": {
@@ -1135,7 +1135,7 @@
       "status": "read"
     },
     "fund_share": {
-      "measured_at": "2026-11-06T05:24:35.924309+00:00",
+      "measured_at": "2026-11-06T07:41:04.704895+00:00",
       "purpose": "ETF份额变化研究,万份,缺席不补零",
       "read_semantics": "latest_available",
       "coverage": {
@@ -1153,7 +1153,7 @@
         "measured_at": "2026-11-06",
         "knowledge_axis": "derived_t1"
       },
-      "rows": 6868,
+      "rows": 8585,
       "fields": [
         "source_ticker",
         "trade_date",
@@ -1165,16 +1165,6 @@
         "source"
       ],
       "business_values": [
-        {
-          "source_ticker": "158082.SZ",
-          "trade_date": "2026-11-02",
-          "knowledge_date": "2026-11-03",
-          "fd_share": 13073.5272,
-          "fund_type": "ETF",
-          "exchange": "SZ",
-          "instrument_id": 2001868,
-          "source": "tushare"
-        },
         {
           "source_ticker": "158082.SZ",
           "trade_date": "2026-11-03",
@@ -1194,13 +1184,23 @@
           "exchange": "SZ",
           "instrument_id": 2001868,
           "source": "tushare"
+        },
+        {
+          "source_ticker": "158082.SZ",
+          "trade_date": "2026-11-05",
+          "knowledge_date": "2026-11-06",
+          "fd_share": 8673.5272,
+          "fund_type": "ETF",
+          "exchange": "SZ",
+          "instrument_id": 2001868,
+          "source": "tushare"
         }
       ],
       "empty": false,
       "status": "read"
     },
     "moneyflow": {
-      "measured_at": "2026-11-06T05:24:35.957631+00:00",
+      "measured_at": "2026-11-06T07:41:04.744909+00:00",
       "purpose": "个股资金/披露事实展示,不推导整体持仓",
       "read_semantics": "latest_available",
       "coverage": {
@@ -1323,7 +1323,7 @@
       "status": "read"
     },
     "top_list": {
-      "measured_at": "2026-11-06T05:24:36.315453+00:00",
+      "measured_at": "2026-11-06T07:41:04.888371+00:00",
       "purpose": "个股资金/披露事实展示,不推导整体持仓",
       "read_semantics": "latest_available",
       "coverage": {
@@ -1426,7 +1426,7 @@
       "status": "read"
     },
     "top_inst": {
-      "measured_at": "2026-11-06T05:24:36.345265+00:00",
+      "measured_at": "2026-11-06T07:41:04.905157+00:00",
       "purpose": "个股资金/披露事实展示,不推导整体持仓",
       "read_semantics": "latest_available",
       "coverage": {
@@ -1507,7 +1507,7 @@
       "status": "read"
     },
     "hk_hold": {
-      "measured_at": "2026-11-06T05:24:36.411231+00:00",
+      "measured_at": "2026-11-06T07:41:04.930136+00:00",
       "purpose": "个股资金/披露事实展示,不推导整体持仓",
       "read_semantics": "latest_available",
       "coverage": {
@@ -1570,7 +1570,7 @@
       "status": "read"
     },
     "top10_holders": {
-      "measured_at": "2026-11-06T05:24:36.723243+00:00",
+      "measured_at": "2026-11-06T07:41:04.957375+00:00",
       "purpose": "个股资金/披露事实展示,不推导整体持仓",
       "read_semantics": "latest_available",
       "coverage": {
@@ -1586,7 +1586,7 @@
         "measured_at": "2026-11-06",
         "knowledge_axis": "provider_anchor"
       },
-      "rows": 553,
+      "rows": 563,
       "fields": [
         "source_ticker",
         "report_date",
@@ -1645,7 +1645,7 @@
       "status": "read"
     },
     "top10_floatholders": {
-      "measured_at": "2026-11-06T05:24:36.904797+00:00",
+      "measured_at": "2026-11-06T07:41:04.997842+00:00",
       "purpose": "个股资金/披露事实展示,不推导整体持仓",
       "read_semantics": "latest_available",
       "coverage": {
@@ -1718,7 +1718,7 @@
       "status": "read"
     },
     "cyq_perf": {
-      "measured_at": "2026-11-06T05:24:37.146804+00:00",
+      "measured_at": "2026-11-06T07:41:05.043075+00:00",
       "purpose": "成本分布/胜率源指标,非真实投资者完整持仓",
       "read_semantics": "latest_available",
       "coverage": {
@@ -1805,7 +1805,7 @@
       "status": "read"
     },
     "hsgt_top10": {
-      "measured_at": "2026-11-06T05:24:37.329006+00:00",
+      "measured_at": "2026-11-06T07:41:05.065731+00:00",
       "purpose": "互联互通活跃榜披露",
       "read_semantics": "latest_available",
       "coverage": {
@@ -1888,7 +1888,7 @@
       "status": "read"
     },
     "margin_trading": {
-      "measured_at": "2026-11-06T05:24:37.386889+00:00",
+      "measured_at": "2026-11-06T07:41:05.068536+00:00",
       "purpose": "融资融券余额与买入额展示",
       "read_semantics": "latest_available",
       "coverage": {
@@ -1956,7 +1956,7 @@
       "status": "read"
     },
     "valuation_metrics": {
-      "measured_at": "2026-11-06T05:24:37.395556+00:00",
+      "measured_at": "2026-11-06T07:41:05.073175+00:00",
       "purpose": "个股估值画像",
       "read_semantics": "latest_available",
       "coverage": {
@@ -2025,7 +2025,7 @@
       "status": "read"
     },
     "pledge_ratio": {
-      "measured_at": "2026-11-06T05:24:38.105078+00:00",
+      "measured_at": "2026-11-06T07:41:05.567150+00:00",
       "purpose": "质押比例风险提示",
       "read_semantics": "latest_available",
       "coverage": {
@@ -2088,7 +2088,7 @@
       "status": "read"
     },
     "index_valuation": {
-      "measured_at": "2026-11-06T05:24:38.241293+00:00",
+      "measured_at": "2026-11-06T07:41:05.655723+00:00",
       "purpose": "指数PE/PB及元计市值展示",
       "read_semantics": "latest_available",
       "coverage": {
@@ -2161,7 +2161,7 @@
       "status": "read"
     },
     "balance_sheet": {
-      "measured_at": "2026-11-06T05:24:38.293169+00:00",
+      "measured_at": "2026-11-06T07:41:05.662989+00:00",
       "purpose": "截至公告日可见的个股财务披露",
       "read_semantics": "announcement_cutoff_latest_storage",
       "coverage": {
@@ -2230,7 +2230,7 @@
       "status": "read"
     },
     "income_statement": {
-      "measured_at": "2026-11-06T05:24:38.328898+00:00",
+      "measured_at": "2026-11-06T07:41:05.664715+00:00",
       "purpose": "截至公告日可见的个股财务披露",
       "read_semantics": "announcement_cutoff_latest_storage",
       "coverage": {
@@ -2299,7 +2299,7 @@
       "status": "read"
     },
     "cash_flow": {
-      "measured_at": "2026-11-06T05:24:38.370040+00:00",
+      "measured_at": "2026-11-06T07:41:05.675484+00:00",
       "purpose": "截至公告日可见的个股财务披露",
       "read_semantics": "announcement_cutoff_latest_storage",
       "coverage": {
@@ -2366,7 +2366,7 @@
       "status": "read"
     },
     "dividend": {
-      "measured_at": "2026-11-06T05:24:38.403265+00:00",
+      "measured_at": "2026-11-06T07:41:05.684535+00:00",
       "purpose": "截至公告日可见的个股财务披露",
       "read_semantics": "announcement_cutoff_latest_storage",
       "coverage": {
@@ -2427,7 +2427,7 @@
       "status": "read"
     },
     "corporate_actions": {
-      "measured_at": "2026-11-06T05:24:38.432944+00:00",
+      "measured_at": "2026-11-06T07:41:05.691008+00:00",
       "purpose": "回购和解禁事件核对,计划日不等于已实施",
       "read_semantics": "latest_available",
       "coverage": {
@@ -2486,7 +2486,7 @@
       "status": "read"
     },
     "fina_indicator": {
-      "measured_at": "2026-11-06T05:24:38.437658+00:00",
+      "measured_at": "2026-11-06T07:41:05.692813+00:00",
       "purpose": "报告期财务指标研究",
       "read_semantics": "latest_available",
       "coverage": {
@@ -2955,7 +2955,7 @@
       "status": "read"
     },
     "earnings_forecast": {
-      "measured_at": "2026-11-06T05:24:38.489610+00:00",
+      "measured_at": "2026-11-06T07:41:05.706018+00:00",
       "purpose": "预告/快报与正式财报分开展示",
       "read_semantics": "latest_available",
       "coverage": {
@@ -3004,7 +3004,7 @@
       "status": "read"
     },
     "earnings_express": {
-      "measured_at": "2026-11-06T05:24:38.743282+00:00",
+      "measured_at": "2026-11-06T07:41:05.715598+00:00",
       "purpose": "预告/快报与正式财报分开展示",
       "read_semantics": "latest_available",
       "coverage": {
@@ -3073,7 +3073,7 @@
       "status": "read"
     },
     "fund_portfolio": {
-      "measured_at": "2026-11-06T05:24:38.776218+00:00",
+      "measured_at": "2026-11-06T07:41:05.722361+00:00",
       "purpose": "公募已披露股票持仓与原文类型,非全资产",
       "read_semantics": "disclosure_observations",
       "coverage": {
@@ -3167,7 +3167,7 @@
       "status": "read"
     },
     "macro_indicators": {
-      "measured_at": "2026-11-06T05:24:38.995748+00:00",
+      "measured_at": "2026-11-06T07:41:05.774748+00:00",
       "purpose": "按频率/单位展示最新宏观背景值,非历史可知性",
       "read_semantics": "latest_available",
       "coverage": {
@@ -3235,7 +3235,7 @@
       "status": "read"
     },
     "fx_daily": {
-      "measured_at": "2026-11-06T05:24:39.344150+00:00",
+      "measured_at": "2026-11-06T07:41:05.828603+00:00",
       "purpose": "六汇率对GMT日线买价参考",
       "read_semantics": "latest_available",
       "coverage": {
@@ -3292,7 +3292,7 @@
       "status": "read"
     },
     "commodity_daily": {
-      "measured_at": "2026-11-06T05:24:39.373735+00:00",
+      "measured_at": "2026-11-06T07:41:05.830474+00:00",
       "purpose": "八条商品参考腿;FRED单值与金属/连续期货分开",
       "read_semantics": "latest_available",
       "coverage": {
@@ -3351,7 +3351,7 @@
       "status": "read"
     },
     "index_weight": {
-      "measured_at": "2026-11-06T05:24:39.386664+00:00",
+      "measured_at": "2026-11-06T07:41:05.831870+00:00",
       "purpose": "最新观察指数成分权重,非历史生效证明",
       "read_semantics": "latest_available",
       "coverage": {
@@ -3399,7 +3399,7 @@
       "status": "read"
     },
     "industry_classification": {
-      "measured_at": "2026-11-06T05:24:39.483419+00:00",
+      "measured_at": "2026-11-06T07:41:05.886941+00:00",
       "purpose": "申万一级行业分类标签",
       "read_semantics": "latest_available",
       "coverage": {
@@ -3454,7 +3454,7 @@
       "status": "read"
     },
     "industry_mapping": {
-      "measured_at": "2026-11-06T05:24:39.483995+00:00",
+      "measured_at": "2026-11-06T07:41:05.887512+00:00",
       "purpose": "行业截面研究分组",
       "read_semantics": "latest_available",
       "coverage": {
@@ -3485,7 +3485,7 @@
       "status": "read"
     },
     "namechange": {
-      "measured_at": "2026-11-06T05:24:39.484986+00:00",
+      "measured_at": "2026-11-06T07:41:05.888256+00:00",
       "purpose": "历史名称与当前名分开识别",
       "read_semantics": "observed_history_at_cutoff",
       "coverage": {
@@ -3509,7 +3509,7 @@
       "status": "read"
     },
     "st_history": {
-      "measured_at": "2026-11-06T05:24:39.513947+00:00",
+      "measured_at": "2026-11-06T07:41:05.901949+00:00",
       "purpose": "ST证据优先,未覆盖标的未知",
       "read_semantics": "observed_history_at_cutoff",
       "coverage": {
@@ -3545,7 +3545,7 @@
       "status": "read"
     },
     "futures_basic": {
-      "measured_at": "2026-11-06T05:24:39.554322+00:00",
+      "measured_at": "2026-11-06T07:41:05.916948+00:00",
       "purpose": "真实到期合约乘数、挂牌/到期日",
       "read_semantics": "latest_available",
       "coverage": {
@@ -3610,7 +3610,7 @@
       "status": "read"
     },
     "futures_daily": {
-      "measured_at": "2026-11-06T05:24:39.613688+00:00",
+      "measured_at": "2026-11-06T07:41:05.925286+00:00",
       "purpose": "真实RB合约价格、结算价及持仓量",
       "read_semantics": "latest_available",
       "coverage": {
@@ -3689,7 +3689,7 @@
       "status": "read"
     },
     "etf_reference": {
-      "measured_at": "2026-11-06T05:24:39.711671+00:00",
+      "measured_at": "2026-11-06T07:41:05.934341+00:00",
       "purpose": "ETF候选对比与跟踪限制",
       "read_semantics": "latest_available",
       "coverage": {
@@ -4764,11 +4764,11 @@
       "storage_uri": "corporate_actions/2026",
       "schema": {
         "schema_hash": "schema:sha256:f9546b19b999abca5cf50ed37d5a81a8855aba5b8f460f4a7b6afbd63eaec0c4",
-        "row_count": 80,
-        "created_at": "2026-11-05T18:01:21.279884+00:00"
+        "row_count": 45145,
+        "created_at": "2026-11-06T05:33:41.718910+00:00"
       },
       "source": "tushare",
-      "freshness_at": "2026-11-05T18:01:21.279884+00:00"
+      "freshness_at": "2026-11-06T05:33:41.718910+00:00"
     },
     {
       "asset": {
@@ -4896,14 +4896,14 @@
         "namespace": "capital",
         "partition_keys": []
       },
-      "storage_uri": "top10_holders/observations/no-data/2026-11-05:2026-11-05:sha256:242b8b667e217539df8ac26de33afe50c2f10539303d773832e3586aba3ef2f2",
+      "storage_uri": "top10_holders/2025",
       "schema": {
-        "schema_hash": "schema:sha256:cc16a74d48786fcf1cda706d2919b56ad287d05401ecab862f8ebf829b831eb8",
-        "row_count": 0,
-        "created_at": "2026-11-05T13:55:34.751138+00:00"
+        "schema_hash": "schema:sha256:88200d565fb737f80714d1a4dbe419d5e6dd30f8398263242456397b14792576",
+        "row_count": 72,
+        "created_at": "2026-11-06T06:48:05.149364+00:00"
       },
       "source": "tushare",
-      "freshness_at": "2026-11-05T13:55:34.751138+00:00"
+      "freshness_at": "2026-11-06T06:48:05.149364+00:00"
     },
     {
       "asset": {
@@ -4926,14 +4926,14 @@
         "namespace": "capital",
         "partition_keys": []
       },
-      "storage_uri": "top_list/2026",
+      "storage_uri": "top_list/2014",
       "schema": {
         "schema_hash": "schema:sha256:e718b5b5eeeb3776d941d765fddf87f19c37aa12620062c336d9de0be68adee4",
-        "row_count": 68,
-        "created_at": "2026-11-05T18:07:15.911166+00:00"
+        "row_count": 0,
+        "created_at": "2026-11-06T06:48:46.128589+00:00"
       },
       "source": "tushare",
-      "freshness_at": "2026-11-05T18:07:15.911166+00:00"
+      "freshness_at": "2026-11-06T06:48:46.128589+00:00"
     },
     {
       "asset": {
@@ -5049,11 +5049,11 @@
       "storage_uri": "fund_portfolio/2014",
       "schema": {
         "schema_hash": "schema:sha256:75a7aebf6d86533737e52a7f1f020a77599f07d1f0cdf40cf0887fc46f2acf36",
-        "row_count": 914,
-        "created_at": "2026-11-06T05:24:32.020279+00:00"
+        "row_count": 97,
+        "created_at": "2026-11-06T07:41:04.123011+00:00"
       },
       "source": "tushare",
-      "freshness_at": "2026-11-06T05:24:32.020279+00:00"
+      "freshness_at": "2026-11-06T07:41:04.123011+00:00"
     },
     {
       "asset": {
@@ -5124,11 +5124,11 @@
       "storage_uri": "adj_factor/2026",
       "schema": {
         "schema_hash": "schema:sha256:d73eb867636926267c52f7c3b7865c6eb74d14cf177dd62733bb25030f7213cd",
-        "row_count": 5582,
-        "created_at": "2026-11-05T13:56:49.127144+00:00"
+        "row_count": 2,
+        "created_at": "2026-11-06T06:43:55.455038+00:00"
       },
       "source": "tushare",
-      "freshness_at": "2026-11-05T13:56:49.127144+00:00"
+      "freshness_at": "2026-11-06T06:43:55.455038+00:00"
     },
     {
       "asset": {
@@ -5151,14 +5151,14 @@
         "namespace": "market",
         "partition_keys": []
       },
-      "storage_uri": "etf_nav/2026",
+      "storage_uri": "etf_nav/2014",
       "schema": {
         "schema_hash": "schema:sha256:e3a305174bb134829f62fea736ee39c01f8f20c1b5666563885292a47efd32b7",
-        "row_count": 9333,
-        "created_at": "2026-11-02T18:02:00.304907+00:00"
+        "row_count": 68,
+        "created_at": "2026-11-06T07:40:45.582719+00:00"
       },
       "source": "tushare",
-      "freshness_at": "2026-11-02T18:02:00.304907+00:00"
+      "freshness_at": "2026-11-06T07:40:45.582719+00:00"
     },
     {
       "asset": {
@@ -5169,11 +5169,11 @@
       "storage_uri": "fund_adj/2026",
       "schema": {
         "schema_hash": "schema:sha256:d73eb867636926267c52f7c3b7865c6eb74d14cf177dd62733bb25030f7213cd",
-        "row_count": 11,
-        "created_at": "2026-11-06T05:17:10.494824+00:00"
+        "row_count": 1692,
+        "created_at": "2026-11-06T06:06:51.062313+00:00"
       },
       "source": "tushare",
-      "freshness_at": "2026-11-06T05:17:10.494824+00:00"
+      "freshness_at": "2026-11-06T06:06:51.062313+00:00"
     },
     {
       "asset": {
@@ -5181,14 +5181,14 @@
         "namespace": "market",
         "partition_keys": []
       },
-      "storage_uri": "fund_share/2026",
+      "storage_uri": "fund_share/2014",
       "schema": {
         "schema_hash": "schema:sha256:fffe13f2572984aa7c2482ff819c7b7f1112f97104ec0305213474e06811c1d9",
-        "row_count": 1717,
-        "created_at": "2026-11-05T18:20:31.637250+00:00"
+        "row_count": 630,
+        "created_at": "2026-11-06T07:41:00.640489+00:00"
       },
       "source": "tushare",
-      "freshness_at": "2026-11-05T18:20:31.637250+00:00"
+      "freshness_at": "2026-11-06T07:41:00.640489+00:00"
     },
     {
       "asset": {
@@ -5230,10 +5230,10 @@
       "schema": {
         "schema_hash": "schema:sha256:54f302a7aeebeacc6fa08a4628ae68372de130f0914933bbd1bf0406c249e678",
         "row_count": 113,
-        "created_at": "2026-11-04T18:07:21.634442+00:00"
+        "created_at": "2026-11-06T07:02:43.470320+00:00"
       },
       "source": "tushare",
-      "freshness_at": "2026-11-04T18:07:21.634442+00:00"
+      "freshness_at": "2026-11-06T07:02:43.470320+00:00"
     },
     {
       "asset": {
@@ -5331,14 +5331,14 @@
         "namespace": "market",
         "partition_keys": []
       },
-      "storage_uri": "stock_status/2026",
+      "storage_uri": "stock_status/2021",
       "schema": {
         "schema_hash": "schema:sha256:5faf74005d18aca970ebfe3631f122dd9b5d3a0684a57eefcfc400f0d11289a6",
-        "row_count": 5577,
-        "created_at": "2026-11-05T14:00:04.219862+00:00"
+        "row_count": 4487,
+        "created_at": "2026-11-06T06:26:17.029731+00:00"
       },
       "source": "tushare",
-      "freshness_at": "2026-11-05T14:00:04.219862+00:00"
+      "freshness_at": "2026-11-06T06:26:17.029731+00:00"
     },
     {
       "asset": {
@@ -5461,5 +5461,5 @@
       "freshness_at": "2026-11-05T13:55:14.944949+00:00"
     }
   ],
-  "finished_at": "2026-11-06T05:24:47.520205+00:00"
+  "finished_at": "2026-11-06T07:41:13.727140+00:00"
 }
