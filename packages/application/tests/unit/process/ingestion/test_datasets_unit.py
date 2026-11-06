@@ -494,9 +494,9 @@ class TestExtendedHelperFunctions:
 
     def test_get_parallel_datasets_empty_tier(self) -> None:
         """Test get_parallel_datasets for tier with no datasets."""
-        levels = get_parallel_datasets(TaskTier.T2_REPAIR)
+        levels = get_parallel_datasets(TaskTier.T3_QUALITY)
 
-        # T2 has no datasets, should return empty list
+        # Quality tasks have no ingestion dataset registrations.
         assert levels == []
 
     def test_parallel_execution_validation(self) -> None:

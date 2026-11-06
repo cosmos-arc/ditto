@@ -1,12 +1,37 @@
 {
-  "measured_at": "2026-11-06T05:05:39.406951+00:00",
+  "measured_at": "2026-11-06T05:06:53.759041+00:00",
   "expected_holders": 32842,
   "roster_sha256": "6a90d63c053cc9d79d4ef190857f0246b7de1a408cc8bc79dd717064c7e0e1e2",
   "request_start": "2014-01-01",
   "request_end": "2026-11-05",
-  "attempted_holders": 7222,
-  "completed_holders": 7222,
-  "zero_observations": 3029,
-  "failed_holders": [],
-  "pending_holders": 25620
+  "attempted_holders": 7303,
+  "completed_holders": 7300,
+  "zero_observations": 3067,
+  "failed_holders": [
+    {
+      "fund_code": "001885.OF",
+      "status": "failed",
+      "rows": null,
+      "error": "FETCH_ERROR",
+      "message": "获取数据失败: Failed to fetch fund_portfolio from Tushare",
+      "measured_at": "2026-11-06T05:06:41.749994+00:00"
+    },
+    {
+      "fund_code": "010219.OF",
+      "status": "failed",
+      "rows": null,
+      "error": "FETCH_ERROR",
+      "message": "获取数据失败: Failed to fetch fund_portfolio from Tushare",
+      "measured_at": "2026-11-06T05:06:41.757681+00:00"
+    },
+    {
+      "fund_code": "018932.OF",
+      "status": "failed",
+      "rows": null,
+      "error": "FETCH_ERROR",
+      "message": "获取数据失败: Failed to fetch fund_portfolio from Tushare",
+      "measured_at": "2026-11-06T05:06:41.750653+00:00"
+    }
+  ],
+  "pending_holders": 25542
 }

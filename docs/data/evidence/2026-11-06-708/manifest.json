@@ -24,12 +24,12 @@
     "bytes": 112358
   },
   "etf-price-probes.csv": {
-    "sha256": "a80eb9e9ab34d6cf13a114a58e0283c248ef360c25a967c1a5b8042053ce95fb",
-    "bytes": 75668
+    "sha256": "af41100e32a20ea2a5287584f1b51061061c2927edc99a98ae592bea50a8a405",
+    "bytes": 75224
   },
   "fund-backfill-progress.json": {
-    "sha256": "15553aaedf3d2a564777a480dc33a7945b7ffd317f3dcf185a47ee11f2e52fd1",
-    "bytes": 375
+    "sha256": "8fa49e40fc8ca0435d88ea307d4eaf2175661bfb0558e8847ba6dc2d525e1a91",
+    "bytes": 1160
   },
   "fund_basic.json": {
     "sha256": "091806a9b88e755c84a491c622661908304dff0ee62a8db68eeede0c83aa66e1",
@@ -88,8 +88,8 @@
     "bytes": 915
   },
   "stock-price-probes.csv": {
-    "sha256": "5d21c9d83689dc5619c47542bf1f5776e567d16d6f70142db7a17588b4f36d38",
-    "bytes": 221028
+    "sha256": "012004d593842b2627554a22d01a783431cf56b48435efb3ac3202460ea4b8a3",
+    "bytes": 221099
   },
   "tail-set-probes.json": {
     "sha256": "d11972643bb63251bb21b8934b833c8e8d999acfa8c63b899dd3eefd3d00b4e3",
