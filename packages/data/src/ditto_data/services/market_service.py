@@ -282,6 +282,12 @@ class MarketService:
         )
         return df
 
+    def get_limit_list(self, start: str, end: str) -> pl.DataFrame:
+        """Read disclosed limit events; absent ST rows are not negative events."""
+        if self._read_ports.limit_list is None:
+            raise ValueError("limit_list reader not configured")
+        return self._read_ports.limit_list.read(start_date=start, end_date=end)
+
     @traced("market.get_fund_share")
     def get_fund_share(self, start: str, end: str) -> pl.DataFrame | None:
         """

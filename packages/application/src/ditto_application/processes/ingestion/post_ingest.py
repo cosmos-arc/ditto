@@ -504,10 +504,10 @@ def commit_zero_row_provider_observation(
     *,
     dataset: str,
     trade_date: str,
-    request_start: str | None,
-    request_end: str | None,
+    request_window: RequestWindow,
     chunk_id: str | None,
     ports: ZeroRowEvidencePorts,
+    source_ticker: str | None = None,
 ) -> str | None:
     """
     Persist an auditable zero-row provider response without inventing payload.
@@ -520,6 +520,7 @@ def commit_zero_row_provider_observation(
         return "QUALITY_CHECK_REQUIRED"
     if ports.evidence_committer is None:
         return "EVIDENCE_COMMITTER_REQUIRED"
+    request_start, request_end = request_window.start, request_window.end
     range_end = request_end or trade_date
     digest = sha256(
         orjson.dumps(
@@ -529,6 +530,7 @@ def commit_zero_row_provider_observation(
                 trade_date,
                 range_end,
                 [(name, str(dtype)) for name, dtype in df.schema.items()],
+                *([source_ticker] if source_ticker is not None else []),
             ]
         )
     ).hexdigest()
@@ -551,6 +553,7 @@ def commit_zero_row_provider_observation(
         l1_l2_attested=True,
         chunk_id=chunk_id,
         payload_retained=False,
+        source_ticker=source_ticker,
     )
     outcome = ports.evidence_committer.commit(
         build_evidence_commit_request(observation)
@@ -575,8 +578,7 @@ def _commit_empty_provider_observation(
         df,
         dataset=dataset,
         trade_date=trade_date,
-        request_start=request_start,
-        request_end=request_end,
+        request_window=RequestWindow(request_start, request_end),
         chunk_id=chunk_id,
         ports=ZeroRowEvidencePorts(
             source_name=ctx.source_name,

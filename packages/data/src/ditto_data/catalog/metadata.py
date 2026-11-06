@@ -738,7 +738,7 @@ def _resolve_supported_sources(dataset_id: str) -> tuple[str, ...]:
     """Resolve runtime sources that may drive ingestion for a dataset."""
     if dataset_id in _UNSUPPORTED_INGESTION_DATASETS:
         return ()
-    if dataset_id == "macro_indicators":
+    if dataset_id in {"macro_indicators", "commodity_daily"}:
         return ("tushare", "fred")
     if dataset_id == "stock_daily":
         # fuyao 冗余源：原始价日线，source=auto 故障日降级（ADR dual-source）

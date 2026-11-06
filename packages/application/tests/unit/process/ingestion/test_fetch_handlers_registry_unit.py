@@ -147,7 +147,7 @@ def test_macro_handler_fetches_the_certified_china_batch(
             "CN_SF_FLOW_CUM",
             "CN_SF_STOCK",
         ],
-        "2015-01-01",
+        "2014-01-01",
         "2026-09-01",
         observed_on=date.today(),
     )

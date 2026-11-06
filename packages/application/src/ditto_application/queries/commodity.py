@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from ditto_data.models.source_codes import (
     COMMODITY_CODE_TO_INSTRUMENT_ID,
+    SINA_FOREIGN_FUTURES,
     VIX_CODE_TO_INSTRUMENT_ID,
 )
 from ditto_data.services.market_service import MarketService
@@ -16,6 +17,7 @@ __all__ = ["CommodityQueryFacade"]
 _COMBINED_CODE_TO_INSTRUMENT_ID: dict[str, int] = {
     **COMMODITY_CODE_TO_INSTRUMENT_ID,
     **VIX_CODE_TO_INSTRUMENT_ID,
+    **{code: item[0] for code, item in SINA_FOREIGN_FUTURES.items()},
 }
 
 # 反向映射: instrument_id -> code

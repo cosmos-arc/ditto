@@ -10,7 +10,6 @@ from ditto_application.queries.macro import MacroQueryFacade
 from ditto_application.queries.market import MarketQueryFacade
 from ditto_application.queries.metadata import MetadataQueryFacade
 from ditto_data.services.capital_store import CapitalStore
-from ditto_data.services.fundamental_store import FundamentalStore
 from ditto_data.services.macro_service import MacroService
 from ditto_data.services.market_service import MarketService
 from ditto_data.services.metadata_service import MetadataService
@@ -37,7 +36,6 @@ def create_query_context() -> Generator[QueryContext]:
         metadata_service = container.get(MetadataService)
         market_service = container.get(MarketService)
         capital_store = container.get(CapitalStore)
-        fundamental_store = container.get(FundamentalStore)
         macro_service = container.get(MacroService)
 
         yield QueryContext(
@@ -47,7 +45,7 @@ def create_query_context() -> Generator[QueryContext]:
                 capital_store=capital_store,
             ),
             capital=CapitalQueryFacade(capital_store=capital_store),
-            fundamental=FundamentalQueryFacade(fundamental_store=fundamental_store),
+            fundamental=container.get(FundamentalQueryFacade),
             macro=MacroQueryFacade(macro_service=macro_service),
         )
     finally:

@@ -243,6 +243,22 @@ class TestBackfillRange:
         mock_ingestion_log_store,
     ) -> None:
         class ChunkCoordinator:
+            def register_fund_report(
+                self, evidence_json: bytes, document: bytes
+            ) -> dict[str, str]:
+                raise AssertionError("backfill must not register report evidence")
+
+            def ingest_fund_portfolio_batch(
+                self,
+                start: str,
+                end: str,
+                *,
+                after: str = "",
+                limit: int = 100,
+                roster_sha256: str = "",
+            ) -> dict[str, object]:
+                raise AssertionError("backfill must not use public fund batches")
+
             def __init__(self) -> None:
                 self.calls: list[tuple[str, str, tuple[str, ...]]] = []
 
@@ -342,6 +358,22 @@ class TestBackfillRange:
         mock_ingestion_log_store,
     ) -> None:
         class InstrumentCoordinator:
+            def register_fund_report(
+                self, evidence_json: bytes, document: bytes
+            ) -> dict[str, str]:
+                raise AssertionError("backfill must not register report evidence")
+
+            def ingest_fund_portfolio_batch(
+                self,
+                start: str,
+                end: str,
+                *,
+                after: str = "",
+                limit: int = 100,
+                roster_sha256: str = "",
+            ) -> dict[str, object]:
+                raise AssertionError("backfill must not use public fund batches")
+
             def __init__(self) -> None:
                 self.calls: list[tuple[str, str, InstrumentIngestParams]] = []
 
@@ -1431,6 +1463,22 @@ class TestBackfillMissingChunkReplay:
         )
 
         class _ReplayCoordinator:
+            def register_fund_report(
+                self, evidence_json: bytes, document: bytes
+            ) -> dict[str, str]:
+                raise AssertionError("backfill must not register report evidence")
+
+            def ingest_fund_portfolio_batch(
+                self,
+                start: str,
+                end: str,
+                *,
+                after: str = "",
+                limit: int = 100,
+                roster_sha256: str = "",
+            ) -> dict[str, object]:
+                raise AssertionError("backfill must not use public fund batches")
+
             def __init__(self) -> None:
                 self.chunk_calls: list[tuple[str, tuple[str, ...]]] = []
                 self.day_calls: list[str] = []

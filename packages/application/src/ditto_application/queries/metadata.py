@@ -82,6 +82,22 @@ class MetadataQueryFacade:
             industry_level=industry_level,
         )
 
+    def get_stock_names(
+        self, instrument_ids: list[int], *, asof: str, cutoff: str
+    ) -> dict[int, str]:
+        """Observed historical names; absence never falls back to today's name."""
+        return self._service.instrument.get_stock_names(
+            instrument_ids, asof, cutoff=cutoff
+        )
+
+    def get_st_status(
+        self, instrument_ids: list[int], *, asof: str, cutoff: str
+    ) -> dict[int, dict[str, object]]:
+        """Historical ST evidence; missing keys remain unknown."""
+        return self._service.instrument.get_st_status_batch(
+            instrument_ids, asof, cutoff=cutoff
+        )
+
     def get_instrument(self, instrument_id: int) -> dict[str, Any] | None:
         """
         获取单个证券信息.

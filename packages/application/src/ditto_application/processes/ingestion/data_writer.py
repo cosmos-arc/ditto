@@ -294,7 +294,10 @@ def _settle_fund_portfolio_dual_code(
     """
     if not holding_id_map:
         return enriched_df
-    pk_cols = ["instrument_id", "report_date", "knowledge_date"]
+    holder_key = (
+        "source_ticker" if "source_ticker" in enriched_df.columns else "instrument_id"
+    )
+    pk_cols = [holder_key, "report_date", "knowledge_date"]
     joined = enriched_df.join(
         pl.DataFrame(
             {
@@ -1491,7 +1494,24 @@ class IngestionDataWriter:
         year: int,
         on_duplicate: OnDuplicate = OnDuplicate.ERROR,
     ) -> WriteResult:
-        enriched_df = self._enrich_and_filter_fk_dataframe(df, dataset, year)
+        if dataset_enum is Dataset.FUND_PORTFOLIO:
+            codes = df["source_ticker"].unique().to_list()
+            self._fundamental_store.require_fund_holders(codes)
+            # Only the optional trading link uses instrument IDs. Holder identity
+            # is source_ticker; missing OTC trading links must never drop rows.
+            links = self._metadata_service.instrument.resolve_instrument_ids_batch(
+                identifiers=codes,
+                source=self._source_name,
+                asof=None,
+            )
+            enriched_df = _enrich_with_instrument_id(
+                df,
+                links,
+                "source_ticker",
+                self._source_name,
+            )
+        else:
+            enriched_df = self._enrich_and_filter_fk_dataframe(df, dataset, year)
         if enriched_df is None:
             return _to_write_result(dataset, year, df, 0)
 
@@ -1543,6 +1563,7 @@ class IngestionDataWriter:
             year,
             enriched_df,
             records_written,
+            on_duplicate=on_duplicate,
         )
 
     def _settle_fund_portfolio_dual_code(

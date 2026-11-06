@@ -83,6 +83,10 @@ class CommodityFredAdapter(BaseFredAdapter):
                 observation_end=fred_end,
             )
 
+            # FRED "." means no observation (e.g. a holiday), not a zero price.
+            # Match the macro adapter's no-observation rule; retain negative quotes.
+            df = df.filter(pl.col("value").is_not_null())
+
             if df.height == 0:
                 continue
 

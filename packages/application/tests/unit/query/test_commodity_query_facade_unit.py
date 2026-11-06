@@ -10,6 +10,7 @@ from ditto_application.exceptions import AppQueryError
 from ditto_application.queries.commodity import CommodityQueryFacade
 from ditto_data.models.source_codes import (
     COMMODITY_CODE_TO_INSTRUMENT_ID,
+    SINA_FOREIGN_FUTURES,
     VIX_CODE_TO_INSTRUMENT_ID,
 )
 
@@ -27,7 +28,7 @@ class TestCommodityQueryFacadeMappings:
         assert "VIX_30D" in codes
         assert codes == set(COMMODITY_CODE_TO_INSTRUMENT_ID.keys()) | set(
             VIX_CODE_TO_INSTRUMENT_ID.keys()
-        )
+        ) | set(SINA_FOREIGN_FUTURES)
 
     def test_get_all_instrument_ids(self) -> None:
         service = MagicMock()
@@ -35,8 +36,10 @@ class TestCommodityQueryFacadeMappings:
 
         ids = facade.get_all_instrument_ids()
 
-        expected = list(COMMODITY_CODE_TO_INSTRUMENT_ID.values()) + list(
-            VIX_CODE_TO_INSTRUMENT_ID.values()
+        expected = (
+            list(COMMODITY_CODE_TO_INSTRUMENT_ID.values())
+            + list(VIX_CODE_TO_INSTRUMENT_ID.values())
+            + [item[0] for item in SINA_FOREIGN_FUTURES.values()]
         )
         assert ids == expected
 

@@ -16,6 +16,7 @@ from ditto_features.technical_analysis.series import (
 
 from ditto_application.catalog_maturity import blocked_catalog_datasets
 from ditto_application.exceptions import AppQueryError
+from ditto_application.queries._maturity_gate import assert_query_datasets_allowed
 
 __all__ = ["MarketQueryFacade"]
 
@@ -198,6 +199,42 @@ class MarketQueryFacade:
             msg = "stock_status query requires experimental dataset maturity"
             raise AppQueryError(msg)
         return self._service.get_stock_status(start, end)
+
+    def get_limit_list(
+        self, start: str, end: str, *, allow_experimental_data: bool = False
+    ) -> pl.DataFrame:
+        """Disclosed events since 2020, excluding ST; missing rows are unknown."""
+        assert_query_datasets_allowed(
+            ("limit_list",),
+            allow_experimental_data=allow_experimental_data,
+            context="market query limit_list",
+        )
+        return self._service.get_limit_list(start, end)
+
+    def get_fund_share(
+        self, start: str, end: str, *, allow_experimental_data: bool = False
+    ) -> pl.DataFrame:
+        """Listed ETF share observations in ten-thousand shares, without fill."""
+        assert_query_datasets_allowed(
+            ("fund_share",),
+            allow_experimental_data=allow_experimental_data,
+            context="market query fund_share",
+        )
+        frame = self._service.get_fund_share(start, end)
+        if frame is None:
+            raise AppQueryError("fund_share reader not configured")
+        return frame
+
+    def get_global_index_bars(
+        self, start: str, end: str, *, allow_experimental_data: bool = False
+    ) -> pl.DataFrame:
+        """Global index display references; not strategy or execution inputs."""
+        assert_query_datasets_allowed(
+            ("global_index_daily",),
+            allow_experimental_data=allow_experimental_data,
+            context="market query global_index_daily",
+        )
+        return self._service.get_global_index_bars(start, end)
 
     def get_constituents(
         self,

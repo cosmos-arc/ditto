@@ -32,6 +32,24 @@ type DateRangeLister = Callable[[str, str, str], list[str]]
 class IngestionCoordinatorLike(Protocol):
     """Subset of ingestion coordinator behavior used by apps/process wrappers."""
 
+    def register_fund_report(
+        self, evidence_json: bytes, document: bytes
+    ) -> dict[str, str]:
+        """Attach reviewed report evidence."""
+        ...
+
+    def ingest_fund_portfolio_batch(
+        self,
+        start: str,
+        end: str,
+        *,
+        after: str = "",
+        limit: int = 100,
+        roster_sha256: str = "",
+    ) -> dict[str, object]:
+        """Ingest a bounded public-fund holder roster slice."""
+        ...
+
     def ingest_date(
         self,
         dataset: str,
@@ -96,6 +114,32 @@ class IngestionCoordinatorLike(Protocol):
 
 class AutoSourceIngestionCoordinator:
     """Choose a concrete source coordinator per date-level ingestion request."""
+
+    def register_fund_report(
+        self, evidence_json: bytes, document: bytes
+    ) -> dict[str, str]:
+        """Attach report evidence through the public-fund source coordinator."""
+        return self._coordinator_for_source("tushare").register_fund_report(
+            evidence_json, document
+        )
+
+    def ingest_fund_portfolio_batch(
+        self,
+        start: str,
+        end: str,
+        *,
+        after: str = "",
+        limit: int = 100,
+        roster_sha256: str = "",
+    ) -> dict[str, object]:
+        """Public fund identities and holdings are supplied by Tushare."""
+        return self._coordinator_for_source("tushare").ingest_fund_portfolio_batch(
+            start,
+            end,
+            after=after,
+            limit=limit,
+            roster_sha256=roster_sha256,
+        )
 
     def __init__(
         self,

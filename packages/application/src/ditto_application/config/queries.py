@@ -284,13 +284,13 @@ INGESTION_SPECS: dict[_Dataset, DatasetSpec] = {
         task_name="ingest_fund_share",
         priority=41,
     ),
-    # #522 基金季度持仓（公告日驱动）
+    # #522 公募披露持仓（公告日驱动）
     _Dataset.FUND_PORTFOLIO: create_t1_config(
         dataset=_Dataset.FUND_PORTFOLIO,
-        description="基金季度持仓",
+        description="公募披露持仓",
         typical_available_time=time(21, 0),
-        depends_on=[_Dataset.ETF_BASIC],
-        critical_fields=["instrument_id", "report_date", "holding_symbol"],
+        depends_on=[],
+        critical_fields=["source_ticker", "report_date", "holding_symbol"],
         task_name="ingest_fund_portfolio",
         priority=42,
     ),

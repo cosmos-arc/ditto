@@ -184,7 +184,7 @@ _PRIMARY_KEYS: dict[str, tuple[str, ...]] = {
     # #522 ETF 份额逐日申报 / 持仓季度披露（holding_symbol 原码进主键）
     "fund_share": ("instrument_id", "trade_date", "knowledge_date"),
     "fund_portfolio": (
-        "instrument_id",
+        "source_ticker",
         "report_date",
         "holding_symbol",
         "knowledge_date",

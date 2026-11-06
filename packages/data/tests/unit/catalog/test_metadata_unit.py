@@ -455,15 +455,15 @@ class TestDefaultMetadataSourceCapabilities:
         assert meta.supports_source("tushare") is True
         assert meta.supports_source("fred") is True
 
-    def test_commodity_daily_declares_fred_auxiliary_not_runtime_source(
+    def test_commodity_daily_declares_native_fred_ingestion(
         self,
     ) -> None:
         meta = default_dataset_metadata()["commodity_daily"]
 
         assert meta.default_source == "tushare"
-        assert meta.supported_sources == ("tushare",)
+        assert meta.supported_sources == ("tushare", "fred")
         assert meta.auxiliary_sources == ("fred",)
-        assert meta.supports_source("fred") is False
+        assert meta.supports_source("fred") is True
         assert meta.uses_auxiliary_source("fred") is True
 
     def test_index_weight_declares_tushare_date_ingestion(self) -> None:
