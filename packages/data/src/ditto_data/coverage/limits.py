@@ -590,7 +590,8 @@ _DATASET_COVERAGE: dict[str, DatasetCoverageLimit] = {
         gaps=(
             "官方 2016 年前不覆盖;精确库存起点 2016-08-09。",
             (
-                "剩余缺状态逐代码 bak_basic 实测;6 个无停牌时段却有正成交量的会话在 suspend"
+                "剩余缺状态的逐代码 bak_basic 探针仍在执行,未测项保持未知;"
+                "6 个无停牌时段却有正成交量的会话在 suspend"
                 "_d/daily 原生响应中仍并存,保留未知,不放行严格交易消费者。"
             ),
             "摄取账本仍有未归因失败,不能以库存或消费样本声称闭合;具体 source/date/error 见 current_failures。",
