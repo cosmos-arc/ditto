@@ -1,0 +1,42 @@
+{
+  "start": "2026-11-06T02:23:29.658810+00:00",
+  "status": 200,
+  "params": {
+    "ts_code": "000001.SZ",
+    "trade_date": "20261104"
+  },
+  "response": {
+    "code": 0,
+    "msg": null,
+    "data": {
+      "fields": [
+        "ts_code",
+        "trade_date",
+        "open",
+        "high",
+        "low",
+        "close",
+        "pre_close",
+        "change",
+        "pct_chg",
+        "vol",
+        "amount"
+      ],
+      "items": [
+        [
+          "000001.SZ",
+          "20261104",
+          11.75,
+          11.86,
+          11.68,
+          11.74,
+          11.77,
+          -0.03,
+          -0.2549,
+          1437905.91,
+          1689183.95741
+        ]
+      ]
+    }
+  }
+}

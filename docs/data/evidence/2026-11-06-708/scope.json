@@ -1,0 +1,2477 @@
+{
+  "measured_at": "2026-11-06T04:04:03.654166+00:00",
+  "sets": {
+    "global_index_daily": {
+      "expected": [
+        "XIN9",
+        "HSI",
+        "HKTECH",
+        "HKAH",
+        "DJI",
+        "SPX",
+        "IXIC",
+        "FTSE",
+        "FCHI",
+        "GDAXI",
+        "N225",
+        "KS11",
+        "AS51",
+        "SENSEX",
+        "IBOVESPA",
+        "RTS",
+        "TWII",
+        "CKLSE",
+        "SPTSX",
+        "CSX5P",
+        "RUT"
+      ],
+      "actual": [
+        {
+          "source_ticker": "AS51",
+          "rows": 3281,
+          "start": "2014-01-02",
+          "end": "2026-11-04"
+        },
+        {
+          "source_ticker": "CKLSE",
+          "rows": 3178,
+          "start": "2014-01-02",
+          "end": "2026-11-04"
+        },
+        {
+          "source_ticker": "CSX5P",
+          "rows": 3318,
+          "start": "2014-01-02",
+          "end": "2026-11-03"
+        },
+        {
+          "source_ticker": "DJI",
+          "rows": 3269,
+          "start": "2014-01-02",
+          "end": "2026-11-03"
+        },
+        {
+          "source_ticker": "FCHI",
+          "rows": 3308,
+          "start": "2014-01-02",
+          "end": "2026-11-03"
+        },
+        {
+          "source_ticker": "FTSE",
+          "rows": 3267,
+          "start": "2014-01-02",
+          "end": "2026-11-03"
+        },
+        {
+          "source_ticker": "GDAXI",
+          "rows": 3279,
+          "start": "2014-01-02",
+          "end": "2026-11-03"
+        },
+        {
+          "source_ticker": "HKAH",
+          "rows": 3187,
+          "start": "2014-01-02",
+          "end": "2026-11-04"
+        },
+        {
+          "source_ticker": "HKTECH",
+          "rows": 1571,
+          "start": "2020-07-27",
+          "end": "2026-11-04"
+        },
+        {
+          "source_ticker": "HSI",
+          "rows": 3187,
+          "start": "2014-01-02",
+          "end": "2026-11-04"
+        },
+        {
+          "source_ticker": "IBOVESPA",
+          "rows": 108,
+          "start": "2026-07-03",
+          "end": "2026-11-03"
+        },
+        {
+          "source_ticker": "IXIC",
+          "rows": 3249,
+          "start": "2014-01-02",
+          "end": "2026-11-03"
+        },
+        {
+          "source_ticker": "KS11",
+          "rows": 3180,
+          "start": "2014-01-02",
+          "end": "2026-11-04"
+        },
+        {
+          "source_ticker": "N225",
+          "rows": 3165,
+          "start": "2014-01-06",
+          "end": "2026-11-04"
+        },
+        {
+          "source_ticker": "RTS",
+          "rows": 1215,
+          "start": "2020-01-03",
+          "end": "2026-11-03"
+        },
+        {
+          "source_ticker": "RUT",
+          "rows": 3251,
+          "start": "2014-01-02",
+          "end": "2026-11-03"
+        },
+        {
+          "source_ticker": "SENSEX",
+          "rows": 3181,
+          "start": "2014-01-01",
+          "end": "2026-11-04"
+        },
+        {
+          "source_ticker": "SPTSX",
+          "rows": 3243,
+          "start": "2014-01-02",
+          "end": "2026-11-03"
+        },
+        {
+          "source_ticker": "SPX",
+          "rows": 3251,
+          "start": "2014-01-02",
+          "end": "2026-11-03"
+        },
+        {
+          "source_ticker": "TWII",
+          "rows": 3152,
+          "start": "2014-01-02",
+          "end": "2026-11-04"
+        },
+        {
+          "source_ticker": "XIN9",
+          "rows": 3167,
+          "start": "2014-01-02",
+          "end": "2026-11-04"
+        }
+      ],
+      "missing": [],
+      "extra": []
+    },
+    "fx_daily": {
+      "expected": [
+        4000001,
+        4000002,
+        4000003,
+        4000004,
+        4000005,
+        4000006
+      ],
+      "actual": [
+        {
+          "instrument_id": 4000001,
+          "rows": 3949,
+          "start": "2014-01-02",
+          "end": "2026-11-04"
+        },
+        {
+          "instrument_id": 4000002,
+          "rows": 4048,
+          "start": "2014-01-01",
+          "end": "2026-11-04"
+        },
+        {
+          "instrument_id": 4000003,
+          "rows": 4006,
+          "start": "2014-01-01",
+          "end": "2026-11-04"
+        },
+        {
+          "instrument_id": 4000004,
+          "rows": 4000,
+          "start": "2014-01-01",
+          "end": "2026-11-04"
+        },
+        {
+          "instrument_id": 4000005,
+          "rows": 4028,
+          "start": "2014-01-01",
+          "end": "2026-11-04"
+        },
+        {
+          "instrument_id": 4000006,
+          "rows": 3986,
+          "start": "2014-01-01",
+          "end": "2026-11-04"
+        }
+      ],
+      "missing": [],
+      "extra": []
+    },
+    "commodity_daily": {
+      "expected": [
+        5000001,
+        5000002,
+        5000003,
+        5000004,
+        5100001,
+        5000005,
+        5000006,
+        5000007
+      ],
+      "actual": [
+        {
+          "instrument_id": 5000001,
+          "rows": 3205,
+          "start": "2013-12-31",
+          "end": "2026-11-03"
+        },
+        {
+          "instrument_id": 5000002,
+          "rows": 3260,
+          "start": "2013-12-31",
+          "end": "2026-11-03"
+        },
+        {
+          "instrument_id": 5000003,
+          "rows": 3499,
+          "start": "2014-01-01",
+          "end": "2026-11-04"
+        },
+        {
+          "instrument_id": 5000004,
+          "rows": 3534,
+          "start": "2014-01-01",
+          "end": "2026-11-04"
+        },
+        {
+          "instrument_id": 5000005,
+          "rows": 3330,
+          "start": "2014-01-01",
+          "end": "2026-11-05"
+        },
+        {
+          "instrument_id": 5000006,
+          "rows": 2592,
+          "start": "2016-11-02",
+          "end": "2026-11-05"
+        },
+        {
+          "instrument_id": 5000007,
+          "rows": 2592,
+          "start": "2016-11-02",
+          "end": "2026-11-05"
+        },
+        {
+          "instrument_id": 5100001,
+          "rows": 3264,
+          "start": "2013-12-31",
+          "end": "2026-11-04"
+        }
+      ],
+      "missing": [],
+      "extra": [],
+      "identity_map": {
+        "COMMOD_WTI": 5000001,
+        "COMMOD_BRENT": 5000002,
+        "COMMOD_GOLD": 5000003,
+        "COMMOD_SILVER": 5000004,
+        "VIX_30D": 5100001,
+        "CL": 5000005,
+        "GC": 5000006,
+        "SI": 5000007
+      }
+    },
+    "index_daily": {
+      "actual": [
+        {
+          "source_ticker": "000001.SH",
+          "rows": 3122,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "000016.SH",
+          "rows": 3122,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "000300.SH",
+          "rows": 3122,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "000688.SH",
+          "rows": 1658,
+          "start": "2020-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "000852.SH",
+          "rows": 3122,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "000905.SH",
+          "rows": 3122,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "000906.SH",
+          "rows": 3121,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "000985.SH",
+          "rows": 3119,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "000991.SH",
+          "rows": 3122,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "000992.SH",
+          "rows": 3122,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "000993.SH",
+          "rows": 3122,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "399001.SZ",
+          "rows": 3122,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "399006.SZ",
+          "rows": 3122,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "399303.SZ",
+          "rows": 3121,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "399373.SZ",
+          "rows": 3122,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "399374.SZ",
+          "rows": 3122,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "399375.SZ",
+          "rows": 3122,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "399376.SZ",
+          "rows": 3122,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "399377.SZ",
+          "rows": 3122,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "399378.SZ",
+          "rows": 3122,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "399673.SZ",
+          "rows": 22,
+          "start": "2026-09-30",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801010.SI",
+          "rows": 3119,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801012.SI",
+          "rows": 3119,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801014.SI",
+          "rows": 3119,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801015.SI",
+          "rows": 3119,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801016.SI",
+          "rows": 3119,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801017.SI",
+          "rows": 3119,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801018.SI",
+          "rows": 3119,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801030.SI",
+          "rows": 3119,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801032.SI",
+          "rows": 3119,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801033.SI",
+          "rows": 3119,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801034.SI",
+          "rows": 3119,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801036.SI",
+          "rows": 3119,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801037.SI",
+          "rows": 3119,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801038.SI",
+          "rows": 3119,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801039.SI",
+          "rows": 2913,
+          "start": "2014-11-07",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801040.SI",
+          "rows": 3119,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801043.SI",
+          "rows": 3119,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801044.SI",
+          "rows": 3119,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801045.SI",
+          "rows": 3119,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801050.SI",
+          "rows": 3119,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801051.SI",
+          "rows": 3119,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801053.SI",
+          "rows": 3088,
+          "start": "2014-02-21",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801054.SI",
+          "rows": 3088,
+          "start": "2014-02-21",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801055.SI",
+          "rows": 3088,
+          "start": "2014-02-21",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801056.SI",
+          "rows": 3119,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801072.SI",
+          "rows": 3119,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801074.SI",
+          "rows": 3119,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801076.SI",
+          "rows": 3088,
+          "start": "2014-02-21",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801077.SI",
+          "rows": 3119,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801078.SI",
+          "rows": 3119,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801080.SI",
+          "rows": 3119,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801081.SI",
+          "rows": 3119,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801082.SI",
+          "rows": 3119,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801083.SI",
+          "rows": 3119,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801084.SI",
+          "rows": 3119,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801085.SI",
+          "rows": 3119,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801086.SI",
+          "rows": 3119,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801092.SI",
+          "rows": 3119,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801093.SI",
+          "rows": 3119,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801095.SI",
+          "rows": 3119,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801096.SI",
+          "rows": 3119,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801101.SI",
+          "rows": 3119,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801102.SI",
+          "rows": 3119,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801103.SI",
+          "rows": 3119,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801104.SI",
+          "rows": 3119,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801110.SI",
+          "rows": 3119,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801111.SI",
+          "rows": 3119,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801112.SI",
+          "rows": 3119,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801113.SI",
+          "rows": 3119,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801114.SI",
+          "rows": 3119,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801115.SI",
+          "rows": 3119,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801116.SI",
+          "rows": 3119,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801120.SI",
+          "rows": 3119,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801124.SI",
+          "rows": 3119,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801125.SI",
+          "rows": 3119,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801126.SI",
+          "rows": 3119,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801127.SI",
+          "rows": 3119,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801128.SI",
+          "rows": 3119,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801129.SI",
+          "rows": 3119,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801130.SI",
+          "rows": 3119,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801131.SI",
+          "rows": 3119,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801132.SI",
+          "rows": 3119,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801133.SI",
+          "rows": 3119,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801140.SI",
+          "rows": 3119,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801141.SI",
+          "rows": 3119,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801142.SI",
+          "rows": 3119,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801143.SI",
+          "rows": 3119,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801145.SI",
+          "rows": 3119,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801150.SI",
+          "rows": 3119,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801151.SI",
+          "rows": 3119,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801152.SI",
+          "rows": 3119,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801153.SI",
+          "rows": 3119,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801154.SI",
+          "rows": 3119,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801155.SI",
+          "rows": 3119,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801156.SI",
+          "rows": 3119,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801160.SI",
+          "rows": 3119,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801161.SI",
+          "rows": 3119,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801163.SI",
+          "rows": 3119,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801170.SI",
+          "rows": 3119,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801178.SI",
+          "rows": 3119,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801179.SI",
+          "rows": 3119,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801180.SI",
+          "rows": 3119,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801181.SI",
+          "rows": 3119,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801183.SI",
+          "rows": 3119,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801191.SI",
+          "rows": 3119,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801193.SI",
+          "rows": 3057,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801194.SI",
+          "rows": 3119,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801200.SI",
+          "rows": 3119,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801202.SI",
+          "rows": 3119,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801203.SI",
+          "rows": 3088,
+          "start": "2014-02-21",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801204.SI",
+          "rows": 3088,
+          "start": "2014-02-21",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801206.SI",
+          "rows": 3119,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801210.SI",
+          "rows": 3119,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801218.SI",
+          "rows": 3119,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801219.SI",
+          "rows": 3119,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801223.SI",
+          "rows": 3119,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801230.SI",
+          "rows": 3119,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801231.SI",
+          "rows": 3119,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801710.SI",
+          "rows": 3088,
+          "start": "2014-02-21",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801711.SI",
+          "rows": 3088,
+          "start": "2014-02-21",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801712.SI",
+          "rows": 3088,
+          "start": "2014-02-21",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801713.SI",
+          "rows": 3088,
+          "start": "2014-02-21",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801720.SI",
+          "rows": 3088,
+          "start": "2014-02-21",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801721.SI",
+          "rows": 3088,
+          "start": "2014-02-21",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801722.SI",
+          "rows": 3088,
+          "start": "2014-02-21",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801723.SI",
+          "rows": 3088,
+          "start": "2014-02-21",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801724.SI",
+          "rows": 3088,
+          "start": "2014-02-21",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801726.SI",
+          "rows": 3119,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801730.SI",
+          "rows": 3088,
+          "start": "2014-02-21",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801731.SI",
+          "rows": 3088,
+          "start": "2014-02-21",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801733.SI",
+          "rows": 3088,
+          "start": "2014-02-21",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801735.SI",
+          "rows": 3119,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801736.SI",
+          "rows": 3119,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801737.SI",
+          "rows": 3119,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801738.SI",
+          "rows": 3119,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801740.SI",
+          "rows": 3088,
+          "start": "2014-02-21",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801741.SI",
+          "rows": 3088,
+          "start": "2014-02-21",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801742.SI",
+          "rows": 3088,
+          "start": "2014-02-21",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801743.SI",
+          "rows": 3088,
+          "start": "2014-02-21",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801744.SI",
+          "rows": 3088,
+          "start": "2014-02-21",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801745.SI",
+          "rows": 3119,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801750.SI",
+          "rows": 3088,
+          "start": "2014-02-21",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801760.SI",
+          "rows": 3088,
+          "start": "2014-02-21",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801764.SI",
+          "rows": 3119,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801765.SI",
+          "rows": 3119,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801766.SI",
+          "rows": 3119,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801767.SI",
+          "rows": 3119,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801769.SI",
+          "rows": 3119,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801770.SI",
+          "rows": 3088,
+          "start": "2014-02-21",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801780.SI",
+          "rows": 3088,
+          "start": "2014-02-21",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801782.SI",
+          "rows": 3119,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801783.SI",
+          "rows": 3119,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801784.SI",
+          "rows": 3119,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801785.SI",
+          "rows": 2460,
+          "start": "2016-09-09",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801790.SI",
+          "rows": 3088,
+          "start": "2014-02-21",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801880.SI",
+          "rows": 3088,
+          "start": "2014-02-21",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801881.SI",
+          "rows": 3088,
+          "start": "2014-02-21",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801890.SI",
+          "rows": 3088,
+          "start": "2014-02-21",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801950.SI",
+          "rows": 3119,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801951.SI",
+          "rows": 3119,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801952.SI",
+          "rows": 3119,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801960.SI",
+          "rows": 3119,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801962.SI",
+          "rows": 3119,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801963.SI",
+          "rows": 3119,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801970.SI",
+          "rows": 3119,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801971.SI",
+          "rows": 3119,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801972.SI",
+          "rows": 3119,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801980.SI",
+          "rows": 3119,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801981.SI",
+          "rows": 3119,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801982.SI",
+          "rows": 3119,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801991.SI",
+          "rows": 3119,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801992.SI",
+          "rows": 3119,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801993.SI",
+          "rows": 3119,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801994.SI",
+          "rows": 3119,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "801995.SI",
+          "rows": 3119,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "899050.BJ",
+          "rows": 959,
+          "start": "2022-11-21",
+          "end": "2026-11-05"
+        },
+        {
+          "source_ticker": "932000.CSI",
+          "rows": 3121,
+          "start": "2014-01-02",
+          "end": "2026-11-05"
+        }
+      ]
+    },
+    "index_weight": {
+      "expected": [
+        "000001.SH",
+        "000016.SH",
+        "000300.SH",
+        "000688.SH",
+        "000852.SH",
+        "000905.SH",
+        "000906.SH",
+        "000985.CSI",
+        "000991.SH",
+        "000992.SH",
+        "000993.SH",
+        "399001.SZ",
+        "399006.SZ",
+        "399303.SZ",
+        "399373.SZ",
+        "399374.SZ",
+        "399375.SZ",
+        "399376.SZ",
+        "399377.SZ",
+        "399378.SZ",
+        "399673.SZ",
+        "899050.BJ",
+        "932000.CSI"
+      ],
+      "actual": [
+        {
+          "index_id": "000001.SH",
+          "rows": 242919,
+          "start": "2014-01-30",
+          "end": "2026-09-30",
+          "source_ticker": "000001.SH"
+        },
+        {
+          "index_id": "000016.SH",
+          "rows": 7650,
+          "start": "2014-01-30",
+          "end": "2026-09-30",
+          "source_ticker": "000016.SH"
+        },
+        {
+          "index_id": "000300.SH",
+          "rows": 70200,
+          "start": "2014-01-30",
+          "end": "2026-09-30",
+          "source_ticker": "000300.SH"
+        },
+        {
+          "index_id": "000688.SH",
+          "rows": 3750,
+          "start": "2020-07-31",
+          "end": "2026-09-30",
+          "source_ticker": "000688.SH"
+        },
+        {
+          "index_id": "000852.SH",
+          "rows": 144200,
+          "start": "2014-10-31",
+          "end": "2026-09-30",
+          "source_ticker": "000852.SH"
+        },
+        {
+          "index_id": "000905.SH",
+          "rows": 76514,
+          "start": "2014-01-30",
+          "end": "2026-09-30",
+          "source_ticker": "000905.SH"
+        },
+        {
+          "index_id": "000906.SH",
+          "rows": 122414,
+          "start": "2014-01-30",
+          "end": "2026-09-30",
+          "source_ticker": "000906.SH"
+        },
+        {
+          "index_id": "000985.CSI",
+          "rows": 565806,
+          "start": "2014-01-30",
+          "end": "2026-09-30",
+          "source_ticker": "000985.CSI"
+        },
+        {
+          "index_id": "000991.SH",
+          "rows": 28024,
+          "start": "2014-01-30",
+          "end": "2026-09-30",
+          "source_ticker": "000991.SH"
+        },
+        {
+          "index_id": "000992.SH",
+          "rows": 22167,
+          "start": "2014-01-30",
+          "end": "2026-09-30",
+          "source_ticker": "000992.SH"
+        },
+        {
+          "index_id": "000993.SH",
+          "rows": 46590,
+          "start": "2014-01-30",
+          "end": "2026-09-30",
+          "source_ticker": "000993.SH"
+        },
+        {
+          "index_id": "399001.SZ",
+          "rows": 70154,
+          "start": "2014-01-30",
+          "end": "2026-09-30",
+          "source_ticker": "399001.SZ"
+        },
+        {
+          "index_id": "399006.SZ",
+          "rows": 15614,
+          "start": "2014-01-30",
+          "end": "2026-09-30",
+          "source_ticker": "399006.SZ"
+        },
+        {
+          "index_id": "399303.SZ",
+          "rows": 287235,
+          "start": "2014-03-31",
+          "end": "2026-09-30",
+          "source_ticker": "399303.SZ"
+        },
+        {
+          "index_id": "399373.SZ",
+          "rows": 10230,
+          "start": "2014-01-30",
+          "end": "2026-09-30",
+          "source_ticker": "399373.SZ"
+        },
+        {
+          "index_id": "399374.SZ",
+          "rows": 15500,
+          "start": "2014-01-30",
+          "end": "2026-09-30",
+          "source_ticker": "399374.SZ"
+        },
+        {
+          "index_id": "399375.SZ",
+          "rows": 15506,
+          "start": "2014-01-30",
+          "end": "2026-09-30",
+          "source_ticker": "399375.SZ"
+        },
+        {
+          "index_id": "399376.SZ",
+          "rows": 25754,
+          "start": "2014-01-30",
+          "end": "2026-09-30",
+          "source_ticker": "399376.SZ"
+        },
+        {
+          "index_id": "399377.SZ",
+          "rows": 25772,
+          "start": "2014-01-30",
+          "end": "2026-09-30",
+          "source_ticker": "399377.SZ"
+        },
+        {
+          "index_id": "399378.SZ",
+          "rows": 27000,
+          "start": "2014-01-30",
+          "end": "2026-09-30",
+          "source_ticker": "399378.SZ"
+        },
+        {
+          "index_id": "399673.SZ",
+          "rows": 7464,
+          "start": "2014-06-30",
+          "end": "2026-09-30",
+          "source_ticker": "399673.SZ"
+        },
+        {
+          "index_id": "899050.BJ",
+          "rows": 2300,
+          "start": "2022-12-30",
+          "end": "2026-09-30",
+          "source_ticker": "899050.BJ"
+        },
+        {
+          "index_id": "932000.CSI",
+          "rows": 75902,
+          "start": "2023-08-31",
+          "end": "2026-09-30",
+          "source_ticker": "932000.CSI"
+        }
+      ],
+      "missing": []
+    },
+    "macro_indicators": {
+      "fred_expected": [
+        "US_GDP_QOQ",
+        "US_CPI_INDEX",
+        "US_CORE_CPI_INDEX",
+        "US_PCE_INDEX",
+        "US_CORE_PCE_INDEX",
+        "US_UNRATE",
+        "US_PAYEMS",
+        "US_M2",
+        "US_BOND_YIELD_1Y",
+        "US_BOND_YIELD_2Y",
+        "US_BOND_YIELD_5Y",
+        "US_BOND_YIELD_10Y",
+        "US_BOND_YIELD_30Y",
+        "US_BOND_SPREAD_10Y2Y",
+        "US_FEDFUNDS_M",
+        "US_FEDFUNDS_D",
+        "COMMOD_WTI",
+        "COMMOD_BRENT",
+        "VIX_30D",
+        "US_DOLLAR_INDEX_BROAD",
+        "US_DOLLAR_INDEX_AFE_GOODS",
+        "FX_JPYUSD_H10",
+        "FX_EURUSD_H10",
+        "FX_USDCNY_H10",
+        "FX_GBPUSD_H10",
+        "US_BOND_YIELD_1MO",
+        "US_BOND_YIELD_3MO",
+        "US_BOND_YIELD_3Y",
+        "US_BOND_YIELD_7Y",
+        "US_BOND_YIELD_20Y",
+        "US_BOND_SPREAD_10Y3M",
+        "US_BREAKEVEN_10Y",
+        "US_BREAKEVEN_5Y",
+        "US_SOFR",
+        "US_EFFR",
+        "US_CREDIT_IG_OAS",
+        "US_CREDIT_HY_OAS",
+        "US_CORP_YIELD_AAA",
+        "US_CORP_YIELD_BAA_D",
+        "US_CORP_YIELD_BAA_M",
+        "US_BOND_SPREAD_BAA10Y",
+        "VIX_NASDAQ",
+        "VIX_RUSSELL",
+        "COMMOD_HH_NATGAS",
+        "COMMOD_GASREGW",
+        "COMMOD_COPPER_IMF",
+        "COMMOD_ALUMINUM_IMF",
+        "COMMOD_IRONORE_IMF",
+        "COMMOD_WTI_IMF",
+        "COMMOD_NATGAS_EU_IMF",
+        "COMMOD_ALLFNF_IMF"
+      ],
+      "actual": [
+        {
+          "indicator_id": 1,
+          "code": "CN_GDP_YOY",
+          "frequency": "quarterly",
+          "unit": "%",
+          "source": "tushare",
+          "rows": 51,
+          "start": "2014-01-01",
+          "end": "2026-07-01",
+          "knowledge_start": "2026-10-26",
+          "knowledge_end": "2026-11-06"
+        },
+        {
+          "indicator_id": 2,
+          "code": "CN_CPI_YOY",
+          "frequency": "monthly",
+          "unit": "%",
+          "source": "tushare",
+          "rows": 153,
+          "start": "2014-01-01",
+          "end": "2026-09-01",
+          "knowledge_start": "2026-10-26",
+          "knowledge_end": "2026-11-06"
+        },
+        {
+          "indicator_id": 3,
+          "code": "CN_PPI_YOY",
+          "frequency": "monthly",
+          "unit": "%",
+          "source": "tushare",
+          "rows": 153,
+          "start": "2014-01-01",
+          "end": "2026-09-01",
+          "knowledge_start": "2026-10-26",
+          "knowledge_end": "2026-11-06"
+        },
+        {
+          "indicator_id": 4,
+          "code": "CN_M2_YOY",
+          "frequency": "monthly",
+          "unit": "%",
+          "source": "tushare",
+          "rows": 153,
+          "start": "2014-01-01",
+          "end": "2026-09-01",
+          "knowledge_start": "2026-10-26",
+          "knowledge_end": "2026-11-06"
+        },
+        {
+          "indicator_id": 5,
+          "code": "CN_SF_FLOW_MONTH",
+          "frequency": "monthly",
+          "unit": "亿元",
+          "source": "tushare",
+          "rows": 153,
+          "start": "2014-01-01",
+          "end": "2026-09-01",
+          "knowledge_start": "2026-10-26",
+          "knowledge_end": "2026-11-06"
+        },
+        {
+          "indicator_id": 6,
+          "code": "CN_SF_FLOW_CUM",
+          "frequency": "monthly",
+          "unit": "亿元",
+          "source": "tushare",
+          "rows": 153,
+          "start": "2014-01-01",
+          "end": "2026-09-01",
+          "knowledge_start": "2026-10-26",
+          "knowledge_end": "2026-11-06"
+        },
+        {
+          "indicator_id": 7,
+          "code": "CN_SF_STOCK",
+          "frequency": "monthly",
+          "unit": "万亿元",
+          "source": "tushare",
+          "rows": 134,
+          "start": "2014-12-01",
+          "end": "2026-09-01",
+          "knowledge_start": "2026-10-26",
+          "knowledge_end": "2026-11-06"
+        },
+        {
+          "indicator_id": 8,
+          "code": "SHIBOR_ON",
+          "frequency": "daily",
+          "unit": "%",
+          "source": "tushare",
+          "rows": 3181,
+          "start": "2014-01-02",
+          "end": "2026-11-05",
+          "knowledge_start": "2026-11-04",
+          "knowledge_end": "2026-11-06"
+        },
+        {
+          "indicator_id": 9,
+          "code": "US_BOND_YIELD_1Y",
+          "frequency": "daily",
+          "unit": "%",
+          "source": "fred",
+          "rows": 3212,
+          "start": "2014-01-02",
+          "end": "2026-11-04",
+          "knowledge_start": "2026-11-03",
+          "knowledge_end": "2026-11-05"
+        },
+        {
+          "indicator_id": 10,
+          "code": "US_BOND_YIELD_2Y",
+          "frequency": "daily",
+          "unit": "%",
+          "source": "fred",
+          "rows": 3212,
+          "start": "2014-01-02",
+          "end": "2026-11-04",
+          "knowledge_start": "2026-11-03",
+          "knowledge_end": "2026-11-05"
+        },
+        {
+          "indicator_id": 11,
+          "code": "US_BOND_YIELD_5Y",
+          "frequency": "daily",
+          "unit": "%",
+          "source": "fred",
+          "rows": 3212,
+          "start": "2014-01-02",
+          "end": "2026-11-04",
+          "knowledge_start": "2026-11-03",
+          "knowledge_end": "2026-11-05"
+        },
+        {
+          "indicator_id": 12,
+          "code": "US_BOND_YIELD_10Y",
+          "frequency": "daily",
+          "unit": "%",
+          "source": "fred",
+          "rows": 3212,
+          "start": "2014-01-02",
+          "end": "2026-11-04",
+          "knowledge_start": "2026-11-03",
+          "knowledge_end": "2026-11-05"
+        },
+        {
+          "indicator_id": 13,
+          "code": "US_BOND_YIELD_30Y",
+          "frequency": "daily",
+          "unit": "%",
+          "source": "fred",
+          "rows": 3212,
+          "start": "2014-01-02",
+          "end": "2026-11-04",
+          "knowledge_start": "2026-11-03",
+          "knowledge_end": "2026-11-05"
+        },
+        {
+          "indicator_id": 14,
+          "code": "US_BOND_SPREAD_10Y2Y",
+          "frequency": "daily",
+          "unit": "%",
+          "source": "fred",
+          "rows": 3213,
+          "start": "2014-01-02",
+          "end": "2026-11-05",
+          "knowledge_start": "2026-11-03",
+          "knowledge_end": "2026-11-05"
+        },
+        {
+          "indicator_id": 15,
+          "code": "US_FEDFUNDS_M",
+          "frequency": "monthly",
+          "unit": "%",
+          "source": "fred",
+          "rows": 154,
+          "start": "2014-01-01",
+          "end": "2026-10-01",
+          "knowledge_start": "2026-11-02",
+          "knowledge_end": "2026-11-03"
+        },
+        {
+          "indicator_id": 16,
+          "code": "US_FEDFUNDS_D",
+          "frequency": "daily",
+          "unit": "%",
+          "source": "fred",
+          "rows": 4691,
+          "start": "2014-01-01",
+          "end": "2026-11-04",
+          "knowledge_start": "2026-11-03",
+          "knowledge_end": "2026-11-05"
+        },
+        {
+          "indicator_id": 17,
+          "code": "COMMOD_WTI",
+          "frequency": "daily",
+          "unit": "美元/桶",
+          "source": "fred",
+          "rows": 3204,
+          "start": "2014-01-02",
+          "end": "2026-11-03",
+          "knowledge_start": "2026-10-30",
+          "knowledge_end": "2026-11-04"
+        },
+        {
+          "indicator_id": 18,
+          "code": "COMMOD_BRENT",
+          "frequency": "daily",
+          "unit": "美元/桶",
+          "source": "fred",
+          "rows": 3259,
+          "start": "2014-01-02",
+          "end": "2026-11-03",
+          "knowledge_start": "2026-10-28",
+          "knowledge_end": "2026-11-04"
+        },
+        {
+          "indicator_id": 19,
+          "code": "VIX_30D",
+          "frequency": "daily",
+          "unit": "指数",
+          "source": "fred",
+          "rows": 3263,
+          "start": "2014-01-02",
+          "end": "2026-11-04",
+          "knowledge_start": "2026-11-03",
+          "knowledge_end": "2026-11-05"
+        },
+        {
+          "indicator_id": 20,
+          "code": "US_DOLLAR_INDEX_BROAD",
+          "frequency": "daily",
+          "unit": "指数",
+          "source": "fred",
+          "rows": 3196,
+          "start": "2014-01-02",
+          "end": "2026-10-30",
+          "knowledge_start": "2026-11-03",
+          "knowledge_end": "2026-11-03"
+        },
+        {
+          "indicator_id": 21,
+          "code": "US_DOLLAR_INDEX_AFE_GOODS",
+          "frequency": "daily",
+          "unit": "指数",
+          "source": "fred",
+          "rows": 3196,
+          "start": "2014-01-02",
+          "end": "2026-10-30",
+          "knowledge_start": "2026-11-03",
+          "knowledge_end": "2026-11-03"
+        },
+        {
+          "indicator_id": 22,
+          "code": "FX_JPYUSD_H10",
+          "frequency": "daily",
+          "unit": "日元/美元",
+          "source": "fred",
+          "rows": 3207,
+          "start": "2014-01-02",
+          "end": "2026-10-30",
+          "knowledge_start": "2026-11-03",
+          "knowledge_end": "2026-11-03"
+        },
+        {
+          "indicator_id": 23,
+          "code": "FX_EURUSD_H10",
+          "frequency": "daily",
+          "unit": "美元/欧元",
+          "source": "fred",
+          "rows": 3207,
+          "start": "2014-01-02",
+          "end": "2026-10-30",
+          "knowledge_start": "2026-11-03",
+          "knowledge_end": "2026-11-03"
+        },
+        {
+          "indicator_id": 24,
+          "code": "FX_USDCNY_H10",
+          "frequency": "daily",
+          "unit": "人民币/美元",
+          "source": "fred",
+          "rows": 3207,
+          "start": "2014-01-02",
+          "end": "2026-10-30",
+          "knowledge_start": "2026-11-03",
+          "knowledge_end": "2026-11-03"
+        },
+        {
+          "indicator_id": 25,
+          "code": "FX_GBPUSD_H10",
+          "frequency": "daily",
+          "unit": "美元/英镑",
+          "source": "fred",
+          "rows": 3207,
+          "start": "2014-01-02",
+          "end": "2026-10-30",
+          "knowledge_start": "2026-11-03",
+          "knowledge_end": "2026-11-03"
+        },
+        {
+          "indicator_id": 26,
+          "code": "US_BOND_YIELD_1MO",
+          "frequency": "daily",
+          "unit": "%",
+          "source": "fred",
+          "rows": 3212,
+          "start": "2014-01-02",
+          "end": "2026-11-04",
+          "knowledge_start": "2026-11-03",
+          "knowledge_end": "2026-11-05"
+        },
+        {
+          "indicator_id": 27,
+          "code": "US_BOND_YIELD_3MO",
+          "frequency": "daily",
+          "unit": "%",
+          "source": "fred",
+          "rows": 3212,
+          "start": "2014-01-02",
+          "end": "2026-11-04",
+          "knowledge_start": "2026-11-03",
+          "knowledge_end": "2026-11-05"
+        },
+        {
+          "indicator_id": 28,
+          "code": "US_BOND_YIELD_3Y",
+          "frequency": "daily",
+          "unit": "%",
+          "source": "fred",
+          "rows": 3212,
+          "start": "2014-01-02",
+          "end": "2026-11-04",
+          "knowledge_start": "2026-11-03",
+          "knowledge_end": "2026-11-05"
+        },
+        {
+          "indicator_id": 29,
+          "code": "US_BOND_YIELD_7Y",
+          "frequency": "daily",
+          "unit": "%",
+          "source": "fred",
+          "rows": 3212,
+          "start": "2014-01-02",
+          "end": "2026-11-04",
+          "knowledge_start": "2026-11-03",
+          "knowledge_end": "2026-11-05"
+        },
+        {
+          "indicator_id": 30,
+          "code": "US_BOND_YIELD_20Y",
+          "frequency": "daily",
+          "unit": "%",
+          "source": "fred",
+          "rows": 3212,
+          "start": "2014-01-02",
+          "end": "2026-11-04",
+          "knowledge_start": "2026-11-03",
+          "knowledge_end": "2026-11-05"
+        },
+        {
+          "indicator_id": 31,
+          "code": "US_BOND_SPREAD_10Y3M",
+          "frequency": "daily",
+          "unit": "%",
+          "source": "fred",
+          "rows": 3213,
+          "start": "2014-01-02",
+          "end": "2026-11-05",
+          "knowledge_start": "2026-11-03",
+          "knowledge_end": "2026-11-05"
+        },
+        {
+          "indicator_id": 32,
+          "code": "US_BREAKEVEN_10Y",
+          "frequency": "daily",
+          "unit": "%",
+          "source": "fred",
+          "rows": 3213,
+          "start": "2014-01-02",
+          "end": "2026-11-05",
+          "knowledge_start": "2026-11-03",
+          "knowledge_end": "2026-11-05"
+        },
+        {
+          "indicator_id": 33,
+          "code": "US_BREAKEVEN_5Y",
+          "frequency": "daily",
+          "unit": "%",
+          "source": "fred",
+          "rows": 3213,
+          "start": "2014-01-02",
+          "end": "2026-11-05",
+          "knowledge_start": "2026-11-03",
+          "knowledge_end": "2026-11-05"
+        },
+        {
+          "indicator_id": 34,
+          "code": "US_SOFR",
+          "frequency": "daily",
+          "unit": "%",
+          "source": "fred",
+          "rows": 2146,
+          "start": "2018-04-03",
+          "end": "2026-11-04",
+          "knowledge_start": "2026-11-03",
+          "knowledge_end": "2026-11-05"
+        },
+        {
+          "indicator_id": 35,
+          "code": "US_EFFR",
+          "frequency": "daily",
+          "unit": "%",
+          "source": "fred",
+          "rows": 3226,
+          "start": "2014-01-02",
+          "end": "2026-11-04",
+          "knowledge_start": "2026-11-03",
+          "knowledge_end": "2026-11-05"
+        },
+        {
+          "indicator_id": 36,
+          "code": "US_CREDIT_IG_OAS",
+          "frequency": "daily",
+          "unit": "%",
+          "source": "fred",
+          "rows": 785,
+          "start": "2023-11-06",
+          "end": "2026-11-04",
+          "knowledge_start": "2026-11-03",
+          "knowledge_end": "2026-11-05"
+        },
+        {
+          "indicator_id": 37,
+          "code": "US_CREDIT_HY_OAS",
+          "frequency": "daily",
+          "unit": "%",
+          "source": "fred",
+          "rows": 786,
+          "start": "2023-11-06",
+          "end": "2026-11-04",
+          "knowledge_start": "2026-11-03",
+          "knowledge_end": "2026-11-05"
+        },
+        {
+          "indicator_id": 38,
+          "code": "US_CORP_YIELD_AAA",
+          "frequency": "daily",
+          "unit": "%",
+          "source": "fred",
+          "rows": 3211,
+          "start": "2014-01-02",
+          "end": "2026-11-04",
+          "knowledge_start": "2026-11-03",
+          "knowledge_end": "2026-11-05"
+        },
+        {
+          "indicator_id": 39,
+          "code": "US_CORP_YIELD_BAA_D",
+          "frequency": "daily",
+          "unit": "%",
+          "source": "fred",
+          "rows": 3211,
+          "start": "2014-01-02",
+          "end": "2026-11-04",
+          "knowledge_start": "2026-11-03",
+          "knowledge_end": "2026-11-05"
+        },
+        {
+          "indicator_id": 40,
+          "code": "US_CORP_YIELD_BAA_M",
+          "frequency": "monthly",
+          "unit": "%",
+          "source": "fred",
+          "rows": 154,
+          "start": "2014-01-01",
+          "end": "2026-10-01",
+          "knowledge_start": "2026-11-03",
+          "knowledge_end": "2026-11-03"
+        },
+        {
+          "indicator_id": 41,
+          "code": "US_BOND_SPREAD_BAA10Y",
+          "frequency": "daily",
+          "unit": "%",
+          "source": "fred",
+          "rows": 3207,
+          "start": "2014-01-02",
+          "end": "2026-11-04",
+          "knowledge_start": "2026-11-03",
+          "knowledge_end": "2026-11-05"
+        },
+        {
+          "indicator_id": 42,
+          "code": "VIX_NASDAQ",
+          "frequency": "daily",
+          "unit": "指数",
+          "source": "fred",
+          "rows": 3232,
+          "start": "2014-01-02",
+          "end": "2026-11-04",
+          "knowledge_start": "2026-11-03",
+          "knowledge_end": "2026-11-05"
+        },
+        {
+          "indicator_id": 43,
+          "code": "VIX_RUSSELL",
+          "frequency": "daily",
+          "unit": "指数",
+          "source": "fred",
+          "rows": 3230,
+          "start": "2014-01-02",
+          "end": "2026-11-04",
+          "knowledge_start": "2026-11-03",
+          "knowledge_end": "2026-11-05"
+        },
+        {
+          "indicator_id": 44,
+          "code": "COMMOD_HH_NATGAS",
+          "frequency": "daily",
+          "unit": "美元/百万英热",
+          "source": "fred",
+          "rows": 3237,
+          "start": "2014-01-02",
+          "end": "2026-11-03",
+          "knowledge_start": "2026-11-03",
+          "knowledge_end": "2026-11-05"
+        },
+        {
+          "indicator_id": 45,
+          "code": "COMMOD_GASREGW",
+          "frequency": "weekly",
+          "unit": "美元/加仑",
+          "source": "fred",
+          "rows": 670,
+          "start": "2014-01-06",
+          "end": "2026-11-02",
+          "knowledge_start": "2026-11-03",
+          "knowledge_end": "2026-11-03"
+        },
+        {
+          "indicator_id": 46,
+          "code": "US_GDP_QOQ",
+          "frequency": "quarterly",
+          "unit": "%",
+          "source": "fred",
+          "rows": 51,
+          "start": "2014-01-01",
+          "end": "2026-07-01",
+          "knowledge_start": "2026-11-03",
+          "knowledge_end": "2026-11-03"
+        },
+        {
+          "indicator_id": 47,
+          "code": "US_CPI_INDEX",
+          "frequency": "monthly",
+          "unit": "指数(1982-84=100)",
+          "source": "fred",
+          "rows": 152,
+          "start": "2014-01-01",
+          "end": "2026-09-01",
+          "knowledge_start": "2026-11-02",
+          "knowledge_end": "2026-11-03"
+        },
+        {
+          "indicator_id": 48,
+          "code": "US_CORE_CPI_INDEX",
+          "frequency": "monthly",
+          "unit": "指数(1982-84=100)",
+          "source": "fred",
+          "rows": 152,
+          "start": "2014-01-01",
+          "end": "2026-09-01",
+          "knowledge_start": "2026-11-03",
+          "knowledge_end": "2026-11-03"
+        },
+        {
+          "indicator_id": 49,
+          "code": "US_PCE_INDEX",
+          "frequency": "monthly",
+          "unit": "指数(2017=100)",
+          "source": "fred",
+          "rows": 153,
+          "start": "2014-01-01",
+          "end": "2026-09-01",
+          "knowledge_start": "2026-10-30",
+          "knowledge_end": "2026-11-03"
+        },
+        {
+          "indicator_id": 50,
+          "code": "US_CORE_PCE_INDEX",
+          "frequency": "monthly",
+          "unit": "指数(2017=100)",
+          "source": "fred",
+          "rows": 153,
+          "start": "2014-01-01",
+          "end": "2026-09-01",
+          "knowledge_start": "2026-11-03",
+          "knowledge_end": "2026-11-03"
+        },
+        {
+          "indicator_id": 51,
+          "code": "US_UNRATE",
+          "frequency": "monthly",
+          "unit": "%",
+          "source": "fred",
+          "rows": 152,
+          "start": "2014-01-01",
+          "end": "2026-09-01",
+          "knowledge_start": "2026-10-25",
+          "knowledge_end": "2026-11-03"
+        },
+        {
+          "indicator_id": 52,
+          "code": "US_PAYEMS",
+          "frequency": "monthly",
+          "unit": "千人",
+          "source": "fred",
+          "rows": 153,
+          "start": "2014-01-01",
+          "end": "2026-09-01",
+          "knowledge_start": "2026-10-30",
+          "knowledge_end": "2026-11-03"
+        },
+        {
+          "indicator_id": 53,
+          "code": "US_M2",
+          "frequency": "monthly",
+          "unit": "十亿美元",
+          "source": "fred",
+          "rows": 153,
+          "start": "2014-01-01",
+          "end": "2026-09-01",
+          "knowledge_start": "2026-11-03",
+          "knowledge_end": "2026-11-03"
+        },
+        {
+          "indicator_id": 54,
+          "code": "COMMOD_COPPER_IMF",
+          "frequency": "monthly",
+          "unit": "美元/吨",
+          "source": "fred",
+          "rows": 153,
+          "start": "2014-01-01",
+          "end": "2026-09-01",
+          "knowledge_start": "2026-11-03",
+          "knowledge_end": "2026-11-03"
+        },
+        {
+          "indicator_id": 55,
+          "code": "COMMOD_ALUMINUM_IMF",
+          "frequency": "monthly",
+          "unit": "美元/吨",
+          "source": "fred",
+          "rows": 153,
+          "start": "2014-01-01",
+          "end": "2026-09-01",
+          "knowledge_start": "2026-11-03",
+          "knowledge_end": "2026-11-03"
+        },
+        {
+          "indicator_id": 56,
+          "code": "COMMOD_IRONORE_IMF",
+          "frequency": "monthly",
+          "unit": "美元/干公吨",
+          "source": "fred",
+          "rows": 153,
+          "start": "2014-01-01",
+          "end": "2026-09-01",
+          "knowledge_start": "2026-11-03",
+          "knowledge_end": "2026-11-03"
+        },
+        {
+          "indicator_id": 57,
+          "code": "COMMOD_WTI_IMF",
+          "frequency": "monthly",
+          "unit": "美元/桶",
+          "source": "fred",
+          "rows": 153,
+          "start": "2014-01-01",
+          "end": "2026-09-01",
+          "knowledge_start": "2026-11-03",
+          "knowledge_end": "2026-11-03"
+        },
+        {
+          "indicator_id": 58,
+          "code": "COMMOD_NATGAS_EU_IMF",
+          "frequency": "monthly",
+          "unit": "美元/百万英热",
+          "source": "fred",
+          "rows": 153,
+          "start": "2014-01-01",
+          "end": "2026-09-01",
+          "knowledge_start": "2026-11-03",
+          "knowledge_end": "2026-11-03"
+        },
+        {
+          "indicator_id": 59,
+          "code": "COMMOD_ALLFNF_IMF",
+          "frequency": "monthly",
+          "unit": "指数",
+          "source": "fred",
+          "rows": 153,
+          "start": "2014-01-01",
+          "end": "2026-09-01",
+          "knowledge_start": "2026-11-03",
+          "knowledge_end": "2026-11-03"
+        },
+        {
+          "indicator_id": 60,
+          "code": "CN_PMI_MFG",
+          "frequency": "monthly",
+          "unit": "指数",
+          "source": "tushare",
+          "rows": 154,
+          "start": "2014-01-01",
+          "end": "2026-10-01",
+          "knowledge_start": "2026-11-06",
+          "knowledge_end": "2026-11-06"
+        }
+      ],
+      "fred_missing": []
+    },
+    "futures": {
+      "identity_count": 11363,
+      "actual_contracts": 11100,
+      "eligible": 8979,
+      "missing_bars": [
+        {
+          "source": "tushare",
+          "source_ticker": "SCTAS2005.INE",
+          "symbol": "SC2005TAS",
+          "exchange": "INE",
+          "fut_code": "SCTAS",
+          "multiplier": null,
+          "list_date": "2020-03-20",
+          "delist_date": "2020-04-20",
+          "knowledge_date": "2026-11-05",
+          "rows": null,
+          "start": null,
+          "end": null
+        },
+        {
+          "source": "tushare",
+          "source_ticker": "SCTAS2003.INE",
+          "symbol": "SC2003TAS",
+          "exchange": "INE",
+          "fut_code": "SCTAS",
+          "multiplier": null,
+          "list_date": "2020-01-13",
+          "delist_date": "2020-02-18",
+          "knowledge_date": "2026-11-05",
+          "rows": null,
+          "start": null,
+          "end": null
+        },
+        {
+          "source": "tushare",
+          "source_ticker": "SCTAS2006.INE",
+          "symbol": "SC2006TAS",
+          "exchange": "INE",
+          "fut_code": "SCTAS",
+          "multiplier": null,
+          "list_date": "2020-04-21",
+          "delist_date": "2020-05-19",
+          "knowledge_date": "2026-11-05",
+          "rows": null,
+          "start": null,
+          "end": null
+        },
+        {
+          "source": "tushare",
+          "source_ticker": "SCTAS2009.INE",
+          "symbol": "SC2009TAS",
+          "exchange": "INE",
+          "fut_code": "SCTAS",
+          "multiplier": null,
+          "list_date": "2020-06-19",
+          "delist_date": "2020-08-19",
+          "knowledge_date": "2026-11-05",
+          "rows": null,
+          "start": null,
+          "end": null
+        },
+        {
+          "source": "tushare",
+          "source_ticker": "SCTAS2010.INE",
+          "symbol": "SC2010TAS",
+          "exchange": "INE",
+          "fut_code": "SCTAS",
+          "multiplier": null,
+          "list_date": "2020-07-22",
+          "delist_date": "2020-09-11",
+          "knowledge_date": "2026-11-05",
+          "rows": null,
+          "start": null,
+          "end": null
+        },
+        {
+          "source": "tushare",
+          "source_ticker": "SCTAS2007.INE",
+          "symbol": "SC2007TAS",
+          "exchange": "INE",
+          "fut_code": "SCTAS",
+          "multiplier": null,
+          "list_date": "2020-04-21",
+          "delist_date": "2020-06-16",
+          "knowledge_date": "2026-11-05",
+          "rows": null,
+          "start": null,
+          "end": null
+        },
+        {
+          "source": "tushare",
+          "source_ticker": "SCTAS2008.INE",
+          "symbol": "SC2008TAS",
+          "exchange": "INE",
+          "fut_code": "SCTAS",
+          "multiplier": null,
+          "list_date": "2020-05-20",
+          "delist_date": "2020-07-21",
+          "knowledge_date": "2026-11-05",
+          "rows": null,
+          "start": null,
+          "end": null
+        },
+        {
+          "source": "tushare",
+          "source_ticker": "SCTAS2004.INE",
+          "symbol": "SC2004TAS",
+          "exchange": "INE",
+          "fut_code": "SCTAS",
+          "multiplier": null,
+          "list_date": "2020-02-19",
+          "delist_date": "2020-03-19",
+          "knowledge_date": "2026-11-05",
+          "rows": null,
+          "start": null,
+          "end": null
+        }
+      ],
+      "by_exchange": [
+        {
+          "exchange": "CFFEX",
+          "expected": 651,
+          "with_bars": 651
+        },
+        {
+          "exchange": "CZCE",
+          "expected": 2448,
+          "with_bars": 2448
+        },
+        {
+          "exchange": "DCE",
+          "expected": 2666,
+          "with_bars": 2666
+        },
+        {
+          "exchange": "GFEX",
+          "expected": 144,
+          "with_bars": 144
+        },
+        {
+          "exchange": "INE",
+          "expected": 486,
+          "with_bars": 478
+        },
+        {
+          "exchange": "SHFE",
+          "expected": 2584,
+          "with_bars": 2584
+        }
+      ],
+      "bars_without_identity": []
+    }
+  }
+}

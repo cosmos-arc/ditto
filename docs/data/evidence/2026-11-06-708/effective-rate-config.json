@@ -1,0 +1,8 @@
+{
+  "measured_at": "2026-11-06T05:03:17.229673+00:00",
+  "profile": "paid",
+  "global_rate_per_worker": 40,
+  "workers": 4,
+  "combined_upper_bound_per_minute": 160,
+  "direct_stock_probe_rate_per_minute": 30
+}

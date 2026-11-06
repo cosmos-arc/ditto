@@ -1,0 +1,104 @@
+{
+  "started_at": "2026-11-06T03:14:25.483722+00:00",
+  "probes": [
+    {
+      "api": "fut_daily",
+      "params": {
+        "source_ticker": "SCTAS2009.INE",
+        "start_date": "2020-06-19",
+        "end_date": "2020-08-19"
+      },
+      "rows": 0
+    },
+    {
+      "api": "fut_daily",
+      "params": {
+        "source_ticker": "SCTAS2005.INE",
+        "start_date": "2020-03-20",
+        "end_date": "2020-04-20"
+      },
+      "rows": 0
+    },
+    {
+      "api": "fut_daily",
+      "params": {
+        "source_ticker": "SCTAS2010.INE",
+        "start_date": "2020-07-22",
+        "end_date": "2020-09-11"
+      },
+      "rows": 0
+    },
+    {
+      "api": "fut_daily",
+      "params": {
+        "source_ticker": "SCTAS2007.INE",
+        "start_date": "2020-04-21",
+        "end_date": "2020-06-16"
+      },
+      "rows": 0
+    },
+    {
+      "api": "fut_daily",
+      "params": {
+        "source_ticker": "SCTAS2008.INE",
+        "start_date": "2020-05-20",
+        "end_date": "2020-07-21"
+      },
+      "rows": 0
+    },
+    {
+      "api": "fut_daily",
+      "params": {
+        "source_ticker": "SCTAS2004.INE",
+        "start_date": "2020-02-19",
+        "end_date": "2020-03-19"
+      },
+      "rows": 0
+    },
+    {
+      "api": "fut_daily",
+      "params": {
+        "source_ticker": "SCTAS2006.INE",
+        "start_date": "2020-04-21",
+        "end_date": "2020-05-19"
+      },
+      "rows": 0
+    },
+    {
+      "api": "fut_daily",
+      "params": {
+        "source_ticker": "SCTAS2003.INE",
+        "start_date": "2020-01-13",
+        "end_date": "2020-02-18"
+      },
+      "rows": 0
+    },
+    {
+      "api": "index_global",
+      "params": {
+        "codes": [
+          "RTS"
+        ],
+        "start_date": "2014-01-01",
+        "end_date": "2019-12-31"
+      },
+      "rows": 0
+    },
+    {
+      "api": "index_global",
+      "params": {
+        "codes": [
+          "IBOVESPA"
+        ],
+        "start_date": "2014-01-01",
+        "end_date": "2026-07-02"
+      },
+      "rows": 0
+    }
+  ],
+  "index_roster_error": {
+    "type": "SourceFetchError",
+    "message": "Failed to fetch sw_industry from Tushare"
+  },
+  "finished_at": "2026-11-06T03:14:41.115423+00:00"
+}

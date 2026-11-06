@@ -1,5 +1,8 @@
 # 数据集覆盖合同（#622 / 父规格 #621）
 
+> 2026-11-06 更新：当前47项量测、真实业务消费、补数与未闭合差额见 [#708执行记录](readiness-708-2026-11.md)。YAML和运行时limits已同步刷新；下文“头条结论”和场景勾选保留原测量时点，不作为当前就绪证明。基金不再按Q2/Q4推断全持仓；按需逐基金批次保留全部持有人，自动日更新鲜度尚未承诺。
+
+
 机读真源：[coverage-contract.yaml](coverage-contract.yaml)（47 项逐条：声明侧 vs 实测侧、状态、缺口、消费者、真实接口）。
 本文给出场景→必需输入追踪、头条结论与刷新方法；逐项细节以 YAML 为准。
 
@@ -28,7 +31,7 @@
 1. **「空源」叙事修正（再定界 P1/P3a/P5a）**：`margin_trading`、`hk_hold`、`fx_daily`、`earnings_forecast`、`earnings_express` 本地零行，但逐接口探针证明**源全部可达**（margin_detail 4,486 行/日、hk_hold 4,200 行/日、fx_daily 101 行/日）——是摄取链空转，不是源缺口。五者的修复归 P1（失败分类与补偿），不在 P3 采购/补源范围。**#625 已修 margin_trading 一员**：根因=margin_detail 官方口径 T+1 上午 8:30 更新（深市/北交所周五数据下周一更新），21:55 EOD 波恒空被 SUCCESS/0 固化；晚发布近窗重取（nightly repair force 近 5 交易日）+ 2013-01-04 起历史回补已落地，rzmre 列名语义修正（融资买入额·元，原误标 volume，#390 破坏窗口内改名），详见 docs/data/capital-fund-verification.md。
 2. **Tushare 15000 档经代理 55 接口探针 52 可达**。仅 `rights`（50101，#517-#523 已裁决降级→corporate_actions 缺分配预案味道）与 `csrc_industrial`（2002 权限不足→industry_classification 仅申万线）不可达；`cn_macro` 是 provider 标签假象，真实 `cn_gdp/cn_cpi/cn_ppi/cn_pmi/cn_m/sf_month/shibor` 全部可达。**当前凭据没有需要补源的证据。**
 3. **FRED 修通一半**：`series_observations`（含 ALFRED realtime 参数）全部 200，`.env` 有 key；夜链 macro/fx/commodity 仍 failed（10-29），根因在链路不在凭据（归 P1/P5a）。
-4. **2014 目标达成面**：核心价格链 `stock_daily/adj_factor/stock_limit/etf_daily/fund_adj/index_daily/global_index_daily/moneyflow/valuation_metrics/index_weight/dividend` 均为 ready（多数 2013 起超目标）；`etf_nav`（末端 10-26 后缺）与 `fund_share`（末端 10-27）为 partial。`stock_status` 起点 2016-08-09（bak_basic 官方可得起点）；`cyq_perf` 官方起点 2018。**#626 事件披露四接口已回补落档（2026-11-01）**：`top_list`（192,527 行/2014 起）/`top_inst`（2,343,110 行/2014 起）/`hsgt_top10`（50,730 行/2014-11-17 起）ready；`hk_hold` partial（4,224,382 行/2016-06-29 源墙起，北向按披露制度分段，2024-08-19 后仅季度末北向）——矩阵与对拍见 event-disclosure-verification.md。**#627 持仓披露三库已回补落档（2026-11-02）**：`top10_holders`（2,500,525 行/2014-01-02 起）与 `top10_floatholders`（2,097,949 行/2014-01-08 起）ready 新通路；`fund_portfolio` 609,923 行/1,544 只交易所基金/2014-01-20 起 partial（场外 .OF 子集边界量化定界——单披露日 9,031 只公募 97-100% 场外经 FK 过滤留痕；披露范围 Q1/Q3=前十重仓、Q2/Q4=全量，未披露≠零持仓）——矩阵与对拍见 holdings-disclosure-verification.md。`limit_list/index_valuation/futures_daily/commodity_daily` 仍仅 2026-09/10 起无历史回补。
+4. **2014 目标达成面**：核心价格链 `stock_daily/adj_factor/stock_limit/etf_daily/fund_adj/index_daily/global_index_daily/moneyflow/valuation_metrics/index_weight/dividend` 均为 ready（多数 2013 起超目标）；`etf_nav`（末端 10-26 后缺）与 `fund_share`（末端 10-27）为 partial。`stock_status` 本地实测起点 2016-08-09（bak_basic 官方声明为2016年起）；`cyq_perf` 官方起点 2018。**#626 事件披露四接口已回补落档（2026-11-01）**：`top_list`（192,527 行/2014 起）/`top_inst`（2,343,110 行/2014 起）/`hsgt_top10`（50,730 行/2014-11-17 起）ready；`hk_hold` partial（4,224,382 行/2016-06-29 源墙起，北向按披露制度分段，2024-08-19 后仅季度末北向）——矩阵与对拍见 event-disclosure-verification.md。**#627 持仓披露三库已回补落档（2026-11-02）**：`top10_holders`（2,500,525 行/2014-01-02 起）与 `top10_floatholders`（2,097,949 行/2014-01-08 起）ready 新通路；`fund_portfolio` 609,923 行/1,544 只交易所基金/2014-01-20 起 partial（场外 .OF 子集边界量化定界——单披露日 9,031 只公募 97-100% 场外经 FK 过滤留痕；原季度推断已由#708撤回，报告类型及完整性须原文补证；未披露≠零持仓）——矩阵与对拍见 holdings-disclosure-verification.md。`limit_list/index_valuation/futures_daily/commodity_daily` 仍仅 2026-09/10 起无历史回补。
 5. **10-29 夜链 5 个业务 failed 与 Prefect COMPLETED 并存**（etf_nav/fina_indicator/cash_flow/pledge_ratio/macro_indicators），#621 Problem Statement 的系统性缺口在最新一夜仍在发生。
 6. **环境足迹**：CLI 不带 `DITTO_STATE_ROOT` 会静默落到 `~/.local/state/ditto` 陈旧库（2026-10-06）并被漂移守卫拦下，报错不指明库路径；`etf_reference` 存量 169 万行观察但 catalog 无条目（ops status 显示 missing）。
 

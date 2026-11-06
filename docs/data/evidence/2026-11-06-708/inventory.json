@@ -1,0 +1,813 @@
+{
+  "started_at": "2026-11-06T04:53:35.933884+00:00",
+  "root": "/Users/chevy/Desktop/code/ditto/data",
+  "datasets": {
+    "calendar": {
+      "measured_at": "2026-11-06T04:53:35.934066+00:00",
+      "storage": "sqlite:trading_calendar",
+      "rows": 5478,
+      "identities": 1,
+      "trade_date_min": "2013-01-01",
+      "trade_date_max": "2027-12-31",
+      "identity_column": "exchange",
+      "recent_failures": []
+    },
+    "stock_basic": {
+      "measured_at": "2026-11-06T04:53:35.935832+00:00",
+      "storage": "sqlite:instrument_stock",
+      "rows": 5930,
+      "identities": 5930,
+      "identity_column": "instrument_id",
+      "recent_failures": []
+    },
+    "etf_basic": {
+      "measured_at": "2026-11-06T04:53:35.937461+00:00",
+      "storage": "sqlite:instrument_etf",
+      "rows": 1868,
+      "identities": 1868,
+      "identity_column": "instrument_id",
+      "recent_failures": []
+    },
+    "index_basic": {
+      "measured_at": "2026-11-06T04:53:35.937838+00:00",
+      "storage": "sqlite:instrument_index",
+      "rows": 20897,
+      "identities": 20897,
+      "identity_column": "instrument_id",
+      "recent_failures": []
+    },
+    "etf_reference": {
+      "measured_at": "2026-11-06T04:53:35.944382+00:00",
+      "storage": "sqlite:etf_reference_observation",
+      "rows": 1759605,
+      "identities": 1868,
+      "effective_from_min": "2012-05-28",
+      "effective_from_max": "2026-11-05",
+      "effective_to_min": null,
+      "effective_to_max": null,
+      "observed_on_min": "2013-01-04",
+      "observed_on_max": "2026-11-05",
+      "identity_column": "instrument_id",
+      "recent_failures": []
+    },
+    "stock_daily": {
+      "measured_at": "2026-11-06T04:53:37.781047+00:00",
+      "storage": "parquet:market/stock/bars",
+      "rows": 13045695,
+      "identities": 5847,
+      "knowledge_date_min": "2013-01-05",
+      "knowledge_date_max": "2026-11-06",
+      "trade_date_min": "2013-01-04",
+      "trade_date_max": "2026-11-05",
+      "identity_column": "source_ticker",
+      "recent_failures": []
+    },
+    "etf_daily": {
+      "measured_at": "2026-11-06T04:53:37.827948+00:00",
+      "storage": "parquet:market/etf/bars",
+      "rows": 1626130,
+      "identities": 1864,
+      "knowledge_date_min": "2013-01-05",
+      "knowledge_date_max": "2026-11-06",
+      "trade_date_min": "2013-01-04",
+      "trade_date_max": "2026-11-05",
+      "identity_column": "source_ticker",
+      "recent_failures": []
+    },
+    "index_daily": {
+      "measured_at": "2026-11-06T04:53:37.837457+00:00",
+      "storage": "parquet:market/index/bars",
+      "rows": 546630,
+      "identities": 178,
+      "knowledge_date_min": "2014-01-03",
+      "knowledge_date_max": "2026-11-06",
+      "trade_date_min": "2014-01-02",
+      "trade_date_max": "2026-11-05",
+      "identity_column": "source_ticker",
+      "recent_failures": [
+        {
+          "source": "tushare",
+          "trade_date": "2014-06-01",
+          "error_code": "DQ_BLOCKED",
+          "attempts": 1
+        }
+      ]
+    },
+    "global_index_daily": {
+      "measured_at": "2026-11-06T04:53:37.843902+00:00",
+      "storage": "parquet:market/index/global_bars",
+      "rows": 61007,
+      "identities": 21,
+      "knowledge_date_min": "2026-10-27",
+      "knowledge_date_max": "2026-11-05",
+      "trade_date_min": "2014-01-01",
+      "trade_date_max": "2026-11-04",
+      "identity_column": "source_ticker",
+      "recent_failures": [
+        {
+          "source": "tushare",
+          "trade_date": "2026-11-05",
+          "error_code": "UNKNOWN_ERROR",
+          "attempts": 1
+        },
+        {
+          "source": "tushare",
+          "trade_date": "2026-10-27",
+          "error_code": "UNKNOWN_ERROR",
+          "attempts": 2
+        }
+      ]
+    },
+    "stock_status": {
+      "measured_at": "2026-11-06T04:53:37.852685+00:00",
+      "storage": "parquet:market/stock/status",
+      "rows": 10910918,
+      "identities": 5832,
+      "trade_date_min": "2016-08-09",
+      "trade_date_max": "2026-11-05",
+      "identity_column": "source_ticker",
+      "recent_failures": [
+        {
+          "source": "tushare",
+          "trade_date": "2021-09-06",
+          "error_code": "FETCH_ERROR",
+          "attempts": 3
+        },
+        {
+          "source": "tushare",
+          "trade_date": "2021-07-19",
+          "error_code": "FETCH_ERROR",
+          "attempts": 3
+        },
+        {
+          "source": "tushare",
+          "trade_date": "2021-03-16",
+          "error_code": "EMPTY_DATA_UNEXPECTED",
+          "attempts": 3
+        },
+        {
+          "source": "tushare",
+          "trade_date": "2021-01-29",
+          "error_code": "EMPTY_DATA_UNEXPECTED",
+          "attempts": 4
+        },
+        {
+          "source": "tushare",
+          "trade_date": "2020-11-20",
+          "error_code": "EMPTY_DATA_UNEXPECTED",
+          "attempts": 3
+        }
+      ]
+    },
+    "adj_factor": {
+      "measured_at": "2026-11-06T04:53:37.881976+00:00",
+      "storage": "parquet:market/stock/adj",
+      "rows": 13635387,
+      "identities": 5847,
+      "knowledge_date_min": "2013-01-04",
+      "knowledge_date_max": "2026-11-05",
+      "trade_date_min": "2013-01-04",
+      "trade_date_max": "2026-11-05",
+      "identity_column": "source_ticker",
+      "recent_failures": []
+    },
+    "fund_adj": {
+      "measured_at": "2026-11-06T04:53:37.922682+00:00",
+      "storage": "parquet:market/etf/adj",
+      "rows": 1643241,
+      "identities": 1845,
+      "knowledge_date_min": "2013-01-04",
+      "knowledge_date_max": "2026-11-05",
+      "trade_date_min": "2013-01-04",
+      "trade_date_max": "2026-11-05",
+      "identity_column": "source_ticker",
+      "recent_failures": [
+        {
+          "source": "tushare",
+          "trade_date": "2026-10-15",
+          "error_code": "FETCH_ERROR",
+          "attempts": 4
+        }
+      ]
+    },
+    "etf_nav": {
+      "measured_at": "2026-11-06T04:53:37.930901+00:00",
+      "storage": "parquet:market/etf/nav",
+      "rows": 1528803,
+      "identities": 1866,
+      "knowledge_date_min": "2014-01-03",
+      "knowledge_date_max": "2026-11-03",
+      "trade_date_min": "2014-01-01",
+      "trade_date_max": "2026-11-02",
+      "identity_column": "source_ticker",
+      "recent_failures": [
+        {
+          "source": "tushare",
+          "trade_date": "2026-11-05",
+          "error_code": "FETCH_ERROR",
+          "attempts": 2
+        },
+        {
+          "source": "tushare",
+          "trade_date": "2026-11-04",
+          "error_code": "FETCH_ERROR",
+          "attempts": 3
+        },
+        {
+          "source": "tushare",
+          "trade_date": "2026-11-03",
+          "error_code": "FETCH_ERROR",
+          "attempts": 3
+        }
+      ]
+    },
+    "stock_limit": {
+      "measured_at": "2026-11-06T04:53:37.939614+00:00",
+      "storage": "parquet:market/stock/limit",
+      "rows": 12726466,
+      "identities": 6974,
+      "knowledge_date_min": "2014-01-03",
+      "knowledge_date_max": "2026-11-06",
+      "trade_date_min": "2014-01-02",
+      "trade_date_max": "2026-11-05",
+      "identity_column": "source_ticker",
+      "recent_failures": []
+    },
+    "moneyflow": {
+      "measured_at": "2026-11-06T04:53:37.984693+00:00",
+      "storage": "parquet:capital/moneyflow",
+      "rows": 12582565,
+      "identities": 5844,
+      "knowledge_date_min": "2013-01-05",
+      "knowledge_date_max": "2026-11-06",
+      "trade_date_min": "2013-01-04",
+      "trade_date_max": "2026-11-05",
+      "identity_column": "source_ticker",
+      "recent_failures": []
+    },
+    "cyq_perf": {
+      "measured_at": "2026-11-06T04:53:38.032817+00:00",
+      "storage": "parquet:capital/cyq_perf",
+      "rows": 9588927,
+      "identities": 5631,
+      "knowledge_date_min": "2018-01-03",
+      "knowledge_date_max": "2026-11-06",
+      "trade_date_min": "2018-01-02",
+      "trade_date_max": "2026-11-05",
+      "identity_column": "source_ticker",
+      "recent_failures": []
+    },
+    "limit_list": {
+      "measured_at": "2026-11-06T04:53:38.066361+00:00",
+      "storage": "parquet:market/stock/limit_list",
+      "rows": 166265,
+      "identities": 5578,
+      "knowledge_date_min": "2020-01-03",
+      "knowledge_date_max": "2026-11-06",
+      "trade_date_min": "2020-01-02",
+      "trade_date_max": "2026-11-05",
+      "identity_column": "source_ticker",
+      "recent_failures": []
+    },
+    "top_list": {
+      "measured_at": "2026-11-06T04:53:38.080619+00:00",
+      "storage": "parquet:capital/top_list",
+      "rows": 192840,
+      "identities": 5928,
+      "knowledge_date_min": "2014-01-03",
+      "knowledge_date_max": "2026-11-06",
+      "trade_date_min": "2014-01-02",
+      "trade_date_max": "2026-11-05",
+      "identity_column": "source_ticker",
+      "recent_failures": [
+        {
+          "source": "tushare",
+          "trade_date": "2014-12-31",
+          "error_code": "UNKNOWN_ERROR",
+          "attempts": 1
+        },
+        {
+          "source": "tushare",
+          "trade_date": "2014-11-28",
+          "error_code": "UNKNOWN_ERROR",
+          "attempts": 1
+        },
+        {
+          "source": "tushare",
+          "trade_date": "2014-10-31",
+          "error_code": "UNKNOWN_ERROR",
+          "attempts": 2
+        }
+      ]
+    },
+    "top_inst": {
+      "measured_at": "2026-11-06T04:53:38.089994+00:00",
+      "storage": "parquet:capital/top_inst",
+      "rows": 2345125,
+      "identities": 5788,
+      "knowledge_date_min": "2014-01-03",
+      "knowledge_date_max": "2026-11-06",
+      "trade_date_min": "2014-01-02",
+      "trade_date_max": "2026-11-05",
+      "identity_column": "source_ticker",
+      "recent_failures": []
+    },
+    "hk_hold": {
+      "measured_at": "2026-11-06T04:53:38.106960+00:00",
+      "storage": "parquet:capital/hk_hold",
+      "rows": 5169996,
+      "identities": 4227,
+      "knowledge_date_min": "2016-06-30",
+      "knowledge_date_max": "2026-11-01",
+      "trade_date_min": "2016-06-29",
+      "trade_date_max": "2026-09-30",
+      "identity_column": "source_ticker",
+      "recent_failures": []
+    },
+    "hsgt_top10": {
+      "measured_at": "2026-11-06T04:53:38.131668+00:00",
+      "storage": "parquet:capital/hsgt_top10",
+      "rows": 61350,
+      "identities": 633,
+      "knowledge_date_min": "2014-11-18",
+      "knowledge_date_max": "2026-11-06",
+      "trade_date_min": "2014-11-17",
+      "trade_date_max": "2026-11-05",
+      "identity_column": "source_ticker",
+      "recent_failures": []
+    },
+    "fina_indicator": {
+      "measured_at": "2026-11-06T04:53:38.141605+00:00",
+      "storage": "parquet:fundamental/fina_indicator",
+      "rows": 263675,
+      "identities": 5925,
+      "knowledge_date_min": "2012-04-10",
+      "knowledge_date_max": "2026-11-02",
+      "report_date_min": "2012-03-31",
+      "report_date_max": "2026-09-30",
+      "identity_column": "source_ticker",
+      "recent_failures": []
+    },
+    "fund_share": {
+      "measured_at": "2026-11-06T04:53:38.157207+00:00",
+      "storage": "parquet:market/etf/fund_share",
+      "rows": 1609232,
+      "identities": 1865,
+      "knowledge_date_min": "2013-01-05",
+      "knowledge_date_max": "2026-11-05",
+      "trade_date_min": "2013-01-04",
+      "trade_date_max": "2026-11-04",
+      "identity_column": "source_ticker",
+      "recent_failures": [
+        {
+          "source": "tushare",
+          "trade_date": "2026-11-05",
+          "error_code": "UNKNOWN_ERROR",
+          "attempts": 2
+        }
+      ]
+    },
+    "fund_portfolio": {
+      "measured_at": "2026-11-06T04:53:38.173111+00:00",
+      "storage": "parquet:fundamental/fund_portfolio",
+      "rows": 3691378,
+      "identities": 5332,
+      "knowledge_date_min": "2013-10-23",
+      "knowledge_date_max": "2026-10-26",
+      "report_date_min": "2013-09-30",
+      "report_date_max": "2026-09-30",
+      "identity_column": "source_ticker",
+      "recent_failures": [
+        {
+          "source": "tushare",
+          "trade_date": "2026-10-27",
+          "error_code": "FETCH_ERROR",
+          "attempts": 5
+        },
+        {
+          "source": "tushare",
+          "trade_date": "2026-08-31",
+          "error_code": "FETCH_ERROR",
+          "attempts": 3
+        },
+        {
+          "source": "tushare",
+          "trade_date": "2026-08-29",
+          "error_code": "FETCH_ERROR",
+          "attempts": 3
+        },
+        {
+          "source": "tushare",
+          "trade_date": "2026-08-28",
+          "error_code": "FETCH_ERROR",
+          "attempts": 3
+        },
+        {
+          "source": "tushare",
+          "trade_date": "2026-07-21",
+          "error_code": "FETCH_ERROR",
+          "attempts": 6
+        }
+      ]
+    },
+    "top10_holders": {
+      "measured_at": "2026-11-06T04:53:38.188661+00:00",
+      "storage": "parquet:capital/top10_holders",
+      "rows": 2509826,
+      "identities": 5841,
+      "knowledge_date_min": "2014-01-02",
+      "knowledge_date_max": "2026-11-03",
+      "report_date_min": "2010-12-31",
+      "report_date_max": "2026-09-30",
+      "identity_column": "source_ticker",
+      "recent_failures": [
+        {
+          "source": "tushare",
+          "trade_date": "2025-12-26",
+          "error_code": "FETCH_ERROR",
+          "attempts": 3
+        },
+        {
+          "source": "tushare",
+          "trade_date": "2025-12-25",
+          "error_code": "FETCH_ERROR",
+          "attempts": 3
+        },
+        {
+          "source": "tushare",
+          "trade_date": "2025-12-23",
+          "error_code": "FETCH_ERROR",
+          "attempts": 3
+        },
+        {
+          "source": "tushare",
+          "trade_date": "2025-12-22",
+          "error_code": "FETCH_ERROR",
+          "attempts": 3
+        },
+        {
+          "source": "tushare",
+          "trade_date": "2025-12-19",
+          "error_code": "FETCH_ERROR",
+          "attempts": 3
+        }
+      ]
+    },
+    "top10_floatholders": {
+      "measured_at": "2026-11-06T04:53:38.207136+00:00",
+      "storage": "parquet:capital/top10_floatholders",
+      "rows": 2107405,
+      "identities": 5833,
+      "knowledge_date_min": "2014-01-08",
+      "knowledge_date_max": "2026-11-03",
+      "report_date_min": "2012-06-30",
+      "report_date_max": "2026-09-30",
+      "identity_column": "source_ticker",
+      "recent_failures": []
+    },
+    "balance_sheet": {
+      "measured_at": "2026-11-06T04:53:38.222173+00:00",
+      "storage": "sqlite:balance_sheet",
+      "rows": 239385,
+      "identities": 5884,
+      "effective_from_min": "2014-01-02",
+      "effective_from_max": "2026-11-02",
+      "effective_to_min": null,
+      "effective_to_max": null,
+      "knowledge_date_min": "2014-01-02",
+      "knowledge_date_max": "2026-11-02",
+      "report_date_min": "2011-12-31",
+      "report_date_max": "2026-09-30",
+      "identity_column": "instrument_id",
+      "recent_failures": []
+    },
+    "income_statement": {
+      "measured_at": "2026-11-06T04:53:38.383259+00:00",
+      "storage": "sqlite:income_statement",
+      "rows": 244553,
+      "identities": 5884,
+      "effective_from_min": "2014-01-02",
+      "effective_from_max": "2026-11-02",
+      "effective_to_min": null,
+      "effective_to_max": null,
+      "knowledge_date_min": "2014-01-02",
+      "knowledge_date_max": "2026-11-02",
+      "report_date_min": "2011-12-31",
+      "report_date_max": "2026-09-30",
+      "identity_column": "instrument_id",
+      "recent_failures": []
+    },
+    "cash_flow": {
+      "measured_at": "2026-11-06T04:53:38.469809+00:00",
+      "storage": "sqlite:cash_flow",
+      "rows": 233393,
+      "identities": 5880,
+      "effective_from_min": "2014-01-02",
+      "effective_from_max": "2026-11-02",
+      "effective_to_min": null,
+      "effective_to_max": null,
+      "knowledge_date_min": "2014-01-02",
+      "knowledge_date_max": "2026-11-02",
+      "report_date_min": "2011-12-31",
+      "report_date_max": "2026-09-30",
+      "identity_column": "instrument_id",
+      "recent_failures": [
+        {
+          "source": "tushare",
+          "trade_date": "2023-10-09",
+          "error_code": "FETCH_ERROR",
+          "attempts": 8
+        },
+        {
+          "source": "tushare",
+          "trade_date": "2023-07-03",
+          "error_code": "FETCH_ERROR",
+          "attempts": 10
+        }
+      ]
+    },
+    "dividend": {
+      "measured_at": "2026-11-06T04:53:38.584644+00:00",
+      "storage": "sqlite:dividend",
+      "rows": 266407,
+      "identities": 5823,
+      "effective_from_min": "2014-01-03",
+      "effective_from_max": "2026-10-27",
+      "effective_to_min": null,
+      "effective_to_max": null,
+      "knowledge_date_min": "2014-01-03",
+      "knowledge_date_max": "2026-10-27",
+      "identity_column": "instrument_id",
+      "recent_failures": []
+    },
+    "valuation_metrics": {
+      "measured_at": "2026-11-06T04:53:38.706355+00:00",
+      "storage": "sqlite:valuation_metrics",
+      "rows": 12322673,
+      "identities": 5843,
+      "effective_from_min": "2014-01-03",
+      "effective_from_max": "2026-11-06",
+      "effective_to_min": null,
+      "effective_to_max": null,
+      "knowledge_date_min": "2014-01-03",
+      "knowledge_date_max": "2026-11-06",
+      "trade_date_min": "2014-01-02",
+      "trade_date_max": "2026-11-05",
+      "identity_column": "instrument_id",
+      "recent_failures": []
+    },
+    "margin_trading": {
+      "measured_at": "2026-11-06T04:53:46.378450+00:00",
+      "storage": "sqlite:margin_trading",
+      "rows": 8318122,
+      "identities": 5028,
+      "effective_from_min": "2013-01-05",
+      "effective_from_max": "2026-11-05",
+      "effective_to_min": null,
+      "effective_to_max": null,
+      "knowledge_date_min": "2013-01-05",
+      "knowledge_date_max": "2026-11-05",
+      "trade_date_min": "2013-01-04",
+      "trade_date_max": "2026-11-04",
+      "identity_column": "instrument_id",
+      "recent_failures": [
+        {
+          "source": "tushare",
+          "trade_date": "2018-05-31",
+          "error_code": "DQ_BLOCKED",
+          "attempts": 3
+        }
+      ]
+    },
+    "pledge_ratio": {
+      "measured_at": "2026-11-06T04:53:49.605485+00:00",
+      "storage": "sqlite:pledge_ratio",
+      "rows": 1632293,
+      "identities": 4466,
+      "effective_from_min": "2014-03-07",
+      "effective_from_max": "2026-09-18",
+      "effective_to_min": null,
+      "effective_to_max": null,
+      "knowledge_date_min": "2014-03-07",
+      "knowledge_date_max": "2026-09-18",
+      "report_date_min": "2014-03-07",
+      "report_date_max": "2026-09-18",
+      "identity_column": "instrument_id",
+      "recent_failures": []
+    },
+    "macro_indicators": {
+      "measured_at": "2026-11-06T04:53:50.448037+00:00",
+      "storage": "sqlite:macro_indicator_data",
+      "rows": 112180,
+      "identities": 60,
+      "date_min": "2014-01-01",
+      "date_max": "2026-11-05",
+      "effective_from_min": "2026-10-25",
+      "effective_from_max": "2026-11-06",
+      "effective_to_min": null,
+      "effective_to_max": null,
+      "knowledge_date_min": "2026-10-25",
+      "knowledge_date_max": "2026-11-06",
+      "identity_column": "indicator_id",
+      "recent_failures": []
+    },
+    "fx_daily": {
+      "measured_at": "2026-11-06T04:53:50.558494+00:00",
+      "storage": "parquet:market/fx/bars",
+      "rows": 24017,
+      "identities": 6,
+      "trade_date_min": "2014-01-01",
+      "trade_date_max": "2026-11-04",
+      "identity_column": "instrument_id",
+      "recent_failures": []
+    },
+    "commodity_daily": {
+      "measured_at": "2026-11-06T04:53:50.574383+00:00",
+      "storage": "parquet:market/commodity/bars",
+      "rows": 25276,
+      "identities": 8,
+      "trade_date_min": "2013-12-31",
+      "trade_date_max": "2026-11-05",
+      "identity_column": "instrument_id",
+      "recent_failures": []
+    },
+    "corporate_actions": {
+      "measured_at": "2026-11-06T04:53:50.601512+00:00",
+      "storage": "sqlite:corporate_actions",
+      "rows": 93000,
+      "identities": 5302,
+      "action_date_min": "2007-05-23",
+      "action_date_max": "2034-01-20",
+      "effective_from_min": "2014-01-02",
+      "effective_from_max": "2026-11-05",
+      "effective_to_min": null,
+      "effective_to_max": null,
+      "knowledge_date_min": "2014-01-02",
+      "knowledge_date_max": "2026-11-05",
+      "identity_column": "instrument_id",
+      "recent_failures": [
+        {
+          "source": "tushare",
+          "trade_date": "2026-09-30",
+          "error_code": "FETCH_ERROR",
+          "attempts": 7
+        },
+        {
+          "source": "tushare",
+          "trade_date": "2026-03-31",
+          "error_code": "FETCH_ERROR",
+          "attempts": 3
+        },
+        {
+          "source": "tushare",
+          "trade_date": "2025-07-16",
+          "error_code": "FETCH_ERROR",
+          "attempts": 6
+        },
+        {
+          "source": "tushare",
+          "trade_date": "2025-05-12",
+          "error_code": "FETCH_ERROR",
+          "attempts": 4
+        }
+      ]
+    },
+    "index_weight": {
+      "measured_at": "2026-11-06T04:53:50.734085+00:00",
+      "storage": "sqlite:index_weight",
+      "rows": 1924666,
+      "identities": 23,
+      "trade_date_min": "2014-01-30",
+      "trade_date_max": "2026-10-30",
+      "identity_column": "index_id",
+      "recent_failures": [
+        {
+          "source": "tushare",
+          "trade_date": "2026-10-30",
+          "error_code": "FETCH_ERROR",
+          "attempts": 4
+        },
+        {
+          "source": "tushare",
+          "trade_date": "2025-01-02",
+          "error_code": "UNKNOWN_ERROR",
+          "attempts": 25
+        },
+        {
+          "source": "tushare",
+          "trade_date": "2023-01-03",
+          "error_code": "UNKNOWN_ERROR",
+          "attempts": 24
+        }
+      ]
+    },
+    "industry_classification": {
+      "measured_at": "2026-11-06T04:53:51.477433+00:00",
+      "storage": "sqlite:industry_basic",
+      "rows": 31,
+      "identity_column": null,
+      "recent_failures": []
+    },
+    "industry_mapping": {
+      "measured_at": "2026-11-06T04:53:51.477527+00:00",
+      "storage": "sqlite:industry_mapping",
+      "rows": 7925,
+      "identities": 5919,
+      "effective_from_min": "1984-05-09",
+      "effective_from_max": "2026-10-28",
+      "effective_to_min": "1999-08-31",
+      "effective_to_max": "2026-08-20",
+      "identity_column": "instrument_id",
+      "recent_failures": []
+    },
+    "namechange": {
+      "measured_at": "2026-11-06T04:53:51.480802+00:00",
+      "storage": "sqlite:instrument_name_history",
+      "rows": 3542,
+      "identities": 1606,
+      "changed_date_min": "2013-01-10",
+      "changed_date_max": "2026-11-10",
+      "identity_column": "instrument_id",
+      "recent_failures": []
+    },
+    "st_history": {
+      "measured_at": "2026-11-06T04:53:51.482096+00:00",
+      "storage": "sqlite:st_change_history",
+      "rows": 1849,
+      "identities": 869,
+      "effective_from_min": "2013-01-14",
+      "effective_from_max": "2026-11-05",
+      "effective_to_min": "2013-04-16",
+      "effective_to_max": "2026-10-19",
+      "identity_column": "instrument_id",
+      "recent_failures": []
+    },
+    "futures_daily": {
+      "measured_at": "2026-11-06T04:53:51.483061+00:00",
+      "storage": "parquet:market/futures/daily",
+      "rows": 2385972,
+      "identities": 9227,
+      "knowledge_date_min": "2026-10-26",
+      "knowledge_date_max": "2026-11-05",
+      "trade_date_min": "2014-01-02",
+      "trade_date_max": "2026-11-05",
+      "identity_column": "source_ticker",
+      "recent_failures": []
+    },
+    "futures_basic": {
+      "measured_at": "2026-11-06T04:53:51.508522+00:00",
+      "storage": "parquet:market/futures/basic",
+      "rows": 102221,
+      "identities": 11363,
+      "delist_date_min": "1995-05-15",
+      "delist_date_max": "2029-08-31",
+      "knowledge_date_min": "2026-10-26",
+      "knowledge_date_max": "2026-11-05",
+      "list_date_min": "1995-04-17",
+      "list_date_max": "2026-11-02",
+      "identity_column": "source_ticker",
+      "recent_failures": []
+    },
+    "earnings_forecast": {
+      "measured_at": "2026-11-06T04:53:51.512108+00:00",
+      "storage": "parquet:fundamental/earnings_forecast",
+      "rows": 126176,
+      "identities": 5902,
+      "ann_date_min": "2014-01-01",
+      "ann_date_max": "2026-10-30",
+      "knowledge_date_min": "2026-10-30",
+      "knowledge_date_max": "2026-11-06",
+      "report_date_min": "2013-12-31",
+      "report_date_max": "2027-12-31",
+      "identity_column": "source_ticker",
+      "recent_failures": []
+    },
+    "earnings_express": {
+      "measured_at": "2026-11-06T04:53:51.533677+00:00",
+      "storage": "parquet:fundamental/earnings_express",
+      "rows": 24412,
+      "identities": 4398,
+      "ann_date_min": "2014-01-04",
+      "ann_date_max": "2026-10-21",
+      "knowledge_date_min": "2026-11-02",
+      "knowledge_date_max": "2026-11-03",
+      "report_date_min": "2013-12-31",
+      "report_date_max": "2026-09-30",
+      "identity_column": "source_ticker",
+      "recent_failures": []
+    },
+    "index_valuation": {
+      "measured_at": "2026-11-06T04:53:51.550044+00:00",
+      "storage": "parquet:capital/index_valuation",
+      "rows": 36880,
+      "identities": 15,
+      "knowledge_date_min": "2026-10-26",
+      "knowledge_date_max": "2026-11-05",
+      "trade_date_min": "2014-01-02",
+      "trade_date_max": "2026-11-05",
+      "identity_column": "source_ticker",
+      "recent_failures": []
+    }
+  },
+  "finished_at": "2026-11-06T04:53:51.566539+00:00"
+}

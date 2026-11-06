@@ -1,0 +1,235 @@
+{
+  "measured_at": "2026-11-06T03:55:43.490161+00:00",
+  "probes": [
+    {
+      "api": "index_weight",
+      "params": {
+        "index_code": "000001.SH",
+        "start_date": "20261001",
+        "end_date": "20261105"
+      },
+      "rows": 2233
+    },
+    {
+      "api": "index_weight",
+      "params": {
+        "index_code": "000016.SH",
+        "start_date": "20261001",
+        "end_date": "20261105"
+      },
+      "rows": 50
+    },
+    {
+      "api": "index_weight",
+      "params": {
+        "index_code": "000300.SH",
+        "start_date": "20261001",
+        "end_date": "20261105"
+      },
+      "rows": 300
+    },
+    {
+      "api": "index_weight",
+      "params": {
+        "index_code": "000688.SH",
+        "start_date": "20261001",
+        "end_date": "20261105"
+      },
+      "rows": 50
+    },
+    {
+      "api": "index_weight",
+      "params": {
+        "index_code": "000852.SH",
+        "start_date": "20261001",
+        "end_date": "20261105"
+      },
+      "rows": 1000
+    },
+    {
+      "api": "index_weight",
+      "params": {
+        "index_code": "000905.SH",
+        "start_date": "20261001",
+        "end_date": "20261105"
+      },
+      "rows": 500
+    },
+    {
+      "api": "index_weight",
+      "params": {
+        "index_code": "000906.SH",
+        "start_date": "20261001",
+        "end_date": "20261105"
+      },
+      "rows": 800
+    },
+    {
+      "api": "index_weight",
+      "params": {
+        "index_code": "000985.CSI",
+        "start_date": "20261001",
+        "end_date": "20261105"
+      },
+      "rows": 5117
+    },
+    {
+      "api": "index_weight",
+      "params": {
+        "index_code": "000991.SH",
+        "start_date": "20261001",
+        "end_date": "20261105"
+      },
+      "rows": 119
+    },
+    {
+      "api": "index_weight",
+      "params": {
+        "index_code": "000992.SH",
+        "start_date": "20261001",
+        "end_date": "20261105"
+      },
+      "rows": 127
+    },
+    {
+      "api": "index_weight",
+      "params": {
+        "index_code": "000993.SH",
+        "start_date": "20261001",
+        "end_date": "20261105"
+      },
+      "rows": 147
+    },
+    {
+      "api": "index_weight",
+      "params": {
+        "index_code": "399001.SZ",
+        "start_date": "20261001",
+        "end_date": "20261105"
+      },
+      "error": "Failed to fetch index_weight from Tushare",
+      "cause": "RetryError[<Future at 0x110587ba0 state=finished raised SourceFetchError>]"
+    },
+    {
+      "api": "index_weight",
+      "params": {
+        "index_code": "399006.SZ",
+        "start_date": "20261001",
+        "end_date": "20261105"
+      },
+      "rows": 100
+    },
+    {
+      "api": "index_weight",
+      "params": {
+        "index_code": "399303.SZ",
+        "start_date": "20261001",
+        "end_date": "20261105"
+      },
+      "rows": 2000
+    },
+    {
+      "api": "index_weight",
+      "params": {
+        "index_code": "399373.SZ",
+        "start_date": "20261001",
+        "end_date": "20261105"
+      },
+      "rows": 66
+    },
+    {
+      "api": "index_weight",
+      "params": {
+        "index_code": "399374.SZ",
+        "start_date": "20261001",
+        "end_date": "20261105"
+      },
+      "rows": 100
+    },
+    {
+      "api": "index_weight",
+      "params": {
+        "index_code": "399375.SZ",
+        "start_date": "20261001",
+        "end_date": "20261105"
+      },
+      "rows": 100
+    },
+    {
+      "api": "index_weight",
+      "params": {
+        "index_code": "399376.SZ",
+        "start_date": "20261001",
+        "end_date": "20261105"
+      },
+      "rows": 166
+    },
+    {
+      "api": "index_weight",
+      "params": {
+        "index_code": "399377.SZ",
+        "start_date": "20261001",
+        "end_date": "20261105"
+      },
+      "rows": 166
+    },
+    {
+      "api": "index_weight",
+      "params": {
+        "index_code": "399378.SZ",
+        "start_date": "20261001",
+        "end_date": "20261105"
+      },
+      "rows": 300
+    },
+    {
+      "api": "index_weight",
+      "params": {
+        "index_code": "399673.SZ",
+        "start_date": "20261001",
+        "end_date": "20261105"
+      },
+      "rows": 50
+    },
+    {
+      "api": "index_weight",
+      "params": {
+        "index_code": "899050.BJ",
+        "start_date": "20261001",
+        "end_date": "20261105"
+      },
+      "rows": 50
+    },
+    {
+      "api": "index_weight",
+      "params": {
+        "index_code": "932000.CSI",
+        "start_date": "20261001",
+        "end_date": "20261105"
+      },
+      "rows": 2000
+    },
+    {
+      "api": "GlobalFuturesService.getGlobalFuturesDailyKLine",
+      "params": {
+        "codes": [
+          "GC"
+        ],
+        "start_date": "2014-01-01",
+        "end_date": "2016-11-01"
+      },
+      "rows": 0
+    },
+    {
+      "api": "GlobalFuturesService.getGlobalFuturesDailyKLine",
+      "params": {
+        "codes": [
+          "SI"
+        ],
+        "start_date": "2014-01-01",
+        "end_date": "2016-11-01"
+      },
+      "rows": 0
+    }
+  ]
+}

@@ -1,0 +1,5433 @@
+{
+  "started_at": "2026-11-06T04:48:21.756426+00:00",
+  "datasets": {
+    "calendar": {
+      "measured_at": "2026-11-06T04:48:21.870843+00:00",
+      "purpose": "下一会话与自然日/交易日区分",
+      "read_semantics": "latest_available",
+      "coverage": {
+        "dataset": "calendar",
+        "domain": "metadata",
+        "status": "ready",
+        "measured_start": "2013-01-01",
+        "measured_end": "2027-12-31",
+        "gaps": [],
+        "notes": "实测 2013-01-01~2027-12-31 全量交易日历（覆盖回测与研究目标窗）",
+        "measured_at": "2026-11-03",
+        "knowledge_axis": null
+      },
+      "rows": 10,
+      "fields": [
+        "trade_date",
+        "is_open",
+        "exchange",
+        "prev_trade_date",
+        "next_trade_date",
+        "is_week_end",
+        "is_month_end",
+        "is_quarter_end",
+        "is_half_day",
+        "is_special"
+      ],
+      "business_values": [
+        {
+          "trade_date": "2026-11-08",
+          "is_open": false,
+          "exchange": "SSE",
+          "prev_trade_date": null,
+          "next_trade_date": null,
+          "is_week_end": false,
+          "is_month_end": false,
+          "is_quarter_end": false,
+          "is_half_day": false,
+          "is_special": false
+        },
+        {
+          "trade_date": "2026-11-09",
+          "is_open": true,
+          "exchange": "SSE",
+          "prev_trade_date": "2026-11-06",
+          "next_trade_date": "2026-11-10",
+          "is_week_end": false,
+          "is_month_end": false,
+          "is_quarter_end": false,
+          "is_half_day": false,
+          "is_special": false
+        },
+        {
+          "trade_date": "2026-11-10",
+          "is_open": true,
+          "exchange": "SSE",
+          "prev_trade_date": "2026-11-09",
+          "next_trade_date": "2026-11-11",
+          "is_week_end": false,
+          "is_month_end": false,
+          "is_quarter_end": false,
+          "is_half_day": false,
+          "is_special": false
+        }
+      ],
+      "empty": false,
+      "status": "read"
+    },
+    "stock_basic": {
+      "measured_at": "2026-11-06T04:48:21.871222+00:00",
+      "purpose": "标的代码/交易所/生命周期识别",
+      "read_semantics": "latest_available",
+      "coverage": {
+        "dataset": "stock_basic",
+        "domain": "metadata",
+        "status": "ready",
+        "measured_start": null,
+        "measured_end": null,
+        "gaps": [],
+        "notes": "当前上市快照 5,928（含退市史在 instrument 表 28,678）",
+        "measured_at": "2026-11-03",
+        "knowledge_axis": null
+      },
+      "rows": 5930,
+      "fields": [
+        "instrument_id",
+        "ticker",
+        "name",
+        "display_name",
+        "exchange",
+        "board",
+        "asset_class",
+        "list_date",
+        "delist_date",
+        "is_st",
+        "is_active",
+        "created_at",
+        "updated_at",
+        "source",
+        "source_ticker"
+      ],
+      "business_values": [
+        {
+          "instrument_id": 1005928,
+          "ticker": "920285",
+          "name": "远大健科",
+          "display_name": null,
+          "exchange": "BSE",
+          "board": null,
+          "asset_class": "stock",
+          "list_date": "2026-10-23",
+          "delist_date": null,
+          "is_st": 0,
+          "is_active": 1,
+          "created_at": "2026-10-23 16:00:49",
+          "updated_at": null,
+          "source": "tushare",
+          "source_ticker": "920285.BJ"
+        },
+        {
+          "instrument_id": 1005929,
+          "ticker": "920306",
+          "name": "天元重工",
+          "display_name": null,
+          "exchange": "BSE",
+          "board": null,
+          "asset_class": "stock",
+          "list_date": "2026-10-29",
+          "delist_date": null,
+          "is_st": 0,
+          "is_active": 1,
+          "created_at": "2026-10-30 13:55:11",
+          "updated_at": null,
+          "source": "tushare",
+          "source_ticker": "920306.BJ"
+        },
+        {
+          "instrument_id": 1005930,
+          "ticker": "001381",
+          "name": "皇冠新材",
+          "display_name": null,
+          "exchange": "SZSE",
+          "board": null,
+          "asset_class": "stock",
+          "list_date": "2026-11-03",
+          "delist_date": null,
+          "is_st": 0,
+          "is_active": 1,
+          "created_at": "2026-11-03 07:22:19",
+          "updated_at": null,
+          "source": "tushare",
+          "source_ticker": "001381.SZ"
+        }
+      ],
+      "empty": false,
+      "status": "read"
+    },
+    "etf_basic": {
+      "measured_at": "2026-11-06T04:48:21.902174+00:00",
+      "purpose": "标的代码/交易所/生命周期识别",
+      "read_semantics": "latest_available",
+      "coverage": {
+        "dataset": "etf_basic",
+        "domain": "metadata",
+        "status": "ready",
+        "measured_start": null,
+        "measured_end": null,
+        "gaps": [],
+        "notes": "",
+        "measured_at": "2026-11-03",
+        "knowledge_axis": null
+      },
+      "rows": 1868,
+      "fields": [
+        "instrument_id",
+        "ticker",
+        "name",
+        "display_name",
+        "exchange",
+        "board",
+        "asset_class",
+        "list_date",
+        "delist_date",
+        "is_st",
+        "is_active",
+        "created_at",
+        "updated_at",
+        "source",
+        "source_ticker"
+      ],
+      "business_values": [
+        {
+          "instrument_id": 2001866,
+          "ticker": "158078",
+          "name": "华宝创业板电池ETF",
+          "display_name": null,
+          "exchange": "SZSE",
+          "board": null,
+          "asset_class": "etf",
+          "list_date": "2026-10-28",
+          "delist_date": null,
+          "is_st": 0,
+          "is_active": 1,
+          "created_at": "2026-10-30 13:55:04",
+          "updated_at": null,
+          "source": "tushare",
+          "source_ticker": "158078.SZ"
+        },
+        {
+          "instrument_id": 2001867,
+          "ticker": "158079",
+          "name": "华安创业板电池ETF",
+          "display_name": null,
+          "exchange": "SZSE",
+          "board": null,
+          "asset_class": "etf",
+          "list_date": "2026-11-02",
+          "delist_date": null,
+          "is_st": 0,
+          "is_active": 1,
+          "created_at": "2026-10-30 13:55:04",
+          "updated_at": null,
+          "source": "tushare",
+          "source_ticker": "158079.SZ"
+        },
+        {
+          "instrument_id": 2001868,
+          "ticker": "158082",
+          "name": "银华创业板电池ETF",
+          "display_name": null,
+          "exchange": "SZSE",
+          "board": null,
+          "asset_class": "etf",
+          "list_date": "2026-10-29",
+          "delist_date": null,
+          "is_st": 0,
+          "is_active": 1,
+          "created_at": "2026-10-30 13:55:04",
+          "updated_at": null,
+          "source": "tushare",
+          "source_ticker": "158082.SZ"
+        }
+      ],
+      "empty": false,
+      "status": "read"
+    },
+    "index_basic": {
+      "measured_at": "2026-11-06T04:48:21.912498+00:00",
+      "purpose": "标的代码/交易所/生命周期识别",
+      "read_semantics": "latest_available",
+      "coverage": {
+        "dataset": "index_basic",
+        "domain": "metadata",
+        "status": "ready",
+        "measured_start": null,
+        "measured_end": null,
+        "gaps": [],
+        "notes": "20,886 只含大量细分/海外指数定义",
+        "measured_at": "2026-11-03",
+        "knowledge_axis": null
+      },
+      "rows": 20897,
+      "fields": [
+        "instrument_id",
+        "ticker",
+        "name",
+        "display_name",
+        "exchange",
+        "board",
+        "asset_class",
+        "list_date",
+        "delist_date",
+        "is_st",
+        "is_active",
+        "created_at",
+        "updated_at",
+        "source",
+        "source_ticker"
+      ],
+      "business_values": [
+        {
+          "instrument_id": 3020895,
+          "ticker": "803625",
+          "name": "中欧电子零部件",
+          "display_name": null,
+          "exchange": "SI",
+          "board": null,
+          "asset_class": "index",
+          "list_date": "2026-10-26",
+          "delist_date": null,
+          "is_st": 0,
+          "is_active": 1,
+          "created_at": "2026-10-30 13:55:20",
+          "updated_at": null,
+          "source": "tushare",
+          "source_ticker": "803625.SI"
+        },
+        {
+          "instrument_id": 3020896,
+          "ticker": "803626",
+          "name": "中欧航空航天",
+          "display_name": null,
+          "exchange": "SI",
+          "board": null,
+          "asset_class": "index",
+          "list_date": "2026-10-26",
+          "delist_date": null,
+          "is_st": 0,
+          "is_active": 1,
+          "created_at": "2026-10-30 13:55:20",
+          "updated_at": null,
+          "source": "tushare",
+          "source_ticker": "803626.SI"
+        },
+        {
+          "instrument_id": 3020897,
+          "ticker": "803627",
+          "name": "中欧端侧算力",
+          "display_name": null,
+          "exchange": "SI",
+          "board": null,
+          "asset_class": "index",
+          "list_date": "2026-10-26",
+          "delist_date": null,
+          "is_st": 0,
+          "is_active": 1,
+          "created_at": "2026-10-30 13:55:20",
+          "updated_at": null,
+          "source": "tushare",
+          "source_ticker": "803627.SI"
+        }
+      ],
+      "empty": false,
+      "status": "read"
+    },
+    "stock_daily": {
+      "measured_at": "2026-11-06T04:48:22.030433+00:00",
+      "purpose": "当前价格序列及成交量展示",
+      "read_semantics": "latest_available",
+      "coverage": {
+        "dataset": "stock_daily",
+        "domain": "market",
+        "status": "ready",
+        "measured_start": "2013-01-04",
+        "measured_end": "2026-10-29",
+        "gaps": [],
+        "notes": "2013-01-04 起（超 2014 目标）；BSE 不覆盖=#575 裁决",
+        "measured_at": "2026-11-03",
+        "knowledge_axis": "derived_t1"
+      },
+      "rows": 21,
+      "fields": [
+        "source_ticker",
+        "trade_date",
+        "knowledge_date",
+        "open",
+        "high",
+        "low",
+        "close",
+        "pre_close",
+        "volume",
+        "amount",
+        "pct_change",
+        "instrument_id",
+        "source"
+      ],
+      "business_values": [
+        {
+          "source_ticker": "000001.SZ",
+          "trade_date": "2026-11-03",
+          "knowledge_date": "2026-11-04",
+          "open": 11.56,
+          "high": 11.78,
+          "low": 11.42,
+          "close": 11.77,
+          "pre_close": 11.54,
+          "volume": 2139674.22,
+          "amount": 2488701.78997,
+          "pct_change": 1.9931,
+          "instrument_id": 1000001,
+          "source": "tushare"
+        },
+        {
+          "source_ticker": "000001.SZ",
+          "trade_date": "2026-11-04",
+          "knowledge_date": "2026-11-05",
+          "open": 11.75,
+          "high": 11.86,
+          "low": 11.68,
+          "close": 11.74,
+          "pre_close": 11.77,
+          "volume": 1437905.91,
+          "amount": 1689183.95741,
+          "pct_change": -0.2549,
+          "instrument_id": 1000001,
+          "source": "tushare"
+        },
+        {
+          "source_ticker": "000001.SZ",
+          "trade_date": "2026-11-05",
+          "knowledge_date": "2026-11-06",
+          "open": 11.71,
+          "high": 11.77,
+          "low": 11.56,
+          "close": 11.64,
+          "pre_close": 11.74,
+          "volume": 1228997.01,
+          "amount": 1429433.01632,
+          "pct_change": -0.8518,
+          "instrument_id": 1000001,
+          "source": "tushare"
+        }
+      ],
+      "empty": false,
+      "status": "read"
+    },
+    "etf_daily": {
+      "measured_at": "2026-11-06T04:48:22.039285+00:00",
+      "purpose": "当前价格序列及成交量展示",
+      "read_semantics": "latest_available",
+      "coverage": {
+        "dataset": "etf_daily",
+        "domain": "market",
+        "status": "ready",
+        "measured_start": "2013-01-04",
+        "measured_end": "2026-10-29",
+        "gaps": [],
+        "notes": "2013-01-04 起",
+        "measured_at": "2026-11-03",
+        "knowledge_axis": "derived_t1"
+      },
+      "rows": 21,
+      "fields": [
+        "source_ticker",
+        "trade_date",
+        "knowledge_date",
+        "open",
+        "high",
+        "low",
+        "close",
+        "pre_close",
+        "volume",
+        "amount",
+        "pct_change",
+        "instrument_id",
+        "source"
+      ],
+      "business_values": [
+        {
+          "source_ticker": "510300.SH",
+          "trade_date": "2026-11-03",
+          "knowledge_date": "2026-11-04",
+          "open": 4.076,
+          "high": 4.106,
+          "low": 4.041,
+          "close": 4.092,
+          "pre_close": 4.085,
+          "volume": 46539654.39,
+          "amount": 19007473.545,
+          "pct_change": 0.17,
+          "instrument_id": 2001562,
+          "source": "tushare"
+        },
+        {
+          "source_ticker": "510300.SH",
+          "trade_date": "2026-11-04",
+          "knowledge_date": "2026-11-05",
+          "open": 4.086,
+          "high": 4.191,
+          "low": 4.062,
+          "close": 4.175,
+          "pre_close": 4.092,
+          "volume": 30473917.01,
+          "amount": 12562217.194,
+          "pct_change": 2.03,
+          "instrument_id": 2001562,
+          "source": "tushare"
+        },
+        {
+          "source_ticker": "510300.SH",
+          "trade_date": "2026-11-05",
+          "knowledge_date": "2026-11-06",
+          "open": 4.149,
+          "high": 4.216,
+          "low": 4.145,
+          "close": 4.195,
+          "pre_close": 4.175,
+          "volume": 17982071.82,
+          "amount": 7523081.499,
+          "pct_change": 0.48,
+          "instrument_id": 2001562,
+          "source": "tushare"
+        }
+      ],
+      "empty": false,
+      "status": "read"
+    },
+    "index_daily": {
+      "measured_at": "2026-11-06T04:48:22.044840+00:00",
+      "purpose": "当前价格序列及成交量展示",
+      "read_semantics": "latest_available",
+      "coverage": {
+        "dataset": "index_daily",
+        "domain": "market",
+        "status": "ready",
+        "measured_start": "2014-01-02",
+        "measured_end": "2026-10-29",
+        "gaps": [],
+        "notes": "2014-01-02 起；178 只集合完整性逐指核验属 P2",
+        "measured_at": "2026-11-03",
+        "knowledge_axis": "derived_t1"
+      },
+      "rows": 21,
+      "fields": [
+        "source_ticker",
+        "trade_date",
+        "knowledge_date",
+        "open",
+        "high",
+        "low",
+        "close",
+        "pre_close",
+        "volume",
+        "amount",
+        "pct_change",
+        "instrument_id",
+        "source"
+      ],
+      "business_values": [
+        {
+          "source_ticker": "000300.SH",
+          "trade_date": "2026-11-03",
+          "knowledge_date": "2026-11-04",
+          "open": 4005.2511,
+          "high": 4028.7367,
+          "low": 3969.5471,
+          "close": 4008.8748,
+          "pre_close": 4016.9179,
+          "volume": 248779950.0,
+          "amount": 553053604.2863,
+          "pct_change": -0.2002,
+          "instrument_id": 3000162,
+          "source": "tushare"
+        },
+        {
+          "source_ticker": "000300.SH",
+          "trade_date": "2026-11-04",
+          "knowledge_date": "2026-11-05",
+          "open": 4007.3506,
+          "high": 4105.8575,
+          "low": 3987.1516,
+          "close": 4101.335,
+          "pre_close": 4008.8748,
+          "volume": 246371975.0,
+          "amount": 597260470.887,
+          "pct_change": 2.3064,
+          "instrument_id": 3000162,
+          "source": "tushare"
+        },
+        {
+          "source_ticker": "000300.SH",
+          "trade_date": "2026-11-05",
+          "knowledge_date": "2026-11-06",
+          "open": 4065.7238,
+          "high": 4136.7983,
+          "low": 4065.7238,
+          "close": 4113.4112,
+          "pre_close": 4101.335,
+          "volume": 241979946.0,
+          "amount": 622088649.1206,
+          "pct_change": 0.2944,
+          "instrument_id": 3000162,
+          "source": "tushare"
+        }
+      ],
+      "empty": false,
+      "status": "read"
+    },
+    "global_index_daily": {
+      "measured_at": "2026-11-06T04:48:22.046884+00:00",
+      "purpose": "21全球指数展示参考,禁止策略输入",
+      "read_semantics": "latest_available",
+      "coverage": {
+        "dataset": "global_index_daily",
+        "domain": "market",
+        "status": "ready",
+        "measured_start": "2014-01-01",
+        "measured_end": "2026-10-29",
+        "gaps": [],
+        "notes": "2014-01-01 起；#619 拼接修复后 28/29 连续成功，旧故障不重立；品种口径核验属 P5a；instrument 列为 source_ticker（21 个）",
+        "measured_at": "2026-11-03",
+        "knowledge_axis": "observation"
+      },
+      "rows": 1025,
+      "fields": [
+        "source_ticker",
+        "trade_date",
+        "event_time",
+        "published_at",
+        "available_at",
+        "knowledge_date",
+        "timezone",
+        "currency",
+        "open",
+        "high",
+        "low",
+        "close",
+        "pre_close",
+        "change",
+        "pct_change",
+        "volume",
+        "amount"
+      ],
+      "business_values": [
+        {
+          "source_ticker": "XIN9",
+          "trade_date": "2026-11-03",
+          "event_time": "2026-11-03T08:35:00+00:00",
+          "published_at": "2026-11-03T13:55:35.883668+00:00",
+          "available_at": "2026-11-03T13:55:35.883668+00:00",
+          "knowledge_date": "2026-11-03",
+          "timezone": "Asia/Singapore",
+          "currency": "USD",
+          "open": 12975.15,
+          "high": 12975.15,
+          "low": 12723.82,
+          "close": 12857.16,
+          "pre_close": 12975.15,
+          "change": -117.99,
+          "pct_change": -0.9094,
+          "volume": null,
+          "amount": null
+        },
+        {
+          "source_ticker": "XIN9",
+          "trade_date": "2026-11-03",
+          "event_time": "2026-11-03T08:35:00+00:00",
+          "published_at": "2026-11-04T18:06:32.751275+00:00",
+          "available_at": "2026-11-04T18:06:32.751275+00:00",
+          "knowledge_date": "2026-11-05",
+          "timezone": "Asia/Singapore",
+          "currency": "USD",
+          "open": 12975.15,
+          "high": 12975.15,
+          "low": 12722.94,
+          "close": 12857.16,
+          "pre_close": 12975.15,
+          "change": -117.99,
+          "pct_change": -0.9094,
+          "volume": null,
+          "amount": null
+        },
+        {
+          "source_ticker": "XIN9",
+          "trade_date": "2026-11-04",
+          "event_time": "2026-11-04T08:35:00+00:00",
+          "published_at": "2026-11-04T18:06:32.751275+00:00",
+          "available_at": "2026-11-04T18:06:32.751275+00:00",
+          "knowledge_date": "2026-11-05",
+          "timezone": "Asia/Singapore",
+          "currency": "USD",
+          "open": 12857.16,
+          "high": 13154.19,
+          "low": 12781.2,
+          "close": 13134.63,
+          "pre_close": 12857.16,
+          "change": 277.47,
+          "pct_change": 2.1581,
+          "volume": null,
+          "amount": null
+        }
+      ],
+      "empty": false,
+      "status": "read"
+    },
+    "stock_status": {
+      "measured_at": "2026-11-06T04:48:22.049201+00:00",
+      "purpose": "辨别停牌、ST与正常交易会话",
+      "read_semantics": "latest_available",
+      "coverage": {
+        "dataset": "stock_status",
+        "domain": "market",
+        "status": "partial",
+        "measured_start": "2016-08-09",
+        "measured_end": "2026-10-29",
+        "gaps": [
+          "起点 2016-08-09（bak_basic 官方可得起点），2014~2016-08 缺",
+          "BSE 244 标的不覆盖（#575 裁决）"
+        ],
+        "notes": "bak_basic 当日终值 21:50 就绪（#583 实测）",
+        "measured_at": "2026-11-03",
+        "knowledge_axis": "derived_t1"
+      },
+      "rows": 11154,
+      "fields": [
+        "source_ticker",
+        "trade_date",
+        "is_suspended",
+        "suspend_timing",
+        "is_st",
+        "st_type",
+        "list_status",
+        "instrument_id",
+        "source"
+      ],
+      "business_values": [
+        {
+          "source_ticker": "920306.BJ",
+          "trade_date": "2026-11-05",
+          "is_suspended": false,
+          "suspend_timing": "",
+          "is_st": false,
+          "st_type": "",
+          "list_status": "L",
+          "instrument_id": 1005929,
+          "source": "tushare"
+        },
+        {
+          "source_ticker": "001381.SZ",
+          "trade_date": "2026-11-04",
+          "is_suspended": false,
+          "suspend_timing": "",
+          "is_st": false,
+          "st_type": "",
+          "list_status": "L",
+          "instrument_id": 1005930,
+          "source": "tushare"
+        },
+        {
+          "source_ticker": "001381.SZ",
+          "trade_date": "2026-11-05",
+          "is_suspended": false,
+          "suspend_timing": "",
+          "is_st": false,
+          "st_type": "",
+          "list_status": "L",
+          "instrument_id": 1005930,
+          "source": "tushare"
+        }
+      ],
+      "empty": false,
+      "status": "read"
+    },
+    "adj_factor": {
+      "measured_at": "2026-11-06T04:48:22.052233+00:00",
+      "purpose": "复权价格因子,保留观察版本",
+      "read_semantics": "latest_available",
+      "coverage": {
+        "dataset": "adj_factor",
+        "domain": "market",
+        "status": "ready",
+        "measured_start": "2013-01-04",
+        "measured_end": "2026-10-29",
+        "gaps": [],
+        "notes": "2013-01-04 起；fuyao dump 每日刷新(#617)；黄金集作用域=#620",
+        "measured_at": "2026-11-03",
+        "knowledge_axis": "same_day"
+      },
+      "rows": 11164,
+      "fields": [
+        "source_ticker",
+        "trade_date",
+        "knowledge_date",
+        "adj_factor",
+        "instrument_id",
+        "source"
+      ],
+      "business_values": [
+        {
+          "source_ticker": "920306.BJ",
+          "trade_date": "2026-11-05",
+          "knowledge_date": "2026-11-05",
+          "adj_factor": 1.0,
+          "instrument_id": 1005929,
+          "source": "tushare"
+        },
+        {
+          "source_ticker": "001381.SZ",
+          "trade_date": "2026-11-04",
+          "knowledge_date": "2026-11-04",
+          "adj_factor": 1.0,
+          "instrument_id": 1005930,
+          "source": "tushare"
+        },
+        {
+          "source_ticker": "001381.SZ",
+          "trade_date": "2026-11-05",
+          "knowledge_date": "2026-11-05",
+          "adj_factor": 1.0,
+          "instrument_id": 1005930,
+          "source": "tushare"
+        }
+      ],
+      "empty": false,
+      "status": "read"
+    },
+    "fund_adj": {
+      "measured_at": "2026-11-06T04:48:22.056434+00:00",
+      "purpose": "ETF后复权图表的因子消费",
+      "read_semantics": "latest_available",
+      "coverage": {
+        "dataset": "fund_adj",
+        "domain": "market",
+        "status": "ready",
+        "measured_start": "2013-01-04",
+        "measured_end": "2026-10-29",
+        "gaps": [],
+        "notes": "2013-01-04 起",
+        "measured_at": "2026-11-03",
+        "knowledge_axis": "same_day"
+      },
+      "rows": 21,
+      "fields": [
+        "source_ticker",
+        "trade_date",
+        "knowledge_date",
+        "open",
+        "high",
+        "low",
+        "close",
+        "pre_close",
+        "volume",
+        "amount",
+        "pct_change",
+        "instrument_id",
+        "source",
+        "knowledge_date_right"
+      ],
+      "business_values": [
+        {
+          "source_ticker": "510300.SH",
+          "trade_date": "2026-11-03",
+          "knowledge_date": "2026-11-04",
+          "open": 5.164699599999999,
+          "high": 5.202712599999999,
+          "low": 5.1203511,
+          "close": 5.184973199999999,
+          "pre_close": 4.085,
+          "volume": 46539654.39,
+          "amount": 19007473.545,
+          "pct_change": 0.17,
+          "instrument_id": 2001562,
+          "source": "tushare",
+          "knowledge_date_right": "2026-11-03"
+        },
+        {
+          "source_ticker": "510300.SH",
+          "trade_date": "2026-11-04",
+          "knowledge_date": "2026-11-05",
+          "open": 5.1773706,
+          "high": 5.310416099999999,
+          "low": 5.1469602,
+          "close": 5.290142499999999,
+          "pre_close": 4.092,
+          "volume": 30473917.01,
+          "amount": 12562217.194,
+          "pct_change": 2.03,
+          "instrument_id": 2001562,
+          "source": "tushare",
+          "knowledge_date_right": "2026-11-04"
+        },
+        {
+          "source_ticker": "510300.SH",
+          "trade_date": "2026-11-05",
+          "knowledge_date": "2026-11-06",
+          "open": 5.2571978999999995,
+          "high": 5.3420936,
+          "low": 5.252129499999999,
+          "close": 5.3154845,
+          "pre_close": 4.175,
+          "volume": 17982071.82,
+          "amount": 7523081.499,
+          "pct_change": 0.48,
+          "instrument_id": 2001562,
+          "source": "tushare",
+          "knowledge_date_right": "2026-11-05"
+        }
+      ],
+      "empty": false,
+      "status": "read"
+    },
+    "etf_nav": {
+      "measured_at": "2026-11-06T04:48:22.062793+00:00",
+      "purpose": "ETF单位及累计净值展示,不伪造收益基准",
+      "read_semantics": "latest_available",
+      "coverage": {
+        "dataset": "etf_nav",
+        "domain": "market",
+        "status": "partial",
+        "measured_start": "2014-01-01",
+        "measured_end": "2026-10-26",
+        "gaps": [
+          "末端 2026-10-26 后缺（10-29 摄取 failed 待 P1）"
+        ],
+        "notes": "2014-01-01 起",
+        "measured_at": "2026-11-03",
+        "knowledge_axis": "provider_anchor"
+      },
+      "rows": 10,
+      "fields": [
+        "source_ticker",
+        "trade_date",
+        "knowledge_date",
+        "unit_nav",
+        "acc_nav",
+        "instrument_id",
+        "source"
+      ],
+      "business_values": [
+        {
+          "source_ticker": "510300.SH",
+          "trade_date": "2026-10-28",
+          "knowledge_date": "2026-10-28",
+          "unit_nav": 4.1603,
+          "acc_nav": null,
+          "instrument_id": 2001562,
+          "source": "tushare"
+        },
+        {
+          "source_ticker": "510300.SH",
+          "trade_date": "2026-10-29",
+          "knowledge_date": "2026-10-29",
+          "unit_nav": 4.1176,
+          "acc_nav": null,
+          "instrument_id": 2001562,
+          "source": "tushare"
+        },
+        {
+          "source_ticker": "510300.SH",
+          "trade_date": "2026-10-30",
+          "knowledge_date": "2026-10-30",
+          "unit_nav": 4.0609,
+          "acc_nav": null,
+          "instrument_id": 2001562,
+          "source": "tushare"
+        }
+      ],
+      "empty": false,
+      "status": "read"
+    },
+    "stock_limit": {
+      "measured_at": "2026-11-06T04:48:22.064887+00:00",
+      "purpose": "个股法定上下限价格,非封板时间",
+      "read_semantics": "latest_available",
+      "coverage": {
+        "dataset": "stock_limit",
+        "domain": "market",
+        "status": "ready",
+        "measured_start": "2014-01-02",
+        "measured_end": "2026-10-29",
+        "gaps": [],
+        "notes": "2014-01-02 起；停牌日发行语义 #571",
+        "measured_at": "2026-11-03",
+        "knowledge_axis": "derived_t1"
+      },
+      "rows": 11720,
+      "fields": [
+        "source_ticker",
+        "trade_date",
+        "knowledge_date",
+        "up_limit",
+        "down_limit",
+        "instrument_id",
+        "source"
+      ],
+      "business_values": [
+        {
+          "source_ticker": "920306.BJ",
+          "trade_date": "2026-11-05",
+          "knowledge_date": "2026-11-06",
+          "up_limit": 9.73,
+          "down_limit": 5.25,
+          "instrument_id": 1005929,
+          "source": "tushare"
+        },
+        {
+          "source_ticker": "001381.SZ",
+          "trade_date": "2026-11-04",
+          "knowledge_date": "2026-11-05",
+          "up_limit": 999999.999,
+          "down_limit": 0.01,
+          "instrument_id": 1005930,
+          "source": "tushare"
+        },
+        {
+          "source_ticker": "001381.SZ",
+          "trade_date": "2026-11-05",
+          "knowledge_date": "2026-11-06",
+          "up_limit": 999999.999,
+          "down_limit": 0.01,
+          "instrument_id": 1005930,
+          "source": "tushare"
+        }
+      ],
+      "empty": false,
+      "status": "read"
+    },
+    "limit_list": {
+      "measured_at": "2026-11-06T04:48:22.072801+00:00",
+      "purpose": "披露涨跌停事件与炸板等原生字段,ST缺席未知",
+      "read_semantics": "latest_available",
+      "coverage": {
+        "dataset": "limit_list",
+        "domain": "market",
+        "status": "partial",
+        "measured_start": "2026-09-30",
+        "measured_end": "2026-10-29",
+        "gaps": [
+          "仅 2026-09-30 起无历史回补"
+        ],
+        "notes": "",
+        "measured_at": "2026-11-03",
+        "knowledge_axis": "derived_t1"
+      },
+      "rows": 292,
+      "fields": [
+        "source_ticker",
+        "trade_date",
+        "knowledge_date",
+        "industry",
+        "name",
+        "close",
+        "pct_change",
+        "amount",
+        "limit_amount",
+        "float_mv",
+        "total_mv",
+        "turnover_ratio",
+        "fd_amount",
+        "first_time",
+        "last_time",
+        "open_times",
+        "up_stat",
+        "limit_times",
+        "limit_type",
+        "instrument_id",
+        "source"
+      ],
+      "business_values": [
+        {
+          "source_ticker": "688835.SH",
+          "trade_date": "2026-11-04",
+          "knowledge_date": "2026-11-05",
+          "industry": "专用设备",
+          "name": "高凯技术",
+          "close": 297.28,
+          "pct_change": 20.0,
+          "amount": 713723120.0,
+          "limit_amount": null,
+          "float_mv": 5583746324.8,
+          "total_mv": 29713346474.24,
+          "turnover_ratio": 13.89,
+          "fd_amount": 13937675.0,
+          "first_time": "143813",
+          "last_time": "143813",
+          "open_times": 0,
+          "up_stat": "1/1",
+          "limit_times": 1.0,
+          "limit_type": "U",
+          "instrument_id": 1005551,
+          "source": "tushare"
+        },
+        {
+          "source_ticker": "601123.SH",
+          "trade_date": "2026-11-04",
+          "knowledge_date": "2026-11-05",
+          "industry": "冶钢原料",
+          "name": "马矿股份",
+          "close": 16.58,
+          "pct_change": 10.02,
+          "amount": 507677904.0,
+          "limit_amount": null,
+          "float_mv": 1588832517.64,
+          "total_mv": 20469852104.32,
+          "turnover_ratio": 32.01,
+          "fd_amount": 39742342.0,
+          "first_time": "92502",
+          "last_time": "103005",
+          "open_times": 3,
+          "up_stat": "2/2",
+          "limit_times": 2.0,
+          "limit_type": "U",
+          "instrument_id": 1005555,
+          "source": "tushare"
+        },
+        {
+          "source_ticker": "920298.BJ",
+          "trade_date": "2026-11-04",
+          "knowledge_date": "2026-11-05",
+          "industry": "专用设备",
+          "name": "腾信精密",
+          "close": 94.6,
+          "pct_change": 30.0,
+          "amount": 324344432.0,
+          "limit_amount": null,
+          "float_mv": 1504140000.0,
+          "total_mv": 7634220000.0,
+          "turnover_ratio": 24.35,
+          "fd_amount": 46142569.0,
+          "first_time": "140112",
+          "last_time": "140706",
+          "open_times": 1,
+          "up_stat": "1/1",
+          "limit_times": 1.0,
+          "limit_type": "U",
+          "instrument_id": 1005565,
+          "source": "tushare"
+        }
+      ],
+      "empty": false,
+      "status": "read"
+    },
+    "fund_share": {
+      "measured_at": "2026-11-06T04:48:22.075668+00:00",
+      "purpose": "ETF份额变化研究,万份,缺席不补零",
+      "read_semantics": "latest_available",
+      "coverage": {
+        "dataset": "fund_share",
+        "domain": "market",
+        "status": "partial",
+        "measured_start": "2013-01-04",
+        "measured_end": "2026-10-30",
+        "gaps": [
+          "ETF 无状态数据集，份额非逐日必有——87.9% 会话在场为观测口径（no_status_dataset 证据边界）",
+          "源侧全量 ~1,807 行/日 vs 本地 ~1,714（LOF/非 ETF 名册标的 FK 过滤，#503 线裁决）"
+        ],
+        "notes": "2013-01-04 起 160 万行、逐年交易日全覆盖；#625 晚发布近窗重取治愈尾部（10-26..30 各 1,713-1,715 行）；对拍 3/3 一致",
+        "measured_at": "2026-11-03",
+        "knowledge_axis": "derived_t1"
+      },
+      "rows": 6868,
+      "fields": [
+        "source_ticker",
+        "trade_date",
+        "knowledge_date",
+        "fd_share",
+        "fund_type",
+        "exchange",
+        "instrument_id",
+        "source"
+      ],
+      "business_values": [
+        {
+          "source_ticker": "158082.SZ",
+          "trade_date": "2026-11-02",
+          "knowledge_date": "2026-11-03",
+          "fd_share": 13073.5272,
+          "fund_type": "ETF",
+          "exchange": "SZ",
+          "instrument_id": 2001868,
+          "source": "tushare"
+        },
+        {
+          "source_ticker": "158082.SZ",
+          "trade_date": "2026-11-03",
+          "knowledge_date": "2026-11-04",
+          "fd_share": 11673.5272,
+          "fund_type": "ETF",
+          "exchange": "SZ",
+          "instrument_id": 2001868,
+          "source": "tushare"
+        },
+        {
+          "source_ticker": "158082.SZ",
+          "trade_date": "2026-11-04",
+          "knowledge_date": "2026-11-05",
+          "fd_share": 10173.5272,
+          "fund_type": "ETF",
+          "exchange": "SZ",
+          "instrument_id": 2001868,
+          "source": "tushare"
+        }
+      ],
+      "empty": false,
+      "status": "read"
+    },
+    "moneyflow": {
+      "measured_at": "2026-11-06T04:48:22.079134+00:00",
+      "purpose": "个股资金/披露事实展示,不推导整体持仓",
+      "read_semantics": "latest_available",
+      "coverage": {
+        "dataset": "moneyflow",
+        "domain": "capital",
+        "status": "partial",
+        "measured_start": "2013-01-04",
+        "measured_end": "2026-10-30",
+        "gaps": [
+          "BSE 2023-2026 ~20.5 万会话源端不覆盖（moneyflow 端点无北交所数据，#575 裁决 BSE 先不覆盖）",
+          "stock_status 数据集空洞致 82,422 会话缺口无法归因（2021/2022 为主，P2 线既知边界）"
+        ],
+        "notes": "2013-01-04 起 1,256 万行（#196 回补 +",
+        "measured_at": "2026-11-03",
+        "knowledge_axis": "derived_t1"
+      },
+      "rows": 3119,
+      "fields": [
+        "source_ticker",
+        "trade_date",
+        "knowledge_date",
+        "buy_elg_amount",
+        "buy_elg_vol",
+        "buy_lg_amount",
+        "buy_lg_vol",
+        "buy_md_amount",
+        "buy_md_vol",
+        "buy_sm_amount",
+        "buy_sm_vol",
+        "sell_elg_amount",
+        "sell_elg_vol",
+        "sell_lg_amount",
+        "sell_lg_vol",
+        "sell_md_amount",
+        "sell_md_vol",
+        "sell_sm_amount",
+        "sell_sm_vol",
+        "net_mf_amount",
+        "net_mf_vol",
+        "instrument_id",
+        "source"
+      ],
+      "business_values": [
+        {
+          "source_ticker": "000001.SZ",
+          "trade_date": "2026-11-03",
+          "knowledge_date": "2026-11-04",
+          "buy_elg_amount": 57828.35,
+          "buy_elg_vol": 496505.0,
+          "buy_lg_amount": 77735.03,
+          "buy_lg_vol": 668365.0,
+          "buy_md_amount": 61141.24,
+          "buy_md_vol": 525922.0,
+          "buy_sm_amount": 52165.56,
+          "buy_sm_vol": 448883.0,
+          "sell_elg_amount": 69741.12,
+          "sell_elg_vol": 600372.0,
+          "sell_lg_amount": 58489.27,
+          "sell_lg_vol": 502988.0,
+          "sell_md_amount": 63609.54,
+          "sell_md_vol": 546531.0,
+          "sell_sm_amount": 57030.25,
+          "sell_sm_vol": 489783.0,
+          "net_mf_amount": 47360.03,
+          "net_mf_vol": 403624.0,
+          "instrument_id": 1000001,
+          "source": "tushare"
+        },
+        {
+          "source_ticker": "000001.SZ",
+          "trade_date": "2026-11-04",
+          "knowledge_date": "2026-11-05",
+          "buy_elg_amount": 29951.27,
+          "buy_elg_vol": 254788.0,
+          "buy_lg_amount": 38386.33,
+          "buy_lg_vol": 326722.0,
+          "buy_md_amount": 48666.39,
+          "buy_md_vol": 414385.0,
+          "buy_sm_amount": 51914.4,
+          "buy_sm_vol": 442011.0,
+          "sell_elg_amount": 35181.73,
+          "sell_elg_vol": 299544.0,
+          "sell_lg_amount": 44151.35,
+          "sell_lg_vol": 375905.0,
+          "sell_md_amount": 48885.7,
+          "sell_md_vol": 416034.0,
+          "sell_sm_amount": 40699.62,
+          "sell_sm_vol": 346423.0,
+          "net_mf_amount": 1119.99,
+          "net_mf_vol": 8525.0,
+          "instrument_id": 1000001,
+          "source": "tushare"
+        },
+        {
+          "source_ticker": "000001.SZ",
+          "trade_date": "2026-11-05",
+          "knowledge_date": "2026-11-06",
+          "buy_elg_amount": 30285.88,
+          "buy_elg_vol": 260473.0,
+          "buy_lg_amount": 40956.14,
+          "buy_lg_vol": 352092.0,
+          "buy_md_amount": 33990.03,
+          "buy_md_vol": 292184.0,
+          "buy_sm_amount": 37711.25,
+          "buy_sm_vol": 324248.0,
+          "sell_elg_amount": 33142.92,
+          "sell_elg_vol": 284990.0,
+          "sell_lg_amount": 31131.43,
+          "sell_lg_vol": 267613.0,
+          "sell_md_amount": 38077.16,
+          "sell_md_vol": 327345.0,
+          "sell_sm_amount": 40591.8,
+          "sell_sm_vol": 349048.0,
+          "net_mf_amount": -23006.91,
+          "net_mf_vol": -198365.0,
+          "instrument_id": 1000001,
+          "source": "tushare"
+        }
+      ],
+      "empty": false,
+      "status": "read"
+    },
+    "top_list": {
+      "measured_at": "2026-11-06T04:48:22.151788+00:00",
+      "purpose": "个股资金/披露事实展示,不推导整体持仓",
+      "read_semantics": "latest_available",
+      "coverage": {
+        "dataset": "top_list",
+        "domain": "capital",
+        "status": "ready",
+        "measured_start": "2014-01-02",
+        "measured_end": "2026-10-30",
+        "gaps": [],
+        "notes": "席位不推导整体仓位（#621 语义）；源墙远早于 2014（#626 探针 2010-01-04 已有行），按 #621 2014 锚回补不承诺更早；同 (标的, 日, 原因) 冗余多行适配器确定性收敛（#626）；#626 回补 2014-01-02 起 192,527 行/5,927 标的，逐年交易日全覆盖，可转债榜行（11x/12x 码） 身份过滤不入库——对拍与矩阵见 event-disclosure-verification.md",
+        "measured_at": "2026-11-03",
+        "knowledge_axis": "provider_anchor"
+      },
+      "rows": 34,
+      "fields": [
+        "source_ticker",
+        "trade_date",
+        "knowledge_date",
+        "name",
+        "close",
+        "pct_change",
+        "turnover_rate",
+        "amount",
+        "l_sell",
+        "l_buy",
+        "l_amount",
+        "net_amount",
+        "net_rate",
+        "amount_rate",
+        "float_values",
+        "reason",
+        "instrument_id",
+        "source"
+      ],
+      "business_values": [
+        {
+          "source_ticker": "000002.SZ",
+          "trade_date": "2026-09-22",
+          "knowledge_date": "2026-09-23",
+          "name": "万科A",
+          "close": 3.81,
+          "pct_change": 4.3836,
+          "turnover_rate": 8.44,
+          "amount": 7389607169.0,
+          "l_sell": 936767842.67,
+          "l_buy": 1061260025.45,
+          "l_amount": 1998027868.12,
+          "net_amount": 124492182.78,
+          "net_rate": 1.68,
+          "amount_rate": 27.04,
+          "float_values": 37014581116.74,
+          "reason": "连续三个交易日内，涨幅偏离值累计达到20%的证券",
+          "instrument_id": 1000002,
+          "source": "tushare"
+        },
+        {
+          "source_ticker": "000002.SZ",
+          "trade_date": "2026-09-29",
+          "knowledge_date": "2026-09-30",
+          "name": "万科A",
+          "close": 4.08,
+          "pct_change": 9.973,
+          "turnover_rate": 8.26,
+          "amount": 3176619108.0,
+          "l_sell": 307002423.65,
+          "l_buy": 466610675.4,
+          "l_amount": 773613099.05,
+          "net_amount": 159608251.75,
+          "net_rate": 5.02,
+          "amount_rate": 24.35,
+          "float_values": 39637661668.32,
+          "reason": "日涨幅偏离值达到7%的前5只证券",
+          "instrument_id": 1000002,
+          "source": "tushare"
+        },
+        {
+          "source_ticker": "000002.SZ",
+          "trade_date": "2026-09-30",
+          "knowledge_date": "2026-10-01",
+          "name": "万科A",
+          "close": 4.26,
+          "pct_change": 4.4118,
+          "turnover_rate": 13.48,
+          "amount": 5158052404.0,
+          "l_sell": 617580196.43,
+          "l_buy": 688964755.91,
+          "l_amount": 1306544952.34,
+          "net_amount": 71384559.48,
+          "net_rate": 1.38,
+          "amount_rate": 25.33,
+          "float_values": 41386382036.04,
+          "reason": "日振幅值达到15%的前5只证券",
+          "instrument_id": 1000002,
+          "source": "tushare"
+        }
+      ],
+      "empty": false,
+      "status": "read"
+    },
+    "top_inst": {
+      "measured_at": "2026-11-06T04:48:22.160096+00:00",
+      "purpose": "个股资金/披露事实展示,不推导整体持仓",
+      "read_semantics": "latest_available",
+      "coverage": {
+        "dataset": "top_inst",
+        "domain": "capital",
+        "status": "ready",
+        "measured_start": "2014-01-02",
+        "measured_end": "2026-10-30",
+        "gaps": [],
+        "notes": "席位不推导整体仓位——「机构专用」是多家机构共用席位名，席位 金额≠机构持仓（#621/#626 语义）；源墙远早于 2014（#626 探针 2013-01-04 已有 754 行），按 #621 2014 锚回补不承诺更早；同键 「机构专用」多行适配器确定性收敛（#482 先例，#626 下沉共用）； #626 回补 2014-01-02 起 2,343,110 行/5,787 标的，存量 2026-09-22+ 窗口已按新收敛规则 force 重拉收敛（F1b）；源端 buy/net 双侧 null 对称（席位单边披露），对拍零差异",
+        "measured_at": "2026-11-03",
+        "knowledge_axis": "provider_anchor"
+      },
+      "rows": 312,
+      "fields": [
+        "source_ticker",
+        "trade_date",
+        "knowledge_date",
+        "exalter",
+        "side",
+        "buy",
+        "buy_rate",
+        "sell",
+        "sell_rate",
+        "net_buy",
+        "reason",
+        "instrument_id",
+        "source"
+      ],
+      "business_values": [
+        {
+          "source_ticker": "000002.SZ",
+          "trade_date": "2026-09-30",
+          "knowledge_date": "2026-10-01",
+          "exalter": "国泰海通证券股份有限公司湛江万豪世家证券营业部",
+          "side": "1",
+          "buy": 205041.0,
+          "buy_rate": 0.0,
+          "sell": 101142299.0,
+          "sell_rate": 1.96,
+          "net_buy": -100937258.0,
+          "reason": "日振幅值达到15%的前5只证券",
+          "instrument_id": 1000002,
+          "source": "tushare"
+        },
+        {
+          "source_ticker": "000002.SZ",
+          "trade_date": "2026-09-30",
+          "knowledge_date": "2026-10-01",
+          "exalter": "国盛证券股份有限公司宁波桑田路证券营业部",
+          "side": "1",
+          "buy": 3237992.0,
+          "buy_rate": 0.06,
+          "sell": 109002706.0,
+          "sell_rate": 2.11,
+          "net_buy": -105764714.0,
+          "reason": "日振幅值达到15%的前5只证券",
+          "instrument_id": 1000002,
+          "source": "tushare"
+        },
+        {
+          "source_ticker": "000002.SZ",
+          "trade_date": "2026-09-30",
+          "knowledge_date": "2026-10-01",
+          "exalter": "深股通专用",
+          "side": "1",
+          "buy": 212786509.98,
+          "buy_rate": 4.13,
+          "sell": 121614253.73,
+          "sell_rate": 2.36,
+          "net_buy": 91172256.25,
+          "reason": "日振幅值达到15%的前5只证券",
+          "instrument_id": 1000002,
+          "source": "tushare"
+        }
+      ],
+      "empty": false,
+      "status": "read"
+    },
+    "hk_hold": {
+      "measured_at": "2026-11-06T04:48:22.176194+00:00",
+      "purpose": "个股资金/披露事实展示,不推导整体持仓",
+      "read_semantics": "latest_available",
+      "coverage": {
+        "dataset": "hk_hold",
+        "domain": "capital",
+        "status": "partial",
+        "measured_start": "2016-06-29",
+        "measured_end": "2026-09-30",
+        "gaps": [
+          "历史可得性受限：源墙 2016-06-29（探针 2016-06-28 空），2014-11-17 沪港通上线至源墙间不可得=源端限制；2024-08-19 后非季末无北向披露 是制度性缺席（见 disclosure_segments），不计缺口；日频段另有源端 真空日 ~55 个交易日（逐日 SUCCESS/0 落账，含 2024-06-30 单日空洞 实证）"
+        ],
+        "notes": "#621「北向空源」修正：源非空，链路问题；#626 定根因=季度末帧 同股多北向持有者行撞存储主键（dq unique 整日拒绝），适配器确定性 收敛后季度末北向可入库；#626 回补 2016-06-29 起 4,224,382 行/4,227 标的（日频段+季度末段），平日 0 行=南向过滤+制度性缺席，对拍与 矩阵见 event-disclosure-verification.md",
+        "measured_at": "2026-11-03",
+        "knowledge_axis": "provider_anchor"
+      },
+      "rows": 1829,
+      "fields": [
+        "source_ticker",
+        "trade_date",
+        "knowledge_date",
+        "vol",
+        "ratio",
+        "exchange",
+        "instrument_id",
+        "source"
+      ],
+      "business_values": [
+        {
+          "source_ticker": "000001.SZ",
+          "trade_date": "2026-03-31",
+          "knowledge_date": "2026-11-01",
+          "vol": 570772048.0,
+          "ratio": 2.94,
+          "exchange": "SZ",
+          "instrument_id": 1000001,
+          "source": "tushare"
+        },
+        {
+          "source_ticker": "000001.SZ",
+          "trade_date": "2026-06-30",
+          "knowledge_date": "2026-11-01",
+          "vol": 736878410.0,
+          "ratio": 3.79,
+          "exchange": "SZ",
+          "instrument_id": 1000001,
+          "source": "tushare"
+        },
+        {
+          "source_ticker": "000001.SZ",
+          "trade_date": "2026-09-30",
+          "knowledge_date": "2026-11-01",
+          "vol": 1209130304.0,
+          "ratio": 6.23,
+          "exchange": "SZ",
+          "instrument_id": 1000001,
+          "source": "tushare"
+        }
+      ],
+      "empty": false,
+      "status": "read"
+    },
+    "top10_holders": {
+      "measured_at": "2026-11-06T04:48:22.184466+00:00",
+      "purpose": "个股资金/披露事实展示,不推导整体持仓",
+      "read_semantics": "latest_available",
+      "coverage": {
+        "dataset": "top10_holders",
+        "domain": "capital",
+        "status": "ready",
+        "measured_start": "2014-01-02",
+        "measured_end": "2026-10-31",
+        "gaps": [],
+        "notes": "#627 新通路（Tushare doc 61）：公告日驱动市场级 ann_date 单请求 日更+按标的报告期区间回填；主键 (标的, 报告期, 持有人名, 公告日)， kd=公告日，修订=新公告日版本行。跨期名单跌出≠清仓；hold_amount 股、 hold_ratio 占总股本 %、hold_change 0=不变 null=新进；送转使股数跳变 而比例持平，环比前须按公司行为调整。对拍与矩阵见 holdings-disclosure-verification.md",
+        "measured_at": "2026-11-03",
+        "knowledge_axis": "provider_anchor"
+      },
+      "rows": 553,
+      "fields": [
+        "source_ticker",
+        "report_date",
+        "knowledge_date",
+        "holder_name",
+        "hold_amount",
+        "hold_ratio",
+        "hold_float_ratio",
+        "hold_change",
+        "holder_type",
+        "instrument_id",
+        "source"
+      ],
+      "business_values": [
+        {
+          "source_ticker": "000001.SZ",
+          "report_date": "2026-09-30",
+          "knowledge_date": "2026-10-24",
+          "holder_name": "瑞众人寿保险有限责任公司-万能产品",
+          "hold_amount": 69798010.0,
+          "hold_ratio": 0.3597,
+          "hold_float_ratio": 0.3597,
+          "hold_change": -311900.0,
+          "holder_type": "保险投资组合",
+          "instrument_id": 1000001,
+          "source": "tushare"
+        },
+        {
+          "source_ticker": "000001.SZ",
+          "report_date": "2026-09-30",
+          "knowledge_date": "2026-10-24",
+          "holder_name": "瑞众人寿保险有限责任公司-自有资金",
+          "hold_amount": 86882648.0,
+          "hold_ratio": 0.4477,
+          "hold_float_ratio": 0.4477,
+          "hold_change": -451500.0,
+          "holder_type": "保险公司",
+          "instrument_id": 1000001,
+          "source": "tushare"
+        },
+        {
+          "source_ticker": "000001.SZ",
+          "report_date": "2026-09-30",
+          "knowledge_date": "2026-10-24",
+          "holder_name": "香港中央结算有限公司",
+          "hold_amount": 1209130304.0,
+          "hold_ratio": 6.2307,
+          "hold_float_ratio": 6.2308,
+          "hold_change": 472251894.0,
+          "holder_type": "一般企业",
+          "instrument_id": 1000001,
+          "source": "tushare"
+        }
+      ],
+      "empty": false,
+      "status": "read"
+    },
+    "top10_floatholders": {
+      "measured_at": "2026-11-06T04:48:22.205592+00:00",
+      "purpose": "个股资金/披露事实展示,不推导整体持仓",
+      "read_semantics": "latest_available",
+      "coverage": {
+        "dataset": "top10_floatholders",
+        "domain": "capital",
+        "status": "ready",
+        "measured_start": "2014-01-08",
+        "measured_end": "2026-10-31",
+        "gaps": [],
+        "notes": "#627 新通路（Tushare doc 62）：字段同 top10_holders，名单口径= 流通股东榜——两榜同名行值可一致（2026-04-30 000002.SZ 实测），语义 不同各存一行不互推；不推导整体持仓。对拍与矩阵见 holdings-disclosure-verification.md",
+        "measured_at": "2026-11-03",
+        "knowledge_axis": "provider_anchor"
+      },
+      "rows": 510,
+      "fields": [
+        "source_ticker",
+        "report_date",
+        "knowledge_date",
+        "holder_name",
+        "hold_amount",
+        "hold_ratio",
+        "hold_float_ratio",
+        "hold_change",
+        "holder_type",
+        "instrument_id",
+        "source"
+      ],
+      "business_values": [
+        {
+          "source_ticker": "000001.SZ",
+          "report_date": "2026-09-30",
+          "knowledge_date": "2026-10-24",
+          "holder_name": "瑞众人寿保险有限责任公司-万能产品",
+          "hold_amount": 69798010.0,
+          "hold_ratio": 0.3597,
+          "hold_float_ratio": 0.3597,
+          "hold_change": -311900.0,
+          "holder_type": "保险投资组合",
+          "instrument_id": 1000001,
+          "source": "tushare"
+        },
+        {
+          "source_ticker": "000001.SZ",
+          "report_date": "2026-09-30",
+          "knowledge_date": "2026-10-24",
+          "holder_name": "瑞众人寿保险有限责任公司-自有资金",
+          "hold_amount": 86882648.0,
+          "hold_ratio": 0.4477,
+          "hold_float_ratio": 0.4477,
+          "hold_change": -451500.0,
+          "holder_type": "保险公司",
+          "instrument_id": 1000001,
+          "source": "tushare"
+        },
+        {
+          "source_ticker": "000001.SZ",
+          "report_date": "2026-09-30",
+          "knowledge_date": "2026-10-24",
+          "holder_name": "香港中央结算有限公司",
+          "hold_amount": 1209130304.0,
+          "hold_ratio": 6.2307,
+          "hold_float_ratio": 6.2308,
+          "hold_change": 472251894.0,
+          "holder_type": "一般企业",
+          "instrument_id": 1000001,
+          "source": "tushare"
+        }
+      ],
+      "empty": false,
+      "status": "read"
+    },
+    "cyq_perf": {
+      "measured_at": "2026-11-06T04:48:22.227608+00:00",
+      "purpose": "成本分布/胜率源指标,非真实投资者完整持仓",
+      "read_semantics": "latest_available",
+      "coverage": {
+        "dataset": "cyq_perf",
+        "domain": "capital",
+        "status": "partial",
+        "measured_start": "2018-01-02",
+        "measured_end": "2026-10-29",
+        "gaps": [
+          "官方数据起点 2018-01-02，2014~2017 源侧不可得"
+        ],
+        "notes": "15000 积分档特色数据",
+        "measured_at": "2026-11-03",
+        "knowledge_axis": "derived_t1"
+      },
+      "rows": 7514,
+      "fields": [
+        "source_ticker",
+        "trade_date",
+        "knowledge_date",
+        "cost_5pct",
+        "cost_15pct",
+        "cost_50pct",
+        "cost_85pct",
+        "cost_95pct",
+        "his_high",
+        "his_low",
+        "weight_avg",
+        "winner_rate",
+        "instrument_id",
+        "source"
+      ],
+      "business_values": [
+        {
+          "source_ticker": "920306.BJ",
+          "trade_date": "2026-11-05",
+          "knowledge_date": "2026-11-06",
+          "cost_5pct": 7.2,
+          "cost_15pct": 7.3,
+          "cost_50pct": 7.4,
+          "cost_85pct": 7.6,
+          "cost_95pct": 8.2,
+          "his_high": 12.7,
+          "his_low": 7.0,
+          "weight_avg": 7.54,
+          "winner_rate": 65.57,
+          "instrument_id": 1005929,
+          "source": "tushare"
+        },
+        {
+          "source_ticker": "001381.SZ",
+          "trade_date": "2026-11-04",
+          "knowledge_date": "2026-11-05",
+          "cost_5pct": 64.8,
+          "cost_15pct": 67.5,
+          "cost_50pct": 72.0,
+          "cost_85pct": 77.4,
+          "cost_95pct": 80.1,
+          "his_high": 149.4,
+          "his_low": 55.8,
+          "weight_avg": 72.5,
+          "winner_rate": 12.52,
+          "instrument_id": 1005930,
+          "source": "tushare"
+        },
+        {
+          "source_ticker": "001381.SZ",
+          "trade_date": "2026-11-05",
+          "knowledge_date": "2026-11-06",
+          "cost_5pct": 58.2,
+          "cost_15pct": 59.4,
+          "cost_50pct": 61.2,
+          "cost_85pct": 63.3,
+          "cost_95pct": 64.5,
+          "his_high": 83.4,
+          "his_low": 56.7,
+          "weight_avg": 61.31,
+          "winner_rate": 0.38,
+          "instrument_id": 1005930,
+          "source": "tushare"
+        }
+      ],
+      "empty": false,
+      "status": "read"
+    },
+    "hsgt_top10": {
+      "measured_at": "2026-11-06T04:48:22.243076+00:00",
+      "purpose": "互联互通活跃榜披露",
+      "read_semantics": "latest_available",
+      "coverage": {
+        "dataset": "hsgt_top10",
+        "domain": "capital",
+        "status": "ready",
+        "measured_start": "2014-11-17",
+        "measured_end": "2026-10-30",
+        "gaps": [],
+        "notes": "#626 回补 2014-11-17 起 50,730 行/633 标的；源端历年共 130 个 交易日无披露（每年 5-16 天，逐日 SUCCESS/0 落账）非链路缺口；制度 分段见 disclosure_segments，对拍与矩阵见 event-disclosure-verification.md",
+        "measured_at": "2026-11-03",
+        "knowledge_axis": "provider_anchor"
+      },
+      "rows": 80,
+      "fields": [
+        "source_ticker",
+        "trade_date",
+        "knowledge_date",
+        "close",
+        "pct_change",
+        "rank",
+        "market_type",
+        "amount",
+        "net_amount",
+        "buy",
+        "sell",
+        "instrument_id",
+        "source"
+      ],
+      "business_values": [
+        {
+          "source_ticker": "002475.SZ",
+          "trade_date": "2026-11-05",
+          "knowledge_date": "2026-11-06",
+          "close": 50.86,
+          "pct_change": 1.35,
+          "rank": 8,
+          "market_type": "3",
+          "amount": 1617190496.0,
+          "net_amount": null,
+          "buy": null,
+          "sell": null,
+          "instrument_id": 1001807,
+          "source": "tushare"
+        },
+        {
+          "source_ticker": "300604.SZ",
+          "trade_date": "2026-11-05",
+          "knowledge_date": "2026-11-06",
+          "close": 187.22,
+          "pct_change": 2.22,
+          "rank": 9,
+          "market_type": "3",
+          "amount": 1244268288.0,
+          "net_amount": null,
+          "buy": null,
+          "sell": null,
+          "instrument_id": 1003143,
+          "source": "tushare"
+        },
+        {
+          "source_ticker": "300394.SZ",
+          "trade_date": "2026-11-05",
+          "knowledge_date": "2026-11-06",
+          "close": 129.5,
+          "pct_change": -6.5,
+          "rank": 10,
+          "market_type": "3",
+          "amount": 1136701231.0,
+          "net_amount": null,
+          "buy": null,
+          "sell": null,
+          "instrument_id": 1002791,
+          "source": "tushare"
+        }
+      ],
+      "empty": false,
+      "status": "read"
+    },
+    "margin_trading": {
+      "measured_at": "2026-11-06T04:48:22.245362+00:00",
+      "purpose": "融资融券余额与买入额展示",
+      "read_semantics": "latest_available",
+      "coverage": {
+        "dataset": "margin_trading",
+        "domain": "capital",
+        "status": "partial",
+        "measured_start": "2013-01-04",
+        "measured_end": "2026-10-30",
+        "gaps": [
+          "2026-10-30 深市部分行（2,017/4,486，沪市先到）——源侧 T+3（周五数据下周一上午更新）节奏，晚发布近窗重取自动收敛"
+        ],
+        "notes": "2013-01-04 起 3355/3355 交易日全覆盖、684 万行（#625 回补+通路修复）；列名语义修正 margin_buy_amount（原误标 volume，#390 破坏窗口）；月末披露含 null 余额为真实形态（not_null 收敛到业务键）；对拍 3/3 逐字段一致",
+        "measured_at": "2026-11-03",
+        "knowledge_axis": "derived_t1"
+      },
+      "rows": 20,
+      "fields": [
+        "instrument_id",
+        "trade_date",
+        "knowledge_date",
+        "effective_from",
+        "effective_to",
+        "margin_buy_balance",
+        "short_sell_balance",
+        "margin_buy_amount",
+        "short_sell_volume"
+      ],
+      "business_values": [
+        {
+          "instrument_id": 1000001,
+          "trade_date": "2026-10-12",
+          "knowledge_date": "2026-10-13",
+          "effective_from": "2026-10-13",
+          "effective_to": null,
+          "margin_buy_balance": 4414864840.0,
+          "short_sell_balance": 185076374.0,
+          "margin_buy_amount": 100500133.0,
+          "short_sell_volume": 86300.0
+        },
+        {
+          "instrument_id": 1000001,
+          "trade_date": "2026-10-09",
+          "knowledge_date": "2026-10-12",
+          "effective_from": "2026-10-12",
+          "effective_to": null,
+          "margin_buy_balance": 4509201305.0,
+          "short_sell_balance": 182152345.0,
+          "margin_buy_amount": 142547564.0,
+          "short_sell_volume": 31800.0
+        },
+        {
+          "instrument_id": 1000001,
+          "trade_date": "2026-10-08",
+          "knowledge_date": "2026-10-09",
+          "effective_from": "2026-10-09",
+          "effective_to": null,
+          "margin_buy_balance": 4443240036.0,
+          "short_sell_balance": 186810032.0,
+          "margin_buy_amount": 108387205.0,
+          "short_sell_volume": 161900.0
+        }
+      ],
+      "empty": false,
+      "status": "read"
+    },
+    "valuation_metrics": {
+      "measured_at": "2026-11-06T04:48:22.250585+00:00",
+      "purpose": "个股估值画像",
+      "read_semantics": "latest_available",
+      "coverage": {
+        "dataset": "valuation_metrics",
+        "domain": "capital",
+        "status": "ready",
+        "measured_start": "2014-01-02",
+        "measured_end": "2026-10-29",
+        "gaps": [],
+        "notes": "2014-01-02 起 1,229 万行",
+        "measured_at": "2026-11-03",
+        "knowledge_axis": "derived_t1"
+      },
+      "rows": 3108,
+      "fields": [
+        "instrument_id",
+        "trade_date",
+        "knowledge_date",
+        "effective_from",
+        "effective_to",
+        "pe_ratio",
+        "pb_ratio",
+        "ps_ratio",
+        "dividend_yield",
+        "market_cap"
+      ],
+      "business_values": [
+        {
+          "instrument_id": 1000001,
+          "trade_date": "2014-01-06",
+          "knowledge_date": "2014-01-07",
+          "effective_from": "2014-01-07",
+          "effective_to": null,
+          "pe_ratio": 7.1376,
+          "pb_ratio": 1.0079,
+          "ps_ratio": 2.4067,
+          "dividend_yield": 0.9105,
+          "market_cap": 9566319.8961
+        },
+        {
+          "instrument_id": 1000001,
+          "trade_date": "2014-01-03",
+          "knowledge_date": "2014-01-04",
+          "effective_from": "2014-01-04",
+          "effective_to": null,
+          "pe_ratio": 7.2966,
+          "pb_ratio": 1.0304,
+          "ps_ratio": 2.4603,
+          "dividend_yield": 0.8906,
+          "market_cap": 9779451.2733
+        },
+        {
+          "instrument_id": 1000001,
+          "trade_date": "2014-01-02",
+          "knowledge_date": "2014-01-03",
+          "effective_from": "2014-01-03",
+          "effective_to": null,
+          "pe_ratio": 7.4801,
+          "pb_ratio": 1.0563,
+          "ps_ratio": 2.5222,
+          "dividend_yield": 0.8688,
+          "market_cap": 10025372.0933
+        }
+      ],
+      "empty": false,
+      "status": "read"
+    },
+    "pledge_ratio": {
+      "measured_at": "2026-11-06T04:48:22.728672+00:00",
+      "purpose": "质押比例风险提示",
+      "read_semantics": "latest_available",
+      "coverage": {
+        "dataset": "pledge_ratio",
+        "domain": "capital",
+        "status": "partial",
+        "measured_start": "2014-03-07",
+        "measured_end": "2026-09-18",
+        "gaps": [
+          "周更数据末端 2026-09-18，停更 6 周；10-27/10-29 摄取 failed 待 P1"
+        ],
+        "notes": "2014-03-07 起 163 万行（#503 线回补后）",
+        "measured_at": "2026-11-03",
+        "knowledge_axis": "provider_anchor"
+      },
+      "rows": 604,
+      "fields": [
+        "instrument_id",
+        "report_date",
+        "knowledge_date",
+        "effective_from",
+        "effective_to",
+        "pledge_ratio",
+        "pledge_shares",
+        "total_shares"
+      ],
+      "business_values": [
+        {
+          "instrument_id": 1000001,
+          "report_date": "2014-03-21",
+          "knowledge_date": "2014-03-21",
+          "effective_from": "2014-03-21",
+          "effective_to": null,
+          "pledge_ratio": 0.65,
+          "pledge_shares": null,
+          "total_shares": 952074.57
+        },
+        {
+          "instrument_id": 1000001,
+          "report_date": "2014-03-14",
+          "knowledge_date": "2014-03-14",
+          "effective_from": "2014-03-14",
+          "effective_to": null,
+          "pledge_ratio": 0.65,
+          "pledge_shares": null,
+          "total_shares": 952074.57
+        },
+        {
+          "instrument_id": 1000001,
+          "report_date": "2014-03-07",
+          "knowledge_date": "2014-03-07",
+          "effective_from": "2014-03-07",
+          "effective_to": null,
+          "pledge_ratio": 0.05,
+          "pledge_shares": null,
+          "total_shares": 952074.57
+        }
+      ],
+      "empty": false,
+      "status": "read"
+    },
+    "index_valuation": {
+      "measured_at": "2026-11-06T04:48:22.814014+00:00",
+      "purpose": "指数PE/PB及元计市值展示",
+      "read_semantics": "latest_available",
+      "coverage": {
+        "dataset": "index_valuation",
+        "domain": "capital",
+        "status": "partial",
+        "measured_start": "2026-10-26",
+        "measured_end": "2026-10-29",
+        "gaps": [
+          "仅 2026-10-26 起 60 行×15 指数，历史未回补"
+        ],
+        "notes": "",
+        "measured_at": "2026-11-03",
+        "knowledge_axis": "observation"
+      },
+      "rows": 21,
+      "fields": [
+        "source_ticker",
+        "trade_date",
+        "total_mv",
+        "float_mv",
+        "pe",
+        "pe_ttm",
+        "pb",
+        "turnover_rate",
+        "knowledge_date",
+        "instrument_id",
+        "source"
+      ],
+      "business_values": [
+        {
+          "source_ticker": "000300.SH",
+          "trade_date": "2026-11-03",
+          "total_mv": 64571580482806.18,
+          "float_mv": 48411097247881.78,
+          "pe": 13.9382,
+          "pe_ttm": 13.5553,
+          "pb": 1.3353,
+          "turnover_rate": 0.7405,
+          "knowledge_date": "2026-11-03",
+          "instrument_id": 3000162,
+          "source": "tushare"
+        },
+        {
+          "source_ticker": "000300.SH",
+          "trade_date": "2026-11-04",
+          "total_mv": 65044483563698.49,
+          "float_mv": 48945706888127.09,
+          "pe": 14.0403,
+          "pe_ttm": 13.6546,
+          "pb": 1.3451,
+          "turnover_rate": 0.7333,
+          "knowledge_date": "2026-11-04",
+          "instrument_id": 3000162,
+          "source": "tushare"
+        },
+        {
+          "source_ticker": "000300.SH",
+          "trade_date": "2026-11-05",
+          "total_mv": 64759976169328.24,
+          "float_mv": 48820651235122.55,
+          "pe": 13.9789,
+          "pe_ttm": 13.5949,
+          "pb": 1.3393,
+          "turnover_rate": 0.7203,
+          "knowledge_date": "2026-11-05",
+          "instrument_id": 3000162,
+          "source": "tushare"
+        }
+      ],
+      "empty": false,
+      "status": "read"
+    },
+    "balance_sheet": {
+      "measured_at": "2026-11-06T04:48:22.816541+00:00",
+      "purpose": "截至公告日可见的个股财务披露",
+      "read_semantics": "announcement_cutoff_latest_storage",
+      "coverage": {
+        "dataset": "balance_sheet",
+        "domain": "fundamental",
+        "status": "ready",
+        "measured_start": "2011-12-31",
+        "measured_end": "2026-09-30",
+        "gaps": [],
+        "notes": "2011-12-31 起超目标，Q 报告期至 2026-09-30",
+        "measured_at": "2026-11-03",
+        "knowledge_axis": "provider_anchor"
+      },
+      "rows": 52,
+      "fields": [
+        "instrument_id",
+        "report_date",
+        "knowledge_date",
+        "effective_from",
+        "effective_to",
+        "total_assets",
+        "total_liabilities",
+        "net_assets",
+        "current_assets",
+        "current_liabilities"
+      ],
+      "business_values": [
+        {
+          "instrument_id": 1000001,
+          "report_date": "2014-06-30",
+          "knowledge_date": "2014-08-14",
+          "effective_from": "2014-08-14",
+          "effective_to": null,
+          "total_assets": 2136475000000.0,
+          "total_liabilities": 2015535000000.0,
+          "net_assets": 120940000000.0,
+          "current_assets": null,
+          "current_liabilities": null
+        },
+        {
+          "instrument_id": 1000001,
+          "report_date": "2014-03-31",
+          "knowledge_date": "2014-04-24",
+          "effective_from": "2014-04-24",
+          "effective_to": null,
+          "total_assets": 2097102000000.0,
+          "total_liabilities": 1979802000000.0,
+          "net_assets": 117300000000.0,
+          "current_assets": null,
+          "current_liabilities": null
+        },
+        {
+          "instrument_id": 1000001,
+          "report_date": "2013-12-31",
+          "knowledge_date": "2014-03-07",
+          "effective_from": "2014-03-07",
+          "effective_to": null,
+          "total_assets": 1891741000000.0,
+          "total_liabilities": 1779660000000.0,
+          "net_assets": 112081000000.0,
+          "current_assets": null,
+          "current_liabilities": null
+        }
+      ],
+      "empty": false,
+      "status": "read"
+    },
+    "income_statement": {
+      "measured_at": "2026-11-06T04:48:22.826390+00:00",
+      "purpose": "截至公告日可见的个股财务披露",
+      "read_semantics": "announcement_cutoff_latest_storage",
+      "coverage": {
+        "dataset": "income_statement",
+        "domain": "fundamental",
+        "status": "ready",
+        "measured_start": "2011-12-31",
+        "measured_end": "2026-09-30",
+        "gaps": [],
+        "notes": "2011-12-31 起超目标（同 balance_sheet 家族口径）；本地库对 schema.sql 有漂移守卫拦截记录（XDG 陈旧库，非本库）",
+        "measured_at": "2026-11-03",
+        "knowledge_axis": "provider_anchor"
+      },
+      "rows": 52,
+      "fields": [
+        "instrument_id",
+        "report_date",
+        "knowledge_date",
+        "effective_from",
+        "effective_to",
+        "revenue",
+        "operating_revenue",
+        "operating_profit",
+        "net_profit",
+        "eps"
+      ],
+      "business_values": [
+        {
+          "instrument_id": 1000001,
+          "report_date": "2014-06-30",
+          "knowledge_date": "2014-08-14",
+          "effective_from": "2014-08-14",
+          "effective_to": null,
+          "revenue": 34733000000.0,
+          "operating_revenue": 34733000000.0,
+          "operating_profit": 13345000000.0,
+          "net_profit": 10072000000.0,
+          "eps": 0.88
+        },
+        {
+          "instrument_id": 1000001,
+          "report_date": "2014-03-31",
+          "knowledge_date": "2014-04-24",
+          "effective_from": "2014-04-24",
+          "effective_to": null,
+          "revenue": 16100000000.0,
+          "operating_revenue": 16100000000.0,
+          "operating_profit": 6712000000.0,
+          "net_profit": 5054000000.0,
+          "eps": 0.53
+        },
+        {
+          "instrument_id": 1000001,
+          "report_date": "2013-12-31",
+          "knowledge_date": "2014-03-07",
+          "effective_from": "2014-03-07",
+          "effective_to": null,
+          "revenue": 52189000000.0,
+          "operating_revenue": 52189000000.0,
+          "operating_profit": 19955000000.0,
+          "net_profit": 15231000000.0,
+          "eps": 1.86
+        }
+      ],
+      "empty": false,
+      "status": "read"
+    },
+    "cash_flow": {
+      "measured_at": "2026-11-06T04:48:22.835350+00:00",
+      "purpose": "截至公告日可见的个股财务披露",
+      "read_semantics": "announcement_cutoff_latest_storage",
+      "coverage": {
+        "dataset": "cash_flow",
+        "domain": "fundamental",
+        "status": "ready",
+        "measured_start": "2011-12-31",
+        "measured_end": "2026-09-30",
+        "gaps": [],
+        "notes": "2011-12-31 起；12 分区代理 EOF 留档（#196）；10-29 摄取 failed 待 P1",
+        "measured_at": "2026-11-03",
+        "knowledge_axis": "provider_anchor"
+      },
+      "rows": 51,
+      "fields": [
+        "instrument_id",
+        "report_date",
+        "knowledge_date",
+        "effective_from",
+        "effective_to",
+        "operating_cash_flow",
+        "investing_cash_flow",
+        "financing_cash_flow",
+        "net_cash_flow"
+      ],
+      "business_values": [
+        {
+          "instrument_id": 1000001,
+          "report_date": "2014-06-30",
+          "knowledge_date": "2014-08-14",
+          "effective_from": "2014-08-14",
+          "effective_to": null,
+          "operating_cash_flow": 53424000000.0,
+          "investing_cash_flow": -15214000000.0,
+          "financing_cash_flow": null,
+          "net_cash_flow": null
+        },
+        {
+          "instrument_id": 1000001,
+          "report_date": "2014-03-31",
+          "knowledge_date": "2014-04-24",
+          "effective_from": "2014-04-24",
+          "effective_to": null,
+          "operating_cash_flow": 60097000000.0,
+          "investing_cash_flow": 8058000000.0,
+          "financing_cash_flow": null,
+          "net_cash_flow": null
+        },
+        {
+          "instrument_id": 1000001,
+          "report_date": "2013-12-31",
+          "knowledge_date": "2014-03-07",
+          "effective_from": "2014-03-07",
+          "effective_to": null,
+          "operating_cash_flow": 91674000000.0,
+          "investing_cash_flow": -87011000000.0,
+          "financing_cash_flow": null,
+          "net_cash_flow": null
+        }
+      ],
+      "empty": false,
+      "status": "read"
+    },
+    "dividend": {
+      "measured_at": "2026-11-06T04:48:22.839170+00:00",
+      "purpose": "截至公告日可见的个股财务披露",
+      "read_semantics": "announcement_cutoff_latest_storage",
+      "coverage": {
+        "dataset": "dividend",
+        "domain": "fundamental",
+        "status": "ready",
+        "measured_start": "2014-02-12",
+        "measured_end": "2026-10-28",
+        "gaps": [],
+        "notes": "ex_date 2014-02-12 起；当日无除权事件=正常空",
+        "measured_at": "2026-11-03",
+        "knowledge_axis": "provider_anchor"
+      },
+      "rows": 49,
+      "fields": [
+        "instrument_id",
+        "ex_dividend_date",
+        "knowledge_date",
+        "effective_from",
+        "effective_to",
+        "dividend_per_share",
+        "dividend_yield",
+        "div_proc"
+      ],
+      "business_values": [
+        {
+          "instrument_id": 1000001,
+          "ex_dividend_date": null,
+          "knowledge_date": "2016-08-12",
+          "effective_from": "2016-08-12",
+          "effective_to": null,
+          "dividend_per_share": null,
+          "dividend_yield": null,
+          "div_proc": "股东大会通过"
+        },
+        {
+          "instrument_id": 1000001,
+          "ex_dividend_date": null,
+          "knowledge_date": "2015-08-14",
+          "effective_from": "2015-08-14",
+          "effective_to": null,
+          "dividend_per_share": null,
+          "dividend_yield": null,
+          "div_proc": "股东大会通过"
+        },
+        {
+          "instrument_id": 1000001,
+          "ex_dividend_date": null,
+          "knowledge_date": "2014-08-14",
+          "effective_from": "2014-08-14",
+          "effective_to": null,
+          "dividend_per_share": null,
+          "dividend_yield": null,
+          "div_proc": "股东大会通过"
+        }
+      ],
+      "empty": false,
+      "status": "read"
+    },
+    "corporate_actions": {
+      "measured_at": "2026-11-06T04:48:22.844835+00:00",
+      "purpose": "回购和解禁事件核对,计划日不等于已实施",
+      "read_semantics": "latest_available",
+      "coverage": {
+        "dataset": "corporate_actions",
+        "domain": "capital",
+        "status": "partial",
+        "measured_start": "2007-05-23",
+        "measured_end": "2034-01-20",
+        "gaps": [
+          "rights（分配预案）经代理 50101 不可达（#517-#523 降级裁决）；repurchase/share_float 可达"
+        ],
+        "notes": "2007-05-23 起 9.3 万行；含未来日期=预案计划日，PIT 由 knowledge_date 守",
+        "measured_at": "2026-11-03",
+        "knowledge_axis": "provider_anchor"
+      },
+      "rows": 3,
+      "fields": [
+        "instrument_id",
+        "action_date",
+        "knowledge_date",
+        "effective_from",
+        "effective_to",
+        "action_type",
+        "description"
+      ],
+      "business_values": [
+        {
+          "instrument_id": 1000001,
+          "action_date": "2018-05-21",
+          "knowledge_date": "2015-05-20",
+          "effective_from": "2015-05-20",
+          "effective_to": null,
+          "action_type": "restricted_share_release",
+          "description": "share_type=公开增发一般股份;holder=中国平安保险(集团)股份有限公司—集团本级—自有资金;shares=252247983.0;ratio=1.4691"
+        },
+        {
+          "instrument_id": 1000001,
+          "action_date": "2017-01-09",
+          "knowledge_date": "2014-01-08",
+          "effective_from": "2014-01-08",
+          "effective_to": null,
+          "action_type": "restricted_share_release",
+          "description": "share_type=公开增发一般股份;holder=中国平安保险（集团）股份有限公司;shares=2286809264.0;ratio=13.3183"
+        },
+        {
+          "instrument_id": 1000001,
+          "action_date": "2016-05-23",
+          "knowledge_date": "2015-05-20",
+          "effective_from": "2015-05-20",
+          "effective_to": null,
+          "action_type": "restricted_share_release",
+          "description": "share_type=定增股份;holder=财通基金-光大银行-富春定增243号资产管理计划;shares=183234.0;ratio=0.0013"
+        }
+      ],
+      "empty": false,
+      "status": "read"
+    },
+    "fina_indicator": {
+      "measured_at": "2026-11-06T04:48:22.846213+00:00",
+      "purpose": "报告期财务指标研究",
+      "read_semantics": "latest_available",
+      "coverage": {
+        "dataset": "fina_indicator",
+        "domain": "fundamental",
+        "status": "ready",
+        "measured_start": "2012-03-31",
+        "measured_end": "2026-09-30",
+        "gaps": [],
+        "notes": "2012-03-31 起超目标；存量跨年错位 33,851 组已由 #620 修复（2026-10-27 --apply 分区修复，2026-11-03 复测 263,672 行/0 跨分区同键）；10-29 failed（无新报告期日失败语义待 P1；Q3 报告期数据完整）",
+        "measured_at": "2026-11-03",
+        "knowledge_axis": "provider_anchor"
+      },
+      "rows": 3,
+      "fields": [
+        "source_ticker",
+        "knowledge_date",
+        "report_date",
+        "eps",
+        "dt_eps",
+        "total_revenue_ps",
+        "revenue_ps",
+        "capital_rese_ps",
+        "surplus_rese_ps",
+        "undist_profit_ps",
+        "extra_item",
+        "profit_dedt",
+        "gross_margin",
+        "current_ratio",
+        "quick_ratio",
+        "cash_ratio",
+        "ar_turn",
+        "ca_turn",
+        "fa_turn",
+        "assets_turn",
+        "op_income",
+        "ebit",
+        "ebitda",
+        "fcff",
+        "fcfe",
+        "current_exint",
+        "noncurrent_exint",
+        "interestdebt",
+        "netdebt",
+        "tangible_asset",
+        "working_capital",
+        "networking_capital",
+        "invest_capital",
+        "retained_earnings",
+        "diluted2_eps",
+        "bps",
+        "ocfps",
+        "retainedps",
+        "cfps",
+        "ebit_ps",
+        "fcff_ps",
+        "fcfe_ps",
+        "netprofit_margin",
+        "grossprofit_margin",
+        "cogs_of_sales",
+        "expense_of_sales",
+        "profit_to_gr",
+        "saleexp_to_gr",
+        "adminexp_of_gr",
+        "finaexp_of_gr",
+        "impai_ttm",
+        "gc_of_gr",
+        "op_of_gr",
+        "ebit_of_gr",
+        "roe",
+        "roe_waa",
+        "roe_dt",
+        "roa",
+        "npta",
+        "roic",
+        "roe_yearly",
+        "roa2_yearly",
+        "debt_to_assets",
+        "assets_to_eqt",
+        "dp_assets_to_eqt",
+        "ca_to_assets",
+        "nca_to_assets",
+        "tbassets_to_totalassets",
+        "int_to_talcap",
+        "eqt_to_talcapital",
+        "currentdebt_to_debt",
+        "longdeb_to_debt",
+        "ocf_to_shortdebt",
+        "debt_to_eqt",
+        "eqt_to_debt",
+        "eqt_to_interestdebt",
+        "tangibleasset_to_debt",
+        "tangasset_to_intdebt",
+        "tangibleasset_to_netdebt",
+        "ocf_to_debt",
+        "turn_days",
+        "roa_yearly",
+        "roa_dp",
+        "fixed_assets",
+        "profit_to_op",
+        "q_saleexp_to_gr",
+        "q_gc_to_gr",
+        "q_roe",
+        "q_dt_roe",
+        "q_npta",
+        "q_ocf_to_sales",
+        "basic_eps_yoy",
+        "dt_eps_yoy",
+        "cfps_yoy",
+        "op_yoy",
+        "ebt_yoy",
+        "netprofit_yoy",
+        "dt_netprofit_yoy",
+        "ocf_yoy",
+        "roe_yoy",
+        "bps_yoy",
+        "assets_yoy",
+        "eqt_yoy",
+        "tr_yoy",
+        "or_yoy",
+        "q_sales_yoy",
+        "q_op_qoq",
+        "equity_yoy",
+        "instrument_id",
+        "source"
+      ],
+      "business_values": [
+        {
+          "source_ticker": "000001.SZ",
+          "knowledge_date": "2026-04-25",
+          "report_date": "2026-03-31",
+          "eps": 0.67,
+          "dt_eps": 0.67,
+          "total_revenue_ps": 1.8178,
+          "revenue_ps": 1.8178,
+          "capital_rese_ps": 4.1533,
+          "surplus_rese_ps": 0.5556,
+          "undist_profit_ps": 14.62,
+          "extra_item": 35000000.0,
+          "profit_dedt": 14488000000.0,
+          "gross_margin": null,
+          "current_ratio": null,
+          "quick_ratio": null,
+          "cash_ratio": null,
+          "ar_turn": null,
+          "ca_turn": null,
+          "fa_turn": null,
+          "assets_turn": 0.0059,
+          "op_income": 11617000000.0,
+          "ebit": null,
+          "ebitda": null,
+          "fcff": null,
+          "fcfe": null,
+          "current_exint": null,
+          "noncurrent_exint": null,
+          "interestdebt": null,
+          "netdebt": null,
+          "tangible_asset": null,
+          "working_capital": null,
+          "networking_capital": null,
+          "invest_capital": null,
+          "retained_earnings": 294495000000.0,
+          "diluted2_eps": 0.7484,
+          "bps": 23.9145,
+          "ocfps": 1.95,
+          "retainedps": 15.1755,
+          "cfps": -2.6896,
+          "ebit_ps": null,
+          "fcff_ps": null,
+          "fcfe_ps": null,
+          "netprofit_margin": 41.1685,
+          "grossprofit_margin": null,
+          "cogs_of_sales": null,
+          "expense_of_sales": null,
+          "profit_to_gr": 41.1685,
+          "saleexp_to_gr": null,
+          "adminexp_of_gr": 26.9637,
+          "finaexp_of_gr": null,
+          "impai_ttm": null,
+          "gc_of_gr": null,
+          "op_of_gr": 49.2927,
+          "ebit_of_gr": null,
+          "roe": 2.652,
+          "roe_waa": 0.24,
+          "roe_dt": 2.6456,
+          "roa": null,
+          "npta": 0.2429,
+          "roic": null,
+          "roe_yearly": 10.608,
+          "roa2_yearly": null,
+          "debt_to_assets": 90.983,
+          "assets_to_eqt": 11.0902,
+          "dp_assets_to_eqt": 10.9195,
+          "ca_to_assets": null,
+          "nca_to_assets": null,
+          "tbassets_to_totalassets": null,
+          "int_to_talcap": null,
+          "eqt_to_talcapital": null,
+          "currentdebt_to_debt": null,
+          "longdeb_to_debt": null,
+          "ocf_to_shortdebt": null,
+          "debt_to_eqt": 10.0901,
+          "eqt_to_debt": 0.0991,
+          "eqt_to_interestdebt": null,
+          "tangibleasset_to_debt": null,
+          "tangasset_to_intdebt": null,
+          "tangibleasset_to_netdebt": null,
+          "ocf_to_debt": 0.0069,
+          "turn_days": null,
+          "roa_yearly": 0.9716,
+          "roa_dp": 0.2429,
+          "fixed_assets": 11164000000.0,
+          "profit_to_op": 49.3211,
+          "q_saleexp_to_gr": null,
+          "q_gc_to_gr": null,
+          "q_roe": 2.652,
+          "q_dt_roe": 2.6456,
+          "q_npta": 0.2429,
+          "q_ocf_to_sales": 107.1576,
+          "basic_eps_yoy": 8.0645,
+          "dt_eps_yoy": 8.0645,
+          "cfps_yoy": -76.7857,
+          "op_yoy": 2.8326,
+          "ebt_yoy": 3.0563,
+          "netprofit_yoy": 3.0292,
+          "dt_netprofit_yoy": 3.2,
+          "ocf_yoy": -76.8009,
+          "roe_yoy": -4.1611,
+          "bps_yoy": 2.8,
+          "assets_yoy": 1.8257,
+          "eqt_yoy": -1.2883,
+          "tr_yoy": 4.6516,
+          "or_yoy": 4.6516,
+          "q_sales_yoy": 4.6516,
+          "q_op_qoq": 227.4148,
+          "equity_yoy": 7.5025,
+          "instrument_id": 1000001,
+          "source": "tushare"
+        },
+        {
+          "source_ticker": "000001.SZ",
+          "knowledge_date": "2026-08-15",
+          "report_date": "2026-06-30",
+          "eps": 1.24,
+          "dt_eps": 1.24,
+          "total_revenue_ps": 3.6389,
+          "revenue_ps": 3.6389,
+          "capital_rese_ps": 4.1445,
+          "surplus_rese_ps": 0.5555,
+          "undist_profit_ps": 14.8334,
+          "extra_item": 63000000.0,
+          "profit_dedt": 25633000000.0,
+          "gross_margin": null,
+          "current_ratio": null,
+          "quick_ratio": null,
+          "cash_ratio": null,
+          "ar_turn": null,
+          "ca_turn": null,
+          "fa_turn": null,
+          "assets_turn": 0.0118,
+          "op_income": 17942000000.0,
+          "ebit": null,
+          "ebitda": null,
+          "fcff": null,
+          "fcfe": null,
+          "current_exint": null,
+          "noncurrent_exint": null,
+          "interestdebt": null,
+          "netdebt": null,
+          "tangible_asset": null,
+          "working_capital": null,
+          "networking_capital": null,
+          "invest_capital": null,
+          "retained_earnings": 298638000000.0,
+          "diluted2_eps": 1.3241,
+          "bps": 24.1273,
+          "ocfps": 11.08,
+          "retainedps": 15.389,
+          "cfps": -2.7509,
+          "ebit_ps": null,
+          "fcff_ps": null,
+          "fcfe_ps": null,
+          "netprofit_margin": 36.3878,
+          "grossprofit_margin": null,
+          "cogs_of_sales": null,
+          "expense_of_sales": null,
+          "profit_to_gr": 36.3878,
+          "saleexp_to_gr": null,
+          "adminexp_of_gr": 27.0586,
+          "finaexp_of_gr": null,
+          "impai_ttm": null,
+          "gc_of_gr": null,
+          "op_of_gr": 43.6552,
+          "ebit_of_gr": null,
+          "roe": 4.6746,
+          "roe_waa": 5.22,
+          "roe_dt": 4.6631,
+          "roa": null,
+          "npta": 0.4299,
+          "roic": null,
+          "roe_yearly": 9.3492,
+          "roa2_yearly": null,
+          "debt_to_assets": 90.9067,
+          "assets_to_eqt": 10.9971,
+          "dp_assets_to_eqt": 10.8737,
+          "ca_to_assets": null,
+          "nca_to_assets": null,
+          "tbassets_to_totalassets": null,
+          "int_to_talcap": null,
+          "eqt_to_talcapital": null,
+          "currentdebt_to_debt": null,
+          "longdeb_to_debt": null,
+          "ocf_to_shortdebt": null,
+          "debt_to_eqt": 9.9971,
+          "eqt_to_debt": 0.1,
+          "eqt_to_interestdebt": null,
+          "tangibleasset_to_debt": null,
+          "tangasset_to_intdebt": null,
+          "tangibleasset_to_netdebt": null,
+          "ocf_to_debt": 0.0392,
+          "turn_days": null,
+          "roa_yearly": 0.8598,
+          "roa_dp": 0.4299,
+          "fixed_assets": 11016000000.0,
+          "profit_to_op": 43.6085,
+          "q_saleexp_to_gr": null,
+          "q_gc_to_gr": null,
+          "q_roe": 2.0458,
+          "q_dt_roe": 2.0407,
+          "q_npta": 0.1852,
+          "q_ocf_to_sales": 501.4431,
+          "basic_eps_yoy": 5.0847,
+          "dt_eps_yoy": 5.0847,
+          "cfps_yoy": 23.1,
+          "op_yoy": 2.4118,
+          "ebt_yoy": 2.8832,
+          "netprofit_yoy": 3.3213,
+          "dt_netprofit_yoy": 2.8,
+          "ocf_yoy": 23.0877,
+          "roe_yoy": -3.8692,
+          "bps_yoy": 3.8,
+          "assets_yoy": 1.7383,
+          "eqt_yoy": -0.5388,
+          "tr_yoy": 1.7756,
+          "or_yoy": 1.7756,
+          "q_sales_yoy": -0.9418,
+          "q_op_qoq": -22.7155,
+          "equity_yoy": 7.4799,
+          "instrument_id": 1000001,
+          "source": "tushare"
+        },
+        {
+          "source_ticker": "000001.SZ",
+          "knowledge_date": "2026-10-24",
+          "report_date": "2026-09-30",
+          "eps": 1.94,
+          "dt_eps": 1.94,
+          "total_revenue_ps": 5.3128,
+          "revenue_ps": 5.3128,
+          "capital_rese_ps": 4.1453,
+          "surplus_rese_ps": 0.5556,
+          "undist_profit_ps": 15.2774,
+          "extra_item": 62000000.0,
+          "profit_dedt": 39124000000.0,
+          "gross_margin": null,
+          "current_ratio": null,
+          "quick_ratio": null,
+          "cash_ratio": null,
+          "ar_turn": null,
+          "ca_turn": null,
+          "fa_turn": 9.5194,
+          "assets_turn": 0.0174,
+          "op_income": 29489000000.0,
+          "ebit": null,
+          "ebitda": null,
+          "fcff": null,
+          "fcfe": null,
+          "current_exint": null,
+          "noncurrent_exint": null,
+          "interestdebt": null,
+          "netdebt": null,
+          "tangible_asset": 494286000000.0,
+          "working_capital": null,
+          "networking_capital": null,
+          "invest_capital": null,
+          "retained_earnings": 307255000000.0,
+          "diluted2_eps": 2.0193,
+          "bps": 24.56,
+          "ocfps": 14.59,
+          "retainedps": 15.833,
+          "cfps": 0.3026,
+          "ebit_ps": null,
+          "fcff_ps": null,
+          "fcfe_ps": null,
+          "netprofit_margin": 38.0078,
+          "grossprofit_margin": null,
+          "cogs_of_sales": null,
+          "expense_of_sales": 27.0097,
+          "profit_to_gr": 38.0078,
+          "saleexp_to_gr": null,
+          "adminexp_of_gr": 27.0097,
+          "finaexp_of_gr": null,
+          "impai_ttm": 0.064,
+          "gc_of_gr": 54.5616,
+          "op_of_gr": 45.4384,
+          "ebit_of_gr": null,
+          "roe": 7.074,
+          "roe_waa": 8.07,
+          "roe_dt": 7.0628,
+          "roa": null,
+          "npta": 0.6598,
+          "roic": null,
+          "roe_yearly": 9.432,
+          "roa2_yearly": null,
+          "debt_to_assets": 90.6474,
+          "assets_to_eqt": 10.6922,
+          "dp_assets_to_eqt": 10.7214,
+          "ca_to_assets": null,
+          "nca_to_assets": null,
+          "tbassets_to_totalassets": 8.304,
+          "int_to_talcap": null,
+          "eqt_to_talcapital": null,
+          "currentdebt_to_debt": null,
+          "longdeb_to_debt": null,
+          "ocf_to_shortdebt": null,
+          "debt_to_eqt": 9.6922,
+          "eqt_to_debt": 0.1032,
+          "eqt_to_interestdebt": null,
+          "tangibleasset_to_debt": 0.0916,
+          "tangasset_to_intdebt": null,
+          "tangibleasset_to_netdebt": null,
+          "ocf_to_debt": 0.0525,
+          "turn_days": null,
+          "roa_yearly": 0.8797,
+          "roa_dp": 0.6598,
+          "fixed_assets": 11051000000.0,
+          "profit_to_op": 45.3628,
+          "q_saleexp_to_gr": null,
+          "q_gc_to_gr": 50.685,
+          "q_roe": 2.4232,
+          "q_dt_roe": 2.4234,
+          "q_npta": 0.2252,
+          "q_ocf_to_sales": 209.9837,
+          "basic_eps_yoy": 3.7433,
+          "dt_eps_yoy": 3.7433,
+          "cfps_yoy": 294.3243,
+          "op_yoy": 1.627,
+          "ebt_yoy": 1.8489,
+          "netprofit_yoy": 2.2092,
+          "dt_netprofit_yoy": 2.2,
+          "ocf_yoy": 294.5516,
+          "roe_yoy": -4.909,
+          "bps_yoy": 5.6344,
+          "assets_yoy": 0.4485,
+          "eqt_yoy": 1.0009,
+          "tr_yoy": 2.4159,
+          "or_yoy": 2.4159,
+          "q_sales_yoy": 3.8,
+          "q_op_qoq": 19.1979,
+          "equity_yoy": 7.4858,
+          "instrument_id": 1000001,
+          "source": "tushare"
+        }
+      ],
+      "empty": false,
+      "status": "read"
+    },
+    "earnings_forecast": {
+      "measured_at": "2026-11-06T04:48:22.856141+00:00",
+      "purpose": "预告/快报与正式财报分开展示",
+      "read_semantics": "latest_available",
+      "coverage": {
+        "dataset": "earnings_forecast",
+        "domain": "fundamental",
+        "status": "partial",
+        "measured_start": "2014-01-01",
+        "measured_end": "2026-10-30",
+        "gaps": [
+          "2024-01-31 单日不可得——forecast_vip 该高峰日经代理确定性 PaginationCorruptionError（直连探针实证，几何重试不收敛）；按 #640 语义季块保持可重试，修复通道可见"
+        ],
+        "notes": "#629 回补 2014-01-01 起 120,461 行；公告日驱动事件集，平日 0 行=正常无公告；上下界万元/单边可空/update_flag 独立版本口径见 supporting-sources-verification.md",
+        "measured_at": "2026-11-03",
+        "knowledge_axis": "observation"
+      },
+      "rows": 1,
+      "fields": [
+        "source_ticker",
+        "ann_date",
+        "report_date",
+        "forecast_type",
+        "p_change_min",
+        "p_change_max",
+        "net_profit_min",
+        "net_profit_max",
+        "first_ann_date",
+        "update_flag",
+        "knowledge_date"
+      ],
+      "business_values": [
+        {
+          "source_ticker": "000001.SZ",
+          "ann_date": "2016-01-21",
+          "report_date": "2015-12-31",
+          "forecast_type": "略增",
+          "p_change_min": 5.0,
+          "p_change_max": 15.0,
+          "net_profit_min": 2079206.0,
+          "net_profit_max": 2277225.0,
+          "first_ann_date": "2016-01-21",
+          "update_flag": "1",
+          "knowledge_date": "2026-11-02"
+        }
+      ],
+      "empty": false,
+      "status": "read"
+    },
+    "earnings_express": {
+      "measured_at": "2026-11-06T04:48:22.860462+00:00",
+      "purpose": "预告/快报与正式财报分开展示",
+      "read_semantics": "latest_available",
+      "coverage": {
+        "dataset": "earnings_express",
+        "domain": "fundamental",
+        "status": "ready",
+        "measured_start": "2014-01-04",
+        "measured_end": "2026-10-30",
+        "gaps": [],
+        "notes": "#629 回补 2014-01-04 起 24,412 行全覆盖（回补期 11 个瞬态失败日已全部重试愈合）；快报为已审数口径浓缩披露，与正式三表非同一颗粒度",
+        "measured_at": "2026-11-03",
+        "knowledge_axis": "observation"
+      },
+      "rows": 4,
+      "fields": [
+        "source_ticker",
+        "ann_date",
+        "report_date",
+        "revenue",
+        "operate_profit",
+        "total_profit",
+        "n_income",
+        "total_assets",
+        "audit_status",
+        "knowledge_date"
+      ],
+      "business_values": [
+        {
+          "source_ticker": "000001.SZ",
+          "ann_date": "2020-01-14",
+          "report_date": "2019-12-31",
+          "revenue": 137958000000.0,
+          "operate_profit": 36289000000.0,
+          "total_profit": 36240000000.0,
+          "n_income": 28195000000.0,
+          "total_assets": 3939070000000.0,
+          "audit_status": null,
+          "knowledge_date": "2026-11-02"
+        },
+        {
+          "source_ticker": "000001.SZ",
+          "ann_date": "2022-01-14",
+          "report_date": "2021-12-31",
+          "revenue": 169383000000.0,
+          "operate_profit": 45985000000.0,
+          "total_profit": 45879000000.0,
+          "n_income": 36336000000.0,
+          "total_assets": 4921380000000.0,
+          "audit_status": null,
+          "knowledge_date": "2026-11-02"
+        },
+        {
+          "source_ticker": "000001.SZ",
+          "ann_date": "2023-01-17",
+          "report_date": "2022-12-31",
+          "revenue": 179895000000.0,
+          "operate_profit": 57475000000.0,
+          "total_profit": 57253000000.0,
+          "n_income": 45516000000.0,
+          "total_assets": 5321514000000.0,
+          "audit_status": null,
+          "knowledge_date": "2026-11-02"
+        }
+      ],
+      "empty": false,
+      "status": "read"
+    },
+    "fund_portfolio": {
+      "measured_at": "2026-11-06T04:48:22.864416+00:00",
+      "purpose": "公募已披露股票持仓与原文类型,非全资产",
+      "read_semantics": "disclosure_observations",
+      "coverage": {
+        "dataset": "fund_portfolio",
+        "domain": "fundamental",
+        "status": "partial",
+        "measured_start": "2014-01-20",
+        "measured_end": "2026-10-26",
+        "gaps": [
+          "交易所上市基金子集边界（#627 量化定界非缺损）：单披露日 9,031 只公募中 ~97-100% 为 .OF 场外基金经写入层 FK 过滤不入库；扩域至公募全覆盖= 基金宇宙注册决策另票"
+        ],
+        "notes": "#627 量化定界：本地=交易所上市基金子集（ETF/LOF ~1,240 只≈单日 披露 9,031 只公募的 13.7%），非公募全覆盖；市场级 ann_date 响应 97-100% 为 .OF 场外基金，写入层 FK 过滤拒绝并 WARN 留痕。披露范围 分别标记：Q1/Q3 季报=前十大重仓、Q2/Q4 半年报/年报=全部持仓明细， 未披露≠零持仓；修订=同报告期多公告日版本行（kd=ann_date 分版本）。 P0 探针 period=2026 返回 0 的根因=参数形状（需完整季度末 YYYYMMDD）， #627 修正为 period=20141231 实测 ok。对拍与矩阵见 holdings-disclosure-verification.md",
+        "measured_at": "2026-11-03",
+        "knowledge_axis": "provider_anchor"
+      },
+      "rows": 426,
+      "fields": [
+        "source_ticker",
+        "report_date",
+        "knowledge_date",
+        "holding_symbol",
+        "market_value",
+        "holding_shares",
+        "stk_mkv_ratio",
+        "stk_float_ratio",
+        "instrument_id",
+        "source",
+        "report_type",
+        "holding_scope",
+        "holdings_sha256",
+        "revision_of",
+        "report_evidence"
+      ],
+      "business_values": [
+        {
+          "source_ticker": "000001.OF",
+          "report_date": "2026-06-30",
+          "knowledge_date": "2026-08-31",
+          "holding_symbol": "688818.SH",
+          "market_value": 120430.38,
+          "holding_shares": 1717.0,
+          "stk_mkv_ratio": 0.0,
+          "stk_float_ratio": 0.0,
+          "instrument_id": null,
+          "source": "tushare",
+          "report_type": "semiannual",
+          "holding_scope": "disclosed_subset",
+          "holdings_sha256": "74713831b6713c37ac6178e72dd742a06da892f86998059256eeb75555350d9a",
+          "revision_of": null,
+          "report_evidence": "[{\"source_ticker\":\"000001.OF\",\"report_date\":\"2026-06-30\",\"announcement_date\":\"2026-08-31\",\"report_type\":\"semiannual\",\"document_form\":\"body\",\"document_stock_count\":77,\"document_sha256\":\"ad5a32fbbc8d0317160d96c2713a2594b6b177b34eb29298497d661bef78c11f\",\"source_url\":\"https://fund.chinaamc.com/upload/resources/file/2026/08/31/bd9ce00969744c94a67cb7f2ededc846.pdf\",\"title\":\"华夏成长证券投资基金2026年中期报告\",\"revision_of\":null,\"holdings_sha256\":\"74713831b6713c37ac6178e72dd742a06da892f86998059256eeb75555350d9a\",\"evidence_note\":\"2026-11-06: original title, fund code, period and publication date checked; all 67 provider stock codes, share counts and CNY values match original; original stock table has 77 rows; 10 original rows absent from this announcement-date group, so this is a matched subset; ratios not mapped to NAV weights; disclosed stocks only, not full assets.\"}]"
+        },
+        {
+          "source_ticker": "000001.OF",
+          "report_date": "2026-06-30",
+          "knowledge_date": "2026-08-31",
+          "holding_symbol": "688820.SH",
+          "market_value": 338302.59,
+          "holding_shares": 2391.0,
+          "stk_mkv_ratio": 0.01,
+          "stk_float_ratio": 0.0,
+          "instrument_id": null,
+          "source": "tushare",
+          "report_type": "semiannual",
+          "holding_scope": "disclosed_subset",
+          "holdings_sha256": "74713831b6713c37ac6178e72dd742a06da892f86998059256eeb75555350d9a",
+          "revision_of": null,
+          "report_evidence": "[{\"source_ticker\":\"000001.OF\",\"report_date\":\"2026-06-30\",\"announcement_date\":\"2026-08-31\",\"report_type\":\"semiannual\",\"document_form\":\"body\",\"document_stock_count\":77,\"document_sha256\":\"ad5a32fbbc8d0317160d96c2713a2594b6b177b34eb29298497d661bef78c11f\",\"source_url\":\"https://fund.chinaamc.com/upload/resources/file/2026/08/31/bd9ce00969744c94a67cb7f2ededc846.pdf\",\"title\":\"华夏成长证券投资基金2026年中期报告\",\"revision_of\":null,\"holdings_sha256\":\"74713831b6713c37ac6178e72dd742a06da892f86998059256eeb75555350d9a\",\"evidence_note\":\"2026-11-06: original title, fund code, period and publication date checked; all 67 provider stock codes, share counts and CNY values match original; original stock table has 77 rows; 10 original rows absent from this announcement-date group, so this is a matched subset; ratios not mapped to NAV weights; disclosed stocks only, not full assets.\"}]"
+        },
+        {
+          "source_ticker": "000001.OF",
+          "report_date": "2026-06-30",
+          "knowledge_date": "2026-08-31",
+          "holding_symbol": "688981.SH",
+          "market_value": 122165455.74,
+          "holding_shares": 769207.0,
+          "stk_mkv_ratio": 3.88,
+          "stk_float_ratio": 0.04,
+          "instrument_id": null,
+          "source": "tushare",
+          "report_type": "semiannual",
+          "holding_scope": "disclosed_subset",
+          "holdings_sha256": "74713831b6713c37ac6178e72dd742a06da892f86998059256eeb75555350d9a",
+          "revision_of": null,
+          "report_evidence": "[{\"source_ticker\":\"000001.OF\",\"report_date\":\"2026-06-30\",\"announcement_date\":\"2026-08-31\",\"report_type\":\"semiannual\",\"document_form\":\"body\",\"document_stock_count\":77,\"document_sha256\":\"ad5a32fbbc8d0317160d96c2713a2594b6b177b34eb29298497d661bef78c11f\",\"source_url\":\"https://fund.chinaamc.com/upload/resources/file/2026/08/31/bd9ce00969744c94a67cb7f2ededc846.pdf\",\"title\":\"华夏成长证券投资基金2026年中期报告\",\"revision_of\":null,\"holdings_sha256\":\"74713831b6713c37ac6178e72dd742a06da892f86998059256eeb75555350d9a\",\"evidence_note\":\"2026-11-06: original title, fund code, period and publication date checked; all 67 provider stock codes, share counts and CNY values match original; original stock table has 77 rows; 10 original rows absent from this announcement-date group, so this is a matched subset; ratios not mapped to NAV weights; disclosed stocks only, not full assets.\"}]"
+        }
+      ],
+      "empty": false,
+      "status": "read"
+    },
+    "macro_indicators": {
+      "measured_at": "2026-11-06T04:48:22.892520+00:00",
+      "purpose": "按频率/单位展示最新宏观背景值,非历史可知性",
+      "read_semantics": "latest_available",
+      "coverage": {
+        "dataset": "macro_indicators",
+        "domain": "macro",
+        "status": "partial",
+        "measured_start": "2015-01-01",
+        "measured_end": "2026-09-01",
+        "gaps": [
+          "月度数据末端 2026-09-01，10 月未更新；近期日链 failed 待 P1",
+          "884 行×7 指标，FRED 系列覆盖完整性属 P5a"
+        ],
+        "notes": "tushare 全系+fred 探针可达；alfred:vintages=observations+realtime 参数",
+        "measured_at": "2026-11-03",
+        "knowledge_axis": "observation"
+      },
+      "rows": 7770,
+      "fields": [
+        "indicator_id",
+        "date",
+        "value",
+        "knowledge_date",
+        "code",
+        "name",
+        "category",
+        "frequency",
+        "unit"
+      ],
+      "business_values": [
+        {
+          "indicator_id": 60,
+          "date": "2026-08-01",
+          "value": 49.8,
+          "knowledge_date": "2026-11-06",
+          "code": "CN_PMI_MFG",
+          "name": "制造业PMI",
+          "category": "survey",
+          "frequency": "monthly",
+          "unit": "指数"
+        },
+        {
+          "indicator_id": 60,
+          "date": "2026-09-01",
+          "value": 50.1,
+          "knowledge_date": "2026-11-06",
+          "code": "CN_PMI_MFG",
+          "name": "制造业PMI",
+          "category": "survey",
+          "frequency": "monthly",
+          "unit": "指数"
+        },
+        {
+          "indicator_id": 60,
+          "date": "2026-10-01",
+          "value": 49.3,
+          "knowledge_date": "2026-11-06",
+          "code": "CN_PMI_MFG",
+          "name": "制造业PMI",
+          "category": "survey",
+          "frequency": "monthly",
+          "unit": "指数"
+        }
+      ],
+      "empty": false,
+      "status": "read"
+    },
+    "fx_daily": {
+      "measured_at": "2026-11-06T04:48:22.935126+00:00",
+      "purpose": "六汇率对GMT日线买价参考",
+      "read_semantics": "latest_available",
+      "coverage": {
+        "dataset": "fx_daily",
+        "domain": "macro",
+        "status": "ready",
+        "measured_start": "2014-01-01",
+        "measured_end": "2026-10-31",
+        "gaps": [],
+        "notes": "#629 回补 2014-01-01 起六对全覆盖；根因=GMT 日收盘 vs 北京当日单日请求恒空，7 日回看窗口修复（11-02 夜链首跑 36 行落地实证）；USDCNH 源端 2012-02-18 起（六对中最早起点最晚）；GMT 日 K/bid OHLC 口径见 supporting-sources-verification.md",
+        "measured_at": "2026-11-03",
+        "knowledge_axis": "derived_t1"
+      },
+      "rows": 180,
+      "fields": [
+        "instrument_id",
+        "trade_date",
+        "trade_date_utc",
+        "open",
+        "high",
+        "low",
+        "close"
+      ],
+      "business_values": [
+        {
+          "instrument_id": 4000006,
+          "trade_date": "2026-11-02",
+          "trade_date_utc": "2026-11-02T00:00:00",
+          "open": 1.39854,
+          "high": 1.40114,
+          "low": 1.39493,
+          "close": 1.40089
+        },
+        {
+          "instrument_id": 4000006,
+          "trade_date": "2026-11-03",
+          "trade_date_utc": "2026-11-03T00:00:00",
+          "open": 1.40089,
+          "high": 1.40133,
+          "low": 1.39286,
+          "close": 1.39764
+        },
+        {
+          "instrument_id": 4000006,
+          "trade_date": "2026-11-04",
+          "trade_date_utc": "2026-11-04T00:00:00",
+          "open": 1.39764,
+          "high": 1.39765,
+          "low": 1.39628,
+          "close": 1.39699
+        }
+      ],
+      "empty": false,
+      "status": "read"
+    },
+    "commodity_daily": {
+      "measured_at": "2026-11-06T04:48:22.937646+00:00",
+      "purpose": "八条商品参考腿;FRED单值与金属/连续期货分开",
+      "read_semantics": "latest_available",
+      "coverage": {
+        "dataset": "commodity_daily",
+        "domain": "macro",
+        "status": "partial",
+        "measured_start": "2014-01-01",
+        "measured_end": "2026-10-31",
+        "gaps": [
+          "FRED 油/VIX 三品种腿「复合取数器内、运行时腿未配置」——R2 证据守卫下 tushare 车道不带 FRED 直连且无 fred 车道（#629 实测定界，接线需逐腿证据归属设计）",
+          "新浪 GC/SI 2016-11-02 起（端点历史深度），CL 2014-01-01 起"
+        ],
+        "notes": "#629 回补：金属腿（FXCM XAU/XAG bid）2014 全覆盖、新浪连续参考三品种、FRED 腿未接线（同 FRED 48 系列口径）；三腿 trade_date_utc 统一 ms 无时区合同精度；窗口修复后 11-02 夜链 31 行/日落地（金属+新浪）；矩阵见 supporting-sources-verification.md",
+        "measured_at": "2026-11-03",
+        "knowledge_axis": "derived_t1"
+      },
+      "rows": 216,
+      "fields": [
+        "instrument_id",
+        "trade_date",
+        "trade_date_utc",
+        "open",
+        "high",
+        "low",
+        "close"
+      ],
+      "business_values": [
+        {
+          "instrument_id": 5100001,
+          "trade_date": "2026-11-02",
+          "trade_date_utc": "2026-11-02T05:00:00",
+          "open": null,
+          "high": null,
+          "low": null,
+          "close": 21.15
+        },
+        {
+          "instrument_id": 5100001,
+          "trade_date": "2026-11-03",
+          "trade_date_utc": "2026-11-03T05:00:00",
+          "open": null,
+          "high": null,
+          "low": null,
+          "close": 20.83
+        },
+        {
+          "instrument_id": 5100001,
+          "trade_date": "2026-11-04",
+          "trade_date_utc": "2026-11-04T05:00:00",
+          "open": null,
+          "high": null,
+          "low": null,
+          "close": 16.61
+        }
+      ],
+      "empty": false,
+      "status": "read"
+    },
+    "index_weight": {
+      "measured_at": "2026-11-06T04:48:22.939551+00:00",
+      "purpose": "最新观察指数成分权重,非历史生效证明",
+      "read_semantics": "latest_available",
+      "coverage": {
+        "dataset": "index_weight",
+        "domain": "market",
+        "status": "ready",
+        "measured_start": "2014-01-30",
+        "measured_end": "2026-09-30",
+        "gaps": [],
+        "notes": "2014-01-30 起 191 万行；月度数据末端 2026-09-30（10 月未结束，正常）",
+        "measured_at": "2026-11-03",
+        "knowledge_axis": "observation"
+      },
+      "rows": 300,
+      "fields": [
+        "index_id",
+        "trade_date",
+        "instrument_id",
+        "weight"
+      ],
+      "business_values": [
+        {
+          "index_id": "000300.SH",
+          "trade_date": "2026-10-30",
+          "instrument_id": 1005270,
+          "weight": 0.158
+        },
+        {
+          "index_id": "000300.SH",
+          "trade_date": "2026-10-30",
+          "instrument_id": 1005334,
+          "weight": 0.026
+        },
+        {
+          "index_id": "000300.SH",
+          "trade_date": "2026-10-30",
+          "instrument_id": 1005419,
+          "weight": 0.042
+        }
+      ],
+      "empty": false,
+      "status": "read"
+    },
+    "industry_classification": {
+      "measured_at": "2026-11-06T04:48:22.983920+00:00",
+      "purpose": "申万一级行业分类标签",
+      "read_semantics": "latest_available",
+      "coverage": {
+        "dataset": "industry_classification",
+        "domain": "metadata",
+        "status": "partial",
+        "measured_start": null,
+        "measured_end": null,
+        "gaps": [
+          "csrc_industrial 2002 权限不足（SW 申万线可用）"
+        ],
+        "notes": "申万 L1 28 分类（探针核实）+映射 7,919 行",
+        "measured_at": "2026-11-03",
+        "knowledge_axis": null
+      },
+      "rows": 31,
+      "fields": [
+        "industry_id",
+        "industry_name",
+        "industry_level",
+        "parent_id",
+        "is_active",
+        "source"
+      ],
+      "business_values": [
+        {
+          "industry_id": "801960.SI",
+          "industry_name": "石油石化",
+          "industry_level": "L1",
+          "parent_id": null,
+          "is_active": 1,
+          "source": "sw"
+        },
+        {
+          "industry_id": "801970.SI",
+          "industry_name": "环保",
+          "industry_level": "L1",
+          "parent_id": null,
+          "is_active": 1,
+          "source": "sw"
+        },
+        {
+          "industry_id": "801980.SI",
+          "industry_name": "美容护理",
+          "industry_level": "L1",
+          "parent_id": null,
+          "is_active": 1,
+          "source": "sw"
+        }
+      ],
+      "empty": false,
+      "status": "read"
+    },
+    "industry_mapping": {
+      "measured_at": "2026-11-06T04:48:22.984464+00:00",
+      "purpose": "行业截面研究分组",
+      "read_semantics": "latest_available",
+      "coverage": {
+        "dataset": "industry_mapping",
+        "domain": "metadata",
+        "status": "ready",
+        "measured_start": "1984-05-09",
+        "measured_end": "2026-09-24",
+        "gaps": [],
+        "notes": "as-of 语义=#452；周刷 cron 已建（#612）",
+        "measured_at": "2026-11-03",
+        "knowledge_axis": null
+      },
+      "rows": 1,
+      "fields": [
+        "instrument_id",
+        "sector_id"
+      ],
+      "business_values": [
+        {
+          "instrument_id": 1000001,
+          "sector_id": "801780.SI"
+        }
+      ],
+      "empty": false,
+      "status": "read"
+    },
+    "namechange": {
+      "measured_at": "2026-11-06T04:48:22.985113+00:00",
+      "purpose": "历史名称与当前名分开识别",
+      "read_semantics": "observed_history_at_cutoff",
+      "coverage": {
+        "dataset": "namechange",
+        "domain": "metadata",
+        "status": "ready",
+        "measured_start": "2013-01-10",
+        "measured_end": "2026-10-29",
+        "gaps": [],
+        "notes": "2013-01-10 起 3,538 行；窗口拼接=#619",
+        "measured_at": "2026-11-03",
+        "knowledge_axis": null
+      },
+      "rows": 1605,
+      "business_values": {
+        "1000004": "全新好",
+        "1000005": "神州高铁",
+        "1000007": "*ST美丽"
+      },
+      "empty": false,
+      "status": "read"
+    },
+    "st_history": {
+      "measured_at": "2026-11-06T04:48:22.998861+00:00",
+      "purpose": "ST证据优先,未覆盖标的未知",
+      "read_semantics": "observed_history_at_cutoff",
+      "coverage": {
+        "dataset": "st_history",
+        "domain": "market",
+        "status": "ready",
+        "measured_start": "2013-01-14",
+        "measured_end": "2026-10-20",
+        "gaps": [],
+        "notes": "1,848 行区间语义",
+        "measured_at": "2026-11-03",
+        "knowledge_axis": null
+      },
+      "rows": 561,
+      "business_values": {
+        "1000004": {
+          "is_st": false,
+          "st_type": null,
+          "effective_from": "2024-07-02"
+        },
+        "1000007": {
+          "is_st": true,
+          "st_type": "*ST",
+          "effective_from": "2026-04-30"
+        },
+        "1000011": {
+          "is_st": true,
+          "st_type": "*ST",
+          "effective_from": "2026-04-30"
+        }
+      },
+      "empty": false,
+      "status": "read"
+    },
+    "futures_basic": {
+      "measured_at": "2026-11-06T04:48:23.013660+00:00",
+      "purpose": "真实到期合约乘数、挂牌/到期日",
+      "read_semantics": "latest_available",
+      "coverage": {
+        "dataset": "futures_basic",
+        "domain": "market",
+        "status": "ready",
+        "measured_start": "1995-04-17",
+        "measured_end": "2026-10-28",
+        "gaps": [],
+        "notes": "1995 起 34,057 行",
+        "measured_at": "2026-11-03",
+        "knowledge_axis": "observation"
+      },
+      "rows": 1980,
+      "fields": [
+        "source",
+        "source_ticker",
+        "symbol",
+        "exchange",
+        "fut_code",
+        "multiplier",
+        "list_date",
+        "delist_date",
+        "knowledge_date"
+      ],
+      "business_values": [
+        {
+          "source": "tushare",
+          "source_ticker": "RBL.SHF",
+          "symbol": "RBL",
+          "exchange": "SHFE",
+          "fut_code": "RB",
+          "multiplier": null,
+          "list_date": null,
+          "delist_date": null,
+          "knowledge_date": "2026-11-03"
+        },
+        {
+          "source": "tushare",
+          "source_ticker": "RBL.SHF",
+          "symbol": "RBL",
+          "exchange": "SHFE",
+          "fut_code": "RB",
+          "multiplier": null,
+          "list_date": null,
+          "delist_date": null,
+          "knowledge_date": "2026-11-04"
+        },
+        {
+          "source": "tushare",
+          "source_ticker": "RBL.SHF",
+          "symbol": "RBL",
+          "exchange": "SHFE",
+          "fut_code": "RB",
+          "multiplier": null,
+          "list_date": null,
+          "delist_date": null,
+          "knowledge_date": "2026-11-05"
+        }
+      ],
+      "empty": false,
+      "status": "read"
+    },
+    "futures_daily": {
+      "measured_at": "2026-11-06T04:48:23.017209+00:00",
+      "purpose": "真实RB合约价格、结算价及持仓量",
+      "read_semantics": "latest_available",
+      "coverage": {
+        "dataset": "futures_daily",
+        "domain": "market",
+        "status": "partial",
+        "measured_start": "2026-10-26",
+        "measured_end": "2026-10-29",
+        "gaps": [
+          "仅 2026-10-26 起 4 日，历史未回补"
+        ],
+        "notes": "fut_daily 源可达",
+        "measured_at": "2026-11-03",
+        "knowledge_axis": "observation"
+      },
+      "rows": 4,
+      "fields": [
+        "source_ticker",
+        "trade_date",
+        "open",
+        "high",
+        "low",
+        "close",
+        "settle",
+        "pre_settle",
+        "volume",
+        "amount",
+        "open_interest",
+        "knowledge_date"
+      ],
+      "business_values": [
+        {
+          "source_ticker": "RB2701.SHF",
+          "trade_date": "2026-11-03",
+          "open": 3005.0,
+          "high": 3019.0,
+          "low": 2990.0,
+          "close": 2991.0,
+          "settle": 3002.0,
+          "pre_settle": 3019.0,
+          "volume": 702802.0,
+          "amount": 2110196.582,
+          "open_interest": 1878506.0,
+          "knowledge_date": "2026-11-03"
+        },
+        {
+          "source_ticker": "RB2701.SHF",
+          "trade_date": "2026-11-04",
+          "open": 2991.0,
+          "high": 3013.0,
+          "low": 2988.0,
+          "close": 3008.0,
+          "settle": 2999.0,
+          "pre_settle": 3002.0,
+          "volume": 565993.0,
+          "amount": 1697834.694,
+          "open_interest": 1855150.0,
+          "knowledge_date": "2026-11-04"
+        },
+        {
+          "source_ticker": "RB2701.SHF",
+          "trade_date": "2026-11-05",
+          "open": 3008.0,
+          "high": 3047.0,
+          "low": 3008.0,
+          "close": 3042.0,
+          "settle": 3030.0,
+          "pre_settle": 2999.0,
+          "volume": 872723.0,
+          "amount": 2645195.475,
+          "open_interest": 1731454.0,
+          "knowledge_date": "2026-11-05"
+        }
+      ],
+      "empty": false,
+      "status": "read"
+    },
+    "etf_reference": {
+      "measured_at": "2026-11-06T04:48:23.023791+00:00",
+      "purpose": "ETF候选对比与跟踪限制",
+      "read_semantics": "latest_available",
+      "coverage": {
+        "dataset": "etf_reference",
+        "domain": "metadata",
+        "status": "partial",
+        "measured_start": "2013-01-04",
+        "measured_end": "2026-11-03",
+        "gaps": [
+          "config 声明源已登记（#658 批次2，2026-11-03 config 快照 10 行）；夜链 tushare 恒 SOURCE_UNSUPPORTED 属设计，SLA 168h 随时间转 stale——声明变更时手动重摄取 config 源（一次性命令，无自动节奏）"
+        ],
+        "notes": "config 源声明式配置，#408 两阶段映射",
+        "measured_at": "2026-11-03",
+        "knowledge_axis": null
+      },
+      "rows": 1868,
+      "business_values": [
+        {
+          "instrument_id": 2001768,
+          "ticker": "158000",
+          "name": "鹏华中证港股通内地金融ETF",
+          "exchange": "SZSE",
+          "is_active": true,
+          "fields": {
+            "list_status": {
+              "value": null,
+              "unit": null,
+              "observed_on": null,
+              "published_at": null,
+              "source": null,
+              "source_snapshot_id": null,
+              "eligibility": null,
+              "missing_reason": "no_observation",
+              "eligibility_reasons": [],
+              "sample_count": null,
+              "effective_from": null,
+              "effective_to": null
+            },
+            "etf_type": {
+              "value": null,
+              "unit": null,
+              "observed_on": null,
+              "published_at": null,
+              "source": null,
+              "source_snapshot_id": null,
+              "eligibility": null,
+              "missing_reason": "no_observation",
+              "eligibility_reasons": [],
+              "sample_count": null,
+              "effective_from": null,
+              "effective_to": null
+            },
+            "tracking_index": {
+              "value": null,
+              "unit": null,
+              "observed_on": null,
+              "published_at": null,
+              "source": null,
+              "source_snapshot_id": null,
+              "eligibility": null,
+              "missing_reason": "no_observation",
+              "eligibility_reasons": [],
+              "sample_count": null,
+              "effective_from": null,
+              "effective_to": null
+            },
+            "asset_class": {
+              "value": null,
+              "unit": null,
+              "observed_on": null,
+              "published_at": null,
+              "source": null,
+              "source_snapshot_id": null,
+              "eligibility": null,
+              "missing_reason": "no_observation",
+              "eligibility_reasons": [],
+              "sample_count": null,
+              "effective_from": null,
+              "effective_to": null
+            },
+            "fund_currency": {
+              "value": null,
+              "unit": null,
+              "observed_on": null,
+              "published_at": null,
+              "source": null,
+              "source_snapshot_id": null,
+              "eligibility": null,
+              "missing_reason": "no_observation",
+              "eligibility_reasons": [],
+              "sample_count": null,
+              "effective_from": null,
+              "effective_to": null
+            },
+            "trading_currency": {
+              "value": null,
+              "unit": null,
+              "observed_on": null,
+              "published_at": null,
+              "source": null,
+              "source_snapshot_id": null,
+              "eligibility": null,
+              "missing_reason": "no_observation",
+              "eligibility_reasons": [],
+              "sample_count": null,
+              "effective_from": null,
+              "effective_to": null
+            },
+            "aum": {
+              "value": null,
+              "unit": null,
+              "observed_on": null,
+              "published_at": null,
+              "source": null,
+              "source_snapshot_id": null,
+              "eligibility": null,
+              "missing_reason": "no_observation",
+              "eligibility_reasons": [],
+              "sample_count": null,
+              "effective_from": null,
+              "effective_to": null
+            },
+            "management_fee": {
+              "value": null,
+              "unit": null,
+              "observed_on": null,
+              "published_at": null,
+              "source": null,
+              "source_snapshot_id": null,
+              "eligibility": null,
+              "missing_reason": "no_observation",
+              "eligibility_reasons": [],
+              "sample_count": null,
+              "effective_from": null,
+              "effective_to": null
+            },
+            "custody_fee": {
+              "value": null,
+              "unit": null,
+              "observed_on": null,
+              "published_at": null,
+              "source": null,
+              "source_snapshot_id": null,
+              "eligibility": null,
+              "missing_reason": "no_observation",
+              "eligibility_reasons": [],
+              "sample_count": null,
+              "effective_from": null,
+              "effective_to": null
+            },
+            "trading_restriction": {
+              "value": null,
+              "unit": null,
+              "observed_on": null,
+              "published_at": null,
+              "source": null,
+              "source_snapshot_id": null,
+              "eligibility": null,
+              "missing_reason": "no_observation",
+              "eligibility_reasons": [],
+              "sample_count": null,
+              "effective_from": null,
+              "effective_to": null
+            },
+            "distribution": {
+              "value": null,
+              "unit": null,
+              "observed_on": null,
+              "published_at": null,
+              "source": null,
+              "source_snapshot_id": null,
+              "eligibility": null,
+              "missing_reason": "no_observation",
+              "eligibility_reasons": [],
+              "sample_count": null,
+              "effective_from": null,
+              "effective_to": null
+            },
+            "price_close": {
+              "value": null,
+              "unit": null,
+              "observed_on": null,
+              "published_at": null,
+              "source": null,
+              "source_snapshot_id": null,
+              "eligibility": null,
+              "missing_reason": "no_observation",
+              "eligibility_reasons": [],
+              "sample_count": null,
+              "effective_from": null,
+              "effective_to": null
+            },
+            "lot_size": {
+              "value": null,
+              "unit": null,
+              "observed_on": null,
+              "published_at": null,
+              "source": null,
+              "source_snapshot_id": null,
+              "eligibility": null,
+              "missing_reason": "no_observation",
+              "eligibility_reasons": [],
+              "sample_count": null,
+              "effective_from": null,
+              "effective_to": null
+            },
+            "tick_size": {
+              "value": null,
+              "unit": null,
+              "observed_on": null,
+              "published_at": null,
+              "source": null,
+              "source_snapshot_id": null,
+              "eligibility": null,
+              "missing_reason": "no_observation",
+              "eligibility_reasons": [],
+              "sample_count": null,
+              "effective_from": null,
+              "effective_to": null
+            },
+            "settlement_cycle": {
+              "value": null,
+              "unit": null,
+              "observed_on": null,
+              "published_at": null,
+              "source": null,
+              "source_snapshot_id": null,
+              "eligibility": null,
+              "missing_reason": "no_observation",
+              "eligibility_reasons": [],
+              "sample_count": null,
+              "effective_from": null,
+              "effective_to": null
+            },
+            "price_limit_pct": {
+              "value": null,
+              "unit": null,
+              "observed_on": null,
+              "published_at": null,
+              "source": null,
+              "source_snapshot_id": null,
+              "eligibility": null,
+              "missing_reason": "no_observation",
+              "eligibility_reasons": [],
+              "sample_count": null,
+              "effective_from": null,
+              "effective_to": null
+            },
+            "commission_rate": {
+              "value": null,
+              "unit": null,
+              "observed_on": null,
+              "published_at": null,
+              "source": null,
+              "source_snapshot_id": null,
+              "eligibility": null,
+              "missing_reason": "no_observation",
+              "eligibility_reasons": [],
+              "sample_count": null,
+              "effective_from": null,
+              "effective_to": null
+            },
+            "min_commission": {
+              "value": null,
+              "unit": null,
+              "observed_on": null,
+              "published_at": null,
+              "source": null,
+              "source_snapshot_id": null,
+              "eligibility": null,
+              "missing_reason": "no_observation",
+              "eligibility_reasons": [],
+              "sample_count": null,
+              "effective_from": null,
+              "effective_to": null
+            },
+            "stamp_duty_rate": {
+              "value": null,
+              "unit": null,
+              "observed_on": null,
+              "published_at": null,
+              "source": null,
+              "source_snapshot_id": null,
+              "eligibility": null,
+              "missing_reason": "no_observation",
+              "eligibility_reasons": [],
+              "sample_count": null,
+              "effective_from": null,
+              "effective_to": null
+            },
+            "transfer_fee_rate": {
+              "value": null,
+              "unit": null,
+              "observed_on": null,
+              "published_at": null,
+              "source": null,
+              "source_snapshot_id": null,
+              "eligibility": null,
+              "missing_reason": "no_observation",
+              "eligibility_reasons": [],
+              "sample_count": null,
+              "effective_from": null,
+              "effective_to": null
+            },
+            "nav": {
+              "value": null,
+              "unit": null,
+              "observed_on": null,
+              "published_at": null,
+              "source": null,
+              "source_snapshot_id": null,
+              "eligibility": null,
+              "missing_reason": "no_observation",
+              "eligibility_reasons": [],
+              "sample_count": null,
+              "effective_from": null,
+              "effective_to": null
+            },
+            "iopv": {
+              "value": null,
+              "unit": null,
+              "observed_on": null,
+              "published_at": null,
+              "source": null,
+              "source_snapshot_id": null,
+              "eligibility": null,
+              "missing_reason": "no_observation",
+              "eligibility_reasons": [],
+              "sample_count": null,
+              "effective_from": null,
+              "effective_to": null
+            },
+            "daily_amount": {
+              "value": null,
+              "unit": null,
+              "observed_on": null,
+              "published_at": null,
+              "source": null,
+              "source_snapshot_id": null,
+              "eligibility": null,
+              "missing_reason": "incomplete_20_session_window",
+              "eligibility_reasons": [],
+              "sample_count": 0,
+              "effective_from": null,
+              "effective_to": null
+            }
+          },
+          "tracking": {
+            "status": "unavailable",
+            "reason": "tracking_index_unavailable",
+            "tracking_deviation_pct": null,
+            "tracking_error_pct": null,
+            "sample_count": 0,
+            "start": null,
+            "end": null,
+            "currency": null,
+            "benchmark_id": null,
+            "source_snapshot_id": "snapshot:tushare:etf_daily:sha256:ffb6093f0dc5999c3848883b6f9ae7bdc54a7555d4ee00af3ff3de40e7d6b1b1",
+            "calendar_snapshot_ids": [
+              "snapshot:tushare:calendar:sha256:bb54d0bd41fa9833166828cf3d894aa2dda2b919743af1eb68e611c852829e53",
+              "snapshot:tushare:calendar:sha256:eb2bfad933dfc42f691d8769b7893d482ebd19ba54257eb1dd41f3a0d8823c28"
+            ],
+            "method": "dividend-reinvested NAV total return vs same-currency index total return; formal results require the same UTC valuation time; 252 aligned daily returns; sample std (ddof=1) * sqrt(252)"
+          }
+        },
+        {
+          "instrument_id": 2001797,
+          "ticker": "158001",
+          "name": "嘉实国证价值100ETF",
+          "exchange": "SZSE",
+          "is_active": true,
+          "fields": {
+            "list_status": {
+              "value": null,
+              "unit": null,
+              "observed_on": null,
+              "published_at": null,
+              "source": null,
+              "source_snapshot_id": null,
+              "eligibility": null,
+              "missing_reason": "no_observation",
+              "eligibility_reasons": [],
+              "sample_count": null,
+              "effective_from": null,
+              "effective_to": null
+            },
+            "etf_type": {
+              "value": null,
+              "unit": null,
+              "observed_on": null,
+              "published_at": null,
+              "source": null,
+              "source_snapshot_id": null,
+              "eligibility": null,
+              "missing_reason": "no_observation",
+              "eligibility_reasons": [],
+              "sample_count": null,
+              "effective_from": null,
+              "effective_to": null
+            },
+            "tracking_index": {
+              "value": null,
+              "unit": null,
+              "observed_on": null,
+              "published_at": null,
+              "source": null,
+              "source_snapshot_id": null,
+              "eligibility": null,
+              "missing_reason": "no_observation",
+              "eligibility_reasons": [],
+              "sample_count": null,
+              "effective_from": null,
+              "effective_to": null
+            },
+            "asset_class": {
+              "value": null,
+              "unit": null,
+              "observed_on": null,
+              "published_at": null,
+              "source": null,
+              "source_snapshot_id": null,
+              "eligibility": null,
+              "missing_reason": "no_observation",
+              "eligibility_reasons": [],
+              "sample_count": null,
+              "effective_from": null,
+              "effective_to": null
+            },
+            "fund_currency": {
+              "value": null,
+              "unit": null,
+              "observed_on": null,
+              "published_at": null,
+              "source": null,
+              "source_snapshot_id": null,
+              "eligibility": null,
+              "missing_reason": "no_observation",
+              "eligibility_reasons": [],
+              "sample_count": null,
+              "effective_from": null,
+              "effective_to": null
+            },
+            "trading_currency": {
+              "value": null,
+              "unit": null,
+              "observed_on": null,
+              "published_at": null,
+              "source": null,
+              "source_snapshot_id": null,
+              "eligibility": null,
+              "missing_reason": "no_observation",
+              "eligibility_reasons": [],
+              "sample_count": null,
+              "effective_from": null,
+              "effective_to": null
+            },
+            "aum": {
+              "value": null,
+              "unit": null,
+              "observed_on": null,
+              "published_at": null,
+              "source": null,
+              "source_snapshot_id": null,
+              "eligibility": null,
+              "missing_reason": "no_observation",
+              "eligibility_reasons": [],
+              "sample_count": null,
+              "effective_from": null,
+              "effective_to": null
+            },
+            "management_fee": {
+              "value": null,
+              "unit": null,
+              "observed_on": null,
+              "published_at": null,
+              "source": null,
+              "source_snapshot_id": null,
+              "eligibility": null,
+              "missing_reason": "no_observation",
+              "eligibility_reasons": [],
+              "sample_count": null,
+              "effective_from": null,
+              "effective_to": null
+            },
+            "custody_fee": {
+              "value": null,
+              "unit": null,
+              "observed_on": null,
+              "published_at": null,
+              "source": null,
+              "source_snapshot_id": null,
+              "eligibility": null,
+              "missing_reason": "no_observation",
+              "eligibility_reasons": [],
+              "sample_count": null,
+              "effective_from": null,
+              "effective_to": null
+            },
+            "trading_restriction": {
+              "value": null,
+              "unit": null,
+              "observed_on": null,
+              "published_at": null,
+              "source": null,
+              "source_snapshot_id": null,
+              "eligibility": null,
+              "missing_reason": "no_observation",
+              "eligibility_reasons": [],
+              "sample_count": null,
+              "effective_from": null,
+              "effective_to": null
+            },
+            "distribution": {
+              "value": null,
+              "unit": null,
+              "observed_on": null,
+              "published_at": null,
+              "source": null,
+              "source_snapshot_id": null,
+              "eligibility": null,
+              "missing_reason": "no_observation",
+              "eligibility_reasons": [],
+              "sample_count": null,
+              "effective_from": null,
+              "effective_to": null
+            },
+            "price_close": {
+              "value": null,
+              "unit": null,
+              "observed_on": null,
+              "published_at": null,
+              "source": null,
+              "source_snapshot_id": null,
+              "eligibility": null,
+              "missing_reason": "no_observation",
+              "eligibility_reasons": [],
+              "sample_count": null,
+              "effective_from": null,
+              "effective_to": null
+            },
+            "lot_size": {
+              "value": null,
+              "unit": null,
+              "observed_on": null,
+              "published_at": null,
+              "source": null,
+              "source_snapshot_id": null,
+              "eligibility": null,
+              "missing_reason": "no_observation",
+              "eligibility_reasons": [],
+              "sample_count": null,
+              "effective_from": null,
+              "effective_to": null
+            },
+            "tick_size": {
+              "value": null,
+              "unit": null,
+              "observed_on": null,
+              "published_at": null,
+              "source": null,
+              "source_snapshot_id": null,
+              "eligibility": null,
+              "missing_reason": "no_observation",
+              "eligibility_reasons": [],
+              "sample_count": null,
+              "effective_from": null,
+              "effective_to": null
+            },
+            "settlement_cycle": {
+              "value": null,
+              "unit": null,
+              "observed_on": null,
+              "published_at": null,
+              "source": null,
+              "source_snapshot_id": null,
+              "eligibility": null,
+              "missing_reason": "no_observation",
+              "eligibility_reasons": [],
+              "sample_count": null,
+              "effective_from": null,
+              "effective_to": null
+            },
+            "price_limit_pct": {
+              "value": null,
+              "unit": null,
+              "observed_on": null,
+              "published_at": null,
+              "source": null,
+              "source_snapshot_id": null,
+              "eligibility": null,
+              "missing_reason": "no_observation",
+              "eligibility_reasons": [],
+              "sample_count": null,
+              "effective_from": null,
+              "effective_to": null
+            },
+            "commission_rate": {
+              "value": null,
+              "unit": null,
+              "observed_on": null,
+              "published_at": null,
+              "source": null,
+              "source_snapshot_id": null,
+              "eligibility": null,
+              "missing_reason": "no_observation",
+              "eligibility_reasons": [],
+              "sample_count": null,
+              "effective_from": null,
+              "effective_to": null
+            },
+            "min_commission": {
+              "value": null,
+              "unit": null,
+              "observed_on": null,
+              "published_at": null,
+              "source": null,
+              "source_snapshot_id": null,
+              "eligibility": null,
+              "missing_reason": "no_observation",
+              "eligibility_reasons": [],
+              "sample_count": null,
+              "effective_from": null,
+              "effective_to": null
+            },
+            "stamp_duty_rate": {
+              "value": null,
+              "unit": null,
+              "observed_on": null,
+              "published_at": null,
+              "source": null,
+              "source_snapshot_id": null,
+              "eligibility": null,
+              "missing_reason": "no_observation",
+              "eligibility_reasons": [],
+              "sample_count": null,
+              "effective_from": null,
+              "effective_to": null
+            },
+            "transfer_fee_rate": {
+              "value": null,
+              "unit": null,
+              "observed_on": null,
+              "published_at": null,
+              "source": null,
+              "source_snapshot_id": null,
+              "eligibility": null,
+              "missing_reason": "no_observation",
+              "eligibility_reasons": [],
+              "sample_count": null,
+              "effective_from": null,
+              "effective_to": null
+            },
+            "nav": {
+              "value": null,
+              "unit": null,
+              "observed_on": null,
+              "published_at": null,
+              "source": null,
+              "source_snapshot_id": null,
+              "eligibility": null,
+              "missing_reason": "no_observation",
+              "eligibility_reasons": [],
+              "sample_count": null,
+              "effective_from": null,
+              "effective_to": null
+            },
+            "iopv": {
+              "value": null,
+              "unit": null,
+              "observed_on": null,
+              "published_at": null,
+              "source": null,
+              "source_snapshot_id": null,
+              "eligibility": null,
+              "missing_reason": "no_observation",
+              "eligibility_reasons": [],
+              "sample_count": null,
+              "effective_from": null,
+              "effective_to": null
+            },
+            "daily_amount": {
+              "value": null,
+              "unit": null,
+              "observed_on": null,
+              "published_at": null,
+              "source": null,
+              "source_snapshot_id": null,
+              "eligibility": null,
+              "missing_reason": "incomplete_20_session_window",
+              "eligibility_reasons": [],
+              "sample_count": 0,
+              "effective_from": null,
+              "effective_to": null
+            }
+          },
+          "tracking": {
+            "status": "unavailable",
+            "reason": "tracking_index_unavailable",
+            "tracking_deviation_pct": null,
+            "tracking_error_pct": null,
+            "sample_count": 0,
+            "start": null,
+            "end": null,
+            "currency": null,
+            "benchmark_id": null,
+            "source_snapshot_id": "snapshot:tushare:etf_daily:sha256:ffb6093f0dc5999c3848883b6f9ae7bdc54a7555d4ee00af3ff3de40e7d6b1b1",
+            "calendar_snapshot_ids": [
+              "snapshot:tushare:calendar:sha256:bb54d0bd41fa9833166828cf3d894aa2dda2b919743af1eb68e611c852829e53",
+              "snapshot:tushare:calendar:sha256:eb2bfad933dfc42f691d8769b7893d482ebd19ba54257eb1dd41f3a0d8823c28"
+            ],
+            "method": "dividend-reinvested NAV total return vs same-currency index total return; formal results require the same UTC valuation time; 252 aligned daily returns; sample std (ddof=1) * sqrt(252)"
+          }
+        },
+        {
+          "instrument_id": 2001777,
+          "ticker": "158003",
+          "name": "嘉实中证港股通医疗主题ETF",
+          "exchange": "SZSE",
+          "is_active": true,
+          "fields": {
+            "list_status": {
+              "value": null,
+              "unit": null,
+              "observed_on": null,
+              "published_at": null,
+              "source": null,
+              "source_snapshot_id": null,
+              "eligibility": null,
+              "missing_reason": "no_observation",
+              "eligibility_reasons": [],
+              "sample_count": null,
+              "effective_from": null,
+              "effective_to": null
+            },
+            "etf_type": {
+              "value": null,
+              "unit": null,
+              "observed_on": null,
+              "published_at": null,
+              "source": null,
+              "source_snapshot_id": null,
+              "eligibility": null,
+              "missing_reason": "no_observation",
+              "eligibility_reasons": [],
+              "sample_count": null,
+              "effective_from": null,
+              "effective_to": null
+            },
+            "tracking_index": {
+              "value": null,
+              "unit": null,
+              "observed_on": null,
+              "published_at": null,
+              "source": null,
+              "source_snapshot_id": null,
+              "eligibility": null,
+              "missing_reason": "no_observation",
+              "eligibility_reasons": [],
+              "sample_count": null,
+              "effective_from": null,
+              "effective_to": null
+            },
+            "asset_class": {
+              "value": null,
+              "unit": null,
+              "observed_on": null,
+              "published_at": null,
+              "source": null,
+              "source_snapshot_id": null,
+              "eligibility": null,
+              "missing_reason": "no_observation",
+              "eligibility_reasons": [],
+              "sample_count": null,
+              "effective_from": null,
+              "effective_to": null
+            },
+            "fund_currency": {
+              "value": null,
+              "unit": null,
+              "observed_on": null,
+              "published_at": null,
+              "source": null,
+              "source_snapshot_id": null,
+              "eligibility": null,
+              "missing_reason": "no_observation",
+              "eligibility_reasons": [],
+              "sample_count": null,
+              "effective_from": null,
+              "effective_to": null
+            },
+            "trading_currency": {
+              "value": null,
+              "unit": null,
+              "observed_on": null,
+              "published_at": null,
+              "source": null,
+              "source_snapshot_id": null,
+              "eligibility": null,
+              "missing_reason": "no_observation",
+              "eligibility_reasons": [],
+              "sample_count": null,
+              "effective_from": null,
+              "effective_to": null
+            },
+            "aum": {
+              "value": null,
+              "unit": null,
+              "observed_on": null,
+              "published_at": null,
+              "source": null,
+              "source_snapshot_id": null,
+              "eligibility": null,
+              "missing_reason": "no_observation",
+              "eligibility_reasons": [],
+              "sample_count": null,
+              "effective_from": null,
+              "effective_to": null
+            },
+            "management_fee": {
+              "value": null,
+              "unit": null,
+              "observed_on": null,
+              "published_at": null,
+              "source": null,
+              "source_snapshot_id": null,
+              "eligibility": null,
+              "missing_reason": "no_observation",
+              "eligibility_reasons": [],
+              "sample_count": null,
+              "effective_from": null,
+              "effective_to": null
+            },
+            "custody_fee": {
+              "value": null,
+              "unit": null,
+              "observed_on": null,
+              "published_at": null,
+              "source": null,
+              "source_snapshot_id": null,
+              "eligibility": null,
+              "missing_reason": "no_observation",
+              "eligibility_reasons": [],
+              "sample_count": null,
+              "effective_from": null,
+              "effective_to": null
+            },
+            "trading_restriction": {
+              "value": null,
+              "unit": null,
+              "observed_on": null,
+              "published_at": null,
+              "source": null,
+              "source_snapshot_id": null,
+              "eligibility": null,
+              "missing_reason": "no_observation",
+              "eligibility_reasons": [],
+              "sample_count": null,
+              "effective_from": null,
+              "effective_to": null
+            },
+            "distribution": {
+              "value": null,
+              "unit": null,
+              "observed_on": null,
+              "published_at": null,
+              "source": null,
+              "source_snapshot_id": null,
+              "eligibility": null,
+              "missing_reason": "no_observation",
+              "eligibility_reasons": [],
+              "sample_count": null,
+              "effective_from": null,
+              "effective_to": null
+            },
+            "price_close": {
+              "value": null,
+              "unit": null,
+              "observed_on": null,
+              "published_at": null,
+              "source": null,
+              "source_snapshot_id": null,
+              "eligibility": null,
+              "missing_reason": "no_observation",
+              "eligibility_reasons": [],
+              "sample_count": null,
+              "effective_from": null,
+              "effective_to": null
+            },
+            "lot_size": {
+              "value": null,
+              "unit": null,
+              "observed_on": null,
+              "published_at": null,
+              "source": null,
+              "source_snapshot_id": null,
+              "eligibility": null,
+              "missing_reason": "no_observation",
+              "eligibility_reasons": [],
+              "sample_count": null,
+              "effective_from": null,
+              "effective_to": null
+            },
+            "tick_size": {
+              "value": null,
+              "unit": null,
+              "observed_on": null,
+              "published_at": null,
+              "source": null,
+              "source_snapshot_id": null,
+              "eligibility": null,
+              "missing_reason": "no_observation",
+              "eligibility_reasons": [],
+              "sample_count": null,
+              "effective_from": null,
+              "effective_to": null
+            },
+            "settlement_cycle": {
+              "value": null,
+              "unit": null,
+              "observed_on": null,
+              "published_at": null,
+              "source": null,
+              "source_snapshot_id": null,
+              "eligibility": null,
+              "missing_reason": "no_observation",
+              "eligibility_reasons": [],
+              "sample_count": null,
+              "effective_from": null,
+              "effective_to": null
+            },
+            "price_limit_pct": {
+              "value": null,
+              "unit": null,
+              "observed_on": null,
+              "published_at": null,
+              "source": null,
+              "source_snapshot_id": null,
+              "eligibility": null,
+              "missing_reason": "no_observation",
+              "eligibility_reasons": [],
+              "sample_count": null,
+              "effective_from": null,
+              "effective_to": null
+            },
+            "commission_rate": {
+              "value": null,
+              "unit": null,
+              "observed_on": null,
+              "published_at": null,
+              "source": null,
+              "source_snapshot_id": null,
+              "eligibility": null,
+              "missing_reason": "no_observation",
+              "eligibility_reasons": [],
+              "sample_count": null,
+              "effective_from": null,
+              "effective_to": null
+            },
+            "min_commission": {
+              "value": null,
+              "unit": null,
+              "observed_on": null,
+              "published_at": null,
+              "source": null,
+              "source_snapshot_id": null,
+              "eligibility": null,
+              "missing_reason": "no_observation",
+              "eligibility_reasons": [],
+              "sample_count": null,
+              "effective_from": null,
+              "effective_to": null
+            },
+            "stamp_duty_rate": {
+              "value": null,
+              "unit": null,
+              "observed_on": null,
+              "published_at": null,
+              "source": null,
+              "source_snapshot_id": null,
+              "eligibility": null,
+              "missing_reason": "no_observation",
+              "eligibility_reasons": [],
+              "sample_count": null,
+              "effective_from": null,
+              "effective_to": null
+            },
+            "transfer_fee_rate": {
+              "value": null,
+              "unit": null,
+              "observed_on": null,
+              "published_at": null,
+              "source": null,
+              "source_snapshot_id": null,
+              "eligibility": null,
+              "missing_reason": "no_observation",
+              "eligibility_reasons": [],
+              "sample_count": null,
+              "effective_from": null,
+              "effective_to": null
+            },
+            "nav": {
+              "value": null,
+              "unit": null,
+              "observed_on": null,
+              "published_at": null,
+              "source": null,
+              "source_snapshot_id": null,
+              "eligibility": null,
+              "missing_reason": "no_observation",
+              "eligibility_reasons": [],
+              "sample_count": null,
+              "effective_from": null,
+              "effective_to": null
+            },
+            "iopv": {
+              "value": null,
+              "unit": null,
+              "observed_on": null,
+              "published_at": null,
+              "source": null,
+              "source_snapshot_id": null,
+              "eligibility": null,
+              "missing_reason": "no_observation",
+              "eligibility_reasons": [],
+              "sample_count": null,
+              "effective_from": null,
+              "effective_to": null
+            },
+            "daily_amount": {
+              "value": null,
+              "unit": null,
+              "observed_on": null,
+              "published_at": null,
+              "source": null,
+              "source_snapshot_id": null,
+              "eligibility": null,
+              "missing_reason": "incomplete_20_session_window",
+              "eligibility_reasons": [],
+              "sample_count": 0,
+              "effective_from": null,
+              "effective_to": null
+            }
+          },
+          "tracking": {
+            "status": "unavailable",
+            "reason": "tracking_index_unavailable",
+            "tracking_deviation_pct": null,
+            "tracking_error_pct": null,
+            "sample_count": 0,
+            "start": null,
+            "end": null,
+            "currency": null,
+            "benchmark_id": null,
+            "source_snapshot_id": "snapshot:tushare:etf_daily:sha256:ffb6093f0dc5999c3848883b6f9ae7bdc54a7555d4ee00af3ff3de40e7d6b1b1",
+            "calendar_snapshot_ids": [
+              "snapshot:tushare:calendar:sha256:bb54d0bd41fa9833166828cf3d894aa2dda2b919743af1eb68e611c852829e53",
+              "snapshot:tushare:calendar:sha256:eb2bfad933dfc42f691d8769b7893d482ebd19ba54257eb1dd41f3a0d8823c28"
+            ],
+            "method": "dividend-reinvested NAV total return vs same-currency index total return; formal results require the same UTC valuation time; 252 aligned daily returns; sample std (ddof=1) * sqrt(252)"
+          }
+        }
+      ],
+      "empty": false,
+      "status": "read"
+    }
+  },
+  "catalog_assets": [
+    {
+      "asset": {
+        "dataset_id": "corporate_actions",
+        "namespace": "capital",
+        "partition_keys": []
+      },
+      "storage_uri": "corporate_actions/2026",
+      "schema": {
+        "schema_hash": "schema:sha256:f9546b19b999abca5cf50ed37d5a81a8855aba5b8f460f4a7b6afbd63eaec0c4",
+        "row_count": 80,
+        "created_at": "2026-11-05T18:01:21.279884+00:00"
+      },
+      "source": "tushare",
+      "freshness_at": "2026-11-05T18:01:21.279884+00:00"
+    },
+    {
+      "asset": {
+        "dataset_id": "cyq_perf",
+        "namespace": "capital",
+        "partition_keys": []
+      },
+      "storage_uri": "cyq_perf/2026",
+      "schema": {
+        "schema_hash": "schema:sha256:9744a5844e3fa1e8f5c1abef67bc1262386d9fedbed8ba9440375392394ba6ca",
+        "row_count": 5571,
+        "created_at": "2026-11-05T13:55:40.075934+00:00"
+      },
+      "source": "tushare",
+      "freshness_at": "2026-11-05T13:55:40.075934+00:00"
+    },
+    {
+      "asset": {
+        "dataset_id": "hk_hold",
+        "namespace": "capital",
+        "partition_keys": []
+      },
+      "storage_uri": "hk_hold/observations/no-data/2026-11-05:2026-11-05:sha256:573a4085f9dba590ed84284daa0d83a6fa4ce46fa5e27ebc22171aceac6f9bb2",
+      "schema": {
+        "schema_hash": "schema:sha256:182a83fe17ba5e663f2eac110b5e627502c242fb5fe8390f147928d9ea14668a",
+        "row_count": 0,
+        "created_at": "2026-11-05T13:55:38.950409+00:00"
+      },
+      "source": "tushare",
+      "freshness_at": "2026-11-05T13:55:38.950409+00:00"
+    },
+    {
+      "asset": {
+        "dataset_id": "hsgt_top10",
+        "namespace": "capital",
+        "partition_keys": []
+      },
+      "storage_uri": "hsgt_top10/2026",
+      "schema": {
+        "schema_hash": "schema:sha256:40c8b68667c891a3d69289f5f87b2402c403f3d62065c76ea9485265c66c6b15",
+        "row_count": 20,
+        "created_at": "2026-11-05T13:55:40.114702+00:00"
+      },
+      "source": "tushare",
+      "freshness_at": "2026-11-05T13:55:40.114702+00:00"
+    },
+    {
+      "asset": {
+        "dataset_id": "index_valuation",
+        "namespace": "capital",
+        "partition_keys": []
+      },
+      "storage_uri": "index_valuation/2026",
+      "schema": {
+        "schema_hash": "schema:sha256:dee56d887b6fc98b56d5947f7737b753e81d17189fba7f272ee7129ad11b7c80",
+        "row_count": 15,
+        "created_at": "2026-11-05T13:55:40.833663+00:00"
+      },
+      "source": "tushare",
+      "freshness_at": "2026-11-05T13:55:40.833663+00:00"
+    },
+    {
+      "asset": {
+        "dataset_id": "margin_trading",
+        "namespace": "capital",
+        "partition_keys": []
+      },
+      "storage_uri": "margin_trading/2026",
+      "schema": {
+        "schema_hash": "schema:sha256:53e5ed755e1828eabfa25d297a73d9fa2d04fccabff414e094830f74b9533ac1",
+        "row_count": 4487,
+        "created_at": "2026-11-05T18:18:55.526571+00:00"
+      },
+      "source": "tushare",
+      "freshness_at": "2026-11-05T18:18:55.526571+00:00"
+    },
+    {
+      "asset": {
+        "dataset_id": "moneyflow",
+        "namespace": "capital",
+        "partition_keys": []
+      },
+      "storage_uri": "moneyflow/2026",
+      "schema": {
+        "schema_hash": "schema:sha256:2df646507d88361eb0c27e3f86ca7ee34891e98589702a60ad5d4d862c3ac902",
+        "row_count": 5578,
+        "created_at": "2026-11-05T13:55:46.133653+00:00"
+      },
+      "source": "tushare",
+      "freshness_at": "2026-11-05T13:55:46.133653+00:00"
+    },
+    {
+      "asset": {
+        "dataset_id": "pledge_ratio",
+        "namespace": "capital",
+        "partition_keys": []
+      },
+      "storage_uri": "pledge_ratio/observations/no-data/2026-11-05:2026-11-05:sha256:4cb4254394a5b9a6ff488482cad0b490012951ab4c8ffd8f3d7581d44fa41811",
+      "schema": {
+        "schema_hash": "schema:sha256:cb08bf9314fc1eef586732fd6634d3580bb85d25238d4c349bb1a27dd2c84594",
+        "row_count": 0,
+        "created_at": "2026-11-05T13:55:38.597495+00:00"
+      },
+      "source": "tushare",
+      "freshness_at": "2026-11-05T13:55:38.597495+00:00"
+    },
+    {
+      "asset": {
+        "dataset_id": "top10_floatholders",
+        "namespace": "capital",
+        "partition_keys": []
+      },
+      "storage_uri": "top10_floatholders/observations/no-data/2026-11-05:2026-11-05:sha256:fe3f146a969d08d8420f766f3b091e9ecacdfa41f5f35ff253ecea1a03611336",
+      "schema": {
+        "schema_hash": "schema:sha256:cc16a74d48786fcf1cda706d2919b56ad287d05401ecab862f8ebf829b831eb8",
+        "row_count": 0,
+        "created_at": "2026-11-05T13:55:35.500378+00:00"
+      },
+      "source": "tushare",
+      "freshness_at": "2026-11-05T13:55:35.500378+00:00"
+    },
+    {
+      "asset": {
+        "dataset_id": "top10_holders",
+        "namespace": "capital",
+        "partition_keys": []
+      },
+      "storage_uri": "top10_holders/observations/no-data/2026-11-05:2026-11-05:sha256:242b8b667e217539df8ac26de33afe50c2f10539303d773832e3586aba3ef2f2",
+      "schema": {
+        "schema_hash": "schema:sha256:cc16a74d48786fcf1cda706d2919b56ad287d05401ecab862f8ebf829b831eb8",
+        "row_count": 0,
+        "created_at": "2026-11-05T13:55:34.751138+00:00"
+      },
+      "source": "tushare",
+      "freshness_at": "2026-11-05T13:55:34.751138+00:00"
+    },
+    {
+      "asset": {
+        "dataset_id": "top_inst",
+        "namespace": "capital",
+        "partition_keys": []
+      },
+      "storage_uri": "top_inst/2026",
+      "schema": {
+        "schema_hash": "schema:sha256:e265d189b63064b24f3838eb7b345bbde019712c483e3af481076b4184e74541",
+        "row_count": 606,
+        "created_at": "2026-11-05T13:59:56.946410+00:00"
+      },
+      "source": "tushare",
+      "freshness_at": "2026-11-05T13:59:56.946410+00:00"
+    },
+    {
+      "asset": {
+        "dataset_id": "top_list",
+        "namespace": "capital",
+        "partition_keys": []
+      },
+      "storage_uri": "top_list/2026",
+      "schema": {
+        "schema_hash": "schema:sha256:e718b5b5eeeb3776d941d765fddf87f19c37aa12620062c336d9de0be68adee4",
+        "row_count": 68,
+        "created_at": "2026-11-05T18:07:15.911166+00:00"
+      },
+      "source": "tushare",
+      "freshness_at": "2026-11-05T18:07:15.911166+00:00"
+    },
+    {
+      "asset": {
+        "dataset_id": "valuation_metrics",
+        "namespace": "capital",
+        "partition_keys": []
+      },
+      "storage_uri": "valuation_metrics/2026",
+      "schema": {
+        "schema_hash": "schema:sha256:68749efc8f75d1db709c35e14cf0b2525aa1afacaef154368e6bc3de3d0aead8",
+        "row_count": 5571,
+        "created_at": "2026-11-05T13:59:58.999773+00:00"
+      },
+      "source": "tushare",
+      "freshness_at": "2026-11-05T13:59:58.999773+00:00"
+    },
+    {
+      "asset": {
+        "dataset_id": "balance_sheet",
+        "namespace": "fundamental",
+        "partition_keys": []
+      },
+      "storage_uri": "balance_sheet/2026",
+      "schema": {
+        "schema_hash": "schema:sha256:924c167dadbd01e0ceebea51cd704e72e9d797f9216b64f02cafd91b7ad015d5",
+        "row_count": 46266,
+        "created_at": "2026-11-05T13:56:48.383430+00:00"
+      },
+      "source": "tushare",
+      "freshness_at": "2026-11-05T13:56:48.383430+00:00"
+    },
+    {
+      "asset": {
+        "dataset_id": "cash_flow",
+        "namespace": "fundamental",
+        "partition_keys": []
+      },
+      "storage_uri": "cash_flow/2022",
+      "schema": {
+        "schema_hash": "schema:sha256:023ce9b6214fe0d6a086c0363249758e8fafdf719a10dcd85a32672c5a4a6f9b",
+        "row_count": 35270,
+        "created_at": "2026-11-06T04:47:58.133560+00:00"
+      },
+      "source": "tushare",
+      "freshness_at": "2026-11-06T04:47:58.133560+00:00"
+    },
+    {
+      "asset": {
+        "dataset_id": "dividend",
+        "namespace": "fundamental",
+        "partition_keys": []
+      },
+      "storage_uri": "dividend/2026",
+      "schema": {
+        "schema_hash": "schema:sha256:36a324e7496ee50d3d195390810615f0e098ff97f9f9d0c20f8775623fef65b2",
+        "row_count": 3,
+        "created_at": "2026-11-05T13:55:40.156777+00:00"
+      },
+      "source": "tushare",
+      "freshness_at": "2026-11-05T13:55:40.156777+00:00"
+    },
+    {
+      "asset": {
+        "dataset_id": "earnings_express",
+        "namespace": "fundamental",
+        "partition_keys": []
+      },
+      "storage_uri": "earnings_express/observations/no-data/2026-11-05:2026-11-05:sha256:a5fc5bcac83e9b5cab8fbe4ec718bf7f7b355e6177e05b022be8816ecc715b8d",
+      "schema": {
+        "schema_hash": "schema:sha256:fab8bb47b6cea14fccd7c68528d2393521ba1b1bfe8e9b71538737e9a9b80e43",
+        "row_count": 0,
+        "created_at": "2026-11-05T18:01:23.929970+00:00"
+      },
+      "source": "tushare",
+      "freshness_at": "2026-11-05T18:01:23.929970+00:00"
+    },
+    {
+      "asset": {
+        "dataset_id": "earnings_forecast",
+        "namespace": "fundamental",
+        "partition_keys": []
+      },
+      "storage_uri": "earnings_forecast/observations/no-data/2026-11-05:2026-11-05:sha256:465f764692431286257c5806948195e3bbed983cc1ddf5d8b568112786d1d5a0",
+      "schema": {
+        "schema_hash": "schema:sha256:13d432094063057ed99a300e3e83aeb81b4cc76eed33854423bddca071705513",
+        "row_count": 0,
+        "created_at": "2026-11-05T13:55:36.822984+00:00"
+      },
+      "source": "tushare",
+      "freshness_at": "2026-11-05T13:55:36.822984+00:00"
+    },
+    {
+      "asset": {
+        "dataset_id": "fina_indicator",
+        "namespace": "fundamental",
+        "partition_keys": []
+      },
+      "storage_uri": "fina_indicator/2026",
+      "schema": {
+        "schema_hash": "schema:sha256:302b20b97e767c1f8a92b26e6839962f1a9e0e90f31b5d2053edf7ef07589567",
+        "row_count": 40521,
+        "created_at": "2026-11-05T13:59:51.062068+00:00"
+      },
+      "source": "tushare",
+      "freshness_at": "2026-11-05T13:59:51.062068+00:00"
+    },
+    {
+      "asset": {
+        "dataset_id": "fund_portfolio",
+        "namespace": "fundamental",
+        "partition_keys": []
+      },
+      "storage_uri": "fund_portfolio/observations/no-data/2014-01-01:2026-11-05:sha256:4883af246bbf2264e2f8e42aa8df1240bfb68a61186e55d8de39cd17176ba584",
+      "schema": {
+        "schema_hash": "schema:sha256:a339f241013145695ef3935dcc275b415b013ef1068ec6ab2b9b49dfdddd31f4",
+        "row_count": 0,
+        "created_at": "2026-11-06T04:48:21.793106+00:00"
+      },
+      "source": "tushare",
+      "freshness_at": "2026-11-06T04:48:21.793106+00:00"
+    },
+    {
+      "asset": {
+        "dataset_id": "income_statement",
+        "namespace": "fundamental",
+        "partition_keys": []
+      },
+      "storage_uri": "income_statement/2026",
+      "schema": {
+        "schema_hash": "schema:sha256:260b9a6f3842e33a45cfbd6650813cfaae851f4be130faaaef9f2a39a3bedd5e",
+        "row_count": 46441,
+        "created_at": "2026-11-05T13:56:42.666073+00:00"
+      },
+      "source": "tushare",
+      "freshness_at": "2026-11-05T13:56:42.666073+00:00"
+    },
+    {
+      "asset": {
+        "dataset_id": "commodity_daily",
+        "namespace": "macro",
+        "partition_keys": []
+      },
+      "storage_uri": "commodity_daily/2026",
+      "schema": {
+        "schema_hash": "schema:sha256:e17db0f3c3b4c8f922687e9908fed8f367810a514ad1266e04199d8c3edc322a",
+        "row_count": 645,
+        "created_at": "2026-11-06T03:15:00.955043+00:00"
+      },
+      "source": "fred",
+      "freshness_at": "2026-11-06T03:15:00.955043+00:00"
+    },
+    {
+      "asset": {
+        "dataset_id": "fx_daily",
+        "namespace": "macro",
+        "partition_keys": []
+      },
+      "storage_uri": "fx_daily/2026",
+      "schema": {
+        "schema_hash": "schema:sha256:e17db0f3c3b4c8f922687e9908fed8f367810a514ad1266e04199d8c3edc322a",
+        "row_count": 36,
+        "created_at": "2026-11-05T13:55:53.611774+00:00"
+      },
+      "source": "tushare",
+      "freshness_at": "2026-11-05T13:55:53.611774+00:00"
+    },
+    {
+      "asset": {
+        "dataset_id": "macro_indicators",
+        "namespace": "macro",
+        "partition_keys": []
+      },
+      "storage_uri": "macro_indicators/2026",
+      "schema": {
+        "schema_hash": "schema:sha256:76186f59ac4ca55d0f9c455fafbe1710bdfe5ff210cc2f569f197f10b36b36cc",
+        "row_count": 154,
+        "created_at": "2026-11-06T03:45:51.270689+00:00"
+      },
+      "source": "tushare",
+      "freshness_at": "2026-11-06T03:45:51.270689+00:00"
+    },
+    {
+      "asset": {
+        "dataset_id": "adj_factor",
+        "namespace": "market",
+        "partition_keys": []
+      },
+      "storage_uri": "adj_factor/2026",
+      "schema": {
+        "schema_hash": "schema:sha256:d73eb867636926267c52f7c3b7865c6eb74d14cf177dd62733bb25030f7213cd",
+        "row_count": 5582,
+        "created_at": "2026-11-05T13:56:49.127144+00:00"
+      },
+      "source": "tushare",
+      "freshness_at": "2026-11-05T13:56:49.127144+00:00"
+    },
+    {
+      "asset": {
+        "dataset_id": "etf_daily",
+        "namespace": "market",
+        "partition_keys": []
+      },
+      "storage_uri": "etf_daily/2026",
+      "schema": {
+        "schema_hash": "schema:sha256:e4486f0e192cf0ef65a6860c2ef8d1cbda07689048e67d131d50f6bd09850d02",
+        "row_count": 7,
+        "created_at": "2026-11-06T04:43:14.674602+00:00"
+      },
+      "source": "tushare",
+      "freshness_at": "2026-11-06T04:43:14.674602+00:00"
+    },
+    {
+      "asset": {
+        "dataset_id": "etf_nav",
+        "namespace": "market",
+        "partition_keys": []
+      },
+      "storage_uri": "etf_nav/2026",
+      "schema": {
+        "schema_hash": "schema:sha256:e3a305174bb134829f62fea736ee39c01f8f20c1b5666563885292a47efd32b7",
+        "row_count": 9333,
+        "created_at": "2026-11-02T18:02:00.304907+00:00"
+      },
+      "source": "tushare",
+      "freshness_at": "2026-11-02T18:02:00.304907+00:00"
+    },
+    {
+      "asset": {
+        "dataset_id": "fund_adj",
+        "namespace": "market",
+        "partition_keys": []
+      },
+      "storage_uri": "fund_adj/2026",
+      "schema": {
+        "schema_hash": "schema:sha256:d73eb867636926267c52f7c3b7865c6eb74d14cf177dd62733bb25030f7213cd",
+        "row_count": 1,
+        "created_at": "2026-11-06T03:54:12.550046+00:00"
+      },
+      "source": "tushare",
+      "freshness_at": "2026-11-06T03:54:12.550046+00:00"
+    },
+    {
+      "asset": {
+        "dataset_id": "fund_share",
+        "namespace": "market",
+        "partition_keys": []
+      },
+      "storage_uri": "fund_share/2026",
+      "schema": {
+        "schema_hash": "schema:sha256:fffe13f2572984aa7c2482ff819c7b7f1112f97104ec0305213474e06811c1d9",
+        "row_count": 1717,
+        "created_at": "2026-11-05T18:20:31.637250+00:00"
+      },
+      "source": "tushare",
+      "freshness_at": "2026-11-05T18:20:31.637250+00:00"
+    },
+    {
+      "asset": {
+        "dataset_id": "futures_basic",
+        "namespace": "market",
+        "partition_keys": []
+      },
+      "storage_uri": "futures_basic/2026",
+      "schema": {
+        "schema_hash": "schema:sha256:5f477039a3fb2246cd3cff7e7b880161240247e70c74ffdd1d8bde2df9b2be12",
+        "row_count": 11363,
+        "created_at": "2026-11-05T13:55:56.386562+00:00"
+      },
+      "source": "tushare",
+      "freshness_at": "2026-11-05T13:55:56.386562+00:00"
+    },
+    {
+      "asset": {
+        "dataset_id": "futures_daily",
+        "namespace": "market",
+        "partition_keys": []
+      },
+      "storage_uri": "futures_daily/2026",
+      "schema": {
+        "schema_hash": "schema:sha256:7d7b7ff980d4a6c6f35666be1df80ceb12178738850165d1888adaa422dd937b",
+        "row_count": 1076,
+        "created_at": "2026-11-05T13:55:36.627136+00:00"
+      },
+      "source": "tushare",
+      "freshness_at": "2026-11-05T13:55:36.627136+00:00"
+    },
+    {
+      "asset": {
+        "dataset_id": "global_index_daily",
+        "namespace": "market",
+        "partition_keys": []
+      },
+      "storage_uri": "global_index_daily/2026",
+      "schema": {
+        "schema_hash": "schema:sha256:54f302a7aeebeacc6fa08a4628ae68372de130f0914933bbd1bf0406c249e678",
+        "row_count": 113,
+        "created_at": "2026-11-04T18:07:21.634442+00:00"
+      },
+      "source": "tushare",
+      "freshness_at": "2026-11-04T18:07:21.634442+00:00"
+    },
+    {
+      "asset": {
+        "dataset_id": "index_daily",
+        "namespace": "market",
+        "partition_keys": []
+      },
+      "storage_uri": "index_daily/2026",
+      "schema": {
+        "schema_hash": "schema:sha256:e4486f0e192cf0ef65a6860c2ef8d1cbda07689048e67d131d50f6bd09850d02",
+        "row_count": 178,
+        "created_at": "2026-11-05T14:05:16.408057+00:00"
+      },
+      "source": "tushare",
+      "freshness_at": "2026-11-05T14:05:16.408057+00:00"
+    },
+    {
+      "asset": {
+        "dataset_id": "index_weight",
+        "namespace": "market",
+        "partition_keys": []
+      },
+      "storage_uri": "index_weight/2026",
+      "schema": {
+        "schema_hash": "schema:sha256:0366df6ce37fa2738a03bfc346cb25a7ec987ef9c89439036f8d17b188daff3b",
+        "row_count": 100,
+        "created_at": "2026-11-06T04:46:16.293958+00:00"
+      },
+      "source": "tushare",
+      "freshness_at": "2026-11-06T04:46:16.293958+00:00"
+    },
+    {
+      "asset": {
+        "dataset_id": "limit_list",
+        "namespace": "market",
+        "partition_keys": []
+      },
+      "storage_uri": "limit_list/2026",
+      "schema": {
+        "schema_hash": "schema:sha256:a79f006253e5e889178acc351c6087ee2b70ba44308cfcf86135ee55879b9d75",
+        "row_count": 132,
+        "created_at": "2026-11-05T13:55:35.129662+00:00"
+      },
+      "source": "tushare",
+      "freshness_at": "2026-11-05T13:55:35.129662+00:00"
+    },
+    {
+      "asset": {
+        "dataset_id": "st_history",
+        "namespace": "market",
+        "partition_keys": []
+      },
+      "storage_uri": "st_history/0",
+      "schema": {
+        "schema_hash": "schema:sha256:d6c943f9898c7d8aaa8f379a378394d16300f77eb379cb1d72036315a6e5ad4c",
+        "row_count": 6,
+        "created_at": "2026-11-05T13:55:39.546764+00:00"
+      },
+      "source": "tushare",
+      "freshness_at": "2026-11-05T13:55:39.546764+00:00"
+    },
+    {
+      "asset": {
+        "dataset_id": "stock_daily",
+        "namespace": "market",
+        "partition_keys": []
+      },
+      "storage_uri": "stock_daily/2026",
+      "schema": {
+        "schema_hash": "schema:sha256:e4486f0e192cf0ef65a6860c2ef8d1cbda07689048e67d131d50f6bd09850d02",
+        "row_count": 5572,
+        "created_at": "2026-11-05T13:56:15.069313+00:00"
+      },
+      "source": "tushare",
+      "freshness_at": "2026-11-05T13:56:15.069313+00:00"
+    },
+    {
+      "asset": {
+        "dataset_id": "stock_limit",
+        "namespace": "market",
+        "partition_keys": []
+      },
+      "storage_uri": "stock_limit/2026",
+      "schema": {
+        "schema_hash": "schema:sha256:36863a11fccd5fc17f10a698ca84099abdf91debf436600e38e1ae62ef421c72",
+        "row_count": 5860,
+        "created_at": "2026-11-05T13:55:37.834994+00:00"
+      },
+      "source": "tushare",
+      "freshness_at": "2026-11-05T13:55:37.834994+00:00"
+    },
+    {
+      "asset": {
+        "dataset_id": "stock_status",
+        "namespace": "market",
+        "partition_keys": []
+      },
+      "storage_uri": "stock_status/2026",
+      "schema": {
+        "schema_hash": "schema:sha256:5faf74005d18aca970ebfe3631f122dd9b5d3a0684a57eefcfc400f0d11289a6",
+        "row_count": 5577,
+        "created_at": "2026-11-05T14:00:04.219862+00:00"
+      },
+      "source": "tushare",
+      "freshness_at": "2026-11-05T14:00:04.219862+00:00"
+    },
+    {
+      "asset": {
+        "dataset_id": "calendar",
+        "namespace": "metadata",
+        "partition_keys": []
+      },
+      "storage_uri": "calendar_store:2027-12-31",
+      "schema": {
+        "schema_hash": "schema:sha256:2addc2e9d8a56e1009813a6d39a55139f4f436690cb46c11cf6551d505ee93bb",
+        "row_count": 365,
+        "created_at": "2026-10-31T10:39:29.518319+00:00"
+      },
+      "source": "tushare",
+      "freshness_at": "2026-10-31T10:39:29.518319+00:00"
+    },
+    {
+      "asset": {
+        "dataset_id": "etf_basic",
+        "namespace": "metadata",
+        "partition_keys": []
+      },
+      "storage_uri": "instrument_reader:etf_basic",
+      "schema": {
+        "schema_hash": "schema:sha256:78cb4c2f66cb313050b0a7bfb75cad1a8bafedd03ea73c70eb94a538f0249824",
+        "row_count": 1847,
+        "created_at": "2026-11-05T13:55:04.331895+00:00"
+      },
+      "source": "tushare",
+      "freshness_at": "2026-11-05T13:55:04.331895+00:00"
+    },
+    {
+      "asset": {
+        "dataset_id": "etf_reference",
+        "namespace": "metadata",
+        "partition_keys": []
+      },
+      "storage_uri": "etf_reference/0",
+      "schema": {
+        "schema_hash": "schema:sha256:6c26a4dbfc575a401ff555b2de9b32e7bbaf520739f7789a46235c1489cc2d97",
+        "row_count": 10,
+        "created_at": "2026-11-03T17:31:23.873195+00:00"
+      },
+      "source": "config",
+      "freshness_at": "2026-11-03T17:31:23.873195+00:00"
+    },
+    {
+      "asset": {
+        "dataset_id": "index_basic",
+        "namespace": "metadata",
+        "partition_keys": []
+      },
+      "storage_uri": "instrument_reader:index_basic",
+      "schema": {
+        "schema_hash": "schema:sha256:ceabdca777724c8f18287a64f4e05c929b2bad52989bba2d06c1b612c2017178",
+        "row_count": 20897,
+        "created_at": "2026-11-05T13:55:21.900786+00:00"
+      },
+      "source": "tushare",
+      "freshness_at": "2026-11-05T13:55:21.900786+00:00"
+    },
+    {
+      "asset": {
+        "dataset_id": "industry_classification",
+        "namespace": "metadata",
+        "partition_keys": []
+      },
+      "storage_uri": "industry_classification/0",
+      "schema": {
+        "schema_hash": "schema:sha256:167c9da0764a8e46956b9846907c209ad7cd182a040954a0dc1dc87036e568c8",
+        "row_count": 31,
+        "created_at": "2026-11-05T13:55:46.544605+00:00"
+      },
+      "source": "tushare",
+      "freshness_at": "2026-11-05T13:55:46.544605+00:00"
+    },
+    {
+      "asset": {
+        "dataset_id": "industry_mapping",
+        "namespace": "metadata",
+        "partition_keys": []
+      },
+      "storage_uri": "industry_mapping/0",
+      "schema": {
+        "schema_hash": "schema:sha256:c037f9493cbd8abeed8ba548a9266c7efa4e52fdd945f01ba9fcf55e0bd58dd6",
+        "row_count": 7925,
+        "created_at": "2026-11-05T14:02:16.216826+00:00"
+      },
+      "source": "tushare",
+      "freshness_at": "2026-11-05T14:02:16.216826+00:00"
+    },
+    {
+      "asset": {
+        "dataset_id": "namechange",
+        "namespace": "metadata",
+        "partition_keys": []
+      },
+      "storage_uri": "namechange/0",
+      "schema": {
+        "schema_hash": "schema:sha256:1a9d426989016ecabeeb71eb806dd6433f8337976f50f6e1c41fc0994c2d15b6",
+        "row_count": 20,
+        "created_at": "2026-11-05T13:55:36.385351+00:00"
+      },
+      "source": "tushare",
+      "freshness_at": "2026-11-05T13:55:36.385351+00:00"
+    },
+    {
+      "asset": {
+        "dataset_id": "stock_basic",
+        "namespace": "metadata",
+        "partition_keys": []
+      },
+      "storage_uri": "instrument_reader:stock_basic",
+      "schema": {
+        "schema_hash": "schema:sha256:f946c3e8327d6dfedc5d01ee890023166dd2d3f633f6b816571d6bd716854cdd",
+        "row_count": 5921,
+        "created_at": "2026-11-05T13:55:14.944949+00:00"
+      },
+      "source": "tushare",
+      "freshness_at": "2026-11-05T13:55:14.944949+00:00"
+    }
+  ],
+  "finished_at": "2026-11-06T04:48:30.203195+00:00"
+}
