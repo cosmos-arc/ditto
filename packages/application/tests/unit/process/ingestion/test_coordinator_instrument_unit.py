@@ -5,6 +5,11 @@ from unittest.mock import MagicMock
 
 import polars as pl
 import pytest
+from ditto_application.config.queries import (
+    get_all_datasets,
+    get_datasets_by_tier,
+)
+from ditto_application.config.specs import TaskTier
 from ditto_application.exceptions import AppProcessError
 from ditto_application.processes.ingestion.config import IngestionCoordinatorConfig
 from ditto_application.processes.ingestion.coordinator import (
@@ -13,6 +18,7 @@ from ditto_application.processes.ingestion.coordinator import (
     MarketServices,
     SourceFetchers,
 )
+from ditto_data.models import Dataset
 from ditto_data.models.ingestion import IngestionLog, IngestionStatus
 from ditto_kernel.instrument import InstrumentIngestParams
 from ditto_platform.foundation import (
@@ -457,6 +463,26 @@ class TestIngestByInstrument:
 # ---------------------------------------------------------------------------
 # _infer_exchange_suffix tests
 # ---------------------------------------------------------------------------
+
+
+@pytest.mark.unit
+def test_fund_batches_remain_in_scope_without_claiming_daily_coverage(
+    coordinator, mock_ingestion_log_store
+) -> None:
+    assert Dataset.FUND_PORTFOLIO in get_all_datasets()
+    assert Dataset.FUND_PORTFOLIO not in get_datasets_by_tier(TaskTier.T1_INCREMENTAL)
+    assert Dataset.FUND_PORTFOLIO in get_datasets_by_tier(TaskTier.T2_REPAIR)
+    mock_ingestion_log_store.get_log.return_value = IngestionLog(
+        dataset="fund_portfolio",
+        source="tushare",
+        trade_date="2026-11-05",
+        status=IngestionStatus.SUCCESS,
+        rows=0,
+    )
+    result = coordinator.ingest_date("fund_portfolio", "2026-11-05")
+    assert result.status == "failed"
+    assert result.error == "PER_FUND_INGESTION_REQUIRED"
+    mock_ingestion_log_store.get_log.assert_not_called()
 
 
 @pytest.mark.unit

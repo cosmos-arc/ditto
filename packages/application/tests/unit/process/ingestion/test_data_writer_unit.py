@@ -229,6 +229,9 @@ def mock_fundamental_store(mocker):
     service.save_income_statement.return_value = 1
     service.save_cash_flow.return_value = 1
     service.save_dividend.return_value = 1
+    service.preserve_fund_trading_links.side_effect = lambda frame: frame.with_columns(
+        pl.lit(None, dtype=pl.Int64).alias("instrument_id")
+    )
     return service
 
 

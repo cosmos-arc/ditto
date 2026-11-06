@@ -349,8 +349,47 @@ class FundamentalStore:
         if df.is_empty():
             return 0
         self.require_fund_holders(df["source_ticker"].unique().to_list())
-        result = writer.write(df, year, on_duplicate=on_duplicate)
+        result = writer.write(
+            self.preserve_fund_trading_links(df), year, on_duplicate=on_duplicate
+        )
         return result.added + result.updated
+
+    def preserve_fund_trading_links(self, frame: pl.DataFrame) -> pl.DataFrame:
+        """
+        Keep legacy links immutable; new disclosures have no trading identity.
+
+        A later securities-master registration must not change an identical
+        provider observation or its canonical checksum. Every service write uses
+        this rule, so concurrent new keys both receive null and existing links
+        cannot change between preparation and the ordinary locked write.
+        """
+        reader = self._read_ports.fund_portfolio
+        if reader is None:
+            raise ValueError("fund_portfolio reader not configured")
+        keys = ["source_ticker", "report_date", "holding_symbol", "knowledge_date"]
+        incoming = frame.drop("instrument_id", strict=False)
+        columns = [column for column in incoming.columns if column != "source"]
+        columns.append("instrument_id")
+        if "source" in incoming.columns:
+            columns.append("source")
+        if frame.is_empty():
+            return incoming.with_columns(
+                pl.lit(None, dtype=pl.Int64).alias("instrument_id")
+            ).select(columns)
+        existing = reader.read(
+            start_date=str(frame["report_date"].min()),
+            end_date=str(frame["report_date"].max()),
+            filters=pl.col("source_ticker").is_in(
+                frame["source_ticker"].unique().to_list()
+            ),
+        )
+        if existing.is_empty():
+            return incoming.with_columns(
+                pl.lit(None, dtype=pl.Int64).alias("instrument_id")
+            ).select(columns)
+        return incoming.join(
+            existing.select(*keys, "instrument_id"), on=keys, how="left", validate="m:1"
+        ).select(columns)
 
 
 def fund_holdings_checksum(frame: pl.DataFrame) -> str:

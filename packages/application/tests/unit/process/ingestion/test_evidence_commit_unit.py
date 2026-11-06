@@ -6,6 +6,7 @@ from dataclasses import replace
 from datetime import UTC, datetime
 from pathlib import Path
 
+import polars as pl
 import pytest
 from ditto_application.processes.ingestion.evidence_commit import (
     EvidenceCommitPorts,
@@ -13,11 +14,16 @@ from ditto_application.processes.ingestion.evidence_commit import (
     IngestionEvidenceCommitter,
     _payload_evidence_id,
 )
+from ditto_application.processes.ingestion.ingestion_evidence import (
+    CatalogWriteContext,
+    build_evidence_commit_request,
+)
 from ditto_data.catalog import (
     DataAssetRef,
     DataCatalogEntry,
     DataSchemaFingerprint,
 )
+from ditto_data.catalog.provider_payload import FilesystemProviderPayloadStore
 from ditto_data.catalog.snapshot_completion import snapshot_completed
 from ditto_data.catalog.source_snapshot import ProviderSnapshot, ProviderSnapshotDraft
 from ditto_data.ingestion.partition_state import (
@@ -26,7 +32,7 @@ from ditto_data.ingestion.partition_state import (
 )
 from ditto_data.ingestion.partition_state_store import SQLitePartitionLifecycleStore
 from ditto_data.models.ingestion import IngestionLog, IngestionStatus
-from ditto_platform.foundation import SQLiteClient, SQLitePool
+from ditto_platform.foundation import SQLiteClient, SQLitePool, WriteResult
 
 
 class _Recorder:
@@ -172,6 +178,50 @@ def _planned(request: EvidenceCommitRequest, *, payload_id: str | None = None):
         error_code=None,
         updated_at=datetime(2026, 7, 18, 8, 40, tzinfo=UTC),
     )
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("rows", [0, 1])
+def test_fund_observation_and_replay_never_publish_whole_day_success(
+    tmp_path: Path, rows: int
+) -> None:
+    lifecycle, pool = _store(tmp_path)
+    snapshots, catalog, logs = (_Recorder() for _ in range(3))
+    payload = pl.DataFrame({"source_ticker": ["000001.OF"] * rows})
+    artifact = FilesystemProviderPayloadStore(tmp_path).retain_payload(
+        dataset_id="fund_portfolio", source="tushare", payload=payload
+    )
+    request = build_evidence_commit_request(
+        CatalogWriteContext(
+            dataset="fund_portfolio",
+            trade_date="2026-07-17",
+            source_name="tushare",
+            source_ticker="000001.OF",
+            df=payload,
+            write_result=WriteResult(
+                file_path="fund_portfolio/2026.parquet",
+                checksum=artifact.checksum,
+                rows_written=rows,
+                rows_total=rows,
+                blocked=False,
+            ),
+            l1_l2_attested=True,
+            provider_payload=artifact if rows else None,
+            payload_retained=bool(rows),
+        )
+    )
+    committer = IngestionEvidenceCommitter(
+        ports=_ports(lifecycle, snapshots, catalog, logs)
+    )
+    try:
+        for _ in range(2):
+            assert committer.commit(request).completed
+            snapshot = snapshots.get_snapshot(request.provider_snapshot.snapshot_id)
+            assert snapshot is not None
+            assert snapshot_completed(snapshot, lifecycle)
+            assert logs.values == []
+    finally:
+        pool.close()
 
 
 @pytest.mark.unit

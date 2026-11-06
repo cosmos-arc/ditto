@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 import polars as pl
 from ditto_data.catalog import DataCatalogWriter
@@ -128,6 +128,8 @@ def ingest_by_instrument(
             value=dataset,
         ) from e
     ensure_source_supported(dataset_enum, ctx.source_name)
+    if dataset_enum is Dataset.FUND_PORTFOLIO:
+        ctx = replace(ctx, result_handler=IngestionResultHandler(None, ctx.source_name))
 
     if dataset_enum not in SUPPORTED_INSTRUMENT_DATASETS:
         raise AppProcessError(

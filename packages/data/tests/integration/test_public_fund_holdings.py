@@ -102,3 +102,66 @@ def test_legacy_codes_and_report_revision_identity(
             ),
             b"annual",
         )
+
+
+def test_legacy_trading_links_survive_independent_holder_writes(
+    sqlite_pool_with_schema: SQLitePool,
+    tmp_path,
+) -> None:
+    from datetime import date
+
+    from ditto_data.config.data_store import DataStoreSettings
+    from ditto_data.di.fundamental import FundamentalProvider
+    from ditto_platform.foundation import FileLockManager, OnDuplicate
+
+    client = SQLiteClient(sqlite_pool_with_schema)
+    settings = DataStoreSettings(data_root=tmp_path)
+    provider = FundamentalProvider()
+    writers = provider.fundamental_writers(
+        client, settings, FileLockManager(tmp_path / "locks")
+    )
+    store = provider.fundamental_store(
+        provider.fundamental_readers(client, settings), writers, client
+    )
+    store.register_fund_holders(
+        pl.DataFrame(
+            {
+                "source_ticker": ["510300.SH", "000001.OF"],
+                "name": ["ETF", "OTC"],
+                "market": ["E", "O"],
+                "status": ["L", "L"],
+            }
+        )
+    )
+    legacy = pl.DataFrame(
+        {
+            "source_ticker": ["510300.SH"],
+            "report_date": [date(2026, 6, 30)],
+            "knowledge_date": [date(2026, 7, 21)],
+            "holding_symbol": ["600519.SH"],
+            "market_value": [10.0],
+            "holding_shares": [1.0],
+            "instrument_id": [2000001],
+            "source": ["tushare"],
+        }
+    )
+    assert writers.fund_portfolio is not None
+    # Seed the previous writer shape directly; the new service never creates IDs.
+    writers.fund_portfolio.write(legacy, 2026, OnDuplicate.ERROR)
+    incoming = legacy.with_columns(pl.lit(None, dtype=pl.Int64).alias("instrument_id"))
+    prepared = store.preserve_fund_trading_links(incoming)
+    assert prepared.equals(legacy)
+    assert store.save_fund_portfolio(incoming, 2026, OnDuplicate.VERIFY_IDENTICAL) == 0
+    new_holder = legacy.with_columns(pl.lit("000001.OF").alias("source_ticker"))
+    assert (
+        store.save_fund_portfolio(new_holder, 2026, OnDuplicate.VERIFY_IDENTICAL) == 1
+    )
+    assert store.preserve_fund_trading_links(new_holder)["instrument_id"].to_list() == [
+        None
+    ]
+    with pytest.raises(ValueError, match="retry contains changed values"):
+        store.save_fund_portfolio(
+            incoming.with_columns(pl.lit(20.0).alias("market_value")),
+            2026,
+            OnDuplicate.VERIFY_IDENTICAL,
+        )

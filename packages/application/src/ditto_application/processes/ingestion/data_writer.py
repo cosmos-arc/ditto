@@ -1497,18 +1497,8 @@ class IngestionDataWriter:
         if dataset_enum is Dataset.FUND_PORTFOLIO:
             codes = df["source_ticker"].unique().to_list()
             self._fundamental_store.require_fund_holders(codes)
-            # Only the optional trading link uses instrument IDs. Holder identity
-            # is source_ticker; missing OTC trading links must never drop rows.
-            links = self._metadata_service.instrument.resolve_instrument_ids_batch(
-                identifiers=codes,
-                source=self._source_name,
-                asof=None,
-            )
-            enriched_df = _enrich_with_instrument_id(
-                df,
-                links,
-                "source_ticker",
-                self._source_name,
+            enriched_df = self._fundamental_store.preserve_fund_trading_links(
+                df.with_columns(pl.lit(self._source_name).alias("source"))
             )
         else:
             enriched_df = self._enrich_and_filter_fk_dataframe(df, dataset, year)

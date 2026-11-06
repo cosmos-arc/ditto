@@ -63,6 +63,13 @@ def test_otc_fund_disclosures_preserve_nulls_and_late_observations(
             }
         )
         store.save_fund_portfolio(frame, 2026, OnDuplicate.VERIFY_IDENTICAL)
+        # A newly registered trading link cannot mutate a source observation.
+        store.save_fund_portfolio(
+            frame.with_columns(pl.lit(2000001).alias("instrument_id")),
+            2026,
+            OnDuplicate.VERIFY_IDENTICAL,
+        )
+
         store.save_fund_portfolio(frame, 2026, OnDuplicate.VERIFY_IDENTICAL)
         query = FundamentalQueryFacade(store)
         visible = query.get_fund_portfolio(

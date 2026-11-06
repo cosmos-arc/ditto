@@ -92,6 +92,15 @@ def test_knowledge_axis_vocabulary_and_key_datasets() -> None:
     assert classified["adj_factor"] == "same_day"
     # #452：观察锚数据集不宣称公告可知性
     assert classified["index_weight"] == "observation"
+    for dataset in (
+        "global_index_daily",
+        "index_valuation",
+        "futures_basic",
+        "futures_daily",
+        "earnings_forecast",
+        "earnings_express",
+    ):
+        assert classified[dataset] == "observation"
     # 纯元数据集未分类（None），不伪造知识轴
     assert get_knowledge_axis("calendar") is None
     assert get_knowledge_axis("stock_basic") is None

@@ -345,6 +345,15 @@ class IngestionCoordinator:
         dataset_enum = _validate_dataset(dataset)
         ensure_source_supported(dataset_enum, self._source_name)
 
+        if dataset_enum is Dataset.FUND_PORTFOLIO:
+            return IngestionResult(
+                dataset=dataset,
+                trade_date=trade_date,
+                status="failed",
+                error="PER_FUND_INGESTION_REQUIRED",
+                message="公募持仓须使用 ingest fundamental portfolio-batch 逐基金续跑",
+            )
+
         if skip_result := self._check_should_skip(dataset, trade_date, force):
             return skip_result
 
