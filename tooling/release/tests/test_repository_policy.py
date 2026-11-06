@@ -357,7 +357,7 @@ def test_ci_has_explicit_pit_and_supported_platform_gates() -> None:
     platform = _workflow("deep-ci.yml")["jobs"]["platform-smoke"]
     matrix = platform["strategy"]["matrix"]["include"]
     by_name = {entry["name"]: entry for entry in matrix}
-    assert by_name["macos-arm64"]["os"] == "macos-14"
+    assert by_name["macos-arm64"]["os"] == "macos-15"
     assert by_name["windows-x64"]["os"] == "windows-2025"
     platform_steps = json.dumps(platform)
     assert "./.github/actions/setup-toolchain" in platform_steps
