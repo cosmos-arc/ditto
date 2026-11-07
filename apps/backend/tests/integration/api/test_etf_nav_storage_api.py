@@ -23,7 +23,15 @@ from httpx import ASGITransport, AsyncClient
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
-    "mode", ["stored", "revisions", "empty", "missing_reader", "missing_value"]
+    "mode",
+    [
+        "stored",
+        "revisions",
+        "empty",
+        "missing_reader",
+        "missing_value",
+        "missing_cumulative",
+    ],
 )
 async def test_nav_api_reads_canonical_unit_nav(tmp_path: Path, mode: str) -> None:
     register_metrics()
@@ -32,7 +40,7 @@ async def test_nav_api_reads_canonical_unit_nav(tmp_path: Path, mode: str) -> No
         key_columns=("instrument_id", "trade_date", "knowledge_date"),
         date_column="trade_date",
     )
-    if mode in {"stored", "revisions", "missing_value"}:
+    if mode in {"stored", "revisions", "missing_value", "missing_cumulative"}:
         EtfNavWriter(store).write(
             pl.DataFrame(
                 {
@@ -40,9 +48,11 @@ async def test_nav_api_reads_canonical_unit_nav(tmp_path: Path, mode: str) -> No
                     "trade_date": [date(2026, 9, 29), date(2026, 9, 30)],
                     "knowledge_date": [None, date(2026, 10, 2)],
                     "unit_nav": [None, None] if mode == "missing_value" else [4.4, 4.5],
-                    "acc_nav": [99.0, 99.0],
+                    "acc_nav": [None, None]
+                    if mode == "missing_cumulative"
+                    else [99.0, 99.0],
                 },
-                schema_overrides={"unit_nav": pl.Float64},
+                schema_overrides={"unit_nav": pl.Float64, "acc_nav": pl.Float64},
             ),
             2026,
         )
@@ -70,6 +80,8 @@ async def test_nav_api_reads_canonical_unit_nav(tmp_path: Path, mode: str) -> No
         etf_nav=None if mode == "missing_reader" else EtfNavReader(store),
     )
     facade = MarketQueryFacade(MarketService(readers))
+    if mode == "missing_cumulative":
+        assert facade.get_etf_nav(instrument_id=1)["acc_nav"].null_count() == 2
 
     class TestProvider(Provider):
         scope = Scope.REQUEST
@@ -105,8 +117,9 @@ async def test_nav_api_reads_canonical_unit_nav(tmp_path: Path, mode: str) -> No
                 {"nav_date": "2026-09-29", "nav": 4.4},
                 {"nav_date": "2026-09-30", "nav": 4.6 if mode == "revisions" else 4.5},
             ]
-            if mode in {"stored", "revisions"}
+            if mode in {"stored", "revisions", "missing_cumulative"}
             else []
         )
+        assert response.json()["data"]["data_coverage"]["status"] == "partial"
     finally:
         await container.close()
