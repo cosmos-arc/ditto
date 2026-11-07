@@ -450,7 +450,7 @@ class TestIndexWeightUniverse:
         fx_kwargs = macro.fetch_fx_daily.call_args.kwargs
         assert fx_kwargs["start_date"] < fx_kwargs["end_date"]
 
-    def test_fund_portfolio_rejects_unbounded_market_route(self) -> None:
+    def test_fund_portfolio_uses_bounded_announcement_day(self) -> None:
         context, _, fundamental = self._daily_context("2026-09-30")
         factory = (
             default_dataset_registry()
@@ -458,9 +458,8 @@ class TestIndexWeightUniverse:
             .daily_fetch_factory
         )
         assert factory is not None
-        with pytest.raises(AppProcessError, match="portfolio-batch"):
-            factory(context)()
-        fundamental.fetch_fund_portfolio.assert_not_called()
+        factory(context)()
+        fundamental.fetch_fund_portfolio.assert_called_once_with("2026-09-30")
 
 
 class TestNightlyOnDuplicatePolicy:

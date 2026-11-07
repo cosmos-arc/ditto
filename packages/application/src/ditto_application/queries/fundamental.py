@@ -6,7 +6,7 @@ from datetime import date
 from typing import Protocol
 
 import polars as pl
-from ditto_data.catalog.snapshot_completion import snapshot_completed
+from ditto_data.catalog.snapshot_completion import checkpoint_matches_snapshot
 from ditto_data.catalog.source_snapshot import ProviderSnapshotReader
 from ditto_data.ingestion.partition_state import PartitionLifecycleReader
 
@@ -127,6 +127,22 @@ class FundamentalQueryFacade:
         """List completed source evidence, without claiming a frozen canonical read."""
         if self._snapshots is None or self._lifecycle is None:
             return []
+        snapshots = [
+            snapshot
+            for snapshot in self._snapshots.list_snapshots(dataset_id="fund_portfolio")
+            if dict(snapshot.response_metadata).get("source_ticker")
+            in {None, source_ticker}
+        ]
+        by_id = {snapshot.snapshot_id: snapshot for snapshot in snapshots}
+        completed = {
+            checkpoint.complete_evidence_id
+            for checkpoint in self._lifecycle.list_complete(dataset_id="fund_portfolio")
+            if checkpoint.complete_evidence_id is not None
+            and checkpoint.complete_evidence_id in by_id
+            and checkpoint_matches_snapshot(
+                checkpoint, by_id[checkpoint.complete_evidence_id]
+            )
+        }
         return [
             {
                 "snapshot_id": snapshot.snapshot_id,
@@ -137,10 +153,13 @@ class FundamentalQueryFacade:
                 "rows": snapshot.row_count,
                 "payload_retained": snapshot.payload_retained,
                 "checksum": snapshot.checksum,
+                "scope": "fund"
+                if dict(snapshot.response_metadata).get("source_ticker")
+                else "market",
+                "source_ticker": dict(snapshot.response_metadata).get("source_ticker"),
             }
-            for snapshot in self._snapshots.list_snapshots(dataset_id="fund_portfolio")
-            if dict(snapshot.response_metadata).get("source_ticker") == source_ticker
-            and snapshot_completed(snapshot, self._lifecycle)
+            for snapshot in snapshots
+            if snapshot.snapshot_id in completed
         ]
 
     def get_balance_sheet(

@@ -46,6 +46,32 @@ def _patch_transform(
 
 
 @pytest.mark.unit
+def test_fund_portfolio_period_accepts_multiple_funds(
+    mocker: pytest_mock.MockFixture,
+) -> None:
+    adapter, client = _adapter_with_client()
+    frame = pl.DataFrame(
+        {
+            "source_ticker": ["000001.OF", "510300.SH"],
+            "report_date": [date(2026, 9, 30)] * 2,
+        }
+    )
+    _patch_transform(mocker, frame)
+    assert adapter.fetch_fund_portfolio(period="20260930").equals(frame)
+    assert client.query.call_args.kwargs["period"] == "20260930"
+    assert "ts_code" not in client.query.call_args.kwargs
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("code", [None, "000001.OF,510300.SH"])
+def test_fund_portfolio_rejects_unbounded_or_multiple_codes(code: str | None) -> None:
+    adapter, client = _adapter_with_client()
+    with pytest.raises(ValueError, match="fund_portfolio requires"):
+        adapter.fetch_fund_portfolio(ts_code=code)
+    client.query.assert_not_called()
+
+
+@pytest.mark.unit
 class TestFundamentalAdapterFetchFinancial:
     """Shared financial fetch helper behavior."""
 

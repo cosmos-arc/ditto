@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
@@ -37,6 +38,43 @@ def _planned() -> PartitionCheckpoint:
 
 
 class TestSQLitePartitionLifecycleStore:
+    def test_incomplete_uses_latest_event_not_clock_or_revision_name(
+        self, tmp_path: Path
+    ) -> None:
+        client, pool = _client(tmp_path / "runtime.sqlite")
+        store = SQLitePartitionLifecycleStore(client)
+        base = _planned()
+        revision = replace(
+            base,
+            chunk_id=base.chunk_id + ":revision:retry",
+            updated_at=base.updated_at - timedelta(days=1),
+        )
+        try:
+            store.plan_partition(base)
+            store.plan_partition(revision)
+            assert store.list_incomplete(
+                dataset_id="stock_daily", source="tushare"
+            ) == (revision,)
+            assert store.list_incomplete(source="fred") == ()
+            # Event order wins over wall-clock and revision-name order.
+            payload = store.advance_partition(
+                base.chunk_id,
+                PartitionLifecycleStatus.PAYLOAD_COMMITTED,
+                occurred_at=base.updated_at - timedelta(days=2),
+                evidence_id="payload:old",
+            )
+            assert store.get_latest_checkpoint(base.chunk_id) == payload
+            assert store.list_incomplete() == (payload,)
+            store.advance_partition(
+                base.chunk_id,
+                PartitionLifecycleStatus.COMPLETE,
+                occurred_at=base.updated_at - timedelta(days=2),
+                evidence_id="snapshot:old",
+            )
+            assert store.list_incomplete() == ()
+        finally:
+            pool.close()
+
     def test_records_complete_happy_path_in_order(self, tmp_path: Path) -> None:
         client, pool = _client(tmp_path / "runtime.sqlite")
         store = SQLitePartitionLifecycleStore(client)

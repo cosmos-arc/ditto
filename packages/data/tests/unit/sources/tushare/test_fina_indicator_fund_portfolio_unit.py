@@ -93,11 +93,16 @@ class TestFinaIndicatorDisclosureDelta:
 class TestFundPortfolioModes:
     """fund_portfolio 公告日驱动（日更）/报告期窗口（按基金回填）."""
 
-    def test_market_request_is_rejected_before_provider_call(self) -> None:
+    def test_market_request_uses_exact_announcement_day(self) -> None:
         fundamental = MagicMock(spec=FundamentalTushareAdapter)
-        with pytest.raises(ValueError, match="source_ticker"):
-            fetch_fund_portfolio(fundamental, _compact, trade_date="2026-07-21")
-        fundamental.fetch_fund_portfolio.assert_not_called()
+        fundamental.fetch_fund_portfolio.return_value = pl.DataFrame(
+            {"source_ticker": ["000001.OF", "510300.SH"]}
+        )
+        result = fetch_fund_portfolio(fundamental, _compact, trade_date="2026-07-21")
+        assert result.height == 2
+        fundamental.fetch_fund_portfolio.assert_called_once_with(
+            ts_code=None, ann_date="20260721"
+        )
 
     def test_trade_date_queries_one_fund(self) -> None:
         fundamental = MagicMock(spec=FundamentalTushareAdapter)

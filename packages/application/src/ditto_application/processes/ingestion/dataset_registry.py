@@ -499,17 +499,6 @@ def _announcement_instrument_fetch(
     return factory
 
 
-def _fund_portfolio_disclosure_fetch(_ctx: DailyFetchContext) -> DailyFetchHandler:
-    """Reject the obsolete market-wide route before any provider request."""
-
-    def fetch() -> pl.DataFrame:
-        raise AppProcessError(
-            "fund_portfolio requires per-fund portfolio-batch ingestion"
-        )
-
-    return fetch
-
-
 def _capital_disclosure_fetch(method: str) -> DailyFetchFactory:
     """``ctx.fetchers.capital.<method>(trade_date=…)`` — 公告日市场级单请求（#627）."""
 
@@ -860,13 +849,13 @@ _FUNDAMENTAL_REGISTRATIONS: tuple[DatasetRegistration, ...] = (
             "fundamental", "fetch_fina_indicator"
         ),
     ),
-    # Source requires a single fund code since 2026-11-05. OTC holders use
+    # Exact announcement-day requests may cover the market. OTC holders use
     # fund_basic identities, independently of the tradable ETF universe.
     DatasetRegistration(
         dataset=Dataset.FUND_PORTFOLIO,
         write_kind=WriteKind.FUNDAMENTAL,
         date_schedule=DateScheduleType.NATURAL_DAYS,
-        daily_fetch_factory=_fund_portfolio_disclosure_fetch,
+        daily_fetch_factory=_daily_fetch("fundamental", "fetch_fund_portfolio"),
         instrument_fetch_factory=_announcement_instrument_fetch(
             "fundamental", "fetch_fund_portfolio"
         ),

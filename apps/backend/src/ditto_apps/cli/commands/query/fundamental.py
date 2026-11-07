@@ -75,7 +75,8 @@ def get_fund_portfolio(
                     "披露股票子集; 类型与修订只采信 report_evidence; 未披露不等于零; "
                     "announcement_cutoff 不是冻结快照; "
                     "provider_observations 为来源记录, 非当前合并结果的单一快照; "
-                    "其 request_start/end 是原请求范围, 不等于已核验的实际覆盖"
+                    "其 request_start/end 是原请求范围, 不等于已核验的实际覆盖; "
+                    "scope=market 的 rows 是市场载荷总行数, 非本基金持仓数量或完整性"
                 ),
                 "rows": frame.to_dicts(),
             }

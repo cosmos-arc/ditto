@@ -466,23 +466,10 @@ class TestIngestByInstrument:
 
 
 @pytest.mark.unit
-def test_fund_batches_remain_in_scope_without_claiming_daily_coverage(
-    coordinator, mock_ingestion_log_store
-) -> None:
+def test_fund_ingestion_remains_on_demand() -> None:
     assert Dataset.FUND_PORTFOLIO in get_all_datasets()
     assert Dataset.FUND_PORTFOLIO not in get_datasets_by_tier(TaskTier.T1_INCREMENTAL)
     assert Dataset.FUND_PORTFOLIO in get_datasets_by_tier(TaskTier.T2_REPAIR)
-    mock_ingestion_log_store.get_log.return_value = IngestionLog(
-        dataset="fund_portfolio",
-        source="tushare",
-        trade_date="2026-11-05",
-        status=IngestionStatus.SUCCESS,
-        rows=0,
-    )
-    result = coordinator.ingest_date("fund_portfolio", "2026-11-05")
-    assert result.status == "failed"
-    assert result.error == "PER_FUND_INGESTION_REQUIRED"
-    mock_ingestion_log_store.get_log.assert_not_called()
 
 
 @pytest.mark.unit

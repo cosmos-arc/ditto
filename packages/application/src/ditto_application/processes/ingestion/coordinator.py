@@ -345,15 +345,6 @@ class IngestionCoordinator:
         dataset_enum = _validate_dataset(dataset)
         ensure_source_supported(dataset_enum, self._source_name)
 
-        if dataset_enum is Dataset.FUND_PORTFOLIO:
-            return IngestionResult(
-                dataset=dataset,
-                trade_date=trade_date,
-                status="failed",
-                error="PER_FUND_INGESTION_REQUIRED",
-                message="公募持仓须使用 ingest fundamental portfolio-batch 逐基金续跑",
-            )
-
         if skip_result := self._check_should_skip(dataset, trade_date, force):
             return skip_result
 
@@ -499,7 +490,13 @@ class IngestionCoordinator:
     ) -> pl.DataFrame | IngestionResult:
         """尝试获取数据，失败时返回 IngestionResult。"""
         try:
-            return self._fetch_data(dataset, trade_date)
+            frame = self._fetch_data(dataset, trade_date)
+            if dataset == "fund_portfolio" and not frame.is_empty():
+                codes = frame["source_ticker"].unique().to_list()
+                if not set(codes) <= set(self._fundamental_store.list_fund_holders()):
+                    self._get_fund_holder_codes()
+                self._fundamental_store.require_fund_holders(codes)
+            return frame
         except Exception as e:
             return _handle_fetch_error(
                 e,

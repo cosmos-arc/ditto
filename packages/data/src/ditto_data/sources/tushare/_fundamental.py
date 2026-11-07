@@ -365,17 +365,19 @@ def fetch_fund_portfolio(
     """
     Fetch fund quarterly holdings (#522, ann_date disclosure anchor).
 
-    2026-11-05 起供应商要求单基金 ts_code，不再支持市场级请求。
-    - 逐基金披露（trade_date + source_ticker）：ts_code+ann_date 单日；
+    供应商要求 ts_code、ann_date、period 至少一个选择条件。
+    - 公告日披露：ann_date 单日，可选单基金 ts_code；
     - 按基金回填：保留边界季度，下界兼容报告期，上界覆盖真实披露截止日。
     """
-    if not source_ticker or "," in source_ticker:
+    if source_ticker and "," in source_ticker:
         raise ValueError("fund_portfolio requires a single source_ticker")
     if trade_date:
         return fundamental.fetch_fund_portfolio(
             ts_code=source_ticker,
             ann_date=to_compact_date(trade_date),
         )
+    if not source_ticker:
+        raise ValueError("fund_portfolio requires source_ticker or trade_date")
     if start_date is None or end_date is None:
         raise ValueError(
             "fund_portfolio instrument fetch requires start_date and end_date"
