@@ -1,0 +1,16 @@
+{
+  "verified_at": "2026-11-07T08:58:33.847725+00:00",
+  "code_sha": "7696d411d5404acb4fd22406d64cb408782ad16e",
+  "scope": "historical artifact maintenance only; not a current release acceptance",
+  "actual_revalidation": "uv run --no-sync python scripts/evidence/paper_five_day_preacceptance.py",
+  "fresh_evidence_hash": "sha256:87baabbd589e4f75128cb931851b9ce7b39f5905084dba66b889ef25fa997c82",
+  "q4_artifacts_verified": 15,
+  "ops_artifacts_verified": 22,
+  "q4_before": "sha256:70397ae5b568aa70355d3974a6275aa582153674cc7c219c9ca018af9d9cf324",
+  "q4_after": "sha256:4c19c14c5557f2c569c33f316bc6e298f1c7aa3f00b2b60a7dee567da143bbbf",
+  "ops_before": "611d426dd9815e2b3b24ba79aec13845e36feb84200542a0766e2b3747889c7a",
+  "ops_after": "d4b8b6d30478c1d013b447564de99acd2b201a94eb7eaa4bf307cf334e35a360",
+  "current_backup_full_restore": "maintainer_deferred",
+  "current_release_qualified": false,
+  "archive": "legacy contains the byte-exact pre-repair manifests; old dates and old outcomes remain historical"
+}

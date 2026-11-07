@@ -1,0 +1,20 @@
+{
+  "code_sha": "7696d411d5404acb4fd22406d64cb408782ad16e",
+  "checked_at": "2026-11-07T08:57:36.760646+00:00",
+  "lanes": {
+    "stock": {
+      "stage": "pre-freeze source qualification",
+      "preflight": "not reached",
+      "launch": "not reached",
+      "error_type": "ValueError",
+      "reason": "live observed snapshots start too late: stock_basic"
+    },
+    "etf": {
+      "stage": "pre-freeze source qualification",
+      "preflight": "not reached",
+      "launch": "not reached",
+      "error_type": "ValueError",
+      "reason": "live observed snapshots start too late: etf_basic"
+    }
+  }
+}

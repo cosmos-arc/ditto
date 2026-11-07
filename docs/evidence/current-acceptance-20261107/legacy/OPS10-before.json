@@ -1,0 +1,165 @@
+{
+  "accelerated_acceptance_approval_hash": "4a3a257bf97afe893cd402be34ab890869a96ac2e6db8b599f60c799b8a5032b",
+  "accelerated_trading_day_count": 20,
+  "artifacts": [
+    {
+      "label": "accelerated_proposal",
+      "path": "/Users/chevy/Desktop/code/ditto/docs/evidence/personal-workstation/pap09-accelerated-proposal-20260902.json",
+      "sha256": "55056899e5928914143349a637ba60afb7098c135da0e80dd3ff561580ba25a3",
+      "size": 9836
+    },
+    {
+      "label": "accelerated_bootstrap",
+      "path": "/Users/chevy/Desktop/code/ditto/docs/evidence/personal-workstation/pap09-accelerated/bootstrap.json",
+      "sha256": "c0c4a443163cb33da1dbcc5adf04b4af107072b1130f6f66725b8944f7594f6b",
+      "size": 1299
+    },
+    {
+      "label": "accelerated_progress",
+      "path": "/Users/chevy/Desktop/code/ditto/docs/evidence/personal-workstation/pap09-accelerated/accelerated-progress.json",
+      "sha256": "d78de4ee6040c7d5839753bfb98c8e133adcc6efe7fab4dab76cff5b5acb36db",
+      "size": 2780
+    },
+    {
+      "label": "restore_evidence",
+      "path": "/Users/chevy/Desktop/code/ditto/docs/evidence/personal-workstation/q1/backup-restore-20260901.json",
+      "sha256": "87a9f1f1eba6578f95242e267367b57a6c0e41473171d328b94796337840e575",
+      "size": 1601
+    },
+    {
+      "label": "q5_proposal",
+      "path": "/Users/chevy/Desktop/code/ditto/docs/evidence/personal-workstation/q5/live-portfolio-proposal-20260902.json",
+      "sha256": "5bdbb29f98041b3a5a118914518d4741e3e08761ebc743c9ba41d942e349dbc3",
+      "size": 5182
+    },
+    {
+      "label": "q5_acceptance",
+      "path": "/Users/chevy/Desktop/code/ditto/docs/evidence/personal-workstation/q5/live-portfolio-acceptance-20260902.json",
+      "sha256": "36f1c0fa1556135d102f1fdb6abc51138509133098ea9dc78c598f69a607a88a",
+      "size": 15167
+    },
+    {
+      "label": "portfolio_diagnostic",
+      "path": "/Users/chevy/Desktop/code/ditto/docs/evidence/personal-workstation/q5/live-portfolio-diagnostic-20260902.json",
+      "sha256": "75aa9526742d525f939d057f0bdf0dc4942efc27a7a81449d8ab45595d39cb98",
+      "size": 12046
+    },
+    {
+      "label": "ui08_final",
+      "path": "/Users/chevy/Desktop/code/ditto/docs/evidence/personal-workstation/q5/ui08-final-20260902.json",
+      "sha256": "38938f8ec5b445aa6d7e73ef0443b58856201b991ff4a7fa97e99257cc8b3587",
+      "size": 6205
+    },
+    {
+      "label": "backend_validation",
+      "path": "/Users/chevy/Desktop/code/ditto/docs/evidence/personal-workstation/validation/backend.json",
+      "sha256": "1b741d2f049ffe528f744bf2fbe75075aca216605eb8bea8995714add37eeb18",
+      "size": 2837
+    },
+    {
+      "label": "frontend_validation",
+      "path": "/Users/chevy/Desktop/code/ditto/docs/evidence/personal-workstation/validation/frontend.json",
+      "sha256": "92451b5de97a88c23088b49e36b3e793cace4168d4f9f4000e3f06b583a22656",
+      "size": 2299
+    },
+    {
+      "label": "gate_0",
+      "path": "/Users/chevy/Desktop/code/ditto/docs/evidence/personal-workstation/gates/Q0.json",
+      "sha256": "43b45caa42d2d64e2091e57c50d7236a09e680f9ff7428aee2cf1a2ec1b2e845",
+      "size": 660
+    },
+    {
+      "label": "gate_1",
+      "path": "/Users/chevy/Desktop/code/ditto/docs/evidence/personal-workstation/gates/Q1.json",
+      "sha256": "966ecf8273ff271fa5ddd29a3bdaa72df2a0516dfe6f370aedff8d1aa95852b3",
+      "size": 1434
+    },
+    {
+      "label": "gate_2",
+      "path": "/Users/chevy/Desktop/code/ditto/docs/evidence/personal-workstation/gates/Q2.json",
+      "sha256": "a5c12e4054608d99c03bd53927b152f3cbf0363eeac210254e815832e33a0731",
+      "size": 1044
+    },
+    {
+      "label": "gate_3",
+      "path": "/Users/chevy/Desktop/code/ditto/docs/evidence/personal-workstation/gates/Q3.json",
+      "sha256": "5ff6e24469b95361b7d20f3decd2ebb57a50f31599ed969ff1cd71dd8fbf6038",
+      "size": 1153
+    },
+    {
+      "label": "gate_4",
+      "path": "/Users/chevy/Desktop/code/ditto/docs/evidence/personal-workstation/gates/Q4.json",
+      "sha256": "7ab5c646f37c11892408ec4c779e044141da116f9f8f90cc61fc66a71819d614",
+      "size": 2168
+    },
+    {
+      "label": "gate_5",
+      "path": "/Users/chevy/Desktop/code/ditto/docs/evidence/personal-workstation/gates/Q5.json",
+      "sha256": "1fed8ffb6ee1d3d6b463494a9bb76a009c7ba3f7c856309b59298c6815abe107",
+      "size": 2809
+    },
+    {
+      "label": "gate_manifest_0",
+      "path": "/Users/chevy/Desktop/code/ditto/docs/evidence/personal-workstation/manifests/Q0.json",
+      "sha256": "4ac5dea25aca1586faa253ea4726465c01ec498272a9188980363ae6de315009",
+      "size": 1170
+    },
+    {
+      "label": "gate_manifest_1",
+      "path": "/Users/chevy/Desktop/code/ditto/docs/evidence/personal-workstation/manifests/Q1.json",
+      "sha256": "63f25ea1bd068458c16cac7dc476a07586cc127df45d892beb7a52ae9217547d",
+      "size": 2476
+    },
+    {
+      "label": "gate_manifest_2",
+      "path": "/Users/chevy/Desktop/code/ditto/docs/evidence/personal-workstation/manifests/Q2.json",
+      "sha256": "bf7a222ac4cae5d4e41ebce9e759b66fe01553502b13481a8d2c5347ba66f1c7",
+      "size": 1202
+    },
+    {
+      "label": "gate_manifest_3",
+      "path": "/Users/chevy/Desktop/code/ditto/docs/evidence/personal-workstation/manifests/Q3.json",
+      "sha256": "0e785fc109cc88b58e7f718fb6b54e96a7c70300b86882274b5e36b71be051b5",
+      "size": 1393
+    },
+    {
+      "label": "gate_manifest_4",
+      "path": "/Users/chevy/Desktop/code/ditto/docs/evidence/personal-workstation/manifests/Q4.json",
+      "sha256": "c3947dd226f2780161cf49fa7b3ce50ff83849802a18e287d39aad2371bbc950",
+      "size": 3357
+    },
+    {
+      "label": "gate_manifest_5",
+      "path": "/Users/chevy/Desktop/code/ditto/docs/evidence/personal-workstation/manifests/Q5.json",
+      "sha256": "610fafdc73027bc363df736585a2ae9a1a39587087e394b95241fc79d3965a0b",
+      "size": 4673
+    }
+  ],
+  "bundle_hash": "611d426dd9815e2b3b24ba79aec13845e36feb84200542a0766e2b3747889c7a",
+  "fresh_bootstrap": true,
+  "generated_at": "2026-09-03T10:15:19.595003Z",
+  "live_day_anchor_bound": true,
+  "passed": true,
+  "portfolio_diagnostic_provider": "glm",
+  "prerequisite_gates": [
+    "Q0",
+    "Q1",
+    "Q2",
+    "Q3",
+    "Q4",
+    "Q5"
+  ],
+  "q5_acceptance_approval_hash": "f6661fefac9294bf1dee388b1fa19b050633d1f233768526c9e374f596c88811",
+  "qualifies_as_wall_clock_soak": false,
+  "restore_verified": true,
+  "safety": {
+    "broker_connections": 0,
+    "paper_only": true,
+    "real_orders": 0,
+    "strategy_publish_or_activation": 0
+  },
+  "schema": "ditto.personal-workstation.release-candidate.v1",
+  "status": "passed",
+  "ui08_steps_passed": 10,
+  "work_package": "OPS-10"
+}

@@ -1,0 +1,173 @@
+{
+  "acceptance_mode": "historical_simulation_from_retained_provider_payloads",
+  "qualifies_as_wall_clock_soak": false,
+  "qualifies_as_live_day": false,
+  "actual_started_at": "2026-11-07T08:54:37.990979+00:00",
+  "signal_date": "2026-11-05",
+  "intended_trade_date": "2026-11-06",
+  "instrument_id": 2001562,
+  "instrument_code": "510300.SH",
+  "account_id": "issue710-governed-etf",
+  "session_id": "issue710-governed-etf-session",
+  "sources": {
+    "basic": {
+      "snapshot_id": "snapshot:tushare:etf_basic:sha256:fe2601e1b8e370e135388d2f9d72a889cb3cf3b88b4ea674888536086cf41623",
+      "created_at": "2026-11-05T13:55:04.331895+00:00",
+      "payload_uri": "provider_payloads/tushare/etf_basic/a6c9c8273d92d85a32309d1a5cdd6bd3.parquet",
+      "checksum": "a6c9c8273d92d85a32309d1a5cdd6bd3",
+      "request_start": "2026-11-05",
+      "request_end": "2026-11-05"
+    },
+    "signal": {
+      "snapshot_id": "snapshot:tushare:etf_daily:sha256:cab893ec18db625b94a37baaa5c578b15218a407e3ae3f8ef372770374e37a0e",
+      "created_at": "2026-11-05T13:55:50.516376+00:00",
+      "payload_uri": "provider_payloads/tushare/etf_daily/9e66ef882c8c196957863e87a6fe420c.parquet",
+      "checksum": "9e66ef882c8c196957863e87a6fe420c",
+      "request_start": "2026-11-05",
+      "request_end": "2026-11-05"
+    },
+    "execution": {
+      "snapshot_id": "snapshot:tushare:etf_daily:sha256:06f01dee2ab32f82f02bee67377204720c90650f10e930e1118984ddad27e4b0",
+      "created_at": "2026-11-06T18:08:10.999615+00:00",
+      "payload_uri": "provider_payloads/tushare/etf_daily/c44b574bcd40e18ae408f85395c59049.parquet",
+      "checksum": "c44b574bcd40e18ae408f85395c59049",
+      "request_start": "2026-11-06",
+      "request_end": "2026-11-06"
+    },
+    "reference": {
+      "snapshot_id": "snapshot:config:etf_reference:sha256:2416f373e5b3d8952584f8895995be80c29e915409a5746f6f8d5038fc0d3dd3",
+      "created_at": "2026-11-03T17:31:23.873195+00:00",
+      "payload_uri": "provider_payloads/config/etf_reference/745b85d536f365cc6ddec1cf94597056.parquet",
+      "checksum": "745b85d536f365cc6ddec1cf94597056",
+      "request_start": "2026-11-03",
+      "request_end": "2026-11-03"
+    }
+  },
+  "simulated_account_clock": "2026-11-05T15:00:00+00:00",
+  "code_sha": "7696d411d5404acb4fd22406d64cb408782ad16e",
+  "safety": {
+    "broker_connections": 0,
+    "real_orders": 0,
+    "strategy_publishes": 0
+  },
+  "version": {
+    "version_id": "etf-allocation-3d2f02cf69c8aeae428ff3118479b390",
+    "allocation_id": "issue710-governed",
+    "parent_version_id": null,
+    "asof": "2026-11-05",
+    "knowledge_cutoff": "2026-11-05T15:00:00Z",
+    "source_snapshot_id": "snapshot:tushare:etf_basic:sha256:fe2601e1b8e370e135388d2f9d72a889cb3cf3b88b4ea674888536086cf41623",
+    "mode": "equal",
+    "weights": {
+      "2001562": "0.50000000"
+    },
+    "cash_weight": "0.5",
+    "max_position_weight": "0.5",
+    "tracking_exposure": {
+      "000300.SH": "0.50000000"
+    },
+    "reason": "issue710 isolated historical acceptance",
+    "rule_version": "etf-allocation-v1",
+    "paper_status": "research_only",
+    "review_status": "review_approved",
+    "created_at": "2026-11-07T08:54:39.342094+00:00"
+  },
+  "authorization_id": "etf-allocation-3d2f02cf69c8aeae428ff3118479b390:paper:4a2dbd905287e75a5d2b659d2546fbab",
+  "handoff": {
+    "status": "created",
+    "action": "start",
+    "session": {
+      "session_id": "issue710-governed-etf-session",
+      "account_id": "issue710-governed-etf",
+      "strategy_id": "etf-allocation:issue710-governed",
+      "trade_date": "2026-11-06",
+      "status": "running",
+      "revision": 1,
+      "created_at": "2026-11-07 08:54:41.134409+00:00",
+      "updated_at": "2026-11-07 08:54:41.138374+00:00",
+      "pause_reason": null
+    }
+  },
+  "execution": [
+    {
+      "intent_id": "sig-eod-2026-11-05-etf-allocation:issue710-governed-etf-allocation-3d2f02cf69c8aeae428ff3118479b390-issue710-governed-etf-2026-11-05-c025e5462568-2001562-buy",
+      "instrument_id": 2001562,
+      "status": "filled",
+      "reason": null,
+      "execution_id": "paper-execution:f2f5cdf2d46e7c346d34fa6eb1ddaa8d",
+      "ledger_event_id": "account-event:d26a75f607f3fafbee531ee8d9ae4a87"
+    }
+  ],
+  "replay_identical": true,
+  "restart_replay_identical": true,
+  "ledger_events": [
+    {
+      "event_id": "account-event:6abd83ed958cea6ffdc3ea69642631f3",
+      "account_id": "issue710-governed-etf",
+      "account_kind": "paper",
+      "event_type": "opening_cash",
+      "trade_date": "2026-11-05",
+      "settlement_date": "2026-11-05",
+      "recorded_at": "2026-11-05 14:59:59+00:00",
+      "idempotency_key": "paper-opening:opening",
+      "actor": "paper-engine:account-bootstrap",
+      "source": "paper_engine",
+      "instrument_id": null,
+      "currency": "CNY",
+      "quantity": "0",
+      "price": "0.0000",
+      "gross_amount": "10000.00",
+      "fees": "0.00",
+      "tax": "0.00",
+      "net_cash": "10000.00",
+      "flow_position": null,
+      "note": "",
+      "attachment_refs": [],
+      "external_reference": null,
+      "reverses_event_id": null,
+      "corrects_event_id": null,
+      "replacement_event_type": null,
+      "event_hash": "account-event:sha256:169a7785682ec4a9fde489938f6fe844ee29632c8b1d5d45969a7e7ef6bd7375"
+    },
+    {
+      "event_id": "account-event:d26a75f607f3fafbee531ee8d9ae4a87",
+      "account_id": "issue710-governed-etf",
+      "account_kind": "paper",
+      "event_type": "buy",
+      "trade_date": "2026-11-06",
+      "settlement_date": "2026-11-09",
+      "recorded_at": "2026-11-07 08:54:41.140457+00:00",
+      "idempotency_key": "paper-ledger:paper-execution:f2f5cdf2d46e7c346d34fa6eb1ddaa8d",
+      "actor": "paper-session:issue710-governed-etf-session",
+      "source": "paper_engine",
+      "instrument_id": 2001562,
+      "currency": "CNY",
+      "quantity": "1.1E+3",
+      "price": "4.1240",
+      "gross_amount": "4536.40",
+      "fees": "5.05",
+      "tax": "0.00",
+      "net_cash": "-4541.45",
+      "flow_position": null,
+      "note": "assumption=fill-assumption:sha256:9b04db471b15e5511a8a77fccb69968e6c7310c030c2231875900b21b9b378b3;market_lineage=market-lineage:sha256:27ab5d88735715e68fb30449976dc8d2232a4815834993858c6565c797be5386",
+      "attachment_refs": [],
+      "external_reference": "paper-execution:f2f5cdf2d46e7c346d34fa6eb1ddaa8d",
+      "reverses_event_id": null,
+      "corrects_event_id": null,
+      "replacement_event_type": null,
+      "event_hash": "account-event:sha256:25fc2b985601b4be1d0d2fbb5f0bf60a817360ddcdc72e389575ed643ecc56e9"
+    }
+  ],
+  "eod": {
+    "reconciliation_id": "paper-reconciliation:488b327ce716e87b90182e0b8ab99758",
+    "session_id": "issue710-governed-etf-session",
+    "trade_date": "2026-11-06",
+    "order_count": 1,
+    "fill_count": 1,
+    "ledger_fill_count": 1,
+    "balanced": true,
+    "checksum": "paper-eod:sha256:a2a533c747c408cf12b992cd268d1dcde7ec92bbf8fed4d7ff3c91380d2d20ff",
+    "reconciled_at": "2026-11-07 08:54:43.490477+00:00"
+  },
+  "actual_finished_at": "2026-11-07T08:54:43.491377+00:00"
+}

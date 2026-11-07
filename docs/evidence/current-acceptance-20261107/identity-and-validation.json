@@ -1,0 +1,50 @@
+{
+  "executed_code_sha": "7696d411d5404acb4fd22406d64cb408782ad16e",
+  "base_sha": "f97684b6a56ed2c9928a83301e8184a4c7fccfa8",
+  "trees": {
+    "apps/backend/src": "8d406d665810e7117eb1c9afd98155fcf852fca2",
+    "packages": "6fb7d59a9dcc3807c20b73a626c9baf4dfbe6d9b",
+    "config": "1c103d159f904b6a58a94d0b4ff79f6cfa124d98"
+  },
+  "files_sha256": {
+    "uv.lock": "755d7b95e428e176a45298139768f8f2d47edd921052590b36ca6fb2d86cbf26",
+    "bun.lock": "a7eded59e03ac2c7dd55453a70323d531dd52a760657a7360b549407dd905d18",
+    "pyproject.toml": "7d5d9aaa6ba4f5f6842d0e1fea211b6d817fa7c74d3127fc5c2dc30ed0d24cd2",
+    "docs/evidence/stock-paper-20261021/stock_paper_journey.py": "729f76a50b4b80b3bca5f355bcdb0da3a38f46b73b56276d53a061b5afb750e7"
+  },
+  "runtime": {
+    "python": "3.13.14",
+    "bun": "1.3.14",
+    "node": "24.20.0",
+    "task": "3.53.1"
+  },
+  "state_scope": "Fresh private acceptance roots only; original metadata and retained provider payloads opened read-only. Signing keys and databases are local, excluded from the repository.",
+  "validation": {
+    "full_verify_push": {
+      "code_sha": "6bb914a1cb92dfdca55bc5b041728bdfb762c6a1",
+      "result": "PASS",
+      "python": "16771 passed, 17 skipped",
+      "web": "224 files / 1928 tests passed",
+      "harness": "148 passed, 116 subtests; tooling 270 passed; dependency smoke 4 passed",
+      "types_lint": "passed"
+    },
+    "review_fix": {
+      "code_sha": "7696d411d5404acb4fd22406d64cb408782ad16e",
+      "result": "PASS",
+      "targeted_tests": 8,
+      "basedpyright": "0 errors, 0 warnings",
+      "ruff": "passed"
+    },
+    "focused_research": 247,
+    "focused_paper": 25,
+    "pit": 666
+  },
+  "current_qualification": {
+    "research": "NOT_PASSED",
+    "paper_historical_execution": "PASSED",
+    "paper_current_release": "NOT_PASSED: archived live-day anchor; proxy authentication verified successfully",
+    "natural_day_soak": "NOT_CLAIMED",
+    "backup_full_restore": "MAINTAINER_DEFERRED"
+  },
+  "proxy_online_execution_code_sha": "39890cb0a5e54289c33b1a3662bb00c43e1e6925"
+}

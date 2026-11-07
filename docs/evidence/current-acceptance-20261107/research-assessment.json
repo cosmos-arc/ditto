@@ -1,0 +1,242 @@
+{
+  "code_sha": "7696d411d5404acb4fd22406d64cb408782ad16e",
+  "status": "NOT_PASSED",
+  "checked_at": "2026-11-07T09:00:00.882701+00:00",
+  "strategy_versions": [
+    {
+      "strategy_id": "seed_etf_industry_rotation",
+      "version": 1,
+      "name": "ETF 行业轮动",
+      "spec_json": {
+        "strategy_id": "seed_etf_industry_rotation",
+        "name": "ETF 行业轮动",
+        "template": "etf_rotation",
+        "universe": "csi_etf_broad",
+        "asset_class": "etf",
+        "scorer": {
+          "method": "rank_then_combine",
+          "params": {}
+        },
+        "selector": {
+          "method": "top_k",
+          "params": {
+            "k": 5
+          }
+        },
+        "execution": {
+          "frequency": "M",
+          "method": "calendar",
+          "cost_model": {
+            "commission_rate": 0.0003,
+            "slippage_bps": 5.0,
+            "impact_model": "none"
+          },
+          "default_order_type": "market"
+        },
+        "constraints": [
+          {
+            "type": "max_weight_per_instrument",
+            "params": {
+              "max_weight": 0.3
+            },
+            "priority": 100
+          },
+          {
+            "type": "max_turnover",
+            "params": {
+              "max_turnover": 0.5
+            },
+            "priority": 100
+          }
+        ],
+        "benchmark": "000300.SH",
+        "params": {
+          "lookback": 252,
+          "vol_window": 60
+        },
+        "param_constraints": [],
+        "tags": [
+          "seed",
+          "etf",
+          "rotation",
+          "industry"
+        ],
+        "signal_expressions": [
+          "momentum_1m",
+          "reversal_1w",
+          "volatility_factor"
+        ],
+        "signal_weights": [
+          0.5,
+          0.3,
+          0.2
+        ],
+        "required_datasets": [
+          "etf_daily"
+        ]
+      },
+      "spec_hash": "68cc64dc74f6a251a08ffdbee2de9b671641a5c908e47b2202481cff4e1c8b00",
+      "parent_version": null,
+      "tags": [
+        "seed",
+        "etf",
+        "rotation",
+        "industry"
+      ],
+      "created_at": "2026-10-18T23:42:13Z"
+    },
+    {
+      "strategy_id": "seed_stock_selection_rotation",
+      "version": 1,
+      "name": "个股选股轮动",
+      "spec_json": {
+        "strategy_id": "seed_stock_selection_rotation",
+        "name": "个股选股轮动",
+        "template": "stock_selection",
+        "universe": "csi_a_share",
+        "asset_class": "stock",
+        "scorer": {
+          "method": "rank_then_combine",
+          "params": {}
+        },
+        "selector": {
+          "method": "top_k",
+          "params": {
+            "k": 20
+          }
+        },
+        "execution": {
+          "frequency": "M",
+          "method": "calendar",
+          "cost_model": {
+            "commission_rate": 0.001,
+            "slippage_bps": 10.0,
+            "impact_model": "none"
+          },
+          "default_order_type": "market"
+        },
+        "constraints": [
+          {
+            "type": "max_weight_per_instrument",
+            "params": {
+              "max_weight": 0.1
+            },
+            "priority": 100
+          },
+          {
+            "type": "max_turnover",
+            "params": {
+              "max_turnover": 0.3
+            },
+            "priority": 100
+          }
+        ],
+        "benchmark": "000300.SH",
+        "params": {
+          "lookback": 252,
+          "top_k": 20,
+          "max_weight": 0.1,
+          "trend_threshold": 0.0,
+          "cash_target": 0.0,
+          "allocation_method": "equal_weight",
+          "rebalance_freq": "monthly",
+          "quality_weight": 0.4,
+          "value_weight": 0.3,
+          "momentum_weight": 0.3
+        },
+        "param_constraints": [],
+        "tags": [
+          "seed",
+          "stock",
+          "selection",
+          "rotation"
+        ],
+        "signal_expressions": [
+          "quality_roe",
+          "value_pe",
+          "momentum_1m"
+        ],
+        "signal_weights": [
+          0.4,
+          0.3,
+          0.3
+        ],
+        "required_datasets": [
+          "stock_daily",
+          "adj_factor",
+          "balance_sheet",
+          "income_statement"
+        ]
+      },
+      "spec_hash": "80dcc1d80aeeebe403aafbf524d2280ff58aadc984326dbc2e387e6fca3eece8",
+      "parent_version": null,
+      "tags": [
+        "seed",
+        "stock",
+        "selection",
+        "rotation"
+      ],
+      "created_at": "2026-10-18T23:42:13Z"
+    }
+  ],
+  "research_time": {
+    "consumer": "ResearchDataFeed",
+    "decision_time": "15:00 UTC (23:00 Asia/Shanghai), unchanged",
+    "membership": "lagged knowledge cutoff, frozen membership required",
+    "execution_lag_sessions": 1
+  },
+  "price_and_adjustment": {
+    "consumer": "build_live_bars -> normalized_bars",
+    "requires": "OHLC plus exact per-instrument/session adj_factor for both lanes; index benchmark neutral 1.0",
+    "stock_limit": "retained provider limits required for traded stock sessions",
+    "etf_limit": "existing synthetic band approximation, not independent ETF limit truth"
+  },
+  "warmup": {
+    "declared_strategy_lookback": 252,
+    "etf_declared_vol_window": 60,
+    "qualification_rule": "compiled_expressions_actual_max_lookback and certified per-instrument calendar determine warmup; lookback parameter is not an eligible-month count",
+    "certified_runtime_warmup": "not produced: pre-freeze source qualification rejected"
+  },
+  "local_snapshot_replay": {
+    "stock_first_master_observed_at": "2026-10-03T14:54:11.722076+00:00",
+    "etf_first_master_observed_at": "2026-10-03T14:56:07.751340+00:00",
+    "complete_contiguous_eligible_months_upper_bound": 1,
+    "derivation": "Retained calendar: first October session 2026-10-08, last 2026-10-30. Master observations on October 3 precede the first session, so the existing complete_months trading-session boundary permits at most October. November is unfinished. Per-instrument coverage and compiled warmup remain uncertified and may reduce this bound to zero; no month is certified eligible.",
+    "qualified_interval": null,
+    "thresholds": {
+      "failure_below_months": 37,
+      "research_only_months": "37-95",
+      "length_only_promotion_eligibility_from_months": 96
+    },
+    "calendar_evidence": {
+      "first_october_session": "2026-10-08",
+      "last_october_session": "2026-10-30",
+      "captured_calendar_sha256": "25dea2d0fc6c6caebee82654a8788a6083727061f43576b83c760ff2db632523",
+      "rule": "research_validation_calendar.complete_months includes the first month when strategy_eligible_start <= its first session; last_complete_month=2026-10"
+    }
+  },
+  "historical_information_reconstruction": {
+    "status": "NOT_PROVEN",
+    "reason": "Retained master payloads do not carry original public/revision provenance for historical roster and member changes; ETF daily payload lacks suspension status. Need original dated evidence, qualified projection, corporate actions and factor/status coverage. Later local observations were not backdated; late backfill alone does not refute all possible reconstruction."
+  },
+  "actual_attempt": {
+    "consumer": "r3_live_planning_builder.main",
+    "legacy_requested_window": "2015-02-01..2026-07-31 (existing builder constant, not selected as a newly qualified interval)",
+    "result": "both lanes rejected before freeze; source request_start is later than legacy window",
+    "preflight": "NOT_REACHED",
+    "launch_scheduler_factory_feed": "NOT_REACHED",
+    "frozen_result_stability": "NOT_TESTED_ON_REAL_CURRENT_CANDIDATE"
+  },
+  "coverage": {
+    "fixed_pool": "stock Paper 10 names and governed ETF 510300.SH are execution samples only; neither proves full-market research",
+    "real_edge_case_matrix": "NOT_COMPLETED: dividends/actions, listing/delisting/rename, suspension/resumption, membership transitions, revisions and future sentinels require qualified dated source evidence",
+    "automated_pit": "666 passed separately; not a substitute for the real source matrix",
+    "ordinary_backtest": "NOT_RERUN; no claim that static daily-asof absence alone implies leakage"
+  },
+  "prior_evidence": "August 5 R3 and September Backtest successes remain historical audit evidence; neither replaced nor claimed as this candidate pass",
+  "remaining": [
+    "Close source-history and dependency eligibility before final execution (#707 remains open).",
+    "Derive a real common eligible interval with source provenance and compiled warmup; preserve 37/96-month rules.",
+    "Run preflight -> freeze -> launch -> scheduler -> FrozenAuditResearchBacktestFactory -> ResearchDataFeed, then edge-case and frozen-result stability acceptance."
+  ]
+}

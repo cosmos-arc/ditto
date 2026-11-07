@@ -1,0 +1,17 @@
+{
+  "code_sha": "7696d411d5404acb4fd22406d64cb408782ad16e",
+  "source_mode": "retained real Tushare response, no synthesized bars",
+  "online_capture_code_sha": "6bb914a1cb92dfdca55bc5b041728bdfb762c6a1",
+  "online_capture_proposal_generated_at": "2026-11-07T08:44:14.821394Z",
+  "captured_files": {
+    "calendar.parquet": "25dea2d0fc6c6caebee82654a8788a6083727061f43576b83c760ff2db632523",
+    "bars.parquet": "59e50bda1825a5d77d0876261f9ee1f4db2f373d1627f236eb9c598f853b0a8b"
+  },
+  "current_online_refetch": "Historical failed attempts used the wrong official endpoint with the proxy token. Corrected proxy online acceptance passed; see proxy-correction.json.",
+  "live_day_anchor": "archived 2026-09-02, NOT a current live-day pass",
+  "current_release_qualification": false,
+  "repeat_existing_root": {
+    "run_disposition": "verified_existing",
+    "newly_recorded_days": 0
+  }
+}

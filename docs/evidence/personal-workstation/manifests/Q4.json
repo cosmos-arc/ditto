@@ -7,8 +7,8 @@
     },
     {
       "relative_path": "personal-workstation/20260831-paper-five-day-preacceptance.json",
-      "sha256": "sha256:1c3a85f1324e7f461e608395f16fd3d3299fa2509042ba07f77840b42a89c1a2",
-      "size_bytes": 8991
+      "sha256": "sha256:3e82ca2e40a101ee4d5b1bb42f3a3a2415a22e99c38b8e80d576dd4cbe758fe2",
+      "size_bytes": 8990
     },
     {
       "relative_path": "personal-workstation/20260831-portfolio-comparison-live-acceptance.json",
@@ -78,7 +78,7 @@
   ],
   "blockers": [],
   "gate": "Q4",
-  "manifest_hash": "sha256:70397ae5b568aa70355d3974a6275aa582153674cc7c219c9ca018af9d9cf324",
+  "manifest_hash": "sha256:4c19c14c5557f2c569c33f316bc6e298f1c7aa3f00b2b60a7dee567da143bbbf",
   "schema_version": 1,
   "status": "passed"
 }

@@ -1,5 +1,11 @@
 # 个人量化工作站执行证据
 
+> 以下结论属于 2026 年 9 月历史身份，不是当前候选放行。2026-11-07 的
+> [#709/#710 复验](../current-acceptance-20261107/README.md) 保留研究与当前 Paper 发布资格阻断，
+> 备份/完整恢复为维护者已暂缓。本次实际复验 PAP-08 后修复 Q4/OPS-10 清单引用，
+> [修复前清单与前后 hash](../current-acceptance-20261107/legacy-revalidation.json) 可追溯；
+> 下文旧日期的 `passed` 和恢复结论不代表当前通过。
+
 生成时间：2026-09-03 07:49（Asia/Shanghai）
 
 ## 结论
@@ -37,7 +43,7 @@ I12 已由精确批准完成 Strategy Draft 保存、136 个合资格月份的�
 - PAP-09：[加速 bootstrap](pap09-accelerated/bootstrap.json) 与 [20 日进度](pap09-accelerated/accelerated-progress.json) — 20 个真实已收盘交易日全部有独立签名/对账证据，`q4_five_day_ready=true`、`pap09_twenty_day_release_ready=true`、签名链有效。它满足发布验收，但明确 `qualifies_as_wall_clock_soak=false`。
 - Q5：[组合闭环](q5/live-portfolio-acceptance-20260902.json)、[GLM 诊断](q5/live-portfolio-diagnostic-20260902.json) 与 [UI-08 最终验收](q5/ui08-final-20260902.json) — 真实 Tushare 2,110 行、2 个策略标的；GLM-5.3 使用 7,900 tokens、一次只读工具调用，引用精确数值路径；十步浏览器旅程全部通过。
 - GLM 正式评测：[balanced](../r5/release/eval-report-balanced.json)、[quality](../r5/release/eval-report-quality.json) 与 [release preflight](../r5/release/release-preflight.json) — 两档各 131/131、合计 546,193 tokens，6/6 发布前置检查通过。
-- OPS-10：[release candidate](ops/release-candidate-20260902.json) — `status=passed`，22 个输入 artifact 均绑定到 hash，bundle hash 为 `1511caeec444775ddaa8ad48b7cc108faea209bcc7ba63251ad41599d640fb79`。
+- OPS-10：[release candidate](ops/release-candidate-20260902.json) — 历史 `status=passed`，22 个输入 artifact 均绑定到 hash；2026-11-07 修复引用后的 bundle hash 为 `d4b8b6d30478c1d013b447564de99acd2b201a94eb7eaa4bf307cf334e35a360`，不代表重新通过当前 OPS-10。
 - Gate manifest：Q0—Q6 的 artifact path、SHA-256、size、blocker/status 与 canonical manifest hash 已逐份重算验证；所有 Gate 均为 `passed` 且 blocker 为空。
 
 ## 持续运营边界

@@ -3,12 +3,18 @@
 
 信号源：selection-run:sha256:b38de6d2…（#585 停牌真值治愈后口径，10 候选，
 research-case:sha256:0a7e0454…）。行情/涨跌停取自真实认证分区
-（bars/limit 2026.parquet，trade_date=2026-10-21），写入真实账本
-data/trading/trading.sqlite。每单执行后重放一次验证幂等，会话 EOD 对账后暂停。
+（trade_date=2026-10-21）的留存 payload，仅写入新建隔离根。
+完整历史 OHLC 用于事后执行模拟，不证明开盘可见性或策略严格 PIT。
 """
 
 from __future__ import annotations
 
+import argparse
+import hashlib
+import shutil
+import sqlite3
+import subprocess
+from contextlib import closing
 from datetime import UTC, date, datetime
 from decimal import Decimal
 from pathlib import Path
@@ -38,15 +44,18 @@ from ditto_application.processes.execution.operate_paper_session import (
 from ditto_application.processes.execution.reconcile_paper_account import (
     ReconcilePaperAccount,
 )
+from ditto_data.catalog.provider_payload import FilesystemProviderPayloadStore
+from ditto_data.catalog.snapshot_reader import SnapshotReadService
+from ditto_data.catalog.source_snapshot_store import SQLiteProviderSnapshotStore
+from ditto_data.ingestion.partition_state_store import SQLitePartitionLifecycleStore
 from ditto_execution.paper.sqlite_store import SqlitePaperSessionStore
 from ditto_execution.storage.sqlite.account_journal import SqliteAccountEventJournal
 from ditto_kernel.identity import InstrumentId
+from ditto_platform.foundation.db.sqlite_pool import SQLitePool
+from ditto_platform.foundation.storage.sqlite_client import SQLiteClient
 from ditto_portfolio.account_projection import AccountLedgerRebuilder
 
 REPO = Path(__file__).resolve().parents[3]
-STATE = REPO / "data"
-TRADING_DB = STATE / "trading" / "trading.sqlite"
-OUT = Path(__file__).resolve().parent / "report.json"
 
 ACCOUNT_ID = "stock-paper-live-20261021"
 SESSION_ID = "stock-paper-live-20261021:s1"
@@ -56,7 +65,6 @@ RESEARCH_CASE = (
     "0a7e0454f670a8008ff4863ff108444d3dcb3c0bd47138fa8a4df1dd6d4652cc"
 )
 SIGNAL_AS_OF = datetime(2026, 10, 20, 7, 0, tzinfo=UTC)  # 选池 as_of 15:00 CST
-EXECUTION_AT = datetime(2026, 10, 21, 1, 30, tzinfo=UTC)  # 09:30 CST 开盘
 TRADE_DATE = date(2026, 10, 21)
 SETTLEMENT_DATE = date(2026, 10, 22)
 INITIAL_CASH = Decimal("200000")
@@ -65,6 +73,10 @@ LOT_SIZE = 100
 SNAPSHOT_STOCK_DAILY = (
     "snapshot:tushare:stock_daily:sha256:"
     "d6465767689476990d6b03f9769cd43c0199247ee1c18a0b1795315d0bef8ea3"
+)
+SNAPSHOT_STOCK_LIMIT = (
+    "snapshot:tushare:stock_limit:sha256:"
+    "0bdf6624d4901f33d97d301afab0185e39ad64b29be411dc5b4d0cef4308526f"
 )
 
 CANDIDATES: tuple[tuple[int, str, float], ...] = (  # (instrument_id, name, score)
@@ -92,15 +104,80 @@ def _board(ticker: str) -> tuple[str, str, float]:
     return exchange, "main", 0.1
 
 
-def load_market() -> dict[int, dict[str, object]]:
-    """读 10-21 真实 bars 并按标的合并涨跌停真值."""
+def load_market(source_root: Path) -> tuple[dict[int, dict[str, object]], list[dict]]:
+    """Verify the original retained responses; never relabel today's partitions."""
     ids = [c[0] for c in CANDIDATES]
-    bars = pl.read_parquet(STATE / "market/stock/bars/2026.parquet").filter(
-        (pl.col("trade_date") == TRADE_DATE) & pl.col("instrument_id").is_in(ids)
-    )
-    limits = pl.read_parquet(STATE / "market/stock/limit/2026.parquet").filter(
-        (pl.col("trade_date") == TRADE_DATE) & pl.col("instrument_id").is_in(ids)
-    )
+    frames = []
+    evidence = []
+    with (
+        closing(
+            sqlite3.connect(
+                f"file:{source_root}/metadata/metadata.sqlite?mode=ro", uri=True
+            )
+        ) as connection,
+        closing(SQLiteClient(SQLitePool(":memory:"))) as catalog,
+    ):
+        connection.row_factory = sqlite3.Row
+        connection.execute("BEGIN")
+        # Store initialization/backfills must only touch the disposable catalog.
+        snapshots = SQLiteProviderSnapshotStore(catalog)
+        lifecycle = SQLitePartitionLifecycleStore(catalog)
+        snapshot_ids = (SNAPSHOT_STOCK_DAILY, SNAPSHOT_STOCK_LIMIT)
+        for table, identity in (
+            ("provider_snapshots", "snapshot_id"),
+            ("provider_snapshot_observation_events", "snapshot_id"),
+            ("ingestion_partition_checkpoints", "complete_evidence_id"),
+        ):
+            columns = ",".join(
+                row["name"] for row in catalog.fetchall(f"PRAGMA table_info({table})")
+            )
+            rows = connection.execute(
+                f"SELECT {columns} FROM {table} WHERE {identity} IN (?, ?)",  # noqa: S608 - fixed tables and locally created schema
+                snapshot_ids,
+            ).fetchall()
+            placeholders = ",".join("?" for _ in columns.split(","))
+            catalog.executemany(
+                f"INSERT INTO {table} ({columns}) VALUES ({placeholders})",  # noqa: S608 - fixed tables and locally created schema
+                [tuple(row) for row in rows],
+            )
+        catalog.commit()
+        reader = SnapshotReadService(
+            snapshots, FilesystemProviderPayloadStore(source_root), lifecycle
+        )
+        instruments = pl.DataFrame(
+            [
+                dict(row)
+                for row in connection.execute(
+                    "SELECT instrument_id, ticker || CASE exchange WHEN 'SSE' "
+                    "THEN '.SH' WHEN 'SZSE' THEN '.SZ' END AS source_ticker "
+                    "FROM instrument"
+                )
+            ]
+        ).filter(pl.col("instrument_id").is_in(ids))
+        for snapshot_id in snapshot_ids:
+            contents = reader.read(snapshot_id)
+            snapshot = contents.snapshot
+            frame = contents.frame.filter(pl.col("trade_date") == TRADE_DATE).join(
+                instruments, on="source_ticker", how="inner", validate="1:1"
+            )
+            frames.append(frame)
+            evidence.append(
+                {
+                    "snapshot_id": snapshot_id,
+                    "observed_at": (
+                        contents.observed_at or snapshot.created_at
+                    ).isoformat(),
+                    "knowledge_date": str(frame["knowledge_date"].max()),
+                    "payload_uri": snapshot.payload_uri,
+                    "sha256": hashlib.sha256(
+                        (
+                            source_root
+                            / _require(snapshot.payload_uri, "payload missing")
+                        ).read_bytes()
+                    ).hexdigest(),
+                }
+            )
+    bars, limits = frames
     limit_by_id = {r["instrument_id"]: r for r in limits.to_dicts()}
     market: dict[int, dict[str, object]] = {}
     for row in bars.to_dicts():
@@ -115,13 +192,14 @@ def load_market() -> dict[int, dict[str, object]]:
     missing = set(ids) - set(market)
     if missing:
         raise RuntimeError(f"bars missing for {missing}")
-    return market
+    return market, evidence
 
 
 def _order(
     spec: tuple[int, str, float],
     market: dict[int, dict[str, object]],
     index: int,
+    execution_at: datetime,
 ) -> OperatePaperOrderCommand:
     instrument_id, _, _ = spec
     bar = market[instrument_id]
@@ -144,8 +222,8 @@ def _order(
             dataset_id="stock_daily",
             source="tushare",
             source_snapshot_id=SNAPSHOT_STOCK_DAILY,
-            observed_at=EXECUTION_AT,
-            publication_cutoff=EXECUTION_AT,
+            observed_at=execution_at,
+            publication_cutoff=execution_at,
             open=float(bar["open"]),
             high=float(bar["high"]),
             low=float(bar["low"]),
@@ -178,10 +256,8 @@ def _order(
             slippage_bps=10.0,
         ),
         decision_at=SIGNAL_AS_OF,
-        execution_at=EXECUTION_AT,
+        execution_at=execution_at,
         settlement_date=SETTLEMENT_DATE.isoformat(),
-        position_quantity=0,
-        available_quantity=0,
     )
 
 
@@ -191,37 +267,116 @@ def _require[T](value: T | None, message: str) -> T:
     return value
 
 
+def verify_restart(
+    trading_db: Path, market: dict[int, dict[str, object]], execution_at: datetime
+) -> dict[str, object]:
+    """Reopen storage, replay orders, and reconcile with a new idempotency key."""
+    with (
+        SqliteAccountEventJournal(str(trading_db)) as journal,
+        SqlitePaperSessionStore(str(trading_db)) as store,
+    ):
+        before = len(journal.list_events(ACCOUNT_ID))
+        operator = OperatePaperSession(store=store, account_journal=journal)
+        recovered = operator.recover(SESSION_ID)
+        for index, spec in enumerate(CANDIDATES, start=1):
+            if (
+                operator.execute(_order(spec, market, index, execution_at)).status
+                != "replayed"
+            ):
+                raise RuntimeError("restart did not replay the original execution")
+        if len(journal.list_events(ACCOUNT_ID)) != before:
+            raise RuntimeError("restart duplicated ledger events")
+        handler = PaperSessionCommandHandler(
+            store=store,
+            account_journal=journal,
+            clock=lambda: execution_at,
+            reconciler=ReconcilePaperAccount(store=store, account_journal=journal),
+        )
+        reconciled = handler.reconcile(
+            ReconcilePaperSessionCommand(
+                session_id=SESSION_ID,
+                idempotency_key=f"{SESSION_ID}:issue710-restart-eod",
+            )
+        )
+        if not reconciled.balanced:
+            raise RuntimeError("restart reconciliation is unbalanced")
+        handler.pause(
+            PausePaperSessionCommand(
+                session_id=SESSION_ID,
+                idempotency_key=f"{SESSION_ID}:pause:v1",
+                reason="#710 historical simulation and restart EOD complete",
+            )
+        )
+        return {
+            "recovered": len(recovered),
+            "ledger_events": before,
+            "balanced": reconciled.balanced,
+        }
+
+
 def main() -> None:
-    """执行（幂等一次性）走单并写 report.json."""
-    market = load_market()
+    """Run the historical simulation once in a fresh, explicit acceptance root."""
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--source-root", type=Path, required=True)
+    parser.add_argument("--run-root", type=Path, required=True)
+    args = parser.parse_args()
+    source_root = args.source_root.resolve(strict=True)
+    run_root = args.run_root.resolve()
+    if (
+        source_root == run_root
+        or source_root in run_root.parents
+        or run_root in source_root.parents
+    ):
+        raise ValueError("source and acceptance roots must be independent")
+    market, sources = load_market(source_root)
+    execution_at = datetime.now(UTC)
+    for source in sources:
+        if (
+            datetime.fromisoformat(source["observed_at"]) > execution_at
+            or date.fromisoformat(source["knowledge_date"]) >= execution_at.date()
+        ):
+            raise ValueError("source evidence is not yet visible")
+    run_root.mkdir(parents=True, exist_ok=False)
+    trading_db = run_root / "paper.sqlite"
     report: dict[str, object] = {
+        "code_sha": subprocess.check_output(  # noqa: S603 - resolved git, fixed read-only arguments
+            [_require(shutil.which("git"), "git missing"), "rev-parse", "HEAD"],
+            cwd=REPO,
+            text=True,
+        ).strip(),
+        "acceptance_mode": "historical_simulation",
+        "qualifies_as_strict_pit": False,
+        "qualifies_as_wall_clock_soak": False,
+        "execution_at": execution_at.isoformat(),
+        "sources": sources,
+        "safety": {"broker_connections": 0, "real_orders": 0, "strategy_publishes": 0},
         "account_id": ACCOUNT_ID,
         "session_id": SESSION_ID,
         "research_case_id": RESEARCH_CASE,
         "signal_as_of": SIGNAL_AS_OF.isoformat(),
         "trade_date": TRADE_DATE.isoformat(),
-        "database": str(TRADING_DB),
+        "database": str(trading_db),
         "orders": [],
     }
-    with SqliteAccountEventJournal(str(TRADING_DB)) as journal:
-        CreatePaperAccountHandler(journal=journal, clock=lambda: EXECUTION_AT).handle(
+    with SqliteAccountEventJournal(str(trading_db)) as journal:
+        CreatePaperAccountHandler(journal=journal, clock=lambda: execution_at).handle(
             CreatePaperAccountCommand(
                 account_id=ACCOUNT_ID,
                 name="#196 股票 Paper 首次真实走单",
-                opened_at=EXECUTION_AT,
+                opened_at=execution_at,
                 trade_date=TRADE_DATE.isoformat(),
                 initial_cash=INITIAL_CASH,
                 idempotency_key=f"{ACCOUNT_ID}:create:v1",
             )
         )
     with (
-        SqliteAccountEventJournal(str(TRADING_DB)) as journal,
-        SqlitePaperSessionStore(str(TRADING_DB)) as store,
+        SqliteAccountEventJournal(str(trading_db)) as journal,
+        SqlitePaperSessionStore(str(trading_db)) as store,
     ):
         handler = PaperSessionCommandHandler(
             store=store,
             account_journal=journal,
-            clock=lambda: EXECUTION_AT,
+            clock=lambda: execution_at,
             reconciler=ReconcilePaperAccount(store=store, account_journal=journal),
         )
         if store.get_session(SESSION_ID) is None:
@@ -241,7 +396,7 @@ def main() -> None:
             )
             operator = OperatePaperSession(store=store, account_journal=journal)
             for index, spec in enumerate(CANDIDATES, start=1):
-                command = _order(spec, market, index)
+                command = _order(spec, market, index, execution_at)
                 first = operator.execute(command)
                 replay = operator.execute(command)
                 if (
@@ -255,13 +410,6 @@ def main() -> None:
             handler.reconcile(
                 ReconcilePaperSessionCommand(
                     session_id=SESSION_ID, idempotency_key=f"{SESSION_ID}:eod:v1"
-                )
-            )
-            handler.pause(
-                PausePaperSessionCommand(
-                    session_id=SESSION_ID,
-                    idempotency_key=f"{SESSION_ID}:pause:v1",
-                    reason="#196 股票 Paper 首次走单 EOD 完成",
                 )
             )
         session = _require(store.get_session(SESSION_ID), "session missing")
@@ -325,7 +473,11 @@ def main() -> None:
                 sum((p.market_value for p in ledger.positions), Decimal("0"))
             ),
         }
-    OUT.write_bytes(orjson.dumps(report, option=orjson.OPT_INDENT_2, default=str))
+    report["restart"] = verify_restart(trading_db, market, execution_at)
+    report["summary"]["session_status"] = "paused"
+    (run_root / "report.json").write_bytes(
+        orjson.dumps(report, option=orjson.OPT_INDENT_2, default=str)
+    )
 
 
 if __name__ == "__main__":

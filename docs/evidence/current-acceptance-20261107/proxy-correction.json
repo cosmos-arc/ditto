@@ -1,0 +1,68 @@
+{
+  "checked_at": "2026-11-07T10:35:17.809426+00:00",
+  "executed_code_sha": "39890cb0a5e54289c33b1a3662bb00c43e1e6925",
+  "root_cause": "acceptance invocation omitted DITTO_CONFIG_ROOT; XDG config root fell back to default official endpoint while loading the existing proxy token",
+  "before": {
+    "environment": "development",
+    "config_root": "/Users/chevy/.config/ditto",
+    "endpoint_host": "api.tushare.pro",
+    "endpoint_check": "failed before request"
+  },
+  "after": {
+    "environment": "development",
+    "config_root": "/Users/chevy/Desktop/code/ditto.worktrees/issues-709-710",
+    "endpoint_host": "t.xiaodefa.top",
+    "endpoint_check": "passed",
+    "calendar_rows": 2,
+    "token_same_in_single_process_comparison": true,
+    "token_changed": false,
+    "credential_source": "existing keyring tushare/token; environment and file token empty"
+  },
+  "production_configuration_changed": false,
+  "source_code_changed": false,
+  "prior_authentication_blocker": "WITHDRAWN: failure was from an incorrectly selected endpoint, not the configured proxy",
+  "online_acceptance": {
+    "approval_hash": "5af1aa518bdf1b73e3ba80e804282b195bb791b4b0936a62fc4d9ebfece2dc8e",
+    "run_disposition": "executed",
+    "newly_recorded_days": 20,
+    "trade_dates": [
+      "2026-10-12",
+      "2026-10-13",
+      "2026-10-14",
+      "2026-10-15",
+      "2026-10-16",
+      "2026-10-19",
+      "2026-10-20",
+      "2026-10-21",
+      "2026-10-22",
+      "2026-10-23",
+      "2026-10-26",
+      "2026-10-27",
+      "2026-10-28",
+      "2026-10-29",
+      "2026-10-30",
+      "2026-11-02",
+      "2026-11-03",
+      "2026-11-04",
+      "2026-11-05",
+      "2026-11-06"
+    ],
+    "signature_chain_valid": true,
+    "balanced_days": 20,
+    "separate_process_restart": {
+      "ledger_before": 21,
+      "ledger_after": 21,
+      "fresh_eod_count": 20
+    },
+    "response_files_sha256": {
+      "calendar.parquet": "25dea2d0fc6c6caebee82654a8788a6083727061f43576b83c760ff2db632523",
+      "bars.parquet": "59e50bda1825a5d77d0876261f9ee1f4db2f373d1627f236eb9c598f853b0a8b"
+    }
+  },
+  "remaining_paper_release_blocker": "current live-day anchor missing; archived 2026-09-02 anchor is not a current pass",
+  "safety": {
+    "paper_only": true,
+    "broker_connections": 0,
+    "real_orders": 0
+  }
+}

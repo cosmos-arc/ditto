@@ -328,13 +328,18 @@ def run_accelerated_paper_acceptance(
         _assert_scoped_roots(approved)
         existing = _existing_complete(approved)
         if existing is not None:
-            return existing
+            return {
+                **existing,
+                "run_disposition": "verified_existing",
+                "newly_recorded_days": 0,
+            }
         _preflight_provider(approved, source)
         key, signature = _bootstrap(
             approved, approved_at=timestamp, operator_id=operator
         )
         paper = approved.paper_scope()
         database, _key_path, _bootstrap_path = _paths(approved)
+        newly_recorded_days = 0
         for ordinal, (trade_date, settlement_date, frozen_bar) in enumerate(
             zip(
                 approved.trade_dates,
@@ -442,6 +447,7 @@ def run_accelerated_paper_acceptance(
             )
             atomic_write_json(durable, payload)
             atomic_write_json(public, payload)
+            newly_recorded_days += 1
         progress = verify_accelerated_acceptance(
             data_root=approved.data_root,
             evidence_root=approved.evidence_root,
@@ -450,4 +456,10 @@ def run_accelerated_paper_acceptance(
         atomic_write_json(
             approved.evidence_root / "accelerated-progress.json", progress
         )
-        return progress
+        return {
+            **progress,
+            "run_disposition": (
+                "executed" if newly_recorded_days else "verified_existing"
+            ),
+            "newly_recorded_days": newly_recorded_days,
+        }
