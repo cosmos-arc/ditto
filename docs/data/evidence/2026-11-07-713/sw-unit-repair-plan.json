@@ -1,0 +1,133 @@
+{
+  "status": "prepared_not_applied",
+  "created_at": "2026-11-07T03:03:45.210563+00:00",
+  "scope": "Only source=tushare, .SI, volume x100, amount x10; all other fields/rows unchanged; immutable old payloads retained",
+  "rows": 481557,
+  "partitions": [
+    {
+      "year": 2014,
+      "total_rows": 41463,
+      "corrected_rows": 36563,
+      "before_sha256": "b0652a7f3057e52fc9d0f214ef85aef32c74f0386463debcc1c08568a66df65f",
+      "staged_sha256": "e04379a44c44740f9a57ad8bad055d793492c6514d06ad0843453e77fd41b3c6",
+      "new_payload_uri": "provider_payloads/tushare/index_daily/5500f8db7655ff27b75291cdc44f3118.parquet",
+      "new_payload_checksum": "5500f8db7655ff27b75291cdc44f3118"
+    },
+    {
+      "year": 2015,
+      "total_rows": 42394,
+      "corrected_rows": 37514,
+      "before_sha256": "8b43955e3c4fa8c37c8e25a89a4f443d7b548339a6b74536090420679204a8f6",
+      "staged_sha256": "d3798f4dd52499aa39c5a6726ac4bbace13478bd065db44af2a21ac0f237bab2",
+      "new_payload_uri": "provider_payloads/tushare/index_daily/dc00079f66ebc605cdf4dcde9220b895.parquet",
+      "new_payload_checksum": "dc00079f66ebc605cdf4dcde9220b895"
+    },
+    {
+      "year": 2016,
+      "total_rows": 42530,
+      "corrected_rows": 37650,
+      "before_sha256": "1be6cde67207dd54d3307f23f1a4a1695f4cdeffdd1109c15f9d9eb6be1d7523",
+      "staged_sha256": "3edbf6b897d596197b72fc21d8ca617c10e7e7b8daf8b8140a79bd600ec7b062",
+      "new_payload_uri": "provider_payloads/tushare/index_daily/141d250d52134ed3063cd1956f873b7a.parquet",
+      "new_payload_checksum": "141d250d52134ed3063cd1956f873b7a"
+    },
+    {
+      "year": 2017,
+      "total_rows": 42700,
+      "corrected_rows": 37820,
+      "before_sha256": "d4d9a5202ba03f5ff14a49f490111ed28d6af63e4744f1ec376ab57ee9218d08",
+      "staged_sha256": "3c66394d2de5211375c4ee20e4bac3ef7ed06010bc9f4a33f6cd4a678a71de38",
+      "new_payload_uri": "provider_payloads/tushare/index_daily/a1d551566fba06e7545e4f8d12aad87b.parquet",
+      "new_payload_checksum": "a1d551566fba06e7545e4f8d12aad87b"
+    },
+    {
+      "year": 2018,
+      "total_rows": 42525,
+      "corrected_rows": 37665,
+      "before_sha256": "da0db42d38e8b067207b716f90b17ec863b43c8ff28edf1cb36593acc77fe4b0",
+      "staged_sha256": "50348cb438c3d8a5603fc9c7da1c8789e455c8245631ec50c03dded3ac992e54",
+      "new_payload_uri": "provider_payloads/tushare/index_daily/fc10896fd784aa542e79ea6cd1fe7a95.parquet",
+      "new_payload_checksum": "fc10896fd784aa542e79ea6cd1fe7a95"
+    },
+    {
+      "year": 2019,
+      "total_rows": 42700,
+      "corrected_rows": 37820,
+      "before_sha256": "e8304288fe090838ba8627604bd56f7836df6ccdcbfc85d245c7c14808978aee",
+      "staged_sha256": "6327f15dbf0ee0caaf0c855fcca204ea5211b2d1889c01fcb54d5afa3ceed7cf",
+      "new_payload_uri": "provider_payloads/tushare/index_daily/487976bce82fa48965a4d70c82473cb4.parquet",
+      "new_payload_checksum": "487976bce82fa48965a4d70c82473cb4"
+    },
+    {
+      "year": 2020,
+      "total_rows": 42768,
+      "corrected_rows": 37665,
+      "before_sha256": "7eb4721d08f52fb0d13bbd46af9382a1c4e830af8e41c3541e6c495651059b00",
+      "staged_sha256": "7cdf2f3c45e2c5da7d7ed43a88a5b2aeabbf9776e3b18a0e03e8e3c303ec4080",
+      "new_payload_uri": "provider_payloads/tushare/index_daily/af7369d466f41120b32cf80f55ea6f4f.parquet",
+      "new_payload_checksum": "af7369d466f41120b32cf80f55ea6f4f"
+    },
+    {
+      "year": 2021,
+      "total_rows": 42768,
+      "corrected_rows": 37665,
+      "before_sha256": "cbeb570c1cc33348882bdcb9110c7189e6e2d9e41d1947ba03847e8d0d242ad9",
+      "staged_sha256": "649eb4d85b0c07aa51d7ab3a053211a0dbc23f3b6c6e5744b03cb374bffb547a",
+      "new_payload_uri": "provider_payloads/tushare/index_daily/df8a2c82eb77013e957e43e1c4d79416.parquet",
+      "new_payload_checksum": "df8a2c82eb77013e957e43e1c4d79416"
+    },
+    {
+      "year": 2022,
+      "total_rows": 42622,
+      "corrected_rows": 37510,
+      "before_sha256": "9591fa6d0cfa7a08a0230a385bf6f969f9acc75e0417d6e200a615f4f4a8b523",
+      "staged_sha256": "d945db1eb33b9bcb1c5bbc18abf930fef6348d2fff5c57cd40589770334f674c",
+      "new_payload_uri": "provider_payloads/tushare/index_daily/f1338a7507d09e23c9e73c9adfc48f4c.parquet",
+      "new_payload_checksum": "f1338a7507d09e23c9e73c9adfc48f4c"
+    },
+    {
+      "year": 2023,
+      "total_rows": 42834,
+      "corrected_rows": 37510,
+      "before_sha256": "1a2a69ca2a177c008bc6989eefb6826377d2e5622c9124c23d76439576c40d09",
+      "staged_sha256": "cba647b994f8212d8222f0a32375a4435ee79f96ec86124af1c8c640104715b8",
+      "new_payload_uri": "provider_payloads/tushare/index_daily/a1566418e86ab30ee18a47cf874cb316.parquet",
+      "new_payload_checksum": "a1566418e86ab30ee18a47cf874cb316"
+    },
+    {
+      "year": 2024,
+      "total_rows": 42834,
+      "corrected_rows": 37510,
+      "before_sha256": "4dd51581223afe0721210087543db8af20cac95a3e57be8d60743443b036c0a2",
+      "staged_sha256": "c90d3856d3fc50b7e4f5bdb4336d977d3d1f455d5563a632c874b823bf361fc7",
+      "new_payload_uri": "provider_payloads/tushare/index_daily/eb5c13e763b5427e8e91dce237b06621.parquet",
+      "new_payload_checksum": "eb5c13e763b5427e8e91dce237b06621"
+    },
+    {
+      "year": 2025,
+      "total_rows": 43011,
+      "corrected_rows": 37665,
+      "before_sha256": "5d4ef026f89c5cae2f106b80eab1bfcab6b99b4e2aa45b55f27cd6de29f30b19",
+      "staged_sha256": "04dcc6ea898eb1ae97605b9958dd1ef4c3ca6a1643cac47a10adb5bb4831a84c",
+      "new_payload_uri": "provider_payloads/tushare/index_daily/07ea5f30bad8c96d200bb26dd8ab4499.parquet",
+      "new_payload_checksum": "07ea5f30bad8c96d200bb26dd8ab4499"
+    },
+    {
+      "year": 2026,
+      "total_rows": 35487,
+      "corrected_rows": 31000,
+      "before_sha256": "0a915a2700d96ca6d602084ecf90a0ca0c38193ac600d7d31a54180a8c622ba7",
+      "staged_sha256": "67100e3027c81e57cee7928014022fc3d05c07e47d1677402d700c88e4a16b79",
+      "new_payload_uri": "provider_payloads/tushare/index_daily/535b807174111d1ba0e521cd3e654b04.parquet",
+      "new_payload_checksum": "535b807174111d1ba0e521cd3e654b04"
+    }
+  ],
+  "production_unchanged": true,
+  "original_snapshot_ids_sha256": "b1efd6229b6ab765989ad2f1528d5f96557e9c2d925983f08659dc22ffe8568e",
+  "apply_requirements": [
+    "Recheck all baseline partition hashes and acquire existing index year writer locks before any mutation.",
+    "Keep before-images and original 169 provider snapshots immutable. Register corrected payload/snapshot identities with correction reason and original identity lineage; update catalog through existing store APIs.",
+    "Validate current application reader, keys, non-SW rows, non-volume/amount fields and PIT dates; reject repeated application by baseline hashes.",
+    "Do not replay old normalized payloads as corrected values; VERIFY_IDENTICAL must still reject conflicting historical-unit rows."
+  ]
+}

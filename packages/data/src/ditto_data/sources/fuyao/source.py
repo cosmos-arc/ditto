@@ -22,9 +22,11 @@ from __future__ import annotations
 
 import os
 import tempfile
+from collections.abc import Iterator
 from datetime import date, timedelta
+from itertools import batched
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any, Literal, cast
 from uuid import uuid4
 
 import polars as pl
@@ -246,6 +248,49 @@ def _bars_frame(rows: list[Any], source_ticker: str) -> pl.DataFrame:
     )
 
 
+def _validated_bar_rows(
+    items: list[dict[str, Any]],
+    thscode: str,
+    window_start: date,
+    window_end: date,
+    seen_dates: set[date],
+) -> list[tuple[Any, ...]]:
+    """Validate source dates before converting either historical or batch bars."""
+    rows: list[tuple[Any, ...]] = []
+    for item in items:
+        item_date = ms_to_date(item["date_ms"])
+        if not window_start <= item_date <= window_end:
+            raise SourceFetchError(
+                source="fuyao",
+                message=(
+                    f"fuyao historical {thscode} window "
+                    f"[{window_start},{window_end}] returned out-of-window "
+                    f"bar {item_date}: 响应契约违约 拒绝静默截断"
+                ),
+            )
+        if item_date in seen_dates:
+            raise SourceFetchError(
+                source="fuyao",
+                message=(
+                    f"fuyao historical {thscode} returned duplicate "
+                    f"trade_date {item_date} across windows: 不前进或重复页"
+                ),
+            )
+        seen_dates.add(item_date)
+        rows.append(
+            (
+                item["date_ms"],
+                item["open_price"],
+                item["high_price"],
+                item["low_price"],
+                item["close_price"],
+                item["volume"],
+                item["turnover"],
+            )
+        )
+    return rows
+
+
 class FuyaoSource:
     """fuyao 数据源门面."""
 
@@ -328,37 +373,11 @@ class FuyaoSource:
             )
             items: list[dict[str, Any]] = data.get("item") or []
             window_counts.append(len(items))
-            for item in items:
-                item_date = ms_to_date(item["date_ms"])
-                if not window_start <= item_date <= window_end:
-                    raise SourceFetchError(
-                        source="fuyao",
-                        message=(
-                            f"fuyao historical {thscode} window "
-                            f"[{window_start},{window_end}] returned out-of-window "
-                            f"bar {item_date}: 响应契约违约 拒绝静默截断"
-                        ),
-                    )
-                if item_date in seen_dates:
-                    raise SourceFetchError(
-                        source="fuyao",
-                        message=(
-                            f"fuyao historical {thscode} returned duplicate "
-                            f"trade_date {item_date} across windows: 不前进或重复页"
-                        ),
-                    )
-                seen_dates.add(item_date)
-                rows.append(
-                    (
-                        item["date_ms"],
-                        item["open_price"],
-                        item["high_price"],
-                        item["low_price"],
-                        item["close_price"],
-                        item["volume"],
-                        item["turnover"],
-                    )
+            rows.extend(
+                _validated_bar_rows(
+                    items, thscode, window_start, window_end, seen_dates
                 )
+            )
             window_start = window_end + timedelta(days=1)
 
         if len(window_counts) > 1 and 0 in window_counts and any(window_counts):
@@ -444,140 +463,157 @@ class FuyaoSource:
             ),
         ).select(_ADJUSTMENT_EVENT_COLUMNS)
 
+    def _reconciliation_items(
+        self,
+        path: str,
+        raw_codes: list[str],
+        params: dict[str, Any],
+    ) -> Iterator[tuple[str, list[dict[str, Any]]]]:
+        """Existing reconciliation baskets: at most ten codes per native request."""
+        codes: list[str] = []
+        for raw_code in raw_codes:
+            try:
+                code = to_thscode(raw_code.upper())
+            except SourceFetchError as error:
+                logger.warning(
+                    "Fuyao reconciliation code skipped",
+                    thscode=raw_code,
+                    reason=str(error),
+                )
+                continue
+            codes.append(code)
+        for chunk in batched(dict.fromkeys(codes), 10, strict=False):
+            try:
+                raw_groups: object
+                if len(chunk) == 1:
+                    data = self._client.get(
+                        path, params={"thscode": chunk[0], **params}
+                    )
+                    raw_groups = [
+                        {
+                            "thscode": chunk[0],
+                            "item": data.get("item") or list[object](),
+                        }
+                    ]
+                else:
+                    data = self._client.get(
+                        path + "-batch",
+                        params={
+                            "thscodes": ",".join(chunk),
+                            **params,
+                        },
+                    )
+                    raw_groups = data.get("item")
+                if not isinstance(raw_groups, list) or any(
+                    not isinstance(group, dict)
+                    or cast("dict[str, Any]", group).get("thscode") not in chunk
+                    for group in cast("list[object]", raw_groups)
+                ):
+                    raise SourceFetchError(
+                        source="fuyao", message="Invalid batch identities"
+                    )
+            except SourceFetchError as error:
+                logger.warning(
+                    "Fuyao reconciliation request failed",
+                    thscodes=chunk,
+                    path=path,
+                    reason=str(error)[:200],
+                )
+                continue
+            groups = cast("list[dict[str, Any]]", raw_groups)
+            for code in chunk:
+                matches = [group for group in groups if group["thscode"] == code]
+                if len(matches) != 1 or not isinstance(matches[0].get("item"), list):
+                    logger.warning(
+                        "Fuyao reconciliation group missing or duplicated",
+                        path=path,
+                        thscode=code,
+                        groups=len(matches),
+                    )
+                    continue
+                items = cast("list[object]", matches[0]["item"])
+                if any(not isinstance(item, dict) for item in items):
+                    logger.warning("Fuyao reconciliation group malformed", thscode=code)
+                    continue
+                yield code, cast("list[dict[str, Any]]", items)
+
     def fetch_stock_daily_bars(
         self,
         tickers: list[str],
         trade_date: str,
     ) -> pl.DataFrame:
-        """
-        对账协议帧：[ticker, trade_date, open, high, low, close, volume, amount].
-
-        按标的隔离失败（未识别前缀/越窗/重复键/单标的业务错误）：记录原因
-        后跳过该标的，报告以辅侧未匹配显式呈现，不中断整篮（#516 评审 F2
-        ——宽基对账数千标的，单标的身份错误不得替换整数据集结果）.
-        """
-        target = _parse_date(trade_date)
-        frames: list[pl.DataFrame] = []
-        for ticker in tickers:
-            try:
-                frame = self._fetch_ticker_daily(ticker, str(target), str(target))
-            except SourceFetchError as error:
-                logger.warning(
-                    "Fuyao stock bar skipped for reconciliation",
-                    event="fuyao_stock_bar_skip",
-                    ticker=ticker,
-                    trade_date=str(target),
-                    reason=str(error)[:200],
-                )
-                continue
-            frame = frame.filter(pl.col("trade_date") == target)
-            if not frame.is_empty():
-                frames.append(
-                    frame.with_columns(
-                        ticker=pl.col("source_ticker").str.split(".").list.get(0)
-                    ).select(
-                        "ticker",
-                        "trade_date",
-                        "open",
-                        "high",
-                        "low",
-                        "close",
-                        "volume",
-                        "amount",
-                    )
-                )
-        if not frames:
-            return pl.DataFrame(
-                schema={
-                    "ticker": pl.String,
-                    "trade_date": pl.Date,
-                    "open": pl.Float64,
-                    "high": pl.Float64,
-                    "low": pl.Float64,
-                    "close": pl.Float64,
-                    "volume": pl.Float64,
-                    "amount": pl.Float64,
-                }
-            )
-        return pl.concat(frames)
+        """Unadjusted stock reconciliation bars, batched with per-code validation."""
+        return self._reconciliation_bars(tickers, trade_date, index=False)
 
     def fetch_index_daily_bars(
         self,
         thscodes: list[str],
         trade_date: str,
     ) -> pl.DataFrame:
-        """
-        指数对账协议帧（#474）：[ticker(thscode), trade_date, OHLC, volume, amount].
+        """Index reconciliation bars (official history: five years), in 手/千元."""
+        return self._reconciliation_bars(thscodes, trade_date, index=True)
 
-        官方契约：窗口 ≤10 年、无 offset、指数无复权。复用 #433 越窗/重复键
-        防护——实测长窗口尾部与最新边缘会返回窗口外最近一根，必须逐根校验
-        date_ms == 目标日。对账按标的隔离失败（未知代码/越窗/重复键/空窗）：
-        记录原因后跳过该标的，报告中以辅侧未匹配显式呈现，不静默缩窗。
-        """
+    def _reconciliation_bars(
+        self,
+        codes: list[str],
+        trade_date: str,
+        *,
+        index: bool,
+    ) -> pl.DataFrame:
         target = _parse_date(trade_date)
-        rows: list[dict[str, Any]] = []
-        for thscode in thscodes:
-            code = thscode.upper()
+        path = (
+            "/api/a-share-index/prices/historical"
+            if index
+            else "/api/a-share/prices/historical"
+        )
+        params: dict[str, Any] = {
+            "interval": "1d",
+            "start": date_to_ms(target),
+            "end": date_to_ms(target),
+        }
+        if not index:
+            params["adjust"] = "none"
+        frames: list[pl.DataFrame] = []
+        for code, items in self._reconciliation_items(path, codes, params):
             try:
-                data = self._client.get(
-                    "/api/a-share-index/prices/historical",
-                    params={
-                        "thscode": code,
-                        "interval": "1d",
-                        "start": date_to_ms(target),
-                        "end": date_to_ms(target),
-                    },
-                )
-                items: list[dict[str, Any]] = data.get("item") or []
-                dates = [ms_to_date(item["date_ms"]) for item in items]
-                if len(set(dates)) != len(dates):
-                    raise SourceFetchError(
-                        source="fuyao",
-                        message=f"fuyao index {code} duplicate trade_date: 拒绝",
-                    )
-                out_of_window = [d for d in dates if d != target]
-                if out_of_window:
-                    raise SourceFetchError(
-                        source="fuyao",
-                        message=(
-                            f"fuyao index {code} window [{target},{target}] "
-                            f"returned out-of-window bars {out_of_window}"
-                        ),
-                    )
-            except SourceFetchError as error:
+                rows = _validated_bar_rows(items, code, target, target, set())
+                frame = _bars_frame(rows, code)
+            except (SourceFetchError, KeyError, TypeError, ValueError) as error:
                 logger.warning(
-                    "Fuyao index bar skipped for reconciliation",
-                    event="fuyao_index_bar_skip",
+                    "Fuyao reconciliation bar skipped",
                     thscode=code,
-                    trade_date=str(target),
                     reason=str(error)[:200],
                 )
                 continue
-            rows.extend(
-                {
-                    "ticker": code,
-                    "trade_date": target,
-                    "open": item["open_price"],
-                    "high": item["high_price"],
-                    "low": item["low_price"],
-                    "close": item["close_price"],
-                    "volume": item["volume"] / _VOLUME_TO_LOTS,
-                    "amount": item["turnover"] / _AMOUNT_TO_THOUSANDS,
-                }
-                for item in items
+            frames.append(
+                frame.with_columns(
+                    ticker=pl.lit(code if index else code.split(".")[0])
+                ).select(
+                    "ticker",
+                    "trade_date",
+                    "open",
+                    "high",
+                    "low",
+                    "close",
+                    "volume",
+                    "amount",
+                )
             )
-        return pl.DataFrame(
-            rows,
-            schema={
-                "ticker": pl.String,
-                "trade_date": pl.Date,
-                "open": pl.Float64,
-                "high": pl.Float64,
-                "low": pl.Float64,
-                "close": pl.Float64,
-                "volume": pl.Float64,
-                "amount": pl.Float64,
-            },
+        if frames:
+            return pl.concat(frames)
+        return (
+            _bars_frame([], "")
+            .rename({"source_ticker": "ticker"})
+            .select(
+                "ticker",
+                "trade_date",
+                "open",
+                "high",
+                "low",
+                "close",
+                "volume",
+                "amount",
+            )
         )
 
     def fetch_financial_statements(
@@ -591,7 +627,7 @@ class FuyaoSource:
         """
         财务三表对账协议帧（#473）.
 
-        fuyao 财务接口单标的、period=quarterly 覆盖全部季度末报告期（含年报
+        fuyao 财务接口至多十码批量、period=quarterly 覆盖全部季度末报告期（含年报
         Q4），金额原币元。thscodes 接受裸码（按股票前缀规则补后缀，与身份
         反解同规则）或完整 thscode。返回 [ticker(thscode), report_date,
         disclosure_date, fiscal_year, fiscal_period, <内部列名数值字段>]；
@@ -601,27 +637,17 @@ class FuyaoSource:
         path = _FINANCIAL_STATEMENT_PATHS[dataset]
         renames = _FINANCIAL_FIELD_RENAMES[dataset]
         rows: list[dict[str, Any]] = []
-        for raw_code in thscodes:
+        for code, items in self._reconciliation_items(
+            path, thscodes, {"period": period, "limit": limit}
+        ):
             try:
-                # 前缀转换也在隔离块内：未识别前缀（如 B 股裸码）按标的
-                # 跳过留痕，不中断整批（#516 评审 F1）
-                code = to_thscode(raw_code)
-                data = self._client.get(
-                    path,
-                    params={
-                        "thscode": code,
-                        "period": period,
-                        "limit": limit,
-                    },
-                )
-                items: list[dict[str, Any]] = data.get("item") or []
                 self._validate_financial_items(dataset, code, items, renames)
             except SourceFetchError as error:
                 logger.warning(
                     "Fuyao financial statement skipped for reconciliation",
                     event="fuyao_financial_skip",
                     dataset=dataset,
-                    thscode=raw_code,
+                    thscode=code,
                     reason=str(error)[:200],
                 )
                 continue

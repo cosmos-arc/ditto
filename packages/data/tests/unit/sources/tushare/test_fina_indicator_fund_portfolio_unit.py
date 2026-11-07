@@ -5,13 +5,59 @@ from __future__ import annotations
 from datetime import date
 from unittest.mock import MagicMock
 
+import httpx
+import orjson
 import polars as pl
 import pytest
+from ditto_data.config import DataSourceSettings
 from ditto_data.sources.tushare._fundamental import (
     fetch_fina_indicator,
     fetch_fund_portfolio,
 )
 from ditto_data.sources.tushare.adapters.fundamental import FundamentalTushareAdapter
+from ditto_data.sources.tushare.client import TushareClient
+
+
+@pytest.mark.unit
+def test_vip_indicator_does_not_treat_provider_cap_as_complete(respx_mock) -> None:
+    """A short capped page and redundant rows must not lose later disclosures."""
+    rows = [
+        {
+            "ts_code": f"{600000 + index}.SH",
+            "ann_date": "20261030",
+            "end_date": "20260930",
+            "eps": 3.5,
+            "update_flag": "1",
+        }
+        for index in range(600)
+    ]
+    rows.insert(1, dict(rows[0]))
+
+    def respond(request: httpx.Request) -> httpx.Response:
+        body = orjson.loads(request.content)
+        assert body["api_name"] == "fina_indicator_vip"
+        fields = body["fields"].split(",")
+        params = body["params"]
+        offset = params.get("offset", 0)
+        page = rows[offset : offset + min(params.get("limit", 2000), 500)]
+        return httpx.Response(
+            200,
+            json={
+                "code": 0,
+                "data": {
+                    "fields": fields,
+                    "items": [[row.get(field) for field in fields] for row in page],
+                },
+            },
+        )
+
+    respx_mock.post("http://api.tushare.pro/").mock(side_effect=respond)
+    with TushareClient(settings=DataSourceSettings(tushare_token="recorded")) as client:
+        result = FundamentalTushareAdapter(_client=client).fetch_fina_indicator_vip(
+            period="20260930"
+        )
+    assert result.height == 600
+    assert result.filter(pl.col("source_ticker") == "600599.SH")["eps"].item() == 3.5
 
 
 def _compact(value: str) -> str:

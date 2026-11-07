@@ -1,0 +1,470 @@
+{
+  "measured_at": "2026-11-07T03:06:06.893077+00:00",
+  "base_commit": "99b92f1f135b5448021decbb54ba3b1e0f1a43ca",
+  "scope": "Read-only current configured providers; no production data writes or account/route changes. Raw business responses retained locally, not committed.",
+  "tushare": {
+    "started_at": "2026-11-07T03:01:46.164989+00:00",
+    "checks": [
+      {
+        "name": "vip_indicator_shared_pagination",
+        "rows": 5590,
+        "codes": 5588,
+        "requests": 2,
+        "status": "success",
+        "seconds": 16.265,
+        "measured_at": "2026-11-07T03:02:02.502217+00:00"
+      },
+      {
+        "name": "dividend_range_support",
+        "fixed_rows": 6,
+        "full_rows": 106,
+        "range_rows": 106,
+        "expected_announcement_rows": 6,
+        "range_equals_full": true,
+        "range_equals_expected": false,
+        "status": "success",
+        "seconds": 5.975,
+        "measured_at": "2026-11-07T03:02:08.483736+00:00"
+      },
+      {
+        "name": "top_list_adapter_exact_range",
+        "rows": 5,
+        "dates": [
+          "2026-11-04",
+          "2026-11-05"
+        ],
+        "requests": 4,
+        "status": "success",
+        "seconds": 4.75,
+        "measured_at": "2026-11-07T03:02:13.237473+00:00"
+      },
+      {
+        "name": "top_inst_adapter_exact_range",
+        "rows": 50,
+        "dates": [
+          "2026-11-04",
+          "2026-11-05"
+        ],
+        "requests": 4,
+        "status": "success",
+        "seconds": 3.762,
+        "measured_at": "2026-11-07T03:02:17.002210+00:00"
+      },
+      {
+        "name": "sw_batch_units",
+        "rows": 3,
+        "requests": 2,
+        "volume_factor": 100,
+        "amount_factor": 10,
+        "status": "success",
+        "seconds": 1.836,
+        "measured_at": "2026-11-07T03:02:18.840136+00:00"
+      }
+    ],
+    "boundary": "Read-only source queries; no production writes, unchanged configured source identity, at most60 native requests at30/min.",
+    "finished_at": "2026-11-07T03:02:18.840914+00:00"
+  },
+  "fuyao_adapter_equivalence": [
+    {
+      "method": "fetch_stock_daily_bars",
+      "window_or_dataset": "2026-11-05",
+      "codes": [
+        "600519.SH",
+        "000001.SZ"
+      ],
+      "rows": 2,
+      "all_fields_equal": true,
+      "status": "success"
+    },
+    {
+      "method": "fetch_index_daily_bars",
+      "window_or_dataset": "2026-11-05",
+      "codes": [
+        "000300.SH",
+        "000905.SH"
+      ],
+      "rows": 2,
+      "all_fields_equal": true,
+      "status": "success"
+    },
+    {
+      "method": "fetch_financial_statements",
+      "window_or_dataset": "income_statement",
+      "codes": [
+        "600519.SH",
+        "000001.SZ"
+      ],
+      "rows": 2,
+      "all_fields_equal": true,
+      "status": "success"
+    },
+    {
+      "method": "fetch_financial_statements",
+      "window_or_dataset": "balance_sheet",
+      "codes": [
+        "600519.SH",
+        "000001.SZ"
+      ],
+      "rows": 2,
+      "all_fields_equal": true,
+      "status": "success"
+    },
+    {
+      "method": "fetch_financial_statements",
+      "window_or_dataset": "cash_flow",
+      "codes": [
+        "600519.SH",
+        "000001.SZ"
+      ],
+      "rows": 2,
+      "all_fields_equal": true,
+      "status": "success"
+    }
+  ],
+  "sw_native_market": {
+    "name": "sw_market_vs_single",
+    "market_rows": 439,
+    "market_codes": 439,
+    "single_equivalence": [
+      {
+        "code": "801010.SI",
+        "rows": 1
+      },
+      {
+        "code": "801020.SI",
+        "rows": 0
+      }
+    ],
+    "requests": 6,
+    "status": "success",
+    "seconds": 15.391,
+    "measured_at": "2026-11-07T02:39:50.942151+00:00"
+  },
+  "sw_official_example": {
+    "name": "sw_official_example_active_code",
+    "rows": [
+      {
+        "ts_code": "801010.SI",
+        "trade_date": "20230705",
+        "open": 2986.75,
+        "high": 2986.76,
+        "low": 2939.67,
+        "close": 2946.6,
+        "change": -44.95,
+        "pct_change": -1.5,
+        "vol": 83532.0,
+        "amount": 762446.0
+      }
+    ],
+    "official_example": {
+      "vol": 83532.0,
+      "open": 2986.75,
+      "close": 2946.6
+    },
+    "reference": "https://tushare.pro/document/2?doc_id=327",
+    "status": "success",
+    "seconds": 3.711,
+    "measured_at": "2026-11-07T02:42:57.731379+00:00"
+  },
+  "sw_positive_single_equivalence": {
+    "name": "sw_three_positive_single_equivalence",
+    "positive_codes": [
+      {
+        "code": "801995.SI",
+        "rows": 1
+      },
+      {
+        "code": "801994.SI",
+        "rows": 1
+      },
+      {
+        "code": "801993.SI",
+        "rows": 1
+      }
+    ],
+    "status": "success",
+    "seconds": 7.132,
+    "measured_at": "2026-11-07T02:43:04.863509+00:00"
+  },
+  "sw_stored": {
+    "canonical": {
+      "rows": 481557,
+      "codes": 155,
+      "days": 3119,
+      "start": "2014-01-02",
+      "end": "2026-11-06"
+    },
+    "all_index_rows": 546636,
+    "canonical_duplicate_keys": 0,
+    "snapshot_count_with_sw": 169,
+    "payload_physical_rows": 481712,
+    "payload_unique_keys": 481557,
+    "payload_conflicting_keys": 0,
+    "canonical_rows_without_exact_payload_match": 0
+  },
+  "cyq_january": {
+    "canonical": {
+      "rows": 68420,
+      "codes": 3175,
+      "days": 22,
+      "start": "2018-01-02",
+      "end": "2018-01-31"
+    },
+    "matches_retained_payload": true,
+    "snapshot_id": "snapshot:tushare:cyq_perf:sha256:7d969f06a0b5271b9257c961dadb189e15f1250fa9b6d9faada0d14ddf4a0525"
+  },
+  "limitations": [
+    "82 baseline fixed entrypoints audited against current docs and callsites; only identified changes received new live probes. Four Tushare APIs and Sina have no verified current complete official contract.",
+    "Initial probe attempts included an already-closed task client, missing metrics registration, and a task Polars literal error. These attempts are not source-failure evidence; corrected verification is recorded here.",
+    "SW existing 481557 stored rows remain uncorrected pending explicit authorization for a real-data migration; dry-run staged copies and before/after checksums are prepared.",
+    "#708 NAV 388 persistent-pagination failures and other documented source/history limits are not claimed resolved by this interface patch."
+  ],
+  "verified_response_manifest": [
+    {
+      "api": "fina_indicator_vip",
+      "params": {
+        "limit": 10000,
+        "offset": 0,
+        "period": "20260930"
+      },
+      "started_at": "2026-11-07T03:01:46.217529+00:00",
+      "rows": 6701,
+      "payload": "001.json",
+      "sha256": "a46d2ea5994f62648723c0ec6df1195f4d05ebdf45eca906964480222facd1ac",
+      "finished_at": "2026-11-07T03:02:01.511383+00:00"
+    },
+    {
+      "api": "fina_indicator_vip",
+      "params": {
+        "limit": 1,
+        "offset": 6701,
+        "period": "20260930"
+      },
+      "started_at": "2026-11-07T03:02:01.575415+00:00",
+      "rows": 0,
+      "payload": "002.json",
+      "sha256": "9b8786f246abbf0c7e38456c1f93175f8d8d4a82eacfc37f62e35c8e3825ca1c",
+      "finished_at": "2026-11-07T03:02:02.431843+00:00"
+    },
+    {
+      "api": "dividend",
+      "params": {
+        "limit": 2000,
+        "offset": 0,
+        "ts_code": "600519.SH"
+      },
+      "started_at": "2026-11-07T03:02:02.502658+00:00",
+      "rows": 106,
+      "payload": "003.json",
+      "sha256": "5abb4edeb63343860704ab0745a9b248f432b2ae516462961d84a4c8f3027bd5",
+      "finished_at": "2026-11-07T03:02:03.223568+00:00"
+    },
+    {
+      "api": "dividend",
+      "params": {
+        "limit": 1,
+        "offset": 106,
+        "ts_code": "600519.SH"
+      },
+      "started_at": "2026-11-07T03:02:03.223938+00:00",
+      "rows": 0,
+      "payload": "004.json",
+      "sha256": "e98f42706b270990fa922c6c42198ed80cb62f37ccdf672799fa5d5192759a4c",
+      "finished_at": "2026-11-07T03:02:04.153493+00:00"
+    },
+    {
+      "api": "dividend",
+      "params": {
+        "limit": 2000,
+        "offset": 0,
+        "ts_code": "600519.SH",
+        "start_date": "20260101",
+        "end_date": "20261105"
+      },
+      "started_at": "2026-11-07T03:02:04.153718+00:00",
+      "rows": 106,
+      "payload": "005.json",
+      "sha256": "5abb4edeb63343860704ab0745a9b248f432b2ae516462961d84a4c8f3027bd5",
+      "finished_at": "2026-11-07T03:02:05.404953+00:00"
+    },
+    {
+      "api": "dividend",
+      "params": {
+        "limit": 1,
+        "offset": 106,
+        "ts_code": "600519.SH",
+        "start_date": "20260101",
+        "end_date": "20261105"
+      },
+      "started_at": "2026-11-07T03:02:05.405345+00:00",
+      "rows": 0,
+      "payload": "006.json",
+      "sha256": "e98f42706b270990fa922c6c42198ed80cb62f37ccdf672799fa5d5192759a4c",
+      "finished_at": "2026-11-07T03:02:06.617815+00:00"
+    },
+    {
+      "api": "dividend",
+      "params": {
+        "limit": 2000,
+        "offset": 0,
+        "ts_code": "600519.SH"
+      },
+      "started_at": "2026-11-07T03:02:06.620472+00:00",
+      "rows": 106,
+      "payload": "007.json",
+      "sha256": "5abb4edeb63343860704ab0745a9b248f432b2ae516462961d84a4c8f3027bd5",
+      "finished_at": "2026-11-07T03:02:07.455195+00:00"
+    },
+    {
+      "api": "dividend",
+      "params": {
+        "limit": 1,
+        "offset": 106,
+        "ts_code": "600519.SH"
+      },
+      "started_at": "2026-11-07T03:02:07.455644+00:00",
+      "rows": 0,
+      "payload": "008.json",
+      "sha256": "e98f42706b270990fa922c6c42198ed80cb62f37ccdf672799fa5d5192759a4c",
+      "finished_at": "2026-11-07T03:02:08.479725+00:00"
+    },
+    {
+      "api": "top_list",
+      "params": {
+        "limit": 10000,
+        "offset": 0,
+        "ts_code": "920770.BJ",
+        "trade_date": "20261104"
+      },
+      "started_at": "2026-11-07T03:02:08.484123+00:00",
+      "rows": 3,
+      "payload": "009.json",
+      "sha256": "e1269512d6863fe37b1959e9537f55fc098df84f1a50f086f6139b029e025d9d",
+      "finished_at": "2026-11-07T03:02:09.312099+00:00"
+    },
+    {
+      "api": "top_list",
+      "params": {
+        "limit": 1,
+        "offset": 3,
+        "ts_code": "920770.BJ",
+        "trade_date": "20261104"
+      },
+      "started_at": "2026-11-07T03:02:09.313238+00:00",
+      "rows": 0,
+      "payload": "010.json",
+      "sha256": "e98f42706b270990fa922c6c42198ed80cb62f37ccdf672799fa5d5192759a4c",
+      "finished_at": "2026-11-07T03:02:10.092349+00:00"
+    },
+    {
+      "api": "top_list",
+      "params": {
+        "limit": 10000,
+        "offset": 0,
+        "ts_code": "920770.BJ",
+        "trade_date": "20261105"
+      },
+      "started_at": "2026-11-07T03:02:10.103455+00:00",
+      "rows": 2,
+      "payload": "011.json",
+      "sha256": "c6dd278f212af92340bb3cbb8127cca612c6b74797e16254e5e62ccaf5a77cef",
+      "finished_at": "2026-11-07T03:02:11.844020+00:00"
+    },
+    {
+      "api": "top_list",
+      "params": {
+        "limit": 1,
+        "offset": 2,
+        "ts_code": "920770.BJ",
+        "trade_date": "20261105"
+      },
+      "started_at": "2026-11-07T03:02:11.844801+00:00",
+      "rows": 0,
+      "payload": "012.json",
+      "sha256": "e98f42706b270990fa922c6c42198ed80cb62f37ccdf672799fa5d5192759a4c",
+      "finished_at": "2026-11-07T03:02:13.229782+00:00"
+    },
+    {
+      "api": "top_inst",
+      "params": {
+        "limit": 10000,
+        "offset": 0,
+        "ts_code": "920770.BJ",
+        "trade_date": "20261104"
+      },
+      "started_at": "2026-11-07T03:02:13.237850+00:00",
+      "rows": 30,
+      "payload": "013.json",
+      "sha256": "45d74211eb835e0893f51eae12b6c464977818157c01e2ddb95856aad5e58526",
+      "finished_at": "2026-11-07T03:02:13.992340+00:00"
+    },
+    {
+      "api": "top_inst",
+      "params": {
+        "limit": 1,
+        "offset": 30,
+        "ts_code": "920770.BJ",
+        "trade_date": "20261104"
+      },
+      "started_at": "2026-11-07T03:02:13.994099+00:00",
+      "rows": 0,
+      "payload": "014.json",
+      "sha256": "e98f42706b270990fa922c6c42198ed80cb62f37ccdf672799fa5d5192759a4c",
+      "finished_at": "2026-11-07T03:02:15.220253+00:00"
+    },
+    {
+      "api": "top_inst",
+      "params": {
+        "limit": 10000,
+        "offset": 0,
+        "ts_code": "920770.BJ",
+        "trade_date": "20261105"
+      },
+      "started_at": "2026-11-07T03:02:15.226890+00:00",
+      "rows": 20,
+      "payload": "015.json",
+      "sha256": "951b0fe723f9fde7527c053d7fb10c2ef054770a77d9f3a1460b5c3849bcfc17",
+      "finished_at": "2026-11-07T03:02:16.271606+00:00"
+    },
+    {
+      "api": "top_inst",
+      "params": {
+        "limit": 1,
+        "offset": 20,
+        "ts_code": "920770.BJ",
+        "trade_date": "20261105"
+      },
+      "started_at": "2026-11-07T03:02:16.273054+00:00",
+      "rows": 0,
+      "payload": "016.json",
+      "sha256": "e98f42706b270990fa922c6c42198ed80cb62f37ccdf672799fa5d5192759a4c",
+      "finished_at": "2026-11-07T03:02:16.993843+00:00"
+    },
+    {
+      "api": "sw_daily",
+      "params": {
+        "limit": 4000,
+        "offset": 0,
+        "trade_date": "20261105"
+      },
+      "started_at": "2026-11-07T03:02:17.003189+00:00",
+      "rows": 439,
+      "payload": "017.json",
+      "sha256": "e07a9c2fbcfd979d04b7e2e0cc73253489b32d36269bb00a5f53465724464f60",
+      "finished_at": "2026-11-07T03:02:18.087992+00:00"
+    },
+    {
+      "api": "sw_daily",
+      "params": {
+        "limit": 1,
+        "offset": 439,
+        "trade_date": "20261105"
+      },
+      "started_at": "2026-11-07T03:02:18.091278+00:00",
+      "rows": 0,
+      "payload": "018.json",
+      "sha256": "e0105cb680b52ece9b437a19962b9d89d7cd261c92913714a9b2bb009d4a70d4",
+      "finished_at": "2026-11-07T03:02:18.814886+00:00"
+    }
+  ]
+}

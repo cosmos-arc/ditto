@@ -108,8 +108,6 @@ def _empty_with_schema(
     return pl.DataFrame(schema=schema)
 
 
-_FINA_PAGE_SIZE = 2000
-
 # fina_indicator 显式请求字段集（#591）。源端默认列集（fields 省略）不含
 # update_flag，须显式点名才能拿到同披露键的版本判别列。列序对齐历史
 # 存量帧（server 默认序：ts_code,ann_date,end_date + 指标序），否则
@@ -492,6 +490,12 @@ class FundamentalTushareAdapter(BaseTushareAdapter):
         end_date: str | None = None,
     ) -> pl.DataFrame:
         """获取股息分红数据."""
+        start = date.fromisoformat(start_date) if start_date else None
+        end = date.fromisoformat(end_date) if end_date else None
+        if (start or end) and not ts_code:
+            raise ValueError("分红公告区间查询必须指定 ts_code")
+        if start and end and start > end:
+            raise ValueError("start_date 不能晚于 end_date")
         logger.info(
             "Fetching Tushare dividend data",
             event="tushare_dividend_fetch_start",
@@ -513,16 +517,18 @@ class FundamentalTushareAdapter(BaseTushareAdapter):
                 params["ann_date"] = ann_date
             if ex_date:
                 params["ex_date"] = ex_date
-            if start_date:
-                params["start_date"] = start_date
-            if end_date:
-                params["end_date"] = end_date
 
             response = self._client.query(**params)
 
             result = TushareDataTransformer.transform(
                 response, "dividend", DIVIDEND_MAPPING
             )
+
+            # dividend 忽略 start/end；按实际公告日过滤，不能改用除权日。
+            if start:
+                result = result.filter(pl.col("knowledge_date") >= start)
+            if end:
+                result = result.filter(pl.col("knowledge_date") <= end)
 
             # 添加 PIT 列
             result = result.with_columns(
@@ -685,10 +691,8 @@ class FundamentalTushareAdapter(BaseTushareAdapter):
         实测 code=「必填参数, 标的」），日更披露增量走本端点按 period
         全市场批量（与 forecast/express 的 vip 形态一致）。
         """
-        # 源端存在字节级重复行（2026-10-06 实测同 period 响应 in-page 重复
-        # 875+ 行，且与请求字段集无关）——自动翻页的重复守卫会拒收。fina
-        # 端点走调用方自管分页（单页语义），取尽后统一按披露键去重
-        # （#591 显式字段集含 update_flag，选版 '1' 优先）。
+        # 共享分页保留页内业务重复，并校验短页尾部与跨页进展。
+        # 取尽后仍按披露键和 update_flag 选版，不另维护无守卫的页循环。
         params: dict[str, str | None] = {
             "period": period,
             "ann_date": ann_date,
@@ -697,24 +701,11 @@ class FundamentalTushareAdapter(BaseTushareAdapter):
         }
         active = {k: v for k, v in params.items() if v}
         with tushare_fetch_error_handler("fina_indicator", "fina_indicator_vip"):
-            pages: list[pl.DataFrame] = []
-            offset = 0
-            while True:
-                page = self._client.query(
-                    api_name="fina_indicator_vip",
-                    fields=_FINA_INDICATOR_REQUEST_FIELDS,
-                    limit=_FINA_PAGE_SIZE,
-                    offset=offset,
-                    **active,
-                )
-                if page.height > 0:
-                    # 终页（总行数恰为页宽整数倍时）是 all-String 空 schema，
-                    # 进 concat 会把数值列拉成 String——空页丢弃。
-                    pages.append(page)
-                if page.height < _FINA_PAGE_SIZE:
-                    break
-                offset += _FINA_PAGE_SIZE
-            raw = pl.concat(pages, how="diagonal_relaxed") if pages else pl.DataFrame()
+            raw = self._client.query(
+                api_name="fina_indicator_vip",
+                fields=_FINA_INDICATOR_REQUEST_FIELDS,
+                **active,
+            )
             logger.info(
                 "Tushare fina indicator (VIP) fetched",
                 event="tushare_fina_indicator_fetch_complete",

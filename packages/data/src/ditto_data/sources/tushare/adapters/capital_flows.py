@@ -7,6 +7,8 @@ Capital flow adapters: moneyflow, cyq_perf, hk_hold, hsgt_top10, top_list, top_i
 
 from __future__ import annotations
 
+from datetime import date, timedelta
+
 import polars as pl
 from ditto_platform.foundation import Metrics, logger, traced
 
@@ -150,6 +152,35 @@ class CapitalFlowsTushareAdapter(BaseTushareAdapter):
         （``_collapse_same_key_rows``）；moneyflow/cyq_perf 逐标的
         单行契约不收敛，真重复交 DQ unique 响亮失败。
         """
+        if api_name in {"top_list", "top_inst"}:
+            start, end = query.get("start_date"), query.get("end_date")
+            if query.get("trade_date"):
+                if start or end:
+                    raise ValueError("trade_date 与日期区间互斥")
+            else:
+                if not start or not end:
+                    raise ValueError("龙虎榜区间查询必须指定 start_date 和 end_date")
+                first, last = date.fromisoformat(start), date.fromisoformat(end)
+                if first > last:
+                    raise ValueError("start_date 不能晚于 end_date")
+                # 官方接口仅接受单日；每一日仍经分页、日期和事件键守卫。
+                return pl.concat(
+                    [
+                        self._fetch_daily_frame(
+                            dataset,
+                            api_name,
+                            fields,
+                            mapping,
+                            {
+                                "ts_code": query.get("ts_code"),
+                                "trade_date": str(first + timedelta(days=offset)),
+                            },
+                            dedupe_subset,
+                        )
+                        for offset in range((last - first).days + 1)
+                    ],
+                    how="vertical_relaxed",
+                )
         logger.info(
             f"Fetching Tushare {dataset}",
             event=f"tushare_{dataset}_fetch_start",

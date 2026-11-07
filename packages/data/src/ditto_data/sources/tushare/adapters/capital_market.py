@@ -169,6 +169,12 @@ class CapitalMarketTushareAdapter(BaseTushareAdapter):
             SourceFetchError: If fetch fails.
 
         """
+        start = date.fromisoformat(start_date) if start_date else None
+        end = date.fromisoformat(end_date) if end_date else None
+        if (start or end) and not ts_code:
+            raise ValueError("分红公告区间查询必须指定 ts_code")
+        if start and end and start > end:
+            raise ValueError("start_date 不能晚于 end_date")
         logger.info(
             "Fetching Tushare dividend data",
             event="tushare_dividend_fetch_start",
@@ -186,16 +192,18 @@ class CapitalMarketTushareAdapter(BaseTushareAdapter):
                 params["ts_code"] = ts_code
             if ex_date:
                 params["ex_date"] = ex_date
-            if start_date:
-                params["start_date"] = start_date
-            if end_date:
-                params["end_date"] = end_date
 
             response = self._client.query(**params)
 
             result = TushareDataTransformer.transform(
                 response, "dividend", DIVIDEND_MAPPING
             )
+
+            # dividend 忽略 start/end；按实际公告日过滤，不能改用除权日。
+            if start:
+                result = result.filter(pl.col("knowledge_date") >= start)
+            if end:
+                result = result.filter(pl.col("knowledge_date") <= end)
 
             # 添加 PIT 列
             result = result.with_columns(

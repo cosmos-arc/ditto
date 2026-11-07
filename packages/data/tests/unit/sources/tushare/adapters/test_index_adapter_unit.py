@@ -213,8 +213,8 @@ class TestIndexAdapter:
                 "low": 4020.3,
                 "close": 4070.5,
                 "pre_close": 4045.0,
-                "volume": 1_000.0,
-                "amount": 2_000.0,
+                "volume": 100_000.0,
+                "amount": 20_000.0,
                 "pct_change": 0.63,
             }
         ]
@@ -269,6 +269,35 @@ class TestIndexAdapter:
         assert [
             call.kwargs["api_name"] for call in mock_client.query.call_args_list
         ] == ["index_daily", "sw_daily"]
+
+    def test_sw_market_day_filters_requested_codes_and_converts_units(self) -> None:
+        from ditto_data.sources.tushare.adapters.index import IndexTushareAdapter
+
+        client = MagicMock()
+        client.query.return_value = pl.DataFrame(
+            {
+                "ts_code": ["801010.SI", "801030.SI", "801040.SI"],
+                "trade_date": ["20230705"] * 3,
+                "open": [2986.75] * 3,
+                "high": [2986.76] * 3,
+                "low": [2939.67] * 3,
+                "close": [2946.6] * 3,
+                "change": [-44.95] * 3,
+                "pct_change": [-1.5] * 3,
+                "vol": [83532.0] * 3,
+                "amount": [762446.0] * 3,
+            }
+        )
+        result = IndexTushareAdapter(_client=client).fetch_daily(
+            trade_date="2023-07-05", ts_codes=["801010.SI", "801030.SI"]
+        )
+        assert set(result["source_ticker"]) == {"801010.SI", "801030.SI"}
+        assert result["volume"].to_list() == [8_353_200.0] * 2
+        assert result["amount"].to_list() == [7_624_460.0] * 2
+        assert result["knowledge_date"].to_list() == [date(2023, 7, 6)] * 2
+        client.query.assert_called_once()
+        assert client.query.call_args.kwargs["trade_date"] == "20230705"
+        assert "ts_code" not in client.query.call_args.kwargs
 
 
 @pytest.mark.unit

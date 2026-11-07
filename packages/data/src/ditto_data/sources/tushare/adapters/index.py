@@ -319,12 +319,28 @@ class IndexTushareAdapter(BaseTushareAdapter):
         failed_codes: list[str] = []
         empty_codes: list[str] = []
 
+        sw_codes = [code for code in ts_codes if code.endswith(".SI")]
+        if len(sw_codes) > 1:
+            with tushare_fetch_error_handler("index_daily", "sw_daily"):
+                market = self._client.query(
+                    api_name="sw_daily", trade_date=ts_date, fields=_SW_DAILY_FIELDS
+                )
+                assert_single_trade_date(market, expected=ts_date, dataset="sw_daily")
+                if market.is_empty():
+                    empty_codes.extend(sw_codes)
+                else:
+                    selected = market.filter(pl.col("ts_code").is_in(sw_codes))
+                    empty_codes.extend(sorted(set(sw_codes) - set(selected["ts_code"])))
+                    dfs.append(self._normalize_sw_daily(selected))
+
         # 逐个查询每个指数。
         # #511：逐码失败不再静默吞掉——单码缺口曾整段不可见（#1861）。
         # 失败使当日摄取 fail closed（游标不前进，重试自愈）；空响应
         # （200 且 0 行）保留跳过但显式记名告警，因历史上也可能是源侧
         # 静默缺口的形态（是否真缺由 L3 per-instrument completeness 判定）。
         for ts_code in ts_codes:
+            if len(sw_codes) > 1 and ts_code.endswith(".SI"):
+                continue
             try:
                 provider_api = self._daily_api_name(ts_code)
                 api_name = f"{provider_api}:{ts_code}"
@@ -441,11 +457,18 @@ class IndexTushareAdapter(BaseTushareAdapter):
         )
         if api_name != "sw_daily" or response.is_empty():
             return response
+        return self._normalize_sw_daily(response)
+
+    @staticmethod
+    def _normalize_sw_daily(response: pl.DataFrame) -> pl.DataFrame:
+        """SW 万股/万元 → canonical 手/千元（官方 doc_id=327）."""
         return (
             response.with_columns(
+                (pl.col("vol").cast(pl.Float64) * 100).alias("vol"),
+                (pl.col("amount").cast(pl.Float64) * 10).alias("amount"),
                 (
                     pl.col("close").cast(pl.Float64) - pl.col("change").cast(pl.Float64)
-                ).alias("pre_close")
+                ).alias("pre_close"),
             )
             .rename({"pct_change": "pct_chg"})
             .select(

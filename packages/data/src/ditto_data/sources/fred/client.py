@@ -126,7 +126,24 @@ def _decode_observations(
             source="fred",
             details={"dataset": series_id},
         )
-    return cast("list[dict[str, Any]]", observations)
+    typed_observations = cast("list[dict[str, Any]]", observations)
+    document = cast("dict[str, Any]", body)
+    if "count" in document and (
+        type(document["count"]) is not int
+        or document["count"] != len(typed_observations)
+        or document.get("offset", 0) != 0
+    ):
+        raise _PermanentFetchError(
+            message="FRED API observations are incomplete; narrow the requested window",
+            source="fred",
+            details={
+                "dataset": series_id,
+                "count": document["count"],
+                "rows": len(typed_observations),
+                "offset": document.get("offset"),
+            },
+        )
+    return typed_observations
 
 
 def _rate_limit_aware_wait(retry_state: RetryCallState) -> float:
