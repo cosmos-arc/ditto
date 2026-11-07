@@ -1,0 +1,13 @@
+{
+  "measured_at": "2026-11-07T11:39:07.846151+00:00",
+  "free_bytes": 44810158080,
+  "state_bytes": 18058703912,
+  "app_logs_bytes": 1646082,
+  "worker_logs_bytes": 21008713,
+  "wal_bytes": 4124152,
+  "temp_bytes": 0,
+  "acceptance_residual_bytes": 5083974,
+  "acceptance_services_stopped": true,
+  "temporary_web_runtime_config_restored": true,
+  "backup_created": false
+}

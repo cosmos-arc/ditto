@@ -1,0 +1,144 @@
+[
+  {
+    "request": {
+      "instrument_id": 1000001,
+      "asset_class": "stock",
+      "start_date": "2026-11-05",
+      "end_date": "2026-11-06",
+      "period": "daily",
+      "adjustment": "none",
+      "allow_experimental_data": true,
+      "now": "2026-11-07 11:13:08.461741+00:00",
+      "listed_on": null,
+      "delisted_on": null,
+      "exchange": "SZSE"
+    },
+    "status": "read",
+    "result": {
+      "instrument_id": 1000001,
+      "period": "daily",
+      "adjustment": "none",
+      "as_of": "2026-11-07 11:13:08.461741+00:00",
+      "knowledge_cutoff": "2026-11-07 11:13:08.461741+00:00",
+      "publication_cutoff": "2026-11-07 11:13:08.461741+00:00",
+      "timezone": "Asia/Shanghai",
+      "calendar_snapshot_ids": [
+        "snapshot:tushare:calendar:sha256:eb2bfad933dfc42f691d8769b7893d482ebd19ba54257eb1dd41f3a0d8823c28"
+      ],
+      "source_snapshot_ids": [
+        "snapshot:tushare:stock_daily:sha256:0d5f5e8c89eacdb0ee2f768444bb873f9113b1df508f8afb2bd24ccc06bdfc63",
+        "snapshot:tushare:stock_daily:sha256:a1126e5dbb7fc9c1757b32284a13c38f407e481078dc43956fa2fcfcff84204d",
+        "snapshot:tushare:stock_status:sha256:7c35642ba56236dcd64982d2974c5c48a848d773d0b90829072bba761bb08b49",
+        "snapshot:tushare:stock_status:sha256:e5c6e44399482163ced60b49684f7badc7d638d02246a5019cd0c33846fdfc37"
+      ],
+      "sources": [
+        "tushare"
+      ],
+      "latest_price_date": "2026-11-06",
+      "stale_reason": null,
+      "missing_sessions": [],
+      "bars": [
+        {
+          "trade_date": "2026-11-05",
+          "first_trade_date": "2026-11-05",
+          "last_trade_date": "2026-11-05",
+          "open": 11.71,
+          "high": 11.77,
+          "low": 11.56,
+          "close": 11.64,
+          "volume": 1228997.01,
+          "amount": 1429433.01632,
+          "source_snapshot_ids": [
+            "snapshot:tushare:stock_daily:sha256:0d5f5e8c89eacdb0ee2f768444bb873f9113b1df508f8afb2bd24ccc06bdfc63"
+          ],
+          "available_at": "2026-11-06 07:00:00+00:00",
+          "published_at": "2026-11-05 13:56:15.069313+00:00",
+          "partial": false
+        },
+        {
+          "trade_date": "2026-11-06",
+          "first_trade_date": "2026-11-06",
+          "last_trade_date": "2026-11-06",
+          "open": 11.62,
+          "high": 11.85,
+          "low": 11.57,
+          "close": 11.81,
+          "volume": 1640276.39,
+          "amount": 1927307.59053,
+          "source_snapshot_ids": [
+            "snapshot:tushare:stock_daily:sha256:a1126e5dbb7fc9c1757b32284a13c38f407e481078dc43956fa2fcfcff84204d"
+          ],
+          "available_at": "2026-11-07 07:00:00+00:00",
+          "published_at": "2026-11-06 13:56:48.546423+00:00",
+          "partial": false
+        }
+      ]
+    }
+  },
+  {
+    "request": {
+      "instrument_id": 1000001,
+      "asset_class": "stock",
+      "start_date": "2026-10-01",
+      "end_date": "2026-11-06",
+      "period": "daily",
+      "adjustment": "none",
+      "allow_experimental_data": true,
+      "now": "2026-11-07 11:13:08.725203+00:00",
+      "listed_on": null,
+      "delisted_on": null,
+      "exchange": "SZSE"
+    },
+    "status": "failed",
+    "error": "technical analysis source failed closed: newer overlapping revision omits the instrument day",
+    "details": {
+      "code": "TECHNICAL_SOURCE_REVISION_CONFLICT",
+      "reason": "newer overlapping revision omits the instrument day",
+      "snapshot_id": "snapshot:tushare:stock_daily:sha256:1fb6c5cb314832a9c60044951356fc74c0eb6df0a9628b5527478ff61d772629"
+    }
+  },
+  {
+    "request": {
+      "instrument_id": 2001562,
+      "asset_class": "etf",
+      "start_date": "2026-11-05",
+      "end_date": "2026-11-06",
+      "period": "daily",
+      "adjustment": "none",
+      "allow_experimental_data": true,
+      "now": "2026-11-07 11:13:10.565014+00:00",
+      "listed_on": null,
+      "delisted_on": null,
+      "exchange": "SSE"
+    },
+    "status": "failed",
+    "error": "technical analysis source failed closed: newer overlapping revision omits the instrument day",
+    "details": {
+      "code": "TECHNICAL_SOURCE_REVISION_CONFLICT",
+      "reason": "newer overlapping revision omits the instrument day",
+      "snapshot_id": "snapshot:tushare:etf_daily:sha256:cab893ec18db625b94a37baaa5c578b15218a407e3ae3f8ef372770374e37a0e"
+    }
+  },
+  {
+    "request": {
+      "instrument_id": 2001562,
+      "asset_class": "etf",
+      "start_date": "2026-10-01",
+      "end_date": "2026-11-06",
+      "period": "daily",
+      "adjustment": "none",
+      "allow_experimental_data": true,
+      "now": "2026-11-07 11:13:10.642377+00:00",
+      "listed_on": null,
+      "delisted_on": null,
+      "exchange": "SSE"
+    },
+    "status": "failed",
+    "error": "technical analysis source failed closed: newer overlapping revision omits the instrument day",
+    "details": {
+      "code": "TECHNICAL_SOURCE_REVISION_CONFLICT",
+      "reason": "newer overlapping revision omits the instrument day",
+      "snapshot_id": "snapshot:tushare:etf_daily:sha256:156bc33502876fdb31c9db75618ee25fe1d0b6fc6d6e01c9fb3855ec26340549"
+    }
+  }
+]

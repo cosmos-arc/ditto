@@ -1,0 +1,3595 @@
+{
+  "started_at": "2026-11-07T11:35:20.448Z",
+  "routes": [
+    {
+      "name": "stock",
+      "id": 1000001,
+      "adjustment": "none",
+      "period": "daily",
+      "http_status": 200,
+      "request": {
+        "adjustment": "none",
+        "allow_experimental_data": true,
+        "end_date": "2026-11-06",
+        "instrument_id": 1000001,
+        "period": "daily",
+        "start_date": "2026-10-01"
+      },
+      "response": {
+        "data": {
+          "instrument_id": 1000001,
+          "period": "daily",
+          "adjustment": "none",
+          "as_of": "2026-11-07T11:36:25.825876Z",
+          "knowledge_cutoff": "2026-11-07T11:36:25.825876Z",
+          "publication_cutoff": "2026-11-07T11:36:25.825876Z",
+          "timezone": "Asia/Shanghai",
+          "calendar_snapshot_ids": [
+            "snapshot:tushare:calendar:sha256:eb2bfad933dfc42f691d8769b7893d482ebd19ba54257eb1dd41f3a0d8823c28"
+          ],
+          "source_snapshot_ids": [
+            "snapshot:tushare:stock_daily:sha256:024ecd699468ca6951f14f5db538d21922db7f3690719f582c34032bcda096b8",
+            "snapshot:tushare:stock_daily:sha256:0d5f5e8c89eacdb0ee2f768444bb873f9113b1df508f8afb2bd24ccc06bdfc63",
+            "snapshot:tushare:stock_daily:sha256:1cb440d6c494c4a6a922c695b336eded7198d4de059735d23887be791c2b1c69",
+            "snapshot:tushare:stock_daily:sha256:1e69e4ac93fba69cf7c15fabc42115c6e5d8ccb50d5054b12e9ebbd1e7b040a5",
+            "snapshot:tushare:stock_daily:sha256:1fb6c5cb314832a9c60044951356fc74c0eb6df0a9628b5527478ff61d772629",
+            "snapshot:tushare:stock_daily:sha256:2472313f3a2e7a894c06f44277bc972bd9f3b9073b267d250771a680b55b4ba2",
+            "snapshot:tushare:stock_daily:sha256:368169c115e3a13d85a5a2c49f711c7981b0aa67294fd177602cf80343d2c0e8",
+            "snapshot:tushare:stock_daily:sha256:5b4f3a729334620bb782abaddcb8cf00dba198c471ebcb1f2f655dcdb92c8a5b",
+            "snapshot:tushare:stock_daily:sha256:8974717174a39b09d7fe7cb669b70aa8c17e1c9dd3c7f32dc991a33642cef9bb",
+            "snapshot:tushare:stock_daily:sha256:993b012f73ed187e458e24427d5a66816a6d0967244efacedb8e6002c38b5b1c",
+            "snapshot:tushare:stock_daily:sha256:a1126e5dbb7fc9c1757b32284a13c38f407e481078dc43956fa2fcfcff84204d",
+            "snapshot:tushare:stock_daily:sha256:a8c16d5bf35c1a9d6225a0f32d51f3cf6755ed67724ac0c88ecfb6c7e3b61fc1",
+            "snapshot:tushare:stock_daily:sha256:c8dedcfa8263f4daf9915c40542f73cbc7d75c8bfff985ff3cdbc94f2558bb38",
+            "snapshot:tushare:stock_daily:sha256:d6465767689476990d6b03f9769cd43c0199247ee1c18a0b1795315d0bef8ea3",
+            "snapshot:tushare:stock_daily:sha256:d6728bd3f6b93b3344f84b1138d5d950ed4836340f7367796cec368401a6271a",
+            "snapshot:tushare:stock_daily:sha256:e0c8705ff3e465cbc0be61d682f1348bc3807f487fc2f4579f4a840890105b4a",
+            "snapshot:tushare:stock_status:sha256:00fbf62b1c70b249cdd72d99ce7d436b6398f3a7071d7a0c45e68925ab1930a5",
+            "snapshot:tushare:stock_status:sha256:08cef0454579ae3dcb6372f930afffc3114cea274e83c12e0acbda86011aa67a",
+            "snapshot:tushare:stock_status:sha256:34812f7f14ec478f00a8b156f1d1b26c3f4b1305381be53fc665f1e7750c72d5",
+            "snapshot:tushare:stock_status:sha256:4d7fae67166498501252335201874f19977f0515b85c3b458693b8a44fd9f872",
+            "snapshot:tushare:stock_status:sha256:7c35642ba56236dcd64982d2974c5c48a848d773d0b90829072bba761bb08b49",
+            "snapshot:tushare:stock_status:sha256:81249c453a5a225084ab236c77d464f552fbd1cbf497fc8145290597df25c2b2",
+            "snapshot:tushare:stock_status:sha256:963e6d43ab78b24a7d1d4510d1bfa3758d65f9af7f03f6116cb2b7074f0e734c",
+            "snapshot:tushare:stock_status:sha256:99d35e42da322646d6785b9858b9ae451235514bca77b4c064658a211b61c823",
+            "snapshot:tushare:stock_status:sha256:a42b5b9217dd8306ab56c9131207eae0ffd9586dd7598574e8bb0992e44cab23",
+            "snapshot:tushare:stock_status:sha256:aafd80bfe3c9c1e44cc7c4c92f776afffa56238e6909b3eb45f5d3537fdacc65",
+            "snapshot:tushare:stock_status:sha256:b461c02e9e790edc3cc25c53facef930ee19909039a8985612f652a0725426b9",
+            "snapshot:tushare:stock_status:sha256:c7a75decaccc827c2206ca9942bce040b43919dac27ece4825822dad963b2968",
+            "snapshot:tushare:stock_status:sha256:c83f335571302c722fed60ffb6c912a8677d9401a9e8f1bac799828a583d4db0",
+            "snapshot:tushare:stock_status:sha256:da2bb6d51c9857686896426c7e51b38a96fbce4757bb0f8b249c1603a0d3eb7f",
+            "snapshot:tushare:stock_status:sha256:e1d253b22f665bd66e2837016f65bad10b558d092b66fdbf6a2fac54e919a26b",
+            "snapshot:tushare:stock_status:sha256:e5c6e44399482163ced60b49684f7badc7d638d02246a5019cd0c33846fdfc37",
+            "snapshot:tushare:stock_status:sha256:ff1627e5105379b9ad55aa98eab7acdb494e264f2815d4f5d007c0980bca357c"
+          ],
+          "sources": [
+            "tushare"
+          ],
+          "latest_price_date": "2026-11-06",
+          "stale_reason": null,
+          "missing_sessions": [],
+          "bars": [
+            {
+              "trade_date": "2026-10-08",
+              "first_trade_date": "2026-10-08",
+              "last_trade_date": "2026-10-08",
+              "open": 11.57,
+              "high": 11.87,
+              "low": 11.54,
+              "close": 11.78,
+              "volume": 1481685.94,
+              "amount": 1743402.5104,
+              "source_snapshot_ids": [
+                "snapshot:tushare:stock_daily:sha256:c8dedcfa8263f4daf9915c40542f73cbc7d75c8bfff985ff3cdbc94f2558bb38"
+              ],
+              "available_at": "2026-11-07T11:34:24.073647Z",
+              "published_at": "2026-10-18T13:48:41.288635Z",
+              "partial": false
+            },
+            {
+              "trade_date": "2026-10-09",
+              "first_trade_date": "2026-10-09",
+              "last_trade_date": "2026-10-09",
+              "open": 11.78,
+              "high": 11.89,
+              "low": 11.58,
+              "close": 11.59,
+              "volume": 1078105.61,
+              "amount": 1259717.10828,
+              "source_snapshot_ids": [
+                "snapshot:tushare:stock_daily:sha256:c8dedcfa8263f4daf9915c40542f73cbc7d75c8bfff985ff3cdbc94f2558bb38"
+              ],
+              "available_at": "2026-11-07T11:34:24.073647Z",
+              "published_at": "2026-10-18T13:48:41.288635Z",
+              "partial": false
+            },
+            {
+              "trade_date": "2026-10-12",
+              "first_trade_date": "2026-10-12",
+              "last_trade_date": "2026-10-12",
+              "open": 11.62,
+              "high": 11.83,
+              "low": 11.62,
+              "close": 11.73,
+              "volume": 1058634.56,
+              "amount": 1243459.833,
+              "source_snapshot_ids": [
+                "snapshot:tushare:stock_daily:sha256:c8dedcfa8263f4daf9915c40542f73cbc7d75c8bfff985ff3cdbc94f2558bb38"
+              ],
+              "available_at": "2026-11-07T11:34:24.073647Z",
+              "published_at": "2026-10-18T13:48:41.288635Z",
+              "partial": false
+            },
+            {
+              "trade_date": "2026-10-13",
+              "first_trade_date": "2026-10-13",
+              "last_trade_date": "2026-10-13",
+              "open": 11.73,
+              "high": 11.77,
+              "low": 11.55,
+              "close": 11.57,
+              "volume": 994936.86,
+              "amount": 1157375.14124,
+              "source_snapshot_ids": [
+                "snapshot:tushare:stock_daily:sha256:c8dedcfa8263f4daf9915c40542f73cbc7d75c8bfff985ff3cdbc94f2558bb38"
+              ],
+              "available_at": "2026-11-07T11:34:24.073647Z",
+              "published_at": "2026-10-18T13:48:41.288635Z",
+              "partial": false
+            },
+            {
+              "trade_date": "2026-10-14",
+              "first_trade_date": "2026-10-14",
+              "last_trade_date": "2026-10-14",
+              "open": 11.57,
+              "high": 11.72,
+              "low": 11.48,
+              "close": 11.5,
+              "volume": 969081.92,
+              "amount": 1122283.85223,
+              "source_snapshot_ids": [
+                "snapshot:tushare:stock_daily:sha256:c8dedcfa8263f4daf9915c40542f73cbc7d75c8bfff985ff3cdbc94f2558bb38"
+              ],
+              "available_at": "2026-11-07T11:34:24.073647Z",
+              "published_at": "2026-10-18T13:48:41.288635Z",
+              "partial": false
+            },
+            {
+              "trade_date": "2026-10-15",
+              "first_trade_date": "2026-10-15",
+              "last_trade_date": "2026-10-15",
+              "open": 11.5,
+              "high": 11.52,
+              "low": 11.26,
+              "close": 11.41,
+              "volume": 1511767.06,
+              "amount": 1719700.51161,
+              "source_snapshot_ids": [
+                "snapshot:tushare:stock_daily:sha256:c8dedcfa8263f4daf9915c40542f73cbc7d75c8bfff985ff3cdbc94f2558bb38"
+              ],
+              "available_at": "2026-11-07T11:34:24.073647Z",
+              "published_at": "2026-10-18T13:48:41.288635Z",
+              "partial": false
+            },
+            {
+              "trade_date": "2026-10-16",
+              "first_trade_date": "2026-10-16",
+              "last_trade_date": "2026-10-16",
+              "open": 11.41,
+              "high": 11.63,
+              "low": 11.36,
+              "close": 11.5,
+              "volume": 1111850.79,
+              "amount": 1281599.06332,
+              "source_snapshot_ids": [
+                "snapshot:tushare:stock_daily:sha256:c8dedcfa8263f4daf9915c40542f73cbc7d75c8bfff985ff3cdbc94f2558bb38"
+              ],
+              "available_at": "2026-11-07T11:34:24.073647Z",
+              "published_at": "2026-10-18T13:48:41.288635Z",
+              "partial": false
+            },
+            {
+              "trade_date": "2026-10-19",
+              "first_trade_date": "2026-10-19",
+              "last_trade_date": "2026-10-19",
+              "open": 11.48,
+              "high": 11.68,
+              "low": 11.41,
+              "close": 11.65,
+              "volume": 1267792.62,
+              "amount": 1466720.68933,
+              "source_snapshot_ids": [
+                "snapshot:tushare:stock_daily:sha256:993b012f73ed187e458e24427d5a66816a6d0967244efacedb8e6002c38b5b1c"
+              ],
+              "available_at": "2026-11-07T11:34:24.073647Z",
+              "published_at": "2026-10-19T09:35:46.358485Z",
+              "partial": false
+            },
+            {
+              "trade_date": "2026-10-20",
+              "first_trade_date": "2026-10-20",
+              "last_trade_date": "2026-10-20",
+              "open": 11.62,
+              "high": 11.68,
+              "low": 11.38,
+              "close": 11.44,
+              "volume": 1245096.68,
+              "amount": 1429559.86696,
+              "source_snapshot_ids": [
+                "snapshot:tushare:stock_daily:sha256:2472313f3a2e7a894c06f44277bc972bd9f3b9073b267d250771a680b55b4ba2"
+              ],
+              "available_at": "2026-11-07T11:34:24.073647Z",
+              "published_at": "2026-10-20T13:53:24.007007Z",
+              "partial": false
+            },
+            {
+              "trade_date": "2026-10-21",
+              "first_trade_date": "2026-10-21",
+              "last_trade_date": "2026-10-21",
+              "open": 11.44,
+              "high": 11.51,
+              "low": 11.39,
+              "close": 11.41,
+              "volume": 813541.37,
+              "amount": 930546.78777,
+              "source_snapshot_ids": [
+                "snapshot:tushare:stock_daily:sha256:d6465767689476990d6b03f9769cd43c0199247ee1c18a0b1795315d0bef8ea3"
+              ],
+              "available_at": "2026-11-07T11:34:24.073647Z",
+              "published_at": "2026-10-21T13:52:05.788239Z",
+              "partial": false
+            },
+            {
+              "trade_date": "2026-10-22",
+              "first_trade_date": "2026-10-22",
+              "last_trade_date": "2026-10-22",
+              "open": 11.41,
+              "high": 11.42,
+              "low": 11.26,
+              "close": 11.3,
+              "volume": 1297648.75,
+              "amount": 1468424.72209,
+              "source_snapshot_ids": [
+                "snapshot:tushare:stock_daily:sha256:1fb6c5cb314832a9c60044951356fc74c0eb6df0a9628b5527478ff61d772629"
+              ],
+              "available_at": "2026-11-07T11:34:24.073647Z",
+              "published_at": "2026-10-22T09:51:31.487256Z",
+              "partial": false
+            },
+            {
+              "trade_date": "2026-10-23",
+              "first_trade_date": "2026-10-23",
+              "last_trade_date": "2026-10-23",
+              "open": 11.27,
+              "high": 11.35,
+              "low": 11.17,
+              "close": 11.2,
+              "volume": 1448805.6,
+              "amount": 1628277.17338,
+              "source_snapshot_ids": [
+                "snapshot:tushare:stock_daily:sha256:5b4f3a729334620bb782abaddcb8cf00dba198c471ebcb1f2f655dcdb92c8a5b"
+              ],
+              "available_at": "2026-11-07T11:34:24.073647Z",
+              "published_at": "2026-10-23T09:51:31.732902Z",
+              "partial": false
+            },
+            {
+              "trade_date": "2026-10-26",
+              "first_trade_date": "2026-10-26",
+              "last_trade_date": "2026-10-26",
+              "open": 11.15,
+              "high": 11.34,
+              "low": 11.13,
+              "close": 11.3,
+              "volume": 1323113.08,
+              "amount": 1485999.50406,
+              "source_snapshot_ids": [
+                "snapshot:tushare:stock_daily:sha256:a8c16d5bf35c1a9d6225a0f32d51f3cf6755ed67724ac0c88ecfb6c7e3b61fc1"
+              ],
+              "available_at": "2026-11-07T11:34:24.073647Z",
+              "published_at": "2026-10-26T13:56:00.477882Z",
+              "partial": false
+            },
+            {
+              "trade_date": "2026-10-27",
+              "first_trade_date": "2026-10-27",
+              "last_trade_date": "2026-10-27",
+              "open": 11.27,
+              "high": 11.55,
+              "low": 11.24,
+              "close": 11.47,
+              "volume": 1529291.55,
+              "amount": 1750404.15702,
+              "source_snapshot_ids": [
+                "snapshot:tushare:stock_daily:sha256:024ecd699468ca6951f14f5db538d21922db7f3690719f582c34032bcda096b8"
+              ],
+              "available_at": "2026-11-07T11:34:24.073647Z",
+              "published_at": "2026-10-27T08:26:53.368007Z",
+              "partial": false
+            },
+            {
+              "trade_date": "2026-10-28",
+              "first_trade_date": "2026-10-28",
+              "last_trade_date": "2026-10-28",
+              "open": 11.43,
+              "high": 11.5,
+              "low": 11.22,
+              "close": 11.31,
+              "volume": 1687009.27,
+              "amount": 1911547.80441,
+              "source_snapshot_ids": [
+                "snapshot:tushare:stock_daily:sha256:e0c8705ff3e465cbc0be61d682f1348bc3807f487fc2f4579f4a840890105b4a"
+              ],
+              "available_at": "2026-11-07T11:34:24.073647Z",
+              "published_at": "2026-10-28T13:55:46.233177Z",
+              "partial": false
+            },
+            {
+              "trade_date": "2026-10-29",
+              "first_trade_date": "2026-10-29",
+              "last_trade_date": "2026-10-29",
+              "open": 11.3,
+              "high": 11.55,
+              "low": 11.29,
+              "close": 11.54,
+              "volume": 1993503.94,
+              "amount": 2283899.68266,
+              "source_snapshot_ids": [
+                "snapshot:tushare:stock_daily:sha256:1e69e4ac93fba69cf7c15fabc42115c6e5d8ccb50d5054b12e9ebbd1e7b040a5"
+              ],
+              "available_at": "2026-11-07T11:34:24.073647Z",
+              "published_at": "2026-10-29T13:56:04.065685Z",
+              "partial": false
+            },
+            {
+              "trade_date": "2026-10-30",
+              "first_trade_date": "2026-10-30",
+              "last_trade_date": "2026-10-30",
+              "open": 11.53,
+              "high": 11.67,
+              "low": 11.4,
+              "close": 11.64,
+              "volume": 1864245.07,
+              "amount": 2152393.88636,
+              "source_snapshot_ids": [
+                "snapshot:tushare:stock_daily:sha256:368169c115e3a13d85a5a2c49f711c7981b0aa67294fd177602cf80343d2c0e8"
+              ],
+              "available_at": "2026-11-07T11:34:24.073647Z",
+              "published_at": "2026-10-30T13:55:41.803828Z",
+              "partial": false
+            },
+            {
+              "trade_date": "2026-11-02",
+              "first_trade_date": "2026-11-02",
+              "last_trade_date": "2026-11-02",
+              "open": 11.6,
+              "high": 11.74,
+              "low": 11.47,
+              "close": 11.54,
+              "volume": 1594361.45,
+              "amount": 1850311.24796,
+              "source_snapshot_ids": [
+                "snapshot:tushare:stock_daily:sha256:1cb440d6c494c4a6a922c695b336eded7198d4de059735d23887be791c2b1c69"
+              ],
+              "available_at": "2026-11-07T11:34:24.073647Z",
+              "published_at": "2026-11-02T13:55:53.892609Z",
+              "partial": false
+            },
+            {
+              "trade_date": "2026-11-03",
+              "first_trade_date": "2026-11-03",
+              "last_trade_date": "2026-11-03",
+              "open": 11.56,
+              "high": 11.78,
+              "low": 11.42,
+              "close": 11.77,
+              "volume": 2139674.22,
+              "amount": 2488701.78997,
+              "source_snapshot_ids": [
+                "snapshot:tushare:stock_daily:sha256:8974717174a39b09d7fe7cb669b70aa8c17e1c9dd3c7f32dc991a33642cef9bb"
+              ],
+              "available_at": "2026-11-07T11:34:24.073647Z",
+              "published_at": "2026-11-03T13:55:42.941083Z",
+              "partial": false
+            },
+            {
+              "trade_date": "2026-11-04",
+              "first_trade_date": "2026-11-04",
+              "last_trade_date": "2026-11-04",
+              "open": 11.75,
+              "high": 11.86,
+              "low": 11.68,
+              "close": 11.74,
+              "volume": 1437905.91,
+              "amount": 1689183.95741,
+              "source_snapshot_ids": [
+                "snapshot:tushare:stock_daily:sha256:d6728bd3f6b93b3344f84b1138d5d950ed4836340f7367796cec368401a6271a"
+              ],
+              "available_at": "2026-11-07T11:34:24.073647Z",
+              "published_at": "2026-11-04T13:55:52.141835Z",
+              "partial": false
+            },
+            {
+              "trade_date": "2026-11-05",
+              "first_trade_date": "2026-11-05",
+              "last_trade_date": "2026-11-05",
+              "open": 11.71,
+              "high": 11.77,
+              "low": 11.56,
+              "close": 11.64,
+              "volume": 1228997.01,
+              "amount": 1429433.01632,
+              "source_snapshot_ids": [
+                "snapshot:tushare:stock_daily:sha256:0d5f5e8c89eacdb0ee2f768444bb873f9113b1df508f8afb2bd24ccc06bdfc63"
+              ],
+              "available_at": "2026-11-07T11:34:24.073647Z",
+              "published_at": "2026-11-05T13:56:15.069313Z",
+              "partial": false
+            },
+            {
+              "trade_date": "2026-11-06",
+              "first_trade_date": "2026-11-06",
+              "last_trade_date": "2026-11-06",
+              "open": 11.62,
+              "high": 11.85,
+              "low": 11.57,
+              "close": 11.81,
+              "volume": 1640276.39,
+              "amount": 1927307.59053,
+              "source_snapshot_ids": [
+                "snapshot:tushare:stock_daily:sha256:a1126e5dbb7fc9c1757b32284a13c38f407e481078dc43956fa2fcfcff84204d"
+              ],
+              "available_at": "2026-11-07T11:34:24.073647Z",
+              "published_at": "2026-11-06T13:56:48.546423Z",
+              "partial": false
+            }
+          ]
+        },
+        "pagination": null,
+        "read_semantics": null
+      },
+      "export": "stock-none-daily.csv",
+      "visible_latest": true,
+      "page_errors": []
+    },
+    {
+      "name": "stock",
+      "id": 1000001,
+      "adjustment": "none",
+      "period": "weekly",
+      "http_status": 200,
+      "request": {
+        "adjustment": "none",
+        "allow_experimental_data": true,
+        "end_date": "2026-11-06",
+        "instrument_id": 1000001,
+        "period": "weekly",
+        "start_date": "2026-10-01"
+      },
+      "response": {
+        "data": {
+          "instrument_id": 1000001,
+          "period": "weekly",
+          "adjustment": "none",
+          "as_of": "2026-11-07T11:36:28.271253Z",
+          "knowledge_cutoff": "2026-11-07T11:36:28.271253Z",
+          "publication_cutoff": "2026-11-07T11:36:28.271253Z",
+          "timezone": "Asia/Shanghai",
+          "calendar_snapshot_ids": [
+            "snapshot:tushare:calendar:sha256:eb2bfad933dfc42f691d8769b7893d482ebd19ba54257eb1dd41f3a0d8823c28"
+          ],
+          "source_snapshot_ids": [
+            "snapshot:tushare:stock_daily:sha256:024ecd699468ca6951f14f5db538d21922db7f3690719f582c34032bcda096b8",
+            "snapshot:tushare:stock_daily:sha256:0d5f5e8c89eacdb0ee2f768444bb873f9113b1df508f8afb2bd24ccc06bdfc63",
+            "snapshot:tushare:stock_daily:sha256:1cb440d6c494c4a6a922c695b336eded7198d4de059735d23887be791c2b1c69",
+            "snapshot:tushare:stock_daily:sha256:1e69e4ac93fba69cf7c15fabc42115c6e5d8ccb50d5054b12e9ebbd1e7b040a5",
+            "snapshot:tushare:stock_daily:sha256:1fb6c5cb314832a9c60044951356fc74c0eb6df0a9628b5527478ff61d772629",
+            "snapshot:tushare:stock_daily:sha256:2472313f3a2e7a894c06f44277bc972bd9f3b9073b267d250771a680b55b4ba2",
+            "snapshot:tushare:stock_daily:sha256:368169c115e3a13d85a5a2c49f711c7981b0aa67294fd177602cf80343d2c0e8",
+            "snapshot:tushare:stock_daily:sha256:5b4f3a729334620bb782abaddcb8cf00dba198c471ebcb1f2f655dcdb92c8a5b",
+            "snapshot:tushare:stock_daily:sha256:8974717174a39b09d7fe7cb669b70aa8c17e1c9dd3c7f32dc991a33642cef9bb",
+            "snapshot:tushare:stock_daily:sha256:993b012f73ed187e458e24427d5a66816a6d0967244efacedb8e6002c38b5b1c",
+            "snapshot:tushare:stock_daily:sha256:a1126e5dbb7fc9c1757b32284a13c38f407e481078dc43956fa2fcfcff84204d",
+            "snapshot:tushare:stock_daily:sha256:a8c16d5bf35c1a9d6225a0f32d51f3cf6755ed67724ac0c88ecfb6c7e3b61fc1",
+            "snapshot:tushare:stock_daily:sha256:c8dedcfa8263f4daf9915c40542f73cbc7d75c8bfff985ff3cdbc94f2558bb38",
+            "snapshot:tushare:stock_daily:sha256:d6465767689476990d6b03f9769cd43c0199247ee1c18a0b1795315d0bef8ea3",
+            "snapshot:tushare:stock_daily:sha256:d6728bd3f6b93b3344f84b1138d5d950ed4836340f7367796cec368401a6271a",
+            "snapshot:tushare:stock_daily:sha256:e0c8705ff3e465cbc0be61d682f1348bc3807f487fc2f4579f4a840890105b4a",
+            "snapshot:tushare:stock_status:sha256:00fbf62b1c70b249cdd72d99ce7d436b6398f3a7071d7a0c45e68925ab1930a5",
+            "snapshot:tushare:stock_status:sha256:08cef0454579ae3dcb6372f930afffc3114cea274e83c12e0acbda86011aa67a",
+            "snapshot:tushare:stock_status:sha256:34812f7f14ec478f00a8b156f1d1b26c3f4b1305381be53fc665f1e7750c72d5",
+            "snapshot:tushare:stock_status:sha256:4d7fae67166498501252335201874f19977f0515b85c3b458693b8a44fd9f872",
+            "snapshot:tushare:stock_status:sha256:7c35642ba56236dcd64982d2974c5c48a848d773d0b90829072bba761bb08b49",
+            "snapshot:tushare:stock_status:sha256:81249c453a5a225084ab236c77d464f552fbd1cbf497fc8145290597df25c2b2",
+            "snapshot:tushare:stock_status:sha256:8d62b4db624d7641bd88ceeeb95032533a1d052cf4534a20dfd1829e7937abba",
+            "snapshot:tushare:stock_status:sha256:963e6d43ab78b24a7d1d4510d1bfa3758d65f9af7f03f6116cb2b7074f0e734c",
+            "snapshot:tushare:stock_status:sha256:99d35e42da322646d6785b9858b9ae451235514bca77b4c064658a211b61c823",
+            "snapshot:tushare:stock_status:sha256:a42b5b9217dd8306ab56c9131207eae0ffd9586dd7598574e8bb0992e44cab23",
+            "snapshot:tushare:stock_status:sha256:aafd80bfe3c9c1e44cc7c4c92f776afffa56238e6909b3eb45f5d3537fdacc65",
+            "snapshot:tushare:stock_status:sha256:b461c02e9e790edc3cc25c53facef930ee19909039a8985612f652a0725426b9",
+            "snapshot:tushare:stock_status:sha256:c7a75decaccc827c2206ca9942bce040b43919dac27ece4825822dad963b2968",
+            "snapshot:tushare:stock_status:sha256:c83f335571302c722fed60ffb6c912a8677d9401a9e8f1bac799828a583d4db0",
+            "snapshot:tushare:stock_status:sha256:da2bb6d51c9857686896426c7e51b38a96fbce4757bb0f8b249c1603a0d3eb7f",
+            "snapshot:tushare:stock_status:sha256:e1d253b22f665bd66e2837016f65bad10b558d092b66fdbf6a2fac54e919a26b",
+            "snapshot:tushare:stock_status:sha256:e5c6e44399482163ced60b49684f7badc7d638d02246a5019cd0c33846fdfc37",
+            "snapshot:tushare:stock_status:sha256:ec8d69bded47b5ce4536c14629c78e8c5b01529cc2ddd4f71e5e8bc91d80c3f2",
+            "snapshot:tushare:stock_status:sha256:ff1627e5105379b9ad55aa98eab7acdb494e264f2815d4f5d007c0980bca357c"
+          ],
+          "sources": [
+            "tushare"
+          ],
+          "latest_price_date": "2026-11-06",
+          "stale_reason": null,
+          "missing_sessions": [],
+          "bars": [
+            {
+              "trade_date": "2026-10-09",
+              "first_trade_date": "2026-10-08",
+              "last_trade_date": "2026-10-09",
+              "open": 11.57,
+              "high": 11.89,
+              "low": 11.54,
+              "close": 11.59,
+              "volume": 2559791.55,
+              "amount": 3003119.6186800003,
+              "source_snapshot_ids": [
+                "snapshot:tushare:stock_daily:sha256:c8dedcfa8263f4daf9915c40542f73cbc7d75c8bfff985ff3cdbc94f2558bb38"
+              ],
+              "available_at": "2026-11-07T11:34:24.073647Z",
+              "published_at": "2026-10-18T13:48:41.288635Z",
+              "partial": false
+            },
+            {
+              "trade_date": "2026-10-16",
+              "first_trade_date": "2026-10-12",
+              "last_trade_date": "2026-10-16",
+              "open": 11.62,
+              "high": 11.83,
+              "low": 11.26,
+              "close": 11.5,
+              "volume": 5646271.19,
+              "amount": 6524418.4014,
+              "source_snapshot_ids": [
+                "snapshot:tushare:stock_daily:sha256:c8dedcfa8263f4daf9915c40542f73cbc7d75c8bfff985ff3cdbc94f2558bb38"
+              ],
+              "available_at": "2026-11-07T11:34:24.073647Z",
+              "published_at": "2026-10-18T13:48:41.288635Z",
+              "partial": false
+            },
+            {
+              "trade_date": "2026-10-23",
+              "first_trade_date": "2026-10-19",
+              "last_trade_date": "2026-10-23",
+              "open": 11.48,
+              "high": 11.68,
+              "low": 11.17,
+              "close": 11.2,
+              "volume": 6072885.0200000005,
+              "amount": 6923529.23953,
+              "source_snapshot_ids": [
+                "snapshot:tushare:stock_daily:sha256:1fb6c5cb314832a9c60044951356fc74c0eb6df0a9628b5527478ff61d772629",
+                "snapshot:tushare:stock_daily:sha256:2472313f3a2e7a894c06f44277bc972bd9f3b9073b267d250771a680b55b4ba2",
+                "snapshot:tushare:stock_daily:sha256:5b4f3a729334620bb782abaddcb8cf00dba198c471ebcb1f2f655dcdb92c8a5b",
+                "snapshot:tushare:stock_daily:sha256:993b012f73ed187e458e24427d5a66816a6d0967244efacedb8e6002c38b5b1c",
+                "snapshot:tushare:stock_daily:sha256:d6465767689476990d6b03f9769cd43c0199247ee1c18a0b1795315d0bef8ea3"
+              ],
+              "available_at": "2026-11-07T11:34:24.073647Z",
+              "published_at": "2026-10-23T09:51:31.732902Z",
+              "partial": false
+            },
+            {
+              "trade_date": "2026-10-30",
+              "first_trade_date": "2026-10-26",
+              "last_trade_date": "2026-10-30",
+              "open": 11.15,
+              "high": 11.67,
+              "low": 11.13,
+              "close": 11.64,
+              "volume": 8397162.91,
+              "amount": 9584245.03451,
+              "source_snapshot_ids": [
+                "snapshot:tushare:stock_daily:sha256:024ecd699468ca6951f14f5db538d21922db7f3690719f582c34032bcda096b8",
+                "snapshot:tushare:stock_daily:sha256:1e69e4ac93fba69cf7c15fabc42115c6e5d8ccb50d5054b12e9ebbd1e7b040a5",
+                "snapshot:tushare:stock_daily:sha256:368169c115e3a13d85a5a2c49f711c7981b0aa67294fd177602cf80343d2c0e8",
+                "snapshot:tushare:stock_daily:sha256:a8c16d5bf35c1a9d6225a0f32d51f3cf6755ed67724ac0c88ecfb6c7e3b61fc1",
+                "snapshot:tushare:stock_daily:sha256:e0c8705ff3e465cbc0be61d682f1348bc3807f487fc2f4579f4a840890105b4a"
+              ],
+              "available_at": "2026-11-07T11:34:24.073647Z",
+              "published_at": "2026-10-30T13:55:41.803828Z",
+              "partial": false
+            },
+            {
+              "trade_date": "2026-11-06",
+              "first_trade_date": "2026-11-02",
+              "last_trade_date": "2026-11-06",
+              "open": 11.6,
+              "high": 11.86,
+              "low": 11.42,
+              "close": 11.81,
+              "volume": 8041214.98,
+              "amount": 9384937.60219,
+              "source_snapshot_ids": [
+                "snapshot:tushare:stock_daily:sha256:0d5f5e8c89eacdb0ee2f768444bb873f9113b1df508f8afb2bd24ccc06bdfc63",
+                "snapshot:tushare:stock_daily:sha256:1cb440d6c494c4a6a922c695b336eded7198d4de059735d23887be791c2b1c69",
+                "snapshot:tushare:stock_daily:sha256:8974717174a39b09d7fe7cb669b70aa8c17e1c9dd3c7f32dc991a33642cef9bb",
+                "snapshot:tushare:stock_daily:sha256:a1126e5dbb7fc9c1757b32284a13c38f407e481078dc43956fa2fcfcff84204d",
+                "snapshot:tushare:stock_daily:sha256:d6728bd3f6b93b3344f84b1138d5d950ed4836340f7367796cec368401a6271a"
+              ],
+              "available_at": "2026-11-07T11:34:24.073647Z",
+              "published_at": "2026-11-06T13:56:48.546423Z",
+              "partial": false
+            }
+          ]
+        },
+        "pagination": null,
+        "read_semantics": null
+      },
+      "export": "stock-none-weekly.csv",
+      "visible_latest": true,
+      "page_errors": []
+    },
+    {
+      "name": "stock",
+      "id": 1000001,
+      "adjustment": "none",
+      "period": "monthly",
+      "http_status": 200,
+      "request": {
+        "adjustment": "none",
+        "allow_experimental_data": true,
+        "end_date": "2026-11-06",
+        "instrument_id": 1000001,
+        "period": "monthly",
+        "start_date": "2026-10-01"
+      },
+      "response": {
+        "data": {
+          "instrument_id": 1000001,
+          "period": "monthly",
+          "adjustment": "none",
+          "as_of": "2026-11-07T11:36:31.490561Z",
+          "knowledge_cutoff": "2026-11-07T11:36:31.490561Z",
+          "publication_cutoff": "2026-11-07T11:36:31.490561Z",
+          "timezone": "Asia/Shanghai",
+          "calendar_snapshot_ids": [
+            "snapshot:tushare:calendar:sha256:eb2bfad933dfc42f691d8769b7893d482ebd19ba54257eb1dd41f3a0d8823c28"
+          ],
+          "source_snapshot_ids": [
+            "snapshot:tushare:stock_daily:sha256:024ecd699468ca6951f14f5db538d21922db7f3690719f582c34032bcda096b8",
+            "snapshot:tushare:stock_daily:sha256:0d5f5e8c89eacdb0ee2f768444bb873f9113b1df508f8afb2bd24ccc06bdfc63",
+            "snapshot:tushare:stock_daily:sha256:1cb440d6c494c4a6a922c695b336eded7198d4de059735d23887be791c2b1c69",
+            "snapshot:tushare:stock_daily:sha256:1e69e4ac93fba69cf7c15fabc42115c6e5d8ccb50d5054b12e9ebbd1e7b040a5",
+            "snapshot:tushare:stock_daily:sha256:1fb6c5cb314832a9c60044951356fc74c0eb6df0a9628b5527478ff61d772629",
+            "snapshot:tushare:stock_daily:sha256:2472313f3a2e7a894c06f44277bc972bd9f3b9073b267d250771a680b55b4ba2",
+            "snapshot:tushare:stock_daily:sha256:368169c115e3a13d85a5a2c49f711c7981b0aa67294fd177602cf80343d2c0e8",
+            "snapshot:tushare:stock_daily:sha256:5b4f3a729334620bb782abaddcb8cf00dba198c471ebcb1f2f655dcdb92c8a5b",
+            "snapshot:tushare:stock_daily:sha256:8974717174a39b09d7fe7cb669b70aa8c17e1c9dd3c7f32dc991a33642cef9bb",
+            "snapshot:tushare:stock_daily:sha256:993b012f73ed187e458e24427d5a66816a6d0967244efacedb8e6002c38b5b1c",
+            "snapshot:tushare:stock_daily:sha256:a1126e5dbb7fc9c1757b32284a13c38f407e481078dc43956fa2fcfcff84204d",
+            "snapshot:tushare:stock_daily:sha256:a8c16d5bf35c1a9d6225a0f32d51f3cf6755ed67724ac0c88ecfb6c7e3b61fc1",
+            "snapshot:tushare:stock_daily:sha256:c8dedcfa8263f4daf9915c40542f73cbc7d75c8bfff985ff3cdbc94f2558bb38",
+            "snapshot:tushare:stock_daily:sha256:d6465767689476990d6b03f9769cd43c0199247ee1c18a0b1795315d0bef8ea3",
+            "snapshot:tushare:stock_daily:sha256:d6728bd3f6b93b3344f84b1138d5d950ed4836340f7367796cec368401a6271a",
+            "snapshot:tushare:stock_daily:sha256:e0c8705ff3e465cbc0be61d682f1348bc3807f487fc2f4579f4a840890105b4a",
+            "snapshot:tushare:stock_status:sha256:00fbf62b1c70b249cdd72d99ce7d436b6398f3a7071d7a0c45e68925ab1930a5",
+            "snapshot:tushare:stock_status:sha256:08cef0454579ae3dcb6372f930afffc3114cea274e83c12e0acbda86011aa67a",
+            "snapshot:tushare:stock_status:sha256:34812f7f14ec478f00a8b156f1d1b26c3f4b1305381be53fc665f1e7750c72d5",
+            "snapshot:tushare:stock_status:sha256:4d7fae67166498501252335201874f19977f0515b85c3b458693b8a44fd9f872",
+            "snapshot:tushare:stock_status:sha256:7c35642ba56236dcd64982d2974c5c48a848d773d0b90829072bba761bb08b49",
+            "snapshot:tushare:stock_status:sha256:81249c453a5a225084ab236c77d464f552fbd1cbf497fc8145290597df25c2b2",
+            "snapshot:tushare:stock_status:sha256:963e6d43ab78b24a7d1d4510d1bfa3758d65f9af7f03f6116cb2b7074f0e734c",
+            "snapshot:tushare:stock_status:sha256:99d35e42da322646d6785b9858b9ae451235514bca77b4c064658a211b61c823",
+            "snapshot:tushare:stock_status:sha256:a42b5b9217dd8306ab56c9131207eae0ffd9586dd7598574e8bb0992e44cab23",
+            "snapshot:tushare:stock_status:sha256:aafd80bfe3c9c1e44cc7c4c92f776afffa56238e6909b3eb45f5d3537fdacc65",
+            "snapshot:tushare:stock_status:sha256:b461c02e9e790edc3cc25c53facef930ee19909039a8985612f652a0725426b9",
+            "snapshot:tushare:stock_status:sha256:c7a75decaccc827c2206ca9942bce040b43919dac27ece4825822dad963b2968",
+            "snapshot:tushare:stock_status:sha256:c83f335571302c722fed60ffb6c912a8677d9401a9e8f1bac799828a583d4db0",
+            "snapshot:tushare:stock_status:sha256:da2bb6d51c9857686896426c7e51b38a96fbce4757bb0f8b249c1603a0d3eb7f",
+            "snapshot:tushare:stock_status:sha256:e1d253b22f665bd66e2837016f65bad10b558d092b66fdbf6a2fac54e919a26b",
+            "snapshot:tushare:stock_status:sha256:e5c6e44399482163ced60b49684f7badc7d638d02246a5019cd0c33846fdfc37",
+            "snapshot:tushare:stock_status:sha256:ff1627e5105379b9ad55aa98eab7acdb494e264f2815d4f5d007c0980bca357c"
+          ],
+          "sources": [
+            "tushare"
+          ],
+          "latest_price_date": "2026-11-06",
+          "stale_reason": null,
+          "missing_sessions": [],
+          "bars": [
+            {
+              "trade_date": "2026-10-30",
+              "first_trade_date": "2026-10-08",
+              "last_trade_date": "2026-10-30",
+              "open": 11.57,
+              "high": 11.89,
+              "low": 11.13,
+              "close": 11.64,
+              "volume": 22676110.67,
+              "amount": 26035312.29412,
+              "source_snapshot_ids": [
+                "snapshot:tushare:stock_daily:sha256:024ecd699468ca6951f14f5db538d21922db7f3690719f582c34032bcda096b8",
+                "snapshot:tushare:stock_daily:sha256:1e69e4ac93fba69cf7c15fabc42115c6e5d8ccb50d5054b12e9ebbd1e7b040a5",
+                "snapshot:tushare:stock_daily:sha256:1fb6c5cb314832a9c60044951356fc74c0eb6df0a9628b5527478ff61d772629",
+                "snapshot:tushare:stock_daily:sha256:2472313f3a2e7a894c06f44277bc972bd9f3b9073b267d250771a680b55b4ba2",
+                "snapshot:tushare:stock_daily:sha256:368169c115e3a13d85a5a2c49f711c7981b0aa67294fd177602cf80343d2c0e8",
+                "snapshot:tushare:stock_daily:sha256:5b4f3a729334620bb782abaddcb8cf00dba198c471ebcb1f2f655dcdb92c8a5b",
+                "snapshot:tushare:stock_daily:sha256:993b012f73ed187e458e24427d5a66816a6d0967244efacedb8e6002c38b5b1c",
+                "snapshot:tushare:stock_daily:sha256:a8c16d5bf35c1a9d6225a0f32d51f3cf6755ed67724ac0c88ecfb6c7e3b61fc1",
+                "snapshot:tushare:stock_daily:sha256:c8dedcfa8263f4daf9915c40542f73cbc7d75c8bfff985ff3cdbc94f2558bb38",
+                "snapshot:tushare:stock_daily:sha256:d6465767689476990d6b03f9769cd43c0199247ee1c18a0b1795315d0bef8ea3",
+                "snapshot:tushare:stock_daily:sha256:e0c8705ff3e465cbc0be61d682f1348bc3807f487fc2f4579f4a840890105b4a"
+              ],
+              "available_at": "2026-11-07T11:34:24.073647Z",
+              "published_at": "2026-10-30T13:55:41.803828Z",
+              "partial": false
+            },
+            {
+              "trade_date": "2026-11-06",
+              "first_trade_date": "2026-11-02",
+              "last_trade_date": "2026-11-06",
+              "open": 11.6,
+              "high": 11.86,
+              "low": 11.42,
+              "close": 11.81,
+              "volume": 8041214.98,
+              "amount": 9384937.60219,
+              "source_snapshot_ids": [
+                "snapshot:tushare:stock_daily:sha256:0d5f5e8c89eacdb0ee2f768444bb873f9113b1df508f8afb2bd24ccc06bdfc63",
+                "snapshot:tushare:stock_daily:sha256:1cb440d6c494c4a6a922c695b336eded7198d4de059735d23887be791c2b1c69",
+                "snapshot:tushare:stock_daily:sha256:8974717174a39b09d7fe7cb669b70aa8c17e1c9dd3c7f32dc991a33642cef9bb",
+                "snapshot:tushare:stock_daily:sha256:a1126e5dbb7fc9c1757b32284a13c38f407e481078dc43956fa2fcfcff84204d",
+                "snapshot:tushare:stock_daily:sha256:d6728bd3f6b93b3344f84b1138d5d950ed4836340f7367796cec368401a6271a"
+              ],
+              "available_at": "2026-11-07T11:34:24.073647Z",
+              "published_at": "2026-11-06T13:56:48.546423Z",
+              "partial": true
+            }
+          ]
+        },
+        "pagination": null,
+        "read_semantics": null
+      },
+      "export": "stock-none-monthly.csv",
+      "visible_latest": true,
+      "page_errors": []
+    },
+    {
+      "name": "stock",
+      "id": 1000001,
+      "adjustment": "qfq",
+      "period": "daily",
+      "http_status": 200,
+      "request": {
+        "adjustment": "qfq",
+        "allow_experimental_data": true,
+        "end_date": "2026-11-06",
+        "instrument_id": 1000001,
+        "period": "daily",
+        "start_date": "2026-10-01"
+      },
+      "response": {
+        "data": {
+          "instrument_id": 1000001,
+          "period": "daily",
+          "adjustment": "qfq",
+          "as_of": "2026-11-07T11:36:37.271474Z",
+          "knowledge_cutoff": "2026-11-07T11:36:37.271474Z",
+          "publication_cutoff": "2026-11-07T11:36:37.271474Z",
+          "timezone": "Asia/Shanghai",
+          "calendar_snapshot_ids": [
+            "snapshot:tushare:calendar:sha256:eb2bfad933dfc42f691d8769b7893d482ebd19ba54257eb1dd41f3a0d8823c28"
+          ],
+          "source_snapshot_ids": [
+            "snapshot:tushare:adj_factor:sha256:375f88bef3707bebb893fb09ddc0c92fa0a76382802be5d36814020de09acbe6",
+            "snapshot:tushare:adj_factor:sha256:7272dc95aaefd64dceec24388f272b74f2878627635872e06a36863c1af1ca77",
+            "snapshot:tushare:adj_factor:sha256:78e6f74c1a3760785aa28b8fbb9d995b6e798b6d71870a1494961b5b14e4cdc9",
+            "snapshot:tushare:adj_factor:sha256:7ef0b9ed5a7deff7bc644658d512da19a27b74b212456cfc7830565ae75f68f2",
+            "snapshot:tushare:adj_factor:sha256:947508b34c5e3e1f05dbb070f998e7df51226b8ed0da84a64af0c2ffff4ff06b",
+            "snapshot:tushare:adj_factor:sha256:a150133a255e301ac48620542280ecb4c6878ed98ff727132a0820828c91de11",
+            "snapshot:tushare:adj_factor:sha256:aa2f042a22743b4e45a903d2ed4d95a94ac3a9f97d9f1dac0cb267b41cc56f85",
+            "snapshot:tushare:adj_factor:sha256:ae5e489560aff43dac32273470126411702d150da460cb67993289693686ded9",
+            "snapshot:tushare:adj_factor:sha256:c23e3f0f59174e9fe1cba3238948ad75d1efddbd861eb5d412fabe06b4523fa2",
+            "snapshot:tushare:adj_factor:sha256:cbe335ff43ba6e5750b33c3d38b7cc6c7598da23de237df318430b711fbbbfce",
+            "snapshot:tushare:adj_factor:sha256:cc7c59547bc2f18ac97e4dfa8bcf9cd1513a245964465fb41b2506a083d03149",
+            "snapshot:tushare:adj_factor:sha256:d6dea69f971e96cb5616b31d5de5c2a0c823b8a37ef52b54b1d06cff85298470",
+            "snapshot:tushare:adj_factor:sha256:e5cb122ec59359b2db6ac4a96c2f82cbe7e00f989c9e4a4fc2fe0f20130285d7",
+            "snapshot:tushare:adj_factor:sha256:e6b39f4ad50f6e572f70276fbc98347501bd0e7103be4b124baac33c33df2aa2",
+            "snapshot:tushare:adj_factor:sha256:ef57fbfb3dffc3d0ff196a11bb86b8563a3e94e7227e4bb5a6f45e064c6cec19",
+            "snapshot:tushare:adj_factor:sha256:f11bc84548e34b9258e43a3845f9e901fcf7e4fde92d09af4811ecaa86959463",
+            "snapshot:tushare:stock_daily:sha256:024ecd699468ca6951f14f5db538d21922db7f3690719f582c34032bcda096b8",
+            "snapshot:tushare:stock_daily:sha256:0d5f5e8c89eacdb0ee2f768444bb873f9113b1df508f8afb2bd24ccc06bdfc63",
+            "snapshot:tushare:stock_daily:sha256:1cb440d6c494c4a6a922c695b336eded7198d4de059735d23887be791c2b1c69",
+            "snapshot:tushare:stock_daily:sha256:1e69e4ac93fba69cf7c15fabc42115c6e5d8ccb50d5054b12e9ebbd1e7b040a5",
+            "snapshot:tushare:stock_daily:sha256:1fb6c5cb314832a9c60044951356fc74c0eb6df0a9628b5527478ff61d772629",
+            "snapshot:tushare:stock_daily:sha256:2472313f3a2e7a894c06f44277bc972bd9f3b9073b267d250771a680b55b4ba2",
+            "snapshot:tushare:stock_daily:sha256:368169c115e3a13d85a5a2c49f711c7981b0aa67294fd177602cf80343d2c0e8",
+            "snapshot:tushare:stock_daily:sha256:5b4f3a729334620bb782abaddcb8cf00dba198c471ebcb1f2f655dcdb92c8a5b",
+            "snapshot:tushare:stock_daily:sha256:8974717174a39b09d7fe7cb669b70aa8c17e1c9dd3c7f32dc991a33642cef9bb",
+            "snapshot:tushare:stock_daily:sha256:993b012f73ed187e458e24427d5a66816a6d0967244efacedb8e6002c38b5b1c",
+            "snapshot:tushare:stock_daily:sha256:a1126e5dbb7fc9c1757b32284a13c38f407e481078dc43956fa2fcfcff84204d",
+            "snapshot:tushare:stock_daily:sha256:a8c16d5bf35c1a9d6225a0f32d51f3cf6755ed67724ac0c88ecfb6c7e3b61fc1",
+            "snapshot:tushare:stock_daily:sha256:c8dedcfa8263f4daf9915c40542f73cbc7d75c8bfff985ff3cdbc94f2558bb38",
+            "snapshot:tushare:stock_daily:sha256:d6465767689476990d6b03f9769cd43c0199247ee1c18a0b1795315d0bef8ea3",
+            "snapshot:tushare:stock_daily:sha256:d6728bd3f6b93b3344f84b1138d5d950ed4836340f7367796cec368401a6271a",
+            "snapshot:tushare:stock_daily:sha256:e0c8705ff3e465cbc0be61d682f1348bc3807f487fc2f4579f4a840890105b4a",
+            "snapshot:tushare:stock_status:sha256:00fbf62b1c70b249cdd72d99ce7d436b6398f3a7071d7a0c45e68925ab1930a5",
+            "snapshot:tushare:stock_status:sha256:08cef0454579ae3dcb6372f930afffc3114cea274e83c12e0acbda86011aa67a",
+            "snapshot:tushare:stock_status:sha256:34812f7f14ec478f00a8b156f1d1b26c3f4b1305381be53fc665f1e7750c72d5",
+            "snapshot:tushare:stock_status:sha256:4d7fae67166498501252335201874f19977f0515b85c3b458693b8a44fd9f872",
+            "snapshot:tushare:stock_status:sha256:7c35642ba56236dcd64982d2974c5c48a848d773d0b90829072bba761bb08b49",
+            "snapshot:tushare:stock_status:sha256:81249c453a5a225084ab236c77d464f552fbd1cbf497fc8145290597df25c2b2",
+            "snapshot:tushare:stock_status:sha256:963e6d43ab78b24a7d1d4510d1bfa3758d65f9af7f03f6116cb2b7074f0e734c",
+            "snapshot:tushare:stock_status:sha256:99d35e42da322646d6785b9858b9ae451235514bca77b4c064658a211b61c823",
+            "snapshot:tushare:stock_status:sha256:a42b5b9217dd8306ab56c9131207eae0ffd9586dd7598574e8bb0992e44cab23",
+            "snapshot:tushare:stock_status:sha256:aafd80bfe3c9c1e44cc7c4c92f776afffa56238e6909b3eb45f5d3537fdacc65",
+            "snapshot:tushare:stock_status:sha256:b461c02e9e790edc3cc25c53facef930ee19909039a8985612f652a0725426b9",
+            "snapshot:tushare:stock_status:sha256:c7a75decaccc827c2206ca9942bce040b43919dac27ece4825822dad963b2968",
+            "snapshot:tushare:stock_status:sha256:c83f335571302c722fed60ffb6c912a8677d9401a9e8f1bac799828a583d4db0",
+            "snapshot:tushare:stock_status:sha256:da2bb6d51c9857686896426c7e51b38a96fbce4757bb0f8b249c1603a0d3eb7f",
+            "snapshot:tushare:stock_status:sha256:e1d253b22f665bd66e2837016f65bad10b558d092b66fdbf6a2fac54e919a26b",
+            "snapshot:tushare:stock_status:sha256:e5c6e44399482163ced60b49684f7badc7d638d02246a5019cd0c33846fdfc37",
+            "snapshot:tushare:stock_status:sha256:ff1627e5105379b9ad55aa98eab7acdb494e264f2815d4f5d007c0980bca357c"
+          ],
+          "sources": [
+            "tushare"
+          ],
+          "latest_price_date": "2026-11-06",
+          "stale_reason": null,
+          "missing_sessions": [],
+          "bars": [
+            {
+              "trade_date": "2026-10-08",
+              "first_trade_date": "2026-10-08",
+              "last_trade_date": "2026-10-08",
+              "open": 11.57,
+              "high": 11.87,
+              "low": 11.54,
+              "close": 11.78,
+              "volume": 1481685.94,
+              "amount": 1743402.5104,
+              "source_snapshot_ids": [
+                "snapshot:tushare:adj_factor:sha256:aa2f042a22743b4e45a903d2ed4d95a94ac3a9f97d9f1dac0cb267b41cc56f85",
+                "snapshot:tushare:adj_factor:sha256:ef57fbfb3dffc3d0ff196a11bb86b8563a3e94e7227e4bb5a6f45e064c6cec19",
+                "snapshot:tushare:stock_daily:sha256:c8dedcfa8263f4daf9915c40542f73cbc7d75c8bfff985ff3cdbc94f2558bb38"
+              ],
+              "available_at": "2026-11-07T11:34:24.073647Z",
+              "published_at": "2026-11-06T13:57:28.944839Z",
+              "partial": false
+            },
+            {
+              "trade_date": "2026-10-09",
+              "first_trade_date": "2026-10-09",
+              "last_trade_date": "2026-10-09",
+              "open": 11.78,
+              "high": 11.89,
+              "low": 11.58,
+              "close": 11.59,
+              "volume": 1078105.61,
+              "amount": 1259717.10828,
+              "source_snapshot_ids": [
+                "snapshot:tushare:adj_factor:sha256:aa2f042a22743b4e45a903d2ed4d95a94ac3a9f97d9f1dac0cb267b41cc56f85",
+                "snapshot:tushare:adj_factor:sha256:ef57fbfb3dffc3d0ff196a11bb86b8563a3e94e7227e4bb5a6f45e064c6cec19",
+                "snapshot:tushare:stock_daily:sha256:c8dedcfa8263f4daf9915c40542f73cbc7d75c8bfff985ff3cdbc94f2558bb38"
+              ],
+              "available_at": "2026-11-07T11:34:24.073647Z",
+              "published_at": "2026-11-06T13:57:28.944839Z",
+              "partial": false
+            },
+            {
+              "trade_date": "2026-10-12",
+              "first_trade_date": "2026-10-12",
+              "last_trade_date": "2026-10-12",
+              "open": 11.62,
+              "high": 11.83,
+              "low": 11.62,
+              "close": 11.73,
+              "volume": 1058634.56,
+              "amount": 1243459.833,
+              "source_snapshot_ids": [
+                "snapshot:tushare:adj_factor:sha256:aa2f042a22743b4e45a903d2ed4d95a94ac3a9f97d9f1dac0cb267b41cc56f85",
+                "snapshot:tushare:adj_factor:sha256:ef57fbfb3dffc3d0ff196a11bb86b8563a3e94e7227e4bb5a6f45e064c6cec19",
+                "snapshot:tushare:stock_daily:sha256:c8dedcfa8263f4daf9915c40542f73cbc7d75c8bfff985ff3cdbc94f2558bb38"
+              ],
+              "available_at": "2026-11-07T11:34:24.073647Z",
+              "published_at": "2026-11-06T13:57:28.944839Z",
+              "partial": false
+            },
+            {
+              "trade_date": "2026-10-13",
+              "first_trade_date": "2026-10-13",
+              "last_trade_date": "2026-10-13",
+              "open": 11.73,
+              "high": 11.77,
+              "low": 11.55,
+              "close": 11.57,
+              "volume": 994936.86,
+              "amount": 1157375.14124,
+              "source_snapshot_ids": [
+                "snapshot:tushare:adj_factor:sha256:aa2f042a22743b4e45a903d2ed4d95a94ac3a9f97d9f1dac0cb267b41cc56f85",
+                "snapshot:tushare:adj_factor:sha256:ef57fbfb3dffc3d0ff196a11bb86b8563a3e94e7227e4bb5a6f45e064c6cec19",
+                "snapshot:tushare:stock_daily:sha256:c8dedcfa8263f4daf9915c40542f73cbc7d75c8bfff985ff3cdbc94f2558bb38"
+              ],
+              "available_at": "2026-11-07T11:34:24.073647Z",
+              "published_at": "2026-11-06T13:57:28.944839Z",
+              "partial": false
+            },
+            {
+              "trade_date": "2026-10-14",
+              "first_trade_date": "2026-10-14",
+              "last_trade_date": "2026-10-14",
+              "open": 11.57,
+              "high": 11.72,
+              "low": 11.48,
+              "close": 11.5,
+              "volume": 969081.92,
+              "amount": 1122283.85223,
+              "source_snapshot_ids": [
+                "snapshot:tushare:adj_factor:sha256:aa2f042a22743b4e45a903d2ed4d95a94ac3a9f97d9f1dac0cb267b41cc56f85",
+                "snapshot:tushare:adj_factor:sha256:ef57fbfb3dffc3d0ff196a11bb86b8563a3e94e7227e4bb5a6f45e064c6cec19",
+                "snapshot:tushare:stock_daily:sha256:c8dedcfa8263f4daf9915c40542f73cbc7d75c8bfff985ff3cdbc94f2558bb38"
+              ],
+              "available_at": "2026-11-07T11:34:24.073647Z",
+              "published_at": "2026-11-06T13:57:28.944839Z",
+              "partial": false
+            },
+            {
+              "trade_date": "2026-10-15",
+              "first_trade_date": "2026-10-15",
+              "last_trade_date": "2026-10-15",
+              "open": 11.5,
+              "high": 11.52,
+              "low": 11.26,
+              "close": 11.41,
+              "volume": 1511767.06,
+              "amount": 1719700.51161,
+              "source_snapshot_ids": [
+                "snapshot:tushare:adj_factor:sha256:aa2f042a22743b4e45a903d2ed4d95a94ac3a9f97d9f1dac0cb267b41cc56f85",
+                "snapshot:tushare:adj_factor:sha256:ef57fbfb3dffc3d0ff196a11bb86b8563a3e94e7227e4bb5a6f45e064c6cec19",
+                "snapshot:tushare:stock_daily:sha256:c8dedcfa8263f4daf9915c40542f73cbc7d75c8bfff985ff3cdbc94f2558bb38"
+              ],
+              "available_at": "2026-11-07T11:34:24.073647Z",
+              "published_at": "2026-11-06T13:57:28.944839Z",
+              "partial": false
+            },
+            {
+              "trade_date": "2026-10-16",
+              "first_trade_date": "2026-10-16",
+              "last_trade_date": "2026-10-16",
+              "open": 11.41,
+              "high": 11.63,
+              "low": 11.36,
+              "close": 11.5,
+              "volume": 1111850.79,
+              "amount": 1281599.06332,
+              "source_snapshot_ids": [
+                "snapshot:tushare:adj_factor:sha256:aa2f042a22743b4e45a903d2ed4d95a94ac3a9f97d9f1dac0cb267b41cc56f85",
+                "snapshot:tushare:adj_factor:sha256:ef57fbfb3dffc3d0ff196a11bb86b8563a3e94e7227e4bb5a6f45e064c6cec19",
+                "snapshot:tushare:stock_daily:sha256:c8dedcfa8263f4daf9915c40542f73cbc7d75c8bfff985ff3cdbc94f2558bb38"
+              ],
+              "available_at": "2026-11-07T11:34:24.073647Z",
+              "published_at": "2026-11-06T13:57:28.944839Z",
+              "partial": false
+            },
+            {
+              "trade_date": "2026-10-19",
+              "first_trade_date": "2026-10-19",
+              "last_trade_date": "2026-10-19",
+              "open": 11.48,
+              "high": 11.68,
+              "low": 11.41,
+              "close": 11.65,
+              "volume": 1267792.62,
+              "amount": 1466720.68933,
+              "source_snapshot_ids": [
+                "snapshot:tushare:adj_factor:sha256:a150133a255e301ac48620542280ecb4c6878ed98ff727132a0820828c91de11",
+                "snapshot:tushare:adj_factor:sha256:aa2f042a22743b4e45a903d2ed4d95a94ac3a9f97d9f1dac0cb267b41cc56f85",
+                "snapshot:tushare:stock_daily:sha256:993b012f73ed187e458e24427d5a66816a6d0967244efacedb8e6002c38b5b1c"
+              ],
+              "available_at": "2026-11-07T11:34:24.073647Z",
+              "published_at": "2026-11-06T13:57:28.944839Z",
+              "partial": false
+            },
+            {
+              "trade_date": "2026-10-20",
+              "first_trade_date": "2026-10-20",
+              "last_trade_date": "2026-10-20",
+              "open": 11.62,
+              "high": 11.68,
+              "low": 11.38,
+              "close": 11.44,
+              "volume": 1245096.68,
+              "amount": 1429559.86696,
+              "source_snapshot_ids": [
+                "snapshot:tushare:adj_factor:sha256:aa2f042a22743b4e45a903d2ed4d95a94ac3a9f97d9f1dac0cb267b41cc56f85",
+                "snapshot:tushare:adj_factor:sha256:cbe335ff43ba6e5750b33c3d38b7cc6c7598da23de237df318430b711fbbbfce",
+                "snapshot:tushare:stock_daily:sha256:2472313f3a2e7a894c06f44277bc972bd9f3b9073b267d250771a680b55b4ba2"
+              ],
+              "available_at": "2026-11-07T11:34:24.073647Z",
+              "published_at": "2026-11-06T13:57:28.944839Z",
+              "partial": false
+            },
+            {
+              "trade_date": "2026-10-21",
+              "first_trade_date": "2026-10-21",
+              "last_trade_date": "2026-10-21",
+              "open": 11.44,
+              "high": 11.51,
+              "low": 11.39,
+              "close": 11.41,
+              "volume": 813541.37,
+              "amount": 930546.78777,
+              "source_snapshot_ids": [
+                "snapshot:tushare:adj_factor:sha256:aa2f042a22743b4e45a903d2ed4d95a94ac3a9f97d9f1dac0cb267b41cc56f85",
+                "snapshot:tushare:adj_factor:sha256:ae5e489560aff43dac32273470126411702d150da460cb67993289693686ded9",
+                "snapshot:tushare:stock_daily:sha256:d6465767689476990d6b03f9769cd43c0199247ee1c18a0b1795315d0bef8ea3"
+              ],
+              "available_at": "2026-11-07T11:34:24.073647Z",
+              "published_at": "2026-11-06T13:57:28.944839Z",
+              "partial": false
+            },
+            {
+              "trade_date": "2026-10-22",
+              "first_trade_date": "2026-10-22",
+              "last_trade_date": "2026-10-22",
+              "open": 11.41,
+              "high": 11.42,
+              "low": 11.26,
+              "close": 11.3,
+              "volume": 1297648.75,
+              "amount": 1468424.72209,
+              "source_snapshot_ids": [
+                "snapshot:tushare:adj_factor:sha256:aa2f042a22743b4e45a903d2ed4d95a94ac3a9f97d9f1dac0cb267b41cc56f85",
+                "snapshot:tushare:adj_factor:sha256:d6dea69f971e96cb5616b31d5de5c2a0c823b8a37ef52b54b1d06cff85298470",
+                "snapshot:tushare:stock_daily:sha256:1fb6c5cb314832a9c60044951356fc74c0eb6df0a9628b5527478ff61d772629"
+              ],
+              "available_at": "2026-11-07T11:34:24.073647Z",
+              "published_at": "2026-11-06T13:57:28.944839Z",
+              "partial": false
+            },
+            {
+              "trade_date": "2026-10-23",
+              "first_trade_date": "2026-10-23",
+              "last_trade_date": "2026-10-23",
+              "open": 11.27,
+              "high": 11.35,
+              "low": 11.17,
+              "close": 11.2,
+              "volume": 1448805.6,
+              "amount": 1628277.17338,
+              "source_snapshot_ids": [
+                "snapshot:tushare:adj_factor:sha256:7ef0b9ed5a7deff7bc644658d512da19a27b74b212456cfc7830565ae75f68f2",
+                "snapshot:tushare:adj_factor:sha256:aa2f042a22743b4e45a903d2ed4d95a94ac3a9f97d9f1dac0cb267b41cc56f85",
+                "snapshot:tushare:stock_daily:sha256:5b4f3a729334620bb782abaddcb8cf00dba198c471ebcb1f2f655dcdb92c8a5b"
+              ],
+              "available_at": "2026-11-07T11:34:24.073647Z",
+              "published_at": "2026-11-06T13:57:28.944839Z",
+              "partial": false
+            },
+            {
+              "trade_date": "2026-10-26",
+              "first_trade_date": "2026-10-26",
+              "last_trade_date": "2026-10-26",
+              "open": 11.15,
+              "high": 11.34,
+              "low": 11.13,
+              "close": 11.3,
+              "volume": 1323113.08,
+              "amount": 1485999.50406,
+              "source_snapshot_ids": [
+                "snapshot:tushare:adj_factor:sha256:aa2f042a22743b4e45a903d2ed4d95a94ac3a9f97d9f1dac0cb267b41cc56f85",
+                "snapshot:tushare:adj_factor:sha256:e6b39f4ad50f6e572f70276fbc98347501bd0e7103be4b124baac33c33df2aa2",
+                "snapshot:tushare:stock_daily:sha256:a8c16d5bf35c1a9d6225a0f32d51f3cf6755ed67724ac0c88ecfb6c7e3b61fc1"
+              ],
+              "available_at": "2026-11-07T11:34:24.073647Z",
+              "published_at": "2026-11-06T13:57:28.944839Z",
+              "partial": false
+            },
+            {
+              "trade_date": "2026-10-27",
+              "first_trade_date": "2026-10-27",
+              "last_trade_date": "2026-10-27",
+              "open": 11.27,
+              "high": 11.55,
+              "low": 11.24,
+              "close": 11.47,
+              "volume": 1529291.55,
+              "amount": 1750404.15702,
+              "source_snapshot_ids": [
+                "snapshot:tushare:adj_factor:sha256:7272dc95aaefd64dceec24388f272b74f2878627635872e06a36863c1af1ca77",
+                "snapshot:tushare:adj_factor:sha256:aa2f042a22743b4e45a903d2ed4d95a94ac3a9f97d9f1dac0cb267b41cc56f85",
+                "snapshot:tushare:stock_daily:sha256:024ecd699468ca6951f14f5db538d21922db7f3690719f582c34032bcda096b8"
+              ],
+              "available_at": "2026-11-07T11:34:24.073647Z",
+              "published_at": "2026-11-06T13:57:28.944839Z",
+              "partial": false
+            },
+            {
+              "trade_date": "2026-10-28",
+              "first_trade_date": "2026-10-28",
+              "last_trade_date": "2026-10-28",
+              "open": 11.43,
+              "high": 11.5,
+              "low": 11.22,
+              "close": 11.31,
+              "volume": 1687009.27,
+              "amount": 1911547.80441,
+              "source_snapshot_ids": [
+                "snapshot:tushare:adj_factor:sha256:947508b34c5e3e1f05dbb070f998e7df51226b8ed0da84a64af0c2ffff4ff06b",
+                "snapshot:tushare:adj_factor:sha256:aa2f042a22743b4e45a903d2ed4d95a94ac3a9f97d9f1dac0cb267b41cc56f85",
+                "snapshot:tushare:stock_daily:sha256:e0c8705ff3e465cbc0be61d682f1348bc3807f487fc2f4579f4a840890105b4a"
+              ],
+              "available_at": "2026-11-07T11:34:24.073647Z",
+              "published_at": "2026-11-06T13:57:28.944839Z",
+              "partial": false
+            },
+            {
+              "trade_date": "2026-10-29",
+              "first_trade_date": "2026-10-29",
+              "last_trade_date": "2026-10-29",
+              "open": 11.3,
+              "high": 11.55,
+              "low": 11.29,
+              "close": 11.54,
+              "volume": 1993503.94,
+              "amount": 2283899.68266,
+              "source_snapshot_ids": [
+                "snapshot:tushare:adj_factor:sha256:aa2f042a22743b4e45a903d2ed4d95a94ac3a9f97d9f1dac0cb267b41cc56f85",
+                "snapshot:tushare:adj_factor:sha256:e5cb122ec59359b2db6ac4a96c2f82cbe7e00f989c9e4a4fc2fe0f20130285d7",
+                "snapshot:tushare:stock_daily:sha256:1e69e4ac93fba69cf7c15fabc42115c6e5d8ccb50d5054b12e9ebbd1e7b040a5"
+              ],
+              "available_at": "2026-11-07T11:34:24.073647Z",
+              "published_at": "2026-11-06T13:57:28.944839Z",
+              "partial": false
+            },
+            {
+              "trade_date": "2026-10-30",
+              "first_trade_date": "2026-10-30",
+              "last_trade_date": "2026-10-30",
+              "open": 11.53,
+              "high": 11.67,
+              "low": 11.4,
+              "close": 11.64,
+              "volume": 1864245.07,
+              "amount": 2152393.88636,
+              "source_snapshot_ids": [
+                "snapshot:tushare:adj_factor:sha256:aa2f042a22743b4e45a903d2ed4d95a94ac3a9f97d9f1dac0cb267b41cc56f85",
+                "snapshot:tushare:adj_factor:sha256:cc7c59547bc2f18ac97e4dfa8bcf9cd1513a245964465fb41b2506a083d03149",
+                "snapshot:tushare:stock_daily:sha256:368169c115e3a13d85a5a2c49f711c7981b0aa67294fd177602cf80343d2c0e8"
+              ],
+              "available_at": "2026-11-07T11:34:24.073647Z",
+              "published_at": "2026-11-06T13:57:28.944839Z",
+              "partial": false
+            },
+            {
+              "trade_date": "2026-11-02",
+              "first_trade_date": "2026-11-02",
+              "last_trade_date": "2026-11-02",
+              "open": 11.6,
+              "high": 11.74,
+              "low": 11.47,
+              "close": 11.54,
+              "volume": 1594361.45,
+              "amount": 1850311.24796,
+              "source_snapshot_ids": [
+                "snapshot:tushare:adj_factor:sha256:375f88bef3707bebb893fb09ddc0c92fa0a76382802be5d36814020de09acbe6",
+                "snapshot:tushare:adj_factor:sha256:aa2f042a22743b4e45a903d2ed4d95a94ac3a9f97d9f1dac0cb267b41cc56f85",
+                "snapshot:tushare:stock_daily:sha256:1cb440d6c494c4a6a922c695b336eded7198d4de059735d23887be791c2b1c69"
+              ],
+              "available_at": "2026-11-07T11:34:24.073647Z",
+              "published_at": "2026-11-06T13:57:28.944839Z",
+              "partial": false
+            },
+            {
+              "trade_date": "2026-11-03",
+              "first_trade_date": "2026-11-03",
+              "last_trade_date": "2026-11-03",
+              "open": 11.56,
+              "high": 11.78,
+              "low": 11.42,
+              "close": 11.77,
+              "volume": 2139674.22,
+              "amount": 2488701.78997,
+              "source_snapshot_ids": [
+                "snapshot:tushare:adj_factor:sha256:aa2f042a22743b4e45a903d2ed4d95a94ac3a9f97d9f1dac0cb267b41cc56f85",
+                "snapshot:tushare:adj_factor:sha256:f11bc84548e34b9258e43a3845f9e901fcf7e4fde92d09af4811ecaa86959463",
+                "snapshot:tushare:stock_daily:sha256:8974717174a39b09d7fe7cb669b70aa8c17e1c9dd3c7f32dc991a33642cef9bb"
+              ],
+              "available_at": "2026-11-07T11:34:24.073647Z",
+              "published_at": "2026-11-06T13:57:28.944839Z",
+              "partial": false
+            },
+            {
+              "trade_date": "2026-11-04",
+              "first_trade_date": "2026-11-04",
+              "last_trade_date": "2026-11-04",
+              "open": 11.75,
+              "high": 11.86,
+              "low": 11.68,
+              "close": 11.74,
+              "volume": 1437905.91,
+              "amount": 1689183.95741,
+              "source_snapshot_ids": [
+                "snapshot:tushare:adj_factor:sha256:aa2f042a22743b4e45a903d2ed4d95a94ac3a9f97d9f1dac0cb267b41cc56f85",
+                "snapshot:tushare:adj_factor:sha256:c23e3f0f59174e9fe1cba3238948ad75d1efddbd861eb5d412fabe06b4523fa2",
+                "snapshot:tushare:stock_daily:sha256:d6728bd3f6b93b3344f84b1138d5d950ed4836340f7367796cec368401a6271a"
+              ],
+              "available_at": "2026-11-07T11:34:24.073647Z",
+              "published_at": "2026-11-06T13:57:28.944839Z",
+              "partial": false
+            },
+            {
+              "trade_date": "2026-11-05",
+              "first_trade_date": "2026-11-05",
+              "last_trade_date": "2026-11-05",
+              "open": 11.71,
+              "high": 11.77,
+              "low": 11.56,
+              "close": 11.64,
+              "volume": 1228997.01,
+              "amount": 1429433.01632,
+              "source_snapshot_ids": [
+                "snapshot:tushare:adj_factor:sha256:78e6f74c1a3760785aa28b8fbb9d995b6e798b6d71870a1494961b5b14e4cdc9",
+                "snapshot:tushare:adj_factor:sha256:aa2f042a22743b4e45a903d2ed4d95a94ac3a9f97d9f1dac0cb267b41cc56f85",
+                "snapshot:tushare:stock_daily:sha256:0d5f5e8c89eacdb0ee2f768444bb873f9113b1df508f8afb2bd24ccc06bdfc63"
+              ],
+              "available_at": "2026-11-07T11:34:24.073647Z",
+              "published_at": "2026-11-06T13:57:28.944839Z",
+              "partial": false
+            },
+            {
+              "trade_date": "2026-11-06",
+              "first_trade_date": "2026-11-06",
+              "last_trade_date": "2026-11-06",
+              "open": 11.62,
+              "high": 11.85,
+              "low": 11.57,
+              "close": 11.81,
+              "volume": 1640276.39,
+              "amount": 1927307.59053,
+              "source_snapshot_ids": [
+                "snapshot:tushare:adj_factor:sha256:aa2f042a22743b4e45a903d2ed4d95a94ac3a9f97d9f1dac0cb267b41cc56f85",
+                "snapshot:tushare:stock_daily:sha256:a1126e5dbb7fc9c1757b32284a13c38f407e481078dc43956fa2fcfcff84204d"
+              ],
+              "available_at": "2026-11-07T11:34:24.073647Z",
+              "published_at": "2026-11-06T13:57:28.944839Z",
+              "partial": false
+            }
+          ]
+        },
+        "pagination": null,
+        "read_semantics": null
+      },
+      "export": "stock-qfq-daily.csv",
+      "visible_latest": true,
+      "page_errors": []
+    },
+    {
+      "name": "stock",
+      "id": 1000001,
+      "adjustment": "qfq",
+      "period": "weekly",
+      "http_status": 200,
+      "request": {
+        "adjustment": "qfq",
+        "allow_experimental_data": true,
+        "end_date": "2026-11-06",
+        "instrument_id": 1000001,
+        "period": "weekly",
+        "start_date": "2026-10-01"
+      },
+      "response": {
+        "data": {
+          "instrument_id": 1000001,
+          "period": "weekly",
+          "adjustment": "qfq",
+          "as_of": "2026-11-07T11:36:40.654940Z",
+          "knowledge_cutoff": "2026-11-07T11:36:40.654940Z",
+          "publication_cutoff": "2026-11-07T11:36:40.654940Z",
+          "timezone": "Asia/Shanghai",
+          "calendar_snapshot_ids": [
+            "snapshot:tushare:calendar:sha256:eb2bfad933dfc42f691d8769b7893d482ebd19ba54257eb1dd41f3a0d8823c28"
+          ],
+          "source_snapshot_ids": [
+            "snapshot:tushare:adj_factor:sha256:375f88bef3707bebb893fb09ddc0c92fa0a76382802be5d36814020de09acbe6",
+            "snapshot:tushare:adj_factor:sha256:7272dc95aaefd64dceec24388f272b74f2878627635872e06a36863c1af1ca77",
+            "snapshot:tushare:adj_factor:sha256:78e6f74c1a3760785aa28b8fbb9d995b6e798b6d71870a1494961b5b14e4cdc9",
+            "snapshot:tushare:adj_factor:sha256:7ef0b9ed5a7deff7bc644658d512da19a27b74b212456cfc7830565ae75f68f2",
+            "snapshot:tushare:adj_factor:sha256:947508b34c5e3e1f05dbb070f998e7df51226b8ed0da84a64af0c2ffff4ff06b",
+            "snapshot:tushare:adj_factor:sha256:a150133a255e301ac48620542280ecb4c6878ed98ff727132a0820828c91de11",
+            "snapshot:tushare:adj_factor:sha256:aa2f042a22743b4e45a903d2ed4d95a94ac3a9f97d9f1dac0cb267b41cc56f85",
+            "snapshot:tushare:adj_factor:sha256:ae5e489560aff43dac32273470126411702d150da460cb67993289693686ded9",
+            "snapshot:tushare:adj_factor:sha256:c23e3f0f59174e9fe1cba3238948ad75d1efddbd861eb5d412fabe06b4523fa2",
+            "snapshot:tushare:adj_factor:sha256:cbe335ff43ba6e5750b33c3d38b7cc6c7598da23de237df318430b711fbbbfce",
+            "snapshot:tushare:adj_factor:sha256:cc7c59547bc2f18ac97e4dfa8bcf9cd1513a245964465fb41b2506a083d03149",
+            "snapshot:tushare:adj_factor:sha256:d6dea69f971e96cb5616b31d5de5c2a0c823b8a37ef52b54b1d06cff85298470",
+            "snapshot:tushare:adj_factor:sha256:e5cb122ec59359b2db6ac4a96c2f82cbe7e00f989c9e4a4fc2fe0f20130285d7",
+            "snapshot:tushare:adj_factor:sha256:e6b39f4ad50f6e572f70276fbc98347501bd0e7103be4b124baac33c33df2aa2",
+            "snapshot:tushare:adj_factor:sha256:ef57fbfb3dffc3d0ff196a11bb86b8563a3e94e7227e4bb5a6f45e064c6cec19",
+            "snapshot:tushare:adj_factor:sha256:f11bc84548e34b9258e43a3845f9e901fcf7e4fde92d09af4811ecaa86959463",
+            "snapshot:tushare:stock_daily:sha256:024ecd699468ca6951f14f5db538d21922db7f3690719f582c34032bcda096b8",
+            "snapshot:tushare:stock_daily:sha256:0d5f5e8c89eacdb0ee2f768444bb873f9113b1df508f8afb2bd24ccc06bdfc63",
+            "snapshot:tushare:stock_daily:sha256:1cb440d6c494c4a6a922c695b336eded7198d4de059735d23887be791c2b1c69",
+            "snapshot:tushare:stock_daily:sha256:1e69e4ac93fba69cf7c15fabc42115c6e5d8ccb50d5054b12e9ebbd1e7b040a5",
+            "snapshot:tushare:stock_daily:sha256:1fb6c5cb314832a9c60044951356fc74c0eb6df0a9628b5527478ff61d772629",
+            "snapshot:tushare:stock_daily:sha256:2472313f3a2e7a894c06f44277bc972bd9f3b9073b267d250771a680b55b4ba2",
+            "snapshot:tushare:stock_daily:sha256:368169c115e3a13d85a5a2c49f711c7981b0aa67294fd177602cf80343d2c0e8",
+            "snapshot:tushare:stock_daily:sha256:5b4f3a729334620bb782abaddcb8cf00dba198c471ebcb1f2f655dcdb92c8a5b",
+            "snapshot:tushare:stock_daily:sha256:8974717174a39b09d7fe7cb669b70aa8c17e1c9dd3c7f32dc991a33642cef9bb",
+            "snapshot:tushare:stock_daily:sha256:993b012f73ed187e458e24427d5a66816a6d0967244efacedb8e6002c38b5b1c",
+            "snapshot:tushare:stock_daily:sha256:a1126e5dbb7fc9c1757b32284a13c38f407e481078dc43956fa2fcfcff84204d",
+            "snapshot:tushare:stock_daily:sha256:a8c16d5bf35c1a9d6225a0f32d51f3cf6755ed67724ac0c88ecfb6c7e3b61fc1",
+            "snapshot:tushare:stock_daily:sha256:c8dedcfa8263f4daf9915c40542f73cbc7d75c8bfff985ff3cdbc94f2558bb38",
+            "snapshot:tushare:stock_daily:sha256:d6465767689476990d6b03f9769cd43c0199247ee1c18a0b1795315d0bef8ea3",
+            "snapshot:tushare:stock_daily:sha256:d6728bd3f6b93b3344f84b1138d5d950ed4836340f7367796cec368401a6271a",
+            "snapshot:tushare:stock_daily:sha256:e0c8705ff3e465cbc0be61d682f1348bc3807f487fc2f4579f4a840890105b4a",
+            "snapshot:tushare:stock_status:sha256:00fbf62b1c70b249cdd72d99ce7d436b6398f3a7071d7a0c45e68925ab1930a5",
+            "snapshot:tushare:stock_status:sha256:08cef0454579ae3dcb6372f930afffc3114cea274e83c12e0acbda86011aa67a",
+            "snapshot:tushare:stock_status:sha256:34812f7f14ec478f00a8b156f1d1b26c3f4b1305381be53fc665f1e7750c72d5",
+            "snapshot:tushare:stock_status:sha256:4d7fae67166498501252335201874f19977f0515b85c3b458693b8a44fd9f872",
+            "snapshot:tushare:stock_status:sha256:7c35642ba56236dcd64982d2974c5c48a848d773d0b90829072bba761bb08b49",
+            "snapshot:tushare:stock_status:sha256:81249c453a5a225084ab236c77d464f552fbd1cbf497fc8145290597df25c2b2",
+            "snapshot:tushare:stock_status:sha256:8d62b4db624d7641bd88ceeeb95032533a1d052cf4534a20dfd1829e7937abba",
+            "snapshot:tushare:stock_status:sha256:963e6d43ab78b24a7d1d4510d1bfa3758d65f9af7f03f6116cb2b7074f0e734c",
+            "snapshot:tushare:stock_status:sha256:99d35e42da322646d6785b9858b9ae451235514bca77b4c064658a211b61c823",
+            "snapshot:tushare:stock_status:sha256:a42b5b9217dd8306ab56c9131207eae0ffd9586dd7598574e8bb0992e44cab23",
+            "snapshot:tushare:stock_status:sha256:aafd80bfe3c9c1e44cc7c4c92f776afffa56238e6909b3eb45f5d3537fdacc65",
+            "snapshot:tushare:stock_status:sha256:b461c02e9e790edc3cc25c53facef930ee19909039a8985612f652a0725426b9",
+            "snapshot:tushare:stock_status:sha256:c7a75decaccc827c2206ca9942bce040b43919dac27ece4825822dad963b2968",
+            "snapshot:tushare:stock_status:sha256:c83f335571302c722fed60ffb6c912a8677d9401a9e8f1bac799828a583d4db0",
+            "snapshot:tushare:stock_status:sha256:da2bb6d51c9857686896426c7e51b38a96fbce4757bb0f8b249c1603a0d3eb7f",
+            "snapshot:tushare:stock_status:sha256:e1d253b22f665bd66e2837016f65bad10b558d092b66fdbf6a2fac54e919a26b",
+            "snapshot:tushare:stock_status:sha256:e5c6e44399482163ced60b49684f7badc7d638d02246a5019cd0c33846fdfc37",
+            "snapshot:tushare:stock_status:sha256:ec8d69bded47b5ce4536c14629c78e8c5b01529cc2ddd4f71e5e8bc91d80c3f2",
+            "snapshot:tushare:stock_status:sha256:ff1627e5105379b9ad55aa98eab7acdb494e264f2815d4f5d007c0980bca357c"
+          ],
+          "sources": [
+            "tushare"
+          ],
+          "latest_price_date": "2026-11-06",
+          "stale_reason": null,
+          "missing_sessions": [],
+          "bars": [
+            {
+              "trade_date": "2026-10-09",
+              "first_trade_date": "2026-10-08",
+              "last_trade_date": "2026-10-09",
+              "open": 11.57,
+              "high": 11.89,
+              "low": 11.54,
+              "close": 11.59,
+              "volume": 2559791.55,
+              "amount": 3003119.6186800003,
+              "source_snapshot_ids": [
+                "snapshot:tushare:adj_factor:sha256:aa2f042a22743b4e45a903d2ed4d95a94ac3a9f97d9f1dac0cb267b41cc56f85",
+                "snapshot:tushare:adj_factor:sha256:ef57fbfb3dffc3d0ff196a11bb86b8563a3e94e7227e4bb5a6f45e064c6cec19",
+                "snapshot:tushare:stock_daily:sha256:c8dedcfa8263f4daf9915c40542f73cbc7d75c8bfff985ff3cdbc94f2558bb38"
+              ],
+              "available_at": "2026-11-07T11:34:24.073647Z",
+              "published_at": "2026-11-06T13:57:28.944839Z",
+              "partial": false
+            },
+            {
+              "trade_date": "2026-10-16",
+              "first_trade_date": "2026-10-12",
+              "last_trade_date": "2026-10-16",
+              "open": 11.62,
+              "high": 11.83,
+              "low": 11.26,
+              "close": 11.5,
+              "volume": 5646271.19,
+              "amount": 6524418.4014,
+              "source_snapshot_ids": [
+                "snapshot:tushare:adj_factor:sha256:aa2f042a22743b4e45a903d2ed4d95a94ac3a9f97d9f1dac0cb267b41cc56f85",
+                "snapshot:tushare:adj_factor:sha256:ef57fbfb3dffc3d0ff196a11bb86b8563a3e94e7227e4bb5a6f45e064c6cec19",
+                "snapshot:tushare:stock_daily:sha256:c8dedcfa8263f4daf9915c40542f73cbc7d75c8bfff985ff3cdbc94f2558bb38"
+              ],
+              "available_at": "2026-11-07T11:34:24.073647Z",
+              "published_at": "2026-11-06T13:57:28.944839Z",
+              "partial": false
+            },
+            {
+              "trade_date": "2026-10-23",
+              "first_trade_date": "2026-10-19",
+              "last_trade_date": "2026-10-23",
+              "open": 11.48,
+              "high": 11.68,
+              "low": 11.17,
+              "close": 11.2,
+              "volume": 6072885.0200000005,
+              "amount": 6923529.23953,
+              "source_snapshot_ids": [
+                "snapshot:tushare:adj_factor:sha256:7ef0b9ed5a7deff7bc644658d512da19a27b74b212456cfc7830565ae75f68f2",
+                "snapshot:tushare:adj_factor:sha256:a150133a255e301ac48620542280ecb4c6878ed98ff727132a0820828c91de11",
+                "snapshot:tushare:adj_factor:sha256:aa2f042a22743b4e45a903d2ed4d95a94ac3a9f97d9f1dac0cb267b41cc56f85",
+                "snapshot:tushare:adj_factor:sha256:ae5e489560aff43dac32273470126411702d150da460cb67993289693686ded9",
+                "snapshot:tushare:adj_factor:sha256:cbe335ff43ba6e5750b33c3d38b7cc6c7598da23de237df318430b711fbbbfce",
+                "snapshot:tushare:adj_factor:sha256:d6dea69f971e96cb5616b31d5de5c2a0c823b8a37ef52b54b1d06cff85298470",
+                "snapshot:tushare:stock_daily:sha256:1fb6c5cb314832a9c60044951356fc74c0eb6df0a9628b5527478ff61d772629",
+                "snapshot:tushare:stock_daily:sha256:2472313f3a2e7a894c06f44277bc972bd9f3b9073b267d250771a680b55b4ba2",
+                "snapshot:tushare:stock_daily:sha256:5b4f3a729334620bb782abaddcb8cf00dba198c471ebcb1f2f655dcdb92c8a5b",
+                "snapshot:tushare:stock_daily:sha256:993b012f73ed187e458e24427d5a66816a6d0967244efacedb8e6002c38b5b1c",
+                "snapshot:tushare:stock_daily:sha256:d6465767689476990d6b03f9769cd43c0199247ee1c18a0b1795315d0bef8ea3"
+              ],
+              "available_at": "2026-11-07T11:34:24.073647Z",
+              "published_at": "2026-11-06T13:57:28.944839Z",
+              "partial": false
+            },
+            {
+              "trade_date": "2026-10-30",
+              "first_trade_date": "2026-10-26",
+              "last_trade_date": "2026-10-30",
+              "open": 11.15,
+              "high": 11.67,
+              "low": 11.13,
+              "close": 11.64,
+              "volume": 8397162.91,
+              "amount": 9584245.03451,
+              "source_snapshot_ids": [
+                "snapshot:tushare:adj_factor:sha256:7272dc95aaefd64dceec24388f272b74f2878627635872e06a36863c1af1ca77",
+                "snapshot:tushare:adj_factor:sha256:947508b34c5e3e1f05dbb070f998e7df51226b8ed0da84a64af0c2ffff4ff06b",
+                "snapshot:tushare:adj_factor:sha256:aa2f042a22743b4e45a903d2ed4d95a94ac3a9f97d9f1dac0cb267b41cc56f85",
+                "snapshot:tushare:adj_factor:sha256:cc7c59547bc2f18ac97e4dfa8bcf9cd1513a245964465fb41b2506a083d03149",
+                "snapshot:tushare:adj_factor:sha256:e5cb122ec59359b2db6ac4a96c2f82cbe7e00f989c9e4a4fc2fe0f20130285d7",
+                "snapshot:tushare:adj_factor:sha256:e6b39f4ad50f6e572f70276fbc98347501bd0e7103be4b124baac33c33df2aa2",
+                "snapshot:tushare:stock_daily:sha256:024ecd699468ca6951f14f5db538d21922db7f3690719f582c34032bcda096b8",
+                "snapshot:tushare:stock_daily:sha256:1e69e4ac93fba69cf7c15fabc42115c6e5d8ccb50d5054b12e9ebbd1e7b040a5",
+                "snapshot:tushare:stock_daily:sha256:368169c115e3a13d85a5a2c49f711c7981b0aa67294fd177602cf80343d2c0e8",
+                "snapshot:tushare:stock_daily:sha256:a8c16d5bf35c1a9d6225a0f32d51f3cf6755ed67724ac0c88ecfb6c7e3b61fc1",
+                "snapshot:tushare:stock_daily:sha256:e0c8705ff3e465cbc0be61d682f1348bc3807f487fc2f4579f4a840890105b4a"
+              ],
+              "available_at": "2026-11-07T11:34:24.073647Z",
+              "published_at": "2026-11-06T13:57:28.944839Z",
+              "partial": false
+            },
+            {
+              "trade_date": "2026-11-06",
+              "first_trade_date": "2026-11-02",
+              "last_trade_date": "2026-11-06",
+              "open": 11.6,
+              "high": 11.86,
+              "low": 11.42,
+              "close": 11.81,
+              "volume": 8041214.98,
+              "amount": 9384937.60219,
+              "source_snapshot_ids": [
+                "snapshot:tushare:adj_factor:sha256:375f88bef3707bebb893fb09ddc0c92fa0a76382802be5d36814020de09acbe6",
+                "snapshot:tushare:adj_factor:sha256:78e6f74c1a3760785aa28b8fbb9d995b6e798b6d71870a1494961b5b14e4cdc9",
+                "snapshot:tushare:adj_factor:sha256:aa2f042a22743b4e45a903d2ed4d95a94ac3a9f97d9f1dac0cb267b41cc56f85",
+                "snapshot:tushare:adj_factor:sha256:c23e3f0f59174e9fe1cba3238948ad75d1efddbd861eb5d412fabe06b4523fa2",
+                "snapshot:tushare:adj_factor:sha256:f11bc84548e34b9258e43a3845f9e901fcf7e4fde92d09af4811ecaa86959463",
+                "snapshot:tushare:stock_daily:sha256:0d5f5e8c89eacdb0ee2f768444bb873f9113b1df508f8afb2bd24ccc06bdfc63",
+                "snapshot:tushare:stock_daily:sha256:1cb440d6c494c4a6a922c695b336eded7198d4de059735d23887be791c2b1c69",
+                "snapshot:tushare:stock_daily:sha256:8974717174a39b09d7fe7cb669b70aa8c17e1c9dd3c7f32dc991a33642cef9bb",
+                "snapshot:tushare:stock_daily:sha256:a1126e5dbb7fc9c1757b32284a13c38f407e481078dc43956fa2fcfcff84204d",
+                "snapshot:tushare:stock_daily:sha256:d6728bd3f6b93b3344f84b1138d5d950ed4836340f7367796cec368401a6271a"
+              ],
+              "available_at": "2026-11-07T11:34:24.073647Z",
+              "published_at": "2026-11-06T13:57:28.944839Z",
+              "partial": false
+            }
+          ]
+        },
+        "pagination": null,
+        "read_semantics": null
+      },
+      "export": "stock-qfq-weekly.csv",
+      "visible_latest": true,
+      "page_errors": []
+    },
+    {
+      "name": "stock",
+      "id": 1000001,
+      "adjustment": "qfq",
+      "period": "monthly",
+      "http_status": 200,
+      "request": {
+        "adjustment": "qfq",
+        "allow_experimental_data": true,
+        "end_date": "2026-11-06",
+        "instrument_id": 1000001,
+        "period": "monthly",
+        "start_date": "2026-10-01"
+      },
+      "response": {
+        "data": {
+          "instrument_id": 1000001,
+          "period": "monthly",
+          "adjustment": "qfq",
+          "as_of": "2026-11-07T11:36:33.939597Z",
+          "knowledge_cutoff": "2026-11-07T11:36:33.939597Z",
+          "publication_cutoff": "2026-11-07T11:36:33.939597Z",
+          "timezone": "Asia/Shanghai",
+          "calendar_snapshot_ids": [
+            "snapshot:tushare:calendar:sha256:eb2bfad933dfc42f691d8769b7893d482ebd19ba54257eb1dd41f3a0d8823c28"
+          ],
+          "source_snapshot_ids": [
+            "snapshot:tushare:adj_factor:sha256:375f88bef3707bebb893fb09ddc0c92fa0a76382802be5d36814020de09acbe6",
+            "snapshot:tushare:adj_factor:sha256:7272dc95aaefd64dceec24388f272b74f2878627635872e06a36863c1af1ca77",
+            "snapshot:tushare:adj_factor:sha256:78e6f74c1a3760785aa28b8fbb9d995b6e798b6d71870a1494961b5b14e4cdc9",
+            "snapshot:tushare:adj_factor:sha256:7ef0b9ed5a7deff7bc644658d512da19a27b74b212456cfc7830565ae75f68f2",
+            "snapshot:tushare:adj_factor:sha256:947508b34c5e3e1f05dbb070f998e7df51226b8ed0da84a64af0c2ffff4ff06b",
+            "snapshot:tushare:adj_factor:sha256:a150133a255e301ac48620542280ecb4c6878ed98ff727132a0820828c91de11",
+            "snapshot:tushare:adj_factor:sha256:aa2f042a22743b4e45a903d2ed4d95a94ac3a9f97d9f1dac0cb267b41cc56f85",
+            "snapshot:tushare:adj_factor:sha256:ae5e489560aff43dac32273470126411702d150da460cb67993289693686ded9",
+            "snapshot:tushare:adj_factor:sha256:c23e3f0f59174e9fe1cba3238948ad75d1efddbd861eb5d412fabe06b4523fa2",
+            "snapshot:tushare:adj_factor:sha256:cbe335ff43ba6e5750b33c3d38b7cc6c7598da23de237df318430b711fbbbfce",
+            "snapshot:tushare:adj_factor:sha256:cc7c59547bc2f18ac97e4dfa8bcf9cd1513a245964465fb41b2506a083d03149",
+            "snapshot:tushare:adj_factor:sha256:d6dea69f971e96cb5616b31d5de5c2a0c823b8a37ef52b54b1d06cff85298470",
+            "snapshot:tushare:adj_factor:sha256:e5cb122ec59359b2db6ac4a96c2f82cbe7e00f989c9e4a4fc2fe0f20130285d7",
+            "snapshot:tushare:adj_factor:sha256:e6b39f4ad50f6e572f70276fbc98347501bd0e7103be4b124baac33c33df2aa2",
+            "snapshot:tushare:adj_factor:sha256:ef57fbfb3dffc3d0ff196a11bb86b8563a3e94e7227e4bb5a6f45e064c6cec19",
+            "snapshot:tushare:adj_factor:sha256:f11bc84548e34b9258e43a3845f9e901fcf7e4fde92d09af4811ecaa86959463",
+            "snapshot:tushare:stock_daily:sha256:024ecd699468ca6951f14f5db538d21922db7f3690719f582c34032bcda096b8",
+            "snapshot:tushare:stock_daily:sha256:0d5f5e8c89eacdb0ee2f768444bb873f9113b1df508f8afb2bd24ccc06bdfc63",
+            "snapshot:tushare:stock_daily:sha256:1cb440d6c494c4a6a922c695b336eded7198d4de059735d23887be791c2b1c69",
+            "snapshot:tushare:stock_daily:sha256:1e69e4ac93fba69cf7c15fabc42115c6e5d8ccb50d5054b12e9ebbd1e7b040a5",
+            "snapshot:tushare:stock_daily:sha256:1fb6c5cb314832a9c60044951356fc74c0eb6df0a9628b5527478ff61d772629",
+            "snapshot:tushare:stock_daily:sha256:2472313f3a2e7a894c06f44277bc972bd9f3b9073b267d250771a680b55b4ba2",
+            "snapshot:tushare:stock_daily:sha256:368169c115e3a13d85a5a2c49f711c7981b0aa67294fd177602cf80343d2c0e8",
+            "snapshot:tushare:stock_daily:sha256:5b4f3a729334620bb782abaddcb8cf00dba198c471ebcb1f2f655dcdb92c8a5b",
+            "snapshot:tushare:stock_daily:sha256:8974717174a39b09d7fe7cb669b70aa8c17e1c9dd3c7f32dc991a33642cef9bb",
+            "snapshot:tushare:stock_daily:sha256:993b012f73ed187e458e24427d5a66816a6d0967244efacedb8e6002c38b5b1c",
+            "snapshot:tushare:stock_daily:sha256:a1126e5dbb7fc9c1757b32284a13c38f407e481078dc43956fa2fcfcff84204d",
+            "snapshot:tushare:stock_daily:sha256:a8c16d5bf35c1a9d6225a0f32d51f3cf6755ed67724ac0c88ecfb6c7e3b61fc1",
+            "snapshot:tushare:stock_daily:sha256:c8dedcfa8263f4daf9915c40542f73cbc7d75c8bfff985ff3cdbc94f2558bb38",
+            "snapshot:tushare:stock_daily:sha256:d6465767689476990d6b03f9769cd43c0199247ee1c18a0b1795315d0bef8ea3",
+            "snapshot:tushare:stock_daily:sha256:d6728bd3f6b93b3344f84b1138d5d950ed4836340f7367796cec368401a6271a",
+            "snapshot:tushare:stock_daily:sha256:e0c8705ff3e465cbc0be61d682f1348bc3807f487fc2f4579f4a840890105b4a",
+            "snapshot:tushare:stock_status:sha256:00fbf62b1c70b249cdd72d99ce7d436b6398f3a7071d7a0c45e68925ab1930a5",
+            "snapshot:tushare:stock_status:sha256:08cef0454579ae3dcb6372f930afffc3114cea274e83c12e0acbda86011aa67a",
+            "snapshot:tushare:stock_status:sha256:34812f7f14ec478f00a8b156f1d1b26c3f4b1305381be53fc665f1e7750c72d5",
+            "snapshot:tushare:stock_status:sha256:4d7fae67166498501252335201874f19977f0515b85c3b458693b8a44fd9f872",
+            "snapshot:tushare:stock_status:sha256:7c35642ba56236dcd64982d2974c5c48a848d773d0b90829072bba761bb08b49",
+            "snapshot:tushare:stock_status:sha256:81249c453a5a225084ab236c77d464f552fbd1cbf497fc8145290597df25c2b2",
+            "snapshot:tushare:stock_status:sha256:963e6d43ab78b24a7d1d4510d1bfa3758d65f9af7f03f6116cb2b7074f0e734c",
+            "snapshot:tushare:stock_status:sha256:99d35e42da322646d6785b9858b9ae451235514bca77b4c064658a211b61c823",
+            "snapshot:tushare:stock_status:sha256:a42b5b9217dd8306ab56c9131207eae0ffd9586dd7598574e8bb0992e44cab23",
+            "snapshot:tushare:stock_status:sha256:aafd80bfe3c9c1e44cc7c4c92f776afffa56238e6909b3eb45f5d3537fdacc65",
+            "snapshot:tushare:stock_status:sha256:b461c02e9e790edc3cc25c53facef930ee19909039a8985612f652a0725426b9",
+            "snapshot:tushare:stock_status:sha256:c7a75decaccc827c2206ca9942bce040b43919dac27ece4825822dad963b2968",
+            "snapshot:tushare:stock_status:sha256:c83f335571302c722fed60ffb6c912a8677d9401a9e8f1bac799828a583d4db0",
+            "snapshot:tushare:stock_status:sha256:da2bb6d51c9857686896426c7e51b38a96fbce4757bb0f8b249c1603a0d3eb7f",
+            "snapshot:tushare:stock_status:sha256:e1d253b22f665bd66e2837016f65bad10b558d092b66fdbf6a2fac54e919a26b",
+            "snapshot:tushare:stock_status:sha256:e5c6e44399482163ced60b49684f7badc7d638d02246a5019cd0c33846fdfc37",
+            "snapshot:tushare:stock_status:sha256:ff1627e5105379b9ad55aa98eab7acdb494e264f2815d4f5d007c0980bca357c"
+          ],
+          "sources": [
+            "tushare"
+          ],
+          "latest_price_date": "2026-11-06",
+          "stale_reason": null,
+          "missing_sessions": [],
+          "bars": [
+            {
+              "trade_date": "2026-10-30",
+              "first_trade_date": "2026-10-08",
+              "last_trade_date": "2026-10-30",
+              "open": 11.57,
+              "high": 11.89,
+              "low": 11.13,
+              "close": 11.64,
+              "volume": 22676110.67,
+              "amount": 26035312.29412,
+              "source_snapshot_ids": [
+                "snapshot:tushare:adj_factor:sha256:7272dc95aaefd64dceec24388f272b74f2878627635872e06a36863c1af1ca77",
+                "snapshot:tushare:adj_factor:sha256:7ef0b9ed5a7deff7bc644658d512da19a27b74b212456cfc7830565ae75f68f2",
+                "snapshot:tushare:adj_factor:sha256:947508b34c5e3e1f05dbb070f998e7df51226b8ed0da84a64af0c2ffff4ff06b",
+                "snapshot:tushare:adj_factor:sha256:a150133a255e301ac48620542280ecb4c6878ed98ff727132a0820828c91de11",
+                "snapshot:tushare:adj_factor:sha256:aa2f042a22743b4e45a903d2ed4d95a94ac3a9f97d9f1dac0cb267b41cc56f85",
+                "snapshot:tushare:adj_factor:sha256:ae5e489560aff43dac32273470126411702d150da460cb67993289693686ded9",
+                "snapshot:tushare:adj_factor:sha256:cbe335ff43ba6e5750b33c3d38b7cc6c7598da23de237df318430b711fbbbfce",
+                "snapshot:tushare:adj_factor:sha256:cc7c59547bc2f18ac97e4dfa8bcf9cd1513a245964465fb41b2506a083d03149",
+                "snapshot:tushare:adj_factor:sha256:d6dea69f971e96cb5616b31d5de5c2a0c823b8a37ef52b54b1d06cff85298470",
+                "snapshot:tushare:adj_factor:sha256:e5cb122ec59359b2db6ac4a96c2f82cbe7e00f989c9e4a4fc2fe0f20130285d7",
+                "snapshot:tushare:adj_factor:sha256:e6b39f4ad50f6e572f70276fbc98347501bd0e7103be4b124baac33c33df2aa2",
+                "snapshot:tushare:adj_factor:sha256:ef57fbfb3dffc3d0ff196a11bb86b8563a3e94e7227e4bb5a6f45e064c6cec19",
+                "snapshot:tushare:stock_daily:sha256:024ecd699468ca6951f14f5db538d21922db7f3690719f582c34032bcda096b8",
+                "snapshot:tushare:stock_daily:sha256:1e69e4ac93fba69cf7c15fabc42115c6e5d8ccb50d5054b12e9ebbd1e7b040a5",
+                "snapshot:tushare:stock_daily:sha256:1fb6c5cb314832a9c60044951356fc74c0eb6df0a9628b5527478ff61d772629",
+                "snapshot:tushare:stock_daily:sha256:2472313f3a2e7a894c06f44277bc972bd9f3b9073b267d250771a680b55b4ba2",
+                "snapshot:tushare:stock_daily:sha256:368169c115e3a13d85a5a2c49f711c7981b0aa67294fd177602cf80343d2c0e8",
+                "snapshot:tushare:stock_daily:sha256:5b4f3a729334620bb782abaddcb8cf00dba198c471ebcb1f2f655dcdb92c8a5b",
+                "snapshot:tushare:stock_daily:sha256:993b012f73ed187e458e24427d5a66816a6d0967244efacedb8e6002c38b5b1c",
+                "snapshot:tushare:stock_daily:sha256:a8c16d5bf35c1a9d6225a0f32d51f3cf6755ed67724ac0c88ecfb6c7e3b61fc1",
+                "snapshot:tushare:stock_daily:sha256:c8dedcfa8263f4daf9915c40542f73cbc7d75c8bfff985ff3cdbc94f2558bb38",
+                "snapshot:tushare:stock_daily:sha256:d6465767689476990d6b03f9769cd43c0199247ee1c18a0b1795315d0bef8ea3",
+                "snapshot:tushare:stock_daily:sha256:e0c8705ff3e465cbc0be61d682f1348bc3807f487fc2f4579f4a840890105b4a"
+              ],
+              "available_at": "2026-11-07T11:34:24.073647Z",
+              "published_at": "2026-11-06T13:57:28.944839Z",
+              "partial": false
+            },
+            {
+              "trade_date": "2026-11-06",
+              "first_trade_date": "2026-11-02",
+              "last_trade_date": "2026-11-06",
+              "open": 11.6,
+              "high": 11.86,
+              "low": 11.42,
+              "close": 11.81,
+              "volume": 8041214.98,
+              "amount": 9384937.60219,
+              "source_snapshot_ids": [
+                "snapshot:tushare:adj_factor:sha256:375f88bef3707bebb893fb09ddc0c92fa0a76382802be5d36814020de09acbe6",
+                "snapshot:tushare:adj_factor:sha256:78e6f74c1a3760785aa28b8fbb9d995b6e798b6d71870a1494961b5b14e4cdc9",
+                "snapshot:tushare:adj_factor:sha256:aa2f042a22743b4e45a903d2ed4d95a94ac3a9f97d9f1dac0cb267b41cc56f85",
+                "snapshot:tushare:adj_factor:sha256:c23e3f0f59174e9fe1cba3238948ad75d1efddbd861eb5d412fabe06b4523fa2",
+                "snapshot:tushare:adj_factor:sha256:f11bc84548e34b9258e43a3845f9e901fcf7e4fde92d09af4811ecaa86959463",
+                "snapshot:tushare:stock_daily:sha256:0d5f5e8c89eacdb0ee2f768444bb873f9113b1df508f8afb2bd24ccc06bdfc63",
+                "snapshot:tushare:stock_daily:sha256:1cb440d6c494c4a6a922c695b336eded7198d4de059735d23887be791c2b1c69",
+                "snapshot:tushare:stock_daily:sha256:8974717174a39b09d7fe7cb669b70aa8c17e1c9dd3c7f32dc991a33642cef9bb",
+                "snapshot:tushare:stock_daily:sha256:a1126e5dbb7fc9c1757b32284a13c38f407e481078dc43956fa2fcfcff84204d",
+                "snapshot:tushare:stock_daily:sha256:d6728bd3f6b93b3344f84b1138d5d950ed4836340f7367796cec368401a6271a"
+              ],
+              "available_at": "2026-11-07T11:34:24.073647Z",
+              "published_at": "2026-11-06T13:57:28.944839Z",
+              "partial": true
+            }
+          ]
+        },
+        "pagination": null,
+        "read_semantics": null
+      },
+      "export": "stock-qfq-monthly.csv",
+      "visible_latest": true,
+      "page_errors": []
+    },
+    {
+      "name": "etf",
+      "id": 2001562,
+      "adjustment": "none",
+      "period": "daily",
+      "http_status": 200,
+      "request": {
+        "adjustment": "none",
+        "allow_experimental_data": true,
+        "end_date": "2026-11-06",
+        "instrument_id": 2001562,
+        "period": "daily",
+        "start_date": "2026-10-01"
+      },
+      "response": {
+        "data": {
+          "instrument_id": 2001562,
+          "period": "daily",
+          "adjustment": "none",
+          "as_of": "2026-11-07T11:36:49.704931Z",
+          "knowledge_cutoff": "2026-11-07T11:36:49.704931Z",
+          "publication_cutoff": "2026-11-07T11:36:49.704931Z",
+          "timezone": "Asia/Shanghai",
+          "calendar_snapshot_ids": [
+            "snapshot:tushare:calendar:sha256:eb2bfad933dfc42f691d8769b7893d482ebd19ba54257eb1dd41f3a0d8823c28"
+          ],
+          "source_snapshot_ids": [
+            "snapshot:tushare:etf_daily:sha256:06f01dee2ab32f82f02bee67377204720c90650f10e930e1118984ddad27e4b0",
+            "snapshot:tushare:etf_daily:sha256:156bc33502876fdb31c9db75618ee25fe1d0b6fc6d6e01c9fb3855ec26340549",
+            "snapshot:tushare:etf_daily:sha256:1fc0c4785963c1d39a7f2986e15dfa44e16b24202aae4e9eaccd7597b5315c07",
+            "snapshot:tushare:etf_daily:sha256:57cf6830ca16929899c6b78b63cbed8ec07b51f672fb37a5bc2fd418bf14efde",
+            "snapshot:tushare:etf_daily:sha256:670cbd2eb182e94d86bb31f9059963a731f76e81db64f796e20ae975c54dfa39",
+            "snapshot:tushare:etf_daily:sha256:689abe2f215ad735fae80f5d3e5a365fc7258485a7442b8abe4d744c47b3a44c",
+            "snapshot:tushare:etf_daily:sha256:76ca29595f3069a40cdf917f708ad7663ef200cb022cff1f9b00d728d87be653",
+            "snapshot:tushare:etf_daily:sha256:798eab47888fdaa64ac6cd764969757f0f7e1a3a119a2767cb0883c356f8895f",
+            "snapshot:tushare:etf_daily:sha256:7e078efa80482421f066987ce8c276e3e4f22b872c7b8725714fbb63910265cf",
+            "snapshot:tushare:etf_daily:sha256:9266c92c4828408f3f7a7f0efb1d5fe14f968853634264675a632dbded379bf3",
+            "snapshot:tushare:etf_daily:sha256:cab893ec18db625b94a37baaa5c578b15218a407e3ae3f8ef372770374e37a0e",
+            "snapshot:tushare:etf_daily:sha256:d28f1a4ec4d1a7f9eed3fbed93084462108fe8599095f056e74e2f59be9cb4b6",
+            "snapshot:tushare:etf_daily:sha256:d4a9a0624983e8377864c835322024436d1c94f102299059f77d54f5ceb90078",
+            "snapshot:tushare:etf_daily:sha256:d82a0484d16d194f644ca278ca18ce2c3c05ad606b27dabe125d6896c6312292",
+            "snapshot:tushare:etf_daily:sha256:f2904354d9ff39d783833d3b0e16e4df7391ff559a5a9e1740eb2476f96420aa",
+            "snapshot:tushare:etf_daily:sha256:f9ce85a66223fc16f739e8d7c6b641723a895cbd42399aad71961f80a3d9a685",
+            "snapshot:tushare:etf_daily:sha256:fa73471bdf9eda3563272d71c39695c963a09aadedef43a2212efb14258b86cb"
+          ],
+          "sources": [
+            "tushare"
+          ],
+          "latest_price_date": "2026-11-06",
+          "stale_reason": null,
+          "missing_sessions": [],
+          "bars": [
+            {
+              "trade_date": "2026-10-08",
+              "first_trade_date": "2026-10-08",
+              "last_trade_date": "2026-10-08",
+              "open": 4.418,
+              "high": 4.459,
+              "low": 4.358,
+              "close": 4.389,
+              "volume": 7508725.37,
+              "amount": 3307953.958,
+              "source_snapshot_ids": [
+                "snapshot:tushare:etf_daily:sha256:d4a9a0624983e8377864c835322024436d1c94f102299059f77d54f5ceb90078"
+              ],
+              "available_at": "2026-11-07T11:34:24.073647Z",
+              "published_at": "2026-10-12T07:47:07.516007Z",
+              "partial": false
+            },
+            {
+              "trade_date": "2026-10-09",
+              "first_trade_date": "2026-10-09",
+              "last_trade_date": "2026-10-09",
+              "open": 4.369,
+              "high": 4.4,
+              "low": 4.309,
+              "close": 4.385,
+              "volume": 12767331.25,
+              "amount": 5564821.743,
+              "source_snapshot_ids": [
+                "snapshot:tushare:etf_daily:sha256:d28f1a4ec4d1a7f9eed3fbed93084462108fe8599095f056e74e2f59be9cb4b6"
+              ],
+              "available_at": "2026-11-07T11:34:24.073647Z",
+              "published_at": "2026-10-18T14:17:23.296007Z",
+              "partial": false
+            },
+            {
+              "trade_date": "2026-10-12",
+              "first_trade_date": "2026-10-12",
+              "last_trade_date": "2026-10-12",
+              "open": 4.384,
+              "high": 4.408,
+              "low": 4.351,
+              "close": 4.36,
+              "volume": 6962187.72,
+              "amount": 3046819.274,
+              "source_snapshot_ids": [
+                "snapshot:tushare:etf_daily:sha256:d28f1a4ec4d1a7f9eed3fbed93084462108fe8599095f056e74e2f59be9cb4b6"
+              ],
+              "available_at": "2026-11-07T11:34:24.073647Z",
+              "published_at": "2026-10-18T14:17:23.296007Z",
+              "partial": false
+            },
+            {
+              "trade_date": "2026-10-13",
+              "first_trade_date": "2026-10-13",
+              "last_trade_date": "2026-10-13",
+              "open": 4.313,
+              "high": 4.384,
+              "low": 4.286,
+              "close": 4.345,
+              "volume": 10815478.64,
+              "amount": 4679165.883,
+              "source_snapshot_ids": [
+                "snapshot:tushare:etf_daily:sha256:d28f1a4ec4d1a7f9eed3fbed93084462108fe8599095f056e74e2f59be9cb4b6"
+              ],
+              "available_at": "2026-11-07T11:34:24.073647Z",
+              "published_at": "2026-10-18T14:17:23.296007Z",
+              "partial": false
+            },
+            {
+              "trade_date": "2026-10-14",
+              "first_trade_date": "2026-10-14",
+              "last_trade_date": "2026-10-14",
+              "open": 4.336,
+              "high": 4.351,
+              "low": 4.284,
+              "close": 4.294,
+              "volume": 8864444.78,
+              "amount": 3827820.697,
+              "source_snapshot_ids": [
+                "snapshot:tushare:etf_daily:sha256:d28f1a4ec4d1a7f9eed3fbed93084462108fe8599095f056e74e2f59be9cb4b6"
+              ],
+              "available_at": "2026-11-07T11:34:24.073647Z",
+              "published_at": "2026-10-18T14:17:23.296007Z",
+              "partial": false
+            },
+            {
+              "trade_date": "2026-10-15",
+              "first_trade_date": "2026-10-15",
+              "last_trade_date": "2026-10-15",
+              "open": 4.245,
+              "high": 4.25,
+              "low": 4.187,
+              "close": 4.242,
+              "volume": 15787695.03,
+              "amount": 6664780.823,
+              "source_snapshot_ids": [
+                "snapshot:tushare:etf_daily:sha256:d28f1a4ec4d1a7f9eed3fbed93084462108fe8599095f056e74e2f59be9cb4b6"
+              ],
+              "available_at": "2026-11-07T11:34:24.073647Z",
+              "published_at": "2026-10-18T14:17:23.296007Z",
+              "partial": false
+            },
+            {
+              "trade_date": "2026-10-16",
+              "first_trade_date": "2026-10-16",
+              "last_trade_date": "2026-10-16",
+              "open": 4.255,
+              "high": 4.282,
+              "low": 4.2,
+              "close": 4.236,
+              "volume": 37995084.74,
+              "amount": 16092791.436,
+              "source_snapshot_ids": [
+                "snapshot:tushare:etf_daily:sha256:d28f1a4ec4d1a7f9eed3fbed93084462108fe8599095f056e74e2f59be9cb4b6"
+              ],
+              "available_at": "2026-11-07T11:34:24.073647Z",
+              "published_at": "2026-10-18T14:17:23.296007Z",
+              "partial": false
+            },
+            {
+              "trade_date": "2026-10-19",
+              "first_trade_date": "2026-10-19",
+              "last_trade_date": "2026-10-19",
+              "open": 4.224,
+              "high": 4.267,
+              "low": 4.22,
+              "close": 4.24,
+              "volume": 12105647.98,
+              "amount": 5137102.82,
+              "source_snapshot_ids": [
+                "snapshot:tushare:etf_daily:sha256:670cbd2eb182e94d86bb31f9059963a731f76e81db64f796e20ae975c54dfa39"
+              ],
+              "available_at": "2026-11-07T11:34:24.073647Z",
+              "published_at": "2026-10-25T18:06:51.684677Z",
+              "partial": false
+            },
+            {
+              "trade_date": "2026-10-20",
+              "first_trade_date": "2026-10-20",
+              "last_trade_date": "2026-10-20",
+              "open": 4.229,
+              "high": 4.25,
+              "low": 4.186,
+              "close": 4.22,
+              "volume": 10577403,
+              "amount": 4460249.485,
+              "source_snapshot_ids": [
+                "snapshot:tushare:etf_daily:sha256:d82a0484d16d194f644ca278ca18ce2c3c05ad606b27dabe125d6896c6312292"
+              ],
+              "available_at": "2026-11-07T11:34:24.073647Z",
+              "published_at": "2026-10-25T18:06:55.143195Z",
+              "partial": false
+            },
+            {
+              "trade_date": "2026-10-21",
+              "first_trade_date": "2026-10-21",
+              "last_trade_date": "2026-10-21",
+              "open": 4.234,
+              "high": 4.237,
+              "low": 4.17,
+              "close": 4.185,
+              "volume": 14153393.15,
+              "amount": 5943185.942,
+              "source_snapshot_ids": [
+                "snapshot:tushare:etf_daily:sha256:57cf6830ca16929899c6b78b63cbed8ec07b51f672fb37a5bc2fd418bf14efde"
+              ],
+              "available_at": "2026-11-07T11:34:24.073647Z",
+              "published_at": "2026-10-25T18:06:57.965531Z",
+              "partial": false
+            },
+            {
+              "trade_date": "2026-10-22",
+              "first_trade_date": "2026-10-22",
+              "last_trade_date": "2026-10-22",
+              "open": 4.185,
+              "high": 4.189,
+              "low": 4.097,
+              "close": 4.107,
+              "volume": 35419780.15,
+              "amount": 14627094.353,
+              "source_snapshot_ids": [
+                "snapshot:tushare:etf_daily:sha256:7e078efa80482421f066987ce8c276e3e4f22b872c7b8725714fbb63910265cf"
+              ],
+              "available_at": "2026-11-07T11:34:24.073647Z",
+              "published_at": "2026-10-25T18:07:00.954438Z",
+              "partial": false
+            },
+            {
+              "trade_date": "2026-10-23",
+              "first_trade_date": "2026-10-23",
+              "last_trade_date": "2026-10-23",
+              "open": 4.08,
+              "high": 4.186,
+              "low": 4.031,
+              "close": 4.178,
+              "volume": 37556082.13,
+              "amount": 15423238.067,
+              "source_snapshot_ids": [
+                "snapshot:tushare:etf_daily:sha256:fa73471bdf9eda3563272d71c39695c963a09aadedef43a2212efb14258b86cb"
+              ],
+              "available_at": "2026-11-07T11:34:24.073647Z",
+              "published_at": "2026-10-25T18:07:04.654417Z",
+              "partial": false
+            },
+            {
+              "trade_date": "2026-10-26",
+              "first_trade_date": "2026-10-26",
+              "last_trade_date": "2026-10-26",
+              "open": 4.155,
+              "high": 4.187,
+              "low": 4.13,
+              "close": 4.179,
+              "volume": 21198447.08,
+              "amount": 8817683.336,
+              "source_snapshot_ids": [
+                "snapshot:tushare:etf_daily:sha256:798eab47888fdaa64ac6cd764969757f0f7e1a3a119a2767cb0883c356f8895f"
+              ],
+              "available_at": "2026-11-07T11:34:24.073647Z",
+              "published_at": "2026-10-26T13:56:02.691938Z",
+              "partial": false
+            },
+            {
+              "trade_date": "2026-10-27",
+              "first_trade_date": "2026-10-27",
+              "last_trade_date": "2026-10-27",
+              "open": 4.186,
+              "high": 4.192,
+              "low": 4.123,
+              "close": 4.123,
+              "volume": 14039887.59,
+              "amount": 5847854.734,
+              "source_snapshot_ids": [
+                "snapshot:tushare:etf_daily:sha256:689abe2f215ad735fae80f5d3e5a365fc7258485a7442b8abe4d744c47b3a44c"
+              ],
+              "available_at": "2026-11-07T11:34:24.073647Z",
+              "published_at": "2026-10-27T08:20:49.437427Z",
+              "partial": false
+            },
+            {
+              "trade_date": "2026-10-28",
+              "first_trade_date": "2026-10-28",
+              "last_trade_date": "2026-10-28",
+              "open": 4.155,
+              "high": 4.166,
+              "low": 4.132,
+              "close": 4.152,
+              "volume": 10986237.2,
+              "amount": 4558577.92,
+              "source_snapshot_ids": [
+                "snapshot:tushare:etf_daily:sha256:f2904354d9ff39d783833d3b0e16e4df7391ff559a5a9e1740eb2476f96420aa"
+              ],
+              "available_at": "2026-11-07T11:34:24.073647Z",
+              "published_at": "2026-10-28T13:55:46.868384Z",
+              "partial": false
+            },
+            {
+              "trade_date": "2026-10-29",
+              "first_trade_date": "2026-10-29",
+              "last_trade_date": "2026-10-29",
+              "open": 4.145,
+              "high": 4.146,
+              "low": 4.103,
+              "close": 4.111,
+              "volume": 21619192.88,
+              "amount": 8906934.553,
+              "source_snapshot_ids": [
+                "snapshot:tushare:etf_daily:sha256:76ca29595f3069a40cdf917f708ad7663ef200cb022cff1f9b00d728d87be653"
+              ],
+              "available_at": "2026-11-07T11:34:24.073647Z",
+              "published_at": "2026-10-29T13:55:45.857087Z",
+              "partial": false
+            },
+            {
+              "trade_date": "2026-10-30",
+              "first_trade_date": "2026-10-30",
+              "last_trade_date": "2026-10-30",
+              "open": 4.059,
+              "high": 4.126,
+              "low": 4.046,
+              "close": 4.065,
+              "volume": 21130014.1,
+              "amount": 8613930.896,
+              "source_snapshot_ids": [
+                "snapshot:tushare:etf_daily:sha256:1fc0c4785963c1d39a7f2986e15dfa44e16b24202aae4e9eaccd7597b5315c07"
+              ],
+              "available_at": "2026-11-07T11:34:24.073647Z",
+              "published_at": "2026-10-30T13:55:47.094655Z",
+              "partial": false
+            },
+            {
+              "trade_date": "2026-11-02",
+              "first_trade_date": "2026-11-02",
+              "last_trade_date": "2026-11-02",
+              "open": 4.084,
+              "high": 4.12,
+              "low": 4.065,
+              "close": 4.085,
+              "volume": 29514530.77,
+              "amount": 12066215.573,
+              "source_snapshot_ids": [
+                "snapshot:tushare:etf_daily:sha256:f9ce85a66223fc16f739e8d7c6b641723a895cbd42399aad71961f80a3d9a685"
+              ],
+              "available_at": "2026-11-07T11:34:24.073647Z",
+              "published_at": "2026-11-02T13:55:55.757638Z",
+              "partial": false
+            },
+            {
+              "trade_date": "2026-11-03",
+              "first_trade_date": "2026-11-03",
+              "last_trade_date": "2026-11-03",
+              "open": 4.076,
+              "high": 4.106,
+              "low": 4.041,
+              "close": 4.092,
+              "volume": 46539654.39,
+              "amount": 19007473.545,
+              "source_snapshot_ids": [
+                "snapshot:tushare:etf_daily:sha256:9266c92c4828408f3f7a7f0efb1d5fe14f968853634264675a632dbded379bf3"
+              ],
+              "available_at": "2026-11-07T11:34:24.073647Z",
+              "published_at": "2026-11-03T13:55:36.557679Z",
+              "partial": false
+            },
+            {
+              "trade_date": "2026-11-04",
+              "first_trade_date": "2026-11-04",
+              "last_trade_date": "2026-11-04",
+              "open": 4.086,
+              "high": 4.191,
+              "low": 4.062,
+              "close": 4.175,
+              "volume": 30473917.01,
+              "amount": 12562217.194,
+              "source_snapshot_ids": [
+                "snapshot:tushare:etf_daily:sha256:156bc33502876fdb31c9db75618ee25fe1d0b6fc6d6e01c9fb3855ec26340549"
+              ],
+              "available_at": "2026-11-07T11:34:24.073647Z",
+              "published_at": "2026-11-04T13:55:52.559130Z",
+              "partial": false
+            },
+            {
+              "trade_date": "2026-11-05",
+              "first_trade_date": "2026-11-05",
+              "last_trade_date": "2026-11-05",
+              "open": 4.149,
+              "high": 4.216,
+              "low": 4.145,
+              "close": 4.195,
+              "volume": 17982071.82,
+              "amount": 7523081.499,
+              "source_snapshot_ids": [
+                "snapshot:tushare:etf_daily:sha256:cab893ec18db625b94a37baaa5c578b15218a407e3ae3f8ef372770374e37a0e"
+              ],
+              "available_at": "2026-11-07T11:34:24.073647Z",
+              "published_at": "2026-11-05T13:55:50.516376Z",
+              "partial": false
+            },
+            {
+              "trade_date": "2026-11-06",
+              "first_trade_date": "2026-11-06",
+              "last_trade_date": "2026-11-06",
+              "open": 4.113,
+              "high": 4.169,
+              "low": 4.095,
+              "close": 4.124,
+              "volume": 12629370.4,
+              "amount": 5211672.667,
+              "source_snapshot_ids": [
+                "snapshot:tushare:etf_daily:sha256:06f01dee2ab32f82f02bee67377204720c90650f10e930e1118984ddad27e4b0"
+              ],
+              "available_at": "2026-11-07T11:34:24.073647Z",
+              "published_at": "2026-11-06T18:08:10.999615Z",
+              "partial": false
+            }
+          ]
+        },
+        "pagination": null,
+        "read_semantics": null
+      },
+      "export": "etf-none-daily.csv",
+      "visible_latest": true,
+      "page_errors": []
+    },
+    {
+      "name": "etf",
+      "id": 2001562,
+      "adjustment": "none",
+      "period": "weekly",
+      "http_status": 200,
+      "request": {
+        "adjustment": "none",
+        "allow_experimental_data": true,
+        "end_date": "2026-11-06",
+        "instrument_id": 2001562,
+        "period": "weekly",
+        "start_date": "2026-10-01"
+      },
+      "response": {
+        "data": {
+          "instrument_id": 2001562,
+          "period": "weekly",
+          "adjustment": "none",
+          "as_of": "2026-11-07T11:36:50.275258Z",
+          "knowledge_cutoff": "2026-11-07T11:36:50.275258Z",
+          "publication_cutoff": "2026-11-07T11:36:50.275258Z",
+          "timezone": "Asia/Shanghai",
+          "calendar_snapshot_ids": [
+            "snapshot:tushare:calendar:sha256:eb2bfad933dfc42f691d8769b7893d482ebd19ba54257eb1dd41f3a0d8823c28"
+          ],
+          "source_snapshot_ids": [
+            "snapshot:tushare:etf_daily:sha256:06f01dee2ab32f82f02bee67377204720c90650f10e930e1118984ddad27e4b0",
+            "snapshot:tushare:etf_daily:sha256:156bc33502876fdb31c9db75618ee25fe1d0b6fc6d6e01c9fb3855ec26340549",
+            "snapshot:tushare:etf_daily:sha256:1fc0c4785963c1d39a7f2986e15dfa44e16b24202aae4e9eaccd7597b5315c07",
+            "snapshot:tushare:etf_daily:sha256:57cf6830ca16929899c6b78b63cbed8ec07b51f672fb37a5bc2fd418bf14efde",
+            "snapshot:tushare:etf_daily:sha256:670cbd2eb182e94d86bb31f9059963a731f76e81db64f796e20ae975c54dfa39",
+            "snapshot:tushare:etf_daily:sha256:689abe2f215ad735fae80f5d3e5a365fc7258485a7442b8abe4d744c47b3a44c",
+            "snapshot:tushare:etf_daily:sha256:76ca29595f3069a40cdf917f708ad7663ef200cb022cff1f9b00d728d87be653",
+            "snapshot:tushare:etf_daily:sha256:798eab47888fdaa64ac6cd764969757f0f7e1a3a119a2767cb0883c356f8895f",
+            "snapshot:tushare:etf_daily:sha256:7e078efa80482421f066987ce8c276e3e4f22b872c7b8725714fbb63910265cf",
+            "snapshot:tushare:etf_daily:sha256:9266c92c4828408f3f7a7f0efb1d5fe14f968853634264675a632dbded379bf3",
+            "snapshot:tushare:etf_daily:sha256:cab893ec18db625b94a37baaa5c578b15218a407e3ae3f8ef372770374e37a0e",
+            "snapshot:tushare:etf_daily:sha256:d28f1a4ec4d1a7f9eed3fbed93084462108fe8599095f056e74e2f59be9cb4b6",
+            "snapshot:tushare:etf_daily:sha256:d4a9a0624983e8377864c835322024436d1c94f102299059f77d54f5ceb90078",
+            "snapshot:tushare:etf_daily:sha256:d82a0484d16d194f644ca278ca18ce2c3c05ad606b27dabe125d6896c6312292",
+            "snapshot:tushare:etf_daily:sha256:f2904354d9ff39d783833d3b0e16e4df7391ff559a5a9e1740eb2476f96420aa",
+            "snapshot:tushare:etf_daily:sha256:f9ce85a66223fc16f739e8d7c6b641723a895cbd42399aad71961f80a3d9a685",
+            "snapshot:tushare:etf_daily:sha256:fa73471bdf9eda3563272d71c39695c963a09aadedef43a2212efb14258b86cb"
+          ],
+          "sources": [
+            "tushare"
+          ],
+          "latest_price_date": "2026-11-06",
+          "stale_reason": null,
+          "missing_sessions": [],
+          "bars": [
+            {
+              "trade_date": "2026-10-09",
+              "first_trade_date": "2026-10-08",
+              "last_trade_date": "2026-10-09",
+              "open": 4.418,
+              "high": 4.459,
+              "low": 4.309,
+              "close": 4.385,
+              "volume": 20276056.62,
+              "amount": 8872775.701,
+              "source_snapshot_ids": [
+                "snapshot:tushare:etf_daily:sha256:d28f1a4ec4d1a7f9eed3fbed93084462108fe8599095f056e74e2f59be9cb4b6",
+                "snapshot:tushare:etf_daily:sha256:d4a9a0624983e8377864c835322024436d1c94f102299059f77d54f5ceb90078"
+              ],
+              "available_at": "2026-11-07T11:34:24.073647Z",
+              "published_at": "2026-10-18T14:17:23.296007Z",
+              "partial": false
+            },
+            {
+              "trade_date": "2026-10-16",
+              "first_trade_date": "2026-10-12",
+              "last_trade_date": "2026-10-16",
+              "open": 4.384,
+              "high": 4.408,
+              "low": 4.187,
+              "close": 4.236,
+              "volume": 80424890.91,
+              "amount": 34311378.113,
+              "source_snapshot_ids": [
+                "snapshot:tushare:etf_daily:sha256:d28f1a4ec4d1a7f9eed3fbed93084462108fe8599095f056e74e2f59be9cb4b6"
+              ],
+              "available_at": "2026-11-07T11:34:24.073647Z",
+              "published_at": "2026-10-18T14:17:23.296007Z",
+              "partial": false
+            },
+            {
+              "trade_date": "2026-10-23",
+              "first_trade_date": "2026-10-19",
+              "last_trade_date": "2026-10-23",
+              "open": 4.224,
+              "high": 4.267,
+              "low": 4.031,
+              "close": 4.178,
+              "volume": 109812306.41,
+              "amount": 45590870.667,
+              "source_snapshot_ids": [
+                "snapshot:tushare:etf_daily:sha256:57cf6830ca16929899c6b78b63cbed8ec07b51f672fb37a5bc2fd418bf14efde",
+                "snapshot:tushare:etf_daily:sha256:670cbd2eb182e94d86bb31f9059963a731f76e81db64f796e20ae975c54dfa39",
+                "snapshot:tushare:etf_daily:sha256:7e078efa80482421f066987ce8c276e3e4f22b872c7b8725714fbb63910265cf",
+                "snapshot:tushare:etf_daily:sha256:d82a0484d16d194f644ca278ca18ce2c3c05ad606b27dabe125d6896c6312292",
+                "snapshot:tushare:etf_daily:sha256:fa73471bdf9eda3563272d71c39695c963a09aadedef43a2212efb14258b86cb"
+              ],
+              "available_at": "2026-11-07T11:34:24.073647Z",
+              "published_at": "2026-10-25T18:07:04.654417Z",
+              "partial": false
+            },
+            {
+              "trade_date": "2026-10-30",
+              "first_trade_date": "2026-10-26",
+              "last_trade_date": "2026-10-30",
+              "open": 4.155,
+              "high": 4.192,
+              "low": 4.046,
+              "close": 4.065,
+              "volume": 88973778.85,
+              "amount": 36744981.438999996,
+              "source_snapshot_ids": [
+                "snapshot:tushare:etf_daily:sha256:1fc0c4785963c1d39a7f2986e15dfa44e16b24202aae4e9eaccd7597b5315c07",
+                "snapshot:tushare:etf_daily:sha256:689abe2f215ad735fae80f5d3e5a365fc7258485a7442b8abe4d744c47b3a44c",
+                "snapshot:tushare:etf_daily:sha256:76ca29595f3069a40cdf917f708ad7663ef200cb022cff1f9b00d728d87be653",
+                "snapshot:tushare:etf_daily:sha256:798eab47888fdaa64ac6cd764969757f0f7e1a3a119a2767cb0883c356f8895f",
+                "snapshot:tushare:etf_daily:sha256:f2904354d9ff39d783833d3b0e16e4df7391ff559a5a9e1740eb2476f96420aa"
+              ],
+              "available_at": "2026-11-07T11:34:24.073647Z",
+              "published_at": "2026-10-30T13:55:47.094655Z",
+              "partial": false
+            },
+            {
+              "trade_date": "2026-11-06",
+              "first_trade_date": "2026-11-02",
+              "last_trade_date": "2026-11-06",
+              "open": 4.084,
+              "high": 4.216,
+              "low": 4.041,
+              "close": 4.124,
+              "volume": 137139544.39000002,
+              "amount": 56370660.478,
+              "source_snapshot_ids": [
+                "snapshot:tushare:etf_daily:sha256:06f01dee2ab32f82f02bee67377204720c90650f10e930e1118984ddad27e4b0",
+                "snapshot:tushare:etf_daily:sha256:156bc33502876fdb31c9db75618ee25fe1d0b6fc6d6e01c9fb3855ec26340549",
+                "snapshot:tushare:etf_daily:sha256:9266c92c4828408f3f7a7f0efb1d5fe14f968853634264675a632dbded379bf3",
+                "snapshot:tushare:etf_daily:sha256:cab893ec18db625b94a37baaa5c578b15218a407e3ae3f8ef372770374e37a0e",
+                "snapshot:tushare:etf_daily:sha256:f9ce85a66223fc16f739e8d7c6b641723a895cbd42399aad71961f80a3d9a685"
+              ],
+              "available_at": "2026-11-07T11:34:24.073647Z",
+              "published_at": "2026-11-06T18:08:10.999615Z",
+              "partial": false
+            }
+          ]
+        },
+        "pagination": null,
+        "read_semantics": null
+      },
+      "export": "etf-none-weekly.csv",
+      "visible_latest": true,
+      "page_errors": []
+    },
+    {
+      "name": "etf",
+      "id": 2001562,
+      "adjustment": "none",
+      "period": "monthly",
+      "http_status": 200,
+      "request": {
+        "adjustment": "none",
+        "allow_experimental_data": true,
+        "end_date": "2026-11-06",
+        "instrument_id": 2001562,
+        "period": "monthly",
+        "start_date": "2026-10-01"
+      },
+      "response": {
+        "data": {
+          "instrument_id": 2001562,
+          "period": "monthly",
+          "adjustment": "none",
+          "as_of": "2026-11-07T11:36:50.959711Z",
+          "knowledge_cutoff": "2026-11-07T11:36:50.959711Z",
+          "publication_cutoff": "2026-11-07T11:36:50.959711Z",
+          "timezone": "Asia/Shanghai",
+          "calendar_snapshot_ids": [
+            "snapshot:tushare:calendar:sha256:eb2bfad933dfc42f691d8769b7893d482ebd19ba54257eb1dd41f3a0d8823c28"
+          ],
+          "source_snapshot_ids": [
+            "snapshot:tushare:etf_daily:sha256:06f01dee2ab32f82f02bee67377204720c90650f10e930e1118984ddad27e4b0",
+            "snapshot:tushare:etf_daily:sha256:156bc33502876fdb31c9db75618ee25fe1d0b6fc6d6e01c9fb3855ec26340549",
+            "snapshot:tushare:etf_daily:sha256:1fc0c4785963c1d39a7f2986e15dfa44e16b24202aae4e9eaccd7597b5315c07",
+            "snapshot:tushare:etf_daily:sha256:57cf6830ca16929899c6b78b63cbed8ec07b51f672fb37a5bc2fd418bf14efde",
+            "snapshot:tushare:etf_daily:sha256:670cbd2eb182e94d86bb31f9059963a731f76e81db64f796e20ae975c54dfa39",
+            "snapshot:tushare:etf_daily:sha256:689abe2f215ad735fae80f5d3e5a365fc7258485a7442b8abe4d744c47b3a44c",
+            "snapshot:tushare:etf_daily:sha256:76ca29595f3069a40cdf917f708ad7663ef200cb022cff1f9b00d728d87be653",
+            "snapshot:tushare:etf_daily:sha256:798eab47888fdaa64ac6cd764969757f0f7e1a3a119a2767cb0883c356f8895f",
+            "snapshot:tushare:etf_daily:sha256:7e078efa80482421f066987ce8c276e3e4f22b872c7b8725714fbb63910265cf",
+            "snapshot:tushare:etf_daily:sha256:9266c92c4828408f3f7a7f0efb1d5fe14f968853634264675a632dbded379bf3",
+            "snapshot:tushare:etf_daily:sha256:cab893ec18db625b94a37baaa5c578b15218a407e3ae3f8ef372770374e37a0e",
+            "snapshot:tushare:etf_daily:sha256:d28f1a4ec4d1a7f9eed3fbed93084462108fe8599095f056e74e2f59be9cb4b6",
+            "snapshot:tushare:etf_daily:sha256:d4a9a0624983e8377864c835322024436d1c94f102299059f77d54f5ceb90078",
+            "snapshot:tushare:etf_daily:sha256:d82a0484d16d194f644ca278ca18ce2c3c05ad606b27dabe125d6896c6312292",
+            "snapshot:tushare:etf_daily:sha256:f2904354d9ff39d783833d3b0e16e4df7391ff559a5a9e1740eb2476f96420aa",
+            "snapshot:tushare:etf_daily:sha256:f9ce85a66223fc16f739e8d7c6b641723a895cbd42399aad71961f80a3d9a685",
+            "snapshot:tushare:etf_daily:sha256:fa73471bdf9eda3563272d71c39695c963a09aadedef43a2212efb14258b86cb"
+          ],
+          "sources": [
+            "tushare"
+          ],
+          "latest_price_date": "2026-11-06",
+          "stale_reason": null,
+          "missing_sessions": [],
+          "bars": [
+            {
+              "trade_date": "2026-10-30",
+              "first_trade_date": "2026-10-08",
+              "last_trade_date": "2026-10-30",
+              "open": 4.418,
+              "high": 4.459,
+              "low": 4.031,
+              "close": 4.065,
+              "volume": 299487032.79,
+              "amount": 125520005.92,
+              "source_snapshot_ids": [
+                "snapshot:tushare:etf_daily:sha256:1fc0c4785963c1d39a7f2986e15dfa44e16b24202aae4e9eaccd7597b5315c07",
+                "snapshot:tushare:etf_daily:sha256:57cf6830ca16929899c6b78b63cbed8ec07b51f672fb37a5bc2fd418bf14efde",
+                "snapshot:tushare:etf_daily:sha256:670cbd2eb182e94d86bb31f9059963a731f76e81db64f796e20ae975c54dfa39",
+                "snapshot:tushare:etf_daily:sha256:689abe2f215ad735fae80f5d3e5a365fc7258485a7442b8abe4d744c47b3a44c",
+                "snapshot:tushare:etf_daily:sha256:76ca29595f3069a40cdf917f708ad7663ef200cb022cff1f9b00d728d87be653",
+                "snapshot:tushare:etf_daily:sha256:798eab47888fdaa64ac6cd764969757f0f7e1a3a119a2767cb0883c356f8895f",
+                "snapshot:tushare:etf_daily:sha256:7e078efa80482421f066987ce8c276e3e4f22b872c7b8725714fbb63910265cf",
+                "snapshot:tushare:etf_daily:sha256:d28f1a4ec4d1a7f9eed3fbed93084462108fe8599095f056e74e2f59be9cb4b6",
+                "snapshot:tushare:etf_daily:sha256:d4a9a0624983e8377864c835322024436d1c94f102299059f77d54f5ceb90078",
+                "snapshot:tushare:etf_daily:sha256:d82a0484d16d194f644ca278ca18ce2c3c05ad606b27dabe125d6896c6312292",
+                "snapshot:tushare:etf_daily:sha256:f2904354d9ff39d783833d3b0e16e4df7391ff559a5a9e1740eb2476f96420aa",
+                "snapshot:tushare:etf_daily:sha256:fa73471bdf9eda3563272d71c39695c963a09aadedef43a2212efb14258b86cb"
+              ],
+              "available_at": "2026-11-07T11:34:24.073647Z",
+              "published_at": "2026-10-30T13:55:47.094655Z",
+              "partial": false
+            },
+            {
+              "trade_date": "2026-11-06",
+              "first_trade_date": "2026-11-02",
+              "last_trade_date": "2026-11-06",
+              "open": 4.084,
+              "high": 4.216,
+              "low": 4.041,
+              "close": 4.124,
+              "volume": 137139544.39000002,
+              "amount": 56370660.478,
+              "source_snapshot_ids": [
+                "snapshot:tushare:etf_daily:sha256:06f01dee2ab32f82f02bee67377204720c90650f10e930e1118984ddad27e4b0",
+                "snapshot:tushare:etf_daily:sha256:156bc33502876fdb31c9db75618ee25fe1d0b6fc6d6e01c9fb3855ec26340549",
+                "snapshot:tushare:etf_daily:sha256:9266c92c4828408f3f7a7f0efb1d5fe14f968853634264675a632dbded379bf3",
+                "snapshot:tushare:etf_daily:sha256:cab893ec18db625b94a37baaa5c578b15218a407e3ae3f8ef372770374e37a0e",
+                "snapshot:tushare:etf_daily:sha256:f9ce85a66223fc16f739e8d7c6b641723a895cbd42399aad71961f80a3d9a685"
+              ],
+              "available_at": "2026-11-07T11:34:24.073647Z",
+              "published_at": "2026-11-06T18:08:10.999615Z",
+              "partial": true
+            }
+          ]
+        },
+        "pagination": null,
+        "read_semantics": null
+      },
+      "export": "etf-none-monthly.csv",
+      "visible_latest": true,
+      "page_errors": []
+    },
+    {
+      "name": "etf",
+      "id": 2001562,
+      "adjustment": "qfq",
+      "period": "daily",
+      "http_status": 200,
+      "request": {
+        "adjustment": "qfq",
+        "allow_experimental_data": true,
+        "end_date": "2026-11-06",
+        "instrument_id": 2001562,
+        "period": "daily",
+        "start_date": "2026-10-01"
+      },
+      "response": {
+        "data": {
+          "instrument_id": 2001562,
+          "period": "daily",
+          "adjustment": "qfq",
+          "as_of": "2026-11-07T11:36:52.420483Z",
+          "knowledge_cutoff": "2026-11-07T11:36:52.420483Z",
+          "publication_cutoff": "2026-11-07T11:36:52.420483Z",
+          "timezone": "Asia/Shanghai",
+          "calendar_snapshot_ids": [
+            "snapshot:tushare:calendar:sha256:eb2bfad933dfc42f691d8769b7893d482ebd19ba54257eb1dd41f3a0d8823c28"
+          ],
+          "source_snapshot_ids": [
+            "snapshot:tushare:etf_daily:sha256:06f01dee2ab32f82f02bee67377204720c90650f10e930e1118984ddad27e4b0",
+            "snapshot:tushare:etf_daily:sha256:156bc33502876fdb31c9db75618ee25fe1d0b6fc6d6e01c9fb3855ec26340549",
+            "snapshot:tushare:etf_daily:sha256:1fc0c4785963c1d39a7f2986e15dfa44e16b24202aae4e9eaccd7597b5315c07",
+            "snapshot:tushare:etf_daily:sha256:57cf6830ca16929899c6b78b63cbed8ec07b51f672fb37a5bc2fd418bf14efde",
+            "snapshot:tushare:etf_daily:sha256:670cbd2eb182e94d86bb31f9059963a731f76e81db64f796e20ae975c54dfa39",
+            "snapshot:tushare:etf_daily:sha256:689abe2f215ad735fae80f5d3e5a365fc7258485a7442b8abe4d744c47b3a44c",
+            "snapshot:tushare:etf_daily:sha256:76ca29595f3069a40cdf917f708ad7663ef200cb022cff1f9b00d728d87be653",
+            "snapshot:tushare:etf_daily:sha256:798eab47888fdaa64ac6cd764969757f0f7e1a3a119a2767cb0883c356f8895f",
+            "snapshot:tushare:etf_daily:sha256:7e078efa80482421f066987ce8c276e3e4f22b872c7b8725714fbb63910265cf",
+            "snapshot:tushare:etf_daily:sha256:9266c92c4828408f3f7a7f0efb1d5fe14f968853634264675a632dbded379bf3",
+            "snapshot:tushare:etf_daily:sha256:cab893ec18db625b94a37baaa5c578b15218a407e3ae3f8ef372770374e37a0e",
+            "snapshot:tushare:etf_daily:sha256:d28f1a4ec4d1a7f9eed3fbed93084462108fe8599095f056e74e2f59be9cb4b6",
+            "snapshot:tushare:etf_daily:sha256:d4a9a0624983e8377864c835322024436d1c94f102299059f77d54f5ceb90078",
+            "snapshot:tushare:etf_daily:sha256:d82a0484d16d194f644ca278ca18ce2c3c05ad606b27dabe125d6896c6312292",
+            "snapshot:tushare:etf_daily:sha256:f2904354d9ff39d783833d3b0e16e4df7391ff559a5a9e1740eb2476f96420aa",
+            "snapshot:tushare:etf_daily:sha256:f9ce85a66223fc16f739e8d7c6b641723a895cbd42399aad71961f80a3d9a685",
+            "snapshot:tushare:etf_daily:sha256:fa73471bdf9eda3563272d71c39695c963a09aadedef43a2212efb14258b86cb",
+            "snapshot:tushare:fund_adj:sha256:0637460a6709502ac883fa7fbbec94045f281d7ba00a61e07a88f1bbee01e83c",
+            "snapshot:tushare:fund_adj:sha256:1c61d29ac738f6bc922e2a0f92c8ff0f39492758056ca3dc8ada7ee3481f6daf",
+            "snapshot:tushare:fund_adj:sha256:36935f37f93b720aa38656553fdfd1b9c6090e4c95ca465a80753c58323fb3bc",
+            "snapshot:tushare:fund_adj:sha256:4f35c77e59eab6e5320d905c6feeaf8b3b0c4e713e9a0fc717e7dd64078cf167",
+            "snapshot:tushare:fund_adj:sha256:628922b3bf88593e4570a691cdc9055696506fc49051569f74eb995f13d6aed6",
+            "snapshot:tushare:fund_adj:sha256:64a15f35a1052fb186daafe977349535e10102f8c81183c630f7ac18a9b83d42",
+            "snapshot:tushare:fund_adj:sha256:660c458086640afc6215ba081b98be40009c8617aaf5bf458964aae51d53e3cb",
+            "snapshot:tushare:fund_adj:sha256:666ca5aa7856e14551048ee2bc5f2b8356e079a37a0aa73e465469d37a1d2cfc",
+            "snapshot:tushare:fund_adj:sha256:68d361690cf5a6a11c1dbd6137f4a2f9e3036d41c1126c7c087f3d9f28702cb3",
+            "snapshot:tushare:fund_adj:sha256:8f174c13dbf26b7e26ed62111a7d354ba2d94f50d1ade5d8783b6e9a9ce481b6",
+            "snapshot:tushare:fund_adj:sha256:9401f2063e69e5024f51c5c0c3e03fd284f5bf04da68ed39ff83e05374ed7438",
+            "snapshot:tushare:fund_adj:sha256:affdb0a0cc615ba7d55bea1bc22b70b37752c3917064d43f7540d51501995d03",
+            "snapshot:tushare:fund_adj:sha256:baf069c04fa15b5c64c0ef151df90f62752f6939f85e367c046ab83746a6595e",
+            "snapshot:tushare:fund_adj:sha256:beaaa014b0fbe83a88fcf8e45247e242fac23992526af941a54988e20dbf7d11",
+            "snapshot:tushare:fund_adj:sha256:d9513496edbf56b0f9e3034ba4129b36116cd93929d84544a99c076a53a5eaa3",
+            "snapshot:tushare:fund_adj:sha256:de2b5ac3614eb1a91e4bb5eafc9f5e56d3ba9733fef103f093f07c317629adb3",
+            "snapshot:tushare:fund_adj:sha256:e3b311a662a5558f43c4b613f85f3ec12f51409a2b1775d11ae6d20e7c16c289",
+            "snapshot:tushare:fund_adj:sha256:efd7577771dc6a1de75898e2502ea9d121047db8ef87e45a6be15eba0e1b45a3",
+            "snapshot:tushare:fund_adj:sha256:f0f0c39fe81dc442df3d57c9b848e8d6a58b2809dbde105fce451a0c1f331034",
+            "snapshot:tushare:fund_adj:sha256:f76b200a29bce17b1499d5b33d49f1810d50df83be174ab5feeaf7a529d15df1",
+            "snapshot:tushare:fund_adj:sha256:f84655cfa5325a146603ecee548c1f63a33dbb4fb73304b43bcd8ee570b70c62"
+          ],
+          "sources": [
+            "tushare"
+          ],
+          "latest_price_date": "2026-11-06",
+          "stale_reason": null,
+          "missing_sessions": [],
+          "bars": [
+            {
+              "trade_date": "2026-10-08",
+              "first_trade_date": "2026-10-08",
+              "last_trade_date": "2026-10-08",
+              "open": 4.418,
+              "high": 4.459,
+              "low": 4.358,
+              "close": 4.389,
+              "volume": 7508725.37,
+              "amount": 3307953.958,
+              "source_snapshot_ids": [
+                "snapshot:tushare:etf_daily:sha256:d4a9a0624983e8377864c835322024436d1c94f102299059f77d54f5ceb90078",
+                "snapshot:tushare:fund_adj:sha256:4f35c77e59eab6e5320d905c6feeaf8b3b0c4e713e9a0fc717e7dd64078cf167",
+                "snapshot:tushare:fund_adj:sha256:f84655cfa5325a146603ecee548c1f63a33dbb4fb73304b43bcd8ee570b70c62"
+              ],
+              "available_at": "2026-11-07T11:34:24.073647Z",
+              "published_at": "2026-11-06T18:46:41.097189Z",
+              "partial": false
+            },
+            {
+              "trade_date": "2026-10-09",
+              "first_trade_date": "2026-10-09",
+              "last_trade_date": "2026-10-09",
+              "open": 4.369,
+              "high": 4.4,
+              "low": 4.309,
+              "close": 4.385,
+              "volume": 12767331.25,
+              "amount": 5564821.743,
+              "source_snapshot_ids": [
+                "snapshot:tushare:etf_daily:sha256:d28f1a4ec4d1a7f9eed3fbed93084462108fe8599095f056e74e2f59be9cb4b6",
+                "snapshot:tushare:fund_adj:sha256:4f35c77e59eab6e5320d905c6feeaf8b3b0c4e713e9a0fc717e7dd64078cf167",
+                "snapshot:tushare:fund_adj:sha256:f84655cfa5325a146603ecee548c1f63a33dbb4fb73304b43bcd8ee570b70c62"
+              ],
+              "available_at": "2026-11-07T11:34:24.073647Z",
+              "published_at": "2026-11-06T18:46:41.097189Z",
+              "partial": false
+            },
+            {
+              "trade_date": "2026-10-12",
+              "first_trade_date": "2026-10-12",
+              "last_trade_date": "2026-10-12",
+              "open": 4.384,
+              "high": 4.408,
+              "low": 4.351,
+              "close": 4.36,
+              "volume": 6962187.72,
+              "amount": 3046819.274,
+              "source_snapshot_ids": [
+                "snapshot:tushare:etf_daily:sha256:d28f1a4ec4d1a7f9eed3fbed93084462108fe8599095f056e74e2f59be9cb4b6",
+                "snapshot:tushare:fund_adj:sha256:affdb0a0cc615ba7d55bea1bc22b70b37752c3917064d43f7540d51501995d03",
+                "snapshot:tushare:fund_adj:sha256:f84655cfa5325a146603ecee548c1f63a33dbb4fb73304b43bcd8ee570b70c62"
+              ],
+              "available_at": "2026-11-07T11:34:24.073647Z",
+              "published_at": "2026-11-06T18:46:41.097189Z",
+              "partial": false
+            },
+            {
+              "trade_date": "2026-10-13",
+              "first_trade_date": "2026-10-13",
+              "last_trade_date": "2026-10-13",
+              "open": 4.313,
+              "high": 4.384,
+              "low": 4.286,
+              "close": 4.345,
+              "volume": 10815478.64,
+              "amount": 4679165.883,
+              "source_snapshot_ids": [
+                "snapshot:tushare:etf_daily:sha256:d28f1a4ec4d1a7f9eed3fbed93084462108fe8599095f056e74e2f59be9cb4b6",
+                "snapshot:tushare:fund_adj:sha256:de2b5ac3614eb1a91e4bb5eafc9f5e56d3ba9733fef103f093f07c317629adb3",
+                "snapshot:tushare:fund_adj:sha256:f84655cfa5325a146603ecee548c1f63a33dbb4fb73304b43bcd8ee570b70c62"
+              ],
+              "available_at": "2026-11-07T11:34:24.073647Z",
+              "published_at": "2026-11-06T18:46:41.097189Z",
+              "partial": false
+            },
+            {
+              "trade_date": "2026-10-14",
+              "first_trade_date": "2026-10-14",
+              "last_trade_date": "2026-10-14",
+              "open": 4.336,
+              "high": 4.351,
+              "low": 4.284,
+              "close": 4.294,
+              "volume": 8864444.78,
+              "amount": 3827820.697,
+              "source_snapshot_ids": [
+                "snapshot:tushare:etf_daily:sha256:d28f1a4ec4d1a7f9eed3fbed93084462108fe8599095f056e74e2f59be9cb4b6",
+                "snapshot:tushare:fund_adj:sha256:666ca5aa7856e14551048ee2bc5f2b8356e079a37a0aa73e465469d37a1d2cfc",
+                "snapshot:tushare:fund_adj:sha256:f84655cfa5325a146603ecee548c1f63a33dbb4fb73304b43bcd8ee570b70c62"
+              ],
+              "available_at": "2026-11-07T11:34:24.073647Z",
+              "published_at": "2026-11-06T18:46:41.097189Z",
+              "partial": false
+            },
+            {
+              "trade_date": "2026-10-15",
+              "first_trade_date": "2026-10-15",
+              "last_trade_date": "2026-10-15",
+              "open": 4.245,
+              "high": 4.25,
+              "low": 4.187,
+              "close": 4.242,
+              "volume": 15787695.03,
+              "amount": 6664780.823,
+              "source_snapshot_ids": [
+                "snapshot:tushare:etf_daily:sha256:d28f1a4ec4d1a7f9eed3fbed93084462108fe8599095f056e74e2f59be9cb4b6",
+                "snapshot:tushare:fund_adj:sha256:beaaa014b0fbe83a88fcf8e45247e242fac23992526af941a54988e20dbf7d11",
+                "snapshot:tushare:fund_adj:sha256:f84655cfa5325a146603ecee548c1f63a33dbb4fb73304b43bcd8ee570b70c62"
+              ],
+              "available_at": "2026-11-07T11:34:24.073647Z",
+              "published_at": "2026-11-06T18:46:41.097189Z",
+              "partial": false
+            },
+            {
+              "trade_date": "2026-10-16",
+              "first_trade_date": "2026-10-16",
+              "last_trade_date": "2026-10-16",
+              "open": 4.255,
+              "high": 4.282,
+              "low": 4.2,
+              "close": 4.236,
+              "volume": 37995084.74,
+              "amount": 16092791.436,
+              "source_snapshot_ids": [
+                "snapshot:tushare:etf_daily:sha256:d28f1a4ec4d1a7f9eed3fbed93084462108fe8599095f056e74e2f59be9cb4b6",
+                "snapshot:tushare:fund_adj:sha256:8f174c13dbf26b7e26ed62111a7d354ba2d94f50d1ade5d8783b6e9a9ce481b6",
+                "snapshot:tushare:fund_adj:sha256:f84655cfa5325a146603ecee548c1f63a33dbb4fb73304b43bcd8ee570b70c62"
+              ],
+              "available_at": "2026-11-07T11:34:24.073647Z",
+              "published_at": "2026-11-06T18:46:41.097189Z",
+              "partial": false
+            },
+            {
+              "trade_date": "2026-10-19",
+              "first_trade_date": "2026-10-19",
+              "last_trade_date": "2026-10-19",
+              "open": 4.224,
+              "high": 4.267,
+              "low": 4.22,
+              "close": 4.24,
+              "volume": 12105647.98,
+              "amount": 5137102.82,
+              "source_snapshot_ids": [
+                "snapshot:tushare:etf_daily:sha256:670cbd2eb182e94d86bb31f9059963a731f76e81db64f796e20ae975c54dfa39",
+                "snapshot:tushare:fund_adj:sha256:f0f0c39fe81dc442df3d57c9b848e8d6a58b2809dbde105fce451a0c1f331034",
+                "snapshot:tushare:fund_adj:sha256:f84655cfa5325a146603ecee548c1f63a33dbb4fb73304b43bcd8ee570b70c62"
+              ],
+              "available_at": "2026-11-07T11:34:24.073647Z",
+              "published_at": "2026-11-06T18:46:41.097189Z",
+              "partial": false
+            },
+            {
+              "trade_date": "2026-10-20",
+              "first_trade_date": "2026-10-20",
+              "last_trade_date": "2026-10-20",
+              "open": 4.229,
+              "high": 4.25,
+              "low": 4.186,
+              "close": 4.22,
+              "volume": 10577403,
+              "amount": 4460249.485,
+              "source_snapshot_ids": [
+                "snapshot:tushare:etf_daily:sha256:d82a0484d16d194f644ca278ca18ce2c3c05ad606b27dabe125d6896c6312292",
+                "snapshot:tushare:fund_adj:sha256:d9513496edbf56b0f9e3034ba4129b36116cd93929d84544a99c076a53a5eaa3",
+                "snapshot:tushare:fund_adj:sha256:f84655cfa5325a146603ecee548c1f63a33dbb4fb73304b43bcd8ee570b70c62"
+              ],
+              "available_at": "2026-11-07T11:34:24.073647Z",
+              "published_at": "2026-11-06T18:46:41.097189Z",
+              "partial": false
+            },
+            {
+              "trade_date": "2026-10-21",
+              "first_trade_date": "2026-10-21",
+              "last_trade_date": "2026-10-21",
+              "open": 4.234,
+              "high": 4.237,
+              "low": 4.17,
+              "close": 4.185,
+              "volume": 14153393.15,
+              "amount": 5943185.942,
+              "source_snapshot_ids": [
+                "snapshot:tushare:etf_daily:sha256:57cf6830ca16929899c6b78b63cbed8ec07b51f672fb37a5bc2fd418bf14efde",
+                "snapshot:tushare:fund_adj:sha256:68d361690cf5a6a11c1dbd6137f4a2f9e3036d41c1126c7c087f3d9f28702cb3",
+                "snapshot:tushare:fund_adj:sha256:f84655cfa5325a146603ecee548c1f63a33dbb4fb73304b43bcd8ee570b70c62"
+              ],
+              "available_at": "2026-11-07T11:34:24.073647Z",
+              "published_at": "2026-11-06T18:46:41.097189Z",
+              "partial": false
+            },
+            {
+              "trade_date": "2026-10-22",
+              "first_trade_date": "2026-10-22",
+              "last_trade_date": "2026-10-22",
+              "open": 4.185,
+              "high": 4.189,
+              "low": 4.097,
+              "close": 4.107,
+              "volume": 35419780.15,
+              "amount": 14627094.353,
+              "source_snapshot_ids": [
+                "snapshot:tushare:etf_daily:sha256:7e078efa80482421f066987ce8c276e3e4f22b872c7b8725714fbb63910265cf",
+                "snapshot:tushare:fund_adj:sha256:660c458086640afc6215ba081b98be40009c8617aaf5bf458964aae51d53e3cb",
+                "snapshot:tushare:fund_adj:sha256:f84655cfa5325a146603ecee548c1f63a33dbb4fb73304b43bcd8ee570b70c62"
+              ],
+              "available_at": "2026-11-07T11:34:24.073647Z",
+              "published_at": "2026-11-06T18:46:41.097189Z",
+              "partial": false
+            },
+            {
+              "trade_date": "2026-10-23",
+              "first_trade_date": "2026-10-23",
+              "last_trade_date": "2026-10-23",
+              "open": 4.08,
+              "high": 4.186,
+              "low": 4.031,
+              "close": 4.178,
+              "volume": 37556082.13,
+              "amount": 15423238.067,
+              "source_snapshot_ids": [
+                "snapshot:tushare:etf_daily:sha256:fa73471bdf9eda3563272d71c39695c963a09aadedef43a2212efb14258b86cb",
+                "snapshot:tushare:fund_adj:sha256:f76b200a29bce17b1499d5b33d49f1810d50df83be174ab5feeaf7a529d15df1",
+                "snapshot:tushare:fund_adj:sha256:f84655cfa5325a146603ecee548c1f63a33dbb4fb73304b43bcd8ee570b70c62"
+              ],
+              "available_at": "2026-11-07T11:34:24.073647Z",
+              "published_at": "2026-11-06T18:46:41.097189Z",
+              "partial": false
+            },
+            {
+              "trade_date": "2026-10-26",
+              "first_trade_date": "2026-10-26",
+              "last_trade_date": "2026-10-26",
+              "open": 4.155,
+              "high": 4.187,
+              "low": 4.13,
+              "close": 4.179,
+              "volume": 21198447.08,
+              "amount": 8817683.336,
+              "source_snapshot_ids": [
+                "snapshot:tushare:etf_daily:sha256:798eab47888fdaa64ac6cd764969757f0f7e1a3a119a2767cb0883c356f8895f",
+                "snapshot:tushare:fund_adj:sha256:9401f2063e69e5024f51c5c0c3e03fd284f5bf04da68ed39ff83e05374ed7438",
+                "snapshot:tushare:fund_adj:sha256:f84655cfa5325a146603ecee548c1f63a33dbb4fb73304b43bcd8ee570b70c62"
+              ],
+              "available_at": "2026-11-07T11:34:24.073647Z",
+              "published_at": "2026-11-06T18:46:41.097189Z",
+              "partial": false
+            },
+            {
+              "trade_date": "2026-10-27",
+              "first_trade_date": "2026-10-27",
+              "last_trade_date": "2026-10-27",
+              "open": 4.186,
+              "high": 4.192,
+              "low": 4.123,
+              "close": 4.123,
+              "volume": 14039887.59,
+              "amount": 5847854.734,
+              "source_snapshot_ids": [
+                "snapshot:tushare:etf_daily:sha256:689abe2f215ad735fae80f5d3e5a365fc7258485a7442b8abe4d744c47b3a44c",
+                "snapshot:tushare:fund_adj:sha256:0637460a6709502ac883fa7fbbec94045f281d7ba00a61e07a88f1bbee01e83c",
+                "snapshot:tushare:fund_adj:sha256:f84655cfa5325a146603ecee548c1f63a33dbb4fb73304b43bcd8ee570b70c62"
+              ],
+              "available_at": "2026-11-07T11:34:24.073647Z",
+              "published_at": "2026-11-06T18:46:41.097189Z",
+              "partial": false
+            },
+            {
+              "trade_date": "2026-10-28",
+              "first_trade_date": "2026-10-28",
+              "last_trade_date": "2026-10-28",
+              "open": 4.155,
+              "high": 4.166,
+              "low": 4.132,
+              "close": 4.152,
+              "volume": 10986237.2,
+              "amount": 4558577.92,
+              "source_snapshot_ids": [
+                "snapshot:tushare:etf_daily:sha256:f2904354d9ff39d783833d3b0e16e4df7391ff559a5a9e1740eb2476f96420aa",
+                "snapshot:tushare:fund_adj:sha256:628922b3bf88593e4570a691cdc9055696506fc49051569f74eb995f13d6aed6",
+                "snapshot:tushare:fund_adj:sha256:f84655cfa5325a146603ecee548c1f63a33dbb4fb73304b43bcd8ee570b70c62"
+              ],
+              "available_at": "2026-11-07T11:34:24.073647Z",
+              "published_at": "2026-11-06T18:46:41.097189Z",
+              "partial": false
+            },
+            {
+              "trade_date": "2026-10-29",
+              "first_trade_date": "2026-10-29",
+              "last_trade_date": "2026-10-29",
+              "open": 4.145,
+              "high": 4.146,
+              "low": 4.103,
+              "close": 4.111,
+              "volume": 21619192.88,
+              "amount": 8906934.553,
+              "source_snapshot_ids": [
+                "snapshot:tushare:etf_daily:sha256:76ca29595f3069a40cdf917f708ad7663ef200cb022cff1f9b00d728d87be653",
+                "snapshot:tushare:fund_adj:sha256:1c61d29ac738f6bc922e2a0f92c8ff0f39492758056ca3dc8ada7ee3481f6daf",
+                "snapshot:tushare:fund_adj:sha256:f84655cfa5325a146603ecee548c1f63a33dbb4fb73304b43bcd8ee570b70c62"
+              ],
+              "available_at": "2026-11-07T11:34:24.073647Z",
+              "published_at": "2026-11-06T18:46:41.097189Z",
+              "partial": false
+            },
+            {
+              "trade_date": "2026-10-30",
+              "first_trade_date": "2026-10-30",
+              "last_trade_date": "2026-10-30",
+              "open": 4.059,
+              "high": 4.126,
+              "low": 4.046,
+              "close": 4.065,
+              "volume": 21130014.1,
+              "amount": 8613930.896,
+              "source_snapshot_ids": [
+                "snapshot:tushare:etf_daily:sha256:1fc0c4785963c1d39a7f2986e15dfa44e16b24202aae4e9eaccd7597b5315c07",
+                "snapshot:tushare:fund_adj:sha256:36935f37f93b720aa38656553fdfd1b9c6090e4c95ca465a80753c58323fb3bc",
+                "snapshot:tushare:fund_adj:sha256:f84655cfa5325a146603ecee548c1f63a33dbb4fb73304b43bcd8ee570b70c62"
+              ],
+              "available_at": "2026-11-07T11:34:24.073647Z",
+              "published_at": "2026-11-06T18:46:41.097189Z",
+              "partial": false
+            },
+            {
+              "trade_date": "2026-11-02",
+              "first_trade_date": "2026-11-02",
+              "last_trade_date": "2026-11-02",
+              "open": 4.084,
+              "high": 4.12,
+              "low": 4.065,
+              "close": 4.085,
+              "volume": 29514530.77,
+              "amount": 12066215.573,
+              "source_snapshot_ids": [
+                "snapshot:tushare:etf_daily:sha256:f9ce85a66223fc16f739e8d7c6b641723a895cbd42399aad71961f80a3d9a685",
+                "snapshot:tushare:fund_adj:sha256:e3b311a662a5558f43c4b613f85f3ec12f51409a2b1775d11ae6d20e7c16c289",
+                "snapshot:tushare:fund_adj:sha256:f84655cfa5325a146603ecee548c1f63a33dbb4fb73304b43bcd8ee570b70c62"
+              ],
+              "available_at": "2026-11-07T11:34:24.073647Z",
+              "published_at": "2026-11-06T18:46:41.097189Z",
+              "partial": false
+            },
+            {
+              "trade_date": "2026-11-03",
+              "first_trade_date": "2026-11-03",
+              "last_trade_date": "2026-11-03",
+              "open": 4.076,
+              "high": 4.106,
+              "low": 4.041,
+              "close": 4.092,
+              "volume": 46539654.39,
+              "amount": 19007473.545,
+              "source_snapshot_ids": [
+                "snapshot:tushare:etf_daily:sha256:9266c92c4828408f3f7a7f0efb1d5fe14f968853634264675a632dbded379bf3",
+                "snapshot:tushare:fund_adj:sha256:baf069c04fa15b5c64c0ef151df90f62752f6939f85e367c046ab83746a6595e",
+                "snapshot:tushare:fund_adj:sha256:f84655cfa5325a146603ecee548c1f63a33dbb4fb73304b43bcd8ee570b70c62"
+              ],
+              "available_at": "2026-11-07T11:34:24.073647Z",
+              "published_at": "2026-11-06T18:46:41.097189Z",
+              "partial": false
+            },
+            {
+              "trade_date": "2026-11-04",
+              "first_trade_date": "2026-11-04",
+              "last_trade_date": "2026-11-04",
+              "open": 4.086,
+              "high": 4.191,
+              "low": 4.062,
+              "close": 4.175,
+              "volume": 30473917.01,
+              "amount": 12562217.194,
+              "source_snapshot_ids": [
+                "snapshot:tushare:etf_daily:sha256:156bc33502876fdb31c9db75618ee25fe1d0b6fc6d6e01c9fb3855ec26340549",
+                "snapshot:tushare:fund_adj:sha256:efd7577771dc6a1de75898e2502ea9d121047db8ef87e45a6be15eba0e1b45a3",
+                "snapshot:tushare:fund_adj:sha256:f84655cfa5325a146603ecee548c1f63a33dbb4fb73304b43bcd8ee570b70c62"
+              ],
+              "available_at": "2026-11-07T11:34:24.073647Z",
+              "published_at": "2026-11-06T18:46:41.097189Z",
+              "partial": false
+            },
+            {
+              "trade_date": "2026-11-05",
+              "first_trade_date": "2026-11-05",
+              "last_trade_date": "2026-11-05",
+              "open": 4.149,
+              "high": 4.216,
+              "low": 4.145,
+              "close": 4.195,
+              "volume": 17982071.82,
+              "amount": 7523081.499,
+              "source_snapshot_ids": [
+                "snapshot:tushare:etf_daily:sha256:cab893ec18db625b94a37baaa5c578b15218a407e3ae3f8ef372770374e37a0e",
+                "snapshot:tushare:fund_adj:sha256:64a15f35a1052fb186daafe977349535e10102f8c81183c630f7ac18a9b83d42",
+                "snapshot:tushare:fund_adj:sha256:f84655cfa5325a146603ecee548c1f63a33dbb4fb73304b43bcd8ee570b70c62"
+              ],
+              "available_at": "2026-11-07T11:34:24.073647Z",
+              "published_at": "2026-11-06T18:46:41.097189Z",
+              "partial": false
+            },
+            {
+              "trade_date": "2026-11-06",
+              "first_trade_date": "2026-11-06",
+              "last_trade_date": "2026-11-06",
+              "open": 4.113,
+              "high": 4.169,
+              "low": 4.095,
+              "close": 4.124,
+              "volume": 12629370.4,
+              "amount": 5211672.667,
+              "source_snapshot_ids": [
+                "snapshot:tushare:etf_daily:sha256:06f01dee2ab32f82f02bee67377204720c90650f10e930e1118984ddad27e4b0",
+                "snapshot:tushare:fund_adj:sha256:f84655cfa5325a146603ecee548c1f63a33dbb4fb73304b43bcd8ee570b70c62"
+              ],
+              "available_at": "2026-11-07T11:34:24.073647Z",
+              "published_at": "2026-11-06T18:46:41.097189Z",
+              "partial": false
+            }
+          ]
+        },
+        "pagination": null,
+        "read_semantics": null
+      },
+      "export": "etf-qfq-daily.csv",
+      "visible_latest": true,
+      "page_errors": []
+    },
+    {
+      "name": "etf",
+      "id": 2001562,
+      "adjustment": "qfq",
+      "period": "weekly",
+      "http_status": 200,
+      "request": {
+        "adjustment": "qfq",
+        "allow_experimental_data": true,
+        "end_date": "2026-11-06",
+        "instrument_id": 2001562,
+        "period": "weekly",
+        "start_date": "2026-10-01"
+      },
+      "response": {
+        "data": {
+          "instrument_id": 2001562,
+          "period": "weekly",
+          "adjustment": "qfq",
+          "as_of": "2026-11-07T11:36:53.323214Z",
+          "knowledge_cutoff": "2026-11-07T11:36:53.323214Z",
+          "publication_cutoff": "2026-11-07T11:36:53.323214Z",
+          "timezone": "Asia/Shanghai",
+          "calendar_snapshot_ids": [
+            "snapshot:tushare:calendar:sha256:eb2bfad933dfc42f691d8769b7893d482ebd19ba54257eb1dd41f3a0d8823c28"
+          ],
+          "source_snapshot_ids": [
+            "snapshot:tushare:etf_daily:sha256:06f01dee2ab32f82f02bee67377204720c90650f10e930e1118984ddad27e4b0",
+            "snapshot:tushare:etf_daily:sha256:156bc33502876fdb31c9db75618ee25fe1d0b6fc6d6e01c9fb3855ec26340549",
+            "snapshot:tushare:etf_daily:sha256:1fc0c4785963c1d39a7f2986e15dfa44e16b24202aae4e9eaccd7597b5315c07",
+            "snapshot:tushare:etf_daily:sha256:57cf6830ca16929899c6b78b63cbed8ec07b51f672fb37a5bc2fd418bf14efde",
+            "snapshot:tushare:etf_daily:sha256:670cbd2eb182e94d86bb31f9059963a731f76e81db64f796e20ae975c54dfa39",
+            "snapshot:tushare:etf_daily:sha256:689abe2f215ad735fae80f5d3e5a365fc7258485a7442b8abe4d744c47b3a44c",
+            "snapshot:tushare:etf_daily:sha256:76ca29595f3069a40cdf917f708ad7663ef200cb022cff1f9b00d728d87be653",
+            "snapshot:tushare:etf_daily:sha256:798eab47888fdaa64ac6cd764969757f0f7e1a3a119a2767cb0883c356f8895f",
+            "snapshot:tushare:etf_daily:sha256:7e078efa80482421f066987ce8c276e3e4f22b872c7b8725714fbb63910265cf",
+            "snapshot:tushare:etf_daily:sha256:9266c92c4828408f3f7a7f0efb1d5fe14f968853634264675a632dbded379bf3",
+            "snapshot:tushare:etf_daily:sha256:cab893ec18db625b94a37baaa5c578b15218a407e3ae3f8ef372770374e37a0e",
+            "snapshot:tushare:etf_daily:sha256:d28f1a4ec4d1a7f9eed3fbed93084462108fe8599095f056e74e2f59be9cb4b6",
+            "snapshot:tushare:etf_daily:sha256:d4a9a0624983e8377864c835322024436d1c94f102299059f77d54f5ceb90078",
+            "snapshot:tushare:etf_daily:sha256:d82a0484d16d194f644ca278ca18ce2c3c05ad606b27dabe125d6896c6312292",
+            "snapshot:tushare:etf_daily:sha256:f2904354d9ff39d783833d3b0e16e4df7391ff559a5a9e1740eb2476f96420aa",
+            "snapshot:tushare:etf_daily:sha256:f9ce85a66223fc16f739e8d7c6b641723a895cbd42399aad71961f80a3d9a685",
+            "snapshot:tushare:etf_daily:sha256:fa73471bdf9eda3563272d71c39695c963a09aadedef43a2212efb14258b86cb",
+            "snapshot:tushare:fund_adj:sha256:0637460a6709502ac883fa7fbbec94045f281d7ba00a61e07a88f1bbee01e83c",
+            "snapshot:tushare:fund_adj:sha256:1c61d29ac738f6bc922e2a0f92c8ff0f39492758056ca3dc8ada7ee3481f6daf",
+            "snapshot:tushare:fund_adj:sha256:36935f37f93b720aa38656553fdfd1b9c6090e4c95ca465a80753c58323fb3bc",
+            "snapshot:tushare:fund_adj:sha256:4f35c77e59eab6e5320d905c6feeaf8b3b0c4e713e9a0fc717e7dd64078cf167",
+            "snapshot:tushare:fund_adj:sha256:628922b3bf88593e4570a691cdc9055696506fc49051569f74eb995f13d6aed6",
+            "snapshot:tushare:fund_adj:sha256:64a15f35a1052fb186daafe977349535e10102f8c81183c630f7ac18a9b83d42",
+            "snapshot:tushare:fund_adj:sha256:660c458086640afc6215ba081b98be40009c8617aaf5bf458964aae51d53e3cb",
+            "snapshot:tushare:fund_adj:sha256:666ca5aa7856e14551048ee2bc5f2b8356e079a37a0aa73e465469d37a1d2cfc",
+            "snapshot:tushare:fund_adj:sha256:68d361690cf5a6a11c1dbd6137f4a2f9e3036d41c1126c7c087f3d9f28702cb3",
+            "snapshot:tushare:fund_adj:sha256:8f174c13dbf26b7e26ed62111a7d354ba2d94f50d1ade5d8783b6e9a9ce481b6",
+            "snapshot:tushare:fund_adj:sha256:9401f2063e69e5024f51c5c0c3e03fd284f5bf04da68ed39ff83e05374ed7438",
+            "snapshot:tushare:fund_adj:sha256:affdb0a0cc615ba7d55bea1bc22b70b37752c3917064d43f7540d51501995d03",
+            "snapshot:tushare:fund_adj:sha256:baf069c04fa15b5c64c0ef151df90f62752f6939f85e367c046ab83746a6595e",
+            "snapshot:tushare:fund_adj:sha256:beaaa014b0fbe83a88fcf8e45247e242fac23992526af941a54988e20dbf7d11",
+            "snapshot:tushare:fund_adj:sha256:d9513496edbf56b0f9e3034ba4129b36116cd93929d84544a99c076a53a5eaa3",
+            "snapshot:tushare:fund_adj:sha256:de2b5ac3614eb1a91e4bb5eafc9f5e56d3ba9733fef103f093f07c317629adb3",
+            "snapshot:tushare:fund_adj:sha256:e3b311a662a5558f43c4b613f85f3ec12f51409a2b1775d11ae6d20e7c16c289",
+            "snapshot:tushare:fund_adj:sha256:efd7577771dc6a1de75898e2502ea9d121047db8ef87e45a6be15eba0e1b45a3",
+            "snapshot:tushare:fund_adj:sha256:f0f0c39fe81dc442df3d57c9b848e8d6a58b2809dbde105fce451a0c1f331034",
+            "snapshot:tushare:fund_adj:sha256:f76b200a29bce17b1499d5b33d49f1810d50df83be174ab5feeaf7a529d15df1",
+            "snapshot:tushare:fund_adj:sha256:f84655cfa5325a146603ecee548c1f63a33dbb4fb73304b43bcd8ee570b70c62"
+          ],
+          "sources": [
+            "tushare"
+          ],
+          "latest_price_date": "2026-11-06",
+          "stale_reason": null,
+          "missing_sessions": [],
+          "bars": [
+            {
+              "trade_date": "2026-10-09",
+              "first_trade_date": "2026-10-08",
+              "last_trade_date": "2026-10-09",
+              "open": 4.418,
+              "high": 4.459,
+              "low": 4.309,
+              "close": 4.385,
+              "volume": 20276056.62,
+              "amount": 8872775.701,
+              "source_snapshot_ids": [
+                "snapshot:tushare:etf_daily:sha256:d28f1a4ec4d1a7f9eed3fbed93084462108fe8599095f056e74e2f59be9cb4b6",
+                "snapshot:tushare:etf_daily:sha256:d4a9a0624983e8377864c835322024436d1c94f102299059f77d54f5ceb90078",
+                "snapshot:tushare:fund_adj:sha256:4f35c77e59eab6e5320d905c6feeaf8b3b0c4e713e9a0fc717e7dd64078cf167",
+                "snapshot:tushare:fund_adj:sha256:f84655cfa5325a146603ecee548c1f63a33dbb4fb73304b43bcd8ee570b70c62"
+              ],
+              "available_at": "2026-11-07T11:34:24.073647Z",
+              "published_at": "2026-11-06T18:46:41.097189Z",
+              "partial": false
+            },
+            {
+              "trade_date": "2026-10-16",
+              "first_trade_date": "2026-10-12",
+              "last_trade_date": "2026-10-16",
+              "open": 4.384,
+              "high": 4.408,
+              "low": 4.187,
+              "close": 4.236,
+              "volume": 80424890.91,
+              "amount": 34311378.113,
+              "source_snapshot_ids": [
+                "snapshot:tushare:etf_daily:sha256:d28f1a4ec4d1a7f9eed3fbed93084462108fe8599095f056e74e2f59be9cb4b6",
+                "snapshot:tushare:fund_adj:sha256:666ca5aa7856e14551048ee2bc5f2b8356e079a37a0aa73e465469d37a1d2cfc",
+                "snapshot:tushare:fund_adj:sha256:8f174c13dbf26b7e26ed62111a7d354ba2d94f50d1ade5d8783b6e9a9ce481b6",
+                "snapshot:tushare:fund_adj:sha256:affdb0a0cc615ba7d55bea1bc22b70b37752c3917064d43f7540d51501995d03",
+                "snapshot:tushare:fund_adj:sha256:beaaa014b0fbe83a88fcf8e45247e242fac23992526af941a54988e20dbf7d11",
+                "snapshot:tushare:fund_adj:sha256:de2b5ac3614eb1a91e4bb5eafc9f5e56d3ba9733fef103f093f07c317629adb3",
+                "snapshot:tushare:fund_adj:sha256:f84655cfa5325a146603ecee548c1f63a33dbb4fb73304b43bcd8ee570b70c62"
+              ],
+              "available_at": "2026-11-07T11:34:24.073647Z",
+              "published_at": "2026-11-06T18:46:41.097189Z",
+              "partial": false
+            },
+            {
+              "trade_date": "2026-10-23",
+              "first_trade_date": "2026-10-19",
+              "last_trade_date": "2026-10-23",
+              "open": 4.224,
+              "high": 4.267,
+              "low": 4.031,
+              "close": 4.178,
+              "volume": 109812306.41,
+              "amount": 45590870.667,
+              "source_snapshot_ids": [
+                "snapshot:tushare:etf_daily:sha256:57cf6830ca16929899c6b78b63cbed8ec07b51f672fb37a5bc2fd418bf14efde",
+                "snapshot:tushare:etf_daily:sha256:670cbd2eb182e94d86bb31f9059963a731f76e81db64f796e20ae975c54dfa39",
+                "snapshot:tushare:etf_daily:sha256:7e078efa80482421f066987ce8c276e3e4f22b872c7b8725714fbb63910265cf",
+                "snapshot:tushare:etf_daily:sha256:d82a0484d16d194f644ca278ca18ce2c3c05ad606b27dabe125d6896c6312292",
+                "snapshot:tushare:etf_daily:sha256:fa73471bdf9eda3563272d71c39695c963a09aadedef43a2212efb14258b86cb",
+                "snapshot:tushare:fund_adj:sha256:660c458086640afc6215ba081b98be40009c8617aaf5bf458964aae51d53e3cb",
+                "snapshot:tushare:fund_adj:sha256:68d361690cf5a6a11c1dbd6137f4a2f9e3036d41c1126c7c087f3d9f28702cb3",
+                "snapshot:tushare:fund_adj:sha256:d9513496edbf56b0f9e3034ba4129b36116cd93929d84544a99c076a53a5eaa3",
+                "snapshot:tushare:fund_adj:sha256:f0f0c39fe81dc442df3d57c9b848e8d6a58b2809dbde105fce451a0c1f331034",
+                "snapshot:tushare:fund_adj:sha256:f76b200a29bce17b1499d5b33d49f1810d50df83be174ab5feeaf7a529d15df1",
+                "snapshot:tushare:fund_adj:sha256:f84655cfa5325a146603ecee548c1f63a33dbb4fb73304b43bcd8ee570b70c62"
+              ],
+              "available_at": "2026-11-07T11:34:24.073647Z",
+              "published_at": "2026-11-06T18:46:41.097189Z",
+              "partial": false
+            },
+            {
+              "trade_date": "2026-10-30",
+              "first_trade_date": "2026-10-26",
+              "last_trade_date": "2026-10-30",
+              "open": 4.155,
+              "high": 4.192,
+              "low": 4.046,
+              "close": 4.065,
+              "volume": 88973778.85,
+              "amount": 36744981.438999996,
+              "source_snapshot_ids": [
+                "snapshot:tushare:etf_daily:sha256:1fc0c4785963c1d39a7f2986e15dfa44e16b24202aae4e9eaccd7597b5315c07",
+                "snapshot:tushare:etf_daily:sha256:689abe2f215ad735fae80f5d3e5a365fc7258485a7442b8abe4d744c47b3a44c",
+                "snapshot:tushare:etf_daily:sha256:76ca29595f3069a40cdf917f708ad7663ef200cb022cff1f9b00d728d87be653",
+                "snapshot:tushare:etf_daily:sha256:798eab47888fdaa64ac6cd764969757f0f7e1a3a119a2767cb0883c356f8895f",
+                "snapshot:tushare:etf_daily:sha256:f2904354d9ff39d783833d3b0e16e4df7391ff559a5a9e1740eb2476f96420aa",
+                "snapshot:tushare:fund_adj:sha256:0637460a6709502ac883fa7fbbec94045f281d7ba00a61e07a88f1bbee01e83c",
+                "snapshot:tushare:fund_adj:sha256:1c61d29ac738f6bc922e2a0f92c8ff0f39492758056ca3dc8ada7ee3481f6daf",
+                "snapshot:tushare:fund_adj:sha256:36935f37f93b720aa38656553fdfd1b9c6090e4c95ca465a80753c58323fb3bc",
+                "snapshot:tushare:fund_adj:sha256:628922b3bf88593e4570a691cdc9055696506fc49051569f74eb995f13d6aed6",
+                "snapshot:tushare:fund_adj:sha256:9401f2063e69e5024f51c5c0c3e03fd284f5bf04da68ed39ff83e05374ed7438",
+                "snapshot:tushare:fund_adj:sha256:f84655cfa5325a146603ecee548c1f63a33dbb4fb73304b43bcd8ee570b70c62"
+              ],
+              "available_at": "2026-11-07T11:34:24.073647Z",
+              "published_at": "2026-11-06T18:46:41.097189Z",
+              "partial": false
+            },
+            {
+              "trade_date": "2026-11-06",
+              "first_trade_date": "2026-11-02",
+              "last_trade_date": "2026-11-06",
+              "open": 4.084,
+              "high": 4.216,
+              "low": 4.041,
+              "close": 4.124,
+              "volume": 137139544.39000002,
+              "amount": 56370660.478,
+              "source_snapshot_ids": [
+                "snapshot:tushare:etf_daily:sha256:06f01dee2ab32f82f02bee67377204720c90650f10e930e1118984ddad27e4b0",
+                "snapshot:tushare:etf_daily:sha256:156bc33502876fdb31c9db75618ee25fe1d0b6fc6d6e01c9fb3855ec26340549",
+                "snapshot:tushare:etf_daily:sha256:9266c92c4828408f3f7a7f0efb1d5fe14f968853634264675a632dbded379bf3",
+                "snapshot:tushare:etf_daily:sha256:cab893ec18db625b94a37baaa5c578b15218a407e3ae3f8ef372770374e37a0e",
+                "snapshot:tushare:etf_daily:sha256:f9ce85a66223fc16f739e8d7c6b641723a895cbd42399aad71961f80a3d9a685",
+                "snapshot:tushare:fund_adj:sha256:64a15f35a1052fb186daafe977349535e10102f8c81183c630f7ac18a9b83d42",
+                "snapshot:tushare:fund_adj:sha256:baf069c04fa15b5c64c0ef151df90f62752f6939f85e367c046ab83746a6595e",
+                "snapshot:tushare:fund_adj:sha256:e3b311a662a5558f43c4b613f85f3ec12f51409a2b1775d11ae6d20e7c16c289",
+                "snapshot:tushare:fund_adj:sha256:efd7577771dc6a1de75898e2502ea9d121047db8ef87e45a6be15eba0e1b45a3",
+                "snapshot:tushare:fund_adj:sha256:f84655cfa5325a146603ecee548c1f63a33dbb4fb73304b43bcd8ee570b70c62"
+              ],
+              "available_at": "2026-11-07T11:34:24.073647Z",
+              "published_at": "2026-11-06T18:46:41.097189Z",
+              "partial": false
+            }
+          ]
+        },
+        "pagination": null,
+        "read_semantics": null
+      },
+      "export": "etf-qfq-weekly.csv",
+      "visible_latest": true,
+      "page_errors": []
+    },
+    {
+      "name": "etf",
+      "id": 2001562,
+      "adjustment": "qfq",
+      "period": "monthly",
+      "http_status": 200,
+      "request": {
+        "adjustment": "qfq",
+        "allow_experimental_data": true,
+        "end_date": "2026-11-06",
+        "instrument_id": 2001562,
+        "period": "monthly",
+        "start_date": "2026-10-01"
+      },
+      "response": {
+        "data": {
+          "instrument_id": 2001562,
+          "period": "monthly",
+          "adjustment": "qfq",
+          "as_of": "2026-11-07T11:36:51.554797Z",
+          "knowledge_cutoff": "2026-11-07T11:36:51.554797Z",
+          "publication_cutoff": "2026-11-07T11:36:51.554797Z",
+          "timezone": "Asia/Shanghai",
+          "calendar_snapshot_ids": [
+            "snapshot:tushare:calendar:sha256:eb2bfad933dfc42f691d8769b7893d482ebd19ba54257eb1dd41f3a0d8823c28"
+          ],
+          "source_snapshot_ids": [
+            "snapshot:tushare:etf_daily:sha256:06f01dee2ab32f82f02bee67377204720c90650f10e930e1118984ddad27e4b0",
+            "snapshot:tushare:etf_daily:sha256:156bc33502876fdb31c9db75618ee25fe1d0b6fc6d6e01c9fb3855ec26340549",
+            "snapshot:tushare:etf_daily:sha256:1fc0c4785963c1d39a7f2986e15dfa44e16b24202aae4e9eaccd7597b5315c07",
+            "snapshot:tushare:etf_daily:sha256:57cf6830ca16929899c6b78b63cbed8ec07b51f672fb37a5bc2fd418bf14efde",
+            "snapshot:tushare:etf_daily:sha256:670cbd2eb182e94d86bb31f9059963a731f76e81db64f796e20ae975c54dfa39",
+            "snapshot:tushare:etf_daily:sha256:689abe2f215ad735fae80f5d3e5a365fc7258485a7442b8abe4d744c47b3a44c",
+            "snapshot:tushare:etf_daily:sha256:76ca29595f3069a40cdf917f708ad7663ef200cb022cff1f9b00d728d87be653",
+            "snapshot:tushare:etf_daily:sha256:798eab47888fdaa64ac6cd764969757f0f7e1a3a119a2767cb0883c356f8895f",
+            "snapshot:tushare:etf_daily:sha256:7e078efa80482421f066987ce8c276e3e4f22b872c7b8725714fbb63910265cf",
+            "snapshot:tushare:etf_daily:sha256:9266c92c4828408f3f7a7f0efb1d5fe14f968853634264675a632dbded379bf3",
+            "snapshot:tushare:etf_daily:sha256:cab893ec18db625b94a37baaa5c578b15218a407e3ae3f8ef372770374e37a0e",
+            "snapshot:tushare:etf_daily:sha256:d28f1a4ec4d1a7f9eed3fbed93084462108fe8599095f056e74e2f59be9cb4b6",
+            "snapshot:tushare:etf_daily:sha256:d4a9a0624983e8377864c835322024436d1c94f102299059f77d54f5ceb90078",
+            "snapshot:tushare:etf_daily:sha256:d82a0484d16d194f644ca278ca18ce2c3c05ad606b27dabe125d6896c6312292",
+            "snapshot:tushare:etf_daily:sha256:f2904354d9ff39d783833d3b0e16e4df7391ff559a5a9e1740eb2476f96420aa",
+            "snapshot:tushare:etf_daily:sha256:f9ce85a66223fc16f739e8d7c6b641723a895cbd42399aad71961f80a3d9a685",
+            "snapshot:tushare:etf_daily:sha256:fa73471bdf9eda3563272d71c39695c963a09aadedef43a2212efb14258b86cb",
+            "snapshot:tushare:fund_adj:sha256:0637460a6709502ac883fa7fbbec94045f281d7ba00a61e07a88f1bbee01e83c",
+            "snapshot:tushare:fund_adj:sha256:1c61d29ac738f6bc922e2a0f92c8ff0f39492758056ca3dc8ada7ee3481f6daf",
+            "snapshot:tushare:fund_adj:sha256:36935f37f93b720aa38656553fdfd1b9c6090e4c95ca465a80753c58323fb3bc",
+            "snapshot:tushare:fund_adj:sha256:4f35c77e59eab6e5320d905c6feeaf8b3b0c4e713e9a0fc717e7dd64078cf167",
+            "snapshot:tushare:fund_adj:sha256:628922b3bf88593e4570a691cdc9055696506fc49051569f74eb995f13d6aed6",
+            "snapshot:tushare:fund_adj:sha256:64a15f35a1052fb186daafe977349535e10102f8c81183c630f7ac18a9b83d42",
+            "snapshot:tushare:fund_adj:sha256:660c458086640afc6215ba081b98be40009c8617aaf5bf458964aae51d53e3cb",
+            "snapshot:tushare:fund_adj:sha256:666ca5aa7856e14551048ee2bc5f2b8356e079a37a0aa73e465469d37a1d2cfc",
+            "snapshot:tushare:fund_adj:sha256:68d361690cf5a6a11c1dbd6137f4a2f9e3036d41c1126c7c087f3d9f28702cb3",
+            "snapshot:tushare:fund_adj:sha256:8f174c13dbf26b7e26ed62111a7d354ba2d94f50d1ade5d8783b6e9a9ce481b6",
+            "snapshot:tushare:fund_adj:sha256:9401f2063e69e5024f51c5c0c3e03fd284f5bf04da68ed39ff83e05374ed7438",
+            "snapshot:tushare:fund_adj:sha256:affdb0a0cc615ba7d55bea1bc22b70b37752c3917064d43f7540d51501995d03",
+            "snapshot:tushare:fund_adj:sha256:baf069c04fa15b5c64c0ef151df90f62752f6939f85e367c046ab83746a6595e",
+            "snapshot:tushare:fund_adj:sha256:beaaa014b0fbe83a88fcf8e45247e242fac23992526af941a54988e20dbf7d11",
+            "snapshot:tushare:fund_adj:sha256:d9513496edbf56b0f9e3034ba4129b36116cd93929d84544a99c076a53a5eaa3",
+            "snapshot:tushare:fund_adj:sha256:de2b5ac3614eb1a91e4bb5eafc9f5e56d3ba9733fef103f093f07c317629adb3",
+            "snapshot:tushare:fund_adj:sha256:e3b311a662a5558f43c4b613f85f3ec12f51409a2b1775d11ae6d20e7c16c289",
+            "snapshot:tushare:fund_adj:sha256:efd7577771dc6a1de75898e2502ea9d121047db8ef87e45a6be15eba0e1b45a3",
+            "snapshot:tushare:fund_adj:sha256:f0f0c39fe81dc442df3d57c9b848e8d6a58b2809dbde105fce451a0c1f331034",
+            "snapshot:tushare:fund_adj:sha256:f76b200a29bce17b1499d5b33d49f1810d50df83be174ab5feeaf7a529d15df1",
+            "snapshot:tushare:fund_adj:sha256:f84655cfa5325a146603ecee548c1f63a33dbb4fb73304b43bcd8ee570b70c62"
+          ],
+          "sources": [
+            "tushare"
+          ],
+          "latest_price_date": "2026-11-06",
+          "stale_reason": null,
+          "missing_sessions": [],
+          "bars": [
+            {
+              "trade_date": "2026-10-30",
+              "first_trade_date": "2026-10-08",
+              "last_trade_date": "2026-10-30",
+              "open": 4.418,
+              "high": 4.459,
+              "low": 4.031,
+              "close": 4.065,
+              "volume": 299487032.79,
+              "amount": 125520005.92,
+              "source_snapshot_ids": [
+                "snapshot:tushare:etf_daily:sha256:1fc0c4785963c1d39a7f2986e15dfa44e16b24202aae4e9eaccd7597b5315c07",
+                "snapshot:tushare:etf_daily:sha256:57cf6830ca16929899c6b78b63cbed8ec07b51f672fb37a5bc2fd418bf14efde",
+                "snapshot:tushare:etf_daily:sha256:670cbd2eb182e94d86bb31f9059963a731f76e81db64f796e20ae975c54dfa39",
+                "snapshot:tushare:etf_daily:sha256:689abe2f215ad735fae80f5d3e5a365fc7258485a7442b8abe4d744c47b3a44c",
+                "snapshot:tushare:etf_daily:sha256:76ca29595f3069a40cdf917f708ad7663ef200cb022cff1f9b00d728d87be653",
+                "snapshot:tushare:etf_daily:sha256:798eab47888fdaa64ac6cd764969757f0f7e1a3a119a2767cb0883c356f8895f",
+                "snapshot:tushare:etf_daily:sha256:7e078efa80482421f066987ce8c276e3e4f22b872c7b8725714fbb63910265cf",
+                "snapshot:tushare:etf_daily:sha256:d28f1a4ec4d1a7f9eed3fbed93084462108fe8599095f056e74e2f59be9cb4b6",
+                "snapshot:tushare:etf_daily:sha256:d4a9a0624983e8377864c835322024436d1c94f102299059f77d54f5ceb90078",
+                "snapshot:tushare:etf_daily:sha256:d82a0484d16d194f644ca278ca18ce2c3c05ad606b27dabe125d6896c6312292",
+                "snapshot:tushare:etf_daily:sha256:f2904354d9ff39d783833d3b0e16e4df7391ff559a5a9e1740eb2476f96420aa",
+                "snapshot:tushare:etf_daily:sha256:fa73471bdf9eda3563272d71c39695c963a09aadedef43a2212efb14258b86cb",
+                "snapshot:tushare:fund_adj:sha256:0637460a6709502ac883fa7fbbec94045f281d7ba00a61e07a88f1bbee01e83c",
+                "snapshot:tushare:fund_adj:sha256:1c61d29ac738f6bc922e2a0f92c8ff0f39492758056ca3dc8ada7ee3481f6daf",
+                "snapshot:tushare:fund_adj:sha256:36935f37f93b720aa38656553fdfd1b9c6090e4c95ca465a80753c58323fb3bc",
+                "snapshot:tushare:fund_adj:sha256:4f35c77e59eab6e5320d905c6feeaf8b3b0c4e713e9a0fc717e7dd64078cf167",
+                "snapshot:tushare:fund_adj:sha256:628922b3bf88593e4570a691cdc9055696506fc49051569f74eb995f13d6aed6",
+                "snapshot:tushare:fund_adj:sha256:660c458086640afc6215ba081b98be40009c8617aaf5bf458964aae51d53e3cb",
+                "snapshot:tushare:fund_adj:sha256:666ca5aa7856e14551048ee2bc5f2b8356e079a37a0aa73e465469d37a1d2cfc",
+                "snapshot:tushare:fund_adj:sha256:68d361690cf5a6a11c1dbd6137f4a2f9e3036d41c1126c7c087f3d9f28702cb3",
+                "snapshot:tushare:fund_adj:sha256:8f174c13dbf26b7e26ed62111a7d354ba2d94f50d1ade5d8783b6e9a9ce481b6",
+                "snapshot:tushare:fund_adj:sha256:9401f2063e69e5024f51c5c0c3e03fd284f5bf04da68ed39ff83e05374ed7438",
+                "snapshot:tushare:fund_adj:sha256:affdb0a0cc615ba7d55bea1bc22b70b37752c3917064d43f7540d51501995d03",
+                "snapshot:tushare:fund_adj:sha256:beaaa014b0fbe83a88fcf8e45247e242fac23992526af941a54988e20dbf7d11",
+                "snapshot:tushare:fund_adj:sha256:d9513496edbf56b0f9e3034ba4129b36116cd93929d84544a99c076a53a5eaa3",
+                "snapshot:tushare:fund_adj:sha256:de2b5ac3614eb1a91e4bb5eafc9f5e56d3ba9733fef103f093f07c317629adb3",
+                "snapshot:tushare:fund_adj:sha256:f0f0c39fe81dc442df3d57c9b848e8d6a58b2809dbde105fce451a0c1f331034",
+                "snapshot:tushare:fund_adj:sha256:f76b200a29bce17b1499d5b33d49f1810d50df83be174ab5feeaf7a529d15df1",
+                "snapshot:tushare:fund_adj:sha256:f84655cfa5325a146603ecee548c1f63a33dbb4fb73304b43bcd8ee570b70c62"
+              ],
+              "available_at": "2026-11-07T11:34:24.073647Z",
+              "published_at": "2026-11-06T18:46:41.097189Z",
+              "partial": false
+            },
+            {
+              "trade_date": "2026-11-06",
+              "first_trade_date": "2026-11-02",
+              "last_trade_date": "2026-11-06",
+              "open": 4.084,
+              "high": 4.216,
+              "low": 4.041,
+              "close": 4.124,
+              "volume": 137139544.39000002,
+              "amount": 56370660.478,
+              "source_snapshot_ids": [
+                "snapshot:tushare:etf_daily:sha256:06f01dee2ab32f82f02bee67377204720c90650f10e930e1118984ddad27e4b0",
+                "snapshot:tushare:etf_daily:sha256:156bc33502876fdb31c9db75618ee25fe1d0b6fc6d6e01c9fb3855ec26340549",
+                "snapshot:tushare:etf_daily:sha256:9266c92c4828408f3f7a7f0efb1d5fe14f968853634264675a632dbded379bf3",
+                "snapshot:tushare:etf_daily:sha256:cab893ec18db625b94a37baaa5c578b15218a407e3ae3f8ef372770374e37a0e",
+                "snapshot:tushare:etf_daily:sha256:f9ce85a66223fc16f739e8d7c6b641723a895cbd42399aad71961f80a3d9a685",
+                "snapshot:tushare:fund_adj:sha256:64a15f35a1052fb186daafe977349535e10102f8c81183c630f7ac18a9b83d42",
+                "snapshot:tushare:fund_adj:sha256:baf069c04fa15b5c64c0ef151df90f62752f6939f85e367c046ab83746a6595e",
+                "snapshot:tushare:fund_adj:sha256:e3b311a662a5558f43c4b613f85f3ec12f51409a2b1775d11ae6d20e7c16c289",
+                "snapshot:tushare:fund_adj:sha256:efd7577771dc6a1de75898e2502ea9d121047db8ef87e45a6be15eba0e1b45a3",
+                "snapshot:tushare:fund_adj:sha256:f84655cfa5325a146603ecee548c1f63a33dbb4fb73304b43bcd8ee570b70c62"
+              ],
+              "available_at": "2026-11-07T11:34:24.073647Z",
+              "published_at": "2026-11-06T18:46:41.097189Z",
+              "partial": true
+            }
+          ]
+        },
+        "pagination": null,
+        "read_semantics": null
+      },
+      "export": "etf-qfq-monthly.csv",
+      "visible_latest": true,
+      "page_errors": []
+    }
+  ],
+  "capital": {
+    "status": 200,
+    "request": {
+      "allow_experimental_data": true,
+      "end_date": "2026-11-06",
+      "instrument_id": 1000001,
+      "start_date": "2026-10-19"
+    },
+    "response": {
+      "data": {
+        "instrument_id": 1000001,
+        "window": {
+          "start": "2026-10-19",
+          "end": "2026-11-06"
+        },
+        "moneyflow": {
+          "rows": [
+            {
+              "trade_date": "2026-10-19",
+              "buy_sm_amount": 41829.54,
+              "buy_md_amount": 32425.94,
+              "buy_lg_amount": 37947.96,
+              "buy_elg_amount": 34468.63,
+              "sell_sm_amount": 31760.82,
+              "sell_md_amount": 27261.07,
+              "sell_lg_amount": 28042.37,
+              "sell_elg_amount": 59607.81,
+              "net_mf_amount": 1262.7,
+              "net_mf_vol": 8454
+            },
+            {
+              "trade_date": "2026-10-20",
+              "buy_sm_amount": 37565.86,
+              "buy_md_amount": 45204.99,
+              "buy_lg_amount": 33438.11,
+              "buy_elg_amount": 26747.03,
+              "sell_sm_amount": 45390.97,
+              "sell_md_amount": 37057.71,
+              "sell_lg_amount": 25898.46,
+              "sell_elg_amount": 34608.84,
+              "net_mf_amount": -18195.54,
+              "net_mf_vol": -159174
+            },
+            {
+              "trade_date": "2026-10-21",
+              "buy_sm_amount": 30204.94,
+              "buy_md_amount": 22701.09,
+              "buy_lg_amount": 18580.01,
+              "buy_elg_amount": 21568.64,
+              "sell_sm_amount": 27024.91,
+              "sell_md_amount": 28322.33,
+              "sell_lg_amount": 24313.06,
+              "sell_elg_amount": 13394.38,
+              "net_mf_amount": -2850.94,
+              "net_mf_vol": -25514
+            },
+            {
+              "trade_date": "2026-10-22",
+              "buy_sm_amount": 37913.45,
+              "buy_md_amount": 39609.99,
+              "buy_lg_amount": 30648.08,
+              "buy_elg_amount": 38670.95,
+              "sell_sm_amount": 33805.2,
+              "sell_md_amount": 35572.85,
+              "sell_lg_amount": 27847.34,
+              "sell_elg_amount": 49617.09,
+              "net_mf_amount": -21098.31,
+              "net_mf_vol": -187152
+            },
+            {
+              "trade_date": "2026-10-23",
+              "buy_sm_amount": 52056.33,
+              "buy_md_amount": 50576.1,
+              "buy_lg_amount": 39946.72,
+              "buy_elg_amount": 20248.57,
+              "sell_sm_amount": 42528.89,
+              "sell_md_amount": 43402.94,
+              "sell_lg_amount": 43644.77,
+              "sell_elg_amount": 33251.11,
+              "net_mf_amount": -6345.51,
+              "net_mf_vol": -57797
+            },
+            {
+              "trade_date": "2026-10-26",
+              "buy_sm_amount": 37307.65,
+              "buy_md_amount": 44013.81,
+              "buy_lg_amount": 40286.16,
+              "buy_elg_amount": 26992.33,
+              "sell_sm_amount": 38357.98,
+              "sell_md_amount": 45959.27,
+              "sell_lg_amount": 34392.57,
+              "sell_elg_amount": 29890.13,
+              "net_mf_amount": 18775.08,
+              "net_mf_vol": 165864
+            },
+            {
+              "trade_date": "2026-10-27",
+              "buy_sm_amount": 45117.24,
+              "buy_md_amount": 44982.97,
+              "buy_lg_amount": 45623.05,
+              "buy_elg_amount": 39317.15,
+              "sell_sm_amount": 47696.27,
+              "sell_md_amount": 50807.24,
+              "sell_lg_amount": 40055.83,
+              "sell_elg_amount": 36481.09,
+              "net_mf_amount": 54896.83,
+              "net_mf_vol": 478839
+            },
+            {
+              "trade_date": "2026-10-28",
+              "buy_sm_amount": 45027.22,
+              "buy_md_amount": 50938.63,
+              "buy_lg_amount": 49077.28,
+              "buy_elg_amount": 46111.65,
+              "sell_sm_amount": 45038.28,
+              "sell_md_amount": 55333.92,
+              "sell_lg_amount": 53078.61,
+              "sell_elg_amount": 37703.97,
+              "net_mf_amount": -46988.54,
+              "net_mf_vol": -415543
+            },
+            {
+              "trade_date": "2026-10-29",
+              "buy_sm_amount": 54387.91,
+              "buy_md_amount": 50814.44,
+              "buy_lg_amount": 58974.52,
+              "buy_elg_amount": 64213.1,
+              "sell_sm_amount": 37433.94,
+              "sell_md_amount": 56967.99,
+              "sell_lg_amount": 57759.13,
+              "sell_elg_amount": 76228.91,
+              "net_mf_amount": 36615.34,
+              "net_mf_vol": 318171
+            },
+            {
+              "trade_date": "2026-10-30",
+              "buy_sm_amount": 58106.17,
+              "buy_md_amount": 59075.2,
+              "buy_lg_amount": 46418.55,
+              "buy_elg_amount": 51639.46,
+              "sell_sm_amount": 48994.85,
+              "sell_md_amount": 54932.45,
+              "sell_lg_amount": 58921.89,
+              "sell_elg_amount": 52390.2,
+              "net_mf_amount": 32864.94,
+              "net_mf_vol": 281068
+            },
+            {
+              "trade_date": "2026-11-02",
+              "buy_sm_amount": 50005.45,
+              "buy_md_amount": 53990.27,
+              "buy_lg_amount": 50215.92,
+              "buy_elg_amount": 30819.48,
+              "sell_sm_amount": 52947.5,
+              "sell_md_amount": 52781.57,
+              "sell_lg_amount": 43604.79,
+              "sell_elg_amount": 35697.27,
+              "net_mf_amount": -13965.23,
+              "net_mf_vol": -121829
+            },
+            {
+              "trade_date": "2026-11-03",
+              "buy_sm_amount": 52165.56,
+              "buy_md_amount": 61141.24,
+              "buy_lg_amount": 77735.03,
+              "buy_elg_amount": 57828.35,
+              "sell_sm_amount": 57030.25,
+              "sell_md_amount": 63609.54,
+              "sell_lg_amount": 58489.27,
+              "sell_elg_amount": 69741.12,
+              "net_mf_amount": 47360.03,
+              "net_mf_vol": 403624
+            },
+            {
+              "trade_date": "2026-11-04",
+              "buy_sm_amount": 51914.4,
+              "buy_md_amount": 48666.39,
+              "buy_lg_amount": 38386.33,
+              "buy_elg_amount": 29951.27,
+              "sell_sm_amount": 40699.62,
+              "sell_md_amount": 48885.7,
+              "sell_lg_amount": 44151.35,
+              "sell_elg_amount": 35181.73,
+              "net_mf_amount": 1119.99,
+              "net_mf_vol": 8525
+            },
+            {
+              "trade_date": "2026-11-05",
+              "buy_sm_amount": 37711.25,
+              "buy_md_amount": 33990.03,
+              "buy_lg_amount": 40956.14,
+              "buy_elg_amount": 30285.88,
+              "sell_sm_amount": 40591.8,
+              "sell_md_amount": 38077.16,
+              "sell_lg_amount": 31131.43,
+              "sell_elg_amount": 33142.92,
+              "net_mf_amount": -23006.91,
+              "net_mf_vol": -198365
+            },
+            {
+              "trade_date": "2026-11-06",
+              "buy_sm_amount": 42734.58,
+              "buy_md_amount": 53264.44,
+              "buy_lg_amount": 56326.97,
+              "buy_elg_amount": 40404.77,
+              "sell_sm_amount": 43998.61,
+              "sell_md_amount": 59936.56,
+              "sell_lg_amount": 41838.69,
+              "sell_elg_amount": 46956.9,
+              "net_mf_amount": 27856.75,
+              "net_mf_vol": 235867
+            }
+          ],
+          "read_semantics": "latest_available",
+          "sources": [
+            "tushare"
+          ],
+          "latest_trade_date": "2026-11-06",
+          "data_coverage": {
+            "dataset": "moneyflow",
+            "domain": "capital",
+            "status": "partial",
+            "measured_start": "2013-01-04",
+            "measured_end": "2026-11-06",
+            "gaps": [
+              "完整历史版本与可知性未证,当前读通不授予严格历史用途。"
+            ],
+            "notes": "沪深资金流展示,金额单位遵循字段合同;BSE 不扩域。未核验完整历史版本与可知性,不因查询成功放行严格历史。",
+            "measured_at": "2026-11-07",
+            "knowledge_axis": "derived_t1"
+          }
+        },
+        "top_list": {
+          "rows": [],
+          "read_semantics": "latest_available",
+          "sources": [],
+          "latest_trade_date": null,
+          "data_coverage": {
+            "dataset": "top_list",
+            "domain": "capital",
+            "status": "ready",
+            "measured_start": "2014-01-02",
+            "measured_end": "2026-11-06",
+            "gaps": [],
+            "notes": "沪深龙虎榜事件展示;无事件与抓取失败分开;当前夜链失败治理归 #707。",
+            "measured_at": "2026-11-07",
+            "knowledge_axis": "provider_anchor"
+          }
+        },
+        "top_inst": {
+          "rows": [],
+          "read_semantics": "latest_available",
+          "sources": [],
+          "latest_trade_date": null,
+          "data_coverage": {
+            "dataset": "top_inst",
+            "domain": "capital",
+            "status": "ready",
+            "measured_start": "2014-01-02",
+            "measured_end": "2026-11-05",
+            "gaps": [],
+            "notes": "机构席位披露,买卖单边 null/重复保留;席位金额不是整体资金仓位。",
+            "measured_at": "2026-11-07",
+            "knowledge_axis": "provider_anchor"
+          }
+        },
+        "margin_trading": {
+          "rows": [
+            {
+              "trade_date": "2026-11-05",
+              "margin_buy_balance": 4087277003,
+              "short_sell_balance": 191228171,
+              "margin_buy_amount": 146295562,
+              "short_sell_volume": 11900
+            },
+            {
+              "trade_date": "2026-11-04",
+              "margin_buy_balance": 4075992731,
+              "short_sell_balance": 195251896,
+              "margin_buy_amount": 127611890,
+              "short_sell_volume": 73000
+            },
+            {
+              "trade_date": "2026-11-03",
+              "margin_buy_balance": 4057707244,
+              "short_sell_balance": 196052148,
+              "margin_buy_amount": 156393658,
+              "short_sell_volume": 380000
+            },
+            {
+              "trade_date": "2026-11-02",
+              "margin_buy_balance": 4110923229,
+              "short_sell_balance": 189055631,
+              "margin_buy_amount": 162101512,
+              "short_sell_volume": 104100
+            },
+            {
+              "trade_date": "2026-10-30",
+              "margin_buy_balance": 4087376089,
+              "short_sell_balance": 191317799,
+              "margin_buy_amount": 118352121,
+              "short_sell_volume": 186000
+            },
+            {
+              "trade_date": "2026-10-29",
+              "margin_buy_balance": 4159010257,
+              "short_sell_balance": 189052169,
+              "margin_buy_amount": 149699659,
+              "short_sell_volume": 225500
+            },
+            {
+              "trade_date": "2026-10-28",
+              "margin_buy_balance": 4283332088,
+              "short_sell_balance": 183062947,
+              "margin_buy_amount": 225799290,
+              "short_sell_volume": 46200
+            },
+            {
+              "trade_date": "2026-10-27",
+              "margin_buy_balance": 4167305045,
+              "short_sell_balance": 187260792,
+              "margin_buy_amount": 87695070,
+              "short_sell_volume": 272400
+            },
+            {
+              "trade_date": "2026-10-26",
+              "margin_buy_balance": 4211326554,
+              "short_sell_balance": 181843409,
+              "margin_buy_amount": 102380541,
+              "short_sell_volume": 80100
+            },
+            {
+              "trade_date": "2026-10-23",
+              "margin_buy_balance": 4225657492,
+              "short_sell_balance": 179944094,
+              "margin_buy_amount": 121575826,
+              "short_sell_volume": 76800
+            },
+            {
+              "trade_date": "2026-10-22",
+              "margin_buy_balance": 4217414879,
+              "short_sell_balance": 181421919,
+              "margin_buy_amount": 130969567,
+              "short_sell_volume": 69200
+            },
+            {
+              "trade_date": "2026-10-21",
+              "margin_buy_balance": 4275048513,
+              "short_sell_balance": 182922120,
+              "margin_buy_amount": 55083323,
+              "short_sell_volume": 38100
+            },
+            {
+              "trade_date": "2026-10-20",
+              "margin_buy_balance": 4278372863,
+              "short_sell_balance": 183335576,
+              "margin_buy_amount": 113209625,
+              "short_sell_volume": 19800
+            },
+            {
+              "trade_date": "2026-10-19",
+              "margin_buy_balance": 4245592704,
+              "short_sell_balance": 188486946,
+              "margin_buy_amount": 96580666,
+              "short_sell_volume": 102400
+            }
+          ],
+          "sources": [],
+          "read_error": null,
+          "read_semantics": "latest_available",
+          "latest_trade_date": "2026-11-05",
+          "pending_trade_dates": [
+            "2026-11-06"
+          ],
+          "freshness_promise": "交易所于下一交易日开市前(约09:15)公布前一交易日两融数据",
+          "data_coverage": {
+            "dataset": "margin_trading",
+            "domain": "capital",
+            "status": "partial",
+            "measured_start": "2013-01-04",
+            "measured_end": "2026-11-05",
+            "gaps": [
+              "迟发、错误旧版本与画像选版未由本票豁免;分别见 #706/#707。"
+            ],
+            "notes": "沪深两融余额/融资买入额,元;T+1 上午发布,11-05 截面不因 EOD 零行视为完整。旧 knowledge_date 及画像选版归 #706,09:15 运行归 #707。",
+            "measured_at": "2026-11-07",
+            "knowledge_axis": "derived_t1"
+          }
+        }
+      },
+      "pagination": null,
+      "read_semantics": null
+    },
+    "visible_text": "D\n当前产品域：\nTODAY\n标的详情\n命令\n⌘K\nC\n平安银行\n000001 · SZSE\n交易中\n资产类别\nstock\n交易所\nSZSE\n上市日期\n1991-04-03\n内部 ID\n1000001\n概览\n行情\n资金\n技术证据\n数据边界\n资金画像\n最新观察 · 业务日期窗内现在已知的数据\n刷新资金画像\n含 experimental 数据（资金画像四数据集均 experimental）\n开始日期\n截至日期\n逐日资金流\n末端 2026-11-06\n2026-10-19\t净流入 1262.7 万元\n2026-10-20\t净流入 -18195.5 万元\n2026-10-21\t净流入 -2850.9 万元\n2026-10-22\t净流入 -21098.3 万元\n2026-10-23\t净流入 -6345.5 万元\n2026-10-26\t净流入 18775.1 万元\n2026-10-27\t净流入 54896.8 万元\n2026-10-28\t净流入 -46988.5 万元\n2026-10-29\t净流入 36615.3 万元\n2026-10-30\t净流入 32864.9 万元\n2026-11-02\t净流入 -13965.2 万元\n2026-11-03\t净流入 47360.0 万元\n2026-11-04\t净流入 1120.0 万元\n2026-11-05\t净流入 -23006.9 万元\n2026-11-06\t净流入 27856.8 万元\n龙虎榜\n末端 —\n\n窗口内无上榜事件（无事件≠漏页）。\n\n龙虎榜席位\n末端 —\n\n窗口内无席位明细（席位≠机构总仓位）。\n\n两融\n末端 2026-11-05\n\n交易所于下一交易日开市前(约09:15)公布前一交易日两融数据\n\n待补交易日：2026-11-06\n\n2026-11-05\t融资余额 40.87 亿元\n2026-11-04\t融资余额 40.76 亿元\n2026-11-03\t融资余额 40.58 亿元\n2026-11-02\t融资余额 41.11 亿元\n2026-10-30\t融资余额 40.87 亿元\n2026-10-29\t融资余额 41.59 亿元\n2026-10-28\t融资余额 42.83 亿元\n2026-10-27\t融资余额 41.67 亿元\n2026-10-26\t融资余额 42.11 亿元\n2026-10-23\t融资余额 42.26 亿元\n公开合同：metadata identity + exact date-range bars · 缺少 snapshot identity 时不用于交易决策\n图表工具\n新闻详情\n公告详情\n加入自选\n发送研究\n停牌状态\nLIVE\n已连接\n12ms\n19:36\n⌘K 搜索"
+  },
+  "finished_at": "2026-11-07T11:36:55.342Z"
+}

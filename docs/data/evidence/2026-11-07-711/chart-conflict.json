@@ -1,0 +1,88 @@
+[
+  {
+    "prior": {
+      "snapshot_id": "snapshot:tushare:etf_daily:sha256:cab893ec18db625b94a37baaa5c578b15218a407e3ae3f8ef372770374e37a0e",
+      "dataset_id": "etf_daily",
+      "source": "tushare",
+      "request_start": "2026-11-05",
+      "request_end": "2026-11-05",
+      "schema_version": "etf.daily.v1",
+      "checksum": "9e66ef882c8c196957863e87a6fe420c",
+      "canonical_asset": {
+        "dataset_id": "etf_daily",
+        "namespace": "market",
+        "partition_keys": []
+      },
+      "request_parameters_hash": "sha256:b042e6718d51c1f754d1bb9923eba0f673ae8e6fcc39b6e165139ef54ed6f639",
+      "response_metadata": [
+        [
+          "canonical_checksum",
+          "34109c896cf45d77786bbefd80238058"
+        ],
+        [
+          "canonical_row_count",
+          "1717"
+        ],
+        [
+          "snapshot_layer",
+          "normalized_provider_payload"
+        ]
+      ],
+      "row_count": 1717,
+      "payload_uri": "provider_payloads/tushare/etf_daily/9e66ef882c8c196957863e87a6fe420c.parquet",
+      "payload_retained": true,
+      "created_at": "2026-11-05 13:55:50.516376+00:00",
+      "schema_fingerprint": "[[\"source_ticker\",\"String\"],[\"trade_date\",\"Date\"],[\"knowledge_date\",\"Date\"],[\"open\",\"Float64\"],[\"high\",\"Float64\"],[\"low\",\"Float64\"],[\"close\",\"Float64\"],[\"pre_close\",\"Float64\"],[\"volume\",\"Float64\"],[\"amount\",\"Float64\"],[\"pct_change\",\"Float64\"]]",
+      "observations": [
+        "2026-11-05 13:55:50.977522+00:00"
+      ]
+    },
+    "authority": {
+      "snapshot_id": "snapshot:tushare:etf_daily:sha256:9a18e2e96c30858a7c7e313fa953d2524512a85cea6c403c9e0b1886d6b50687",
+      "dataset_id": "etf_daily",
+      "source": "tushare",
+      "request_start": "2014-01-01",
+      "request_end": "2026-11-05",
+      "schema_version": "etf.daily.v1",
+      "checksum": "15a7baa6a599d66ac5acb380fcae47b3",
+      "canonical_asset": {
+        "dataset_id": "etf_daily",
+        "namespace": "market",
+        "partition_keys": []
+      },
+      "request_parameters_hash": "sha256:43acce9b0d960ff8d6f79935acf6eb47866965889a2edb149afe4c9a06c8f890",
+      "response_metadata": [
+        [
+          "canonical_checksum",
+          "3786493ebff78597b3b8b2fe0f5e1e09"
+        ],
+        [
+          "canonical_row_count",
+          "1"
+        ],
+        [
+          "snapshot_layer",
+          "normalized_provider_payload"
+        ],
+        [
+          "source_ticker",
+          "158081.SZ"
+        ]
+      ],
+      "row_count": 1,
+      "payload_uri": "provider_payloads/tushare/etf_daily/15a7baa6a599d66ac5acb380fcae47b3.parquet",
+      "payload_retained": true,
+      "created_at": "2026-11-06 14:46:46.881303+00:00",
+      "schema_fingerprint": "[[\"source_ticker\",\"String\"],[\"trade_date\",\"Date\"],[\"knowledge_date\",\"Date\"],[\"open\",\"Float64\"],[\"high\",\"Float64\"],[\"low\",\"Float64\"],[\"close\",\"Float64\"],[\"pre_close\",\"Float64\"],[\"volume\",\"Float64\"],[\"amount\",\"Float64\"],[\"pct_change\",\"Float64\"]]",
+      "observations": [
+        "2026-11-06 14:46:46.881671+00:00"
+      ]
+    },
+    "day": "20261105",
+    "ticker": "510300.SH",
+    "present_days": {
+      "snapshot:tushare:etf_daily:sha256:06f01dee2ab32f82f02bee67377204720c90650f10e930e1118984ddad27e4b0": "{'20261106'}",
+      "snapshot:tushare:etf_daily:sha256:cab893ec18db625b94a37baaa5c578b15218a407e3ae3f8ef372770374e37a0e": "{'20261105'}"
+    }
+  }
+]

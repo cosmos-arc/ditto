@@ -1,0 +1,74 @@
+[
+  {
+    "export": "stock-none-daily.csv",
+    "rows": 22,
+    "value_and_identity_match": true,
+    "aggregation_matches_daily": false
+  },
+  {
+    "export": "stock-none-weekly.csv",
+    "rows": 5,
+    "value_and_identity_match": true,
+    "aggregation_matches_daily": true
+  },
+  {
+    "export": "stock-none-monthly.csv",
+    "rows": 2,
+    "value_and_identity_match": true,
+    "aggregation_matches_daily": true
+  },
+  {
+    "export": "stock-qfq-daily.csv",
+    "rows": 22,
+    "value_and_identity_match": true,
+    "aggregation_matches_daily": false
+  },
+  {
+    "export": "stock-qfq-weekly.csv",
+    "rows": 5,
+    "value_and_identity_match": true,
+    "aggregation_matches_daily": true
+  },
+  {
+    "export": "stock-qfq-monthly.csv",
+    "rows": 2,
+    "value_and_identity_match": true,
+    "aggregation_matches_daily": true
+  },
+  {
+    "export": "etf-none-daily.csv",
+    "rows": 22,
+    "value_and_identity_match": true,
+    "aggregation_matches_daily": false
+  },
+  {
+    "export": "etf-none-weekly.csv",
+    "rows": 5,
+    "value_and_identity_match": true,
+    "aggregation_matches_daily": true
+  },
+  {
+    "export": "etf-none-monthly.csv",
+    "rows": 2,
+    "value_and_identity_match": true,
+    "aggregation_matches_daily": true
+  },
+  {
+    "export": "etf-qfq-daily.csv",
+    "rows": 22,
+    "value_and_identity_match": true,
+    "aggregation_matches_daily": false
+  },
+  {
+    "export": "etf-qfq-weekly.csv",
+    "rows": 5,
+    "value_and_identity_match": true,
+    "aggregation_matches_daily": true
+  },
+  {
+    "export": "etf-qfq-monthly.csv",
+    "rows": 2,
+    "value_and_identity_match": true,
+    "aggregation_matches_daily": true
+  }
+]
