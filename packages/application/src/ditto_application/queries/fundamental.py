@@ -6,7 +6,7 @@ from datetime import date
 from typing import Protocol
 
 import polars as pl
-from ditto_data.catalog.snapshot_completion import checkpoint_matches_snapshot
+from ditto_data.catalog.snapshot_completion import completed_snapshots
 from ditto_data.catalog.source_snapshot import ProviderSnapshotReader
 from ditto_data.ingestion.partition_state import PartitionLifecycleReader
 
@@ -133,16 +133,6 @@ class FundamentalQueryFacade:
             if dict(snapshot.response_metadata).get("source_ticker")
             in {None, source_ticker}
         ]
-        by_id = {snapshot.snapshot_id: snapshot for snapshot in snapshots}
-        completed = {
-            checkpoint.complete_evidence_id
-            for checkpoint in self._lifecycle.list_complete(dataset_id="fund_portfolio")
-            if checkpoint.complete_evidence_id is not None
-            and checkpoint.complete_evidence_id in by_id
-            and checkpoint_matches_snapshot(
-                checkpoint, by_id[checkpoint.complete_evidence_id]
-            )
-        }
         return [
             {
                 "snapshot_id": snapshot.snapshot_id,
@@ -158,8 +148,7 @@ class FundamentalQueryFacade:
                 else "market",
                 "source_ticker": dict(snapshot.response_metadata).get("source_ticker"),
             }
-            for snapshot in snapshots
-            if snapshot.snapshot_id in completed
+            for snapshot in completed_snapshots(snapshots, self._lifecycle)
         ]
 
     def get_balance_sheet(

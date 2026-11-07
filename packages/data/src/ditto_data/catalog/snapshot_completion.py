@@ -1,5 +1,7 @@
 """Bind durable ingestion evidence to exact provider content."""
 
+from collections.abc import Iterable
+
 from ditto_data.catalog.source_snapshot import ProviderSnapshot
 from ditto_data.ingestion.partition_state import (
     PartitionCheckpoint,
@@ -45,6 +47,25 @@ def snapshot_completed(
         and checkpoint.complete_evidence_id == snapshot.snapshot_id
         for checkpoint in lifecycle.list_complete(dataset_id=snapshot.dataset_id)
     )
+
+
+def completed_snapshots(
+    snapshots: Iterable[ProviderSnapshot], lifecycle: PartitionLifecycleReader
+) -> tuple[ProviderSnapshot, ...]:
+    """Bind a batch with one completion read per dataset, without caching state."""
+    candidates = tuple(snapshots)
+    by_id = {snapshot.snapshot_id: snapshot for snapshot in candidates}
+    completed = {
+        checkpoint.complete_evidence_id
+        for dataset_id in {snapshot.dataset_id for snapshot in candidates}
+        for checkpoint in lifecycle.list_complete(dataset_id=dataset_id)
+        if checkpoint.complete_evidence_id is not None
+        and checkpoint.complete_evidence_id in by_id
+        and checkpoint_matches_snapshot(
+            checkpoint, by_id[checkpoint.complete_evidence_id]
+        )
+    }
+    return tuple(item for item in candidates if item.snapshot_id in completed)
 
 
 def canonical_write_identity(snapshot: ProviderSnapshot) -> tuple[str, int] | None:

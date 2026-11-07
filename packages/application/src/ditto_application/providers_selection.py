@@ -9,7 +9,7 @@ from zoneinfo import ZoneInfo
 
 from dishka import Provider, Scope, provide
 from ditto_data.catalog.provider_payload import ProviderPayloadReader
-from ditto_data.catalog.snapshot_completion import snapshot_completed
+from ditto_data.catalog.snapshot_completion import completed_snapshots
 from ditto_data.catalog.snapshot_reader import SnapshotReadService, SourceTickerResolver
 from ditto_data.catalog.source_snapshot import ProviderSnapshot, ProviderSnapshotReader
 from ditto_data.ingestion.partition_state import PartitionLifecycleReader
@@ -189,9 +189,10 @@ def completed_snapshot_index(
         def _completed(self, dataset_id: str) -> tuple[ProviderSnapshot, ...]:
             return tuple(
                 snapshot
-                for snapshot in snapshots.list_snapshots(dataset_id=dataset_id)
+                for snapshot in completed_snapshots(
+                    snapshots.list_snapshots(dataset_id=dataset_id), lifecycle
+                )
                 if snapshot.payload_retained
-                and snapshot_completed(snapshot, lifecycle)
                 # Same restricted-scope rule as covering_snapshots: a
                 # per-ticker/per-exchange request cannot prove the whole
                 # market, so it must not advance the live session (#583).
