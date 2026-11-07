@@ -714,7 +714,10 @@ def _source_by_thscode(
         if "thscodes" in params:
             return {
                 "item": [
-                    {"thscode": code, "item": responses[code]["item"]}
+                    {
+                        "thscode": code,
+                        "item": cast("dict[str, object]", responses[code])["item"],
+                    }
                     for code in str(params["thscodes"]).split(",")
                     if isinstance(responses[code], dict)
                 ]
