@@ -249,15 +249,16 @@ def _quarterly_impacts(
             impacts.extend(_official_anchor_impacts(dataset, t, versions, official))
             continue
         expected = anchors.get(t)
-        # 已有观察锚版本（kd 晚于事实日 14 天＝任何披露制度锚之外）则该日
-        # 首锚已立：后续新覆盖快照前移 MAX 锚不再重写（首锚胜，可见性不
-        # 随重复回补单调后移）。
-        anchored = any(
-            date.fromisoformat(k) > date.fromisoformat(t) + _ANCHOR_ALREADY_SET_DAYS
+        # 首个保守观察锚保持稳定；其存在不能豁免其他标的的错误 T+1。
+        established = [
+            k
             for k in versions
-        )
-        if anchored:
-            continue
+            if date.fromisoformat(k) > date.fromisoformat(t) + _ANCHOR_ALREADY_SET_DAYS
+        ]
+        if established:
+            expected = min(established)
+            # 后续已知观察版本本身保留资格，只纠正未锚定的旧投影。
+            versions = {k: c for k, c in versions.items() if k not in established}
         if expected is None or date.fromisoformat(expected) <= date.fromisoformat(t):
             # 无覆盖快照，或锚不晚于事实日（不可作为可知时间）——拒绝动。
             impacts.append(

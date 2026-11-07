@@ -78,7 +78,13 @@ def test_final_ledger_controls_prefect_state(
         repair,
         "create_ingestion_bundle",
         lambda **kwargs: nullcontext(
-            SimpleNamespace(retry_manager=manager, backfill_manager=backfill)
+            SimpleNamespace(
+                retry_manager=manager,
+                backfill_manager=backfill,
+                metadata_facade=SimpleNamespace(
+                    list_trading_days=lambda *args: ["2026-11-05"]
+                ),
+            )
         ),
     )
     accepted = [
@@ -110,5 +116,19 @@ def test_final_ledger_controls_prefect_state(
         )
     assert state.is_completed() == (case in {"healed", "accepted"})
     assert state.is_failed() == (case in {"current", "permanent"})
+    if case == "accepted" and not daily:
+        normal = repair.retry_failed_flow(
+            dataset="etf_nav", limit=0, accepted_gaps=accepted, return_state=True
+        )
+        assert normal.is_completed()
+        research = repair.retry_failed_flow(
+            dataset="etf_nav",
+            limit=0,
+            required_start="2014-01-01",
+            required_end="2014-01-25",
+            accepted_gaps=accepted,
+            return_state=True,
+        )
+        assert research.is_failed()
     assert len(logs.list_unresolved_failures(limit=-1)) >= 25
     client.conn.close()

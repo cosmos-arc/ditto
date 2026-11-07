@@ -7,6 +7,7 @@ import signal
 import subprocess
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
+from threading import Timer
 from types import FrameType
 
 _MIN_LOG_BYTES = 8192
@@ -17,6 +18,7 @@ def run(command: list[str], path: Path, *, max_bytes: int, backups: int) -> int:
     if not command or max_bytes < _MIN_LOG_BYTES or backups < 1:
         raise ValueError("command, max_bytes >= 8192 and backups >= 1 required")
     path.parent.mkdir(parents=True, exist_ok=True)
+    _bound_existing_logs(path, max_bytes, backups)
     handler = RotatingFileHandler(
         path, maxBytes=max_bytes, backupCount=backups, encoding="utf-8"
     )
@@ -27,10 +29,17 @@ def run(command: list[str], path: Path, *, max_bytes: int, backups: int) -> int:
         start_new_session=True,
     )
 
+    stop_timer: Timer | None = None
+
     def forward(signum: int, frame: FrameType | None) -> None:
+        nonlocal stop_timer
         del frame
-        if process.poll() is None:
-            os.killpg(process.pid, signum)
+        if stop_timer is None:
+            # A timer runs even while read blocks and the worker ignores TERM.
+            stop_timer = Timer(10, _signal_group, (process.pid, signal.SIGKILL))
+            stop_timer.daemon = True
+            stop_timer.start()
+        _signal_group(process.pid, signum)
 
     previous = {
         sig: signal.signal(sig, forward) for sig in (signal.SIGTERM, signal.SIGINT)
@@ -38,7 +47,7 @@ def run(command: list[str], path: Path, *, max_bytes: int, backups: int) -> int:
     try:
         if process.stdout is None:
             raise RuntimeError("worker output pipe was not created")
-        while chunk := os.read(process.stdout.fileno(), 4096):
+        while chunk := os.read(process.stdout.fileno(), min(4096, max_bytes // 4)):
             handler.handle(
                 logging.LogRecord(
                     "worker",
@@ -52,18 +61,52 @@ def run(command: list[str], path: Path, *, max_bytes: int, backups: int) -> int:
             )
         return process.wait()
     finally:
+        if stop_timer is not None:
+            stop_timer.cancel()
         for sig, original in previous.items():
             signal.signal(sig, original)
-        if process.poll() is None:
-            os.killpg(process.pid, signal.SIGTERM)
-            try:
-                process.wait(timeout=10)
-            except subprocess.TimeoutExpired:
-                os.killpg(process.pid, signal.SIGKILL)
-                process.wait()
+        _stop_process(process)
         if process.stdout is not None:
             process.stdout.close()
         handler.close()
+
+
+def _stop_process(process: subprocess.Popen[bytes]) -> None:
+    if process.poll() is None:
+        _signal_group(process.pid, signal.SIGTERM)
+        try:
+            process.wait(timeout=10)
+        except subprocess.TimeoutExpired:
+            _signal_group(process.pid, signal.SIGKILL)
+            process.wait()
+
+
+def _signal_group(pid: int, signum: int) -> None:
+    try:
+        os.killpg(pid, signum)
+    except ProcessLookupError:
+        pass  # The entire worker group already exited.
+
+
+def _bound_existing_logs(path: Path, max_bytes: int, backups: int) -> None:
+    """接管已有大日志时保留尾部；只触碰此日志与数字轮转代。"""
+    existing = [path]
+    for candidate in path.parent.glob(path.name + ".*"):
+        suffix = candidate.name.removeprefix(path.name + ".")
+        if not suffix.isdecimal():
+            continue
+        if int(suffix) > backups:
+            candidate.unlink()
+        else:
+            existing.append(candidate)
+    for candidate in existing:
+        if candidate.exists() and candidate.stat().st_size > max_bytes:
+            with candidate.open("r+b") as stream:
+                stream.seek(-max_bytes, os.SEEK_END)
+                tail = stream.read(max_bytes)
+                stream.seek(0)
+                stream.write(tail)
+                stream.truncate()
 
 
 def main() -> int:

@@ -2,23 +2,24 @@
 
 from collections.abc import Callable
 from datetime import datetime, time
-from hashlib import sha256
-from pathlib import Path
 from zoneinfo import ZoneInfo
 
-import orjson
 import polars as pl
 from ditto_data.catalog.snapshot_completion import completed_snapshots
 from ditto_data.catalog.source_snapshot import ProviderSnapshotReader
 from ditto_data.ingestion.partition_state import PartitionLifecycleReader
+from ditto_data.ingestion.published_refresh_evidence import (
+    PublishedRefreshEvidenceStore,
+)
 from ditto_data.sources.fred.indicators import FRED_INDICATORS
-from ditto_platform.foundation.util.io import atomic_bytes_write
 
 from ditto_application.catalog_freshness import (
     completed_covering_snapshot,
     covering_snapshots,
+    has_pending_date,
     observed_at,
 )
+from ditto_application.exceptions import AppProcessError
 from ditto_application.processes.ingestion.source_selection import (
     IngestionCoordinatorLike,
 )
@@ -39,7 +40,7 @@ class PublishedRefreshProcess:
         snapshots: ProviderSnapshotReader,
         lifecycle: PartitionLifecycleReader,
         audit: ProviderSnapshotQuery,
-        evidence_root: Path,
+        evidence: PublishedRefreshEvidenceStore,
         clock: Callable[[], datetime] = lambda: datetime.now(SHANGHAI),
     ) -> None:
         self._clock = clock
@@ -48,13 +49,13 @@ class PublishedRefreshProcess:
         self._snapshots = snapshots
         self._lifecycle = lifecycle
         self._audit = audit
-        self._evidence_root = evidence_root
+        self._evidence = evidence
 
     def margin(self, *, scheduled_day: str, finalize: bool) -> dict[str, object]:
         """只刷新上个交易日两融；09:15 后不再发起请求，完整留存每次观察。"""
         now = self._clock()
         if now.tzinfo is None:
-            raise ValueError("published refresh needs an aware execution time")
+            raise AppProcessError("published refresh needs an aware execution time")
         now = now.astimezone(SHANGHAI)
         day = datetime.fromisoformat(scheduled_day).date()
         if not self._calendar.is_trading_day(day.isoformat()):
@@ -62,14 +63,14 @@ class PublishedRefreshProcess:
         days = self._calendar.list_trading_days("2014-01-01", day.isoformat())
         previous = [item for item in days if item < day.isoformat()]
         if not previous:
-            raise ValueError("missing previous trading session")
+            raise AppProcessError("missing previous trading session")
         target = previous[-1]
         release = datetime.combine(day, time(8, 30), SHANGHAI)
         deadline = datetime.combine(day, time(9, 15), SHANGHAI)
         if now < release:
-            raise ValueError("margin refresh cannot run before publication window")
+            raise AppProcessError("margin refresh cannot run before publication window")
         if finalize and now < deadline:
-            raise ValueError("final margin evidence cannot precede the deadline")
+            raise AppProcessError("final margin evidence cannot precede the deadline")
         status = self._margin_evidence(target, release, deadline)
         attempted = False
         error: str | None = None
@@ -98,14 +99,27 @@ class PublishedRefreshProcess:
             **status,
         }
         # 每次观察不可覆盖，尤其不能用迟到成功覆盖截止失败。
-        self._record("margin", report)
+        self._evidence.record("margin", report)
         if finalize and not status["ready"]:
-            raise RuntimeError(f"margin {target}: not ready by {deadline.isoformat()}")
+            raise AppProcessError(
+                f"margin {target}: not ready by {deadline.isoformat()}"
+            )
         return report
 
     def _margin_evidence(
         self, target: str, release: datetime, deadline: datetime
     ) -> dict[str, object]:
+        if has_pending_date(
+            self._lifecycle,
+            dataset="margin_trading",
+            source="tushare",
+            trade_date=target,
+        ):
+            return {
+                "ready": False,
+                "status": "incomplete_revision",
+                "snapshot_id": None,
+            }
         candidates = completed_snapshots(
             covering_snapshots(
                 self._snapshots,
@@ -170,7 +184,7 @@ class PublishedRefreshProcess:
         """FRED 已配置系列的日常有界回看；返回真实源载荷逐系列末端。"""
         result = self._coordinator.ingest_date("macro_indicators", day, force=True)
         if result.status == "failed":
-            raise RuntimeError(result.error or result.message)
+            raise AppProcessError(result.error or result.message)
         snapshot = completed_covering_snapshot(
             self._snapshots,
             self._lifecycle,
@@ -179,7 +193,9 @@ class PublishedRefreshProcess:
             trade_date=day,
         )
         if snapshot is None or snapshot.row_count == 0:
-            raise RuntimeError("FRED refresh has no nonempty completed source evidence")
+            raise AppProcessError(
+                "FRED refresh has no nonempty completed source evidence"
+            )
         frame = self._audit.read_for_audit(snapshot.snapshot_id).frame
         latest = (
             frame.group_by("indicator_code", "frequency")
@@ -197,14 +213,7 @@ class PublishedRefreshProcess:
             "latest": latest,
             "missing_series": missing,
         }
-        self._record("fred", report)
+        self._evidence.record("fred", report)
         if missing:
-            raise RuntimeError(f"FRED refresh missing configured series: {missing}")
+            raise AppProcessError(f"FRED refresh missing configured series: {missing}")
         return report
-
-    def _record(self, scope: str, report: dict[str, object]) -> None:
-        """内容寻址保留每次观察；不同结果不会覆盖旧截止记录。"""
-        payload = orjson.dumps(report, option=orjson.OPT_SORT_KEYS)
-        atomic_bytes_write(
-            payload, self._evidence_root / scope / f"{sha256(payload).hexdigest()}.json"
-        )

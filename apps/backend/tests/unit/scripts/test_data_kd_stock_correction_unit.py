@@ -496,7 +496,9 @@ class TestCorrectnessRegressions:
             ],
         )
         impacts = scan_dataset("hk_hold", conn=conn, data_root=tmp_path)
-        assert impacts == []
+        assert len(impacts) == 1
+        assert impacts[0].old_knowledge_date == "2027-01-01"
+        assert impacts[0].new_knowledge_date == "2027-01-15"
 
     def test_official_anchor_impacts_until_coverage(self, tmp_path: Path) -> None:
         """#693：表内季为偏离版本追加官方锚行；official 覆盖不足前持续 impact."""

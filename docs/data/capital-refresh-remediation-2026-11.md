@@ -94,3 +94,19 @@ state 为上述 data 根，fd 1/2 指向主 checkout `.cache/prefect-worker/work
 4,177,712 bytes，mtime=11:38，本轮只读操作未更新；data/logs 1,324 KiB、data/temp 0。
 本轮影响清单及标准输出约各 366 MiB，属于隔离临时证据增量，不是生产日志增长验收。
 真实回补/部署前后须重新记录余量、WAL、日志与临时空间，不提前声明该运行门通过。
+
+## 独立审查与修复
+
+首审固定 `8bd3d31d...76e9307d`，两条独立审查分别给出以下发现；没有用其中一轴
+替代另一轴。规范轴 3 项：未完成 revision 仍可能得到晨间 ready、忽略 TERM 的 worker
+让包装器无限阻塞、application 承担物理证据 I/O。需求轴 3 项：旧大日志轮转后仍超限、
+单独 retry/holes 默认全历史、表外季度已有首锚导致其他旧投影未撤销。
+
+集中修复恢复 pending revision 守卫，使用独立 10 秒停止计时器，证据存储下沉到 data；
+启动时仅对目标日志及数字代保留有界尾部，补偿入口统一五交易日默认窗，保留季度首锚
+同时纠正未锚定旧行。新增反例覆盖忽略 TERM、已有 64 KiB 日志、默认历史留账与显式
+研究阻断、未完成新 revision。
+
+本次 OpenAPI 默认语义变更使 R5 preflight **汇总**中的 interface_contracts 哈希变化。
+通过原 `r5_agent_release_preflight` 生成器更新派生汇总，只改变契约与汇总身份；没有
+重写底层 sandbox/live eval 证据，也不声称重新完成 R5 真实运行验收。

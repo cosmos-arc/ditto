@@ -8,6 +8,7 @@ from zoneinfo import ZoneInfo
 import orjson
 import polars as pl
 import pytest
+from ditto_application.exceptions import AppProcessError
 from ditto_application.processes.ingestion.published_refresh import (
     PublishedRefreshProcess,
 )
@@ -22,6 +23,9 @@ from ditto_data.ingestion.partition_state import (
     PartitionLifecycleStatus,
 )
 from ditto_data.ingestion.partition_state_store import SQLitePartitionLifecycleStore
+from ditto_data.ingestion.published_refresh_evidence import (
+    PublishedRefreshEvidenceStore,
+)
 from ditto_platform.foundation import SQLiteClient, SQLitePool
 
 SHANGHAI = ZoneInfo("Asia/Shanghai")
@@ -109,11 +113,11 @@ def test_completed_source_is_on_time_only_before_deadline(
         audit=ProviderSnapshotQuery(
             SnapshotReadService(snapshots, payloads, lifecycle), MagicMock()
         ),
-        evidence_root=tmp_path / "evidence",
+        evidence=PublishedRefreshEvidenceStore(tmp_path / "evidence"),
         clock=lambda: observed,
     )
     if late:
-        with pytest.raises(RuntimeError, match="not ready by"):
+        with pytest.raises(AppProcessError, match="not ready by"):
             process.margin(scheduled_day=session, finalize=True)
     else:
         assert process.margin(scheduled_day=session, finalize=False)["ready"] is True
@@ -123,6 +127,22 @@ def test_completed_source_is_on_time_only_before_deadline(
     )
     assert report["trade_date"] == target
     assert report["on_time"] is not late
+    if not late:
+        lifecycle.plan_partition(
+            PartitionCheckpoint(
+                chunk_id="new-revision",
+                dataset_id="margin_trading",
+                source="tushare",
+                request_start=target,
+                request_end=target,
+                status=PartitionLifecycleStatus.PLANNED,
+                payload_id=None,
+                complete_evidence_id=None,
+                error_code=None,
+                updated_at=observed,
+            )
+        )
+        assert process._margin_evidence(target, observed, observed)["ready"] is False
     client.conn.close()
 
 
@@ -144,7 +164,7 @@ def test_pending_refresh_is_one_attempt_and_final_never_fetches(tmp_path: Path) 
         snapshots=snapshots,
         lifecycle=lifecycle,
         audit=MagicMock(),
-        evidence_root=tmp_path,
+        evidence=PublishedRefreshEvidenceStore(tmp_path),
         clock=lambda: now,
     )
     report = process.margin(scheduled_day="2026-11-09", finalize=False)
@@ -153,10 +173,10 @@ def test_pending_refresh_is_one_attempt_and_final_never_fetches(tmp_path: Path) 
     coordinator.ingest_date.assert_called_once_with(
         "margin_trading", "2026-11-06", force=True
     )
-    with pytest.raises(ValueError, match="cannot precede"):
+    with pytest.raises(AppProcessError, match="cannot precede"):
         process.margin(scheduled_day="2026-11-09", finalize=True)
     now = datetime(2026, 11, 9, 9, 15, tzinfo=SHANGHAI)
-    with pytest.raises(RuntimeError, match="not ready by"):
+    with pytest.raises(AppProcessError, match="not ready by"):
         process.margin(scheduled_day="2026-11-09", finalize=True)
     assert coordinator.ingest_date.call_count == 1
     assert len(list((tmp_path / "margin").glob("*.json"))) == 2

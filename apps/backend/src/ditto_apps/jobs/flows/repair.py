@@ -131,6 +131,9 @@ def retry_failed_flow(
 
     """
     with create_ingestion_bundle(source=source) as bundle:
+        required_start, required_end = _required_window(
+            source, required_start, required_end
+        )
         # 执行重试
         result = bundle.retry_manager.retry_failed(
             dataset=dataset,
@@ -138,13 +141,14 @@ def retry_failed_flow(
             limit=limit,
         )
 
-        bundle.retry_manager.require_resolved(
+        required_state = bundle.retry_manager.require_resolved(
             datasets=[dataset],
             start=required_start,
             end=required_end,
             accepted_gaps=accepted_gaps,
         )
         return {
+            "required_state": required_state,
             "dataset": result.dataset,
             "total_failed": result.total_failed,
             "retried_count": result.retried_count,
@@ -206,6 +210,9 @@ def repair_holes_flow(
 
     """
     with create_ingestion_bundle(source=source) as bundle:
+        required_start, required_end = _required_window(
+            source, required_start, required_end
+        )
         # 回补缺失数据
         result = bundle.backfill_manager.backfill_missing(
             dataset=dataset,
@@ -214,13 +221,14 @@ def repair_holes_flow(
             force_refresh_days=refetch_window_days,
         )
 
-        bundle.retry_manager.require_resolved(
+        required_state = bundle.retry_manager.require_resolved(
             datasets=[dataset],
             start=required_start,
             end=required_end,
             accepted_gaps=accepted_gaps,
         )
         return {
+            "required_state": required_state,
             "dataset": result.dataset,
             "holes_count": result.total_dates,
             "repaired_count": result.success_count,

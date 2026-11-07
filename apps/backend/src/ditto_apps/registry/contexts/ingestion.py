@@ -35,6 +35,9 @@ from ditto_data.config.data_store import DataStoreSettings
 from ditto_data.ingestion.ingestion_cursor_store import IngestionCursorStore
 from ditto_data.ingestion.ingestion_log_store import IngestionLogStore
 from ditto_data.ingestion.partition_state import PartitionLifecycleReader
+from ditto_data.ingestion.published_refresh_evidence import (
+    PublishedRefreshEvidenceStore,
+)
 from ditto_data.services.capital_store import CapitalStore
 from ditto_data.services.fundamental_store import FundamentalStore
 from ditto_data.services.macro_service import MacroService
@@ -199,9 +202,11 @@ def create_ingestion_bundle(
                     snapshots=snapshot_reader,
                     lifecycle=lifecycle_reader,
                     audit=container.get(ProviderSnapshotQuery),
-                    evidence_root=container.get(DataStoreSettings).data_root
-                    / "operations"
-                    / "published-refresh",
+                    evidence=PublishedRefreshEvidenceStore(
+                        container.get(DataStoreSettings).data_root
+                        / "operations"
+                        / "published-refresh"
+                    ),
                 ),
                 backfill_manager=backfill_manager,
                 retry_manager=retry_manager,

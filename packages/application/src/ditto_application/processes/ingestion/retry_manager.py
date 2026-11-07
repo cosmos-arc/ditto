@@ -18,6 +18,7 @@ from ditto_data.models.ingestion import (
 from ditto_platform.foundation import logger
 
 from ditto_application.catalog_freshness import snapshot_repair_priority
+from ditto_application.exceptions import AppProcessError
 from ditto_application.processes.ingestion.result_handler import count_results
 from ditto_application.processes.ingestion.source_selection import (
     IngestionCoordinatorLike,
@@ -27,7 +28,7 @@ from ditto_application.processes.ingestion.source_selection import (
 DEFAULT_MAX_ATTEMPTS = 3
 
 
-class RepairIncomplete(RuntimeError):
+class RepairIncomplete(AppProcessError):
     """必需范围仍有未解账本项；Prefect 必须记录 Failed。"""
 
 
@@ -342,7 +343,7 @@ class RetryManager:
         if end is not None:
             date.fromisoformat(end)
         if start and end and start > end:
-            raise ValueError("repair scope start must not follow end")
+            raise AppProcessError("repair scope start must not follow end")
         accepted = accepted_gaps or []
         _validate_accepted_gaps(accepted)
         # SQLite LIMIT -1 is unbounded: the diagnostic sample is never a decision input.
@@ -396,13 +397,13 @@ def _validate_accepted_gaps(accepted: list[dict[str, str]]) -> None:
             gap.get(k)
             for k in ("dataset", "source", "start", "end", "error_code", "evidence")
         ):
-            raise ValueError(
+            raise AppProcessError(
                 "accepted gap needs exact scope, error and decision evidence"
             )
         date.fromisoformat(gap["start"])
         date.fromisoformat(gap["end"])
         if gap["start"] > gap["end"]:
-            raise ValueError("invalid accepted gap interval")
+            raise AppProcessError("invalid accepted gap interval")
 
 
 __all__ = ["DEFAULT_MAX_ATTEMPTS", "RetryManager"]

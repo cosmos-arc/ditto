@@ -41,13 +41,17 @@ class TestDeployFunctions:
 
     def test_list_flows(self):
         """Test that list_flows returns all available flows."""
-        from ditto_apps.jobs.flows.deploy import _get_flow_configs, list_flows
+        from ditto_apps.jobs.flows.deploy import (
+            _get_flow_configs,
+            _resolve_flow,
+            list_flows,
+        )
 
         flows = list_flows()
 
         # list_flows 应该返回所有配置的 flows
         configs = _get_flow_configs()
-        assert len(flows) == len(configs)
+        assert set(flows) == {_resolve_flow(config.flow).name for config in configs}
 
         # 每个 flow 都应该有描述
         for flow_name, description in flows.items():
@@ -83,8 +87,8 @@ class TestDeployFunctions:
 
         configs = _get_flow_configs()
 
-        # 应该有 7 个 flow 配置
-        assert len(configs) == 7
+        # 两融同一 flow 有四个时刻的部署。
+        assert len(configs) == 12
 
         # 验证每个配置都有必需的字段
         for config in configs:
