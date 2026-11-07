@@ -202,6 +202,10 @@ def test_twenty_day_accelerated_run_is_signed_balanced_and_idempotent(
     assert first["qualifies_as_wall_clock_soak"] is False
     assert first["qualifies_as_release_acceptance"] is True
     assert first["signature_chain_valid"] is True
+    assert first.pop("run_disposition") == "executed"
+    assert replay.pop("run_disposition") == "verified_existing"
+    assert first.pop("newly_recorded_days") == 20
+    assert replay.pop("newly_recorded_days") == 0
     assert replay == first
     assert all(cast("list[bool]", first["daily_reconciliations_balanced"]))
 
@@ -222,6 +226,18 @@ def test_twenty_day_accelerated_run_is_signed_balanced_and_idempotent(
         expected_approval_hash=approval_hash,
     )
     assert verified == first
+
+    (tmp_path / "accelerated-evidence" / "accelerated-progress.json").unlink()
+    restored = run_accelerated_paper_acceptance(
+        proposal,
+        approved_request_hash=approval_hash,
+        operator_id="workspace-user",
+        source=source,
+        approved_at=_APPROVED_AT + timedelta(minutes=10),
+    )
+    assert restored.pop("run_disposition") == "verified_existing"
+    assert restored.pop("newly_recorded_days") == 0
+    assert restored == first
 
     database = (
         tmp_path / "accelerated-state" / "state" / "q4-account-acceptance.sqlite3"
