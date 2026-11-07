@@ -215,6 +215,56 @@ def test_evidence_chain_persists_and_completed_replay_is_idempotent(
         restored = logs.get_log("stock_daily", "tushare", "2026-07-17")
         assert restored is not None
         assert restored.status is IngestionStatus.SUCCESS
+
+    finally:
+        pool.close()
+
+
+@pytest.mark.integration
+def test_completed_payload_relocation_creates_idempotent_revision(
+    tmp_path: Path,
+) -> None:
+    register_metrics()
+    pool = SQLitePool(str(tmp_path / "runtime.sqlite"))
+    client = SQLiteClient(pool)
+    lifecycle = SQLitePartitionLifecycleStore(client)
+    snapshots = SQLiteProviderSnapshotStore(client)
+    logs = IngestionLogStore(IngestionLogReader(client), IngestionLogWriter(client))
+    committer = IngestionEvidenceCommitter(
+        ports=EvidenceCommitPorts(
+            lifecycle_reader=lifecycle,
+            lifecycle_writer=lifecycle,
+            snapshot_writer=snapshots,
+            snapshot_reader=snapshots,
+            catalog_writer=SQLiteDataCatalog(client),
+            ingestion_log_store=logs,
+        )
+    )
+    request = _request()
+    try:
+        assert committer.commit(request).completed
+        checkpoint = lifecycle.get_checkpoint(request.chunk_id)
+        # A repeated annual calendar payload can have a different ingestion-day
+        # storage URI. Preserve the old binding and attest a separate revision.
+        relocated = replace(
+            request,
+            ingestion_date="2026-07-18",
+            catalog_entry=replace(
+                request.catalog_entry, storage_uri="stock_daily/relocated.parquet"
+            ),
+            success_log=replace(request.success_log, trade_date="2026-07-18"),
+        )
+        moved = committer.commit(relocated)
+        assert moved.completed
+        assert moved.chunk_id != request.chunk_id
+        assert lifecycle.get_checkpoint(request.chunk_id) == checkpoint
+        moved_checkpoint = lifecycle.get_checkpoint(moved.chunk_id)
+        assert moved_checkpoint is not None
+        assert moved_checkpoint.status is PartitionLifecycleStatus.COMPLETE
+        event_count = len(lifecycle.list_events(moved.chunk_id))
+        assert committer.commit(relocated) == moved
+        assert len(lifecycle.list_events(moved.chunk_id)) == event_count
+        assert logs.get_log("stock_daily", "tushare", "2026-07-18") is not None
     finally:
         pool.close()
 

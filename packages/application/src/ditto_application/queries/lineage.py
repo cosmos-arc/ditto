@@ -424,22 +424,12 @@ def _to_data_lineage_asset(asset: DataAssetRef) -> DataLineageAsset:
 _INGEST_OPERATION = "ingest"
 
 
-def _canonical_partition_values(snapshot: ProviderSnapshot) -> dict[str, str]:
-    values: dict[str, str] = {}
-    for partition in snapshot.canonical_asset.partition_keys:
-        key, separator, value = partition.partition("=")
-        if separator and key and value:
-            values[key] = value
-    return values
-
-
 def _ingest_source_asset(snapshot: ProviderSnapshot) -> DataAssetRef:
     """Rebuild the provider-side input asset recorded by the old ingest writes."""
-    values = _canonical_partition_values(snapshot)
-    ticker = values.get("source_ticker")
     keys: list[str] = [f"source={snapshot.source}"]
-    if ticker is not None:
-        keys.append(f"source_ticker={ticker}")
+    keys.extend(
+        f"source_ticker={ticker}" for ticker in sorted(snapshot.source_ticker_scope)
+    )
     keys.append(f"start_date={snapshot.request_start}")
     keys.append(f"end_date={snapshot.request_end}")
     return DataAssetRef(
@@ -450,9 +440,8 @@ def _ingest_source_asset(snapshot: ProviderSnapshot) -> DataAssetRef:
 
 
 def _ingest_run_id(snapshot: ProviderSnapshot) -> str:
-    values = _canonical_partition_values(snapshot)
-    ticker = values.get("source_ticker")
-    if ticker is None and snapshot.request_start == snapshot.request_end:
+    ticker = ",".join(sorted(snapshot.source_ticker_scope))
+    if not ticker and snapshot.request_start == snapshot.request_end:
         return (
             f"ingest:{snapshot.source}:{snapshot.dataset_id}:"
             f"{snapshot.request_start}:{snapshot.checksum}"

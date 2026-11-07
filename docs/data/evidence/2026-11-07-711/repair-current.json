@@ -1,0 +1,216 @@
+{
+  "started_at": "2026-11-07T11:24:32.618507+00:00",
+  "targets": [
+    "calendar",
+    "cash_flow",
+    "commodity_daily",
+    "fund_portfolio",
+    "fund_share"
+  ],
+  "business_day": "2026-11-06",
+  "source_host": "t.xiaodefa.top",
+  "before": [
+    {
+      "dataset": "calendar",
+      "source": "tushare",
+      "trade_date": "2026-11-06",
+      "status": "FAIL",
+      "checksum": null,
+      "rows": null,
+      "error_code": "RATE_LIMIT",
+      "error_message": "Tushare API \u9650\u6d41 (API: trade_cal)",
+      "attempts": 1,
+      "first_attempt_at": "2026-11-06T21:55:15.067824",
+      "last_attempt_at": "2026-11-06T21:55:15.067824"
+    },
+    {
+      "dataset": "cash_flow",
+      "source": "tushare",
+      "trade_date": "2026-11-06",
+      "status": "FAIL",
+      "checksum": null,
+      "rows": null,
+      "error_code": "FETCH_ERROR",
+      "error_message": "Failed to fetch cash_flow_vip from Tushare",
+      "attempts": 2,
+      "first_attempt_at": "2026-11-06T21:55:29.232226",
+      "last_attempt_at": "2026-11-07T02:06:49.652528"
+    },
+    {
+      "dataset": "commodity_daily",
+      "source": "tushare",
+      "trade_date": "2026-11-06",
+      "status": "FAIL",
+      "checksum": null,
+      "rows": null,
+      "error_code": "FETCH_ERROR",
+      "error_message": "Failed to fetch fx_daily from Tushare",
+      "attempts": 2,
+      "first_attempt_at": "2026-11-06T21:55:32.277575",
+      "last_attempt_at": "2026-11-07T02:07:25.008324"
+    },
+    {
+      "dataset": "fund_portfolio",
+      "source": "tushare",
+      "trade_date": "2026-11-06",
+      "status": "FAIL",
+      "checksum": null,
+      "rows": null,
+      "error_code": "PER_FUND_INGESTION_REQUIRED",
+      "error_message": "Legacy market-day fund_portfolio request lacks required ts_code and cannot establish all-fund completion. Use bounded per-holder requests; never retry the unsupported market-day scope.",
+      "attempts": 2,
+      "first_attempt_at": "2026-11-06T21:55:42.333584",
+      "last_attempt_at": "2026-11-06T23:07:26.296876"
+    },
+    {
+      "dataset": "fund_share",
+      "source": "tushare",
+      "trade_date": "2026-11-06",
+      "status": "FAIL",
+      "checksum": null,
+      "rows": null,
+      "error_code": "UNKNOWN_ERROR",
+      "error_message": "AppProcessError: all 33 records filtered with null instrument_id for dataset fund_share",
+      "attempts": 3,
+      "first_attempt_at": "2026-11-06T21:55:32.363596",
+      "last_attempt_at": "2026-11-07T03:09:07.464392"
+    }
+  ],
+  "free_before": 44849885184,
+  "results": [
+    {
+      "dataset": "calendar",
+      "started_at": "2026-11-07T11:24:32.834920+00:00",
+      "finished_at": "2026-11-07T11:24:37.909965+00:00",
+      "result": {
+        "dataset": "calendar",
+        "trade_date": "2026-11-06",
+        "status": "failed",
+        "row_count": null,
+        "message": "R2 \u6444\u53d6\u8bc1\u636e\u63d0\u4ea4\u5931\u8d25, \u5206\u533a\u5df2\u8fdb\u5165\u53ef\u4fee\u590d\u72b6\u6001",
+        "error": "PARTITION_LIFECYCLE_FAILED"
+      }
+    },
+    {
+      "dataset": "cash_flow",
+      "started_at": "2026-11-07T11:24:37.911189+00:00",
+      "finished_at": "2026-11-07T11:25:37.579988+00:00",
+      "result": {
+        "dataset": "cash_flow",
+        "trade_date": "2026-11-06",
+        "status": "success",
+        "row_count": 46540,
+        "message": "\u6570\u636e\u6444\u53d6\u6210\u529f",
+        "error": null
+      }
+    },
+    {
+      "dataset": "commodity_daily",
+      "started_at": "2026-11-07T11:25:37.582337+00:00",
+      "finished_at": "2026-11-07T11:25:49.604506+00:00",
+      "result": {
+        "dataset": "commodity_daily",
+        "trade_date": "2026-11-06",
+        "status": "success",
+        "row_count": 31,
+        "message": "\u6570\u636e\u6444\u53d6\u6210\u529f",
+        "error": null
+      }
+    },
+    {
+      "dataset": "fund_portfolio",
+      "started_at": "2026-11-07T11:25:49.606766+00:00",
+      "finished_at": "2026-11-07T11:25:54.846581+00:00",
+      "result": {
+        "dataset": "fund_portfolio",
+        "trade_date": "2026-11-06",
+        "status": "success",
+        "row_count": 0,
+        "message": "provider \u5df2\u9a8c\u8bc1\u65e0\u6570\u636e\u5e76\u63d0\u4ea4\u96f6\u884c\u8bc1\u636e",
+        "error": null
+      }
+    },
+    {
+      "dataset": "fund_share",
+      "started_at": "2026-11-07T11:25:54.847814+00:00",
+      "finished_at": "2026-11-07T11:25:57.068335+00:00",
+      "result": {
+        "dataset": "fund_share",
+        "trade_date": "2026-11-06",
+        "status": "success",
+        "row_count": 1719,
+        "message": "\u6570\u636e\u6444\u53d6\u6210\u529f",
+        "error": null
+      }
+    }
+  ],
+  "after": [
+    {
+      "dataset": "calendar",
+      "source": "tushare",
+      "trade_date": "2026-11-06",
+      "status": "FAIL",
+      "checksum": null,
+      "rows": null,
+      "error_code": "RATE_LIMIT",
+      "error_message": "Tushare API \u9650\u6d41 (API: trade_cal)",
+      "attempts": 1,
+      "first_attempt_at": "2026-11-06T21:55:15.067824",
+      "last_attempt_at": "2026-11-06T21:55:15.067824"
+    },
+    {
+      "dataset": "cash_flow",
+      "source": "tushare",
+      "trade_date": "2026-11-06",
+      "status": "SUCCESS",
+      "checksum": "7aa3a55a5dc51df7cfbbbccb89d740ff",
+      "rows": 46540,
+      "error_code": null,
+      "error_message": null,
+      "attempts": 3,
+      "first_attempt_at": "2026-11-06T21:55:29.232226",
+      "last_attempt_at": "2026-11-07T19:25:36.979312"
+    },
+    {
+      "dataset": "commodity_daily",
+      "source": "tushare",
+      "trade_date": "2026-11-06",
+      "status": "SUCCESS",
+      "checksum": "b0aa47ae77a884bbabeed5ba2bebd3c2",
+      "rows": 31,
+      "error_code": null,
+      "error_message": null,
+      "attempts": 3,
+      "first_attempt_at": "2026-11-06T21:55:32.277575",
+      "last_attempt_at": "2026-11-07T19:25:49.604060"
+    },
+    {
+      "dataset": "fund_portfolio",
+      "source": "tushare",
+      "trade_date": "2026-11-06",
+      "status": "SUCCESS",
+      "checksum": null,
+      "rows": 0,
+      "error_code": null,
+      "error_message": null,
+      "attempts": 4,
+      "first_attempt_at": "2026-11-06T21:55:42.333584",
+      "last_attempt_at": "2026-11-07T19:25:54.841636"
+    },
+    {
+      "dataset": "fund_share",
+      "source": "tushare",
+      "trade_date": "2026-11-06",
+      "status": "SUCCESS",
+      "checksum": "2221a4456cc70cfeb02ebe48cbbfaaa1",
+      "rows": 1719,
+      "error_code": null,
+      "error_message": null,
+      "attempts": 4,
+      "first_attempt_at": "2026-11-06T21:55:32.363596",
+      "last_attempt_at": "2026-11-07T19:25:57.067753"
+    }
+  ],
+  "finished_at": "2026-11-07T11:25:57.080509+00:00",
+  "free_after": 44845584384
+}

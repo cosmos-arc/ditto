@@ -1,0 +1,26 @@
+from pathlib import Path
+import csv,json,math
+from datetime import date
+p=Path(__file__).resolve().parent;report=json.loads((p/'browser-acceptance.json').read_text());results=[]
+for x in report['routes']:
+ d=x['response']['data'];rows=list(csv.DictReader((p/x['export']).open()));assert len(rows)==len(d['bars'])
+ for row,bar in zip(rows,d['bars'],strict=True):
+  for key in ['open','high','low','close','volume']:
+   field=key+'_ohlc' if key!='volume' else key
+   assert math.isclose(float(row[field]),bar[key],rel_tol=1e-12),(x['export'],field)
+  for key in ['first_trade_date','last_trade_date','available_at','published_at']:assert row[key]==bar[key],(x['export'],key)
+  assert row['time'][:10]==bar['trade_date']
+  assert row['partial']==str(bar['partial']).lower()
+  assert row['bar_source_snapshot_ids'].split('|')==bar['source_snapshot_ids']
+  for key in ['adjustment','period','as_of','knowledge_cutoff','publication_cutoff']:assert row[key]==d[key],(x['export'],key)
+  assert row['snapshot_id'].split(',')==d['source_snapshot_ids']
+  assert row['calendar_snapshot_ids'].split('|')==d['calendar_snapshot_ids']
+  assert row['missing_sessions']==','.join(d['missing_sessions'])
+ assert not x['page_errors'];assert x['visible_latest']
+ if x['period']!='daily':
+  daily=next(y for y in report['routes'] if y['name']==x['name'] and y['adjustment']==x['adjustment'] and y['period']=='daily')['response']['data']['bars']
+  for b in d['bars']:
+   group=[a for a in daily if b['first_trade_date']<=a['trade_date']<=b['last_trade_date']]
+   for key,value in [('open',group[0]['open']),('close',group[-1]['close']),('high',max(a['high'] for a in group)),('low',min(a['low'] for a in group)),('volume',sum(a['volume'] for a in group))]:assert math.isclose(b[key],value,rel_tol=1e-12),(x['export'],key)
+ results.append({'export':x['export'],'rows':len(rows),'value_and_identity_match':True,'aggregation_matches_daily':x['period']!='daily'})
+(p/'export-verification.json').write_text(json.dumps(results,indent=2));print('verified',len(results),'CSV files')

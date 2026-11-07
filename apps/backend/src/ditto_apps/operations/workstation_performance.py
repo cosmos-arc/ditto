@@ -12,12 +12,17 @@ from pathlib import Path
 
 import orjson
 
-_SCHEMA_VERSION = 1
+_SCHEMA_VERSION = 2
 _MIN_ITERATIONS = 2
 
 
 class PerformanceBudgetError(RuntimeError):
     """Raised when any measured p95 exceeds its explicit local budget."""
+
+    def __init__(self, report: WorkstationPerformanceReport) -> None:
+        self.report = report
+        failed = [item.name for item in report.cases if item.status == "failed"]
+        super().__init__(f"p95 performance budget exceeded: {', '.join(failed)}")
 
 
 @dataclass(frozen=True, slots=True)
@@ -26,7 +31,7 @@ class PerformanceCase:
 
     name: str
     operation: Callable[[], object]
-    threshold_ms: float
+    threshold_ms: float | None
 
 
 @dataclass(frozen=True, slots=True)
@@ -38,7 +43,7 @@ class PerformanceCaseResult:
     median_ms: float
     p95_ms: float
     max_ms: float
-    threshold_ms: float
+    threshold_ms: float | None
     status: str
 
 
@@ -62,14 +67,17 @@ def benchmark_workstation(
     iterations: int = 40,
     clock_ns: Callable[[], int] = time.perf_counter_ns,
 ) -> WorkstationPerformanceReport:
-    """Measure real callbacks and fail closed on a missing or exceeded budget."""
+    """Measure callbacks; an explicit None budget records no SLO verdict."""
     if not cases or warmup < 0 or iterations < _MIN_ITERATIONS:
         raise ValueError("cases, warmup, and iterations are invalid")
     if len({case.name for case in cases}) != len(cases):
         raise ValueError("performance case names must be unique")
     results: list[PerformanceCaseResult] = []
     for case in cases:
-        if not case.name or case.threshold_ms <= 0:
+        if not case.name or (
+            case.threshold_ms is not None
+            and (not math.isfinite(case.threshold_ms) or case.threshold_ms <= 0)
+        ):
             raise ValueError("performance case identity or budget is invalid")
         for _ in range(warmup):
             case.operation()
@@ -93,32 +101,43 @@ def benchmark_workstation(
                 p95_ms=round(p95, 6),
                 max_ms=round(samples[-1], 6),
                 threshold_ms=case.threshold_ms,
-                status="passed" if p95 <= case.threshold_ms else "failed",
+                status=(
+                    "measured"
+                    if case.threshold_ms is None
+                    else "passed"
+                    if p95 <= case.threshold_ms
+                    else "failed"
+                ),
             )
         )
-    failed = tuple(item.name for item in results if item.status != "passed")
-    if failed:
-        raise PerformanceBudgetError(
-            f"p95 performance budget exceeded: {', '.join(failed)}"
-        )
+    status = (
+        "failed"
+        if any(item.status == "failed" for item in results)
+        else "measured"
+        if any(item.status == "measured" for item in results)
+        else "passed"
+    )
     generated_at = datetime.now(UTC).isoformat()
     payload = {
         "schema_version": _SCHEMA_VERSION,
         "generated_at": generated_at,
-        "status": "passed",
+        "status": status,
         "warmup": warmup,
         "iterations": iterations,
         "cases": [asdict(item) for item in results],
     }
-    return WorkstationPerformanceReport(
+    report = WorkstationPerformanceReport(
         schema_version=_SCHEMA_VERSION,
         generated_at=generated_at,
-        status="passed",
+        status=status,
         warmup=warmup,
         iterations=iterations,
         cases=tuple(results),
         report_hash=_hash(payload),
     )
+    if status == "failed":
+        raise PerformanceBudgetError(report)
+    return report
 
 
 def write_performance_report(

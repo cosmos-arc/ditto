@@ -85,6 +85,22 @@ class ProviderSnapshot:
     # 首次可见时间由 created_at 表示；后续相同内容的重观察只追加事件。
     observations: tuple[datetime, ...] = ()
 
+    @property
+    def source_ticker_scope(self) -> frozenset[str]:
+        """Resolve retained request scope; an empty set denotes the market."""
+        partitions = frozenset(
+            key.removeprefix("source_ticker=")
+            for key in self.canonical_asset.partition_keys
+            if key.startswith("source_ticker=")
+        )
+        ticker = dict(self.response_metadata).get("source_ticker")
+        if ticker is None:
+            return partitions
+        metadata_scope = frozenset((ticker,))
+        if not ticker.strip() or (partitions and partitions != metadata_scope):
+            raise ValueError("provider snapshot source ticker scope is inconsistent")
+        return metadata_scope
+
     def __post_init__(self) -> None:
         """Validate source evidence without persisting provider secrets."""
         for field in (

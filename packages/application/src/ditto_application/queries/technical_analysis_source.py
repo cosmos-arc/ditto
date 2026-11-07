@@ -273,7 +273,7 @@ def _reject_rows_outside_request_bounds(
 
 def _overlapping_revisions(
     retained: dict[str, ProviderSnapshot | None],
-    scopes: dict[str, set[str]],
+    scopes: dict[str, frozenset[str]],
     observed_at: dict[str, datetime],
     prior: ProviderSnapshot,
     ticker: str | None,
@@ -335,11 +335,7 @@ def _reject_superseded_revision_rows(
         for snapshot_id in dataset.source_snapshot_ids
     }
     scopes = {
-        snapshot_id: {
-            key.removeprefix("source_ticker=")
-            for key in item.canonical_asset.partition_keys
-            if key.startswith("source_ticker=")
-        }
+        snapshot_id: item.source_ticker_scope
         for snapshot_id, item in retained.items()
         if item is not None
     }
