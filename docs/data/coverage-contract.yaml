@@ -22,8 +22,8 @@ meta:
     access_model: 积分=Tushare 15000 档位（档位决定接口权限与限频，非余额）；代理 t.xiaodefa.top 为 HTTP 透传层；实测成功以 probes 逐条为准，普通/VIP选型及独立限制见2026-11-07-source-interface-contract-audit.md；单码权限探针不冒充全历史完整性
     unit_dimension: 本合同单位维度仅记 currency；计量单位（万元/万份/倍/股）核验归 P2 价格口径与 P3c 股数单位反例等 lane 实施票，P0 不伪造
     tushare_proxy: https://t.xiaodefa.top/
-    tushare_probed: 62
-    tushare_ok: 59
+    tushare_probed: 63
+    tushare_ok: 60
     probes:
       tushare:balancesheet_vip:
         result: ok
