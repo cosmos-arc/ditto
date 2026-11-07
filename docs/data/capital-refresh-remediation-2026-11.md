@@ -67,11 +67,17 @@ etf_nav 11-04 与 11-06 为 FETCH_ERROR，11-05 SUCCESS 10,040 行。
 当前源参数/分页修复基线为 #714，详见
 [来源契约审计](../research/2026-11-07-source-interface-contract-audit.md)。
 
-以相同 `ETFTushareAdapter.fetch_fund_nav(trade_date=...)` 分别复现 11-04、11-06，
-使用 `.env` 及已运行 worker 的当前凭据配置，均收到 `SourceAuthenticationError`：
-“您的token不对，请确认。”未写 canonical；记录在本机 `nav-probe.json`，没有凭据值。
-这只能证明当前认证阻断，不能推断旧 FETCH_ERROR 的根因，也不能当作空响应、合法无事件
-或尚未发布。凭据恢复后须对同范围重取、检查完成 snapshot 与真实消费者再关闭此项。
+最初临时探针直接构造 `DataSourceSettings()`，误用了官方默认地址；维护者的凭据
+仅适用于既有代理，该次“token 不对”的结果已作废，不能作为实际运行凭据失效或旧
+FETCH_ERROR 的根因证据。真实 worker 为 development 环境，必须经同一
+`ConfigProvider.data_source_settings(ConfigLoader(...))` 加载代理地址、限频、超时和
+凭据，并注册实际数据指标后，再调用 `ETFTushareAdapter.fetch_fund_nav`。
+
+已按实际配置重新探测 11-04、11-06；代理上的前置 `etf_basic` 可正常返回。后续
+`fund_nav` 同范围结果记录在本机 `nav-probe-configured.json`（不含凭据），最终状态
+在 #707 交接中记录。原 `nav-probe.json` 仅保留为错误探针的审计记录，不用于验收。
+源读取成功仍需完成 snapshot 与真实消费者闭合；不能把源失败当作空响应、合法无事件
+或尚未发布。
 
 本轮不能声称真实发布后 09:15、FRED 末端或连续 5 个交易日已验收；5 日结论由 #705
 最终验收包统一记录。
