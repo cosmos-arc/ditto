@@ -1,0 +1,687 @@
+{
+  "created_at": "2026-11-06T17:39:11.689256+00:00",
+  "source_phase_started": "2026-11-06T16:52:20.775875+00:00",
+  "selected": [
+    {
+      "source_ticker": "510950.SH",
+      "failed_attempt": {
+        "source_ticker": "510950.SH",
+        "started_at": "2026-11-06T17:06:13.445226+00:00",
+        "measured_at": "2026-11-06T17:07:24.445852+00:00",
+        "start": "2014-01-01",
+        "end": "2026-11-05",
+        "raw_field": "accum_nav",
+        "result": {
+          "dataset": "etf_nav",
+          "trade_date": "2014-01-01",
+          "status": "failed",
+          "row_count": null,
+          "checksum": null,
+          "message": "获取数据失败: Failed to fetch etf_nav from Tushare",
+          "error": "FETCH_ERROR",
+          "snapshot_evidence": null,
+          "quality_evidence": null
+        }
+      },
+      "native": [
+        {
+          "measured_at": "2026-11-06T17:07:24.441263+00:00",
+          "api": "fund_nav",
+          "params": {
+            "ts_code": "510950.SH",
+            "start_date": "20140101",
+            "end_date": "20261105"
+          },
+          "errors": [
+            "SourceFetchError: Tushare API 网络错误 (API: fund_nav)"
+          ]
+        }
+      ]
+    },
+    {
+      "source_ticker": "511010.SH",
+      "failed_attempt": {
+        "source_ticker": "511010.SH",
+        "started_at": "2026-11-06T17:05:27.412671+00:00",
+        "measured_at": "2026-11-06T17:07:25.972415+00:00",
+        "start": "2014-01-01",
+        "end": "2026-11-05",
+        "raw_field": "accum_nav",
+        "result": {
+          "dataset": "etf_nav",
+          "trade_date": "2014-01-01",
+          "status": "failed",
+          "row_count": null,
+          "checksum": null,
+          "message": "获取数据失败: Failed to fetch etf_nav from Tushare",
+          "error": "FETCH_ERROR",
+          "snapshot_evidence": null,
+          "quality_evidence": null
+        }
+      },
+      "native": [
+        {
+          "measured_at": "2026-11-06T17:07:25.968606+00:00",
+          "api": "fund_nav",
+          "params": {
+            "ts_code": "511010.SH",
+            "start_date": "20140101",
+            "end_date": "20261105"
+          },
+          "errors": [
+            "SourceFetchError: Tushare API 网络错误 (API: fund_nav)"
+          ]
+        }
+      ]
+    },
+    {
+      "source_ticker": "511030.SH",
+      "failed_attempt": {
+        "source_ticker": "511030.SH",
+        "started_at": "2026-11-06T17:05:06.518449+00:00",
+        "measured_at": "2026-11-06T17:07:25.464630+00:00",
+        "start": "2014-01-01",
+        "end": "2026-11-05",
+        "raw_field": "accum_nav",
+        "result": {
+          "dataset": "etf_nav",
+          "trade_date": "2014-01-01",
+          "status": "failed",
+          "row_count": null,
+          "checksum": null,
+          "message": "获取数据失败: Failed to fetch etf_nav from Tushare",
+          "error": "FETCH_ERROR",
+          "snapshot_evidence": null,
+          "quality_evidence": null
+        }
+      },
+      "native": [
+        {
+          "measured_at": "2026-11-06T17:07:25.460880+00:00",
+          "api": "fund_nav",
+          "params": {
+            "ts_code": "511030.SH",
+            "start_date": "20140101",
+            "end_date": "20261105"
+          },
+          "errors": [
+            "SourceFetchError: Tushare API 网络错误 (API: fund_nav)"
+          ]
+        }
+      ]
+    },
+    {
+      "source_ticker": "511110.SH",
+      "failed_attempt": {
+        "source_ticker": "511110.SH",
+        "started_at": "2026-11-06T17:07:25.973084+00:00",
+        "measured_at": "2026-11-06T17:07:30.980453+00:00",
+        "start": "2014-01-01",
+        "end": "2026-11-05",
+        "raw_field": "accum_nav",
+        "result": {
+          "dataset": "etf_nav",
+          "trade_date": "2014-01-01",
+          "status": "failed",
+          "row_count": null,
+          "checksum": null,
+          "message": "获取数据失败: Failed to fetch etf_nav from Tushare",
+          "error": "FETCH_ERROR",
+          "snapshot_evidence": null,
+          "quality_evidence": null
+        }
+      },
+      "native": [
+        {
+          "measured_at": "2026-11-06T17:07:30.979755+00:00",
+          "api": "fund_nav",
+          "params": {
+            "ts_code": "511110.SH",
+            "start_date": "20140101",
+            "end_date": "20261105"
+          },
+          "errors": [
+            "SourceFetchError: Tushare API 网络错误 (API: fund_nav)"
+          ]
+        }
+      ]
+    },
+    {
+      "source_ticker": "511120.SH",
+      "failed_attempt": {
+        "source_ticker": "511120.SH",
+        "started_at": "2026-11-06T17:06:37.818199+00:00",
+        "measured_at": "2026-11-06T17:07:17.425698+00:00",
+        "start": "2014-01-01",
+        "end": "2026-11-05",
+        "raw_field": "accum_nav",
+        "result": {
+          "dataset": "etf_nav",
+          "trade_date": "2014-01-01",
+          "status": "failed",
+          "row_count": null,
+          "checksum": null,
+          "message": "获取数据失败: Failed to fetch etf_nav from Tushare",
+          "error": "FETCH_ERROR",
+          "snapshot_evidence": null,
+          "quality_evidence": null
+        }
+      },
+      "native": [
+        {
+          "measured_at": "2026-11-06T17:07:17.415064+00:00",
+          "api": "fund_nav",
+          "params": {
+            "ts_code": "511120.SH",
+            "start_date": "20140101",
+            "end_date": "20261105"
+          },
+          "errors": [
+            "RemoteProtocolError: Server disconnected without sending a response.",
+            "RemoteProtocolError: Server disconnected without sending a response."
+          ]
+        }
+      ]
+    },
+    {
+      "source_ticker": "511130.SH",
+      "failed_attempt": {
+        "source_ticker": "511130.SH",
+        "started_at": "2026-11-06T17:07:25.465294+00:00",
+        "measured_at": "2026-11-06T17:07:30.472811+00:00",
+        "start": "2014-01-01",
+        "end": "2026-11-05",
+        "raw_field": "accum_nav",
+        "result": {
+          "dataset": "etf_nav",
+          "trade_date": "2014-01-01",
+          "status": "failed",
+          "row_count": null,
+          "checksum": null,
+          "message": "获取数据失败: Failed to fetch etf_nav from Tushare",
+          "error": "FETCH_ERROR",
+          "snapshot_evidence": null,
+          "quality_evidence": null
+        }
+      },
+      "native": [
+        {
+          "measured_at": "2026-11-06T17:07:30.472189+00:00",
+          "api": "fund_nav",
+          "params": {
+            "ts_code": "511130.SH",
+            "start_date": "20140101",
+            "end_date": "20261105"
+          },
+          "errors": [
+            "SourceFetchError: Tushare API 网络错误 (API: fund_nav)"
+          ]
+        }
+      ]
+    },
+    {
+      "source_ticker": "511180.SH",
+      "failed_attempt": {
+        "source_ticker": "511180.SH",
+        "started_at": "2026-11-06T17:05:36.161637+00:00",
+        "measured_at": "2026-11-06T17:07:17.426608+00:00",
+        "start": "2014-01-01",
+        "end": "2026-11-05",
+        "raw_field": "accum_nav",
+        "result": {
+          "dataset": "etf_nav",
+          "trade_date": "2014-01-01",
+          "status": "failed",
+          "row_count": null,
+          "checksum": null,
+          "message": "获取数据失败: Failed to fetch etf_nav from Tushare",
+          "error": "FETCH_ERROR",
+          "snapshot_evidence": null,
+          "quality_evidence": null
+        }
+      },
+      "native": [
+        {
+          "measured_at": "2026-11-06T17:07:17.410145+00:00",
+          "api": "fund_nav",
+          "params": {
+            "ts_code": "511180.SH",
+            "start_date": "20140101",
+            "end_date": "20261105"
+          },
+          "errors": [
+            "SourceFetchError: Tushare API 网络错误 (API: fund_nav)"
+          ]
+        }
+      ]
+    },
+    {
+      "source_ticker": "511200.SH",
+      "failed_attempt": {
+        "source_ticker": "511200.SH",
+        "started_at": "2026-11-06T17:06:19.535597+00:00",
+        "measured_at": "2026-11-06T17:07:17.421490+00:00",
+        "start": "2014-01-01",
+        "end": "2026-11-05",
+        "raw_field": "accum_nav",
+        "result": {
+          "dataset": "etf_nav",
+          "trade_date": "2014-01-01",
+          "status": "failed",
+          "row_count": null,
+          "checksum": null,
+          "message": "获取数据失败: Failed to fetch etf_nav from Tushare",
+          "error": "FETCH_ERROR",
+          "snapshot_evidence": null,
+          "quality_evidence": null
+        }
+      },
+      "native": [
+        {
+          "measured_at": "2026-11-06T17:07:17.406926+00:00",
+          "api": "fund_nav",
+          "params": {
+            "ts_code": "511200.SH",
+            "start_date": "20140101",
+            "end_date": "20261105"
+          },
+          "errors": [
+            "RemoteProtocolError: Server disconnected without sending a response.",
+            "RemoteProtocolError: Server disconnected without sending a response."
+          ]
+        }
+      ]
+    },
+    {
+      "source_ticker": "511220.SH",
+      "failed_attempt": {
+        "source_ticker": "511220.SH",
+        "started_at": "2026-11-06T17:07:17.426265+00:00",
+        "measured_at": "2026-11-06T17:07:29.972105+00:00",
+        "start": "2014-01-01",
+        "end": "2026-11-05",
+        "raw_field": "accum_nav",
+        "result": {
+          "dataset": "etf_nav",
+          "trade_date": "2014-01-01",
+          "status": "failed",
+          "row_count": null,
+          "checksum": null,
+          "message": "获取数据失败: Failed to fetch etf_nav from Tushare",
+          "error": "FETCH_ERROR",
+          "snapshot_evidence": null,
+          "quality_evidence": null
+        }
+      },
+      "native": [
+        {
+          "measured_at": "2026-11-06T17:07:29.969405+00:00",
+          "api": "fund_nav",
+          "params": {
+            "ts_code": "511220.SH",
+            "start_date": "20140101",
+            "end_date": "20261105"
+          },
+          "errors": [
+            "SourceFetchError: Tushare API 网络错误 (API: fund_nav)"
+          ]
+        }
+      ]
+    },
+    {
+      "source_ticker": "511260.SH",
+      "failed_attempt": {
+        "source_ticker": "511260.SH",
+        "started_at": "2026-11-06T17:06:18.623890+00:00",
+        "measured_at": "2026-11-06T17:07:32.476042+00:00",
+        "start": "2014-01-01",
+        "end": "2026-11-05",
+        "raw_field": "accum_nav",
+        "result": {
+          "dataset": "etf_nav",
+          "trade_date": "2014-01-01",
+          "status": "failed",
+          "row_count": null,
+          "checksum": null,
+          "message": "获取数据失败: Failed to fetch etf_nav from Tushare",
+          "error": "FETCH_ERROR",
+          "snapshot_evidence": null,
+          "quality_evidence": null
+        }
+      },
+      "native": [
+        {
+          "measured_at": "2026-11-06T17:07:32.468796+00:00",
+          "api": "fund_nav",
+          "params": {
+            "ts_code": "511260.SH",
+            "start_date": "20140101",
+            "end_date": "20261105"
+          },
+          "errors": [
+            "SourceFetchError: Tushare API 网络错误 (API: fund_nav)"
+          ]
+        }
+      ]
+    },
+    {
+      "source_ticker": "511650.SH",
+      "failed_attempt": {
+        "source_ticker": "511650.SH",
+        "started_at": "2026-11-06T17:06:19.993601+00:00",
+        "measured_at": "2026-11-06T17:07:22.432123+00:00",
+        "start": "2014-01-01",
+        "end": "2026-11-05",
+        "raw_field": "accum_nav",
+        "result": {
+          "dataset": "etf_nav",
+          "trade_date": "2014-01-01",
+          "status": "failed",
+          "row_count": null,
+          "checksum": null,
+          "message": "获取数据失败: Failed to fetch etf_nav from Tushare",
+          "error": "FETCH_ERROR",
+          "snapshot_evidence": null,
+          "quality_evidence": null
+        }
+      },
+      "native": [
+        {
+          "measured_at": "2026-11-06T17:07:22.426648+00:00",
+          "api": "fund_nav",
+          "params": {
+            "ts_code": "511650.SH",
+            "start_date": "20140101",
+            "end_date": "20261105"
+          },
+          "errors": [
+            "SourceFetchError: Tushare API 网络错误 (API: fund_nav)"
+          ]
+        }
+      ]
+    },
+    {
+      "source_ticker": "512170.SH",
+      "failed_attempt": {
+        "source_ticker": "512170.SH",
+        "started_at": "2026-11-06T17:16:00.849530+00:00",
+        "measured_at": "2026-11-06T17:17:28.708453+00:00",
+        "start": "2014-01-01",
+        "end": "2026-11-05",
+        "raw_field": "accum_nav",
+        "result": {
+          "dataset": "etf_nav",
+          "trade_date": "2014-01-01",
+          "status": "failed",
+          "row_count": null,
+          "checksum": null,
+          "message": "获取数据失败: Failed to fetch etf_nav from Tushare",
+          "error": "FETCH_ERROR",
+          "snapshot_evidence": null,
+          "quality_evidence": null
+        }
+      },
+      "native": [
+        {
+          "measured_at": "2026-11-06T17:17:28.706952+00:00",
+          "api": "fund_nav",
+          "params": {
+            "ts_code": "512170.SH",
+            "start_date": "20140101",
+            "end_date": "20261105"
+          },
+          "errors": [
+            "SourceFetchError: ip超限，请不到在多个ip同时使用"
+          ]
+        }
+      ]
+    },
+    {
+      "source_ticker": "512180.SH",
+      "failed_attempt": {
+        "source_ticker": "512180.SH",
+        "started_at": "2026-11-06T17:15:03.367602+00:00",
+        "measured_at": "2026-11-06T17:17:32.139975+00:00",
+        "start": "2014-01-01",
+        "end": "2026-11-05",
+        "raw_field": "accum_nav",
+        "result": {
+          "dataset": "etf_nav",
+          "trade_date": "2014-01-01",
+          "status": "failed",
+          "row_count": null,
+          "checksum": null,
+          "message": "获取数据失败: Failed to fetch etf_nav from Tushare",
+          "error": "FETCH_ERROR",
+          "snapshot_evidence": null,
+          "quality_evidence": null
+        }
+      },
+      "native": [
+        {
+          "measured_at": "2026-11-06T17:17:32.135333+00:00",
+          "api": "fund_nav",
+          "params": {
+            "ts_code": "512180.SH",
+            "start_date": "20140101",
+            "end_date": "20261105"
+          },
+          "errors": [
+            "SourceFetchError: ip超限，请不到在多个ip同时使用"
+          ]
+        }
+      ]
+    },
+    {
+      "source_ticker": "512210.SH",
+      "failed_attempt": {
+        "source_ticker": "512210.SH",
+        "started_at": "2026-11-06T17:17:20.575787+00:00",
+        "measured_at": "2026-11-06T17:17:28.778109+00:00",
+        "start": "2014-01-01",
+        "end": "2026-11-05",
+        "raw_field": "accum_nav",
+        "result": {
+          "dataset": "etf_nav",
+          "trade_date": "2014-01-01",
+          "status": "failed",
+          "row_count": null,
+          "checksum": null,
+          "message": "获取数据失败: Failed to fetch etf_nav from Tushare",
+          "error": "FETCH_ERROR",
+          "snapshot_evidence": null,
+          "quality_evidence": null
+        }
+      },
+      "native": [
+        {
+          "measured_at": "2026-11-06T17:17:28.777169+00:00",
+          "api": "fund_nav",
+          "params": {
+            "ts_code": "512210.SH",
+            "start_date": "20140101",
+            "end_date": "20261105"
+          },
+          "errors": [
+            "SourceFetchError: ip超限，请不到在多个ip同时使用"
+          ]
+        }
+      ]
+    },
+    {
+      "source_ticker": "512240.SH",
+      "failed_attempt": {
+        "source_ticker": "512240.SH",
+        "started_at": "2026-11-06T17:16:24.045624+00:00",
+        "measured_at": "2026-11-06T17:17:29.310059+00:00",
+        "start": "2014-01-01",
+        "end": "2026-11-05",
+        "raw_field": "accum_nav",
+        "result": {
+          "dataset": "etf_nav",
+          "trade_date": "2014-01-01",
+          "status": "failed",
+          "row_count": null,
+          "checksum": null,
+          "message": "获取数据失败: Failed to fetch etf_nav from Tushare",
+          "error": "FETCH_ERROR",
+          "snapshot_evidence": null,
+          "quality_evidence": null
+        }
+      },
+      "native": [
+        {
+          "measured_at": "2026-11-06T17:17:29.308214+00:00",
+          "api": "fund_nav",
+          "params": {
+            "ts_code": "512240.SH",
+            "start_date": "20140101",
+            "end_date": "20261105"
+          },
+          "errors": [
+            "SourceFetchError: ip超限，请不到在多个ip同时使用"
+          ]
+        }
+      ]
+    },
+    {
+      "source_ticker": "512250.SH",
+      "failed_attempt": {
+        "source_ticker": "512250.SH",
+        "started_at": "2026-11-06T17:17:28.708831+00:00",
+        "measured_at": "2026-11-06T17:17:33.603826+00:00",
+        "start": "2014-01-01",
+        "end": "2026-11-05",
+        "raw_field": "accum_nav",
+        "result": {
+          "dataset": "etf_nav",
+          "trade_date": "2014-01-01",
+          "status": "failed",
+          "row_count": null,
+          "checksum": null,
+          "message": "获取数据失败: Failed to fetch etf_nav from Tushare",
+          "error": "FETCH_ERROR",
+          "snapshot_evidence": null,
+          "quality_evidence": null
+        }
+      },
+      "native": [
+        {
+          "measured_at": "2026-11-06T17:17:33.601733+00:00",
+          "api": "fund_nav",
+          "params": {
+            "ts_code": "512250.SH",
+            "start_date": "20140101",
+            "end_date": "20261105"
+          },
+          "errors": [
+            "SourceFetchError: ip超限，请不到在多个ip同时使用"
+          ]
+        }
+      ]
+    },
+    {
+      "source_ticker": "512350.SH",
+      "failed_attempt": {
+        "source_ticker": "512350.SH",
+        "started_at": "2026-11-06T17:17:12.725585+00:00",
+        "measured_at": "2026-11-06T17:17:35.051860+00:00",
+        "start": "2014-01-01",
+        "end": "2026-11-05",
+        "raw_field": "accum_nav",
+        "result": {
+          "dataset": "etf_nav",
+          "trade_date": "2014-01-01",
+          "status": "failed",
+          "row_count": null,
+          "checksum": null,
+          "message": "获取数据失败: Failed to fetch etf_nav from Tushare",
+          "error": "FETCH_ERROR",
+          "snapshot_evidence": null,
+          "quality_evidence": null
+        }
+      },
+      "native": [
+        {
+          "measured_at": "2026-11-06T17:17:35.050265+00:00",
+          "api": "fund_nav",
+          "params": {
+            "ts_code": "512350.SH",
+            "start_date": "20140101",
+            "end_date": "20261105"
+          },
+          "errors": [
+            "SourceFetchError: ip超限，请不到在多个ip同时使用"
+          ]
+        }
+      ]
+    },
+    {
+      "source_ticker": "512380.SH",
+      "failed_attempt": {
+        "source_ticker": "512380.SH",
+        "started_at": "2026-11-06T17:17:25.424663+00:00",
+        "measured_at": "2026-11-06T17:17:33.487870+00:00",
+        "start": "2014-01-01",
+        "end": "2026-11-05",
+        "raw_field": "accum_nav",
+        "result": {
+          "dataset": "etf_nav",
+          "trade_date": "2014-01-01",
+          "status": "failed",
+          "row_count": null,
+          "checksum": null,
+          "message": "获取数据失败: Failed to fetch etf_nav from Tushare",
+          "error": "FETCH_ERROR",
+          "snapshot_evidence": null,
+          "quality_evidence": null
+        }
+      },
+      "native": [
+        {
+          "measured_at": "2026-11-06T17:17:33.485441+00:00",
+          "api": "fund_nav",
+          "params": {
+            "ts_code": "512380.SH",
+            "start_date": "20140101",
+            "end_date": "20261105"
+          },
+          "errors": [
+            "SourceFetchError: ip超限，请不到在多个ip同时使用"
+          ]
+        }
+      ]
+    }
+  ],
+  "chunks": [
+    [
+      "510950.SH",
+      "511030.SH",
+      "511120.SH",
+      "511180.SH",
+      "511220.SH",
+      "511650.SH",
+      "512180.SH",
+      "512240.SH",
+      "512350.SH"
+    ],
+    [
+      "511010.SH",
+      "511110.SH",
+      "511130.SH",
+      "511200.SH",
+      "511260.SH",
+      "512170.SH",
+      "512210.SH",
+      "512250.SH",
+      "512380.SH"
+    ]
+  ],
+  "global_http_per_minute": 60,
+  "effective_inflight": 8,
+  "rate_per_worker": 10,
+  "query_attempts_per_window": 1,
+  "original_wave4_plan_sha256": "6cda6359334eac9307dd970cdd77df1bff0d2dd9b2bb781fdf058cadbbc316a0",
+  "boundary": "Retry only transient failures already returned by the current wave4 process after its120phase restart; unique plannedcode has no later scheduled occurrence in that process. Exclude every successful fullwindow. Allcurrent failures remain evidence, no sourceidentity/route/pagination/write rule changes, global1sec gate retained.",
+  "independent_review": "Standards:0 blockers; all18 transientfailures and timing match, nofullsuccess, originalplanhash andeachuniqueonce membership verified, two9-code recoverysets disjoint, outputcompatiblewithmeasure_nav_accum."
+}

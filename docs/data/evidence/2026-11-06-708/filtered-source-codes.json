@@ -1,7 +1,178 @@
 {
-  "measured_at": "2026-11-06T07:10:47.349255+00:00",
+  "measured_at": "2026-11-07T01:25:27.930393+00:00",
   "boundary": "Written rows are the write result of this ingestion, not total canonical inventory. Current mapping membership identifies source codes with no known identity; deduplication, PIT filtering and already-retained data can also explain raw/write differences.",
   "observations": [
+    {
+      "dataset": "index_weight",
+      "request_start": "2026-10-01",
+      "request_end": "2026-11-05",
+      "snapshot_id": "snapshot:tushare:index_weight:sha256:5ae94026d87b83a64cdd5435358d05a985fd25b83d70d807677d22bf34c5155b",
+      "created_at": "2026-11-06T04:43:25.356541+00:00",
+      "source_rows": 2233,
+      "written_rows": 2193,
+      "unmapped": [
+        {
+          "source_ticker": "900901.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "900902.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "900903.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "900904.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "900905.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "900906.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "900908.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "900909.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "900910.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "900911.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "900912.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "900913.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "900914.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "900916.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "900917.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "900918.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "900920.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "900921.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "900922.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "900923.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "900924.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "900925.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "900926.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "900927.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "900928.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "900929.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "900932.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "900934.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "900936.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "900937.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "900938.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "900939.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "900940.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "900941.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "900942.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "900943.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "900945.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "900946.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "900947.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "900948.SH",
+          "len": 1
+        }
+      ]
+    },
     {
       "dataset": "cash_flow",
       "request_start": "2022-01-04",
@@ -2480,10 +2651,6 @@
       "written_rows": 1717,
       "unmapped": [
         {
-          "source_ticker": "158081.SZ",
-          "len": 1
-        },
-        {
           "source_ticker": "180101.SZ",
           "len": 1
         },
@@ -3766,6 +3933,1176 @@
       "unmapped": [
         {
           "source_ticker": "200024.SZ",
+          "len": 1
+        }
+      ]
+    },
+    {
+      "dataset": "top10_holders",
+      "request_start": "2025-08-29",
+      "request_end": "2025-08-29",
+      "snapshot_id": "snapshot:tushare:top10_holders:sha256:8fac6d06c6e8b9b61f10d297653f977c2aaddcada5675635e0484fdbd59120ea",
+      "created_at": "2026-11-06T08:11:45.381358+00:00",
+      "source_rows": 8595,
+      "written_rows": 8184,
+      "unmapped": [
+        {
+          "source_ticker": "031006.SZ",
+          "len": 10
+        },
+        {
+          "source_ticker": "360005.SZ",
+          "len": 10
+        },
+        {
+          "source_ticker": "360007.SZ",
+          "len": 10
+        },
+        {
+          "source_ticker": "360012.SZ",
+          "len": 10
+        },
+        {
+          "source_ticker": "360019.SZ",
+          "len": 10
+        },
+        {
+          "source_ticker": "360020.SZ",
+          "len": 10
+        },
+        {
+          "source_ticker": "360024.SZ",
+          "len": 10
+        },
+        {
+          "source_ticker": "360029.SZ",
+          "len": 10
+        },
+        {
+          "source_ticker": "360032.SZ",
+          "len": 10
+        },
+        {
+          "source_ticker": "830866.BJ",
+          "len": 10
+        },
+        {
+          "source_ticker": "831274.BJ",
+          "len": 10
+        },
+        {
+          "source_ticker": "831550.BJ",
+          "len": 10
+        },
+        {
+          "source_ticker": "831681.BJ",
+          "len": 10
+        },
+        {
+          "source_ticker": "831872.BJ",
+          "len": 11
+        },
+        {
+          "source_ticker": "831895.BJ",
+          "len": 10
+        },
+        {
+          "source_ticker": "832422.BJ",
+          "len": 10
+        },
+        {
+          "source_ticker": "832456.BJ",
+          "len": 10
+        },
+        {
+          "source_ticker": "833149.BJ",
+          "len": 10
+        },
+        {
+          "source_ticker": "833309.BJ",
+          "len": 10
+        },
+        {
+          "source_ticker": "833577.BJ",
+          "len": 10
+        },
+        {
+          "source_ticker": "833598.BJ",
+          "len": 10
+        },
+        {
+          "source_ticker": "833972.BJ",
+          "len": 10
+        },
+        {
+          "source_ticker": "834278.BJ",
+          "len": 10
+        },
+        {
+          "source_ticker": "834613.BJ",
+          "len": 10
+        },
+        {
+          "source_ticker": "834839.BJ",
+          "len": 10
+        },
+        {
+          "source_ticker": "835124.BJ",
+          "len": 10
+        },
+        {
+          "source_ticker": "835209.BJ",
+          "len": 10
+        },
+        {
+          "source_ticker": "835243.BJ",
+          "len": 10
+        },
+        {
+          "source_ticker": "836736.BJ",
+          "len": 10
+        },
+        {
+          "source_ticker": "837278.BJ",
+          "len": 10
+        },
+        {
+          "source_ticker": "837292.BJ",
+          "len": 10
+        },
+        {
+          "source_ticker": "837417.BJ",
+          "len": 10
+        },
+        {
+          "source_ticker": "839562.BJ",
+          "len": 10
+        },
+        {
+          "source_ticker": "839728.BJ",
+          "len": 10
+        },
+        {
+          "source_ticker": "900905.BJ",
+          "len": 10
+        },
+        {
+          "source_ticker": "900911.BJ",
+          "len": 10
+        },
+        {
+          "source_ticker": "900913.BJ",
+          "len": 10
+        },
+        {
+          "source_ticker": "900924.BJ",
+          "len": 10
+        },
+        {
+          "source_ticker": "900928.BJ",
+          "len": 10
+        },
+        {
+          "source_ticker": "900937.BJ",
+          "len": 10
+        },
+        {
+          "source_ticker": "900941.BJ",
+          "len": 10
+        }
+      ]
+    },
+    {
+      "dataset": "top10_holders",
+      "request_start": "2025-10-21",
+      "request_end": "2025-10-21",
+      "snapshot_id": "snapshot:tushare:top10_holders:sha256:987afad25c7744bc4851a1cd2869c06f4acb2888c6c642ef8706e5bf2c7f543b",
+      "created_at": "2026-11-06T08:13:35.834821+00:00",
+      "source_rows": 700,
+      "written_rows": 690,
+      "unmapped": [
+        {
+          "source_ticker": "839247.BJ",
+          "len": 10
+        }
+      ]
+    },
+    {
+      "dataset": "index_weight",
+      "request_start": "2026-10-30",
+      "request_end": "2026-10-30",
+      "snapshot_id": "snapshot:tushare:index_weight:sha256:309e038b11f9be654badbfa3c0b4549eb9461c4d6eb65079329f035332b9f345",
+      "created_at": "2026-11-06T08:23:32.647036+00:00",
+      "source_rows": 16041,
+      "written_rows": 16001,
+      "unmapped": [
+        {
+          "source_ticker": "900901.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "900902.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "900903.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "900904.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "900905.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "900906.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "900908.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "900909.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "900910.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "900911.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "900912.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "900913.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "900914.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "900916.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "900917.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "900918.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "900920.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "900921.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "900922.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "900923.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "900924.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "900925.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "900926.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "900927.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "900928.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "900929.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "900932.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "900934.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "900936.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "900937.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "900938.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "900939.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "900940.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "900941.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "900942.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "900943.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "900945.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "900946.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "900947.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "900948.SH",
+          "len": 1
+        }
+      ]
+    },
+    {
+      "dataset": "top_list",
+      "request_start": "2026-11-06",
+      "request_end": "2026-11-06",
+      "snapshot_id": "snapshot:tushare:top_list:sha256:3c1e20f407bfa1474d5bdd38f0400fe95318b4e83c8b608dbe15e6012b37feb2",
+      "created_at": "2026-11-06T18:33:27.501655+00:00",
+      "source_rows": 79,
+      "written_rows": 78,
+      "unmapped": [
+        {
+          "source_ticker": "123290.SZ",
+          "len": 1
+        }
+      ]
+    },
+    {
+      "dataset": "fund_share",
+      "request_start": "2026-11-03",
+      "request_end": "2026-11-03",
+      "snapshot_id": "snapshot:tushare:fund_share:sha256:45c6a34440451b4df328d5edc8a1bdc68546767f241e56300207a5de2a8a137e",
+      "created_at": "2026-11-06T19:09:01.126490+00:00",
+      "source_rows": 1815,
+      "written_rows": 1717,
+      "unmapped": [
+        {
+          "source_ticker": "028919.OF",
+          "len": 1
+        },
+        {
+          "source_ticker": "028920.OF",
+          "len": 1
+        },
+        {
+          "source_ticker": "029522.OF",
+          "len": 1
+        },
+        {
+          "source_ticker": "029523.OF",
+          "len": 1
+        },
+        {
+          "source_ticker": "180101.SZ",
+          "len": 1
+        },
+        {
+          "source_ticker": "180102.SZ",
+          "len": 1
+        },
+        {
+          "source_ticker": "180103.SZ",
+          "len": 1
+        },
+        {
+          "source_ticker": "180105.SZ",
+          "len": 1
+        },
+        {
+          "source_ticker": "180106.SZ",
+          "len": 1
+        },
+        {
+          "source_ticker": "180201.SZ",
+          "len": 1
+        },
+        {
+          "source_ticker": "180202.SZ",
+          "len": 1
+        },
+        {
+          "source_ticker": "180203.SZ",
+          "len": 1
+        },
+        {
+          "source_ticker": "180301.SZ",
+          "len": 1
+        },
+        {
+          "source_ticker": "180302.SZ",
+          "len": 1
+        },
+        {
+          "source_ticker": "180303.SZ",
+          "len": 1
+        },
+        {
+          "source_ticker": "180305.SZ",
+          "len": 1
+        },
+        {
+          "source_ticker": "180306.SZ",
+          "len": 1
+        },
+        {
+          "source_ticker": "180307.SZ",
+          "len": 1
+        },
+        {
+          "source_ticker": "180401.SZ",
+          "len": 1
+        },
+        {
+          "source_ticker": "180402.SZ",
+          "len": 1
+        },
+        {
+          "source_ticker": "180501.SZ",
+          "len": 1
+        },
+        {
+          "source_ticker": "180502.SZ",
+          "len": 1
+        },
+        {
+          "source_ticker": "180503.SZ",
+          "len": 1
+        },
+        {
+          "source_ticker": "180505.SZ",
+          "len": 1
+        },
+        {
+          "source_ticker": "180601.SZ",
+          "len": 1
+        },
+        {
+          "source_ticker": "180602.SZ",
+          "len": 1
+        },
+        {
+          "source_ticker": "180603.SZ",
+          "len": 1
+        },
+        {
+          "source_ticker": "180605.SZ",
+          "len": 1
+        },
+        {
+          "source_ticker": "180606.SZ",
+          "len": 1
+        },
+        {
+          "source_ticker": "180607.SZ",
+          "len": 1
+        },
+        {
+          "source_ticker": "180701.SZ",
+          "len": 1
+        },
+        {
+          "source_ticker": "180702.SZ",
+          "len": 1
+        },
+        {
+          "source_ticker": "180801.SZ",
+          "len": 1
+        },
+        {
+          "source_ticker": "180901.SZ",
+          "len": 1
+        },
+        {
+          "source_ticker": "181001.SZ",
+          "len": 1
+        },
+        {
+          "source_ticker": "508000.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "508001.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "508002.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "508003.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "508005.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "508006.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "508007.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "508008.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "508009.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "508010.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "508011.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "508012.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "508015.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "508016.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "508017.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "508018.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "508019.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "508020.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "508021.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "508022.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "508026.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "508027.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "508028.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "508029.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "508030.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "508031.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "508033.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "508036.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "508039.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "508048.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "508050.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "508055.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "508056.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "508058.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "508059.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "508060.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "508066.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "508068.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "508069.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "508077.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "508078.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "508080.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "508082.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "508084.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "508085.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "508086.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "508087.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "508088.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "508089.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "508090.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "508091.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "508092.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "508093.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "508095.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "508096.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "508097.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "508098.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "508099.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "508600.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "508601.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "508602.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "508603.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "508609.SH",
+          "len": 1
+        }
+      ]
+    },
+    {
+      "dataset": "fund_share",
+      "request_start": "2026-11-04",
+      "request_end": "2026-11-04",
+      "snapshot_id": "snapshot:tushare:fund_share:sha256:c5241315ae5b16aaa1d9a49eaa04c29485a10bf9139c80a99c234867b781f86e",
+      "created_at": "2026-11-06T19:09:03.692153+00:00",
+      "source_rows": 1812,
+      "written_rows": 1717,
+      "unmapped": [
+        {
+          "source_ticker": "180101.SZ",
+          "len": 1
+        },
+        {
+          "source_ticker": "180102.SZ",
+          "len": 1
+        },
+        {
+          "source_ticker": "180103.SZ",
+          "len": 1
+        },
+        {
+          "source_ticker": "180105.SZ",
+          "len": 1
+        },
+        {
+          "source_ticker": "180106.SZ",
+          "len": 1
+        },
+        {
+          "source_ticker": "180201.SZ",
+          "len": 1
+        },
+        {
+          "source_ticker": "180202.SZ",
+          "len": 1
+        },
+        {
+          "source_ticker": "180203.SZ",
+          "len": 1
+        },
+        {
+          "source_ticker": "180301.SZ",
+          "len": 1
+        },
+        {
+          "source_ticker": "180302.SZ",
+          "len": 1
+        },
+        {
+          "source_ticker": "180303.SZ",
+          "len": 1
+        },
+        {
+          "source_ticker": "180305.SZ",
+          "len": 1
+        },
+        {
+          "source_ticker": "180306.SZ",
+          "len": 1
+        },
+        {
+          "source_ticker": "180307.SZ",
+          "len": 1
+        },
+        {
+          "source_ticker": "180401.SZ",
+          "len": 1
+        },
+        {
+          "source_ticker": "180402.SZ",
+          "len": 1
+        },
+        {
+          "source_ticker": "180501.SZ",
+          "len": 1
+        },
+        {
+          "source_ticker": "180502.SZ",
+          "len": 1
+        },
+        {
+          "source_ticker": "180503.SZ",
+          "len": 1
+        },
+        {
+          "source_ticker": "180505.SZ",
+          "len": 1
+        },
+        {
+          "source_ticker": "180601.SZ",
+          "len": 1
+        },
+        {
+          "source_ticker": "180602.SZ",
+          "len": 1
+        },
+        {
+          "source_ticker": "180603.SZ",
+          "len": 1
+        },
+        {
+          "source_ticker": "180605.SZ",
+          "len": 1
+        },
+        {
+          "source_ticker": "180606.SZ",
+          "len": 1
+        },
+        {
+          "source_ticker": "180607.SZ",
+          "len": 1
+        },
+        {
+          "source_ticker": "180701.SZ",
+          "len": 1
+        },
+        {
+          "source_ticker": "180702.SZ",
+          "len": 1
+        },
+        {
+          "source_ticker": "180801.SZ",
+          "len": 1
+        },
+        {
+          "source_ticker": "180901.SZ",
+          "len": 1
+        },
+        {
+          "source_ticker": "181001.SZ",
+          "len": 1
+        },
+        {
+          "source_ticker": "508000.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "508001.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "508002.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "508003.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "508005.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "508006.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "508007.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "508008.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "508009.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "508010.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "508011.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "508012.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "508015.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "508016.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "508017.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "508018.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "508019.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "508020.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "508021.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "508022.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "508026.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "508027.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "508028.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "508029.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "508030.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "508031.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "508033.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "508036.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "508039.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "508048.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "508050.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "508055.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "508056.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "508058.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "508059.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "508060.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "508066.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "508068.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "508069.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "508077.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "508078.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "508080.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "508082.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "508084.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "508085.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "508086.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "508087.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "508088.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "508089.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "508090.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "508091.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "508092.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "508093.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "508095.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "508096.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "508097.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "508098.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "508099.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "508600.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "508601.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "508602.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "508603.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "508607.SH",
+          "len": 1
+        },
+        {
+          "source_ticker": "508609.SH",
           "len": 1
         }
       ]

@@ -1,0 +1,19 @@
+{
+  "measured_at": "2026-11-06T10:47:56.134055+00:00",
+  "commit": "657f328c90fe0b6fb73a1b9f1cb7cd65b41561f1",
+  "runs": [
+    {
+      "name": "CI",
+      "run_id": 42203244288,
+      "conclusion": "success",
+      "url": "https://github.com/cosmos-arc/ditto/actions/runs/42203244288"
+    },
+    {
+      "name": "Deep CI",
+      "run_id": 42203244270,
+      "conclusion": "success",
+      "url": "https://github.com/cosmos-arc/ditto/actions/runs/42203244270"
+    }
+  ],
+  "boundary": "Actual current-SHA remote results; data execution remains separate and in progress."
+}

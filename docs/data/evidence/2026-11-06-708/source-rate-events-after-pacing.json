@@ -1,0 +1,181 @@
+{
+  "measured_at": "2026-11-07T02:01:38.048010+00:00",
+  "pacing_started_at": "2026-11-06T16:21:18.478992+00:00",
+  "input_prefix_bytes": 387830,
+  "input_prefix_sha256": "fa98518045414526d218e2ef15d776fd4ee26905853642b34f74d09ccc22479f",
+  "rate_error_records": 13,
+  "groups": [
+    {
+      "first": "2026-11-06T17:17:28.706952+00:00",
+      "last": "2026-11-06T17:17:35.050265+00:00",
+      "count": 7,
+      "records": [
+        {
+          "measured_at": "2026-11-06T17:17:28.706952+00:00",
+          "api": "fund_nav",
+          "params": {
+            "ts_code": "512170.SH",
+            "start_date": "20140101",
+            "end_date": "20261105"
+          },
+          "errors": [
+            "SourceFetchError: ip超限，请不到在多个ip同时使用"
+          ]
+        },
+        {
+          "measured_at": "2026-11-06T17:17:28.777169+00:00",
+          "api": "fund_nav",
+          "params": {
+            "ts_code": "512210.SH",
+            "start_date": "20140101",
+            "end_date": "20261105"
+          },
+          "errors": [
+            "SourceFetchError: ip超限，请不到在多个ip同时使用"
+          ]
+        },
+        {
+          "measured_at": "2026-11-06T17:17:29.308214+00:00",
+          "api": "fund_nav",
+          "params": {
+            "ts_code": "512240.SH",
+            "start_date": "20140101",
+            "end_date": "20261105"
+          },
+          "errors": [
+            "SourceFetchError: ip超限，请不到在多个ip同时使用"
+          ]
+        },
+        {
+          "measured_at": "2026-11-06T17:17:32.135333+00:00",
+          "api": "fund_nav",
+          "params": {
+            "ts_code": "512180.SH",
+            "start_date": "20140101",
+            "end_date": "20261105"
+          },
+          "errors": [
+            "SourceFetchError: ip超限，请不到在多个ip同时使用"
+          ]
+        },
+        {
+          "measured_at": "2026-11-06T17:17:33.485441+00:00",
+          "api": "fund_nav",
+          "params": {
+            "ts_code": "512380.SH",
+            "start_date": "20140101",
+            "end_date": "20261105"
+          },
+          "errors": [
+            "SourceFetchError: ip超限，请不到在多个ip同时使用"
+          ]
+        },
+        {
+          "measured_at": "2026-11-06T17:17:33.601733+00:00",
+          "api": "fund_nav",
+          "params": {
+            "ts_code": "512250.SH",
+            "start_date": "20140101",
+            "end_date": "20261105"
+          },
+          "errors": [
+            "SourceFetchError: ip超限，请不到在多个ip同时使用"
+          ]
+        },
+        {
+          "measured_at": "2026-11-06T17:17:35.050265+00:00",
+          "api": "fund_nav",
+          "params": {
+            "ts_code": "512350.SH",
+            "start_date": "20140101",
+            "end_date": "20261105"
+          },
+          "errors": [
+            "SourceFetchError: ip超限，请不到在多个ip同时使用"
+          ]
+        }
+      ]
+    },
+    {
+      "first": "2026-11-06T18:17:27.272686+00:00",
+      "last": "2026-11-06T18:17:32.460901+00:00",
+      "count": 6,
+      "records": [
+        {
+          "measured_at": "2026-11-06T18:17:27.272686+00:00",
+          "api": "fund_nav",
+          "params": {
+            "ts_code": "515920.SH",
+            "start_date": "20140101",
+            "end_date": "20261105"
+          },
+          "errors": [
+            "SourceFetchError: ip超限，请不到在多个ip同时使用"
+          ]
+        },
+        {
+          "measured_at": "2026-11-06T18:17:27.973482+00:00",
+          "api": "fund_nav",
+          "params": {
+            "ts_code": "516060.SH",
+            "start_date": "20140101",
+            "end_date": "20261105"
+          },
+          "errors": [
+            "SourceFetchError: ip超限，请不到在多个ip同时使用"
+          ]
+        },
+        {
+          "measured_at": "2026-11-06T18:17:29.159439+00:00",
+          "api": "fund_nav",
+          "params": {
+            "ts_code": "516710.SH",
+            "start_date": "20140101",
+            "end_date": "20261105"
+          },
+          "errors": [
+            "SourceFetchError: ip超限，请不到在多个ip同时使用"
+          ]
+        },
+        {
+          "measured_at": "2026-11-06T18:17:30.317624+00:00",
+          "api": "fund_nav",
+          "params": {
+            "ts_code": "516260.SH",
+            "start_date": "20140101",
+            "end_date": "20261105"
+          },
+          "errors": [
+            "SourceFetchError: ip超限，请不到在多个ip同时使用"
+          ]
+        },
+        {
+          "measured_at": "2026-11-06T18:17:30.924315+00:00",
+          "api": "fund_nav",
+          "params": {
+            "ts_code": "516130.SH",
+            "start_date": "20140101",
+            "end_date": "20261105"
+          },
+          "errors": [
+            "SourceFetchError: ip超限，请不到在多个ip同时使用"
+          ]
+        },
+        {
+          "measured_at": "2026-11-06T18:17:32.460901+00:00",
+          "api": "fund_nav",
+          "params": {
+            "ts_code": "516040.SH",
+            "start_date": "20140101",
+            "end_date": "20261105"
+          },
+          "errors": [
+            "SourceFetchError: ip超限，请不到在多个ip同时使用"
+          ]
+        }
+      ]
+    }
+  ],
+  "current_http_interval_seconds": 1.0,
+  "boundary": "Every native rate/IP/speed rejection after initial shared pacing retained. Groups only collect records at most120seconds apart, not an inference of continuous outage or its cause. Task identity/route unchanged; configured60HTTP/min did not eliminate the later18:17 IP-limit episode. Errors do not establish source absence; outcomes remain in exact-window attempt evidence. Input hash binds the recorded complete-line prefix of the append-only local error log."
+}

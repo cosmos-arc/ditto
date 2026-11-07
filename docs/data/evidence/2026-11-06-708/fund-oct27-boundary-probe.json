@@ -1,0 +1,22 @@
+[
+  {
+    "params": {
+      "ann_date": "20261027",
+      "limit": 1,
+      "offset": 102000
+    },
+    "started_at": "2026-11-07T01:30:25.268522+00:00",
+    "error": "SourceFetchError",
+    "message": "参数校验失败, offset"
+  },
+  {
+    "params": {
+      "ann_date": "20261027",
+      "limit": 1,
+      "offset": 102001
+    },
+    "started_at": "2026-11-07T01:30:26.500047+00:00",
+    "error": "SourceFetchError",
+    "message": "参数校验失败, offset"
+  }
+]

@@ -1,0 +1,121 @@
+{
+  "started_at": "2026-11-07T00:50:20.990132+00:00",
+  "api": "fund_portfolio",
+  "requests": [
+    {
+      "name": "ann-0",
+      "started_at": "2026-11-07T00:50:21.041558+00:00",
+      "params": {
+        "ann_date": "20261026",
+        "limit": 100,
+        "offset": 0
+      },
+      "status": "success",
+      "rows": 100,
+      "payload": "fund-market-parameter-ann-0.parquet",
+      "sha256": "571633369d46ec65115933e1aff3dba3c1abeea558799ed010ad979d68802877",
+      "codes": [
+        "000006.OF",
+        "000039.OF",
+        "000056.OF",
+        "000127.OF",
+        "000142.OF",
+        "000143.OF",
+        "000165.OF",
+        "000209.OF",
+        "000259.OF",
+        "000270.OF"
+      ],
+      "announcement_dates": [
+        "20261026"
+      ],
+      "finished_at": "2026-11-07T00:50:37.048677+00:00",
+      "elapsed_seconds": 16.008
+    },
+    {
+      "name": "ann-100",
+      "started_at": "2026-11-07T00:50:37.049094+00:00",
+      "params": {
+        "ann_date": "20261026",
+        "limit": 100,
+        "offset": 100
+      },
+      "status": "success",
+      "rows": 100,
+      "payload": "fund-market-parameter-ann-100.parquet",
+      "sha256": "1f92e85968224aed20c384cf4e6b9889fb69b4cd644ceb73e5778f504127f144",
+      "codes": [
+        "000297.OF",
+        "000308.OF",
+        "000309.OF",
+        "000336.OF",
+        "000338.OF",
+        "000409.OF",
+        "000431.OF",
+        "000433.OF",
+        "000462.OF",
+        "000478.OF"
+      ],
+      "announcement_dates": [
+        "20261026"
+      ],
+      "finished_at": "2026-11-07T00:51:29.150013+00:00",
+      "elapsed_seconds": 52.103
+    },
+    {
+      "name": "period-0",
+      "started_at": "2026-11-07T00:51:29.150596+00:00",
+      "params": {
+        "period": "20260930",
+        "limit": 100,
+        "offset": 0
+      },
+      "status": "success",
+      "rows": 100,
+      "payload": "fund-market-parameter-period-0.parquet",
+      "sha256": "18eb6bc63fe190a7832c9253aa6ad624d6ae158a2c30bcfe74200f2d5ebb97bf",
+      "codes": [
+        "000001.OF",
+        "000006.OF",
+        "000008.OF",
+        "000011.OF",
+        "000017.OF",
+        "000020.OF",
+        "000021.OF",
+        "000028.OF",
+        "000029.OF",
+        "000030.OF"
+      ],
+      "announcement_dates": [
+        "20261026",
+        "20261027"
+      ],
+      "finished_at": "2026-11-07T00:51:49.810199+00:00",
+      "elapsed_seconds": 20.66
+    },
+    {
+      "name": "known-fund-ann",
+      "started_at": "2026-11-07T00:51:49.810539+00:00",
+      "params": {
+        "ts_code": "561250.SH",
+        "ann_date": "20261026",
+        "limit": 100,
+        "offset": 0
+      },
+      "status": "success",
+      "rows": 10,
+      "payload": "fund-market-parameter-known-fund-ann.parquet",
+      "sha256": "9db6fa009e397be55348276e8e04c19b892842043468dc444adefb67fb8bf209",
+      "codes": [
+        "561250.SH"
+      ],
+      "announcement_dates": [
+        "20261026"
+      ],
+      "finished_at": "2026-11-07T00:52:00.604311+00:00",
+      "elapsed_seconds": 10.794
+    }
+  ],
+  "boundary": "Read-only bounded pages from the existing configured identity and route. Page samples do not prove complete market coverage or authorize ingestion.",
+  "finished_at": "2026-11-07T00:52:00.605149+00:00"
+}

@@ -1,0 +1,9 @@
+{
+  "measured_at": "2026-11-06T09:45:18.744426+00:00",
+  "simulated_requests": 48,
+  "processes": 24,
+  "peak_active_requests": 8,
+  "limit": 8,
+  "external_ungated_workers": 2,
+  "boundary": "Local no-network check of the exact task-only cross-process lock gate; source entitlement remains at most 10 concurrent requests."
+}

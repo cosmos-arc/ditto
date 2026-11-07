@@ -1,0 +1,24 @@
+{
+  "measured_at": "2026-11-06T15:46:25.060490+00:00",
+  "chunks": [
+    12,
+    16,
+    17,
+    18,
+    19
+  ],
+  "rate_per_worker": 4,
+  "additional_aggregate_rate_cap": 20,
+  "effective_http_slots": 8,
+  "shared_per_chunk_lease_unchanged": true,
+  "original_scope_roster_sha256": "6a90d63c053cc9d79d4ef190857f0246b7de1a408cc8bc79dd717064c7e0e1e2",
+  "reason": "Start the five remaining not-yet-leased frozen chunks before the sequential group queues reach them. All existing successful records are skipped under the same exclusive chunk lease; later duplicate group arrivals take that lease and skip completed work. No live worker restart, extra HTTP concurrency, source identity, route, pagination or write-policy change. Reuses the20/min request budget freed by the completed unfiltered NAV market worker.",
+  "lease_verified_at": "2026-11-06T15:59:13.523929+00:00",
+  "leased_worker_pids": {
+    "12": 15942,
+    "16": 15946,
+    "17": 15958,
+    "18": 15962,
+    "19": 15966
+  }
+}

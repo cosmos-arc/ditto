@@ -1,0 +1,245 @@
+{
+  "measured_at": "2026-11-06T13:22:20.762007+00:00",
+  "reason": "Task-only market=E selector returned zero despite positive same-day same-source code observations; narrowed response is not full ETF coverage. Retry unfiltered native selector.",
+  "native_queries": [
+    {
+      "measured_at": "2026-11-06T13:18:21.628816+00:00",
+      "api": "fund_nav",
+      "fields": "ts_code,ann_date,nav_date,unit_nav,accum_nav",
+      "params": {
+        "nav_date": "20261105",
+        "market": "E"
+      },
+      "rows": 0,
+      "sha256": "3fbbb73a472ac5724c6970ce59f4e5d5213deb59f8a64b0d9a160de766ec02d1",
+      "payload": ".cache/issue-708/nav-native-accum-delta/f41f48a028f1655b63c4b392ce6e6650393e3d1cf0907596cb3eb6e4d1843c96.parquet"
+    },
+    {
+      "measured_at": "2026-11-06T13:17:56.577986+00:00",
+      "api": "fund_nav",
+      "fields": "ts_code,ann_date,nav_date,unit_nav,accum_nav",
+      "params": {
+        "nav_date": "20261103",
+        "market": "E"
+      },
+      "rows": 0,
+      "sha256": "3fbbb73a472ac5724c6970ce59f4e5d5213deb59f8a64b0d9a160de766ec02d1",
+      "payload": ".cache/issue-708/nav-native-accum-delta/5d0f613a108f81a2a4f8fdc54fb09706fed8d34a00358e223e1699b9678d33b0.parquet"
+    },
+    {
+      "measured_at": "2026-11-06T13:17:47.907526+00:00",
+      "api": "fund_nav",
+      "fields": "ts_code,ann_date,nav_date,unit_nav,accum_nav",
+      "params": {
+        "nav_date": "20261102",
+        "market": "E"
+      },
+      "rows": 0,
+      "sha256": "3fbbb73a472ac5724c6970ce59f4e5d5213deb59f8a64b0d9a160de766ec02d1",
+      "payload": ".cache/issue-708/nav-native-accum-delta/94435ab4428ab778de6862db75af50c2fcd53a7b071796ff7ade8cec414fcfe5.parquet"
+    },
+    {
+      "measured_at": "2026-11-06T13:17:29.636692+00:00",
+      "api": "fund_nav",
+      "fields": "ts_code,ann_date,nav_date,unit_nav,accum_nav",
+      "params": {
+        "nav_date": "20261031",
+        "market": "E"
+      },
+      "rows": 0,
+      "sha256": "3fbbb73a472ac5724c6970ce59f4e5d5213deb59f8a64b0d9a160de766ec02d1",
+      "payload": ".cache/issue-708/nav-native-accum-delta/e3c2e7c00dcdbd04a5e85effe5ba359181c6ba877c85f466ff9217633f126cb0.parquet"
+    },
+    {
+      "measured_at": "2026-11-06T13:17:10.684545+00:00",
+      "api": "fund_nav",
+      "fields": "ts_code,ann_date,nav_date,unit_nav,accum_nav",
+      "params": {
+        "nav_date": "20261029",
+        "market": "E"
+      },
+      "rows": 0,
+      "sha256": "3fbbb73a472ac5724c6970ce59f4e5d5213deb59f8a64b0d9a160de766ec02d1",
+      "payload": ".cache/issue-708/nav-native-accum-delta/7f82f85c46907010d118730b3e63b6f8f1635d9942b8b6acc42caa5eb6a943fa.parquet"
+    },
+    {
+      "measured_at": "2026-11-06T13:17:40.736807+00:00",
+      "api": "fund_nav",
+      "fields": "ts_code,ann_date,nav_date,unit_nav,accum_nav",
+      "params": {
+        "nav_date": "20261101",
+        "market": "E"
+      },
+      "rows": 0,
+      "sha256": "3fbbb73a472ac5724c6970ce59f4e5d5213deb59f8a64b0d9a160de766ec02d1",
+      "payload": ".cache/issue-708/nav-native-accum-delta/eead594e5e5914a80bad131a55475a1e04ca3e113346ae7b1a42e72cec67373b.parquet"
+    },
+    {
+      "measured_at": "2026-11-06T13:17:21.181500+00:00",
+      "api": "fund_nav",
+      "fields": "ts_code,ann_date,nav_date,unit_nav,accum_nav",
+      "params": {
+        "nav_date": "20261030",
+        "market": "E"
+      },
+      "rows": 0,
+      "sha256": "3fbbb73a472ac5724c6970ce59f4e5d5213deb59f8a64b0d9a160de766ec02d1",
+      "payload": ".cache/issue-708/nav-native-accum-delta/411d9289f32128d937bb67e55f7801f389b9b42f09e3c6b53c21ec791908edbc.parquet"
+    },
+    {
+      "measured_at": "2026-11-06T13:18:03.973097+00:00",
+      "api": "fund_nav",
+      "fields": "ts_code,ann_date,nav_date,unit_nav,accum_nav",
+      "params": {
+        "nav_date": "20261104",
+        "market": "E"
+      },
+      "rows": 0,
+      "sha256": "3fbbb73a472ac5724c6970ce59f4e5d5213deb59f8a64b0d9a160de766ec02d1",
+      "payload": ".cache/issue-708/nav-native-accum-delta/c692e0febda36328053ea03d0ee7a8368ab03d01abc2a28d254eeefc175a089a.parquet"
+    }
+  ],
+  "contradiction": [
+    {
+      "measured_at": "2026-11-06T11:36:42.558565+00:00",
+      "api": "fund_nav",
+      "params": {
+        "ts_code": "510300.SH",
+        "start_date": "20261105",
+        "end_date": "20261105",
+        "limit": 3,
+        "offset": 0
+      },
+      "fields": "ts_code,ann_date,nav_date,unit_nav,acc_nav,accum_nav",
+      "boundary": "Explicit first-page field probe only, not a complete request or coverage receipt.",
+      "status": "success",
+      "rows": [
+        {
+          "ts_code": "510300.SH",
+          "ann_date": "20261105",
+          "nav_date": "20261105",
+          "unit_nav": 4.1909,
+          "acc_nav": null,
+          "accum_nav": 1.881
+        }
+      ]
+    },
+    {
+      "measured_at": "2026-11-06T11:36:58.661067+00:00",
+      "api": "fund_nav",
+      "params": {
+        "ts_code": "159915.SZ",
+        "start_date": "20261105",
+        "end_date": "20261105",
+        "limit": 3,
+        "offset": 0
+      },
+      "fields": "ts_code,ann_date,nav_date,unit_nav,acc_nav,accum_nav",
+      "boundary": "Explicit first-page field probe only, not a complete request or coverage receipt.",
+      "status": "success",
+      "rows": [
+        {
+          "ts_code": "159915.SZ",
+          "ann_date": "20261106",
+          "nav_date": "20261105",
+          "unit_nav": 2.5834,
+          "acc_nav": null,
+          "accum_nav": 2.9595
+        }
+      ]
+    }
+  ],
+  "excluded_snapshot_id": "snapshot:tushare:etf_nav:sha256:e838d9e2ed662348605e8ab7363627f350342b0c4f868c5d5bf9650b0c74cfac",
+  "before_checkpoint": {
+    "chunk_id": "partition:tushare:etf_nav:2026-11-05:2026-11-05",
+    "dataset_id": "etf_nav",
+    "source": "tushare",
+    "request_start": "2026-11-05",
+    "request_end": "2026-11-05",
+    "status": "COMPLETE",
+    "payload_id": "payload:empty:sha256:ed0c7894d0812050ba970c94523f566f0e0ae635eab993342e3f12eb76fe7654:etf_nav/observations/no-data/2026-11-05:2026-11-05:sha256:ed0c7894d0812050ba970c94523f566f0e0ae635eab993342e3f12eb76fe7654:snapshot:tushare:etf_nav:sha256:e838d9e2ed662348605e8ab7363627f350342b0c4f868c5d5bf9650b0c74cfac",
+    "complete_evidence_id": "snapshot:tushare:etf_nav:sha256:e838d9e2ed662348605e8ab7363627f350342b0c4f868c5d5bf9650b0c74cfac",
+    "error_code": null,
+    "updated_at": "2026-11-06T13:18:21.860799+00:00"
+  },
+  "before_log": {
+    "dataset": "etf_nav",
+    "source": "tushare",
+    "trade_date": "2026-11-05",
+    "status": "SUCCESS",
+    "checksum": null,
+    "rows": 0,
+    "error_code": null,
+    "error_message": null,
+    "attempts": 8,
+    "first_attempt_at": "2026-11-05T21:59:01.220217",
+    "last_attempt_at": "2026-11-06T21:18:21.860950"
+  },
+  "before_snapshot": {
+    "snapshot_id": "snapshot:tushare:etf_nav:sha256:e838d9e2ed662348605e8ab7363627f350342b0c4f868c5d5bf9650b0c74cfac",
+    "dataset_id": "etf_nav",
+    "source": "tushare",
+    "request_start": "2026-11-05",
+    "request_end": "2026-11-05",
+    "schema_version": "market.etf_nav.v1",
+    "checksum": "empty:sha256:ed0c7894d0812050ba970c94523f566f0e0ae635eab993342e3f12eb76fe7654",
+    "canonical_asset": {
+      "dataset_id": "etf_nav",
+      "namespace": "market",
+      "partition_keys": []
+    },
+    "request_parameters_hash": "sha256:2c779ed924ac8cd31727fa17a7db053e89e08a70d6f0b2684a8b40ce5bbe758a",
+    "response_metadata": [
+      [
+        "canonical_checksum",
+        "empty:sha256:ed0c7894d0812050ba970c94523f566f0e0ae635eab993342e3f12eb76fe7654"
+      ],
+      [
+        "canonical_row_count",
+        "0"
+      ],
+      [
+        "snapshot_layer",
+        "verified_empty_provider_observation"
+      ]
+    ],
+    "row_count": 0,
+    "payload_uri": null,
+    "payload_retained": false,
+    "created_at": "2026-11-06T13:18:21.633599+00:00",
+    "schema_fingerprint": null,
+    "observations": [
+      "2026-11-06T13:18:21.860011+00:00"
+    ]
+  },
+  "replacement_pending_revision": "partition:tushare:etf_nav:2026-11-05:2026-11-05:revision:f8f35ed5ffae14a2e8754b3e4258e333487886a7f1dfe2f433110026b0efccf1",
+  "boundary": "No canonical values changed. Immutable zero observation and transition audit retained, but explicitly rejected for coverage. A later genuine full-scope successful revision can supersede the pending repair through the existing lifecycle.",
+  "after_checkpoint": {
+    "chunk_id": "partition:tushare:etf_nav:2026-11-05:2026-11-05:revision:f8f35ed5ffae14a2e8754b3e4258e333487886a7f1dfe2f433110026b0efccf1",
+    "dataset_id": "etf_nav",
+    "source": "tushare",
+    "request_start": "2026-11-05",
+    "request_end": "2026-11-05",
+    "status": "PLANNED",
+    "payload_id": null,
+    "complete_evidence_id": null,
+    "error_code": "SOURCE_QUERY_SCOPE_CONTRADICTION",
+    "updated_at": "2026-11-06T13:22:20.765161+00:00"
+  },
+  "after_log": {
+    "dataset": "etf_nav",
+    "source": "tushare",
+    "trade_date": "2026-11-05",
+    "status": "FAIL",
+    "checksum": null,
+    "rows": null,
+    "error_code": "SOURCE_QUERY_SCOPE_CONTRADICTION",
+    "error_message": "Task-only market=E selector returned zero despite positive same-day same-source code observations; narrowed response is not full ETF coverage. Retry unfiltered native selector.",
+    "attempts": 9,
+    "first_attempt_at": "2026-11-05T21:59:01.220217",
+    "last_attempt_at": "2026-11-06T21:22:20.765356"
+  },
+  "completed_coverage_denied": true,
+  "retry_not_skipped": true,
+  "finished_at": "2026-11-06T13:22:21.169394+00:00"
+}

@@ -1,0 +1,13 @@
+{
+  "measured_at": "2026-11-07T01:59:59.692547+00:00",
+  "checks": {
+    "real_snapshot": true,
+    "failed_status_rejected": true,
+    "wrong_payload_rejected": true,
+    "wrong_complete_id_rejected": true,
+    "wrong_window_rejected": true,
+    "missing_market_day_rejected": true
+  },
+  "coverage_summary_sha256": "d6a19b6a558b77cdac44fa51c069cb10f3b51388c3aec1b20fb752470e92a58f",
+  "boundary": "Task union requires the frozen prefix and every exact announcement day; no full-window snapshot synthesized."
+}

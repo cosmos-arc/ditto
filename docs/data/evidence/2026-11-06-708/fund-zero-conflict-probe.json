@@ -1,0 +1,58 @@
+{
+  "started_at": "2026-11-06T20:38:20.896135+00:00",
+  "api": "fund_portfolio",
+  "requests": [
+    {
+      "started_at": "2026-11-06T20:38:20.939908+00:00",
+      "params": {
+        "ts_code": "561250.SH",
+        "start_date": "20140101",
+        "end_date": "20261105"
+      },
+      "status": "success",
+      "rows": 10,
+      "payload": "fund-zero-conflict-561250.SH-full.parquet",
+      "sha256": "9db6fa009e397be55348276e8e04c19b892842043468dc444adefb67fb8bf209",
+      "finished_at": "2026-11-06T20:38:36.171753+00:00"
+    },
+    {
+      "started_at": "2026-11-06T20:38:36.172707+00:00",
+      "params": {
+        "ts_code": "561250.SH",
+        "period": "20260930"
+      },
+      "status": "success",
+      "rows": 10,
+      "payload": "fund-zero-conflict-561250.SH-quarter.parquet",
+      "sha256": "9db6fa009e397be55348276e8e04c19b892842043468dc444adefb67fb8bf209",
+      "finished_at": "2026-11-06T20:38:50.688704+00:00"
+    },
+    {
+      "started_at": "2026-11-06T20:38:50.689407+00:00",
+      "params": {
+        "ts_code": "561390.SH",
+        "start_date": "20140101",
+        "end_date": "20261105"
+      },
+      "status": "success",
+      "rows": 11,
+      "payload": "fund-zero-conflict-561390.SH-full.parquet",
+      "sha256": "e760482bb41c6b1ca1579bf70bec220b7fb96652b7305070e1541fb589d85f62",
+      "finished_at": "2026-11-06T20:39:03.598274+00:00"
+    },
+    {
+      "started_at": "2026-11-06T20:39:03.598913+00:00",
+      "params": {
+        "ts_code": "561390.SH",
+        "period": "20260930"
+      },
+      "status": "success",
+      "rows": 11,
+      "payload": "fund-zero-conflict-561390.SH-quarter.parquet",
+      "sha256": "e760482bb41c6b1ca1579bf70bec220b7fb96652b7305070e1541fb589d85f62",
+      "finished_at": "2026-11-06T20:39:17.765882+00:00"
+    }
+  ],
+  "boundary": "Read-only same-identity, same-route native rechecks; no completion promotion or canonical deletion.",
+  "finished_at": "2026-11-06T20:39:17.766318+00:00"
+}

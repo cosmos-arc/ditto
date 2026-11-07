@@ -1,0 +1,13 @@
+{
+  "measured_at": "2026-11-07T01:56:24.161685+00:00",
+  "day": "2026-10-27",
+  "funds": 32903,
+  "completed_batches": 165,
+  "rows": 143782,
+  "nonempty_funds": 13626,
+  "roster_sha256": "4f68991b4b4c99f42f080085580d32be639ca153ee30de3e547b9006469545eb",
+  "payload": "fund-oct27-code-batches-complete.parquet",
+  "sha256": "9480df7e8b2e365c3529d919caaacd1bd31686c1fa0cd27f377389509e715f7e",
+  "plan_sha256": "9ce3a54ef33bd810fb8d4cf7338edecd0eab1e667d56835f8b26daa690041120",
+  "boundary": "Acquired complete code-batch response only; not yet canonical ingestion or COMPLETE."
+}

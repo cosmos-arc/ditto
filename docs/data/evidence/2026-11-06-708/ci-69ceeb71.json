@@ -1,0 +1,17 @@
+{
+  "measured_at": "2026-11-06T09:56:07.058523+00:00",
+  "head": "69ceeb71eb51728c4d31418c56c387a37fa090f1",
+  "ci": {
+    "run": 42196075593,
+    "conclusion": "success"
+  },
+  "deep_ci": {
+    "run": 42196075662,
+    "conclusion": "failure",
+    "failed_job": 127819621267,
+    "failed_test": "tests/system/instrument-chart.spec.ts:37",
+    "error": "ColumnNotFoundError: knowledge_date absent from three-column NAV fixture",
+    "classification": "The new NAV disclosure key exposed a pre-existing system seed that omitted the catalog-declared disclosure column. Real source transformation and normal writers already retain this column; the seed is being aligned using typed null, not an invented disclosure date."
+  },
+  "next": "Run the real supervised backend and browser suite with the corrected seed, commit the fixture, independently review and push; final current-SHA CI must pass."
+}

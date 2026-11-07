@@ -1,0 +1,74 @@
+{
+  "started_at": "2026-11-06T20:40:09.761164+00:00",
+  "probe_sha256": "0d13b2751839901ea2c1cb75b8f75a2d865feeeb507042f0755934163ab4b273",
+  "corrections": [
+    {
+      "source_ticker": "561250.SH",
+      "before": {
+        "chunk_id": "partition:tushare:fund_portfolio:561250.SH:2014-01-01:2026-11-05",
+        "dataset_id": "fund_portfolio",
+        "source": "tushare",
+        "request_start": "2014-01-01",
+        "request_end": "2026-11-05",
+        "status": "COMPLETE",
+        "payload_id": "payload:empty:sha256:22a9253d3f710d5edbf81f1eccc9c3409dd39db9c2185ab5c33e25686d1474d6:fund_portfolio/observations/no-data/2014-01-01:2026-11-05:sha256:22a9253d3f710d5edbf81f1eccc9c3409dd39db9c2185ab5c33e25686d1474d6:snapshot:tushare:fund_portfolio:sha256:5abaa8a9a1e8a6a05749c9160d7d6c291cf296b72d8d273855bcc83598b1f514",
+        "complete_evidence_id": "snapshot:tushare:fund_portfolio:sha256:5abaa8a9a1e8a6a05749c9160d7d6c291cf296b72d8d273855bcc83598b1f514",
+        "error_code": null,
+        "updated_at": "2026-11-06T17:11:03.800890+00:00"
+      },
+      "excluded_snapshot_id": "snapshot:tushare:fund_portfolio:sha256:5abaa8a9a1e8a6a05749c9160d7d6c291cf296b72d8d273855bcc83598b1f514",
+      "positive_probe": {
+        "started_at": "2026-11-06T20:38:20.939908+00:00",
+        "params": {
+          "ts_code": "561250.SH",
+          "start_date": "20140101",
+          "end_date": "20261105"
+        },
+        "status": "success",
+        "rows": 10,
+        "payload": "fund-zero-conflict-561250.SH-full.parquet",
+        "sha256": "9db6fa009e397be55348276e8e04c19b892842043468dc444adefb67fb8bf209",
+        "finished_at": "2026-11-06T20:38:36.171753+00:00"
+      },
+      "revision": "partition:tushare:fund_portfolio:561250.SH:2014-01-01:2026-11-05:revision:2ef76beebc1e411de6821c015f808e7042b2c554bbf8afd9fa4f9f8596ad6628",
+      "reason": "Full-window zero contradicted by current same-code same-window native nonzero response; re-ingest normally and retain old zero as rejected evidence.",
+      "pending": {
+        "chunk_id": "partition:tushare:fund_portfolio:561250.SH:2014-01-01:2026-11-05:revision:2ef76beebc1e411de6821c015f808e7042b2c554bbf8afd9fa4f9f8596ad6628",
+        "dataset_id": "fund_portfolio",
+        "source": "tushare",
+        "request_start": "2014-01-01",
+        "request_end": "2026-11-05",
+        "status": "PLANNED",
+        "payload_id": null,
+        "complete_evidence_id": null,
+        "error_code": "SOURCE_ZERO_CONTRADICTION",
+        "updated_at": "2026-11-06T20:40:09.960222+00:00"
+      },
+      "result": {
+        "dataset": "fund_portfolio",
+        "trade_date": "2014-01-01",
+        "status": "success",
+        "row_count": 0,
+        "checksum": null,
+        "message": "provider 已验证区间无数据并提交零行证据",
+        "error": null,
+        "snapshot_evidence": null,
+        "quality_evidence": null
+      },
+      "after": {
+        "chunk_id": "partition:tushare:fund_portfolio:561250.SH:2014-01-01:2026-11-05:revision:2ef76beebc1e411de6821c015f808e7042b2c554bbf8afd9fa4f9f8596ad6628",
+        "dataset_id": "fund_portfolio",
+        "source": "tushare",
+        "request_start": "2014-01-01",
+        "request_end": "2026-11-05",
+        "status": "COMPLETE",
+        "payload_id": "payload:empty:sha256:22a9253d3f710d5edbf81f1eccc9c3409dd39db9c2185ab5c33e25686d1474d6:fund_portfolio/observations/no-data/2014-01-01:2026-11-05:sha256:22a9253d3f710d5edbf81f1eccc9c3409dd39db9c2185ab5c33e25686d1474d6:snapshot:tushare:fund_portfolio:sha256:5abaa8a9a1e8a6a05749c9160d7d6c291cf296b72d8d273855bcc83598b1f514",
+        "complete_evidence_id": "snapshot:tushare:fund_portfolio:sha256:5abaa8a9a1e8a6a05749c9160d7d6c291cf296b72d8d273855bcc83598b1f514",
+        "error_code": null,
+        "updated_at": "2026-11-06T20:40:15.141697+00:00"
+      },
+      "finished_at": "2026-11-06T20:40:15.142441+00:00"
+    }
+  ],
+  "boundary": "Only two exact contradicted zero windows lose completion. Original snapshots/base checkpoints and canonical holdings are retained; normal per-holder ingestion restores proven nonzero evidence without force or relaxed duplicate policy."
+}

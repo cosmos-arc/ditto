@@ -1,0 +1,17 @@
+{
+  "started_at": "2026-11-07T02:00:04.664882+00:00",
+  "finished_at": "2026-11-07T02:01:11.272653+00:00",
+  "durable_holders_checked": 32903,
+  "added_holder_full_windows": 61,
+  "source_windows_checked": 42703,
+  "coverage_mode": "verified_frozen_roster_prefix_and_market_announcement_days",
+  "prefix_zero_observations": 12423,
+  "market_days": 36,
+  "market_payload_rows": 174597,
+  "market_funds": 16541,
+  "per_fund_tail_crosschecked": 9764,
+  "verified_payload_rows_including_overlap": 18749388,
+  "failures": [],
+  "verification": "Existing payload reader verified every retained prefix, added-holder full-window, market-day and completed per-fund tail payload. All original normalized values including nulls matched canonical keys under the existing BSE dual-code rule. All canonical tail rows and all precise per-fund tail observations withinOct1..Nov5 were corroborated by the36-day market union. Historical overlap is counted repeatedly in comparison rows, not unique inventory. Market absence is not a per-fund zero response; no synthetic full-window snapshot or all-asset/PIT claim.",
+  "market_union_sha256": "f4b47fe204dc9356704e54e58b660883dd2cfcc8ec5212e4227c25625fb20731"
+}

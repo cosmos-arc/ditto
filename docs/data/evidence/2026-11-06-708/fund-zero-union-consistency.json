@@ -1,0 +1,27 @@
+{
+  "measured_at": "2026-11-06T23:07:14.845898+00:00",
+  "completed_holders": 5362,
+  "pending_holders": 27480,
+  "completion_sha256": "da421609e35303d567668b4126866016a4ea496f6b73b2f7e8398ccdfb30a508",
+  "prefix_completion_sha256": "7e5c466ba4d9904349471bbbf395992f8f0543212f42e01cb52060672ac1e6f1",
+  "checks": [
+    {
+      "window": "prefix",
+      "start": "2014-01-01",
+      "end": "2026-09-30",
+      "zero_observations": 12423,
+      "contradictions": [],
+      "unknown_knowledge_rows": 0
+    },
+    {
+      "window": "tail",
+      "start": "2026-10-01",
+      "end": "2026-11-05",
+      "zero_observations": 3174,
+      "contradictions": [],
+      "unknown_knowledge_rows": 0
+    }
+  ],
+  "contradictions": 0,
+  "boundary": "Read-only crosscheck of zero source observations against canonical holdings in the credited report and knowledge-date windows. Unknown knowledge dates are counted separately; absence of contradictions does not prove historical nonexistence or full asset disclosure."
+}

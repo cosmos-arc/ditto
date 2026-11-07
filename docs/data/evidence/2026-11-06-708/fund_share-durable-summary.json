@@ -1,9 +1,12 @@
 {
-  "measured_at": "2026-11-06T07:43:47.553196+00:00",
+  "measured_at": "2026-11-06T20:58:24.697018+00:00",
   "dataset": "fund_share",
-  "expected_instruments": 1847,
-  "completed_instruments": 837,
+  "expected_instruments": 1849,
+  "initial_instruments": 1847,
+  "roster_delta_instruments": 2,
+  "completed_instruments": 1849,
   "invalid_checkpoints": [],
-  "roster_sha256": "75e9e635d78739564f29ec1bdee0c03d79e5a8115b127d97674d339a7014d912",
-  "boundary": "Union of successful same-code COMPLETE checkpoints measured during this task covers the exact requested calendar interval. Each checkpoint has retained payload or verified zero observation. Failed overlapping requests remain failed; interval coverage does not certify every historical disclosure or revision."
+  "excluded_snapshots": [],
+  "roster_sha256": "4e2793ddc1dedbbf841aae3e2d3a263b38667611fdcf1228c720da7e5bf90e30",
+  "boundary": "Union of successful same-code COMPLETE windows and, for NAV, independently audited current/historical market-date ingestion windows and checksum-verified native empty day observations. Historical market windows use their retained same-day ETF universe, never the larger current roster. Historical payload checksums, schema, count and all normalized values were revalidated against canonical rows; native market responses have separate checksum and exact-value evidence. No market request fabricates per-code checkpoints. Zero responses are observations; overlapping failures remain failed; coverage does not certify every disclosure or revision."
 }

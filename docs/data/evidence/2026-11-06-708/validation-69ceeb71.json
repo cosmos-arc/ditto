@@ -1,0 +1,31 @@
+{
+  "measured_at": "2026-11-06T09:35:26.701777+00:00",
+  "commit": "69ceeb71eb51728c4d31418c56c387a37fa090f1",
+  "checks": [
+    {
+      "command": "task test",
+      "result": "17445 passed, 71 skipped",
+      "exit_code": 0,
+      "log_sha256": "b10d4f5111376b77d407025a92f7800674f765fa84b80a783fc68b6b9c06436e"
+    },
+    {
+      "command": "task verify-push",
+      "result": "backend 16731 passed / 17 skipped; web 1927; contract 4; harness 148 plus 116 subtests; tooling 270; PIT 657; applicable lint, type, format and architecture gates passed",
+      "exit_code": 0,
+      "log_sha256": "8a6b2fddb520d0f093ca4645ffbfdf2dd2a912fcf798ce8fddbcc74b2da6e936"
+    },
+    {
+      "command": "focused NAV storage / service / CLI / HTTP",
+      "result": "79 passed",
+      "exit_code": 0,
+      "log_sha256": "46ae598738f7fad285e30e071cccbef5d06ddbffab83c59a3b78497db56aa183"
+    }
+  ],
+  "review": {
+    "base": "9265cfd71067c810e9428bc6a5bf1d9ceb752f08",
+    "head": "69ceeb71eb51728c4d31418c56c387a37fa090f1",
+    "standards": "Original NAV consumer finding closed; no new hard violations or smells. Captured production-frame comparison restores ALERT; old disclosures retained.",
+    "spec": "Original NAV consumer finding closed; no new regressions; independent CLI and HTTP 7 passed."
+  },
+  "boundary": "Code verification at this commit. Ongoing production backfills and the final evidence refresh have separate measurement times; these test results do not certify completion of all requested data windows."
+}

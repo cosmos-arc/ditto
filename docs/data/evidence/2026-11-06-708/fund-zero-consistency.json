@@ -1,0 +1,13 @@
+{
+  "measured_at": "2026-11-06T20:37:16.876551+00:00",
+  "start": "2014-01-01",
+  "end": "2026-11-05",
+  "zero_observations": 12423,
+  "canonical_nonempty_codes": 20407,
+  "contradictions": [
+    "561250.SH",
+    "561390.SH"
+  ],
+  "completion_sha256": "7e5c466ba4d9904349471bbbf395992f8f0543212f42e01cb52060672ac1e6f1",
+  "boundary": "Read-only crosscheck of verified full-window zero observations against existing canonical holdings in the same report-date window. An empty intersection does not prove historical nonexistence or complete asset disclosure."
+}

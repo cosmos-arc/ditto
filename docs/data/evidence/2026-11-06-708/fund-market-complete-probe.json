@@ -1,0 +1,214 @@
+{
+  "started_at": "2026-11-07T00:54:48.880045+00:00",
+  "api": "fund_portfolio",
+  "params": {
+    "ann_date": "20261026"
+  },
+  "pages": [
+    {
+      "started_at": "2026-11-07T00:54:48.924485+00:00",
+      "finished_at": "2026-11-07T00:54:54.078135+00:00",
+      "params": {
+        "limit": 2000,
+        "offset": 0,
+        "ann_date": "20261026"
+      },
+      "rows": 2000,
+      "payload": "fund-market-ann-20261026-page-000.json",
+      "sha256": "1c780649c955780580ec6df0c6e49a6da832f2cda71f3ba7e48f8c6827d41882"
+    },
+    {
+      "started_at": "2026-11-07T00:54:54.084018+00:00",
+      "finished_at": "2026-11-07T00:54:55.717808+00:00",
+      "params": {
+        "limit": 2000,
+        "offset": 2000,
+        "ann_date": "20261026"
+      },
+      "rows": 2000,
+      "payload": "fund-market-ann-20261026-page-001.json",
+      "sha256": "34377554869e3e2c82f7186de3456801215798f51a0d7a85884a58f4d4ac6b77"
+    },
+    {
+      "started_at": "2026-11-07T00:54:55.723305+00:00",
+      "finished_at": "2026-11-07T00:54:57.404648+00:00",
+      "params": {
+        "limit": 2000,
+        "offset": 4000,
+        "ann_date": "20261026"
+      },
+      "rows": 2000,
+      "payload": "fund-market-ann-20261026-page-002.json",
+      "sha256": "b21fe683958f2227b32ebfdd061f94cd6849a59a580946ce5c6f6268902b574d"
+    },
+    {
+      "started_at": "2026-11-07T00:54:57.409826+00:00",
+      "finished_at": "2026-11-07T00:54:58.883347+00:00",
+      "params": {
+        "limit": 2000,
+        "offset": 6000,
+        "ann_date": "20261026"
+      },
+      "rows": 2000,
+      "payload": "fund-market-ann-20261026-page-003.json",
+      "sha256": "a1b85f90fc0cdb188743b93b5cd11330cb89524296d174d04c386d913071c26a"
+    },
+    {
+      "started_at": "2026-11-07T00:54:58.889169+00:00",
+      "finished_at": "2026-11-07T00:55:00.574230+00:00",
+      "params": {
+        "limit": 2000,
+        "offset": 8000,
+        "ann_date": "20261026"
+      },
+      "rows": 2000,
+      "payload": "fund-market-ann-20261026-page-004.json",
+      "sha256": "d6bf88743e5a727ce7b4e97ede6bcad50087c66e20dbab3686caac1734680d70"
+    },
+    {
+      "started_at": "2026-11-07T00:55:00.578268+00:00",
+      "finished_at": "2026-11-07T00:55:02.260402+00:00",
+      "params": {
+        "limit": 2000,
+        "offset": 10000,
+        "ann_date": "20261026"
+      },
+      "rows": 2000,
+      "payload": "fund-market-ann-20261026-page-005.json",
+      "sha256": "8cc1ce28b2faf4bccd5486fa0bd48e1d515a32cd6c58c2b4db2ead66329e2c48"
+    },
+    {
+      "started_at": "2026-11-07T00:55:02.266648+00:00",
+      "finished_at": "2026-11-07T00:55:03.918579+00:00",
+      "params": {
+        "limit": 2000,
+        "offset": 12000,
+        "ann_date": "20261026"
+      },
+      "rows": 2000,
+      "payload": "fund-market-ann-20261026-page-006.json",
+      "sha256": "bbd148edaec49702be12488a32e09c311c93223f9d81bf399c8f80b0a59cda87"
+    },
+    {
+      "started_at": "2026-11-07T00:55:03.923592+00:00",
+      "finished_at": "2026-11-07T00:55:05.703179+00:00",
+      "params": {
+        "limit": 2000,
+        "offset": 14000,
+        "ann_date": "20261026"
+      },
+      "rows": 2000,
+      "payload": "fund-market-ann-20261026-page-007.json",
+      "sha256": "e011f86038989c1ae41986037fd007e0ad6eb384d2f06c032b681f154538b3d5"
+    },
+    {
+      "started_at": "2026-11-07T00:55:05.709373+00:00",
+      "finished_at": "2026-11-07T00:55:07.207454+00:00",
+      "params": {
+        "limit": 2000,
+        "offset": 16000,
+        "ann_date": "20261026"
+      },
+      "rows": 2000,
+      "payload": "fund-market-ann-20261026-page-008.json",
+      "sha256": "8fc342ca74c8a279b2ce11abc82b0d6eb5554ce00efcc47064a57d0566af3d8f"
+    },
+    {
+      "started_at": "2026-11-07T00:55:07.213159+00:00",
+      "finished_at": "2026-11-07T00:55:08.665986+00:00",
+      "params": {
+        "limit": 2000,
+        "offset": 18000,
+        "ann_date": "20261026"
+      },
+      "rows": 2000,
+      "payload": "fund-market-ann-20261026-page-009.json",
+      "sha256": "be681b9c14d18935cdb3eb05173c5031a76a12707d3f924177b7d3123d5de4b7"
+    },
+    {
+      "started_at": "2026-11-07T00:55:08.672285+00:00",
+      "finished_at": "2026-11-07T00:55:10.813729+00:00",
+      "params": {
+        "limit": 2000,
+        "offset": 20000,
+        "ann_date": "20261026"
+      },
+      "rows": 2000,
+      "payload": "fund-market-ann-20261026-page-010.json",
+      "sha256": "120a0ca7c3c171744251a8223dcabb8ec11922badf4991db6b4961615db6b859"
+    },
+    {
+      "started_at": "2026-11-07T00:55:10.819016+00:00",
+      "finished_at": "2026-11-07T00:55:12.271164+00:00",
+      "params": {
+        "limit": 2000,
+        "offset": 22000,
+        "ann_date": "20261026"
+      },
+      "rows": 2000,
+      "payload": "fund-market-ann-20261026-page-011.json",
+      "sha256": "cfb3cb99aa48c8525553a2e6d113823710e2ae0e5bd277dccb3587fef4041c52"
+    },
+    {
+      "started_at": "2026-11-07T00:55:12.276784+00:00",
+      "finished_at": "2026-11-07T00:55:13.807876+00:00",
+      "params": {
+        "limit": 2000,
+        "offset": 24000,
+        "ann_date": "20261026"
+      },
+      "rows": 2000,
+      "payload": "fund-market-ann-20261026-page-012.json",
+      "sha256": "a10d52a8a64d0d57d103a4c6114bb8099ee6975d3d59c534cd166d3e3c33d6eb"
+    },
+    {
+      "started_at": "2026-11-07T00:55:13.811767+00:00",
+      "finished_at": "2026-11-07T00:55:15.713916+00:00",
+      "params": {
+        "limit": 2000,
+        "offset": 26000,
+        "ann_date": "20261026"
+      },
+      "rows": 287,
+      "payload": "fund-market-ann-20261026-page-013.json",
+      "sha256": "685d939b64a68a7b033f11f667149b3ef843d20ada5d416ee77bd64b0ede8b61"
+    },
+    {
+      "started_at": "2026-11-07T00:55:15.715816+00:00",
+      "finished_at": "2026-11-07T00:55:16.920239+00:00",
+      "params": {
+        "limit": 1,
+        "offset": 26287,
+        "ann_date": "20261026"
+      },
+      "rows": 0,
+      "payload": "fund-market-ann-20261026-page-014.json",
+      "sha256": "e98f42706b270990fa922c6c42198ed80cb62f37ccdf672799fa5d5192759a4c"
+    }
+  ],
+  "boundary": "Read-only whole announcement-day query through the existing guarded pagination client. Raw native pages and the complete returned frame are retained; no ingestion or checkpoint promotion.",
+  "status": "success",
+  "finished_at": "2026-11-07T00:55:16.948526+00:00",
+  "elapsed_seconds": 28.069,
+  "rows": 26287,
+  "fund_codes": 2490,
+  "payload": "fund-market-ann-20261026-complete.parquet",
+  "sha256": "a7164d8858995a3f8886d038971a2e10d1fa74a07125cccb304a253897f85f93",
+  "sample_comparisons": [
+    {
+      "sample": "ann-0",
+      "rows": 100,
+      "missing_or_changed": 0
+    },
+    {
+      "sample": "ann-100",
+      "rows": 100,
+      "missing_or_changed": 0
+    },
+    {
+      "sample": "known-fund-ann",
+      "rows": 10,
+      "missing_or_changed": 0
+    }
+  ]
+}

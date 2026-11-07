@@ -1,0 +1,11 @@
+{
+  "started_at": "2026-11-06T20:59:35.975915+00:00",
+  "finished_at": "2026-11-06T21:03:15.340929+00:00",
+  "dataset": "etf_nav",
+  "checkpoints_checked": 3598,
+  "instruments_checked": 1845,
+  "authorized_null_fills": 1221398,
+  "expected_rows": 2903869,
+  "failures": [],
+  "verification": "Existing ProviderPayloadReader verifies payload checksum, count and schema. Receipt-proven NULL accumulation extraction corrections are admitted only for exact before-images; all other normalized source values, disclosure dates and nulls are compared with canonical rows under the current ETF identity. Overlapping request rows count per snapshot. Zero responses remain observations."
+}

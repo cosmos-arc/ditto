@@ -1,0 +1,18 @@
+{
+  "started_at": "2026-11-07T01:59:40.517190+00:00",
+  "finished_at": "2026-11-07T01:59:45.582404+00:00",
+  "status": "success",
+  "rows": 143782,
+  "bridge_calls": 1,
+  "force": false,
+  "pre_ingestion_audit_sha256": "822cb46909d4f5c7dc389e93fbcd64cf63673702812587442c7eb07578d5fc8a",
+  "raw_aggregate_payload": "fund-oct27-code-batches-complete.parquet",
+  "raw_aggregate_file_sha256": "9480df7e8b2e365c3529d919caaacd1bd31686c1fa0cd27f377389509e715f7e",
+  "chunk_id": "partition:tushare:fund_portfolio:2026-10-27:2026-10-27:revision:2864dbd1a54a67dc3170520d258ddf5ff94f8f57cbd7f33023522e746050bcbd",
+  "snapshot_id": "snapshot:tushare:fund_portfolio:sha256:da20efd79578030834dff7db62d98c80e061340b8d53e80adfcf1b4618bf4982",
+  "normalized_payload_uri": "provider_payloads/tushare/fund_portfolio/4ea3b5cd87a0c7993d36942f5882dfdd.parquet",
+  "normalized_payload_checksum": "4ea3b5cd87a0c7993d36942f5882dfdd",
+  "source_acquisition_summary_sha256": "a49464e518c234b27199fd96f31a22d2dbc7acbb07e9900954fa5e36a767c9b2",
+  "script_sha256": "0b698939e4923fa578d00a0169a84fffb4a88d87a6048b90972a4faf7af39de6",
+  "boundary": "Normal coordinator ingestion replay of the complete pre-audited raw source response acquired in disjoint code partitions. Exact source parameters/roster/page hashes remain in the acquisition audit. Native acquisition and replay times are distinct and neither backdated. Existing date, identity, DQ, year locks and duplicate-value protections unchanged; original query restored."
+}

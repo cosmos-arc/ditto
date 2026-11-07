@@ -1,0 +1,24 @@
+{
+  "measured_at": "2026-11-06T21:03:44.645881+00:00",
+  "rows": [
+    {
+      "dataset_id": "fund_adj",
+      "request_start": "2026-11-06",
+      "request_end": "2026-11-06",
+      "snapshot_id": "snapshot:tushare:fund_adj:sha256:f84655cfa5325a146603ecee548c1f63a33dbb4fb73304b43bcd8ee570b70c62",
+      "created_at": "2026-11-06T18:46:41.097189+00:00",
+      "row_count": 1719,
+      "latest_observed_at": "2026-11-06 18:46:41.098119+00:00"
+    },
+    {
+      "dataset_id": "etf_daily",
+      "request_start": "2026-11-06",
+      "request_end": "2026-11-06",
+      "snapshot_id": "snapshot:tushare:etf_daily:sha256:06f01dee2ab32f82f02bee67377204720c90650f10e930e1118984ddad27e4b0",
+      "created_at": "2026-11-06T18:08:10.999615+00:00",
+      "row_count": 1719,
+      "latest_observed_at": "2026-11-06 18:08:11.684573+00:00"
+    }
+  ],
+  "boundary": "Read-only observation of later business dates outside the fixedNov5 task denominator. Actor unknown; no attempt to stop the user worker. Later rows retained and excluded from target-window zero assertions."
+}

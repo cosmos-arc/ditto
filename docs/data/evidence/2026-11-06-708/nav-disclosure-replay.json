@@ -1,0 +1,36 @@
+{
+  "measured_at": "2026-11-06T08:51:09.170736+00:00",
+  "source_payload_sha256": "1a0393481331e48f728886e801b3853694d861004f005d6d297738663cf7666c",
+  "old_canonical_sha256": "a6ef98a10eca85270a4e0b75625ddfe1015e2382e3c6c186d8416b44be57870f",
+  "source_rows": 1691,
+  "old_canonical_rows": 1685,
+  "appended_rows": 8,
+  "overwritten_rows": 0,
+  "retained_rows": 1693,
+  "retry_added": 0,
+  "latest_display_rows": 1691,
+  "old_disclosures_preserved": 2,
+  "disclosure_changes": [
+    {
+      "source_ticker": "159509.SZ",
+      "trade_date": "2026-10-30",
+      "knowledge_date": "2026-11-02",
+      "knowledge_date_stored": "2026-10-31",
+      "unit_nav": 2.1365,
+      "unit_nav_stored": 2.1365,
+      "acc_nav": null,
+      "acc_nav_stored": null
+    },
+    {
+      "source_ticker": "159529.SZ",
+      "trade_date": "2026-10-30",
+      "knowledge_date": "2026-11-02",
+      "knowledge_date_stored": "2026-10-31",
+      "unit_nav": 1.2992,
+      "unit_nav_stored": 1.2992,
+      "acc_nav": null,
+      "acc_nav_stored": null
+    }
+  ],
+  "boundary": "Real captured provider and canonical rows replayed through production MarketProvider writers/readers and MarketService in an isolated directory. This is replay verification, not a production ingestion or proof of historical publication availability."
+}

@@ -1,0 +1,18 @@
+{
+  "measured_at": "2026-11-06T21:00:04.117247+00:00",
+  "dataset": "etf_nav",
+  "expected_instruments": 1849,
+  "initial_instruments": 1847,
+  "roster_delta_instruments": 2,
+  "completed_instruments": 1461,
+  "attempted_instruments": 1849,
+  "attempts": 2221,
+  "failed_attempts": 758,
+  "audited_market_windows": 2,
+  "excluded_snapshots": [
+    "snapshot:tushare:etf_nav:sha256:e838d9e2ed662348605e8ab7363627f350342b0c4f868c5d5bf9650b0c74cfac"
+  ],
+  "invalid_checkpoints": [],
+  "roster_sha256": "4e2793ddc1dedbbf841aae3e2d3a263b38667611fdcf1228c720da7e5bf90e30",
+  "boundary": "Only successful normal ingestion attempts from the corrected accum_nav extraction are included; Same-code windows bind exact COMPLETE checkpoints and retained normalized payloads or verified zero observations. Independently audited unfiltered native market windows apply only to their original1847-code scope;2 new identities are covered separately. The contradictory market=E zero responses are excluded. Old acc_nav-field requests prove unit NAV only and cannot satisfy cumulative scope. Canonical payload-value audit is separate. Full-current-request coverage does not claim all historical vintages."
+}

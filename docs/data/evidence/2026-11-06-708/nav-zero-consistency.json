@@ -1,0 +1,82 @@
+{
+  "measured_at": "2026-11-06T18:29:33.501333+00:00",
+  "zero_same_code_windows": [
+    {
+      "source_ticker": "159908J.SZ",
+      "start": "2014-01-01",
+      "end": "2026-11-05",
+      "rows": 0,
+      "snapshot_id": "snapshot:tushare:etf_nav:sha256:3f92e6b33c43d906c160e0d59b7efe746828acc1b236d2137b76964d0e538109",
+      "payload_checksum": "empty:sha256:eccf1a06c490d679648165924100b3a7c0dedb3a09e0357c4c6beb2f889d9640",
+      "checkpoint": "partition:tushare:etf_nav:159908J.SZ:2014-01-01:2026-11-05",
+      "measured_at": "2026-11-06T16:03:32.967804+00:00",
+      "field": "accum_nav"
+    },
+    {
+      "source_ticker": "510680J.SH",
+      "start": "2014-01-01",
+      "end": "2026-11-05",
+      "rows": 0,
+      "snapshot_id": "snapshot:tushare:etf_nav:sha256:623692abf0876a75e1fcbcf613e8747c7088ae6c5c0b6972a1fd5f474732e0db",
+      "payload_checksum": "empty:sha256:7a88c6d19c3cdf2e676755ff730e4ef9341fecf436c175a64c1ddd5400c3e0f6",
+      "checkpoint": "partition:tushare:etf_nav:510680J.SH:2014-01-01:2026-11-05",
+      "measured_at": "2026-11-06T17:04:31.620825+00:00",
+      "field": "accum_nav"
+    }
+  ],
+  "checks": [
+    {
+      "day": "2026-10-31",
+      "native_rows": 2,
+      "native_sha256": "ec01e011cffa2f642e6560dae55639aa49dac785b1760750b86bfb18e93b9adf",
+      "contradictions": []
+    },
+    {
+      "day": "2026-10-30",
+      "native_rows": 26139,
+      "native_sha256": "1cff1ba770ce1eb998d0c711710612033ccb20523519e3042168440f6ca738b9",
+      "contradictions": []
+    },
+    {
+      "day": "2026-11-02",
+      "native_rows": 25592,
+      "native_sha256": "5d743626d03078128bb52201fd2bc98c3f698d7405b4aa34669477f72d82193a",
+      "contradictions": []
+    },
+    {
+      "day": "2026-10-29",
+      "native_rows": 26573,
+      "native_sha256": "27cd084488e85a29a22f533d20b4c866cdf76935e4fa132055cc3189fe7b4d26",
+      "contradictions": []
+    },
+    {
+      "day": "2026-11-04",
+      "native_rows": 25241,
+      "native_sha256": "37e7b301993bd1bebd5d238710ba0e84b35ead4a6351df8cb7ff74b66ab7ec30",
+      "contradictions": []
+    },
+    {
+      "day": "2026-11-05",
+      "native_rows": 24591,
+      "native_sha256": "e54ad87cdaa46cfddb10551843faa61cd9431c4453c805de314643a43be4a7fe",
+      "contradictions": []
+    },
+    {
+      "day": "2026-11-03",
+      "native_rows": 26837,
+      "native_sha256": "912ade8890bc9c02a4cc4ecfe61cb37800a4e4e2c52bb58a4781addff029c40c",
+      "contradictions": []
+    },
+    {
+      "day": "2026-11-01",
+      "native_rows": 0,
+      "native_sha256": "3fbbb73a472ac5724c6970ce59f4e5d5213deb59f8a64b0d9a160de766ec02d1",
+      "contradictions": []
+    }
+  ],
+  "contradictions": 0,
+  "boundary": "Current same-code zero request windows checked against every retained unfiltered native market-day payload in their overlappingdates.Only159908J.SZ/510680J.SH arezero fullwindows atthismeasurement; their sourceD/inactive evidence remainsseparate. No contradictorypositive marketrows found; zero remainsanobservation,not historicalnonexistence.",
+  "final_scope_rechecked_at": "2026-11-06T21:02:39.091910+00:00",
+  "final_full_success_count": 1461,
+  "final_zero_code_set_unchanged": true
+}

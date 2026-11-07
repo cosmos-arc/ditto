@@ -1,0 +1,9 @@
+{
+  "measured_at": "2026-11-06T21:04:48.776412+00:00",
+  "completed_union": 459,
+  "pending_with_old_complete_prefix": 32383,
+  "pilot_zero_plus_nonzero_windows_verified": 2,
+  "negative_evidence_checks": 6,
+  "measurement_script_sha256": "01f7ef621ed8409cb8ec5aa4817b37797a9793c2114981121c94029139028a99",
+  "boundary": "Actual verifiedpilot tails close only their own prefix/tail unions; oldCOMPLETE prefixes alone remainpending. In-memory badstate/wrongidentity/missingpayload examples rejected. No source request or production writes."
+}

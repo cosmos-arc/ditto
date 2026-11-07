@@ -1,0 +1,50 @@
+[
+  {
+    "measured_at": "2026-11-06T11:36:42.558565+00:00",
+    "api": "fund_nav",
+    "params": {
+      "ts_code": "510300.SH",
+      "start_date": "20261105",
+      "end_date": "20261105",
+      "limit": 3,
+      "offset": 0
+    },
+    "fields": "ts_code,ann_date,nav_date,unit_nav,acc_nav,accum_nav",
+    "boundary": "Explicit first-page field probe only, not a complete request or coverage receipt.",
+    "status": "success",
+    "rows": [
+      {
+        "ts_code": "510300.SH",
+        "ann_date": "20261105",
+        "nav_date": "20261105",
+        "unit_nav": 4.1909,
+        "acc_nav": null,
+        "accum_nav": 1.881
+      }
+    ]
+  },
+  {
+    "measured_at": "2026-11-06T11:36:58.661067+00:00",
+    "api": "fund_nav",
+    "params": {
+      "ts_code": "159915.SZ",
+      "start_date": "20261105",
+      "end_date": "20261105",
+      "limit": 3,
+      "offset": 0
+    },
+    "fields": "ts_code,ann_date,nav_date,unit_nav,acc_nav,accum_nav",
+    "boundary": "Explicit first-page field probe only, not a complete request or coverage receipt.",
+    "status": "success",
+    "rows": [
+      {
+        "ts_code": "159915.SZ",
+        "ann_date": "20261106",
+        "nav_date": "20261105",
+        "unit_nav": 2.5834,
+        "acc_nav": null,
+        "accum_nav": 2.9595
+      }
+    ]
+  }
+]

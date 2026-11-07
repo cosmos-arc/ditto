@@ -1,0 +1,8 @@
+{
+  "measured_at": "2026-11-06T13:58:13.053157+00:00",
+  "http_status": 200,
+  "retry_after": null,
+  "content_type": "application/json; charset=utf-8",
+  "body": "{\"code\": 0, \"msg\": null, \"data\": {\"fields\": [\"ts_code\", \"nav_date\", \"unit_nav\", \"accum_nav\"], \"items\": [[\"510300.SH\", \"20261105\", 4.1909, 1.881]]}}",
+  "boundary": "Single raw HTTP diagnostic after concentrated429; does not bypass a block, change credentials, or count as coverage. No production write."
+}

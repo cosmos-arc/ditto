@@ -1,0 +1,218 @@
+{
+  "measured_at": "2026-11-06T18:22:43.191053+00:00",
+  "plan_sha256": "052bf69f3b0fd97079f369ee8c07613ee608097c3a89d47fa2e7a4aaa030a90a",
+  "expected": 18,
+  "attempted": 18,
+  "successes": 13,
+  "failures": [
+    {
+      "attempt": {
+        "source_ticker": "511110.SH",
+        "started_at": "2026-11-06T17:44:45.510387+00:00",
+        "measured_at": "2026-11-06T17:45:55.061833+00:00",
+        "start": "2014-01-01",
+        "end": "2026-11-05",
+        "raw_field": "accum_nav",
+        "result": {
+          "dataset": "etf_nav",
+          "trade_date": "2014-01-01",
+          "status": "failed",
+          "row_count": null,
+          "checksum": null,
+          "message": "获取数据失败: Failed to fetch etf_nav from Tushare",
+          "error": "FETCH_ERROR",
+          "snapshot_evidence": null,
+          "quality_evidence": null
+        }
+      },
+      "native": [
+        {
+          "measured_at": "2026-11-06T17:45:55.055198+00:00",
+          "api": "fund_nav",
+          "params": {
+            "ts_code": "511110.SH",
+            "start_date": "20140101",
+            "end_date": "20261105"
+          },
+          "errors": [
+            "PaginationCorruptionError: Tushare fund_nav pagination returned duplicate rows at offset=470 (dedup-merge echo, consecutive zero-new pages): 服务端忽略 offset, 整页回显无法收敛"
+          ]
+        }
+      ]
+    },
+    {
+      "attempt": {
+        "source_ticker": "511130.SH",
+        "started_at": "2026-11-06T17:45:55.062508+00:00",
+        "measured_at": "2026-11-06T17:46:51.083222+00:00",
+        "start": "2014-01-01",
+        "end": "2026-11-05",
+        "raw_field": "accum_nav",
+        "result": {
+          "dataset": "etf_nav",
+          "trade_date": "2014-01-01",
+          "status": "failed",
+          "row_count": null,
+          "checksum": null,
+          "message": "获取数据失败: Failed to fetch etf_nav from Tushare",
+          "error": "FETCH_ERROR",
+          "snapshot_evidence": null,
+          "quality_evidence": null
+        }
+      },
+      "native": [
+        {
+          "measured_at": "2026-11-06T17:46:51.082155+00:00",
+          "api": "fund_nav",
+          "params": {
+            "ts_code": "511130.SH",
+            "start_date": "20140101",
+            "end_date": "20261105"
+          },
+          "errors": [
+            "PaginationCorruptionError: Tushare fund_nav pagination returned duplicate rows at offset=679 (dedup-merge echo, consecutive zero-new pages): 服务端忽略 offset, 整页回显无法收敛"
+          ]
+        }
+      ]
+    },
+    {
+      "attempt": {
+        "source_ticker": "511180.SH",
+        "started_at": "2026-11-06T17:51:31.822037+00:00",
+        "measured_at": "2026-11-06T17:53:11.563956+00:00",
+        "start": "2014-01-01",
+        "end": "2026-11-05",
+        "raw_field": "accum_nav",
+        "result": {
+          "dataset": "etf_nav",
+          "trade_date": "2014-01-01",
+          "status": "failed",
+          "row_count": null,
+          "checksum": null,
+          "message": "获取数据失败: Failed to fetch etf_nav from Tushare",
+          "error": "FETCH_ERROR",
+          "snapshot_evidence": null,
+          "quality_evidence": null
+        }
+      },
+      "native": [
+        {
+          "measured_at": "2026-11-06T17:53:11.559338+00:00",
+          "api": "fund_nav",
+          "params": {
+            "ts_code": "511180.SH",
+            "start_date": "20140101",
+            "end_date": "20261105"
+          },
+          "errors": [
+            "PaginationCorruptionError: Tushare fund_nav pagination returned duplicate rows at offset=1548 (dedup-merge echo, consecutive zero-new pages): 服务端忽略 offset, 整页回显无法收敛"
+          ]
+        }
+      ]
+    },
+    {
+      "attempt": {
+        "source_ticker": "511220.SH",
+        "started_at": "2026-11-06T17:53:11.564435+00:00",
+        "measured_at": "2026-11-06T17:55:04.074388+00:00",
+        "start": "2014-01-01",
+        "end": "2026-11-05",
+        "raw_field": "accum_nav",
+        "result": {
+          "dataset": "etf_nav",
+          "trade_date": "2014-01-01",
+          "status": "failed",
+          "row_count": null,
+          "checksum": null,
+          "message": "获取数据失败: Failed to fetch etf_nav from Tushare",
+          "error": "FETCH_ERROR",
+          "snapshot_evidence": null,
+          "quality_evidence": null
+        }
+      },
+      "native": [
+        {
+          "measured_at": "2026-11-06T17:55:04.071363+00:00",
+          "api": "fund_nav",
+          "params": {
+            "ts_code": "511220.SH",
+            "start_date": "20140101",
+            "end_date": "20261105"
+          },
+          "errors": [
+            "PaginationCorruptionError: Tushare fund_nav pagination returned duplicate rows at offset=2953 (dedup-merge echo, consecutive zero-new pages): 服务端忽略 offset, 整页回显无法收敛"
+          ]
+        }
+      ]
+    },
+    {
+      "attempt": {
+        "source_ticker": "512350.SH",
+        "started_at": "2026-11-06T18:00:30.709322+00:00",
+        "measured_at": "2026-11-06T18:02:31.331806+00:00",
+        "start": "2014-01-01",
+        "end": "2026-11-05",
+        "raw_field": "accum_nav",
+        "result": {
+          "dataset": "etf_nav",
+          "trade_date": "2014-01-01",
+          "status": "failed",
+          "row_count": null,
+          "checksum": null,
+          "message": "获取数据失败: Failed to fetch etf_nav from Tushare",
+          "error": "FETCH_ERROR",
+          "snapshot_evidence": null,
+          "quality_evidence": null
+        }
+      },
+      "native": [
+        {
+          "measured_at": "2026-11-06T18:02:31.326525+00:00",
+          "api": "fund_nav",
+          "params": {
+            "ts_code": "512350.SH",
+            "start_date": "20140101",
+            "end_date": "20261105"
+          },
+          "errors": [
+            "PaginationCorruptionError: Tushare fund_nav pagination returned duplicate rows at offset=331 (dedup-merge echo, consecutive zero-new pages): 服务端忽略 offset, 整页回显无法收敛"
+          ]
+        }
+      ]
+    }
+  ],
+  "successful_codes": [
+    "511010.SH",
+    "511200.SH",
+    "511260.SH",
+    "512170.SH",
+    "512210.SH",
+    "512250.SH",
+    "512380.SH",
+    "510950.SH",
+    "511030.SH",
+    "511120.SH",
+    "511650.SH",
+    "512180.SH",
+    "512240.SH"
+  ],
+  "completion_measurement": {
+    "measured_at": "2026-11-06T18:22:43.045202+00:00",
+    "dataset": "etf_nav",
+    "expected_instruments": 1849,
+    "initial_instruments": 1847,
+    "roster_delta_instruments": 2,
+    "completed_instruments": 922,
+    "attempted_instruments": 1247,
+    "attempts": 1345,
+    "failed_attempts": 421,
+    "audited_market_windows": 2,
+    "excluded_snapshots": [
+      "snapshot:tushare:etf_nav:sha256:e838d9e2ed662348605e8ab7363627f350342b0c4f868c5d5bf9650b0c74cfac"
+    ],
+    "invalid_checkpoints": [],
+    "roster_sha256": "4e2793ddc1dedbbf841aae3e2d3a263b38667611fdcf1228c720da7e5bf90e30",
+    "boundary": "Only successful normal ingestion attempts from the corrected accum_nav extraction are included; Same-code windows bind exact COMPLETE checkpoints and retained normalized payloads or verified zero observations. Independently audited unfiltered native market windows apply only to their original1847-code scope;2 new identities are covered separately. The contradictory market=E zero responses are excluded. Old acc_nav-field requests prove unit NAV only and cannot satisfy cumulative scope. Canonical payload-value audit is separate. Full-current-request coverage does not claim all historical vintages."
+  },
+  "boundary": "Only18 exact previouslyreturned transientfailures retried, atcurrentshared60HTTP/min and8slots.13windows succeeded; remaining exactnative failures retained. Successfulresults are boundbycurrentdurablemeasurement toCOMPLETE andpayloadidentity; canonicalvalueaudit remainsseparate."
+}

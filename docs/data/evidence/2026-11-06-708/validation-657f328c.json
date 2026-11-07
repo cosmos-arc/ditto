@@ -1,0 +1,20 @@
+{
+  "measured_at": "2026-11-06T10:06:45.750099+00:00",
+  "commit": "657f328c90fe0b6fb73a1b9f1cb7cd65b41561f1",
+  "command": "DITTO_REUSE_WEB_BUILD=1 task test-system",
+  "result": "42 passed, including all 6 instrument-chart cases",
+  "exit_code": 0,
+  "log_sha256": "0a58b98182eed8a3767a668bcb80476ae248b5deb5bdfdcceba1dfb616668350",
+  "test_identity": "Production/Web code at 69ceeb71; only the exact fixture diff later committed in 657f328c was pending during this local run. Final remote checks bind the full current commit.",
+  "standards": "Fixed-diff re-review: no hard violations or smells.",
+  "spec": "Fixed-diff re-review: no regressions; unknown disclosure preserved as typed null.",
+  "verify_push": {
+    "command": "PYTEST_XDIST_AUTO_NUM_WORKERS=2 task verify-push",
+    "exit_code": 0,
+    "backend": "16731 passed, 17 skipped",
+    "pit": "657 passed",
+    "log": ".cache/issue-708/verify-push-fixture-low-concurrency.log",
+    "boundary": "Unchanged test selection and 10-second timeout. Four transient timeout failures under excessive background process contention passed the exact isolated checks in 1.21-2.25 seconds and the complete rerun at two workers."
+  },
+  "updated_at": "2026-11-06T10:34:23.225477+00:00"
+}

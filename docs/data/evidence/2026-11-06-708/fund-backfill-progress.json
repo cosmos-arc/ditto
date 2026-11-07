@@ -1,12 +1,18 @@
 {
-  "measured_at": "2026-11-06T07:43:49.217055+00:00",
-  "expected_holders": 32842,
-  "roster_sha256": "6a90d63c053cc9d79d4ef190857f0246b7de1a408cc8bc79dd717064c7e0e1e2",
+  "measured_at": "2026-11-07T01:59:54.308332+00:00",
+  "expected_holders": 32903,
+  "roster_sha256": "1b3da5562ef8e0c1b6efd7fdbe736c1315ea569af8eac8868ef856d1f54246d3",
+  "initial_roster_sha256": "6a90d63c053cc9d79d4ef190857f0246b7de1a408cc8bc79dd717064c7e0e1e2",
   "request_start": "2014-01-01",
   "request_end": "2026-11-05",
-  "attempted_holders": 17423,
-  "completed_holders": 17423,
-  "zero_observations": 6769,
+  "coverage_mode": "verified_frozen_roster_prefix_and_market_announcement_days",
+  "prefix_holders": 32842,
+  "completed_holders": 32903,
+  "prefix_zero_observations": 12423,
+  "market_completed_days": 36,
+  "market_expected_days": 36,
+  "per_fund_tail_completed_holders": 9764,
+  "added_holder_full_complete": 61,
   "failed_holders": [],
-  "pending_holders": 15419
+  "pending_holders": 0
 }

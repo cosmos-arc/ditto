@@ -1,0 +1,40 @@
+{
+  "measured_at": "2026-11-07T01:33:31.753310+00:00",
+  "requests": [
+    {
+      "params": {
+        "ann_date": "20261027",
+        "ts_code": "000001.OF,025047.OF"
+      },
+      "rows": 15,
+      "codes": [
+        "000001.OF",
+        "025047.OF"
+      ],
+      "payload": "fund-oct27-positive-0.parquet"
+    },
+    {
+      "params": {
+        "ann_date": "20261027",
+        "ts_code": "000001.OF"
+      },
+      "rows": 10,
+      "codes": [
+        "000001.OF"
+      ],
+      "payload": "fund-oct27-positive-1.parquet"
+    },
+    {
+      "params": {
+        "ann_date": "20261027",
+        "ts_code": "025047.OF"
+      },
+      "rows": 5,
+      "codes": [
+        "025047.OF"
+      ],
+      "payload": "fund-oct27-positive-2.parquet"
+    }
+  ],
+  "exact_union_match": true
+}

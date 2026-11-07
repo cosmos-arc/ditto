@@ -1,0 +1,14 @@
+{
+  "measured_at": "2026-11-06T16:47:42.038958+00:00",
+  "processes": 24,
+  "requests": 24,
+  "peak_concurrent_requests": 8,
+  "minimum_admission_gap_seconds": 0.5002018749946728,
+  "elapsed_admission_seconds": 19.653287832974456,
+  "configured_interval_seconds": 0.5,
+  "maximum_admissions_per_minute": 120,
+  "source_gate_sha256": "67c85873367d68f4dde7d2f5e5c381c2a7d1225442c8609f94c604288632f79d",
+  "network_calls": 0,
+  "production_slots_used": false,
+  "verification": "Actual unmodified task gate and0.5-second interval,24 independent processes,fake8-second HTTP responses,slots8/9 reserved. Cross-process starts maintain spacing and never exceed8 concurrent sends; all complete and release their slots. No source credentials, network or production locks used."
+}

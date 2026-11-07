@@ -1,0 +1,99 @@
+{
+  "started_at": "2026-11-06T20:41:41.309595+00:00",
+  "api": "fund_portfolio",
+  "requests": [
+    {
+      "started_at": "2026-11-06T20:41:41.340477+00:00",
+      "params": {
+        "ts_code": "561250.SH",
+        "start_date": "20130930",
+        "end_date": "20260929"
+      },
+      "status": "success",
+      "rows": 0,
+      "payload": "fund-range-semantics-561250.SH-20260929.parquet",
+      "sha256": "5e95ec456fbf2629be5f479dca44804a0827a1eb8c593433c21b658f80ff1c83",
+      "finished_at": "2026-11-06T20:41:46.073357+00:00"
+    },
+    {
+      "started_at": "2026-11-06T20:41:46.074183+00:00",
+      "params": {
+        "ts_code": "561250.SH",
+        "start_date": "20130930",
+        "end_date": "20260930"
+      },
+      "status": "success",
+      "rows": 0,
+      "payload": "fund-range-semantics-561250.SH-20260930.parquet",
+      "sha256": "5e95ec456fbf2629be5f479dca44804a0827a1eb8c593433c21b658f80ff1c83",
+      "finished_at": "2026-11-06T20:41:50.850028+00:00"
+    },
+    {
+      "started_at": "2026-11-06T20:41:50.850646+00:00",
+      "params": {
+        "ts_code": "561250.SH",
+        "start_date": "20130930",
+        "end_date": "20261001"
+      },
+      "status": "success",
+      "rows": 0,
+      "payload": "fund-range-semantics-561250.SH-20261001.parquet",
+      "sha256": "5e95ec456fbf2629be5f479dca44804a0827a1eb8c593433c21b658f80ff1c83",
+      "finished_at": "2026-11-06T20:41:55.971039+00:00"
+    },
+    {
+      "started_at": "2026-11-06T20:41:55.971536+00:00",
+      "params": {
+        "ts_code": "561250.SH",
+        "start_date": "20130930",
+        "end_date": "20261025"
+      },
+      "status": "success",
+      "rows": 0,
+      "payload": "fund-range-semantics-561250.SH-20261025.parquet",
+      "sha256": "5e95ec456fbf2629be5f479dca44804a0827a1eb8c593433c21b658f80ff1c83",
+      "finished_at": "2026-11-06T20:42:00.386844+00:00"
+    },
+    {
+      "started_at": "2026-11-06T20:42:00.387494+00:00",
+      "params": {
+        "ts_code": "561250.SH",
+        "start_date": "20130930",
+        "end_date": "20261026"
+      },
+      "status": "success",
+      "rows": 10,
+      "payload": "fund-range-semantics-561250.SH-20261026.parquet",
+      "sha256": "9db6fa009e397be55348276e8e04c19b892842043468dc444adefb67fb8bf209",
+      "finished_at": "2026-11-06T20:42:10.887054+00:00"
+    },
+    {
+      "started_at": "2026-11-06T20:42:10.887760+00:00",
+      "params": {
+        "ts_code": "561250.SH",
+        "start_date": "20130930",
+        "end_date": "20261027"
+      },
+      "status": "success",
+      "rows": 10,
+      "payload": "fund-range-semantics-561250.SH-20261027.parquet",
+      "sha256": "9db6fa009e397be55348276e8e04c19b892842043468dc444adefb67fb8bf209",
+      "finished_at": "2026-11-06T20:42:20.612832+00:00"
+    },
+    {
+      "started_at": "2026-11-06T20:42:20.613511+00:00",
+      "params": {
+        "ts_code": "561250.SH",
+        "start_date": "20130930",
+        "end_date": "20261105"
+      },
+      "status": "success",
+      "rows": 10,
+      "payload": "fund-range-semantics-561250.SH-20261105.parquet",
+      "sha256": "9db6fa009e397be55348276e8e04c19b892842043468dc444adefb67fb8bf209",
+      "finished_at": "2026-11-06T20:42:30.687973+00:00"
+    }
+  ],
+  "boundary": "Read-only same-identity, same-route native rechecks; no completion promotion or canonical deletion.",
+  "finished_at": "2026-11-06T20:42:30.689266+00:00"
+}

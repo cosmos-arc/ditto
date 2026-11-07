@@ -1,0 +1,19 @@
+{
+  "measured_at": "2026-11-06T17:17:29.283845+00:00",
+  "watch_started_at": "2026-11-06T16:52:20.775875+00:00",
+  "interval_seconds": 1,
+  "max_http_per_minute": 60,
+  "trigger": {
+    "measured_at": "2026-11-06T17:17:28.706952+00:00",
+    "api": "fund_nav",
+    "params": {
+      "ts_code": "512170.SH",
+      "start_date": "20140101",
+      "end_date": "20261105"
+    },
+    "errors": [
+      "SourceFetchError: ip超限，请不到在多个ip同时使用"
+    ]
+  },
+  "boundary": "Immediate task-only downgrade after recorded source rate rejection; same identity, route,8slot cap and completeness guards."
+}
