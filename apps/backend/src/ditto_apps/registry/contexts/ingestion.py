@@ -46,6 +46,7 @@ from ditto_data.services.market_write_service import MarketWriteService
 from ditto_data.services.metadata_service import MetadataService
 from ditto_data.services.source_accessor import SourceAccessor
 from ditto_data.sources.exchange_transformers import ExchangeTransformers
+from ditto_data.sources.fred.indicators import FRED_INDICATORS
 from ditto_data.sources.fuyao.source import FuyaoDailyKDumpFetcher
 from ditto_data.sources.protocols import MarketFetcher
 from ditto_data.sources.reference_config import EtfReferenceConfigSource
@@ -202,6 +203,7 @@ def create_ingestion_bundle(
                     snapshots=snapshot_reader,
                     lifecycle=lifecycle_reader,
                     audit=container.get(ProviderSnapshotQuery),
+                    fred_series=tuple(FRED_INDICATORS),
                     evidence=PublishedRefreshEvidenceStore(
                         container.get(DataStoreSettings).data_root
                         / "operations"

@@ -27,6 +27,7 @@ from ditto_data.ingestion.published_refresh_evidence import (
     PublishedRefreshEvidenceStore,
 )
 from ditto_platform.foundation import SQLiteClient, SQLitePool
+from time_machine import TimeMachineFixture
 
 SHANGHAI = ZoneInfo("Asia/Shanghai")
 
@@ -36,7 +37,11 @@ SHANGHAI = ZoneInfo("Asia/Shanghai")
 )
 @pytest.mark.parametrize("late", [False, True])
 def test_completed_source_is_on_time_only_before_deadline(
-    tmp_path: Path, target: str, session: str, late: bool
+    tmp_path: Path,
+    target: str,
+    session: str,
+    late: bool,
+    time_machine: TimeMachineFixture,
 ) -> None:
     observed = datetime.fromisoformat(
         session + ("T09:16:00" if late else "T08:40:00")
@@ -105,6 +110,7 @@ def test_completed_source_is_on_time_only_before_deadline(
     calendar.is_trading_day.return_value = True
     calendar.list_trading_days.return_value = [target, session]
     coordinator = MagicMock()
+    time_machine.move_to(observed, tick=False)
     process = PublishedRefreshProcess(
         coordinator=coordinator,
         calendar=calendar,
@@ -113,8 +119,8 @@ def test_completed_source_is_on_time_only_before_deadline(
         audit=ProviderSnapshotQuery(
             SnapshotReadService(snapshots, payloads, lifecycle), MagicMock()
         ),
+        fred_series=(),
         evidence=PublishedRefreshEvidenceStore(tmp_path / "evidence"),
-        clock=lambda: observed,
     )
     if late:
         with pytest.raises(AppProcessError, match="not ready by"):
@@ -146,7 +152,10 @@ def test_completed_source_is_on_time_only_before_deadline(
     client.conn.close()
 
 
-def test_pending_refresh_is_one_attempt_and_final_never_fetches(tmp_path: Path) -> None:
+def test_pending_refresh_is_one_attempt_and_final_never_fetches(
+    tmp_path: Path,
+    time_machine: TimeMachineFixture,
+) -> None:
     calendar = MagicMock()
     calendar.is_trading_day.return_value = True
     calendar.list_trading_days.return_value = ["2026-11-06", "2026-11-09"]
@@ -157,15 +166,15 @@ def test_pending_refresh_is_one_attempt_and_final_never_fetches(tmp_path: Path) 
     coordinator = MagicMock()
     coordinator.ingest_date.return_value.status = "failed"
     coordinator.ingest_date.return_value.error = "recorded fetch failure"
-    now = datetime(2026, 11, 9, 8, 35, tzinfo=SHANGHAI)
+    time_machine.move_to(datetime(2026, 11, 9, 8, 35, tzinfo=SHANGHAI), tick=False)
     process = PublishedRefreshProcess(
         coordinator=coordinator,
         calendar=calendar,
         snapshots=snapshots,
         lifecycle=lifecycle,
         audit=MagicMock(),
+        fred_series=(),
         evidence=PublishedRefreshEvidenceStore(tmp_path),
-        clock=lambda: now,
     )
     report = process.margin(scheduled_day="2026-11-09", finalize=False)
     assert report["attempted"] is True
@@ -175,7 +184,7 @@ def test_pending_refresh_is_one_attempt_and_final_never_fetches(tmp_path: Path) 
     )
     with pytest.raises(AppProcessError, match="cannot precede"):
         process.margin(scheduled_day="2026-11-09", finalize=True)
-    now = datetime(2026, 11, 9, 9, 15, tzinfo=SHANGHAI)
+    time_machine.move_to(datetime(2026, 11, 9, 9, 15, tzinfo=SHANGHAI), tick=False)
     with pytest.raises(AppProcessError, match="not ready by"):
         process.margin(scheduled_day="2026-11-09", finalize=True)
     assert coordinator.ingest_date.call_count == 1

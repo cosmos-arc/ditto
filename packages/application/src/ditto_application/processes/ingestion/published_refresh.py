@@ -1,6 +1,5 @@
 """发布后有限刷新：复用摄取完成证据，不把空响应或迟到补齐算作准时。"""
 
-from collections.abc import Callable
 from datetime import datetime, time
 from zoneinfo import ZoneInfo
 
@@ -11,7 +10,6 @@ from ditto_data.ingestion.partition_state import PartitionLifecycleReader
 from ditto_data.ingestion.published_refresh_evidence import (
     PublishedRefreshEvidenceStore,
 )
-from ditto_data.sources.fred.indicators import FRED_INDICATORS
 
 from ditto_application.catalog_freshness import (
     completed_covering_snapshot,
@@ -41,19 +39,19 @@ class PublishedRefreshProcess:
         lifecycle: PartitionLifecycleReader,
         audit: ProviderSnapshotQuery,
         evidence: PublishedRefreshEvidenceStore,
-        clock: Callable[[], datetime] = lambda: datetime.now(SHANGHAI),
+        fred_series: tuple[str, ...],
     ) -> None:
-        self._clock = clock
         self._coordinator = coordinator
         self._calendar = calendar
         self._snapshots = snapshots
         self._lifecycle = lifecycle
         self._audit = audit
         self._evidence = evidence
+        self._fred_series = fred_series
 
     def margin(self, *, scheduled_day: str, finalize: bool) -> dict[str, object]:
         """只刷新上个交易日两融；09:15 后不再发起请求，完整留存每次观察。"""
-        now = self._clock()
+        now = datetime.now(SHANGHAI)
         if now.tzinfo is None:
             raise AppProcessError("published refresh needs an aware execution time")
         now = now.astimezone(SHANGHAI)
@@ -85,7 +83,7 @@ class PublishedRefreshProcess:
             except Exception as exc:
                 error = f"{type(exc).__name__}: {exc}"
             status = self._margin_evidence(target, release, deadline)
-        now = self._clock().astimezone(SHANGHAI)
+        now = datetime.now(SHANGHAI).astimezone(SHANGHAI)
         report: dict[str, object] = {
             "dataset": "margin_trading",
             "source": "tushare",
@@ -182,6 +180,8 @@ class PublishedRefreshProcess:
 
     def fred(self, *, day: str) -> dict[str, object]:
         """FRED 已配置系列的日常有界回看；返回真实源载荷逐系列末端。"""
+        if not self._fred_series:
+            raise AppProcessError("FRED refresh requires configured series")
         result = self._coordinator.ingest_date("macro_indicators", day, force=True)
         if result.status == "failed":
             raise AppProcessError(result.error or result.message)
@@ -203,9 +203,11 @@ class PublishedRefreshProcess:
             .sort("indicator_code")
             .to_dicts()
         )
-        missing = sorted(set(FRED_INDICATORS) - set(frame["indicator_code"].to_list()))
+        missing = sorted(
+            set(self._fred_series) - set(frame["indicator_code"].to_list())
+        )
         report: dict[str, object] = {
-            "recorded_at": self._clock().isoformat(),
+            "recorded_at": datetime.now(SHANGHAI).isoformat(),
             "day": day,
             "source": "fred",
             "snapshot_id": snapshot.snapshot_id,
