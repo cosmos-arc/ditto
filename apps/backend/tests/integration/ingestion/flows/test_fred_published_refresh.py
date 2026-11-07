@@ -5,7 +5,6 @@ from datetime import UTC, date, datetime
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import MagicMock
-from zoneinfo import ZoneInfo
 
 import orjson
 import polars as pl
@@ -29,6 +28,7 @@ from ditto_data.ingestion.published_refresh_evidence import (
     PublishedRefreshEvidenceStore,
 )
 from ditto_platform.foundation import SQLiteClient, SQLitePool
+from prefect.settings import PREFECT_LOCAL_STORAGE_PATH, temporary_settings
 
 
 @pytest.mark.usefixtures("prefect_test_session")
@@ -49,8 +49,9 @@ from ditto_platform.foundation import SQLiteClient, SQLitePool
 def test_fred_refresh_requires_both_datasets(
     tmp_path: Path, fault: str | None, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    day = datetime.now(ZoneInfo("Asia/Shanghai")).date().isoformat()
+    day = "2026-11-07"
     observed = datetime(2026, 11, 7, tzinfo=UTC)
+    monkeypatch.setattr(repair, "datetime", SimpleNamespace(now=observed.astimezone))
     client = SQLiteClient(SQLitePool(str(tmp_path / "metadata.sqlite")))
     snapshots = SQLiteProviderSnapshotStore(client, now=lambda: observed)
     lifecycle = SQLitePartitionLifecycleStore(client)
@@ -177,7 +178,8 @@ def test_fred_refresh_requires_both_datasets(
         lambda **kwargs: nullcontext(SimpleNamespace(published_refresh=process)),
     )
     try:
-        state = repair.fred_published_refresh_flow(return_state=True)
+        with temporary_settings({PREFECT_LOCAL_STORAGE_PATH: tmp_path / "prefect"}):
+            state = repair.fred_published_refresh_flow(return_state=True)
         assert state.is_failed() is bool(fault)
         assert state.is_completed() is (fault is None)
         if fault is None:
