@@ -256,9 +256,11 @@ def _quarterly_impacts(
             if date.fromisoformat(k) > date.fromisoformat(t) + _ANCHOR_ALREADY_SET_DAYS
         ]
         if established:
-            expected = min(established)
-            # 后续已知观察版本本身保留资格，只纠正未锚定的旧投影。
+            # 后续已知观察版本本身保留资格；其他标的仍使用来源观察锚，
+            # 不能以某标的较早的首锚证明另一标的当时已可知。
             versions = {k: c for k, c in versions.items() if k not in established}
+        if not versions:
+            continue
         if expected is None or date.fromisoformat(expected) <= date.fromisoformat(t):
             # 无覆盖快照，或锚不晚于事实日（不可作为可知时间）——拒绝动。
             impacts.append(

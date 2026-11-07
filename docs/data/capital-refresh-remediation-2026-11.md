@@ -110,3 +110,8 @@ state 为上述 data 根，fd 1/2 指向主 checkout `.cache/prefect-worker/work
 本次 OpenAPI 默认语义变更使 R5 preflight **汇总**中的 interface_contracts 哈希变化。
 通过原 `r5_agent_release_preflight` 生成器更新派生汇总，只改变契约与汇总身份；没有
 重写底层 sandbox/live eval 证据，也不声称重新完成 R5 真实运行验收。
+
+规范复审识别出首锚修复中的跨标的时间回退：未锚行不能借用另一标的的较早观察锚。
+已保留既有已锚版本，并让未锚行继续使用可核验来源观察时间；新增不同观察日期的
+反例，来源 02-01 时不得改成另一标的的 01-15。该问题分类为修复引入，未影响本机
+官方披露表内的上述只读盘点数字。
