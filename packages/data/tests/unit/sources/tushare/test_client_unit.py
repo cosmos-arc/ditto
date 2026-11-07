@@ -60,7 +60,10 @@ def test_page_retry_does_not_restart_completed_pages(respx_mock, fake_time):
     assert offsets == [0, 100, 100, 101]
 
 
-@pytest.mark.parametrize("message", ["您请求速度过快", "请不要超过10个线程"])
+@pytest.mark.parametrize(
+    "message",
+    ["您请求速度过快", "请不要超过10个线程", "ip超限\uff0c请不到在多个ip同时使用"],
+)
 def test_transport_quota_errors_do_not_use_network_retry(respx_mock, message):
     route = respx_mock.post("http://api.tushare.pro").respond(
         200, json={"code": 50101, "msg": message, "data": None}

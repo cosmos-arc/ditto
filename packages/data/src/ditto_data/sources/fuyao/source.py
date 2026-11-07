@@ -683,7 +683,14 @@ class FuyaoSource:
         renames: dict[str, str],
     ) -> None:
         """校验辅源财务行契约（CNY 常量 + 关键列存在），违约拒绝该标的."""
-        required = {"period_end_ms", "report_date_ms", "currency", *renames}
+        required = {
+            "period_end_ms",
+            "report_date_ms",
+            "currency",
+            "thscode",
+            "ticker",
+            *renames,
+        }
         for item in items:
             missing = sorted(required - set(item))
             if missing:
@@ -691,6 +698,17 @@ class FuyaoSource:
                     source="fuyao",
                     message=(
                         f"fuyao {dataset} {thscode} 缺列 {missing}: 契约违约 拒绝"
+                    ),
+                )
+            if (
+                item["thscode"] != thscode
+                or item["ticker"] != thscode.split(".", maxsplit=1)[0]
+            ):
+                raise SourceFetchError(
+                    source="fuyao",
+                    message=(
+                        f"fuyao {dataset} {thscode} "
+                        "row identity differs from request: 拒绝"
                     ),
                 )
             if item["currency"] != "CNY":

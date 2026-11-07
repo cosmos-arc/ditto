@@ -17,6 +17,7 @@ _RATE_LIMIT_MSG_MARKERS = (
     "每天最多访问",
     "请求速度过快",
     "请不要超过10个线程",
+    "ip超限",
 )
 
 
@@ -51,7 +52,9 @@ def validate_tushare_response(response_json: dict[str, object]) -> dict[str, obj
     if code != 0:
         msg_str = msg if isinstance(msg, str) else None
         # 频次超限不得转为空成功或普通失败重试，显式归类为限流错误
-        if msg_str and any(marker in msg_str for marker in _RATE_LIMIT_MSG_MARKERS):
+        if msg_str and any(
+            marker in msg_str.casefold() for marker in _RATE_LIMIT_MSG_MARKERS
+        ):
             raise SourceRateLimitError(
                 message=msg_str,
                 source="tushare",

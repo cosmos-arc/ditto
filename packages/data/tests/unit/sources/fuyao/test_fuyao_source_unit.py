@@ -830,6 +830,25 @@ def _income_item(
 class TestFuyaoFinancialStatementsFrame:
     """#473 财务三表对账帧：字段映射、披露日、契约违约按标的隔离."""
 
+    def test_batch_rejects_crossed_row_identity_preserving_valid_group(self) -> None:
+        bank = _income_item(
+            date(2026, 6, 30),
+            date(2026, 8, 14),
+            thscode="000001.SZ",
+            ticker="000001",
+            operating_income=103_100_000_000.0,
+        )
+        source = _source_by_thscode(
+            {
+                "600519.SH": {"item": [bank]},
+                "000001.SZ": {"item": [bank]},
+            }
+        )
+        result = source.fetch_financial_statements(
+            "income_statement", ["600519.SH", "000001.SZ"]
+        )
+        assert result["ticker"].to_list() == ["000001.SZ"]
+
     def test_renames_fields_and_derives_dates_from_bare_ticker(self) -> None:
         source = _source_by_thscode(
             {
