@@ -522,11 +522,7 @@ def _window_days(sorted_days: list[str], start: str, end: str) -> list[str]:
 def _absence_scope_matches(
     item: ProviderSnapshot, day: str, ticker: Callable[[date], str | None]
 ) -> bool:
-    tickers = {
-        key.removeprefix("source_ticker=")
-        for key in item.canonical_asset.partition_keys
-        if key.startswith("source_ticker=")
-    }
+    tickers = item.source_ticker_scope
     return not tickers or ticker(date.fromisoformat(day)) in tickers
 
 
@@ -542,11 +538,7 @@ def _snapshot_matches_instrument(
     mapping for the shard. Sessions are bisected to the shard's own
     request window so scoped shards never walk the full consumable set.
     """
-    tickers = {
-        key.removeprefix("source_ticker=")
-        for key in item.canonical_asset.partition_keys
-        if key.startswith("source_ticker=")
-    }
+    tickers = item.source_ticker_scope
     if not tickers:
         return True  # Market-wide requests are filtered at the row boundary.
     return any(

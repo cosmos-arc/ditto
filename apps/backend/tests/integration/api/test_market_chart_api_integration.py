@@ -4517,8 +4517,9 @@ def test_chart_ignores_revision_conflicts_outside_requested_window(
 
 @pytest.mark.pit
 @pytest.mark.parametrize("ticker", ["600519.SH", "OTHER.SH"])
+@pytest.mark.parametrize("scope_location", ["partition", "metadata", "both"])
 def test_shared_source_empty_revision_respects_ticker_scope(
-    tmp_path: Path, ticker: str
+    tmp_path: Path, ticker: str, scope_location: str
 ) -> None:
     chart, price, _ = _chart(tmp_path, poisoned=False)
     empty = replace(
@@ -4529,14 +4530,21 @@ def test_shared_source_empty_revision_respects_ticker_scope(
         canonical_asset=DataAssetRef(
             dataset_id="stock_daily",
             namespace="market",
-            partition_keys=(f"source_ticker={ticker}",),
+            partition_keys=(f"source_ticker={ticker}",)
+            if scope_location in {"partition", "both"}
+            else (),
         ),
         row_count=0,
         payload_retained=False,
         payload_uri=None,
         created_at=datetime(2026, 3, 12, 8, tzinfo=UTC),
         observations=(),
-        response_metadata=(("snapshot_layer", "verified_empty_provider_observation"),),
+        response_metadata=(("snapshot_layer", "verified_empty_provider_observation"),)
+        + (
+            (("source_ticker", ticker),)
+            if scope_location in {"metadata", "both"}
+            else ()
+        ),
     )
     cutoff = datetime(2026, 3, 12, 9, tzinfo=UTC)
     context = PITQueryContext(
@@ -4574,6 +4582,73 @@ def test_shared_source_empty_revision_respects_ticker_scope(
             )
             == 2
         )
+
+
+@pytest.mark.pit
+def test_chart_ignores_newer_other_ticker_ingestion_metadata(tmp_path: Path) -> None:
+    """Per-instrument ingestion stores scope in response metadata (#711)."""
+    chart, price, _ = _chart(tmp_path, poisoned=False)
+    store = cast(FilesystemProviderPayloadStore, chart._payloads)
+    other = replace(
+        _snapshot(
+            store,
+            "stock_daily",
+            pl.DataFrame(
+                {
+                    "source_ticker": ["OTHER.SH"],
+                    "trade_date": ["2026-03-09"],
+                    "open": [20.0],
+                    "high": [21.0],
+                    "low": [19.0],
+                    "close": [20.5],
+                    "volume": [100.0],
+                    "amount": [2050.0],
+                }
+            ),
+            datetime(2026, 3, 11, 8, tzinfo=UTC),
+            bounds=("2026-03-01", "2026-03-10"),
+        ),
+        response_metadata=(("source_ticker", "OTHER.SH"),),
+    )
+    reader = cast(
+        ProviderSnapshotReader, _Snapshots((*chart._snapshots.list_snapshots(), other))
+    )
+    request = MarketChartRequest(
+        instrument_id=1000001,
+        asset_class="stock",
+        start_date=date(2026, 3, 9),
+        end_date=date(2026, 3, 10),
+        period="daily",
+        adjustment="none",
+        allow_experimental_data=False,
+        now=datetime(2026, 3, 12, 9, tzinfo=UTC),
+    )
+    result = MarketChartQueryFacade(
+        reader, store, chart._metadata, chart._market
+    ).get_chart(request)
+    assert [bar.close for bar in result.bars] == [10.2, 10.8]
+    assert other.snapshot_id not in result.source_snapshot_ids
+    context = PITQueryContext(
+        as_of=request.now,
+        knowledge_cutoff=request.now,
+        publication_cutoff=request.now,
+        source_snapshots=(
+            DatasetSnapshot(
+                dataset_id="stock_daily",
+                dataset_version=price.schema_version,
+                source_snapshot_ids=(price.snapshot_id, other.snapshot_id),
+                created_at=other.created_at,
+            ),
+        ),
+    )
+    bars = ProviderPayloadTechnicalAnalysisSource(
+        snapshot_reader=reader, payload_reader=store
+    ).load(
+        context,
+        instrument_id=InstrumentId(1000001),
+        instrument_code="600519.SH",
+    )
+    assert [bar.close for bar in bars] == [10.2, 10.8]
 
 
 # ---------------------------------------------------------------------------
