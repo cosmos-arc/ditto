@@ -241,9 +241,10 @@ class IngestionEvidenceCommitter:
         """Reuse must prove the recorded evidence belongs to this snapshot."""
         if checkpoint.status is PartitionLifecycleStatus.COMPLETE:
             attested = checkpoint.complete_evidence_id
-            if attested is None:
+            if attested is None or (
+                snapshot_id is not None and attested != snapshot_id
+            ):
                 return True
-            return snapshot_id is not None and attested != snapshot_id
         return (
             checkpoint.payload_id is not None
             and payload_evidence_id is not None
