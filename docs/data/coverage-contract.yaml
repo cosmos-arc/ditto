@@ -19,12 +19,36 @@ meta:
     empty: 本地零行
     unknown: 禁止出现——合同不允许未测量项冒充就绪
   permission_matrix:
-    access_model: 积分=Tushare 15000 档位（档位决定接口权限与限频，非余额）；代理 t.xiaodefa.top 为 HTTP 透传层；实测成功以 probes 逐条为准，官方文档门槛未逐条核对——若未来触发补源比较再补门槛列
+    access_model: 积分=Tushare 15000 档位（档位决定接口权限与限频，非余额）；代理 t.xiaodefa.top 为 HTTP 透传层；实测成功以 probes 逐条为准，普通/VIP选型及独立限制见2026-11-07-source-interface-contract-audit.md；单码权限探针不冒充全历史完整性
     unit_dimension: 本合同单位维度仅记 currency；计量单位（万元/万份/倍/股）核验归 P2 价格口径与 P3c 股数单位反例等 lane 实施票，P0 不伪造
     tushare_proxy: https://t.xiaodefa.top/
-    tushare_probed: 58
-    tushare_ok: 55
+    tushare_probed: 62
+    tushare_ok: 59
     probes:
+      tushare:balancesheet_vip:
+        result: ok
+        rows: 2
+        measured_at: '2026-11-07T04:05:16.030150+00:00'
+        params: {ts_code: 600519.SH, period: '20260930'}
+        evidence: docs/data/evidence/2026-11-07-713/vip-selection-validation.json
+      tushare:income_vip:
+        result: ok
+        rows: 2
+        measured_at: '2026-11-07T04:05:17.988779+00:00'
+        params: {ts_code: 600519.SH, period: '20260930'}
+        evidence: docs/data/evidence/2026-11-07-713/vip-selection-validation.json
+      tushare:cashflow_vip:
+        result: ok
+        rows: 1
+        measured_at: '2026-11-07T04:05:19.958106+00:00'
+        params: {ts_code: 600519.SH, period: '20260930'}
+        evidence: docs/data/evidence/2026-11-07-713/vip-selection-validation.json
+      tushare:fina_indicator_vip:
+        result: ok
+        rows: 139
+        measured_at: '2026-11-07T03:45:19.000824+00:00'
+        params: {ts_code: 600519.SH}
+        evidence: docs/data/evidence/2026-11-07-713/vip-selection-validation.json
       tushare:trade_cal:
         result: ok
         rows: 4

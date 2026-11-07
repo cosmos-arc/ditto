@@ -114,6 +114,7 @@ class TestFinaIndicatorDisclosureDelta:
         fundamental.fetch_fina_indicator.assert_not_called()
         assert fundamental.fetch_fina_indicator_vip.call_count == 8
 
+    @pytest.mark.pit
     def test_instrument_mode_filters_disclosures_after_fetching_history(self) -> None:
         fundamental = MagicMock(spec=FundamentalTushareAdapter)
         fundamental.fetch_fina_indicator_vip.return_value = pl.DataFrame(
