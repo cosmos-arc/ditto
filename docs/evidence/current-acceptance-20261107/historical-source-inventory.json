@@ -1,0 +1,94 @@
+{
+  "stock": {
+    "master_first_observed_at": "2026-10-03T14:54:11.722076+00:00",
+    "master_snapshot_count": 15,
+    "status_snapshot_count": 595,
+    "snapshot_ids": [
+      "snapshot:tushare:stock_basic:sha256:f4c823ec4cf0eed3a1255b24c1776b2f685191e1fa2aa18211a01199830cdc4d",
+      "snapshot:tushare:stock_status:sha256:7c35642ba56236dcd64982d2974c5c48a848d773d0b90829072bba761bb08b49"
+    ],
+    "historical_cutoff_refusal": {
+      "type": "AppQueryError",
+      "reason": "HISTORY_NOT_OBSERVED"
+    },
+    "master_payload": {
+      "rows": 5922,
+      "columns": [
+        "source_ticker",
+        "ticker",
+        "name",
+        "exchange",
+        "list_date",
+        "delist_date",
+        "list_status"
+      ],
+      "observed_at": "2026-11-06T18:33:20.213055+00:00",
+      "schema_fingerprint": "[[\"source_ticker\",\"String\"],[\"ticker\",\"String\"],[\"name\",\"String\"],[\"exchange\",\"String\"],[\"list_date\",\"Date\"],[\"delist_date\",\"Date\"],[\"list_status\",\"String\"]]",
+      "checksum": "abaf6eb27237f654f24e7cde4dd12a7b"
+    },
+    "status_payload": {
+      "rows": 5580,
+      "columns": [
+        "source_ticker",
+        "trade_date",
+        "is_suspended",
+        "suspend_timing",
+        "is_st",
+        "st_type",
+        "list_status"
+      ],
+      "observed_at": "2026-11-06T14:33:43.161775+00:00",
+      "schema_fingerprint": "[[\"source_ticker\",\"String\"],[\"trade_date\",\"Date\"],[\"is_suspended\",\"Boolean\"],[\"suspend_timing\",\"String\"],[\"is_st\",\"Boolean\"],[\"st_type\",\"String\"],[\"list_status\",\"String\"]]",
+      "checksum": "f94222c89cc663ff7d567ee4d21130cc"
+    }
+  },
+  "etf": {
+    "master_first_observed_at": "2026-10-03T14:56:07.751340+00:00",
+    "master_snapshot_count": 12,
+    "status_snapshot_count": 545,
+    "snapshot_ids": [
+      "snapshot:tushare:etf_basic:sha256:d2fd357e507f02635a3a5751f40be655849803cc0e5da21b2e227bf7946157ee",
+      "snapshot:tushare:etf_daily:sha256:06f01dee2ab32f82f02bee67377204720c90650f10e930e1118984ddad27e4b0"
+    ],
+    "historical_cutoff_refusal": {
+      "type": "AppQueryError",
+      "reason": "HISTORY_NOT_OBSERVED"
+    },
+    "master_payload": {
+      "rows": 1849,
+      "columns": [
+        "source_ticker",
+        "ticker",
+        "name",
+        "exchange",
+        "list_date",
+        "list_status",
+        "tracking_index",
+        "etf_type",
+        "asset_class"
+      ],
+      "observed_at": "2026-11-06T14:36:44.148916+00:00",
+      "schema_fingerprint": "[[\"source_ticker\",\"String\"],[\"ticker\",\"String\"],[\"name\",\"String\"],[\"exchange\",\"String\"],[\"list_date\",\"Date\"],[\"list_status\",\"String\"],[\"tracking_index\",\"String\"],[\"etf_type\",\"String\"],[\"asset_class\",\"String\"]]",
+      "checksum": "f507118569e7e1b3574e496128166229"
+    },
+    "status_payload": {
+      "rows": 1719,
+      "columns": [
+        "source_ticker",
+        "trade_date",
+        "knowledge_date",
+        "open",
+        "high",
+        "low",
+        "close",
+        "pre_close",
+        "volume",
+        "amount",
+        "pct_change"
+      ],
+      "observed_at": "2026-11-06T18:08:11.684573+00:00",
+      "schema_fingerprint": "[[\"source_ticker\",\"String\"],[\"trade_date\",\"Date\"],[\"knowledge_date\",\"Date\"],[\"open\",\"Float64\"],[\"high\",\"Float64\"],[\"low\",\"Float64\"],[\"close\",\"Float64\"],[\"pre_close\",\"Float64\"],[\"volume\",\"Float64\"],[\"amount\",\"Float64\"],[\"pct_change\",\"Float64\"]]",
+      "checksum": "c44b574bcd40e18ae408f85395c59049"
+    }
+  }
+}

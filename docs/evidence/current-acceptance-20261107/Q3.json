@@ -1,0 +1,197 @@
+{
+  "artifacts": [
+    {
+      "relative_path": "current-acceptance-20261107/README.md",
+      "sha256": "sha256:8576d29ec6fb8df8aa9ca32b77b437e6f5cd9e5c963b741af3f90e0898c419d1",
+      "size_bytes": 8979
+    },
+    {
+      "relative_path": "current-acceptance-20261107/accelerated-identity.json",
+      "sha256": "sha256:73d6237f164d248385ff3d0dd8acf5f49b5d3e8a1bbbe82e49b89bf025d44794",
+      "size_bytes": 799
+    },
+    {
+      "relative_path": "current-acceptance-20261107/accelerated-proposal.json",
+      "sha256": "sha256:2d1547cefd21379f9691c1c095838451d050fe4b0808515c410c4d8a06fa8bf2",
+      "size_bytes": 9884
+    },
+    {
+      "relative_path": "current-acceptance-20261107/accelerated-result.json",
+      "sha256": "sha256:1e22c498efb9aacf08240545b218da68ed80ccaa840f8e0eebda64d3876190f1",
+      "size_bytes": 2841
+    },
+    {
+      "relative_path": "current-acceptance-20261107/accelerated/accelerated-progress.json",
+      "sha256": "sha256:c3d80d2705ddb6139f68a8cb987bec7611db99d3a931dae99433cc6fe528b97d",
+      "size_bytes": 2780
+    },
+    {
+      "relative_path": "current-acceptance-20261107/accelerated/bootstrap.json",
+      "sha256": "sha256:abb26c535e3ffdd8a4713649388388e54509781af89e2f1dfcd846a8cef511fe",
+      "size_bytes": 1325
+    },
+    {
+      "relative_path": "current-acceptance-20261107/accelerated/days/2026-10-12.json",
+      "sha256": "sha256:1fe95599f06de4fcaa4ef08bc946321a61b69f2fa3525c53aef774793c0250f8",
+      "size_bytes": 3406
+    },
+    {
+      "relative_path": "current-acceptance-20261107/accelerated/days/2026-10-13.json",
+      "sha256": "sha256:330a1d99fac55f04837a5ae106f51987b4ae2f4ca1a22a0addce38c8ef671305",
+      "size_bytes": 3406
+    },
+    {
+      "relative_path": "current-acceptance-20261107/accelerated/days/2026-10-14.json",
+      "sha256": "sha256:053189865eecdb4140051f8e08c5234ccf56de805dee7f3575f9acb1bab29aba",
+      "size_bytes": 3409
+    },
+    {
+      "relative_path": "current-acceptance-20261107/accelerated/days/2026-10-15.json",
+      "sha256": "sha256:0b2e7d94b0e5e17d0284ade3baa2d31a301d17d2e314b39555cbf3210145d739",
+      "size_bytes": 3408
+    },
+    {
+      "relative_path": "current-acceptance-20261107/accelerated/days/2026-10-16.json",
+      "sha256": "sha256:f67b0b097ebbd9d484d46376d038e005869a005ddd24d838232d8843302778ff",
+      "size_bytes": 3409
+    },
+    {
+      "relative_path": "current-acceptance-20261107/accelerated/days/2026-10-19.json",
+      "sha256": "sha256:70e49306dab6bd4e5b622ec2197fdcf15f47b565d9885fced0a7c5980f084bc2",
+      "size_bytes": 3407
+    },
+    {
+      "relative_path": "current-acceptance-20261107/accelerated/days/2026-10-20.json",
+      "sha256": "sha256:b2bc4b1297c046b92a9e27c896c38769b9731c1f597b80461b8849d7659670a0",
+      "size_bytes": 3409
+    },
+    {
+      "relative_path": "current-acceptance-20261107/accelerated/days/2026-10-21.json",
+      "sha256": "sha256:3e126d63f821460920918d058d75fccbdaa80dee5ce1246e2cf5094eb3a6d526",
+      "size_bytes": 3409
+    },
+    {
+      "relative_path": "current-acceptance-20261107/accelerated/days/2026-10-22.json",
+      "sha256": "sha256:20e03a8417900c3258b1c1f1affc6ae83a0088901641179b0937f0707850b789",
+      "size_bytes": 3407
+    },
+    {
+      "relative_path": "current-acceptance-20261107/accelerated/days/2026-10-23.json",
+      "sha256": "sha256:4acb30eb02c0150ea2a988203fbcd9a02019200134341d57b1eef879f98b59fc",
+      "size_bytes": 3404
+    },
+    {
+      "relative_path": "current-acceptance-20261107/accelerated/days/2026-10-26.json",
+      "sha256": "sha256:88183e64556efca7964c8e24aed54a8cbed9bf8fddd456c43be0bf2382e85677",
+      "size_bytes": 3412
+    },
+    {
+      "relative_path": "current-acceptance-20261107/accelerated/days/2026-10-27.json",
+      "sha256": "sha256:38b4176774746a3f68ccdf4f36fde6875f655da78c0bd6ce82ee2ae3b3215620",
+      "size_bytes": 3413
+    },
+    {
+      "relative_path": "current-acceptance-20261107/accelerated/days/2026-10-28.json",
+      "sha256": "sha256:4f993ae8cc439275546d622e669996cf0771764f1d7e6e59c1b6b7ff918017c8",
+      "size_bytes": 3412
+    },
+    {
+      "relative_path": "current-acceptance-20261107/accelerated/days/2026-10-29.json",
+      "sha256": "sha256:3a290142d60aa7a678c11276de662cb33fbef664995a3764f32fb458eb6fb690",
+      "size_bytes": 3412
+    },
+    {
+      "relative_path": "current-acceptance-20261107/accelerated/days/2026-10-30.json",
+      "sha256": "sha256:ec62e495867ba9ac982b6a34138ea1882aa0deefa040bf80e0a8608f034f724a",
+      "size_bytes": 3412
+    },
+    {
+      "relative_path": "current-acceptance-20261107/accelerated/days/2026-11-02.json",
+      "sha256": "sha256:9f9a579cbad63507906977165d169a0e4eb18a2b4583a456f83e50eba1e60cda",
+      "size_bytes": 3411
+    },
+    {
+      "relative_path": "current-acceptance-20261107/accelerated/days/2026-11-03.json",
+      "sha256": "sha256:8447d1f250d242088e93258992f2a6562009f18b4bc1e0a93690c1b4bc7cbdf6",
+      "size_bytes": 3410
+    },
+    {
+      "relative_path": "current-acceptance-20261107/accelerated/days/2026-11-04.json",
+      "sha256": "sha256:60d42c4735e4e21b18753fccac3cd5a7103c76f250bd92f2dbae9d428812bc52",
+      "size_bytes": 3409
+    },
+    {
+      "relative_path": "current-acceptance-20261107/accelerated/days/2026-11-05.json",
+      "sha256": "sha256:7ea78b66f989363549aa941b82c1529e745228cb2d79500d23a84f4439fe9105",
+      "size_bytes": 3409
+    },
+    {
+      "relative_path": "current-acceptance-20261107/accelerated/days/2026-11-06.json",
+      "sha256": "sha256:274bc7217d592a8c29f06b8fef3a8447497491bc99069e59a82b9b3ffac40e5f",
+      "size_bytes": 3410
+    },
+    {
+      "relative_path": "current-acceptance-20261107/governed-etf.json",
+      "sha256": "sha256:6ca522ef1cc66f7b3ffbb7df5014fbe633d3aac5b86a3b9b966161d9110ebfb9",
+      "size_bytes": 7046
+    },
+    {
+      "relative_path": "current-acceptance-20261107/historical-source-inventory.json",
+      "sha256": "sha256:b4ad6ab03815b7c5bb2b66feec72b858ad7d2a4d41d659357ba7686fe269a648",
+      "size_bytes": 3527
+    },
+    {
+      "relative_path": "current-acceptance-20261107/identity-and-validation.json",
+      "sha256": "sha256:2fafdae10f2d23e94cead3b5f4a3f35c40b07ca269671e86984ff061588eed5f",
+      "size_bytes": 1985
+    },
+    {
+      "relative_path": "current-acceptance-20261107/legacy-revalidation.json",
+      "sha256": "sha256:75cfc777c7a34f407d8d83565b0076730730733b6fe42a0403ab243654f682c7",
+      "size_bytes": 1016
+    },
+    {
+      "relative_path": "current-acceptance-20261107/legacy/OPS10-before.json",
+      "sha256": "sha256:f7bed324cce7388eaf4ba68c3539e5067cf59a97536fcde6b973f84bdc189272",
+      "size_bytes": 6620
+    },
+    {
+      "relative_path": "current-acceptance-20261107/legacy/Q4-before.json",
+      "sha256": "sha256:c3947dd226f2780161cf49fa7b3ce50ff83849802a18e287d39aad2371bbc950",
+      "size_bytes": 3357
+    },
+    {
+      "relative_path": "current-acceptance-20261107/paper-five-day.json",
+      "sha256": "sha256:7ee658bc1d87325da819ddd8f3039db72ce14b2c485ad068e5c980760db63b5b",
+      "size_bytes": 8991
+    },
+    {
+      "relative_path": "current-acceptance-20261107/process-restart.json",
+      "sha256": "sha256:ff2395def73061c3469db01208f45a3898bfa53afa0a4fac9e7921111e14af5d",
+      "size_bytes": 15131
+    },
+    {
+      "relative_path": "current-acceptance-20261107/research-assessment.json",
+      "sha256": "sha256:09739e3eb0dcd497306814210468e2119aa7b86b486eb9ba10e4d49c01918a7d",
+      "size_bytes": 8206
+    },
+    {
+      "relative_path": "current-acceptance-20261107/research-prefreeze.json",
+      "sha256": "sha256:3066533c66abe074d79312d57e7b9ddc4e149116b55348be58fb546c7239dd3d",
+      "size_bytes": 607
+    },
+    {
+      "relative_path": "current-acceptance-20261107/stock-paper.json",
+      "sha256": "sha256:a993aa684d4273d7d8b1852d93ded7b70beaaa842b049eb4699b42d298b7f5de",
+      "size_bytes": 8216
+    }
+  ],
+  "blockers": [
+    "Current real-source research rejected before preflight/freeze; no eligible interval certified.",
+    "Real edge-case matrix and frozen execution stability remain unverified."
+  ],
+  "gate": "Q3",
+  "manifest_hash": "sha256:2d239ba93c0df6ab63162bcef5f85a4c2db4ef3e2b46d8762dd2526d308aa1c8",
+  "schema_version": 1,
+  "status": "blocked"
+}

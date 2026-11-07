@@ -125,7 +125,7 @@
     {
       "label": "gate_manifest_4",
       "path": "/Users/chevy/Desktop/code/ditto/docs/evidence/personal-workstation/manifests/Q4.json",
-      "sha256": "c3947dd226f2780161cf49fa7b3ce50ff83849802a18e287d39aad2371bbc950",
+      "sha256": "ff47b39ed7ea06afe38ee8cb237e27081ce9d5607b3334cee3727a7aaea871d9",
       "size": 3357
     },
     {
@@ -135,7 +135,7 @@
       "size": 4673
     }
   ],
-  "bundle_hash": "611d426dd9815e2b3b24ba79aec13845e36feb84200542a0766e2b3747889c7a",
+  "bundle_hash": "d4b8b6d30478c1d013b447564de99acd2b201a94eb7eaa4bf307cf334e35a360",
   "fresh_bootstrap": true,
   "generated_at": "2026-09-03T10:15:19.595003Z",
   "live_day_anchor_bound": true,
