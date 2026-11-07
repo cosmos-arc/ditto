@@ -631,7 +631,7 @@ datasets:
     status: partial
     gaps:
     - 2014-06-01 为非交易日,当前入口正确跳过;旧 DQ 失败记录保留,不写成假成功。
-    - 申万存量481557行的成交量/金额仍缺单位换算（应为手/千元），待授权修复；新抓取代码已纠正，旧快照与历史量额不可视为已修复。
+    - 申万存量481557行已于2026-11-07授权纠正为手/千元并登记13个修正快照；169个旧载荷保留原单位，仅供溯源，不可视为已归一快照。
     consumers:
     - 当前价格序列及成交量展示；application 实测入口/参数/结果见 readiness-708-2026-11.md
     notes: 冻结 178/178 代码有行情;价格/成交量展示,早于指数发布或源实际起点不回造。
@@ -1367,6 +1367,7 @@ datasets:
     - tushare
     provider_apis:
     - fina_indicator
+    - fina_indicator_vip
     declared:
       frequency: quarterly
       update_frequency: 每日
@@ -1642,6 +1643,7 @@ datasets:
     - tushare
     provider_apis:
     - balancesheet
+    - balancesheet_vip
     declared:
       frequency: quarterly
       update_frequency: 每日
@@ -1689,6 +1691,7 @@ datasets:
     - tushare
     provider_apis:
     - income
+    - income_vip
     declared:
       frequency: quarterly
       update_frequency: 每日
@@ -1736,6 +1739,7 @@ datasets:
     - tushare
     provider_apis:
     - cashflow
+    - cashflow_vip
     declared:
       frequency: quarterly
       update_frequency: 每日

@@ -1,5 +1,5 @@
 {
-  "status": "prepared_not_applied",
+  "status": "applied_verified",
   "created_at": "2026-11-07T03:03:45.210563+00:00",
   "scope": "Only source=tushare, .SI, volume x100, amount x10; all other fields/rows unchanged; immutable old payloads retained",
   "rows": 481557,
@@ -122,12 +122,14 @@
       "new_payload_checksum": "535b807174111d1ba0e521cd3e654b04"
     }
   ],
-  "production_unchanged": true,
   "original_snapshot_ids_sha256": "b1efd6229b6ab765989ad2f1528d5f96557e9c2d925983f08659dc22ffe8568e",
   "apply_requirements": [
     "Recheck all baseline partition hashes and acquire existing index year writer locks before any mutation.",
     "Keep before-images and original 169 provider snapshots immutable. Register corrected payload/snapshot identities with correction reason and original identity lineage; update catalog through existing store APIs.",
     "Validate current application reader, keys, non-SW rows, non-volume/amount fields and PIT dates; reject repeated application by baseline hashes.",
     "Do not replay old normalized payloads as corrected values; VERIFY_IDENTICAL must still reject conflicting historical-unit rows."
-  ]
+  ],
+  "application_receipt": "sw-unit-repair-applied.json",
+  "executed_manifest_sha256": "9c2107c45913696d157cd7d414a5b9c55c81f14023d2877dcd3f32ddc7d8c084",
+  "production_unchanged_at_preparation": true
 }

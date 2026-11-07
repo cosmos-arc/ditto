@@ -8,6 +8,7 @@ import polars as pl
 from ditto_platform.foundation import Metrics, logger, traced
 from ditto_platform.foundation.storage import CORRECTION_FLAG_COLUMN
 
+from ditto_data.sources.base import SourceFetchError
 from ditto_data.sources.tushare.adapters.base import BaseTushareAdapter
 from ditto_data.sources.tushare.adapters.capital_corporate import (
     CapitalCorporateTushareAdapter,
@@ -652,9 +653,9 @@ class FundamentalTushareAdapter(BaseTushareAdapter):
 
         Args:
             ts_code: 股票代码 (e.g., "600519.SH")
-            period: 报告期 (YYYYMMDD，如 "20240331")，全市场批量
-            start_date: 公告开始日期 (YYYYMMDD，配 ts_code)
-            end_date: 公告结束日期 (YYYYMMDD，配 ts_code)
+            period: 单股报告期 (YYYYMMDD，如 "20240331")；全市场须用 VIP
+            start_date: 报告期开始日期 (YYYYMMDD，配 ts_code)
+            end_date: 报告期结束日期 (YYYYMMDD，配 ts_code)
 
         """
         # 显式字段集（含 update_flag）：源端默认列集不含选版判别列（#591）；
@@ -683,6 +684,7 @@ class FundamentalTushareAdapter(BaseTushareAdapter):
         ann_date: str | None = None,
         start_date: str | None = None,
         end_date: str | None = None,
+        ts_code: str | None = None,
     ) -> pl.DataFrame:
         """
         获取官方口径财务指标——VIP 批量端点 (#521).
@@ -690,10 +692,12 @@ class FundamentalTushareAdapter(BaseTushareAdapter):
         代理 transport 的非 VIP fina_indicator 必填 ts_code（2026-10-06
         实测 code=「必填参数, 标的」），日更披露增量走本端点按 period
         全市场批量（与 forecast/express 的 vip 形态一致）。
+        单码历史同样优先 VIP，并检查 ts_code 未被服务端忽略；标准入口保留。
         """
         # 共享分页保留页内业务重复，并校验短页尾部与跨页进展。
         # 取尽后仍按披露键和 update_flag 选版，不另维护无守卫的页循环。
         params: dict[str, str | None] = {
+            "ts_code": ts_code,
             "period": period,
             "ann_date": ann_date,
             "start_date": start_date,
@@ -714,6 +718,16 @@ class FundamentalTushareAdapter(BaseTushareAdapter):
             Metrics.data_records.add(
                 raw.height,
                 {"source": "tushare", "dataset": "fina_indicator", "status": "success"},
+            )
+        if (
+            ts_code
+            and not raw.is_empty()
+            and (raw["ts_code"] != ts_code).fill_null(True).any()
+        ):
+            raise SourceFetchError(
+                "fina_indicator_vip returned rows outside requested ts_code",
+                source="tushare",
+                details={"retryable": False},
             )
         result = TushareDataTransformer.transform(
             raw, "fina_indicator", FINA_INDICATOR_MAPPING

@@ -67,7 +67,9 @@ def validate_tushare_response(response_json: dict[str, object]) -> dict[str, obj
             # 调用方按码判别（如 rights 端点 50101 传输边界降级），不匹配消息文本。
             details={
                 "code": code,
-                "retryable": not error_msg.startswith(("必填参数", "参数校验失败")),
+                "retryable": not error_msg.startswith(
+                    ("必填参数", "参数校验失败", "请指定正确的接口名")
+                ),
             },
         )
 

@@ -10,6 +10,7 @@ import orjson
 import polars as pl
 import pytest
 from ditto_data.config import DataSourceSettings
+from ditto_data.sources.base import SourceFetchError
 from ditto_data.sources.tushare._fundamental import (
     fetch_fina_indicator,
     fetch_fund_portfolio,
@@ -73,7 +74,7 @@ class TestFinaIndicatorDisclosureDelta:
         # 两期响应：Q2 披露日早于截止日保留；Q3 披露日晚于截止日剔除
         # adapter 输出契约：ts_code→source_ticker、ann_date→knowledge_date、
         # end_date→report_date（指标列透传）
-        fundamental.fetch_fina_indicator.side_effect = [
+        fundamental.fetch_fina_indicator_vip.side_effect = [
             pl.DataFrame(
                 {
                     "source_ticker": ["600519.SH"],
@@ -102,7 +103,7 @@ class TestFinaIndicatorDisclosureDelta:
             )
         ] * 6
 
-        result = fetch_fina_indicator(fundamental, _compact, trade_date="2026-09-30")
+        result = fetch_fina_indicator(fundamental, trade_date="2026-09-30")
 
         assert result.height == 1
         row = result.row(0, named=True)
@@ -110,29 +111,36 @@ class TestFinaIndicatorDisclosureDelta:
         assert row["report_date"] == date(2026, 6, 30)
         # 指标列透传：未在 mapping 声明的列原样带出
         assert row["eps"] == pytest.approx(33.19)
+        fundamental.fetch_fina_indicator.assert_not_called()
+        assert fundamental.fetch_fina_indicator_vip.call_count == 8
 
-    def test_instrument_mode_uses_ann_window(self) -> None:
+    def test_instrument_mode_filters_disclosures_after_fetching_history(self) -> None:
         fundamental = MagicMock(spec=FundamentalTushareAdapter)
-        fundamental.fetch_fina_indicator.return_value = pl.DataFrame(
+        fundamental.fetch_fina_indicator_vip.return_value = pl.DataFrame(
             {
-                "source_ticker": ["600519.SH"],
-                "knowledge_date": [date(2026, 4, 27)],
-                "report_date": [date(2024, 3, 31)],
-                "eps": [19.16],
+                "source_ticker": ["600519.SH"] * 5,
+                "knowledge_date": [
+                    date(2026, 1, 1),
+                    date(2026, 6, 30),
+                    date(2025, 12, 31),
+                    date(2026, 7, 1),
+                    None,
+                ],
+                "report_date": [date(2024, 3, 31)] * 5,
+                "eps": [19.16, 19.17, 19.18, 19.19, 19.20],
             }
         )
         result = fetch_fina_indicator(
             fundamental,
-            _compact,
             source_ticker="600519.SH",
             start_date="2026-01-01",
             end_date="2026-06-30",
         )
-        call = fundamental.fetch_fina_indicator.call_args.kwargs
-        assert call["ts_code"] == "600519.SH"
-        assert call["start_date"] == "20260101"
-        assert call["end_date"] == "20260630"
-        assert result.height == 1
+        fundamental.fetch_fina_indicator_vip.assert_called_once_with(
+            ts_code="600519.SH"
+        )
+        assert result["eps"].to_list() == [19.16, 19.17]
+        fundamental.fetch_fina_indicator.assert_not_called()
 
 
 @pytest.mark.unit
@@ -469,3 +477,14 @@ def test_daily_rejects_multiple_codes_before_provider_request() -> None:
             end_date="2026-11-05",
         )
     client.query.assert_not_called()
+
+
+@pytest.mark.unit
+def test_vip_single_code_rejects_ignored_selector() -> None:
+    client = MagicMock(spec=TushareClient)
+    client.query.return_value = pl.DataFrame({"ts_code": ["000001.SZ"]})
+    with pytest.raises(SourceFetchError, match="outside requested ts_code"):
+        FundamentalTushareAdapter(_client=client).fetch_fina_indicator_vip(
+            ts_code="600519.SH"
+        )
+    assert client.query.call_args.kwargs["ts_code"] == "600519.SH"

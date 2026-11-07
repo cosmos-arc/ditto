@@ -216,7 +216,7 @@
   "limitations": [
     "82 baseline fixed entrypoints audited against current docs and callsites; only identified changes received new live probes. Four Tushare APIs and Sina have no verified current complete official contract.",
     "Initial probe attempts included an already-closed task client, missing metrics registration, and a task Polars literal error. These attempts are not source-failure evidence; corrected verification is recorded here.",
-    "SW existing 481557 stored rows remain uncorrected pending explicit authorization for a real-data migration; dry-run staged copies and before/after checksums are prepared.",
+    "SW canonical 481557 rows corrected after explicit authorization; 169 immutable old payloads remain in their original units and must not be mistaken for corrected snapshots. New correction identities and 13-year consumer equality are recorded in sw-unit-repair-applied.json.",
     "#708 NAV 388 persistent-pagination failures and other documented source/history limits are not claimed resolved by this interface patch."
   ],
   "verified_response_manifest": [
@@ -466,5 +466,11 @@
       "sha256": "e0105cb680b52ece9b437a19962b9d89d7cd261c92913714a9b2bb009d4a70d4",
       "finished_at": "2026-11-07T03:02:18.814886+00:00"
     }
-  ]
+  ],
+  "sw_unit_repair": {
+    "status": "applied_verified",
+    "receipt": "sw-unit-repair-applied.json",
+    "corrected_rows": 481557,
+    "http_requests": 0
+  }
 }

@@ -28,7 +28,9 @@ def _settings(token: str | None = None) -> DataSourceSettings:
     return DataSourceSettings(tushare_token=token)
 
 
-@pytest.mark.parametrize("message", ["必填参数, trade_date", "参数校验失败, offset"])
+@pytest.mark.parametrize(
+    "message", ["必填参数, trade_date", "参数校验失败, offset", "请指定正确的接口名"]
+)
 def test_invalid_parameters_are_not_retried(respx_mock, fake_time, message):
     route = respx_mock.post("http://api.tushare.pro").respond(
         200, json={"code": 50101, "msg": message, "data": None}

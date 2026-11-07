@@ -329,27 +329,34 @@ def fetch_corporate_actions(
 
 def fetch_fina_indicator(
     fundamental: FundamentalTushareAdapter,
-    to_compact_date: Callable[[str], str],
     *,
     trade_date: str | None = None,
     source_ticker: str | None = None,
     start_date: str | None = None,
     end_date: str | None = None,
 ) -> pl.DataFrame:
-    """
-    Fetch official financial indicators (#521, ann_date disclosure anchor).
-
-    与财务三表共用披露增量语义：近期报告期超集 + knowledge_date ≤ 截止日
-    过滤；修订以新 ann_date 版本追加，不做同披露键去重。
-    """
-    return _fetch_statement(
-        to_compact_date,
-        vip_fetch=fundamental.fetch_fina_indicator,
-        standard_fetch=fundamental.fetch_fina_indicator,
-        trade_date=trade_date,
+    """Fetch indicator disclosures; provider date ranges select report periods."""
+    _require_statement_mode(trade_date=trade_date, source_ticker=source_ticker)
+    if trade_date:
+        return fetch_disclosure_delta(
+            fundamental.fetch_fina_indicator_vip,
+            asof_date=parse_iso(trade_date),
+        )
+    source_ticker, start_date, end_date = _require_ticker_range(
         source_ticker=source_ticker,
         start_date=start_date,
         end_date=end_date,
+    )
+    start, end = parse_iso(start_date), parse_iso(end_date)
+    if start > end:
+        raise ValueError("fina_indicator requires start_date <= end_date")
+    # Native start/end filter report periods, so they could omit a newly
+    # disclosed revision of an old report. Filter the complete single-code
+    # history by its disclosure date, just as the market VIP path does.
+    result = fundamental.fetch_fina_indicator_vip(ts_code=source_ticker)
+    return result.filter(
+        pl.col("knowledge_date").is_not_null()
+        & pl.col("knowledge_date").is_between(start, end, closed="both")
     )
 
 

@@ -25,10 +25,6 @@ from ditto_data.sources.tushare._fundamental import (
     fetch_corporate_actions as _fetch_corporate_actions,
 )
 from ditto_data.sources.tushare._fundamental import (
-    fetch_disclosure_delta,
-    parse_iso,
-)
-from ditto_data.sources.tushare._fundamental import (
     fetch_dividend as _fetch_dividend,
 )
 from ditto_data.sources.tushare._fundamental import (
@@ -597,18 +593,11 @@ def fetch_fina_indicator(
     """
     Fetch official financial indicators（#521 披露增量语义）.
 
-    日更走 fina_indicator_vip 按 period 批量（代理 transport 非 VIP 端点
-    必填 ts_code，2026-10-06 实测）；按标的回填走非 VIP 端点。
+    全市场披露走 VIP 报告期超集；单码历史按真实公告日期本地过滤。
     """
-    if trade_date:
-        return fetch_disclosure_delta(
-            fundamental.fetch_fina_indicator_vip,
-            asof_date=parse_iso(trade_date),
-        )
     return _fetch_fina_indicator(
         fundamental,
-        to_compact_date,
-        trade_date=None,
+        trade_date=trade_date,
         source_ticker=source_ticker,
         start_date=start_date,
         end_date=end_date,
