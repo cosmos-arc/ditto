@@ -620,6 +620,28 @@ class TestSyntheticIngestEvents:
             provider_snapshots=_SnapshotReader(*snapshots),
         )
 
+    def test_metadata_scoped_ingestion_keeps_ticker_in_source_and_run(self) -> None:
+        snapshot = replace(
+            _ingested_snapshot(created_at=datetime(2026, 1, 5, 9, tzinfo=UTC)),
+            response_metadata=(("source_ticker", "600519.SH"),),
+        )
+        facade = self._facade((snapshot,))
+        events = facade.list_data_events_for_asset(
+            namespace="source",
+            dataset_id="stock_daily",
+            partition_keys=(
+                "source=tushare",
+                "source_ticker=600519.SH",
+                "start_date=2026-01-05",
+                "end_date=2026-01-05",
+            ),
+        )
+        assert len(events) == 1
+        assert events[0].run_id == (
+            "ingest:tushare:stock_daily:600519.SH:2026-01-05:2026-01-05:sha256:payload"
+        )
+        assert facade.get_data_lineage_for_run(events[0].run_id).events == events
+
     def test_synthesizes_ingest_event_for_canonical_asset(self) -> None:
         observed = datetime(2026, 1, 5, 9, 0, tzinfo=UTC)
         reobserved = datetime(2026, 1, 6, 9, 0, tzinfo=UTC)
