@@ -43,6 +43,26 @@ class TestFredClientInit:
 class TestFredClientGetSeriesObservations:
     """Tests for FredClient.get_series_observations method."""
 
+    def test_declared_truncation_is_rejected_without_retry(self, respx_mock) -> None:
+        route = respx_mock.get(
+            "https://api.stlouisfed.org/fred/series/observations"
+        ).respond(
+            200,
+            json={
+                "count": 2,
+                "offset": 0,
+                "limit": 1,
+                "observations": [{"date": "2024-01-01", "value": "1.0"}],
+            },
+        )
+        with pytest.raises(SourceFetchError, match="incomplete"):
+            FredClient(api_key="test_key").get_series_observations(
+                series_id="UNRATE",
+                observation_start="2024-01-01",
+                observation_end="2024-01-31",
+            )
+        assert route.call_count == 1
+
     def test_api_key_is_redacted_from_httpx_logs(
         self,
         respx_mock,

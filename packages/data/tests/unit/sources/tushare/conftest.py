@@ -17,8 +17,8 @@ class NoRetryTushareClient(TushareClient):
         **params: str | int,
     ):
         """直接调用 _query，跳过 @retry 装饰器."""
-        # 调用父类的 _query 方法（无 retry）
-        data = self._query(api_name, fields, **params)
+        # 显式移除 HTTP 页级重试；本夹具仍保持原单页测试语义。
+        data = TushareClient._query.__wrapped__(self, api_name, fields, **params)
         # 转换为 DataFrame
         return response_to_dataframe(data)
 

@@ -982,7 +982,7 @@ class TestTushareSourceDividendRange:
         fetch = mocker.patch.object(
             source._fundamental,  # pyright: ignore[reportPrivateUsage]
             "fetch_dividend",
-            side_effect=[SourceFetchError("transient", source="tushare"), expected],
+            side_effect=[SourceRateLimitError("quota", source="tushare"), expected],
         )
         sleep = mocker.patch("ditto_data.sources.tushare._announcement_range.sleep")
 
@@ -991,6 +991,19 @@ class TestTushareSourceDividendRange:
         assert result.equals(expected)
         assert fetch.call_count == 2
         sleep.assert_called_once_with(61.0)
+
+    def test_announcement_range_does_not_retry_invalid_parameters(self, mocker) -> None:
+        source = TushareSource(settings=_settings())
+        fetch = mocker.patch.object(
+            source._fundamental,
+            "fetch_dividend",
+            side_effect=SourceFetchError("invalid parameters", source="tushare"),
+        )
+        sleep = mocker.patch("ditto_data.sources.tushare._announcement_range.sleep")
+        with pytest.raises(SourceFetchError, match="invalid parameters"):
+            source.fetch_dividend_range("2024-01-01", "2024-01-01")
+        fetch.assert_called_once()
+        sleep.assert_not_called()
 
     def test_fetch_dividend_range_deduplicates_exact_provider_rows(
         self,
@@ -1071,7 +1084,7 @@ class TestTushareSourceCorporateActionsRange:
         fetch = mocker.patch.object(
             source._fundamental,  # pyright: ignore[reportPrivateUsage]
             "fetch_corporate_actions",
-            side_effect=[SourceFetchError("transient", source="tushare"), expected],
+            side_effect=[SourceRateLimitError("quota", source="tushare"), expected],
         )
         sleep = mocker.patch("ditto_data.sources.tushare._announcement_range.sleep")
 

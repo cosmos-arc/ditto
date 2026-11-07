@@ -1,0 +1,874 @@
+{
+  "verified_at": "2026-11-07T03:39:49.131126+00:00",
+  "baseline_commit": "a95b88fddaf261c895d146e5d8627a664132ff0e",
+  "scope": {
+    "tushare_entrypoints": 69,
+    "financial_pair_entrypoints": 12,
+    "additional_named_candidate": 1,
+    "no_named_vip_found_in_current_pages": 52,
+    "unknown_current_page": 4
+  },
+  "official_pages": [
+    {
+      "doc_id": 19,
+      "url": "https://tushare.pro/document/2?doc_id=19",
+      "title": "公募基金列表",
+      "html_sha256": "6de224288fa32a9e607dfda56182fd71c3e1cfb319ef71c10ccb6187df868de5",
+      "vip_names": []
+    },
+    {
+      "doc_id": 25,
+      "url": "https://tushare.pro/document/2?doc_id=25",
+      "title": "股票基础信息",
+      "html_sha256": "7178ab8d31b22e7fc4cc9b9a41f0da151cfaa7d35cccdccf014b1575a1ad1878",
+      "vip_names": []
+    },
+    {
+      "doc_id": 26,
+      "url": "https://tushare.pro/document/2?doc_id=26",
+      "title": "交易日历",
+      "html_sha256": "ce87c8512dab7fca9a51ee1e1f2de452959b1de25eb44ca4cbd7042d69f88dbc",
+      "vip_names": []
+    },
+    {
+      "doc_id": 27,
+      "url": "https://tushare.pro/document/2?doc_id=27",
+      "title": "A股日线行情",
+      "html_sha256": "fe2b6398662b2d9d02e41cf1dfa8cd1ba09af5fbe61bf7c039c7fb03109febea",
+      "vip_names": []
+    },
+    {
+      "doc_id": 28,
+      "url": "https://tushare.pro/document/2?doc_id=28",
+      "title": "复权因子",
+      "html_sha256": "d32a4d7f9912bc76c6136b3d149fc731768ea134dedd9de9207eded16d1205c6",
+      "vip_names": []
+    },
+    {
+      "doc_id": 32,
+      "url": "https://tushare.pro/document/2?doc_id=32",
+      "title": "每日指标",
+      "html_sha256": "9115e72ff14c9d19630b966fae3a1adcd5f231ca311fb753d3df330c4a8c0874",
+      "vip_names": []
+    },
+    {
+      "doc_id": 33,
+      "url": "https://tushare.pro/document/2?doc_id=33",
+      "title": "利润表",
+      "html_sha256": "1e1921ba56fd82312a8fbfcb0f251bcdc54b40639fd02b1654811cc18937475a",
+      "vip_names": [
+        "income_vip"
+      ]
+    },
+    {
+      "doc_id": 36,
+      "url": "https://tushare.pro/document/2?doc_id=36",
+      "title": "资产负债表",
+      "html_sha256": "a1fa629ea4c77569bc7921b9254260b14eb3cc87359126c12089b1c228f14098",
+      "vip_names": [
+        "balancesheet_vip"
+      ]
+    },
+    {
+      "doc_id": 44,
+      "url": "https://tushare.pro/document/2?doc_id=44",
+      "title": "现金流量表",
+      "html_sha256": "82906844283cb19cb24b3f929a3faea84474ab6c109132d94692ae1f09eeaac1",
+      "vip_names": [
+        "cashflow_vip"
+      ]
+    },
+    {
+      "doc_id": 45,
+      "url": "https://tushare.pro/document/2?doc_id=45",
+      "title": "业绩预告",
+      "html_sha256": "3441187d61e9cbd16aa5f30e6eaf45809ff14e1c89ab5e28277fa6a350e905d2",
+      "vip_names": [
+        "forecast_vip"
+      ]
+    },
+    {
+      "doc_id": 46,
+      "url": "https://tushare.pro/document/2?doc_id=46",
+      "title": "业绩快报",
+      "html_sha256": "6b5c8766f37da89093382bf6263a81bf20460f3d182b0a6d3fffeb9f015f53f5",
+      "vip_names": [
+        "express_vip"
+      ]
+    },
+    {
+      "doc_id": 48,
+      "url": "https://tushare.pro/document/2?doc_id=48",
+      "title": "沪深股通十大成交股",
+      "html_sha256": "60b45e0c88d1cbdc82bee75776589642238a1b23990f6b4a32961e8482edef96",
+      "vip_names": []
+    },
+    {
+      "doc_id": 59,
+      "url": "https://tushare.pro/document/2?doc_id=59",
+      "title": "融资融券交易明细",
+      "html_sha256": "940d382709943976b0caf35d23ed541690d762500493205885390a036c8e46a9",
+      "vip_names": []
+    },
+    {
+      "doc_id": 61,
+      "url": "https://tushare.pro/document/2?doc_id=61",
+      "title": "前十大股东",
+      "html_sha256": "eeacb43319e7dc618f9eed74ca2701f197e9e85f9dadac85e6099265572df2a3",
+      "vip_names": []
+    },
+    {
+      "doc_id": 62,
+      "url": "https://tushare.pro/document/2?doc_id=62",
+      "title": "前十大流通股东",
+      "html_sha256": "3822dd615276fba88471324668776077c53d880d484b9fad514e8cec61e9ec6a",
+      "vip_names": []
+    },
+    {
+      "doc_id": 79,
+      "url": "https://tushare.pro/document/2?doc_id=79",
+      "title": "财务指标数据",
+      "html_sha256": "f185abe8a11fe4ff89b2e60dd26bbdd87b592ddf78864272fd8970252ad8b3de",
+      "vip_names": [
+        "fina_indicator_vip"
+      ]
+    },
+    {
+      "doc_id": 94,
+      "url": "https://tushare.pro/document/2?doc_id=94",
+      "title": "指数基本信息",
+      "html_sha256": "2d302c5d0b4e4c72e67580899c019aa54cd982b3a810a6d348e113141f4d178a",
+      "vip_names": []
+    },
+    {
+      "doc_id": 95,
+      "url": "https://tushare.pro/document/2?doc_id=95",
+      "title": "指数日线行情",
+      "html_sha256": "d65e2affd23461133932123d133b1854112483e25fa048e28ce86d56d76bd4f8",
+      "vip_names": []
+    },
+    {
+      "doc_id": 96,
+      "url": "https://tushare.pro/document/2?doc_id=96",
+      "title": "指数成分和权重",
+      "html_sha256": "be8b57e3e64ba95ec5f8a197279eeb6df1e79481e6472b298bafe0baba41d489",
+      "vip_names": []
+    },
+    {
+      "doc_id": 100,
+      "url": "https://tushare.pro/document/2?doc_id=100",
+      "title": "股票曾用名",
+      "html_sha256": "482d56d66d39446e793133bcc25dd73bedf8037327d96335080580b344b5aefa",
+      "vip_names": []
+    },
+    {
+      "doc_id": 103,
+      "url": "https://tushare.pro/document/2?doc_id=103",
+      "title": "分红送股",
+      "html_sha256": "422792711db66b55b3aec85f6aa33872130fb8af676dbef169560afc37ff4549",
+      "vip_names": []
+    },
+    {
+      "doc_id": 106,
+      "url": "https://tushare.pro/document/2?doc_id=106",
+      "title": "龙虎榜每日明细",
+      "html_sha256": "f9bd99317e08051f5e5c7f36f73e94d3e8774402f609494588489b130214171e",
+      "vip_names": []
+    },
+    {
+      "doc_id": 107,
+      "url": "https://tushare.pro/document/2?doc_id=107",
+      "title": "龙虎榜机构明细",
+      "html_sha256": "431502fb379be8c08294aaf4a9f677769ff85fc08f0cf32a7cb62a996022c031",
+      "vip_names": []
+    },
+    {
+      "doc_id": 110,
+      "url": "https://tushare.pro/document/2?doc_id=110",
+      "title": "股权质押统计数据",
+      "html_sha256": "b761f85907a60679e29f3b7c8521f3ff2ed7167b240552bc7882176450f8fdae",
+      "vip_names": []
+    },
+    {
+      "doc_id": 119,
+      "url": "https://tushare.pro/document/2?doc_id=119",
+      "title": "公募基金净值",
+      "html_sha256": "0c73d2ecee58d732d1ff25f1180f4db65bdaf5450664ba818c12c68bde6c175c",
+      "vip_names": []
+    },
+    {
+      "doc_id": 121,
+      "url": "https://tushare.pro/document/2?doc_id=121",
+      "title": "公募基金持仓数据",
+      "html_sha256": "aab6eeda6a85cfa441c9ba64e40716c4d574885836932b68245c53893c97a10d",
+      "vip_names": []
+    },
+    {
+      "doc_id": 124,
+      "url": "https://tushare.pro/document/2?doc_id=124",
+      "title": "股票回购",
+      "html_sha256": "82446f516222781e30191a011fd9abb052316f13338c28af3801cd2b14f447ee",
+      "vip_names": []
+    },
+    {
+      "doc_id": 127,
+      "url": "https://tushare.pro/document/2?doc_id=127",
+      "title": "ETF日线行情",
+      "html_sha256": "d6ced12638a2f662cd52e89defcc16f0824e7feae3f876ef2bf39dbf4ba4f0fa",
+      "vip_names": []
+    },
+    {
+      "doc_id": 128,
+      "url": "https://tushare.pro/document/2?doc_id=128",
+      "title": "大盘指数每日指标",
+      "html_sha256": "5911cd17baf86463865d0a4a6b4a0ec01f27f83f430e361322d284d56e01dadd",
+      "vip_names": []
+    },
+    {
+      "doc_id": 135,
+      "url": "https://tushare.pro/document/2?doc_id=135",
+      "title": "期货合约信息表",
+      "html_sha256": "f5ea86bbfe325df8f558f83fac6d375ce80a4963a706f2ec251e7c6049117709",
+      "vip_names": []
+    },
+    {
+      "doc_id": 138,
+      "url": "https://tushare.pro/document/2?doc_id=138",
+      "title": "期货日线行情",
+      "html_sha256": "043cf6505d4813e8889f2502c62eeb8a73e1876599e06c9798ef3d07b1060bd6",
+      "vip_names": []
+    },
+    {
+      "doc_id": 149,
+      "url": "https://tushare.pro/document/2?doc_id=149",
+      "title": "Shibor利率数据",
+      "html_sha256": "ceb5c58338f252921befa2d554423d4b7c72d2bc9ddcd6ef76ccc1a47a5431c6",
+      "vip_names": []
+    },
+    {
+      "doc_id": 151,
+      "url": "https://tushare.pro/document/2?doc_id=151",
+      "title": "LPR贷款基础利率",
+      "html_sha256": "177592bf10aabdd635a616b452a3ebb4edbb105d65584e1648416a116f197bd8",
+      "vip_names": []
+    },
+    {
+      "doc_id": 152,
+      "url": "https://tushare.pro/document/2?doc_id=152",
+      "title": "Libor拆借利率",
+      "html_sha256": "03c4d2477be401458acc3bf6c09eed62f331a0a4e52491c63bc0dc0326f49020",
+      "vip_names": []
+    },
+    {
+      "doc_id": 153,
+      "url": "https://tushare.pro/document/2?doc_id=153",
+      "title": "Hibor利率",
+      "html_sha256": "7e43e1360671de77ff1367460fc97ce1e0fbc18070a9a00bb472f5bb0cf10286",
+      "vip_names": []
+    },
+    {
+      "doc_id": 160,
+      "url": "https://tushare.pro/document/2?doc_id=160",
+      "title": "限售股解禁",
+      "html_sha256": "426675db09d3fce9cc29f798bca71339a6db48b42fcfc5359a1dca367a74c498",
+      "vip_names": []
+    },
+    {
+      "doc_id": 170,
+      "url": "https://tushare.pro/document/2?doc_id=170",
+      "title": "个股资金流向",
+      "html_sha256": "3ca373aa5d88bd74eda9582f38c708ea5426cb49f2f2ef6cb4b9ca181f2e6713",
+      "vip_names": []
+    },
+    {
+      "doc_id": 179,
+      "url": "https://tushare.pro/document/2?doc_id=179",
+      "title": "外汇日线行情",
+      "html_sha256": "c27d833d75992c98fed8ee45395e295da2e2b2231e486307719d2fe130c8d8f5",
+      "vip_names": []
+    },
+    {
+      "doc_id": 181,
+      "url": "https://tushare.pro/document/2?doc_id=181",
+      "title": "申万行业分类",
+      "html_sha256": "4ec74e22c0e39fded9f0ec4ce3022a7f52572b45ef0a0ecf7baad3c7493782a6",
+      "vip_names": []
+    },
+    {
+      "doc_id": 183,
+      "url": "https://tushare.pro/document/2?doc_id=183",
+      "title": "每日涨跌停价格",
+      "html_sha256": "8204bc3c60305a448b38eef051c3ca7c0858cc4399a1ba0b8705a7457975845d",
+      "vip_names": []
+    },
+    {
+      "doc_id": 199,
+      "url": "https://tushare.pro/document/2?doc_id=199",
+      "title": "基金复权因子",
+      "html_sha256": "47c5e77e8dcd21076fcc3e5b4b7178717f31db06e71a634441d15a83278ff968",
+      "vip_names": []
+    },
+    {
+      "doc_id": 201,
+      "url": "https://tushare.pro/document/2?doc_id=201",
+      "title": "国债收益率曲线",
+      "html_sha256": "c377314636eb2107a892b188a167cb04e893f333975480c3cedb099cb9bf6c4a",
+      "vip_names": []
+    },
+    {
+      "doc_id": 207,
+      "url": "https://tushare.pro/document/2?doc_id=207",
+      "title": "基金规模数据",
+      "html_sha256": "b5bcf745fa70f2e31f770c0c14fd67998930907637d99dd0b9430ed59a13cb41",
+      "vip_names": []
+    },
+    {
+      "doc_id": 211,
+      "url": "https://tushare.pro/document/2?doc_id=211",
+      "title": "国际指数",
+      "html_sha256": "bf98741bdaf6fb30d15164f9717c628ad0d51a8dbb78dca71a269bd9f4821953",
+      "vip_names": []
+    },
+    {
+      "doc_id": 214,
+      "url": "https://tushare.pro/document/2?doc_id=214",
+      "title": "每日停复牌信息",
+      "html_sha256": "69f3d2ba004b97cec3d8a1425958ec66c7f55b2356f9fe4d2a2c76206785e53d",
+      "vip_names": []
+    },
+    {
+      "doc_id": 227,
+      "url": "https://tushare.pro/document/2?doc_id=227",
+      "title": "GDP数据",
+      "html_sha256": "2e2b2ae518c6b87b3feb064989720a0258476c4ebb4cf3f4aebb53f47151e8dd",
+      "vip_names": []
+    },
+    {
+      "doc_id": 228,
+      "url": "https://tushare.pro/document/2?doc_id=228",
+      "title": "居民消费价格指数",
+      "html_sha256": "85fa78f220a7af6d84f24448a87c9fa345a2dd6cc98a128e694a941b01f7a8b3",
+      "vip_names": []
+    },
+    {
+      "doc_id": 242,
+      "url": "https://tushare.pro/document/2?doc_id=242",
+      "title": "货币供应量",
+      "html_sha256": "626daa0f0d7dee4bdd80470e6c70535066bbb6c04ba60eeaebfff23aa123d62c",
+      "vip_names": []
+    },
+    {
+      "doc_id": 245,
+      "url": "https://tushare.pro/document/2?doc_id=245",
+      "title": "工业生产者出厂价格指数",
+      "html_sha256": "97c7a19a8f8f6422bbff32802838c5752d062e0abfe8c087e87a227ac77b32ee",
+      "vip_names": []
+    },
+    {
+      "doc_id": 262,
+      "url": "https://tushare.pro/document/2?doc_id=262",
+      "title": "股票历史列表（历史每天股票列表）",
+      "html_sha256": "b1850dd8e5dc1c3311cc004fb7ac467b43b3d072e293c686bcf926d8217ed7cb",
+      "vip_names": []
+    },
+    {
+      "doc_id": 293,
+      "url": "https://tushare.pro/document/2?doc_id=293",
+      "title": "每日筹码及胜率",
+      "html_sha256": "bc35b1895440c38b88a4c5ee79a32082ad81b6d646f1ccce60b22561d6d21eb4",
+      "vip_names": []
+    },
+    {
+      "doc_id": 298,
+      "url": "https://tushare.pro/document/2?doc_id=298",
+      "title": "涨跌停列表（新）",
+      "html_sha256": "891da480fc8bebebc1a07a9b56e8308dd9a0cf8d83575a6860373f80b5a7895e",
+      "vip_names": []
+    },
+    {
+      "doc_id": 310,
+      "url": "https://tushare.pro/document/2?doc_id=310",
+      "title": "社融数据（月度）",
+      "html_sha256": "b7df8365ff8a11dbd697c6564f71dde38f604d13f0d2a0e97f40fb324525216e",
+      "vip_names": []
+    },
+    {
+      "doc_id": 325,
+      "url": "https://tushare.pro/document/2?doc_id=325",
+      "title": "采购经理人指数",
+      "html_sha256": "ef6d658e406b935d4bbdd63c1253424be8f177b10c6d737cf7bde4c58f693b0b",
+      "vip_names": []
+    },
+    {
+      "doc_id": 327,
+      "url": "https://tushare.pro/document/2?doc_id=327",
+      "title": "申万行业日线行情",
+      "html_sha256": "e12557b64b58e318715153d8fbc00436c94ae83e64f5a18c412348f1678d45e6",
+      "vip_names": []
+    },
+    {
+      "doc_id": 335,
+      "url": "https://tushare.pro/document/2?doc_id=335",
+      "title": "申万行业成分构成(分级)",
+      "html_sha256": "a1dde877305b8e3a078e451533aeb7a1e5230d36727d25752c2c883e226a14ff",
+      "vip_names": []
+    },
+    {
+      "doc_id": 375,
+      "url": "https://tushare.pro/document/2?doc_id=375",
+      "title": "北交所新旧代码对照表",
+      "html_sha256": "aedde1791fe19795bb4e2894b91e92690255359295cf606ee96ff1bf502b0aba",
+      "vip_names": []
+    },
+    {
+      "doc_id": 385,
+      "url": "https://tushare.pro/document/2?doc_id=385",
+      "title": "ETF基础信息",
+      "html_sha256": "4dcdae06cf63632b4cf6a44f0bb4a9db3d19b8583e0464be1b0097d515bc6f2a",
+      "vip_names": []
+    },
+    {
+      "doc_id": 397,
+      "url": "https://tushare.pro/document/2?doc_id=397",
+      "title": "ST股票列表",
+      "html_sha256": "8359a0dc5f6b8a25493244e72bc87e8c3b3a002c4bb03cd37adc02775ab05733",
+      "vip_names": []
+    }
+  ],
+  "candidate_probes": [
+    {
+      "name": "daily_vip_market_single_and_tail",
+      "status": "failed",
+      "error": "RetryError",
+      "message": "RetryError[<Future at 0x109f4b490 state=finished raised SourceFetchError>]",
+      "seconds": 11.719,
+      "measured_at": "2026-11-07T03:40:36.548574+00:00"
+    },
+    {
+      "name": "fina_indicator_vip_single_scope",
+      "quarter_rows": 1,
+      "equals_standard": true,
+      "history_rows": 139,
+      "single_code_enforced": true,
+      "status": "success",
+      "seconds": 8.153,
+      "measured_at": "2026-11-07T03:40:44.701970+00:00"
+    }
+  ],
+  "daily_vip_error": {
+    "api_name": "daily_vip",
+    "trade_date": "20261105",
+    "limit": 10000,
+    "offset": 0,
+    "error": "SourceFetchError",
+    "message": "请指定正确的接口名",
+    "details": {
+      "source": "tushare",
+      "code": 50101,
+      "retryable": true
+    },
+    "measured_at": "2026-11-07T03:41:43.500620+00:00"
+  },
+  "limitations": [
+    "Unlisted VIP variants are unproven, not asserted nonexistent. Dynamic SDK names do not prove server capability.",
+    "daily_vip failed through the unchanged configured transport. The initial client made three bounded attempts; a separate request confirmed the native error. The exact error is now permanent.",
+    "Financial VIP page widths are independent of standard limits. 9000/10000 are configured transport evidence, not universal official caps.",
+    "No route, account, entitlement, dependency, or canonical financial data changed."
+  ],
+  "actual_consumer": [
+    {
+      "name": "fina_vip_single_actual_consumer",
+      "full_history_rows": 139,
+      "full_history_equal": true,
+      "standard_requests": 3,
+      "vip_consumer_requests": 2,
+      "consumer_rows": 4,
+      "exact_disclosure_window": true,
+      "status": "success",
+      "seconds": 11.413,
+      "measured_at": "2026-11-07T03:45:19.000824+00:00"
+    }
+  ],
+  "statement_vip_permission_probes": [
+    {
+      "name": "balancesheet_vip",
+      "api": "balancesheet_vip",
+      "ts_code": "600519.SH",
+      "period": "20260930",
+      "rows": 2,
+      "requests": 2,
+      "fields": [
+        "ts_code",
+        "end_date",
+        "f_ann_date",
+        "report_type",
+        "update_flag",
+        "total_assets",
+        "total_liab",
+        "total_hldr_eqy_exc_min_int",
+        "total_cur_assets",
+        "total_cur_liab",
+        "inventory",
+        "fixed_assets",
+        "cash_equivalents",
+        "accounts_receivable",
+        "short_term_debt",
+        "long_term_debt",
+        "money_cap",
+        "total_share"
+      ],
+      "status": "success",
+      "seconds": 3.846,
+      "measured_at": "2026-11-07T04:05:16.030150+00:00"
+    },
+    {
+      "name": "income_vip",
+      "api": "income_vip",
+      "ts_code": "600519.SH",
+      "period": "20260930",
+      "rows": 2,
+      "requests": 2,
+      "fields": [
+        "ts_code",
+        "end_date",
+        "f_ann_date",
+        "report_type",
+        "update_flag",
+        "total_revenue",
+        "revenue",
+        "operate_cost",
+        "sale_exp",
+        "admin_exp",
+        "fin_exp",
+        "rd_exp",
+        "operate_profit",
+        "total_profit",
+        "income_tax",
+        "n_income",
+        "basic_eps",
+        "diluted_eps"
+      ],
+      "status": "success",
+      "seconds": 1.958,
+      "measured_at": "2026-11-07T04:05:17.988779+00:00"
+    },
+    {
+      "name": "cashflow_vip",
+      "api": "cashflow_vip",
+      "ts_code": "600519.SH",
+      "period": "20260930",
+      "rows": 1,
+      "requests": 2,
+      "fields": [
+        "ts_code",
+        "end_date",
+        "f_ann_date",
+        "report_type",
+        "update_flag",
+        "n_cashflow_act",
+        "n_cashflow_inv_act",
+        "n_cashflow_fnc_act"
+      ],
+      "status": "success",
+      "seconds": 1.969,
+      "measured_at": "2026-11-07T04:05:19.958106+00:00"
+    }
+  ],
+  "response_manifest": {
+    "vip-statement-calls.json": [
+      {
+        "api": "balancesheet_vip",
+        "fields": "ts_code,end_date,f_ann_date,report_type,update_flag,total_assets,total_liab,total_hldr_eqy_exc_min_int,total_cur_assets,total_cur_liab,inventory,fixed_assets,cash_equivalents,accounts_receivable,short_term_debt,long_term_debt,money_cap,total_share",
+        "params": {
+          "limit": 9000,
+          "offset": 0,
+          "ts_code": "600519.SH",
+          "period": "20260930"
+        },
+        "started_at": "2026-11-07T04:05:12.184176+00:00",
+        "rows": 2,
+        "payload": "001.json",
+        "sha256": "1fe87506d0aa582a7834fec5d5a0203905f657eae4f72c929a44dc7efa2b4124",
+        "finished_at": "2026-11-07T04:05:14.499055+00:00"
+      },
+      {
+        "api": "balancesheet_vip",
+        "fields": "ts_code,end_date,f_ann_date,report_type,update_flag,total_assets,total_liab,total_hldr_eqy_exc_min_int,total_cur_assets,total_cur_liab,inventory,fixed_assets,cash_equivalents,accounts_receivable,short_term_debt,long_term_debt,money_cap,total_share",
+        "params": {
+          "limit": 1,
+          "offset": 2,
+          "ts_code": "600519.SH",
+          "period": "20260930"
+        },
+        "started_at": "2026-11-07T04:05:14.500584+00:00",
+        "rows": 0,
+        "payload": "002.json",
+        "sha256": "42d6d95e9bb0c1c99dc6f27b63fcebae6a4f1c46f0280cd48aef697bc1cac794",
+        "finished_at": "2026-11-07T04:05:16.027098+00:00"
+      },
+      {
+        "api": "income_vip",
+        "fields": "ts_code,end_date,f_ann_date,report_type,update_flag,total_revenue,revenue,operate_cost,sale_exp,admin_exp,fin_exp,rd_exp,operate_profit,total_profit,income_tax,n_income,basic_eps,diluted_eps",
+        "params": {
+          "limit": 9000,
+          "offset": 0,
+          "ts_code": "600519.SH",
+          "period": "20260930"
+        },
+        "started_at": "2026-11-07T04:05:16.030813+00:00",
+        "rows": 2,
+        "payload": "003.json",
+        "sha256": "5e2672b3d78f0ab7776b8dfa3514ccfee534250fc9f0109866fc9b789348a968",
+        "finished_at": "2026-11-07T04:05:17.031701+00:00"
+      },
+      {
+        "api": "income_vip",
+        "fields": "ts_code,end_date,f_ann_date,report_type,update_flag,total_revenue,revenue,operate_cost,sale_exp,admin_exp,fin_exp,rd_exp,operate_profit,total_profit,income_tax,n_income,basic_eps,diluted_eps",
+        "params": {
+          "limit": 1,
+          "offset": 2,
+          "ts_code": "600519.SH",
+          "period": "20260930"
+        },
+        "started_at": "2026-11-07T04:05:17.032554+00:00",
+        "rows": 0,
+        "payload": "004.json",
+        "sha256": "5e2a70527f2e71e5a4444dbb05729661a2a0fc3a8f4b58d2329d02da10451e56",
+        "finished_at": "2026-11-07T04:05:17.987450+00:00"
+      },
+      {
+        "api": "cashflow_vip",
+        "fields": "ts_code,end_date,f_ann_date,report_type,update_flag,n_cashflow_act,n_cashflow_inv_act,n_cashflow_fnc_act",
+        "params": {
+          "limit": 9000,
+          "offset": 0,
+          "ts_code": "600519.SH",
+          "period": "20260930"
+        },
+        "started_at": "2026-11-07T04:05:17.989222+00:00",
+        "rows": 1,
+        "payload": "005.json",
+        "sha256": "0555b5d0f207d463b4769d7af16631327faf90a1c22a0197ad9ac797f4f94c14",
+        "finished_at": "2026-11-07T04:05:19.159599+00:00"
+      },
+      {
+        "api": "cashflow_vip",
+        "fields": "ts_code,end_date,f_ann_date,report_type,update_flag,n_cashflow_act,n_cashflow_inv_act,n_cashflow_fnc_act",
+        "params": {
+          "limit": 1,
+          "offset": 1,
+          "ts_code": "600519.SH",
+          "period": "20260930"
+        },
+        "started_at": "2026-11-07T04:05:19.160719+00:00",
+        "rows": 0,
+        "payload": "006.json",
+        "sha256": "6e4346dee924ea71f034bb6bb98f06cbc8dd18da49be10d25b6ef14c55d5b5fe",
+        "finished_at": "2026-11-07T04:05:19.957156+00:00"
+      }
+    ],
+    "vip-followup-calls.json": [
+      {
+        "api": "daily",
+        "fields": "ts_code,trade_date,open,high,low,close,pre_close,change,pct_chg,vol,amount",
+        "params": {
+          "limit": 6000,
+          "offset": 0,
+          "trade_date": "20261105"
+        },
+        "started_at": "2026-11-07T03:40:24.829355+00:00",
+        "rows": 5572,
+        "payload": "001.json",
+        "sha256": "6c9e063b29fb9cc7b9f48c1f9f1982720f624a7e434b8a41ccff10d26f982082",
+        "finished_at": "2026-11-07T03:40:29.611839+00:00"
+      },
+      {
+        "api": "daily",
+        "fields": "ts_code,trade_date,open,high,low,close,pre_close,change,pct_chg,vol,amount",
+        "params": {
+          "limit": 1,
+          "offset": 5572,
+          "trade_date": "20261105"
+        },
+        "started_at": "2026-11-07T03:40:29.623116+00:00",
+        "rows": 0,
+        "payload": "002.json",
+        "sha256": "e98f42706b270990fa922c6c42198ed80cb62f37ccdf672799fa5d5192759a4c",
+        "finished_at": "2026-11-07T03:40:31.242666+00:00"
+      },
+      {
+        "api": "daily_vip",
+        "fields": "ts_code,trade_date,open,high,low,close,pre_close,change,pct_chg,vol,amount",
+        "params": {
+          "trade_date": "20261105",
+          "limit": 10000
+        },
+        "started_at": "2026-11-07T03:40:31.245806+00:00",
+        "error": "RetryError",
+        "message": "RetryError[<Future at 0x109f4b490 state=finished raised SourceFetchError>]",
+        "details": {},
+        "finished_at": "2026-11-07T03:40:36.547167+00:00"
+      },
+      {
+        "api": "fina_indicator",
+        "fields": "ts_code,ann_date,end_date,eps,dt_eps,total_revenue_ps,revenue_ps,capital_rese_ps,surplus_rese_ps,undist_profit_ps,extra_item,profit_dedt,gross_margin,current_ratio,quick_ratio,cash_ratio,ar_turn,ca_turn,fa_turn,assets_turn,op_income,ebit,ebitda,fcff,fcfe,current_exint,noncurrent_exint,interestdebt,netdebt,tangible_asset,working_capital,networking_capital,invest_capital,retained_earnings,diluted2_eps,bps,ocfps,retainedps,cfps,ebit_ps,fcff_ps,fcfe_ps,netprofit_margin,grossprofit_margin,cogs_of_sales,expense_of_sales,profit_to_gr,saleexp_to_gr,adminexp_of_gr,finaexp_of_gr,impai_ttm,gc_of_gr,op_of_gr,ebit_of_gr,roe,roe_waa,roe_dt,roa,npta,roic,roe_yearly,roa2_yearly,debt_to_assets,assets_to_eqt,dp_assets_to_eqt,ca_to_assets,nca_to_assets,tbassets_to_totalassets,int_to_talcap,eqt_to_talcapital,currentdebt_to_debt,longdeb_to_debt,ocf_to_shortdebt,debt_to_eqt,eqt_to_debt,eqt_to_interestdebt,tangibleasset_to_debt,tangasset_to_intdebt,tangibleasset_to_netdebt,ocf_to_debt,turn_days,roa_yearly,roa_dp,fixed_assets,profit_to_op,q_saleexp_to_gr,q_gc_to_gr,q_roe,q_dt_roe,q_npta,q_ocf_to_sales,basic_eps_yoy,dt_eps_yoy,cfps_yoy,op_yoy,ebt_yoy,netprofit_yoy,dt_netprofit_yoy,ocf_yoy,roe_yoy,bps_yoy,assets_yoy,eqt_yoy,tr_yoy,or_yoy,q_sales_yoy,q_op_qoq,equity_yoy,update_flag",
+        "params": {
+          "limit": 100,
+          "offset": 0,
+          "ts_code": "600519.SH",
+          "period": "20260930"
+        },
+        "started_at": "2026-11-07T03:40:36.549132+00:00",
+        "rows": 1,
+        "payload": "004.json",
+        "sha256": "0e935a87e643cca37bb98e2d2017b4a936a772ff07a53a8da1856019de6fb334",
+        "finished_at": "2026-11-07T03:40:37.828557+00:00"
+      },
+      {
+        "api": "fina_indicator",
+        "fields": "ts_code,ann_date,end_date,eps,dt_eps,total_revenue_ps,revenue_ps,capital_rese_ps,surplus_rese_ps,undist_profit_ps,extra_item,profit_dedt,gross_margin,current_ratio,quick_ratio,cash_ratio,ar_turn,ca_turn,fa_turn,assets_turn,op_income,ebit,ebitda,fcff,fcfe,current_exint,noncurrent_exint,interestdebt,netdebt,tangible_asset,working_capital,networking_capital,invest_capital,retained_earnings,diluted2_eps,bps,ocfps,retainedps,cfps,ebit_ps,fcff_ps,fcfe_ps,netprofit_margin,grossprofit_margin,cogs_of_sales,expense_of_sales,profit_to_gr,saleexp_to_gr,adminexp_of_gr,finaexp_of_gr,impai_ttm,gc_of_gr,op_of_gr,ebit_of_gr,roe,roe_waa,roe_dt,roa,npta,roic,roe_yearly,roa2_yearly,debt_to_assets,assets_to_eqt,dp_assets_to_eqt,ca_to_assets,nca_to_assets,tbassets_to_totalassets,int_to_talcap,eqt_to_talcapital,currentdebt_to_debt,longdeb_to_debt,ocf_to_shortdebt,debt_to_eqt,eqt_to_debt,eqt_to_interestdebt,tangibleasset_to_debt,tangasset_to_intdebt,tangibleasset_to_netdebt,ocf_to_debt,turn_days,roa_yearly,roa_dp,fixed_assets,profit_to_op,q_saleexp_to_gr,q_gc_to_gr,q_roe,q_dt_roe,q_npta,q_ocf_to_sales,basic_eps_yoy,dt_eps_yoy,cfps_yoy,op_yoy,ebt_yoy,netprofit_yoy,dt_netprofit_yoy,ocf_yoy,roe_yoy,bps_yoy,assets_yoy,eqt_yoy,tr_yoy,or_yoy,q_sales_yoy,q_op_qoq,equity_yoy,update_flag",
+        "params": {
+          "limit": 1,
+          "offset": 1,
+          "ts_code": "600519.SH",
+          "period": "20260930"
+        },
+        "started_at": "2026-11-07T03:40:37.830942+00:00",
+        "rows": 0,
+        "payload": "005.json",
+        "sha256": "9b8786f246abbf0c7e38456c1f93175f8d8d4a82eacfc37f62e35c8e3825ca1c",
+        "finished_at": "2026-11-07T03:40:39.045691+00:00"
+      },
+      {
+        "api": "fina_indicator_vip",
+        "fields": "ts_code,ann_date,end_date,eps,dt_eps,total_revenue_ps,revenue_ps,capital_rese_ps,surplus_rese_ps,undist_profit_ps,extra_item,profit_dedt,gross_margin,current_ratio,quick_ratio,cash_ratio,ar_turn,ca_turn,fa_turn,assets_turn,op_income,ebit,ebitda,fcff,fcfe,current_exint,noncurrent_exint,interestdebt,netdebt,tangible_asset,working_capital,networking_capital,invest_capital,retained_earnings,diluted2_eps,bps,ocfps,retainedps,cfps,ebit_ps,fcff_ps,fcfe_ps,netprofit_margin,grossprofit_margin,cogs_of_sales,expense_of_sales,profit_to_gr,saleexp_to_gr,adminexp_of_gr,finaexp_of_gr,impai_ttm,gc_of_gr,op_of_gr,ebit_of_gr,roe,roe_waa,roe_dt,roa,npta,roic,roe_yearly,roa2_yearly,debt_to_assets,assets_to_eqt,dp_assets_to_eqt,ca_to_assets,nca_to_assets,tbassets_to_totalassets,int_to_talcap,eqt_to_talcapital,currentdebt_to_debt,longdeb_to_debt,ocf_to_shortdebt,debt_to_eqt,eqt_to_debt,eqt_to_interestdebt,tangibleasset_to_debt,tangasset_to_intdebt,tangibleasset_to_netdebt,ocf_to_debt,turn_days,roa_yearly,roa_dp,fixed_assets,profit_to_op,q_saleexp_to_gr,q_gc_to_gr,q_roe,q_dt_roe,q_npta,q_ocf_to_sales,basic_eps_yoy,dt_eps_yoy,cfps_yoy,op_yoy,ebt_yoy,netprofit_yoy,dt_netprofit_yoy,ocf_yoy,roe_yoy,bps_yoy,assets_yoy,eqt_yoy,tr_yoy,or_yoy,q_sales_yoy,q_op_qoq,equity_yoy,update_flag",
+        "params": {
+          "limit": 10000,
+          "offset": 0,
+          "ts_code": "600519.SH",
+          "period": "20260930"
+        },
+        "started_at": "2026-11-07T03:40:39.047262+00:00",
+        "rows": 1,
+        "payload": "006.json",
+        "sha256": "0e935a87e643cca37bb98e2d2017b4a936a772ff07a53a8da1856019de6fb334",
+        "finished_at": "2026-11-07T03:40:40.361417+00:00"
+      },
+      {
+        "api": "fina_indicator_vip",
+        "fields": "ts_code,ann_date,end_date,eps,dt_eps,total_revenue_ps,revenue_ps,capital_rese_ps,surplus_rese_ps,undist_profit_ps,extra_item,profit_dedt,gross_margin,current_ratio,quick_ratio,cash_ratio,ar_turn,ca_turn,fa_turn,assets_turn,op_income,ebit,ebitda,fcff,fcfe,current_exint,noncurrent_exint,interestdebt,netdebt,tangible_asset,working_capital,networking_capital,invest_capital,retained_earnings,diluted2_eps,bps,ocfps,retainedps,cfps,ebit_ps,fcff_ps,fcfe_ps,netprofit_margin,grossprofit_margin,cogs_of_sales,expense_of_sales,profit_to_gr,saleexp_to_gr,adminexp_of_gr,finaexp_of_gr,impai_ttm,gc_of_gr,op_of_gr,ebit_of_gr,roe,roe_waa,roe_dt,roa,npta,roic,roe_yearly,roa2_yearly,debt_to_assets,assets_to_eqt,dp_assets_to_eqt,ca_to_assets,nca_to_assets,tbassets_to_totalassets,int_to_talcap,eqt_to_talcapital,currentdebt_to_debt,longdeb_to_debt,ocf_to_shortdebt,debt_to_eqt,eqt_to_debt,eqt_to_interestdebt,tangibleasset_to_debt,tangasset_to_intdebt,tangibleasset_to_netdebt,ocf_to_debt,turn_days,roa_yearly,roa_dp,fixed_assets,profit_to_op,q_saleexp_to_gr,q_gc_to_gr,q_roe,q_dt_roe,q_npta,q_ocf_to_sales,basic_eps_yoy,dt_eps_yoy,cfps_yoy,op_yoy,ebt_yoy,netprofit_yoy,dt_netprofit_yoy,ocf_yoy,roe_yoy,bps_yoy,assets_yoy,eqt_yoy,tr_yoy,or_yoy,q_sales_yoy,q_op_qoq,equity_yoy,update_flag",
+        "params": {
+          "limit": 1,
+          "offset": 1,
+          "ts_code": "600519.SH",
+          "period": "20260930"
+        },
+        "started_at": "2026-11-07T03:40:40.363950+00:00",
+        "rows": 0,
+        "payload": "007.json",
+        "sha256": "9b8786f246abbf0c7e38456c1f93175f8d8d4a82eacfc37f62e35c8e3825ca1c",
+        "finished_at": "2026-11-07T03:40:41.360540+00:00"
+      },
+      {
+        "api": "fina_indicator_vip",
+        "fields": "ts_code,ann_date,end_date,eps,dt_eps,total_revenue_ps,revenue_ps,capital_rese_ps,surplus_rese_ps,undist_profit_ps,extra_item,profit_dedt,gross_margin,current_ratio,quick_ratio,cash_ratio,ar_turn,ca_turn,fa_turn,assets_turn,op_income,ebit,ebitda,fcff,fcfe,current_exint,noncurrent_exint,interestdebt,netdebt,tangible_asset,working_capital,networking_capital,invest_capital,retained_earnings,diluted2_eps,bps,ocfps,retainedps,cfps,ebit_ps,fcff_ps,fcfe_ps,netprofit_margin,grossprofit_margin,cogs_of_sales,expense_of_sales,profit_to_gr,saleexp_to_gr,adminexp_of_gr,finaexp_of_gr,impai_ttm,gc_of_gr,op_of_gr,ebit_of_gr,roe,roe_waa,roe_dt,roa,npta,roic,roe_yearly,roa2_yearly,debt_to_assets,assets_to_eqt,dp_assets_to_eqt,ca_to_assets,nca_to_assets,tbassets_to_totalassets,int_to_talcap,eqt_to_talcapital,currentdebt_to_debt,longdeb_to_debt,ocf_to_shortdebt,debt_to_eqt,eqt_to_debt,eqt_to_interestdebt,tangibleasset_to_debt,tangasset_to_intdebt,tangibleasset_to_netdebt,ocf_to_debt,turn_days,roa_yearly,roa_dp,fixed_assets,profit_to_op,q_saleexp_to_gr,q_gc_to_gr,q_roe,q_dt_roe,q_npta,q_ocf_to_sales,basic_eps_yoy,dt_eps_yoy,cfps_yoy,op_yoy,ebt_yoy,netprofit_yoy,dt_netprofit_yoy,ocf_yoy,roe_yoy,bps_yoy,assets_yoy,eqt_yoy,tr_yoy,or_yoy,q_sales_yoy,q_op_qoq,equity_yoy,update_flag",
+        "params": {
+          "limit": 10000,
+          "offset": 0,
+          "ts_code": "600519.SH"
+        },
+        "started_at": "2026-11-07T03:40:41.366343+00:00",
+        "rows": 139,
+        "payload": "008.json",
+        "sha256": "305de4d8b0ace0bda31347f4e483c4c85d8c22557ae60ace5581bb798945e1ed",
+        "finished_at": "2026-11-07T03:40:43.266268+00:00"
+      },
+      {
+        "api": "fina_indicator_vip",
+        "fields": "ts_code,ann_date,end_date,eps,dt_eps,total_revenue_ps,revenue_ps,capital_rese_ps,surplus_rese_ps,undist_profit_ps,extra_item,profit_dedt,gross_margin,current_ratio,quick_ratio,cash_ratio,ar_turn,ca_turn,fa_turn,assets_turn,op_income,ebit,ebitda,fcff,fcfe,current_exint,noncurrent_exint,interestdebt,netdebt,tangible_asset,working_capital,networking_capital,invest_capital,retained_earnings,diluted2_eps,bps,ocfps,retainedps,cfps,ebit_ps,fcff_ps,fcfe_ps,netprofit_margin,grossprofit_margin,cogs_of_sales,expense_of_sales,profit_to_gr,saleexp_to_gr,adminexp_of_gr,finaexp_of_gr,impai_ttm,gc_of_gr,op_of_gr,ebit_of_gr,roe,roe_waa,roe_dt,roa,npta,roic,roe_yearly,roa2_yearly,debt_to_assets,assets_to_eqt,dp_assets_to_eqt,ca_to_assets,nca_to_assets,tbassets_to_totalassets,int_to_talcap,eqt_to_talcapital,currentdebt_to_debt,longdeb_to_debt,ocf_to_shortdebt,debt_to_eqt,eqt_to_debt,eqt_to_interestdebt,tangibleasset_to_debt,tangasset_to_intdebt,tangibleasset_to_netdebt,ocf_to_debt,turn_days,roa_yearly,roa_dp,fixed_assets,profit_to_op,q_saleexp_to_gr,q_gc_to_gr,q_roe,q_dt_roe,q_npta,q_ocf_to_sales,basic_eps_yoy,dt_eps_yoy,cfps_yoy,op_yoy,ebt_yoy,netprofit_yoy,dt_netprofit_yoy,ocf_yoy,roe_yoy,bps_yoy,assets_yoy,eqt_yoy,tr_yoy,or_yoy,q_sales_yoy,q_op_qoq,equity_yoy,update_flag",
+        "params": {
+          "limit": 1,
+          "offset": 139,
+          "ts_code": "600519.SH"
+        },
+        "started_at": "2026-11-07T03:40:43.268953+00:00",
+        "rows": 0,
+        "payload": "009.json",
+        "sha256": "9b8786f246abbf0c7e38456c1f93175f8d8d4a82eacfc37f62e35c8e3825ca1c",
+        "finished_at": "2026-11-07T03:40:44.695486+00:00"
+      }
+    ],
+    "vip-consumer-calls.json": [
+      {
+        "api": "fina_indicator",
+        "fields": "ts_code,ann_date,end_date,eps,dt_eps,total_revenue_ps,revenue_ps,capital_rese_ps,surplus_rese_ps,undist_profit_ps,extra_item,profit_dedt,gross_margin,current_ratio,quick_ratio,cash_ratio,ar_turn,ca_turn,fa_turn,assets_turn,op_income,ebit,ebitda,fcff,fcfe,current_exint,noncurrent_exint,interestdebt,netdebt,tangible_asset,working_capital,networking_capital,invest_capital,retained_earnings,diluted2_eps,bps,ocfps,retainedps,cfps,ebit_ps,fcff_ps,fcfe_ps,netprofit_margin,grossprofit_margin,cogs_of_sales,expense_of_sales,profit_to_gr,saleexp_to_gr,adminexp_of_gr,finaexp_of_gr,impai_ttm,gc_of_gr,op_of_gr,ebit_of_gr,roe,roe_waa,roe_dt,roa,npta,roic,roe_yearly,roa2_yearly,debt_to_assets,assets_to_eqt,dp_assets_to_eqt,ca_to_assets,nca_to_assets,tbassets_to_totalassets,int_to_talcap,eqt_to_talcapital,currentdebt_to_debt,longdeb_to_debt,ocf_to_shortdebt,debt_to_eqt,eqt_to_debt,eqt_to_interestdebt,tangibleasset_to_debt,tangasset_to_intdebt,tangibleasset_to_netdebt,ocf_to_debt,turn_days,roa_yearly,roa_dp,fixed_assets,profit_to_op,q_saleexp_to_gr,q_gc_to_gr,q_roe,q_dt_roe,q_npta,q_ocf_to_sales,basic_eps_yoy,dt_eps_yoy,cfps_yoy,op_yoy,ebt_yoy,netprofit_yoy,dt_netprofit_yoy,ocf_yoy,roe_yoy,bps_yoy,assets_yoy,eqt_yoy,tr_yoy,or_yoy,q_sales_yoy,q_op_qoq,equity_yoy,update_flag",
+        "params": {
+          "limit": 100,
+          "offset": 0,
+          "ts_code": "600519.SH"
+        },
+        "started_at": "2026-11-07T03:45:07.587817+00:00",
+        "rows": 100,
+        "payload": "001.json",
+        "sha256": "158943d186cde62d88b80ddc948d64b6f1fadfd6803cc1841d6c978045748553",
+        "finished_at": "2026-11-07T03:45:11.316047+00:00"
+      },
+      {
+        "api": "fina_indicator",
+        "fields": "ts_code,ann_date,end_date,eps,dt_eps,total_revenue_ps,revenue_ps,capital_rese_ps,surplus_rese_ps,undist_profit_ps,extra_item,profit_dedt,gross_margin,current_ratio,quick_ratio,cash_ratio,ar_turn,ca_turn,fa_turn,assets_turn,op_income,ebit,ebitda,fcff,fcfe,current_exint,noncurrent_exint,interestdebt,netdebt,tangible_asset,working_capital,networking_capital,invest_capital,retained_earnings,diluted2_eps,bps,ocfps,retainedps,cfps,ebit_ps,fcff_ps,fcfe_ps,netprofit_margin,grossprofit_margin,cogs_of_sales,expense_of_sales,profit_to_gr,saleexp_to_gr,adminexp_of_gr,finaexp_of_gr,impai_ttm,gc_of_gr,op_of_gr,ebit_of_gr,roe,roe_waa,roe_dt,roa,npta,roic,roe_yearly,roa2_yearly,debt_to_assets,assets_to_eqt,dp_assets_to_eqt,ca_to_assets,nca_to_assets,tbassets_to_totalassets,int_to_talcap,eqt_to_talcapital,currentdebt_to_debt,longdeb_to_debt,ocf_to_shortdebt,debt_to_eqt,eqt_to_debt,eqt_to_interestdebt,tangibleasset_to_debt,tangasset_to_intdebt,tangibleasset_to_netdebt,ocf_to_debt,turn_days,roa_yearly,roa_dp,fixed_assets,profit_to_op,q_saleexp_to_gr,q_gc_to_gr,q_roe,q_dt_roe,q_npta,q_ocf_to_sales,basic_eps_yoy,dt_eps_yoy,cfps_yoy,op_yoy,ebt_yoy,netprofit_yoy,dt_netprofit_yoy,ocf_yoy,roe_yoy,bps_yoy,assets_yoy,eqt_yoy,tr_yoy,or_yoy,q_sales_yoy,q_op_qoq,equity_yoy,update_flag",
+        "params": {
+          "limit": 100,
+          "offset": 100,
+          "ts_code": "600519.SH"
+        },
+        "started_at": "2026-11-07T03:45:11.317687+00:00",
+        "rows": 39,
+        "payload": "002.json",
+        "sha256": "9f8345352db8e84a33a63add3243622ed03b24b9bca98179ea92b35a7d876256",
+        "finished_at": "2026-11-07T03:45:13.291014+00:00"
+      },
+      {
+        "api": "fina_indicator",
+        "fields": "ts_code,ann_date,end_date,eps,dt_eps,total_revenue_ps,revenue_ps,capital_rese_ps,surplus_rese_ps,undist_profit_ps,extra_item,profit_dedt,gross_margin,current_ratio,quick_ratio,cash_ratio,ar_turn,ca_turn,fa_turn,assets_turn,op_income,ebit,ebitda,fcff,fcfe,current_exint,noncurrent_exint,interestdebt,netdebt,tangible_asset,working_capital,networking_capital,invest_capital,retained_earnings,diluted2_eps,bps,ocfps,retainedps,cfps,ebit_ps,fcff_ps,fcfe_ps,netprofit_margin,grossprofit_margin,cogs_of_sales,expense_of_sales,profit_to_gr,saleexp_to_gr,adminexp_of_gr,finaexp_of_gr,impai_ttm,gc_of_gr,op_of_gr,ebit_of_gr,roe,roe_waa,roe_dt,roa,npta,roic,roe_yearly,roa2_yearly,debt_to_assets,assets_to_eqt,dp_assets_to_eqt,ca_to_assets,nca_to_assets,tbassets_to_totalassets,int_to_talcap,eqt_to_talcapital,currentdebt_to_debt,longdeb_to_debt,ocf_to_shortdebt,debt_to_eqt,eqt_to_debt,eqt_to_interestdebt,tangibleasset_to_debt,tangasset_to_intdebt,tangibleasset_to_netdebt,ocf_to_debt,turn_days,roa_yearly,roa_dp,fixed_assets,profit_to_op,q_saleexp_to_gr,q_gc_to_gr,q_roe,q_dt_roe,q_npta,q_ocf_to_sales,basic_eps_yoy,dt_eps_yoy,cfps_yoy,op_yoy,ebt_yoy,netprofit_yoy,dt_netprofit_yoy,ocf_yoy,roe_yoy,bps_yoy,assets_yoy,eqt_yoy,tr_yoy,or_yoy,q_sales_yoy,q_op_qoq,equity_yoy,update_flag",
+        "params": {
+          "limit": 1,
+          "offset": 139,
+          "ts_code": "600519.SH"
+        },
+        "started_at": "2026-11-07T03:45:13.293948+00:00",
+        "rows": 0,
+        "payload": "003.json",
+        "sha256": "9b8786f246abbf0c7e38456c1f93175f8d8d4a82eacfc37f62e35c8e3825ca1c",
+        "finished_at": "2026-11-07T03:45:15.546192+00:00"
+      },
+      {
+        "api": "fina_indicator_vip",
+        "fields": "ts_code,ann_date,end_date,eps,dt_eps,total_revenue_ps,revenue_ps,capital_rese_ps,surplus_rese_ps,undist_profit_ps,extra_item,profit_dedt,gross_margin,current_ratio,quick_ratio,cash_ratio,ar_turn,ca_turn,fa_turn,assets_turn,op_income,ebit,ebitda,fcff,fcfe,current_exint,noncurrent_exint,interestdebt,netdebt,tangible_asset,working_capital,networking_capital,invest_capital,retained_earnings,diluted2_eps,bps,ocfps,retainedps,cfps,ebit_ps,fcff_ps,fcfe_ps,netprofit_margin,grossprofit_margin,cogs_of_sales,expense_of_sales,profit_to_gr,saleexp_to_gr,adminexp_of_gr,finaexp_of_gr,impai_ttm,gc_of_gr,op_of_gr,ebit_of_gr,roe,roe_waa,roe_dt,roa,npta,roic,roe_yearly,roa2_yearly,debt_to_assets,assets_to_eqt,dp_assets_to_eqt,ca_to_assets,nca_to_assets,tbassets_to_totalassets,int_to_talcap,eqt_to_talcapital,currentdebt_to_debt,longdeb_to_debt,ocf_to_shortdebt,debt_to_eqt,eqt_to_debt,eqt_to_interestdebt,tangibleasset_to_debt,tangasset_to_intdebt,tangibleasset_to_netdebt,ocf_to_debt,turn_days,roa_yearly,roa_dp,fixed_assets,profit_to_op,q_saleexp_to_gr,q_gc_to_gr,q_roe,q_dt_roe,q_npta,q_ocf_to_sales,basic_eps_yoy,dt_eps_yoy,cfps_yoy,op_yoy,ebt_yoy,netprofit_yoy,dt_netprofit_yoy,ocf_yoy,roe_yoy,bps_yoy,assets_yoy,eqt_yoy,tr_yoy,or_yoy,q_sales_yoy,q_op_qoq,equity_yoy,update_flag",
+        "params": {
+          "limit": 10000,
+          "offset": 0,
+          "ts_code": "600519.SH"
+        },
+        "started_at": "2026-11-07T03:45:15.554530+00:00",
+        "rows": 139,
+        "payload": "004.json",
+        "sha256": "305de4d8b0ace0bda31347f4e483c4c85d8c22557ae60ace5581bb798945e1ed",
+        "finished_at": "2026-11-07T03:45:17.241336+00:00"
+      },
+      {
+        "api": "fina_indicator_vip",
+        "fields": "ts_code,ann_date,end_date,eps,dt_eps,total_revenue_ps,revenue_ps,capital_rese_ps,surplus_rese_ps,undist_profit_ps,extra_item,profit_dedt,gross_margin,current_ratio,quick_ratio,cash_ratio,ar_turn,ca_turn,fa_turn,assets_turn,op_income,ebit,ebitda,fcff,fcfe,current_exint,noncurrent_exint,interestdebt,netdebt,tangible_asset,working_capital,networking_capital,invest_capital,retained_earnings,diluted2_eps,bps,ocfps,retainedps,cfps,ebit_ps,fcff_ps,fcfe_ps,netprofit_margin,grossprofit_margin,cogs_of_sales,expense_of_sales,profit_to_gr,saleexp_to_gr,adminexp_of_gr,finaexp_of_gr,impai_ttm,gc_of_gr,op_of_gr,ebit_of_gr,roe,roe_waa,roe_dt,roa,npta,roic,roe_yearly,roa2_yearly,debt_to_assets,assets_to_eqt,dp_assets_to_eqt,ca_to_assets,nca_to_assets,tbassets_to_totalassets,int_to_talcap,eqt_to_talcapital,currentdebt_to_debt,longdeb_to_debt,ocf_to_shortdebt,debt_to_eqt,eqt_to_debt,eqt_to_interestdebt,tangibleasset_to_debt,tangasset_to_intdebt,tangibleasset_to_netdebt,ocf_to_debt,turn_days,roa_yearly,roa_dp,fixed_assets,profit_to_op,q_saleexp_to_gr,q_gc_to_gr,q_roe,q_dt_roe,q_npta,q_ocf_to_sales,basic_eps_yoy,dt_eps_yoy,cfps_yoy,op_yoy,ebt_yoy,netprofit_yoy,dt_netprofit_yoy,ocf_yoy,roe_yoy,bps_yoy,assets_yoy,eqt_yoy,tr_yoy,or_yoy,q_sales_yoy,q_op_qoq,equity_yoy,update_flag",
+        "params": {
+          "limit": 1,
+          "offset": 139,
+          "ts_code": "600519.SH"
+        },
+        "started_at": "2026-11-07T03:45:17.243578+00:00",
+        "rows": 0,
+        "payload": "005.json",
+        "sha256": "9b8786f246abbf0c7e38456c1f93175f8d8d4a82eacfc37f62e35c8e3825ca1c",
+        "finished_at": "2026-11-07T03:45:18.990036+00:00"
+      }
+    ]
+  }
+}

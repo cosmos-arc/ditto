@@ -26,6 +26,7 @@ class TestFundamentalSourceWrappers:
             (fundamental_source.fetch_balance_sheet, "fetch_balance_sheet_vip"),
             (fundamental_source.fetch_income_statement, "fetch_income_statement_vip"),
             (fundamental_source.fetch_cash_flow, "fetch_cash_flow_vip"),
+            (fundamental_source.fetch_fina_indicator, "fetch_fina_indicator_vip"),
         ],
     )
     def test_financial_statement_trade_date_pulls_quarter_periods(

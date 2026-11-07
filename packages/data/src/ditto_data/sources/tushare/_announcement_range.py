@@ -8,7 +8,7 @@ from time import sleep
 
 import polars as pl
 
-from ditto_data.errors import SourceFetchError
+from ditto_data.errors.network import SourceRateLimitError
 from ditto_data.sources.tushare.adapters.fundamental import FundamentalTushareAdapter
 
 _ANNOUNCEMENT_DATE_ATTEMPTS = 3
@@ -19,11 +19,11 @@ def _fetch_exact_announcement_date(
     fetch: Callable[..., pl.DataFrame],
     announcement_date: str,
 ) -> pl.DataFrame:
-    """Retry one exact date after the client's bounded transport retries."""
+    """Wait across a quota window only for an explicitly classified rate limit."""
     for attempt in range(1, _ANNOUNCEMENT_DATE_ATTEMPTS + 1):
         try:
             return fetch(ann_date=announcement_date)
-        except SourceFetchError:
+        except SourceRateLimitError:
             if attempt == _ANNOUNCEMENT_DATE_ATTEMPTS:
                 raise
             # Business-level quota errors arrive in successful HTTP responses.

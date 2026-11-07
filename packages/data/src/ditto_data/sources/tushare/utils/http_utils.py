@@ -12,7 +12,13 @@ from ditto_data.sources.base import (
 )
 
 # 官方频次超限消息特征（FAQ：抱歉，您每分钟/每天最多访问该接口…次）
-_RATE_LIMIT_MSG_MARKERS = ("每分钟最多访问", "每天最多访问")
+_RATE_LIMIT_MSG_MARKERS = (
+    "每分钟最多访问",
+    "每天最多访问",
+    "请求速度过快",
+    "请不要超过10个线程",
+    "ip超限",
+)
 
 
 def validate_tushare_response(response_json: dict[str, object]) -> dict[str, object]:
@@ -46,7 +52,9 @@ def validate_tushare_response(response_json: dict[str, object]) -> dict[str, obj
     if code != 0:
         msg_str = msg if isinstance(msg, str) else None
         # 频次超限不得转为空成功或普通失败重试，显式归类为限流错误
-        if msg_str and any(marker in msg_str for marker in _RATE_LIMIT_MSG_MARKERS):
+        if msg_str and any(
+            marker in msg_str.casefold() for marker in _RATE_LIMIT_MSG_MARKERS
+        ):
             raise SourceRateLimitError(
                 message=msg_str,
                 source="tushare",
@@ -57,7 +65,12 @@ def validate_tushare_response(response_json: dict[str, object]) -> dict[str, obj
             source="tushare",
             # 结构化错误码随行（correctness review #7 / standards #2）：
             # 调用方按码判别（如 rights 端点 50101 传输边界降级），不匹配消息文本。
-            details={"code": code},
+            details={
+                "code": code,
+                "retryable": not error_msg.startswith(
+                    ("必填参数", "参数校验失败", "请指定正确的接口名")
+                ),
+            },
         )
 
     # 检查 data 字段
@@ -112,6 +125,7 @@ def map_http_error(error: Exception, api_name: str) -> NoReturn:
         # HTTP 状态码常量
         _HTTP_RATE_LIMIT = 429
         _HTTP_SERVER_ERROR = 500
+        _HTTP_REQUEST_TIMEOUT = 408
 
         if status_code == _HTTP_RATE_LIMIT:
             raise SourceRateLimitError(
@@ -131,7 +145,10 @@ def map_http_error(error: Exception, api_name: str) -> NoReturn:
         raise SourceFetchError(
             message=f"Tushare API 请求失败 (API: {api_name})",
             source="tushare",
-            details={"original_error": str(error)},
+            details={
+                "original_error": str(error),
+                "retryable": status_code == _HTTP_REQUEST_TIMEOUT,
+            },
         )
 
     # 处理网络错误

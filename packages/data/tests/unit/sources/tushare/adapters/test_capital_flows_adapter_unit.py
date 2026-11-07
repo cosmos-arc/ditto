@@ -163,18 +163,30 @@ class TestCapitalFlowsAdapters:
         frame = adapter.fetch_top_list(trade_date="2026-09-22")
         assert frame.row(0, named=True)["reason"] == "日涨幅偏离值达到7%的前5只证券"
 
-    def test_instrument_mode_passes_range_params(self) -> None:
+    @pytest.mark.parametrize("api_name", ["top_list", "top_inst"])
+    def test_instrument_mode_queries_exact_days(self, api_name: str) -> None:
         adapter, client = _adapter_with_response(pl.DataFrame())
-        adapter.fetch_top_inst(
-            ts_code="000560.SZ",
-            start_date="2026-09-01",
-            end_date="2026-09-30",
+        getattr(adapter, f"fetch_{api_name}")(
+            ts_code="000560.SZ", start_date="2026-09-29", end_date="2026-09-30"
         )
-        kwargs = client.query.call_args.kwargs
-        assert kwargs["ts_code"] == "000560.SZ"
-        assert kwargs["start_date"] == "20260901"
-        assert kwargs["end_date"] == "20260930"
-        assert "trade_date" not in kwargs
+        assert [call.kwargs["trade_date"] for call in client.query.call_args_list] == [
+            "20260929",
+            "20260930",
+        ]
+        for call in client.query.call_args_list:
+            assert call.kwargs["ts_code"] == "000560.SZ"
+            assert "start_date" not in call.kwargs
+            assert "end_date" not in call.kwargs
+
+    @pytest.mark.parametrize(
+        ("start", "end"),
+        [(None, None), ("2026-09-30", None), ("2026-09-30", "2026-09-29")],
+    )
+    def test_top_range_must_be_bounded_and_ordered(self, start, end) -> None:
+        adapter, client = _adapter_with_response(pl.DataFrame())
+        with pytest.raises(ValueError):
+            adapter.fetch_top_inst(ts_code="000560.SZ", start_date=start, end_date=end)
+        client.query.assert_not_called()
 
 
 @pytest.mark.unit

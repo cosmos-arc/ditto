@@ -309,11 +309,11 @@ class TestFundamentalAdapterFinancialMethods:
 class TestFundamentalAdapterDividendAndActions:
     """Dividend and corporate-action adapter parameter behavior."""
 
-    def test_fetch_dividend_includes_all_optional_params_and_pit_columns(
+    def test_fetch_dividend_only_forwards_native_params_and_pit_columns(
         self,
         mocker: pytest_mock.MockFixture,
     ) -> None:
-        """Dividend fetch forwards all filters and adds PIT columns."""
+        """Native selectors and local date filtering retain PIT columns."""
         adapter, client = _adapter_with_client()
         _patch_transform(mocker)
         client.query.return_value = pl.DataFrame({"raw": ["value"]})
@@ -334,8 +334,6 @@ class TestFundamentalAdapterDividendAndActions:
             "ts_code": "000001.SZ",
             "ann_date": "20240507",
             "ex_date": "20240506",
-            "start_date": "20240501",
-            "end_date": "20240531",
         }
         assert result["effective_from"].to_list() == [date(2024, 5, 7)]
         assert result["effective_to"].null_count() == 1

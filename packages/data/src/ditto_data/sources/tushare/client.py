@@ -9,7 +9,7 @@ import polars as pl
 from ditto_platform.foundation import logger
 from tenacity import (
     retry,
-    retry_if_exception_type,
+    retry_if_exception,
     stop_after_attempt,
     wait_exponential,
 )
@@ -235,6 +235,16 @@ class TushareClient:
         else:
             return TushareAPIGroup.SPECIAL
 
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=1, max=10),
+        retry=retry_if_exception(
+            lambda error: (
+                isinstance(error, SourceFetchError)
+                and error.details.get("retryable") is not False
+            )
+        ),
+    )
     def _query(
         self,
         api_name: str,
@@ -305,11 +315,6 @@ class TushareClient:
             # 网络错误和超时,映射到 SourceFetchError
             map_http_error(e, api_name)
 
-    @retry(
-        stop=stop_after_attempt(3),
-        wait=wait_exponential(multiplier=1, min=1, max=10),
-        retry=retry_if_exception_type(SourceFetchError),
-    )
     def query(
         self,
         api_name: str,
@@ -368,6 +373,8 @@ class TushareClient:
                 if page_size != primary_page_size:
                     raise
                 shifted = max(page_size - _PAGINATION_RETRY_PAGE_SHIFT, 500)
+                if shifted == page_size:
+                    raise
                 logger.warning(
                     "pagination cross-page duplicates; retrying with shifted page size",
                     event="tushare_pagination_shifted_page_retry",

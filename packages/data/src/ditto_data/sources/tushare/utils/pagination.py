@@ -12,8 +12,8 @@ fut_basic=10000），不存在统一页宽。只有请求页宽不超过服务�
 2026-10-31 增补 margin_detail/fund_share，#625）：
 
 - 已核实上限的端点用精确值；
-- 未核实上限的端点用保守默认 2000（已知官方列表端点上限的最小值；
-  唯一低于 2000 的 vix_index=300 未被本仓库消费）。官方确认具体上限后
+- 未核实上限的端点暂用默认 2000（不是官方最小上限；标准版
+  fina_indicator 仅 100）。官方确认具体上限后
   应改为精确值，不得以默认值冒充接口合同。
 - 页宽超服务端上限时的静默截断由 client 的短页续探兜底（#625）：
   续探发现未见行即降页宽续拉，检测不再单纯依赖本表定档正确。
@@ -27,8 +27,12 @@ from __future__ import annotations
 
 __all__ = ["resolve_page_size"]
 
-# 已核实官方单次提取上限的端点 → 上限（tushare.pro/document/2 各专页）。
+# 请求页宽：官方上限与当前 transport 实测值分别在条目中注明。
 _DOCUMENTED_PAGE_SIZES: dict[str, int] = {
+    "fina_indicator": 100,  # doc_id=79，标准版；VIP 独立定档
+    "sw_daily": 4000,  # doc_id=327，全市场单日批量
+    "top_list": 10000,  # doc_id=106，必须指定 trade_date
+    "top_inst": 10000,  # doc_id=107，必须指定 trade_date
     "etf_basic": 5000,  # doc_id=385
     "etf_limit": 3000,  # doc_id=491
     "daily": 6000,  # doc_id=27，停牌不出行

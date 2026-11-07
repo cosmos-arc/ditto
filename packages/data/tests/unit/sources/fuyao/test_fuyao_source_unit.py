@@ -27,6 +27,32 @@ def _client() -> FuyaoClient:
     return FuyaoClient(base_url=_BASE, api_key="not_a_secret")
 
 
+def test_batch_bars_preserve_units_identity_and_isolate_bad_group(respx_mock) -> None:
+    codes = [f"600{i:03d}.SH" for i in range(12)]
+    requests: list[list[str]] = []
+
+    def respond(request: httpx.Request) -> httpx.Response:
+        requested = request.url.params["thscodes"].split(",")
+        requests.append(requested)
+        assert request.url.params["adjust"] == "none"
+        items = [
+            {"thscode": code, "item": [_bar(date_to_ms(date(2026, 9, 30)), 10.5)]}
+            for code in requested
+            if code != codes[1]
+        ]
+        if codes[2] in requested:
+            items.append(items[1])  # duplicate group must not duplicate stored keys
+        return httpx.Response(200, json={"code": 0, "data": {"item": items}})
+
+    respx_mock.get(_BASE + "/api/a-share/prices/historical-batch").mock(
+        side_effect=respond
+    )
+    result = FuyaoSource(client=_client()).fetch_stock_daily_bars(codes, "2026-09-30")
+    assert requests == [codes[:10], codes[10:]]
+    assert set(result["ticker"]) == {code[:6] for code in codes} - {"600001", "600002"}
+    assert result["volume"].to_list() == [1.0] * 10
+
+
 @pytest.mark.unit
 class TestFuyaoTimeConversions:
     """北京时区毫秒戳换算."""
@@ -685,6 +711,17 @@ def _source_by_thscode(
 
     def fake_get(path: str, params: dict[str, object] | None = None):
         assert params is not None
+        if "thscodes" in params:
+            return {
+                "item": [
+                    {
+                        "thscode": code,
+                        "item": cast("dict[str, object]", responses[code])["item"],
+                    }
+                    for code in str(params["thscodes"]).split(",")
+                    if isinstance(responses[code], dict)
+                ]
+            }
         key = str(params.get("thscode", ""))
         if key not in responses:
             raise AssertionError(f"unexpected thscode {key} on {path}")
@@ -795,6 +832,25 @@ def _income_item(
 @pytest.mark.unit
 class TestFuyaoFinancialStatementsFrame:
     """#473 财务三表对账帧：字段映射、披露日、契约违约按标的隔离."""
+
+    def test_batch_rejects_crossed_row_identity_preserving_valid_group(self) -> None:
+        bank = _income_item(
+            date(2026, 6, 30),
+            date(2026, 8, 14),
+            thscode="000001.SZ",
+            ticker="000001",
+            operating_income=103_100_000_000.0,
+        )
+        source = _source_by_thscode(
+            {
+                "600519.SH": {"item": [bank]},
+                "000001.SZ": {"item": [bank]},
+            }
+        )
+        result = source.fetch_financial_statements(
+            "income_statement", ["600519.SH", "000001.SZ"]
+        )
+        assert result["ticker"].to_list() == ["000001.SZ"]
 
     def test_renames_fields_and_derives_dates_from_bare_ticker(self) -> None:
         source = _source_by_thscode(

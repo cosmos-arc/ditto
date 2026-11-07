@@ -7,8 +7,10 @@ import pytest_mock
 import tenacity
 from ditto_data.config import DataSourceSettings
 from ditto_data.sources.base import (
+    PaginationCorruptionError,
     SourceAuthenticationError,
     SourceConfigurationError,
+    SourceFetchError,
     SourceRateLimitError,
 )
 from ditto_data.sources.tushare.client import TushareClient
@@ -24,6 +26,69 @@ def _settings(token: str | None = None) -> DataSourceSettings:
     if token is None:
         token = "not_a_secret"
     return DataSourceSettings(tushare_token=token)
+
+
+@pytest.mark.parametrize(
+    "message", ["必填参数, trade_date", "参数校验失败, offset", "请指定正确的接口名"]
+)
+def test_invalid_parameters_are_not_retried(respx_mock, fake_time, message):
+    route = respx_mock.post("http://api.tushare.pro").respond(
+        200, json={"code": 50101, "msg": message, "data": None}
+    )
+    client = TushareClient(settings=_settings())
+    with pytest.raises(SourceFetchError, match=message):
+        client.query("top_list", "ts_code", start_date="20261104")
+    assert route.call_count == 1
+
+
+def test_page_retry_does_not_restart_completed_pages(respx_mock, fake_time):
+    offsets = []
+
+    def respond(request):
+        params = orjson.loads(request.content)["params"]
+        offset = params["offset"]
+        offsets.append(offset)
+        if offset == 100 and offsets.count(100) == 1:
+            return httpx.Response(503)
+        rows = [[str(i)] for i in range(offset, min(offset + params["limit"], 101))]
+        return httpx.Response(
+            200, json={"code": 0, "data": {"fields": ["ts_code"], "items": rows}}
+        )
+
+    respx_mock.post("http://api.tushare.pro").mock(side_effect=respond)
+    client = TushareClient(settings=_settings())
+    result = client.query("fina_indicator", "ts_code", ts_code="600519.SH")
+    assert result.height == 101
+    assert offsets == [0, 100, 100, 101]
+
+
+@pytest.mark.parametrize(
+    "message",
+    ["您请求速度过快", "请不要超过10个线程", "ip超限\uff0c请不到在多个ip同时使用"],
+)
+def test_transport_quota_errors_do_not_use_network_retry(respx_mock, message):
+    route = respx_mock.post("http://api.tushare.pro").respond(
+        200, json={"code": 50101, "msg": message, "data": None}
+    )
+    with pytest.raises(SourceRateLimitError, match=message):
+        TushareClient(settings=_settings()).query("fund_nav", "ts_code")
+    assert route.call_count == 1
+
+
+def test_corrupt_page_at_retry_floor_stops(respx_mock, fake_time):
+    route = respx_mock.post("http://api.tushare.pro").respond(
+        200,
+        json={
+            "code": 0,
+            "data": {
+                "fields": ["ts_code"],
+                "items": [[str(i)] for i in range(500)],
+            },
+        },
+    )
+    with pytest.raises(PaginationCorruptionError):
+        TushareClient(settings=_settings()).query("fina_indicator", "ts_code")
+    assert route.call_count == 5
 
 
 class TestTushareClientInit:
@@ -399,10 +464,8 @@ class TestTushareClientQuery:
         respx_mock.post("http://api.tushare.pro").mock(side_effect=side_effect)
 
         client = TushareClient(token="test_token", settings=_settings())
-        with pytest.raises(tenacity.RetryError) as exc_info:
+        with pytest.raises(PaginationCorruptionError, match="dedup-merge echo"):
             client.query("trade_cal", "cal_date")
-
-        assert "dedup-merge echo" in str(exc_info.value.last_attempt.exception())
 
     def test_truncation_probe_transient_failure_recovers(
         self,
@@ -412,8 +475,7 @@ class TestTushareClientQuery:
     ) -> None:
         """续探瞬态失败沿既有重试传播：重试后完整取回（#653 反例一）.
 
-        探针失败不再按取尽吞掉——第一 attempt 探针 500，tenacity 重试
-        整个翻页，第二 attempt 干净收尾，返回完整数据。
+        探针失败不按取尽吞掉；只重试失败探针，不重拉已成功首页。
         """
         monkeypatch.setitem(pagination._DOCUMENTED_PAGE_SIZES, "trade_cal", 2)
         empty_tail = httpx.Response(
@@ -432,7 +494,6 @@ class TestTushareClientQuery:
             side_effect=[
                 page_one,
                 httpx.Response(500, text="probe blew up"),
-                page_one,
                 empty_tail,
             ]
         )
@@ -498,10 +559,9 @@ class TestTushareClientQuery:
         respx_mock.post("http://api.tushare.pro").mock(side_effect=side_effect)
 
         client = TushareClient(token="test_token", settings=_settings())
-        with pytest.raises(tenacity.RetryError) as exc_info:
+        with pytest.raises(SourceFetchError, match="truncated below floor"):
             client.query("trade_cal", "cal_date")
-
-        assert "truncated below floor" in str(exc_info.value.last_attempt.exception())
+        assert respx_mock.calls.call_count == 2
 
     def test_exact_full_page_with_schemaless_empty_tail_completes(
         self,
@@ -570,11 +630,10 @@ class TestTushareClientQuery:
         respx_mock.post("http://api.tushare.pro").mock(side_effect=side_effect)
 
         client = TushareClient(token="test_token", settings=_settings())
-        # 重复页错误按 SourceFetchError 参与现有重试语义，耗尽后以 RetryError 冒泡
-        with pytest.raises(tenacity.RetryError) as exc_info:
+        # 两种几何耗尽即拒绝，不重跑已证实损坏的完整查询。
+        with pytest.raises(PaginationCorruptionError, match="duplicate rows"):
             client.query("trade_cal", "cal_date")
-
-        assert "duplicate rows" in str(exc_info.value.last_attempt.exception())
+        assert respx_mock.calls.call_count == 5
 
     def test_cross_page_duplicates_retry_with_shifted_page_size(
         self,
@@ -1014,10 +1073,8 @@ class TestPaginationDedupMerge:
         respx_mock.post("http://api.tushare.pro").mock(side_effect=side_effect)
 
         client = TushareClient(token="test_token", settings=_settings())
-        with pytest.raises(tenacity.RetryError) as exc_info:
+        with pytest.raises(PaginationCorruptionError, match="dedup-merge echo"):
             client.query("trade_cal", "cal_date")
-
-        assert "dedup-merge echo" in str(exc_info.value.last_attempt.exception())
 
     def test_echo_probes_reset_on_clean_page_between_echoes(
         self,
