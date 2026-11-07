@@ -54,7 +54,7 @@ class TestGetFlowConfigs:
         """测试返回配置列表。"""
         configs = _get_flow_configs()
         assert isinstance(configs, list)
-        assert len(configs) == 7
+        assert len(configs) == 12
 
     def test_get_flow_configs_contains_all_flows(self):
         """测试包含所有 flow 配置。"""
@@ -67,6 +67,11 @@ class TestGetFlowConfigs:
             "retry-failed-prod",
             "backfill-prod",
             "repair-holes-prod",
+            "margin-published-0835",
+            "margin-published-0850",
+            "margin-published-0905",
+            "margin-published-0915",
+            "fred-published-daily",
             "backtest-prod",
         ]
         assert deployment_names == expected
@@ -205,6 +210,11 @@ class TestDeployScope:
             "retry-failed-prod",
             "backfill-prod",
             "repair-holes-prod",
+            "margin-published-0835",
+            "margin-published-0850",
+            "margin-published-0905",
+            "margin-published-0915",
+            "fred-published-daily",
         ]
 
     def test_ingestion_scope_can_include_backtest(self) -> None:
@@ -212,7 +222,7 @@ class TestDeployScope:
         configs = _get_flow_configs("ingestion", include_backtest=True)
         names = [c.deployment_name for c in configs]
 
-        assert len(names) == 6
+        assert len(names) == 11
         assert names[-1] == "backtest-prod"
         assert "eod-pipeline-prod" not in names
 

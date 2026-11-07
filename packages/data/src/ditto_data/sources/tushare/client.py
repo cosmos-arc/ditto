@@ -311,7 +311,11 @@ class TushareClient:
             # HTTP 状态码错误,映射到相应异常
             map_http_error(e, api_name)
 
-        except (httpx.NetworkError, httpx.TimeoutException) as e:
+        except (
+            httpx.NetworkError,
+            httpx.TimeoutException,
+            httpx.RemoteProtocolError,
+        ) as e:
             # 网络错误和超时,映射到 SourceFetchError
             map_http_error(e, api_name)
 

@@ -18,7 +18,7 @@ B1（#653 修正安全链）把 margin_trading/hsgt_top10/hk_hold 的可知时�
 
 - 新版本行经标准写入端口按冲突键落库（新 effective_from/knowledge_date
   = 新身份），旧行原样保留——本地快照重放语义保留「当时机器所见」，
-  PIT 读取按 knowledge_date 收敛到新版本；原 payload／快照证据不动。
+  普通/PIT 读取先排除撤销资格，再选择有效版本；原 payload／快照证据不动。
 - 每个被纠正的 (dataset, trade_date) 在 ingestion_log 记一行
   source='kd_correction' 的 SUCCESS 账本行（rows=新版本行数），作为
   机读纠正记录；与 tushare 源行互不干扰（账本主键含 source）。
@@ -31,8 +31,8 @@ B1（#653 修正安全链）把 margin_trading/hsgt_top10/hk_hold 的可知时�
     python -m ditto_apps.scripts.data_kd_stock_correction apply \
         --data-root <DITTO_DATA_ROOT> --dataset <ds>[,<ds>...] --confirm
 
-apply 须在停写窗口内执行（同备份配方要求）；批次2 流程要求执行前完成
-真实根备份（先备份后写）。
+apply 须在已核对目标的停写窗口内执行。先生成影响清单；#705 已明确暂缓
+备份与完整恢复，不将其扩大成本批前提。
 """
 
 from __future__ import annotations
@@ -53,6 +53,7 @@ import polars as pl
 from ditto_application.processes.ingestion.correction_ledger import (
     CORRECTION_LEDGER_SOURCE,
     CorrectionLogStore,
+    publish_capital_correction,
     save_kd_correction_ledger_row,
 )
 from ditto_application.processes.ingestion.hk_hold_disclosure import (
@@ -209,18 +210,10 @@ def _official_anchor_impacts(
     versions: dict[str, int],
     official: date,
 ) -> list[DateImpact]:
-    """
-    官方发布日锚（#693）的日期级 impacts.
-
-    为偏离版本追加 official 版本行（旧行保留证据；读取侧 latest_available
-    收敛/未来 as-of 过滤按 knowledge_date 生效）。覆盖守卫（镜像 W4）：
-    official 版本行数已覆盖最大旧版行数 → 该日已收敛，扫描幂等。
-    """
+    """官方发布日锚；即使正确行已存在，也撤销仍留在原投影的旧资格。"""
     expected = official.isoformat()
     wrong = {k: c for k, c in versions.items() if k != expected}
     if not wrong:
-        return []
-    if versions.get(expected, 0) >= max(wrong.values()):
         return []
     return [
         DateImpact(
@@ -256,14 +249,17 @@ def _quarterly_impacts(
             impacts.extend(_official_anchor_impacts(dataset, t, versions, official))
             continue
         expected = anchors.get(t)
-        # 已有观察锚版本（kd 晚于事实日 14 天＝任何披露制度锚之外）则该日
-        # 首锚已立：后续新覆盖快照前移 MAX 锚不再重写（首锚胜，可见性不
-        # 随重复回补单调后移）。
-        anchored = any(
-            date.fromisoformat(k) > date.fromisoformat(t) + _ANCHOR_ALREADY_SET_DAYS
+        # 首个保守观察锚保持稳定；其存在不能豁免其他标的的错误 T+1。
+        established = [
+            k
             for k in versions
-        )
-        if anchored:
+            if date.fromisoformat(k) > date.fromisoformat(t) + _ANCHOR_ALREADY_SET_DAYS
+        ]
+        if established:
+            # 后续已知观察版本本身保留资格；其他标的仍使用来源观察锚，
+            # 不能以某标的较早的首锚证明另一标的当时已可知。
+            versions = {k: c for k, c in versions.items() if k not in established}
+        if not versions:
             continue
         if expected is None or date.fromisoformat(expected) <= date.fromisoformat(t):
             # 无覆盖快照，或锚不晚于事实日（不可作为可知时间）——拒绝动。
@@ -306,8 +302,7 @@ def _impacts_from_groups(
     下一交易日策略的纠正计划.
 
     守卫（correctness W4/W5）：
-    - 期望版本**行数**已覆盖最大旧版行数 → 无需动作（存在性守卫会在
-      标的级局部重取后留下未纠正标的的泄漏行）；
+    - 正确版本已存在也保留旧版本的资格撤销计划；重复应用幂等；
     - 同日存在多个旧版本（>1 个非期望 kd 组）→ 值谱系不可分辨，
       status=ambiguous 拒绝写入、响亮报告，人工分流。
     """
@@ -335,8 +330,6 @@ def _impacts_from_groups(
                     status="ambiguous",
                 )
             )
-            continue
-        if versions.get(expected, 0) >= max(wrong.values()):
             continue
         for k, c in sorted(wrong.items()):
             impacts.append(
@@ -377,6 +370,7 @@ def apply_dataset(
     now = run_at.isoformat()
     written = 0
     dates: set[str] = set()
+    _publish_eligibility(correct, conn=conn, data_root=data_root)
     _write_ledger_rows(correct, log_store=log_store, now=now)
     if dataset == "margin_trading":
         frame = _margin_corrected_frame(conn, correct)
@@ -405,6 +399,112 @@ def apply_dataset(
                 )
             dates.update(frame["trade_date"].cast(pl.String).unique().to_list())
     return {"dataset": dataset, "dates_corrected": len(dates), "rows_written": written}
+
+
+def correction_impact_report(
+    impacts: list[DateImpact], *, conn: sqlite3.Connection, data_root: Path
+) -> dict[str, Any]:
+    """一次性盘点事实键、规则、分区及既有来源/纠偏身份，不以快照相同免检。"""
+    dataset = impacts[0].dataset
+    keys = ["instrument_id", "trade_date", "knowledge_date"]
+    if dataset == "hsgt_top10":
+        keys.append("market_type")
+    facts: list[dict[str, Any]] = []
+    # 每个年度只读一次，避免长历史扫描反复加载同一大分区。
+    partitions: dict[str, dict[tuple[object, ...], pl.DataFrame]] = {}
+    tables = {
+        r[0] for r in conn.execute("SELECT name FROM sqlite_master WHERE type='table'")
+    }
+    snapshot_columns = {
+        r[1] for r in conn.execute("PRAGMA table_info(provider_snapshots)")
+    }
+    for impact in impacts:
+        partition = (
+            "metadata/metadata.sqlite#margin_trading"
+            if dataset == "margin_trading"
+            else f"capital/{dataset}/{impact.trade_date[:4]}.parquet"
+        )
+        if partition not in partitions:
+            frame = (
+                pl.read_database(
+                    """SELECT instrument_id, trade_date, knowledge_date
+                    FROM margin_trading""",
+                    conn,
+                )
+                if dataset == "margin_trading"
+                else pl.read_parquet(data_root / partition, columns=keys)
+            ).select(pl.col(keys).cast(pl.String))
+            partitions[partition] = frame.partition_by(
+                ["trade_date", "knowledge_date"], as_dict=True
+            )
+        selected_frame = partitions[partition].get(
+            (impact.trade_date, impact.old_knowledge_date)
+        )
+        selected = selected_frame.to_dicts() if selected_frame is not None else []
+        snapshots = []
+        if {
+            "snapshot_id",
+            "checksum",
+            "dataset_id",
+            "request_start",
+            "request_end",
+        } <= snapshot_columns:
+            snapshots = [
+                dict(zip(["snapshot_id", "checksum"], row, strict=True))
+                for row in conn.execute(
+                    """SELECT snapshot_id, checksum FROM provider_snapshots
+                    WHERE dataset_id=? AND request_start<=? AND request_end>=?
+                    ORDER BY snapshot_id""",
+                    (dataset, impact.trade_date, impact.trade_date),
+                )
+            ]
+        prior = []
+        if "ingestion_log" in tables:
+            prior = [
+                r[0]
+                for r in conn.execute(
+                    """SELECT checksum FROM ingestion_log
+                    WHERE dataset=? AND source=? AND trade_date=?""",
+                    (dataset, CORRECTION_LEDGER_SOURCE, impact.trade_date),
+                )
+            ]
+        facts.append(
+            {
+                **vars(impact),
+                "target_partition": partition,
+                "facts": sorted(selected, key=lambda row: tuple(row[k] for k in keys)),
+                "source_snapshots": snapshots,
+                "prior_kd_correction_checksums": prior,
+                "old_eligibility": "revoked",
+                "new_eligibility": "canonical_and_pit",
+            }
+        )
+    return {
+        "dataset": dataset,
+        "rule_version": "capital-kd-v2",
+        "keys": keys,
+        "impacts": facts,
+        "correction_checksum": _impact_checksum(impacts),
+        "consumer_rule": "eligible-capital-v2/latest-profile-v2",
+        "consumers": (
+            ["margin HTTP", "margin CLI", "capital-profile query"]
+            if dataset == "margin_trading"
+            else [f"{dataset} HTTP"]
+        ),
+        "artifact_matching": (
+            "dataset + business dates/instruments "
+            + "+ interpretation/consumer rule; snapshot IDs alone are insufficient"
+        ),
+    }
+
+
+def _publish_eligibility(
+    impacts: list[DateImpact], *, conn: sqlite3.Connection, data_root: Path
+) -> None:
+    """在任何数据写入前持久化完整影响与紧凑资格规则。"""
+    publish_capital_correction(
+        data_root, correction_impact_report(impacts, conn=conn, data_root=data_root)
+    )
 
 
 _ANCHOR_ALREADY_SET_DAYS = timedelta(days=14)
@@ -610,8 +710,17 @@ def main(argv: list[str] | None = None) -> int:
     )
     try:
         impacts: list[DateImpact] = []
+        reports = []
         for dataset in datasets:
-            impacts.extend(scan_dataset(dataset, conn=scan_conn, data_root=data_root))
+            selected = scan_dataset(dataset, conn=scan_conn, data_root=data_root)
+            impacts.extend(selected)
+            correct = [item for item in selected if item.status == "correct"]
+            if correct:
+                reports.append(
+                    correction_impact_report(
+                        correct, conn=scan_conn, data_root=data_root
+                    )
+                )
     finally:
         scan_conn.close()
 
@@ -624,6 +733,7 @@ def main(argv: list[str] | None = None) -> int:
                 "scanned_at": datetime.now(_SHANGHAI).isoformat(),
                 "totals": _totals(impacts),
                 "impacts": [vars(i) for i in impacts],
+                "impact_reports": reports,
             },
             args.output,
         )

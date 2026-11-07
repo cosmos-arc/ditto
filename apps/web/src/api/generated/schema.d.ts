@@ -1,6 +1,6 @@
 /**
  * DO NOT EDIT: generated from contracts/openapi/v1.json.
- * Schema SHA-256: 1fbced3af06450333740ecae23ba13e6351e2a636f86544211cee449b5204386
+ * Schema SHA-256: aa211ae9844cf7d4e601a572a9edbfae201b85361bec89b78f1e65e6030b0d86
  * Generator: openapi-typescript 7.13.0
  */
 
@@ -966,7 +966,7 @@ export interface paths {
          * @description 个股资金画像（#658 批次3：四数据集同标的同窗口联看）.
          *
          *     必需块 moneyflow/top_list/top_inst（latest_available＝库内现存行，无 PIT
-         *     过滤）；可选块 margin_trading（pit_asof=end_date）带实际末端与待补列表
+         *     过滤）；可选块 margin_trading（latest_available）带实际末端与待补列表
          *     （迟发数据按 09:15 披露承诺，待补窗=尾部 5 个交易日，与夜修滑窗对齐）。
          *     每块携带 data_coverage 覆盖限制快照；无事件/空窗是合法状态，不冒充失败。
          *
@@ -12673,7 +12673,7 @@ export interface components {
         };
         /**
          * MarginBlock
-         * @description 画像块:两融(pit_asof=end_date;迟发数据按 09:15 承诺显示待补).
+         * @description 画像块:两融(latest_available;迟发数据按 09:15 承诺显示待补).
          */
         MarginBlock: {
             data_coverage?: components["schemas"]["DataCoverageInfo"] | null;
@@ -12697,7 +12697,7 @@ export interface components {
             read_error?: string | null;
             /**
              * Read Semantics
-             * @default pit_asof
+             * @default latest_available
              */
             read_semantics: string;
             /** Rows */

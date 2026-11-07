@@ -276,3 +276,36 @@ class TestTextLogOutput:
         logger.info("Test message")
 
         # Verify日志格式包含: timestamp, level, logger:function:line
+
+
+def test_production_json_logs_have_bounded_rotation(tmp_path: Path) -> None:
+    """实际 Loguru sink 写出 JSON 并遵守大小/代数边界。"""
+    import json
+
+    from loguru import logger
+
+    configure_logging(
+        ObservabilityConfig(
+            environment=Environment.PRODUCTION,
+            log_dir=str(tmp_path),
+            log_to_console=False,
+            log_to_file=True,
+            pytest_running=False,
+            log_rotation_bytes=1024,
+            log_retention_files=2,
+        )
+    )
+    try:
+        for index in range(100):
+            logger.bind(index=index).info("message {value}", value="x" * 100)
+        files = list(tmp_path.glob("ditto.*jsonl*"))
+        assert 1 <= len(files) <= 3
+        assert sum(path.stat().st_size for path in files) < 3 * 2048
+        records = [
+            json.loads(line)
+            for line in (tmp_path / "ditto.jsonl").read_text().splitlines()
+        ]
+        assert records[-1]["index"] == 99
+        assert records[-1]["level"] == "INFO"
+    finally:
+        logger.remove()

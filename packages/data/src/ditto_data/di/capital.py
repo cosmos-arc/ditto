@@ -79,7 +79,9 @@ class CapitalProvider(Provider):
     ) -> CapitalReaders:
         """Capital 域读取依赖聚合。"""
         return CapitalReaders(
-            margin_trading=MarginTradingReader(MARGIN_TRADING_SPEC, sqlite_client),
+            margin_trading=MarginTradingReader(
+                MARGIN_TRADING_SPEC, sqlite_client, settings.data_root
+            ),
             pledge_ratio=PledgeRatioReader(PLEDGE_RATIO_SPEC, sqlite_client),
             valuation_metrics=ValuationMetricsReader(
                 VALUATION_METRICS_SPEC,

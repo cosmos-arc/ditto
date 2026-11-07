@@ -2,8 +2,8 @@
 个股资金画像查询（#658 批次3 首个真实流程）.
 
 四数据集同标的同窗口联看：moneyflow／top_list／top_inst（必需，
-latest_available＝库内现存行）＋margin_trading（可选，pit_asof＝窗口
-终点）。两融迟发按「窗口尾部最近 N 个交易日内缺失」表达为待补列表
+latest_available＝库内有效版本）＋margin_trading（可选，最新观察）。
+两融迟发按「窗口尾部最近 N 个交易日内缺失」表达为待补列表
 （N 与 02:00 夜修滑窗 #625 语义对齐＝5）；席位与榜单事件按 reason
 独立成行，席位≠机构总仓位、榜单退出≠清仓（#658 主旅程契约）。
 """
@@ -157,7 +157,7 @@ class CapitalProfileQueryFacade:
                 request.instrument_id,
                 start,
                 end,
-                as_of_date=request.end,
+                as_of_date=None,
                 allow_experimental_data=flag,
             )
             margin_error: str | None = None

@@ -281,3 +281,25 @@ test.describe
 			expect(browserErrors).toEqual([]);
 		});
 	});
+
+
+test("capital profile refresh uses corrected storage and newest ten facts", async ({ page }) => {
+    await page.goto(`${webOrigin}/instruments/${STOCK_ID}?tab=capital`);
+    await page.getByLabel("开始日期").fill("2026-10-19");
+    await page.getByLabel("截至日期").fill("2026-11-06");
+    const block = page.locator('[data-info-unit="capital-block-两融"]');
+    await expect(block).toContainText("2026-11-03");
+    await expect(block).toContainText("2026-10-21");
+    await expect(block).not.toContainText("2026-10-20");
+    await expect(block).not.toContainText("2026-10-19");
+    const response = page.waitForResponse(res => res.url().endsWith("/capital/profile") && res.request().method() === "POST");
+    await page.getByRole("button", { name: "刷新资金画像" }).click();
+    const payload = (await (await response).json()).data.margin_trading;
+    expect(payload.read_semantics).toBe("latest_available");
+    expect(payload.rows).toHaveLength(12);
+    expect(payload.latest_trade_date).toBe("2026-11-03");
+    await expect(block).toContainText("2026-11-03");
+    await expect(block.locator("tbody tr")).toHaveCount(10);
+    for (const day of payload.pending_trade_dates) await expect(block).toContainText(day);
+    await page.screenshot({ path: `${process.env["DITTO_SYSTEM_OUTPUT_ROOT"]}/capital-profile-refreshed.png` });
+});

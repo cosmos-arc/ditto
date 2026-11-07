@@ -33,6 +33,9 @@ from ditto_application.processes.experiments.planning_process import (
 )
 from ditto_application.processes.experiments.worker import ResearchExperimentWorker
 from ditto_application.processes.ingestion.backfill_manager import BackfillManager
+from ditto_application.processes.ingestion.published_refresh import (
+    PublishedRefreshProcess,
+)
 from ditto_application.processes.ingestion.retry_manager import RetryManager
 from ditto_application.processes.ingestion.source_selection import (
     IngestionCoordinatorLike,
@@ -67,6 +70,7 @@ class IngestionBundle:
     """
 
     coordinator: IngestionCoordinatorLike
+    published_refresh: PublishedRefreshProcess
     backfill_manager: BackfillManager
     retry_manager: RetryManager
     sparse_pit_reattestation: SparsePITReattestationProcess

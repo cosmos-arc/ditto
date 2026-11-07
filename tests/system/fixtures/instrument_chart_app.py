@@ -10,9 +10,18 @@ from zoneinfo import ZoneInfo
 
 import polars as pl
 from ditto_apps.registry.fresh_runtime import create_fresh_runtime
+from ditto_apps.scripts.data_kd_stock_correction import apply_dataset, scan_dataset
+from ditto_data.config.data_store import DataStoreSettings
+from ditto_data.di.capital import CapitalProvider
+from ditto_data.ingestion.ingestion_log_store import IngestionLogStore
 from ditto_data.models.metadata import InstrumentRegistration
+from ditto_data.observability.metrics import register_metrics
+from ditto_data.services.capital_store import CapitalStore
 from ditto_data.storage.metadata.instrument.instrument_writer import InstrumentWriter
+from ditto_data.storage.runtime.ingestion.ingestion_log_reader import IngestionLogReader
+from ditto_data.storage.runtime.ingestion.ingestion_log_writer import IngestionLogWriter
 from ditto_platform.foundation import (
+    FileLockManager,
     OnDuplicate,
     ParquetStore,
     SQLiteClient,
@@ -147,6 +156,58 @@ def _seed_retained_charts(client: SQLiteClient, state_root: Path) -> None:
             payload=frame,
             created_at=datetime(2026, 5, 21, 9, tzinfo=UTC),
         )
+
+
+def _seed_corrected_capital(client: SQLiteClient, state: Path) -> None:
+    """Real writers and correction feed the browser profile; twelve descending facts."""
+    days = [
+        date.fromisoformat("2026-" + day)
+        for day in (
+            "10-19",
+            "10-20",
+            "10-21",
+            "10-22",
+            "10-23",
+            "10-26",
+            "10-27",
+            "10-28",
+            "10-29",
+            "10-30",
+            "11-02",
+            "11-03",
+        )
+    ]
+    register_metrics()
+    provider = CapitalProvider()
+    settings = DataStoreSettings(data_root=state)
+    store = CapitalStore(
+        provider.capital_readers(client, settings),
+        provider.capital_writers(client, settings, FileLockManager(state / "locks")),
+    )
+    known = [day + timedelta(days=1) for day in days]
+    store.save_margin_trading(
+        pl.DataFrame(
+            {
+                "instrument_id": [STOCK_ID] * len(days),
+                "trade_date": days,
+                "knowledge_date": known,
+                "effective_from": known,
+                "effective_to": [None] * len(days),
+                "margin_buy_balance": [100_000_000.0 + i for i in range(len(days))],
+            }
+        )
+    )
+    apply_dataset(
+        "margin_trading",
+        scan_dataset("margin_trading", conn=client.conn, data_root=state),
+        conn=client.conn,
+        data_root=state,
+        capital_store=store,
+        log_store=IngestionLogStore(
+            IngestionLogReader(client), IngestionLogWriter(client)
+        ),
+        run_at=datetime(2026, 11, 7, tzinfo=UTC),
+    )
 
 
 def _seed(root: Path) -> None:
@@ -332,7 +393,12 @@ def _seed(root: Path) -> None:
         payload=pl.DataFrame({"trade_date": calendar_days, "is_open": calendar_open}),
         created_at=datetime(2026, 5, 21, 9, tzinfo=UTC),
     )
+    client.executemany(
+        "INSERT OR IGNORE INTO trading_calendar (trade_date, is_open) VALUES (?, 1)",
+        [[day] for day in sorted(open_days)],
+    )
     client.commit()
+    _seed_corrected_capital(client, root / "state")
     pool.close_all()
 
 

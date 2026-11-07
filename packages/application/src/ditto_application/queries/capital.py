@@ -306,7 +306,7 @@ class CapitalQueryFacade:
         *,
         allow_experimental_data: bool = False,
     ) -> pl.DataFrame:
-        """逐标的两融窗口读（pit_asof=as_of_date，缺省窗口终点）."""
+        """逐标的两融窗口读（显式 as_of_date 为 PIT，None 为最新观察）."""
         self._assert_dataset_allowed(
             _MARGIN_TRADING_DATASET,
             allow_experimental_data=allow_experimental_data,

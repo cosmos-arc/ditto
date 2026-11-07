@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import date
+from pathlib import Path
 
 import polars as pl
 import pytest
@@ -38,9 +39,9 @@ def in_memory_db() -> SQLiteClient:
 
 
 @pytest.fixture
-def reader(in_memory_db: SQLiteClient) -> MarginTradingReader:
+def reader(in_memory_db: SQLiteClient, tmp_path: Path) -> MarginTradingReader:
     """创建 MarginTradingReader 实例."""
-    return MarginTradingReader(MARGIN_TRADING_SPEC, in_memory_db)
+    return MarginTradingReader(MARGIN_TRADING_SPEC, in_memory_db, tmp_path)
 
 
 def test_get_returns_data(

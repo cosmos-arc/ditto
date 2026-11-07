@@ -3,11 +3,14 @@
 from __future__ import annotations
 
 from datetime import date
+from pathlib import Path
+from typing import Any
 
 import polars as pl
 from ditto_platform.foundation import OnDuplicate, logger
 
 from ditto_data.services.deps import CapitalReaders, CapitalWriters
+from ditto_data.storage.capital.version_eligibility import publish_correction
 
 
 class CapitalStore:
@@ -41,6 +44,11 @@ class CapitalStore:
             "CapitalStore initialized",
             event="capital_store_init_complete",
         )
+
+    @staticmethod
+    def publish_correction(data_root: Path, report: dict[str, Any]) -> str:
+        """发布普通查询共用的版本资格，并保留完整影响证据。"""
+        return publish_correction(data_root, report)
 
     # Query methods (get_*)
 
@@ -377,7 +385,7 @@ class CapitalStore:
         逐标的北向持股窗口读（vol 股/ratio %；latest_available 收敛）.
 
         知识日分段 2024-08-19（日频制度段=次交易日；季度段=官方披露
-        发布日，#693；观察锚/伪造锚旧行作为多版本共存）——修订收敛到
+        发布日，#693；已撤销的旧锚由 reader 排除）——有效修订收敛到
         最新 knowledge_date 版本（镜像 get_moneyflow；#628 词表），否则
         存量多版本会向窗口读重复行。2024-08-19 后非季末无行＝制度性
         缺席不是缺口。
@@ -412,7 +420,9 @@ class CapitalStore:
         return (
             frame
             if frame.is_empty()
-            else frame.sort(["trade_date", "market_type", "rank"])
+            else frame.sort("knowledge_date")
+            .unique(subset=["instrument_id", "trade_date", "market_type"], keep="last")
+            .sort(["trade_date", "market_type", "rank"])
         )
 
     def get_top10_holders(

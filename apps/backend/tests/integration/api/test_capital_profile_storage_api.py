@@ -1,9 +1,9 @@
 """个股资金画像：真实存储→facade→HTTP 契约（#658 批次3）.
 
-真实 ParquetStore（moneyflow/top_list/top_inst）＋margin 窗口语义 stub
-（margin 读取器收敛语义另有单测）→ CapitalStore → CapitalQueryFacade →
+真实 ParquetStore（moneyflow/top_list/top_inst）＋真实 SQLite 两融→
+CapitalStore → CapitalQueryFacade →
 CapitalProfileQueryFacade → POST /capital/profile。锁定：四块联看、
-latest_available/pit_asof 语义标注、margin 迟发待补（尾部 5 交易日窗）、
+latest_available 语义标注、margin 迟发待补（尾部 5 交易日窗）、
 无事件合法空、experimental 门。
 """
 
@@ -27,13 +27,16 @@ from ditto_apps.models.capital import MarginBlock
 from ditto_data.observability.metrics import register_metrics
 from ditto_data.services.capital_store import CapitalStore
 from ditto_data.services.deps import CapitalReaders, CapitalWriters
+from ditto_data.storage.capital.margin.margin_trading_reader import MarginTradingReader
+from ditto_data.storage.capital.margin.margin_trading_writer import MarginTradingWriter
 from ditto_data.storage.capital.moneyflow import (
     MoneyflowReader,
     MoneyflowWriter,
 )
+from ditto_data.storage.capital.specs import MARGIN_TRADING_SPEC
 from ditto_data.storage.capital.top_inst import TopInstReader, TopInstWriter
 from ditto_data.storage.capital.top_list import TopListReader, TopListWriter
-from ditto_platform.foundation import ParquetStore
+from ditto_platform.foundation import ParquetStore, SQLiteClient, SQLitePool
 from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
 
@@ -99,19 +102,26 @@ def _make_store(tmp_path: Path, mode: str) -> CapitalStore:
     margin_rows = {
         "instrument_id": [1, 1],
         "trade_date": ["2026-10-26", "2026-10-27"],
-        "knowledge_date": ["2026-10-27", "2026-10-28"],
-        "effective_from": ["2026-10-27", "2026-10-28"],
+        "knowledge_date": ["2026-10-27", "2026-11-02"],
+        "effective_from": ["2026-10-27", "2026-11-02"],
         "effective_to": [None, None],
         "margin_buy_balance": [None, 1.0],
         "short_sell_balance": [2.0, None],
         "margin_buy_amount": [None, 3.0],
         "short_sell_volume": [None, 4],
     }
-    margin_reader = MagicMock()
-    margin_reader.get_range.return_value = pl.DataFrame(
-        margin_rows,
-        schema_overrides={"effective_to": pl.String},
+    client = SQLiteClient(SQLitePool(str(tmp_path / "margin.sqlite")))
+    client.conn.executescript("""
+        CREATE TABLE margin_trading (
+            instrument_id INTEGER, trade_date TEXT, knowledge_date TEXT,
+            effective_from TEXT, effective_to TEXT, margin_buy_balance REAL,
+            short_sell_balance REAL, margin_buy_amount REAL, short_sell_volume REAL,
+            PRIMARY KEY (instrument_id, trade_date, effective_from));
+    """)
+    MarginTradingWriter(MARGIN_TRADING_SPEC, client).write(
+        pl.DataFrame(margin_rows, schema_overrides={"effective_to": pl.String})
     )
+    margin_reader = MarginTradingReader(MARGIN_TRADING_SPEC, client, tmp_path)
     readers = CapitalReaders(
         margin_trading=margin_reader,
         pledge_ratio=MagicMock(),
@@ -188,15 +198,15 @@ async def test_capital_profile_four_blocks(tmp_path: Path, mode: str) -> None:
             assert inst["sell"] is None
             margin_rows_out = payload["margin_trading"]["rows"]
             # null 余额月末行原样传播(correctness F1),不再 500 或填 0。
-            assert margin_rows_out[0]["margin_buy_balance"] is None
-            assert margin_rows_out[1]["margin_buy_balance"] == 1.0
-            assert payload["margin_trading"]["read_semantics"] == "pit_asof"
+            assert margin_rows_out[1]["margin_buy_balance"] is None
+            assert margin_rows_out[0]["margin_buy_balance"] == 1.0
+            assert payload["margin_trading"]["read_semantics"] == "latest_available"
             assert payload["moneyflow"]["sources"] == ["tushare"]
         else:
             for block in ("moneyflow", "top_list", "top_inst"):
                 assert payload[block]["rows"] == []
                 assert payload[block]["latest_trade_date"] is None
-        # margin 末端 10-27(stub 恒有行),观察窗尾 10-28 待补(today 钳制排除未来)。
+        # SQLite 迟发到窗口外仍可读；末端 10-27，窗尾 10-28 待补。
         assert payload["margin_trading"]["pending_trade_dates"] == ["2026-10-28"]
         for block in ("moneyflow", "top_list", "top_inst", "margin_trading"):
             assert payload[block]["data_coverage"]["dataset"] == (
@@ -304,4 +314,4 @@ def test_margin_block_model_defaults() -> None:
     block = MarginBlock()
     assert block.freshness_promise.startswith("交易所于下一交易日开市前")
     assert block.pending_trade_dates == []
-    assert block.read_semantics == "pit_asof"
+    assert block.read_semantics == "latest_available"

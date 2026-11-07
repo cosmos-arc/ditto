@@ -188,9 +188,11 @@ class TestScanMargin:
         ]
         assert all(i.status == "correct" for i in impacts)
 
-    def test_expected_version_present_needs_no_action(self, tmp_path: Path) -> None:
+    def test_expected_version_still_requires_old_eligibility_revocation(
+        self, tmp_path: Path
+    ) -> None:
         conn = _make_db(tmp_path)
-        # 周五行已有 B1 校准版本（kd=周一）：旧版本保留、无需再写。
+        # 正确版本已存在仍须撤销旧错误版本资格。
         _insert_margin(
             conn, instrument_id=1, trade_date="2024-11-01", knowledge_date="2024-11-02"
         )
@@ -200,7 +202,7 @@ class TestScanMargin:
         conn.commit()
 
         impacts = scan_dataset("margin_trading", conn=conn, data_root=tmp_path)
-        assert impacts == []
+        assert len(impacts) == 1
 
 
 class TestScanHkHold:
@@ -473,7 +475,7 @@ class TestCorrectnessRegressions:
         conn.execute(
             "INSERT INTO provider_snapshots VALUES "
             "('s1', 'hk_hold', 'tushare', '2026-12-16', '2026-12-31', 3000, "
-            "'2027-01-15T08:00:00+00:00')"
+            "'2027-02-01T08:00:00+00:00')"
         )
         conn.commit()
         _write_hk_hold_year(
@@ -494,7 +496,10 @@ class TestCorrectnessRegressions:
             ],
         )
         impacts = scan_dataset("hk_hold", conn=conn, data_root=tmp_path)
-        assert impacts == []
+        assert len(impacts) == 1
+        assert impacts[0].old_knowledge_date == "2027-01-01"
+        # 标的2的首锚不能提前证明标的1的可知时间。
+        assert impacts[0].new_knowledge_date == "2027-02-01"
 
     def test_official_anchor_impacts_until_coverage(self, tmp_path: Path) -> None:
         """#693：表内季为偏离版本追加官方锚行；official 覆盖不足前持续 impact."""
@@ -558,7 +563,7 @@ class TestCorrectnessRegressions:
             ],
         )
         impacts = scan_dataset("hk_hold", conn=conn, data_root=tmp_path)
-        assert impacts == []
+        assert len(impacts) == 2
 
     def test_quarterly_anchor_on_trade_date_unanchorable(
         self,

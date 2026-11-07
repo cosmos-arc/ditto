@@ -10,7 +10,7 @@ export function parseInstrumentSearch(search: Record<string, unknown>): Instrume
 	const direction = optionalString(search["drillDirection"]);
 	return {
 		selectionRunId: optionalString(search["selectionRunId"]),
-		tab: tab === "chart" || tab === "fundamentals" || tab === "technical" ? tab : "overview",
+		tab: tab === "capital" || tab === "chart" || tab === "fundamentals" || tab === "technical" ? tab : "overview",
 		// 回测买卖点下钻上下文（跨域跳转合同）：对象=focusDate 标的、原因=runId、知识时间=drillAsOf。
 		drill:
 			optionalString(search["focusDate"]) !== undefined

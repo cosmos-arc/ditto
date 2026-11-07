@@ -41,7 +41,8 @@ def test_invalid_parameters_are_not_retried(respx_mock, fake_time, message):
     assert route.call_count == 1
 
 
-def test_page_retry_does_not_restart_completed_pages(respx_mock, fake_time):
+@pytest.mark.parametrize("failure", ["server_error", "disconnect"])
+def test_page_retry_does_not_restart_completed_pages(respx_mock, fake_time, failure):
     offsets = []
 
     def respond(request):
@@ -49,6 +50,10 @@ def test_page_retry_does_not_restart_completed_pages(respx_mock, fake_time):
         offset = params["offset"]
         offsets.append(offset)
         if offset == 100 and offsets.count(100) == 1:
+            if failure == "disconnect":
+                raise httpx.RemoteProtocolError(
+                    "Server disconnected without sending a response.", request=request
+                )
             return httpx.Response(503)
         rows = [[str(i)] for i in range(offset, min(offset + params["limit"], 101))]
         return httpx.Response(
@@ -60,6 +65,37 @@ def test_page_retry_does_not_restart_completed_pages(respx_mock, fake_time):
     result = client.query("fina_indicator", "ts_code", ts_code="600519.SH")
     assert result.height == 101
     assert offsets == [0, 100, 100, 101]
+
+
+def test_disconnected_page_exhaustion_rejects_partial_result(respx_mock, fake_time):
+    offsets = []
+
+    def respond(request):
+        params = orjson.loads(request.content)["params"]
+        offset = params["offset"]
+        offsets.append(offset)
+        if offset == 100:
+            raise httpx.RemoteProtocolError(
+                "Server disconnected without sending a response.", request=request
+            )
+        return httpx.Response(
+            200,
+            json={
+                "code": 0,
+                "data": {
+                    "fields": ["ts_code"],
+                    "items": [[str(i)] for i in range(100)],
+                },
+            },
+        )
+
+    respx_mock.post("http://api.tushare.pro").mock(side_effect=respond)
+    with pytest.raises(tenacity.RetryError) as failure:
+        TushareClient(settings=_settings()).query(
+            "fina_indicator", "ts_code", ts_code="600519.SH"
+        )
+    assert isinstance(failure.value.last_attempt.exception(), SourceFetchError)
+    assert offsets == [0, 100, 100, 100]
 
 
 @pytest.mark.parametrize(

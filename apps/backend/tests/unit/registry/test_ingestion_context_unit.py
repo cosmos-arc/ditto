@@ -37,6 +37,8 @@ def test_create_ingestion_bundle_wires_runtime_ports(mocker) -> None:
     lifecycle = MagicMock(spec=PartitionLifecycleReader)
     source_registry = SourceRegistry()
     services = {
+        ingestion_context.ProviderSnapshotQuery: MagicMock(),
+        ingestion_context.DataStoreSettings: MagicMock(),
         ingestion_context.MetadataService: MagicMock(),
         ingestion_context.MarketService: MagicMock(),
         ingestion_context.MarketWriteService: MagicMock(),

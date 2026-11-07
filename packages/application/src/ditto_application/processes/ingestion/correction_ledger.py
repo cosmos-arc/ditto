@@ -8,9 +8,17 @@ apps-service-isolation），而纠正原因行须构造 IngestionLog 模型—�
 
 from __future__ import annotations
 
-from typing import Protocol
+from pathlib import Path
+from typing import Any, Protocol
 
 from ditto_data.models.ingestion import IngestionLog, IngestionStatus
+from ditto_data.services.capital_store import CapitalStore
+
+
+def publish_capital_correction(data_root: Path, report: dict[str, Any]) -> str:
+    """发布纠偏影响与资格清单，供 SQLite/Parquet 同一规则消费。"""
+    return CapitalStore.publish_correction(data_root, report)
+
 
 __all__ = [
     "CORRECTION_LEDGER_SOURCE",

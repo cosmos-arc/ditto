@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
+from datetime import date
+
 from ditto_data.ingestion.ingestion_log_store import (
     IngestionLogStore,
 )
 from ditto_data.models.ingestion import (
     IngestionFailedErrorGroup,
+    IngestionLog,
     IngestionResult,
     RetryResult,
     classify_ingestion_failure,
@@ -15,6 +18,7 @@ from ditto_data.models.ingestion import (
 from ditto_platform.foundation import logger
 
 from ditto_application.catalog_freshness import snapshot_repair_priority
+from ditto_application.exceptions import AppProcessError
 from ditto_application.processes.ingestion.result_handler import count_results
 from ditto_application.processes.ingestion.source_selection import (
     IngestionCoordinatorLike,
@@ -22,6 +26,10 @@ from ditto_application.processes.ingestion.source_selection import (
 
 # 与 reader/store 既有默认一致的尝试上限（既有签名保持原字面量）。
 DEFAULT_MAX_ATTEMPTS = 3
+
+
+class RepairIncomplete(AppProcessError):
+    """必需范围仍有未解账本项；Prefect 必须记录 Failed。"""
 
 
 class RetryManager:
@@ -320,6 +328,82 @@ class RetryManager:
         )
 
         return retry_result
+
+    def require_resolved(
+        self,
+        *,
+        datasets: list[str] | None = None,
+        start: str | None = None,
+        end: str | None = None,
+        accepted_gaps: list[dict[str, str]] | None = None,
+    ) -> dict[str, object]:
+        """完整最终账本判定；范围外与明确接受的历史项留账，不以重试资格豁免。"""
+        if start is not None:
+            date.fromisoformat(start)
+        if end is not None:
+            date.fromisoformat(end)
+        if start and end and start > end:
+            raise AppProcessError("repair scope start must not follow end")
+        accepted = accepted_gaps or []
+        _validate_accepted_gaps(accepted)
+        # SQLite LIMIT -1 is unbounded: the diagnostic sample is never a decision input.
+        logs = self._ingestion_log_store.list_unresolved_failures(
+            source=self._source, limit=-1
+        )
+        blocking: list[IngestionLog] = []
+        accepted_count = 0
+        outside_scope = 0
+        for log in logs:
+            required = not (
+                (datasets is not None and log.dataset not in datasets)
+                or (start is not None and log.trade_date < start)
+                or (end is not None and log.trade_date > end)
+            )
+            if required:
+                # 历史例外不能豁免显式研究所依赖的必需输入。
+                blocking.append(log)
+            elif any(
+                gap["dataset"] == log.dataset
+                and gap["source"] == log.source
+                and gap["start"] <= log.trade_date <= gap["end"]
+                and gap["error_code"] == log.error_code
+                for gap in accepted
+            ):
+                accepted_count += 1
+            else:
+                outside_scope += 1
+        result: dict[str, object] = {
+            "required_unresolved": len(blocking),
+            "accepted": accepted_count,
+            "outside_scope": outside_scope,
+            "datasets": datasets,
+            "start": start,
+            "end": end,
+        }
+        logger.info("修补最终必需范围", event="repair_required_final", **result)
+        if blocking:
+            raise RepairIncomplete(
+                f"{self._source}: {len(blocking)} required unresolved failures; "
+                + f"first={blocking[0].dataset}/{blocking[0].trade_date}"
+                + f"/{blocking[0].error_code}"
+            )
+        return result
+
+
+def _validate_accepted_gaps(accepted: list[dict[str, str]]) -> None:
+    """历史例外需要范围及人工裁决证据。"""
+    for gap in accepted:
+        if not all(
+            gap.get(k)
+            for k in ("dataset", "source", "start", "end", "error_code", "evidence")
+        ):
+            raise AppProcessError(
+                "accepted gap needs exact scope, error and decision evidence"
+            )
+        date.fromisoformat(gap["start"])
+        date.fromisoformat(gap["end"])
+        if gap["start"] > gap["end"]:
+            raise AppProcessError("invalid accepted gap interval")
 
 
 __all__ = ["DEFAULT_MAX_ATTEMPTS", "RetryManager"]

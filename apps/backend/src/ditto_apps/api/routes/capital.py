@@ -225,7 +225,7 @@ async def post_capital_profile(
     个股资金画像（#658 批次3：四数据集同标的同窗口联看）.
 
     必需块 moneyflow/top_list/top_inst（latest_available＝库内现存行，无 PIT
-    过滤）；可选块 margin_trading（pit_asof=end_date）带实际末端与待补列表
+    过滤）；可选块 margin_trading（latest_available）带实际末端与待补列表
     （迟发数据按 09:15 披露承诺，待补窗=尾部 5 个交易日，与夜修滑窗对齐）。
     每块携带 data_coverage 覆盖限制快照；无事件/空窗是合法状态，不冒充失败。
 
@@ -288,7 +288,7 @@ async def post_capital_profile(
             data_coverage=_coverage(coverage_facade, "margin_trading"),
         ),
     )
-    # 混合语义响应(margin=pit_asof、其余=latest_available):信封不声明
+    # 各块均为最新观察；严格历史读取继续使用显式 as_of 接口。信封不声明
     # 单一语义,各块 read_semantics 自持(correctness F4)。
     return APIResponse(data=profile)
 

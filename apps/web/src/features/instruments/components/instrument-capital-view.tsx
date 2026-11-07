@@ -106,6 +106,15 @@ export function InstrumentCapitalView({ id }: { readonly id: string }) {
 					className="flex flex-wrap items-center gap-4 border-b border-(--color-border-subtle) p-3 text-xs text-(--color-foreground-tertiary)"
 					data-info-unit="capital-profile-toolbar"
 				>
+					<span>最新观察 · 业务日期窗内现在已知的数据</span>
+					<button
+						type="button"
+						disabled={query.isFetching || !includeExperimental || notApplicable}
+						onClick={() => void query.refetch()}
+						className="rounded-md border border-(--color-border-primary) px-2 py-1 disabled:opacity-50"
+					>
+						刷新资金画像
+					</button>
 					<label className="flex items-center gap-1.5">
 						<input
 							type="checkbox"
@@ -232,7 +241,7 @@ export function InstrumentCapitalView({ id }: { readonly id: string }) {
 							) : (
 								<table className="mt-1.5 w-full">
 									<tbody>
-										{profile.margin_trading.rows.slice(-10).map((row) => (
+										{profile.margin_trading.rows.slice(0, 10).map((row) => (
 											<tr key={row.trade_date} className="font-data">
 												<td className="pr-3 text-(--color-foreground-tertiary)">{row.trade_date}</td>
 												<td className="text-right">

@@ -16,20 +16,28 @@ from ditto_application.processes.ingestion.coordinator_factory import (
 from ditto_application.processes.ingestion.evidence_commit import (
     IngestionEvidenceCommitter,
 )
+from ditto_application.processes.ingestion.published_refresh import (
+    PublishedRefreshProcess,
+)
 from ditto_application.processes.ingestion.retry_manager import RetryManager
 from ditto_application.processes.ingestion.sparse_recovery import (
     SparsePITReattestationProcess,
 )
 from ditto_application.queries.metadata import MetadataQueryFacade
+from ditto_application.queries.provider_snapshot import ProviderSnapshotQuery
 from ditto_data.catalog import (
     DataCatalogReader,
     DataCatalogWriter,
 )
 from ditto_data.catalog.provider_payload import ProviderPayloadWriter
 from ditto_data.catalog.source_snapshot import ProviderSnapshotReader
+from ditto_data.config.data_store import DataStoreSettings
 from ditto_data.ingestion.ingestion_cursor_store import IngestionCursorStore
 from ditto_data.ingestion.ingestion_log_store import IngestionLogStore
 from ditto_data.ingestion.partition_state import PartitionLifecycleReader
+from ditto_data.ingestion.published_refresh_evidence import (
+    PublishedRefreshEvidenceStore,
+)
 from ditto_data.services.capital_store import CapitalStore
 from ditto_data.services.fundamental_store import FundamentalStore
 from ditto_data.services.macro_service import MacroService
@@ -38,6 +46,7 @@ from ditto_data.services.market_write_service import MarketWriteService
 from ditto_data.services.metadata_service import MetadataService
 from ditto_data.services.source_accessor import SourceAccessor
 from ditto_data.sources.exchange_transformers import ExchangeTransformers
+from ditto_data.sources.fred.indicators import FRED_INDICATORS
 from ditto_data.sources.fuyao.source import FuyaoDailyKDumpFetcher
 from ditto_data.sources.protocols import MarketFetcher
 from ditto_data.sources.reference_config import EtfReferenceConfigSource
@@ -188,6 +197,19 @@ def create_ingestion_bundle(
 
             yield IngestionBundle(
                 coordinator=coordinator,
+                published_refresh=PublishedRefreshProcess(
+                    coordinator=coordinator,
+                    calendar=metadata_facade,
+                    snapshots=snapshot_reader,
+                    lifecycle=lifecycle_reader,
+                    audit=container.get(ProviderSnapshotQuery),
+                    fred_series=tuple(FRED_INDICATORS),
+                    evidence=PublishedRefreshEvidenceStore(
+                        container.get(DataStoreSettings).data_root
+                        / "operations"
+                        / "published-refresh"
+                    ),
+                ),
                 backfill_manager=backfill_manager,
                 retry_manager=retry_manager,
                 sparse_pit_reattestation=sparse_pit_reattestation,

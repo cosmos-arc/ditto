@@ -167,8 +167,10 @@ def test_apps_registry_composition_allowances_are_owned_and_reasoned() -> None:
         {
             "ditto_data.catalog",
             "ditto_data.catalog.provider_payload",
+            "ditto_data.config.data_store",
             "ditto_data.catalog.source_snapshot",
             "ditto_data.ingestion.partition_state",
+            "ditto_data.ingestion.published_refresh_evidence",
             "ditto_data.ingestion.ingestion_cursor_store",
             "ditto_data.ingestion.ingestion_log_store",
             "ditto_data.services.capital_store",
@@ -180,6 +182,7 @@ def test_apps_registry_composition_allowances_are_owned_and_reasoned() -> None:
             "ditto_data.services.source_accessor",
             "ditto_data.sources.exchange_transformers",
             "ditto_data.sources.fuyao.source",
+            "ditto_data.sources.fred.indicators",
             "ditto_data.sources.protocols",
             "ditto_data.sources.reference_config",
             "ditto_data.sources.registry",
