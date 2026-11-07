@@ -22,7 +22,7 @@ from ditto_data.catalog import (
 )
 from ditto_data.catalog.snapshot_completion import (
     canonical_write_identity,
-    snapshot_completed,
+    completed_snapshots,
 )
 from ditto_data.catalog.source_snapshot import (
     ProviderSnapshot,
@@ -212,15 +212,14 @@ def completed_covering_snapshot(
         lifecycle, dataset=dataset, source=source, trade_date=trade_date
     ):
         return None
-    completed = tuple(
-        snapshot
-        for snapshot in covering_snapshots(
+    completed = completed_snapshots(
+        covering_snapshots(
             snapshots,
             dataset=dataset,
             source=source,
             trade_date=trade_date,
-        )
-        if snapshot_completed(snapshot, lifecycle)
+        ),
+        lifecycle,
     )
     return max(
         completed,
@@ -272,7 +271,7 @@ def source_coverage_evidence(
             sla_hours=sla_hours,
         )
     snapshot = max(
-        (item for item in covering if snapshot_completed(item, lifecycle)),
+        completed_snapshots(covering, lifecycle),
         key=lambda item: (observed_at(item), item.snapshot_id),
         default=None,
     )
@@ -306,13 +305,13 @@ def visible_completed_snapshots(
     不会因观察时间晚于信号日而被排除(与旧分区日期语义一致)。
     """
     visible: list[ProviderSnapshot] = []
-    for snapshot in snapshots.list_snapshots(dataset_id=dataset, source=source):
+    for snapshot in completed_snapshots(
+        snapshots.list_snapshots(dataset_id=dataset, source=source), lifecycle
+    ):
         request_end = _parse_iso_date(snapshot.request_end)
         if request_end is None or request_end > cutoff:
             continue
         if not snapshot.observations:
-            continue
-        if not snapshot_completed(snapshot, lifecycle):
             continue
         visible.append(snapshot)
     active: dict[tuple[str, str, str], ProviderSnapshot] = {}
@@ -387,12 +386,10 @@ def observed_snapshot_ids(
     """Snapshot identities completed and already observed by the cutoff."""
     identities: set[str] = set()
     for dataset_id in dataset_ids:
-        for snapshot in snapshots.list_snapshots(dataset_id=dataset_id):
-            if (
-                snapshot.created_at <= knowledge_cutoff
-                and snapshot.payload_retained
-                and snapshot_completed(snapshot, lifecycle)
-            ):
+        for snapshot in completed_snapshots(
+            snapshots.list_snapshots(dataset_id=dataset_id), lifecycle
+        ):
+            if snapshot.created_at <= knowledge_cutoff and snapshot.payload_retained:
                 identities.add(snapshot.snapshot_id)
     return tuple(sorted(identities))
 
@@ -454,12 +451,14 @@ class PersistedIngestionEvidenceVerifier:
             return False
         return any(
             canonical_write_identity(snapshot) == (checksum, row_count)
-            and snapshot_completed(snapshot, self.lifecycle)
-            for snapshot in covering_snapshots(
-                self.snapshots,
-                dataset=dataset,
-                source=source,
-                trade_date=trade_date,
+            for snapshot in completed_snapshots(
+                covering_snapshots(
+                    self.snapshots,
+                    dataset=dataset,
+                    source=source,
+                    trade_date=trade_date,
+                ),
+                self.lifecycle,
             )
         )
 

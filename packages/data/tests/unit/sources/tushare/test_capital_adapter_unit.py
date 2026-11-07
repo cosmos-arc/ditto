@@ -794,3 +794,12 @@ class TestRightsBoundaryCodeMatching:
             CapitalCorporateTushareAdapter(_client=client).fetch_corporate_actions(
                 ann_date="20260930"
             )
+
+
+@pytest.mark.parametrize("code", ["", "000300.SH,000905.SH"])
+def test_index_weight_rejects_market_or_multi_index_request(code, mocker):
+    client = mocker.Mock()
+    adapter = CapitalTushareAdapter(_client=client)
+    with pytest.raises(ValueError, match="single index_code"):
+        adapter.fetch_index_weight(code, trade_date="20261105")
+    client.query.assert_not_called()

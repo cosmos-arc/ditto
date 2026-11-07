@@ -1,0 +1,90 @@
+{
+  "measured_at": "2026-11-07T02:01:16.092380+00:00",
+  "checks": [
+    {
+      "partition": "2013.parquet",
+      "before_rows": 107575,
+      "after_rows": 107575,
+      "missing_or_changed": 0
+    },
+    {
+      "partition": "2014.parquet",
+      "before_rows": 246704,
+      "after_rows": 246704,
+      "missing_or_changed": 0
+    },
+    {
+      "partition": "2015.parquet",
+      "before_rows": 347423,
+      "after_rows": 347423,
+      "missing_or_changed": 0
+    },
+    {
+      "partition": "2016.parquet",
+      "before_rows": 518457,
+      "after_rows": 518457,
+      "missing_or_changed": 0
+    },
+    {
+      "partition": "2017.parquet",
+      "before_rows": 667719,
+      "after_rows": 667719,
+      "missing_or_changed": 0
+    },
+    {
+      "partition": "2018.parquet",
+      "before_rows": 656903,
+      "after_rows": 656903,
+      "missing_or_changed": 0
+    },
+    {
+      "partition": "2019.parquet",
+      "before_rows": 805924,
+      "after_rows": 805924,
+      "missing_or_changed": 0
+    },
+    {
+      "partition": "2020.parquet",
+      "before_rows": 1178234,
+      "after_rows": 1178234,
+      "missing_or_changed": 0
+    },
+    {
+      "partition": "2021.parquet",
+      "before_rows": 1628761,
+      "after_rows": 1628761,
+      "missing_or_changed": 0
+    },
+    {
+      "partition": "2022.parquet",
+      "before_rows": 2108937,
+      "after_rows": 2108937,
+      "missing_or_changed": 0
+    },
+    {
+      "partition": "2023.parquet",
+      "before_rows": 2718567,
+      "after_rows": 2718567,
+      "missing_or_changed": 0
+    },
+    {
+      "partition": "2024.parquet",
+      "before_rows": 2471870,
+      "after_rows": 2471870,
+      "missing_or_changed": 0
+    },
+    {
+      "partition": "2025.parquet",
+      "before_rows": 3076819,
+      "after_rows": 3076819,
+      "missing_or_changed": 0
+    },
+    {
+      "partition": "2026.parquet",
+      "before_rows": 1868563,
+      "after_rows": 1999891,
+      "missing_or_changed": 0
+    }
+  ],
+  "failures": []
+}

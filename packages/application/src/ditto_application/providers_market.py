@@ -302,9 +302,11 @@ class AppMarketQueryProvider(Provider):
     def fundamental_query_facade(
         self,
         fundamental_store: FundamentalStore,
+        snapshots: ProviderSnapshotReader,
+        lifecycle: PartitionLifecycleReader,
     ) -> FundamentalQueryFacade:
         """基本面查询 facade — 隐藏 CQRS 端口类型."""
-        return FundamentalQueryFacade(fundamental_store=fundamental_store)
+        return FundamentalQueryFacade(fundamental_store, snapshots, lifecycle)
 
     @provide
     def dataset_coverage_query_facade(self) -> DatasetCoverageQueryFacade:

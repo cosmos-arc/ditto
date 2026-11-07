@@ -1,0 +1,234 @@
+{
+  "measured_at": "2026-11-06T06:46:52.808796+00:00",
+  "evidence_sha256": "db8583184a645db387c8f1a62214db22381154f76aeefb4fcb6854647112225c",
+  "before": [
+    {
+      "instrument": {
+        "instrument_id": 2001576,
+        "ticker": "159908",
+        "name": "博时创业板ETF",
+        "display_name": null,
+        "exchange": "SZSE",
+        "board": null,
+        "asset_class": "etf",
+        "list_date": "2018-12-10",
+        "delist_date": null,
+        "is_st": 0,
+        "is_active": 1,
+        "created_at": "2026-10-03 14:56:07",
+        "updated_at": null
+      },
+      "mappings": [
+        {
+          "instrument_id": 2001576,
+          "source": "tushare",
+          "source_ticker": "159908.SZ",
+          "effective_from": "2018-12-10",
+          "effective_to": null,
+          "is_primary": 1,
+          "created_at": "2026-10-03 14:56:07"
+        }
+      ]
+    },
+    {
+      "instrument": {
+        "instrument_id": 2001521,
+        "ticker": "510680",
+        "name": "万家上证50ETF",
+        "display_name": null,
+        "exchange": "SSE",
+        "board": null,
+        "asset_class": "etf",
+        "list_date": "2015-12-15",
+        "delist_date": null,
+        "is_st": 0,
+        "is_active": 1,
+        "created_at": "2026-10-03 14:56:07",
+        "updated_at": null
+      },
+      "mappings": [
+        {
+          "instrument_id": 2001521,
+          "source": "tushare",
+          "source_ticker": "510680.SH",
+          "effective_from": "2015-12-15",
+          "effective_to": null,
+          "is_primary": 1,
+          "created_at": "2026-10-03 14:56:07"
+        }
+      ]
+    },
+    {
+      "instrument": {
+        "instrument_id": 2001503,
+        "ticker": "511220",
+        "name": "海富通上证城投债ETF",
+        "display_name": null,
+        "exchange": "SSE",
+        "board": null,
+        "asset_class": "etf",
+        "list_date": "2019-04-24",
+        "delist_date": null,
+        "is_st": 0,
+        "is_active": 1,
+        "created_at": "2026-10-03 14:56:07",
+        "updated_at": null
+      },
+      "mappings": [
+        {
+          "instrument_id": 2001503,
+          "source": "tushare",
+          "source_ticker": "511220.SH",
+          "effective_from": "2019-04-24",
+          "effective_to": null,
+          "is_primary": 1,
+          "created_at": "2026-10-03 14:56:07"
+        }
+      ]
+    },
+    {
+      "instrument": {
+        "instrument_id": 2001494,
+        "ticker": "512990",
+        "name": "华夏MSCI中国A股国际通ETF",
+        "display_name": null,
+        "exchange": "SSE",
+        "board": null,
+        "asset_class": "etf",
+        "list_date": "2018-09-17",
+        "delist_date": null,
+        "is_st": 0,
+        "is_active": 1,
+        "created_at": "2026-10-03 14:56:07",
+        "updated_at": null
+      },
+      "mappings": [
+        {
+          "instrument_id": 2001494,
+          "source": "tushare",
+          "source_ticker": "512990.SH",
+          "effective_from": "2018-09-17",
+          "effective_to": null,
+          "is_primary": 1,
+          "created_at": "2026-10-03 14:56:07"
+        }
+      ]
+    }
+  ],
+  "after": [
+    {
+      "instrument": {
+        "instrument_id": 2001576,
+        "ticker": "159908",
+        "name": "博时创业板ETF",
+        "display_name": null,
+        "exchange": "SZSE",
+        "board": null,
+        "asset_class": "etf",
+        "list_date": "2011-07-13",
+        "delist_date": null,
+        "is_st": 0,
+        "is_active": 1,
+        "created_at": "2026-10-03 14:56:07",
+        "updated_at": null
+      },
+      "mappings": [
+        {
+          "instrument_id": 2001576,
+          "source": "tushare",
+          "source_ticker": "159908.SZ",
+          "effective_from": "2011-07-13",
+          "effective_to": null,
+          "is_primary": 1,
+          "created_at": "2026-10-03 14:56:07"
+        }
+      ]
+    },
+    {
+      "instrument": {
+        "instrument_id": 2001521,
+        "ticker": "510680",
+        "name": "万家上证50ETF",
+        "display_name": null,
+        "exchange": "SSE",
+        "board": null,
+        "asset_class": "etf",
+        "list_date": "2013-12-02",
+        "delist_date": null,
+        "is_st": 0,
+        "is_active": 1,
+        "created_at": "2026-10-03 14:56:07",
+        "updated_at": null
+      },
+      "mappings": [
+        {
+          "instrument_id": 2001521,
+          "source": "tushare",
+          "source_ticker": "510680.SH",
+          "effective_from": "2013-12-02",
+          "effective_to": null,
+          "is_primary": 1,
+          "created_at": "2026-10-03 14:56:07"
+        }
+      ]
+    },
+    {
+      "instrument": {
+        "instrument_id": 2001503,
+        "ticker": "511220",
+        "name": "海富通上证城投债ETF",
+        "display_name": null,
+        "exchange": "SSE",
+        "board": null,
+        "asset_class": "etf",
+        "list_date": "2014-12-16",
+        "delist_date": null,
+        "is_st": 0,
+        "is_active": 1,
+        "created_at": "2026-10-03 14:56:07",
+        "updated_at": null
+      },
+      "mappings": [
+        {
+          "instrument_id": 2001503,
+          "source": "tushare",
+          "source_ticker": "511220.SH",
+          "effective_from": "2014-12-16",
+          "effective_to": null,
+          "is_primary": 1,
+          "created_at": "2026-10-03 14:56:07"
+        }
+      ]
+    },
+    {
+      "instrument": {
+        "instrument_id": 2001494,
+        "ticker": "512990",
+        "name": "华夏MSCI中国A股国际通ETF",
+        "display_name": null,
+        "exchange": "SSE",
+        "board": null,
+        "asset_class": "etf",
+        "list_date": "2015-03-25",
+        "delist_date": null,
+        "is_st": 0,
+        "is_active": 1,
+        "created_at": "2026-10-03 14:56:07",
+        "updated_at": null
+      },
+      "mappings": [
+        {
+          "instrument_id": 2001494,
+          "source": "tushare",
+          "source_ticker": "512990.SH",
+          "effective_from": "2015-03-25",
+          "effective_to": null,
+          "is_primary": 1,
+          "created_at": "2026-10-03 14:56:07"
+        }
+      ]
+    }
+  ],
+  "boundary": "Exactly four listing dates and their sole same-code mapping starts corrected from primary disclosure. Raw provider fund_holder evidence unchanged. Conversion dates do not define first listing or historical mandate continuity.",
+  "source_evidence_sha256_raw": "db8583184a645db387c8f1a62214db22381154f76aeefb4fcb6854647112225c"
+}

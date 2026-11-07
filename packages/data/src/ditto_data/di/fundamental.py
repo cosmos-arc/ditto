@@ -54,6 +54,7 @@ from ditto_data.storage.fundamental.fund_portfolio import (
     FundPortfolioReader,
     FundPortfolioWriter,
 )
+from ditto_data.storage.fundamental.fund_portfolio.identity import FundIdentityStore
 from ditto_data.storage.fundamental.specs import (
     BALANCE_SHEET_SPEC,
     CASH_FLOW_SPEC,
@@ -138,11 +139,13 @@ class FundamentalProvider(Provider):
         self,
         read_ports: FundamentalReaders,
         write_ports: FundamentalWriters,
+        sqlite_client: SQLiteClient,
     ) -> FundamentalStore:
         """Fundamental domain unified service（写入锁已下沉 writer 层）."""
         return FundamentalStore(
             read_ports=read_ports,
             write_ports=write_ports,
+            fund_identities=FundIdentityStore(sqlite_client),
         )
 
 
@@ -195,16 +198,17 @@ def _fina_indicator_parquet_store(
 def _fund_portfolio_parquet_store(
     settings: DataStoreSettings, *, file_lock: FileLockManager | None = None
 ) -> ParquetStore:
-    """基金持仓行以 (基金, 报告期, 持仓代码, 公告日) 为自然键."""
+    """Fund holder code is independent of the optional tradable instrument ID."""
+    # ponytail: per-fund writes rewrite years; shard if measured batch cost grows.
     return ParquetStore(
         settings.data_root,
         key_columns=(
-            "instrument_id",
+            "source_ticker",
             "report_date",
             "holding_symbol",
             "knowledge_date",
         ),
         date_column="report_date",
-        instrument_column="instrument_id",
+        instrument_column="source_ticker",
         file_lock=file_lock,
     )

@@ -1,0 +1,94 @@
+{
+  "measured_at": "2026-11-07T01:59:54.308332+00:00",
+  "start": "2026-10-01",
+  "end": "2026-11-05",
+  "batch_attempts": 9767,
+  "batch_attempted_holders": 9762,
+  "pilot_holders": 2,
+  "failed_attempts": [
+    {
+      "fund_code": "001585.OF",
+      "status": "failed",
+      "rows": null,
+      "error": "UNKNOWN_ERROR",
+      "message": "未知错误: parquet: File out of specification: The page header reported the wrong page size",
+      "measured_at": "2026-11-06T21:27:13.207971+00:00",
+      "chunk": 1,
+      "attempt": 1,
+      "tail_later_complete": true
+    },
+    {
+      "fund_code": "001766.OF",
+      "status": "failed",
+      "rows": null,
+      "error": "UNKNOWN_ERROR",
+      "message": "未知错误: parquet: File out of specification: The page header reported the wrong page size",
+      "measured_at": "2026-11-06T21:41:01.175733+00:00",
+      "chunk": 10,
+      "attempt": 1,
+      "tail_later_complete": true
+    },
+    {
+      "fund_code": "000496.OF",
+      "status": "failed",
+      "rows": null,
+      "error": "FETCH_ERROR",
+      "message": "获取数据失败: Failed to fetch fund_portfolio from Tushare",
+      "measured_at": "2026-11-06T21:06:39.587073+00:00",
+      "chunk": 7,
+      "attempt": 1,
+      "tail_later_complete": true
+    },
+    {
+      "fund_code": "001312.OF",
+      "status": "failed",
+      "rows": null,
+      "error": "UNKNOWN_ERROR",
+      "message": "未知错误: parquet: File out of specification: The page header reported the wrong page size",
+      "measured_at": "2026-11-06T21:26:55.070813+00:00",
+      "chunk": 8,
+      "attempt": 1,
+      "tail_later_complete": true
+    },
+    {
+      "fund_code": "008597.OF",
+      "status": "failed",
+      "rows": null,
+      "error": "FETCH_ERROR",
+      "message": "获取数据失败: Failed to fetch fund_portfolio from Tushare",
+      "measured_at": "2026-11-07T00:06:29.172695+00:00",
+      "chunk": 8,
+      "attempt": 1,
+      "tail_later_complete": true
+    }
+  ],
+  "same_code_native_errors": [
+    {
+      "measured_at": "2026-11-06T21:06:39.566997+00:00",
+      "api": "fund_portfolio",
+      "params": {
+        "ts_code": "000496.OF",
+        "start_date": "20260630",
+        "end_date": "20261105"
+      },
+      "errors": [
+        "RemoteProtocolError: Server disconnected without sending a response.",
+        "RemoteProtocolError: Server disconnected without sending a response."
+      ]
+    },
+    {
+      "measured_at": "2026-11-07T00:06:29.169381+00:00",
+      "api": "fund_portfolio",
+      "params": {
+        "ts_code": "008597.OF",
+        "start_date": "20260630",
+        "end_date": "20261105"
+      },
+      "errors": [
+        "RemoteProtocolError: Server disconnected without sending a response.",
+        "RemoteProtocolError: Server disconnected without sending a response."
+      ]
+    }
+  ],
+  "boundary": "Failed batch attempts remain recorded even after a successful bounded retry. Native source errors are linked by exact code and native bounds, retaining their timestamps; write errors are separate from source errors. Completion is independently verified against checkpoints and payloads."
+}

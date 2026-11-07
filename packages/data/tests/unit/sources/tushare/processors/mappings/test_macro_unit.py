@@ -48,10 +48,10 @@ class TestTushareMacroIndicatorMetadata:
         assert cpi.frequency == "monthly"
 
     def test_pmi_indicator_uses_provider_native_field_names(self) -> None:
-        """The NBS PMI surface exposes uppercase provider codes and MONTH."""
+        """Tushare cn_pmi uses lowercase fields (official doc 325)."""
         pmi = TUSHARE_MACRO_INDICATORS["CN_PMI_MFG"]
-        assert pmi.field == "PMI010000"
-        assert pmi.date_field == "MONTH"
+        assert pmi.field == "pmi010000"
+        assert pmi.date_field == "month"
 
     def test_money_supply_indicators_share_same_api(self) -> None:
         """M0, M1, M2 indicators share the same API."""

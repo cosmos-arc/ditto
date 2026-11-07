@@ -316,7 +316,7 @@ class MacroTushareAdapter(BaseTushareAdapter):
             results: list[pl.DataFrame] = []
             for indicator in indicators:
                 if indicator.field not in response.columns:
-                    continue
+                    raise ValueError(f"missing macro field: {indicator.field}")
                 df = self._transform_to_schema(
                     response,
                     indicator,

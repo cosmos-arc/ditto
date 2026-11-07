@@ -7,6 +7,7 @@ from datetime import UTC, datetime
 from ditto_data.catalog.contracts import DataAssetRef
 from ditto_data.catalog.snapshot_completion import (
     checkpoint_matches_snapshot,
+    completed_snapshots,
     snapshot_completed,
 )
 from ditto_data.catalog.source_snapshot import ProviderSnapshot, ProviderSnapshotDraft
@@ -107,6 +108,7 @@ class _Lifecycle:
         dataset_id: str | None = None,
         source: str | None = None,
     ) -> tuple[PartitionCheckpoint, ...]:
+        self.complete_reads += 1
         return tuple(
             checkpoint
             for checkpoint in self._checkpoints
@@ -119,6 +121,7 @@ class _Lifecycle:
 
     def __init__(self, *checkpoints: PartitionCheckpoint) -> None:
         self._checkpoints = checkpoints
+        self.complete_reads = 0
 
 
 class TestSnapshotCompleted:
@@ -159,3 +162,20 @@ class TestSnapshotCompleted:
 
         assert snapshot_completed(v1, lifecycle)
         assert not snapshot_completed(v2, lifecycle)
+
+    def test_batch_reads_once_and_observes_new_completion_without_stale_cache(
+        self,
+    ) -> None:
+        v1 = _snapshot("market.stock_daily.v1")
+        v2 = _snapshot("market.stock_daily.v2")
+        lifecycle = _Lifecycle(
+            self._complete(v1, evidence_id=v1.snapshot_id),
+            self._complete(v1, evidence_id=v2.snapshot_id),
+        )
+
+        assert completed_snapshots((v2, v1), lifecycle) == (v1,)
+        assert lifecycle.complete_reads == 1
+
+        lifecycle._checkpoints += (self._complete(v2, evidence_id=v2.snapshot_id),)
+        assert completed_snapshots((v2, v1), lifecycle) == (v2, v1)
+        assert lifecycle.complete_reads == 2

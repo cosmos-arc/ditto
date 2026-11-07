@@ -1,0 +1,628 @@
+{
+  "native_rows": 32893,
+  "codes": 32893,
+  "extra": [
+    {
+      "ts_code": "589450.SH",
+      "name": "兴业上证科创板人工智能ETF",
+      "market": "E",
+      "status": "L",
+      "found_date": "20261104",
+      "due_date": null,
+      "list_date": null,
+      "delist_date": null
+    },
+    {
+      "ts_code": "508038.SH",
+      "name": "国金嘉泽新能源REIT",
+      "market": "E",
+      "status": "L",
+      "found_date": "20261103",
+      "due_date": null,
+      "list_date": null,
+      "delist_date": null
+    },
+    {
+      "ts_code": "508610.SH",
+      "name": "广发新城吾悦REIT",
+      "market": "E",
+      "status": "L",
+      "found_date": "20261103",
+      "due_date": null,
+      "list_date": null,
+      "delist_date": null
+    },
+    {
+      "ts_code": "561970.SH",
+      "name": "博时中证稀有金属主题ETF",
+      "market": "E",
+      "status": "L",
+      "found_date": "20261102",
+      "due_date": null,
+      "list_date": null,
+      "delist_date": null
+    },
+    {
+      "ts_code": "158905.SZ",
+      "name": "工银瑞信红利主动管理ETF",
+      "market": "E",
+      "status": "L",
+      "found_date": "20261104",
+      "due_date": null,
+      "list_date": null,
+      "delist_date": null
+    },
+    {
+      "ts_code": "158907.SZ",
+      "name": "国泰鑫汇均衡收益主动管理ETF",
+      "market": "E",
+      "status": "L",
+      "found_date": "20261104",
+      "due_date": null,
+      "list_date": null,
+      "delist_date": null
+    },
+    {
+      "ts_code": "158908.SZ",
+      "name": "天弘均衡量化选股主动管理ETF",
+      "market": "E",
+      "status": "L",
+      "found_date": "20261030",
+      "due_date": null,
+      "list_date": null,
+      "delist_date": null
+    },
+    {
+      "ts_code": "581020.SH",
+      "name": "华安均衡慧选主动管理ETF",
+      "market": "E",
+      "status": "L",
+      "found_date": "20261102",
+      "due_date": null,
+      "list_date": null,
+      "delist_date": null
+    },
+    {
+      "ts_code": "581060.SH",
+      "name": "永赢景气均衡主动管理ETF",
+      "market": "E",
+      "status": "L",
+      "found_date": "20261103",
+      "due_date": null,
+      "list_date": null,
+      "delist_date": null
+    },
+    {
+      "ts_code": "581010.SH",
+      "name": "汇添富均衡策略智选主动管理ETF",
+      "market": "E",
+      "status": "L",
+      "found_date": "20261030",
+      "due_date": null,
+      "list_date": null,
+      "delist_date": null
+    },
+    {
+      "ts_code": "581080.SH",
+      "name": "招商价值智选主动管理ETF",
+      "market": "E",
+      "status": "L",
+      "found_date": "20261030",
+      "due_date": null,
+      "list_date": null,
+      "delist_date": null
+    },
+    {
+      "ts_code": "028567.OF",
+      "name": "泰信全景智选量化选股混合-A",
+      "market": "O",
+      "status": "L",
+      "found_date": "20261103",
+      "due_date": null,
+      "list_date": null,
+      "delist_date": null
+    },
+    {
+      "ts_code": "028568.OF",
+      "name": "泰信全景智选量化选股混合-C",
+      "market": "O",
+      "status": "L",
+      "found_date": "20261103",
+      "due_date": null,
+      "list_date": null,
+      "delist_date": null
+    },
+    {
+      "ts_code": "029044.OF",
+      "name": "工银瑞信中证港股通医疗主题ETF联接-C",
+      "market": "O",
+      "status": "L",
+      "found_date": "20261103",
+      "due_date": null,
+      "list_date": null,
+      "delist_date": null
+    },
+    {
+      "ts_code": "029137.OF",
+      "name": "富国北交所精选3个月持有期混合-A",
+      "market": "O",
+      "status": "L",
+      "found_date": "20261103",
+      "due_date": null,
+      "list_date": null,
+      "delist_date": null
+    },
+    {
+      "ts_code": "029138.OF",
+      "name": "富国北交所精选3个月持有期混合-C",
+      "market": "O",
+      "status": "L",
+      "found_date": "20261103",
+      "due_date": null,
+      "list_date": null,
+      "delist_date": null
+    },
+    {
+      "ts_code": "029043.OF",
+      "name": "工银瑞信中证港股通医疗主题ETF联接-A",
+      "market": "O",
+      "status": "L",
+      "found_date": "20261103",
+      "due_date": null,
+      "list_date": null,
+      "delist_date": null
+    },
+    {
+      "ts_code": "029229.OF",
+      "name": "鹏安安瑞63个月封闭式债券",
+      "market": "O",
+      "status": "L",
+      "found_date": "20261103",
+      "due_date": null,
+      "list_date": null,
+      "delist_date": null
+    },
+    {
+      "ts_code": "027307.OF",
+      "name": "富荣中证500指数量化增强-A",
+      "market": "O",
+      "status": "L",
+      "found_date": "20261103",
+      "due_date": null,
+      "list_date": null,
+      "delist_date": null
+    },
+    {
+      "ts_code": "027308.OF",
+      "name": "富荣中证500指数量化增强-C",
+      "market": "O",
+      "status": "L",
+      "found_date": "20261103",
+      "due_date": null,
+      "list_date": null,
+      "delist_date": null
+    },
+    {
+      "ts_code": "027994.OF",
+      "name": "易方达悦泽6个月持有期混合-A",
+      "market": "O",
+      "status": "L",
+      "found_date": "20261103",
+      "due_date": null,
+      "list_date": null,
+      "delist_date": null
+    },
+    {
+      "ts_code": "027995.OF",
+      "name": "易方达悦泽6个月持有期混合-C",
+      "market": "O",
+      "status": "L",
+      "found_date": "20261103",
+      "due_date": null,
+      "list_date": null,
+      "delist_date": null
+    },
+    {
+      "ts_code": "028694.OF",
+      "name": "汇添富周期精选混合-A",
+      "market": "O",
+      "status": "L",
+      "found_date": "20261103",
+      "due_date": null,
+      "list_date": null,
+      "delist_date": null
+    },
+    {
+      "ts_code": "029062.OF",
+      "name": "大成智选量化选股股票-C",
+      "market": "O",
+      "status": "L",
+      "found_date": "20261103",
+      "due_date": null,
+      "list_date": null,
+      "delist_date": null
+    },
+    {
+      "ts_code": "028695.OF",
+      "name": "汇添富周期精选混合-C",
+      "market": "O",
+      "status": "L",
+      "found_date": "20261103",
+      "due_date": null,
+      "list_date": null,
+      "delist_date": null
+    },
+    {
+      "ts_code": "029061.OF",
+      "name": "大成智选量化选股股票-A",
+      "market": "O",
+      "status": "L",
+      "found_date": "20261103",
+      "due_date": null,
+      "list_date": null,
+      "delist_date": null
+    },
+    {
+      "ts_code": "029283.OF",
+      "name": "德邦数字经济混合-C",
+      "market": "O",
+      "status": "L",
+      "found_date": "20261103",
+      "due_date": null,
+      "list_date": null,
+      "delist_date": null
+    },
+    {
+      "ts_code": "029282.OF",
+      "name": "德邦数字经济混合-A",
+      "market": "O",
+      "status": "L",
+      "found_date": "20261103",
+      "due_date": null,
+      "list_date": null,
+      "delist_date": null
+    },
+    {
+      "ts_code": "028803.OF",
+      "name": "安信稳健多策略三个月持有期混合(FOF)-A",
+      "market": "O",
+      "status": "L",
+      "found_date": "20261030",
+      "due_date": null,
+      "list_date": null,
+      "delist_date": null
+    },
+    {
+      "ts_code": "028804.OF",
+      "name": "安信稳健多策略三个月持有期混合(FOF)-C",
+      "market": "O",
+      "status": "L",
+      "found_date": "20261030",
+      "due_date": null,
+      "list_date": null,
+      "delist_date": null
+    },
+    {
+      "ts_code": "029080.OF",
+      "name": "华泰柏瑞消费机遇混合-A",
+      "market": "O",
+      "status": "L",
+      "found_date": "20261103",
+      "due_date": null,
+      "list_date": null,
+      "delist_date": null
+    },
+    {
+      "ts_code": "029081.OF",
+      "name": "华泰柏瑞消费机遇混合-C",
+      "market": "O",
+      "status": "L",
+      "found_date": "20261103",
+      "due_date": null,
+      "list_date": null,
+      "delist_date": null
+    },
+    {
+      "ts_code": "028331.OF",
+      "name": "广发悦恒多元稳健3个月持有期混合(FOF)-C",
+      "market": "O",
+      "status": "L",
+      "found_date": "20261103",
+      "due_date": null,
+      "list_date": null,
+      "delist_date": null
+    },
+    {
+      "ts_code": "028330.OF",
+      "name": "广发悦恒多元稳健3个月持有期混合(FOF)-A",
+      "market": "O",
+      "status": "L",
+      "found_date": "20261103",
+      "due_date": null,
+      "list_date": null,
+      "delist_date": null
+    },
+    {
+      "ts_code": "028970.OF",
+      "name": "鹏华盈睿稳健6个月持有期混合(FOF)",
+      "market": "O",
+      "status": "L",
+      "found_date": "20261103",
+      "due_date": null,
+      "list_date": null,
+      "delist_date": null
+    },
+    {
+      "ts_code": "029107.OF",
+      "name": "华宝安嘉三个月持有期债券-A",
+      "market": "O",
+      "status": "L",
+      "found_date": "20261103",
+      "due_date": null,
+      "list_date": null,
+      "delist_date": null
+    },
+    {
+      "ts_code": "029108.OF",
+      "name": "华宝安嘉三个月持有期债券-C",
+      "market": "O",
+      "status": "L",
+      "found_date": "20261103",
+      "due_date": null,
+      "list_date": null,
+      "delist_date": null
+    },
+    {
+      "ts_code": "029179.OF",
+      "name": "景顺长城和熙安融三个月持有期混合(FOF)-C",
+      "market": "O",
+      "status": "L",
+      "found_date": "20261103",
+      "due_date": null,
+      "list_date": null,
+      "delist_date": null
+    },
+    {
+      "ts_code": "029178.OF",
+      "name": "景顺长城和熙安融三个月持有期混合(FOF)-A",
+      "market": "O",
+      "status": "L",
+      "found_date": "20261103",
+      "due_date": null,
+      "list_date": null,
+      "delist_date": null
+    },
+    {
+      "ts_code": "029224.OF",
+      "name": "摩根安悦回报债券-A",
+      "market": "O",
+      "status": "L",
+      "found_date": "20261103",
+      "due_date": null,
+      "list_date": null,
+      "delist_date": null
+    },
+    {
+      "ts_code": "029225.OF",
+      "name": "摩根安悦回报债券-C",
+      "market": "O",
+      "status": "L",
+      "found_date": "20261103",
+      "due_date": null,
+      "list_date": null,
+      "delist_date": null
+    },
+    {
+      "ts_code": "027463.OF",
+      "name": "国泰多资产稳健优享3个月持有期混合(FOF)-A",
+      "market": "O",
+      "status": "L",
+      "found_date": "20261103",
+      "due_date": null,
+      "list_date": null,
+      "delist_date": null
+    },
+    {
+      "ts_code": "027464.OF",
+      "name": "国泰多资产稳健优享3个月持有期混合(FOF)-C",
+      "market": "O",
+      "status": "L",
+      "found_date": "20261103",
+      "due_date": null,
+      "list_date": null,
+      "delist_date": null
+    },
+    {
+      "ts_code": "028836.OF",
+      "name": "渤海汇金智增益债券-A",
+      "market": "O",
+      "status": "L",
+      "found_date": "20261103",
+      "due_date": null,
+      "list_date": null,
+      "delist_date": null
+    },
+    {
+      "ts_code": "028837.OF",
+      "name": "渤海汇金智增益债券-C",
+      "market": "O",
+      "status": "L",
+      "found_date": "20261103",
+      "due_date": null,
+      "list_date": null,
+      "delist_date": null
+    },
+    {
+      "ts_code": "029088.OF",
+      "name": "景顺长城标普中国A股红利100ETF联接-A",
+      "market": "O",
+      "status": "L",
+      "found_date": "20261030",
+      "due_date": null,
+      "list_date": null,
+      "delist_date": null
+    },
+    {
+      "ts_code": "029095.OF",
+      "name": "中银北证50成份指数-C",
+      "market": "O",
+      "status": "L",
+      "found_date": "20261103",
+      "due_date": null,
+      "list_date": null,
+      "delist_date": null
+    },
+    {
+      "ts_code": "029089.OF",
+      "name": "景顺长城标普中国A股红利100ETF联接-C",
+      "market": "O",
+      "status": "L",
+      "found_date": "20261030",
+      "due_date": null,
+      "list_date": null,
+      "delist_date": null
+    },
+    {
+      "ts_code": "029094.OF",
+      "name": "中银北证50成份指数-A",
+      "market": "O",
+      "status": "L",
+      "found_date": "20261103",
+      "due_date": null,
+      "list_date": null,
+      "delist_date": null
+    },
+    {
+      "ts_code": "029440.OF",
+      "name": "银华汇泽债券-A",
+      "market": "O",
+      "status": "L",
+      "found_date": "20261103",
+      "due_date": null,
+      "list_date": null,
+      "delist_date": null
+    },
+    {
+      "ts_code": "029441.OF",
+      "name": "银华汇泽债券-C",
+      "market": "O",
+      "status": "L",
+      "found_date": "20261103",
+      "due_date": null,
+      "list_date": null,
+      "delist_date": null
+    },
+    {
+      "ts_code": "029584.OF",
+      "name": "大成国证机器人产业ETF联接-A",
+      "market": "O",
+      "status": "L",
+      "found_date": "20261103",
+      "due_date": null,
+      "list_date": null,
+      "delist_date": null
+    },
+    {
+      "ts_code": "029585.OF",
+      "name": "大成国证机器人产业ETF联接-C",
+      "market": "O",
+      "status": "L",
+      "found_date": "20261103",
+      "due_date": null,
+      "list_date": null,
+      "delist_date": null
+    },
+    {
+      "ts_code": "029720.OF",
+      "name": "银华长丰混合-C",
+      "market": "O",
+      "status": "L",
+      "found_date": "20261105",
+      "due_date": null,
+      "list_date": null,
+      "delist_date": null
+    },
+    {
+      "ts_code": "029725.OF",
+      "name": "华泰柏瑞消费成长灵活配置混合-C",
+      "market": "O",
+      "status": "L",
+      "found_date": "20261106",
+      "due_date": null,
+      "list_date": null,
+      "delist_date": null
+    },
+    {
+      "ts_code": "029728.OF",
+      "name": "永赢丰益债券-C",
+      "market": "O",
+      "status": "L",
+      "found_date": "20261105",
+      "due_date": null,
+      "list_date": null,
+      "delist_date": null
+    },
+    {
+      "ts_code": "029223.OF",
+      "name": "联博汇嘉63个月封闭式债券",
+      "market": "O",
+      "status": "L",
+      "found_date": "20261029",
+      "due_date": null,
+      "list_date": null,
+      "delist_date": null
+    },
+    {
+      "ts_code": "029432.OF",
+      "name": "广发中证卫星产业ETF联接-A",
+      "market": "O",
+      "status": "L",
+      "found_date": null,
+      "due_date": null,
+      "list_date": null,
+      "delist_date": null
+    },
+    {
+      "ts_code": "029433.OF",
+      "name": "广发中证卫星产业ETF联接-C",
+      "market": "O",
+      "status": "L",
+      "found_date": null,
+      "due_date": null,
+      "list_date": null,
+      "delist_date": null
+    },
+    {
+      "ts_code": "029644.OF",
+      "name": "易方达恒旭稳健6个月持有期债券-A",
+      "market": "O",
+      "status": "L",
+      "found_date": null,
+      "due_date": null,
+      "list_date": null,
+      "delist_date": null
+    },
+    {
+      "ts_code": "029645.OF",
+      "name": "易方达恒旭稳健6个月持有期债券-C",
+      "market": "O",
+      "status": "L",
+      "found_date": null,
+      "due_date": null,
+      "list_date": null,
+      "delist_date": null
+    }
+  ],
+  "missing": [
+    "027690.OF",
+    "027691.OF",
+    "029004.OF",
+    "029005.OF",
+    "029154.OF",
+    "029155.OF",
+    "029307.OF",
+    "029308.OF",
+    "029512.OF",
+    "029513.OF"
+  ]
+}

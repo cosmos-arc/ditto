@@ -1,0 +1,13 @@
+{
+  "source_ticker": "000001.OF",
+  "report_date": "2025-12-31",
+  "announcement_date": "2026-03-31",
+  "report_type": "annual",
+  "document_form": "body",
+  "document_stock_count": 132,
+  "document_sha256": "6f3fd5cf18facae2c457ce364c91d343d01a5dcca9c1d2033d31179d31ce116d",
+  "source_url": "https://www.chinaamc.com.cn/upload/resources/file/2026/03/31/8b7d455376d9421b805f62a6d27cbffd.pdf",
+  "title": "华夏成长证券投资基金2025年年度报告",
+  "holdings_sha256": "ea6309b778733750d3233456da160875a029b28bb4a198285bf14fb4ad2835c0",
+  "evidence_note": "2026-11-06: original title, fund code, period and publication date checked; all 122 provider stock codes, share counts and CNY values match original; original stock table has 132 rows; 10 original rows absent from this announcement-date group, so this is a matched subset; ratios not mapped to NAV weights; disclosed stocks only, not full assets."
+}

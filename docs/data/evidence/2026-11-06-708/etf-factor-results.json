@@ -1,0 +1,4531 @@
+[
+  {
+    "request": {
+      "source_ticker": "158011.SZ",
+      "start": "2026-09-30",
+      "end": "2026-09-30",
+      "missing_dates": [
+        "2026-09-30"
+      ]
+    },
+    "measured_at": "2026-11-06T03:52:30.788003+00:00",
+    "result": {
+      "dataset": "fund_adj",
+      "trade_date": "2026-09-30",
+      "status": "success",
+      "row_count": 1,
+      "checksum": "77134eef86db96c360e0514a84c2e971",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-09-30",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 1,
+        "checksum": "77134eef86db96c360e0514a84c2e971"
+      }
+    }
+  },
+  {
+    "request": {
+      "source_ticker": "158013.SZ",
+      "start": "2026-09-30",
+      "end": "2026-09-30",
+      "missing_dates": [
+        "2026-09-30"
+      ]
+    },
+    "measured_at": "2026-11-06T03:52:33.017665+00:00",
+    "result": {
+      "dataset": "fund_adj",
+      "trade_date": "2026-09-30",
+      "status": "success",
+      "row_count": 1,
+      "checksum": "c36877ba506eb595579132d7a415e32d",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-09-30",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 1,
+        "checksum": "c36877ba506eb595579132d7a415e32d"
+      }
+    }
+  },
+  {
+    "request": {
+      "source_ticker": "158022.SZ",
+      "start": "2026-09-30",
+      "end": "2026-09-30",
+      "missing_dates": [
+        "2026-09-30"
+      ]
+    },
+    "measured_at": "2026-11-06T03:52:35.419528+00:00",
+    "result": {
+      "dataset": "fund_adj",
+      "trade_date": "2026-09-30",
+      "status": "success",
+      "row_count": 1,
+      "checksum": "12a6116a199e3e3aa4f6b2f59f10cdb7",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-09-30",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 1,
+        "checksum": "12a6116a199e3e3aa4f6b2f59f10cdb7"
+      }
+    }
+  },
+  {
+    "request": {
+      "source_ticker": "158023.SZ",
+      "start": "2026-09-30",
+      "end": "2026-09-30",
+      "missing_dates": [
+        "2026-09-30"
+      ]
+    },
+    "measured_at": "2026-11-06T03:52:37.463459+00:00",
+    "result": {
+      "dataset": "fund_adj",
+      "trade_date": "2026-09-30",
+      "status": "success",
+      "row_count": 1,
+      "checksum": "43861ecdc0fb498751aca29cac1ea1ba",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-09-30",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 1,
+        "checksum": "43861ecdc0fb498751aca29cac1ea1ba"
+      }
+    }
+  },
+  {
+    "request": {
+      "source_ticker": "158025.SZ",
+      "start": "2026-09-30",
+      "end": "2026-09-30",
+      "missing_dates": [
+        "2026-09-30"
+      ]
+    },
+    "measured_at": "2026-11-06T03:52:40.293464+00:00",
+    "result": {
+      "dataset": "fund_adj",
+      "trade_date": "2026-09-30",
+      "status": "success",
+      "row_count": 1,
+      "checksum": "030a2ee86077befe61de1b5a55754f49",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-09-30",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 1,
+        "checksum": "030a2ee86077befe61de1b5a55754f49"
+      }
+    }
+  },
+  {
+    "request": {
+      "source_ticker": "158026.SZ",
+      "start": "2026-09-30",
+      "end": "2026-09-30",
+      "missing_dates": [
+        "2026-09-30"
+      ]
+    },
+    "measured_at": "2026-11-06T03:52:42.425124+00:00",
+    "result": {
+      "dataset": "fund_adj",
+      "trade_date": "2026-09-30",
+      "status": "success",
+      "row_count": 1,
+      "checksum": "92067c8e111e27c292f48411b1642dc2",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-09-30",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 1,
+        "checksum": "92067c8e111e27c292f48411b1642dc2"
+      }
+    }
+  },
+  {
+    "request": {
+      "source_ticker": "158028.SZ",
+      "start": "2026-09-30",
+      "end": "2026-09-30",
+      "missing_dates": [
+        "2026-09-30"
+      ]
+    },
+    "measured_at": "2026-11-06T03:52:44.570623+00:00",
+    "result": {
+      "dataset": "fund_adj",
+      "trade_date": "2026-09-30",
+      "status": "success",
+      "row_count": 1,
+      "checksum": "4b636acd499446fa1c5d324f28c523af",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-09-30",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 1,
+        "checksum": "4b636acd499446fa1c5d324f28c523af"
+      }
+    }
+  },
+  {
+    "request": {
+      "source_ticker": "158031.SZ",
+      "start": "2026-09-30",
+      "end": "2026-09-30",
+      "missing_dates": [
+        "2026-09-30"
+      ]
+    },
+    "measured_at": "2026-11-06T03:52:47.950235+00:00",
+    "result": {
+      "dataset": "fund_adj",
+      "trade_date": "2026-09-30",
+      "status": "success",
+      "row_count": 1,
+      "checksum": "c30eb1aed4cd5f43b0ab62e12793b94f",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-09-30",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 1,
+        "checksum": "c30eb1aed4cd5f43b0ab62e12793b94f"
+      }
+    }
+  },
+  {
+    "request": {
+      "source_ticker": "158032.SZ",
+      "start": "2026-09-30",
+      "end": "2026-09-30",
+      "missing_dates": [
+        "2026-09-30"
+      ]
+    },
+    "measured_at": "2026-11-06T03:52:50.358603+00:00",
+    "result": {
+      "dataset": "fund_adj",
+      "trade_date": "2026-09-30",
+      "status": "success",
+      "row_count": 1,
+      "checksum": "c569988950e768d9da41101600c408d6",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-09-30",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 1,
+        "checksum": "c569988950e768d9da41101600c408d6"
+      }
+    }
+  },
+  {
+    "request": {
+      "source_ticker": "158038.SZ",
+      "start": "2026-09-30",
+      "end": "2026-09-30",
+      "missing_dates": [
+        "2026-09-30"
+      ]
+    },
+    "measured_at": "2026-11-06T03:52:52.482413+00:00",
+    "result": {
+      "dataset": "fund_adj",
+      "trade_date": "2026-09-30",
+      "status": "success",
+      "row_count": 1,
+      "checksum": "a90306fb5a893b4abbf7edbff4a3e5ae",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-09-30",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 1,
+        "checksum": "a90306fb5a893b4abbf7edbff4a3e5ae"
+      }
+    }
+  },
+  {
+    "request": {
+      "source_ticker": "158039.SZ",
+      "start": "2026-09-30",
+      "end": "2026-09-30",
+      "missing_dates": [
+        "2026-09-30"
+      ]
+    },
+    "measured_at": "2026-11-06T03:52:54.556786+00:00",
+    "result": {
+      "dataset": "fund_adj",
+      "trade_date": "2026-09-30",
+      "status": "success",
+      "row_count": 1,
+      "checksum": "c2b02139da99aa487604fc298231dd7b",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-09-30",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 1,
+        "checksum": "c2b02139da99aa487604fc298231dd7b"
+      }
+    }
+  },
+  {
+    "request": {
+      "source_ticker": "158041.SZ",
+      "start": "2026-09-30",
+      "end": "2026-09-30",
+      "missing_dates": [
+        "2026-09-30"
+      ]
+    },
+    "measured_at": "2026-11-06T03:52:56.982935+00:00",
+    "result": {
+      "dataset": "fund_adj",
+      "trade_date": "2026-09-30",
+      "status": "success",
+      "row_count": 1,
+      "checksum": "0fb23c818faa04f3e691520394381e47",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-09-30",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 1,
+        "checksum": "0fb23c818faa04f3e691520394381e47"
+      }
+    }
+  },
+  {
+    "request": {
+      "source_ticker": "158042.SZ",
+      "start": "2026-09-30",
+      "end": "2026-09-30",
+      "missing_dates": [
+        "2026-09-30"
+      ]
+    },
+    "measured_at": "2026-11-06T03:52:59.727662+00:00",
+    "result": {
+      "dataset": "fund_adj",
+      "trade_date": "2026-09-30",
+      "status": "success",
+      "row_count": 1,
+      "checksum": "650af50a0ba761aa36a6aad24b41ad77",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-09-30",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 1,
+        "checksum": "650af50a0ba761aa36a6aad24b41ad77"
+      }
+    }
+  },
+  {
+    "request": {
+      "source_ticker": "158049.SZ",
+      "start": "2026-09-30",
+      "end": "2026-09-30",
+      "missing_dates": [
+        "2026-09-30"
+      ]
+    },
+    "measured_at": "2026-11-06T03:53:02.013347+00:00",
+    "result": {
+      "dataset": "fund_adj",
+      "trade_date": "2026-09-30",
+      "status": "success",
+      "row_count": 1,
+      "checksum": "6d36fcf2562bb2a526f341d77249816b",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-09-30",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 1,
+        "checksum": "6d36fcf2562bb2a526f341d77249816b"
+      }
+    }
+  },
+  {
+    "request": {
+      "source_ticker": "158050.SZ",
+      "start": "2026-09-30",
+      "end": "2026-09-30",
+      "missing_dates": [
+        "2026-09-30"
+      ]
+    },
+    "measured_at": "2026-11-06T03:53:04.277149+00:00",
+    "result": {
+      "dataset": "fund_adj",
+      "trade_date": "2026-09-30",
+      "status": "success",
+      "row_count": 1,
+      "checksum": "52b55b173db2b3a023fe2089d20b803f",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-09-30",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 1,
+        "checksum": "52b55b173db2b3a023fe2089d20b803f"
+      }
+    }
+  },
+  {
+    "request": {
+      "source_ticker": "158053.SZ",
+      "start": "2026-09-30",
+      "end": "2026-09-30",
+      "missing_dates": [
+        "2026-09-30"
+      ]
+    },
+    "measured_at": "2026-11-06T03:53:06.685088+00:00",
+    "result": {
+      "dataset": "fund_adj",
+      "trade_date": "2026-09-30",
+      "status": "success",
+      "row_count": 1,
+      "checksum": "e2322e720e5eaef063ac3db56f6de6e9",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-09-30",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 1,
+        "checksum": "e2322e720e5eaef063ac3db56f6de6e9"
+      }
+    }
+  },
+  {
+    "request": {
+      "source_ticker": "158056.SZ",
+      "start": "2026-09-30",
+      "end": "2026-09-30",
+      "missing_dates": [
+        "2026-09-30"
+      ]
+    },
+    "measured_at": "2026-11-06T03:53:08.712421+00:00",
+    "result": {
+      "dataset": "fund_adj",
+      "trade_date": "2026-09-30",
+      "status": "success",
+      "row_count": 1,
+      "checksum": "5d5a88ff6e22160a8cf221d255c5df32",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-09-30",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 1,
+        "checksum": "5d5a88ff6e22160a8cf221d255c5df32"
+      }
+    }
+  },
+  {
+    "request": {
+      "source_ticker": "158057.SZ",
+      "start": "2026-09-30",
+      "end": "2026-09-30",
+      "missing_dates": [
+        "2026-09-30"
+      ]
+    },
+    "measured_at": "2026-11-06T03:53:11.206737+00:00",
+    "result": {
+      "dataset": "fund_adj",
+      "trade_date": "2026-09-30",
+      "status": "success",
+      "row_count": 1,
+      "checksum": "072a957bcaa2bf1dd6a9b9a87ec0a0e0",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-09-30",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 1,
+        "checksum": "072a957bcaa2bf1dd6a9b9a87ec0a0e0"
+      }
+    }
+  },
+  {
+    "request": {
+      "source_ticker": "158059.SZ",
+      "start": "2026-09-30",
+      "end": "2026-09-30",
+      "missing_dates": [
+        "2026-09-30"
+      ]
+    },
+    "measured_at": "2026-11-06T03:53:13.406789+00:00",
+    "result": {
+      "dataset": "fund_adj",
+      "trade_date": "2026-09-30",
+      "status": "success",
+      "row_count": 1,
+      "checksum": "157287a5a9692593b3dddc08c7595319",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-09-30",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 1,
+        "checksum": "157287a5a9692593b3dddc08c7595319"
+      }
+    }
+  },
+  {
+    "request": {
+      "source_ticker": "158061.SZ",
+      "start": "2026-09-30",
+      "end": "2026-09-30",
+      "missing_dates": [
+        "2026-09-30"
+      ]
+    },
+    "measured_at": "2026-11-06T03:53:15.433769+00:00",
+    "result": {
+      "dataset": "fund_adj",
+      "trade_date": "2026-09-30",
+      "status": "success",
+      "row_count": 1,
+      "checksum": "2e90b01f6e43813819fa3ca7dbd14f2b",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-09-30",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 1,
+        "checksum": "2e90b01f6e43813819fa3ca7dbd14f2b"
+      }
+    }
+  },
+  {
+    "request": {
+      "source_ticker": "158063.SZ",
+      "start": "2026-09-30",
+      "end": "2026-09-30",
+      "missing_dates": [
+        "2026-09-30"
+      ]
+    },
+    "measured_at": "2026-11-06T03:53:17.484423+00:00",
+    "result": {
+      "dataset": "fund_adj",
+      "trade_date": "2026-09-30",
+      "status": "success",
+      "row_count": 1,
+      "checksum": "d9c6b1045dbced6c87b5bfbe1a3bb799",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-09-30",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 1,
+        "checksum": "d9c6b1045dbced6c87b5bfbe1a3bb799"
+      }
+    }
+  },
+  {
+    "request": {
+      "source_ticker": "159025.SZ",
+      "start": "2026-09-30",
+      "end": "2026-09-30",
+      "missing_dates": [
+        "2026-09-30"
+      ]
+    },
+    "measured_at": "2026-11-06T03:53:19.869171+00:00",
+    "result": {
+      "dataset": "fund_adj",
+      "trade_date": "2026-09-30",
+      "status": "success",
+      "row_count": 1,
+      "checksum": "4ac28a675b8af69fd198e8b7a7902cb4",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-09-30",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 1,
+        "checksum": "4ac28a675b8af69fd198e8b7a7902cb4"
+      }
+    }
+  },
+  {
+    "request": {
+      "source_ticker": "160119.SZ",
+      "start": "2026-09-30",
+      "end": "2026-09-30",
+      "missing_dates": [
+        "2026-09-30"
+      ]
+    },
+    "measured_at": "2026-11-06T05:17:07.415384+00:00",
+    "result": {
+      "dataset": "fund_adj",
+      "trade_date": "2026-09-30",
+      "status": "failed",
+      "row_count": null,
+      "checksum": null,
+      "message": "未知错误: source_ticker 160119.SZ is not in the etf_basic universe; fund_adj only accepts ETF instruments (#513)",
+      "error": "UNKNOWN_ERROR",
+      "snapshot_evidence": null,
+      "quality_evidence": null
+    }
+  },
+  {
+    "request": {
+      "source_ticker": "160615.SZ",
+      "start": "2026-09-30",
+      "end": "2026-09-30",
+      "missing_dates": [
+        "2026-09-30"
+      ]
+    },
+    "measured_at": "2026-11-06T05:17:07.422359+00:00",
+    "result": {
+      "dataset": "fund_adj",
+      "trade_date": "2026-09-30",
+      "status": "failed",
+      "row_count": null,
+      "checksum": null,
+      "message": "未知错误: source_ticker 160615.SZ is not in the etf_basic universe; fund_adj only accepts ETF instruments (#513)",
+      "error": "UNKNOWN_ERROR",
+      "snapshot_evidence": null,
+      "quality_evidence": null
+    }
+  },
+  {
+    "request": {
+      "source_ticker": "160706.SZ",
+      "start": "2026-09-30",
+      "end": "2026-09-30",
+      "missing_dates": [
+        "2026-09-30"
+      ]
+    },
+    "measured_at": "2026-11-06T05:17:07.430094+00:00",
+    "result": {
+      "dataset": "fund_adj",
+      "trade_date": "2026-09-30",
+      "status": "failed",
+      "row_count": null,
+      "checksum": null,
+      "message": "未知错误: source_ticker 160706.SZ is not in the etf_basic universe; fund_adj only accepts ETF instruments (#513)",
+      "error": "UNKNOWN_ERROR",
+      "snapshot_evidence": null,
+      "quality_evidence": null
+    }
+  },
+  {
+    "request": {
+      "source_ticker": "161121.SZ",
+      "start": "2026-09-30",
+      "end": "2026-09-30",
+      "missing_dates": [
+        "2026-09-30"
+      ]
+    },
+    "measured_at": "2026-11-06T05:17:07.432788+00:00",
+    "result": {
+      "dataset": "fund_adj",
+      "trade_date": "2026-09-30",
+      "status": "failed",
+      "row_count": null,
+      "checksum": null,
+      "message": "未知错误: source_ticker 161121.SZ is not in the etf_basic universe; fund_adj only accepts ETF instruments (#513)",
+      "error": "UNKNOWN_ERROR",
+      "snapshot_evidence": null,
+      "quality_evidence": null
+    }
+  },
+  {
+    "request": {
+      "source_ticker": "161130.SZ",
+      "start": "2026-09-30",
+      "end": "2026-09-30",
+      "missing_dates": [
+        "2026-09-30"
+      ]
+    },
+    "measured_at": "2026-11-06T05:17:07.434286+00:00",
+    "result": {
+      "dataset": "fund_adj",
+      "trade_date": "2026-09-30",
+      "status": "failed",
+      "row_count": null,
+      "checksum": null,
+      "message": "未知错误: source_ticker 161130.SZ is not in the etf_basic universe; fund_adj only accepts ETF instruments (#513)",
+      "error": "UNKNOWN_ERROR",
+      "snapshot_evidence": null,
+      "quality_evidence": null
+    }
+  },
+  {
+    "request": {
+      "source_ticker": "162412.SZ",
+      "start": "2026-09-30",
+      "end": "2026-09-30",
+      "missing_dates": [
+        "2026-09-30"
+      ]
+    },
+    "measured_at": "2026-11-06T05:17:07.436838+00:00",
+    "result": {
+      "dataset": "fund_adj",
+      "trade_date": "2026-09-30",
+      "status": "failed",
+      "row_count": null,
+      "checksum": null,
+      "message": "未知错误: source_ticker 162412.SZ is not in the etf_basic universe; fund_adj only accepts ETF instruments (#513)",
+      "error": "UNKNOWN_ERROR",
+      "snapshot_evidence": null,
+      "quality_evidence": null
+    }
+  },
+  {
+    "request": {
+      "source_ticker": "162711.SZ",
+      "start": "2026-09-30",
+      "end": "2026-09-30",
+      "missing_dates": [
+        "2026-09-30"
+      ]
+    },
+    "measured_at": "2026-11-06T05:17:07.441490+00:00",
+    "result": {
+      "dataset": "fund_adj",
+      "trade_date": "2026-09-30",
+      "status": "failed",
+      "row_count": null,
+      "checksum": null,
+      "message": "未知错误: source_ticker 162711.SZ is not in the etf_basic universe; fund_adj only accepts ETF instruments (#513)",
+      "error": "UNKNOWN_ERROR",
+      "snapshot_evidence": null,
+      "quality_evidence": null
+    }
+  },
+  {
+    "request": {
+      "source_ticker": "501011.SH",
+      "start": "2026-09-30",
+      "end": "2026-09-30",
+      "missing_dates": [
+        "2026-09-30"
+      ]
+    },
+    "measured_at": "2026-11-06T05:17:07.443422+00:00",
+    "result": {
+      "dataset": "fund_adj",
+      "trade_date": "2026-09-30",
+      "status": "failed",
+      "row_count": null,
+      "checksum": null,
+      "message": "未知错误: source_ticker 501011.SH is not in the etf_basic universe; fund_adj only accepts ETF instruments (#513)",
+      "error": "UNKNOWN_ERROR",
+      "snapshot_evidence": null,
+      "quality_evidence": null
+    }
+  },
+  {
+    "request": {
+      "source_ticker": "501012.SH",
+      "start": "2026-09-30",
+      "end": "2026-09-30",
+      "missing_dates": [
+        "2026-09-30"
+      ]
+    },
+    "measured_at": "2026-11-06T05:17:07.444236+00:00",
+    "result": {
+      "dataset": "fund_adj",
+      "trade_date": "2026-09-30",
+      "status": "failed",
+      "row_count": null,
+      "checksum": null,
+      "message": "未知错误: source_ticker 501012.SH is not in the etf_basic universe; fund_adj only accepts ETF instruments (#513)",
+      "error": "UNKNOWN_ERROR",
+      "snapshot_evidence": null,
+      "quality_evidence": null
+    }
+  },
+  {
+    "request": {
+      "source_ticker": "501029.SH",
+      "start": "2026-09-30",
+      "end": "2026-09-30",
+      "missing_dates": [
+        "2026-09-30"
+      ]
+    },
+    "measured_at": "2026-11-06T05:17:07.444917+00:00",
+    "result": {
+      "dataset": "fund_adj",
+      "trade_date": "2026-09-30",
+      "status": "failed",
+      "row_count": null,
+      "checksum": null,
+      "message": "未知错误: source_ticker 501029.SH is not in the etf_basic universe; fund_adj only accepts ETF instruments (#513)",
+      "error": "UNKNOWN_ERROR",
+      "snapshot_evidence": null,
+      "quality_evidence": null
+    }
+  },
+  {
+    "request": {
+      "source_ticker": "501036.SH",
+      "start": "2026-09-30",
+      "end": "2026-09-30",
+      "missing_dates": [
+        "2026-09-30"
+      ]
+    },
+    "measured_at": "2026-11-06T05:17:07.445684+00:00",
+    "result": {
+      "dataset": "fund_adj",
+      "trade_date": "2026-09-30",
+      "status": "failed",
+      "row_count": null,
+      "checksum": null,
+      "message": "未知错误: source_ticker 501036.SH is not in the etf_basic universe; fund_adj only accepts ETF instruments (#513)",
+      "error": "UNKNOWN_ERROR",
+      "snapshot_evidence": null,
+      "quality_evidence": null
+    }
+  },
+  {
+    "request": {
+      "source_ticker": "501047.SH",
+      "start": "2026-09-30",
+      "end": "2026-09-30",
+      "missing_dates": [
+        "2026-09-30"
+      ]
+    },
+    "measured_at": "2026-11-06T05:17:07.446453+00:00",
+    "result": {
+      "dataset": "fund_adj",
+      "trade_date": "2026-09-30",
+      "status": "failed",
+      "row_count": null,
+      "checksum": null,
+      "message": "未知错误: source_ticker 501047.SH is not in the etf_basic universe; fund_adj only accepts ETF instruments (#513)",
+      "error": "UNKNOWN_ERROR",
+      "snapshot_evidence": null,
+      "quality_evidence": null
+    }
+  },
+  {
+    "request": {
+      "source_ticker": "501048.SH",
+      "start": "2026-09-30",
+      "end": "2026-09-30",
+      "missing_dates": [
+        "2026-09-30"
+      ]
+    },
+    "measured_at": "2026-11-06T05:17:07.447131+00:00",
+    "result": {
+      "dataset": "fund_adj",
+      "trade_date": "2026-09-30",
+      "status": "failed",
+      "row_count": null,
+      "checksum": null,
+      "message": "未知错误: source_ticker 501048.SH is not in the etf_basic universe; fund_adj only accepts ETF instruments (#513)",
+      "error": "UNKNOWN_ERROR",
+      "snapshot_evidence": null,
+      "quality_evidence": null
+    }
+  },
+  {
+    "request": {
+      "source_ticker": "501090.SH",
+      "start": "2026-09-30",
+      "end": "2026-09-30",
+      "missing_dates": [
+        "2026-09-30"
+      ]
+    },
+    "measured_at": "2026-11-06T05:17:07.447934+00:00",
+    "result": {
+      "dataset": "fund_adj",
+      "trade_date": "2026-09-30",
+      "status": "failed",
+      "row_count": null,
+      "checksum": null,
+      "message": "未知错误: source_ticker 501090.SH is not in the etf_basic universe; fund_adj only accepts ETF instruments (#513)",
+      "error": "UNKNOWN_ERROR",
+      "snapshot_evidence": null,
+      "quality_evidence": null
+    }
+  },
+  {
+    "request": {
+      "source_ticker": "501301.SH",
+      "start": "2026-09-30",
+      "end": "2026-09-30",
+      "missing_dates": [
+        "2026-09-30"
+      ]
+    },
+    "measured_at": "2026-11-06T05:17:07.453008+00:00",
+    "result": {
+      "dataset": "fund_adj",
+      "trade_date": "2026-09-30",
+      "status": "failed",
+      "row_count": null,
+      "checksum": null,
+      "message": "未知错误: source_ticker 501301.SH is not in the etf_basic universe; fund_adj only accepts ETF instruments (#513)",
+      "error": "UNKNOWN_ERROR",
+      "snapshot_evidence": null,
+      "quality_evidence": null
+    }
+  },
+  {
+    "request": {
+      "source_ticker": "501302.SH",
+      "start": "2026-09-30",
+      "end": "2026-09-30",
+      "missing_dates": [
+        "2026-09-30"
+      ]
+    },
+    "measured_at": "2026-11-06T05:17:07.453844+00:00",
+    "result": {
+      "dataset": "fund_adj",
+      "trade_date": "2026-09-30",
+      "status": "failed",
+      "row_count": null,
+      "checksum": null,
+      "message": "未知错误: source_ticker 501302.SH is not in the etf_basic universe; fund_adj only accepts ETF instruments (#513)",
+      "error": "UNKNOWN_ERROR",
+      "snapshot_evidence": null,
+      "quality_evidence": null
+    }
+  },
+  {
+    "request": {
+      "source_ticker": "501305.SH",
+      "start": "2026-09-30",
+      "end": "2026-09-30",
+      "missing_dates": [
+        "2026-09-30"
+      ]
+    },
+    "measured_at": "2026-11-06T05:17:07.457832+00:00",
+    "result": {
+      "dataset": "fund_adj",
+      "trade_date": "2026-09-30",
+      "status": "failed",
+      "row_count": null,
+      "checksum": null,
+      "message": "未知错误: source_ticker 501305.SH is not in the etf_basic universe; fund_adj only accepts ETF instruments (#513)",
+      "error": "UNKNOWN_ERROR",
+      "snapshot_evidence": null,
+      "quality_evidence": null
+    }
+  },
+  {
+    "request": {
+      "source_ticker": "501306.SH",
+      "start": "2026-09-30",
+      "end": "2026-09-30",
+      "missing_dates": [
+        "2026-09-30"
+      ]
+    },
+    "measured_at": "2026-11-06T05:17:07.460127+00:00",
+    "result": {
+      "dataset": "fund_adj",
+      "trade_date": "2026-09-30",
+      "status": "failed",
+      "row_count": null,
+      "checksum": null,
+      "message": "未知错误: source_ticker 501306.SH is not in the etf_basic universe; fund_adj only accepts ETF instruments (#513)",
+      "error": "UNKNOWN_ERROR",
+      "snapshot_evidence": null,
+      "quality_evidence": null
+    }
+  },
+  {
+    "request": {
+      "source_ticker": "502056.SH",
+      "start": "2026-09-30",
+      "end": "2026-09-30",
+      "missing_dates": [
+        "2026-09-30"
+      ]
+    },
+    "measured_at": "2026-11-06T05:17:07.462449+00:00",
+    "result": {
+      "dataset": "fund_adj",
+      "trade_date": "2026-09-30",
+      "status": "failed",
+      "row_count": null,
+      "checksum": null,
+      "message": "未知错误: source_ticker 502056.SH is not in the etf_basic universe; fund_adj only accepts ETF instruments (#513)",
+      "error": "UNKNOWN_ERROR",
+      "snapshot_evidence": null,
+      "quality_evidence": null
+    }
+  },
+  {
+    "request": {
+      "source_ticker": "512390.SH",
+      "start": "2026-09-14",
+      "end": "2026-10-22",
+      "missing_dates": [
+        "2026-09-14",
+        "2026-09-15",
+        "2026-09-16",
+        "2026-09-17",
+        "2026-09-18",
+        "2026-09-22",
+        "2026-09-23",
+        "2026-09-24",
+        "2026-09-28",
+        "2026-09-29",
+        "2026-09-30",
+        "2026-10-12",
+        "2026-10-13",
+        "2026-10-14",
+        "2026-10-15",
+        "2026-10-16",
+        "2026-10-19",
+        "2026-10-20",
+        "2026-10-21",
+        "2026-10-22"
+      ]
+    },
+    "measured_at": "2026-11-06T05:17:08.575287+00:00",
+    "result": {
+      "dataset": "fund_adj",
+      "trade_date": "2026-09-14",
+      "status": "success",
+      "row_count": 0,
+      "checksum": null,
+      "message": "provider 已验证区间无数据并提交零行证据",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": null
+    }
+  },
+  {
+    "request": {
+      "source_ticker": "512470.SH",
+      "start": "2026-09-30",
+      "end": "2026-09-30",
+      "missing_dates": [
+        "2026-09-30"
+      ]
+    },
+    "measured_at": "2026-11-06T03:53:23.969079+00:00",
+    "result": {
+      "dataset": "fund_adj",
+      "trade_date": "2026-09-30",
+      "status": "success",
+      "row_count": 1,
+      "checksum": "7b5e341cbf84d1962400787f6e1fbec3",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-09-30",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 1,
+        "checksum": "7b5e341cbf84d1962400787f6e1fbec3"
+      }
+    }
+  },
+  {
+    "request": {
+      "source_ticker": "512740.SH",
+      "start": "2026-09-30",
+      "end": "2026-09-30",
+      "missing_dates": [
+        "2026-09-30"
+      ]
+    },
+    "measured_at": "2026-11-06T03:53:26.353008+00:00",
+    "result": {
+      "dataset": "fund_adj",
+      "trade_date": "2026-09-30",
+      "status": "success",
+      "row_count": 1,
+      "checksum": "3ca53f9b5013ae4b9933e1a5745c3488",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-09-30",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 1,
+        "checksum": "3ca53f9b5013ae4b9933e1a5745c3488"
+      }
+    }
+  },
+  {
+    "request": {
+      "source_ticker": "515440.SH",
+      "start": "2026-09-30",
+      "end": "2026-09-30",
+      "missing_dates": [
+        "2026-09-30"
+      ]
+    },
+    "measured_at": "2026-11-06T03:53:28.823926+00:00",
+    "result": {
+      "dataset": "fund_adj",
+      "trade_date": "2026-09-30",
+      "status": "success",
+      "row_count": 1,
+      "checksum": "74b6bb84b7c708bbe4076a9ea51a9daf",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-09-30",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 1,
+        "checksum": "74b6bb84b7c708bbe4076a9ea51a9daf"
+      }
+    }
+  },
+  {
+    "request": {
+      "source_ticker": "515470.SH",
+      "start": "2026-09-30",
+      "end": "2026-09-30",
+      "missing_dates": [
+        "2026-09-30"
+      ]
+    },
+    "measured_at": "2026-11-06T03:53:34.016610+00:00",
+    "result": {
+      "dataset": "fund_adj",
+      "trade_date": "2026-09-30",
+      "status": "success",
+      "row_count": 1,
+      "checksum": "b575d0135ceb52879a452f766a1d85c4",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-09-30",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 1,
+        "checksum": "b575d0135ceb52879a452f766a1d85c4"
+      }
+    }
+  },
+  {
+    "request": {
+      "source_ticker": "515540.SH",
+      "start": "2026-09-30",
+      "end": "2026-09-30",
+      "missing_dates": [
+        "2026-09-30"
+      ]
+    },
+    "measured_at": "2026-11-06T03:53:36.283501+00:00",
+    "result": {
+      "dataset": "fund_adj",
+      "trade_date": "2026-09-30",
+      "status": "success",
+      "row_count": 1,
+      "checksum": "6c5b2d8d7875b1bc274b5508111f5f8c",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-09-30",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 1,
+        "checksum": "6c5b2d8d7875b1bc274b5508111f5f8c"
+      }
+    }
+  },
+  {
+    "request": {
+      "source_ticker": "515940.SH",
+      "start": "2026-09-30",
+      "end": "2026-09-30",
+      "missing_dates": [
+        "2026-09-30"
+      ]
+    },
+    "measured_at": "2026-11-06T03:53:38.469237+00:00",
+    "result": {
+      "dataset": "fund_adj",
+      "trade_date": "2026-09-30",
+      "status": "success",
+      "row_count": 1,
+      "checksum": "3b403d3516f9b586636331624abc88cf",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-09-30",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 1,
+        "checksum": "3b403d3516f9b586636331624abc88cf"
+      }
+    }
+  },
+  {
+    "request": {
+      "source_ticker": "516040.SH",
+      "start": "2026-09-30",
+      "end": "2026-09-30",
+      "missing_dates": [
+        "2026-09-30"
+      ]
+    },
+    "measured_at": "2026-11-06T03:53:40.539726+00:00",
+    "result": {
+      "dataset": "fund_adj",
+      "trade_date": "2026-09-30",
+      "status": "success",
+      "row_count": 1,
+      "checksum": "1afdb493cd494ed5b9adf4c346affa72",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-09-30",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 1,
+        "checksum": "1afdb493cd494ed5b9adf4c346affa72"
+      }
+    }
+  },
+  {
+    "request": {
+      "source_ticker": "526060.SH",
+      "start": "2026-09-30",
+      "end": "2026-09-30",
+      "missing_dates": [
+        "2026-09-30"
+      ]
+    },
+    "measured_at": "2026-11-06T03:53:42.732785+00:00",
+    "result": {
+      "dataset": "fund_adj",
+      "trade_date": "2026-09-30",
+      "status": "success",
+      "row_count": 1,
+      "checksum": "6b488e0d0917ff37befe0d783202ab1c",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-09-30",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 1,
+        "checksum": "6b488e0d0917ff37befe0d783202ab1c"
+      }
+    }
+  },
+  {
+    "request": {
+      "source_ticker": "560000.SH",
+      "start": "2026-07-10",
+      "end": "2026-07-13",
+      "missing_dates": [
+        "2026-07-10",
+        "2026-07-13"
+      ]
+    },
+    "measured_at": "2026-11-06T05:17:11.829285+00:00",
+    "result": {
+      "dataset": "fund_adj",
+      "trade_date": "2026-07-10",
+      "status": "success",
+      "row_count": 0,
+      "checksum": null,
+      "message": "provider 已验证区间无数据并提交零行证据",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": null
+    }
+  },
+  {
+    "request": {
+      "source_ticker": "560650.SH",
+      "start": "2026-07-10",
+      "end": "2026-08-21",
+      "missing_dates": [
+        "2026-07-10",
+        "2026-07-13",
+        "2026-07-17",
+        "2026-07-24",
+        "2026-07-31",
+        "2026-08-07",
+        "2026-08-14",
+        "2026-08-21"
+      ]
+    },
+    "measured_at": "2026-11-06T05:17:12.545015+00:00",
+    "result": {
+      "dataset": "fund_adj",
+      "trade_date": "2026-07-10",
+      "status": "success",
+      "row_count": 0,
+      "checksum": null,
+      "message": "provider 已验证区间无数据并提交零行证据",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": null
+    }
+  },
+  {
+    "request": {
+      "source_ticker": "561530.SH",
+      "start": "2026-09-30",
+      "end": "2026-09-30",
+      "missing_dates": [
+        "2026-09-30"
+      ]
+    },
+    "measured_at": "2026-11-06T03:53:47.263795+00:00",
+    "result": {
+      "dataset": "fund_adj",
+      "trade_date": "2026-09-30",
+      "status": "success",
+      "row_count": 1,
+      "checksum": "a335ce97532dfdf0c8c808f69ccaf2bb",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-09-30",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 1,
+        "checksum": "a335ce97532dfdf0c8c808f69ccaf2bb"
+      }
+    }
+  },
+  {
+    "request": {
+      "source_ticker": "561610.SH",
+      "start": "2026-09-30",
+      "end": "2026-09-30",
+      "missing_dates": [
+        "2026-09-30"
+      ]
+    },
+    "measured_at": "2026-11-06T03:53:49.302111+00:00",
+    "result": {
+      "dataset": "fund_adj",
+      "trade_date": "2026-09-30",
+      "status": "success",
+      "row_count": 1,
+      "checksum": "60f6d7b299188f3d78938bf84875efce",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-09-30",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 1,
+        "checksum": "60f6d7b299188f3d78938bf84875efce"
+      }
+    }
+  },
+  {
+    "request": {
+      "source_ticker": "561650.SH",
+      "start": "2026-09-30",
+      "end": "2026-09-30",
+      "missing_dates": [
+        "2026-09-30"
+      ]
+    },
+    "measured_at": "2026-11-06T03:53:51.409124+00:00",
+    "result": {
+      "dataset": "fund_adj",
+      "trade_date": "2026-09-30",
+      "status": "success",
+      "row_count": 1,
+      "checksum": "1ad7a97197f992969406621b56391618",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-09-30",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 1,
+        "checksum": "1ad7a97197f992969406621b56391618"
+      }
+    }
+  },
+  {
+    "request": {
+      "source_ticker": "561690.SH",
+      "start": "2026-09-30",
+      "end": "2026-09-30",
+      "missing_dates": [
+        "2026-09-30"
+      ]
+    },
+    "measured_at": "2026-11-06T03:53:53.503784+00:00",
+    "result": {
+      "dataset": "fund_adj",
+      "trade_date": "2026-09-30",
+      "status": "success",
+      "row_count": 1,
+      "checksum": "42b13cd6bd3f1549dbbac72333464075",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-09-30",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 1,
+        "checksum": "42b13cd6bd3f1549dbbac72333464075"
+      }
+    }
+  },
+  {
+    "request": {
+      "source_ticker": "562110.SH",
+      "start": "2026-09-30",
+      "end": "2026-09-30",
+      "missing_dates": [
+        "2026-09-30"
+      ]
+    },
+    "measured_at": "2026-11-06T03:53:55.671037+00:00",
+    "result": {
+      "dataset": "fund_adj",
+      "trade_date": "2026-09-30",
+      "status": "success",
+      "row_count": 1,
+      "checksum": "456ee5b6a4ede311f864bbfe9563182c",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-09-30",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 1,
+        "checksum": "456ee5b6a4ede311f864bbfe9563182c"
+      }
+    }
+  },
+  {
+    "request": {
+      "source_ticker": "562150.SH",
+      "start": "2026-09-30",
+      "end": "2026-09-30",
+      "missing_dates": [
+        "2026-09-30"
+      ]
+    },
+    "measured_at": "2026-11-06T03:53:57.683350+00:00",
+    "result": {
+      "dataset": "fund_adj",
+      "trade_date": "2026-09-30",
+      "status": "success",
+      "row_count": 1,
+      "checksum": "4df3a5de4e93e26b9af65f93fc696f23",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-09-30",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 1,
+        "checksum": "4df3a5de4e93e26b9af65f93fc696f23"
+      }
+    }
+  },
+  {
+    "request": {
+      "source_ticker": "562170.SH",
+      "start": "2026-09-30",
+      "end": "2026-09-30",
+      "missing_dates": [
+        "2026-09-30"
+      ]
+    },
+    "measured_at": "2026-11-06T03:53:59.663845+00:00",
+    "result": {
+      "dataset": "fund_adj",
+      "trade_date": "2026-09-30",
+      "status": "success",
+      "row_count": 1,
+      "checksum": "58f38a2899d10bb5e77f95876e814add",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-09-30",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 1,
+        "checksum": "58f38a2899d10bb5e77f95876e814add"
+      }
+    }
+  },
+  {
+    "request": {
+      "source_ticker": "562200.SH",
+      "start": "2026-09-30",
+      "end": "2026-09-30",
+      "missing_dates": [
+        "2026-09-30"
+      ]
+    },
+    "measured_at": "2026-11-06T03:54:01.947163+00:00",
+    "result": {
+      "dataset": "fund_adj",
+      "trade_date": "2026-09-30",
+      "status": "success",
+      "row_count": 1,
+      "checksum": "d16823bc4b487e8fa21eee84e1eea713",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-09-30",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 1,
+        "checksum": "d16823bc4b487e8fa21eee84e1eea713"
+      }
+    }
+  },
+  {
+    "request": {
+      "source_ticker": "562450.SH",
+      "start": "2026-09-30",
+      "end": "2026-09-30",
+      "missing_dates": [
+        "2026-09-30"
+      ]
+    },
+    "measured_at": "2026-11-06T03:54:03.995032+00:00",
+    "result": {
+      "dataset": "fund_adj",
+      "trade_date": "2026-09-30",
+      "status": "success",
+      "row_count": 1,
+      "checksum": "0f923b8bdded70a0eeb30097178528cb",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-09-30",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 1,
+        "checksum": "0f923b8bdded70a0eeb30097178528cb"
+      }
+    }
+  },
+  {
+    "request": {
+      "source_ticker": "589430.SH",
+      "start": "2026-09-30",
+      "end": "2026-09-30",
+      "missing_dates": [
+        "2026-09-30"
+      ]
+    },
+    "measured_at": "2026-11-06T03:54:06.085435+00:00",
+    "result": {
+      "dataset": "fund_adj",
+      "trade_date": "2026-09-30",
+      "status": "success",
+      "row_count": 1,
+      "checksum": "5ef75f402ac3072cb7272c585768f0b0",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-09-30",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 1,
+        "checksum": "5ef75f402ac3072cb7272c585768f0b0"
+      }
+    }
+  },
+  {
+    "request": {
+      "source_ticker": "589480.SH",
+      "start": "2026-09-30",
+      "end": "2026-09-30",
+      "missing_dates": [
+        "2026-09-30"
+      ]
+    },
+    "measured_at": "2026-11-06T03:54:08.255183+00:00",
+    "result": {
+      "dataset": "fund_adj",
+      "trade_date": "2026-09-30",
+      "status": "success",
+      "row_count": 1,
+      "checksum": "2bd84c33b2b323f3a4bdbd479aeeeefd",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-09-30",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 1,
+        "checksum": "2bd84c33b2b323f3a4bdbd479aeeeefd"
+      }
+    }
+  },
+  {
+    "request": {
+      "source_ticker": "589490.SH",
+      "start": "2026-09-30",
+      "end": "2026-09-30",
+      "missing_dates": [
+        "2026-09-30"
+      ]
+    },
+    "measured_at": "2026-11-06T03:54:10.514735+00:00",
+    "result": {
+      "dataset": "fund_adj",
+      "trade_date": "2026-09-30",
+      "status": "success",
+      "row_count": 1,
+      "checksum": "2c3204e4e8e9878ba206d66432ca85b2",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-09-30",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 1,
+        "checksum": "2c3204e4e8e9878ba206d66432ca85b2"
+      }
+    }
+  },
+  {
+    "request": {
+      "source_ticker": "589510.SH",
+      "start": "2026-09-30",
+      "end": "2026-09-30",
+      "missing_dates": [
+        "2026-09-30"
+      ]
+    },
+    "measured_at": "2026-11-06T03:54:12.551237+00:00",
+    "result": {
+      "dataset": "fund_adj",
+      "trade_date": "2026-09-30",
+      "status": "success",
+      "row_count": 1,
+      "checksum": "7f8464977855c00857bc9ccc99375b36",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-09-30",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 1,
+        "checksum": "7f8464977855c00857bc9ccc99375b36"
+      }
+    }
+  },
+  {
+    "request": {
+      "source_ticker": "158011.SZ",
+      "start": "2026-09-04",
+      "end": "2026-10-09",
+      "missing_dates": [
+        "2026-09-04",
+        "2026-09-07",
+        "2026-09-08",
+        "2026-09-09",
+        "2026-09-10",
+        "2026-09-11",
+        "2026-09-14",
+        "2026-09-15",
+        "2026-09-16",
+        "2026-09-17",
+        "2026-09-18",
+        "2026-09-21",
+        "2026-09-22",
+        "2026-09-23",
+        "2026-09-24",
+        "2026-09-28",
+        "2026-09-29",
+        "2026-10-08",
+        "2026-10-09"
+      ]
+    },
+    "measured_at": "2026-11-06T04:52:51.443362+00:00",
+    "result": {
+      "dataset": "fund_adj",
+      "trade_date": "2026-09-04",
+      "status": "success",
+      "row_count": 20,
+      "checksum": "5095b7f40e11f67ae7aeb7459123e114",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-09-04",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 20,
+        "checksum": "5095b7f40e11f67ae7aeb7459123e114"
+      }
+    }
+  },
+  {
+    "request": {
+      "source_ticker": "158013.SZ",
+      "start": "2026-09-07",
+      "end": "2026-10-09",
+      "missing_dates": [
+        "2026-09-07",
+        "2026-09-08",
+        "2026-09-09",
+        "2026-09-10",
+        "2026-09-11",
+        "2026-09-14",
+        "2026-09-15",
+        "2026-09-16",
+        "2026-09-17",
+        "2026-09-18",
+        "2026-09-21",
+        "2026-09-22",
+        "2026-09-23",
+        "2026-09-24",
+        "2026-09-28",
+        "2026-09-29",
+        "2026-10-08",
+        "2026-10-09"
+      ]
+    },
+    "measured_at": "2026-11-06T04:52:53.351185+00:00",
+    "result": {
+      "dataset": "fund_adj",
+      "trade_date": "2026-09-07",
+      "status": "success",
+      "row_count": 19,
+      "checksum": "19e4a4a9b91007a5bb33a2550495cf78",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-09-07",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 19,
+        "checksum": "19e4a4a9b91007a5bb33a2550495cf78"
+      }
+    }
+  },
+  {
+    "request": {
+      "source_ticker": "158022.SZ",
+      "start": "2026-09-18",
+      "end": "2026-10-09",
+      "missing_dates": [
+        "2026-09-18",
+        "2026-09-21",
+        "2026-09-22",
+        "2026-09-23",
+        "2026-09-24",
+        "2026-09-28",
+        "2026-09-29",
+        "2026-10-08",
+        "2026-10-09"
+      ]
+    },
+    "measured_at": "2026-11-06T04:52:56.467350+00:00",
+    "result": {
+      "dataset": "fund_adj",
+      "trade_date": "2026-09-18",
+      "status": "success",
+      "row_count": 10,
+      "checksum": "6453e5c82a4110b7f9084b745d4e0807",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-09-18",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 10,
+        "checksum": "6453e5c82a4110b7f9084b745d4e0807"
+      }
+    }
+  },
+  {
+    "request": {
+      "source_ticker": "158023.SZ",
+      "start": "2026-09-07",
+      "end": "2026-10-09",
+      "missing_dates": [
+        "2026-09-07",
+        "2026-09-08",
+        "2026-09-09",
+        "2026-09-10",
+        "2026-09-11",
+        "2026-09-14",
+        "2026-09-15",
+        "2026-09-16",
+        "2026-09-17",
+        "2026-09-18",
+        "2026-09-21",
+        "2026-09-22",
+        "2026-09-23",
+        "2026-09-24",
+        "2026-09-28",
+        "2026-09-29",
+        "2026-10-08",
+        "2026-10-09"
+      ]
+    },
+    "measured_at": "2026-11-06T04:52:58.553628+00:00",
+    "result": {
+      "dataset": "fund_adj",
+      "trade_date": "2026-09-07",
+      "status": "success",
+      "row_count": 19,
+      "checksum": "22cfa44d15afadbd4a7ff8ea59189132",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-09-07",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 19,
+        "checksum": "22cfa44d15afadbd4a7ff8ea59189132"
+      }
+    }
+  },
+  {
+    "request": {
+      "source_ticker": "158025.SZ",
+      "start": "2026-09-28",
+      "end": "2026-10-09",
+      "missing_dates": [
+        "2026-09-28",
+        "2026-09-29",
+        "2026-10-08",
+        "2026-10-09"
+      ]
+    },
+    "measured_at": "2026-11-06T04:53:00.135016+00:00",
+    "result": {
+      "dataset": "fund_adj",
+      "trade_date": "2026-09-28",
+      "status": "success",
+      "row_count": 5,
+      "checksum": "e97b591d5725376439d40e8bb3d0f792",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-09-28",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 5,
+        "checksum": "e97b591d5725376439d40e8bb3d0f792"
+      }
+    }
+  },
+  {
+    "request": {
+      "source_ticker": "158026.SZ",
+      "start": "2026-09-23",
+      "end": "2026-10-09",
+      "missing_dates": [
+        "2026-09-23",
+        "2026-09-24",
+        "2026-09-28",
+        "2026-09-29",
+        "2026-10-08",
+        "2026-10-09"
+      ]
+    },
+    "measured_at": "2026-11-06T04:53:02.248596+00:00",
+    "result": {
+      "dataset": "fund_adj",
+      "trade_date": "2026-09-23",
+      "status": "success",
+      "row_count": 7,
+      "checksum": "a01ecb8dbdb0dd86cd3eeafcecb72964",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-09-23",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 7,
+        "checksum": "a01ecb8dbdb0dd86cd3eeafcecb72964"
+      }
+    }
+  },
+  {
+    "request": {
+      "source_ticker": "158028.SZ",
+      "start": "2026-09-11",
+      "end": "2026-10-09",
+      "missing_dates": [
+        "2026-09-11",
+        "2026-09-14",
+        "2026-09-15",
+        "2026-09-16",
+        "2026-09-17",
+        "2026-09-18",
+        "2026-09-21",
+        "2026-09-22",
+        "2026-09-23",
+        "2026-09-24",
+        "2026-09-28",
+        "2026-09-29",
+        "2026-10-08",
+        "2026-10-09"
+      ]
+    },
+    "measured_at": "2026-11-06T04:53:03.832905+00:00",
+    "result": {
+      "dataset": "fund_adj",
+      "trade_date": "2026-09-11",
+      "status": "success",
+      "row_count": 15,
+      "checksum": "c9821e173b68d928d153a48f50709c86",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-09-11",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 15,
+        "checksum": "c9821e173b68d928d153a48f50709c86"
+      }
+    }
+  },
+  {
+    "request": {
+      "source_ticker": "158030.SZ",
+      "start": "2026-10-09",
+      "end": "2026-10-09",
+      "missing_dates": [
+        "2026-10-09"
+      ]
+    },
+    "measured_at": "2026-11-06T04:53:06.171255+00:00",
+    "result": {
+      "dataset": "fund_adj",
+      "trade_date": "2026-10-09",
+      "status": "success",
+      "row_count": 1,
+      "checksum": "d43f08fb4dc994abb82f2126a99962e5",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-10-09",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 1,
+        "checksum": "d43f08fb4dc994abb82f2126a99962e5"
+      }
+    }
+  },
+  {
+    "request": {
+      "source_ticker": "158031.SZ",
+      "start": "2026-09-22",
+      "end": "2026-10-09",
+      "missing_dates": [
+        "2026-09-22",
+        "2026-09-23",
+        "2026-09-24",
+        "2026-09-28",
+        "2026-09-29",
+        "2026-10-08",
+        "2026-10-09"
+      ]
+    },
+    "measured_at": "2026-11-06T04:53:10.013745+00:00",
+    "result": {
+      "dataset": "fund_adj",
+      "trade_date": "2026-09-22",
+      "status": "success",
+      "row_count": 8,
+      "checksum": "32d1872f07fdd2830c65d44de3c25343",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-09-22",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 8,
+        "checksum": "32d1872f07fdd2830c65d44de3c25343"
+      }
+    }
+  },
+  {
+    "request": {
+      "source_ticker": "158032.SZ",
+      "start": "2026-09-14",
+      "end": "2026-10-09",
+      "missing_dates": [
+        "2026-09-14",
+        "2026-09-15",
+        "2026-09-16",
+        "2026-09-17",
+        "2026-09-18",
+        "2026-09-21",
+        "2026-09-22",
+        "2026-09-23",
+        "2026-09-24",
+        "2026-09-28",
+        "2026-09-29",
+        "2026-10-08",
+        "2026-10-09"
+      ]
+    },
+    "measured_at": "2026-11-06T04:53:11.556740+00:00",
+    "result": {
+      "dataset": "fund_adj",
+      "trade_date": "2026-09-14",
+      "status": "success",
+      "row_count": 14,
+      "checksum": "0808746be43e0152836a605ab3d5b90d",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-09-14",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 14,
+        "checksum": "0808746be43e0152836a605ab3d5b90d"
+      }
+    }
+  },
+  {
+    "request": {
+      "source_ticker": "158036.SZ",
+      "start": "2026-10-23",
+      "end": "2026-10-23",
+      "missing_dates": [
+        "2026-10-23"
+      ]
+    },
+    "measured_at": "2026-11-06T04:53:14.403841+00:00",
+    "result": {
+      "dataset": "fund_adj",
+      "trade_date": "2026-10-23",
+      "status": "success",
+      "row_count": 1,
+      "checksum": "99ce81023d5ce32a7f74bee494d4fa09",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-10-23",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 1,
+        "checksum": "99ce81023d5ce32a7f74bee494d4fa09"
+      }
+    }
+  },
+  {
+    "request": {
+      "source_ticker": "158037.SZ",
+      "start": "2026-10-15",
+      "end": "2026-10-23",
+      "missing_dates": [
+        "2026-10-15",
+        "2026-10-16",
+        "2026-10-19",
+        "2026-10-20",
+        "2026-10-21",
+        "2026-10-22",
+        "2026-10-23"
+      ]
+    },
+    "measured_at": "2026-11-06T04:53:16.248300+00:00",
+    "result": {
+      "dataset": "fund_adj",
+      "trade_date": "2026-10-15",
+      "status": "success",
+      "row_count": 7,
+      "checksum": "62232b2c2671e0c3e115e11ca83d7f00",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-10-15",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 7,
+        "checksum": "62232b2c2671e0c3e115e11ca83d7f00"
+      }
+    }
+  },
+  {
+    "request": {
+      "source_ticker": "158038.SZ",
+      "start": "2026-09-16",
+      "end": "2026-10-09",
+      "missing_dates": [
+        "2026-09-16",
+        "2026-09-17",
+        "2026-09-18",
+        "2026-09-21",
+        "2026-09-22",
+        "2026-09-23",
+        "2026-09-24",
+        "2026-09-28",
+        "2026-09-29",
+        "2026-10-08",
+        "2026-10-09"
+      ]
+    },
+    "measured_at": "2026-11-06T04:53:18.881563+00:00",
+    "result": {
+      "dataset": "fund_adj",
+      "trade_date": "2026-09-16",
+      "status": "success",
+      "row_count": 12,
+      "checksum": "279f3cf333e9f8e1b9e639da761ab922",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-09-16",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 12,
+        "checksum": "279f3cf333e9f8e1b9e639da761ab922"
+      }
+    }
+  },
+  {
+    "request": {
+      "source_ticker": "158039.SZ",
+      "start": "2026-09-29",
+      "end": "2026-10-09",
+      "missing_dates": [
+        "2026-09-29",
+        "2026-10-08",
+        "2026-10-09"
+      ]
+    },
+    "measured_at": "2026-11-06T04:53:20.620174+00:00",
+    "result": {
+      "dataset": "fund_adj",
+      "trade_date": "2026-09-29",
+      "status": "success",
+      "row_count": 4,
+      "checksum": "d2cbeebbcce9d6e22a2d8a022536e1e0",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-09-29",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 4,
+        "checksum": "d2cbeebbcce9d6e22a2d8a022536e1e0"
+      }
+    }
+  },
+  {
+    "request": {
+      "source_ticker": "158040.SZ",
+      "start": "2026-10-14",
+      "end": "2026-10-23",
+      "missing_dates": [
+        "2026-10-14",
+        "2026-10-15",
+        "2026-10-16",
+        "2026-10-19",
+        "2026-10-20",
+        "2026-10-21",
+        "2026-10-22",
+        "2026-10-23"
+      ]
+    },
+    "measured_at": "2026-11-06T04:53:22.383121+00:00",
+    "result": {
+      "dataset": "fund_adj",
+      "trade_date": "2026-10-14",
+      "status": "success",
+      "row_count": 8,
+      "checksum": "a0601579e14272173b1b70fb1a72569f",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-10-14",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 8,
+        "checksum": "a0601579e14272173b1b70fb1a72569f"
+      }
+    }
+  },
+  {
+    "request": {
+      "source_ticker": "158041.SZ",
+      "start": "2026-09-17",
+      "end": "2026-10-09",
+      "missing_dates": [
+        "2026-09-17",
+        "2026-09-18",
+        "2026-09-21",
+        "2026-09-22",
+        "2026-09-23",
+        "2026-09-24",
+        "2026-09-28",
+        "2026-09-29",
+        "2026-10-08",
+        "2026-10-09"
+      ]
+    },
+    "measured_at": "2026-11-06T04:53:24.235717+00:00",
+    "result": {
+      "dataset": "fund_adj",
+      "trade_date": "2026-09-17",
+      "status": "success",
+      "row_count": 11,
+      "checksum": "34354cba1e48f5dea096e00d87244bbf",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-09-17",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 11,
+        "checksum": "34354cba1e48f5dea096e00d87244bbf"
+      }
+    }
+  },
+  {
+    "request": {
+      "source_ticker": "158042.SZ",
+      "start": "2026-09-24",
+      "end": "2026-10-09",
+      "missing_dates": [
+        "2026-09-24",
+        "2026-09-28",
+        "2026-09-29",
+        "2026-10-08",
+        "2026-10-09"
+      ]
+    },
+    "measured_at": "2026-11-06T04:53:25.766637+00:00",
+    "result": {
+      "dataset": "fund_adj",
+      "trade_date": "2026-09-24",
+      "status": "success",
+      "row_count": 6,
+      "checksum": "88b22eff7369ebca5ad8457762704aac",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-09-24",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 6,
+        "checksum": "88b22eff7369ebca5ad8457762704aac"
+      }
+    }
+  },
+  {
+    "request": {
+      "source_ticker": "158043.SZ",
+      "start": "2026-10-15",
+      "end": "2026-10-23",
+      "missing_dates": [
+        "2026-10-15",
+        "2026-10-16",
+        "2026-10-19",
+        "2026-10-20",
+        "2026-10-21",
+        "2026-10-22",
+        "2026-10-23"
+      ]
+    },
+    "measured_at": "2026-11-06T04:53:27.619585+00:00",
+    "result": {
+      "dataset": "fund_adj",
+      "trade_date": "2026-10-15",
+      "status": "success",
+      "row_count": 7,
+      "checksum": "077a2e0042ee04b1b68337eccacfcbf0",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-10-15",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 7,
+        "checksum": "077a2e0042ee04b1b68337eccacfcbf0"
+      }
+    }
+  },
+  {
+    "request": {
+      "source_ticker": "158047.SZ",
+      "start": "2026-10-15",
+      "end": "2026-10-23",
+      "missing_dates": [
+        "2026-10-15",
+        "2026-10-16",
+        "2026-10-19",
+        "2026-10-20",
+        "2026-10-21",
+        "2026-10-22",
+        "2026-10-23"
+      ]
+    },
+    "measured_at": "2026-11-06T05:17:07.379959+00:00",
+    "result": {
+      "dataset": "fund_adj",
+      "trade_date": "2026-10-15",
+      "status": "success",
+      "row_count": 7,
+      "checksum": "b2d9ee27abdd355cbddae313ba8641e5",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-10-15",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 7,
+        "checksum": "b2d9ee27abdd355cbddae313ba8641e5"
+      }
+    }
+  },
+  {
+    "request": {
+      "source_ticker": "158049.SZ",
+      "start": "2026-09-22",
+      "end": "2026-10-09",
+      "missing_dates": [
+        "2026-09-22",
+        "2026-09-23",
+        "2026-09-24",
+        "2026-09-28",
+        "2026-09-29",
+        "2026-10-08",
+        "2026-10-09"
+      ]
+    },
+    "measured_at": "2026-11-06T04:53:39.444257+00:00",
+    "result": {
+      "dataset": "fund_adj",
+      "trade_date": "2026-09-22",
+      "status": "success",
+      "row_count": 8,
+      "checksum": "87826b1345921b699d8a4357cd1ced7a",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-09-22",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 8,
+        "checksum": "87826b1345921b699d8a4357cd1ced7a"
+      }
+    }
+  },
+  {
+    "request": {
+      "source_ticker": "158050.SZ",
+      "start": "2026-09-18",
+      "end": "2026-10-09",
+      "missing_dates": [
+        "2026-09-18",
+        "2026-09-21",
+        "2026-09-22",
+        "2026-09-23",
+        "2026-09-24",
+        "2026-09-28",
+        "2026-09-29",
+        "2026-10-08",
+        "2026-10-09"
+      ]
+    },
+    "measured_at": "2026-11-06T04:53:40.954078+00:00",
+    "result": {
+      "dataset": "fund_adj",
+      "trade_date": "2026-09-18",
+      "status": "success",
+      "row_count": 10,
+      "checksum": "4334cfba8e5ef7fcc6de6a85acd4bf47",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-09-18",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 10,
+        "checksum": "4334cfba8e5ef7fcc6de6a85acd4bf47"
+      }
+    }
+  },
+  {
+    "request": {
+      "source_ticker": "158051.SZ",
+      "start": "2026-10-19",
+      "end": "2026-10-23",
+      "missing_dates": [
+        "2026-10-19",
+        "2026-10-20",
+        "2026-10-21",
+        "2026-10-22",
+        "2026-10-23"
+      ]
+    },
+    "measured_at": "2026-11-06T04:53:45.693789+00:00",
+    "result": {
+      "dataset": "fund_adj",
+      "trade_date": "2026-10-19",
+      "status": "success",
+      "row_count": 5,
+      "checksum": "2d29548f9a740673913dae3480fa56d0",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-10-19",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 5,
+        "checksum": "2d29548f9a740673913dae3480fa56d0"
+      }
+    }
+  },
+  {
+    "request": {
+      "source_ticker": "158052.SZ",
+      "start": "2026-10-16",
+      "end": "2026-10-23",
+      "missing_dates": [
+        "2026-10-16",
+        "2026-10-19",
+        "2026-10-20",
+        "2026-10-21",
+        "2026-10-22",
+        "2026-10-23"
+      ]
+    },
+    "measured_at": "2026-11-06T04:53:47.408215+00:00",
+    "result": {
+      "dataset": "fund_adj",
+      "trade_date": "2026-10-16",
+      "status": "success",
+      "row_count": 6,
+      "checksum": "36207ff8119522def1a9be2ded56a590",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-10-16",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 6,
+        "checksum": "36207ff8119522def1a9be2ded56a590"
+      }
+    }
+  },
+  {
+    "request": {
+      "source_ticker": "158053.SZ",
+      "start": "2026-09-23",
+      "end": "2026-10-09",
+      "missing_dates": [
+        "2026-09-23",
+        "2026-09-24",
+        "2026-09-28",
+        "2026-09-29",
+        "2026-10-08",
+        "2026-10-09"
+      ]
+    },
+    "measured_at": "2026-11-06T04:53:48.927627+00:00",
+    "result": {
+      "dataset": "fund_adj",
+      "trade_date": "2026-09-23",
+      "status": "success",
+      "row_count": 7,
+      "checksum": "1b869f181dc9eec43f6947189e591b9b",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-09-23",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 7,
+        "checksum": "1b869f181dc9eec43f6947189e591b9b"
+      }
+    }
+  },
+  {
+    "request": {
+      "source_ticker": "158055.SZ",
+      "start": "2026-10-16",
+      "end": "2026-10-23",
+      "missing_dates": [
+        "2026-10-16",
+        "2026-10-19",
+        "2026-10-20",
+        "2026-10-21",
+        "2026-10-22",
+        "2026-10-23"
+      ]
+    },
+    "measured_at": "2026-11-06T04:53:50.763929+00:00",
+    "result": {
+      "dataset": "fund_adj",
+      "trade_date": "2026-10-16",
+      "status": "success",
+      "row_count": 6,
+      "checksum": "546dc661032f0912906f5b0ea7c8c554",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-10-16",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 6,
+        "checksum": "546dc661032f0912906f5b0ea7c8c554"
+      }
+    }
+  },
+  {
+    "request": {
+      "source_ticker": "158056.SZ",
+      "start": "2026-09-24",
+      "end": "2026-10-09",
+      "missing_dates": [
+        "2026-09-24",
+        "2026-09-28",
+        "2026-09-29",
+        "2026-10-08",
+        "2026-10-09"
+      ]
+    },
+    "measured_at": "2026-11-06T04:53:52.660032+00:00",
+    "result": {
+      "dataset": "fund_adj",
+      "trade_date": "2026-09-24",
+      "status": "success",
+      "row_count": 6,
+      "checksum": "9622c3445a7458190f5998fc0359cea2",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-09-24",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 6,
+        "checksum": "9622c3445a7458190f5998fc0359cea2"
+      }
+    }
+  },
+  {
+    "request": {
+      "source_ticker": "158057.SZ",
+      "start": "2026-09-23",
+      "end": "2026-10-09",
+      "missing_dates": [
+        "2026-09-23",
+        "2026-09-24",
+        "2026-09-28",
+        "2026-09-29",
+        "2026-10-08",
+        "2026-10-09"
+      ]
+    },
+    "measured_at": "2026-11-06T04:53:54.160083+00:00",
+    "result": {
+      "dataset": "fund_adj",
+      "trade_date": "2026-09-23",
+      "status": "success",
+      "row_count": 7,
+      "checksum": "a8e6b20e6c2a2169b768f0e04c7ef50e",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-09-23",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 7,
+        "checksum": "a8e6b20e6c2a2169b768f0e04c7ef50e"
+      }
+    }
+  },
+  {
+    "request": {
+      "source_ticker": "158058.SZ",
+      "start": "2026-10-14",
+      "end": "2026-10-23",
+      "missing_dates": [
+        "2026-10-14",
+        "2026-10-15",
+        "2026-10-16",
+        "2026-10-19",
+        "2026-10-20",
+        "2026-10-21",
+        "2026-10-22",
+        "2026-10-23"
+      ]
+    },
+    "measured_at": "2026-11-06T04:53:56.794392+00:00",
+    "result": {
+      "dataset": "fund_adj",
+      "trade_date": "2026-10-14",
+      "status": "success",
+      "row_count": 8,
+      "checksum": "0cb9cddc5c070234b41d883a53df90f4",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-10-14",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 8,
+        "checksum": "0cb9cddc5c070234b41d883a53df90f4"
+      }
+    }
+  },
+  {
+    "request": {
+      "source_ticker": "158059.SZ",
+      "start": "2026-10-08",
+      "end": "2026-10-09",
+      "missing_dates": [
+        "2026-10-08",
+        "2026-10-09"
+      ]
+    },
+    "measured_at": "2026-11-06T04:53:58.513762+00:00",
+    "result": {
+      "dataset": "fund_adj",
+      "trade_date": "2026-10-08",
+      "status": "success",
+      "row_count": 2,
+      "checksum": "76c63e09b68380d07cb1ffe61ed2210f",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-10-08",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 2,
+        "checksum": "76c63e09b68380d07cb1ffe61ed2210f"
+      }
+    }
+  },
+  {
+    "request": {
+      "source_ticker": "158061.SZ",
+      "start": "2026-09-16",
+      "end": "2026-10-09",
+      "missing_dates": [
+        "2026-09-16",
+        "2026-09-17",
+        "2026-09-18",
+        "2026-09-21",
+        "2026-09-22",
+        "2026-09-23",
+        "2026-09-24",
+        "2026-09-28",
+        "2026-09-29",
+        "2026-10-08",
+        "2026-10-09"
+      ]
+    },
+    "measured_at": "2026-11-06T04:54:00.087909+00:00",
+    "result": {
+      "dataset": "fund_adj",
+      "trade_date": "2026-09-16",
+      "status": "success",
+      "row_count": 12,
+      "checksum": "508e95cf209d858b223845d0733f39f0",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-09-16",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 12,
+        "checksum": "508e95cf209d858b223845d0733f39f0"
+      }
+    }
+  },
+  {
+    "request": {
+      "source_ticker": "158062.SZ",
+      "start": "2026-10-19",
+      "end": "2026-10-23",
+      "missing_dates": [
+        "2026-10-19",
+        "2026-10-20",
+        "2026-10-21",
+        "2026-10-22",
+        "2026-10-23"
+      ]
+    },
+    "measured_at": "2026-11-06T04:54:02.033159+00:00",
+    "result": {
+      "dataset": "fund_adj",
+      "trade_date": "2026-10-19",
+      "status": "success",
+      "row_count": 5,
+      "checksum": "79023ddfd9c5c5d8202223a0edbef308",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-10-19",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 5,
+        "checksum": "79023ddfd9c5c5d8202223a0edbef308"
+      }
+    }
+  },
+  {
+    "request": {
+      "source_ticker": "158063.SZ",
+      "start": "2026-09-24",
+      "end": "2026-10-09",
+      "missing_dates": [
+        "2026-09-24",
+        "2026-09-28",
+        "2026-09-29",
+        "2026-10-08",
+        "2026-10-09"
+      ]
+    },
+    "measured_at": "2026-11-06T04:54:03.729310+00:00",
+    "result": {
+      "dataset": "fund_adj",
+      "trade_date": "2026-09-24",
+      "status": "success",
+      "row_count": 6,
+      "checksum": "23942fb70b793660c798de5874a30767",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-09-24",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 6,
+        "checksum": "23942fb70b793660c798de5874a30767"
+      }
+    }
+  },
+  {
+    "request": {
+      "source_ticker": "158066.SZ",
+      "start": "2026-10-22",
+      "end": "2026-10-23",
+      "missing_dates": [
+        "2026-10-22",
+        "2026-10-23"
+      ]
+    },
+    "measured_at": "2026-11-06T04:54:05.545484+00:00",
+    "result": {
+      "dataset": "fund_adj",
+      "trade_date": "2026-10-22",
+      "status": "success",
+      "row_count": 2,
+      "checksum": "0d8f8ac41f8096546f461bdc4320064f",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-10-22",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 2,
+        "checksum": "0d8f8ac41f8096546f461bdc4320064f"
+      }
+    }
+  },
+  {
+    "request": {
+      "source_ticker": "158067.SZ",
+      "start": "2026-10-19",
+      "end": "2026-10-23",
+      "missing_dates": [
+        "2026-10-19",
+        "2026-10-20",
+        "2026-10-21",
+        "2026-10-22",
+        "2026-10-23"
+      ]
+    },
+    "measured_at": "2026-11-06T04:54:07.602023+00:00",
+    "result": {
+      "dataset": "fund_adj",
+      "trade_date": "2026-10-19",
+      "status": "success",
+      "row_count": 5,
+      "checksum": "9dd991f0b3bf1e5c7ec16ea41e67c5c9",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-10-19",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 5,
+        "checksum": "9dd991f0b3bf1e5c7ec16ea41e67c5c9"
+      }
+    }
+  },
+  {
+    "request": {
+      "source_ticker": "158072.SZ",
+      "start": "2026-10-20",
+      "end": "2026-10-23",
+      "missing_dates": [
+        "2026-10-20",
+        "2026-10-21",
+        "2026-10-22",
+        "2026-10-23"
+      ]
+    },
+    "measured_at": "2026-11-06T04:54:09.544016+00:00",
+    "result": {
+      "dataset": "fund_adj",
+      "trade_date": "2026-10-20",
+      "status": "success",
+      "row_count": 4,
+      "checksum": "04dc642aeb8b60232b8482907810dcf9",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-10-20",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 4,
+        "checksum": "04dc642aeb8b60232b8482907810dcf9"
+      }
+    }
+  },
+  {
+    "request": {
+      "source_ticker": "158078.SZ",
+      "start": "2026-10-28",
+      "end": "2026-10-29",
+      "missing_dates": [
+        "2026-10-28",
+        "2026-10-29"
+      ]
+    },
+    "measured_at": "2026-11-06T04:54:11.508717+00:00",
+    "result": {
+      "dataset": "fund_adj",
+      "trade_date": "2026-10-28",
+      "status": "success",
+      "row_count": 2,
+      "checksum": "c51dfaa1642cf5649e4d959b6a55ed89",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-10-28",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 2,
+        "checksum": "c51dfaa1642cf5649e4d959b6a55ed89"
+      }
+    }
+  },
+  {
+    "request": {
+      "source_ticker": "158082.SZ",
+      "start": "2026-10-29",
+      "end": "2026-10-29",
+      "missing_dates": [
+        "2026-10-29"
+      ]
+    },
+    "measured_at": "2026-11-06T04:54:13.149669+00:00",
+    "result": {
+      "dataset": "fund_adj",
+      "trade_date": "2026-10-29",
+      "status": "success",
+      "row_count": 1,
+      "checksum": "ae4279b2873e3ebbc5b6dae1329de6a2",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-10-29",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 1,
+        "checksum": "ae4279b2873e3ebbc5b6dae1329de6a2"
+      }
+    }
+  },
+  {
+    "request": {
+      "source_ticker": "159025.SZ",
+      "start": "2026-09-14",
+      "end": "2026-10-09",
+      "missing_dates": [
+        "2026-09-14",
+        "2026-09-15",
+        "2026-09-16",
+        "2026-09-17",
+        "2026-09-18",
+        "2026-09-21",
+        "2026-09-22",
+        "2026-09-23",
+        "2026-09-24",
+        "2026-09-28",
+        "2026-09-29",
+        "2026-10-08",
+        "2026-10-09"
+      ]
+    },
+    "measured_at": "2026-11-06T04:54:15.115603+00:00",
+    "result": {
+      "dataset": "fund_adj",
+      "trade_date": "2026-09-14",
+      "status": "success",
+      "row_count": 14,
+      "checksum": "7d704db9dbeb01a545a07b32ecf0dad8",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-09-14",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 14,
+        "checksum": "7d704db9dbeb01a545a07b32ecf0dad8"
+      }
+    }
+  },
+  {
+    "request": {
+      "source_ticker": "159047.SZ",
+      "start": "2026-10-21",
+      "end": "2026-10-23",
+      "missing_dates": [
+        "2026-10-21",
+        "2026-10-22",
+        "2026-10-23"
+      ]
+    },
+    "measured_at": "2026-11-06T04:54:17.101702+00:00",
+    "result": {
+      "dataset": "fund_adj",
+      "trade_date": "2026-10-21",
+      "status": "success",
+      "row_count": 3,
+      "checksum": "c461e7b6110132a3001ab370434674ad",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-10-21",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 3,
+        "checksum": "c461e7b6110132a3001ab370434674ad"
+      }
+    }
+  },
+  {
+    "request": {
+      "source_ticker": "159089.SZ",
+      "start": "2026-10-21",
+      "end": "2026-10-23",
+      "missing_dates": [
+        "2026-10-21",
+        "2026-10-22",
+        "2026-10-23"
+      ]
+    },
+    "measured_at": "2026-11-06T04:54:19.822969+00:00",
+    "result": {
+      "dataset": "fund_adj",
+      "trade_date": "2026-10-21",
+      "status": "success",
+      "row_count": 3,
+      "checksum": "cea7953e08020be9539337bcdc1bb85e",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-10-21",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 3,
+        "checksum": "cea7953e08020be9539337bcdc1bb85e"
+      }
+    }
+  },
+  {
+    "request": {
+      "source_ticker": "512470.SH",
+      "start": "2026-09-24",
+      "end": "2026-10-09",
+      "missing_dates": [
+        "2026-09-24",
+        "2026-09-28",
+        "2026-09-29",
+        "2026-10-08",
+        "2026-10-09"
+      ]
+    },
+    "measured_at": "2026-11-06T04:54:22.702679+00:00",
+    "result": {
+      "dataset": "fund_adj",
+      "trade_date": "2026-09-24",
+      "status": "success",
+      "row_count": 6,
+      "checksum": "067da7d0ec85cc5a09330f663dfcab94",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-09-24",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 6,
+        "checksum": "067da7d0ec85cc5a09330f663dfcab94"
+      }
+    }
+  },
+  {
+    "request": {
+      "source_ticker": "512740.SH",
+      "start": "2026-09-14",
+      "end": "2026-10-09",
+      "missing_dates": [
+        "2026-09-14",
+        "2026-09-15",
+        "2026-09-16",
+        "2026-09-17",
+        "2026-09-18",
+        "2026-09-21",
+        "2026-09-22",
+        "2026-09-23",
+        "2026-09-24",
+        "2026-09-28",
+        "2026-09-29",
+        "2026-10-08",
+        "2026-10-09"
+      ]
+    },
+    "measured_at": "2026-11-06T04:54:24.366059+00:00",
+    "result": {
+      "dataset": "fund_adj",
+      "trade_date": "2026-09-14",
+      "status": "success",
+      "row_count": 14,
+      "checksum": "95af61dc5cc81ef41b1b1d07133fa67d",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-09-14",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 14,
+        "checksum": "95af61dc5cc81ef41b1b1d07133fa67d"
+      }
+    }
+  },
+  {
+    "request": {
+      "source_ticker": "515440.SH",
+      "start": "2026-09-10",
+      "end": "2026-10-09",
+      "missing_dates": [
+        "2026-09-10",
+        "2026-09-11",
+        "2026-09-14",
+        "2026-09-15",
+        "2026-09-16",
+        "2026-09-17",
+        "2026-09-18",
+        "2026-09-21",
+        "2026-09-22",
+        "2026-09-23",
+        "2026-09-24",
+        "2026-09-28",
+        "2026-09-29",
+        "2026-10-08",
+        "2026-10-09"
+      ]
+    },
+    "measured_at": "2026-11-06T04:54:26.145385+00:00",
+    "result": {
+      "dataset": "fund_adj",
+      "trade_date": "2026-09-10",
+      "status": "success",
+      "row_count": 16,
+      "checksum": "9a86809ebb6a17d76a3c6d4381a2eb93",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-09-10",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 16,
+        "checksum": "9a86809ebb6a17d76a3c6d4381a2eb93"
+      }
+    }
+  },
+  {
+    "request": {
+      "source_ticker": "515470.SH",
+      "start": "2026-09-24",
+      "end": "2026-10-09",
+      "missing_dates": [
+        "2026-09-24",
+        "2026-09-28",
+        "2026-09-29",
+        "2026-10-08",
+        "2026-10-09"
+      ]
+    },
+    "measured_at": "2026-11-06T04:54:27.929429+00:00",
+    "result": {
+      "dataset": "fund_adj",
+      "trade_date": "2026-09-24",
+      "status": "success",
+      "row_count": 6,
+      "checksum": "ddcc3b8ceafd7191f2b62eaaa94efc4d",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-09-24",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 6,
+        "checksum": "ddcc3b8ceafd7191f2b62eaaa94efc4d"
+      }
+    }
+  },
+  {
+    "request": {
+      "source_ticker": "515540.SH",
+      "start": "2026-10-08",
+      "end": "2026-10-09",
+      "missing_dates": [
+        "2026-10-08",
+        "2026-10-09"
+      ]
+    },
+    "measured_at": "2026-11-06T04:54:31.515653+00:00",
+    "result": {
+      "dataset": "fund_adj",
+      "trade_date": "2026-10-08",
+      "status": "success",
+      "row_count": 2,
+      "checksum": "6cd0f6eb30362b45aac9f702ab6c9b39",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-10-08",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 2,
+        "checksum": "6cd0f6eb30362b45aac9f702ab6c9b39"
+      }
+    }
+  },
+  {
+    "request": {
+      "source_ticker": "515940.SH",
+      "start": "2026-09-17",
+      "end": "2026-10-09",
+      "missing_dates": [
+        "2026-09-17",
+        "2026-09-18",
+        "2026-09-21",
+        "2026-09-22",
+        "2026-09-23",
+        "2026-09-24",
+        "2026-09-28",
+        "2026-09-29",
+        "2026-10-08",
+        "2026-10-09"
+      ]
+    },
+    "measured_at": "2026-11-06T05:17:10.495608+00:00",
+    "result": {
+      "dataset": "fund_adj",
+      "trade_date": "2026-09-17",
+      "status": "success",
+      "row_count": 11,
+      "checksum": "e5855bd30f00191aa5dc1a47df169f43",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-09-17",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 11,
+        "checksum": "e5855bd30f00191aa5dc1a47df169f43"
+      }
+    }
+  },
+  {
+    "request": {
+      "source_ticker": "516040.SH",
+      "start": "2026-09-18",
+      "end": "2026-10-09",
+      "missing_dates": [
+        "2026-09-18",
+        "2026-09-21",
+        "2026-09-22",
+        "2026-09-23",
+        "2026-09-24",
+        "2026-09-28",
+        "2026-09-29",
+        "2026-10-08",
+        "2026-10-09"
+      ]
+    },
+    "measured_at": "2026-11-06T04:54:39.975815+00:00",
+    "result": {
+      "dataset": "fund_adj",
+      "trade_date": "2026-09-18",
+      "status": "success",
+      "row_count": 10,
+      "checksum": "d3cf3764a48aa6a6e8dfe6117eb58d22",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-09-18",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 10,
+        "checksum": "d3cf3764a48aa6a6e8dfe6117eb58d22"
+      }
+    }
+  },
+  {
+    "request": {
+      "source_ticker": "526060.SH",
+      "start": "2026-09-04",
+      "end": "2026-10-09",
+      "missing_dates": [
+        "2026-09-04",
+        "2026-09-07",
+        "2026-09-08",
+        "2026-09-09",
+        "2026-09-10",
+        "2026-09-11",
+        "2026-09-14",
+        "2026-09-15",
+        "2026-09-16",
+        "2026-09-17",
+        "2026-09-18",
+        "2026-09-21",
+        "2026-09-22",
+        "2026-09-23",
+        "2026-09-24",
+        "2026-09-28",
+        "2026-09-29",
+        "2026-10-08",
+        "2026-10-09"
+      ]
+    },
+    "measured_at": "2026-11-06T04:54:42.147827+00:00",
+    "result": {
+      "dataset": "fund_adj",
+      "trade_date": "2026-09-04",
+      "status": "success",
+      "row_count": 20,
+      "checksum": "da358f6082bee2c6cb45d5c42e9446ae",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-09-04",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 20,
+        "checksum": "da358f6082bee2c6cb45d5c42e9446ae"
+      }
+    }
+  },
+  {
+    "request": {
+      "source_ticker": "526090.SH",
+      "start": "2026-10-16",
+      "end": "2026-10-23",
+      "missing_dates": [
+        "2026-10-16",
+        "2026-10-19",
+        "2026-10-20",
+        "2026-10-21",
+        "2026-10-22",
+        "2026-10-23"
+      ]
+    },
+    "measured_at": "2026-11-06T04:54:43.826743+00:00",
+    "result": {
+      "dataset": "fund_adj",
+      "trade_date": "2026-10-16",
+      "status": "success",
+      "row_count": 6,
+      "checksum": "feab70f919b6fcd37c38eecdfe02353e",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-10-16",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 6,
+        "checksum": "feab70f919b6fcd37c38eecdfe02353e"
+      }
+    }
+  },
+  {
+    "request": {
+      "source_ticker": "561070.SH",
+      "start": "2026-10-13",
+      "end": "2026-10-23",
+      "missing_dates": [
+        "2026-10-13",
+        "2026-10-14",
+        "2026-10-15",
+        "2026-10-16",
+        "2026-10-19",
+        "2026-10-20",
+        "2026-10-21",
+        "2026-10-22",
+        "2026-10-23"
+      ]
+    },
+    "measured_at": "2026-11-06T04:54:50.158835+00:00",
+    "result": {
+      "dataset": "fund_adj",
+      "trade_date": "2026-10-13",
+      "status": "success",
+      "row_count": 9,
+      "checksum": "5457395686d5774f88ac2c6d169148f7",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-10-13",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 9,
+        "checksum": "5457395686d5774f88ac2c6d169148f7"
+      }
+    }
+  },
+  {
+    "request": {
+      "source_ticker": "561530.SH",
+      "start": "2026-09-03",
+      "end": "2026-10-09",
+      "missing_dates": [
+        "2026-09-03",
+        "2026-09-04",
+        "2026-09-07",
+        "2026-09-08",
+        "2026-09-09",
+        "2026-09-10",
+        "2026-09-11",
+        "2026-09-14",
+        "2026-09-15",
+        "2026-09-16",
+        "2026-09-17",
+        "2026-09-18",
+        "2026-09-21",
+        "2026-09-22",
+        "2026-09-23",
+        "2026-09-24",
+        "2026-09-28",
+        "2026-09-29",
+        "2026-10-08",
+        "2026-10-09"
+      ]
+    },
+    "measured_at": "2026-11-06T04:54:52.068229+00:00",
+    "result": {
+      "dataset": "fund_adj",
+      "trade_date": "2026-09-03",
+      "status": "success",
+      "row_count": 21,
+      "checksum": "1f50421c76972613457189344f4e1376",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-09-03",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 21,
+        "checksum": "1f50421c76972613457189344f4e1376"
+      }
+    }
+  },
+  {
+    "request": {
+      "source_ticker": "561610.SH",
+      "start": "2026-09-16",
+      "end": "2026-10-09",
+      "missing_dates": [
+        "2026-09-16",
+        "2026-09-17",
+        "2026-09-18",
+        "2026-09-21",
+        "2026-09-22",
+        "2026-09-23",
+        "2026-09-24",
+        "2026-09-28",
+        "2026-09-29",
+        "2026-10-08",
+        "2026-10-09"
+      ]
+    },
+    "measured_at": "2026-11-06T04:54:53.930370+00:00",
+    "result": {
+      "dataset": "fund_adj",
+      "trade_date": "2026-09-16",
+      "status": "success",
+      "row_count": 12,
+      "checksum": "3d9346583ee102ad3f589a4d450b9296",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-09-16",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 12,
+        "checksum": "3d9346583ee102ad3f589a4d450b9296"
+      }
+    }
+  },
+  {
+    "request": {
+      "source_ticker": "561650.SH",
+      "start": "2026-10-08",
+      "end": "2026-10-09",
+      "missing_dates": [
+        "2026-10-08",
+        "2026-10-09"
+      ]
+    },
+    "measured_at": "2026-11-06T04:54:55.464139+00:00",
+    "result": {
+      "dataset": "fund_adj",
+      "trade_date": "2026-10-08",
+      "status": "success",
+      "row_count": 2,
+      "checksum": "74f6b1d2b3ade581e07c66950d71a5e2",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-10-08",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 2,
+        "checksum": "74f6b1d2b3ade581e07c66950d71a5e2"
+      }
+    }
+  },
+  {
+    "request": {
+      "source_ticker": "561690.SH",
+      "start": "2026-09-07",
+      "end": "2026-10-09",
+      "missing_dates": [
+        "2026-09-07",
+        "2026-09-08",
+        "2026-09-09",
+        "2026-09-10",
+        "2026-09-11",
+        "2026-09-14",
+        "2026-09-15",
+        "2026-09-16",
+        "2026-09-17",
+        "2026-09-18",
+        "2026-09-21",
+        "2026-09-22",
+        "2026-09-23",
+        "2026-09-24",
+        "2026-09-28",
+        "2026-09-29",
+        "2026-10-08",
+        "2026-10-09"
+      ]
+    },
+    "measured_at": "2026-11-06T04:54:57.218543+00:00",
+    "result": {
+      "dataset": "fund_adj",
+      "trade_date": "2026-09-07",
+      "status": "success",
+      "row_count": 19,
+      "checksum": "72218908eb81661266f5585d7b036095",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-09-07",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 19,
+        "checksum": "72218908eb81661266f5585d7b036095"
+      }
+    }
+  },
+  {
+    "request": {
+      "source_ticker": "562110.SH",
+      "start": "2026-09-16",
+      "end": "2026-10-09",
+      "missing_dates": [
+        "2026-09-16",
+        "2026-09-17",
+        "2026-09-18",
+        "2026-09-21",
+        "2026-09-22",
+        "2026-09-23",
+        "2026-09-24",
+        "2026-09-28",
+        "2026-09-29",
+        "2026-10-08",
+        "2026-10-09"
+      ]
+    },
+    "measured_at": "2026-11-06T04:54:59.177394+00:00",
+    "result": {
+      "dataset": "fund_adj",
+      "trade_date": "2026-09-16",
+      "status": "success",
+      "row_count": 12,
+      "checksum": "4c65704ee1e4d31369db84f66dff6ba9",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-09-16",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 12,
+        "checksum": "4c65704ee1e4d31369db84f66dff6ba9"
+      }
+    }
+  },
+  {
+    "request": {
+      "source_ticker": "562150.SH",
+      "start": "2026-09-14",
+      "end": "2026-10-09",
+      "missing_dates": [
+        "2026-09-14",
+        "2026-09-15",
+        "2026-09-16",
+        "2026-09-17",
+        "2026-09-18",
+        "2026-09-21",
+        "2026-09-22",
+        "2026-09-23",
+        "2026-09-24",
+        "2026-09-28",
+        "2026-09-29",
+        "2026-10-08",
+        "2026-10-09"
+      ]
+    },
+    "measured_at": "2026-11-06T04:55:00.777988+00:00",
+    "result": {
+      "dataset": "fund_adj",
+      "trade_date": "2026-09-14",
+      "status": "success",
+      "row_count": 14,
+      "checksum": "14bea40675b62347bdee6cedb9a829b1",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-09-14",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 14,
+        "checksum": "14bea40675b62347bdee6cedb9a829b1"
+      }
+    }
+  },
+  {
+    "request": {
+      "source_ticker": "562170.SH",
+      "start": "2026-09-14",
+      "end": "2026-10-09",
+      "missing_dates": [
+        "2026-09-14",
+        "2026-09-15",
+        "2026-09-16",
+        "2026-09-17",
+        "2026-09-18",
+        "2026-09-21",
+        "2026-09-22",
+        "2026-09-23",
+        "2026-09-24",
+        "2026-09-28",
+        "2026-09-29",
+        "2026-10-08",
+        "2026-10-09"
+      ]
+    },
+    "measured_at": "2026-11-06T04:55:02.523690+00:00",
+    "result": {
+      "dataset": "fund_adj",
+      "trade_date": "2026-09-14",
+      "status": "success",
+      "row_count": 14,
+      "checksum": "c552e3f063b46a1112f140b8729d2b2d",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-09-14",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 14,
+        "checksum": "c552e3f063b46a1112f140b8729d2b2d"
+      }
+    }
+  },
+  {
+    "request": {
+      "source_ticker": "562200.SH",
+      "start": "2026-10-08",
+      "end": "2026-10-09",
+      "missing_dates": [
+        "2026-10-08",
+        "2026-10-09"
+      ]
+    },
+    "measured_at": "2026-11-06T04:55:04.152994+00:00",
+    "result": {
+      "dataset": "fund_adj",
+      "trade_date": "2026-10-08",
+      "status": "success",
+      "row_count": 2,
+      "checksum": "b8e20f8f9a02a54a7875f2468cb76c24",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-10-08",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 2,
+        "checksum": "b8e20f8f9a02a54a7875f2468cb76c24"
+      }
+    }
+  },
+  {
+    "request": {
+      "source_ticker": "562400.SH",
+      "start": "2026-10-14",
+      "end": "2026-10-23",
+      "missing_dates": [
+        "2026-10-14",
+        "2026-10-15",
+        "2026-10-16",
+        "2026-10-19",
+        "2026-10-20",
+        "2026-10-21",
+        "2026-10-22",
+        "2026-10-23"
+      ]
+    },
+    "measured_at": "2026-11-06T04:55:05.967601+00:00",
+    "result": {
+      "dataset": "fund_adj",
+      "trade_date": "2026-10-14",
+      "status": "success",
+      "row_count": 8,
+      "checksum": "df2cea5a8d2919161907d2073d353baa",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-10-14",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 8,
+        "checksum": "df2cea5a8d2919161907d2073d353baa"
+      }
+    }
+  },
+  {
+    "request": {
+      "source_ticker": "562420.SH",
+      "start": "2026-10-16",
+      "end": "2026-10-23",
+      "missing_dates": [
+        "2026-10-16",
+        "2026-10-19",
+        "2026-10-20",
+        "2026-10-21",
+        "2026-10-22",
+        "2026-10-23"
+      ]
+    },
+    "measured_at": "2026-11-06T04:55:09.060963+00:00",
+    "result": {
+      "dataset": "fund_adj",
+      "trade_date": "2026-10-16",
+      "status": "success",
+      "row_count": 6,
+      "checksum": "f260f2dd74cfa052bd6734cfb4ce6f63",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-10-16",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 6,
+        "checksum": "f260f2dd74cfa052bd6734cfb4ce6f63"
+      }
+    }
+  },
+  {
+    "request": {
+      "source_ticker": "562450.SH",
+      "start": "2026-09-28",
+      "end": "2026-10-09",
+      "missing_dates": [
+        "2026-09-28",
+        "2026-09-29",
+        "2026-10-08",
+        "2026-10-09"
+      ]
+    },
+    "measured_at": "2026-11-06T04:55:10.760925+00:00",
+    "result": {
+      "dataset": "fund_adj",
+      "trade_date": "2026-09-28",
+      "status": "success",
+      "row_count": 5,
+      "checksum": "5020e8ec16c0718ebd13b1897ee3e50e",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-09-28",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 5,
+        "checksum": "5020e8ec16c0718ebd13b1897ee3e50e"
+      }
+    }
+  },
+  {
+    "request": {
+      "source_ticker": "589430.SH",
+      "start": "2026-09-04",
+      "end": "2026-10-09",
+      "missing_dates": [
+        "2026-09-04",
+        "2026-09-07",
+        "2026-09-08",
+        "2026-09-09",
+        "2026-09-10",
+        "2026-09-11",
+        "2026-09-14",
+        "2026-09-15",
+        "2026-09-16",
+        "2026-09-17",
+        "2026-09-18",
+        "2026-09-21",
+        "2026-09-22",
+        "2026-09-23",
+        "2026-09-24",
+        "2026-09-28",
+        "2026-09-29",
+        "2026-10-08",
+        "2026-10-09"
+      ]
+    },
+    "measured_at": "2026-11-06T04:55:14.171196+00:00",
+    "result": {
+      "dataset": "fund_adj",
+      "trade_date": "2026-09-04",
+      "status": "success",
+      "row_count": 20,
+      "checksum": "201674099cb50fb5c719ddc4ebda8cff",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-09-04",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 20,
+        "checksum": "201674099cb50fb5c719ddc4ebda8cff"
+      }
+    }
+  },
+  {
+    "request": {
+      "source_ticker": "589480.SH",
+      "start": "2026-09-24",
+      "end": "2026-10-09",
+      "missing_dates": [
+        "2026-09-24",
+        "2026-09-28",
+        "2026-09-29",
+        "2026-10-08",
+        "2026-10-09"
+      ]
+    },
+    "measured_at": "2026-11-06T04:55:16.233483+00:00",
+    "result": {
+      "dataset": "fund_adj",
+      "trade_date": "2026-09-24",
+      "status": "success",
+      "row_count": 6,
+      "checksum": "63a9c7954bf5372cf88a2d965842e090",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-09-24",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 6,
+        "checksum": "63a9c7954bf5372cf88a2d965842e090"
+      }
+    }
+  },
+  {
+    "request": {
+      "source_ticker": "589490.SH",
+      "start": "2026-10-08",
+      "end": "2026-10-09",
+      "missing_dates": [
+        "2026-10-08",
+        "2026-10-09"
+      ]
+    },
+    "measured_at": "2026-11-06T04:55:18.132744+00:00",
+    "result": {
+      "dataset": "fund_adj",
+      "trade_date": "2026-10-08",
+      "status": "success",
+      "row_count": 2,
+      "checksum": "86fc09ef37cd2c3b8bb8404e678b2c90",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-10-08",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 2,
+        "checksum": "86fc09ef37cd2c3b8bb8404e678b2c90"
+      }
+    }
+  },
+  {
+    "request": {
+      "source_ticker": "589510.SH",
+      "start": "2026-09-17",
+      "end": "2026-10-09",
+      "missing_dates": [
+        "2026-09-17",
+        "2026-09-18",
+        "2026-09-21",
+        "2026-09-22",
+        "2026-09-23",
+        "2026-09-24",
+        "2026-09-28",
+        "2026-09-29",
+        "2026-10-08",
+        "2026-10-09"
+      ]
+    },
+    "measured_at": "2026-11-06T04:55:20.042428+00:00",
+    "result": {
+      "dataset": "fund_adj",
+      "trade_date": "2026-09-17",
+      "status": "success",
+      "row_count": 11,
+      "checksum": "01edd07940871a066bcb82fd636c7528",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-09-17",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 11,
+        "checksum": "01edd07940871a066bcb82fd636c7528"
+      }
+    }
+  }
+]

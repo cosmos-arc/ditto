@@ -3,11 +3,15 @@
 from __future__ import annotations
 
 from datetime import date
+from hashlib import sha256
 
+import orjson
 import polars as pl
 from ditto_platform.foundation import OnDuplicate, logger
 
+from ditto_data.models.metadata import FundReportEvidence
 from ditto_data.services.deps import FundamentalReaders, FundamentalWriters
+from ditto_data.storage.fundamental.fund_portfolio.identity import FundIdentityStore
 
 
 class FundamentalStore:
@@ -25,6 +29,7 @@ class FundamentalStore:
         self,
         read_ports: FundamentalReaders,
         write_ports: FundamentalWriters,
+        fund_identities: FundIdentityStore | None = None,
     ) -> None:
         """
         Initialize FundamentalStore with CQRS Readers/Writers.
@@ -32,10 +37,12 @@ class FundamentalStore:
         Args:
             read_ports: Fundamental 域读取依赖（包含所有 Reader）.
             write_ports: Fundamental 域写入依赖（包含所有 Writer）.
+            fund_identities: 独立的公募持有人身份存储.
 
         """
         self._read_ports = read_ports
         self._write_ports = write_ports
+        self._fund_identities = fund_identities
 
         logger.debug(
             "FundamentalStore initialized with CQRS Readers/Writers",
@@ -43,6 +50,103 @@ class FundamentalStore:
         )
 
     # get_* - Single record queries (PIT)
+
+    def register_fund_holders(self, frame: pl.DataFrame) -> None:
+        """Register fund_basic identities without adding tradable securities."""
+        if self._fund_identities is None:
+            raise ValueError("fund holder identity store not configured")
+        self._fund_identities.register(frame)
+
+    def list_fund_holders(self) -> list[str]:
+        """List all observed holders, including OTC and inactive funds."""
+        if self._fund_identities is None:
+            raise ValueError("fund holder identity store not configured")
+        return self._fund_identities.list_codes()
+
+    def require_fund_holders(self, codes: list[str]) -> None:
+        """Reject missing holder identities without filtering any holdings."""
+        if self._fund_identities is None:
+            raise ValueError("fund holder identity store not configured")
+        self._fund_identities.require(codes)
+
+    def get_fund_portfolio(
+        self,
+        source_ticker: str,
+        start: str,
+        end: str,
+        as_of: str | None = None,
+    ) -> pl.DataFrame:
+        """Read disclosures with only exact, explicitly verified report bindings."""
+        frame = self._read_fund_portfolio(source_ticker, start, end, as_of)
+        if frame.is_empty():
+            return frame
+        if self._fund_identities is None:
+            raise ValueError("fund holder identity store not configured")
+        reports = self._fund_identities.reports(source_ticker)
+        groups: list[pl.DataFrame] = []
+        for group in frame.partition_by(["report_date", "knowledge_date"]):
+            checksum = fund_holdings_checksum(group)
+            matched = [
+                report
+                for report in reports
+                if report.holdings_sha256 == checksum
+                and report.report_date == group["report_date"][0]
+                and report.announcement_date == group["knowledge_date"][0]
+            ]
+            types = {report.report_type for report in matched}
+            groups.append(
+                group.with_columns(
+                    pl.lit(next(iter(types)) if len(types) == 1 else "unknown").alias(
+                        "report_type"
+                    ),
+                    pl.lit("disclosed_subset").alias("holding_scope"),
+                    pl.lit(checksum).alias("holdings_sha256"),
+                    pl.lit(
+                        matched[0].revision_of if len(matched) == 1 else None,
+                        dtype=pl.String,
+                    ).alias("revision_of"),
+                    pl.lit(
+                        orjson.dumps(
+                            [item.model_dump(mode="json") for item in matched]
+                        ).decode()
+                    ).alias("report_evidence"),
+                )
+            )
+        return pl.concat(groups).sort(
+            ["report_date", "knowledge_date", "holding_symbol"]
+        )
+
+    def register_fund_report(
+        self, evidence: FundReportEvidence, document: bytes
+    ) -> None:
+        """Attach a reviewed document only to its exact local disclosure values."""
+        frame = self._read_fund_portfolio(
+            evidence.source_ticker,
+            evidence.report_date.isoformat(),
+            evidence.report_date.isoformat(),
+            evidence.announcement_date.isoformat(),
+        ).filter(pl.col("knowledge_date") == evidence.announcement_date)
+        if (
+            frame.is_empty()
+            or fund_holdings_checksum(frame) != evidence.holdings_sha256
+        ):
+            raise ValueError("fund report holdings checksum mismatch")
+        if self._fund_identities is None:
+            raise ValueError("fund holder identity store not configured")
+        self._fund_identities.register_report(evidence, document)
+
+    def _read_fund_portfolio(
+        self, source_ticker: str, start: str, end: str, as_of: str | None
+    ) -> pl.DataFrame:
+        """Read original rows before adding any report interpretation."""
+        self.require_fund_holders([source_ticker])
+        reader = self._read_ports.fund_portfolio
+        if reader is None:
+            raise ValueError("fund_portfolio reader not configured")
+        filters = [pl.col("source_ticker") == source_ticker]
+        if as_of is not None:
+            filters.append(pl.col("knowledge_date") <= date.fromisoformat(as_of))
+        return reader.read(start_date=start, end_date=end, filters=filters)
 
     def get_balance_sheet(
         self, instrument_id: int, as_of_date: date
@@ -244,5 +348,52 @@ class FundamentalStore:
             raise ValueError("fund_portfolio writer not configured")
         if df.is_empty():
             return 0
-        result = writer.write(df, year, on_duplicate=on_duplicate)
+        self.require_fund_holders(df["source_ticker"].unique().to_list())
+        result = writer.write(
+            self.preserve_fund_trading_links(df), year, on_duplicate=on_duplicate
+        )
         return result.added + result.updated
+
+    def preserve_fund_trading_links(self, frame: pl.DataFrame) -> pl.DataFrame:
+        """
+        Keep legacy links immutable; new disclosures have no trading identity.
+
+        A later securities-master registration must not change an identical
+        provider observation or its canonical checksum. Every service write uses
+        this rule, so concurrent new keys both receive null and existing links
+        cannot change between preparation and the ordinary locked write.
+        """
+        reader = self._read_ports.fund_portfolio
+        if reader is None:
+            raise ValueError("fund_portfolio reader not configured")
+        keys = ["source_ticker", "report_date", "holding_symbol", "knowledge_date"]
+        incoming = frame.drop("instrument_id", strict=False)
+        columns = [column for column in incoming.columns if column != "source"]
+        columns.append("instrument_id")
+        if "source" in incoming.columns:
+            columns.append("source")
+        if frame.is_empty():
+            return incoming.with_columns(
+                pl.lit(None, dtype=pl.Int64).alias("instrument_id")
+            ).select(columns)
+        existing = reader.read(
+            start_date=str(frame["report_date"].min()),
+            end_date=str(frame["report_date"].max()),
+            filters=pl.col("source_ticker").is_in(
+                frame["source_ticker"].unique().to_list()
+            ),
+        )
+        if existing.is_empty():
+            return incoming.with_columns(
+                pl.lit(None, dtype=pl.Int64).alias("instrument_id")
+            ).select(columns)
+        return incoming.join(
+            existing.select(*keys, "instrument_id"), on=keys, how="left", validate="m:1"
+        ).select(columns)
+
+
+def fund_holdings_checksum(frame: pl.DataFrame) -> str:
+    """Bind evidence to values, nulls and disclosure identity, excluding trading IDs."""
+    columns = sorted(set(frame.columns) - {"instrument_id", "source"})
+    rows = frame.select(columns).sort(columns).to_dicts()
+    return sha256(orjson.dumps(rows, option=orjson.OPT_SORT_KEYS)).hexdigest()

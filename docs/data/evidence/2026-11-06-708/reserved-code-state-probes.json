@@ -1,0 +1,142 @@
+[
+  {
+    "measured_at": "2026-11-06T06:03:58.542336+00:00",
+    "api": "stock_basic",
+    "params": {
+      "ts_code": "600849.SH",
+      "list_status": "G",
+      "fields": "ts_code,name,exchange,market,list_status,list_date,delist_date"
+    },
+    "rows": []
+  },
+  {
+    "measured_at": "2026-11-06T06:03:59.710603+00:00",
+    "api": "stock_basic",
+    "params": {
+      "ts_code": "600849.SH",
+      "list_status": "UN",
+      "fields": "ts_code,name,exchange,market,list_status,list_date,delist_date"
+    },
+    "rows": []
+  },
+  {
+    "measured_at": "2026-11-06T06:04:00.487035+00:00",
+    "api": "stock_basic",
+    "params": {
+      "ts_code": "300060.SZ",
+      "list_status": "G",
+      "fields": "ts_code,name,exchange,market,list_status,list_date,delist_date"
+    },
+    "rows": []
+  },
+  {
+    "measured_at": "2026-11-06T06:04:02.405735+00:00",
+    "api": "stock_basic",
+    "params": {
+      "ts_code": "300060.SZ",
+      "list_status": "UN",
+      "fields": "ts_code,name,exchange,market,list_status,list_date,delist_date"
+    },
+    "rows": []
+  },
+  {
+    "measured_at": "2026-11-06T06:04:02.934266+00:00",
+    "api": "stock_basic",
+    "params": {
+      "ts_code": "002525.SZ",
+      "list_status": "G",
+      "fields": "ts_code,name,exchange,market,list_status,list_date,delist_date"
+    },
+    "rows": []
+  },
+  {
+    "measured_at": "2026-11-06T06:04:03.880788+00:00",
+    "api": "stock_basic",
+    "params": {
+      "ts_code": "002525.SZ",
+      "list_status": "UN",
+      "fields": "ts_code,name,exchange,market,list_status,list_date,delist_date"
+    },
+    "rows": []
+  },
+  {
+    "measured_at": "2026-11-06T06:04:04.637651+00:00",
+    "api": "stock_basic",
+    "params": {
+      "ts_code": "001235.SZ",
+      "list_status": "G",
+      "fields": "ts_code,name,exchange,market,list_status,list_date,delist_date"
+    },
+    "rows": []
+  },
+  {
+    "measured_at": "2026-11-06T06:04:05.930677+00:00",
+    "api": "stock_basic",
+    "params": {
+      "ts_code": "001235.SZ",
+      "list_status": "UN",
+      "fields": "ts_code,name,exchange,market,list_status,list_date,delist_date"
+    },
+    "rows": []
+  },
+  {
+    "measured_at": "2026-11-06T06:04:06.515657+00:00",
+    "api": "stock_basic",
+    "params": {
+      "ts_code": "300646.SZ",
+      "list_status": "G",
+      "fields": "ts_code,name,exchange,market,list_status,list_date,delist_date"
+    },
+    "rows": []
+  },
+  {
+    "measured_at": "2026-11-06T06:04:07.704257+00:00",
+    "api": "stock_basic",
+    "params": {
+      "ts_code": "300646.SZ",
+      "list_status": "UN",
+      "fields": "ts_code,name,exchange,market,list_status,list_date,delist_date"
+    },
+    "rows": []
+  },
+  {
+    "measured_at": "2026-11-06T06:04:57.642890+00:00",
+    "api": "stock_basic",
+    "params": {
+      "ts_code": "603361.SH",
+      "list_status": "G",
+      "fields": "ts_code,name,exchange,market,list_status,list_date,delist_date"
+    },
+    "rows": []
+  },
+  {
+    "measured_at": "2026-11-06T06:04:59.539722+00:00",
+    "api": "stock_basic",
+    "params": {
+      "ts_code": "603361.SH",
+      "list_status": "UN",
+      "fields": "ts_code,name,exchange,market,list_status,list_date,delist_date"
+    },
+    "rows": []
+  },
+  {
+    "measured_at": "2026-11-06T06:05:00.535507+00:00",
+    "api": "stock_basic",
+    "params": {
+      "ts_code": "688688.SH",
+      "list_status": "G",
+      "fields": "ts_code,name,exchange,market,list_status,list_date,delist_date"
+    },
+    "rows": []
+  },
+  {
+    "measured_at": "2026-11-06T06:05:01.488547+00:00",
+    "api": "stock_basic",
+    "params": {
+      "ts_code": "688688.SH",
+      "list_status": "UN",
+      "fields": "ts_code,name,exchange,market,list_status,list_date,delist_date"
+    },
+    "rows": []
+  }
+]

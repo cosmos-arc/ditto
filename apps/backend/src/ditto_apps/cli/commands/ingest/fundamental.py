@@ -1,13 +1,55 @@
 """Fundamental 域摄取命令."""
 
+from pathlib import Path
+
 import typer
 
 from ditto_apps.cli.commands.factory import (
     create_daily_command,
     create_instrument_command,
 )
+from ditto_apps.cli.context import create_executor
+from ditto_apps.cli.utils.output import output_json_dict
+from ditto_apps.cli.utils.validation import validate_date_range
 
 app = typer.Typer(help="基本面数据摄取")
+
+
+@app.command("portfolio-report")
+def portfolio_report(
+    evidence: Path = typer.Option(..., "--evidence", exists=True, dir_okay=False),
+    document: Path = typer.Option(..., "--document", exists=True, dir_okay=False),
+) -> None:
+    """附加人工核实的原文与元数据；校验文档及持仓内容哈希，拒绝覆盖证据。"""
+    with create_executor() as executor:
+        result = executor.coordinator.register_fund_report(
+            evidence.read_bytes(), document.read_bytes()
+        )
+    output_json_dict(result)
+
+
+@app.command("portfolio-batch")
+def portfolio_batch(
+    start: str = typer.Option(..., "--start"),
+    end: str = typer.Option(..., "--end"),
+    after: str = typer.Option("", "--after"),
+    limit: int = typer.Option(100, "--limit", min=1, max=1000),
+    roster_sha256: str = typer.Option("", "--roster-sha256"),
+) -> None:
+    """逐基金有界摄取; 续跑使用上批 next_after 与 roster_sha256。"""
+    validate_date_range(start, end)
+    with create_executor() as executor:
+        result = executor.coordinator.ingest_fund_portfolio_batch(
+            start,
+            end,
+            after=after,
+            limit=limit,
+            roster_sha256=roster_sha256,
+        )
+        output_json_dict(result)
+        if result["failed"]:
+            raise typer.Exit(1)
+
 
 # 双模式命令（按日期/按标的）
 app.command("balance")(
@@ -79,7 +121,7 @@ app.command("fina-indicator")(
 app.command("portfolio")(
     create_instrument_command(
         "fund_portfolio",
-        "摄取基金季度持仓",
+        "摄取公募披露持仓",
         cli_path="ingest fundamental portfolio",
     )
 )

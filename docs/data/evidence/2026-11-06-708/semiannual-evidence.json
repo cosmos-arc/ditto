@@ -1,0 +1,13 @@
+{
+  "source_ticker": "000001.OF",
+  "report_date": "2026-06-30",
+  "announcement_date": "2026-08-31",
+  "report_type": "semiannual",
+  "document_form": "body",
+  "document_stock_count": 77,
+  "document_sha256": "ad5a32fbbc8d0317160d96c2713a2594b6b177b34eb29298497d661bef78c11f",
+  "source_url": "https://fund.chinaamc.com/upload/resources/file/2026/08/31/bd9ce00969744c94a67cb7f2ededc846.pdf",
+  "title": "华夏成长证券投资基金2026年中期报告",
+  "holdings_sha256": "74713831b6713c37ac6178e72dd742a06da892f86998059256eeb75555350d9a",
+  "evidence_note": "2026-11-06: original title, fund code, period and publication date checked; all 67 provider stock codes, share counts and CNY values match original; original stock table has 77 rows; 10 original rows absent from this announcement-date group, so this is a matched subset; ratios not mapped to NAV weights; disclosed stocks only, not full assets."
+}

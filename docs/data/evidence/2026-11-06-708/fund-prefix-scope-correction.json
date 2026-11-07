@@ -1,0 +1,19 @@
+{
+  "finished_at": "2026-11-06T20:52:25.411402+00:00",
+  "holders": 32842,
+  "original_completion_file": "fund-durable-before-zero-correction.json",
+  "original_completion_sha256": "7e5c466ba4d9904349471bbbf395992f8f0543212f42e01cb52060672ac1e6f1",
+  "manifest_file": "fund-prefix-snapshot-manifest.json",
+  "manifest_sha256": "3053510a72833d8893c27ca125efb1791b31827e9abfdf49ad372262dcfdf3f2",
+  "checkpoint_before_file": "fund-prefix-checkpoints-before.json",
+  "checkpoint_before_sha256": "56cb161b561c79c1ea5a6eb09814706e2eb7625e705f4554e31d40ce6e5765fb",
+  "current_full_window_complete": 0,
+  "current_full_window_pending": 32842,
+  "effective_prefix_start": "2014-01-01",
+  "effective_prefix_end": "2026-09-30",
+  "required_tail_start": "2026-10-01",
+  "required_tail_end": "2026-11-05",
+  "original_checkpoints_unchanged": true,
+  "reason": "Original full-window fund request ended at quarter-end instead of the requested disclosure cutoff. Retain original source observations as audited prefix through2026-09-30; full-window completion requires repair. Tail is separately ingested and measured as a union, not a new full-window snapshot.",
+  "boundary": "Current full-window request families are pending. Immutable historical COMPLETE records/snapshots remain historical execution evidence; this is not global snapshot revocation. No canonical holdings changed. The final task audit must separately bind original prefix payloads and successful tail payloads."
+}

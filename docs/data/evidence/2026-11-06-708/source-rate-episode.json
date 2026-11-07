@@ -1,0 +1,742 @@
+{
+  "recorded_at": "2026-11-06T16:21:18.477548+00:00",
+  "application_rate_rejections": [
+    {
+      "measured_at": "2026-11-06T16:01:32.712323+00:00",
+      "api": "fund_nav",
+      "params": {
+        "ts_code": "159867.SZ",
+        "start_date": "20140101",
+        "end_date": "20261105"
+      },
+      "errors": [
+        "SourceFetchError: 您请求速度过快"
+      ]
+    },
+    {
+      "measured_at": "2026-11-06T16:01:33.198698+00:00",
+      "api": "fund_nav",
+      "params": {
+        "ts_code": "159846.SZ",
+        "start_date": "20140101",
+        "end_date": "20261105"
+      },
+      "errors": [
+        "SourceFetchError: 您请求速度过快"
+      ]
+    },
+    {
+      "measured_at": "2026-11-06T16:01:35.041811+00:00",
+      "api": "fund_nav",
+      "params": {
+        "ts_code": "159880.SZ",
+        "start_date": "20140101",
+        "end_date": "20261105"
+      },
+      "errors": [
+        "SourceFetchError: 您请求速度过快"
+      ]
+    },
+    {
+      "measured_at": "2026-11-06T16:01:35.109906+00:00",
+      "api": "fund_nav",
+      "params": {
+        "ts_code": "159839.SZ",
+        "start_date": "20140101",
+        "end_date": "20261105"
+      },
+      "errors": [
+        "SourceFetchError: 您请求速度过快"
+      ]
+    },
+    {
+      "measured_at": "2026-11-06T16:01:35.303264+00:00",
+      "api": "fund_nav",
+      "params": {
+        "ts_code": "159851.SZ",
+        "start_date": "20140101",
+        "end_date": "20261105"
+      },
+      "errors": [
+        "SourceFetchError: 您请求速度过快"
+      ]
+    },
+    {
+      "measured_at": "2026-11-06T16:01:36.604028+00:00",
+      "api": "fund_portfolio",
+      "params": {
+        "ts_code": "519764.OF",
+        "start_date": "20130930",
+        "end_date": "20260930"
+      },
+      "errors": [
+        "RetryError: RetryError[<Future at 0x110df1450 state=finished raised SourceFetchError>]",
+        "SourceFetchError: 您请求速度过快"
+      ]
+    },
+    {
+      "measured_at": "2026-11-06T16:01:36.953442+00:00",
+      "api": "fund_portfolio",
+      "params": {
+        "ts_code": "024735.OF",
+        "start_date": "20130930",
+        "end_date": "20260930"
+      },
+      "errors": [
+        "RetryError: RetryError[<Future at 0x112f04ed0 state=finished raised SourceFetchError>]",
+        "SourceFetchError: 您请求速度过快"
+      ]
+    },
+    {
+      "measured_at": "2026-11-06T16:01:38.471176+00:00",
+      "api": "fund_portfolio",
+      "params": {
+        "ts_code": "025058.OF",
+        "start_date": "20130930",
+        "end_date": "20260930"
+      },
+      "errors": [
+        "RetryError: RetryError[<Future at 0x1112f27d0 state=finished raised SourceFetchError>]",
+        "SourceFetchError: 您请求速度过快"
+      ]
+    },
+    {
+      "measured_at": "2026-11-06T16:01:39.458171+00:00",
+      "api": "fund_portfolio",
+      "params": {
+        "ts_code": "025053.OF",
+        "start_date": "20130930",
+        "end_date": "20260930"
+      },
+      "errors": [
+        "RetryError: RetryError[<Future at 0x11321b9d0 state=finished raised SourceFetchError>]",
+        "SourceFetchError: 您请求速度过快"
+      ]
+    },
+    {
+      "measured_at": "2026-11-06T16:01:39.458215+00:00",
+      "api": "fund_portfolio",
+      "params": {
+        "ts_code": "025031.OF",
+        "start_date": "20130930",
+        "end_date": "20260930"
+      },
+      "errors": [
+        "RetryError: RetryError[<Future at 0x1146570d0 state=finished raised SourceFetchError>]",
+        "SourceFetchError: 您请求速度过快"
+      ]
+    },
+    {
+      "measured_at": "2026-11-06T16:01:40.449230+00:00",
+      "api": "fund_portfolio",
+      "params": {
+        "ts_code": "024956.OF",
+        "start_date": "20130930",
+        "end_date": "20260930"
+      },
+      "errors": [
+        "RetryError: RetryError[<Future at 0x1145f23d0 state=finished raised SourceFetchError>]",
+        "SourceFetchError: 您请求速度过快"
+      ]
+    },
+    {
+      "measured_at": "2026-11-06T16:02:32.939668+00:00",
+      "api": "fund_nav",
+      "params": {
+        "ts_code": "159889.SZ",
+        "start_date": "20140101",
+        "end_date": "20261105"
+      },
+      "errors": [
+        "SourceFetchError: 您请求速度过快"
+      ]
+    },
+    {
+      "measured_at": "2026-11-06T16:02:33.325645+00:00",
+      "api": "fund_nav",
+      "params": {
+        "ts_code": "159855.SZ",
+        "start_date": "20140101",
+        "end_date": "20261105"
+      },
+      "errors": [
+        "SourceFetchError: 您请求速度过快"
+      ]
+    },
+    {
+      "measured_at": "2026-11-06T16:02:33.886974+00:00",
+      "api": "fund_nav",
+      "params": {
+        "ts_code": "159864.SZ",
+        "start_date": "20140101",
+        "end_date": "20261105"
+      },
+      "errors": [
+        "SourceFetchError: 您请求速度过快"
+      ]
+    },
+    {
+      "measured_at": "2026-11-06T16:02:33.892295+00:00",
+      "api": "fund_nav",
+      "params": {
+        "ts_code": "159863.SZ",
+        "start_date": "20140101",
+        "end_date": "20261105"
+      },
+      "errors": [
+        "SourceFetchError: 您请求速度过快"
+      ]
+    },
+    {
+      "measured_at": "2026-11-06T16:02:34.859970+00:00",
+      "api": "fund_nav",
+      "params": {
+        "ts_code": "159901.SZ",
+        "start_date": "20140101",
+        "end_date": "20261105"
+      },
+      "errors": [
+        "SourceFetchError: 您请求速度过快"
+      ]
+    },
+    {
+      "measured_at": "2026-11-06T16:02:35.111931+00:00",
+      "api": "fund_portfolio",
+      "params": {
+        "ts_code": "006290.OF",
+        "start_date": "20130930",
+        "end_date": "20260930"
+      },
+      "errors": [
+        "RetryError: RetryError[<Future at 0x11465dd90 state=finished raised SourceFetchError>]",
+        "SourceFetchError: 您请求速度过快"
+      ]
+    },
+    {
+      "measured_at": "2026-11-06T16:02:35.355921+00:00",
+      "api": "fund_nav",
+      "params": {
+        "ts_code": "159857.SZ",
+        "start_date": "20140101",
+        "end_date": "20261105"
+      },
+      "errors": [
+        "SourceFetchError: 您请求速度过快"
+      ]
+    },
+    {
+      "measured_at": "2026-11-06T16:02:35.918900+00:00",
+      "api": "fund_nav",
+      "params": {
+        "ts_code": "159870.SZ",
+        "start_date": "20140101",
+        "end_date": "20261105"
+      },
+      "errors": [
+        "SourceFetchError: 您请求速度过快"
+      ]
+    },
+    {
+      "measured_at": "2026-11-06T16:02:37.512293+00:00",
+      "api": "fund_portfolio",
+      "params": {
+        "ts_code": "025133.OF",
+        "start_date": "20130930",
+        "end_date": "20260930"
+      },
+      "errors": [
+        "RetryError: RetryError[<Future at 0x114b0ded0 state=finished raised SourceFetchError>]",
+        "SourceFetchError: 您请求速度过快"
+      ]
+    },
+    {
+      "measured_at": "2026-11-06T16:02:37.676079+00:00",
+      "api": "fund_portfolio",
+      "params": {
+        "ts_code": "025232.OF",
+        "start_date": "20130930",
+        "end_date": "20260930"
+      },
+      "errors": [
+        "RetryError: RetryError[<Future at 0x1113e84d0 state=finished raised SourceFetchError>]",
+        "SourceFetchError: 您请求速度过快"
+      ]
+    },
+    {
+      "measured_at": "2026-11-06T16:02:37.742880+00:00",
+      "api": "fund_portfolio",
+      "params": {
+        "ts_code": "025005.OF",
+        "start_date": "20130930",
+        "end_date": "20260930"
+      },
+      "errors": [
+        "RetryError: RetryError[<Future at 0x112cbb7d0 state=finished raised SourceFetchError>]",
+        "SourceFetchError: 您请求速度过快"
+      ]
+    },
+    {
+      "measured_at": "2026-11-06T16:02:38.196038+00:00",
+      "api": "fund_portfolio",
+      "params": {
+        "ts_code": "520850.SH",
+        "start_date": "20130930",
+        "end_date": "20260930"
+      },
+      "errors": [
+        "RetryError: RetryError[<Future at 0x165512c50 state=finished raised SourceFetchError>]",
+        "SourceFetchError: 您请求速度过快"
+      ]
+    },
+    {
+      "measured_at": "2026-11-06T16:02:39.610766+00:00",
+      "api": "fund_portfolio",
+      "params": {
+        "ts_code": "025177.OF",
+        "start_date": "20130930",
+        "end_date": "20260930"
+      },
+      "errors": [
+        "RetryError: RetryError[<Future at 0x11321a750 state=finished raised SourceFetchError>]",
+        "SourceFetchError: 您请求速度过快"
+      ]
+    },
+    {
+      "measured_at": "2026-11-06T16:02:40.902870+00:00",
+      "api": "fund_portfolio",
+      "params": {
+        "ts_code": "014987.OF",
+        "start_date": "20130930",
+        "end_date": "20260930"
+      },
+      "errors": [
+        "RetryError: RetryError[<Future at 0x11330b5d0 state=finished raised SourceFetchError>]",
+        "SourceFetchError: 您请求速度过快"
+      ]
+    },
+    {
+      "measured_at": "2026-11-06T16:02:41.277053+00:00",
+      "api": "fund_portfolio",
+      "params": {
+        "ts_code": "025206.OF",
+        "start_date": "20130930",
+        "end_date": "20260930"
+      },
+      "errors": [
+        "RetryError: RetryError[<Future at 0x11480e950 state=finished raised SourceFetchError>]",
+        "SourceFetchError: 您请求速度过快"
+      ]
+    },
+    {
+      "measured_at": "2026-11-06T16:03:35.490942+00:00",
+      "api": "fund_nav",
+      "params": {
+        "ts_code": "159876.SZ",
+        "start_date": "20140101",
+        "end_date": "20261105"
+      },
+      "errors": [
+        "SourceFetchError: 您请求速度过快"
+      ]
+    },
+    {
+      "measured_at": "2026-11-06T16:03:35.639604+00:00",
+      "api": "fund_nav",
+      "params": {
+        "ts_code": "159891.SZ",
+        "start_date": "20140101",
+        "end_date": "20261105"
+      },
+      "errors": [
+        "SourceFetchError: 您请求速度过快"
+      ]
+    },
+    {
+      "measured_at": "2026-11-06T16:03:36.539288+00:00",
+      "api": "fund_nav",
+      "params": {
+        "ts_code": "159885.SZ",
+        "start_date": "20140101",
+        "end_date": "20261105"
+      },
+      "errors": [
+        "SourceFetchError: 您请求速度过快"
+      ]
+    },
+    {
+      "measured_at": "2026-11-06T16:03:39.723244+00:00",
+      "api": "fund_portfolio",
+      "params": {
+        "ts_code": "025303.OF",
+        "start_date": "20130930",
+        "end_date": "20260930"
+      },
+      "errors": [
+        "RetryError: RetryError[<Future at 0x1146b4250 state=finished raised SourceFetchError>]",
+        "SourceFetchError: 您请求速度过快"
+      ]
+    },
+    {
+      "measured_at": "2026-11-06T16:03:40.785183+00:00",
+      "api": "fund_portfolio",
+      "params": {
+        "ts_code": "025379.OF",
+        "start_date": "20130930",
+        "end_date": "20260930"
+      },
+      "errors": [
+        "RetryError: RetryError[<Future at 0x110ed4050 state=finished raised SourceFetchError>]",
+        "SourceFetchError: 您请求速度过快"
+      ]
+    },
+    {
+      "measured_at": "2026-11-06T16:03:41.111293+00:00",
+      "api": "fund_portfolio",
+      "params": {
+        "ts_code": "025323.OF",
+        "start_date": "20130930",
+        "end_date": "20260930"
+      },
+      "errors": [
+        "RetryError: RetryError[<Future at 0x112eeec50 state=finished raised SourceFetchError>]",
+        "SourceFetchError: 您请求速度过快"
+      ]
+    },
+    {
+      "measured_at": "2026-11-06T16:04:34.738359+00:00",
+      "api": "fund_nav",
+      "params": {
+        "ts_code": "159896.SZ",
+        "start_date": "20140101",
+        "end_date": "20261105"
+      },
+      "errors": [
+        "SourceFetchError: 您请求速度过快"
+      ]
+    },
+    {
+      "measured_at": "2026-11-06T16:04:34.822255+00:00",
+      "api": "fund_nav",
+      "params": {
+        "ts_code": "159919.SZ",
+        "start_date": "20140101",
+        "end_date": "20261105"
+      },
+      "errors": [
+        "SourceFetchError: 您请求速度过快"
+      ]
+    },
+    {
+      "measured_at": "2026-11-06T16:04:35.292140+00:00",
+      "api": "fund_nav",
+      "params": {
+        "ts_code": "159906.SZ",
+        "start_date": "20140101",
+        "end_date": "20261105"
+      },
+      "errors": [
+        "SourceFetchError: 您请求速度过快"
+      ]
+    },
+    {
+      "measured_at": "2026-11-06T16:04:35.437338+00:00",
+      "api": "fund_nav",
+      "params": {
+        "ts_code": "159902.SZ",
+        "start_date": "20140101",
+        "end_date": "20261105"
+      },
+      "errors": [
+        "SourceFetchError: 您请求速度过快"
+      ]
+    },
+    {
+      "measured_at": "2026-11-06T16:04:35.529188+00:00",
+      "api": "fund_nav",
+      "params": {
+        "ts_code": "159898.SZ",
+        "start_date": "20140101",
+        "end_date": "20261105"
+      },
+      "errors": [
+        "SourceFetchError: 您请求速度过快"
+      ]
+    },
+    {
+      "measured_at": "2026-11-06T16:04:36.453157+00:00",
+      "api": "fund_nav",
+      "params": {
+        "ts_code": "159905.SZ",
+        "start_date": "20140101",
+        "end_date": "20261105"
+      },
+      "errors": [
+        "SourceFetchError: 您请求速度过快"
+      ]
+    },
+    {
+      "measured_at": "2026-11-06T16:04:38.559881+00:00",
+      "api": "fund_portfolio",
+      "params": {
+        "ts_code": "470021.OF",
+        "start_date": "20130930",
+        "end_date": "20260930"
+      },
+      "errors": [
+        "RetryError: RetryError[<Future at 0x11251e3d0 state=finished raised SourceFetchError>]",
+        "SourceFetchError: 您请求速度过快"
+      ]
+    },
+    {
+      "measured_at": "2026-11-06T16:04:39.403845+00:00",
+      "api": "fund_portfolio",
+      "params": {
+        "ts_code": "025400.OF",
+        "start_date": "20130930",
+        "end_date": "20260930"
+      },
+      "errors": [
+        "RetryError: RetryError[<Future at 0x112ef10d0 state=finished raised SourceFetchError>]",
+        "SourceFetchError: 您请求速度过快"
+      ]
+    },
+    {
+      "measured_at": "2026-11-06T16:04:39.874518+00:00",
+      "api": "fund_portfolio",
+      "params": {
+        "ts_code": "025378.OF",
+        "start_date": "20130930",
+        "end_date": "20260930"
+      },
+      "errors": [
+        "RetryError: RetryError[<Future at 0x114c000d0 state=finished raised SourceFetchError>]",
+        "SourceFetchError: 您请求速度过快"
+      ]
+    },
+    {
+      "measured_at": "2026-11-06T16:04:39.950663+00:00",
+      "api": "fund_portfolio",
+      "params": {
+        "ts_code": "015159.OF",
+        "start_date": "20130930",
+        "end_date": "20260930"
+      },
+      "errors": [
+        "RetryError: RetryError[<Future at 0x113811ed0 state=finished raised SourceFetchError>]",
+        "SourceFetchError: 您请求速度过快"
+      ]
+    },
+    {
+      "measured_at": "2026-11-06T16:04:41.506552+00:00",
+      "api": "fund_portfolio",
+      "params": {
+        "ts_code": "025631.OF",
+        "start_date": "20130930",
+        "end_date": "20260930"
+      },
+      "errors": [
+        "RetryError: RetryError[<Future at 0x114306b50 state=finished raised SourceFetchError>]",
+        "SourceFetchError: 您请求速度过快"
+      ]
+    },
+    {
+      "measured_at": "2026-11-06T16:05:35.013899+00:00",
+      "api": "fund_nav",
+      "params": {
+        "ts_code": "159913.SZ",
+        "start_date": "20140101",
+        "end_date": "20261105"
+      },
+      "errors": [
+        "SourceFetchError: 您请求速度过快"
+      ]
+    },
+    {
+      "measured_at": "2026-11-06T16:05:35.076418+00:00",
+      "api": "fund_nav",
+      "params": {
+        "ts_code": "159935.SZ",
+        "start_date": "20140101",
+        "end_date": "20261105"
+      },
+      "errors": [
+        "SourceFetchError: 您请求速度过快"
+      ]
+    },
+    {
+      "measured_at": "2026-11-06T16:05:35.927024+00:00",
+      "api": "fund_nav",
+      "params": {
+        "ts_code": "159910.SZ",
+        "start_date": "20140101",
+        "end_date": "20261105"
+      },
+      "errors": [
+        "SourceFetchError: 您请求速度过快"
+      ]
+    },
+    {
+      "measured_at": "2026-11-06T16:05:36.303427+00:00",
+      "api": "fund_nav",
+      "params": {
+        "ts_code": "159908.SZ",
+        "start_date": "20140101",
+        "end_date": "20261105"
+      },
+      "errors": [
+        "SourceFetchError: 您请求速度过快"
+      ]
+    },
+    {
+      "measured_at": "2026-11-06T16:05:36.543884+00:00",
+      "api": "fund_nav",
+      "params": {
+        "ts_code": "159923.SZ",
+        "start_date": "20140101",
+        "end_date": "20261105"
+      },
+      "errors": [
+        "SourceFetchError: 您请求速度过快"
+      ]
+    },
+    {
+      "measured_at": "2026-11-06T16:05:36.925150+00:00",
+      "api": "fund_nav",
+      "params": {
+        "ts_code": "159912.SZ",
+        "start_date": "20140101",
+        "end_date": "20261105"
+      },
+      "errors": [
+        "SourceFetchError: 您请求速度过快"
+      ]
+    },
+    {
+      "measured_at": "2026-11-06T16:05:38.153587+00:00",
+      "api": "fund_portfolio",
+      "params": {
+        "ts_code": "501027.SH",
+        "start_date": "20130930",
+        "end_date": "20260930"
+      },
+      "errors": [
+        "RetryError: RetryError[<Future at 0x112a0de50 state=finished raised SourceFetchError>]",
+        "SourceFetchError: 您请求速度过快"
+      ]
+    },
+    {
+      "measured_at": "2026-11-06T16:05:38.445099+00:00",
+      "api": "fund_portfolio",
+      "params": {
+        "ts_code": "025457.OF",
+        "start_date": "20130930",
+        "end_date": "20260930"
+      },
+      "errors": [
+        "RetryError: RetryError[<Future at 0x114b0d050 state=finished raised SourceFetchError>]",
+        "SourceFetchError: 您请求速度过快"
+      ]
+    },
+    {
+      "measured_at": "2026-11-06T16:05:38.525853+00:00",
+      "api": "fund_portfolio",
+      "params": {
+        "ts_code": "025562.OF",
+        "start_date": "20130930",
+        "end_date": "20260930"
+      },
+      "errors": [
+        "RetryError: RetryError[<Future at 0x11340f150 state=finished raised SourceFetchError>]",
+        "SourceFetchError: 您请求速度过快"
+      ]
+    },
+    {
+      "measured_at": "2026-11-06T16:05:38.906233+00:00",
+      "api": "fund_portfolio",
+      "params": {
+        "ts_code": "360018.OF",
+        "start_date": "20130930",
+        "end_date": "20260930"
+      },
+      "errors": [
+        "RetryError: RetryError[<Future at 0x1112f16d0 state=finished raised SourceFetchError>]",
+        "SourceFetchError: 您请求速度过快"
+      ]
+    },
+    {
+      "measured_at": "2026-11-06T16:05:40.305506+00:00",
+      "api": "fund_portfolio",
+      "params": {
+        "ts_code": "375010.OF",
+        "start_date": "20130930",
+        "end_date": "20260930"
+      },
+      "errors": [
+        "RetryError: RetryError[<Future at 0x1142f3350 state=finished raised SourceFetchError>]",
+        "SourceFetchError: 您请求速度过快"
+      ]
+    },
+    {
+      "measured_at": "2026-11-06T16:05:41.396450+00:00",
+      "api": "fund_portfolio",
+      "params": {
+        "ts_code": "015259.OF",
+        "start_date": "20130930",
+        "end_date": "20260930"
+      },
+      "errors": [
+        "RetryError: RetryError[<Future at 0x11331df50 state=finished raised SourceFetchError>]",
+        "SourceFetchError: 您请求速度过快"
+      ]
+    },
+    {
+      "measured_at": "2026-11-06T16:05:41.412697+00:00",
+      "api": "fund_nav",
+      "params": {
+        "ts_code": "159920.SZ",
+        "start_date": "20140101",
+        "end_date": "20261105"
+      },
+      "errors": [
+        "SourceFetchError: 您请求速度过快"
+      ]
+    }
+  ],
+  "reason": "HTTP concurrency alone did not bound aggregate frequency after response latency fell; provider began application-level speed rejection. No source absence inferred.",
+  "hold": "source-rate-hold-active.json",
+  "safe_stop": "source-rate-stop.json",
+  "pacing_check": "source-pacing-check.json",
+  "gate_sha256": "19a7056536db922bda1bce32ab9d69ca8f3b2b56e24ac21d6e4c7e8f8eb06297",
+  "interval_seconds": 1,
+  "admission_cap_per_minute": 60,
+  "max_inflight": 8,
+  "workers": {
+    "17147": "/Users/chevy/Desktop/code/ditto.worktrees/issue-708/.venv/bin/python3 .cache/issue-708/backfill_fund_chunk24.py 6 10",
+    "17151": "/Users/chevy/Desktop/code/ditto.worktrees/issue-708/.venv/bin/python3 .cache/issue-708/backfill_fund_chunk24.py 7 10",
+    "17157": "/Users/chevy/Desktop/code/ditto.worktrees/issue-708/.venv/bin/python3 .cache/issue-708/backfill_fund_chunk24.py 8 10",
+    "17161": "/Users/chevy/Desktop/code/ditto.worktrees/issue-708/.venv/bin/python3 .cache/issue-708/backfill_fund_chunk24.py 9 10",
+    "17165": "/Users/chevy/Desktop/code/ditto.worktrees/issue-708/.venv/bin/python3 .cache/issue-708/backfill_fund_chunk24.py 10 10",
+    "17169": "/Users/chevy/Desktop/code/ditto.worktrees/issue-708/.venv/bin/python3 .cache/issue-708/backfill_fund_chunk24.py 11 10",
+    "17173": "/Users/chevy/Desktop/code/ditto.worktrees/issue-708/.venv/bin/python3 .cache/issue-708/backfill_fund_chunk24.py 12 10",
+    "17177": "/Users/chevy/Desktop/code/ditto.worktrees/issue-708/.venv/bin/python3 .cache/issue-708/backfill_fund_chunk24.py 13 10",
+    "17181": "/Users/chevy/Desktop/code/ditto.worktrees/issue-708/.venv/bin/python3 .cache/issue-708/backfill_fund_chunk24.py 14 10",
+    "17185": "/Users/chevy/Desktop/code/ditto.worktrees/issue-708/.venv/bin/python3 .cache/issue-708/backfill_fund_chunk24.py 16 10",
+    "17189": "/Users/chevy/Desktop/code/ditto.worktrees/issue-708/.venv/bin/python3 .cache/issue-708/backfill_fund_chunk24.py 17 10",
+    "17193": "/Users/chevy/Desktop/code/ditto.worktrees/issue-708/.venv/bin/python3 .cache/issue-708/backfill_fund_chunk24.py 18 10",
+    "17197": "/Users/chevy/Desktop/code/ditto.worktrees/issue-708/.venv/bin/python3 .cache/issue-708/backfill_fund_chunk24.py 19 10",
+    "17201": "/Users/chevy/Desktop/code/ditto.worktrees/issue-708/.venv/bin/python3 .cache/issue-708/backfill_fund_chunk24.py 20 10",
+    "17205": "/Users/chevy/Desktop/code/ditto.worktrees/issue-708/.venv/bin/python3 .cache/issue-708/backfill_fund_chunk24.py 21 10",
+    "17209": "/Users/chevy/Desktop/code/ditto.worktrees/issue-708/.venv/bin/python3 .cache/issue-708/backfill_nav_accum_wave4.py 0",
+    "17213": "/Users/chevy/Desktop/code/ditto.worktrees/issue-708/.venv/bin/python3 .cache/issue-708/backfill_nav_accum_wave4.py 1",
+    "17217": "/Users/chevy/Desktop/code/ditto.worktrees/issue-708/.venv/bin/python3 .cache/issue-708/backfill_nav_accum_wave4.py 2",
+    "17221": "/Users/chevy/Desktop/code/ditto.worktrees/issue-708/.venv/bin/python3 .cache/issue-708/backfill_nav_accum_wave4.py 3",
+    "17233": "/Users/chevy/Desktop/code/ditto.worktrees/issue-708/.venv/bin/python3 .cache/issue-708/backfill_nav_accum_wave4.py 4",
+    "17237": "/Users/chevy/Desktop/code/ditto.worktrees/issue-708/.venv/bin/python3 .cache/issue-708/backfill_nav_accum_wave4.py 5",
+    "17243": "/Users/chevy/Desktop/code/ditto.worktrees/issue-708/.venv/bin/python3 .cache/issue-708/backfill_nav_accum_wave4.py 6",
+    "17249": "/Users/chevy/Desktop/code/ditto.worktrees/issue-708/.venv/bin/python3 .cache/issue-708/backfill_nav_accum_wave4.py 7"
+  },
+  "nav_resume_plan_sha256": "6cda6359334eac9307dd970cdd77df1bff0d2dd9b2bb781fdf058cadbbc316a0",
+  "fund_resume_plan_sha256": "7c69f8ea79765a7e1b0e6bc9dd40a3533fe953651e847576541c00aaa2443671",
+  "independent_review": "Standards:0 blockers; full pending sets and safe stop preservation verified.",
+  "boundary": "Task-only same-host shared pacing in addition to existing8-slot limit. Every actual send and retry passes it. Existing source credentials/routes, pagination, DQ, NULL correction and duplicate guards unchanged; failed throttled attempts remain failures and are retried from exact unfinished scopes."
+}

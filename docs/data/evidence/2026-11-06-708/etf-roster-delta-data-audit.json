@@ -1,0 +1,363 @@
+{
+  "started_at": "2026-11-06T21:03:23.404849+00:00",
+  "finished_at": "2026-11-06T21:03:35.324869+00:00",
+  "registration_sha256": "3d6a0592ec7473c50ced5b66a24bf5ebf42a80fffb4c64649fc6facc3e5b73fd",
+  "initial_roster": 1847,
+  "new_roster_delta": 2,
+  "current_roster": 1849,
+  "initial_market_window_scope_unchanged": true,
+  "checks": [
+    {
+      "dataset": "etf_nav",
+      "source_ticker": "158076.SZ",
+      "snapshot_id": "snapshot:tushare:etf_nav:sha256:749b1ee5154345c6fdd8ac30e1016ea1a77ce51b81e7b375c632c58c91016434",
+      "snapshot_checksum": "70ed44a7ac3c8de72bac9cf049c4396d",
+      "checkpoint": "partition:tushare:etf_nav:158076.SZ:2014-01-01:2026-11-05",
+      "native_rows": 3,
+      "written_rows": 3,
+      "canonical_rows": 3,
+      "outside_target_rows_preserved": 0,
+      "outside_target_dates": [],
+      "all_source_values_match": true,
+      "sample": [
+        {
+          "source_ticker": "158076.SZ",
+          "trade_date": "2026-10-28",
+          "knowledge_date": "2026-10-29",
+          "unit_nav": 1.0,
+          "acc_nav": 1.0,
+          "instrument_id": 2001869,
+          "source": "tushare"
+        },
+        {
+          "source_ticker": "158076.SZ",
+          "trade_date": "2026-10-30",
+          "knowledge_date": "2026-10-30",
+          "unit_nav": 1.0025,
+          "acc_nav": 1.0025,
+          "instrument_id": 2001869,
+          "source": "tushare"
+        },
+        {
+          "source_ticker": "158076.SZ",
+          "trade_date": "2026-11-05",
+          "knowledge_date": "2026-11-05",
+          "unit_nav": 0.9915,
+          "acc_nav": 0.9915,
+          "instrument_id": 2001869,
+          "source": "tushare"
+        }
+      ]
+    },
+    {
+      "dataset": "etf_nav",
+      "source_ticker": "158081.SZ",
+      "snapshot_id": "snapshot:tushare:etf_nav:sha256:af8145eac97a2d8083878ff4916b76443b2905eeed15788a612b1f298c548fcc",
+      "snapshot_checksum": "1ae056a1c7d55329692180d5b4dfeea0",
+      "checkpoint": "partition:tushare:etf_nav:158081.SZ:2014-01-01:2026-11-05",
+      "native_rows": 4,
+      "written_rows": 4,
+      "canonical_rows": 4,
+      "outside_target_rows_preserved": 0,
+      "outside_target_dates": [],
+      "all_source_values_match": true,
+      "sample": [
+        {
+          "source_ticker": "158081.SZ",
+          "trade_date": "2026-10-28",
+          "knowledge_date": "2026-10-29",
+          "unit_nav": 1.0,
+          "acc_nav": 1.0,
+          "instrument_id": 2001870,
+          "source": "tushare"
+        },
+        {
+          "source_ticker": "158081.SZ",
+          "trade_date": "2026-10-30",
+          "knowledge_date": "2026-10-30",
+          "unit_nav": 0.9995,
+          "acc_nav": 0.9995,
+          "instrument_id": 2001870,
+          "source": "tushare"
+        },
+        {
+          "source_ticker": "158081.SZ",
+          "trade_date": "2026-11-04",
+          "knowledge_date": "2026-11-04",
+          "unit_nav": 1.0163,
+          "acc_nav": 1.0163,
+          "instrument_id": 2001870,
+          "source": "tushare"
+        },
+        {
+          "source_ticker": "158081.SZ",
+          "trade_date": "2026-11-05",
+          "knowledge_date": "2026-11-05",
+          "unit_nav": 1.0654,
+          "acc_nav": 1.0654,
+          "instrument_id": 2001870,
+          "source": "tushare"
+        }
+      ]
+    },
+    {
+      "dataset": "fund_share",
+      "source_ticker": "158076.SZ",
+      "snapshot_id": "snapshot:tushare:fund_share:sha256:0c5bf2501b83ddee5871a9ab63452d51850c5fb8591ebc67e63bd20a7cbb94cd",
+      "snapshot_checksum": "empty:sha256:033783d411165f9cb728b24a8722cf09eb9c545f6ec0a0ad590701a903e171e4",
+      "checkpoint": "partition:tushare:fund_share:158076.SZ:2014-01-01:2026-11-05",
+      "native_rows": 0,
+      "written_rows": 0,
+      "canonical_rows": 0,
+      "outside_target_rows_preserved": 0,
+      "outside_target_dates": [],
+      "all_source_values_match": true,
+      "sample": []
+    },
+    {
+      "dataset": "fund_share",
+      "source_ticker": "158081.SZ",
+      "snapshot_id": "snapshot:tushare:fund_share:sha256:5020811d117f9c8025ef3c9fafb3fa4acef1ff01e66f279cc3cdebdc70c33981",
+      "snapshot_checksum": "d7b888b67e17c49074659a786586c1e6",
+      "checkpoint": "partition:tushare:fund_share:158081.SZ:2014-01-01:2026-11-05",
+      "native_rows": 1,
+      "written_rows": 1,
+      "canonical_rows": 1,
+      "outside_target_rows_preserved": 0,
+      "outside_target_dates": [],
+      "all_source_values_match": true,
+      "sample": [
+        {
+          "source_ticker": "158081.SZ",
+          "trade_date": "2026-11-05",
+          "knowledge_date": "2026-11-06",
+          "fd_share": 15568.3343,
+          "fund_type": "ETF",
+          "exchange": "SZ",
+          "instrument_id": 2001870,
+          "source": "tushare"
+        }
+      ]
+    },
+    {
+      "dataset": "etf_daily",
+      "source_ticker": "158076.SZ",
+      "snapshot_id": "snapshot:tushare:etf_daily:sha256:8c3704ee14b14751b0bef4797a64ae7685d7ad86b48914c94a470bc314dfd6c0",
+      "snapshot_checksum": "empty:sha256:85d26bb4f623570da3e0bfe9dad2bb0caff8bdd3704236d2df550e2d23aafc0a",
+      "checkpoint": "partition:tushare:etf_daily:158076.SZ:2014-01-01:2026-11-05",
+      "native_rows": 0,
+      "written_rows": 0,
+      "canonical_rows": 0,
+      "outside_target_rows_preserved": 1,
+      "outside_target_dates": [
+        "2026-11-06"
+      ],
+      "all_source_values_match": true,
+      "sample": []
+    },
+    {
+      "dataset": "etf_daily",
+      "source_ticker": "158081.SZ",
+      "snapshot_id": "snapshot:tushare:etf_daily:sha256:9a18e2e96c30858a7c7e313fa953d2524512a85cea6c403c9e0b1886d6b50687",
+      "snapshot_checksum": "15a7baa6a599d66ac5acb380fcae47b3",
+      "checkpoint": "partition:tushare:etf_daily:158081.SZ:2014-01-01:2026-11-05",
+      "native_rows": 1,
+      "written_rows": 1,
+      "canonical_rows": 1,
+      "outside_target_rows_preserved": 1,
+      "outside_target_dates": [
+        "2026-11-06"
+      ],
+      "all_source_values_match": true,
+      "sample": [
+        {
+          "source_ticker": "158081.SZ",
+          "trade_date": "2026-11-05",
+          "knowledge_date": "2026-11-06",
+          "open": 1.012,
+          "high": 1.091,
+          "low": 1.009,
+          "close": 1.061,
+          "pre_close": 1.016,
+          "volume": 1775336.43,
+          "amount": 184521.749,
+          "pct_change": 4.43,
+          "instrument_id": 2001870,
+          "source": "tushare"
+        }
+      ]
+    },
+    {
+      "dataset": "fund_adj",
+      "source_ticker": "158076.SZ",
+      "snapshot_id": "snapshot:tushare:fund_adj:sha256:1b47bc224cd68d240ff6738c8c2f0e2e32cb27141c0add5c732ecb33947a93a6",
+      "snapshot_checksum": "empty:sha256:778f35a7131e6f879950e3d8e32581fe4f5c22f065f15c75379160fc904a94c4",
+      "checkpoint": "partition:tushare:fund_adj:158076.SZ:2014-01-01:2026-11-05",
+      "native_rows": 0,
+      "written_rows": 0,
+      "canonical_rows": 0,
+      "outside_target_rows_preserved": 1,
+      "outside_target_dates": [
+        "2026-11-06"
+      ],
+      "all_source_values_match": true,
+      "sample": []
+    },
+    {
+      "dataset": "fund_adj",
+      "source_ticker": "158081.SZ",
+      "snapshot_id": "snapshot:tushare:fund_adj:sha256:8542e13b9186df3c4d27b989ea35668451a38a1a668f1f0417eafb333310c947",
+      "snapshot_checksum": "f523869f1299121af9e85a25489fe5da",
+      "checkpoint": "partition:tushare:fund_adj:158081.SZ:2014-01-01:2026-11-05",
+      "native_rows": 1,
+      "written_rows": 1,
+      "canonical_rows": 1,
+      "outside_target_rows_preserved": 1,
+      "outside_target_dates": [
+        "2026-11-06"
+      ],
+      "all_source_values_match": true,
+      "sample": [
+        {
+          "source_ticker": "158081.SZ",
+          "trade_date": "2026-11-05",
+          "knowledge_date": "2026-11-05",
+          "adj_factor": 1.0,
+          "instrument_id": 2001870,
+          "source": "tushare"
+        }
+      ]
+    }
+  ],
+  "consumers": [
+    {
+      "source_ticker": "158076.SZ",
+      "nav": [
+        {
+          "source_ticker": "158076.SZ",
+          "trade_date": "2026-10-28",
+          "knowledge_date": "2026-10-29",
+          "unit_nav": 1.0,
+          "acc_nav": 1.0,
+          "instrument_id": 2001869,
+          "source": "tushare"
+        },
+        {
+          "source_ticker": "158076.SZ",
+          "trade_date": "2026-10-30",
+          "knowledge_date": "2026-10-30",
+          "unit_nav": 1.0025,
+          "acc_nav": 1.0025,
+          "instrument_id": 2001869,
+          "source": "tushare"
+        },
+        {
+          "source_ticker": "158076.SZ",
+          "trade_date": "2026-11-05",
+          "knowledge_date": "2026-11-05",
+          "unit_nav": 0.9915,
+          "acc_nav": 0.9915,
+          "instrument_id": 2001869,
+          "source": "tushare"
+        }
+      ],
+      "bars": [],
+      "shares": [],
+      "adjusted_bars": []
+    },
+    {
+      "source_ticker": "158081.SZ",
+      "nav": [
+        {
+          "source_ticker": "158081.SZ",
+          "trade_date": "2026-10-28",
+          "knowledge_date": "2026-10-29",
+          "unit_nav": 1.0,
+          "acc_nav": 1.0,
+          "instrument_id": 2001870,
+          "source": "tushare"
+        },
+        {
+          "source_ticker": "158081.SZ",
+          "trade_date": "2026-10-30",
+          "knowledge_date": "2026-10-30",
+          "unit_nav": 0.9995,
+          "acc_nav": 0.9995,
+          "instrument_id": 2001870,
+          "source": "tushare"
+        },
+        {
+          "source_ticker": "158081.SZ",
+          "trade_date": "2026-11-04",
+          "knowledge_date": "2026-11-04",
+          "unit_nav": 1.0163,
+          "acc_nav": 1.0163,
+          "instrument_id": 2001870,
+          "source": "tushare"
+        },
+        {
+          "source_ticker": "158081.SZ",
+          "trade_date": "2026-11-05",
+          "knowledge_date": "2026-11-05",
+          "unit_nav": 1.0654,
+          "acc_nav": 1.0654,
+          "instrument_id": 2001870,
+          "source": "tushare"
+        }
+      ],
+      "bars": [
+        {
+          "source_ticker": "158081.SZ",
+          "trade_date": "2026-11-05",
+          "knowledge_date": "2026-11-06",
+          "open": 1.012,
+          "high": 1.091,
+          "low": 1.009,
+          "close": 1.061,
+          "pre_close": 1.016,
+          "volume": 1775336.43,
+          "amount": 184521.749,
+          "pct_change": 4.43,
+          "instrument_id": 2001870,
+          "source": "tushare"
+        }
+      ],
+      "shares": [
+        {
+          "source_ticker": "158081.SZ",
+          "trade_date": "2026-11-05",
+          "knowledge_date": "2026-11-06",
+          "fd_share": 15568.3343,
+          "fund_type": "ETF",
+          "exchange": "SZ",
+          "instrument_id": 2001870,
+          "source": "tushare"
+        }
+      ],
+      "adjusted_bars": [
+        {
+          "source_ticker": "158081.SZ",
+          "trade_date": "2026-11-05",
+          "knowledge_date": "2026-11-06",
+          "open": 1.012,
+          "high": 1.091,
+          "low": 1.009,
+          "close": 1.061,
+          "pre_close": 1.016,
+          "volume": 1775336.43,
+          "amount": 184521.749,
+          "pct_change": 4.43,
+          "instrument_id": 2001870,
+          "source": "tushare",
+          "knowledge_date_right": "2026-11-05"
+        }
+      ]
+    }
+  ],
+  "candidate_asof": "2026-11-05",
+  "candidate_count": 1848,
+  "reference_snapshot_id": "snapshot:tushare:etf_daily:sha256:ffb6093f0dc5999c3848883b6f9ae7bdc54a7555d4ee00af3ff3de40e7d6b1b1",
+  "boundary": "Two newly observed identities use separate normal full-window requests and COMPLETE payload evidence. Initial1847 coverage remains separate.158076 first listsNov6 and has no prices/factors/shares in the Nov5 target;158081 first listsNov5 and is read through price,adjustment/share application paths. Both retain prelisting NAV from Oct28 inception. Later canonical rows outside2014..Nov5 are explicitly excluded from target assertions and retained. Current reference observation does not authorize historical PIT.",
+  "previously_filtered_market_nav_rows_recovered_exactly": 5,
+  "registration_sha256_raw": "1e7f100b283493e0d1a840130f57f41a30fdb6a48bda9e591705efab5c279447"
+}

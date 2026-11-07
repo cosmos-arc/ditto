@@ -16,6 +16,7 @@ from ditto_features.technical_analysis.series import (
 
 from ditto_application.catalog_maturity import blocked_catalog_datasets
 from ditto_application.exceptions import AppQueryError
+from ditto_application.queries._maturity_gate import assert_query_datasets_allowed
 
 __all__ = ["MarketQueryFacade"]
 
@@ -199,6 +200,42 @@ class MarketQueryFacade:
             raise AppQueryError(msg)
         return self._service.get_stock_status(start, end)
 
+    def get_limit_list(
+        self, start: str, end: str, *, allow_experimental_data: bool = False
+    ) -> pl.DataFrame:
+        """Disclosed events since 2020, excluding ST; missing rows are unknown."""
+        assert_query_datasets_allowed(
+            ("limit_list",),
+            allow_experimental_data=allow_experimental_data,
+            context="market query limit_list",
+        )
+        return self._service.get_limit_list(start, end)
+
+    def get_fund_share(
+        self, start: str, end: str, *, allow_experimental_data: bool = False
+    ) -> pl.DataFrame:
+        """Listed ETF share observations in ten-thousand shares, without fill."""
+        assert_query_datasets_allowed(
+            ("fund_share",),
+            allow_experimental_data=allow_experimental_data,
+            context="market query fund_share",
+        )
+        frame = self._service.get_fund_share(start, end)
+        if frame is None:
+            raise AppQueryError("fund_share reader not configured")
+        return frame
+
+    def get_global_index_bars(
+        self, start: str, end: str, *, allow_experimental_data: bool = False
+    ) -> pl.DataFrame:
+        """Global index display references; not strategy or execution inputs."""
+        assert_query_datasets_allowed(
+            ("global_index_daily",),
+            allow_experimental_data=allow_experimental_data,
+            context="market query global_index_daily",
+        )
+        return self._service.get_global_index_bars(start, end)
+
     def get_constituents(
         self,
         index_id: int,
@@ -328,15 +365,15 @@ class MarketQueryFacade:
     def get_etf_nav(
         self,
         *,
-        instrument_id: int,
+        instrument_id: int | None = None,
         start: str | None = None,
         end: str | None = None,
     ) -> pl.DataFrame:
-        """查询 ETF 净值序列（数据可得时；未配置/无数据返回空帧）。"""
+        """查询最新披露的 ETF 净值；未指定标的时用于全市场对账。"""
         return self._service.get_etf_nav(
             start or "1900-01-01",
             end or "9999-12-31",
-            instrument_ids=[instrument_id],
+            instrument_ids=[instrument_id] if instrument_id is not None else None,
         )
 
     def _assert_market_bars_allowed(

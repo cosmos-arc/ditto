@@ -1,0 +1,160 @@
+[
+  {
+    "measured_at": "2026-11-06T07:18:20.336222+00:00",
+    "params": {
+      "ts_code": "158005.SZ",
+      "start_date": "20260904",
+      "end_date": "20260904",
+      "limit": 2000,
+      "offset": 0
+    },
+    "rows": [
+      {
+        "ts_code": "158005.SZ",
+        "ann_date": "20260905",
+        "nav_date": "20260904",
+        "unit_nav": 0.9796,
+        "acc_nav": null
+      }
+    ]
+  },
+  {
+    "measured_at": "2026-11-06T07:18:21.446121+00:00",
+    "params": {
+      "ts_code": "158005.SZ",
+      "start_date": "20260904",
+      "end_date": "20260904",
+      "limit": 1,
+      "offset": 1
+    },
+    "rows": [
+      {
+        "ts_code": "158005.SZ",
+        "ann_date": "20260904",
+        "nav_date": "20260904",
+        "unit_nav": 0.9796,
+        "acc_nav": null
+      }
+    ]
+  },
+  {
+    "measured_at": "2026-11-06T07:18:22.751192+00:00",
+    "params": {
+      "ts_code": "158005.SZ",
+      "start_date": "20260904",
+      "end_date": "20260904",
+      "limit": 2000,
+      "offset": 1
+    },
+    "rows": [
+      {
+        "ts_code": "158005.SZ",
+        "ann_date": "20260904",
+        "nav_date": "20260904",
+        "unit_nav": 0.9796,
+        "acc_nav": null
+      }
+    ]
+  },
+  {
+    "measured_at": "2026-11-06T07:18:24.001506+00:00",
+    "params": {
+      "ts_code": "158005.SZ",
+      "start_date": "20260904",
+      "end_date": "20260904",
+      "limit": 2000,
+      "offset": 2
+    },
+    "rows": []
+  },
+  {
+    "measured_at": "2026-11-06T07:18:27.113721+00:00",
+    "params": {
+      "ts_code": "158005.SZ",
+      "start_date": "20260904",
+      "end_date": "20260904",
+      "limit": 2000,
+      "offset": 3
+    },
+    "rows": []
+  },
+  {
+    "measured_at": "2026-11-06T07:18:27.984488+00:00",
+    "params": {
+      "ts_code": "158005.SZ",
+      "start_date": "20260909",
+      "end_date": "20260909",
+      "limit": 2000,
+      "offset": 0
+    },
+    "rows": [
+      {
+        "ts_code": "158005.SZ",
+        "ann_date": "20260910",
+        "nav_date": "20260909",
+        "unit_nav": 0.999,
+        "acc_nav": null
+      }
+    ]
+  },
+  {
+    "measured_at": "2026-11-06T07:18:30.067192+00:00",
+    "params": {
+      "ts_code": "158005.SZ",
+      "start_date": "20260909",
+      "end_date": "20260909",
+      "limit": 1,
+      "offset": 1
+    },
+    "rows": [
+      {
+        "ts_code": "158005.SZ",
+        "ann_date": "20260909",
+        "nav_date": "20260909",
+        "unit_nav": 0.999,
+        "acc_nav": null
+      }
+    ]
+  },
+  {
+    "measured_at": "2026-11-06T07:18:31.245926+00:00",
+    "params": {
+      "ts_code": "158005.SZ",
+      "start_date": "20260909",
+      "end_date": "20260909",
+      "limit": 2000,
+      "offset": 1
+    },
+    "rows": [
+      {
+        "ts_code": "158005.SZ",
+        "ann_date": "20260909",
+        "nav_date": "20260909",
+        "unit_nav": 0.999,
+        "acc_nav": null
+      }
+    ]
+  },
+  {
+    "measured_at": "2026-11-06T07:18:32.389632+00:00",
+    "params": {
+      "ts_code": "158005.SZ",
+      "start_date": "20260909",
+      "end_date": "20260909",
+      "limit": 2000,
+      "offset": 2
+    },
+    "rows": []
+  },
+  {
+    "measured_at": "2026-11-06T07:19:10.389416+00:00",
+    "params": {
+      "ts_code": "158005.SZ",
+      "start_date": "20260909",
+      "end_date": "20260909",
+      "limit": 2000,
+      "offset": 3
+    },
+    "rows": []
+  }
+]

@@ -1,0 +1,98 @@
+{
+  "measured_at": "2026-11-06T07:26:18.150647+00:00",
+  "dataset": "daily",
+  "asset_class": "stock",
+  "window": [
+    "2014-01-01",
+    "2026-11-05"
+  ],
+  "passed": false,
+  "calendar": {
+    "trading_days": 3121,
+    "duplicate_days": 0,
+    "weekend_days": 0,
+    "missing_years": [],
+    "years_out_of_bounds": [],
+    "yearly_counts": [
+      [
+        2014,
+        245
+      ],
+      [
+        2015,
+        244
+      ],
+      [
+        2016,
+        244
+      ],
+      [
+        2017,
+        244
+      ],
+      [
+        2018,
+        243
+      ],
+      [
+        2019,
+        244
+      ],
+      [
+        2020,
+        243
+      ],
+      [
+        2021,
+        243
+      ],
+      [
+        2022,
+        242
+      ],
+      [
+        2023,
+        242
+      ],
+      [
+        2024,
+        242
+      ],
+      [
+        2025,
+        243
+      ],
+      [
+        2026,
+        202
+      ]
+    ],
+    "passed": true
+  },
+  "session": {
+    "roster_total": 5930,
+    "securities_with_sessions": 5844,
+    "expected_sessions": 12745513,
+    "present_sessions": 12404576,
+    "failure_gaps": 19624,
+    "limitation_gaps": 321313,
+    "failure_anomalies": 78112,
+    "bar_sessions": 12480843,
+    "adj_factor_checked": true,
+    "adj_factor_missing": 0,
+    "passed": false
+  },
+  "gap_counts": {
+    "pre_status_era": 187639,
+    "status_row_missing": 9474,
+    "status_trading_no_bar": 10150,
+    "suspended": 133674
+  },
+  "anomaly_counts": {
+    "bar_before_list_date": 76267,
+    "master_list_date_missing": 3,
+    "suspended_with_bar": 1845
+  },
+  "top_gap_securities": [],
+  "gap_samples": []
+}

@@ -1,0 +1,223 @@
+{
+  "started_at": "2026-11-06T15:07:26.280651+00:00",
+  "reason": "Legacy market-day fund_portfolio request lacks required ts_code and cannot establish all-fund completion. Use bounded per-holder requests; never retry the unsupported market-day scope.",
+  "excluded_snapshot_id": "snapshot:tushare:fund_portfolio:sha256:afa56d3a421cfca2fe0aed35581f2dbfa7b18a3fc64fddd05459096cc60745f1",
+  "before_checkpoint": {
+    "chunk_id": "partition:tushare:fund_portfolio:2026-11-06:2026-11-06",
+    "dataset_id": "fund_portfolio",
+    "source": "tushare",
+    "request_start": "2026-11-06",
+    "request_end": "2026-11-06",
+    "status": "COMPLETE",
+    "payload_id": "payload:empty:sha256:f8ccee97ba2b0a6864e5e6a384c5fec88f8bb28d99e60ab4d74bd92c9dcf2961:fund_portfolio/observations/no-data/2026-11-06:2026-11-06:sha256:f8ccee97ba2b0a6864e5e6a384c5fec88f8bb28d99e60ab4d74bd92c9dcf2961:snapshot:tushare:fund_portfolio:sha256:afa56d3a421cfca2fe0aed35581f2dbfa7b18a3fc64fddd05459096cc60745f1",
+    "complete_evidence_id": "snapshot:tushare:fund_portfolio:sha256:afa56d3a421cfca2fe0aed35581f2dbfa7b18a3fc64fddd05459096cc60745f1",
+    "error_code": null,
+    "updated_at": "2026-11-06T13:55:42.333765+00:00"
+  },
+  "before_log": {
+    "dataset": "fund_portfolio",
+    "source": "tushare",
+    "trade_date": "2026-11-06",
+    "status": "SUCCESS",
+    "checksum": "empty:sha256:f8ccee97ba2b0a6864e5e6a384c5fec88f8bb28d99e60ab4d74bd92c9dcf2961",
+    "rows": 0,
+    "error_code": null,
+    "error_message": null,
+    "attempts": 1,
+    "first_attempt_at": "2026-11-06T21:55:42.333584",
+    "last_attempt_at": "2026-11-06T21:55:42.333584"
+  },
+  "before_snapshot": {
+    "snapshot_id": "snapshot:tushare:fund_portfolio:sha256:afa56d3a421cfca2fe0aed35581f2dbfa7b18a3fc64fddd05459096cc60745f1",
+    "dataset_id": "fund_portfolio",
+    "source": "tushare",
+    "request_start": "2026-11-06",
+    "request_end": "2026-11-06",
+    "schema_version": "fundamental.fund_portfolio.v1",
+    "checksum": "empty:sha256:f8ccee97ba2b0a6864e5e6a384c5fec88f8bb28d99e60ab4d74bd92c9dcf2961",
+    "canonical_asset": {
+      "dataset_id": "fund_portfolio",
+      "namespace": "fundamental",
+      "partition_keys": []
+    },
+    "request_parameters_hash": "sha256:57ae86b75380cc9ddf30f855d2b14a59712566d080292d92907def2b91a2a4fd",
+    "response_metadata": [
+      [
+        "canonical_checksum",
+        "empty:sha256:f8ccee97ba2b0a6864e5e6a384c5fec88f8bb28d99e60ab4d74bd92c9dcf2961"
+      ],
+      [
+        "canonical_row_count",
+        "0"
+      ],
+      [
+        "snapshot_layer",
+        "verified_empty_provider_observation"
+      ]
+    ],
+    "row_count": 0,
+    "payload_uri": null,
+    "payload_retained": false,
+    "created_at": "2026-11-06T13:55:42.110294+00:00",
+    "schema_fingerprint": null,
+    "observations": [
+      "2026-11-06T13:55:42.332750+00:00"
+    ]
+  },
+  "coverage_before": {
+    "source": "tushare",
+    "status": "fresh",
+    "sla_hours": 1080,
+    "snapshot": {
+      "snapshot_id": "snapshot:tushare:fund_portfolio:sha256:afa56d3a421cfca2fe0aed35581f2dbfa7b18a3fc64fddd05459096cc60745f1",
+      "dataset_id": "fund_portfolio",
+      "source": "tushare",
+      "request_start": "2026-11-06",
+      "request_end": "2026-11-06",
+      "schema_version": "fundamental.fund_portfolio.v1",
+      "checksum": "empty:sha256:f8ccee97ba2b0a6864e5e6a384c5fec88f8bb28d99e60ab4d74bd92c9dcf2961",
+      "canonical_asset": {
+        "dataset_id": "fund_portfolio",
+        "namespace": "fundamental",
+        "partition_keys": []
+      },
+      "request_parameters_hash": "sha256:57ae86b75380cc9ddf30f855d2b14a59712566d080292d92907def2b91a2a4fd",
+      "response_metadata": [
+        [
+          "canonical_checksum",
+          "empty:sha256:f8ccee97ba2b0a6864e5e6a384c5fec88f8bb28d99e60ab4d74bd92c9dcf2961"
+        ],
+        [
+          "canonical_row_count",
+          "0"
+        ],
+        [
+          "snapshot_layer",
+          "verified_empty_provider_observation"
+        ]
+      ],
+      "row_count": 0,
+      "payload_uri": null,
+      "payload_retained": false,
+      "created_at": "2026-11-06T13:55:42.110294+00:00",
+      "schema_fingerprint": null,
+      "observations": [
+        "2026-11-06T13:55:42.332750+00:00"
+      ]
+    }
+  },
+  "health_before": {
+    "dataset_id": "fund_portfolio",
+    "namespace": "fundamental",
+    "trade_date": "2026-11-06",
+    "default_source": "tushare",
+    "selected_source": "tushare",
+    "selected_freshness_status": "fresh",
+    "selected_source_health": {
+      "source": "tushare",
+      "supported": true,
+      "freshness_status": "fresh",
+      "freshness_sla_hours": 1080,
+      "freshness_at": "2026-11-06T13:55:42.332750+00:00",
+      "storage_uri": null,
+      "schema_hash": "fundamental.fund_portfolio.v1",
+      "row_count": 0
+    },
+    "source_selection_status": "ready",
+    "source_selection_blockers": [],
+    "attention_reasons": [],
+    "sources": [
+      {
+        "source": "tushare",
+        "supported": true,
+        "freshness_status": "fresh",
+        "freshness_sla_hours": 1080,
+        "freshness_at": "2026-11-06T13:55:42.332750+00:00",
+        "storage_uri": null,
+        "schema_hash": "fundamental.fund_portfolio.v1",
+        "row_count": 0
+      }
+    ],
+    "unsupported_sources": [],
+    "failover_from_default": false,
+    "fallback_sources": []
+  },
+  "replacement_pending_revision": "partition:tushare:fund_portfolio:2026-11-06:2026-11-06:revision:099a93764caa980b2b2e1bd5c118c69c1f381642c47e5e05a83451910f987fd4",
+  "holder_complete_before": 28027,
+  "holder_complete_before_sha256": "483a3f6e39652bec11cf057fa191f676690051a0071ad8507c03f89a8768f8e0",
+  "boundary": "Only the exact legacy Nov6 unsupported market zero loses completion status. Immutable zero snapshot/base checkpoint and transition history remain. Existing per-holder observations and canonical values are untouched. Source selection ready means a selectable provider, not data completion; freshness must become stale. This does not schedule or retry market-day ingestion and does not claim #707 operational acceptance.",
+  "after_checkpoint": {
+    "chunk_id": "partition:tushare:fund_portfolio:2026-11-06:2026-11-06:revision:099a93764caa980b2b2e1bd5c118c69c1f381642c47e5e05a83451910f987fd4",
+    "dataset_id": "fund_portfolio",
+    "source": "tushare",
+    "request_start": "2026-11-06",
+    "request_end": "2026-11-06",
+    "status": "PLANNED",
+    "payload_id": null,
+    "complete_evidence_id": null,
+    "error_code": "PER_FUND_INGESTION_REQUIRED",
+    "updated_at": "2026-11-06T15:07:26.296588+00:00"
+  },
+  "after_log": {
+    "dataset": "fund_portfolio",
+    "source": "tushare",
+    "trade_date": "2026-11-06",
+    "status": "FAIL",
+    "checksum": null,
+    "rows": null,
+    "error_code": "PER_FUND_INGESTION_REQUIRED",
+    "error_message": "Legacy market-day fund_portfolio request lacks required ts_code and cannot establish all-fund completion. Use bounded per-holder requests; never retry the unsupported market-day scope.",
+    "attempts": 2,
+    "first_attempt_at": "2026-11-06T21:55:42.333584",
+    "last_attempt_at": "2026-11-06T23:07:26.296876"
+  },
+  "coverage_after": {
+    "source": "tushare",
+    "status": "stale",
+    "sla_hours": 1080,
+    "snapshot": null
+  },
+  "health_after": {
+    "dataset_id": "fund_portfolio",
+    "namespace": "fundamental",
+    "trade_date": "2026-11-06",
+    "default_source": "tushare",
+    "selected_source": "tushare",
+    "selected_freshness_status": "stale",
+    "selected_source_health": {
+      "source": "tushare",
+      "supported": true,
+      "freshness_status": "stale",
+      "freshness_sla_hours": 1080,
+      "freshness_at": null,
+      "storage_uri": null,
+      "schema_hash": null,
+      "row_count": null
+    },
+    "source_selection_status": "ready",
+    "source_selection_blockers": [],
+    "attention_reasons": [
+      "selected_source_stale",
+      "no_fallback_source"
+    ],
+    "sources": [
+      {
+        "source": "tushare",
+        "supported": true,
+        "freshness_status": "stale",
+        "freshness_sla_hours": 1080,
+        "freshness_at": null,
+        "storage_uri": null,
+        "schema_hash": null,
+        "row_count": null
+      }
+    ],
+    "unsupported_sources": [],
+    "failover_from_default": false,
+    "fallback_sources": []
+  },
+  "existing_holder_completions_preserved": true,
+  "holder_complete_after": 28027,
+  "completed_coverage_denied": true,
+  "finished_at": "2026-11-06T15:07:31.142327+00:00"
+}

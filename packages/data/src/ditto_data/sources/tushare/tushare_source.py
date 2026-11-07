@@ -989,6 +989,10 @@ class TushareSource:
             end_date=end_date,
         )
 
+    def fetch_fund_holders(self, source_ticker: str | None = None) -> pl.DataFrame:
+        """Public fund holder identities, independent of tradable ETFs."""
+        return self._fundamental.fetch_fund_holders(source_ticker)
+
     def fetch_fund_portfolio(
         self,
         trade_date: str | None = None,

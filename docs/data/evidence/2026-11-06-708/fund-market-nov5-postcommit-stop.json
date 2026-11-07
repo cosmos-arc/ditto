@@ -1,0 +1,13 @@
+{
+  "measured_at": "2026-11-07T01:42:56.648851+00:00",
+  "pid": 37541,
+  "completed_day_checkpoints": [
+    {
+      "chunk_id": "partition:tushare:fund_portfolio:2026-11-05:2026-11-05",
+      "status": "COMPLETE",
+      "complete_evidence_id": "snapshot:tushare:fund_portfolio:sha256:ea1fac3c20c59a3df66315e8cbd61ff831277c1b7142c463db6aaec9d99aaea2",
+      "updated_at": "2026-11-05T13:55:35.168413+00:00"
+    }
+  ],
+  "reason": "Task day worker stuck in post-commit read-only cumulative snapshot resolution; bulk completion matching fix will be validated before normal re-read. Completed zero observation retained."
+}

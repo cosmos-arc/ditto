@@ -1,0 +1,19 @@
+{
+  "measured_at": "2026-11-06T18:03:14.646361+00:00",
+  "sample_receipts": 100,
+  "baseline_rows": 1531177,
+  "correction_rows": 21565,
+  "old_seconds": 5.688687540998217,
+  "new_seconds": 0.17555187497055158,
+  "outputs_identical": true,
+  "unknown_disclosure_preserved": true,
+  "nonbaseline_value_rejected": true,
+  "duplicate_keys_rejected": true,
+  "original_helper_sha256": "49d933a2ebfb32eb17d5c345f74bf11136c2d8a4fb4aa8c7f1f158a58949c64f",
+  "updated_helper_sha256": "185d9c14a8964aa7431d435919ffdd4e3a501647f5c366f4de3ebf4d9d339698",
+  "network_calls": 0,
+  "production_writes": 0,
+  "boundary": "Only audit baseline-membership verification moved after concatenation. Every receipt status, baseline/image hash, count, NULL transition, other-field invariance and key uniqueness check retained. Production correction writer unchanged.",
+  "reviewed_at": "2026-11-06T18:06:24.368631+00:00",
+  "independent_review": "Standards:0 blockers; per-receipt baseline membership is equivalent to concatenated before-image membership. nulls_equal, individual checks and final unique keys preserved; real snapshot output equality and invalid fixtures confirmed."
+}

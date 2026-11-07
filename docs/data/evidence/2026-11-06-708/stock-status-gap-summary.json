@@ -1,0 +1,99 @@
+{
+  "measured_at": "2026-11-06T12:13:53.741029+00:00",
+  "expected_codes": 977,
+  "missing_sessions": 8931,
+  "probed_sessions": 8931,
+  "unprobed_sessions": 0,
+  "source_absent_sessions": 8931,
+  "source_returned_missing_sessions": 0,
+  "incomplete_codes": 0,
+  "old_code_attribution": [
+    {
+      "source_ticker": "601313.SH",
+      "code_change_date": "2018-02-28",
+      "period": "before_code_change",
+      "rows": 1013,
+      "by_kind": {
+        "pre_status_era": 636,
+        "status_trading_no_bar": 368,
+        "status_row_missing": 9
+      },
+      "dates_sha256": "f6258ae6fc7d74dd80ab6ff1f52178c6f35a9748b0f4c3e40bca7dfcc3c42211"
+    },
+    {
+      "source_ticker": "601313.SH",
+      "code_change_date": "2018-02-28",
+      "period": "retired_code_interval",
+      "rows": 2108,
+      "by_kind": {
+        "status_row_missing": 2108
+      },
+      "dates_sha256": "fad6821362eec49c0b04787162f80c00d112e1996de593544cf2ae80dc490c73"
+    },
+    {
+      "source_ticker": "000022.SZ",
+      "code_change_date": "2018-12-26",
+      "period": "before_code_change",
+      "rows": 281,
+      "by_kind": {
+        "pre_status_era": 120,
+        "status_trading_no_bar": 161
+      },
+      "dates_sha256": "92796228459e2463e531c1ecd09b7edaf28b4ed950cb3922de5aad720fdf0dda"
+    },
+    {
+      "source_ticker": "000022.SZ",
+      "code_change_date": "2018-12-26",
+      "period": "retired_code_interval",
+      "rows": 1904,
+      "by_kind": {
+        "status_row_missing": 1904
+      },
+      "dates_sha256": "65b7abd9ee27c5cad62f498e9b91f48cb627c872ca234398df06d769b3628f6a"
+    },
+    {
+      "source_ticker": "000043.SZ",
+      "code_change_date": "2019-12-16",
+      "period": "before_code_change",
+      "rows": 80,
+      "by_kind": {
+        "pre_status_era": 23,
+        "status_row_missing": 4,
+        "status_trading_no_bar": 53
+      },
+      "dates_sha256": "97926f5b4e03e2ca0047d2a6446db6c8641f59e83779bb1d19843c560eeffbf2"
+    },
+    {
+      "source_ticker": "000043.SZ",
+      "code_change_date": "2019-12-16",
+      "period": "retired_code_interval",
+      "rows": 1669,
+      "by_kind": {
+        "status_row_missing": 1669
+      },
+      "dates_sha256": "78c96cdbae70b882e95b4d31d521719b5b72eb0e036bfbfe368250d1045a448d"
+    },
+    {
+      "source_ticker": "300114.SZ",
+      "code_change_date": "2025-02-17",
+      "period": "before_code_change",
+      "rows": 16,
+      "by_kind": {
+        "pre_status_era": 6,
+        "status_trading_no_bar": 10
+      },
+      "dates_sha256": "9450b6113b82d8075fdb209dfeb8f63eb142ec7d803f77e281a5e7ebc3f0d0a7"
+    },
+    {
+      "source_ticker": "300114.SZ",
+      "code_change_date": "2025-02-17",
+      "period": "retired_code_interval",
+      "rows": 419,
+      "by_kind": {
+        "status_row_missing": 419
+      },
+      "dates_sha256": "22a9f961ec3b109ca8dc859e1e4f65abb313ddebf4333854255ac60319e7df79"
+    }
+  ],
+  "boundary": "Official code-change dates classify retired-code intervals without inventing corporate delisting or suspension. Native bak_basic full-code responses independently prove source absence only for the exact recorded missing dates. No identity, price or status rows are deleted or relabeled."
+}

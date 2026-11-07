@@ -1,0 +1,726 @@
+{
+  "started_at": "2026-11-06T03:27:27.461913+00:00",
+  "china": [
+    {
+      "code": "CN_GDP_YOY",
+      "error": "SourceFetchError",
+      "message": "Failed to fetch macro_indicators from Tushare"
+    },
+    {
+      "code": "CN_CPI_YOY",
+      "error": "SourceFetchError",
+      "message": "Failed to fetch macro_indicators from Tushare"
+    },
+    {
+      "code": "CN_PPI_YOY",
+      "error": "SourceFetchError",
+      "message": "Failed to fetch macro_indicators from Tushare"
+    },
+    {
+      "code": "CN_M2_YOY",
+      "error": "SourceFetchError",
+      "message": "Failed to fetch macro_indicators from Tushare"
+    },
+    {
+      "code": "CN_PMI_MFG",
+      "error": "SourceFetchError",
+      "message": "Failed to fetch macro_indicators from Tushare"
+    },
+    {
+      "code": "CN_SF_FLOW_MONTH",
+      "error": "SourceFetchError",
+      "message": "Failed to fetch macro_indicators from Tushare"
+    },
+    {
+      "code": "CN_SF_FLOW_CUM",
+      "error": "SourceFetchError",
+      "message": "Failed to fetch macro_indicators from Tushare"
+    },
+    {
+      "code": "CN_SF_STOCK",
+      "rows": 1,
+      "sample": [
+        {
+          "indicator_code": "CN_SF_STOCK",
+          "indicator_name": "社融存量",
+          "category": "credit",
+          "frequency": "monthly",
+          "need_pit": true,
+          "date": "2014-12-01",
+          "value": 122.86,
+          "knowledge_date": "2026-11-06",
+          "source": "tushare",
+          "unit": "万亿元",
+          "description": "社会融资规模存量(期末值)"
+        }
+      ]
+    }
+  ],
+  "fred": [
+    {
+      "code": "US_GDP_QOQ",
+      "rows": 7,
+      "sample": [
+        {
+          "indicator_code": "US_GDP_QOQ",
+          "indicator_name": "美国GDP环比",
+          "category": "economic",
+          "frequency": "quarterly",
+          "need_pit": true,
+          "date": "2026-07-01",
+          "value": 3.4,
+          "knowledge_date": "2026-10-29",
+          "source": "fred",
+          "unit": "%",
+          "description": "Real GDP, Percent Change from Preceding Period, Seasonally Adjusted Annual Rate"
+        }
+      ]
+    },
+    {
+      "code": "US_CPI_INDEX",
+      "rows": 20,
+      "sample": [
+        {
+          "indicator_code": "US_CPI_INDEX",
+          "indicator_name": "美国CPI(季调指数)",
+          "category": "prices",
+          "frequency": "monthly",
+          "need_pit": true,
+          "date": "2026-08-01",
+          "value": 334.131,
+          "knowledge_date": "2026-09-11",
+          "source": "fred",
+          "unit": "指数(1982-84=100)",
+          "description": "CPI for All Urban Consumers: All Items, Seasonally Adjusted Index (level, not YoY)"
+        }
+      ]
+    },
+    {
+      "code": "US_CORE_CPI_INDEX",
+      "rows": 20,
+      "sample": [
+        {
+          "indicator_code": "US_CORE_CPI_INDEX",
+          "indicator_name": "美国核心CPI(季调指数)",
+          "category": "prices",
+          "frequency": "monthly",
+          "need_pit": true,
+          "date": "2026-03-01",
+          "value": 334.165,
+          "knowledge_date": "2026-04-10",
+          "source": "fred",
+          "unit": "指数(1982-84=100)",
+          "description": "Core CPI (Excluding Food and Energy), Seasonally Adjusted Index (level, not YoY)"
+        }
+      ]
+    },
+    {
+      "code": "US_PCE_INDEX",
+      "rows": 21,
+      "sample": [
+        {
+          "indicator_code": "US_PCE_INDEX",
+          "indicator_name": "美国PCE物价指数(季调)",
+          "category": "prices",
+          "frequency": "monthly",
+          "need_pit": true,
+          "date": "2025-02-01",
+          "value": 125.77,
+          "knowledge_date": "2026-09-30",
+          "source": "fred",
+          "unit": "指数(2017=100)",
+          "description": "Personal Consumption Expenditures Price Index, Seasonally Adjusted (level, not YoY)"
+        }
+      ]
+    },
+    {
+      "code": "US_CORE_PCE_INDEX",
+      "rows": 21,
+      "sample": [
+        {
+          "indicator_code": "US_CORE_PCE_INDEX",
+          "indicator_name": "美国核心PCE物价指数(季调)",
+          "category": "prices",
+          "frequency": "monthly",
+          "need_pit": true,
+          "date": "2026-09-01",
+          "value": 130.902,
+          "knowledge_date": "2026-10-29",
+          "source": "fred",
+          "unit": "指数(2017=100)",
+          "description": "Core PCE (Excluding Food and Energy), Seasonally Adjusted (level, not YoY)"
+        }
+      ]
+    },
+    {
+      "code": "US_UNRATE",
+      "rows": 20,
+      "sample": [
+        {
+          "indicator_code": "US_UNRATE",
+          "indicator_name": "美国失业率",
+          "category": "employment",
+          "frequency": "monthly",
+          "need_pit": true,
+          "date": "2026-08-01",
+          "value": 4.1,
+          "knowledge_date": "2026-09-04",
+          "source": "fred",
+          "unit": "%",
+          "description": "Civilian Unemployment Rate (monthly release, revised)"
+        }
+      ]
+    },
+    {
+      "code": "US_PAYEMS",
+      "rows": 21,
+      "sample": [
+        {
+          "indicator_code": "US_PAYEMS",
+          "indicator_name": "美国非农就业",
+          "category": "employment",
+          "frequency": "monthly",
+          "need_pit": true,
+          "date": "2025-10-01",
+          "value": 158408.0,
+          "knowledge_date": "2026-02-11",
+          "source": "fred",
+          "unit": "千人",
+          "description": "Nonfarm Employment"
+        }
+      ]
+    },
+    {
+      "code": "US_M2",
+      "rows": 21,
+      "sample": [
+        {
+          "indicator_code": "US_M2",
+          "indicator_name": "美国M2货币供应(季调)",
+          "category": "money_supply",
+          "frequency": "monthly",
+          "need_pit": true,
+          "date": "2026-08-01",
+          "value": 23300.9,
+          "knowledge_date": "2026-10-27",
+          "source": "fred",
+          "unit": "十亿美元",
+          "description": "M2 Money Stock, Seasonally Adjusted (level, not YoY; annual benchmark revisions can reach back years)"
+        }
+      ]
+    },
+    {
+      "code": "US_BOND_YIELD_1Y",
+      "error": "_PermanentFetchError",
+      "message": "FRED API request failed: 400"
+    },
+    {
+      "code": "US_BOND_YIELD_2Y",
+      "error": "_PermanentFetchError",
+      "message": "FRED API request failed: 400"
+    },
+    {
+      "code": "US_BOND_YIELD_5Y",
+      "error": "_PermanentFetchError",
+      "message": "FRED API request failed: 400"
+    },
+    {
+      "code": "US_BOND_YIELD_10Y",
+      "error": "_PermanentFetchError",
+      "message": "FRED API request failed: 400"
+    },
+    {
+      "code": "US_BOND_YIELD_30Y",
+      "error": "_PermanentFetchError",
+      "message": "FRED API request failed: 400"
+    },
+    {
+      "code": "US_BOND_SPREAD_10Y2Y",
+      "error": "_PermanentFetchError",
+      "message": "FRED API request failed: 400"
+    },
+    {
+      "code": "US_FEDFUNDS_M",
+      "rows": 22,
+      "sample": [
+        {
+          "indicator_code": "US_FEDFUNDS_M",
+          "indicator_name": "美国联邦基金利率(月)",
+          "category": "interest_rate",
+          "frequency": "monthly",
+          "need_pit": false,
+          "date": "2025-01-01",
+          "value": 4.33,
+          "knowledge_date": "2025-02-03",
+          "source": "fred",
+          "unit": "%",
+          "description": "Effective Federal Funds Rate (Monthly)"
+        }
+      ]
+    },
+    {
+      "code": "US_FEDFUNDS_D",
+      "error": "_PermanentFetchError",
+      "message": "FRED API request failed: 400"
+    },
+    {
+      "code": "COMMOD_WTI",
+      "rows": 459,
+      "sample": [
+        {
+          "indicator_code": "COMMOD_WTI",
+          "indicator_name": "WTI原油",
+          "category": "commodity",
+          "frequency": "daily",
+          "need_pit": false,
+          "date": "2026-02-11",
+          "value": 64.8,
+          "knowledge_date": "2026-02-19",
+          "source": "fred",
+          "unit": "美元/桶",
+          "description": "Crude Oil Prices: West Texas Intermediate (WTI)"
+        }
+      ]
+    },
+    {
+      "code": "COMMOD_BRENT",
+      "rows": 466,
+      "sample": [
+        {
+          "indicator_code": "COMMOD_BRENT",
+          "indicator_name": "布伦特原油",
+          "category": "commodity",
+          "frequency": "daily",
+          "need_pit": false,
+          "date": "2025-11-07",
+          "value": 63.72,
+          "knowledge_date": "2025-11-13",
+          "source": "fred",
+          "unit": "美元/桶",
+          "description": "Crude Oil Prices: Brent - Europe"
+        }
+      ]
+    },
+    {
+      "code": "VIX_30D",
+      "error": "_PermanentFetchError",
+      "message": "FRED API request failed: 400"
+    },
+    {
+      "code": "US_DOLLAR_INDEX_BROAD",
+      "rows": 459,
+      "sample": [
+        {
+          "indicator_code": "US_DOLLAR_INDEX_BROAD",
+          "indicator_name": "美国贸易加权美元指数(广义)",
+          "category": "dollar_index",
+          "frequency": "daily",
+          "need_pit": false,
+          "date": "2025-05-29",
+          "value": 121.5617,
+          "knowledge_date": "2026-02-02",
+          "source": "fred",
+          "unit": "指数",
+          "description": "Trade Weighted U.S. Dollar Index: Broad, Goods and Services (Federal Reserve Board H.10 release)"
+        }
+      ]
+    },
+    {
+      "code": "US_DOLLAR_INDEX_AFE_GOODS",
+      "rows": 459,
+      "sample": [
+        {
+          "indicator_code": "US_DOLLAR_INDEX_AFE_GOODS",
+          "indicator_name": "美元指数(发达经济体·商品)",
+          "category": "dollar_index",
+          "frequency": "daily",
+          "need_pit": false,
+          "date": "2026-08-27",
+          "value": 111.7503,
+          "knowledge_date": "2026-08-31",
+          "source": "fred",
+          "unit": "指数",
+          "description": "Trade Weighted U.S. Dollar Index: Advanced Foreign Economies, Goods (Federal Reserve Board H.10)"
+        }
+      ]
+    },
+    {
+      "code": "FX_JPYUSD_H10",
+      "rows": 459,
+      "sample": [
+        {
+          "indicator_code": "FX_JPYUSD_H10",
+          "indicator_name": "日元兑美元(H.10)",
+          "category": "exchange_rate",
+          "frequency": "daily",
+          "need_pit": false,
+          "date": "2026-01-20",
+          "value": 157.89,
+          "knowledge_date": "2026-01-26",
+          "source": "fred",
+          "unit": "日元/美元",
+          "description": "Japanese Yen to U.S. Dollar Spot Exchange Rate (H.10 noon buying rate; not the Tushare fx_daily series)"
+        }
+      ]
+    },
+    {
+      "code": "FX_EURUSD_H10",
+      "rows": 459,
+      "sample": [
+        {
+          "indicator_code": "FX_EURUSD_H10",
+          "indicator_name": "欧元兑美元(H.10)",
+          "category": "exchange_rate",
+          "frequency": "daily",
+          "need_pit": false,
+          "date": "2026-03-17",
+          "value": 1.1525,
+          "knowledge_date": "2026-03-23",
+          "source": "fred",
+          "unit": "美元/欧元",
+          "description": "U.S. Dollars to Euro Spot Exchange Rate (H.10 noon buying rate)"
+        }
+      ]
+    },
+    {
+      "code": "FX_USDCNY_H10",
+      "rows": 459,
+      "sample": [
+        {
+          "indicator_code": "FX_USDCNY_H10",
+          "indicator_name": "人民币兑美元(H.10)",
+          "category": "exchange_rate",
+          "frequency": "daily",
+          "need_pit": false,
+          "date": "2025-09-29",
+          "value": 7.1194,
+          "knowledge_date": "2025-10-06",
+          "source": "fred",
+          "unit": "人民币/美元",
+          "description": "China Yuan to U.S. Dollar Spot Exchange Rate (H.10 noon buying rate)"
+        }
+      ]
+    },
+    {
+      "code": "FX_GBPUSD_H10",
+      "rows": 459,
+      "sample": [
+        {
+          "indicator_code": "FX_GBPUSD_H10",
+          "indicator_name": "英镑兑美元(H.10)",
+          "category": "exchange_rate",
+          "frequency": "daily",
+          "need_pit": false,
+          "date": "2025-07-01",
+          "value": 1.3728,
+          "knowledge_date": "2025-07-07",
+          "source": "fred",
+          "unit": "美元/英镑",
+          "description": "U.S. Dollars to British Pound Spot Exchange Rate (H.10 noon buying rate)"
+        }
+      ]
+    },
+    {
+      "code": "US_BOND_YIELD_1MO",
+      "error": "_PermanentFetchError",
+      "message": "FRED API request failed: 400"
+    },
+    {
+      "code": "US_BOND_YIELD_3MO",
+      "error": "_PermanentFetchError",
+      "message": "FRED API request failed: 400"
+    },
+    {
+      "code": "US_BOND_YIELD_3Y",
+      "error": "_PermanentFetchError",
+      "message": "FRED API request failed: 400"
+    },
+    {
+      "code": "US_BOND_YIELD_7Y",
+      "error": "_PermanentFetchError",
+      "message": "FRED API request failed: 400"
+    },
+    {
+      "code": "US_BOND_YIELD_20Y",
+      "error": "_PermanentFetchError",
+      "message": "FRED API request failed: 400"
+    },
+    {
+      "code": "US_BOND_SPREAD_10Y3M",
+      "error": "_PermanentFetchError",
+      "message": "FRED API request failed: 400"
+    },
+    {
+      "code": "US_BREAKEVEN_10Y",
+      "error": "_PermanentFetchError",
+      "message": "FRED API request failed: 400"
+    },
+    {
+      "code": "US_BREAKEVEN_5Y",
+      "error": "_PermanentFetchError",
+      "message": "FRED API request failed: 400"
+    },
+    {
+      "code": "US_SOFR",
+      "rows": 460,
+      "sample": [
+        {
+          "indicator_code": "US_SOFR",
+          "indicator_name": "SOFR担保隔夜融资利率",
+          "category": "interest_rate",
+          "frequency": "daily",
+          "need_pit": false,
+          "date": "2025-01-27",
+          "value": 4.34,
+          "knowledge_date": "2025-01-28",
+          "source": "fred",
+          "unit": "%",
+          "description": "Secured Overnight Financing Rate (NY Fed)"
+        }
+      ]
+    },
+    {
+      "code": "US_EFFR",
+      "error": "_PermanentFetchError",
+      "message": "FRED API request failed: 400"
+    },
+    {
+      "code": "US_CREDIT_IG_OAS",
+      "rows": 483,
+      "sample": [
+        {
+          "indicator_code": "US_CREDIT_IG_OAS",
+          "indicator_name": "美国投资级公司债利差OAS",
+          "category": "credit",
+          "frequency": "daily",
+          "need_pit": false,
+          "date": "2025-12-24",
+          "value": 0.79,
+          "knowledge_date": "2025-12-24",
+          "source": "fred",
+          "unit": "%",
+          "description": "ICE BofA US Corporate Index Option-Adjusted Spread (ICE 自 2026-04 仅提供滚动 3 年窗口)"
+        }
+      ]
+    },
+    {
+      "code": "US_CREDIT_HY_OAS",
+      "rows": 483,
+      "sample": [
+        {
+          "indicator_code": "US_CREDIT_HY_OAS",
+          "indicator_name": "美国高收益公司债利差OAS",
+          "category": "credit",
+          "frequency": "daily",
+          "need_pit": false,
+          "date": "2025-08-28",
+          "value": 2.75,
+          "knowledge_date": "2025-08-28",
+          "source": "fred",
+          "unit": "%",
+          "description": "ICE BofA US High Yield Index Option-Adjusted Spread (ICE 自 2026-04 仅提供滚动 3 年窗口)"
+        }
+      ]
+    },
+    {
+      "code": "US_CORP_YIELD_AAA",
+      "error": "_PermanentFetchError",
+      "message": "FRED API request failed: 400"
+    },
+    {
+      "code": "US_CORP_YIELD_BAA_D",
+      "error": "_PermanentFetchError",
+      "message": "FRED API request failed: 400"
+    },
+    {
+      "code": "US_CORP_YIELD_BAA_M",
+      "rows": 22,
+      "sample": [
+        {
+          "indicator_code": "US_CORP_YIELD_BAA_M",
+          "indicator_name": "Moody's Baa公司债收益率(月)",
+          "category": "credit",
+          "frequency": "monthly",
+          "need_pit": false,
+          "date": "2025-05-01",
+          "value": 6.29,
+          "knowledge_date": "2025-06-02",
+          "source": "fred",
+          "unit": "%",
+          "description": "Moody's Seasoned Baa Corporate Bond Yield (monthly only)"
+        }
+      ]
+    },
+    {
+      "code": "US_BOND_SPREAD_BAA10Y",
+      "error": "_PermanentFetchError",
+      "message": "FRED API request failed: 400"
+    },
+    {
+      "code": "VIX_NASDAQ",
+      "error": "_PermanentFetchError",
+      "message": "FRED API request failed: 400"
+    },
+    {
+      "code": "VIX_RUSSELL",
+      "error": "_PermanentFetchError",
+      "message": "FRED API request failed: 400"
+    },
+    {
+      "code": "COMMOD_HH_NATGAS",
+      "rows": 458,
+      "sample": [
+        {
+          "indicator_code": "COMMOD_HH_NATGAS",
+          "indicator_name": "Henry Hub天然气现货",
+          "category": "commodity",
+          "frequency": "daily",
+          "need_pit": false,
+          "date": "2026-10-07",
+          "value": 3.16,
+          "knowledge_date": "2026-10-15",
+          "source": "fred",
+          "unit": "美元/百万英热",
+          "description": "Henry Hub Natural Gas Spot Price (EIA, 1997-01 起)"
+        }
+      ]
+    },
+    {
+      "code": "COMMOD_GASREGW",
+      "rows": 96,
+      "sample": [
+        {
+          "indicator_code": "COMMOD_GASREGW",
+          "indicator_name": "美国常规汽油零售价(周)",
+          "category": "commodity",
+          "frequency": "weekly",
+          "need_pit": false,
+          "date": "2026-02-23",
+          "value": 2.937,
+          "knowledge_date": "2026-02-24",
+          "source": "fred",
+          "unit": "美元/加仑",
+          "description": "US Regular Conventional Gas Price, Weekly (EIA 周一发布上周值; 周频如实注册, 不伪称日频)"
+        }
+      ]
+    },
+    {
+      "code": "COMMOD_COPPER_IMF",
+      "rows": 21,
+      "sample": [
+        {
+          "indicator_code": "COMMOD_COPPER_IMF",
+          "indicator_name": "IMF铜价(月)",
+          "category": "commodity",
+          "frequency": "monthly",
+          "need_pit": false,
+          "date": "2025-08-01",
+          "value": 9671.875714285714,
+          "knowledge_date": "2026-01-22",
+          "source": "fred",
+          "unit": "美元/吨",
+          "description": "Global price of Copper (IMF PCPS, monthly)"
+        }
+      ]
+    },
+    {
+      "code": "COMMOD_ALUMINUM_IMF",
+      "rows": 21,
+      "sample": [
+        {
+          "indicator_code": "COMMOD_ALUMINUM_IMF",
+          "indicator_name": "IMF铝价(月)",
+          "category": "commodity",
+          "frequency": "monthly",
+          "need_pit": false,
+          "date": "2026-09-01",
+          "value": 3283.054285714286,
+          "knowledge_date": "2026-10-22",
+          "source": "fred",
+          "unit": "美元/吨",
+          "description": "Global price of Aluminum (IMF PCPS, monthly)"
+        }
+      ]
+    },
+    {
+      "code": "COMMOD_IRONORE_IMF",
+      "rows": 21,
+      "sample": [
+        {
+          "indicator_code": "COMMOD_IRONORE_IMF",
+          "indicator_name": "IMF铁矿石价(月)",
+          "category": "commodity",
+          "frequency": "monthly",
+          "need_pit": false,
+          "date": "2025-04-01",
+          "value": 100.9090909090909,
+          "knowledge_date": "2026-01-22",
+          "source": "fred",
+          "unit": "美元/干公吨",
+          "description": "Global price of Iron Ore (IMF PCPS, monthly)"
+        }
+      ]
+    },
+    {
+      "code": "COMMOD_WTI_IMF",
+      "rows": 21,
+      "sample": [
+        {
+          "indicator_code": "COMMOD_WTI_IMF",
+          "indicator_name": "IMF WTI原油价(月)",
+          "category": "commodity",
+          "frequency": "monthly",
+          "need_pit": false,
+          "date": "2025-11-01",
+          "value": 60.0435,
+          "knowledge_date": "2026-01-22",
+          "source": "fred",
+          "unit": "美元/桶",
+          "description": "Global price of WTI Crude (IMF PCPS, monthly; 与 DCOILWTICO 日度现货是不同频率/口径序列)"
+        }
+      ]
+    },
+    {
+      "code": "COMMOD_NATGAS_EU_IMF",
+      "rows": 21,
+      "sample": [
+        {
+          "indicator_code": "COMMOD_NATGAS_EU_IMF",
+          "indicator_name": "IMF欧盟天然气价(月)",
+          "category": "commodity",
+          "frequency": "monthly",
+          "need_pit": false,
+          "date": "2025-06-01",
+          "value": 12.30058745,
+          "knowledge_date": "2026-02-12",
+          "source": "fred",
+          "unit": "美元/百万英热",
+          "description": "Global price of Natural Gas, EU (IMF PCPS, monthly; 与 Henry Hub 是不同基准。正确ID为 PNGASEUUSDM——候选清单的 PNGASUSDM 为错误ID 404, 2026-10-05 CSV 端点核实)"
+        }
+      ]
+    },
+    {
+      "code": "COMMOD_ALLFNF_IMF",
+      "rows": 21,
+      "sample": [
+        {
+          "indicator_code": "COMMOD_ALLFNF_IMF",
+          "indicator_name": "IMF全球金融与非能源商品指数(月)",
+          "category": "commodity",
+          "frequency": "monthly",
+          "need_pit": false,
+          "date": "2026-02-01",
+          "value": 184.2585703960487,
+          "knowledge_date": "2026-06-05",
+          "source": "fred",
+          "unit": "指数",
+          "description": "IMF Global price index of Financial Non-Fuel Commodities (正确ID; 旧 PALLFNF/PALLFIN 为错误ID 404)"
+        }
+      ]
+    }
+  ],
+  "index_error": {
+    "error": "SourceFetchError",
+    "message": "Failed to fetch sw_industry from Tushare"
+  }
+}

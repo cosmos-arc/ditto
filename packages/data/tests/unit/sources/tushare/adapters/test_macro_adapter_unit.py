@@ -82,7 +82,7 @@ class TestMacroTushareAdapterFetchIndicators:
         # fields should include the required field
         assert "gdp_yoy" in call_kwargs["fields"]
 
-    def test_pmi_uses_uppercase_provider_date_and_value_fields(self) -> None:
+    def test_pmi_uses_lowercase_provider_date_and_value_fields(self) -> None:
         """Normalize the actual cn_pmi provider schema."""
         from datetime import date
 
@@ -90,7 +90,7 @@ class TestMacroTushareAdapterFetchIndicators:
 
         mock_client = MagicMock()
         mock_client.query.return_value = pl.DataFrame(
-            {"MONTH": ["202401"], "PMI010000": [49.2]}
+            {"month": ["202401"], "pmi010000": [49.2]}
         )
 
         result = MacroTushareAdapter(_client=mock_client).fetch_indicators(
@@ -103,8 +103,8 @@ class TestMacroTushareAdapterFetchIndicators:
         assert result.height == 1
         assert result["date"][0] == date(2024, 1, 1)
         assert result["value"][0] == 49.2
-        assert "MONTH" in mock_client.query.call_args.kwargs["fields"]
-        assert "PMI010000" in mock_client.query.call_args.kwargs["fields"]
+        assert "month" in mock_client.query.call_args.kwargs["fields"]
+        assert "pmi010000" in mock_client.query.call_args.kwargs["fields"]
 
     def test_provider_full_history_response_is_bounded_locally(self) -> None:
         """China macro APIs ignore generic start/end parameters."""
@@ -166,6 +166,18 @@ class TestMacroTushareAdapterFetchIndicators:
 
         assert result.height == 0
         assert set(result.columns) == set(MACRO_INDICATOR_SOURCE_SCHEMA.schema.keys())
+
+    def test_nonempty_response_missing_requested_field_fails(self) -> None:
+        from ditto_data.sources.base import SourceFetchError
+        from ditto_data.sources.tushare.adapters.macro import MacroTushareAdapter
+
+        client = MagicMock()
+        client.query.return_value = pl.DataFrame({"month": ["202401"]})
+        with pytest.raises(SourceFetchError) as error:
+            MacroTushareAdapter(_client=client).fetch_indicators(
+                ["CN_PMI_MFG"], "2024-01-01", "2024-01-31"
+            )
+        assert "missing macro field: pmi010000" in str(error.value.__cause__)
 
     def test_historical_macro_bootstrap_is_visible_only_from_retrieval_date(
         self,

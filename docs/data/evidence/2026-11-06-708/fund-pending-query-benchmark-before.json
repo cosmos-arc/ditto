@@ -1,0 +1,6 @@
+{
+  "measured_at": "2026-11-07T00:55:46.151288+00:00",
+  "sample_queries": 10,
+  "seconds": 0.606240541965235,
+  "boundary": "Read-only timing sample of existing per-family latest-event query, not an executed full list_incomplete call."
+}

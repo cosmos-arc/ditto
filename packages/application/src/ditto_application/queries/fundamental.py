@@ -6,7 +6,11 @@ from datetime import date
 from typing import Protocol
 
 import polars as pl
+from ditto_data.catalog.snapshot_completion import completed_snapshots
+from ditto_data.catalog.source_snapshot import ProviderSnapshotReader
+from ditto_data.ingestion.partition_state import PartitionLifecycleReader
 
+from ditto_application.exceptions import AppQueryError
 from ditto_application.queries._maturity_gate import assert_query_datasets_allowed
 
 __all__ = ["FundamentalDataPort", "FundamentalQueryFacade"]
@@ -23,6 +27,16 @@ _EARNINGS_FORECAST_DATASET = "earnings_forecast"
 
 class FundamentalDataPort(Protocol):
     """窄 Protocol：FundamentalQueryFacade 所需的 fundamental 数据获取能力."""
+
+    def get_fund_portfolio(
+        self,
+        source_ticker: str,
+        start: str,
+        end: str,
+        as_of: str | None = None,
+    ) -> pl.DataFrame:
+        """Read fund disclosure observations without inferring report types."""
+        ...
 
     def get_balance_sheet(
         self,
@@ -100,8 +114,42 @@ class FundamentalQueryFacade:
     def __init__(
         self,
         fundamental_store: FundamentalDataPort,
+        snapshots: ProviderSnapshotReader | None = None,
+        lifecycle: PartitionLifecycleReader | None = None,
     ) -> None:
         self._service = fundamental_store
+        self._snapshots = snapshots
+        self._lifecycle = lifecycle
+
+    def list_fund_portfolio_observations(
+        self, source_ticker: str
+    ) -> list[dict[str, object]]:
+        """List completed source evidence, without claiming a frozen canonical read."""
+        if self._snapshots is None or self._lifecycle is None:
+            return []
+        snapshots = [
+            snapshot
+            for snapshot in self._snapshots.list_snapshots(dataset_id="fund_portfolio")
+            if dict(snapshot.response_metadata).get("source_ticker")
+            in {None, source_ticker}
+        ]
+        return [
+            {
+                "snapshot_id": snapshot.snapshot_id,
+                "source": snapshot.source,
+                "request_start": snapshot.request_start,
+                "request_end": snapshot.request_end,
+                "observed_at": self._snapshots.get_observed_at(snapshot.snapshot_id),
+                "rows": snapshot.row_count,
+                "payload_retained": snapshot.payload_retained,
+                "checksum": snapshot.checksum,
+                "scope": "fund"
+                if dict(snapshot.response_metadata).get("source_ticker")
+                else "market",
+                "source_ticker": dict(snapshot.response_metadata).get("source_ticker"),
+            }
+            for snapshot in completed_snapshots(snapshots, self._lifecycle)
+        ]
 
     def get_balance_sheet(
         self,
@@ -245,6 +293,26 @@ class FundamentalQueryFacade:
             allow_experimental_data=allow_experimental_data,
             context=f"fundamental query {dataset_id}",
         )
+
+    def get_fund_portfolio(
+        self,
+        source_ticker: str,
+        start: str,
+        end: str,
+        as_of: str | None = None,
+        *,
+        require_complete: bool = False,
+        allow_experimental_data: bool = False,
+    ) -> pl.DataFrame:
+        """Observe disclosed stocks; dates do not establish a complete portfolio."""
+        if date.fromisoformat(start) > date.fromisoformat(end):
+            raise AppQueryError("fund portfolio start must not exceed end")
+        if require_complete:
+            raise AppQueryError("fund_portfolio report completeness is unverified")
+        self._assert_dataset_allowed(
+            "fund_portfolio", allow_experimental_data=allow_experimental_data
+        )
+        return self._service.get_fund_portfolio(source_ticker, start, end, as_of)
 
     # ── #658 批次4b 消费接线：披露帧窗口读 ─────────────────────────────
 

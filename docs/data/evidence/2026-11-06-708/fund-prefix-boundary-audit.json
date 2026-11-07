@@ -1,0 +1,137 @@
+{
+  "measured_at": "2026-11-06T20:47:34.353810+00:00",
+  "original_completion_file": "fund-durable-before-zero-correction.json",
+  "original_completion_sha256": "7e5c466ba4d9904349471bbbf395992f8f0543212f42e01cb52060672ac1e6f1",
+  "holders": 32842,
+  "native_request_start": "20130930",
+  "native_request_end": "20260930",
+  "effective_prefix_start": "2014-01-01",
+  "effective_prefix_end": "2026-09-30",
+  "old_declared_end": "2026-11-05",
+  "nonempty_payload_rows": 18359513,
+  "null_knowledge_rows": 0,
+  "maximum_knowledge_date": "2026-10-27",
+  "beyond_native_end": [
+    {
+      "code": "003125.OF",
+      "maximum": "2026-10-27"
+    },
+    {
+      "code": "003126.OF",
+      "maximum": "2026-10-27"
+    },
+    {
+      "code": "003127.OF",
+      "maximum": "2026-10-27"
+    },
+    {
+      "code": "006861.OF",
+      "maximum": "2026-10-27"
+    },
+    {
+      "code": "011352.OF",
+      "maximum": "2026-10-27"
+    },
+    {
+      "code": "011355.OF",
+      "maximum": "2026-10-27"
+    },
+    {
+      "code": "011356.OF",
+      "maximum": "2026-10-27"
+    },
+    {
+      "code": "011357.OF",
+      "maximum": "2026-10-27"
+    },
+    {
+      "code": "011358.OF",
+      "maximum": "2026-10-27"
+    },
+    {
+      "code": "013440.OF",
+      "maximum": "2026-10-27"
+    },
+    {
+      "code": "015593.OF",
+      "maximum": "2026-10-27"
+    },
+    {
+      "code": "020475.OF",
+      "maximum": "2026-10-27"
+    },
+    {
+      "code": "020476.OF",
+      "maximum": "2026-10-26"
+    },
+    {
+      "code": "020477.OF",
+      "maximum": "2026-10-26"
+    },
+    {
+      "code": "020478.OF",
+      "maximum": "2026-10-27"
+    },
+    {
+      "code": "020481.OF",
+      "maximum": "2026-10-27"
+    },
+    {
+      "code": "020482.OF",
+      "maximum": "2026-10-27"
+    },
+    {
+      "code": "020483.OF",
+      "maximum": "2026-10-27"
+    },
+    {
+      "code": "159331.SZ",
+      "maximum": "2026-10-27"
+    },
+    {
+      "code": "159379.SZ",
+      "maximum": "2026-10-26"
+    },
+    {
+      "code": "159380.SZ",
+      "maximum": "2026-10-27"
+    },
+    {
+      "code": "159381.SZ",
+      "maximum": "2026-10-27"
+    },
+    {
+      "code": "159537.SZ",
+      "maximum": "2026-10-27"
+    },
+    {
+      "code": "159545.SZ",
+      "maximum": "2026-10-27"
+    },
+    {
+      "code": "159546.SZ",
+      "maximum": "2026-10-27"
+    },
+    {
+      "code": "159547.SZ",
+      "maximum": "2026-10-27"
+    },
+    {
+      "code": "159549.SZ",
+      "maximum": "2026-10-27"
+    },
+    {
+      "code": "512980.SH",
+      "maximum": "2026-10-27"
+    },
+    {
+      "code": "560210.SH",
+      "maximum": "2026-10-27"
+    },
+    {
+      "code": "589420.SH",
+      "maximum": "2026-10-27"
+    }
+  ],
+  "boundary": "All original normalized nonempty payloads were separately checksum/schema/value audited. This check bounds their actual known disclosure dates; old declared Nov5 completion cannot prove the unrequested Oct1..Nov5 tail. Unknown dates remain unknown; no historical PIT claim."
+}

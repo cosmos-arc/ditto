@@ -2,12 +2,16 @@
 
 from __future__ import annotations
 
+from datetime import date
+from hashlib import sha256
 from typing import NamedTuple
 
+import orjson
 import polars as pl
 from ditto_data.catalog.dataset_spec import expects_rows_per_trading_day
 from ditto_data.models import Dataset
 from ditto_data.models.ingestion import IngestionQualityEvidence, IngestionResult
+from ditto_data.models.metadata import FundReportEvidence
 from ditto_data.models.source_codes import FX_CODE_TO_INSTRUMENT_ID
 from ditto_data.services.capital_store import CapitalStore
 from ditto_data.services.fundamental_store import FundamentalStore
@@ -21,6 +25,7 @@ from ditto_platform.foundation import OnDuplicate, WriteResult, logger
 
 from ditto_application.exceptions import AppProcessError
 from ditto_application.processes.ingestion.commodity_fetcher import (
+    FRED_COMMODITY_CODES,
     CommoditySource,
 )
 from ditto_application.processes.ingestion.commodity_fetcher import (
@@ -32,6 +37,7 @@ from ditto_application.processes.ingestion.coordinator_constants import (
 )
 from ditto_application.processes.ingestion.data_writer import IngestionDataWriter
 from ditto_application.processes.ingestion.dataset_registry import (
+    CHINA_MACRO_CODES,
     default_dataset_registry,
     fx_commodity_request_bounds,
 )
@@ -84,6 +90,8 @@ __all__ = [
     "MarketServices",
     "SourceFetchers",
 ]
+
+_MAX_FUND_BATCH_SIZE = 1000
 
 
 def _validate_dataset(dataset: str) -> Dataset:
@@ -214,6 +222,14 @@ class IngestionCoordinator:
         FRED 油/VIX 发布滞后与 FXCM 金属 GMT 收盘使单日请求恒空。
         """
         start, end = fx_commodity_request_bounds(trade_date)
+        return self._fetch_commodity_window(start, end)
+
+    def _fetch_commodity_window(self, start: str, end: str) -> pl.DataFrame:
+        """Keep FRED oil/VIX payloads under their own source evidence."""
+        if self._source_name == "fred":
+            return self._fetchers.macro.fetch_commodities(
+                codes=list(FRED_COMMODITY_CODES), start_date=start, end_date=end
+            )
         return _fetch_commodity_range(
             start,
             end,
@@ -238,13 +254,7 @@ class IngestionCoordinator:
     ) -> pl.DataFrame:
         """Use provider-native range APIs for source-defined products."""
         if dataset == "commodity_daily":
-            return _fetch_commodity_range(
-                start_date,
-                end_date,
-                primary_source=self._fetchers.macro,
-                fred_source=self._fred_source,
-                sina_source=self._sina_source,
-            )
+            return self._fetch_commodity_window(start_date, end_date)
         if dataset == "fx_daily":
             # fx 端点本身即区间 API：块级回补按月单请求（6 对×154 月），
             # 相比日级循环（~28k 请求）同源同值且省配额。
@@ -266,6 +276,11 @@ class IngestionCoordinator:
             value = range_fetch(start_date, end_date)
             if not isinstance(value, pl.DataFrame):
                 raise AppProcessError("macro range fetch returned invalid payload")
+            if self._source_name == "tushare":
+                china = self._fetchers.macro.fetch_macro_indicators_by_codes(
+                    CHINA_MACRO_CODES, start_date, end_date, observed_on=date.today()
+                )
+                return pl.concat([value, china], how="diagonal_relaxed")
             return value
         raise AppProcessError(f"unsupported source-defined range dataset: {dataset}")
 
@@ -475,7 +490,13 @@ class IngestionCoordinator:
     ) -> pl.DataFrame | IngestionResult:
         """尝试获取数据，失败时返回 IngestionResult。"""
         try:
-            return self._fetch_data(dataset, trade_date)
+            frame = self._fetch_data(dataset, trade_date)
+            if dataset == "fund_portfolio" and not frame.is_empty():
+                codes = frame["source_ticker"].unique().to_list()
+                if not set(codes) <= set(self._fundamental_store.list_fund_holders()):
+                    self._get_fund_holder_codes()
+                self._fundamental_store.require_fund_holders(codes)
+            return frame
         except Exception as e:
             return _handle_fetch_error(
                 e,
@@ -810,6 +831,7 @@ class IngestionCoordinator:
                 quality_checker=self._quality_checker,
                 evidence_committer=self._evidence_committer,
                 provider_payload_writer=self._provider_payload_writer,
+                fundamental_store=self._fundamental_store,
             ),
         )
 
@@ -836,9 +858,85 @@ class IngestionCoordinator:
                 quality_checker=self._quality_checker,
                 evidence_committer=self._evidence_committer,
                 provider_payload_writer=self._provider_payload_writer,
+                fundamental_store=self._fundamental_store,
             ),
             chunk_id=chunk_id,
         )
+
+    def _get_fund_holder_codes(self) -> list[str]:
+        holders = self._fetchers.fundamental.fetch_fund_holders()
+        self._fundamental_store.register_fund_holders(holders)
+        return holders["source_ticker"].to_list()
+
+    def register_fund_report(
+        self, evidence_json: bytes, document: bytes
+    ) -> dict[str, str]:
+        """Attach reviewed original-report evidence to exact disclosure values."""
+        evidence = FundReportEvidence.model_validate_json(evidence_json)
+        self._fundamental_store.register_fund_report(evidence, document)
+        return {
+            "fund_code": evidence.source_ticker,
+            "report_id": evidence.document_sha256,
+        }
+
+    def ingest_fund_portfolio_batch(
+        self,
+        start: str,
+        end: str,
+        *,
+        after: str = "",
+        limit: int = 100,
+        roster_sha256: str = "",
+    ) -> dict[str, object]:
+        """Ingest a bounded roster slice; continuation must name the same roster."""
+        if not 1 <= limit <= _MAX_FUND_BATCH_SIZE or date.fromisoformat(
+            start
+        ) > date.fromisoformat(end):
+            raise AppProcessError("invalid fund batch limit or date range")
+        ensure_source_supported(Dataset.FUND_PORTFOLIO, self._source_name)
+        if after and not roster_sha256:
+            raise AppProcessError("fund batch continuation requires roster hash")
+        if not roster_sha256:
+            self._get_fund_holder_codes()
+        codes = self._fundamental_store.list_fund_holders()
+        if not codes:
+            raise AppProcessError("fund holder roster is empty")
+        digest = sha256(orjson.dumps([start, end, codes])).hexdigest()
+        if (after and after not in codes) or (
+            roster_sha256 and roster_sha256 != digest
+        ):
+            raise AppProcessError("fund batch continuation roster mismatch")
+        remaining = [code for code in codes if code > after]
+        selected = remaining[:limit]
+        results: list[dict[str, object]] = []
+        cursor = after
+        for code in selected:
+            result = self.ingest_by_instrument(
+                "fund_portfolio",
+                InstrumentIngestParams(ticker=code, start_date=start, end_date=end),
+            )
+            results.append(
+                {
+                    "fund_code": code,
+                    "status": result.status,
+                    "rows": result.row_count,
+                    "error": result.error,
+                    "message": result.message,
+                }
+            )
+            if result.status == "failed":
+                break
+            cursor = code
+        return {
+            "roster_sha256": digest,
+            "expected_holders": len(codes),
+            "start": start,
+            "end": end,
+            "results": results,
+            "next_after": cursor,
+            "has_more": bool(codes and cursor != codes[-1]),
+            "failed": any(result["status"] == "failed" for result in results),
+        }
 
     def _fetch_data(self, dataset: str, trade_date: str) -> pl.DataFrame:
         """根据数据集类型调用对应的 Source 方法获取数据（日期级）。"""

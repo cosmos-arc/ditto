@@ -1,0 +1,36 @@
+{
+  "started_at": "2026-11-06T14:13:24.488363+00:00",
+  "finished_at": "2026-11-06T14:13:47.998743+00:00",
+  "stopped_task_workers": {
+    "10559": "/Users/chevy/Desktop/code/ditto.worktrees/issue-708/.venv/bin/python3 .cache/issue-708/backfill_nav_accum_wave2.py 0",
+    "10560": "/Users/chevy/Desktop/code/ditto.worktrees/issue-708/.venv/bin/python3 .cache/issue-708/backfill_nav_accum_wave2.py 4",
+    "10561": "/Users/chevy/Desktop/code/ditto.worktrees/issue-708/.venv/bin/python3 .cache/issue-708/backfill_nav_accum_wave2.py 3",
+    "10562": "/Users/chevy/Desktop/code/ditto.worktrees/issue-708/.venv/bin/python3 .cache/issue-708/backfill_nav_accum_wave2.py 2",
+    "10563": "/Users/chevy/Desktop/code/ditto.worktrees/issue-708/.venv/bin/python3 .cache/issue-708/backfill_nav_accum_wave2.py 6",
+    "10564": "/Users/chevy/Desktop/code/ditto.worktrees/issue-708/.venv/bin/python3 .cache/issue-708/backfill_nav_accum_wave2.py 1",
+    "10565": "/Users/chevy/Desktop/code/ditto.worktrees/issue-708/.venv/bin/python3 .cache/issue-708/backfill_nav_accum_wave2.py 5",
+    "10566": "/Users/chevy/Desktop/code/ditto.worktrees/issue-708/.venv/bin/python3 .cache/issue-708/backfill_nav_accum_wave2.py 7"
+  },
+  "verified_stopped_pids": [
+    10559,
+    10560,
+    10561,
+    10562,
+    10563,
+    10564,
+    10565,
+    10566
+  ],
+  "previous_attempt_log_sha256": null,
+  "baseline_preserved": 1531177,
+  "corrected_old_null_rows": 40937,
+  "all_receipts_applied": true,
+  "duplicate_keys": 0,
+  "source_inflight_limit": 8,
+  "old_nav_workers": 8,
+  "new_nav_workers": 8,
+  "old_per_worker_rate": 10,
+  "new_per_worker_rate": 10,
+  "unchanged_nav_aggregate_rate": 80,
+  "boundary": "Only eight task-owned NAV processes interrupted while all 13 actual shared year-writer locks were held. No correction was in progress; baseline values, receipt states and keys revalidated before release. Durable successes will be excluded from the new frozen pending plan. Fund jobs, unfiltered NAV date job and user Prefect/GoalX processes untouched."
+}

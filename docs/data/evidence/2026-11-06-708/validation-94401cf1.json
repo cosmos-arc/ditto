@@ -1,0 +1,53 @@
+{
+  "measured_at": "2026-11-07T01:56:40.298161+00:00",
+  "commit": "94401cf1c1b3c54ce6fd94777eb08e91680c6160",
+  "baseline": "3f17e62de39a80b2a1942bbc59c84caeb8356a57",
+  "checks": {
+    "full_backend": {
+      "command": "PYTEST_XDIST_AUTO_NUM_WORKERS=2 VITEST_MAX_WORKERS=2 task test",
+      "log": "test-final-snapshot-batch.log",
+      "sha256": "5f16ace61795657a4fd5141a70710e879bf3c5a001a04530da620238b0d2154a",
+      "exit_code": 0,
+      "summaries": [
+        "================ 17456 passed, 71 skipped in 431.98s (0:07:11) ================="
+      ]
+    },
+    "type": {
+      "command": "task type",
+      "log": "snapshot-batch-type.log",
+      "sha256": "7f15dfa89dae9d710c9f28c8c26971ae44dc423b33fc047a9c89030e879e442a",
+      "exit_code": 0,
+      "summaries": [
+        "0 errors, 0 warnings, 0 notes"
+      ]
+    },
+    "snapshot_binding": {
+      "command": "uv run --no-sync pytest packages/data/tests/unit/catalog/test_snapshot_completion_unit.py -q",
+      "log": "snapshot-batch-binding.log",
+      "sha256": "e64013ed10c6d818f0d834ae3ac107ec1c69723d7e992252435e6ce138ac15d3",
+      "exit_code": 0,
+      "summaries": [
+        "============================== 7 passed in 2.99s ==============================="
+      ]
+    },
+    "catalog_consumers": {
+      "command": "uv run --no-sync pytest packages/data/tests/unit/catalog/test_snapshot_completion_unit.py packages/application/tests/unit -k \"catalog_freshness or catalog_dependency_validation or snapshot_coverage or fund_portfolio_observations\" -q",
+      "log": "snapshot-batch-focused.log",
+      "sha256": "05e73e4076f3e339e5c9667d7f4715c641fcf4a6ccf6bebf3a1d4eb387be2443",
+      "exit_code": 0,
+      "summaries": [
+        "============================= 18 passed in 12.56s =============================="
+      ]
+    }
+  },
+  "tool_versions": {
+    "uv": "0.12.13",
+    "bun": "1.3.14",
+    "python": "3.13.14"
+  },
+  "reviews": {
+    "standards": "FixedSHA 3f17e62d..94401cf1:0 violations/0 smells; mixed dataset/source predicate equivalence checked.",
+    "spec": "FixedSHA 3f17e62d..94401cf1:0 findings; independently21 binding/catalog checks passed."
+  },
+  "boundary": "Full backend suite rerun because the final production snapshot aggregation fix followed the earlier17455-pass run. Existing71 network/optional skips and snapshot/sandbox_live exclusions retained. Final evidence/coverage synchronization, verify-push and finalSHA remote CI are separate records."
+}

@@ -178,6 +178,9 @@ class _StubMarketFetcher:
 class _StubFundamentalFetcher:
     """Stub implementing FundamentalFetcher Protocol."""
 
+    def fetch_fund_holders(self, source_ticker: str | None = None) -> pl.DataFrame:
+        return pl.DataFrame()
+
     def fetch_balance_sheet(
         self,
         trade_date: str | None = None,

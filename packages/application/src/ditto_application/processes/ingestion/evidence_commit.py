@@ -296,8 +296,9 @@ class IngestionEvidenceCommitter:
                 # for upgraded stores whose legacy snapshot rows predate
                 # observations.
                 self._ports.snapshot_writer.append_snapshot(request.provider_snapshot)
-                self._persist_success_log(request.success_log)
-                self._persist_partition_day_logs(request)
+                log_failure = self._commit_success_log(request)
+                if log_failure is not None:
+                    return log_failure
                 return EvidenceCommitOutcome(request.chunk_id, completed=True)
             self._advance_payload_stage(checkpoint, request)
         except Exception:
@@ -334,6 +335,11 @@ class IngestionEvidenceCommitter:
     def _commit_success_log(
         self, request: EvidenceCommitRequest
     ) -> EvidenceCommitOutcome | None:
+        # One fund's completed observation cannot attest the whole roster/day.
+        if request.dataset_id == "fund_portfolio" and dict(
+            request.provider_snapshot.response_metadata
+        ).get("source_ticker"):
+            return None
         try:
             self._persist_success_log(request.success_log)
             self._persist_partition_day_logs(request)

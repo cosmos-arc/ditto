@@ -1,0 +1,8 @@
+{
+  "measured_at": "2026-11-07T01:01:48.641428+00:00",
+  "full_pending_rows": 32843,
+  "single_query_seconds": 0.6566825410118327,
+  "independent_event_order_comparison": "all current families matched",
+  "schema_changes": false,
+  "boundary": "Read-only production benchmark; the complete list was compared to an independent append-only event-order reduction, including completed winning revisions. Original before timing was only a10-query sample, not a full run."
+}

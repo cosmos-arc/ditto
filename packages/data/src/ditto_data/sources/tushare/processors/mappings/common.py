@@ -79,10 +79,11 @@ FUND_ADJ_MAPPING = ColumnMapping(
 ETF_NAV_MAPPING = ColumnMapping(
     rename={"ts_code": "source_ticker"},
     date_columns={"ann_date": "%Y%m%d", "nav_date": "%Y%m%d"},
-    float_columns=["unit_nav", "acc_nav"],
+    float_columns=["unit_nav", "accum_nav"],
     computed_columns={
         "trade_date": pl.col("nav_date"),
         "knowledge_date": pl.col("ann_date"),
+        "acc_nav": pl.col("accum_nav"),
     },
     output_columns=(
         "source_ticker",

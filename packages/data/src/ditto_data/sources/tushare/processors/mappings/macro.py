@@ -107,7 +107,7 @@ TUSHARE_MACRO_INDICATORS: dict[str, TushareMacroIndicator] = {
     "CN_PMI_MFG": TushareMacroIndicator(
         api_name="cn_pmi",
         code="CN_PMI_MFG",
-        field="PMI010000",
+        field="pmi010000",
         name="制造业PMI",
         category="survey",
         frequency="monthly",
@@ -115,7 +115,7 @@ TUSHARE_MACRO_INDICATORS: dict[str, TushareMacroIndicator] = {
         description="制造业采购经理人指数",
         need_pit=True,
         release_lag_days=1,  # 月初发布
-        date_field="MONTH",
+        date_field="month",
         range_params=_MONTHLY_RANGE_PARAMS,
     ),
     # === Money Supply ===

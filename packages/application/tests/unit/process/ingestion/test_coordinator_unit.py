@@ -942,7 +942,7 @@ class TestIngestDate:
                 "CN_SF_FLOW_CUM",
                 "CN_SF_STOCK",
             ],
-            "2015-01-01",
+            "2014-01-01",
             "2024-12-27",
             observed_on=date.today(),
         )
@@ -1638,6 +1638,9 @@ class TestIngestRange:
     ) -> None:
         expected = pl.DataFrame({"date": [date(2024, 1, 2)], "value": [1.5]})
         mock_source.fetch_macro_indicators_range.return_value = expected
+        mock_source.fetch_macro_indicators_by_codes.return_value = pl.DataFrame(
+            {"date": [date(2024, 1, 1)], "value": [3.0]}
+        )
 
         result = coordinator._fetch_source_defined_range(
             "macro_indicators",
@@ -1645,7 +1648,8 @@ class TestIngestRange:
             "2024-12-31",
         )
 
-        assert result is expected
+        assert result["value"].to_list() == [1.5, 3.0]
+        mock_source.fetch_macro_indicators_by_codes.assert_called_once()
         mock_source.fetch_macro_indicators_range.assert_called_once_with(
             "2024-01-01",
             "2024-12-31",
@@ -2459,7 +2463,7 @@ class TestTradingDayCheck:
                 "CN_SF_FLOW_CUM",
                 "CN_SF_STOCK",
             ],
-            "2015-01-01",
+            "2014-01-01",
             "2024-12-28",
             observed_on=date.today(),
         )
@@ -3000,3 +3004,59 @@ class TestChunkDayLoss640:
                     checksum=day_checksum,
                     row_count=day_rows,
                 ), f"{day} 的日级台账行未被完成快照证实"
+
+
+def test_fund_batch_is_bounded_and_resumes_only_completed_holders(
+    coordinator, mock_fundamental_store, mock_source, mocker
+):
+    """A failure cannot advance the durable cursor or alter its scope."""
+    codes = ["000001.OF", "0000371.OF", "F000355.OF"]
+    mock_fundamental_store.list_fund_holders.return_value = codes
+    mock_source.fetch_fund_holders.return_value = pl.DataFrame({"source_ticker": codes})
+    success = IngestionResult(
+        dataset="fund_portfolio", trade_date="2026-01-01", status="success", row_count=1
+    )
+    failure = IngestionResult(
+        dataset="fund_portfolio",
+        trade_date="2026-01-01",
+        status="failed",
+        error="FETCH_ERROR",
+    )
+    ingest = mocker.patch.object(
+        coordinator, "ingest_by_instrument", side_effect=[success, failure]
+    )
+    first = coordinator.ingest_fund_portfolio_batch("2014-01-01", "2026-11-05", limit=2)
+    assert first["failed"] is True
+    assert first["has_more"] is True
+    assert first["next_after"] == codes[0]
+    assert ingest.call_count == 2
+    ingest.side_effect = [success, success]
+    resumed = coordinator.ingest_fund_portfolio_batch(
+        "2014-01-01",
+        "2026-11-05",
+        after=first["next_after"],
+        roster_sha256=first["roster_sha256"],
+        limit=2,
+    )
+    assert [row["fund_code"] for row in resumed["results"]] == codes[1:]
+    assert resumed["has_more"] is False
+    mock_source.fetch_fund_holders.assert_called_once_with()
+    with pytest.raises(AppProcessError, match="roster mismatch"):
+        coordinator.ingest_fund_portfolio_batch(
+            "2015-01-01",
+            "2026-11-05",
+            after=codes[0],
+            roster_sha256=first["roster_sha256"],
+        )
+    with pytest.raises(AppProcessError, match="requires roster hash"):
+        coordinator.ingest_fund_portfolio_batch(
+            "2014-01-01", "2026-11-05", after=codes[0]
+        )
+    mock_fundamental_store.list_fund_holders.return_value = [*codes, "Z000001.OF"]
+    with pytest.raises(AppProcessError, match="roster mismatch"):
+        coordinator.ingest_fund_portfolio_batch(
+            "2014-01-01",
+            "2026-11-05",
+            after=codes[0],
+            roster_sha256=first["roster_sha256"],
+        )

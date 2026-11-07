@@ -1,0 +1,31 @@
+{
+  "measured_at": "2026-11-06T14:59:06.043781+00:00",
+  "commit": "afecdd839c5066b28141929888df6b6ba653de02",
+  "prior_day_success": {
+    "dataset": "fund_portfolio",
+    "source": "tushare",
+    "trade_date": "2026-11-06",
+    "status": "SUCCESS",
+    "checksum": "empty:sha256:f8ccee97ba2b0a6864e5e6a384c5fec88f8bb28d99e60ab4d74bd92c9dcf2961",
+    "rows": 0,
+    "error_code": null,
+    "error_message": null,
+    "attempts": 1,
+    "first_attempt_at": "2026-11-06T21:55:42.333584",
+    "last_attempt_at": "2026-11-06T21:55:42.333584"
+  },
+  "result": {
+    "dataset": "fund_portfolio",
+    "trade_date": "2026-11-06",
+    "status": "failed",
+    "row_count": null,
+    "checksum": null,
+    "message": "公募持仓须使用 ingest fundamental portfolio-batch 逐基金续跑",
+    "error": "PER_FUND_INGESTION_REQUIRED",
+    "snapshot_evidence": null,
+    "quality_evidence": null
+  },
+  "source_called": false,
+  "existing_ledger_unchanged": true,
+  "boundary": "Actual task coordinator refuses the forbidden market-day scope before consulting an existing production SUCCESS0 ledger; no native call or ingestion-ledger mutation. The legacy zero remains auditable but never contributes per-holder completion."
+}

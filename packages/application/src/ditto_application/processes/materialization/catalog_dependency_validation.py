@@ -13,7 +13,7 @@ from dataclasses import dataclass
 
 from ditto_data.catalog import DataCatalogEntry, DataCatalogReader
 from ditto_data.catalog.metadata import default_dataset_metadata
-from ditto_data.catalog.snapshot_completion import snapshot_completed
+from ditto_data.catalog.snapshot_completion import completed_snapshots
 from ditto_data.catalog.source_snapshot import (
     ProviderSnapshot,
     ProviderSnapshotReader,
@@ -279,11 +279,7 @@ def _date_coverage(
     dates: tuple[str, ...],
 ) -> tuple[tuple[str, ...], tuple[str, ...]]:
     """Selected snapshot IDs covering every date, plus dates left uncovered."""
-    completed = tuple(
-        snapshot
-        for snapshot in _contract_snapshots(snapshots, contract)
-        if snapshot_completed(snapshot, lifecycle)
-    )
+    completed = completed_snapshots(_contract_snapshots(snapshots, contract), lifecycle)
     selected: set[str] = set()
     missing: list[str] = []
     for date in dates:

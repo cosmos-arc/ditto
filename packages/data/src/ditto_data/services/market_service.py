@@ -282,6 +282,12 @@ class MarketService:
         )
         return df
 
+    def get_limit_list(self, start: str, end: str) -> pl.DataFrame:
+        """Read disclosed limit events; absent ST rows are not negative events."""
+        if self._read_ports.limit_list is None:
+            raise ValueError("limit_list reader not configured")
+        return self._read_ports.limit_list.read(start_date=start, end_date=end)
+
     @traced("market.get_fund_share")
     def get_fund_share(self, start: str, end: str) -> pl.DataFrame | None:
         """
@@ -373,6 +379,13 @@ class MarketService:
             )
             return pl.DataFrame()
         df = reader.read(instrument_ids=instrument_ids, start_date=start, end_date=end)
+        if not df.is_empty():
+            # This display query is latest_available; storage retains disclosures.
+            df = (
+                df.sort("knowledge_date", nulls_last=False)
+                .unique(subset=["instrument_id", "trade_date"], keep="last")
+                .sort(["trade_date", "instrument_id"])
+            )
         Metrics.data_records.add(
             len(df),
             {"dataset": "etf_nav", "operation": "get"},

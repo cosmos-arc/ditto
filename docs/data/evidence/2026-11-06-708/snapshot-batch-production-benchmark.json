@@ -1,0 +1,7 @@
+{
+  "measured_at": "2026-11-07T01:45:31.033462+00:00",
+  "visible_snapshots": 42767,
+  "elapsed_seconds": 2.853142666979693,
+  "ids_sha256": "0c2968dbea2aacb6fa5dc5eff5545326c09672f1263223aabd4986a25b81b0b3",
+  "boundary": "Read-only current production metadata benchmark. Bulk exact payload/COMPLETE matching replaces per-snapshot repeated full completion scans. This is historical observation aggregation, not canonical completeness or full-window coverage."
+}

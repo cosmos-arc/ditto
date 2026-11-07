@@ -1,0 +1,71 @@
+{
+  "measured_at": "2026-11-06T10:02:05.216854+00:00",
+  "partitions": [
+    {
+      "partition": "2014.parquet",
+      "knowledge_date_type": "Date",
+      "missing_keys": []
+    },
+    {
+      "partition": "2015.parquet",
+      "knowledge_date_type": "Date",
+      "missing_keys": []
+    },
+    {
+      "partition": "2016.parquet",
+      "knowledge_date_type": "Date",
+      "missing_keys": []
+    },
+    {
+      "partition": "2017.parquet",
+      "knowledge_date_type": "Date",
+      "missing_keys": []
+    },
+    {
+      "partition": "2018.parquet",
+      "knowledge_date_type": "Date",
+      "missing_keys": []
+    },
+    {
+      "partition": "2019.parquet",
+      "knowledge_date_type": "Date",
+      "missing_keys": []
+    },
+    {
+      "partition": "2020.parquet",
+      "knowledge_date_type": "Date",
+      "missing_keys": []
+    },
+    {
+      "partition": "2021.parquet",
+      "knowledge_date_type": "Date",
+      "missing_keys": []
+    },
+    {
+      "partition": "2022.parquet",
+      "knowledge_date_type": "Date",
+      "missing_keys": []
+    },
+    {
+      "partition": "2023.parquet",
+      "knowledge_date_type": "Date",
+      "missing_keys": []
+    },
+    {
+      "partition": "2024.parquet",
+      "knowledge_date_type": "Date",
+      "missing_keys": []
+    },
+    {
+      "partition": "2025.parquet",
+      "knowledge_date_type": "Date",
+      "missing_keys": []
+    },
+    {
+      "partition": "2026.parquet",
+      "knowledge_date_type": "Date",
+      "missing_keys": []
+    }
+  ],
+  "boundary": "Canonical production NAV partitions already have the catalog-declared nullable disclosure-date column. The three-column system-test seed was the incompatible input; no invented historical date or production schema migration is needed."
+}

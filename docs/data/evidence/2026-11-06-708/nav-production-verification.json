@@ -1,0 +1,137 @@
+{
+  "measured_at": "2026-11-06T09:23:55.356851+00:00",
+  "results": [
+    {
+      "source_ticker": "159509.SZ",
+      "result": {
+        "dataset": "etf_nav",
+        "trade_date": "2026-10-27",
+        "status": "success",
+        "row_count": 7,
+        "checksum": "c8a60984b260a4e720f6cfcd03e9bda6",
+        "message": "数据摄取成功",
+        "error": null,
+        "snapshot_evidence": null,
+        "quality_evidence": {
+          "kind": "write_time_l1_l2",
+          "status": "passed",
+          "source": "tushare",
+          "trade_date": "2026-10-27",
+          "levels": [
+            "l1",
+            "l2"
+          ],
+          "row_count": 7,
+          "checksum": "c8a60984b260a4e720f6cfcd03e9bda6"
+        }
+      },
+      "measured_at": "2026-11-06T09:22:54.789221+00:00"
+    },
+    {
+      "source_ticker": "159529.SZ",
+      "result": {
+        "dataset": "etf_nav",
+        "trade_date": "2026-10-27",
+        "status": "success",
+        "row_count": 7,
+        "checksum": "fb599f57504efabf12be151cc58a3367",
+        "message": "数据摄取成功",
+        "error": null,
+        "snapshot_evidence": null,
+        "quality_evidence": {
+          "kind": "write_time_l1_l2",
+          "status": "passed",
+          "source": "tushare",
+          "trade_date": "2026-10-27",
+          "levels": [
+            "l1",
+            "l2"
+          ],
+          "row_count": 7,
+          "checksum": "fb599f57504efabf12be151cc58a3367"
+        }
+      },
+      "measured_at": "2026-11-06T09:23:55.166702+00:00"
+    }
+  ],
+  "original_rows_preserved": 2,
+  "before": [
+    {
+      "source_ticker": "159529.SZ",
+      "trade_date": "2026-10-30",
+      "knowledge_date": "2026-10-31",
+      "unit_nav": 1.2992,
+      "acc_nav": null,
+      "instrument_id": 2000588,
+      "source": "tushare"
+    },
+    {
+      "source_ticker": "159509.SZ",
+      "trade_date": "2026-10-30",
+      "knowledge_date": "2026-10-31",
+      "unit_nav": 2.1365,
+      "acc_nav": null,
+      "instrument_id": 2000686,
+      "source": "tushare"
+    }
+  ],
+  "after": [
+    {
+      "source_ticker": "159529.SZ",
+      "trade_date": "2026-10-30",
+      "knowledge_date": "2026-10-31",
+      "unit_nav": 1.2992,
+      "acc_nav": null,
+      "instrument_id": 2000588,
+      "source": "tushare"
+    },
+    {
+      "source_ticker": "159529.SZ",
+      "trade_date": "2026-10-30",
+      "knowledge_date": "2026-11-02",
+      "unit_nav": 1.2992,
+      "acc_nav": null,
+      "instrument_id": 2000588,
+      "source": "tushare"
+    },
+    {
+      "source_ticker": "159509.SZ",
+      "trade_date": "2026-10-30",
+      "knowledge_date": "2026-10-31",
+      "unit_nav": 2.1365,
+      "acc_nav": null,
+      "instrument_id": 2000686,
+      "source": "tushare"
+    },
+    {
+      "source_ticker": "159509.SZ",
+      "trade_date": "2026-10-30",
+      "knowledge_date": "2026-11-02",
+      "unit_nav": 2.1365,
+      "acc_nav": null,
+      "instrument_id": 2000686,
+      "source": "tushare"
+    }
+  ],
+  "latest": [
+    {
+      "source_ticker": "159529.SZ",
+      "trade_date": "2026-10-30",
+      "knowledge_date": "2026-11-02",
+      "unit_nav": 1.2992,
+      "acc_nav": null,
+      "instrument_id": 2000588,
+      "source": "tushare"
+    },
+    {
+      "source_ticker": "159509.SZ",
+      "trade_date": "2026-10-30",
+      "knowledge_date": "2026-11-02",
+      "unit_nav": 2.1365,
+      "acc_nav": null,
+      "instrument_id": 2000686,
+      "source": "tushare"
+    }
+  ],
+  "boundary": "Normal production coordinator on exact authorized data root, source windows 2026-10-27..2026-11-05. Older observations remain; latest_available does not assert all historical revisions."
+}

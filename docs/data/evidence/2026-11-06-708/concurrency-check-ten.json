@@ -1,0 +1,11 @@
+{
+  "measured_at": "2026-11-06T12:29:16.956506+00:00",
+  "processes": 24,
+  "requests": 72,
+  "peak_concurrent_requests": 10,
+  "declared_slots": 10,
+  "source_gate_sha256": "d20dc1fb814f280fa01f5ca8bc804fe3cfbc1a8b2a12d6b67940c64d3e0ee016",
+  "network_calls": 0,
+  "production_slots_used": false,
+  "verification": "Actual task gate loaded unchanged in isolated temporary directories; fake HTTP sends share a process-safe counter. All worker sends complete, lock release leaves zero active requests."
+}

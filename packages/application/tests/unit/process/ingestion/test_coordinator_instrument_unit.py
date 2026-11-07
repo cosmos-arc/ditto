@@ -5,6 +5,11 @@ from unittest.mock import MagicMock
 
 import polars as pl
 import pytest
+from ditto_application.config.queries import (
+    get_all_datasets,
+    get_datasets_by_tier,
+)
+from ditto_application.config.specs import TaskTier
 from ditto_application.exceptions import AppProcessError
 from ditto_application.processes.ingestion.config import IngestionCoordinatorConfig
 from ditto_application.processes.ingestion.coordinator import (
@@ -13,6 +18,7 @@ from ditto_application.processes.ingestion.coordinator import (
     MarketServices,
     SourceFetchers,
 )
+from ditto_data.models import Dataset
 from ditto_data.models.ingestion import IngestionLog, IngestionStatus
 from ditto_kernel.instrument import InstrumentIngestParams
 from ditto_platform.foundation import (
@@ -457,6 +463,13 @@ class TestIngestByInstrument:
 # ---------------------------------------------------------------------------
 # _infer_exchange_suffix tests
 # ---------------------------------------------------------------------------
+
+
+@pytest.mark.unit
+def test_fund_ingestion_remains_on_demand() -> None:
+    assert Dataset.FUND_PORTFOLIO in get_all_datasets()
+    assert Dataset.FUND_PORTFOLIO not in get_datasets_by_tier(TaskTier.T1_INCREMENTAL)
+    assert Dataset.FUND_PORTFOLIO in get_datasets_by_tier(TaskTier.T2_REPAIR)
 
 
 @pytest.mark.unit

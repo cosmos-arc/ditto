@@ -1,0 +1,128 @@
+{
+  "started_at": "2026-11-07T00:53:24.845730+00:00",
+  "finished_at": "2026-11-07T00:53:40.016624+00:00",
+  "stopped_workers": {
+    "25826": "/Users/chevy/Desktop/code/ditto.worktrees/issue-708/.venv/bin/python3 .cache/issue-708/backfill_fund_tail.py 0 10",
+    "25830": "/Users/chevy/Desktop/code/ditto.worktrees/issue-708/.venv/bin/python3 .cache/issue-708/backfill_fund_tail.py 1 10",
+    "25834": "/Users/chevy/Desktop/code/ditto.worktrees/issue-708/.venv/bin/python3 .cache/issue-708/backfill_fund_tail.py 2 10",
+    "25838": "/Users/chevy/Desktop/code/ditto.worktrees/issue-708/.venv/bin/python3 .cache/issue-708/backfill_fund_tail.py 3 10",
+    "25844": "/Users/chevy/Desktop/code/ditto.worktrees/issue-708/.venv/bin/python3 .cache/issue-708/backfill_fund_tail.py 4 10",
+    "25848": "/Users/chevy/Desktop/code/ditto.worktrees/issue-708/.venv/bin/python3 .cache/issue-708/backfill_fund_tail.py 5 10",
+    "25852": "/Users/chevy/Desktop/code/ditto.worktrees/issue-708/.venv/bin/python3 .cache/issue-708/backfill_fund_tail.py 6 10",
+    "25856": "/Users/chevy/Desktop/code/ditto.worktrees/issue-708/.venv/bin/python3 .cache/issue-708/backfill_fund_tail.py 7 10",
+    "25868": "/Users/chevy/Desktop/code/ditto.worktrees/issue-708/.venv/bin/python3 .cache/issue-708/backfill_fund_tail.py 8 10",
+    "25873": "/Users/chevy/Desktop/code/ditto.worktrees/issue-708/.venv/bin/python3 .cache/issue-708/backfill_fund_tail.py 9 10",
+    "25878": "/Users/chevy/Desktop/code/ditto.worktrees/issue-708/.venv/bin/python3 .cache/issue-708/backfill_fund_tail.py 10 10",
+    "25882": "/Users/chevy/Desktop/code/ditto.worktrees/issue-708/.venv/bin/python3 .cache/issue-708/backfill_fund_tail.py 11 10",
+    "25886": "/Users/chevy/Desktop/code/ditto.worktrees/issue-708/.venv/bin/python3 .cache/issue-708/backfill_fund_tail.py 12 10",
+    "25890": "/Users/chevy/Desktop/code/ditto.worktrees/issue-708/.venv/bin/python3 .cache/issue-708/backfill_fund_tail.py 13 10",
+    "25894": "/Users/chevy/Desktop/code/ditto.worktrees/issue-708/.venv/bin/python3 .cache/issue-708/backfill_fund_tail.py 14 10",
+    "25898": "/Users/chevy/Desktop/code/ditto.worktrees/issue-708/.venv/bin/python3 .cache/issue-708/backfill_fund_tail.py 15 10",
+    "25902": "/Users/chevy/Desktop/code/ditto.worktrees/issue-708/.venv/bin/python3 .cache/issue-708/backfill_fund_tail.py 16 10",
+    "25906": "/Users/chevy/Desktop/code/ditto.worktrees/issue-708/.venv/bin/python3 .cache/issue-708/backfill_fund_tail.py 17 10",
+    "25910": "/Users/chevy/Desktop/code/ditto.worktrees/issue-708/.venv/bin/python3 .cache/issue-708/backfill_fund_tail.py 18 10",
+    "25914": "/Users/chevy/Desktop/code/ditto.worktrees/issue-708/.venv/bin/python3 .cache/issue-708/backfill_fund_tail.py 19 10",
+    "25918": "/Users/chevy/Desktop/code/ditto.worktrees/issue-708/.venv/bin/python3 .cache/issue-708/backfill_fund_tail.py 20 10",
+    "25922": "/Users/chevy/Desktop/code/ditto.worktrees/issue-708/.venv/bin/python3 .cache/issue-708/backfill_fund_tail.py 21 10",
+    "25926": "/Users/chevy/Desktop/code/ditto.worktrees/issue-708/.venv/bin/python3 .cache/issue-708/backfill_fund_tail.py 22 10",
+    "25930": "/Users/chevy/Desktop/code/ditto.worktrees/issue-708/.venv/bin/python3 .cache/issue-708/backfill_fund_tail.py 23 10"
+  },
+  "http_hold": {
+    "pid": 34010,
+    "held_at": "2026-11-07T00:53:16.567557+00:00",
+    "slots": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7
+    ],
+    "other_slots_reserved": [
+      8,
+      9
+    ],
+    "reason": "Verify and restore officially supported market announcement-day ingestion; preserve completed per-fund work."
+  },
+  "year_write_locks": [
+    2013,
+    2014,
+    2015,
+    2016,
+    2017,
+    2018,
+    2019,
+    2020,
+    2021,
+    2022,
+    2023,
+    2024,
+    2025,
+    2026
+  ],
+  "completed_checkpoints_before": 42684,
+  "completed_checkpoints_after": 42684,
+  "existing_complete_preserved": true,
+  "canonical_before_images": ".cache/issue-708/fund-before-market-switch",
+  "canonical_manifest": {
+    "2013.parquet": {
+      "sha256": "a039452db4cab4735d1103dd16b64b1d769687ea39545d060b24153a6a05191a",
+      "bytes": 1052790
+    },
+    "2014.parquet": {
+      "sha256": "9e6ae199f7c4ebf138a677401cca59caaa67877ad74405e872ebdee5968708c4",
+      "bytes": 2538373
+    },
+    "2015.parquet": {
+      "sha256": "ab0a881d0f5413d813132ce51e5c4d51a128f42d7ba1977bddd3c10a5ed2173c",
+      "bytes": 3366252
+    },
+    "2016.parquet": {
+      "sha256": "e696caaae194ffc4e6dadfd78074beb92a720f0cc5bea1c62f9190f3599e9386",
+      "bytes": 4890351
+    },
+    "2017.parquet": {
+      "sha256": "bac7518b3437380833b2a64fe287ca3eab9d754537148bcd6b710f39f0e2e61c",
+      "bytes": 6081370
+    },
+    "2018.parquet": {
+      "sha256": "df4850b3a60110ed687131158b7c5745309af35e8a255c3f8fa2c3ce3d33b2ba",
+      "bytes": 6017890
+    },
+    "2019.parquet": {
+      "sha256": "372651696bff3c9a77d0077a985afb7035bea53dee4245f1fd0a0d959b242687",
+      "bytes": 7425413
+    },
+    "2020.parquet": {
+      "sha256": "30bc4b3b98537c22262e7ac3c89c1676f91098c0b8154095b9539ba6e9219b2b",
+      "bytes": 10162279
+    },
+    "2021.parquet": {
+      "sha256": "efdfef7095d424dcd27f1cbfbde7b753f0d8073985ea0f79d8a836cbeaded0f5",
+      "bytes": 12733887
+    },
+    "2022.parquet": {
+      "sha256": "260da664748d1a857f824a52f3cbdc210647ab41873467baee23a874f0b45fe0",
+      "bytes": 18140983
+    },
+    "2023.parquet": {
+      "sha256": "708399da80f172191e136b7815efee398ddb45f568fb7feb1e515ae18f7a320e",
+      "bytes": 23045507
+    },
+    "2024.parquet": {
+      "sha256": "42c238bb319c6ae359f25fe3f30e37d17f687266c8e2652e317b5a44cd49953b",
+      "bytes": 21575720
+    },
+    "2025.parquet": {
+      "sha256": "b4de11a7b0e05afad935d3f462bcf863b059cf9080f84e4c0923c631b37c276a",
+      "bytes": 26094330
+    },
+    "2026.parquet": {
+      "sha256": "6cdb4a6bd027976e52670a969ff8cba072c69c5aa1ffe97496c44f6817fbb024",
+      "bytes": 15635193
+    }
+  },
+  "boundary": "Only the24 exact task-owned per-fund tail workers stopped after all available task HTTP slots and every fund canonical year writer lock were acquired. All completed receipts retained; exact canonical before-images copied after drain. Source identity, route and60HTTP/min/8effective-slot limits unchanged. User Prefect and GoalX untouched."
+}

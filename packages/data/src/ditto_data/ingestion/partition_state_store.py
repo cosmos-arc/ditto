@@ -226,11 +226,21 @@ class SQLitePartitionLifecycleStore:
         """List active unfinished revisions; superseded attempts remain in the audit."""
         rows = self._client.fetchall(
             """
-            SELECT * FROM ingestion_partition_checkpoints
-            WHERE status != ?
-              AND (? IS NULL OR dataset_id = ?)
-              AND (? IS NULL OR source = ?)
-            ORDER BY request_start, request_end, chunk_id
+            WITH latest_events AS (
+                SELECT MAX(event_id) AS event_id
+                FROM ingestion_partition_events
+                GROUP BY CASE WHEN instr(chunk_id, ':revision:') = 0
+                    THEN chunk_id
+                    ELSE substr(chunk_id, 1, instr(chunk_id, ':revision:') - 1)
+                END
+            )
+            SELECT c.* FROM latest_events latest
+            JOIN ingestion_partition_events e ON e.event_id = latest.event_id
+            JOIN ingestion_partition_checkpoints c ON c.chunk_id = e.chunk_id
+            WHERE c.status != ?
+              AND (? IS NULL OR c.dataset_id = ?)
+              AND (? IS NULL OR c.source = ?)
+            ORDER BY c.request_start, c.request_end, c.chunk_id
             """,
             [
                 PartitionLifecycleStatus.COMPLETE.value,
@@ -240,15 +250,7 @@ class SQLitePartitionLifecycleStore:
                 source,
             ],
         )
-        checkpoints = (_checkpoint_from_row(row) for row in rows)
-        return tuple(
-            checkpoint
-            for checkpoint in checkpoints
-            if checkpoint
-            == self.get_latest_checkpoint(
-                checkpoint.chunk_id.partition(":revision:")[0]
-            )
-        )
+        return tuple(_checkpoint_from_row(row) for row in rows)
 
     def list_complete(
         self,

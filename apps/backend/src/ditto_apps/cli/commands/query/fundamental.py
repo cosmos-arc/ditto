@@ -2,8 +2,10 @@
 
 from collections.abc import Generator
 from contextlib import contextmanager
+from dataclasses import asdict
 
 import typer
+from ditto_application.queries.dataset_coverage import DatasetCoverageQueryFacade
 from ditto_application.queries.fundamental import FundamentalQueryFacade
 from ditto_application.queries.metadata import MetadataQueryFacade
 from rich.console import Console
@@ -13,6 +15,7 @@ from ditto_apps.cli.utils.identifier import resolve_identifier_for_cli
 from ditto_apps.cli.utils.output import (
     TABLE_DISPLAY_LIMIT,
     output_json,
+    output_json_dict,
     print_truncated_hint,
 )
 from ditto_apps.cli.utils.validation import parse_date, validate_date_range
@@ -26,6 +29,58 @@ from ditto_apps.registry.contexts import create_query_context
 
 app = typer.Typer(help="基本面数据查询")
 console = Console()
+
+
+@app.command("fund-portfolio")
+def get_fund_portfolio(
+    fund_code: str = typer.Option(
+        ..., "--fund-code", help="公募持有人代码, 如 000001.OF"
+    ),
+    start: str = typer.Option(..., "--start", help="报告期起点"),
+    end: str = typer.Option(..., "--end", help="报告期末端"),
+    as_of: str | None = typer.Option(None, "--as-of", help="公告日截止, 非本地旧快照"),
+    require_complete: bool = typer.Option(False, "--require-complete"),
+    allow_experimental_data: bool = typer.Option(False, "--allow-experimental-data"),
+) -> None:
+    """查询公募披露的股票持仓，保留未知报告类型和未披露值。"""
+    validate_date_range(start, end)
+    if as_of is not None:
+        parse_date(as_of)
+    with _get_facades() as (facade, _metadata):
+        frame = facade.get_fund_portfolio(
+            fund_code,
+            start,
+            end,
+            as_of,
+            require_complete=require_complete,
+            allow_experimental_data=allow_experimental_data,
+        )
+        coverage = DatasetCoverageQueryFacade().get("fund_portfolio")
+        output_json_dict(
+            {
+                "fund_code": fund_code,
+                "coverage": asdict(coverage) if coverage is not None else None,
+                "provider_observations": facade.list_fund_portfolio_observations(
+                    fund_code
+                ),
+                "read_semantics": "disclosure_observations",
+                "report_date_range": [start, end],
+                "announcement_cutoff": as_of,
+                "units": {
+                    "market_value": "CNY",
+                    "holding_shares": "shares",
+                    "ratios": "percent",
+                },
+                "limits": (
+                    "披露股票子集; 类型与修订只采信 report_evidence; 未披露不等于零; "
+                    "announcement_cutoff 不是冻结快照; "
+                    "provider_observations 为来源记录, 非当前合并结果的单一快照; "
+                    "其 request_start/end 是原请求范围, 不等于已核验的实际覆盖; "
+                    "scope=market 的 rows 是市场载荷总行数, 非本基金持仓数量或完整性"
+                ),
+                "rows": frame.to_dicts(),
+            }
+        )
 
 
 def _experimental_kwargs(allow_experimental_data: bool) -> dict[str, bool]:

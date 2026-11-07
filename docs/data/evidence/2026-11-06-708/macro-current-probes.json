@@ -1,0 +1,2190 @@
+{
+  "started_at": "2026-11-06T03:32:51.085144+00:00",
+  "china": [
+    {
+      "code": "CN_GDP_YOY",
+      "rows": 4,
+      "sample": [
+        {
+          "indicator_code": "CN_GDP_YOY",
+          "indicator_name": "GDP同比",
+          "category": "economic",
+          "frequency": "quarterly",
+          "need_pit": true,
+          "date": "2014-10-01",
+          "value": 7.3,
+          "knowledge_date": "2026-11-06",
+          "source": "tushare",
+          "unit": "%",
+          "description": "国内生产总值同比增长率"
+        }
+      ]
+    },
+    {
+      "code": "CN_CPI_YOY",
+      "rows": 12,
+      "sample": [
+        {
+          "indicator_code": "CN_CPI_YOY",
+          "indicator_name": "CPI同比",
+          "category": "prices",
+          "frequency": "monthly",
+          "need_pit": true,
+          "date": "2014-12-01",
+          "value": 1.5,
+          "knowledge_date": "2026-11-06",
+          "source": "tushare",
+          "unit": "%",
+          "description": "居民消费价格指数同比增长率"
+        }
+      ]
+    },
+    {
+      "code": "CN_PPI_YOY",
+      "rows": 12,
+      "sample": [
+        {
+          "indicator_code": "CN_PPI_YOY",
+          "indicator_name": "PPI同比",
+          "category": "prices",
+          "frequency": "monthly",
+          "need_pit": true,
+          "date": "2014-12-01",
+          "value": -3.32,
+          "knowledge_date": "2026-11-06",
+          "source": "tushare",
+          "unit": "%",
+          "description": "工业生产者出厂价格指数同比增长率"
+        }
+      ]
+    },
+    {
+      "code": "CN_M2_YOY",
+      "rows": 12,
+      "sample": [
+        {
+          "indicator_code": "CN_M2_YOY",
+          "indicator_name": "M2同比",
+          "category": "money_supply",
+          "frequency": "monthly",
+          "need_pit": true,
+          "date": "2014-12-01",
+          "value": 12.2,
+          "knowledge_date": "2026-11-06",
+          "source": "tushare",
+          "unit": "%",
+          "description": "广义货币供应量同比增长率"
+        }
+      ]
+    },
+    {
+      "code": "CN_PMI_MFG",
+      "rows": 0,
+      "sample": []
+    },
+    {
+      "code": "CN_SF_FLOW_MONTH",
+      "rows": 12,
+      "sample": [
+        {
+          "indicator_code": "CN_SF_FLOW_MONTH",
+          "indicator_name": "社融增量当月值",
+          "category": "credit",
+          "frequency": "monthly",
+          "need_pit": true,
+          "date": "2014-12-01",
+          "value": 16945.0,
+          "knowledge_date": "2026-11-06",
+          "source": "tushare",
+          "unit": "亿元",
+          "description": "社会融资规模增量当月值"
+        }
+      ]
+    },
+    {
+      "code": "CN_SF_FLOW_CUM",
+      "rows": 12,
+      "sample": [
+        {
+          "indicator_code": "CN_SF_FLOW_CUM",
+          "indicator_name": "社融增量累计值",
+          "category": "credit",
+          "frequency": "monthly",
+          "need_pit": true,
+          "date": "2014-12-01",
+          "value": 164133.0,
+          "knowledge_date": "2026-11-06",
+          "source": "tushare",
+          "unit": "亿元",
+          "description": "社会融资规模增量累计值(年初至当月)"
+        }
+      ]
+    },
+    {
+      "code": "CN_SF_STOCK",
+      "rows": 1,
+      "sample": [
+        {
+          "indicator_code": "CN_SF_STOCK",
+          "indicator_name": "社融存量",
+          "category": "credit",
+          "frequency": "monthly",
+          "need_pit": true,
+          "date": "2014-12-01",
+          "value": 122.86,
+          "knowledge_date": "2026-11-06",
+          "source": "tushare",
+          "unit": "万亿元",
+          "description": "社会融资规模存量(期末值)"
+        }
+      ]
+    }
+  ],
+  "fred": [
+    {
+      "code": "US_GDP_QOQ",
+      "mode": "current",
+      "rows": 7,
+      "sample": [
+        {
+          "indicator_code": "US_GDP_QOQ",
+          "indicator_name": "美国GDP环比",
+          "category": "economic",
+          "frequency": "quarterly",
+          "need_pit": true,
+          "date": "2026-07-01",
+          "value": 3.4,
+          "knowledge_date": "2026-11-05",
+          "source": "fred",
+          "unit": "%",
+          "description": "Real GDP, Percent Change from Preceding Period, Seasonally Adjusted Annual Rate"
+        }
+      ]
+    },
+    {
+      "code": "US_GDP_QOQ",
+      "mode": "as_of",
+      "rows": 7,
+      "sample": [
+        {
+          "indicator_code": "US_GDP_QOQ",
+          "indicator_name": "美国GDP环比",
+          "category": "economic",
+          "frequency": "quarterly",
+          "need_pit": true,
+          "date": "2025-07-01",
+          "value": 3.9,
+          "knowledge_date": "2026-11-05",
+          "source": "fred",
+          "unit": "%",
+          "description": "Real GDP, Percent Change from Preceding Period, Seasonally Adjusted Annual Rate"
+        }
+      ]
+    },
+    {
+      "code": "US_CPI_INDEX",
+      "mode": "current",
+      "rows": 20,
+      "sample": [
+        {
+          "indicator_code": "US_CPI_INDEX",
+          "indicator_name": "美国CPI(季调指数)",
+          "category": "prices",
+          "frequency": "monthly",
+          "need_pit": true,
+          "date": "2026-09-01",
+          "value": 336.298,
+          "knowledge_date": "2026-11-05",
+          "source": "fred",
+          "unit": "指数(1982-84=100)",
+          "description": "CPI for All Urban Consumers: All Items, Seasonally Adjusted Index (level, not YoY)"
+        }
+      ]
+    },
+    {
+      "code": "US_CPI_INDEX",
+      "mode": "as_of",
+      "rows": 20,
+      "sample": [
+        {
+          "indicator_code": "US_CPI_INDEX",
+          "indicator_name": "美国CPI(季调指数)",
+          "category": "prices",
+          "frequency": "monthly",
+          "need_pit": true,
+          "date": "2026-05-01",
+          "value": 333.979,
+          "knowledge_date": "2026-11-05",
+          "source": "fred",
+          "unit": "指数(1982-84=100)",
+          "description": "CPI for All Urban Consumers: All Items, Seasonally Adjusted Index (level, not YoY)"
+        }
+      ]
+    },
+    {
+      "code": "US_CORE_CPI_INDEX",
+      "mode": "current",
+      "rows": 20,
+      "sample": [
+        {
+          "indicator_code": "US_CORE_CPI_INDEX",
+          "indicator_name": "美国核心CPI(季调指数)",
+          "category": "prices",
+          "frequency": "monthly",
+          "need_pit": true,
+          "date": "2026-09-01",
+          "value": 338.896,
+          "knowledge_date": "2026-11-05",
+          "source": "fred",
+          "unit": "指数(1982-84=100)",
+          "description": "Core CPI (Excluding Food and Energy), Seasonally Adjusted Index (level, not YoY)"
+        }
+      ]
+    },
+    {
+      "code": "US_CORE_CPI_INDEX",
+      "mode": "as_of",
+      "rows": 20,
+      "sample": [
+        {
+          "indicator_code": "US_CORE_CPI_INDEX",
+          "indicator_name": "美国核心CPI(季调指数)",
+          "category": "prices",
+          "frequency": "monthly",
+          "need_pit": true,
+          "date": "2026-04-01",
+          "value": 335.423,
+          "knowledge_date": "2026-11-05",
+          "source": "fred",
+          "unit": "指数(1982-84=100)",
+          "description": "Core CPI (Excluding Food and Energy), Seasonally Adjusted Index (level, not YoY)"
+        }
+      ]
+    },
+    {
+      "code": "US_PCE_INDEX",
+      "mode": "current",
+      "rows": 21,
+      "sample": [
+        {
+          "indicator_code": "US_PCE_INDEX",
+          "indicator_name": "美国PCE物价指数(季调)",
+          "category": "prices",
+          "frequency": "monthly",
+          "need_pit": true,
+          "date": "2026-09-01",
+          "value": 132.257,
+          "knowledge_date": "2026-11-05",
+          "source": "fred",
+          "unit": "指数(2017=100)",
+          "description": "Personal Consumption Expenditures Price Index, Seasonally Adjusted (level, not YoY)"
+        }
+      ]
+    },
+    {
+      "code": "US_PCE_INDEX",
+      "mode": "as_of",
+      "rows": 21,
+      "sample": [
+        {
+          "indicator_code": "US_PCE_INDEX",
+          "indicator_name": "美国PCE物价指数(季调)",
+          "category": "prices",
+          "frequency": "monthly",
+          "need_pit": true,
+          "date": "2025-12-01",
+          "value": 128.455,
+          "knowledge_date": "2026-11-05",
+          "source": "fred",
+          "unit": "指数(2017=100)",
+          "description": "Personal Consumption Expenditures Price Index, Seasonally Adjusted (level, not YoY)"
+        }
+      ]
+    },
+    {
+      "code": "US_CORE_PCE_INDEX",
+      "mode": "current",
+      "rows": 21,
+      "sample": [
+        {
+          "indicator_code": "US_CORE_PCE_INDEX",
+          "indicator_name": "美国核心PCE物价指数(季调)",
+          "category": "prices",
+          "frequency": "monthly",
+          "need_pit": true,
+          "date": "2026-09-01",
+          "value": 130.902,
+          "knowledge_date": "2026-11-05",
+          "source": "fred",
+          "unit": "指数(2017=100)",
+          "description": "Core PCE (Excluding Food and Energy), Seasonally Adjusted (level, not YoY)"
+        }
+      ]
+    },
+    {
+      "code": "US_CORE_PCE_INDEX",
+      "mode": "as_of",
+      "rows": 21,
+      "sample": [
+        {
+          "indicator_code": "US_CORE_PCE_INDEX",
+          "indicator_name": "美国核心PCE物价指数(季调)",
+          "category": "prices",
+          "frequency": "monthly",
+          "need_pit": true,
+          "date": "2025-11-01",
+          "value": 127.363,
+          "knowledge_date": "2026-11-05",
+          "source": "fred",
+          "unit": "指数(2017=100)",
+          "description": "Core PCE (Excluding Food and Energy), Seasonally Adjusted (level, not YoY)"
+        }
+      ]
+    },
+    {
+      "code": "US_UNRATE",
+      "mode": "current",
+      "rows": 20,
+      "sample": [
+        {
+          "indicator_code": "US_UNRATE",
+          "indicator_name": "美国失业率",
+          "category": "employment",
+          "frequency": "monthly",
+          "need_pit": true,
+          "date": "2026-09-01",
+          "value": 4.2,
+          "knowledge_date": "2026-11-05",
+          "source": "fred",
+          "unit": "%",
+          "description": "Civilian Unemployment Rate (monthly release, revised)"
+        }
+      ]
+    },
+    {
+      "code": "US_UNRATE",
+      "mode": "as_of",
+      "rows": 20,
+      "sample": [
+        {
+          "indicator_code": "US_UNRATE",
+          "indicator_name": "美国失业率",
+          "category": "employment",
+          "frequency": "monthly",
+          "need_pit": true,
+          "date": "2025-11-01",
+          "value": 4.5,
+          "knowledge_date": "2026-11-05",
+          "source": "fred",
+          "unit": "%",
+          "description": "Civilian Unemployment Rate (monthly release, revised)"
+        }
+      ]
+    },
+    {
+      "code": "US_PAYEMS",
+      "mode": "current",
+      "rows": 21,
+      "sample": [
+        {
+          "indicator_code": "US_PAYEMS",
+          "indicator_name": "美国非农就业",
+          "category": "employment",
+          "frequency": "monthly",
+          "need_pit": true,
+          "date": "2026-09-01",
+          "value": 159044.0,
+          "knowledge_date": "2026-11-05",
+          "source": "fred",
+          "unit": "千人",
+          "description": "Nonfarm Employment"
+        }
+      ]
+    },
+    {
+      "code": "US_PAYEMS",
+      "mode": "as_of",
+      "rows": 21,
+      "sample": [
+        {
+          "indicator_code": "US_PAYEMS",
+          "indicator_name": "美国非农就业",
+          "category": "employment",
+          "frequency": "monthly",
+          "need_pit": true,
+          "date": "2026-07-01",
+          "value": 158882.0,
+          "knowledge_date": "2026-11-05",
+          "source": "fred",
+          "unit": "千人",
+          "description": "Nonfarm Employment"
+        }
+      ]
+    },
+    {
+      "code": "US_M2",
+      "mode": "current",
+      "rows": 21,
+      "sample": [
+        {
+          "indicator_code": "US_M2",
+          "indicator_name": "美国M2货币供应(季调)",
+          "category": "money_supply",
+          "frequency": "monthly",
+          "need_pit": true,
+          "date": "2026-09-01",
+          "value": 23413.9,
+          "knowledge_date": "2026-11-05",
+          "source": "fred",
+          "unit": "十亿美元",
+          "description": "M2 Money Stock, Seasonally Adjusted (level, not YoY; annual benchmark revisions can reach back years)"
+        }
+      ]
+    },
+    {
+      "code": "US_M2",
+      "mode": "as_of",
+      "rows": 21,
+      "sample": [
+        {
+          "indicator_code": "US_M2",
+          "indicator_name": "美国M2货币供应(季调)",
+          "category": "money_supply",
+          "frequency": "monthly",
+          "need_pit": true,
+          "date": "2026-09-01",
+          "value": 23413.9,
+          "knowledge_date": "2026-11-05",
+          "source": "fred",
+          "unit": "十亿美元",
+          "description": "M2 Money Stock, Seasonally Adjusted (level, not YoY; annual benchmark revisions can reach back years)"
+        }
+      ]
+    },
+    {
+      "code": "US_BOND_YIELD_1Y",
+      "mode": "current",
+      "rows": 461,
+      "sample": [
+        {
+          "indicator_code": "US_BOND_YIELD_1Y",
+          "indicator_name": "美国1年期国债收益率",
+          "category": "interest_rate",
+          "frequency": "daily",
+          "need_pit": false,
+          "date": "2026-11-04",
+          "value": 4.39,
+          "knowledge_date": "2026-11-05",
+          "source": "fred",
+          "unit": "%",
+          "description": "1-Year Treasury Constant Maturity Rate"
+        }
+      ]
+    },
+    {
+      "code": "US_BOND_YIELD_1Y",
+      "mode": "as_of",
+      "rows": 461,
+      "sample": [
+        {
+          "indicator_code": "US_BOND_YIELD_1Y",
+          "indicator_name": "美国1年期国债收益率",
+          "category": "interest_rate",
+          "frequency": "daily",
+          "need_pit": false,
+          "date": "2026-07-09",
+          "value": 4.02,
+          "knowledge_date": "2026-11-05",
+          "source": "fred",
+          "unit": "%",
+          "description": "1-Year Treasury Constant Maturity Rate"
+        }
+      ]
+    },
+    {
+      "code": "US_BOND_YIELD_2Y",
+      "mode": "current",
+      "rows": 461,
+      "sample": [
+        {
+          "indicator_code": "US_BOND_YIELD_2Y",
+          "indicator_name": "美国2年期国债收益率",
+          "category": "interest_rate",
+          "frequency": "daily",
+          "need_pit": false,
+          "date": "2026-11-04",
+          "value": 4.58,
+          "knowledge_date": "2026-11-05",
+          "source": "fred",
+          "unit": "%",
+          "description": "2-Year Treasury Constant Maturity Rate"
+        }
+      ]
+    },
+    {
+      "code": "US_BOND_YIELD_2Y",
+      "mode": "as_of",
+      "rows": 461,
+      "sample": [
+        {
+          "indicator_code": "US_BOND_YIELD_2Y",
+          "indicator_name": "美国2年期国债收益率",
+          "category": "interest_rate",
+          "frequency": "daily",
+          "need_pit": false,
+          "date": "2026-04-16",
+          "value": 3.78,
+          "knowledge_date": "2026-11-05",
+          "source": "fred",
+          "unit": "%",
+          "description": "2-Year Treasury Constant Maturity Rate"
+        }
+      ]
+    },
+    {
+      "code": "US_BOND_YIELD_5Y",
+      "mode": "current",
+      "rows": 461,
+      "sample": [
+        {
+          "indicator_code": "US_BOND_YIELD_5Y",
+          "indicator_name": "美国5年期国债收益率",
+          "category": "interest_rate",
+          "frequency": "daily",
+          "need_pit": false,
+          "date": "2026-11-04",
+          "value": 4.69,
+          "knowledge_date": "2026-11-05",
+          "source": "fred",
+          "unit": "%",
+          "description": "5-Year Treasury Constant Maturity Rate"
+        }
+      ]
+    },
+    {
+      "code": "US_BOND_YIELD_5Y",
+      "mode": "as_of",
+      "rows": 461,
+      "sample": [
+        {
+          "indicator_code": "US_BOND_YIELD_5Y",
+          "indicator_name": "美国5年期国债收益率",
+          "category": "interest_rate",
+          "frequency": "daily",
+          "need_pit": false,
+          "date": "2026-02-18",
+          "value": 3.66,
+          "knowledge_date": "2026-11-05",
+          "source": "fred",
+          "unit": "%",
+          "description": "5-Year Treasury Constant Maturity Rate"
+        }
+      ]
+    },
+    {
+      "code": "US_BOND_YIELD_10Y",
+      "mode": "current",
+      "rows": 461,
+      "sample": [
+        {
+          "indicator_code": "US_BOND_YIELD_10Y",
+          "indicator_name": "美国10年期国债收益率",
+          "category": "interest_rate",
+          "frequency": "daily",
+          "need_pit": false,
+          "date": "2026-11-04",
+          "value": 4.9,
+          "knowledge_date": "2026-11-05",
+          "source": "fred",
+          "unit": "%",
+          "description": "10-Year Treasury Constant Maturity Rate"
+        }
+      ]
+    },
+    {
+      "code": "US_BOND_YIELD_10Y",
+      "mode": "as_of",
+      "rows": 461,
+      "sample": [
+        {
+          "indicator_code": "US_BOND_YIELD_10Y",
+          "indicator_name": "美国10年期国债收益率",
+          "category": "interest_rate",
+          "frequency": "daily",
+          "need_pit": false,
+          "date": "2026-06-29",
+          "value": 4.38,
+          "knowledge_date": "2026-11-05",
+          "source": "fred",
+          "unit": "%",
+          "description": "10-Year Treasury Constant Maturity Rate"
+        }
+      ]
+    },
+    {
+      "code": "US_BOND_YIELD_30Y",
+      "mode": "current",
+      "rows": 461,
+      "sample": [
+        {
+          "indicator_code": "US_BOND_YIELD_30Y",
+          "indicator_name": "美国30年期国债收益率",
+          "category": "interest_rate",
+          "frequency": "daily",
+          "need_pit": false,
+          "date": "2026-11-04",
+          "value": 5.28,
+          "knowledge_date": "2026-11-05",
+          "source": "fred",
+          "unit": "%",
+          "description": "30-Year Treasury Constant Maturity Rate"
+        }
+      ]
+    },
+    {
+      "code": "US_BOND_YIELD_30Y",
+      "mode": "as_of",
+      "rows": 461,
+      "sample": [
+        {
+          "indicator_code": "US_BOND_YIELD_30Y",
+          "indicator_name": "美国30年期国债收益率",
+          "category": "interest_rate",
+          "frequency": "daily",
+          "need_pit": false,
+          "date": "2026-09-08",
+          "value": 5.25,
+          "knowledge_date": "2026-11-05",
+          "source": "fred",
+          "unit": "%",
+          "description": "30-Year Treasury Constant Maturity Rate"
+        }
+      ]
+    },
+    {
+      "code": "US_BOND_SPREAD_10Y2Y",
+      "mode": "current",
+      "rows": 462,
+      "sample": [
+        {
+          "indicator_code": "US_BOND_SPREAD_10Y2Y",
+          "indicator_name": "美国10Y-2Y国债利差",
+          "category": "interest_rate",
+          "frequency": "daily",
+          "need_pit": false,
+          "date": "2026-11-05",
+          "value": 0.38,
+          "knowledge_date": "2026-11-05",
+          "source": "fred",
+          "unit": "%",
+          "description": "10-Year Treasury Minus 2-Year Treasury"
+        }
+      ]
+    },
+    {
+      "code": "US_BOND_SPREAD_10Y2Y",
+      "mode": "as_of",
+      "rows": 462,
+      "sample": [
+        {
+          "indicator_code": "US_BOND_SPREAD_10Y2Y",
+          "indicator_name": "美国10Y-2Y国债利差",
+          "category": "interest_rate",
+          "frequency": "daily",
+          "need_pit": false,
+          "date": "2025-04-23",
+          "value": 0.59,
+          "knowledge_date": "2026-11-05",
+          "source": "fred",
+          "unit": "%",
+          "description": "10-Year Treasury Minus 2-Year Treasury"
+        }
+      ]
+    },
+    {
+      "code": "US_FEDFUNDS_M",
+      "mode": "current",
+      "rows": 22,
+      "sample": [
+        {
+          "indicator_code": "US_FEDFUNDS_M",
+          "indicator_name": "美国联邦基金利率(月)",
+          "category": "interest_rate",
+          "frequency": "monthly",
+          "need_pit": false,
+          "date": "2026-10-01",
+          "value": 3.88,
+          "knowledge_date": "2026-11-05",
+          "source": "fred",
+          "unit": "%",
+          "description": "Effective Federal Funds Rate (Monthly)"
+        }
+      ]
+    },
+    {
+      "code": "US_FEDFUNDS_M",
+      "mode": "as_of",
+      "rows": 22,
+      "sample": [
+        {
+          "indicator_code": "US_FEDFUNDS_M",
+          "indicator_name": "美国联邦基金利率(月)",
+          "category": "interest_rate",
+          "frequency": "monthly",
+          "need_pit": false,
+          "date": "2025-11-01",
+          "value": 3.88,
+          "knowledge_date": "2026-11-05",
+          "source": "fred",
+          "unit": "%",
+          "description": "Effective Federal Funds Rate (Monthly)"
+        }
+      ]
+    },
+    {
+      "code": "US_FEDFUNDS_D",
+      "mode": "current",
+      "rows": 673,
+      "sample": [
+        {
+          "indicator_code": "US_FEDFUNDS_D",
+          "indicator_name": "美国联邦基金利率(日)",
+          "category": "interest_rate",
+          "frequency": "daily",
+          "need_pit": false,
+          "date": "2026-11-04",
+          "value": 3.88,
+          "knowledge_date": "2026-11-05",
+          "source": "fred",
+          "unit": "%",
+          "description": "Effective Federal Funds Rate (Daily)"
+        }
+      ]
+    },
+    {
+      "code": "US_FEDFUNDS_D",
+      "mode": "as_of",
+      "rows": 673,
+      "sample": [
+        {
+          "indicator_code": "US_FEDFUNDS_D",
+          "indicator_name": "美国联邦基金利率(日)",
+          "category": "interest_rate",
+          "frequency": "daily",
+          "need_pit": false,
+          "date": "2026-08-07",
+          "value": 3.63,
+          "knowledge_date": "2026-11-05",
+          "source": "fred",
+          "unit": "%",
+          "description": "Effective Federal Funds Rate (Daily)"
+        }
+      ]
+    },
+    {
+      "code": "COMMOD_WTI",
+      "mode": "current",
+      "rows": 459,
+      "sample": [
+        {
+          "indicator_code": "COMMOD_WTI",
+          "indicator_name": "WTI原油",
+          "category": "commodity",
+          "frequency": "daily",
+          "need_pit": false,
+          "date": "2026-11-03",
+          "value": 99.64,
+          "knowledge_date": "2026-11-05",
+          "source": "fred",
+          "unit": "美元/桶",
+          "description": "Crude Oil Prices: West Texas Intermediate (WTI)"
+        }
+      ]
+    },
+    {
+      "code": "COMMOD_WTI",
+      "mode": "as_of",
+      "rows": 459,
+      "sample": [
+        {
+          "indicator_code": "COMMOD_WTI",
+          "indicator_name": "WTI原油",
+          "category": "commodity",
+          "frequency": "daily",
+          "need_pit": false,
+          "date": "2026-08-07",
+          "value": 79.77,
+          "knowledge_date": "2026-11-05",
+          "source": "fred",
+          "unit": "美元/桶",
+          "description": "Crude Oil Prices: West Texas Intermediate (WTI)"
+        }
+      ]
+    },
+    {
+      "code": "COMMOD_BRENT",
+      "mode": "current",
+      "rows": 466,
+      "sample": [
+        {
+          "indicator_code": "COMMOD_BRENT",
+          "indicator_name": "布伦特原油",
+          "category": "commodity",
+          "frequency": "daily",
+          "need_pit": false,
+          "date": "2026-11-03",
+          "value": 107.03,
+          "knowledge_date": "2026-11-05",
+          "source": "fred",
+          "unit": "美元/桶",
+          "description": "Crude Oil Prices: Brent - Europe"
+        }
+      ]
+    },
+    {
+      "code": "COMMOD_BRENT",
+      "mode": "as_of",
+      "rows": 466,
+      "sample": [
+        {
+          "indicator_code": "COMMOD_BRENT",
+          "indicator_name": "布伦特原油",
+          "category": "commodity",
+          "frequency": "daily",
+          "need_pit": false,
+          "date": "2025-09-22",
+          "value": 66.87,
+          "knowledge_date": "2026-11-05",
+          "source": "fred",
+          "unit": "美元/桶",
+          "description": "Crude Oil Prices: Brent - Europe"
+        }
+      ]
+    },
+    {
+      "code": "VIX_30D",
+      "mode": "current",
+      "rows": 476,
+      "sample": [
+        {
+          "indicator_code": "VIX_30D",
+          "indicator_name": "VIX波动率指数(30天)",
+          "category": "vix",
+          "frequency": "daily",
+          "need_pit": false,
+          "date": "2026-11-04",
+          "value": 16.61,
+          "knowledge_date": "2026-11-05",
+          "source": "fred",
+          "unit": "指数",
+          "description": "CBOE Volatility Index (VIX)"
+        }
+      ]
+    },
+    {
+      "code": "VIX_30D",
+      "mode": "as_of",
+      "rows": 476,
+      "sample": [
+        {
+          "indicator_code": "VIX_30D",
+          "indicator_name": "VIX波动率指数(30天)",
+          "category": "vix",
+          "frequency": "daily",
+          "need_pit": false,
+          "date": "2025-09-05",
+          "value": 15.18,
+          "knowledge_date": "2026-11-05",
+          "source": "fred",
+          "unit": "指数",
+          "description": "CBOE Volatility Index (VIX)"
+        }
+      ]
+    },
+    {
+      "code": "US_DOLLAR_INDEX_BROAD",
+      "mode": "current",
+      "rows": 459,
+      "sample": [
+        {
+          "indicator_code": "US_DOLLAR_INDEX_BROAD",
+          "indicator_name": "美国贸易加权美元指数(广义)",
+          "category": "dollar_index",
+          "frequency": "daily",
+          "need_pit": false,
+          "date": "2026-10-30",
+          "value": 121.6656,
+          "knowledge_date": "2026-11-05",
+          "source": "fred",
+          "unit": "指数",
+          "description": "Trade Weighted U.S. Dollar Index: Broad, Goods and Services (Federal Reserve Board H.10 release)"
+        }
+      ]
+    },
+    {
+      "code": "US_DOLLAR_INDEX_BROAD",
+      "mode": "as_of",
+      "rows": 459,
+      "sample": [
+        {
+          "indicator_code": "US_DOLLAR_INDEX_BROAD",
+          "indicator_name": "美国贸易加权美元指数(广义)",
+          "category": "dollar_index",
+          "frequency": "daily",
+          "need_pit": false,
+          "date": "2026-03-26",
+          "value": 120.389,
+          "knowledge_date": "2026-11-05",
+          "source": "fred",
+          "unit": "指数",
+          "description": "Trade Weighted U.S. Dollar Index: Broad, Goods and Services (Federal Reserve Board H.10 release)"
+        }
+      ]
+    },
+    {
+      "code": "US_DOLLAR_INDEX_AFE_GOODS",
+      "mode": "current",
+      "rows": 459,
+      "sample": [
+        {
+          "indicator_code": "US_DOLLAR_INDEX_AFE_GOODS",
+          "indicator_name": "美元指数(发达经济体·商品)",
+          "category": "dollar_index",
+          "frequency": "daily",
+          "need_pit": false,
+          "date": "2026-10-30",
+          "value": 114.3735,
+          "knowledge_date": "2026-11-05",
+          "source": "fred",
+          "unit": "指数",
+          "description": "Trade Weighted U.S. Dollar Index: Advanced Foreign Economies, Goods (Federal Reserve Board H.10)"
+        }
+      ]
+    },
+    {
+      "code": "US_DOLLAR_INDEX_AFE_GOODS",
+      "mode": "as_of",
+      "rows": 459,
+      "sample": [
+        {
+          "indicator_code": "US_DOLLAR_INDEX_AFE_GOODS",
+          "indicator_name": "美元指数(发达经济体·商品)",
+          "category": "dollar_index",
+          "frequency": "daily",
+          "need_pit": false,
+          "date": "2025-04-03",
+          "value": 115.0625,
+          "knowledge_date": "2026-11-05",
+          "source": "fred",
+          "unit": "指数",
+          "description": "Trade Weighted U.S. Dollar Index: Advanced Foreign Economies, Goods (Federal Reserve Board H.10)"
+        }
+      ]
+    },
+    {
+      "code": "FX_JPYUSD_H10",
+      "mode": "current",
+      "rows": 459,
+      "sample": [
+        {
+          "indicator_code": "FX_JPYUSD_H10",
+          "indicator_name": "日元兑美元(H.10)",
+          "category": "exchange_rate",
+          "frequency": "daily",
+          "need_pit": false,
+          "date": "2026-10-30",
+          "value": 157.47,
+          "knowledge_date": "2026-11-04",
+          "source": "fred",
+          "unit": "日元/美元",
+          "description": "Japanese Yen to U.S. Dollar Spot Exchange Rate (H.10 noon buying rate; not the Tushare fx_daily series)"
+        }
+      ]
+    },
+    {
+      "code": "FX_JPYUSD_H10",
+      "mode": "as_of",
+      "rows": 459,
+      "sample": [
+        {
+          "indicator_code": "FX_JPYUSD_H10",
+          "indicator_name": "日元兑美元(H.10)",
+          "category": "exchange_rate",
+          "frequency": "daily",
+          "need_pit": false,
+          "date": "2026-10-27",
+          "value": 157.86,
+          "knowledge_date": "2026-11-05",
+          "source": "fred",
+          "unit": "日元/美元",
+          "description": "Japanese Yen to U.S. Dollar Spot Exchange Rate (H.10 noon buying rate; not the Tushare fx_daily series)"
+        }
+      ]
+    },
+    {
+      "code": "FX_EURUSD_H10",
+      "mode": "current",
+      "rows": 459,
+      "sample": [
+        {
+          "indicator_code": "FX_EURUSD_H10",
+          "indicator_name": "欧元兑美元(H.10)",
+          "category": "exchange_rate",
+          "frequency": "daily",
+          "need_pit": false,
+          "date": "2026-10-30",
+          "value": 1.1163,
+          "knowledge_date": "2026-11-05",
+          "source": "fred",
+          "unit": "美元/欧元",
+          "description": "U.S. Dollars to Euro Spot Exchange Rate (H.10 noon buying rate)"
+        }
+      ]
+    },
+    {
+      "code": "FX_EURUSD_H10",
+      "mode": "as_of",
+      "rows": 459,
+      "sample": [
+        {
+          "indicator_code": "FX_EURUSD_H10",
+          "indicator_name": "欧元兑美元(H.10)",
+          "category": "exchange_rate",
+          "frequency": "daily",
+          "need_pit": false,
+          "date": "2026-05-05",
+          "value": 1.1707,
+          "knowledge_date": "2026-11-05",
+          "source": "fred",
+          "unit": "美元/欧元",
+          "description": "U.S. Dollars to Euro Spot Exchange Rate (H.10 noon buying rate)"
+        }
+      ]
+    },
+    {
+      "code": "FX_USDCNY_H10",
+      "mode": "current",
+      "rows": 459,
+      "sample": [
+        {
+          "indicator_code": "FX_USDCNY_H10",
+          "indicator_name": "人民币兑美元(H.10)",
+          "category": "exchange_rate",
+          "frequency": "daily",
+          "need_pit": false,
+          "date": "2026-10-30",
+          "value": 6.6538,
+          "knowledge_date": "2026-11-05",
+          "source": "fred",
+          "unit": "人民币/美元",
+          "description": "China Yuan to U.S. Dollar Spot Exchange Rate (H.10 noon buying rate)"
+        }
+      ]
+    },
+    {
+      "code": "FX_USDCNY_H10",
+      "mode": "as_of",
+      "rows": 459,
+      "sample": [
+        {
+          "indicator_code": "FX_USDCNY_H10",
+          "indicator_name": "人民币兑美元(H.10)",
+          "category": "exchange_rate",
+          "frequency": "daily",
+          "need_pit": false,
+          "date": "2025-06-16",
+          "value": 7.179,
+          "knowledge_date": "2026-11-05",
+          "source": "fred",
+          "unit": "人民币/美元",
+          "description": "China Yuan to U.S. Dollar Spot Exchange Rate (H.10 noon buying rate)"
+        }
+      ]
+    },
+    {
+      "code": "FX_GBPUSD_H10",
+      "mode": "current",
+      "rows": 459,
+      "sample": [
+        {
+          "indicator_code": "FX_GBPUSD_H10",
+          "indicator_name": "英镑兑美元(H.10)",
+          "category": "exchange_rate",
+          "frequency": "daily",
+          "need_pit": false,
+          "date": "2026-10-30",
+          "value": 1.3398,
+          "knowledge_date": "2026-11-05",
+          "source": "fred",
+          "unit": "美元/英镑",
+          "description": "U.S. Dollars to British Pound Spot Exchange Rate (H.10 noon buying rate)"
+        }
+      ]
+    },
+    {
+      "code": "FX_GBPUSD_H10",
+      "mode": "as_of",
+      "rows": 459,
+      "sample": [
+        {
+          "indicator_code": "FX_GBPUSD_H10",
+          "indicator_name": "英镑兑美元(H.10)",
+          "category": "exchange_rate",
+          "frequency": "daily",
+          "need_pit": false,
+          "date": "2025-04-28",
+          "value": 1.3395,
+          "knowledge_date": "2026-11-05",
+          "source": "fred",
+          "unit": "美元/英镑",
+          "description": "U.S. Dollars to British Pound Spot Exchange Rate (H.10 noon buying rate)"
+        }
+      ]
+    },
+    {
+      "code": "US_BOND_YIELD_1MO",
+      "mode": "current",
+      "rows": 461,
+      "sample": [
+        {
+          "indicator_code": "US_BOND_YIELD_1MO",
+          "indicator_name": "美国1个月期国债收益率",
+          "category": "interest_rate",
+          "frequency": "daily",
+          "need_pit": false,
+          "date": "2026-11-04",
+          "value": 4.01,
+          "knowledge_date": "2026-11-05",
+          "source": "fred",
+          "unit": "%",
+          "description": "1-Month Treasury Constant Maturity Rate"
+        }
+      ]
+    },
+    {
+      "code": "US_BOND_YIELD_1MO",
+      "mode": "as_of",
+      "rows": 461,
+      "sample": [
+        {
+          "indicator_code": "US_BOND_YIELD_1MO",
+          "indicator_name": "美国1个月期国债收益率",
+          "category": "interest_rate",
+          "frequency": "daily",
+          "need_pit": false,
+          "date": "2026-01-07",
+          "value": 3.7,
+          "knowledge_date": "2026-11-05",
+          "source": "fred",
+          "unit": "%",
+          "description": "1-Month Treasury Constant Maturity Rate"
+        }
+      ]
+    },
+    {
+      "code": "US_BOND_YIELD_3MO",
+      "mode": "current",
+      "rows": 461,
+      "sample": [
+        {
+          "indicator_code": "US_BOND_YIELD_3MO",
+          "indicator_name": "美国3个月期国债收益率",
+          "category": "interest_rate",
+          "frequency": "daily",
+          "need_pit": false,
+          "date": "2026-11-04",
+          "value": 4.21,
+          "knowledge_date": "2026-11-05",
+          "source": "fred",
+          "unit": "%",
+          "description": "3-Month Treasury Constant Maturity Rate"
+        }
+      ]
+    },
+    {
+      "code": "US_BOND_YIELD_3MO",
+      "mode": "as_of",
+      "rows": 461,
+      "sample": [
+        {
+          "indicator_code": "US_BOND_YIELD_3MO",
+          "indicator_name": "美国3个月期国债收益率",
+          "category": "interest_rate",
+          "frequency": "daily",
+          "need_pit": false,
+          "date": "2025-08-13",
+          "value": 4.29,
+          "knowledge_date": "2026-11-05",
+          "source": "fred",
+          "unit": "%",
+          "description": "3-Month Treasury Constant Maturity Rate"
+        }
+      ]
+    },
+    {
+      "code": "US_BOND_YIELD_3Y",
+      "mode": "current",
+      "rows": 461,
+      "sample": [
+        {
+          "indicator_code": "US_BOND_YIELD_3Y",
+          "indicator_name": "美国3年期国债收益率",
+          "category": "interest_rate",
+          "frequency": "daily",
+          "need_pit": false,
+          "date": "2026-11-04",
+          "value": 4.64,
+          "knowledge_date": "2026-11-05",
+          "source": "fred",
+          "unit": "%",
+          "description": "3-Year Treasury Constant Maturity Rate"
+        }
+      ]
+    },
+    {
+      "code": "US_BOND_YIELD_3Y",
+      "mode": "as_of",
+      "rows": 461,
+      "sample": [
+        {
+          "indicator_code": "US_BOND_YIELD_3Y",
+          "indicator_name": "美国3年期国债收益率",
+          "category": "interest_rate",
+          "frequency": "daily",
+          "need_pit": false,
+          "date": "2026-02-10",
+          "value": 3.5,
+          "knowledge_date": "2026-11-05",
+          "source": "fred",
+          "unit": "%",
+          "description": "3-Year Treasury Constant Maturity Rate"
+        }
+      ]
+    },
+    {
+      "code": "US_BOND_YIELD_7Y",
+      "mode": "current",
+      "rows": 461,
+      "sample": [
+        {
+          "indicator_code": "US_BOND_YIELD_7Y",
+          "indicator_name": "美国7年期国债收益率",
+          "category": "interest_rate",
+          "frequency": "daily",
+          "need_pit": false,
+          "date": "2026-11-04",
+          "value": 4.77,
+          "knowledge_date": "2026-11-05",
+          "source": "fred",
+          "unit": "%",
+          "description": "7-Year Treasury Constant Maturity Rate"
+        }
+      ]
+    },
+    {
+      "code": "US_BOND_YIELD_7Y",
+      "mode": "as_of",
+      "rows": 461,
+      "sample": [
+        {
+          "indicator_code": "US_BOND_YIELD_7Y",
+          "indicator_name": "美国7年期国债收益率",
+          "category": "interest_rate",
+          "frequency": "daily",
+          "need_pit": false,
+          "date": "2026-07-08",
+          "value": 4.43,
+          "knowledge_date": "2026-11-05",
+          "source": "fred",
+          "unit": "%",
+          "description": "7-Year Treasury Constant Maturity Rate"
+        }
+      ]
+    },
+    {
+      "code": "US_BOND_YIELD_20Y",
+      "mode": "current",
+      "rows": 461,
+      "sample": [
+        {
+          "indicator_code": "US_BOND_YIELD_20Y",
+          "indicator_name": "美国20年期国债收益率",
+          "category": "interest_rate",
+          "frequency": "daily",
+          "need_pit": false,
+          "date": "2026-11-04",
+          "value": 5.3,
+          "knowledge_date": "2026-11-05",
+          "source": "fred",
+          "unit": "%",
+          "description": "20-Year Treasury Constant Maturity Rate (1987-1993 停发段缺失为源覆盖边界)"
+        }
+      ]
+    },
+    {
+      "code": "US_BOND_YIELD_20Y",
+      "mode": "as_of",
+      "rows": 461,
+      "sample": [
+        {
+          "indicator_code": "US_BOND_YIELD_20Y",
+          "indicator_name": "美国20年期国债收益率",
+          "category": "interest_rate",
+          "frequency": "daily",
+          "need_pit": false,
+          "date": "2026-07-07",
+          "value": 5.05,
+          "knowledge_date": "2026-11-05",
+          "source": "fred",
+          "unit": "%",
+          "description": "20-Year Treasury Constant Maturity Rate (1987-1993 停发段缺失为源覆盖边界)"
+        }
+      ]
+    },
+    {
+      "code": "US_BOND_SPREAD_10Y3M",
+      "mode": "current",
+      "rows": 462,
+      "sample": [
+        {
+          "indicator_code": "US_BOND_SPREAD_10Y3M",
+          "indicator_name": "美国10Y-3M国债利差",
+          "category": "interest_rate",
+          "frequency": "daily",
+          "need_pit": false,
+          "date": "2026-11-05",
+          "value": 0.67,
+          "knowledge_date": "2026-11-05",
+          "source": "fred",
+          "unit": "%",
+          "description": "10-Year Treasury Minus 3-Month Treasury"
+        }
+      ]
+    },
+    {
+      "code": "US_BOND_SPREAD_10Y3M",
+      "mode": "as_of",
+      "rows": 462,
+      "sample": [
+        {
+          "indicator_code": "US_BOND_SPREAD_10Y3M",
+          "indicator_name": "美国10Y-3M国债利差",
+          "category": "interest_rate",
+          "frequency": "daily",
+          "need_pit": false,
+          "date": "2025-05-12",
+          "value": 0.03,
+          "knowledge_date": "2026-11-05",
+          "source": "fred",
+          "unit": "%",
+          "description": "10-Year Treasury Minus 3-Month Treasury"
+        }
+      ]
+    },
+    {
+      "code": "US_BREAKEVEN_10Y",
+      "mode": "current",
+      "rows": 462,
+      "sample": [
+        {
+          "indicator_code": "US_BREAKEVEN_10Y",
+          "indicator_name": "美国10年期盈亏平衡通胀",
+          "category": "interest_rate",
+          "frequency": "daily",
+          "need_pit": false,
+          "date": "2026-11-05",
+          "value": 2.24,
+          "knowledge_date": "2026-11-05",
+          "source": "fred",
+          "unit": "%",
+          "description": "10-Year Breakeven Inflation Rate"
+        }
+      ]
+    },
+    {
+      "code": "US_BREAKEVEN_10Y",
+      "mode": "as_of",
+      "rows": 462,
+      "sample": [
+        {
+          "indicator_code": "US_BREAKEVEN_10Y",
+          "indicator_name": "美国10年期盈亏平衡通胀",
+          "category": "interest_rate",
+          "frequency": "daily",
+          "need_pit": false,
+          "date": "2025-08-22",
+          "value": 2.41,
+          "knowledge_date": "2026-11-05",
+          "source": "fred",
+          "unit": "%",
+          "description": "10-Year Breakeven Inflation Rate"
+        }
+      ]
+    },
+    {
+      "code": "US_BREAKEVEN_5Y",
+      "mode": "current",
+      "rows": 462,
+      "sample": [
+        {
+          "indicator_code": "US_BREAKEVEN_5Y",
+          "indicator_name": "美国5年期盈亏平衡通胀",
+          "category": "interest_rate",
+          "frequency": "daily",
+          "need_pit": false,
+          "date": "2026-11-05",
+          "value": 2.26,
+          "knowledge_date": "2026-11-05",
+          "source": "fred",
+          "unit": "%",
+          "description": "5-Year Breakeven Inflation Rate"
+        }
+      ]
+    },
+    {
+      "code": "US_BREAKEVEN_5Y",
+      "mode": "as_of",
+      "rows": 462,
+      "sample": [
+        {
+          "indicator_code": "US_BREAKEVEN_5Y",
+          "indicator_name": "美国5年期盈亏平衡通胀",
+          "category": "interest_rate",
+          "frequency": "daily",
+          "need_pit": false,
+          "date": "2025-09-22",
+          "value": 2.42,
+          "knowledge_date": "2026-11-05",
+          "source": "fred",
+          "unit": "%",
+          "description": "5-Year Breakeven Inflation Rate"
+        }
+      ]
+    },
+    {
+      "code": "US_SOFR",
+      "mode": "current",
+      "rows": 460,
+      "sample": [
+        {
+          "indicator_code": "US_SOFR",
+          "indicator_name": "SOFR担保隔夜融资利率",
+          "category": "interest_rate",
+          "frequency": "daily",
+          "need_pit": false,
+          "date": "2026-11-04",
+          "value": 3.94,
+          "knowledge_date": "2026-11-05",
+          "source": "fred",
+          "unit": "%",
+          "description": "Secured Overnight Financing Rate (NY Fed)"
+        }
+      ]
+    },
+    {
+      "code": "US_SOFR",
+      "mode": "as_of",
+      "rows": 460,
+      "sample": [
+        {
+          "indicator_code": "US_SOFR",
+          "indicator_name": "SOFR担保隔夜融资利率",
+          "category": "interest_rate",
+          "frequency": "daily",
+          "need_pit": false,
+          "date": "2026-01-27",
+          "value": 3.66,
+          "knowledge_date": "2026-11-05",
+          "source": "fred",
+          "unit": "%",
+          "description": "Secured Overnight Financing Rate (NY Fed)"
+        }
+      ]
+    },
+    {
+      "code": "US_EFFR",
+      "mode": "current",
+      "rows": 463,
+      "sample": [
+        {
+          "indicator_code": "US_EFFR",
+          "indicator_name": "有效联邦基金利率(EFFR)",
+          "category": "interest_rate",
+          "frequency": "daily",
+          "need_pit": false,
+          "date": "2026-11-04",
+          "value": 3.88,
+          "knowledge_date": "2026-11-05",
+          "source": "fred",
+          "unit": "%",
+          "description": "Effective Federal Funds Rate (NY Fed daily; 与 DFF 是不同序列)"
+        }
+      ]
+    },
+    {
+      "code": "US_EFFR",
+      "mode": "as_of",
+      "rows": 463,
+      "sample": [
+        {
+          "indicator_code": "US_EFFR",
+          "indicator_name": "有效联邦基金利率(EFFR)",
+          "category": "interest_rate",
+          "frequency": "daily",
+          "need_pit": false,
+          "date": "2026-07-09",
+          "value": 3.62,
+          "knowledge_date": "2026-11-05",
+          "source": "fred",
+          "unit": "%",
+          "description": "Effective Federal Funds Rate (NY Fed daily; 与 DFF 是不同序列)"
+        }
+      ]
+    },
+    {
+      "code": "US_CREDIT_IG_OAS",
+      "mode": "current",
+      "rows": 483,
+      "sample": [
+        {
+          "indicator_code": "US_CREDIT_IG_OAS",
+          "indicator_name": "美国投资级公司债利差OAS",
+          "category": "credit",
+          "frequency": "daily",
+          "need_pit": false,
+          "date": "2026-11-04",
+          "value": 0.91,
+          "knowledge_date": "2026-11-05",
+          "source": "fred",
+          "unit": "%",
+          "description": "ICE BofA US Corporate Index Option-Adjusted Spread (ICE 自 2026-04 仅提供滚动 3 年窗口)"
+        }
+      ]
+    },
+    {
+      "code": "US_CREDIT_IG_OAS",
+      "mode": "as_of",
+      "rows": 483,
+      "sample": [
+        {
+          "indicator_code": "US_CREDIT_IG_OAS",
+          "indicator_name": "美国投资级公司债利差OAS",
+          "category": "credit",
+          "frequency": "daily",
+          "need_pit": false,
+          "date": "2026-10-14",
+          "value": 0.84,
+          "knowledge_date": "2026-11-05",
+          "source": "fred",
+          "unit": "%",
+          "description": "ICE BofA US Corporate Index Option-Adjusted Spread (ICE 自 2026-04 仅提供滚动 3 年窗口)"
+        }
+      ]
+    },
+    {
+      "code": "US_CREDIT_HY_OAS",
+      "mode": "current",
+      "rows": 483,
+      "sample": [
+        {
+          "indicator_code": "US_CREDIT_HY_OAS",
+          "indicator_name": "美国高收益公司债利差OAS",
+          "category": "credit",
+          "frequency": "daily",
+          "need_pit": false,
+          "date": "2026-11-04",
+          "value": 3.32,
+          "knowledge_date": "2026-11-05",
+          "source": "fred",
+          "unit": "%",
+          "description": "ICE BofA US High Yield Index Option-Adjusted Spread (ICE 自 2026-04 仅提供滚动 3 年窗口)"
+        }
+      ]
+    },
+    {
+      "code": "US_CREDIT_HY_OAS",
+      "mode": "as_of",
+      "rows": 483,
+      "sample": [
+        {
+          "indicator_code": "US_CREDIT_HY_OAS",
+          "indicator_name": "美国高收益公司债利差OAS",
+          "category": "credit",
+          "frequency": "daily",
+          "need_pit": false,
+          "date": "2025-11-07",
+          "value": 3.15,
+          "knowledge_date": "2026-11-05",
+          "source": "fred",
+          "unit": "%",
+          "description": "ICE BofA US High Yield Index Option-Adjusted Spread (ICE 自 2026-04 仅提供滚动 3 年窗口)"
+        }
+      ]
+    },
+    {
+      "code": "US_CORP_YIELD_AAA",
+      "mode": "current",
+      "rows": 460,
+      "sample": [
+        {
+          "indicator_code": "US_CORP_YIELD_AAA",
+          "indicator_name": "Moody's AAA公司债收益率",
+          "category": "credit",
+          "frequency": "daily",
+          "need_pit": false,
+          "date": "2026-11-04",
+          "value": 5.96,
+          "knowledge_date": "2026-11-05",
+          "source": "fred",
+          "unit": "%",
+          "description": "Moody's Seasoned Aaa Corporate Bond Yield"
+        }
+      ]
+    },
+    {
+      "code": "US_CORP_YIELD_AAA",
+      "mode": "as_of",
+      "rows": 460,
+      "sample": [
+        {
+          "indicator_code": "US_CORP_YIELD_AAA",
+          "indicator_name": "Moody's AAA公司债收益率",
+          "category": "credit",
+          "frequency": "daily",
+          "need_pit": false,
+          "date": "2026-08-10",
+          "value": 5.9,
+          "knowledge_date": "2026-11-05",
+          "source": "fred",
+          "unit": "%",
+          "description": "Moody's Seasoned Aaa Corporate Bond Yield"
+        }
+      ]
+    },
+    {
+      "code": "US_CORP_YIELD_BAA_D",
+      "mode": "current",
+      "rows": 460,
+      "sample": [
+        {
+          "indicator_code": "US_CORP_YIELD_BAA_D",
+          "indicator_name": "Moody's Baa公司债收益率(日)",
+          "category": "credit",
+          "frequency": "daily",
+          "need_pit": false,
+          "date": "2026-11-04",
+          "value": 6.42,
+          "knowledge_date": "2026-11-05",
+          "source": "fred",
+          "unit": "%",
+          "description": "Moody's Seasoned Baa Corporate Bond Yield (daily)"
+        }
+      ]
+    },
+    {
+      "code": "US_CORP_YIELD_BAA_D",
+      "mode": "as_of",
+      "rows": 460,
+      "sample": [
+        {
+          "indicator_code": "US_CORP_YIELD_BAA_D",
+          "indicator_name": "Moody's Baa公司债收益率(日)",
+          "category": "credit",
+          "frequency": "daily",
+          "need_pit": false,
+          "date": "2026-04-16",
+          "value": 6.03,
+          "knowledge_date": "2026-11-05",
+          "source": "fred",
+          "unit": "%",
+          "description": "Moody's Seasoned Baa Corporate Bond Yield (daily)"
+        }
+      ]
+    },
+    {
+      "code": "US_CORP_YIELD_BAA_M",
+      "mode": "current",
+      "rows": 22,
+      "sample": [
+        {
+          "indicator_code": "US_CORP_YIELD_BAA_M",
+          "indicator_name": "Moody's Baa公司债收益率(月)",
+          "category": "credit",
+          "frequency": "monthly",
+          "need_pit": false,
+          "date": "2026-10-01",
+          "value": 6.59,
+          "knowledge_date": "2026-11-05",
+          "source": "fred",
+          "unit": "%",
+          "description": "Moody's Seasoned Baa Corporate Bond Yield (monthly only)"
+        }
+      ]
+    },
+    {
+      "code": "US_CORP_YIELD_BAA_M",
+      "mode": "as_of",
+      "rows": 22,
+      "sample": [
+        {
+          "indicator_code": "US_CORP_YIELD_BAA_M",
+          "indicator_name": "Moody's Baa公司债收益率(月)",
+          "category": "credit",
+          "frequency": "monthly",
+          "need_pit": false,
+          "date": "2026-08-01",
+          "value": 6.32,
+          "knowledge_date": "2026-11-05",
+          "source": "fred",
+          "unit": "%",
+          "description": "Moody's Seasoned Baa Corporate Bond Yield (monthly only)"
+        }
+      ]
+    },
+    {
+      "code": "US_BOND_SPREAD_BAA10Y",
+      "mode": "current",
+      "rows": 460,
+      "sample": [
+        {
+          "indicator_code": "US_BOND_SPREAD_BAA10Y",
+          "indicator_name": "Baa公司债-10年期国债利差",
+          "category": "credit",
+          "frequency": "daily",
+          "need_pit": false,
+          "date": "2026-11-04",
+          "value": 1.52,
+          "knowledge_date": "2026-11-05",
+          "source": "fred",
+          "unit": "%",
+          "description": "Moody's Seasoned Baa Corporate Bond Yield Relative to Yield on 10-Year Treasury"
+        }
+      ]
+    },
+    {
+      "code": "US_BOND_SPREAD_BAA10Y",
+      "mode": "as_of",
+      "rows": 460,
+      "sample": [
+        {
+          "indicator_code": "US_BOND_SPREAD_BAA10Y",
+          "indicator_name": "Baa公司债-10年期国债利差",
+          "category": "credit",
+          "frequency": "daily",
+          "need_pit": false,
+          "date": "2026-01-21",
+          "value": 1.62,
+          "knowledge_date": "2026-11-05",
+          "source": "fred",
+          "unit": "%",
+          "description": "Moody's Seasoned Baa Corporate Bond Yield Relative to Yield on 10-Year Treasury"
+        }
+      ]
+    },
+    {
+      "code": "VIX_NASDAQ",
+      "mode": "current",
+      "rows": 462,
+      "sample": [
+        {
+          "indicator_code": "VIX_NASDAQ",
+          "indicator_name": "纳斯达克100波动率指数",
+          "category": "vix",
+          "frequency": "daily",
+          "need_pit": false,
+          "date": "2026-11-04",
+          "value": 25.08,
+          "knowledge_date": "2026-11-05",
+          "source": "fred",
+          "unit": "指数",
+          "description": "CBOE NASDAQ 100 Volatility Index (VXN, 2001-02 起)"
+        }
+      ]
+    },
+    {
+      "code": "VIX_NASDAQ",
+      "mode": "as_of",
+      "rows": 462,
+      "sample": [
+        {
+          "indicator_code": "VIX_NASDAQ",
+          "indicator_name": "纳斯达克100波动率指数",
+          "category": "vix",
+          "frequency": "daily",
+          "need_pit": false,
+          "date": "2026-07-20",
+          "value": 28.53,
+          "knowledge_date": "2026-11-05",
+          "source": "fred",
+          "unit": "指数",
+          "description": "CBOE NASDAQ 100 Volatility Index (VXN, 2001-02 起)"
+        }
+      ]
+    },
+    {
+      "code": "VIX_RUSSELL",
+      "mode": "current",
+      "rows": 462,
+      "sample": [
+        {
+          "indicator_code": "VIX_RUSSELL",
+          "indicator_name": "罗素2000波动率指数",
+          "category": "vix",
+          "frequency": "daily",
+          "need_pit": false,
+          "date": "2026-11-04",
+          "value": 19.7,
+          "knowledge_date": "2026-11-05",
+          "source": "fred",
+          "unit": "指数",
+          "description": "CBOE Russell 2000 Volatility Index (RVX, 2004-01 起)"
+        }
+      ]
+    },
+    {
+      "code": "VIX_RUSSELL",
+      "mode": "as_of",
+      "rows": 462,
+      "sample": [
+        {
+          "indicator_code": "VIX_RUSSELL",
+          "indicator_name": "罗素2000波动率指数",
+          "category": "vix",
+          "frequency": "daily",
+          "need_pit": false,
+          "date": "2025-06-03",
+          "value": 23.56,
+          "knowledge_date": "2026-11-05",
+          "source": "fred",
+          "unit": "指数",
+          "description": "CBOE Russell 2000 Volatility Index (RVX, 2004-01 起)"
+        }
+      ]
+    },
+    {
+      "code": "COMMOD_HH_NATGAS",
+      "mode": "current",
+      "rows": 458,
+      "sample": [
+        {
+          "indicator_code": "COMMOD_HH_NATGAS",
+          "indicator_name": "Henry Hub天然气现货",
+          "category": "commodity",
+          "frequency": "daily",
+          "need_pit": false,
+          "date": "2026-11-03",
+          "value": 2.63,
+          "knowledge_date": "2026-11-05",
+          "source": "fred",
+          "unit": "美元/百万英热",
+          "description": "Henry Hub Natural Gas Spot Price (EIA, 1997-01 起)"
+        }
+      ]
+    },
+    {
+      "code": "COMMOD_HH_NATGAS",
+      "mode": "as_of",
+      "rows": 458,
+      "sample": [
+        {
+          "indicator_code": "COMMOD_HH_NATGAS",
+          "indicator_name": "Henry Hub天然气现货",
+          "category": "commodity",
+          "frequency": "daily",
+          "need_pit": false,
+          "date": "2025-05-08",
+          "value": 3.23,
+          "knowledge_date": "2026-11-05",
+          "source": "fred",
+          "unit": "美元/百万英热",
+          "description": "Henry Hub Natural Gas Spot Price (EIA, 1997-01 起)"
+        }
+      ]
+    },
+    {
+      "code": "COMMOD_GASREGW",
+      "mode": "current",
+      "rows": 96,
+      "sample": [
+        {
+          "indicator_code": "COMMOD_GASREGW",
+          "indicator_name": "美国常规汽油零售价(周)",
+          "category": "commodity",
+          "frequency": "weekly",
+          "need_pit": false,
+          "date": "2026-11-02",
+          "value": 4.153,
+          "knowledge_date": "2026-11-05",
+          "source": "fred",
+          "unit": "美元/加仑",
+          "description": "US Regular Conventional Gas Price, Weekly (EIA 周一发布上周值; 周频如实注册, 不伪称日频)"
+        }
+      ]
+    },
+    {
+      "code": "COMMOD_GASREGW",
+      "mode": "as_of",
+      "rows": 96,
+      "sample": [
+        {
+          "indicator_code": "COMMOD_GASREGW",
+          "indicator_name": "美国常规汽油零售价(周)",
+          "category": "commodity",
+          "frequency": "weekly",
+          "need_pit": false,
+          "date": "2025-07-07",
+          "value": 3.125,
+          "knowledge_date": "2026-11-05",
+          "source": "fred",
+          "unit": "美元/加仑",
+          "description": "US Regular Conventional Gas Price, Weekly (EIA 周一发布上周值; 周频如实注册, 不伪称日频)"
+        }
+      ]
+    },
+    {
+      "code": "COMMOD_COPPER_IMF",
+      "mode": "current",
+      "rows": 21,
+      "sample": [
+        {
+          "indicator_code": "COMMOD_COPPER_IMF",
+          "indicator_name": "IMF铜价(月)",
+          "category": "commodity",
+          "frequency": "monthly",
+          "need_pit": false,
+          "date": "2026-09-01",
+          "value": 14473.05590909091,
+          "knowledge_date": "2026-11-05",
+          "source": "fred",
+          "unit": "美元/吨",
+          "description": "Global price of Copper (IMF PCPS, monthly)"
+        }
+      ]
+    },
+    {
+      "code": "COMMOD_COPPER_IMF",
+      "mode": "as_of",
+      "rows": 21,
+      "sample": [
+        {
+          "indicator_code": "COMMOD_COPPER_IMF",
+          "indicator_name": "IMF铜价(月)",
+          "category": "commodity",
+          "frequency": "monthly",
+          "need_pit": false,
+          "date": "2025-04-01",
+          "value": 9172.69590909091,
+          "knowledge_date": "2026-11-05",
+          "source": "fred",
+          "unit": "美元/吨",
+          "description": "Global price of Copper (IMF PCPS, monthly)"
+        }
+      ]
+    },
+    {
+      "code": "COMMOD_ALUMINUM_IMF",
+      "mode": "current",
+      "rows": 21,
+      "sample": [
+        {
+          "indicator_code": "COMMOD_ALUMINUM_IMF",
+          "indicator_name": "IMF铝价(月)",
+          "category": "commodity",
+          "frequency": "monthly",
+          "need_pit": false,
+          "date": "2026-09-01",
+          "value": 3283.054285714286,
+          "knowledge_date": "2026-11-05",
+          "source": "fred",
+          "unit": "美元/吨",
+          "description": "Global price of Aluminum (IMF PCPS, monthly)"
+        }
+      ]
+    },
+    {
+      "code": "COMMOD_ALUMINUM_IMF",
+      "mode": "as_of",
+      "rows": 21,
+      "sample": [
+        {
+          "indicator_code": "COMMOD_ALUMINUM_IMF",
+          "indicator_name": "IMF铝价(月)",
+          "category": "commodity",
+          "frequency": "monthly",
+          "need_pit": false,
+          "date": "2026-03-01",
+          "value": 3372.952727272727,
+          "knowledge_date": "2026-11-05",
+          "source": "fred",
+          "unit": "美元/吨",
+          "description": "Global price of Aluminum (IMF PCPS, monthly)"
+        }
+      ]
+    },
+    {
+      "code": "COMMOD_IRONORE_IMF",
+      "mode": "current",
+      "rows": 21,
+      "sample": [
+        {
+          "indicator_code": "COMMOD_IRONORE_IMF",
+          "indicator_name": "IMF铁矿石价(月)",
+          "category": "commodity",
+          "frequency": "monthly",
+          "need_pit": false,
+          "date": "2026-09-01",
+          "value": 100.4409090909091,
+          "knowledge_date": "2026-11-05",
+          "source": "fred",
+          "unit": "美元/干公吨",
+          "description": "Global price of Iron Ore (IMF PCPS, monthly)"
+        }
+      ]
+    },
+    {
+      "code": "COMMOD_IRONORE_IMF",
+      "mode": "as_of",
+      "rows": 21,
+      "sample": [
+        {
+          "indicator_code": "COMMOD_IRONORE_IMF",
+          "indicator_name": "IMF铁矿石价(月)",
+          "category": "commodity",
+          "frequency": "monthly",
+          "need_pit": false,
+          "date": "2025-11-01",
+          "value": 106.23,
+          "knowledge_date": "2026-11-05",
+          "source": "fred",
+          "unit": "美元/干公吨",
+          "description": "Global price of Iron Ore (IMF PCPS, monthly)"
+        }
+      ]
+    },
+    {
+      "code": "COMMOD_WTI_IMF",
+      "mode": "current",
+      "rows": 21,
+      "sample": [
+        {
+          "indicator_code": "COMMOD_WTI_IMF",
+          "indicator_name": "IMF WTI原油价(月)",
+          "category": "commodity",
+          "frequency": "monthly",
+          "need_pit": false,
+          "date": "2026-09-01",
+          "value": 97.0942857142857,
+          "knowledge_date": "2026-11-05",
+          "source": "fred",
+          "unit": "美元/桶",
+          "description": "Global price of WTI Crude (IMF PCPS, monthly; 与 DCOILWTICO 日度现货是不同频率/口径序列)"
+        }
+      ]
+    },
+    {
+      "code": "COMMOD_WTI_IMF",
+      "mode": "as_of",
+      "rows": 21,
+      "sample": [
+        {
+          "indicator_code": "COMMOD_WTI_IMF",
+          "indicator_name": "IMF WTI原油价(月)",
+          "category": "commodity",
+          "frequency": "monthly",
+          "need_pit": false,
+          "date": "2026-07-01",
+          "value": 79.70954545454545,
+          "knowledge_date": "2026-11-05",
+          "source": "fred",
+          "unit": "美元/桶",
+          "description": "Global price of WTI Crude (IMF PCPS, monthly; 与 DCOILWTICO 日度现货是不同频率/口径序列)"
+        }
+      ]
+    },
+    {
+      "code": "COMMOD_NATGAS_EU_IMF",
+      "mode": "current",
+      "rows": 21,
+      "sample": [
+        {
+          "indicator_code": "COMMOD_NATGAS_EU_IMF",
+          "indicator_name": "IMF欧盟天然气价(月)",
+          "category": "commodity",
+          "frequency": "monthly",
+          "need_pit": false,
+          "date": "2026-09-01",
+          "value": 25.494,
+          "knowledge_date": "2026-11-05",
+          "source": "fred",
+          "unit": "美元/百万英热",
+          "description": "Global price of Natural Gas, EU (IMF PCPS, monthly; 与 Henry Hub 是不同基准。正确ID为 PNGASEUUSDM——候选清单的 PNGASUSDM 为错误ID 404, 2026-10-05 CSV 端点核实)"
+        }
+      ]
+    },
+    {
+      "code": "COMMOD_NATGAS_EU_IMF",
+      "mode": "as_of",
+      "rows": 21,
+      "sample": [
+        {
+          "indicator_code": "COMMOD_NATGAS_EU_IMF",
+          "indicator_name": "IMF欧盟天然气价(月)",
+          "category": "commodity",
+          "frequency": "monthly",
+          "need_pit": false,
+          "date": "2025-12-01",
+          "value": 9.46,
+          "knowledge_date": "2026-11-05",
+          "source": "fred",
+          "unit": "美元/百万英热",
+          "description": "Global price of Natural Gas, EU (IMF PCPS, monthly; 与 Henry Hub 是不同基准。正确ID为 PNGASEUUSDM——候选清单的 PNGASUSDM 为错误ID 404, 2026-10-05 CSV 端点核实)"
+        }
+      ]
+    },
+    {
+      "code": "COMMOD_ALLFNF_IMF",
+      "mode": "current",
+      "rows": 21,
+      "sample": [
+        {
+          "indicator_code": "COMMOD_ALLFNF_IMF",
+          "indicator_name": "IMF全球金融与非能源商品指数(月)",
+          "category": "commodity",
+          "frequency": "monthly",
+          "need_pit": false,
+          "date": "2026-09-01",
+          "value": 222.4285486100514,
+          "knowledge_date": "2026-11-05",
+          "source": "fred",
+          "unit": "指数",
+          "description": "IMF Global price index of Financial Non-Fuel Commodities (正确ID; 旧 PALLFNF/PALLFIN 为错误ID 404)"
+        }
+      ]
+    },
+    {
+      "code": "COMMOD_ALLFNF_IMF",
+      "mode": "as_of",
+      "rows": 21,
+      "sample": [
+        {
+          "indicator_code": "COMMOD_ALLFNF_IMF",
+          "indicator_name": "IMF全球金融与非能源商品指数(月)",
+          "category": "commodity",
+          "frequency": "monthly",
+          "need_pit": false,
+          "date": "2025-12-01",
+          "value": 170.7768992919449,
+          "knowledge_date": "2026-11-05",
+          "source": "fred",
+          "unit": "指数",
+          "description": "IMF Global price index of Financial Non-Fuel Commodities (正确ID; 旧 PALLFNF/PALLFIN 为错误ID 404)"
+        }
+      ]
+    }
+  ],
+  "index_error": {
+    "error": "SourceFetchError",
+    "message": "Failed to fetch sw_industry from Tushare"
+  },
+  "finished_at": "2026-11-06T03:35:16.114079+00:00"
+}

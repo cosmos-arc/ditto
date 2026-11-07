@@ -1,0 +1,62 @@
+{
+  "measured_at": "2026-11-06T21:24:18.997557+00:00",
+  "commit": "057420406999abaccbe67c5290dd4b1130bdfa08",
+  "baseline": "afecdd839c5066b28141929888df6b6ba653de02",
+  "checks": {
+    "focused": {
+      "command": "uv run --no-sync pytest packages/data/tests/unit/sources/tushare/test_fina_indicator_fund_portfolio_unit.py packages/data/tests/unit/sources/tushare/test_fundamental_delegates_unit.py -q",
+      "log": "fund-range-green.log",
+      "sha256": "df992b67a6042c91ae3c38e5eb777e0b56ff11816c3bc04fa696f557d670055f",
+      "exit_code": 0,
+      "summaries": [
+        "============================== 57 passed in 2.42s =============================="
+      ]
+    },
+    "type": {
+      "command": "task type",
+      "log": "fund-range-type.log",
+      "sha256": "7f15dfa89dae9d710c9f28c8c26971ae44dc423b33fc047a9c89030e879e442a",
+      "exit_code": 0,
+      "summaries": [
+        "0 errors, 0 warnings, 0 notes"
+      ]
+    },
+    "pit": {
+      "command": "PYTEST_XDIST_AUTO_NUM_WORKERS=2 task pit",
+      "log": "fund-range-pit.log",
+      "sha256": "7923971b6c95cd10d0541bc544039967a880c5e4457b9a7f1074cc0894f79535",
+      "exit_code": 0,
+      "summaries": [
+        "=============== 658 passed, 16864 deselected in 79.52s (0:01:19) ==============="
+      ]
+    },
+    "verify_push": {
+      "command": "PYTEST_XDIST_AUTO_NUM_WORKERS=2 VITEST_MAX_WORKERS=2 task verify-push",
+      "log": "verify-push-fund-range.log",
+      "sha256": "d5de1d4f4985060d72e70b0db86664a98ef82120220c52223bccd5420a00a26b",
+      "exit_code": 0,
+      "summaries": [
+        "0 errors, 0 warnings, 0 notes",
+        "0 errors, 0 warnings, 0 notes",
+        "================ 16733 passed, 17 skipped in 267.74s (0:04:27) =================",
+        "      Tests  1927 passed (1927)",
+        "============================== 4 passed in 7.15s ===============================",
+        "================== 148 passed, 116 subtests passed in 28.44s ===================",
+        "======================== 270 passed in 86.65s (0:01:26) ========================",
+        "0 errors, 0 warnings, 0 notes",
+        "=============== 658 passed, 16864 deselected in 81.64s (0:01:21) ==============="
+      ]
+    }
+  },
+  "red": {
+    "log": "fund-range-red.log",
+    "sha256": "4080e2cbbddbb26e93141a9c33cd1c99f475568b43af4d0c65b7efd8cf5e03ff",
+    "failed": 2,
+    "passed": 17
+  },
+  "reviews": {
+    "standards": "0 hardviolations,0 smells; fixedSHA review",
+    "spec": "0 findings; cutoffrootcauseclosedin code, tailproductionexecution stillpending"
+  },
+  "boundary": "Currentcode repair checks; finalall-tests run and finaldata/runtimecoverage evidence remain separate and will be recorded aftertail completion."
+}

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 import polars as pl
 from ditto_data.catalog import DataCatalogWriter
@@ -13,6 +13,7 @@ from ditto_data.catalog.provider_payload import (
 )
 from ditto_data.models import Dataset
 from ditto_data.models.ingestion import IngestionQualityEvidence, IngestionResult
+from ditto_data.services.fundamental_store import FundamentalStore
 from ditto_data.services.market_service import MarketService
 from ditto_data.services.metadata_service import MetadataService
 from ditto_kernel.instrument import InstrumentIngestParams
@@ -43,6 +44,7 @@ from ditto_application.processes.ingestion.ports import QualityCheckerProtocol
 from ditto_application.processes.ingestion.post_ingest import (
     CatalogWriteContext,
     DataWriteContext,
+    RequestWindow,
     ZeroRowEvidencePorts,
     build_evidence_commit_request,
     commit_zero_row_provider_observation,
@@ -92,6 +94,7 @@ class InstrumentIngestContext:
     quality_checker: QualityCheckerProtocol | None = None
     evidence_committer: IngestionEvidenceCommitter | None = None
     provider_payload_writer: ProviderPayloadWriter | None = None
+    fundamental_store: FundamentalStore | None = None
 
 
 @dataclass(frozen=True)
@@ -125,6 +128,8 @@ def ingest_by_instrument(
             value=dataset,
         ) from e
     ensure_source_supported(dataset_enum, ctx.source_name)
+    if dataset_enum is Dataset.FUND_PORTFOLIO:
+        ctx = replace(ctx, result_handler=IngestionResultHandler(None, ctx.source_name))
 
     if dataset_enum not in SUPPORTED_INSTRUMENT_DATASETS:
         raise AppProcessError(
@@ -141,14 +146,28 @@ def ingest_by_instrument(
             value=dataset,
         )
 
-    source_ticker = resolve_identifier_with_auto_init(
-        params,
-        asset_class,
-        dataset,
-        metadata_service=ctx.metadata_service,
-        source=ctx.fetchers.metadata,
-        source_name=ctx.source_name,
-    )
+    if (
+        dataset_enum is Dataset.FUND_PORTFOLIO
+        and params.ticker
+        and "." in params.ticker
+    ):
+        source_ticker = params.ticker
+    else:
+        source_ticker = resolve_identifier_with_auto_init(
+            params,
+            asset_class,
+            dataset,
+            metadata_service=ctx.metadata_service,
+            source=ctx.fetchers.metadata,
+            source_name=ctx.source_name,
+        )
+    if dataset_enum is Dataset.FUND_PORTFOLIO:
+        if ctx.fundamental_store is None:
+            raise AppProcessError("fund holder identity store not configured")
+        if source_ticker not in ctx.fundamental_store.list_fund_holders():
+            holders = ctx.fetchers.fundamental.fetch_fund_holders(source_ticker)
+            ctx.fundamental_store.register_fund_holders(holders)
+        ctx.fundamental_store.require_fund_holders([source_ticker])
 
     logger.info(
         "开始按标的摄取数据",
@@ -252,7 +271,9 @@ def _process_fetched_data_by_instrument(  # noqa: PLR0911 - fail-closed stages
 ) -> IngestionResult:
     """按标的处理获取的数据：写入。"""
     if df.is_empty():
-        return _handle_instrument_empty(df, dataset, params, chunk_id=chunk_id, ctx=ctx)
+        return _handle_instrument_empty(
+            df, dataset, params, source_ticker=source_ticker, chunk_id=chunk_id, ctx=ctx
+        )
     prerequisite_failure = _instrument_evidence_prerequisite_failure(
         dataset,
         params.start_date,
@@ -364,6 +385,7 @@ def _handle_instrument_empty(
     dataset: str,
     params: InstrumentIngestParams,
     *,
+    source_ticker: str,
     chunk_id: str | None,
     ctx: InstrumentPostIngestContext,
 ) -> IngestionResult:
@@ -377,8 +399,8 @@ def _handle_instrument_empty(
         df,
         dataset=dataset,
         trade_date=params.start_date,
-        request_start=params.start_date,
-        request_end=params.end_date,
+        request_window=RequestWindow(params.start_date, params.end_date),
+        source_ticker=source_ticker,
         chunk_id=chunk_id,
         ports=ZeroRowEvidencePorts(
             source_name=ctx.source_name,

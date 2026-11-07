@@ -365,43 +365,34 @@ def fetch_fund_portfolio(
     """
     Fetch fund quarterly holdings (#522, ann_date disclosure anchor).
 
-    三种模式：
-    - 日更（trade_date）：全市场按公告日单请求抓取（2026-10-27 代理实测
-      单日 ~1.4 万行 1-7 页取尽；披露峰值页数上涨，真翻页损坏由客户端
-      fail-closed 守卫响亮失败）；
-    - 逐标的披露（trade_date + source_ticker）：ts_code+ann_date 单标的
-      单日；
-    - 按基金回填（source_ticker + start/end）：区间内报告期逐期抓取。
+    供应商要求 ts_code、ann_date、period 至少一个选择条件。
+    - 公告日披露：ann_date 单日，可选单基金 ts_code；
+    - 按基金回填：保留边界季度，下界兼容报告期，上界覆盖真实披露截止日。
     """
-    if trade_date and source_ticker:
+    if source_ticker and "," in source_ticker:
+        raise ValueError("fund_portfolio requires a single source_ticker")
+    if trade_date:
         return fundamental.fetch_fund_portfolio(
             ts_code=source_ticker,
             ann_date=to_compact_date(trade_date),
         )
-    if trade_date:
-        return fundamental.fetch_fund_portfolio(
-            ann_date=to_compact_date(trade_date),
-        )
-    if source_ticker is None:
-        raise ValueError(
-            "fund_portfolio fetch requires either trade_date or source_ticker"
-        )
+    if not source_ticker:
+        raise ValueError("fund_portfolio requires source_ticker or trade_date")
     if start_date is None or end_date is None:
         raise ValueError(
             "fund_portfolio instrument fetch requires start_date and end_date"
         )
-    frames = [
-        fundamental.fetch_fund_portfolio(
-            ts_code=source_ticker,
-            period=period,
-        )
-        for period in _recent_quarter_ends(
-            end_date,
-            count=max_quarters_in_range(start_date, end_date),
-        )
-    ]
-    merged = pl.concat(frames, how="diagonal_relaxed") if frames else pl.DataFrame()
-    return _knowable_by_end(merged, end_date)
+    periods = _recent_quarter_ends(
+        end_date, count=max_quarters_in_range(start_date, end_date)
+    )
+    frame = fundamental.fetch_fund_portfolio(
+        # Some configured routes apply end_date to ann_date despite the
+        # documented report-period meaning. The caller's cutoff covers both.
+        ts_code=source_ticker,
+        start_date=min(periods),
+        end_date=to_compact_date(end_date),
+    )
+    return _knowable_by_end(frame, end_date)
 
 
 def max_quarters_in_range(start_date: str, end_date: str) -> int:

@@ -729,26 +729,58 @@ class FundamentalTushareAdapter(BaseTushareAdapter):
         )
         return _dedupe_fina_disclosure_key(_normalize_fina_numeric_columns(result))
 
+    def fetch_fund_holders(self, source_ticker: str | None = None) -> pl.DataFrame:
+        """Fetch all fund_basic statuses and both markets, with checked pagination."""
+        frames: list[pl.DataFrame] = []
+        for market in ("E", "O"):
+            for status in ("L", "D", "I"):
+                params = {"market": market, "status": status}
+                if source_ticker is not None:
+                    params["ts_code"] = source_ticker
+                frame = self._client.query(
+                    "fund_basic",
+                    fields="ts_code,name,market,status,found_date,due_date,list_date,delist_date",
+                    **params,
+                )
+                if not frame.is_empty():
+                    frames.append(frame)
+        if not frames:
+            raise ValueError("fund_basic returned no holder identities")
+        result = pl.concat(frames, how="vertical_relaxed").unique()
+        if result["ts_code"].n_unique() != result.height:
+            raise ValueError("fund_basic returned conflicting holder identities")
+        if source_ticker is not None and result["ts_code"].to_list() != [source_ticker]:
+            raise ValueError("fund_basic returned an unexpected fund")
+        return result.rename({"ts_code": "source_ticker"}).sort("source_ticker")
+
     @traced("source.tushare.fetch_fund_portfolio")
     def fetch_fund_portfolio(
         self,
         ts_code: str | None = None,
         ann_date: str | None = None,
         period: str | None = None,
+        *,
+        start_date: str | None = None,
+        end_date: str | None = None,
     ) -> pl.DataFrame:
         """
         获取基金持仓 (#522，公告日驱动).
 
-        季度持仓披露，修订以新 ann_date 行呈现（#452 观察事实语义）；
-        market_value 元、holding_shares 股、比率 %。响应含全部基金类型
-        （含 .OF 场外），未注册身份在写入层过滤留痕。
+        market_value 元、holding_shares 股、比率 %。来源不提供报告类型或
+        修订关系；不同公告日保留独立观察，不能据 Q2/Q4 推定完整持仓。
 
         Args:
             ts_code: 基金代码 (e.g., "510300.SH")
-            ann_date: 公告日期 (YYYYMMDD)，全市场按披露日抓取
+            ann_date: 公告日期 (YYYYMMDD)，未指定基金时读取全市场
             period: 报告期 (YYYYMMDD)
+            start_date: 报告期窗口起点 (YYYYMMDD)
+            end_date: 报告期窗口末端 (YYYYMMDD)
 
         """
+        if not (ts_code or ann_date or period):
+            raise ValueError("fund_portfolio requires ts_code, ann_date or period")
+        if ts_code and "," in ts_code:
+            raise ValueError("fund_portfolio requires a single ts_code")
         logger.info(
             "Fetching Tushare fund portfolio",
             event="tushare_fund_portfolio_fetch_start",
@@ -764,16 +796,42 @@ class FundamentalTushareAdapter(BaseTushareAdapter):
                     "stk_mkv_ratio,stk_float_ratio"
                 ),
             }
-            if ts_code:
-                params["ts_code"] = ts_code
-            if ann_date:
-                params["ann_date"] = ann_date
-            if period:
-                params["period"] = period
+            params.update(
+                {
+                    key: value
+                    for key, value in {
+                        "ts_code": ts_code,
+                        "ann_date": ann_date,
+                        "period": period,
+                        "start_date": start_date,
+                        "end_date": end_date,
+                    }.items()
+                    if value
+                }
+            )
             response = self._client.query(**params)
             result = TushareDataTransformer.transform(
                 response, "fund_portfolio", FUND_PORTFOLIO_MAPPING
             )
+            if (
+                ts_code
+                and not result.is_empty()
+                and result["source_ticker"].unique().to_list() != [ts_code]
+            ):
+                raise ValueError("fund_portfolio returned holdings for another fund")
+            for value, column in [
+                (ann_date, "knowledge_date"),
+                (period, "report_date"),
+            ]:
+                if (
+                    value
+                    and not result.is_empty()
+                    and (
+                        result[column].null_count()
+                        or not (result[column] == date.fromisoformat(value)).all()
+                    )
+                ):
+                    raise ValueError(f"fund_portfolio returned a different {column}")
             Metrics.data_records.add(
                 len(result),
                 {

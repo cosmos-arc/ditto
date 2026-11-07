@@ -1,0 +1,322 @@
+{
+  "measured_at": "2026-11-06T14:51:02.069179+00:00",
+  "dataset": "daily",
+  "asset_class": "etf",
+  "window": [
+    "2014-01-01",
+    "2026-11-05"
+  ],
+  "passed": false,
+  "calendar": {
+    "trading_days": 3121,
+    "duplicate_days": 0,
+    "weekend_days": 0,
+    "missing_years": [],
+    "years_out_of_bounds": [],
+    "yearly_counts": [
+      [
+        2014,
+        245
+      ],
+      [
+        2015,
+        244
+      ],
+      [
+        2016,
+        244
+      ],
+      [
+        2017,
+        244
+      ],
+      [
+        2018,
+        243
+      ],
+      [
+        2019,
+        244
+      ],
+      [
+        2020,
+        243
+      ],
+      [
+        2021,
+        243
+      ],
+      [
+        2022,
+        242
+      ],
+      [
+        2023,
+        242
+      ],
+      [
+        2024,
+        242
+      ],
+      [
+        2025,
+        243
+      ],
+      [
+        2026,
+        202
+      ]
+    ],
+    "passed": true
+  },
+  "session": {
+    "roster_total": 1849,
+    "securities_with_sessions": 1848,
+    "expected_sessions": 1772923,
+    "present_sessions": 1610679,
+    "failure_gaps": 0,
+    "limitation_gaps": 162244,
+    "failure_anomalies": 68,
+    "bar_sessions": 1610698,
+    "adj_factor_checked": true,
+    "adj_factor_missing": 49,
+    "passed": false
+  },
+  "gap_counts": {
+    "no_status_dataset": 162244
+  },
+  "anomaly_counts": {
+    "adj_factor_missing": 49,
+    "bar_security_not_in_master": 19
+  },
+  "top_gap_securities": [
+    {
+      "instrument_id": 2001844,
+      "ticker": "159908J.SZ",
+      "gaps": 3121
+    },
+    {
+      "instrument_id": 2001845,
+      "ticker": "510680J.SH",
+      "gaps": 3121
+    },
+    {
+      "instrument_id": 2001565,
+      "ticker": "159917.SZ",
+      "gaps": 2721
+    },
+    {
+      "instrument_id": 2001538,
+      "ticker": "510700.SH",
+      "gaps": 2716
+    },
+    {
+      "instrument_id": 2001543,
+      "ticker": "510620.SH",
+      "gaps": 2582
+    },
+    {
+      "instrument_id": 2001544,
+      "ticker": "510610.SH",
+      "gaps": 2576
+    },
+    {
+      "instrument_id": 2001533,
+      "ticker": "510450.SH",
+      "gaps": 2530
+    },
+    {
+      "instrument_id": 2001519,
+      "ticker": "512110.SH",
+      "gaps": 2481
+    },
+    {
+      "instrument_id": 2001532,
+      "ticker": "511210.SH",
+      "gaps": 2360
+    },
+    {
+      "instrument_id": 2001555,
+      "ticker": "159921.SZ",
+      "gaps": 2243
+    },
+    {
+      "instrument_id": 2001450,
+      "ticker": "511760.SH",
+      "gaps": 2189
+    },
+    {
+      "instrument_id": 2001508,
+      "ticker": "512210.SH",
+      "gaps": 2160
+    },
+    {
+      "instrument_id": 2001477,
+      "ticker": "511890.SH",
+      "gaps": 2157
+    },
+    {
+      "instrument_id": 2001529,
+      "ticker": "159927.SZ",
+      "gaps": 2154
+    },
+    {
+      "instrument_id": 2001509,
+      "ticker": "512230.SH",
+      "gaps": 2153
+    },
+    {
+      "instrument_id": 2001560,
+      "ticker": "510420.SH",
+      "gaps": 2132
+    },
+    {
+      "instrument_id": 2001536,
+      "ticker": "159924.SZ",
+      "gaps": 2125
+    },
+    {
+      "instrument_id": 2001444,
+      "ticker": "511230.SH",
+      "gaps": 2104
+    },
+    {
+      "instrument_id": 2001455,
+      "ticker": "511680.SH",
+      "gaps": 2039
+    },
+    {
+      "instrument_id": 2001572,
+      "ticker": "510280.SH",
+      "gaps": 2021
+    }
+  ],
+  "gap_samples": [
+    {
+      "instrument_id": 2000272,
+      "ticker": "159203.SZ",
+      "trade_date": "2026-04-29",
+      "kind": "no_status_dataset"
+    },
+    {
+      "instrument_id": 2000276,
+      "ticker": "159240.SZ",
+      "trade_date": "2026-04-14",
+      "kind": "no_status_dataset"
+    },
+    {
+      "instrument_id": 2000308,
+      "ticker": "159229.SZ",
+      "trade_date": "2026-03-11",
+      "kind": "no_status_dataset"
+    },
+    {
+      "instrument_id": 2000337,
+      "ticker": "159391.SZ",
+      "trade_date": "2025-12-10",
+      "kind": "no_status_dataset"
+    },
+    {
+      "instrument_id": 2000343,
+      "ticker": "159377.SZ",
+      "trade_date": "2026-03-03",
+      "kind": "no_status_dataset"
+    },
+    {
+      "instrument_id": 2000344,
+      "ticker": "159216.SZ",
+      "trade_date": "2026-01-26",
+      "kind": "no_status_dataset"
+    },
+    {
+      "instrument_id": 2000345,
+      "ticker": "560820.SH",
+      "trade_date": "2025-12-18",
+      "kind": "no_status_dataset"
+    },
+    {
+      "instrument_id": 2000345,
+      "ticker": "560820.SH",
+      "trade_date": "2026-04-30",
+      "kind": "no_status_dataset"
+    },
+    {
+      "instrument_id": 2000395,
+      "ticker": "159367.SZ",
+      "trade_date": "2025-12-04",
+      "kind": "no_status_dataset"
+    },
+    {
+      "instrument_id": 2000444,
+      "ticker": "159320.SZ",
+      "trade_date": "2025-11-04",
+      "kind": "no_status_dataset"
+    },
+    {
+      "instrument_id": 2000473,
+      "ticker": "561570.SH",
+      "trade_date": "2025-04-02",
+      "kind": "no_status_dataset"
+    },
+    {
+      "instrument_id": 2000484,
+      "ticker": "159305.SZ",
+      "trade_date": "2025-08-12",
+      "kind": "no_status_dataset"
+    },
+    {
+      "instrument_id": 2000490,
+      "ticker": "560890.SH",
+      "trade_date": "2026-02-13",
+      "kind": "no_status_dataset"
+    },
+    {
+      "instrument_id": 2000490,
+      "ticker": "560890.SH",
+      "trade_date": "2026-02-24",
+      "kind": "no_status_dataset"
+    },
+    {
+      "instrument_id": 2000490,
+      "ticker": "560890.SH",
+      "trade_date": "2026-02-25",
+      "kind": "no_status_dataset"
+    },
+    {
+      "instrument_id": 2000490,
+      "ticker": "560890.SH",
+      "trade_date": "2026-02-26",
+      "kind": "no_status_dataset"
+    },
+    {
+      "instrument_id": 2000490,
+      "ticker": "560890.SH",
+      "trade_date": "2026-02-27",
+      "kind": "no_status_dataset"
+    },
+    {
+      "instrument_id": 2000490,
+      "ticker": "560890.SH",
+      "trade_date": "2026-03-02",
+      "kind": "no_status_dataset"
+    },
+    {
+      "instrument_id": 2000490,
+      "ticker": "560890.SH",
+      "trade_date": "2026-03-03",
+      "kind": "no_status_dataset"
+    },
+    {
+      "instrument_id": 2000490,
+      "ticker": "560890.SH",
+      "trade_date": "2026-03-04",
+      "kind": "no_status_dataset"
+    }
+  ],
+  "initial_report_sha256": "8f5a69cbc20b74f6be55b94fe0a2c2a985a3150372da76362b9500b1c5df29a0",
+  "delta_expected_sessions": 1,
+  "delta_present_sessions": 1,
+  "initial_gaps_preserved": true,
+  "boundary": "Current1849 ETF metadata includes2 additions. Only158081 contributes one Nov5 session;158076 listsNov6 outside target. Existing exact source-absent gaps and factor limitations remain unchanged; no prelisting price expected.",
+  "initial_report_sha256_raw": "5c3c3c7154005616874b90a71286b60436a2095e2b3468c2098d5039cf862b2d"
+}

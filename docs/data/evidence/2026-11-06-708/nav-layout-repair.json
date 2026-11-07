@@ -1,0 +1,175 @@
+{
+  "started_at": "2026-11-06T12:02:27.941750+00:00",
+  "finished_at": "2026-11-06T12:02:31.343462+00:00",
+  "rows_before": 1618570,
+  "rows_after": 1531177,
+  "identical_duplicate_copies_removed": 87393,
+  "wrong_year_rows_before": 1479817,
+  "wrong_year_rows_after": 0,
+  "conflicting_values": 0,
+  "semantic_rows_preserved": true,
+  "before_partitions": [
+    {
+      "year": 2014,
+      "rows": 1502660,
+      "sha256": "c366b6ae2f08e85b4cacbcba89acd1b38f6dd3094b30d050226be90ed1323991"
+    },
+    {
+      "year": 2015,
+      "rows": 884,
+      "sha256": "1be62d50b05582c114d5ef1b76405121c37bff9ec510e3b5daaa49e050c7d247"
+    },
+    {
+      "year": 2016,
+      "rows": 885,
+      "sha256": "9747b804d0c0c6cad959860b371963e63d4ed59aa54276632c9cc55f411bfe14"
+    },
+    {
+      "year": 2017,
+      "rows": 891,
+      "sha256": "5a407688165f2cc5d5551cce1fe97de0bb99ddd415375ef4468892b8b15aaaa3"
+    },
+    {
+      "year": 2018,
+      "rows": 894,
+      "sha256": "22d26c923d15f309913f3cc2f9ef17ae2b3d29149aef09941052f21a79f83e11"
+    },
+    {
+      "year": 2019,
+      "rows": 888,
+      "sha256": "f0c06bb634e304331656db3bcc207a65127677d8bf048f124ff0489f6880a468"
+    },
+    {
+      "year": 2020,
+      "rows": 885,
+      "sha256": "bb9684b02b1453f2b27955dbf46965950f3bde9461e16737495011d783840b57"
+    },
+    {
+      "year": 2021,
+      "rows": 896,
+      "sha256": "5b908715f9c416997840af021f6c455957abeac2915945c4d1064f97d001b2cd"
+    },
+    {
+      "year": 2022,
+      "rows": 1255,
+      "sha256": "63f9354dc1fbfb451dcd94f426cbd41618238dec66abc08c141a5d6ad5495785"
+    },
+    {
+      "year": 2023,
+      "rows": 2746,
+      "sha256": "82fc000a412488ba44ac9d8b4c7e4392d1210a417d030acd69902c1f7fae79ee"
+    },
+    {
+      "year": 2024,
+      "rows": 7599,
+      "sha256": "63b2255665c6743bd655b17e7bfe769531a51f07749e716432caf8cb463edea3"
+    },
+    {
+      "year": 2025,
+      "rows": 24229,
+      "sha256": "bf5b02cb28ee93432409efd63e5aa5a93b3a3f4e7c8f2376d2fab313b446f3a7"
+    },
+    {
+      "year": 2026,
+      "rows": 73858,
+      "sha256": "4f7d02efcdcf86d675e2934d49bccb6fefba16b93051f46c8ee6a20257a385f2"
+    }
+  ],
+  "after_bounded_checks": [
+    {
+      "year": 2014,
+      "physical_rows": 22843,
+      "reader_rows": 22843,
+      "consumer_rows": 22843,
+      "sha256": "2072bb19ed354e7cb4284efa53785c251a011a8d754f8a9b356f0ae180b47a54"
+    },
+    {
+      "year": 2015,
+      "physical_rows": 29210,
+      "reader_rows": 29210,
+      "consumer_rows": 29210,
+      "sha256": "377f53067ede170fcba591c59517f79be9323b02eef144ce54798f8f23565106"
+    },
+    {
+      "year": 2016,
+      "physical_rows": 33927,
+      "reader_rows": 33927,
+      "consumer_rows": 33927,
+      "sha256": "0231adf58bbbaf105f14aeea4779e68e68822566b9bf73e0f837684978475775"
+    },
+    {
+      "year": 2017,
+      "physical_rows": 40189,
+      "reader_rows": 40189,
+      "consumer_rows": 40189,
+      "sha256": "e0faf15172d495270b7e7a24ce6b03d80e746452e74581d640a040e5c5724927"
+    },
+    {
+      "year": 2018,
+      "physical_rows": 45246,
+      "reader_rows": 45246,
+      "consumer_rows": 45246,
+      "sha256": "facd282ad6888d8680bfd7b1f75485ad96a6152c3079bebd3b50298a2317898a"
+    },
+    {
+      "year": 2019,
+      "physical_rows": 54923,
+      "reader_rows": 54923,
+      "consumer_rows": 54923,
+      "sha256": "89e7d7b6976e3bbe2b814f4e6b262aa547d3f6ab08c8c2be889e3c43e2ab4e6e"
+    },
+    {
+      "year": 2020,
+      "physical_rows": 81993,
+      "reader_rows": 81993,
+      "consumer_rows": 81993,
+      "sha256": "7a17c61ebc4e2424905f5ca1243ac95cd007251e40fa746aff81011967bc4c49"
+    },
+    {
+      "year": 2021,
+      "physical_rows": 123850,
+      "reader_rows": 123850,
+      "consumer_rows": 123850,
+      "sha256": "45085ff4f52592b87dff8f19a37f3127b58e488f9323f9f2e5b60166c780dd13"
+    },
+    {
+      "year": 2022,
+      "physical_rows": 157200,
+      "reader_rows": 157200,
+      "consumer_rows": 157200,
+      "sha256": "428df3749b6726d53e69d348e35ddf6c7df1ef1382a69f8f43155736679ab9e4"
+    },
+    {
+      "year": 2023,
+      "physical_rows": 177680,
+      "reader_rows": 177680,
+      "consumer_rows": 177680,
+      "sha256": "d971b6a69c4c16e27493bb15e1c3340f864fbb902c1a3e71568ad481dc6a2c5e"
+    },
+    {
+      "year": 2024,
+      "physical_rows": 210572,
+      "reader_rows": 210572,
+      "consumer_rows": 210572,
+      "sha256": "aa200f4073cd08aba1afbd8186eadfa7561a9e9db3a7811cb4b4506ca3bed51a"
+    },
+    {
+      "year": 2025,
+      "physical_rows": 268687,
+      "reader_rows": 268687,
+      "consumer_rows": 268687,
+      "sha256": "77c3582027ea70566f3b4f7d76dfad7b96d0f4bbb4d31b52eb2b3b04ac83fddb"
+    },
+    {
+      "year": 2026,
+      "physical_rows": 284857,
+      "reader_rows": 284857,
+      "consumer_rows": 284855,
+      "sha256": "bb8f1f1c501b2d97ede7e1fed609185625e0d049fd5a8baf3155cc5de58ba053"
+    }
+  ],
+  "baseline_sha256": "2e2d7a2d74fe73c0dbfa00964bf4e151678ea3a3ec4557943b4a134c1896f4d8",
+  "baseline_rows": 1531177,
+  "baseline_null_acc_nav": 1531177,
+  "method": "Exact full-row deduplication under existing year writer locks; all fields preserved; destination years first, then legacy 2014 partition; actual bounded storage and application reads verified for all 13 years."
+}

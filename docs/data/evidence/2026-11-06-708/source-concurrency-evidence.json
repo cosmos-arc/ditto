@@ -1,0 +1,54 @@
+{
+  "measured_at": "2026-11-06T12:34:28.911783+00:00",
+  "provider_message": "请不要超过10个线程",
+  "first_recorded_at": "2026-11-06T09:00:25.614491+00:00",
+  "last_recorded_at": "2026-11-06T09:43:25.097926+00:00",
+  "recorded_failure_attempts": 159,
+  "task_gate_started_at": "2026-11-06T09:47:00Z",
+  "concurrency_failures_since_gate": 0,
+  "examples": [
+    {
+      "measured_at": "2026-11-06T09:24:07.200098+00:00",
+      "api": "etf_basic",
+      "params": {},
+      "errors": [
+        "RetryError: RetryError[<Future at 0x11007ead0 state=finished raised SourceFetchError>]",
+        "SourceFetchError: 请不要超过10个线程"
+      ]
+    },
+    {
+      "measured_at": "2026-11-06T09:25:28.372953+00:00",
+      "api": "fund_nav",
+      "params": {
+        "nav_date": "20261028"
+      },
+      "errors": [
+        "RetryError: RetryError[<Future at 0x110076030 state=finished raised SourceFetchError>]",
+        "SourceFetchError: 请不要超过10个线程"
+      ]
+    },
+    {
+      "measured_at": "2026-11-06T09:00:25.614491+00:00",
+      "api": "fund_portfolio",
+      "params": {
+        "ts_code": "562110.SH",
+        "start_date": "20130930",
+        "end_date": "20260930"
+      },
+      "errors": [
+        "RetryError: RetryError[<Future at 0x114d34b90 state=finished raised SourceFetchError>]",
+        "SourceFetchError: 请不要超过10个线程"
+      ]
+    }
+  ],
+  "boundary": "Captured real transport errors remain failed attempts. All original ungated share/status workers have finished. Task workers now share at most 10 request slots; older 8/9-slot workers use subsets of the same directory. The isolated 24-process check reached 10 concurrent fake sends with all 72 complete. Provider IP-limit burst is recorded separately and retried, not called source absence. No provider quota or production configuration changed.",
+  "history": [
+    {
+      "recorded_at": "2026-11-06T10:06:45.748624+00:00",
+      "boundary": "Captured actual transport errors, retained as failed attempts; task-only shared slots enforce <=8 gated requests plus two existing ungated source workers. Logical process count is not request concurrency. No provider quota or production configuration changed."
+    }
+  ],
+  "ip_limit_failures": 17,
+  "ip_limit_first_at": "2026-11-06T12:17:47.489909+00:00",
+  "ip_limit_last_at": "2026-11-06T12:18:37.411804+00:00"
+}

@@ -1,0 +1,308 @@
+[
+  {
+    "measured_at": "2026-11-06T07:37:40.225107+00:00",
+    "canonical": {
+      "source_ticker": "000659.SZ",
+      "trade_date": "2016-08-18",
+      "is_suspended": true,
+      "suspend_timing": "",
+      "is_st": false,
+      "st_type": "",
+      "list_status": "L",
+      "instrument_id": 1000193,
+      "source": "tushare",
+      "volume": 951555.7,
+      "amount": 565964.133,
+      "close": 6.07
+    },
+    "probes": [
+      {
+        "api": "suspend_d",
+        "params": {
+          "ts_code": "000659.SZ",
+          "trade_date": "20160818",
+          "suspend_type": "S"
+        },
+        "rows": [
+          {
+            "ts_code": "000659.SZ",
+            "trade_date": "20160818",
+            "suspend_timing": null,
+            "suspend_type": "S"
+          }
+        ]
+      },
+      {
+        "api": "daily",
+        "params": {
+          "ts_code": "000659.SZ",
+          "trade_date": "20160818"
+        },
+        "rows": [
+          {
+            "ts_code": "000659.SZ",
+            "trade_date": "20160818",
+            "close": 6.07,
+            "vol": 951555.7,
+            "amount": 565964.133
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "measured_at": "2026-11-06T07:37:44.675744+00:00",
+    "canonical": {
+      "source_ticker": "000711.SZ",
+      "trade_date": "2016-10-19",
+      "is_suspended": true,
+      "suspend_timing": "",
+      "is_st": false,
+      "st_type": "",
+      "list_status": "L",
+      "instrument_id": 1000228,
+      "source": "tushare",
+      "volume": 9743.2,
+      "amount": 31818.4734,
+      "close": 32.54
+    },
+    "probes": [
+      {
+        "api": "suspend_d",
+        "params": {
+          "ts_code": "000711.SZ",
+          "trade_date": "20161019",
+          "suspend_type": "S"
+        },
+        "rows": [
+          {
+            "ts_code": "000711.SZ",
+            "trade_date": "20161019",
+            "suspend_timing": null,
+            "suspend_type": "S"
+          }
+        ]
+      },
+      {
+        "api": "daily",
+        "params": {
+          "ts_code": "000711.SZ",
+          "trade_date": "20161019"
+        },
+        "rows": [
+          {
+            "ts_code": "000711.SZ",
+            "trade_date": "20161019",
+            "close": 32.54,
+            "vol": 9743.2,
+            "amount": 31818.4734
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "measured_at": "2026-11-06T07:38:38.484410+00:00",
+    "canonical": {
+      "source_ticker": "000498.SZ",
+      "trade_date": "2017-08-16",
+      "is_suspended": true,
+      "suspend_timing": "",
+      "is_st": false,
+      "st_type": "",
+      "list_status": "L",
+      "instrument_id": 1000087,
+      "source": "tushare",
+      "volume": 3188.0,
+      "amount": 2538.916,
+      "close": 7.95
+    },
+    "probes": [
+      {
+        "api": "suspend_d",
+        "params": {
+          "ts_code": "000498.SZ",
+          "trade_date": "20170816",
+          "suspend_type": "S"
+        },
+        "rows": [
+          {
+            "ts_code": "000498.SZ",
+            "trade_date": "20170816",
+            "suspend_timing": null,
+            "suspend_type": "S"
+          }
+        ]
+      },
+      {
+        "api": "daily",
+        "params": {
+          "ts_code": "000498.SZ",
+          "trade_date": "20170816"
+        },
+        "rows": [
+          {
+            "ts_code": "000498.SZ",
+            "trade_date": "20170816",
+            "close": 7.95,
+            "vol": 3188.0,
+            "amount": 2538.916
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "measured_at": "2026-11-06T07:38:43.946825+00:00",
+    "canonical": {
+      "source_ticker": "300272.SZ",
+      "trade_date": "2017-08-14",
+      "is_suspended": true,
+      "suspend_timing": "",
+      "is_st": false,
+      "st_type": "",
+      "list_status": "L",
+      "instrument_id": 1001744,
+      "source": "tushare",
+      "volume": 3374.34,
+      "amount": 3067.945,
+      "close": 9.13
+    },
+    "probes": [
+      {
+        "api": "suspend_d",
+        "params": {
+          "ts_code": "300272.SZ",
+          "trade_date": "20170814",
+          "suspend_type": "S"
+        },
+        "rows": [
+          {
+            "ts_code": "300272.SZ",
+            "trade_date": "20170814",
+            "suspend_timing": null,
+            "suspend_type": "S"
+          }
+        ]
+      },
+      {
+        "api": "daily",
+        "params": {
+          "ts_code": "300272.SZ",
+          "trade_date": "20170814"
+        },
+        "rows": [
+          {
+            "ts_code": "300272.SZ",
+            "trade_date": "20170814",
+            "close": 9.13,
+            "vol": 3374.34,
+            "amount": 3067.945
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "measured_at": "2026-11-06T07:39:38.262869+00:00",
+    "canonical": {
+      "source_ticker": "300731.SZ",
+      "trade_date": "2017-12-08",
+      "is_suspended": true,
+      "suspend_timing": "",
+      "is_st": false,
+      "st_type": "",
+      "list_status": "L",
+      "instrument_id": 1003322,
+      "source": "tushare",
+      "volume": 108.88,
+      "amount": 207.157,
+      "close": 19.07
+    },
+    "probes": [
+      {
+        "api": "suspend_d",
+        "params": {
+          "ts_code": "300731.SZ",
+          "trade_date": "20171208",
+          "suspend_type": "S"
+        },
+        "rows": [
+          {
+            "ts_code": "300731.SZ",
+            "trade_date": "20171208",
+            "suspend_timing": null,
+            "suspend_type": "S"
+          }
+        ]
+      },
+      {
+        "api": "daily",
+        "params": {
+          "ts_code": "300731.SZ",
+          "trade_date": "20171208"
+        },
+        "rows": [
+          {
+            "ts_code": "300731.SZ",
+            "trade_date": "20171208",
+            "close": 19.07,
+            "vol": 108.88,
+            "amount": 207.157
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "measured_at": "2026-11-06T07:39:44.285965+00:00",
+    "canonical": {
+      "source_ticker": "000979.SZ",
+      "trade_date": "2018-08-28",
+      "is_suspended": true,
+      "suspend_timing": "",
+      "is_st": false,
+      "st_type": "",
+      "list_status": "L",
+      "instrument_id": 1005683,
+      "source": "tushare",
+      "volume": 1259260.33,
+      "amount": 109555.648,
+      "close": 0.87
+    },
+    "probes": [
+      {
+        "api": "suspend_d",
+        "params": {
+          "ts_code": "000979.SZ",
+          "trade_date": "20180828",
+          "suspend_type": "S"
+        },
+        "rows": [
+          {
+            "ts_code": "000979.SZ",
+            "trade_date": "20180828",
+            "suspend_timing": null,
+            "suspend_type": "S"
+          }
+        ]
+      },
+      {
+        "api": "daily",
+        "params": {
+          "ts_code": "000979.SZ",
+          "trade_date": "20180828"
+        },
+        "rows": [
+          {
+            "ts_code": "000979.SZ",
+            "trade_date": "20180828",
+            "close": 0.87,
+            "vol": 1259260.33,
+            "amount": 109555.648
+          }
+        ]
+      }
+    ]
+  }
+]

@@ -23,7 +23,7 @@ __all__ = [
 ]
 
 # 覆盖合同测量时刻（coverage-contract.yaml meta.measured_at）
-COVERAGE_MEASURED_AT = date(2026, 11, 3)
+COVERAGE_MEASURED_AT = date(2026, 11, 7)
 
 # 知识轴分类词汇表（pit-time-semantics.md §1.2 四类口径）：
 # - provider_anchor: 供应商公告锚（kd=披露日；date 精度，日终语义）
@@ -51,13 +51,10 @@ _KNOWLEDGE_AXES: dict[str, str] = {
     "top_list": "provider_anchor",
     "top_inst": "provider_anchor",
     "pledge_ratio": "provider_anchor",
-    "earnings_forecast": "provider_anchor",
-    "earnings_express": "provider_anchor",
     # T+1 推导（日线族；#625 margin 官方口径 T+1 上午 8:30 更新亦归此类）
     "stock_daily": "derived_t1",
     "etf_daily": "derived_t1",
     "index_daily": "derived_t1",
-    "global_index_daily": "derived_t1",
     "moneyflow": "derived_t1",
     "stock_limit": "derived_t1",
     "limit_list": "derived_t1",
@@ -65,15 +62,17 @@ _KNOWLEDGE_AXES: dict[str, str] = {
     "valuation_metrics": "derived_t1",
     "margin_trading": "derived_t1",
     "cyq_perf": "derived_t1",
-    "index_valuation": "derived_t1",
-    "futures_daily": "derived_t1",
-    "commodity_daily": "derived_t1",
-    "fx_daily": "derived_t1",
     "stock_status": "derived_t1",
     # 即日
     "adj_factor": "same_day",
     "fund_adj": "same_day",
     # 观察日（#452：官方无公告时刻，不伪造）
+    "global_index_daily": "observation",
+    "index_valuation": "observation",
+    "futures_daily": "observation",
+    "futures_basic": "observation",
+    "earnings_forecast": "observation",
+    "earnings_express": "observation",
     "index_weight": "observation",
     "macro_indicators": "observation",
     "fred_observation": "observation",
@@ -81,13 +80,13 @@ _KNOWLEDGE_AXES: dict[str, str] = {
 
 
 def get_knowledge_axis(dataset: str) -> str | None:
-    """返回数据集知识轴分类；未分类（如纯元数据集）返回 None。"""
+    """返回已保存的知识轴分类；纯元数据和无知识轴参考序列返回 None。"""
     return _KNOWLEDGE_AXES.get(dataset)
 
 
 @dataclass(frozen=True)
 class DatasetCoverageLimit:
-    """单数据集覆盖限制（测量时点 2026-10-30，非实时）。"""
+    """单数据集覆盖限制（测量时点 2026-11-07，非实时）。"""
 
     dataset: str
     domain: str
@@ -105,9 +104,9 @@ _DATASET_COVERAGE: dict[str, DatasetCoverageLimit] = {
         domain="market",
         status="ready",
         measured_start="2013-01-04",
-        measured_end="2026-10-29",
+        measured_end="2026-11-06",
         gaps=(),
-        notes="2013-01-04 起；fuyao dump 每日刷新(#617)；黄金集作用域=#620",
+        notes="股票新补两条价格的复权因子已补齐;当前逐会话审计有价缺因子为 0。黄金集/版本边界沿用 #620,不将最新因子称当年所见。",
     ),
     "balance_sheet": DatasetCoverageLimit(
         dataset="balance_sheet",
@@ -116,75 +115,83 @@ _DATASET_COVERAGE: dict[str, DatasetCoverageLimit] = {
         measured_start="2011-12-31",
         measured_end="2026-09-30",
         gaps=(),
-        notes="2011-12-31 起超目标，Q 报告期至 2026-09-30",
+        notes="截至公告日可见的财务披露,保留 2011 起比较期;金额元,null 非零。公告切片不等于任意本地历史快照重放。",
     ),
     "calendar": DatasetCoverageLimit(
         dataset="calendar",
         domain="metadata",
-        status="ready",
+        status="partial",
         measured_start="2013-01-01",
         measured_end="2027-12-31",
-        gaps=(),
-        notes="实测 2013-01-01~2027-12-31 全量交易日历（覆盖回测与研究目标窗）",
+        gaps=(
+            "北向/结算日历未独立取证,严格跨市场公开时间用途未获证明。",
+            "本次业务验收窗截至11-05;另有11-06日级失败保留,不能据本票声明后续日更健康或当前全市场新鲜。",
+        ),
+        notes="SSE 交易日历覆盖目标窗及前后边界;不代表北向/结算日历。",
     ),
     "cash_flow": DatasetCoverageLimit(
         dataset="cash_flow",
         domain="fundamental",
-        status="ready",
+        status="partial",
         measured_start="2011-12-31",
         measured_end="2026-09-30",
-        gaps=(),
-        notes="2011-12-31 起；12 分区代理 EOF 留档（#196）；10-29 摄取 failed 待 P1",
+        gaps=(
+            "旧失败窗口已逐次重取;当前重试结果/未闭合窗口见验收清单,不以总行数结案。",
+            "本次业务验收窗截至11-05;另有11-06日级失败保留,不能据本票声明后续日更健康或当前全市场新鲜。",
+        ),
+        notes="现金流量表独立核验,金额元;旧失败分区不能借另外两表推定闭合,保留具体窗口复测。",
     ),
     "commodity_daily": DatasetCoverageLimit(
         dataset="commodity_daily",
         domain="macro",
         status="partial",
-        measured_start="2014-01-01",
-        measured_end="2026-10-31",
+        measured_start="2013-12-31",
+        measured_end="2026-11-05",
         gaps=(
-            "FRED 油/VIX 三品种腿「复合取数器内、运行时腿未配置」——R2 证据守卫下 tushare 车道不带 FRED 直连且无 fred 车道（#629 实测定界，接线需逐腿证据归属设计）",
-            "新浪 GC/SI 2016-11-02 起（端点历史深度），CL 2014-01-01 起",
+            "Sina GC/SI 的 2014-01-01…2016-11-01 原生端点窗口为 0;端点为滚动深度参考序列。",
+            "本次业务验收窗截至11-05;另有11-06日级失败保留,不能据本票声明后续日更健康或当前全市场新鲜。",
         ),
-        notes="#629 回补：金属腿（FXCM XAU/XAG bid）2014 全覆盖、新浪连续参考三品种、FRED 腿未接线（同 FRED 48 系列口径）；三腿 trade_date_utc 统一 ms 无时区合同精度；窗口修复后 11-02 夜链 31 行/日落地（金属+新浪）；矩阵见 supporting-sources-verification.md",
+        notes=(
+            "8/8 配置腿:FXCM 金银、Sina CL/GC/SI、FRED WTI/Brent/VIX"
+            "。FRED 单值不伪造 OHLC,点号缺测过滤、负油价保留;Sina GC/SI 2016-11"
+            "-02 起,此前 2014 窗实测空。仅展示参考,无连续合约回测。"
+        ),
     ),
     "corporate_actions": DatasetCoverageLimit(
         dataset="corporate_actions",
         domain="capital",
-        status="partial",
+        status="ready",
         measured_start="2007-05-23",
         measured_end="2034-01-20",
-        gaps=(
-            "rights（分配预案）经代理 50101 不可达（#517-#523 降级裁决）；repurchase/share_float 可达",
-        ),
-        notes="2007-05-23 起 9.3 万行；含未来日期=预案计划日，PIT 由 knowledge_date 守",
+        gaps=(),
+        notes="冻结用途为回购/解禁,rights 排除;计划日可到 2034 年,不代表已实施,PIT 由可知时间守。",
     ),
     "cyq_perf": DatasetCoverageLimit(
         dataset="cyq_perf",
         domain="capital",
         status="partial",
         measured_start="2018-01-02",
-        measured_end="2026-10-29",
-        gaps=("官方数据起点 2018-01-02，2014~2017 源侧不可得",),
-        notes="15000 积分档特色数据",
+        measured_end="2026-11-06",
+        gaps=("官方 2018-01-02 起,2014–2017 无源数据。",),
+        notes="2018-01-02 为官方源起点;成本分布指标,不是真实投资者完整仓位。",
     ),
     "dividend": DatasetCoverageLimit(
         dataset="dividend",
         domain="fundamental",
         status="ready",
-        measured_start="2014-02-12",
-        measured_end="2026-10-28",
+        measured_start="2014-01-03",
+        measured_end="2026-10-29",
         gaps=(),
-        notes="ex_date 2014-02-12 起；当日无除权事件=正常空",
+        notes="公告/登记/除权/到账日期分开;未披露值不补零,修订与实施状态分开;保留此前可知比较值。",
     ),
     "earnings_express": DatasetCoverageLimit(
         dataset="earnings_express",
         domain="fundamental",
         status="ready",
         measured_start="2014-01-04",
-        measured_end="2026-10-30",
+        measured_end="2026-11-06",
         gaps=(),
-        notes="#629 回补 2014-01-04 起 24,412 行全覆盖（回补期 11 个瞬态失败日已全部重试愈合）；快报为已审数口径浓缩披露，与正式三表非同一颗粒度",
+        notes="快报原始 audit_status 保留,不能一概称已审计;公告日与本机回填观察日分开。",
     ),
     "earnings_forecast": DatasetCoverageLimit(
         dataset="earnings_forecast",
@@ -193,47 +200,78 @@ _DATASET_COVERAGE: dict[str, DatasetCoverageLimit] = {
         measured_start="2014-01-01",
         measured_end="2026-10-30",
         gaps=(
-            "2024-01-31 单日不可得——forecast_vip 该高峰日经代理确定性 PaginationCorruptionError（直连探针实证，几何重试不收敛）；按 #640 语义季块保持可重试，修复通道可见",
+            "2024-01-31 forecast_vip 重新取尽并摄取 2,209 行;knowledge_date 为本次观察日,不冒充当年可知。",
         ),
-        notes="#629 回补 2014-01-01 起 120,461 行；公告日驱动事件集，平日 0 行=正常无公告；上下界万元/单边可空/update_flag 独立版本口径见 supporting-sources-verification.md",
+        notes="2014 起公告,利润上下界万元;2024-01-31 原分页失败经实测重取 2,209 行闭合;回填 knowledge_date 不伪装当年可知。",
     ),
     "etf_basic": DatasetCoverageLimit(
         dataset="etf_basic",
         domain="metadata",
-        status="ready",
+        status="partial",
         measured_start=None,
         measured_end=None,
-        gaps=(),
-        notes="",
+        gaps=(
+            "21 个历史错误分类已纠正且保留审计分解;历史分类公开版本未证,仅当前分类观察。",
+        ),
+        notes=(
+            "历史扩展表 1,868=1,847 ETF+21 联接/LOF。21 个 instrument."
+            "asset_class 已按 fund_basic 与 etf_basic 排除证据纠正为 fu"
+            "nd;初始 ETF 1,847,随后完整源目录增加 158076.SZ/158081.SZ 两只"
+            ",当前 1,849、活跃 1,847;11-05 适用上市候选 1,848,158076 于 1"
+            "1-06 上市,新增身份单独登记/补数且不改全公募名册。159908J.SZ/510680J.S"
+            "H 按源 list_status=D 纠正活跃标志,两个历史身份仍计入分母且不推造退市日。旧 I"
+            "D、映射、扩展和历史行情保留;当前分类纠错不声称历史分类版本。"
+        ),
     ),
     "etf_daily": DatasetCoverageLimit(
         dataset="etf_daily",
         domain="market",
-        status="ready",
+        status="partial",
         measured_start="2013-01-04",
-        measured_end="2026-10-29",
-        gaps=(),
-        notes="2013-01-04 起",
+        measured_end="2026-11-06",
+        gaps=(
+            "162,244 个会话在精确 fund_daily 请求中未返回;无 ETF 状态全集,源缺席不等于停牌。",
+        ),
+        notes=(
+            "初始 1,847 加新2只共 1,849 ETF,11-05 上市范围 1,848;增量价格/因"
+            "子逐值审计另列。4 个转型日误作首次上市日已按交易所原文纠正,上市前价异常清零。当前 162,2"
+            "44 个缺价会话均与 fund_daily 原生请求精确匹配,源返回未补入为 0;无状态全集,源"
+            "空不推断停牌。"
+        ),
     ),
     "etf_nav": DatasetCoverageLimit(
         dataset="etf_nav",
         domain="market",
         status="partial",
         measured_start="2014-01-01",
-        measured_end="2026-10-26",
-        gaps=("末端 2026-10-26 后缺（10-29 摄取 failed 待 P1）",),
-        notes="2014-01-01 起",
+        measured_end="2026-11-05",
+        gaps=(
+            "尚余 7 个标的未完成精确请求窗,具体窗口见请求覆盖 CSV;尚未执行或失败不称源不可取得。",
+            "公告版本与当前源修订分开;分页/同键变值失败保留 fail closed,不用一次最新读取授予严格历史用途。",
+            "累计值尚余 388 个标的未完成精确窗;逐码区间及失败原因见更正字段请求 CSV,不把执行失败说成源无累计值。",
+            "本次业务验收窗截至11-05;另有11-06日级失败保留,不能据本票声明后续日更健康或当前全市场新鲜。",
+            "失败尝试保留原状态;单代码窗口覆盖与整市场日级失败分别对照证据,未完成范围不能因样本读通而放行。",
+        ),
+        notes=(
+            "正式 ETF 净值研究;1842/1849 个标的已由核验后的历史回执及本次成功请求覆盖 201"
+            "4-01-01…2026-11-05。同码窗绑定快照及载荷或源空观察,市场窗另按完整原生响应及入"
+            "库值核验,允许成功窗口并集覆盖,原失败请求不改写。源披露不承诺逐交易日必有;净值公告锚与份额 T"
+            "+1 派生分别保留。 原始累计字段已更正为 accum_nav 并原值映射到 acc_nav;累"
+            "计值单独核验 1461/1849 个完整历史请求窗。旧错误字段回执仅证明单位净值,未冒充累计覆盖"
+            ";源 NULL 与复权净值保留各自含义。 同标的同估值日保留不同 knowledge_date "
+            "观察;HTTP 与 CLI 对账均用最新披露,缺披露仍为 null。已通过正常生产入口验证 15"
+            "9509.SZ/159529.SZ 的新旧观察并存。源响应内部仅保留最新披露,不声称保存全部 v"
+            "intage。"
+        ),
     ),
     "etf_reference": DatasetCoverageLimit(
         dataset="etf_reference",
         domain="metadata",
-        status="partial",
+        status="ready",
         measured_start="2013-01-04",
-        measured_end="2026-11-03",
-        gaps=(
-            "config 声明源已登记（#658 批次2，2026-11-03 config 快照 10 行）；夜链 tushare 恒 SOURCE_UNSUPPORTED 属设计，SLA 168h 随时间转 stale——声明变更时手动重摄取 config 源（一次性命令，无自动节奏）",
-        ),
-        notes="config 源声明式配置，#408 两阶段映射",
+        measured_end="2026-11-06",
+        gaps=(),
+        notes="读取真实 source_snapshot_id 的候选参考观察;config 为声明变更时刷新,168 小时 SLA,不伪造历史 config。",
     ),
     "fina_indicator": DatasetCoverageLimit(
         dataset="fina_indicator",
@@ -242,75 +280,119 @@ _DATASET_COVERAGE: dict[str, DatasetCoverageLimit] = {
         measured_start="2012-03-31",
         measured_end="2026-09-30",
         gaps=(),
-        notes="2012-03-31 起超目标；存量跨年错位 33,851 组已由 #620 修复（2026-10-27 --apply 分区修复，2026-11-03 复测 263,672 行/0 跨分区同键）；10-29 failed（无新报告期日失败语义待 P1；Q3 报告期数据完整）",
+        notes="报告期、公告锚及财务指标原列透传;保留 2012 起比较期。旧跨年分区问题已修,不重复实施。",
     ),
     "fund_adj": DatasetCoverageLimit(
         dataset="fund_adj",
         domain="market",
-        status="ready",
+        status="partial",
         measured_start="2013-01-04",
-        measured_end="2026-10-29",
-        gaps=(),
-        notes="2013-01-04 起",
+        measured_end="2026-11-06",
+        gaps=(
+            (
+                "当前 ETF 有价缺因子残余 30 会话/3 码,fund_adj 同窗返回 0;原 21 个非"
+                " ETF 身份的 19 旧会话另列,不要求 ETF 源补 LOF。"
+            ),
+        ),
+        notes=(
+            "ETF 后复权图表已实际消费;价格补齐后复测并逐项重取;当前 ETF 残余 30 会话属 512"
+            "390.SH/560000.SH/560650.SH 原生零响应。21 个已纠正普通基金的旧因子"
+            "缺口另列,缺因子仍 fail closed。"
+        ),
     ),
     "fund_portfolio": DatasetCoverageLimit(
         dataset="fund_portfolio",
         domain="fundamental",
         status="partial",
-        measured_start="2014-01-20",
-        measured_end="2026-10-26",
+        measured_start="2013-09-30",
+        measured_end="2026-09-30",
         gaps=(
-            "交易所上市基金子集边界（#627 量化定界非缺损）：单披露日 9,031 只公募中 ~97-100% 为 .OF 场外基金经写入层 FK 过滤不入库；扩域至公募全覆盖= 基金宇宙注册决策另票",
+            "全持有人批量补数执行结果见 #708;未验证报告类型保持 unknown。",
+            "原文对拍已证半年报/年报公告组缺前十股票;不支持要求完整持仓/全资产的消费。",
+            "按需 T2 支持逐基金及合法公告日市场请求;后续须人工刷新,尚无自动全公募日更承诺。",
+            "本次业务验收窗截至11-05;另有11-06日级失败保留,不能据本票声明后续日更健康或当前全市场新鲜。",
+            (
+                "历史失败台账保留;合法公告日市场请求已恢复,完成度绑定精确COMPLETE及载荷。11-06旧零"
+                "观察未重取,不计本票截止窗覆盖;旧全窗待修订不由窗口并集伪造关闭。"
+            ),
         ),
-        notes="#627 量化定界：本地=交易所上市基金子集（ETF/LOF ~1,240 只≈单日 披露 9,031 只公募的 13.7%），非公募全覆盖；市场级 ann_date 响应 97-100% 为 .OF 场外基金，写入层 FK 过滤拒绝并 WARN 留痕。披露范围 分别标记：Q1/Q3 季报=前十大重仓、Q2/Q4 半年报/年报=全部持仓明细， 未披露≠零持仓；修订=同报告期多公告日版本行（kd=ann_date 分版本）。 P0 探针 period=2026 返回 0 的根因=参数形状（需完整季度末 YYYYMMDD）， #627 修正为 period=20141231 实测 ok。对拍与矩阵见 holdings-disclosure-verification.md",
+        notes=(
+            "初始fund_basic 32,842;fresh32,893新增61/缺旧10,保守并集32,"
+            "903独立持有人;有界逐基金或按公告日全市场摄取。持仓金额元、数量股、源比率百分比;null 非"
+            "零。报告类型仅取原文哈希与精确持仓内容绑定,其他 unknown/disclosed_subse"
+            "t;正文/摘要/显式修订分开。000001.OF 季报 10/10、半年报 67/77、年报 1"
+            "22/132 对拍,均不称全资产。CLI 返回源观察快照,不声称可重放的冻结结果。 本次 329"
+            "03/32903 持有人覆盖由初始32,842个核验的截至09-30逐基金前段和10-01至11"
+            "-05全部36/36个公告日市场COMPLETE并集,加新增61个完整窗COMPLETE组成。前"
+            "段有12423个逐基金零观察;市场缺席不称逐基金零响应。另有9764个精确逐基金末段窗独立对拍。"
+            "新增61另有完整窗零响应COMPLETE,成立日未知或晚于截止日不推断其当时已成立。10-27用"
+            "全部名册并集分片经逐值预审后正常重放。旧全窗因截止日截断保持待修订,不合成全窗快照;原请求范围不"
+            "等于已核验覆盖。"
+        ),
     ),
     "fund_share": DatasetCoverageLimit(
         dataset="fund_share",
         domain="market",
         status="partial",
         measured_start="2013-01-04",
-        measured_end="2026-10-30",
+        measured_end="2026-11-05",
         gaps=(
-            "ETF 无状态数据集，份额非逐日必有——87.9% 会话在场为观测口径（no_status_dataset 证据边界）",
-            "源侧全量 ~1,807 行/日 vs 本地 ~1,714（LOF/非 ETF 名册标的 FK 过滤，#503 线裁决）",
+            "本次业务验收窗截至11-05;另有11-06日级失败保留,不能据本票声明后续日更健康或当前全市场新鲜。",
         ),
-        notes="2013-01-04 起 160 万行、逐年交易日全覆盖；#625 晚发布近窗重取治愈尾部（10-26..30 各 1,713-1,715 行）；对拍 3/3 一致",
+        notes=(
+            "正式 ETF 份额研究;1849/1849 个标的已由核验后的历史回执及本次成功请求覆盖 201"
+            "4-01-01…2026-11-05。同码窗绑定快照及载荷或源空观察,市场窗另按完整原生响应及入"
+            "库值核验,允许成功窗口并集覆盖,原失败请求不改写。源披露不承诺逐交易日必有;净值公告锚与份额 T"
+            "+1 派生分别保留。"
+        ),
     ),
     "futures_basic": DatasetCoverageLimit(
         dataset="futures_basic",
         domain="market",
         status="ready",
         measured_start="1995-04-17",
-        measured_end="2026-10-28",
+        measured_end="2026-11-02",
         gaps=(),
-        notes="1995 起 34,057 行",
+        notes="11,363 唯一源身份中实际合约 11,100;目标窗适用 8,979。保留到期历史、挂牌/到期、乘数,连续/占位代码不混作真实合约分母。",
     ),
     "futures_daily": DatasetCoverageLimit(
         dataset="futures_daily",
         domain="market",
         status="partial",
-        measured_start="2026-10-26",
-        measured_end="2026-10-29",
-        gaps=("仅 2026-10-26 起 4 日，历史未回补",),
-        notes="fut_daily 源可达",
+        measured_start="2014-01-02",
+        measured_end="2026-11-06",
+        gaps=(
+            "8 个 INE SCTAS 2020 合约完整挂牌窗 fut_daily 返回 0;精确代码/区间见 #708。",
+        ),
+        notes=(
+            "六所实际合约,2014 或上市日起;8,979 应有合约中 8,971 有行情,8 个 INE "
+            "SCTAS 在原生完整挂牌窗 fut_daily 实测空。结算/持仓单位按合约乘数,观察回填不授"
+            "权历史策略;无主连拼接。"
+        ),
     ),
     "fx_daily": DatasetCoverageLimit(
         dataset="fx_daily",
         domain="macro",
         status="ready",
         measured_start="2014-01-01",
-        measured_end="2026-10-31",
+        measured_end="2026-11-05",
         gaps=(),
-        notes="#629 回补 2014-01-01 起六对全覆盖；根因=GMT 日收盘 vs 北京当日单日请求恒空，7 日回看窗口修复（11-02 夜链首跑 36 行落地实证）；USDCNH 源端 2012-02-18 起（六对中最早起点最晚）；GMT 日 K/bid OHLC 口径见 supporting-sources-verification.md",
+        notes="6/6 汇率对;GMT 日线 bid 参考,缺值不补零;无历史发布时间与完整修订证据,不用于严格 PIT。",
     ),
     "global_index_daily": DatasetCoverageLimit(
         dataset="global_index_daily",
         domain="market",
-        status="ready",
+        status="partial",
         measured_start="2014-01-01",
-        measured_end="2026-10-29",
-        gaps=(),
-        notes="2014-01-01 起；#619 拼接修复后 28/29 连续成功，旧故障不重立；品种口径核验属 P5a；instrument 列为 source_ticker（21 个）",
+        measured_end="2026-11-06",
+        gaps=(
+            "RTS 的 2014–2019、IBOVESPA 的 2014–2026-07-02:index_global 原生请求返回 0。",
+        ),
+        notes=(
+            "21/21 参考指数;RTS 2020-01-03 起,IBOVESPA 2026-07-03 "
+            "起;对应此前窗口 index_global 实测空。HKTECH 2020-07-27 起。kn"
+            "owledge_date 为回填观察,不授权严格历史策略。"
+        ),
     ),
     "hk_hold": DatasetCoverageLimit(
         dataset="hk_hold",
@@ -318,19 +400,17 @@ _DATASET_COVERAGE: dict[str, DatasetCoverageLimit] = {
         status="partial",
         measured_start="2016-06-29",
         measured_end="2026-09-30",
-        gaps=(
-            "历史可得性受限：源墙 2016-06-29（探针 2016-06-28 空），2014-11-17 沪港通上线至源墙间不可得=源端限制；2024-08-19 后非季末无北向披露 是制度性缺席（见 disclosure_segments），不计缺口；日频段另有源端 真空日 ~55 个交易日（逐日 SUCCESS/0 落账，含 2024-06-30 单日空洞 实证）",
-        ),
-        notes="#621「北向空源」修正：源非空，链路问题；#626 定根因=季度末帧 同股多北向持有者行撞存储主键（dq unique 整日拒绝），适配器确定性 收敛后季度末北向可入库；#626 回补 2016-06-29 起 4,224,382 行/4,227 标的（日频段+季度末段），平日 0 行=南向过滤+制度性缺席，对拍与 矩阵见 event-disclosure-verification.md",
+        gaps=("制度分段的公开日历与存量版本尚按 #706 整改,不能以现有旧行放行历史。",),
+        notes="通道真实开通/源起点及 2024-08-19 制度分段;观察锚不能冒充季末当时可知。存量版本问题归 #706。",
     ),
     "hsgt_top10": DatasetCoverageLimit(
         dataset="hsgt_top10",
         domain="capital",
-        status="ready",
+        status="partial",
         measured_start="2014-11-17",
-        measured_end="2026-10-30",
-        gaps=(),
-        notes="#626 回补 2014-11-17 起 50,730 行/633 标的；源端历年共 130 个 交易日无披露（每年 5-16 天，逐日 SUCCESS/0 落账）非链路缺口；制度 分段见 disclosure_segments，对拍与矩阵见 event-disclosure-verification.md",
+        measured_end="2026-11-06",
+        gaps=("旧 knowledge_date 与重复有效事实归 #706,修正前限制严格历史消费者。",),
+        notes="互联互通活跃榜;制度后未披露买卖/净额保留 null;并存旧错误版本与重复有效事实的纠正归 #706。",
     ),
     "income_statement": DatasetCoverageLimit(
         dataset="income_statement",
@@ -339,7 +419,7 @@ _DATASET_COVERAGE: dict[str, DatasetCoverageLimit] = {
         measured_start="2011-12-31",
         measured_end="2026-09-30",
         gaps=(),
-        notes="2011-12-31 起超目标（同 balance_sheet 家族口径）；本地库对 schema.sql 有漂移守卫拦截记录（XDG 陈旧库，非本库）",
+        notes="累计/单季及报表类型原样保留,金额元;同报告期不同公告日不自动等于修订。",
     ),
     "index_basic": DatasetCoverageLimit(
         dataset="index_basic",
@@ -348,34 +428,41 @@ _DATASET_COVERAGE: dict[str, DatasetCoverageLimit] = {
         measured_start=None,
         measured_end=None,
         gaps=(),
-        notes="20,886 只含大量细分/海外指数定义",
+        notes="目录 20,897 定义不作为分母;冻结 178 码均存在。当前源目录多出的 10 个申万码单列,不自动更改冻结集合。",
     ),
     "index_daily": DatasetCoverageLimit(
         dataset="index_daily",
         domain="market",
-        status="ready",
+        status="partial",
         measured_start="2014-01-02",
-        measured_end="2026-10-29",
-        gaps=(),
-        notes="2014-01-02 起；178 只集合完整性逐指核验属 P2",
+        measured_end="2026-11-06",
+        gaps=(
+            "2014-06-01 为非交易日,当前入口正确跳过;旧 DQ 失败记录保留,不写成假成功。",
+        ),
+        notes="冻结 178/178 代码有行情;价格/成交量展示,早于指数发布或源实际起点不回造。",
     ),
     "index_valuation": DatasetCoverageLimit(
         dataset="index_valuation",
         domain="capital",
-        status="partial",
-        measured_start="2026-10-26",
-        measured_end="2026-10-29",
-        gaps=("仅 2026-10-26 起 60 行×15 指数，历史未回补",),
-        notes="",
+        status="ready",
+        measured_start="2014-01-02",
+        measured_end="2026-11-06",
+        gaps=(),
+        notes="冻结 15 指数,市值元、估值倍数,2014 或真实起点;本机观察锚,非当年已知快照。",
     ),
     "index_weight": DatasetCoverageLimit(
         dataset="index_weight",
         domain="market",
-        status="ready",
+        status="partial",
         measured_start="2014-01-30",
-        measured_end="2026-09-30",
-        gaps=(),
-        notes="2014-01-30 起 191 万行；月度数据末端 2026-09-30（10 月未结束，正常）",
+        measured_end="2026-10-30",
+        gaps=(
+            "23/23 指数十月权重已逐代码补齐;观察日不等于公告/生效时刻,严格历史用途不放行。",
+        ),
+        notes=(
+            "冻结 23 指数;按单 index_code 取数。月度观察日不是公告或生效日;未知发布时刻不伪"
+            "造。23/23 代码十月窗口已补齐并核对;不因今日名册回造成立前成员。"
+        ),
     ),
     "industry_classification": DatasetCoverageLimit(
         dataset="industry_classification",
@@ -383,70 +470,82 @@ _DATASET_COVERAGE: dict[str, DatasetCoverageLimit] = {
         status="partial",
         measured_start=None,
         measured_end=None,
-        gaps=("csrc_industrial 2002 权限不足（SW 申万线可用）",),
-        notes="申万 L1 28 分类（探针核实）+映射 7,919 行",
+        gaps=("当前申万分类标签可读;定义表无历史发布时间轴,历史分类版本未获证明。",),
+        notes="申万 31 个一级分类,CSRC 排除是冻结范围,不是此次新增缩域;定义版本与历史公开证据分开。",
     ),
     "industry_mapping": DatasetCoverageLimit(
         dataset="industry_mapping",
         domain="metadata",
-        status="ready",
+        status="partial",
         measured_start="1984-05-09",
-        measured_end="2026-09-24",
-        gaps=(),
-        notes="as-of 语义=#452；周刷 cron 已建（#612）",
+        measured_end="2026-10-28",
+        gaps=("有效日期不等于公开日,无完整历史发布证据时仅受限研究。",),
+        notes="申万有效区间用于研究分组,当前有效起止不证明历史公开;已有 11-02 覆盖修复保留,不重复实施。",
     ),
     "limit_list": DatasetCoverageLimit(
         dataset="limit_list",
         domain="market",
         status="partial",
-        measured_start="2026-09-30",
-        measured_end="2026-10-29",
-        gaps=("仅 2026-09-30 起无历史回补",),
-        notes="",
+        measured_start="2020-01-02",
+        measured_end="2026-11-06",
+        gaps=(
+            "官方 2020 起且不含 ST 统计;ST 封板时间/炸板次数等细节不支持,股票整体分母保留 ST。",
+        ),
+        notes=(
+            "limit_list_d 官方 2020 起且不统计 ST;未出现 ST 行不等于无事件。ST "
+            "仍在正式股票池,需要的价格限幅事实取 stock_daily/stock_limit/st_hi"
+            "story;封板细节缺失。"
+        ),
     ),
     "macro_indicators": DatasetCoverageLimit(
         dataset="macro_indicators",
         domain="macro",
         status="partial",
-        measured_start="2015-01-01",
-        measured_end="2026-09-01",
+        measured_start="2014-01-01",
+        measured_end="2026-11-05",
         gaps=(
-            "月度数据末端 2026-09-01，10 月未更新；近期日链 failed 待 P1",
-            "884 行×7 指标，FRED 系列覆盖完整性属 P5a",
+            (
+                "部分高频系列大跨度 realtime_end-only 请求超过 2000 vintage 上限"
+                ";支持已验证的当前/点时范围,未承诺全 vintage。"
+            ),
+            "例行刷新由 #707 验收;本票一次补齐不证明持续运行。",
         ),
-        notes="tushare 全系+fred 探针可达；alfred:vintages=observations+realtime 参数",
+        notes=(
+            "51 FRED + 8 中国指标 + SHIBOR 共 60 序列;各自频率/单位保留。FRED"
+            " 51 最新+51 点时 vintage 请求均成功;部分高频全 realtime 窗超过 20"
+            "00 vintage 限制,非缺 realtime_start。中国 PMI 小写字段修复并补 "
+            "2014 起;最新背景用途不要求全 vintage 仓库。"
+        ),
     ),
     "margin_trading": DatasetCoverageLimit(
         dataset="margin_trading",
         domain="capital",
         status="partial",
         measured_start="2013-01-04",
-        measured_end="2026-10-30",
-        gaps=(
-            "2026-10-30 深市部分行（2,017/4,486，沪市先到）——源侧 T+3（周五数据下周一上午更新）节奏，晚发布近窗重取自动收敛",
+        measured_end="2026-11-05",
+        gaps=("迟发、错误旧版本与画像选版未由本票豁免;分别见 #706/#707。",),
+        notes=(
+            "沪深两融余额/融资买入额,元;T+1 上午发布,11-05 截面不因 EOD 零行视为完整。旧 "
+            "knowledge_date 及画像选版归 #706,09:15 运行归 #707。"
         ),
-        notes="2013-01-04 起 3355/3355 交易日全覆盖、684 万行（#625 回补+通路修复）；列名语义修正 margin_buy_amount（原误标 volume，#390 破坏窗口）；月末披露含 null 余额为真实形态（not_null 收敛到业务键）；对拍 3/3 逐字段一致",
     ),
     "moneyflow": DatasetCoverageLimit(
         dataset="moneyflow",
         domain="capital",
         status="partial",
         measured_start="2013-01-04",
-        measured_end="2026-10-30",
-        gaps=(
-            "BSE 2023-2026 ~20.5 万会话源端不覆盖（moneyflow 端点无北交所数据，#575 裁决 BSE 先不覆盖）",
-            "stock_status 数据集空洞致 82,422 会话缺口无法归因（2021/2022 为主，P2 线既知边界）",
-        ),
-        notes="2013-01-04 起 1,256 万行（#196 回补 +",
+        measured_end="2026-11-06",
+        gaps=("完整历史版本与可知性未证,当前读通不授予严格历史用途。",),
+        notes="沪深资金流展示,金额单位遵循字段合同;BSE 不扩域。未核验完整历史版本与可知性,不因查询成功放行严格历史。",
     ),
     "namechange": DatasetCoverageLimit(
         dataset="namechange",
         domain="metadata",
         status="ready",
         measured_start="2013-01-10",
-        measured_end="2026-10-29",
+        measured_end="2026-11-10",
         gaps=(),
-        notes="2013-01-10 起 3,538 行；窗口拼接=#619",
+        notes="更名公告、生效与观察截点分开,包含退市/旧码;未来生效日不提前使用,缺历史名不回退当前名称。",
     ),
     "pledge_ratio": DatasetCoverageLimit(
         dataset="pledge_ratio",
@@ -454,101 +553,128 @@ _DATASET_COVERAGE: dict[str, DatasetCoverageLimit] = {
         status="partial",
         measured_start="2014-03-07",
         measured_end="2026-09-18",
-        gaps=("周更数据末端 2026-09-18，停更 6 周；10-27/10-29 摄取 failed 待 P1",),
-        notes="2014-03-07 起 163 万行（#503 线回补后）",
+        gaps=(
+            "末端 2026-09-18;09-25 至 11-05 七次请求对应周快照均源空,不等同于事实无质押或永久停供。",
+        ),
+        notes="质押比例周频风险提示;库存末端 2026-09-18;之后七个请求日 pledge_stat 原生端点均返回零行,不能称当前新鲜。",
     ),
     "st_history": DatasetCoverageLimit(
         dataset="st_history",
         domain="market",
         status="ready",
         measured_start="2013-01-14",
-        measured_end="2026-10-20",
+        measured_end="2026-11-05",
         gaps=(),
-        notes="1,848 行区间语义",
+        notes="ST 证据区间与 cutoff 传播;没有覆盖证据的标的返回未知,不用当前名称重建过去 ST。",
     ),
     "stock_basic": DatasetCoverageLimit(
         dataset="stock_basic",
         domain="metadata",
-        status="ready",
+        status="partial",
         measured_start=None,
         measured_end=None,
-        gaps=(),
-        notes="当前上市快照 5,928（含退市史在 instrument 表 28,678）",
+        gaps=("3 个沪深历史代码缺上市日,未据行情推造。",),
+        notes=(
+            "正式沪深名册 5,571(含退市与旧码);BSE 359 保留但个股链范围外。600849.SH"
+            " 旧码及 300060.SZ/002525.SZ 撤销发行保留身份并退出当前活跃池,不造日期;4"
+            " 个错误 1970 上市日及 601313 首次上市日已按原文纠正;另 4 个变更代码的旧身份退"
+            "出当前活跃池,仍保留完整历史分母。"
+        ),
     ),
     "stock_daily": DatasetCoverageLimit(
         dataset="stock_daily",
         domain="market",
-        status="ready",
+        status="partial",
         measured_start="2013-01-04",
-        measured_end="2026-10-29",
-        gaps=(),
-        notes="2013-01-04 起（超 2014 目标）；BSE 不覆盖=#575 裁决",
+        measured_end="2026-11-06",
+        gaps=(
+            "206,620 个非停牌缺价会话在精确 daily 请求中未返回;缺价不等于停牌或现实无成交,旧码区间单列。",
+        ),
+        notes=(
+            "沪深全生命周期,2014 目标;当前 206,620 个非停牌缺价会话均与逐码 daily 原生"
+            "请求精确匹配,未探测及源返回未补入均为 0。源缺价不证明现实无成交;停牌、退市、旧码和源缺席分别"
+            "取证,BSE 存量单列保留。"
+        ),
     ),
     "stock_limit": DatasetCoverageLimit(
         dataset="stock_limit",
         domain="market",
         status="ready",
         measured_start="2014-01-02",
-        measured_end="2026-10-29",
+        measured_end="2026-11-06",
         gaps=(),
-        notes="2014-01-02 起；停牌日发行语义 #571",
+        notes="元/股上下限事实;支持与日线/ST 证据合读,不由日线制造封板时间、炸板次数。特殊上市限幅以源事实为准。",
     ),
     "stock_status": DatasetCoverageLimit(
         dataset="stock_status",
         domain="market",
         status="partial",
         measured_start="2016-08-09",
-        measured_end="2026-10-29",
+        measured_end="2026-11-06",
         gaps=(
-            "起点 2016-08-09（bak_basic 官方可得起点），2014~2016-08 缺",
-            "BSE 244 标的不覆盖（#575 裁决）",
+            "官方 2016 年前不覆盖;精确库存起点 2016-08-09。",
+            (
+                "剩余缺状态 8931 会话中,已探测 8931、源未返回 8931、源返回待补 0、未测 0;未"
+                "测项保持未知。6 个时段空但正成交量会话在 suspend_d/daily 原生响应中同样并存,"
+                "不放行严格交易消费者。"
+            ),
+            (
+                "保留 24 个官方 2016 年源起点之前的拒绝与 25 个日期全市场源空失败;精确尝试和逐代码"
+                "补证见 ledger-failure-dispositions.json。"
+            ),
         ),
-        notes="bak_basic 当日终值 21:50 就绪（#583 实测）",
+        notes=(
+            "bak_basic 官方声明 2016 年起;本库存实测 2016-08-09 起,两者不可混写"
+            "。停牌有价物理 1,845 项中 1,448 有盘中时段、391 为零成交量、6 项时段空但正成"
+            "交量(两原生接口同样返回)。沪深正式异常 1,831 项,BSE 14 项另列;不从日线存在推断"
+            "允许交易。 其中 6,100 个缺状态会话落在 4 个官方已换码身份的旧码停用区间;这是代码有效"
+            "区间例外,不等于公司退市或停牌。"
+        ),
     ),
     "top10_floatholders": DatasetCoverageLimit(
         dataset="top10_floatholders",
         domain="capital",
         status="ready",
         measured_start="2014-01-08",
-        measured_end="2026-10-31",
+        measured_end="2026-11-06",
         gaps=(),
-        notes="#627 新通路（Tushare doc 62）：字段同 top10_holders，名单口径= 流通股东榜——两榜同名行值可一致（2026-04-30 000002.SZ 实测），语义 不同各存一行不互推；不推导整体持仓。对拍与矩阵见 holdings-disclosure-verification.md",
+        notes="独立的流通股股东榜;退出、送转和股份类别不得与总股东榜混用。",
     ),
     "top10_holders": DatasetCoverageLimit(
         dataset="top10_holders",
         domain="capital",
         status="ready",
         measured_start="2014-01-02",
-        measured_end="2026-10-31",
+        measured_end="2026-11-06",
         gaps=(),
-        notes="#627 新通路（Tushare doc 61）：公告日驱动市场级 ann_date 单请求 日更+按标的报告期区间回填；主键 (标的, 报告期, 持有人名, 公告日)， kd=公告日，修订=新公告日版本行。跨期名单跌出≠清仓；hold_amount 股、 hold_ratio 占总股本 %、hold_change 0=不变 null=新进；送转使股数跳变 而比例持平，环比前须按公司行为调整。对拍与矩阵见 holdings-disclosure-verification.md",
+        notes="公告锚十大股东披露;持股股数/比例与股类透传,名单退出不推造清仓,保留版本限制。",
     ),
     "top_inst": DatasetCoverageLimit(
         dataset="top_inst",
         domain="capital",
         status="ready",
         measured_start="2014-01-02",
-        measured_end="2026-10-30",
+        measured_end="2026-11-05",
         gaps=(),
-        notes="席位不推导整体仓位——「机构专用」是多家机构共用席位名，席位 金额≠机构持仓（#621/#626 语义）；源墙远早于 2014（#626 探针 2013-01-04 已有 754 行），按 #621 2014 锚回补不承诺更早；同键 「机构专用」多行适配器确定性收敛（#482 先例，#626 下沉共用）； #626 回补 2014-01-02 起 2,343,110 行/5,787 标的，存量 2026-09-22+ 窗口已按新收敛规则 force 重拉收敛（F1b）；源端 buy/net 双侧 null 对称（席位单边披露），对拍零差异",
+        notes="机构席位披露,买卖单边 null/重复保留;席位金额不是整体资金仓位。",
     ),
     "top_list": DatasetCoverageLimit(
         dataset="top_list",
         domain="capital",
         status="ready",
         measured_start="2014-01-02",
-        measured_end="2026-10-30",
+        measured_end="2026-11-06",
         gaps=(),
-        notes="席位不推导整体仓位（#621 语义）；源墙远早于 2014（#626 探针 2010-01-04 已有行），按 #621 2014 锚回补不承诺更早；同 (标的, 日, 原因) 冗余多行适配器确定性收敛（#626）；#626 回补 2014-01-02 起 192,527 行/5,927 标的，逐年交易日全覆盖，可转债榜行（11x/12x 码） 身份过滤不入库——对拍与矩阵见 event-disclosure-verification.md",
+        notes="沪深龙虎榜事件展示;无事件与抓取失败分开;当前夜链失败治理归 #707。",
     ),
     "valuation_metrics": DatasetCoverageLimit(
         dataset="valuation_metrics",
         domain="capital",
         status="ready",
         measured_start="2014-01-02",
-        measured_end="2026-10-29",
+        measured_end="2026-11-05",
         gaps=(),
-        notes="2014-01-02 起 1,229 万行",
+        notes="估值画像,倍数/百分比/市值按字段合同;负值/null、分母与版本保真。",
     ),
 }
 

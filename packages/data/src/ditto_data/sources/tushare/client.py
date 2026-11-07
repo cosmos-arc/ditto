@@ -571,16 +571,30 @@ class TushareClient:
         续探一行区分两者：offset 处出现未见过的行 = 截断实锤，按观测到
         的服务端上限降页宽续拉（#625 可检测条款）。探针为首页首行回显 =
         越界回显形态（#431 实测），按取尽处理；已见非首行回显 = offset
-        失效证据不足，探针内 fail-closed（#658 批次1）。
+        失效证据不足，不以模糊探针判取尽（#658 批次1）。续拉整页仍经
+        现有跨页重复拒绝/换档去重及连续回显守卫（#708）。
         """
-        if not self._probe_unseen_row_beyond(
-            api_name,
-            fields,
-            offset=offset + len(page),
-            seen_rows=seen_rows,
-            first_row_hash=first_row_hash,
-            **params,
-        ):
+        try:
+            more = self._probe_unseen_row_beyond(
+                api_name,
+                fields,
+                offset=offset + len(page),
+                seen_rows=seen_rows,
+                first_row_hash=first_row_hash,
+                **params,
+            )
+        except PaginationCorruptionError:
+            # A one-row probe can repeat a boundary row while a full page
+            # still contains new data. Only the guarded continuation can
+            # establish exhaustion; the probe itself cannot.
+            logger.warning(
+                "ambiguous tail probe; continuing with guarded full page",
+                event="tushare_pagination_probe_continuation",
+                api_name=api_name,
+                offset=offset + len(page),
+            )
+            return active_page_size, offset + len(page)
+        if not more:
             return None
         if len(page) < _PAGINATION_MIN_PAGE_SIZE:
             raise SourceFetchError(

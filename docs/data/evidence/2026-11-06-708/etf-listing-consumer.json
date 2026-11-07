@@ -1,0 +1,83 @@
+{
+  "measured_at": "2026-11-06T06:47:31.489453+00:00",
+  "consumer": "MetadataQueryFacade.find_securities + MetadataService.instrument.resolve_instrument_ids_batch",
+  "roster_rows": 4,
+  "actual": [
+    {
+      "instrument_id": 2001576,
+      "ticker": "159908",
+      "name": "博时创业板ETF",
+      "display_name": null,
+      "exchange": "SZSE",
+      "board": null,
+      "asset_class": "etf",
+      "list_date": "2011-07-13",
+      "delist_date": null,
+      "is_st": 0,
+      "is_active": 1,
+      "created_at": "2026-10-03 14:56:07",
+      "updated_at": null,
+      "source": "tushare",
+      "source_ticker": "159908.SZ"
+    },
+    {
+      "instrument_id": 2001521,
+      "ticker": "510680",
+      "name": "万家上证50ETF",
+      "display_name": null,
+      "exchange": "SSE",
+      "board": null,
+      "asset_class": "etf",
+      "list_date": "2013-12-02",
+      "delist_date": null,
+      "is_st": 0,
+      "is_active": 1,
+      "created_at": "2026-10-03 14:56:07",
+      "updated_at": null,
+      "source": "tushare",
+      "source_ticker": "510680.SH"
+    },
+    {
+      "instrument_id": 2001503,
+      "ticker": "511220",
+      "name": "海富通上证城投债ETF",
+      "display_name": null,
+      "exchange": "SSE",
+      "board": null,
+      "asset_class": "etf",
+      "list_date": "2014-12-16",
+      "delist_date": null,
+      "is_st": 0,
+      "is_active": 1,
+      "created_at": "2026-10-03 14:56:07",
+      "updated_at": null,
+      "source": "tushare",
+      "source_ticker": "511220.SH"
+    },
+    {
+      "instrument_id": 2001494,
+      "ticker": "512990",
+      "name": "华夏MSCI中国A股国际通ETF",
+      "display_name": null,
+      "exchange": "SSE",
+      "board": null,
+      "asset_class": "etf",
+      "list_date": "2015-03-25",
+      "delist_date": null,
+      "is_st": 0,
+      "is_active": 1,
+      "created_at": "2026-10-03 14:56:07",
+      "updated_at": null,
+      "source": "tushare",
+      "source_ticker": "512990.SH"
+    }
+  ],
+  "identity_asof": "2015-04-01",
+  "resolved": {
+    "159908.SZ": 2001576,
+    "510680.SH": 2001521,
+    "511220.SH": 2001503,
+    "512990.SH": 2001494
+  },
+  "boundary": "Same-code historical identity mapping only. Current fund names, mandates and benchmark memberships are not historical versions."
+}

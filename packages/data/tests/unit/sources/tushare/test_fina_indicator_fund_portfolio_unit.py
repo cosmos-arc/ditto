@@ -10,7 +10,6 @@ import pytest
 from ditto_data.sources.tushare._fundamental import (
     fetch_fina_indicator,
     fetch_fund_portfolio,
-    max_quarters_in_range,
 )
 from ditto_data.sources.tushare.adapters.fundamental import FundamentalTushareAdapter
 
@@ -94,59 +93,46 @@ class TestFinaIndicatorDisclosureDelta:
 class TestFundPortfolioModes:
     """fund_portfolio 公告日驱动（日更）/报告期窗口（按基金回填）."""
 
-    def test_trade_date_queries_exact_announcement_date(self) -> None:
+    def test_market_request_uses_exact_announcement_day(self) -> None:
         fundamental = MagicMock(spec=FundamentalTushareAdapter)
-        # adapter 输出契约：ann_date→knowledge_date、end_date→report_date、
-        # symbol→holding_symbol、mkv→market_value、amount→holding_shares
         fundamental.fetch_fund_portfolio.return_value = pl.DataFrame(
-            {
-                "source_ticker": ["510300.SH", "000001.OF"],
-                "report_date": [date(2026, 6, 30), date(2026, 6, 30)],
-                "knowledge_date": [date(2026, 7, 21), date(2026, 7, 21)],
-                "holding_symbol": ["300308.SZ", "002371.SZ"],
-                "market_value": [4504019440.0, 145269519.68],
-                "holding_shares": [3546472.0, 164228.0],
-                "stk_mkv_ratio": [4.95, 4.61],
-                "stk_float_ratio": [0.32, 0.02],
-            }
+            {"source_ticker": ["000001.OF", "510300.SH"]}
         )
         result = fetch_fund_portfolio(fundamental, _compact, trade_date="2026-07-21")
-
-        fundamental.fetch_fund_portfolio.assert_called_once_with(ann_date="20260721")
         assert result.height == 2
-        row = result.row(0, named=True)
-        assert row["holding_symbol"] == "300308.SZ"
-        assert row["market_value"] == pytest.approx(4504019440.0)
-        assert row["holding_shares"] == pytest.approx(3546472.0)
+        fundamental.fetch_fund_portfolio.assert_called_once_with(
+            ts_code=None, ann_date="20260721"
+        )
 
-    def test_instrument_mode_loops_quarters_and_filters_late_disclosure(self) -> None:
+    def test_trade_date_queries_one_fund(self) -> None:
         fundamental = MagicMock(spec=FundamentalTushareAdapter)
-        fundamental.fetch_fund_portfolio.side_effect = [
-            pl.DataFrame(
-                {
-                    "source_ticker": ["510300.SH"],
-                    "report_date": [date(2026, 3, 31)],
-                    "knowledge_date": [date(2026, 4, 22)],
-                    "holding_symbol": ["600519.SH"],
-                    "market_value": [1.0],
-                    "holding_shares": [2.0],
-                    "stk_mkv_ratio": [0.1],
-                    "stk_float_ratio": [0.01],
-                }
-            ),
-            pl.DataFrame(
-                {
-                    "source_ticker": ["510300.SH"],
-                    "report_date": [date(2026, 6, 30)],
-                    "knowledge_date": [date(2026, 7, 21)],
-                    "holding_symbol": ["600519.SH"],
-                    "market_value": [1.5],
-                    "holding_shares": [2.5],
-                    "stk_mkv_ratio": [0.2],
-                    "stk_float_ratio": [0.02],
-                }
-            ),
-        ]
+        fundamental.fetch_fund_portfolio.return_value = pl.DataFrame(
+            {"source_ticker": ["000001.OF"]}
+        )
+        result = fetch_fund_portfolio(
+            fundamental,
+            _compact,
+            trade_date="2026-07-21",
+            source_ticker="000001.OF",
+        )
+        assert result["source_ticker"].to_list() == ["000001.OF"]
+        fundamental.fetch_fund_portfolio.assert_called_once_with(
+            ts_code="000001.OF", ann_date="20260721"
+        )
+
+    def test_instrument_mode_uses_report_range_and_filters_late_disclosure(
+        self,
+    ) -> None:
+        fundamental = MagicMock(spec=FundamentalTushareAdapter)
+        fundamental.fetch_fund_portfolio.return_value = pl.DataFrame(
+            {
+                "source_ticker": ["510300.SH", "510300.SH"],
+                "report_date": [date(2026, 3, 31), date(2026, 6, 30)],
+                "knowledge_date": [date(2026, 4, 22), date(2026, 7, 21)],
+                "holding_symbol": ["600519.SH", "600519.SH"],
+                "market_value": [1.0, 1.5],
+            }
+        )
         result = fetch_fund_portfolio(
             fundamental,
             _compact,
@@ -155,19 +141,45 @@ class TestFundPortfolioModes:
             end_date="2026-05-31",
         )
 
-        periods = [
-            call.kwargs["period"]
-            for call in fundamental.fetch_fund_portfolio.call_args_list
-        ]
-        # 区间窗口按季度数+1 覆盖边界季度；每期都带 ts_code
-        assert len(periods) == max_quarters_in_range("2026-04-01", "2026-05-31")
-        assert all(
-            call.kwargs["ts_code"] == "510300.SH"
-            for call in fundamental.fetch_fund_portfolio.call_args_list
+        fundamental.fetch_fund_portfolio.assert_called_once_with(
+            ts_code="510300.SH", start_date="20251231", end_date="20260531"
         )
         # 披露晚于 end_date 的 Q2 行被剔除，只剩 Q1
         assert result.height == 1
         assert result.row(0, named=True)["report_date"] == date(2026, 3, 31)
+
+    @pytest.mark.pit
+    def test_ann_date_filtered_source_keeps_tail_and_rejects_future(self) -> None:
+        fundamental = MagicMock(spec=FundamentalTushareAdapter)
+        observed = pl.DataFrame(
+            {
+                "source_ticker": ["561250.SH"] * 3,
+                "report_date": [date(2026, 9, 30)] * 3,
+                "knowledge_date": [
+                    date(2026, 10, 26),
+                    date(2026, 11, 5),
+                    date(2026, 11, 6),
+                ],
+                "market_value": [1.0, 2.0, 999999.0],
+            }
+        )
+        # Live #708 probe: this route returns nothing until the announcement
+        # date, even though the report period is already September 30.
+        fundamental.fetch_fund_portfolio.side_effect = lambda **params: (
+            observed if params["end_date"] >= "20261026" else observed.head(0)
+        )
+        for cutoff, expected in [
+            ("2026-11-05", [1.0, 2.0]),
+            ("2026-11-06", [1.0, 2.0, 999999.0]),
+        ]:
+            result = fetch_fund_portfolio(
+                fundamental,
+                _compact,
+                source_ticker="561250.SH",
+                start_date="2014-01-01",
+                end_date=cutoff,
+            )
+            assert result["market_value"].to_list() == expected
 
     def test_requires_mode_arguments(self) -> None:
         fundamental = MagicMock(spec=FundamentalTushareAdapter)
@@ -397,3 +409,17 @@ class TestFinaIndicatorCorrectionFlag:
         )
         result = _dedupe_fina_disclosure_key(frame)
         assert result[CORRECTION_FLAG_COLUMN].to_list() == [False]
+
+
+def test_daily_rejects_multiple_codes_before_provider_request() -> None:
+    from ditto_data.sources.tushare.adapters.stock import StockTushareAdapter
+
+    client = MagicMock()
+    adapter = StockTushareAdapter(_client=client)
+    with pytest.raises(ValueError, match="single source_ticker"):
+        adapter.fetch_stock_daily(
+            source_ticker="000001.SZ,000002.SZ",
+            start_date="2026-11-01",
+            end_date="2026-11-05",
+        )
+    client.query.assert_not_called()

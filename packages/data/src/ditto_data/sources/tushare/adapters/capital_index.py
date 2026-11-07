@@ -57,6 +57,8 @@ class CapitalIndexTushareAdapter(BaseTushareAdapter):
             SourceFetchError: If fetch fails.
 
         """
+        if not index_code or "," in index_code:
+            raise ValueError("index_weight requires a single index_code")
         if trade_date and (start_date or end_date):
             raise ValueError("trade_date is mutually exclusive with start/end date")
         if (start_date is None) != (end_date is None):

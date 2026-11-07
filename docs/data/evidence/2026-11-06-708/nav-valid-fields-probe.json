@@ -1,0 +1,30 @@
+[
+  {
+    "measured_at": "2026-11-06T11:44:30.719395+00:00",
+    "api": "fund_nav",
+    "params": {
+      "ts_code": "158013.SZ",
+      "start_date": "20260909",
+      "end_date": "20260909"
+    },
+    "status": "failed",
+    "errors": [
+      "RetryError: RetryError[<Future at 0x113e0ca50 state=finished raised SourceFetchError>]",
+      "SourceFetchError: Tushare fund_nav pagination truncated below floor: page=1 at offset=0 but more rows exist (server cap < 500)"
+    ]
+  },
+  {
+    "measured_at": "2026-11-06T11:45:28.690553+00:00",
+    "api": "fund_nav",
+    "params": {
+      "ts_code": "158005.SZ",
+      "start_date": "20260909",
+      "end_date": "20260909"
+    },
+    "status": "failed",
+    "errors": [
+      "RetryError: RetryError[<Future at 0x113dc7bf0 state=finished raised SourceFetchError>]",
+      "SourceFetchError: Tushare fund_nav pagination truncated below floor: page=1 at offset=0 but more rows exist (server cap < 500)"
+    ]
+  }
+]

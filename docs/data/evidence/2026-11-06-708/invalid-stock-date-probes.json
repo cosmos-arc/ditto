@@ -1,0 +1,66 @@
+[
+  {
+    "params": {
+      "ts_code": "001246.SZ",
+      "list_status": "L"
+    },
+    "measured_at": "2026-11-06T06:56:15.041363+00:00",
+    "rows": [
+      {
+        "ts_code": "001246.SZ",
+        "name": "力勤资源",
+        "list_date": "20260930",
+        "delist_date": null,
+        "list_status": "L"
+      }
+    ]
+  },
+  {
+    "params": {
+      "ts_code": "301569.SZ",
+      "list_status": "L"
+    },
+    "measured_at": "2026-11-06T06:56:16.547555+00:00",
+    "rows": [
+      {
+        "ts_code": "301569.SZ",
+        "name": "联亚药业",
+        "list_date": "20261015",
+        "delist_date": null,
+        "list_status": "L"
+      }
+    ]
+  },
+  {
+    "params": {
+      "ts_code": "301660.SZ",
+      "list_status": "L"
+    },
+    "measured_at": "2026-11-06T06:56:18.140219+00:00",
+    "rows": [
+      {
+        "ts_code": "301660.SZ",
+        "name": "粤芯半导体",
+        "list_date": "20261013",
+        "delist_date": null,
+        "list_status": "L"
+      }
+    ]
+  },
+  {
+    "params": {
+      "ts_code": "301716.SZ",
+      "list_status": "L"
+    },
+    "measured_at": "2026-11-06T06:56:19.675050+00:00",
+    "rows": [
+      {
+        "ts_code": "301716.SZ",
+        "name": "鸿富诚",
+        "list_date": "20260929",
+        "delist_date": null,
+        "list_status": "L"
+      }
+    ]
+  }
+]

@@ -277,13 +277,13 @@ def _seed(root: Path) -> None:
         OnDuplicate.ERROR.value,
         year=2026,
     )
-    adj_store = ParquetStore(
+    disclosed_store = ParquetStore(
         root / "state",
         key_columns=("instrument_id", "trade_date", "knowledge_date"),
         date_column="trade_date",
         instrument_column="instrument_id",
     )
-    adj_store.write(
+    disclosed_store.write(
         "market/stock/adj", _adj_frame(STOCK_ID), OnDuplicate.ERROR.value, year=2026
     )
     # 第一只 ETF 有净值(可得路径), 第二只不播净值(不可得降级路径)
@@ -295,9 +295,12 @@ def _seed(root: Path) -> None:
         }
         for index, day in enumerate(_TRADING_DAYS)
     ]
-    store.write(
+    disclosed_store.write(
         "market/etf/nav",
-        pl.DataFrame(nav_rows).with_columns(pl.col("trade_date").str.to_date()),
+        pl.DataFrame(nav_rows).with_columns(
+            pl.col("trade_date").str.to_date(),
+            pl.lit(None, dtype=pl.Date).alias("knowledge_date"),
+        ),
         OnDuplicate.ERROR.value,
         year=2026,
     )

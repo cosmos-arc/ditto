@@ -281,7 +281,6 @@ class TestIndexWeightUniverse:
         )
 
     def test_daily_fetch_iterates_weight_universe_not_cached_codes(self) -> None:
-        from unittest.mock import MagicMock
 
         from ditto_application.processes.ingestion.dataset_registry import (
             INDEX_WEIGHT_UNIVERSE,
@@ -451,17 +450,16 @@ class TestIndexWeightUniverse:
         fx_kwargs = macro.fetch_fx_daily.call_args.kwargs
         assert fx_kwargs["start_date"] < fx_kwargs["end_date"]
 
-    def test_fund_portfolio_fetches_market_wide_single_request(self) -> None:
-        """fund_portfolio 日更=市场级单请求（逐标的 1,864 循环超时且烧配额）."""
+    def test_fund_portfolio_uses_bounded_announcement_day(self) -> None:
         context, _, fundamental = self._daily_context("2026-09-30")
-        registration = default_dataset_registry().require(Dataset.FUND_PORTFOLIO)
-        assert registration.daily_fetch_factory is not None
-
-        registration.daily_fetch_factory(context)()
-
-        fundamental.fetch_fund_portfolio.assert_called_once_with(
-            trade_date="2026-09-30"
+        factory = (
+            default_dataset_registry()
+            .require(Dataset.FUND_PORTFOLIO)
+            .daily_fetch_factory
         )
+        assert factory is not None
+        factory(context)()
+        fundamental.fetch_fund_portfolio.assert_called_once_with("2026-09-30")
 
 
 class TestNightlyOnDuplicatePolicy:

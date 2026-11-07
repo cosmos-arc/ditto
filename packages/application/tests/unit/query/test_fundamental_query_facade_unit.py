@@ -31,6 +31,11 @@ class _StubFundamentalData:
         self._dividend = dividend
         self._corporate_actions = corporate_actions
 
+    def get_fund_portfolio(
+        self, source_ticker: str, start: str, end: str, as_of: str | None = None
+    ) -> pl.DataFrame:
+        return pl.DataFrame()
+
     def get_balance_sheet(
         self,
         instrument_id: int,

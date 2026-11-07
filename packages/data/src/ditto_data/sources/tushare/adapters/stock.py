@@ -194,6 +194,8 @@ class StockTushareAdapter(BaseTushareAdapter):
 
         """
         # 参数校验
+        if source_ticker and "," in source_ticker:
+            raise ValueError("daily requires a single source_ticker")
         if trade_date and source_ticker:
             raise ValueError("trade_date 和 source_ticker 互斥, 不能同时指定")
 

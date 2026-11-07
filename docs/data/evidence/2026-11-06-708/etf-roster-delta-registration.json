@@ -1,0 +1,104 @@
+{
+  "started_at": "2026-11-06T14:36:41.208862+00:00",
+  "finished_at": "2026-11-06T14:37:40.118279+00:00",
+  "initial_etfs": 1847,
+  "delta_etfs": 2,
+  "current_etfs": 1849,
+  "current_active_etfs": 1847,
+  "legacy_funds": 21,
+  "source_observation": {
+    "measured_at": "2026-11-06T13:23:11.666944+00:00",
+    "api": "etf_basic",
+    "fields": "ts_code,csname,list_date,list_status,index_code,etf_type",
+    "params": {},
+    "rows": 3498,
+    "sha256": "92e3b5dd1d46eae5ff5dd219f23ae79d8b78d7dbf908c622385fd813c5c3122b",
+    "payload": ".cache/issue-708/nav-native-accum-unfiltered/32a18c9cbdfdf9539a62e3fd5d38c65c1d8995fd56df7b6c93c65fd2db860888.parquet"
+  },
+  "before_metadata_file": "etf-roster-delta-metadata-before.json",
+  "before_metadata_sha256": "0c1338dfc77eab88296b9fcb0cced9f08d31a606c7edbe5ad32f45f05cd04935",
+  "all_old_instruments_and_mappings_unchanged": true,
+  "fund_holder_roster_unchanged": true,
+  "fund_holder_count": 32842,
+  "new_instruments": [
+    {
+      "instrument_id": 2001869,
+      "ticker": "158076",
+      "name": "广发中证红利低波动ETF",
+      "display_name": null,
+      "exchange": "SZSE",
+      "board": null,
+      "asset_class": "etf",
+      "list_date": "2026-11-06",
+      "delist_date": null,
+      "is_st": 0,
+      "is_active": 1,
+      "created_at": "2026-11-06 14:36:41",
+      "updated_at": null
+    },
+    {
+      "instrument_id": 2001870,
+      "ticker": "158081",
+      "name": "永赢创业板电池ETF",
+      "display_name": null,
+      "exchange": "SZSE",
+      "board": null,
+      "asset_class": "etf",
+      "list_date": "2026-11-05",
+      "delist_date": null,
+      "is_st": 0,
+      "is_active": 1,
+      "created_at": "2026-11-06 14:36:41",
+      "updated_at": null
+    }
+  ],
+  "new_mappings": [
+    {
+      "instrument_id": 2001869,
+      "source": "tushare",
+      "source_ticker": "158076.SZ",
+      "effective_from": "2026-11-06",
+      "effective_to": null,
+      "is_primary": 1,
+      "created_at": "2026-11-06 14:36:41"
+    },
+    {
+      "instrument_id": 2001870,
+      "source": "tushare",
+      "source_ticker": "158081.SZ",
+      "effective_from": "2026-11-05",
+      "effective_to": null,
+      "is_primary": 1,
+      "created_at": "2026-11-06 14:36:41"
+    }
+  ],
+  "result": {
+    "dataset": "etf_basic",
+    "trade_date": "2026-11-06",
+    "status": "success",
+    "row_count": 1849,
+    "checksum": "424bd8a6d5574eb8c3ff6e97b08a6de9",
+    "message": "数据摄取成功",
+    "error": null,
+    "snapshot_evidence": null,
+    "quality_evidence": {
+      "kind": "write_time_l1_l2",
+      "status": "passed",
+      "source": "tushare",
+      "trade_date": "2026-11-06",
+      "levels": [
+        "l1",
+        "l2"
+      ],
+      "row_count": 1849,
+      "checksum": "424bd8a6d5574eb8c3ff6e97b08a6de9"
+    }
+  },
+  "reference_snapshot_id": "snapshot:tushare:etf_daily:sha256:ffb6093f0dc5999c3848883b6f9ae7bdc54a7555d4ee00af3ff3de40e7d6b1b1",
+  "candidate_counts": {
+    "2026-11-05": 1848,
+    "2026-11-06": 1849
+  },
+  "candidate_cutoff": "2026-11-06T14:37:31Z",
+  "boundary": "Normal forced ETF metadata refresh replays one complete checksummed native observation from this task, with original observation time retained here. Initial1847 roster is preserved plus2 newly observed ETFs; no fund-holder roster change.158076 first listsNov6 and is excluded fromNov5 candidates/prices; both funds formedOct28 and may have prelisting NAV. Current identity/reference observation does not grant historical trading or PIT eligibility."
+}

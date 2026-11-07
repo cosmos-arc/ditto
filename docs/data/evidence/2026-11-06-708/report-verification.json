@@ -1,0 +1,42 @@
+{
+  "quarterly": {
+    "document_rows": 10,
+    "provider_rows": 10,
+    "differences": [],
+    "document_only_codes": []
+  },
+  "semiannual": {
+    "document_rows": 77,
+    "provider_rows": 67,
+    "differences": [],
+    "document_only_codes": [
+      "002371",
+      "300308",
+      "688012",
+      "688037",
+      "688041",
+      "688072",
+      "688120",
+      "688256",
+      "688347",
+      "688361"
+    ]
+  },
+  "annual": {
+    "document_rows": 132,
+    "provider_rows": 122,
+    "differences": [],
+    "document_only_codes": [
+      "002371",
+      "002475",
+      "300308",
+      "300502",
+      "601689",
+      "603986",
+      "688019",
+      "688041",
+      "688256",
+      "688347"
+    ]
+  }
+}

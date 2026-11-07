@@ -367,7 +367,8 @@ class TestTushareClientQuery:
 
         反例（#653/#658 批次1）：探针重复已见行若可以是任意回显位置，
         服务端忽略 offset 截断真数据时会被误判取尽。仅首页首行回显有
-        #431 实测证据支撑取尽语义；其余已见行两几何都 fail-closed。
+        #431 实测证据支撑取尽语义；其余已见行不能直接判取尽。
+        #708 换档后整页续探仍连续回显，必须保持 fail-closed。
         """
         monkeypatch.setitem(pagination._DOCUMENTED_PAGE_SIZES, "trade_cal", 2)
 
@@ -401,7 +402,7 @@ class TestTushareClientQuery:
         with pytest.raises(tenacity.RetryError) as exc_info:
             client.query("trade_cal", "cal_date")
 
-        assert "not the documented" in str(exc_info.value.last_attempt.exception())
+        assert "dedup-merge echo" in str(exc_info.value.last_attempt.exception())
 
     def test_truncation_probe_transient_failure_recovers(
         self,
@@ -874,6 +875,58 @@ class TestTushareClientResourceManagement:
 
 class TestPaginationDedupMerge:
     """#672：换档重试几何的跨页重叠去重合并与零新行回显硬拦."""
+
+    @pytest.mark.parametrize("tail_only", [False, True])
+    def test_seen_tail_probe_continues_until_verified_exhaustion(
+        self, respx_mock, fake_time, tail_only: bool
+    ) -> None:
+        """#708: a repeated single-row probe can precede a page with new rows."""
+        total = 48 if tail_only else 3145
+
+        def respond(request: httpx.Request) -> httpx.Response:
+            params = orjson.loads(request.content)["params"]
+            limit, offset = params["limit"], params["offset"]
+            if limit == 1:
+                values = (
+                    [40 if tail_only else offset - 10]
+                    if offset in ({48} if tail_only else {990, 1990})
+                    else []
+                )
+            elif offset == 0:
+                values = list(range(min(total, 1990 if limit == 2000 else 990)))
+            elif tail_only and offset == 48:
+                values = list(range(40, 48))
+            elif not tail_only and offset == 990:
+                values = list(range(980, 1980))
+            elif not tail_only and offset == 1990:
+                values = list(range(1970, 2970))
+            elif not tail_only and offset == 2990:
+                values = list(range(2960, total))
+            else:
+                values = []
+            return httpx.Response(
+                200,
+                json={
+                    "code": 0,
+                    "msg": None,
+                    "data": {"fields": ["nav_date"], "items": [[v] for v in values]},
+                },
+            )
+
+        respx_mock.post("http://api.tushare.pro").mock(side_effect=respond)
+        with TushareClient(settings=_settings()) as client:
+            result = client.query("fund_nav", "nav_date", ts_code="510300.SH")
+
+        assert sorted(result["nav_date"].to_list()) == list(range(total))
+        requests = [
+            orjson.loads(call.request.content)["params"] for call in respx_mock.calls
+        ]
+        assert {
+            "limit": 1000,
+            "offset": 48 if tail_only else 990,
+            "ts_code": "510300.SH",
+        } in requests
+        assert requests[-1]["offset"] == (56 if tail_only else 3175)
 
     def test_cross_page_overlap_at_both_geometries_dedup_merges(
         self,

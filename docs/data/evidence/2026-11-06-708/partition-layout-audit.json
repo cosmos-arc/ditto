@@ -1,0 +1,2383 @@
+{
+  "started_at": "2026-11-07T02:01:36.356355+00:00",
+  "datasets": {
+    "stock_daily": {
+      "storage": "parquet:market/stock/bars",
+      "measured_at": "2026-11-07T02:01:36.469656+00:00",
+      "declared_partition_date": "trade_date",
+      "partitions": [
+        {
+          "year": 2013,
+          "rows": 564854,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2014,
+          "rows": 571035,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2015,
+          "rows": 575184,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2016,
+          "rows": 652864,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2017,
+          "rows": 754372,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2018,
+          "rows": 824535,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2019,
+          "rows": 894177,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2020,
+          "rows": 964131,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2021,
+          "rows": 1085445,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2022,
+          "rows": 1179072,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2023,
+          "rows": 1258734,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2024,
+          "rows": 1293893,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2025,
+          "rows": 1313898,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2026,
+          "rows": 1119075,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        }
+      ],
+      "wrong_year_rows": 0,
+      "null_dates": 0
+    },
+    "etf_daily": {
+      "storage": "parquet:market/etf/bars",
+      "measured_at": "2026-11-07T02:01:36.586462+00:00",
+      "declared_partition_date": "trade_date",
+      "partitions": [
+        {
+          "year": 2013,
+          "rows": 15433,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2014,
+          "rows": 21769,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2015,
+          "rows": 28369,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2016,
+          "rows": 31701,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2017,
+          "rows": 36893,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2018,
+          "rows": 40922,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2019,
+          "rows": 50949,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2020,
+          "rows": 78597,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2021,
+          "rows": 120428,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2022,
+          "rows": 168336,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2023,
+          "rows": 194612,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2024,
+          "rows": 231153,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2025,
+          "rows": 294046,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2026,
+          "rows": 314642,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        }
+      ],
+      "wrong_year_rows": 0,
+      "null_dates": 0
+    },
+    "index_daily": {
+      "storage": "parquet:market/index/bars",
+      "measured_at": "2026-11-07T02:01:36.608158+00:00",
+      "declared_partition_date": "trade_date",
+      "partitions": [
+        {
+          "year": 2014,
+          "rows": 41463,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2015,
+          "rows": 42394,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2016,
+          "rows": 42530,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2017,
+          "rows": 42700,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2018,
+          "rows": 42525,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2019,
+          "rows": 42700,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2020,
+          "rows": 42768,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2021,
+          "rows": 42768,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2022,
+          "rows": 42622,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2023,
+          "rows": 42834,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2024,
+          "rows": 42834,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2025,
+          "rows": 43011,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2026,
+          "rows": 35487,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        }
+      ],
+      "wrong_year_rows": 0,
+      "null_dates": 0
+    },
+    "global_index_daily": {
+      "storage": "parquet:market/index/global_bars",
+      "measured_at": "2026-11-07T02:01:36.620017+00:00",
+      "declared_partition_date": "trade_date",
+      "partitions": [
+        {
+          "year": 2014,
+          "rows": 4492,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2015,
+          "rows": 4500,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2016,
+          "rows": 4489,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2017,
+          "rows": 4486,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2018,
+          "rows": 4486,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2019,
+          "rows": 4485,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2020,
+          "rows": 4880,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2021,
+          "rows": 5004,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2022,
+          "rows": 4967,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2023,
+          "rows": 4957,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2024,
+          "rows": 4864,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2025,
+          "rows": 4717,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2026,
+          "rows": 5029,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        }
+      ],
+      "wrong_year_rows": 0,
+      "null_dates": 0
+    },
+    "stock_status": {
+      "storage": "parquet:market/stock/status",
+      "measured_at": "2026-11-07T02:01:36.626645+00:00",
+      "declared_partition_date": "trade_date",
+      "partitions": [
+        {
+          "year": 2016,
+          "rows": 273737,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2017,
+          "rows": 798260,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2018,
+          "rows": 858200,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2019,
+          "rows": 878172,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2020,
+          "rows": 910214,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2021,
+          "rows": 1059997,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2022,
+          "rows": 1153020,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2023,
+          "rows": 1248548,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2024,
+          "rows": 1296824,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2025,
+          "rows": 1317509,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2026,
+          "rows": 1122014,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        }
+      ],
+      "wrong_year_rows": 0,
+      "null_dates": 0
+    },
+    "adj_factor": {
+      "storage": "parquet:market/stock/adj",
+      "measured_at": "2026-11-07T02:01:36.718872+00:00",
+      "declared_partition_date": "trade_date",
+      "partitions": [
+        {
+          "year": 2013,
+          "rows": 589400,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2014,
+          "rows": 623189,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2015,
+          "rows": 675358,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2016,
+          "rows": 729185,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2017,
+          "rows": 834943,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2018,
+          "rows": 899534,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2019,
+          "rows": 936704,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2020,
+          "rows": 1003301,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2021,
+          "rows": 1119157,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2022,
+          "rows": 1208822,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2023,
+          "rows": 1274480,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2024,
+          "rows": 1303184,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2025,
+          "rows": 1321761,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2026,
+          "rows": 1121953,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        }
+      ],
+      "wrong_year_rows": 0,
+      "null_dates": 0
+    },
+    "fund_adj": {
+      "storage": "parquet:market/etf/adj",
+      "measured_at": "2026-11-07T02:01:36.833239+00:00",
+      "declared_partition_date": "trade_date",
+      "partitions": [
+        {
+          "year": 2013,
+          "rows": 15613,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2014,
+          "rows": 22165,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2015,
+          "rows": 28704,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2016,
+          "rows": 32981,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2017,
+          "rows": 38353,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2018,
+          "rows": 43327,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2019,
+          "rows": 53318,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2020,
+          "rows": 80244,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2021,
+          "rows": 121931,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2022,
+          "rows": 170418,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2023,
+          "rows": 196434,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2024,
+          "rows": 232608,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2025,
+          "rows": 294534,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2026,
+          "rows": 314689,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        }
+      ],
+      "wrong_year_rows": 0,
+      "null_dates": 0
+    },
+    "etf_nav": {
+      "storage": "parquet:market/etf/nav",
+      "measured_at": "2026-11-07T02:01:36.853879+00:00",
+      "declared_partition_date": "trade_date",
+      "partitions": [
+        {
+          "year": 2014,
+          "rows": 22843,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2015,
+          "rows": 29210,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2016,
+          "rows": 33927,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2017,
+          "rows": 40189,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2018,
+          "rows": 45246,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2019,
+          "rows": 54923,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2020,
+          "rows": 81993,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2021,
+          "rows": 124034,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2022,
+          "rows": 168031,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2023,
+          "rows": 193531,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2024,
+          "rows": 229810,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2025,
+          "rows": 290466,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2026,
+          "rows": 306987,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        }
+      ],
+      "wrong_year_rows": 0,
+      "null_dates": 0
+    },
+    "stock_limit": {
+      "storage": "parquet:market/stock/limit",
+      "measured_at": "2026-11-07T02:01:36.875485+00:00",
+      "declared_partition_date": "trade_date",
+      "partitions": [
+        {
+          "year": 2014,
+          "rows": 619566,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2015,
+          "rows": 665312,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2016,
+          "rows": 704154,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2017,
+          "rows": 798651,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2018,
+          "rows": 856589,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2019,
+          "rows": 889050,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2020,
+          "rows": 950043,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2021,
+          "rows": 1064402,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2022,
+          "rows": 1174360,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2023,
+          "rows": 1261226,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2024,
+          "rows": 1298806,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2025,
+          "rows": 1321705,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2026,
+          "rows": 1128462,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        }
+      ],
+      "wrong_year_rows": 0,
+      "null_dates": 0
+    },
+    "moneyflow": {
+      "storage": "parquet:capital/moneyflow",
+      "measured_at": "2026-11-07T02:01:36.983130+00:00",
+      "declared_partition_date": "trade_date",
+      "partitions": [
+        {
+          "year": 2013,
+          "rows": 451567,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2014,
+          "rows": 569948,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2015,
+          "rows": 569714,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2016,
+          "rows": 640777,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2017,
+          "rows": 741779,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2018,
+          "rows": 816685,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2019,
+          "rows": 884816,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2020,
+          "rows": 945946,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2021,
+          "rows": 1058846,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2022,
+          "rows": 1146266,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2023,
+          "rows": 1209660,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2024,
+          "rows": 1233202,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2025,
+          "rows": 1248109,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2026,
+          "rows": 1070828,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        }
+      ],
+      "wrong_year_rows": 0,
+      "null_dates": 0
+    },
+    "cyq_perf": {
+      "storage": "parquet:capital/cyq_perf",
+      "measured_at": "2026-11-07T02:01:37.089755+00:00",
+      "declared_partition_date": "trade_date",
+      "partitions": [
+        {
+          "year": 2018,
+          "rows": 778913,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2019,
+          "rows": 843317,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2020,
+          "rows": 908194,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2021,
+          "rows": 1027055,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2022,
+          "rows": 1144172,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2023,
+          "rows": 1241943,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2024,
+          "rows": 1288743,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2025,
+          "rows": 1313865,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2026,
+          "rows": 1048297,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        }
+      ],
+      "wrong_year_rows": 0,
+      "null_dates": 0
+    },
+    "limit_list": {
+      "storage": "parquet:market/stock/limit_list",
+      "measured_at": "2026-11-07T02:01:37.169667+00:00",
+      "declared_partition_date": "trade_date",
+      "partitions": [
+        {
+          "year": 2020,
+          "rows": 25694,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2021,
+          "rows": 23183,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2022,
+          "rows": 24905,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2023,
+          "rows": 13483,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2024,
+          "rows": 30625,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2025,
+          "rows": 26466,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2026,
+          "rows": 21970,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        }
+      ],
+      "wrong_year_rows": 0,
+      "null_dates": 0
+    },
+    "top_list": {
+      "storage": "parquet:capital/top_list",
+      "measured_at": "2026-11-07T02:01:37.175211+00:00",
+      "declared_partition_date": "trade_date",
+      "partitions": [
+        {
+          "year": 2014,
+          "rows": 9629,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2015,
+          "rows": 17509,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2016,
+          "rows": 11731,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2017,
+          "rows": 12433,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2018,
+          "rows": 13471,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2019,
+          "rows": 14199,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2020,
+          "rows": 16251,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2021,
+          "rows": 15688,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2022,
+          "rows": 15550,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2023,
+          "rows": 13654,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2024,
+          "rows": 19148,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2025,
+          "rows": 17576,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2026,
+          "rows": 16079,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        }
+      ],
+      "wrong_year_rows": 0,
+      "null_dates": 0
+    },
+    "top_inst": {
+      "storage": "parquet:capital/top_inst",
+      "measured_at": "2026-11-07T02:01:37.183156+00:00",
+      "declared_partition_date": "trade_date",
+      "partitions": [
+        {
+          "year": 2014,
+          "rows": 95893,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2015,
+          "rows": 172042,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2016,
+          "rows": 116060,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2017,
+          "rows": 128200,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2018,
+          "rows": 148135,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2019,
+          "rows": 294497,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2020,
+          "rows": 283557,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2021,
+          "rows": 247445,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2022,
+          "rows": 207325,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2023,
+          "rows": 136498,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2024,
+          "rows": 191866,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2025,
+          "rows": 176039,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2026,
+          "rows": 147568,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        }
+      ],
+      "wrong_year_rows": 0,
+      "null_dates": 0
+    },
+    "hk_hold": {
+      "storage": "parquet:capital/hk_hold",
+      "measured_at": "2026-11-07T02:01:37.210329+00:00",
+      "declared_partition_date": "trade_date",
+      "partitions": [
+        {
+          "year": 2016,
+          "rows": 115034,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2017,
+          "rows": 478156,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2018,
+          "rows": 529603,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2019,
+          "rows": 576573,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2020,
+          "rows": 601663,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2021,
+          "rows": 648519,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2022,
+          "rows": 677677,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2023,
+          "rows": 852937,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2024,
+          "rows": 611993,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2025,
+          "rows": 42633,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2026,
+          "rows": 35208,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        }
+      ],
+      "wrong_year_rows": 0,
+      "null_dates": 0
+    },
+    "hsgt_top10": {
+      "storage": "parquet:capital/hsgt_top10",
+      "measured_at": "2026-11-07T02:01:37.257493+00:00",
+      "declared_partition_date": "trade_date",
+      "partitions": [
+        {
+          "year": 2014,
+          "rows": 360,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2015,
+          "rows": 2790,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2016,
+          "rows": 2970,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2017,
+          "rows": 5680,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2018,
+          "rows": 5540,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2019,
+          "rows": 5650,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2020,
+          "rows": 5580,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2021,
+          "rows": 5580,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2022,
+          "rows": 5560,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2023,
+          "rows": 5580,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2024,
+          "rows": 5640,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2025,
+          "rows": 5660,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2026,
+          "rows": 4780,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        }
+      ],
+      "wrong_year_rows": 0,
+      "null_dates": 0
+    },
+    "fina_indicator": {
+      "storage": "parquet:fundamental/fina_indicator",
+      "measured_at": "2026-11-07T02:01:37.264163+00:00",
+      "declared_partition_date": "report_date",
+      "partitions": [
+        {
+          "year": 2012,
+          "rows": 10795,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2013,
+          "rows": 11439,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2014,
+          "rows": 12467,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2015,
+          "rows": 14024,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2016,
+          "rows": 15476,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2017,
+          "rows": 16143,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2018,
+          "rows": 16766,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2019,
+          "rows": 18059,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2020,
+          "rows": 19950,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2021,
+          "rows": 21497,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2022,
+          "rows": 22250,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2023,
+          "rows": 22392,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2024,
+          "rows": 22647,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2025,
+          "rows": 22552,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2026,
+          "rows": 17219,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        }
+      ],
+      "wrong_year_rows": 0,
+      "null_dates": 0
+    },
+    "fund_share": {
+      "storage": "parquet:market/etf/fund_share",
+      "measured_at": "2026-11-07T02:01:37.274261+00:00",
+      "declared_partition_date": "trade_date",
+      "partitions": [
+        {
+          "year": 2013,
+          "rows": 7244,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2014,
+          "rows": 9672,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2015,
+          "rows": 22591,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2016,
+          "rows": 32762,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2017,
+          "rows": 38485,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2018,
+          "rows": 43248,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2019,
+          "rows": 52866,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2020,
+          "rows": 79921,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2021,
+          "rows": 122339,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2022,
+          "rows": 170429,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2023,
+          "rows": 197305,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2024,
+          "rows": 233968,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2025,
+          "rows": 293567,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2026,
+          "rows": 313424,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        }
+      ],
+      "wrong_year_rows": 0,
+      "null_dates": 0
+    },
+    "fund_portfolio": {
+      "storage": "parquet:fundamental/fund_portfolio",
+      "measured_at": "2026-11-07T02:01:37.293545+00:00",
+      "declared_partition_date": "report_date",
+      "partitions": [
+        {
+          "year": 2013,
+          "rows": 107575,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2014,
+          "rows": 246704,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2015,
+          "rows": 347423,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2016,
+          "rows": 518457,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2017,
+          "rows": 667719,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2018,
+          "rows": 656903,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2019,
+          "rows": 805924,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2020,
+          "rows": 1178234,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2021,
+          "rows": 1628761,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2022,
+          "rows": 2108937,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2023,
+          "rows": 2718567,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2024,
+          "rows": 2471870,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2025,
+          "rows": 3076819,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2026,
+          "rows": 1999891,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        }
+      ],
+      "wrong_year_rows": 0,
+      "null_dates": 0
+    },
+    "top10_holders": {
+      "storage": "parquet:capital/top10_holders",
+      "measured_at": "2026-11-07T02:01:37.446972+00:00",
+      "declared_partition_date": "report_date",
+      "partitions": [
+        {
+          "year": 2010,
+          "rows": 10,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2011,
+          "rows": 4508,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2012,
+          "rows": 5711,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2013,
+          "rows": 36777,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2014,
+          "rows": 135717,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2015,
+          "rows": 156479,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2016,
+          "rows": 168621,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2017,
+          "rows": 169236,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2018,
+          "rows": 173665,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2019,
+          "rows": 178819,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2020,
+          "rows": 196531,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2021,
+          "rows": 216406,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2022,
+          "rows": 227008,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2023,
+          "rows": 235978,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2024,
+          "rows": 240599,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2025,
+          "rows": 233494,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2026,
+          "rows": 179439,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        }
+      ],
+      "wrong_year_rows": 0,
+      "null_dates": 0
+    },
+    "top10_floatholders": {
+      "storage": "parquet:capital/top10_floatholders",
+      "measured_at": "2026-11-07T02:01:37.479728+00:00",
+      "declared_partition_date": "report_date",
+      "partitions": [
+        {
+          "year": 2012,
+          "rows": 23,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2013,
+          "rows": 25508,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2014,
+          "rows": 105130,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2015,
+          "rows": 115739,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2016,
+          "rows": 121282,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2017,
+          "rows": 134072,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2018,
+          "rows": 142694,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2019,
+          "rows": 147930,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2020,
+          "rows": 159901,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2021,
+          "rows": 178901,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2022,
+          "rows": 193589,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2023,
+          "rows": 205767,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2024,
+          "rows": 211911,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2025,
+          "rows": 198494,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2026,
+          "rows": 166474,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        }
+      ],
+      "wrong_year_rows": 0,
+      "null_dates": 0
+    },
+    "fx_daily": {
+      "storage": "parquet:market/fx/bars",
+      "measured_at": "2026-11-07T02:01:37.508147+00:00",
+      "declared_partition_date": "trade_date",
+      "partitions": [
+        {
+          "year": 2014,
+          "rows": 1860,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2015,
+          "rows": 1854,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2016,
+          "rows": 1856,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2017,
+          "rows": 1841,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2018,
+          "rows": 1854,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2019,
+          "rows": 1830,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2020,
+          "rows": 1841,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2021,
+          "rows": 1840,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2022,
+          "rows": 1892,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2023,
+          "rows": 2001,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2024,
+          "rows": 1913,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2025,
+          "rows": 1856,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2026,
+          "rows": 1585,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        }
+      ],
+      "wrong_year_rows": 0,
+      "null_dates": 0
+    },
+    "commodity_daily": {
+      "storage": "parquet:market/commodity/bars",
+      "measured_at": "2026-11-07T02:01:37.513899+00:00",
+      "declared_partition_date": "trade_date",
+      "partitions": [
+        {
+          "year": 2013,
+          "rows": 3,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2014,
+          "rows": 1536,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2015,
+          "rows": 1530,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2016,
+          "rows": 1627,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2017,
+          "rows": 2051,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2018,
+          "rows": 2050,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2019,
+          "rows": 2084,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2020,
+          "rows": 2053,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2021,
+          "rows": 2051,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2022,
+          "rows": 2096,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2023,
+          "rows": 2121,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2024,
+          "rows": 2147,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2025,
+          "rows": 2127,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2026,
+          "rows": 1800,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        }
+      ],
+      "wrong_year_rows": 0,
+      "null_dates": 0
+    },
+    "futures_daily": {
+      "storage": "parquet:market/futures/daily",
+      "measured_at": "2026-11-07T02:01:37.518719+00:00",
+      "declared_partition_date": "trade_date",
+      "partitions": [
+        {
+          "year": 2014,
+          "rows": 123356,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2015,
+          "rows": 141001,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2016,
+          "rows": 144051,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2017,
+          "rows": 145630,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2018,
+          "rows": 154103,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2019,
+          "rows": 169158,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2020,
+          "rows": 189201,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2021,
+          "rows": 202719,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2022,
+          "rows": 204529,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2023,
+          "rows": 215832,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2024,
+          "rows": 230323,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2025,
+          "rows": 244009,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2026,
+          "rows": 223136,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        }
+      ],
+      "wrong_year_rows": 0,
+      "null_dates": 0
+    },
+    "futures_basic": {
+      "storage": "parquet:market/futures/basic",
+      "measured_at": "2026-11-07T02:01:37.547241+00:00",
+      "declared_partition_date": "knowledge_date",
+      "partitions": [
+        {
+          "year": 2026,
+          "rows": 113584,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        }
+      ],
+      "wrong_year_rows": 0,
+      "null_dates": 0
+    },
+    "earnings_forecast": {
+      "storage": "parquet:fundamental/earnings_forecast",
+      "measured_at": "2026-11-07T02:01:37.549028+00:00",
+      "declared_partition_date": "ann_date",
+      "partitions": [
+        {
+          "year": 2014,
+          "rows": 6817,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2015,
+          "rows": 7595,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2016,
+          "rows": 10094,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2017,
+          "rows": 9320,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2018,
+          "rows": 9366,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2019,
+          "rows": 7721,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2020,
+          "rows": 7974,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2021,
+          "rows": 15181,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2022,
+          "rows": 11412,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2023,
+          "rows": 10425,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2024,
+          "rows": 17083,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2025,
+          "rows": 6281,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2026,
+          "rows": 6907,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        }
+      ],
+      "wrong_year_rows": 0,
+      "null_dates": 0
+    },
+    "earnings_express": {
+      "storage": "parquet:fundamental/earnings_express",
+      "measured_at": "2026-11-07T02:01:37.555888+00:00",
+      "declared_partition_date": "ann_date",
+      "partitions": [
+        {
+          "year": 2014,
+          "rows": 1604,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2015,
+          "rows": 1633,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2016,
+          "rows": 1777,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2017,
+          "rows": 1910,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2018,
+          "rows": 2323,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2019,
+          "rows": 2256,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2020,
+          "rows": 2428,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2021,
+          "rows": 1806,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2022,
+          "rows": 1643,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2023,
+          "rows": 1608,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2024,
+          "rows": 1578,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2025,
+          "rows": 1514,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2026,
+          "rows": 2333,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        }
+      ],
+      "wrong_year_rows": 0,
+      "null_dates": 0
+    },
+    "index_valuation": {
+      "storage": "parquet:capital/index_valuation",
+      "measured_at": "2026-11-07T02:01:37.560646+00:00",
+      "declared_partition_date": "trade_date",
+      "partitions": [
+        {
+          "year": 2014,
+          "rows": 2695,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2015,
+          "rows": 2684,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2016,
+          "rows": 2707,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2017,
+          "rows": 2928,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2018,
+          "rows": 2916,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2019,
+          "rows": 2928,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2020,
+          "rows": 2916,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2021,
+          "rows": 2916,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2022,
+          "rows": 2904,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2023,
+          "rows": 2902,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2024,
+          "rows": 2899,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2025,
+          "rows": 2885,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        },
+        {
+          "year": 2026,
+          "rows": 2615,
+          "null_dates": 0,
+          "wrong_year_rows": 0
+        }
+      ],
+      "wrong_year_rows": 0,
+      "null_dates": 0
+    }
+  },
+  "finished_at": "2026-11-07T02:01:37.566693+00:00",
+  "boundary": "Read-only check of every declared Parquet date-partition axis in the frozen 47 datasets, using actual DI reader declarations. Each file opened once; active writes remain atomic per partition, not a global snapshot. This checks physical placement, not business coverage or PIT eligibility."
+}

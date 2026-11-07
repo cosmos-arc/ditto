@@ -26,6 +26,7 @@ from ditto_application.exceptions import AppProcessError  # noqa: RUF100
 from ditto_application.processes.ingestion.types import SourceFetchers
 
 __all__ = [
+    "CHINA_MACRO_CODES",
     "GLOBAL_CONTEXT_INDEX_CODES",
     "INDEX_WEIGHT_UNIVERSE",
     "MARKET_INDEX_CODES",
@@ -498,22 +499,6 @@ def _announcement_instrument_fetch(
     return factory
 
 
-def _fund_portfolio_disclosure_fetch(ctx: DailyFetchContext) -> DailyFetchHandler:
-    """
-    #522：按公告日全市场单请求抓取；未注册身份在写入层过滤。
-
-    代理实测（2026-10-27）单日 ann_date 响应 ~1.4 万行、1-2 页取尽；
-    逐标的 1,864 请求的循环超出 300s 任务超时且烧配额，降级为市场级
-    单请求（重披露日行数上涨仍单页可容，真翻页损坏由 fail-closed 守卫
-    响亮失败）。
-    """
-
-    def fetch() -> pl.DataFrame:
-        return ctx.fetchers.fundamental.fetch_fund_portfolio(trade_date=ctx.trade_date)
-
-    return fetch
-
-
 def _capital_disclosure_fetch(method: str) -> DailyFetchFactory:
     """``ctx.fetchers.capital.<method>(trade_date=…)`` — 公告日市场级单请求（#627）."""
 
@@ -600,7 +585,7 @@ def _industry_mapping_fetch(ctx: DailyFetchContext) -> DailyFetchHandler:
     )
 
 
-_CHINA_MACRO_CODES = [
+CHINA_MACRO_CODES = [
     "CN_GDP_YOY",
     "CN_CPI_YOY",
     "CN_PPI_YOY",
@@ -617,8 +602,8 @@ def _macro_fetch(ctx: DailyFetchContext) -> DailyFetchHandler:
     """Use the bounded China batch only for Tushare; preserve other providers."""
     if ctx.source_name == "tushare":
         return lambda: ctx.fetchers.macro.fetch_macro_indicators_by_codes(
-            _CHINA_MACRO_CODES,
-            "2015-01-01",
+            CHINA_MACRO_CODES,
+            "2014-01-01",
             ctx.trade_date,
             observed_on=date.today(),
         )
@@ -864,16 +849,13 @@ _FUNDAMENTAL_REGISTRATIONS: tuple[DatasetRegistration, ...] = (
             "fundamental", "fetch_fina_indicator"
         ),
     ),
-    # #522 基金季度持仓：日更=市场级单日 ann_date 单请求（2026-10-27 代理
-    # 实测 ~1.4 万行 1-7 页取尽）。披露峰值日页数上涨，翻页损坏时当夜
-    # 响亮失败（无部分写入），该日数据需按基金 instrument 回补——日更
-    # 不回补历史日。未注册身份（.OF 场外）写入层过滤；按基金回填走
-    # instrument 路由（区间内报告期逐期）。
+    # Exact announcement-day requests may cover the market. OTC holders use
+    # fund_basic identities, independently of the tradable ETF universe.
     DatasetRegistration(
         dataset=Dataset.FUND_PORTFOLIO,
         write_kind=WriteKind.FUNDAMENTAL,
         date_schedule=DateScheduleType.NATURAL_DAYS,
-        daily_fetch_factory=_fund_portfolio_disclosure_fetch,
+        daily_fetch_factory=_daily_fetch("fundamental", "fetch_fund_portfolio"),
         instrument_fetch_factory=_announcement_instrument_fetch(
             "fundamental", "fetch_fund_portfolio"
         ),

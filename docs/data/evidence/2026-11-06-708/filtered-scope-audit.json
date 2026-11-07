@@ -1,0 +1,297 @@
+{
+  "measured_at": "2026-11-06T09:25:48.829161+00:00",
+  "formal_stock_codes": 5571,
+  "formal_etf_codes": 1847,
+  "observations": [
+    {
+      "dataset": "index_weight",
+      "request_start": "2026-10-01",
+      "request_end": "2026-11-05",
+      "snapshot_id": "snapshot:tushare:index_weight:sha256:5ae94026d87b83a64cdd5435358d05a985fd25b83d70d807677d22bf34c5155b",
+      "unmapped_codes": 40,
+      "unmapped_rows": 40,
+      "formal_scope_unmapped_codes": []
+    },
+    {
+      "dataset": "cash_flow",
+      "request_start": "2022-01-04",
+      "request_end": "2022-01-04",
+      "snapshot_id": "snapshot:tushare:cash_flow:sha256:4ddfd4392c994d6ea0a84ce4b070266deeba70670a72a102b7d18d418ec07fd2",
+      "unmapped_codes": 64,
+      "unmapped_rows": 66,
+      "formal_scope_unmapped_codes": []
+    },
+    {
+      "dataset": "cash_flow",
+      "request_start": "2022-10-10",
+      "request_end": "2022-10-10",
+      "snapshot_id": "snapshot:tushare:cash_flow:sha256:06ad4a8e8705f6f899605b098b00dad0807f31628e57b89f473ea32816b89b51",
+      "unmapped_codes": 4,
+      "unmapped_rows": 8,
+      "formal_scope_unmapped_codes": []
+    },
+    {
+      "dataset": "cash_flow",
+      "request_start": "2023-01-03",
+      "request_end": "2023-01-03",
+      "snapshot_id": "snapshot:tushare:cash_flow:sha256:c94fcad8604d85399442b0a314a3580463178b47031ab96028f0eec83d22abdf",
+      "unmapped_codes": 4,
+      "unmapped_rows": 7,
+      "formal_scope_unmapped_codes": []
+    },
+    {
+      "dataset": "cash_flow",
+      "request_start": "2023-04-03",
+      "request_end": "2023-04-03",
+      "snapshot_id": "snapshot:tushare:cash_flow:sha256:84056a43be87d1fc0e605db97c00434d49c1893821add0c107967dc2d8126dad",
+      "unmapped_codes": 32,
+      "unmapped_rows": 44,
+      "formal_scope_unmapped_codes": []
+    },
+    {
+      "dataset": "cash_flow",
+      "request_start": "2022-04-01",
+      "request_end": "2022-04-01",
+      "snapshot_id": "snapshot:tushare:cash_flow:sha256:f10522874a1865bef553a35ff864f012fdb5810ce0873041fcea758a9d93a774",
+      "unmapped_codes": 64,
+      "unmapped_rows": 66,
+      "formal_scope_unmapped_codes": []
+    },
+    {
+      "dataset": "cash_flow",
+      "request_start": "2022-07-01",
+      "request_end": "2022-07-01",
+      "snapshot_id": "snapshot:tushare:cash_flow:sha256:6200eb997c8fa9236c01aacdd4372125fa903d417a6acfb307698b96bdc8a75f",
+      "unmapped_codes": 4,
+      "unmapped_rows": 8,
+      "formal_scope_unmapped_codes": []
+    },
+    {
+      "dataset": "cash_flow",
+      "request_start": "2023-07-03",
+      "request_end": "2023-07-03",
+      "snapshot_id": "snapshot:tushare:cash_flow:sha256:23296510ae530a42545f2c8710f386d894912d9e66dc46228871dc9a808772c7",
+      "unmapped_codes": 186,
+      "unmapped_rows": 538,
+      "formal_scope_unmapped_codes": []
+    },
+    {
+      "dataset": "cash_flow",
+      "request_start": "2023-10-09",
+      "request_end": "2023-10-09",
+      "snapshot_id": "snapshot:tushare:cash_flow:sha256:d329e8d9d2bd91fba8fe4c6823da7358b65d58781f293697fcb7b6d6677a029d",
+      "unmapped_codes": 237,
+      "unmapped_rows": 869,
+      "formal_scope_unmapped_codes": []
+    },
+    {
+      "dataset": "fund_share",
+      "request_start": "2026-11-05",
+      "request_end": "2026-11-05",
+      "snapshot_id": "snapshot:tushare:fund_share:sha256:56cd0134d83508b75413ff60e2c61cbd0518a9dbfd9ca564a4a003b1e5e9024d",
+      "unmapped_codes": 96,
+      "unmapped_rows": 96,
+      "formal_scope_unmapped_codes": []
+    },
+    {
+      "dataset": "top10_holders",
+      "request_start": "2025-08-19",
+      "request_end": "2025-08-19",
+      "snapshot_id": "snapshot:tushare:top10_holders:sha256:ffb40d0c9378bdbb17aaf3d542a2af6ee9d0be0505855c7b73919f82470fd2ea",
+      "unmapped_codes": 7,
+      "unmapped_rows": 70,
+      "formal_scope_unmapped_codes": []
+    },
+    {
+      "dataset": "top10_holders",
+      "request_start": "2025-08-22",
+      "request_end": "2025-08-22",
+      "snapshot_id": "snapshot:tushare:top10_holders:sha256:dfc439f25d1bee6f9636d69ef00c03cbf4295ea7dbb80c7c6679a0b56ee4e415",
+      "unmapped_codes": 7,
+      "unmapped_rows": 70,
+      "formal_scope_unmapped_codes": []
+    },
+    {
+      "dataset": "top10_holders",
+      "request_start": "2025-08-26",
+      "request_end": "2025-08-26",
+      "snapshot_id": "snapshot:tushare:top10_holders:sha256:86e378dea430a5a50311cae59066402c7b306976ad28b3de4946abf43edebd6c",
+      "unmapped_codes": 21,
+      "unmapped_rows": 213,
+      "formal_scope_unmapped_codes": []
+    },
+    {
+      "dataset": "top10_holders",
+      "request_start": "2025-10-23",
+      "request_end": "2025-10-23",
+      "snapshot_id": "snapshot:tushare:top10_holders:sha256:aa0bc28ce46d10adebd8ace96a0c6cd505120613490d8366e278bc50532a5027",
+      "unmapped_codes": 3,
+      "unmapped_rows": 30,
+      "formal_scope_unmapped_codes": []
+    },
+    {
+      "dataset": "top10_holders",
+      "request_start": "2025-10-24",
+      "request_end": "2025-10-24",
+      "snapshot_id": "snapshot:tushare:top10_holders:sha256:20489550937f580d2fc361fcbb8f7d53455a107c277afb989cb65f2b61422a7c",
+      "unmapped_codes": 9,
+      "unmapped_rows": 90,
+      "formal_scope_unmapped_codes": []
+    },
+    {
+      "dataset": "top10_holders",
+      "request_start": "2025-10-25",
+      "request_end": "2025-10-25",
+      "snapshot_id": "snapshot:tushare:top10_holders:sha256:2ac116df3b65f5619e97be2a78fdfb5b604bf15ca00affd546ae025bbea26d37",
+      "unmapped_codes": 30,
+      "unmapped_rows": 300,
+      "formal_scope_unmapped_codes": []
+    },
+    {
+      "dataset": "top10_holders",
+      "request_start": "2025-10-28",
+      "request_end": "2025-10-28",
+      "snapshot_id": "snapshot:tushare:top10_holders:sha256:fcfdb5fe2895e7bf58efbe11e28364434ee2e33e070f44c3d827df871c534dec",
+      "unmapped_codes": 49,
+      "unmapped_rows": 490,
+      "formal_scope_unmapped_codes": []
+    },
+    {
+      "dataset": "top10_holders",
+      "request_start": "2025-10-29",
+      "request_end": "2025-10-29",
+      "snapshot_id": "snapshot:tushare:top10_holders:sha256:d23673935a11a3744e90b94cfae293b3e540ca30efa1c3123e481308dfe70ba8",
+      "unmapped_codes": 38,
+      "unmapped_rows": 381,
+      "formal_scope_unmapped_codes": []
+    },
+    {
+      "dataset": "top10_holders",
+      "request_start": "2025-11-11",
+      "request_end": "2025-11-11",
+      "snapshot_id": "snapshot:tushare:top10_holders:sha256:deea53119b108a97409693112ede0124923870c0ad9d35afaaf109c591543851",
+      "unmapped_codes": 1,
+      "unmapped_rows": 20,
+      "formal_scope_unmapped_codes": []
+    },
+    {
+      "dataset": "top10_holders",
+      "request_start": "2025-11-14",
+      "request_end": "2025-11-14",
+      "snapshot_id": "snapshot:tushare:top10_holders:sha256:e2d5f8ebb521f23c4ed550e4eeb9bbeaf9f3a6cfe1f441669d7e5e3d8c8c4bc9",
+      "unmapped_codes": 1,
+      "unmapped_rows": 20,
+      "formal_scope_unmapped_codes": []
+    },
+    {
+      "dataset": "top10_holders",
+      "request_start": "2025-11-29",
+      "request_end": "2025-11-29",
+      "snapshot_id": "snapshot:tushare:top10_holders:sha256:cda8a5588276e1fa0c2c520ae1a4f8b73faa350dcad76806be208adf50b6b39c",
+      "unmapped_codes": 2,
+      "unmapped_rows": 20,
+      "formal_scope_unmapped_codes": []
+    },
+    {
+      "dataset": "top10_holders",
+      "request_start": "2025-12-12",
+      "request_end": "2025-12-12",
+      "snapshot_id": "snapshot:tushare:top10_holders:sha256:08c85a13c64535f540d4e372ebec7e962128336be88b737cc9fc6d6c4b84225d",
+      "unmapped_codes": 1,
+      "unmapped_rows": 10,
+      "formal_scope_unmapped_codes": []
+    },
+    {
+      "dataset": "top10_holders",
+      "request_start": "2025-12-18",
+      "request_end": "2025-12-18",
+      "snapshot_id": "snapshot:tushare:top10_holders:sha256:c775274f609c1f54a3dbd3eddc6212aa0575335bd5eae196bcc9a4577dd8a5db",
+      "unmapped_codes": 1,
+      "unmapped_rows": 10,
+      "formal_scope_unmapped_codes": []
+    },
+    {
+      "dataset": "top10_holders",
+      "request_start": "2025-12-19",
+      "request_end": "2025-12-19",
+      "snapshot_id": "snapshot:tushare:top10_holders:sha256:cddfe875d98b6828ac6225a4d52105ff4365244658053b6c2fc1d4ac8f96f118",
+      "unmapped_codes": 3,
+      "unmapped_rows": 30,
+      "formal_scope_unmapped_codes": []
+    },
+    {
+      "dataset": "top10_holders",
+      "request_start": "2025-12-25",
+      "request_end": "2025-12-25",
+      "snapshot_id": "snapshot:tushare:top10_holders:sha256:7bb8111f7c4589cabc41f2bc1cb510dd084241ba295feb3a429b93531f92b3ae",
+      "unmapped_codes": 1,
+      "unmapped_rows": 10,
+      "formal_scope_unmapped_codes": []
+    },
+    {
+      "dataset": "top_list",
+      "request_start": "2014-10-31",
+      "request_end": "2014-10-31",
+      "snapshot_id": "snapshot:tushare:top_list:sha256:807492592b42095b482c09b6a06a8dc6b1d4bf84e85699d857b1b6433c781e33",
+      "unmapped_codes": 0,
+      "unmapped_rows": 0,
+      "formal_scope_unmapped_codes": []
+    },
+    {
+      "dataset": "top_list",
+      "request_start": "2014-11-28",
+      "request_end": "2014-11-28",
+      "snapshot_id": "snapshot:tushare:top_list:sha256:e94b86ce21b98ef3e2fa1df0a53b1946f465480a81cfc5627aca0ddecd38f4a9",
+      "unmapped_codes": 2,
+      "unmapped_rows": 2,
+      "formal_scope_unmapped_codes": []
+    },
+    {
+      "dataset": "top_list",
+      "request_start": "2014-12-31",
+      "request_end": "2014-12-31",
+      "snapshot_id": "snapshot:tushare:top_list:sha256:7f60a280009f40ff0a42e96b45342f4538502d3d38f6b8e9601447ff037e7383",
+      "unmapped_codes": 1,
+      "unmapped_rows": 1,
+      "formal_scope_unmapped_codes": []
+    },
+    {
+      "dataset": "top10_holders",
+      "request_start": "2025-08-29",
+      "request_end": "2025-08-29",
+      "snapshot_id": "snapshot:tushare:top10_holders:sha256:8fac6d06c6e8b9b61f10d297653f977c2aaddcada5675635e0484fdbd59120ea",
+      "unmapped_codes": 41,
+      "unmapped_rows": 411,
+      "formal_scope_unmapped_codes": []
+    },
+    {
+      "dataset": "top10_holders",
+      "request_start": "2025-10-21",
+      "request_end": "2025-10-21",
+      "snapshot_id": "snapshot:tushare:top10_holders:sha256:987afad25c7744bc4851a1cd2869c06f4acb2888c6c642ef8706e5bf2c7f543b",
+      "unmapped_codes": 1,
+      "unmapped_rows": 10,
+      "formal_scope_unmapped_codes": []
+    },
+    {
+      "dataset": "index_weight",
+      "request_start": "2026-10-30",
+      "request_end": "2026-10-30",
+      "snapshot_id": "snapshot:tushare:index_weight:sha256:309e038b11f9be654badbfa3c0b4549eb9461c4d6eb65079329f035332b9f345",
+      "unmapped_codes": 40,
+      "unmapped_rows": 40,
+      "formal_scope_unmapped_codes": []
+    }
+  ],
+  "unlisted_fund_example": {
+    "delist_date": null,
+    "due_date": null,
+    "found_date": "20261028",
+    "list_date": null,
+    "market": "E",
+    "name": "永赢创业板电池ETF",
+    "source_ticker": "158081.SZ",
+    "status": "L"
+  },
+  "boundary": "Every unmapped code in these measured payloads is outside the retained formal listed-stock/ETF sets. Missing identities are not invented. 158081.SZ has a retained independent fund holder identity but no supplied listing date; fund_share observations do not establish listing eligibility. Raw payloads and known out-of-scope identities remain retained."
+}

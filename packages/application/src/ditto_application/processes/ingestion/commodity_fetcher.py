@@ -49,7 +49,9 @@ class CommoditySource(Protocol):
     ) -> pl.DataFrame: ...
 
 
-__all__ = ["fetch_commodity_daily", "fetch_commodity_range"]
+FRED_COMMODITY_CODES = ("COMMOD_WTI", "COMMOD_BRENT", *VIX_CODE_TO_INSTRUMENT_ID)
+
+__all__ = ["FRED_COMMODITY_CODES", "fetch_commodity_daily", "fetch_commodity_range"]
 
 
 def fetch_commodity_daily(
@@ -99,16 +101,10 @@ def fetch_commodity_range(
     """
     results: list[pl.DataFrame] = []
 
-    fred_codes = [
-        "COMMOD_WTI",
-        "COMMOD_BRENT",
-        *list(VIX_CODE_TO_INSTRUMENT_ID.keys()),
-    ]
-
     if fred_source is not None:
         # 不吞异常：油/VIX 腿失败时整体失败，防止"只剩金银"被报 COMPLETE。
         fred_df = fred_source.fetch_commodities(
-            codes=fred_codes,
+            codes=list(FRED_COMMODITY_CODES),
             start_date=start_date,
             end_date=end_date,
         )

@@ -29,6 +29,30 @@ INSERT OR IGNORE INTO instrument_id_sequence (asset_class, current_max)
 VALUES ('option', 8000000);
 
 -- 证券主表
+-- Public fund holders are not tradable instruments. Evidence is the observed
+-- fund_basic payload, not a historical membership assertion.
+CREATE TABLE IF NOT EXISTS fund_holder (
+    source_ticker TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    market TEXT NOT NULL CHECK (market IN ('E', 'O')),
+    status TEXT NOT NULL CHECK (status IN ('L', 'D', 'I')),
+    source_payload TEXT NOT NULL,
+    observed_at TEXT NOT NULL
+);
+
+-- Verified report attachments are immutable and do not overwrite disclosure rows.
+CREATE TABLE IF NOT EXISTS fund_report_evidence (
+    source_ticker TEXT NOT NULL REFERENCES fund_holder(source_ticker),
+    document_sha256 TEXT NOT NULL,
+    report_date TEXT NOT NULL,
+    announcement_date TEXT NOT NULL,
+    holdings_sha256 TEXT NOT NULL,
+    evidence_json TEXT NOT NULL,
+    document BLOB NOT NULL,
+    observed_at TEXT NOT NULL,
+    PRIMARY KEY (source_ticker, document_sha256)
+);
+
 CREATE TABLE IF NOT EXISTS instrument (
     instrument_id INTEGER PRIMARY KEY,
     ticker TEXT NOT NULL,

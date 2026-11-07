@@ -1,0 +1,600 @@
+[
+  {
+    "code": "000001.SH",
+    "measured_at": "2026-11-06T04:43:25.359419+00:00",
+    "result": {
+      "dataset": "index_weight",
+      "trade_date": "2026-10-01",
+      "status": "success",
+      "row_count": 2193,
+      "checksum": "ee260304b8728d2ecf35cceb43f1e2f2",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-10-01",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 2193,
+        "checksum": "ee260304b8728d2ecf35cceb43f1e2f2"
+      }
+    }
+  },
+  {
+    "code": "000016.SH",
+    "measured_at": "2026-11-06T04:43:31.910916+00:00",
+    "result": {
+      "dataset": "index_weight",
+      "trade_date": "2026-10-01",
+      "status": "success",
+      "row_count": 50,
+      "checksum": "ca3e19bec15c7d99ce4bb424b47a18eb",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-10-01",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 50,
+        "checksum": "ca3e19bec15c7d99ce4bb424b47a18eb"
+      }
+    }
+  },
+  {
+    "code": "000300.SH",
+    "measured_at": "2026-11-06T04:43:37.178550+00:00",
+    "result": {
+      "dataset": "index_weight",
+      "trade_date": "2026-10-01",
+      "status": "success",
+      "row_count": 300,
+      "checksum": "991222ec5db039fe88b7d0306a9341a0",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-10-01",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 300,
+        "checksum": "991222ec5db039fe88b7d0306a9341a0"
+      }
+    }
+  },
+  {
+    "code": "000688.SH",
+    "measured_at": "2026-11-06T04:43:41.806039+00:00",
+    "result": {
+      "dataset": "index_weight",
+      "trade_date": "2026-10-01",
+      "status": "success",
+      "row_count": 50,
+      "checksum": "cbf88da9aef05b514fac34bd50d222b0",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-10-01",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 50,
+        "checksum": "cbf88da9aef05b514fac34bd50d222b0"
+      }
+    }
+  },
+  {
+    "code": "000852.SH",
+    "measured_at": "2026-11-06T04:43:46.746312+00:00",
+    "result": {
+      "dataset": "index_weight",
+      "trade_date": "2026-10-01",
+      "status": "success",
+      "row_count": 1000,
+      "checksum": "e94f9e5c6ec17ddb522d2b1788657345",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-10-01",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 1000,
+        "checksum": "e94f9e5c6ec17ddb522d2b1788657345"
+      }
+    }
+  },
+  {
+    "code": "000905.SH",
+    "measured_at": "2026-11-06T04:43:51.994897+00:00",
+    "result": {
+      "dataset": "index_weight",
+      "trade_date": "2026-10-01",
+      "status": "success",
+      "row_count": 500,
+      "checksum": "b9e866f2b5db9b7f410b8862d68afb3e",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-10-01",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 500,
+        "checksum": "b9e866f2b5db9b7f410b8862d68afb3e"
+      }
+    }
+  },
+  {
+    "code": "000906.SH",
+    "measured_at": "2026-11-06T04:43:56.868432+00:00",
+    "result": {
+      "dataset": "index_weight",
+      "trade_date": "2026-10-01",
+      "status": "success",
+      "row_count": 800,
+      "checksum": "22f908c3d9ffd6234d432dc05e12cad5",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-10-01",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 800,
+        "checksum": "22f908c3d9ffd6234d432dc05e12cad5"
+      }
+    }
+  },
+  {
+    "code": "000985.CSI",
+    "measured_at": "2026-11-06T04:44:04.071865+00:00",
+    "result": {
+      "dataset": "index_weight",
+      "trade_date": "2026-10-01",
+      "status": "success",
+      "row_count": 5117,
+      "checksum": "6ab7f5bb7535f00cb637175d0a3004cf",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-10-01",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 5117,
+        "checksum": "6ab7f5bb7535f00cb637175d0a3004cf"
+      }
+    }
+  },
+  {
+    "code": "000991.SH",
+    "measured_at": "2026-11-06T04:44:09.026631+00:00",
+    "result": {
+      "dataset": "index_weight",
+      "trade_date": "2026-10-01",
+      "status": "success",
+      "row_count": 119,
+      "checksum": "26506218bc1bd53050755528bc20a506",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-10-01",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 119,
+        "checksum": "26506218bc1bd53050755528bc20a506"
+      }
+    }
+  },
+  {
+    "code": "000992.SH",
+    "measured_at": "2026-11-06T04:44:13.587212+00:00",
+    "result": {
+      "dataset": "index_weight",
+      "trade_date": "2026-10-01",
+      "status": "success",
+      "row_count": 127,
+      "checksum": "b7731f3e43be2db885c16fb776185c45",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-10-01",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 127,
+        "checksum": "b7731f3e43be2db885c16fb776185c45"
+      }
+    }
+  },
+  {
+    "code": "000993.SH",
+    "measured_at": "2026-11-06T04:44:18.005146+00:00",
+    "result": {
+      "dataset": "index_weight",
+      "trade_date": "2026-10-01",
+      "status": "success",
+      "row_count": 147,
+      "checksum": "f6496a7ab59ef2b67132c91fe844df25",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-10-01",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 147,
+        "checksum": "f6496a7ab59ef2b67132c91fe844df25"
+      }
+    }
+  },
+  {
+    "code": "399001.SZ",
+    "measured_at": "2026-11-06T04:44:23.248223+00:00",
+    "result": {
+      "dataset": "index_weight",
+      "trade_date": "2026-10-01",
+      "status": "success",
+      "row_count": 500,
+      "checksum": "12fab393edacae229fbcd4d347ae6897",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-10-01",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 500,
+        "checksum": "12fab393edacae229fbcd4d347ae6897"
+      }
+    }
+  },
+  {
+    "code": "399006.SZ",
+    "measured_at": "2026-11-06T04:46:16.295050+00:00",
+    "result": {
+      "dataset": "index_weight",
+      "trade_date": "2026-10-01",
+      "status": "success",
+      "row_count": 100,
+      "checksum": "94b3c7fb72f9c84ce37515d7f4ea1ced",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-10-01",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 100,
+        "checksum": "94b3c7fb72f9c84ce37515d7f4ea1ced"
+      }
+    }
+  },
+  {
+    "code": "399303.SZ",
+    "measured_at": "2026-11-06T04:44:36.497889+00:00",
+    "result": {
+      "dataset": "index_weight",
+      "trade_date": "2026-10-01",
+      "status": "success",
+      "row_count": 2000,
+      "checksum": "5436f05634c2a7765057c19a54f65d51",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-10-01",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 2000,
+        "checksum": "5436f05634c2a7765057c19a54f65d51"
+      }
+    }
+  },
+  {
+    "code": "399373.SZ",
+    "measured_at": "2026-11-06T04:44:40.940954+00:00",
+    "result": {
+      "dataset": "index_weight",
+      "trade_date": "2026-10-01",
+      "status": "success",
+      "row_count": 66,
+      "checksum": "01ce91a8c5957185c2b340fa3f75ec04",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-10-01",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 66,
+        "checksum": "01ce91a8c5957185c2b340fa3f75ec04"
+      }
+    }
+  },
+  {
+    "code": "399374.SZ",
+    "measured_at": "2026-11-06T04:44:45.390812+00:00",
+    "result": {
+      "dataset": "index_weight",
+      "trade_date": "2026-10-01",
+      "status": "success",
+      "row_count": 100,
+      "checksum": "a83a00d2deb057853ec8b13580c0e901",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-10-01",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 100,
+        "checksum": "a83a00d2deb057853ec8b13580c0e901"
+      }
+    }
+  },
+  {
+    "code": "399375.SZ",
+    "measured_at": "2026-11-06T04:44:50.097046+00:00",
+    "result": {
+      "dataset": "index_weight",
+      "trade_date": "2026-10-01",
+      "status": "success",
+      "row_count": 100,
+      "checksum": "a0411af19e5f779c939d8d360bce64cb",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-10-01",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 100,
+        "checksum": "a0411af19e5f779c939d8d360bce64cb"
+      }
+    }
+  },
+  {
+    "code": "399376.SZ",
+    "measured_at": "2026-11-06T04:44:54.557882+00:00",
+    "result": {
+      "dataset": "index_weight",
+      "trade_date": "2026-10-01",
+      "status": "success",
+      "row_count": 166,
+      "checksum": "268a02be82d8047ba88cd32c28c42976",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-10-01",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 166,
+        "checksum": "268a02be82d8047ba88cd32c28c42976"
+      }
+    }
+  },
+  {
+    "code": "399377.SZ",
+    "measured_at": "2026-11-06T04:44:59.154620+00:00",
+    "result": {
+      "dataset": "index_weight",
+      "trade_date": "2026-10-01",
+      "status": "success",
+      "row_count": 166,
+      "checksum": "6d14010919cf45d53aebea12c7395393",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-10-01",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 166,
+        "checksum": "6d14010919cf45d53aebea12c7395393"
+      }
+    }
+  },
+  {
+    "code": "399378.SZ",
+    "measured_at": "2026-11-06T04:45:03.626106+00:00",
+    "result": {
+      "dataset": "index_weight",
+      "trade_date": "2026-10-01",
+      "status": "success",
+      "row_count": 300,
+      "checksum": "5e1a3bb8c6c556dd85398f5bfcf3629b",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-10-01",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 300,
+        "checksum": "5e1a3bb8c6c556dd85398f5bfcf3629b"
+      }
+    }
+  },
+  {
+    "code": "399673.SZ",
+    "measured_at": "2026-11-06T04:45:07.935227+00:00",
+    "result": {
+      "dataset": "index_weight",
+      "trade_date": "2026-10-01",
+      "status": "success",
+      "row_count": 50,
+      "checksum": "d5ac34b805fc8617302a9cd88518a36b",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-10-01",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 50,
+        "checksum": "d5ac34b805fc8617302a9cd88518a36b"
+      }
+    }
+  },
+  {
+    "code": "899050.BJ",
+    "measured_at": "2026-11-06T04:45:13.370040+00:00",
+    "result": {
+      "dataset": "index_weight",
+      "trade_date": "2026-10-01",
+      "status": "success",
+      "row_count": 50,
+      "checksum": "768b5e43716075b178aa2fcefea3dbf3",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-10-01",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 50,
+        "checksum": "768b5e43716075b178aa2fcefea3dbf3"
+      }
+    }
+  },
+  {
+    "code": "932000.CSI",
+    "measured_at": "2026-11-06T04:45:18.342949+00:00",
+    "result": {
+      "dataset": "index_weight",
+      "trade_date": "2026-10-01",
+      "status": "success",
+      "row_count": 2000,
+      "checksum": "da28d34019d60e599d80d7f5b53796e5",
+      "message": "数据摄取成功",
+      "error": null,
+      "snapshot_evidence": null,
+      "quality_evidence": {
+        "kind": "write_time_l1_l2",
+        "status": "passed",
+        "source": "tushare",
+        "trade_date": "2026-10-01",
+        "levels": [
+          "l1",
+          "l2"
+        ],
+        "row_count": 2000,
+        "checksum": "da28d34019d60e599d80d7f5b53796e5"
+      }
+    }
+  }
+]

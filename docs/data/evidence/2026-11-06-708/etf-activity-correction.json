@@ -1,0 +1,97 @@
+{
+  "measured_at": "2026-11-06T13:15:18.851346+00:00",
+  "source": {
+    "measured_at": "2026-11-06T10:32:44.289121+00:00",
+    "api": "etf_basic",
+    "fields": "ts_code,csname,list_date,list_status,index_code,etf_type",
+    "params": {},
+    "rows": 3497,
+    "sha256": "4703d0b29da8d54ea82979b0f2e648c7c84ab13bcb8ec7df4ea2fad709abaa7e",
+    "payload": ".cache/issue-708/nav-native-delta/32a18c9cbdfdf9539a62e3fd5d38c65c1d8995fd56df7b6c93c65fd2db860888.parquet"
+  },
+  "official_contract": "https://tushare.pro/document/2?doc_id=385",
+  "native_aliases": [
+    {
+      "ts_code": "159908J.SZ",
+      "csname": "博时深证基本面200ETF",
+      "list_date": "20110713",
+      "list_status": "D",
+      "index_code": "399703.SZ",
+      "etf_type": "纯境内"
+    },
+    {
+      "ts_code": "510680J.SH",
+      "csname": "万家上证380ETF",
+      "list_date": "20131202",
+      "list_status": "D",
+      "index_code": "000009.SH",
+      "etf_type": "纯境内"
+    }
+  ],
+  "before": [
+    {
+      "instrument_id": 2001844,
+      "ticker": "159908J",
+      "name": "博时深证基本面200ETF",
+      "display_name": null,
+      "exchange": "SZSE",
+      "board": null,
+      "asset_class": "etf",
+      "list_date": "2011-07-13",
+      "delist_date": null,
+      "is_st": 0,
+      "is_active": 1,
+      "created_at": "2026-10-12 07:13:32",
+      "updated_at": null
+    },
+    {
+      "instrument_id": 2001845,
+      "ticker": "510680J",
+      "name": "万家上证380ETF",
+      "display_name": null,
+      "exchange": "SSE",
+      "board": null,
+      "asset_class": "etf",
+      "list_date": "2013-12-02",
+      "delist_date": null,
+      "is_st": 0,
+      "is_active": 1,
+      "created_at": "2026-10-12 07:13:32",
+      "updated_at": null
+    }
+  ],
+  "after": [
+    {
+      "instrument_id": 2001844,
+      "ticker": "159908J",
+      "name": "博时深证基本面200ETF",
+      "display_name": null,
+      "exchange": "SZSE",
+      "board": null,
+      "asset_class": "etf",
+      "list_date": "2011-07-13",
+      "delist_date": null,
+      "is_st": 0,
+      "is_active": 0,
+      "created_at": "2026-10-12 07:13:32",
+      "updated_at": null
+    },
+    {
+      "instrument_id": 2001845,
+      "ticker": "510680J",
+      "name": "万家上证380ETF",
+      "display_name": null,
+      "exchange": "SSE",
+      "board": null,
+      "asset_class": "etf",
+      "list_date": "2013-12-02",
+      "delist_date": null,
+      "is_st": 0,
+      "is_active": 0,
+      "created_at": "2026-10-12 07:13:32",
+      "updated_at": null
+    }
+  ],
+  "boundary": "Correct current active flag from explicit source list_status D; preserve both historical ETF identities, all dates, mappings, prices and the 1847 historical denominator. No inferred retirement date or merged history.",
+  "completed_at": "2026-11-06T13:15:18.855051+00:00"
+}

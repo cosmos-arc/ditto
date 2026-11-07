@@ -1,0 +1,23 @@
+{
+  "created_at": "2026-11-06T13:38:05.665363+00:00",
+  "expected_instruments": 1847,
+  "completed_before": 192,
+  "pending_count": 1655,
+  "parts": 8,
+  "global_rate_per_worker": 10,
+  "shared_http_slots": 10,
+  "source_roster_sha256": "75e9e635d78739564f29ec1bdee0c03d79e5a8115b127d97674d339a7014d912",
+  "completion_evidence_sha256": "e1e880de105f3974fa89056c5701e749bcf0aba7f079f74c425471947d636828",
+  "boundary": "Exact pending-set repartition after four task workers stopped under all writer locks; 192 verified full-window successes excluded, prior failed attempts retained. Eight disjoint workers at 10/min keep unchanged NAV aggregate 80/min and shared transport max10. No source or write guards relaxed.",
+  "chunk_sizes": [
+    207,
+    207,
+    207,
+    207,
+    207,
+    207,
+    207,
+    206
+  ],
+  "plan_sha256": "a74d434712415d582f4f286a4fb9dab5db18b414e32b13d343a886e69ae9a0c2"
+}

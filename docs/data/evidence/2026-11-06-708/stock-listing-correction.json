@@ -1,0 +1,234 @@
+{
+  "measured_at": "2026-11-06T06:57:08.254695+00:00",
+  "evidence_sha256": "da914db030fedb1e979ba9d74fe68ab35f11c2a8288cdac8e6b0964e5f422f73",
+  "before": [
+    {
+      "instrument": {
+        "instrument_id": 1005567,
+        "ticker": "001246",
+        "name": "N力勤",
+        "display_name": null,
+        "exchange": "SZSE",
+        "board": null,
+        "asset_class": "stock",
+        "list_date": "1970-01-01",
+        "delist_date": null,
+        "is_st": 0,
+        "is_active": 1,
+        "created_at": "2026-10-03 14:52:11",
+        "updated_at": null
+      },
+      "mappings": [
+        {
+          "instrument_id": 1005567,
+          "source": "tushare",
+          "source_ticker": "001246.SZ",
+          "effective_from": "1970-01-01",
+          "effective_to": null,
+          "is_primary": 1,
+          "created_at": "2026-10-03 14:52:11"
+        }
+      ]
+    },
+    {
+      "instrument": {
+        "instrument_id": 1005579,
+        "ticker": "301569",
+        "name": "联亚药业",
+        "display_name": null,
+        "exchange": "SZSE",
+        "board": null,
+        "asset_class": "stock",
+        "list_date": "1970-01-01",
+        "delist_date": null,
+        "is_st": 0,
+        "is_active": 1,
+        "created_at": "2026-10-03 14:52:11",
+        "updated_at": null
+      },
+      "mappings": [
+        {
+          "instrument_id": 1005579,
+          "source": "tushare",
+          "source_ticker": "301569.SZ",
+          "effective_from": "1970-01-01",
+          "effective_to": null,
+          "is_primary": 1,
+          "created_at": "2026-10-03 14:52:11"
+        }
+      ]
+    },
+    {
+      "instrument": {
+        "instrument_id": 1005570,
+        "ticker": "301660",
+        "name": "粤芯半导",
+        "display_name": null,
+        "exchange": "SZSE",
+        "board": null,
+        "asset_class": "stock",
+        "list_date": "1970-01-01",
+        "delist_date": null,
+        "is_st": 0,
+        "is_active": 1,
+        "created_at": "2026-10-03 14:52:11",
+        "updated_at": null
+      },
+      "mappings": [
+        {
+          "instrument_id": 1005570,
+          "source": "tushare",
+          "source_ticker": "301660.SZ",
+          "effective_from": "1970-01-01",
+          "effective_to": null,
+          "is_primary": 1,
+          "created_at": "2026-10-03 14:52:11"
+        }
+      ]
+    },
+    {
+      "instrument": {
+        "instrument_id": 1005564,
+        "ticker": "301716",
+        "name": "C鸿富诚",
+        "display_name": null,
+        "exchange": "SZSE",
+        "board": null,
+        "asset_class": "stock",
+        "list_date": "1970-01-01",
+        "delist_date": null,
+        "is_st": 0,
+        "is_active": 1,
+        "created_at": "2026-10-03 14:52:11",
+        "updated_at": null
+      },
+      "mappings": [
+        {
+          "instrument_id": 1005564,
+          "source": "tushare",
+          "source_ticker": "301716.SZ",
+          "effective_from": "1970-01-01",
+          "effective_to": null,
+          "is_primary": 1,
+          "created_at": "2026-10-03 14:52:11"
+        }
+      ]
+    }
+  ],
+  "after": [
+    {
+      "instrument": {
+        "instrument_id": 1005567,
+        "ticker": "001246",
+        "name": "N力勤",
+        "display_name": null,
+        "exchange": "SZSE",
+        "board": null,
+        "asset_class": "stock",
+        "list_date": "2026-09-30",
+        "delist_date": null,
+        "is_st": 0,
+        "is_active": 1,
+        "created_at": "2026-10-03 14:52:11",
+        "updated_at": null
+      },
+      "mappings": [
+        {
+          "instrument_id": 1005567,
+          "source": "tushare",
+          "source_ticker": "001246.SZ",
+          "effective_from": "2026-09-30",
+          "effective_to": null,
+          "is_primary": 1,
+          "created_at": "2026-10-03 14:52:11"
+        }
+      ]
+    },
+    {
+      "instrument": {
+        "instrument_id": 1005579,
+        "ticker": "301569",
+        "name": "联亚药业",
+        "display_name": null,
+        "exchange": "SZSE",
+        "board": null,
+        "asset_class": "stock",
+        "list_date": "2026-10-15",
+        "delist_date": null,
+        "is_st": 0,
+        "is_active": 1,
+        "created_at": "2026-10-03 14:52:11",
+        "updated_at": null
+      },
+      "mappings": [
+        {
+          "instrument_id": 1005579,
+          "source": "tushare",
+          "source_ticker": "301569.SZ",
+          "effective_from": "2026-10-15",
+          "effective_to": null,
+          "is_primary": 1,
+          "created_at": "2026-10-03 14:52:11"
+        }
+      ]
+    },
+    {
+      "instrument": {
+        "instrument_id": 1005570,
+        "ticker": "301660",
+        "name": "粤芯半导",
+        "display_name": null,
+        "exchange": "SZSE",
+        "board": null,
+        "asset_class": "stock",
+        "list_date": "2026-10-13",
+        "delist_date": null,
+        "is_st": 0,
+        "is_active": 1,
+        "created_at": "2026-10-03 14:52:11",
+        "updated_at": null
+      },
+      "mappings": [
+        {
+          "instrument_id": 1005570,
+          "source": "tushare",
+          "source_ticker": "301660.SZ",
+          "effective_from": "2026-10-13",
+          "effective_to": null,
+          "is_primary": 1,
+          "created_at": "2026-10-03 14:52:11"
+        }
+      ]
+    },
+    {
+      "instrument": {
+        "instrument_id": 1005564,
+        "ticker": "301716",
+        "name": "C鸿富诚",
+        "display_name": null,
+        "exchange": "SZSE",
+        "board": null,
+        "asset_class": "stock",
+        "list_date": "2026-09-29",
+        "delist_date": null,
+        "is_st": 0,
+        "is_active": 1,
+        "created_at": "2026-10-03 14:52:11",
+        "updated_at": null
+      },
+      "mappings": [
+        {
+          "instrument_id": 1005564,
+          "source": "tushare",
+          "source_ticker": "301716.SZ",
+          "effective_from": "2026-09-29",
+          "effective_to": null,
+          "is_primary": 1,
+          "created_at": "2026-10-03 14:52:11"
+        }
+      ]
+    }
+  ],
+  "boundary": "Exactly four invalid 1970 listing dates and their sole same-code mapping starts corrected from current native stock_basic and matching exchange disclosure; all other stored values retained.",
+  "source_evidence_sha256_raw": "da914db030fedb1e979ba9d74fe68ab35f11c2a8288cdac8e6b0964e5f422f73"
+}

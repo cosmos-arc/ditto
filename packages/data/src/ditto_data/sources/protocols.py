@@ -250,6 +250,10 @@ class FundamentalFetcher(Protocol):
         """获取官方口径财务指标（#521，118 列透传，kd=公告日）."""
         ...
 
+    def fetch_fund_holders(self, source_ticker: str | None = None) -> pl.DataFrame:
+        """Fetch public-fund identities from fund_basic, including OTC funds."""
+        ...
+
     def fetch_fund_portfolio(
         self,
         trade_date: str | None = None,

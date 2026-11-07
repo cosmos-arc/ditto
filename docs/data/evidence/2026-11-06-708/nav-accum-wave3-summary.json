@@ -1,0 +1,29 @@
+{
+  "created_at": "2026-11-06T14:14:47.296678+00:00",
+  "expected_instruments": 1847,
+  "completed_before": 226,
+  "pending_count": 1621,
+  "parts": 8,
+  "global_rate_per_worker": 10,
+  "effective_http_slots": 8,
+  "source_roster_sha256": "75e9e635d78739564f29ec1bdee0c03d79e5a8115b127d97674d339a7014d912",
+  "completion_evidence_sha256": "3e152043368f79d31c66bfcd2aea4168793ce6fce833a9ee8fb331e482edd4d9",
+  "query_retry_budget": 1,
+  "boundary": "Exact unfinished-set repartition under existing writer locks; successful full windows excluded. Only outer whole-query auto-retries are deferred to explicit bounded task recovery. Native primary/shifted geometry, min500, zero-new2, DQ, frozen-NULL correction and VERIFY_IDENTICAL remain unchanged. Same eight workers, total80requests/min and effective8 HTTP slots.",
+  "chunk_sizes": [
+    203,
+    203,
+    203,
+    203,
+    203,
+    202,
+    202,
+    202
+  ],
+  "plan_sha256": "a8fa3bec92a53067f43f017a68151f5931c884c918fd56a25d8c133f85e5a6eb",
+  "retry_helper_sha256": "7b27bda16fbb68f461775ed3de134b70d6a418d750d61cf293489982bd745e67",
+  "selfcheck_log_sha256": "f0ae1850f72269767149deb8d2856c88679d3eafa04719f13292116022c40f9a",
+  "independent_review": "Standards: no guard weakening or recovery blocker; installation precedes error wrapper.",
+  "order": "Never-attempted identities first, then fewer prior full-window attempts; all1621 pending identities retained.",
+  "never_attempted_first": 1543
+}

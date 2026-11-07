@@ -420,7 +420,7 @@ class TestFetchFundNavDelegation:
                         "ann_date": pl.String,
                         "nav_date": pl.String,
                         "unit_nav": pl.Float64,
-                        "acc_nav": pl.Float64,
+                        "accum_nav": pl.Float64,
                     }
                 )
             return pl.DataFrame(
@@ -429,7 +429,7 @@ class TestFetchFundNavDelegation:
                     "ann_date": ["20261001"],
                     "nav_date": [day],
                     "unit_nav": [4.4312],
-                    "acc_nav": [None],
+                    "accum_nav": [None],
                 }
             )
 

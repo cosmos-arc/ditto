@@ -1,0 +1,24 @@
+[
+  {
+    "params": {
+      "ann_date": "20261027",
+      "limit": 5000,
+      "offset": 100000
+    },
+    "started_at": "2026-11-07T01:31:08.114719+00:00",
+    "rows": 5000,
+    "payload": "fund-oct27-last-5000.json",
+    "sha256": "f0591ce594437c319cf8c03af5321cbfb233215795f8ad9e3cca0887f6525303"
+  },
+  {
+    "params": {
+      "ann_date": "20261027",
+      "limit": 10000,
+      "offset": 100000
+    },
+    "started_at": "2026-11-07T01:31:10.465887+00:00",
+    "rows": 8000,
+    "payload": "fund-oct27-last-10000.json",
+    "sha256": "29f55b20a3b146408e64d169889d8988bd4a5877b3de0b23f0e73fc3f503cff0"
+  }
+]

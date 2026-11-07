@@ -3,7 +3,10 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import date
 from typing import Literal, Protocol
+
+from pydantic import BaseModel, ConfigDict, Field, HttpUrl, model_validator
 
 # ========================================================================
 # Calendar
@@ -153,3 +156,35 @@ __all__ = [
     "InstrumentRegistration",
     "StockExtension",
 ]
+
+
+FUND_HOLDER_CODE_PATTERN = r"^[A-Z0-9]{1,32}\.(OF|SH|SZ)$"
+
+
+class FundReportEvidence(BaseModel):
+    """A reviewed original document and its exact provider observation binding."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    source_ticker: str = Field(pattern=FUND_HOLDER_CODE_PATTERN)
+    report_date: date
+    announcement_date: date
+    report_type: Literal["quarterly", "semiannual", "annual"]
+    document_form: Literal["body", "summary"]
+    document_stock_count: int | None = Field(default=None, ge=0)
+    document_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    source_url: HttpUrl
+    title: str = Field(min_length=1)
+    # A changed announcement date alone is never a revision relationship.
+    revision_of: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
+    holdings_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    evidence_note: str = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def validate_dates(self) -> FundReportEvidence:
+        """Reject impossible publication order and self-revisions."""
+        if self.report_date > self.announcement_date:
+            raise ValueError("report period ends after publication")
+        if self.revision_of == self.document_sha256:
+            raise ValueError("a report cannot revise itself")
+        return self

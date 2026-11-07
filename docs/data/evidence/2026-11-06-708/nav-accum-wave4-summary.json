@@ -1,0 +1,30 @@
+{
+  "created_at": "2026-11-06T16:15:28.242777+00:00",
+  "initial_roster_count": 1847,
+  "delta_roster_count": 2,
+  "completed_before": 538,
+  "pending_count": 1311,
+  "never_attempted_first": 1085,
+  "business_start": "2014-01-01",
+  "business_end": "2026-11-05",
+  "current_roster_sha256": "4e2793ddc1dedbbf841aae3e2d3a263b38667611fdcf1228c720da7e5bf90e30",
+  "completion_evidence_sha256": "eab0cfbab7d94fc9f610cbc29220ecbfddc6711b4051babe71c07f6697fd2b26",
+  "shared_http_admissions_per_minute": 60,
+  "effective_inflight_slots": 8,
+  "boundary": "Resume after app-level speed rejection with shared per-HTTP pacing. Same current1849 roster and native accum_nav; no pagination, correction or duplicate-policy change. Completed windows excluded; all unfinished windows remain explicit. Previously attempted failures retained and retried after never-attempted identities.",
+  "expected_instruments": 1849,
+  "parts": 8,
+  "chunk_sizes": [
+    164,
+    164,
+    164,
+    164,
+    164,
+    164,
+    164,
+    163
+  ],
+  "plan_sha256": "6cda6359334eac9307dd970cdd77df1bff0d2dd9b2bb781fdf058cadbbc316a0",
+  "source_gate_sha256": "19a7056536db922bda1bce32ab9d69ca8f3b2b56e24ac21d6e4c7e8f8eb06297",
+  "query_retry_budget": 1
+}

@@ -1,0 +1,55 @@
+{
+  "started_at": "2026-11-06T16:48:10.252311+00:00",
+  "finished_at": "2026-11-06T16:49:59.025837+00:00",
+  "stopped_workers": {
+    "17147": "/Users/chevy/Desktop/code/ditto.worktrees/issue-708/.venv/bin/python3 .cache/issue-708/backfill_fund_chunk24.py 6 10",
+    "17151": "/Users/chevy/Desktop/code/ditto.worktrees/issue-708/.venv/bin/python3 .cache/issue-708/backfill_fund_chunk24.py 7 10",
+    "17157": "/Users/chevy/Desktop/code/ditto.worktrees/issue-708/.venv/bin/python3 .cache/issue-708/backfill_fund_chunk24.py 8 10",
+    "17161": "/Users/chevy/Desktop/code/ditto.worktrees/issue-708/.venv/bin/python3 .cache/issue-708/backfill_fund_chunk24.py 9 10",
+    "17165": "/Users/chevy/Desktop/code/ditto.worktrees/issue-708/.venv/bin/python3 .cache/issue-708/backfill_fund_chunk24.py 10 10",
+    "17169": "/Users/chevy/Desktop/code/ditto.worktrees/issue-708/.venv/bin/python3 .cache/issue-708/backfill_fund_chunk24.py 11 10",
+    "17173": "/Users/chevy/Desktop/code/ditto.worktrees/issue-708/.venv/bin/python3 .cache/issue-708/backfill_fund_chunk24.py 12 10",
+    "17177": "/Users/chevy/Desktop/code/ditto.worktrees/issue-708/.venv/bin/python3 .cache/issue-708/backfill_fund_chunk24.py 13 10",
+    "17185": "/Users/chevy/Desktop/code/ditto.worktrees/issue-708/.venv/bin/python3 .cache/issue-708/backfill_fund_chunk24.py 16 10",
+    "17189": "/Users/chevy/Desktop/code/ditto.worktrees/issue-708/.venv/bin/python3 .cache/issue-708/backfill_fund_chunk24.py 17 10",
+    "17193": "/Users/chevy/Desktop/code/ditto.worktrees/issue-708/.venv/bin/python3 .cache/issue-708/backfill_fund_chunk24.py 18 10",
+    "17197": "/Users/chevy/Desktop/code/ditto.worktrees/issue-708/.venv/bin/python3 .cache/issue-708/backfill_fund_chunk24.py 19 10",
+    "17201": "/Users/chevy/Desktop/code/ditto.worktrees/issue-708/.venv/bin/python3 .cache/issue-708/backfill_fund_chunk24.py 20 10",
+    "17205": "/Users/chevy/Desktop/code/ditto.worktrees/issue-708/.venv/bin/python3 .cache/issue-708/backfill_fund_chunk24.py 21 10",
+    "17209": "/Users/chevy/Desktop/code/ditto.worktrees/issue-708/.venv/bin/python3 .cache/issue-708/backfill_nav_accum_wave4.py 0",
+    "17213": "/Users/chevy/Desktop/code/ditto.worktrees/issue-708/.venv/bin/python3 .cache/issue-708/backfill_nav_accum_wave4.py 1",
+    "17217": "/Users/chevy/Desktop/code/ditto.worktrees/issue-708/.venv/bin/python3 .cache/issue-708/backfill_nav_accum_wave4.py 2",
+    "17221": "/Users/chevy/Desktop/code/ditto.worktrees/issue-708/.venv/bin/python3 .cache/issue-708/backfill_nav_accum_wave4.py 3",
+    "17233": "/Users/chevy/Desktop/code/ditto.worktrees/issue-708/.venv/bin/python3 .cache/issue-708/backfill_nav_accum_wave4.py 4",
+    "17237": "/Users/chevy/Desktop/code/ditto.worktrees/issue-708/.venv/bin/python3 .cache/issue-708/backfill_nav_accum_wave4.py 5",
+    "17243": "/Users/chevy/Desktop/code/ditto.worktrees/issue-708/.venv/bin/python3 .cache/issue-708/backfill_nav_accum_wave4.py 6",
+    "17249": "/Users/chevy/Desktop/code/ditto.worktrees/issue-708/.venv/bin/python3 .cache/issue-708/backfill_nav_accum_wave4.py 7"
+  },
+  "http_hold": {
+    "pid": 18810,
+    "held_at": "2026-11-06T16:47:41.942050+00:00",
+    "slots": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7
+    ],
+    "other_slots_reserved": [
+      8,
+      9
+    ],
+    "reason": "After stable 60HTTP/min observation, prepare smooth120HTTP/min with unchanged8slot cap and immediate live derating on rate rejection."
+  },
+  "baseline_rows_preserved": 1531177,
+  "corrected_old_null_rows": 417692,
+  "all_receipts_applied": true,
+  "duplicate_keys": 0,
+  "holder_complete_before": 29792,
+  "holder_complete_after": 29792,
+  "existing_holder_completions_preserved": true,
+  "boundary": "All22 task-owned fund/NAV workers stopped only after the eight available HTTP slots were held and all13 NAV year writer locks acquired. Original slots8/9 reservation remains. SQLite transactions retain atomic recovery; all existing completed holder evidence and NAV baseline/corrections preserved. User Prefect/GoalX processes untouched. Restart will add shared120HTTP/min pacing, without source identity, route or completeness/write guard changes."
+}

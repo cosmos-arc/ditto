@@ -1,0 +1,10 @@
+{
+  "pid": 11353,
+  "held_at": "2026-11-06T13:59:40.851506+00:00",
+  "reserved_slots": [
+    8,
+    9
+  ],
+  "effective_task_concurrency": 8,
+  "reason": "Concentrated HTTP429 recovered during full hold; reduce pressure without changing credentials, routes or pagination guards."
+}
