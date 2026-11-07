@@ -906,12 +906,12 @@ datasets:
       scope: 单位/累计 NAV、公告延迟、修订及末端
     measured:
       storage: parquet:market/etf/nav
-      rows: 1621190
+      rows: 1623921
       instruments: 1868
       start: '2014-01-01'
-      end: '2026-11-05'
+      end: '2026-11-06'
       date_axis: trade_date
-      measured_at: '2026-11-07T02:01:19.205220+00:00'
+      measured_at: '2026-11-07T15:28:27.696548+00:00'
     catalog_latest:
       date: null
       partition_rows: null
@@ -931,41 +931,54 @@ datasets:
         freshness_at: '2026-11-06T20:53:30.154761+00:00'
     status: partial
     gaps:
-    - 尚余 7 个标的未完成精确请求窗,具体窗口见请求覆盖 CSV;尚未执行或失败不称源不可取得。
-    - 公告版本与当前源修订分开;分页/同键变值失败保留 fail closed,不用一次最新读取授予严格历史用途。
-    - 累计值尚余 388 个标的未完成精确窗;逐码区间及失败原因见更正字段请求 CSV,不把执行失败说成源无累计值。
-    - 本次业务验收窗截至11-05;另有11-06日级失败保留,不能据本票声明后续日更健康或当前全市场新鲜。
-    - 失败尝试保留原状态;单代码窗口覆盖与整市场日级失败分别对照证据,未完成范围不能因样本读通而放行。
+    - 原 388 个累计/7 个单位请求窗已逐项重核,当前累计空值 277,850 条;精确区间见 refresh-nav-closeout-2026-11.md 及逐窗证据。
+    - 本批未闭合窗口的 2026-08-11 前累计历史暂不支持;保留 277,850 条空值及后续目标,不据此生成累计收益、前填或以单位值替代。
+    - 2026-08-11…10-28 的本批目标返回值已对拍,累计空值 0 条;后续缺值仍明确缺失,源响应缺席不冒称合法未披露或永不可得。
+    - 公告版本与当前源修订分开;分页/同键变值失败保留 fail closed,不用当前读取授予严格历史用途。
+    - 覆盖与新鲜度分别验收;历史失败尝试保留,本批不声明当日全市场新鲜或连续五日运行通过。
     consumers:
-    - ETF单位及累计净值展示,不伪造收益基准；application 实测入口/参数/结果见 readiness-708-2026-11.md
-    notes: 正式 ETF 净值研究;1842/1849 个标的已由核验后的历史回执及本次成功请求覆盖 2014-01-01…2026-11-05。同码窗绑定快照及载荷或源空观察,市场窗另按完整原生响应及入库值核验,允许成功窗口并集覆盖,原失败请求不改写。源披露不承诺逐交易日必有;净值公告锚与份额
-      T+1 派生分别保留。 原始累计字段已更正为 accum_nav 并原值映射到 acc_nav;累计值单独核验 1461/1849 个完整历史请求窗。旧错误字段回执仅证明单位净值,未冒充累计覆盖;源
-      NULL 与复权净值保留各自含义。 同标的同估值日保留不同 knowledge_date 观察;HTTP 与 CLI 对账均用最新披露,缺披露仍为 null。已通过正常生产入口验证 159509.SZ/159529.SZ
-      的新旧观察并存。源响应内部仅保留最新披露,不声称保存全部 vintage。
-    verification_report: docs/data/readiness-708-2026-11.md
+    - application 单位/累计净值查询与 HTTP 单位净值展示;缺值明确保留,用途及实测见 refresh-nav-closeout-2026-11.md
+    notes: 正式 ETF 净值查询;本批完整保留原 395 个请求窗分母。七个单位窗口按基金成立日和 11 个市场完成窗口核销,源本次缺席仍明确缺失;不按交易所上市日删除有效基金净值。累计值为源 accum_nav 原值映射到 acc_nav,旧错误字段回执不冒充累计覆盖。维护者选择近期闭合、早期累计缺口对应历史暂不支持;剩余精确范围保留。application
+      保留累计 null;HTTP 仅展示单位净值并传播 partial 限制,不伪造收益基准。同标的同估值日保留不同 knowledge_date 观察,查询采用最新披露,不声称保存全部 vintage。
+    verification_report: docs/data/refresh-nav-closeout-2026-11.md
     current_failures:
     - source: tushare
-      trade_date: '2026-11-06'
+      trade_date: '2026-10-28'
+      error_code: FETCH_ERROR
+      attempts: 3
+      within_acceptance_window: true
+    - source: tushare
+      trade_date: '2026-10-16'
       error_code: FETCH_ERROR
       attempts: 2
-      within_acceptance_window: false
+      within_acceptance_window: true
     - source: tushare
-      trade_date: '2026-11-04'
+      trade_date: '2026-09-22'
+      error_code: FETCH_ERROR
+      attempts: 1
+      within_acceptance_window: true
+    - source: tushare
+      trade_date: '2026-09-10'
+      error_code: FETCH_ERROR
+      attempts: 4
+      within_acceptance_window: true
+    - source: tushare
+      trade_date: '2026-09-09'
+      error_code: FETCH_ERROR
+      attempts: 5
+      within_acceptance_window: true
+    - source: tushare
+      trade_date: '2026-09-04'
       error_code: FETCH_ERROR
       attempts: 6
       within_acceptance_window: true
     - source: tushare
-      trade_date: '2026-11-03'
+      trade_date: '2026-08-24'
       error_code: FETCH_ERROR
-      attempts: 9
+      attempts: 1
       within_acceptance_window: true
     - source: tushare
-      trade_date: '2026-10-25'
-      error_code: FETCH_ERROR
-      attempts: 2
-      within_acceptance_window: true
-    - source: tushare
-      trade_date: '2026-10-16'
+      trade_date: '2021-01-01'
       error_code: FETCH_ERROR
       attempts: 2
       within_acceptance_window: true

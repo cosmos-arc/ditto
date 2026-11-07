@@ -1,0 +1,31 @@
+{
+  "measured_at": "2026-11-07T14:38:04.443239+00:00",
+  "datasets": {
+    "macro_indicators": {
+      "snapshot_id": "snapshot:fred:macro_indicators:sha256:a09eb347805bd9f32d79430e9d53cf033404d423c38c215eb7b54aea5e0a100b",
+      "source_rows": 418,
+      "consumer_rows": 7799,
+      "configured_series": 51,
+      "missing": []
+    },
+    "commodity_daily": {
+      "snapshot_id": "snapshot:fred:commodity_daily:sha256:d0d2fe01d5716d3ae1458a26dcf57f02833c690b0d0b9d9fe08bef0eb3e90524",
+      "source_rows": 11,
+      "consumer_rows": 11,
+      "latest": [
+        {
+          "instrument_id": 5000001,
+          "trade_date": "2026-11-03"
+        },
+        {
+          "instrument_id": 5000002,
+          "trade_date": "2026-11-03"
+        },
+        {
+          "instrument_id": 5100001,
+          "trade_date": "2026-11-05"
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "measured_at": "2026-11-07T14:26:57.953365+00:00",
+  "roster_count": 1849,
+  "canonical_rows": 1622848,
+  "target_windows": 395,
+  "detail_sha256": "b64b805d1733dc9944cc4aa57d8166da4dfb3fd020bfb7c003dbee021856566f",
+  "detail_local_path": ".cache/issues-707-718/nav-audit-before.json",
+  "notes": "The 388 cumulative and 7 unit request windows remain the denominator. Stored prelisting NAV observations are retained. A nonnull stored value is not a proof of complete disclosure coverage; an overlapping COMPLETE checkpoint is not proof of the whole target window. Nulls and absence are not zero or proof of no source data.",
+  "fields": {
+    "acc_nav": {
+      "windows": 388,
+      "rows": 295006,
+      "null_rows": 294278,
+      "windows_with_nulls": 388,
+      "no_rows": 0
+    },
+    "unit_nav": {
+      "windows": 7,
+      "rows": 20,
+      "null_rows": 0,
+      "windows_with_nulls": 0,
+      "no_rows": 2
+    }
+  }
+}

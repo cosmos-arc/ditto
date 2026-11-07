@@ -1,0 +1,474 @@
+{
+  "measured_at": "2026-11-07T15:25:50.407676+00:00",
+  "windows": [
+    {
+      "day": "2026-09-16",
+      "snapshot_id": "snapshot:tushare:etf_nav:sha256:30dde6b76815e7f9d4c8401173aa74c33feb4ca0b8889a0c0bf49d909ab43e49",
+      "payload_rows": 9858,
+      "payload_checksum": "e14ba2649d89c822db8068d4cf9286b1",
+      "comparisons": [
+        {
+          "code": "158005.SZ",
+          "source_rows": 6,
+          "app_rows": 6,
+          "null_acc_nav": 0,
+          "dates": [
+            "2026-09-09",
+            "2026-09-10",
+            "2026-09-11",
+            "2026-09-14",
+            "2026-09-15",
+            "2026-09-16"
+          ]
+        },
+        {
+          "code": "158013.SZ",
+          "source_rows": 6,
+          "app_rows": 6,
+          "null_acc_nav": 0,
+          "dates": [
+            "2026-09-09",
+            "2026-09-10",
+            "2026-09-11",
+            "2026-09-14",
+            "2026-09-15",
+            "2026-09-16"
+          ]
+        },
+        {
+          "code": "158031.SZ",
+          "source_rows": 1,
+          "app_rows": 1,
+          "null_acc_nav": 0,
+          "dates": [
+            "2026-09-14"
+          ]
+        }
+      ]
+    },
+    {
+      "day": "2026-08-26",
+      "snapshot_id": "snapshot:tushare:etf_nav:sha256:18183e37b2f9a1198534e79ff2137dfee49342ef9230ac1d9333ef4764788722",
+      "payload_rows": 9705,
+      "payload_checksum": "8b37ff5b44900dcb1bd4c67b5125b956",
+      "comparisons": [
+        {
+          "code": "158005.SZ",
+          "source_rows": 5,
+          "app_rows": 5,
+          "null_acc_nav": 0,
+          "dates": [
+            "2026-08-20",
+            "2026-08-21",
+            "2026-08-24",
+            "2026-08-25",
+            "2026-08-26"
+          ]
+        },
+        {
+          "code": "158013.SZ",
+          "source_rows": 1,
+          "app_rows": 1,
+          "null_acc_nav": 0,
+          "dates": [
+            "2026-08-26"
+          ]
+        },
+        {
+          "code": "158031.SZ",
+          "source_rows": 0,
+          "app_rows": 0,
+          "null_acc_nav": 0,
+          "dates": []
+        }
+      ]
+    },
+    {
+      "day": "2026-09-03",
+      "snapshot_id": "snapshot:tushare:etf_nav:sha256:ffa78402c2de899c16375a0bc0a7eda002d8e7b7df9847df73c2bab4d6642ffa",
+      "payload_rows": 9763,
+      "payload_checksum": "267e039ecc0b005b17bf6da808bd9b98",
+      "comparisons": [
+        {
+          "code": "158005.SZ",
+          "source_rows": 6,
+          "app_rows": 6,
+          "null_acc_nav": 0,
+          "dates": [
+            "2026-08-27",
+            "2026-08-28",
+            "2026-08-31",
+            "2026-09-01",
+            "2026-09-02",
+            "2026-09-03"
+          ]
+        },
+        {
+          "code": "158013.SZ",
+          "source_rows": 3,
+          "app_rows": 3,
+          "null_acc_nav": 0,
+          "dates": [
+            "2026-08-28",
+            "2026-09-02",
+            "2026-09-03"
+          ]
+        },
+        {
+          "code": "158031.SZ",
+          "source_rows": 0,
+          "app_rows": 0,
+          "null_acc_nav": 0,
+          "dates": []
+        }
+      ]
+    },
+    {
+      "day": "2026-09-11",
+      "snapshot_id": "snapshot:tushare:etf_nav:sha256:1b79589eb98ad571b4667703b1efc3cc69348e007066c9dd17655f204965eb3e",
+      "payload_rows": 9824,
+      "payload_checksum": "3e85e85e04c00d0d0c0b11506a036703",
+      "comparisons": [
+        {
+          "code": "158005.SZ",
+          "source_rows": 6,
+          "app_rows": 6,
+          "null_acc_nav": 0,
+          "dates": [
+            "2026-09-04",
+            "2026-09-07",
+            "2026-09-08",
+            "2026-09-09",
+            "2026-09-10",
+            "2026-09-11"
+          ]
+        },
+        {
+          "code": "158013.SZ",
+          "source_rows": 6,
+          "app_rows": 6,
+          "null_acc_nav": 0,
+          "dates": [
+            "2026-09-04",
+            "2026-09-07",
+            "2026-09-08",
+            "2026-09-09",
+            "2026-09-10",
+            "2026-09-11"
+          ]
+        },
+        {
+          "code": "158031.SZ",
+          "source_rows": 0,
+          "app_rows": 0,
+          "null_acc_nav": 0,
+          "dates": []
+        }
+      ]
+    },
+    {
+      "day": "2026-09-24",
+      "snapshot_id": "snapshot:tushare:etf_nav:sha256:d2c5302754e782875a611c7d5140d87f7bda38c03c7ace12bd21319c6b8f7470",
+      "payload_rows": 9948,
+      "payload_checksum": "716b5ff4822b0e18b307ac30ccfa5882",
+      "comparisons": [
+        {
+          "code": "158005.SZ",
+          "source_rows": 6,
+          "app_rows": 6,
+          "null_acc_nav": 0,
+          "dates": [
+            "2026-09-17",
+            "2026-09-18",
+            "2026-09-21",
+            "2026-09-22",
+            "2026-09-23",
+            "2026-09-24"
+          ]
+        },
+        {
+          "code": "158013.SZ",
+          "source_rows": 6,
+          "app_rows": 6,
+          "null_acc_nav": 0,
+          "dates": [
+            "2026-09-17",
+            "2026-09-18",
+            "2026-09-21",
+            "2026-09-22",
+            "2026-09-23",
+            "2026-09-24"
+          ]
+        },
+        {
+          "code": "158031.SZ",
+          "source_rows": 6,
+          "app_rows": 6,
+          "null_acc_nav": 0,
+          "dates": [
+            "2026-09-17",
+            "2026-09-18",
+            "2026-09-21",
+            "2026-09-22",
+            "2026-09-23",
+            "2026-09-24"
+          ]
+        }
+      ]
+    },
+    {
+      "day": "2026-10-02",
+      "snapshot_id": "snapshot:tushare:etf_nav:sha256:a7048da5da13ae435070778ecdfe22d0e7e55ddbb4003b1a4680fcf3131b1fc9",
+      "payload_rows": 4973,
+      "payload_checksum": "359b4740e73c112fefcafb6845085b1f",
+      "comparisons": [
+        {
+          "code": "158005.SZ",
+          "source_rows": 3,
+          "app_rows": 3,
+          "null_acc_nav": 0,
+          "dates": [
+            "2026-09-28",
+            "2026-09-29",
+            "2026-09-30"
+          ]
+        },
+        {
+          "code": "158013.SZ",
+          "source_rows": 3,
+          "app_rows": 3,
+          "null_acc_nav": 0,
+          "dates": [
+            "2026-09-28",
+            "2026-09-29",
+            "2026-09-30"
+          ]
+        },
+        {
+          "code": "158031.SZ",
+          "source_rows": 3,
+          "app_rows": 3,
+          "null_acc_nav": 0,
+          "dates": [
+            "2026-09-28",
+            "2026-09-29",
+            "2026-09-30"
+          ]
+        }
+      ]
+    },
+    {
+      "day": "2026-10-09",
+      "snapshot_id": "snapshot:tushare:etf_nav:sha256:cc4b6fd262887aaeb4ec01f949dc3d11884ad5ba8afbc3373b3db61ffff414d6",
+      "payload_rows": 3352,
+      "payload_checksum": "2f41afc5b9531840e106e4effd84c74e",
+      "comparisons": [
+        {
+          "code": "158005.SZ",
+          "source_rows": 2,
+          "app_rows": 2,
+          "null_acc_nav": 0,
+          "dates": [
+            "2026-10-08",
+            "2026-10-09"
+          ]
+        },
+        {
+          "code": "158013.SZ",
+          "source_rows": 2,
+          "app_rows": 2,
+          "null_acc_nav": 0,
+          "dates": [
+            "2026-10-08",
+            "2026-10-09"
+          ]
+        },
+        {
+          "code": "158031.SZ",
+          "source_rows": 2,
+          "app_rows": 2,
+          "null_acc_nav": 0,
+          "dates": [
+            "2026-10-08",
+            "2026-10-09"
+          ]
+        }
+      ]
+    },
+    {
+      "day": "2026-10-17",
+      "snapshot_id": "snapshot:tushare:etf_nav:sha256:5c6a533717d4da70359572b0521aadcfd4affee0020a7306ff51d1cec5741652",
+      "payload_rows": 8386,
+      "payload_checksum": "6eb3994171687c1b7622c7c784ddb3db",
+      "comparisons": [
+        {
+          "code": "158005.SZ",
+          "source_rows": 5,
+          "app_rows": 5,
+          "null_acc_nav": 0,
+          "dates": [
+            "2026-10-12",
+            "2026-10-13",
+            "2026-10-14",
+            "2026-10-15",
+            "2026-10-16"
+          ]
+        },
+        {
+          "code": "158013.SZ",
+          "source_rows": 5,
+          "app_rows": 5,
+          "null_acc_nav": 0,
+          "dates": [
+            "2026-10-12",
+            "2026-10-13",
+            "2026-10-14",
+            "2026-10-15",
+            "2026-10-16"
+          ]
+        },
+        {
+          "code": "158031.SZ",
+          "source_rows": 5,
+          "app_rows": 5,
+          "null_acc_nav": 0,
+          "dates": [
+            "2026-10-12",
+            "2026-10-13",
+            "2026-10-14",
+            "2026-10-15",
+            "2026-10-16"
+          ]
+        }
+      ]
+    },
+    {
+      "day": "2026-10-25",
+      "snapshot_id": "snapshot:tushare:etf_nav:sha256:d97c7bd0e6939a540d486de0a2088f005d28e5bb0682fbaa7d42759bf5e44779",
+      "payload_rows": 8434,
+      "payload_checksum": "cde3fce63dd8ffaa94ebd8bf68326817",
+      "comparisons": [
+        {
+          "code": "158005.SZ",
+          "source_rows": 5,
+          "app_rows": 5,
+          "null_acc_nav": 0,
+          "dates": [
+            "2026-10-19",
+            "2026-10-20",
+            "2026-10-21",
+            "2026-10-22",
+            "2026-10-23"
+          ]
+        },
+        {
+          "code": "158013.SZ",
+          "source_rows": 5,
+          "app_rows": 5,
+          "null_acc_nav": 0,
+          "dates": [
+            "2026-10-19",
+            "2026-10-20",
+            "2026-10-21",
+            "2026-10-22",
+            "2026-10-23"
+          ]
+        },
+        {
+          "code": "158031.SZ",
+          "source_rows": 5,
+          "app_rows": 5,
+          "null_acc_nav": 0,
+          "dates": [
+            "2026-10-19",
+            "2026-10-20",
+            "2026-10-21",
+            "2026-10-22",
+            "2026-10-23"
+          ]
+        }
+      ]
+    },
+    {
+      "day": "2026-08-18",
+      "snapshot_id": "snapshot:tushare:etf_nav:sha256:2c5f5cb1eaf22c60ae60dfc1545b35c4dfa3da338c51ae6140849c851b7d741f",
+      "payload_rows": 9633,
+      "payload_checksum": "51e970f5d8a633e4e0f9e2e69baaaa70",
+      "comparisons": [
+        {
+          "code": "158005.SZ",
+          "source_rows": 1,
+          "app_rows": 1,
+          "null_acc_nav": 0,
+          "dates": [
+            "2026-08-14"
+          ]
+        },
+        {
+          "code": "158013.SZ",
+          "source_rows": 0,
+          "app_rows": 0,
+          "null_acc_nav": 0,
+          "dates": []
+        },
+        {
+          "code": "158031.SZ",
+          "source_rows": 0,
+          "app_rows": 0,
+          "null_acc_nav": 0,
+          "dates": []
+        }
+      ]
+    },
+    {
+      "day": "2026-11-02",
+      "snapshot_id": "snapshot:tushare:etf_nav:sha256:0fdc8c2773c2411bab15e14f2ecbeaab76f5d5dd21a8edec1661f374f33d2171",
+      "payload_rows": 10135,
+      "payload_checksum": "25bdcec518783fe5bf06043d8c483ac9",
+      "comparisons": [
+        {
+          "code": "158005.SZ",
+          "source_rows": 6,
+          "app_rows": 6,
+          "null_acc_nav": 0,
+          "dates": [
+            "2026-10-26",
+            "2026-10-27",
+            "2026-10-28",
+            "2026-10-29",
+            "2026-10-30",
+            "2026-11-02"
+          ]
+        },
+        {
+          "code": "158013.SZ",
+          "source_rows": 6,
+          "app_rows": 6,
+          "null_acc_nav": 0,
+          "dates": [
+            "2026-10-26",
+            "2026-10-27",
+            "2026-10-28",
+            "2026-10-29",
+            "2026-10-30",
+            "2026-11-02"
+          ]
+        },
+        {
+          "code": "158031.SZ",
+          "source_rows": 6,
+          "app_rows": 6,
+          "null_acc_nav": 0,
+          "dates": [
+            "2026-10-26",
+            "2026-10-27",
+            "2026-10-28",
+            "2026-10-29",
+            "2026-10-30",
+            "2026-11-02"
+          ]
+        }
+      ]
+    }
+  ]
+}

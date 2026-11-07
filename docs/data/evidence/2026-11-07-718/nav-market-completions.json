@@ -1,0 +1,123 @@
+[
+  {
+    "day": "2026-09-16",
+    "start": "2026-09-09",
+    "end": "2026-09-16",
+    "snapshot_id": "snapshot:tushare:etf_nav:sha256:30dde6b76815e7f9d4c8401173aa74c33feb4ca0b8889a0c0bf49d909ab43e49",
+    "payload_uri": "provider_payloads/tushare/etf_nav/e14ba2649d89c822db8068d4cf9286b1.parquet",
+    "checksum": "e14ba2649d89c822db8068d4cf9286b1",
+    "payload_rows": 9858,
+    "canonical_rows": 9858,
+    "completed_at": "2026-11-07T14:28:38.742138+00:00"
+  },
+  {
+    "day": "2026-08-26",
+    "start": "2026-08-19",
+    "end": "2026-08-26",
+    "snapshot_id": "snapshot:tushare:etf_nav:sha256:18183e37b2f9a1198534e79ff2137dfee49342ef9230ac1d9333ef4764788722",
+    "payload_uri": "provider_payloads/tushare/etf_nav/8b37ff5b44900dcb1bd4c67b5125b956.parquet",
+    "checksum": "8b37ff5b44900dcb1bd4c67b5125b956",
+    "payload_rows": 9705,
+    "canonical_rows": 9705,
+    "completed_at": "2026-11-07T14:34:56.187763+00:00"
+  },
+  {
+    "day": "2026-09-03",
+    "start": "2026-08-27",
+    "end": "2026-09-03",
+    "snapshot_id": "snapshot:tushare:etf_nav:sha256:ffa78402c2de899c16375a0bc0a7eda002d8e7b7df9847df73c2bab4d6642ffa",
+    "payload_uri": "provider_payloads/tushare/etf_nav/267e039ecc0b005b17bf6da808bd9b98.parquet",
+    "checksum": "267e039ecc0b005b17bf6da808bd9b98",
+    "payload_rows": 9763,
+    "canonical_rows": 9763,
+    "completed_at": "2026-11-07T14:40:50.586326+00:00"
+  },
+  {
+    "day": "2026-09-11",
+    "start": "2026-09-04",
+    "end": "2026-09-11",
+    "snapshot_id": "snapshot:tushare:etf_nav:sha256:1b79589eb98ad571b4667703b1efc3cc69348e007066c9dd17655f204965eb3e",
+    "payload_uri": "provider_payloads/tushare/etf_nav/3e85e85e04c00d0d0c0b11506a036703.parquet",
+    "checksum": "3e85e85e04c00d0d0c0b11506a036703",
+    "payload_rows": 9824,
+    "canonical_rows": 9824,
+    "completed_at": "2026-11-07T14:45:49.223862+00:00"
+  },
+  {
+    "day": "2026-09-24",
+    "start": "2026-09-17",
+    "end": "2026-09-24",
+    "snapshot_id": "snapshot:tushare:etf_nav:sha256:d2c5302754e782875a611c7d5140d87f7bda38c03c7ace12bd21319c6b8f7470",
+    "payload_uri": "provider_payloads/tushare/etf_nav/716b5ff4822b0e18b307ac30ccfa5882.parquet",
+    "checksum": "716b5ff4822b0e18b307ac30ccfa5882",
+    "payload_rows": 9948,
+    "canonical_rows": 9948,
+    "completed_at": "2026-11-07T14:50:06.724697+00:00"
+  },
+  {
+    "day": "2026-10-02",
+    "start": "2026-09-25",
+    "end": "2026-10-02",
+    "snapshot_id": "snapshot:tushare:etf_nav:sha256:a7048da5da13ae435070778ecdfe22d0e7e55ddbb4003b1a4680fcf3131b1fc9",
+    "payload_uri": "provider_payloads/tushare/etf_nav/359b4740e73c112fefcafb6845085b1f.parquet",
+    "checksum": "359b4740e73c112fefcafb6845085b1f",
+    "payload_rows": 4973,
+    "canonical_rows": 4973,
+    "completed_at": "2026-11-07T14:52:19.102992+00:00"
+  },
+  {
+    "day": "2026-10-09",
+    "start": "2026-10-02",
+    "end": "2026-10-09",
+    "snapshot_id": "snapshot:tushare:etf_nav:sha256:cc4b6fd262887aaeb4ec01f949dc3d11884ad5ba8afbc3373b3db61ffff414d6",
+    "payload_uri": "provider_payloads/tushare/etf_nav/2f41afc5b9531840e106e4effd84c74e.parquet",
+    "checksum": "2f41afc5b9531840e106e4effd84c74e",
+    "payload_rows": 3352,
+    "canonical_rows": 3352,
+    "completed_at": "2026-11-07T14:54:43.656673+00:00"
+  },
+  {
+    "day": "2026-10-17",
+    "start": "2026-10-10",
+    "end": "2026-10-17",
+    "snapshot_id": "snapshot:tushare:etf_nav:sha256:5c6a533717d4da70359572b0521aadcfd4affee0020a7306ff51d1cec5741652",
+    "payload_uri": "provider_payloads/tushare/etf_nav/6eb3994171687c1b7622c7c784ddb3db.parquet",
+    "checksum": "6eb3994171687c1b7622c7c784ddb3db",
+    "payload_rows": 8386,
+    "canonical_rows": 8386,
+    "completed_at": "2026-11-07T14:59:42.521346+00:00"
+  },
+  {
+    "day": "2026-10-25",
+    "start": "2026-10-18",
+    "end": "2026-10-25",
+    "snapshot_id": "snapshot:tushare:etf_nav:sha256:d97c7bd0e6939a540d486de0a2088f005d28e5bb0682fbaa7d42759bf5e44779",
+    "payload_uri": "provider_payloads/tushare/etf_nav/cde3fce63dd8ffaa94ebd8bf68326817.parquet",
+    "checksum": "cde3fce63dd8ffaa94ebd8bf68326817",
+    "payload_rows": 8434,
+    "canonical_rows": 8434,
+    "completed_at": "2026-11-07T15:05:02.205818+00:00"
+  },
+  {
+    "day": "2026-08-18",
+    "start": "2026-08-11",
+    "end": "2026-08-18",
+    "snapshot_id": "snapshot:tushare:etf_nav:sha256:2c5f5cb1eaf22c60ae60dfc1545b35c4dfa3da338c51ae6140849c851b7d741f",
+    "payload_uri": "provider_payloads/tushare/etf_nav/51e970f5d8a633e4e0f9e2e69baaaa70.parquet",
+    "checksum": "51e970f5d8a633e4e0f9e2e69baaaa70",
+    "payload_rows": 9633,
+    "canonical_rows": 9633,
+    "completed_at": "2026-11-07T15:19:28.208374+00:00"
+  },
+  {
+    "day": "2026-11-02",
+    "start": "2026-10-26",
+    "end": "2026-11-02",
+    "snapshot_id": "snapshot:tushare:etf_nav:sha256:0fdc8c2773c2411bab15e14f2ecbeaab76f5d5dd21a8edec1661f374f33d2171",
+    "payload_uri": "provider_payloads/tushare/etf_nav/25bdcec518783fe5bf06043d8c483ac9.parquet",
+    "checksum": "25bdcec518783fe5bf06043d8c483ac9",
+    "payload_rows": 10135,
+    "canonical_rows": 10134,
+    "completed_at": "2026-11-07T15:24:17.493295+00:00"
+  }
+]

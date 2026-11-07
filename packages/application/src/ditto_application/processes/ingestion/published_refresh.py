@@ -10,6 +10,10 @@ from ditto_data.ingestion.partition_state import PartitionLifecycleReader
 from ditto_data.ingestion.published_refresh_evidence import (
     PublishedRefreshEvidenceStore,
 )
+from ditto_data.models.source_codes import (
+    COMMODITY_CODE_TO_INSTRUMENT_ID,
+    VIX_CODE_TO_INSTRUMENT_ID,
+)
 
 from ditto_application.catalog_freshness import (
     completed_covering_snapshot,
@@ -18,6 +22,7 @@ from ditto_application.catalog_freshness import (
     observed_at,
 )
 from ditto_application.exceptions import AppProcessError
+from ditto_application.processes.ingestion.commodity_fetcher import FRED_COMMODITY_CODES
 from ditto_application.processes.ingestion.source_selection import (
     IngestionCoordinatorLike,
 )
@@ -179,16 +184,37 @@ class PublishedRefreshProcess:
         }
 
     def fred(self, *, day: str) -> dict[str, object]:
-        """FRED 已配置系列的日常有界回看；返回真实源载荷逐系列末端。"""
+        """分别验收宏观与商品，保留每腿结果；任一失败令任务失败。"""
         if not self._fred_series:
             raise AppProcessError("FRED refresh requires configured series")
-        result = self._coordinator.ingest_date("macro_indicators", day, force=True)
-        if result.status == "failed":
+        datasets: dict[str, dict[str, object]] = {}
+        errors: dict[str, str] = {}
+        for dataset in ("macro_indicators", "commodity_daily"):
+            try:
+                datasets[dataset] = self._fred_dataset(dataset, day)
+            except Exception as exc:
+                errors[dataset] = f"{type(exc).__name__}: {exc}"
+                datasets[dataset] = {"error": errors[dataset]}
+        report: dict[str, object] = {
+            "recorded_at": datetime.now(SHANGHAI).isoformat(),
+            "day": day,
+            "source": "fred",
+            "datasets": datasets,
+            "errors": errors,
+        }
+        self._evidence.record("fred", report)
+        if errors:
+            raise AppProcessError(f"FRED refresh incomplete: {errors}")
+        return report
+
+    def _fred_dataset(self, dataset: str, day: str) -> dict[str, object]:
+        result = self._coordinator.ingest_date(dataset, day, force=True)
+        if result.status != "success":
             raise AppProcessError(result.error or result.message)
         snapshot = completed_covering_snapshot(
             self._snapshots,
             self._lifecycle,
-            dataset="macro_indicators",
+            dataset=dataset,
             source="fred",
             trade_date=day,
         )
@@ -197,25 +223,31 @@ class PublishedRefreshProcess:
                 "FRED refresh has no nonempty completed source evidence"
             )
         frame = self._audit.read_for_audit(snapshot.snapshot_id).frame
+        if dataset == "macro_indicators":
+            keys, date_column = ["indicator_code", "frequency"], "date"
+            frame = frame.drop_nulls(["value", "date", "frequency"])
+            missing = sorted(set(self._fred_series) - set(frame["indicator_code"]))
+        else:
+            keys, date_column = ["instrument_id"], "trade_date"
+            mapping = COMMODITY_CODE_TO_INSTRUMENT_ID | VIX_CODE_TO_INSTRUMENT_ID
+            frame = frame.drop_nulls(["close", "trade_date"])
+            present = set(frame["instrument_id"])
+            missing = sorted(
+                code for code in FRED_COMMODITY_CODES if mapping[code] not in present
+            )
+        if missing:
+            raise AppProcessError(
+                f"FRED {dataset} missing configured series: {missing}"
+            )
         latest = (
-            frame.group_by("indicator_code", "frequency")
-            .agg(pl.col("date").max().cast(pl.String).alias("latest_date"))
-            .sort("indicator_code")
+            frame.group_by(keys)
+            .agg(pl.col(date_column).max().cast(pl.String).alias("latest_date"))
+            .sort(keys)
             .to_dicts()
         )
-        missing = sorted(
-            set(self._fred_series) - set(frame["indicator_code"].to_list())
-        )
-        report: dict[str, object] = {
-            "recorded_at": datetime.now(SHANGHAI).isoformat(),
-            "day": day,
-            "source": "fred",
+        return {
             "snapshot_id": snapshot.snapshot_id,
             "rows": frame.height,
             "latest": latest,
             "missing_series": missing,
         }
-        self._evidence.record("fred", report)
-        if missing:
-            raise AppProcessError(f"FRED refresh missing configured series: {missing}")
-        return report
