@@ -2,8 +2,8 @@
   "artifacts": [
     {
       "relative_path": "current-acceptance-20261107/README.md",
-      "sha256": "sha256:8576d29ec6fb8df8aa9ca32b77b437e6f5cd9e5c963b741af3f90e0898c419d1",
-      "size_bytes": 8979
+      "sha256": "sha256:5e6ccb3bfb1ae74b30a5f7d7ce48bb785d94d7ca1f7f3f6b7de644893fc091c0",
+      "size_bytes": 9313
     },
     {
       "relative_path": "current-acceptance-20261107/accelerated-identity.json",
@@ -172,8 +172,8 @@
     },
     {
       "relative_path": "current-acceptance-20261107/research-assessment.json",
-      "sha256": "sha256:09739e3eb0dcd497306814210468e2119aa7b86b486eb9ba10e4d49c01918a7d",
-      "size_bytes": 8206
+      "sha256": "sha256:237b22674508ed5296ae78d409cb48bcb79bd94015b07e1b064abfcd5ef7f6c3",
+      "size_bytes": 8705
     },
     {
       "relative_path": "current-acceptance-20261107/research-prefreeze.json",
@@ -191,7 +191,7 @@
     "Current online source authentication rejected; final execution uses retained real responses."
   ],
   "gate": "Q4",
-  "manifest_hash": "sha256:3331a665dc02942659be73eba670cdb49703dbffef186e59f588a8c29757d1cc",
+  "manifest_hash": "sha256:5af41db125f57ee46841e7a7cb5adb0b2e0855b3aee30860748d0c0dc5b18ddf",
   "schema_version": 1,
   "status": "blocked"
 }

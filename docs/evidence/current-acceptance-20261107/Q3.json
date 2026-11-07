@@ -2,8 +2,8 @@
   "artifacts": [
     {
       "relative_path": "current-acceptance-20261107/README.md",
-      "sha256": "sha256:8576d29ec6fb8df8aa9ca32b77b437e6f5cd9e5c963b741af3f90e0898c419d1",
-      "size_bytes": 8979
+      "sha256": "sha256:5e6ccb3bfb1ae74b30a5f7d7ce48bb785d94d7ca1f7f3f6b7de644893fc091c0",
+      "size_bytes": 9313
     },
     {
       "relative_path": "current-acceptance-20261107/accelerated-identity.json",
@@ -172,8 +172,8 @@
     },
     {
       "relative_path": "current-acceptance-20261107/research-assessment.json",
-      "sha256": "sha256:09739e3eb0dcd497306814210468e2119aa7b86b486eb9ba10e4d49c01918a7d",
-      "size_bytes": 8206
+      "sha256": "sha256:237b22674508ed5296ae78d409cb48bcb79bd94015b07e1b064abfcd5ef7f6c3",
+      "size_bytes": 8705
     },
     {
       "relative_path": "current-acceptance-20261107/research-prefreeze.json",
@@ -191,7 +191,7 @@
     "Real edge-case matrix and frozen execution stability remain unverified."
   ],
   "gate": "Q3",
-  "manifest_hash": "sha256:2d239ba93c0df6ab63162bcef5f85a4c2db4ef3e2b46d8762dd2526d308aa1c8",
+  "manifest_hash": "sha256:a705529d4fb43ce886c1e49c7073170e9e9ec3f68d6f4370fad50ef5c8807ad2",
   "schema_version": 1,
   "status": "blocked"
 }

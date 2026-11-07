@@ -180,7 +180,7 @@
     }
   ],
   "research_time": {
-    "consumer": "ResearchDataFeed._build_slice",
+    "consumer": "ResearchDataFeed",
     "decision_time": "15:00 UTC (23:00 Asia/Shanghai), unchanged",
     "membership": "lagged knowledge cutoff, frozen membership required",
     "execution_lag_sessions": 1
@@ -200,13 +200,19 @@
   "local_snapshot_replay": {
     "stock_first_master_observed_at": "2026-10-03T14:54:11.722076+00:00",
     "etf_first_master_observed_at": "2026-10-03T14:56:07.751340+00:00",
-    "complete_contiguous_eligible_months_upper_bound": 0,
-    "derivation": "First master observation falls inside October; November is unfinished. Even before instrument-specific exclusions/warmup, no complete calendar month is observable. This is a strict upper bound, not a certification of every day after October 3.",
+    "complete_contiguous_eligible_months_upper_bound": 1,
+    "derivation": "Retained calendar: first October session 2026-10-08, last 2026-10-30. Master observations on October 3 precede the first session, so the existing complete_months trading-session boundary permits at most October. November is unfinished. Per-instrument coverage and compiled warmup remain uncertified and may reduce this bound to zero; no month is certified eligible.",
     "qualified_interval": null,
     "thresholds": {
       "failure_below_months": 37,
       "research_only_months": "37-95",
       "length_only_promotion_eligibility_from_months": 96
+    },
+    "calendar_evidence": {
+      "first_october_session": "2026-10-08",
+      "last_october_session": "2026-10-30",
+      "captured_calendar_sha256": "25dea2d0fc6c6caebee82654a8788a6083727061f43576b83c760ff2db632523",
+      "rule": "research_validation_calendar.complete_months includes the first month when strategy_eligible_start <= its first session; last_complete_month=2026-10"
     }
   },
   "historical_information_reconstruction": {
