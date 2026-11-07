@@ -1,0 +1,67 @@
+{
+  "measured_at": "2026-11-07T15:28:27.696548+00:00",
+  "raw_storage": {
+    "rows": 1623921,
+    "instruments": 1868,
+    "start": "2014-01-01",
+    "end": "2026-11-06"
+  },
+  "current_failures": [
+    {
+      "source": "tushare",
+      "trade_date": "2026-10-28",
+      "error_code": "FETCH_ERROR",
+      "attempts": 3,
+      "within_acceptance_window": true
+    },
+    {
+      "source": "tushare",
+      "trade_date": "2026-10-16",
+      "error_code": "FETCH_ERROR",
+      "attempts": 2,
+      "within_acceptance_window": true
+    },
+    {
+      "source": "tushare",
+      "trade_date": "2026-09-22",
+      "error_code": "FETCH_ERROR",
+      "attempts": 1,
+      "within_acceptance_window": true
+    },
+    {
+      "source": "tushare",
+      "trade_date": "2026-09-10",
+      "error_code": "FETCH_ERROR",
+      "attempts": 4,
+      "within_acceptance_window": true
+    },
+    {
+      "source": "tushare",
+      "trade_date": "2026-09-09",
+      "error_code": "FETCH_ERROR",
+      "attempts": 5,
+      "within_acceptance_window": true
+    },
+    {
+      "source": "tushare",
+      "trade_date": "2026-09-04",
+      "error_code": "FETCH_ERROR",
+      "attempts": 6,
+      "within_acceptance_window": true
+    },
+    {
+      "source": "tushare",
+      "trade_date": "2026-08-24",
+      "error_code": "FETCH_ERROR",
+      "attempts": 1,
+      "within_acceptance_window": true
+    },
+    {
+      "source": "tushare",
+      "trade_date": "2021-01-01",
+      "error_code": "FETCH_ERROR",
+      "attempts": 2,
+      "within_acceptance_window": true
+    }
+  ]
+}

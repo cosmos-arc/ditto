@@ -1,0 +1,37 @@
+{
+  "measured_at": "2026-11-07T14:34:00.010960+00:00",
+  "result": {
+    "dataset": "etf_nav",
+    "trade_date": "2026-09-16",
+    "status": "skipped",
+    "row_count": 9858,
+    "checksum": "8733c16e68b2b26935868ffb1db20c80",
+    "message": "\u6570\u636e\u5df2\u5b58\u5728\u4e14\u6444\u53d6\u6210\u529f(2026-09-16, checksum=8733c16e..., rows=9858)",
+    "error": null,
+    "snapshot_evidence": null,
+    "quality_evidence": {
+      "kind": "persisted_ingestion_l1_l2",
+      "status": "passed",
+      "source": "tushare",
+      "trade_date": "2026-09-16",
+      "levels": [
+        "l1",
+        "l2"
+      ],
+      "row_count": 9858,
+      "checksum": "8733c16e68b2b26935868ffb1db20c80"
+    }
+  },
+  "before": [
+    "SUCCESS",
+    "8733c16e68b2b26935868ffb1db20c80",
+    9858,
+    2
+  ],
+  "after": [
+    "SUCCESS",
+    "8733c16e68b2b26935868ffb1db20c80",
+    9858,
+    2
+  ]
+}

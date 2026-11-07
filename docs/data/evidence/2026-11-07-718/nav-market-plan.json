@@ -1,0 +1,28 @@
+{
+  "reason": "Bounded current 2026 sample windows and original seven unit NAV windows; daily market alternative after deterministic per-code pagination rejection; no all-history market sweep.",
+  "request_days": [
+    "2026-08-26",
+    "2026-09-03",
+    "2026-09-11",
+    "2026-09-24",
+    "2026-10-02",
+    "2026-10-09",
+    "2026-10-17",
+    "2026-10-25",
+    "2026-10-28"
+  ],
+  "retained_prior_request": "2026-09-16",
+  "coordinator": "ingest_date etf_nav force=True; unchanged eight-day lookback; one serial attempt per day",
+  "addendum": {
+    "request_day": "2026-08-18",
+    "recorded_reason": "158005.SZ original seed contains stored prelisting NAV on 2026-08-14/17/18. Preserve these observations and include the unchanged eight-day market lookback 2026-08-11..18; do not clamp NAV to exchange listing. Execute serially after current batch.",
+    "scope_decision": "User confirmed recent closure; earlier cumulative NAV explicitly unsupported, retained as exact follow-up targets."
+  },
+  "tail_replacement": {
+    "recorded_at": "2026-11-07T15:11:04.756918+00:00",
+    "failed_day": "2026-10-28",
+    "failure": "FETCH_ERROR / RetryError(SourceFetchError) during nav_date=20261022; retained failed request, do not repeat this day window",
+    "request_day": "2026-11-02",
+    "reason": "Use existing eight-day market request 2026-10-26..11-02 to cover the remaining 10-26..28 target tail, avoiding the already-completed 10-22 day that failed in the 10-28 attempt. No changed guards, no partial response reuse. Execute after 08-18 batch."
+  }
+}

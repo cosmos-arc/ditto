@@ -1,0 +1,294 @@
+{
+  "measured_at": "2026-11-07T14:35:54.283067+00:00",
+  "run_id": "55af2b84-990b-42ac-94d5-3435cefe02e2",
+  "state": "StateType.COMPLETED",
+  "result": {
+    "recorded_at": "2026-11-07T22:35:53.293298+08:00",
+    "day": "2026-11-07",
+    "source": "fred",
+    "datasets": {
+      "macro_indicators": {
+        "snapshot_id": "snapshot:fred:macro_indicators:sha256:a09eb347805bd9f32d79430e9d53cf033404d423c38c215eb7b54aea5e0a100b",
+        "rows": 418,
+        "latest": [
+          {
+            "indicator_code": "COMMOD_ALLFNF_IMF",
+            "frequency": "monthly",
+            "latest_date": "2026-09-01"
+          },
+          {
+            "indicator_code": "COMMOD_ALUMINUM_IMF",
+            "frequency": "monthly",
+            "latest_date": "2026-09-01"
+          },
+          {
+            "indicator_code": "COMMOD_BRENT",
+            "frequency": "daily",
+            "latest_date": "2026-11-03"
+          },
+          {
+            "indicator_code": "COMMOD_COPPER_IMF",
+            "frequency": "monthly",
+            "latest_date": "2026-09-01"
+          },
+          {
+            "indicator_code": "COMMOD_GASREGW",
+            "frequency": "weekly",
+            "latest_date": "2026-11-02"
+          },
+          {
+            "indicator_code": "COMMOD_HH_NATGAS",
+            "frequency": "daily",
+            "latest_date": "2026-11-03"
+          },
+          {
+            "indicator_code": "COMMOD_IRONORE_IMF",
+            "frequency": "monthly",
+            "latest_date": "2026-09-01"
+          },
+          {
+            "indicator_code": "COMMOD_NATGAS_EU_IMF",
+            "frequency": "monthly",
+            "latest_date": "2026-09-01"
+          },
+          {
+            "indicator_code": "COMMOD_WTI",
+            "frequency": "daily",
+            "latest_date": "2026-11-03"
+          },
+          {
+            "indicator_code": "COMMOD_WTI_IMF",
+            "frequency": "monthly",
+            "latest_date": "2026-09-01"
+          },
+          {
+            "indicator_code": "FX_EURUSD_H10",
+            "frequency": "daily",
+            "latest_date": "2026-10-30"
+          },
+          {
+            "indicator_code": "FX_GBPUSD_H10",
+            "frequency": "daily",
+            "latest_date": "2026-10-30"
+          },
+          {
+            "indicator_code": "FX_JPYUSD_H10",
+            "frequency": "daily",
+            "latest_date": "2026-10-30"
+          },
+          {
+            "indicator_code": "FX_USDCNY_H10",
+            "frequency": "daily",
+            "latest_date": "2026-10-30"
+          },
+          {
+            "indicator_code": "US_BOND_SPREAD_10Y2Y",
+            "frequency": "daily",
+            "latest_date": "2026-11-06"
+          },
+          {
+            "indicator_code": "US_BOND_SPREAD_10Y3M",
+            "frequency": "daily",
+            "latest_date": "2026-11-06"
+          },
+          {
+            "indicator_code": "US_BOND_SPREAD_BAA10Y",
+            "frequency": "daily",
+            "latest_date": "2026-11-05"
+          },
+          {
+            "indicator_code": "US_BOND_YIELD_10Y",
+            "frequency": "daily",
+            "latest_date": "2026-11-05"
+          },
+          {
+            "indicator_code": "US_BOND_YIELD_1MO",
+            "frequency": "daily",
+            "latest_date": "2026-11-05"
+          },
+          {
+            "indicator_code": "US_BOND_YIELD_1Y",
+            "frequency": "daily",
+            "latest_date": "2026-11-05"
+          },
+          {
+            "indicator_code": "US_BOND_YIELD_20Y",
+            "frequency": "daily",
+            "latest_date": "2026-11-05"
+          },
+          {
+            "indicator_code": "US_BOND_YIELD_2Y",
+            "frequency": "daily",
+            "latest_date": "2026-11-05"
+          },
+          {
+            "indicator_code": "US_BOND_YIELD_30Y",
+            "frequency": "daily",
+            "latest_date": "2026-11-05"
+          },
+          {
+            "indicator_code": "US_BOND_YIELD_3MO",
+            "frequency": "daily",
+            "latest_date": "2026-11-05"
+          },
+          {
+            "indicator_code": "US_BOND_YIELD_3Y",
+            "frequency": "daily",
+            "latest_date": "2026-11-05"
+          },
+          {
+            "indicator_code": "US_BOND_YIELD_5Y",
+            "frequency": "daily",
+            "latest_date": "2026-11-05"
+          },
+          {
+            "indicator_code": "US_BOND_YIELD_7Y",
+            "frequency": "daily",
+            "latest_date": "2026-11-05"
+          },
+          {
+            "indicator_code": "US_BREAKEVEN_10Y",
+            "frequency": "daily",
+            "latest_date": "2026-11-06"
+          },
+          {
+            "indicator_code": "US_BREAKEVEN_5Y",
+            "frequency": "daily",
+            "latest_date": "2026-11-06"
+          },
+          {
+            "indicator_code": "US_CORE_CPI_INDEX",
+            "frequency": "monthly",
+            "latest_date": "2026-09-01"
+          },
+          {
+            "indicator_code": "US_CORE_PCE_INDEX",
+            "frequency": "monthly",
+            "latest_date": "2026-09-01"
+          },
+          {
+            "indicator_code": "US_CORP_YIELD_AAA",
+            "frequency": "daily",
+            "latest_date": "2026-11-05"
+          },
+          {
+            "indicator_code": "US_CORP_YIELD_BAA_D",
+            "frequency": "daily",
+            "latest_date": "2026-11-05"
+          },
+          {
+            "indicator_code": "US_CORP_YIELD_BAA_M",
+            "frequency": "monthly",
+            "latest_date": "2026-10-01"
+          },
+          {
+            "indicator_code": "US_CPI_INDEX",
+            "frequency": "monthly",
+            "latest_date": "2026-09-01"
+          },
+          {
+            "indicator_code": "US_CREDIT_HY_OAS",
+            "frequency": "daily",
+            "latest_date": "2026-11-05"
+          },
+          {
+            "indicator_code": "US_CREDIT_IG_OAS",
+            "frequency": "daily",
+            "latest_date": "2026-11-05"
+          },
+          {
+            "indicator_code": "US_DOLLAR_INDEX_AFE_GOODS",
+            "frequency": "daily",
+            "latest_date": "2026-10-30"
+          },
+          {
+            "indicator_code": "US_DOLLAR_INDEX_BROAD",
+            "frequency": "daily",
+            "latest_date": "2026-10-30"
+          },
+          {
+            "indicator_code": "US_EFFR",
+            "frequency": "daily",
+            "latest_date": "2026-11-05"
+          },
+          {
+            "indicator_code": "US_FEDFUNDS_D",
+            "frequency": "daily",
+            "latest_date": "2026-11-05"
+          },
+          {
+            "indicator_code": "US_FEDFUNDS_M",
+            "frequency": "monthly",
+            "latest_date": "2026-10-01"
+          },
+          {
+            "indicator_code": "US_GDP_QOQ",
+            "frequency": "quarterly",
+            "latest_date": "2026-07-01"
+          },
+          {
+            "indicator_code": "US_M2",
+            "frequency": "monthly",
+            "latest_date": "2026-09-01"
+          },
+          {
+            "indicator_code": "US_PAYEMS",
+            "frequency": "monthly",
+            "latest_date": "2026-10-01"
+          },
+          {
+            "indicator_code": "US_PCE_INDEX",
+            "frequency": "monthly",
+            "latest_date": "2026-09-01"
+          },
+          {
+            "indicator_code": "US_SOFR",
+            "frequency": "daily",
+            "latest_date": "2026-11-05"
+          },
+          {
+            "indicator_code": "US_UNRATE",
+            "frequency": "monthly",
+            "latest_date": "2026-10-01"
+          },
+          {
+            "indicator_code": "VIX_30D",
+            "frequency": "daily",
+            "latest_date": "2026-11-05"
+          },
+          {
+            "indicator_code": "VIX_NASDAQ",
+            "frequency": "daily",
+            "latest_date": "2026-11-05"
+          },
+          {
+            "indicator_code": "VIX_RUSSELL",
+            "frequency": "daily",
+            "latest_date": "2026-11-05"
+          }
+        ],
+        "missing_series": []
+      },
+      "commodity_daily": {
+        "snapshot_id": "snapshot:fred:commodity_daily:sha256:d0d2fe01d5716d3ae1458a26dcf57f02833c690b0d0b9d9fe08bef0eb3e90524",
+        "rows": 11,
+        "latest": [
+          {
+            "instrument_id": 5000001,
+            "latest_date": "2026-11-03"
+          },
+          {
+            "instrument_id": 5000002,
+            "latest_date": "2026-11-03"
+          },
+          {
+            "instrument_id": 5100001,
+            "latest_date": "2026-11-05"
+          }
+        ],
+        "missing_series": []
+      }
+    },
+    "errors": {}
+  }
+}

@@ -1,0 +1,443 @@
+{
+  "per_instrument": [
+    {
+      "target": {
+        "source_ticker": "158005.SZ",
+        "instrument_id": 2001803,
+        "start": "2026-08-24",
+        "end": "2026-10-28",
+        "field": "acc_nav",
+        "rows": 42,
+        "nulls": 40
+      },
+      "started_at": "2026-11-07T14:20:12.244812+00:00",
+      "finished_at": "2026-11-07T14:20:22.916030+00:00",
+      "result": {
+        "dataset": "etf_nav",
+        "trade_date": "2026-08-24",
+        "status": "failed",
+        "row_count": null,
+        "checksum": null,
+        "message": "获取数据失败: Failed to fetch etf_nav from Tushare",
+        "error": "FETCH_ERROR",
+        "snapshot_evidence": null,
+        "quality_evidence": null
+      }
+    },
+    {
+      "target": {
+        "source_ticker": "158013.SZ",
+        "instrument_id": 2001789,
+        "start": "2026-09-09",
+        "end": "2026-09-09",
+        "field": "unit_nav",
+        "rows": 0,
+        "nulls": 0
+      },
+      "started_at": "2026-11-07T14:20:22.916504+00:00",
+      "finished_at": "2026-11-07T14:20:24.184188+00:00",
+      "result": {
+        "dataset": "etf_nav",
+        "trade_date": "2026-09-09",
+        "status": "failed",
+        "row_count": null,
+        "checksum": null,
+        "message": "获取数据失败: Failed to fetch etf_nav from Tushare",
+        "error": "FETCH_ERROR",
+        "snapshot_evidence": null,
+        "quality_evidence": null
+      }
+    },
+    {
+      "target": {
+        "source_ticker": "158013.SZ",
+        "instrument_id": 2001789,
+        "start": "2026-09-09",
+        "end": "2026-10-28",
+        "field": "acc_nav",
+        "rows": 29,
+        "nulls": 27
+      },
+      "started_at": "2026-11-07T14:20:24.184628+00:00",
+      "finished_at": "2026-11-07T14:20:30.262247+00:00",
+      "result": {
+        "dataset": "etf_nav",
+        "trade_date": "2026-09-09",
+        "status": "failed",
+        "row_count": null,
+        "checksum": null,
+        "message": "获取数据失败: Failed to fetch etf_nav from Tushare",
+        "error": "FETCH_ERROR",
+        "snapshot_evidence": null,
+        "quality_evidence": null
+      }
+    },
+    {
+      "target": {
+        "source_ticker": "158031.SZ",
+        "instrument_id": 2001822,
+        "start": "2026-09-22",
+        "end": "2026-10-28",
+        "field": "acc_nav",
+        "rows": 21,
+        "nulls": 19
+      },
+      "started_at": "2026-11-07T14:20:30.262967+00:00",
+      "finished_at": "2026-11-07T14:20:34.910680+00:00",
+      "result": {
+        "dataset": "etf_nav",
+        "trade_date": "2026-09-22",
+        "status": "failed",
+        "row_count": null,
+        "checksum": null,
+        "message": "获取数据失败: Failed to fetch etf_nav from Tushare",
+        "error": "FETCH_ERROR",
+        "snapshot_evidence": null,
+        "quality_evidence": null
+      }
+    },
+    {
+      "target": {
+        "source_ticker": "158031.SZ",
+        "instrument_id": 2001822,
+        "start": "2026-09-24",
+        "end": "2026-09-24",
+        "field": "unit_nav",
+        "rows": 1,
+        "nulls": 0
+      },
+      "started_at": "2026-11-07T14:20:34.911448+00:00",
+      "finished_at": "2026-11-07T14:20:36.314200+00:00",
+      "result": {
+        "dataset": "etf_nav",
+        "trade_date": "2026-09-24",
+        "status": "failed",
+        "row_count": null,
+        "checksum": null,
+        "message": "获取数据失败: Failed to fetch etf_nav from Tushare",
+        "error": "FETCH_ERROR",
+        "snapshot_evidence": null,
+        "quality_evidence": null
+      }
+    }
+  ],
+  "excluded_setup_attempts": 5,
+  "market": [
+    {
+      "day": "2026-09-16",
+      "started_at": "2026-11-07T14:23:09.728468+00:00",
+      "finished_at": "2026-11-07T14:28:38.743248+00:00",
+      "result": {
+        "dataset": "etf_nav",
+        "trade_date": "2026-09-16",
+        "status": "success",
+        "row_count": 9858,
+        "checksum": "8733c16e68b2b26935868ffb1db20c80",
+        "message": "数据摄取成功",
+        "error": null,
+        "snapshot_evidence": null,
+        "quality_evidence": {
+          "kind": "write_time_l1_l2",
+          "status": "passed",
+          "source": "tushare",
+          "trade_date": "2026-09-16",
+          "levels": [
+            "l1",
+            "l2"
+          ],
+          "row_count": 9858,
+          "checksum": "8733c16e68b2b26935868ffb1db20c80"
+        }
+      }
+    },
+    {
+      "day": "2026-08-26",
+      "started_at": "2026-11-07T14:29:40.333655+00:00",
+      "finished_at": "2026-11-07T14:34:56.188134+00:00",
+      "result": {
+        "dataset": "etf_nav",
+        "trade_date": "2026-08-26",
+        "status": "success",
+        "row_count": 9705,
+        "checksum": "a9a96a5abfb042577b931954516ea441",
+        "message": "数据摄取成功",
+        "error": null,
+        "snapshot_evidence": null,
+        "quality_evidence": {
+          "kind": "write_time_l1_l2",
+          "status": "passed",
+          "source": "tushare",
+          "trade_date": "2026-08-26",
+          "levels": [
+            "l1",
+            "l2"
+          ],
+          "row_count": 9705,
+          "checksum": "a9a96a5abfb042577b931954516ea441"
+        }
+      }
+    },
+    {
+      "day": "2026-09-03",
+      "started_at": "2026-11-07T14:34:56.188551+00:00",
+      "finished_at": "2026-11-07T14:40:50.586721+00:00",
+      "result": {
+        "dataset": "etf_nav",
+        "trade_date": "2026-09-03",
+        "status": "success",
+        "row_count": 9763,
+        "checksum": "e0bc520d31941a845e034d3c83c3b7bd",
+        "message": "数据摄取成功",
+        "error": null,
+        "snapshot_evidence": null,
+        "quality_evidence": {
+          "kind": "write_time_l1_l2",
+          "status": "passed",
+          "source": "tushare",
+          "trade_date": "2026-09-03",
+          "levels": [
+            "l1",
+            "l2"
+          ],
+          "row_count": 9763,
+          "checksum": "e0bc520d31941a845e034d3c83c3b7bd"
+        }
+      }
+    },
+    {
+      "day": "2026-09-11",
+      "started_at": "2026-11-07T14:40:50.587261+00:00",
+      "finished_at": "2026-11-07T14:45:49.224201+00:00",
+      "result": {
+        "dataset": "etf_nav",
+        "trade_date": "2026-09-11",
+        "status": "success",
+        "row_count": 9824,
+        "checksum": "7ccd247d833a97b38945c5675275c1ae",
+        "message": "数据摄取成功",
+        "error": null,
+        "snapshot_evidence": null,
+        "quality_evidence": {
+          "kind": "write_time_l1_l2",
+          "status": "passed",
+          "source": "tushare",
+          "trade_date": "2026-09-11",
+          "levels": [
+            "l1",
+            "l2"
+          ],
+          "row_count": 9824,
+          "checksum": "7ccd247d833a97b38945c5675275c1ae"
+        }
+      }
+    },
+    {
+      "day": "2026-09-24",
+      "started_at": "2026-11-07T14:45:49.224551+00:00",
+      "finished_at": "2026-11-07T14:50:06.724885+00:00",
+      "result": {
+        "dataset": "etf_nav",
+        "trade_date": "2026-09-24",
+        "status": "success",
+        "row_count": 9948,
+        "checksum": "39e15055fe61cb89400d0bf19f715d52",
+        "message": "数据摄取成功",
+        "error": null,
+        "snapshot_evidence": null,
+        "quality_evidence": {
+          "kind": "write_time_l1_l2",
+          "status": "passed",
+          "source": "tushare",
+          "trade_date": "2026-09-24",
+          "levels": [
+            "l1",
+            "l2"
+          ],
+          "row_count": 9948,
+          "checksum": "39e15055fe61cb89400d0bf19f715d52"
+        }
+      }
+    },
+    {
+      "day": "2026-10-02",
+      "started_at": "2026-11-07T14:50:06.725060+00:00",
+      "finished_at": "2026-11-07T14:52:19.103180+00:00",
+      "result": {
+        "dataset": "etf_nav",
+        "trade_date": "2026-10-02",
+        "status": "success",
+        "row_count": 4973,
+        "checksum": "6fc8247703f14f37034bf94021de5c6d",
+        "message": "数据摄取成功",
+        "error": null,
+        "snapshot_evidence": null,
+        "quality_evidence": {
+          "kind": "write_time_l1_l2",
+          "status": "passed",
+          "source": "tushare",
+          "trade_date": "2026-10-02",
+          "levels": [
+            "l1",
+            "l2"
+          ],
+          "row_count": 4973,
+          "checksum": "6fc8247703f14f37034bf94021de5c6d"
+        }
+      }
+    },
+    {
+      "day": "2026-10-09",
+      "started_at": "2026-11-07T14:52:19.103455+00:00",
+      "finished_at": "2026-11-07T14:54:43.656835+00:00",
+      "result": {
+        "dataset": "etf_nav",
+        "trade_date": "2026-10-09",
+        "status": "success",
+        "row_count": 3352,
+        "checksum": "264b44c3d4dc4875a488ecaf64784ab0",
+        "message": "数据摄取成功",
+        "error": null,
+        "snapshot_evidence": null,
+        "quality_evidence": {
+          "kind": "write_time_l1_l2",
+          "status": "passed",
+          "source": "tushare",
+          "trade_date": "2026-10-09",
+          "levels": [
+            "l1",
+            "l2"
+          ],
+          "row_count": 3352,
+          "checksum": "264b44c3d4dc4875a488ecaf64784ab0"
+        }
+      }
+    },
+    {
+      "day": "2026-10-17",
+      "started_at": "2026-11-07T14:54:43.656973+00:00",
+      "finished_at": "2026-11-07T14:59:42.521602+00:00",
+      "result": {
+        "dataset": "etf_nav",
+        "trade_date": "2026-10-17",
+        "status": "success",
+        "row_count": 8386,
+        "checksum": "60e105069220ddb8f3e07aa0ccbb3305",
+        "message": "数据摄取成功",
+        "error": null,
+        "snapshot_evidence": null,
+        "quality_evidence": {
+          "kind": "write_time_l1_l2",
+          "status": "passed",
+          "source": "tushare",
+          "trade_date": "2026-10-17",
+          "levels": [
+            "l1",
+            "l2"
+          ],
+          "row_count": 8386,
+          "checksum": "60e105069220ddb8f3e07aa0ccbb3305"
+        }
+      }
+    },
+    {
+      "day": "2026-10-25",
+      "started_at": "2026-11-07T14:59:42.521978+00:00",
+      "finished_at": "2026-11-07T15:05:02.206477+00:00",
+      "result": {
+        "dataset": "etf_nav",
+        "trade_date": "2026-10-25",
+        "status": "success",
+        "row_count": 8434,
+        "checksum": "162918362e15d0ed05f337386224485c",
+        "message": "数据摄取成功",
+        "error": null,
+        "snapshot_evidence": null,
+        "quality_evidence": {
+          "kind": "write_time_l1_l2",
+          "status": "passed",
+          "source": "tushare",
+          "trade_date": "2026-10-25",
+          "levels": [
+            "l1",
+            "l2"
+          ],
+          "row_count": 8434,
+          "checksum": "162918362e15d0ed05f337386224485c"
+        }
+      }
+    },
+    {
+      "day": "2026-10-28",
+      "started_at": "2026-11-07T15:05:02.206847+00:00",
+      "finished_at": "2026-11-07T15:07:12.027479+00:00",
+      "result": {
+        "dataset": "etf_nav",
+        "trade_date": "2026-10-28",
+        "status": "failed",
+        "row_count": null,
+        "checksum": null,
+        "message": "获取数据失败: Failed to fetch etf_nav from Tushare",
+        "error": "FETCH_ERROR",
+        "snapshot_evidence": null,
+        "quality_evidence": null
+      }
+    },
+    {
+      "day": "2026-08-18",
+      "started_at": "2026-11-07T15:09:47.549432+00:00",
+      "finished_at": "2026-11-07T15:19:28.208665+00:00",
+      "result": {
+        "dataset": "etf_nav",
+        "trade_date": "2026-08-18",
+        "status": "success",
+        "row_count": 9633,
+        "checksum": "a1ebacb101e67169f9782701a51b90c0",
+        "message": "数据摄取成功",
+        "error": null,
+        "snapshot_evidence": null,
+        "quality_evidence": {
+          "kind": "write_time_l1_l2",
+          "status": "passed",
+          "source": "tushare",
+          "trade_date": "2026-08-18",
+          "levels": [
+            "l1",
+            "l2"
+          ],
+          "row_count": 9633,
+          "checksum": "a1ebacb101e67169f9782701a51b90c0"
+        }
+      }
+    },
+    {
+      "day": "2026-11-02",
+      "started_at": "2026-11-07T15:20:49.701148+00:00",
+      "finished_at": "2026-11-07T15:24:17.493521+00:00",
+      "result": {
+        "dataset": "etf_nav",
+        "trade_date": "2026-11-02",
+        "status": "success",
+        "row_count": 10134,
+        "checksum": "26927968505c7f3d4a566a5afb959b2d",
+        "message": "数据摄取成功",
+        "error": null,
+        "snapshot_evidence": null,
+        "quality_evidence": {
+          "kind": "write_time_l1_l2",
+          "status": "passed",
+          "source": "tushare",
+          "trade_date": "2026-11-02",
+          "levels": [
+            "l1",
+            "l2"
+          ],
+          "row_count": 10134,
+          "checksum": "26927968505c7f3d4a566a5afb959b2d"
+        }
+      }
+    }
+  ],
+  "native_observations": 1987,
+  "native_index_sha256": "1c1e1b84abe7dbdca04eaea4e85c117d3a84d5b9808b8b17a7ce422288281ded",
+  "native_local_directory": ".cache/issues-707-718/nav-native-pages"
+}
