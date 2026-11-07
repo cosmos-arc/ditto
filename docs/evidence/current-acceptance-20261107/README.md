@@ -1,7 +1,8 @@
 # #709 / #710 当前候选验收
 
 **研究未通过；Paper 历史执行链通过，但当前发布资格未通过。**
-执行代码为 `7696d411d5404acb4fd22406d64cb408782ad16e`；后续证据提交只整理报告和历史清单。
+股票/ETF 与初次留存重放使用 `7696d411d5404acb4fd22406d64cb408782ad16e`；
+纠正代理入口后的在线 20 日复验使用 `39890cb0a5e54289c33b1a3662bb00c43e1e6925`，二者执行代码树相同。
 完整代码树、锁文件、配置及辅助脚本身份见 [identity-and-validation.json](identity-and-validation.json)。
 没有连接券商、真实下单、发布或激活生产策略。原始数据只读，账户与运行状态均在新建隔离根。
 
@@ -51,6 +52,7 @@ ETF daily 响应也没有停复牌状态。没有把晚回填伪装成早期观�
 | 通用股票 Paper | 10 单：9 成交、1 涨停拒单；账本 10 条；EOD balanced | [stock-paper.json](stock-paper.json)，真实 10 月 21 日留存行情/限价，11 月 7 日事后模拟 |
 | governed ETF | 1 成交；opening + buy 共 2 条账本；EOD balanced | [governed-etf.json](governed-etf.json)，510300.SH，11 月 5 日信号 / 11 月 6 日交易 |
 | 20 日加速 | 10 月 12 日至 11 月 6 日，20 个真实历史交易日；20/20 balanced；HMAC 链校验通过 | [accelerated-result.json](accelerated-result.json)，新隔离根、真实留存响应重放 |
+| 代理在线 20 日复验 | 同一真实日期窗，在线重新取数与逐日源校验；20/20 balanced；HMAC 链通过 | [proxy-online/result.json](proxy-online/result.json)，另一全新隔离根；[独立进程恢复](proxy-online/restart.json) 后仍为 21 条账本 |
 | 独立进程恢复 | 股票 10、ETF 2、加速 21 条账本在恢复/重放前后不变；22 个 session 使用新 EOD 键重算且全部 balanced | [process-restart.json](process-restart.json) |
 | 复用已完成根 | `verified_existing`，`newly_recorded_days=0` | [accelerated-identity.json](accelerated-identity.json)，不记作新执行通过 |
 
@@ -69,15 +71,43 @@ basic/daily/reference 快照、execution、ledger event、EOD 和代码 SHA。
 额外账本事实的反向对账拒绝、未入账守卫、账户事实注入拒绝与 CAS 等反例由现有针对性测试覆盖；
 本次真实输入不声称穷尽这些反例。
 
-20 日数据最初于 `6bb914a1` 在线取得并完成一次真实源加速运行；当前代码重新在线读取时，
-Tushare 两次返回 `SourceAuthenticationError`。于是当前代码使用本轮已留存的同一真实响应完成全新根重放，
-原始响应 SHA-256、获取时刻、当前执行身份见 [accelerated-identity.json](accelerated-identity.json)。
-没有合成行情，也没有把留存重放说成新的在线抓取。
+**认证阻断结论已撤回：是验收入口选错配置，不是代理 token 失效。**
+两次失败调用漏设 `DITTO_CONFIG_ROOT`，配置根回退到 `~/.config/ditto`，
+最终使用默认官方地址 `api.tushare.pro`，却加载了钥匙串里的代理 token。
+同一进程对照确认 token 完全相同；只把配置根明确指向仓库后，选中 development 的
+`t.xiaodefa.top`，真实交易日历请求通过。没有更换 token，也没有更改全局或生产配置。
+
+随后在 `39890cb0` 使用显式配置/状态/缓存根及请求前代理主机断言，完成另一新根的在线 20 日验收，
+并在原进程退出后校验 HMAC 链、恢复执行、以新键重算 20 个 EOD，账本始终为 21 条。
+详情见 [proxy-correction.json](proxy-correction.json) 与 [proxy-online/](proxy-online/)。
+原先的留存重放及其独立进程回执仍保留；它们与这次在线抓取是不同运行。
+
+后续现场复验必须明确使用已有代理配置；以下最小检查会在误选官方地址时先拒绝：
+
+```bash
+ENVIRONMENT=development DITTO_CONFIG_ROOT="$PWD" \
+DITTO_STATE_ROOT="$PWD/.cache/proxy-check/state" \
+DITTO_CACHE_ROOT="$PWD/.cache/proxy-check/cache" uv run --no-sync python - <<'PY'
+from contextlib import closing
+from urllib.parse import urlsplit
+from ditto_apps.registry.container import make_app_container
+from ditto_apps.registry.infra.config import preload_runtime_secrets
+from ditto_data.config.data_source import DataSourceSettings
+from ditto_application.queries.source import SourceDataPort
+preload_runtime_secrets()
+with closing(make_app_container()) as container:
+    settings = container.get(DataSourceSettings)
+    assert urlsplit(settings.http_base_url).hostname == 't.xiaodefa.top'
+    rows = container.get(SourceDataPort).fetch_calendar('2026-11-05', '2026-11-06')
+    assert rows.height > 0
+    print('proxy calendar passed:', rows.height)
+PY
+```
 
 **当前发布资格仍未通过**：既有加速合同要求 current live-day anchor，而本次引用的是
 2026-09-02 归档锚点。原始签名报告中的 `qualifies_as_release_acceptance=true` 是既有合同字段，
 不能越过本报告的当前资格判定。自然运行不在本次声明中，也没有新增自然 20 日等待门。
-补齐当前适用的 live-day anchor、恢复在线认证后，才能完成该部分放行复验。
+补齐当前适用的 live-day anchor 后，才能完成该部分放行复验；代理认证已实测通过。
 备份/完整恢复按维护者决定 **DEFERRED**；普通进程重启已验，旧恢复结果不充当当前恢复证明。
 
 ## 清单修复、检查与复核

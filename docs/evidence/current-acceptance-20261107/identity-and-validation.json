@@ -42,8 +42,9 @@
   "current_qualification": {
     "research": "NOT_PASSED",
     "paper_historical_execution": "PASSED",
-    "paper_current_release": "NOT_PASSED: archived live-day anchor and online source authentication rejection",
+    "paper_current_release": "NOT_PASSED: archived live-day anchor; proxy authentication verified successfully",
     "natural_day_soak": "NOT_CLAIMED",
     "backup_full_restore": "MAINTAINER_DEFERRED"
-  }
+  },
+  "proxy_online_execution_code_sha": "39890cb0a5e54289c33b1a3662bb00c43e1e6925"
 }

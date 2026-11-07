@@ -1,0 +1,328 @@
+{
+  "schema": "ditto.q4-accelerated-paper-acceptance-proposal.v1",
+  "generated_at": "2026-11-07T10:32:07.781732Z",
+  "status": "pending_operator_approval",
+  "acceptance": {
+    "mode": "accelerated_real_provider_replay",
+    "qualifies_as_wall_clock_soak": false,
+    "qualifies_as_release_acceptance": true,
+    "requires_current_live_day_anchor": true
+  },
+  "safety": {
+    "paper_only": true,
+    "broker_connections": 0,
+    "real_orders": 0,
+    "strategy_publishes": 0
+  },
+  "exact_acceptance_request": {
+    "arguments": {
+      "operation": "run-accelerated-real-provider-paper-acceptance-v1",
+      "data_root": "/Users/chevy/Desktop/code/ditto.worktrees/issues-709-710/.cache/acceptance/accelerated-proxy-corrected/private",
+      "evidence_root": "/Users/chevy/Desktop/code/ditto.worktrees/issues-709-710/.cache/acceptance/accelerated-proxy-corrected/public",
+      "generated_at": "2026-11-07T10:32:07.781732Z",
+      "acceptance": {
+        "mode": "accelerated_real_provider_replay",
+        "qualifies_as_wall_clock_soak": false,
+        "qualifies_as_release_acceptance": true,
+        "requires_current_live_day_anchor": true
+      },
+      "live_day_anchor": {
+        "approval_hash": "8f9e27eff65976bf42413335ae80e63cb9982b3cbb8a4727d69b2450792922e2",
+        "day_evidence_hash": "52bf2838ebf8fc7a66a72302c19593561f9d67859f5dc841001aff97b1e1358d"
+      },
+      "replay": {
+        "provider": "tushare",
+        "calendar_dataset": "trade_calendar",
+        "market_dataset": "etf_daily",
+        "instrument_id": 2001724,
+        "instrument_code": "518880.SH",
+        "strategy_id": "seed_etf_industry_rotation",
+        "paper_account_id": "paper-pap09-accelerated-acceptance",
+        "opening_cash": "1000000",
+        "order_quantity": 100,
+        "target_days": 20,
+        "trade_dates": [
+          "2026-10-12",
+          "2026-10-13",
+          "2026-10-14",
+          "2026-10-15",
+          "2026-10-16",
+          "2026-10-19",
+          "2026-10-20",
+          "2026-10-21",
+          "2026-10-22",
+          "2026-10-23",
+          "2026-10-26",
+          "2026-10-27",
+          "2026-10-28",
+          "2026-10-29",
+          "2026-10-30",
+          "2026-11-02",
+          "2026-11-03",
+          "2026-11-04",
+          "2026-11-05",
+          "2026-11-06"
+        ],
+        "settlement_dates": [
+          "2026-10-13",
+          "2026-10-14",
+          "2026-10-15",
+          "2026-10-16",
+          "2026-10-19",
+          "2026-10-20",
+          "2026-10-21",
+          "2026-10-22",
+          "2026-10-23",
+          "2026-10-26",
+          "2026-10-27",
+          "2026-10-28",
+          "2026-10-29",
+          "2026-10-30",
+          "2026-11-02",
+          "2026-11-03",
+          "2026-11-04",
+          "2026-11-05",
+          "2026-11-06",
+          "2026-11-09"
+        ],
+        "provider_bars": [
+          {
+            "source_ticker": "518880.SH",
+            "trade_date": "2026-10-12",
+            "open": 8.645,
+            "high": 8.647,
+            "low": 8.579,
+            "close": 8.585,
+            "pre_close": 8.617,
+            "volume": 3115559.81,
+            "amount": 2684394.652
+          },
+          {
+            "source_ticker": "518880.SH",
+            "trade_date": "2026-10-13",
+            "open": 8.538,
+            "high": 8.621,
+            "low": 8.516,
+            "close": 8.599,
+            "pre_close": 8.585,
+            "volume": 3787499.96,
+            "amount": 3249820.831
+          },
+          {
+            "source_ticker": "518880.SH",
+            "trade_date": "2026-10-14",
+            "open": 8.52,
+            "high": 8.553,
+            "low": 8.498,
+            "close": 8.501,
+            "pre_close": 8.599,
+            "volume": 3135939.48,
+            "amount": 2673119.262
+          },
+          {
+            "source_ticker": "518880.SH",
+            "trade_date": "2026-10-15",
+            "open": 8.5,
+            "high": 8.527,
+            "low": 8.468,
+            "close": 8.472,
+            "pre_close": 8.501,
+            "volume": 3411753.24,
+            "amount": 2897109.446
+          },
+          {
+            "source_ticker": "518880.SH",
+            "trade_date": "2026-10-16",
+            "open": 8.508,
+            "high": 8.56,
+            "low": 8.497,
+            "close": 8.554,
+            "pre_close": 8.472,
+            "volume": 3335685.05,
+            "amount": 2847789.386
+          },
+          {
+            "source_ticker": "518880.SH",
+            "trade_date": "2026-10-19",
+            "open": 8.53,
+            "high": 8.564,
+            "low": 8.53,
+            "close": 8.553,
+            "pre_close": 8.554,
+            "volume": 2851998.0,
+            "amount": 2438039.052
+          },
+          {
+            "source_ticker": "518880.SH",
+            "trade_date": "2026-10-20",
+            "open": 8.428,
+            "high": 8.481,
+            "low": 8.427,
+            "close": 8.457,
+            "pre_close": 8.553,
+            "volume": 3495776.0,
+            "amount": 2953948.866
+          },
+          {
+            "source_ticker": "518880.SH",
+            "trade_date": "2026-10-21",
+            "open": 8.414,
+            "high": 8.45,
+            "low": 8.408,
+            "close": 8.412,
+            "pre_close": 8.457,
+            "volume": 2951752.08,
+            "amount": 2487094.759
+          },
+          {
+            "source_ticker": "518880.SH",
+            "trade_date": "2026-10-22",
+            "open": 8.41,
+            "high": 8.429,
+            "low": 8.306,
+            "close": 8.36,
+            "pre_close": 8.412,
+            "volume": 5369807.34,
+            "amount": 4495307.614
+          },
+          {
+            "source_ticker": "518880.SH",
+            "trade_date": "2026-10-23",
+            "open": 8.22,
+            "high": 8.228,
+            "low": 8.139,
+            "close": 8.199,
+            "pre_close": 8.36,
+            "volume": 6826344.3,
+            "amount": 5595133.045
+          },
+          {
+            "source_ticker": "518880.SH",
+            "trade_date": "2026-10-26",
+            "open": 8.159,
+            "high": 8.212,
+            "low": 8.13,
+            "close": 8.185,
+            "pre_close": 8.199,
+            "volume": 3415930.91,
+            "amount": 2790757.293
+          },
+          {
+            "source_ticker": "518880.SH",
+            "trade_date": "2026-10-27",
+            "open": 8.184,
+            "high": 8.208,
+            "low": 8.165,
+            "close": 8.167,
+            "pre_close": 8.185,
+            "volume": 3057945.63,
+            "amount": 2503328.352
+          },
+          {
+            "source_ticker": "518880.SH",
+            "trade_date": "2026-10-28",
+            "open": 8.284,
+            "high": 8.286,
+            "low": 8.22,
+            "close": 8.226,
+            "pre_close": 8.167,
+            "volume": 2680460.37,
+            "amount": 2211567.912
+          },
+          {
+            "source_ticker": "518880.SH",
+            "trade_date": "2026-10-29",
+            "open": 8.284,
+            "high": 8.293,
+            "low": 8.202,
+            "close": 8.224,
+            "pre_close": 8.226,
+            "volume": 2985418.1,
+            "amount": 2462218.847
+          },
+          {
+            "source_ticker": "518880.SH",
+            "trade_date": "2026-10-30",
+            "open": 8.16,
+            "high": 8.176,
+            "low": 8.112,
+            "close": 8.115,
+            "pre_close": 8.224,
+            "volume": 3368514.94,
+            "amount": 2744215.185
+          },
+          {
+            "source_ticker": "518880.SH",
+            "trade_date": "2026-11-02",
+            "open": 7.95,
+            "high": 7.97,
+            "low": 7.927,
+            "close": 7.941,
+            "pre_close": 8.115,
+            "volume": 4223902.15,
+            "amount": 3359094.586
+          },
+          {
+            "source_ticker": "518880.SH",
+            "trade_date": "2026-11-03",
+            "open": 8.068,
+            "high": 8.07,
+            "low": 7.988,
+            "close": 7.989,
+            "pre_close": 7.941,
+            "volume": 4340550.99,
+            "amount": 3483075.665
+          },
+          {
+            "source_ticker": "518880.SH",
+            "trade_date": "2026-11-04",
+            "open": 8.055,
+            "high": 8.23,
+            "low": 8.021,
+            "close": 8.229,
+            "pre_close": 7.989,
+            "volume": 8582623.39,
+            "amount": 6983160.98
+          },
+          {
+            "source_ticker": "518880.SH",
+            "trade_date": "2026-11-05",
+            "open": 8.4,
+            "high": 8.453,
+            "low": 8.377,
+            "close": 8.42,
+            "pre_close": 8.229,
+            "volume": 9188026.98,
+            "amount": 7738467.734
+          },
+          {
+            "source_ticker": "518880.SH",
+            "trade_date": "2026-11-06",
+            "open": 8.32,
+            "high": 8.32,
+            "low": 8.229,
+            "close": 8.253,
+            "pre_close": 8.42,
+            "volume": 4575204.67,
+            "amount": 3783500.413
+          }
+        ],
+        "provider_bars_hash": "576d680c9ee0a9d91c4fb7fbe3a75365a874bb547b3ac689975878482fc0e127",
+        "one_session_per_day": true,
+        "storage_reopened_per_day": true,
+        "restart_replay_required": true
+      },
+      "prohibitions": {
+        "broker_connection": true,
+        "real_order": true,
+        "strategy_publish_or_activation": true,
+        "claim_wall_clock_soak": true,
+        "unclosed_or_future_bar": true,
+        "provider_bar_drift": true
+      }
+    },
+    "approval_hash": "5af1aa518bdf1b73e3ba80e804282b195bb791b4b0936a62fc4d9ebfece2dc8e",
+    "requires_exact_approval": true,
+    "approval_phrase": "批准加速账户验收 5af1aa518bdf1b73e3ba80e804282b195bb791b4b0936a62fc4d9ebfece2dc8e"
+  }
+}

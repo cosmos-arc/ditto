@@ -2,13 +2,13 @@
   "artifacts": [
     {
       "relative_path": "current-acceptance-20261107/README.md",
-      "sha256": "sha256:5e6ccb3bfb1ae74b30a5f7d7ce48bb785d94d7ca1f7f3f6b7de644893fc091c0",
-      "size_bytes": 9313
+      "sha256": "sha256:e803bf0be099db6361baca5293ada4883b6cc9ee66555a595bb16f6add4853d8",
+      "size_bytes": 11180
     },
     {
       "relative_path": "current-acceptance-20261107/accelerated-identity.json",
-      "sha256": "sha256:73d6237f164d248385ff3d0dd8acf5f49b5d3e8a1bbbe82e49b89bf025d44794",
-      "size_bytes": 799
+      "sha256": "sha256:afc10b7cd0042b63314d268c2aa384bb1c1465a69a2493ae24485f20d3c8109c",
+      "size_bytes": 887
     },
     {
       "relative_path": "current-acceptance-20261107/accelerated-proposal.json",
@@ -142,8 +142,8 @@
     },
     {
       "relative_path": "current-acceptance-20261107/identity-and-validation.json",
-      "sha256": "sha256:2fafdae10f2d23e94cead3b5f4a3f35c40b07ca269671e86984ff061588eed5f",
-      "size_bytes": 1985
+      "sha256": "sha256:ae9a9059243b77ddee992e5afa641ddce176b6fb2266485167a56df2fbc51f44",
+      "size_bytes": 2067
     },
     {
       "relative_path": "current-acceptance-20261107/legacy-revalidation.json",
@@ -171,6 +171,136 @@
       "size_bytes": 15131
     },
     {
+      "relative_path": "current-acceptance-20261107/proxy-correction.json",
+      "sha256": "sha256:19af436bed68715c68e57b75a041e5a0d4235b77344e5795dc0d3d867994fce6",
+      "size_bytes": 2300
+    },
+    {
+      "relative_path": "current-acceptance-20261107/proxy-online/accelerated-progress.json",
+      "sha256": "sha256:ee394fa907b184fcf82cc4d197c4784e0015f6791bc7d3cab85fbcc8c3329047",
+      "size_bytes": 2780
+    },
+    {
+      "relative_path": "current-acceptance-20261107/proxy-online/bootstrap.json",
+      "sha256": "sha256:085b522eab3ed6b6e66ac57f1ef21ae945dc2025945979eae7c61c14463fc249",
+      "size_bytes": 1314
+    },
+    {
+      "relative_path": "current-acceptance-20261107/proxy-online/days/2026-10-12.json",
+      "sha256": "sha256:b376a0f8fff49e07216cab9598f743a7addcb94aaeb3cb0ee325857f0d98c5e7",
+      "size_bytes": 3395
+    },
+    {
+      "relative_path": "current-acceptance-20261107/proxy-online/days/2026-10-13.json",
+      "sha256": "sha256:938c4d7c7eb7772fb3108f620580355787cfb31c8888a78423e0dcd4d6f72c3a",
+      "size_bytes": 3395
+    },
+    {
+      "relative_path": "current-acceptance-20261107/proxy-online/days/2026-10-14.json",
+      "sha256": "sha256:93adc64e6200b07eea42798c5b63beb30795bea1423110cd97f746f81e7d44dd",
+      "size_bytes": 3398
+    },
+    {
+      "relative_path": "current-acceptance-20261107/proxy-online/days/2026-10-15.json",
+      "sha256": "sha256:8a65a4ceb401acffe30028499be4df7a5453279f416c4815a05215381b472bed",
+      "size_bytes": 3397
+    },
+    {
+      "relative_path": "current-acceptance-20261107/proxy-online/days/2026-10-16.json",
+      "sha256": "sha256:b76cd7dbeed7b7de5179f913293e515e6422f602ce5065070838e5a48840f3b3",
+      "size_bytes": 3398
+    },
+    {
+      "relative_path": "current-acceptance-20261107/proxy-online/days/2026-10-19.json",
+      "sha256": "sha256:6633b8367799bfaf4aa99fb663b64e232e8fcb6de80d07675c45d2c95486814e",
+      "size_bytes": 3396
+    },
+    {
+      "relative_path": "current-acceptance-20261107/proxy-online/days/2026-10-20.json",
+      "sha256": "sha256:e4f75ad62d21e39bea3a4472ff00781a03b6bcc3ffe79276d57fdeeb4355775d",
+      "size_bytes": 3398
+    },
+    {
+      "relative_path": "current-acceptance-20261107/proxy-online/days/2026-10-21.json",
+      "sha256": "sha256:ce7c4df47bb3a9bcef19502c73a20a87e7e86def7d71bbddd75d3f845ae126e7",
+      "size_bytes": 3398
+    },
+    {
+      "relative_path": "current-acceptance-20261107/proxy-online/days/2026-10-22.json",
+      "sha256": "sha256:64454c00a6bf8f179caa67cf72141b8e7b15f33db39e64c89feec6c1e11ac631",
+      "size_bytes": 3396
+    },
+    {
+      "relative_path": "current-acceptance-20261107/proxy-online/days/2026-10-23.json",
+      "sha256": "sha256:321fa25f9f43dfe585e5e50f729d17493acffea2ce1405bca3330f1670f992d0",
+      "size_bytes": 3393
+    },
+    {
+      "relative_path": "current-acceptance-20261107/proxy-online/days/2026-10-26.json",
+      "sha256": "sha256:6e9977794355f1e8e9105681c3bcc3777352d24b21797c9bdb023ab2f4bfedb0",
+      "size_bytes": 3401
+    },
+    {
+      "relative_path": "current-acceptance-20261107/proxy-online/days/2026-10-27.json",
+      "sha256": "sha256:5345776ba85d5cf402a426604f517c3fec5d9683a7615c07fafdd703ccb9aea6",
+      "size_bytes": 3402
+    },
+    {
+      "relative_path": "current-acceptance-20261107/proxy-online/days/2026-10-28.json",
+      "sha256": "sha256:6996bef0e9f89471b592ea28a1d0fbf5c47becabfc44682705847d15b24758d7",
+      "size_bytes": 3401
+    },
+    {
+      "relative_path": "current-acceptance-20261107/proxy-online/days/2026-10-29.json",
+      "sha256": "sha256:17465cdbcbbbc4fdfd60a0003536115f534013b3da7311a0fb915ddea867ec34",
+      "size_bytes": 3401
+    },
+    {
+      "relative_path": "current-acceptance-20261107/proxy-online/days/2026-10-30.json",
+      "sha256": "sha256:b103f4c651f1f7b7002fd79dcab394e6c0e734f7d31c6a687d7eeb262aae0767",
+      "size_bytes": 3401
+    },
+    {
+      "relative_path": "current-acceptance-20261107/proxy-online/days/2026-11-02.json",
+      "sha256": "sha256:aa94d9700788d1c3ce4932cadbad6eaeaa797aba84b83c224c87daf8a1816bdd",
+      "size_bytes": 3400
+    },
+    {
+      "relative_path": "current-acceptance-20261107/proxy-online/days/2026-11-03.json",
+      "sha256": "sha256:265e067d522381237d7f2c016f89bd344835ea061a53cd9a4ec9d1db6b9b3ccf",
+      "size_bytes": 3399
+    },
+    {
+      "relative_path": "current-acceptance-20261107/proxy-online/days/2026-11-04.json",
+      "sha256": "sha256:1f4808354a2985ee80d586bede283eec0bdce1519980f907032ef30d67bec51b",
+      "size_bytes": 3398
+    },
+    {
+      "relative_path": "current-acceptance-20261107/proxy-online/days/2026-11-05.json",
+      "sha256": "sha256:8c87a1cf0c7c091cb59b331788e8b2b15c506d809f234e294ff765c8f985de79",
+      "size_bytes": 3398
+    },
+    {
+      "relative_path": "current-acceptance-20261107/proxy-online/days/2026-11-06.json",
+      "sha256": "sha256:87a82d7519271337b79b9c8351a04ed15defed9d0ebdebd13931cfdfa1d2e2e7",
+      "size_bytes": 3399
+    },
+    {
+      "relative_path": "current-acceptance-20261107/proxy-online/proposal.json",
+      "sha256": "sha256:42a5abc3c80f1df0cbf97a3bfc79883c76782c85938113bdb4824d8396f91855",
+      "size_bytes": 9880
+    },
+    {
+      "relative_path": "current-acceptance-20261107/proxy-online/restart.json",
+      "sha256": "sha256:5666646e8fcc4debdce59ce05123370a4964f95d42ab2ebcdf3d99ee609bd86b",
+      "size_bytes": 9512
+    },
+    {
+      "relative_path": "current-acceptance-20261107/proxy-online/result.json",
+      "sha256": "sha256:068fa81b224563d1756278fdc8036286fbe048b7fdd327ed5806c096294cf043",
+      "size_bytes": 2841
+    },
+    {
       "relative_path": "current-acceptance-20261107/research-assessment.json",
       "sha256": "sha256:237b22674508ed5296ae78d409cb48bcb79bd94015b07e1b064abfcd5ef7f6c3",
       "size_bytes": 8705
@@ -187,11 +317,10 @@
     }
   ],
   "blockers": [
-    "Current live-day anchor is missing; referenced 2026-09-02 anchor is historical.",
-    "Current online source authentication rejected; final execution uses retained real responses."
+    "Current live-day anchor is missing; referenced 2026-09-02 anchor is historical."
   ],
   "gate": "Q4",
-  "manifest_hash": "sha256:5af41db125f57ee46841e7a7cb5adb0b2e0855b3aee30860748d0c0dc5b18ddf",
+  "manifest_hash": "sha256:e38debf6bba7950ff918e1b69577a1a33606227a68c2d97cb60e21f3bf4b6dd3",
   "schema_version": 1,
   "status": "blocked"
 }
