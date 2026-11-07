@@ -42,6 +42,7 @@ def test_sparse_pit_runner_delegates_to_application_process(
     )
     bundle = mocker.MagicMock()
     bundle.sparse_pit_reattestation.run.return_value = application_result
+    bundle.metadata_facade.list_trading_days.return_value = ["2026-11-05"]
     context = mocker.MagicMock()
     context.__enter__.return_value = bundle
     context.__exit__.return_value = None
@@ -124,6 +125,7 @@ def _mock_bundle_context(mocker: MockerFixture, bundle: Any) -> None:
         "unresolved_sample": [],
         "sample_truncated": False,
     }
+    bundle.metadata_facade.list_trading_days.return_value = ["2026-11-05"]
     context = mocker.MagicMock()
     context.__enter__.return_value = bundle
     context.__exit__.return_value = None
@@ -328,11 +330,10 @@ class TestDailyRepairCompensationSelection:
             return_value={"repaired_count": 0},
         )
 
-        result = _prefect_runner(repair_module.daily_repair_flow)()
+        with pytest.raises(RuntimeError, match="repair orchestration failed"):
+            _prefect_runner(repair_module.daily_repair_flow)()
 
-        # 失效数据集失败留痕，其余数据集与空洞扫描继续。
-        assert "ValueError" in str(result["retry_result"]["stale_dataset"]["error"])
-        assert result["retry_result"]["etf_nav"]["success_count"] == 1
+        # 其他数据集及空洞扫描仍执行；最终编排状态不能假成功。
         hole_calls = [
             c
             for c in holes_flow.call_args_list

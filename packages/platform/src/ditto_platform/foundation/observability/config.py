@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Literal, TypeGuard, TypeVar
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from ditto_platform.foundation.config.environment import Environment
 
@@ -49,6 +49,8 @@ class ObservabilityConfig(BaseModel):
     log_format: Literal["console", "json"] | None = None
     log_to_console: bool | None = None
     log_to_file: bool | None = None
+    log_rotation_bytes: int = Field(default=20 * 1024 * 1024, gt=0)
+    log_retention_files: int = Field(default=5, ge=0)
 
     tracing_enabled: bool | None = None
     tracing_exporter: Literal["otlp", "none"] | None = None

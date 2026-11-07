@@ -480,7 +480,7 @@ def to_margin_profile_rows(df: pl.DataFrame) -> list[MarginProfileRow]:
 
 
 class MarginBlock(BaseModel):
-    """画像块:两融(pit_asof=end_date;迟发数据按 09:15 承诺显示待补)."""
+    """画像块:两融(latest_available;迟发数据按 09:15 承诺显示待补)."""
 
     rows: list[MarginProfileRow] = Field(default_factory=list)
     sources: list[str] = Field(default_factory=list, description="行来源")
@@ -488,7 +488,7 @@ class MarginBlock(BaseModel):
         default=None,
         description="可选块读取失败原因(受限展示,其余块不受影响)",
     )
-    read_semantics: str = Field(default="pit_asof")
+    read_semantics: str = Field(default="latest_available")
     latest_trade_date: str | None = Field(default=None)
     pending_trade_dates: list[str] = Field(
         default_factory=list,

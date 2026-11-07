@@ -9,13 +9,18 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
+from datetime import datetime
 from typing import cast
+from zoneinfo import ZoneInfo
 
+from ditto_application.processes.ingestion.retry_manager import RepairIncomplete
 from ditto_application.processes.ingestion.sparse_recovery_models import (
     SparsePITReattestationRequest,
 )
 from ditto_platform.foundation import logger
 from prefect import flow
+from prefect.runtime import flow_run
 
 from ditto_apps.registry import create_ingestion_bundle
 
@@ -105,6 +110,9 @@ def retry_failed_flow(
     max_attempts: int = 3,
     limit: int = 10,
     source: str = "tushare",
+    required_start: str | None = None,
+    required_end: str | None = None,
+    accepted_gaps: list[dict[str, str]] | None = None,
 ) -> dict[str, object]:
     """
     重试失败任务流程。
@@ -114,6 +122,9 @@ def retry_failed_flow(
         max_attempts: 最大尝试次数筛选条件
         limit: 重试的最大任务数量
         source: 数据源名称
+        required_start: 必需日期起点；历史研究须显式传入
+        required_end: 必需日期终点
+        accepted_gaps: 含精确范围、错误及裁决证据的历史例外
 
     Returns:
         重试结果字典
@@ -127,6 +138,12 @@ def retry_failed_flow(
             limit=limit,
         )
 
+        bundle.retry_manager.require_resolved(
+            datasets=[dataset],
+            start=required_start,
+            end=required_end,
+            accepted_gaps=accepted_gaps,
+        )
         return {
             "dataset": result.dataset,
             "total_failed": result.total_failed,
@@ -159,6 +176,9 @@ def repair_holes_flow(
     source: str = "tushare",
     parallel: int = 1,
     refetch_window_days: int = 0,
+    required_start: str | None = None,
+    required_end: str | None = None,
+    accepted_gaps: list[dict[str, str]] | None = None,
 ) -> dict[str, object]:
     """
     扫描并修补数据空洞流程。
@@ -171,7 +191,13 @@ def repair_holes_flow(
     Args:
         dataset: 数据集名称
         source: 数据源名称
+        required_start: 必需日期起点；历史研究须显式传入
+        required_end: 必需日期终点
+        accepted_gaps: 含精确范围、错误及裁决证据的历史例外
         parallel: 并行度
+        required_start: 必需日期起点；历史研究须显式传入
+        required_end: 必需日期终点
+        accepted_gaps: 含精确范围、错误及裁决证据的历史例外
         refetch_window_days: 追加近 N 个交易日 force 重取（#625 晚发布
             数据集；0 表示仅扫空洞）
 
@@ -188,6 +214,12 @@ def repair_holes_flow(
             force_refresh_days=refetch_window_days,
         )
 
+        bundle.retry_manager.require_resolved(
+            datasets=[dataset],
+            start=required_start,
+            end=required_end,
+            accepted_gaps=accepted_gaps,
+        )
         return {
             "dataset": result.dataset,
             "holes_count": result.total_dates,
@@ -212,6 +244,9 @@ def daily_repair_flow(
     retry_limit: int = 10,
     source: str = "tushare",
     parallel: int = 1,
+    *,
+    required_dates: tuple[str, str] | None = None,
+    accepted_gaps: list[dict[str, str]] | None = None,
 ) -> dict[str, object]:
     """
     每日修补流程。
@@ -235,12 +270,20 @@ def daily_repair_flow(
         max_attempts: 重试的最大尝试次数
         retry_limit: 重试的最大任务数
         source: 数据源名称
+        required_dates: 必需日期起止；历史研究须显式传入
+        accepted_gaps: 含精确范围、错误及裁决证据的历史例外
         parallel: 并行度
+        required_dates: 必需日期起止；历史研究须显式传入
+        accepted_gaps: 含精确范围、错误及裁决证据的历史例外
 
     Returns:
         修补结果汇总
 
     """
+    required_start, required_end = _required_window(
+        source, *(required_dates or (None, None))
+    )
+    orchestration_errors: set[str] = set()
     excluded_groups: list[dict[str, object]] = []
     refresh_datasets: list[str] = []
     if datasets is None:
@@ -268,73 +311,39 @@ def daily_repair_flow(
     retry_results: dict[str, dict[str, object]] = {}
     holes_results: dict[str, dict[str, object]] = {}
 
+    scope = {
+        "source": source,
+        "required_start": required_start,
+        "required_end": required_end,
+        "accepted_gaps": accepted_gaps,
+    }
     for dataset in retry_datasets:
-        # 逐数据集隔离（#623 correctness F2）：补偿发现来自 ingestion_log，
-        # 可能含已改名/移除/权限被撤的数据集名——单个数据集的编排异常
-        # 不得拖垮整晚修补（消费者关键数据集的空洞扫描仍须执行）。
-        try:
-            retry_result = retry_failed_flow(
-                dataset=dataset,
-                max_attempts=max_attempts,
-                limit=retry_limit,
-                source=source,
-            )
-        except Exception as exc:
-            logger.exception(
-                "重试数据集编排失败",
-                event="repair_retry_dataset_failed",
-                dataset=dataset,
-                error_type=type(exc).__name__,
-            )
-            retry_result: dict[str, object] = {
-                "dataset": dataset,
-                "error": f"{type(exc).__name__}: {exc}",
-            }
-        retry_results[dataset] = retry_result
-
+        retry_results[dataset] = _repair_step(
+            retry_failed_flow,
+            dataset,
+            orchestration_errors,
+            max_attempts=max_attempts,
+            limit=retry_limit,
+            **scope,
+        )
     for dataset in holes_datasets:
-        try:
-            holes_result = repair_holes_flow(
-                dataset=dataset,
-                source=source,
-                parallel=parallel,
-            )
-        except Exception as exc:
-            logger.exception(
-                "空洞扫描数据集编排失败",
-                event="repair_holes_dataset_failed",
-                dataset=dataset,
-                error_type=type(exc).__name__,
-            )
-            holes_result: dict[str, object] = {
-                "dataset": dataset,
-                "error": f"{type(exc).__name__}: {exc}",
-            }
-        holes_results[dataset] = holes_result
-
-    # #625 晚发布近窗刷新：对晚发布数据集 force 重取近 N 个交易日，
-    # 治愈被 SUCCESS 固化的空帧/部分行观察。逐数据集隔离同上。
+        holes_results[dataset] = _repair_step(
+            repair_holes_flow,
+            dataset,
+            orchestration_errors,
+            parallel=parallel,
+            **scope,
+        )
     refresh_results: dict[str, dict[str, object]] = {}
     for dataset in refresh_datasets:
-        try:
-            refresh_result = repair_holes_flow(
-                dataset=dataset,
-                source=source,
-                parallel=parallel,
-                refetch_window_days=LATE_PUBLISHING_REFRESH_WINDOW_DAYS,
-            )
-        except Exception as exc:
-            logger.exception(
-                "晚发布数据集近窗刷新编排失败",
-                event="repair_late_publishing_refresh_failed",
-                dataset=dataset,
-                error_type=type(exc).__name__,
-            )
-            refresh_result: dict[str, object] = {
-                "dataset": dataset,
-                "error": f"{type(exc).__name__}: {exc}",
-            }
-        refresh_results[dataset] = refresh_result
+        refresh_results[dataset] = _repair_step(
+            repair_holes_flow,
+            dataset,
+            orchestration_errors,
+            parallel=parallel,
+            refetch_window_days=LATE_PUBLISHING_REFRESH_WINDOW_DAYS,
+            **scope,
+        )
 
     # 汇总结果
     total_retried = sum(
@@ -354,8 +363,19 @@ def daily_repair_flow(
         final_unresolved = bundle.retry_manager.final_failure_state(
             max_attempts=max_attempts,
         )
+        required_state = bundle.retry_manager.require_resolved(
+            datasets=datasets,
+            start=required_start,
+            end=required_end,
+            accepted_gaps=accepted_gaps,
+        )
+    if orchestration_errors:
+        raise RuntimeError(
+            f"repair orchestration failed: {sorted(orchestration_errors)}"
+        )
 
     return {
+        "required_state": required_state,
         "retry_result": retry_results,
         "holes_result": holes_results,
         "refresh_result": refresh_results,
@@ -378,6 +398,40 @@ def daily_repair_flow(
     }
 
 
+def _required_window(
+    source: str, start: str | None, end: str | None
+) -> tuple[str, str]:
+    """日常默认近五个交易日，历史消费者显式覆盖此范围。"""
+    end = end or datetime.now(ZoneInfo("Asia/Shanghai")).date().isoformat()
+    if start is None:
+        with create_ingestion_bundle(source=source) as bundle:
+            days = bundle.metadata_facade.list_trading_days("2014-01-01", end)
+        if not days:
+            raise ValueError("repair requires a populated trading calendar")
+        start = days[-LATE_PUBLISHING_REFRESH_WINDOW_DAYS:][0]
+    return start, end
+
+
+def _repair_step(
+    operation: Callable[..., dict[str, object]],
+    dataset: str,
+    errors: set[str],
+    **parameters: object,
+) -> dict[str, object]:
+    """单个补偿失败不阻断兄弟任务；后续成功可治愈同一数据集。"""
+    try:
+        result = operation(dataset=dataset, **parameters)
+        errors.discard(dataset)
+        return result
+    except Exception as exc:
+        if not isinstance(exc, RepairIncomplete):
+            errors.add(dataset)
+        logger.exception(
+            "数据集补偿失败", dataset=dataset, error_type=type(exc).__name__
+        )
+        return {"dataset": dataset, "error": f"{type(exc).__name__}: {exc}"}
+
+
 def _final_unresolved_suffix(final_unresolved: dict[str, object]) -> str:
     """终态后缀：有遗留未解决失败时如实报告，不静默绿色收尾."""
     unresolved_total = cast(int, final_unresolved.get("unresolved_total", 0))
@@ -393,3 +447,21 @@ def _final_unresolved_suffix(final_unresolved: dict[str, object]) -> str:
         f"; 遗留未解决 {unresolved_total} 项"
         f"(其中重试耗尽 {exhausted} 项, 样本与分桶见 final_unresolved)"
     )
+
+
+@flow(name="margin-published-refresh", description="两融发布后有限补取与09:15截止留证")
+def margin_published_refresh_flow(finalize: bool = False) -> dict[str, object]:
+    """定时任务以计划日归属证据，迟执行不能把其他日期冒充准时。"""
+    scheduled = flow_run.scheduled_start_time.astimezone(ZoneInfo("Asia/Shanghai"))
+    with create_ingestion_bundle(source="tushare") as bundle:
+        return bundle.published_refresh.margin(
+            scheduled_day=scheduled.date().isoformat(), finalize=finalize
+        )
+
+
+@flow(name="fred-published-refresh", description="FRED按既定系列频率有界回看")
+def fred_published_refresh_flow() -> dict[str, object]:
+    """独立 source=fred，避免以中国宏观入口覆盖美国系列。"""
+    day = datetime.now(ZoneInfo("Asia/Shanghai")).date().isoformat()
+    with create_ingestion_bundle(source="fred") as bundle:
+        return bundle.published_refresh.fred(day=day)

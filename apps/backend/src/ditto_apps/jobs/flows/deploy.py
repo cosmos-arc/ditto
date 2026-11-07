@@ -28,6 +28,10 @@ from ditto_apps.jobs.flows import (
     retry_failed_flow,
 )
 from ditto_apps.jobs.flows.backtest import run_backtest_flow
+from ditto_apps.jobs.flows.repair import (
+    fred_published_refresh_flow,
+    margin_published_refresh_flow,
+)
 
 # ---------------------------------------------------------------------------
 # Cron 调度定义
@@ -252,6 +256,32 @@ def _get_flow_configs(
             tags=["production", "repair", "manual"],
         ),
     ]
+    for label, cron, final in (
+        ("0835", "35 8 * * 1-5", False),
+        ("0850", "50 8 * * 1-5", False),
+        ("0905", "5 9 * * 1-5", False),
+        ("0915", "15 9 * * 1-5", True),
+    ):
+        configs.append(
+            FlowDeploymentConfig(
+                flow=margin_published_refresh_flow,
+                deployment_name=f"margin-published-{label}",
+                description="发布后两融补取/截止留证",
+                parameters={"finalize": final},
+                tags=["production", "ingestion", "margin"],
+                schedule=Cron(cron, timezone="Asia/Shanghai"),
+            )
+        )
+    configs.append(
+        FlowDeploymentConfig(
+            flow=fred_published_refresh_flow,
+            deployment_name="fred-published-daily",
+            description="FRED配置系列日常刷新",
+            parameters={},
+            tags=["production", "ingestion", "fred"],
+            schedule=Cron("30 7 * * *", timezone="Asia/Shanghai"),
+        )
+    )
     if scope == "all":
         configs.insert(
             0,

@@ -188,9 +188,11 @@ class TestScanMargin:
         ]
         assert all(i.status == "correct" for i in impacts)
 
-    def test_expected_version_present_needs_no_action(self, tmp_path: Path) -> None:
+    def test_expected_version_still_requires_old_eligibility_revocation(
+        self, tmp_path: Path
+    ) -> None:
         conn = _make_db(tmp_path)
-        # 周五行已有 B1 校准版本（kd=周一）：旧版本保留、无需再写。
+        # 正确版本已存在仍须撤销旧错误版本资格。
         _insert_margin(
             conn, instrument_id=1, trade_date="2024-11-01", knowledge_date="2024-11-02"
         )
@@ -200,7 +202,7 @@ class TestScanMargin:
         conn.commit()
 
         impacts = scan_dataset("margin_trading", conn=conn, data_root=tmp_path)
-        assert impacts == []
+        assert len(impacts) == 1
 
 
 class TestScanHkHold:
@@ -558,7 +560,7 @@ class TestCorrectnessRegressions:
             ],
         )
         impacts = scan_dataset("hk_hold", conn=conn, data_root=tmp_path)
-        assert impacts == []
+        assert len(impacts) == 2
 
     def test_quarterly_anchor_on_trade_date_unanchorable(
         self,

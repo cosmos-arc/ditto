@@ -62,7 +62,13 @@ def _json_formatter(record: dict[str, Any]) -> str:
 # 但运行时实际传递的 record 是一个 wrapper dict。
 # 使用 Any 类型注解使 pyright 接受任意类型，
 # 同时避免 ANN401（变量注解不在 ANN401 检查范围）。
-_json_log_format: Any = _json_formatter
+def _loguru_json_format(record: dict[str, Any]) -> str:
+    """Loguru 传原始 record 并二次格式化模板，JSON 花括号必须转义。"""
+    encoded = _json_formatter({"record": record, "extra": record["extra"]})
+    return encoded.replace("{", "{{").replace("}", "}}")
+
+
+_json_log_format: Any = _loguru_json_format
 
 
 def configure_logging(config: ObservabilityConfig) -> None:
@@ -120,8 +126,8 @@ def configure_logging(config: ObservabilityConfig) -> None:
             log_file,
             format=file_format,
             level=effective.log_level,
-            rotation="1 day",
-            retention="30 days",
+            rotation=config.log_rotation_bytes,
+            retention=config.log_retention_files,
             compression="gz",
             serialize=False,
         )
@@ -131,8 +137,8 @@ def configure_logging(config: ObservabilityConfig) -> None:
             error_log_file,
             level="ERROR",
             format=file_format,
-            rotation="1 day",
-            retention="30 days",
+            rotation=config.log_rotation_bytes,
+            retention=config.log_retention_files,
             compression="gz",
         )
 

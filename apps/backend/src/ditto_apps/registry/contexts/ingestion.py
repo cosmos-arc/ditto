@@ -16,17 +16,22 @@ from ditto_application.processes.ingestion.coordinator_factory import (
 from ditto_application.processes.ingestion.evidence_commit import (
     IngestionEvidenceCommitter,
 )
+from ditto_application.processes.ingestion.published_refresh import (
+    PublishedRefreshProcess,
+)
 from ditto_application.processes.ingestion.retry_manager import RetryManager
 from ditto_application.processes.ingestion.sparse_recovery import (
     SparsePITReattestationProcess,
 )
 from ditto_application.queries.metadata import MetadataQueryFacade
+from ditto_application.queries.provider_snapshot import ProviderSnapshotQuery
 from ditto_data.catalog import (
     DataCatalogReader,
     DataCatalogWriter,
 )
 from ditto_data.catalog.provider_payload import ProviderPayloadWriter
 from ditto_data.catalog.source_snapshot import ProviderSnapshotReader
+from ditto_data.config.data_store import DataStoreSettings
 from ditto_data.ingestion.ingestion_cursor_store import IngestionCursorStore
 from ditto_data.ingestion.ingestion_log_store import IngestionLogStore
 from ditto_data.ingestion.partition_state import PartitionLifecycleReader
@@ -188,6 +193,16 @@ def create_ingestion_bundle(
 
             yield IngestionBundle(
                 coordinator=coordinator,
+                published_refresh=PublishedRefreshProcess(
+                    coordinator=coordinator,
+                    calendar=metadata_facade,
+                    snapshots=snapshot_reader,
+                    lifecycle=lifecycle_reader,
+                    audit=container.get(ProviderSnapshotQuery),
+                    evidence_root=container.get(DataStoreSettings).data_root
+                    / "operations"
+                    / "published-refresh",
+                ),
                 backfill_manager=backfill_manager,
                 retry_manager=retry_manager,
                 sparse_pit_reattestation=sparse_pit_reattestation,
