@@ -152,7 +152,7 @@ def map_http_error(error: Exception, api_name: str) -> NoReturn:
         )
 
     # 处理网络错误
-    if isinstance(error, httpx.NetworkError):
+    if isinstance(error, (httpx.NetworkError, httpx.RemoteProtocolError)):
         raise SourceFetchError(
             message=f"Tushare API 网络错误 (API: {api_name})",
             source="tushare",

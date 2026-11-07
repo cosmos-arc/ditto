@@ -160,10 +160,13 @@ class TestMapHttpError:
         assert exc_info.value.details.get("source") == "tushare"
         assert exc_info.value.details.get("original_error") is not None
 
-    def test_network_error_raises_fetch_error(self):
+    @pytest.mark.parametrize(
+        "error_type", [httpx.NetworkError, httpx.RemoteProtocolError]
+    )
+    def test_network_error_raises_fetch_error(self, error_type):
         """网络错误映射到抓取错误."""
         # Arrange
-        error = httpx.NetworkError("Connection failed")
+        error = error_type("Connection failed")
 
         # Act & Assert
         with pytest.raises(SourceFetchError) as exc_info:
