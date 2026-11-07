@@ -14,6 +14,7 @@ import hashlib
 import shutil
 import sqlite3
 import subprocess
+from contextlib import closing
 from datetime import UTC, date, datetime
 from decimal import Decimal
 from pathlib import Path
@@ -43,13 +44,15 @@ from ditto_application.processes.execution.operate_paper_session import (
 from ditto_application.processes.execution.reconcile_paper_account import (
     ReconcilePaperAccount,
 )
-from ditto_data.catalog.provider_payload import (
-    FilesystemProviderPayloadStore,
-    ProviderPayloadArtifact,
-)
+from ditto_data.catalog.provider_payload import FilesystemProviderPayloadStore
+from ditto_data.catalog.snapshot_reader import SnapshotReadService
+from ditto_data.catalog.source_snapshot_store import SQLiteProviderSnapshotStore
+from ditto_data.ingestion.partition_state_store import SQLitePartitionLifecycleStore
 from ditto_execution.paper.sqlite_store import SqlitePaperSessionStore
 from ditto_execution.storage.sqlite.account_journal import SqliteAccountEventJournal
 from ditto_kernel.identity import InstrumentId
+from ditto_platform.foundation.db.sqlite_pool import SQLitePool
+from ditto_platform.foundation.storage.sqlite_client import SQLiteClient
 from ditto_portfolio.account_projection import AccountLedgerRebuilder
 
 REPO = Path(__file__).resolve().parents[3]
@@ -106,10 +109,41 @@ def load_market(source_root: Path) -> tuple[dict[int, dict[str, object]], list[d
     ids = [c[0] for c in CANDIDATES]
     frames = []
     evidence = []
-    with sqlite3.connect(
-        f"file:{source_root}/metadata/metadata.sqlite?mode=ro", uri=True
-    ) as connection:
+    with (
+        closing(
+            sqlite3.connect(
+                f"file:{source_root}/metadata/metadata.sqlite?mode=ro", uri=True
+            )
+        ) as connection,
+        closing(SQLiteClient(SQLitePool(":memory:"))) as catalog,
+    ):
         connection.row_factory = sqlite3.Row
+        connection.execute("BEGIN")
+        # Store initialization/backfills must only touch the disposable catalog.
+        snapshots = SQLiteProviderSnapshotStore(catalog)
+        lifecycle = SQLitePartitionLifecycleStore(catalog)
+        snapshot_ids = (SNAPSHOT_STOCK_DAILY, SNAPSHOT_STOCK_LIMIT)
+        for table, identity in (
+            ("provider_snapshots", "snapshot_id"),
+            ("provider_snapshot_observation_events", "snapshot_id"),
+            ("ingestion_partition_checkpoints", "complete_evidence_id"),
+        ):
+            columns = ",".join(
+                row["name"] for row in catalog.fetchall(f"PRAGMA table_info({table})")
+            )
+            rows = connection.execute(
+                f"SELECT {columns} FROM {table} WHERE {identity} IN (?, ?)",  # noqa: S608 - fixed tables and locally created schema
+                snapshot_ids,
+            ).fetchall()
+            placeholders = ",".join("?" for _ in columns.split(","))
+            catalog.executemany(
+                f"INSERT INTO {table} ({columns}) VALUES ({placeholders})",  # noqa: S608 - fixed tables and locally created schema
+                [tuple(row) for row in rows],
+            )
+        catalog.commit()
+        reader = SnapshotReadService(
+            snapshots, FilesystemProviderPayloadStore(source_root), lifecycle
+        )
         instruments = pl.DataFrame(
             [
                 dict(row)
@@ -120,36 +154,26 @@ def load_market(source_root: Path) -> tuple[dict[int, dict[str, object]], list[d
                 )
             ]
         ).filter(pl.col("instrument_id").is_in(ids))
-        for snapshot_id in (SNAPSHOT_STOCK_DAILY, SNAPSHOT_STOCK_LIMIT):
-            row = connection.execute(
-                "SELECT * FROM provider_snapshots WHERE snapshot_id=?", (snapshot_id,)
-            ).fetchone()
-            if row is None or not row["payload_retained"]:
-                raise RuntimeError(f"retained snapshot missing: {snapshot_id}")
-            frame = (
-                FilesystemProviderPayloadStore(source_root)
-                .read_payload(
-                    ProviderPayloadArtifact(
-                        dataset_id=row["dataset_id"],
-                        source=row["source"],
-                        checksum=row["checksum"],
-                        row_count=row["row_count"],
-                        uri=row["payload_uri"],
-                        schema_fingerprint=row["schema_fingerprint"],
-                    )
-                )
-                .filter(pl.col("trade_date") == TRADE_DATE)
-                .join(instruments, on="source_ticker", how="inner", validate="1:1")
+        for snapshot_id in snapshot_ids:
+            contents = reader.read(snapshot_id)
+            snapshot = contents.snapshot
+            frame = contents.frame.filter(pl.col("trade_date") == TRADE_DATE).join(
+                instruments, on="source_ticker", how="inner", validate="1:1"
             )
             frames.append(frame)
             evidence.append(
                 {
                     "snapshot_id": snapshot_id,
-                    "observed_at": row["created_at"],
+                    "observed_at": (
+                        contents.observed_at or snapshot.created_at
+                    ).isoformat(),
                     "knowledge_date": str(frame["knowledge_date"].max()),
-                    "payload_uri": row["payload_uri"],
+                    "payload_uri": snapshot.payload_uri,
                     "sha256": hashlib.sha256(
-                        (source_root / row["payload_uri"]).read_bytes()
+                        (
+                            source_root
+                            / _require(snapshot.payload_uri, "payload missing")
+                        ).read_bytes()
                     ).hexdigest(),
                 }
             )
