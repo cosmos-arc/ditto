@@ -22,9 +22,12 @@ function UtilityIconButton({
 		<button
 			type="button"
 			aria-label={ariaLabel}
+			aria-disabled={!onClick}
+			aria-description={onClick ? undefined : `${ariaLabel}暂不可用`}
+			title={onClick ? ariaLabel : `${ariaLabel}暂不可用`}
 			data-shell-utility={utility}
 			onClick={onClick}
-			className="relative flex h-8 w-8 items-center justify-center rounded-[var(--radius-md)] text-[var(--color-foreground-tertiary)] transition-colors hover:bg-[var(--color-interaction-hover-subtle-bg)] hover:text-[var(--color-foreground-secondary)]"
+			className="relative flex h-8 w-8 items-center justify-center rounded-[var(--radius-md)] text-[var(--color-foreground-tertiary)] transition-colors hover:bg-[var(--color-interaction-hover-subtle-bg)] hover:text-[var(--color-foreground-secondary)] aria-disabled:opacity-50"
 		>
 			{children}
 		</button>
@@ -56,7 +59,6 @@ export function HeaderUtilityBar({ onOpenAgent, onOpenCommand }: HeaderUtilityBa
 					/>
 					<path d="M8 16a2 2 0 004 0" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" />
 				</svg>
-				<span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-[var(--color-red-400)]" />
 			</UtilityIconButton>
 			<UtilityIconButton aria-label="帮助" utility="help">
 				<svg width={16} height={16} viewBox="0 0 20 20" fill="none" aria-hidden="true">

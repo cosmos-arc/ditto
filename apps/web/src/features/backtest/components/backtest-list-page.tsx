@@ -262,7 +262,6 @@ export function BacktestListPage({ createForm }: { readonly createForm?: ReactNo
 					>
 						<div className="flex h-10 items-center justify-between border-b border-(--color-border-subtle) px-4">
 							<p className="text-xs font-medium text-(--color-foreground)">Run Detail</p>
-							<span className="font-data text-xs text-(--color-foreground-tertiary)">LIVE</span>
 						</div>
 						<div className="h-[calc(100%-2.5rem)] overflow-y-auto p-(--density-panel-padding)">
 							{selected ? (

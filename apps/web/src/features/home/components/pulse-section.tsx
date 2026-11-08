@@ -1,9 +1,18 @@
 import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
 import { ScrollReveal } from "@/components/ui/scroll-reveal";
 import { DittoErrorBoundary } from "@/lib/error-boundary";
+import type { MarketSession } from "@/types/common";
 import { useHomePulse } from "../hooks";
 
 const LOADING_METRIC_IDS = ["session", "pnl", "risk"] as const;
+const SESSION_LABELS: Record<MarketSession, string> = {
+	pre_market: "盘前",
+	call_auction: "集合竞价",
+	continuous: "盘中交易",
+	lunch: "午间休市",
+	close: "已收盘",
+	after_hours: "盘后",
+};
 
 /**
  * PulseSection — thin operational status strip.
@@ -39,18 +48,12 @@ export function PulseSection() {
 				>
 					{/* 1. Time + Status */}
 					<div className="flex items-center gap-1 whitespace-nowrap rounded-[4px] px-1 py-0.5">
-						<span className="inline-block size-1.5 rounded-full bg-(--color-system-healthy-fg) animate-[dot-live-pulse_3s_ease-in-out_infinite]" />
+						{data?.session === "continuous" && (
+							<span className="inline-block size-1.5 rounded-full bg-(--color-system-healthy-fg) animate-[dot-live-pulse_3s_ease-in-out_infinite]" />
+						)}
 						<span className="font-data">{data?.date ?? "—"}</span>
 						<span>·</span>
-						<span>
-							{data?.session == null
-								? "交易阶段不可用"
-								: data.session === "continuous"
-									? "盘中交易"
-									: data.session === "pre_market"
-										? "盘前"
-										: "已收盘"}
-						</span>
+						<span>{data?.session == null ? "交易阶段不可用" : SESSION_LABELS[data.session]}</span>
 					</div>
 
 					<PulseSeparator />

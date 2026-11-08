@@ -1,8 +1,10 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { HttpResponse, http } from "msw";
 import type { ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
+import { server } from "@/mocks/server";
 import { MarketsPage } from "@/workflows/market-pages";
 
 function wrapper() {
@@ -13,6 +15,25 @@ function wrapper() {
 }
 
 describe("MarketsPage public evidence boundary", () => {
+	it("does not claim an unsupported viewpoint was saved", async () => {
+		const user = userEvent.setup();
+		render(<MarketsPage />, { wrapper: wrapper() });
+		await user.click(await screen.findByRole("button", { name: "固定视角" }));
+		expect(screen.getByText("固定视角暂不可用")).toBeInTheDocument();
+		expect(screen.queryByText("视角已固定")).not.toBeInTheDocument();
+	});
+
+	it("separates failed context loading from connection state and can retry", async () => {
+		server.use(http.get("/api/v1/market/context", () => HttpResponse.json({ detail: "unavailable" }, { status: 422 })));
+		const user = userEvent.setup();
+		render(<MarketsPage />, { wrapper: wrapper() });
+		await expect(screen.findByText("市场上下文加载失败")).resolves.toBeInTheDocument();
+		expect(screen.queryByText("Loading")).not.toBeInTheDocument();
+		server.resetHandlers();
+		await user.click(screen.getByRole("button", { name: "重试市场上下文" }));
+		await expect(screen.findByText("Ready")).resolves.toBeInTheDocument();
+	});
+
 	it("live 模式也使用公开合同而非 prototype-only 空态", async () => {
 		vi.stubEnv("VITE_USE_MOCK", "false");
 		render(<MarketsPage />, { wrapper: wrapper() });

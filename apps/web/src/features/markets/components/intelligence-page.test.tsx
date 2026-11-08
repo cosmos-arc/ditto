@@ -13,6 +13,18 @@ function wrapper() {
 }
 
 describe("IntelligencePage composition", () => {
+	it("does not pretend a date range was bookmarked or cleared", async () => {
+		const user = userEvent.setup();
+		render(<IntelligencePage />, { wrapper: wrapper() });
+		await user.click(screen.getByRole("button", { name: "收藏视角" }));
+		expect(screen.getByRole("status", { name: "收藏视角暂不可用" })).toBeInTheDocument();
+		expect(screen.queryByText("视角已收藏")).not.toBeInTheDocument();
+		await user.click(screen.getByRole("button", { name: "关闭收藏视角暂不可用" }));
+		expect(screen.getByRole("button", { name: "收藏视角" })).toHaveFocus();
+		await user.click(screen.getByRole("button", { name: "清除收藏" }));
+		expect(screen.getByRole("status", { name: "清除收藏暂不可用" })).toBeInTheDocument();
+	});
+
 	it("提供日期范围、实验开关与证据说明", () => {
 		render(<IntelligencePage />, { wrapper: wrapper() });
 		expect(screen.getByLabelText("开始日期")).toBeInTheDocument();

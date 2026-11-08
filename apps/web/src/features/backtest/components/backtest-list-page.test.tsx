@@ -61,6 +61,8 @@ describe("BacktestListPage", () => {
 
 		expect(await screen.findByRole("button", { name: "选择回测 bt-live-002" })).toBeInTheDocument();
 		expect(screen.getByRole("complementary", { name: "回测运行详情" })).toHaveTextContent("64%");
+		expect(screen.getByRole("complementary", { name: "回测运行详情" })).toHaveTextContent("running");
+		expect(screen.queryByText("LIVE")).not.toBeInTheDocument();
 		expect(screen.getByRole("link", { name: "打开回测结果" })).toHaveAttribute(
 			"href",
 			"/research/backtests/bt-live-002",

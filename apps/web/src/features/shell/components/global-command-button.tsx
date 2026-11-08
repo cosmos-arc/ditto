@@ -7,6 +7,9 @@ export function GlobalCommandButton({ onOpenCommand }: GlobalCommandButtonProps)
 		<button
 			type="button"
 			aria-label="打开全局命令"
+			aria-disabled={!onOpenCommand}
+			aria-description={onOpenCommand ? undefined : "全局命令暂不可用"}
+			title={onOpenCommand ? "打开全局命令" : "全局命令暂不可用"}
 			data-search-scope="global"
 			data-shell-utility="command"
 			onClick={onOpenCommand}
@@ -16,8 +19,9 @@ export function GlobalCommandButton({ onOpenCommand }: GlobalCommandButtonProps)
 				<circle cx="9" cy="9" r="5.5" stroke="currentColor" strokeWidth={1.5} />
 				<path d="M13 13l4 4" stroke="currentColor" strokeWidth={1.5} />
 			</svg>
-			<span className="hidden text-xs text-[var(--color-foreground-muted)] sm:inline">命令</span>
-			<kbd className="hidden text-xs text-[var(--color-foreground-muted)] sm:inline">⌘K</kbd>
+			<span className="hidden text-xs text-[var(--color-foreground-muted)] sm:inline">
+				{onOpenCommand ? "命令" : "命令暂不可用"}
+			</span>
 		</button>
 	);
 }

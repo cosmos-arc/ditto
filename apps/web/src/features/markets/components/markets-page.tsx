@@ -3,6 +3,7 @@ import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
 import { ContextSection } from "@/components/domain/context-section";
 import { PageActionBar } from "@/components/domain/page-action-overlay";
 import { ContextBar, ContextBarItem, ContextBarSep } from "@/components/indicator/context-bar";
+import { Button } from "@/components/ui/button";
 import { Panel, PanelBody, PanelHeader, RadarLayout, StatusBar } from "@/features/shell";
 import { ErrorState } from "@/lib/error-boundary";
 import type { MarketContext } from "../api/market-evidence";
@@ -251,7 +252,7 @@ export function MarketsPage({
 	const items = catalogQuery.data?.items ?? [];
 	const exchangeCounts = countBy(items, "exchange");
 	const assetCounts = countBy(items, "asset_class");
-	const context = contextQuery.data;
+	const context = contextQuery.isError ? undefined : contextQuery.data;
 
 	return (
 		<>
@@ -260,8 +261,8 @@ export function MarketsPage({
 				contextBar={
 					<ContextBar>
 						<ContextBarItem
-							label="市场状态"
-							value={statusLabel(context?.status)}
+							label="市场上下文"
+							value={contextQuery.isError ? "加载失败" : statusLabel(context?.status)}
 							color="muted"
 							className={
 								context?.status === "ready"
@@ -280,7 +281,9 @@ export function MarketsPage({
 						<ContextBarSep />
 						<ContextBarItem
 							label="标的覆盖"
-							value={catalogQuery.data ? `${catalogQuery.data.total} 个标的` : "加载中"}
+							value={
+								catalogQuery.isError ? "加载失败" : catalogQuery.data ? `${catalogQuery.data.total} 个标的` : "加载中"
+							}
 						/>
 					</ContextBar>
 				}
@@ -294,7 +297,8 @@ export function MarketsPage({
 							<div className="min-w-0 flex-1">
 								<p className="text-sm font-medium text-(--color-foreground)">市场覆盖</p>
 								<p className="mt-0.5 text-xs text-(--color-foreground-tertiary)">
-									{contextSummary(context)} 当前仍未加载价格、涨跌、资金流或相关性，不会把缺失事实包装成市场解读。
+									{contextQuery.isError ? "市场上下文加载失败，当前用途不可用。" : contextSummary(context)}{" "}
+									当前仍未加载价格、涨跌、资金流或相关性，不会把缺失事实包装成市场解读。
 								</p>
 							</div>
 							<PageActionBar ariaLabel="市场页面操作" actions={marketsOverviewActions} onOpen={setActiveOverlay} />
@@ -306,11 +310,14 @@ export function MarketsPage({
 						{contextQuery.isLoading && <LoadingSkeleton variant="table" rows={5} />}
 						{contextQuery.isError && (
 							<Panel data-info-level="l1" data-info-unit="market-context-error">
-								<PanelHeader title="MarketContext blocked" />
+								<PanelHeader title="市场上下文加载失败" />
 								<PanelBody className="p-4">
 									<p role="alert" className="text-sm text-(--color-system-down)">
 										无法解析 exact source snapshots；没有回退到 latest 数据。
 									</p>
+									<Button variant="outline" size="sm" onClick={() => void contextQuery.refetch()}>
+										重试市场上下文
+									</Button>
 								</PanelBody>
 							</Panel>
 						)}

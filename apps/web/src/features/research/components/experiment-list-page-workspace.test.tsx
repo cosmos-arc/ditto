@@ -56,6 +56,7 @@ describe("ExperimentListPage governed catalog", () => {
 		expect(within(detail).getByText("revision 3")).toBeInTheDocument();
 		expect(within(detail).getByText("candidate_evaluation")).toBeInTheDocument();
 		expect(within(detail).getByText("未报告失败")).toBeInTheDocument();
+		expect(screen.queryByText("LIVE")).not.toBeInTheDocument();
 	});
 
 	it("filters the live list and opens the selected experiment drawer", async () => {

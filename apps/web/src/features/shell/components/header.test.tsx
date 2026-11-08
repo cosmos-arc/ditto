@@ -104,7 +104,11 @@ describe("ShellHeader", () => {
 
 	it("renders notification placeholder button", () => {
 		render(<ShellHeader />);
-		expect(screen.getByLabelText("通知")).toBeInTheDocument();
+		for (const label of ["通知", "帮助", "打开全局命令"]) {
+			expect(screen.getByLabelText(label)).toHaveAttribute("aria-disabled", "true");
+			expect(screen.getByLabelText(label)).toHaveAttribute("title", expect.stringContaining("暂不可用"));
+		}
+		expect(screen.queryByText("⌘K")).not.toBeInTheDocument();
 	});
 
 	it("renders account preferences button", () => {
