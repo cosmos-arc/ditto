@@ -1,0 +1,148 @@
+{
+  "receipt": {
+    "started_at": "2026-11-08T01:35:08.658530+00:00",
+    "code_sha": "2fbe7e8e204f925d62a58d32b43b9846c9ada2b8",
+    "strategy_id": "seed_stock_selection_rotation",
+    "strategy_version": 1,
+    "requested_interval": [
+      "2026-10-01",
+      "2026-11-06"
+    ],
+    "config_root": "/Users/chevy/Desktop/code/ditto",
+    "state_root": "/Users/chevy/Desktop/code/ditto/data",
+    "artifact_root": "/Users/chevy/Desktop/code/ditto.worktrees/issues-710-711-closeout/.cache/issues-710-711/artifacts",
+    "strict_historical_availability": "not_certified",
+    "status": "completed",
+    "run_id": "issue711-limited-20261108",
+    "actual_period": [
+      "2026-10-08",
+      "2026-11-06"
+    ],
+    "nav_points": 22,
+    "finished_at": "2026-11-08T01:37:52.818120+00:00"
+  },
+  "report_period": {
+    "start": "2026-10-08",
+    "end": "2026-11-06"
+  },
+  "input_instrument_count": 5570,
+  "usage_context": {
+    "intended_use": "limited_historical_research",
+    "historical_availability": "not_certified",
+    "sample_pool": "recorded_input_union",
+    "limitations": [
+      "严格历史可得性未认证。完成状态与 PIT fail_closed 策略均不构成来源认证。",
+      "标的清单仅为运行实际输入集合。普通回测使用起始日解析的固定池。不代表历史全市场或逐日成员。",
+      "结果不自动授予策略晋级、信号启用或 Paper 授权。严格研究须沿原资格入口另验。"
+    ]
+  },
+  "source_identity_count": 5570,
+  "source_snapshot_ids": [
+    "snapshot-set:sha256:56828c5cc96f2e8a5e03784f7e377ba223251780b2570bdd8943883140e9b642",
+    "snapshot-set:sha256:610e838a230b77421ecdcd71fabb5a04eed8e22747868c300f0da3a62d4f608e",
+    "snapshot-set:sha256:61306248e0be91b187bf65cd1bdb68a23f40175bf93869b07049a2ea7478877b",
+    "snapshot-set:sha256:7ff55f9ef4745cf7cbac218761c665fed615947b5cccc7905f18c2ea780902d4",
+    "snapshot-set:sha256:88792f0f9546b507f3d19abad6ff41f003e595eefd93161de60f926e9cc4a9da",
+    "snapshot-set:sha256:8ad8c27943c28f1fcd853ee2c6a447182d8ccbbfc4252c6c704368213aaf777b",
+    "snapshot-set:sha256:932e421322d3b44d4d195cb5f825d69ef6558816a18f078188a5e2fce936869f",
+    "snapshot-set:sha256:a4f3dfdf6d3ef3e4937f6d6b9ea431a0e79422c4171ace6fa0adf336097b78ac",
+    "snapshot-set:sha256:a504f742b936383cf29c449b7880f739799cf2646d7623f0ac22c39d1e5a1849",
+    "snapshot-set:sha256:cc9d7e5994b8a70b78071291a40f1c54435df50c54e0725f3008253737d36e70",
+    "snapshot-set:sha256:d8d130a3e0b653c371e1d7de2bf673165fe0ff64e877f5ca880ade8abf68262c",
+    "snapshot-set:sha256:f2e01607aaa920db5cd809da904ccf7276be91740447f52462a7f381c405a08a",
+    "snapshot:tushare:etf_daily:sha256:d28f1a4ec4d1a7f9eed3fbed93084462108fe8599095f056e74e2f59be9cb4b6"
+  ],
+  "strategy_promotion_without_per_instrument_rows": {
+    "strategy_id": "seed_stock_selection_rotation",
+    "strategy_version": "1",
+    "code_version": "80dcc1d80aeeebe403aafbf524d2280ff58aadc984326dbc2e387e6fca3eece8",
+    "base_spec_hash": "80dcc1d80aeeebe403aafbf524d2280ff58aadc984326dbc2e387e6fca3eece8",
+    "spec_hash": "80dcc1d80aeeebe403aafbf524d2280ff58aadc984326dbc2e387e6fca3eece8",
+    "parameter_hash": "9f4c47d4dbe3427071f1037377f0e4ce0522c9021ea72c345d3c5f86f96ace58",
+    "effective_parameters": [
+      {
+        "path": "/pipeline/nodes/legacy_factor_set/config/params/allocation_method",
+        "value": "equal_weight"
+      },
+      {
+        "path": "/pipeline/nodes/legacy_factor_set/config/params/cash_target",
+        "value": 0.0
+      },
+      {
+        "path": "/pipeline/nodes/legacy_factor_set/config/params/max_weight",
+        "value": 0.1
+      },
+      {
+        "path": "/pipeline/nodes/legacy_factor_set/config/params/rebalance_freq",
+        "value": "monthly"
+      },
+      {
+        "path": "/pipeline/nodes/legacy_factor_set/config/params/top_k",
+        "value": 20
+      },
+      {
+        "path": "/pipeline/nodes/legacy_factor_set/config/params/trend_threshold",
+        "value": 0.0
+      }
+    ],
+    "research_snapshot_id": null,
+    "research_snapshot_manifest_hash": null,
+    "benchmark": 3000162,
+    "cost_model": {
+      "fee_model": "AShareFeeModel",
+      "slippage_model": "",
+      "total_fees": 3874.6268467229997,
+      "cost_drag": 0.3876136311901002,
+      "net_return_after_cost": -10.442148379614894
+    },
+    "backtest_metrics": {
+      "period_start": "2026-10-08",
+      "period_end": "2026-11-06",
+      "initial_cash": 999610.5747949658,
+      "final_nav": 899104.3822032772,
+      "total_trades": 414,
+      "sharpe_ratio": -3.7214421548957533,
+      "max_drawdown": -13.331948086782699,
+      "annualized_return": -71.96172630640461
+    },
+    "factor_report_refs": [],
+    "recommendation_status": "research"
+  },
+  "pit_policy": {
+    "time_column": "knowledge_date",
+    "policy": "knowledge_date_fail_closed",
+    "unsafe_time_policy": "",
+    "knowledge_lag_days": 1
+  },
+  "artifact_files": {
+    ".cache/issues-710-711/artifacts/issue711-limited-20261108/backtest_report.json": {
+      "bytes": 1977129,
+      "sha256": "4c7b572ac5fe689684dedb29c7ed24e5f76f156f91d39c98d1af05bcb5036cae"
+    },
+    ".cache/issues-710-711/artifacts/issue711-limited-20261108/trade_log.parquet": {
+      "bytes": 25818,
+      "sha256": "d802ae4efe847a9cc4ab490d54284169dfa11c88d416974ab38f58bc1462da5f"
+    },
+    ".cache/issues-710-711/artifacts/issue711-limited-20261108/pre_trade_log.json": {
+      "bytes": 169681,
+      "sha256": "db8989e73c39aa1039af1cf019f734a9dc6d3bf75b8d9bcfe4c0a4430cb97ff8"
+    },
+    ".cache/issues-710-711/artifacts/issue711-limited-20261108/nav.parquet": {
+      "bytes": 1113,
+      "sha256": "d506887578486d75e11fdd5b34e125158d45abeab0bfd3bca62b4964b9b2e3dc"
+    },
+    ".cache/issues-710-711/artifacts/issue711-limited-20261108/manifest.json": {
+      "bytes": 1845632,
+      "sha256": "6364f93808503f57a68585d7fdfdfa4b621c438b3564e6c7eb81ac191712775a"
+    },
+    ".cache/issues-710-711/artifacts/issue711-limited-20261108/fill_log.parquet": {
+      "bytes": 16511,
+      "sha256": "8e6177764079cfdeceee10a0e2e0a0a6ef58fd66e8c958bf0fbaa3ea9caddf83"
+    },
+    ".cache/issues-710-711/artifacts/issue711-limited-20261108/portfolio_stats.parquet": {
+      "bytes": 4471,
+      "sha256": "ecb78d71955bceae24152c7fe620a107f72a96cd06683db7d23f7f3065a1d9c6"
+    }
+  },
+  "http_report_sha256": "873de5e5a2cb18cc1efc8c534008fc44d6a1a1113b83e64b99a8858e9e4207d1"
+}

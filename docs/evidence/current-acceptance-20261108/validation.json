@@ -1,0 +1,79 @@
+{
+  "verified_at": "2026-11-08T02:07:04.764762+00:00",
+  "code_sha": "d9a5fec92861fda3dccce6eeb9d0e600fc232a84",
+  "task_verify_push": {
+    "exit_code": 0,
+    "python_fast_passed": 16776,
+    "python_fast_skipped": 17,
+    "web_files": 225,
+    "web_tests": 1930,
+    "contract_conformance": 4,
+    "harness_tests": 148,
+    "harness_subtests": 116,
+    "tooling_tests": 270,
+    "system_browser_journeys": 43,
+    "pit_tests": 671,
+    "lint_types_architecture_contract_generation": "passed; existing Biome warnings remain"
+  },
+  "task_test_no_cov": {
+    "exit_code": 0,
+    "passed": 17523,
+    "skipped": 71,
+    "duration": "293.94s (0:04:53)",
+    "selection": "default repository suite: not snapshot and not sandbox_live"
+  },
+  "win_rate_fix": {
+    "red": "KPI expected 58.3%, actual 5833.0%; original assertion failed",
+    "green_focused_tests": 19,
+    "full_web_passed": 1930
+  },
+  "independent_review": {
+    "initial_range": "4c7e6a13..2fbe7e8e",
+    "initial_findings": [
+      "Spec: chart CSV/PNG and directory comparison omitted research boundaries",
+      "Standards: URL mock mutated the original global"
+    ],
+    "repair_range": "2fbe7e8e..00642c778",
+    "repair_blockers": 0,
+    "live_discovered_legacy_fix_range": "00642c778..d9a5fec9",
+    "live_fix": "remove duplicate win-rate percentage conversion; preserve engine units",
+    "final_spec_blockers": 0,
+    "final_standards_blockers": 0
+  },
+  "prior_attempts": [
+    {
+      "file": "verify-push.log",
+      "result": "failed: deterministic R5 derived interface hash changed with OpenAPI; regenerated using official builder; original live evidence unchanged"
+    },
+    {
+      "file": "verify-push-final.log",
+      "result": "incomplete: two 10-second timeouts and one interrupted startup wait; 16766 passed, 17 skipped, 3 failed. Focused startup 1 passed and whole file 11 passed; isolated full gate passed. Cause not proven; no speculative production fix."
+    }
+  ],
+  "log_files": {
+    "verify-push-isolated.log": {
+      "sha256": "72bc593b9abc0c288d11de572c6b93ade6b7127d83ffc186e1ffbe719aeeba95",
+      "bytes": 5376423
+    },
+    "test-default.log": {
+      "sha256": "c3b676f0c24cb91c4f2aa455d0ee9d378523ad52b4b1d988905e1d7550541a24",
+      "bytes": 5108859
+    },
+    "win-rate-green.log": {
+      "sha256": "9cae3e5b85032e3ae1079fd67f3c52f7ddf077db018cd0de839326b965a314ca",
+      "bytes": 528
+    },
+    "web-build-final.log": {
+      "sha256": "def94129cb60a673dd7bbe24b0ebe0914db0b6532a07826ae572a4a8dfc5832c",
+      "bytes": 9151
+    },
+    "verify-push.log": {
+      "sha256": "361ea77d31f648723e7a1988f031eb849427e221a8bd884ddf962c6108df2771",
+      "bytes": 4884776
+    },
+    "verify-push-final.log": {
+      "sha256": "4ec7f8677280a2f9f7535eebac7c51cfc96def74a8acb27e40757972d18edb6c",
+      "bytes": 4893944
+    }
+  }
+}

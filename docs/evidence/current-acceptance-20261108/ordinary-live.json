@@ -1,0 +1,22 @@
+{
+  "started_at": "2026-11-08T01:35:08.658530+00:00",
+  "code_sha": "2fbe7e8e204f925d62a58d32b43b9846c9ada2b8",
+  "strategy_id": "seed_stock_selection_rotation",
+  "strategy_version": 1,
+  "requested_interval": [
+    "2026-10-01",
+    "2026-11-06"
+  ],
+  "config_root": "/Users/chevy/Desktop/code/ditto",
+  "state_root": "/Users/chevy/Desktop/code/ditto/data",
+  "artifact_root": "/Users/chevy/Desktop/code/ditto.worktrees/issues-710-711-closeout/.cache/issues-710-711/artifacts",
+  "strict_historical_availability": "not_certified",
+  "status": "completed",
+  "run_id": "issue711-limited-20261108",
+  "actual_period": [
+    "2026-10-08",
+    "2026-11-06"
+  ],
+  "nav_points": 22,
+  "finished_at": "2026-11-08T01:37:52.818120+00:00"
+}

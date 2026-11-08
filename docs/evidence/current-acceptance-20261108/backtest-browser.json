@@ -1,0 +1,54 @@
+{
+  "observed_at": "2026-11-08T01:45:32.501Z",
+  "identity": {
+    "status": "running",
+    "version": "0.1.0",
+    "product_version": "0.1.0",
+    "git_sha": "d9a5fec92861fda3dccce6eeb9d0e600fc232a84",
+    "api_contract_version": "v1",
+    "contract_digest": "bdae2cf5c582596cf37412a92d4ace386ab68bef0992b7a43a121371ae6df656",
+    "environment": "development",
+    "features": {
+      "data_collection": true,
+      "data_validation": true,
+      "backtest": true,
+      "trading": true
+    },
+    "observability": {
+      "level": "INFO",
+      "structured": true
+    }
+  },
+  "run_id": "issue711-limited-20261108",
+  "downloads": [
+    {
+      "file": "ordinary-report-download.json",
+      "bytes": 2177774,
+      "sha256": "da7af36a3d1ecff513c8c80a9faa12b7782a82170fbc67a94a80145db7d89344"
+    },
+    {
+      "file": "ordinary-nav.csv",
+      "bytes": 44905,
+      "sha256": "be30424999b92a9224a7a0073bcc77c60eef68799eea9960d3068b550deed4fb"
+    },
+    {
+      "file": "ordinary-nav.png",
+      "bytes": 199463,
+      "sha256": "7a5e7f85e13c64157ef47d50e250f65eb434f85f234720fbe80c96ffe1d85551"
+    }
+  ],
+  "errors": [],
+  "assertions": {
+    "correct_win_rate": "44.2%",
+    "actual_period": [
+      "2026-10-08",
+      "2026-11-06"
+    ],
+    "input_instruments": 5570,
+    "source_identities": 5570,
+    "unique_source_snapshots": 13,
+    "json_preserves_original_source_and_pit": true,
+    "csv_preserves_all_snapshot_ids": true
+  },
+  "page_text": "D\n当前产品域：\nRESEARCH\n回测列表\n命令\n⌘K\nC\n\n回测目录\n\n搜索回测运行\n全部状态\ncompleted\n回测对比\nBacktest Runs\n3\n0/8 对比 · 3 completed · 0 running\n加入对比\nRUN\nSTRATEGY VERSION\nSTATUS\nPROGRESS\nSTARTED\nissue711-limited-20261108\nseed_stock_selection_rotation · v1\ncompleted\n100%\n2026-11-08\n8ee0de7e\nseed_stock_selection_rotation · v1\ncompleted\n100%\n2026-10-21\n77ce20b4\nseed_stock_selection_rotation · v1\ncompleted\n100%\n2026-10-19\n\nRun Detail\n\nLIVE\nissue711-limited-20261108\n\nseed_stock_selection_rotation · v1\n\ncompleted\nProgress\n100%\nCurrent step\nengine\nDays\n22 / 22\nBenchmark\n未发布\nStarted\n2026-11-08T01:35:08Z\nCompleted\n2026-11-08T01:37:52Z\n打开回测结果"
+}

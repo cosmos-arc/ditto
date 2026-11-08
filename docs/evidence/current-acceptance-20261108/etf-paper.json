@@ -1,0 +1,249 @@
+{
+  "kind": "etf",
+  "observed_at": "2026-11-08T01:42:27.654Z",
+  "identity": {
+    "status": "running",
+    "version": "0.1.0",
+    "product_version": "0.1.0",
+    "git_sha": "00642c7784ab00a5f331a98ac69248aa2d263f09",
+    "api_contract_version": "v1",
+    "contract_digest": "bdae2cf5c582596cf37412a92d4ace386ab68bef0992b7a43a121371ae6df656",
+    "environment": "development",
+    "features": {
+      "data_collection": true,
+      "data_validation": true,
+      "backtest": true,
+      "trading": true
+    },
+    "observability": {
+      "level": "INFO",
+      "structured": true
+    }
+  },
+  "account": "issue710-governed-etf",
+  "session": "issue710-governed-etf-session",
+  "date": "2026-11-06",
+  "actions": [
+    {
+      "button": "日终对账",
+      "http_status": 200,
+      "browser_elapsed_ms": 138.4632079999999,
+      "payload": {
+        "data": {
+          "reconciliation_id": "paper-reconciliation:4a7bc17c871dabe175415a345447d947",
+          "session_id": "issue710-governed-etf-session",
+          "trade_date": "2026-11-06",
+          "order_count": 1,
+          "fill_count": 1,
+          "ledger_fill_count": 1,
+          "balanced": true,
+          "checksum": "paper-eod:sha256:a2a533c747c408cf12b992cd268d1dcde7ec92bbf8fed4d7ff3c91380d2d20ff",
+          "reconciled_at": "2026-11-08T01:42:28.802182Z"
+        },
+        "pagination": null,
+        "read_semantics": null
+      }
+    },
+    {
+      "button": "恢复账本缺口",
+      "http_status": 200,
+      "browser_elapsed_ms": 60.187999999999874,
+      "payload": {
+        "data": {
+          "idempotency_key": "paper-recover:e2b4f2a9-864f-4c9f-afdd-53020e7349b7",
+          "recovered_execution_count": 1
+        },
+        "pagination": null,
+        "read_semantics": null
+      }
+    }
+  ],
+  "before": {
+    "data": {
+      "account": {
+        "account_id": "issue710-governed-etf",
+        "account_kind": "paper",
+        "name": "issue 710 historical simulation",
+        "opened_at": "2026-11-05T14:59:59Z",
+        "currency": "CNY"
+      },
+      "events": [
+        {
+          "event_id": "account-event:6abd83ed958cea6ffdc3ea69642631f3",
+          "account_id": "issue710-governed-etf",
+          "account_kind": "paper",
+          "event_type": "opening_cash",
+          "trade_date": "2026-11-05",
+          "settlement_date": "2026-11-05",
+          "recorded_at": "2026-11-05T14:59:59Z",
+          "idempotency_key": "paper-opening:opening",
+          "actor": "paper-engine:account-bootstrap",
+          "source": "paper_engine",
+          "instrument_id": null,
+          "currency": "CNY",
+          "quantity": "0",
+          "price": "0.0000",
+          "gross_amount": "10000.00",
+          "fees": "0.00",
+          "tax": "0.00",
+          "net_cash": "10000.00",
+          "note": "",
+          "external_reference": null,
+          "event_hash": "account-event:sha256:169a7785682ec4a9fde489938f6fe844ee29632c8b1d5d45969a7e7ef6bd7375"
+        },
+        {
+          "event_id": "account-event:d26a75f607f3fafbee531ee8d9ae4a87",
+          "account_id": "issue710-governed-etf",
+          "account_kind": "paper",
+          "event_type": "buy",
+          "trade_date": "2026-11-06",
+          "settlement_date": "2026-11-09",
+          "recorded_at": "2026-11-07T08:54:41.140457Z",
+          "idempotency_key": "paper-ledger:paper-execution:f2f5cdf2d46e7c346d34fa6eb1ddaa8d",
+          "actor": "paper-session:issue710-governed-etf-session",
+          "source": "paper_engine",
+          "instrument_id": 2001562,
+          "currency": "CNY",
+          "quantity": "1.1E+3",
+          "price": "4.1240",
+          "gross_amount": "4536.40",
+          "fees": "5.05",
+          "tax": "0.00",
+          "net_cash": "-4541.45",
+          "note": "assumption=fill-assumption:sha256:9b04db471b15e5511a8a77fccb69968e6c7310c030c2231875900b21b9b378b3;market_lineage=market-lineage:sha256:27ab5d88735715e68fb30449976dc8d2232a4815834993858c6565c797be5386",
+          "external_reference": "paper-execution:f2f5cdf2d46e7c346d34fa6eb1ddaa8d",
+          "event_hash": "account-event:sha256:25fc2b985601b4be1d0d2fbb5f0bf60a817360ddcdc72e389575ed643ecc56e9"
+        }
+      ],
+      "snapshot": {
+        "account_id": "issue710-governed-etf",
+        "account_kind": "paper",
+        "as_of": "2026-11-06",
+        "currency": "CNY",
+        "cash": {
+          "available": "5458.55",
+          "settled": "10000.00",
+          "frozen": "0",
+          "total": "5458.55"
+        },
+        "positions": [
+          {
+            "instrument_id": 2001562,
+            "quantity": "1.1E+3",
+            "available_quantity": "0",
+            "average_cost": "4.1286",
+            "last_price": "4.1286",
+            "market_value": "4541.46",
+            "realized_pnl": "0.00",
+            "unrealized_pnl": "0.00",
+            "total_fees": "5.05"
+          }
+        ],
+        "total_value": "10000.01",
+        "realized_pnl": "0.00",
+        "unrealized_pnl": "0.00",
+        "total_fees": "5.05",
+        "event_count": 2,
+        "ledger_hash": "account-ledger:sha256:536c995eaf56a0227b4d1e5444aa0cb99626ba33c27a47dd3d87f19885d30ec1",
+        "valuation_complete": false
+      }
+    },
+    "pagination": null,
+    "read_semantics": null
+  },
+  "after": {
+    "data": {
+      "account": {
+        "account_id": "issue710-governed-etf",
+        "account_kind": "paper",
+        "name": "issue 710 historical simulation",
+        "opened_at": "2026-11-05T14:59:59Z",
+        "currency": "CNY"
+      },
+      "events": [
+        {
+          "event_id": "account-event:6abd83ed958cea6ffdc3ea69642631f3",
+          "account_id": "issue710-governed-etf",
+          "account_kind": "paper",
+          "event_type": "opening_cash",
+          "trade_date": "2026-11-05",
+          "settlement_date": "2026-11-05",
+          "recorded_at": "2026-11-05T14:59:59Z",
+          "idempotency_key": "paper-opening:opening",
+          "actor": "paper-engine:account-bootstrap",
+          "source": "paper_engine",
+          "instrument_id": null,
+          "currency": "CNY",
+          "quantity": "0",
+          "price": "0.0000",
+          "gross_amount": "10000.00",
+          "fees": "0.00",
+          "tax": "0.00",
+          "net_cash": "10000.00",
+          "note": "",
+          "external_reference": null,
+          "event_hash": "account-event:sha256:169a7785682ec4a9fde489938f6fe844ee29632c8b1d5d45969a7e7ef6bd7375"
+        },
+        {
+          "event_id": "account-event:d26a75f607f3fafbee531ee8d9ae4a87",
+          "account_id": "issue710-governed-etf",
+          "account_kind": "paper",
+          "event_type": "buy",
+          "trade_date": "2026-11-06",
+          "settlement_date": "2026-11-09",
+          "recorded_at": "2026-11-07T08:54:41.140457Z",
+          "idempotency_key": "paper-ledger:paper-execution:f2f5cdf2d46e7c346d34fa6eb1ddaa8d",
+          "actor": "paper-session:issue710-governed-etf-session",
+          "source": "paper_engine",
+          "instrument_id": 2001562,
+          "currency": "CNY",
+          "quantity": "1.1E+3",
+          "price": "4.1240",
+          "gross_amount": "4536.40",
+          "fees": "5.05",
+          "tax": "0.00",
+          "net_cash": "-4541.45",
+          "note": "assumption=fill-assumption:sha256:9b04db471b15e5511a8a77fccb69968e6c7310c030c2231875900b21b9b378b3;market_lineage=market-lineage:sha256:27ab5d88735715e68fb30449976dc8d2232a4815834993858c6565c797be5386",
+          "external_reference": "paper-execution:f2f5cdf2d46e7c346d34fa6eb1ddaa8d",
+          "event_hash": "account-event:sha256:25fc2b985601b4be1d0d2fbb5f0bf60a817360ddcdc72e389575ed643ecc56e9"
+        }
+      ],
+      "snapshot": {
+        "account_id": "issue710-governed-etf",
+        "account_kind": "paper",
+        "as_of": "2026-11-06",
+        "currency": "CNY",
+        "cash": {
+          "available": "5458.55",
+          "settled": "10000.00",
+          "frozen": "0",
+          "total": "5458.55"
+        },
+        "positions": [
+          {
+            "instrument_id": 2001562,
+            "quantity": "1.1E+3",
+            "available_quantity": "0",
+            "average_cost": "4.1286",
+            "last_price": "4.1286",
+            "market_value": "4541.46",
+            "realized_pnl": "0.00",
+            "unrealized_pnl": "0.00",
+            "total_fees": "5.05"
+          }
+        ],
+        "total_value": "10000.01",
+        "realized_pnl": "0.00",
+        "unrealized_pnl": "0.00",
+        "total_fees": "5.05",
+        "event_count": 2,
+        "ledger_hash": "account-ledger:sha256:536c995eaf56a0227b4d1e5444aa0cb99626ba33c27a47dd3d87f19885d30ec1",
+        "valuation_complete": false
+      }
+    },
+    "pagination": null,
+    "read_semantics": null
+  },
+  "ledger_unchanged": true,
+  "page_text": "D\n当前产品域：\nPORTFOLIO\nPaper Account\n命令\n⌘K\nC\nPAPER 模拟账户\nissue710-governed-etf\nissue 710 historical simulation\n由 Ditto 模拟撮合，不连接券商下单\n\n会话状态\n\nPAUSED\n\nrevision 4\n\n订单 / 成交\n\n1 / 1\n\n2026-11-06\n\n日终对账\n\n日终已平衡\n\npaper-eod:sha256:a…380d2d20ff\n\n策略\n\netf-allocation:issue710-governed\n\nissue710-governed-etf-session\n\n会话控制\n\n暂停阻止新撮合；恢复只补齐已持久化执行的账本链接。\n\n日终对账\n恢复账本缺口\n暂停会话\n恢复检查完成：1 条执行记录已核验\n模拟订单\n\n提交完整市场快照与规则；现金与持仓由账本投影推导，撮合结果可能成交、推迟或拒绝。\n\n资产类型\nA 股个股\nETF\nInstrument ID\n交易所\n上海 XSHG\n深圳 XSHE\n方向\n买入\n卖出\n订单类型\n市价\n限价\n数量\n收盘 / 参考价\n昨收\n交收日\n行情快照 ID\nA 股个股 · 卖出收印花税 · 100 股一手 · T+1 · 默认 1 bps 滑点\n提交模拟订单\n订单与成交\n1\n\netf-intent:823044e058bf0885430a7f1539fa1462\n\nBUY 1100 @ 4.124\n\nfilled\n成交假设与快照血缘\n\netf-paper-request:sha256:1c019a248b5520f16002b35b650eecba717bc8d590359d9064a04b3c9020fd40\n\n参考 / 成交\n\n4.124 / 4.124\n\n滑点\n\n1.00\n\n成交价差总额\n\n佣金 / 过户费\n\n5.00 / 0.05\n\n税费 / 总成本\n\n0.00 / 5.05\n\nASSUMPTION\nfill-assumption:sha256:9b04db471b15e5511a8a77fccb69968e6c7310c030c2231875900b21b9b378b3\nMARKET SNAPSHOT\nmarket-snapshot:sha256:a10dd02e2ba5181a2f04ff93df81fedb1f6e4fe217ca48df93b926ad2c4370db\nMARKET LINEAGE\nmarket-lineage:sha256:27ab5d88735715e68fb30449976dc8d2232a4815834993858c6565c797be5386\nLEDGER EVENT\naccount-event:d26a75f607f3fafbee531ee8d9ae4a87\n历史收益（资金流调整 TWR）\n模拟成交（Paper）\n\n只读重放：模拟账本修订 2 条事件；会话 issue710-governed-etf-session 已绑定账户，不读取实盘账本\n\n开始日期\n结束日期\n知识/发布截止\n价格快照（逗号分隔）\n查询历史\n\n填写区间与价格快照后查询；外部资金流需要在录入时声明时点，否则该日收益留空。\n\n执行偏差归因\n\n先解释 Model 意图进入 Paper 后的执行损耗；正式持仓权重 drift 由统一比较视图提供。\n\n未成交\n\n0 笔未成交 / 推迟\n\n总滑点\n\n1.00\n\n费用\n\n5.05\n\n税费\n\n0.00\n\nModel → Paper 权重差：等待 PortfolioComparisonView；当前不从 UI 推断。\n\n总资产\n\n10,000.01\n\n可用现金\n\n5,458.55\n\n累计成本\n\n5.05\n\naccount-ledger:sha256:536c995eaf56a0227b4d1e5444aa0cb99626ba33c27a47dd3d87f19885d30ec1"
+}

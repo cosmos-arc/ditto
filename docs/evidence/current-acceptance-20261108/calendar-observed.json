@@ -1,0 +1,56 @@
+{
+  "observed_at": "2026-11-08T01:49:49.300049+00:00",
+  "rows": [
+    {
+      "trade_date": "2026-11-16",
+      "is_open": true
+    },
+    {
+      "trade_date": "2026-11-15",
+      "is_open": false
+    },
+    {
+      "trade_date": "2026-11-14",
+      "is_open": false
+    },
+    {
+      "trade_date": "2026-11-13",
+      "is_open": true
+    },
+    {
+      "trade_date": "2026-11-12",
+      "is_open": true
+    },
+    {
+      "trade_date": "2026-11-11",
+      "is_open": true
+    },
+    {
+      "trade_date": "2026-11-10",
+      "is_open": true
+    },
+    {
+      "trade_date": "2026-11-09",
+      "is_open": true
+    },
+    {
+      "trade_date": "2026-11-08",
+      "is_open": false
+    },
+    {
+      "trade_date": "2026-11-07",
+      "is_open": false
+    },
+    {
+      "trade_date": "2026-11-06",
+      "is_open": true
+    }
+  ],
+  "code_sha": "d9a5fec92861fda3dccce6eeb9d0e600fc232a84",
+  "source": "SourceDataPort.fetch_calendar through configured Tushare proxy",
+  "probe": "existing select_next_eligible_trade_date at observation timestamp; eligibility probe only, not an approval or new account",
+  "current_eligible_trade_date": null,
+  "next_open_date": "2026-11-09",
+  "current_live_day_qualified": false,
+  "continuous_trading_days_recorded": 0
+}
