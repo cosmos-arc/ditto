@@ -450,8 +450,19 @@ class _InstrumentLookup:
         }.get(instrument_id)
 
 
+class _UniverseLookup:
+    def get_universe_detail(self, universe_id: str) -> dict[str, object]:
+        return {
+            "universe_id": universe_id,
+            "name": "Synthetic ETF pool",
+            "description": "Fixed synthetic inputs for replay verification",
+            "source_ref": "synthetic:restored-replay-golden",
+        }
+
+
 class _MetadataServiceStub:
     instrument = _InstrumentLookup()
+    universe = _UniverseLookup()
 
     def resolve_instrument_id(
         self,
