@@ -5,6 +5,7 @@ import { ChartCockpit, ChartLegend } from "@/components/chart";
 import { Button } from "@/components/ui/button";
 import { fetchBacktestNav, fetchBacktestReport } from "../api/backtests";
 import { backtestKeys } from "../hooks";
+import { backtestExportContext } from "../lib/export-context";
 import { MAX_COMPARE_RUNS, metricsRows, multiRunSeries, runColor } from "../lib/multi-run-mapping";
 import type { BacktestNavPoint, BacktestReport, BacktestRun } from "../types";
 
@@ -139,16 +140,24 @@ export function BacktestMultiRunCompare({ runs }: { readonly runs: readonly Back
 	);
 	const identity = useMemo(
 		() => ({
-			dataSourceName: `运行产物（各 run nav.parquet，nav₀ 归一，#N 为色槽位）：${visibleRunLabels.join(" · ")}`,
+			dataSourceName: `运行产物（各 run nav.parquet，nav₀ 归一，#N 为色槽位）：${visibleRunLabels.join(" · ")}；${resources
+				.filter((item, index) => index < MAX_COMPARE_RUNS && !hiddenRuns.has(item.run.runId))
+				.map((item) =>
+					backtestExportContext(item.run.runId, `${item.run.strategyId}@${item.run.strategyVersion}`, item.report),
+				)
+				.join("；")}`,
 			snapshotId: null,
 			knowledgeCutoff: null,
 			publicationCutoff: null,
 		}),
-		[visibleRunLabels],
+		[visibleRunLabels, resources, hiddenRuns],
 	);
 
 	return (
 		<div className="flex min-w-0 flex-col gap-4" data-testid="backtest-multi-run-compare">
+			<p className="text-xs text-(--color-risk-warning-fg)">
+				受限历史研究对比 · 严格历史可得性未认证；固定池不能推定为历史全市场，完成状态不授予信号或 Paper 资格。
+			</p>
 			<ChartLegend
 				ariaLabel="净值叠加序列显隐"
 				testId="multi-run-legend"

@@ -184,7 +184,7 @@ describe("BacktestPage governed workspace", () => {
 		await user.click(screen.getByRole("button", { name: "导出报告" }));
 		expect(screen.getByRole("dialog", { name: "导出回测报告" })).toHaveTextContent("bt-live-001");
 		const createObjectURL = vi.fn<(blob: Blob) => string>(() => "blob:report");
-		vi.stubGlobal("URL", Object.assign(URL, { createObjectURL, revokeObjectURL: vi.fn() }));
+		vi.stubGlobal("URL", Object.assign(class extends URL {}, { createObjectURL, revokeObjectURL: vi.fn() }));
 		const click = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
 		try {
 			await user.click(screen.getByRole("button", { name: "下载 JSON" }));

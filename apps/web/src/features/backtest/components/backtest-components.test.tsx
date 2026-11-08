@@ -127,6 +127,7 @@ describe("BacktestOverview", () => {
 		expect(last.series.map((spec) => spec.label)).toEqual(["策略净值", "基准"]);
 		expect(last.subPanes.map((pane) => pane.id)).toEqual(["excess", "drawdown"]);
 		expect(last.bands.length).toBeGreaterThan(0);
+		expect(last).toMatchObject({ identity: { dataSourceName: expect.stringContaining("严格历史可得性未认证") } });
 	});
 
 	it("显示策略与基准的独立末值", async () => {
