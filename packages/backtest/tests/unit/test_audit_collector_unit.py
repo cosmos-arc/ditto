@@ -877,6 +877,23 @@ class TestBacktestReport:
         assert report.pre_trade_log == ()
         assert report.final_account_state == final_account_state
 
+    def test_report_preserves_inception_cash_and_captured_benchmark(self) -> None:
+        collector = ExecutionAuditCollector()
+        collector.record_account_view("2026-01-01", _account_view(nav=99_995.0))
+        collector.record_account_view("2026-01-02", _account_view(nav=100_995.0))
+        collector.record_fill(_fill_event())
+        report = build_report(
+            collector, initial_cash=100_000.0, benchmark_navs=(4000.0, 4040.0)
+        )
+        assert report.initial_cash == 100_000.0
+        assert report.portfolio_stats[0].daily_return == pytest.approx(-0.005)
+        assert report.portfolio_stats[0].drawdown == pytest.approx(-0.005)
+        assert report.alpha_stats.net_return_after_cost == pytest.approx(0.995)
+        assert report.benchmark_series == (
+            ("2026-01-01", 4000.0),
+            ("2026-01-02", 4040.0),
+        )
+
     def test_report_with_benchmark(self) -> None:
         """Report passes benchmark to alpha_stats computation."""
         collector = ExecutionAuditCollector()

@@ -157,8 +157,8 @@ def run_backtest_flow(
     """
     flow_request = _normalize_flow_request(request, wire_params)
     cost_cfg = _deserialize_cost_config(flow_request.cost_config)
-    fee_model = build_fee_model(cost_cfg)
-    slippage_model = build_slippage_model(cost_cfg)
+    fee_model = build_fee_model(cost_cfg) if cost_cfg is not None else None
+    slippage_model = build_slippage_model(cost_cfg) if cost_cfg is not None else None
 
     config = BacktestCatalogRequestConfig(
         strategy_id=flow_request.strategy_id,

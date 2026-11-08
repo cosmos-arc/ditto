@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any, cast
 from unittest.mock import MagicMock, patch
 
+import polars as pl
 import pytest
 from ditto_application.exceptions import AppProcessError
 from ditto_application.processes.execution.backtest_process import (
@@ -95,6 +96,23 @@ def _make_service_config(
     )
 
 
+def _visible_factor_history() -> pl.DataFrame:
+    return pl.DataFrame(
+        [
+            {
+                "instrument_id": iid,
+                "trade_date": "2026-04-08",
+                "open": close,
+                "high": close,
+                "low": close,
+                "close": close,
+                "volume": 1000000.0,
+            }
+            for iid, close in [(510050, 4.15), (159915, 0.82)]
+        ]
+    )
+
+
 def _make_minimal_service(
     config: BacktestServiceConfig | None = None,
     audit_service: MagicMock | None = None,
@@ -110,6 +128,8 @@ def _make_minimal_service(
     mock_brokerage = MagicMock()
     mock_pre_trade_check = MagicMock()
     mock_data_feed = data_feed if data_feed is not None else MagicMock()
+    if data_feed is None:
+        mock_data_feed.get_history.return_value = _visible_factor_history()
 
     options = BacktestServiceOptions(
         audit_service=audit_service,
@@ -1566,9 +1586,9 @@ class TestBuildFactorAwareBundleBuilder:
         assert bundle.strategy_id == "factor-strat"
         assert bundle.run_id == "run-factor-001"
         assert bundle.benchmark_close == 3000.0
-        # instruments 和 market_data 包含 2 个标的
+        # 两个标的，各含一行可见历史和一行决策占位
         assert bundle.instruments.height == 2
-        assert bundle.market_data.height == 2
+        assert bundle.market_data.height == 4
         # signal_values 包含 instrument_id + signal_value 列
         signal_values = bundle.signal_values
         assert signal_values is not None
@@ -1805,9 +1825,9 @@ class TestBuildFactorAwareBundleBuilder:
             weights=(0.7, 0.3),
         )
 
-        # mock data_feed — 返回空 DataFrame，但记录调用参数
+        # 可见历史只用于验证 lookback 参数，表达式计算在本测试中隔离
         mock_data_feed = MagicMock()
-        mock_data_feed.get_history.return_value = pl.DataFrame()
+        mock_data_feed.get_history.return_value = _visible_factor_history()
 
         config = _make_service_config(
             strategy_id="lookback-strat",

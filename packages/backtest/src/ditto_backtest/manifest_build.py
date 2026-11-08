@@ -49,6 +49,7 @@ class RunManifestInputEvidence:
     input_instruments: set[InstrumentId]
     bar_fingerprints: dict[InstrumentId, list[tuple[str, float]]]
     source_snapshot_ids: Mapping[InstrumentId, str | Iterable[str]] | None = None
+    consumed_inputs: tuple[InputRef, ...] = ()
 
 
 def _hash_definition(defn: InstrumentDefinition) -> str:
@@ -225,7 +226,8 @@ def build_run_manifest(
         strategy_version=config.strategy_version,
         mode=RunMode.BACKTEST,
         input_refs=input_refs,
-        input_ref_details=_build_input_ref_details(
+        input_ref_details=input_evidence.consumed_inputs
+        or _build_input_ref_details(
             input_evidence.bar_fingerprints,
             source_snapshot_ids=input_evidence.source_snapshot_ids,
         ),

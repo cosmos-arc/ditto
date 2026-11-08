@@ -7,6 +7,8 @@ from dataclasses import dataclass
 from ditto_data.services.metadata_service import MetadataService
 from ditto_kernel.identity import InstrumentId
 
+from ditto_application.exceptions import AppBuilderError
+
 
 @dataclass(frozen=True)
 class ResolutionResult:
@@ -68,4 +70,8 @@ def resolve_benchmark(
     if spec_benchmark is None:
         return None
     iid = metadata_service.resolve_instrument_id(spec_benchmark, source, as_of)
-    return InstrumentId(iid) if iid is not None else None
+    if iid is None:
+        raise AppBuilderError(
+            f"declared benchmark cannot be resolved: {spec_benchmark} at {as_of}"
+        )
+    return InstrumentId(iid)

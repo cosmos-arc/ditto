@@ -20,8 +20,9 @@ from ditto_execution.orders.model import Order
 from ditto_execution.orders.status import OrderStatus
 from ditto_execution.orders.ticket import OrderTicket
 from ditto_execution.orders.trigger import OrderTrigger
+from ditto_execution.reality.price import round_to_tick
 from ditto_kernel.identity import InstrumentId
-from ditto_kernel.order import OrderSide
+from ditto_kernel.order import OrderSide, OrderType
 from ditto_kernel.trading import (
     DEFAULT_COMMISSION_RATE,
     DEFAULT_LOT_SIZE,
@@ -307,6 +308,8 @@ class BacktestBrokerage:
                 slippage,
                 step_time,
                 fee_schedule,
+                definition,
+                market,
             )
             settle_date = self._model.settlement_model.settle_date(
                 trade_date,
@@ -337,6 +340,8 @@ class BacktestBrokerage:
         slippage: float,
         step_time: datetime,
         fee_schedule: FeeSchedule,
+        definition: InstrumentDefinition,
+        market: MarketSnapshot,
     ) -> FillEvent:
         """构建 FillEvent，补全所有字段。"""
         order = ticket.order
@@ -366,7 +371,18 @@ class BacktestBrokerage:
 
         # 基准成交价 (FillModel 返回) + 滑点
         base_price = filled.fill_event.fill_price
-        fill_price = base_price + slippage
+        fill_price = round_to_tick(base_price + slippage, definition.tick_size)
+        if market.limit_up is not None:
+            fill_price = min(fill_price, market.limit_up)
+        if market.limit_down is not None:
+            fill_price = max(fill_price, market.limit_down)
+        if order.order_type == OrderType.LIMIT and order.price is not None:
+            fill_price = (
+                min(fill_price, order.price)
+                if order.direction == OrderSide.BUY
+                else max(fill_price, order.price)
+            )
+        slippage = fill_price - base_price
 
         fee = self._model.fee_model.calculate(
             order,

@@ -152,15 +152,15 @@ class TestTenDaySnapshot:
         assert len(result.account_view.positions) <= 3
 
     def test_daily_golden_signature(self, tmp_path: Path) -> None:
-        """Daily snapshot has an explicit promotion-style output signature."""
+        """Golden prices respect the fixture tick (0.001)."""
         engine = _build_daily_engine(tmp_path)
         result = engine.run()
 
-        assert result.final_nav == pytest.approx(1_006_490.3899186)
+        assert result.final_nav == pytest.approx(1_006_515.25401)
         assert result.total_trades == 36
         assert account_position_signature(result) == (
-            (10, 29_696, 29_696, 10.80216, 332_595.2, 11_814.25664),
-            (12, 57_300, 57_300, 5.80116, 332_340.0, -66.468),
+            (10, 29_696, 29_696, 10.802, 332_595.2, 11_819.008),
+            (12, 57_300, 57_300, 5.801, 332_340.0, -57.3),
         )
 
 

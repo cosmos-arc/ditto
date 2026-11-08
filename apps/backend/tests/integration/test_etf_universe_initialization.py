@@ -5,13 +5,17 @@ from pathlib import Path
 
 import pytest
 from ditto_apps.registry.contexts.universe import create_universe_write_context
-from ditto_apps.scripts.materialize_etf_universe import main
+from ditto_apps.scripts.materialize_research_universe import main
 from ditto_platform.foundation import SQLiteClient
 
 
+@pytest.mark.parametrize(
+    ("asset_class", "universe_id"),
+    [("etf", "csi_etf_broad"), ("stock", "ordinary_stock_acceptance")],
+)
 @pytest.mark.pit
 def test_frozen_etf_initialization_is_repeatable_and_preserves_history(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, asset_class: str, universe_id: str
 ) -> None:
     monkeypatch.setenv("DITTO_STATE_ROOT", str(tmp_path))
     monkeypatch.setenv("DITTO_CACHE_ROOT", str(tmp_path / "cache"))
@@ -26,13 +30,13 @@ def test_frozen_etf_initialization_is_repeatable_and_preserves_history(
             "(instrument_id,ticker,name,exchange,asset_class,list_date,delist_date) "
             "VALUES (?,?,?,?,?,?,?)",
             [
-                (2000001, "510300", "Test ETF", "SSE", "etf", "2020-01-02", None),
+                (2000001, "510300", "Test ETF", "SSE", asset_class, "2020-01-02", None),
                 (
                     2000002,
                     "159915",
                     "Closed ETF",
                     "SZSE",
-                    "etf",
+                    asset_class,
                     "2020-01-03",
                     "2020-02-01",
                 ),
@@ -42,7 +46,7 @@ def test_frozen_etf_initialization_is_repeatable_and_preserves_history(
     finally:
         container.close()
     plan = {
-        "universe_id": "csi_etf_broad",
+        "universe_id": universe_id,
         "name": "Frozen sample",
         "selected_at": "2026-11-08T04:00:00+00:00",
         "source_observed_at": "2026-11-08T04:00:00+00:00",
@@ -57,7 +61,7 @@ def test_frozen_etf_initialization_is_repeatable_and_preserves_history(
                 "ticker": "510300",
                 "name": "Test ETF",
                 "exchange": "SSE",
-                "asset_class": "etf",
+                "asset_class": asset_class,
                 "list_date": "2020-01-02",
                 "delist_date": None,
             },
@@ -66,7 +70,7 @@ def test_frozen_etf_initialization_is_repeatable_and_preserves_history(
                 "ticker": "159915",
                 "name": "Closed ETF",
                 "exchange": "SZSE",
-                "asset_class": "etf",
+                "asset_class": asset_class,
                 "list_date": "2020-01-03",
                 "delist_date": "2020-02-01",
             },
@@ -89,24 +93,24 @@ def test_frozen_etf_initialization_is_repeatable_and_preserves_history(
         )
     assert main(args) == 0  # dry-run is read-only
     with create_universe_write_context() as metadata:
-        assert metadata.universe.get_universe_detail("csi_etf_broad") is None
+        assert metadata.universe.get_universe_detail(universe_id) is None
     assert main([*args, "--apply"]) == 0
     with create_universe_write_context() as metadata:
-        before = metadata.universe.get_constituent_history("csi_etf_broad")
-        assert metadata.get_universe("csi_etf_broad", "2020-01-01") == []
-        assert metadata.get_universe("csi_etf_broad", "2020-01-02") == [2000001]
-        assert metadata.get_universe("csi_etf_broad", "2020-01-03") == [
+        before = metadata.universe.get_constituent_history(universe_id)
+        assert metadata.get_universe(universe_id, "2020-01-01") == []
+        assert metadata.get_universe(universe_id, "2020-01-02") == [2000001]
+        assert metadata.get_universe(universe_id, "2020-01-03") == [
             2000001,
             2000002,
         ]
-        assert metadata.get_universe("csi_etf_broad", "2020-02-01") == [2000001]
+        assert metadata.get_universe(universe_id, "2020-02-01") == [2000001]
     assert main([*args, "--apply"]) == 0
     with create_universe_write_context() as metadata:
-        assert metadata.universe.get_constituent_history("csi_etf_broad") == before
+        assert metadata.universe.get_constituent_history(universe_id) == before
         assert metadata.get_universe("unrelated", "2019-12-31") == [2000001]
         assert metadata.get_universe("unrelated", "2020-01-01") == []
         metadata.universe.add_constituents(
-            "csi_etf_broad",
+            universe_id,
             [
                 {
                     "instrument_id": 2000001,
@@ -118,4 +122,4 @@ def test_frozen_etf_initialization_is_repeatable_and_preserves_history(
     with pytest.raises(ValueError, match="conflict"):
         main([*args, "--apply"])
     with create_universe_write_context() as metadata:
-        assert metadata.get_universe("csi_etf_broad", "2019-12-31") == [2000001]
+        assert metadata.get_universe(universe_id, "2019-12-31") == [2000001]

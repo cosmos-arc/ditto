@@ -8,6 +8,7 @@ from datetime import date, timedelta
 from ditto_backtest.brokerage import BacktestBrokerage
 from ditto_backtest.data_feed import (
     DataFeed,
+    FeedInputRequirements,
     ProviderBackedDataFeed,
     SnapshotProviders,
 )
@@ -19,7 +20,8 @@ from ditto_backtest.result import (
 )
 from ditto_backtest.simulation import BrokerageModel
 from ditto_backtest.simulation.fill import AShareFillModel
-from ditto_backtest.simulation.slippage import FixedBpsSlippage, SlippageModel
+from ditto_backtest.simulation.settlement import AShareSettlementModel
+from ditto_backtest.simulation.slippage import SlippageModel
 from ditto_data.lineage import DataLineageRecorder
 from ditto_data.provider import DataProvider
 from ditto_data.services.metadata_service import MetadataService
@@ -33,14 +35,17 @@ from ditto_execution.orders.status import OrderStatus
 from ditto_execution.orders.ticket import OrderTicket
 from ditto_execution.planner import ExecutionPlanner, SimpleExecutionPlanner
 from ditto_execution.reality import AShareFeeModel
+from ditto_execution.reality.ordinary_equity import RULES_OBSERVED_AT
 from ditto_kernel.identity import InstrumentId
 from ditto_kernel.order import OrderSide, OrderType
-from ditto_kernel.trading import FeeModel
+from ditto_kernel.trading import FeeModel, InstrumentRuleProvider, InstrumentRules
 from ditto_portfolio.accounting import Account, CashBook, Position
 from ditto_risk.pre_trade import (
     BuyingPowerCheck,
     CompositePreTradeCheck,
     LotSizeCheck,
+    NoShortSellCheck,
+    PriceValidityCheck,
 )
 from ditto_strategy.alpha.parameters import EffectiveParameter
 from ditto_strategy.alpha.pipeline import StrategyPipeline
@@ -60,9 +65,13 @@ from ditto_application.builders._resolution import (
     resolve_benchmark,
     resolve_instrument_display,
 )
+from ditto_application.builders.ordinary_backtest import (
+    build_ordinary_rules,
+    ordinary_market_transform,
+)
 from ditto_application.builders.runtime_builder import StrategyRuntimeBuilder
 from ditto_application.catalog_maturity import assert_strategy_runtime_data_allowed
-from ditto_application.contracts import REGIME_DEFAULT_LOOKBACK
+from ditto_application.contracts import REGIME_DEFAULT_LOOKBACK, CostConfig
 from ditto_application.exceptions import AppBuilderError
 from ditto_application.processes.execution.backtest_process import (
     BacktestCatalogRequestConfig,
@@ -75,6 +84,7 @@ from ditto_application.processes.execution.classification_snapshot import (
     build_classification_snapshot_fn,
 )
 from ditto_application.processes.execution.factor_bridge import CompiledExpressions
+from ditto_application.processes.execution.fee_override import build_slippage_model
 from ditto_application.processes.execution.fundamental_snapshot import (
     FundamentalReadFacade,
     build_fundamental_snapshot_fn,
@@ -179,8 +189,11 @@ def _compute_max_lookback(
     if compiled is None:
         return REGIME_DEFAULT_LOOKBACK
     return max(
-        (expr.analysis.lookback for expr in compiled.expressions),
-        default=REGIME_DEFAULT_LOOKBACK,
+        REGIME_DEFAULT_LOOKBACK,
+        max(
+            (expr.analysis.lookback for expr in compiled.expressions),
+            default=REGIME_DEFAULT_LOOKBACK,
+        ),
     )
 
 
@@ -356,6 +369,8 @@ class PublishedBacktestRuntime:
     fee_model: FeeModel
     config: BacktestServiceConfig
     compiled_expressions: CompiledExpressions | None = None
+    rule_provider: InstrumentRuleProvider | None = None
+    slippage_model: SlippageModel | None = None
 
 
 def _resolve_backtest_catalog_request(
@@ -419,6 +434,47 @@ def _resolve_backtest_catalog_request(
 # ===========================================================================
 
 
+def _validate_resume_pool(
+    universe_ids: list[int],
+    account: BacktestAccountStateSnapshot | None,
+    runtime: BacktestRuntimeStateSnapshot | None,
+) -> None:
+    """A frozen pool cannot silently discard held, pending or delayed instruments."""
+    carried: set[InstrumentId] = (
+        {p.instrument_id for p in account.positions if p.quantity} if account else set()
+    )
+    if runtime is not None:
+        carried.update(order.instrument_id for order in runtime.pending_orders)
+        carried.update(
+            p.instrument_id
+            for signal in runtime.delayed_signals
+            for p in signal.positions
+        )
+    missing = carried.difference(universe_ids)
+    if missing:
+        raise AppBuilderError(
+            f"unresolved exit valuation for resumed instruments: {sorted(missing)}"
+        )
+
+
+def _settlement_calendar(
+    provider: DataProvider, config: BacktestCatalogRequestConfig
+) -> tuple[str, ...]:
+    """Require a real next session, including for last-day T+1 purchases."""
+    end = (date.fromisoformat(config.end_date) + timedelta(days=31)).isoformat()
+    days = tuple(
+        sorted(
+            str(day)
+            for day in provider.get_schedule(config.start_date, end)[
+                "trade_date"
+            ].to_list()
+        )
+    )
+    if not days or days[-1] <= config.end_date:
+        raise AppBuilderError("missing next trading session for T+1 settlement")
+    return days
+
+
 class BacktestRuntimeBuilder:
     """为 published strategy 组装最小可运行回测依赖。"""
 
@@ -448,6 +504,10 @@ class BacktestRuntimeBuilder:
         allow_experimental_data: bool = False,
     ) -> PublishedBacktestRuntime:
         """从 published strategy catalog 构造回测运行时。"""
+        if config.research_snapshot_id is not None:
+            raise AppBuilderError(
+                "ordinary catalog rules cannot certify a strict research snapshot"
+            )
         runtime = self._strategy_runtime_builder.build_published_runtime(
             config.strategy_id,
             version,
@@ -459,24 +519,15 @@ class BacktestRuntimeBuilder:
             context="catalog-backed backtest",
         )
         resolved_fee_model = fee_model or AShareFeeModel()
-        resolved_slippage = slippage_model or FixedBpsSlippage()
+        resolved_slippage = slippage_model or build_slippage_model(
+            CostConfig(
+                slippage_bps=runtime.spec.execution.cost_model.slippage_bps,
+                impact_model=runtime.spec.execution.cost_model.impact_model,
+            )
+        )
         account_state = _load_account_state(config)
         settlement_state = _load_settlement_state(config)
         runtime_state = _load_runtime_state(config)
-        brokerage = BacktestBrokerage(
-            account=_build_account(
-                initial_cash=config.initial_cash,
-                account_state=account_state,
-            ),
-            order_book=_build_order_book(runtime_state),
-            model=BrokerageModel(
-                fill_model=_build_fill_model(config),
-                fee_model=resolved_fee_model,
-                slippage_model=resolved_slippage,
-            ),
-        )
-        if settlement_state is not None:
-            brokerage.restore_settlement_state(settlement_state)
         benchmark_id = resolve_benchmark(
             runtime.spec.benchmark,
             self._metadata_service,
@@ -500,22 +551,41 @@ class BacktestRuntimeBuilder:
             asof=config.start_date,
         )
         if not universe_ids:
-            # 空成员放行会产出零标的的"成功"回测，静默掩盖上游数据损坏
+            # 空成员放行会产出零标的的"成功"回测,静默掩盖上游数据损坏
             # （宇宙缺失/成员区间不覆盖 start_date/物化中断残留）。
             msg = (
                 f"universe {runtime.spec.universe} 在 {config.start_date} "
                 + "解析到 0 成员; 检查宇宙存在性与成员 PIT 区间"
             )
             raise AppBuilderError(msg)
+        _validate_resume_pool(universe_ids, account_state, runtime_state)
+        rule_provider = build_ordinary_rules(
+            self._metadata_service,
+            universe_ids,
+            asset_class=runtime.spec.asset_class,
+            commission_rate=runtime.spec.execution.cost_model.commission_rate,
+            start=config.start_date,
+            end=config.end_date,
+        )
         pool = self._metadata_service.universe.get_universe_detail(
             runtime.spec.universe
         )
         if isinstance(pool, dict):
+            pool_description = str(pool.get("description") or "")
+            pool_description += (
+                f" 普通规则核对时间 {RULES_OBSERVED_AT};仅覆盖已核实名单,"
+                "未认证历史可得性。股票退出或无报价停牌拒绝估值;"
+                "ETF 状态以实际正成交量核验,缺报价/零成交量拒绝。"
+                "最低佣金 5 元为保守研究假设;不模拟分红、拆并份或退市清算。"
+            )
             resolved_config = replace(
                 resolved_config,
                 sample_pool={
-                    key: pool.get(key)
-                    for key in ("universe_id", "name", "description", "source_ref")
+                    **{
+                        key: pool.get(key)
+                        for key in ("universe_id", "name", "source_ref")
+                    },
+                    "description": pool_description,
                 },
             )
         resolution = resolve_instrument_display(
@@ -527,12 +597,21 @@ class BacktestRuntimeBuilder:
         tickers = resolution.tickers
         id_map = resolution.id_map
         display_map = resolution.display_map
+        benchmark_ticker = None
+        if benchmark_id is not None:
+            benchmark_resolution = resolve_instrument_display(
+                [int(benchmark_id)],
+                self._metadata_service,
+                source=source,
+                as_of=config.start_date,
+            )
+            benchmark_ticker = benchmark_resolution.tickers[0]
 
         # 计算数据加载起点：考虑因子表达式 lookback + Regime 默认 lookback
         max_lookback = _compute_max_lookback(runtime.compiled_expressions)
         data_start_date = _shift_back_calendar_days(config.start_date, max_lookback * 2)
 
-        # 基本面快照闭包：注入 DataFeed 数据通道，供 quality_roe / value_pe 等因子引用。
+        # 基本面快照闭包：注入 DataFeed 数据通道,供 quality_roe / value_pe 等因子引用。
         # maturity gate 经 facade 的 allow_experimental_data 生效。
         fundamental_snapshot_fn = None
         if self._fundamental_read_facade is not None:
@@ -551,8 +630,15 @@ class BacktestRuntimeBuilder:
         snapshot_providers = SnapshotProviders(
             fundamental=fundamental_snapshot_fn,
             classification=classification_snapshot_fn,
-            require_source_snapshot_lineage=bool(
-                config.research_snapshot_id or config.context_input_refs
+            require_source_snapshot_lineage=True,
+            market=ordinary_market_transform(
+                rule_provider, start_date=config.start_date
+            ),
+            requirements=FeedInputRequirements(
+                start_date=config.start_date,
+                warmup_days=max_lookback,
+                knowledge_lag_days=config.knowledge_lag_days,
+                benchmark_ticker=benchmark_ticker,
             ),
         )
         data_feed = ProviderBackedDataFeed(
@@ -564,21 +650,55 @@ class BacktestRuntimeBuilder:
             benchmark_id=resolved_config.benchmark_id,
             snapshot_providers=snapshot_providers,
         )
+        data_feed.validate_inputs()
+        settlement_days = _settlement_calendar(self._data_provider, config)
 
+        def rules_getter(iid: InstrumentId, trade_date: str) -> InstrumentRules:
+            rules = rule_provider.get_rules(trade_date, [iid])
+            if iid not in rules:
+                raise AppBuilderError(f"missing asset rule: {iid} {trade_date}")
+            return rules[iid]
+
+        brokerage = BacktestBrokerage(
+            account=_build_account(
+                initial_cash=config.initial_cash, account_state=account_state
+            ),
+            order_book=_build_order_book(runtime_state),
+            model=BrokerageModel(
+                fill_model=_build_fill_model(config),
+                fee_model=resolved_fee_model,
+                slippage_model=resolved_slippage,
+                settlement_model=AShareSettlementModel(
+                    trading_calendar=tuple(settlement_days)
+                ),
+            ),
+            rules_getter=rules_getter,
+        )
+        if settlement_state is not None:
+            brokerage.restore_settlement_state(settlement_state)
         return PublishedBacktestRuntime(
             record=runtime.record,
             spec=runtime.spec,
             pipeline=runtime.pipeline,
-            planner=SimpleExecutionPlanner(),
+            planner=SimpleExecutionPlanner(
+                default_order_type=runtime.spec.execution.default_order_type
+            ),
             brokerage=brokerage,
             pre_trade_check=CompositePreTradeCheck(
-                checks=(LotSizeCheck(), BuyingPowerCheck()),
+                checks=(
+                    NoShortSellCheck(),
+                    PriceValidityCheck(),
+                    LotSizeCheck(),
+                    BuyingPowerCheck(),
+                ),
             ),
             data_feed=data_feed,
             display_map=display_map,
             fee_model=resolved_fee_model,
             config=resolved_config,
             compiled_expressions=runtime.compiled_expressions,
+            rule_provider=rule_provider,
+            slippage_model=resolved_slippage,
         )
 
 
@@ -706,6 +826,11 @@ class StrategyServiceFactory:
             fee_model=resolved_options.fee_model,
             slippage_model=resolved_options.slippage_model,
             allow_experimental_data=resolved_options.allow_experimental_data,
+        )
+        resolved_options = replace(
+            resolved_options,
+            rule_provider=runtime.rule_provider,
+            slippage_model=runtime.slippage_model or resolved_options.slippage_model,
         )
         if resolved_options.fee_model is None:
             resolved_options = replace(

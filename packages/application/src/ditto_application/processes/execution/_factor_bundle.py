@@ -212,41 +212,35 @@ def build_factor_bundle[CompiledT: _CompiledExpressionSet](
     instrument_ids = list(bars.keys())
 
     instruments = pl.DataFrame({"instrument_id": instrument_ids})
-    market_rows: list[dict[str, object]] = []
-    for iid, bar in bars.items():
-        market_rows.append(
-            {
-                "instrument_id": int(iid),
-                "open": bar.open,
-                "high": bar.high,
-                "low": bar.low,
-                "close": bar.close,
-                "volume": bar.volume,
-                "trade_date": ctx.time_context.trade_date,
-            },
-        )
-
     history_df = data_feed.get_history(
         instrument_ids,
         ctx.time_context.knowledge_date.isoformat(),
         lookback_days,
     )
-    if not history_df.is_empty():
-        market_rows.extend(
-            history_df.select(
-                "instrument_id",
-                "open",
-                "high",
-                "low",
-                "close",
-                "volume",
-                pl.col("trade_date").cast(pl.String),
-            ).to_dicts()
+    if history_df.is_empty():
+        raise AppProcessError("factor history is empty at the knowledge cutoff")
+    # Execution-day quotes are realized outcomes, not decision-time inputs.
+    # Keep the history's adjusted prices separate from raw brokerage prices.
+    market_data = history_df.select(
+        "instrument_id",
+        "open",
+        "high",
+        "low",
+        "close",
+        "volume",
+        pl.col("trade_date").cast(pl.String),
+    ).sort("trade_date")
+    # The expression engine shifts rolling inputs before the decision row.
+    # Populate that row with the last visible observation, never today's fill
+    # quote. It also receives fundamentals queried at the knowledge cutoff.
+    decision_rows = (
+        market_data.group_by("instrument_id", maintain_order=True)
+        .tail(1)
+        .with_columns(
+            pl.lit(ctx.time_context.trade_date).alias("trade_date"),
         )
-
-    market_data = pl.DataFrame(market_rows)
-    if "trade_date" in market_data.columns:
-        market_data = market_data.sort("trade_date")
+    )
+    market_data = pl.concat([market_data, decision_rows]).sort("trade_date")
 
     market_data = _enrich_with_fundamentals(
         market_data,

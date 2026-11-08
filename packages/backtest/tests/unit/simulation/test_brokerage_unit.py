@@ -1,5 +1,6 @@
 """BacktestBrokerage unit tests."""
 
+from dataclasses import replace
 from datetime import datetime
 
 import pytest
@@ -23,6 +24,10 @@ from ditto_execution.orders.journal import InMemoryOrderEventJournal
 from ditto_execution.orders.model import Order
 from ditto_execution.orders.status import OrderStatus
 from ditto_execution.orders.trigger import OrderTrigger
+from ditto_execution.reality.ordinary_equity import (
+    CashEquityListing,
+    ordinary_equity_rules,
+)
 from ditto_kernel.identity import InstrumentId
 from ditto_kernel.order import OrderSide, OrderType
 from ditto_kernel.trading import (
@@ -150,6 +155,32 @@ def brokerage() -> BacktestBrokerage:
 class TestConnectGetAccount:
     def test_connect_is_noop(self, brokerage: BacktestBrokerage) -> None:
         brokerage.connect()  # Should not raise
+
+    def test_stock_fill_rounds_to_tick_and_respects_band_after_slippage(self) -> None:
+        iid = InstrumentId(1_000_001)
+        rules = ordinary_equity_rules(
+            CashEquityListing(iid, "000001", "stock", "SZSE", "1991-04-03", None),
+            commission_rate=0.001,
+            start="2026-10-08",
+            end="2026-11-06",
+        )
+        brokerage = BacktestBrokerage(
+            account=_account(),
+            order_book=_order_book(),
+            model=BrokerageModel(
+                fill_model=AShareFillModel(), slippage_model=FixedBpsSlippage(bps=10)
+            ),
+            rules_getter=lambda _iid, _day: rules,
+        )
+        brokerage.place_order(_order(instrument_id=iid, quantity=100))
+        market = replace(
+            _market_snapshot(instrument_id=iid, close=10.499),
+            limit_up=10.50,
+            limit_down=9.0,
+        )
+        fills = brokerage.process_pending(_process_input(bars={iid: market}))
+        assert fills[0].fill_price == 10.50
+        assert fills[0].slippage == pytest.approx(0.001)
 
     def test_get_account_view(self, brokerage: BacktestBrokerage) -> None:
         view = brokerage.get_account()
@@ -425,9 +456,9 @@ class TestProcessMarketWithSlippage:
         brk.place_order(order)
         sd = _process_input()
         fills = brk.process_pending(sd)
-        # close=10.5, slippage=10.5*2/10000=0.0021
-        assert fills[0].fill_price == pytest.approx(10.5021)
-        assert fills[0].slippage == pytest.approx(0.0021)
+        # close=10.5, 2 bps then round to the ETF tick (0.001)
+        assert fills[0].fill_price == pytest.approx(10.502)
+        assert fills[0].slippage == pytest.approx(0.002)
 
     def test_sell_slippage_decreases_price(self) -> None:
         # 先建仓
@@ -450,8 +481,8 @@ class TestProcessMarketWithSlippage:
         )
         brk.place_order(sell_order)
         fills = brk.process_pending(_process_input())
-        # close=10.5, slippage=-0.0021
-        assert fills[0].fill_price == pytest.approx(10.5 - 0.0021)
+        # close=10.5, -2 bps then round to the ETF tick (0.001)
+        assert fills[0].fill_price == pytest.approx(10.498)
 
 
 # ---------------------------------------------------------------------------

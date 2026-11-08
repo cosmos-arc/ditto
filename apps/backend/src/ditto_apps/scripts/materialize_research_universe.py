@@ -1,5 +1,5 @@
 """
-Initialize csi_etf_broad from a reviewed, frozen registry selection.
+Initialize an ordinary stock/ETF sample from a reviewed, frozen registry selection.
 
 Default is read-only. --apply uses existing domain writes, preserves all old
 intervals, and resumes an interrupted identical initialization. Conflicts reject.
@@ -21,7 +21,7 @@ from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, model_validato
 from ditto_apps.registry.contexts.universe import create_universe_write_context
 
 
-class ETFMember(BaseModel):
+class ResearchMember(BaseModel):
     """Registry facts frozen before any return calculation."""
 
     model_config = ConfigDict(extra="forbid")
@@ -29,12 +29,12 @@ class ETFMember(BaseModel):
     ticker: str = Field(pattern=r"^\d{6}$")
     name: str = Field(min_length=1)
     exchange: Literal["SSE", "SZSE"]
-    asset_class: Literal["etf"]
+    asset_class: Literal["stock", "etf"]
     list_date: date
     delist_date: date | None
 
     @model_validator(mode="after")
-    def valid_interval(self) -> ETFMember:
+    def valid_interval(self) -> ResearchMember:
         """Reject placeholder or reversed business dates."""
         if self.list_date < date(1990, 12, 19) or (
             self.delist_date is not None and self.delist_date <= self.list_date
@@ -43,11 +43,11 @@ class ETFMember(BaseModel):
         return self
 
 
-class ETFSelection(BaseModel):
+class ResearchSelection(BaseModel):
     """Finite research scope; not an official index or historical certification."""
 
     model_config = ConfigDict(extra="forbid")
-    universe_id: Literal["csi_etf_broad"]
+    universe_id: Literal["csi_etf_broad", "ordinary_stock_acceptance"]
     name: str = Field(min_length=1)
     selected_at: AwareDatetime
     source_observed_at: AwareDatetime
@@ -56,15 +56,18 @@ class ETFSelection(BaseModel):
     excluded_scope: str = Field(min_length=1)
     candidate_window: dict[str, str]
     limitations: str = Field(min_length=1)
-    members: list[ETFMember] = Field(min_length=1)
+    members: list[ResearchMember] = Field(min_length=1)
 
     @model_validator(mode="after")
-    def frozen_identity(self) -> ETFSelection:
+    def frozen_identity(self) -> ResearchSelection:
         """Reject duplicate members and invented future observations."""
+        expected_asset = "etf" if self.universe_id == "csi_etf_broad" else "stock"
+        if any(m.asset_class != expected_asset for m in self.members):
+            raise ValueError("sample pool asset class mismatch")
         if len({m.instrument_id for m in self.members}) != len(self.members) or len(
             {(m.ticker, m.exchange) for m in self.members}
         ) != len(self.members):
-            raise ValueError("duplicate ETF member")
+            raise ValueError("duplicate research member")
         if max(self.selected_at, self.source_observed_at) > datetime.now(UTC):
             raise ValueError("selection/observation cannot be in the future")
         return self
@@ -76,7 +79,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--selection", type=Path, required=True)
     parser.add_argument("--apply", action="store_true")
     args = parser.parse_args(argv)
-    selection = ETFSelection.model_validate_json(args.selection.read_bytes())
+    selection = ResearchSelection.model_validate_json(args.selection.read_bytes())
     frozen = selection.model_dump(mode="json")
     frozen_json = orjson.dumps(frozen, option=orjson.OPT_SORT_KEYS)
     source_ref = "instrument_registry:sha256:" + hashlib.sha256(frozen_json).hexdigest()
@@ -113,7 +116,9 @@ def main(argv: list[str] | None = None) -> int:
         for member in selection.members
     ]
     with create_universe_write_context() as metadata:
-        registry = metadata.find_securities(asset_class="etf", is_active=None)
+        registry = metadata.find_securities(
+            asset_class=selection.members[0].asset_class, is_active=None
+        )
         for member in selection.members:
             expected = member.model_dump(mode="json")
             matches = [

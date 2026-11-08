@@ -1,0 +1,62 @@
+{
+  "universe_id": "ordinary_stock_acceptance",
+  "name": "普通回测主板固定验收样本",
+  "selected_at": "2026-11-08T06:19:52.937205+00:00",
+  "source_observed_at": "2026-11-08T06:19:52.937205+00:00",
+  "source": "instrument_registry; user confirmed the five tickers before any return calculation",
+  "selection_rule": "用户事前确认 000001、000333、600000、600036、600519 五只主板股票，仅用于普通历史回测链路验收，不依据收益选择。",
+  "excluded_scope": "原 csi_a_share 完整保留；不覆盖其余股票、科创板、创业板、北交所、首次上市与退市结算；未知规则和必需输入缺失拒绝运行。",
+  "candidate_window": {
+    "start": "2026-10-08",
+    "end": "2026-11-06",
+    "status": "input_and_execution_validation_pending"
+  },
+  "limitations": "当前选择的固定样本，存在选择与存活者偏差；业务适用日期不代表历史信息当时已知；严格历史未认证，不授予信号或Paper资格。",
+  "members": [
+    {
+      "instrument_id": 1000001,
+      "ticker": "000001",
+      "name": "平安银行",
+      "exchange": "SZSE",
+      "asset_class": "stock",
+      "list_date": "1991-04-03",
+      "delist_date": null
+    },
+    {
+      "instrument_id": 1002380,
+      "ticker": "000333",
+      "name": "美的集团",
+      "exchange": "SZSE",
+      "asset_class": "stock",
+      "list_date": "2013-09-18",
+      "delist_date": null
+    },
+    {
+      "instrument_id": 1000416,
+      "ticker": "600000",
+      "name": "浦发银行",
+      "exchange": "SSE",
+      "asset_class": "stock",
+      "list_date": "1999-11-10",
+      "delist_date": null
+    },
+    {
+      "instrument_id": 1000437,
+      "ticker": "600036",
+      "name": "招商银行",
+      "exchange": "SSE",
+      "asset_class": "stock",
+      "list_date": "2002-04-09",
+      "delist_date": null
+    },
+    {
+      "instrument_id": 1000782,
+      "ticker": "600519",
+      "name": "贵州茅台",
+      "exchange": "SSE",
+      "asset_class": "stock",
+      "list_date": "2001-08-27",
+      "delist_date": null
+    }
+  ]
+}

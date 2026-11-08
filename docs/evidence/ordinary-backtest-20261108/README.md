@@ -1,5 +1,7 @@
 # 普通回测样本池初始化与验收阻断
 
+以下保留 #724 交付时的历史记录；后续 #723 的修复与隔离验收见 [acceptance.md](acceptance.md)。
+
 本批落实 [#707](https://github.com/cosmos-arc/ditto/issues/707) 的版本化 worker 日志默认值和
 [#722](https://github.com/cosmos-arc/ditto/issues/722) 的冻结 ETF 池、普通创建入口及结果限制传播。
 **这不是双资产回测验收或最终部署记录。** 实际执行链发现的资产规则、成员完整性、基准和来源问题
@@ -13,7 +15,7 @@
 - 文件 SHA-256：`fd62b15402fbc1e199fb467353c59a73a9154ff103ebe725bb0b2afa12ab32a1`。
 - 目标为主 checkout 的现有 `data/metadata/metadata.sqlite`，仅新增 `csi_etf_broad` 定义和 5 条成员区间。
   来源为本地 `instrument_registry` 的真实注册信息，选定五类境内股票宽基 ETF；不代表官方中证成分。
-- 初始化经 `ditto_apps.scripts.materialize_etf_universe` 调用现有 universe 域写入口。
+- 初始化经 `ditto_apps.scripts.materialize_etf_universe`（#723 后更名为 `materialize_research_universe`） 调用现有 universe 域写入口。
   首次 apply 缺 5 条，重复 apply 缺 0 条；正式观察时点 `2026-11-08T05:08:14.759625+00:00`。
   其他 universe 定义与写前一致，操作未触及账户、订单或账本。写入时可用空间 33.05 GiB。
 - 规范化选择内容的来源身份：

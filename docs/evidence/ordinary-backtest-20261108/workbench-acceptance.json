@@ -1,0 +1,375 @@
+{
+  "schema": "ditto.ordinary-backtest-acceptance",
+  "observed_at": "2026-11-08T07:35:06.477680+00:00",
+  "candidate_code_sha": "de7dc51c9a6ba9ec266cf716721d37a5b66b203c",
+  "environment": "isolated local development copy",
+  "cohort": {
+    "observed_at": "2026-11-08T07:33:19.528Z",
+    "api": {
+      "git_sha": "de7dc51c9a6ba9ec266cf716721d37a5b66b203c",
+      "product_version": "0.1.0",
+      "api_contract_version": "v1",
+      "environment": "development",
+      "contract_sha256": "bdae2cf5c582596cf37412a92d4ace386ab68bef0992b7a43a121371ae6df656"
+    },
+    "web": {
+      "git_sha": "de7dc51c9a6ba9ec266cf716721d37a5b66b203c",
+      "product_version": "0.1.0",
+      "api_contract_version": "v1",
+      "contract_sha256": "bdae2cf5c582596cf37412a92d4ace386ab68bef0992b7a43a121371ae6df656"
+    },
+    "normalization": "identity fields only; contract digest verified against contracts/openapi/v1.json"
+  },
+  "period": [
+    "2026-10-08",
+    "2026-11-06"
+  ],
+  "production_readonly_checks": [
+    {
+      "database": "metadata/metadata.sqlite",
+      "table": "strategy_run",
+      "candidate_run_count": 0
+    },
+    {
+      "database": "metadata/metadata.sqlite",
+      "table": "strategy_run_checkpoint",
+      "candidate_run_count": 0
+    },
+    {
+      "database": "metadata/metadata.sqlite",
+      "table": "derived_run",
+      "candidate_run_count": 0
+    },
+    {
+      "database": "metadata/metadata.sqlite",
+      "table": "selection_run",
+      "candidate_run_count": 0
+    }
+  ],
+  "runs": [
+    {
+      "strategy_id": "ordinary_stock_acceptance",
+      "strategy_version": "1",
+      "run_id": "232c7212",
+      "started_at": "2026-11-08T07:30:53Z",
+      "completed_at": "2026-11-08T07:33:35Z",
+      "viewed_at": "2026-11-08T07:33:39.214Z",
+      "trading_days": 22,
+      "nav_points": 22,
+      "benchmark_points": 22,
+      "initial_cash": 1000000,
+      "final_nav": 1014870.8264852995,
+      "closed_trades": 36,
+      "trading_instrument_ids": [
+        1000001,
+        1000416,
+        1000437,
+        1000782,
+        1002380
+      ],
+      "input_ref_details": [
+        {
+          "instrument_id": 1000001,
+          "source": "backtest:provider:execution-history-benchmark",
+          "source_snapshot_id": "snapshot-set:sha256:0692527f88c40eb2e3522b9f1d77adb49651392bac74e6422b6aaa4113535adb",
+          "data_hash": "sha256:24479490f22d80b0ac451848d4c451fffa8b6b5e5893a244d5a1dc4444d7a618",
+          "date_range": [
+            "2026-07-08",
+            "2026-11-06"
+          ]
+        },
+        {
+          "instrument_id": 1000416,
+          "source": "backtest:provider:execution-history-benchmark",
+          "source_snapshot_id": "snapshot-set:sha256:0692527f88c40eb2e3522b9f1d77adb49651392bac74e6422b6aaa4113535adb",
+          "data_hash": "sha256:f6f9f234d905141e8cbd527830f65e5abbd5da3d91721ce0736921e5d25f38ea",
+          "date_range": [
+            "2026-07-08",
+            "2026-11-06"
+          ]
+        },
+        {
+          "instrument_id": 1000437,
+          "source": "backtest:provider:execution-history-benchmark",
+          "source_snapshot_id": "snapshot-set:sha256:0692527f88c40eb2e3522b9f1d77adb49651392bac74e6422b6aaa4113535adb",
+          "data_hash": "sha256:81c462d3bd03f7f9929ba8200c69230af6f7b9d153c7e4b6b5e16f26a3c26c89",
+          "date_range": [
+            "2026-07-08",
+            "2026-11-06"
+          ]
+        },
+        {
+          "instrument_id": 1000782,
+          "source": "backtest:provider:execution-history-benchmark",
+          "source_snapshot_id": "snapshot-set:sha256:0692527f88c40eb2e3522b9f1d77adb49651392bac74e6422b6aaa4113535adb",
+          "data_hash": "sha256:d17567351a74d2f4f32179313d70bb36ff18b948d0b69bb14bc38f9c7a3ec3e8",
+          "date_range": [
+            "2026-07-08",
+            "2026-11-06"
+          ]
+        },
+        {
+          "instrument_id": 1002380,
+          "source": "backtest:provider:execution-history-benchmark",
+          "source_snapshot_id": "snapshot-set:sha256:0692527f88c40eb2e3522b9f1d77adb49651392bac74e6422b6aaa4113535adb",
+          "data_hash": "sha256:408db26452584566c89f3685bfdea61ea3fc61204d2195fabfbc9ed1e9dff928",
+          "date_range": [
+            "2026-07-08",
+            "2026-11-06"
+          ]
+        },
+        {
+          "instrument_id": 3000162,
+          "source": "backtest:provider:execution-history-benchmark",
+          "source_snapshot_id": "snapshot:tushare:index_daily:sha256:948415e9c5fb9d6fc99862ee47efd0bb38c1cfed4b70ed7164062e71d1cfb479",
+          "data_hash": "sha256:f855a4d47ea3962092ae4687da13c2baf4de874d7a0e6fddc230412526b6bd2c",
+          "date_range": [
+            "2026-10-08",
+            "2026-11-06"
+          ]
+        }
+      ],
+      "page_errors": [],
+      "exports": [
+        {
+          "path": "exports/ordinary_stock_acceptance.json",
+          "bytes": 12882,
+          "sha256": "494811f3e9837754327ec6608396ca4d0623a3da67b74dc9758727a5fdd229ed"
+        },
+        {
+          "path": "exports/ordinary_stock_acceptance.csv",
+          "bytes": 56735,
+          "sha256": "c0c61fa60a8a52a5725598ea8f540a4c1c3ab89940d01e938cee7e47c3961001",
+          "download_sha256": "1eaf08460aec3e0b86c73fb0272dd9266d675a85e0aa2ae6cc63596478a6b6be",
+          "archive_normalization": "repository hook adds final newline"
+        },
+        {
+          "path": "exports/ordinary_stock_acceptance.png",
+          "bytes": 238693,
+          "sha256": "ad6a4159c9a70d985c1773e4d6d18aa199df082eb0df9b57e0aec69c43cdeeff",
+          "dimensions": [
+            1084,
+            538
+          ]
+        }
+      ]
+    },
+    {
+      "strategy_id": "seed_etf_industry_rotation",
+      "strategy_version": "1",
+      "run_id": "9a9ff529",
+      "started_at": "2026-11-08T07:30:59Z",
+      "completed_at": "2026-11-08T07:33:42Z",
+      "viewed_at": "2026-11-08T07:33:45.401Z",
+      "trading_days": 22,
+      "nav_points": 22,
+      "benchmark_points": 22,
+      "initial_cash": 1000000,
+      "final_nav": 904630.9281499998,
+      "closed_trades": 59,
+      "trading_instrument_ids": [
+        2001552,
+        2001562,
+        2001567,
+        2001604,
+        2001606
+      ],
+      "input_ref_details": [
+        {
+          "instrument_id": 2001552,
+          "source": "backtest:provider:execution-history-benchmark",
+          "source_snapshot_id": "snapshot-set:sha256:af4f896050b60f6a6ebc1723f42ca0ddcd07800488c464d9e73352baeaa9660c",
+          "data_hash": "sha256:2d1208df45a1d0fe3002811c8b89281ba3b7486a1a8ff27e6488a8cf449ab23e",
+          "date_range": [
+            "2026-07-08",
+            "2026-11-06"
+          ]
+        },
+        {
+          "instrument_id": 2001562,
+          "source": "backtest:provider:execution-history-benchmark",
+          "source_snapshot_id": "snapshot-set:sha256:af4f896050b60f6a6ebc1723f42ca0ddcd07800488c464d9e73352baeaa9660c",
+          "data_hash": "sha256:244ecbec7ac4803e0df693a2e182b3b0bbaf914f84e20d44198913745d23266d",
+          "date_range": [
+            "2026-07-08",
+            "2026-11-06"
+          ]
+        },
+        {
+          "instrument_id": 2001567,
+          "source": "backtest:provider:execution-history-benchmark",
+          "source_snapshot_id": "snapshot-set:sha256:af4f896050b60f6a6ebc1723f42ca0ddcd07800488c464d9e73352baeaa9660c",
+          "data_hash": "sha256:211a6f17d719b1c42a394a3fb8963cb153535d0669d39fe9ca678a3e0c6ef1f5",
+          "date_range": [
+            "2026-07-08",
+            "2026-11-06"
+          ]
+        },
+        {
+          "instrument_id": 2001604,
+          "source": "backtest:provider:execution-history-benchmark",
+          "source_snapshot_id": "snapshot-set:sha256:af4f896050b60f6a6ebc1723f42ca0ddcd07800488c464d9e73352baeaa9660c",
+          "data_hash": "sha256:76b7caf42436599bddbd00bd8b7085b068bf893b676fc400138c2fec07648ada",
+          "date_range": [
+            "2026-07-08",
+            "2026-11-06"
+          ]
+        },
+        {
+          "instrument_id": 2001606,
+          "source": "backtest:provider:execution-history-benchmark",
+          "source_snapshot_id": "snapshot-set:sha256:af4f896050b60f6a6ebc1723f42ca0ddcd07800488c464d9e73352baeaa9660c",
+          "data_hash": "sha256:cdc4f0e38a5c62e1d0038cf4949155c842711935c20c896229ced3cff6d04d91",
+          "date_range": [
+            "2026-07-08",
+            "2026-11-06"
+          ]
+        },
+        {
+          "instrument_id": 3000162,
+          "source": "backtest:provider:execution-history-benchmark",
+          "source_snapshot_id": "snapshot:tushare:index_daily:sha256:948415e9c5fb9d6fc99862ee47efd0bb38c1cfed4b70ed7164062e71d1cfb479",
+          "data_hash": "sha256:2596d9c78a27e39dacc2b048be739c523f27047160a78e57f360ab119c2e3878",
+          "date_range": [
+            "2026-10-08",
+            "2026-11-06"
+          ]
+        }
+      ],
+      "page_errors": [],
+      "exports": [
+        {
+          "path": "exports/seed_etf_industry_rotation.json",
+          "bytes": 13003,
+          "sha256": "25ded632c4a9905b63c7eefeb79b12dd14e9546827df333a3bc3c2c5198e48bc"
+        },
+        {
+          "path": "exports/seed_etf_industry_rotation.csv",
+          "bytes": 60323,
+          "sha256": "d7ab8134db7ae0f501d0bf4f2749f9fc4518de554a399aff1537a9fccc10b506",
+          "download_sha256": "1ad77ab85d794d42c0450d8e6be82bbce31d30d959dae460a4cc8afd5a2ac4fb",
+          "archive_normalization": "repository hook adds final newline"
+        },
+        {
+          "path": "exports/seed_etf_industry_rotation.png",
+          "bytes": 252434,
+          "sha256": "6adc9ebac0417d74436bc592a4b811a964b0549bfdb19f783ef9a8e8310d63aa",
+          "dimensions": [
+            1084,
+            552
+          ]
+        }
+      ]
+    },
+    {
+      "strategy_id": "seed_etf_trend_swing",
+      "strategy_version": "1",
+      "run_id": "998c7780",
+      "started_at": "2026-11-08T07:31:08Z",
+      "completed_at": "2026-11-08T07:33:43Z",
+      "viewed_at": "2026-11-08T07:33:47.674Z",
+      "trading_days": 22,
+      "nav_points": 22,
+      "benchmark_points": 22,
+      "initial_cash": 1000000,
+      "final_nav": 941933.4666600003,
+      "closed_trades": 37,
+      "trading_instrument_ids": [
+        2001552,
+        2001562,
+        2001567,
+        2001604,
+        2001606
+      ],
+      "input_ref_details": [
+        {
+          "instrument_id": 2001552,
+          "source": "backtest:provider:execution-history-benchmark",
+          "source_snapshot_id": "snapshot-set:sha256:fc4259a4f7c3057cb5f41433bcd0999051441ffb70db08982e943613dbc36ed0",
+          "data_hash": "sha256:bb8b97b4cfcf45356a0b438d0e657b5b927fcabd4aff02a3137708ff053afe20",
+          "date_range": [
+            "2026-07-08",
+            "2026-11-06"
+          ]
+        },
+        {
+          "instrument_id": 2001562,
+          "source": "backtest:provider:execution-history-benchmark",
+          "source_snapshot_id": "snapshot-set:sha256:fc4259a4f7c3057cb5f41433bcd0999051441ffb70db08982e943613dbc36ed0",
+          "data_hash": "sha256:3c0be418f53789c68aa54bf28a3cd1c8c41306505d5f7a4c3c9d12c762f401c7",
+          "date_range": [
+            "2026-07-08",
+            "2026-11-06"
+          ]
+        },
+        {
+          "instrument_id": 2001567,
+          "source": "backtest:provider:execution-history-benchmark",
+          "source_snapshot_id": "snapshot-set:sha256:fc4259a4f7c3057cb5f41433bcd0999051441ffb70db08982e943613dbc36ed0",
+          "data_hash": "sha256:2082b2cd30102a1534d6e584138cca013092240c84f240f52b602d60a63b2bb2",
+          "date_range": [
+            "2026-07-08",
+            "2026-11-06"
+          ]
+        },
+        {
+          "instrument_id": 2001604,
+          "source": "backtest:provider:execution-history-benchmark",
+          "source_snapshot_id": "snapshot-set:sha256:fc4259a4f7c3057cb5f41433bcd0999051441ffb70db08982e943613dbc36ed0",
+          "data_hash": "sha256:1c87c81b411dddebe93b631046b76d8c99e0891b21cc5a6e8b08f2b35e6582e4",
+          "date_range": [
+            "2026-07-08",
+            "2026-11-06"
+          ]
+        },
+        {
+          "instrument_id": 2001606,
+          "source": "backtest:provider:execution-history-benchmark",
+          "source_snapshot_id": "snapshot-set:sha256:fc4259a4f7c3057cb5f41433bcd0999051441ffb70db08982e943613dbc36ed0",
+          "data_hash": "sha256:696798726bca09efbc636fa25ab70e3f395939afe3cc54e8169a94e7f3249c63",
+          "date_range": [
+            "2026-07-08",
+            "2026-11-06"
+          ]
+        },
+        {
+          "instrument_id": 3000162,
+          "source": "backtest:provider:execution-history-benchmark",
+          "source_snapshot_id": "snapshot:tushare:index_daily:sha256:948415e9c5fb9d6fc99862ee47efd0bb38c1cfed4b70ed7164062e71d1cfb479",
+          "data_hash": "sha256:2596d9c78a27e39dacc2b048be739c523f27047160a78e57f360ab119c2e3878",
+          "date_range": [
+            "2026-10-08",
+            "2026-11-06"
+          ]
+        }
+      ],
+      "page_errors": [],
+      "exports": [
+        {
+          "path": "exports/seed_etf_trend_swing.json",
+          "bytes": 13406,
+          "sha256": "5d064c0646ec2feacbb845f48f1babe7a1d97e05debdba1f84554164af607987"
+        },
+        {
+          "path": "exports/seed_etf_trend_swing.csv",
+          "bytes": 60194,
+          "sha256": "109db74ce6f71c54ac3f14cd7b8ebf977ca8057f4cda370b3633b8395f98b4cf",
+          "download_sha256": "1e801debb7a3686eb0ece14167ed06b9565138fe557c1a4bcab928051b24a275",
+          "archive_normalization": "repository hook adds final newline"
+        },
+        {
+          "path": "exports/seed_etf_trend_swing.png",
+          "bytes": 251721,
+          "sha256": "f810f794e740486cb03749071ec926b08eb1154851a898abb74414959c1c3610",
+          "dimensions": [
+            1084,
+            552
+          ]
+        }
+      ]
+    }
+  ],
+  "strict_historical_certification": false,
+  "production_deployed": false,
+  "release_observation_count": 0
+}

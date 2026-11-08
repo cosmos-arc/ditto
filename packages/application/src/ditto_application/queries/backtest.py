@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, cast
@@ -17,6 +18,7 @@ from ditto_strategy.storage.sqlite.services.strategy_artifact_service import (
     StrategyArtifactService,
 )
 
+from ditto_application.exceptions import AppQueryError
 from ditto_application.queries.artifact_utils import find_artifact
 from ditto_application.queries.backtest_trade import (
     BacktestTradeQueryFacade,
@@ -294,7 +296,10 @@ class BacktestQueryFacade:
     # ------------------------------------------------------------------
 
     def get_benchmark_return(self, run_id: str) -> float | None:
-        """从 alpha_stats 提取基准年化收益率 (CAPM: Rb = (R - alpha) / beta)."""
+        """Return captured period return; retain legacy alpha-based fallback."""
+        captured = _captured_benchmark_levels(self.get_nav_series(run_id))
+        if captured is not None:
+            return (captured[-1][1] / captured[0][1] - 1) * 100 if captured else None
         report = self.get_report(run_id)
         if report is None:
             return None
@@ -315,17 +320,16 @@ class BacktestQueryFacade:
 
     def get_benchmark_nav_series(self, run_id: str) -> list[tuple[str, float]] | None:
         """
-        基准 NAV 序列 — 未配置基准返回 None，配置后按运行期间收盘价归一自算.
+        优先返回执行时冻结的基准，归一到首点 1.0。
 
-        引擎当前不持久化基准序列；运行记录 config_json 携带 benchmark_id 与
-        起止日期，这里用既有 bars 查询（同一成熟度门控）把基准收盘价归一到
-        1.0 起步，与策略净值同口径可叠加。基准配置了但行情缺失时返回空列表，
-        由调用方区分「未配置」与「数据不可得」。
+        旧报告没有冻结列时保持既有 config_json/market 查询兼容。
+        未配置返回 None，已配置但缺行情返回空列表。
         """
-        if self._market is None:
-            return None
+        captured = _captured_benchmark_levels(self.get_nav_series(run_id))
+        if captured is not None:
+            return [(day, value / captured[0][1]) for day, value in captured]
         run = self._run_model.get_run(run_id)
-        if run is None:
+        if self._market is None or run is None:
             return None
         benchmark = _benchmark_request(run)
         if benchmark is None:
@@ -345,6 +349,26 @@ class BacktestQueryFacade:
         dates = closes["trade_date"].to_list()
         navs = (closes["close"] / base).to_list()
         return [(str(date), float(nav)) for date, nav in zip(dates, navs, strict=True)]
+
+
+def _captured_benchmark_levels(
+    rows: list[dict[str, object]],
+) -> list[tuple[str, float]] | None:
+    """Reject corrupt captured evidence instead of silently querying a newer series."""
+    if not rows or "benchmark_nav" not in rows[0]:
+        return None
+    result: list[tuple[str, float]] = []
+    for row in rows:
+        value = row.get("benchmark_nav")
+        if (
+            not isinstance(value, (int, float))
+            or isinstance(value, bool)
+            or not math.isfinite(value)
+            or value <= 0
+        ):
+            raise AppQueryError("captured benchmark is incomplete or invalid")
+        result.append((str(row["trade_date"]), float(value)))
+    return result
 
 
 def _benchmark_request(

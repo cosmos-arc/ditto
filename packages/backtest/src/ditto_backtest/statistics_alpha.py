@@ -49,12 +49,15 @@ class BenchmarkRelative:
 def compute_alpha_statistics(
     collector: ExecutionAuditCollector,
     benchmark_navs: tuple[float, ...] | None = None,
+    *,
+    initial_cash: float | None = None,
 ) -> AlphaStatistics:
     """
     从 NAV 序列计算绩效分析统计.
 
     Args:
         collector: 审计数据收集器。
+        initial_cash: 执行前初始资金；None 保留首快照基准的旧调用语义。
         benchmark_navs: 可选的基准 NAV 序列（长度须与快照一致）。
 
     Returns:
@@ -69,28 +72,30 @@ def compute_alpha_statistics(
         return empty_alpha_statistics()
 
     n = len(navs)
-    initial_nav = navs[0]
-    daily_returns = daily_returns_from_navs(navs)
+    initial_nav = initial_cash if initial_cash is not None else navs[0]
+    performance_navs = [initial_cash, *navs] if initial_cash is not None else navs
+    daily_returns = daily_returns_from_navs(performance_navs)
     total_days = len(daily_returns)
-    total_ret = total_return(navs)
+    total_ret = total_return(performance_navs)
 
     ann_ret = annualized_return(total_ret, total_days)
     ann_vol = annualized_volatility(daily_returns)
     sharpe = ann_ret / ann_vol if ann_vol > 0 else 0.0
     sortino = sortino_ratio(daily_returns, ann_ret)
-    max_dd, max_dd_dur = drawdown_analysis(navs)
+    max_dd, max_dd_dur = drawdown_analysis(performance_navs)
     calmar = ann_ret / abs(max_dd) if max_dd != 0 else 0.0
 
     bench_rel = benchmark_relative(
-        daily_returns,
+        daily_returns_from_navs(navs),
         benchmark_navs,
         n,
-        ann_ret,
+        annualized_return(total_return(navs), n - 1),
     )
 
     cost = cost_metrics(list(fills), initial_nav, navs)
 
-    net_return_after_cost = total_ret * 100 - cost.cost_drag
+    # Account NAV already includes fees and slippage; never deduct fees twice.
+    net_return_after_cost = total_ret * 100
 
     return AlphaStatistics(
         annualized_return=ann_ret,

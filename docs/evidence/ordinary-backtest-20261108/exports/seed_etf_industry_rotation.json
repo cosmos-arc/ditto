@@ -1,0 +1,221 @@
+{
+  "report": {
+    "runId": "9a9ff529",
+    "periodStart": "2026-10-08",
+    "periodEnd": "2026-11-06",
+    "initialCash": 1000000,
+    "finalNav": 904630.9281499998,
+    "rebalanceFreq": "daily",
+    "usageContext": {
+      "intendedUse": "limited_historical_research",
+      "historicalAvailability": "not_certified",
+      "samplePool": "recorded_input_union",
+      "inputInstrumentIds": [
+        2001552,
+        2001562,
+        2001567,
+        2001604,
+        2001606
+      ],
+      "limitations": [
+        "严格历史可得性未认证。完成状态与 PIT fail_closed 策略均不构成来源认证。",
+        "标的清单仅为运行实际输入集合。普通回测使用起始日解析的固定池。不代表历史全市场或逐日成员。",
+        "结果不自动授予策略晋级、信号启用或 Paper 授权。严格研究须沿原资格入口另验。",
+        "起始日固定池: csi_etf_broad",
+        "选择时点 2026-11-08T05:01:37.058051+00:00; 来源观察 2026-11-08T05:01:37.058051+00:00, instrument_registry (Tushare registration observed 2026-10-03; rechecked at source_observed_at)。事前固定覆盖上证50、沪深300、中证500、深证100、创业板五类境内股票宽基指数，各取以下一只已登记ETF；名单由研究范围选择，不依据回测收益。不是中证官方成分，也不代表行业轮动全市场。 纳入: 159901 易方达深证100ETF [2006-04-24, 开放); 159915 易方达创业板ETF [2011-12-09, 开放); 510050 华夏上证50ETF [2005-02-23, 开放); 510300 华泰柏瑞沪深300ETF [2012-05-28, 开放); 510500 南方中证500ETF [2013-03-15, 开放)。排除: 其他同指数产品、行业主题、债券、商品、跨境、杠杆、反向ETF及本名单外所有ETF；不因必需输入缺失删成员。。候选窗口 {'start': '2026-10-08', 'end': '2026-11-06', 'status': 'input_and_execution_validation_pending'} (仍需逐次输入及执行校验)。当前选择的固定样本，存在选择与存活者偏差；挂牌/退出日期仅为业务适用区间，不代表历史成员信息当时已知；严格历史未认证，不授予信号或Paper资格。 普通规则核对时间 2026-11-08T06:22:22+00:00;仅覆盖已核实名单,未认证历史可得性。股票退出或无报价停牌拒绝估值;ETF 状态以实际正成交量核验,缺报价/零成交量拒绝。最低佣金 5 元为保守研究假设;不模拟分红、拆并份或退市清算。",
+        "样本池来源: instrument_registry:sha256:eb07f70577af15d3f12ab2157ec7d62dc5053b7d1e3d4679f00e8a80eb3b6d81"
+      ]
+    },
+    "strategyPromotion": {
+      "strategy_id": "seed_etf_industry_rotation",
+      "strategy_version": "1",
+      "code_version": "68cc64dc74f6a251a08ffdbee2de9b671641a5c908e47b2202481cff4e1c8b00",
+      "data_catalog_identities": [
+        {
+          "instrument_id": 2001552,
+          "source": "backtest:provider:execution-history-benchmark",
+          "source_snapshot_id": "snapshot-set:sha256:af4f896050b60f6a6ebc1723f42ca0ddcd07800488c464d9e73352baeaa9660c",
+          "data_hash": "sha256:2d1208df45a1d0fe3002811c8b89281ba3b7486a1a8ff27e6488a8cf449ab23e",
+          "date_range": [
+            "2026-07-08",
+            "2026-11-06"
+          ]
+        },
+        {
+          "instrument_id": 2001562,
+          "source": "backtest:provider:execution-history-benchmark",
+          "source_snapshot_id": "snapshot-set:sha256:af4f896050b60f6a6ebc1723f42ca0ddcd07800488c464d9e73352baeaa9660c",
+          "data_hash": "sha256:244ecbec7ac4803e0df693a2e182b3b0bbaf914f84e20d44198913745d23266d",
+          "date_range": [
+            "2026-07-08",
+            "2026-11-06"
+          ]
+        },
+        {
+          "instrument_id": 2001567,
+          "source": "backtest:provider:execution-history-benchmark",
+          "source_snapshot_id": "snapshot-set:sha256:af4f896050b60f6a6ebc1723f42ca0ddcd07800488c464d9e73352baeaa9660c",
+          "data_hash": "sha256:211a6f17d719b1c42a394a3fb8963cb153535d0669d39fe9ca678a3e0c6ef1f5",
+          "date_range": [
+            "2026-07-08",
+            "2026-11-06"
+          ]
+        },
+        {
+          "instrument_id": 2001604,
+          "source": "backtest:provider:execution-history-benchmark",
+          "source_snapshot_id": "snapshot-set:sha256:af4f896050b60f6a6ebc1723f42ca0ddcd07800488c464d9e73352baeaa9660c",
+          "data_hash": "sha256:76b7caf42436599bddbd00bd8b7085b068bf893b676fc400138c2fec07648ada",
+          "date_range": [
+            "2026-07-08",
+            "2026-11-06"
+          ]
+        },
+        {
+          "instrument_id": 2001606,
+          "source": "backtest:provider:execution-history-benchmark",
+          "source_snapshot_id": "snapshot-set:sha256:af4f896050b60f6a6ebc1723f42ca0ddcd07800488c464d9e73352baeaa9660c",
+          "data_hash": "sha256:cdc4f0e38a5c62e1d0038cf4949155c842711935c20c896229ced3cff6d04d91",
+          "date_range": [
+            "2026-07-08",
+            "2026-11-06"
+          ]
+        },
+        {
+          "instrument_id": 3000162,
+          "source": "backtest:provider:execution-history-benchmark",
+          "source_snapshot_id": "snapshot:tushare:index_daily:sha256:948415e9c5fb9d6fc99862ee47efd0bb38c1cfed4b70ed7164062e71d1cfb479",
+          "data_hash": "sha256:2596d9c78a27e39dacc2b048be739c523f27047160a78e57f360ab119c2e3878",
+          "date_range": [
+            "2026-10-08",
+            "2026-11-06"
+          ]
+        }
+      ],
+      "base_spec_hash": "68cc64dc74f6a251a08ffdbee2de9b671641a5c908e47b2202481cff4e1c8b00",
+      "spec_hash": "68cc64dc74f6a251a08ffdbee2de9b671641a5c908e47b2202481cff4e1c8b00",
+      "parameter_hash": "49f985398b1b76477a977c2c4db943eca4b67b7f4e5d957963fad31fc777e76a",
+      "effective_parameters": [
+        {
+          "path": "/pipeline/nodes/legacy_factor_set/config/params/allocation_method",
+          "value": "equal_weight"
+        },
+        {
+          "path": "/pipeline/nodes/legacy_factor_set/config/params/cash_target",
+          "value": 0
+        },
+        {
+          "path": "/pipeline/nodes/legacy_factor_set/config/params/top_k",
+          "value": 5
+        }
+      ],
+      "research_snapshot_id": null,
+      "research_snapshot_manifest_hash": null,
+      "benchmark": 3000162,
+      "cost_model": {
+        "fee_model": "AShareFeeModel",
+        "slippage_model": "FixedBpsSlippage",
+        "total_fees": 764.83785,
+        "cost_drag": 0.076483785,
+        "net_return_after_cost": -9.536907185000022
+      },
+      "backtest_metrics": {
+        "period_start": "2026-10-08",
+        "period_end": "2026-11-06",
+        "initial_cash": 1000000,
+        "final_nav": 904630.9281499998,
+        "total_trades": 59,
+        "sharpe_ratio": -2.712806374789646,
+        "max_drawdown": -11.430188963473523,
+        "annualized_return": -68.2751165715314
+      },
+      "factor_report_refs": [],
+      "recommendation_status": "research",
+      "sample_pool": {
+        "universe_id": "csi_etf_broad",
+        "name": "境内股票宽基 ETF 固定研究样本",
+        "source_ref": "instrument_registry:sha256:eb07f70577af15d3f12ab2157ec7d62dc5053b7d1e3d4679f00e8a80eb3b6d81",
+        "description": "选择时点 2026-11-08T05:01:37.058051+00:00; 来源观察 2026-11-08T05:01:37.058051+00:00, instrument_registry (Tushare registration observed 2026-10-03; rechecked at source_observed_at)。事前固定覆盖上证50、沪深300、中证500、深证100、创业板五类境内股票宽基指数，各取以下一只已登记ETF；名单由研究范围选择，不依据回测收益。不是中证官方成分，也不代表行业轮动全市场。 纳入: 159901 易方达深证100ETF [2006-04-24, 开放); 159915 易方达创业板ETF [2011-12-09, 开放); 510050 华夏上证50ETF [2005-02-23, 开放); 510300 华泰柏瑞沪深300ETF [2012-05-28, 开放); 510500 南方中证500ETF [2013-03-15, 开放)。排除: 其他同指数产品、行业主题、债券、商品、跨境、杠杆、反向ETF及本名单外所有ETF；不因必需输入缺失删成员。。候选窗口 {'start': '2026-10-08', 'end': '2026-11-06', 'status': 'input_and_execution_validation_pending'} (仍需逐次输入及执行校验)。当前选择的固定样本，存在选择与存活者偏差；挂牌/退出日期仅为业务适用区间，不代表历史成员信息当时已知；严格历史未认证，不授予信号或Paper资格。 普通规则核对时间 2026-11-08T06:22:22+00:00;仅覆盖已核实名单,未认证历史可得性。股票退出或无报价停牌拒绝估值;ETF 状态以实际正成交量核验,缺报价/零成交量拒绝。最低佣金 5 元为保守研究假设;不模拟分红、拆并份或退市清算。"
+      }
+    },
+    "pitPolicy": {
+      "time_column": "knowledge_date",
+      "policy": "knowledge_date_fail_closed",
+      "unsafe_time_policy": "",
+      "knowledge_lag_days": 1
+    },
+    "alphaStats": {
+      "annualizedReturn": -68.2751165715314,
+      "annualizedVolatility": 25.167707214941032,
+      "sharpeRatio": -2.712806374789646,
+      "sortinoRatio": -3.3434627799248045,
+      "maxDrawdown": -11.430188963473523,
+      "maxDrawdownDurationDays": 20,
+      "calmarRatio": -5.9732272834432,
+      "informationRatio": -1.8243801992021293,
+      "trackingError": 9.661732457210453,
+      "beta": 1.469221799960015,
+      "alphaAnnualized": 6.790585402015623,
+      "totalTurnover": 1.3102644488512794,
+      "avgTurnoverPerRebalance": 0.06239354518339425,
+      "totalFees": 764.83785,
+      "netReturnAfterCost": -9.536907185000022,
+      "costDrag": 0.076483785
+    },
+    "tradeStats": {
+      "totalTrades": 59,
+      "longTrades": 59,
+      "shortTrades": 0,
+      "winTrades": 4,
+      "lossTrades": 55,
+      "winRate": 6.779661016949152,
+      "profitFactor": 0.0008901714575444921,
+      "avgWin": 1.7047500000000353,
+      "avgLoss": 139.27858181818186,
+      "avgWinLossRatio": 0.012239857541236767,
+      "maxConsecutiveWins": 2,
+      "maxConsecutiveLosses": 51,
+      "avgHoldingDays": 16.93220338983051,
+      "medianHoldingDays": 15,
+      "bestTrade": 3.6000000000001364,
+      "worstTrade": -907.2000000000008,
+      "avgTradeReturnPct": -4.781434609647772
+    }
+  },
+  "run": {
+    "runId": "9a9ff529",
+    "strategyId": "seed_etf_industry_rotation",
+    "strategyVersion": "1",
+    "mode": "backtest",
+    "status": "completed",
+    "startedAt": "2026-11-08T07:30:59Z",
+    "completedAt": "2026-11-08T07:33:42Z",
+    "errorMessage": "",
+    "parentRunId": "",
+    "benchmarkReturn": null,
+    "progressPct": 100,
+    "currentStep": "engine",
+    "completedDays": 22,
+    "totalDays": 22
+  },
+  "usageContext": {
+    "intendedUse": "limited_historical_research",
+    "historicalAvailability": "not_certified",
+    "samplePool": "recorded_input_union",
+    "inputInstrumentIds": [
+      2001552,
+      2001562,
+      2001567,
+      2001604,
+      2001606
+    ],
+    "limitations": [
+      "严格历史可得性未认证。完成状态与 PIT fail_closed 策略均不构成来源认证。",
+      "标的清单仅为运行实际输入集合。普通回测使用起始日解析的固定池。不代表历史全市场或逐日成员。",
+      "结果不自动授予策略晋级、信号启用或 Paper 授权。严格研究须沿原资格入口另验。",
+      "起始日固定池: csi_etf_broad",
+      "选择时点 2026-11-08T05:01:37.058051+00:00; 来源观察 2026-11-08T05:01:37.058051+00:00, instrument_registry (Tushare registration observed 2026-10-03; rechecked at source_observed_at)。事前固定覆盖上证50、沪深300、中证500、深证100、创业板五类境内股票宽基指数，各取以下一只已登记ETF；名单由研究范围选择，不依据回测收益。不是中证官方成分，也不代表行业轮动全市场。 纳入: 159901 易方达深证100ETF [2006-04-24, 开放); 159915 易方达创业板ETF [2011-12-09, 开放); 510050 华夏上证50ETF [2005-02-23, 开放); 510300 华泰柏瑞沪深300ETF [2012-05-28, 开放); 510500 南方中证500ETF [2013-03-15, 开放)。排除: 其他同指数产品、行业主题、债券、商品、跨境、杠杆、反向ETF及本名单外所有ETF；不因必需输入缺失删成员。。候选窗口 {'start': '2026-10-08', 'end': '2026-11-06', 'status': 'input_and_execution_validation_pending'} (仍需逐次输入及执行校验)。当前选择的固定样本，存在选择与存活者偏差；挂牌/退出日期仅为业务适用区间，不代表历史成员信息当时已知；严格历史未认证，不授予信号或Paper资格。 普通规则核对时间 2026-11-08T06:22:22+00:00;仅覆盖已核实名单,未认证历史可得性。股票退出或无报价停牌拒绝估值;ETF 状态以实际正成交量核验,缺报价/零成交量拒绝。最低佣金 5 元为保守研究假设;不模拟分红、拆并份或退市清算。",
+      "样本池来源: instrument_registry:sha256:eb07f70577af15d3f12ab2157ec7d62dc5053b7d1e3d4679f00e8a80eb3b6d81"
+    ]
+  }
+}

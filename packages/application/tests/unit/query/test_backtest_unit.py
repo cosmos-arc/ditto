@@ -764,6 +764,32 @@ def _benchmark_bars_frame() -> pl.DataFrame:
 class TestBacktestQueryFacadeGetBenchmarkNavSeries:
     """BacktestQueryFacade.get_benchmark_nav_series — 基准 NAV 序列."""
 
+    def test_captured_benchmark_survives_changed_market_data(self) -> None:
+        artifact = _make_artifact_record()
+        service = MagicMock(spec=["list_artifacts"])
+        service.list_artifacts.return_value = [artifact]
+        reader = MagicMock(spec=["read_json", "read_parquet", "exists"])
+        reader.read_parquet.return_value = pl.DataFrame(
+            {
+                "trade_date": ["2026-10-08", "2026-10-09"],
+                "nav": [99995.0, 100995.0],
+                "benchmark_nav": [4000.0, 4040.0],
+            }
+        )
+        market = MagicMock(spec=["find_bars"])
+        market.find_bars.return_value = pl.DataFrame(
+            {"trade_date": ["2026-10-08", "2026-10-09"], "close": [1.0, 999999.0]}
+        )
+        facade = _inject_market(
+            _make_facade(artifact_service=service, artifact_reader=reader), market
+        )
+        assert facade.get_benchmark_return("run-001") == pytest.approx(1.0)
+        assert facade.get_benchmark_nav_series("run-001") == [
+            ("2026-10-08", 1.0),
+            ("2026-10-09", 1.01),
+        ]
+        market.find_bars.assert_not_called()
+
     def test_normalizes_configured_benchmark_close_to_unit_base(self) -> None:
         """配置 benchmark_id 时按运行期间收盘价归一到 1.0 起步."""
 

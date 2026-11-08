@@ -10,19 +10,23 @@ from __future__ import annotations
 
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
+from hashlib import sha256
 from typing import Any, Protocol
 
+import orjson
 import polars as pl
 from ditto_data.provider import BarQuery, DataProvider
 from ditto_kernel.identity import InstrumentId
 from ditto_kernel.trading import MarketSnapshot as _MarketSnapshot
 
+from ditto_backtest.manifest_types import InputRef
 from ditto_backtest.provenance import aggregate_source_snapshot_id
 
 __all__ = [
     "ClassificationSnapshotFn",
     "DataFeed",
+    "FeedInputRequirements",
     "FundamentalSnapshotFn",
     "ProviderBackedDataFeed",
     "Slice",
@@ -52,6 +56,18 @@ class SnapshotProviders:
     fundamental: FundamentalSnapshotFn | None = None
     classification: ClassificationSnapshotFn | None = None
     require_source_snapshot_lineage: bool = False
+    market: Callable[[pl.DataFrame], pl.DataFrame] | None = None
+    requirements: FeedInputRequirements | None = None
+
+
+@dataclass(frozen=True)
+class FeedInputRequirements:
+    """Complete frozen-pool inputs for an ordinary catalog run."""
+
+    start_date: str
+    warmup_days: int
+    knowledge_lag_days: int = 1
+    benchmark_ticker: str | None = None
 
 
 # get_fundamental_snapshot 无注入 fn 或无数据时返回的空 schema。
@@ -205,7 +221,13 @@ def _source_snapshot_sets_by_instrument(
         return {}
 
     snapshot_sets: dict[InstrumentId, set[str]] = {}
-    for row in df.select(["instrument_id", _SOURCE_SNAPSHOT_ID_COLUMN]).to_dicts():
+    source_columns = [
+        column
+        for column in df.columns
+        if column == _SOURCE_SNAPSHOT_ID_COLUMN
+        or column.endswith("_source_snapshot_id")
+    ]
+    for row in df.select(["instrument_id", *source_columns]).to_dicts():
         iid_raw = row.get("instrument_id")
         if iid_raw is None:
             continue
@@ -213,13 +235,10 @@ def _source_snapshot_sets_by_instrument(
         if exclude_instrument_id is not None and iid == exclude_instrument_id:
             continue
 
-        snapshot_raw = row.get(_SOURCE_SNAPSHOT_ID_COLUMN)
-        if snapshot_raw is None:
-            continue
-        snapshot_id = str(snapshot_raw).strip()
-        if snapshot_id == "":
-            continue
-        snapshot_sets.setdefault(iid, set()).add(snapshot_id)
+        for column in source_columns:
+            snapshot_raw = row.get(column)
+            if snapshot_raw is not None and (snapshot_id := str(snapshot_raw).strip()):
+                snapshot_sets.setdefault(iid, set()).add(snapshot_id)
     return snapshot_sets
 
 
@@ -268,6 +287,7 @@ class ProviderBackedDataFeed:
         benchmark_id: InstrumentId | None = None,
         snapshot_providers: SnapshotProviders | None = None,
     ) -> None:
+        self._consumed_inputs: dict[tuple[int, str, str], InputRef] = {}
         self._provider = provider
         self._tickers = tickers
         self._start_date = start_date
@@ -275,6 +295,10 @@ class ProviderBackedDataFeed:
         self._id_map = id_map
         self._benchmark_id = benchmark_id
         self._snapshots = snapshot_providers or SnapshotProviders()
+        self._requirements = self._snapshots.requirements
+        self._benchmark_ticker = (
+            self._requirements.benchmark_ticker if self._requirements else None
+        )
         self._require_source_snapshot_lineage = (
             self._snapshots.require_source_snapshot_lineage
         )
@@ -292,11 +316,105 @@ class ProviderBackedDataFeed:
             instruments=list(self._tickers),
             start=self._start_date,
             end=self._end_date,
+            with_execution_state=self._requirements is not None,
         )
         result = self._provider.get_bars(query)
+        if self._snapshots.market is not None:
+            result = self._snapshots.market(result)
+        if self._benchmark_ticker is not None:
+            benchmark = self._provider.get_bars(
+                BarQuery(
+                    instruments=(self._benchmark_ticker,),
+                    start=self._requirements.start_date
+                    if self._requirements
+                    else self._start_date,
+                    end=self._end_date,
+                    dataset_id="index_daily",
+                )
+            )
+            result = pl.concat([result, benchmark], how="diagonal_relaxed")
         self._bars_df = self._ensure_prev_close(result)
         self._validate_required_source_snapshot_lineage(self._bars_df)
         return self._bars_df
+
+    def validate_inputs(self) -> None:
+        """Reject missing members/dates before the first order or return."""
+        requirements = self._requirements
+        if requirements is None:
+            return
+        days = self.trading_days()
+        cutoff = (
+            date.fromisoformat(requirements.start_date)
+            - timedelta(days=requirements.knowledge_lag_days)
+        ).isoformat()
+        prior = [day for day in days if day < cutoff]
+        if len(prior) < requirements.warmup_days:
+            raise ValueError(
+                f"insufficient warmup calendar before {cutoff}: {len(prior)} < "
+                + f"{requirements.warmup_days}"
+            )
+        run_days = [
+            day for day in days if requirements.start_date <= day <= self._end_date
+        ]
+        if not run_days:
+            raise ValueError("backtest interval contains no trading days")
+        required_days = (
+            prior[-requirements.warmup_days :] + run_days
+            if requirements.warmup_days
+            else run_days
+        )
+        frame = self._load_bars()
+        expected = [
+            (int(iid), day) for iid in self._id_map.values() for day in required_days
+        ]
+        if self._benchmark_id is not None:
+            expected.extend((int(self._benchmark_id), day) for day in run_days)
+        expected_frame = pl.DataFrame(
+            expected,
+            schema={"instrument_id": pl.Int64, "trade_date": pl.String},
+            orient="row",
+        )
+        if frame.is_empty():
+            raise ValueError(f"missing backtest inputs: {expected[:10]}")
+        actual = frame.with_columns(pl.col("trade_date").cast(pl.String))
+        missing = expected_frame.join(
+            actual.select("instrument_id", "trade_date"),
+            on=["instrument_id", "trade_date"],
+            how="anti",
+        )
+        if not missing.is_empty():
+            raise ValueError(
+                f"missing backtest member/date inputs ({missing.height}): "
+                + f"{missing.head(10).to_dicts()}"
+            )
+        if actual.select("instrument_id", "trade_date").is_duplicated().any():
+            raise ValueError("duplicate backtest member/date inputs")
+        relevant = actual.join(
+            expected_frame, on=["instrument_id", "trade_date"], how="semi"
+        )
+        bad = relevant.filter(
+            pl.any_horizontal(
+                [
+                    pl.col(column).is_null()
+                    | ~pl.col(column).is_finite()
+                    | (pl.col(column) <= 0)
+                    for column in ("open", "high", "low", "close")
+                ]
+            )
+        )
+        if not bad.is_empty():
+            raise ValueError(
+                "invalid OHLC: "
+                + str(bad.select("instrument_id", "trade_date").head(10).to_dicts())
+            )
+        if (
+            _SOURCE_SNAPSHOT_ID_COLUMN not in relevant.columns
+            or relevant[_SOURCE_SNAPSHOT_ID_COLUMN].null_count()
+        ):
+            raise ValueError(
+                "source snapshot lineage is incomplete for required backtest inputs"
+            )
+        self.get_history(list(self._id_map.values()), cutoff, requirements.warmup_days)
 
     def _validate_required_source_snapshot_lineage(self, df: pl.DataFrame) -> None:
         """Fail closed when a research/context-bound run has incomplete bar lineage."""
@@ -348,6 +466,8 @@ class ProviderBackedDataFeed:
         """
         if df.is_empty() or "prev_close" in df.columns:
             return df
+        if "pre_close" in df.columns:
+            return df.with_columns(pl.col("pre_close").alias("prev_close"))
         return df.sort(["instrument_id", "trade_date"]).with_columns(
             pl.col("close")
             .shift(1)
@@ -384,6 +504,7 @@ class ProviderBackedDataFeed:
         )
 
         day_df = df.filter(pl.col("trade_date").cast(pl.String) == date)
+        self._record_consumed_inputs(day_df, kind="execution", cutoff=date)
         day_source_snapshot_ids = _aggregate_source_snapshot_ids_by_instrument(
             day_df,
             exclude_instrument_id=self._benchmark_id,
@@ -442,7 +563,34 @@ class ProviderBackedDataFeed:
         - 按 trade_date desc 限制 lookback_days 行
         返回按 (instrument_id, trade_date) 排序的 DataFrame。
         """
-        df = self._load_bars()
+        if self._requirements is not None and lookback_days > 0:
+            tickers = tuple(
+                ticker for ticker, iid in self._id_map.items() if iid in instrument_ids
+            )
+            df = self._provider.get_bars(
+                BarQuery(
+                    instruments=tickers,
+                    start=self._start_date,
+                    end=(
+                        date.fromisoformat(as_of_date) - timedelta(days=1)
+                    ).isoformat(),
+                    adj="qfq",
+                    asof=as_of_date,
+                )
+            )
+            if not df.is_empty():
+                if "knowledge_date" not in df.columns:
+                    raise ValueError("missing history knowledge_date")
+                df = df.filter(
+                    pl.col("knowledge_date").cast(pl.Date)
+                    <= date.fromisoformat(as_of_date)
+                )
+        else:
+            df = self._load_bars()
+        if self._requirements is not None and df.is_empty() and lookback_days > 0:
+            raise ValueError(
+                f"missing visible history before {as_of_date}: {instrument_ids}"
+            )
         if df.is_empty() or lookback_days <= 0:
             return df.clear()
 
@@ -460,8 +608,85 @@ class ProviderBackedDataFeed:
             .group_by("instrument_id", maintain_order=True)
             .tail(lookback_days)
         )
-
+        if self._requirements is not None:
+            counts = dict(result.group_by("instrument_id").len().iter_rows())
+            missing = {
+                int(iid): counts.get(int(iid), 0)
+                for iid in instrument_ids
+                if counts.get(int(iid), 0) < lookback_days
+            }
+            if missing:
+                raise ValueError(
+                    f"insufficient warmup before {as_of_date}, "
+                    + f"require {lookback_days}: "
+                    + f"{missing}"
+                )
+            lineage = ["source_snapshot_id", "adjustment_source_snapshot_id"]
+            if (
+                not set(lineage).issubset(result.columns)
+                or result.filter(
+                    pl.any_horizontal(
+                        pl.col(column).is_null()
+                        | (pl.col(column).cast(pl.String).str.strip_chars() == "")
+                        for column in lineage
+                    )
+                ).height
+            ):
+                raise ValueError("history source/adjustment lineage is incomplete")
+            self._record_consumed_inputs(
+                result, kind=f"qfq-history:{lookback_days}", cutoff=as_of_date
+            )
         return result
+
+    def _record_consumed_inputs(
+        self, frame: pl.DataFrame, *, kind: str, cutoff: str
+    ) -> None:
+        """Hash actual consumed rows, including benchmark, history and revisions."""
+        if self._requirements is None or frame.is_empty():
+            return
+        sources = _aggregate_source_snapshot_ids_by_instrument(frame)
+        for key, group in frame.partition_by("instrument_id", as_dict=True).items():
+            iid = InstrumentId(int(key[0]))
+            rows = group.sort("trade_date").select(sorted(group.columns))
+            dates = rows["trade_date"].cast(pl.String).to_list()
+            payload = orjson.dumps(
+                [kind, cutoff, rows.to_dicts()], option=orjson.OPT_SORT_KEYS
+            )
+            ref = InputRef(
+                instrument_id=iid,
+                data_hash="sha256:" + sha256(payload).hexdigest(),
+                date_range=(min(dates), max(dates)),
+                source="backtest:provider:" + kind,
+                source_snapshot_id=sources.get(iid, ""),
+            )
+            identity = (int(iid), kind, cutoff)
+            previous = self._consumed_inputs.get(identity)
+            if previous is not None and previous != ref:
+                raise ValueError(f"input changed during backtest: {identity}")
+            self._consumed_inputs[identity] = ref
+
+    def consumed_input_refs(self) -> tuple[InputRef, ...]:
+        """One manifest identity per dependency; trading universe stays separate."""
+        grouped: dict[InstrumentId, list[InputRef]] = {}
+        for _, ref in sorted(self._consumed_inputs.items()):
+            grouped.setdefault(ref.instrument_id, []).append(ref)
+        return tuple(
+            InputRef(
+                instrument_id=iid,
+                data_hash="sha256:"
+                + sha256(orjson.dumps([ref.data_hash for ref in refs])).hexdigest(),
+                date_range=(
+                    min(ref.date_range[0] for ref in refs),
+                    max(ref.date_range[1] for ref in refs),
+                ),
+                source="backtest:provider:execution-history-benchmark",
+                source_snapshot_id=aggregate_source_snapshot_id(
+                    ref.source_snapshot_id for ref in refs
+                )
+                or "",
+            )
+            for iid, refs in sorted(grouped.items())
+        )
 
     def get_fundamental_snapshot(
         self,

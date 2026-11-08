@@ -234,6 +234,12 @@ def _serialize_report_tables(report: BacktestReport) -> dict[str, pl.DataFrame]:
             [{"trade_date": d, "nav": v} for d, v in report.nav_series],
         )
 
+    if report.benchmark_series:
+        benchmark = dict(report.benchmark_series)
+        parquet_tables["nav"] = parquet_tables["nav"].with_columns(
+            pl.Series("benchmark_nav", [benchmark[day] for day, _ in report.nav_series])
+        )
+
     if report.portfolio_stats:
         parquet_tables["portfolio_stats"] = pl.DataFrame(
             [dataclasses.asdict(r) for r in report.portfolio_stats],

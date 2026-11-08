@@ -502,9 +502,7 @@ class TestRunBacktestFlowCostConfig:
         self,
         mock_facade: Mock,
     ) -> None:
-        """无 cost_config 时 options.fee_model 为 AShareFeeModel 默认实例."""
-        from ditto_execution.reality.fee import AShareFeeModel
-
+        """无 cost_config 时由 catalog 绑定标的费率."""
         RUNNER(
             run_id="run-010",
             strategy_id="test",
@@ -515,7 +513,7 @@ class TestRunBacktestFlowCostConfig:
         call_kwargs = mock_facade.run_backtest_from_catalog.call_args
         options = call_kwargs.kwargs.get("options") or call_kwargs[1].get("options")
         assert options is not None
-        assert isinstance(options.fee_model, AShareFeeModel)
+        assert options.fee_model is None
 
     def test_with_cost_config_options_has_fee_model(
         self,
@@ -549,9 +547,7 @@ class TestRunBacktestFlowCostConfig:
         self,
         mock_facade: Mock,
     ) -> None:
-        """无 cost_config 时 options.slippage_model 为 FixedBpsSlippage 默认实例."""
-        from ditto_backtest.simulation.slippage import FixedBpsSlippage
-
+        """无 cost_config 时由 catalog 绑定 seed 滑点."""
         RUNNER(
             run_id="run-012",
             strategy_id="test",
@@ -562,7 +558,7 @@ class TestRunBacktestFlowCostConfig:
         call_kwargs = mock_facade.run_backtest_from_catalog.call_args
         options = call_kwargs.kwargs.get("options") or call_kwargs[1].get("options")
         assert options is not None
-        assert isinstance(options.slippage_model, FixedBpsSlippage)
+        assert options.slippage_model is None
 
     def test_with_cost_config_slippage_model_uses_custom_bps(
         self,
