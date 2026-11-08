@@ -2,11 +2,13 @@
 
 > 版本：1.0
 > 日期：2026-08-31
-> 状态：IMPLEMENTATION COMPLETE / RELEASE CANDIDATE PASSED
+> 状态：历史计划的 IMPLEMENTATION COMPLETE / RELEASE CANDIDATE PASSED 记录，非当前版本放行
 > 目标设计：[Ditto 个人量化投研与 Paper 工作站系统设计](../design/2026-08-31-ditto-personal-quant-workstation-system-design.md)
 > 产品基线：[系统产品定位与 App 蓝图基线](../reviews/2026-08-30-system-product-positioning-and-app-blueprint-baseline.md)
 > 当前路线图：[Ditto Development Roadmap](../roadmaps/ditto-development-roadmap.md)
 > 执行证据：[个人工作站 Gate 与验证总表](../evidence/personal-workstation/README.md)
+
+> **2026-11-08 适用性**：当前版本以[产品上线地图](https://github.com/cosmos-arc/ditto/issues/726)及[产品范围入口](../../apps/web/PRODUCT.md)为准。历史实现、合同与证据保留复用；下文的 Agent 必选、旧执行顺序与完成记录不覆盖当前范围。2014 年普通研究、真实页面质量及本人任务验收分别留证，不能由本计划的历史完成状态代替。
 
 截至 2026-09-03，I0—I15 已完成，Q0—Q6 按顺序全部通过并由内容寻址 manifest 鉴证。Q1—Q3 使用真实 Tushare/FRED、有界 snapshot、PIT 重放、mock-disabled UI 和最小化 GLM 证据；I12 沿同一 Selection/PIT lineage 精确保存 Strategy Draft，完成 136 个合资格月份的 Backtest、holdout 防重复和 10/10 hard gates，并以独立精确批准的受治理 Agent 工具调用进入 review/pending。PAP-09 在保留 2026-09-02 live anchor 的同时，按顺序处理了 2026-08-06 至 2026-09-02 的 20 个已收盘真实 Tushare 交易日，逐日重启、账本对账和 HMAC 链均通过；这是发布验收，不宣称自然时钟 soak。精确批准的 Q5 闭环把 Model、Paper、Manual 绑定到同一 as-of、snapshot 和 valuation lineage，GLM-5.3 PortfolioDiagnostic 仅调用一次只读比较工具并通过 guardrail。UI-08 十步真实用户旅程全部通过且浏览器 console error 为 0。最终后端 `pixi run -e dev ci`、PIT 专项、前端 `bun run ci` 和 OpenAPI zero-diff 均通过；OPS-10 已复验恢复、Q0—Q5、20 日回放、组合诊断和 UI-08，生成自校验发布候选。全程未连接券商、未提交真实订单、未发布或激活策略。
 
