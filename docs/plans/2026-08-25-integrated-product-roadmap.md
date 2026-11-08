@@ -1,12 +1,14 @@
 # Ditto 统一产品路线图与执行计划
 
 > 日期：2026-08-25<br>
-> 状态：当前跨仓库执行事实源<br>
+> 状态：历史跨仓库执行计划（不再决定当前版本范围或排期）<br>
 > 产品边界：A 股 ETF、本机单操作者、日频人工决策、研究与交易工作台<br>
 > 后端基线：`ditto/main@69967f97`<br>
 > R5 实现基线：`ditto/codex/r5-governed-agent@a971a253`<br>
 > 前端基线：`ditto-app/codex/r1-r5-frontend-completion@a54122a`<br>
 > 前端专项计划：[Ditto 前端产品体验恢复计划](https://github.com/cosmos-arc/ditto-app/blob/main/docs/plans/2026-08-25-frontend-product-experience-recovery-plan.md)
+
+> **2026-11-08 适用性**：当前版本以[产品上线地图](https://github.com/cosmos-arc/ditto/issues/726)及[产品范围入口](../../apps/web/PRODUCT.md)为准。下文的“当前”、Agent 交付、阶段顺序和跨仓库路径均属于当时记录；已实现能力可复用，不能据此恢复本版后置任务或宣称当前产品已验收。
 
 ## 1. 执行裁决
 

@@ -2,10 +2,18 @@
 
 > Ditto Product Criteria
 >
-> v2.0 — 2026-08-30 产品边界确认版
+> 当前范围校正：2026-11-08；保留 v2.0（2026-08-30）的视觉细节供复用。
 >
-> 定义 Ditto 产品定位、密度分层准则、元素角色规范和间距体系。
-> 这是设计 spec 的上游文档——所有页面蓝图和视觉设计必须符合本规格。
+> 产品范围由 [PRODUCT.md](../../PRODUCT.md) 承接[已确认的日用范围与放行决议](https://github.com/cosmos-arc/ditto/issues/729#issuecomment-6720456379)。本文提供密度、元素角色和间距参考，不另行定义版本范围。
+> [信息架构](https://github.com/cosmos-arc/ditto/issues/730)与[交互/视觉原型](https://github.com/cosmos-arc/ditto/issues/731)仍待维护者签收；本文不表示候选方案已获批。
+
+## 当前适用范围
+
+本版以本人盘后研究、次日计划和传统量化日用为目标，覆盖沪深股票与境内 ETF、2014 年起至少十年的普通历史研究，以及分别验收的 Paper 和完整 Manual。可视条件、因子组合与高级受控公式/规则是当前研究入口；自由 Python、ML、产品 Agent 与 MCP 新增能力后置，不连接券商下单。普通研究、严格历史资格和 Paper 资格分别判断。
+
+Graphite Studio、现五域、主辅工作面与右栏等是候选依据，需用真实任务和工作面验证。允许更优方案全面重做，不以迁移成本锁死。下列字号、间距、密度与模块示例保留为既有视觉参考；当前实现继续使用 [DESIGN.md](../../DESIGN.md) 与实际 tokens，改变设计方案应记录签收结果，不能从本文推定必须有某个栏位。
+
+旧 AI 叙事、团队分工、自由 Python、券商或固定使用时长要求不授权本版本，也不覆盖 PRODUCT 中的新范围。先逐任务验收，视觉由维护者认可真实工作面；真人日用周期后定，不能以旧评分或页面数量替代。
 
 ---
 
@@ -17,7 +25,7 @@
 
 **产品边界**：宏观、A 股核心/行业指数与全球核心市场数据用于解释 A 股环境；核心可决策资产是 A 股个股和 ETF；系统只提供 Paper 模拟与 Manual 实际账户记录，不连接券商下单。
 
-**产品签名**：每个关键判断都应沿“宏观/全球 → A 股市场 → 行业 → 个股 → 策略/信号 → Model/Paper/Manual → 风险/归因”的证据链下钻。Graphite Studio 是视觉基线，证据链是业务识别度来源。
+**产品签名**：判断应能追溯至其实际使用的市场、行业、标的、研究与账户事实；不要求每次任务先经过宏观/全球分析。Graphite Studio 是首选视觉候选，证据链是业务识别度来源。
 
 **审美-功能张力**: 克制感（留白/字号/装饰）vs 信息密度（数据量/可扫视性/操作效率）。
 这不是二选一，而是**按模块分层融合**。
@@ -116,7 +124,9 @@ section_gap = max(12px, 可用高度 × 2.5%)
 
 ---
 
-## AI 叙事定位
+## 历史参考：AI 叙事定位（本版不新增）
+
+以下为 v2.0 的未来能力设想，保留作历史背景；不是本版页面、导航或组件的实施要求。
 
 Ditto 的 AI 不是独立的"AI 域"，而是**嵌入各业务域的智能层**。
 
@@ -131,7 +141,9 @@ Ditto 的 AI 不是独立的"AI 域"，而是**嵌入各业务域的智能层**�
 
 ---
 
-## System 域收敛说明
+## 历史参考：System 域迁移说明
+
+下表记录旧路径迁移语义，不授权恢复 `/platform/*` 或新增兼容路由；当前路由以源码为准，新 IA 仍待签收。
 
 System 域承接原 Platform 的技术路径，但用户可见产品心智统一为 System：
 
@@ -144,7 +156,7 @@ System 域承接原 Platform 的技术路径，但用户可见产品心智统一
 
 ## 完成度判定
 
-页面、route、contract、overlay 和原型数量只能证明界面结构存在。产品完成必须由真实数据、freshness/PIT、错误与空态、以及“市场判断 → 选股 → Paper → 实际账户记录 → 复盘”的端到端任务证据共同验收。
+页面、route、contract、overlay 和原型数量只能证明界面结构存在。产品完成按 PRODUCT 的必选任务逐项验收，并保持数据、PIT 与账户边界；Paper 和 Manual 分别验收，不要求 Manual 记录先经过 Paper。正常完成、适用错误与恢复、数据口径和维护者视觉认可分别留证。
 
 > 详见 [01 产品信息架构 §7.6](01_product_information_architecture.md)。
 
@@ -152,7 +164,7 @@ System 域承接原 Platform 的技术路径，但用户可见产品心智统一
 
 ## 与其他 spec 的关系
 
-- **上游**: [00_ditto_visual_constitution.md](00_ditto_visual_constitution.md) — 视觉原则（判断 > 操作 > 美感）
-- **下游**: [01_product_information_architecture.md](01_product_information_architecture.md) — IA 结构
-- **下游**: [02_core_page_blueprints.md](02_core_page_blueprints.md) — 页面蓝图（应用本规格的密度准则）
-- **审查引用**: `.claude/design-review/review-scoring.md` — 审查评分时引用本规格中的量化标准
+- **产品上游**：[PRODUCT.md](../../PRODUCT.md) — 当前范围、任务与放行边界，承接维护者最新决议。
+- **视觉入口**：[DESIGN.md](../../DESIGN.md) 与 [视觉宪章](00_ditto_visual_constitution.md) — 当前实现与候选视觉语言；不能覆盖产品范围或代替方案签收。
+- **结构与任务**：[IA](01_product_information_architecture.md)、[页面蓝图](02_core_page_blueprints.md) — 先读当前性说明，再取适用部分。
+- **验收**：按本批任务、实际状态与获批样板核对；历史评分规则不构成产品或视觉通过证据。

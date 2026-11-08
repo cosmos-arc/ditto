@@ -193,13 +193,15 @@ colors:
     volatility:   "oklch(0.746 0.165 50)"      # orange
     alternative:  "oklch(0.604 0.109 305)"     # purple
 
-  # ── L4 Data Visualization: Data Freshness (opacity-based time-fade) ──
+  # ── L4 Data Visualization: Legacy freshness opacity tokens ──
+  # Values remain for existing consumers; they do not define freshness deadlines.
+  # Use source cadence, trading calendar and purpose-specific backend status.
   data-freshness:
     live:     1.0
-    recent:   0.85     # < 30s
-    aging:    0.65     # 30s – 5min
-    stale:    0.40     # 5min – 30min
-    expired:  0.25     # > 30min
+    recent:   0.85
+    aging:    0.65
+    stale:    0.40
+    expired:  0.25
 
   # ── L6 Interaction ──
   interaction:
@@ -359,11 +361,13 @@ atmosphere:
 
 ## Overview
 
+**Current scope (2026-11-08)**: [PRODUCT.md](PRODUCT.md) is the current product scope entry. Graphite Studio is the first visual candidate; the [information architecture](https://github.com/cosmos-arc/ditto/issues/730) and [interactive prototype](https://github.com/cosmos-arc/ditto/issues/731) still require task-based validation and maintainer approval. Existing tokens remain the implementation baseline until an approved change; this document does not certify the current live UI or freeze future page layouts.
+
 **Design Philosophy**: Ditto is a professional quantitative workstation — not a consumer SaaS, not a content product, not a single research tool. Its visual system serves one goal: enabling faster judgment, smoother operation, and stable long-term use.
 
-**Core Principle**: > Visuals serve judgment first, operation second, aesthetics last. Beauty emerges from efficiency, not from decoration overlaid on efficiency.
+**Core Principle**: Visuals support judgment and operation. Task correctness, data expression, visual quality, and return/recovery continuity each need to pass; strengths in one dimension do not compensate for failure in another.
 
-**Product Positioning**: Local-first A-share stock and ETF quantitative decision, paper-trading, and manual-account workstation. Macro, domestic-index, and global core-market data explain the A-share environment; Ditto never routes real broker orders. The five product domains are Today, Markets, Research, Portfolio, and System. AI is embedded intelligence surfaced through Today, System Agents, and the global Copilot sidecar.
+**Product Positioning**: Local-first A-share stock and ETF quantitative decision, paper-trading, and manual-account workstation. Macro, domestic-index, and global core-market data explain the A-share environment; Ditto never routes real broker orders. Today, Markets, Research, Portfolio, and System are the existing navigation baseline to evaluate. The next release's core tasks work independently of product Agent features; new ML/Agent capabilities are deferred.
 
 **Reference Aesthetics**: Linear / Vercel / Raycast — modern SaaS clean style with balanced density. Graphite Studio direction.
 
@@ -642,15 +646,27 @@ Applied via `data-density` attribute: `<div data-density="compact">`.
 - Crosshair: `oklch(1 0 0 / 0.25)`
 - Series colors derived from market tokens (up/down/neutral)
 
-### Data Freshness (opacity-based time-fade)
+### Data Freshness
 
-| State | Opacity | Age |
-|-------|---------|-----|
-| live | 1.0 | Real-time |
-| recent | 0.85 | < 30s |
-| aging | 0.65 | 30s – 5min |
-| stale | 0.40 | 5min – 30min |
-| expired | 0.25 | > 30min |
+Freshness follows the source's publication cadence, the trading calendar and the supported task. There is no universal seconds/minutes expiry rule for daily prices, financial statements and macro releases.
+
+| Meaning | Product expression |
+|---------|--------------------|
+| Backend connectivity | Actual connection/request state; unknown latency remains unknown |
+| Market data coverage | Latest complete trading date and the affected instruments/fields |
+| Publication timing | Observation period and latest publication date where relevant |
+| Task availability | Eligible, partial, stale or blocked for the requested use, with a reason and next action |
+| Running work | Actual saved task/run state, independently of market freshness |
+
+Show historical as-of dates separately from service connectivity. A closed market is not an empty dataset; a frozen historical result does not become stale merely because newer prices exist. A failed request must leave loading and expose its effect and recovery action. Evidence identities and exact cutoffs remain inspectable without becoming required manual inputs.
+
+Existing `data-freshness` opacity tokens are legacy rendering values, not timing or qualification rules. Essential numbers, dates and reasons retain readable contrast; fading or color alone cannot communicate validity. These documentation changes do not alter token values or qualify data for Paper or strict historical research.
+
+### Visual acceptance
+
+Use the representative tasks in [the page blueprints](design/specs/02_core_page_blueprints.md) to select a baseline. Compare candidates with the same data, viewport, theme, density and applicable states. The maintainer judges the actual work surface; screenshots, DOM markers and numerical review scores do not grant acceptance.
+
+For the selected core pages, fixed examples and live data use the same formal presentation and state contract. Examples are labelled; a live failure never silently substitutes example data. Validate keyboard operation, focus, readable numbers and the main/narrower desktop layouts. Expand regression checks by impact, rather than multiplying every page by every state and viewport. Preserve the existing security, identity and accessibility checks.
 
 ### Asset Class Colors
 

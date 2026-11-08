@@ -31,8 +31,8 @@
 
 ### 产品路线与设计来源
 
-任务规格、进度和验收以 [GitHub Issues](https://github.com/cosmos-arc/ditto/issues) 为准；
-以下材料提供设计背景，是否仍适用于当前实现需核对任务和源码。
+当前版本从 [产品上线地图](https://github.com/cosmos-arc/ditto/issues/726) 和 [产品范围入口](../apps/web/PRODUCT.md) 读取已确认决定；任务规格、进度和验收以 [GitHub Issues](https://github.com/cosmos-arc/ditto/issues) 为准。
+以下材料提供设计背景和历史证据，不覆盖当前版本范围、排期或放行标准。
 - [母版路线图](roadmaps/ditto-development-roadmap.md) — 分阶段产品/工程路线
 - [功能能力评级与业界对标](plans/2026-07-10-capability-benchmark-design.md)
 - [阶段 A 实施计划](plans/2026-07-10-phase-a-implementation-plan.md)
