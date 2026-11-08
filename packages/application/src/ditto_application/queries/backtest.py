@@ -18,6 +18,7 @@ from ditto_strategy.storage.sqlite.services.strategy_artifact_service import (
     StrategyArtifactService,
 )
 
+from ditto_application.exceptions import AppQueryError
 from ditto_application.queries.artifact_utils import find_artifact
 from ditto_application.queries.backtest_trade import (
     BacktestTradeQueryFacade,
@@ -365,7 +366,7 @@ def _captured_benchmark_levels(
             or not math.isfinite(value)
             or value <= 0
         ):
-            raise ValueError("captured benchmark is incomplete or invalid")
+            raise AppQueryError("captured benchmark is incomplete or invalid")
         result.append((str(row["trade_date"]), float(value)))
     return result
 

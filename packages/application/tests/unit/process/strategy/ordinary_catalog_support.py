@@ -106,6 +106,7 @@ class CatalogProvider:
                         "source": "tushare",
                         "source_ticker": ticker,
                         "source_snapshot_id": f"synthetic:{iid}",
+                        "adjustment_source_snapshot_id": f"synthetic:adj:{iid}",
                     }
                 )
         return pl.DataFrame(rows)

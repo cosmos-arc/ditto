@@ -6,6 +6,7 @@ from unittest.mock import MagicMock
 import polars as pl
 import pytest
 from ditto_application.builders.data_provider import ServiceBackedDataProvider
+from ditto_application.exceptions import AppBuilderError
 from ditto_data.catalog.contracts import DataAssetRef
 from ditto_data.catalog.source_snapshot import (
     ProviderSnapshot,
@@ -395,7 +396,7 @@ class TestServiceBackedDataProvider:
             instruments=["510300.SH"], start="2026-10-08", end="2026-10-08"
         )
         if existing_lineage:
-            with pytest.raises(ValueError, match=r"dataset.*etf_daily"):
+            with pytest.raises(AppBuilderError, match=r"dataset.*etf_daily"):
                 provider.get_bars(query)
         else:
             assert provider.get_bars(query)["source_snapshot_id"].to_list() == [None]
@@ -741,10 +742,79 @@ def test_execution_inputs_require_stock_state_and_adjustment_lineage(
         with_execution_state=True,
     )
     if gap:
-        with pytest.raises(ValueError, match=r"missing|suspension"):
+        with pytest.raises(AppBuilderError, match=r"missing|suspension"):
             provider.get_bars(query)
     else:
         result = provider.get_bars(query)
         assert result["status_source_snapshot_id"].item() == "stock_status"
         assert result["limit_source_snapshot_id"].item() == "stock_limit"
         assert result["adjustment_source_snapshot_id"].item() == "adj_factor"
+
+
+@pytest.mark.pit
+def test_adjusted_history_binds_visible_factors_and_requires_source() -> None:
+    market, metadata = _make_mock_service("market"), _make_mock_service("metadata")
+    metadata.instrument.resolve_instrument_ids_batch.return_value = {
+        "000001.SZ": 1_000_001
+    }
+    common = {
+        "instrument_id": 1_000_001,
+        "trade_date": date(2026, 10, 8),
+        "source": "tushare",
+        "source_ticker": "000001.SZ",
+    }
+    market.find_bars.return_value = pl.DataFrame([{**common, "close": 10.0}])
+    factors = pl.DataFrame(
+        [
+            {**common, "adj_factor": 1.0, "knowledge_date": date(2026, 10, 8)},
+            {**common, "adj_factor": 99.0, "knowledge_date": date(2026, 10, 12)},
+        ]
+    )
+    market.get_adj_factors.return_value = factors
+    reader = _SnapshotReader(
+        *[
+            _snapshot(
+                snapshot_id=dataset,
+                dataset=dataset,
+                request_start="2026-10-08",
+                request_end="2026-10-08",
+                observed_at=datetime(2026, 11, 8, tzinfo=UTC),
+            )
+            for dataset in ("stock_daily", "adj_factor")
+        ]
+    )
+    provider = ServiceBackedDataProvider(
+        market_service=market,
+        metadata_service=metadata,
+        derived_service=_make_mock_service("derived"),
+        snapshot_reader=reader,
+        lifecycle_reader=_LifecycleReader(reader),
+    )
+    query = BarQuery(
+        instruments=["000001.SZ"],
+        start="2026-10-08",
+        end="2026-10-08",
+        adj="qfq",
+        asof="2026-10-09",
+    )
+    baseline = provider.get_bars(query)
+    assert baseline["adjustment_source_snapshot_id"].item() == "adj_factor"
+    market.get_adj_factors.return_value = factors.with_columns(
+        pl.when(pl.col("knowledge_date") > date(2026, 10, 9))
+        .then(1000.0)
+        .otherwise(pl.col("adj_factor"))
+        .alias("adj_factor")
+    )
+    assert provider.get_bars(query).equals(baseline)
+    market.get_adj_factors.return_value = factors.with_columns(
+        pl.lit(2.0).alias("adj_factor")
+    )
+    assert (
+        provider.get_bars(query)["adjustment_input_hash"].item()
+        != baseline["adjustment_input_hash"].item()
+    )
+    market.get_adj_factors.return_value = factors.with_columns(
+        pl.lit("unknown").alias("source")
+    )
+    with pytest.raises(AppBuilderError, match="adjustment history lineage"):
+        provider.get_bars(query)

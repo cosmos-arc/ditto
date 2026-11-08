@@ -1,15 +1,14 @@
 """Assemble observed ordinary research rules and market inputs (#723)."""
 
 from collections.abc import Callable
-from decimal import Decimal
 
 import polars as pl
 from ditto_data.services.metadata_service import MetadataService
 from ditto_execution.reality.ordinary_equity import (
     CashEquityListing,
     ordinary_equity_rules,
+    ordinary_execution_fields,
 )
-from ditto_execution.reality.price import round_to_tick
 from ditto_execution.rules import InMemoryRuleProvider
 from ditto_kernel.identity import InstrumentId
 from ditto_kernel.trading import InstrumentRules
@@ -68,44 +67,23 @@ def ordinary_market_transform(
         ordered = frame.sort(["instrument_id", "trade_date"]).with_columns(
             pl.col("adj_factor").shift(1).over("instrument_id").alias("_previous_adj"),
         )
-        actions = ordered.filter(
-            (pl.col("trade_date").cast(pl.String) >= start_date)
-            & (pl.col("adj_factor") != pl.col("_previous_adj"))
-        )
-        if not actions.is_empty():
-            raise ValueError(
-                "corporate action requires cash/share accounting: "
-                + f"{actions.select('instrument_id', 'trade_date').to_dicts()}"
-            )
-        rows = ordered.drop("_previous_adj").to_dicts()
+        rows = ordered.to_dicts()
         for row in rows:
             iid = InstrumentId(int(row["instrument_id"]))
             day = str(row["trade_date"])
-            definition, rule, _ = provider.get_rules(day, [iid])[iid]
-            if definition.asset_class == "stock":
-                if row.get("is_st") is not False:
-                    raise ValueError(
-                        f"unverified risk-warning rule/status: {iid} {day}"
+            try:
+                row.update(
+                    ordinary_execution_fields(
+                        row, provider.get_rules(day, [iid])[iid], start_date=start_date
                     )
-            else:
-                # Positive recorded turnover proves trading occurred. A zero/missing
-                # quote is not evidence of suspension: refuse an invented status.
-                if row.get("volume") is None or row["volume"] <= 0:
-                    raise ValueError(f"unknown ETF suspension/valuation: {iid} {day}")
-                previous = row.get("pre_close")
-                if previous is None or previous <= 0 or rule.price_limit_pct is None:
-                    raise ValueError(f"missing ETF limit inputs: {iid} {day}")
-                previous_decimal = Decimal(str(previous))
-                band = Decimal(str(rule.price_limit_pct))
-                row["limit_up"] = round_to_tick(
-                    previous_decimal * (1 + band), definition.tick_size
                 )
-                row["limit_down"] = round_to_tick(
-                    previous_decimal * (1 - band), definition.tick_size
-                )
-                row["is_suspended"] = False
+            except ValueError as exc:
+                raise AppBuilderError(str(exc)) from exc
+            row.pop("_previous_adj")
             if row.get("source") != "tushare":
-                raise ValueError(f"unknown execution volume/amount units: {iid} {day}")
+                raise AppBuilderError(
+                    f"unknown execution volume/amount units: {iid} {day}"
+                )
             # Tushare daily/fund_daily: volume is lots, amount is CNY thousands.
             row["volume"] *= 100
             row["amount"] *= 1000

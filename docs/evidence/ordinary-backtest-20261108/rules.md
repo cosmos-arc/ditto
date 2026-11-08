@@ -47,6 +47,9 @@
   [股票日线](https://tushare.pro/document/2?doc_id=27)和[ETF 日线](https://tushare.pro/document/2?doc_id=127)。
 - 决策日 T 的价格特征仅使用 `trade_date < knowledge_cutoff` 且 knowledge date 不晚于 cutoff 的历史；
   执行价独立取 T 日原始行情。默认 cutoff 为 T 减一日，延续现有保守知识滞后合同。
+- 运行身份记录实际消费的执行日完整行、基准和每次 cutoff 下的复权历史；
+  历史同时绑定复权服务读取的可见因子窗口（含 qfq 基准）内容与来源。
+  基准进入 manifest 输入证据，不进入交易池；缺历史来源拒绝运行。
 - 基准按实际运行日期冻结进报告的 `nav.parquet`，新报告读取时不重新查询最新市场数据。
   组合绝对收益从输入初始资金开始，含首日成本；基准比较按共同收盘日期区间计算，图表首点归一。
   NAV 已扣费用，净收益不会二次扣费。

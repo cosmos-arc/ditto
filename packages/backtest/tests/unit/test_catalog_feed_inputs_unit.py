@@ -38,6 +38,7 @@ def _feed(missing: tuple[int, str] | None = None) -> ProviderBackedDataFeed:
             "volume": 1000.0,
             "knowledge_date": date.fromisoformat(day),
             "source_snapshot_id": f"snapshot:{iid}",
+            "adjustment_source_snapshot_id": f"adjustment:{iid}",
         }
         for iid in [2_000_001, 2_000_002, 3_000_001]
         for day in DATES
@@ -75,3 +76,49 @@ def test_catalog_feed_loads_benchmark_separately_without_trading_it() -> None:
     slice_ = feed.get_slice(DATES[2])
     assert slice_.benchmark_close == 4.0
     assert set(slice_.bars) == {2_000_001, 2_000_002}
+
+
+@pytest.mark.parametrize("input_kind", ["benchmark", "history"])
+def test_consumed_inputs_cover_nontrading_dependencies(input_kind: str) -> None:
+    from dataclasses import replace
+
+    from ditto_backtest.replay import ReplayValidator
+    from packages.backtest.tests.unit.test_manifest_unit import _make_manifest
+
+    original, changed = _feed(), _feed()
+    provider = changed._provider
+    assert isinstance(provider, _Provider)
+    iid = 3_000_001 if input_kind == "benchmark" else 2_000_001
+    day = DATES[2] if input_kind == "benchmark" else DATES[0]
+    provider._bars_df = provider._bars_df.with_columns(
+        pl.when((pl.col("instrument_id") == iid) & (pl.col("trade_date") == day))
+        .then(5.0)
+        .otherwise(pl.col("close"))
+        .alias("close")
+    )
+    for feed in (original, changed):
+        feed.validate_inputs()
+        feed.get_slice(DATES[2])
+    refs = original.consumed_input_refs()
+    assert {ref.instrument_id for ref in refs} == {2_000_001, 2_000_002, 3_000_001}
+    stock_ref = next(ref for ref in refs if ref.instrument_id == 2_000_001)
+    assert stock_ref.date_range == (DATES[0], DATES[2])
+    manifest = replace(
+        _make_manifest(),
+        input_refs=(InstrumentId(2_000_001), InstrumentId(2_000_002)),
+        input_ref_details=refs,
+    )
+    replay = replace(manifest, input_ref_details=changed.consumed_input_refs())
+    assert not ReplayValidator.validate(manifest, replay, [], []).input_data_match
+
+
+def test_actual_history_rejects_missing_lineage_after_preflight() -> None:
+    feed = _feed()
+    feed.validate_inputs()
+    provider = feed._provider
+    assert isinstance(provider, _Provider)
+    provider._bars_df = provider._bars_df.with_columns(
+        pl.lit(None, dtype=pl.String).alias("source_snapshot_id")
+    )
+    with pytest.raises(ValueError, match=r"history.*lineage"):
+        feed.get_history([InstrumentId(2_000_001)], "2026-10-13", 2)

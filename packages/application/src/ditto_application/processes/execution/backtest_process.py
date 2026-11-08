@@ -536,7 +536,7 @@ class BacktestService:
                 for day, _ in collector.get_daily_snapshots()
             ]
             if any(level is None for level in levels):
-                raise ValueError(
+                raise AppProcessError(
                     "declared benchmark is missing from executed report dates"
                 )
             benchmark = tuple(float(level) for level in levels if level is not None)

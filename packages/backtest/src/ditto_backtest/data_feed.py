@@ -11,13 +11,16 @@ from __future__ import annotations
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 from datetime import UTC, date, datetime, timedelta
+from hashlib import sha256
 from typing import Any, Protocol
 
+import orjson
 import polars as pl
 from ditto_data.provider import BarQuery, DataProvider
 from ditto_kernel.identity import InstrumentId
 from ditto_kernel.trading import MarketSnapshot as _MarketSnapshot
 
+from ditto_backtest.manifest_types import InputRef
 from ditto_backtest.provenance import aggregate_source_snapshot_id
 
 __all__ = [
@@ -284,6 +287,7 @@ class ProviderBackedDataFeed:
         benchmark_id: InstrumentId | None = None,
         snapshot_providers: SnapshotProviders | None = None,
     ) -> None:
+        self._consumed_inputs: dict[tuple[int, str, str], InputRef] = {}
         self._provider = provider
         self._tickers = tickers
         self._start_date = start_date
@@ -500,6 +504,7 @@ class ProviderBackedDataFeed:
         )
 
         day_df = df.filter(pl.col("trade_date").cast(pl.String) == date)
+        self._record_consumed_inputs(day_df, kind="execution", cutoff=date)
         day_source_snapshot_ids = _aggregate_source_snapshot_ids_by_instrument(
             day_df,
             exclude_instrument_id=self._benchmark_id,
@@ -616,7 +621,72 @@ class ProviderBackedDataFeed:
                     + f"require {lookback_days}: "
                     + f"{missing}"
                 )
+            lineage = ["source_snapshot_id", "adjustment_source_snapshot_id"]
+            if (
+                not set(lineage).issubset(result.columns)
+                or result.filter(
+                    pl.any_horizontal(
+                        pl.col(column).is_null()
+                        | (pl.col(column).cast(pl.String).str.strip_chars() == "")
+                        for column in lineage
+                    )
+                ).height
+            ):
+                raise ValueError("history source/adjustment lineage is incomplete")
+            self._record_consumed_inputs(
+                result, kind=f"qfq-history:{lookback_days}", cutoff=as_of_date
+            )
         return result
+
+    def _record_consumed_inputs(
+        self, frame: pl.DataFrame, *, kind: str, cutoff: str
+    ) -> None:
+        """Hash actual consumed rows, including benchmark, history and revisions."""
+        if self._requirements is None or frame.is_empty():
+            return
+        sources = _aggregate_source_snapshot_ids_by_instrument(frame)
+        for key, group in frame.partition_by("instrument_id", as_dict=True).items():
+            iid = InstrumentId(int(key[0]))
+            rows = group.sort("trade_date").select(sorted(group.columns))
+            dates = rows["trade_date"].cast(pl.String).to_list()
+            payload = orjson.dumps(
+                [kind, cutoff, rows.to_dicts()], option=orjson.OPT_SORT_KEYS
+            )
+            ref = InputRef(
+                instrument_id=iid,
+                data_hash="sha256:" + sha256(payload).hexdigest(),
+                date_range=(min(dates), max(dates)),
+                source="backtest:provider:" + kind,
+                source_snapshot_id=sources.get(iid, ""),
+            )
+            identity = (int(iid), kind, cutoff)
+            previous = self._consumed_inputs.get(identity)
+            if previous is not None and previous != ref:
+                raise ValueError(f"input changed during backtest: {identity}")
+            self._consumed_inputs[identity] = ref
+
+    def consumed_input_refs(self) -> tuple[InputRef, ...]:
+        """One manifest identity per dependency; trading universe stays separate."""
+        grouped: dict[InstrumentId, list[InputRef]] = {}
+        for _, ref in sorted(self._consumed_inputs.items()):
+            grouped.setdefault(ref.instrument_id, []).append(ref)
+        return tuple(
+            InputRef(
+                instrument_id=iid,
+                data_hash="sha256:"
+                + sha256(orjson.dumps([ref.data_hash for ref in refs])).hexdigest(),
+                date_range=(
+                    min(ref.date_range[0] for ref in refs),
+                    max(ref.date_range[1] for ref in refs),
+                ),
+                source="backtest:provider:execution-history-benchmark",
+                source_snapshot_id=aggregate_source_snapshot_id(
+                    ref.source_snapshot_id for ref in refs
+                )
+                or "",
+            )
+            for iid, refs in sorted(grouped.items())
+        )
 
     def get_fundamental_snapshot(
         self,

@@ -10,8 +10,11 @@ from __future__ import annotations
 from collections.abc import Sequence
 from dataclasses import dataclass, replace
 from datetime import date, datetime
+from hashlib import sha256
 
+import orjson
 import polars as pl
+from ditto_backtest.provenance import aggregate_source_snapshot_id
 from ditto_data.catalog.contracts import DataAssetRef
 from ditto_data.catalog.snapshot_completion import checkpoint_matches_snapshot
 from ditto_data.catalog.source_snapshot import (
@@ -26,6 +29,7 @@ from ditto_data.services.metadata_service import MetadataService
 from ditto_features.services import DerivedQueryService
 
 from ditto_application.catalog_freshness import dataset_namespace, observed_at
+from ditto_application.exceptions import AppBuilderError
 
 __all__ = ["ServiceBackedDataProvider"]
 
@@ -319,7 +323,7 @@ def _attach_catalog_source_snapshots(
             if snapshot is None or (
                 dataset_id is not None and snapshot.dataset_id != dataset_id
             ):
-                raise ValueError(
+                raise AppBuilderError(
                     f"source snapshot {identity!r} does not identify dataset "
                     + f"{dataset_id}"
                 )
@@ -447,7 +451,7 @@ class ServiceBackedDataProvider:
             return bars
         dataset_id = f"{InstrumentIdRange.detect_asset_class(instrument_ids)}_daily"
         if query.dataset_id is not None and query.dataset_id != dataset_id:
-            raise ValueError(
+            raise AppBuilderError(
                 f"requested dataset {query.dataset_id} disagrees with {dataset_id} "
                 + f"for instruments {instrument_ids}"
             )
@@ -455,11 +459,78 @@ class ServiceBackedDataProvider:
             bars = _attach_catalog_source_snapshots(
                 bars, self._snapshots, dataset_id, self._lifecycle
             )
+        if query.adj in {"qfq", "hfq"} and self._snapshots is not None:
+            bars = self._adjusted_history_evidence(
+                bars, query, instrument_ids, dataset_id
+            )
         if query.with_execution_state and dataset_id == "stock_daily":
             bars = self._stock_execution_state(bars, query, instrument_ids)
         if query.with_execution_state:
             bars = self._adjustment_state(bars, query, instrument_ids, dataset_id)
         return bars
+
+    def _adjusted_history_evidence(
+        self,
+        bars: pl.DataFrame,
+        query: BarQuery,
+        instrument_ids: list[int],
+        dataset_id: str,
+    ) -> pl.DataFrame:
+        """
+        Bind the visible factor input window used by MarketService adjustment.
+
+        Preserve all visible candidates (including the qfq baseline), not a second
+        implementation of revision selection. Actual adjusted OHLC is hashed by
+        the consuming feed alongside this factor-window hash.
+        """
+        if bars.is_empty() or dataset_id == "index_daily":
+            return bars
+        if self._snapshots is None:
+            raise AppBuilderError("missing adjustment snapshot reader")
+        factors = (
+            self._market.get_adj_factors(query.start, query.end)
+            if dataset_id == "stock_daily"
+            else self._market.get_fund_adj(query.start, query.end)
+        )
+        if (
+            factors is None
+            or factors.is_empty()
+            or "knowledge_date" not in factors.columns
+        ):
+            raise AppBuilderError("missing adjustment history/knowledge_date")
+        factors = factors.filter(pl.col("instrument_id").is_in(instrument_ids))
+        if query.asof is not None:
+            factors = factors.filter(
+                pl.col("knowledge_date").cast(pl.Date) <= date.fromisoformat(query.asof)
+            )
+        factors = _attach_catalog_source_snapshots(
+            factors,
+            self._snapshots,
+            "adj_factor" if dataset_id == "stock_daily" else "fund_adj",
+            self._lifecycle,
+        )
+        if factors.is_empty() or factors["source_snapshot_id"].null_count():
+            raise AppBuilderError("missing adjustment history lineage")
+        evidence: list[dict[str, int | str | None]] = []
+        for key, group in factors.partition_by("instrument_id", as_dict=True).items():
+            rows = group.sort(["trade_date", "knowledge_date"]).select(
+                sorted(group.columns)
+            )
+            evidence.append(
+                {
+                    "instrument_id": int(key[0]),
+                    "adjustment_input_hash": "sha256:"
+                    + sha256(
+                        orjson.dumps(rows.to_dicts(), option=orjson.OPT_SORT_KEYS)
+                    ).hexdigest(),
+                    "adjustment_source_snapshot_id": aggregate_source_snapshot_id(
+                        rows["source_snapshot_id"].to_list()
+                    ),
+                }
+            )
+        return bars.join(
+            pl.DataFrame(evidence), on="instrument_id", how="left", validate="m:1"
+        )
 
     def _adjustment_state(
         self,
@@ -470,7 +541,7 @@ class ServiceBackedDataProvider:
     ) -> pl.DataFrame:
         """Keep actual adjustment provenance; no silent missing-factor coverage."""
         if self._snapshots is None:
-            raise ValueError("adjustment inputs require source snapshot evidence")
+            raise AppBuilderError("adjustment inputs require source snapshot evidence")
         stock = dataset_id == "stock_daily"
         factors = (
             self._market.get_adj_factors(query.start, query.end)
@@ -478,7 +549,7 @@ class ServiceBackedDataProvider:
             else self._market.get_fund_adj(query.start, query.end)
         )
         if factors is None or factors.is_empty():
-            raise ValueError(f"missing adjustment inputs for {instrument_ids}")
+            raise AppBuilderError(f"missing adjustment inputs for {instrument_ids}")
         factors = factors.filter(pl.col("instrument_id").is_in(instrument_ids))
         factors = _attach_catalog_source_snapshots(
             factors,
@@ -508,7 +579,7 @@ class ServiceBackedDataProvider:
             | pl.col("adjustment_source_snapshot_id").is_null()
         )
         if not bad.is_empty():
-            raise ValueError(
+            raise AppBuilderError(
                 "missing adjustment input/lineage: "
                 + f"{bad.select(keys).head(10).to_dicts()}"
             )
@@ -519,7 +590,9 @@ class ServiceBackedDataProvider:
     ) -> pl.DataFrame:
         """Actual daily status/limits; unknown state never becomes tradable."""
         if self._snapshots is None:
-            raise ValueError("stock execution state requires source snapshot evidence")
+            raise AppBuilderError(
+                "stock execution state requires source snapshot evidence"
+            )
         keys = ["instrument_id", "trade_date"]
         status = self._market.get_stock_status(query.start, query.end).filter(
             pl.col("instrument_id").is_in(instrument_ids)
@@ -529,7 +602,7 @@ class ServiceBackedDataProvider:
         )
         for dataset, frame in (("stock_status", status), ("stock_limit", limits)):
             if frame.is_empty():
-                raise ValueError(f"missing {dataset} inputs for {instrument_ids}")
+                raise AppBuilderError(f"missing {dataset} inputs for {instrument_ids}")
         status = _attach_catalog_source_snapshots(
             status, self._snapshots, "stock_status", self._lifecycle
         )
@@ -540,7 +613,7 @@ class ServiceBackedDataProvider:
             bars.select(keys), on=keys, how="anti"
         )
         if not missing_quotes.is_empty():
-            raise ValueError(
+            raise AppBuilderError(
                 "verified suspension without valuation quote; "
                 + "positions cannot disappear: "
                 + f"{missing_quotes.select(keys).head(10).to_dicts()}"
@@ -581,7 +654,7 @@ class ServiceBackedDataProvider:
             | (pl.col("list_status") != "L")
         )
         if not bad.is_empty():
-            raise ValueError(
+            raise AppBuilderError(
                 "missing status/limit/lineage or unresolved exit: "
                 + f"{bad.select(keys).head(10).to_dicts()}"
             )

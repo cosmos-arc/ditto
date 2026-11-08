@@ -305,6 +305,13 @@ class TestAppBuilderFactory:
             decided_at="2026-01-01T00:00:01Z",
         )
 
+        from packages.application.tests.unit.process.strategy import (
+            ordinary_catalog_support as catalog,
+        )
+
+        builder = container.get(BacktestRuntimeBuilder)
+        monkeypatch.setattr(builder, "_data_provider", catalog.CatalogProvider())
+        monkeypatch.setattr(builder, "_metadata_service", catalog.make_metadata())
         factory = container.get(StrategyServiceFactory)
         service = factory.build_backtest_service_from_catalog(
             config=BacktestCatalogRequestConfig(

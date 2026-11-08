@@ -43,7 +43,7 @@ from ditto_strategy.alpha.pipeline import StrategyInputBundle
 from loguru import logger
 
 from ditto_backtest.config import EngineConfig, EngineMode
-from ditto_backtest.data_feed import Slice
+from ditto_backtest.data_feed import ProviderBackedDataFeed, Slice
 from ditto_backtest.engine_runtime import (
     EngineRuntimeCapture,
     capture_runtime_state,
@@ -333,6 +333,11 @@ class EngineLoop:
                 input_instruments=self._input_instruments,
                 bar_fingerprints=self._bar_fingerprints,
                 source_snapshot_ids=self._source_snapshot_ids,
+                consumed_inputs=(
+                    self._data_feed.consumed_input_refs()
+                    if isinstance(self._data_feed, ProviderBackedDataFeed)
+                    else ()
+                ),
             ),
             rule_refs=self._rule_ref_collector.rule_refs,
             random_seed=self._random_seed,

@@ -4,10 +4,12 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock
 
+import pytest
 from ditto_application.builders._resolution import (
     resolve_benchmark,
     resolve_instrument_display,
 )
+from ditto_application.exceptions import AppBuilderError
 from ditto_kernel.identity import InstrumentId
 
 
@@ -111,13 +113,13 @@ class TestResolveBenchmark:
     def test_spec_benchmark_not_found(self) -> None:
         metadata = MagicMock()
         metadata.resolve_instrument_id.return_value = None
-        result = resolve_benchmark(
-            spec_benchmark="000300",
-            metadata_service=metadata,
-            source="tushare",
-            as_of="2024-01-01",
-        )
-        assert result is None
+        with pytest.raises(AppBuilderError, match="benchmark"):
+            resolve_benchmark(
+                spec_benchmark="000300",
+                metadata_service=metadata,
+                source="tushare",
+                as_of="2024-01-01",
+            )
 
     def test_no_benchmark(self) -> None:
         metadata = MagicMock()
