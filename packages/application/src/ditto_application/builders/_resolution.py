@@ -68,4 +68,8 @@ def resolve_benchmark(
     if spec_benchmark is None:
         return None
     iid = metadata_service.resolve_instrument_id(spec_benchmark, source, as_of)
-    return InstrumentId(iid) if iid is not None else None
+    if iid is None:
+        raise ValueError(
+            f"declared benchmark cannot be resolved: {spec_benchmark} at {as_of}"
+        )
+    return InstrumentId(iid)

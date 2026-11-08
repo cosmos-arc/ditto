@@ -65,6 +65,20 @@ def _make_slice_with_bars() -> Slice:
     return mock_slice
 
 
+def _visible_history() -> pl.DataFrame:
+    return pl.DataFrame(
+        {
+            "instrument_id": [1, 2, 3],
+            "trade_date": ["2023-12-29"] * 3,
+            "open": [10.5, 20.5, 30.5],
+            "high": [10.5, 20.5, 30.5],
+            "low": [10.5, 20.5, 30.5],
+            "close": [10.5, 20.5, 30.5],
+            "volume": [1000.0, 2000.0, 3000.0],
+        }
+    )
+
+
 def _make_step_context(date_str: str, slice_: Slice) -> StepContext:
     """构造测试用 StepContext."""
     ctx = MagicMock(spec=StepContext)
@@ -170,6 +184,7 @@ class TestFactorAwareBundleBuilder:
         mock_brokerage = MagicMock()
         mock_pre_trade = MagicMock()
         mock_data_feed = MagicMock()
+        mock_data_feed.get_history.return_value = _visible_history()
 
         service = BacktestService(
             config=config,
@@ -225,6 +240,7 @@ class TestFactorAwareBundleBuilder:
         mock_brokerage = MagicMock()
         mock_pre_trade = MagicMock()
         mock_data_feed = MagicMock()
+        mock_data_feed.get_history.return_value = _visible_history()
 
         service = BacktestService(
             config=config,
@@ -250,6 +266,7 @@ class TestFactorAwareBundleBuilder:
         for v in signal_values:
             assert 0.0 <= v <= 1.0
 
+    @pytest.mark.pit
     def test_factor_history_uses_knowledge_date_cutoff(self) -> None:
         """T 日因子回看不得读取 knowledge_date 当日仍不可见的历史行."""
         bridge = FactorBridge()
@@ -331,6 +348,13 @@ class TestFactorAwareBundleBuilder:
             "2026-04-08",
             "2026-04-10",
         ]
+        assert bundle.market_data["close"].to_list() == [8.0, 8.0]
+        # A realized execution-day quote must not become a factor input merely
+        # because the history query correctly rejected the future sentinel.
+        bar.close = 1_000_000.0
+        changed = builder(ctx)
+        assert changed.market_data.equals(bundle.market_data)
+        assert changed.signal_values.equals(bundle.signal_values)
 
     def test_factor_history_normalizes_provider_native_dates(self) -> None:
         """Provider Date rows and the current ISO date share one stable schema."""
@@ -368,8 +392,6 @@ class TestFactorAwareBundleBuilder:
         assert bundle.market_data["trade_date"].to_list() == [
             "2024-01-01",
             "2024-01-02",
-            "2024-01-02",
-            "2024-01-02",
         ]
 
     def test_backtest_service_options_accept_compiled_expressions(self) -> None:
@@ -401,7 +423,7 @@ class TestFactorBundleFundamentalInjection:
             weights=(1.0,),
         )
         data_feed = MagicMock()
-        data_feed.get_history.return_value = pl.DataFrame()
+        data_feed.get_history.return_value = _visible_history()
         data_feed.get_fundamental_snapshot.return_value = pl.DataFrame(
             {
                 "instrument_id": [1, 2, 3],
@@ -441,7 +463,7 @@ class TestFactorBundleFundamentalInjection:
             weights=(1.0,),
         )
         data_feed = MagicMock()
-        data_feed.get_history.return_value = pl.DataFrame()
+        data_feed.get_history.return_value = _visible_history()
         data_feed.get_fundamental_snapshot.return_value = pl.DataFrame(
             {
                 "instrument_id": [1, 2, 3],
@@ -481,7 +503,7 @@ class TestFactorBundleFundamentalInjection:
             weights=(1.0,),
         )
         data_feed = MagicMock()
-        data_feed.get_history.return_value = pl.DataFrame()
+        data_feed.get_history.return_value = _visible_history()
         data_feed.get_fundamental_snapshot.return_value = pl.DataFrame(
             {
                 "instrument_id": [1, 2, 3],
@@ -515,7 +537,7 @@ class TestFactorBundleFundamentalInjection:
             weights=(1.0,),
         )
         data_feed = MagicMock()
-        data_feed.get_history.return_value = pl.DataFrame()
+        data_feed.get_history.return_value = _visible_history()
         data_feed.get_fundamental_snapshot.return_value = pl.DataFrame()
 
         ctx = _make_step_context("2024-01-02", _make_slice_with_bars())
@@ -542,7 +564,7 @@ class TestFactorBundleFundamentalInjection:
             weights=(0.5, 0.5),
         )
         data_feed = MagicMock()
-        data_feed.get_history.return_value = pl.DataFrame()
+        data_feed.get_history.return_value = _visible_history()
         data_feed.get_fundamental_snapshot.return_value = pl.DataFrame(
             {
                 "instrument_id": [1, 2, 3],

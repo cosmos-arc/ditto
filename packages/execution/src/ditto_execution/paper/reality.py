@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import date, datetime
-from decimal import ROUND_HALF_UP, Decimal
+from decimal import Decimal
 from hashlib import sha256
 from zoneinfo import ZoneInfo
 
@@ -20,6 +20,7 @@ from ditto_execution.paper.contracts import (
     PaperRealityResult,
     PaperRealityStatus,
 )
+from ditto_execution.reality.price import round_to_tick
 
 __all__ = ["ASharePaperReality"]
 
@@ -154,7 +155,7 @@ class ASharePaperReality:
             if order.direction is OrderSide.BUY
             else 1.0 - slip_multiplier
         )
-        fill_price = _round_to_tick(raw_fill, definition.tick_size)
+        fill_price = round_to_tick(raw_fill, definition.tick_size)
         # In-band close still evidences an opposite side, so a slippage-
         # inflated fill is a tradable price once clamped to the band
         # (#679 verdict A); out-of-band closes already defer above.
@@ -349,15 +350,6 @@ def _limit_order_outcome(
             reason="limit_price_not_marketable",
         )
     return None
-
-
-def _round_to_tick(price: float, tick_size: float) -> float:
-    if tick_size <= 0:
-        raise ValueError("tick_size must be positive")
-    price_decimal = Decimal(str(price))
-    tick_decimal = Decimal(str(tick_size))
-    ticks = (price_decimal / tick_decimal).quantize(Decimal("1"), ROUND_HALF_UP)
-    return float(ticks * tick_decimal)
 
 
 def _fill_id(order_id: str, lineage_hash: str, assumption_hash: str) -> str:

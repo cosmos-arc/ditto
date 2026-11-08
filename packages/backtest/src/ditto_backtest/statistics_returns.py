@@ -54,12 +54,15 @@ def total_return(navs: list[float]) -> float:
 @traced("backtest.statistics.portfolio")
 def compute_portfolio_statistics(
     collector: ExecutionAuditCollector,
+    *,
+    initial_cash: float | None = None,
 ) -> tuple[PortfolioStatistics, ...]:
     """
     从每日账户快照计算组合统计序列.
 
     Args:
         collector: 审计数据收集器。
+        initial_cash: 执行前初始资金；None 保留首快照基准的旧调用语义。
 
     Returns:
         按 trade_date 排序的 PortfolioStatistics 元组。
@@ -67,8 +70,8 @@ def compute_portfolio_statistics(
     """
     snapshots = collector.get_daily_snapshots()
     stats: list[PortfolioStatistics] = []
-    peak_nav = 0.0
-    inception_nav: float | None = None
+    peak_nav = initial_cash or 0.0
+    inception_nav: float | None = initial_cash
 
     for i, (date, view) in enumerate(snapshots):
         if inception_nav is None:
@@ -79,7 +82,7 @@ def compute_portfolio_statistics(
             prev_nav = snapshots[i - 1][1].nav
             daily_return = safe_ratio(view.nav - prev_nav, prev_nav) * 100
         else:
-            daily_return = 0.0
+            daily_return = safe_ratio(view.nav - inception_nav, inception_nav) * 100
 
         # Cumulative return — decimal → * 100
         cumulative_return = safe_ratio(view.nav - inception_nav, inception_nav) * 100

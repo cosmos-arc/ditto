@@ -529,7 +529,23 @@ class BacktestService:
             pass  # 指标记录不阻断主流程
 
         # 构建 BacktestReport
-        report = build_report(collector, run_id=run_id)
+        benchmark = None
+        if self._config.benchmark_id is not None:
+            levels = [
+                self._data_feed.get_slice(day).benchmark_close
+                for day, _ in collector.get_daily_snapshots()
+            ]
+            if any(level is None for level in levels):
+                raise ValueError(
+                    "declared benchmark is missing from executed report dates"
+                )
+            benchmark = tuple(float(level) for level in levels if level is not None)
+        report = build_report(
+            collector,
+            run_id=run_id,
+            benchmark_navs=benchmark,
+            initial_cash=self._config.initial_cash,
+        )
 
         # 持久化 + 更新状态
         self._post_process(run_id, report, engine_result)

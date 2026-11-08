@@ -213,3 +213,4 @@ class BacktestReport:
     risk_log: tuple[RiskScanRecord, ...] = ()
     pre_trade_log: tuple[PreTradeDecisionRecord, ...] = ()
     final_account_state: AccountView | None = None
+    benchmark_series: tuple[tuple[str, float], ...] = ()

@@ -176,10 +176,6 @@ class AShareFillModel:
         if market.is_suspended:
             return NoFill(reason="suspended", can_retry=True)
 
-        # MARKET_ON_CLOSE 委托竞价模型
-        if order.order_type == _OrderType.MARKET_ON_CLOSE:
-            return self._auction.try_fill(order, market, definition, trading_rule)
-
         # 涨跌停判断
         at_limit_up = market.limit_up is not None and market.close >= market.limit_up
         at_limit_down = (
@@ -192,6 +188,10 @@ class AShareFillModel:
         ):
             reason = "limit_up_no_buy" if at_limit_up else "limit_down_no_sell"
             return NoFill(reason=reason, can_retry=True)
+
+        # Closing-auction orders obey the same suspension and daily-band rules.
+        if order.order_type == _OrderType.MARKET_ON_CLOSE:
+            return self._auction.try_fill(order, market, definition, trading_rule)
 
         # MARKET / LIMIT 单 — 使用共享函数
         if order.order_type in (_OrderType.MARKET, _OrderType.LIMIT):

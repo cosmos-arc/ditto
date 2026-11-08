@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 from dataclasses import asdict, replace
+from datetime import date, timedelta
 from pathlib import Path
 from typing import cast
 
@@ -100,8 +101,15 @@ class _SyntheticDataProvider:
         )
 
     def get_schedule(self, start: str, end: str) -> pl.DataFrame:
-        dates = [trade_date for trade_date in TRADE_DATES if start <= trade_date <= end]
-        return pl.DataFrame({"trade_date": dates})
+        days = (
+            date.fromisoformat(start) + timedelta(days=i)
+            for i in range(
+                (date.fromisoformat(end) - date.fromisoformat(start)).days + 1
+            )
+        )
+        return pl.DataFrame(
+            {"trade_date": [d.isoformat() for d in days if d.weekday() < 5]}
+        )
 
     def get_instruments(self, query: InstrumentQuery) -> pl.DataFrame:
         _ = query
@@ -344,9 +352,21 @@ def _make_data() -> dict[InstrumentId, pl.DataFrame]:
 
 
 def _bar_frame(close_prices: list[float]) -> pl.DataFrame:
+    warmup = [
+        (date(2025, 8, 1) + timedelta(days=i)).isoformat()
+        for i in range(157)
+        if (date(2025, 8, 1) + timedelta(days=i)).weekday() < 5
+    ]
+    close_prices = [close_prices[0]] * len(warmup) + close_prices
+    dates = warmup + list(TRADE_DATES)
     return pl.DataFrame(
         {
-            "trade_date": list(TRADE_DATES),
+            "trade_date": dates,
+            "knowledge_date": dates,
+            "adj_factor": [1.0] * len(dates),
+            "source": ["tushare"] * len(dates),
+            "source_snapshot_id": ["synthetic:replay-golden"] * len(dates),
+            "pre_close": [close_prices[0], *close_prices[:-1]],
             "open": close_prices,
             "high": [value * 1.01 for value in close_prices],
             "low": [value * 0.99 for value in close_prices],
@@ -432,9 +452,19 @@ class _RuntimeBuilderStub:
 class _InstrumentLookup:
     def get_instrument(self, instrument_id: int) -> dict[str, str] | None:
         if instrument_id == 2_000_001:
-            return {"ticker": "510300", "exchange": "XSHG"}
+            return {
+                "ticker": "510300",
+                "exchange": "SSE",
+                "asset_class": "etf",
+                "list_date": "2012-01-01",
+            }
         if instrument_id == 2_000_002:
-            return {"ticker": "510500", "exchange": "XSHG"}
+            return {
+                "ticker": "510500",
+                "exchange": "SSE",
+                "asset_class": "etf",
+                "list_date": "2012-01-01",
+            }
         return None
 
     def get_source_ticker(

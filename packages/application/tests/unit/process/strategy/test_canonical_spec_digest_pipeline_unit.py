@@ -15,8 +15,6 @@ from ditto_backtest.manifest_build import (
     RunManifestInputEvidence,
     build_run_manifest,
 )
-from ditto_data.provider import DataProvider
-from ditto_data.services.metadata_service import MetadataService
 from ditto_kernel.order import OrderType
 from ditto_kernel.strategy import ImpactModel
 from ditto_strategy.alpha.specs import (
@@ -30,6 +28,8 @@ from ditto_strategy.models import StrategySpecRecord
 from ditto_strategy.storage.sqlite.services.strategy_catalog_service import (
     StrategyCatalogService,
 )
+
+from .ordinary_catalog_support import CatalogProvider, make_metadata
 
 _EXPECTED_MARKET_HASH = (
     "3d4383741997e61203b384ed755c06d8e05df64ea09d66af1cc36230d32b2ff1"
@@ -84,7 +84,7 @@ def _build_manifest_from_record(record: StrategySpecRecord) -> RunManifest:
     catalog_service = MagicMock(spec=StrategyCatalogService)
     catalog_service.get_spec.return_value = record
     strategy_builder = StrategyRuntimeBuilder(catalog_service=catalog_service)
-    metadata_service = MagicMock(spec=MetadataService)
+    metadata_service = make_metadata()
     metadata_service.get_universe.return_value = [2_000_001]
     metadata_service.instrument.get_instrument.return_value = {
         "ticker": "510300",
@@ -93,7 +93,7 @@ def _build_manifest_from_record(record: StrategySpecRecord) -> RunManifest:
     runtime_builder = BacktestRuntimeBuilder(
         strategy_runtime_builder=strategy_builder,
         metadata_service=metadata_service,
-        data_provider=MagicMock(spec=DataProvider),
+        data_provider=CatalogProvider(),
     )
     runtime = runtime_builder.build_published_runtime(
         config=BacktestCatalogRequestConfig(

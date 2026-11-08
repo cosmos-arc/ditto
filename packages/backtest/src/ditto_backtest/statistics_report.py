@@ -25,12 +25,15 @@ def build_report(
     collector: ExecutionAuditCollector,
     run_id: str = "",
     benchmark_navs: tuple[float, ...] | None = None,
+    *,
+    initial_cash: float | None = None,
 ) -> BacktestReport:
     """
     构建完整回测报告.
 
     Args:
         collector: 审计数据收集器。
+        initial_cash: 执行前初始资金；None 保留首快照基准的旧调用语义。
         run_id: 回测运行 ID。
         benchmark_navs: 可选基准 NAV 序列。
 
@@ -38,10 +41,12 @@ def build_report(
         BacktestReport 实例。
 
     """
-    portfolio_stats = compute_portfolio_statistics(collector)
+    portfolio_stats = compute_portfolio_statistics(collector, initial_cash=initial_cash)
     trade_stats = compute_trade_statistics(collector)
     aggregated_stats = compute_aggregated_trade_statistics(collector)
-    alpha_stats = compute_alpha_statistics(collector, benchmark_navs)
+    alpha_stats = compute_alpha_statistics(
+        collector, benchmark_navs, initial_cash=initial_cash
+    )
 
     snapshots = collector.get_daily_snapshots()
 
@@ -56,7 +61,18 @@ def build_report(
         start_date = ""
         end_date = ""
 
-    initial_cash = snapshots[0][1].nav if snapshots else 0.0
+    if initial_cash is None:
+        initial_cash = snapshots[0][1].nav if snapshots else 0.0
+    if benchmark_navs is not None and len(benchmark_navs) != len(snapshots):
+        raise ValueError("benchmark must cover every report date")
+    benchmark_series = (
+        tuple(
+            (day, level)
+            for (day, _), level in zip(snapshots, benchmark_navs, strict=True)
+        )
+        if benchmark_navs is not None
+        else ()
+    )
     final_nav = snapshots[-1][1].nav if snapshots else 0.0
     final_account_state = snapshots[-1][1] if snapshots else None
 
@@ -78,4 +94,5 @@ def build_report(
         risk_log=collector.get_risk_log(),
         pre_trade_log=collector.get_pre_trade_log(),
         final_account_state=final_account_state,
+        benchmark_series=benchmark_series,
     )

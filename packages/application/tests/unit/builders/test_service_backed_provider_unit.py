@@ -354,6 +354,52 @@ class TestServiceBackedDataProvider:
             DataAssetRef(dataset_id="etf_daily", namespace="market")
         ]
 
+    @pytest.mark.parametrize("existing_lineage", [False, True])
+    def test_etf_bars_never_claim_a_stock_payload(self, existing_lineage: bool) -> None:
+        market = _make_mock_service("market")
+        metadata = _make_mock_service("metadata")
+        metadata.instrument.resolve_instrument_ids_batch.return_value = {
+            "510300.SH": 2_001_562,
+        }
+        reader = _SnapshotReader(
+            _snapshot(
+                snapshot_id="stock-payload",
+                dataset="stock_daily",
+                request_start="2026-10-08",
+                request_end="2026-10-08",
+                observed_at=datetime(2026, 11, 8, tzinfo=UTC),
+            ),
+        )
+        bars = pl.DataFrame(
+            {
+                "instrument_id": [2_001_562],
+                "trade_date": [date(2026, 10, 8)],
+                "source": ["tushare"],
+                "source_ticker": ["510300.SH"],
+                "close": [4.0],
+            }
+        )
+        if existing_lineage:
+            bars = bars.with_columns(
+                pl.lit("stock-payload").alias("source_snapshot_id")
+            )
+        market.find_bars.return_value = bars
+        provider = ServiceBackedDataProvider(
+            market_service=market,
+            metadata_service=metadata,
+            derived_service=_make_mock_service("derived"),
+            snapshot_reader=reader,
+            lifecycle_reader=_LifecycleReader(reader),
+        )
+        query = BarQuery(
+            instruments=["510300.SH"], start="2026-10-08", end="2026-10-08"
+        )
+        if existing_lineage:
+            with pytest.raises(ValueError, match=r"dataset.*etf_daily"):
+                provider.get_bars(query)
+        else:
+            assert provider.get_bars(query)["source_snapshot_id"].to_list() == [None]
+
     def test_get_bars_leaves_unresolved_source_snapshot_null(self) -> None:
         """The adapter preserves rows so the consuming PIT boundary can fail closed."""
         market = _make_mock_service("market")
@@ -604,10 +650,12 @@ def test_uncompleted_revision_cannot_claim_canonical_bar_lineage(registered):
             )
         market = MagicMock()
         metadata = MagicMock()
-        metadata.instrument.resolve_instrument_ids_batch.return_value = {"000001.SZ": 1}
+        metadata.instrument.resolve_instrument_ids_batch.return_value = {
+            "000001.SZ": 1_000_001
+        }
         market.find_bars.return_value = pl.DataFrame(
             {
-                "instrument_id": [1],
+                "instrument_id": [1_000_001],
                 "trade_date": [date(2026, 7, 1)],
                 "source": ["tushare"],
                 "source_ticker": ["000001.SZ"],
@@ -630,3 +678,73 @@ def test_uncompleted_revision_cannot_claim_canonical_bar_lineage(registered):
             )
         )
         assert frame["source_snapshot_id"].to_list() == [None]
+
+
+@pytest.mark.parametrize(
+    "gap", [None, "status", "limit", "adjustment", "suspended_without_quote"]
+)
+def test_execution_inputs_require_stock_state_and_adjustment_lineage(
+    gap: str | None,
+) -> None:
+    market, metadata = _make_mock_service("market"), _make_mock_service("metadata")
+    metadata.instrument.resolve_instrument_ids_batch.return_value = {
+        "000001.SZ": 1_000_001
+    }
+    common = {
+        "instrument_id": [1_000_001],
+        "trade_date": [date(2026, 10, 8)],
+        "source": ["tushare"],
+        "source_ticker": ["000001.SZ"],
+    }
+    bars = pl.DataFrame({**common, "close": [10.0]})
+    status = pl.DataFrame(
+        {
+            **common,
+            "is_suspended": [gap == "suspended_without_quote"],
+            "is_st": [False],
+            "list_status": ["L"],
+        }
+    )
+    limits = pl.DataFrame({**common, "up_limit": [11.0], "down_limit": [9.0]})
+    adj = pl.DataFrame(
+        {**common, "adj_factor": [1.0], "knowledge_date": [date(2026, 10, 8)]}
+    )
+    market.find_bars.return_value = (
+        bars.clear() if gap == "suspended_without_quote" else bars
+    )
+    market.get_stock_status.return_value = status.clear() if gap == "status" else status
+    market.get_stock_limits.return_value = limits.clear() if gap == "limit" else limits
+    market.get_adj_factors.return_value = adj.clear() if gap == "adjustment" else adj
+    reader = _SnapshotReader(
+        *[
+            _snapshot(
+                snapshot_id=dataset,
+                dataset=dataset,
+                request_start="2026-10-08",
+                request_end="2026-10-08",
+                observed_at=datetime(2026, 11, 8, tzinfo=UTC),
+            )
+            for dataset in ("stock_daily", "stock_status", "stock_limit", "adj_factor")
+        ]
+    )
+    provider = ServiceBackedDataProvider(
+        market_service=market,
+        metadata_service=metadata,
+        derived_service=_make_mock_service("derived"),
+        snapshot_reader=reader,
+        lifecycle_reader=_LifecycleReader(reader),
+    )
+    query = BarQuery(
+        instruments=["000001.SZ"],
+        start="2026-10-08",
+        end="2026-10-08",
+        with_execution_state=True,
+    )
+    if gap:
+        with pytest.raises(ValueError, match=r"missing|suspension"):
+            provider.get_bars(query)
+    else:
+        result = provider.get_bars(query)
+        assert result["status_source_snapshot_id"].item() == "stock_status"
+        assert result["limit_source_snapshot_id"].item() == "stock_limit"
+        assert result["adjustment_source_snapshot_id"].item() == "adj_factor"

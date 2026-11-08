@@ -14,7 +14,7 @@ import polars as pl
 __all__ = ["BarQuery", "DataProvider", "InstrumentQuery"]
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, kw_only=True)
 class BarQuery:
     """
     行情查询契约.
@@ -26,36 +26,23 @@ class BarQuery:
         frequency: 频率（"daily" / "weekly" / "monthly"），由实现侧验证
         adj: 复权类型（"none" / "hfq" / "qfq"），由实现侧验证
         asof: PIT 时间点（ISO 格式 "YYYY-MM-DD"），None 表示使用当前映射
+        with_execution_state: 同时要求真实成交状态与复权来源
         dataset_id: 期望的日线数据集（如 "stock_daily"），用于目录 lineage 精确匹配
 
     """
 
-    instruments: tuple[str, ...]
+    instruments: list[str] | tuple[str, ...]
     start: str
     end: str
     frequency: str = "daily"
     adj: str = "none"
     asof: str | None = None
     dataset_id: str | None = None
+    with_execution_state: bool = False
 
-    def __init__(
-        self,
-        *,
-        instruments: list[str] | tuple[str, ...],
-        start: str,
-        end: str,
-        frequency: str = "daily",
-        adj: str = "none",
-        asof: str | None = None,
-        dataset_id: str | None = None,
-    ) -> None:
-        object.__setattr__(self, "instruments", tuple(instruments))
-        object.__setattr__(self, "start", start)
-        object.__setattr__(self, "end", end)
-        object.__setattr__(self, "frequency", frequency)
-        object.__setattr__(self, "adj", adj)
-        object.__setattr__(self, "asof", asof)
-        object.__setattr__(self, "dataset_id", dataset_id)
+    def __post_init__(self) -> None:
+        """Freeze caller-owned instrument lists."""
+        object.__setattr__(self, "instruments", tuple(self.instruments))
 
 
 @dataclass(frozen=True)

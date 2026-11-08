@@ -19,6 +19,7 @@ from ditto_data.catalog.source_snapshot import (
     ProviderSnapshotReader,
 )
 from ditto_data.ingestion.partition_state import PartitionLifecycleReader
+from ditto_data.models.common import InstrumentIdRange
 from ditto_data.provider import BarQuery, InstrumentQuery
 from ditto_data.services.market_service import AdjType, MarketBarsQuery, MarketService
 from ditto_data.services.metadata_service import MetadataService
@@ -234,7 +235,7 @@ def _rewrite_lineage(
     )
 
 
-_BAR_DATASETS = frozenset({"stock_daily", "etf_daily"})
+_BAR_DATASETS = frozenset({"stock_daily", "etf_daily", "index_daily"})
 
 
 def _catalog_windows(
@@ -310,7 +311,18 @@ def _attach_catalog_source_snapshots(
     dataset_id: str | None = None,
     lifecycle: PartitionLifecycleReader | None = None,
 ) -> pl.DataFrame:
-    if frame.is_empty() or _SOURCE_SNAPSHOT_COLUMN in frame.columns:
+    if frame.is_empty():
+        return frame
+    if _SOURCE_SNAPSHOT_COLUMN in frame.columns:
+        for identity in frame[_SOURCE_SNAPSHOT_COLUMN].drop_nulls().unique():
+            snapshot = snapshot_reader.get_snapshot(str(identity))
+            if snapshot is None or (
+                dataset_id is not None and snapshot.dataset_id != dataset_id
+            ):
+                raise ValueError(
+                    f"source snapshot {identity!r} does not identify dataset "
+                    + f"{dataset_id}"
+                )
         return frame
     required = {"trade_date", "source", "source_ticker"}
     if not required.issubset(frame.columns) or not (
@@ -431,11 +443,149 @@ class ServiceBackedDataProvider:
             asof=query.asof,
         )
         bars = self._market.find_bars(bars_query)
-        if self._snapshots is None:
+        if self._snapshots is None and not query.with_execution_state:
             return bars
-        return _attach_catalog_source_snapshots(
-            bars, self._snapshots, query.dataset_id, self._lifecycle
+        dataset_id = f"{InstrumentIdRange.detect_asset_class(instrument_ids)}_daily"
+        if query.dataset_id is not None and query.dataset_id != dataset_id:
+            raise ValueError(
+                f"requested dataset {query.dataset_id} disagrees with {dataset_id} "
+                + f"for instruments {instrument_ids}"
+            )
+        if self._snapshots is not None:
+            bars = _attach_catalog_source_snapshots(
+                bars, self._snapshots, dataset_id, self._lifecycle
+            )
+        if query.with_execution_state and dataset_id == "stock_daily":
+            bars = self._stock_execution_state(bars, query, instrument_ids)
+        if query.with_execution_state:
+            bars = self._adjustment_state(bars, query, instrument_ids, dataset_id)
+        return bars
+
+    def _adjustment_state(
+        self,
+        bars: pl.DataFrame,
+        query: BarQuery,
+        instrument_ids: list[int],
+        dataset_id: str,
+    ) -> pl.DataFrame:
+        """Keep actual adjustment provenance; no silent missing-factor coverage."""
+        if self._snapshots is None:
+            raise ValueError("adjustment inputs require source snapshot evidence")
+        stock = dataset_id == "stock_daily"
+        factors = (
+            self._market.get_adj_factors(query.start, query.end)
+            if stock
+            else self._market.get_fund_adj(query.start, query.end)
         )
+        if factors is None or factors.is_empty():
+            raise ValueError(f"missing adjustment inputs for {instrument_ids}")
+        factors = factors.filter(pl.col("instrument_id").is_in(instrument_ids))
+        factors = _attach_catalog_source_snapshots(
+            factors,
+            self._snapshots,
+            "adj_factor" if stock else "fund_adj",
+            self._lifecycle,
+        )
+        keys = ["instrument_id", "trade_date"]
+        factors = factors.sort([*keys, "knowledge_date"]).unique(
+            subset=keys, keep="last"
+        )
+        joined = bars.join(
+            factors.select(
+                *keys,
+                "adj_factor",
+                pl.col("knowledge_date").alias("adjustment_knowledge_date"),
+                pl.col("source_snapshot_id").alias("adjustment_source_snapshot_id"),
+            ),
+            on=keys,
+            how="left",
+            validate="1:1",
+        )
+        bad = joined.filter(
+            pl.col("adj_factor").is_null()
+            | (pl.col("adj_factor") <= 0)
+            | ~pl.col("adj_factor").is_finite()
+            | pl.col("adjustment_source_snapshot_id").is_null()
+        )
+        if not bad.is_empty():
+            raise ValueError(
+                "missing adjustment input/lineage: "
+                + f"{bad.select(keys).head(10).to_dicts()}"
+            )
+        return joined
+
+    def _stock_execution_state(
+        self, bars: pl.DataFrame, query: BarQuery, instrument_ids: list[int]
+    ) -> pl.DataFrame:
+        """Actual daily status/limits; unknown state never becomes tradable."""
+        if self._snapshots is None:
+            raise ValueError("stock execution state requires source snapshot evidence")
+        keys = ["instrument_id", "trade_date"]
+        status = self._market.get_stock_status(query.start, query.end).filter(
+            pl.col("instrument_id").is_in(instrument_ids)
+        )
+        limits = self._market.get_stock_limits(query.start, query.end).filter(
+            pl.col("instrument_id").is_in(instrument_ids)
+        )
+        for dataset, frame in (("stock_status", status), ("stock_limit", limits)):
+            if frame.is_empty():
+                raise ValueError(f"missing {dataset} inputs for {instrument_ids}")
+        status = _attach_catalog_source_snapshots(
+            status, self._snapshots, "stock_status", self._lifecycle
+        )
+        limits = _attach_catalog_source_snapshots(
+            limits, self._snapshots, "stock_limit", self._lifecycle
+        )
+        missing_quotes = status.filter(pl.col("is_suspended")).join(
+            bars.select(keys), on=keys, how="anti"
+        )
+        if not missing_quotes.is_empty():
+            raise ValueError(
+                "verified suspension without valuation quote; "
+                + "positions cannot disappear: "
+                + f"{missing_quotes.select(keys).head(10).to_dicts()}"
+            )
+        joined = bars.join(
+            status.select(
+                *keys,
+                "is_suspended",
+                "is_st",
+                "list_status",
+                pl.col("source_snapshot_id").alias("status_source_snapshot_id"),
+            ),
+            on=keys,
+            how="left",
+            validate="1:1",
+        ).join(
+            limits.select(
+                *keys,
+                pl.col("up_limit").alias("limit_up"),
+                pl.col("down_limit").alias("limit_down"),
+                pl.col("source_snapshot_id").alias("limit_source_snapshot_id"),
+            ),
+            on=keys,
+            how="left",
+            validate="1:1",
+        )
+        required = (
+            "is_suspended",
+            "is_st",
+            "list_status",
+            "limit_up",
+            "limit_down",
+            "status_source_snapshot_id",
+            "limit_source_snapshot_id",
+        )
+        bad = joined.filter(
+            pl.any_horizontal(pl.col(name).is_null() for name in required)
+            | (pl.col("list_status") != "L")
+        )
+        if not bad.is_empty():
+            raise ValueError(
+                "missing status/limit/lineage or unresolved exit: "
+                + f"{bad.select(keys).head(10).to_dicts()}"
+            )
+        return joined
 
     def get_instruments(self, query: InstrumentQuery) -> pl.DataFrame:
         """获取标的列表."""

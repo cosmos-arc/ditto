@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import asdict, fields
+from dataclasses import asdict, fields, replace
 from unittest.mock import MagicMock
 
 import pytest
@@ -24,8 +24,6 @@ from ditto_backtest.result import (
     BacktestSettlementStateSnapshot,
 )
 from ditto_backtest.simulation.fill import AShareFillModel
-from ditto_data.provider import DataProvider
-from ditto_data.services.metadata_service import MetadataService
 from ditto_execution.planner import SimpleExecutionPlanner
 from ditto_execution.reality import AShareFeeModel
 from ditto_kernel.identity import InstrumentId
@@ -40,6 +38,8 @@ from ditto_strategy.alpha.pipeline import StrategyPipeline
 from ditto_strategy.alpha.spec_codec import adapt_legacy_strategy_spec
 from ditto_strategy.alpha.specs import StrategySpec
 from ditto_strategy.models import StrategySpecRecord
+
+from .ordinary_catalog_support import LISTINGS, CatalogProvider, make_metadata
 
 
 def _make_strategy_spec(
@@ -94,6 +94,230 @@ def _make_published_strategy_runtime(
 
 class TestBacktestRuntimeBuilder:
     """published backtest runtime 装配测试。"""
+
+    @pytest.mark.parametrize("gap", ["member", "warmup", "benchmark", "rule", "exit"])
+    def test_catalog_entry_rejects_incomplete_inputs_before_execution(
+        self, gap: str
+    ) -> None:
+        spec = _make_strategy_spec()
+        strategy_builder = MagicMock()
+        strategy_builder.build_published_runtime.return_value = (
+            _make_published_strategy_runtime(spec, version=1)
+        )
+        metadata = make_metadata()
+        provider = CatalogProvider()
+        if gap == "member":
+            provider.missing.add((2_000_002, "all"))
+        elif gap == "warmup":
+            provider.missing_before = "2026-01-10"
+        elif gap == "benchmark":
+            provider.missing.add((3_000_001, "all"))
+        else:
+            records = {iid: dict(record) for iid, record in LISTINGS.items()}
+            if gap == "rule":
+                records[2_000_001]["ticker"] = "999999"
+            else:
+                records[2_000_001]["delist_date"] = "2026-01-12"
+            metadata.instrument.get_instrument.side_effect = records.get
+        builder = BacktestRuntimeBuilder(
+            strategy_runtime_builder=strategy_builder,
+            metadata_service=metadata,
+            data_provider=provider,
+        )
+        with pytest.raises(ValueError, match=r"missing|incomplete|exit"):
+            builder.build_published_runtime(
+                config=BacktestCatalogRequestConfig(
+                    strategy_id=spec.strategy_id,
+                    start_date="2026-01-10",
+                    end_date="2026-01-13",
+                ),
+                version=1,
+            )
+
+    def test_catalog_stock_suspension_reaches_planner_and_fills(self) -> None:
+        from datetime import UTC, datetime
+
+        from ditto_execution.brokerage import ProcessInput
+        from ditto_execution.orders.ids import ClientOrderId
+        from ditto_execution.orders.model import Order
+        from ditto_kernel.order import OrderSide, OrderType
+        from ditto_strategy.alpha.models import TargetPortfolio
+
+        spec = _make_strategy_spec(asset_class="stock", template="stock_selection")
+        strategy_builder = MagicMock()
+        strategy_builder.build_published_runtime.return_value = (
+            _make_published_strategy_runtime(spec, version=1)
+        )
+        provider = CatalogProvider()
+        provider.suspended = True
+        runtime = BacktestRuntimeBuilder(
+            strategy_runtime_builder=strategy_builder,
+            metadata_service=make_metadata("stock"),
+            data_provider=provider,
+        ).build_published_runtime(
+            config=BacktestCatalogRequestConfig(
+                strategy_id=spec.strategy_id,
+                start_date="2026-01-12",
+                end_date="2026-01-13",
+            ),
+            version=1,
+        )
+        iid = InstrumentId(1_000_001)
+        bars = runtime.data_feed.get_slice("2026-01-12").bars
+        assert bars[iid].is_suspended
+        assert runtime.rule_provider is not None
+        plan = runtime.planner.plan(
+            TargetPortfolio(
+                trade_date="2026-01-12",
+                strategy_id=spec.strategy_id,
+                run_id="suspension",
+                positions={iid: 0.5},
+            ),
+            runtime.brokerage.get_account(),
+            "2026-01-12",
+            rules=runtime.rule_provider.get_rules("2026-01-12", [iid]),
+            market_snapshots=bars,
+        )
+        assert not plan.orders
+        assert plan.blocked_orders[0].reason == "suspended"
+        runtime.brokerage.place_order(
+            Order(
+                client_id=ClientOrderId("suspended"),
+                instrument_id=iid,
+                direction=OrderSide.BUY,
+                order_type=OrderType.MARKET,
+                quantity=100,
+            )
+        )
+        assert (
+            runtime.brokerage.process_pending(
+                ProcessInput(
+                    step_time=datetime(2026, 1, 12, 15, tzinfo=UTC),
+                    trade_date="2026-01-12",
+                    bars=bars,
+                )
+            )
+            == ()
+        )
+
+    def test_etf_half_tick_limit_matches_observed_exchange_price(self) -> None:
+        import polars as pl
+        from ditto_application.builders.ordinary_backtest import (
+            build_ordinary_rules,
+            ordinary_market_transform,
+        )
+        from ditto_data.provider import BarQuery
+
+        provider = CatalogProvider()
+        frame = provider.get_bars(
+            BarQuery(instruments=["510300.SH"], start="2026-10-22", end="2026-10-22")
+        ).with_columns(pl.lit(4.185).alias("pre_close"))
+        rules = build_ordinary_rules(
+            make_metadata(),
+            [2_000_001],
+            asset_class="etf",
+            commission_rate=0.0003,
+            start="2026-10-22",
+            end="2026-10-22",
+        )
+        result = ordinary_market_transform(rules, start_date="2026-10-22")(frame)
+        assert result["limit_up"].item() == 4.604
+        assert result["limit_down"].item() == 3.767
+
+    @pytest.mark.parametrize("asset_class", ["stock", "etf"])
+    def test_catalog_execution_uses_seed_costs_and_t1(self, asset_class: str) -> None:
+        from datetime import UTC, datetime
+        from decimal import Decimal
+
+        from ditto_execution.brokerage import ProcessInput
+        from ditto_execution.orders.ids import ClientOrderId
+        from ditto_execution.orders.model import Order
+        from ditto_execution.reality.price import round_to_tick
+        from ditto_kernel.order import OrderSide, OrderType
+        from ditto_strategy.alpha.specs import CostModelSpec, ExecutionSpec
+
+        spec = replace(
+            _make_strategy_spec(asset_class=asset_class),
+            execution=ExecutionSpec(
+                cost_model=CostModelSpec(commission_rate=0.001, slippage_bps=17)
+            ),
+        )
+        builder = MagicMock()
+        builder.build_published_runtime.return_value = _make_published_strategy_runtime(
+            spec, version=1
+        )
+        runtime = BacktestRuntimeBuilder(
+            strategy_runtime_builder=builder,
+            metadata_service=make_metadata(asset_class),
+            data_provider=CatalogProvider(),
+        ).build_published_runtime(
+            config=BacktestCatalogRequestConfig(
+                strategy_id=spec.strategy_id,
+                start_date="2026-01-09",
+                end_date="2026-01-12",
+            ),
+            version=1,
+        )
+        iid = InstrumentId(1_000_001 if asset_class == "stock" else 2_000_001)
+        stock = asset_class == "stock"
+
+        def step(day: int) -> ProcessInput:
+            date_string = f"2026-01-{day:02}"
+            return ProcessInput(
+                step_time=datetime(2026, 1, day, 15, tzinfo=UTC),
+                trade_date=date_string,
+                bars=runtime.data_feed.get_slice(date_string).bars,
+            )
+
+        buy = Order(
+            client_id=ClientOrderId("buy"),
+            instrument_id=iid,
+            direction=OrderSide.BUY,
+            order_type=OrderType.MARKET,
+            quantity=1000,
+        )
+        runtime.brokerage.place_order(buy)
+        fill = runtime.brokerage.process_pending(step(9))[0]
+        assert fill.fill_price == round_to_tick(
+            Decimal("10.017"), 0.01 if stock else 0.001
+        )
+        assert fill.fee == pytest.approx(
+            fill.fill_price * 1000 * (0.00101 if stock else 0.001)
+        )
+        assert runtime.brokerage.get_account().positions[iid].available_quantity == 0
+        sell = Order(
+            client_id=ClientOrderId("sell"),
+            instrument_id=iid,
+            direction=OrderSide.SELL,
+            order_type=OrderType.MARKET,
+            quantity=1000,
+        )
+        runtime.brokerage.place_order(sell)
+        assert runtime.brokerage.process_pending(step(9)) == ()
+        fill = runtime.brokerage.process_pending(step(12))[0]
+        assert fill.fee == pytest.approx(
+            fill.fill_price * 1000 * (0.00151 if stock else 0.001)
+        )
+
+    def test_ordinary_catalog_cannot_claim_strict_snapshot_qualification(self) -> None:
+        from ditto_application.exceptions import AppBuilderError
+
+        builder = BacktestRuntimeBuilder(
+            strategy_runtime_builder=MagicMock(),
+            metadata_service=make_metadata(),
+            data_provider=CatalogProvider(),
+        )
+        with pytest.raises(AppBuilderError, match="cannot certify"):
+            builder.build_published_runtime(
+                config=BacktestCatalogRequestConfig(
+                    strategy_id="ordinary",
+                    start_date="2026-10-08",
+                    end_date="2026-11-06",
+                    research_snapshot_id="strict-snapshot",
+                    research_snapshot_manifest_hash="a" * 64,
+                ),
+                version=1,
+            )
 
     def test_catalog_resolution_preserves_every_request_field(self) -> None:
         """Resolved config keeps the entire unresolved launch request intact."""
@@ -174,7 +398,7 @@ class TestBacktestRuntimeBuilder:
                 spec_hash=canonical_spec_hash,
             )
         )
-        metadata_service = MagicMock(spec=MetadataService)
+        metadata_service = make_metadata(spec.asset_class)
         metadata_service.resolve_instrument_id.return_value = 3_000_001
         metadata_service.get_universe.return_value = [2_000_001, 2_000_002]
         metadata_service.universe.get_universe_detail.return_value = {
@@ -189,9 +413,10 @@ class TestBacktestRuntimeBuilder:
         }
         metadata_service.instrument.get_source_ticker.side_effect = (
             "510300.SH",
-            "518880.SH",
+            "510500.SH",
+            "000300.SH",
         )
-        data_provider = MagicMock(spec=DataProvider)
+        data_provider = CatalogProvider()
         builder = BacktestRuntimeBuilder(
             strategy_runtime_builder=strategy_runtime_builder,
             metadata_service=metadata_service,
@@ -211,12 +436,17 @@ class TestBacktestRuntimeBuilder:
         assert runtime.config.strategy_version == "2"
         assert runtime.config.spec_hash == canonical_spec_hash
         assert runtime.config.benchmark_id == 3_000_001
-        assert runtime.config.sample_pool == {
+        assert runtime.config.sample_pool is not None
+        assert {
+            key: value
+            for key, value in runtime.config.sample_pool.items()
+            if key != "description"
+        } == {
             "universe_id": "cn_etf",
             "name": "Fixed research sample",
-            "description": "Selected 2026-01-09; not historical membership",
             "source_ref": "instrument_registry:sha256:" + "c" * 64,
         }
+        assert "Selected 2026-01-09" in str(runtime.config.sample_pool["description"])
         # data_feed 是 ProviderBackedDataFeed 实例
         assert isinstance(runtime.data_feed, ProviderBackedDataFeed)
         assert hasattr(runtime.data_feed, "trading_days")
@@ -228,13 +458,14 @@ class TestBacktestRuntimeBuilder:
         assert isinstance(runtime.pre_trade_check, CompositePreTradeCheck)
         assert isinstance(runtime.fee_model, AShareFeeModel)
         assert runtime.brokerage.get_account().cash.available == 2_000_000.0
-        assert runtime.data_feed._tickers == ("510300.SH", "518880.SH")
+        assert runtime.data_feed._tickers == ("510300.SH", "510500.SH")
         assert [
             item.args
             for item in metadata_service.instrument.get_source_ticker.call_args_list
         ] == [
             (2_000_001, "tushare", "2026-01-10"),
             (2_000_002, "tushare", "2026-01-10"),
+            (3_000_001, "tushare", "2026-01-10"),
         ]
         fill_model = runtime.brokerage._model.fill_model
         assert isinstance(fill_model, AShareFillModel)
@@ -252,14 +483,14 @@ class TestBacktestRuntimeBuilder:
         strategy_runtime_builder.build_published_runtime.return_value = (
             _make_published_strategy_runtime(spec, version=2, spec_hash="b" * 64)
         )
-        metadata_service = MagicMock(spec=MetadataService)
+        metadata_service = make_metadata(spec.asset_class)
         metadata_service.resolve_instrument_id.return_value = 3_000_001
         metadata_service.get_universe.return_value = [2_000_001, 2_000_002]
         metadata_service.instrument.get_instrument.return_value = {
             "ticker": "510300",
             "exchange": "XSHG",
         }
-        data_provider = MagicMock(spec=DataProvider)
+        data_provider = CatalogProvider()
         builder = BacktestRuntimeBuilder(
             strategy_runtime_builder=strategy_runtime_builder,
             metadata_service=metadata_service,
@@ -289,14 +520,14 @@ class TestBacktestRuntimeBuilder:
         strategy_runtime_builder.build_published_runtime.return_value = (
             _make_published_strategy_runtime(spec, version=2, spec_hash="b" * 64)
         )
-        metadata_service = MagicMock(spec=MetadataService)
+        metadata_service = make_metadata(spec.asset_class)
         metadata_service.resolve_instrument_id.return_value = 3_000_001
         metadata_service.get_universe.return_value = [2_000_001]
         metadata_service.instrument.get_instrument.return_value = {
             "ticker": "510300",
             "exchange": "XSHG",
         }
-        data_provider = MagicMock(spec=DataProvider)
+        data_provider = CatalogProvider()
         account_state = BacktestAccountStateSnapshot(
             cash_available=910_000.0,
             cash_settled=900_000.0,
@@ -391,8 +622,8 @@ class TestBacktestRuntimeBuilder:
         strategy_runtime_builder.build_published_runtime.return_value = (
             _make_published_strategy_runtime(spec, version=1, spec_hash="b" * 64)
         )
-        metadata_service = MagicMock(spec=MetadataService)
-        data_provider = MagicMock(spec=DataProvider)
+        metadata_service = make_metadata(spec.asset_class)
+        data_provider = CatalogProvider()
         builder = BacktestRuntimeBuilder(
             strategy_runtime_builder=strategy_runtime_builder,
             metadata_service=metadata_service,
@@ -421,14 +652,14 @@ class TestBacktestRuntimeBuilder:
         strategy_runtime_builder.build_published_runtime.return_value = (
             _make_published_strategy_runtime(spec, version=1, spec_hash="b" * 64)
         )
-        metadata_service = MagicMock(spec=MetadataService)
+        metadata_service = make_metadata(spec.asset_class)
         metadata_service.resolve_instrument_id.return_value = 3_000_001
         metadata_service.get_universe.return_value = [1_000_001]
         metadata_service.instrument.get_instrument.return_value = {
             "ticker": "600000",
             "exchange": "XSHG",
         }
-        data_provider = MagicMock(spec=DataProvider)
+        data_provider = CatalogProvider()
         builder = BacktestRuntimeBuilder(
             strategy_runtime_builder=strategy_runtime_builder,
             metadata_service=metadata_service,
