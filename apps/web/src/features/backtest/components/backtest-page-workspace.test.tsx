@@ -61,7 +61,7 @@ const REPORT = {
 		short_trades: 0,
 		win_trades: 14,
 		loss_trades: 10,
-		win_rate: 0.5833,
+		win_rate: 58.33,
 		profit_factor: 1.65,
 		avg_win: 14800,
 		avg_loss: -8900,

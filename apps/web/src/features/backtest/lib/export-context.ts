@@ -33,5 +33,6 @@ export function backtestExportContext(runId: string, strategy: string, report: B
 			: "样本池语义未记录",
 		...scope.limitations,
 		`来源快照 ${sources.join(" | ") || "未记录"}`,
+		"完整标的清单、逐标的来源与时间守卫见同一 run 的 JSON 报告",
 	].join(" · ");
 }

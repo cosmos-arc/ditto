@@ -40,6 +40,7 @@ export interface BacktestTradeStats {
 	readonly shortTrades: number;
 	readonly winTrades: number;
 	readonly lossTrades: number;
+	/** Percentage points, matching the engine: 58.33 means 58.33%. */
 	readonly winRate: number;
 	readonly profitFactor: number;
 	readonly avgWin: number;

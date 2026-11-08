@@ -57,6 +57,7 @@ describe("BacktestKpiStrip", () => {
 		render(<BacktestKpiStrip jobId="bt-001" />, { wrapper: createWrapper() });
 		await expect(screen.findByText("Sharpe")).resolves.toBeInTheDocument();
 		await expect(screen.findByText(/1.82/)).resolves.toBeInTheDocument();
+		await expect(screen.findByText("58.3%")).resolves.toBeInTheDocument();
 	});
 
 	it("显示年化收益", async () => {
