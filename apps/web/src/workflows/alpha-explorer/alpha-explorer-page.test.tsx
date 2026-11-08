@@ -1,7 +1,18 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { fireEvent, render as renderUI, screen, waitFor } from "@testing-library/react";
+import type { ReactElement, ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { AgentCampaignView } from "@/features/agent";
 import { AlphaExplorerPage, AlphaExplorerPageView } from "./alpha-explorer-page";
+
+function render(ui: ReactElement) {
+	const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+	return renderUI(ui, {
+		wrapper: ({ children }: { children: ReactNode }) => (
+			<QueryClientProvider client={client}>{children}</QueryClientProvider>
+		),
+	});
+}
 
 const mocks = vi.hoisted(() => ({
 	useAgentCampaign: vi.fn(),

@@ -12,17 +12,11 @@ export function IntelligencePage() {
 	const [endDate, setEndDate] = useState(() => new Date().toISOString().slice(0, 10));
 	const [allowExperimental, setAllowExperimental] = useState(false);
 	const [activeOverlay, setActiveOverlay] = useState<IntelligenceOverlayId | null>(null);
-	const [bookmarked, setBookmarked] = useState(false);
 	const query = useMacroEvidence({
 		allowExperimentalData: allowExperimental,
 		endDate,
 		startDate,
 	});
-
-	function openOverlay(id: IntelligenceOverlayId): void {
-		if (id === "bookmark-success") setBookmarked(true);
-		setActiveOverlay(id);
-	}
 
 	return (
 		<>
@@ -66,8 +60,7 @@ export function IntelligencePage() {
 							/>
 							允许 experimental 宏观数据
 						</label>
-						{bookmarked && <span className="text-xs text-(--color-system-healthy-fg)">视角已收藏</span>}
-						<PageActionBar ariaLabel="情报页面操作" actions={intelligenceActions} onOpen={openOverlay} />
+						<PageActionBar ariaLabel="情报页面操作" actions={intelligenceActions} onOpen={setActiveOverlay} />
 					</div>
 				}
 				main={
@@ -153,10 +146,6 @@ export function IntelligencePage() {
 				allowExperimental={allowExperimental}
 				endDate={endDate}
 				indicatorCount={query.data?.length ?? 0}
-				onClearBookmark={() => {
-					setBookmarked(false);
-					setActiveOverlay(null);
-				}}
 				onClose={() => setActiveOverlay(null)}
 				startDate={startDate}
 			/>

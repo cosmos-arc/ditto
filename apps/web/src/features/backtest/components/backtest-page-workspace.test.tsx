@@ -154,6 +154,14 @@ function registerHandlers() {
 describe("BacktestPage governed workspace", () => {
 	beforeEach(registerHandlers);
 
+	it("does not claim a run was added before detail comparison is connected", async () => {
+		const user = userEvent.setup();
+		render(<BacktestPage />, { wrapper });
+		await user.click(await screen.findByRole("button", { name: "加入对比" }));
+		expect(screen.getByRole("status", { name: "详情加入对比暂不可用" })).toBeInTheDocument();
+		expect(screen.queryByText("已加入对比")).not.toBeInTheDocument();
+	});
+
 	it("keeps exact run identity while switching among live report, trade, and audit resources", async () => {
 		const user = userEvent.setup();
 		render(<BacktestPage />, { wrapper });

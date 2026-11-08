@@ -133,6 +133,50 @@ test.describe
 			expect(browserErrors).toEqual([]);
 		});
 
+		test("keeps local context blocking separate from API outage and recovers through the UI", async ({ page, context }) => {
+			const pageErrors: string[] = [];
+			page.on("pageerror", (error) => pageErrors.push(error.message));
+			await page.goto("/markets/", { waitUntil: "networkidle" });
+			const status = page.getByRole("status", { name: "系统状态" });
+			await expect(status).toContainText("API 最近检查通过");
+			await expect(page.locator('[data-info-unit="market-context-error"]')).toContainText("市场上下文加载失败");
+			await expect(status).not.toContainText(/LIVE|12ms|⌘K/);
+			await page.getByRole("button", { name: "固定视角", exact: true }).click();
+			await expect(page.getByRole("status", { name: "固定视角暂不可用" })).toBeVisible();
+			await page.getByRole("button", { name: "关闭固定视角暂不可用" }).click();
+			await expect(page.getByRole("button", { name: "固定视角", exact: true })).toBeFocused();
+			for (const name of ["通知", "帮助", "打开全局命令"]) {
+				const button = page.getByRole("button", { name, exact: true });
+				await button.focus();
+				await expect(button).toBeFocused();
+				await expect(button).toHaveAttribute("aria-disabled", "true");
+				await expect(button).toHaveAttribute("title", /暂不可用/);
+			}
+			await context.setOffline(true);
+			const check = page.getByRole("button", { name: "检查 API 连接" });
+			await check.focus();
+			await page.keyboard.press("Enter");
+			await expect(status).toContainText("API 连接失败");
+			await expect(status).not.toContainText("最近检查通过");
+			await context.setOffline(false);
+			await expect(status).toContainText("API 最近检查通过");
+			await expect(page.locator('[data-info-unit="market-context-error"]')).toContainText("市场上下文加载失败");
+			expect(pageErrors).toEqual([]);
+		});
+
+		test("opens the real risk work surface from the home action", async ({ page }) => {
+			const browserErrors = captureBrowserErrors(page);
+			await page.goto("/", { waitUntil: "networkidle" });
+			await page.getByRole("link", { name: "查看风控", exact: true }).focus();
+			await page.keyboard.press("Enter");
+			await expect(page).toHaveURL(/\/portfolio\/risk\/?$/);
+			await expect(page.getByRole("status", { name: "系统状态" })).toContainText("API 最近检查通过");
+			await expect(page.locator("#root")).not.toContainText("Not Found");
+			await page.reload({ waitUntil: "networkidle" });
+			await expect(page).toHaveURL(/\/portfolio\/risk\/?$/);
+			expect(browserErrors).toEqual([]);
+		});
+
 		for (const route of [
 			"/",
 			"/markets/",

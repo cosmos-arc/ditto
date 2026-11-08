@@ -22,7 +22,11 @@ const copy = {
 		kind: "alert-dialog",
 	},
 	"ai-analysis": { title: "AI 解读", description: "Agent 只基于当前回测证据回答，不成为统计裁判。", kind: "drawer" },
-	"compare-toast": { title: "已加入对比", description: "当前 run 已加入本次浏览会话的对比集合。", kind: "toast" },
+	"compare-toast": {
+		title: "详情加入对比暂不可用",
+		description: "本次操作没有修改对比集合；请回到回测目录勾选运行，再打开回测对比。",
+		kind: "inline",
+	},
 	compare: { title: "回测对比", description: "当前仅有一个已验证 run；不会生成虚构基准运行。", kind: "modal" },
 } as const;
 

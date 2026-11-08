@@ -81,7 +81,7 @@ export function BannerSection() {
 										<a href="/portfolio/review">复核信号</a>
 									</Button>
 									<Button asChild variant="ghost" size="xs">
-										<a href="/risk">查看风控</a>
+										<a href="/portfolio/risk">查看风控</a>
 									</Button>
 								</div>
 							</div>

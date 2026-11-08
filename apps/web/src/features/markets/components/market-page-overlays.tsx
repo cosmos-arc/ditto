@@ -57,8 +57,8 @@ const marketsOverviewCopy: Record<MarketsOverviewOverlayId, OverlayCopy> = {
 		kind: "drawer",
 	},
 	"pin-viewpoint": {
-		title: "视角已固定",
-		description: "当前 metadata 覆盖已固定在本次浏览会话中；刷新页面后恢复默认。",
+		title: "固定视角暂不可用",
+		description: "当前页面尚不支持保存或冻结视角；本次操作没有保存任何内容。",
 		kind: "inline",
 	},
 };
@@ -120,11 +120,15 @@ const intelligenceCopy: Record<IntelligenceOverlayId, OverlayCopy> = {
 		kind: "sheet",
 	},
 	"bookmark-success": {
-		title: "视角已收藏",
-		description: "只在当前浏览会话保存日期范围，不写入服务端。",
-		kind: "toast",
+		title: "收藏视角暂不可用",
+		description: "当前页面尚不支持保存日期范围；本次操作没有创建收藏。",
+		kind: "inline",
 	},
-	"delete-confirm": { title: "清除收藏", description: "清除当前浏览会话中的宏观视角。", kind: "alert-dialog" },
+	"delete-confirm": {
+		title: "清除收藏暂不可用",
+		description: "当前页面尚不支持收藏，没有可清除的已保存视角。",
+		kind: "inline",
+	},
 	"send-to-copilot": {
 		title: "发送到 Copilot",
 		description: "创建 Agent 任务前必须具备不可变 evidence identity。",
@@ -137,7 +141,6 @@ export function IntelligenceOverlay({
 	allowExperimental,
 	endDate,
 	indicatorCount,
-	onClearBookmark,
 	onClose,
 	startDate,
 }: {
@@ -145,30 +148,13 @@ export function IntelligenceOverlay({
 	readonly allowExperimental: boolean;
 	readonly endDate: string;
 	readonly indicatorCount: number;
-	readonly onClearBookmark: () => void;
 	readonly onClose: () => void;
 	readonly startDate: string;
 }) {
 	if (!active) return null;
 	const copy = intelligenceCopy[active];
 	return (
-		<PageActionOverlay
-			{...copy}
-			open
-			onClose={onClose}
-			actions={
-				active === "delete-confirm" ? (
-					<>
-						<Button type="button" variant="outline" onClick={onClose}>
-							取消
-						</Button>
-						<Button type="button" variant="destructive" onClick={onClearBookmark}>
-							确认清除
-						</Button>
-					</>
-				) : undefined
-			}
-		>
+		<PageActionOverlay {...copy} open onClose={onClose}>
 			<OverlayFactList
 				facts={[
 					["开始日期", startDate],
@@ -192,7 +178,7 @@ export type CalendarOverlayId = "event-detail" | "reminder" | "intelligence";
 export const calendarActions = [
 	{ id: "event-detail", label: "状态详情" },
 	{ id: "reminder", label: "设置检查提醒" },
-	{ id: "intelligence", label: "前往 Intelligence" },
+	{ id: "intelligence", label: "返回市场总览" },
 ] as const;
 
 const calendarCopy: Record<CalendarOverlayId, OverlayCopy> = {
@@ -201,10 +187,10 @@ const calendarCopy: Record<CalendarOverlayId, OverlayCopy> = {
 		description: "当前接口只提供交易日历摄取状态与目录新鲜度。",
 		kind: "drawer",
 	},
-	reminder: { title: "日历检查提醒", description: "提醒只保存在当前浏览会话，不会创建系统通知。", kind: "sheet" },
+	reminder: { title: "日历检查提醒暂不可用", description: "当前页面尚不支持保存或触发提醒。", kind: "sheet" },
 	intelligence: {
-		title: "前往 Intelligence",
-		description: "宏观指标查询在 Intelligence 中以显式日期范围运行。",
+		title: "返回市场总览",
+		description: "返回当前导航中的市场工作面。",
 		kind: "modal",
 	},
 };
@@ -229,7 +215,7 @@ export function CalendarOverlay({
 						className="rounded-(--radius-sm) bg-(--brand-accent) px-3 py-2 text-xs font-medium text-(--brand-accent-fg)"
 						href="/markets"
 					>
-						打开 Intelligence
+						返回市场总览
 					</a>
 				) : undefined
 			}

@@ -1,9 +1,10 @@
-import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { verifyBackendCompatibility } from "@/api/bootstrap";
+import { CompatibilityError } from "@/api/compatibility";
+import { isMockRuntime } from "@/api/runtime-config";
 
 function formatTime(date: Date): string {
-	const hours = date.getHours().toString().padStart(2, "0");
-	const minutes = date.getMinutes().toString().padStart(2, "0");
-	return `${hours}:${minutes}`;
+	return date.toLocaleString("zh-CN", { hour12: false });
 }
 
 /**
@@ -21,14 +22,29 @@ export function StatusBar({
 	readonly spanRail?: boolean;
 	readonly reserveRightRail?: boolean;
 }) {
-	const [time, setTime] = useState(() => formatTime(new Date()));
-
-	useEffect(() => {
-		const interval = setInterval(() => {
-			setTime(formatTime(new Date()));
-		}, 10_000);
-		return () => clearInterval(interval);
-	}, []);
+	const mock = isMockRuntime();
+	const connection = useQuery({
+		queryKey: ["shell", "api-connection"],
+		queryFn: () => verifyBackendCompatibility({ release: import.meta.env.PROD }),
+		enabled: !mock,
+		retry: false,
+		networkMode: "always",
+		staleTime: 0,
+		refetchInterval: 30_000,
+		refetchOnWindowFocus: true,
+		refetchOnReconnect: true,
+	});
+	const label = mock
+		? "样例模式 · 未检查 API"
+		: connection.isFetching
+			? "正在检查 API"
+			: connection.isError
+				? connection.error instanceof CompatibilityError
+					? "API 兼容性检查未通过"
+					: "API 连接失败"
+				: connection.isSuccess
+					? `API 最近检查通过 · ${formatTime(new Date(connection.dataUpdatedAt))} 本地时间`
+					: "API 尚未检查";
 
 	return (
 		<div
@@ -48,21 +64,21 @@ export function StatusBar({
 				"text-xs text-(--color-foreground-tertiary)"
 			}
 		>
-			<span className="flex items-center gap-1.5">
-				<span
-					className={
-						"w-1.5 h-1.5 rounded-full " +
-						"bg-(--color-status-led-healthy) " +
-						"animate-[status-breathe_2s_ease-in-out_infinite]"
-					}
-				/>
-				<span>LIVE</span>
-			</span>
-			<span>已连接</span>
-			<span>12ms</span>
+			<span>{label}</span>
 			<span className="flex-1" />
-			<span>{time}</span>
-			<span>⌘K 搜索</span>
+			{!mock && (
+				<button
+					type="button"
+					aria-label="检查 API 连接"
+					aria-disabled={connection.isFetching}
+					onClick={() => {
+						if (!connection.isFetching) void connection.refetch();
+					}}
+					className="rounded px-1 text-(--color-foreground-secondary) focus-visible:outline-2 focus-visible:outline-(--color-accent)"
+				>
+					重新检查
+				</button>
+			)}
 		</div>
 	);
 }

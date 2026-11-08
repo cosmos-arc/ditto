@@ -1,11 +1,12 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { HttpResponse, http } from "msw";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fetchMarketContext } from "@/features/markets";
 import { useUIPreferences } from "@/features/shell/hooks/use-ui-preferences";
-import { mockDecisionBanner } from "@/mocks/fixtures/home";
+import { mockDecisionBanner, mockHomePulse } from "@/mocks/fixtures/home";
 import { homeHandlers } from "@/mocks/handlers/home";
 import { portfolioHandlers } from "@/mocks/handlers/portfolio";
 import { server } from "@/mocks/server";
@@ -57,6 +58,18 @@ beforeEach(() => {
 });
 
 describe("PulseSection", () => {
+	it.each([
+		["lunch", "午间休市"],
+		["call_auction", "集合竞价"],
+		["close", "已收盘"],
+		[null, "交易阶段不可用"],
+	])("distinguishes %s from a live trading session", async (session, label) => {
+		server.use(http.get("/api/home/pulse", () => HttpResponse.json({ ...mockHomePulse, session })));
+		render(<PulseSection />, { wrapper: createWrapper() });
+		await expect(screen.findByText(label)).resolves.toBeInTheDocument();
+		expect(document.querySelector('[class*="dot-live-pulse"]')).not.toBeInTheDocument();
+	});
+
 	it("渲染脉动薄条", async () => {
 		render(<PulseSection />, { wrapper: createWrapper() });
 
@@ -97,7 +110,7 @@ describe("BannerSection", () => {
 		render(<BannerSection />, { wrapper: createWrapper() });
 
 		await expect(screen.findByRole("link", { name: "复核信号" })).resolves.toHaveAttribute("href", "/portfolio/review");
-		expect(screen.getByRole("link", { name: "查看风控" })).toHaveAttribute("href", "/risk");
+		expect(screen.getByRole("link", { name: "查看风控" })).toHaveAttribute("href", "/portfolio/risk");
 	});
 
 	it("只显示聚合合同能提供的三个影响指标", async () => {
