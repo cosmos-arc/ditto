@@ -9,12 +9,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ObjectHubLayout, ShellHeaderExtension } from "@/features/shell";
 import { ContextActions } from "@/providers";
 import { useBacktestReport, useBacktestRun } from "../hooks";
+import { legacyBacktestUsage } from "../types";
 import { BacktestAuditView } from "./backtest-audit-view";
 import { BacktestKpiStrip } from "./backtest-kpi-strip";
 import { type BacktestOverlayId, BacktestOverlays, backtestActions } from "./backtest-overlays";
 import { BacktestOverview } from "./backtest-overview";
 import { BacktestReturnsView } from "./backtest-returns-view";
 import { BacktestTrades } from "./backtest-trades";
+import { BacktestUsage } from "./backtest-usage";
 
 type BacktestTab = "overview" | "report" | "trades" | "audit";
 
@@ -97,7 +99,11 @@ export function BacktestPage() {
 	const report = reportQuery.data;
 
 	function exportReport(): void {
-		const payload = JSON.stringify({ report: report ?? null, run }, null, 2);
+		const payload = JSON.stringify(
+			{ report: report ?? null, run, usageContext: report?.usageContext ?? legacyBacktestUsage },
+			null,
+			2,
+		);
 		const url = URL.createObjectURL(new Blob([payload], { type: "application/json" }));
 		const link = document.createElement("a");
 		link.href = url;
@@ -108,7 +114,7 @@ export function BacktestPage() {
 	}
 
 	return (
-		<section aria-label="回测结果工作台" className="h-full min-h-0">
+		<section aria-label="回测结果工作台" className="flex h-full min-h-0 flex-col">
 			<ShellHeaderExtension>
 				<div className="ml-auto flex min-w-0 items-center gap-2 overflow-hidden">
 					<PageActionBar ariaLabel="回测结果操作" actions={backtestActions} onOpen={setActiveOverlay} />
@@ -120,7 +126,8 @@ export function BacktestPage() {
 					/>
 				</div>
 			</ShellHeaderExtension>
-			<Tabs value={tab} onValueChange={(value) => setTab(value as BacktestTab)} className="h-full min-h-0 gap-0">
+			<BacktestUsage report={report} />
+			<Tabs value={tab} onValueChange={(value) => setTab(value as BacktestTab)} className="min-h-0 flex-1 gap-0">
 				<ObjectHubLayout
 					className="grid-rows-[92px_45px_minmax(0,1fr)_36px]"
 					meta={

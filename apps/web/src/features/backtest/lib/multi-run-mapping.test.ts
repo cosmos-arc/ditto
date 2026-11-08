@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { BacktestReport, BacktestRun } from "../types";
+import { legacyBacktestUsage } from "../types";
 import { MAX_COMPARE_RUNS, metricsRows, multiRunSeries, runColor } from "./multi-run-mapping";
 
 function run(runId: string): BacktestRun {
@@ -47,6 +48,9 @@ const report = (runId: string): BacktestReport => ({
 		costDrag: 1.1,
 	},
 	tradeStats: null,
+	usageContext: legacyBacktestUsage,
+	strategyPromotion: null,
+	pitPolicy: null,
 });
 
 describe("multi-run-mapping", () => {

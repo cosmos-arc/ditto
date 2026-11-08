@@ -9289,6 +9289,19 @@
             "title": "Period",
             "type": "object"
           },
+          "pit_policy": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "原报告时间守卫配置。不代表来源历史可得性认证",
+            "title": "Pit Policy"
+          },
           "rebalance_freq": {
             "default": "daily",
             "title": "Rebalance Freq",
@@ -9298,6 +9311,30 @@
             "default": "",
             "title": "Run Id",
             "type": "string"
+          },
+          "strategy_promotion": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "原报告中的策略版本、来源身份及成本证据。不代表批准",
+            "title": "Strategy Promotion"
+          },
+          "usage_context": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BacktestUsageContextResponse"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "用途与样本限制。旧报告缺失时按未认证展示"
           }
         },
         "title": "BacktestReportResponse",
@@ -9325,6 +9362,42 @@
           "strategy_id"
         ],
         "title": "BacktestRunTriggerResponse",
+        "type": "object"
+      },
+      "BacktestUsageContextResponse": {
+        "description": "Report scope is descriptive evidence, never a promotion authorization.",
+        "properties": {
+          "historical_availability": {
+            "default": "not_certified",
+            "title": "Historical Availability",
+            "type": "string"
+          },
+          "input_instrument_ids": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Input Instrument Ids",
+            "type": "array"
+          },
+          "intended_use": {
+            "default": "unclassified",
+            "title": "Intended Use",
+            "type": "string"
+          },
+          "limitations": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Limitations",
+            "type": "array"
+          },
+          "sample_pool": {
+            "default": "unknown",
+            "title": "Sample Pool",
+            "type": "string"
+          }
+        },
+        "title": "BacktestUsageContextResponse",
         "type": "object"
       },
       "Bar": {

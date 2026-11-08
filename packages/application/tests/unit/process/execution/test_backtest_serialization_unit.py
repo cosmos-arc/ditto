@@ -227,6 +227,7 @@ class TestPitPolicyReporting:
             research_snapshot_id=None,
             research_snapshot_manifest_hash=None,
             knowledge_lag_days=2,
+            input_refs=(InstrumentId(510300), InstrumentId(510500)),
         )
 
         json_bytes, _ = serialize_report(_make_report(), manifest=manifest)
@@ -238,6 +239,11 @@ class TestPitPolicyReporting:
             "unsafe_time_policy": "",
             "knowledge_lag_days": 2,
         }
+        assert data["usage_context"]["intended_use"] == "limited_historical_research"
+        assert data["usage_context"]["historical_availability"] == "not_certified"
+        assert data["usage_context"]["input_instrument_ids"] == [510300, 510500]
+        assert data["usage_context"]["sample_pool"] == "recorded_input_union"
+        assert data["usage_context"]["limitations"]
 
 
 class TestFinalAccountStateReporting:

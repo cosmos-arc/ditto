@@ -7,6 +7,32 @@ import { fetchBacktestAudit, fetchBacktestBenchmark, mapBacktestReport, mapBackt
 afterEach(() => vi.unstubAllGlobals());
 
 describe("backtest API view-model boundaries", () => {
+	it("keeps report scope and original provenance through mapping, with conservative legacy defaults", () => {
+		const provenance = { strategy_version: "7", data_catalog_identities: ["snapshot:retained"] };
+		const report = mapBacktestReport({
+			...mockBacktestReport,
+			strategy_promotion: provenance,
+			pit_policy: { policy: "knowledge_date_fail_closed" },
+			usage_context: {
+				intended_use: "limited_historical_research",
+				historical_availability: "not_certified",
+				sample_pool: "recorded_input_union",
+				input_instrument_ids: [510300],
+				limitations: ["仅固定样本池"],
+			},
+		});
+		expect(report.usageContext).toMatchObject({ inputInstrumentIds: [510300], limitations: ["仅固定样本池"] });
+		expect(report.strategyPromotion).toEqual(provenance);
+		expect(report.pitPolicy).toEqual({ policy: "knowledge_date_fail_closed" });
+		const legacy = mapBacktestReport(mockBacktestReport);
+		expect(legacy.usageContext).toMatchObject({
+			intendedUse: "unclassified",
+			historicalAvailability: "not_certified",
+			samplePool: "unknown",
+		});
+		expect(legacy.usageContext.limitations.length).toBeGreaterThan(0);
+	});
+
 	it("maps an incomplete report to explicit empty periods and unavailable statistics", () => {
 		const report = mapBacktestReport({
 			...mockBacktestReport,
