@@ -354,6 +354,8 @@ class TestFactorAwareBundleBuilder:
         bar.close = 1_000_000.0
         changed = builder(ctx)
         assert changed.market_data.equals(bundle.market_data)
+        assert changed.signal_values is not None
+        assert bundle.signal_values is not None
         assert changed.signal_values.equals(bundle.signal_values)
 
     def test_factor_history_normalizes_provider_native_dates(self) -> None:

@@ -108,8 +108,23 @@ def apply_qfq_adj(
         )
 
     # 获取每个 Instrument ID 的最新因子（基于 baseline）
+    baseline_columns = [
+        column
+        for column in (
+            "trade_date",
+            "knowledge_date",
+            "source",
+            "source_ticker",
+            "adj_factor",
+        )
+        if column in baseline_df.columns
+    ]
     latest_factors = baseline_df.group_by("instrument_id").agg(
-        pl.col("adj_factor").last().alias("latest_factor")
+        pl.col("adj_factor").last().alias("latest_factor"),
+        *[
+            pl.col(column).last().alias("adjustment_baseline_" + column)
+            for column in baseline_columns
+        ],
     )
     df = df.join(latest_factors, on="instrument_id", how="left")
 

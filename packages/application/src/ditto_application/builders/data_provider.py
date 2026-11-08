@@ -460,9 +460,7 @@ class ServiceBackedDataProvider:
                 bars, self._snapshots, dataset_id, self._lifecycle
             )
         if query.adj in {"qfq", "hfq"} and self._snapshots is not None:
-            bars = self._adjusted_history_evidence(
-                bars, query, instrument_ids, dataset_id
-            )
+            bars = self._adjusted_history_evidence(bars, query, dataset_id)
         if query.with_execution_state and dataset_id == "stock_daily":
             bars = self._stock_execution_state(bars, query, instrument_ids)
         if query.with_execution_state:
@@ -473,36 +471,38 @@ class ServiceBackedDataProvider:
         self,
         bars: pl.DataFrame,
         query: BarQuery,
-        instrument_ids: list[int],
         dataset_id: str,
     ) -> pl.DataFrame:
-        """
-        Bind the visible factor input window used by MarketService adjustment.
-
-        Preserve all visible candidates (including the qfq baseline), not a second
-        implementation of revision selection. Actual adjusted OHLC is hashed by
-        the consuming feed alongside this factor-window hash.
-        """
+        """Bind factors and qfq baseline captured by the actual adjustment read."""
         if bars.is_empty() or dataset_id == "index_daily":
             return bars
         if self._snapshots is None:
             raise AppBuilderError("missing adjustment snapshot reader")
-        factors = (
-            self._market.get_adj_factors(query.start, query.end)
-            if dataset_id == "stock_daily"
-            else self._market.get_fund_adj(query.start, query.end)
-        )
-        if (
-            factors is None
-            or factors.is_empty()
-            or "knowledge_date" not in factors.columns
-        ):
-            raise AppBuilderError("missing adjustment history/knowledge_date")
-        factors = factors.filter(pl.col("instrument_id").is_in(instrument_ids))
-        if query.asof is not None:
-            factors = factors.filter(
-                pl.col("knowledge_date").cast(pl.Date) <= date.fromisoformat(query.asof)
+        columns = [
+            "trade_date",
+            "knowledge_date",
+            "source",
+            "source_ticker",
+            "adj_factor",
+        ]
+        prefixes = ["adjustment_"]
+        if query.adj == "qfq":
+            prefixes.append("adjustment_baseline_")
+        frames: list[pl.DataFrame] = []
+        for prefix in prefixes:
+            if not {prefix + column for column in columns}.issubset(bars.columns):
+                raise AppBuilderError("missing actual adjustment input evidence")
+            frames.append(
+                bars.select(
+                    "instrument_id",
+                    *[pl.col(prefix + column).alias(column) for column in columns],
+                )
             )
+        factors = (
+            pl.concat(frames)
+            .unique()
+            .sort(["instrument_id", "trade_date", "knowledge_date"])
+        )
         factors = _attach_catalog_source_snapshots(
             factors,
             self._snapshots,

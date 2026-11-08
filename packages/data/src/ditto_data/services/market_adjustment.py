@@ -41,8 +41,28 @@ def _join_factors(
     has_knowledge = "knowledge_date" in adj_df.columns
     if has_knowledge:
         sort_keys.append("knowledge_date")
-    adj_df = adj_df.sort(sort_keys)
-    cols = ["instrument_id", "trade_date", "adj_factor"]
+    # Carry the actual selected factor beside adjusted prices. The application
+    # must not reread a mutable factor store to reconstruct this evidence.
+    evidence_columns = [
+        column
+        for column in (
+            "trade_date",
+            "knowledge_date",
+            "source",
+            "source_ticker",
+            "adj_factor",
+        )
+        if column in adj_df.columns
+    ]
+    adj_df = adj_df.sort(sort_keys).with_columns(
+        pl.col(column).alias("adjustment_" + column) for column in evidence_columns
+    )
+    cols = [
+        "instrument_id",
+        "trade_date",
+        "adj_factor",
+        *["adjustment_" + column for column in evidence_columns],
+    ]
     if has_knowledge:
         cols.append("knowledge_date")
     df = df.with_row_index("__ditto_input_order")

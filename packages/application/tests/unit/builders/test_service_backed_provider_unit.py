@@ -752,25 +752,60 @@ def test_execution_inputs_require_stock_state_and_adjustment_lineage(
 
 
 @pytest.mark.pit
-def test_adjusted_history_binds_visible_factors_and_requires_source() -> None:
-    market, metadata = _make_mock_service("market"), _make_mock_service("metadata")
-    metadata.instrument.resolve_instrument_ids_batch.return_value = {
-        "000001.SZ": 1_000_001
-    }
+@pytest.mark.parametrize("asset", ["stock", "etf"])
+def test_adjusted_history_uses_same_read_for_prices_and_evidence(
+    asset: str,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from ditto_data.services.deps import MarketReaders
+    from ditto_platform.foundation import Metrics
+
+    monkeypatch.setattr(Metrics, "data_records", MagicMock(), raising=False)
+    from ditto_data.services.market_service import MarketService
+
+    stock = asset == "stock"
+    iid, ticker = (1_000_001, "000001.SZ") if stock else (2_000_001, "510300.SH")
+    metadata = _make_mock_service("metadata")
+    metadata.instrument.resolve_instrument_ids_batch.return_value = {ticker: iid}
     common = {
-        "instrument_id": 1_000_001,
+        "instrument_id": iid,
         "trade_date": date(2026, 10, 8),
         "source": "tushare",
-        "source_ticker": "000001.SZ",
+        "source_ticker": ticker,
     }
-    market.find_bars.return_value = pl.DataFrame([{**common, "close": 10.0}])
+    bars = pl.DataFrame(
+        [
+            {
+                **common,
+                "knowledge_date": date(2026, 10, 8),
+                "open": 10.0,
+                "high": 10.0,
+                "low": 10.0,
+                "close": 10.0,
+            }
+        ]
+    )
     factors = pl.DataFrame(
         [
             {**common, "adj_factor": 1.0, "knowledge_date": date(2026, 10, 8)},
             {**common, "adj_factor": 99.0, "knowledge_date": date(2026, 10, 12)},
         ]
     )
-    market.get_adj_factors.return_value = factors
+    bars_reader, factor_reader = MagicMock(), MagicMock()
+    bars_reader.read.return_value = bars
+    factor_reader.read.side_effect = [factors, AssertionError("factor store reread")]
+    market = MarketService(
+        read_ports=MarketReaders(
+            stock_bars=bars_reader,
+            stock_status=MagicMock(),
+            stock_adj=factor_reader,
+            etf_bars=bars_reader,
+            etf_status=MagicMock(),
+            etf_adj=factor_reader,
+            instrument=MagicMock(),
+        )
+    )
+    factor_dataset = "adj_factor" if stock else "fund_adj"
     reader = _SnapshotReader(
         *[
             _snapshot(
@@ -780,7 +815,7 @@ def test_adjusted_history_binds_visible_factors_and_requires_source() -> None:
                 request_end="2026-10-08",
                 observed_at=datetime(2026, 11, 8, tzinfo=UTC),
             )
-            for dataset in ("stock_daily", "adj_factor")
+            for dataset in (f"{asset}_daily", factor_dataset)
         ]
     )
     provider = ServiceBackedDataProvider(
@@ -791,29 +826,34 @@ def test_adjusted_history_binds_visible_factors_and_requires_source() -> None:
         lifecycle_reader=_LifecycleReader(reader),
     )
     query = BarQuery(
-        instruments=["000001.SZ"],
+        instruments=[ticker],
         start="2026-10-08",
         end="2026-10-08",
         adj="qfq",
         asof="2026-10-09",
     )
     baseline = provider.get_bars(query)
-    assert baseline["adjustment_source_snapshot_id"].item() == "adj_factor"
-    market.get_adj_factors.return_value = factors.with_columns(
+    factor_reader.read.assert_called_once()
+    assert baseline["close"].item() == 10.0
+    assert baseline["adjustment_adj_factor"].item() == 1.0
+    assert baseline["adjustment_baseline_adj_factor"].item() == 1.0
+    assert baseline["adjustment_source_snapshot_id"].item() == factor_dataset
+    factor_reader.read.side_effect = None
+    factor_reader.read.return_value = factors.with_columns(
         pl.when(pl.col("knowledge_date") > date(2026, 10, 9))
         .then(1000.0)
         .otherwise(pl.col("adj_factor"))
         .alias("adj_factor")
     )
     assert provider.get_bars(query).equals(baseline)
-    market.get_adj_factors.return_value = factors.with_columns(
+    factor_reader.read.return_value = factors.with_columns(
         pl.lit(2.0).alias("adj_factor")
     )
     assert (
         provider.get_bars(query)["adjustment_input_hash"].item()
         != baseline["adjustment_input_hash"].item()
     )
-    market.get_adj_factors.return_value = factors.with_columns(
+    factor_reader.read.return_value = factors.with_columns(
         pl.lit("unknown").alias("source")
     )
     with pytest.raises(AppBuilderError, match="adjustment history lineage"):
