@@ -507,6 +507,17 @@ class BacktestRuntimeBuilder:
                 + "解析到 0 成员; 检查宇宙存在性与成员 PIT 区间"
             )
             raise AppBuilderError(msg)
+        pool = self._metadata_service.universe.get_universe_detail(
+            runtime.spec.universe
+        )
+        if isinstance(pool, dict):
+            resolved_config = replace(
+                resolved_config,
+                sample_pool={
+                    key: pool.get(key)
+                    for key in ("universe_id", "name", "description", "source_ref")
+                },
+            )
         resolution = resolve_instrument_display(
             universe_ids,
             self._metadata_service,

@@ -312,6 +312,10 @@ class UniverseService:
         """获取证券域定义。不存在时返回 None."""
         return self._universe_reader.get_universe(universe_id)
 
+    def get_constituent_history(self, universe_id: str) -> list[dict[str, Any]]:
+        """Read all intervals for administration; never use as a decision-time pool."""
+        return self._universe_reader.get_constituent_history(universe_id)
+
     @traced("metadata.universe.list_universes_df")
     def list_universes_df(self, universe_type: str | None = None) -> pl.DataFrame:
         """列出所有证券域。可选按类型过滤."""

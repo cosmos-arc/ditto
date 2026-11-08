@@ -244,6 +244,19 @@ class TestPitPolicyReporting:
         assert data["usage_context"]["input_instrument_ids"] == [510300, 510500]
         assert data["usage_context"]["sample_pool"] == "recorded_input_union"
         assert data["usage_context"]["limitations"]
+        pool = {
+            "universe_id": "csi_etf_broad",
+            "description": "选择于 2026-11-08; 存活者偏差; 严格历史未认证",
+            "source_ref": "instrument_registry:sha256:" + "c" * 64,
+        }
+        json_bytes, _ = serialize_report(
+            _make_report(), manifest=manifest, strategy_promotion={"sample_pool": pool}
+        )
+        frozen = orjson.loads(json_bytes)
+        assert frozen["strategy_promotion"]["sample_pool"] == pool
+        assert frozen["usage_context"]["sample_pool"] == "csi_etf_broad"
+        assert pool["description"] in frozen["usage_context"]["limitations"]
+        assert pool["source_ref"] in " ".join(frozen["usage_context"]["limitations"])
 
 
 class TestFinalAccountStateReporting:

@@ -1,0 +1,62 @@
+{
+  "universe_id": "csi_etf_broad",
+  "name": "境内股票宽基 ETF 固定研究样本",
+  "selected_at": "2026-11-08T05:01:37.058051+00:00",
+  "source_observed_at": "2026-11-08T05:01:37.058051+00:00",
+  "source": "instrument_registry (Tushare registration observed 2026-10-03; rechecked at source_observed_at)",
+  "selection_rule": "事前固定覆盖上证50、沪深300、中证500、深证100、创业板五类境内股票宽基指数，各取以下一只已登记ETF；名单由研究范围选择，不依据回测收益。不是中证官方成分，也不代表行业轮动全市场。",
+  "excluded_scope": "其他同指数产品、行业主题、债券、商品、跨境、杠杆、反向ETF及本名单外所有ETF；不因必需输入缺失删成员。",
+  "candidate_window": {
+    "start": "2026-10-08",
+    "end": "2026-11-06",
+    "status": "input_and_execution_validation_pending"
+  },
+  "limitations": "当前选择的固定样本，存在选择与存活者偏差；挂牌/退出日期仅为业务适用区间，不代表历史成员信息当时已知；严格历史未认证，不授予信号或Paper资格。",
+  "members": [
+    {
+      "instrument_id": 2001604,
+      "ticker": "159901",
+      "name": "易方达深证100ETF",
+      "exchange": "SZSE",
+      "asset_class": "etf",
+      "list_date": "2006-04-24",
+      "delist_date": null
+    },
+    {
+      "instrument_id": 2001567,
+      "ticker": "159915",
+      "name": "易方达创业板ETF",
+      "exchange": "SZSE",
+      "asset_class": "etf",
+      "list_date": "2011-12-09",
+      "delist_date": null
+    },
+    {
+      "instrument_id": 2001606,
+      "ticker": "510050",
+      "name": "华夏上证50ETF",
+      "exchange": "SSE",
+      "asset_class": "etf",
+      "list_date": "2005-02-23",
+      "delist_date": null
+    },
+    {
+      "instrument_id": 2001562,
+      "ticker": "510300",
+      "name": "华泰柏瑞沪深300ETF",
+      "exchange": "SSE",
+      "asset_class": "etf",
+      "list_date": "2012-05-28",
+      "delist_date": null
+    },
+    {
+      "instrument_id": 2001552,
+      "ticker": "510500",
+      "name": "南方中证500ETF",
+      "exchange": "SSE",
+      "asset_class": "etf",
+      "list_date": "2013-03-15",
+      "delist_date": null
+    }
+  ]
+}

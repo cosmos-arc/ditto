@@ -81,6 +81,7 @@ class ArtifactPersistConfig:
     recommendation_status: str = "research"
     fee_model_name: str = ""
     slippage_model_name: str = ""
+    sample_pool: dict[str, object] | None = None
 
     def __post_init__(self) -> None:
         """Validate immutable strategy and research identities before persistence."""
@@ -289,6 +290,7 @@ def _strategy_promotion_artifact(
         "backtest_metrics": _backtest_metrics(ctx.report),
         "factor_report_refs": list(config.factor_report_refs),
         "recommendation_status": config.recommendation_status,
+        "sample_pool": config.sample_pool,
     }
 
 

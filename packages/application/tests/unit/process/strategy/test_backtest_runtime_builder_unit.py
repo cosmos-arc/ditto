@@ -154,6 +154,7 @@ class TestBacktestRuntimeBuilder:
             "spec_hash",
             "parameter_hash",
             "effective_parameters",
+            "sample_pool",
         }
         for field_name in request_fields - {"strategy_version", "benchmark_id"}:
             assert getattr(resolved, field_name) == getattr(request, field_name)
@@ -176,6 +177,12 @@ class TestBacktestRuntimeBuilder:
         metadata_service = MagicMock(spec=MetadataService)
         metadata_service.resolve_instrument_id.return_value = 3_000_001
         metadata_service.get_universe.return_value = [2_000_001, 2_000_002]
+        metadata_service.universe.get_universe_detail.return_value = {
+            "universe_id": "cn_etf",
+            "name": "Fixed research sample",
+            "description": "Selected 2026-01-09; not historical membership",
+            "source_ref": "instrument_registry:sha256:" + "c" * 64,
+        }
         metadata_service.instrument.get_instrument.return_value = {
             "ticker": "510300",
             "exchange": "XSHG",
@@ -204,6 +211,12 @@ class TestBacktestRuntimeBuilder:
         assert runtime.config.strategy_version == "2"
         assert runtime.config.spec_hash == canonical_spec_hash
         assert runtime.config.benchmark_id == 3_000_001
+        assert runtime.config.sample_pool == {
+            "universe_id": "cn_etf",
+            "name": "Fixed research sample",
+            "description": "Selected 2026-01-09; not historical membership",
+            "source_ref": "instrument_registry:sha256:" + "c" * 64,
+        }
         # data_feed 是 ProviderBackedDataFeed 实例
         assert isinstance(runtime.data_feed, ProviderBackedDataFeed)
         assert hasattr(runtime.data_feed, "trading_days")

@@ -6,6 +6,8 @@ set -a
 [ ! -f "$repo/.env" ] || . "$repo/.env"
 set +a
 export PREFECT_API_URL="${PREFECT_API_URL:-http://127.0.0.1:4200/api}"
+export PREFECT_LOGGING_LEVEL="${PREFECT_LOGGING_LEVEL:-INFO}"
+export LOGURU_LEVEL="${LOGURU_LEVEL:-INFO}"
 export DITTO_CONFIG_ROOT="${DITTO_CONFIG_ROOT:-$repo}"
 export DITTO_STATE_ROOT="${DITTO_STATE_ROOT:-$repo/data}"
 export DITTO_CACHE_ROOT="${DITTO_CACHE_ROOT:-$repo/.cache}"
