@@ -366,6 +366,7 @@ def _bar_frame(close_prices: list[float]) -> pl.DataFrame:
             "adj_factor": [1.0] * len(dates),
             "source": ["tushare"] * len(dates),
             "source_snapshot_id": ["synthetic:replay-golden"] * len(dates),
+            "adjustment_source_snapshot_id": ["synthetic:adjustment"] * len(dates),
             "pre_close": [close_prices[0], *close_prices[:-1]],
             "open": close_prices,
             "high": [value * 1.01 for value in close_prices],

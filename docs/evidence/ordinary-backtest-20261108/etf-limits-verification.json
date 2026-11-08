@@ -1,0 +1,21 @@
+{
+  "checked_at": "2026-11-08T07:35:09.712300+00:00",
+  "code_sha": "de7dc51c9a6ba9ec266cf716721d37a5b66b203c",
+  "source_observed_at": "2026-11-08T06:50:36.462936+00:00",
+  "source_endpoint": "tushare.etf_limit",
+  "period": [
+    "2026-10-08",
+    "2026-11-06"
+  ],
+  "rows": 110,
+  "mismatches": [],
+  "price_basis": "actual etf_daily.pre_close; etf_limit.pre_close missing on 5 rows",
+  "raw_file_sha256": "ac67fb0cd687684e5ca771350556b46a9a67dd01b95666ede026c716a6e02ffe",
+  "raw_file": "private .cache/issue-723/etf-limit-observation.json",
+  "rounding_regression": {
+    "ticker": "510300.SH",
+    "date": "2026-10-22",
+    "pre_close": 4.185,
+    "down_limit": 3.767
+  }
+}

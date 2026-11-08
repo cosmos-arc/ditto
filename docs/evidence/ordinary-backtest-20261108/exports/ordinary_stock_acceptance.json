@@ -1,0 +1,233 @@
+{
+  "report": {
+    "runId": "232c7212",
+    "periodStart": "2026-10-08",
+    "periodEnd": "2026-11-06",
+    "initialCash": 1000000,
+    "finalNav": 1014870.8264852995,
+    "rebalanceFreq": "daily",
+    "usageContext": {
+      "intendedUse": "limited_historical_research",
+      "historicalAvailability": "not_certified",
+      "samplePool": "recorded_input_union",
+      "inputInstrumentIds": [
+        1000001,
+        1000416,
+        1000437,
+        1000782,
+        1002380
+      ],
+      "limitations": [
+        "严格历史可得性未认证。完成状态与 PIT fail_closed 策略均不构成来源认证。",
+        "标的清单仅为运行实际输入集合。普通回测使用起始日解析的固定池。不代表历史全市场或逐日成员。",
+        "结果不自动授予策略晋级、信号启用或 Paper 授权。严格研究须沿原资格入口另验。",
+        "起始日固定池: ordinary_stock_acceptance",
+        "选择时点 2026-11-08T06:19:52.937205+00:00; 来源观察 2026-11-08T06:19:52.937205+00:00, instrument_registry; user confirmed the five tickers before any return calculation。用户事前确认 000001、000333、600000、600036、600519 五只主板股票，仅用于普通历史回测链路验收，不依据收益选择。 纳入: 000001 平安银行 [1991-04-03, 开放); 000333 美的集团 [2013-09-18, 开放); 600000 浦发银行 [1999-11-10, 开放); 600036 招商银行 [2002-04-09, 开放); 600519 贵州茅台 [2001-08-27, 开放)。排除: 原 csi_a_share 完整保留；不覆盖其余股票、科创板、创业板、北交所、首次上市与退市结算；未知规则和必需输入缺失拒绝运行。。候选窗口 {'start': '2026-10-08', 'end': '2026-11-06', 'status': 'input_and_execution_validation_pending'} (仍需逐次输入及执行校验)。当前选择的固定样本，存在选择与存活者偏差；业务适用日期不代表历史信息当时已知；严格历史未认证，不授予信号或Paper资格。 普通规则核对时间 2026-11-08T06:22:22+00:00;仅覆盖已核实名单,未认证历史可得性。股票退出或无报价停牌拒绝估值;ETF 状态以实际正成交量核验,缺报价/零成交量拒绝。最低佣金 5 元为保守研究假设;不模拟分红、拆并份或退市清算。",
+        "样本池来源: instrument_registry:sha256:a9018035cc8547d956baf3f3ca729a1fce7399f5d18e145d8359ab1497965357"
+      ]
+    },
+    "strategyPromotion": {
+      "strategy_id": "ordinary_stock_acceptance",
+      "strategy_version": "1",
+      "code_version": "d12a5f917d49fde70df8a472c9e3ce3d4a10a0fb1c91f06b32239d47d1c64192",
+      "data_catalog_identities": [
+        {
+          "instrument_id": 1000001,
+          "source": "backtest:provider:execution-history-benchmark",
+          "source_snapshot_id": "snapshot-set:sha256:0692527f88c40eb2e3522b9f1d77adb49651392bac74e6422b6aaa4113535adb",
+          "data_hash": "sha256:24479490f22d80b0ac451848d4c451fffa8b6b5e5893a244d5a1dc4444d7a618",
+          "date_range": [
+            "2026-07-08",
+            "2026-11-06"
+          ]
+        },
+        {
+          "instrument_id": 1000416,
+          "source": "backtest:provider:execution-history-benchmark",
+          "source_snapshot_id": "snapshot-set:sha256:0692527f88c40eb2e3522b9f1d77adb49651392bac74e6422b6aaa4113535adb",
+          "data_hash": "sha256:f6f9f234d905141e8cbd527830f65e5abbd5da3d91721ce0736921e5d25f38ea",
+          "date_range": [
+            "2026-07-08",
+            "2026-11-06"
+          ]
+        },
+        {
+          "instrument_id": 1000437,
+          "source": "backtest:provider:execution-history-benchmark",
+          "source_snapshot_id": "snapshot-set:sha256:0692527f88c40eb2e3522b9f1d77adb49651392bac74e6422b6aaa4113535adb",
+          "data_hash": "sha256:81c462d3bd03f7f9929ba8200c69230af6f7b9d153c7e4b6b5e16f26a3c26c89",
+          "date_range": [
+            "2026-07-08",
+            "2026-11-06"
+          ]
+        },
+        {
+          "instrument_id": 1000782,
+          "source": "backtest:provider:execution-history-benchmark",
+          "source_snapshot_id": "snapshot-set:sha256:0692527f88c40eb2e3522b9f1d77adb49651392bac74e6422b6aaa4113535adb",
+          "data_hash": "sha256:d17567351a74d2f4f32179313d70bb36ff18b948d0b69bb14bc38f9c7a3ec3e8",
+          "date_range": [
+            "2026-07-08",
+            "2026-11-06"
+          ]
+        },
+        {
+          "instrument_id": 1002380,
+          "source": "backtest:provider:execution-history-benchmark",
+          "source_snapshot_id": "snapshot-set:sha256:0692527f88c40eb2e3522b9f1d77adb49651392bac74e6422b6aaa4113535adb",
+          "data_hash": "sha256:408db26452584566c89f3685bfdea61ea3fc61204d2195fabfbc9ed1e9dff928",
+          "date_range": [
+            "2026-07-08",
+            "2026-11-06"
+          ]
+        },
+        {
+          "instrument_id": 3000162,
+          "source": "backtest:provider:execution-history-benchmark",
+          "source_snapshot_id": "snapshot:tushare:index_daily:sha256:948415e9c5fb9d6fc99862ee47efd0bb38c1cfed4b70ed7164062e71d1cfb479",
+          "data_hash": "sha256:f855a4d47ea3962092ae4687da13c2baf4de874d7a0e6fddc230412526b6bd2c",
+          "date_range": [
+            "2026-10-08",
+            "2026-11-06"
+          ]
+        }
+      ],
+      "base_spec_hash": "d12a5f917d49fde70df8a472c9e3ce3d4a10a0fb1c91f06b32239d47d1c64192",
+      "spec_hash": "d12a5f917d49fde70df8a472c9e3ce3d4a10a0fb1c91f06b32239d47d1c64192",
+      "parameter_hash": "9f4c47d4dbe3427071f1037377f0e4ce0522c9021ea72c345d3c5f86f96ace58",
+      "effective_parameters": [
+        {
+          "path": "/pipeline/nodes/legacy_factor_set/config/params/allocation_method",
+          "value": "equal_weight"
+        },
+        {
+          "path": "/pipeline/nodes/legacy_factor_set/config/params/cash_target",
+          "value": 0
+        },
+        {
+          "path": "/pipeline/nodes/legacy_factor_set/config/params/max_weight",
+          "value": 0.1
+        },
+        {
+          "path": "/pipeline/nodes/legacy_factor_set/config/params/rebalance_freq",
+          "value": "monthly"
+        },
+        {
+          "path": "/pipeline/nodes/legacy_factor_set/config/params/top_k",
+          "value": 20
+        },
+        {
+          "path": "/pipeline/nodes/legacy_factor_set/config/params/trend_threshold",
+          "value": 0
+        }
+      ],
+      "research_snapshot_id": null,
+      "research_snapshot_manifest_hash": null,
+      "benchmark": 3000162,
+      "cost_model": {
+        "fee_model": "AShareFeeModel",
+        "slippage_model": "FixedBpsSlippage",
+        "total_fees": 661.7335147,
+        "cost_drag": 0.06617335147,
+        "net_return_after_cost": 1.487082648529947
+      },
+      "backtest_metrics": {
+        "period_start": "2026-10-08",
+        "period_end": "2026-11-06",
+        "initial_cash": 1000000,
+        "final_nav": 1014870.8264852995,
+        "total_trades": 36,
+        "sharpe_ratio": 3.138752523452111,
+        "max_drawdown": -1.0519923143673564,
+        "annualized_return": 18.42201281940472
+      },
+      "factor_report_refs": [],
+      "recommendation_status": "research",
+      "sample_pool": {
+        "universe_id": "ordinary_stock_acceptance",
+        "name": "普通回测主板固定验收样本",
+        "source_ref": "instrument_registry:sha256:a9018035cc8547d956baf3f3ca729a1fce7399f5d18e145d8359ab1497965357",
+        "description": "选择时点 2026-11-08T06:19:52.937205+00:00; 来源观察 2026-11-08T06:19:52.937205+00:00, instrument_registry; user confirmed the five tickers before any return calculation。用户事前确认 000001、000333、600000、600036、600519 五只主板股票，仅用于普通历史回测链路验收，不依据收益选择。 纳入: 000001 平安银行 [1991-04-03, 开放); 000333 美的集团 [2013-09-18, 开放); 600000 浦发银行 [1999-11-10, 开放); 600036 招商银行 [2002-04-09, 开放); 600519 贵州茅台 [2001-08-27, 开放)。排除: 原 csi_a_share 完整保留；不覆盖其余股票、科创板、创业板、北交所、首次上市与退市结算；未知规则和必需输入缺失拒绝运行。。候选窗口 {'start': '2026-10-08', 'end': '2026-11-06', 'status': 'input_and_execution_validation_pending'} (仍需逐次输入及执行校验)。当前选择的固定样本，存在选择与存活者偏差；业务适用日期不代表历史信息当时已知；严格历史未认证，不授予信号或Paper资格。 普通规则核对时间 2026-11-08T06:22:22+00:00;仅覆盖已核实名单,未认证历史可得性。股票退出或无报价停牌拒绝估值;ETF 状态以实际正成交量核验,缺报价/零成交量拒绝。最低佣金 5 元为保守研究假设;不模拟分红、拆并份或退市清算。"
+      }
+    },
+    "pitPolicy": {
+      "time_column": "knowledge_date",
+      "policy": "knowledge_date_fail_closed",
+      "unsafe_time_policy": "",
+      "knowledge_lag_days": 1
+    },
+    "alphaStats": {
+      "annualizedReturn": 18.42201281940472,
+      "annualizedVolatility": 5.869214817593691,
+      "sharpeRatio": 3.138752523452111,
+      "sortinoRatio": 5.940270600552422,
+      "maxDrawdown": -1.0519923143673564,
+      "maxDrawdownDurationDays": 7,
+      "calmarRatio": 17.511546964564364,
+      "informationRatio": 3.57560762552795,
+      "trackingError": 20.2843578355738,
+      "beta": -0.1385775787793366,
+      "alphaAnnualized": 13.279859877093095,
+      "totalTurnover": 0.4407168953412514,
+      "avgTurnoverPerRebalance": 0.022035844767062572,
+      "totalFees": 661.7335147,
+      "netReturnAfterCost": 1.487082648529947,
+      "costDrag": 0.06617335147
+    },
+    "tradeStats": {
+      "totalTrades": 36,
+      "longTrades": 36,
+      "shortTrades": 0,
+      "winTrades": 21,
+      "lossTrades": 15,
+      "winRate": 58.333333333333336,
+      "profitFactor": 3.7902937081482593,
+      "avgWin": 27.223333333333347,
+      "avgLoss": 10.055333333333303,
+      "avgWinLossRatio": 2.7073526486773285,
+      "maxConsecutiveWins": 5,
+      "maxConsecutiveLosses": 3,
+      "avgHoldingDays": 17.305555555555557,
+      "medianHoldingDays": 19,
+      "bestTrade": 106.49000000000022,
+      "worstTrade": -33,
+      "avgTradeReturnPct": 1.1980559445249064
+    }
+  },
+  "run": {
+    "runId": "232c7212",
+    "strategyId": "ordinary_stock_acceptance",
+    "strategyVersion": "1",
+    "mode": "backtest",
+    "status": "completed",
+    "startedAt": "2026-11-08T07:30:53Z",
+    "completedAt": "2026-11-08T07:33:35Z",
+    "errorMessage": "",
+    "parentRunId": "",
+    "benchmarkReturn": null,
+    "progressPct": 100,
+    "currentStep": "engine",
+    "completedDays": 22,
+    "totalDays": 22
+  },
+  "usageContext": {
+    "intendedUse": "limited_historical_research",
+    "historicalAvailability": "not_certified",
+    "samplePool": "recorded_input_union",
+    "inputInstrumentIds": [
+      1000001,
+      1000416,
+      1000437,
+      1000782,
+      1002380
+    ],
+    "limitations": [
+      "严格历史可得性未认证。完成状态与 PIT fail_closed 策略均不构成来源认证。",
+      "标的清单仅为运行实际输入集合。普通回测使用起始日解析的固定池。不代表历史全市场或逐日成员。",
+      "结果不自动授予策略晋级、信号启用或 Paper 授权。严格研究须沿原资格入口另验。",
+      "起始日固定池: ordinary_stock_acceptance",
+      "选择时点 2026-11-08T06:19:52.937205+00:00; 来源观察 2026-11-08T06:19:52.937205+00:00, instrument_registry; user confirmed the five tickers before any return calculation。用户事前确认 000001、000333、600000、600036、600519 五只主板股票，仅用于普通历史回测链路验收，不依据收益选择。 纳入: 000001 平安银行 [1991-04-03, 开放); 000333 美的集团 [2013-09-18, 开放); 600000 浦发银行 [1999-11-10, 开放); 600036 招商银行 [2002-04-09, 开放); 600519 贵州茅台 [2001-08-27, 开放)。排除: 原 csi_a_share 完整保留；不覆盖其余股票、科创板、创业板、北交所、首次上市与退市结算；未知规则和必需输入缺失拒绝运行。。候选窗口 {'start': '2026-10-08', 'end': '2026-11-06', 'status': 'input_and_execution_validation_pending'} (仍需逐次输入及执行校验)。当前选择的固定样本，存在选择与存活者偏差；业务适用日期不代表历史信息当时已知；严格历史未认证，不授予信号或Paper资格。 普通规则核对时间 2026-11-08T06:22:22+00:00;仅覆盖已核实名单,未认证历史可得性。股票退出或无报价停牌拒绝估值;ETF 状态以实际正成交量核验,缺报价/零成交量拒绝。最低佣金 5 元为保守研究假设;不模拟分红、拆并份或退市清算。",
+      "样本池来源: instrument_registry:sha256:a9018035cc8547d956baf3f3ca729a1fce7399f5d18e145d8359ab1497965357"
+    ]
+  }
+}

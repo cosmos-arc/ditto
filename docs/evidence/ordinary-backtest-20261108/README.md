@@ -1,5 +1,7 @@
 # 普通回测样本池初始化与验收阻断
 
+以下保留 #724 交付时的历史记录；后续 #723 的修复与隔离验收见 [acceptance.md](acceptance.md)。
+
 本批落实 [#707](https://github.com/cosmos-arc/ditto/issues/707) 的版本化 worker 日志默认值和
 [#722](https://github.com/cosmos-arc/ditto/issues/722) 的冻结 ETF 池、普通创建入口及结果限制传播。
 **这不是双资产回测验收或最终部署记录。** 实际执行链发现的资产规则、成员完整性、基准和来源问题
