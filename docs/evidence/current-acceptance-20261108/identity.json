@@ -1,0 +1,161 @@
+{
+  "observed_at": "2026-11-08T01:53:34.485794+00:00",
+  "implementation_sha": "d9a5fec92861fda3dccce6eeb9d0e600fc232a84",
+  "base_sha": "4c7e6a1300fdd62a5ffad6b3d93ec5fc714cbf96",
+  "code_trees_by_stage": {
+    "2fbe7e8e204f925d62a58d32b43b9846c9ada2b8": {
+      "apps/backend/src": "42df0532a3687976d68842d638caa034488277e4",
+      "packages": "e9123e97ebeeeeead1aa159b7f9abf3c06664550",
+      "apps/web/src": "8cecf9c9d9acf6ef0d7a9f22a88f36ccd1a2b203",
+      "contracts": "e15cd4788a143217f1c996219f158e188ba611db",
+      "config": "1c103d159f904b6a58a94d0b4ff79f6cfa124d98"
+    },
+    "00642c7784ab00a5f331a98ac69248aa2d263f09": {
+      "apps/backend/src": "42df0532a3687976d68842d638caa034488277e4",
+      "packages": "e9123e97ebeeeeead1aa159b7f9abf3c06664550",
+      "apps/web/src": "4bca2aee12413b2700e3c21e92a5d1de3968bdad",
+      "contracts": "e15cd4788a143217f1c996219f158e188ba611db",
+      "config": "1c103d159f904b6a58a94d0b4ff79f6cfa124d98"
+    },
+    "d9a5fec92861fda3dccce6eeb9d0e600fc232a84": {
+      "apps/backend/src": "42df0532a3687976d68842d638caa034488277e4",
+      "packages": "e9123e97ebeeeeead1aa159b7f9abf3c06664550",
+      "apps/web/src": "fbed9bd35997aaea1ea99989aa711cdd19802595",
+      "contracts": "e15cd4788a143217f1c996219f158e188ba611db",
+      "config": "1c103d159f904b6a58a94d0b4ff79f6cfa124d98"
+    }
+  },
+  "api": {
+    "status": "running",
+    "version": "0.1.0",
+    "product_version": "0.1.0",
+    "git_sha": "d9a5fec92861fda3dccce6eeb9d0e600fc232a84",
+    "api_contract_version": "v1",
+    "contract_digest": "bdae2cf5c582596cf37412a92d4ace386ab68bef0992b7a43a121371ae6df656",
+    "environment": "development",
+    "features": {
+      "data_collection": true,
+      "data_validation": true,
+      "backtest": true,
+      "trading": true
+    },
+    "observability": {
+      "level": "INFO",
+      "structured": true
+    }
+  },
+  "web": {
+    "contractDigest": "bdae2cf5c582596cf37412a92d4ace386ab68bef0992b7a43a121371ae6df656",
+    "apiContractVersion": "v1",
+    "compatibilityPolicy": {
+      "schema": "ditto.cohort-compatibility-policy",
+      "schemaVersion": 1,
+      "policySha256": "cf0ac5fe03ff29ba3c2653de74d942b31584cff34dab2389efcfe5703592afdc",
+      "current": {
+        "productVersion": "0.1.0",
+        "gitSha": "d9a5fec92861fda3dccce6eeb9d0e600fc232a84",
+        "apiContractVersion": "v1",
+        "contractDigest": "bdae2cf5c582596cf37412a92d4ace386ab68bef0992b7a43a121371ae6df656"
+      },
+      "previous": []
+    },
+    "gitSha": "d9a5fec92861fda3dccce6eeb9d0e600fc232a84",
+    "productVersion": "0.1.0",
+    "schema": "ditto.web-build-metadata",
+    "schemaVersion": 1
+  },
+  "shared_api_observed": {
+    "status": "running",
+    "version": "0.1.0",
+    "product_version": "0.1.0",
+    "git_sha": "4c7e6a1300fdd62a5ffad6b3d93ec5fc714cbf96",
+    "api_contract_version": "v1",
+    "contract_digest": "aa211ae9844cf7d4e601a572a9edbfae201b85361bec89b78f1e65e6030b0d86",
+    "environment": "development",
+    "features": {
+      "data_collection": true,
+      "data_validation": true,
+      "backtest": true,
+      "trading": true
+    },
+    "observability": {
+      "level": "INFO",
+      "structured": true
+    }
+  },
+  "environment": "development",
+  "config_root": "/Users/chevy/Desktop/code/ditto",
+  "source_and_backtest_metadata_root": "/Users/chevy/Desktop/code/ditto/data",
+  "acceptance_artifact_root": "/Users/chevy/Desktop/code/ditto.worktrees/issues-710-711-closeout/.cache/issues-710-711",
+  "api_port": 18170,
+  "web_port": 15170,
+  "paper_databases": {
+    "stock": "/Users/chevy/Desktop/code/ditto.worktrees/issues-709-710/.cache/acceptance/stock-reviewed/paper.sqlite",
+    "etf": "/Users/chevy/Desktop/code/ditto.worktrees/issues-709-710/.cache/acceptance/etf-reviewed/state/trading/trading.sqlite"
+  },
+  "configuration_files_sha256": {
+    "config/development/data_source.env": "273805a338f4fbff84f776f23375bdb3a7b8541b420e554e3225ec7b5f74c6ba",
+    "config/development/notification.env": "01cad780501d2cd4b00666fb0b2885f21c11f206dfdbded437050bd798b3eff9",
+    "config/development/data_store.env": "c0c6cdd162fcf985d8d9271b24827100177113af8c9a7b8f5c11493e9e747f1e",
+    "config/development/dq.env": "d8a77b566e7c52192507273662d5f4052885fc0c7b067cf0f5abfe6d27198ef6",
+    "config/development/system.env": "d1a23e74852a65a8f904319e1570669b3cbea8863809fe52ae629b6beec64a50",
+    "config/development/observability.env": "2295e30bd1f27e187cd8be7246b938e5f2e723d9f19b7e7054546d1a24d8d066"
+  },
+  "lockfiles_sha256": {
+    "uv.lock": "755d7b95e428e176a45298139768f8f2d47edd921052590b36ca6fb2d86cbf26",
+    "bun.lock": "a7eded59e03ac2c7dd55453a70323d531dd52a760657a7360b549407dd905d18"
+  },
+  "probe_files_sha256": [
+    {
+      "path": "paper-browser.mjs",
+      "content_digest": "2268b4007e4a919cf944ece230476124d07e32996e531c41566a37603e07e899"
+    },
+    {
+      "path": "package-evidence.py",
+      "content_digest": "a669ebc387128f990ca988571c539821ee53d1d406f74c06ab26ab421af5acc4"
+    },
+    {
+      "path": "ordinary_etf_live.py",
+      "content_digest": "d77e6df95557665dabc70dc5161293d59a600e27a63dec07ca263543a07450d5"
+    },
+    {
+      "path": "browser-inspect.mjs",
+      "content_digest": "7a5b1590db9642ff8a045cf3335a587c56da75d20ffa209c220de3f4070e0380"
+    },
+    {
+      "path": "ordinary_live.py",
+      "content_digest": "856265ee0f799befe6aeae0d2235369fa212d45abb06715705710812e647c494"
+    },
+    {
+      "path": "backtest-browser.mjs",
+      "content_digest": "c1807a964b27b2a0c80bdc47fc033f42344d57b2a0a3317b563038731b9ec441"
+    },
+    {
+      "path": "current-day-check.py",
+      "content_digest": "8b8c61cddcdeb275eedd6468ff066b14522816aa7f614520ea12c3b41367bf7f"
+    },
+    {
+      "path": "compare-browser.mjs",
+      "content_digest": "662f444ad8d621bc785b635ef83707e62feaf49bb58512e6262e6e7fd797ec6c"
+    },
+    {
+      "path": "eod_measure.py",
+      "content_digest": "5fea4c1019d858c04507af76d0deb8e389a3e844422fbedadbb53cc714994820"
+    },
+    {
+      "path": "start_api.py",
+      "content_digest": "083d1f80accb5f7f12f6dbe5a19ebf12d4ce0c2e0e9dfbfae2857249befda4d4"
+    }
+  ],
+  "disk_free_bytes": 37279440896,
+  "minimum_free_bytes": 21474836480,
+  "local_evidence_bytes": 30527100,
+  "backup_full_restore": "DEFERRED",
+  "current_live_day_qualified": false,
+  "five_day_evidence_count": 0,
+  "scope": "Historical Paper reconciliation records only in explicit acceptance databases; ordinary backtest metadata through existing development use case; no broker or production strategy activation; signing keys and private databases excluded.",
+  "public_evidence_field_aliases": {
+    "api_contract_sha256": "contract_digest",
+    "apiContractSha256": "contractDigest"
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "started_at": "2026-11-08T01:43:24.176973+00:00",
+  "code_sha": "00642c7784ab00a5f331a98ac69248aa2d263f09",
+  "strategy_id": "seed_etf_industry_rotation",
+  "strategy_version": 1,
+  "requested_interval": [
+    "2026-10-01",
+    "2026-11-06"
+  ],
+  "config_root": "/Users/chevy/Desktop/code/ditto",
+  "state_root": "/Users/chevy/Desktop/code/ditto/data",
+  "artifact_root": "/Users/chevy/Desktop/code/ditto.worktrees/issues-710-711-closeout/.cache/issues-710-711/artifacts",
+  "strict_historical_availability": "not_certified",
+  "status": "rejected",
+  "error_type": "AppBuilderError",
+  "reason": "universe csi_etf_broad 在 2026-10-01 解析到 0 成员; 检查宇宙存在性与成员 PIT 区间",
+  "finished_at": "2026-11-08T01:43:24.573552+00:00"
+}

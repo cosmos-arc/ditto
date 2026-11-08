@@ -119,6 +119,8 @@ describe("BacktestMultiRunCompare", () => {
 		expect(cockpitProps.at(-1)).toMatchObject({
 			identity: { dataSourceName: expect.stringContaining("run-a#1 · run-b#2") },
 		});
+		expect(cockpitProps.at(-1)?.identity?.dataSourceName).toContain("严格历史可得性未认证");
+		expect(cockpitProps.at(-1)?.identity?.dataSourceName).toContain("seed_etf_industry_rotation@4");
 		// 指标差异表：已发布 run 的真实指标 + 未发布 run 的诚实标注
 		const table = screen.getByTestId("multi-run-metrics");
 		expect(table.querySelector("[data-run-id='run-a']")).toHaveTextContent("18.20%");

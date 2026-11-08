@@ -61,7 +61,7 @@ const REPORT = {
 		short_trades: 0,
 		win_trades: 14,
 		loss_trades: 10,
-		win_rate: 0.5833,
+		win_rate: 58.33,
 		profit_factor: 1.65,
 		avg_win: 14800,
 		avg_loss: -8900,
@@ -163,6 +163,10 @@ describe("BacktestPage governed workspace", () => {
 		expect(await screen.findByText("1.82")).toBeInTheDocument();
 		expect(screen.getByText("18.2%")).toBeInTheDocument();
 		expect(await screen.findByText("净值 vs 基准")).toBeInTheDocument();
+		expect(screen.getByRole("complementary", { name: "回测使用边界" })).toHaveTextContent(
+			"受限历史研究 · 严格历史可得性未认证",
+		);
+		expect(screen.getByText(/旧报告未记录用途与样本池资格/)).toBeInTheDocument();
 		expect(screen.queryByText("当前持仓")).not.toBeInTheDocument();
 
 		await user.click(screen.getByRole("tab", { name: "收益报告" }));
@@ -179,6 +183,27 @@ describe("BacktestPage governed workspace", () => {
 
 		await user.click(screen.getByRole("button", { name: "导出报告" }));
 		expect(screen.getByRole("dialog", { name: "导出回测报告" })).toHaveTextContent("bt-live-001");
+		const createObjectURL = vi.fn<(blob: Blob) => string>(() => "blob:report");
+		vi.stubGlobal("URL", Object.assign(class extends URL {}, { createObjectURL, revokeObjectURL: vi.fn() }));
+		const click = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
+		try {
+			await user.click(screen.getByRole("button", { name: "下载 JSON" }));
+			const blob = createObjectURL.mock.calls[0]?.[0];
+			if (!blob) throw new Error("report download did not produce a Blob");
+			const contents = await new Promise<string>((resolve) => {
+				const reader = new FileReader();
+				reader.onload = () => resolve(String(reader.result));
+				reader.readAsText(blob);
+			});
+			const exported = JSON.parse(contents);
+			expect(exported.run.strategyVersion).toBe("4");
+			expect(exported.report.periodStart).toBe("2025-01-01");
+			expect(exported.usageContext.historicalAvailability).toBe("not_certified");
+			expect(exported.usageContext.limitations.join(" ")).toContain("不自动授予");
+		} finally {
+			click.mockRestore();
+			vi.unstubAllGlobals();
+		}
 	});
 
 	it("fails closed with a typed run retry and no synthetic performance", async () => {

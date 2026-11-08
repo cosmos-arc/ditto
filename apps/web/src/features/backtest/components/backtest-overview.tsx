@@ -3,7 +3,8 @@ import { ApiError } from "@/api/errors";
 import { ChartCockpit } from "@/components/chart";
 import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
 import { Button } from "@/components/ui/button";
-import { useBacktestBenchmark, useBacktestNav } from "../hooks";
+import { useBacktestBenchmark, useBacktestNav, useBacktestReport, useBacktestRun } from "../hooks";
+import { backtestExportContext } from "../lib/export-context";
 import {
 	alignedBenchmarkPoints,
 	benchmarkGapCount,
@@ -22,6 +23,8 @@ interface BacktestOverviewProps {
 export function BacktestOverview({ jobId }: BacktestOverviewProps) {
 	const navQuery = useBacktestNav(jobId);
 	const benchmarkQuery = useBacktestBenchmark(jobId);
+	const reportQuery = useBacktestReport(jobId);
+	const runQuery = useBacktestRun(jobId);
 
 	const navBars = useMemo(() => normalizedNavPoints(navQuery.data ?? []), [navQuery.data]);
 	const benchmarkAvailable =
@@ -166,7 +169,8 @@ export function BacktestOverview({ jobId }: BacktestOverviewProps) {
 								},
 							]}
 							identity={{
-								dataSourceName: "运行产物（nav.parquet + 基准行情归一）",
+								dataSourceName: `运行产物（nav.parquet + 基准行情归一）；${backtestExportContext(jobId, `${runQuery.data?.strategyId || "未记录"}@${runQuery.data?.strategyVersion || "未记录"}`, reportQuery.data)}`,
+								period: `${nav[0]?.tradeDate} → ${nav.at(-1)?.tradeDate}`,
 								knowledgeCutoff: null,
 								publicationCutoff: null,
 							}}

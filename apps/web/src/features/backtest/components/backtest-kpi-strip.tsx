@@ -61,7 +61,7 @@ export function BacktestKpiStrip({ jobId }: BacktestKpiStripProps) {
 			<Metric variant="strip" label="年化收益" value={`${alpha.annualizedReturn.toFixed(1)}%`} />
 			<Metric variant="strip" label="Sortino" value={alpha.sortinoRatio.toFixed(2)} />
 			<Metric variant="strip" label="总换手" value={`${alpha.totalTurnover.toFixed(1)}x`} />
-			<Metric variant="strip" label="胜率" value={trades ? `${(trades.winRate * 100).toFixed(1)}%` : "未评估"} />
+			<Metric variant="strip" label="胜率" value={trades ? `${trades.winRate.toFixed(1)}%` : "未评估"} />
 		</div>
 	);
 }

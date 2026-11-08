@@ -176,6 +176,24 @@ def _serialize_json_data(
         ),
     }
     if manifest is not None:
+        json_data["usage_context"] = {
+            "intended_use": (
+                "research_protocol"
+                if manifest.research_snapshot_id
+                else "limited_historical_research"
+            ),
+            "historical_availability": "not_certified",
+            "sample_pool": "recorded_input_union",
+            "input_instrument_ids": list(manifest.input_refs),
+            "limitations": [
+                "严格历史可得性未认证。"
+                + "完成状态与 PIT fail_closed 策略均不构成来源认证。",
+                "标的清单仅为运行实际输入集合。普通回测使用起始日解析的固定池。"
+                + "不代表历史全市场或逐日成员。",
+                "结果不自动授予策略晋级、信号启用或 Paper 授权。"
+                + "严格研究须沿原资格入口另验。",
+            ],
+        }
         json_data["pit_policy"] = {
             "time_column": manifest.pit_time_column,
             "policy": manifest.pit_policy,

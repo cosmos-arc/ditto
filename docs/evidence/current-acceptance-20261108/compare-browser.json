@@ -1,0 +1,40 @@
+{
+  "observed_at": "2026-11-08T01:52:25.487Z",
+  "runtime_identity": {
+    "status": "running",
+    "version": "0.1.0",
+    "product_version": "0.1.0",
+    "git_sha": "d9a5fec92861fda3dccce6eeb9d0e600fc232a84",
+    "api_contract_version": "v1",
+    "contract_digest": "bdae2cf5c582596cf37412a92d4ace386ab68bef0992b7a43a121371ae6df656",
+    "environment": "development",
+    "features": {
+      "data_collection": true,
+      "data_validation": true,
+      "backtest": true,
+      "trading": true
+    },
+    "observability": {
+      "level": "INFO",
+      "structured": true
+    }
+  },
+  "runs": [
+    "issue711-limited-20261108",
+    "8ee0de7e"
+  ],
+  "old_report_missing": true,
+  "downloads": [
+    {
+      "file": "compare-nav.csv",
+      "bytes": 58408,
+      "sha256": "3773de8f9d54c59707a5ae7f16e8b32b9346bfcbb7814c23da43fc4a3bcea236"
+    },
+    {
+      "file": "compare-nav.png",
+      "bytes": 224203,
+      "sha256": "b216569e425b079cf48b1cd4913104af47059c687a5b043443e1e3b8138eb79e"
+    }
+  ],
+  "page_text": "受限历史研究对比 · 严格历史可得性未认证；固定池不能推定为历史全市场，完成状态不授予信号或 Paper 资格。\n\nissue711-limited-20261108\n8ee0de7e\nissue711-limited-20261108\n0.8995\n8ee0de7e\n—\n2026-11-06 00:00\nPNG\nCSV\n\t\n\t\n\n\t\n\t\n\n键盘：←/→ 平移 · ↑/↓ 粗平移 · +/− 缩放 · Home/End 首尾 · Shift+拖拽框选缩放 · 双击复位；断口 = 数据缺失（不插值）\n\nRUN\tPERIOD\tINITIAL CASH\tFINAL NAV\t年化收益\t最大回撤\tSHARPE\nissue711-limited-20261108\t2026-10-08 → 2026-11-06\t999,610.57\t899,104.38\t-71.96%\t-13.33%\t-3.72\n8ee0de7e\t—\t—\t—\t未发布\t—\t—\n\n图内曲线按各 run 首日净值归一（跨初始资金可比）；表内为 run 原值，金额单位 CNY。未发布 report 的 run 指标不可得，如实标注。"
+}

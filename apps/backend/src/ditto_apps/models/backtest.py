@@ -291,6 +291,18 @@ class AlphaStatsResponse(BaseModel):
     model_config = ConfigDict(strict=True, extra="ignore")
 
 
+class BacktestUsageContextResponse(BaseModel):
+    """Report scope is descriptive evidence, never a promotion authorization."""
+
+    intended_use: str = "unclassified"
+    historical_availability: str = "not_certified"
+    sample_pool: str = "unknown"
+    input_instrument_ids: list[int] = Field(default_factory=list)
+    limitations: list[str] = Field(default_factory=list)
+
+    model_config = ConfigDict(strict=True, extra="ignore")
+
+
 class BacktestReportResponse(BaseModel):
     """回测报告响应 — 对应 backtest_report.json 的元数据结构."""
 
@@ -311,6 +323,15 @@ class BacktestReportResponse(BaseModel):
     rebalance_freq: str = Field(default="daily")
     nav_series: list[float] | None = Field(
         default=None, description="NAV series (float list)"
+    )
+    usage_context: BacktestUsageContextResponse | None = Field(
+        default=None, description="用途与样本限制。旧报告缺失时按未认证展示"
+    )
+    strategy_promotion: dict[str, Any] | None = Field(
+        default=None, description="原报告中的策略版本、来源身份及成本证据。不代表批准"
+    )
+    pit_policy: dict[str, Any] | None = Field(
+        default=None, description="原报告时间守卫配置。不代表来源历史可得性认证"
     )
 
     model_config = ConfigDict(strict=True, extra="allow")

@@ -1,6 +1,6 @@
 /**
  * DO NOT EDIT: generated from contracts/openapi/v1.json.
- * Schema SHA-256: aa211ae9844cf7d4e601a572a9edbfae201b85361bec89b78f1e65e6030b0d86
+ * Schema SHA-256: bdae2cf5c582596cf37412a92d4ace386ab68bef0992b7a43a121371ae6df656
  * Generator: openapi-typescript 7.13.0
  */
 
@@ -7377,6 +7377,13 @@ export interface components {
                 [key: string]: string;
             };
             /**
+             * Pit Policy
+             * @description 原报告时间守卫配置。不代表来源历史可得性认证
+             */
+            pit_policy?: {
+                [key: string]: unknown;
+            } | null;
+            /**
              * Rebalance Freq
              * @default daily
              */
@@ -7386,6 +7393,15 @@ export interface components {
              * @default
              */
             run_id: string;
+            /**
+             * Strategy Promotion
+             * @description 原报告中的策略版本、来源身份及成本证据。不代表批准
+             */
+            strategy_promotion?: {
+                [key: string]: unknown;
+            } | null;
+            /** @description 用途与样本限制。旧报告缺失时按未认证展示 */
+            usage_context?: components["schemas"]["BacktestUsageContextResponse"] | null;
         } & {
             [key: string]: unknown;
         };
@@ -7403,6 +7419,31 @@ export interface components {
             status: string;
             /** Strategy Id */
             strategy_id: string;
+        };
+        /**
+         * BacktestUsageContextResponse
+         * @description Report scope is descriptive evidence, never a promotion authorization.
+         */
+        BacktestUsageContextResponse: {
+            /**
+             * Historical Availability
+             * @default not_certified
+             */
+            historical_availability: string;
+            /** Input Instrument Ids */
+            input_instrument_ids?: number[];
+            /**
+             * Intended Use
+             * @default unclassified
+             */
+            intended_use: string;
+            /** Limitations */
+            limitations?: string[];
+            /**
+             * Sample Pool
+             * @default unknown
+             */
+            sample_pool: string;
         };
         /**
          * Bar

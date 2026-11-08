@@ -612,6 +612,33 @@ class TestGetReport:
         alpha_stats = response.data.alpha_stats
         assert alpha_stats is not None
         assert alpha_stats.annualized_return == 12.5
+        assert response.data.usage_context is None
+
+    async def test_report_preserves_scope_and_source_identity(
+        self,
+        mock_query_facade: MagicMock,
+    ) -> None:
+        """HTTP projection preserves the report evidence without certifying it."""
+        report = {
+            "run_id": "run-001",
+            "usage_context": {
+                "intended_use": "limited_historical_research",
+                "historical_availability": "not_certified",
+                "sample_pool": "recorded_input_union",
+                "input_instrument_ids": [510300],
+                "limitations": ["固定样本池不代表历史全市场"],
+            },
+            "strategy_promotion": {
+                "strategy_version": "7",
+                "data_catalog_identities": ["snapshot:retained"],
+            },
+            "pit_policy": {"policy": "knowledge_date_fail_closed"},
+        }
+        mock_query_facade.get_report.return_value = report
+        response = await _call_report("run-001", mock_query_facade)
+        payload = response.data.model_dump()
+        for field in ("usage_context", "strategy_promotion", "pit_policy"):
+            assert payload[field] == report[field]
 
     async def test_report_not_found(
         self,

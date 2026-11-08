@@ -8,6 +8,7 @@ import type {
 	BacktestRun,
 	BacktestTradeRecord,
 } from "../types";
+import { legacyBacktestUsage } from "../types";
 
 export type RunResponse = components["schemas"]["RunResponse"];
 export type BacktestReportResponse = components["schemas"]["BacktestReportResponse"];
@@ -57,6 +58,17 @@ export function mapBacktestReport(dto: BacktestReportResponse): BacktestReport {
 		initialCash: dto.initial_cash,
 		finalNav: dto.final_nav,
 		rebalanceFreq: dto.rebalance_freq,
+		usageContext: dto.usage_context
+			? {
+					intendedUse: dto.usage_context.intended_use,
+					historicalAvailability: dto.usage_context.historical_availability,
+					samplePool: dto.usage_context.sample_pool,
+					inputInstrumentIds: dto.usage_context.input_instrument_ids ?? [],
+					limitations: dto.usage_context.limitations ?? legacyBacktestUsage.limitations,
+				}
+			: legacyBacktestUsage,
+		strategyPromotion: dto.strategy_promotion ?? null,
+		pitPolicy: dto.pit_policy ?? null,
 		alphaStats: alpha
 			? {
 					annualizedReturn: alpha.annualized_return,

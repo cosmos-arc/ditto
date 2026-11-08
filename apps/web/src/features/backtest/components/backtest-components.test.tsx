@@ -57,6 +57,7 @@ describe("BacktestKpiStrip", () => {
 		render(<BacktestKpiStrip jobId="bt-001" />, { wrapper: createWrapper() });
 		await expect(screen.findByText("Sharpe")).resolves.toBeInTheDocument();
 		await expect(screen.findByText(/1.82/)).resolves.toBeInTheDocument();
+		await expect(screen.findByText("58.3%")).resolves.toBeInTheDocument();
 	});
 
 	it("显示年化收益", async () => {
@@ -127,6 +128,7 @@ describe("BacktestOverview", () => {
 		expect(last.series.map((spec) => spec.label)).toEqual(["策略净值", "基准"]);
 		expect(last.subPanes.map((pane) => pane.id)).toEqual(["excess", "drawdown"]);
 		expect(last.bands.length).toBeGreaterThan(0);
+		expect(last).toMatchObject({ identity: { dataSourceName: expect.stringContaining("严格历史可得性未认证") } });
 	});
 
 	it("显示策略与基准的独立末值", async () => {

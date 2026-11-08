@@ -1,0 +1,344 @@
+{
+  "measured_at": "2026-11-08T01:34:04.797041+00:00",
+  "code_sha": "2fbe7e8e204f925d62a58d32b43b9846c9ada2b8",
+  "account_id": "paper-pap09-accelerated-acceptance",
+  "database": "/Users/chevy/Desktop/code/ditto.worktrees/issues-709-710/.cache/acceptance/accelerated-proxy-corrected/private/state/q4-account-acceptance.sqlite3",
+  "historical_window": [
+    "2026-10-12",
+    "2026-10-13",
+    "2026-10-14",
+    "2026-10-15",
+    "2026-10-16",
+    "2026-10-19",
+    "2026-10-20",
+    "2026-10-21",
+    "2026-10-22",
+    "2026-10-23",
+    "2026-10-26",
+    "2026-10-27",
+    "2026-10-28",
+    "2026-10-29",
+    "2026-10-30",
+    "2026-11-02",
+    "2026-11-03",
+    "2026-11-04",
+    "2026-11-05",
+    "2026-11-06"
+  ],
+  "signature_chain_valid": true,
+  "current_live_day_qualified": false,
+  "timing_boundary": "PaperSessionCommandHandler.reconcile: session and persisted execution/ledger reads, bidirectional reconciliation, checksum and SQLite EOD insert; excludes process bootstrap, source fetch, HTTP/browser and R4 risk scan",
+  "sampling": "20 different historical sessions, one fresh EOD each, no warmup, no repeated execution or ledger writes",
+  "samples": [
+    {
+      "trade_date": "2026-10-12",
+      "elapsed_ms": 2.75825,
+      "eod": {
+        "reconciliation_id": "paper-reconciliation:0e37e05927f7990ab8745487533e1b23",
+        "session_id": "pap09-accelerated-session-2026-10-12",
+        "trade_date": "2026-10-12",
+        "order_count": 1,
+        "fill_count": 1,
+        "ledger_fill_count": 1,
+        "balanced": true,
+        "checksum": "paper-eod:sha256:1bd889e921675a58f0107291ea2a2b1f58f2ec69da4bb06b994a7cd44839b2fe",
+        "reconciled_at": "2026-11-08T01:34:04.829319+00:00"
+      }
+    },
+    {
+      "trade_date": "2026-10-13",
+      "elapsed_ms": 1.207959,
+      "eod": {
+        "reconciliation_id": "paper-reconciliation:7e3f0acffbee5eeff910cb2586e70f1a",
+        "session_id": "pap09-accelerated-session-2026-10-13",
+        "trade_date": "2026-10-13",
+        "order_count": 1,
+        "fill_count": 1,
+        "ledger_fill_count": 1,
+        "balanced": true,
+        "checksum": "paper-eod:sha256:1c744e1e501ad30c83bd9f8e40af229bbd409ea151f57eb26708c7659140fd86",
+        "reconciled_at": "2026-11-08T01:34:04.832118+00:00"
+      }
+    },
+    {
+      "trade_date": "2026-10-14",
+      "elapsed_ms": 1.040083,
+      "eod": {
+        "reconciliation_id": "paper-reconciliation:909994adb9aacd45c189d4f0b6ea8f46",
+        "session_id": "pap09-accelerated-session-2026-10-14",
+        "trade_date": "2026-10-14",
+        "order_count": 1,
+        "fill_count": 1,
+        "ledger_fill_count": 1,
+        "balanced": true,
+        "checksum": "paper-eod:sha256:e209cacf124bfb0329c54da5eb73564f413977fa76ac2572e290b77e398cfdf8",
+        "reconciled_at": "2026-11-08T01:34:04.833357+00:00"
+      }
+    },
+    {
+      "trade_date": "2026-10-15",
+      "elapsed_ms": 0.971417,
+      "eod": {
+        "reconciliation_id": "paper-reconciliation:b9990974d1197b4fe01c5f059e4c153e",
+        "session_id": "pap09-accelerated-session-2026-10-15",
+        "trade_date": "2026-10-15",
+        "order_count": 1,
+        "fill_count": 1,
+        "ledger_fill_count": 1,
+        "balanced": true,
+        "checksum": "paper-eod:sha256:838819a23616f7188084fc0d9005d1ed39580149ef33fbd9fe05ed9d3ec77d57",
+        "reconciled_at": "2026-11-08T01:34:04.834422+00:00"
+      }
+    },
+    {
+      "trade_date": "2026-10-16",
+      "elapsed_ms": 0.934459,
+      "eod": {
+        "reconciliation_id": "paper-reconciliation:42cd12b99e742db404500afb9adeb700",
+        "session_id": "pap09-accelerated-session-2026-10-16",
+        "trade_date": "2026-10-16",
+        "order_count": 1,
+        "fill_count": 1,
+        "ledger_fill_count": 1,
+        "balanced": true,
+        "checksum": "paper-eod:sha256:dfeb8c186e8316f1e1fe0de85003dae32226c1484f9954fa54fab30e39bdd134",
+        "reconciled_at": "2026-11-08T01:34:04.835412+00:00"
+      }
+    },
+    {
+      "trade_date": "2026-10-19",
+      "elapsed_ms": 0.914458,
+      "eod": {
+        "reconciliation_id": "paper-reconciliation:a3183d7e127c9f9a84a4c5a275da785d",
+        "session_id": "pap09-accelerated-session-2026-10-19",
+        "trade_date": "2026-10-19",
+        "order_count": 1,
+        "fill_count": 1,
+        "ledger_fill_count": 1,
+        "balanced": true,
+        "checksum": "paper-eod:sha256:fa00a940dd915823fe39ee99bcc27053c90f5236c66f6caf63fe4e14f89f9caa",
+        "reconciled_at": "2026-11-08T01:34:04.836363+00:00"
+      }
+    },
+    {
+      "trade_date": "2026-10-20",
+      "elapsed_ms": 0.903834,
+      "eod": {
+        "reconciliation_id": "paper-reconciliation:4769bf1a72364a0159a812655d8ef76f",
+        "session_id": "pap09-accelerated-session-2026-10-20",
+        "trade_date": "2026-10-20",
+        "order_count": 1,
+        "fill_count": 1,
+        "ledger_fill_count": 1,
+        "balanced": true,
+        "checksum": "paper-eod:sha256:d34476a8c0309995a19fb2d53826b58918bbb31d0a803d5ed989910f8ca7c98f",
+        "reconciled_at": "2026-11-08T01:34:04.837294+00:00"
+      }
+    },
+    {
+      "trade_date": "2026-10-21",
+      "elapsed_ms": 1.819958,
+      "eod": {
+        "reconciliation_id": "paper-reconciliation:5edf23c8a48faef11c9dd7cd7ab5e3e0",
+        "session_id": "pap09-accelerated-session-2026-10-21",
+        "trade_date": "2026-10-21",
+        "order_count": 1,
+        "fill_count": 1,
+        "ledger_fill_count": 1,
+        "balanced": true,
+        "checksum": "paper-eod:sha256:8778dc4284d38b841e8195652e05403bda3b8da0d0a373a4406da0fbaec75166",
+        "reconciled_at": "2026-11-08T01:34:04.838215+00:00"
+      }
+    },
+    {
+      "trade_date": "2026-10-22",
+      "elapsed_ms": 0.991083,
+      "eod": {
+        "reconciliation_id": "paper-reconciliation:b95a1a52f8a1d501ab6f3def376bb0fa",
+        "session_id": "pap09-accelerated-session-2026-10-22",
+        "trade_date": "2026-10-22",
+        "order_count": 1,
+        "fill_count": 1,
+        "ledger_fill_count": 1,
+        "balanced": true,
+        "checksum": "paper-eod:sha256:68e9b78221af232e56b13c83e938781767b09db64b84631748f547e738119ed1",
+        "reconciled_at": "2026-11-08T01:34:04.840075+00:00"
+      }
+    },
+    {
+      "trade_date": "2026-10-23",
+      "elapsed_ms": 0.954958,
+      "eod": {
+        "reconciliation_id": "paper-reconciliation:8c079f137bccc5d19d3a5367ed412ef1",
+        "session_id": "pap09-accelerated-session-2026-10-23",
+        "trade_date": "2026-10-23",
+        "order_count": 1,
+        "fill_count": 1,
+        "ledger_fill_count": 1,
+        "balanced": true,
+        "checksum": "paper-eod:sha256:9b4179151b1049c83a899abaa04ec8a55a9f7fd079a5aecfae823e52e260ddbc",
+        "reconciled_at": "2026-11-08T01:34:04.841088+00:00"
+      }
+    },
+    {
+      "trade_date": "2026-10-26",
+      "elapsed_ms": 0.922334,
+      "eod": {
+        "reconciliation_id": "paper-reconciliation:e66ea64b5dae7836b61591fa1bec992f",
+        "session_id": "pap09-accelerated-session-2026-10-26",
+        "trade_date": "2026-10-26",
+        "order_count": 1,
+        "fill_count": 1,
+        "ledger_fill_count": 1,
+        "balanced": true,
+        "checksum": "paper-eod:sha256:f69d0a7ac440b5c66099f918aea819ed060540e4415adf2aae07b8046f73190d",
+        "reconciled_at": "2026-11-08T01:34:04.842062+00:00"
+      }
+    },
+    {
+      "trade_date": "2026-10-27",
+      "elapsed_ms": 0.920875,
+      "eod": {
+        "reconciliation_id": "paper-reconciliation:fe43619febec66f68ebd472df439736e",
+        "session_id": "pap09-accelerated-session-2026-10-27",
+        "trade_date": "2026-10-27",
+        "order_count": 1,
+        "fill_count": 1,
+        "ledger_fill_count": 1,
+        "balanced": true,
+        "checksum": "paper-eod:sha256:4ff8e66561e7273ef374f60fd9ab51377bd45224003b4a303575f7d1223752f6",
+        "reconciled_at": "2026-11-08T01:34:04.843001+00:00"
+      }
+    },
+    {
+      "trade_date": "2026-10-28",
+      "elapsed_ms": 0.908167,
+      "eod": {
+        "reconciliation_id": "paper-reconciliation:369974db14731ed37f4fa2de5a379370",
+        "session_id": "pap09-accelerated-session-2026-10-28",
+        "trade_date": "2026-10-28",
+        "order_count": 1,
+        "fill_count": 1,
+        "ledger_fill_count": 1,
+        "balanced": true,
+        "checksum": "paper-eod:sha256:a436c0d50b15bcdf1799434ecf93fda8cdb03eb7643672f9b7aff88fa27329a2",
+        "reconciled_at": "2026-11-08T01:34:04.843938+00:00"
+      }
+    },
+    {
+      "trade_date": "2026-10-29",
+      "elapsed_ms": 0.895,
+      "eod": {
+        "reconciliation_id": "paper-reconciliation:8fc3db829b3d8a89ff023b68bdba7cf7",
+        "session_id": "pap09-accelerated-session-2026-10-29",
+        "trade_date": "2026-10-29",
+        "order_count": 1,
+        "fill_count": 1,
+        "ledger_fill_count": 1,
+        "balanced": true,
+        "checksum": "paper-eod:sha256:bda90f1cdeeb40007d6ddaad12863529cfafbb3d8258152bd52bd34e83b6a80d",
+        "reconciled_at": "2026-11-08T01:34:04.844862+00:00"
+      }
+    },
+    {
+      "trade_date": "2026-10-30",
+      "elapsed_ms": 0.941708,
+      "eod": {
+        "reconciliation_id": "paper-reconciliation:57b18c3479476abad69f820461aea183",
+        "session_id": "pap09-accelerated-session-2026-10-30",
+        "trade_date": "2026-10-30",
+        "order_count": 1,
+        "fill_count": 1,
+        "ledger_fill_count": 1,
+        "balanced": true,
+        "checksum": "paper-eod:sha256:c83bf53384c63334366315cc67908ffee7a2f65ce4997390f9799dda8f7dc850",
+        "reconciled_at": "2026-11-08T01:34:04.845772+00:00"
+      }
+    },
+    {
+      "trade_date": "2026-11-02",
+      "elapsed_ms": 1.14575,
+      "eod": {
+        "reconciliation_id": "paper-reconciliation:a48daec2eab1dfc0a7f7fd60756ca044",
+        "session_id": "pap09-accelerated-session-2026-11-02",
+        "trade_date": "2026-11-02",
+        "order_count": 1,
+        "fill_count": 1,
+        "ledger_fill_count": 1,
+        "balanced": true,
+        "checksum": "paper-eod:sha256:efc9edc52db5dd164dd7c6d9d76e4ec6956b07c13002cca3b382edab9b62bd9c",
+        "reconciled_at": "2026-11-08T01:34:04.846734+00:00"
+      }
+    },
+    {
+      "trade_date": "2026-11-03",
+      "elapsed_ms": 0.996542,
+      "eod": {
+        "reconciliation_id": "paper-reconciliation:a15852e9537dd4037b537865f13ee147",
+        "session_id": "pap09-accelerated-session-2026-11-03",
+        "trade_date": "2026-11-03",
+        "order_count": 1,
+        "fill_count": 1,
+        "ledger_fill_count": 1,
+        "balanced": true,
+        "checksum": "paper-eod:sha256:2770532704bef3670253425e6288965bd05e9afb1a64206810473e4fc9742b2b",
+        "reconciled_at": "2026-11-08T01:34:04.847906+00:00"
+      }
+    },
+    {
+      "trade_date": "2026-11-04",
+      "elapsed_ms": 1.047333,
+      "eod": {
+        "reconciliation_id": "paper-reconciliation:6c79e738d7b6f4df7287da1daa62d70b",
+        "session_id": "pap09-accelerated-session-2026-11-04",
+        "trade_date": "2026-11-04",
+        "order_count": 1,
+        "fill_count": 1,
+        "ledger_fill_count": 1,
+        "balanced": true,
+        "checksum": "paper-eod:sha256:20b9d32bf2df4f9562df473606f1a44653cf42cf4c9396aac5470e40b28944de",
+        "reconciled_at": "2026-11-08T01:34:04.848929+00:00"
+      }
+    },
+    {
+      "trade_date": "2026-11-05",
+      "elapsed_ms": 0.929333,
+      "eod": {
+        "reconciliation_id": "paper-reconciliation:8e1d29ef4055271ca9907dba4b0d50a6",
+        "session_id": "pap09-accelerated-session-2026-11-05",
+        "trade_date": "2026-11-05",
+        "order_count": 1,
+        "fill_count": 1,
+        "ledger_fill_count": 1,
+        "balanced": true,
+        "checksum": "paper-eod:sha256:4139d6ae87a07abf0664befb032b538e80e2e4772bddc55bcd68783aab4ea578",
+        "reconciled_at": "2026-11-08T01:34:04.850000+00:00"
+      }
+    },
+    {
+      "trade_date": "2026-11-06",
+      "elapsed_ms": 0.891834,
+      "eod": {
+        "reconciliation_id": "paper-reconciliation:e14db46cccc9aa1cd1b1cc4f66b0845c",
+        "session_id": "pap09-accelerated-session-2026-11-06",
+        "trade_date": "2026-11-06",
+        "order_count": 1,
+        "fill_count": 1,
+        "ledger_fill_count": 1,
+        "balanced": true,
+        "checksum": "paper-eod:sha256:0170200824a2c14a9ae76f68b169a12870ebcc95a283bfef32815aac2731a9ca",
+        "reconciled_at": "2026-11-08T01:34:04.850945+00:00"
+      }
+    }
+  ],
+  "ledger_count": 21,
+  "ledger_hash_before": "5dfc06591c1961d97b76f0d04e38f8edadddaaa9095c6f775a5d29f54ee7fd00",
+  "ledger_hash_after": "5dfc06591c1961d97b76f0d04e38f8edadddaaa9095c6f775a5d29f54ee7fd00",
+  "sample_count": 20,
+  "p50_ms": 0.941708,
+  "p95_ms": 1.819958,
+  "max_ms": 2.75825,
+  "percentile_method": "nearest rank",
+  "threshold_ms": 60000,
+  "paper_reconciliation_slo_passed": true
+}
