@@ -204,6 +204,17 @@ def _serialize_json_data(
         json_data["resume_provenance"] = dict(resume_provenance)
     if strategy_promotion is not None:
         json_data["strategy_promotion"] = dict(strategy_promotion)
+        pool = strategy_promotion.get("sample_pool")
+        if manifest is not None and isinstance(pool, Mapping):
+            pool = cast(Mapping[str, object], pool)
+            usage = cast(dict[str, object], json_data["usage_context"])
+            limitations = cast(list[str], usage["limitations"])
+            if pool.get("universe_id"):
+                limitations.append(f"起始日固定池: {pool['universe_id']}")
+            if pool.get("description"):
+                limitations.append(str(pool["description"]))
+            if pool.get("source_ref"):
+                limitations.append(f"样本池来源: {pool['source_ref']}")
     if risk_report is not None:
         json_data["risk_report"] = dict(risk_report)
     if report.final_account_state is not None:

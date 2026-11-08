@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { BacktestListPage } from "@/features/backtest";
+import { BacktestCatalogPage } from "@/workflows/backtest-catalog";
 
 export const Route = createFileRoute("/research/backtests/")({
-	component: BacktestListPage,
+	component: BacktestCatalogPage,
 	staticData: { title: "回测列表" },
 });

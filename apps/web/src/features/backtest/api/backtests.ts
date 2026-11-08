@@ -1,5 +1,25 @@
 import type { components } from "@/api/generated/schema";
 import { apiClient } from "@/api/transport";
+
+export async function createBacktestRun(input: {
+	readonly strategyId: string;
+	readonly startDate: string;
+	readonly endDate: string;
+	readonly initialCash: number;
+	readonly allowExperimental: boolean;
+}) {
+	const result = await apiClient.post("/api/v1/backtests/runs", {
+		body: {
+			strategy_id: input.strategyId,
+			start_date: input.startDate,
+			end_date: input.endDate,
+			initial_cash: input.initialCash,
+			allow_experimental_data: input.allowExperimental,
+		},
+	});
+	return { runId: result.run_id, status: result.status };
+}
+
 import type {
 	BacktestAuditRecord,
 	BacktestBenchmark,

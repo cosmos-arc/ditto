@@ -1,8 +1,9 @@
-import { useMemo, useState } from "react";
+import { type ReactNode, useMemo, useState } from "react";
 import { ApiError } from "@/api/errors";
 import { PageActionBar } from "@/components/domain/page-action-overlay";
 import { StatusBadge } from "@/components/status/status-badge/status-badge";
 import { Button } from "@/components/ui/button";
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { CatalogLayout, Panel, PanelBody, PanelHeader } from "@/features/shell";
 import { useBacktestRuns } from "../hooks";
 import { MAX_COMPARE_RUNS } from "../lib/multi-run-mapping";
@@ -77,13 +78,14 @@ function RunSummary({ run }: { readonly run: BacktestRun }) {
 	);
 }
 
-export function BacktestListPage() {
+export function BacktestListPage({ createForm }: { readonly createForm?: ReactNode }) {
 	const query = useBacktestRuns();
 	const runs = query.data ?? [];
 	const [search, setSearch] = useState("");
 	const [status, setStatus] = useState("all");
 	const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
 	const [compareOpen, setCompareOpen] = useState(false);
+	const [createOpen, setCreateOpen] = useState(false);
 	const [compareIds, setCompareIds] = useState<string[]>([]);
 	const statuses = useMemo(() => [...new Set(runs.map((run) => run.status))].sort(), [runs]);
 	const filtered = useMemo(() => {
@@ -156,6 +158,11 @@ export function BacktestListPage() {
 							))}
 						</select>
 						<PageActionBar ariaLabel="回测目录操作" actions={compareAction} onOpen={() => setCompareOpen(true)} />
+						{createForm ? (
+							<Button size="sm" onClick={() => setCreateOpen(true)}>
+								新建回测
+							</Button>
+						) : null}
 					</div>
 				}
 				main={
@@ -268,6 +275,15 @@ export function BacktestListPage() {
 				}
 			/>
 			<BacktestCompareOverlay open={compareOpen} onClose={() => setCompareOpen(false)} runs={compareRuns} />
+			<Sheet open={createOpen} onOpenChange={setCreateOpen}>
+				<SheetContent className="overflow-y-auto p-5">
+					<SheetHeader>
+						<SheetTitle>新建回测</SheetTitle>
+						<SheetDescription>确认策略、日期和研究数据范围后提交。</SheetDescription>
+					</SheetHeader>
+					{createOpen ? createForm : null}
+				</SheetContent>
+			</Sheet>
 		</section>
 	);
 }

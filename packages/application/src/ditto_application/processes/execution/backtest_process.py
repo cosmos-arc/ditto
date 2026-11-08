@@ -245,6 +245,7 @@ class BacktestServiceConfig(BacktestCatalogRequestConfig):
     base_spec_hash: str = field(kw_only=True)
     parameter_hash: str = field(kw_only=True)
     effective_parameters: tuple[EffectiveParameter, ...] = field(kw_only=True)
+    sample_pool: dict[str, object] | None = None
     research_snapshot_id: str | None = field(kw_only=True)  # pyright: ignore[reportGeneralTypeIssues]
     research_snapshot_manifest_hash: str | None = field(kw_only=True)  # pyright: ignore[reportGeneralTypeIssues]
 
@@ -789,5 +790,6 @@ class BacktestService:
                 recommendation_status=self._config.recommendation_status,
                 fee_model_name=model_name(self._options.fee_model),
                 slippage_model_name=model_name(self._options.slippage_model),
+                sample_pool=self._config.sample_pool,
             ),
         )

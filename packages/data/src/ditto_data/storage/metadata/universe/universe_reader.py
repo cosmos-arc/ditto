@@ -91,6 +91,14 @@ class UniverseReader:
 
         return pl.DataFrame(rows)
 
+    def get_constituent_history(self, universe_id: str) -> list[dict[str, Any]]:
+        """Read all intervals for conflict checks, never PIT selection."""
+        return self._client.fetchall(
+            """SELECT * FROM universe_constituent WHERE universe_id = ?
+            ORDER BY instrument_id, effective_from""",
+            [universe_id],
+        )
+
     def get_constituents(
         self,
         universe_id: str,
