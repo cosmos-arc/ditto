@@ -1,10 +1,14 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { BacktestListPage, createBacktestRun } from "@/features/backtest";
 import { useStrategies } from "@/features/strategy";
-import { createBacktestRun } from "../api/backtests";
 
-export function BacktestCreateForm() {
+export function BacktestCatalogPage() {
+	return <BacktestListPage createForm={<BacktestCreateForm />} />;
+}
+
+function BacktestCreateForm() {
 	const strategies = useStrategies();
 	const queryClient = useQueryClient();
 	const [strategyId, setStrategyId] = useState("");
@@ -102,7 +106,7 @@ export function BacktestCreateForm() {
 					允许实验数据
 				</label>
 				<p className="text-xs text-(--color-foreground-secondary)">
-					仅对本次研究生效；必需输入、时间、费用与交易约束继续校验。默认使用已有资产费率和滑点模型。
+					允许实验数据仅对本次研究生效，不代表历史认证或真实交易资格。
 				</p>
 				<Button type="submit" disabled={!strategyId || strategies.isError || strategies.isLoading}>
 					{submit.isPending ? "正在提交…" : "提交回测"}

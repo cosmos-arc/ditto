@@ -18,7 +18,8 @@ def test_frozen_etf_initialization_is_repeatable_and_preserves_history(
     monkeypatch.setenv("PYTHON_KEYRING_BACKEND", "keyring.backends.null.Keyring")
     from ditto_apps.registry.container import make_app_container
 
-    with make_app_container() as container:
+    container = make_app_container()
+    try:
         client = container.get(SQLiteClient)
         client.executemany(
             "INSERT INTO instrument "
@@ -38,6 +39,8 @@ def test_frozen_etf_initialization_is_repeatable_and_preserves_history(
             ],
         )
         client.commit()
+    finally:
+        container.close()
     plan = {
         "universe_id": "csi_etf_broad",
         "name": "Frozen sample",

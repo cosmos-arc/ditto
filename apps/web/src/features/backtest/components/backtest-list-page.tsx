@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { type ReactNode, useMemo, useState } from "react";
 import { ApiError } from "@/api/errors";
 import { PageActionBar } from "@/components/domain/page-action-overlay";
 import { StatusBadge } from "@/components/status/status-badge/status-badge";
@@ -8,7 +8,6 @@ import { CatalogLayout, Panel, PanelBody, PanelHeader } from "@/features/shell";
 import { useBacktestRuns } from "../hooks";
 import { MAX_COMPARE_RUNS } from "../lib/multi-run-mapping";
 import type { BacktestRun } from "../types";
-import { BacktestCreateForm } from "./backtest-create-form";
 import { BacktestCompareOverlay } from "./backtest-overlays";
 
 const compareAction = [{ id: "compare", label: "回测对比" }] as const;
@@ -79,7 +78,7 @@ function RunSummary({ run }: { readonly run: BacktestRun }) {
 	);
 }
 
-export function BacktestListPage() {
+export function BacktestListPage({ createForm }: { readonly createForm?: ReactNode }) {
 	const query = useBacktestRuns();
 	const runs = query.data ?? [];
 	const [search, setSearch] = useState("");
@@ -159,9 +158,11 @@ export function BacktestListPage() {
 							))}
 						</select>
 						<PageActionBar ariaLabel="回测目录操作" actions={compareAction} onOpen={() => setCompareOpen(true)} />
-						<Button size="sm" onClick={() => setCreateOpen(true)}>
-							新建回测
-						</Button>
+						{createForm ? (
+							<Button size="sm" onClick={() => setCreateOpen(true)}>
+								新建回测
+							</Button>
+						) : null}
 					</div>
 				}
 				main={
@@ -280,7 +281,7 @@ export function BacktestListPage() {
 						<SheetTitle>新建回测</SheetTitle>
 						<SheetDescription>确认策略、日期和研究数据范围后提交。</SheetDescription>
 					</SheetHeader>
-					{createOpen ? <BacktestCreateForm /> : null}
+					{createOpen ? createForm : null}
 				</SheetContent>
 			</Sheet>
 		</section>

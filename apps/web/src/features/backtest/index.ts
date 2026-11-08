@@ -1,3 +1,4 @@
+export { createBacktestRun } from "./api/backtests";
 export { BacktestKpiStrip } from "./components/backtest-kpi-strip";
 export { BacktestListPage } from "./components/backtest-list-page";
 export { BacktestOverview } from "./components/backtest-overview";

@@ -94,8 +94,8 @@ class UniverseReader:
     def get_constituent_history(self, universe_id: str) -> list[dict[str, Any]]:
         """Read all intervals for conflict checks, never PIT selection."""
         return self._client.fetchall(
-            "SELECT * FROM universe_constituent WHERE universe_id = ? "
-            "ORDER BY instrument_id, effective_from",
+            """SELECT * FROM universe_constituent WHERE universe_id = ?
+            ORDER BY instrument_id, effective_from""",
             [universe_id],
         )
 

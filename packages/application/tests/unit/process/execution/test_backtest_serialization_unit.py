@@ -254,7 +254,8 @@ class TestPitPolicyReporting:
         )
         frozen = orjson.loads(json_bytes)
         assert frozen["strategy_promotion"]["sample_pool"] == pool
-        assert frozen["usage_context"]["sample_pool"] == "csi_etf_broad"
+        assert frozen["usage_context"]["sample_pool"] == "recorded_input_union"
+        assert "起始日固定池: csi_etf_broad" in frozen["usage_context"]["limitations"]
         assert pool["description"] in frozen["usage_context"]["limitations"]
         assert pool["source_ref"] in " ".join(frozen["usage_context"]["limitations"])
 

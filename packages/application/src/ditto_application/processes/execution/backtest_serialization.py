@@ -208,10 +208,9 @@ def _serialize_json_data(
         if manifest is not None and isinstance(pool, Mapping):
             pool = cast(Mapping[str, object], pool)
             usage = cast(dict[str, object], json_data["usage_context"])
-            usage["sample_pool"] = str(
-                pool.get("universe_id") or "recorded_input_union"
-            )
             limitations = cast(list[str], usage["limitations"])
+            if pool.get("universe_id"):
+                limitations.append(f"起始日固定池: {pool['universe_id']}")
             if pool.get("description"):
                 limitations.append(str(pool["description"]))
             if pool.get("source_ref"):
