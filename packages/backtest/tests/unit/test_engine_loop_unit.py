@@ -1706,6 +1706,94 @@ class TestCooperativeCancellation:
 class TestExecutionDelay:
     """execution_delay 信号延迟执行测试."""
 
+    def test_terminal_fills_recompute_real_dividend_registration(self):
+        from ditto_backtest.brokerage import BacktestBrokerage
+        from ditto_backtest.simulation import BrokerageModel
+        from ditto_execution.orders.book import OrderBook
+        from ditto_execution.orders.journal import InMemoryOrderEventJournal
+        from ditto_portfolio.accounting.account import Account
+        from ditto_portfolio.accounting.dividends import CashDividend
+
+        event = CashDividend(
+            InstrumentId(1),
+            date(2026, 3, 3),
+            date(2026, 3, 4),
+            date(2026, 3, 5),
+            1,
+            date(2026, 2, 25),
+            "snapshot:cash",
+        )
+        account = Account(cash=_make_cash(), dividends=(event,))
+        brokerage = BacktestBrokerage(
+            account=account,
+            order_book=OrderBook(journal=InMemoryOrderEventJournal()),
+            model=BrokerageModel(),
+        )
+        planner = Mock()
+        planner.plan.side_effect = [
+            Mock(
+                plan_id=f"plan-{index}",
+                trade_date=DAYS[-1],
+                orders=(
+                    Order(
+                        client_id=ClientOrderId(f"order-{index}"),
+                        instrument_id=InstrumentId(1),
+                        order_type=OrderType.MARKET,
+                        direction=OrderSide.BUY,
+                        quantity=100,
+                    ),
+                ),
+                estimated_turnover=0.0,
+                estimated_cost=0.0,
+                blocked_orders=(),
+            )
+            for index in range(3)
+        ]
+        pipeline = Mock()
+        pipeline.run.return_value = _make_target()
+        feed = Mock()
+        feed.trading_days.return_value = DAYS
+        feed.get_slice.side_effect = [_make_slice(day) for day in DAYS]
+        check = Mock()
+        check.check_order.return_value = OrderCheckResult(
+            decision=Decision.ACCEPT, order_id="ok"
+        )
+        config = replace(_make_config(), execution_delay=1)
+        clock = _make_clock()
+        synchronizer = Mock(spec=Synchronizer)
+        synchronizer.clock.return_value = clock
+        synchronizer.stream.return_value = iter(
+            [
+                TimeSlice(
+                    time_context=TimeContext(
+                        decision_time=datetime.fromisoformat(day + "T15:00:00"),
+                        knowledge_date=date(2026, 2, 28),
+                        trade_date=day,
+                    ),
+                    bars={InstrumentId(1): replace(_make_snapshot(), trade_date=day)},
+                )
+                for day in DAYS
+            ]
+        )
+        loop = EngineLoop(
+            config=config,
+            pipeline=pipeline,
+            planner=planner,
+            brokerage=brokerage,
+            pre_trade_check=check,
+            data_feed=feed,
+            synchronizer=synchronizer,
+            options=EngineOptions(),
+        )
+        result = loop.run()
+        assert len(result.fills) == 3
+        view = account.get_view()
+        assert view.positions[InstrumentId(1)].quantity == 300
+        assert sum(right.quantity for right in view.dividends.rights) == 300
+        assert result.last_checkpoint is not None
+        assert result.last_checkpoint.account_state is not None
+        assert result.last_checkpoint.account_state.dividends == view.dividends
+
     def _make_delay_loop(
         self,
         execution_delay: int = 1,

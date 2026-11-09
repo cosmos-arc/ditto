@@ -96,7 +96,7 @@ class DatasetSpec:
                 raise ValueError(f"Invalid product contract {field}: {values!r}")
         if not self.runbook.startswith("docs/operations/"):
             raise ValueError(f"Invalid product contract runbook: {self.runbook!r}")
-        if not self.schema_version.endswith((".v1", ".v2")):
+        if not self.schema_version.endswith((".v1", ".v2", ".v3")):
             raise ValueError(
                 f"Invalid product contract schema_version: {self.schema_version!r}"
             )
@@ -402,7 +402,7 @@ _SCHEMA_VERSION_OVERRIDES: dict[str, str] = {
     "stock_status": "market.stock_status.v1",
     "etf_daily": "etf.daily.v1",
     "corporate_actions": "fundamental.corporate_actions.v2",
-    "dividend": "fundamental.dividend.v2",
+    "dividend": "fundamental.dividend.v3",
 }
 
 _DATASET_DOMAINS: dict[str, str] = {

@@ -82,6 +82,11 @@ class TestCapitalTushareAdapterFetchDividend:
                 "ts_code": ["000001.SZ"],
                 "ex_date": ["20240101"],
                 "cash_div": [0.5],  # API returns cash_div
+                "cash_div_tax": [0.5],
+                "pay_date": ["20240105"],
+                "imp_ann_date": ["20231228"],
+                "end_date": ["20231231"],
+                "stk_div": [0.0],
                 "record_date": ["20240102"],
                 "ann_date": ["20240101"],
                 "div_proc": ["实施"],  # P015: 实施进度

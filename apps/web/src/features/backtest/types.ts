@@ -86,12 +86,45 @@ export interface BacktestFeeStatement {
 	}[];
 }
 
+export interface BacktestDividendStatement {
+	readonly policy: string;
+	readonly events: readonly {
+		readonly eventId: string;
+		readonly symbol: string;
+		readonly source: string;
+		readonly announcement: string;
+		readonly record: string;
+		readonly ex: string;
+		readonly pay: string;
+		readonly grossPerShare: number;
+		readonly quantity: number;
+	}[];
+	readonly entries: readonly {
+		readonly acquired: string;
+		readonly eventId: string;
+		readonly day: string;
+		readonly kind: string;
+		readonly amount: number;
+		readonly quantity: number;
+	}[];
+	readonly balances: readonly {
+		readonly day: string;
+		readonly cash: number;
+		readonly available: number;
+		readonly receivable: number;
+		readonly tax: number;
+		readonly market: number;
+		readonly nav: number;
+	}[];
+}
+
 export interface BacktestReport {
 	readonly runId: string;
 	readonly periodStart: string;
 	readonly periodEnd: string;
 	readonly initialCash: number;
 	readonly finalNav: number;
+	readonly dividendStatement?: BacktestDividendStatement | null;
 	readonly feeStatement?: BacktestFeeStatement | null;
 	readonly rebalanceFreq: string;
 	readonly alphaStats: BacktestAlphaStats | null;

@@ -218,6 +218,7 @@ def _serialize_json_data(
     if risk_report is not None:
         json_data["risk_report"] = dict(risk_report)
     if report.final_account_state is not None:
+        json_data["dividend_statement"] = _dividend_statement(report)
         json_data["final_account_state"] = (
             BacktestAccountStateSnapshot.from_account_view(
                 report.final_account_state,
@@ -575,3 +576,46 @@ def _serialize_instrument_id(instrument_id: int | str) -> tuple[str, str]:
     """Preserve numeric-versus-text identity while using one stable column dtype."""
     kind = "integer" if isinstance(instrument_id, int) else "string"
     return str(instrument_id), kind
+
+
+def _dividend_statement(report: BacktestReport) -> dict[str, object] | None:
+    if (
+        report.final_account_state is None
+        or not report.final_account_state.dividends.events
+    ):
+        return None
+    book = report.final_account_state.dividends
+    return {
+        "currency": "CNY",
+        "policy": "个人普通流通 A 股研究假设: 按日终净变动先进先出。"
+        + "按自然月/年计税。"
+        + "2013 起先扣 5%, 2015-09-08 起先扣 0%。"
+        + "卖出日预留补税, 下一交易日扣款。"
+        + "除息应收在派息日前不可再投资; 保留计算精度。"
+        + "不模拟券商分币舍入。",
+        "events": [
+            {
+                **dataclasses.asdict(event),
+                "event_id": event.identity,
+                "registered_quantity": sum(
+                    r.quantity
+                    for r in book.rights
+                    if r.event.identity == event.identity
+                ),
+            }
+            for event in book.events
+        ],
+        "entries": [dataclasses.asdict(entry) for entry in book.entries],
+        "balances": [
+            {
+                "trade_date": day,
+                "cash": view.cash.total,
+                "available_cash": view.cash.available,
+                "receivable": view.dividends.receivable,
+                "tax_payable": view.dividends.tax_payable,
+                "market_value": view.exposure,
+                "nav": view.nav,
+            }
+            for day, view in report.account_series
+        ],
+    }

@@ -10,10 +10,15 @@ from ditto_backtest.provenance import aggregate_source_snapshot_id
 from ditto_data.catalog.snapshot_reader import SnapshotReadService
 from ditto_data.catalog.source_snapshot import ProviderSnapshot
 from ditto_data.provider import BarQuery, InstrumentQuery
+from ditto_data.services.cash_dividends import (
+    cash_adjusted_suspension_marks,
+    implemented_cash_dividends,
+)
 from ditto_data.services.market_adjustment import adjust_retained_bars
 from ditto_data.services.market_status import stock_execution_bars
 from ditto_data.services.market_types import AdjType
 from ditto_kernel.identity import InstrumentId
+from ditto_portfolio.accounting.dividends import CashDividend
 
 from ditto_application.builders.data_provider import resolve_frozen_snapshot_rows
 from ditto_application.catalog_freshness import observed_at
@@ -50,6 +55,45 @@ class FrozenHistoryProvider:
         self._ticker_ids: dict[str, InstrumentId] = {}
         self._asset_class = ""
         self._etf_reference: pl.DataFrame | None = None
+        self.cash_dividends: tuple[CashDividend, ...] = ()
+
+    def freeze_cash_dividends(self, *, start: str, end: str) -> None:
+        """Pin implementation facts selected by the raw announcement date."""
+        if not self._reader.list_snapshots(dataset_id="dividend", source=self._source):
+            raise AppBuilderError("missing retained dividend coverage")
+        listed = {
+            str(row["source_ticker"]): str(row["list_date"]) for row in self.roster
+        }
+        if any(not listed.get(ticker) for ticker in self.members):
+            raise AppBuilderError("dividend coverage requires retained listing dates")
+        # Announcements may precede the run by arbitrarily many sessions. Require
+        # their complete declared history rather than inventing a lookback window.
+        coverage_start = min(listed[ticker] for ticker in self.members)
+        frame = self._freeze_dataset(
+            "dividend",
+            {ticker: self._ticker_ids[ticker] for ticker in self.members},
+            start=None,
+            end=end,
+            date_column="knowledge_date",
+            coverage_start=coverage_start,
+        )
+        try:
+            selected = implemented_cash_dividends(frame, start=start, end=end)
+            self.cash_dividends = tuple(
+                CashDividend(
+                    instrument_id=InstrumentId(row["instrument_id"]),
+                    record_date=row["record_date"],
+                    ex_date=row["ex_dividend_date"],
+                    pay_date=row["pay_date"],
+                    gross_per_share=row["gross_dividend_per_share"],
+                    announcement_date=row["implementation_date"],
+                    source_snapshot_id=row["source_snapshot_id"],
+                    source_ticker=row["source_ticker"],
+                )
+                for row in selected.to_dicts()
+            )
+        except ValueError as exc:
+            raise AppBuilderError(str(exc)) from exc
 
     def freeze_etf_reference(self) -> pl.DataFrame:
         """Freeze dated declarations by receipt, not by the historical bar window."""
@@ -267,6 +311,7 @@ class FrozenHistoryProvider:
         start: str | None,
         end: str,
         date_column: str,
+        coverage_start: str | None = None,
     ) -> pl.DataFrame:
         candidates = tuple(
             replace(
@@ -287,6 +332,8 @@ class FrozenHistoryProvider:
                 f"missing retained {dataset}: {sorted(scope)} {start}..{end}"
             )
         first = date.fromisoformat(start or min(s.request_start for s in candidates))
+        if coverage_start is not None:
+            first = min(first, date.fromisoformat(coverage_start))
         dates = pl.date_range(first, date.fromisoformat(end), eager=True)
         # ponytail: daily scope grid; replace with interval joins if large pools
         # make this measured cost material. No date/member is silently omitted.
@@ -296,6 +343,16 @@ class FrozenHistoryProvider:
             .with_columns(pl.lit(self._source).alias("source"))
         )
         selected = resolve_frozen_snapshot_rows(grid, candidates)
+        if (
+            coverage_start is not None
+            and selected.filter(
+                (pl.col("trade_date") >= date.fromisoformat(coverage_start))
+                & pl.col("source_snapshot_id").is_null()
+            ).height
+        ):
+            raise AppBuilderError(
+                f"incomplete retained {dataset} coverage: {coverage_start}..{end}"
+            )
         frames: list[pl.DataFrame] = []
         for snapshot in candidates:
             covered = selected.filter(
@@ -448,6 +505,13 @@ class FrozenHistoryProvider:
                     valuation_history=self._frames["stock_daily"].filter(
                         pl.col("source_ticker").is_in(query.instruments)
                         & (pl.col("trade_date") < date.fromisoformat(query.start))
+                    ),
+                )
+                bars = cash_adjusted_suspension_marks(
+                    bars,
+                    tuple(
+                        (int(event.instrument_id), event.ex_date, event.gross_per_share)
+                        for event in self.cash_dividends
                     ),
                 )
             except ValueError as error:

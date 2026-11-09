@@ -138,6 +138,13 @@ DIVIDEND_SOURCE_SCHEMA = SourceSchema(
         "effective_to": pl.Date,
         "dividend_per_share": pl.Float64,
         "dividend_yield": pl.Float64,
+        "div_proc": pl.String,
+        "gross_dividend_per_share": pl.Float64,
+        "record_date": pl.Date,
+        "pay_date": pl.Date,
+        "implementation_date": pl.Date,
+        "report_date": pl.Date,
+        "stock_dividend_ratio": pl.Float64,
     },
     pit_columns=("effective_from", "effective_to"),
 )

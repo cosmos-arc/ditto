@@ -462,8 +462,47 @@ def ordinary_equity_rules(
     )
 
 
+_ADJ_FACTOR_QUANTUM = 0.001
+
+
+def _cash_factor_matches(
+    row: Mapping[str, object], cash: float | None, tick: float
+) -> bool:
+    """Reconcile independently declared cash against the rounded ex reference."""
+    close, previous, current = (
+        row.get(k) for k in ("_previous_close", "_previous_adj", "adj_factor")
+    )
+    if not (
+        cash is not None
+        and isfinite(cash)
+        and cash > 0
+        and isinstance(close, (int, float))
+        and isfinite(close)
+        and close > cash
+        and isinstance(previous, (int, float))
+        and isfinite(previous)
+        and previous > 0
+        and isinstance(current, (int, float))
+        and isfinite(current)
+        and current > 0
+    ):
+        return False
+    reference = round_to_tick(Decimal(str(close)) - Decimal(str(cash)), tick)
+    if reference <= 0:
+        return False
+    ratio = close / reference
+    # Retained Tushare factors have three decimal places. Bound both input
+    # roundings, rather than using an arbitrary percentage tolerance.
+    tolerance = _ADJ_FACTOR_QUANTUM * (1 + ratio) / 2
+    return abs(current - previous * ratio) <= tolerance
+
+
 def ordinary_execution_fields(
-    row: Mapping[str, object], rules: _InstrumentRules, *, start_date: str
+    row: Mapping[str, object],
+    rules: _InstrumentRules,
+    *,
+    start_date: str,
+    cash_dividend: float | None = None,
 ) -> dict[str, float | bool | None]:
     """Validate daily execution state and derive verified ETF price bands."""
     definition, rule, _ = rules
@@ -471,7 +510,11 @@ def ordinary_execution_fields(
     if (
         day >= start_date
         and row.get("_previous_adj") is not None
-        and (row.get("adj_factor") != row["_previous_adj"])
+        and (cash_dividend is not None or row.get("adj_factor") != row["_previous_adj"])
+        and not (
+            definition.asset_class == "stock"
+            and _cash_factor_matches(row, cash_dividend, definition.tick_size)
+        )
     ):
         raise ValueError(
             f"corporate action requires cash/share accounting: {iid} {day}"

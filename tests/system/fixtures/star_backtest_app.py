@@ -21,9 +21,14 @@ from ditto_strategy.storage.sqlite.services.strategy_catalog_service import (
     StrategyCatalogService,
 )
 
-from tests.system.fixtures.historical_backtest_app import app, retain_history_payload
+from tests.system.fixtures.historical_backtest_app import (
+    app,
+    retain_empty_dividends,
+    retain_history_payload,
+)
 
 _PERIOD = ("2019-06-01", "2019-08-30")
+retain_empty_dividends(_PERIOD)
 _STOCKS = (
     (1006881, "688001.SH", "2019-07-22"),
     (1006882, "688008.SH", "2019-07-22"),

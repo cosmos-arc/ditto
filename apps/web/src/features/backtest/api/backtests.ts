@@ -88,6 +88,36 @@ export function mapBacktestReport(dto: BacktestReportResponse): BacktestReport {
 	const alpha = dto.alpha_stats;
 	const trades = dto.aggregated_trade_stats;
 	const bill = dto.fee_statement;
+	const dividends = dto.dividend_statement;
+	if (
+		dividends &&
+		(dividends.currency !== "CNY" ||
+			!Array.isArray(dividends.balances) ||
+			!Array.isArray(dividends.events) ||
+			!Array.isArray(dividends.entries) ||
+			dividends.balances.some(
+				(row) =>
+					![row.cash, row.available_cash, row.receivable, row.tax_payable, row.market_value, row.nav].every(
+						Number.isFinite,
+					) || Math.abs(row.cash + row.receivable + row.market_value - row.tax_payable - row.nav) > 0.00001,
+			) ||
+			dividends.events.some(
+				(event) =>
+					!Number.isSafeInteger(event.instrument_id) ||
+					event.instrument_id <= 0 ||
+					!event.source_snapshot_id ||
+					!Number.isFinite(event.gross_per_share) ||
+					event.gross_per_share <= 0 ||
+					!Number.isSafeInteger(event.registered_quantity) ||
+					event.registered_quantity < 0,
+			) ||
+			dividends.entries.some(
+				(entry) =>
+					!Number.isFinite(entry.amount) ||
+					!["receivable", "cash_payment", "tax_reserved", "tax_payment"].includes(entry.kind),
+			))
+	)
+		throw new Error("分红账本金额或来源不一致，请重新读取报告。");
 	if (
 		bill != null &&
 		(bill.currency !== "CNY" ||
@@ -125,6 +155,39 @@ export function mapBacktestReport(dto: BacktestReportResponse): BacktestReport {
 		periodEnd: dto.period?.["end"] ?? "",
 		initialCash: dto.initial_cash,
 		finalNav: dto.final_nav,
+		dividendStatement: dividends
+			? {
+					policy: dividends.policy,
+					events: dividends.events.map((event) => ({
+						eventId: event.event_id,
+						symbol: event.source_ticker || String(event.instrument_id),
+						source: event.source_snapshot_id,
+						announcement: event.announcement_date,
+						record: event.record_date,
+						ex: event.ex_date,
+						pay: event.pay_date,
+						grossPerShare: event.gross_per_share,
+						quantity: event.registered_quantity,
+					})),
+					entries: dividends.entries.map((entry) => ({
+						acquired: entry.acquired,
+						eventId: entry.event_id,
+						day: entry.day,
+						kind: entry.kind,
+						amount: entry.amount,
+						quantity: entry.quantity,
+					})),
+					balances: dividends.balances.map((row) => ({
+						day: row.trade_date,
+						cash: row.cash,
+						available: row.available_cash,
+						receivable: row.receivable,
+						tax: row.tax_payable,
+						market: row.market_value,
+						nav: row.nav,
+					})),
+				}
+			: null,
 		feeStatement: dto.fee_statement
 			? {
 					currency: dto.fee_statement.currency,

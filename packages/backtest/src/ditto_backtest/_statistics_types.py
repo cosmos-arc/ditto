@@ -210,6 +210,7 @@ class BacktestReport:
     nav_series: tuple[tuple[str, float], ...]
     trade_log: tuple[TradeRecord, ...]
     fill_log: tuple[FillEvent, ...]
+    account_series: tuple[tuple[str, AccountView], ...] = ()
     risk_log: tuple[RiskScanRecord, ...] = ()
     pre_trade_log: tuple[PreTradeDecisionRecord, ...] = ()
     final_account_state: AccountView | None = None

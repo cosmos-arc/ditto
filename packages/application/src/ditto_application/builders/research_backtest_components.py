@@ -323,7 +323,9 @@ def _build_account(
         )
         for item in snapshot.positions
     }
-    return cash, Account(positions=positions, cash=cash)
+    return cash, Account(
+        positions=positions, cash=cash, dividend_state=snapshot.dividends
+    )
 
 
 def _build_order_book(

@@ -222,6 +222,7 @@ def load_final_account_state(report: dict[str, Any]) -> AccountView | None:
         total_value=snapshot.total_value,
         nav=snapshot.nav,
         exposure=snapshot.exposure,
+        dividends=snapshot.dividends,
     )
 
 

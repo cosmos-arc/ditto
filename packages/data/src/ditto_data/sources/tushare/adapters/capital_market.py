@@ -185,7 +185,8 @@ class CapitalMarketTushareAdapter(BaseTushareAdapter):
         with tushare_fetch_error_handler("dividend", "dividend"):
             params: dict[str, str] = {
                 "api_name": "dividend",
-                "fields": "ts_code,ex_date,cash_div,record_date,ann_date",
+                "fields": "ts_code,ex_date,cash_div,cash_div_tax,record_date,pay_date,"
+                + "ann_date,imp_ann_date,end_date,stk_div,div_proc",
             }
 
             if ts_code:

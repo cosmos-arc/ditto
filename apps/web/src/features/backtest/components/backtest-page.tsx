@@ -14,6 +14,7 @@ import { useBacktestReport, useBacktestRun } from "../hooks";
 import { comparisonLifetime, useBacktestComparison } from "../hooks/use-backtest-comparison";
 import { legacyBacktestUsage } from "../types";
 import { BacktestAuditView } from "./backtest-audit-view";
+import { BacktestDividends } from "./backtest-dividends";
 import { BacktestFeeStatementView } from "./backtest-fee-statement";
 import { BacktestKpiStrip } from "./backtest-kpi-strip";
 import { type BacktestOverlayId, BacktestOverlays, backtestActions } from "./backtest-overlays";
@@ -249,6 +250,7 @@ export function BacktestPage() {
 											</div>
 										) : null}
 										{reportQuery.data ? <BacktestFeeStatementView statement={reportQuery.data.feeStatement} /> : null}
+										{reportQuery.data ? <BacktestDividends statement={reportQuery.data.dividendStatement} /> : null}
 										<BacktestTrades jobId={runId} />
 									</div>
 								</WorkbenchPanel>

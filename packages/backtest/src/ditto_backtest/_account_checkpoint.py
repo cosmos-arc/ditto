@@ -3,13 +3,14 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from hashlib import sha256
 from typing import cast
 
 import orjson
 from ditto_kernel.identity import InstrumentId
 from ditto_portfolio.accounting import AccountView
+from ditto_portfolio.accounting.dividends import DividendBook
 from ditto_portfolio.accounting.position import Position
 
 from ditto_backtest._checkpoint_codec import (
@@ -19,6 +20,7 @@ from ditto_backtest._checkpoint_codec import (
     payload_mapping,
     payload_sequence,
 )
+from ditto_backtest._dividend_checkpoint import dividend_from_payload, dividend_payload
 
 __all__ = ["BacktestAccountStateSnapshot", "BacktestPositionSnapshot"]
 
@@ -90,6 +92,7 @@ class BacktestAccountStateSnapshot:
     nav: float
     exposure: float
     positions: tuple[BacktestPositionSnapshot, ...] = ()
+    dividends: DividendBook = field(default_factory=DividendBook)
 
     @classmethod
     def from_account_view(
@@ -105,6 +108,7 @@ class BacktestAccountStateSnapshot:
             nav=account_view.nav,
             exposure=account_view.exposure,
             positions=_snapshot_positions(account_view.positions),
+            dividends=account_view.dividends,
         )
 
     def to_payload(self) -> dict[str, object]:
@@ -117,6 +121,7 @@ class BacktestAccountStateSnapshot:
             "nav": finite_float(self.nav, "nav"),
             "exposure": finite_float(self.exposure, "exposure"),
             "positions": [position.to_payload() for position in self.positions],
+            "dividends": dividend_payload(self.dividends),
         }
 
     def to_json(self) -> str:
@@ -140,6 +145,7 @@ class BacktestAccountStateSnapshot:
             total_value=payload_float(data, "total_value"),
             nav=payload_float(data, "nav"),
             exposure=payload_float(data, "exposure"),
+            dividends=dividend_from_payload(data["dividends"]),
             positions=tuple(
                 BacktestPositionSnapshot.from_payload(position)
                 for position in payload_sequence(data, "positions")

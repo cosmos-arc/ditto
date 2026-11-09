@@ -1,6 +1,6 @@
 /**
  * DO NOT EDIT: generated from contracts/openapi/v1.json.
- * Schema SHA-256: 43f0385e2858e0711a6423ac98209bf2563d6e58126adc5f76e4b75e9ea36f48
+ * Schema SHA-256: 6942efd181ed14571340a95331cfa53f67151e632b00985aeda0411fa565cb2e
  * Generator: openapi-typescript 7.13.0
  */
 
@@ -7388,6 +7388,7 @@ export interface components {
             aggregated_trade_stats?: components["schemas"]["AggregatedTradeStatsResponse"] | null;
             /** @description 绩效分析统计 */
             alpha_stats?: components["schemas"]["AlphaStatsResponse"] | null;
+            dividend_statement?: components["schemas"]["DividendStatementResponse"] | null;
             /** @description 已保存的实际逐笔费用账单。旧报告缺失时不补算 */
             fee_statement?: components["schemas"]["FeeStatementResponse"] | null;
             /**
@@ -9955,6 +9956,83 @@ export interface components {
              * @description 公告锚（as_of 可见的披露日）
              */
             knowledge_date?: string | null;
+        };
+        /** DividendBalanceResponse */
+        DividendBalanceResponse: {
+            /** Available Cash */
+            available_cash: number;
+            /** Cash */
+            cash: number;
+            /** Market Value */
+            market_value: number;
+            /** Nav */
+            nav: number;
+            /** Receivable */
+            receivable: number;
+            /** Tax Payable */
+            tax_payable: number;
+            /** Trade Date */
+            trade_date: string;
+        };
+        /** DividendEntryResponse */
+        DividendEntryResponse: {
+            /** Acquired */
+            acquired: string;
+            /** Amount */
+            amount: number;
+            /** Day */
+            day: string;
+            /** Event Id */
+            event_id: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "receivable" | "cash_payment" | "tax_reserved" | "tax_payment";
+            /** Quantity */
+            quantity: number;
+        };
+        /**
+         * DividendEventResponse
+         * @description Implemented source facts and the actual record-date entitlement.
+         */
+        DividendEventResponse: {
+            /** Announcement Date */
+            announcement_date: string;
+            /** Event Id */
+            event_id: string;
+            /** Ex Date */
+            ex_date: string;
+            /** Gross Per Share */
+            gross_per_share: number;
+            /** Instrument Id */
+            instrument_id: number;
+            /** Pay Date */
+            pay_date: string;
+            /** Record Date */
+            record_date: string;
+            /** Registered Quantity */
+            registered_quantity: number;
+            /** Source Snapshot Id */
+            source_snapshot_id: string;
+            /** Source Ticker */
+            source_ticker: string;
+        };
+        /** DividendStatementResponse */
+        DividendStatementResponse: {
+            /** Balances */
+            balances: components["schemas"]["DividendBalanceResponse"][];
+            /**
+             * Currency
+             * @constant
+             */
+            currency: "CNY";
+            /** Entries */
+            entries: components["schemas"]["DividendEntryResponse"][];
+            /** Events */
+            events: components["schemas"]["DividendEventResponse"][];
+            /** Policy */
+            policy: string;
         };
         /**
          * ETFAllocationBody
