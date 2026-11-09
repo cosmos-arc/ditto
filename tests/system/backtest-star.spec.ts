@@ -76,6 +76,17 @@ test("STAR opening rejects stale bands, recovers with a new snapshot and exports
     const exported = JSON.parse(await readFile(path, "utf8"));
     expect(exported.report.feeStatement.finalCash).toBe(report.fee_statement.final_cash);
     expect(exported.report.feeStatement.fills.length).toBe(fills.length);
+    const saved = (await (await page.request.get(`${apiOrigin}/api/v1/backtests/runs/${id}/request`)).json()).data;
+    expect(exported.request.runId).toBe(id);
+    expect(exported.request.frozenAt).toBe(saved.frozen_at);
+    expect(exported.request.sources.map((row: { snapshotId: string }) => row.snapshotId)).toEqual(saved.sources.map((row: { snapshot_id: string }) => row.snapshot_id));
+    expect(exported.request.sources.length).toBeGreaterThan(0);
+    const participation = exported.request.participation;
+    const rowOn = (day: string) => participation.find((row: { tradeDate: string; symbol: string }) => row.tradeDate === day && row.symbol === "688001.SH");
+    expect(rowOn("2019-07-19")).toMatchObject({ status: "not_listed", executionRule: null });
+    expect(rowOn("2019-07-22")).toMatchObject({ status: "warmup" });
+    expect(rowOn("2019-07-26").executionRule).toMatch(/star\/2019-07-22.*无日涨跌幅限制/);
+    expect(rowOn("2019-07-29").executionRule).toMatch(/star\/2019-07-29.*涨跌幅 20%.*100000 股.*50000 股.*200 股起.*递增 1 股.*规则依据 docs\/evidence\/star-rules-755.md/);
     expect((await (await page.request.get(`${apiOrigin}/api/v1/backtests/runs/${originalId}/request`)).json()).data).toEqual(original);
     const accessibility = await new AxeBuilder({ page }).analyze();
     expect(accessibility.violations.filter((v) => ["critical", "serious"].includes(v.impact ?? ""))).toEqual([]);

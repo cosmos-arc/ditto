@@ -144,6 +144,11 @@ def ordinary_rule_description(
         f"{definition.exchange}/{definition.board_segment}/{trading.as_of_date}"
         + f" · {band} · {quantity}"
         + f" · 报价 {definition.tick_size:g} 元 · T+{trading.settlement_cycle}"
+        + (
+            " · 规则依据 docs/evidence/star-rules-755.md"
+            if definition.board_segment == "star"
+            else ""
+        )
     )
 
 

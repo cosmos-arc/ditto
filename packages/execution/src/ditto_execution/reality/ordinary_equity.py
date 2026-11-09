@@ -267,6 +267,8 @@ def _apply_ipo_exemption(
     )
     if len(sessions) > initial_sessions:
         first_banded = sessions[initial_sessions]
+        if first_banded < min(versions):
+            return
         versions[first_banded] = max(
             ((day, band) for day, band in versions.items() if day <= first_banded),
             key=lambda item: item[0],

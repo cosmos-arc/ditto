@@ -14,6 +14,23 @@ from ditto_execution.reality.ordinary_equity import (
 from ditto_kernel.identity import InstrumentId
 
 
+def test_pre_2014_ipo_calendar_keeps_supported_rules_without_extending_coverage() -> (
+    None
+):
+    history = stock_rule_history(
+        CashEquityListing(
+            InstrumentId(1), "002703", "stock", "SZSE", "2012-11-02", None
+        ),
+        commission_rate=0.001,
+        start="2014-01-02",
+        end="2014-01-02",
+        trading_days=["2012-11-02", "2012-11-05", "2012-11-06", "2014-01-02"],
+    )
+    assert [(rule.as_of_date, rule.price_limit_pct) for _, rule, _ in history] == [
+        ("2014-01-01", 0.1)
+    ]
+
+
 @pytest.mark.pit
 @pytest.mark.parametrize(
     ("ticker", "exchange", "day", "buy_fee", "sell_fee"),

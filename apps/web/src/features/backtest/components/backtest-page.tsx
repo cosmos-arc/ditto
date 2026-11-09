@@ -1,3 +1,4 @@
+import { useMutation } from "@tanstack/react-query";
 import { useParams } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { useState } from "react";
@@ -8,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ObjectHubLayout, ShellHeaderExtension } from "@/features/shell";
 import { ContextActions } from "@/providers";
+import { fetchBacktestReport, fetchBacktestRequest } from "../api/backtests";
 import { useBacktestReport, useBacktestRun } from "../hooks";
 import { comparisonLifetime, useBacktestComparison } from "../hooks/use-backtest-comparison";
 import { legacyBacktestUsage } from "../types";
@@ -67,6 +69,7 @@ export function BacktestPage() {
 	const [compareNotice, setCompareNotice] = useState("");
 	const [tab, setTab] = useState<BacktestTab>("overview");
 	const [activeOverlay, setActiveOverlay] = useState<BacktestOverlayId | null>(null);
+	const exportMutation = useMutation({ mutationFn: exportReport });
 
 	if (runQuery.isLoading) {
 		return (
@@ -103,9 +106,16 @@ export function BacktestPage() {
 	const run = runQuery.data;
 	const report = reportQuery.data;
 
-	function exportReport(): void {
+	async function exportReport(): Promise<void> {
+		const [request, savedReport] = await Promise.all([
+			fetchBacktestRequest(run.runId),
+			run.status === "completed" ? fetchBacktestReport(run.runId) : Promise.resolve(null),
+		]);
+		if (savedReport && savedReport.runId !== run.runId) {
+			throw new Error("报告运行身份不一致；请重试导出。");
+		}
 		const payload = JSON.stringify(
-			{ report: report ?? null, run, usageContext: report?.usageContext ?? legacyBacktestUsage },
+			{ report: savedReport, request, run, usageContext: savedReport?.usageContext ?? legacyBacktestUsage },
 			null,
 			2,
 		);
@@ -136,6 +146,7 @@ export function BacktestPage() {
 								setCompareNotice(saved ? `${included ? "已加入对比" : "已移出对比"} · ${run.runId}` : "");
 							} else {
 								setCompareNotice("");
+								exportMutation.reset();
 								setActiveOverlay(action);
 							}
 						}}
@@ -286,7 +297,9 @@ export function BacktestPage() {
 					/>
 				}
 				onClose={() => setActiveOverlay(null)}
-				onExport={exportReport}
+				onExport={() => exportMutation.mutate()}
+				exportPending={exportMutation.isPending}
+				exportError={exportMutation.error?.message ?? ""}
 				period={`${report?.periodStart ?? "未发布"} → ${report?.periodEnd ?? "未发布"}`}
 				runId={run.runId}
 				strategyIdentity={`${run.strategyId}@${run.strategyVersion}`}

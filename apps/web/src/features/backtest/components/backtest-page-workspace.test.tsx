@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { HttpResponse, http } from "msw";
 import { createElement, type ReactNode } from "react";
@@ -221,8 +221,55 @@ describe("BacktestPage governed workspace", () => {
 		const createObjectURL = vi.fn<(blob: Blob) => string>(() => "blob:report");
 		vi.stubGlobal("URL", Object.assign(class extends URL {}, { createObjectURL, revokeObjectURL: vi.fn() }));
 		const click = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
+		let available = false;
+		server.use(
+			http.get("/api/v1/backtests/runs/bt-live-001/request", () =>
+				available
+					? HttpResponse.json({
+							data: {
+								run_id: RUN.run_id,
+								purpose: "historical_reconstruction",
+								input_status: "ready",
+								universe: "saved-pool",
+								frozen_at: "2026-11-09T00:00:00+00:00",
+								reason: "",
+								members: ["688001.SH"],
+								limitations: ["历史可得性未认证"],
+								sources: [
+									{
+										dataset: "stock_daily",
+										source: "tushare",
+										snapshot_id: "saved-snapshot",
+										checksum: "saved-checksum",
+										request_start: "2019-07-19",
+										request_end: "2019-07-31",
+										received_at: "2026-11-09T00:00:00+00:00",
+										observed_at: "2026-11-09T00:00:00+00:00",
+										rows: 8,
+										verified: true,
+									},
+								],
+							},
+						})
+					: HttpResponse.json({ detail: "request unavailable" }, { status: 503 }),
+			),
+		);
 		try {
 			await user.click(screen.getByRole("button", { name: "下载 JSON" }));
+			expect(await screen.findByRole("alert")).toHaveTextContent("request unavailable");
+			expect(createObjectURL).not.toHaveBeenCalled();
+			available = true;
+			server.use(
+				http.get("/api/v1/backtests/runs/bt-live-001/report", () =>
+					HttpResponse.json({ data: { ...REPORT, run_id: "another-run" } }),
+				),
+			);
+			await user.click(screen.getByRole("button", { name: "下载 JSON" }));
+			expect(await screen.findByRole("alert")).toHaveTextContent("报告运行身份不一致");
+			expect(createObjectURL).not.toHaveBeenCalled();
+			server.use(http.get("/api/v1/backtests/runs/bt-live-001/report", () => HttpResponse.json({ data: REPORT })));
+			await user.click(screen.getByRole("button", { name: "下载 JSON" }));
+			await waitFor(() => expect(createObjectURL).toHaveBeenCalledOnce());
 			const blob = createObjectURL.mock.calls[0]?.[0];
 			if (!blob) throw new Error("report download did not produce a Blob");
 			const contents = await new Promise<string>((resolve) => {
@@ -233,6 +280,8 @@ describe("BacktestPage governed workspace", () => {
 			const exported = JSON.parse(contents);
 			expect(exported.run.strategyVersion).toBe("4");
 			expect(exported.report.periodStart).toBe("2025-01-01");
+			expect(exported.request.runId).toBe(RUN.run_id);
+			expect(exported.request.sources[0]).toMatchObject({ snapshotId: "saved-snapshot", checksum: "saved-checksum" });
 			expect(exported.usageContext.historicalAvailability).toBe("not_certified");
 			expect(exported.usageContext.limitations.join(" ")).toContain("不自动授予");
 		} finally {
