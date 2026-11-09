@@ -599,7 +599,7 @@ def main() -> int:
                 environment,
                 acceptance=_FixtureAcceptance(
                     command=_fixture_api_command(
-                        "tests.system.fixtures.historical_backtest_app:app", api_port
+                        "tests.system.fixtures.mainboard_backtest_app:app", api_port
                     ),
                     prefix="ditto-system-historical-request-",
                     spec="backtest-historical-request.spec.ts",

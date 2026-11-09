@@ -32,7 +32,12 @@ if os.environ.get(
     raise RuntimeError("historical fixture requires isolated testing state")
 
 
-def _retain(dataset: str, frame: pl.DataFrame) -> None:
+def retain_history_payload(
+    dataset: str,
+    frame: pl.DataFrame,
+    *,
+    period: tuple[str, str] = ("2014-01-01", "2014-12-31"),
+) -> None:
     pool = SQLitePool(str(_state / "metadata/metadata.sqlite"))
     client = SQLiteClient(pool)
     try:
@@ -44,8 +49,8 @@ def _retain(dataset: str, frame: pl.DataFrame) -> None:
             ProviderSnapshotDraft(
                 dataset_id=dataset,
                 source="tushare",
-                request_start="2014-01-01",
-                request_end="2014-12-31",
+                request_start=period[0],
+                request_end=period[1],
                 schema_version=f"synthetic.{dataset}.v1",
                 checksum=payload.checksum,
                 canonical_asset=DataAssetRef(dataset, "market"),
@@ -68,8 +73,8 @@ def _retain(dataset: str, frame: pl.DataFrame) -> None:
                 chunk_id=snapshot.snapshot_id,
                 dataset_id=dataset,
                 source="tushare",
-                request_start="2014-01-01",
-                request_end="2014-12-31",
+                request_start=period[0],
+                request_end=period[1],
                 status=PartitionLifecycleStatus.PLANNED,
                 payload_id=None,
                 complete_evidence_id=None,
@@ -177,10 +182,10 @@ def _seed_history() -> None:
         )
     finally:
         pool.close_all()
-    _retain("etf_daily", _daily(("510300.SH", "510500.SH", "510050.SH")))
-    _retain("index_daily", _daily(("000300.SH",)))
+    retain_history_payload("etf_daily", _daily(("510300.SH", "510500.SH", "510050.SH")))
+    retain_history_payload("index_daily", _daily(("000300.SH",)))
     dates = pl.date_range(date(2014, 1, 1), date(2014, 12, 31), eager=True)
-    _retain(
+    retain_history_payload(
         "calendar",
         pl.DataFrame({"trade_date": dates, "is_open": dates.dt.weekday() <= 5}),
     )
@@ -195,5 +200,7 @@ def repair() -> dict[str, bool]:
     frame = _daily(("510300.SH", "510500.SH", "510050.SH")).select(
         "source_ticker", "trade_date", "knowledge_date"
     )
-    _retain("fund_adj", frame.with_columns(pl.lit(1.0).alias("adj_factor")))
+    retain_history_payload(
+        "fund_adj", frame.with_columns(pl.lit(1.0).alias("adj_factor"))
+    )
     return {"repaired": True}

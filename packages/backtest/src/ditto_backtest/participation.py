@@ -12,6 +12,7 @@ def daily_participation(
     *,
     warmup_days: int,
     knowledge_lag_days: int,
+    mainboard_ids: frozenset[int] = frozenset(),
 ) -> pl.DataFrame:
     """Project half-open membership and listing life; count actual prior sessions."""
     intervals = pl.DataFrame(roster).with_columns(
@@ -46,16 +47,13 @@ def daily_participation(
             )
         ).alias("requires_quote"),
     )
-    # IPO execution rules remain unqualified in this ordinary rule cohort.
-    # Retain the interval and its explicit reason instead of deleting the security.
+    execution_covered = pl.col("instrument_id").is_in(mainboard_ids) | (
+        (pl.col("trade_date") - pl.col("list_date")).dt.total_days()
+        >= MIN_ORDINARY_LISTED_DAYS
+    )
+    # Other asset cohorts retain their explicit listing-rule limitation.
     return grid.with_columns(
-        (
-            pl.col("requires_quote")
-            & (
-                (pl.col("trade_date") - pl.col("list_date")).dt.total_days()
-                >= MIN_ORDINARY_LISTED_DAYS
-            )
-        ).alias("execution_available"),
+        (pl.col("requires_quote") & execution_covered).alias("execution_available"),
         pl.when(pl.col("trade_date") < pl.col("list_date"))
         .then(pl.lit("not_listed"))
         .when(pl.col("trade_date") >= pl.col("delist_date"))
@@ -64,10 +62,7 @@ def daily_participation(
         .then(pl.lit("outside_universe"))
         .when(pl.col("warmup_available") < warmup_days)
         .then(pl.lit("warmup"))
-        .when(
-            (pl.col("trade_date") - pl.col("list_date")).dt.total_days()
-            < MIN_ORDINARY_LISTED_DAYS
-        )
+        .when(~execution_covered)
         .then(pl.lit("listing_rule_unavailable"))
         .otherwise(pl.lit("eligible"))
         .alias("status"),

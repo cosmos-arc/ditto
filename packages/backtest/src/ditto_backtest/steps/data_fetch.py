@@ -46,8 +46,9 @@ class DataFetchStep:
     @traced("backtest.step.data_fetch")
     def execute(self, ctx: StepContext) -> StepResult:
         """获取账户快照并累积数据指纹。"""
-        account_view = self._brokerage.get_account()
         trade_date = ctx.time_context.trade_date
+        self._brokerage.settle(trade_date)
+        account_view = self._brokerage.get_account()
 
         # 收集输入标的 -- 用于 RunManifest input_refs
         self._input_instruments.update(ctx.bars.keys())

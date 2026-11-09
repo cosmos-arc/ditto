@@ -56,6 +56,10 @@ class Brokerage(Protocol):
         """Return the current read-only account view."""
         ...
 
+    def settle(self, trade_date: str) -> None:
+        """Release due settlements before planning, without executing orders."""
+        ...
+
     def get_order_book(self) -> OrderBookReadOnly:
         """Return a read-only snapshot of the current order book."""
         ...

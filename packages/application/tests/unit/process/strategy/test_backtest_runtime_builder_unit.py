@@ -222,8 +222,7 @@ class TestBacktestRuntimeBuilder:
             [2_000_001],
             asset_class="etf",
             commission_rate=0.0003,
-            start="2026-10-22",
-            end="2026-10-22",
+            period=("2026-10-22", "2026-10-22"),
         )
         result = ordinary_market_transform(rules, start_date="2026-10-22")(frame)
         assert result["limit_up"].item() == 4.604

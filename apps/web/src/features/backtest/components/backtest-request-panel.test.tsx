@@ -215,7 +215,36 @@ it("reads saved daily exclusions with keyboard selection and explicit trading-da
 	expect(screen.getByText("当日已执行")).toBeVisible();
 });
 
-it("rejects malformed saved eligibility instead of presenting it as executed", async () => {
+it.each([{ evaluated: "false" }, { evaluated: true, execution_rule: 10 }])(
+	"rejects malformed saved eligibility or rule: %j",
+	async (invalid) => {
+		server.use(
+			http.get("/api/v1/backtests/runs/:id/request", () =>
+				HttpResponse.json({
+					data: {
+						...request,
+						participation: [
+							{
+								instrument_id: 1,
+								symbol: "510300.SH",
+								trade_date: "2014-10-13",
+								status: "eligible",
+								warmup_available: 60,
+								warmup_required: 60,
+								...invalid,
+							},
+						],
+					},
+				}),
+			),
+		);
+		render(<BacktestRequestPanel run={run} />, { wrapper });
+		expect(await screen.findByRole("alert")).toHaveTextContent("逐日参与记录无效");
+		expect(screen.queryByText("当日已执行")).not.toBeInTheDocument();
+	},
+);
+
+it("reopens the saved daily execution rule with dates and trading units", async () => {
 	server.use(
 		http.get("/api/v1/backtests/runs/:id/request", () =>
 			HttpResponse.json({
@@ -223,13 +252,14 @@ it("rejects malformed saved eligibility instead of presenting it as executed", a
 					...request,
 					participation: [
 						{
-							instrument_id: 1,
-							symbol: "510300.SH",
-							trade_date: "2014-10-13",
+							instrument_id: 1005567,
+							symbol: "001246.SZ",
+							trade_date: "2026-10-14",
 							status: "eligible",
-							warmup_available: 60,
-							warmup_required: 60,
-							evaluated: "false",
+							warmup_available: 5,
+							warmup_required: 1,
+							evaluated: true,
+							execution_rule: "XSHE/main/2026-10-14 · 涨跌幅 10% · 买入 100 股 · 报价 0.01 元 · T+1",
 						},
 					],
 				},
@@ -237,6 +267,6 @@ it("rejects malformed saved eligibility instead of presenting it as executed", a
 		),
 	);
 	render(<BacktestRequestPanel run={run} />, { wrapper });
-	expect(await screen.findByRole("alert")).toHaveTextContent("逐日参与记录无效");
-	expect(screen.queryByText("当日已执行")).not.toBeInTheDocument();
+	expect(await screen.findByRole("columnheader", { name: "执行规则" })).toBeVisible();
+	expect(screen.getByText(/XSHE\/main\/2026-10-14/)).toBeVisible();
 });

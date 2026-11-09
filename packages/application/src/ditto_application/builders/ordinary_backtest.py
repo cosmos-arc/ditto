@@ -8,6 +8,8 @@ from ditto_data.services.metadata_service import MetadataService
 from ditto_execution.reality.ordinary_equity import (
     MIN_ORDINARY_LISTED_DAYS,
     CashEquityListing,
+    is_mainboard_stock,
+    mainboard_rule_history,
     ordinary_equity_rules,
     ordinary_execution_fields,
 )
@@ -24,12 +26,13 @@ def build_ordinary_rules(
     *,
     asset_class: str,
     commission_rate: float,
-    start: str,
-    end: str,
+    period: tuple[str, str],
     historical_roster: list[dict[str, object]] | None = None,
+    trading_days: list[str] | None = None,
 ) -> InMemoryRuleProvider:
     """Bind every frozen member to an explicitly covered listing."""
-    rules: dict[InstrumentId, InstrumentRules] = {}
+    start, end = period
+    rules: dict[InstrumentId, tuple[InstrumentRules, ...]] = {}
     frozen = (
         {int(str(row["instrument_id"])): row for row in historical_roster}
         if historical_roster is not None
@@ -54,6 +57,19 @@ def build_ordinary_rules(
             else None,
         )
         rule_start = start
+        if historical_roster is not None and is_mainboard_stock(
+            listing.asset_class, listing.exchange, listing.ticker
+        ):
+            if listing.list_date > end:
+                continue
+            rules[InstrumentId(iid)] = mainboard_rule_history(
+                listing,
+                commission_rate=commission_rate,
+                start=max(start, listing.list_date),
+                end=end,
+                trading_days=trading_days or [],
+            )
+            continue
         if historical_roster is not None:
             rule_start = max(
                 start,
@@ -64,17 +80,52 @@ def build_ordinary_rules(
             )
             if rule_start > end:
                 continue
-        rules[InstrumentId(iid)] = ordinary_equity_rules(
-            listing,
-            commission_rate=commission_rate,
-            start=rule_start,
-            end=end,
-            historical_reconstruction=historical_roster is not None,
+        rules[InstrumentId(iid)] = (
+            ordinary_equity_rules(
+                listing,
+                commission_rate=commission_rate,
+                start=rule_start,
+                end=end,
+                historical_reconstruction=historical_roster is not None,
+            ),
         )
     return InMemoryRuleProvider(
-        definitions={iid: rule[0] for iid, rule in rules.items()},
-        trading_rules={iid: [rule[1]] for iid, rule in rules.items()},
-        fee_schedules={iid: [rule[2]] for iid, rule in rules.items()},
+        definitions={iid: history[0][0] for iid, history in rules.items()},
+        trading_rules={
+            iid: [rule[1] for rule in history] for iid, history in rules.items()
+        },
+        fee_schedules={
+            iid: [rule[2] for rule in history] for iid, history in rules.items()
+        },
+    )
+
+
+def ordinary_rule_description(
+    provider: InMemoryRuleProvider, instrument_id: int, day: str
+) -> str | None:
+    """Saved report wording comes from the exact rule used by execution."""
+    rule = provider.get_rules(day, [InstrumentId(instrument_id)]).get(
+        InstrumentId(instrument_id)
+    )
+    if rule is None:
+        return None
+    definition, trading, _ = rule
+    if definition.ipo_date is not None and day < definition.ipo_date:
+        return None
+    band = (
+        "无日涨跌幅限制"
+        if trading.price_limit_pct is None
+        else f"涨跌幅 {trading.price_limit_pct:.0%}"
+    )
+    if trading.price_limit_pct is None and (definition.ipo_date or "") < "2023-04-10":
+        band = "上市首日申报价格范围"
+    if "market" not in trading.order_types_supported:
+        band += " · 不接受市价申报"
+    unit = "股" if definition.asset_class == "stock" else "份"
+    return (
+        f"{definition.exchange}/{definition.board_segment}/{trading.as_of_date}"
+        + f" · {band} · 买入 {definition.lot_size} {unit}"
+        + f" · 报价 {definition.tick_size:g} 元 · T+{trading.settlement_cycle}"
     )
 
 

@@ -1,6 +1,6 @@
 /**
  * DO NOT EDIT: generated from contracts/openapi/v1.json.
- * Schema SHA-256: a3246676bf04b3aa52a46dc0b9537bd7150b5818eac2d5425a5e26b48bcd352e
+ * Schema SHA-256: c08ec93c562a55b651a434a22ff2cc333539eedb386fbdae4e0da60db31bf228
  * Generator: openapi-typescript 7.13.0
  */
 
@@ -9312,6 +9312,8 @@ export interface components {
              * @default false
              */
             evaluated: boolean;
+            /** Execution Rule */
+            execution_rule?: string | null;
             /** Instrument Id */
             instrument_id: number;
             /**

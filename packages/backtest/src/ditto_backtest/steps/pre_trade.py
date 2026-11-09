@@ -78,7 +78,20 @@ class PreTradeStep:
         pre_trade_context = self._build_pre_trade_context(ctx)
 
         # 逐单校验
-        decisions: list[PreTradeDecisionRecord] = []
+        decisions = [
+            PreTradeDecisionRecord(
+                trade_date=ctx.time_context.trade_date,
+                order_id=f"{ctx.execution_plan.plan_id}:blocked:{index}",
+                instrument_id=blocked.instrument_id,
+                direction=blocked.direction.value,
+                original_quantity=blocked.intended_quantity,
+                final_quantity=0,
+                decision="rejected",
+                reason=blocked.reason,
+                check_sequence=("planner", blocked.severity.value),
+            )
+            for index, blocked in enumerate(ctx.execution_plan.blocked_orders)
+        ]
         for order in ctx.execution_plan.orders:
             result = self._check_order(order, pre_trade_context)
 
@@ -202,7 +215,18 @@ class PreTradeStep:
         order: Order,
         pre_trade_context: PreTradeContext,
     ) -> OrderCheckResult:
-        """调用 pre_trade_check.check_order。"""
+        """Reject unsupported order types before submission; retain the reason."""
+        rules = pre_trade_context.rules.get(order.instrument_id)
+        if (
+            rules is not None
+            and order.order_type.value not in rules[1].order_types_supported
+        ):
+            return OrderCheckResult(
+                decision=Decision.REJECT,
+                order_id=order.order_id,
+                reason="unsupported_order_type",
+                triggered_checks=("dated_order_type",),
+            )
         return self._pre_trade_check.check_order(order, pre_trade_context)
 
     def _place_order(self, order: Order) -> None:

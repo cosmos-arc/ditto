@@ -169,6 +169,11 @@ class BacktestBrokerage:
         """获取只读账户快照。"""
         return self._account.get_view()
 
+    def settle(self, trade_date: str) -> None:
+        """Make due quantities available before the day's account snapshot."""
+        self._current_trade_date = trade_date
+        self._thaw_frozen(trade_date)
+
     def get_order_book(self) -> OrderBookReadOnly:
         """获取订单簿只读快照。"""
         return self._order_book.readonly_view()
@@ -227,9 +232,7 @@ class BacktestBrokerage:
         bars = process_input.bars
         events: list[FillEvent] = []
 
-        self._current_trade_date = trade_date
-        # 解冻到期份额
-        self._thaw_frozen(trade_date)
+        self.settle(trade_date)
 
         for ticket in self._order_book.get_pending():
             fill = self._process_single_ticket(

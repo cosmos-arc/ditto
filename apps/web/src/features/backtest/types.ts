@@ -142,6 +142,7 @@ export interface BacktestRequest {
 		readonly warmupAvailable: number;
 		readonly warmupRequired: number;
 		readonly evaluated: boolean;
+		readonly executionRule: string | null;
 	}[];
 	readonly sources: readonly {
 		readonly dataset: string;

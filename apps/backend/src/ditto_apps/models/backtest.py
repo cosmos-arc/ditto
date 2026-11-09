@@ -396,6 +396,7 @@ class DailyParticipationResponse(BaseModel):
     warmup_available: int
     warmup_required: int
     evaluated: bool = False
+    execution_rule: str | None = None
     model_config = ConfigDict(strict=True, extra="forbid")
 
 

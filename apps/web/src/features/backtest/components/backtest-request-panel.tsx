@@ -118,6 +118,7 @@ export function BacktestRequestPanel({ run }: { readonly run: BacktestRun }) {
 											<th scope="col">参与原因</th>
 											<th scope="col">预热（已有 / 所需）</th>
 											<th scope="col">执行证据</th>
+											<th scope="col">执行规则</th>
 										</tr>
 									</thead>
 									<tbody>
@@ -131,6 +132,7 @@ export function BacktestRequestPanel({ run }: { readonly run: BacktestRun }) {
 														{row.warmupAvailable} / {row.warmupRequired} 交易日
 													</td>
 													<td>{row.evaluated ? "当日已执行" : "预检；尚无执行证据"}</td>
+													<td>{row.executionRule ?? "尚无已保存规则"}</td>
 												</tr>
 											))}
 									</tbody>

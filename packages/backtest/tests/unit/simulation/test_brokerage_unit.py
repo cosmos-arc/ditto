@@ -857,6 +857,34 @@ def t1_brokerage() -> BacktestBrokerage:
 class TestT1FreezeBasic:
     """T+1 冻结基础行为 — 买入当日不可卖。"""
 
+    def test_next_day_planning_sees_settled_quantity(
+        self, t1_brokerage: BacktestBrokerage
+    ) -> None:
+        from ditto_backtest.steps.data_fetch import DataFetchStep
+        from ditto_strategy.alpha.context import StrategyContext
+        from packages.backtest.tests.unit._helpers import _make_ctx
+
+        t1_brokerage.place_order(_order(quantity=1000))
+        t1_brokerage.process_pending(_t1_process_input("2026-03-02"))
+        step = DataFetchStep(t1_brokerage, StrategyContext(), set(), {})
+        same_day = _make_ctx(trade_date="2026-03-02")
+        step.execute(same_day)
+        assert (
+            same_day.require_account_view()
+            .positions[InstrumentId(1)]
+            .available_quantity
+            == 0
+        )
+        next_day = _make_ctx(trade_date="2026-03-03")
+        step.execute(next_day)
+        assert (
+            next_day.require_account_view()
+            .positions[InstrumentId(1)]
+            .available_quantity
+            == 1000
+        )
+        assert next_day.step_fills == []
+
     def test_buy_on_t_day_quantity_increases(
         self, t1_brokerage: BacktestBrokerage
     ) -> None:

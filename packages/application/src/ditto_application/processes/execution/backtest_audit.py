@@ -406,6 +406,9 @@ def persist_daily_participation(
             "status",
             "warmup_available",
             "warmup_required",
+            pl.col("execution_rule")
+            if "execution_rule" in participation.columns
+            else pl.lit(None, dtype=pl.String).alias("execution_rule"),
             pl.col("trade_date").is_in(sorted(completed_days)).alias("evaluated"),
         )
         .to_dicts()
