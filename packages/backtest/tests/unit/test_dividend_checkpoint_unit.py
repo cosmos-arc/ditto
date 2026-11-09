@@ -186,7 +186,9 @@ def test_trade_matching_survives_share_credit_restore_and_listing(method):
         assert locked[0].available_from == date(2020, 6, 5)
     fill("2020-06-05", OrderSide.SELL, 50, 8)
     assert sum(t.quantity for t in builder.get_closed_trades()) == 250
-    assert sum(t.gross_pnl for t in builder.get_closed_trades()) == pytest.approx(0)
+    gross_pnls = [t.gross_pnl for t in builder.get_closed_trades()]
+    assert None not in gross_pnls
+    assert sum(pnl for pnl in gross_pnls if pnl is not None) == pytest.approx(0)
     assert builder.get_open_trades() == ()
     assert sum(t.fees for t in builder.get_closed_trades()) == pytest.approx(6)
 
@@ -254,5 +256,7 @@ def test_fifo_attributes_whole_share_credit_across_fractional_cost_lots():
         account.get_view(),
     )
     assert sum(t.quantity for t in builder.get_closed_trades()) == 3
-    assert sum(t.gross_pnl for t in builder.get_closed_trades()) == pytest.approx(0)
+    gross_pnls = [t.gross_pnl for t in builder.get_closed_trades()]
+    assert None not in gross_pnls
+    assert sum(pnl for pnl in gross_pnls if pnl is not None) == pytest.approx(0)
     assert sum(t.fees for t in builder.get_closed_trades()) == pytest.approx(3)
