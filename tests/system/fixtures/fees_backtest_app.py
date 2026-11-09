@@ -21,7 +21,11 @@ from ditto_strategy.storage.sqlite.services.strategy_catalog_service import (
     StrategyCatalogService,
 )
 
-from tests.system.fixtures.historical_backtest_app import app, retain_history_payload
+from tests.system.fixtures.historical_backtest_app import (
+    app,
+    retain_empty_dividends,
+    retain_history_payload,
+)
 
 __all__ = ["app"]
 
@@ -35,6 +39,7 @@ _PERIODS = [
 
 
 def _retain_period(period: tuple[str, str]) -> None:
+    retain_empty_dividends(period)
     days = pl.date_range(
         date.fromisoformat(period[0]), date.fromisoformat(period[1]), eager=True
     )

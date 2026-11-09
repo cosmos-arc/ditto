@@ -362,6 +362,48 @@ class FeeStatementResponse(BaseModel):
     fills: list[FeeBillResponse]
 
 
+class DividendEventResponse(BaseModel):
+    """Implemented source facts and the actual record-date entitlement."""
+
+    event_id: str
+    instrument_id: int
+    source_ticker: str
+    source_snapshot_id: str
+    announcement_date: str
+    record_date: str
+    ex_date: str
+    pay_date: str
+    gross_per_share: float
+    registered_quantity: int
+
+
+class DividendEntryResponse(BaseModel):
+    event_id: str
+    day: str
+    kind: Literal["receivable", "cash_payment", "tax_reserved", "tax_payment"]
+    amount: float
+    quantity: int
+    acquired: str
+
+
+class DividendBalanceResponse(BaseModel):
+    trade_date: str
+    cash: float
+    available_cash: float
+    receivable: float
+    tax_payable: float
+    market_value: float
+    nav: float
+
+
+class DividendStatementResponse(BaseModel):
+    currency: Literal["CNY"]
+    policy: str
+    events: list[DividendEventResponse]
+    entries: list[DividendEntryResponse]
+    balances: list[DividendBalanceResponse]
+
+
 class BacktestReportResponse(BaseModel):
     """回测报告响应 — 对应 backtest_report.json 的元数据结构."""
 
@@ -371,6 +413,7 @@ class BacktestReportResponse(BaseModel):
     )
     initial_cash: float = Field(default=0.0)
     final_nav: float = Field(default=0.0)
+    dividend_statement: DividendStatementResponse | None = None
     fee_statement: FeeStatementResponse | None = Field(
         default=None, description="已保存的实际逐笔费用账单。旧报告缺失时不补算"
     )

@@ -41,7 +41,17 @@ CASH_FLOW_SPEC = SqliteTableSpec(
 
 DIVIDEND_SPEC = SqliteTableSpec(
     table="dividend",
-    columns=("dividend_per_share", "dividend_yield", "div_proc"),
+    columns=(
+        "dividend_per_share",
+        "dividend_yield",
+        "div_proc",
+        "gross_dividend_per_share",
+        "record_date",
+        "pay_date",
+        "implementation_date",
+        "report_date",
+        "stock_dividend_ratio",
+    ),
     id_column="instrument_id",
     date_column="ex_dividend_date",
     nullable_columns=frozenset(
@@ -51,6 +61,12 @@ DIVIDEND_SPEC = SqliteTableSpec(
             "dividend_per_share",
             "dividend_yield",
             "div_proc",
+            "gross_dividend_per_share",
+            "record_date",
+            "pay_date",
+            "implementation_date",
+            "report_date",
+            "stock_dividend_ratio",
         }
     ),
     # ex_dividend_date 可 NULL（预案阶段），数据不携带事件级稳定 ID——

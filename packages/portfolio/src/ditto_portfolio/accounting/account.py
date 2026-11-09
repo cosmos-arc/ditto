@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Mapping
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field, replace
 from types import MappingProxyType
 
 from ditto_kernel.events import EventBus
@@ -11,6 +11,7 @@ from ditto_kernel.identity import InstrumentId
 from ditto_kernel.order import OrderSide
 
 from ditto_portfolio.accounting.cash import CashBook
+from ditto_portfolio.accounting.dividends import CashDividend, DividendBook
 from ditto_portfolio.accounting.fills import FillEvent
 from ditto_portfolio.accounting.position import Position
 from ditto_portfolio.events import PositionChanged
@@ -39,6 +40,7 @@ class AccountView:
     total_value: float
     nav: float
     exposure: float
+    dividends: DividendBook = field(default_factory=DividendBook)
 
 
 class Account:
@@ -63,12 +65,16 @@ class Account:
         positions: dict[InstrumentId, Position] | None = None,
         cash: CashBook | None = None,
         event_bus: EventBus | None = None,
+        dividends: tuple[CashDividend, ...] = (),
+        dividend_state: DividendBook | None = None,
     ) -> None:
         """
         初始化账户。
 
         Args:
             positions: 持仓映射
+            dividends: 已冻结的股票现金分红事实
+            dividend_state: 恢复的权益账本
             cash: 现金账本
             event_bus: 事件总线（可选，用于发布 PositionChanged 事件）
 
@@ -90,6 +96,9 @@ class Account:
             ),
         )
         self._event_bus = event_bus
+        if dividends and positions and dividend_state is None:
+            raise ValueError("dividend tax requires opening acquisition lots")
+        self._dividends = dividend_state or DividendBook.start(dividends)
 
     @property
     def positions(self) -> MappingProxyType[InstrumentId, Position]:
@@ -116,10 +125,69 @@ class Account:
         return AccountView(
             positions=MappingProxyType(dict(self._positions)),
             cash=self.cash,
-            total_value=self.cash.total + exposure,
-            nav=self.cash.total + exposure,
+            total_value=self.cash.total
+            + exposure
+            + self._dividends.receivable
+            - self._dividends.tax_payable,
+            nav=self.cash.total
+            + exposure
+            + self._dividends.receivable
+            - self._dividends.tax_payable,
             exposure=exposure,
+            dividends=replace(
+                self._dividends,
+                events=tuple(
+                    event
+                    for event in self._dividends.events
+                    if event.announcement_date.isoformat()
+                    < max(self._dividends.settled_day, self._dividends.closed_day)
+                ),
+            ),
         )
+
+    def settle_dividends(self, day: str) -> None:
+        """Apply due cash and tax without making pending receivables spendable."""
+        state, amount = self._dividends.settle(day)
+        previously_accrued = {
+            right.event.identity for right in self._dividends.rights if right.accrued
+        }
+        newly_accrued = {
+            right.event
+            for right in state.rights
+            if right.accrued and right.event.identity not in previously_accrued
+        }
+        # The carried quote is cum-dividend. Remove the entitlement before the
+        # strategy sees both the old market value and the new receivable.
+        for event in newly_accrued:
+            position = self._positions.get(event.instrument_id)
+            if position is not None:
+                reduction = position.quantity * event.gross_per_share
+                self._positions[event.instrument_id] = replace(
+                    position,
+                    market_value=position.market_value - reduction,
+                    unrealized_pnl=position.unrealized_pnl - reduction,
+                )
+        released = self._dividends.tax_payable - state.tax_payable
+        self._cash = replace(
+            self._cash,
+            available=self._cash.available + amount + released,
+            settled=self._cash.settled + amount,
+            frozen=self._cash.frozen - released,
+        )
+        self._dividends = state
+
+    def close_dividend_day(self, day: str) -> None:
+        """Freeze daily-net holdings and reserve tax before the daily report."""
+        state = self._dividends.close(
+            day, {iid: p.quantity for iid, p in self._positions.items()}
+        )
+        reserve = state.tax_payable - self._dividends.tax_payable
+        self._cash = replace(
+            self._cash,
+            available=self._cash.available - reserve,
+            frozen=self._cash.frozen + reserve,
+        )
+        self._dividends = state
 
     def mark_to_market(self, prices: Mapping[InstrumentId, float]) -> None:
         """按最新价格重估已有持仓市值和未实现盈亏。"""

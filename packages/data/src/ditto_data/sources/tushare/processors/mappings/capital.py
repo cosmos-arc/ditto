@@ -41,11 +41,29 @@ DIVIDEND_MAPPING = ColumnMapping(
         "ts_code": "source_ticker",
         "ex_date": "ex_dividend_date",
         "cash_div": "dividend_per_share",
+        "cash_div_tax": "gross_dividend_per_share",
+        "imp_ann_date": "implementation_date",
+        "end_date": "report_date",
+        "stk_div": "stock_dividend_ratio",
         "ann_date": "knowledge_date",
         "div_proc": "div_proc",  # P015: 添加实施进度字段
     },
-    date_columns={"ex_dividend_date": "%Y%m%d", "knowledge_date": "%Y%m%d"},
-    float_columns=["dividend_per_share"],
+    date_columns=dict.fromkeys(
+        (
+            "ex_dividend_date",
+            "knowledge_date",
+            "record_date",
+            "pay_date",
+            "implementation_date",
+            "report_date",
+        ),
+        "%Y%m%d",
+    ),
+    float_columns=[
+        "dividend_per_share",
+        "gross_dividend_per_share",
+        "stock_dividend_ratio",
+    ],
     computed_columns={
         "dividend_yield": pl.lit(None, dtype=pl.Float64),
     },
@@ -56,6 +74,12 @@ DIVIDEND_MAPPING = ColumnMapping(
         "dividend_per_share",
         "dividend_yield",
         "div_proc",  # P015: 输出包含实施进度
+        "gross_dividend_per_share",
+        "record_date",
+        "pay_date",
+        "implementation_date",
+        "report_date",
+        "stock_dividend_ratio",
     ),
 )
 

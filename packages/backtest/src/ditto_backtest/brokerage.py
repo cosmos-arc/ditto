@@ -174,6 +174,7 @@ class BacktestBrokerage:
         """Make due quantities available before the day's account snapshot."""
         self._current_trade_date = trade_date
         self._thaw_frozen(trade_date)
+        self._account.settle_dividends(trade_date)
 
     def get_order_book(self) -> OrderBookReadOnly:
         """获取订单簿只读快照。"""
@@ -248,6 +249,7 @@ class BacktestBrokerage:
         self._account.mark_to_market(
             {iid: market.close for iid, market in bars.items()}
         )
+        self._account.close_dividend_day(trade_date)
         return tuple(events)
 
     def _process_single_ticket(

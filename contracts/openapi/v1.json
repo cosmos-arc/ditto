@@ -9297,6 +9297,16 @@
             ],
             "description": "绩效分析统计"
           },
+          "dividend_statement": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DividendStatementResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "fee_statement": {
             "anyOf": [
               {
@@ -14230,6 +14240,195 @@
           "dividend_yield"
         ],
         "title": "Dividend",
+        "type": "object"
+      },
+      "DividendBalanceResponse": {
+        "properties": {
+          "available_cash": {
+            "title": "Available Cash",
+            "type": "number"
+          },
+          "cash": {
+            "title": "Cash",
+            "type": "number"
+          },
+          "market_value": {
+            "title": "Market Value",
+            "type": "number"
+          },
+          "nav": {
+            "title": "Nav",
+            "type": "number"
+          },
+          "receivable": {
+            "title": "Receivable",
+            "type": "number"
+          },
+          "tax_payable": {
+            "title": "Tax Payable",
+            "type": "number"
+          },
+          "trade_date": {
+            "title": "Trade Date",
+            "type": "string"
+          }
+        },
+        "required": [
+          "trade_date",
+          "cash",
+          "available_cash",
+          "receivable",
+          "tax_payable",
+          "market_value",
+          "nav"
+        ],
+        "title": "DividendBalanceResponse",
+        "type": "object"
+      },
+      "DividendEntryResponse": {
+        "properties": {
+          "acquired": {
+            "title": "Acquired",
+            "type": "string"
+          },
+          "amount": {
+            "title": "Amount",
+            "type": "number"
+          },
+          "day": {
+            "title": "Day",
+            "type": "string"
+          },
+          "event_id": {
+            "title": "Event Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "receivable",
+              "cash_payment",
+              "tax_reserved",
+              "tax_payment"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "quantity": {
+            "title": "Quantity",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "event_id",
+          "day",
+          "kind",
+          "amount",
+          "quantity",
+          "acquired"
+        ],
+        "title": "DividendEntryResponse",
+        "type": "object"
+      },
+      "DividendEventResponse": {
+        "description": "Implemented source facts and the actual record-date entitlement.",
+        "properties": {
+          "announcement_date": {
+            "title": "Announcement Date",
+            "type": "string"
+          },
+          "event_id": {
+            "title": "Event Id",
+            "type": "string"
+          },
+          "ex_date": {
+            "title": "Ex Date",
+            "type": "string"
+          },
+          "gross_per_share": {
+            "title": "Gross Per Share",
+            "type": "number"
+          },
+          "instrument_id": {
+            "title": "Instrument Id",
+            "type": "integer"
+          },
+          "pay_date": {
+            "title": "Pay Date",
+            "type": "string"
+          },
+          "record_date": {
+            "title": "Record Date",
+            "type": "string"
+          },
+          "registered_quantity": {
+            "title": "Registered Quantity",
+            "type": "integer"
+          },
+          "source_snapshot_id": {
+            "title": "Source Snapshot Id",
+            "type": "string"
+          },
+          "source_ticker": {
+            "title": "Source Ticker",
+            "type": "string"
+          }
+        },
+        "required": [
+          "event_id",
+          "instrument_id",
+          "source_ticker",
+          "source_snapshot_id",
+          "announcement_date",
+          "record_date",
+          "ex_date",
+          "pay_date",
+          "gross_per_share",
+          "registered_quantity"
+        ],
+        "title": "DividendEventResponse",
+        "type": "object"
+      },
+      "DividendStatementResponse": {
+        "properties": {
+          "balances": {
+            "items": {
+              "$ref": "#/components/schemas/DividendBalanceResponse"
+            },
+            "title": "Balances",
+            "type": "array"
+          },
+          "currency": {
+            "const": "CNY",
+            "title": "Currency",
+            "type": "string"
+          },
+          "entries": {
+            "items": {
+              "$ref": "#/components/schemas/DividendEntryResponse"
+            },
+            "title": "Entries",
+            "type": "array"
+          },
+          "events": {
+            "items": {
+              "$ref": "#/components/schemas/DividendEventResponse"
+            },
+            "title": "Events",
+            "type": "array"
+          },
+          "policy": {
+            "title": "Policy",
+            "type": "string"
+          }
+        },
+        "required": [
+          "currency",
+          "policy",
+          "events",
+          "entries",
+          "balances"
+        ],
+        "title": "DividendStatementResponse",
         "type": "object"
       },
       "ETFAllocationBody": {

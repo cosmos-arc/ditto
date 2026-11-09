@@ -16,6 +16,7 @@ from ditto_execution.reality.ordinary_etf import etf_rule_history
 from ditto_execution.rules import InMemoryRuleProvider
 from ditto_kernel.identity import InstrumentId
 from ditto_kernel.trading import InstrumentRules
+from ditto_portfolio.accounting.dividends import CashDividend
 
 from ditto_application.exceptions import AppBuilderError
 
@@ -198,6 +199,7 @@ def ordinary_market_transform(
     *,
     start_date: str,
     participation: pl.DataFrame | None = None,
+    cash_dividends: tuple[CashDividend, ...] = (),
 ) -> Callable[[pl.DataFrame], pl.DataFrame]:
     """Use real status/limits for stocks and the verified ETF limit formula."""
     execution_dates = (
@@ -215,6 +217,7 @@ def ordinary_market_transform(
             return frame
         ordered = frame.sort(["instrument_id", "trade_date"]).with_columns(
             pl.col("adj_factor").shift(1).over("instrument_id").alias("_previous_adj"),
+            pl.col("close").shift(1).over("instrument_id").alias("_previous_close"),
         )
         rows = ordered.to_dicts()
         for row in rows:
@@ -230,11 +233,21 @@ def ordinary_market_transform(
                             row,
                             provider.get_rules(day, [iid])[iid],
                             start_date=start_date,
+                            cash_dividend=next(
+                                (
+                                    e.gross_per_share
+                                    for e in cash_dividends
+                                    if e.instrument_id == iid
+                                    and e.ex_date.isoformat() == day
+                                ),
+                                None,
+                            ),
                         )
                     )
             except ValueError as exc:
                 raise AppBuilderError(str(exc)) from exc
             row.pop("_previous_adj")
+            row.pop("_previous_close")
             if row.get("source") != "tushare":
                 raise AppBuilderError(
                     f"unknown execution volume/amount units: {iid} {day}"

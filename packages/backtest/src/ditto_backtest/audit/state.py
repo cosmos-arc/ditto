@@ -175,6 +175,7 @@ def _account_view_from_snapshot(snapshot: BacktestAccountStateSnapshot) -> Accou
         total_value=snapshot.total_value,
         nav=snapshot.nav,
         exposure=snapshot.exposure,
+        dividends=snapshot.dividends,
     )
 
 
@@ -398,6 +399,7 @@ def _daily_snapshot_from_payload(
             "nav",
             "positions",
             "total_value",
+            "dividends",
         ),
     )
     for position in payload_sequence(account, "positions"):

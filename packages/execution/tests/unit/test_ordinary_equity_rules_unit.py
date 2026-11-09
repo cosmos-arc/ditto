@@ -14,6 +14,45 @@ from ditto_execution.reality.ordinary_equity import (
 from ditto_kernel.identity import InstrumentId
 
 
+def test_cash_event_reconciles_rounded_ex_reference_and_rejects_other_actions():
+    rules = ordinary_equity_rules(
+        CashEquityListing(
+            InstrumentId(1), "000001", "stock", "SZSE", "1991-04-03", None
+        ),
+        commission_rate=0.0003,
+        start="2023-06-12",
+        end="2023-06-20",
+        historical_reconstruction=True,
+    )
+    row = {
+        "trade_date": "2023-06-14",
+        "_previous_close": 11.77,
+        "_previous_adj": 113.936,
+        "adj_factor": 116.713,
+        "pre_close": 11.49,
+        "is_st": False,
+        "is_suspended": False,
+        "limit_up": 12.64,
+        "limit_down": 10.34,
+    }
+    assert (
+        ordinary_execution_fields(
+            row, rules, start_date="2023-06-12", cash_dividend=0.285
+        )
+        == {}
+    )
+    for factor in (113.936, 233.426):
+        with pytest.raises(ValueError, match="corporate action"):
+            ordinary_execution_fields(
+                {**row, "adj_factor": factor},
+                rules,
+                start_date="2023-06-12",
+                cash_dividend=0.285,
+            )
+    with pytest.raises(ValueError, match="corporate action"):
+        ordinary_execution_fields(row, rules, start_date="2023-06-12")
+
+
 def test_pre_2014_ipo_calendar_keeps_supported_rules_without_extending_coverage() -> (
     None
 ):

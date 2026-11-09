@@ -702,12 +702,21 @@ class IndustryMapping:
 | `knowledge_date` | Date | 数据可知日期 |
 | `effective_from` | Date | 版本生效开始日期 |
 | `effective_to` | Date | 版本生效结束日期 |
-| `dividend_per_share` | Float64 | 每股股息 |
+| `dividend_per_share` | Float64 | 供应商每股税后股息，不作为统一账户税后金额 |
+| `gross_dividend_per_share` | Float64 | 每股税前现金，人民币元 |
+| `record_date` | Date | 股权登记日 |
+| `pay_date` | Date | 派息日 |
+| `implementation_date` | Date | 实施公告日；与原公告知识日期分开 |
+| `report_date` | Date | 分红所属报告年度/期间 |
+| `stock_dividend_ratio` | Float64 | 每股送转比例；现金增量不处理份额变化 |
+| `div_proc` | String | 实施进度，只有明确实施的事实可生成权益 |
 | `dividend_yield` | Float64 | 股息率 |
 
 **存储路径**：`fundamental/corporate/dividend/`
 
 **主键**：`(instrument_id, ex_dividend_date, effective_from)`
+
+普通历史现金记账使用 v3 留存载荷，不从复权因子推断现金。登记持仓、除息应收、到账现金及个人流通股税务假设见 [股票现金分红](../../../docs/evidence/stock-cash-dividends-759.md)。旧载荷缺少实施字段时重新采集，原报告保持原事实。
 
 ---
 

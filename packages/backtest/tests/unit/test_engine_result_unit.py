@@ -100,6 +100,15 @@ def _complete_audit_state_payload() -> dict[str, object]:
         "daily_snapshots": [
             {
                 "account": {
+                    "dividends": {
+                        "events": [],
+                        "lots": [],
+                        "rights": [],
+                        "entries": [],
+                        "tax_payable": 0.0,
+                        "closed_day": "",
+                        "settled_day": "",
+                    },
                     "cash_available": 1_000.0,
                     "cash_frozen": 0.0,
                     "cash_settled": 1_000.0,

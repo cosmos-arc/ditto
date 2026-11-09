@@ -479,6 +479,12 @@ CREATE TABLE IF NOT EXISTS dividend (
     dividend_per_share REAL,
     dividend_yield REAL,
     div_proc TEXT,  -- P015: 实施进度：预案/实施
+    gross_dividend_per_share REAL,
+    record_date DATE,
+    pay_date DATE,
+    implementation_date DATE,
+    report_date DATE,
+    stock_dividend_ratio REAL,
     PRIMARY KEY (instrument_id, effective_from, ex_dividend_date),  -- 调整主键顺序
     FOREIGN KEY (instrument_id) REFERENCES instrument(instrument_id)
 );

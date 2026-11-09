@@ -46,6 +46,7 @@ from ditto_kernel.identity import InstrumentId
 from ditto_kernel.order import OrderSide, OrderType
 from ditto_kernel.trading import FeeModel, InstrumentRuleProvider, InstrumentRules
 from ditto_portfolio.accounting import Account, CashBook, Position
+from ditto_portfolio.accounting.dividends import CashDividend
 from ditto_risk.pre_trade import (
     BuyingPowerCheck,
     CompositePreTradeCheck,
@@ -306,17 +307,20 @@ def _build_account(
     *,
     initial_cash: float,
     account_state: BacktestAccountStateSnapshot | None,
+    dividends: tuple[CashDividend, ...] = (),
 ) -> Account:
     """Build a mutable Account from initial cash or checkpoint state."""
     if account_state is None:
         return Account(
+            dividends=dividends,
             cash=CashBook(
                 available=initial_cash,
                 settled=initial_cash,
                 frozen=0.0,
-            )
+            ),
         )
     return Account(
+        dividend_state=account_state.dividends,
         positions={
             position.instrument_id: Position(
                 instrument_id=position.instrument_id,
@@ -698,9 +702,15 @@ class BacktestRuntimeBuilder:
             pool_description = str(pool.get("description") or "")
             pool_description += (
                 f" 普通规则核对时间 {RULES_OBSERVED_AT};仅覆盖已核实名单,"
-                "未认证历史可得性。股票退出或无报价停牌拒绝估值;"
-                "ETF 状态以实际正成交量核验,缺报价/零成交量拒绝。"
-                "最低佣金 5 元为保守研究假设;不模拟分红、拆并份或退市清算。"
+                + "未认证历史可得性。股票退出或无报价停牌拒绝估值;"
+                + "ETF 状态以实际正成交量核验,缺报价/零成交量拒绝。"
+                + "最低佣金 5 元为保守研究假设;拆并份或退市清算仍缺会计证据。"
+                + (
+                    "股票现金分红与适用税务假设见保存的分红账本。"
+                    if historical_provider is not None
+                    and runtime.spec.asset_class == "stock"
+                    else "本路径不模拟现金分配。"
+                )
             )
             resolved_config = replace(
                 resolved_config,
@@ -741,7 +751,11 @@ class BacktestRuntimeBuilder:
 
         brokerage = BacktestBrokerage(
             account=_build_account(
-                initial_cash=config.initial_cash, account_state=account_state
+                initial_cash=config.initial_cash,
+                account_state=account_state,
+                dividends=historical_provider.cash_dividends
+                if historical_provider
+                else (),
             ),
             order_book=_build_order_book(runtime_state),
             model=BrokerageModel(
@@ -870,6 +884,10 @@ class BacktestRuntimeBuilder:
                 ).isoformat(),
                 include_fundamentals=runtime.spec.asset_class == "stock",
             )
+            if runtime.spec.asset_class == "stock":
+                historical_provider.freeze_cash_dividends(
+                    start=config.start_date, end=config.end_date
+                )
         participation = None
         etf_reference = (
             historical_provider.freeze_etf_reference()
@@ -1046,7 +1064,12 @@ class BacktestRuntimeBuilder:
             classification=classification_snapshot_fn,
             require_source_snapshot_lineage=True,
             market=ordinary_market_transform(
-                rule_provider, start_date=config.start_date, participation=participation
+                rule_provider,
+                start_date=config.start_date,
+                participation=participation,
+                cash_dividends=historical_provider.cash_dividends
+                if historical_provider
+                else (),
             ),
             participation=participation,
             requirements=FeedInputRequirements(

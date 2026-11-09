@@ -32,6 +32,9 @@ def in_memory_db(tmp_path: Path) -> SQLitePool:
         effective_to DATE,
         dividend_per_share REAL,
         dividend_yield REAL,
+        gross_dividend_per_share REAL,
+        record_date DATE, pay_date DATE, implementation_date DATE,
+        report_date DATE, stock_dividend_ratio REAL,
         div_proc TEXT,  -- P015: implementation progress
         PRIMARY KEY (instrument_id, effective_from, ex_dividend_date)
     )"""

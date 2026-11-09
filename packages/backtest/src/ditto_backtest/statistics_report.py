@@ -94,5 +94,6 @@ def build_report(
         risk_log=collector.get_risk_log(),
         pre_trade_log=collector.get_pre_trade_log(),
         final_account_state=final_account_state,
+        account_series=tuple(snapshots),
         benchmark_series=benchmark_series,
     )

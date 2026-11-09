@@ -100,6 +100,27 @@ def retain_history_payload(
         pool.close_all()
 
 
+def retain_empty_dividends(period: tuple[str, str]) -> None:
+    """Declare a completed empty announcement response for a synthetic window."""
+    retain_history_payload(
+        "dividend",
+        pl.DataFrame(
+            schema={
+                "source_ticker": pl.String,
+                "knowledge_date": pl.Date,
+                "div_proc": pl.String,
+                "record_date": pl.Date,
+                "ex_dividend_date": pl.Date,
+                "pay_date": pl.Date,
+                "implementation_date": pl.Date,
+                "gross_dividend_per_share": pl.Float64,
+                "stock_dividend_ratio": pl.Float64,
+            }
+        ),
+        period=period,
+    )
+
+
 def _daily(tickers: tuple[str, ...]) -> pl.DataFrame:
     days = pl.date_range(date(2014, 1, 1), date(2014, 12, 31), eager=True)
     dates = [day for day in days if day.weekday() < 5]
