@@ -92,6 +92,63 @@ class FrozenHistoryProvider:
                 end=(calendar_end or end) if dataset == "calendar" else end,
                 date_column="knowledge_date" if financial else "trade_date",
             )
+        if asset_class == "stock":
+            self._freeze_suspension_anchors(start)
+
+    def _freeze_suspension_anchors(self, start: str) -> None:
+        """Retain a past quote for halts already in progress at the warmup start."""
+        bars = self._frames["stock_daily"]
+        missing = (
+            self._frames["stock_status"]
+            .filter(pl.col("is_suspended"))
+            .join(
+                bars.group_by("instrument_id").agg(
+                    pl.col("trade_date").min().alias("_first_quote")
+                ),
+                on="instrument_id",
+                how="left",
+            )
+            .filter(
+                pl.col("_first_quote").is_null()
+                | (pl.col("trade_date") < pl.col("_first_quote"))
+            )
+        )
+        scope = {
+            ticker: self._ticker_ids[ticker]
+            for ticker in missing["source_ticker"].unique().to_list()
+        }
+        if not scope:
+            return
+        candidates = [
+            s.request_start
+            for s in self._reader.list_snapshots(
+                dataset_id="stock_daily", source=self._source
+            )
+            if s.created_at <= self.frozen_at and s.request_start < start
+        ]
+        if not candidates:
+            return
+        earliest = min(candidates)
+        end = (date.fromisoformat(start) - timedelta(days=1)).isoformat()
+        span = 31
+        while scope:
+            first = max(
+                earliest, (date.fromisoformat(start) - timedelta(days=span)).isoformat()
+            )
+            quotes = self._freeze_dataset(
+                "stock_daily", scope, start=first, end=end, date_column="trade_date"
+            )
+            anchors = quotes.sort("trade_date").group_by("source_ticker").tail(1)
+            self._frames["stock_daily"] = pl.concat(
+                [self._frames["stock_daily"], anchors], how="diagonal_relaxed"
+            )
+            found = set(anchors["source_ticker"])
+            scope = {
+                ticker: iid for ticker, iid in scope.items() if ticker not in found
+            }
+            if first == earliest:
+                break
+            span *= 2
 
     def prepare_calendar(self, *, start: str, end: str, warmup: int, lag: int) -> str:
         """Expand verified calendar coverage until the required sessions exist."""
@@ -308,6 +365,10 @@ class FrozenHistoryProvider:
                     bars,
                     self._range("stock_status", query),
                     self._range("stock_limit", query),
+                    valuation_history=self._frames["stock_daily"].filter(
+                        pl.col("source_ticker").is_in(query.instruments)
+                        & (pl.col("trade_date") < date.fromisoformat(query.start))
+                    ),
                 )
             except ValueError as error:
                 raise AppBuilderError(str(error)) from error

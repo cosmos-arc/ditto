@@ -257,3 +257,41 @@ def test_suspend_same_code_different_timing_rows_survive() -> None:
 
     assert result.height == 1
     assert result["is_suspended"].to_list() == [True]
+
+
+@pytest.mark.parametrize("day", ["2014-01-02", "2016-01-04", "2018-06-15"])
+def test_empty_st_cannot_certify_unnamed_traded_or_halted_identities(day):
+    client = MagicMock()
+    ts_day = day.replace("-", "")
+
+    def query(**params):
+        if params["api_name"] == "stock_st":
+            return pl.DataFrame(
+                schema={
+                    "ts_code": pl.String,
+                    "name": pl.String,
+                    "trade_date": pl.String,
+                }
+            )
+        if params["api_name"] == "suspend_d":
+            return pl.DataFrame(
+                {
+                    "ts_code": ["000001.SZ"],
+                    "trade_date": [ts_day],
+                    "suspend_timing": [None],
+                }
+            )
+        if params["api_name"] == "bak_basic":
+            return pl.DataFrame(
+                {"ts_code": ["600000.SH"], "trade_date": [ts_day], "name": ["浦发银行"]}
+            )
+        if params["api_name"] == "daily":
+            return pl.DataFrame({"ts_code": ["600000.SH"], "trade_date": [ts_day]})
+        pytest.fail(f"unexpected API {params}")
+
+    client.query.side_effect = query
+    with pytest.raises(SourceFetchError) as failure:
+        StockTushareAdapter(_client=client).fetch_stock_status(day)
+    assert "empty stock_st without complete dated name evidence" in str(
+        failure.value.__cause__
+    )

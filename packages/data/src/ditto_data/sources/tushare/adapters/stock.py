@@ -550,6 +550,12 @@ class StockTushareAdapter(BaseTushareAdapter):
 
             if universe_df is None or universe_df.is_empty():
                 universe_df = self._fetch_traded_universe(ts_date, suspend_df)
+            universe_df = universe_df.join(
+                suspend_df.select("ts_code").unique(),
+                on="ts_code",
+                how="full",
+                coalesce=True,
+            )
 
             # 3. Fetch the same-date ST snapshot; historical names are a
             # provider-native fallback when the daily endpoint has no rows.
@@ -919,6 +925,14 @@ class StockTushareAdapter(BaseTushareAdapter):
         )
         if not st_response.is_empty():
             return st_response.select("ts_code", "name")
+        if universe_df.filter(
+            pl.col("name").is_null() | (pl.col("name").str.strip_chars() == "")
+        ).height:
+            raise SourceFetchError(
+                message="empty stock_st without complete dated name evidence",
+                source="tushare",
+                details={"trade_date": ts_date},
+            )
         return universe_df.filter(
             pl.col("name").fill_null("").str.contains(_ST_NAME_PATTERN)
         ).select("ts_code", "name")

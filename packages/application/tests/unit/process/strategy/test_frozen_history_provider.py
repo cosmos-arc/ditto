@@ -32,6 +32,8 @@ def _provider(
     newer: str | None = None,
     stock: bool = False,
     halted: bool = False,
+    start: str = "2014-10-13",
+    prior_quote: bool = True,
 ):
     days = [date(2014, 10, 13) + timedelta(days=i) for i in range(5)]
     bars = pl.DataFrame(
@@ -93,6 +95,10 @@ def _provider(
                 frames[dataset] = frames[dataset].filter(
                     ~pl.col("trade_date").is_in(days[1:3])
                 )
+        if not prior_quote:
+            frames["stock_daily"] = frames["stock_daily"].filter(
+                pl.col("trade_date") != days[0]
+            )
         frames = {
             dataset: frame.with_columns(pl.lit("000001.SZ").alias("source_ticker"))
             if "source_ticker" in frame.columns
@@ -163,7 +169,7 @@ def _provider(
     provider.freeze(
         ticker_ids={"000001.SZ" if stock else "510300.SH": _IID},
         asset_class="stock" if stock else "etf",
-        start="2014-10-13",
+        start=start,
         end="2014-10-17",
         include_fundamentals=True,
     )
@@ -312,7 +318,7 @@ def test_confirmed_halts_keep_past_valuation_without_fabricating_signal_history(
 
 
 def test_halt_without_a_past_valuation_cannot_take_a_future_quote():
-    provider, _, _ = _provider(stock=True, halted=True)
+    provider, _, _ = _provider(stock=True, halted=True, prior_quote=False)
     with pytest.raises(
         AppBuilderError, match=r"missing prior suspension valuation.*2014"
     ):
@@ -324,3 +330,23 @@ def test_halt_without_a_past_valuation_cannot_take_a_future_quote():
                 with_execution_state=True,
             )
         )
+
+
+def test_long_halt_retains_frozen_quote_before_warmup_without_adding_signal_history():
+    provider, _, _ = _provider(stock=True, halted=True, start="2014-10-14")
+    execution = provider.get_bars(
+        BarQuery(
+            instruments=("000001.SZ",),
+            start="2014-10-14",
+            end="2014-10-15",
+            with_execution_state=True,
+        )
+    )
+    assert execution["close"].to_list() == [10.0, 10.0]
+    assert execution["valuation_date"].to_list() == [date(2014, 10, 13)] * 2
+    assert execution["is_valuation_only"].to_list() == [True, True]
+    history = provider.get_bars(
+        BarQuery(instruments=("000001.SZ",), start="2014-10-14", end="2014-10-15")
+    )
+    assert history.is_empty()
+    assert all(row["verified"] for row in provider.sources)

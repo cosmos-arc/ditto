@@ -4,7 +4,11 @@ import polars as pl
 
 
 def stock_execution_bars(
-    bars: pl.DataFrame, status: pl.DataFrame, limits: pl.DataFrame
+    bars: pl.DataFrame,
+    status: pl.DataFrame,
+    limits: pl.DataFrame,
+    *,
+    valuation_history: pl.DataFrame | None = None,
 ) -> pl.DataFrame:
     """
     Carry only a verified past close for a confirmed full-day suspension.
@@ -16,6 +20,13 @@ def stock_execution_bars(
     bars = bars.with_columns(
         pl.col("trade_date").alias("valuation_date"),
         pl.lit(False).alias("is_valuation_only"),
+    )
+    quotes = (
+        pl.concat([bars, valuation_history], how="diagonal_relaxed").with_columns(
+            pl.col("trade_date").alias("valuation_date")
+        )
+        if valuation_history is not None
+        else bars
     )
     missing = status.filter(pl.col("is_suspended")).join(
         bars.select(keys), on=keys, how="anti"
@@ -34,7 +45,7 @@ def stock_execution_bars(
             missing.select(keys)
             .sort("trade_date")
             .join_asof(
-                bars.rename({"trade_date": "_quote_date"}).sort("_quote_date"),
+                quotes.rename({"trade_date": "_quote_date"}).sort("_quote_date"),
                 left_on="trade_date",
                 right_on="_quote_date",
                 by="instrument_id",
