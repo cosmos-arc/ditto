@@ -31,10 +31,16 @@ test("cash dividend facts recover through the UI, reconcile, reopen and export",
 		page.getByText(/unknown dividend implementation dates/).first(),
 	).toBeVisible();
 	await page.request.post(`${apiOrigin}/system-fixture/dividends/repair`);
-	await page
+	await page.reload();
+	const requestDisclosure = page
 		.locator("summary")
-		.filter({ hasText: "请求与冻结来源" })
-		.press("Enter");
+		.filter({ hasText: "请求与冻结来源" });
+	await expect(requestDisclosure).toBeVisible();
+	if ((await requestDisclosure.locator("..").getAttribute("open")) === null)
+		await requestDisclosure.press("Enter");
+	await expect(
+		page.getByRole("button", { name: "补证后沿原配置新建运行" }),
+	).toBeVisible();
 	await page
 		.getByRole("button", { name: "补证后沿原配置新建运行" })
 		.press("Enter");
