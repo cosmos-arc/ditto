@@ -34,9 +34,9 @@ test.describe
 			const browserErrors = captureBrowserErrors(page);
 			await page.goto(`${webOrigin}/research/backtests`);
 
-			// 从目录加入 A，经正式详情入口加入 B；整页导航与刷新均读取同一会话集合。
-			await page.getByRole("checkbox", { name: `加入对比 ${RUN_A}` }).check();
-			await page.getByRole("button", { name: `选择回测 ${RUN_B}` }).click();
+			// 从目录加入 B，经正式详情入口加入 A；整页导航与刷新均读取同一会话集合。
+			await page.getByRole("checkbox", { name: `加入对比 ${RUN_B}` }).check();
+			await page.getByRole("button", { name: `选择回测 ${RUN_A}` }).click();
 			await page.getByRole("link", { name: "打开回测结果" }).click();
 			await page.getByRole("button", { name: "加入对比", exact: true }).click();
 			await expect(page.getByRole("status")).toContainText("已加入对比");
