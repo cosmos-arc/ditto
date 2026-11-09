@@ -2,18 +2,17 @@
 
 from collections.abc import Callable
 from dataclasses import dataclass
-from datetime import date, timedelta
 
 import polars as pl
 from ditto_data.services.metadata_service import MetadataService
 from ditto_execution.reality.ordinary_equity import (
-    MIN_ORDINARY_LISTED_DAYS,
     CashEquityListing,
     cash_stock_board,
     ordinary_equity_rules,
     ordinary_execution_fields,
     stock_rule_history,
 )
+from ditto_execution.reality.ordinary_etf import etf_rule_history
 from ditto_execution.rules import InMemoryRuleProvider
 from ditto_kernel.identity import InstrumentId
 from ditto_kernel.trading import InstrumentRules
@@ -28,6 +27,7 @@ class HistoricalRuleInputs:
     roster: list[dict[str, object]]
     trading_days: list[str]
     stock_status: pl.DataFrame | None
+    etf_reference: pl.DataFrame | None = None
 
 
 def build_ordinary_rules(
@@ -68,7 +68,22 @@ def build_ordinary_rules(
             if record.get("delist_date")
             else None,
         )
-        rule_start = start
+        if historical_inputs is not None and asset_class == "etf":
+            if listing.list_date > end:
+                continue
+            if historical_inputs.etf_reference is None:
+                raise AppBuilderError(f"missing frozen etf_reference: {iid} {start}")
+            rules[InstrumentId(iid)] = etf_rule_history(
+                listing,
+                facts=historical_inputs.etf_reference.filter(
+                    pl.col("instrument_id") == iid
+                ).to_dicts(),
+                commission_rate=commission_rate,
+                start=max(start, listing.list_date),
+                end=end,
+                trading_days=trading_days,
+            )
+            continue
         if historical_roster is not None and cash_stock_board(
             listing.asset_class, listing.exchange, listing.ticker
         ):
@@ -89,21 +104,11 @@ def build_ordinary_rules(
                 else None,
             )
             continue
-        if historical_roster is not None:
-            rule_start = max(
-                start,
-                (
-                    date.fromisoformat(listing.list_date)
-                    + timedelta(days=MIN_ORDINARY_LISTED_DAYS)
-                ).isoformat(),
-            )
-            if rule_start > end:
-                continue
         rules[InstrumentId(iid)] = (
             ordinary_equity_rules(
                 listing,
                 commission_rate=commission_rate,
-                start=rule_start,
+                start=start,
                 end=end,
                 historical_reconstruction=historical_roster is not None,
             ),
@@ -147,6 +152,11 @@ def ordinary_rule_description(
         band = "上市首日申报价格范围"
     if "market" not in trading.order_types_supported:
         band += " · 不接受市价申报"
+    if (
+        definition.asset_class == "etf"
+        and "market_on_close" not in trading.order_types_supported
+    ):
+        band += " · 无收盘集合竞价"
     if trading.max_daily_buy_quantity is not None:
         band += f" · 当日已买入及未撤销买单合计 ≤{trading.max_daily_buy_quantity} 股"
     unit = "股" if definition.asset_class == "stock" else "份"
@@ -161,13 +171,23 @@ def ordinary_rule_description(
             + f", 递增 {definition.lot_size} {unit}"
             + f"; 不足 {trading.min_order_quantity} {unit}仅可全部卖出"
         )
+    category = {
+        "equity_etf": "股票 ETF",
+        "bond_etf": "债券 ETF",
+        "gold_etf": "黄金 ETF",
+        "cross_border_etf": "跨境 ETF",
+        "money_etf": "货币 ETF",
+        "commodity_futures_etf": "商品期货 ETF",
+    }.get(definition.board_segment, definition.board_segment)
     return (
-        f"{definition.exchange}/{definition.board_segment}/{trading.as_of_date}"
+        f"{definition.exchange}/{category}/{trading.as_of_date}"
         + f" · {band} · {quantity}"
         + f" · 报价 {definition.tick_size:g} 元 · T+{trading.settlement_cycle}"
         + (
             " · 规则依据 docs/evidence/star-rules-755.md"
             if definition.board_segment == "star"
+            else " · ETF 历史品类与规则声明已冻结"
+            if definition.asset_class == "etf"
             else ""
         )
     )

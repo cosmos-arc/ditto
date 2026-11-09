@@ -11,6 +11,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date
+from itertools import pairwise
 from math import isfinite
 from pathlib import Path
 from typing import cast
@@ -31,6 +32,7 @@ __all__ = [
 ETF_REFERENCE_CONFIG_FIELDS: frozenset[str] = frozenset(
     {
         "trading_currency",
+        "trading_category",
         "trading_restriction",
         "lot_size",
         "tick_size",
@@ -44,7 +46,8 @@ ETF_REFERENCE_CONFIG_FIELDS: frozenset[str] = frozenset(
 )
 
 _NUMERIC_FIELDS: frozenset[str] = frozenset(
-    ETF_REFERENCE_CONFIG_FIELDS - {"trading_currency", "trading_restriction"}
+    ETF_REFERENCE_CONFIG_FIELDS
+    - {"trading_currency", "trading_restriction", "trading_category"}
 )
 
 _FRAME_COLUMNS: tuple[str, ...] = (
@@ -53,6 +56,7 @@ _FRAME_COLUMNS: tuple[str, ...] = (
     "value",
     "unit",
     "effective_from",
+    "effective_to",
     "basis",
 )
 
@@ -70,6 +74,7 @@ class _Fact:
     value: str
     unit: str
     effective_from: str
+    effective_to: str | None
     basis: str
 
 
@@ -109,10 +114,24 @@ class EtfReferenceConfigSource:
 
     def _load_facts(self) -> list[_Fact]:
         facts: list[_Fact] = []
-        seen: set[tuple[str, str]] = set()
+        seen: set[tuple[str, str, str]] = set()
         for instrument in self._load_instruments():
             facts.extend(_parse_instrument(instrument, seen))
-        facts.sort(key=lambda fact: (fact.source_ticker, fact.field))
+        facts.sort(
+            key=lambda fact: (fact.source_ticker, fact.field, fact.effective_from)
+        )
+        for previous, current in pairwise(facts):
+            if (previous.source_ticker, previous.field) == (
+                current.source_ticker,
+                current.field,
+            ) and (
+                previous.effective_to is None
+                or previous.effective_to > current.effective_from
+            ):
+                raise EtfReferenceConfigError(
+                    "overlapping ETF reference versions: "
+                    + f"{current.source_ticker}.{current.field}"
+                )
         return facts
 
     def _load_instruments(self) -> list[object]:
@@ -145,7 +164,9 @@ class EtfReferenceConfigSource:
         return cast("list[object]", instruments)
 
 
-def _parse_instrument(instrument: object, seen: set[tuple[str, str]]) -> list[_Fact]:
+def _parse_instrument(
+    instrument: object, seen: set[tuple[str, str, str]]
+) -> list[_Fact]:
     """解析一个标的的全部事实声明；重复声明 fail closed。"""
     if not isinstance(instrument, dict):
         raise EtfReferenceConfigError(
@@ -165,13 +186,14 @@ def _parse_instrument(instrument: object, seen: set[tuple[str, str]]) -> list[_F
         )
     facts: list[_Fact] = []
     for field, entry in cast("dict[str, object]", declared).items():
-        key = (source_ticker, field)
+        fact = _parse_fact(source_ticker, field, entry)
+        key = (source_ticker, field, fact.effective_from)
         if key in seen:
             raise EtfReferenceConfigError(
                 f"ETF reference config declares {source_ticker}.{field} twice"
             )
         seen.add(key)
-        facts.append(_parse_fact(source_ticker, field, entry))
+        facts.append(fact)
     return facts
 
 
@@ -192,6 +214,17 @@ def _parse_fact(source_ticker: str, field: str, entry: object) -> _Fact:
     effective_from = _string_entry(source_ticker, field, typed, "effective_from")
     basis = _string_entry(source_ticker, field, typed, "basis")
     _require_iso_date(f"{source_ticker}.{field}.effective_from", effective_from)
+    effective_to = typed.get("effective_to")
+    if effective_to is not None:
+        if not isinstance(effective_to, str):
+            raise EtfReferenceConfigError(
+                "ETF reference effective_to must be an ISO date"
+            )
+        _require_iso_date(f"{source_ticker}.{field}.effective_to", effective_to)
+        if effective_to <= effective_from:
+            raise EtfReferenceConfigError(
+                "ETF reference interval must have a positive span"
+            )
     if field in _NUMERIC_FIELDS:
         _require_non_negative_number(source_ticker, field, value)
     return _Fact(
@@ -200,6 +233,7 @@ def _parse_fact(source_ticker: str, field: str, entry: object) -> _Fact:
         value=value,
         unit=unit,
         effective_from=effective_from,
+        effective_to=effective_to,
         basis=basis,
     )
 
@@ -217,7 +251,8 @@ def _string_entry(
 
 def _require_iso_date(label: str, value: str) -> None:
     try:
-        date.fromisoformat(value)
+        if date.fromisoformat(value).isoformat() != value:
+            raise ValueError("date must use YYYY-MM-DD")
     except ValueError as error:
         raise EtfReferenceConfigError(
             f"ETF reference config {label} must be an ISO date"

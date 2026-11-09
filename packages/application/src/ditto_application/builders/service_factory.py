@@ -871,6 +871,11 @@ class BacktestRuntimeBuilder:
                 include_fundamentals=runtime.spec.asset_class == "stock",
             )
         participation = None
+        etf_reference = (
+            historical_provider.freeze_etf_reference()
+            if historical_provider is not None and runtime.spec.asset_class == "etf"
+            else None
+        )
         trading_days = provider.get_schedule(data_start_date, config.end_date)[
             "trade_date"
         ].to_list()
@@ -883,7 +888,12 @@ class BacktestRuntimeBuilder:
                 ipo_covered_ids=frozenset(
                     int(str(row["instrument_id"]))
                     for row in historical_provider.roster
-                    if cash_stock_board(
+                    if (
+                        etf_reference is not None
+                        and int(str(row["instrument_id"]))
+                        in etf_reference["instrument_id"]
+                    )
+                    or cash_stock_board(
                         str(row["asset_class"]),
                         str(row["exchange"]),
                         str(row["ticker"]),
@@ -953,6 +963,7 @@ class BacktestRuntimeBuilder:
                 historical_provider.roster,
                 trading_days,
                 execution_facts if runtime.spec.asset_class == "stock" else None,
+                etf_reference,
             )
             if historical_provider is not None
             else None,

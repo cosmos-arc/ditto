@@ -399,21 +399,9 @@ def ordinary_equity_rules(
     historical_stock = historical_reconstruction and board is not None
     if key not in _COVERAGE and not historical_stock:
         raise ValueError(f"missing ordinary asset rule: {listing.instrument_id} {key}")
-    representative_2014 = (
-        historical_reconstruction
-        and key
-        in {
-            ("etf", "SSE", "510050"),
-            ("etf", "SSE", "510300"),
-            ("etf", "SSE", "510500"),
-        }
-        and "2014-09-26" <= start <= end <= "2014-12-31"
-    )
-    effective_from = (
-        "2014-01-01"
-        if historical_stock
-        else ("2014-09-26" if representative_2014 else RULES_EFFECTIVE_FROM)
-    )
+    if historical_reconstruction and listing.asset_class == "etf":
+        raise ValueError("ETF history requires retained dated declarations")
+    effective_from = "2014-01-01" if historical_stock else RULES_EFFECTIVE_FROM
     if not effective_from <= start <= end <= RULES_OBSERVED_AT[:10]:
         raise ValueError(
             "ordinary rule coverage is " + f"{effective_from}..{RULES_OBSERVED_AT[:10]}"
@@ -452,9 +440,7 @@ def ordinary_equity_rules(
             fund_settlement_cycle=0,
             price_limit_pct=0.10 if historical_stock else _COVERAGE[key],
             order_types_supported=("market", "limit", "market_on_close"),
-            call_auction_sessions=("09:15-09:25",)
-            if representative_2014
-            else ("09:15-09:25", "14:57-15:00"),
+            call_auction_sessions=("09:15-09:25", "14:57-15:00"),
         ),
         max(
             (

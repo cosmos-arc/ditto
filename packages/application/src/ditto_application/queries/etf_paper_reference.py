@@ -24,6 +24,7 @@ _INPUT_FIELDS = {
     "etf_reference": frozenset(
         {
             "trading_currency",
+            "trading_category",
             "trading_restriction",
             "lot_size",
             "tick_size",

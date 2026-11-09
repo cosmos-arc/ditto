@@ -135,36 +135,20 @@ def test_verified_stock_and_etf_have_distinct_rules_and_fees() -> None:
             )
 
 
-def test_historical_opt_in_has_a_verified_2014_etf_window_only() -> None:
+def test_historical_etfs_require_retained_declarations_even_for_legacy_whitelist() -> (
+    None
+):
     listing = CashEquityListing(
         InstrumentId(2_000_001), "510300", "etf", "SSE", "2012-05-28", None
     )
-    _, rule, fee = ordinary_equity_rules(
-        listing,
-        commission_rate=0.0003,
-        start="2014-10-13",
-        end="2014-11-07",
-        historical_reconstruction=True,
-    )
-    assert (rule.as_of_date, rule.price_limit_pct, rule.settlement_cycle) == (
-        "2014-09-26",
-        0.1,
-        1,
-    )
-    assert rule.call_auction_sessions == ("09:15-09:25",)
-    assert (fee.stamp_duty_rate, fee.transfer_fee_rate) == (0.0, 0.0)
-    for start, end, enabled in [
-        ("2014-10-13", "2014-11-07", False),
-        ("2014-01-01", "2014-11-07", True),
-        ("2014-10-13", "2026-11-07", True),
-    ]:
-        with pytest.raises(ValueError, match="coverage"):
+    for start, end in [("2014-10-13", "2014-11-07"), ("2026-10-08", "2026-11-06")]:
+        with pytest.raises(ValueError, match="retained dated declarations"):
             ordinary_equity_rules(
                 listing,
                 commission_rate=0.0003,
                 start=start,
                 end=end,
-                historical_reconstruction=enabled,
+                historical_reconstruction=True,
             )
 
 

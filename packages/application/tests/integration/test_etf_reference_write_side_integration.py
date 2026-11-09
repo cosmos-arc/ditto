@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from collections.abc import Callable, Iterator
 from dataclasses import replace
-from datetime import date
+from datetime import UTC, date, datetime
 from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock
@@ -20,6 +20,8 @@ import polars as pl
 import pytest
 from ditto_application.processes.ingestion.data_writer import IngestionDataWriter
 from ditto_application.processes.ingestion.post_ingest import process_fetched_data
+from ditto_data.catalog.contracts import DataAssetRef
+from ditto_data.catalog.source_snapshot import ProviderSnapshot, ProviderSnapshotDraft
 from ditto_data.models.ingestion import IngestionResult
 from ditto_data.runtime.instrument_id_allocator import InstrumentIdAllocator
 from ditto_data.services.metadata_service import MetadataService
@@ -252,3 +254,55 @@ class TestEtfReferenceWriteSideIntegration:
         names = {candidate.ticker: candidate.name for candidate in candidates}
         assert names["510300"] == "沪深300ETF"
         assert names["159915"] == "创业板ETF"
+
+    def test_config_projection_keeps_current_rule_and_retains_its_end(
+        self, ingest: Callable[[], IngestionResult], metadata: MetadataService
+    ) -> None:
+        ingest()
+        writer = IngestionDataWriter(
+            metadata_service=metadata,
+            market_write_service=MagicMock(),
+            fundamental_store=MagicMock(),
+            capital_store=MagicMock(),
+            macro_service=MagicMock(),
+            source_name="config",
+        )
+        frame = pl.DataFrame(
+            {
+                "source_ticker": ["159915.SZ"] * 3,
+                "field": ["price_limit_pct"] * 3,
+                "value": ["0.1", "0.2", "0.1"],
+                "unit": ["ratio"] * 3,
+                "effective_from": ["2011-12-09", "2020-08-24", "2027-01-01"],
+                "effective_to": ["2020-08-24", "2027-01-01", None],
+                "basis": ["old", "current", "future sentinel"],
+            }
+        )
+        writer.write_data("etf_reference", frame, "2026-09-18")
+        snapshot = ProviderSnapshot.create(
+            ProviderSnapshotDraft(
+                dataset_id="etf_reference",
+                source="config",
+                request_start="2026-09-18",
+                request_end="2026-09-18",
+                schema_version="synthetic.etf_reference.v1",
+                checksum="f" * 64,
+                canonical_asset=DataAssetRef("etf_reference", "metadata"),
+                request_parameters_hash="f" * 64,
+                response_metadata=(),
+                row_count=3,
+                payload_uri="synthetic.parquet",
+                payload_retained=True,
+                created_at=datetime(2026, 9, 18, tzinfo=UTC),
+            )
+        )
+        writer.write_etf_reference(frame, snapshot)
+        _, rows = metadata.instrument.find_etf_reference(
+            asof="2026-09-18",
+            cutoff="2999-01-01T00:00:00Z",
+            source_snapshot_id=snapshot.snapshot_id,
+            observed_since="2000-01-01",
+        )
+        assert [(row["value"], row["effective_to"]) for row in rows] == [
+            ("0.2", "2027-01-01")
+        ]
