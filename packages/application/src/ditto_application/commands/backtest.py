@@ -188,7 +188,11 @@ class BacktestRunHandler:
         if command.idempotency is not None:
             config_data = mutation_receipt_detail(
                 command.idempotency,
-                response={"run_id": run_id, "strategy_id": command.strategy_id},
+                response={
+                    "run_id": run_id,
+                    "strategy_id": command.strategy_id,
+                    "strategy_version": spec_record.version,
+                },
                 detail=config_data,
             )
         config_json = orjson.dumps(config_data).decode("utf-8")
@@ -226,14 +230,32 @@ class BacktestRunHandler:
         record = self._run_service.get_run(run_id)
         if record is None:
             return None
-        config = orjson.loads(record.config_json)
-        if not isinstance(config, dict):
+        try:
+            decoded = orjson.loads(record.config_json)
+        except orjson.JSONDecodeError as exc:
+            raise AppCommandError("Invalid backtest submission receipt") from exc
+        if not isinstance(decoded, dict):
             raise AppCommandError("Invalid backtest submission receipt")
-        receipt = find_mutation_receipt(
-            [cast("dict[str, object]", config)], command.idempotency
-        )
+        config = cast("dict[str, object]", decoded)
+        receipt = find_mutation_receipt([config], command.idempotency)
+        version = config.get("strategy_version")
         if (
-            receipt != {"run_id": run_id, "strategy_id": command.strategy_id}
+            type(version) is not int
+            or version <= 0
+            or str(version) != record.strategy_version
+            or (
+                command.strategy_version is not None
+                and command.strategy_version != version
+            )
+        ):
+            raise AppCommandError("Invalid backtest submission version")
+        if (
+            receipt
+            != {
+                "run_id": run_id,
+                "strategy_id": command.strategy_id,
+                "strategy_version": version,
+            }
             or record.strategy_id != command.strategy_id
             or record.mode != "backtest"
         ):
@@ -242,7 +264,7 @@ class BacktestRunHandler:
             run_id=run_id,
             strategy_id=record.strategy_id,
             status=record.status,
-            strategy_version=int(record.strategy_version),
+            strategy_version=version,
             cost_config=command.cost_config,
         )
 

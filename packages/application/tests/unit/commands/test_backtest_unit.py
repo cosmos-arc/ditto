@@ -154,6 +154,9 @@ def test_submission_replays_durable_run_and_rejects_changed_payload(
     )
     with pytest.raises(AppCommandError, match="different request"):
         handler.handle(replace(command, idempotency=changed, strategy_version=8))
+    records[first.run_id] = replace(records[first.run_id], strategy_version="corrupt")
+    with pytest.raises(AppCommandError, match="submission version"):
+        handler.handle(command)
 
 
 @pytest.fixture
