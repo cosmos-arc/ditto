@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
+
 import pytest
 from ditto_execution.cost_estimate import calc_cost, calc_turnover, get_estimated_price
 from ditto_execution.orders.ids import ClientOrderId
@@ -164,40 +166,24 @@ class TestCalcTurnover:
 # ---------------------------------------------------------------------------
 
 
-class TestCalcCost:
-    """Tests for calc_cost."""
-
-    def test_zero_turnover(self) -> None:
-        rules = _instrument_rules()
-        assert calc_cost(0.0, rules) == 0.0
-
-    def test_empty_rules(self) -> None:
-        assert calc_cost(1000.0, {}) == 0.0
-
-    def test_cost_calculation(self) -> None:
-        rules = _instrument_rules(
-            commission_rate=0.0003,
-            stamp_duty_rate=0.0005,
-            transfer_fee_rate=0.00001,
-        )
-        # total rate = 0.0003 + 0.0005 + 0.00001 = 0.00081
-        # cost = 10000.0 * 0.00081 = 8.1
-        assert calc_cost(10000.0, rules) == pytest.approx(8.1)
-
-    def test_uses_max_rate_across_instruments(self) -> None:
-        rules_low = _instrument_rules(
-            _IID_A,
-            commission_rate=0.0001,
-            stamp_duty_rate=0.0001,
-            transfer_fee_rate=0.0,
-        )
-        rules_high = _instrument_rules(
-            _IID_B,
-            commission_rate=0.001,
+def test_cost_uses_actual_order_side_minimum_and_nominal_transfer() -> None:
+    rules = _instrument_rules()
+    definition, trading, fee = rules[_IID_A]
+    rules[_IID_A] = (
+        definition,
+        trading,
+        replace(
+            fee,
             stamp_duty_rate=0.001,
             transfer_fee_rate=0.0,
-        )
-        combined = {**rules_low, **rules_high}
-        # max rate = 0.001 + 0.001 + 0.0 = 0.002
-        # cost = 10000.0 * 0.002 = 20.0
-        assert calc_cost(10000.0, combined) == pytest.approx(20.0)
+            transfer_fee_per_share=0.0003,
+        ),
+    )
+    orders = [_order(direction=OrderSide.BUY), _order(direction=OrderSide.SELL)]
+    assert calc_cost(orders, {_IID_A: _snap()}, rules) == pytest.approx(11.06)
+    assert calc_cost([], {}, {}) == 0.0
+
+
+def test_cost_preserves_legacy_optional_inputs() -> None:
+    assert calc_cost([_order()], {}, _instrument_rules()) == 0.0
+    assert calc_cost([_order()], {_IID_A: _snap()}, {}) == 0.0

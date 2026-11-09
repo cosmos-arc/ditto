@@ -102,7 +102,15 @@ test("ordinary 2014 request persists its failed freeze and recovers into a new r
 	const trades = (await tradesResponse.json()).data;
 	expect(trades.some((trade: { instrument_id: number }) => trade.instrument_id === 2001004)).toBe(false);
 	expect((await nav.json()).data.length).toBeGreaterThan(0);
-	expect((await report.json()).data.aggregated_trade_stats.total_trades).toBeGreaterThan(0);
+	const savedReport = (await report.json()).data;
+	expect(savedReport.aggregated_trade_stats.total_trades).toBeGreaterThan(0);
+	expect(savedReport.fee_statement.fills.length).toBeGreaterThan(0);
+	for (const fill of savedReport.fee_statement.fills) {
+		expect(fill.stamp_duty).toBe(0);
+		expect(fill.transfer_fee).toBe(0);
+		expect(fill.total_fee).toBe(fill.commission);
+	}
+
 	expect((await oldAgain.json()).data).toEqual(oldRequest);
 	const accessibility = await new AxeBuilder({ page }).analyze();
 	expect(accessibility.violations.filter((v) => ["critical", "serious"].includes(v.impact ?? ""))).toEqual([]);

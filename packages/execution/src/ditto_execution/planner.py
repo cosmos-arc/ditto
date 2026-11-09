@@ -131,7 +131,7 @@ class SimpleExecutionPlanner:
         orders, blocked_orders = compute_diff(ctx, self._make_order)
 
         turnover = calc_turnover(orders, market)
-        cost = calc_cost(turnover, instrument_rules)
+        cost = calc_cost(orders, market, instrument_rules)
 
         return ExecutionPlan(
             plan_id=self._next_id(),

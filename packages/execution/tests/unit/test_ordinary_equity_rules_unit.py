@@ -14,6 +14,71 @@ from ditto_execution.reality.ordinary_equity import (
 from ditto_kernel.identity import InstrumentId
 
 
+@pytest.mark.pit
+@pytest.mark.parametrize(
+    ("ticker", "exchange", "day", "buy_fee", "sell_fee"),
+    [
+        ("600000", "SSE", "2014-01-02", 5.03, 6.03),
+        ("000001", "SZSE", "2014-01-02", 5.0255, 6.0255),
+        ("601899", "SSE", "2015-07-31", 5.003, 6.003),
+        ("603993", "SSE", "2015-07-31", 5.006, 6.006),
+        ("600000", "SSE", "2015-07-31", 5.03, 6.03),
+        ("000001", "SZSE", "2015-07-31", 5.0255, 6.0255),
+        ("600000", "SSE", "2015-08-03", 5.02, 6.02),
+        ("000001", "SZSE", "2022-04-28", 5.02, 6.02),
+        ("600000", "SSE", "2022-04-29", 5.01, 6.01),
+        ("000001", "SZSE", "2023-08-25", 5.01, 6.01),
+        ("600000", "SSE", "2023-08-28", 5.01, 5.51),
+    ],
+)
+def test_historical_fee_bill_uses_fill_date_and_nominal_not_market_value(
+    ticker: str, exchange: str, day: str, buy_fee: float, sell_fee: float
+) -> None:
+    """100 shares at CNY 10; research commission excludes CSDC transfer charges."""
+    from ditto_execution.orders.ids import ClientOrderId
+    from ditto_execution.orders.model import Order
+    from ditto_execution.reality.fee import AShareFeeModel
+    from ditto_execution.rules import InMemoryRuleProvider
+    from ditto_kernel.order import OrderSide, OrderType
+
+    listing = CashEquityListing(
+        InstrumentId(1), ticker, "stock", exchange, "2012-10-09", None
+    )
+    history = mainboard_rule_history(
+        listing,
+        commission_rate=0.0003,
+        start="2014-01-02",
+        end="2026-11-06",
+        trading_days=[
+            "2013-12-24",
+            "2013-12-25",
+            "2013-12-26",
+            "2013-12-27",
+            "2013-12-30",
+            "2014-01-02",
+        ],
+    )
+    provider = InMemoryRuleProvider(
+        definitions={listing.instrument_id: history[0][0]},
+        trading_rules={listing.instrument_id: [row[1] for row in history]},
+        fee_schedules={listing.instrument_id: [row[2] for row in history]},
+    )
+    schedule = provider.get_fee_schedule(listing.instrument_id, day)
+    assert schedule is not None
+    model = AShareFeeModel()
+    for direction, expected in [(OrderSide.BUY, buy_fee), (OrderSide.SELL, sell_fee)]:
+        order = Order(
+            ClientOrderId("fee"),
+            listing.instrument_id,
+            OrderType.MARKET,
+            direction,
+            100,
+            None,
+        )
+        assert model.calculate(order, 10.0, 100, schedule) == pytest.approx(expected)
+        assert model.estimate(order, 10.0, schedule) == pytest.approx(expected)
+
+
 def test_verified_stock_and_etf_have_distinct_rules_and_fees() -> None:
     stock = CashEquityListing(
         InstrumentId(1_000_001), "000001", "stock", "SZSE", "1991-04-03", None
@@ -155,14 +220,10 @@ def test_mainboard_identity_calendar_and_older_fee_boundaries() -> None:
         mainboard_trading_history(
             listing, start=days[-2], end=days[-1], trading_days=days[-2:]
         )
-    with pytest.raises(ValueError, match="fee schedule missing"):
-        mainboard_rule_history(
-            listing,
-            commission_rate=0.001,
-            start=days[-2],
-            end=days[-1],
-            trading_days=days,
-        )
+    combined = mainboard_rule_history(
+        listing, commission_rate=0.001, start=days[-2], end=days[-1], trading_days=days
+    )
+    assert combined[-1][2].as_of_date == "2015-08-01"
 
 
 def test_stock_band_has_at_least_one_tick_difference() -> None:

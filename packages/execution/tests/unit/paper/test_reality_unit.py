@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 
 import pytest
@@ -400,3 +401,26 @@ class TestFillAssumptionLineage:
                 decision_at=NOW,
                 execution_at=NOW - timedelta(microseconds=1),
             )
+
+
+def test_paper_fee_consumer_preserves_per_share_transfer_charge() -> None:
+    definition, trading, fee = _rules()
+    result = ASharePaperReality().execute(
+        paper_order=_paper_order(_order(side=OrderSide.SELL, quantity=100)),
+        lineage=_lineage(),
+        rules=(
+            definition,
+            trading,
+            replace(
+                fee,
+                stamp_duty_rate=0.001,
+                transfer_fee_rate=0.0,
+                transfer_fee_per_share=0.0003,
+            ),
+        ),
+        assumption=_assumption(slippage_bps=0),
+        context=_context(position_quantity=100, available_quantity=100),
+    )
+    assert result.fill is not None
+    assert result.fill.transfer_fee == pytest.approx(0.03)
+    assert result.fill.total_cost == pytest.approx(6.03)

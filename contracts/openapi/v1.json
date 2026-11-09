@@ -9297,6 +9297,17 @@
             ],
             "description": "绩效分析统计"
           },
+          "fee_statement": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FeeStatementResponse"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "已保存的实际逐笔费用账单。旧报告缺失时不补算"
+          },
           "final_nav": {
             "default": 0.0,
             "title": "Final Nav",
@@ -17269,6 +17280,177 @@
           "monthly_ic"
         ],
         "title": "FactorEvaluationSeriesResponse",
+        "type": "object"
+      },
+      "FeeBillResponse": {
+        "description": "One actual fill, including entries that remain open at the end of the run.",
+        "properties": {
+          "commission": {
+            "title": "Commission",
+            "type": "number"
+          },
+          "direction": {
+            "enum": [
+              "buy",
+              "sell"
+            ],
+            "title": "Direction",
+            "type": "string"
+          },
+          "fill_id": {
+            "title": "Fill Id",
+            "type": "string"
+          },
+          "instrument_id": {
+            "title": "Instrument Id",
+            "type": "integer"
+          },
+          "order_id": {
+            "title": "Order Id",
+            "type": "string"
+          },
+          "price": {
+            "title": "Price",
+            "type": "number"
+          },
+          "quantity": {
+            "title": "Quantity",
+            "type": "integer"
+          },
+          "schedule": {
+            "$ref": "#/components/schemas/FeeScheduleResponse"
+          },
+          "stamp_duty": {
+            "title": "Stamp Duty",
+            "type": "number"
+          },
+          "symbol": {
+            "title": "Symbol",
+            "type": "string"
+          },
+          "total_fee": {
+            "title": "Total Fee",
+            "type": "number"
+          },
+          "trade_date": {
+            "title": "Trade Date",
+            "type": "string"
+          },
+          "transfer_fee": {
+            "title": "Transfer Fee",
+            "type": "number"
+          }
+        },
+        "required": [
+          "fill_id",
+          "order_id",
+          "instrument_id",
+          "symbol",
+          "trade_date",
+          "direction",
+          "quantity",
+          "price",
+          "commission",
+          "stamp_duty",
+          "transfer_fee",
+          "total_fee",
+          "schedule"
+        ],
+        "title": "FeeBillResponse",
+        "type": "object"
+      },
+      "FeeScheduleResponse": {
+        "description": "Exact dated rates consumed by a saved fill; CNY per share for nominal fees.",
+        "properties": {
+          "as_of_date": {
+            "title": "As Of Date",
+            "type": "string"
+          },
+          "commission_rate": {
+            "title": "Commission Rate",
+            "type": "number"
+          },
+          "instrument_id": {
+            "title": "Instrument Id",
+            "type": "integer"
+          },
+          "min_commission": {
+            "title": "Min Commission",
+            "type": "number"
+          },
+          "stamp_duty_rate": {
+            "title": "Stamp Duty Rate",
+            "type": "number"
+          },
+          "transfer_fee_per_share": {
+            "title": "Transfer Fee Per Share",
+            "type": "number"
+          },
+          "transfer_fee_rate": {
+            "title": "Transfer Fee Rate",
+            "type": "number"
+          }
+        },
+        "required": [
+          "instrument_id",
+          "as_of_date",
+          "commission_rate",
+          "min_commission",
+          "stamp_duty_rate",
+          "transfer_fee_rate",
+          "transfer_fee_per_share"
+        ],
+        "title": "FeeScheduleResponse",
+        "type": "object"
+      },
+      "FeeStatementResponse": {
+        "description": "Persisted bill and research assumptions, never recomputed by a GET.",
+        "properties": {
+          "currency": {
+            "const": "CNY",
+            "title": "Currency",
+            "type": "string"
+          },
+          "fills": {
+            "items": {
+              "$ref": "#/components/schemas/FeeBillResponse"
+            },
+            "title": "Fills",
+            "type": "array"
+          },
+          "final_cash": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Final Cash"
+          },
+          "policy": {
+            "title": "Policy",
+            "type": "string"
+          },
+          "rules_observed_at": {
+            "title": "Rules Observed At",
+            "type": "string"
+          },
+          "source_ref": {
+            "title": "Source Ref",
+            "type": "string"
+          }
+        },
+        "required": [
+          "currency",
+          "policy",
+          "rules_observed_at",
+          "source_ref",
+          "final_cash",
+          "fills"
+        ],
+        "title": "FeeStatementResponse",
         "type": "object"
       },
       "FillAdjustmentResponse": {

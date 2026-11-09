@@ -87,12 +87,76 @@ export async function fetchBacktestRun(runId: string): Promise<BacktestRun> {
 export function mapBacktestReport(dto: BacktestReportResponse): BacktestReport {
 	const alpha = dto.alpha_stats;
 	const trades = dto.aggregated_trade_stats;
+	const bill = dto.fee_statement;
+	if (
+		bill != null &&
+		(bill.currency !== "CNY" ||
+			!Array.isArray(bill.fills) ||
+			(bill.final_cash !== null && !Number.isFinite(bill.final_cash)) ||
+			bill.fills.some(
+				(fill) =>
+					!fill ||
+					!Number.isSafeInteger(fill.instrument_id) ||
+					fill.instrument_id <= 0 ||
+					fill.schedule?.instrument_id !== fill.instrument_id ||
+					!["buy", "sell"].includes(fill.direction) ||
+					!Number.isSafeInteger(fill.quantity) ||
+					fill.quantity <= 0 ||
+					fill.price <= 0 ||
+					![
+						fill.price,
+						fill.commission,
+						fill.stamp_duty,
+						fill.transfer_fee,
+						fill.total_fee,
+						fill.schedule.commission_rate,
+						fill.schedule.min_commission,
+						fill.schedule.stamp_duty_rate,
+						fill.schedule.transfer_fee_rate,
+						fill.schedule.transfer_fee_per_share,
+					].every((value) => Number.isFinite(value) && value >= 0),
+			))
+	) {
+		throw new Error("费用账单响应无效；币种、成交方向、证券身份或金额不一致，请重新读取报告。");
+	}
 	return {
 		runId: dto.run_id,
 		periodStart: dto.period?.["start"] ?? "",
 		periodEnd: dto.period?.["end"] ?? "",
 		initialCash: dto.initial_cash,
 		finalNav: dto.final_nav,
+		feeStatement: dto.fee_statement
+			? {
+					currency: dto.fee_statement.currency,
+					policy: dto.fee_statement.policy,
+					rulesObservedAt: dto.fee_statement.rules_observed_at,
+					sourceRef: dto.fee_statement.source_ref,
+					finalCash: dto.fee_statement.final_cash,
+					fills: dto.fee_statement.fills.map((fill) => ({
+						fillId: fill.fill_id,
+						orderId: fill.order_id,
+						instrumentId: fill.instrument_id,
+						symbol: fill.symbol,
+						tradeDate: fill.trade_date,
+						direction: fill.direction,
+						quantity: fill.quantity,
+						price: fill.price,
+						commission: fill.commission,
+						stampDuty: fill.stamp_duty,
+						transferFee: fill.transfer_fee,
+						totalFee: fill.total_fee,
+						schedule: {
+							instrumentId: fill.schedule.instrument_id,
+							asOfDate: fill.schedule.as_of_date,
+							commissionRate: fill.schedule.commission_rate,
+							minCommission: fill.schedule.min_commission,
+							stampDutyRate: fill.schedule.stamp_duty_rate,
+							transferFeeRate: fill.schedule.transfer_fee_rate,
+							transferFeePerShare: fill.schedule.transfer_fee_per_share,
+						},
+					})),
+				}
+			: null,
 		rebalanceFreq: dto.rebalance_freq,
 		usageContext: dto.usage_context
 			? {
@@ -133,10 +197,10 @@ export function mapBacktestReport(dto: BacktestReportResponse): BacktestReport {
 					winTrades: trades.win_trades,
 					lossTrades: trades.loss_trades,
 					winRate: trades.win_rate,
-					profitFactor: trades.profit_factor,
+					profitFactor: trades.profit_factor ?? null,
 					avgWin: trades.avg_win,
 					avgLoss: trades.avg_loss,
-					avgWinLossRatio: trades.avg_win_loss_ratio,
+					avgWinLossRatio: trades.avg_win_loss_ratio ?? null,
 					maxConsecutiveWins: trades.max_consecutive_wins,
 					maxConsecutiveLosses: trades.max_consecutive_losses,
 					avgHoldingDays: trades.avg_holding_days,

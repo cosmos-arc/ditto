@@ -6,6 +6,7 @@ from ditto_kernel.identity import InstrumentId
 from ditto_kernel.trading import InstrumentRules, MarketSnapshot
 
 from ditto_execution.orders.model import Order
+from ditto_execution.reality.fee import AShareFeeModel
 
 __all__ = [
     "calc_cost",
@@ -37,14 +38,18 @@ def calc_turnover(
 
 
 def calc_cost(
-    turnover: float,
+    orders: list[Order],
+    market: dict[InstrumentId, MarketSnapshot],
     instrument_rules: dict[InstrumentId, InstrumentRules],
 ) -> float:
-    """计算预估交易成本 (使用各标的最大费率)。"""
-    if not instrument_rules or turnover == 0:
-        return 0.0
-    max_rate = max(
-        r[2].commission_rate + r[2].stamp_duty_rate + r[2].transfer_fee_rate
-        for r in instrument_rules.values()
-    )
-    return turnover * max_rate
+    """Estimate each planned order using its side, minimum and dated fee table."""
+    total = 0.0
+    for order in orders:
+        price = get_estimated_price(market, order.instrument_id)
+        rules = instrument_rules.get(order.instrument_id)
+        # Legacy planners allow absent rules/quotes; ordinary launches validate
+        # complete dated inputs before reaching this optional cost summary.
+        if rules is None or price <= 0:
+            continue
+        total += AShareFeeModel().estimate(order, price, rules[2])
+    return total

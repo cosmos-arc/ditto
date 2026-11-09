@@ -1,6 +1,6 @@
 /**
  * DO NOT EDIT: generated from contracts/openapi/v1.json.
- * Schema SHA-256: c08ec93c562a55b651a434a22ff2cc333539eedb386fbdae4e0da60db31bf228
+ * Schema SHA-256: 360f4abdd034793bc49e1cf67d6f58b33be2f093d6b282a6ef4f5dca1597545f
  * Generator: openapi-typescript 7.13.0
  */
 
@@ -7388,6 +7388,8 @@ export interface components {
             aggregated_trade_stats?: components["schemas"]["AggregatedTradeStatsResponse"] | null;
             /** @description 绩效分析统计 */
             alpha_stats?: components["schemas"]["AlphaStatsResponse"] | null;
+            /** @description 已保存的实际逐笔费用账单。旧报告缺失时不补算 */
+            fee_statement?: components["schemas"]["FeeStatementResponse"] | null;
             /**
              * Final Nav
              * @default 0
@@ -11175,6 +11177,81 @@ export interface components {
             rolling_ir: (number | null)[];
             /** Rolling Ir Window */
             rolling_ir_window: number;
+        };
+        /**
+         * FeeBillResponse
+         * @description One actual fill, including entries that remain open at the end of the run.
+         */
+        FeeBillResponse: {
+            /** Commission */
+            commission: number;
+            /**
+             * Direction
+             * @enum {string}
+             */
+            direction: "buy" | "sell";
+            /** Fill Id */
+            fill_id: string;
+            /** Instrument Id */
+            instrument_id: number;
+            /** Order Id */
+            order_id: string;
+            /** Price */
+            price: number;
+            /** Quantity */
+            quantity: number;
+            schedule: components["schemas"]["FeeScheduleResponse"];
+            /** Stamp Duty */
+            stamp_duty: number;
+            /** Symbol */
+            symbol: string;
+            /** Total Fee */
+            total_fee: number;
+            /** Trade Date */
+            trade_date: string;
+            /** Transfer Fee */
+            transfer_fee: number;
+        };
+        /**
+         * FeeScheduleResponse
+         * @description Exact dated rates consumed by a saved fill; CNY per share for nominal fees.
+         */
+        FeeScheduleResponse: {
+            /** As Of Date */
+            as_of_date: string;
+            /** Commission Rate */
+            commission_rate: number;
+            /** Instrument Id */
+            instrument_id: number;
+            /** Min Commission */
+            min_commission: number;
+            /** Stamp Duty Rate */
+            stamp_duty_rate: number;
+            /** Transfer Fee Per Share */
+            transfer_fee_per_share: number;
+            /** Transfer Fee Rate */
+            transfer_fee_rate: number;
+        };
+        /**
+         * FeeStatementResponse
+         * @description Persisted bill and research assumptions, never recomputed by a GET.
+         */
+        FeeStatementResponse: {
+            /**
+             * Currency
+             * @constant
+             */
+            currency: "CNY";
+            /** Fills */
+            fills: components["schemas"]["FeeBillResponse"][];
+            /** Final Cash */
+            final_cash: number | null;
+            /** Policy */
+            policy: string;
+            /** Rules Observed At */
+            rules_observed_at: string;
+            /** Source Ref */
+            source_ref: string;
         };
         /**
          * FillAdjustmentResponse

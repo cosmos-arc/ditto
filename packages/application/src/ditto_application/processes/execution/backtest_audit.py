@@ -56,6 +56,7 @@ class ArtifactPersistContext:
     report: BacktestReport
     manifest: RunManifest | None = None
     resume_provenance: Mapping[str, object] | None = None
+    fee_statement: Mapping[str, object] | None = None
 
 
 @dataclass(frozen=True)
@@ -193,6 +194,7 @@ def persist_artifact(
             rebalance_freq=config.rebalance_freq,
             resume_provenance=ctx.resume_provenance,
             strategy_promotion=strategy_promotion,
+            fee_statement=ctx.fee_statement,
         ),
     )
     # file_path 存储目录路径，匹配读取侧 _build_path 契约（Path(base) / filename）

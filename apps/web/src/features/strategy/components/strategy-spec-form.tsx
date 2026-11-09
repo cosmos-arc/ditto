@@ -84,6 +84,10 @@ export function StrategySpecForm({ spec, onChange }: StrategySpecFormProps): Rea
 							}))
 						}
 					/>
+					<p className="text-xs text-(--color-foreground-secondary)">
+						普通回测研究佣金：小数费率（0.0003 为万三），每笔成交最低 5
+						元。包含经手费、证管费及券商留存，须剔除另计的中登过户费；股票印花税另计，ETF 不收股票税费。
+					</p>
 					<NumberField
 						label="滑点(bps)"
 						value={spec.execution.costModel?.slippageBps ?? 0}

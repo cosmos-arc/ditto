@@ -90,6 +90,7 @@ from ditto_application.processes.execution.factor_bridge import (
     build_backtest_input_bundle_builder,
     build_factor_aware_bundle_builder,
 )
+from ditto_application.processes.execution.fee_statement import build_fee_statement
 from ditto_application.processes.execution.strategy_input import (
     write_backtest_artifacts,
 )
@@ -793,6 +794,14 @@ class BacktestService:
                 report=report,
                 manifest=manifest,
                 resume_provenance=resume_provenance(self._config),
+                fee_statement=build_fee_statement(
+                    report,
+                    self._options.rule_provider,
+                    self._options.fee_model,
+                    self._options.display_map,
+                )
+                if self._config.research_snapshot_id is None
+                else None,
             ),
             ArtifactPersistConfig(
                 strategy_id=self._config.strategy_id,
