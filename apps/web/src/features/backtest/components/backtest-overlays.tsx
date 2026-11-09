@@ -1,16 +1,20 @@
+import { useQueries } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { OverlayFactList, PageActionOverlay } from "@/components/domain/page-action-overlay";
 import { Button } from "@/components/ui/button";
+import { fetchBacktestRun } from "../api/backtests";
+import { comparisonLifetime, useBacktestComparison } from "../hooks/use-backtest-comparison";
+import { backtestKeys } from "../hooks/use-backtest-resources";
 import type { BacktestRun } from "../types";
 import { BacktestMultiRunCompare } from "./backtest-multi-run-compare";
 
-export type BacktestOverlayId = "export" | "enable-signal" | "ai-analysis" | "compare-toast" | "compare";
+export type BacktestOverlayId = "export" | "enable-signal" | "ai-analysis" | "compare";
 
 export const backtestActions = [
 	{ id: "export", label: "导出报告" },
 	{ id: "enable-signal", label: "提交信号治理" },
 	{ id: "ai-analysis", label: "AI 解读" },
-	{ id: "compare-toast", label: "加入对比" },
+	{ id: "compare-toggle", label: "加入对比" },
 	{ id: "compare", label: "对比视图" },
 ] as const;
 
@@ -22,12 +26,6 @@ const copy = {
 		kind: "alert-dialog",
 	},
 	"ai-analysis": { title: "AI 解读", description: "Agent 只基于当前回测证据回答，不成为统计裁判。", kind: "drawer" },
-	"compare-toast": {
-		title: "详情加入对比暂不可用",
-		description: "本次操作没有修改对比集合；请回到回测目录勾选运行，再打开回测对比。",
-		kind: "inline",
-	},
-	compare: { title: "回测对比", description: "当前仅有一个已验证 run；不会生成虚构基准运行。", kind: "modal" },
 } as const;
 
 export function BacktestOverlays({
@@ -48,6 +46,7 @@ export function BacktestOverlays({
 	readonly strategyIdentity: string;
 }) {
 	if (!active) return null;
+	if (active === "compare") return <BacktestCompareOverlay open onClose={onClose} />;
 	const details = copy[active];
 	const actions =
 		active === "export" ? (
@@ -83,15 +82,16 @@ export function BacktestOverlays({
 	);
 }
 
-export function BacktestCompareOverlay({
-	onClose,
-	open,
-	runs,
-}: {
-	readonly onClose: () => void;
-	readonly open: boolean;
-	readonly runs: readonly BacktestRun[];
-}) {
+export function BacktestCompareOverlay({ onClose, open }: { readonly onClose: () => void; readonly open: boolean }) {
+	const { runIds, error, setIncluded } = useBacktestComparison();
+	const queries = useQueries({
+		queries: runIds.map((runId) => ({
+			queryKey: backtestKeys.run(runId),
+			queryFn: () => fetchBacktestRun(runId),
+			enabled: open,
+		})),
+	});
+	const runs = queries.flatMap((query): BacktestRun[] => (query.data && !query.isError ? [query.data] : []));
 	return (
 		<PageActionOverlay
 			open={open}
@@ -106,15 +106,56 @@ export function BacktestCompareOverlay({
 			<div className="flex flex-col gap-3 rounded-(--radius-md) bg-(--color-surface-0) p-3">
 				<OverlayFactList
 					facts={[
-						["已选择", `${runs.length} 个 run`],
-						["Run identities", runs.map((run) => run.runId).join(" · ") || "尚未选择"],
+						["已选择", `${runIds.length} 个 run`],
+						["Run identities", runIds.join(" · ") || "尚未选择"],
 						["对比口径", "nav₀ 归一净值叠加 + 已发布 report 指标"],
 					]}
 				/>
-				{runs.length < 2 ? (
+				<p className="text-xs text-(--color-foreground-tertiary)">{comparisonLifetime}</p>
+				{error && <p role="alert">{error}</p>}
+				<ul aria-label="对比集合" className="space-y-2">
+					{runIds.map((runId, index) => {
+						const query = queries[index];
+						return (
+							<li key={runId} className="flex flex-wrap items-center gap-2 text-xs">
+								<a href={`/research/backtests/${encodeURIComponent(runId)}`} className="break-all underline">
+									{runId}
+								</a>
+								{query?.isError ? (
+									<>
+										<span role="alert">读取失败：{query.error.message}；保留在集合中。</span>
+										<Button
+											size="xs"
+											variant="outline"
+											onClick={() => void query.refetch()}
+											aria-label={`重试 ${runId}`}
+										>
+											重试
+										</Button>
+									</>
+								) : query?.isPending ? (
+									<span>正在加载…</span>
+								) : query?.isFetching ? (
+									<span>正在刷新…</span>
+								) : null}
+								<Button
+									size="xs"
+									variant="outline"
+									aria-label={`移出对比 ${runId}`}
+									onClick={() => setIncluded(runId, false)}
+								>
+									移出
+								</Button>
+							</li>
+						);
+					})}
+				</ul>
+				{runIds.length < 2 ? (
 					<p className="text-xs text-(--color-foreground-tertiary)">
-						至少需要两个真实 run 才能形成对比；在目录中勾选 run 后重新打开。
+						至少需要两个真实 run 才能形成对比；可在目录或详情页加入运行。
 					</p>
+				) : runs.length !== runIds.length ? (
+					<p className="text-xs">等待所选运行全部读取成功后展示对比；失败项可重试或移出。</p>
 				) : (
 					<BacktestMultiRunCompare runs={runs} />
 				)}

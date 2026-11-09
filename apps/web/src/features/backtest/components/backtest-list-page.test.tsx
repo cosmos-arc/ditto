@@ -3,8 +3,9 @@ import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { HttpResponse, http } from "msw";
 import type { ReactNode } from "react";
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import { server } from "@/mocks/server";
+import { useBacktestComparison } from "../hooks/use-backtest-comparison";
 import { BacktestListPage } from "./backtest-list-page";
 
 function wrapper({ children }: { readonly children: ReactNode }) {
@@ -53,6 +54,15 @@ const LIVE_RUNS = [
 ];
 
 describe("BacktestListPage", () => {
+	beforeEach(() => {
+		sessionStorage.clear();
+		useBacktestComparison.setState({ runIds: [], error: null });
+		server.use(
+			http.get("/api/v1/backtests/runs/:runId", ({ params }) =>
+				HttpResponse.json({ data: { ...LIVE_RUNS[0], run_id: params["runId"] } }),
+			),
+		);
+	});
 	it("renders and filters only live governed run summaries", async () => {
 		const user = userEvent.setup();
 		server.use(http.get("/api/v1/backtests/runs", () => HttpResponse.json({ data: LIVE_RUNS })));
@@ -79,6 +89,25 @@ describe("BacktestListPage", () => {
 		await user.click(screen.getByRole("button", { name: "回测对比" }));
 		expect(screen.getByRole("dialog", { name: "回测对比" })).toHaveTextContent("bt-live-001");
 		expect(screen.getByRole("dialog", { name: "回测对比" })).toHaveTextContent("至少需要两个真实 run");
+	});
+
+	it("retains a failed selection and recovers it by rereading the exact run", async () => {
+		const user = userEvent.setup();
+		server.use(
+			http.get("/api/v1/backtests/runs", () => HttpResponse.json({ data: LIVE_RUNS })),
+			http.get("/api/v1/backtests/runs/bt-live-001", () =>
+				HttpResponse.json({ detail: "run unavailable" }, { status: 503 }),
+			),
+		);
+		render(<BacktestListPage />, { wrapper });
+		await user.click(await screen.findByRole("checkbox", { name: "加入对比 bt-live-001" }));
+		await user.click(screen.getByRole("button", { name: "回测对比" }));
+		expect(await screen.findByRole("alert")).toHaveTextContent("保留在集合中");
+		expect(useBacktestComparison.getState().runIds).toEqual(["bt-live-001"]);
+		server.use(http.get("/api/v1/backtests/runs/bt-live-001", () => HttpResponse.json({ data: LIVE_RUNS[1] })));
+		await user.click(screen.getByRole("button", { name: "重试 bt-live-001" }));
+		await waitFor(() => expect(screen.queryByRole("alert")).not.toBeInTheDocument());
+		expect(screen.getByRole("button", { name: "移出对比 bt-live-001" })).toBeInTheDocument();
 	});
 
 	it("shows a typed retry error and never falls back to the old static catalog", async () => {
@@ -116,7 +145,10 @@ describe("BacktestListPage", () => {
 			completed_days: 244,
 			total_days: 244,
 		}));
-		server.use(http.get("/api/v1/backtests/runs", () => HttpResponse.json({ data: visibleRuns })));
+		server.use(
+			http.get("/api/v1/backtests/runs", () => HttpResponse.json({ data: visibleRuns })),
+			http.get("/api/v1/backtests/runs/:runId", () => HttpResponse.json({ detail: "unavailable" }, { status: 503 })),
+		);
 		const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
 		const invalidateWrapper = ({ children }: { readonly children: ReactNode }) => (
 			<QueryClientProvider client={client}>{children}</QueryClientProvider>
@@ -136,18 +168,22 @@ describe("BacktestListPage", () => {
 		expect(ninth).toBeDisabled();
 		expect(ninth).toHaveAttribute("title", expect.stringContaining("8 个 run 上限"));
 
-		// 目录刷新后已选 run 消失：先按现存目录对账再算容量，不留幽灵占位
+		// 目录刷新/截断不能删除来自详情或其他页的选择。
 		visibleRuns = visibleRuns.filter((candidate) => candidate.run_id !== "bt-live-003");
 		await act(async () => {
 			await client.invalidateQueries({ queryKey: ["backtests"] });
 		});
-		await waitFor(() => {
-			expect(screen.getByTestId("compare-selection-count")).toHaveTextContent("7/8");
-		});
-		// 释放的容量可真正选入：mutator 守卫同样基于对账后的现存集合（幽灵 id 不占位）
-		const freedNinth = screen.getByRole("checkbox", { name: "加入对比 bt-live-009" });
-		expect(freedNinth).toBeEnabled();
-		await user.click(freedNinth);
+		await waitFor(() =>
+			expect(screen.queryByRole("checkbox", { name: "加入对比 bt-live-003" })).not.toBeInTheDocument(),
+		);
+		expect(screen.getByTestId("compare-selection-count")).toHaveTextContent("8/8");
+		expect(ninth).toBeDisabled();
+		await user.click(screen.getByRole("button", { name: "回测对比" }));
+		await user.click(screen.getByRole("button", { name: "移出对比 bt-live-003" }));
+		await user.keyboard("{Escape}");
+		expect(screen.getByTestId("compare-selection-count")).toHaveTextContent("7/8");
+		expect(ninth).toBeEnabled();
+		await user.click(ninth);
 		expect(screen.getByTestId("compare-selection-count")).toHaveTextContent("8/8");
 	});
 });
