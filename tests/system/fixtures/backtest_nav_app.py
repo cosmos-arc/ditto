@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import importlib
 import os
+from dataclasses import replace
 from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 
@@ -28,6 +29,7 @@ from ditto_application.processes.execution.strategy_input import (
     write_backtest_artifacts,
 )
 from ditto_apps.registry.container import make_app_container
+from ditto_apps.registry.contexts.strategy import create_strategy_bundle
 from ditto_apps.registry.fresh_runtime import create_fresh_runtime
 from ditto_backtest.audit import ExecutionAuditCollector
 from ditto_backtest.brokerage import BacktestBrokerage
@@ -68,8 +70,12 @@ from ditto_strategy.alpha.templates.etf_rotation import (
     ETFRotationConfig,
     build_etf_rotation_pipeline,
 )
+from ditto_strategy.governance.service import GovernanceService
 from ditto_strategy.storage.sqlite.services.strategy_artifact_service import (
     StrategyArtifactService,
+)
+from ditto_strategy.storage.sqlite.services.strategy_catalog_service import (
+    StrategyCatalogService,
 )
 from ditto_strategy.storage.sqlite.services.strategy_run_service import (
     StrategyRunLifecycleStore,
@@ -440,9 +446,21 @@ def _persist_run(
 
 def _seed() -> None:
     frames = _seed_market()
+    with create_strategy_bundle() as bundle:
+        assert bundle.seed_bootstrap is not None
+        bundle.seed_bootstrap.run()
     provider = _SeededStoreProvider(frames)
     container = make_app_container()
     try:
+        catalog = container.get(StrategyCatalogService)
+        original = catalog.get_spec("seed_etf_trend_swing", 1)
+        assert original is not None
+        container.get(GovernanceService).create_draft(
+            strategy_id=original.strategy_id,
+            version=2,
+            spec_record=replace(original, version=2, parent_version=1),
+            created_at="2026-11-09T00:00:00Z",
+        )
         run_service = container.get(StrategyRunLifecycleStore)
         audit_service = container.get(ExecutionAuditService)
         artifact_service = container.get(StrategyArtifactService)

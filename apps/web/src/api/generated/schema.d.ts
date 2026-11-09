@@ -1,6 +1,6 @@
 /**
  * DO NOT EDIT: generated from contracts/openapi/v1.json.
- * Schema SHA-256: bdae2cf5c582596cf37412a92d4ace386ab68bef0992b7a43a121371ae6df656
+ * Schema SHA-256: 73d5114fca705ce869f139cbd106e0aefee65c29b77a7f217830c33c368af32d
  * Generator: openapi-typescript 7.13.0
  */
 
@@ -8552,6 +8552,11 @@ export interface components {
              * @description 策略 ID
              */
             strategy_id: string;
+            /**
+             * Strategy Version
+             * @description 精确策略版本, 省略时解析当前已发布版本
+             */
+            strategy_version?: number | null;
         };
         /**
          * CreateManualAccountBody
@@ -18634,6 +18639,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
+                "Idempotency-Key"?: string | null;
                 /** @description Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required. */
                 "X-Ditto-API-Contract-Version"?: "v1";
             };

@@ -70,26 +70,26 @@ describe("StrategyDetailPage governed workspace", () => {
 		await expect(screen.findByText("governed strategy v4")).resolves.toBeInTheDocument();
 	});
 
-	it("hands backtest submission to exact experiment planning without creating a run", async () => {
-		let experimentWrites = 0;
-		server.use(
-			http.post("/api/v1/research/experiments", () => {
-				experimentWrites += 1;
-				return HttpResponse.json({ data: {} });
-			}),
-		);
+	it("composes the ordinary form with the exact detail version", async () => {
 		const user = userEvent.setup();
-		render(<StrategyDetailPage renderGovernanceActions={renderNoGovernanceActions} />, { wrapper });
-
-		await user.click(await screen.findByRole("button", { name: "提交回测" }));
-		const sheet = screen.getByRole("dialog", { name: "提交回测" });
-		expect(within(sheet).getByText("seed_etf_industry_rotation")).toBeInTheDocument();
-		expect(within(sheet).getByText("v3")).toBeInTheDocument();
-		expect(within(sheet).getByRole("link", { name: "打开实验创建器" })).toHaveAttribute(
-			"href",
-			"/research/experiments/new",
+		render(
+			<StrategyDetailPage
+				renderGovernanceActions={renderNoGovernanceActions}
+				renderBacktestForm={(id, version) => (
+					<p>
+						{id} version {version} ordinary form
+					</p>
+				)}
+			/>,
+			{ wrapper },
 		);
-		expect(experimentWrites).toBe(0);
+		await user.click(await screen.findByRole("button", { name: "提交回测" }));
+		expect(screen.getByRole("dialog", { name: "提交回测" })).toHaveTextContent(
+			"seed_etf_industry_rotation version 3 ordinary form",
+		);
+		expect(screen.queryByRole("link", { name: "打开实验创建器" })).not.toBeInTheDocument();
+		await user.keyboard("{Escape}");
+		expect(screen.getByRole("button", { name: "提交回测" })).toHaveFocus();
 	});
 
 	it("deprecates the current version through the audited governance command", async () => {

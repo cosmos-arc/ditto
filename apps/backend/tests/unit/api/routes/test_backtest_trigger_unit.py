@@ -22,6 +22,22 @@ from pydantic import ValidationError
 class TestCreateBacktestRunRequest:
     """Tests for request model validation."""
 
+    def test_explicit_version_is_preserved_and_validated(self) -> None:
+        body = CreateBacktestRunRequest.model_validate(
+            {
+                "strategy_id": "test",
+                "strategy_version": 3,
+                "start_date": "2025-01-01",
+                "end_date": "2025-01-31",
+            }
+        )
+        assert body.strategy_version == 3
+        for invalid in (0, -1, True, "3"):
+            with pytest.raises(ValidationError):
+                CreateBacktestRunRequest.model_validate(
+                    {**body.model_dump(), "strategy_version": invalid}
+                )
+
     def test_default_values(self) -> None:
         """默认 initial_cash=1M, parameter_overrides=[]."""
         body = CreateBacktestRunRequest(
@@ -396,3 +412,18 @@ class TestRunBacktestFlow:
         error_msg = call_args[0][1]
         # 必须包含原始异常文本，而非仅有 "Flow execution failed"
         assert "strategy compilation failed: bad alpha expr" in error_msg
+
+
+def test_replayed_dispatch_only_executes_the_durable_claim_once() -> None:
+    from unittest.mock import Mock, patch
+
+    from ditto_apps.api.routes.backtest_run_routes import run_backtest_flow_sync
+
+    claim = Mock(side_effect=[True, False])
+    failure = Mock()
+    flow = Mock()
+    with patch("ditto_apps.api.routes.backtest_run_routes.run_backtest_flow", flow):
+        for _ in range(2):
+            run_backtest_flow_sync({"run_id": "same-run"}, failure, claim)
+    flow.fn.assert_called_once_with(run_id="same-run")
+    failure.assert_not_called()

@@ -34,6 +34,13 @@ from ditto_strategy.storage.sqlite.services.strategy_run_service import (
 from ditto_application.config import DEFAULT_INITIAL_CASH
 from ditto_application.contracts import CostConfig
 from ditto_application.exceptions import AppCommandError
+from ditto_application.mutation_idempotency import (
+    MutationIdempotency,
+    canonical_request_hash,
+    find_mutation_receipt,
+    mutation_event_id,
+    mutation_receipt_detail,
+)
 from ditto_application.processes.execution.factor_bridge import FactorBridge
 from ditto_application.processes.execution.strategy_types import RunLifecycleService
 from ditto_application.strategy_spec_deserialization import deserialize_strategy_spec
@@ -65,6 +72,7 @@ class BacktestRunCommand:
     parameter_overrides: tuple[str, ...] = ()
     cost_config: CostConfig | None = None
     allow_experimental_data: bool = False
+    idempotency: MutationIdempotency | None = None
 
 
 @dataclass(frozen=True)
@@ -116,6 +124,15 @@ class BacktestRunHandler:
             AppCommandError: 策略不存在、日期非法、因子编译失败.
 
         """
+        run_id = (
+            canonical_request_hash(mutation_event_id(command.idempotency))
+            if command.idempotency is not None
+            else uuid.uuid4().hex[:8]
+        )
+        replay = self._existing_submission(command, run_id)
+        if replay is not None:
+            return replay
+
         # 1. 校验日期
         self._validate_dates(command.start_date, command.end_date)
 
@@ -169,10 +186,19 @@ class BacktestRunHandler:
                 "slippage_bps": command.cost_config.slippage_bps,
                 "impact_model": command.cost_config.impact_model,
             }
+        if command.idempotency is not None:
+            config_data = mutation_receipt_detail(
+                command.idempotency,
+                response={
+                    "run_id": run_id,
+                    "strategy_id": command.strategy_id,
+                    "strategy_version": spec_record.version,
+                },
+                detail=config_data,
+            )
         config_json = orjson.dumps(config_data).decode("utf-8")
 
         # 6. 创建 RunRecord with the same exact catalog version.
-        run_id = uuid.uuid4().hex[:8]
         self._run_service.create_run(
             run_id=run_id,
             strategy_id=command.strategy_id,
@@ -181,12 +207,65 @@ class BacktestRunHandler:
             config_json=config_json,
         )
 
+        # Read the durable winner, including a concurrent insert with this key.
+        if command.idempotency is not None:
+            replay = self._existing_submission(command, run_id)
+            if replay is None:
+                raise AppCommandError("Backtest submission was not persisted")
+            return replay
+
         return BacktestRunResult(
             run_id=run_id,
             strategy_id=command.strategy_id,
             status="pending",
             strategy_version=spec_record.version,
             candidate_parameters=candidate_parameters,
+            cost_config=command.cost_config,
+        )
+
+    def _existing_submission(
+        self, command: BacktestRunCommand, run_id: str
+    ) -> BacktestRunResult | None:
+        if command.idempotency is None:
+            return None
+        record = self._run_service.get_run(run_id)
+        if record is None:
+            return None
+        try:
+            decoded = orjson.loads(record.config_json)
+        except orjson.JSONDecodeError as exc:
+            raise AppCommandError("Invalid backtest submission receipt") from exc
+        if not isinstance(decoded, dict):
+            raise AppCommandError("Invalid backtest submission receipt")
+        config = cast("dict[str, object]", decoded)
+        receipt = find_mutation_receipt([config], command.idempotency)
+        version = config.get("strategy_version")
+        if (
+            type(version) is not int
+            or version <= 0
+            or str(version) != record.strategy_version
+            or (
+                command.strategy_version is not None
+                and command.strategy_version != version
+            )
+        ):
+            raise AppCommandError("Invalid backtest submission version")
+        if (
+            receipt
+            != {
+                "run_id": run_id,
+                "strategy_id": command.strategy_id,
+                "strategy_version": version,
+            }
+            or record.strategy_id != command.strategy_id
+            or record.mode != "backtest"
+        ):
+            raise AppCommandError("Invalid backtest submission receipt")
+        return BacktestRunResult(
+            run_id=run_id,
+            strategy_id=record.strategy_id,
+            status=record.status,
+            strategy_version=version,
             cost_config=command.cost_config,
         )
 

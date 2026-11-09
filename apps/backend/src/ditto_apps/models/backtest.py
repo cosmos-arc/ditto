@@ -176,6 +176,9 @@ class CreateBacktestRunRequest(BaseModel):
     """创建回测运行请求."""
 
     strategy_id: str = Field(..., min_length=1, description="策略 ID")
+    strategy_version: int | None = Field(
+        default=None, gt=0, description="精确策略版本, 省略时解析当前已发布版本"
+    )
     start_date: str = Field(..., min_length=1, description="起始日期 (YYYY-MM-DD)")
     end_date: str = Field(..., min_length=1, description="结束日期 (YYYY-MM-DD)")
     initial_cash: float = Field(
