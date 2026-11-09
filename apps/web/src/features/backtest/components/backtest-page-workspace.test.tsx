@@ -255,3 +255,33 @@ describe("BacktestPage governed workspace", () => {
 		expect(screen.queryByText("Sharpe")).not.toBeInTheDocument();
 	});
 });
+
+it("rejects an invalid bill and recovers by rereading the saved report", async () => {
+	let repaired = false;
+	server.use(
+		http.get("/api/v1/backtests/runs/bt-live-001/report", () =>
+			HttpResponse.json({
+				data: {
+					...REPORT,
+					fee_statement: {
+						currency: repaired ? "CNY" : "USD",
+						policy: "saved research assumption",
+						rules_observed_at: "2026-11-09",
+						source_ref: "fees",
+						final_cash: 1000000,
+						fills: [],
+					},
+				},
+			}),
+		),
+	);
+	const user = userEvent.setup();
+	render(<BacktestPage />, { wrapper });
+	await user.click(await screen.findByRole("tab", { name: "成交", exact: true }));
+	const retry = await screen.findByRole("button", { name: "重试费用账单" });
+	expect(screen.queryByText(/逐笔费用账单（/)).not.toBeInTheDocument();
+	repaired = true;
+	await user.click(retry);
+	expect(await screen.findByText("本次运行没有实际成交。")).toBeInTheDocument();
+	expect(screen.queryByRole("button", { name: "重试费用账单" })).not.toBeInTheDocument();
+});

@@ -87,6 +87,38 @@ export async function fetchBacktestRun(runId: string): Promise<BacktestRun> {
 export function mapBacktestReport(dto: BacktestReportResponse): BacktestReport {
 	const alpha = dto.alpha_stats;
 	const trades = dto.aggregated_trade_stats;
+	const bill = dto.fee_statement;
+	if (
+		bill != null &&
+		(bill.currency !== "CNY" ||
+			!Array.isArray(bill.fills) ||
+			(bill.final_cash !== null && !Number.isFinite(bill.final_cash)) ||
+			bill.fills.some(
+				(fill) =>
+					!fill ||
+					!Number.isSafeInteger(fill.instrument_id) ||
+					fill.instrument_id <= 0 ||
+					fill.schedule?.instrument_id !== fill.instrument_id ||
+					!["buy", "sell"].includes(fill.direction) ||
+					!Number.isSafeInteger(fill.quantity) ||
+					fill.quantity <= 0 ||
+					fill.price <= 0 ||
+					![
+						fill.price,
+						fill.commission,
+						fill.stamp_duty,
+						fill.transfer_fee,
+						fill.total_fee,
+						fill.schedule.commission_rate,
+						fill.schedule.min_commission,
+						fill.schedule.stamp_duty_rate,
+						fill.schedule.transfer_fee_rate,
+						fill.schedule.transfer_fee_per_share,
+					].every((value) => Number.isFinite(value) && value >= 0),
+			))
+	) {
+		throw new Error("费用账单响应无效；币种、成交方向、证券身份或金额不一致，请重新读取报告。");
+	}
 	return {
 		runId: dto.run_id,
 		periodStart: dto.period?.["start"] ?? "",

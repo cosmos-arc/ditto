@@ -2,7 +2,13 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { mockBacktestReport, mockBacktestRuns } from "@/mocks/fixtures/backtest";
 import { capturedRequest, requestPath } from "@/test/request";
 import type { BacktestReportResponse, RunResponse } from "./backtests";
-import { fetchBacktestAudit, fetchBacktestBenchmark, mapBacktestReport, mapBacktestRun } from "./backtests";
+import {
+	fetchBacktestAudit,
+	fetchBacktestBenchmark,
+	fetchBacktestReport,
+	mapBacktestReport,
+	mapBacktestRun,
+} from "./backtests";
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -109,3 +115,52 @@ describe("backtest API view-model boundaries", () => {
 		]);
 	});
 });
+
+it.each(["currency", "direction", "identity", "quantity"])(
+	"rejects a malformed saved fee bill over HTTP: %s",
+	async (field) => {
+		const bill = {
+			currency: "CNY",
+			policy: "saved",
+			rules_observed_at: "2026-11-09",
+			source_ref: "fees",
+			final_cash: 8994.97,
+			fills: [
+				{
+					fill_id: "f",
+					order_id: "o",
+					instrument_id: 1,
+					symbol: "600000.SSE",
+					trade_date: "2014-01-02",
+					direction: "buy",
+					quantity: 100,
+					price: 10,
+					commission: 5,
+					stamp_duty: 0,
+					transfer_fee: 0.03,
+					total_fee: 5.03,
+					schedule: {
+						instrument_id: 1,
+						as_of_date: "2014-01-01",
+						commission_rate: 0.0003,
+						min_commission: 5,
+						stamp_duty_rate: 0.001,
+						transfer_fee_rate: 0,
+						transfer_fee_per_share: 0.0003,
+					},
+				},
+			],
+		};
+		const fill = bill.fills[0];
+		if (!fill) throw new Error("missing test fill");
+		if (field === "currency") bill.currency = "USD";
+		if (field === "direction") fill.direction = "unknown";
+		if (field === "identity") fill.schedule.instrument_id = 2;
+		if (field === "quantity") fill.quantity = -100;
+		vi.stubGlobal(
+			"fetch",
+			vi.fn<typeof fetch>(async () => Response.json({ data: { ...mockBacktestReport, fee_statement: bill } })),
+		);
+		await expect(fetchBacktestReport("bt-001")).rejects.toThrow("费用账单响应无效");
+	},
+);

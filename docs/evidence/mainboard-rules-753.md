@@ -7,7 +7,7 @@
 | 适用范围/断点 | 权威依据 | 本次消费与限制 |
 | --- | --- | --- |
 | 沪深主板普通 A 股 | [深市主板代码区间](https://www.szse.cn/disclosure/notice/general/t20210331_585343.html)、[CDR 专用区间](https://www.szse.cn/www/marketServices/technicalservice/notice/t20210205_584702.html)、[沪市 605 上市公告](https://big5.sse.com.cn/site/cht/www.sse.com.cn/disclosure/announcement/listing/ipo/c/c_20200730_78861071.shtml) | 登记资产类型与交易所共同约束；深市 000001..004999 排除 001001..001199 CDR；沪市 600/601/603/605。不纳入 B 股、创业板、科创板、北交所或基金。 |
-| 2014 年旧制新股首日 | [沪市 2013 首日规则](https://edu.sse.com.cn/best/article/mcontent/c/4731124.shtml)、[沪市 2014 调整](https://edu.sse.com.cn/best/article/mcontent/c/4731135.shtml)、[深市 2014-06-13 调整](https://www.szse.cn/aboutus/trends/news/t20140613_518480.html) | 不把首日当成普通 10% 或无限幅；保留来源中的不对称申报范围。旧制盘中限制尚不能用日线完整复现；旧费率未齐，普通股票运行仍拒绝该窗口。 |
+| 2014 年旧制新股首日 | [沪市 2013 首日规则](https://edu.sse.com.cn/best/article/mcontent/c/4731124.shtml)、[沪市 2014 调整](https://edu.sse.com.cn/best/article/mcontent/c/4731135.shtml)、[深市 2014-06-13 调整](https://www.szse.cn/aboutus/trends/news/t20140613_518480.html) | 不把首日当成普通 10% 或无限幅；保留来源中的不对称申报范围。旧制盘中限制尚不能用日线完整复现；本票交付时旧费率未齐；现由 [#757](historical-fees-757.md) 补齐，仍要求完整历史执行输入。 |
 | 沪市 2018-08-20 | [收盘集合竞价通知](https://www.sse.com.cn/aboutus/mediacenter/hotandd/c/c_20180806_4607055.shtml) | 此日前规则不声明收盘集合竞价支持；成交模型实际拒绝未获当日规则支持的订单类型。 |
 | 2023-04-10 注册制主板新股 | [沪市首批上市时间](https://big5.sse.com.cn/site/cht/www.sse.com.cn/aboutus/mediacenter/hotandd/c/c_20230404_5719112.shtml)、[沪市规则存档](https://www.sse.com.cn/lawandrules/sselawsrules2025/repeal/rules/c/c_20250612_10824490.shtml)、[深市生效日说明](https://investor.szse.cn/knowledge/stock/deal/t20230621_601277.html)、[深市前五日说明](https://investor.szse.cn/knowledge/stock/deal/t20230525_600599.html) | 前五交易日无日涨跌幅限制，第六日起普通 10%；买入单位 100 股、报价单位 0.01 元、T+1。规则选取与成交使用同一 provider。 |
 | 2026-07-06 新版 | [沪市规则](https://www.sse.com.cn/lawandrules/sselawsrules2025/trade/universal/c/c_20260424_10816492.shtml)、[深市规则](https://docs.static.szse.cn/www/lawrules/rule/trade/current/W020260424690713155663.pdf) | 保留普通主板及上述 IPO 规则。普通日上下限按十进制四舍五入至报价单位、至少相差一档且价格不低于一档，并核对原始限价；风险警示股仍待 #756。 |
@@ -36,4 +36,4 @@
 
 ## 尚未完成
 
-#757 历史收费、#756 特殊状态、#759–#764 分红拆并与退出会计、#765 财务历史完整性及其他板块仍独立推进；#766–#768 三类 2014 起完整运行尚未验收。#720 容器发布阻断、实际交易日观察及 #779 真人验收保留。任何缺证都不能靠缩池、缩区间、前填价格或零交易成功消除。
+#757 历史收费已补齐，见[费用账单记录](historical-fees-757.md)。#756 特殊状态、#759–#764 分红拆并与退出会计、#765 财务历史完整性及其他板块仍独立推进；#766–#768 三类 2014 起完整运行尚未验收。#720 容器发布阻断、实际交易日观察及 #779 真人验收保留。任何缺证都不能靠缩池、缩区间、前填价格或零交易成功消除。
