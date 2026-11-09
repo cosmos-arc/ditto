@@ -122,10 +122,7 @@ class TradeBuilderStateSnapshot:
             raise ValueError(msg)
         if len(set(self.applied_distributions)) != len(
             self.applied_distributions
-        ) or any(
-            not isinstance(identity, str) or not identity
-            for identity in self.applied_distributions
-        ):
+        ) or any(not identity for identity in self.applied_distributions):
             raise ValueError(
                 "trade builder distribution identities must be unique strings"
             )
